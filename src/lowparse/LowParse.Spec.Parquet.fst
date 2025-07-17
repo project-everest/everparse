@@ -32,6 +32,8 @@ open LowParse.Bytes
 
 open FStar.Real
 
+open FStar.List.Tot
+
 assume
 val parse_footer_kind:parser_kind
 
@@ -363,18 +365,19 @@ type bloom_filter_header = {
 //   | DATA_PAGE_HEADER_V2 of data_page_header_v2
 
 type page_header = {
-  ptype: page_type;
+  ptype:page_type;
   uncompressed_page_size:int32;
   compressed_page_size:int32;
   crc:option int32;
-  data_page_header: option data_page_header;
-  index_page_header: option index_page_header;
-  dictionary_page_header: option dictionary_page_header;
-  data_page_header_v2: option data_page_header_v2
-  // header:page_header_variants // sum type instead of "tagged union"
+  data_page_header:option data_page_header;
+  index_page_header:option index_page_header;
+  dictionary_page_header:option dictionary_page_header;
+  data_page_header_v2:option data_page_header_v2
 }
 
 
+
+// header:page_header_variants // sum type instead of "tagged union"
 
 type key_value = {
   key:string;
@@ -550,11 +553,11 @@ let rec zip (#a #b: Type0) (xs: list a) (ys: list b {List.length ys == List.leng
 (* A byte‑range in the file *)
 
 type range = {
-  start:int64;
-  len:int32
+  start:int;
+  len:int
 }
 
-let range_end (r: range) : int = I64.v r.start + I32.v r.len
+let range_end (r: range) : int = r.start + r.len
 
 
 
@@ -563,7 +566,18 @@ let range_end (r: range) : int = I64.v r.start + I32.v r.len
 let disjoint (r1 r2: range) : Tot bool =
   let end1 = range_end r1 in
   let end2 = range_end r2 in
-  (I64.v r1.start >= end2) || (I64.v r2.start >= end1)
+  (r1.start >= end2) || (r2.start >= end1)
+
+
+
+(* Check if a list of ranges are in-bound *)
+
+let rec ranges_in_bound (rs: list range) (max_len: int) : Tot bool =
+  match rs with
+  | [] -> true
+  | r :: rest ->
+    let end_ = range_end r in
+    end_ <= max_len && ranges_in_bound rest max_len
 
 
 
@@ -573,21 +587,6 @@ let rec ranges_disjoint (rs: list range) : Tot bool =
   match rs with
   | [] | [_] -> true
   | x :: xs -> List.Tot.for_all (disjoint x) xs && ranges_disjoint xs
-
-
-
-(* Build a range from optional offset/length *)
-
-let range_of_offsets (off: option int64) (len: option int32) : option range =
-  match off, len with
-  | Some o, Some l -> Some ({ start = o; len = l })
-  | _ -> None
-
-
-
-// (* Sum a list<int32> into int64 safely *)
-// let sum_i32 (xs:list int32) : Tot int64 =
-//   List.Tot.fold_left (fun acc x -> acc + int64 (v x)) 0L xs
 
 let rec offsets_are_ordered (prev: page_location) (locs: list page_location)
     : Tot bool (decreases locs) =
@@ -599,57 +598,122 @@ let rec offsets_are_ordered (prev: page_location) (locs: list page_location)
 
 (** Validation of a single column‑chunk ------------------------------ *)
 
-val validate_column_chunk: column_chunk -> int64 -> option offset_index -> Tot bool
+val validate_column_chunk: column_chunk -> Tot bool
 
-let validate_column_chunk cc footer_start oi =
-  let idx_ranges:(* 1. index ranges must be disjoint and not overlap with footer *)
-  list range =
-    let off_idx = range_of_offsets cc.offset_index_offset cc.offset_index_length in
-    let col_idx = range_of_offsets cc.column_index_offset cc.column_index_length in
-    match off_idx, col_idx with
-    | Some r1, Some r2 -> [r1; r2]
-    | Some r, None | None, Some r -> [r]
-    | None, None -> []
-  in
-  let idx_ok =
-    ranges_disjoint idx_ranges &&
-    List.Tot.for_all (fun r -> range_end r <= I64.v footer_start) idx_ranges
-  in
-  let pages_ok =
-    (* 2. page‑level checks when we have an OffsetIndex *)
-    match oi with
+let validate_column_chunk cc =
+  let offsets_ok =
+    // dictionary_page, if present, should be the first in every column
+    match cc.meta_data with
     | None -> true
-    | Some oi' ->
-      let locs = oi'.page_locations in
-      let ordered =
-        (* ordered by offset and disjoint *)
-        match locs with
-        | [] -> true
-        | first :: rest -> offsets_are_ordered first rest
-      in
-      let disj =
-        let pl_ranges =
-          List.Tot.map (fun pl -> { start = pl.offset; len = pl.compressed_page_size }) locs
-        in
-        ranges_disjoint pl_ranges
-      in
-      let col_size_ok =
-        (* compressed size matches meta *)
-        match cc.meta_data with
-        | None -> true
-        | Some md ->
-          let s = List.Tot.fold_left (fun acc pl -> acc + I32.v pl.compressed_page_size) 0 locs in
-          s = I64.v md.total_compressed_size
-      in
-      ordered && disj && col_size_ok
+    | Some cmd ->
+      let data_off = I64.v cmd.data_page_offset in
+      match cmd.dictionary_page_offset, cmd.index_page_offset with
+      | None, _ -> true
+      | Some dict_off, None -> I64.v dict_off < data_off
+      | Some dict_off, Some idx_off -> I64.v dict_off < data_off && I64.v dict_off < I64.v idx_off
   in
-  idx_ok && pages_ok
+  let idx_ok:// OffsetIndex may be present even if ColumnIndex is not.
+  // If ColumnIndex is present, OffsetIndex must also be present.
+  // If offset is present, the corresponding length must be present
+  bool =
+    match
+      cc.offset_index_offset, cc.offset_index_length, cc.column_index_offset, cc.column_index_length
+    with
+    | Some _, Some _, Some _, Some _ | Some _, Some _, None, None | None, None, None, None -> true
+    | _ -> false
+  in
+  offsets_ok && idx_ok
 
 
 
 (** Column order vs schema order ------------------------------------- *)
 
+// type schema_tree = 
+//   | Leaf of schema_element
+//   | Node of schema_element & list schema_tree
+//
+// (* Build a schema tree from the flat list.
+//  * The flat list was built based on depth-first traversal of the tree
+//  *)
+// val build_schema_tree : list schema_element -> Tot (option schema_tree)
+//
+// let rec build_schema_tree : list schema_element -> Tot (option schema_tree) = 
+
+(** ------------------------------------------------------------------ *)
+(**  Schema‑tree reconstruction                                         *)
+(** ------------------------------------------------------------------ *)
+
+(* A tree view of the flattened SchemaElement list *)
+
+type schema_tree =
+  | Leaf : schema_element -> schema_tree
+  | Node : se: schema_element -> children: list schema_tree -> schema_tree
+
+
+
+(* Internal helper: consume a prefix of the list, returning the
+   subtree and the unconsumed suffix. The input list MUST encode a
+   well‑formed schema (depth‑first order, correct num_children.) *)
+// let rec build_aux (els:list schema_element)
+//   : Tot (option (schema_tree * list schema_element))
+//   (decreases els)
+//   = match els with
+//     | [] -> None
+//     | hd::tl ->
+//         let nc = match hd.num_children with | Some n -> I32.v n | None -> 0 in
+//         if nc = 0 then Some (Leaf hd, tl)
+//         else
+//           (* build [nc] children sequentially *)
+//           // make it top-level mutually recursive function
+//           let (kids, rem) = collect nc tl [] in
+//           Some (Node hd kids, rem)
+// and collect k (rest:list schema_element)
+//   (acc:list schema_tree)
+//   : Tot (list schema_tree * list schema_element) 
+//   (decreases k, rest)
+//   =
+//   if k = 0 then (List.Tot.rev acc, rest) else
+//   match build_aux rest with
+//   | None -> (List.Tot.rev acc, rest) // not enough elements to build a child
+//   | Some (child, rest') ->
+//     collect (k - 1) rest' (child :: acc)
+  // let (child, rest') = build_aux rest in
+  // collect (k-1) rest' (child::acc)
+
+
+// val build_schema_tree : list schema_element -> Tot (option schema_tree)
+// let build_schema_tree els =
+//   // let (tree, rest) = build_aux els in
+//   match build_aux els with
+//   | None -> None
+//   | Some (tree, rest) ->
+//   if List.Tot.length rest = 0 then Some tree
+//   else 
+//     // the input list was not well-formed
+//     None
+
 (** Row‑group validation --------------------------------------------- *)
+
+(* Calculate the total size of all column chunks in a row group *)
+
+let cols_size (ccs: list column_chunk) : option int =
+  let col_sizes:list (option int64) =
+    List.Tot.map (fun cc ->
+          match cc.meta_data with
+          | None -> None
+          | Some md -> Some md.total_compressed_size)
+      ccs
+  in
+  List.Tot.fold_left (fun acc sz_opt ->
+        match acc, sz_opt with
+        | Some acc_sz, Some sz -> Some (acc_sz + I64.v sz)
+        | _, _ -> None)
+    (Some 0)
+    col_sizes
+
+
+
+(* dictionary_page_offset ? dictionary_page_offset : min (index_page_offset, data_page_offset) *)
 
 let offset_of_column_chunk (cmd: column_meta_data) : int64 =
   match cmd.dictionary_page_offset with
@@ -674,29 +738,34 @@ let rec columns_are_contiguous (prev: column_chunk) (cols: list column_chunk)
       // if metadata is missing, we can't check contiguity
       true
 
-val validate_row_group: row_group -> int64 -> list (option offset_index) -> Tot bool
+val validate_row_group: row_group -> Tot bool
 
-let validate_row_group rg footer_start offset_indices =
-  let col_sizes:(* sum of col sizes equals row‑group size (when available) *)
-  list (option int64) =
-    List.Tot.map (fun cc ->
-          match cc.meta_data with
-          | None -> None
-          | Some md -> Some md.total_compressed_size)
-      rg.columns
+let validate_row_group rg =
+  let col_offset =
+    // column offset is the first page offset
+    match rg.columns with
+    | [] -> None
+    | first :: _ ->
+      match first.meta_data with
+      | None -> None
+      | Some cmd -> Some (offset_of_column_chunk cmd)
+  in
+  let offset_ok =
+    match rg.file_offset with
+    | None -> true
+    | Some off ->
+      match col_offset with
+      | None -> true
+      | Some col_off -> I64.v off = I64.v col_off
   in
   let rg_size_ok =
+    (* sum of col sizes equals row‑group size (when available) *)
     match rg.total_compressed_size with
     | None -> true
     | Some sz ->
-      let total_size =
-        List.Tot.fold_left (fun acc sz_opt ->
-              match acc, sz_opt with
-              | Some acc_sz, Some sz -> Some (acc_sz + I64.v sz)
-              | _, _ -> None)
-          (Some 0)
-          col_sizes
-      in
+      let total_size = cols_size rg.columns in
+      (* total_size is None if any column chunk is missing metadata *)
+      (* so we can’t check the size *)
       match total_size with
       | None -> true
       | Some total_sz -> total_sz = I64.v sz
@@ -708,28 +777,167 @@ let validate_row_group rg footer_start offset_indices =
     | first :: rest -> columns_are_contiguous first rest
   in
   let cols_ok =
-    (* each column chunk passes *)
-    if List.length offset_indices = List.length rg.columns
-    then
-      List.Tot.for_all (fun (cc, oi) -> validate_column_chunk cc footer_start oi)
-        (zip rg.columns offset_indices)
-    else false
+    List.Tot.for_all (fun cc -> validate_column_chunk cc) rg.columns (* each column chunk passes *)
   in
-  rg_size_ok && contiguous_ok && cols_ok
+  offset_ok && rg_size_ok && contiguous_ok && cols_ok
+
+let cc_idx_ranges (cc: column_chunk) : list range =
+  match
+    cc.offset_index_offset, cc.offset_index_length, cc.column_index_offset, cc.column_index_length
+  with
+  | Some off, Some len, Some col_off, Some col_len ->
+    let off_idx = { start = I64.v off; len = I32.v len } in
+    let col_idx = { start = I64.v col_off; len = I32.v col_len } in
+    [off_idx; col_idx]
+  | Some off, Some len, None, None -> [{ start = I64.v off; len = I32.v len }]
+  | _ -> []
+
+let rg_range (rg: row_group) : option range =
+  match rg.file_offset, rg.total_compressed_size with
+  | Some off, Some sz -> Some ({ start = I64.v off; len = I64.v sz })
+  | _ ->
+    let total_size = cols_size rg.columns in
+    match rg.columns with
+    | [] -> None
+    | first :: _ ->
+      match first.meta_data with
+      | None -> None
+      | Some cmd ->
+        match total_size with
+        | None -> None
+        | Some total_sz -> Some ({ start = I64.v (offset_of_column_chunk cmd); len = total_sz })
+
+
+
+// get a flat list of all page offsets
+
+let get_all_page_offs (rgs: list row_group) : list int64 =
+  List.Tot.collect (fun rg ->
+        List.Tot.collect (fun cc ->
+              match cc.meta_data with
+              | None -> []
+              | Some cmd ->
+                let dict_off =
+                  match cmd.dictionary_page_offset with
+                  | None -> []
+                  | Some off -> [off]
+                in
+                let idx_off =
+                  match cmd.index_page_offset with
+                  | None -> []
+                  | Some off -> [off]
+                in
+                let data_off = [cmd.data_page_offset] in
+                dict_off @ idx_off @ data_off)
+          rg.columns)
+    rgs
+
+let rec page_offsets_are_distinct_and_inbound (page_offs: list int64) (bound: int64)
+    : Tot bool (decreases page_offs) =
+  match page_offs with
+  | [] -> true
+  | x :: xs ->
+    not (List.Tot.contains x xs) && I64.v x < I64.v bound &&
+    page_offsets_are_distinct_and_inbound xs bound
 
 
 
 (** Top‑level file metadata validation ------------------------------- *)
 
-val validate_file_metat_data: file_meta_data -> int64 -> list (list (option offset_index))
-  -> Tot bool
+val validate_file_meta_data: file_meta_data -> int64 -> Tot bool
 
-let validate_file_metat_data fmd footer_start group_offset_indices =
-  if List.length group_offset_indices = List.length fmd.row_groups
-  then
-    List.Tot.for_all (fun (rg, offset_indices) ->
-          if List.length offset_indices = List.length rg.columns
-          then validate_row_group rg footer_start offset_indices
-          else false)
-      (zip fmd.row_groups group_offset_indices)
-  else false
+let validate_file_meta_data fmd footer_start =
+  let page_offs:// get a flat list of all page offsets
+  list int64 =
+    get_all_page_offs fmd.row_groups
+  in
+  let ranges:// get a flat list of all rg ranges and idx ranges
+  list range =
+    List.Tot.collect (fun rg ->
+          let rg_range_opt = rg_range rg in
+          let cc_ranges = List.Tot.collect cc_idx_ranges rg.columns in
+          match rg_range_opt with
+          | None -> cc_ranges
+          | Some rg_range -> rg_range :: cc_ranges)
+      fmd.row_groups
+  in
+  // page_offs should all be distinct and inbound
+  page_offsets_are_distinct_and_inbound page_offs (footer_start) && ranges_disjoint ranges &&
+  ranges_in_bound ranges
+    // ranges should be mutually disjoint and non-overlapping with the footer
+    (I64.v footer_start) &&
+  List.Tot.for_all (fun rg -> validate_row_group rg) fmd.row_groups
+
+let rec page_offsets_are_contiguous (prev: page_location) (locs: list page_location)
+    : Tot bool (decreases locs) =
+  match locs with
+  | [] -> true
+  | loc :: rest ->
+    I64.v loc.offset = I64.v prev.offset + I32.v prev.compressed_page_size &&
+    page_offsets_are_contiguous loc rest
+
+
+
+(* Once jump to OffsetIndex, validate its structure against the corresponding column_chunk *)
+
+val validate_offset_index (oi: offset_index) (cc: column_chunk) : Tot bool
+
+let validate_offset_index (oi: offset_index) (cc: column_chunk) : Tot bool =
+  let locs = oi.page_locations in
+  let first_loc =
+    // the first page location must be consistent with the (computed) page location in cc
+    match locs with
+    | [] -> None
+    | first :: _ -> Some first
+  in
+  let first_page_offset =
+    match cc.meta_data with
+    | None -> None
+    | Some cmd -> Some (I64.v (offset_of_column_chunk cmd))
+  in
+  let first_loc_ok =
+    match first_loc, first_page_offset with
+    | Some loc, Some off -> I64.v loc.offset = off
+    | _ -> true
+  in
+  let cc_page_offsets_ok =
+    // all page offsets (if present) in cc should be listed in `page_locations`
+    match cc.meta_data with
+    | None -> true
+    | Some cmd ->
+      let all_page_offsets = List.Tot.map (fun pl -> pl.offset) locs in
+      let contains (off: int64) = List.Tot.contains off all_page_offsets in
+      (match cmd.dictionary_page_offset, cmd.index_page_offset with
+        | Some dict_off, Some idx_off -> contains dict_off && contains idx_off
+        | Some dict_off, None -> contains dict_off
+        | None, Some idx_off -> contains idx_off
+        | None, None -> true) &&
+      contains cmd.data_page_offset
+  in
+  let col_size_ok =
+    //compressed size matches meta
+    match cc.meta_data with
+    | None -> true
+    | Some md ->
+      let s = List.Tot.fold_left (fun acc pl -> acc + I32.v pl.compressed_page_size) 0 locs in
+      s = I64.v md.total_compressed_size
+  in
+  let contiguous_ok =
+    match locs with
+    | [] -> true
+    | first :: rest -> page_offsets_are_contiguous first rest
+  in
+  // let ordered =
+  //   (* ordered by offset and disjoint *)
+  //   match locs with
+  //   | [] -> true
+  //   | first :: rest -> offsets_are_ordered first rest
+  // in
+  // let disj =
+  //   let pl_ranges =
+  //     List.Tot.map (fun pl -> { start = I64.v pl.offset; len = I32.v pl.compressed_page_size }) locs
+  //   in
+  //   ranges_disjoint pl_ranges
+  // in
+  // first_loc_ok && col_size_ok && ordered && disj
+  first_loc_ok && cc_page_offsets_ok && col_size_ok && contiguous_ok
