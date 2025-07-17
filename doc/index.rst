@@ -53,7 +53,11 @@ Manual
 
 * :ref:`build`
 
-* `EverCBOR Rust API<https://project-everest.github.io/everparse/evercbor-rust/cborrs/>`_
+* EverCBOR:
+
+  + `Documented C example<https://github.com/project-everest/everparse/blob/master/src/cbor/pulse/det/c/example/main.c>`_
+
+  + `Rust API reference<https://project-everest.github.io/everparse/evercbor-rust/cborrs/>`_
   
 In the News
 -----------
