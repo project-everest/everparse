@@ -1,4 +1,4 @@
-module LowParse.Spec.Parquet
+module Parquet.Spec
 
 module U32 = FStar.UInt32
 
