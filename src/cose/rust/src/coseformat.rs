@@ -75,8 +75,7 @@ parse_bool(c: crate::cbordetveraux::cbor_raw) ->
         };
     let res: bool = w == crate::cbordetveraux::simple_value_true;
     let res1: bool = res;
-    let res2: bool = evercddl_bool_pretty_right(res1);
-    res2
+    evercddl_bool_pretty_right(res1)
 }
 
 /**
@@ -219,8 +218,7 @@ parse_everparsenomatch(c: crate::cbordetveraux::cbor_raw) ->
     evercddl_everparsenomatch_pretty
 {
     crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(c);
-    let res2: evercddl_everparsenomatch_pretty = evercddl_everparsenomatch_pretty_right();
-    res2
+    evercddl_everparsenomatch_pretty_right()
 }
 
 /**
@@ -315,8 +313,7 @@ parse_uint(c: crate::cbordetveraux::cbor_raw) ->
             _ => panic!("Incomplete pattern matching")
         };
     let res1: u64 = res;
-    let res2: u64 = evercddl_uint_pretty_right(res1);
-    res2
+    evercddl_uint_pretty_right(res1)
 }
 
 /**
@@ -415,8 +412,7 @@ parse_nint(c: crate::cbordetveraux::cbor_raw) ->
             _ => panic!("Incomplete pattern matching")
         };
     let res1: u64 = res;
-    let res2: u64 = evercddl_nint_pretty_right(res1);
-    res2
+    evercddl_nint_pretty_right(res1)
 }
 
 /**
@@ -567,8 +563,7 @@ parse_int(c: crate::cbordetveraux::cbor_raw) ->
             let res: u64 = parse_nint(c);
             evercddl_int::Inr { v: res }
         };
-    let res2: evercddl_int_pretty = evercddl_int_pretty_right(res1);
-    res2
+    evercddl_int_pretty_right(res1)
 }
 
 /**
@@ -667,8 +662,7 @@ parse_bstr
             _ => panic!("Incomplete pattern matching")
         };
     let res1: &[u8] = s;
-    let res2: &[u8] = evercddl_bstr_pretty_right(res1);
-    res2
+    evercddl_bstr_pretty_right(res1)
 }
 
 /**
@@ -809,8 +803,7 @@ parse_encodedcbor
             _ => panic!("Incomplete pattern matching")
         };
     let res1: &[u8] = parse_bstr(cpl);
-    let res2: &[u8] = evercddl_encodedcbor_pretty_right(res1);
-    res2
+    evercddl_encodedcbor_pretty_right(res1)
 }
 
 /**
@@ -906,8 +899,7 @@ parse_bytes
     &'a [u8]
 {
     let res1: &[u8] = parse_bstr(c);
-    let res2: &[u8] = evercddl_bytes_pretty_right(res1);
-    res2
+    evercddl_bytes_pretty_right(res1)
 }
 
 /**
@@ -999,8 +991,7 @@ parse_tstr
             _ => panic!("Incomplete pattern matching")
         };
     let res1: &[u8] = s;
-    let res2: &[u8] = evercddl_tstr_pretty_right(res1);
-    res2
+    evercddl_tstr_pretty_right(res1)
 }
 
 /**
@@ -1173,8 +1164,7 @@ parse_label
             let res: &[u8] = parse_tstr(c);
             evercddl_label::Inr { v: res }
         };
-    let res2: evercddl_label_pretty = evercddl_label_pretty_right(res1);
-    res2
+    evercddl_label_pretty_right(res1)
 }
 
 /**
@@ -1297,8 +1287,7 @@ parse_tdate
             _ => panic!("Incomplete pattern matching")
         };
     let res1: &[u8] = parse_tstr(cpl);
-    let res2: &[u8] = evercddl_tdate_pretty_right(res1);
-    res2
+    evercddl_tdate_pretty_right(res1)
 }
 
 /**
@@ -1429,8 +1418,7 @@ parse_uri
             _ => panic!("Incomplete pattern matching")
         };
     let res1: &[u8] = parse_tstr(cpl);
-    let res2: &[u8] = evercddl_uri_pretty_right(res1);
-    res2
+    evercddl_uri_pretty_right(res1)
 }
 
 /**
@@ -1561,8 +1549,7 @@ parse_b64url
             _ => panic!("Incomplete pattern matching")
         };
     let res1: &[u8] = parse_tstr(cpl);
-    let res2: &[u8] = evercddl_b64url_pretty_right(res1);
-    res2
+    evercddl_b64url_pretty_right(res1)
 }
 
 /**
@@ -1695,8 +1682,7 @@ parse_b64legacy
             _ => panic!("Incomplete pattern matching")
         };
     let res1: &[u8] = parse_tstr(cpl);
-    let res2: &[u8] = evercddl_b64legacy_pretty_right(res1);
-    res2
+    evercddl_b64legacy_pretty_right(res1)
 }
 
 /**
@@ -1830,8 +1816,7 @@ parse_regexp
             _ => panic!("Incomplete pattern matching")
         };
     let res1: &[u8] = parse_tstr(cpl);
-    let res2: &[u8] = evercddl_regexp_pretty_right(res1);
-    res2
+    evercddl_regexp_pretty_right(res1)
 }
 
 /**
@@ -1964,8 +1949,7 @@ parse_mimemessage
             _ => panic!("Incomplete pattern matching")
         };
     let res1: &[u8] = parse_tstr(cpl);
-    let res2: &[u8] = evercddl_mimemessage_pretty_right(res1);
-    res2
+    evercddl_mimemessage_pretty_right(res1)
 }
 
 /**
@@ -2061,8 +2045,7 @@ parse_text
     &'a [u8]
 {
     let res1: &[u8] = parse_tstr(c);
-    let res2: &[u8] = evercddl_text_pretty_right(res1);
-    res2
+    evercddl_text_pretty_right(res1)
 }
 
 /**
@@ -2158,8 +2141,7 @@ parse_false(c: crate::cbordetveraux::cbor_raw) ->
     evercddl_false_pretty
 {
     crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(c);
-    let res2: evercddl_false_pretty = evercddl_false_pretty_right();
-    res2
+    evercddl_false_pretty_right()
 }
 
 /**
@@ -2269,8 +2251,7 @@ parse_true(c: crate::cbordetveraux::cbor_raw) ->
     evercddl_true_pretty
 {
     crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(c);
-    let res2: evercddl_true_pretty = evercddl_true_pretty_right();
-    res2
+    evercddl_true_pretty_right()
 }
 
 /**
@@ -2380,8 +2361,7 @@ parse_nil(c: crate::cbordetveraux::cbor_raw) ->
     evercddl_nil_pretty
 {
     crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(c);
-    let res2: evercddl_nil_pretty = evercddl_nil_pretty_right();
-    res2
+    evercddl_nil_pretty_right()
 }
 
 /**
@@ -2474,8 +2454,7 @@ parse_null(c: crate::cbordetveraux::cbor_raw) ->
     evercddl_nil_pretty
 {
     let res1: evercddl_nil_pretty = parse_nil(c);
-    let res2: evercddl_nil_pretty = evercddl_null_pretty_right(res1);
-    res2
+    evercddl_null_pretty_right(res1)
 }
 
 /**
@@ -2573,8 +2552,7 @@ parse_undefined(c: crate::cbordetveraux::cbor_raw) ->
     evercddl_undefined_pretty
 {
     crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(c);
-    let res2: evercddl_undefined_pretty = evercddl_undefined_pretty_right();
-    res2
+    evercddl_undefined_pretty_right()
 }
 
 /**
@@ -2684,8 +2662,7 @@ parse_any
     <'a>
 {
     let res1: crate::cbordetveraux::cbor_raw = c;
-    let res2: crate::cbordetveraux::cbor_raw = evercddl_any_pretty_right(res1);
-    res2
+    evercddl_any_pretty_right(res1)
 }
 
 /**
@@ -2778,8 +2755,7 @@ parse_values
     <'a>
 {
     let res1: crate::cbordetveraux::cbor_raw = parse_any(c);
-    let res2: crate::cbordetveraux::cbor_raw = evercddl_values_pretty_right(res1);
-    res2
+    evercddl_values_pretty_right(res1)
 }
 
 /**
@@ -2886,8 +2862,7 @@ aux_env24_parse_1
     let x: crate::cbordetveraux::cbor_raw =
         crate::cbordetver::cbor_det_array_iterator_next(&mut pc);
     let res1: evercddl_label_pretty = parse_label(x);
-    let res2: evercddl_label_pretty = aux_env24_type_1_pretty_right(res1);
-    res2
+    aux_env24_type_1_pretty_right(res1)
 }
 
 /**
@@ -2954,8 +2929,7 @@ aux_env24_parse_2
     <'a>
 {
     let res1: evercddl_label_pretty = parse_label(c);
-    let res2: evercddl_label_pretty = aux_env24_type_2_pretty_right(res1);
-    res2
+    aux_env24_type_2_pretty_right(res1)
 }
 
 /**
@@ -3044,8 +3018,7 @@ aux_env24_parse_3
     <'a>
 {
     let res1: crate::cbordetveraux::cbor_raw = parse_values(c);
-    let res2: crate::cbordetveraux::cbor_raw = aux_env24_type_3_pretty_right(res1);
-    res2
+    aux_env24_type_3_pretty_right(res1)
 }
 
 /**
@@ -7928,8 +7901,7 @@ parse_header_map
     either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_FStar_Pervasives_either···COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty····FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·)
     =
         (w12,w22);
-    let res2: evercddl_header_map_pretty = evercddl_header_map_pretty_right(res11);
-    res2
+    evercddl_header_map_pretty_right(res11)
 }
 
 /**
@@ -12320,9 +12292,7 @@ parse_empty_or_serialized_map
             let res: &[u8] = s;
             evercddl_empty_or_serialized_map::Inr { v: res }
         };
-    let res2: evercddl_empty_or_serialized_map_pretty =
-        evercddl_empty_or_serialized_map_pretty_right(res1);
-    res2
+    evercddl_empty_or_serialized_map_pretty_right(res1)
 }
 
 /**
@@ -12687,8 +12657,7 @@ parse_COSE_Signature
     let w20: &[u8] = parse_bstr(x1);
     let res1: ((evercddl_empty_or_serialized_map_pretty, evercddl_header_map_pretty), &[u8]) =
         (w10,w20);
-    let res2: evercddl_COSE_Signature_pretty = evercddl_COSE_Signature_pretty_right(res1);
-    res2
+    evercddl_COSE_Signature_pretty_right(res1)
 }
 
 /**
@@ -12893,8 +12862,7 @@ aux_env28_parse_1
     let x: crate::cbordetveraux::cbor_raw =
         crate::cbordetver::cbor_det_array_iterator_next(&mut pc);
     let res1: evercddl_COSE_Signature_pretty = parse_COSE_Signature(x);
-    let res2: evercddl_COSE_Signature_pretty = aux_env28_type_1_pretty_right(res1);
-    res2
+    aux_env28_type_1_pretty_right(res1)
 }
 
 /**
@@ -13369,8 +13337,7 @@ parse_COSE_Sign
     either__CDDL_Pulse_Types_slice·COSE_Format_aux_env28_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env28_type_1_pretty))
     =
         (w10,w21);
-    let res2: evercddl_COSE_Sign_pretty = evercddl_COSE_Sign_pretty_right(res1);
-    res2
+    evercddl_COSE_Sign_pretty_right(res1)
 }
 
 /**
@@ -13892,8 +13859,7 @@ parse_COSE_Sign_Tagged
             _ => panic!("Incomplete pattern matching")
         };
     let res1: evercddl_COSE_Sign_pretty = parse_COSE_Sign(cpl);
-    let res2: evercddl_COSE_Sign_pretty = evercddl_COSE_Sign_Tagged_pretty_right(res1);
-    res2
+    evercddl_COSE_Sign_Tagged_pretty_right(res1)
 }
 
 /**
@@ -14232,8 +14198,7 @@ parse_COSE_Sign1
     (either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty, &[u8]))
     =
         (w10,w21);
-    let res2: evercddl_COSE_Sign1_pretty = evercddl_COSE_Sign1_pretty_right(res1);
-    res2
+    evercddl_COSE_Sign1_pretty_right(res1)
 }
 
 /**
@@ -14550,9 +14515,7 @@ parse_COSE_Untagged_Message
             let res: evercddl_COSE_Sign1_pretty = parse_COSE_Sign1(c);
             evercddl_COSE_Untagged_Message::Inr { v: res }
         };
-    let res2: evercddl_COSE_Untagged_Message_pretty =
-        evercddl_COSE_Untagged_Message_pretty_right(res1);
-    res2
+    evercddl_COSE_Untagged_Message_pretty_right(res1)
 }
 
 /**
@@ -14686,8 +14649,7 @@ parse_COSE_Sign1_Tagged
             _ => panic!("Incomplete pattern matching")
         };
     let res1: evercddl_COSE_Sign1_pretty = parse_COSE_Sign1(cpl);
-    let res2: evercddl_COSE_Sign1_pretty = evercddl_COSE_Sign1_Tagged_pretty_right(res1);
-    res2
+    evercddl_COSE_Sign1_Tagged_pretty_right(res1)
 }
 
 /**
@@ -14860,9 +14822,7 @@ parse_COSE_Tagged_Message
             let res: evercddl_COSE_Sign1_pretty = parse_COSE_Sign1_Tagged(c);
             evercddl_COSE_Tagged_Message::Inr { v: res }
         };
-    let res2: evercddl_COSE_Tagged_Message_pretty =
-        evercddl_COSE_Tagged_Message_pretty_right(res1);
-    res2
+    evercddl_COSE_Tagged_Message_pretty_right(res1)
 }
 
 /**
@@ -15017,8 +14977,7 @@ parse_COSE_Messages
             let res: evercddl_COSE_Tagged_Message_pretty = parse_COSE_Tagged_Message(c);
             evercddl_COSE_Messages::Inr { v: res }
         };
-    let res2: evercddl_COSE_Messages_pretty = evercddl_COSE_Messages_pretty_right(res1);
-    res2
+    evercddl_COSE_Messages_pretty_right(res1)
 }
 
 /**
@@ -15981,8 +15940,7 @@ parse_Sig_structure
     either__·COSE_Format_evercddl_empty_or_serialized_map_pretty····COSE_Format_evercddl_bstr_pretty···COSE_Format_evercddl_bstr_pretty··_·COSE_Format_evercddl_bstr_pretty···COSE_Format_evercddl_bstr_pretty·))
     =
         (w1,w20);
-    let res2: evercddl_Sig_structure_pretty = evercddl_Sig_structure_pretty_right(res1);
-    res2
+    evercddl_Sig_structure_pretty_right(res1)
 }
 
 /**
@@ -16430,8 +16388,7 @@ parse_Internal_Types
     <'a>
 {
     let res1: evercddl_Sig_structure_pretty = parse_Sig_structure(c);
-    let res2: evercddl_Sig_structure_pretty = evercddl_Internal_Types_pretty_right(res1);
-    res2
+    evercddl_Internal_Types_pretty_right(res1)
 }
 
 /**
@@ -16571,8 +16528,7 @@ parse_start
             let res: evercddl_Sig_structure_pretty = parse_Internal_Types(c);
             evercddl_start::Inr { v: res }
         };
-    let res2: evercddl_start_pretty = evercddl_start_pretty_right(res1);
-    res2
+    evercddl_start_pretty_right(res1)
 }
 
 /**
@@ -17574,8 +17530,7 @@ parse_COSE_Key_OKP
     either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty)
     =
         (w11,w22);
-    let res2: evercddl_COSE_Key_OKP_pretty = evercddl_COSE_Key_OKP_pretty_right(res1);
-    res2
+    evercddl_COSE_Key_OKP_pretty_right(res1)
 }
 
 /**
@@ -18675,8 +18630,7 @@ parse_COSE_Key
     <'a>
 {
     let res1: evercddl_COSE_Key_OKP_pretty = parse_COSE_Key_OKP(c);
-    let res2: evercddl_COSE_Key_OKP_pretty = evercddl_COSE_Key_pretty_right(res1);
-    res2
+    evercddl_COSE_Key_pretty_right(res1)
 }
 
 /**
@@ -18804,8 +18758,7 @@ parse_eb64url
             _ => panic!("Incomplete pattern matching")
         };
     let res1: crate::cbordetveraux::cbor_raw = parse_any(cpl);
-    let res2: crate::cbordetveraux::cbor_raw = evercddl_eb64url_pretty_right(res1);
-    res2
+    evercddl_eb64url_pretty_right(res1)
 }
 
 /**
@@ -18945,8 +18898,7 @@ parse_eb64legacy
             _ => panic!("Incomplete pattern matching")
         };
     let res1: crate::cbordetveraux::cbor_raw = parse_any(cpl);
-    let res2: crate::cbordetveraux::cbor_raw = evercddl_eb64legacy_pretty_right(res1);
-    res2
+    evercddl_eb64legacy_pretty_right(res1)
 }
 
 /**
@@ -19087,8 +19039,7 @@ parse_eb16
             _ => panic!("Incomplete pattern matching")
         };
     let res1: crate::cbordetveraux::cbor_raw = parse_any(cpl);
-    let res2: crate::cbordetveraux::cbor_raw = evercddl_eb16_pretty_right(res1);
-    res2
+    evercddl_eb16_pretty_right(res1)
 }
 
 /**
@@ -19226,8 +19177,7 @@ parse_cborany
             _ => panic!("Incomplete pattern matching")
         };
     let res1: crate::cbordetveraux::cbor_raw = parse_any(cpl);
-    let res2: crate::cbordetveraux::cbor_raw = evercddl_cborany_pretty_right(res1);
-    res2
+    evercddl_cborany_pretty_right(res1)
 }
 
 /**

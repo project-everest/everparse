@@ -560,23 +560,7 @@
 <a href="#559" id="559">559</a>
 <a href="#560" id="560">560</a>
 <a href="#561" id="561">561</a>
-<a href="#562" id="562">562</a>
-<a href="#563" id="563">563</a>
-<a href="#564" id="564">564</a>
-<a href="#565" id="565">565</a>
-<a href="#566" id="566">566</a>
-<a href="#567" id="567">567</a>
-<a href="#568" id="568">568</a>
-<a href="#569" id="569">569</a>
-<a href="#570" id="570">570</a>
-<a href="#571" id="571">571</a>
-<a href="#572" id="572">572</a>
-<a href="#573" id="573">573</a>
-<a href="#574" id="574">574</a>
-<a href="#575" id="575">575</a>
-<a href="#576" id="576">576</a>
-<a href="#577" id="577">577</a>
-<a href="#578" id="578">578</a></pre></div><pre class="rust"><code><span class="attr">#![allow(non_snake_case)]
+<a href="#562" id="562">562</a></pre></div><pre class="rust"><code><span class="attr">#![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(unused_assignments)]
@@ -600,8 +584,7 @@
     option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
     &lt;<span class="lifetime">'a</span>&gt;
 {
-    <span class="kw">let </span>res: usize = <span class="kw">crate</span>::cbordetveraux::cbor_validate_det(input);
-    <span class="kw">let </span>len: usize = res;
+    <span class="kw">let </span>len: usize = <span class="kw">crate</span>::cbordetveraux::cbor_validate_det(input);
     <span class="kw">if </span>len == <span class="number">0usize
     </span>{ option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None }
     <span class="kw">else
@@ -616,10 +599,9 @@
         <span class="kw">let </span>input2: <span class="kw-2">&amp;</span>[u8] = _letpattern.<span class="number">0</span>;
         <span class="kw">let </span>rem: <span class="kw-2">&amp;</span>[u8] = _letpattern.<span class="number">1</span>;
         <span class="kw">let </span>len1: usize = input2.len();
-        <span class="kw">let </span>res0: <span class="kw">crate</span>::cbordetveraux::cbor_raw = <span class="kw">crate</span>::cbordetveraux::cbor_parse(input2, len1);
-        <span class="kw">let </span>res1: <span class="kw">crate</span>::cbordetveraux::cbor_raw = res0;
+        <span class="kw">let </span>res: <span class="kw">crate</span>::cbordetveraux::cbor_raw = <span class="kw">crate</span>::cbordetveraux::cbor_parse(input2, len1);
         option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
-        { v: (res1,rem) }
+        { v: (res,rem) }
     }
 }
 
@@ -697,9 +679,7 @@
             cbor_int_size: (<span class="kw">crate</span>::cbordetveraux::mk_raw_uint64(v)).size,
             cbor_int_value: (<span class="kw">crate</span>::cbordetveraux::mk_raw_uint64(v)).value
         };
-    <span class="kw">let </span>res: <span class="kw">crate</span>::cbordetveraux::cbor_raw =
-        <span class="kw">crate</span>::cbordetveraux::cbor_raw::CBOR_Case_Int { v: resi };
-    res
+    <span class="kw">crate</span>::cbordetveraux::cbor_raw::CBOR_Case_Int { v: resi }
 }
 
 <span class="attr">#[derive(PartialEq, Clone, Copy)]
@@ -918,9 +898,8 @@
                 <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"Incomplete pattern matching"</span>)
             };
         <span class="kw">let </span>tag: u64 = res.value;
-        <span class="kw">let </span>res0: <span class="kw">crate</span>::cbordetveraux::cbor_raw =
+        <span class="kw">let </span>payload: <span class="kw">crate</span>::cbordetveraux::cbor_raw =
             <span class="kw">crate</span>::cbordetveraux::cbor_match_tagged_get_payload(c);
-        <span class="kw">let </span>payload: <span class="kw">crate</span>::cbordetveraux::cbor_raw = res0;
         cbor_det_view::Tagged { tag, payload }
     }
     <span class="kw">else
@@ -957,11 +936,7 @@
 <span class="kw">pub fn </span>cbor_det_array_iterator_start &lt;<span class="lifetime">'a</span>&gt;(x: <span class="kw">crate</span>::cbordetveraux::cbor_raw &lt;<span class="lifetime">'a</span>&gt;) -&gt;
     <span class="kw">crate</span>::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
     &lt;<span class="lifetime">'a</span>&gt;
-{
-    <span class="kw">let </span>res: <span class="kw">crate</span>::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-        <span class="kw">crate</span>::cbordetveraux::cbor_array_iterator_init(x);
-    res
-}
+{ <span class="kw">crate</span>::cbordetveraux::cbor_array_iterator_init(x) }
 
 <span class="kw">pub fn </span>cbor_det_array_iterator_is_empty(
     x: <span class="kw">crate</span>::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
@@ -988,11 +963,7 @@
 ) -&gt;
     <span class="kw">crate</span>::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
     &lt;<span class="lifetime">'a</span>&gt;
-{
-    <span class="kw">let </span>res: <span class="kw">crate</span>::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-        <span class="kw">crate</span>::cbordetveraux::cbor_array_iterator_truncate(x, len);
-    res
-}
+{ <span class="kw">crate</span>::cbordetveraux::cbor_array_iterator_truncate(x, len) }
 
 <span class="kw">pub fn </span>cbor_det_get_array_item &lt;<span class="lifetime">'a</span>&gt;(x: <span class="kw">crate</span>::cbordetveraux::cbor_raw &lt;<span class="lifetime">'a</span>&gt;, i: u64) -&gt;
     option__CBOR_Pulse_Raw_Type_cbor_raw
@@ -1004,8 +975,7 @@
     <span class="kw">else
     </span>{
         <span class="kw">let </span>res: <span class="kw">crate</span>::cbordetveraux::cbor_raw = <span class="kw">crate</span>::cbordetveraux::cbor_array_item(x, i);
-        <span class="kw">let </span>res0: <span class="kw">crate</span>::cbordetveraux::cbor_raw = res;
-        option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: res0 }
+        option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: res }
     }
 }
 
@@ -1138,8 +1108,7 @@
 <span class="kw">pub fn </span>cbor_det_serialize_array(len: u64, out: <span class="kw-2">&amp;mut </span>[u8], off: usize) -&gt; usize
 {
     <span class="kw">let </span>rlen: <span class="kw">crate</span>::cbordetveraux::raw_uint64 = <span class="kw">crate</span>::cbordetveraux::mk_raw_uint64(len);
-    <span class="kw">let </span>res: usize = <span class="kw">crate</span>::cbordetveraux::cbor_serialize_array(rlen, out, off);
-    res
+    <span class="kw">crate</span>::cbordetveraux::cbor_serialize_array(rlen, out, off)
 }
 
 <span class="kw">pub fn </span>cbor_det_serialize_map_insert(out: <span class="kw-2">&amp;mut </span>[u8], off2: usize, off3: usize) -&gt; bool
@@ -1148,8 +1117,7 @@
 <span class="kw">pub fn </span>cbor_det_serialize_map(len: u64, out: <span class="kw-2">&amp;mut </span>[u8], off: usize) -&gt; usize
 {
     <span class="kw">let </span>rlen: <span class="kw">crate</span>::cbordetveraux::raw_uint64 = <span class="kw">crate</span>::cbordetveraux::mk_raw_uint64(len);
-    <span class="kw">let </span>res: usize = <span class="kw">crate</span>::cbordetveraux::cbor_serialize_map(rlen, out, off);
-    res
+    <span class="kw">crate</span>::cbordetveraux::cbor_serialize_map(rlen, out, off)
 }
 
 <span class="kw">pub fn </span>dummy_cbor_det_t &lt;<span class="lifetime">'a</span>&gt;() -&gt; <span class="kw">crate</span>::cbordetveraux::cbor_raw &lt;<span class="lifetime">'a</span>&gt;

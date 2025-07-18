@@ -1860,11 +1860,7 @@ pub(crate) fn cbor_parse <'a>(input: &'a [u8], len: usize) -> cbor_raw <'a>
     cbor_read(input1)
 }
 
-fn cbor_jump(input: &[u8], off: usize) -> usize
-{
-    let res: usize = jump_raw_data_item(input, off);
-    res
-}
+fn cbor_jump(input: &[u8], off: usize) -> usize { jump_raw_data_item(input, off) }
 
 #[derive(PartialEq, Clone, Copy)]
 enum cbor_raw_map_insert_result
@@ -2987,8 +2983,7 @@ pub(crate) fn ser·(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                         let x11: cbor_raw = e.cbor_map_entry_key;
                         let res11: usize = ser·(x11, out, off);
                         let x2: cbor_raw = e.cbor_map_entry_value;
-                        let res2: usize = ser·(x2, out, res11);
-                        let res: usize = res2;
+                        let res: usize = ser·(x2, out, res11);
                         (&mut pi)[0] = i·;
                         (&mut pres)[0] = res;
                         let i1: usize = (&pi)[0];
@@ -3068,10 +3063,7 @@ fn ser(x1·: cbor_raw, out: &mut [u8], offset: usize) -> usize
 }
 
 pub(crate) fn cbor_serialize(x: cbor_raw, output: &mut [u8]) -> usize
-{
-    let res: usize = ser(x, output, 0usize);
-    res
-}
+{ ser(x, output, 0usize) }
 
 pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
 {

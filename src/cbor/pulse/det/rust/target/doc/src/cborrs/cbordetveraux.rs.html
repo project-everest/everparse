@@ -4384,15 +4384,7 @@
 <a href="#4383" id="4383">4383</a>
 <a href="#4384" id="4384">4384</a>
 <a href="#4385" id="4385">4385</a>
-<a href="#4386" id="4386">4386</a>
-<a href="#4387" id="4387">4387</a>
-<a href="#4388" id="4388">4388</a>
-<a href="#4389" id="4389">4389</a>
-<a href="#4390" id="4390">4390</a>
-<a href="#4391" id="4391">4391</a>
-<a href="#4392" id="4392">4392</a>
-<a href="#4393" id="4393">4393</a>
-<a href="#4394" id="4394">4394</a></pre></div><pre class="rust"><code><span class="attr">#![allow(non_snake_case)]
+<a href="#4386" id="4386">4386</a></pre></div><pre class="rust"><code><span class="attr">#![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(unused_assignments)]
@@ -6254,11 +6246,7 @@
     cbor_read(input1)
 }
 
-<span class="kw">fn </span>cbor_jump(input: <span class="kw-2">&amp;</span>[u8], off: usize) -&gt; usize
-{
-    <span class="kw">let </span>res: usize = jump_raw_data_item(input, off);
-    res
-}
+<span class="kw">fn </span>cbor_jump(input: <span class="kw-2">&amp;</span>[u8], off: usize) -&gt; usize { jump_raw_data_item(input, off) }
 
 <span class="attr">#[derive(PartialEq, Clone, Copy)]
 </span><span class="kw">enum </span>cbor_raw_map_insert_result
@@ -7381,8 +7369,7 @@
                         <span class="kw">let </span>x11: cbor_raw = e.cbor_map_entry_key;
                         <span class="kw">let </span>res11: usize = ser·(x11, out, off);
                         <span class="kw">let </span>x2: cbor_raw = e.cbor_map_entry_value;
-                        <span class="kw">let </span>res2: usize = ser·(x2, out, res11);
-                        <span class="kw">let </span>res: usize = res2;
+                        <span class="kw">let </span>res: usize = ser·(x2, out, res11);
                         (<span class="kw-2">&amp;mut </span>pi)[<span class="number">0</span>] = i·;
                         (<span class="kw-2">&amp;mut </span>pres)[<span class="number">0</span>] = res;
                         <span class="kw">let </span>i1: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
@@ -7462,10 +7449,7 @@
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>cbor_serialize(x: cbor_raw, output: <span class="kw-2">&amp;mut </span>[u8]) -&gt; usize
-{
-    <span class="kw">let </span>res: usize = ser(x, output, <span class="number">0usize</span>);
-    res
-}
+{ ser(x, output, <span class="number">0usize</span>) }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>siz·(x·: cbor_raw, out: <span class="kw-2">&amp;mut </span>[usize]) -&gt; bool
 {
