@@ -627,6 +627,7 @@ let impl_serialize_array_group_valid_zero_or_more_true_intro
   end
   else ()
 
+#push-options "--z3rlimit 32"
 #restart-solver
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_array_group_zero_or_more_slice
@@ -741,6 +742,8 @@ fn impl_serialize_array_group_zero_or_more_slice
   GR.free pl1;
   !pres
 }
+
+#pop-options
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_serialize_array_group_zero_or_more_iterator_t
