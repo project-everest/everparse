@@ -1,0 +1,32 @@
+(lang dune 3.19)
+
+(name parquet)
+
+(generate_opam_files true)
+
+; (source
+;  (github username/reponame))
+
+(authors "Yi Cai <caiyeee@outlook.com>")
+
+(maintainers "Yi Cai <caiyeee@outlook.com>")
+
+; (license LICENSE)
+
+; (documentation https://url/to/documentation)
+
+(pin
+ (package
+  (name thrift))
+ (url git+https://github.com/vbmithr/ocaml-thrift-lib))
+
+(package
+ (name parquet)
+ (synopsis "An Apache Parquet File Format Validator")
+ (description "Validator extracted from F* specification; metadata parser generated from the Thrift compiler")
+ (depends ocaml thrift)
+ (tags
+  ("add topics" "to describe" your project)))
+
+
+; See the complete stanza docs at https://dune.readthedocs.io/en/stable/reference/dune-project/index.html
