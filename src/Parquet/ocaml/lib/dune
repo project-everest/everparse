@@ -1,0 +1,7 @@
+(library
+ (name parquet)
+ (libraries thrift))
+
+(env
+  (dev
+    (flags (:standard -warn-error -A))))

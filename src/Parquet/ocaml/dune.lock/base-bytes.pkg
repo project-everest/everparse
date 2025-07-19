@@ -1,0 +1,3 @@
+(version base)
+
+(depends ocaml ocamlfind)
