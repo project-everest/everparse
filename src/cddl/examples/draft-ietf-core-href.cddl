@@ -1,0 +1,40 @@
+RFC-XXXX-Definitions = [CRI, CRI-Reference]
+
+CRI = [
+  scheme,
+  authority / no-authority,
+  path,                    ; use [] for empty path
+  query,                   ; use [] for empty query
+  fragment / null
+]
+
+
+CRI-Reference = [
+  ((scheme / null, authority / no-authority)
+   // discard),            ; relative reference
+  path / null,             ; null is explicitly not set
+  query / null,            ; null is explicitly not set
+  fragment / null
+]
+
+scheme      = scheme-id / scheme-name ; (scheme-name .feature "scheme-name")
+scheme-id   = nint              ; -1 - scheme-number
+scheme-name = text ; TODO: support .regexp "[a-z][a-z0-9+.-]*"
+
+no-authority = NOAUTH-ROOTBASED / NOAUTH-ROOTLESS
+NOAUTH-ROOTBASED = null ; .feature "no-authority"
+NOAUTH-ROOTLESS = true ; .feature "no-authority"
+
+authority   = [?userinfo, host, ?port]
+userinfo    = (false, text) ; TODO: support .feature "userinfo")
+host        = host-name ; host-ip ; (host-ip // host-name) ; TODO: add support for non-disjoint arrays, with explicit serializability check
+host-name   = (*text)      ; lowercase, NFC labels; no dot
+host-ip     = ((bytes .size 4 / bytes .size 16), ?zone-id) ; TODO: define and distribute bytes .size (4 / 16)
+zone-id     = text
+port        = 0..65535
+
+discard     = DISCARD-ALL / 0..127
+DISCARD-ALL = true
+path        = [*text]
+query       = [*text]
+fragment    = text

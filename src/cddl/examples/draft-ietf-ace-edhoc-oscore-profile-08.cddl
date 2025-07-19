@@ -1,0 +1,22 @@
+EDHOC_Information = {
+  ?  0 => bstr,                   ; id
+  ?  1 => int / array,            ; methods
+  ?  2 => int / array,            ; cipher_suites
+  ?  3 => true / false,           ; message_4
+  ?  4 => true / false,           ; comb_req
+  ?  5 => tstr,                   ; uri_path
+  ?  6 => int / array,            ; cred_types
+  ?  7 => int / tstr / array,     ; id_cred_types
+  ?  8 => uint / array,           ; eads
+  ?  9 => true / false,           ; initiator
+  ? 10 => true / false,           ; responder
+  ? 11 => uint,                   ; max_msgsize
+  ? 12 => true / false,           ; coap_ct
+  ? 13 => int / array,            ; ep_id_types
+  ? 14 => int / array,            ; transports
+  ? 15 => map,                    ; trust_anchors
+  * (int / tstr) => any ; DOES NOT work without parentheses
+}
+
+map = { * any => any }
+array = [ * any ]

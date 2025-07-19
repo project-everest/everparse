@@ -1,0 +1,77 @@
+suites = [ int, int, * int ] / int
+
+map = { * any => any }
+
+ead = (
+  ead_label : int,
+  ? ead_value : bstr,
+)
+
+EAD_1 = (ead, * ead) ; TODO: support 1* ead
+EAD_2 = (ead, * ead)
+EAD_3 = (ead, * ead)
+EAD_4 = (ead, * ead)
+
+message_1 = (
+  METHOD : int,
+  SUITES_I : suites,
+  G_X : bstr,
+  C_I : bstr / -24..23,
+  ? EAD_1,
+)
+
+message_1_as_array = [ message_1 ]
+
+message_2 = (
+  G_Y_CIPHERTEXT_2 : bstr,
+)
+
+message_2_as_array = [ message_2 ]
+
+C_R = ( -24 .. 23 ) / bstr
+
+PLAINTEXT_2 = (
+  C_R,
+  ID_CRED_R : map / bstr / -24..23,
+  Signature_or_MAC_2 : bstr,
+  ? EAD_2,
+)
+
+PLAINTEXT_2_as_array = [ PLAINTEXT_2 ]
+
+message_3 = (
+  CIPHERTEXT_3 : bstr,
+)
+
+message_3_as_array = [ message_3 ]
+
+PLAINTEXT_3 = (
+  ID_CRED_I : map / bstr / -24..23,
+  Signature_or_MAC_3 : bstr,
+  ? EAD_3,
+)
+
+PLAINTEXT_3_as_array = [ PLAINTEXT_3 ]
+
+message_4 = (
+  CIPHERTEXT_4 : bstr,
+)
+
+message_4_as_array = [ message_4 ]
+
+PLAINTEXT_4 = (
+  ? EAD_4,
+)
+
+PLAINTEXT_4_as_array = [ PLAINTEXT_4 ]
+
+; error = (
+;   ERR_CODE : int,
+;   ERR_INFO : any,
+; )
+
+; info = (
+;   info_label : int,
+;   context : bstr,
+;   length : uint,
+; )
