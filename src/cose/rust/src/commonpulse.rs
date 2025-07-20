@@ -85,25 +85,25 @@ pub fn mk_phdrs <'a>(
             crate::coseformat::option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty::Some
             { v: crate::coseformat::evercddl_label::Inl { v: alg· } },
             intkey2:
-            crate::coseformat::option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty::None,
+            crate::coseformat::option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty::None,
             intkey3:
             crate::coseformat::option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty::None,
             intkey4: crate::coseformat::option__COSE_Format_evercddl_bstr_pretty::None,
             _x0:
-            crate::coseformat::either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_FStar_Pervasives_either···COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty····FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·::Inr
+            crate::coseformat::either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·::Inr
             {
                 v:
-                crate::coseformat::either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_··FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·::Inr
+                crate::coseformat::either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_·FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·::Inr
                 {
                     v:
                     (
-                        (
-                            crate::coseformat::option__COSE_Format_evercddl_everparsenomatch_pretty::None,crate::coseformat::option__COSE_Format_evercddl_everparsenomatch_pretty::None
-                        ),crate::coseformat::either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty::Inl
-                        { v: rest2 }
+                        crate::coseformat::option__COSE_Format_evercddl_everparsenomatch_pretty::None,crate::coseformat::option__COSE_Format_evercddl_everparsenomatch_pretty::None
                     )
                 }
-            }
+            },
+            _x1:
+            crate::coseformat::either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty::Inl
+            { v: rest2 }
         }
     }
 }
@@ -137,25 +137,25 @@ pub fn sign1 <'a>(
                 crate::coseformat::option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty::Some
                 { v: crate::coseformat::evercddl_label::Inl { v: alg· } },
                 intkey2:
-                crate::coseformat::option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty::None,
+                crate::coseformat::option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty::None,
                 intkey3:
                 crate::coseformat::option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty::None,
                 intkey4: crate::coseformat::option__COSE_Format_evercddl_bstr_pretty::None,
                 _x0:
-                crate::coseformat::either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_FStar_Pervasives_either···COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty····FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·::Inr
+                crate::coseformat::either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·::Inr
                 {
                     v:
-                    crate::coseformat::either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_··FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·::Inr
+                    crate::coseformat::either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_·FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·::Inr
                     {
                         v:
                         (
-                            (
-                                crate::coseformat::option__COSE_Format_evercddl_everparsenomatch_pretty::None,crate::coseformat::option__COSE_Format_evercddl_everparsenomatch_pretty::None
-                            ),crate::coseformat::either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty::Inl
-                            { v: rest2 }
+                            crate::coseformat::option__COSE_Format_evercddl_everparsenomatch_pretty::None,crate::coseformat::option__COSE_Format_evercddl_everparsenomatch_pretty::None
                         )
                     }
-                }
+                },
+                _x1:
+                crate::coseformat::either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty::Inl
+                { v: rest2 }
             }
         };
     let mut sigbuf: [u8; 64] = [0u8; 64usize];
@@ -201,25 +201,25 @@ pub fn sign1_simple <'a>(privkey: &'a [u8], payload: &'a [u8], outbuf: &'a mut [
             intkey1:
             crate::coseformat::option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty::None,
             intkey2:
-            crate::coseformat::option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty::None,
+            crate::coseformat::option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty::None,
             intkey3:
             crate::coseformat::option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty::None,
             intkey4: crate::coseformat::option__COSE_Format_evercddl_bstr_pretty::None,
             _x0:
-            crate::coseformat::either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_FStar_Pervasives_either···COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty····FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·::Inr
+            crate::coseformat::either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·::Inr
             {
                 v:
-                crate::coseformat::either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_··FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·::Inr
+                crate::coseformat::either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_·FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·::Inr
                 {
                     v:
                     (
-                        (
-                            crate::coseformat::option__COSE_Format_evercddl_everparsenomatch_pretty::None,crate::coseformat::option__COSE_Format_evercddl_everparsenomatch_pretty::None
-                        ),crate::coseformat::either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty::Inl
-                        { v: rest2 }
+                        crate::coseformat::option__COSE_Format_evercddl_everparsenomatch_pretty::None,crate::coseformat::option__COSE_Format_evercddl_everparsenomatch_pretty::None
                     )
                 }
-            }
+            },
+            _x1:
+            crate::coseformat::either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty::Inl
+            { v: rest2 }
         };
     let aadbuf: [u8; 0] = [0u8; 0usize];
     let aadslice: &[u8] = &aadbuf;
@@ -241,25 +241,25 @@ pub fn sign1_simple <'a>(privkey: &'a [u8], payload: &'a [u8], outbuf: &'a mut [
                 crate::coseformat::option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty::Some
                 { v: crate::coseformat::evercddl_label::Inl { v: alg· } },
                 intkey2:
-                crate::coseformat::option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty::None,
+                crate::coseformat::option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty::None,
                 intkey3:
                 crate::coseformat::option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty::None,
                 intkey4: crate::coseformat::option__COSE_Format_evercddl_bstr_pretty::None,
                 _x0:
-                crate::coseformat::either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_FStar_Pervasives_either···COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty····FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·::Inr
+                crate::coseformat::either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·::Inr
                 {
                     v:
-                    crate::coseformat::either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_··FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·::Inr
+                    crate::coseformat::either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_·FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·::Inr
                     {
                         v:
                         (
-                            (
-                                crate::coseformat::option__COSE_Format_evercddl_everparsenomatch_pretty::None,crate::coseformat::option__COSE_Format_evercddl_everparsenomatch_pretty::None
-                            ),crate::coseformat::either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty::Inl
-                            { v: rest20 }
+                            crate::coseformat::option__COSE_Format_evercddl_everparsenomatch_pretty::None,crate::coseformat::option__COSE_Format_evercddl_everparsenomatch_pretty::None
                         )
                     }
-                }
+                },
+                _x1:
+                crate::coseformat::either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty::Inl
+                { v: rest20 }
             }
         };
     let mut sigbuf: [u8; 64] = [0u8; 64usize];

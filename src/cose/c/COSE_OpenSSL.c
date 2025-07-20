@@ -47,20 +47,18 @@ COSE_Format_evercddl_header_map_pretty COSE_OpenSSL_empty_sig_headers() {
             .case_Inr = {
                 .tag = COSE_Format_Inr,
                 .case_Inr = {
-		  .fst = {
                     .fst = { .tag = FStar_Pervasives_Native_None },
                     .snd = { .tag = FStar_Pervasives_Native_None },
-		  },
-		  .snd =  {
-		    .tag = COSE_Format_Inl,
-		    .case_Inl = {
-		      .elt = (K___COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty[]) {},
-		      .len = 0,
-		    },
-		  },
-		},
-	    },
-	},
+                },
+            }
+        },
+        ._x1 = {
+            .tag = COSE_Format_Inl,
+            .case_Inl = {
+                .elt = (K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty[]) {},
+                .len = 0,
+            },
+        },
     };
 }
 
