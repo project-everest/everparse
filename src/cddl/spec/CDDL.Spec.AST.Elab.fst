@@ -169,6 +169,16 @@ let rec mk_elab_map_group
       else ROutOfFuel
     | _ -> RFailure ("mk_elab_map_group: undefined group: " ^ n)
     end
+  | GZeroOrMore (GDef n) ->
+    begin match env.e_sem_env.se_bound n with
+    | Some NGroup ->
+      let g1 = env.e_env n in
+      let (g2, res) = rewrite_group fuel true g1 in
+      if res
+      then mk_elab_map_group fuel' env (GZeroOrMore g2)
+      else ROutOfFuel
+    | _ -> RFailure ("mk_elab_map_group: undefined group: " ^ n)
+    end
   | _ -> RFailure ("mk_elab_map_group: unsupported" ^ CDDL.Spec.AST.Print.group_to_string g)
 
 let rec mk_elab_map_group_bounded
@@ -196,6 +206,18 @@ let rec mk_elab_map_group_bounded
     let g' = (env.e_env n) in
     rewrite_group_bounded env.e_sem_env.se_bound fuel true g';
     mk_elab_map_group_bounded fuel' env (fst (rewrite_group fuel true g'))
+  | GZeroOrMore (GDef n) ->
+    begin match env.e_sem_env.se_bound n with
+    | Some NGroup ->
+      let g1 = env.e_env n in
+      let (g2, res) = rewrite_group fuel true g1 in
+      if res
+      then begin
+        rewrite_group_bounded env.e_sem_env.se_bound fuel true g1;
+        mk_elab_map_group_bounded fuel' env (GZeroOrMore g2)
+      end
+      else ()
+    end
   | _ -> ()
 
 let rec mk_elab_map_group_correct
@@ -230,6 +252,10 @@ let rec mk_elab_map_group_correct
     let g' = (env.e_env n) in
     rewrite_group_correct env.e_sem_env fuel true g';
     mk_elab_map_group_correct fuel' env (fst (rewrite_group fuel true g'))
+  | GZeroOrMore (GDef n) ->
+    let g' = (env.e_env n) in
+    rewrite_group_correct env.e_sem_env fuel true g';
+    mk_elab_map_group_correct fuel' env (GZeroOrMore (fst (rewrite_group fuel true g')))
   | _ -> ()
 
 let typ_inter_underapprox_postcond
