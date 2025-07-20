@@ -7,8 +7,9 @@ open CDDL_Spec_AST_Base
 type state = {
   env: CDDL_Spec_AST_Base.name_env;
   sockets: string list;
+  result: CDDL_Spec_AST_Base.program;
 }
-type cddl_t = (state * (string * CDDL_Spec_AST_Driver.decl) list)
+type cddl_t = state
 type 'a parser = (Tokens.token, state, 'a, cddl_t) ABNF.parser
 type symbol = unit parser
 
@@ -98,7 +99,7 @@ let typename = debug "typename"
       if not (List.mem n s.sockets)
       then begin match s.env n with
       | None ->
-        let s' = {
+        let s' = { s with
           env = CDDL_Spec_AST_Base.extend_name_env s.env n CDDL_Spec_AST_Base.NType;
           sockets = n :: s.sockets;
         }
@@ -129,7 +130,7 @@ let groupname = debug "groupname"
       if not (List.mem n s.sockets)
       then begin match s.env n with
       | None ->
-        let s' = {
+        let s' = { s with
           env = CDDL_Spec_AST_Base.extend_name_env s.env n CDDL_Spec_AST_Base.NGroup;
           sockets = n :: s.sockets;
         }
@@ -148,15 +149,15 @@ let assignt ((k, x): (id_kind * string)) = debug "assignt"
   (choice
     (concat eq (fun _ ->
       if k = Regular
-      then ret (fun (t: typ) (l: (string * CDDL_Spec_AST_Driver.decl) list) -> (x, CDDL_Spec_AST_Driver.DType t) :: l)
+      then ret (fun (t: typ) (l: (string * CDDL_Spec_AST_Base.decl) list) -> (x, CDDL_Spec_AST_Base.DType t) :: l)
       else fail
     ))
     (concat slasheq (fun _ ->
       if k = SocketType
-      then ret (fun (t: typ) (l: (string * CDDL_Spec_AST_Driver.decl) list) ->
+      then ret (fun (t: typ) (l: (string * CDDL_Spec_AST_Base.decl) list) ->
         match List.assoc_opt x l with
-        | None -> (x, CDDL_Spec_AST_Driver.DType t) :: l
-        | Some (CDDL_Spec_AST_Driver.DType t0) -> (x, CDDL_Spec_AST_Driver.DType (CDDL_Spec_AST_Elab_Base.mk_TChoice t0 t)) :: List.remove_assoc x l
+        | None -> (x, CDDL_Spec_AST_Base.DType t) :: l
+        | Some (CDDL_Spec_AST_Base.DType t0) -> (x, CDDL_Spec_AST_Base.DType (CDDL_Spec_AST_Elab_Base.mk_TChoice t0 t)) :: List.remove_assoc x l
         | _ -> failwith "assignt: this should not happen. Please report"
       )
       else fail
@@ -167,15 +168,15 @@ let assigng ((k, x) : (id_kind * string)) = debug "assignt"
   (choice
     (concat eq (fun _ ->
       if k = Regular
-      then ret (fun (t: group) (l: (string * CDDL_Spec_AST_Driver.decl) list) -> (x, CDDL_Spec_AST_Driver.DGroup t) :: l)
+      then ret (fun (t: group) (l: (string * CDDL_Spec_AST_Base.decl) list) -> (x, CDDL_Spec_AST_Base.DGroup t) :: l)
       else fail
     ))
     (concat slashslasheq (fun _ ->
       if k = SocketGroup
-      then ret (fun (t: group) (l: (string * CDDL_Spec_AST_Driver.decl) list) ->
+      then ret (fun (t: group) (l: (string * CDDL_Spec_AST_Base.decl) list) ->
         match List.assoc_opt x l with
-        | None -> (x, CDDL_Spec_AST_Driver.DGroup t) :: l
-        | Some (CDDL_Spec_AST_Driver.DGroup t0) -> (x, CDDL_Spec_AST_Driver.DGroup (CDDL_Spec_AST_Driver.mk_GChoice t0 t)) :: List.remove_assoc x l
+        | None -> (x, CDDL_Spec_AST_Base.DGroup t) :: l
+        | Some (CDDL_Spec_AST_Base.DGroup t0) -> (x, CDDL_Spec_AST_Base.DGroup (CDDL_Spec_AST_Driver.mk_GChoice t0 t)) :: List.remove_assoc x l
         | _ -> failwith "assigng: this should not happen. Please report"
       )
       else fail
@@ -354,16 +355,16 @@ and memberkey () = debug "memberkey" (
 
 let rec cddl () : cddl_t parser = debug_start "cddl" (
                                       (* rev needed because assignment operators cons definitions in the reverse order of their parsing *)
-  concat s (fun _ -> concat (nonempty_fold_left (cddl_item ())) (fun l -> concat eof (fun _ -> concat (get_state ()) (fun st -> ret (st, List.rev (l []))))))
+  concat s (fun _ -> concat (nonempty_unit_fold_left (cddl_item ())) (fun l -> concat eof (fun _ -> get_state ())))
 )
 
-and cddl_item () : ((string * CDDL_Spec_AST_Driver.decl) list -> (string * CDDL_Spec_AST_Driver.decl) list) parser = debug "cddl_item" (
-  concat (rule ()) (fun x -> concat s (fun _ -> ret x))
+and cddl_item () : unit parser = debug "cddl_item" (
+  concat (rule ()) (fun _ -> s)
 )
 
-and rule () : ((string * CDDL_Spec_AST_Driver.decl) list -> (string * CDDL_Spec_AST_Driver.decl) list) parser =
+and rule () : unit parser =
   debug "rule"
     (choice
-       (concat typename (* option(genericparm) *) (fun name -> concat s (fun _ -> concat (assignt name) (fun f -> concat s (fun _ -> concat (type_ ()) (fun t -> ret (f t)))))))
-       (concat groupname (* option(genericparm) *) (fun name -> concat s (fun _ -> concat (assigng name) (fun f -> concat s (fun _ -> concat (group0 ()) (fun t -> ret (f t)))))))
+       (concat typename (* option(genericparm) *) (fun name -> concat s (fun _ -> concat (assignt name) (fun f -> concat s (fun _ -> concat (type_ ()) (fun t -> concat (get_state ()) (fun env -> let env' = { env with result = f t env.result } in set_state env')))))))
+       (concat groupname (* option(genericparm) *) (fun name -> concat s (fun _ -> concat (assigng name) (fun f -> concat s (fun _ -> concat (group0 ()) (fun t -> concat (get_state ()) (fun env -> let env' = { env with result = f t env.result } in set_state env')))))))
     )

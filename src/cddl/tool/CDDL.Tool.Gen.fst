@@ -810,7 +810,7 @@ let option_source_some () : squash (Some? option_source) = _ by (FStar.Tactics.n
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; "^opaque_to_smt^"] noextract
 let source = T.get_option_some option_source (option_source_some ())
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; "^opaque_to_smt^"] noextract
-let option_sorted_source = topological_sort source
+let option_sorted_source = topological_sort_as_option source
 let option_sorted_source_some () : squash (Some? option_sorted_source) = _ by (FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ())
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; base_attr; "^opaque_to_smt^"] noextract
 let sorted_source0 = T.get_option_some option_sorted_source (option_sorted_source_some ())
@@ -837,8 +837,8 @@ let produce_defs_fst
 : FStar.All.ML // Dv
   string
 = match CDDL.Spec.AST.Driver.topological_sort l with
-  | None -> "Error: topological sort failed"
-  | Some l ->
+  | RFailure fail -> "Error: topological sort failed: "^ fail
+  | RSuccess l ->
     let accu = prelude_fst mname lang filenames in
     match produce_defs0 accu l with
     | RSuccess s -> s
