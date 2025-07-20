@@ -86,12 +86,12 @@ COSE_EverCrypt_create_sig(
   }
 }
 
-K___COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
+K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
 COSE_EverCrypt_dummy_map_val(void)
 {
   return
     (
-      (K___COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty){
+      (K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty){
         .fst = {
           .tag = COSE_Format_Mkevercddl_label_pretty0,
           {
@@ -106,15 +106,15 @@ COSE_EverCrypt_dummy_map_val(void)
     );
 }
 
-static Pulse_Lib_Slice_slice___COSE_Format_aux_env24_type_2_pretty___COSE_Format_aux_env24_type_3_pretty_
-from_array___COSE_Format_aux_env24_type_2_pretty___COSE_Format_aux_env24_type_3_pretty_(
-  K___COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty *a,
+static Pulse_Lib_Slice_slice___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_3_pretty_
+from_array___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_3_pretty_(
+  K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty *a,
   size_t alen
 )
 {
   return
     (
-      (Pulse_Lib_Slice_slice___COSE_Format_aux_env24_type_2_pretty___COSE_Format_aux_env24_type_3_pretty_){
+      (Pulse_Lib_Slice_slice___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_3_pretty_){
         .elt = a,
         .len = alen
       }
@@ -124,7 +124,7 @@ from_array___COSE_Format_aux_env24_type_2_pretty___COSE_Format_aux_env24_type_3_
 COSE_Format_evercddl_empty_or_serialized_map_pretty
 COSE_EverCrypt_mk_phdrs(
   int32_t alg,
-  K___COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty *rest
+  K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty *rest
 )
 {
   COSE_Format_evercddl_int_pretty alg_ = COSE_EverCrypt_mk_int(alg);
@@ -147,20 +147,18 @@ COSE_EverCrypt_mk_phdrs(
                   .tag = COSE_Format_Inr,
                   {
                     .case_Inr = {
-                      .fst = {
-                        .fst = { .tag = FStar_Pervasives_Native_None },
-                        .snd = { .tag = FStar_Pervasives_Native_None }
-                      },
-                      .snd = {
-                        .tag = COSE_Format_Inl,
-                        {
-                          .case_Inl = from_array___COSE_Format_aux_env24_type_2_pretty___COSE_Format_aux_env24_type_3_pretty_(rest,
-                            (size_t)0U)
-                        }
-                      }
+                      .fst = { .tag = FStar_Pervasives_Native_None },
+                      .snd = { .tag = FStar_Pervasives_Native_None }
                     }
                   }
                 }
+              }
+            },
+            ._x1 = {
+              .tag = COSE_Format_Inl,
+              {
+                .case_Inl = from_array___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_3_pretty_(rest,
+                  (size_t)0U)
               }
             }
           }
@@ -179,10 +177,10 @@ COSE_EverCrypt_sign1(
 )
 {
   KRML_CHECK_SIZE(sizeof (
-      K___COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
+      K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
     ),
     (size_t)0U);
-  K___COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty phdrauxbuf[0U];
+  K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty phdrauxbuf[0U];
   for (uint32_t _i = 0U; _i < (size_t)0U; ++_i)
     phdrauxbuf[_i] = COSE_EverCrypt_dummy_map_val();
   COSE_Format_evercddl_int_pretty alg_ = COSE_EverCrypt_mk_int((int32_t)-8);
@@ -205,20 +203,18 @@ COSE_EverCrypt_sign1(
                 .tag = COSE_Format_Inr,
                 {
                   .case_Inr = {
-                    .fst = {
-                      .fst = { .tag = FStar_Pervasives_Native_None },
-                      .snd = { .tag = FStar_Pervasives_Native_None }
-                    },
-                    .snd = {
-                      .tag = COSE_Format_Inl,
-                      {
-                        .case_Inl = from_array___COSE_Format_aux_env24_type_2_pretty___COSE_Format_aux_env24_type_3_pretty_(phdrauxbuf,
-                          (size_t)0U)
-                      }
-                    }
+                    .fst = { .tag = FStar_Pervasives_Native_None },
+                    .snd = { .tag = FStar_Pervasives_Native_None }
                   }
                 }
               }
+            }
+          },
+          ._x1 = {
+            .tag = COSE_Format_Inl,
+            {
+              .case_Inl = from_array___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_3_pretty_(phdrauxbuf,
+                (size_t)0U)
             }
           }
         }
@@ -255,10 +251,10 @@ COSE_EverCrypt_sign1_simple(
 )
 {
   KRML_CHECK_SIZE(sizeof (
-      K___COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
+      K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
     ),
     (size_t)0U);
-  K___COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty buf0[0U];
+  K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty buf0[0U];
   for (uint32_t _i = 0U; _i < (size_t)0U; ++_i)
     buf0[_i] = COSE_EverCrypt_dummy_map_val();
   COSE_Format_evercddl_header_map_pretty
@@ -275,20 +271,18 @@ COSE_EverCrypt_sign1_simple(
             .tag = COSE_Format_Inr,
             {
               .case_Inr = {
-                .fst = {
-                  .fst = { .tag = FStar_Pervasives_Native_None },
-                  .snd = { .tag = FStar_Pervasives_Native_None }
-                },
-                .snd = {
-                  .tag = COSE_Format_Inl,
-                  {
-                    .case_Inl = from_array___COSE_Format_aux_env24_type_2_pretty___COSE_Format_aux_env24_type_3_pretty_(buf0,
-                      (size_t)0U)
-                  }
-                }
+                .fst = { .tag = FStar_Pervasives_Native_None },
+                .snd = { .tag = FStar_Pervasives_Native_None }
               }
             }
           }
+        }
+      },
+      ._x1 = {
+        .tag = COSE_Format_Inl,
+        {
+          .case_Inl = from_array___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_3_pretty_(buf0,
+            (size_t)0U)
         }
       }
     };

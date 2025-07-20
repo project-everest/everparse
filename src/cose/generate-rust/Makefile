@@ -29,4 +29,4 @@ test: $(addsuffix .diff,$(SNAPSHOT_FILES_RS))
 .PHONY: test
 
 # Uncomment if you want to edit the produced F* file
-include extract.Makefile
+# include extract.Makefile

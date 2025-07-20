@@ -2814,7 +2814,7 @@ pub fn validate_and_parse_values <'a>(s: &'a [u8]) ->
     }
 }
 
-pub fn aux_env24_validate_1(
+pub fn aux_env25_validate_1(
     pi: &mut [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw]
 ) ->
     bool
@@ -2830,29 +2830,29 @@ pub fn aux_env24_validate_1(
     }
 }
 
-pub type aux_env24_type_1_pretty <'a> = evercddl_label_pretty <'a>;
+pub type aux_env25_type_1_pretty <'a> = evercddl_label_pretty <'a>;
 
-pub fn uu___is_Mkaux_env24_type_1_pretty0(projectee: evercddl_label_pretty) -> bool
+pub fn uu___is_Mkaux_env25_type_1_pretty0(projectee: evercddl_label_pretty) -> bool
 {
     crate::lowstar::ignore::ignore::<evercddl_label_pretty>(projectee);
     true
 }
 
-fn aux_env24_type_1_pretty_right <'a>(x1: evercddl_label_pretty <'a>) ->
+fn aux_env25_type_1_pretty_right <'a>(x1: evercddl_label_pretty <'a>) ->
     evercddl_label_pretty
     <'a>
 { x1 }
 
-fn aux_env24_type_1_pretty_left <'a>(x3: evercddl_label_pretty <'a>) ->
+fn aux_env25_type_1_pretty_left <'a>(x3: evercddl_label_pretty <'a>) ->
     evercddl_label_pretty
     <'a>
 { x3 }
 
 /**
-Parser for aux_env24_type_1
+Parser for aux_env25_type_1
 */
 pub fn
-aux_env24_parse_1
+aux_env25_parse_1
 <'a>(c: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>) ->
     evercddl_label_pretty
     <'a>
@@ -2862,14 +2862,14 @@ aux_env24_parse_1
     let x: crate::cbordetveraux::cbor_raw =
         crate::cbordetver::cbor_det_array_iterator_next(&mut pc);
     let res1: evercddl_label_pretty = parse_label(x);
-    aux_env24_type_1_pretty_right(res1)
+    aux_env25_type_1_pretty_right(res1)
 }
 
 /**
-Serializer for aux_env24_type_1
+Serializer for aux_env25_type_1
 */
 pub fn
-aux_env24_serialize_1(
+aux_env25_serialize_1(
     c: evercddl_label_pretty,
     out: &mut [u8],
     out_count: &mut [u64],
@@ -2877,7 +2877,7 @@ aux_env24_serialize_1(
 ) ->
     bool
 {
-    let c·: evercddl_label_pretty = aux_env24_type_1_pretty_left(c);
+    let c·: evercddl_label_pretty = aux_env25_type_1_pretty_left(c);
     let count: u64 = out_count[0];
     if count < 18446744073709551615u64
     {
@@ -2899,61 +2899,61 @@ aux_env24_serialize_1(
     { false }
 }
 
-pub fn aux_env24_validate_2(c: crate::cbordetveraux::cbor_raw) -> bool { validate_label(c) }
+pub fn aux_env25_validate_2(c: crate::cbordetveraux::cbor_raw) -> bool { validate_label(c) }
 
-pub type aux_env24_type_2_pretty <'a> = evercddl_label_pretty <'a>;
+pub type aux_env25_type_2_pretty <'a> = evercddl_label_pretty <'a>;
 
-pub fn uu___is_Mkaux_env24_type_2_pretty0(projectee: evercddl_label_pretty) -> bool
+pub fn uu___is_Mkaux_env25_type_2_pretty0(projectee: evercddl_label_pretty) -> bool
 {
     crate::lowstar::ignore::ignore::<evercddl_label_pretty>(projectee);
     true
 }
 
-fn aux_env24_type_2_pretty_right <'a>(x1: evercddl_label_pretty <'a>) ->
+fn aux_env25_type_2_pretty_right <'a>(x1: evercddl_label_pretty <'a>) ->
     evercddl_label_pretty
     <'a>
 { x1 }
 
-fn aux_env24_type_2_pretty_left <'a>(x3: evercddl_label_pretty <'a>) ->
+fn aux_env25_type_2_pretty_left <'a>(x3: evercddl_label_pretty <'a>) ->
     evercddl_label_pretty
     <'a>
 { x3 }
 
 /**
-Parser for aux_env24_type_2
+Parser for aux_env25_type_2
 */
 pub fn
-aux_env24_parse_2
+aux_env25_parse_2
 <'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
     evercddl_label_pretty
     <'a>
 {
     let res1: evercddl_label_pretty = parse_label(c);
-    aux_env24_type_2_pretty_right(res1)
+    aux_env25_type_2_pretty_right(res1)
 }
 
 /**
-Serializer for aux_env24_type_2
+Serializer for aux_env25_type_2
 */
 pub fn
-aux_env24_serialize_2(c: evercddl_label_pretty, out: &mut [u8]) ->
+aux_env25_serialize_2(c: evercddl_label_pretty, out: &mut [u8]) ->
     usize
 {
-    let c·: evercddl_label_pretty = aux_env24_type_2_pretty_left(c);
+    let c·: evercddl_label_pretty = aux_env25_type_2_pretty_left(c);
     serialize_label(c·, out)
 }
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum
-option__·COSE_Format_aux_env24_type_2_pretty···Pulse_Lib_Slice_slice·uint8_t·
+option__·COSE_Format_aux_env25_type_2_pretty···Pulse_Lib_Slice_slice·uint8_t·
 <'a>
 {
     None,
     Some { v: (evercddl_label_pretty <'a>, &'a [u8]) }
 }
 
-pub fn validate_and_aux_env24_parse_2 <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_aux_env24_type_2_pretty···Pulse_Lib_Slice_slice·uint8_t·
+pub fn validate_and_aux_env25_parse_2 <'a>(s: &'a [u8]) ->
+    option__·COSE_Format_aux_env25_type_2_pretty···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -2964,7 +2964,7 @@ pub fn validate_and_aux_env24_parse_2 <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_aux_env24_type_2_pretty···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_aux_env25_type_2_pretty···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -2972,77 +2972,77 @@ pub fn validate_and_aux_env24_parse_2 <'a>(s: &'a [u8]) ->
               let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
               let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
               let rem: &[u8] = _letpattern.1;
-              let test: bool = aux_env24_validate_2(rl);
+              let test: bool = aux_env25_validate_2(rl);
               if test
               {
-                  let x: evercddl_label_pretty = aux_env24_parse_2(rl);
-                  option__·COSE_Format_aux_env24_type_2_pretty···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: evercddl_label_pretty = aux_env25_parse_2(rl);
+                  option__·COSE_Format_aux_env25_type_2_pretty···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
               {
-                  option__·COSE_Format_aux_env24_type_2_pretty···Pulse_Lib_Slice_slice·uint8_t·::None
+                  option__·COSE_Format_aux_env25_type_2_pretty···Pulse_Lib_Slice_slice·uint8_t·::None
               }
           },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
-pub fn aux_env24_validate_3(c: crate::cbordetveraux::cbor_raw) -> bool { validate_values(c) }
+pub fn aux_env25_validate_3(c: crate::cbordetveraux::cbor_raw) -> bool { validate_values(c) }
 
-pub type aux_env24_type_3_pretty <'a> = evercddl_values_pretty <'a>;
+pub type aux_env25_type_3_pretty <'a> = evercddl_values_pretty <'a>;
 
-pub fn uu___is_Mkaux_env24_type_3_pretty0(projectee: crate::cbordetveraux::cbor_raw) -> bool
+pub fn uu___is_Mkaux_env25_type_3_pretty0(projectee: crate::cbordetveraux::cbor_raw) -> bool
 {
     crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(projectee);
     true
 }
 
-fn aux_env24_type_3_pretty_right <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
+fn aux_env25_type_3_pretty_right <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
 { x1 }
 
-fn aux_env24_type_3_pretty_left <'a>(x3: crate::cbordetveraux::cbor_raw <'a>) ->
+fn aux_env25_type_3_pretty_left <'a>(x3: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
 { x3 }
 
 /**
-Parser for aux_env24_type_3
+Parser for aux_env25_type_3
 */
 pub fn
-aux_env24_parse_3
+aux_env25_parse_3
 <'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
 {
     let res1: crate::cbordetveraux::cbor_raw = parse_values(c);
-    aux_env24_type_3_pretty_right(res1)
+    aux_env25_type_3_pretty_right(res1)
 }
 
 /**
-Serializer for aux_env24_type_3
+Serializer for aux_env25_type_3
 */
 pub fn
-aux_env24_serialize_3(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
+aux_env25_serialize_3(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
     usize
 {
-    let c·: crate::cbordetveraux::cbor_raw = aux_env24_type_3_pretty_left(c);
+    let c·: crate::cbordetveraux::cbor_raw = aux_env25_type_3_pretty_left(c);
     serialize_values(c·, out)
 }
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum
-option__·COSE_Format_aux_env24_type_3_pretty···Pulse_Lib_Slice_slice·uint8_t·
+option__·COSE_Format_aux_env25_type_3_pretty···Pulse_Lib_Slice_slice·uint8_t·
 <'a>
 {
     None,
     Some { v: (crate::cbordetveraux::cbor_raw <'a>, &'a [u8]) }
 }
 
-pub fn validate_and_aux_env24_parse_3 <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_aux_env24_type_3_pretty···Pulse_Lib_Slice_slice·uint8_t·
+pub fn validate_and_aux_env25_parse_3 <'a>(s: &'a [u8]) ->
+    option__·COSE_Format_aux_env25_type_3_pretty···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -3053,7 +3053,7 @@ pub fn validate_and_aux_env24_parse_3 <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_aux_env24_type_3_pretty···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_aux_env25_type_3_pretty···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -3061,23 +3061,23 @@ pub fn validate_and_aux_env24_parse_3 <'a>(s: &'a [u8]) ->
               let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
               let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
               let rem: &[u8] = _letpattern.1;
-              let test: bool = aux_env24_validate_3(rl);
+              let test: bool = aux_env25_validate_3(rl);
               if test
               {
-                  let x: crate::cbordetveraux::cbor_raw = aux_env24_parse_3(rl);
-                  option__·COSE_Format_aux_env24_type_3_pretty···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: crate::cbordetveraux::cbor_raw = aux_env25_parse_3(rl);
+                  option__·COSE_Format_aux_env25_type_3_pretty···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
               {
-                  option__·COSE_Format_aux_env24_type_3_pretty···Pulse_Lib_Slice_slice·uint8_t·::None
+                  option__·COSE_Format_aux_env25_type_3_pretty···Pulse_Lib_Slice_slice·uint8_t·::None
               }
           },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
-pub fn aux_env24_map_constraint_4(x: crate::cbordetveraux::cbor_map_entry) -> bool
+pub fn aux_env25_map_constraint_4(x: crate::cbordetveraux::cbor_map_entry) -> bool
 {
     let k: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
     let mt: u8 = crate::cbordetver::cbor_det_major_type(k);
@@ -3315,558 +3315,6 @@ pub fn aux_env24_map_constraint_4(x: crate::cbordetveraux::cbor_map_entry) -> bo
             {
                 let v1: crate::cbordetveraux::cbor_raw =
                     crate::cbordetver::cbor_det_map_entry_value(x);
-                validate_bstr(v1)
-            }
-            else
-            { false }
-        };
-    if test3
-    { true }
-    else
-    {
-        let k0: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
-        let mt0: u8 = crate::cbordetver::cbor_det_major_type(k0);
-        let is_uint0: bool = mt0 == crate::cbordetveraux::cbor_major_type_uint64;
-        let testk0: bool =
-            if is_uint0
-            {
-                let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(k0);
-                let _letpattern: crate::cbordetver::cbor_det_view = v1;
-                let i: u64 =
-                    match _letpattern
-                    {
-                        crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
-                        _ => panic!("Incomplete pattern matching")
-                    };
-                i == 6u64
-            }
-            else
-            { false };
-        if testk0
-        {
-            let v1: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_value(x);
-            crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(v1);
-            true
-        }
-        else
-        { false }
-    }
-}
-
-pub fn aux_env24_map_constraint_5(x: crate::cbordetveraux::cbor_map_entry) -> bool
-{
-    let k: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
-    let mt: u8 = crate::cbordetver::cbor_det_major_type(k);
-    let is_uint: bool = mt == crate::cbordetveraux::cbor_major_type_uint64;
-    let testk: bool =
-        if is_uint
-        {
-            let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(k);
-            let _letpattern: crate::cbordetver::cbor_det_view = v1;
-            let i: u64 =
-                match _letpattern
-                {
-                    crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
-                    _ => panic!("Incomplete pattern matching")
-                };
-            i == 1u64
-        }
-        else
-        { false };
-    let test: bool =
-        if testk
-        {
-            let v1: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_value(x);
-            let test: bool = validate_int(v1);
-            if test { true } else { validate_tstr(v1) }
-        }
-        else
-        { false };
-    let test0: bool =
-        if test
-        { true }
-        else
-        {
-            let k0: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
-            let mt0: u8 = crate::cbordetver::cbor_det_major_type(k0);
-            let is_uint0: bool = mt0 == crate::cbordetveraux::cbor_major_type_uint64;
-            let testk0: bool =
-                if is_uint0
-                {
-                    let v1: crate::cbordetver::cbor_det_view =
-                        crate::cbordetver::cbor_det_destruct(k0);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v1;
-                    let i: u64 =
-                        match _letpattern
-                        {
-                            crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    i == 2u64
-                }
-                else
-                { false };
-            if testk0
-            {
-                let v1: crate::cbordetveraux::cbor_raw =
-                    crate::cbordetver::cbor_det_map_entry_value(x);
-                let ty: u8 = crate::cbordetver::cbor_det_major_type(v1);
-                if ty == crate::cbordetveraux::cbor_major_type_array
-                {
-                    let v2: crate::cbordetver::cbor_det_view =
-                        crate::cbordetver::cbor_det_destruct(v1);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v2;
-                    let i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-                        match _letpattern
-                        {
-                            crate::cbordetver::cbor_det_view::Array { _0: a } =>
-                              crate::cbordetver::cbor_det_array_iterator_start(a),
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    let
-                    mut
-                    pi:
-                    [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1]
-                    =
-                        [i; 1usize];
-                    let i1: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-                        (&pi)[0];
-                    let is_done: bool = crate::cbordetver::cbor_det_array_iterator_is_empty(i1);
-                    let test1: bool =
-                        if is_done
-                        { false }
-                        else
-                        {
-                            let c: crate::cbordetveraux::cbor_raw =
-                                crate::cbordetver::cbor_det_array_iterator_next(&mut pi);
-                            validate_label(c)
-                        };
-                    let b_success: bool =
-                        if test1
-                        {
-                            let mut pcont: [bool; 1] = [true; 1usize];
-                            while
-                            (&pcont)[0]
-                            {
-                                let
-                                i10:
-                                crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                =
-                                    (&pi)[0];
-                                let
-                                i2:
-                                crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                =
-                                    (&pi)[0];
-                                let is_done0: bool =
-                                    crate::cbordetver::cbor_det_array_iterator_is_empty(i2);
-                                let cont: bool =
-                                    if is_done0
-                                    { false }
-                                    else
-                                    {
-                                        let c: crate::cbordetveraux::cbor_raw =
-                                            crate::cbordetver::cbor_det_array_iterator_next(&mut pi);
-                                        validate_label(c)
-                                    };
-                                if ! cont
-                                {
-                                    (&mut pi)[0] = i10;
-                                    (&mut pcont)[0] = false
-                                }
-                            };
-                            true
-                        }
-                        else
-                        { false };
-                    if b_success
-                    {
-                        let
-                        i·: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                        =
-                            (&pi)[0];
-                        crate::cbordetver::cbor_det_array_iterator_is_empty(i·)
-                    }
-                    else
-                    { false }
-                }
-                else
-                { false }
-            }
-            else
-            { false }
-        };
-    let test1: bool =
-        if test0
-        { true }
-        else
-        {
-            let k0: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
-            let mt0: u8 = crate::cbordetver::cbor_det_major_type(k0);
-            let is_uint0: bool = mt0 == crate::cbordetveraux::cbor_major_type_uint64;
-            let testk0: bool =
-                if is_uint0
-                {
-                    let v1: crate::cbordetver::cbor_det_view =
-                        crate::cbordetver::cbor_det_destruct(k0);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v1;
-                    let i: u64 =
-                        match _letpattern
-                        {
-                            crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    i == 3u64
-                }
-                else
-                { false };
-            if testk0
-            {
-                let v1: crate::cbordetveraux::cbor_raw =
-                    crate::cbordetver::cbor_det_map_entry_value(x);
-                let test1: bool = validate_tstr(v1);
-                if test1 { true } else { validate_int(v1) }
-            }
-            else
-            { false }
-        };
-    let test2: bool =
-        if test1
-        { true }
-        else
-        {
-            let k0: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
-            let mt0: u8 = crate::cbordetver::cbor_det_major_type(k0);
-            let is_uint0: bool = mt0 == crate::cbordetveraux::cbor_major_type_uint64;
-            let testk0: bool =
-                if is_uint0
-                {
-                    let v1: crate::cbordetver::cbor_det_view =
-                        crate::cbordetver::cbor_det_destruct(k0);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v1;
-                    let i: u64 =
-                        match _letpattern
-                        {
-                            crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    i == 4u64
-                }
-                else
-                { false };
-            if testk0
-            {
-                let v1: crate::cbordetveraux::cbor_raw =
-                    crate::cbordetver::cbor_det_map_entry_value(x);
-                validate_bstr(v1)
-            }
-            else
-            { false }
-        };
-    let test3: bool =
-        if test2
-        { true }
-        else
-        {
-            let k0: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
-            let mt0: u8 = crate::cbordetver::cbor_det_major_type(k0);
-            let is_uint0: bool = mt0 == crate::cbordetveraux::cbor_major_type_uint64;
-            let testk0: bool =
-                if is_uint0
-                {
-                    let v1: crate::cbordetver::cbor_det_view =
-                        crate::cbordetver::cbor_det_destruct(k0);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v1;
-                    let i: u64 =
-                        match _letpattern
-                        {
-                            crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    i == 6u64
-                }
-                else
-                { false };
-            if testk0
-            {
-                let v1: crate::cbordetveraux::cbor_raw =
-                    crate::cbordetver::cbor_det_map_entry_value(x);
-                validate_bstr(v1)
-            }
-            else
-            { false }
-        };
-    if test3
-    { true }
-    else
-    {
-        let k0: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
-        let mt0: u8 = crate::cbordetver::cbor_det_major_type(k0);
-        let is_uint0: bool = mt0 == crate::cbordetveraux::cbor_major_type_uint64;
-        let testk0: bool =
-            if is_uint0
-            {
-                let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(k0);
-                let _letpattern: crate::cbordetver::cbor_det_view = v1;
-                let i: u64 =
-                    match _letpattern
-                    {
-                        crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
-                        _ => panic!("Incomplete pattern matching")
-                    };
-                i == 5u64
-            }
-            else
-            { false };
-        if testk0
-        {
-            let v1: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_value(x);
-            crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(v1);
-            true
-        }
-        else
-        { false }
-    }
-}
-
-pub fn aux_env24_map_constraint_6(x: crate::cbordetveraux::cbor_map_entry) -> bool
-{
-    let k: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
-    let mt: u8 = crate::cbordetver::cbor_det_major_type(k);
-    let is_uint: bool = mt == crate::cbordetveraux::cbor_major_type_uint64;
-    let testk: bool =
-        if is_uint
-        {
-            let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(k);
-            let _letpattern: crate::cbordetver::cbor_det_view = v1;
-            let i: u64 =
-                match _letpattern
-                {
-                    crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
-                    _ => panic!("Incomplete pattern matching")
-                };
-            i == 1u64
-        }
-        else
-        { false };
-    let test: bool =
-        if testk
-        {
-            let v1: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_value(x);
-            let test: bool = validate_int(v1);
-            if test { true } else { validate_tstr(v1) }
-        }
-        else
-        { false };
-    let test0: bool =
-        if test
-        { true }
-        else
-        {
-            let k0: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
-            let mt0: u8 = crate::cbordetver::cbor_det_major_type(k0);
-            let is_uint0: bool = mt0 == crate::cbordetveraux::cbor_major_type_uint64;
-            let testk0: bool =
-                if is_uint0
-                {
-                    let v1: crate::cbordetver::cbor_det_view =
-                        crate::cbordetver::cbor_det_destruct(k0);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v1;
-                    let i: u64 =
-                        match _letpattern
-                        {
-                            crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    i == 2u64
-                }
-                else
-                { false };
-            if testk0
-            {
-                let v1: crate::cbordetveraux::cbor_raw =
-                    crate::cbordetver::cbor_det_map_entry_value(x);
-                let ty: u8 = crate::cbordetver::cbor_det_major_type(v1);
-                if ty == crate::cbordetveraux::cbor_major_type_array
-                {
-                    let v2: crate::cbordetver::cbor_det_view =
-                        crate::cbordetver::cbor_det_destruct(v1);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v2;
-                    let i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-                        match _letpattern
-                        {
-                            crate::cbordetver::cbor_det_view::Array { _0: a } =>
-                              crate::cbordetver::cbor_det_array_iterator_start(a),
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    let
-                    mut
-                    pi:
-                    [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1]
-                    =
-                        [i; 1usize];
-                    let i1: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-                        (&pi)[0];
-                    let is_done: bool = crate::cbordetver::cbor_det_array_iterator_is_empty(i1);
-                    let test1: bool =
-                        if is_done
-                        { false }
-                        else
-                        {
-                            let c: crate::cbordetveraux::cbor_raw =
-                                crate::cbordetver::cbor_det_array_iterator_next(&mut pi);
-                            validate_label(c)
-                        };
-                    let b_success: bool =
-                        if test1
-                        {
-                            let mut pcont: [bool; 1] = [true; 1usize];
-                            while
-                            (&pcont)[0]
-                            {
-                                let
-                                i10:
-                                crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                =
-                                    (&pi)[0];
-                                let
-                                i2:
-                                crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                =
-                                    (&pi)[0];
-                                let is_done0: bool =
-                                    crate::cbordetver::cbor_det_array_iterator_is_empty(i2);
-                                let cont: bool =
-                                    if is_done0
-                                    { false }
-                                    else
-                                    {
-                                        let c: crate::cbordetveraux::cbor_raw =
-                                            crate::cbordetver::cbor_det_array_iterator_next(&mut pi);
-                                        validate_label(c)
-                                    };
-                                if ! cont
-                                {
-                                    (&mut pi)[0] = i10;
-                                    (&mut pcont)[0] = false
-                                }
-                            };
-                            true
-                        }
-                        else
-                        { false };
-                    if b_success
-                    {
-                        let
-                        i·: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                        =
-                            (&pi)[0];
-                        crate::cbordetver::cbor_det_array_iterator_is_empty(i·)
-                    }
-                    else
-                    { false }
-                }
-                else
-                { false }
-            }
-            else
-            { false }
-        };
-    let test1: bool =
-        if test0
-        { true }
-        else
-        {
-            let k0: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
-            let mt0: u8 = crate::cbordetver::cbor_det_major_type(k0);
-            let is_uint0: bool = mt0 == crate::cbordetveraux::cbor_major_type_uint64;
-            let testk0: bool =
-                if is_uint0
-                {
-                    let v1: crate::cbordetver::cbor_det_view =
-                        crate::cbordetver::cbor_det_destruct(k0);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v1;
-                    let i: u64 =
-                        match _letpattern
-                        {
-                            crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    i == 3u64
-                }
-                else
-                { false };
-            if testk0
-            {
-                let v1: crate::cbordetveraux::cbor_raw =
-                    crate::cbordetver::cbor_det_map_entry_value(x);
-                let test1: bool = validate_tstr(v1);
-                if test1 { true } else { validate_int(v1) }
-            }
-            else
-            { false }
-        };
-    let test2: bool =
-        if test1
-        { true }
-        else
-        {
-            let k0: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
-            let mt0: u8 = crate::cbordetver::cbor_det_major_type(k0);
-            let is_uint0: bool = mt0 == crate::cbordetveraux::cbor_major_type_uint64;
-            let testk0: bool =
-                if is_uint0
-                {
-                    let v1: crate::cbordetver::cbor_det_view =
-                        crate::cbordetver::cbor_det_destruct(k0);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v1;
-                    let i: u64 =
-                        match _letpattern
-                        {
-                            crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    i == 4u64
-                }
-                else
-                { false };
-            if testk0
-            {
-                let v1: crate::cbordetveraux::cbor_raw =
-                    crate::cbordetver::cbor_det_map_entry_value(x);
-                validate_bstr(v1)
-            }
-            else
-            { false }
-        };
-    let test3: bool =
-        if test2
-        { true }
-        else
-        {
-            let k0: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
-            let mt0: u8 = crate::cbordetver::cbor_det_major_type(k0);
-            let is_uint0: bool = mt0 == crate::cbordetveraux::cbor_major_type_uint64;
-            let testk0: bool =
-                if is_uint0
-                {
-                    let v1: crate::cbordetver::cbor_det_view =
-                        crate::cbordetver::cbor_det_destruct(k0);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v1;
-                    let i: u64 =
-                        match _letpattern
-                        {
-                            crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    i == 6u64
-                }
-                else
-                { false };
-            if testk0
-            {
-                let v1: crate::cbordetveraux::cbor_raw =
-                    crate::cbordetver::cbor_det_map_entry_value(x);
                 crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(v1);
                 true
             }
@@ -3891,7 +3339,7 @@ pub fn aux_env24_map_constraint_6(x: crate::cbordetveraux::cbor_map_entry) -> bo
                         crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
                         _ => panic!("Incomplete pattern matching")
                     };
-                i == 5u64
+                i == 6u64
             }
             else
             { false };
@@ -4265,7 +3713,7 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                   crate::cbordetveraux::impl_map_group_result::MGCutFail,
                 _ => panic!("Precondition of the function most likely violated")
             };
-        let res: crate::cbordetveraux::impl_map_group_result =
+        let res14: crate::cbordetveraux::impl_map_group_result =
             match res13
             {
                 crate::cbordetveraux::impl_map_group_result::MGOK =>
@@ -4377,574 +3825,7 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                                 crate::cbordetveraux::impl_map_group_result::MGCutFail,
                               _ => panic!("Precondition of the function most likely violated")
                           };
-                      let res112: crate::cbordetveraux::impl_map_group_result =
-                          match res111
-                          {
-                              crate::cbordetveraux::impl_map_group_result::MGOK =>
-                                {
-                                    let v10: crate::cbordetver::cbor_det_view =
-                                        crate::cbordetver::cbor_det_destruct(c);
-                                    let _letpattern2: crate::cbordetver::cbor_det_view = v10;
-                                    let
-                                    j0:
-                                    crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                    =
-                                        match _letpattern2
-                                        {
-                                            crate::cbordetver::cbor_det_view::Map { _0: a } =>
-                                              crate::cbordetver::cbor_det_map_iterator_start(a),
-                                            _ => panic!("Incomplete pattern matching")
-                                        };
-                                    let
-                                    mut
-                                    pj:
-                                    [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
-                                    1]
-                                    =
-                                        [j0; 1usize];
-                                    let
-                                    j:
-                                    crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                    =
-                                        (&pj)[0];
-                                    let is_empty: bool =
-                                        crate::cbordetver::cbor_det_map_iterator_is_empty(j);
-                                    let mut cond: bool = ! is_empty;
-                                    while
-                                    cond
-                                    {
-                                        let chd: crate::cbordetveraux::cbor_map_entry =
-                                            crate::cbordetver::cbor_det_map_iterator_next(&mut pj);
-                                        let k: crate::cbordetveraux::cbor_raw =
-                                            crate::cbordetver::cbor_det_map_entry_key(chd);
-                                        let testk: bool = validate_label(k);
-                                        let test: bool =
-                                            if testk
-                                            {
-                                                let v11: crate::cbordetveraux::cbor_raw =
-                                                    crate::cbordetver::cbor_det_map_entry_value(chd);
-                                                validate_values(v11)
-                                            }
-                                            else
-                                            { false };
-                                        let test0: bool =
-                                            if test
-                                            {
-                                                let k0: crate::cbordetveraux::cbor_raw =
-                                                    crate::cbordetver::cbor_det_map_entry_key(chd);
-                                                let mt: u8 =
-                                                    crate::cbordetver::cbor_det_major_type(k0);
-                                                let is_uint: bool =
-                                                    mt
-                                                    ==
-                                                    crate::cbordetveraux::cbor_major_type_uint64;
-                                                let testk0: bool =
-                                                    if is_uint
-                                                    {
-                                                        let v11: crate::cbordetver::cbor_det_view =
-                                                            crate::cbordetver::cbor_det_destruct(k0);
-                                                        let
-                                                        _letpattern3:
-                                                        crate::cbordetver::cbor_det_view
-                                                        =
-                                                            v11;
-                                                        let i: u64 =
-                                                            match _letpattern3
-                                                            {
-                                                                crate::cbordetver::cbor_det_view::Int64
-                                                                { value: res, .. }
-                                                                => res,
-                                                                _ =>
-                                                                  panic!(
-                                                                      "Incomplete pattern matching"
-                                                                  )
-                                                            };
-                                                        i == 1u64
-                                                    }
-                                                    else
-                                                    { false };
-                                                let test1: bool =
-                                                    if testk0
-                                                    {
-                                                        let v11: crate::cbordetveraux::cbor_raw =
-                                                            crate::cbordetver::cbor_det_map_entry_value(
-                                                                chd
-                                                            );
-                                                        let test1: bool = validate_int(v11);
-                                                        if test1
-                                                        { true }
-                                                        else
-                                                        { validate_tstr(v11) }
-                                                    }
-                                                    else
-                                                    { false };
-                                                let test10: bool =
-                                                    if test1
-                                                    { true }
-                                                    else
-                                                    {
-                                                        let k1: crate::cbordetveraux::cbor_raw =
-                                                            crate::cbordetver::cbor_det_map_entry_key(
-                                                                chd
-                                                            );
-                                                        let mt0: u8 =
-                                                            crate::cbordetver::cbor_det_major_type(
-                                                                k1
-                                                            );
-                                                        let is_uint0: bool =
-                                                            mt0
-                                                            ==
-                                                            crate::cbordetveraux::cbor_major_type_uint64;
-                                                        let testk1: bool =
-                                                            if is_uint0
-                                                            {
-                                                                let
-                                                                v11:
-                                                                crate::cbordetver::cbor_det_view
-                                                                =
-                                                                    crate::cbordetver::cbor_det_destruct(
-                                                                        k1
-                                                                    );
-                                                                let
-                                                                _letpattern3:
-                                                                crate::cbordetver::cbor_det_view
-                                                                =
-                                                                    v11;
-                                                                let i: u64 =
-                                                                    match _letpattern3
-                                                                    {
-                                                                        crate::cbordetver::cbor_det_view::Int64
-                                                                        { value: res, .. }
-                                                                        => res,
-                                                                        _ =>
-                                                                          panic!(
-                                                                              "Incomplete pattern matching"
-                                                                          )
-                                                                    };
-                                                                i == 2u64
-                                                            }
-                                                            else
-                                                            { false };
-                                                        if testk1
-                                                        {
-                                                            let
-                                                            v11: crate::cbordetveraux::cbor_raw
-                                                            =
-                                                                crate::cbordetver::cbor_det_map_entry_value(
-                                                                    chd
-                                                                );
-                                                            let ty1: u8 =
-                                                                crate::cbordetver::cbor_det_major_type(
-                                                                    v11
-                                                                );
-                                                            if
-                                                            ty1
-                                                            ==
-                                                            crate::cbordetveraux::cbor_major_type_array
-                                                            {
-                                                                let
-                                                                v2: crate::cbordetver::cbor_det_view
-                                                                =
-                                                                    crate::cbordetver::cbor_det_destruct(
-                                                                        v11
-                                                                    );
-                                                                let
-                                                                _letpattern3:
-                                                                crate::cbordetver::cbor_det_view
-                                                                =
-                                                                    v2;
-                                                                let
-                                                                i:
-                                                                crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                                                =
-                                                                    match _letpattern3
-                                                                    {
-                                                                        crate::cbordetver::cbor_det_view::Array
-                                                                        { _0: a }
-                                                                        =>
-                                                                          crate::cbordetver::cbor_det_array_iterator_start(
-                                                                              a
-                                                                          ),
-                                                                        _ =>
-                                                                          panic!(
-                                                                              "Incomplete pattern matching"
-                                                                          )
-                                                                    };
-                                                                let
-                                                                mut
-                                                                pi:
-                                                                [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw;
-                                                                1]
-                                                                =
-                                                                    [i; 1usize];
-                                                                let
-                                                                i1:
-                                                                crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                                                =
-                                                                    (&pi)[0];
-                                                                let is_done: bool =
-                                                                    crate::cbordetver::cbor_det_array_iterator_is_empty(
-                                                                        i1
-                                                                    );
-                                                                let test11: bool =
-                                                                    if is_done
-                                                                    { false }
-                                                                    else
-                                                                    {
-                                                                        let
-                                                                        c11:
-                                                                        crate::cbordetveraux::cbor_raw
-                                                                        =
-                                                                            crate::cbordetver::cbor_det_array_iterator_next(
-                                                                                &mut pi
-                                                                            );
-                                                                        validate_label(c11)
-                                                                    };
-                                                                let b_success: bool =
-                                                                    if test11
-                                                                    {
-                                                                        let mut pcont: [bool; 1] =
-                                                                            [true; 1usize];
-                                                                        while
-                                                                        (&pcont)[0]
-                                                                        {
-                                                                            let
-                                                                            i10:
-                                                                            crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                                                            =
-                                                                                (&pi)[0];
-                                                                            let
-                                                                            i2:
-                                                                            crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                                                            =
-                                                                                (&pi)[0];
-                                                                            let is_done0: bool =
-                                                                                crate::cbordetver::cbor_det_array_iterator_is_empty(
-                                                                                    i2
-                                                                                );
-                                                                            let cont: bool =
-                                                                                if is_done0
-                                                                                { false }
-                                                                                else
-                                                                                {
-                                                                                    let
-                                                                                    c11:
-                                                                                    crate::cbordetveraux::cbor_raw
-                                                                                    =
-                                                                                        crate::cbordetver::cbor_det_array_iterator_next(
-                                                                                            &mut pi
-                                                                                        );
-                                                                                    validate_label(
-                                                                                        c11
-                                                                                    )
-                                                                                };
-                                                                            if ! cont
-                                                                            {
-                                                                                (&mut pi)[0] = i10;
-                                                                                (&mut pcont)[0] =
-                                                                                    false
-                                                                            }
-                                                                        };
-                                                                        true
-                                                                    }
-                                                                    else
-                                                                    { false };
-                                                                if b_success
-                                                                {
-                                                                    let
-                                                                    i·:
-                                                                    crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                                                    =
-                                                                        (&pi)[0];
-                                                                    crate::cbordetver::cbor_det_array_iterator_is_empty(
-                                                                        i·
-                                                                    )
-                                                                }
-                                                                else
-                                                                { false }
-                                                            }
-                                                            else
-                                                            { false }
-                                                        }
-                                                        else
-                                                        { false }
-                                                    };
-                                                let test11: bool =
-                                                    if test10
-                                                    { true }
-                                                    else
-                                                    {
-                                                        let k1: crate::cbordetveraux::cbor_raw =
-                                                            crate::cbordetver::cbor_det_map_entry_key(
-                                                                chd
-                                                            );
-                                                        let mt0: u8 =
-                                                            crate::cbordetver::cbor_det_major_type(
-                                                                k1
-                                                            );
-                                                        let is_uint0: bool =
-                                                            mt0
-                                                            ==
-                                                            crate::cbordetveraux::cbor_major_type_uint64;
-                                                        let testk1: bool =
-                                                            if is_uint0
-                                                            {
-                                                                let
-                                                                v11:
-                                                                crate::cbordetver::cbor_det_view
-                                                                =
-                                                                    crate::cbordetver::cbor_det_destruct(
-                                                                        k1
-                                                                    );
-                                                                let
-                                                                _letpattern3:
-                                                                crate::cbordetver::cbor_det_view
-                                                                =
-                                                                    v11;
-                                                                let i: u64 =
-                                                                    match _letpattern3
-                                                                    {
-                                                                        crate::cbordetver::cbor_det_view::Int64
-                                                                        { value: res, .. }
-                                                                        => res,
-                                                                        _ =>
-                                                                          panic!(
-                                                                              "Incomplete pattern matching"
-                                                                          )
-                                                                    };
-                                                                i == 3u64
-                                                            }
-                                                            else
-                                                            { false };
-                                                        if testk1
-                                                        {
-                                                            let
-                                                            v11: crate::cbordetveraux::cbor_raw
-                                                            =
-                                                                crate::cbordetver::cbor_det_map_entry_value(
-                                                                    chd
-                                                                );
-                                                            let test2: bool = validate_tstr(v11);
-                                                            if test2
-                                                            { true }
-                                                            else
-                                                            { validate_int(v11) }
-                                                        }
-                                                        else
-                                                        { false }
-                                                    };
-                                                let test12: bool =
-                                                    if test11
-                                                    { true }
-                                                    else
-                                                    {
-                                                        let k1: crate::cbordetveraux::cbor_raw =
-                                                            crate::cbordetver::cbor_det_map_entry_key(
-                                                                chd
-                                                            );
-                                                        let mt0: u8 =
-                                                            crate::cbordetver::cbor_det_major_type(
-                                                                k1
-                                                            );
-                                                        let is_uint0: bool =
-                                                            mt0
-                                                            ==
-                                                            crate::cbordetveraux::cbor_major_type_uint64;
-                                                        let testk1: bool =
-                                                            if is_uint0
-                                                            {
-                                                                let
-                                                                v11:
-                                                                crate::cbordetver::cbor_det_view
-                                                                =
-                                                                    crate::cbordetver::cbor_det_destruct(
-                                                                        k1
-                                                                    );
-                                                                let
-                                                                _letpattern3:
-                                                                crate::cbordetver::cbor_det_view
-                                                                =
-                                                                    v11;
-                                                                let i: u64 =
-                                                                    match _letpattern3
-                                                                    {
-                                                                        crate::cbordetver::cbor_det_view::Int64
-                                                                        { value: res, .. }
-                                                                        => res,
-                                                                        _ =>
-                                                                          panic!(
-                                                                              "Incomplete pattern matching"
-                                                                          )
-                                                                    };
-                                                                i == 4u64
-                                                            }
-                                                            else
-                                                            { false };
-                                                        if testk1
-                                                        {
-                                                            let
-                                                            v11: crate::cbordetveraux::cbor_raw
-                                                            =
-                                                                crate::cbordetver::cbor_det_map_entry_value(
-                                                                    chd
-                                                                );
-                                                            validate_bstr(v11)
-                                                        }
-                                                        else
-                                                        { false }
-                                                    };
-                                                let test13: bool =
-                                                    if test12
-                                                    { true }
-                                                    else
-                                                    {
-                                                        let k1: crate::cbordetveraux::cbor_raw =
-                                                            crate::cbordetver::cbor_det_map_entry_key(
-                                                                chd
-                                                            );
-                                                        let mt0: u8 =
-                                                            crate::cbordetver::cbor_det_major_type(
-                                                                k1
-                                                            );
-                                                        let is_uint0: bool =
-                                                            mt0
-                                                            ==
-                                                            crate::cbordetveraux::cbor_major_type_uint64;
-                                                        let testk1: bool =
-                                                            if is_uint0
-                                                            {
-                                                                let
-                                                                v11:
-                                                                crate::cbordetver::cbor_det_view
-                                                                =
-                                                                    crate::cbordetver::cbor_det_destruct(
-                                                                        k1
-                                                                    );
-                                                                let
-                                                                _letpattern3:
-                                                                crate::cbordetver::cbor_det_view
-                                                                =
-                                                                    v11;
-                                                                let i: u64 =
-                                                                    match _letpattern3
-                                                                    {
-                                                                        crate::cbordetver::cbor_det_view::Int64
-                                                                        { value: res, .. }
-                                                                        => res,
-                                                                        _ =>
-                                                                          panic!(
-                                                                              "Incomplete pattern matching"
-                                                                          )
-                                                                    };
-                                                                i == 5u64
-                                                            }
-                                                            else
-                                                            { false };
-                                                        if testk1
-                                                        {
-                                                            let
-                                                            v11: crate::cbordetveraux::cbor_raw
-                                                            =
-                                                                crate::cbordetver::cbor_det_map_entry_value(
-                                                                    chd
-                                                                );
-                                                            validate_bstr(v11)
-                                                        }
-                                                        else
-                                                        { false }
-                                                    };
-                                                let test14: bool =
-                                                    if test13
-                                                    { true }
-                                                    else
-                                                    {
-                                                        let k1: crate::cbordetveraux::cbor_raw =
-                                                            crate::cbordetver::cbor_det_map_entry_key(
-                                                                chd
-                                                            );
-                                                        let mt0: u8 =
-                                                            crate::cbordetver::cbor_det_major_type(
-                                                                k1
-                                                            );
-                                                        let is_uint0: bool =
-                                                            mt0
-                                                            ==
-                                                            crate::cbordetveraux::cbor_major_type_uint64;
-                                                        let testk1: bool =
-                                                            if is_uint0
-                                                            {
-                                                                let
-                                                                v11:
-                                                                crate::cbordetver::cbor_det_view
-                                                                =
-                                                                    crate::cbordetver::cbor_det_destruct(
-                                                                        k1
-                                                                    );
-                                                                let
-                                                                _letpattern3:
-                                                                crate::cbordetver::cbor_det_view
-                                                                =
-                                                                    v11;
-                                                                let i: u64 =
-                                                                    match _letpattern3
-                                                                    {
-                                                                        crate::cbordetver::cbor_det_view::Int64
-                                                                        { value: res, .. }
-                                                                        => res,
-                                                                        _ =>
-                                                                          panic!(
-                                                                              "Incomplete pattern matching"
-                                                                          )
-                                                                    };
-                                                                i == 6u64
-                                                            }
-                                                            else
-                                                            { false };
-                                                        if testk1
-                                                        {
-                                                            let
-                                                            v11: crate::cbordetveraux::cbor_raw
-                                                            =
-                                                                crate::cbordetver::cbor_det_map_entry_value(
-                                                                    chd
-                                                                );
-                                                            crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(
-                                                                v11
-                                                            );
-                                                            true
-                                                        }
-                                                        else
-                                                        { false }
-                                                    };
-                                                ! test14
-                                            }
-                                            else
-                                            { false };
-                                        let test1: bool = ! test0;
-                                        if ! test1
-                                        {
-                                            let i: u64 = (&remaining)[0];
-                                            let i·: u64 = i.wrapping_sub(1u64);
-                                            (&mut remaining)[0] = i·
-                                        };
-                                        let
-                                        j1:
-                                        crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                        =
-                                            (&pj)[0];
-                                        let is_empty0: bool =
-                                            crate::cbordetver::cbor_det_map_iterator_is_empty(j1);
-                                        cond = ! is_empty0
-                                    };
-                                    crate::cbordetveraux::impl_map_group_result::MGOK
-                                },
-                              crate::cbordetveraux::impl_map_group_result::MGFail =>
-                                crate::cbordetveraux::impl_map_group_result::MGFail,
-                              crate::cbordetveraux::impl_map_group_result::MGCutFail =>
-                                crate::cbordetveraux::impl_map_group_result::MGCutFail,
-                              _ => panic!("Precondition of the function most likely violated")
-                          };
-                      match res112
+                      match res111
                       {
                           crate::cbordetveraux::impl_map_group_result::MGOK =>
                             crate::cbordetveraux::impl_map_group_result::MGOK,
@@ -5073,634 +3954,7 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                                               "Precondition of the function most likely violated"
                                           )
                                     };
-                                let res122: crate::cbordetveraux::impl_map_group_result =
-                                    match res121
-                                    {
-                                        crate::cbordetveraux::impl_map_group_result::MGOK =>
-                                          {
-                                              let v10: crate::cbordetver::cbor_det_view =
-                                                  crate::cbordetver::cbor_det_destruct(c);
-                                              let _letpattern3: crate::cbordetver::cbor_det_view =
-                                                  v10;
-                                              let
-                                              j0:
-                                              crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                              =
-                                                  match _letpattern3
-                                                  {
-                                                      crate::cbordetver::cbor_det_view::Map
-                                                      { _0: a }
-                                                      =>
-                                                        crate::cbordetver::cbor_det_map_iterator_start(
-                                                            a
-                                                        ),
-                                                      _ => panic!("Incomplete pattern matching")
-                                                  };
-                                              let
-                                              mut
-                                              pj:
-                                              [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
-                                              1]
-                                              =
-                                                  [j0; 1usize];
-                                              let
-                                              j:
-                                              crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                              =
-                                                  (&pj)[0];
-                                              let is_empty: bool =
-                                                  crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                      j
-                                                  );
-                                              let mut cond: bool = ! is_empty;
-                                              while
-                                              cond
-                                              {
-                                                  let chd: crate::cbordetveraux::cbor_map_entry =
-                                                      crate::cbordetver::cbor_det_map_iterator_next(
-                                                          &mut pj
-                                                      );
-                                                  let k: crate::cbordetveraux::cbor_raw =
-                                                      crate::cbordetver::cbor_det_map_entry_key(chd);
-                                                  let testk: bool = validate_label(k);
-                                                  let test: bool =
-                                                      if testk
-                                                      {
-                                                          let v11: crate::cbordetveraux::cbor_raw =
-                                                              crate::cbordetver::cbor_det_map_entry_value(
-                                                                  chd
-                                                              );
-                                                          validate_values(v11)
-                                                      }
-                                                      else
-                                                      { false };
-                                                  let test0: bool =
-                                                      if test
-                                                      {
-                                                          let k0: crate::cbordetveraux::cbor_raw =
-                                                              crate::cbordetver::cbor_det_map_entry_key(
-                                                                  chd
-                                                              );
-                                                          let mt: u8 =
-                                                              crate::cbordetver::cbor_det_major_type(
-                                                                  k0
-                                                              );
-                                                          let is_uint: bool =
-                                                              mt
-                                                              ==
-                                                              crate::cbordetveraux::cbor_major_type_uint64;
-                                                          let testk0: bool =
-                                                              if is_uint
-                                                              {
-                                                                  let
-                                                                  v11:
-                                                                  crate::cbordetver::cbor_det_view
-                                                                  =
-                                                                      crate::cbordetver::cbor_det_destruct(
-                                                                          k0
-                                                                      );
-                                                                  let
-                                                                  _letpattern4:
-                                                                  crate::cbordetver::cbor_det_view
-                                                                  =
-                                                                      v11;
-                                                                  let i: u64 =
-                                                                      match _letpattern4
-                                                                      {
-                                                                          crate::cbordetver::cbor_det_view::Int64
-                                                                          { value: res, .. }
-                                                                          => res,
-                                                                          _ =>
-                                                                            panic!(
-                                                                                "Incomplete pattern matching"
-                                                                            )
-                                                                      };
-                                                                  i == 1u64
-                                                              }
-                                                              else
-                                                              { false };
-                                                          let test1: bool =
-                                                              if testk0
-                                                              {
-                                                                  let
-                                                                  v11:
-                                                                  crate::cbordetveraux::cbor_raw
-                                                                  =
-                                                                      crate::cbordetver::cbor_det_map_entry_value(
-                                                                          chd
-                                                                      );
-                                                                  let test1: bool =
-                                                                      validate_int(v11);
-                                                                  if test1
-                                                                  { true }
-                                                                  else
-                                                                  { validate_tstr(v11) }
-                                                              }
-                                                              else
-                                                              { false };
-                                                          let test10: bool =
-                                                              if test1
-                                                              { true }
-                                                              else
-                                                              {
-                                                                  let
-                                                                  k1: crate::cbordetveraux::cbor_raw
-                                                                  =
-                                                                      crate::cbordetver::cbor_det_map_entry_key(
-                                                                          chd
-                                                                      );
-                                                                  let mt0: u8 =
-                                                                      crate::cbordetver::cbor_det_major_type(
-                                                                          k1
-                                                                      );
-                                                                  let is_uint0: bool =
-                                                                      mt0
-                                                                      ==
-                                                                      crate::cbordetveraux::cbor_major_type_uint64;
-                                                                  let testk1: bool =
-                                                                      if is_uint0
-                                                                      {
-                                                                          let
-                                                                          v11:
-                                                                          crate::cbordetver::cbor_det_view
-                                                                          =
-                                                                              crate::cbordetver::cbor_det_destruct(
-                                                                                  k1
-                                                                              );
-                                                                          let
-                                                                          _letpattern4:
-                                                                          crate::cbordetver::cbor_det_view
-                                                                          =
-                                                                              v11;
-                                                                          let i: u64 =
-                                                                              match _letpattern4
-                                                                              {
-                                                                                  crate::cbordetver::cbor_det_view::Int64
-                                                                                  { value: res, .. }
-                                                                                  => res,
-                                                                                  _ =>
-                                                                                    panic!(
-                                                                                        "Incomplete pattern matching"
-                                                                                    )
-                                                                              };
-                                                                          i == 2u64
-                                                                      }
-                                                                      else
-                                                                      { false };
-                                                                  if testk1
-                                                                  {
-                                                                      let
-                                                                      v11:
-                                                                      crate::cbordetveraux::cbor_raw
-                                                                      =
-                                                                          crate::cbordetver::cbor_det_map_entry_value(
-                                                                              chd
-                                                                          );
-                                                                      let ty1: u8 =
-                                                                          crate::cbordetver::cbor_det_major_type(
-                                                                              v11
-                                                                          );
-                                                                      if
-                                                                      ty1
-                                                                      ==
-                                                                      crate::cbordetveraux::cbor_major_type_array
-                                                                      {
-                                                                          let
-                                                                          v2:
-                                                                          crate::cbordetver::cbor_det_view
-                                                                          =
-                                                                              crate::cbordetver::cbor_det_destruct(
-                                                                                  v11
-                                                                              );
-                                                                          let
-                                                                          _letpattern4:
-                                                                          crate::cbordetver::cbor_det_view
-                                                                          =
-                                                                              v2;
-                                                                          let
-                                                                          i:
-                                                                          crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                                                          =
-                                                                              match _letpattern4
-                                                                              {
-                                                                                  crate::cbordetver::cbor_det_view::Array
-                                                                                  { _0: a }
-                                                                                  =>
-                                                                                    crate::cbordetver::cbor_det_array_iterator_start(
-                                                                                        a
-                                                                                    ),
-                                                                                  _ =>
-                                                                                    panic!(
-                                                                                        "Incomplete pattern matching"
-                                                                                    )
-                                                                              };
-                                                                          let
-                                                                          mut
-                                                                          pi:
-                                                                          [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw;
-                                                                          1]
-                                                                          =
-                                                                              [i; 1usize];
-                                                                          let
-                                                                          i1:
-                                                                          crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                                                          =
-                                                                              (&pi)[0];
-                                                                          let is_done: bool =
-                                                                              crate::cbordetver::cbor_det_array_iterator_is_empty(
-                                                                                  i1
-                                                                              );
-                                                                          let test11: bool =
-                                                                              if is_done
-                                                                              { false }
-                                                                              else
-                                                                              {
-                                                                                  let
-                                                                                  c12:
-                                                                                  crate::cbordetveraux::cbor_raw
-                                                                                  =
-                                                                                      crate::cbordetver::cbor_det_array_iterator_next(
-                                                                                          &mut pi
-                                                                                      );
-                                                                                  validate_label(
-                                                                                      c12
-                                                                                  )
-                                                                              };
-                                                                          let b_success: bool =
-                                                                              if test11
-                                                                              {
-                                                                                  let
-                                                                                  mut
-                                                                                  pcont:
-                                                                                  [bool; 1]
-                                                                                  =
-                                                                                      [true; 1usize];
-                                                                                  while
-                                                                                  (&pcont)[0]
-                                                                                  {
-                                                                                      let
-                                                                                      i10:
-                                                                                      crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                                                                      =
-                                                                                          (&pi)[0];
-                                                                                      let
-                                                                                      i2:
-                                                                                      crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                                                                      =
-                                                                                          (&pi)[0];
-                                                                                      let
-                                                                                      is_done0: bool
-                                                                                      =
-                                                                                          crate::cbordetver::cbor_det_array_iterator_is_empty(
-                                                                                              i2
-                                                                                          );
-                                                                                      let
-                                                                                      cont: bool
-                                                                                      =
-                                                                                          if
-                                                                                          is_done0
-                                                                                          { false }
-                                                                                          else
-                                                                                          {
-                                                                                              let
-                                                                                              c12:
-                                                                                              crate::cbordetveraux::cbor_raw
-                                                                                              =
-                                                                                                  crate::cbordetver::cbor_det_array_iterator_next(
-                                                                                                      &mut
-                                                                                                      pi
-                                                                                                  );
-                                                                                              validate_label(
-                                                                                                  c12
-                                                                                              )
-                                                                                          };
-                                                                                      if ! cont
-                                                                                      {
-                                                                                          (&mut pi)[0] =
-                                                                                              i10;
-                                                                                          (&mut
-                                                                                          pcont)[0] =
-                                                                                              false
-                                                                                      }
-                                                                                  };
-                                                                                  true
-                                                                              }
-                                                                              else
-                                                                              { false };
-                                                                          if b_success
-                                                                          {
-                                                                              let
-                                                                              i·:
-                                                                              crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                                                              =
-                                                                                  (&pi)[0];
-                                                                              crate::cbordetver::cbor_det_array_iterator_is_empty(
-                                                                                  i·
-                                                                              )
-                                                                          }
-                                                                          else
-                                                                          { false }
-                                                                      }
-                                                                      else
-                                                                      { false }
-                                                                  }
-                                                                  else
-                                                                  { false }
-                                                              };
-                                                          let test11: bool =
-                                                              if test10
-                                                              { true }
-                                                              else
-                                                              {
-                                                                  let
-                                                                  k1: crate::cbordetveraux::cbor_raw
-                                                                  =
-                                                                      crate::cbordetver::cbor_det_map_entry_key(
-                                                                          chd
-                                                                      );
-                                                                  let mt0: u8 =
-                                                                      crate::cbordetver::cbor_det_major_type(
-                                                                          k1
-                                                                      );
-                                                                  let is_uint0: bool =
-                                                                      mt0
-                                                                      ==
-                                                                      crate::cbordetveraux::cbor_major_type_uint64;
-                                                                  let testk1: bool =
-                                                                      if is_uint0
-                                                                      {
-                                                                          let
-                                                                          v11:
-                                                                          crate::cbordetver::cbor_det_view
-                                                                          =
-                                                                              crate::cbordetver::cbor_det_destruct(
-                                                                                  k1
-                                                                              );
-                                                                          let
-                                                                          _letpattern4:
-                                                                          crate::cbordetver::cbor_det_view
-                                                                          =
-                                                                              v11;
-                                                                          let i: u64 =
-                                                                              match _letpattern4
-                                                                              {
-                                                                                  crate::cbordetver::cbor_det_view::Int64
-                                                                                  { value: res, .. }
-                                                                                  => res,
-                                                                                  _ =>
-                                                                                    panic!(
-                                                                                        "Incomplete pattern matching"
-                                                                                    )
-                                                                              };
-                                                                          i == 3u64
-                                                                      }
-                                                                      else
-                                                                      { false };
-                                                                  if testk1
-                                                                  {
-                                                                      let
-                                                                      v11:
-                                                                      crate::cbordetveraux::cbor_raw
-                                                                      =
-                                                                          crate::cbordetver::cbor_det_map_entry_value(
-                                                                              chd
-                                                                          );
-                                                                      let test2: bool =
-                                                                          validate_tstr(v11);
-                                                                      if test2
-                                                                      { true }
-                                                                      else
-                                                                      { validate_int(v11) }
-                                                                  }
-                                                                  else
-                                                                  { false }
-                                                              };
-                                                          let test12: bool =
-                                                              if test11
-                                                              { true }
-                                                              else
-                                                              {
-                                                                  let
-                                                                  k1: crate::cbordetveraux::cbor_raw
-                                                                  =
-                                                                      crate::cbordetver::cbor_det_map_entry_key(
-                                                                          chd
-                                                                      );
-                                                                  let mt0: u8 =
-                                                                      crate::cbordetver::cbor_det_major_type(
-                                                                          k1
-                                                                      );
-                                                                  let is_uint0: bool =
-                                                                      mt0
-                                                                      ==
-                                                                      crate::cbordetveraux::cbor_major_type_uint64;
-                                                                  let testk1: bool =
-                                                                      if is_uint0
-                                                                      {
-                                                                          let
-                                                                          v11:
-                                                                          crate::cbordetver::cbor_det_view
-                                                                          =
-                                                                              crate::cbordetver::cbor_det_destruct(
-                                                                                  k1
-                                                                              );
-                                                                          let
-                                                                          _letpattern4:
-                                                                          crate::cbordetver::cbor_det_view
-                                                                          =
-                                                                              v11;
-                                                                          let i: u64 =
-                                                                              match _letpattern4
-                                                                              {
-                                                                                  crate::cbordetver::cbor_det_view::Int64
-                                                                                  { value: res, .. }
-                                                                                  => res,
-                                                                                  _ =>
-                                                                                    panic!(
-                                                                                        "Incomplete pattern matching"
-                                                                                    )
-                                                                              };
-                                                                          i == 4u64
-                                                                      }
-                                                                      else
-                                                                      { false };
-                                                                  if testk1
-                                                                  {
-                                                                      let
-                                                                      v11:
-                                                                      crate::cbordetveraux::cbor_raw
-                                                                      =
-                                                                          crate::cbordetver::cbor_det_map_entry_value(
-                                                                              chd
-                                                                          );
-                                                                      validate_bstr(v11)
-                                                                  }
-                                                                  else
-                                                                  { false }
-                                                              };
-                                                          let test13: bool =
-                                                              if test12
-                                                              { true }
-                                                              else
-                                                              {
-                                                                  let
-                                                                  k1: crate::cbordetveraux::cbor_raw
-                                                                  =
-                                                                      crate::cbordetver::cbor_det_map_entry_key(
-                                                                          chd
-                                                                      );
-                                                                  let mt0: u8 =
-                                                                      crate::cbordetver::cbor_det_major_type(
-                                                                          k1
-                                                                      );
-                                                                  let is_uint0: bool =
-                                                                      mt0
-                                                                      ==
-                                                                      crate::cbordetveraux::cbor_major_type_uint64;
-                                                                  let testk1: bool =
-                                                                      if is_uint0
-                                                                      {
-                                                                          let
-                                                                          v11:
-                                                                          crate::cbordetver::cbor_det_view
-                                                                          =
-                                                                              crate::cbordetver::cbor_det_destruct(
-                                                                                  k1
-                                                                              );
-                                                                          let
-                                                                          _letpattern4:
-                                                                          crate::cbordetver::cbor_det_view
-                                                                          =
-                                                                              v11;
-                                                                          let i: u64 =
-                                                                              match _letpattern4
-                                                                              {
-                                                                                  crate::cbordetver::cbor_det_view::Int64
-                                                                                  { value: res, .. }
-                                                                                  => res,
-                                                                                  _ =>
-                                                                                    panic!(
-                                                                                        "Incomplete pattern matching"
-                                                                                    )
-                                                                              };
-                                                                          i == 6u64
-                                                                      }
-                                                                      else
-                                                                      { false };
-                                                                  if testk1
-                                                                  {
-                                                                      let
-                                                                      v11:
-                                                                      crate::cbordetveraux::cbor_raw
-                                                                      =
-                                                                          crate::cbordetver::cbor_det_map_entry_value(
-                                                                              chd
-                                                                          );
-                                                                      validate_bstr(v11)
-                                                                  }
-                                                                  else
-                                                                  { false }
-                                                              };
-                                                          let test14: bool =
-                                                              if test13
-                                                              { true }
-                                                              else
-                                                              {
-                                                                  let
-                                                                  k1: crate::cbordetveraux::cbor_raw
-                                                                  =
-                                                                      crate::cbordetver::cbor_det_map_entry_key(
-                                                                          chd
-                                                                      );
-                                                                  let mt0: u8 =
-                                                                      crate::cbordetver::cbor_det_major_type(
-                                                                          k1
-                                                                      );
-                                                                  let is_uint0: bool =
-                                                                      mt0
-                                                                      ==
-                                                                      crate::cbordetveraux::cbor_major_type_uint64;
-                                                                  let testk1: bool =
-                                                                      if is_uint0
-                                                                      {
-                                                                          let
-                                                                          v11:
-                                                                          crate::cbordetver::cbor_det_view
-                                                                          =
-                                                                              crate::cbordetver::cbor_det_destruct(
-                                                                                  k1
-                                                                              );
-                                                                          let
-                                                                          _letpattern4:
-                                                                          crate::cbordetver::cbor_det_view
-                                                                          =
-                                                                              v11;
-                                                                          let i: u64 =
-                                                                              match _letpattern4
-                                                                              {
-                                                                                  crate::cbordetver::cbor_det_view::Int64
-                                                                                  { value: res, .. }
-                                                                                  => res,
-                                                                                  _ =>
-                                                                                    panic!(
-                                                                                        "Incomplete pattern matching"
-                                                                                    )
-                                                                              };
-                                                                          i == 5u64
-                                                                      }
-                                                                      else
-                                                                      { false };
-                                                                  if testk1
-                                                                  {
-                                                                      let
-                                                                      v11:
-                                                                      crate::cbordetveraux::cbor_raw
-                                                                      =
-                                                                          crate::cbordetver::cbor_det_map_entry_value(
-                                                                              chd
-                                                                          );
-                                                                      crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(
-                                                                          v11
-                                                                      );
-                                                                      true
-                                                                  }
-                                                                  else
-                                                                  { false }
-                                                              };
-                                                          ! test14
-                                                      }
-                                                      else
-                                                      { false };
-                                                  let test1: bool = ! test0;
-                                                  if ! test1
-                                                  {
-                                                      let i: u64 = (&remaining)[0];
-                                                      let i·: u64 = i.wrapping_sub(1u64);
-                                                      (&mut remaining)[0] = i·
-                                                  };
-                                                  let
-                                                  j1:
-                                                  crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                  =
-                                                      (&pj)[0];
-                                                  let is_empty0: bool =
-                                                      crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                          j1
-                                                      );
-                                                  cond = ! is_empty0
-                                              };
-                                              crate::cbordetveraux::impl_map_group_result::MGOK
-                                          },
-                                        crate::cbordetveraux::impl_map_group_result::MGFail =>
-                                          crate::cbordetveraux::impl_map_group_result::MGFail,
-                                        crate::cbordetveraux::impl_map_group_result::MGCutFail =>
-                                          crate::cbordetveraux::impl_map_group_result::MGCutFail,
-                                        _ =>
-                                          panic!(
-                                              "Precondition of the function most likely violated"
-                                          )
-                                    };
-                                match res122
+                                match res121
                                 {
                                     crate::cbordetveraux::impl_map_group_result::MGOK =>
                                       crate::cbordetveraux::impl_map_group_result::MGOK,
@@ -5772,785 +4026,90 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                                                         "Precondition of the function most likely violated"
                                                     )
                                               };
-                                          let res132: crate::cbordetveraux::impl_map_group_result =
-                                              match res131
-                                              {
-                                                  crate::cbordetveraux::impl_map_group_result::MGOK
-                                                  =>
-                                                    {
-                                                        let i020: u64 = (&remaining)[0];
-                                                        let
-                                                        mty3: crate::cbordetver::cbor_det_int_kind
-                                                        =
-                                                            crate::cbordetver::cbor_det_int_kind::UInt64;
-                                                        let c13: crate::cbordetveraux::cbor_raw =
-                                                            crate::cbordetver::cbor_det_mk_int64(
-                                                                mty3,
-                                                                5u64
-                                                            );
-                                                        let x·3: crate::cbordetver::cbor_det_view =
-                                                            crate::cbordetver::cbor_det_destruct(c);
-                                                        let
-                                                        _letpattern4:
-                                                        crate::cbordetver::cbor_det_view
-                                                        =
-                                                            x·3;
-                                                        let
-                                                        mg3:
-                                                        crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw
-                                                        =
-                                                            match _letpattern4
-                                                            {
-                                                                crate::cbordetver::cbor_det_view::Map
-                                                                { _0: m3 }
-                                                                =>
-                                                                  crate::cbordetver::cbor_det_map_get(
-                                                                      m3,
-                                                                      c13
-                                                                  ),
-                                                                _ =>
-                                                                  panic!(
-                                                                      "Incomplete pattern matching"
-                                                                  )
-                                                            };
-                                                        let
-                                                        res14:
-                                                        crate::cbordetveraux::impl_map_group_result
-                                                        =
-                                                            match mg3
-                                                            {
-                                                                crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None
-                                                                =>
-                                                                  crate::cbordetveraux::impl_map_group_result::MGFail,
-                                                                crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some
-                                                                { v: cv }
-                                                                =>
-                                                                  {
-                                                                      let check_value: bool =
-                                                                          validate_everparsenomatch(
-                                                                              cv
-                                                                          );
-                                                                      if check_value
-                                                                      {
-                                                                          let i1: u64 =
-                                                                              (&remaining)[0];
-                                                                          let i2: u64 =
-                                                                              i1.wrapping_sub(1u64);
-                                                                          (&mut remaining)[0] = i2;
-                                                                          crate::cbordetveraux::impl_map_group_result::MGOK
-                                                                      }
-                                                                      else
-                                                                      {
-                                                                          crate::cbordetveraux::impl_map_group_result::MGCutFail
-                                                                      }
-                                                                  },
-                                                                _ =>
-                                                                  panic!(
-                                                                      "Incomplete pattern matching"
-                                                                  )
-                                                            };
-                                                        match res14
-                                                        {
-                                                            crate::cbordetveraux::impl_map_group_result::MGOK
-                                                            =>
-                                                              crate::cbordetveraux::impl_map_group_result::MGOK,
-                                                            crate::cbordetveraux::impl_map_group_result::MGFail
-                                                            =>
-                                                              {
-                                                                  (&mut remaining)[0] = i020;
-                                                                  crate::cbordetveraux::impl_map_group_result::MGOK
-                                                              },
-                                                            crate::cbordetveraux::impl_map_group_result::MGCutFail
-                                                            =>
-                                                              crate::cbordetveraux::impl_map_group_result::MGCutFail,
-                                                            _ =>
-                                                              panic!(
-                                                                  "Precondition of the function most likely violated"
-                                                              )
-                                                        }
-                                                    },
-                                                  crate::cbordetveraux::impl_map_group_result::MGFail
-                                                  =>
-                                                    crate::cbordetveraux::impl_map_group_result::MGFail,
-                                                  crate::cbordetveraux::impl_map_group_result::MGCutFail
-                                                  =>
-                                                    crate::cbordetveraux::impl_map_group_result::MGCutFail,
-                                                  _ =>
-                                                    panic!(
-                                                        "Precondition of the function most likely violated"
-                                                    )
-                                              };
-                                          match res132
+                                          match res131
                                           {
                                               crate::cbordetveraux::impl_map_group_result::MGOK =>
                                                 {
-                                                    let v10: crate::cbordetver::cbor_det_view =
+                                                    let i020: u64 = (&remaining)[0];
+                                                    let mty3: crate::cbordetver::cbor_det_int_kind =
+                                                        crate::cbordetver::cbor_det_int_kind::UInt64;
+                                                    let c13: crate::cbordetveraux::cbor_raw =
+                                                        crate::cbordetver::cbor_det_mk_int64(
+                                                            mty3,
+                                                            5u64
+                                                        );
+                                                    let x·3: crate::cbordetver::cbor_det_view =
                                                         crate::cbordetver::cbor_det_destruct(c);
                                                     let
                                                     _letpattern4: crate::cbordetver::cbor_det_view
                                                     =
-                                                        v10;
+                                                        x·3;
                                                     let
-                                                    j0:
-                                                    crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                                                    mg3:
+                                                    crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw
                                                     =
                                                         match _letpattern4
                                                         {
                                                             crate::cbordetver::cbor_det_view::Map
-                                                            { _0: a }
+                                                            { _0: m3 }
                                                             =>
-                                                              crate::cbordetver::cbor_det_map_iterator_start(
-                                                                  a
+                                                              crate::cbordetver::cbor_det_map_get(
+                                                                  m3,
+                                                                  c13
                                                               ),
                                                             _ =>
                                                               panic!("Incomplete pattern matching")
                                                         };
                                                     let
-                                                    mut
-                                                    pj:
-                                                    [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
-                                                    1]
+                                                    res14:
+                                                    crate::cbordetveraux::impl_map_group_result
                                                     =
-                                                        [j0; 1usize];
-                                                    let
-                                                    j:
-                                                    crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                    =
-                                                        (&pj)[0];
-                                                    let is_empty: bool =
-                                                        crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                            j
-                                                        );
-                                                    let mut cond: bool = ! is_empty;
-                                                    while
-                                                    cond
-                                                    {
-                                                        let
-                                                        chd: crate::cbordetveraux::cbor_map_entry
-                                                        =
-                                                            crate::cbordetver::cbor_det_map_iterator_next(
-                                                                &mut pj
-                                                            );
-                                                        let k: crate::cbordetveraux::cbor_raw =
-                                                            crate::cbordetver::cbor_det_map_entry_key(
-                                                                chd
-                                                            );
-                                                        let testk: bool = validate_label(k);
-                                                        let test: bool =
-                                                            if testk
-                                                            {
-                                                                let
-                                                                v11: crate::cbordetveraux::cbor_raw
-                                                                =
-                                                                    crate::cbordetver::cbor_det_map_entry_value(
-                                                                        chd
-                                                                    );
-                                                                validate_values(v11)
-                                                            }
-                                                            else
-                                                            { false };
-                                                        let test0: bool =
-                                                            if test
-                                                            {
-                                                                let
-                                                                k0: crate::cbordetveraux::cbor_raw
-                                                                =
-                                                                    crate::cbordetver::cbor_det_map_entry_key(
-                                                                        chd
-                                                                    );
-                                                                let mt: u8 =
-                                                                    crate::cbordetver::cbor_det_major_type(
-                                                                        k0
-                                                                    );
-                                                                let is_uint: bool =
-                                                                    mt
-                                                                    ==
-                                                                    crate::cbordetveraux::cbor_major_type_uint64;
-                                                                let testk0: bool =
-                                                                    if is_uint
-                                                                    {
-                                                                        let
-                                                                        v11:
-                                                                        crate::cbordetver::cbor_det_view
-                                                                        =
-                                                                            crate::cbordetver::cbor_det_destruct(
-                                                                                k0
-                                                                            );
-                                                                        let
-                                                                        _letpattern5:
-                                                                        crate::cbordetver::cbor_det_view
-                                                                        =
-                                                                            v11;
-                                                                        let i: u64 =
-                                                                            match _letpattern5
-                                                                            {
-                                                                                crate::cbordetver::cbor_det_view::Int64
-                                                                                { value: res, .. }
-                                                                                => res,
-                                                                                _ =>
-                                                                                  panic!(
-                                                                                      "Incomplete pattern matching"
-                                                                                  )
-                                                                            };
-                                                                        i == 1u64
-                                                                    }
-                                                                    else
-                                                                    { false };
-                                                                let test1: bool =
-                                                                    if testk0
-                                                                    {
-                                                                        let
-                                                                        v11:
-                                                                        crate::cbordetveraux::cbor_raw
-                                                                        =
-                                                                            crate::cbordetver::cbor_det_map_entry_value(
-                                                                                chd
-                                                                            );
-                                                                        let test1: bool =
-                                                                            validate_int(v11);
-                                                                        if test1
-                                                                        { true }
-                                                                        else
-                                                                        { validate_tstr(v11) }
-                                                                    }
-                                                                    else
-                                                                    { false };
-                                                                let test10: bool =
-                                                                    if test1
-                                                                    { true }
-                                                                    else
-                                                                    {
-                                                                        let
-                                                                        k1:
-                                                                        crate::cbordetveraux::cbor_raw
-                                                                        =
-                                                                            crate::cbordetver::cbor_det_map_entry_key(
-                                                                                chd
-                                                                            );
-                                                                        let mt0: u8 =
-                                                                            crate::cbordetver::cbor_det_major_type(
-                                                                                k1
-                                                                            );
-                                                                        let is_uint0: bool =
-                                                                            mt0
-                                                                            ==
-                                                                            crate::cbordetveraux::cbor_major_type_uint64;
-                                                                        let testk1: bool =
-                                                                            if is_uint0
-                                                                            {
-                                                                                let
-                                                                                v11:
-                                                                                crate::cbordetver::cbor_det_view
-                                                                                =
-                                                                                    crate::cbordetver::cbor_det_destruct(
-                                                                                        k1
-                                                                                    );
-                                                                                let
-                                                                                _letpattern5:
-                                                                                crate::cbordetver::cbor_det_view
-                                                                                =
-                                                                                    v11;
-                                                                                let i: u64 =
-                                                                                    match
-                                                                                    _letpattern5
-                                                                                    {
-                                                                                        crate::cbordetver::cbor_det_view::Int64
-                                                                                        {
-                                                                                            value:
-                                                                                            res,
-                                                                                            ..
-                                                                                        }
-                                                                                        => res,
-                                                                                        _ =>
-                                                                                          panic!(
-                                                                                              "Incomplete pattern matching"
-                                                                                          )
-                                                                                    };
-                                                                                i == 2u64
-                                                                            }
-                                                                            else
-                                                                            { false };
-                                                                        if testk1
-                                                                        {
-                                                                            let
-                                                                            v11:
-                                                                            crate::cbordetveraux::cbor_raw
-                                                                            =
-                                                                                crate::cbordetver::cbor_det_map_entry_value(
-                                                                                    chd
-                                                                                );
-                                                                            let ty1: u8 =
-                                                                                crate::cbordetver::cbor_det_major_type(
-                                                                                    v11
-                                                                                );
-                                                                            if
-                                                                            ty1
-                                                                            ==
-                                                                            crate::cbordetveraux::cbor_major_type_array
-                                                                            {
-                                                                                let
-                                                                                v2:
-                                                                                crate::cbordetver::cbor_det_view
-                                                                                =
-                                                                                    crate::cbordetver::cbor_det_destruct(
-                                                                                        v11
-                                                                                    );
-                                                                                let
-                                                                                _letpattern5:
-                                                                                crate::cbordetver::cbor_det_view
-                                                                                =
-                                                                                    v2;
-                                                                                let
-                                                                                i:
-                                                                                crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                                                                =
-                                                                                    match
-                                                                                    _letpattern5
-                                                                                    {
-                                                                                        crate::cbordetver::cbor_det_view::Array
-                                                                                        { _0: a }
-                                                                                        =>
-                                                                                          crate::cbordetver::cbor_det_array_iterator_start(
-                                                                                              a
-                                                                                          ),
-                                                                                        _ =>
-                                                                                          panic!(
-                                                                                              "Incomplete pattern matching"
-                                                                                          )
-                                                                                    };
-                                                                                let
-                                                                                mut
-                                                                                pi:
-                                                                                [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw;
-                                                                                1]
-                                                                                =
-                                                                                    [i; 1usize];
-                                                                                let
-                                                                                i1:
-                                                                                crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                                                                =
-                                                                                    (&pi)[0];
-                                                                                let is_done: bool =
-                                                                                    crate::cbordetver::cbor_det_array_iterator_is_empty(
-                                                                                        i1
-                                                                                    );
-                                                                                let test11: bool =
-                                                                                    if is_done
-                                                                                    { false }
-                                                                                    else
-                                                                                    {
-                                                                                        let
-                                                                                        c13:
-                                                                                        crate::cbordetveraux::cbor_raw
-                                                                                        =
-                                                                                            crate::cbordetver::cbor_det_array_iterator_next(
-                                                                                                &mut
-                                                                                                pi
-                                                                                            );
-                                                                                        validate_label(
-                                                                                            c13
-                                                                                        )
-                                                                                    };
-                                                                                let
-                                                                                b_success: bool
-                                                                                =
-                                                                                    if test11
-                                                                                    {
-                                                                                        let
-                                                                                        mut
-                                                                                        pcont:
-                                                                                        [bool; 1]
-                                                                                        =
-                                                                                            [true;
-                                                                                                1usize];
-                                                                                        while
-                                                                                        (&pcont)[0]
-                                                                                        {
-                                                                                            let
-                                                                                            i10:
-                                                                                            crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                                                                            =
-                                                                                                (&pi)[0];
-                                                                                            let
-                                                                                            i2:
-                                                                                            crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                                                                            =
-                                                                                                (&pi)[0];
-                                                                                            let
-                                                                                            is_done0:
-                                                                                            bool
-                                                                                            =
-                                                                                                crate::cbordetver::cbor_det_array_iterator_is_empty(
-                                                                                                    i2
-                                                                                                );
-                                                                                            let
-                                                                                            cont:
-                                                                                            bool
-                                                                                            =
-                                                                                                if
-                                                                                                is_done0
-                                                                                                {
-                                                                                                    false
-                                                                                                }
-                                                                                                else
-                                                                                                {
-                                                                                                    let
-                                                                                                    c13:
-                                                                                                    crate::cbordetveraux::cbor_raw
-                                                                                                    =
-                                                                                                        crate::cbordetver::cbor_det_array_iterator_next(
-                                                                                                            &mut
-                                                                                                            pi
-                                                                                                        );
-                                                                                                    validate_label(
-                                                                                                        c13
-                                                                                                    )
-                                                                                                };
-                                                                                            if
-                                                                                            ! cont
-                                                                                            {
-                                                                                                (&mut
-                                                                                                pi)[0] =
-                                                                                                    i10;
-                                                                                                (&mut
-                                                                                                pcont)[0] =
-                                                                                                    false
-                                                                                            }
-                                                                                        };
-                                                                                        true
-                                                                                    }
-                                                                                    else
-                                                                                    { false };
-                                                                                if b_success
-                                                                                {
-                                                                                    let
-                                                                                    i·:
-                                                                                    crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                                                                    =
-                                                                                        (&pi)[0];
-                                                                                    crate::cbordetver::cbor_det_array_iterator_is_empty(
-                                                                                        i·
-                                                                                    )
-                                                                                }
-                                                                                else
-                                                                                { false }
-                                                                            }
-                                                                            else
-                                                                            { false }
-                                                                        }
-                                                                        else
-                                                                        { false }
-                                                                    };
-                                                                let test11: bool =
-                                                                    if test10
-                                                                    { true }
-                                                                    else
-                                                                    {
-                                                                        let
-                                                                        k1:
-                                                                        crate::cbordetveraux::cbor_raw
-                                                                        =
-                                                                            crate::cbordetver::cbor_det_map_entry_key(
-                                                                                chd
-                                                                            );
-                                                                        let mt0: u8 =
-                                                                            crate::cbordetver::cbor_det_major_type(
-                                                                                k1
-                                                                            );
-                                                                        let is_uint0: bool =
-                                                                            mt0
-                                                                            ==
-                                                                            crate::cbordetveraux::cbor_major_type_uint64;
-                                                                        let testk1: bool =
-                                                                            if is_uint0
-                                                                            {
-                                                                                let
-                                                                                v11:
-                                                                                crate::cbordetver::cbor_det_view
-                                                                                =
-                                                                                    crate::cbordetver::cbor_det_destruct(
-                                                                                        k1
-                                                                                    );
-                                                                                let
-                                                                                _letpattern5:
-                                                                                crate::cbordetver::cbor_det_view
-                                                                                =
-                                                                                    v11;
-                                                                                let i: u64 =
-                                                                                    match
-                                                                                    _letpattern5
-                                                                                    {
-                                                                                        crate::cbordetver::cbor_det_view::Int64
-                                                                                        {
-                                                                                            value:
-                                                                                            res,
-                                                                                            ..
-                                                                                        }
-                                                                                        => res,
-                                                                                        _ =>
-                                                                                          panic!(
-                                                                                              "Incomplete pattern matching"
-                                                                                          )
-                                                                                    };
-                                                                                i == 3u64
-                                                                            }
-                                                                            else
-                                                                            { false };
-                                                                        if testk1
-                                                                        {
-                                                                            let
-                                                                            v11:
-                                                                            crate::cbordetveraux::cbor_raw
-                                                                            =
-                                                                                crate::cbordetver::cbor_det_map_entry_value(
-                                                                                    chd
-                                                                                );
-                                                                            let test2: bool =
-                                                                                validate_tstr(v11);
-                                                                            if test2
-                                                                            { true }
-                                                                            else
-                                                                            { validate_int(v11) }
-                                                                        }
-                                                                        else
-                                                                        { false }
-                                                                    };
-                                                                let test12: bool =
-                                                                    if test11
-                                                                    { true }
-                                                                    else
-                                                                    {
-                                                                        let
-                                                                        k1:
-                                                                        crate::cbordetveraux::cbor_raw
-                                                                        =
-                                                                            crate::cbordetver::cbor_det_map_entry_key(
-                                                                                chd
-                                                                            );
-                                                                        let mt0: u8 =
-                                                                            crate::cbordetver::cbor_det_major_type(
-                                                                                k1
-                                                                            );
-                                                                        let is_uint0: bool =
-                                                                            mt0
-                                                                            ==
-                                                                            crate::cbordetveraux::cbor_major_type_uint64;
-                                                                        let testk1: bool =
-                                                                            if is_uint0
-                                                                            {
-                                                                                let
-                                                                                v11:
-                                                                                crate::cbordetver::cbor_det_view
-                                                                                =
-                                                                                    crate::cbordetver::cbor_det_destruct(
-                                                                                        k1
-                                                                                    );
-                                                                                let
-                                                                                _letpattern5:
-                                                                                crate::cbordetver::cbor_det_view
-                                                                                =
-                                                                                    v11;
-                                                                                let i: u64 =
-                                                                                    match
-                                                                                    _letpattern5
-                                                                                    {
-                                                                                        crate::cbordetver::cbor_det_view::Int64
-                                                                                        {
-                                                                                            value:
-                                                                                            res,
-                                                                                            ..
-                                                                                        }
-                                                                                        => res,
-                                                                                        _ =>
-                                                                                          panic!(
-                                                                                              "Incomplete pattern matching"
-                                                                                          )
-                                                                                    };
-                                                                                i == 4u64
-                                                                            }
-                                                                            else
-                                                                            { false };
-                                                                        if testk1
-                                                                        {
-                                                                            let
-                                                                            v11:
-                                                                            crate::cbordetveraux::cbor_raw
-                                                                            =
-                                                                                crate::cbordetver::cbor_det_map_entry_value(
-                                                                                    chd
-                                                                                );
-                                                                            validate_bstr(v11)
-                                                                        }
-                                                                        else
-                                                                        { false }
-                                                                    };
-                                                                let test13: bool =
-                                                                    if test12
-                                                                    { true }
-                                                                    else
-                                                                    {
-                                                                        let
-                                                                        k1:
-                                                                        crate::cbordetveraux::cbor_raw
-                                                                        =
-                                                                            crate::cbordetver::cbor_det_map_entry_key(
-                                                                                chd
-                                                                            );
-                                                                        let mt0: u8 =
-                                                                            crate::cbordetver::cbor_det_major_type(
-                                                                                k1
-                                                                            );
-                                                                        let is_uint0: bool =
-                                                                            mt0
-                                                                            ==
-                                                                            crate::cbordetveraux::cbor_major_type_uint64;
-                                                                        let testk1: bool =
-                                                                            if is_uint0
-                                                                            {
-                                                                                let
-                                                                                v11:
-                                                                                crate::cbordetver::cbor_det_view
-                                                                                =
-                                                                                    crate::cbordetver::cbor_det_destruct(
-                                                                                        k1
-                                                                                    );
-                                                                                let
-                                                                                _letpattern5:
-                                                                                crate::cbordetver::cbor_det_view
-                                                                                =
-                                                                                    v11;
-                                                                                let i: u64 =
-                                                                                    match
-                                                                                    _letpattern5
-                                                                                    {
-                                                                                        crate::cbordetver::cbor_det_view::Int64
-                                                                                        {
-                                                                                            value:
-                                                                                            res,
-                                                                                            ..
-                                                                                        }
-                                                                                        => res,
-                                                                                        _ =>
-                                                                                          panic!(
-                                                                                              "Incomplete pattern matching"
-                                                                                          )
-                                                                                    };
-                                                                                i == 6u64
-                                                                            }
-                                                                            else
-                                                                            { false };
-                                                                        if testk1
-                                                                        {
-                                                                            let
-                                                                            v11:
-                                                                            crate::cbordetveraux::cbor_raw
-                                                                            =
-                                                                                crate::cbordetver::cbor_det_map_entry_value(
-                                                                                    chd
-                                                                                );
-                                                                            crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(
-                                                                                v11
-                                                                            );
-                                                                            true
-                                                                        }
-                                                                        else
-                                                                        { false }
-                                                                    };
-                                                                let test14: bool =
-                                                                    if test13
-                                                                    { true }
-                                                                    else
-                                                                    {
-                                                                        let
-                                                                        k1:
-                                                                        crate::cbordetveraux::cbor_raw
-                                                                        =
-                                                                            crate::cbordetver::cbor_det_map_entry_key(
-                                                                                chd
-                                                                            );
-                                                                        let mt0: u8 =
-                                                                            crate::cbordetver::cbor_det_major_type(
-                                                                                k1
-                                                                            );
-                                                                        let is_uint0: bool =
-                                                                            mt0
-                                                                            ==
-                                                                            crate::cbordetveraux::cbor_major_type_uint64;
-                                                                        let testk1: bool =
-                                                                            if is_uint0
-                                                                            {
-                                                                                let
-                                                                                v11:
-                                                                                crate::cbordetver::cbor_det_view
-                                                                                =
-                                                                                    crate::cbordetver::cbor_det_destruct(
-                                                                                        k1
-                                                                                    );
-                                                                                let
-                                                                                _letpattern5:
-                                                                                crate::cbordetver::cbor_det_view
-                                                                                =
-                                                                                    v11;
-                                                                                let i: u64 =
-                                                                                    match
-                                                                                    _letpattern5
-                                                                                    {
-                                                                                        crate::cbordetver::cbor_det_view::Int64
-                                                                                        {
-                                                                                            value:
-                                                                                            res,
-                                                                                            ..
-                                                                                        }
-                                                                                        => res,
-                                                                                        _ =>
-                                                                                          panic!(
-                                                                                              "Incomplete pattern matching"
-                                                                                          )
-                                                                                    };
-                                                                                i == 5u64
-                                                                            }
-                                                                            else
-                                                                            { false };
-                                                                        if testk1
-                                                                        {
-                                                                            let
-                                                                            v11:
-                                                                            crate::cbordetveraux::cbor_raw
-                                                                            =
-                                                                                crate::cbordetver::cbor_det_map_entry_value(
-                                                                                    chd
-                                                                                );
-                                                                            crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(
-                                                                                v11
-                                                                            );
-                                                                            true
-                                                                        }
-                                                                        else
-                                                                        { false }
-                                                                    };
-                                                                ! test14
-                                                            }
-                                                            else
-                                                            { false };
-                                                        let test1: bool = ! test0;
-                                                        if ! test1
+                                                        match mg3
                                                         {
-                                                            let i: u64 = (&remaining)[0];
-                                                            let i·: u64 = i.wrapping_sub(1u64);
-                                                            (&mut remaining)[0] = i·
+                                                            crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None
+                                                            =>
+                                                              crate::cbordetveraux::impl_map_group_result::MGFail,
+                                                            crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some
+                                                            { v: cv }
+                                                            =>
+                                                              {
+                                                                  let check_value: bool =
+                                                                      validate_everparsenomatch(cv);
+                                                                  if check_value
+                                                                  {
+                                                                      let i1: u64 = (&remaining)[0];
+                                                                      let i2: u64 =
+                                                                          i1.wrapping_sub(1u64);
+                                                                      (&mut remaining)[0] = i2;
+                                                                      crate::cbordetveraux::impl_map_group_result::MGOK
+                                                                  }
+                                                                  else
+                                                                  {
+                                                                      crate::cbordetveraux::impl_map_group_result::MGCutFail
+                                                                  }
+                                                              },
+                                                            _ =>
+                                                              panic!("Incomplete pattern matching")
                                                         };
-                                                        let
-                                                        j1:
-                                                        crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                        =
-                                                            (&pj)[0];
-                                                        let is_empty0: bool =
-                                                            crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                                j1
-                                                            );
-                                                        cond = ! is_empty0
-                                                    };
-                                                    crate::cbordetveraux::impl_map_group_result::MGOK
+                                                    match res14
+                                                    {
+                                                        crate::cbordetveraux::impl_map_group_result::MGOK
+                                                        =>
+                                                          crate::cbordetveraux::impl_map_group_result::MGOK,
+                                                        crate::cbordetveraux::impl_map_group_result::MGFail
+                                                        =>
+                                                          {
+                                                              (&mut remaining)[0] = i020;
+                                                              crate::cbordetveraux::impl_map_group_result::MGOK
+                                                          },
+                                                        crate::cbordetveraux::impl_map_group_result::MGCutFail
+                                                        =>
+                                                          crate::cbordetveraux::impl_map_group_result::MGCutFail,
+                                                        _ =>
+                                                          panic!(
+                                                              "Precondition of the function most likely violated"
+                                                          )
+                                                    }
                                                 },
                                               crate::cbordetveraux::impl_map_group_result::MGFail =>
                                                 crate::cbordetveraux::impl_map_group_result::MGFail,
@@ -6572,6 +4131,436 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                             crate::cbordetveraux::impl_map_group_result::MGCutFail,
                           _ => panic!("Precondition of the function most likely violated")
                       }
+                  },
+                crate::cbordetveraux::impl_map_group_result::MGFail =>
+                  crate::cbordetveraux::impl_map_group_result::MGFail,
+                crate::cbordetveraux::impl_map_group_result::MGCutFail =>
+                  crate::cbordetveraux::impl_map_group_result::MGCutFail,
+                _ => panic!("Precondition of the function most likely violated")
+            };
+        let res: crate::cbordetveraux::impl_map_group_result =
+            match res14
+            {
+                crate::cbordetveraux::impl_map_group_result::MGOK =>
+                  {
+                      let v10: crate::cbordetver::cbor_det_view =
+                          crate::cbordetver::cbor_det_destruct(c);
+                      let _letpattern1: crate::cbordetver::cbor_det_view = v10;
+                      let
+                      j0:
+                      crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                      =
+                          match _letpattern1
+                          {
+                              crate::cbordetver::cbor_det_view::Map { _0: a } =>
+                                crate::cbordetver::cbor_det_map_iterator_start(a),
+                              _ => panic!("Incomplete pattern matching")
+                          };
+                      let
+                      mut
+                      pj:
+                      [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
+                      1]
+                      =
+                          [j0; 1usize];
+                      let
+                      j: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                      =
+                          (&pj)[0];
+                      let is_empty: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
+                      let mut cond: bool = ! is_empty;
+                      while
+                      cond
+                      {
+                          let chd: crate::cbordetveraux::cbor_map_entry =
+                              crate::cbordetver::cbor_det_map_iterator_next(&mut pj);
+                          let k: crate::cbordetveraux::cbor_raw =
+                              crate::cbordetver::cbor_det_map_entry_key(chd);
+                          let testk: bool = validate_label(k);
+                          let test: bool =
+                              if testk
+                              {
+                                  let v11: crate::cbordetveraux::cbor_raw =
+                                      crate::cbordetver::cbor_det_map_entry_value(chd);
+                                  validate_values(v11)
+                              }
+                              else
+                              { false };
+                          let test0: bool =
+                              if test
+                              {
+                                  let k0: crate::cbordetveraux::cbor_raw =
+                                      crate::cbordetver::cbor_det_map_entry_key(chd);
+                                  let mt: u8 = crate::cbordetver::cbor_det_major_type(k0);
+                                  let is_uint: bool =
+                                      mt == crate::cbordetveraux::cbor_major_type_uint64;
+                                  let testk0: bool =
+                                      if is_uint
+                                      {
+                                          let v11: crate::cbordetver::cbor_det_view =
+                                              crate::cbordetver::cbor_det_destruct(k0);
+                                          let _letpattern2: crate::cbordetver::cbor_det_view = v11;
+                                          let i: u64 =
+                                              match _letpattern2
+                                              {
+                                                  crate::cbordetver::cbor_det_view::Int64
+                                                  { value: res, .. }
+                                                  => res,
+                                                  _ => panic!("Incomplete pattern matching")
+                                              };
+                                          i == 1u64
+                                      }
+                                      else
+                                      { false };
+                                  let test1: bool =
+                                      if testk0
+                                      {
+                                          let v11: crate::cbordetveraux::cbor_raw =
+                                              crate::cbordetver::cbor_det_map_entry_value(chd);
+                                          let test1: bool = validate_int(v11);
+                                          if test1 { true } else { validate_tstr(v11) }
+                                      }
+                                      else
+                                      { false };
+                                  let test10: bool =
+                                      if test1
+                                      { true }
+                                      else
+                                      {
+                                          let k1: crate::cbordetveraux::cbor_raw =
+                                              crate::cbordetver::cbor_det_map_entry_key(chd);
+                                          let mt0: u8 = crate::cbordetver::cbor_det_major_type(k1);
+                                          let is_uint0: bool =
+                                              mt0 == crate::cbordetveraux::cbor_major_type_uint64;
+                                          let testk1: bool =
+                                              if is_uint0
+                                              {
+                                                  let v11: crate::cbordetver::cbor_det_view =
+                                                      crate::cbordetver::cbor_det_destruct(k1);
+                                                  let
+                                                  _letpattern2: crate::cbordetver::cbor_det_view
+                                                  =
+                                                      v11;
+                                                  let i: u64 =
+                                                      match _letpattern2
+                                                      {
+                                                          crate::cbordetver::cbor_det_view::Int64
+                                                          { value: res, .. }
+                                                          => res,
+                                                          _ => panic!("Incomplete pattern matching")
+                                                      };
+                                                  i == 2u64
+                                              }
+                                              else
+                                              { false };
+                                          if testk1
+                                          {
+                                              let v11: crate::cbordetveraux::cbor_raw =
+                                                  crate::cbordetver::cbor_det_map_entry_value(chd);
+                                              let ty1: u8 =
+                                                  crate::cbordetver::cbor_det_major_type(v11);
+                                              if ty1 == crate::cbordetveraux::cbor_major_type_array
+                                              {
+                                                  let v2: crate::cbordetver::cbor_det_view =
+                                                      crate::cbordetver::cbor_det_destruct(v11);
+                                                  let
+                                                  _letpattern2: crate::cbordetver::cbor_det_view
+                                                  =
+                                                      v2;
+                                                  let
+                                                  i:
+                                                  crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
+                                                  =
+                                                      match _letpattern2
+                                                      {
+                                                          crate::cbordetver::cbor_det_view::Array
+                                                          { _0: a }
+                                                          =>
+                                                            crate::cbordetver::cbor_det_array_iterator_start(
+                                                                a
+                                                            ),
+                                                          _ => panic!("Incomplete pattern matching")
+                                                      };
+                                                  let
+                                                  mut
+                                                  pi:
+                                                  [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw;
+                                                  1]
+                                                  =
+                                                      [i; 1usize];
+                                                  let
+                                                  i1:
+                                                  crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
+                                                  =
+                                                      (&pi)[0];
+                                                  let is_done: bool =
+                                                      crate::cbordetver::cbor_det_array_iterator_is_empty(
+                                                          i1
+                                                      );
+                                                  let test11: bool =
+                                                      if is_done
+                                                      { false }
+                                                      else
+                                                      {
+                                                          let c10: crate::cbordetveraux::cbor_raw =
+                                                              crate::cbordetver::cbor_det_array_iterator_next(
+                                                                  &mut pi
+                                                              );
+                                                          validate_label(c10)
+                                                      };
+                                                  let b_success: bool =
+                                                      if test11
+                                                      {
+                                                          let mut pcont: [bool; 1] = [true; 1usize];
+                                                          while
+                                                          (&pcont)[0]
+                                                          {
+                                                              let
+                                                              i10:
+                                                              crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
+                                                              =
+                                                                  (&pi)[0];
+                                                              let
+                                                              i2:
+                                                              crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
+                                                              =
+                                                                  (&pi)[0];
+                                                              let is_done0: bool =
+                                                                  crate::cbordetver::cbor_det_array_iterator_is_empty(
+                                                                      i2
+                                                                  );
+                                                              let cont: bool =
+                                                                  if is_done0
+                                                                  { false }
+                                                                  else
+                                                                  {
+                                                                      let
+                                                                      c10:
+                                                                      crate::cbordetveraux::cbor_raw
+                                                                      =
+                                                                          crate::cbordetver::cbor_det_array_iterator_next(
+                                                                              &mut pi
+                                                                          );
+                                                                      validate_label(c10)
+                                                                  };
+                                                              if ! cont
+                                                              {
+                                                                  (&mut pi)[0] = i10;
+                                                                  (&mut pcont)[0] = false
+                                                              }
+                                                          };
+                                                          true
+                                                      }
+                                                      else
+                                                      { false };
+                                                  if b_success
+                                                  {
+                                                      let
+                                                      i·:
+                                                      crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
+                                                      =
+                                                          (&pi)[0];
+                                                      crate::cbordetver::cbor_det_array_iterator_is_empty(
+                                                          i·
+                                                      )
+                                                  }
+                                                  else
+                                                  { false }
+                                              }
+                                              else
+                                              { false }
+                                          }
+                                          else
+                                          { false }
+                                      };
+                                  let test11: bool =
+                                      if test10
+                                      { true }
+                                      else
+                                      {
+                                          let k1: crate::cbordetveraux::cbor_raw =
+                                              crate::cbordetver::cbor_det_map_entry_key(chd);
+                                          let mt0: u8 = crate::cbordetver::cbor_det_major_type(k1);
+                                          let is_uint0: bool =
+                                              mt0 == crate::cbordetveraux::cbor_major_type_uint64;
+                                          let testk1: bool =
+                                              if is_uint0
+                                              {
+                                                  let v11: crate::cbordetver::cbor_det_view =
+                                                      crate::cbordetver::cbor_det_destruct(k1);
+                                                  let
+                                                  _letpattern2: crate::cbordetver::cbor_det_view
+                                                  =
+                                                      v11;
+                                                  let i: u64 =
+                                                      match _letpattern2
+                                                      {
+                                                          crate::cbordetver::cbor_det_view::Int64
+                                                          { value: res, .. }
+                                                          => res,
+                                                          _ => panic!("Incomplete pattern matching")
+                                                      };
+                                                  i == 3u64
+                                              }
+                                              else
+                                              { false };
+                                          if testk1
+                                          {
+                                              let v11: crate::cbordetveraux::cbor_raw =
+                                                  crate::cbordetver::cbor_det_map_entry_value(chd);
+                                              let test2: bool = validate_tstr(v11);
+                                              if test2 { true } else { validate_int(v11) }
+                                          }
+                                          else
+                                          { false }
+                                      };
+                                  let test12: bool =
+                                      if test11
+                                      { true }
+                                      else
+                                      {
+                                          let k1: crate::cbordetveraux::cbor_raw =
+                                              crate::cbordetver::cbor_det_map_entry_key(chd);
+                                          let mt0: u8 = crate::cbordetver::cbor_det_major_type(k1);
+                                          let is_uint0: bool =
+                                              mt0 == crate::cbordetveraux::cbor_major_type_uint64;
+                                          let testk1: bool =
+                                              if is_uint0
+                                              {
+                                                  let v11: crate::cbordetver::cbor_det_view =
+                                                      crate::cbordetver::cbor_det_destruct(k1);
+                                                  let
+                                                  _letpattern2: crate::cbordetver::cbor_det_view
+                                                  =
+                                                      v11;
+                                                  let i: u64 =
+                                                      match _letpattern2
+                                                      {
+                                                          crate::cbordetver::cbor_det_view::Int64
+                                                          { value: res, .. }
+                                                          => res,
+                                                          _ => panic!("Incomplete pattern matching")
+                                                      };
+                                                  i == 4u64
+                                              }
+                                              else
+                                              { false };
+                                          if testk1
+                                          {
+                                              let v11: crate::cbordetveraux::cbor_raw =
+                                                  crate::cbordetver::cbor_det_map_entry_value(chd);
+                                              validate_bstr(v11)
+                                          }
+                                          else
+                                          { false }
+                                      };
+                                  let test13: bool =
+                                      if test12
+                                      { true }
+                                      else
+                                      {
+                                          let k1: crate::cbordetveraux::cbor_raw =
+                                              crate::cbordetver::cbor_det_map_entry_key(chd);
+                                          let mt0: u8 = crate::cbordetver::cbor_det_major_type(k1);
+                                          let is_uint0: bool =
+                                              mt0 == crate::cbordetveraux::cbor_major_type_uint64;
+                                          let testk1: bool =
+                                              if is_uint0
+                                              {
+                                                  let v11: crate::cbordetver::cbor_det_view =
+                                                      crate::cbordetver::cbor_det_destruct(k1);
+                                                  let
+                                                  _letpattern2: crate::cbordetver::cbor_det_view
+                                                  =
+                                                      v11;
+                                                  let i: u64 =
+                                                      match _letpattern2
+                                                      {
+                                                          crate::cbordetver::cbor_det_view::Int64
+                                                          { value: res, .. }
+                                                          => res,
+                                                          _ => panic!("Incomplete pattern matching")
+                                                      };
+                                                  i == 5u64
+                                              }
+                                              else
+                                              { false };
+                                          if testk1
+                                          {
+                                              let v11: crate::cbordetveraux::cbor_raw =
+                                                  crate::cbordetver::cbor_det_map_entry_value(chd);
+                                              crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(
+                                                  v11
+                                              );
+                                              true
+                                          }
+                                          else
+                                          { false }
+                                      };
+                                  let test14: bool =
+                                      if test13
+                                      { true }
+                                      else
+                                      {
+                                          let k1: crate::cbordetveraux::cbor_raw =
+                                              crate::cbordetver::cbor_det_map_entry_key(chd);
+                                          let mt0: u8 = crate::cbordetver::cbor_det_major_type(k1);
+                                          let is_uint0: bool =
+                                              mt0 == crate::cbordetveraux::cbor_major_type_uint64;
+                                          let testk1: bool =
+                                              if is_uint0
+                                              {
+                                                  let v11: crate::cbordetver::cbor_det_view =
+                                                      crate::cbordetver::cbor_det_destruct(k1);
+                                                  let
+                                                  _letpattern2: crate::cbordetver::cbor_det_view
+                                                  =
+                                                      v11;
+                                                  let i: u64 =
+                                                      match _letpattern2
+                                                      {
+                                                          crate::cbordetver::cbor_det_view::Int64
+                                                          { value: res, .. }
+                                                          => res,
+                                                          _ => panic!("Incomplete pattern matching")
+                                                      };
+                                                  i == 6u64
+                                              }
+                                              else
+                                              { false };
+                                          if testk1
+                                          {
+                                              let v11: crate::cbordetveraux::cbor_raw =
+                                                  crate::cbordetver::cbor_det_map_entry_value(chd);
+                                              crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(
+                                                  v11
+                                              );
+                                              true
+                                          }
+                                          else
+                                          { false }
+                                      };
+                                  ! test14
+                              }
+                              else
+                              { false };
+                          let test1: bool = ! test0;
+                          if ! test1
+                          {
+                              let i: u64 = (&remaining)[0];
+                              let i·: u64 = i.wrapping_sub(1u64);
+                              (&mut remaining)[0] = i·
+                          };
+                          let
+                          j1:
+                          crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                          =
+                              (&pj)[0];
+                          let is_empty0: bool =
+                              crate::cbordetver::cbor_det_map_iterator_is_empty(j1);
+                          cond = ! is_empty0
+                      };
+                      crate::cbordetveraux::impl_map_group_result::MGOK
                   },
                 crate::cbordetveraux::impl_map_group_result::MGFail =>
                   crate::cbordetveraux::impl_map_group_result::MGFail,
@@ -6606,7 +4595,7 @@ option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_ev
 
 #[derive(PartialEq, Clone, Copy)]
 pub struct
-array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env24_type_1_pretty
+array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env25_type_1_pretty
 <'a>
 {
     pub cddl_array_iterator_contents:
@@ -6624,28 +4613,28 @@ array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum
-either__CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty
+either__CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty
 <'a>
 {
     Inl { v: &'a [evercddl_label_pretty <'a>] },
     Inr
     {
         v:
-        array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env24_type_1_pretty
+        array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env25_type_1_pretty
         <'a>
     }
 }
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum
-option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty
+option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty
 <'a>
 {
     None,
     Some
     {
         v:
-        either__CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty
+        either__CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty
         <'a>
     }
 }
@@ -6681,8 +4670,36 @@ pub enum option__COSE_Format_evercddl_everparsenomatch_pretty
 }
 
 #[derive(PartialEq, Clone, Copy)]
+pub enum
+either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_·FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·
+<'a>
+{
+    Inl { v: (&'a [u8], option__COSE_Format_evercddl_everparsenomatch_pretty) },
+    Inr
+    {
+        v:
+        (option__COSE_Format_evercddl_everparsenomatch_pretty,
+        option__COSE_Format_evercddl_everparsenomatch_pretty)
+    }
+}
+
+#[derive(PartialEq, Clone, Copy)]
+pub enum
+either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·
+<'a>
+{
+    Inl { v: (&'a [u8], option__COSE_Format_evercddl_everparsenomatch_pretty) },
+    Inr
+    {
+        v:
+        either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_·FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·
+        <'a>
+    }
+}
+
+#[derive(PartialEq, Clone, Copy)]
 pub struct
-map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
+map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
 <'a>
 {
     pub cddl_map_iterator_contents:
@@ -6698,56 +4715,14 @@ map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum
-either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty
+either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty
 <'a>
 {
     Inl { v: &'a [(evercddl_label_pretty <'a>, crate::cbordetveraux::cbor_raw <'a>)] },
     Inr
     {
         v:
-        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-        <'a>
-    }
-}
-
-#[derive(PartialEq, Clone, Copy)]
-pub enum
-either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_··FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·
-<'a>
-{
-    Inl
-    {
-        v:
-        ((&'a [u8], option__COSE_Format_evercddl_everparsenomatch_pretty),
-        either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty
-        <'a>)
-    },
-    Inr
-    {
-        v:
-        ((option__COSE_Format_evercddl_everparsenomatch_pretty,
-        option__COSE_Format_evercddl_everparsenomatch_pretty),
-        either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty
-        <'a>)
-    }
-}
-
-#[derive(PartialEq, Clone, Copy)]
-pub enum
-either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_FStar_Pervasives_either···COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty····FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·
-<'a>
-{
-    Inl
-    {
-        v:
-        ((&'a [u8], option__COSE_Format_evercddl_everparsenomatch_pretty),
-        either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty
-        <'a>)
-    },
-    Inr
-    {
-        v:
-        either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_··FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·
+        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
         <'a>
     }
 }
@@ -6759,14 +4734,17 @@ pub struct evercddl_header_map_pretty <'a>
     option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty
     <'a>,
     pub intkey2:
-    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty
+    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty
     <'a>,
     pub intkey3:
     option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty
     <'a>,
     pub intkey4: option__COSE_Format_evercddl_bstr_pretty <'a>,
     pub _x0:
-    either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_FStar_Pervasives_either···COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty····FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·
+    either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·
+    <'a>,
+    pub _x1:
+    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty
     <'a>
 }
 
@@ -6777,63 +4755,72 @@ pub fn uu___is_Mkevercddl_header_map_pretty0(projectee: evercddl_header_map_pret
 }
 
 fn evercddl_header_map_pretty_right <'a>(
-    x5:
-    ((((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty
+    x6:
+    (((((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty
     <'a>,
-    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty
+    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty
     <'a>),
     option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty
     <'a>),
     option__COSE_Format_evercddl_bstr_pretty
     <'a>),
-    either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_FStar_Pervasives_either···COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty····FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·
+    either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·
+    <'a>),
+    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty
     <'a>)
 ) ->
     evercddl_header_map_pretty
     <'a>
 {
-    match x5
+    match x6
     {
-        ((((x6,x7),x8),x9),x10) =>
+        (((((x7,x8),x9),x10),x11),x12) =>
           evercddl_header_map_pretty
-          { intkey1: x6, intkey2: x7, intkey3: x8, intkey4: x9, _x0: x10 }
+          { intkey1: x7, intkey2: x8, intkey3: x9, intkey4: x10, _x0: x11, _x1: x12 }
     }
 }
 
-fn evercddl_header_map_pretty_left <'a>(x11: evercddl_header_map_pretty <'a>) ->
-    ((((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty
+fn evercddl_header_map_pretty_left <'a>(x13: evercddl_header_map_pretty <'a>) ->
+    (((((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty
     <'a>,
-    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty
+    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty
     <'a>),
     option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty
     <'a>),
     option__COSE_Format_evercddl_bstr_pretty
     <'a>),
-    either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_FStar_Pervasives_either···COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty····FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·
+    either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·
+    <'a>),
+    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty
     <'a>)
 {
     let
-    x18:
+    x21:
     option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty
     =
-        x11.intkey1;
-    let
-    x19:
-    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty
-    =
-        x11.intkey2;
-    let
-    x20:
-    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty
-    =
-        x11.intkey3;
-    let x21: option__COSE_Format_evercddl_bstr_pretty = x11.intkey4;
+        x13.intkey1;
     let
     x22:
-    either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_FStar_Pervasives_either···COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty····FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·
+    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty
     =
-        x11._x0;
-    ((((x18,x19),x20),x21),x22)
+        x13.intkey2;
+    let
+    x23:
+    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty
+    =
+        x13.intkey3;
+    let x24: option__COSE_Format_evercddl_bstr_pretty = x13.intkey4;
+    let
+    x25:
+    either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·
+    =
+        x13._x0;
+    let
+    x26:
+    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty
+    =
+        x13._x1;
+    (((((x21,x22),x23),x24),x25),x26)
 }
 
 /**
@@ -7040,7 +5027,7 @@ parse_header_map
         };
     let
     w2:
-    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty
+    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty
     =
         if crate::cbordetveraux::uu___is_MGOK(test10)
         {
@@ -7060,7 +5047,7 @@ parse_header_map
             let _letpattern2: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow;
             let
             w11:
-            either__CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty
+            either__CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty
             =
                 match _letpattern2
                 {
@@ -7080,30 +5067,30 @@ parse_header_map
                               };
                           let
                           i:
-                          array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env24_type_1_pretty
+                          array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env25_type_1_pretty
                           =
-                              array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env24_type_1_pretty
+                              array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env25_type_1_pretty
                               {
                                   cddl_array_iterator_contents: ar,
-                                  cddl_array_iterator_impl_validate: aux_env24_validate_1,
-                                  cddl_array_iterator_impl_parse: aux_env24_parse_1
+                                  cddl_array_iterator_impl_validate: aux_env25_validate_1,
+                                  cddl_array_iterator_impl_parse: aux_env25_parse_1
                               };
-                          either__CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty::Inr
+                          either__CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty::Inr
                           { v: i }
                       },
                     _ => panic!("Incomplete pattern matching")
                 };
-            option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty::Some
+            option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty::Some
             { v: w11 }
         }
         else
         {
-            option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty::None
+            option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty::None
         };
     let
     w10:
     (option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
-    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty)
+    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty)
     =
         (w1,w2);
     let dummy1: [u64; 1] = [0u64; 1usize];
@@ -7186,7 +5173,7 @@ parse_header_map
     let
     w11:
     ((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
-    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty),
+    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty),
     option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty)
     =
         (w10,w20);
@@ -7249,7 +5236,7 @@ parse_header_map
     let
     w12:
     (((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
-    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty),
+    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty),
     option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty),
     option__COSE_Format_evercddl_bstr_pretty)
     =
@@ -7281,7 +5268,7 @@ parse_header_map
               },
             _ => panic!("Incomplete pattern matching")
         };
-    let res10: crate::cbordetveraux::impl_map_group_result =
+    let test13: crate::cbordetveraux::impl_map_group_result =
         match res1
         {
             crate::cbordetveraux::impl_map_group_result::MGOK =>
@@ -7336,20 +5323,9 @@ parse_header_map
               crate::cbordetveraux::impl_map_group_result::MGCutFail,
             _ => panic!("Precondition of the function most likely violated")
         };
-    let test13: crate::cbordetveraux::impl_map_group_result =
-        match res10
-        {
-            crate::cbordetveraux::impl_map_group_result::MGOK =>
-              crate::cbordetveraux::impl_map_group_result::MGOK,
-            crate::cbordetveraux::impl_map_group_result::MGFail =>
-              crate::cbordetveraux::impl_map_group_result::MGFail,
-            crate::cbordetveraux::impl_map_group_result::MGCutFail =>
-              crate::cbordetveraux::impl_map_group_result::MGCutFail,
-            _ => panic!("Precondition of the function most likely violated")
-        };
     let
     w22:
-    either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_FStar_Pervasives_either···COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty····FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·
+    either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·
     =
         if crate::cbordetveraux::uu___is_MGOK(test13)
         {
@@ -7435,42 +5411,8 @@ parse_header_map
                 else
                 { option__COSE_Format_evercddl_everparsenomatch_pretty::None };
             let w111: (&[u8], option__COSE_Format_evercddl_everparsenomatch_pretty) = (w110,w22);
-            let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
-            let _letpattern7: crate::cbordetver::cbor_det_view = v1;
-            let i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-                match _letpattern7
-                {
-                    crate::cbordetver::cbor_det_view::Map { _0: a } =>
-                      crate::cbordetver::cbor_det_map_iterator_start(a),
-                    _ => panic!("Incomplete pattern matching")
-                };
-            let
-            rres:
-            map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-            =
-                map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                {
-                    cddl_map_iterator_contents: i,
-                    cddl_map_iterator_impl_validate1: aux_env24_validate_2,
-                    cddl_map_iterator_impl_parse1: aux_env24_parse_2,
-                    cddl_map_iterator_impl_validate_ex: aux_env24_map_constraint_4,
-                    cddl_map_iterator_impl_validate2: aux_env24_validate_3,
-                    cddl_map_iterator_impl_parse2: aux_env24_parse_3
-                };
-            let
-            w23:
-            either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty
-            =
-                either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty::Inr
-                { v: rres };
-            let
-            w112:
-            ((&[u8], option__COSE_Format_evercddl_everparsenomatch_pretty),
-            either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty)
-            =
-                (w111,w23);
-            either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_FStar_Pervasives_either···COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty····FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·::Inl
-            { v: w112 }
+            either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·::Inl
+            { v: w111 }
         }
         else
         {
@@ -7488,7 +5430,7 @@ parse_header_map
                       crate::cbordetver::cbor_det_map_get(m3, c14),
                     _ => panic!("Incomplete pattern matching")
                 };
-            let res11: crate::cbordetveraux::impl_map_group_result =
+            let res10: crate::cbordetveraux::impl_map_group_result =
                 match mg4
                 {
                     crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None =>
@@ -7503,8 +5445,8 @@ parse_header_map
                       },
                     _ => panic!("Incomplete pattern matching")
                 };
-            let res12: crate::cbordetveraux::impl_map_group_result =
-                match res11
+            let test110: crate::cbordetveraux::impl_map_group_result =
+                match res10
                 {
                     crate::cbordetveraux::impl_map_group_result::MGOK =>
                       {
@@ -7523,7 +5465,7 @@ parse_header_map
                                     crate::cbordetver::cbor_det_map_get(m4, c15),
                                   _ => panic!("Incomplete pattern matching")
                               };
-                          let res110: crate::cbordetveraux::impl_map_group_result =
+                          let res11: crate::cbordetveraux::impl_map_group_result =
                               match mg5
                               {
                                   crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None =>
@@ -7540,7 +5482,7 @@ parse_header_map
                                     },
                                   _ => panic!("Incomplete pattern matching")
                               };
-                          match res110
+                          match res11
                           {
                               crate::cbordetveraux::impl_map_group_result::MGOK =>
                                 crate::cbordetveraux::impl_map_group_result::MGOK,
@@ -7560,20 +5502,9 @@ parse_header_map
                       crate::cbordetveraux::impl_map_group_result::MGCutFail,
                     _ => panic!("Precondition of the function most likely violated")
                 };
-            let test110: crate::cbordetveraux::impl_map_group_result =
-                match res12
-                {
-                    crate::cbordetveraux::impl_map_group_result::MGOK =>
-                      crate::cbordetveraux::impl_map_group_result::MGOK,
-                    crate::cbordetveraux::impl_map_group_result::MGFail =>
-                      crate::cbordetveraux::impl_map_group_result::MGFail,
-                    crate::cbordetveraux::impl_map_group_result::MGCutFail =>
-                      crate::cbordetveraux::impl_map_group_result::MGCutFail,
-                    _ => panic!("Precondition of the function most likely violated")
-                };
             let
             w22:
-            either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_··FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·
+            either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_·FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·
             =
                 if crate::cbordetveraux::uu___is_MGOK(test110)
                 {
@@ -7668,45 +5599,8 @@ parse_header_map
                         { option__COSE_Format_evercddl_everparsenomatch_pretty::None };
                     let w111: (&[u8], option__COSE_Format_evercddl_everparsenomatch_pretty) =
                         (w110,w22);
-                    let v1: crate::cbordetver::cbor_det_view =
-                        crate::cbordetver::cbor_det_destruct(c);
-                    let _letpattern8: crate::cbordetver::cbor_det_view = v1;
-                    let
-                    i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                    =
-                        match _letpattern8
-                        {
-                            crate::cbordetver::cbor_det_view::Map { _0: a } =>
-                              crate::cbordetver::cbor_det_map_iterator_start(a),
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    let
-                    rres:
-                    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                    =
-                        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                        {
-                            cddl_map_iterator_contents: i,
-                            cddl_map_iterator_impl_validate1: aux_env24_validate_2,
-                            cddl_map_iterator_impl_parse1: aux_env24_parse_2,
-                            cddl_map_iterator_impl_validate_ex: aux_env24_map_constraint_5,
-                            cddl_map_iterator_impl_validate2: aux_env24_validate_3,
-                            cddl_map_iterator_impl_parse2: aux_env24_parse_3
-                        };
-                    let
-                    w23:
-                    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty
-                    =
-                        either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty::Inr
-                        { v: rres };
-                    let
-                    w112:
-                    ((&[u8], option__COSE_Format_evercddl_everparsenomatch_pretty),
-                    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty)
-                    =
-                        (w111,w23);
-                    either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_··FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·::Inl
-                    { v: w112 }
+                    either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_·FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·::Inl
+                    { v: w111 }
                 }
                 else
                 {
@@ -7843,65 +5737,65 @@ parse_header_map
                         else
                         { option__COSE_Format_evercddl_everparsenomatch_pretty::None };
                     let
-                    w111:
+                    w23:
                     (option__COSE_Format_evercddl_everparsenomatch_pretty,
                     option__COSE_Format_evercddl_everparsenomatch_pretty)
                     =
                         (w110,w22);
-                    let v1: crate::cbordetver::cbor_det_view =
-                        crate::cbordetver::cbor_det_destruct(c);
-                    let _letpattern7: crate::cbordetver::cbor_det_view = v1;
-                    let
-                    i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                    =
-                        match _letpattern7
-                        {
-                            crate::cbordetver::cbor_det_view::Map { _0: a } =>
-                              crate::cbordetver::cbor_det_map_iterator_start(a),
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    let
-                    rres:
-                    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                    =
-                        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                        {
-                            cddl_map_iterator_contents: i,
-                            cddl_map_iterator_impl_validate1: aux_env24_validate_2,
-                            cddl_map_iterator_impl_parse1: aux_env24_parse_2,
-                            cddl_map_iterator_impl_validate_ex: aux_env24_map_constraint_6,
-                            cddl_map_iterator_impl_validate2: aux_env24_validate_3,
-                            cddl_map_iterator_impl_parse2: aux_env24_parse_3
-                        };
-                    let
-                    w23:
-                    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty
-                    =
-                        either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty::Inr
-                        { v: rres };
-                    let
-                    w24:
-                    ((option__COSE_Format_evercddl_everparsenomatch_pretty,
-                    option__COSE_Format_evercddl_everparsenomatch_pretty),
-                    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty)
-                    =
-                        (w111,w23);
-                    either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_··FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·::Inr
-                    { v: w24 }
+                    either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_·FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·::Inr
+                    { v: w23 }
                 };
-            either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_FStar_Pervasives_either···COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty····FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·::Inr
+            either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·::Inr
             { v: w22 }
         };
     let
-    res11:
+    w13:
     ((((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
-    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty),
+    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty),
     option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty),
     option__COSE_Format_evercddl_bstr_pretty),
-    either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_FStar_Pervasives_either···COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty····FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·)
+    either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·)
     =
         (w12,w22);
-    evercddl_header_map_pretty_right(res11)
+    let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
+    let _letpattern4: crate::cbordetver::cbor_det_view = v1;
+    let i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
+        match _letpattern4
+        {
+            crate::cbordetver::cbor_det_view::Map { _0: a } =>
+              crate::cbordetver::cbor_det_map_iterator_start(a),
+            _ => panic!("Incomplete pattern matching")
+        };
+    let
+    rres:
+    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
+    =
+        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
+        {
+            cddl_map_iterator_contents: i,
+            cddl_map_iterator_impl_validate1: aux_env25_validate_2,
+            cddl_map_iterator_impl_parse1: aux_env25_parse_2,
+            cddl_map_iterator_impl_validate_ex: aux_env25_map_constraint_4,
+            cddl_map_iterator_impl_validate2: aux_env25_validate_3,
+            cddl_map_iterator_impl_parse2: aux_env25_parse_3
+        };
+    let
+    w23:
+    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty
+    =
+        either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty::Inr
+        { v: rres };
+    let
+    res10:
+    (((((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
+    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty),
+    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty),
+    option__COSE_Format_evercddl_bstr_pretty),
+    either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·),
+    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty)
+    =
+        (w13,w23);
+    evercddl_header_map_pretty_right(res10)
 }
 
 /**
@@ -7913,99 +5807,646 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
 {
     let
     c·:
-    ((((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
-    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty),
+    (((((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
+    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty),
     option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty),
     option__COSE_Format_evercddl_bstr_pretty),
-    either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_FStar_Pervasives_either···COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty····FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·)
+    either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·),
+    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty)
     =
         evercddl_header_map_pretty_left(c);
     let mut pcount: [u64; 1] = [0u64; 1usize];
     let mut psize: [usize; 1] = [0usize; 1usize];
     let
     _letpattern:
-    ((((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
-    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty),
+    (((((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
+    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty),
     option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty),
     option__COSE_Format_evercddl_bstr_pretty),
-    either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_FStar_Pervasives_either···COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty····FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·)
+    either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·),
+    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty)
     =
         c·;
     let res: bool =
         {
             let
             c1:
-            (((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
-            option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty),
+            ((((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
+            option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty),
             option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty),
-            option__COSE_Format_evercddl_bstr_pretty)
+            option__COSE_Format_evercddl_bstr_pretty),
+            either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·)
             =
                 _letpattern.0;
             let
             c2:
-            either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_FStar_Pervasives_either···COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty····FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·
+            either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty
             =
                 _letpattern.1;
             let
             _letpattern1:
-            (((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
-            option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty),
+            ((((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
+            option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty),
             option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty),
-            option__COSE_Format_evercddl_bstr_pretty)
+            option__COSE_Format_evercddl_bstr_pretty),
+            either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·)
             =
                 c1;
             let res1: bool =
                 {
                     let
                     c11:
-                    ((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
-                    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty),
-                    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty)
+                    (((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
+                    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty),
+                    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty),
+                    option__COSE_Format_evercddl_bstr_pretty)
                     =
                         _letpattern1.0;
-                    let c21: option__COSE_Format_evercddl_bstr_pretty = _letpattern1.1;
+                    let
+                    c21:
+                    either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·
+                    =
+                        _letpattern1.1;
                     let
                     _letpattern2:
-                    ((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
-                    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty),
-                    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty)
+                    (((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
+                    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty),
+                    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty),
+                    option__COSE_Format_evercddl_bstr_pretty)
                     =
                         c11;
                     let res1: bool =
                         {
                             let
                             c12:
-                            (option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
-                            option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty)
+                            ((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
+                            option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty),
+                            option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty)
                             =
                                 _letpattern2.0;
-                            let
-                            c22:
-                            option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty
-                            =
-                                _letpattern2.1;
+                            let c22: option__COSE_Format_evercddl_bstr_pretty = _letpattern2.1;
                             let
                             _letpattern3:
-                            (option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
-                            option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty)
+                            ((option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
+                            option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty),
+                            option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty)
                             =
                                 c12;
                             let res1: bool =
                                 {
                                     let
                                     c13:
-                                    option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty
+                                    (option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
+                                    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty)
                                     =
                                         _letpattern3.0;
                                     let
                                     c23:
-                                    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty
+                                    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty
                                     =
                                         _letpattern3.1;
+                                    let
+                                    _letpattern4:
+                                    (option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty,
+                                    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty)
+                                    =
+                                        c13;
                                     let res1: bool =
-                                        match c13
                                         {
-                                            option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty::Some
+                                            let
+                                            c14:
+                                            option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty
+                                            =
+                                                _letpattern4.0;
+                                            let
+                                            c24:
+                                            option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty
+                                            =
+                                                _letpattern4.1;
+                                            let res1: bool =
+                                                match c14
+                                                {
+                                                    option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty::Some
+                                                    { v: c15 }
+                                                    =>
+                                                      {
+                                                          let count: u64 = (&pcount)[0];
+                                                          if count < 18446744073709551615u64
+                                                          {
+                                                              let size0: usize = (&psize)[0];
+                                                              let
+                                                              _letpattern5: (&mut [u8], &mut [u8])
+                                                              =
+                                                                  out.split_at_mut(size0);
+                                                              let _out0: &[u8] = _letpattern5.0;
+                                                              let out1: &mut [u8] = _letpattern5.1;
+                                                              let
+                                                              mty:
+                                                              crate::cbordetver::cbor_det_int_kind
+                                                              =
+                                                                  crate::cbordetver::cbor_det_int_kind::UInt64;
+                                                              let
+                                                              c3: crate::cbordetveraux::cbor_raw
+                                                              =
+                                                                  crate::cbordetver::cbor_det_mk_int64(
+                                                                      mty,
+                                                                      1u64
+                                                                  );
+                                                              let
+                                                              res: crate::cbordetver::option__size_t
+                                                              =
+                                                                  crate::cbordetver::cbor_det_serialize(
+                                                                      c3,
+                                                                      out1
+                                                                  );
+                                                              let res1: usize =
+                                                                  match res
+                                                                  {
+                                                                      crate::cbordetver::option__size_t::None
+                                                                      => 0usize,
+                                                                      crate::cbordetver::option__size_t::Some
+                                                                      { v: r }
+                                                                      => r,
+                                                                      _ =>
+                                                                        panic!(
+                                                                            "Incomplete pattern matching"
+                                                                        )
+                                                                  };
+                                                              if res1 > 0usize
+                                                              {
+                                                                  let size1: usize =
+                                                                      size0.wrapping_add(res1);
+                                                                  let
+                                                                  _letpattern6:
+                                                                  (&mut [u8], &mut [u8])
+                                                                  =
+                                                                      out.split_at_mut(size1);
+                                                                  let _out01: &[u8] =
+                                                                      _letpattern6.0;
+                                                                  let out2: &mut [u8] =
+                                                                      _letpattern6.1;
+                                                                  let res2: usize =
+                                                                      match c15
+                                                                      {
+                                                                          evercddl_label::Inl
+                                                                          { v: c16 }
+                                                                          =>
+                                                                            serialize_int(c16, out2),
+                                                                          evercddl_label::Inr
+                                                                          { v: c25 }
+                                                                          =>
+                                                                            serialize_tstr(
+                                                                                c25,
+                                                                                out2
+                                                                            ),
+                                                                          _ =>
+                                                                            panic!(
+                                                                                "Incomplete pattern matching"
+                                                                            )
+                                                                      };
+                                                                  if res2 > 0usize
+                                                                  {
+                                                                      let size2: usize =
+                                                                          size1.wrapping_add(res2);
+                                                                      let
+                                                                      _letpattern7:
+                                                                      (&mut [u8], &mut [u8])
+                                                                      =
+                                                                          out.split_at_mut(size2);
+                                                                      let out012: &mut [u8] =
+                                                                          _letpattern7.0;
+                                                                      let res0: bool =
+                                                                          crate::cbordetver::cbor_det_serialize_map_insert(
+                                                                              out012,
+                                                                              size0,
+                                                                              size1
+                                                                          );
+                                                                      if res0
+                                                                      {
+                                                                          (&mut psize)[0] = size2;
+                                                                          (&mut pcount)[0] =
+                                                                              count.wrapping_add(
+                                                                                  1u64
+                                                                              );
+                                                                          true
+                                                                      }
+                                                                      else
+                                                                      { false }
+                                                                  }
+                                                                  else
+                                                                  { false }
+                                                              }
+                                                              else
+                                                              { false }
+                                                          }
+                                                          else
+                                                          { false }
+                                                      },
+                                                    option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty::None
+                                                    => true,
+                                                    _ => panic!("Incomplete pattern matching")
+                                                };
+                                            if res1
+                                            {
+                                                match c24
+                                                {
+                                                    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty::Some
+                                                    { v: c15 }
+                                                    =>
+                                                      {
+                                                          let count: u64 = (&pcount)[0];
+                                                          if count < 18446744073709551615u64
+                                                          {
+                                                              let size0: usize = (&psize)[0];
+                                                              let
+                                                              _letpattern5: (&mut [u8], &mut [u8])
+                                                              =
+                                                                  out.split_at_mut(size0);
+                                                              let _out0: &[u8] = _letpattern5.0;
+                                                              let out1: &mut [u8] = _letpattern5.1;
+                                                              let
+                                                              mty:
+                                                              crate::cbordetver::cbor_det_int_kind
+                                                              =
+                                                                  crate::cbordetver::cbor_det_int_kind::UInt64;
+                                                              let
+                                                              c3: crate::cbordetveraux::cbor_raw
+                                                              =
+                                                                  crate::cbordetver::cbor_det_mk_int64(
+                                                                      mty,
+                                                                      2u64
+                                                                  );
+                                                              let
+                                                              res: crate::cbordetver::option__size_t
+                                                              =
+                                                                  crate::cbordetver::cbor_det_serialize(
+                                                                      c3,
+                                                                      out1
+                                                                  );
+                                                              let res11: usize =
+                                                                  match res
+                                                                  {
+                                                                      crate::cbordetver::option__size_t::None
+                                                                      => 0usize,
+                                                                      crate::cbordetver::option__size_t::Some
+                                                                      { v: r }
+                                                                      => r,
+                                                                      _ =>
+                                                                        panic!(
+                                                                            "Incomplete pattern matching"
+                                                                        )
+                                                                  };
+                                                              if res11 > 0usize
+                                                              {
+                                                                  let size1: usize =
+                                                                      size0.wrapping_add(res11);
+                                                                  let
+                                                                  _letpattern6:
+                                                                  (&mut [u8], &mut [u8])
+                                                                  =
+                                                                      out.split_at_mut(size1);
+                                                                  let _out01: &[u8] =
+                                                                      _letpattern6.0;
+                                                                  let out2: &mut [u8] =
+                                                                      _letpattern6.1;
+                                                                  let mut pcount1: [u64; 1] =
+                                                                      [0u64; 1usize];
+                                                                  let mut psize1: [usize; 1] =
+                                                                      [0usize; 1usize];
+                                                                  let res0: bool =
+                                                                      match c15
+                                                                      {
+                                                                          either__CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty::Inl
+                                                                          { v: c16 }
+                                                                          =>
+                                                                            if c16.len() == 0usize
+                                                                            { false }
+                                                                            else
+                                                                            {
+                                                                                let
+                                                                                mut pres: [bool; 1]
+                                                                                =
+                                                                                    [true; 1usize];
+                                                                                let
+                                                                                mut pi: [usize; 1]
+                                                                                =
+                                                                                    [0usize; 1usize];
+                                                                                let slen: usize =
+                                                                                    c16.len();
+                                                                                let res0: bool =
+                                                                                    (&pres)[0];
+                                                                                let mut cond: bool =
+                                                                                    if res0
+                                                                                    {
+                                                                                        let
+                                                                                        i: usize
+                                                                                        =
+                                                                                            (&pi)[0];
+                                                                                        i < slen
+                                                                                    }
+                                                                                    else
+                                                                                    { false };
+                                                                                while
+                                                                                cond
+                                                                                {
+                                                                                    let i: usize =
+                                                                                        (&pi)[0];
+                                                                                    let
+                                                                                    x:
+                                                                                    evercddl_label_pretty
+                                                                                    =
+                                                                                        c16[i];
+                                                                                    let res2: bool =
+                                                                                        aux_env25_serialize_1(
+                                                                                            x,
+                                                                                            out2,
+                                                                                            &mut
+                                                                                            pcount1,
+                                                                                            &mut
+                                                                                            psize1
+                                                                                        );
+                                                                                    if res2
+                                                                                    {
+                                                                                        let
+                                                                                        i·: usize
+                                                                                        =
+                                                                                            i.wrapping_add(
+                                                                                                1usize
+                                                                                            );
+                                                                                        (&mut pi)[0] =
+                                                                                            i·
+                                                                                    }
+                                                                                    else
+                                                                                    {
+                                                                                        (&mut pres)[0] =
+                                                                                            false
+                                                                                    };
+                                                                                    let res3: bool =
+                                                                                        (&pres)[0];
+                                                                                    let ite: bool =
+                                                                                        if res3
+                                                                                        {
+                                                                                            let
+                                                                                            i0:
+                                                                                            usize
+                                                                                            =
+                                                                                                (&pi)[0];
+                                                                                            i0
+                                                                                            <
+                                                                                            slen
+                                                                                        }
+                                                                                        else
+                                                                                        { false };
+                                                                                    cond = ite
+                                                                                };
+                                                                                (&pres)[0]
+                                                                            },
+                                                                          either__CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty::Inr
+                                                                          { v: c25 }
+                                                                          =>
+                                                                            {
+                                                                                let em: bool =
+                                                                                    crate::cbordetver::cbor_det_array_iterator_is_empty(
+                                                                                        c25.cddl_array_iterator_contents
+                                                                                    );
+                                                                                if em
+                                                                                { false }
+                                                                                else
+                                                                                {
+                                                                                    let
+                                                                                    mut
+                                                                                    pc:
+                                                                                    [array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env25_type_1_pretty;
+                                                                                    1]
+                                                                                    =
+                                                                                        [c25;
+                                                                                            1usize];
+                                                                                    let
+                                                                                    mut
+                                                                                    pres:
+                                                                                    [bool; 1]
+                                                                                    =
+                                                                                        [true;
+                                                                                            1usize];
+                                                                                    let res0: bool =
+                                                                                        (&pres)[0];
+                                                                                    let
+                                                                                    mut cond: bool
+                                                                                    =
+                                                                                        if res0
+                                                                                        {
+                                                                                            let
+                                                                                            c30:
+                                                                                            array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env25_type_1_pretty
+                                                                                            =
+                                                                                                (&pc)[0];
+                                                                                            let
+                                                                                            em1:
+                                                                                            bool
+                                                                                            =
+                                                                                                crate::cbordetver::cbor_det_array_iterator_is_empty(
+                                                                                                    c30.cddl_array_iterator_contents
+                                                                                                );
+                                                                                            ! em1
+                                                                                        }
+                                                                                        else
+                                                                                        { false };
+                                                                                    while
+                                                                                    cond
+                                                                                    {
+                                                                                        let
+                                                                                        i:
+                                                                                        array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env25_type_1_pretty
+                                                                                        =
+                                                                                            (&pc)[0];
+                                                                                        let
+                                                                                        len0: u64
+                                                                                        =
+                                                                                            crate::cbordetver::cbor_det_array_iterator_length(
+                                                                                                i.cddl_array_iterator_contents
+                                                                                            );
+                                                                                        let
+                                                                                        mut
+                                                                                        pj:
+                                                                                        [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw;
+                                                                                        1]
+                                                                                        =
+                                                                                            [i.cddl_array_iterator_contents;
+                                                                                                1usize];
+                                                                                        let
+                                                                                        _test: bool
+                                                                                        =
+                                                                                            (i.cddl_array_iterator_impl_validate)(
+                                                                                                &mut
+                                                                                                pj
+                                                                                            );
+                                                                                        crate::lowstar::ignore::ignore::<bool>(
+                                                                                            _test
+                                                                                        );
+                                                                                        let
+                                                                                        ji:
+                                                                                        crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
+                                                                                        =
+                                                                                            (&pj)[0];
+                                                                                        let
+                                                                                        len1: u64
+                                                                                        =
+                                                                                            crate::cbordetver::cbor_det_array_iterator_length(
+                                                                                                ji
+                                                                                            );
+                                                                                        let
+                                                                                        j:
+                                                                                        array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env25_type_1_pretty
+                                                                                        =
+                                                                                            array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env25_type_1_pretty
+                                                                                            {
+                                                                                                cddl_array_iterator_contents:
+                                                                                                ji,
+                                                                                                cddl_array_iterator_impl_validate:
+                                                                                                i.cddl_array_iterator_impl_validate,
+                                                                                                cddl_array_iterator_impl_parse:
+                                                                                                i.cddl_array_iterator_impl_parse
+                                                                                            };
+                                                                                        (&mut pc)[0] =
+                                                                                            j;
+                                                                                        let
+                                                                                        tri:
+                                                                                        crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
+                                                                                        =
+                                                                                            crate::cbordetver::cbor_det_array_iterator_truncate(
+                                                                                                i.cddl_array_iterator_contents,
+                                                                                                len0.wrapping_sub(
+                                                                                                    len1
+                                                                                                )
+                                                                                            );
+                                                                                        let
+                                                                                        x:
+                                                                                        evercddl_label_pretty
+                                                                                        =
+                                                                                            (i.cddl_array_iterator_impl_parse)(
+                                                                                                tri
+                                                                                            );
+                                                                                        let
+                                                                                        res2: bool
+                                                                                        =
+                                                                                            aux_env25_serialize_1(
+                                                                                                x,
+                                                                                                out2,
+                                                                                                &mut
+                                                                                                pcount1,
+                                                                                                &mut
+                                                                                                psize1
+                                                                                            );
+                                                                                        if ! res2
+                                                                                        {
+                                                                                            (&mut
+                                                                                            pres)[0] =
+                                                                                                false
+                                                                                        };
+                                                                                        let
+                                                                                        res3: bool
+                                                                                        =
+                                                                                            (&pres)[0];
+                                                                                        let
+                                                                                        ite: bool
+                                                                                        =
+                                                                                            if res3
+                                                                                            {
+                                                                                                let
+                                                                                                c30:
+                                                                                                array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env25_type_1_pretty
+                                                                                                =
+                                                                                                    (&pc)[0];
+                                                                                                let
+                                                                                                em1:
+                                                                                                bool
+                                                                                                =
+                                                                                                    crate::cbordetver::cbor_det_array_iterator_is_empty(
+                                                                                                        c30.cddl_array_iterator_contents
+                                                                                                    );
+                                                                                                !
+                                                                                                em1
+                                                                                            }
+                                                                                            else
+                                                                                            {
+                                                                                                false
+                                                                                            };
+                                                                                        cond = ite
+                                                                                    };
+                                                                                    (&pres)[0]
+                                                                                }
+                                                                            },
+                                                                          _ =>
+                                                                            panic!(
+                                                                                "Incomplete pattern matching"
+                                                                            )
+                                                                      };
+                                                                  let res2: usize =
+                                                                      if res0
+                                                                      {
+                                                                          let size: usize =
+                                                                              (&psize1)[0];
+                                                                          let count1: u64 =
+                                                                              (&pcount1)[0];
+                                                                          crate::cbordetver::cbor_det_serialize_array(
+                                                                              count1,
+                                                                              out2,
+                                                                              size
+                                                                          )
+                                                                      }
+                                                                      else
+                                                                      { 0usize };
+                                                                  if res2 > 0usize
+                                                                  {
+                                                                      let size2: usize =
+                                                                          size1.wrapping_add(res2);
+                                                                      let
+                                                                      _letpattern7:
+                                                                      (&mut [u8], &mut [u8])
+                                                                      =
+                                                                          out.split_at_mut(size2);
+                                                                      let out012: &mut [u8] =
+                                                                          _letpattern7.0;
+                                                                      let res3: bool =
+                                                                          crate::cbordetver::cbor_det_serialize_map_insert(
+                                                                              out012,
+                                                                              size0,
+                                                                              size1
+                                                                          );
+                                                                      if res3
+                                                                      {
+                                                                          (&mut psize)[0] = size2;
+                                                                          (&mut pcount)[0] =
+                                                                              count.wrapping_add(
+                                                                                  1u64
+                                                                              );
+                                                                          true
+                                                                      }
+                                                                      else
+                                                                      { false }
+                                                                  }
+                                                                  else
+                                                                  { false }
+                                                              }
+                                                              else
+                                                              { false }
+                                                          }
+                                                          else
+                                                          { false }
+                                                      },
+                                                    option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env25_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env25_type_1_pretty::None
+                                                    => true,
+                                                    _ => panic!("Incomplete pattern matching")
+                                                }
+                                            }
+                                            else
+                                            { false }
+                                        };
+                                    if res1
+                                    {
+                                        match c23
+                                        {
+                                            option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty::Some
                                             { v: c14 }
                                             =>
                                               {
@@ -8013,10 +6454,10 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                                   if count < 18446744073709551615u64
                                                   {
                                                       let size0: usize = (&psize)[0];
-                                                      let _letpattern4: (&mut [u8], &mut [u8]) =
+                                                      let _letpattern40: (&mut [u8], &mut [u8]) =
                                                           out.split_at_mut(size0);
-                                                      let _out0: &[u8] = _letpattern4.0;
-                                                      let out1: &mut [u8] = _letpattern4.1;
+                                                      let _out0: &[u8] = _letpattern40.0;
+                                                      let out1: &mut [u8] = _letpattern40.1;
                                                       let
                                                       mty: crate::cbordetver::cbor_det_int_kind
                                                       =
@@ -8024,14 +6465,14 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                                       let c3: crate::cbordetveraux::cbor_raw =
                                                           crate::cbordetver::cbor_det_mk_int64(
                                                               mty,
-                                                              1u64
+                                                              3u64
                                                           );
                                                       let res: crate::cbordetver::option__size_t =
                                                           crate::cbordetver::cbor_det_serialize(
                                                               c3,
                                                               out1
                                                           );
-                                                      let res1: usize =
+                                                      let res11: usize =
                                                           match res
                                                           {
                                                               crate::cbordetver::option__size_t::None
@@ -8044,10 +6485,10 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                                                     "Incomplete pattern matching"
                                                                 )
                                                           };
-                                                      if res1 > 0usize
+                                                      if res11 > 0usize
                                                       {
                                                           let size1: usize =
-                                                              size0.wrapping_add(res1);
+                                                              size0.wrapping_add(res11);
                                                           let _letpattern5: (&mut [u8], &mut [u8]) =
                                                               out.split_at_mut(size1);
                                                           let _out01: &[u8] = _letpattern5.0;
@@ -8055,10 +6496,12 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                                           let res2: usize =
                                                               match c14
                                                               {
-                                                                  evercddl_label::Inl { v: c15 } =>
-                                                                    serialize_int(c15, out2),
-                                                                  evercddl_label::Inr { v: c24 } =>
-                                                                    serialize_tstr(c24, out2),
+                                                                  either__COSE_Format_evercddl_tstr_pretty_COSE_Format_evercddl_int_pretty::Inl
+                                                                  { v: c15 }
+                                                                  => serialize_tstr(c15, out2),
+                                                                  either__COSE_Format_evercddl_tstr_pretty_COSE_Format_evercddl_int_pretty::Inr
+                                                                  { v: c24 }
+                                                                  => serialize_int(c24, out2),
                                                                   _ =>
                                                                     panic!(
                                                                         "Incomplete pattern matching"
@@ -8099,332 +6542,7 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                                   else
                                                   { false }
                                               },
-                                            option__FStar_Pervasives_either·COSE_Format_evercddl_int_pretty·COSE_Format_evercddl_tstr_pretty::None
-                                            => true,
-                                            _ => panic!("Incomplete pattern matching")
-                                        };
-                                    if res1
-                                    {
-                                        match c23
-                                        {
-                                            option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty::Some
-                                            { v: c14 }
-                                            =>
-                                              {
-                                                  let count: u64 = (&pcount)[0];
-                                                  if count < 18446744073709551615u64
-                                                  {
-                                                      let size0: usize = (&psize)[0];
-                                                      let _letpattern4: (&mut [u8], &mut [u8]) =
-                                                          out.split_at_mut(size0);
-                                                      let _out0: &[u8] = _letpattern4.0;
-                                                      let out1: &mut [u8] = _letpattern4.1;
-                                                      let
-                                                      mty: crate::cbordetver::cbor_det_int_kind
-                                                      =
-                                                          crate::cbordetver::cbor_det_int_kind::UInt64;
-                                                      let c3: crate::cbordetveraux::cbor_raw =
-                                                          crate::cbordetver::cbor_det_mk_int64(
-                                                              mty,
-                                                              2u64
-                                                          );
-                                                      let res: crate::cbordetver::option__size_t =
-                                                          crate::cbordetver::cbor_det_serialize(
-                                                              c3,
-                                                              out1
-                                                          );
-                                                      let res11: usize =
-                                                          match res
-                                                          {
-                                                              crate::cbordetver::option__size_t::None
-                                                              => 0usize,
-                                                              crate::cbordetver::option__size_t::Some
-                                                              { v: r }
-                                                              => r,
-                                                              _ =>
-                                                                panic!(
-                                                                    "Incomplete pattern matching"
-                                                                )
-                                                          };
-                                                      if res11 > 0usize
-                                                      {
-                                                          let size1: usize =
-                                                              size0.wrapping_add(res11);
-                                                          let _letpattern5: (&mut [u8], &mut [u8]) =
-                                                              out.split_at_mut(size1);
-                                                          let _out01: &[u8] = _letpattern5.0;
-                                                          let out2: &mut [u8] = _letpattern5.1;
-                                                          let mut pcount1: [u64; 1] =
-                                                              [0u64; 1usize];
-                                                          let mut psize1: [usize; 1] =
-                                                              [0usize; 1usize];
-                                                          let res0: bool =
-                                                              match c14
-                                                              {
-                                                                  either__CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty::Inl
-                                                                  { v: c15 }
-                                                                  =>
-                                                                    if c15.len() == 0usize
-                                                                    { false }
-                                                                    else
-                                                                    {
-                                                                        let mut pres: [bool; 1] =
-                                                                            [true; 1usize];
-                                                                        let mut pi: [usize; 1] =
-                                                                            [0usize; 1usize];
-                                                                        let slen: usize = c15.len();
-                                                                        let res0: bool = (&pres)[0];
-                                                                        let mut cond: bool =
-                                                                            if res0
-                                                                            {
-                                                                                let i: usize =
-                                                                                    (&pi)[0];
-                                                                                i < slen
-                                                                            }
-                                                                            else
-                                                                            { false };
-                                                                        while
-                                                                        cond
-                                                                        {
-                                                                            let i: usize = (&pi)[0];
-                                                                            let
-                                                                            x: evercddl_label_pretty
-                                                                            =
-                                                                                c15[i];
-                                                                            let res2: bool =
-                                                                                aux_env24_serialize_1(
-                                                                                    x,
-                                                                                    out2,
-                                                                                    &mut pcount1,
-                                                                                    &mut psize1
-                                                                                );
-                                                                            if res2
-                                                                            {
-                                                                                let i·: usize =
-                                                                                    i.wrapping_add(
-                                                                                        1usize
-                                                                                    );
-                                                                                (&mut pi)[0] = i·
-                                                                            }
-                                                                            else
-                                                                            {
-                                                                                (&mut pres)[0] =
-                                                                                    false
-                                                                            };
-                                                                            let res3: bool =
-                                                                                (&pres)[0];
-                                                                            let ite: bool =
-                                                                                if res3
-                                                                                {
-                                                                                    let i0: usize =
-                                                                                        (&pi)[0];
-                                                                                    i0 < slen
-                                                                                }
-                                                                                else
-                                                                                { false };
-                                                                            cond = ite
-                                                                        };
-                                                                        (&pres)[0]
-                                                                    },
-                                                                  either__CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty::Inr
-                                                                  { v: c24 }
-                                                                  =>
-                                                                    {
-                                                                        let em: bool =
-                                                                            crate::cbordetver::cbor_det_array_iterator_is_empty(
-                                                                                c24.cddl_array_iterator_contents
-                                                                            );
-                                                                        if em
-                                                                        { false }
-                                                                        else
-                                                                        {
-                                                                            let
-                                                                            mut
-                                                                            pc:
-                                                                            [array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env24_type_1_pretty;
-                                                                            1]
-                                                                            =
-                                                                                [c24; 1usize];
-                                                                            let
-                                                                            mut pres: [bool; 1]
-                                                                            =
-                                                                                [true; 1usize];
-                                                                            let res0: bool =
-                                                                                (&pres)[0];
-                                                                            let mut cond: bool =
-                                                                                if res0
-                                                                                {
-                                                                                    let
-                                                                                    c30:
-                                                                                    array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env24_type_1_pretty
-                                                                                    =
-                                                                                        (&pc)[0];
-                                                                                    let em1: bool =
-                                                                                        crate::cbordetver::cbor_det_array_iterator_is_empty(
-                                                                                            c30.cddl_array_iterator_contents
-                                                                                        );
-                                                                                    ! em1
-                                                                                }
-                                                                                else
-                                                                                { false };
-                                                                            while
-                                                                            cond
-                                                                            {
-                                                                                let
-                                                                                i:
-                                                                                array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env24_type_1_pretty
-                                                                                =
-                                                                                    (&pc)[0];
-                                                                                let len0: u64 =
-                                                                                    crate::cbordetver::cbor_det_array_iterator_length(
-                                                                                        i.cddl_array_iterator_contents
-                                                                                    );
-                                                                                let
-                                                                                mut
-                                                                                pj:
-                                                                                [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw;
-                                                                                1]
-                                                                                =
-                                                                                    [i.cddl_array_iterator_contents;
-                                                                                        1usize];
-                                                                                let _test: bool =
-                                                                                    (i.cddl_array_iterator_impl_validate)(
-                                                                                        &mut pj
-                                                                                    );
-                                                                                crate::lowstar::ignore::ignore::<bool>(
-                                                                                    _test
-                                                                                );
-                                                                                let
-                                                                                ji:
-                                                                                crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                                                                =
-                                                                                    (&pj)[0];
-                                                                                let len1: u64 =
-                                                                                    crate::cbordetver::cbor_det_array_iterator_length(
-                                                                                        ji
-                                                                                    );
-                                                                                let
-                                                                                j:
-                                                                                array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env24_type_1_pretty
-                                                                                =
-                                                                                    array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env24_type_1_pretty
-                                                                                    {
-                                                                                        cddl_array_iterator_contents:
-                                                                                        ji,
-                                                                                        cddl_array_iterator_impl_validate:
-                                                                                        i.cddl_array_iterator_impl_validate,
-                                                                                        cddl_array_iterator_impl_parse:
-                                                                                        i.cddl_array_iterator_impl_parse
-                                                                                    };
-                                                                                (&mut pc)[0] = j;
-                                                                                let
-                                                                                tri:
-                                                                                crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                                                                =
-                                                                                    crate::cbordetver::cbor_det_array_iterator_truncate(
-                                                                                        i.cddl_array_iterator_contents,
-                                                                                        len0.wrapping_sub(
-                                                                                            len1
-                                                                                        )
-                                                                                    );
-                                                                                let
-                                                                                x:
-                                                                                evercddl_label_pretty
-                                                                                =
-                                                                                    (i.cddl_array_iterator_impl_parse)(
-                                                                                        tri
-                                                                                    );
-                                                                                let res2: bool =
-                                                                                    aux_env24_serialize_1(
-                                                                                        x,
-                                                                                        out2,
-                                                                                        &mut pcount1,
-                                                                                        &mut psize1
-                                                                                    );
-                                                                                if ! res2
-                                                                                {
-                                                                                    (&mut pres)[0] =
-                                                                                        false
-                                                                                };
-                                                                                let res3: bool =
-                                                                                    (&pres)[0];
-                                                                                let ite: bool =
-                                                                                    if res3
-                                                                                    {
-                                                                                        let
-                                                                                        c30:
-                                                                                        array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env24_type_1_pretty
-                                                                                        =
-                                                                                            (&pc)[0];
-                                                                                        let
-                                                                                        em1: bool
-                                                                                        =
-                                                                                            crate::cbordetver::cbor_det_array_iterator_is_empty(
-                                                                                                c30.cddl_array_iterator_contents
-                                                                                            );
-                                                                                        ! em1
-                                                                                    }
-                                                                                    else
-                                                                                    { false };
-                                                                                cond = ite
-                                                                            };
-                                                                            (&pres)[0]
-                                                                        }
-                                                                    },
-                                                                  _ =>
-                                                                    panic!(
-                                                                        "Incomplete pattern matching"
-                                                                    )
-                                                              };
-                                                          let res2: usize =
-                                                              if res0
-                                                              {
-                                                                  let size: usize = (&psize1)[0];
-                                                                  let count1: u64 = (&pcount1)[0];
-                                                                  crate::cbordetver::cbor_det_serialize_array(
-                                                                      count1,
-                                                                      out2,
-                                                                      size
-                                                                  )
-                                                              }
-                                                              else
-                                                              { 0usize };
-                                                          if res2 > 0usize
-                                                          {
-                                                              let size2: usize =
-                                                                  size1.wrapping_add(res2);
-                                                              let
-                                                              _letpattern6: (&mut [u8], &mut [u8])
-                                                              =
-                                                                  out.split_at_mut(size2);
-                                                              let out012: &mut [u8] =
-                                                                  _letpattern6.0;
-                                                              let res3: bool =
-                                                                  crate::cbordetver::cbor_det_serialize_map_insert(
-                                                                      out012,
-                                                                      size0,
-                                                                      size1
-                                                                  );
-                                                              if res3
-                                                              {
-                                                                  (&mut psize)[0] = size2;
-                                                                  (&mut pcount)[0] =
-                                                                      count.wrapping_add(1u64);
-                                                                  true
-                                                              }
-                                                              else
-                                                              { false }
-                                                          }
-                                                          else
-                                                          { false }
-                                                      }
-                                                      else
-                                                      { false }
-                                                  }
-                                                  else
-                                                  { false }
-                                              },
-                                            option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env24_type_1_pretty·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env24_type_1_pretty::None
+                                            option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty::None
                                             => true,
                                             _ => panic!("Incomplete pattern matching")
                                         }
@@ -8436,9 +6554,7 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                             {
                                 match c22
                                 {
-                                    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty::Some
-                                    { v: c13 }
-                                    =>
+                                    option__COSE_Format_evercddl_bstr_pretty::Some { v: c13 } =>
                                       {
                                           let count: u64 = (&pcount)[0];
                                           if count < 18446744073709551615u64
@@ -8451,7 +6567,7 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                               let mty: crate::cbordetver::cbor_det_int_kind =
                                                   crate::cbordetver::cbor_det_int_kind::UInt64;
                                               let c3: crate::cbordetveraux::cbor_raw =
-                                                  crate::cbordetver::cbor_det_mk_int64(mty, 3u64);
+                                                  crate::cbordetver::cbor_det_mk_int64(mty, 4u64);
                                               let res: crate::cbordetver::option__size_t =
                                                   crate::cbordetver::cbor_det_serialize(c3, out1);
                                               let res11: usize =
@@ -8471,17 +6587,7 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                                       out.split_at_mut(size1);
                                                   let _out01: &[u8] = _letpattern4.0;
                                                   let out2: &mut [u8] = _letpattern4.1;
-                                                  let res2: usize =
-                                                      match c13
-                                                      {
-                                                          either__COSE_Format_evercddl_tstr_pretty_COSE_Format_evercddl_int_pretty::Inl
-                                                          { v: c14 }
-                                                          => serialize_tstr(c14, out2),
-                                                          either__COSE_Format_evercddl_tstr_pretty_COSE_Format_evercddl_int_pretty::Inr
-                                                          { v: c23 }
-                                                          => serialize_int(c23, out2),
-                                                          _ => panic!("Incomplete pattern matching")
-                                                      };
+                                                  let res2: usize = serialize_bstr(c13, out2);
                                                   if res2 > 0usize
                                                   {
                                                       let size2: usize = size1.wrapping_add(res2);
@@ -8513,8 +6619,7 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                           else
                                           { false }
                                       },
-                                    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty::None
-                                    => true,
+                                    option__COSE_Format_evercddl_bstr_pretty::None => true,
                                     _ => panic!("Incomplete pattern matching")
                                 }
                             }
@@ -8525,105 +6630,18 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                     {
                         match c21
                         {
-                            option__COSE_Format_evercddl_bstr_pretty::Some { v: c12 } =>
+                            either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·::Inl
+                            { v: c12 }
+                            =>
                               {
-                                  let count: u64 = (&pcount)[0];
-                                  if count < 18446744073709551615u64
-                                  {
-                                      let size0: usize = (&psize)[0];
-                                      let _letpattern20: (&mut [u8], &mut [u8]) =
-                                          out.split_at_mut(size0);
-                                      let _out0: &[u8] = _letpattern20.0;
-                                      let out1: &mut [u8] = _letpattern20.1;
-                                      let mty: crate::cbordetver::cbor_det_int_kind =
-                                          crate::cbordetver::cbor_det_int_kind::UInt64;
-                                      let c3: crate::cbordetveraux::cbor_raw =
-                                          crate::cbordetver::cbor_det_mk_int64(mty, 4u64);
-                                      let res: crate::cbordetver::option__size_t =
-                                          crate::cbordetver::cbor_det_serialize(c3, out1);
-                                      let res11: usize =
-                                          match res
-                                          {
-                                              crate::cbordetver::option__size_t::None => 0usize,
-                                              crate::cbordetver::option__size_t::Some { v: r } => r,
-                                              _ => panic!("Incomplete pattern matching")
-                                          };
-                                      if res11 > 0usize
-                                      {
-                                          let size1: usize = size0.wrapping_add(res11);
-                                          let _letpattern3: (&mut [u8], &mut [u8]) =
-                                              out.split_at_mut(size1);
-                                          let _out01: &[u8] = _letpattern3.0;
-                                          let out2: &mut [u8] = _letpattern3.1;
-                                          let res2: usize = serialize_bstr(c12, out2);
-                                          if res2 > 0usize
-                                          {
-                                              let size2: usize = size1.wrapping_add(res2);
-                                              let _letpattern4: (&mut [u8], &mut [u8]) =
-                                                  out.split_at_mut(size2);
-                                              let out012: &mut [u8] = _letpattern4.0;
-                                              let res0: bool =
-                                                  crate::cbordetver::cbor_det_serialize_map_insert(
-                                                      out012,
-                                                      size0,
-                                                      size1
-                                                  );
-                                              if res0
-                                              {
-                                                  (&mut psize)[0] = size2;
-                                                  (&mut pcount)[0] = count.wrapping_add(1u64);
-                                                  true
-                                              }
-                                              else
-                                              { false }
-                                          }
-                                          else
-                                          { false }
-                                      }
-                                      else
-                                      { false }
-                                  }
-                                  else
-                                  { false }
-                              },
-                            option__COSE_Format_evercddl_bstr_pretty::None => true,
-                            _ => panic!("Incomplete pattern matching")
-                        }
-                    }
-                    else
-                    { false }
-                };
-            if res1
-            {
-                match c2
-                {
-                    either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_FStar_Pervasives_either···COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty····FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·::Inl
-                    { v: c11 }
-                    =>
-                      {
-                          let
-                          _letpattern10:
-                          ((&[u8], option__COSE_Format_evercddl_everparsenomatch_pretty),
-                          either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty)
-                          =
-                              c11;
-                          let c12: (&[u8], option__COSE_Format_evercddl_everparsenomatch_pretty) =
-                              _letpattern10.0;
-                          let
-                          c21:
-                          either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty
-                          =
-                              _letpattern10.1;
-                          let
-                          _letpattern2:
-                          (&[u8], option__COSE_Format_evercddl_everparsenomatch_pretty)
-                          =
-                              c12;
-                          let res11: bool =
-                              {
-                                  let c13: &[u8] = _letpattern2.0;
+                                  let
+                                  _letpattern20:
+                                  (&[u8], option__COSE_Format_evercddl_everparsenomatch_pretty)
+                                  =
+                                      c12;
+                                  let c13: &[u8] = _letpattern20.0;
                                   let c22: option__COSE_Format_evercddl_everparsenomatch_pretty =
-                                      _letpattern2.1;
+                                      _letpattern20.1;
                                   let count: u64 = (&pcount)[0];
                                   let res11: bool =
                                       if count < 18446744073709551615u64
@@ -8775,847 +6793,27 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                   }
                                   else
                                   { false }
-                              };
-                          if res11
-                          {
-                              match c21
+                              },
+                            either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·::Inr
+                            { v: c22 }
+                            =>
+                              match c22
                               {
-                                  either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty::Inl
-                                  { v: c13 }
+                                  either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_·FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·::Inl
+                                  { v: c12 }
                                   =>
                                     {
                                         let
-                                        i:
-                                        &[(evercddl_label_pretty, crate::cbordetveraux::cbor_raw)]
+                                        _letpattern20:
+                                        (&[u8],
+                                        option__COSE_Format_evercddl_everparsenomatch_pretty)
                                         =
-                                            c13;
-                                        let
-                                        pi:
-                                        [&[(evercddl_label_pretty, crate::cbordetveraux::cbor_raw)];
-                                        1]
-                                        =
-                                            [i; 1usize];
-                                        crate::lowstar::ignore::ignore::<&[&[(evercddl_label_pretty,
-                                        crate::cbordetveraux::cbor_raw)]]>(&pi);
-                                        let
-                                        mut
-                                        pc:
-                                        [&[(evercddl_label_pretty, crate::cbordetveraux::cbor_raw)];
-                                        1]
-                                        =
-                                            [i; 1usize];
-                                        let mut pres: [bool; 1] = [true; 1usize];
-                                        let res: bool = (&pres)[0];
-                                        let mut cond: bool =
-                                            if res
-                                            {
-                                                let
-                                                c3:
-                                                &[(evercddl_label_pretty,
-                                                crate::cbordetveraux::cbor_raw)]
-                                                =
-                                                    (&pc)[0];
-                                                let em: bool = c3.len() == 0usize;
-                                                ! em
-                                            }
-                                            else
-                                            { false };
-                                        while
-                                        cond
-                                        {
-                                            let count: u64 = (&pcount)[0];
-                                            if count == 18446744073709551615u64
-                                            { (&mut pres)[0] = false }
-                                            else
-                                            {
-                                                let count·: u64 = count.wrapping_add(1u64);
-                                                let
-                                                i1:
-                                                &[(evercddl_label_pretty,
-                                                crate::cbordetveraux::cbor_raw)]
-                                                =
-                                                    (&pc)[0];
-                                                let
-                                                res0:
-                                                (evercddl_label_pretty,
-                                                crate::cbordetveraux::cbor_raw)
-                                                =
-                                                    i1[0usize];
-                                                let
-                                                _letpattern20:
-                                                (&[(evercddl_label_pretty,
-                                                crate::cbordetveraux::cbor_raw)],
-                                                &[(evercddl_label_pretty,
-                                                crate::cbordetveraux::cbor_raw)])
-                                                =
-                                                    i1.split_at(1usize);
-                                                let
-                                                _letpattern21:
-                                                (evercddl_label_pretty,
-                                                crate::cbordetveraux::cbor_raw)
-                                                =
-                                                    {
-                                                        let
-                                                        _il:
-                                                        &[(evercddl_label_pretty,
-                                                        crate::cbordetveraux::cbor_raw)]
-                                                        =
-                                                            _letpattern20.0;
-                                                        let
-                                                        ir:
-                                                        &[(evercddl_label_pretty,
-                                                        crate::cbordetveraux::cbor_raw)]
-                                                        =
-                                                            _letpattern20.1;
-                                                        let
-                                                        i·:
-                                                        &[(evercddl_label_pretty,
-                                                        crate::cbordetveraux::cbor_raw)]
-                                                        =
-                                                            ir;
-                                                        (&mut pc)[0] = i·;
-                                                        res0
-                                                    };
-                                                let ck: evercddl_label_pretty = _letpattern21.0;
-                                                let cv: crate::cbordetveraux::cbor_raw =
-                                                    _letpattern21.1;
-                                                let size0: usize = (&psize)[0];
-                                                let _letpattern3: (&mut [u8], &mut [u8]) =
-                                                    out.split_at_mut(size0);
-                                                let _outl1: &[u8] = _letpattern3.0;
-                                                let out1: &mut [u8] = _letpattern3.1;
-                                                let sz1: usize = aux_env24_serialize_2(ck, out1);
-                                                if sz1 == 0usize
-                                                { (&mut pres)[0] = false }
-                                                else
-                                                {
-                                                    let _letpattern4: (&mut [u8], &mut [u8]) =
-                                                        out1.split_at_mut(sz1);
-                                                    let outl2: &[u8] = _letpattern4.0;
-                                                    let out2: &mut [u8] = _letpattern4.1;
-                                                    let sz2: usize =
-                                                        aux_env24_serialize_3(cv, out2);
-                                                    if sz2 == 0usize
-                                                    { (&mut pres)[0] = false }
-                                                    else
-                                                    {
-                                                        let
-                                                        _letpattern5:
-                                                        crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                                        =
-                                                            crate::cbordetver::cbor_det_parse(outl2);
-                                                        match _letpattern5
-                                                        {
-                                                            crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
-                                                            { v: oo1 }
-                                                            =>
-                                                              {
-                                                                  let
-                                                                  _letpattern6:
-                                                                  (crate::cbordetveraux::cbor_raw,
-                                                                  &[u8])
-                                                                  =
-                                                                      oo1;
-                                                                  let
-                                                                  o1: crate::cbordetveraux::cbor_raw
-                                                                  =
-                                                                      _letpattern6.0;
-                                                                  let _orem1: &[u8] =
-                                                                      _letpattern6.1;
-                                                                  let
-                                                                  _letpattern7:
-                                                                  crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                                                  =
-                                                                      crate::cbordetver::cbor_det_parse(
-                                                                          out2
-                                                                      );
-                                                                  match _letpattern7
-                                                                  {
-                                                                      crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
-                                                                      { v: oo2 }
-                                                                      =>
-                                                                        {
-                                                                            let
-                                                                            _letpattern8:
-                                                                            (crate::cbordetveraux::cbor_raw,
-                                                                            &[u8])
-                                                                            =
-                                                                                oo2;
-                                                                            let
-                                                                            o2:
-                                                                            crate::cbordetveraux::cbor_raw
-                                                                            =
-                                                                                _letpattern8.0;
-                                                                            let _orem2: &[u8] =
-                                                                                _letpattern8.1;
-                                                                            let
-                                                                            o:
-                                                                            crate::cbordetveraux::cbor_map_entry
-                                                                            =
-                                                                                crate::cbordetver::cbor_det_mk_map_entry(
-                                                                                    o1,
-                                                                                    o2
-                                                                                );
-                                                                            let is_except: bool =
-                                                                                aux_env24_map_constraint_4(
-                                                                                    o
-                                                                                );
-                                                                            if is_except
-                                                                            {
-                                                                                (&mut pres)[0] =
-                                                                                    false
-                                                                            }
-                                                                            else
-                                                                            {
-                                                                                let size1: usize =
-                                                                                    size0.wrapping_add(
-                                                                                        sz1
-                                                                                    );
-                                                                                let size2: usize =
-                                                                                    size1.wrapping_add(
-                                                                                        sz2
-                                                                                    );
-                                                                                let
-                                                                                _letpattern9:
-                                                                                (&mut [u8],
-                                                                                &mut [u8])
-                                                                                =
-                                                                                    out.split_at_mut(
-                                                                                        size2
-                                                                                    );
-                                                                                let
-                                                                                _letpattern90:
-                                                                                (&mut [u8],
-                                                                                &mut [u8])
-                                                                                =
-                                                                                    {
-                                                                                        let
-                                                                                        s1:
-                                                                                        &mut [u8]
-                                                                                        =
-                                                                                            _letpattern9.0;
-                                                                                        let
-                                                                                        s2:
-                                                                                        &mut [u8]
-                                                                                        =
-                                                                                            _letpattern9.1;
-                                                                                        (s1,s2)
-                                                                                    };
-                                                                                let
-                                                                                outl: &mut [u8]
-                                                                                =
-                                                                                    _letpattern90.0;
-                                                                                let _outr: &[u8] =
-                                                                                    _letpattern90.1;
-                                                                                let inserted: bool =
-                                                                                    crate::cbordetver::cbor_det_serialize_map_insert(
-                                                                                        outl,
-                                                                                        size0,
-                                                                                        size1
-                                                                                    );
-                                                                                if ! inserted
-                                                                                {
-                                                                                    (&mut pres)[0] =
-                                                                                        false
-                                                                                }
-                                                                                else
-                                                                                {
-                                                                                    (&mut pcount)[0] =
-                                                                                        count·;
-                                                                                    (&mut psize)[0] =
-                                                                                        size2
-                                                                                }
-                                                                            }
-                                                                        },
-                                                                      _ =>
-                                                                        panic!(
-                                                                            "Incomplete pattern matching"
-                                                                        )
-                                                                  }
-                                                              },
-                                                            _ =>
-                                                              panic!("Incomplete pattern matching")
-                                                        }
-                                                    }
-                                                }
-                                            };
-                                            let res0: bool = (&pres)[0];
-                                            let ite: bool =
-                                                if res0
-                                                {
-                                                    let
-                                                    c3:
-                                                    &[(evercddl_label_pretty,
-                                                    crate::cbordetveraux::cbor_raw)]
-                                                    =
-                                                        (&pc)[0];
-                                                    let em: bool = c3.len() == 0usize;
-                                                    ! em
-                                                }
-                                                else
-                                                { false };
-                                            cond = ite
-                                        };
-                                        (&pres)[0]
-                                    },
-                                  either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty::Inr
-                                  { v: c22 }
-                                  =>
-                                    {
-                                        let
-                                        mut
-                                        pc:
-                                        [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty;
-                                        1]
-                                        =
-                                            [c22; 1usize];
-                                        let mut pres: [bool; 1] = [true; 1usize];
-                                        let res: bool = (&pres)[0];
-                                        let mut cond: bool =
-                                            if res
-                                            {
-                                                let
-                                                c3:
-                                                map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                                                =
-                                                    (&pc)[0];
-                                                let
-                                                mut
-                                                pj:
-                                                [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
-                                                1]
-                                                =
-                                                    [c3.cddl_map_iterator_contents; 1usize];
-                                                let mut pres1: [bool; 1] = [true; 1usize];
-                                                let res2: bool = (&pres1)[0];
-                                                let mut cond: bool =
-                                                    if res2
-                                                    {
-                                                        let
-                                                        j:
-                                                        crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                        =
-                                                            (&pj)[0];
-                                                        let test: bool =
-                                                            crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                                j
-                                                            );
-                                                        ! test
-                                                    }
-                                                    else
-                                                    { false };
-                                                while
-                                                cond
-                                                {
-                                                    let elt: crate::cbordetveraux::cbor_map_entry =
-                                                        crate::cbordetver::cbor_det_map_iterator_next(
-                                                            &mut pj
-                                                        );
-                                                    let elt_key: crate::cbordetveraux::cbor_raw =
-                                                        crate::cbordetver::cbor_det_map_entry_key(
-                                                            elt
-                                                        );
-                                                    let test_key: bool =
-                                                        (c3.cddl_map_iterator_impl_validate1)(
-                                                            elt_key
-                                                        );
-                                                    if ! ! test_key
-                                                    {
-                                                        let test_ex: bool =
-                                                            (c3.cddl_map_iterator_impl_validate_ex)(
-                                                                elt
-                                                            );
-                                                        if ! test_ex
-                                                        {
-                                                            let
-                                                            elt_value:
-                                                            crate::cbordetveraux::cbor_raw
-                                                            =
-                                                                crate::cbordetver::cbor_det_map_entry_value(
-                                                                    elt
-                                                                );
-                                                            let test_value: bool =
-                                                                (c3.cddl_map_iterator_impl_validate2)(
-                                                                    elt_value
-                                                                );
-                                                            (&mut pres1)[0] = ! test_value
-                                                        }
-                                                    };
-                                                    let res20: bool = (&pres1)[0];
-                                                    let ite: bool =
-                                                        if res20
-                                                        {
-                                                            let
-                                                            j:
-                                                            crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                            =
-                                                                (&pj)[0];
-                                                            let test: bool =
-                                                                crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                                    j
-                                                                );
-                                                            ! test
-                                                        }
-                                                        else
-                                                        { false };
-                                                    cond = ite
-                                                };
-                                                let em: bool = (&pres1)[0];
-                                                ! em
-                                            }
-                                            else
-                                            { false };
-                                        while
-                                        cond
-                                        {
-                                            let count: u64 = (&pcount)[0];
-                                            if count == 18446744073709551615u64
-                                            { (&mut pres)[0] = false }
-                                            else
-                                            {
-                                                let count·: u64 = count.wrapping_add(1u64);
-                                                let
-                                                i:
-                                                map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                                                =
-                                                    (&pc)[0];
-                                                let
-                                                mut
-                                                pj:
-                                                [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
-                                                1]
-                                                =
-                                                    [i.cddl_map_iterator_contents; 1usize];
-                                                let hd0: crate::cbordetveraux::cbor_map_entry =
-                                                    crate::cbordetver::cbor_det_map_iterator_next(
-                                                        &mut pj
-                                                    );
-                                                let
-                                                mut phd: [crate::cbordetveraux::cbor_map_entry; 1]
-                                                =
-                                                    [hd0; 1usize];
-                                                let hd: crate::cbordetveraux::cbor_map_entry =
-                                                    (&phd)[0];
-                                                let hd_key: crate::cbordetveraux::cbor_raw =
-                                                    crate::cbordetver::cbor_det_map_entry_key(hd);
-                                                let test_key: bool =
-                                                    (i.cddl_map_iterator_impl_validate1)(hd_key);
-                                                let mut cond0: bool =
-                                                    if ! test_key
-                                                    { true }
-                                                    else
-                                                    {
-                                                        let
-                                                        hd_value: crate::cbordetveraux::cbor_raw
-                                                        =
-                                                            crate::cbordetver::cbor_det_map_entry_value(
-                                                                hd
-                                                            );
-                                                        let test_value: bool =
-                                                            (i.cddl_map_iterator_impl_validate2)(
-                                                                hd_value
-                                                            );
-                                                        if ! test_value
-                                                        { true }
-                                                        else
-                                                        {
-                                                            (i.cddl_map_iterator_impl_validate_ex)(
-                                                                hd
-                                                            )
-                                                        }
-                                                    };
-                                                while
-                                                cond0
-                                                {
-                                                    let hd1: crate::cbordetveraux::cbor_map_entry =
-                                                        crate::cbordetver::cbor_det_map_iterator_next(
-                                                            &mut pj
-                                                        );
-                                                    (&mut phd)[0] = hd1;
-                                                    let hd2: crate::cbordetveraux::cbor_map_entry =
-                                                        (&phd)[0];
-                                                    let hd_key0: crate::cbordetveraux::cbor_raw =
-                                                        crate::cbordetver::cbor_det_map_entry_key(
-                                                            hd2
-                                                        );
-                                                    let test_key0: bool =
-                                                        (i.cddl_map_iterator_impl_validate1)(
-                                                            hd_key0
-                                                        );
-                                                    let ite: bool =
-                                                        if ! test_key0
-                                                        { true }
-                                                        else
-                                                        {
-                                                            let
-                                                            hd_value: crate::cbordetveraux::cbor_raw
-                                                            =
-                                                                crate::cbordetver::cbor_det_map_entry_value(
-                                                                    hd2
-                                                                );
-                                                            let test_value: bool =
-                                                                (i.cddl_map_iterator_impl_validate2)(
-                                                                    hd_value
-                                                                );
-                                                            if ! test_value
-                                                            { true }
-                                                            else
-                                                            {
-                                                                (i.cddl_map_iterator_impl_validate_ex)(
-                                                                    hd2
-                                                                )
-                                                            }
-                                                        };
-                                                    cond0 = ite
-                                                };
-                                                let hd1: crate::cbordetveraux::cbor_map_entry =
-                                                    (&phd)[0];
-                                                let hd_key0: crate::cbordetveraux::cbor_raw =
-                                                    crate::cbordetver::cbor_det_map_entry_key(hd1);
-                                                let hd_key_res: evercddl_label_pretty =
-                                                    (i.cddl_map_iterator_impl_parse1)(hd_key0);
-                                                let hd_value: crate::cbordetveraux::cbor_raw =
-                                                    crate::cbordetver::cbor_det_map_entry_value(hd1);
-                                                let hd_value_res: crate::cbordetveraux::cbor_raw =
-                                                    (i.cddl_map_iterator_impl_parse2)(hd_value);
-                                                let
-                                                j:
-                                                crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                =
-                                                    (&pj)[0];
-                                                let
-                                                i·:
-                                                map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                                                =
-                                                    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                                                    {
-                                                        cddl_map_iterator_contents: j,
-                                                        cddl_map_iterator_impl_validate1:
-                                                        i.cddl_map_iterator_impl_validate1,
-                                                        cddl_map_iterator_impl_parse1:
-                                                        i.cddl_map_iterator_impl_parse1,
-                                                        cddl_map_iterator_impl_validate_ex:
-                                                        i.cddl_map_iterator_impl_validate_ex,
-                                                        cddl_map_iterator_impl_validate2:
-                                                        i.cddl_map_iterator_impl_validate2,
-                                                        cddl_map_iterator_impl_parse2:
-                                                        i.cddl_map_iterator_impl_parse2
-                                                    };
-                                                (&mut pc)[0] = i·;
-                                                let
-                                                _letpattern20:
-                                                (evercddl_label_pretty,
-                                                crate::cbordetveraux::cbor_raw)
-                                                =
-                                                    (hd_key_res,hd_value_res);
-                                                let ck: evercddl_label_pretty = _letpattern20.0;
-                                                let cv: crate::cbordetveraux::cbor_raw =
-                                                    _letpattern20.1;
-                                                let size0: usize = (&psize)[0];
-                                                let _letpattern3: (&mut [u8], &mut [u8]) =
-                                                    out.split_at_mut(size0);
-                                                let _outl1: &[u8] = _letpattern3.0;
-                                                let out1: &mut [u8] = _letpattern3.1;
-                                                let sz1: usize = aux_env24_serialize_2(ck, out1);
-                                                if sz1 == 0usize
-                                                { (&mut pres)[0] = false }
-                                                else
-                                                {
-                                                    let _letpattern4: (&mut [u8], &mut [u8]) =
-                                                        out1.split_at_mut(sz1);
-                                                    let outl2: &[u8] = _letpattern4.0;
-                                                    let out2: &mut [u8] = _letpattern4.1;
-                                                    let sz2: usize =
-                                                        aux_env24_serialize_3(cv, out2);
-                                                    if sz2 == 0usize
-                                                    { (&mut pres)[0] = false }
-                                                    else
-                                                    {
-                                                        let
-                                                        _letpattern5:
-                                                        crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                                        =
-                                                            crate::cbordetver::cbor_det_parse(outl2);
-                                                        match _letpattern5
-                                                        {
-                                                            crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
-                                                            { v: oo1 }
-                                                            =>
-                                                              {
-                                                                  let
-                                                                  _letpattern6:
-                                                                  (crate::cbordetveraux::cbor_raw,
-                                                                  &[u8])
-                                                                  =
-                                                                      oo1;
-                                                                  let
-                                                                  o1: crate::cbordetveraux::cbor_raw
-                                                                  =
-                                                                      _letpattern6.0;
-                                                                  let _orem1: &[u8] =
-                                                                      _letpattern6.1;
-                                                                  let
-                                                                  _letpattern7:
-                                                                  crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                                                  =
-                                                                      crate::cbordetver::cbor_det_parse(
-                                                                          out2
-                                                                      );
-                                                                  match _letpattern7
-                                                                  {
-                                                                      crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
-                                                                      { v: oo2 }
-                                                                      =>
-                                                                        {
-                                                                            let
-                                                                            _letpattern8:
-                                                                            (crate::cbordetveraux::cbor_raw,
-                                                                            &[u8])
-                                                                            =
-                                                                                oo2;
-                                                                            let
-                                                                            o2:
-                                                                            crate::cbordetveraux::cbor_raw
-                                                                            =
-                                                                                _letpattern8.0;
-                                                                            let _orem2: &[u8] =
-                                                                                _letpattern8.1;
-                                                                            let
-                                                                            o:
-                                                                            crate::cbordetveraux::cbor_map_entry
-                                                                            =
-                                                                                crate::cbordetver::cbor_det_mk_map_entry(
-                                                                                    o1,
-                                                                                    o2
-                                                                                );
-                                                                            let is_except: bool =
-                                                                                aux_env24_map_constraint_4(
-                                                                                    o
-                                                                                );
-                                                                            if is_except
-                                                                            {
-                                                                                (&mut pres)[0] =
-                                                                                    false
-                                                                            }
-                                                                            else
-                                                                            {
-                                                                                let size1: usize =
-                                                                                    size0.wrapping_add(
-                                                                                        sz1
-                                                                                    );
-                                                                                let size2: usize =
-                                                                                    size1.wrapping_add(
-                                                                                        sz2
-                                                                                    );
-                                                                                let
-                                                                                _letpattern9:
-                                                                                (&mut [u8],
-                                                                                &mut [u8])
-                                                                                =
-                                                                                    out.split_at_mut(
-                                                                                        size2
-                                                                                    );
-                                                                                let
-                                                                                _letpattern90:
-                                                                                (&mut [u8],
-                                                                                &mut [u8])
-                                                                                =
-                                                                                    {
-                                                                                        let
-                                                                                        s1:
-                                                                                        &mut [u8]
-                                                                                        =
-                                                                                            _letpattern9.0;
-                                                                                        let
-                                                                                        s2:
-                                                                                        &mut [u8]
-                                                                                        =
-                                                                                            _letpattern9.1;
-                                                                                        (s1,s2)
-                                                                                    };
-                                                                                let
-                                                                                outl: &mut [u8]
-                                                                                =
-                                                                                    _letpattern90.0;
-                                                                                let _outr: &[u8] =
-                                                                                    _letpattern90.1;
-                                                                                let inserted: bool =
-                                                                                    crate::cbordetver::cbor_det_serialize_map_insert(
-                                                                                        outl,
-                                                                                        size0,
-                                                                                        size1
-                                                                                    );
-                                                                                if ! inserted
-                                                                                {
-                                                                                    (&mut pres)[0] =
-                                                                                        false
-                                                                                }
-                                                                                else
-                                                                                {
-                                                                                    (&mut pcount)[0] =
-                                                                                        count·;
-                                                                                    (&mut psize)[0] =
-                                                                                        size2
-                                                                                }
-                                                                            }
-                                                                        },
-                                                                      _ =>
-                                                                        panic!(
-                                                                            "Incomplete pattern matching"
-                                                                        )
-                                                                  }
-                                                              },
-                                                            _ =>
-                                                              panic!("Incomplete pattern matching")
-                                                        }
-                                                    }
-                                                }
-                                            };
-                                            let res0: bool = (&pres)[0];
-                                            let ite: bool =
-                                                if res0
-                                                {
-                                                    let
-                                                    c3:
-                                                    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                                                    =
-                                                        (&pc)[0];
-                                                    let
-                                                    mut
-                                                    pj:
-                                                    [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
-                                                    1]
-                                                    =
-                                                        [c3.cddl_map_iterator_contents; 1usize];
-                                                    let mut pres1: [bool; 1] = [true; 1usize];
-                                                    let res2: bool = (&pres1)[0];
-                                                    let mut cond0: bool =
-                                                        if res2
-                                                        {
-                                                            let
-                                                            j:
-                                                            crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                            =
-                                                                (&pj)[0];
-                                                            let test: bool =
-                                                                crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                                    j
-                                                                );
-                                                            ! test
-                                                        }
-                                                        else
-                                                        { false };
-                                                    while
-                                                    cond0
-                                                    {
-                                                        let
-                                                        elt: crate::cbordetveraux::cbor_map_entry
-                                                        =
-                                                            crate::cbordetver::cbor_det_map_iterator_next(
-                                                                &mut pj
-                                                            );
-                                                        let
-                                                        elt_key: crate::cbordetveraux::cbor_raw
-                                                        =
-                                                            crate::cbordetver::cbor_det_map_entry_key(
-                                                                elt
-                                                            );
-                                                        let test_key: bool =
-                                                            (c3.cddl_map_iterator_impl_validate1)(
-                                                                elt_key
-                                                            );
-                                                        if ! ! test_key
-                                                        {
-                                                            let test_ex: bool =
-                                                                (c3.cddl_map_iterator_impl_validate_ex)(
-                                                                    elt
-                                                                );
-                                                            if ! test_ex
-                                                            {
-                                                                let
-                                                                elt_value:
-                                                                crate::cbordetveraux::cbor_raw
-                                                                =
-                                                                    crate::cbordetver::cbor_det_map_entry_value(
-                                                                        elt
-                                                                    );
-                                                                let test_value: bool =
-                                                                    (c3.cddl_map_iterator_impl_validate2)(
-                                                                        elt_value
-                                                                    );
-                                                                (&mut pres1)[0] = ! test_value
-                                                            }
-                                                        };
-                                                        let res20: bool = (&pres1)[0];
-                                                        let ite: bool =
-                                                            if res20
-                                                            {
-                                                                let
-                                                                j:
-                                                                crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                                =
-                                                                    (&pj)[0];
-                                                                let test: bool =
-                                                                    crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                                        j
-                                                                    );
-                                                                ! test
-                                                            }
-                                                            else
-                                                            { false };
-                                                        cond0 = ite
-                                                    };
-                                                    let em: bool = (&pres1)[0];
-                                                    ! em
-                                                }
-                                                else
-                                                { false };
-                                            cond = ite
-                                        };
-                                        (&pres)[0]
-                                    },
-                                  _ => panic!("Incomplete pattern matching")
-                              }
-                          }
-                          else
-                          { false }
-                      },
-                    either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_FStar_Pervasives_either···COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty····FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·::Inr
-                    { v: c21 }
-                    =>
-                      match c21
-                      {
-                          either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_··FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·::Inl
-                          { v: c11 }
-                          =>
-                            {
-                                let
-                                _letpattern10:
-                                ((&[u8], option__COSE_Format_evercddl_everparsenomatch_pretty),
-                                either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty)
-                                =
-                                    c11;
-                                let
-                                c12: (&[u8], option__COSE_Format_evercddl_everparsenomatch_pretty)
-                                =
-                                    _letpattern10.0;
-                                let
-                                c22:
-                                either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty
-                                =
-                                    _letpattern10.1;
-                                let
-                                _letpattern2:
-                                (&[u8], option__COSE_Format_evercddl_everparsenomatch_pretty)
-                                =
-                                    c12;
-                                let res11: bool =
-                                    {
-                                        let c13: &[u8] = _letpattern2.0;
+                                            c12;
+                                        let c13: &[u8] = _letpattern20.0;
                                         let
                                         c23: option__COSE_Format_evercddl_everparsenomatch_pretty
                                         =
-                                            _letpattern2.1;
+                                            _letpattern20.1;
                                         let count: u64 = (&pcount)[0];
                                         let res11: bool =
                                             if count < 18446744073709551615u64
@@ -9780,937 +6978,25 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                         }
                                         else
                                         { false }
-                                    };
-                                if res11
-                                {
-                                    match c22
+                                    },
+                                  either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_·FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·::Inr
+                                  { v: c23 }
+                                  =>
                                     {
-                                        either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty::Inl
-                                        { v: c13 }
-                                        =>
-                                          {
-                                              let
-                                              i:
-                                              &[(evercddl_label_pretty,
-                                              crate::cbordetveraux::cbor_raw)]
-                                              =
-                                                  c13;
-                                              let
-                                              pi:
-                                              [&[(evercddl_label_pretty,
-                                              crate::cbordetveraux::cbor_raw)];
-                                              1]
-                                              =
-                                                  [i; 1usize];
-                                              crate::lowstar::ignore::ignore::<&[&[(evercddl_label_pretty,
-                                              crate::cbordetveraux::cbor_raw)]]>(&pi);
-                                              let
-                                              mut
-                                              pc:
-                                              [&[(evercddl_label_pretty,
-                                              crate::cbordetveraux::cbor_raw)];
-                                              1]
-                                              =
-                                                  [i; 1usize];
-                                              let mut pres: [bool; 1] = [true; 1usize];
-                                              let res: bool = (&pres)[0];
-                                              let mut cond: bool =
-                                                  if res
-                                                  {
-                                                      let
-                                                      c3:
-                                                      &[(evercddl_label_pretty,
-                                                      crate::cbordetveraux::cbor_raw)]
-                                                      =
-                                                          (&pc)[0];
-                                                      let em: bool = c3.len() == 0usize;
-                                                      ! em
-                                                  }
-                                                  else
-                                                  { false };
-                                              while
-                                              cond
-                                              {
-                                                  let count: u64 = (&pcount)[0];
-                                                  if count == 18446744073709551615u64
-                                                  { (&mut pres)[0] = false }
-                                                  else
-                                                  {
-                                                      let count·: u64 = count.wrapping_add(1u64);
-                                                      let
-                                                      i1:
-                                                      &[(evercddl_label_pretty,
-                                                      crate::cbordetveraux::cbor_raw)]
-                                                      =
-                                                          (&pc)[0];
-                                                      let
-                                                      res0:
-                                                      (evercddl_label_pretty,
-                                                      crate::cbordetveraux::cbor_raw)
-                                                      =
-                                                          i1[0usize];
-                                                      let
-                                                      _letpattern20:
-                                                      (&[(evercddl_label_pretty,
-                                                      crate::cbordetveraux::cbor_raw)],
-                                                      &[(evercddl_label_pretty,
-                                                      crate::cbordetveraux::cbor_raw)])
-                                                      =
-                                                          i1.split_at(1usize);
-                                                      let
-                                                      _letpattern21:
-                                                      (evercddl_label_pretty,
-                                                      crate::cbordetveraux::cbor_raw)
-                                                      =
-                                                          {
-                                                              let
-                                                              _il:
-                                                              &[(evercddl_label_pretty,
-                                                              crate::cbordetveraux::cbor_raw)]
-                                                              =
-                                                                  _letpattern20.0;
-                                                              let
-                                                              ir:
-                                                              &[(evercddl_label_pretty,
-                                                              crate::cbordetveraux::cbor_raw)]
-                                                              =
-                                                                  _letpattern20.1;
-                                                              let
-                                                              i·:
-                                                              &[(evercddl_label_pretty,
-                                                              crate::cbordetveraux::cbor_raw)]
-                                                              =
-                                                                  ir;
-                                                              (&mut pc)[0] = i·;
-                                                              res0
-                                                          };
-                                                      let ck: evercddl_label_pretty =
-                                                          _letpattern21.0;
-                                                      let cv: crate::cbordetveraux::cbor_raw =
-                                                          _letpattern21.1;
-                                                      let size0: usize = (&psize)[0];
-                                                      let _letpattern3: (&mut [u8], &mut [u8]) =
-                                                          out.split_at_mut(size0);
-                                                      let _outl1: &[u8] = _letpattern3.0;
-                                                      let out1: &mut [u8] = _letpattern3.1;
-                                                      let sz1: usize =
-                                                          aux_env24_serialize_2(ck, out1);
-                                                      if sz1 == 0usize
-                                                      { (&mut pres)[0] = false }
-                                                      else
-                                                      {
-                                                          let _letpattern4: (&mut [u8], &mut [u8]) =
-                                                              out1.split_at_mut(sz1);
-                                                          let outl2: &[u8] = _letpattern4.0;
-                                                          let out2: &mut [u8] = _letpattern4.1;
-                                                          let sz2: usize =
-                                                              aux_env24_serialize_3(cv, out2);
-                                                          if sz2 == 0usize
-                                                          { (&mut pres)[0] = false }
-                                                          else
-                                                          {
-                                                              let
-                                                              _letpattern5:
-                                                              crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                                              =
-                                                                  crate::cbordetver::cbor_det_parse(
-                                                                      outl2
-                                                                  );
-                                                              match _letpattern5
-                                                              {
-                                                                  crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
-                                                                  { v: oo1 }
-                                                                  =>
-                                                                    {
-                                                                        let
-                                                                        _letpattern6:
-                                                                        (crate::cbordetveraux::cbor_raw,
-                                                                        &[u8])
-                                                                        =
-                                                                            oo1;
-                                                                        let
-                                                                        o1:
-                                                                        crate::cbordetveraux::cbor_raw
-                                                                        =
-                                                                            _letpattern6.0;
-                                                                        let _orem1: &[u8] =
-                                                                            _letpattern6.1;
-                                                                        let
-                                                                        _letpattern7:
-                                                                        crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                                                        =
-                                                                            crate::cbordetver::cbor_det_parse(
-                                                                                out2
-                                                                            );
-                                                                        match _letpattern7
-                                                                        {
-                                                                            crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
-                                                                            { v: oo2 }
-                                                                            =>
-                                                                              {
-                                                                                  let
-                                                                                  _letpattern8:
-                                                                                  (crate::cbordetveraux::cbor_raw,
-                                                                                  &[u8])
-                                                                                  =
-                                                                                      oo2;
-                                                                                  let
-                                                                                  o2:
-                                                                                  crate::cbordetveraux::cbor_raw
-                                                                                  =
-                                                                                      _letpattern8.0;
-                                                                                  let
-                                                                                  _orem2: &[u8]
-                                                                                  =
-                                                                                      _letpattern8.1;
-                                                                                  let
-                                                                                  o:
-                                                                                  crate::cbordetveraux::cbor_map_entry
-                                                                                  =
-                                                                                      crate::cbordetver::cbor_det_mk_map_entry(
-                                                                                          o1,
-                                                                                          o2
-                                                                                      );
-                                                                                  let
-                                                                                  is_except: bool
-                                                                                  =
-                                                                                      aux_env24_map_constraint_5(
-                                                                                          o
-                                                                                      );
-                                                                                  if is_except
-                                                                                  {
-                                                                                      (&mut pres)[0] =
-                                                                                          false
-                                                                                  }
-                                                                                  else
-                                                                                  {
-                                                                                      let
-                                                                                      size1: usize
-                                                                                      =
-                                                                                          size0.wrapping_add(
-                                                                                              sz1
-                                                                                          );
-                                                                                      let
-                                                                                      size2: usize
-                                                                                      =
-                                                                                          size1.wrapping_add(
-                                                                                              sz2
-                                                                                          );
-                                                                                      let
-                                                                                      _letpattern9:
-                                                                                      (&mut [u8],
-                                                                                      &mut [u8])
-                                                                                      =
-                                                                                          out.split_at_mut(
-                                                                                              size2
-                                                                                          );
-                                                                                      let
-                                                                                      _letpattern90:
-                                                                                      (&mut [u8],
-                                                                                      &mut [u8])
-                                                                                      =
-                                                                                          {
-                                                                                              let
-                                                                                              s1:
-                                                                                              &mut
-                                                                                              [u8]
-                                                                                              =
-                                                                                                  _letpattern9.0;
-                                                                                              let
-                                                                                              s2:
-                                                                                              &mut
-                                                                                              [u8]
-                                                                                              =
-                                                                                                  _letpattern9.1;
-                                                                                              (
-                                                                                                  s1,s2
-                                                                                              )
-                                                                                          };
-                                                                                      let
-                                                                                      outl:
-                                                                                      &mut [u8]
-                                                                                      =
-                                                                                          _letpattern90.0;
-                                                                                      let
-                                                                                      _outr: &[u8]
-                                                                                      =
-                                                                                          _letpattern90.1;
-                                                                                      let
-                                                                                      inserted: bool
-                                                                                      =
-                                                                                          crate::cbordetver::cbor_det_serialize_map_insert(
-                                                                                              outl,
-                                                                                              size0,
-                                                                                              size1
-                                                                                          );
-                                                                                      if ! inserted
-                                                                                      {
-                                                                                          (&mut pres)[0] =
-                                                                                              false
-                                                                                      }
-                                                                                      else
-                                                                                      {
-                                                                                          (&mut
-                                                                                          pcount)[0] =
-                                                                                              count·;
-                                                                                          (&mut
-                                                                                          psize)[0] =
-                                                                                              size2
-                                                                                      }
-                                                                                  }
-                                                                              },
-                                                                            _ =>
-                                                                              panic!(
-                                                                                  "Incomplete pattern matching"
-                                                                              )
-                                                                        }
-                                                                    },
-                                                                  _ =>
-                                                                    panic!(
-                                                                        "Incomplete pattern matching"
-                                                                    )
-                                                              }
-                                                          }
-                                                      }
-                                                  };
-                                                  let res0: bool = (&pres)[0];
-                                                  let ite: bool =
-                                                      if res0
-                                                      {
-                                                          let
-                                                          c3:
-                                                          &[(evercddl_label_pretty,
-                                                          crate::cbordetveraux::cbor_raw)]
-                                                          =
-                                                              (&pc)[0];
-                                                          let em: bool = c3.len() == 0usize;
-                                                          ! em
-                                                      }
-                                                      else
-                                                      { false };
-                                                  cond = ite
-                                              };
-                                              (&pres)[0]
-                                          },
-                                        either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty::Inr
-                                        { v: c23 }
-                                        =>
-                                          {
-                                              let
-                                              mut
-                                              pc:
-                                              [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty;
-                                              1]
-                                              =
-                                                  [c23; 1usize];
-                                              let mut pres: [bool; 1] = [true; 1usize];
-                                              let res: bool = (&pres)[0];
-                                              let mut cond: bool =
-                                                  if res
-                                                  {
-                                                      let
-                                                      c3:
-                                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                                                      =
-                                                          (&pc)[0];
-                                                      let
-                                                      mut
-                                                      pj:
-                                                      [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
-                                                      1]
-                                                      =
-                                                          [c3.cddl_map_iterator_contents; 1usize];
-                                                      let mut pres1: [bool; 1] = [true; 1usize];
-                                                      let res2: bool = (&pres1)[0];
-                                                      let mut cond: bool =
-                                                          if res2
-                                                          {
-                                                              let
-                                                              j:
-                                                              crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                              =
-                                                                  (&pj)[0];
-                                                              let test: bool =
-                                                                  crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                                      j
-                                                                  );
-                                                              ! test
-                                                          }
-                                                          else
-                                                          { false };
-                                                      while
-                                                      cond
-                                                      {
-                                                          let
-                                                          elt: crate::cbordetveraux::cbor_map_entry
-                                                          =
-                                                              crate::cbordetver::cbor_det_map_iterator_next(
-                                                                  &mut pj
-                                                              );
-                                                          let
-                                                          elt_key: crate::cbordetveraux::cbor_raw
-                                                          =
-                                                              crate::cbordetver::cbor_det_map_entry_key(
-                                                                  elt
-                                                              );
-                                                          let test_key: bool =
-                                                              (c3.cddl_map_iterator_impl_validate1)(
-                                                                  elt_key
-                                                              );
-                                                          if ! ! test_key
-                                                          {
-                                                              let test_ex: bool =
-                                                                  (c3.cddl_map_iterator_impl_validate_ex)(
-                                                                      elt
-                                                                  );
-                                                              if ! test_ex
-                                                              {
-                                                                  let
-                                                                  elt_value:
-                                                                  crate::cbordetveraux::cbor_raw
-                                                                  =
-                                                                      crate::cbordetver::cbor_det_map_entry_value(
-                                                                          elt
-                                                                      );
-                                                                  let test_value: bool =
-                                                                      (c3.cddl_map_iterator_impl_validate2)(
-                                                                          elt_value
-                                                                      );
-                                                                  (&mut pres1)[0] = ! test_value
-                                                              }
-                                                          };
-                                                          let res20: bool = (&pres1)[0];
-                                                          let ite: bool =
-                                                              if res20
-                                                              {
-                                                                  let
-                                                                  j:
-                                                                  crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                                  =
-                                                                      (&pj)[0];
-                                                                  let test: bool =
-                                                                      crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                                          j
-                                                                      );
-                                                                  ! test
-                                                              }
-                                                              else
-                                                              { false };
-                                                          cond = ite
-                                                      };
-                                                      let em: bool = (&pres1)[0];
-                                                      ! em
-                                                  }
-                                                  else
-                                                  { false };
-                                              while
-                                              cond
-                                              {
-                                                  let count: u64 = (&pcount)[0];
-                                                  if count == 18446744073709551615u64
-                                                  { (&mut pres)[0] = false }
-                                                  else
-                                                  {
-                                                      let count·: u64 = count.wrapping_add(1u64);
-                                                      let
-                                                      i:
-                                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                                                      =
-                                                          (&pc)[0];
-                                                      let
-                                                      mut
-                                                      pj:
-                                                      [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
-                                                      1]
-                                                      =
-                                                          [i.cddl_map_iterator_contents; 1usize];
-                                                      let
-                                                      hd0: crate::cbordetveraux::cbor_map_entry
-                                                      =
-                                                          crate::cbordetver::cbor_det_map_iterator_next(
-                                                              &mut pj
-                                                          );
-                                                      let
-                                                      mut
-                                                      phd:
-                                                      [crate::cbordetveraux::cbor_map_entry; 1]
-                                                      =
-                                                          [hd0; 1usize];
-                                                      let hd: crate::cbordetveraux::cbor_map_entry =
-                                                          (&phd)[0];
-                                                      let hd_key: crate::cbordetveraux::cbor_raw =
-                                                          crate::cbordetver::cbor_det_map_entry_key(
-                                                              hd
-                                                          );
-                                                      let test_key: bool =
-                                                          (i.cddl_map_iterator_impl_validate1)(
-                                                              hd_key
-                                                          );
-                                                      let mut cond0: bool =
-                                                          if ! test_key
-                                                          { true }
-                                                          else
-                                                          {
-                                                              let
-                                                              hd_value:
-                                                              crate::cbordetveraux::cbor_raw
-                                                              =
-                                                                  crate::cbordetver::cbor_det_map_entry_value(
-                                                                      hd
-                                                                  );
-                                                              let test_value: bool =
-                                                                  (i.cddl_map_iterator_impl_validate2)(
-                                                                      hd_value
-                                                                  );
-                                                              if ! test_value
-                                                              { true }
-                                                              else
-                                                              {
-                                                                  (i.cddl_map_iterator_impl_validate_ex)(
-                                                                      hd
-                                                                  )
-                                                              }
-                                                          };
-                                                      while
-                                                      cond0
-                                                      {
-                                                          let
-                                                          hd1: crate::cbordetveraux::cbor_map_entry
-                                                          =
-                                                              crate::cbordetver::cbor_det_map_iterator_next(
-                                                                  &mut pj
-                                                              );
-                                                          (&mut phd)[0] = hd1;
-                                                          let
-                                                          hd2: crate::cbordetveraux::cbor_map_entry
-                                                          =
-                                                              (&phd)[0];
-                                                          let
-                                                          hd_key0: crate::cbordetveraux::cbor_raw
-                                                          =
-                                                              crate::cbordetver::cbor_det_map_entry_key(
-                                                                  hd2
-                                                              );
-                                                          let test_key0: bool =
-                                                              (i.cddl_map_iterator_impl_validate1)(
-                                                                  hd_key0
-                                                              );
-                                                          let ite: bool =
-                                                              if ! test_key0
-                                                              { true }
-                                                              else
-                                                              {
-                                                                  let
-                                                                  hd_value:
-                                                                  crate::cbordetveraux::cbor_raw
-                                                                  =
-                                                                      crate::cbordetver::cbor_det_map_entry_value(
-                                                                          hd2
-                                                                      );
-                                                                  let test_value: bool =
-                                                                      (i.cddl_map_iterator_impl_validate2)(
-                                                                          hd_value
-                                                                      );
-                                                                  if ! test_value
-                                                                  { true }
-                                                                  else
-                                                                  {
-                                                                      (i.cddl_map_iterator_impl_validate_ex)(
-                                                                          hd2
-                                                                      )
-                                                                  }
-                                                              };
-                                                          cond0 = ite
-                                                      };
-                                                      let
-                                                      hd1: crate::cbordetveraux::cbor_map_entry
-                                                      =
-                                                          (&phd)[0];
-                                                      let hd_key0: crate::cbordetveraux::cbor_raw =
-                                                          crate::cbordetver::cbor_det_map_entry_key(
-                                                              hd1
-                                                          );
-                                                      let hd_key_res: evercddl_label_pretty =
-                                                          (i.cddl_map_iterator_impl_parse1)(hd_key0);
-                                                      let hd_value: crate::cbordetveraux::cbor_raw =
-                                                          crate::cbordetver::cbor_det_map_entry_value(
-                                                              hd1
-                                                          );
-                                                      let
-                                                      hd_value_res: crate::cbordetveraux::cbor_raw
-                                                      =
-                                                          (i.cddl_map_iterator_impl_parse2)(
-                                                              hd_value
-                                                          );
-                                                      let
-                                                      j:
-                                                      crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                      =
-                                                          (&pj)[0];
-                                                      let
-                                                      i·:
-                                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                                                      =
-                                                          map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                                                          {
-                                                              cddl_map_iterator_contents: j,
-                                                              cddl_map_iterator_impl_validate1:
-                                                              i.cddl_map_iterator_impl_validate1,
-                                                              cddl_map_iterator_impl_parse1:
-                                                              i.cddl_map_iterator_impl_parse1,
-                                                              cddl_map_iterator_impl_validate_ex:
-                                                              i.cddl_map_iterator_impl_validate_ex,
-                                                              cddl_map_iterator_impl_validate2:
-                                                              i.cddl_map_iterator_impl_validate2,
-                                                              cddl_map_iterator_impl_parse2:
-                                                              i.cddl_map_iterator_impl_parse2
-                                                          };
-                                                      (&mut pc)[0] = i·;
-                                                      let
-                                                      _letpattern20:
-                                                      (evercddl_label_pretty,
-                                                      crate::cbordetveraux::cbor_raw)
-                                                      =
-                                                          (hd_key_res,hd_value_res);
-                                                      let ck: evercddl_label_pretty =
-                                                          _letpattern20.0;
-                                                      let cv: crate::cbordetveraux::cbor_raw =
-                                                          _letpattern20.1;
-                                                      let size0: usize = (&psize)[0];
-                                                      let _letpattern3: (&mut [u8], &mut [u8]) =
-                                                          out.split_at_mut(size0);
-                                                      let _outl1: &[u8] = _letpattern3.0;
-                                                      let out1: &mut [u8] = _letpattern3.1;
-                                                      let sz1: usize =
-                                                          aux_env24_serialize_2(ck, out1);
-                                                      if sz1 == 0usize
-                                                      { (&mut pres)[0] = false }
-                                                      else
-                                                      {
-                                                          let _letpattern4: (&mut [u8], &mut [u8]) =
-                                                              out1.split_at_mut(sz1);
-                                                          let outl2: &[u8] = _letpattern4.0;
-                                                          let out2: &mut [u8] = _letpattern4.1;
-                                                          let sz2: usize =
-                                                              aux_env24_serialize_3(cv, out2);
-                                                          if sz2 == 0usize
-                                                          { (&mut pres)[0] = false }
-                                                          else
-                                                          {
-                                                              let
-                                                              _letpattern5:
-                                                              crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                                              =
-                                                                  crate::cbordetver::cbor_det_parse(
-                                                                      outl2
-                                                                  );
-                                                              match _letpattern5
-                                                              {
-                                                                  crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
-                                                                  { v: oo1 }
-                                                                  =>
-                                                                    {
-                                                                        let
-                                                                        _letpattern6:
-                                                                        (crate::cbordetveraux::cbor_raw,
-                                                                        &[u8])
-                                                                        =
-                                                                            oo1;
-                                                                        let
-                                                                        o1:
-                                                                        crate::cbordetveraux::cbor_raw
-                                                                        =
-                                                                            _letpattern6.0;
-                                                                        let _orem1: &[u8] =
-                                                                            _letpattern6.1;
-                                                                        let
-                                                                        _letpattern7:
-                                                                        crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                                                        =
-                                                                            crate::cbordetver::cbor_det_parse(
-                                                                                out2
-                                                                            );
-                                                                        match _letpattern7
-                                                                        {
-                                                                            crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
-                                                                            { v: oo2 }
-                                                                            =>
-                                                                              {
-                                                                                  let
-                                                                                  _letpattern8:
-                                                                                  (crate::cbordetveraux::cbor_raw,
-                                                                                  &[u8])
-                                                                                  =
-                                                                                      oo2;
-                                                                                  let
-                                                                                  o2:
-                                                                                  crate::cbordetveraux::cbor_raw
-                                                                                  =
-                                                                                      _letpattern8.0;
-                                                                                  let
-                                                                                  _orem2: &[u8]
-                                                                                  =
-                                                                                      _letpattern8.1;
-                                                                                  let
-                                                                                  o:
-                                                                                  crate::cbordetveraux::cbor_map_entry
-                                                                                  =
-                                                                                      crate::cbordetver::cbor_det_mk_map_entry(
-                                                                                          o1,
-                                                                                          o2
-                                                                                      );
-                                                                                  let
-                                                                                  is_except: bool
-                                                                                  =
-                                                                                      aux_env24_map_constraint_5(
-                                                                                          o
-                                                                                      );
-                                                                                  if is_except
-                                                                                  {
-                                                                                      (&mut pres)[0] =
-                                                                                          false
-                                                                                  }
-                                                                                  else
-                                                                                  {
-                                                                                      let
-                                                                                      size1: usize
-                                                                                      =
-                                                                                          size0.wrapping_add(
-                                                                                              sz1
-                                                                                          );
-                                                                                      let
-                                                                                      size2: usize
-                                                                                      =
-                                                                                          size1.wrapping_add(
-                                                                                              sz2
-                                                                                          );
-                                                                                      let
-                                                                                      _letpattern9:
-                                                                                      (&mut [u8],
-                                                                                      &mut [u8])
-                                                                                      =
-                                                                                          out.split_at_mut(
-                                                                                              size2
-                                                                                          );
-                                                                                      let
-                                                                                      _letpattern90:
-                                                                                      (&mut [u8],
-                                                                                      &mut [u8])
-                                                                                      =
-                                                                                          {
-                                                                                              let
-                                                                                              s1:
-                                                                                              &mut
-                                                                                              [u8]
-                                                                                              =
-                                                                                                  _letpattern9.0;
-                                                                                              let
-                                                                                              s2:
-                                                                                              &mut
-                                                                                              [u8]
-                                                                                              =
-                                                                                                  _letpattern9.1;
-                                                                                              (
-                                                                                                  s1,s2
-                                                                                              )
-                                                                                          };
-                                                                                      let
-                                                                                      outl:
-                                                                                      &mut [u8]
-                                                                                      =
-                                                                                          _letpattern90.0;
-                                                                                      let
-                                                                                      _outr: &[u8]
-                                                                                      =
-                                                                                          _letpattern90.1;
-                                                                                      let
-                                                                                      inserted: bool
-                                                                                      =
-                                                                                          crate::cbordetver::cbor_det_serialize_map_insert(
-                                                                                              outl,
-                                                                                              size0,
-                                                                                              size1
-                                                                                          );
-                                                                                      if ! inserted
-                                                                                      {
-                                                                                          (&mut pres)[0] =
-                                                                                              false
-                                                                                      }
-                                                                                      else
-                                                                                      {
-                                                                                          (&mut
-                                                                                          pcount)[0] =
-                                                                                              count·;
-                                                                                          (&mut
-                                                                                          psize)[0] =
-                                                                                              size2
-                                                                                      }
-                                                                                  }
-                                                                              },
-                                                                            _ =>
-                                                                              panic!(
-                                                                                  "Incomplete pattern matching"
-                                                                              )
-                                                                        }
-                                                                    },
-                                                                  _ =>
-                                                                    panic!(
-                                                                        "Incomplete pattern matching"
-                                                                    )
-                                                              }
-                                                          }
-                                                      }
-                                                  };
-                                                  let res0: bool = (&pres)[0];
-                                                  let ite: bool =
-                                                      if res0
-                                                      {
-                                                          let
-                                                          c3:
-                                                          map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                                                          =
-                                                              (&pc)[0];
-                                                          let
-                                                          mut
-                                                          pj:
-                                                          [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
-                                                          1]
-                                                          =
-                                                              [c3.cddl_map_iterator_contents;
-                                                                  1usize];
-                                                          let mut pres1: [bool; 1] = [true; 1usize];
-                                                          let res2: bool = (&pres1)[0];
-                                                          let mut cond0: bool =
-                                                              if res2
-                                                              {
-                                                                  let
-                                                                  j:
-                                                                  crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                                  =
-                                                                      (&pj)[0];
-                                                                  let test: bool =
-                                                                      crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                                          j
-                                                                      );
-                                                                  ! test
-                                                              }
-                                                              else
-                                                              { false };
-                                                          while
-                                                          cond0
-                                                          {
-                                                              let
-                                                              elt:
-                                                              crate::cbordetveraux::cbor_map_entry
-                                                              =
-                                                                  crate::cbordetver::cbor_det_map_iterator_next(
-                                                                      &mut pj
-                                                                  );
-                                                              let
-                                                              elt_key:
-                                                              crate::cbordetveraux::cbor_raw
-                                                              =
-                                                                  crate::cbordetver::cbor_det_map_entry_key(
-                                                                      elt
-                                                                  );
-                                                              let test_key: bool =
-                                                                  (c3.cddl_map_iterator_impl_validate1)(
-                                                                      elt_key
-                                                                  );
-                                                              if ! ! test_key
-                                                              {
-                                                                  let test_ex: bool =
-                                                                      (c3.cddl_map_iterator_impl_validate_ex)(
-                                                                          elt
-                                                                      );
-                                                                  if ! test_ex
-                                                                  {
-                                                                      let
-                                                                      elt_value:
-                                                                      crate::cbordetveraux::cbor_raw
-                                                                      =
-                                                                          crate::cbordetver::cbor_det_map_entry_value(
-                                                                              elt
-                                                                          );
-                                                                      let test_value: bool =
-                                                                          (c3.cddl_map_iterator_impl_validate2)(
-                                                                              elt_value
-                                                                          );
-                                                                      (&mut pres1)[0] = ! test_value
-                                                                  }
-                                                              };
-                                                              let res20: bool = (&pres1)[0];
-                                                              let ite: bool =
-                                                                  if res20
-                                                                  {
-                                                                      let
-                                                                      j:
-                                                                      crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                                      =
-                                                                          (&pj)[0];
-                                                                      let test: bool =
-                                                                          crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                                              j
-                                                                          );
-                                                                      ! test
-                                                                  }
-                                                                  else
-                                                                  { false };
-                                                              cond0 = ite
-                                                          };
-                                                          let em: bool = (&pres1)[0];
-                                                          ! em
-                                                      }
-                                                      else
-                                                      { false };
-                                                  cond = ite
-                                              };
-                                              (&pres)[0]
-                                          },
-                                        _ => panic!("Incomplete pattern matching")
-                                    }
-                                }
-                                else
-                                { false }
-                            },
-                          either__··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·_··FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty····FStar_Pervasives_either·CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty··CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty·::Inr
-                          { v: c22 }
-                          =>
-                            {
-                                let
-                                _letpattern10:
-                                ((option__COSE_Format_evercddl_everparsenomatch_pretty,
-                                option__COSE_Format_evercddl_everparsenomatch_pretty),
-                                either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty)
-                                =
-                                    c22;
-                                let
-                                c11:
-                                (option__COSE_Format_evercddl_everparsenomatch_pretty,
-                                option__COSE_Format_evercddl_everparsenomatch_pretty)
-                                =
-                                    _letpattern10.0;
-                                let
-                                c23:
-                                either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty
-                                =
-                                    _letpattern10.1;
-                                let
-                                _letpattern2:
-                                (option__COSE_Format_evercddl_everparsenomatch_pretty,
-                                option__COSE_Format_evercddl_everparsenomatch_pretty)
-                                =
-                                    c11;
-                                let res11: bool =
-                                    {
+                                        let
+                                        _letpattern20:
+                                        (option__COSE_Format_evercddl_everparsenomatch_pretty,
+                                        option__COSE_Format_evercddl_everparsenomatch_pretty)
+                                        =
+                                            c23;
                                         let
                                         c12: option__COSE_Format_evercddl_everparsenomatch_pretty
                                         =
-                                            _letpattern2.0;
+                                            _letpattern20.0;
                                         let
                                         c24: option__COSE_Format_evercddl_everparsenomatch_pretty
                                         =
-                                            _letpattern2.1;
+                                            _letpattern20.1;
                                         let res11: bool =
                                             match c12
                                             {
@@ -10909,900 +7195,640 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                         }
                                         else
                                         { false }
-                                    };
-                                if res11
-                                {
-                                    match c23
-                                    {
-                                        either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty::Inl
-                                        { v: c12 }
-                                        =>
+                                    },
+                                  _ => panic!("Incomplete pattern matching")
+                              },
+                            _ => panic!("Incomplete pattern matching")
+                        }
+                    }
+                    else
+                    { false }
+                };
+            if res1
+            {
+                match c2
+                {
+                    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty::Inl
+                    { v: c11 }
+                    =>
+                      {
+                          let i: &[(evercddl_label_pretty, crate::cbordetveraux::cbor_raw)] = c11;
+                          let pi: [&[(evercddl_label_pretty, crate::cbordetveraux::cbor_raw)]; 1] =
+                              [i; 1usize];
+                          crate::lowstar::ignore::ignore::<&[&[(evercddl_label_pretty,
+                          crate::cbordetveraux::cbor_raw)]]>(&pi);
+                          let
+                          mut pc: [&[(evercddl_label_pretty, crate::cbordetveraux::cbor_raw)]; 1]
+                          =
+                              [i; 1usize];
+                          let mut pres: [bool; 1] = [true; 1usize];
+                          let res: bool = (&pres)[0];
+                          let mut cond: bool =
+                              if res
+                              {
+                                  let
+                                  c3: &[(evercddl_label_pretty, crate::cbordetveraux::cbor_raw)]
+                                  =
+                                      (&pc)[0];
+                                  let em: bool = c3.len() == 0usize;
+                                  ! em
+                              }
+                              else
+                              { false };
+                          while
+                          cond
+                          {
+                              let count: u64 = (&pcount)[0];
+                              if count == 18446744073709551615u64
+                              { (&mut pres)[0] = false }
+                              else
+                              {
+                                  let count·: u64 = count.wrapping_add(1u64);
+                                  let
+                                  i1: &[(evercddl_label_pretty, crate::cbordetveraux::cbor_raw)]
+                                  =
+                                      (&pc)[0];
+                                  let
+                                  res0: (evercddl_label_pretty, crate::cbordetveraux::cbor_raw)
+                                  =
+                                      i1[0usize];
+                                  let
+                                  _letpattern10:
+                                  (&[(evercddl_label_pretty, crate::cbordetveraux::cbor_raw)],
+                                  &[(evercddl_label_pretty, crate::cbordetveraux::cbor_raw)])
+                                  =
+                                      i1.split_at(1usize);
+                                  let
+                                  _letpattern11:
+                                  (evercddl_label_pretty, crate::cbordetveraux::cbor_raw)
+                                  =
+                                      {
+                                          let
+                                          _il:
+                                          &[(evercddl_label_pretty, crate::cbordetveraux::cbor_raw)]
+                                          =
+                                              _letpattern10.0;
+                                          let
+                                          ir:
+                                          &[(evercddl_label_pretty, crate::cbordetveraux::cbor_raw)]
+                                          =
+                                              _letpattern10.1;
+                                          let
+                                          i·:
+                                          &[(evercddl_label_pretty, crate::cbordetveraux::cbor_raw)]
+                                          =
+                                              ir;
+                                          (&mut pc)[0] = i·;
+                                          res0
+                                      };
+                                  let ck: evercddl_label_pretty = _letpattern11.0;
+                                  let cv: crate::cbordetveraux::cbor_raw = _letpattern11.1;
+                                  let size0: usize = (&psize)[0];
+                                  let _letpattern2: (&mut [u8], &mut [u8]) =
+                                      out.split_at_mut(size0);
+                                  let _outl1: &[u8] = _letpattern2.0;
+                                  let out1: &mut [u8] = _letpattern2.1;
+                                  let sz1: usize = aux_env25_serialize_2(ck, out1);
+                                  if sz1 == 0usize
+                                  { (&mut pres)[0] = false }
+                                  else
+                                  {
+                                      let _letpattern3: (&mut [u8], &mut [u8]) =
+                                          out1.split_at_mut(sz1);
+                                      let outl2: &[u8] = _letpattern3.0;
+                                      let out2: &mut [u8] = _letpattern3.1;
+                                      let sz2: usize = aux_env25_serialize_3(cv, out2);
+                                      if sz2 == 0usize
+                                      { (&mut pres)[0] = false }
+                                      else
+                                      {
+                                          let
+                                          _letpattern4:
+                                          crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
+                                          =
+                                              crate::cbordetver::cbor_det_parse(outl2);
+                                          match _letpattern4
                                           {
-                                              let
-                                              i:
-                                              &[(evercddl_label_pretty,
-                                              crate::cbordetveraux::cbor_raw)]
-                                              =
-                                                  c12;
-                                              let
-                                              pi:
-                                              [&[(evercddl_label_pretty,
-                                              crate::cbordetveraux::cbor_raw)];
-                                              1]
-                                              =
-                                                  [i; 1usize];
-                                              crate::lowstar::ignore::ignore::<&[&[(evercddl_label_pretty,
-                                              crate::cbordetveraux::cbor_raw)]]>(&pi);
-                                              let
-                                              mut
-                                              pc:
-                                              [&[(evercddl_label_pretty,
-                                              crate::cbordetveraux::cbor_raw)];
-                                              1]
-                                              =
-                                                  [i; 1usize];
-                                              let mut pres: [bool; 1] = [true; 1usize];
-                                              let res: bool = (&pres)[0];
-                                              let mut cond: bool =
-                                                  if res
-                                                  {
-                                                      let
-                                                      c3:
-                                                      &[(evercddl_label_pretty,
-                                                      crate::cbordetveraux::cbor_raw)]
-                                                      =
-                                                          (&pc)[0];
-                                                      let em: bool = c3.len() == 0usize;
-                                                      ! em
-                                                  }
-                                                  else
-                                                  { false };
-                                              while
-                                              cond
-                                              {
-                                                  let count: u64 = (&pcount)[0];
-                                                  if count == 18446744073709551615u64
-                                                  { (&mut pres)[0] = false }
-                                                  else
-                                                  {
-                                                      let count·: u64 = count.wrapping_add(1u64);
-                                                      let
-                                                      i1:
-                                                      &[(evercddl_label_pretty,
-                                                      crate::cbordetveraux::cbor_raw)]
-                                                      =
-                                                          (&pc)[0];
-                                                      let
-                                                      res0:
-                                                      (evercddl_label_pretty,
-                                                      crate::cbordetveraux::cbor_raw)
-                                                      =
-                                                          i1[0usize];
-                                                      let
-                                                      _letpattern20:
-                                                      (&[(evercddl_label_pretty,
-                                                      crate::cbordetveraux::cbor_raw)],
-                                                      &[(evercddl_label_pretty,
-                                                      crate::cbordetveraux::cbor_raw)])
-                                                      =
-                                                          i1.split_at(1usize);
-                                                      let
-                                                      _letpattern21:
-                                                      (evercddl_label_pretty,
-                                                      crate::cbordetveraux::cbor_raw)
-                                                      =
+                                              crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
+                                              { v: oo1 }
+                                              =>
+                                                {
+                                                    let
+                                                    _letpattern5:
+                                                    (crate::cbordetveraux::cbor_raw, &[u8])
+                                                    =
+                                                        oo1;
+                                                    let o1: crate::cbordetveraux::cbor_raw =
+                                                        _letpattern5.0;
+                                                    let _orem1: &[u8] = _letpattern5.1;
+                                                    let
+                                                    _letpattern6:
+                                                    crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
+                                                    =
+                                                        crate::cbordetver::cbor_det_parse(out2);
+                                                    match _letpattern6
+                                                    {
+                                                        crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
+                                                        { v: oo2 }
+                                                        =>
                                                           {
                                                               let
-                                                              _il:
-                                                              &[(evercddl_label_pretty,
-                                                              crate::cbordetveraux::cbor_raw)]
+                                                              _letpattern7:
+                                                              (crate::cbordetveraux::cbor_raw,
+                                                              &[u8])
                                                               =
-                                                                  _letpattern20.0;
+                                                                  oo2;
                                                               let
-                                                              ir:
-                                                              &[(evercddl_label_pretty,
-                                                              crate::cbordetveraux::cbor_raw)]
+                                                              o2: crate::cbordetveraux::cbor_raw
                                                               =
-                                                                  _letpattern20.1;
+                                                                  _letpattern7.0;
+                                                              let _orem2: &[u8] = _letpattern7.1;
                                                               let
-                                                              i·:
-                                                              &[(evercddl_label_pretty,
-                                                              crate::cbordetveraux::cbor_raw)]
-                                                              =
-                                                                  ir;
-                                                              (&mut pc)[0] = i·;
-                                                              res0
-                                                          };
-                                                      let ck: evercddl_label_pretty =
-                                                          _letpattern21.0;
-                                                      let cv: crate::cbordetveraux::cbor_raw =
-                                                          _letpattern21.1;
-                                                      let size0: usize = (&psize)[0];
-                                                      let _letpattern3: (&mut [u8], &mut [u8]) =
-                                                          out.split_at_mut(size0);
-                                                      let _outl1: &[u8] = _letpattern3.0;
-                                                      let out1: &mut [u8] = _letpattern3.1;
-                                                      let sz1: usize =
-                                                          aux_env24_serialize_2(ck, out1);
-                                                      if sz1 == 0usize
-                                                      { (&mut pres)[0] = false }
-                                                      else
-                                                      {
-                                                          let _letpattern4: (&mut [u8], &mut [u8]) =
-                                                              out1.split_at_mut(sz1);
-                                                          let outl2: &[u8] = _letpattern4.0;
-                                                          let out2: &mut [u8] = _letpattern4.1;
-                                                          let sz2: usize =
-                                                              aux_env24_serialize_3(cv, out2);
-                                                          if sz2 == 0usize
-                                                          { (&mut pres)[0] = false }
-                                                          else
-                                                          {
-                                                              let
-                                                              _letpattern5:
-                                                              crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                                              =
-                                                                  crate::cbordetver::cbor_det_parse(
-                                                                      outl2
-                                                                  );
-                                                              match _letpattern5
-                                                              {
-                                                                  crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
-                                                                  { v: oo1 }
-                                                                  =>
-                                                                    {
-                                                                        let
-                                                                        _letpattern6:
-                                                                        (crate::cbordetveraux::cbor_raw,
-                                                                        &[u8])
-                                                                        =
-                                                                            oo1;
-                                                                        let
-                                                                        o1:
-                                                                        crate::cbordetveraux::cbor_raw
-                                                                        =
-                                                                            _letpattern6.0;
-                                                                        let _orem1: &[u8] =
-                                                                            _letpattern6.1;
-                                                                        let
-                                                                        _letpattern7:
-                                                                        crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                                                        =
-                                                                            crate::cbordetver::cbor_det_parse(
-                                                                                out2
-                                                                            );
-                                                                        match _letpattern7
-                                                                        {
-                                                                            crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
-                                                                            { v: oo2 }
-                                                                            =>
-                                                                              {
-                                                                                  let
-                                                                                  _letpattern8:
-                                                                                  (crate::cbordetveraux::cbor_raw,
-                                                                                  &[u8])
-                                                                                  =
-                                                                                      oo2;
-                                                                                  let
-                                                                                  o2:
-                                                                                  crate::cbordetveraux::cbor_raw
-                                                                                  =
-                                                                                      _letpattern8.0;
-                                                                                  let
-                                                                                  _orem2: &[u8]
-                                                                                  =
-                                                                                      _letpattern8.1;
-                                                                                  let
-                                                                                  o:
-                                                                                  crate::cbordetveraux::cbor_map_entry
-                                                                                  =
-                                                                                      crate::cbordetver::cbor_det_mk_map_entry(
-                                                                                          o1,
-                                                                                          o2
-                                                                                      );
-                                                                                  let
-                                                                                  is_except: bool
-                                                                                  =
-                                                                                      aux_env24_map_constraint_6(
-                                                                                          o
-                                                                                      );
-                                                                                  if is_except
-                                                                                  {
-                                                                                      (&mut pres)[0] =
-                                                                                          false
-                                                                                  }
-                                                                                  else
-                                                                                  {
-                                                                                      let
-                                                                                      size1: usize
-                                                                                      =
-                                                                                          size0.wrapping_add(
-                                                                                              sz1
-                                                                                          );
-                                                                                      let
-                                                                                      size2: usize
-                                                                                      =
-                                                                                          size1.wrapping_add(
-                                                                                              sz2
-                                                                                          );
-                                                                                      let
-                                                                                      _letpattern9:
-                                                                                      (&mut [u8],
-                                                                                      &mut [u8])
-                                                                                      =
-                                                                                          out.split_at_mut(
-                                                                                              size2
-                                                                                          );
-                                                                                      let
-                                                                                      _letpattern90:
-                                                                                      (&mut [u8],
-                                                                                      &mut [u8])
-                                                                                      =
-                                                                                          {
-                                                                                              let
-                                                                                              s1:
-                                                                                              &mut
-                                                                                              [u8]
-                                                                                              =
-                                                                                                  _letpattern9.0;
-                                                                                              let
-                                                                                              s2:
-                                                                                              &mut
-                                                                                              [u8]
-                                                                                              =
-                                                                                                  _letpattern9.1;
-                                                                                              (
-                                                                                                  s1,s2
-                                                                                              )
-                                                                                          };
-                                                                                      let
-                                                                                      outl:
-                                                                                      &mut [u8]
-                                                                                      =
-                                                                                          _letpattern90.0;
-                                                                                      let
-                                                                                      _outr: &[u8]
-                                                                                      =
-                                                                                          _letpattern90.1;
-                                                                                      let
-                                                                                      inserted: bool
-                                                                                      =
-                                                                                          crate::cbordetver::cbor_det_serialize_map_insert(
-                                                                                              outl,
-                                                                                              size0,
-                                                                                              size1
-                                                                                          );
-                                                                                      if ! inserted
-                                                                                      {
-                                                                                          (&mut pres)[0] =
-                                                                                              false
-                                                                                      }
-                                                                                      else
-                                                                                      {
-                                                                                          (&mut
-                                                                                          pcount)[0] =
-                                                                                              count·;
-                                                                                          (&mut
-                                                                                          psize)[0] =
-                                                                                              size2
-                                                                                      }
-                                                                                  }
-                                                                              },
-                                                                            _ =>
-                                                                              panic!(
-                                                                                  "Incomplete pattern matching"
-                                                                              )
-                                                                        }
-                                                                    },
-                                                                  _ =>
-                                                                    panic!(
-                                                                        "Incomplete pattern matching"
-                                                                    )
-                                                              }
-                                                          }
-                                                      }
-                                                  };
-                                                  let res0: bool = (&pres)[0];
-                                                  let ite: bool =
-                                                      if res0
-                                                      {
-                                                          let
-                                                          c3:
-                                                          &[(evercddl_label_pretty,
-                                                          crate::cbordetveraux::cbor_raw)]
-                                                          =
-                                                              (&pc)[0];
-                                                          let em: bool = c3.len() == 0usize;
-                                                          ! em
-                                                      }
-                                                      else
-                                                      { false };
-                                                  cond = ite
-                                              };
-                                              (&pres)[0]
-                                          },
-                                        either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty::Inr
-                                        { v: c24 }
-                                        =>
-                                          {
-                                              let
-                                              mut
-                                              pc:
-                                              [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty;
-                                              1]
-                                              =
-                                                  [c24; 1usize];
-                                              let mut pres: [bool; 1] = [true; 1usize];
-                                              let res: bool = (&pres)[0];
-                                              let mut cond: bool =
-                                                  if res
-                                                  {
-                                                      let
-                                                      c3:
-                                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                                                      =
-                                                          (&pc)[0];
-                                                      let
-                                                      mut
-                                                      pj:
-                                                      [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
-                                                      1]
-                                                      =
-                                                          [c3.cddl_map_iterator_contents; 1usize];
-                                                      let mut pres1: [bool; 1] = [true; 1usize];
-                                                      let res2: bool = (&pres1)[0];
-                                                      let mut cond: bool =
-                                                          if res2
-                                                          {
-                                                              let
-                                                              j:
-                                                              crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                              =
-                                                                  (&pj)[0];
-                                                              let test: bool =
-                                                                  crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                                      j
-                                                                  );
-                                                              ! test
-                                                          }
-                                                          else
-                                                          { false };
-                                                      while
-                                                      cond
-                                                      {
-                                                          let
-                                                          elt: crate::cbordetveraux::cbor_map_entry
-                                                          =
-                                                              crate::cbordetver::cbor_det_map_iterator_next(
-                                                                  &mut pj
-                                                              );
-                                                          let
-                                                          elt_key: crate::cbordetveraux::cbor_raw
-                                                          =
-                                                              crate::cbordetver::cbor_det_map_entry_key(
-                                                                  elt
-                                                              );
-                                                          let test_key: bool =
-                                                              (c3.cddl_map_iterator_impl_validate1)(
-                                                                  elt_key
-                                                              );
-                                                          if ! ! test_key
-                                                          {
-                                                              let test_ex: bool =
-                                                                  (c3.cddl_map_iterator_impl_validate_ex)(
-                                                                      elt
-                                                                  );
-                                                              if ! test_ex
-                                                              {
-                                                                  let
-                                                                  elt_value:
-                                                                  crate::cbordetveraux::cbor_raw
-                                                                  =
-                                                                      crate::cbordetver::cbor_det_map_entry_value(
-                                                                          elt
-                                                                      );
-                                                                  let test_value: bool =
-                                                                      (c3.cddl_map_iterator_impl_validate2)(
-                                                                          elt_value
-                                                                      );
-                                                                  (&mut pres1)[0] = ! test_value
-                                                              }
-                                                          };
-                                                          let res20: bool = (&pres1)[0];
-                                                          let ite: bool =
-                                                              if res20
-                                                              {
-                                                                  let
-                                                                  j:
-                                                                  crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                                  =
-                                                                      (&pj)[0];
-                                                                  let test: bool =
-                                                                      crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                                          j
-                                                                      );
-                                                                  ! test
-                                                              }
-                                                              else
-                                                              { false };
-                                                          cond = ite
-                                                      };
-                                                      let em: bool = (&pres1)[0];
-                                                      ! em
-                                                  }
-                                                  else
-                                                  { false };
-                                              while
-                                              cond
-                                              {
-                                                  let count: u64 = (&pcount)[0];
-                                                  if count == 18446744073709551615u64
-                                                  { (&mut pres)[0] = false }
-                                                  else
-                                                  {
-                                                      let count·: u64 = count.wrapping_add(1u64);
-                                                      let
-                                                      i:
-                                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                                                      =
-                                                          (&pc)[0];
-                                                      let
-                                                      mut
-                                                      pj:
-                                                      [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
-                                                      1]
-                                                      =
-                                                          [i.cddl_map_iterator_contents; 1usize];
-                                                      let
-                                                      hd0: crate::cbordetveraux::cbor_map_entry
-                                                      =
-                                                          crate::cbordetver::cbor_det_map_iterator_next(
-                                                              &mut pj
-                                                          );
-                                                      let
-                                                      mut
-                                                      phd:
-                                                      [crate::cbordetveraux::cbor_map_entry; 1]
-                                                      =
-                                                          [hd0; 1usize];
-                                                      let hd: crate::cbordetveraux::cbor_map_entry =
-                                                          (&phd)[0];
-                                                      let hd_key: crate::cbordetveraux::cbor_raw =
-                                                          crate::cbordetver::cbor_det_map_entry_key(
-                                                              hd
-                                                          );
-                                                      let test_key: bool =
-                                                          (i.cddl_map_iterator_impl_validate1)(
-                                                              hd_key
-                                                          );
-                                                      let mut cond0: bool =
-                                                          if ! test_key
-                                                          { true }
-                                                          else
-                                                          {
-                                                              let
-                                                              hd_value:
-                                                              crate::cbordetveraux::cbor_raw
-                                                              =
-                                                                  crate::cbordetver::cbor_det_map_entry_value(
-                                                                      hd
-                                                                  );
-                                                              let test_value: bool =
-                                                                  (i.cddl_map_iterator_impl_validate2)(
-                                                                      hd_value
-                                                                  );
-                                                              if ! test_value
-                                                              { true }
-                                                              else
-                                                              {
-                                                                  (i.cddl_map_iterator_impl_validate_ex)(
-                                                                      hd
-                                                                  )
-                                                              }
-                                                          };
-                                                      while
-                                                      cond0
-                                                      {
-                                                          let
-                                                          hd1: crate::cbordetveraux::cbor_map_entry
-                                                          =
-                                                              crate::cbordetver::cbor_det_map_iterator_next(
-                                                                  &mut pj
-                                                              );
-                                                          (&mut phd)[0] = hd1;
-                                                          let
-                                                          hd2: crate::cbordetveraux::cbor_map_entry
-                                                          =
-                                                              (&phd)[0];
-                                                          let
-                                                          hd_key0: crate::cbordetveraux::cbor_raw
-                                                          =
-                                                              crate::cbordetver::cbor_det_map_entry_key(
-                                                                  hd2
-                                                              );
-                                                          let test_key0: bool =
-                                                              (i.cddl_map_iterator_impl_validate1)(
-                                                                  hd_key0
-                                                              );
-                                                          let ite: bool =
-                                                              if ! test_key0
-                                                              { true }
-                                                              else
-                                                              {
-                                                                  let
-                                                                  hd_value:
-                                                                  crate::cbordetveraux::cbor_raw
-                                                                  =
-                                                                      crate::cbordetver::cbor_det_map_entry_value(
-                                                                          hd2
-                                                                      );
-                                                                  let test_value: bool =
-                                                                      (i.cddl_map_iterator_impl_validate2)(
-                                                                          hd_value
-                                                                      );
-                                                                  if ! test_value
-                                                                  { true }
-                                                                  else
-                                                                  {
-                                                                      (i.cddl_map_iterator_impl_validate_ex)(
-                                                                          hd2
-                                                                      )
-                                                                  }
-                                                              };
-                                                          cond0 = ite
-                                                      };
-                                                      let
-                                                      hd1: crate::cbordetveraux::cbor_map_entry
-                                                      =
-                                                          (&phd)[0];
-                                                      let hd_key0: crate::cbordetveraux::cbor_raw =
-                                                          crate::cbordetver::cbor_det_map_entry_key(
-                                                              hd1
-                                                          );
-                                                      let hd_key_res: evercddl_label_pretty =
-                                                          (i.cddl_map_iterator_impl_parse1)(hd_key0);
-                                                      let hd_value: crate::cbordetveraux::cbor_raw =
-                                                          crate::cbordetver::cbor_det_map_entry_value(
-                                                              hd1
-                                                          );
-                                                      let
-                                                      hd_value_res: crate::cbordetveraux::cbor_raw
-                                                      =
-                                                          (i.cddl_map_iterator_impl_parse2)(
-                                                              hd_value
-                                                          );
-                                                      let
-                                                      j:
-                                                      crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                      =
-                                                          (&pj)[0];
-                                                      let
-                                                      i·:
-                                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                                                      =
-                                                          map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                                                          {
-                                                              cddl_map_iterator_contents: j,
-                                                              cddl_map_iterator_impl_validate1:
-                                                              i.cddl_map_iterator_impl_validate1,
-                                                              cddl_map_iterator_impl_parse1:
-                                                              i.cddl_map_iterator_impl_parse1,
-                                                              cddl_map_iterator_impl_validate_ex:
-                                                              i.cddl_map_iterator_impl_validate_ex,
-                                                              cddl_map_iterator_impl_validate2:
-                                                              i.cddl_map_iterator_impl_validate2,
-                                                              cddl_map_iterator_impl_parse2:
-                                                              i.cddl_map_iterator_impl_parse2
-                                                          };
-                                                      (&mut pc)[0] = i·;
-                                                      let
-                                                      _letpattern20:
-                                                      (evercddl_label_pretty,
-                                                      crate::cbordetveraux::cbor_raw)
-                                                      =
-                                                          (hd_key_res,hd_value_res);
-                                                      let ck: evercddl_label_pretty =
-                                                          _letpattern20.0;
-                                                      let cv: crate::cbordetveraux::cbor_raw =
-                                                          _letpattern20.1;
-                                                      let size0: usize = (&psize)[0];
-                                                      let _letpattern3: (&mut [u8], &mut [u8]) =
-                                                          out.split_at_mut(size0);
-                                                      let _outl1: &[u8] = _letpattern3.0;
-                                                      let out1: &mut [u8] = _letpattern3.1;
-                                                      let sz1: usize =
-                                                          aux_env24_serialize_2(ck, out1);
-                                                      if sz1 == 0usize
-                                                      { (&mut pres)[0] = false }
-                                                      else
-                                                      {
-                                                          let _letpattern4: (&mut [u8], &mut [u8]) =
-                                                              out1.split_at_mut(sz1);
-                                                          let outl2: &[u8] = _letpattern4.0;
-                                                          let out2: &mut [u8] = _letpattern4.1;
-                                                          let sz2: usize =
-                                                              aux_env24_serialize_3(cv, out2);
-                                                          if sz2 == 0usize
-                                                          { (&mut pres)[0] = false }
-                                                          else
-                                                          {
-                                                              let
-                                                              _letpattern5:
-                                                              crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                                              =
-                                                                  crate::cbordetver::cbor_det_parse(
-                                                                      outl2
-                                                                  );
-                                                              match _letpattern5
-                                                              {
-                                                                  crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
-                                                                  { v: oo1 }
-                                                                  =>
-                                                                    {
-                                                                        let
-                                                                        _letpattern6:
-                                                                        (crate::cbordetveraux::cbor_raw,
-                                                                        &[u8])
-                                                                        =
-                                                                            oo1;
-                                                                        let
-                                                                        o1:
-                                                                        crate::cbordetveraux::cbor_raw
-                                                                        =
-                                                                            _letpattern6.0;
-                                                                        let _orem1: &[u8] =
-                                                                            _letpattern6.1;
-                                                                        let
-                                                                        _letpattern7:
-                                                                        crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-                                                                        =
-                                                                            crate::cbordetver::cbor_det_parse(
-                                                                                out2
-                                                                            );
-                                                                        match _letpattern7
-                                                                        {
-                                                                            crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
-                                                                            { v: oo2 }
-                                                                            =>
-                                                                              {
-                                                                                  let
-                                                                                  _letpattern8:
-                                                                                  (crate::cbordetveraux::cbor_raw,
-                                                                                  &[u8])
-                                                                                  =
-                                                                                      oo2;
-                                                                                  let
-                                                                                  o2:
-                                                                                  crate::cbordetveraux::cbor_raw
-                                                                                  =
-                                                                                      _letpattern8.0;
-                                                                                  let
-                                                                                  _orem2: &[u8]
-                                                                                  =
-                                                                                      _letpattern8.1;
-                                                                                  let
-                                                                                  o:
-                                                                                  crate::cbordetveraux::cbor_map_entry
-                                                                                  =
-                                                                                      crate::cbordetver::cbor_det_mk_map_entry(
-                                                                                          o1,
-                                                                                          o2
-                                                                                      );
-                                                                                  let
-                                                                                  is_except: bool
-                                                                                  =
-                                                                                      aux_env24_map_constraint_6(
-                                                                                          o
-                                                                                      );
-                                                                                  if is_except
-                                                                                  {
-                                                                                      (&mut pres)[0] =
-                                                                                          false
-                                                                                  }
-                                                                                  else
-                                                                                  {
-                                                                                      let
-                                                                                      size1: usize
-                                                                                      =
-                                                                                          size0.wrapping_add(
-                                                                                              sz1
-                                                                                          );
-                                                                                      let
-                                                                                      size2: usize
-                                                                                      =
-                                                                                          size1.wrapping_add(
-                                                                                              sz2
-                                                                                          );
-                                                                                      let
-                                                                                      _letpattern9:
-                                                                                      (&mut [u8],
-                                                                                      &mut [u8])
-                                                                                      =
-                                                                                          out.split_at_mut(
-                                                                                              size2
-                                                                                          );
-                                                                                      let
-                                                                                      _letpattern90:
-                                                                                      (&mut [u8],
-                                                                                      &mut [u8])
-                                                                                      =
-                                                                                          {
-                                                                                              let
-                                                                                              s1:
-                                                                                              &mut
-                                                                                              [u8]
-                                                                                              =
-                                                                                                  _letpattern9.0;
-                                                                                              let
-                                                                                              s2:
-                                                                                              &mut
-                                                                                              [u8]
-                                                                                              =
-                                                                                                  _letpattern9.1;
-                                                                                              (
-                                                                                                  s1,s2
-                                                                                              )
-                                                                                          };
-                                                                                      let
-                                                                                      outl:
-                                                                                      &mut [u8]
-                                                                                      =
-                                                                                          _letpattern90.0;
-                                                                                      let
-                                                                                      _outr: &[u8]
-                                                                                      =
-                                                                                          _letpattern90.1;
-                                                                                      let
-                                                                                      inserted: bool
-                                                                                      =
-                                                                                          crate::cbordetver::cbor_det_serialize_map_insert(
-                                                                                              outl,
-                                                                                              size0,
-                                                                                              size1
-                                                                                          );
-                                                                                      if ! inserted
-                                                                                      {
-                                                                                          (&mut pres)[0] =
-                                                                                              false
-                                                                                      }
-                                                                                      else
-                                                                                      {
-                                                                                          (&mut
-                                                                                          pcount)[0] =
-                                                                                              count·;
-                                                                                          (&mut
-                                                                                          psize)[0] =
-                                                                                              size2
-                                                                                      }
-                                                                                  }
-                                                                              },
-                                                                            _ =>
-                                                                              panic!(
-                                                                                  "Incomplete pattern matching"
-                                                                              )
-                                                                        }
-                                                                    },
-                                                                  _ =>
-                                                                    panic!(
-                                                                        "Incomplete pattern matching"
-                                                                    )
-                                                              }
-                                                          }
-                                                      }
-                                                  };
-                                                  let res0: bool = (&pres)[0];
-                                                  let ite: bool =
-                                                      if res0
-                                                      {
-                                                          let
-                                                          c3:
-                                                          map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
-                                                          =
-                                                              (&pc)[0];
-                                                          let
-                                                          mut
-                                                          pj:
-                                                          [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
-                                                          1]
-                                                          =
-                                                              [c3.cddl_map_iterator_contents;
-                                                                  1usize];
-                                                          let mut pres1: [bool; 1] = [true; 1usize];
-                                                          let res2: bool = (&pres1)[0];
-                                                          let mut cond0: bool =
-                                                              if res2
-                                                              {
-                                                                  let
-                                                                  j:
-                                                                  crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                                  =
-                                                                      (&pj)[0];
-                                                                  let test: bool =
-                                                                      crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                                          j
-                                                                      );
-                                                                  ! test
-                                                              }
-                                                              else
-                                                              { false };
-                                                          while
-                                                          cond0
-                                                          {
-                                                              let
-                                                              elt:
+                                                              o:
                                                               crate::cbordetveraux::cbor_map_entry
                                                               =
-                                                                  crate::cbordetver::cbor_det_map_iterator_next(
-                                                                      &mut pj
+                                                                  crate::cbordetver::cbor_det_mk_map_entry(
+                                                                      o1,
+                                                                      o2
                                                                   );
-                                                              let
-                                                              elt_key:
-                                                              crate::cbordetveraux::cbor_raw
-                                                              =
-                                                                  crate::cbordetver::cbor_det_map_entry_key(
-                                                                      elt
-                                                                  );
-                                                              let test_key: bool =
-                                                                  (c3.cddl_map_iterator_impl_validate1)(
-                                                                      elt_key
-                                                                  );
-                                                              if ! ! test_key
+                                                              let is_except: bool =
+                                                                  aux_env25_map_constraint_4(o);
+                                                              if is_except
+                                                              { (&mut pres)[0] = false }
+                                                              else
                                                               {
-                                                                  let test_ex: bool =
-                                                                      (c3.cddl_map_iterator_impl_validate_ex)(
-                                                                          elt
+                                                                  let size1: usize =
+                                                                      size0.wrapping_add(sz1);
+                                                                  let size2: usize =
+                                                                      size1.wrapping_add(sz2);
+                                                                  let
+                                                                  _letpattern8:
+                                                                  (&mut [u8], &mut [u8])
+                                                                  =
+                                                                      out.split_at_mut(size2);
+                                                                  let
+                                                                  _letpattern80:
+                                                                  (&mut [u8], &mut [u8])
+                                                                  =
+                                                                      {
+                                                                          let s1: &mut [u8] =
+                                                                              _letpattern8.0;
+                                                                          let s2: &mut [u8] =
+                                                                              _letpattern8.1;
+                                                                          (s1,s2)
+                                                                      };
+                                                                  let outl: &mut [u8] =
+                                                                      _letpattern80.0;
+                                                                  let _outr: &[u8] =
+                                                                      _letpattern80.1;
+                                                                  let inserted: bool =
+                                                                      crate::cbordetver::cbor_det_serialize_map_insert(
+                                                                          outl,
+                                                                          size0,
+                                                                          size1
                                                                       );
-                                                                  if ! test_ex
-                                                                  {
-                                                                      let
-                                                                      elt_value:
-                                                                      crate::cbordetveraux::cbor_raw
-                                                                      =
-                                                                          crate::cbordetver::cbor_det_map_entry_value(
-                                                                              elt
-                                                                          );
-                                                                      let test_value: bool =
-                                                                          (c3.cddl_map_iterator_impl_validate2)(
-                                                                              elt_value
-                                                                          );
-                                                                      (&mut pres1)[0] = ! test_value
-                                                                  }
-                                                              };
-                                                              let res20: bool = (&pres1)[0];
-                                                              let ite: bool =
-                                                                  if res20
-                                                                  {
-                                                                      let
-                                                                      j:
-                                                                      crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                                                      =
-                                                                          (&pj)[0];
-                                                                      let test: bool =
-                                                                          crate::cbordetver::cbor_det_map_iterator_is_empty(
-                                                                              j
-                                                                          );
-                                                                      ! test
-                                                                  }
+                                                                  if ! inserted
+                                                                  { (&mut pres)[0] = false }
                                                                   else
-                                                                  { false };
-                                                              cond0 = ite
-                                                          };
-                                                          let em: bool = (&pres1)[0];
-                                                          ! em
-                                                      }
-                                                      else
-                                                      { false };
-                                                  cond = ite
-                                              };
-                                              (&pres)[0]
-                                          },
-                                        _ => panic!("Incomplete pattern matching")
-                                    }
-                                }
-                                else
-                                { false }
-                            },
-                          _ => panic!("Incomplete pattern matching")
+                                                                  {
+                                                                      (&mut pcount)[0] = count·;
+                                                                      (&mut psize)[0] = size2
+                                                                  }
+                                                              }
+                                                          },
+                                                        _ => panic!("Incomplete pattern matching")
+                                                    }
+                                                },
+                                              _ => panic!("Incomplete pattern matching")
+                                          }
+                                      }
+                                  }
+                              };
+                              let res0: bool = (&pres)[0];
+                              let ite: bool =
+                                  if res0
+                                  {
+                                      let
+                                      c3: &[(evercddl_label_pretty, crate::cbordetveraux::cbor_raw)]
+                                      =
+                                          (&pc)[0];
+                                      let em: bool = c3.len() == 0usize;
+                                      ! em
+                                  }
+                                  else
+                                  { false };
+                              cond = ite
+                          };
+                          (&pres)[0]
+                      },
+                    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty::Inr
+                    { v: c21 }
+                    =>
+                      {
+                          let
+                          mut
+                          pc:
+                          [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty;
+                          1]
+                          =
+                              [c21; 1usize];
+                          let mut pres: [bool; 1] = [true; 1usize];
+                          let res: bool = (&pres)[0];
+                          let mut cond: bool =
+                              if res
+                              {
+                                  let
+                                  c3:
+                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
+                                  =
+                                      (&pc)[0];
+                                  let
+                                  mut
+                                  pj:
+                                  [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
+                                  1]
+                                  =
+                                      [c3.cddl_map_iterator_contents; 1usize];
+                                  let mut pres1: [bool; 1] = [true; 1usize];
+                                  let res2: bool = (&pres1)[0];
+                                  let mut cond: bool =
+                                      if res2
+                                      {
+                                          let
+                                          j:
+                                          crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                                          =
+                                              (&pj)[0];
+                                          let test: bool =
+                                              crate::cbordetver::cbor_det_map_iterator_is_empty(j);
+                                          ! test
+                                      }
+                                      else
+                                      { false };
+                                  while
+                                  cond
+                                  {
+                                      let elt: crate::cbordetveraux::cbor_map_entry =
+                                          crate::cbordetver::cbor_det_map_iterator_next(&mut pj);
+                                      let elt_key: crate::cbordetveraux::cbor_raw =
+                                          crate::cbordetver::cbor_det_map_entry_key(elt);
+                                      let test_key: bool =
+                                          (c3.cddl_map_iterator_impl_validate1)(elt_key);
+                                      if ! ! test_key
+                                      {
+                                          let test_ex: bool =
+                                              (c3.cddl_map_iterator_impl_validate_ex)(elt);
+                                          if ! test_ex
+                                          {
+                                              let elt_value: crate::cbordetveraux::cbor_raw =
+                                                  crate::cbordetver::cbor_det_map_entry_value(elt);
+                                              let test_value: bool =
+                                                  (c3.cddl_map_iterator_impl_validate2)(elt_value);
+                                              (&mut pres1)[0] = ! test_value
+                                          }
+                                      };
+                                      let res20: bool = (&pres1)[0];
+                                      let ite: bool =
+                                          if res20
+                                          {
+                                              let
+                                              j:
+                                              crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                                              =
+                                                  (&pj)[0];
+                                              let test: bool =
+                                                  crate::cbordetver::cbor_det_map_iterator_is_empty(
+                                                      j
+                                                  );
+                                              ! test
+                                          }
+                                          else
+                                          { false };
+                                      cond = ite
+                                  };
+                                  let em: bool = (&pres1)[0];
+                                  ! em
+                              }
+                              else
+                              { false };
+                          while
+                          cond
+                          {
+                              let count: u64 = (&pcount)[0];
+                              if count == 18446744073709551615u64
+                              { (&mut pres)[0] = false }
+                              else
+                              {
+                                  let count·: u64 = count.wrapping_add(1u64);
+                                  let
+                                  i:
+                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
+                                  =
+                                      (&pc)[0];
+                                  let
+                                  mut
+                                  pj:
+                                  [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
+                                  1]
+                                  =
+                                      [i.cddl_map_iterator_contents; 1usize];
+                                  let hd0: crate::cbordetveraux::cbor_map_entry =
+                                      crate::cbordetver::cbor_det_map_iterator_next(&mut pj);
+                                  let mut phd: [crate::cbordetveraux::cbor_map_entry; 1] =
+                                      [hd0; 1usize];
+                                  let hd: crate::cbordetveraux::cbor_map_entry = (&phd)[0];
+                                  let hd_key: crate::cbordetveraux::cbor_raw =
+                                      crate::cbordetver::cbor_det_map_entry_key(hd);
+                                  let test_key: bool = (i.cddl_map_iterator_impl_validate1)(hd_key);
+                                  let mut cond0: bool =
+                                      if ! test_key
+                                      { true }
+                                      else
+                                      {
+                                          let hd_value: crate::cbordetveraux::cbor_raw =
+                                              crate::cbordetver::cbor_det_map_entry_value(hd);
+                                          let test_value: bool =
+                                              (i.cddl_map_iterator_impl_validate2)(hd_value);
+                                          if ! test_value
+                                          { true }
+                                          else
+                                          { (i.cddl_map_iterator_impl_validate_ex)(hd) }
+                                      };
+                                  while
+                                  cond0
+                                  {
+                                      let hd1: crate::cbordetveraux::cbor_map_entry =
+                                          crate::cbordetver::cbor_det_map_iterator_next(&mut pj);
+                                      (&mut phd)[0] = hd1;
+                                      let hd2: crate::cbordetveraux::cbor_map_entry = (&phd)[0];
+                                      let hd_key0: crate::cbordetveraux::cbor_raw =
+                                          crate::cbordetver::cbor_det_map_entry_key(hd2);
+                                      let test_key0: bool =
+                                          (i.cddl_map_iterator_impl_validate1)(hd_key0);
+                                      let ite: bool =
+                                          if ! test_key0
+                                          { true }
+                                          else
+                                          {
+                                              let hd_value: crate::cbordetveraux::cbor_raw =
+                                                  crate::cbordetver::cbor_det_map_entry_value(hd2);
+                                              let test_value: bool =
+                                                  (i.cddl_map_iterator_impl_validate2)(hd_value);
+                                              if ! test_value
+                                              { true }
+                                              else
+                                              { (i.cddl_map_iterator_impl_validate_ex)(hd2) }
+                                          };
+                                      cond0 = ite
+                                  };
+                                  let hd1: crate::cbordetveraux::cbor_map_entry = (&phd)[0];
+                                  let hd_key0: crate::cbordetveraux::cbor_raw =
+                                      crate::cbordetver::cbor_det_map_entry_key(hd1);
+                                  let hd_key_res: evercddl_label_pretty =
+                                      (i.cddl_map_iterator_impl_parse1)(hd_key0);
+                                  let hd_value: crate::cbordetveraux::cbor_raw =
+                                      crate::cbordetver::cbor_det_map_entry_value(hd1);
+                                  let hd_value_res: crate::cbordetveraux::cbor_raw =
+                                      (i.cddl_map_iterator_impl_parse2)(hd_value);
+                                  let
+                                  j:
+                                  crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                                  =
+                                      (&pj)[0];
+                                  let
+                                  i·:
+                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
+                                  =
+                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
+                                      {
+                                          cddl_map_iterator_contents: j,
+                                          cddl_map_iterator_impl_validate1:
+                                          i.cddl_map_iterator_impl_validate1,
+                                          cddl_map_iterator_impl_parse1:
+                                          i.cddl_map_iterator_impl_parse1,
+                                          cddl_map_iterator_impl_validate_ex:
+                                          i.cddl_map_iterator_impl_validate_ex,
+                                          cddl_map_iterator_impl_validate2:
+                                          i.cddl_map_iterator_impl_validate2,
+                                          cddl_map_iterator_impl_parse2:
+                                          i.cddl_map_iterator_impl_parse2
+                                      };
+                                  (&mut pc)[0] = i·;
+                                  let
+                                  _letpattern10:
+                                  (evercddl_label_pretty, crate::cbordetveraux::cbor_raw)
+                                  =
+                                      (hd_key_res,hd_value_res);
+                                  let ck: evercddl_label_pretty = _letpattern10.0;
+                                  let cv: crate::cbordetveraux::cbor_raw = _letpattern10.1;
+                                  let size0: usize = (&psize)[0];
+                                  let _letpattern2: (&mut [u8], &mut [u8]) =
+                                      out.split_at_mut(size0);
+                                  let _outl1: &[u8] = _letpattern2.0;
+                                  let out1: &mut [u8] = _letpattern2.1;
+                                  let sz1: usize = aux_env25_serialize_2(ck, out1);
+                                  if sz1 == 0usize
+                                  { (&mut pres)[0] = false }
+                                  else
+                                  {
+                                      let _letpattern3: (&mut [u8], &mut [u8]) =
+                                          out1.split_at_mut(sz1);
+                                      let outl2: &[u8] = _letpattern3.0;
+                                      let out2: &mut [u8] = _letpattern3.1;
+                                      let sz2: usize = aux_env25_serialize_3(cv, out2);
+                                      if sz2 == 0usize
+                                      { (&mut pres)[0] = false }
+                                      else
+                                      {
+                                          let
+                                          _letpattern4:
+                                          crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
+                                          =
+                                              crate::cbordetver::cbor_det_parse(outl2);
+                                          match _letpattern4
+                                          {
+                                              crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
+                                              { v: oo1 }
+                                              =>
+                                                {
+                                                    let
+                                                    _letpattern5:
+                                                    (crate::cbordetveraux::cbor_raw, &[u8])
+                                                    =
+                                                        oo1;
+                                                    let o1: crate::cbordetveraux::cbor_raw =
+                                                        _letpattern5.0;
+                                                    let _orem1: &[u8] = _letpattern5.1;
+                                                    let
+                                                    _letpattern6:
+                                                    crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
+                                                    =
+                                                        crate::cbordetver::cbor_det_parse(out2);
+                                                    match _letpattern6
+                                                    {
+                                                        crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
+                                                        { v: oo2 }
+                                                        =>
+                                                          {
+                                                              let
+                                                              _letpattern7:
+                                                              (crate::cbordetveraux::cbor_raw,
+                                                              &[u8])
+                                                              =
+                                                                  oo2;
+                                                              let
+                                                              o2: crate::cbordetveraux::cbor_raw
+                                                              =
+                                                                  _letpattern7.0;
+                                                              let _orem2: &[u8] = _letpattern7.1;
+                                                              let
+                                                              o:
+                                                              crate::cbordetveraux::cbor_map_entry
+                                                              =
+                                                                  crate::cbordetver::cbor_det_mk_map_entry(
+                                                                      o1,
+                                                                      o2
+                                                                  );
+                                                              let is_except: bool =
+                                                                  aux_env25_map_constraint_4(o);
+                                                              if is_except
+                                                              { (&mut pres)[0] = false }
+                                                              else
+                                                              {
+                                                                  let size1: usize =
+                                                                      size0.wrapping_add(sz1);
+                                                                  let size2: usize =
+                                                                      size1.wrapping_add(sz2);
+                                                                  let
+                                                                  _letpattern8:
+                                                                  (&mut [u8], &mut [u8])
+                                                                  =
+                                                                      out.split_at_mut(size2);
+                                                                  let
+                                                                  _letpattern80:
+                                                                  (&mut [u8], &mut [u8])
+                                                                  =
+                                                                      {
+                                                                          let s1: &mut [u8] =
+                                                                              _letpattern8.0;
+                                                                          let s2: &mut [u8] =
+                                                                              _letpattern8.1;
+                                                                          (s1,s2)
+                                                                      };
+                                                                  let outl: &mut [u8] =
+                                                                      _letpattern80.0;
+                                                                  let _outr: &[u8] =
+                                                                      _letpattern80.1;
+                                                                  let inserted: bool =
+                                                                      crate::cbordetver::cbor_det_serialize_map_insert(
+                                                                          outl,
+                                                                          size0,
+                                                                          size1
+                                                                      );
+                                                                  if ! inserted
+                                                                  { (&mut pres)[0] = false }
+                                                                  else
+                                                                  {
+                                                                      (&mut pcount)[0] = count·;
+                                                                      (&mut psize)[0] = size2
+                                                                  }
+                                                              }
+                                                          },
+                                                        _ => panic!("Incomplete pattern matching")
+                                                    }
+                                                },
+                                              _ => panic!("Incomplete pattern matching")
+                                          }
+                                      }
+                                  }
+                              };
+                              let res0: bool = (&pres)[0];
+                              let ite: bool =
+                                  if res0
+                                  {
+                                      let
+                                      c3:
+                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
+                                      =
+                                          (&pc)[0];
+                                      let
+                                      mut
+                                      pj:
+                                      [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
+                                      1]
+                                      =
+                                          [c3.cddl_map_iterator_contents; 1usize];
+                                      let mut pres1: [bool; 1] = [true; 1usize];
+                                      let res2: bool = (&pres1)[0];
+                                      let mut cond0: bool =
+                                          if res2
+                                          {
+                                              let
+                                              j:
+                                              crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                                              =
+                                                  (&pj)[0];
+                                              let test: bool =
+                                                  crate::cbordetver::cbor_det_map_iterator_is_empty(
+                                                      j
+                                                  );
+                                              ! test
+                                          }
+                                          else
+                                          { false };
+                                      while
+                                      cond0
+                                      {
+                                          let elt: crate::cbordetveraux::cbor_map_entry =
+                                              crate::cbordetver::cbor_det_map_iterator_next(&mut pj);
+                                          let elt_key: crate::cbordetveraux::cbor_raw =
+                                              crate::cbordetver::cbor_det_map_entry_key(elt);
+                                          let test_key: bool =
+                                              (c3.cddl_map_iterator_impl_validate1)(elt_key);
+                                          if ! ! test_key
+                                          {
+                                              let test_ex: bool =
+                                                  (c3.cddl_map_iterator_impl_validate_ex)(elt);
+                                              if ! test_ex
+                                              {
+                                                  let elt_value: crate::cbordetveraux::cbor_raw =
+                                                      crate::cbordetver::cbor_det_map_entry_value(
+                                                          elt
+                                                      );
+                                                  let test_value: bool =
+                                                      (c3.cddl_map_iterator_impl_validate2)(
+                                                          elt_value
+                                                      );
+                                                  (&mut pres1)[0] = ! test_value
+                                              }
+                                          };
+                                          let res20: bool = (&pres1)[0];
+                                          let ite: bool =
+                                              if res20
+                                              {
+                                                  let
+                                                  j:
+                                                  crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                                                  =
+                                                      (&pj)[0];
+                                                  let test: bool =
+                                                      crate::cbordetver::cbor_det_map_iterator_is_empty(
+                                                          j
+                                                      );
+                                                  ! test
+                                              }
+                                              else
+                                              { false };
+                                          cond0 = ite
+                                      };
+                                      let em: bool = (&pres1)[0];
+                                      ! em
+                                  }
+                                  else
+                                  { false };
+                              cond = ite
+                          };
+                          (&pres)[0]
                       },
                     _ => panic!("Incomplete pattern matching")
                 }
@@ -11866,17 +7892,17 @@ pub fn validate_and_parse_header_map <'a>(s: &'a [u8]) ->
     }
 }
 
-pub fn is_empty_iterate_array_aux_env24_type_1(
+pub fn is_empty_iterate_array_aux_env25_type_1(
     i:
-    array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env24_type_1_pretty
+    array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env25_type_1_pretty
 ) ->
     bool
 { crate::cbordetver::cbor_det_array_iterator_is_empty(i.cddl_array_iterator_contents) }
 
-pub fn next_iterate_array_aux_env24_type_1 <'a>(
+pub fn next_iterate_array_aux_env25_type_1 <'a>(
     pi:
     &'a mut
-    [array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env24_type_1_pretty
+    [array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env25_type_1_pretty
     <'a>]
 ) ->
     evercddl_label_pretty
@@ -11884,7 +7910,7 @@ pub fn next_iterate_array_aux_env24_type_1 <'a>(
 {
     let
     i:
-    array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env24_type_1_pretty
+    array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env25_type_1_pretty
     =
         pi[0];
     let len0: u64 =
@@ -11897,9 +7923,9 @@ pub fn next_iterate_array_aux_env24_type_1 <'a>(
     let len1: u64 = crate::cbordetver::cbor_det_array_iterator_length(ji);
     let
     j:
-    array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env24_type_1_pretty
+    array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env25_type_1_pretty
     =
-        array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env24_type_1_pretty
+        array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env25_type_1_pretty
         {
             cddl_array_iterator_contents: ji,
             cddl_array_iterator_impl_validate: i.cddl_array_iterator_impl_validate,
@@ -11914,9 +7940,9 @@ pub fn next_iterate_array_aux_env24_type_1 <'a>(
     (i.cddl_array_iterator_impl_parse)(tri)
 }
 
-pub fn is_empty_iterate_map_aux_env24_type_2_and_aux_env24_type_3(
+pub fn is_empty_iterate_map_aux_env25_type_2_and_aux_env25_type_3(
     i:
-    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
+    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
 ) ->
     bool
 {
@@ -11969,17 +7995,17 @@ pub fn is_empty_iterate_map_aux_env24_type_2_and_aux_env24_type_3(
     (&pres)[0]
 }
 
-pub fn next_iterate_map_aux_env24_type_2_and_aux_env24_type_3 <'a>(
+pub fn next_iterate_map_aux_env25_type_2_and_aux_env25_type_3 <'a>(
     pi:
     &'a mut
-    [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
+    [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
     <'a>]
 ) ->
     (evercddl_label_pretty <'a>, crate::cbordetveraux::cbor_raw <'a>)
 {
     let
     i:
-    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
+    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
     =
         pi[0];
     let mut pj: [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] =
@@ -12031,9 +8057,9 @@ pub fn next_iterate_map_aux_env24_type_2_and_aux_env24_type_3 <'a>(
     let j: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pj)[0];
     let
     i·:
-    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
+    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
     =
-        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
+        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
         {
             cddl_map_iterator_contents: j,
             cddl_map_iterator_impl_validate1: i.cddl_map_iterator_impl_validate1,
@@ -12814,7 +8840,7 @@ pub fn validate_and_parse_COSE_Signature <'a>(s: &'a [u8]) ->
     }
 }
 
-pub fn aux_env28_validate_1(
+pub fn aux_env29_validate_1(
     pi: &mut [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw]
 ) ->
     bool
@@ -12830,29 +8856,29 @@ pub fn aux_env28_validate_1(
     }
 }
 
-pub type aux_env28_type_1_pretty <'a> = evercddl_COSE_Signature_pretty <'a>;
+pub type aux_env29_type_1_pretty <'a> = evercddl_COSE_Signature_pretty <'a>;
 
-pub fn uu___is_Mkaux_env28_type_1_pretty0(projectee: evercddl_COSE_Signature_pretty) -> bool
+pub fn uu___is_Mkaux_env29_type_1_pretty0(projectee: evercddl_COSE_Signature_pretty) -> bool
 {
     crate::lowstar::ignore::ignore::<evercddl_COSE_Signature_pretty>(projectee);
     true
 }
 
-fn aux_env28_type_1_pretty_right <'a>(x1: evercddl_COSE_Signature_pretty <'a>) ->
+fn aux_env29_type_1_pretty_right <'a>(x1: evercddl_COSE_Signature_pretty <'a>) ->
     evercddl_COSE_Signature_pretty
     <'a>
 { x1 }
 
-fn aux_env28_type_1_pretty_left <'a>(x3: evercddl_COSE_Signature_pretty <'a>) ->
+fn aux_env29_type_1_pretty_left <'a>(x3: evercddl_COSE_Signature_pretty <'a>) ->
     evercddl_COSE_Signature_pretty
     <'a>
 { x3 }
 
 /**
-Parser for aux_env28_type_1
+Parser for aux_env29_type_1
 */
 pub fn
-aux_env28_parse_1
+aux_env29_parse_1
 <'a>(c: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>) ->
     evercddl_COSE_Signature_pretty
     <'a>
@@ -12862,14 +8888,14 @@ aux_env28_parse_1
     let x: crate::cbordetveraux::cbor_raw =
         crate::cbordetver::cbor_det_array_iterator_next(&mut pc);
     let res1: evercddl_COSE_Signature_pretty = parse_COSE_Signature(x);
-    aux_env28_type_1_pretty_right(res1)
+    aux_env29_type_1_pretty_right(res1)
 }
 
 /**
-Serializer for aux_env28_type_1
+Serializer for aux_env29_type_1
 */
 pub fn
-aux_env28_serialize_1(
+aux_env29_serialize_1(
     c: evercddl_COSE_Signature_pretty,
     out: &mut [u8],
     out_count: &mut [u64],
@@ -12877,7 +8903,7 @@ aux_env28_serialize_1(
 ) ->
     bool
 {
-    let c·: evercddl_COSE_Signature_pretty = aux_env28_type_1_pretty_left(c);
+    let c·: evercddl_COSE_Signature_pretty = aux_env29_type_1_pretty_left(c);
     let count: u64 = out_count[0];
     if count < 18446744073709551615u64
     {
@@ -13092,7 +9118,7 @@ pub enum either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_prett
 
 #[derive(PartialEq, Clone, Copy)]
 pub struct
-array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env28_type_1_pretty
+array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1_pretty
 <'a>
 {
     pub cddl_array_iterator_contents:
@@ -13110,14 +9136,14 @@ array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum
-either__CDDL_Pulse_Types_slice·COSE_Format_aux_env28_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env28_type_1_pretty
+either__CDDL_Pulse_Types_slice·COSE_Format_aux_env29_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env29_type_1_pretty
 <'a>
 {
     Inl { v: &'a [evercddl_COSE_Signature_pretty <'a>] },
     Inr
     {
         v:
-        array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env28_type_1_pretty
+        array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1_pretty
         <'a>
     }
 }
@@ -13129,7 +9155,7 @@ pub struct evercddl_COSE_Sign_pretty <'a>
     pub unprotected: evercddl_header_map_pretty <'a>,
     pub payload: either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty <'a>,
     pub signatures:
-    either__CDDL_Pulse_Types_slice·COSE_Format_aux_env28_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env28_type_1_pretty
+    either__CDDL_Pulse_Types_slice·COSE_Format_aux_env29_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env29_type_1_pretty
     <'a>
 }
 
@@ -13144,7 +9170,7 @@ fn evercddl_COSE_Sign_pretty_right <'a>(
     ((evercddl_empty_or_serialized_map_pretty <'a>, evercddl_header_map_pretty <'a>),
     (either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty
     <'a>,
-    either__CDDL_Pulse_Types_slice·COSE_Format_aux_env28_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env28_type_1_pretty
+    either__CDDL_Pulse_Types_slice·COSE_Format_aux_env29_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env29_type_1_pretty
     <'a>))
 ) ->
     evercddl_COSE_Sign_pretty
@@ -13161,7 +9187,7 @@ fn evercddl_COSE_Sign_pretty_left <'a>(x9: evercddl_COSE_Sign_pretty <'a>) ->
     ((evercddl_empty_or_serialized_map_pretty <'a>, evercddl_header_map_pretty <'a>),
     (either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty
     <'a>,
-    either__CDDL_Pulse_Types_slice·COSE_Format_aux_env28_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env28_type_1_pretty
+    either__CDDL_Pulse_Types_slice·COSE_Format_aux_env29_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env29_type_1_pretty
     <'a>))
 {
     let x15: evercddl_empty_or_serialized_map_pretty = x9.protected;
@@ -13169,7 +9195,7 @@ fn evercddl_COSE_Sign_pretty_left <'a>(x9: evercddl_COSE_Sign_pretty <'a>) ->
     let x17: either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty = x9.payload;
     let
     x18:
-    either__CDDL_Pulse_Types_slice·COSE_Format_aux_env28_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env28_type_1_pretty
+    either__CDDL_Pulse_Types_slice·COSE_Format_aux_env29_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env29_type_1_pretty
     =
         x9.signatures;
     ((x15,x16),(x17,x18))
@@ -13310,31 +9336,31 @@ parse_COSE_Sign
         };
     let
     i2:
-    array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env28_type_1_pretty
+    array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1_pretty
     =
-        array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env28_type_1_pretty
+        array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1_pretty
         {
             cddl_array_iterator_contents: ar1,
-            cddl_array_iterator_impl_validate: aux_env28_validate_1,
-            cddl_array_iterator_impl_parse: aux_env28_parse_1
+            cddl_array_iterator_impl_validate: aux_env29_validate_1,
+            cddl_array_iterator_impl_parse: aux_env29_parse_1
         };
     let
     w20:
-    either__CDDL_Pulse_Types_slice·COSE_Format_aux_env28_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env28_type_1_pretty
+    either__CDDL_Pulse_Types_slice·COSE_Format_aux_env29_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env29_type_1_pretty
     =
-        either__CDDL_Pulse_Types_slice·COSE_Format_aux_env28_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env28_type_1_pretty::Inr
+        either__CDDL_Pulse_Types_slice·COSE_Format_aux_env29_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env29_type_1_pretty::Inr
         { v: i2 };
     let
     w21:
     (either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty,
-    either__CDDL_Pulse_Types_slice·COSE_Format_aux_env28_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env28_type_1_pretty)
+    either__CDDL_Pulse_Types_slice·COSE_Format_aux_env29_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env29_type_1_pretty)
     =
         (w11,w20);
     let
     res1:
     ((evercddl_empty_or_serialized_map_pretty, evercddl_header_map_pretty),
     (either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty,
-    either__CDDL_Pulse_Types_slice·COSE_Format_aux_env28_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env28_type_1_pretty))
+    either__CDDL_Pulse_Types_slice·COSE_Format_aux_env29_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env29_type_1_pretty))
     =
         (w10,w21);
     evercddl_COSE_Sign_pretty_right(res1)
@@ -13351,7 +9377,7 @@ serialize_COSE_Sign(c: evercddl_COSE_Sign_pretty, out: &mut [u8]) ->
     c·:
     ((evercddl_empty_or_serialized_map_pretty, evercddl_header_map_pretty),
     (either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty,
-    either__CDDL_Pulse_Types_slice·COSE_Format_aux_env28_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env28_type_1_pretty))
+    either__CDDL_Pulse_Types_slice·COSE_Format_aux_env29_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env29_type_1_pretty))
     =
         evercddl_COSE_Sign_pretty_left(c);
     let mut pcount: [u64; 1] = [0u64; 1usize];
@@ -13360,7 +9386,7 @@ serialize_COSE_Sign(c: evercddl_COSE_Sign_pretty, out: &mut [u8]) ->
     _letpattern:
     ((evercddl_empty_or_serialized_map_pretty, evercddl_header_map_pretty),
     (either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty,
-    either__CDDL_Pulse_Types_slice·COSE_Format_aux_env28_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env28_type_1_pretty))
+    either__CDDL_Pulse_Types_slice·COSE_Format_aux_env29_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env29_type_1_pretty))
     =
         c·;
     let res: bool =
@@ -13370,7 +9396,7 @@ serialize_COSE_Sign(c: evercddl_COSE_Sign_pretty, out: &mut [u8]) ->
             let
             c2:
             (either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty,
-            either__CDDL_Pulse_Types_slice·COSE_Format_aux_env28_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env28_type_1_pretty)
+            either__CDDL_Pulse_Types_slice·COSE_Format_aux_env29_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env29_type_1_pretty)
             =
                 _letpattern.1;
             let
@@ -13431,14 +9457,14 @@ serialize_COSE_Sign(c: evercddl_COSE_Sign_pretty, out: &mut [u8]) ->
                 let
                 _letpattern10:
                 (either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty,
-                either__CDDL_Pulse_Types_slice·COSE_Format_aux_env28_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env28_type_1_pretty)
+                either__CDDL_Pulse_Types_slice·COSE_Format_aux_env29_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env29_type_1_pretty)
                 =
                     c2;
                 let c11: either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty =
                     _letpattern10.0;
                 let
                 c21:
-                either__CDDL_Pulse_Types_slice·COSE_Format_aux_env28_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env28_type_1_pretty
+                either__CDDL_Pulse_Types_slice·COSE_Format_aux_env29_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env29_type_1_pretty
                 =
                     _letpattern10.1;
                 let count: u64 = (&pcount)[0];
@@ -13485,7 +9511,7 @@ serialize_COSE_Sign(c: evercddl_COSE_Sign_pretty, out: &mut [u8]) ->
                         let res: bool =
                             match c21
                             {
-                                either__CDDL_Pulse_Types_slice·COSE_Format_aux_env28_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env28_type_1_pretty::Inl
+                                either__CDDL_Pulse_Types_slice·COSE_Format_aux_env29_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env29_type_1_pretty::Inl
                                 { v: c12 }
                                 =>
                                   if c12.len() == 0usize
@@ -13510,7 +9536,7 @@ serialize_COSE_Sign(c: evercddl_COSE_Sign_pretty, out: &mut [u8]) ->
                                           let i: usize = (&pi)[0];
                                           let x: evercddl_COSE_Signature_pretty = c12[i];
                                           let res0: bool =
-                                              aux_env28_serialize_1(
+                                              aux_env29_serialize_1(
                                                   x,
                                                   out1,
                                                   &mut pcount1,
@@ -13536,7 +9562,7 @@ serialize_COSE_Sign(c: evercddl_COSE_Sign_pretty, out: &mut [u8]) ->
                                       };
                                       (&pres)[0]
                                   },
-                                either__CDDL_Pulse_Types_slice·COSE_Format_aux_env28_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env28_type_1_pretty::Inr
+                                either__CDDL_Pulse_Types_slice·COSE_Format_aux_env29_type_1_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env29_type_1_pretty::Inr
                                 { v: c22 }
                                 =>
                                   {
@@ -13551,7 +9577,7 @@ serialize_COSE_Sign(c: evercddl_COSE_Sign_pretty, out: &mut [u8]) ->
                                           let
                                           mut
                                           pc:
-                                          [array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env28_type_1_pretty;
+                                          [array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1_pretty;
                                           1]
                                           =
                                               [c22; 1usize];
@@ -13562,7 +9588,7 @@ serialize_COSE_Sign(c: evercddl_COSE_Sign_pretty, out: &mut [u8]) ->
                                               {
                                                   let
                                                   c3:
-                                                  array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env28_type_1_pretty
+                                                  array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1_pretty
                                                   =
                                                       (&pc)[0];
                                                   let em1: bool =
@@ -13578,7 +9604,7 @@ serialize_COSE_Sign(c: evercddl_COSE_Sign_pretty, out: &mut [u8]) ->
                                           {
                                               let
                                               i:
-                                              array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env28_type_1_pretty
+                                              array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1_pretty
                                               =
                                                   (&pc)[0];
                                               let len0: u64 =
@@ -13606,9 +9632,9 @@ serialize_COSE_Sign(c: evercddl_COSE_Sign_pretty, out: &mut [u8]) ->
                                                   );
                                               let
                                               j:
-                                              array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env28_type_1_pretty
+                                              array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1_pretty
                                               =
-                                                  array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env28_type_1_pretty
+                                                  array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1_pretty
                                                   {
                                                       cddl_array_iterator_contents: ji,
                                                       cddl_array_iterator_impl_validate:
@@ -13628,7 +9654,7 @@ serialize_COSE_Sign(c: evercddl_COSE_Sign_pretty, out: &mut [u8]) ->
                                               let x: evercddl_COSE_Signature_pretty =
                                                   (i.cddl_array_iterator_impl_parse)(tri);
                                               let res0: bool =
-                                                  aux_env28_serialize_1(
+                                                  aux_env29_serialize_1(
                                                       x,
                                                       out1,
                                                       &mut pcount1,
@@ -13641,7 +9667,7 @@ serialize_COSE_Sign(c: evercddl_COSE_Sign_pretty, out: &mut [u8]) ->
                                                   {
                                                       let
                                                       c3:
-                                                      array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env28_type_1_pretty
+                                                      array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1_pretty
                                                       =
                                                           (&pc)[0];
                                                       let em1: bool =
@@ -13742,17 +9768,17 @@ pub fn validate_and_parse_COSE_Sign <'a>(s: &'a [u8]) ->
     }
 }
 
-pub fn is_empty_iterate_array_aux_env28_type_1(
+pub fn is_empty_iterate_array_aux_env29_type_1(
     i:
-    array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env28_type_1_pretty
+    array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1_pretty
 ) ->
     bool
 { crate::cbordetver::cbor_det_array_iterator_is_empty(i.cddl_array_iterator_contents) }
 
-pub fn next_iterate_array_aux_env28_type_1 <'a>(
+pub fn next_iterate_array_aux_env29_type_1 <'a>(
     pi:
     &'a mut
-    [array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env28_type_1_pretty
+    [array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1_pretty
     <'a>]
 ) ->
     evercddl_COSE_Signature_pretty
@@ -13760,7 +9786,7 @@ pub fn next_iterate_array_aux_env28_type_1 <'a>(
 {
     let
     i:
-    array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env28_type_1_pretty
+    array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1_pretty
     =
         pi[0];
     let len0: u64 =
@@ -13773,9 +9799,9 @@ pub fn next_iterate_array_aux_env28_type_1 <'a>(
     let len1: u64 = crate::cbordetver::cbor_det_array_iterator_length(ji);
     let
     j:
-    array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env28_type_1_pretty
+    array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1_pretty
     =
-        array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env28_type_1_pretty
+        array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1_pretty
         {
             cddl_array_iterator_contents: ji,
             cddl_array_iterator_impl_validate: i.cddl_array_iterator_impl_validate,
@@ -16590,7 +12616,7 @@ pub fn validate_and_parse_start <'a>(s: &'a [u8]) ->
     }
 }
 
-pub fn aux_env38_map_constraint_1(x: crate::cbordetveraux::cbor_map_entry) -> bool
+pub fn aux_env39_map_constraint_1(x: crate::cbordetveraux::cbor_map_entry) -> bool
 {
     let k: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
     let mt: u8 = crate::cbordetver::cbor_det_major_type(k);
@@ -17239,7 +13265,7 @@ pub struct evercddl_COSE_Key_OKP_pretty <'a>
     pub intkeyneg2: option__COSE_Format_evercddl_bstr_pretty <'a>,
     pub intkeyneg4: option__COSE_Format_evercddl_bstr_pretty <'a>,
     pub _x0:
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty
+    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty
     <'a>
 }
 
@@ -17254,7 +13280,7 @@ fn evercddl_COSE_Key_OKP_pretty_right <'a>(
     (((((), evercddl_label <'a>), option__COSE_Format_evercddl_bstr_pretty <'a>),
     option__COSE_Format_evercddl_bstr_pretty
     <'a>),
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty
+    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty
     <'a>)
 ) ->
     evercddl_COSE_Key_OKP_pretty
@@ -17271,7 +13297,7 @@ fn evercddl_COSE_Key_OKP_pretty_left <'a>(x11: evercddl_COSE_Key_OKP_pretty <'a>
     (((((), evercddl_label <'a>), option__COSE_Format_evercddl_bstr_pretty <'a>),
     option__COSE_Format_evercddl_bstr_pretty
     <'a>),
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty
+    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty
     <'a>)
 {
     let x19: evercddl_label = x11.intkeyneg1;
@@ -17279,7 +13305,7 @@ fn evercddl_COSE_Key_OKP_pretty_left <'a>(x11: evercddl_COSE_Key_OKP_pretty <'a>
     let x21: option__COSE_Format_evercddl_bstr_pretty = x11.intkeyneg4;
     let
     x22:
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty
+    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty
     =
         x11._x0;
     (((((),x19),x20),x21),x22)
@@ -17506,28 +13532,28 @@ parse_COSE_Key_OKP
         };
     let
     rres:
-    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
+    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
     =
-        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
+        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
         {
             cddl_map_iterator_contents: i,
-            cddl_map_iterator_impl_validate1: aux_env24_validate_2,
-            cddl_map_iterator_impl_parse1: aux_env24_parse_2,
-            cddl_map_iterator_impl_validate_ex: aux_env38_map_constraint_1,
-            cddl_map_iterator_impl_validate2: aux_env24_validate_3,
-            cddl_map_iterator_impl_parse2: aux_env24_parse_3
+            cddl_map_iterator_impl_validate1: aux_env25_validate_2,
+            cddl_map_iterator_impl_parse1: aux_env25_parse_2,
+            cddl_map_iterator_impl_validate_ex: aux_env39_map_constraint_1,
+            cddl_map_iterator_impl_validate2: aux_env25_validate_3,
+            cddl_map_iterator_impl_parse2: aux_env25_parse_3
         };
     let
     w22:
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty
+    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty
     =
-        either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty::Inr
+        either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty::Inr
         { v: rres };
     let
     res1:
     (((((), evercddl_label), option__COSE_Format_evercddl_bstr_pretty),
     option__COSE_Format_evercddl_bstr_pretty),
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty)
+    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty)
     =
         (w11,w22);
     evercddl_COSE_Key_OKP_pretty_right(res1)
@@ -17544,7 +13570,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
     c·:
     (((((), evercddl_label), option__COSE_Format_evercddl_bstr_pretty),
     option__COSE_Format_evercddl_bstr_pretty),
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty)
+    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty)
     =
         evercddl_COSE_Key_OKP_pretty_left(c);
     let mut pcount: [u64; 1] = [0u64; 1usize];
@@ -17553,7 +13579,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
     _letpattern:
     (((((), evercddl_label), option__COSE_Format_evercddl_bstr_pretty),
     option__COSE_Format_evercddl_bstr_pretty),
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty)
+    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty)
     =
         c·;
     let res: bool =
@@ -17566,7 +13592,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                 _letpattern.0;
             let
             c2:
-            either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty
+            either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty
             =
                 _letpattern.1;
             let
@@ -17915,7 +13941,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
             {
                 match c2
                 {
-                    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty::Inl
+                    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty::Inl
                     { v: c11 }
                     =>
                       {
@@ -17995,7 +14021,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                                       out.split_at_mut(size0);
                                   let _outl1: &[u8] = _letpattern2.0;
                                   let out1: &mut [u8] = _letpattern2.1;
-                                  let sz1: usize = aux_env24_serialize_2(ck, out1);
+                                  let sz1: usize = aux_env25_serialize_2(ck, out1);
                                   if sz1 == 0usize
                                   { (&mut pres)[0] = false }
                                   else
@@ -18004,7 +14030,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                                           out1.split_at_mut(sz1);
                                       let outl2: &[u8] = _letpattern3.0;
                                       let out2: &mut [u8] = _letpattern3.1;
-                                      let sz2: usize = aux_env24_serialize_3(cv, out2);
+                                      let sz2: usize = aux_env25_serialize_3(cv, out2);
                                       if sz2 == 0usize
                                       { (&mut pres)[0] = false }
                                       else
@@ -18059,7 +14085,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                                                                       o2
                                                                   );
                                                               let is_except: bool =
-                                                                  aux_env38_map_constraint_1(o);
+                                                                  aux_env39_map_constraint_1(o);
                                                               if is_except
                                                               { (&mut pres)[0] = false }
                                                               else
@@ -18128,14 +14154,14 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                           };
                           (&pres)[0]
                       },
-                    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env24_type_2_pretty···COSE_Format_aux_env24_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env24_type_2_pretty·COSE_Format_aux_env24_type_3_pretty::Inr
+                    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env25_type_2_pretty···COSE_Format_aux_env25_type_3_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env25_type_2_pretty·COSE_Format_aux_env25_type_3_pretty::Inr
                     { v: c21 }
                     =>
                       {
                           let
                           mut
                           pc:
-                          [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty;
+                          [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty;
                           1]
                           =
                               [c21; 1usize];
@@ -18146,7 +14172,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                               {
                                   let
                                   c3:
-                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
+                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
                                   =
                                       (&pc)[0];
                                   let
@@ -18229,7 +14255,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                                   let count·: u64 = count.wrapping_add(1u64);
                                   let
                                   i:
-                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
+                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
                                   =
                                       (&pc)[0];
                                   let
@@ -18304,9 +14330,9 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                                       (&pj)[0];
                                   let
                                   i·:
-                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
+                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
                                   =
-                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
+                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
                                       {
                                           cddl_map_iterator_contents: j,
                                           cddl_map_iterator_impl_validate1:
@@ -18333,7 +14359,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                                       out.split_at_mut(size0);
                                   let _outl1: &[u8] = _letpattern2.0;
                                   let out1: &mut [u8] = _letpattern2.1;
-                                  let sz1: usize = aux_env24_serialize_2(ck, out1);
+                                  let sz1: usize = aux_env25_serialize_2(ck, out1);
                                   if sz1 == 0usize
                                   { (&mut pres)[0] = false }
                                   else
@@ -18342,7 +14368,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                                           out1.split_at_mut(sz1);
                                       let outl2: &[u8] = _letpattern3.0;
                                       let out2: &mut [u8] = _letpattern3.1;
-                                      let sz2: usize = aux_env24_serialize_3(cv, out2);
+                                      let sz2: usize = aux_env25_serialize_3(cv, out2);
                                       if sz2 == 0usize
                                       { (&mut pres)[0] = false }
                                       else
@@ -18397,7 +14423,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                                                                       o2
                                                                   );
                                                               let is_except: bool =
-                                                                  aux_env38_map_constraint_1(o);
+                                                                  aux_env39_map_constraint_1(o);
                                                               if is_except
                                                               { (&mut pres)[0] = false }
                                                               else
@@ -18455,7 +14481,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                                   {
                                       let
                                       c3:
-                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env24_type_2_pretty_COSE_Format_aux_env24_type_3_pretty
+                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty
                                       =
                                           (&pc)[0];
                                       let

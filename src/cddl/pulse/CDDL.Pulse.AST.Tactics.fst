@@ -131,6 +131,7 @@ noextract [@@noextract_to "krml"]
 let base_delta_only_steps = [
         `%List.Tot.for_all;
         `%List.Tot.length;
+        `%FStar.String.strlen;
         `%FStar.Int.Cast.uint32_to_uint8;
         `%pow2;
         `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2;
