@@ -1063,8 +1063,6 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x);
 
 bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x);
 
-bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x);
-
 bool COSE_Format_validate_header_map(cbor_det_t c);
 
 typedef struct

@@ -3315,7 +3315,8 @@ pub fn aux_env24_map_constraint_4(x: crate::cbordetveraux::cbor_map_entry) -> bo
             {
                 let v1: crate::cbordetveraux::cbor_raw =
                     crate::cbordetver::cbor_det_map_entry_value(x);
-                validate_bstr(v1)
+                crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(v1);
+                true
             }
             else
             { false }
@@ -3354,282 +3355,6 @@ pub fn aux_env24_map_constraint_4(x: crate::cbordetveraux::cbor_map_entry) -> bo
 }
 
 pub fn aux_env24_map_constraint_5(x: crate::cbordetveraux::cbor_map_entry) -> bool
-{
-    let k: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
-    let mt: u8 = crate::cbordetver::cbor_det_major_type(k);
-    let is_uint: bool = mt == crate::cbordetveraux::cbor_major_type_uint64;
-    let testk: bool =
-        if is_uint
-        {
-            let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(k);
-            let _letpattern: crate::cbordetver::cbor_det_view = v1;
-            let i: u64 =
-                match _letpattern
-                {
-                    crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
-                    _ => panic!("Incomplete pattern matching")
-                };
-            i == 1u64
-        }
-        else
-        { false };
-    let test: bool =
-        if testk
-        {
-            let v1: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_value(x);
-            let test: bool = validate_int(v1);
-            if test { true } else { validate_tstr(v1) }
-        }
-        else
-        { false };
-    let test0: bool =
-        if test
-        { true }
-        else
-        {
-            let k0: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
-            let mt0: u8 = crate::cbordetver::cbor_det_major_type(k0);
-            let is_uint0: bool = mt0 == crate::cbordetveraux::cbor_major_type_uint64;
-            let testk0: bool =
-                if is_uint0
-                {
-                    let v1: crate::cbordetver::cbor_det_view =
-                        crate::cbordetver::cbor_det_destruct(k0);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v1;
-                    let i: u64 =
-                        match _letpattern
-                        {
-                            crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    i == 2u64
-                }
-                else
-                { false };
-            if testk0
-            {
-                let v1: crate::cbordetveraux::cbor_raw =
-                    crate::cbordetver::cbor_det_map_entry_value(x);
-                let ty: u8 = crate::cbordetver::cbor_det_major_type(v1);
-                if ty == crate::cbordetveraux::cbor_major_type_array
-                {
-                    let v2: crate::cbordetver::cbor_det_view =
-                        crate::cbordetver::cbor_det_destruct(v1);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v2;
-                    let i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-                        match _letpattern
-                        {
-                            crate::cbordetver::cbor_det_view::Array { _0: a } =>
-                              crate::cbordetver::cbor_det_array_iterator_start(a),
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    let
-                    mut
-                    pi:
-                    [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1]
-                    =
-                        [i; 1usize];
-                    let i1: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-                        (&pi)[0];
-                    let is_done: bool = crate::cbordetver::cbor_det_array_iterator_is_empty(i1);
-                    let test1: bool =
-                        if is_done
-                        { false }
-                        else
-                        {
-                            let c: crate::cbordetveraux::cbor_raw =
-                                crate::cbordetver::cbor_det_array_iterator_next(&mut pi);
-                            validate_label(c)
-                        };
-                    let b_success: bool =
-                        if test1
-                        {
-                            let mut pcont: [bool; 1] = [true; 1usize];
-                            while
-                            (&pcont)[0]
-                            {
-                                let
-                                i10:
-                                crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                =
-                                    (&pi)[0];
-                                let
-                                i2:
-                                crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                =
-                                    (&pi)[0];
-                                let is_done0: bool =
-                                    crate::cbordetver::cbor_det_array_iterator_is_empty(i2);
-                                let cont: bool =
-                                    if is_done0
-                                    { false }
-                                    else
-                                    {
-                                        let c: crate::cbordetveraux::cbor_raw =
-                                            crate::cbordetver::cbor_det_array_iterator_next(&mut pi);
-                                        validate_label(c)
-                                    };
-                                if ! cont
-                                {
-                                    (&mut pi)[0] = i10;
-                                    (&mut pcont)[0] = false
-                                }
-                            };
-                            true
-                        }
-                        else
-                        { false };
-                    if b_success
-                    {
-                        let
-                        i·: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                        =
-                            (&pi)[0];
-                        crate::cbordetver::cbor_det_array_iterator_is_empty(i·)
-                    }
-                    else
-                    { false }
-                }
-                else
-                { false }
-            }
-            else
-            { false }
-        };
-    let test1: bool =
-        if test0
-        { true }
-        else
-        {
-            let k0: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
-            let mt0: u8 = crate::cbordetver::cbor_det_major_type(k0);
-            let is_uint0: bool = mt0 == crate::cbordetveraux::cbor_major_type_uint64;
-            let testk0: bool =
-                if is_uint0
-                {
-                    let v1: crate::cbordetver::cbor_det_view =
-                        crate::cbordetver::cbor_det_destruct(k0);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v1;
-                    let i: u64 =
-                        match _letpattern
-                        {
-                            crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    i == 3u64
-                }
-                else
-                { false };
-            if testk0
-            {
-                let v1: crate::cbordetveraux::cbor_raw =
-                    crate::cbordetver::cbor_det_map_entry_value(x);
-                let test1: bool = validate_tstr(v1);
-                if test1 { true } else { validate_int(v1) }
-            }
-            else
-            { false }
-        };
-    let test2: bool =
-        if test1
-        { true }
-        else
-        {
-            let k0: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
-            let mt0: u8 = crate::cbordetver::cbor_det_major_type(k0);
-            let is_uint0: bool = mt0 == crate::cbordetveraux::cbor_major_type_uint64;
-            let testk0: bool =
-                if is_uint0
-                {
-                    let v1: crate::cbordetver::cbor_det_view =
-                        crate::cbordetver::cbor_det_destruct(k0);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v1;
-                    let i: u64 =
-                        match _letpattern
-                        {
-                            crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    i == 4u64
-                }
-                else
-                { false };
-            if testk0
-            {
-                let v1: crate::cbordetveraux::cbor_raw =
-                    crate::cbordetver::cbor_det_map_entry_value(x);
-                validate_bstr(v1)
-            }
-            else
-            { false }
-        };
-    let test3: bool =
-        if test2
-        { true }
-        else
-        {
-            let k0: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
-            let mt0: u8 = crate::cbordetver::cbor_det_major_type(k0);
-            let is_uint0: bool = mt0 == crate::cbordetveraux::cbor_major_type_uint64;
-            let testk0: bool =
-                if is_uint0
-                {
-                    let v1: crate::cbordetver::cbor_det_view =
-                        crate::cbordetver::cbor_det_destruct(k0);
-                    let _letpattern: crate::cbordetver::cbor_det_view = v1;
-                    let i: u64 =
-                        match _letpattern
-                        {
-                            crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    i == 6u64
-                }
-                else
-                { false };
-            if testk0
-            {
-                let v1: crate::cbordetveraux::cbor_raw =
-                    crate::cbordetver::cbor_det_map_entry_value(x);
-                validate_bstr(v1)
-            }
-            else
-            { false }
-        };
-    if test3
-    { true }
-    else
-    {
-        let k0: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
-        let mt0: u8 = crate::cbordetver::cbor_det_major_type(k0);
-        let is_uint0: bool = mt0 == crate::cbordetveraux::cbor_major_type_uint64;
-        let testk0: bool =
-            if is_uint0
-            {
-                let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(k0);
-                let _letpattern: crate::cbordetver::cbor_det_view = v1;
-                let i: u64 =
-                    match _letpattern
-                    {
-                        crate::cbordetver::cbor_det_view::Int64 { value: res, .. } => res,
-                        _ => panic!("Incomplete pattern matching")
-                    };
-                i == 5u64
-            }
-            else
-            { false };
-        if testk0
-        {
-            let v1: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_value(x);
-            crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(v1);
-            true
-        }
-        else
-        { false }
-    }
-}
-
-pub fn aux_env24_map_constraint_6(x: crate::cbordetveraux::cbor_map_entry) -> bool
 {
     let k: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
     let mt: u8 = crate::cbordetver::cbor_det_major_type(k);
@@ -4848,7 +4573,10 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                                                                 crate::cbordetver::cbor_det_map_entry_value(
                                                                     chd
                                                                 );
-                                                            validate_bstr(v11)
+                                                            crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(
+                                                                v11
+                                                            );
+                                                            true
                                                         }
                                                         else
                                                         { false }
@@ -5596,7 +5324,10 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
                                                                           crate::cbordetver::cbor_det_map_entry_value(
                                                                               chd
                                                                           );
-                                                                      validate_bstr(v11)
+                                                                      crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(
+                                                                          v11
+                                                                      );
+                                                                      true
                                                                   }
                                                                   else
                                                                   { false }
@@ -7869,7 +7600,7 @@ parse_header_map
                             cddl_map_iterator_contents: i,
                             cddl_map_iterator_impl_validate1: aux_env24_validate_2,
                             cddl_map_iterator_impl_parse1: aux_env24_parse_2,
-                            cddl_map_iterator_impl_validate_ex: aux_env24_map_constraint_6,
+                            cddl_map_iterator_impl_validate_ex: aux_env24_map_constraint_5,
                             cddl_map_iterator_impl_validate2: aux_env24_validate_3,
                             cddl_map_iterator_impl_parse2: aux_env24_parse_3
                         };
@@ -11103,7 +10834,7 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                                                                   let
                                                                                   is_except: bool
                                                                                   =
-                                                                                      aux_env24_map_constraint_6(
+                                                                                      aux_env24_map_constraint_5(
                                                                                           o
                                                                                       );
                                                                                   if is_except
@@ -11591,7 +11322,7 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                                                                   let
                                                                                   is_except: bool
                                                                                   =
-                                                                                      aux_env24_map_constraint_6(
+                                                                                      aux_env24_map_constraint_5(
                                                                                           o
                                                                                       );
                                                                                   if is_except

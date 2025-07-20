@@ -3827,7 +3827,10 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
     else
       ite = false;
     if (ite)
-      ite5 = COSE_Format_validate_bstr(cbor_det_map_entry_value(x));
+    {
+      cbor_det_map_entry_value(x);
+      ite5 = true;
+    }
     else
       ite5 = false;
   }
@@ -3852,154 +3855,6 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
 }
 
 bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
-{
-  cbor_det_t k0 = cbor_det_map_entry_key(x);
-  bool ite0;
-  if (cbor_det_major_type(k0) == CBOR_MAJOR_TYPE_UINT64)
-    ite0 = cbor_det_read_uint64(k0) == 1ULL;
-  else
-    ite0 = false;
-  bool ite1;
-  if (ite0)
-  {
-    cbor_det_t v1 = cbor_det_map_entry_value(x);
-    if (COSE_Format_validate_int(v1))
-      ite1 = true;
-    else
-      ite1 = COSE_Format_validate_tstr(v1);
-  }
-  else
-    ite1 = false;
-  bool ite2;
-  if (ite1)
-    ite2 = true;
-  else
-  {
-    cbor_det_t k = cbor_det_map_entry_key(x);
-    bool ite0;
-    if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-      ite0 = cbor_det_read_uint64(k) == 2ULL;
-    else
-      ite0 = false;
-    if (ite0)
-    {
-      cbor_det_t v1 = cbor_det_map_entry_value(x);
-      if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
-      {
-        cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
-        bool ite0;
-        if (cbor_det_array_iterator_is_empty(pi))
-          ite0 = false;
-        else
-          ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
-        bool ite1;
-        if (ite0)
-        {
-          bool pcont = true;
-          while (pcont)
-          {
-            cbor_det_array_iterator_t i1 = pi;
-            bool ite;
-            if (cbor_det_array_iterator_is_empty(pi))
-              ite = false;
-            else
-              ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
-            if (!ite)
-            {
-              pi = i1;
-              pcont = false;
-            }
-          }
-          ite1 = true;
-        }
-        else
-          ite1 = false;
-        if (ite1)
-          ite2 = cbor_det_array_iterator_is_empty(pi);
-        else
-          ite2 = false;
-      }
-      else
-        ite2 = false;
-    }
-    else
-      ite2 = false;
-  }
-  bool ite3;
-  if (ite2)
-    ite3 = true;
-  else
-  {
-    cbor_det_t k = cbor_det_map_entry_key(x);
-    bool ite;
-    if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-      ite = cbor_det_read_uint64(k) == 3ULL;
-    else
-      ite = false;
-    if (ite)
-    {
-      cbor_det_t v1 = cbor_det_map_entry_value(x);
-      if (COSE_Format_validate_tstr(v1))
-        ite3 = true;
-      else
-        ite3 = COSE_Format_validate_int(v1);
-    }
-    else
-      ite3 = false;
-  }
-  bool ite4;
-  if (ite3)
-    ite4 = true;
-  else
-  {
-    cbor_det_t k = cbor_det_map_entry_key(x);
-    bool ite;
-    if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-      ite = cbor_det_read_uint64(k) == 4ULL;
-    else
-      ite = false;
-    if (ite)
-      ite4 = COSE_Format_validate_bstr(cbor_det_map_entry_value(x));
-    else
-      ite4 = false;
-  }
-  bool ite5;
-  if (ite4)
-    ite5 = true;
-  else
-  {
-    cbor_det_t k = cbor_det_map_entry_key(x);
-    bool ite;
-    if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-      ite = cbor_det_read_uint64(k) == 6ULL;
-    else
-      ite = false;
-    if (ite)
-      ite5 = COSE_Format_validate_bstr(cbor_det_map_entry_value(x));
-    else
-      ite5 = false;
-  }
-  if (ite5)
-    return true;
-  else
-  {
-    cbor_det_t k = cbor_det_map_entry_key(x);
-    bool ite;
-    if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-      ite = cbor_det_read_uint64(k) == 5ULL;
-    else
-      ite = false;
-    if (ite)
-    {
-      cbor_det_map_entry_value(x);
-      return true;
-    }
-    else
-      return false;
-  }
-}
-
-bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
 {
   cbor_det_t k0 = cbor_det_map_entry_key(x);
   bool ite0;
@@ -4759,7 +4614,10 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                       else
                         ite = false;
                       if (ite)
-                        ite6 = COSE_Format_validate_bstr(cbor_det_map_entry_value(chd));
+                      {
+                        cbor_det_map_entry_value(chd);
+                        ite6 = true;
+                      }
                       else
                         ite6 = false;
                     }
@@ -5076,7 +4934,10 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             else
                               ite = false;
                             if (ite)
-                              ite6 = COSE_Format_validate_bstr(cbor_det_map_entry_value(chd));
+                            {
+                              cbor_det_map_entry_value(chd);
+                              ite6 = true;
+                            }
                             else
                               ite6 = false;
                           }
@@ -6630,7 +6491,7 @@ COSE_Format_evercddl_header_map_pretty COSE_Format_parse_header_map(cbor_det_t c
                       .cddl_map_iterator_contents = cbor_det_map_iterator_start(c),
                       .cddl_map_iterator_impl_validate1 = COSE_Format_aux_env24_validate_2,
                       .cddl_map_iterator_impl_parse1 = COSE_Format_aux_env24_parse_2,
-                      .cddl_map_iterator_impl_validate_ex = COSE_Format_aux_env24_map_constraint_6,
+                      .cddl_map_iterator_impl_validate_ex = COSE_Format_aux_env24_map_constraint_5,
                       .cddl_map_iterator_impl_validate2 = COSE_Format_aux_env24_validate_3,
                       .cddl_map_iterator_impl_parse2 = COSE_Format_aux_env24_parse_3
                     }
@@ -8646,7 +8507,7 @@ COSE_Format_serialize_header_map(
                       if (scrut0.tag == FStar_Pervasives_Native_Some)
                         if
                         (
-                          COSE_Format_aux_env24_map_constraint_6(cbor_det_mk_map_entry(o1,
+                          COSE_Format_aux_env24_map_constraint_5(cbor_det_mk_map_entry(o1,
                               scrut0.v.fst))
                         )
                           pres = false;
@@ -8887,7 +8748,7 @@ COSE_Format_serialize_header_map(
                       if (scrut0.tag == FStar_Pervasives_Native_Some)
                         if
                         (
-                          COSE_Format_aux_env24_map_constraint_6(cbor_det_mk_map_entry(o1,
+                          COSE_Format_aux_env24_map_constraint_5(cbor_det_mk_map_entry(o1,
                               scrut0.v.fst))
                         )
                           pres = false;
