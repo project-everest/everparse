@@ -416,7 +416,7 @@ let rec annot_tables
     RSuccess (MCOr cut (MCKeyValue key value), MGTable key value except)
   | MGTable _ _ _ -> RFailure "annot_tables cannot be run twice"
   | MGMatch cut' key value ->
-    let fp = (MCKeyValue (TElem (ELiteral key)) (if cut' then TElem EAny else value)) in
+    let fp = (MCKeyValue (TElem (ELiteral key)) (TElem EAny)) in
     RSuccess (MCOr cut fp, g) // TODO: rewrite the group if cut' is true and key \included cut
   | MGMatchWithCut key _ ->
     let fp = MCKeyValue key (TElem EAny) in
@@ -573,7 +573,7 @@ let annot_tables_correct_aux_match
   ))
 =
     Spec.apply_map_group_det_match_item_for c (eval_literal key) (typ_sem env.e_sem_env value) m;
-    let fp = (MCKeyValue (TElem (ELiteral key)) (if c then TElem EAny else value)) in
+    let fp = (MCKeyValue (TElem (ELiteral key)) (TElem EAny)) in
     let fp' = map_constraint_sem env.e_sem_env fp in
     Spec.map_group_footprint_match_item_for c (eval_literal key) (typ_sem env.e_sem_env value);
     let cut' = MCOr cut fp in
@@ -597,7 +597,7 @@ let annot_tables_correct_aux_match
         let m1 = Cbor.cbor_map_filter f1 m in
         let m2 = Cbor.cbor_map_filter f2 m in
         assert (Cbor.cbor_map_equal m1 m2);
-        cbor_map_filter_disjoint_from_footprint (if c then f2 else f1) fp' m;
+        cbor_map_filter_disjoint_from_footprint (f2) fp' m;
 //        annot_tables_correct_postcond_intro_some fuel env cut g m () cut' g () () () () () m1 () ();
         ()
       end
@@ -874,7 +874,7 @@ let rec annot_tables'
     end
   | MGTable _ _ _ -> RFailure "annot_tables cannot be run twice"
   | MGMatch cut' key value ->
-    let fp = (MCKeyValue (TElem (ELiteral key)) (if cut' then TElem EAny else value)) in
+    let fp = (MCKeyValue (TElem (ELiteral key)) (TElem EAny)) in
     begin match mk_mc_or fuel env cut fp with
     | RSuccess mc' -> RSuccess (mc', g) // TODO: rewrite the group if cut' is true and key \included cut
     | res -> coerce_failure res
