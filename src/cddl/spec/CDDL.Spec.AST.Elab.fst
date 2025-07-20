@@ -173,9 +173,9 @@ let rec mk_elab_map_group
     begin match env.e_sem_env.se_bound n with
     | Some NGroup ->
       let g1 = env.e_env n in
-      let (g2, res) = rewrite_group fuel true g1 in
+      let (g2, res) = rewrite_group fuel true (GZeroOrMore g1) in
       if res
-      then mk_elab_map_group fuel' env (GZeroOrMore g2)
+      then mk_elab_map_group fuel' env g2
       else ROutOfFuel
     | _ -> RFailure ("mk_elab_map_group: undefined group: " ^ n)
     end
@@ -210,11 +210,11 @@ let rec mk_elab_map_group_bounded
     begin match env.e_sem_env.se_bound n with
     | Some NGroup ->
       let g1 = env.e_env n in
-      let (g2, res) = rewrite_group fuel true g1 in
+      let (g2, res) = rewrite_group fuel true (GZeroOrMore g1) in
       if res
       then begin
-        rewrite_group_bounded env.e_sem_env.se_bound fuel true g1;
-        mk_elab_map_group_bounded fuel' env (GZeroOrMore g2)
+        rewrite_group_bounded env.e_sem_env.se_bound fuel true (GZeroOrMore g1);
+        mk_elab_map_group_bounded fuel' env g2
       end
       else ()
     end
@@ -254,8 +254,8 @@ let rec mk_elab_map_group_correct
     mk_elab_map_group_correct fuel' env (fst (rewrite_group fuel true g'))
   | GZeroOrMore (GDef n) ->
     let g' = (env.e_env n) in
-    rewrite_group_correct env.e_sem_env fuel true g';
-    mk_elab_map_group_correct fuel' env (GZeroOrMore (fst (rewrite_group fuel true g')))
+    rewrite_group_correct env.e_sem_env fuel true (GZeroOrMore g');
+    mk_elab_map_group_correct fuel' env (fst (rewrite_group fuel true (GZeroOrMore g')))
   | _ -> ()
 
 let typ_inter_underapprox_postcond
