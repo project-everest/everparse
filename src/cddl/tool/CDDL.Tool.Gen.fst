@@ -366,7 +366,7 @@ let aa"^anc_env'^" = aa" ^ anc_env
         output = anc.output ^ msg;
       }
     | Some (P.AskForArrayGroup t t_wf) ->
-      let _ = FStar.IO.print_string ("ancillary for group:" ^ CDDL.Tool.Print.group_to_string t ^ ", typename: " ^ typename ^ "\n") in
+      let _ = FStar.IO.print_string ("ancillary for group:" ^ CDDL.Spec.AST.Print.group_to_string t ^ ", typename: " ^ typename ^ "\n") in
       let msg = produce_ask_for_array_parser env anc_env wf validator parser serializer typename bundle ^ "
 let _ : unit = _ by (FStar.Tactics.print (\"ancillary env'\"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "^krml^"; "^opaque_to_smt^"] noextract
@@ -581,16 +581,16 @@ and produce_iterators_for_array_group
     let (anc2, accu2) = produce_iterators_for_array_group wenv anc accu s in
     begin match anc2.array_names _ s with
     | None ->
-      let _ = FStar.IO.print_string ("ancillary for group:" ^ CDDL.Tool.Print.group_to_string g ^ " NOT FOUND\n") in
+      let _ = FStar.IO.print_string ("ancillary for group:" ^ CDDL.Spec.AST.Print.group_to_string g ^ " NOT FOUND\n") in
       (anc2, accu2)
     | Some b ->
         let array_iterator = "iterate_array_" ^ b in
         if List.Tot.mem array_iterator anc2.array_iterators
         then
-          let _ = FStar.IO.print_string ("ancillary for group:" ^ CDDL.Tool.Print.group_to_string g ^ " ALREADY PRODUCED\n") in
+          let _ = FStar.IO.print_string ("ancillary for group:" ^ CDDL.Spec.AST.Print.group_to_string g ^ " ALREADY PRODUCED\n") in
           (anc2, accu2)
         else
-          let _ = FStar.IO.print_string ("ancillary for group:" ^ CDDL.Tool.Print.group_to_string g ^ " FOUND\n") in
+          let _ = FStar.IO.print_string ("ancillary for group:" ^ CDDL.Spec.AST.Print.group_to_string g ^ " FOUND\n") in
           let anc3 = { anc2 with array_iterators = array_iterator :: anc2.array_iterators } in
           let b = b ^ "_pretty" in
           let accu3 = accu2 ^ "
