@@ -169,7 +169,7 @@ let rec mk_elab_map_group
       else ROutOfFuel
     | _ -> RFailure ("mk_elab_map_group: undefined group: " ^ n)
     end
-  | _ -> RFailure "mk_elab_map_group: unsupported"
+  | _ -> RFailure ("mk_elab_map_group: unsupported" ^ CDDL.Spec.AST.Print.group_to_string g)
 
 let rec mk_elab_map_group_bounded
   (fuel: nat)
