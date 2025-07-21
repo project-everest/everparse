@@ -216,13 +216,21 @@ let memberkey_cut = debug "memberkey_cut" (
 
 let bareword = debug "bareword" id
 
+let occur_bound = debug "occur_from" (
+  choices
+    [
+      concat uint (fun x -> ret (Some x));
+      ret None;
+    ]
+)
+
 let occur = debug "occur" (
   choices
     [
       concat plus (fun _ -> ret (fun x -> GOneOrMore x));
       concat question (fun _ -> ret (fun x -> GZeroOrOne x));
-(* TODO: bounds *)
-      concat (* option(occur_from) *) star (* option(occur_to) *) (fun _ -> ret (fun x -> GZeroOrMore x));
+      concat occur_bound (fun from -> concat star (fun _ -> concat occur_bound (fun to_ -> (* TODO: bounds *)
+       if from = None && to_ = None then ret (fun x -> GZeroOrMore x) else fail)));
     ]
 )
 
