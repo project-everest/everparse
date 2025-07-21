@@ -55,7 +55,7 @@ COSE_Format_evercddl_header_map_pretty COSE_OpenSSL_empty_sig_headers() {
         ._x1 = {
             .tag = COSE_Format_Inl,
             .case_Inl = {
-                .elt = (K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_3_pretty[]) {},
+                .elt = (K___COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty[]) {},
                 .len = 0,
             },
         },
