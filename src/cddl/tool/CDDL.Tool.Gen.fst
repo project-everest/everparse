@@ -618,13 +618,21 @@ and produce_iterators_for_map_group
 (ancillaries_t wenv & string)
   (decreases wf)
 = match wf with
-  | WfMZeroOrMore _ _ _ sk sv _ ->
+  | WfMZeroOrMore tk tv _ sk sv _ ->
     let (anc1, accu1) = produce_iterators_for_typ wenv anc accu sk in
     let (anc2, accu2) = produce_iterators_for_typ wenv anc1 accu1 sv in
-    begin match anc2.type_names _ sk with
+    let need_iterator_for_key = match tk with
+    | TDef n -> Some (mk_parsertype_name n)
+    | _ -> anc2.type_names _ sk
+    in
+    begin match need_iterator_for_key  with
     | None -> (anc2, accu2)
     | Some bk ->
-      begin match anc2.type_names _ sv with
+      let need_iterator_for_value = match tv with
+      | TDef n -> Some (mk_parsertype_name n)
+      | _ -> anc2.type_names _ sv
+      in
+      begin match need_iterator_for_value with
       | None -> (anc2, accu2)
       | Some bv ->
         let map_iterator = "iterate_map_" ^ bk ^ "_and_" ^ bv in
