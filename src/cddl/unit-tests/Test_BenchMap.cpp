@@ -30,12 +30,12 @@ uint64_t bigrand() {
 
 bool lookup1(BenchMap_evercddl_map_pretty m, uint64_t key, uint64_t *val) {
   assert (val);
-  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_BenchMap_aux_env3_type_1_pretty_BenchMap_aux_env3_type_1_pretty
+  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_BenchMap_evercddl_uint_pretty_BenchMap_evercddl_uint_pretty
     it = m.case_Mkevercddl_map_pretty1;
 
-  while (!BenchMap_is_empty_iterate_map_aux_env3_type_1_and_aux_env3_type_1(it)) {
-    K___BenchMap_aux_env3_type_1_pretty_BenchMap_aux_env3_type_1_pretty k =
-        BenchMap_next_iterate_map_aux_env3_type_1_and_aux_env3_type_1(&it);
+  while (!BenchMap_is_empty_iterate_map_evercddl_uint_and_evercddl_uint(it)) {
+    K___BenchMap_evercddl_uint_pretty_BenchMap_evercddl_uint_pretty k =
+        BenchMap_next_iterate_map_evercddl_uint_and_evercddl_uint(&it);
     // printf("EVERCDDL read key %llu\n", k.fst);
     if (k.fst == key) {
       if (val) {
@@ -53,12 +53,12 @@ bool lookup1(BenchMap_evercddl_map_pretty m, uint64_t key, uint64_t *val) {
 
 bool lookup1_no_short(BenchMap_evercddl_map_pretty m, uint64_t key, uint64_t *val) {
   assert (val);
-  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_BenchMap_aux_env3_type_1_pretty_BenchMap_aux_env3_type_1_pretty
+  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_BenchMap_evercddl_uint_pretty_BenchMap_evercddl_uint_pretty
   it = m.case_Mkevercddl_map_pretty1;
 
-  while (!BenchMap_is_empty_iterate_map_aux_env3_type_1_and_aux_env3_type_1(it)) {
-    K___BenchMap_aux_env3_type_1_pretty_BenchMap_aux_env3_type_1_pretty k =
-        BenchMap_next_iterate_map_aux_env3_type_1_and_aux_env3_type_1(&it);
+  while (!BenchMap_is_empty_iterate_map_evercddl_uint_and_evercddl_uint(it)) {
+    K___BenchMap_evercddl_uint_pretty_BenchMap_evercddl_uint_pretty k =
+        BenchMap_next_iterate_map_evercddl_uint_and_evercddl_uint(&it);
     if (k.fst == key) {
       if (val) {
           *val = k.snd;
@@ -186,8 +186,8 @@ int main()
         .len = len
     };
 
-    K___BenchMap_aux_env3_type_1_pretty_BenchMap_aux_env3_type_1_pretty *elems =
-      (K___BenchMap_aux_env3_type_1_pretty_BenchMap_aux_env3_type_1_pretty*)
+    K___BenchMap_evercddl_uint_pretty_BenchMap_evercddl_uint_pretty *elems =
+      (K___BenchMap_evercddl_uint_pretty_BenchMap_evercddl_uint_pretty*)
       malloc(2 * N * 8);
     for (int i = 0; i < N; i++) {
         elems[i].fst = bigrand ();
