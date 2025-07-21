@@ -5692,6 +5692,90 @@ COSE_Format_validate_and_parse_COSE_Key_OKP(Pulse_Lib_Slice_slice__uint8_t s)
   }
 }
 
+bool
+COSE_Format_is_empty_iterate_map_evercddl_label_and_evercddl_values(
+  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
+  i
+)
+{
+  cbor_det_map_iterator_t pj = i.cddl_map_iterator_contents;
+  bool pres = true;
+  bool cond;
+  if (pres)
+    cond = !cbor_det_map_iterator_is_empty(pj);
+  else
+    cond = false;
+  while (cond)
+  {
+    cbor_det_map_entry_t elt = cbor_det_map_iterator_next(&pj);
+    if (!!i.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(elt)))
+      if (!i.cddl_map_iterator_impl_validate_ex(elt))
+        pres = !i.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(elt));
+    bool ite;
+    if (pres)
+      ite = !cbor_det_map_iterator_is_empty(pj);
+    else
+      ite = false;
+    cond = ite;
+  }
+  return pres;
+}
+
+K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
+COSE_Format_next_iterate_map_evercddl_label_and_evercddl_values(
+  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
+  *pi
+)
+{
+  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
+  i = *pi;
+  cbor_det_map_iterator_t pj = i.cddl_map_iterator_contents;
+  cbor_det_map_entry_t phd = cbor_det_map_iterator_next(&pj);
+  cbor_det_map_entry_t hd0 = phd;
+  bool cond;
+  if (!i.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(hd0)))
+    cond = true;
+  else if (!i.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(hd0)))
+    cond = true;
+  else
+    cond = i.cddl_map_iterator_impl_validate_ex(hd0);
+  while (cond)
+  {
+    phd = cbor_det_map_iterator_next(&pj);
+    cbor_det_map_entry_t hd = phd;
+    bool ite;
+    if (!i.cddl_map_iterator_impl_validate1(cbor_det_map_entry_key(hd)))
+      ite = true;
+    else if (!i.cddl_map_iterator_impl_validate2(cbor_det_map_entry_value(hd)))
+      ite = true;
+    else
+      ite = i.cddl_map_iterator_impl_validate_ex(hd);
+    cond = ite;
+  }
+  cbor_det_map_entry_t hd = phd;
+  COSE_Format_evercddl_label_pretty
+  hd_key_res = i.cddl_map_iterator_impl_parse1(cbor_det_map_entry_key(hd));
+  cbor_det_t hd_value_res = i.cddl_map_iterator_impl_parse2(cbor_det_map_entry_value(hd));
+  *pi =
+    (
+      (CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty){
+        .cddl_map_iterator_contents = pj,
+        .cddl_map_iterator_impl_validate1 = i.cddl_map_iterator_impl_validate1,
+        .cddl_map_iterator_impl_parse1 = i.cddl_map_iterator_impl_parse1,
+        .cddl_map_iterator_impl_validate_ex = i.cddl_map_iterator_impl_validate_ex,
+        .cddl_map_iterator_impl_validate2 = i.cddl_map_iterator_impl_validate2,
+        .cddl_map_iterator_impl_parse2 = i.cddl_map_iterator_impl_parse2
+      }
+    );
+  return
+    (
+      (K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty){
+        .fst = hd_key_res,
+        .snd = hd_value_res
+      }
+    );
+}
+
 bool COSE_Format_validate_COSE_Key(cbor_det_t c)
 {
   return COSE_Format_validate_COSE_Key_OKP(c);

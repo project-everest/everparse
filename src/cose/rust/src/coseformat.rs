@@ -5500,6 +5500,138 @@ pub fn validate_and_parse_COSE_Key_OKP <'a>(s: &'a [u8]) ->
     }
 }
 
+pub fn is_empty_iterate_map_evercddl_label_and_evercddl_values(
+    i:
+    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
+) ->
+    bool
+{
+    let mut pj: [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] =
+        [i.cddl_map_iterator_contents; 1usize];
+    let mut pres: [bool; 1] = [true; 1usize];
+    let res: bool = (&pres)[0];
+    let mut cond: bool =
+        if res
+        {
+            let j: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
+                (&pj)[0];
+            let test: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
+            ! test
+        }
+        else
+        { false };
+    while
+    cond
+    {
+        let elt: crate::cbordetveraux::cbor_map_entry =
+            crate::cbordetver::cbor_det_map_iterator_next(&mut pj);
+        let elt_key: crate::cbordetveraux::cbor_raw =
+            crate::cbordetver::cbor_det_map_entry_key(elt);
+        let test_key: bool = (i.cddl_map_iterator_impl_validate1)(elt_key);
+        if ! ! test_key
+        {
+            let test_ex: bool = (i.cddl_map_iterator_impl_validate_ex)(elt);
+            if ! test_ex
+            {
+                let elt_value: crate::cbordetveraux::cbor_raw =
+                    crate::cbordetver::cbor_det_map_entry_value(elt);
+                let test_value: bool = (i.cddl_map_iterator_impl_validate2)(elt_value);
+                (&mut pres)[0] = ! test_value
+            }
+        };
+        let res0: bool = (&pres)[0];
+        let ite: bool =
+            if res0
+            {
+                let j: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
+                    (&pj)[0];
+                let test: bool = crate::cbordetver::cbor_det_map_iterator_is_empty(j);
+                ! test
+            }
+            else
+            { false };
+        cond = ite
+    };
+    (&pres)[0]
+}
+
+pub fn next_iterate_map_evercddl_label_and_evercddl_values <'a>(
+    pi:
+    &'a mut
+    [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
+    <'a>]
+) ->
+    (evercddl_label_pretty <'a>, crate::cbordetveraux::cbor_raw <'a>)
+{
+    let
+    i:
+    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
+    =
+        pi[0];
+    let mut pj: [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] =
+        [i.cddl_map_iterator_contents; 1usize];
+    let hd0: crate::cbordetveraux::cbor_map_entry =
+        crate::cbordetver::cbor_det_map_iterator_next(&mut pj);
+    let mut phd: [crate::cbordetveraux::cbor_map_entry; 1] = [hd0; 1usize];
+    let hd: crate::cbordetveraux::cbor_map_entry = (&phd)[0];
+    let hd_key: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(hd);
+    let test_key: bool = (i.cddl_map_iterator_impl_validate1)(hd_key);
+    let mut cond: bool =
+        if ! test_key
+        { true }
+        else
+        {
+            let hd_value: crate::cbordetveraux::cbor_raw =
+                crate::cbordetver::cbor_det_map_entry_value(hd);
+            let test_value: bool = (i.cddl_map_iterator_impl_validate2)(hd_value);
+            if ! test_value { true } else { (i.cddl_map_iterator_impl_validate_ex)(hd) }
+        };
+    while
+    cond
+    {
+        let hd1: crate::cbordetveraux::cbor_map_entry =
+            crate::cbordetver::cbor_det_map_iterator_next(&mut pj);
+        (&mut phd)[0] = hd1;
+        let hd2: crate::cbordetveraux::cbor_map_entry = (&phd)[0];
+        let hd_key0: crate::cbordetveraux::cbor_raw =
+            crate::cbordetver::cbor_det_map_entry_key(hd2);
+        let test_key0: bool = (i.cddl_map_iterator_impl_validate1)(hd_key0);
+        let ite: bool =
+            if ! test_key0
+            { true }
+            else
+            {
+                let hd_value: crate::cbordetveraux::cbor_raw =
+                    crate::cbordetver::cbor_det_map_entry_value(hd2);
+                let test_value: bool = (i.cddl_map_iterator_impl_validate2)(hd_value);
+                if ! test_value { true } else { (i.cddl_map_iterator_impl_validate_ex)(hd2) }
+            };
+        cond = ite
+    };
+    let hd1: crate::cbordetveraux::cbor_map_entry = (&phd)[0];
+    let hd_key0: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(hd1);
+    let hd_key_res: evercddl_label_pretty = (i.cddl_map_iterator_impl_parse1)(hd_key0);
+    let hd_value: crate::cbordetveraux::cbor_raw =
+        crate::cbordetver::cbor_det_map_entry_value(hd1);
+    let hd_value_res: crate::cbordetveraux::cbor_raw = (i.cddl_map_iterator_impl_parse2)(hd_value);
+    let j: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pj)[0];
+    let
+    i·:
+    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
+    =
+        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
+        {
+            cddl_map_iterator_contents: j,
+            cddl_map_iterator_impl_validate1: i.cddl_map_iterator_impl_validate1,
+            cddl_map_iterator_impl_parse1: i.cddl_map_iterator_impl_parse1,
+            cddl_map_iterator_impl_validate_ex: i.cddl_map_iterator_impl_validate_ex,
+            cddl_map_iterator_impl_validate2: i.cddl_map_iterator_impl_validate2,
+            cddl_map_iterator_impl_parse2: i.cddl_map_iterator_impl_parse2
+        };
+    pi[0] = i·;
+    (hd_key_res,hd_value_res)
+}
+
 pub fn validate_COSE_Key(c: crate::cbordetveraux::cbor_raw) -> bool
 { validate_COSE_Key_OKP(c) }
 
