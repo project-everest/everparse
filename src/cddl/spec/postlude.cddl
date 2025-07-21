@@ -1,6 +1,6 @@
                   tdate = #6.0(tstr)
 ;                  time = #6.1(number)
-;                  number = int / float
+                  number = int ; / float ; TODO: support float
 ; TODO: bigint
 ;                  biguint = #6.2(bstr)
 ;                  bignint = #6.3(bstr)
