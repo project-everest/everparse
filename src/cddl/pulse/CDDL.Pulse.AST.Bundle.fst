@@ -637,10 +637,20 @@ and impl_bundle_wf_map_group
           ps1
           nm
         )
-  | WfMZeroOrMore _ _ except s_key s_value s_except ->
-    let Some (v_key, p_key) = ancillary _ s_key in
+  | WfMZeroOrMore t_key t_value except s_key s_value s_except ->
+    let Some (v_key, p_key) = match t_key with
+    | TDef n -> 
+      [@@inline_let] let _ = env.be_b_correct n in
+      Some (env.be_v n, env.be_b n)
+    | _ -> ancillary _ s_key
+    in
     let Some (v_except) = ancillary_mg except in
-    let Some (v_value, p_value) = ancillary _ s_value in
+    let Some (v_value, p_value) = match t_value with
+    | TDef n ->
+      [@@inline_let] let _ = env.be_b_correct n in
+      Some (env.be_v n, env.be_b n)
+    | _ -> ancillary _ s_value
+    in
             (bundle_map_zero_or_more
               impl.cbor_map_iterator_init
               impl.cbor_map_iterator_share
