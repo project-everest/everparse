@@ -130,6 +130,13 @@ let rec mk_elab_map_group
   match g with
   | GElem cut (TElem (ELiteral key)) value ->
     RSuccess (MGMatch cut key value)
+  | GElem cut (TDef nkey) value ->
+    begin match env.e_sem_env.se_bound nkey with
+    | Some NType ->
+      let t = env.e_env nkey in // this type is supposed to be already rewritten
+      mk_elab_map_group fuel' env (GElem cut t value)
+    | _ -> RFailure ("mk_elab_map_group: GElem TDef: " ^ nkey ^ " is not a type" )
+    end
   | GElem true key value ->
     RSuccess (MGMatchWithCut key value)
   | GAlwaysFalse -> RSuccess MGAlwaysFalse
@@ -173,9 +180,9 @@ let rec mk_elab_map_group
     begin match env.e_sem_env.se_bound n with
     | Some NGroup ->
       let g1 = env.e_env n in
-      let (g2, res) = rewrite_group fuel true g1 in
+      let (g2, res) = rewrite_group fuel true (GZeroOrMore g1) in
       if res
-      then mk_elab_map_group fuel' env (GZeroOrMore g2)
+      then mk_elab_map_group fuel' env g2
       else ROutOfFuel
     | _ -> RFailure ("mk_elab_map_group: undefined group: " ^ n)
     end
@@ -210,14 +217,17 @@ let rec mk_elab_map_group_bounded
     begin match env.e_sem_env.se_bound n with
     | Some NGroup ->
       let g1 = env.e_env n in
-      let (g2, res) = rewrite_group fuel true g1 in
+      let (g2, res) = rewrite_group fuel true (GZeroOrMore g1) in
       if res
       then begin
-        rewrite_group_bounded env.e_sem_env.se_bound fuel true g1;
-        mk_elab_map_group_bounded fuel' env (GZeroOrMore g2)
+        rewrite_group_bounded env.e_sem_env.se_bound fuel true (GZeroOrMore g1);
+        mk_elab_map_group_bounded fuel' env g2
       end
       else ()
     end
+  | GElem cut (TDef nkey) value ->
+    let t = env.e_env nkey in
+    mk_elab_map_group_bounded fuel' env (GElem cut t value)
   | _ -> ()
 
 let rec mk_elab_map_group_correct
@@ -254,8 +264,14 @@ let rec mk_elab_map_group_correct
     mk_elab_map_group_correct fuel' env (fst (rewrite_group fuel true g'))
   | GZeroOrMore (GDef n) ->
     let g' = (env.e_env n) in
-    rewrite_group_correct env.e_sem_env fuel true g';
-    mk_elab_map_group_correct fuel' env (GZeroOrMore (fst (rewrite_group fuel true g')))
+    rewrite_group_correct env.e_sem_env fuel true (GZeroOrMore g');
+    mk_elab_map_group_correct fuel' env (fst (rewrite_group fuel true (GZeroOrMore g')))
+  | GElem cut (TDef nkey) value ->
+    let t = env.e_env nkey in
+    assert (Spec.typ_equiv (typ_sem env.e_sem_env t) (sem_of_type_sem (env.e_sem_env.se_env nkey)));
+    Spec.map_group_match_item_ext cut (typ_sem env.e_sem_env t) (typ_sem env.e_sem_env value) (sem_of_type_sem (env.e_sem_env.se_env nkey)) (typ_sem env.e_sem_env value);
+    assert (map_group_sem env.e_sem_env (GElem cut t value) == map_group_sem env.e_sem_env (GElem cut (TDef nkey) value));
+    mk_elab_map_group_correct fuel' env (GElem cut t value)
   | _ -> ()
 
 let typ_inter_underapprox_postcond

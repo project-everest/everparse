@@ -34,7 +34,10 @@ let produce_fst_file (dir: string) : string =
      let filenames_str = List.fold_left (fun accu fn -> accu ^ "\"" ^ fn ^ "\";") "" filenames in
      let str = CDDL_Tool_Gen.produce_defs_fst !mname !lang filenames_str l in
      if String.starts_with ~prefix:"Error: " str
-     then failwith str
+     then begin
+         print_endline str;
+         failwith "Failure"
+       end
      else begin
          let basename = !mname ^ ".fst" in
          let filename = Filename.concat dir basename in

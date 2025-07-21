@@ -102,6 +102,14 @@ and typ =
 | TSize: typ -> typ -> typ
 | TDetCbor: typ -> typ -> typ
 
+[@@plugin; base_attr; PpxDerivingShow]
+type decl =
+| DType of typ
+| DGroup of group
+
+[@@PpxDerivingShow]
+type program = list (string & decl)
+
 (* Environments and well-formedness constraints *)
 
 [@@  base_attr]

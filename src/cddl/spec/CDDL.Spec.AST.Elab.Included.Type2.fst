@@ -195,4 +195,4 @@ let typ_included2
   | _, TElem _
   | TArray _, _
   | _, TArray _
-    -> RFailure "typ_included: unsupported cases"
+    -> RFailure ("typ_included: unsupported cases: \n" ^ CDDL.Spec.AST.Print.typ_to_string t1 ^ "\n vs. \n" ^ CDDL.Spec.AST.Print.typ_to_string t2)

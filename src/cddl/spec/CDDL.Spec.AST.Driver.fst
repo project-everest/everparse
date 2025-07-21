@@ -32,11 +32,6 @@ let ast_env_extend_typ_with_pre
     bounded_wf_typ (extend_name_env e.e_sem_env.se_bound new_name NType) t t_wf /\
     spec_wf_typ (ast_env_extend_gen e new_name NType t).e_sem_env true t t_wf
 
-[@@plugin; base_attr]
-type decl =
-| DType of typ
-| DGroup of group
-
 let check_name (env: name_env) (name: string) (k: name_env_elem) : Tot (option name_env) =
   match env name with
   | None -> Some (extend_name_env env name k)
@@ -47,23 +42,28 @@ let check_name (env: name_env) (name: string) (k: name_env_elem) : Tot (option n
 
 open FStar.Mul
 
+[@@PpxDerivingShow]
+type topological_sort_result =
+  result program
+
 let rec topological_sort'
   (bound: Ghost.erased pos)
   (env: ast_env)
   (res: list (string & decl))
   (accu: list (string & decl))
   (l: list (string & decl) { List.Tot.length accu + List.Tot.length l < bound })
-: Tot (option (list (string & decl)))
+: Tot (r: topological_sort_result { ~ (ROutOfFuel? r) })
   (decreases ((List.Tot.length l + List.Tot.length accu) * bound + List.Tot.length l))
 = match l with
   | [] ->
-    if Nil? accu
-    then Some (List.Tot.rev res)
-    else None
+    begin match accu with
+    | [] -> RSuccess (List.Tot.rev res)
+    | (new_name, _) :: _ -> RFailure ("topological_sort' : " ^ new_name ^  " contains an undefined name")
+    end
   | elt :: q ->
     let (new_name, tg) = elt in
     begin match env.e_sem_env.se_bound new_name with
-    | Some _ -> None
+    | Some _ -> RFailure ("topological sort': name "^ new_name ^" already defined. Definitions already processed: " ^  CDDL.Spec.AST.Print.program_to_string res ^ ". Definitions remaining to process: " ^ CDDL.Spec.AST.Print.program_to_string (elt :: List.Tot.rev_acc accu q))
     | _ ->
       List.Tot.rev_acc_length accu q;
       begin match tg with
@@ -91,8 +91,14 @@ let prelude_list = [
 
 let topological_sort
   (l: list (string & decl))
-: option (list (string & decl))
+: topological_sort_result
 = topological_sort' (List.Tot.length l + 3) empty_ast_env [] [] (List.Tot.append prelude_list l)
+
+let topological_sort_as_option
+  (l: list (string & decl))
+= match topological_sort l with
+  | RSuccess res -> Some res
+  | _ -> None
 
 let rec elab_list_tot
   (fuel: nat)
