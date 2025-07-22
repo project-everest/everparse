@@ -3454,185 +3454,7 @@ pub fn validate_and_parse_label <'a>(s: &'a [u8]) ->
     }
 }
 
-pub fn aux_env29_validate_1(c: crate::cbordetveraux::cbor_raw) -> bool { validate_label(c) }
-
-pub type aux_env29_type_1_pretty <'a> = evercddl_label_pretty <'a>;
-
-pub fn uu___is_Mkaux_env29_type_1_pretty0(projectee: evercddl_label_pretty) -> bool
-{
-    crate::lowstar::ignore::ignore::<evercddl_label_pretty>(projectee);
-    true
-}
-
-fn aux_env29_type_1_pretty_right <'a>(x1: evercddl_label_pretty <'a>) ->
-    evercddl_label_pretty
-    <'a>
-{ x1 }
-
-fn aux_env29_type_1_pretty_left <'a>(x3: evercddl_label_pretty <'a>) ->
-    evercddl_label_pretty
-    <'a>
-{ x3 }
-
-/**
-Parser for aux_env29_type_1
-*/
-pub fn
-aux_env29_parse_1
-<'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
-    evercddl_label_pretty
-    <'a>
-{
-    let res1: evercddl_label_pretty = parse_label(c);
-    aux_env29_type_1_pretty_right(res1)
-}
-
-/**
-Serializer for aux_env29_type_1
-*/
-pub fn
-aux_env29_serialize_1(c: evercddl_label_pretty, out: &mut [u8]) ->
-    usize
-{
-    let c·: evercddl_label_pretty = aux_env29_type_1_pretty_left(c);
-    serialize_label(c·, out)
-}
-
-#[derive(PartialEq, Clone, Copy)]
-pub enum
-option__·COSE_Format_aux_env29_type_1_pretty···Pulse_Lib_Slice_slice·uint8_t·
-<'a>
-{
-    None,
-    Some { v: (evercddl_label_pretty <'a>, &'a [u8]) }
-}
-
-pub fn validate_and_aux_env29_parse_1 <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_aux_env29_type_1_pretty···Pulse_Lib_Slice_slice·uint8_t·
-    <'a>
-{
-    let
-    q:
-    crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-    =
-        crate::cbordetver::cbor_det_parse(s);
-    match q
-    {
-        crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_aux_env29_type_1_pretty···Pulse_Lib_Slice_slice·uint8_t·::None,
-        crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
-        { v: rlrem }
-        =>
-          {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
-              let test: bool = aux_env29_validate_1(rl);
-              if test
-              {
-                  let x: evercddl_label_pretty = aux_env29_parse_1(rl);
-                  option__·COSE_Format_aux_env29_type_1_pretty···Pulse_Lib_Slice_slice·uint8_t·::Some
-                  { v: (x,rem) }
-              }
-              else
-              {
-                  option__·COSE_Format_aux_env29_type_1_pretty···Pulse_Lib_Slice_slice·uint8_t·::None
-              }
-          },
-        _ => panic!("Incomplete pattern matching")
-    }
-}
-
-pub fn aux_env29_validate_2(c: crate::cbordetveraux::cbor_raw) -> bool { validate_values(c) }
-
-pub type aux_env29_type_2_pretty <'a> = evercddl_values_pretty <'a>;
-
-pub fn uu___is_Mkaux_env29_type_2_pretty0(projectee: crate::cbordetveraux::cbor_raw) -> bool
-{
-    crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(projectee);
-    true
-}
-
-fn aux_env29_type_2_pretty_right <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
-    crate::cbordetveraux::cbor_raw
-    <'a>
-{ x1 }
-
-fn aux_env29_type_2_pretty_left <'a>(x3: crate::cbordetveraux::cbor_raw <'a>) ->
-    crate::cbordetveraux::cbor_raw
-    <'a>
-{ x3 }
-
-/**
-Parser for aux_env29_type_2
-*/
-pub fn
-aux_env29_parse_2
-<'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
-    crate::cbordetveraux::cbor_raw
-    <'a>
-{
-    let res1: crate::cbordetveraux::cbor_raw = parse_values(c);
-    aux_env29_type_2_pretty_right(res1)
-}
-
-/**
-Serializer for aux_env29_type_2
-*/
-pub fn
-aux_env29_serialize_2(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
-    usize
-{
-    let c·: crate::cbordetveraux::cbor_raw = aux_env29_type_2_pretty_left(c);
-    serialize_values(c·, out)
-}
-
-#[derive(PartialEq, Clone, Copy)]
-pub enum
-option__·COSE_Format_aux_env29_type_2_pretty···Pulse_Lib_Slice_slice·uint8_t·
-<'a>
-{
-    None,
-    Some { v: (crate::cbordetveraux::cbor_raw <'a>, &'a [u8]) }
-}
-
-pub fn validate_and_aux_env29_parse_2 <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_aux_env29_type_2_pretty···Pulse_Lib_Slice_slice·uint8_t·
-    <'a>
-{
-    let
-    q:
-    crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
-    =
-        crate::cbordetver::cbor_det_parse(s);
-    match q
-    {
-        crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_aux_env29_type_2_pretty···Pulse_Lib_Slice_slice·uint8_t·::None,
-        crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
-        { v: rlrem }
-        =>
-          {
-              let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
-              let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
-              let rem: &[u8] = _letpattern.1;
-              let test: bool = aux_env29_validate_2(rl);
-              if test
-              {
-                  let x: crate::cbordetveraux::cbor_raw = aux_env29_parse_2(rl);
-                  option__·COSE_Format_aux_env29_type_2_pretty···Pulse_Lib_Slice_slice·uint8_t·::Some
-                  { v: (x,rem) }
-              }
-              else
-              {
-                  option__·COSE_Format_aux_env29_type_2_pretty···Pulse_Lib_Slice_slice·uint8_t·::None
-              }
-          },
-        _ => panic!("Incomplete pattern matching")
-    }
-}
-
-pub fn aux_env29_map_constraint_3(x: crate::cbordetveraux::cbor_map_entry) -> bool
+pub fn aux_env29_map_constraint_1(x: crate::cbordetveraux::cbor_map_entry) -> bool
 {
     let k: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(x);
     let mt: u8 = crate::cbordetver::cbor_det_major_type(k);
@@ -4283,7 +4105,7 @@ pub enum option__COSE_Format_evercddl_bstr_pretty <'a>
 
 #[derive(PartialEq, Clone, Copy)]
 pub struct
-map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
 <'a>
 {
     pub cddl_map_iterator_contents:
@@ -4299,14 +4121,14 @@ map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum
-either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty
+either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty
 <'a>
 {
     Inl { v: &'a [(evercddl_label_pretty <'a>, crate::cbordetveraux::cbor_raw <'a>)] },
     Inr
     {
         v:
-        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
         <'a>
     }
 }
@@ -4318,7 +4140,7 @@ pub struct evercddl_COSE_Key_OKP_pretty <'a>
     pub intkeyneg2: option__COSE_Format_evercddl_bstr_pretty <'a>,
     pub intkeyneg4: option__COSE_Format_evercddl_bstr_pretty <'a>,
     pub _x0:
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty
+    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty
     <'a>
 }
 
@@ -4333,7 +4155,7 @@ fn evercddl_COSE_Key_OKP_pretty_right <'a>(
     (((((), evercddl_label <'a>), option__COSE_Format_evercddl_bstr_pretty <'a>),
     option__COSE_Format_evercddl_bstr_pretty
     <'a>),
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty
+    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty
     <'a>)
 ) ->
     evercddl_COSE_Key_OKP_pretty
@@ -4350,7 +4172,7 @@ fn evercddl_COSE_Key_OKP_pretty_left <'a>(x11: evercddl_COSE_Key_OKP_pretty <'a>
     (((((), evercddl_label <'a>), option__COSE_Format_evercddl_bstr_pretty <'a>),
     option__COSE_Format_evercddl_bstr_pretty
     <'a>),
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty
+    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty
     <'a>)
 {
     let x19: evercddl_label = x11.intkeyneg1;
@@ -4358,7 +4180,7 @@ fn evercddl_COSE_Key_OKP_pretty_left <'a>(x11: evercddl_COSE_Key_OKP_pretty <'a>
     let x21: option__COSE_Format_evercddl_bstr_pretty = x11.intkeyneg4;
     let
     x22:
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty
+    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty
     =
         x11._x0;
     (((((),x19),x20),x21),x22)
@@ -4585,28 +4407,28 @@ parse_COSE_Key_OKP
         };
     let
     rres:
-    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
     =
-        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
         {
             cddl_map_iterator_contents: i,
-            cddl_map_iterator_impl_validate1: aux_env29_validate_1,
-            cddl_map_iterator_impl_parse1: aux_env29_parse_1,
-            cddl_map_iterator_impl_validate_ex: aux_env29_map_constraint_3,
-            cddl_map_iterator_impl_validate2: aux_env29_validate_2,
-            cddl_map_iterator_impl_parse2: aux_env29_parse_2
+            cddl_map_iterator_impl_validate1: validate_label,
+            cddl_map_iterator_impl_parse1: parse_label,
+            cddl_map_iterator_impl_validate_ex: aux_env29_map_constraint_1,
+            cddl_map_iterator_impl_validate2: validate_values,
+            cddl_map_iterator_impl_parse2: parse_values
         };
     let
     w22:
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty
+    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty
     =
-        either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty::Inr
+        either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty::Inr
         { v: rres };
     let
     res1:
     (((((), evercddl_label), option__COSE_Format_evercddl_bstr_pretty),
     option__COSE_Format_evercddl_bstr_pretty),
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty)
+    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty)
     =
         (w11,w22);
     evercddl_COSE_Key_OKP_pretty_right(res1)
@@ -4623,7 +4445,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
     c·:
     (((((), evercddl_label), option__COSE_Format_evercddl_bstr_pretty),
     option__COSE_Format_evercddl_bstr_pretty),
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty)
+    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty)
     =
         evercddl_COSE_Key_OKP_pretty_left(c);
     let mut pcount: [u64; 1] = [0u64; 1usize];
@@ -4632,7 +4454,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
     _letpattern:
     (((((), evercddl_label), option__COSE_Format_evercddl_bstr_pretty),
     option__COSE_Format_evercddl_bstr_pretty),
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty)
+    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty)
     =
         c·;
     let res: bool =
@@ -4645,7 +4467,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                 _letpattern.0;
             let
             c2:
-            either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty
+            either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty
             =
                 _letpattern.1;
             let
@@ -4994,7 +4816,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
             {
                 match c2
                 {
-                    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty::Inl
+                    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty::Inl
                     { v: c11 }
                     =>
                       {
@@ -5074,7 +4896,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                                       out.split_at_mut(size0);
                                   let _outl1: &[u8] = _letpattern2.0;
                                   let out1: &mut [u8] = _letpattern2.1;
-                                  let sz1: usize = aux_env29_serialize_1(ck, out1);
+                                  let sz1: usize = serialize_label(ck, out1);
                                   if sz1 == 0usize
                                   { (&mut pres)[0] = false }
                                   else
@@ -5083,7 +4905,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                                           out1.split_at_mut(sz1);
                                       let outl2: &[u8] = _letpattern3.0;
                                       let out2: &mut [u8] = _letpattern3.1;
-                                      let sz2: usize = aux_env29_serialize_2(cv, out2);
+                                      let sz2: usize = serialize_values(cv, out2);
                                       if sz2 == 0usize
                                       { (&mut pres)[0] = false }
                                       else
@@ -5138,7 +4960,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                                                                       o2
                                                                   );
                                                               let is_except: bool =
-                                                                  aux_env29_map_constraint_3(o);
+                                                                  aux_env29_map_constraint_1(o);
                                                               if is_except
                                                               { (&mut pres)[0] = false }
                                                               else
@@ -5207,14 +5029,14 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                           };
                           (&pres)[0]
                       },
-                    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty::Inr
+                    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty::Inr
                     { v: c21 }
                     =>
                       {
                           let
                           mut
                           pc:
-                          [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty;
+                          [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty;
                           1]
                           =
                               [c21; 1usize];
@@ -5225,7 +5047,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                               {
                                   let
                                   c3:
-                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
                                   =
                                       (&pc)[0];
                                   let
@@ -5308,7 +5130,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                                   let count·: u64 = count.wrapping_add(1u64);
                                   let
                                   i:
-                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
                                   =
                                       (&pc)[0];
                                   let
@@ -5383,9 +5205,9 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                                       (&pj)[0];
                                   let
                                   i·:
-                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
                                   =
-                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
                                       {
                                           cddl_map_iterator_contents: j,
                                           cddl_map_iterator_impl_validate1:
@@ -5412,7 +5234,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                                       out.split_at_mut(size0);
                                   let _outl1: &[u8] = _letpattern2.0;
                                   let out1: &mut [u8] = _letpattern2.1;
-                                  let sz1: usize = aux_env29_serialize_1(ck, out1);
+                                  let sz1: usize = serialize_label(ck, out1);
                                   if sz1 == 0usize
                                   { (&mut pres)[0] = false }
                                   else
@@ -5421,7 +5243,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                                           out1.split_at_mut(sz1);
                                       let outl2: &[u8] = _letpattern3.0;
                                       let out2: &mut [u8] = _letpattern3.1;
-                                      let sz2: usize = aux_env29_serialize_2(cv, out2);
+                                      let sz2: usize = serialize_values(cv, out2);
                                       if sz2 == 0usize
                                       { (&mut pres)[0] = false }
                                       else
@@ -5476,7 +5298,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                                                                       o2
                                                                   );
                                                               let is_except: bool =
-                                                                  aux_env29_map_constraint_3(o);
+                                                                  aux_env29_map_constraint_1(o);
                                                               if is_except
                                                               { (&mut pres)[0] = false }
                                                               else
@@ -5534,7 +5356,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP_pretty, out: &mut [u8]) ->
                                   {
                                       let
                                       c3:
-                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
                                       =
                                           (&pc)[0];
                                       let
@@ -5678,9 +5500,9 @@ pub fn validate_and_parse_COSE_Key_OKP <'a>(s: &'a [u8]) ->
     }
 }
 
-pub fn is_empty_iterate_map_aux_env29_type_1_and_aux_env29_type_2(
+pub fn is_empty_iterate_map_evercddl_label_and_evercddl_values(
     i:
-    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
 ) ->
     bool
 {
@@ -5733,17 +5555,17 @@ pub fn is_empty_iterate_map_aux_env29_type_1_and_aux_env29_type_2(
     (&pres)[0]
 }
 
-pub fn next_iterate_map_aux_env29_type_1_and_aux_env29_type_2 <'a>(
+pub fn next_iterate_map_evercddl_label_and_evercddl_values <'a>(
     pi:
     &'a mut
-    [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+    [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
     <'a>]
 ) ->
     (evercddl_label_pretty <'a>, crate::cbordetveraux::cbor_raw <'a>)
 {
     let
     i:
-    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
     =
         pi[0];
     let mut pj: [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] =
@@ -5795,9 +5617,9 @@ pub fn next_iterate_map_aux_env29_type_1_and_aux_env29_type_2 <'a>(
     let j: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pj)[0];
     let
     i·:
-    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
     =
-        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
         {
             cddl_map_iterator_contents: j,
             cddl_map_iterator_impl_validate1: i.cddl_map_iterator_impl_validate1,
@@ -7616,7 +7438,7 @@ pub struct evercddl_header_map_pretty <'a>
     either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·
     <'a>,
     pub _x1:
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty
+    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty
     <'a>
 }
 
@@ -7638,7 +7460,7 @@ fn evercddl_header_map_pretty_right <'a>(
     <'a>),
     either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·
     <'a>),
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty
+    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty
     <'a>)
 ) ->
     evercddl_header_map_pretty
@@ -7663,7 +7485,7 @@ fn evercddl_header_map_pretty_left <'a>(x13: evercddl_header_map_pretty <'a>) ->
     <'a>),
     either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·
     <'a>),
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty
+    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty
     <'a>)
 {
     let
@@ -7689,7 +7511,7 @@ fn evercddl_header_map_pretty_left <'a>(x13: evercddl_header_map_pretty <'a>) ->
         x13._x0;
     let
     x26:
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty
+    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty
     =
         x13._x1;
     (((((x21,x22),x23),x24),x25),x26)
@@ -8640,22 +8462,22 @@ parse_header_map
         };
     let
     rres:
-    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
     =
-        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
         {
             cddl_map_iterator_contents: i,
-            cddl_map_iterator_impl_validate1: aux_env29_validate_1,
-            cddl_map_iterator_impl_parse1: aux_env29_parse_1,
+            cddl_map_iterator_impl_validate1: validate_label,
+            cddl_map_iterator_impl_parse1: parse_label,
             cddl_map_iterator_impl_validate_ex: aux_env32_map_constraint_2,
-            cddl_map_iterator_impl_validate2: aux_env29_validate_2,
-            cddl_map_iterator_impl_parse2: aux_env29_parse_2
+            cddl_map_iterator_impl_validate2: validate_values,
+            cddl_map_iterator_impl_parse2: parse_values
         };
     let
     w23:
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty
+    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty
     =
-        either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty::Inr
+        either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty::Inr
         { v: rres };
     let
     res10:
@@ -8664,7 +8486,7 @@ parse_header_map
     option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty),
     option__COSE_Format_evercddl_bstr_pretty),
     either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·),
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty)
+    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty)
     =
         (w13,w23);
     evercddl_header_map_pretty_right(res10)
@@ -8684,7 +8506,7 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
     option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty),
     option__COSE_Format_evercddl_bstr_pretty),
     either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·),
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty)
+    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty)
     =
         evercddl_header_map_pretty_left(c);
     let mut pcount: [u64; 1] = [0u64; 1usize];
@@ -8696,7 +8518,7 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
     option__FStar_Pervasives_either·COSE_Format_evercddl_tstr_pretty·COSE_Format_evercddl_int_pretty),
     option__COSE_Format_evercddl_bstr_pretty),
     either__·COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·_FStar_Pervasives_either··COSE_Format_evercddl_bstr_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch_pretty·),
-    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty)
+    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty)
     =
         c·;
     let res: bool =
@@ -8712,7 +8534,7 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                 _letpattern.0;
             let
             c2:
-            either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty
+            either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty
             =
                 _letpattern.1;
             let
@@ -10080,7 +9902,7 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
             {
                 match c2
                 {
-                    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty::Inl
+                    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty::Inl
                     { v: c11 }
                     =>
                       {
@@ -10160,7 +9982,7 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                       out.split_at_mut(size0);
                                   let _outl1: &[u8] = _letpattern2.0;
                                   let out1: &mut [u8] = _letpattern2.1;
-                                  let sz1: usize = aux_env29_serialize_1(ck, out1);
+                                  let sz1: usize = serialize_label(ck, out1);
                                   if sz1 == 0usize
                                   { (&mut pres)[0] = false }
                                   else
@@ -10169,7 +9991,7 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                           out1.split_at_mut(sz1);
                                       let outl2: &[u8] = _letpattern3.0;
                                       let out2: &mut [u8] = _letpattern3.1;
-                                      let sz2: usize = aux_env29_serialize_2(cv, out2);
+                                      let sz2: usize = serialize_values(cv, out2);
                                       if sz2 == 0usize
                                       { (&mut pres)[0] = false }
                                       else
@@ -10293,14 +10115,14 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                           };
                           (&pres)[0]
                       },
-                    either__CDDL_Pulse_Types_slice··COSE_Format_aux_env29_type_1_pretty···COSE_Format_aux_env29_type_2_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_aux_env29_type_1_pretty·COSE_Format_aux_env29_type_2_pretty::Inr
+                    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label_pretty···COSE_Format_evercddl_values_pretty·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label_pretty·COSE_Format_evercddl_values_pretty::Inr
                     { v: c21 }
                     =>
                       {
                           let
                           mut
                           pc:
-                          [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty;
+                          [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty;
                           1]
                           =
                               [c21; 1usize];
@@ -10311,7 +10133,7 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                               {
                                   let
                                   c3:
-                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
                                   =
                                       (&pc)[0];
                                   let
@@ -10394,7 +10216,7 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                   let count·: u64 = count.wrapping_add(1u64);
                                   let
                                   i:
-                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
                                   =
                                       (&pc)[0];
                                   let
@@ -10469,9 +10291,9 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                       (&pj)[0];
                                   let
                                   i·:
-                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
                                   =
-                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
                                       {
                                           cddl_map_iterator_contents: j,
                                           cddl_map_iterator_impl_validate1:
@@ -10498,7 +10320,7 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                       out.split_at_mut(size0);
                                   let _outl1: &[u8] = _letpattern2.0;
                                   let out1: &mut [u8] = _letpattern2.1;
-                                  let sz1: usize = aux_env29_serialize_1(ck, out1);
+                                  let sz1: usize = serialize_label(ck, out1);
                                   if sz1 == 0usize
                                   { (&mut pres)[0] = false }
                                   else
@@ -10507,7 +10329,7 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                           out1.split_at_mut(sz1);
                                       let outl2: &[u8] = _letpattern3.0;
                                       let out2: &mut [u8] = _letpattern3.1;
-                                      let sz2: usize = aux_env29_serialize_2(cv, out2);
+                                      let sz2: usize = serialize_values(cv, out2);
                                       if sz2 == 0usize
                                       { (&mut pres)[0] = false }
                                       else
@@ -10620,7 +10442,7 @@ serialize_header_map(c: evercddl_header_map_pretty, out: &mut [u8]) ->
                                   {
                                       let
                                       c3:
-                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
                                       =
                                           (&pc)[0];
                                       let

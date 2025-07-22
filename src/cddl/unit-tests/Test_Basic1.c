@@ -16,7 +16,7 @@ int main()
         .len = len
     };
 
-    K___Basic1_aux_env3_type_1_pretty_Basic1_aux_env3_type_1_pretty *other_elems =
+    K___Basic1_evercddl_uint_pretty_Basic1_evercddl_uint_pretty *other_elems =
       malloc(2 * sizeof other_elems[0]);
     other_elems[0].fst = 42;
     other_elems[0].snd = 4242;

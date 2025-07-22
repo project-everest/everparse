@@ -23,13 +23,13 @@ COSE_EverCrypt_create_sig(
   uint8_t *sigbuf
 );
 
-K___COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
 COSE_EverCrypt_dummy_map_val(void);
 
 COSE_Format_evercddl_empty_or_serialized_map_pretty
 COSE_EverCrypt_mk_phdrs(
   int32_t alg,
-  K___COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty *rest
+  K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty *rest
 );
 
 typedef void *COSE_EverCrypt_sign1_spec;

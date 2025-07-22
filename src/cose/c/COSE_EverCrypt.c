@@ -86,12 +86,12 @@ COSE_EverCrypt_create_sig(
   }
 }
 
-K___COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
 COSE_EverCrypt_dummy_map_val(void)
 {
   return
     (
-      (K___COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty){
+      (K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty){
         .fst = {
           .tag = COSE_Format_Mkevercddl_label_pretty0,
           {
@@ -106,15 +106,15 @@ COSE_EverCrypt_dummy_map_val(void)
     );
 }
 
-static Pulse_Lib_Slice_slice___COSE_Format_aux_env29_type_1_pretty___COSE_Format_aux_env29_type_2_pretty_
-from_array___COSE_Format_aux_env29_type_1_pretty___COSE_Format_aux_env29_type_2_pretty_(
-  K___COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty *a,
+static Pulse_Lib_Slice_slice___COSE_Format_evercddl_label_pretty___COSE_Format_evercddl_values_pretty_
+from_array___COSE_Format_evercddl_label_pretty___COSE_Format_evercddl_values_pretty_(
+  K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty *a,
   size_t alen
 )
 {
   return
     (
-      (Pulse_Lib_Slice_slice___COSE_Format_aux_env29_type_1_pretty___COSE_Format_aux_env29_type_2_pretty_){
+      (Pulse_Lib_Slice_slice___COSE_Format_evercddl_label_pretty___COSE_Format_evercddl_values_pretty_){
         .elt = a,
         .len = alen
       }
@@ -124,7 +124,7 @@ from_array___COSE_Format_aux_env29_type_1_pretty___COSE_Format_aux_env29_type_2_
 COSE_Format_evercddl_empty_or_serialized_map_pretty
 COSE_EverCrypt_mk_phdrs(
   int32_t alg,
-  K___COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty *rest
+  K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty *rest
 )
 {
   COSE_Format_evercddl_int_pretty alg_ = COSE_EverCrypt_mk_int(alg);
@@ -157,7 +157,7 @@ COSE_EverCrypt_mk_phdrs(
             ._x1 = {
               .tag = COSE_Format_Inl,
               {
-                .case_Inl = from_array___COSE_Format_aux_env29_type_1_pretty___COSE_Format_aux_env29_type_2_pretty_(rest,
+                .case_Inl = from_array___COSE_Format_evercddl_label_pretty___COSE_Format_evercddl_values_pretty_(rest,
                   (size_t)0U)
               }
             }
@@ -177,10 +177,10 @@ COSE_EverCrypt_sign1(
 )
 {
   KRML_CHECK_SIZE(sizeof (
-      K___COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+      K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
     ),
     (size_t)0U);
-  K___COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty phdrauxbuf[0U];
+  K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty phdrauxbuf[0U];
   for (uint32_t _i = 0U; _i < (size_t)0U; ++_i)
     phdrauxbuf[_i] = COSE_EverCrypt_dummy_map_val();
   COSE_Format_evercddl_int_pretty alg_ = COSE_EverCrypt_mk_int((int32_t)-8);
@@ -213,7 +213,7 @@ COSE_EverCrypt_sign1(
           ._x1 = {
             .tag = COSE_Format_Inl,
             {
-              .case_Inl = from_array___COSE_Format_aux_env29_type_1_pretty___COSE_Format_aux_env29_type_2_pretty_(phdrauxbuf,
+              .case_Inl = from_array___COSE_Format_evercddl_label_pretty___COSE_Format_evercddl_values_pretty_(phdrauxbuf,
                 (size_t)0U)
             }
           }
@@ -251,10 +251,10 @@ COSE_EverCrypt_sign1_simple(
 )
 {
   KRML_CHECK_SIZE(sizeof (
-      K___COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty
+      K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
     ),
     (size_t)0U);
-  K___COSE_Format_aux_env29_type_1_pretty_COSE_Format_aux_env29_type_2_pretty buf0[0U];
+  K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty buf0[0U];
   for (uint32_t _i = 0U; _i < (size_t)0U; ++_i)
     buf0[_i] = COSE_EverCrypt_dummy_map_val();
   COSE_Format_evercddl_header_map_pretty
@@ -281,7 +281,7 @@ COSE_EverCrypt_sign1_simple(
       ._x1 = {
         .tag = COSE_Format_Inl,
         {
-          .case_Inl = from_array___COSE_Format_aux_env29_type_1_pretty___COSE_Format_aux_env29_type_2_pretty_(buf0,
+          .case_Inl = from_array___COSE_Format_evercddl_label_pretty___COSE_Format_evercddl_values_pretty_(buf0,
             (size_t)0U)
         }
       }

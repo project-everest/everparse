@@ -1,3 +1,5 @@
+; This file is standalone (does not require postlude.cddl)
+
 test1 = {
   foo: uint,
   ? bar: uint
