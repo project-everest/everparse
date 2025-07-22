@@ -1,5 +1,4 @@
 EVERPARSE_SRC_PATH = $(realpath ../..)
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
 OBJFILES = ../c/COSE_Format.c ../../cbor/pulse/det/c/CBORDet.c
 
