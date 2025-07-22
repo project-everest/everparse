@@ -248,7 +248,7 @@ cose-test: cose-extract-test cose-extracted-test
 
 .PHONY: cose-test
 
-cose:
+cose: cbor
 	+$(MAKE) -C src/cose
 
 .PHONY: cose
