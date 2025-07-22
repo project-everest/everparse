@@ -93,7 +93,10 @@ bool evercbor_lookup1(uint8_t *buf, size_t len, uint64_t key, uint64_t *val) {
   bool rc = cbor_det_map_get(m, k, &cval);
 
   if (rc) {
-    *val = cbor_det_read_uint64(cval);
+    rc = (cbor_det_major_type(cval) == CBOR_MAJOR_TYPE_UINT64);
+    if (rc) {
+      *val = cbor_det_read_uint64(cval);
+    }
   }
 
   return rc;
