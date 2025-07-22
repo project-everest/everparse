@@ -9,8 +9,6 @@ ifeq (,$(HACL_HOME))
 endif
 export HACL_HOME
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-
 SANFLAGS = -fsanitize=address -fsanitize=undefined
 
 CFLAGS += -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I ../../c
