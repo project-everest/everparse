@@ -20,7 +20,7 @@ RUN sudo apt-get install --yes \
 # Bring in the contents
 ARG CACHE_BUST
 RUN sudo mkdir /mnt/everparse && sudo chown opam:opam /mnt/everparse
-RUN git clone --branch _taramana_cbor_bij https://github.com/project-everest/everparse /mnt/everparse && echo $CACHE_BUST
+RUN git clone https://github.com/project-everest/everparse /mnt/everparse && echo $CACHE_BUST
 WORKDIR /mnt/everparse
 
 # Build and publish the release
