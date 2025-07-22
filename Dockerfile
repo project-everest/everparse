@@ -14,6 +14,7 @@ RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends \
   cmake \
   python-is-python3 \
   python3-pip \
+  python3-venv \
   time \
   wget
 
@@ -23,7 +24,7 @@ WORKDIR /mnt/everparse
 
 # Build and publish the release
 ARG CI_THREADS=24
-RUN sudo apt-get update && . "$HOME/.cargo/env" && env OPAMYES=1 make _opam && eval $(opam env) && make -j $CI_THREADS -C opt && env OTHERFLAGS='--admit_smt_queries true' make -j $CI_THREADS cbor cddl cose
+RUN sudo apt-get update && . "$HOME/.cargo/env" && env OPAMYES=1 make _opam && eval $(opam env) && make -j $CI_THREADS -C opt && env OTHERFLAGS='--admit_smt_queries true' make -j $CI_THREADS cbor-test cddl-test cose-test
 
 ENTRYPOINT ["/mnt/everparse/opt/shell.sh", "--login", "-c"]
 CMD ["/bin/bash"]
