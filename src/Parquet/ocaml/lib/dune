@@ -1,6 +1,6 @@
 (library
  (name parquet)
- (libraries thrift))
+ (libraries thrift batteries fstar.lib))
 
 (env
   (dev
