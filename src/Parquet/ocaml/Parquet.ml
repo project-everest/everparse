@@ -38,8 +38,7 @@ let () =
   Printf.printf "File metadata version: %s\n" (Int32.to_string fmd#grab_version) ;
   Printf.printf "File metadata num rows: %d\n" (Int64.to_int fmd#grab_num_rows) ;
   let fmd = convert_file_meta_data fmd in
-  Printf.printf "Converted file metadata version: %s\n" (Int32.to_string fmd.version) ;
-  Printf.printf "Converted file metadata num rows: %d\n" (Int64.to_int fmd.num_rows2) ;
+  Printf.printf "Converted file metadata: %s\n" (show_file_meta_data fmd) ;
 
 
 
