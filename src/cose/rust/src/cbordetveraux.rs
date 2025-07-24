@@ -1918,37 +1918,37 @@ pub(crate) fn cbor_raw_map_insert(out: &mut [u8], off2: usize, off3: usize) -> b
                 {
                     let mut pn: [usize; 1] = [out2kv.len(); 1usize];
                     let mut pl: [usize; 1] = [off2.wrapping_sub(off); 1usize];
-                    let l: usize = (&pl)[0];
-                    let mut cond0: bool = l > 0usize;
+                    let __anf3172: usize = (&pl)[0];
+                    let mut cond0: bool = __anf3172 > 0usize;
                     while
                     cond0
                     {
                         let n: usize = (&pn)[0];
-                        let l0: usize = (&pl)[0];
-                        let l·: usize = n.wrapping_rem(l0);
-                        (&mut pn)[0] = l0;
+                        let l: usize = (&pl)[0];
+                        let l·: usize = n.wrapping_rem(l);
+                        (&mut pn)[0] = l;
                         (&mut pl)[0] = l·;
-                        let l1: usize = (&pl)[0];
-                        cond0 = l1 > 0usize
+                        let __anf31720: usize = (&pl)[0];
+                        cond0 = __anf31720 > 0usize
                     };
                     let d: usize = (&pn)[0];
                     let q: usize = out2kv.len().wrapping_div(d);
                     let mut pi: [usize; 1] = [0usize; 1usize];
-                    let i: usize = (&pi)[0];
-                    let mut cond1: bool = i < d;
+                    let __anf4223: usize = (&pi)[0];
+                    let mut cond1: bool = __anf4223 < d;
                     while
                     cond1
                     {
-                        let i0: usize = (&pi)[0];
-                        let save: u8 = out2kv[i0];
+                        let i: usize = (&pi)[0];
+                        let save: u8 = out2kv[i];
                         let mut pj: [usize; 1] = [0usize; 1usize];
-                        let mut pidx: [usize; 1] = [i0; 1usize];
-                        let j: usize = (&pj)[0];
-                        let mut cond2: bool = j < q.wrapping_sub(1usize);
+                        let mut pidx: [usize; 1] = [i; 1usize];
+                        let __anf6456: usize = (&pj)[0];
+                        let mut cond2: bool = __anf6456 < q.wrapping_sub(1usize);
                         while
                         cond2
                         {
-                            let j0: usize = (&pj)[0];
+                            let j: usize = (&pj)[0];
                             let idx: usize = (&pidx)[0];
                             let idx·: usize =
                                 if
@@ -1963,19 +1963,19 @@ pub(crate) fn cbor_raw_map_insert(out: &mut [u8], off2: usize, off3: usize) -> b
                                 else
                                 { idx.wrapping_add(off2.wrapping_sub(off).wrapping_sub(0usize)) };
                             let x: u8 = out2kv[idx·];
-                            let j·: usize = j0.wrapping_add(1usize);
+                            let j·: usize = j.wrapping_add(1usize);
                             out2kv[idx] = x;
                             (&mut pj)[0] = j·;
                             (&mut pidx)[0] = idx·;
-                            let j1: usize = (&pj)[0];
-                            cond2 = j1 < q.wrapping_sub(1usize)
+                            let __anf64560: usize = (&pj)[0];
+                            cond2 = __anf64560 < q.wrapping_sub(1usize)
                         };
                         let idx: usize = (&pidx)[0];
                         out2kv[idx] = save;
-                        let i·: usize = i0.wrapping_add(1usize);
+                        let i·: usize = i.wrapping_add(1usize);
                         (&mut pi)[0] = i·;
-                        let i1: usize = (&pi)[0];
-                        cond1 = i1 < d
+                        let __anf42230: usize = (&pi)[0];
+                        cond1 = __anf42230 < d
                     }
                 };
                 (&mut pres)[0] = cbor_raw_map_insert_result::CSuccess
@@ -3331,37 +3331,37 @@ fn cbor_serialize_array·(len: raw_uint64, out: &mut [u8], off: usize) -> usize
         {
             let mut pn: [usize; 1] = [sp1.len(); 1usize];
             let mut pl: [usize; 1] = [off; 1usize];
-            let l1: usize = (&pl)[0];
-            let mut cond: bool = l1 > 0usize;
+            let __anf3172: usize = (&pl)[0];
+            let mut cond: bool = __anf3172 > 0usize;
             while
             cond
             {
                 let n: usize = (&pn)[0];
-                let l10: usize = (&pl)[0];
-                let l·: usize = n.wrapping_rem(l10);
-                (&mut pn)[0] = l10;
+                let l1: usize = (&pl)[0];
+                let l·: usize = n.wrapping_rem(l1);
+                (&mut pn)[0] = l1;
                 (&mut pl)[0] = l·;
-                let l11: usize = (&pl)[0];
-                cond = l11 > 0usize
+                let __anf31720: usize = (&pl)[0];
+                cond = __anf31720 > 0usize
             };
             let d: usize = (&pn)[0];
             let q: usize = sp1.len().wrapping_div(d);
             let mut pi: [usize; 1] = [0usize; 1usize];
-            let i: usize = (&pi)[0];
-            let mut cond0: bool = i < d;
+            let __anf4223: usize = (&pi)[0];
+            let mut cond0: bool = __anf4223 < d;
             while
             cond0
             {
-                let i0: usize = (&pi)[0];
-                let save: u8 = sp1[i0];
+                let i: usize = (&pi)[0];
+                let save: u8 = sp1[i];
                 let mut pj: [usize; 1] = [0usize; 1usize];
-                let mut pidx: [usize; 1] = [i0; 1usize];
-                let j: usize = (&pj)[0];
-                let mut cond1: bool = j < q.wrapping_sub(1usize);
+                let mut pidx: [usize; 1] = [i; 1usize];
+                let __anf6456: usize = (&pj)[0];
+                let mut cond1: bool = __anf6456 < q.wrapping_sub(1usize);
                 while
                 cond1
                 {
-                    let j0: usize = (&pj)[0];
+                    let j: usize = (&pj)[0];
                     let idx: usize = (&pidx)[0];
                     let idx·: usize =
                         if idx.wrapping_sub(0usize) >= sp1.len().wrapping_sub(off)
@@ -3369,19 +3369,19 @@ fn cbor_serialize_array·(len: raw_uint64, out: &mut [u8], off: usize) -> usize
                         else
                         { idx.wrapping_add(off.wrapping_sub(0usize)) };
                     let x: u8 = sp1[idx·];
-                    let j·: usize = j0.wrapping_add(1usize);
+                    let j·: usize = j.wrapping_add(1usize);
                     sp1[idx] = x;
                     (&mut pj)[0] = j·;
                     (&mut pidx)[0] = idx·;
-                    let j1: usize = (&pj)[0];
-                    cond1 = j1 < q.wrapping_sub(1usize)
+                    let __anf64560: usize = (&pj)[0];
+                    cond1 = __anf64560 < q.wrapping_sub(1usize)
                 };
                 let idx: usize = (&pidx)[0];
                 sp1[idx] = save;
-                let i·: usize = i0.wrapping_add(1usize);
+                let i·: usize = i.wrapping_add(1usize);
                 (&mut pi)[0] = i·;
-                let i1: usize = (&pi)[0];
-                cond0 = i1 < d
+                let __anf42230: usize = (&pi)[0];
+                cond0 = __anf42230 < d
             }
         };
         llen
@@ -3410,37 +3410,37 @@ pub(crate) fn cbor_serialize_string(ty: u8, off: raw_uint64, out: &mut [u8]) -> 
         {
             let mut pn: [usize; 1] = [sp1.len(); 1usize];
             let mut pl: [usize; 1] = [soff; 1usize];
-            let l: usize = (&pl)[0];
-            let mut cond: bool = l > 0usize;
+            let __anf3172: usize = (&pl)[0];
+            let mut cond: bool = __anf3172 > 0usize;
             while
             cond
             {
                 let n: usize = (&pn)[0];
-                let l0: usize = (&pl)[0];
-                let l·: usize = n.wrapping_rem(l0);
-                (&mut pn)[0] = l0;
+                let l: usize = (&pl)[0];
+                let l·: usize = n.wrapping_rem(l);
+                (&mut pn)[0] = l;
                 (&mut pl)[0] = l·;
-                let l1: usize = (&pl)[0];
-                cond = l1 > 0usize
+                let __anf31720: usize = (&pl)[0];
+                cond = __anf31720 > 0usize
             };
             let d: usize = (&pn)[0];
             let q: usize = sp1.len().wrapping_div(d);
             let mut pi: [usize; 1] = [0usize; 1usize];
-            let i: usize = (&pi)[0];
-            let mut cond0: bool = i < d;
+            let __anf4223: usize = (&pi)[0];
+            let mut cond0: bool = __anf4223 < d;
             while
             cond0
             {
-                let i0: usize = (&pi)[0];
-                let save: u8 = sp1[i0];
+                let i: usize = (&pi)[0];
+                let save: u8 = sp1[i];
                 let mut pj: [usize; 1] = [0usize; 1usize];
-                let mut pidx: [usize; 1] = [i0; 1usize];
-                let j: usize = (&pj)[0];
-                let mut cond1: bool = j < q.wrapping_sub(1usize);
+                let mut pidx: [usize; 1] = [i; 1usize];
+                let __anf6456: usize = (&pj)[0];
+                let mut cond1: bool = __anf6456 < q.wrapping_sub(1usize);
                 while
                 cond1
                 {
-                    let j0: usize = (&pj)[0];
+                    let j: usize = (&pj)[0];
                     let idx: usize = (&pidx)[0];
                     let idx·: usize =
                         if idx.wrapping_sub(0usize) >= sp1.len().wrapping_sub(soff)
@@ -3448,19 +3448,19 @@ pub(crate) fn cbor_serialize_string(ty: u8, off: raw_uint64, out: &mut [u8]) -> 
                         else
                         { idx.wrapping_add(soff.wrapping_sub(0usize)) };
                     let x: u8 = sp1[idx·];
-                    let j·: usize = j0.wrapping_add(1usize);
+                    let j·: usize = j.wrapping_add(1usize);
                     sp1[idx] = x;
                     (&mut pj)[0] = j·;
                     (&mut pidx)[0] = idx·;
-                    let j1: usize = (&pj)[0];
-                    cond1 = j1 < q.wrapping_sub(1usize)
+                    let __anf64560: usize = (&pj)[0];
+                    cond1 = __anf64560 < q.wrapping_sub(1usize)
                 };
                 let idx: usize = (&pidx)[0];
                 sp1[idx] = save;
-                let i·: usize = i0.wrapping_add(1usize);
+                let i·: usize = i.wrapping_add(1usize);
                 (&mut pi)[0] = i·;
-                let i1: usize = (&pi)[0];
-                cond0 = i1 < d
+                let __anf42230: usize = (&pi)[0];
+                cond0 = __anf42230 < d
             }
         };
         llen
@@ -3485,37 +3485,37 @@ fn cbor_serialize_map·(len: raw_uint64, out: &mut [u8], off: usize) -> usize
         {
             let mut pn: [usize; 1] = [sp1.len(); 1usize];
             let mut pl: [usize; 1] = [off; 1usize];
-            let l1: usize = (&pl)[0];
-            let mut cond: bool = l1 > 0usize;
+            let __anf3172: usize = (&pl)[0];
+            let mut cond: bool = __anf3172 > 0usize;
             while
             cond
             {
                 let n: usize = (&pn)[0];
-                let l10: usize = (&pl)[0];
-                let l·: usize = n.wrapping_rem(l10);
-                (&mut pn)[0] = l10;
+                let l1: usize = (&pl)[0];
+                let l·: usize = n.wrapping_rem(l1);
+                (&mut pn)[0] = l1;
                 (&mut pl)[0] = l·;
-                let l11: usize = (&pl)[0];
-                cond = l11 > 0usize
+                let __anf31720: usize = (&pl)[0];
+                cond = __anf31720 > 0usize
             };
             let d: usize = (&pn)[0];
             let q: usize = sp1.len().wrapping_div(d);
             let mut pi: [usize; 1] = [0usize; 1usize];
-            let i: usize = (&pi)[0];
-            let mut cond0: bool = i < d;
+            let __anf4223: usize = (&pi)[0];
+            let mut cond0: bool = __anf4223 < d;
             while
             cond0
             {
-                let i0: usize = (&pi)[0];
-                let save: u8 = sp1[i0];
+                let i: usize = (&pi)[0];
+                let save: u8 = sp1[i];
                 let mut pj: [usize; 1] = [0usize; 1usize];
-                let mut pidx: [usize; 1] = [i0; 1usize];
-                let j: usize = (&pj)[0];
-                let mut cond1: bool = j < q.wrapping_sub(1usize);
+                let mut pidx: [usize; 1] = [i; 1usize];
+                let __anf6456: usize = (&pj)[0];
+                let mut cond1: bool = __anf6456 < q.wrapping_sub(1usize);
                 while
                 cond1
                 {
-                    let j0: usize = (&pj)[0];
+                    let j: usize = (&pj)[0];
                     let idx: usize = (&pidx)[0];
                     let idx·: usize =
                         if idx.wrapping_sub(0usize) >= sp1.len().wrapping_sub(off)
@@ -3523,19 +3523,19 @@ fn cbor_serialize_map·(len: raw_uint64, out: &mut [u8], off: usize) -> usize
                         else
                         { idx.wrapping_add(off.wrapping_sub(0usize)) };
                     let x: u8 = sp1[idx·];
-                    let j·: usize = j0.wrapping_add(1usize);
+                    let j·: usize = j.wrapping_add(1usize);
                     sp1[idx] = x;
                     (&mut pj)[0] = j·;
                     (&mut pidx)[0] = idx·;
-                    let j1: usize = (&pj)[0];
-                    cond1 = j1 < q.wrapping_sub(1usize)
+                    let __anf64560: usize = (&pj)[0];
+                    cond1 = __anf64560 < q.wrapping_sub(1usize)
                 };
                 let idx: usize = (&pidx)[0];
                 sp1[idx] = save;
-                let i·: usize = i0.wrapping_add(1usize);
+                let i·: usize = i.wrapping_add(1usize);
                 (&mut pi)[0] = i·;
-                let i1: usize = (&pi)[0];
-                cond0 = i1 < d
+                let __anf42230: usize = (&pi)[0];
+                cond0 = __anf42230 < d
             }
         };
         llen
@@ -4266,37 +4266,37 @@ pub(crate) fn cbor_raw_sort_aux(a: &mut [cbor_map_entry]) -> bool
                         {
                             let mut pn: [usize; 1] = [ac1.len(); 1usize];
                             let mut pl: [usize; 1] = [i20.wrapping_sub(i10); 1usize];
-                            let l3: usize = (&pl)[0];
-                            let mut cond0: bool = l3 > 0usize;
+                            let __anf3172: usize = (&pl)[0];
+                            let mut cond0: bool = __anf3172 > 0usize;
                             while
                             cond0
                             {
                                 let n: usize = (&pn)[0];
-                                let l30: usize = (&pl)[0];
-                                let l·: usize = n.wrapping_rem(l30);
-                                (&mut pn)[0] = l30;
+                                let l3: usize = (&pl)[0];
+                                let l·: usize = n.wrapping_rem(l3);
+                                (&mut pn)[0] = l3;
                                 (&mut pl)[0] = l·;
-                                let l31: usize = (&pl)[0];
-                                cond0 = l31 > 0usize
+                                let __anf31720: usize = (&pl)[0];
+                                cond0 = __anf31720 > 0usize
                             };
                             let d: usize = (&pn)[0];
                             let q: usize = ac1.len().wrapping_div(d);
                             let mut pi: [usize; 1] = [0usize; 1usize];
-                            let i: usize = (&pi)[0];
-                            let mut cond1: bool = i < d;
+                            let __anf4223: usize = (&pi)[0];
+                            let mut cond1: bool = __anf4223 < d;
                             while
                             cond1
                             {
-                                let i0: usize = (&pi)[0];
-                                let save: cbor_map_entry = ac1[i0];
+                                let i: usize = (&pi)[0];
+                                let save: cbor_map_entry = ac1[i];
                                 let mut pj: [usize; 1] = [0usize; 1usize];
-                                let mut pidx: [usize; 1] = [i0; 1usize];
-                                let j: usize = (&pj)[0];
-                                let mut cond2: bool = j < q.wrapping_sub(1usize);
+                                let mut pidx: [usize; 1] = [i; 1usize];
+                                let __anf6456: usize = (&pj)[0];
+                                let mut cond2: bool = __anf6456 < q.wrapping_sub(1usize);
                                 while
                                 cond2
                                 {
-                                    let j0: usize = (&pj)[0];
+                                    let j: usize = (&pj)[0];
                                     let idx: usize = (&pidx)[0];
                                     let idx·: usize =
                                         if
@@ -4315,19 +4315,19 @@ pub(crate) fn cbor_raw_sort_aux(a: &mut [cbor_map_entry]) -> bool
                                             )
                                         };
                                     let x: cbor_map_entry = ac1[idx·];
-                                    let j·: usize = j0.wrapping_add(1usize);
+                                    let j·: usize = j.wrapping_add(1usize);
                                     ac1[idx] = x;
                                     (&mut pj)[0] = j·;
                                     (&mut pidx)[0] = idx·;
-                                    let j1: usize = (&pj)[0];
-                                    cond2 = j1 < q.wrapping_sub(1usize)
+                                    let __anf64560: usize = (&pj)[0];
+                                    cond2 = __anf64560 < q.wrapping_sub(1usize)
                                 };
                                 let idx: usize = (&pidx)[0];
                                 ac1[idx] = save;
-                                let i·: usize = i0.wrapping_add(1usize);
+                                let i·: usize = i.wrapping_add(1usize);
                                 (&mut pi)[0] = i·;
-                                let i3: usize = (&pi)[0];
-                                cond1 = i3 < d
+                                let __anf42230: usize = (&pi)[0];
+                                cond1 = __anf42230 < d
                             }
                         };
                         let i1·: usize = i10.wrapping_add(1usize);
