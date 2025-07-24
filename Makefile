@@ -263,6 +263,11 @@ ci: test 3d-doc-ci
 
 .PHONY: 3d-doc-ci
 
+3d-doc-snapshot: 3d
+	+$(MAKE) -C doc 3d-snapshot
+
+.PHONY: 3d-doc-snapshot
+
 clean-3d:
 	+$(MAKE) -C src/3d clean
 
