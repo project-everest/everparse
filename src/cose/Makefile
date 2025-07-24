@@ -37,12 +37,8 @@ test-interop: build-c .venv
 	+$(MAKE) -C interop
 
 .PHONY: test-verified-interop
-ifeq (,$(HACL_HOME))
-test-verified-interop:
-else
 test-verified-interop: build-c .venv
 	+$(MAKE) -C verifiedinterop/test
-endif
 
 test-rust: build-rust
 	cd rust && cargo test
