@@ -6304,37 +6304,37 @@
                 {
                     <span class="kw">let </span><span class="kw-2">mut </span>pn: [usize; <span class="number">1</span>] = [out2kv.len(); <span class="number">1usize</span>];
                     <span class="kw">let </span><span class="kw-2">mut </span>pl: [usize; <span class="number">1</span>] = [off2.wrapping_sub(off); <span class="number">1usize</span>];
-                    <span class="kw">let </span>l: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
-                    <span class="kw">let </span><span class="kw-2">mut </span>cond0: bool = l &gt; <span class="number">0usize</span>;
+                    <span class="kw">let </span>__anf3172: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
+                    <span class="kw">let </span><span class="kw-2">mut </span>cond0: bool = __anf3172 &gt; <span class="number">0usize</span>;
                     <span class="kw">while
                     </span>cond0
                     {
                         <span class="kw">let </span>n: usize = (<span class="kw-2">&amp;</span>pn)[<span class="number">0</span>];
-                        <span class="kw">let </span>l0: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
-                        <span class="kw">let </span>l·: usize = n.wrapping_rem(l0);
-                        (<span class="kw-2">&amp;mut </span>pn)[<span class="number">0</span>] = l0;
+                        <span class="kw">let </span>l: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
+                        <span class="kw">let </span>l·: usize = n.wrapping_rem(l);
+                        (<span class="kw-2">&amp;mut </span>pn)[<span class="number">0</span>] = l;
                         (<span class="kw-2">&amp;mut </span>pl)[<span class="number">0</span>] = l·;
-                        <span class="kw">let </span>l1: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
-                        cond0 = l1 &gt; <span class="number">0usize
+                        <span class="kw">let </span>__anf31720: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
+                        cond0 = __anf31720 &gt; <span class="number">0usize
                     </span>};
                     <span class="kw">let </span>d: usize = (<span class="kw-2">&amp;</span>pn)[<span class="number">0</span>];
                     <span class="kw">let </span>q: usize = out2kv.len().wrapping_div(d);
                     <span class="kw">let </span><span class="kw-2">mut </span>pi: [usize; <span class="number">1</span>] = [<span class="number">0usize</span>; <span class="number">1usize</span>];
-                    <span class="kw">let </span>i: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
-                    <span class="kw">let </span><span class="kw-2">mut </span>cond1: bool = i &lt; d;
+                    <span class="kw">let </span>__anf4223: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
+                    <span class="kw">let </span><span class="kw-2">mut </span>cond1: bool = __anf4223 &lt; d;
                     <span class="kw">while
                     </span>cond1
                     {
-                        <span class="kw">let </span>i0: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
-                        <span class="kw">let </span>save: u8 = out2kv[i0];
+                        <span class="kw">let </span>i: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
+                        <span class="kw">let </span>save: u8 = out2kv[i];
                         <span class="kw">let </span><span class="kw-2">mut </span>pj: [usize; <span class="number">1</span>] = [<span class="number">0usize</span>; <span class="number">1usize</span>];
-                        <span class="kw">let </span><span class="kw-2">mut </span>pidx: [usize; <span class="number">1</span>] = [i0; <span class="number">1usize</span>];
-                        <span class="kw">let </span>j: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
-                        <span class="kw">let </span><span class="kw-2">mut </span>cond2: bool = j &lt; q.wrapping_sub(<span class="number">1usize</span>);
+                        <span class="kw">let </span><span class="kw-2">mut </span>pidx: [usize; <span class="number">1</span>] = [i; <span class="number">1usize</span>];
+                        <span class="kw">let </span>__anf6456: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
+                        <span class="kw">let </span><span class="kw-2">mut </span>cond2: bool = __anf6456 &lt; q.wrapping_sub(<span class="number">1usize</span>);
                         <span class="kw">while
                         </span>cond2
                         {
-                            <span class="kw">let </span>j0: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
+                            <span class="kw">let </span>j: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
                             <span class="kw">let </span>idx: usize = (<span class="kw-2">&amp;</span>pidx)[<span class="number">0</span>];
                             <span class="kw">let </span>idx·: usize =
                                 <span class="kw">if
@@ -6349,19 +6349,19 @@
                                 <span class="kw">else
                                 </span>{ idx.wrapping_add(off2.wrapping_sub(off).wrapping_sub(<span class="number">0usize</span>)) };
                             <span class="kw">let </span>x: u8 = out2kv[idx·];
-                            <span class="kw">let </span>j·: usize = j0.wrapping_add(<span class="number">1usize</span>);
+                            <span class="kw">let </span>j·: usize = j.wrapping_add(<span class="number">1usize</span>);
                             out2kv[idx] = x;
                             (<span class="kw-2">&amp;mut </span>pj)[<span class="number">0</span>] = j·;
                             (<span class="kw-2">&amp;mut </span>pidx)[<span class="number">0</span>] = idx·;
-                            <span class="kw">let </span>j1: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
-                            cond2 = j1 &lt; q.wrapping_sub(<span class="number">1usize</span>)
+                            <span class="kw">let </span>__anf64560: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
+                            cond2 = __anf64560 &lt; q.wrapping_sub(<span class="number">1usize</span>)
                         };
                         <span class="kw">let </span>idx: usize = (<span class="kw-2">&amp;</span>pidx)[<span class="number">0</span>];
                         out2kv[idx] = save;
-                        <span class="kw">let </span>i·: usize = i0.wrapping_add(<span class="number">1usize</span>);
+                        <span class="kw">let </span>i·: usize = i.wrapping_add(<span class="number">1usize</span>);
                         (<span class="kw-2">&amp;mut </span>pi)[<span class="number">0</span>] = i·;
-                        <span class="kw">let </span>i1: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
-                        cond1 = i1 &lt; d
+                        <span class="kw">let </span>__anf42230: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
+                        cond1 = __anf42230 &lt; d
                     }
                 };
                 (<span class="kw-2">&amp;mut </span>pres)[<span class="number">0</span>] = cbor_raw_map_insert_result::CSuccess
@@ -7717,37 +7717,37 @@
         {
             <span class="kw">let </span><span class="kw-2">mut </span>pn: [usize; <span class="number">1</span>] = [sp1.len(); <span class="number">1usize</span>];
             <span class="kw">let </span><span class="kw-2">mut </span>pl: [usize; <span class="number">1</span>] = [off; <span class="number">1usize</span>];
-            <span class="kw">let </span>l1: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
-            <span class="kw">let </span><span class="kw-2">mut </span>cond: bool = l1 &gt; <span class="number">0usize</span>;
+            <span class="kw">let </span>__anf3172: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
+            <span class="kw">let </span><span class="kw-2">mut </span>cond: bool = __anf3172 &gt; <span class="number">0usize</span>;
             <span class="kw">while
             </span>cond
             {
                 <span class="kw">let </span>n: usize = (<span class="kw-2">&amp;</span>pn)[<span class="number">0</span>];
-                <span class="kw">let </span>l10: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
-                <span class="kw">let </span>l·: usize = n.wrapping_rem(l10);
-                (<span class="kw-2">&amp;mut </span>pn)[<span class="number">0</span>] = l10;
+                <span class="kw">let </span>l1: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
+                <span class="kw">let </span>l·: usize = n.wrapping_rem(l1);
+                (<span class="kw-2">&amp;mut </span>pn)[<span class="number">0</span>] = l1;
                 (<span class="kw-2">&amp;mut </span>pl)[<span class="number">0</span>] = l·;
-                <span class="kw">let </span>l11: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
-                cond = l11 &gt; <span class="number">0usize
+                <span class="kw">let </span>__anf31720: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
+                cond = __anf31720 &gt; <span class="number">0usize
             </span>};
             <span class="kw">let </span>d: usize = (<span class="kw-2">&amp;</span>pn)[<span class="number">0</span>];
             <span class="kw">let </span>q: usize = sp1.len().wrapping_div(d);
             <span class="kw">let </span><span class="kw-2">mut </span>pi: [usize; <span class="number">1</span>] = [<span class="number">0usize</span>; <span class="number">1usize</span>];
-            <span class="kw">let </span>i: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
-            <span class="kw">let </span><span class="kw-2">mut </span>cond0: bool = i &lt; d;
+            <span class="kw">let </span>__anf4223: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
+            <span class="kw">let </span><span class="kw-2">mut </span>cond0: bool = __anf4223 &lt; d;
             <span class="kw">while
             </span>cond0
             {
-                <span class="kw">let </span>i0: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
-                <span class="kw">let </span>save: u8 = sp1[i0];
+                <span class="kw">let </span>i: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
+                <span class="kw">let </span>save: u8 = sp1[i];
                 <span class="kw">let </span><span class="kw-2">mut </span>pj: [usize; <span class="number">1</span>] = [<span class="number">0usize</span>; <span class="number">1usize</span>];
-                <span class="kw">let </span><span class="kw-2">mut </span>pidx: [usize; <span class="number">1</span>] = [i0; <span class="number">1usize</span>];
-                <span class="kw">let </span>j: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
-                <span class="kw">let </span><span class="kw-2">mut </span>cond1: bool = j &lt; q.wrapping_sub(<span class="number">1usize</span>);
+                <span class="kw">let </span><span class="kw-2">mut </span>pidx: [usize; <span class="number">1</span>] = [i; <span class="number">1usize</span>];
+                <span class="kw">let </span>__anf6456: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
+                <span class="kw">let </span><span class="kw-2">mut </span>cond1: bool = __anf6456 &lt; q.wrapping_sub(<span class="number">1usize</span>);
                 <span class="kw">while
                 </span>cond1
                 {
-                    <span class="kw">let </span>j0: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
+                    <span class="kw">let </span>j: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
                     <span class="kw">let </span>idx: usize = (<span class="kw-2">&amp;</span>pidx)[<span class="number">0</span>];
                     <span class="kw">let </span>idx·: usize =
                         <span class="kw">if </span>idx.wrapping_sub(<span class="number">0usize</span>) &gt;= sp1.len().wrapping_sub(off)
@@ -7755,19 +7755,19 @@
                         <span class="kw">else
                         </span>{ idx.wrapping_add(off.wrapping_sub(<span class="number">0usize</span>)) };
                     <span class="kw">let </span>x: u8 = sp1[idx·];
-                    <span class="kw">let </span>j·: usize = j0.wrapping_add(<span class="number">1usize</span>);
+                    <span class="kw">let </span>j·: usize = j.wrapping_add(<span class="number">1usize</span>);
                     sp1[idx] = x;
                     (<span class="kw-2">&amp;mut </span>pj)[<span class="number">0</span>] = j·;
                     (<span class="kw-2">&amp;mut </span>pidx)[<span class="number">0</span>] = idx·;
-                    <span class="kw">let </span>j1: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
-                    cond1 = j1 &lt; q.wrapping_sub(<span class="number">1usize</span>)
+                    <span class="kw">let </span>__anf64560: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
+                    cond1 = __anf64560 &lt; q.wrapping_sub(<span class="number">1usize</span>)
                 };
                 <span class="kw">let </span>idx: usize = (<span class="kw-2">&amp;</span>pidx)[<span class="number">0</span>];
                 sp1[idx] = save;
-                <span class="kw">let </span>i·: usize = i0.wrapping_add(<span class="number">1usize</span>);
+                <span class="kw">let </span>i·: usize = i.wrapping_add(<span class="number">1usize</span>);
                 (<span class="kw-2">&amp;mut </span>pi)[<span class="number">0</span>] = i·;
-                <span class="kw">let </span>i1: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
-                cond0 = i1 &lt; d
+                <span class="kw">let </span>__anf42230: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
+                cond0 = __anf42230 &lt; d
             }
         };
         llen
@@ -7796,37 +7796,37 @@
         {
             <span class="kw">let </span><span class="kw-2">mut </span>pn: [usize; <span class="number">1</span>] = [sp1.len(); <span class="number">1usize</span>];
             <span class="kw">let </span><span class="kw-2">mut </span>pl: [usize; <span class="number">1</span>] = [soff; <span class="number">1usize</span>];
-            <span class="kw">let </span>l: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
-            <span class="kw">let </span><span class="kw-2">mut </span>cond: bool = l &gt; <span class="number">0usize</span>;
+            <span class="kw">let </span>__anf3172: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
+            <span class="kw">let </span><span class="kw-2">mut </span>cond: bool = __anf3172 &gt; <span class="number">0usize</span>;
             <span class="kw">while
             </span>cond
             {
                 <span class="kw">let </span>n: usize = (<span class="kw-2">&amp;</span>pn)[<span class="number">0</span>];
-                <span class="kw">let </span>l0: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
-                <span class="kw">let </span>l·: usize = n.wrapping_rem(l0);
-                (<span class="kw-2">&amp;mut </span>pn)[<span class="number">0</span>] = l0;
+                <span class="kw">let </span>l: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
+                <span class="kw">let </span>l·: usize = n.wrapping_rem(l);
+                (<span class="kw-2">&amp;mut </span>pn)[<span class="number">0</span>] = l;
                 (<span class="kw-2">&amp;mut </span>pl)[<span class="number">0</span>] = l·;
-                <span class="kw">let </span>l1: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
-                cond = l1 &gt; <span class="number">0usize
+                <span class="kw">let </span>__anf31720: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
+                cond = __anf31720 &gt; <span class="number">0usize
             </span>};
             <span class="kw">let </span>d: usize = (<span class="kw-2">&amp;</span>pn)[<span class="number">0</span>];
             <span class="kw">let </span>q: usize = sp1.len().wrapping_div(d);
             <span class="kw">let </span><span class="kw-2">mut </span>pi: [usize; <span class="number">1</span>] = [<span class="number">0usize</span>; <span class="number">1usize</span>];
-            <span class="kw">let </span>i: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
-            <span class="kw">let </span><span class="kw-2">mut </span>cond0: bool = i &lt; d;
+            <span class="kw">let </span>__anf4223: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
+            <span class="kw">let </span><span class="kw-2">mut </span>cond0: bool = __anf4223 &lt; d;
             <span class="kw">while
             </span>cond0
             {
-                <span class="kw">let </span>i0: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
-                <span class="kw">let </span>save: u8 = sp1[i0];
+                <span class="kw">let </span>i: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
+                <span class="kw">let </span>save: u8 = sp1[i];
                 <span class="kw">let </span><span class="kw-2">mut </span>pj: [usize; <span class="number">1</span>] = [<span class="number">0usize</span>; <span class="number">1usize</span>];
-                <span class="kw">let </span><span class="kw-2">mut </span>pidx: [usize; <span class="number">1</span>] = [i0; <span class="number">1usize</span>];
-                <span class="kw">let </span>j: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
-                <span class="kw">let </span><span class="kw-2">mut </span>cond1: bool = j &lt; q.wrapping_sub(<span class="number">1usize</span>);
+                <span class="kw">let </span><span class="kw-2">mut </span>pidx: [usize; <span class="number">1</span>] = [i; <span class="number">1usize</span>];
+                <span class="kw">let </span>__anf6456: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
+                <span class="kw">let </span><span class="kw-2">mut </span>cond1: bool = __anf6456 &lt; q.wrapping_sub(<span class="number">1usize</span>);
                 <span class="kw">while
                 </span>cond1
                 {
-                    <span class="kw">let </span>j0: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
+                    <span class="kw">let </span>j: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
                     <span class="kw">let </span>idx: usize = (<span class="kw-2">&amp;</span>pidx)[<span class="number">0</span>];
                     <span class="kw">let </span>idx·: usize =
                         <span class="kw">if </span>idx.wrapping_sub(<span class="number">0usize</span>) &gt;= sp1.len().wrapping_sub(soff)
@@ -7834,19 +7834,19 @@
                         <span class="kw">else
                         </span>{ idx.wrapping_add(soff.wrapping_sub(<span class="number">0usize</span>)) };
                     <span class="kw">let </span>x: u8 = sp1[idx·];
-                    <span class="kw">let </span>j·: usize = j0.wrapping_add(<span class="number">1usize</span>);
+                    <span class="kw">let </span>j·: usize = j.wrapping_add(<span class="number">1usize</span>);
                     sp1[idx] = x;
                     (<span class="kw-2">&amp;mut </span>pj)[<span class="number">0</span>] = j·;
                     (<span class="kw-2">&amp;mut </span>pidx)[<span class="number">0</span>] = idx·;
-                    <span class="kw">let </span>j1: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
-                    cond1 = j1 &lt; q.wrapping_sub(<span class="number">1usize</span>)
+                    <span class="kw">let </span>__anf64560: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
+                    cond1 = __anf64560 &lt; q.wrapping_sub(<span class="number">1usize</span>)
                 };
                 <span class="kw">let </span>idx: usize = (<span class="kw-2">&amp;</span>pidx)[<span class="number">0</span>];
                 sp1[idx] = save;
-                <span class="kw">let </span>i·: usize = i0.wrapping_add(<span class="number">1usize</span>);
+                <span class="kw">let </span>i·: usize = i.wrapping_add(<span class="number">1usize</span>);
                 (<span class="kw-2">&amp;mut </span>pi)[<span class="number">0</span>] = i·;
-                <span class="kw">let </span>i1: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
-                cond0 = i1 &lt; d
+                <span class="kw">let </span>__anf42230: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
+                cond0 = __anf42230 &lt; d
             }
         };
         llen
@@ -7871,37 +7871,37 @@
         {
             <span class="kw">let </span><span class="kw-2">mut </span>pn: [usize; <span class="number">1</span>] = [sp1.len(); <span class="number">1usize</span>];
             <span class="kw">let </span><span class="kw-2">mut </span>pl: [usize; <span class="number">1</span>] = [off; <span class="number">1usize</span>];
-            <span class="kw">let </span>l1: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
-            <span class="kw">let </span><span class="kw-2">mut </span>cond: bool = l1 &gt; <span class="number">0usize</span>;
+            <span class="kw">let </span>__anf3172: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
+            <span class="kw">let </span><span class="kw-2">mut </span>cond: bool = __anf3172 &gt; <span class="number">0usize</span>;
             <span class="kw">while
             </span>cond
             {
                 <span class="kw">let </span>n: usize = (<span class="kw-2">&amp;</span>pn)[<span class="number">0</span>];
-                <span class="kw">let </span>l10: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
-                <span class="kw">let </span>l·: usize = n.wrapping_rem(l10);
-                (<span class="kw-2">&amp;mut </span>pn)[<span class="number">0</span>] = l10;
+                <span class="kw">let </span>l1: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
+                <span class="kw">let </span>l·: usize = n.wrapping_rem(l1);
+                (<span class="kw-2">&amp;mut </span>pn)[<span class="number">0</span>] = l1;
                 (<span class="kw-2">&amp;mut </span>pl)[<span class="number">0</span>] = l·;
-                <span class="kw">let </span>l11: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
-                cond = l11 &gt; <span class="number">0usize
+                <span class="kw">let </span>__anf31720: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
+                cond = __anf31720 &gt; <span class="number">0usize
             </span>};
             <span class="kw">let </span>d: usize = (<span class="kw-2">&amp;</span>pn)[<span class="number">0</span>];
             <span class="kw">let </span>q: usize = sp1.len().wrapping_div(d);
             <span class="kw">let </span><span class="kw-2">mut </span>pi: [usize; <span class="number">1</span>] = [<span class="number">0usize</span>; <span class="number">1usize</span>];
-            <span class="kw">let </span>i: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
-            <span class="kw">let </span><span class="kw-2">mut </span>cond0: bool = i &lt; d;
+            <span class="kw">let </span>__anf4223: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
+            <span class="kw">let </span><span class="kw-2">mut </span>cond0: bool = __anf4223 &lt; d;
             <span class="kw">while
             </span>cond0
             {
-                <span class="kw">let </span>i0: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
-                <span class="kw">let </span>save: u8 = sp1[i0];
+                <span class="kw">let </span>i: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
+                <span class="kw">let </span>save: u8 = sp1[i];
                 <span class="kw">let </span><span class="kw-2">mut </span>pj: [usize; <span class="number">1</span>] = [<span class="number">0usize</span>; <span class="number">1usize</span>];
-                <span class="kw">let </span><span class="kw-2">mut </span>pidx: [usize; <span class="number">1</span>] = [i0; <span class="number">1usize</span>];
-                <span class="kw">let </span>j: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
-                <span class="kw">let </span><span class="kw-2">mut </span>cond1: bool = j &lt; q.wrapping_sub(<span class="number">1usize</span>);
+                <span class="kw">let </span><span class="kw-2">mut </span>pidx: [usize; <span class="number">1</span>] = [i; <span class="number">1usize</span>];
+                <span class="kw">let </span>__anf6456: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
+                <span class="kw">let </span><span class="kw-2">mut </span>cond1: bool = __anf6456 &lt; q.wrapping_sub(<span class="number">1usize</span>);
                 <span class="kw">while
                 </span>cond1
                 {
-                    <span class="kw">let </span>j0: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
+                    <span class="kw">let </span>j: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
                     <span class="kw">let </span>idx: usize = (<span class="kw-2">&amp;</span>pidx)[<span class="number">0</span>];
                     <span class="kw">let </span>idx·: usize =
                         <span class="kw">if </span>idx.wrapping_sub(<span class="number">0usize</span>) &gt;= sp1.len().wrapping_sub(off)
@@ -7909,19 +7909,19 @@
                         <span class="kw">else
                         </span>{ idx.wrapping_add(off.wrapping_sub(<span class="number">0usize</span>)) };
                     <span class="kw">let </span>x: u8 = sp1[idx·];
-                    <span class="kw">let </span>j·: usize = j0.wrapping_add(<span class="number">1usize</span>);
+                    <span class="kw">let </span>j·: usize = j.wrapping_add(<span class="number">1usize</span>);
                     sp1[idx] = x;
                     (<span class="kw-2">&amp;mut </span>pj)[<span class="number">0</span>] = j·;
                     (<span class="kw-2">&amp;mut </span>pidx)[<span class="number">0</span>] = idx·;
-                    <span class="kw">let </span>j1: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
-                    cond1 = j1 &lt; q.wrapping_sub(<span class="number">1usize</span>)
+                    <span class="kw">let </span>__anf64560: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
+                    cond1 = __anf64560 &lt; q.wrapping_sub(<span class="number">1usize</span>)
                 };
                 <span class="kw">let </span>idx: usize = (<span class="kw-2">&amp;</span>pidx)[<span class="number">0</span>];
                 sp1[idx] = save;
-                <span class="kw">let </span>i·: usize = i0.wrapping_add(<span class="number">1usize</span>);
+                <span class="kw">let </span>i·: usize = i.wrapping_add(<span class="number">1usize</span>);
                 (<span class="kw-2">&amp;mut </span>pi)[<span class="number">0</span>] = i·;
-                <span class="kw">let </span>i1: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
-                cond0 = i1 &lt; d
+                <span class="kw">let </span>__anf42230: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
+                cond0 = __anf42230 &lt; d
             }
         };
         llen
@@ -8652,37 +8652,37 @@
                         {
                             <span class="kw">let </span><span class="kw-2">mut </span>pn: [usize; <span class="number">1</span>] = [ac1.len(); <span class="number">1usize</span>];
                             <span class="kw">let </span><span class="kw-2">mut </span>pl: [usize; <span class="number">1</span>] = [i20.wrapping_sub(i10); <span class="number">1usize</span>];
-                            <span class="kw">let </span>l3: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
-                            <span class="kw">let </span><span class="kw-2">mut </span>cond0: bool = l3 &gt; <span class="number">0usize</span>;
+                            <span class="kw">let </span>__anf3172: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
+                            <span class="kw">let </span><span class="kw-2">mut </span>cond0: bool = __anf3172 &gt; <span class="number">0usize</span>;
                             <span class="kw">while
                             </span>cond0
                             {
                                 <span class="kw">let </span>n: usize = (<span class="kw-2">&amp;</span>pn)[<span class="number">0</span>];
-                                <span class="kw">let </span>l30: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
-                                <span class="kw">let </span>l·: usize = n.wrapping_rem(l30);
-                                (<span class="kw-2">&amp;mut </span>pn)[<span class="number">0</span>] = l30;
+                                <span class="kw">let </span>l3: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
+                                <span class="kw">let </span>l·: usize = n.wrapping_rem(l3);
+                                (<span class="kw-2">&amp;mut </span>pn)[<span class="number">0</span>] = l3;
                                 (<span class="kw-2">&amp;mut </span>pl)[<span class="number">0</span>] = l·;
-                                <span class="kw">let </span>l31: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
-                                cond0 = l31 &gt; <span class="number">0usize
+                                <span class="kw">let </span>__anf31720: usize = (<span class="kw-2">&amp;</span>pl)[<span class="number">0</span>];
+                                cond0 = __anf31720 &gt; <span class="number">0usize
                             </span>};
                             <span class="kw">let </span>d: usize = (<span class="kw-2">&amp;</span>pn)[<span class="number">0</span>];
                             <span class="kw">let </span>q: usize = ac1.len().wrapping_div(d);
                             <span class="kw">let </span><span class="kw-2">mut </span>pi: [usize; <span class="number">1</span>] = [<span class="number">0usize</span>; <span class="number">1usize</span>];
-                            <span class="kw">let </span>i: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
-                            <span class="kw">let </span><span class="kw-2">mut </span>cond1: bool = i &lt; d;
+                            <span class="kw">let </span>__anf4223: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
+                            <span class="kw">let </span><span class="kw-2">mut </span>cond1: bool = __anf4223 &lt; d;
                             <span class="kw">while
                             </span>cond1
                             {
-                                <span class="kw">let </span>i0: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
-                                <span class="kw">let </span>save: cbor_map_entry = ac1[i0];
+                                <span class="kw">let </span>i: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
+                                <span class="kw">let </span>save: cbor_map_entry = ac1[i];
                                 <span class="kw">let </span><span class="kw-2">mut </span>pj: [usize; <span class="number">1</span>] = [<span class="number">0usize</span>; <span class="number">1usize</span>];
-                                <span class="kw">let </span><span class="kw-2">mut </span>pidx: [usize; <span class="number">1</span>] = [i0; <span class="number">1usize</span>];
-                                <span class="kw">let </span>j: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
-                                <span class="kw">let </span><span class="kw-2">mut </span>cond2: bool = j &lt; q.wrapping_sub(<span class="number">1usize</span>);
+                                <span class="kw">let </span><span class="kw-2">mut </span>pidx: [usize; <span class="number">1</span>] = [i; <span class="number">1usize</span>];
+                                <span class="kw">let </span>__anf6456: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
+                                <span class="kw">let </span><span class="kw-2">mut </span>cond2: bool = __anf6456 &lt; q.wrapping_sub(<span class="number">1usize</span>);
                                 <span class="kw">while
                                 </span>cond2
                                 {
-                                    <span class="kw">let </span>j0: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
+                                    <span class="kw">let </span>j: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
                                     <span class="kw">let </span>idx: usize = (<span class="kw-2">&amp;</span>pidx)[<span class="number">0</span>];
                                     <span class="kw">let </span>idx·: usize =
                                         <span class="kw">if
@@ -8701,19 +8701,19 @@
                                             )
                                         };
                                     <span class="kw">let </span>x: cbor_map_entry = ac1[idx·];
-                                    <span class="kw">let </span>j·: usize = j0.wrapping_add(<span class="number">1usize</span>);
+                                    <span class="kw">let </span>j·: usize = j.wrapping_add(<span class="number">1usize</span>);
                                     ac1[idx] = x;
                                     (<span class="kw-2">&amp;mut </span>pj)[<span class="number">0</span>] = j·;
                                     (<span class="kw-2">&amp;mut </span>pidx)[<span class="number">0</span>] = idx·;
-                                    <span class="kw">let </span>j1: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
-                                    cond2 = j1 &lt; q.wrapping_sub(<span class="number">1usize</span>)
+                                    <span class="kw">let </span>__anf64560: usize = (<span class="kw-2">&amp;</span>pj)[<span class="number">0</span>];
+                                    cond2 = __anf64560 &lt; q.wrapping_sub(<span class="number">1usize</span>)
                                 };
                                 <span class="kw">let </span>idx: usize = (<span class="kw-2">&amp;</span>pidx)[<span class="number">0</span>];
                                 ac1[idx] = save;
-                                <span class="kw">let </span>i·: usize = i0.wrapping_add(<span class="number">1usize</span>);
+                                <span class="kw">let </span>i·: usize = i.wrapping_add(<span class="number">1usize</span>);
                                 (<span class="kw-2">&amp;mut </span>pi)[<span class="number">0</span>] = i·;
-                                <span class="kw">let </span>i3: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
-                                cond1 = i3 &lt; d
+                                <span class="kw">let </span>__anf42230: usize = (<span class="kw-2">&amp;</span>pi)[<span class="number">0</span>];
+                                cond1 = __anf42230 &lt; d
                             }
                         };
                         <span class="kw">let </span>i1·: usize = i10.wrapping_add(<span class="number">1usize</span>);

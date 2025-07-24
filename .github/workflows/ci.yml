@@ -115,15 +115,6 @@ jobs:
       - run: echo "PULSE_HOME=$(pwd)/pulse"/out | sudo tee -a $GITHUB_ENV
 
       - uses: actions/checkout@master
-        id: checkout-hacl
-        with:
-          path: hacl-star
-          repository: hacl-star/hacl-star
-          ref: main
-
-      - run: echo "HACL_HOME=$(pwd)/hacl-star" | sudo tee -a $GITHUB_ENV
-
-      - uses: actions/checkout@master
         with:
           path: everparse
 

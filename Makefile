@@ -4,7 +4,6 @@ export EVERPARSE_OPT_PATH=$(realpath opt)
 export FSTAR_EXE ?= $(wildcard $(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe)
 export KRML_HOME ?= $(EVERPARSE_OPT_PATH)/karamel
 export PULSE_HOME ?= $(EVERPARSE_OPT_PATH)/pulse/out
-export HACL_HOME ?= $(EVERPARSE_OPT_PATH)/hacl-star
 EVEREST_HOME ?= $(EVERPARSE_OPT_PATH)/everest
 export PATH := $(EVERPARSE_OPT_PATH)/z3:$(PATH)
 

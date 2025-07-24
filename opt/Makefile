@@ -1,4 +1,4 @@
-all: FStar.do karamel.do pulse.do hacl-star
+all: FStar.do karamel.do pulse.do
 
 export ADMIT=1
 
@@ -7,7 +7,6 @@ export EVERPARSE_OPT_PATH=$(realpath .)
 export FSTAR_EXE  := $(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe
 export KRML_HOME  := $(EVERPARSE_OPT_PATH)/karamel
 export PULSE_HOME := $(EVERPARSE_OPT_PATH)/pulse/out
-export HACL_HOME := $(EVERPARSE_OPT_PATH)/hacl-star
 export PATH := $(EVERPARSE_OPT_PATH)/z3:$(PATH)
 
 include env.Makefile
@@ -27,9 +26,6 @@ pulse:
 
 everest:
 	git clone "https://github.com/project-everest/everest" $@
-
-hacl-star:
-	git clone "https://github.com/hacl-star/hacl-star" $@
 
 FStar.do: FStar
 	+$(MAKE) -C $< ADMIT=1

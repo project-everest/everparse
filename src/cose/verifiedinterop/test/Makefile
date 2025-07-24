@@ -5,7 +5,7 @@ all: signtest verifytest test
 EVERPARSE_SRC_PATH = $(realpath ../../..)
 EVERPARSE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)
 ifeq (,$(HACL_HOME))
-  HACL_HOME := $(EVERPARSE_PATH)/opt/hacl-star
+  HACL_HOME := $(CURDIR)/hacl-star
 endif
 export HACL_HOME
 
@@ -13,8 +13,13 @@ SANFLAGS = -fsanitize=address -fsanitize=undefined
 
 CFLAGS += -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I ../../c
 
-$(HACL_HOME)/dist/gcc-compatible/libevercrypt.a:
+$(HACL_HOME)/dist/gcc-compatible/libevercrypt.a: $(HACL_HOME)
 	$(MAKE) -C $(dir $@)
+
+$(CURDIR)/hacl-star:
+	rm -rf $@.tmp
+	git clone https://github.com/hacl-star/hacl-star $@.tmp
+	mv $@.tmp $@
 
 COSE_EVERCRYPT_O=../../c/COSE_EverCrypt.o
 COSE_FORMAT_O=../../c/COSE_Format.o
