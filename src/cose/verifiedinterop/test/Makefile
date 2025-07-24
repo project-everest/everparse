@@ -9,7 +9,7 @@ ifeq (,$(HACL_HOME))
 endif
 export HACL_HOME
 ifeq (,$(KRML_HOME))
-  KRML_HOME := $(CURDIR)/karamel
+  KRML_HOME := $(EVERPARSE_PATH)/opt/karamel
 endif
 export KRML_HOME
 
@@ -25,10 +25,8 @@ $(CURDIR)/hacl-star:
 	git clone https://github.com/hacl-star/hacl-star $@.tmp
 	mv $@.tmp $@
 
-$(CURDIR)/karamel:
-	rm -rf $@.tmp
-	git clone https://github.com/FStarLang/karamel $@.tmp
-	mv $@.tmp $@
+$(EVERPARSE_PATH)/opt/karamel:
+	+$(MAKE) -C $(dir $@) $(notdir $@)
 
 COSE_EVERCRYPT_O=../../c/COSE_EverCrypt.o
 COSE_FORMAT_O=../../c/COSE_Format.o
