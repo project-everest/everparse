@@ -2,6 +2,7 @@
  (name parquet)
  (public_name parquet.exe)
  (libraries thrift fstar.lib)
+ (preprocess (pps ppx_deriving.show))
  (modes native byte)
 )
 (env

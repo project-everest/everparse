@@ -4,6 +4,7 @@ module TCTrans = TChannelTransport
 module TCompactProt = TCompactProtocol
 
 open Parquet_types
+open Parquet_shim
 
 let test_file_path = "/home/caiyi/repos/arrow-rs/parquet-testing/data/nested_maps.snappy.parquet"
 
@@ -36,6 +37,9 @@ let () =
   close_in ic; close_out oc;
   Printf.printf "File metadata version: %s\n" (Int32.to_string fmd#grab_version) ;
   Printf.printf "File metadata num rows: %d\n" (Int64.to_int fmd#grab_num_rows) ;
+  let fmd = convert_file_meta_data fmd in
+  Printf.printf "Converted file metadata version: %s\n" (Int32.to_string fmd.version) ;
+  Printf.printf "Converted file metadata num rows: %d\n" (Int64.to_int fmd.num_rows2) ;
 
 
 
