@@ -1,7 +1,0 @@
-(library
- (name parquet)
- (libraries thrift batteries fstar.lib))
-
-(env
-  (dev
-    (flags (:standard -warn-error -A))))
