@@ -1,8 +1,0 @@
-(executable
- (public_name parquet)
- (name main)
- (libraries parquet))
-
-(env
-  (dev
-    (flags (:standard -warn-error -A))))

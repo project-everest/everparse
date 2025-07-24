@@ -3,7 +3,7 @@ open Thrift
 module TCTrans = TChannelTransport
 module TCompactProt = TCompactProtocol
 
-open Parquet.Parquet_types
+open Parquet_types
 
 let test_file_path = "/home/caiyi/repos/arrow-rs/parquet-testing/data/nested_maps.snappy.parquet"
 
@@ -40,3 +40,4 @@ let () =
 
 
 
+ 

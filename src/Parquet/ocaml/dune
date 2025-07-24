@@ -1,0 +1,9 @@
+(executable
+ (name parquet)
+ (public_name parquet.exe)
+ (libraries thrift fstar.lib)
+ (modes native byte)
+)
+(env
+  (_
+    (flags (:standard -w -A))))
