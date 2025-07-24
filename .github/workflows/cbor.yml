@@ -15,3 +15,10 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@master
+        with:
+          path: everparse
+      - run: sudo apt update && sudo apt install -y libssl-dev
+      - name: Everparse CI
+        id: cistep
+        run: |
+          . $HOME/.cargo/env && make -C everparse cbor-test-unverified cose-extracted-test -kj$(nproc)
