@@ -112,7 +112,7 @@ let convert_row_group (rg : rowGroup) : row_group =
   }
 
 (*----------------------------------------------------------------------
-   Top‑level                                                            
+   file_meta_data                                                            
   --------------------------------------------------------------------*)
 let convert_file_meta_data (fm : fileMetaData) : file_meta_data =
   { version                     = (fm#grab_version) ;
@@ -126,6 +126,19 @@ let convert_file_meta_data (fm : fileMetaData) : file_meta_data =
     footer_signing_key_metadata = fm#get_footer_signing_key_metadata ;
   }
 
+(*----------------------------------------------------------------------
+   offset_index                                                            
+  --------------------------------------------------------------------*)
+let convert_page_location (pl : pageLocation) : page_location =
+  { offset = pl#grab_offset ;
+    compressed_page_size1 = pl#grab_compressed_page_size ;
+    first_row_index = pl#grab_first_row_index ;
+  }
+
+let convert_offset_index (oi : offsetIndex) : offset_index =
+  { page_locations = List.map convert_page_location (oi#grab_page_locations) ;
+    unencoded_byte_array_data_bytes1 = oi#get_unencoded_byte_array_data_bytes ;
+  }
 
 (*----------------------------------------------------------------------
    pretty printer                                                            
@@ -254,7 +267,7 @@ let pp_row_group fmt rg =
     (pp_opt pp_i64) rg.total_compressed_size1
     (pp_opt pp_i16) rg.ordinal
 
-(* top-level --------------------------------------------------------- *)
+(* file_meta_data --------------------------------------------------------- *)
 let pp_file_meta_data fmt fmd =
   fprintf fmt "@[<v 2>{@,\
   version   = %a;@,\
@@ -266,6 +279,27 @@ let pp_file_meta_data fmt fmd =
     pp_i64   fmd.num_rows2
     (pp_list pp_schema_element) fmd.schema
     (pp_list pp_row_group)      fmd.row_groups
+
+(* page_location ----------------------------------------------------- *)
+let pp_page_location fmt (pl: page_location) =
+  fprintf fmt "@[<v 2>{@,\
+  offset = %a;@,\
+  compressed_page_size1 = %a;@,\
+  first_row_index = %a;@,\
+  }@]"
+    pp_i64 pl.offset
+    pp_i32 pl.compressed_page_size1
+    pp_i64 pl.first_row_index
+
+(* offset_index ------------------------------------------------------ *)
+let pp_offset_index fmt (oi: offset_index) = 
+  fprintf fmt "@[<v 2>{@,\
+  page_locations = %a;@,\
+  unencoded_byte_array_data_bytes1 = %a@,\
+  }@]"
+    (pp_list pp_page_location) oi.page_locations
+    (pp_opt (pp_list pp_i64)) oi.unencoded_byte_array_data_bytes1
+
 
 (* convenience string renderers ------------------------------------- *)
 let show pp v = Format.asprintf "%a" pp v
