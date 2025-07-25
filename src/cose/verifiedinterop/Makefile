@@ -56,4 +56,7 @@ snapshot: extract
 
 .PHONY: snapshot
 
+test: extract
+ifeq ($(EVERPARSE_NO_DIFF),) # Set this variable to disable diffs
 test: $(addsuffix .diff,$(C_FILES))
+endif
