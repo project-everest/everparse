@@ -40,7 +40,7 @@ jobs:
       - name: avoid trivial changes
         continue-on-error: true
         run: |
-          [[ 1 -lt $(git diff --compact-summary HEAD~.. | wc -l) ]]
+          [[ 0 -lt $(git diff --compact-summary HEAD~.. | wc -l) ]]
 
       - name: create pull request
         if: ${{ success() }}
