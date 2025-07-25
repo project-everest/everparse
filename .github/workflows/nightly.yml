@@ -46,6 +46,6 @@ jobs:
         if: ${{ success() }}
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.DZOMO_GITHUB_TOKEN }}
+          token: ${{ secrets.EVERPARSE_GITHUB_TOKEN }}
           branch: "hints-and-dist-main"
           title: "[CI] regenerate hints and dist"
