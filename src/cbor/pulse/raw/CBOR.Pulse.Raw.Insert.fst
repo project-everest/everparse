@@ -206,7 +206,7 @@ let seq_append_assoc_1_23_4
   )
 = ()
 
-#push-options "--z3rlimit 128"
+#push-options "--z3rlimit 192"
 
 #restart-solver
 
