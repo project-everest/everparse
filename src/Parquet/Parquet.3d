@@ -1,0 +1,38 @@
+// typedef struct _parquet_file(file_size: UINT64) {
+//   UINT8 magic_front[4] { magic_front == "PAR1" };
+//   FileBody(file_size, footer_len, footer) body :following Footer(file_size, footer_len) footer;
+//   Footer(file_size, footer_len) footer :following UINT32 footer_len;
+//   UINT8 magic_front[4] { magic_front == "PAR1" };
+// } parquet_file
+
+
+typedef struct _parquet_file(file_size: UINT64) {
+  UINT8 magic_front[4] { magic_front == "PAR1" };
+  FileBody(file_size, @footer_len, @footer) body;
+  Footer(file_size, @footer_len) @footer;
+  UINT32 @footer_len;
+  UINT8 magic_front[4] { magic_front == "PAR1" };
+} parquet_file
+
+typedef struct _footer(file_size: UINT64, len: UINT32) {
+  // thrift definition + semantic constraints
+} Footer
+
+//TODO: schema!!!
+typedef struct _file_body(file_size: UINT64, footer_len: UINT32, footer: Footer(file_size, footer_len)) {
+  (for each rg in footer.rgs 
+    (for each cc in rg.ccs 
+      OffsetIndex(cc)* with (offset:= cc.offset_index_offset, size:= cc.offset_index_length) offset_index;
+      ColumnIndex(cc)* with (offset:= cc.column_index_offset, size:= cc.column_index_length) column_index;
+      Pages(offset_index, column_index) pages;
+    )
+  );
+} FileBody
+
+typedef struct _offset_index(cc: ColumnChunk) {
+  // thrift definition + semantic constraints
+} OffsetIndex
+
+typedef struct _column_index(cc: ColumnChunk) {
+  // thrift definition + semantic constraints
+} ColumnIndex
