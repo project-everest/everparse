@@ -318,6 +318,7 @@ ensures exists* v .
         SZ.v off' + Seq.length sl2' == SZ.v off2
       ));
       assert (pure (SZ.v off == Seq.length sl1));
+      Seq.lemma_len_append sl1 slkv';
       assert (pure (SZ.v off' == Seq.length sl1'));
       assert (pure (
           cbor_raw_map_insert_out_inv' off' l2' off2 key off3 value v'
