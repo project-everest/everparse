@@ -43,38 +43,63 @@ let () =
   let fmd     = read_fileMetaData proto in     (* ← deserialise! *)
   printf "File metadata created by: %s\n%!" fmd#grab_created_by;
   let fmd = convert_file_meta_data fmd in
-  let ok  = validate_file_meta_data fmd (Int64.of_int footer_start) in
+  (* let ok  = validate_file_meta_data fmd (Int64.of_int footer_start) in *)
 
-  (* printf "Converted file metadata: %s\n" (show_file_meta_data fmd) ; *)
+  printf "Converted file metadata: %s\n" (show_file_meta_data fmd) ;
 
   (* validate the file metadata *)
-
-  if ok then begin
-    printf "%s ✔︎ valid\n%!" file_path;
+  try
+    validate_file_meta_data fmd (Int64.of_int footer_start) |> ignore;
+    Printf.printf "%s ✔︎ valid\n" file_path;
     (* traverse each of the column chunks in each of the row group *)
     List.iter (fun rg ->
       List.iter (fun cc ->
         match cc.offset_index_offset, cc.offset_index_length with 
-        Some offset, Some length ->
+        Some offset, Some length -> begin
           seek_in ic Int64.(to_int offset);
           let offset_index = read_offsetIndex proto in
           let offset_index = convert_offset_index offset_index in
-          if validate_offset_index offset_index cc then begin
-            printf "OffsetIndex ✔︎ valid\n%!";
+          try 
+            validate_offset_index offset_index cc |> ignore;
+            printf "OffsetIndex ✔︎ valid\n%!"; 
             (* printf "Column chunk %s offset index: %s\n" (show pp_column_chunk cc) (show pp_offset_index offset_index); *)
-          end else begin
-            printf "OffsetIndex ✘ invalid\n%!";
-            close_in ic; close_out oc;
-            exit 1;
+          with Failure msg ->
+            printf "OffsetIndex ✘ invalid: %s\n%!" msg;
             (* printf "Column chunk %s offset index: %s\n" (show pp_column_chunk cc) (show pp_offset_index offset_index); *)
-          end
-          (* printf "Column chunk %s offset index: %s\n" (show pp_column_chunk cc) (show pp_offset_index offset_index) *)
+        end
         | _ -> printf "No offset index\n"
       ) rg.columns
     ) fmd.row_groups ;
-  end else begin
-    printf "%s ✘ invalid\n%!" file_path;
-    close_in ic; close_out oc;
-    exit 1
-  end 
+  with Failure msg ->
+    Printf.printf "%s ✘ invalid: %s\n" file_path msg;
   close_in ic; close_out oc;
+
+  (* if ok then begin *)
+  (*   printf "%s ✔︎ valid\n%!" file_path; *)
+  (*   (* traverse each of the column chunks in each of the row group *) *)
+  (*   List.iter (fun rg -> *)
+  (*     List.iter (fun cc -> *)
+  (*       match cc.offset_index_offset, cc.offset_index_length with  *)
+  (*       Some offset, Some length -> *)
+  (*         seek_in ic Int64.(to_int offset); *)
+  (*         let offset_index = read_offsetIndex proto in *)
+  (*         let offset_index = convert_offset_index offset_index in *)
+  (*         if validate_offset_index offset_index cc then begin *)
+  (*           printf "OffsetIndex ✔︎ valid\n%!"; *)
+  (*           (* printf "Column chunk %s offset index: %s\n" (show pp_column_chunk cc) (show pp_offset_index offset_index); *) *)
+  (*         end else begin *)
+  (*           printf "OffsetIndex ✘ invalid\n%!"; *)
+  (*           close_in ic; close_out oc; *)
+  (*           exit 1; *)
+  (*           (* printf "Column chunk %s offset index: %s\n" (show pp_column_chunk cc) (show pp_offset_index offset_index); *) *)
+  (*         end *)
+  (*         (* printf "Column chunk %s offset index: %s\n" (show pp_column_chunk cc) (show pp_offset_index offset_index) *) *)
+  (*       | _ -> printf "No offset index\n" *)
+  (*     ) rg.columns *)
+  (*   ) fmd.row_groups ; *)
+  (* end else begin *)
+  (*   printf "%s ✘ invalid\n%!" file_path; *)
+  (*   close_in ic; close_out oc; *)
+  (*   exit 1 *)
+  (* end  *)
+  (* close_in ic; close_out oc; *)

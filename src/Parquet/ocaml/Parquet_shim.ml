@@ -5,7 +5,7 @@
   -------------------------------------------------------------------*)
 
 open Parquet_types               
-include Parquet_Spec_Validator
+include Parquet_Tot_Validator
 
 (* Helpers -----------------------------------------------------------*)
 let opt_map f = function None -> None | Some x -> Some (f x)
@@ -221,6 +221,7 @@ let pp_column_meta fmt cm =
     codec                = %a;@,\
     values               = %a;@,\
     comp_size            = %a;@,\
+    uncomp_size          = %a;@,\
     data_page_offset     = %a;@,\
     index_page_offset    = %a;@,\
     dictionary_page_offset = %a;@,\
@@ -229,6 +230,7 @@ let pp_column_meta fmt cm =
     pp_codec cm.codec
     pp_i64  cm.num_values3
     pp_i64  cm.total_compressed_size
+    pp_i64  cm.total_uncompressed_size
     pp_i64  cm.data_page_offset
     (pp_opt pp_i64) cm.index_page_offset
     (pp_opt pp_i64) cm.dictionary_page_offset
