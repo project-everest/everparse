@@ -1,0 +1,15 @@
+FSTAR_OPTIONS = --odir krml --cache_dir cache --cache_checked_modules \
+		--already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse \
+		--include $(LOWPARSE_HOME) --include $(KRML_HOME)/krmllib --include $(KRML_HOME)/krmllib/obj --cmi
+
+FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)
+
+HEADERS = $(addprefix -add-include ,'"krml/internal/compat.h"')
+
+KRML = $(KRML_HOME)/krml \
+	 -ccopt "-Ofast" \
+	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
+	 -tmpdir out \
+	 -bundle 'LowParse.\*' \
+	 $(HEADERS) \
+	 -warn-error -9
