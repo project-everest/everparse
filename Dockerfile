@@ -21,6 +21,7 @@ RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends \
 # Bring in the contents
 ADD --chown=opam:opam ./ /mnt/everparse/
 WORKDIR /mnt/everparse
+RUN git clean -ffdx || true
 
 # Build and publish the release
 ARG CI_THREADS=24
