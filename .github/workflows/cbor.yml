@@ -1,4 +1,4 @@
-name: Test CBOR, COSE without F*
+name: Test CBOR, CDDL, COSE
 on:
   push:
     branches-ignore:
@@ -22,3 +22,17 @@ jobs:
         id: cistep
         run: |
           . $HOME/.cargo/env && make -C everparse cbor-test-unverified cose-extracted-test -kj$(nproc)
+
+  build-cddl-macos:
+    runs-on: macOS-latest
+    steps:
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5
+      - uses: actions/checkout@master
+        with:
+          path: everparse
+      - name: Everparse CI
+        run: |
+          ./everparse/build-evercddl.sh
