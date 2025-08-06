@@ -30,6 +30,9 @@ jobs:
         uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: 5
+      - name: Install Homebrew tools
+        run: |
+          brew install bash
       - uses: actions/checkout@master
         with:
           path: everparse
