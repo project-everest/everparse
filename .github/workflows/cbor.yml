@@ -57,4 +57,4 @@ jobs:
       - name: Build a Docker image
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: everparse
