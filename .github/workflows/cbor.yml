@@ -32,7 +32,7 @@ jobs:
           ocaml-compiler: 5
       - name: Install Homebrew tools
         run: |
-          brew install bash gnu-getopt
+          brew install bash gnu-getopt make
       - uses: actions/checkout@master
         with:
           path: everparse
