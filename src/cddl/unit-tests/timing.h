@@ -13,6 +13,30 @@ static inline float __tdiff(struct timespec t1, struct timespec t2)
 /* Setear a 0 para no ver el parallel factor */
 static int time_par = 0;
 
+#ifdef __cplusplus // typeof is not defined in C++
+#define __TIME(s, expr, v) ({						\
+		struct timespec __t1p, __t2p;				\
+		struct timespec __t1w, __t2w;				\
+		auto __ret;					\
+		float *__vv = v;					\
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &__t1p);	\
+		clock_gettime(CLOCK_REALTIME, &__t1w);			\
+		0 && fprintf(stderr, "About to call `" s "` \n");	\
+		__ret = expr;						\
+		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &__t2p);	\
+		clock_gettime(CLOCK_REALTIME, &__t2w);			\
+		fprintf(stderr, "computed `" s "` in %.5fs total "	\
+				"CPU time (wall time = %.5fs)\n",	\
+				__tdiff(__t1p, __t2p),			\
+				__tdiff(__t1w, __t2w));			\
+		if (time_par)						\
+			fprintf(stderr, "(parallel factor = %.2f)\n",	\
+					__tdiff(__t1p, __t2p)/		\
+					__tdiff(__t1w, __t2w));		\
+		if (__vv)						\
+		        *__vv = __tdiff(__t1w, __t2w);			\
+		__ret;})
+#else // __cplusplus
 #define __TIME(s, expr, v) ({						\
 		struct timespec __t1p, __t2p;				\
 		struct timespec __t1w, __t2w;				\
@@ -35,6 +59,7 @@ static int time_par = 0;
 		if (__vv)						\
 		        *__vv = __tdiff(__t1w, __t2w);			\
 		__ret;})
+#endif // __cplusplus
 
 /*
  * Dada una expresión [expr] y un puntero a float [v],
