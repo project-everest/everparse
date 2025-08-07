@@ -64,8 +64,8 @@ EverCBOR is already built in the Docker image. If you are not using that image, 
     `src/cbor/pulse/det/rust` , where you can use `cargo build` and
     `cargo test` ; the crate is called `cborrs`.
 
-  + The generated HTML documentation of `cborrs` is in
-    `src/cbor/pulse/det/rust/target/doc/cborrs/cbordetver/index.html`
+  + The generated HTML documentation of `cborrs` is at
+    `https://project-everest.github.io/everparse/evercbor-rust/cborrs/`
 
 ### COSE
 

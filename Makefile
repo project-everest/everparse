@@ -82,7 +82,7 @@ lowparse-unit-test: lowparse
 	+$(MAKE) -C src/3d test
 
 3d-doc-test: 3d
-	+$(MAKE) -C doc 3d
+	+$(MAKE) -C doc 3d-test
 
 3d-test: 3d-unit-test 3d-doc-test
 
@@ -258,7 +258,8 @@ cddl-test: cddl cddl-unit-tests
 
 ci: test 3d-doc-ci
 
-3d-doc-ci: 3d-doc-test
+# cbor needed because we regenerate its Rust documentation
+3d-doc-ci: 3d-doc-test cbor
 	+$(MAKE) -C doc 3d-ci
 
 .PHONY: 3d-doc-ci

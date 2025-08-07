@@ -4,7 +4,7 @@ c.do:
 	+$(MAKE) -C $(basename $@)
 
 rust.do:
-	cd rust && cargo build
+	cd rust && cargo build && cargo doc --no-deps
 
 krml.do:
 	+$(MAKE) -C $(basename $@)
@@ -16,8 +16,6 @@ snapshot: rust-snapshot c.snapshot
 .PHONY: rust-snapshot
 
 rust-snapshot: rust.snapshot
-	rm -rf rust/target/doc
-	cd rust && cargo doc --no-deps
 
 local_curdir := $(CURDIR)
 ifeq ($(OS),Windows_NT)
