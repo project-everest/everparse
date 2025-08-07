@@ -17,12 +17,11 @@ static int time_par = 0;
 #define __TIME(s, expr, v) ({						\
 		struct timespec __t1p, __t2p;				\
 		struct timespec __t1w, __t2w;				\
-		auto __ret;					\
 		float *__vv = v;					\
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &__t1p);	\
 		clock_gettime(CLOCK_REALTIME, &__t1w);			\
 		0 && fprintf(stderr, "About to call `" s "` \n");	\
-		__ret = expr;						\
+		auto __ret = expr;					\
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &__t2p);	\
 		clock_gettime(CLOCK_REALTIME, &__t2w);			\
 		fprintf(stderr, "computed `" s "` in %.5fs total "	\
