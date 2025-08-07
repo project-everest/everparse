@@ -5,5 +5,7 @@ unset CDPATH
 MAKE=$(which gmake >/dev/null 2>&1 && echo gmake || echo make)
 cd "$( dirname "${BASH_SOURCE[0]}" )"
 "$MAKE" _opam
-opam exec -- "$MAKE" -j -C opt
-opam exec -- "$MAKE" -j 8 -k cddl
+nproc=$(nproc) || nproc=$(sysctl -n hw.logicalcpu) || nproc=1
+if [[ $nproc -gt 8 ]] ; then nproc=8 ; fi # to prevent OOM during extraction
+opam exec -- "$MAKE" -j$nproc -C opt
+opam exec -- "$MAKE" -j$nproc -k cddl
