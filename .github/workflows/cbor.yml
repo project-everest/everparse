@@ -39,3 +39,6 @@ jobs:
       - name: Everparse CI
         run: |
           ./everparse/build-evercddl.sh
+      - name: Test
+        run: |
+          cd everparse && opam exec -- gmake -j 8 -k cddl-test
