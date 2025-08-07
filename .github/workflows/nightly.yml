@@ -2,7 +2,7 @@ name: Build 3D doc, CBOR, COSE snapshots
 on:
   workflow_dispatch:
   schedule:
-    - cron: "* 22 * * 0,3"
+    - cron: "0 22 * * 0,3"
 
 defaults:
   run:
