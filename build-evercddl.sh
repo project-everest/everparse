@@ -8,4 +8,4 @@ cd "$( dirname "${BASH_SOURCE[0]}" )"
 nproc=$(nproc) || nproc=$(sysctl -n hw.logicalcpu) || nproc=1
 if [[ $nproc -gt 8 ]] ; then nproc=8 ; fi # to prevent OOM during extraction
 opam exec -- "$MAKE" -j$nproc -C opt
-opam exec -- "$MAKE" -j$nproc -k cddl
+OTHERFLAGS='--admit_smt_queries true' opam exec -- "$MAKE" -j$nproc -k cddl
