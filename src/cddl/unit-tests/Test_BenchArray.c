@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "BenchArray.h"
 #include "BenchArray_common.h"
+#include <time.h>
 #include "timing.h"
 
 int main()
