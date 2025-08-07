@@ -31,7 +31,7 @@ $(ODIR)/%.fst: %.cddl
 	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --mname "$(patsubst %.cddl,%,$<)" --odir $(ODIR) --fstar_only
 
 $(ODIR)/%.o: $(ODIR)/%.c
-	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I _output $(CFLAGS) -c $< -o $@
+	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I _output --std=c2x $(CFLAGS) -c $< -o $@
 
 EVERPARSE_SRC_PATH = $(realpath ../..)
 EVERPARSE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)
@@ -129,10 +129,10 @@ $(ODIR)/Test_%.exe: $(ODIR)/Test_%.o $(ODIR)/$$(call remove__,%).o QCBOR/libqcbo
 	$(CC) -O3 -o $@ $^ $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c/CBORDet.o QCBOR/libqcbor.a tinycbor-build/libtinycbor.a -lm
 
 $(ODIR)/Test_%.o: Test_%.c $(ODIR)/$$(call remove__,%).c
-	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I _output $(CFLAGS) -c $< -o $@
+	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I _output --std=c2x $(CFLAGS) -c $< -o $@
 
 $(ODIR)/Test_%.o: Test_%.cpp $(ODIR)/$$(call remove__,%).c tinycbor-build
-	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I tinycbor-build/src -I tinycbor-build -I _output $(CFLAGS) -c $< -o $@
+	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I tinycbor-build/src -I tinycbor-build -I _output --std=c++2a $(CFLAGS) -c $< -o $@
 
 %.run: $(ODIR)/Test_%.exe
 	./$<
