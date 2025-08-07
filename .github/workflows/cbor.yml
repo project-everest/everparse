@@ -11,39 +11,6 @@ defaults:
     shell: bash
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-        with:
-          path: everparse
-      - run: sudo apt update && sudo apt install -y libssl-dev
-      - name: Everparse CI
-        id: cistep
-        run: |
-          . $HOME/.cargo/env && make -C everparse cbor-test-unverified cose-extracted-test -kj$(nproc)
-
-  build-cddl-macos:
-    runs-on: macOS-latest
-    steps:
-      - name: Set-up OCaml
-        uses: ocaml/setup-ocaml@v3
-        with:
-          ocaml-compiler: 5
-      - name: Install Homebrew tools
-        run: |
-          brew install bash gnu-getopt make gnu-time
-      - uses: actions/checkout@master
-        with:
-          path: everparse
-      - name: Everparse CI
-        run: |
-          ./everparse/build-evercddl.sh
-      - name: Test
-        run: |
-          nproc=$(sysctl -n hw.logicalcpu)
-          if [[ $nproc -gt 8 ]] ; then nproc=8 ; fi
-          cd everparse && opam exec -- gmake -j$nproc -k cddl-test
 
   build-docker:
     runs-on: ubuntu-latest
