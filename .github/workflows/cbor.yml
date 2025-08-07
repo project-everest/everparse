@@ -23,6 +23,20 @@ jobs:
         run: |
           . $HOME/.cargo/env && make -C everparse cbor-test-unverified cose-extracted-test -kj$(nproc)
 
+  build-cddl-ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5
+      - uses: actions/checkout@master
+        with:
+          path: everparse
+      - name: Everparse CI
+        run: |
+          ./everparse/build-evercddl.sh
+
   build-cddl-macos:
     runs-on: macOS-latest
     steps:
