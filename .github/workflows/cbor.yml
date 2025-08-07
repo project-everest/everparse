@@ -41,4 +41,6 @@ jobs:
           ./everparse/build-evercddl.sh
       - name: Test
         run: |
-          cd everparse && opam exec -- gmake -j 8 -k cddl-test
+          nproc=$(sysctl -n hw.logicalcpu)
+          if [[ $nproc -gt 8 ]] ; then nproc=8 ; fi
+          cd everparse && opam exec -- gmake -j$nproc -k cddl-test
