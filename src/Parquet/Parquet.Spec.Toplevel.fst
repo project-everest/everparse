@@ -947,9 +947,10 @@ let parse_parquet (file_size: nat) =
             (weaken (dtuple2_rtol_kind parse_seq_all_bytes_kind 0)
                 (parse_dtuple2_rtol (parse_fldata parse_footer (U32.v len))
                     (fun footer ->
-                        if file_size >= U32.v len + 8 && validate_file_meta_data footer (file_size - U32.v len - 8)
+                        if file_size >= U32.v len + 8 && validate_file_meta_data footer (I64.int_to_t (file_size - U32.v len - 8))
+                        // if true 
                         then parse_seq_all_bytes
-                        else parse_false
+                        else fail_parser _ _
                       // parse_pages footer
                       // (parse_seq_all_bytes)
                       )))))
