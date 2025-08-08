@@ -1,4 +1,4 @@
-all: FStar.do karamel.do pulse.do
+all: FStar.do karamel.do pulse.do z3
 
 export ADMIT=1
 export OTHERFLAGS=--admit_smt_queries true # because Karamel Makefiles do not honor ADMIT
@@ -35,10 +35,10 @@ z3: FStar.do
 	mkdir -p $@
 	FStar/.scripts/get_fstar_z3.sh $(realpath .)/$@
 
-karamel.do: karamel FStar.do z3
+karamel.do: karamel FStar.do
 	+$(MAKE) -C $<
 
-pulse.do: pulse FStar.do z3
+pulse.do: pulse FStar.do
 	+$(MAKE) -C $< ADMIT=1
 
 .PHONY: all submodules %.do
