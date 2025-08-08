@@ -1,6 +1,7 @@
 all: FStar.do karamel.do pulse.do
 
 export ADMIT=1
+export OTHERFLAGS=--admit_smt_queries true # because Karamel Makefiles do not honor ADMIT
 
 export EVERPARSE_OPT_PATH=$(realpath .)
 
