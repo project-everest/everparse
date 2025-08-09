@@ -967,6 +967,7 @@ let elab_map_group_sem_concat
   (ensures
     bounded_elab_map_group env.se_bound g1l /\
     bounded_elab_map_group env.se_bound g1r /\
+    bounded_elab_map_group env.se_bound (MGConcat g1l g1r) /\
     (elab_map_group_sem env (MGConcat g1l g1r) == Spec.map_group_concat (elab_map_group_sem env g1l) (elab_map_group_sem env g1r))
   )
 //  [SMTPat (elab_map_group_sem env (MGConcat g1l g1r))]

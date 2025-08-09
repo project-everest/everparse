@@ -552,6 +552,21 @@ let annot_tables_correct_postcond_intro_some
   (annot_tables_correct_postcond fuel env cut g m)
 = ()
 
+let annot_tables_correct_postcond_intro_not_success
+  (fuel: nat)
+  (env: ast_env)
+  (cut: map_constraint)
+  (g: elab_map_group)
+  (m: Cbor.cbor_map)
+  (sq1: squash (
+    bounded_map_constraint env.e_sem_env.se_bound cut /\
+    bounded_elab_map_group env.e_sem_env.se_bound g
+  ))
+  (sq2: squash (~ (RSuccess? (annot_tables fuel env cut g))))
+: Lemma
+  (annot_tables_correct_postcond fuel env cut g m)
+= ()
+
 let cbor_map_filter_ext_strong
   (f1 f2: (Cbor.cbor & Cbor.cbor) -> Tot bool)
   (m: Cbor.cbor_map)
@@ -567,6 +582,8 @@ let cbor_map_filter_disjoint_from_footprint
   (requires (Spec.map_constraint_disjoint c1 c2))
   (ensures (Spec.cbor_map_disjoint_from_footprint (Cbor.cbor_map_filter c1 m) c2))
 = ()
+
+#push-options "--z3rlimit 32"
 
 #restart-solver
 let annot_tables_correct_aux_match
@@ -660,7 +677,116 @@ let annot_tables_correct_aux_table
       assert (Spec.cbor_map_disjoint_from_footprint mnf (map_constraint_sem env.e_sem_env cut'));
       assert (annot_tables_correct_postcond fuel env cut g m)
 
+#pop-options
+
+let annot_tables_correct_aux'_t
+  (g: elab_map_group)
+=
+  (fuel: nat) ->
+  (env: ast_env) ->
+  (cut: map_constraint) ->
+  (m: Cbor.cbor_map) ->
+  (sq: squash (
+    bounded_map_constraint env.e_sem_env.se_bound cut /\
+    bounded_elab_map_group env.e_sem_env.se_bound g /\
+    Spec.cbor_map_disjoint_from_footprint m (map_constraint_sem env.e_sem_env cut)
+  )) ->
+  Lemma (ensures annot_tables_correct_postcond fuel env cut g m)
+
 #push-options "--z3rlimit 128 --ifuel 8 --fuel 4 --split_queries always"
+
+let annot_tables_correct_aux'_choice
+  (g: elab_map_group { MGChoice? g })
+  (annot_tables_correct_aux': (g' : elab_map_group { g' << g }) -> annot_tables_correct_aux'_t g')
+: Tot (annot_tables_correct_aux'_t g)
+= fun fuel env cut m sq ->
+  let MGChoice g1 g2 = g in
+    let (extracted_cut) = extract_cut g1 in
+    annot_tables_correct_aux' g1 fuel env cut m ();
+//    mk_TChoice_sem env.e_sem_env cut extracted_cut;
+    extract_cut_correct env.e_sem_env g1 m;
+    begin match Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g1) m with
+    | Spec.MapGroupFail ->
+      annot_tables_correct_aux' g2 fuel env (MCOr cut extracted_cut) m ();
+      assert (annot_tables_correct_postcond fuel env cut g m)
+    | _ -> assert (annot_tables_correct_postcond fuel env cut g m)
+    end
+
+let annot_tables_concat
+  (fuel: nat)
+  (env: ast_env)
+  (cut: map_constraint)
+  (g1 g2: elab_map_group)
+  (cut1: map_constraint)
+  (g1': elab_map_group)
+  (cut2: map_constraint)
+  (g2' : elab_map_group)
+: Lemma
+  (requires (
+      bounded_map_constraint env.e_sem_env.se_bound cut /\
+      bounded_elab_map_group env.e_sem_env.se_bound g1 /\
+      bounded_elab_map_group env.e_sem_env.se_bound g2 /\
+      annot_tables fuel env cut g1 == RSuccess (cut1, g1') /\
+      annot_tables fuel env cut1 g2 == RSuccess (cut2, g2')
+  ))
+    (ensures (
+      annot_tables fuel env cut (MGConcat g1 g2) == RSuccess (cut2, MGConcat g1' g2')
+    ))
+= ()
+
+let annot_tables_concat_not_success
+  (fuel: nat)
+  (env: ast_env)
+  (cut: map_constraint)
+  (g1 g2: elab_map_group)
+  (cut1: map_constraint)
+  (g1': elab_map_group)
+: Lemma
+  (requires (
+      bounded_map_constraint env.e_sem_env.se_bound cut /\
+      bounded_elab_map_group env.e_sem_env.se_bound g1 /\
+      bounded_elab_map_group env.e_sem_env.se_bound g2 /\
+      annot_tables fuel env cut g1 == RSuccess (cut1, g1') /\
+      ~ (RSuccess? (annot_tables fuel env cut1 g2))
+  ))
+    (ensures (
+      ~ (RSuccess? (annot_tables fuel env cut (MGConcat g1 g2)))
+    ))
+= ()
+
+let annot_tables_correct_aux'_concat
+  (g: elab_map_group { MGConcat? g })
+  (annot_tables_correct_aux': (g' : elab_map_group { g' << g }) -> annot_tables_correct_aux'_t g')
+: Tot (annot_tables_correct_aux'_t g)
+= fun fuel env cut m sq ->
+  let MGConcat g1 g2 = g in
+  assert (bounded_elab_map_group env.e_sem_env.se_bound g1);
+  assert (bounded_elab_map_group env.e_sem_env.se_bound g2);
+    begin match annot_tables fuel env cut g1 with
+    | RSuccess (cut1, g1') ->
+      annot_tables_correct_aux' g1 fuel env cut m ();
+      begin match Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g1) m with
+      | Spec.MapGroupDet _ m1 ->
+        annot_tables_correct_aux' g2 fuel env cut1 m1 ();
+        assert (annot_tables_correct_postcond fuel env cut g m)
+      | res ->
+        assert (Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g) m == res);
+        assert (Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g1') m == res);
+        begin match annot_tables fuel env cut1 g2 with
+        | RSuccess (cut2, g2') ->
+          assert (Spec.apply_map_group_det (Spec.map_group_concat (elab_map_group_sem env.e_sem_env g1') (elab_map_group_sem env.e_sem_env g2')) m == res);
+          elab_map_group_sem_concat env.e_sem_env g1' g2';
+          annot_tables_concat fuel env cut g1 g2 cut1 g1' cut2 g2';
+          annot_tables_correct_postcond_intro_none fuel env cut (MGConcat g1 g2) m () cut2 (MGConcat g1' g2') () () () () ();
+          assert (annot_tables_correct_postcond fuel env cut g m)
+        | _ ->
+          annot_tables_concat_not_success fuel env cut g1 g2 cut1 g1';
+          annot_tables_correct_postcond_intro_not_success fuel env cut g m () ();
+          assert (annot_tables_correct_postcond fuel env cut g m)
+        end
+      end
+    | _ -> assert (annot_tables_correct_postcond fuel env cut g m)
+    end
 
 #restart-solver
 let rec annot_tables_correct_aux'
@@ -679,36 +805,9 @@ let rec annot_tables_correct_aux'
 = 
   match g with
   | MGChoice g1 g2 ->
-    let (extracted_cut) = extract_cut g1 in
-    annot_tables_correct_aux' fuel env cut g1 m ();
-//    mk_TChoice_sem env.e_sem_env cut extracted_cut;
-    extract_cut_correct env.e_sem_env g1 m;
-    begin match Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g1) m with
-    | Spec.MapGroupFail ->
-      annot_tables_correct_aux' fuel env (MCOr cut extracted_cut) g2 m ();
-      assert (annot_tables_correct_postcond fuel env cut g m)
-    | _ -> assert (annot_tables_correct_postcond fuel env cut g m)
-    end
+    annot_tables_correct_aux'_choice g (fun g' fuel env cut m sq -> annot_tables_correct_aux' fuel env cut g' m sq) fuel env cut m sq
   | MGConcat g1 g2 ->
-    begin match annot_tables fuel env cut g1 with
-    | RSuccess (cut1, g1') ->
-      annot_tables_correct_aux' fuel env cut g1 m ();
-      begin match Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g1) m with
-      | Spec.MapGroupDet _ m1 ->
-        annot_tables_correct_aux' fuel env cut1 g2 m1 ();
-        assert (annot_tables_correct_postcond fuel env cut g m)
-      | res ->
-        assert (Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g) m == res);
-        assert (Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g1') m == res);
-        begin match annot_tables fuel env cut1 g2 with
-        | RSuccess (cut2, g2') ->
-          assert (Spec.apply_map_group_det (Spec.map_group_concat (elab_map_group_sem env.e_sem_env g1') (elab_map_group_sem env.e_sem_env g2')) m == res);
-          assert (annot_tables_correct_postcond fuel env cut g m)
-        | _ -> assert (annot_tables_correct_postcond fuel env cut g m)
-        end
-      end
-    | _ -> assert (annot_tables_correct_postcond fuel env cut g m)
-    end
+    annot_tables_correct_aux'_concat g (fun g' fuel env cut m sq -> annot_tables_correct_aux' fuel env cut g' m sq) fuel env cut m sq
   | MGMatch c key value ->
     annot_tables_correct_aux_match fuel env cut c key value m ()
   | MGTable key value MCFalse ->
@@ -951,7 +1050,7 @@ let map_group_filtered_table_except_ext
         (Util.notp (Util.andp (Spec.matches_map_group_entry key value) (Util.notp except1)))
         (Util.notp (Util.andp (Spec.matches_map_group_entry key value) (Util.notp except2)))
 
-#push-options "--z3rlimit 32 --ifuel 6 --fuel 4 --split_queries always"
+#push-options "--z3rlimit 64 --ifuel 6 --fuel 4 --split_queries always"
 
 #restart-solver
 

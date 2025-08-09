@@ -14,7 +14,7 @@ let squash_modus_ponens
 : Tot (squash p2)
 = ()
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 256 --ifuel 8 --fuel 2 --split_queries always"
 
 #restart-solver
 let rec map_group_choice_compatible'

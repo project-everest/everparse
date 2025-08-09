@@ -100,6 +100,8 @@ fn impl_serialize_map_group_nop
   true
 }
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_map_group_choice
     (#[@@@erasable]t1: Ghost.erased det_map_group)
@@ -189,6 +191,8 @@ fn impl_serialize_map_group_zero_or_one
     }
   }
 }
+
+#pop-options
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_map_group_either_left
@@ -865,6 +869,10 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc_disjoint1
   map_of_list_serializable_disjoint sp1 sp2 except m1' m2;
   ()
 
+#pop-options
+
+#push-options "--z3rlimit 64"
+
 #restart-solver
 let impl_serialize_map_group_valid_map_zero_or_more_snoc_length1
   (#key #value: Type)
@@ -928,7 +936,7 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc_length1
 
 #pop-options
 
-#push-options "--z3rlimit 128 --z3cliopt 'smt.qi.eager_threshold=100' --print_implicits --split_queries always"
+#push-options "--z3rlimit 256 --z3cliopt 'smt.qi.eager_threshold=100' --print_implicits --split_queries always"
 
 #restart-solver
 let impl_serialize_map_group_valid_map_zero_or_more_snoc'
@@ -1327,7 +1335,7 @@ let seq_slice_length_zero_left
   (Seq.length (Seq.slice s 0 len) == len)
 = ()
 
-#push-options "--z3rlimit 256 --fuel 2 --ifuel 1 --query_stats --print_implicits --split_queries always"
+#push-options "--z3rlimit 256 --fuel 2 --ifuel 2 --query_stats --print_implicits --split_queries always"
 
 #restart-solver
 inline_for_extraction noextract [@@noextract_to "krml"]

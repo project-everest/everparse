@@ -513,6 +513,8 @@ let ag_serializable_zero_or_more_append
   end;
   ()
 
+#push-options "--z3rlimit 64"
+
 let impl_serialize_array_group_valid_zero_or_more_false_intro
   (l: list Cbor.cbor)
   (#t: array_group None)
@@ -537,6 +539,8 @@ let impl_serialize_array_group_valid_zero_or_more_false_intro
     impl_serialize_array_group_valid (List.Tot.append l (ps.ag_serializer l1)) ps (x :: l2) len == false
   ))))
 = ag_serializable_zero_or_more_append ps1 l1 (x :: l2)
+
+#pop-options
 
 let impl_serialize_array_group_valid_zero_or_more_true_intro_length
   (x1 x2 x3 x4: nat)

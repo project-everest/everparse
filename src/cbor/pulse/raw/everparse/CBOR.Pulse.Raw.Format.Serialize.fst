@@ -352,6 +352,8 @@ fn cbor_match_with_perm_lens
   res
 }
 
+#push-options "--z3rlimit 32"
+
 fn cbor_raw_get_header
   (p: perm)
   (xl: cbor_raw)
@@ -405,6 +407,8 @@ ensures
     }
   }
 }
+
+#pop-options
 
 fn cbor_raw_with_perm_get_header
   (xl: with_perm cbor_raw)
@@ -549,6 +553,8 @@ ensures
   xh'
 }
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction
 fn ser_payload_string_lens
   (xh1: header)
@@ -624,6 +630,8 @@ vmatch_lens #_ #_ #_
     _;
   res
 }
+
+#pop-options
 
 inline_for_extraction
 let ser_payload_string
@@ -702,6 +710,8 @@ let size_payload_array_array_elem
 = compute_remaining_size_lens
     (cbor_match_with_perm_lens _)
     f
+
+#push-options "--z3rlimit 32"
 
 ghost
 fn ser_payload_array_array_lens_aux
@@ -798,6 +808,8 @@ ensures
   Trade.intro _ _ _ aux;
   Trade.trans _ (cbor_match_array a xl.p xh0 cbor_match) _;
 }
+
+#pop-options
 
 inline_for_extraction
 fn ser_payload_array_array_lens
@@ -902,6 +914,8 @@ ensures
   Trade.intro _ _ _ aux
 }
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction
 fn ser_payload_array_not_array_lens
   (xh1: header)
@@ -984,6 +998,8 @@ fn ser_payload_array_not_array_lens
     _ _;
   res
 }
+
+#pop-options
 
 inline_for_extraction
 let ser_payload_array_not_array
@@ -1149,6 +1165,8 @@ let size_payload_map_map_elem
     (ser_payload_map_map_elem_fst a)
     (ser_payload_map_map_elem_snd a)
 
+#push-options "--z3rlimit 32"
+
 #restart-solver
 ghost
 fn ser_payload_map_map_lens_aux
@@ -1243,6 +1261,8 @@ ensures
   Trade.intro _ _ _ aux;
   Trade.trans _ (cbor_match_map xl.p a xh0) _;
 }
+
+#pop-options
 
 inline_for_extraction
 fn ser_payload_map_map_lens

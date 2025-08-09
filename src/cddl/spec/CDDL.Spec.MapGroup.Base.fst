@@ -1424,7 +1424,7 @@ let apply_map_group_det_match_item_for
     else ()
   | _ -> ()
 
-#push-options "--z3rlimit 256"
+#push-options "--z3rlimit 512"
 
 #restart-solver
 let apply_map_group_det_match_item_cut
@@ -1734,6 +1734,8 @@ let apply_map_group_det_ext
   (ensures (apply_map_group_det m1 l == apply_map_group_det m2 l))
 = ()
 
+#push-options "--z3rlimit 32"
+
 #restart-solver
 let rec map_group_zero_or_more_det
   (g: det_map_group)
@@ -1762,6 +1764,8 @@ let rec map_group_zero_or_more_det
       map_group_zero_or_more_det g rem
     end
   | _ -> ()
+
+#pop-options
 
 #restart-solver
 let map_group_zero_or_more_map_group_match_item_for
@@ -1979,7 +1983,7 @@ let map_group_concat_match_item_cut_eq
     (map_group_match_item_for b k v)
     (map_group_concat (map_group_match_item_for b k v) (map_group_cut (t_literal k)))
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 #restart-solver
 let map_group_concat_zero_or_one_match_item_cut_eq
@@ -2021,3 +2025,17 @@ let t_map_eq
 
 let t_map_ext g1 g2 =
   assert (FE.feq (t_map' g1) (t_map' g2))
+
+#pop-options
+
+#push-options "--z3rlimit 128"
+
+#restart-solver
+let t_map_concat_cut_r_gen
+  (g g1 g2 g3: det_map_group)
+  (k: typ)
+: Lemma
+  (t_map (map_group_concat g (map_group_choice g1 (map_group_choice (map_group_concat g2 (map_group_cut k)) g3))) == t_map (map_group_concat g (map_group_choice g1 (map_group_choice g2 g3))))
+= t_map_ext (map_group_concat g (map_group_choice g1 (map_group_choice (map_group_concat g2 (map_group_cut k)) g3))) (map_group_concat g (map_group_choice g1 (map_group_choice g2 g3)))
+
+#pop-options

@@ -6,6 +6,8 @@ module U64 = FStar.UInt64
 module Util = CBOR.Spec.Util
 module U8 = FStar.UInt8
 
+#push-options "--z3rlimit 32"
+
 #restart-solver
 [@@"opaque_to_smt"]
 let map_group_choice_compatible_no_cut
@@ -95,3 +97,5 @@ let map_group_choice_compatible_no_cut
         (elab_map_group_sem env.e_sem_env g2);
       RSuccess ()
     end
+
+#pop-options
