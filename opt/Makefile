@@ -34,6 +34,7 @@ FStar.do: FStar
 z3: FStar.do
 	mkdir -p $@
 	FStar/.scripts/get_fstar_z3.sh $(realpath .)/$@
+	rm -rf $@/z3-4.8.5
 
 karamel.do: karamel FStar.do
 	+$(MAKE) -C $<
