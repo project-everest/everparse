@@ -2,7 +2,7 @@ name: Build 3D doc, CBOR, COSE snapshots
 on:
   workflow_dispatch:
   schedule:
-    - cron: "* 22 * * 0,3"
+    - cron: "0 22 * * 0,3"
 
 defaults:
   run:
@@ -40,12 +40,13 @@ jobs:
           git clean -xfd
 
       - name: avoid trivial changes
+        id: checktrivial
         continue-on-error: true
         run: |
           [[ 0 -lt $(git diff --compact-summary HEAD~.. | wc -l) ]]
 
       - name: create pull request
-        if: ${{ success() }}
+        if: ${{ steps.checktrivial.outcome == 'success' }}
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.EVERPARSE_GITHUB_TOKEN }}
