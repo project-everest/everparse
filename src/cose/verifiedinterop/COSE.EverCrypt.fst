@@ -499,6 +499,8 @@ fn sign1_simple privkey payload (outbuf: S.slice UInt8.t)
   res
 }
 
+#push-options "--z3rlimit 32"
+
 fn verify_sig pubkey phdr aad payload (sigbuf: AP.ptr UInt8.t)
     (#vphdr: erased _) (#vaad: erased _) (#vpayload: erased _) (#ppubkey: erased _)
     #psigbuf (#vsigbuf: erased (Seq.seq UInt8.t) { Seq.length vsigbuf == 64 })
@@ -549,6 +551,8 @@ fn verify_sig pubkey phdr aad payload (sigbuf: AP.ptr UInt8.t)
     success
   }
 }
+
+#pop-options
 
 let rel_sign1_tagged_eq (a: evercddl_COSE_Sign1_Tagged_pretty) (b: spect_evercddl_COSE_Sign1_Tagged_pretty) =
   assert_norm' (rel_evercddl_COSE_Sign1_Tagged a b ==
@@ -657,6 +661,8 @@ let parses_from #t #st (s: CDDL.Spec.Base.spec t st true) (x: st) y : prop =
   | Some (c, len) -> len == Seq.length y /\ t c /\ s.parser c == x
   | None -> False
 
+#push-options "--z3rlimit 16"
+
 let good_signature (pubkey: Seq.seq UInt8.t { Seq.length pubkey == 32 })
     (msg: Seq.seq UInt8.t) (aad: Seq.seq UInt8.t) (payload: Seq.seq UInt8.t) : prop =
   exists (vmsg: spect_evercddl_COSE_Sign1_Tagged_pretty) tbs.
@@ -669,6 +675,8 @@ let good_signature (pubkey: Seq.seq UInt8.t { Seq.length pubkey == 32 })
 let int_eq_of_diff_zero (a b: int) : Lemma (requires a - b == 0) (ensures a == b) = ()
 let nat_eq_of_diff_zero (a b: nat) : Lemma (requires a - b == 0) (ensures a == b) =
   int_eq_of_diff_zero a b
+
+#pop-options
 
 fn verify1 pubkey aad msg
     #ppubkey (#vpubkey: erased (Seq.seq UInt8.t) { Seq.length vpubkey == 32 })

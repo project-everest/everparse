@@ -70,6 +70,8 @@ noextract [@@noextract_to "krml"]
 let cbor_det_mk_string_from_array () =
   mk_string_from_array (mk_string_from_slice (cbor_det_mk_string_from_arrayptr ()))
 
+#push-options "--z3rlimit 32"
+
 #restart-solver
 fn test_on
   (test: cbor_det_t)
@@ -140,6 +142,8 @@ ensures
   }
 }
 
+#pop-options
+
 let cbor_det_serialize_inj_strong
   (x1 x2: Spec.cbor)
   (y1 y2: Seq.seq U8.t)
@@ -204,7 +208,7 @@ inline_for_extraction
 noextract [@@noextract_to "krml"]
 let cbor_det_mk_int64' = mk_int64_trade _ (cbor_det_mk_int64 ()) (cbor_det_elim_int64 ())
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 128"
 fn main (_: unit)
 requires emp
 returns res: res_t
