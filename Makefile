@@ -1,3 +1,7 @@
+# NOTE: if you want to add global F* options, you need to do the following:
+# 1. Add them to FSTAR_OPTIONS in src/fstar.Makefile
+# 2. Add them to fstar_args0 in src/3d/ocaml/Batch.ml
+
 all: package-subset asn1 cbor cddl cbor-interface cose
 
 export EVERPARSE_OPT_PATH=$(realpath opt)
