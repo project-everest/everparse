@@ -12,3 +12,6 @@ ifneq ($(.SHELLSTATUS),0)
 endif
 
 export FSTAR_EXE
+
+# Add common options here
+FSTAR_OPTIONS += --z3version 4.13.3
