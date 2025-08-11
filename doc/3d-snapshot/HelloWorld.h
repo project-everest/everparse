@@ -1,7 +1,7 @@
 
 
-#ifndef __HelloWorld_H
-#define __HelloWorld_H
+#ifndef HelloWorld_H
+#define HelloWorld_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -31,5 +31,5 @@ HelloWorldValidatePoint(
 }
 #endif
 
-#define __HelloWorld_H_DEFINED
-#endif
+#define HelloWorld_H_DEFINED
+#endif /* HelloWorld_H */

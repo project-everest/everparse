@@ -1,7 +1,7 @@
 
 
-#ifndef __Specialize1_H
-#define __Specialize1_H
+#ifndef Specialize1_H
+#define Specialize1_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -55,5 +55,5 @@ Specialize1ValidateRmux(
 }
 #endif
 
-#define __Specialize1_H_DEFINED
-#endif
+#define Specialize1_H_DEFINED
+#endif /* Specialize1_H */
