@@ -809,7 +809,7 @@ let rec page_offsets_are_distinct_and_inbound (page_offs: list int64) (bound: in
 
 (** Top‑level file metadata validation ------------------------------- *)
 
-val validate_file_meta_data: file_meta_data -> int64 -> Tot bool
+val validate_file_meta_data: file_meta_data -> nat -> Tot bool
 
 let validate_file_meta_data fmd footer_start =
   let page_offs:// get a flat list of all page offsets
@@ -827,10 +827,11 @@ let validate_file_meta_data fmd footer_start =
       fmd.row_groups
   in
   // page_offs should all be distinct and inbound
-  page_offsets_are_distinct_and_inbound page_offs (footer_start) && ranges_disjoint ranges &&
+  FStar.Int.fits footer_start 64 &&
+  page_offsets_are_distinct_and_inbound page_offs (I64.int_to_t footer_start) && ranges_disjoint ranges &&
   ranges_in_bound ranges
     // ranges should be mutually disjoint and non-overlapping with the footer
-    (I64.v footer_start) &&
+    (footer_start) &&
   List.Tot.for_all (fun rg -> validate_row_group rg) fmd.row_groups
 
 let rec page_offsets_are_contiguous (prev: page_location) (locs: list page_location)
@@ -947,7 +948,7 @@ let parse_parquet (file_size: nat) =
             (weaken (dtuple2_rtol_kind parse_seq_all_bytes_kind 0)
                 (parse_dtuple2_rtol (parse_fldata parse_footer (U32.v len))
                     (fun footer ->
-                        if file_size >= U32.v len + 8 && validate_file_meta_data footer (I64.int_to_t (file_size - U32.v len - 8))
+                        if file_size >= U32.v len + 8 && validate_file_meta_data footer (file_size - U32.v len - 8)
                         // if true 
                         then parse_seq_all_bytes
                         else fail_parser _ _
