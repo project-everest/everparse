@@ -18,18 +18,16 @@ let coerce_
 val jump_with_offset_and_size_then_parse
   (offset: nat)
   (size: nat)
-  (#k: parser_kind)
   (#t: Type)
-  (p: parser k t)
+  (p: bare_parser t)
 // : Tot (parser (parse_fldata_kind size k) t)
 : Tot (bare_parser t)
 
 let jump_with_offset_and_size_then_parse
   (offset: nat)
   (size: nat)
-  (#k: parser_kind)
   (#t: Type)
-  (p: parser k t)
+  (p: bare_parser t)
 : Tot (bare_parser t)
 // : Tot (parser (parse_fldata_kind size k) t)
   = fun b ->
@@ -37,4 +35,4 @@ let jump_with_offset_and_size_then_parse
       None
     else
       let new_b = Seq.slice b offset (offset + size) in
-      coerce_ (parse (parse_fldata p size) new_b)
+      coerce_ (parse (parse_fldata' p size) new_b)
