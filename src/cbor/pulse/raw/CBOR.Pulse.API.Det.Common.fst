@@ -108,6 +108,8 @@ let cbor_det_case (x: cbor_det_t) : Tot cbor_det_case_t =
     -> CaseMap
   | Raw.CBOR_Case_Simple _ -> CaseSimpleValue
 
+#push-options "--z3rlimit 32"
+
 ghost
 fn cbor_det_case_correct
   (x: cbor_det_t)
@@ -123,6 +125,8 @@ ensures
   SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor v);
   fold (cbor_det_match p x v);
 }
+
+#pop-options
 
 let cbor_det_validate_post_intro
   (v: Seq.seq U8.t)

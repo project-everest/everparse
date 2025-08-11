@@ -581,10 +581,8 @@ let t_map_concat_cut_r
   (t_map (map_group_concat g (map_group_cut k)) == t_map g)
 = t_map_ext (map_group_concat g (map_group_cut k)) g
 
-#restart-solver
-let t_map_concat_cut_r_gen
+val t_map_concat_cut_r_gen
   (g g1 g2 g3: det_map_group)
   (k: typ)
 : Lemma
   (t_map (map_group_concat g (map_group_choice g1 (map_group_choice (map_group_concat g2 (map_group_cut k)) g3))) == t_map (map_group_concat g (map_group_choice g1 (map_group_choice g2 g3))))
-= t_map_ext (map_group_concat g (map_group_choice g1 (map_group_choice (map_group_concat g2 (map_group_cut k)) g3))) (map_group_concat g (map_group_choice g1 (map_group_choice g2 g3)))

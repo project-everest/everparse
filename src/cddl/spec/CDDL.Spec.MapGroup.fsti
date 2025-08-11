@@ -838,8 +838,7 @@ let map_group_footprint_concat_consumes_all_recip'
 = let (_, _) = map_group_footprint_concat_consumes_all_recip g1 g2 f1 f2 m in
   ()
 
-#restart-solver
-let matches_map_group_equiv_concat'
+val matches_map_group_equiv_concat'
   (g1 g1' g2 g2': det_map_group)
   (f1 f1' f2 f2': map_constraint)
   (m: cbor_map)
@@ -858,8 +857,6 @@ let matches_map_group_equiv_concat'
   (ensures (
     matches_map_group (map_group_concat g1' g2') m
   ))
-= let (m1, m2) = map_group_footprint_concat_consumes_all_recip g1 g2 f1 f2 m in
-  map_group_footprint_concat_consumes_all g1' g2' f1' f2' m1 m2
 
 #restart-solver
 let matches_map_group_equiv_concat
@@ -1921,7 +1918,7 @@ val map_group_parser_spec_choice_eq
     [SMTPat (map_group_parser_spec_choice p1 p2 target_size target_prop l)]
 
 #restart-solver
-let map_group_serializer_spec_choice
+val map_group_serializer_spec_choice
   (#source1: det_map_group)
   (#source_fp1: map_constraint)
   (#target1: Type)
@@ -1954,32 +1951,48 @@ let map_group_serializer_spec_choice
     end
   })  
 : Tot (map_group_serializer_spec (map_group_parser_spec_choice p1 p2 target_size target_prop))
-= fun x ->
-    let res : cbor_map =
+
+#restart-solver
+val map_group_serializer_spec_choice_eq
+  (#source1: det_map_group)
+  (#source_fp1: map_constraint)
+  (#target1: Type)
+  (#target_size1: target1 -> Tot nat)
+  (#target_prop1: target1 -> bool)
+  (#p1: map_group_parser_spec source1 source_fp1 target_size1 target_prop1)
+  (s1: map_group_serializer_spec p1 {
+    map_group_footprint source1 source_fp1
+  })
+  (#source2: det_map_group)
+  (#source_fp2: map_constraint)
+  (#target2: Type)
+  (#target_size2: target2 -> Tot nat)
+  (#target_prop2: target2 -> bool)
+  (#p2: map_group_parser_spec source2 source_fp2 target_size2 target_prop2)
+  (s2: map_group_serializer_spec p2 {
+    map_group_footprint source2 source_fp2 /\
+    map_group_choice_compatible source1 source2
+  })
+  (target_size: (target1 `either` target2) -> Tot nat {
+    forall x . target_size x == begin match x with
+    | Inl y -> target_size1 y
+    | Inr y -> target_size2 y
+    end
+  })
+  (target_prop: (target1 `either` target2) -> bool {
+    forall x . target_prop x <==> begin match x with
+    | Inl x1 -> target_prop1 x1
+    | Inr x2 -> target_prop2 x2
+    end
+  })
+  (x: (target1 `either` target2) { target_prop x })
+: Lemma
+  (ensures (map_group_serializer_spec_choice s1 s2 target_size target_prop x <: cbor_map) == begin
       match x with
       | Inl y -> s1 y
       | Inr y -> s2 y
-    in
-    assert (map_group_serializer_spec_arg_prop (source1 `map_group_choice` source2) (source_fp1 `map_constraint_choice` source_fp2) res);
-    assert (target_size x == cbor_map_length res);
-    let res1 = cbor_map_filter (source_fp1) res in
-    let f () : Lemma (map_group_parser_spec_choice p1 p2 target_size target_prop res == x) =
-      match x with
-      | Inl y ->
-        assert (res1 `cbor_map_equal` res);
-        map_group_parser_spec_choice_eq p1 p2 target_size target_prop res;
-        assert (map_group_parser_spec_choice p1 p2 target_size target_prop res == x)
-      | Inr y ->
-        assert (cbor_map_filter (source_fp2) res `cbor_map_equal` res);
-        map_group_parser_spec_choice_eq p1 p2 target_size target_prop res;
-        assert (MapGroupDet? (apply_map_group_det source2 (res)));
-        assert (MapGroupFail? (apply_map_group_det source1 (res)));
-        map_group_footprint_elim source1 source_fp1 res1 (cbor_map_sub res res1);
-        assert (MapGroupFail? (apply_map_group_det source1 (res1)));
-        assert (map_group_parser_spec_choice p1 p2 target_size target_prop res == x)
-    in
-    f ();
-    res
+  end)
+  [SMTPat (map_group_serializer_spec_choice s1 s2 target_size target_prop x)]
 
 let mg_spec_choice_size
   (#target1: Type)
@@ -2003,7 +2016,7 @@ let mg_spec_choice_serializable
   | Inl x1 -> p1 x1
   | Inr x2 -> p2 x2
 
-let mg_spec_choice_inj
+val mg_spec_choice_inj
   (#source1: det_map_group)
   (#source_fp1: map_constraint)
   (#target1: Type)
@@ -2023,24 +2036,6 @@ let mg_spec_choice_inj
 : Lemma
   (requires (inj1 && inj2))
   (ensures map_group_serializer_spec_choice p1.mg_serializer p2.mg_serializer (mg_spec_choice_size p1.mg_size p2.mg_size) (mg_spec_choice_serializable p1.mg_serializable p2.mg_serializable) (map_group_parser_spec_choice p1.mg_parser p2.mg_parser (mg_spec_choice_size p1.mg_size p2.mg_size) (mg_spec_choice_serializable p1.mg_serializable p2.mg_serializable) c) == c)
-= let f1 = source_fp1 in
-  cbor_map_split f1 c;
-  let c1 = cbor_map_filter f1 c in
-  let c1' = cbor_map_filter (U.notp f1) c in
-  map_group_footprint_elim source1 source_fp1 c1 c1';
-  match apply_map_group_det source1 c1 with
-  | MapGroupDet _ _ ->
-    assert (cbor_map_equal c1' cbor_map_empty);
-    assert (c1 == c)
-  | MapGroupFail ->
-    let f2 = source_fp2 in
-    cbor_map_split f2 c;
-    let c2 = cbor_map_filter f2 c in
-    let c2' = cbor_map_filter (U.notp f2) c in
-    map_group_footprint_elim source2 source_fp2 c2 c2';
-    assert (cbor_map_equal c2' cbor_map_empty);
-    assert (c2 == c);
-    ()
 
 val mg_spec_choice_domain_inj
   (#source1: det_map_group)
@@ -2640,7 +2635,7 @@ let rec list_fold_map_group_zero_or_more_match_item_serializer_op_mem
       list_fold_map_group_zero_or_more_match_item_serializer_op_mem pkey pvalue except m (map_group_zero_or_more_match_item_serializer_op pkey pvalue except m accu a) q kv
   end
 
-let rec list_fold_map_group_zero_or_more_match_item_serializer_length
+val list_fold_map_group_zero_or_more_match_item_serializer_length
   (#tkey #tvalue: Type)
   (#key #value: typ)
   (pkey: spec key tkey true)
@@ -2661,10 +2656,6 @@ let rec list_fold_map_group_zero_or_more_match_item_serializer_length
     cbor_map_length m' == cbor_map_length accu + List.Tot.length l
   ))
   (decreases l)
-= match l with
-  | [] -> ()
-  | a :: q ->
-    list_fold_map_group_zero_or_more_match_item_serializer_length pkey pvalue except m (map_group_zero_or_more_match_item_serializer_op pkey pvalue except m accu a) q
 
 let map_group_zero_or_more_match_item_serializer'
   (#tkey #tvalue: Type)

@@ -245,6 +245,8 @@ fn nondep_then_fst_tot_kind
   nondep_then_fst s1 j1 s2 input
 }
 
+#push-options "--z3rlimit 32"
+
 fn cbor_raw_ints_optimal (_: unit) : LowParse.Pulse.Recursive.impl_pred_t u#0 u#0 #_ serialize_raw_data_item_param R.raw_data_item_ints_optimal_elem
 = (a: _)
   (n: _)
@@ -275,6 +277,8 @@ fn cbor_raw_ints_optimal (_: unit) : LowParse.Pulse.Recursive.impl_pred_t u#0 u#
   Trade.elim _ _;
   res
 }
+
+#pop-options
 
 (*
 fn impl_deterministically_encoded_cbor_map_key_order (_: unit)

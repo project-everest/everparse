@@ -111,12 +111,12 @@ let pulse_home =
   with
   | Not_found -> Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "pulse") "out"
 
-let z3_version = "4.8.5"
+let z3_version = "4.13.3"
 
 let z3_executable_option =
   let test = run_cmd ~silent:true fstar_exe ["--locate_z3"; z3_version] in
   if test = 0
-  then []
+  then ["--z3version"; z3_version]
   else
     let opt_z3 = Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "z3") ("z3-" ^ z3_version) in
     if Sys.file_exists opt_z3

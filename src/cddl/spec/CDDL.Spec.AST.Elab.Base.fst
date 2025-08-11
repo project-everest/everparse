@@ -127,6 +127,8 @@ let rec apply_map_group_det_empty_fail
     | res -> res
     end
 
+#push-options "--z3rlimit 32"
+
 let rec apply_map_group_det_empty_fail_correct
   (env: sem_env)
   (g: elab_map_group)
@@ -160,6 +162,8 @@ let rec apply_map_group_det_empty_fail_correct
   | MGMatch cut k v ->
     Spec.apply_map_group_det_match_item_for cut (eval_literal k) (typ_sem env v) Cbor.cbor_map_empty
   | _ -> ()
+
+#pop-options
 
 let coerce_failure
   (#t1 #t2: Type)

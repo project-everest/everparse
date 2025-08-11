@@ -540,6 +540,9 @@ let init_and_probe
       failed *= true
     )
 
+#pop-options
+
+#push-options "--z3rlimit_factor 8 --split_queries no"
 
 inline_for_extraction
 noextract
@@ -577,3 +580,5 @@ let run_probe_m (#any:bool)
     0uL
   )
   else wr
+
+#pop-options

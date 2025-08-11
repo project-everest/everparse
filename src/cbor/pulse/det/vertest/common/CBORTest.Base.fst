@@ -94,6 +94,10 @@ fn slice_from_array_trade
   s
 }
 
+#pop-options
+
+#push-options "--fuel 8 --z3rlimit 32"
+
 #restart-solver
 inline_for_extraction
 noextract [@@noextract_to "krml"]

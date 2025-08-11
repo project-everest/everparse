@@ -1,10 +1,14 @@
 all: verify-all extract-all
 
+EVERPARSE_SRC_PATH ?= $(realpath ../../src)
+
 LOWPARSE_HOME ?= ../../src/lowparse
 
 FSTAR_OUT_DIR?=.fstar-out
 
 FSTAR_EXE ?= fstar.exe
+
+include $(EVERPARSE_SRC_PATH)/fstar.Makefile
 
 ifndef KRML_HOME
   KRMLLIB:=$(shell ocamlfind query karamel)

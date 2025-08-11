@@ -60,6 +60,7 @@ let krml out_dir =
 
 (* command lines *)
 let fstar_args0 =
+  "--z3version" :: "4.13.3" ::
   "--already_cached" :: "Prims,LowStar,FStar,LowParse,C,EverParse3d.\\*,Spec" ::
     "--include" :: lowparse_home ::
       "--include" :: krmllib ::
