@@ -1,7 +1,7 @@
 
 
-#ifndef __BF_H
-#define __BF_H
+#ifndef BF_H
+#define BF_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -31,5 +31,5 @@ BfValidateDummy(
 }
 #endif
 
-#define __BF_H_DEFINED
-#endif
+#define BF_H_DEFINED
+#endif /* BF_H */

@@ -1,7 +1,7 @@
 
 
-#ifndef __EnumConstraint_H
-#define __EnumConstraint_H
+#ifndef EnumConstraint_H
+#define EnumConstraint_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -46,5 +46,5 @@ EnumConstraintValidateEnumConstraint(
 }
 #endif
 
-#define __EnumConstraint_H_DEFINED
-#endif
+#define EnumConstraint_H_DEFINED
+#endif /* EnumConstraint_H */

@@ -1,7 +1,7 @@
 
 
-#ifndef __BoundedSum_H
-#define __BoundedSum_H
+#ifndef BoundedSum_H
+#define BoundedSum_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -50,5 +50,5 @@ BoundedSumValidateMySum(
 }
 #endif
 
-#define __BoundedSum_H_DEFINED
-#endif
+#define BoundedSum_H_DEFINED
+#endif /* BoundedSum_H */
