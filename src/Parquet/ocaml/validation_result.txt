@@ -1,0 +1,387 @@
+Footer length: 723
+File metadata created by: impala version 1.3.0-INTERNAL (build 8a48ddb1eff84592b3fc06bc6f51ec120e1fffc9)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/alltypes_dictionary.parquet ✘ invalid
+Footer length: 730
+File metadata created by: impala version 1.3.0-INTERNAL (build 8a48ddb1eff84592b3fc06bc6f51ec120e1fffc9)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/alltypes_plain.parquet ✘ invalid
+Footer length: 723
+File metadata created by: impala version 1.3.0-INTERNAL (build 8a48ddb1eff84592b3fc06bc6f51ec120e1fffc9)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/alltypes_plain.snappy.parquet ✘ invalid
+Footer length: 1721
+File metadata created by: parquet-mr version 1.12.0-SNAPSHOT (build 6901a2040848c6b37fa61f4b0a76246445f396db)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/alltypes_tiny_pages.parquet ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✘ invalid
+Footer length: 1644
+File metadata created by: parquet-mr version 1.12.0-SNAPSHOT (build 6901a2040848c6b37fa61f4b0a76246445f396db)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/alltypes_tiny_pages_plain.parquet ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+Footer length: 371
+File metadata created by: parquet-mr version 1.10.0 (build 031a6654009e3b82020012a18434c582bd74c73a)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/binary.parquet ✔︎ valid
+No offset index
+Footer length: 119
+File metadata created by: HVR 5.3.0/9 (linux_glibc2.5-x64-64bit)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/byte_array_decimal.parquet ✔︎ valid
+No offset index
+Footer length: 498
+File metadata created by: parquet-cpp-arrow version 14.0.2
+/home/caiyi/repos/arrow-rs/parquet-testing/data/byte_stream_split.zstd.parquet ✘ invalid
+Footer length: 3033
+File metadata created by: parquet-cpp-arrow version 16.0.0-SNAPSHOT
+/home/caiyi/repos/arrow-rs/parquet-testing/data/byte_stream_split_extended.gzip.parquet ✘ invalid
+Footer length: 237
+File metadata created by: parquet-cpp-arrow version 17.0.0-SNAPSHOT
+/home/caiyi/repos/arrow-rs/parquet-testing/data/column_chunk_key_value_metadata.parquet ✘ invalid
+Footer length: 115
+Fatal error: exception Thrift.Field_empty("fileMetaData.created_by")
+Footer length: 403
+File metadata created by: parquet-mr version 1.13.0-SNAPSHOT (build 7398d9b522733c669d497c25495c9efa1c860994)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/data_index_bloom_encoding_stats.parquet ✔︎ valid
+OffsetIndex ✔︎ valid
+Footer length: 524
+File metadata created by: parquet-rs version 49.0.0
+/home/caiyi/repos/arrow-rs/parquet-testing/data/data_index_bloom_encoding_with_length.parquet ✔︎ valid
+OffsetIndex ✘ invalid
+Footer length: 249
+File metadata created by: parquet-mr version 1.13.0-SNAPSHOT (build 019361e0da0677360788f0ad96c520fb8c296d7d)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/datapage_v1-corrupt-checksum.parquet ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+Footer length: 240
+File metadata created by: parquet-mr version 1.13.0-SNAPSHOT (build 019361e0da0677360788f0ad96c520fb8c296d7d)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/datapage_v1-snappy-compressed-checksum.parquet ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+Footer length: 249
+File metadata created by: parquet-mr version 1.13.0-SNAPSHOT (build 019361e0da0677360788f0ad96c520fb8c296d7d)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/datapage_v1-uncompressed-checksum.parquet ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+Footer length: 836
+File metadata created by: parquet-mr version 1.8.1 (build 4aba4dae7bb0d4edbcf7923ae1339f28fd3f7fcf)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/datapage_v2.snappy.parquet ✔︎ valid
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+Footer length: 353
+File metadata created by: parquet-mr version 1.13.1 (build db4183109d5b734ec5930d870cdae161e408ddba)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/datapage_v2_empty_datapage.snappy.parquet ✔︎ valid
+OffsetIndex ✔︎ valid
+Footer length: 7492
+File metadata created by: parquet-mr version 1.10.0 (build 031a6654009e3b82020012a18434c582bd74c73a)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/delta_binary_packed.parquet ✔︎ valid
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+Footer length: 1046
+File metadata created by: parquet-mr version 1.10.0 (build 031a6654009e3b82020012a18434c582bd74c73a)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/delta_byte_array.parquet ✔︎ valid
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+Footer length: 2070
+File metadata created by: parquet-mr version 1.10.0 (build 031a6654009e3b82020012a18434c582bd74c73a)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/delta_encoding_optional_column.parquet ✔︎ valid
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+Footer length: 3604
+File metadata created by: parquet-mr version 1.12.1 (build 2a5c06c58fa987f85aa22170be14d927d5ff6e7d)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/delta_encoding_required_column.parquet ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+Footer length: 105
+Fatal error: exception Thrift.Field_empty("fileMetaData.created_by")
+Footer length: 550
+Fatal error: exception Thrift.Field_empty("fileMetaData.created_by")
+Footer length: 252
+File metadata created by: parquet-mr version 1.13.0-SNAPSHOT (build d057b39d93014fe40f5067ee4a33621e65c91552)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/fixed_length_byte_array.parquet ✔︎ valid
+OffsetIndex ✔︎ valid
+Footer length: 346
+File metadata created by: parquet-mr version 1.8.2 (build c6522788629e590a53eb79874b95f6c3ff11f16c)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/fixed_length_decimal.parquet ✔︎ valid
+No offset index
+Footer length: 336
+File metadata created by: parquet-mr version 1.8.2 (build c6522788629e590a53eb79874b95f6c3ff11f16c)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/fixed_length_decimal_legacy.parquet ✔︎ valid
+No offset index
+Footer length: 346
+File metadata created by: parquet-cpp-arrow version 15.0.0-SNAPSHOT
+/home/caiyi/repos/arrow-rs/parquet-testing/data/float16_nonzeros_and_nans.parquet ✔︎ valid
+No offset index
+Footer length: 346
+File metadata created by: parquet-cpp-arrow version 15.0.0-SNAPSHOT
+/home/caiyi/repos/arrow-rs/parquet-testing/data/float16_zeros_and_nans.parquet ✔︎ valid
+No offset index
+Footer length: 376
+File metadata created by: parquet-mr version 1.10.1 (build a89df8f9932b6ef6633d06069e50c9b7970bebd1)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/hadoop_lz4_compressed.parquet ✔︎ valid
+No offset index
+No offset index
+No offset index
+Footer length: 397
+File metadata created by: parquet-mr version 1.11.1 (build 765bd5cd7fdef2af1cecd0755000694b992bfadd)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/hadoop_lz4_compressed_larger.parquet ✔︎ valid
+OffsetIndex ✔︎ valid
+Footer length: 366
+File metadata created by: parquet-mr version 1.12.2 (build 77e30c8093386ec52c3cfa6c34b7ef3321322c94)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/incorrect_map_schema.parquet ✔︎ valid
+OffsetIndex ✔︎ valid
+OffsetIndex ✔︎ valid
+Footer length: 329
+File metadata created by: parquet-mr version 1.8.2 (build c6522788629e590a53eb79874b95f6c3ff11f16c)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/int32_decimal.parquet ✔︎ valid
+No offset index
+Footer length: 265
+File metadata created by: parquet-mr version 1.13.0-SNAPSHOT (build 433de8df33fcf31927f7b51456be9f53e64d48b9)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/int32_with_null_pages.parquet ✔︎ valid
+OffsetIndex ✔︎ valid
+Footer length: 338
+File metadata created by: parquet-mr version 1.8.2 (build c6522788629e590a53eb79874b95f6c3ff11f16c)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/int64_decimal.parquet ✔︎ valid
+No offset index
+Footer length: 359
+File metadata created by: parquet-mr version 1.13.1 (build db4183109d5b734ec5930d870cdae161e408ddba)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/int96_from_spark.parquet ✔︎ valid
+OffsetIndex ✘ invalid
+Footer length: 712
+File metadata created by: parquet-cpp-arrow version 11.0.0
+/home/caiyi/repos/arrow-rs/parquet-testing/data/large_string_map.brotli.parquet ✘ invalid
+Footer length: 2140
+File metadata created by: parquet-cpp version 1.5.1-SNAPSHOT
+/home/caiyi/repos/arrow-rs/parquet-testing/data/list_columns.parquet ✘ invalid
+Footer length: 330
+File metadata created by: parquet-cpp version 1.5.1-SNAPSHOT
+/home/caiyi/repos/arrow-rs/parquet-testing/data/lz4_raw_compressed.parquet ✘ invalid
+Footer length: 222
+File metadata created by: parquet-cpp version 1.5.1-SNAPSHOT
+/home/caiyi/repos/arrow-rs/parquet-testing/data/lz4_raw_compressed_larger.parquet ✘ invalid
+Footer length: 455
+File metadata created by: parquet-rs version 53.2.0
+/home/caiyi/repos/arrow-rs/parquet-testing/data/map_no_value.parquet ✔︎ valid
+OffsetIndex ✘ invalid
+Footer length: 156
+File metadata created by: parquet-cpp version 1.3.2-SNAPSHOT
+/home/caiyi/repos/arrow-rs/parquet-testing/data/nan_in_stats.parquet ✘ invalid
+Footer length: 234
+File metadata created by: parquet-mr
+/home/caiyi/repos/arrow-rs/parquet-testing/data/nation.dict-malformed.parquet ✘ invalid
+Footer length: 709
+File metadata created by: parquet-mr version 1.8.2 (build c6522788629e590a53eb79874b95f6c3ff11f16c)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/nested_lists.snappy.parquet ✔︎ valid
+No offset index
+No offset index
+Footer length: 974
+File metadata created by: parquet-mr version 1.8.2 (build c6522788629e590a53eb79874b95f6c3ff11f16c)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/nested_maps.snappy.parquet ✔︎ valid
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+Footer length: 19372
+File metadata created by: UrbanLogiq
+/home/caiyi/repos/arrow-rs/parquet-testing/data/nested_structs.rust.parquet ✘ invalid
+Footer length: 684
+File metadata created by: parquet-cpp version 1.5.1-SNAPSHOT
+/home/caiyi/repos/arrow-rs/parquet-testing/data/non_hadoop_lz4_compressed.parquet ✘ invalid
+Footer length: 2544
+File metadata created by: parquet-mr version 1.8.0 (build 0fda28af84b9746396014ad6a415b90592a98b3b)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/nonnullable.impala.parquet ✔︎ valid
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+Footer length: 414
+File metadata created by: parquet-rs version 9.0.0
+/home/caiyi/repos/arrow-rs/parquet-testing/data/null_list.parquet ✔︎ valid
+No offset index
+Footer length: 2811
+File metadata created by: parquet-mr version 1.8.0 (build 0fda28af84b9746396014ad6a415b90592a98b3b)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/nullable.impala.parquet ✔︎ valid
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+No offset index
+Footer length: 420
+File metadata created by: parquet-mr version 1.8.2 (build c6522788629e590a53eb79874b95f6c3ff11f16c)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/nulls.snappy.parquet ✔︎ valid
+No offset index
+Footer length: 431
+File metadata created by: parquet-mr version 1.14.3 (build b5e376a2caee767a11e75b783512b14cf8ca90ec)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/old_list_structure.parquet ✔︎ valid
+OffsetIndex ✔︎ valid
+Footer length: 382
+File metadata created by: cpp version BuildInfo:GitBranch:master,GitVersion:7def947,BuildTime:1672903249
+/home/caiyi/repos/arrow-rs/parquet-testing/data/overflow_i16_page_cnt.parquet ✔︎ valid
+No offset index
+Footer length: 369
+File metadata created by: parquet-cpp-arrow version 14.0.2
+/home/caiyi/repos/arrow-rs/parquet-testing/data/page_v2_empty_compressed.parquet ✔︎ valid
+No offset index
+Footer length: 525
+File metadata created by: parquet-mr version 1.13.0-SNAPSHOT (build 261f7d2679407c833545b56f4c85a4ae8b5c9ed4)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/plain-dict-uncompressed-checksum.parquet ✔︎ valid
+OffsetIndex ✘ invalid
+Footer length: 306
+File metadata created by: parquet-rs version 0.3.0 (build b45ce7cba2199f22d93269c150d8a83916c69b5e)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/repeated_no_annotation.parquet ✘ invalid
+Footer length: 583
+File metadata created by: parquet-rs version 53.2.0
+/home/caiyi/repos/arrow-rs/parquet-testing/data/repeated_primitive_no_list.parquet ✔︎ valid
+OffsetIndex ✘ invalid
+Footer length: 525
+File metadata created by: parquet-mr version 1.13.0-SNAPSHOT (build 261f7d2679407c833545b56f4c85a4ae8b5c9ed4)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/rle-dict-snappy-checksum.parquet ✔︎ valid
+OffsetIndex ✘ invalid
+Footer length: 525
+File metadata created by: parquet-mr version 1.13.0-SNAPSHOT (build 261f7d2679407c833545b56f4c85a4ae8b5c9ed4)
+/home/caiyi/repos/arrow-rs/parquet-testing/data/rle-dict-uncompressed-corrupt-checksum.parquet ✔︎ valid
+OffsetIndex ✘ invalid
+Footer length: 111
+Fatal error: exception Thrift.Field_empty("fileMetaData.created_by")
+Footer length: 567
+File metadata created by: parquet-cpp version 1.5.1-SNAPSHOT
+/home/caiyi/repos/arrow-rs/parquet-testing/data/single_nan.parquet ✔︎ valid
+No offset index
+Footer length: 699
+File metadata created by: parquet-cpp-arrow version 16.1.0
+/home/caiyi/repos/arrow-rs/parquet-testing/data/sort_columns.parquet ✘ invalid
+Footer length: 852
+File metadata created by: parquet-cpp-arrow version 20.0.0-SNAPSHOT
+/home/caiyi/repos/arrow-rs/parquet-testing/data/unknown-logical-type.parquet ✔︎ valid
+No offset index
+No offset index

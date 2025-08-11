@@ -1,0 +1,12 @@
+(lang dune 3.19)
+(name parquet)
+
+(authors "Yi Cai <caiyeee@outlook.com>")
+
+(maintainers "Yi Cai <caiyeee@outlook.com>")
+
+(package
+  (name parquet)
+  (synopsis "An Apache Parquet File Format Validator")
+  (description "Validator extracted from F* specification; metadata parser generated from the Thrift compiler")
+)
