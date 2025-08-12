@@ -688,20 +688,24 @@ let offset_of_column_chunk (cmd: column_meta_data) : int64 =
     | Some off -> if I64.v off < I64.v cmd.data_page_offset then off else cmd.data_page_offset
     | None -> cmd.data_page_offset
 
-let rec columns_are_contiguous (prev: column_chunk) (cols: list column_chunk)
-    : Tot bool (decreases cols) =
-  match cols with
-  | [] -> true
-  | cc :: rest ->
-    match prev.meta_data, cc.meta_data with
-    | Some (prev_md: column_meta_data), Some cc_md ->
-      let prev_offset = I64.v (offset_of_column_chunk prev_md) in
-      let cc_offset = I64.v (offset_of_column_chunk cc_md) in
-      let prev_size = I64.v prev_md.total_compressed_size in
-      prev_offset + prev_size = cc_offset && columns_are_contiguous cc rest
-    | _ ->
-      // if metadata is missing, we can't check contiguity
-      true
+module J = Parquet.Spec.Jump
+
+let nat_of_int64 (x: I64.t) : Tot nat =
+  let res = I64.v x in if res < 0 then 0 else res
+
+let nat_of_int32 (x: I32.t) : Tot nat =
+  let res = I32.v x in if res < 0 then 0 else res
+
+let columns_are_sorted (cols: list column_chunk) : Tot bool =
+  J.offsets_and_sizes_are_sorted
+   (List.Tot.map
+     (fun col -> 
+       match col.meta_data with
+       | Some col -> (nat_of_int64 (offset_of_column_chunk col), nat_of_int64 col.total_compressed_size)
+       | _ -> ((0 <: nat), (0 <: nat)) (* dummy *)
+     )
+     cols
+   )
 
 val validate_row_group: row_group -> Tot bool
 
@@ -735,16 +739,14 @@ let validate_row_group rg =
       | None -> true
       | Some total_sz -> total_sz = I64.v sz
   in
-  let contiguous_ok =
-    (* cols should be contiguous *)
-    match rg.columns with
-    | [] -> true
-    | first :: rest -> columns_are_contiguous first rest
+  let sorted_ok =
+    (* cols should be contiguous according to the documentation, but we found some counterexamples, so we relax the requirement to cols being sorted *)
+    columns_are_sorted rg.columns
   in
   let cols_ok =
     List.Tot.for_all (fun cc -> validate_column_chunk cc) rg.columns (* each column chunk passes *)
   in
-  offset_ok && rg_size_ok && contiguous_ok && cols_ok
+  offset_ok && rg_size_ok && sorted_ok && cols_ok
 
 let cc_idx_ranges (cc: column_chunk) : list range =
   match
@@ -834,14 +836,9 @@ let validate_file_meta_data fmd footer_start =
     (footer_start) &&
   List.Tot.for_all (fun rg -> validate_row_group rg) fmd.row_groups
 
-let rec page_offsets_are_contiguous (prev: page_location) (locs: list page_location)
-    : Tot bool (decreases locs) =
-  match locs with
-  | [] -> true
-  | loc :: rest ->
-    I64.v loc.offset = I64.v prev.offset + I32.v prev.compressed_page_size &&
-    page_offsets_are_contiguous loc rest
-
+let page_offsets_are_contiguous (locs: list page_location) : Tot bool =
+  J.offsets_and_sizes_are_contiguous
+    (List.Tot.map (fun loc -> (nat_of_int64 loc.offset, nat_of_int32 loc.compressed_page_size)) locs)
 
 
 (* Once jump to OffsetIndex, validate its structure against the corresponding column_chunk *)
@@ -889,9 +886,7 @@ let validate_offset_index (oi: offset_index) (cc: column_chunk) : Tot bool =
       s = I64.v md.total_compressed_size
   in
   let contiguous_ok =
-    match locs with
-    | [] -> true
-    | first :: rest -> page_offsets_are_contiguous first rest
+    page_offsets_are_contiguous locs
   in
   // let ordered =
   //   (* ordered by offset and disjoint *)
