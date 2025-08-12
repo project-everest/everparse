@@ -998,6 +998,7 @@ fn get_array_payload
   get_array_payload' input v
 }
 
+#push-options "--z3rlimit 20"
 ghost
 fn get_map_payload'
   (input: S.slice byte)
@@ -1016,6 +1017,7 @@ fn get_map_payload'
     (L.serialize_nlist (U64.v (Map?.len v).value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
     input
 }
+#pop-options
 
 ghost
 fn get_map_payload
