@@ -1,7 +1,7 @@
 
 
-#ifndef __Probe_H
-#define __Probe_H
+#ifndef Probe_H
+#define Probe_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -167,5 +167,5 @@ ProbeValidateCoercePtr(
 }
 #endif
 
-#define __Probe_H_DEFINED
-#endif
+#define Probe_H_DEFINED
+#endif /* Probe_H */

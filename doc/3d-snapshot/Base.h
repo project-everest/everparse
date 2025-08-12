@@ -1,7 +1,7 @@
 
 
-#ifndef __Base_H
-#define __Base_H
+#ifndef Base_H
+#define Base_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -49,5 +49,5 @@ BaseValidatePair(
 }
 #endif
 
-#define __Base_H_DEFINED
-#endif
+#define Base_H_DEFINED
+#endif /* Base_H */

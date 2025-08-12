@@ -1,7 +1,7 @@
 
 
-#ifndef __Specialize1Standalone_H
-#define __Specialize1Standalone_H
+#ifndef Specialize1Standalone_H
+#define Specialize1Standalone_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -34,5 +34,5 @@ Specialize1standaloneValidateR(
 }
 #endif
 
-#define __Specialize1Standalone_H_DEFINED
-#endif
+#define Specialize1Standalone_H_DEFINED
+#endif /* Specialize1Standalone_H */

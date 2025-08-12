@@ -1,7 +1,7 @@
 
 
-#ifndef __CBORDet_H
-#define __CBORDet_H
+#ifndef CBORDet_H
+#define CBORDet_H
 
 #include "krmllib.h"
 
@@ -375,5 +375,5 @@ cbor_freeable cbor_copy(cbor_raw c);
 void cbor_free(cbor_freeable x);
 
 
-#define __CBORDet_H_DEFINED
-#endif
+#define CBORDet_H_DEFINED
+#endif /* CBORDet_H */

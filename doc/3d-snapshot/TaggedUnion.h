@@ -1,7 +1,7 @@
 
 
-#ifndef __TaggedUnion_H
-#define __TaggedUnion_H
+#ifndef TaggedUnion_H
+#define TaggedUnion_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -37,5 +37,5 @@ TaggedUnionValidateInteger(
 }
 #endif
 
-#define __TaggedUnion_H_DEFINED
-#endif
+#define TaggedUnion_H_DEFINED
+#endif /* TaggedUnion_H */

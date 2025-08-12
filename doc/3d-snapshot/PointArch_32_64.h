@@ -1,7 +1,7 @@
 
 
-#ifndef __PointArch_32_64_H
-#define __PointArch_32_64_H
+#ifndef PointArch_32_64_H
+#define PointArch_32_64_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -32,5 +32,5 @@ PointArch3264ValidatePoint(
 }
 #endif
 
-#define __PointArch_32_64_H_DEFINED
-#endif
+#define PointArch_32_64_H_DEFINED
+#endif /* PointArch_32_64_H */

@@ -1,7 +1,7 @@
 
 
-#ifndef __OrderedPair_H
-#define __OrderedPair_H
+#ifndef OrderedPair_H
+#define OrderedPair_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -31,5 +31,5 @@ OrderedPairValidateOrderedPair(
 }
 #endif
 
-#define __OrderedPair_H_DEFINED
-#endif
+#define OrderedPair_H_DEFINED
+#endif /* OrderedPair_H */
