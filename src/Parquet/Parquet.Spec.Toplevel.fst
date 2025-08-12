@@ -916,17 +916,6 @@ assume
 val parse_footer:parser parse_footer_kind file_meta_data
 // val parse_footer:parser parse_footer_kind footer_t
 
-assume
-val parse_pages_kind:parser_kind
-
-assume
-val pages_t (footer: file_meta_data) : Type0
-// val pages_t (footer: footer_t) : Type0
-
-assume
-val parse_pages (footer: file_meta_data) : parser parse_pages_kind (pages_t footer)
-// val parse_pages (footer: footer_t) : parser parse_pages_kind (pages_t footer)
-
 let is_PAR1 (s: Seq.lseq byte 4) : bool =
   let v0 = Seq.index s 0 in
   let v1 = Seq.index s 1 in
@@ -942,6 +931,30 @@ val parse_offset_index_kind: parser_kind
 assume
 val parse_offset_index: tot_parser parse_offset_index_kind offset_index
 
+assume
+val parse_page_header_kind: (k: parser_kind { k.parser_kind_subkind == Some ParserStrong })
+
+assume
+val parse_page_header: tot_parser parse_page_header_kind page_header
+
+let validate_page_data (h: page_header) (d: bytes) : Tot bool =
+  I32.v h.compressed_page_size = Seq.length d &&
+  true (* TODO: validate data against schema *)
+
+let parse_page = tot_parse_dtuple2 parse_page_header (fun h -> tot_parse_filter tot_parse_seq_all_bytes (validate_page_data h))
+
+let validate_offset_index_all (cc: column_chunk) (data: bytes) (oi: offset_index) : Tot bool =
+  validate_offset_index cc oi &&
+  List.Tot.for_all
+    (fun pl ->
+      J.pred_jump_with_offset_and_size_then_parse
+        (nat_of_int64 pl.offset)
+        (nat_of_int32 pl.compressed_page_size)
+        parse_page
+        data
+    )
+    oi.page_locations
+
 let validate_all (fmd: file_meta_data) (data: bytes) : Tot bool =
   validate_file_meta_data fmd (Seq.length data) &&
   J.pred_jump_with_offset_and_size_then_parse 0 4 (tot_parse_filter (tot_parse_seq_flbytes 4) is_PAR1) data &&
@@ -956,7 +969,7 @@ let validate_all (fmd: file_meta_data) (data: bytes) : Tot bool =
               (nat_of_int32 length)
               (tot_parse_filter
                 parse_offset_index
-                (validate_offset_index cc)
+                (validate_offset_index_all cc data)
               )
               data
           | _ -> true
