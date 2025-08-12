@@ -1,7 +1,7 @@
 
 
-#ifndef __COSE_EverCrypt_H
-#define __COSE_EverCrypt_H
+#ifndef COSE_EverCrypt_H
+#define COSE_EverCrypt_H
 
 #include "krmllib.h"
 
@@ -81,5 +81,5 @@ FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice_uint8_t
 COSE_EverCrypt_verify1_simple(uint8_t *pubkey, Pulse_Lib_Slice_slice__uint8_t msg);
 
 
-#define __COSE_EverCrypt_H_DEFINED
-#endif
+#define COSE_EverCrypt_H_DEFINED
+#endif /* COSE_EverCrypt_H */

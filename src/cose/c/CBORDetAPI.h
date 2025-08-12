@@ -1,7 +1,7 @@
 
 
-#ifndef __CBORDetAPI_H
-#define __CBORDetAPI_H
+#ifndef CBORDetAPI_H
+#define CBORDetAPI_H
 
 #include "krmllib.h"
 
@@ -127,5 +127,5 @@ cbor_det_serialize_map_insert_to_array(uint8_t *x0, size_t x1, size_t x2, size_t
 extern size_t cbor_det_serialize_map_to_array(uint64_t x0, uint8_t *x1, size_t x2, size_t x3);
 
 
-#define __CBORDetAPI_H_DEFINED
-#endif
+#define CBORDetAPI_H_DEFINED
+#endif /* CBORDetAPI_H */

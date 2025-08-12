@@ -1,7 +1,7 @@
 
 
-#ifndef __internal_CBORDet_H
-#define __internal_CBORDet_H
+#ifndef internal_CBORDet_H
+#define internal_CBORDet_H
 
 #include "krmllib.h"
 
@@ -40,5 +40,5 @@ cbor_det_map_iterator_t;
 typedef cbor_freeable cbor_det_freeable_t;
 
 
-#define __internal_CBORDet_H_DEFINED
-#endif
+#define internal_CBORDet_H_DEFINED
+#endif /* internal_CBORDet_H */

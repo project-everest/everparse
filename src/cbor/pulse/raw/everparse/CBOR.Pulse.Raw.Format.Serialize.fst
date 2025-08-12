@@ -2087,6 +2087,7 @@ ensures cbor_match pm x y ** pure (
   }
 }
 
+#push-options "--z3rlimit 32"
 fn cbor_serialize_tag
   (tag: raw_uint64)
   (output: S.slice U8.t)
@@ -2109,6 +2110,7 @@ ensures
     0sz
   }
 }
+#pop-options
 
 let seq_length_append_slice_left
   (#t: Type)

@@ -1,7 +1,7 @@
 
 
-#ifndef __internal_COSE_Format_H
-#define __internal_COSE_Format_H
+#ifndef internal_COSE_Format_H
+#define internal_COSE_Format_H
 
 #include "krmllib.h"
 
@@ -15,5 +15,5 @@ uint8_t *Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(Pulse_Lib_Slice_slice_
 Pulse_Lib_Slice_slice__uint8_t Pulse_Lib_Slice_from_array__uint8_t(uint8_t *a, size_t alen);
 
 
-#define __internal_COSE_Format_H_DEFINED
-#endif
+#define internal_COSE_Format_H_DEFINED
+#endif /* internal_COSE_Format_H */

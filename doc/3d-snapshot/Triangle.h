@@ -1,7 +1,7 @@
 
 
-#ifndef __Triangle_H
-#define __Triangle_H
+#ifndef Triangle_H
+#define Triangle_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -31,5 +31,5 @@ TriangleValidateTriangle(
 }
 #endif
 
-#define __Triangle_H_DEFINED
-#endif
+#define Triangle_H_DEFINED
+#endif /* Triangle_H */

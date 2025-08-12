@@ -1,7 +1,7 @@
 
 
-#ifndef __COSE_Format_H
-#define __COSE_Format_H
+#ifndef COSE_Format_H
+#define COSE_Format_H
 
 #include "krmllib.h"
 
@@ -2228,5 +2228,5 @@ FStar_Pervasives_Native_option___COSE_Format_evercddl_start_pretty___Pulse_Lib_S
 COSE_Format_validate_and_parse_start(Pulse_Lib_Slice_slice__uint8_t s);
 
 
-#define __COSE_Format_H_DEFINED
-#endif
+#define COSE_Format_H_DEFINED
+#endif /* COSE_Format_H */

@@ -1,7 +1,7 @@
 
 
-#ifndef __BoundedSumWhere_H
-#define __BoundedSumWhere_H
+#ifndef BoundedSumWhere_H
+#define BoundedSumWhere_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -32,5 +32,5 @@ BoundedSumWhereValidateBoundedSum(
 }
 #endif
 
-#define __BoundedSumWhere_H_DEFINED
-#endif
+#define BoundedSumWhere_H_DEFINED
+#endif /* BoundedSumWhere_H */
