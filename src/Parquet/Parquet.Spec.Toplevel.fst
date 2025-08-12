@@ -843,9 +843,9 @@ let page_offsets_are_contiguous (locs: list page_location) : Tot bool =
 
 (* Once jump to OffsetIndex, validate its structure against the corresponding column_chunk *)
 
-val validate_offset_index (oi: offset_index) (cc: column_chunk) : Tot bool
+val validate_offset_index (cc: column_chunk) (oi: offset_index) : Tot bool
 
-let validate_offset_index (oi: offset_index) (cc: column_chunk) : Tot bool =
+let validate_offset_index (cc: column_chunk) (oi: offset_index) : Tot bool =
   let locs = oi.page_locations in
   let first_loc =
     // the first page location must be consistent with the (computed) page location in cc
@@ -936,6 +936,35 @@ let is_PAR1 (s: Seq.lseq byte 4) : bool =
   (U32.v (FStar.Char.u32_of_char 'R') = U8.v v2) &&
   (U32.v (FStar.Char.u32_of_char '1') = U8.v v3)
 
+assume
+val parse_offset_index_kind: parser_kind
+
+assume
+val parse_offset_index: tot_parser parse_offset_index_kind offset_index
+
+let validate_all (fmd: file_meta_data) (data: bytes) : Tot bool =
+  validate_file_meta_data fmd (Seq.length data) &&
+  J.pred_jump_with_offset_and_size_then_parse 0 4 (tot_parse_filter (tot_parse_seq_flbytes 4) is_PAR1) data &&
+  List.Tot.for_all
+    (fun rg ->
+      List.Tot.for_all
+        (fun cc ->
+          match cc.offset_index_offset, cc.offset_index_length with
+          | Some offset, Some length ->
+            J.pred_jump_with_offset_and_size_then_parse
+              (nat_of_int64 offset)
+              (nat_of_int32 length)
+              (tot_parse_filter
+                parse_offset_index
+                (validate_offset_index cc)
+              )
+              data
+          | _ -> true
+        )
+        rg.columns
+    )
+    fmd.row_groups
+
 let parse_parquet (file_size: nat) =
   parse_nondep_then_rtol (parse_filter (parse_seq_flbytes 4) is_PAR1)
     (parse_dtuple2_rtol parse_u32_le
@@ -943,10 +972,5 @@ let parse_parquet (file_size: nat) =
             (weaken (dtuple2_rtol_kind parse_seq_all_bytes_kind 0)
                 (parse_dtuple2_rtol (parse_fldata parse_footer (U32.v len))
                     (fun footer ->
-                        if file_size >= U32.v len + 8 && validate_file_meta_data footer (file_size - U32.v len - 8)
-                        // if true 
-                        then parse_seq_all_bytes
-                        else fail_parser _ _
-                      // parse_pages footer
-                      // (parse_seq_all_bytes)
+                        parse_filter parse_seq_all_bytes (validate_all footer)
                       )))))

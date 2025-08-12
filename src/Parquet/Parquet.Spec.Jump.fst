@@ -19,23 +19,55 @@ val jump_with_offset_and_size_then_parse
   (offset: nat)
   (size: nat)
   (#t: Type)
-  (p: bare_parser t)
+  (p: tot_bare_parser t)
 // : Tot (parser (parse_fldata_kind size k) t)
-: Tot (bare_parser t)
+: Tot (tot_bare_parser t)
+
+inline_for_extraction
+val tot_parse_fldata'
+  (#t: Type)
+  (p: tot_bare_parser t)
+  (sz: nat)
+: Tot (tot_bare_parser t)
+
+let tot_parse_fldata' #t p sz =
+  let () = () in // Necessary to pass arity checking
+  fun (s: bytes) ->
+  if Seq.length s < sz
+  then None
+  else
+    match p (Seq.slice s 0 sz) with
+    | Some (v, consumed) ->
+      if (consumed <: nat) = (sz <: nat)
+      then Some (v, (sz <: consumed_length s))
+      else None
+    | _ -> None
 
 let jump_with_offset_and_size_then_parse
   (offset: nat)
   (size: nat)
   (#t: Type)
-  (p: bare_parser t)
-: Tot (bare_parser t)
+  (p: tot_bare_parser t)
+: Tot (tot_bare_parser t)
 // : Tot (parser (parse_fldata_kind size k) t)
   = fun b ->
     if Seq.length b < offset + size then
       None
     else
       let new_b = Seq.slice b offset (offset + size) in
-      coerce_ (parse (parse_fldata' p size) new_b)
+      coerce_ ((tot_parse_fldata' p size) new_b)
+
+let pred_jump_with_offset_and_size_then_parse
+  (offset: nat)
+  (size: nat)
+  (#t: Type)
+  (p: tot_bare_parser t)
+  (b: bytes)
+: Tot bool
+= Some? (jump_with_offset_and_size_then_parse offset size p b)
+
+let andp_g (#t: Type) (g1 g2: (t -> GTot bool)) (x: t) : GTot bool =
+  g1 x && g2 x
 
 let rec offsets_and_sizes_are_contiguous
   (l: list (nat & nat))
