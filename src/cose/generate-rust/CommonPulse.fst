@@ -663,7 +663,12 @@ let good_signature (pubkey: Seq.seq UInt8.t { Seq.length pubkey == 32 })
   to_be_signed_spec vmsg._x0._x0 { _x0 = aad } { _x0 = payload } tbs /\
   spec_ed25519_verify pubkey tbs vmsg._x0._x3._x0
 
+#push-options "--z3rlimit 32"
+
 let int_eq_of_diff_zero (a b: int) : Lemma (requires a - b == 0) (ensures a == b) = ()
+
+#pop-options
+
 let nat_eq_of_diff_zero (a b: nat) : Lemma (requires a - b == 0) (ensures a == b) =
   int_eq_of_diff_zero a b
 
