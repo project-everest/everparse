@@ -161,6 +161,7 @@ let sz_to_u32_safe (i: SizeT.t { SizeT.v i < pow2 32 }) : j:UInt32.t { UInt32.v 
   Math.Lemmas.small_mod (SizeT.v i) (pow2 32);
   SizeT.sizet_to_uint32 i
 
+#push-options "--z3rlimit 32"
 fn create_sig privkey phdr aad payload (sigbuf: AP.ptr UInt8.t)
     (#vphdr: erased _) (#vaad: erased _) (#vpayload: erased _) (#pprivkey: erased _)
     (#vprivkey: erased (Seq.seq UInt8.t) { Seq.length vprivkey == 32 })
@@ -209,6 +210,7 @@ fn create_sig privkey phdr aad payload (sigbuf: AP.ptr UInt8.t)
     V.free arr;
   }
 }
+#pop-options
 
 let rel_inl_map =
 (rel_slice_of_table (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_label_pretty_right
