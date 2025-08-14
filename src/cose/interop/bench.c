@@ -2,7 +2,7 @@
 #include <time.h>
 
 EVP_PKEY *create_key_pair() {
-    EVP_PKEY *pkey;
+    EVP_PKEY *pkey = NULL;
     EVP_PKEY_CTX *pctx; openssl_check(pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_ED25519, NULL));
     openssl_check(EVP_PKEY_keygen_init(pctx) == 1);
     openssl_check(EVP_PKEY_keygen(pctx, &pkey) == 1);
