@@ -1,0 +1,48 @@
+module Parquet.Pulse.Jump
+#lang-pulse
+open Pulse.Lib.Pervasives
+include LowParse.Pulse.Base
+include Parquet.Spec.Jump
+
+module SZ = FStar.SizeT
+module S = Pulse.Lib.Slice.Util
+module Trade = Pulse.Lib.Trade.Util
+
+fn impl_pred_jump_with_offset_and_size_then_parse
+  (#t: Type0)
+  (offset: SZ.t)
+  (size: SZ.t)
+  (#k: Ghost.erased parser_kind)
+  (#p: Ghost.erased (tot_parser k t))
+  (s: Ghost.erased (tot_serializer p))
+  (input: S.slice byte)
+  (#pm: perm)
+  (v: Ghost.erased bytes)
+requires
+  pts_to input #pm v ** pure (
+    SZ.v offset + SZ.v size <= Seq.length v /\
+    pred_jump_with_offset_and_size_then_parse (SZ.v offset) (SZ.v size) p v
+  )
+returns res: S.slice byte
+ensures exists* v' .
+  pts_to_serialized (serializer_of_tot_serializer s) res #pm v' **
+  Trade.trade
+    (pts_to_serialized (serializer_of_tot_serializer s) res #pm v')
+    (pts_to input #pm v) **
+  pure (
+    SZ.v offset + SZ.v size <= Seq.length v /\
+    Seq.slice v (SZ.v offset) (SZ.v offset + SZ.v size) == bare_serialize (serializer_of_tot_serializer s) v'
+  )
+{
+  let (s0, s12) = S.split_trade input offset;
+  Trade.elim_hyp_l _ _ _;
+  let (s1, s2) = S.split_trade s12 size;
+  Trade.elim_hyp_r _ _ _;
+  Trade.trans _ _ (pts_to input #pm v);
+  with v1 . assert (pts_to s1 #pm v1);
+  let v' = Ghost.hide (fst (Some?.v (Ghost.reveal (parse (parser_of_tot_parser p) v1))));
+  serializer_correct_implies_complete (parser_of_tot_parser p) (serializer_of_tot_serializer s);
+  pts_to_serialized_intro_trade (serializer_of_tot_serializer s) s1 v';
+  Trade.trans _ _ (pts_to input #pm v);
+  s1
+}
