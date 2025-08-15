@@ -1,0 +1,36 @@
+{
+    "_comment": "This allows to interactively edit the generated CDDLTest.Test.fst file. Make sure to build the plugins before.",
+    "fstar_exe": "../../../../opt/FStar/bin/fstar.exe",
+    "options": [
+      "--initial_fuel", "0",
+      "--max_fuel", "2",
+      "--initial_ifuel", "2",
+      "--max_ifuel", "2",
+      "--initial_ifuel", "2",
+      "--ext", "context_pruning",
+      "--load_cmxs", "evercddl_lib",
+      "--load_cmxs", "evercddl_plugin"
+    ],
+    "include_dirs": [
+      "../../../../src/lowparse",
+      "../../../../opt/karamel/krmllib",
+      "../../../../opt/karamel/krmllib/obj",
+      "../../../../opt/pulse/out/lib/pulse",
+      "../../../../src/cbor/spec",
+      "../../../../src/cbor/spec/raw",
+      "../../../../src/cbor/spec/raw/everparse",
+      "../../../../src/cbor/pulse",
+      "../../../../src/cbor/pulse/raw",
+      "../../../../src/cbor/pulse/raw/everparse",
+      "../../../../src/cddl/pulse",
+      "../../../../src/cddl/spec",
+      "../../../../src/cddl/tool",
+      "../../../../src/3d",
+      "../../../../src/3d/prelude",
+      "../../../../src/ASN1",
+      "../../../../lib/evercddl/plugin",
+      "../../../../lib/evercddl/lib",
+      "_output"
+    ]
+  }
+  

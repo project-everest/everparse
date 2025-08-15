@@ -25,7 +25,7 @@ all-checked: $(ALL_CHECKED)
 .PHONY: all-c
 all-c: $(ALL_C_FILES)
 
-EVERPARSE_SRC_PATH = $(realpath ../..)
+EVERPARSE_SRC_PATH = $(realpath ../../..)
 
 $(ODIR)/%.fst: %.cddl
 	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --mname "$(patsubst %.cddl,%,$<)" --odir $(ODIR) --fstar_only
@@ -33,7 +33,6 @@ $(ODIR)/%.fst: %.cddl
 $(ODIR)/%.o: $(ODIR)/%.c
 	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I _output --std=gnu2x $(CFLAGS) -c $< -o $@
 
-EVERPARSE_SRC_PATH = $(realpath ../..)
 EVERPARSE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)
 OUTPUT_DIRECTORY := _output
 SRC_PATHS += $(OUTPUT_DIRECTORY)

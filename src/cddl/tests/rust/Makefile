@@ -1,6 +1,6 @@
 all: build-rust
 
-EVERPARSE_SRC_PATH = $(realpath ../..)
+EVERPARSE_SRC_PATH = $(realpath ../../..)
 
 OUTPUT=_output/CDDLTest.Test.fst
 

@@ -1,6 +1,6 @@
 all: extract-all
 
-EVERPARSE_SRC_PATH = $(realpath ../..)
+EVERPARSE_SRC_PATH = $(realpath ../../..)
 
 OUTPUT_DIRECTORY=_output
 OUTPUT=$(OUTPUT_DIRECTORY)/CDDLTest.Test.fst

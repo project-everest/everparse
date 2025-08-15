@@ -1,4 +1,4 @@
-EVERPARSE_SRC_PATH = $(realpath ../..)
+EVERPARSE_SRC_PATH = $(realpath ../../..)
 EVERPARSE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)
 OUTPUT_DIRECTORY := _output
 SRC_PATHS += $(OUTPUT_DIRECTORY)

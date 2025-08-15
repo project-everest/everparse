@@ -1,6 +1,6 @@
 all: verify
 
-EVERPARSE_SRC_PATH = $(realpath ../../..)
+EVERPARSE_SRC_PATH = $(realpath ../../../..)
 INCLUDE_PATHS += \
 $(EVERPARSE_SRC_PATH)/cddl/spec \
 $(EVERPARSE_SRC_PATH)/cbor/spec \
