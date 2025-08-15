@@ -83,6 +83,15 @@ let option_ask_for_get_map_constraint
 : Tot (Ghost.erased CDDL.Spec.MapGroup.map_constraint)
 = map_constraint_sem v_sem_env (AskForMapConstraint?.t (Some?.v a))
 
+[@@bundle_attr]
+let is_TDef
+  (t: typ)
+: Tot bool
+= match t with
+  | TDef _
+  | TNamed _ (TDef _)
+    -> true
+  | _ -> false
 
 #push-options "--z3rlimit 1024 --query_stats"
 
@@ -187,12 +196,12 @@ and ask_zero_copy_wf_map_group
     end
   | WfMZeroOrOne _ s1 ->
     ask_zero_copy_wf_map_group ancillary_v ancillary ancillary_ag ancillary_mg s1
-  | WfMLiteral cut key _ s ->
+  | WfMLiteral cut _ key _ s ->
     ask_zero_copy_wf_type ancillary_v ancillary ancillary_ag ancillary_mg s
   | WfMZeroOrMore tkey tvalue except s_key s_value s_except ->
-    if not (TDef? tkey || ancillary _ s_key)
+    if not (is_TDef tkey || ancillary _ s_key)
     then Some (AskForType _ s_key true)
-    else if not (TDef? tvalue || ancillary _ s_value)
+    else if not (is_TDef tvalue || ancillary _ s_value)
     then Some (AskForType _ s_value true)
     else if not (ancillary_mg except)
     then Some (AskForMapConstraint _ s_except)

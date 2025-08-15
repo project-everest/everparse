@@ -656,7 +656,7 @@ let next_" ^ map_iterator ^ " = CDDL.Pulse.Parse.MapGroup.cddl_map_iterator_next
     let (anc1, accu1) = produce_iterators_for_map_group wenv anc accu s1 in
     produce_iterators_for_map_group wenv anc1 accu1 s2
   | WfMZeroOrOne _ s -> produce_iterators_for_map_group wenv anc accu s
-  | WfMLiteral _ _ _ s -> produce_iterators_for_typ wenv anc accu s
+  | WfMLiteral _ _ _ _ s -> produce_iterators_for_typ wenv anc accu s
   | _ -> (anc, accu)
 
 let produce_typ_defs

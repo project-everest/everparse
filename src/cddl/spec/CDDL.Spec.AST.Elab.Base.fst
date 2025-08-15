@@ -67,7 +67,7 @@ let rec elab_map_group_is_productive
 : Tot (result unit)
 = match g with
   | MGAlwaysFalse
-  | MGMatch _ _ _
+  | MGMatch _ _ _ _
   | MGMatchWithCut _ _
     -> RSuccess ()
   | MGNop -> RFailure "elab_map_group_is_productive: MGNop"
@@ -111,7 +111,7 @@ let rec apply_map_group_det_empty_fail
 : Tot (result bool)
 = match g with
   | MGAlwaysFalse
-  | MGMatch _ _ _
+  | MGMatch _ _ _ _
   | MGMatchWithCut _ _ -> RSuccess true
   | MGCut _
   | MGTable _ _ _
@@ -159,7 +159,7 @@ let rec apply_map_group_det_empty_fail_correct
       apply_map_group_det_empty_fail_correct env g2
     | _ -> ()
     end
-  | MGMatch cut k v ->
+  | MGMatch cut _ k v ->
     Spec.apply_map_group_det_match_item_for cut (eval_literal k) (typ_sem env v) Cbor.cbor_map_empty
   | _ -> ()
 
@@ -210,6 +210,9 @@ let rec rewrite_typ
     let (base', res) = rewrite_typ fuel' base in
     // NOTE: I cannot rewrite `range` because it is matched syntactically
     (TSize base' range, res)
+  | TNamed name t ->
+    let (t', res) = rewrite_typ fuel' t in
+    (TNamed name t', res)
   | _ -> (t, true)
 
 and rewrite_group
@@ -312,6 +315,7 @@ let rec rewrite_typ_bounded
   match t with
   | TChoice (TChoice t1 t2) t3 ->
     rewrite_typ_bounded env fuel' (TChoice t1 (TChoice t2 t3))
+  | TNamed _ t
   | TChoice t (TElem EAlwaysFalse)
   | TChoice (TElem EAlwaysFalse) t
   | TSize t _
@@ -441,6 +445,7 @@ let rec rewrite_typ_correct
   match t with
   | TChoice (TChoice t1 t2) t3 ->
     rewrite_typ_correct env fuel' (TChoice t1 (TChoice t2 t3))
+  | TNamed _ t
   | TSize t _
   | TChoice t (TElem EAlwaysFalse)
   | TChoice (TElem EAlwaysFalse) t
@@ -653,6 +658,7 @@ let rec split_interval
       | Some mi -> (lo <= mi /\ mi < hi)
     )
 = match t with
+  | TNamed _ t -> split_interval e is_int lo hi t
   | TChoice t1 t2 ->
     begin match split_interval e is_int lo hi t1 with
     | None -> split_interval e is_int lo hi t2
@@ -1234,7 +1240,7 @@ let rec map_group_footprint'
   | MGAlwaysFalse ->
     let res = RSuccess MCFalse in
     assert (map_group_footprint'_postcond env.e_sem_env g res); (| res, () |)
-  | MGMatch cut key value
+  | MGMatch cut _ key value
     ->
     let res = RSuccess (MCKeyValue (TElem (ELiteral key)) (if cut then TElem EAny else value)) in
     assert (map_group_footprint'_postcond env.e_sem_env g res); (| res, () |)

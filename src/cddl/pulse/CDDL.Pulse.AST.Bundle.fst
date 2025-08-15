@@ -11,36 +11,6 @@ open CBOR.Spec.API.Type
 module Env = CDDL.Pulse.AST.Env // for validator_env
 module Parse = CDDL.Pulse.AST.Parse // for ancillary_validate_env
 
-[@@bundle_attr]
-let name_from_literal (l : literal) : option string =
-  match l with
-  | LTextString s -> Some s
-  | LSimple i
-  | LInt i ->
-    Some (if i >= 0
-          then "intkey" ^ string_of_int i
-          else "intkeyneg" ^ string_of_int (-i))
-
-[@@bundle_attr]
-let rec extract_name_map_group (t : ast0_wf_parse_map_group 'a) : option string =
-  match t with
-  | WfMLiteral _ l _ _ -> name_from_literal l
-  | WfMZeroOrOne _g sub -> extract_name_map_group sub
-  | _ -> None
-
-[@@bundle_attr]
-let name_from_array_key (key : typ) : option string =
-  match key with
-  | TElem (ELiteral l) -> name_from_literal l
-  | _ -> None
-
-[@@bundle_attr]
-let rec extract_name_array_group (t : ast0_wf_array_group 'a) : option string =
-  match t with
-  | WfAElem _ key _ _ -> name_from_array_key key
-  | WfAZeroOrOne _g sub -> extract_name_array_group sub
-  | _ -> None
-
 let bundle_env'
   (#t: Type0)
   (vmatch: (perm -> t -> cbor -> slprop))
@@ -159,8 +129,7 @@ let sem_of_typ_sem_wf_ast_env_extend_typ_with_weak
   (let e' = (wf_ast_env_extend_typ_with_weak e new_name t t_wf) in
     sem_of_type_sem (e'.e_sem_env.se_env new_name) == typ_sem e.e_sem_env t
   )
-= 
-  assert_norm (let e' = (wf_ast_env_extend_typ_with_weak e new_name t t_wf) in sem_of_type_sem (e'.e_sem_env.se_env new_name) == typ_sem e.e_sem_env t)
+= ()
 
 [@@bundle_attr; sem_attr] // sem_attr for validate_typ
 let bundle_env_extend_typ_with_weak
@@ -618,7 +587,7 @@ and impl_bundle_wf_map_group
       )
       (map_constraint_choice ps1.mb_footprint map_constraint_empty)
       ()
-  | WfMLiteral cut key _ s ->
+  | WfMLiteral cut _ key _ s ->
     let nm = extract_name_map_group t_wf in
     let ps1 = impl_bundle_wf_type impl env ancillary_v ancillary ancillary_ag ancillary_mg s in
         (bundle_map_match_item_for
@@ -639,6 +608,7 @@ and impl_bundle_wf_map_group
         )
   | WfMZeroOrMore t_key t_value except s_key s_value s_except ->
     let Some (v_key, p_key) = match t_key with
+    | TNamed _ (TDef n)
     | TDef n -> 
       [@@inline_let] let _ = env.be_b_correct n in
       Some (env.be_v n, env.be_b n)
@@ -646,6 +616,7 @@ and impl_bundle_wf_map_group
     in
     let Some (v_except) = ancillary_mg except in
     let Some (v_value, p_value) = match t_value with
+    | TNamed _ (TDef n)
     | TDef n ->
       [@@inline_let] let _ = env.be_b_correct n in
       Some (env.be_v n, env.be_b n)

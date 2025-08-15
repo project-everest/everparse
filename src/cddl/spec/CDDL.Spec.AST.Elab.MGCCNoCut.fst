@@ -20,7 +20,7 @@ let map_group_choice_compatible_no_cut
 = fun env #g1 s1 #g2 s2 ->
   match s1 with
   | WfMNop _ -> RSuccess ()
-  | WfMLiteral false key value _ ->
+  | WfMLiteral false _ key value _ ->
     Spec.map_group_choice_compatible_no_cut_match_item_for_no_cut
       (eval_literal key)
       (typ_sem env.e_sem_env value)
@@ -59,7 +59,7 @@ let map_group_choice_compatible_no_cut
         (elab_map_group_sem env.e_sem_env g2);
       RSuccess ()
     end
-  | WfMLiteral _cut key value _s ->
+  | WfMLiteral _cut _ key value _s ->
     begin match map_group_footprint typ_disjoint fuel env g2 with
     | RSuccess te2 ->
       let res1 = map_constraint_disjoint typ_disjoint typ_included env (MCKeyValue (TElem (ELiteral key)) (TElem EAny)) te2 in
