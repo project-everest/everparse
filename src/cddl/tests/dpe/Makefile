@@ -35,7 +35,10 @@ dpe: $(ALL_CHECKED_FILES) dice util
 util:
 	+$(MAKE) -C $@
 
+# The Pulse DPE Makefile cannot be used outside of the Pulse
+# repository, so we need to build it by hand
 dice:
-	+OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $(PULSE_HOME)/../share/pulse/examples/dice verify
+	+$(MAKE) -f dice.Makefile
+#	+OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $(PULSE_HOME)/../share/pulse/examples/dice verify
 
 .PHONY: dpe dice util
