@@ -25,8 +25,12 @@ open DPESlice
 module U8 = FStar.UInt8
 module D = CDDLTest.Destructors
 
+(*
 assume
 val max_cert_len : SZ.t
+*)
+inline_for_extraction let max_cert_len : SZ.t = 1024sz // for extraction purposes
+
 assume
 val size_t_fits_in_u32 (z:SZ.t)
 : Lemma (SZ.v z < pow2 32)
