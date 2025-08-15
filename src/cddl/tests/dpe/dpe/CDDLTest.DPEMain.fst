@@ -167,6 +167,8 @@ ensures derive_context_post sid t p w input res
   }
 }
 
+#push-options "--z3rlimit 32"
+
 fn derive_context
   (sid:sid_t)
   (#t:G.erased trace { trace_valid_for_derive_context t })
@@ -322,3 +324,5 @@ ensures (
     }
   }
 }
+
+#pop-options

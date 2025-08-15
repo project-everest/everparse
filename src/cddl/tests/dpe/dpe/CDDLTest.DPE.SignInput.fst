@@ -45,7 +45,7 @@ ensures exists* p s.
   pts_to tbs #p s **
   Trade.trade (pts_to tbs #p s)
               (rel_evercddl_signinputargs x w) **
-  pure (bytes_of_evercddl_bytes s w._x4)
+  pure (bytes_of_evercddl_bytes s (Mkspect_evercddl_signinputargs_pretty0?._x4 w))
 {
   extract_to_be_signed x w;
   let tbs = extract_bytes _ _;

@@ -1,4 +1,4 @@
-all: extract
+all: extract dpe
 
 EVERPARSE_SRC_PATH = $(realpath ../../..)
 EVERPARSE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)
