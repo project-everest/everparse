@@ -550,11 +550,11 @@ fn verify_sig pubkey phdr aad payload (sigbuf: S.slice UInt8.t)
 
 let rel_sign1_tagged_eq (a: evercddl_COSE_Sign1_Tagged_pretty) (b: spect_evercddl_COSE_Sign1_Tagged_pretty) =
   assert_norm' (rel_evercddl_COSE_Sign1_Tagged a b ==
-    ((COSE.Format.rel_evercddl_empty_or_serialized_map a._x0.protected b._x0._x0 **
-            COSE.Format.rel_evercddl_header_map a._x0.unprotected b._x0._x1) **
+    ((COSE.Format.rel_evercddl_empty_or_serialized_map a._x0.protected b._x0.protected **
+            COSE.Format.rel_evercddl_header_map a._x0.unprotected b._x0.unprotected) **
         ((CDDL.Pulse.Types.rel_either COSE.Format.rel_evercddl_bstr
-                COSE.Format.rel_evercddl_nil a._x0.payload b._x0._x2) **
-            COSE.Format.rel_evercddl_bstr a._x0.signature b._x0._x3))
+                COSE.Format.rel_evercddl_nil a._x0.payload b._x0.payload) **
+            COSE.Format.rel_evercddl_bstr a._x0.signature b._x0.signature))
     )
 
 let rel_bstr_eq' (x: evercddl_bstr_pretty) (y: spect_evercddl_bstr_pretty) =
@@ -567,7 +567,7 @@ let sixty_four: v: SizeT.t { SizeT.v v == 64 } = 64sz
 inline_for_extraction noextract
 fn verify1_core pubkey aad (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x0.payload })
     #ppubkey (#vpubkey: erased (Seq.seq UInt8.t) { Seq.length vpubkey == 32 })
-    (#vaad: erased _) (#vmsg: erased spect_evercddl_COSE_Sign1_Tagged_pretty { Inl? (reveal vmsg)._x0._x2 })
+    (#vaad: erased _) (#vmsg: erased spect_evercddl_COSE_Sign1_Tagged_pretty { Inl? (reveal vmsg)._x0.payload })
   requires S.pts_to pubkey #ppubkey vpubkey
   requires rel_evercddl_COSE_Sign1_Tagged msg vmsg
   requires rel_evercddl_bstr aad vaad
@@ -577,17 +577,17 @@ fn verify1_core pubkey aad (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x
   ensures rel_evercddl_COSE_Sign1_Tagged msg vmsg
   ensures rel_evercddl_bstr aad vaad
   ensures pure (success <==>
-      (let sig = (reveal vmsg)._x0._x3._x0 in
+      (let sig = (reveal vmsg)._x0.signature._x0 in
         Seq.length sig == 64 /\
         exists (tbs: Seq.seq UInt8.t{Seq.length tbs <= max_size_t}).
-        to_be_signed_spec (reveal vmsg)._x0._x0 vaad (Inl?.v (reveal vmsg)._x0._x2) tbs /\
+        to_be_signed_spec (reveal vmsg)._x0.protected vaad (Inl?.v (reveal vmsg)._x0.payload) tbs /\
         spec_ed25519_verify vpubkey tbs sig))
 {
   rw_r_wt (rel_sign1_tagged_eq _ _);
   rw_r_wt (rel_bstr_eq' msg._x0.signature _);
   rewrite_with_trade
-    (rel_either rel_evercddl_bstr rel_evercddl_nil msg._x0.payload (reveal vmsg)._x0._x2)
-    (rel_evercddl_bstr (Inl?.v msg._x0.payload) (Inl?.v (reveal vmsg)._x0._x2));
+    (rel_either rel_evercddl_bstr rel_evercddl_nil msg._x0.payload (reveal vmsg)._x0.payload)
+    (rel_evercddl_bstr (Inl?.v msg._x0.payload) (Inl?.v (reveal vmsg)._x0.payload));
   let sig = msg._x0.signature._x0.s;
   rewrite each msg._x0.signature._x0.s as sig;
   S.pts_to_len sig;
@@ -598,15 +598,15 @@ fn verify1_core pubkey aad (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x
     assert pure (Seq.length vsig == 64);
     let success = verify_sig pubkey msg._x0.protected aad (Inl?.v msg._x0.payload) sig;
     elim_trade _ (rel_evercddl_bstr msg._x0.signature _);
-    elim_trade _ (rel_either rel_evercddl_bstr rel_evercddl_nil msg._x0.payload (reveal vmsg)._x0._x2);
+    elim_trade _ (rel_either rel_evercddl_bstr rel_evercddl_nil msg._x0.payload (reveal vmsg)._x0.payload);
     elim_trade _ (rel_evercddl_COSE_Sign1_Tagged msg vmsg);
     success
   } else {
     elim_trade _ (rel_evercddl_bstr msg._x0.signature _);
-    elim_trade _ (rel_either rel_evercddl_bstr rel_evercddl_nil msg._x0.payload (reveal vmsg)._x0._x2);
+    elim_trade _ (rel_either rel_evercddl_bstr rel_evercddl_nil msg._x0.payload (reveal vmsg)._x0.payload);
     elim_trade _ (rel_evercddl_COSE_Sign1_Tagged msg vmsg);
     assert pure (Seq.length vsig =!= 64);
-    assert pure ((reveal vmsg)._x0._x3._x0 == vsig);
+    assert pure ((reveal vmsg)._x0.signature._x0 == vsig);
     false
   }
 }
@@ -614,30 +614,30 @@ fn verify1_core pubkey aad (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x
 inline_for_extraction noextract
 fn borrow_payload
     (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x0.payload })
-    (#vmsg: erased spect_evercddl_COSE_Sign1_Tagged_pretty { Inl? (reveal vmsg)._x0._x2 })
+    (#vmsg: erased spect_evercddl_COSE_Sign1_Tagged_pretty { Inl? (reveal vmsg)._x0.payload })
   requires rel_evercddl_COSE_Sign1_Tagged msg vmsg
   returns payload: S.slice UInt8.t
   ensures
-    borrows (pts_to payload #((Inl?.v msg._x0.payload)._x0.p) (Inl?.v (reveal vmsg)._x0._x2)._x0)
+    borrows (pts_to payload #((Inl?.v msg._x0.payload)._x0.p) (Inl?.v (reveal vmsg)._x0.payload)._x0)
       (rel_evercddl_COSE_Sign1_Tagged msg vmsg)
 {
   rw_r (rel_sign1_tagged_eq _ _);
   rewrite_with_trade
-    (rel_either rel_evercddl_bstr rel_evercddl_nil msg._x0.payload (reveal vmsg)._x0._x2)
-    (rel_evercddl_bstr (Inl?.v msg._x0.payload) (Inl?.v (reveal vmsg)._x0._x2));
+    (rel_either rel_evercddl_bstr rel_evercddl_nil msg._x0.payload (reveal vmsg)._x0.payload)
+    (rel_evercddl_bstr (Inl?.v msg._x0.payload) (Inl?.v (reveal vmsg)._x0.payload));
   rw_r (rel_bstr_eq' (Inl?.v msg._x0.payload) _);
   ghost fn aux ()
     requires
-      rel_evercddl_bstr msg._x0.signature (reveal vmsg)._x0._x3 **
-      rel_evercddl_empty_or_serialized_map msg._x0.protected (reveal vmsg)._x0._x0 **
-      rel_evercddl_header_map msg._x0.unprotected (reveal vmsg)._x0._x1 **
-      trade (rel_evercddl_bstr (Inl?.v msg._x0.payload) (Inl?.v (reveal vmsg)._x0._x2))
+      rel_evercddl_bstr msg._x0.signature (reveal vmsg)._x0.signature **
+      rel_evercddl_empty_or_serialized_map msg._x0.protected (reveal vmsg)._x0.protected **
+      rel_evercddl_header_map msg._x0.unprotected (reveal vmsg)._x0.unprotected **
+      trade (rel_evercddl_bstr (Inl?.v msg._x0.payload) (Inl?.v (reveal vmsg)._x0.payload))
         (rel_either rel_evercddl_bstr
             rel_evercddl_nil
             msg._x0.payload
-            (reveal vmsg)._x0._x2)
+            (reveal vmsg)._x0.payload)
     requires S.pts_to (Inl?.v msg._x0.payload)._x0.s #(Inl?.v msg._x0.payload)._x0.p
-      (Inl?.v (reveal vmsg)._x0._x2)._x0
+      (Inl?.v (reveal vmsg)._x0.payload)._x0
     ensures rel_evercddl_COSE_Sign1_Tagged msg vmsg
   {
     rw_l (rel_bstr_eq' (Inl?.v msg._x0.payload) _);
@@ -658,10 +658,10 @@ let good_signature (pubkey: Seq.seq UInt8.t { Seq.length pubkey == 32 })
     (msg: Seq.seq UInt8.t) (aad: Seq.seq UInt8.t) (payload: Seq.seq UInt8.t) : prop =
   exists (vmsg: spect_evercddl_COSE_Sign1_Tagged_pretty) tbs.
   parses_from bundle_COSE_Sign1_Tagged''.b_spec vmsg msg /\
-  vmsg._x0._x2 == Inl (Mkspect_evercddl_bstr_pretty0 payload) /\
-  Seq.length vmsg._x0._x3._x0 == 64 /\
-  to_be_signed_spec vmsg._x0._x0 { _x0 = aad } { _x0 = payload } tbs /\
-  spec_ed25519_verify pubkey tbs vmsg._x0._x3._x0
+  vmsg._x0.payload == Inl (Mkspect_evercddl_bstr_pretty0 payload) /\
+  Seq.length vmsg._x0.signature._x0 == 64 /\
+  to_be_signed_spec vmsg._x0.protected { _x0 = aad } { _x0 = payload } tbs /\
+  spec_ed25519_verify pubkey tbs vmsg._x0.signature._x0
 
 #push-options "--z3rlimit 32"
 

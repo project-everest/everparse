@@ -212,7 +212,7 @@ let bundle_array_group_item
   | Mkbundle b_typ b_spec_type b_spec_type_eq b_spec b_impl_type b_rel b_parser b_serializer ->
 {
   ab_typ = _;
-  ab_spec_type = _;
+  ab_spec_type = maybe_named nm b_spec_type;
   ab_spec_type_eq = b_spec_type_eq;
   ab_spec = ag_spec_item b_spec;
   ab_impl_type = maybe_named nm b_impl_type;

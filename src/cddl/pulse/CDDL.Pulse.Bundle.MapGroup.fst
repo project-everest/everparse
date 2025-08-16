@@ -169,8 +169,8 @@ let bundle_map_zero_or_one
   mb_typ = _;
   mb_footprint = _;
   mb_footprint_correct = ();
-  mb_spec_type = _;
-  mb_spec_type_eq = EqTest.option_eq mb_spec_type_eq;
+  mb_spec_type =  maybe_named nm (option mb_spec_type);
+  mb_spec_type_eq = coerce_eq () (Ghost.hide (EqTest.option_eq mb_spec_type_eq));
   mb_spec = mg_spec_zero_or_one mb_spec;
   mb_impl_type = maybe_named nm (option mb_impl_type);
   mb_rel = _;
@@ -226,7 +226,7 @@ let bundle_map_match_item_for
   mb_typ = _;
   mb_footprint = _;
   mb_footprint_correct = ();
-  mb_spec_type = _;
+  mb_spec_type = maybe_named nm b_spec_type;
   mb_spec_type_eq = b_spec_type_eq;
   mb_spec = mg_spec_match_item_for cut key b_spec;
   mb_impl_type = maybe_named nm b_impl_type;
