@@ -31,11 +31,11 @@ let is_engine_record_core
       (e:engine_record)
       (wx:spec_engine_record)
 : slprop
-= rel_evercddl_bytes e.l0_image_header wx._x0 **
-  rel_evercddl_bytes e.l0_image_header_sig wx._x1 **
-  rel_evercddl_bytes e.l0_binary wx._x2 **
-  rel_evercddl_bytes e.l0_binary_hash wx._x3 **
-  rel_evercddl_bytes e.l0_image_auth_pubkey wx._x4
+= rel_evercddl_bytes e.l0_image_header wx.l0_image_header **
+  rel_evercddl_bytes e.l0_image_header_sig wx.l0_image_header_sig **
+  rel_evercddl_bytes e.l0_binary wx.l0_binary **
+  rel_evercddl_bytes e.l0_binary_hash wx.l0_binary_hash **
+  rel_evercddl_bytes e.l0_image_auth_pubkey wx.l0_image_auth_pubkey
 
 [@@pulse_unfold]
 let is_engine_record (e:engine_record) (se:spec_engine_record) res : slprop =
@@ -44,7 +44,7 @@ let is_engine_record (e:engine_record) (se:spec_engine_record) res : slprop =
 
 
 ghost
-fn extract_derive_context_engine_record x (w:erased _)
+fn extract_derive_context_engine_record x (w: _)
 requires rel_evercddl_derive_context_engine_record x w
 ensures is_engine_record x w (rel_evercddl_derive_context_engine_record x w)
 {
@@ -56,11 +56,11 @@ ensures is_engine_record x w (rel_evercddl_derive_context_engine_record x w)
 let device_id_csr_ingredients = evercddl_device_id_csr_ingredients_pretty
 let spec_device_id_csr_ingredients = spect_evercddl_device_id_csr_ingredients_pretty
 let is_device_id_csr_ingredients_core (e:device_id_csr_ingredients) (se:spec_device_id_csr_ingredients) : slprop =
-    rel_evercddl_nint e.ku se._x0 **
-    rel_evercddl_nint e.version se._x1 **
-    rel_evercddl_tstr e.s_common se._x2 **
-    rel_evercddl_tstr e.s_org se._x3 **
-    rel_evercddl_tstr e.s_country se._x4
+    rel_evercddl_nint e.ku se.ku **
+    rel_evercddl_nint e.version se.version **
+    rel_evercddl_tstr e.s_common se.s_common **
+    rel_evercddl_tstr e.s_org se.s_org **
+    rel_evercddl_tstr e.s_country se.s_country
 
 [@@pulse_unfold]
 let is_device_id_csr_ingredients (e:device_id_csr_ingredients) (se:spec_device_id_csr_ingredients) res : slprop =
@@ -81,17 +81,17 @@ let alias_key_crt_ingredients = evercddl_alias_key_crt_ingredients_pretty
 let spec_alias_key_crt_ingredients = spect_evercddl_alias_key_crt_ingredients_pretty
 
 let is_alias_key_crt_ingredients_core (e:alias_key_crt_ingredients) (s:spec_alias_key_crt_ingredients) =
-  rel_evercddl_nint e.version s._x0 **
-  rel_evercddl_bytes e.serial_number s._x1 **
-  rel_evercddl_tstr e.i_common s._x2 **
-  rel_evercddl_tstr e.i_org s._x3 **
-  rel_evercddl_bytes e.not_before s._x4 **
-  rel_evercddl_bytes e.not_after s._x5 **
-  rel_evercddl_tstr e.s_common s._x6 **
-  rel_evercddl_tstr e.s_org s._x7 **
-  rel_evercddl_tstr e.s_country s._x8 **
-  rel_evercddl_nint e.ku s._x9 **
-  rel_evercddl_nint e.l0_version s._x10
+  rel_evercddl_nint e.version s.version **
+  rel_evercddl_bytes e.serial_number s.serial_number **
+  rel_evercddl_tstr e.i_common s.i_common **
+  rel_evercddl_tstr e.i_org s.i_org **
+  rel_evercddl_bytes e.not_before s.not_before **
+  rel_evercddl_bytes e.not_after s.not_after **
+  rel_evercddl_tstr e.s_common s.s_common **
+  rel_evercddl_tstr e.s_org s.s_org **
+  rel_evercddl_tstr e.s_country s.s_country **
+  rel_evercddl_nint e.ku s.ku **
+  rel_evercddl_nint e.l0_version s.l0_version
 
 [@@pulse_unfold]
 let is_alias_key_crt_ingredients (e:alias_key_crt_ingredients) (s:spec_alias_key_crt_ingredients) (res:slprop) : slprop =
@@ -111,11 +111,11 @@ ensures is_alias_key_crt_ingredients x w (rel_evercddl_alias_key_crt_ingredients
 let l0_record = evercddl_derive_context_l0_record_pretty
 let spec_l0_record = spect_evercddl_derive_context_l0_record_pretty
 let is_l0_record_core (e:l0_record) (wx:spec_l0_record) : slprop =
-  rel_evercddl_bytes e.fwid wx._x0 **
-  rel_evercddl_bytes e.device_id_label wx._x1 **
-  rel_evercddl_bytes e.alias_key_label wx._x2 **
-  is_device_id_csr_ingredients_core e.device_id_csr_ingredients wx._x3 **
-  is_alias_key_crt_ingredients_core e.alias_key_crt_ingredients wx._x4
+  rel_evercddl_bytes e.fwid wx.fwid **
+  rel_evercddl_bytes e.device_id_label wx.device_id_label **
+  rel_evercddl_bytes e.alias_key_label wx.alias_key_label **
+  is_device_id_csr_ingredients_core e.device_id_csr_ingredients wx.device_id_csr_ingredients **
+  is_alias_key_crt_ingredients_core e.alias_key_crt_ingredients wx.alias_key_crt_ingredients
 
 [@@pulse_unfold]
 let is_l0_record (e:l0_record) (se:spec_l0_record) res : slprop =
@@ -123,7 +123,7 @@ let is_l0_record (e:l0_record) (se:spec_l0_record) res : slprop =
   Trade.trade (is_l0_record_core e se) res
 
 ghost
-fn extract_derive_context_l0_record x (w:erased _)
+fn extract_derive_context_l0_record x (w: _)
 requires rel_evercddl_derive_context_l0_record x w
 ensures is_l0_record x w (rel_evercddl_derive_context_l0_record x w)
 {
@@ -482,7 +482,7 @@ ensures
 }
 
 ghost
-fn extract_derive_context_input_args_data_opt x (w:option spect_evercddl_derive_context_input_args_data_pretty)
+fn extract_derive_context_input_args_data_opt x w
 requires rel_option rel_evercddl_derive_context_input_args_data x w
 ensures 
   is_record_opt 
@@ -554,8 +554,8 @@ fn extract_derive_context_input_args x w
 requires rel_evercddl_derive_context_input_args x w
 ensures 
   is_record_opt 
-    (map_opt x.intkey6 evercddl_derive_context_input_args_data_pretty_left)
-    (map_opt w._x5 spect_evercddl_derive_context_input_args_data_pretty_left) 
+    (map_opt x.input_data evercddl_derive_context_input_args_data_pretty_left)
+    (map_opt w.input_data spect_evercddl_derive_context_input_args_data_pretty_left) 
     (rel_evercddl_derive_context_input_args x w)
 {
   unfold_with_trade
@@ -573,9 +573,13 @@ ensures
   let rest_6 = fst_pair _ _ _ _ _;
   let input_data = snd_pair _ _ _ _ _;
   rewrite each  
-    (Tactics.PrettifyType.named "intkey6"
+    (Tactics.PrettifyType.named "input_data"
           evercddl_derive_context_input_args_data_pretty)
   as evercddl_derive_context_input_args_data_pretty;
+  rewrite each  
+    (Tactics.PrettifyType.named "input_data"
+          spect_evercddl_derive_context_input_args_data_pretty)
+  as spect_evercddl_derive_context_input_args_data_pretty;
   extract_derive_context_input_args_data_opt _ _;
   is_record_opt_compose _ _ _ _;
 }
@@ -585,7 +589,7 @@ let is_input_args_data w se =
   exists (wx:spect_evercddl_derive_context_input_args_pretty) 
          (wr:Seq.seq UInt8.t).
     validate_and_parse_postcond_some bundle_derive_context_input_args.b_spec.parser w wx wr /\
-    se == map_opt wx._x5 spect_evercddl_derive_context_input_args_data_pretty_left
+    se == map_opt wx.input_data spect_evercddl_derive_context_input_args_data_pretty_left
 
 fn parse_derive_context_input_args (s:Slice.slice UInt8.t) (#p:perm) (#w:erased _)
 requires pts_to s #p w
@@ -611,7 +615,7 @@ ensures (
       extract_derive_context_input_args x _;
       Trade.Util.elim_hyp_r _ _ _;
       is_record_opt_compose _ _ _ _;
-      (map_opt x.intkey6 evercddl_derive_context_input_args_data_pretty_left, true)
+      (map_opt x.input_data evercddl_derive_context_input_args_data_pretty_left, true)
     }
   }
 }

@@ -21,8 +21,8 @@ ghost
 fn extract_to_be_signed x w
 requires rel_evercddl_signinputargs x w
 ensures 
-  rel_evercddl_bytes x.intkey5 w._x4 **
-  Trade.trade (rel_evercddl_bytes x.intkey5 w._x4)
+  rel_evercddl_bytes x.to_be_signed w.to_be_signed **
+  Trade.trade (rel_evercddl_bytes x.to_be_signed w.to_be_signed)
               (rel_evercddl_signinputargs x w)
 { 
   unfold_with_trade
@@ -34,7 +34,7 @@ ensures
   let rest_5 = fst_pair _ _ _ _ _;
   let tbs = snd_pair _ _ _ _ _;
   with xx yy. assert (rel_evercddl_bytes xx yy);
-  rewrite each xx as x.intkey5, yy as w._x4;
+  rewrite each xx as x.to_be_signed, yy as w.to_be_signed;
   ()
 }
 
@@ -45,7 +45,7 @@ ensures exists* p s.
   pts_to tbs #p s **
   Trade.trade (pts_to tbs #p s)
               (rel_evercddl_signinputargs x w) **
-  pure (bytes_of_evercddl_bytes s (Mkspect_evercddl_signinputargs_pretty0?._x4 w))
+  pure (bytes_of_evercddl_bytes s (Mkspect_evercddl_signinputargs_pretty0?.to_be_signed w))
 {
   extract_to_be_signed x w;
   let tbs = extract_bytes _ _;
@@ -56,7 +56,7 @@ ensures exists* p s.
 let is_tbs_bytes (tbs_bytes:Seq.seq UInt8.t) (w:Seq.seq UInt8.t) =
   exists (wx:spect_evercddl_signinputargs_pretty) (wr:Seq.seq UInt8.t).
           validate_and_parse_postcond_some bundle_signinputargs.b_spec.parser w wx wr /\
-          wx._x4 == spect_evercddl_bytes_pretty_right (spect_evercddl_bstr_pretty_right tbs_bytes)
+          wx.to_be_signed == spect_evercddl_bytes_pretty_right (spect_evercddl_bstr_pretty_right tbs_bytes)
 
 let parse_failed (w:Seq.seq UInt8.t) =
   validate_and_parse_postcond_none bundle_signinputargs.b_typ w

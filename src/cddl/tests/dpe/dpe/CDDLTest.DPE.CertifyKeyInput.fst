@@ -45,6 +45,9 @@ ensures is_slice_opt x res
     Some _ -> {
       let sl = destruct_rel_option _ _ _;
       Trade.trade_compose _ _ res;
+      rewrite each (Tactics.PrettifyType.named "public_key"
+            spect_evercddl_bytes_pretty)
+        as spect_evercddl_bytes_pretty;
       let sl = extract_bytes _ _;
       Trade.trade_compose _ _ res;
       fold (is_slice_opt (Some sl) res);

@@ -18,8 +18,8 @@ open CDDLTest.DPE.Common
 let struct_has_sig
     (hres:spect_evercddl_signoutputargs_pretty) 
     (sig :Seq.seq UInt8.t) =
-  hres._x0 == Some (pretty_bytes sig) /\
-  hres._x1 == None
+  hres.signature == Some (pretty_bytes sig) /\
+  hres.new_context_handle == None
 
 ghost
 fn fold_sign_output_args (x:_) (w:erased _)
@@ -41,8 +41,8 @@ ensures
 let res_has_sig
     (res:evercddl_signoutputargs_pretty)
     (sig:Slice.slice UInt8.t) p =
-  of_bytes_option #p res.intkey1 (Some sig) /\
-  of_bytes_option #1.0R res.intkey2 None
+  of_bytes_option #p res.signature (Some sig) /\
+  of_bytes_option #1.0R res.new_context_handle None
 
 fn prepare_sign_output
     (sign:Slice.slice UInt8.t)
@@ -80,16 +80,16 @@ ghost
 fn destruct_signoutputargs x hres sign p s
 requires
     rel_evercddl_signoutputargs x hres **
-    pure (of_bytes_option #p x.intkey1 (Some sign) /\
-          of_bytes_option #1.0R x.intkey2 None /\
+    pure (of_bytes_option #p x.signature (Some sign) /\
+          of_bytes_option #1.0R x.new_context_handle None /\
           struct_has_sig hres s)
 ensures
     pts_to sign #p s
 {
   rewrite (rel_evercddl_signoutputargs x hres) as
-          (rel_evercddl_bytes (Some?.v x.intkey1) (Some?.v hres._x0) **
+          (rel_evercddl_bytes (Some?.v x.signature) (Some?.v hres.signature) **
            emp);
-  let xx = extract_bytes_ghost (Some?.v x.intkey1) _;
+  let xx = extract_bytes_ghost (Some?.v x.signature) _;
   rewrite each xx as sign;
   ()
 }

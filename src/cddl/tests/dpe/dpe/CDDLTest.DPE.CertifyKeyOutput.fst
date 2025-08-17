@@ -16,9 +16,9 @@ open CDDL.Spec.Base
 open CDDLTest.DPE.Common
 
 let struct_has_pubkey_and_cert (hres:spect_evercddl_certifykeyoutputargs_pretty) (pk cert:Seq.seq UInt8.t) =
-  hres._x0 == Some (pretty_bytes pk) /\
-  hres._x1 == Some (pretty_bytes cert) /\
-  hres._x2 == None
+  hres.certificate == Some (pretty_bytes pk) /\
+  hres.derived_public_key == Some (pretty_bytes cert) /\
+  hres.new_context_handle == None
 
 ghost
 fn fold_certify_key_output_args (x:_) (w:erased _)
@@ -40,9 +40,9 @@ ensures
 }
 
 let res_has_pk_and_cert (res:evercddl_certifykeyoutputargs_pretty) (pk cert:Slice.slice UInt8.t) p q =
-  of_bytes_option #p res.intkey1 (Some pk) /\
-  of_bytes_option #q res.intkey2 (Some cert) /\
-  of_bytes_option #q res.intkey3 None
+  of_bytes_option #p res.certificate (Some pk) /\
+  of_bytes_option #q res.derived_public_key (Some cert) /\
+  of_bytes_option #q res.new_context_handle None
 
 fn prepare_certify_key_output
     (pubkey:Slice.slice UInt8.t)
@@ -83,20 +83,20 @@ ghost
 fn destruct_certifykeyoutputargs x hres pubkey cert p q pk c
 requires
     rel_evercddl_certifykeyoutputargs x hres **
-    pure (of_bytes_option #p x.intkey1 (Some pubkey) /\
-          of_bytes_option #q x.intkey2 (Some cert) /\
-          of_bytes_option #q x.intkey3 None /\
+    pure (of_bytes_option #p x.certificate (Some pubkey) /\
+          of_bytes_option #q x.derived_public_key (Some cert) /\
+          of_bytes_option #q x.new_context_handle None /\
           struct_has_pubkey_and_cert hres pk c)
 ensures
     pts_to pubkey #p pk **
     pts_to cert #q c
 {
   rewrite (rel_evercddl_certifykeyoutputargs x hres) as
-          (rel_evercddl_bytes (Some?.v x.intkey1) (Some?.v hres._x0) **
-           rel_evercddl_bytes (Some?.v x.intkey2) (Some?.v hres._x1) **
+          (rel_evercddl_bytes (Some?.v x.certificate) (Some?.v hres.certificate) **
+           rel_evercddl_bytes (Some?.v x.derived_public_key) (Some?.v hres.derived_public_key) **
            emp);
-  let xx = extract_bytes_ghost (Some?.v x.intkey1) _;
-  let yy = extract_bytes_ghost (Some?.v x.intkey2) _;
+  let xx = extract_bytes_ghost (Some?.v x.certificate) _;
+  let yy = extract_bytes_ghost (Some?.v x.derived_public_key) _;
   rewrite each xx as pubkey, yy as cert;
   ()
 }

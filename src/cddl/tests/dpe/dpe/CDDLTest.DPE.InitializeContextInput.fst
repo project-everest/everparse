@@ -111,7 +111,7 @@ let is_uds_bytes (uds:Seq.seq UInt8.t) (w:Seq.seq UInt8.t) =
           wx
           wr 
           /\
-          wx._x2 ==
+          wx.seed ==
           Some (spect_evercddl_bytes_pretty_right (spect_evercddl_bstr_pretty_right uds))
         
 let parsed_initialize_context_input 
