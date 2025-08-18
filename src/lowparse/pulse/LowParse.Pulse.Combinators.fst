@@ -701,15 +701,60 @@ fn validate_nondep_then_rtol
     let off = sz_sub input_len v2_sz ();
     let mut poff = off;
     let is_valid2 = validate v2 input poff;
-    // admit();
     if is_valid2 {
       let (l, r) = split_trade input off;
       let is_valid1 = v1 l poffset;
       Trade.elim _ _;
       poffset := input_len;
-
       parser_kind_prop_equiv (nondep_then_rtol_kind k1 k2.parser_kind_low) (parse_nondep_then_rtol p2 p1);
       is_valid1
+    } else {
+      false
+    }
+  }
+}
+
+inline_for_extraction
+fn validate_dtuple2_rtol
+  (v2_sz: SZ.t)
+  (#t2: Type0)
+  (#t1: t2 -> Type0)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 t2 { k2.parser_kind_high == Some (k2.parser_kind_low) /\ k2.parser_kind_low == SZ.v v2_sz } )
+  (#s2: serializer p2)
+  (r2: leaf_reader s2)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: (x: t2) -> parser k1 (t1 x) { k1.parser_kind_subkind == Some ParserConsumesAll } )
+  (v1: (x: t2) -> validator (p1 x))
+  (v2: validator p2)
+: validator #(dtuple2 t2 t1) #(dtuple2_rtol_kind k1 k2.parser_kind_low) (parse_dtuple2_rtol #k2 #t2 p2 #k1 #t1 p1)
+= 
+  (input: slice byte)
+  (poffset: _)
+  (#offset: _)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  pts_to_len input;
+  let input_len = len input;
+  let offset = !poffset;
+  if (SZ.lt (SZ.sub input_len offset) v2_sz) {
+    false
+  } else {
+    let off = sz_sub input_len v2_sz ();
+    let mut poff = off;
+    let is_valid2 = validate v2 input poff;
+    if is_valid2 {
+      let off' = !poff;
+      let x = read_from_validator_success r2 input off off';
+      let (l, r) = split_trade input off;
+      let is_valid1 = v1 x l poffset;
+      Trade.elim _ _;
+      poffset := input_len;
+      parser_kind_prop_equiv (dtuple2_rtol_kind k1 k2.parser_kind_low) (parse_dtuple2_rtol p2 p1);
+      is_valid1
+    } else {
+      false
     }
   }
 }
