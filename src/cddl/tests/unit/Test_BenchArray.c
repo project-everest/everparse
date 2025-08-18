@@ -17,7 +17,7 @@ int main()
 
     float f, f0;
 
-    BenchArray_evercddl_map m = TIME(build(), &f0);
+    BenchArray_map m = TIME(build(), &f0);
 
     size_t size = TIME(BenchArray_serialize_map(m, slice), &f);
     if (size == 0) {
@@ -34,7 +34,7 @@ int main()
     printf(" >>> SERIALIZATION BANDWIDTH (COMBINED): %f MB/s\n", size / (f0 + f) / 1e6);
 
     /* Validate it, make sure it parses back. */
-    FStar_Pervasives_Native_option___BenchArray_evercddl_map___Pulse_Lib_Slice_slice_uint8_t_
+    FStar_Pervasives_Native_option___BenchArray_map___Pulse_Lib_Slice_slice_uint8_t_
       m_opt = TIME(BenchArray_validate_and_parse_map(slice), &f);
     assert (m_opt.tag == FStar_Pervasives_Native_Some);
     //assert (m_opt.v.fst.intkey42 == m.intkey42);
@@ -42,7 +42,7 @@ int main()
 
     // /* We can also parse it back as a map42. No check is performed here:
     // the 18 or 42 are just names, not keys. */
-    // FStar_Pervasives_Native_option___BenchArray_evercddl_map42___Pulse_Lib_Slice_slice_uint8_t_
+    // FStar_Pervasives_Native_option___BenchArray_map42___Pulse_Lib_Slice_slice_uint8_t_
     //   m2_opt = BenchArray_validate_and_parse_map42(slice);
     // assert (m2_opt.tag == FStar_Pervasives_Native_Some);
     // assert (m2_opt.v.fst.intkey42 == 1818);

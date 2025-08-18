@@ -15,23 +15,40 @@ let filter_char (c: FStar.Char.char) : Tot bool =
 let filter_name (name: string) = 
   FStar.String.string_of_list (List.Tot.filter filter_char (FStar.String.list_of_string name))
 
-let mk_validator_name (name: string) : string =
-  "validate_" ^ filter_name name
+let lowercase_char (c: FStar.Char.char) : Tot FStar.Char.char =
+  let code = FStar.Char.u32_of_char c in
+  let code_A = FStar.Char.u32_of_char 'A' in
+  let code' =
+    if code `U32.gte` FStar.Char.u32_of_char 'A' &&
+      code `U32.lte` FStar.Char.u32_of_char 'Z'
+    then U32.add code 32ul
+    else code
+  in
+  FStar.Char.char_of_u32 code'
 
-let mk_impltype_name (name: string) : string =
-  "impltype_" ^ filter_name name
+let lowercase (name: string) =
+  FStar.String.string_of_list (List.Tot.map lowercase_char (FStar.String.list_of_string name))
+
+let sanitize_name (name: string) : string =
+  lowercase (filter_name name)
 
 let mk_parsertype_name (name: string) : string =
-  "evercddl_" ^ filter_name name
+  let name = sanitize_name name in
+  if List.Tot.mem name ["unsigned"; "float"; "double"; "false"; "true"; "null"; "int"; "uint"; "string"; "bool"]
+  then "evercddl_" ^ name
+  else name (* TODO: provide an option to skip lowercase and to specify a custom prefix *)
+
+let mk_validator_name (name: string) : string =
+  "validate_" ^ sanitize_name name
 
 let mk_parser_name (name: string) : string =
-  "parse_" ^ filter_name name
+  "parse_" ^ sanitize_name name
 
 let mk_serializer_name (name: string) : string =
-  "serialize_" ^ filter_name name
+  "serialize_" ^ sanitize_name name
 
 let mk_bundle_name (name: string) : string =
-  "bundle_" ^ filter_name name
+  "bundle_" ^ sanitize_name name
 
 let krml = "\"krml\""
 
@@ -670,7 +687,6 @@ let produce_typ_defs
   let i = string_of_int index in
   let j = string_of_int (index + 1) in
   let validator = mk_validator_name name in
-  let impltype = mk_impltype_name name in
   let parsertype = mk_parsertype_name name in
   let parser = mk_parser_name name in
   let serializer = mk_serializer_name name in

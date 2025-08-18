@@ -25,17 +25,17 @@ type engine_record_t = {
   l0_image_auth_pubkey:Slice.slice UInt8.t;
 }
 
-let engine_record = evercddl_derive_context_engine_record
-let spec_engine_record = spect_evercddl_derive_context_engine_record
+let engine_record = derive_context_engine_record
+let spec_engine_record = spect_derive_context_engine_record
 let is_engine_record_core
       (e:engine_record)
       (wx:spec_engine_record)
 : slprop
-= rel_evercddl_bytes e.l0_image_header wx.l0_image_header **
-  rel_evercddl_bytes e.l0_image_header_sig wx.l0_image_header_sig **
-  rel_evercddl_bytes e.l0_binary wx.l0_binary **
-  rel_evercddl_bytes e.l0_binary_hash wx.l0_binary_hash **
-  rel_evercddl_bytes e.l0_image_auth_pubkey wx.l0_image_auth_pubkey
+= rel_bytes e.l0_image_header wx.l0_image_header **
+  rel_bytes e.l0_image_header_sig wx.l0_image_header_sig **
+  rel_bytes e.l0_binary wx.l0_binary **
+  rel_bytes e.l0_binary_hash wx.l0_binary_hash **
+  rel_bytes e.l0_image_auth_pubkey wx.l0_image_auth_pubkey
 
 [@@pulse_unfold]
 let is_engine_record (e:engine_record) (se:spec_engine_record) res : slprop =
@@ -45,22 +45,21 @@ let is_engine_record (e:engine_record) (se:spec_engine_record) res : slprop =
 
 ghost
 fn extract_derive_context_engine_record x (w: _)
-requires rel_evercddl_derive_context_engine_record x w
-ensures is_engine_record x w (rel_evercddl_derive_context_engine_record x w)
+requires rel_derive_context_engine_record x w
+ensures is_engine_record x w (rel_derive_context_engine_record x w)
 {
   Trade.rewrite_with_trade 
-    (rel_evercddl_derive_context_engine_record x w)
+    (rel_derive_context_engine_record x w)
     (is_engine_record_core x w);
 }
 
-let device_id_csr_ingredients = evercddl_device_id_csr_ingredients
-let spec_device_id_csr_ingredients = spect_evercddl_device_id_csr_ingredients
+let spec_device_id_csr_ingredients = spect_device_id_csr_ingredients
 let is_device_id_csr_ingredients_core (e:device_id_csr_ingredients) (se:spec_device_id_csr_ingredients) : slprop =
-    rel_evercddl_nint e.ku se.ku **
-    rel_evercddl_nint e.version se.version **
-    rel_evercddl_tstr e.s_common se.s_common **
-    rel_evercddl_tstr e.s_org se.s_org **
-    rel_evercddl_tstr e.s_country se.s_country
+    rel_nint e.ku se.ku **
+    rel_nint e.version se.version **
+    rel_tstr e.s_common se.s_common **
+    rel_tstr e.s_org se.s_org **
+    rel_tstr e.s_country se.s_country
 
 [@@pulse_unfold]
 let is_device_id_csr_ingredients (e:device_id_csr_ingredients) (se:spec_device_id_csr_ingredients) res : slprop =
@@ -69,29 +68,28 @@ let is_device_id_csr_ingredients (e:device_id_csr_ingredients) (se:spec_device_i
     
 ghost 
 fn extract_device_id_csr_ingredients x (w:erased _)
-requires rel_evercddl_device_id_csr_ingredients x w
-ensures is_device_id_csr_ingredients x w (rel_evercddl_device_id_csr_ingredients x w)
+requires rel_device_id_csr_ingredients x w
+ensures is_device_id_csr_ingredients x w (rel_device_id_csr_ingredients x w)
 {
   Trade.rewrite_with_trade 
-    (rel_evercddl_device_id_csr_ingredients x w)
+    (rel_device_id_csr_ingredients x w)
     (is_device_id_csr_ingredients_core x w);
 }
 
-let alias_key_crt_ingredients = evercddl_alias_key_crt_ingredients
-let spec_alias_key_crt_ingredients = spect_evercddl_alias_key_crt_ingredients
+let spec_alias_key_crt_ingredients = spect_alias_key_crt_ingredients
 
 let is_alias_key_crt_ingredients_core (e:alias_key_crt_ingredients) (s:spec_alias_key_crt_ingredients) =
-  rel_evercddl_nint e.version s.version **
-  rel_evercddl_bytes e.serial_number s.serial_number **
-  rel_evercddl_tstr e.i_common s.i_common **
-  rel_evercddl_tstr e.i_org s.i_org **
-  rel_evercddl_bytes e.not_before s.not_before **
-  rel_evercddl_bytes e.not_after s.not_after **
-  rel_evercddl_tstr e.s_common s.s_common **
-  rel_evercddl_tstr e.s_org s.s_org **
-  rel_evercddl_tstr e.s_country s.s_country **
-  rel_evercddl_nint e.ku s.ku **
-  rel_evercddl_nint e.l0_version s.l0_version
+  rel_nint e.version s.version **
+  rel_bytes e.serial_number s.serial_number **
+  rel_tstr e.i_common s.i_common **
+  rel_tstr e.i_org s.i_org **
+  rel_bytes e.not_before s.not_before **
+  rel_bytes e.not_after s.not_after **
+  rel_tstr e.s_common s.s_common **
+  rel_tstr e.s_org s.s_org **
+  rel_tstr e.s_country s.s_country **
+  rel_nint e.ku s.ku **
+  rel_nint e.l0_version s.l0_version
 
 [@@pulse_unfold]
 let is_alias_key_crt_ingredients (e:alias_key_crt_ingredients) (s:spec_alias_key_crt_ingredients) (res:slprop) : slprop =
@@ -100,20 +98,20 @@ let is_alias_key_crt_ingredients (e:alias_key_crt_ingredients) (s:spec_alias_key
 
 ghost
 fn extract_alias_key_crt_ingredients x (w:erased _)
-requires rel_evercddl_alias_key_crt_ingredients x w
-ensures is_alias_key_crt_ingredients x w (rel_evercddl_alias_key_crt_ingredients x w)
+requires rel_alias_key_crt_ingredients x w
+ensures is_alias_key_crt_ingredients x w (rel_alias_key_crt_ingredients x w)
 {
   Trade.rewrite_with_trade 
-    (rel_evercddl_alias_key_crt_ingredients x w)
+    (rel_alias_key_crt_ingredients x w)
     (is_alias_key_crt_ingredients_core x w);
 }
 
-let l0_record = evercddl_derive_context_l0_record
-let spec_l0_record = spect_evercddl_derive_context_l0_record
+let l0_record = derive_context_l0_record
+let spec_l0_record = spect_derive_context_l0_record
 let is_l0_record_core (e:l0_record) (wx:spec_l0_record) : slprop =
-  rel_evercddl_bytes e.fwid wx.fwid **
-  rel_evercddl_bytes e.device_id_label wx.device_id_label **
-  rel_evercddl_bytes e.alias_key_label wx.alias_key_label **
+  rel_bytes e.fwid wx.fwid **
+  rel_bytes e.device_id_label wx.device_id_label **
+  rel_bytes e.alias_key_label wx.alias_key_label **
   is_device_id_csr_ingredients_core e.device_id_csr_ingredients wx.device_id_csr_ingredients **
   is_alias_key_crt_ingredients_core e.alias_key_crt_ingredients wx.alias_key_crt_ingredients
 
@@ -124,11 +122,11 @@ let is_l0_record (e:l0_record) (se:spec_l0_record) res : slprop =
 
 ghost
 fn extract_derive_context_l0_record x (w: _)
-requires rel_evercddl_derive_context_l0_record x w
-ensures is_l0_record x w (rel_evercddl_derive_context_l0_record x w)
+requires rel_derive_context_l0_record x w
+ensures is_l0_record x w (rel_derive_context_l0_record x w)
 {
   Trade.rewrite_with_trade 
-    (rel_evercddl_derive_context_l0_record x w)
+    (rel_derive_context_l0_record x w)
     (is_l0_record_core x w);
 }
 
@@ -319,24 +317,24 @@ ensures
 
 ghost
 fn extract_derive_context_input_args_data x (w:_)
-requires rel_evercddl_derive_context_input_args_data x w
+requires rel_derive_context_input_args_data x w
 ensures is_derive_context_input_args_data 
-          (evercddl_derive_context_input_args_data_left x)
-          (spect_evercddl_derive_context_input_args_data_left w)
-          (rel_evercddl_derive_context_input_args_data x w)
+          (derive_context_input_args_data_left x)
+          (spect_derive_context_input_args_data_left w)
+          (rel_derive_context_input_args_data x w)
 {
-  unfold_with_trade (`%rel_evercddl_derive_context_input_args_data) (rel_evercddl_derive_context_input_args_data _ _);
+  unfold_with_trade (`%rel_derive_context_input_args_data) (rel_derive_context_input_args_data _ _);
   destruct_rel_fun _ _ _ _ _;
-  Trade.trade_compose _ _ (rel_evercddl_derive_context_input_args_data x w);
+  Trade.trade_compose _ _ (rel_derive_context_input_args_data x w);
   rel_either_cases _ _ _ _;
-  match (evercddl_derive_context_input_args_data_left x) {
+  match (derive_context_input_args_data_left x) {
     Inl _ -> {
       let _ = destruct_rel_either_left _ _ _ _ _;
       let engine_record = extract_derive_context_engine_record _ _;
       with xx yy. assert (is_engine_record_core xx yy);
-      Trade.trade_compose _ _ (rel_evercddl_derive_context_input_args_data x w);
-      rewrite each x as (evercddl_derive_context_input_args_data_right (Inl xx));
-      rewrite each w as (spect_evercddl_derive_context_input_args_data_right (Inl yy));
+      Trade.trade_compose _ _ (rel_derive_context_input_args_data x w);
+      rewrite each x as (derive_context_input_args_data_right (Inl xx));
+      rewrite each w as (spect_derive_context_input_args_data_right (Inl yy));
       fold (is_derive_context_input_args_data (Inl xx) (Inl yy));
     }
 
@@ -344,9 +342,9 @@ ensures is_derive_context_input_args_data
       let _ = destruct_rel_either_right _ _ _ _ _;
       let l0_record = extract_derive_context_l0_record _ _;
       with xx yy. assert (is_l0_record_core xx yy);
-      Trade.trade_compose _ _ (rel_evercddl_derive_context_input_args_data x w);
-      rewrite each x as (evercddl_derive_context_input_args_data_right (Inr xx));
-      rewrite each w as (spect_evercddl_derive_context_input_args_data_right (Inr yy));
+      Trade.trade_compose _ _ (rel_derive_context_input_args_data x w);
+      rewrite each x as (derive_context_input_args_data_right (Inr xx));
+      rewrite each w as (spect_derive_context_input_args_data_right (Inr yy));
       fold (is_derive_context_input_args_data (Inr xx) (Inr yy));
     }
   }
@@ -483,12 +481,12 @@ ensures
 
 ghost
 fn extract_derive_context_input_args_data_opt x w
-requires rel_option rel_evercddl_derive_context_input_args_data x w
+requires rel_option rel_derive_context_input_args_data x w
 ensures 
   is_record_opt 
-    (map_opt x evercddl_derive_context_input_args_data_left)
-    (map_opt w spect_evercddl_derive_context_input_args_data_left)
-    (rel_option rel_evercddl_derive_context_input_args_data x w)
+    (map_opt x derive_context_input_args_data_left)
+    (map_opt w spect_derive_context_input_args_data_left)
+    (rel_option rel_derive_context_input_args_data x w)
 {
   rel_option_cases _ _ _;
   match x {
@@ -501,7 +499,7 @@ ensures
       rewrite each (Some v) as x;
       destruct_rel_option _ _ _;
       extract_derive_context_input_args_data _ _;
-      trans_is_derive_context_input _ _ _ (rel_option rel_evercddl_derive_context_input_args_data x w);
+      trans_is_derive_context_input _ _ _ (rel_option rel_derive_context_input_args_data x w);
       with xx yy k. assert (is_derive_context_input_args_data xx yy k);
       fold (is_record_opt (Some xx) (Some yy));
     }
@@ -551,18 +549,18 @@ ensures
 
 ghost
 fn extract_derive_context_input_args x w
-requires rel_evercddl_derive_context_input_args x w
+requires rel_derive_context_input_args x w
 ensures 
   is_record_opt 
-    (map_opt x.input_data evercddl_derive_context_input_args_data_left)
-    (map_opt w.input_data spect_evercddl_derive_context_input_args_data_left) 
-    (rel_evercddl_derive_context_input_args x w)
+    (map_opt x.input_data derive_context_input_args_data_left)
+    (map_opt w.input_data spect_derive_context_input_args_data_left) 
+    (rel_derive_context_input_args x w)
 {
   unfold_with_trade
-    (`%rel_evercddl_derive_context_input_args) 
-    (rel_evercddl_derive_context_input_args x w);
+    (`%rel_derive_context_input_args) 
+    (rel_derive_context_input_args x w);
   destruct_rel_fun _ _ _ _ _;
-  Trade.trade_compose _ _ (rel_evercddl_derive_context_input_args x w);
+  Trade.trade_compose _ _ (rel_derive_context_input_args x w);
   fold_last_relation (`%tstr_any) tstr_any;  
   let rest_12 = fst_pair _ _ _ _ _;
   let rest_11 = fst_pair _ _ _ _ _;
@@ -574,22 +572,22 @@ ensures
   let input_data = snd_pair _ _ _ _ _;
   rewrite each  
     (Tactics.PrettifyType.named "input_data"
-          evercddl_derive_context_input_args_data)
-  as evercddl_derive_context_input_args_data;
+          derive_context_input_args_data)
+  as derive_context_input_args_data;
   rewrite each  
     (Tactics.PrettifyType.named "input_data"
-          spect_evercddl_derive_context_input_args_data)
-  as spect_evercddl_derive_context_input_args_data;
+          spect_derive_context_input_args_data)
+  as spect_derive_context_input_args_data;
   extract_derive_context_input_args_data_opt _ _;
   is_record_opt_compose _ _ _ _;
 }
 
 
 let is_input_args_data w se = 
-  exists (wx:spect_evercddl_derive_context_input_args) 
+  exists (wx:spect_derive_context_input_args) 
          (wr:Seq.seq UInt8.t).
     validate_and_parse_postcond_some bundle_derive_context_input_args.b_spec.parser w wx wr /\
-    se == map_opt wx.input_data spect_evercddl_derive_context_input_args_data_left
+    se == map_opt wx.input_data spect_derive_context_input_args_data_left
 
 fn parse_derive_context_input_args (s:Slice.slice UInt8.t) (#p:perm) (#w:erased _)
 requires pts_to s #p w
@@ -615,7 +613,7 @@ ensures (
       extract_derive_context_input_args x _;
       Trade.Util.elim_hyp_r _ _ _;
       is_record_opt_compose _ _ _ _;
-      (map_opt x.input_data evercddl_derive_context_input_args_data_left, true)
+      (map_opt x.input_data derive_context_input_args_data_left, true)
     }
   }
 }

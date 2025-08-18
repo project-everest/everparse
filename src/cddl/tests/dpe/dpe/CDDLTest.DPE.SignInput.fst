@@ -19,44 +19,44 @@ open  CDDLTest.DPE.DeriveContextInput
 
 ghost
 fn extract_to_be_signed x w
-requires rel_evercddl_signinputargs x w
+requires rel_signinputargs x w
 ensures 
-  rel_evercddl_bytes x.to_be_signed w.to_be_signed **
-  Trade.trade (rel_evercddl_bytes x.to_be_signed w.to_be_signed)
-              (rel_evercddl_signinputargs x w)
+  rel_bytes x.to_be_signed w.to_be_signed **
+  Trade.trade (rel_bytes x.to_be_signed w.to_be_signed)
+              (rel_signinputargs x w)
 { 
   unfold_with_trade
-    (`%rel_evercddl_signinputargs) 
-    (rel_evercddl_signinputargs x w);
+    (`%rel_signinputargs) 
+    (rel_signinputargs x w);
   destruct_rel_fun _ _ _ _ _;
-  Trade.trade_compose _ _ (rel_evercddl_signinputargs x w);
+  Trade.trade_compose _ _ (rel_signinputargs x w);
   fold_last_relation (`%tstr_any) tstr_any;  
   let rest_5 = fst_pair _ _ _ _ _;
   let tbs = snd_pair _ _ _ _ _;
-  with xx yy. assert (rel_evercddl_bytes xx yy);
+  with xx yy. assert (rel_bytes xx yy);
   rewrite each xx as x.to_be_signed, yy as w.to_be_signed;
   ()
 }
 
 fn extract_to_be_signed_bytes x (w:erased _)
-requires rel_evercddl_signinputargs x w
+requires rel_signinputargs x w
 returns tbs:Slice.slice UInt8.t
 ensures exists* p s.
   pts_to tbs #p s **
   Trade.trade (pts_to tbs #p s)
-              (rel_evercddl_signinputargs x w) **
-  pure (bytes_of_evercddl_bytes s (Mkspect_evercddl_signinputargs0?.to_be_signed w))
+              (rel_signinputargs x w) **
+  pure (bytes_of_bytes s (Mkspect_signinputargs0?.to_be_signed w))
 {
   extract_to_be_signed x w;
   let tbs = extract_bytes _ _;
-  Trade.trade_compose _ _ (rel_evercddl_signinputargs x w);
+  Trade.trade_compose _ _ (rel_signinputargs x w);
   tbs
 }
 
 let is_tbs_bytes (tbs_bytes:Seq.seq UInt8.t) (w:Seq.seq UInt8.t) =
-  exists (wx:spect_evercddl_signinputargs) (wr:Seq.seq UInt8.t).
+  exists (wx:spect_signinputargs) (wr:Seq.seq UInt8.t).
           validate_and_parse_postcond_some bundle_signinputargs.b_spec.parser w wx wr /\
-          wx.to_be_signed == spect_evercddl_bytes_right (spect_evercddl_bstr_right tbs_bytes)
+          wx.to_be_signed == spect_bytes_right (spect_bstr_right tbs_bytes)
 
 let parse_failed (w:Seq.seq UInt8.t) =
   validate_and_parse_postcond_none bundle_signinputargs.b_typ w

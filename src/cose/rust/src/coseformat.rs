@@ -194,53 +194,48 @@ pub fn validate_everparsenomatch(c: crate::cbordetveraux::cbor_raw) -> bool
     false
 }
 
-#[derive(PartialEq, Clone, Copy)]
-pub enum evercddl_everparsenomatch
-{ Mkevercddl_everparsenomatch0 }
+#[derive(PartialEq, Clone, Copy)] pub enum everparsenomatch { Mkeverparsenomatch0 }
 
-pub fn uu___is_Mkevercddl_everparsenomatch0(projectee: evercddl_everparsenomatch) -> bool
+pub fn uu___is_Mkeverparsenomatch0(projectee: everparsenomatch) -> bool
 {
-    crate::lowstar::ignore::ignore::<evercddl_everparsenomatch>(projectee);
+    crate::lowstar::ignore::ignore::<everparsenomatch>(projectee);
     true
 }
 
-fn evercddl_everparsenomatch_right() -> evercddl_everparsenomatch
-{ evercddl_everparsenomatch::Mkevercddl_everparsenomatch0 }
+fn everparsenomatch_right() -> everparsenomatch { everparsenomatch::Mkeverparsenomatch0 }
 
 /**
-Parser for evercddl_everparsenomatch
+Parser for everparsenomatch
 */
 pub fn
 parse_everparsenomatch(c: crate::cbordetveraux::cbor_raw) ->
-    evercddl_everparsenomatch
+    everparsenomatch
 {
     crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(c);
-    evercddl_everparsenomatch_right()
+    everparsenomatch_right()
 }
 
 /**
-Serializer for evercddl_everparsenomatch
+Serializer for everparsenomatch
 */
 pub fn
-serialize_everparsenomatch(c: evercddl_everparsenomatch, out: &[u8]) ->
+serialize_everparsenomatch(c: everparsenomatch, out: &[u8]) ->
     usize
 {
-    crate::lowstar::ignore::ignore::<evercddl_everparsenomatch>(c);
+    crate::lowstar::ignore::ignore::<everparsenomatch>(c);
     crate::lowstar::ignore::ignore::<&[u8]>(out);
     0usize
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum
-option__·COSE_Format_evercddl_everparsenomatch···Pulse_Lib_Slice_slice·uint8_t·
-<'a>
+pub enum option__·COSE_Format_everparsenomatch···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (evercddl_everparsenomatch, &'a [u8]) }
+    Some { v: (everparsenomatch, &'a [u8]) }
 }
 
 pub fn validate_and_parse_everparsenomatch <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_everparsenomatch···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_everparsenomatch···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -251,8 +246,7 @@ pub fn validate_and_parse_everparsenomatch <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        =>
-          option__·COSE_Format_evercddl_everparsenomatch···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_everparsenomatch···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -263,14 +257,12 @@ pub fn validate_and_parse_everparsenomatch <'a>(s: &'a [u8]) ->
               let test: bool = validate_everparsenomatch(rl);
               if test
               {
-                  let x: evercddl_everparsenomatch = parse_everparsenomatch(rl);
-                  option__·COSE_Format_evercddl_everparsenomatch···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: everparsenomatch = parse_everparsenomatch(rl);
+                  option__·COSE_Format_everparsenomatch···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              {
-                  option__·COSE_Format_evercddl_everparsenomatch···Pulse_Lib_Slice_slice·uint8_t·::None
-              }
+              { option__·COSE_Format_everparsenomatch···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -282,28 +274,28 @@ pub fn validate_any(c: crate::cbordetveraux::cbor_raw) -> bool
     true
 }
 
-pub type evercddl_any_ugly <'a> = crate::cbordetveraux::cbor_raw <'a>;
+pub type any_ugly <'a> = crate::cbordetveraux::cbor_raw <'a>;
 
-pub type evercddl_any <'a> = evercddl_any_ugly <'a>;
+pub type any <'a> = any_ugly <'a>;
 
-pub fn uu___is_Mkevercddl_any0(projectee: crate::cbordetveraux::cbor_raw) -> bool
+pub fn uu___is_Mkany0(projectee: crate::cbordetveraux::cbor_raw) -> bool
 {
     crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(projectee);
     true
 }
 
-fn evercddl_any_right <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
+fn any_right <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
 { x1 }
 
-fn evercddl_any_left <'a>(x3: crate::cbordetveraux::cbor_raw <'a>) ->
+fn any_left <'a>(x3: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
 { x3 }
 
 /**
-Parser for evercddl_any
+Parser for any
 */
 pub fn
 parse_any
@@ -312,17 +304,17 @@ parse_any
     <'a>
 {
     let res1: crate::cbordetveraux::cbor_raw = c;
-    evercddl_any_right(res1)
+    any_right(res1)
 }
 
 /**
-Serializer for evercddl_any
+Serializer for any
 */
 pub fn
 serialize_any(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
     usize
 {
-    let c·: crate::cbordetveraux::cbor_raw = evercddl_any_left(c);
+    let c·: crate::cbordetveraux::cbor_raw = any_left(c);
     let ser: crate::cbordetver::option__size_t = crate::cbordetver::cbor_det_serialize(c·, out);
     match ser
     {
@@ -333,14 +325,14 @@ serialize_any(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_any···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_any···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
     Some { v: (crate::cbordetveraux::cbor_raw <'a>, &'a [u8]) }
 }
 
 pub fn validate_and_parse_any <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_any···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_any···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -351,7 +343,7 @@ pub fn validate_and_parse_any <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_any···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_any···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -363,11 +355,11 @@ pub fn validate_and_parse_any <'a>(s: &'a [u8]) ->
               if test
               {
                   let x: crate::cbordetveraux::cbor_raw = parse_any(rl);
-                  option__·COSE_Format_evercddl_any···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  option__·COSE_Format_any···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              { option__·COSE_Format_evercddl_any···Pulse_Lib_Slice_slice·uint8_t·::None }
+              { option__·COSE_Format_any···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -393,36 +385,35 @@ pub fn validate_undefined(c: crate::cbordetveraux::cbor_raw) -> bool
     { false }
 }
 
-#[derive(PartialEq, Clone, Copy)] pub enum evercddl_undefined { Mkevercddl_undefined0 }
+#[derive(PartialEq, Clone, Copy)] pub enum undefined { Mkundefined0 }
 
-pub fn uu___is_Mkevercddl_undefined0(projectee: evercddl_undefined) -> bool
+pub fn uu___is_Mkundefined0(projectee: undefined) -> bool
 {
-    crate::lowstar::ignore::ignore::<evercddl_undefined>(projectee);
+    crate::lowstar::ignore::ignore::<undefined>(projectee);
     true
 }
 
-fn evercddl_undefined_right() -> evercddl_undefined
-{ evercddl_undefined::Mkevercddl_undefined0 }
+fn undefined_right() -> undefined { undefined::Mkundefined0 }
 
 /**
-Parser for evercddl_undefined
+Parser for undefined
 */
 pub fn
 parse_undefined(c: crate::cbordetveraux::cbor_raw) ->
-    evercddl_undefined
+    undefined
 {
     crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(c);
-    evercddl_undefined_right()
+    undefined_right()
 }
 
 /**
-Serializer for evercddl_undefined
+Serializer for undefined
 */
 pub fn
-serialize_undefined(c: evercddl_undefined, out: &mut [u8]) ->
+serialize_undefined(c: undefined, out: &mut [u8]) ->
     usize
 {
-    crate::lowstar::ignore::ignore::<evercddl_undefined>(c);
+    crate::lowstar::ignore::ignore::<undefined>(c);
     let _letpattern: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
         crate::cbordetver::cbor_det_mk_simple_value(23u8);
     let c1: crate::cbordetveraux::cbor_raw =
@@ -441,14 +432,14 @@ serialize_undefined(c: evercddl_undefined, out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_undefined···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_undefined···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (evercddl_undefined, &'a [u8]) }
+    Some { v: (undefined, &'a [u8]) }
 }
 
 pub fn validate_and_parse_undefined <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_undefined···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_undefined···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -459,7 +450,7 @@ pub fn validate_and_parse_undefined <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_undefined···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_undefined···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -470,14 +461,12 @@ pub fn validate_and_parse_undefined <'a>(s: &'a [u8]) ->
               let test: bool = validate_undefined(rl);
               if test
               {
-                  let x: evercddl_undefined = parse_undefined(rl);
-                  option__·COSE_Format_evercddl_undefined···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: undefined = parse_undefined(rl);
+                  option__·COSE_Format_undefined···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              {
-                  option__·COSE_Format_evercddl_undefined···Pulse_Lib_Slice_slice·uint8_t·::None
-              }
+              { option__·COSE_Format_undefined···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -503,35 +492,35 @@ pub fn validate_nil(c: crate::cbordetveraux::cbor_raw) -> bool
     { false }
 }
 
-#[derive(PartialEq, Clone, Copy)] pub enum evercddl_nil { Mkevercddl_nil0 }
+#[derive(PartialEq, Clone, Copy)] pub enum nil { Mknil0 }
 
-pub fn uu___is_Mkevercddl_nil0(projectee: evercddl_nil) -> bool
+pub fn uu___is_Mknil0(projectee: nil) -> bool
 {
-    crate::lowstar::ignore::ignore::<evercddl_nil>(projectee);
+    crate::lowstar::ignore::ignore::<nil>(projectee);
     true
 }
 
-fn evercddl_nil_right() -> evercddl_nil { evercddl_nil::Mkevercddl_nil0 }
+fn nil_right() -> nil { nil::Mknil0 }
 
 /**
-Parser for evercddl_nil
+Parser for nil
 */
 pub fn
 parse_nil(c: crate::cbordetveraux::cbor_raw) ->
-    evercddl_nil
+    nil
 {
     crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(c);
-    evercddl_nil_right()
+    nil_right()
 }
 
 /**
-Serializer for evercddl_nil
+Serializer for nil
 */
 pub fn
-serialize_nil(c: evercddl_nil, out: &mut [u8]) ->
+serialize_nil(c: nil, out: &mut [u8]) ->
     usize
 {
-    crate::lowstar::ignore::ignore::<evercddl_nil>(c);
+    crate::lowstar::ignore::ignore::<nil>(c);
     let _letpattern: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw =
         crate::cbordetver::cbor_det_mk_simple_value(22u8);
     let c1: crate::cbordetveraux::cbor_raw =
@@ -550,14 +539,14 @@ serialize_nil(c: evercddl_nil, out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_nil···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_nil···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (evercddl_nil, &'a [u8]) }
+    Some { v: (nil, &'a [u8]) }
 }
 
 pub fn validate_and_parse_nil <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_nil···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_nil···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -568,7 +557,7 @@ pub fn validate_and_parse_nil <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_nil···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_nil···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -579,12 +568,12 @@ pub fn validate_and_parse_nil <'a>(s: &'a [u8]) ->
               let test: bool = validate_nil(rl);
               if test
               {
-                  let x: evercddl_nil = parse_nil(rl);
-                  option__·COSE_Format_evercddl_nil···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: nil = parse_nil(rl);
+                  option__·COSE_Format_nil···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              { option__·COSE_Format_evercddl_nil···Pulse_Lib_Slice_slice·uint8_t·::None }
+              { option__·COSE_Format_nil···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -592,26 +581,26 @@ pub fn validate_and_parse_nil <'a>(s: &'a [u8]) ->
 
 pub fn validate_null(c: crate::cbordetveraux::cbor_raw) -> bool { validate_nil(c) }
 
-pub type evercddl_null = evercddl_nil;
+pub type evercddl_null = nil;
 
-pub fn uu___is_Mkevercddl_null0(projectee: evercddl_nil) -> bool
+pub fn uu___is_Mkevercddl_null0(projectee: nil) -> bool
 {
-    crate::lowstar::ignore::ignore::<evercddl_nil>(projectee);
+    crate::lowstar::ignore::ignore::<nil>(projectee);
     true
 }
 
-fn evercddl_null_right(x1: evercddl_nil) -> evercddl_nil { x1 }
+fn evercddl_null_right(x1: nil) -> nil { x1 }
 
-fn evercddl_null_left(x3: evercddl_nil) -> evercddl_nil { x3 }
+fn evercddl_null_left(x3: nil) -> nil { x3 }
 
 /**
 Parser for evercddl_null
 */
 pub fn
 parse_null(c: crate::cbordetveraux::cbor_raw) ->
-    evercddl_nil
+    nil
 {
-    let res1: evercddl_nil = parse_nil(c);
+    let res1: nil = parse_nil(c);
     evercddl_null_right(res1)
 }
 
@@ -619,10 +608,10 @@ parse_null(c: crate::cbordetveraux::cbor_raw) ->
 Serializer for evercddl_null
 */
 pub fn
-serialize_null(c: evercddl_nil, out: &mut [u8]) ->
+serialize_null(c: nil, out: &mut [u8]) ->
     usize
 {
-    let c·: evercddl_nil = evercddl_null_left(c);
+    let c·: nil = evercddl_null_left(c);
     serialize_nil(c·, out)
 }
 
@@ -630,7 +619,7 @@ serialize_null(c: evercddl_nil, out: &mut [u8]) ->
 pub enum option__·COSE_Format_evercddl_null···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (evercddl_nil, &'a [u8]) }
+    Some { v: (nil, &'a [u8]) }
 }
 
 pub fn validate_and_parse_null <'a>(s: &'a [u8]) ->
@@ -656,7 +645,7 @@ pub fn validate_and_parse_null <'a>(s: &'a [u8]) ->
               let test: bool = validate_null(rl);
               if test
               {
-                  let x: evercddl_nil = parse_null(rl);
+                  let x: nil = parse_null(rl);
                   option__·COSE_Format_evercddl_null···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
@@ -887,22 +876,22 @@ pub fn validate_tstr(c: crate::cbordetveraux::cbor_raw) -> bool
     mt == crate::cbordetveraux::cbor_major_type_text_string
 }
 
-pub type evercddl_tstr_ugly <'a> = &'a [u8];
+pub type tstr_ugly <'a> = &'a [u8];
 
-pub type evercddl_tstr <'a> = evercddl_tstr_ugly <'a>;
+pub type tstr <'a> = tstr_ugly <'a>;
 
-pub fn uu___is_Mkevercddl_tstr0(projectee: &[u8]) -> bool
+pub fn uu___is_Mktstr0(projectee: &[u8]) -> bool
 {
     crate::lowstar::ignore::ignore::<&[u8]>(projectee);
     true
 }
 
-fn evercddl_tstr_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
+fn tstr_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
 
-fn evercddl_tstr_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
+fn tstr_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
 
 /**
-Parser for evercddl_tstr
+Parser for tstr
 */
 pub fn
 parse_tstr
@@ -918,17 +907,17 @@ parse_tstr
             _ => panic!("Incomplete pattern matching")
         };
     let res1: &[u8] = s;
-    evercddl_tstr_right(res1)
+    tstr_right(res1)
 }
 
 /**
-Serializer for evercddl_tstr
+Serializer for tstr
 */
 pub fn
 serialize_tstr(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let c·: &[u8] = evercddl_tstr_left(c);
+    let c·: &[u8] = tstr_left(c);
     let len: usize = c·.len();
     if len <= 18446744073709551615u64 as usize
     {
@@ -969,14 +958,14 @@ serialize_tstr(c: &[u8], out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_tstr···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_tstr···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
     Some { v: (&'a [u8], &'a [u8]) }
 }
 
 pub fn validate_and_parse_tstr <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_tstr···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_tstr···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -987,7 +976,7 @@ pub fn validate_and_parse_tstr <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_tstr···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_tstr···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -999,11 +988,11 @@ pub fn validate_and_parse_tstr <'a>(s: &'a [u8]) ->
               if test
               {
                   let x: &[u8] = parse_tstr(rl);
-                  option__·COSE_Format_evercddl_tstr···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  option__·COSE_Format_tstr···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              { option__·COSE_Format_evercddl_tstr···Pulse_Lib_Slice_slice·uint8_t·::None }
+              { option__·COSE_Format_tstr···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -1015,20 +1004,20 @@ pub fn validate_bstr(c: crate::cbordetveraux::cbor_raw) -> bool
     mt == crate::cbordetveraux::cbor_major_type_byte_string
 }
 
-pub type evercddl_bstr <'a> = evercddl_tstr_ugly <'a>;
+pub type bstr <'a> = tstr_ugly <'a>;
 
-pub fn uu___is_Mkevercddl_bstr0(projectee: &[u8]) -> bool
+pub fn uu___is_Mkbstr0(projectee: &[u8]) -> bool
 {
     crate::lowstar::ignore::ignore::<&[u8]>(projectee);
     true
 }
 
-fn evercddl_bstr_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
+fn bstr_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
 
-fn evercddl_bstr_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
+fn bstr_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
 
 /**
-Parser for evercddl_bstr
+Parser for bstr
 */
 pub fn
 parse_bstr
@@ -1044,17 +1033,17 @@ parse_bstr
             _ => panic!("Incomplete pattern matching")
         };
     let res1: &[u8] = s;
-    evercddl_bstr_right(res1)
+    bstr_right(res1)
 }
 
 /**
-Serializer for evercddl_bstr
+Serializer for bstr
 */
 pub fn
 serialize_bstr(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let c·: &[u8] = evercddl_bstr_left(c);
+    let c·: &[u8] = bstr_left(c);
     let len: usize = c·.len();
     if len <= 18446744073709551615u64 as usize
     {
@@ -1082,14 +1071,14 @@ serialize_bstr(c: &[u8], out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_bstr···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_bstr···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
     Some { v: (&'a [u8], &'a [u8]) }
 }
 
 pub fn validate_and_parse_bstr <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_bstr···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_bstr···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -1100,7 +1089,7 @@ pub fn validate_and_parse_bstr <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_bstr···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_bstr···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -1112,11 +1101,11 @@ pub fn validate_and_parse_bstr <'a>(s: &'a [u8]) ->
               if test
               {
                   let x: &[u8] = parse_bstr(rl);
-                  option__·COSE_Format_evercddl_bstr···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  option__·COSE_Format_bstr···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              { option__·COSE_Format_evercddl_bstr···Pulse_Lib_Slice_slice·uint8_t·::None }
+              { option__·COSE_Format_bstr···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -1124,20 +1113,20 @@ pub fn validate_and_parse_bstr <'a>(s: &'a [u8]) ->
 
 pub fn validate_bytes(c: crate::cbordetveraux::cbor_raw) -> bool { validate_bstr(c) }
 
-pub type evercddl_bytes <'a> = evercddl_bstr <'a>;
+pub type bytes <'a> = bstr <'a>;
 
-pub fn uu___is_Mkevercddl_bytes0(projectee: &[u8]) -> bool
+pub fn uu___is_Mkbytes0(projectee: &[u8]) -> bool
 {
     crate::lowstar::ignore::ignore::<&[u8]>(projectee);
     true
 }
 
-fn evercddl_bytes_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
+fn bytes_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
 
-fn evercddl_bytes_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
+fn bytes_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
 
 /**
-Parser for evercddl_bytes
+Parser for bytes
 */
 pub fn
 parse_bytes
@@ -1145,29 +1134,29 @@ parse_bytes
     &'a [u8]
 {
     let res1: &[u8] = parse_bstr(c);
-    evercddl_bytes_right(res1)
+    bytes_right(res1)
 }
 
 /**
-Serializer for evercddl_bytes
+Serializer for bytes
 */
 pub fn
 serialize_bytes(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let c·: &[u8] = evercddl_bytes_left(c);
+    let c·: &[u8] = bytes_left(c);
     serialize_bstr(c·, out)
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_bytes···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_bytes···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
     Some { v: (&'a [u8], &'a [u8]) }
 }
 
 pub fn validate_and_parse_bytes <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_bytes···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_bytes···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -1178,7 +1167,7 @@ pub fn validate_and_parse_bytes <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_bytes···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_bytes···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -1190,11 +1179,11 @@ pub fn validate_and_parse_bytes <'a>(s: &'a [u8]) ->
               if test
               {
                   let x: &[u8] = parse_bytes(rl);
-                  option__·COSE_Format_evercddl_bytes···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  option__·COSE_Format_bytes···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              { option__·COSE_Format_evercddl_bytes···Pulse_Lib_Slice_slice·uint8_t·::None }
+              { option__·COSE_Format_bytes···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -1202,20 +1191,20 @@ pub fn validate_and_parse_bytes <'a>(s: &'a [u8]) ->
 
 pub fn validate_text(c: crate::cbordetveraux::cbor_raw) -> bool { validate_tstr(c) }
 
-pub type evercddl_text <'a> = evercddl_tstr <'a>;
+pub type text <'a> = tstr <'a>;
 
-pub fn uu___is_Mkevercddl_text0(projectee: &[u8]) -> bool
+pub fn uu___is_Mktext0(projectee: &[u8]) -> bool
 {
     crate::lowstar::ignore::ignore::<&[u8]>(projectee);
     true
 }
 
-fn evercddl_text_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
+fn text_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
 
-fn evercddl_text_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
+fn text_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
 
 /**
-Parser for evercddl_text
+Parser for text
 */
 pub fn
 parse_text
@@ -1223,29 +1212,29 @@ parse_text
     &'a [u8]
 {
     let res1: &[u8] = parse_tstr(c);
-    evercddl_text_right(res1)
+    text_right(res1)
 }
 
 /**
-Serializer for evercddl_text
+Serializer for text
 */
 pub fn
 serialize_text(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let c·: &[u8] = evercddl_text_left(c);
+    let c·: &[u8] = text_left(c);
     serialize_tstr(c·, out)
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_text···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_text···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
     Some { v: (&'a [u8], &'a [u8]) }
 }
 
 pub fn validate_and_parse_text <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_text···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_text···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -1256,7 +1245,7 @@ pub fn validate_and_parse_text <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_text···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_text···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -1268,11 +1257,11 @@ pub fn validate_and_parse_text <'a>(s: &'a [u8]) ->
               if test
               {
                   let x: &[u8] = parse_text(rl);
-                  option__·COSE_Format_evercddl_text···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  option__·COSE_Format_text···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              { option__·COSE_Format_evercddl_text···Pulse_Lib_Slice_slice·uint8_t·::None }
+              { option__·COSE_Format_text···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -1284,20 +1273,20 @@ pub fn validate_nint(c: crate::cbordetveraux::cbor_raw) -> bool
     mt == crate::cbordetveraux::cbor_major_type_neg_int64
 }
 
-pub type evercddl_nint = u64;
+pub type nint = u64;
 
-pub fn uu___is_Mkevercddl_nint0(projectee: u64) -> bool
+pub fn uu___is_Mknint0(projectee: u64) -> bool
 {
     crate::lowstar::ignore::ignore::<u64>(projectee);
     true
 }
 
-fn evercddl_nint_right(x1: u64) -> u64 { x1 }
+fn nint_right(x1: u64) -> u64 { x1 }
 
-fn evercddl_nint_left(x3: u64) -> u64 { x3 }
+fn nint_left(x3: u64) -> u64 { x3 }
 
 /**
-Parser for evercddl_nint
+Parser for nint
 */
 pub fn
 parse_nint(c: crate::cbordetveraux::cbor_raw) ->
@@ -1312,17 +1301,17 @@ parse_nint(c: crate::cbordetveraux::cbor_raw) ->
             _ => panic!("Incomplete pattern matching")
         };
     let res1: u64 = res;
-    evercddl_nint_right(res1)
+    nint_right(res1)
 }
 
 /**
-Serializer for evercddl_nint
+Serializer for nint
 */
 pub fn
 serialize_nint(c: u64, out: &mut [u8]) ->
     usize
 {
-    let c·: u64 = evercddl_nint_left(c);
+    let c·: u64 = nint_left(c);
     let mty: crate::cbordetver::cbor_det_int_kind =
         if
         crate::cbordetveraux::cbor_major_type_neg_int64
@@ -1342,14 +1331,14 @@ serialize_nint(c: u64, out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_nint···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_nint···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
     Some { v: (u64, &'a [u8]) }
 }
 
 pub fn validate_and_parse_nint <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_nint···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_nint···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -1360,7 +1349,7 @@ pub fn validate_and_parse_nint <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_nint···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_nint···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -1372,11 +1361,11 @@ pub fn validate_and_parse_nint <'a>(s: &'a [u8]) ->
               if test
               {
                   let x: u64 = parse_nint(rl);
-                  option__·COSE_Format_evercddl_nint···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  option__·COSE_Format_nint···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              { option__·COSE_Format_evercddl_nint···Pulse_Lib_Slice_slice·uint8_t·::None }
+              { option__·COSE_Format_nint···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -1650,26 +1639,26 @@ pub fn validate_cborany(c: crate::cbordetveraux::cbor_raw) -> bool
     { false }
 }
 
-pub type evercddl_cborany <'a> = evercddl_any <'a>;
+pub type cborany <'a> = any <'a>;
 
-pub fn uu___is_Mkevercddl_cborany0(projectee: crate::cbordetveraux::cbor_raw) -> bool
+pub fn uu___is_Mkcborany0(projectee: crate::cbordetveraux::cbor_raw) -> bool
 {
     crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(projectee);
     true
 }
 
-fn evercddl_cborany_right <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
+fn cborany_right <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
 { x1 }
 
-fn evercddl_cborany_left <'a>(x3: crate::cbordetveraux::cbor_raw <'a>) ->
+fn cborany_left <'a>(x3: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
 { x3 }
 
 /**
-Parser for evercddl_cborany
+Parser for cborany
 */
 pub fn
 parse_cborany
@@ -1686,17 +1675,17 @@ parse_cborany
             _ => panic!("Incomplete pattern matching")
         };
     let res1: crate::cbordetveraux::cbor_raw = parse_any(cpl);
-    evercddl_cborany_right(res1)
+    cborany_right(res1)
 }
 
 /**
-Serializer for evercddl_cborany
+Serializer for cborany
 */
 pub fn
 serialize_cborany(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
     usize
 {
-    let c·: crate::cbordetveraux::cbor_raw = evercddl_cborany_left(c);
+    let c·: crate::cbordetveraux::cbor_raw = cborany_left(c);
     let c·1: (u64, crate::cbordetveraux::cbor_raw) = (55799u64,c·);
     let _letpattern: (u64, crate::cbordetveraux::cbor_raw) = c·1;
     let ctag: u64 = _letpattern.0;
@@ -1714,14 +1703,14 @@ serialize_cborany(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_cborany···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_cborany···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
     Some { v: (crate::cbordetveraux::cbor_raw <'a>, &'a [u8]) }
 }
 
 pub fn validate_and_parse_cborany <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_cborany···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_cborany···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -1732,7 +1721,7 @@ pub fn validate_and_parse_cborany <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_cborany···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_cborany···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -1744,11 +1733,11 @@ pub fn validate_and_parse_cborany <'a>(s: &'a [u8]) ->
               if test
               {
                   let x: crate::cbordetveraux::cbor_raw = parse_cborany(rl);
-                  option__·COSE_Format_evercddl_cborany···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  option__·COSE_Format_cborany···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              { option__·COSE_Format_evercddl_cborany···Pulse_Lib_Slice_slice·uint8_t·::None }
+              { option__·COSE_Format_cborany···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -1786,20 +1775,20 @@ pub fn validate_mimemessage(c: crate::cbordetveraux::cbor_raw) -> bool
     { false }
 }
 
-pub type evercddl_mimemessage <'a> = evercddl_tstr <'a>;
+pub type mimemessage <'a> = tstr <'a>;
 
-pub fn uu___is_Mkevercddl_mimemessage0(projectee: &[u8]) -> bool
+pub fn uu___is_Mkmimemessage0(projectee: &[u8]) -> bool
 {
     crate::lowstar::ignore::ignore::<&[u8]>(projectee);
     true
 }
 
-fn evercddl_mimemessage_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
+fn mimemessage_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
 
-fn evercddl_mimemessage_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
+fn mimemessage_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
 
 /**
-Parser for evercddl_mimemessage
+Parser for mimemessage
 */
 pub fn
 parse_mimemessage
@@ -1815,17 +1804,17 @@ parse_mimemessage
             _ => panic!("Incomplete pattern matching")
         };
     let res1: &[u8] = parse_tstr(cpl);
-    evercddl_mimemessage_right(res1)
+    mimemessage_right(res1)
 }
 
 /**
-Serializer for evercddl_mimemessage
+Serializer for mimemessage
 */
 pub fn
 serialize_mimemessage(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let c·: &[u8] = evercddl_mimemessage_left(c);
+    let c·: &[u8] = mimemessage_left(c);
     let c·1: (u64, &[u8]) = (36u64,c·);
     let _letpattern: (u64, &[u8]) = c·1;
     let ctag: u64 = _letpattern.0;
@@ -1843,14 +1832,14 @@ serialize_mimemessage(c: &[u8], out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_mimemessage···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_mimemessage···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
     Some { v: (&'a [u8], &'a [u8]) }
 }
 
 pub fn validate_and_parse_mimemessage <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_mimemessage···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_mimemessage···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -1861,7 +1850,7 @@ pub fn validate_and_parse_mimemessage <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_mimemessage···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_mimemessage···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -1873,13 +1862,11 @@ pub fn validate_and_parse_mimemessage <'a>(s: &'a [u8]) ->
               if test
               {
                   let x: &[u8] = parse_mimemessage(rl);
-                  option__·COSE_Format_evercddl_mimemessage···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  option__·COSE_Format_mimemessage···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              {
-                  option__·COSE_Format_evercddl_mimemessage···Pulse_Lib_Slice_slice·uint8_t·::None
-              }
+              { option__·COSE_Format_mimemessage···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -1917,20 +1904,20 @@ pub fn validate_regexp(c: crate::cbordetveraux::cbor_raw) -> bool
     { false }
 }
 
-pub type evercddl_regexp <'a> = evercddl_tstr <'a>;
+pub type regexp <'a> = tstr <'a>;
 
-pub fn uu___is_Mkevercddl_regexp0(projectee: &[u8]) -> bool
+pub fn uu___is_Mkregexp0(projectee: &[u8]) -> bool
 {
     crate::lowstar::ignore::ignore::<&[u8]>(projectee);
     true
 }
 
-fn evercddl_regexp_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
+fn regexp_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
 
-fn evercddl_regexp_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
+fn regexp_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
 
 /**
-Parser for evercddl_regexp
+Parser for regexp
 */
 pub fn
 parse_regexp
@@ -1946,17 +1933,17 @@ parse_regexp
             _ => panic!("Incomplete pattern matching")
         };
     let res1: &[u8] = parse_tstr(cpl);
-    evercddl_regexp_right(res1)
+    regexp_right(res1)
 }
 
 /**
-Serializer for evercddl_regexp
+Serializer for regexp
 */
 pub fn
 serialize_regexp(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let c·: &[u8] = evercddl_regexp_left(c);
+    let c·: &[u8] = regexp_left(c);
     let c·1: (u64, &[u8]) = (35u64,c·);
     let _letpattern: (u64, &[u8]) = c·1;
     let ctag: u64 = _letpattern.0;
@@ -1974,14 +1961,14 @@ serialize_regexp(c: &[u8], out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_regexp···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_regexp···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
     Some { v: (&'a [u8], &'a [u8]) }
 }
 
 pub fn validate_and_parse_regexp <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_regexp···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_regexp···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -1992,7 +1979,7 @@ pub fn validate_and_parse_regexp <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_regexp···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_regexp···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -2004,11 +1991,11 @@ pub fn validate_and_parse_regexp <'a>(s: &'a [u8]) ->
               if test
               {
                   let x: &[u8] = parse_regexp(rl);
-                  option__·COSE_Format_evercddl_regexp···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  option__·COSE_Format_regexp···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              { option__·COSE_Format_evercddl_regexp···Pulse_Lib_Slice_slice·uint8_t·::None }
+              { option__·COSE_Format_regexp···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -2046,20 +2033,20 @@ pub fn validate_b64legacy(c: crate::cbordetveraux::cbor_raw) -> bool
     { false }
 }
 
-pub type evercddl_b64legacy <'a> = evercddl_tstr <'a>;
+pub type b64legacy <'a> = tstr <'a>;
 
-pub fn uu___is_Mkevercddl_b64legacy0(projectee: &[u8]) -> bool
+pub fn uu___is_Mkb64legacy0(projectee: &[u8]) -> bool
 {
     crate::lowstar::ignore::ignore::<&[u8]>(projectee);
     true
 }
 
-fn evercddl_b64legacy_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
+fn b64legacy_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
 
-fn evercddl_b64legacy_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
+fn b64legacy_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
 
 /**
-Parser for evercddl_b64legacy
+Parser for b64legacy
 */
 pub fn
 parse_b64legacy
@@ -2075,17 +2062,17 @@ parse_b64legacy
             _ => panic!("Incomplete pattern matching")
         };
     let res1: &[u8] = parse_tstr(cpl);
-    evercddl_b64legacy_right(res1)
+    b64legacy_right(res1)
 }
 
 /**
-Serializer for evercddl_b64legacy
+Serializer for b64legacy
 */
 pub fn
 serialize_b64legacy(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let c·: &[u8] = evercddl_b64legacy_left(c);
+    let c·: &[u8] = b64legacy_left(c);
     let c·1: (u64, &[u8]) = (34u64,c·);
     let _letpattern: (u64, &[u8]) = c·1;
     let ctag: u64 = _letpattern.0;
@@ -2103,14 +2090,14 @@ serialize_b64legacy(c: &[u8], out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_b64legacy···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_b64legacy···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
     Some { v: (&'a [u8], &'a [u8]) }
 }
 
 pub fn validate_and_parse_b64legacy <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_b64legacy···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_b64legacy···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -2121,7 +2108,7 @@ pub fn validate_and_parse_b64legacy <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_b64legacy···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_b64legacy···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -2133,13 +2120,11 @@ pub fn validate_and_parse_b64legacy <'a>(s: &'a [u8]) ->
               if test
               {
                   let x: &[u8] = parse_b64legacy(rl);
-                  option__·COSE_Format_evercddl_b64legacy···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  option__·COSE_Format_b64legacy···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              {
-                  option__·COSE_Format_evercddl_b64legacy···Pulse_Lib_Slice_slice·uint8_t·::None
-              }
+              { option__·COSE_Format_b64legacy···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -2177,20 +2162,20 @@ pub fn validate_b64url(c: crate::cbordetveraux::cbor_raw) -> bool
     { false }
 }
 
-pub type evercddl_b64url <'a> = evercddl_tstr <'a>;
+pub type b64url <'a> = tstr <'a>;
 
-pub fn uu___is_Mkevercddl_b64url0(projectee: &[u8]) -> bool
+pub fn uu___is_Mkb64url0(projectee: &[u8]) -> bool
 {
     crate::lowstar::ignore::ignore::<&[u8]>(projectee);
     true
 }
 
-fn evercddl_b64url_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
+fn b64url_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
 
-fn evercddl_b64url_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
+fn b64url_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
 
 /**
-Parser for evercddl_b64url
+Parser for b64url
 */
 pub fn
 parse_b64url
@@ -2206,17 +2191,17 @@ parse_b64url
             _ => panic!("Incomplete pattern matching")
         };
     let res1: &[u8] = parse_tstr(cpl);
-    evercddl_b64url_right(res1)
+    b64url_right(res1)
 }
 
 /**
-Serializer for evercddl_b64url
+Serializer for b64url
 */
 pub fn
 serialize_b64url(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let c·: &[u8] = evercddl_b64url_left(c);
+    let c·: &[u8] = b64url_left(c);
     let c·1: (u64, &[u8]) = (33u64,c·);
     let _letpattern: (u64, &[u8]) = c·1;
     let ctag: u64 = _letpattern.0;
@@ -2234,14 +2219,14 @@ serialize_b64url(c: &[u8], out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_b64url···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_b64url···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
     Some { v: (&'a [u8], &'a [u8]) }
 }
 
 pub fn validate_and_parse_b64url <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_b64url···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_b64url···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -2252,7 +2237,7 @@ pub fn validate_and_parse_b64url <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_b64url···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_b64url···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -2264,11 +2249,11 @@ pub fn validate_and_parse_b64url <'a>(s: &'a [u8]) ->
               if test
               {
                   let x: &[u8] = parse_b64url(rl);
-                  option__·COSE_Format_evercddl_b64url···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  option__·COSE_Format_b64url···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              { option__·COSE_Format_evercddl_b64url···Pulse_Lib_Slice_slice·uint8_t·::None }
+              { option__·COSE_Format_b64url···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -2306,20 +2291,20 @@ pub fn validate_uri(c: crate::cbordetveraux::cbor_raw) -> bool
     { false }
 }
 
-pub type evercddl_uri <'a> = evercddl_tstr <'a>;
+pub type uri <'a> = tstr <'a>;
 
-pub fn uu___is_Mkevercddl_uri0(projectee: &[u8]) -> bool
+pub fn uu___is_Mkuri0(projectee: &[u8]) -> bool
 {
     crate::lowstar::ignore::ignore::<&[u8]>(projectee);
     true
 }
 
-fn evercddl_uri_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
+fn uri_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
 
-fn evercddl_uri_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
+fn uri_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
 
 /**
-Parser for evercddl_uri
+Parser for uri
 */
 pub fn
 parse_uri
@@ -2335,17 +2320,17 @@ parse_uri
             _ => panic!("Incomplete pattern matching")
         };
     let res1: &[u8] = parse_tstr(cpl);
-    evercddl_uri_right(res1)
+    uri_right(res1)
 }
 
 /**
-Serializer for evercddl_uri
+Serializer for uri
 */
 pub fn
 serialize_uri(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let c·: &[u8] = evercddl_uri_left(c);
+    let c·: &[u8] = uri_left(c);
     let c·1: (u64, &[u8]) = (32u64,c·);
     let _letpattern: (u64, &[u8]) = c·1;
     let ctag: u64 = _letpattern.0;
@@ -2363,14 +2348,14 @@ serialize_uri(c: &[u8], out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_uri···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_uri···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
     Some { v: (&'a [u8], &'a [u8]) }
 }
 
 pub fn validate_and_parse_uri <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_uri···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_uri···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -2381,7 +2366,7 @@ pub fn validate_and_parse_uri <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_uri···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_uri···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -2393,11 +2378,11 @@ pub fn validate_and_parse_uri <'a>(s: &'a [u8]) ->
               if test
               {
                   let x: &[u8] = parse_uri(rl);
-                  option__·COSE_Format_evercddl_uri···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  option__·COSE_Format_uri···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              { option__·COSE_Format_evercddl_uri···Pulse_Lib_Slice_slice·uint8_t·::None }
+              { option__·COSE_Format_uri···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -2435,20 +2420,20 @@ pub fn validate_encodedcbor(c: crate::cbordetveraux::cbor_raw) -> bool
     { false }
 }
 
-pub type evercddl_encodedcbor <'a> = evercddl_bstr <'a>;
+pub type encodedcbor <'a> = bstr <'a>;
 
-pub fn uu___is_Mkevercddl_encodedcbor0(projectee: &[u8]) -> bool
+pub fn uu___is_Mkencodedcbor0(projectee: &[u8]) -> bool
 {
     crate::lowstar::ignore::ignore::<&[u8]>(projectee);
     true
 }
 
-fn evercddl_encodedcbor_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
+fn encodedcbor_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
 
-fn evercddl_encodedcbor_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
+fn encodedcbor_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
 
 /**
-Parser for evercddl_encodedcbor
+Parser for encodedcbor
 */
 pub fn
 parse_encodedcbor
@@ -2464,17 +2449,17 @@ parse_encodedcbor
             _ => panic!("Incomplete pattern matching")
         };
     let res1: &[u8] = parse_bstr(cpl);
-    evercddl_encodedcbor_right(res1)
+    encodedcbor_right(res1)
 }
 
 /**
-Serializer for evercddl_encodedcbor
+Serializer for encodedcbor
 */
 pub fn
 serialize_encodedcbor(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let c·: &[u8] = evercddl_encodedcbor_left(c);
+    let c·: &[u8] = encodedcbor_left(c);
     let c·1: (u64, &[u8]) = (24u64,c·);
     let _letpattern: (u64, &[u8]) = c·1;
     let ctag: u64 = _letpattern.0;
@@ -2492,14 +2477,14 @@ serialize_encodedcbor(c: &[u8], out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_encodedcbor···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_encodedcbor···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
     Some { v: (&'a [u8], &'a [u8]) }
 }
 
 pub fn validate_and_parse_encodedcbor <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_encodedcbor···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_encodedcbor···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -2510,7 +2495,7 @@ pub fn validate_and_parse_encodedcbor <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_encodedcbor···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_encodedcbor···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -2522,13 +2507,11 @@ pub fn validate_and_parse_encodedcbor <'a>(s: &'a [u8]) ->
               if test
               {
                   let x: &[u8] = parse_encodedcbor(rl);
-                  option__·COSE_Format_evercddl_encodedcbor···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  option__·COSE_Format_encodedcbor···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              {
-                  option__·COSE_Format_evercddl_encodedcbor···Pulse_Lib_Slice_slice·uint8_t·::None
-              }
+              { option__·COSE_Format_encodedcbor···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -2566,26 +2549,26 @@ pub fn validate_eb16(c: crate::cbordetveraux::cbor_raw) -> bool
     { false }
 }
 
-pub type evercddl_eb16 <'a> = evercddl_any <'a>;
+pub type eb16 <'a> = any <'a>;
 
-pub fn uu___is_Mkevercddl_eb160(projectee: crate::cbordetveraux::cbor_raw) -> bool
+pub fn uu___is_Mkeb160(projectee: crate::cbordetveraux::cbor_raw) -> bool
 {
     crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(projectee);
     true
 }
 
-fn evercddl_eb16_right <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
+fn eb16_right <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
 { x1 }
 
-fn evercddl_eb16_left <'a>(x3: crate::cbordetveraux::cbor_raw <'a>) ->
+fn eb16_left <'a>(x3: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
 { x3 }
 
 /**
-Parser for evercddl_eb16
+Parser for eb16
 */
 pub fn
 parse_eb16
@@ -2602,17 +2585,17 @@ parse_eb16
             _ => panic!("Incomplete pattern matching")
         };
     let res1: crate::cbordetveraux::cbor_raw = parse_any(cpl);
-    evercddl_eb16_right(res1)
+    eb16_right(res1)
 }
 
 /**
-Serializer for evercddl_eb16
+Serializer for eb16
 */
 pub fn
 serialize_eb16(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
     usize
 {
-    let c·: crate::cbordetveraux::cbor_raw = evercddl_eb16_left(c);
+    let c·: crate::cbordetveraux::cbor_raw = eb16_left(c);
     let c·1: (u64, crate::cbordetveraux::cbor_raw) = (23u64,c·);
     let _letpattern: (u64, crate::cbordetveraux::cbor_raw) = c·1;
     let ctag: u64 = _letpattern.0;
@@ -2630,14 +2613,14 @@ serialize_eb16(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_eb16···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_eb16···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
     Some { v: (crate::cbordetveraux::cbor_raw <'a>, &'a [u8]) }
 }
 
 pub fn validate_and_parse_eb16 <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_eb16···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_eb16···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -2648,7 +2631,7 @@ pub fn validate_and_parse_eb16 <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_eb16···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_eb16···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -2660,11 +2643,11 @@ pub fn validate_and_parse_eb16 <'a>(s: &'a [u8]) ->
               if test
               {
                   let x: crate::cbordetveraux::cbor_raw = parse_eb16(rl);
-                  option__·COSE_Format_evercddl_eb16···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  option__·COSE_Format_eb16···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              { option__·COSE_Format_evercddl_eb16···Pulse_Lib_Slice_slice·uint8_t·::None }
+              { option__·COSE_Format_eb16···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -2702,26 +2685,26 @@ pub fn validate_eb64legacy(c: crate::cbordetveraux::cbor_raw) -> bool
     { false }
 }
 
-pub type evercddl_eb64legacy <'a> = evercddl_any <'a>;
+pub type eb64legacy <'a> = any <'a>;
 
-pub fn uu___is_Mkevercddl_eb64legacy0(projectee: crate::cbordetveraux::cbor_raw) -> bool
+pub fn uu___is_Mkeb64legacy0(projectee: crate::cbordetveraux::cbor_raw) -> bool
 {
     crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(projectee);
     true
 }
 
-fn evercddl_eb64legacy_right <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
+fn eb64legacy_right <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
 { x1 }
 
-fn evercddl_eb64legacy_left <'a>(x3: crate::cbordetveraux::cbor_raw <'a>) ->
+fn eb64legacy_left <'a>(x3: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
 { x3 }
 
 /**
-Parser for evercddl_eb64legacy
+Parser for eb64legacy
 */
 pub fn
 parse_eb64legacy
@@ -2738,17 +2721,17 @@ parse_eb64legacy
             _ => panic!("Incomplete pattern matching")
         };
     let res1: crate::cbordetveraux::cbor_raw = parse_any(cpl);
-    evercddl_eb64legacy_right(res1)
+    eb64legacy_right(res1)
 }
 
 /**
-Serializer for evercddl_eb64legacy
+Serializer for eb64legacy
 */
 pub fn
 serialize_eb64legacy(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
     usize
 {
-    let c·: crate::cbordetveraux::cbor_raw = evercddl_eb64legacy_left(c);
+    let c·: crate::cbordetveraux::cbor_raw = eb64legacy_left(c);
     let c·1: (u64, crate::cbordetveraux::cbor_raw) = (22u64,c·);
     let _letpattern: (u64, crate::cbordetveraux::cbor_raw) = c·1;
     let ctag: u64 = _letpattern.0;
@@ -2766,14 +2749,14 @@ serialize_eb64legacy(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_eb64legacy···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_eb64legacy···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
     Some { v: (crate::cbordetveraux::cbor_raw <'a>, &'a [u8]) }
 }
 
 pub fn validate_and_parse_eb64legacy <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_eb64legacy···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_eb64legacy···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -2784,7 +2767,7 @@ pub fn validate_and_parse_eb64legacy <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_eb64legacy···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_eb64legacy···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -2796,13 +2779,11 @@ pub fn validate_and_parse_eb64legacy <'a>(s: &'a [u8]) ->
               if test
               {
                   let x: crate::cbordetveraux::cbor_raw = parse_eb64legacy(rl);
-                  option__·COSE_Format_evercddl_eb64legacy···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  option__·COSE_Format_eb64legacy···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              {
-                  option__·COSE_Format_evercddl_eb64legacy···Pulse_Lib_Slice_slice·uint8_t·::None
-              }
+              { option__·COSE_Format_eb64legacy···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -2840,26 +2821,26 @@ pub fn validate_eb64url(c: crate::cbordetveraux::cbor_raw) -> bool
     { false }
 }
 
-pub type evercddl_eb64url <'a> = evercddl_any <'a>;
+pub type eb64url <'a> = any <'a>;
 
-pub fn uu___is_Mkevercddl_eb64url0(projectee: crate::cbordetveraux::cbor_raw) -> bool
+pub fn uu___is_Mkeb64url0(projectee: crate::cbordetveraux::cbor_raw) -> bool
 {
     crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(projectee);
     true
 }
 
-fn evercddl_eb64url_right <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
+fn eb64url_right <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
 { x1 }
 
-fn evercddl_eb64url_left <'a>(x3: crate::cbordetveraux::cbor_raw <'a>) ->
+fn eb64url_left <'a>(x3: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
 { x3 }
 
 /**
-Parser for evercddl_eb64url
+Parser for eb64url
 */
 pub fn
 parse_eb64url
@@ -2876,17 +2857,17 @@ parse_eb64url
             _ => panic!("Incomplete pattern matching")
         };
     let res1: crate::cbordetveraux::cbor_raw = parse_any(cpl);
-    evercddl_eb64url_right(res1)
+    eb64url_right(res1)
 }
 
 /**
-Serializer for evercddl_eb64url
+Serializer for eb64url
 */
 pub fn
 serialize_eb64url(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
     usize
 {
-    let c·: crate::cbordetveraux::cbor_raw = evercddl_eb64url_left(c);
+    let c·: crate::cbordetveraux::cbor_raw = eb64url_left(c);
     let c·1: (u64, crate::cbordetveraux::cbor_raw) = (21u64,c·);
     let _letpattern: (u64, crate::cbordetveraux::cbor_raw) = c·1;
     let ctag: u64 = _letpattern.0;
@@ -2904,14 +2885,14 @@ serialize_eb64url(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_eb64url···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_eb64url···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
     Some { v: (crate::cbordetveraux::cbor_raw <'a>, &'a [u8]) }
 }
 
 pub fn validate_and_parse_eb64url <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_eb64url···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_eb64url···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -2922,7 +2903,7 @@ pub fn validate_and_parse_eb64url <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_eb64url···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_eb64url···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -2934,11 +2915,11 @@ pub fn validate_and_parse_eb64url <'a>(s: &'a [u8]) ->
               if test
               {
                   let x: crate::cbordetveraux::cbor_raw = parse_eb64url(rl);
-                  option__·COSE_Format_evercddl_eb64url···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  option__·COSE_Format_eb64url···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              { option__·COSE_Format_evercddl_eb64url···Pulse_Lib_Slice_slice·uint8_t·::None }
+              { option__·COSE_Format_eb64url···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -2946,49 +2927,49 @@ pub fn validate_and_parse_eb64url <'a>(s: &'a [u8]) ->
 
 pub fn validate_number(c: crate::cbordetveraux::cbor_raw) -> bool { validate_int(c) }
 
-pub type evercddl_number = evercddl_int;
+pub type number = evercddl_int;
 
-pub fn uu___is_Mkevercddl_number0(projectee: evercddl_int) -> bool
+pub fn uu___is_Mknumber0(projectee: evercddl_int) -> bool
 {
     crate::lowstar::ignore::ignore::<evercddl_int>(projectee);
     true
 }
 
-fn evercddl_number_right(x1: evercddl_int) -> evercddl_int { x1 }
+fn number_right(x1: evercddl_int) -> evercddl_int { x1 }
 
-fn evercddl_number_left(x3: evercddl_int) -> evercddl_int { x3 }
+fn number_left(x3: evercddl_int) -> evercddl_int { x3 }
 
 /**
-Parser for evercddl_number
+Parser for number
 */
 pub fn
 parse_number(c: crate::cbordetveraux::cbor_raw) ->
     evercddl_int
 {
     let res1: evercddl_int = parse_int(c);
-    evercddl_number_right(res1)
+    number_right(res1)
 }
 
 /**
-Serializer for evercddl_number
+Serializer for number
 */
 pub fn
 serialize_number(c: evercddl_int, out: &mut [u8]) ->
     usize
 {
-    let c·: evercddl_int = evercddl_number_left(c);
+    let c·: evercddl_int = number_left(c);
     serialize_int(c·, out)
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_number···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_number···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
     Some { v: (evercddl_int, &'a [u8]) }
 }
 
 pub fn validate_and_parse_number <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_number···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_number···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -2999,7 +2980,7 @@ pub fn validate_and_parse_number <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_number···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_number···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -3011,11 +2992,11 @@ pub fn validate_and_parse_number <'a>(s: &'a [u8]) ->
               if test
               {
                   let x: evercddl_int = parse_number(rl);
-                  option__·COSE_Format_evercddl_number···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  option__·COSE_Format_number···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              { option__·COSE_Format_evercddl_number···Pulse_Lib_Slice_slice·uint8_t·::None }
+              { option__·COSE_Format_number···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -3053,20 +3034,20 @@ pub fn validate_tdate(c: crate::cbordetveraux::cbor_raw) -> bool
     { false }
 }
 
-pub type evercddl_tdate <'a> = evercddl_tstr <'a>;
+pub type tdate <'a> = tstr <'a>;
 
-pub fn uu___is_Mkevercddl_tdate0(projectee: &[u8]) -> bool
+pub fn uu___is_Mktdate0(projectee: &[u8]) -> bool
 {
     crate::lowstar::ignore::ignore::<&[u8]>(projectee);
     true
 }
 
-fn evercddl_tdate_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
+fn tdate_right <'a>(x1: &'a [u8]) -> &'a [u8] { x1 }
 
-fn evercddl_tdate_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
+fn tdate_left <'a>(x3: &'a [u8]) -> &'a [u8] { x3 }
 
 /**
-Parser for evercddl_tdate
+Parser for tdate
 */
 pub fn
 parse_tdate
@@ -3082,17 +3063,17 @@ parse_tdate
             _ => panic!("Incomplete pattern matching")
         };
     let res1: &[u8] = parse_tstr(cpl);
-    evercddl_tdate_right(res1)
+    tdate_right(res1)
 }
 
 /**
-Serializer for evercddl_tdate
+Serializer for tdate
 */
 pub fn
 serialize_tdate(c: &[u8], out: &mut [u8]) ->
     usize
 {
-    let c·: &[u8] = evercddl_tdate_left(c);
+    let c·: &[u8] = tdate_left(c);
     let c·1: (u64, &[u8]) = (0u64,c·);
     let _letpattern: (u64, &[u8]) = c·1;
     let ctag: u64 = _letpattern.0;
@@ -3110,14 +3091,14 @@ serialize_tdate(c: &[u8], out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_tdate···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_tdate···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
     Some { v: (&'a [u8], &'a [u8]) }
 }
 
 pub fn validate_and_parse_tdate <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_tdate···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_tdate···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -3128,7 +3109,7 @@ pub fn validate_and_parse_tdate <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_tdate···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_tdate···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -3140,11 +3121,11 @@ pub fn validate_and_parse_tdate <'a>(s: &'a [u8]) ->
               if test
               {
                   let x: &[u8] = parse_tdate(rl);
-                  option__·COSE_Format_evercddl_tdate···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  option__·COSE_Format_tdate···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              { option__·COSE_Format_evercddl_tdate···Pulse_Lib_Slice_slice·uint8_t·::None }
+              { option__·COSE_Format_tdate···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -3152,26 +3133,26 @@ pub fn validate_and_parse_tdate <'a>(s: &'a [u8]) ->
 
 pub fn validate_values(c: crate::cbordetveraux::cbor_raw) -> bool { validate_any(c) }
 
-pub type evercddl_values <'a> = evercddl_any <'a>;
+pub type values <'a> = any <'a>;
 
-pub fn uu___is_Mkevercddl_values0(projectee: crate::cbordetveraux::cbor_raw) -> bool
+pub fn uu___is_Mkvalues0(projectee: crate::cbordetveraux::cbor_raw) -> bool
 {
     crate::lowstar::ignore::ignore::<crate::cbordetveraux::cbor_raw>(projectee);
     true
 }
 
-fn evercddl_values_right <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
+fn values_right <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
 { x1 }
 
-fn evercddl_values_left <'a>(x3: crate::cbordetveraux::cbor_raw <'a>) ->
+fn values_left <'a>(x3: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
 { x3 }
 
 /**
-Parser for evercddl_values
+Parser for values
 */
 pub fn
 parse_values
@@ -3180,29 +3161,29 @@ parse_values
     <'a>
 {
     let res1: crate::cbordetveraux::cbor_raw = parse_any(c);
-    evercddl_values_right(res1)
+    values_right(res1)
 }
 
 /**
-Serializer for evercddl_values
+Serializer for values
 */
 pub fn
 serialize_values(c: crate::cbordetveraux::cbor_raw, out: &mut [u8]) ->
     usize
 {
-    let c·: crate::cbordetveraux::cbor_raw = evercddl_values_left(c);
+    let c·: crate::cbordetveraux::cbor_raw = values_left(c);
     serialize_any(c·, out)
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_values···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_values···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
     Some { v: (crate::cbordetveraux::cbor_raw <'a>, &'a [u8]) }
 }
 
 pub fn validate_and_parse_values <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_values···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_values···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -3213,7 +3194,7 @@ pub fn validate_and_parse_values <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_values···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_values···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -3225,11 +3206,11 @@ pub fn validate_and_parse_values <'a>(s: &'a [u8]) ->
               if test
               {
                   let x: crate::cbordetveraux::cbor_raw = parse_values(rl);
-                  option__·COSE_Format_evercddl_values···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  option__·COSE_Format_values···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              { option__·COSE_Format_evercddl_values···Pulse_Lib_Slice_slice·uint8_t·::None }
+              { option__·COSE_Format_values···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -3242,101 +3223,101 @@ pub fn validate_label(c: crate::cbordetveraux::cbor_raw) -> bool
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum evercddl_label_ugly <'a>
+pub enum label_ugly <'a>
 {
     Inl { v: evercddl_int },
     Inr { v: &'a [u8] }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-enum evercddl_label_tags
+enum label_tags
 {
-    Mkevercddl_label0,
-    Mkevercddl_label1
+    Mklabel0,
+    Mklabel1
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum evercddl_label <'a>
+pub enum label <'a>
 {
-    Mkevercddl_label0 { _x0: evercddl_int },
-    Mkevercddl_label1 { _x0: &'a [u8] }
+    Mklabel0 { _x0: evercddl_int },
+    Mklabel1 { _x0: &'a [u8] }
 }
 
-pub fn uu___is_Mkevercddl_label0(projectee: evercddl_label) -> bool
-{ match projectee { evercddl_label::Mkevercddl_label0 { .. } => true, _ => false } }
+pub fn uu___is_Mklabel0(projectee: label) -> bool
+{ match projectee { label::Mklabel0 { .. } => true, _ => false } }
 
-pub fn uu___is_Mkevercddl_label1(projectee: evercddl_label) -> bool
-{ match projectee { evercddl_label::Mkevercddl_label1 { .. } => true, _ => false } }
+pub fn uu___is_Mklabel1(projectee: label) -> bool
+{ match projectee { label::Mklabel1 { .. } => true, _ => false } }
 
-fn evercddl_label_right <'a>(x2: evercddl_label_ugly <'a>) -> evercddl_label <'a>
+fn label_right <'a>(x2: label_ugly <'a>) -> label <'a>
 {
     match x2
     {
-        evercddl_label_ugly::Inl { v: x3 } => evercddl_label::Mkevercddl_label0 { _x0: x3 },
-        evercddl_label_ugly::Inr { v: x4 } => evercddl_label::Mkevercddl_label1 { _x0: x4 },
+        label_ugly::Inl { v: x3 } => label::Mklabel0 { _x0: x3 },
+        label_ugly::Inr { v: x4 } => label::Mklabel1 { _x0: x4 },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
-fn evercddl_label_left <'a>(x7: evercddl_label <'a>) -> evercddl_label_ugly <'a>
+fn label_left <'a>(x7: label <'a>) -> label_ugly <'a>
 {
     match x7
     {
-        evercddl_label::Mkevercddl_label0 { _x0: x10 } => evercddl_label_ugly::Inl { v: x10 },
-        evercddl_label::Mkevercddl_label1 { _x0: x12 } => evercddl_label_ugly::Inr { v: x12 },
+        label::Mklabel0 { _x0: x10 } => label_ugly::Inl { v: x10 },
+        label::Mklabel1 { _x0: x12 } => label_ugly::Inr { v: x12 },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
 /**
-Parser for evercddl_label
+Parser for label
 */
 pub fn
 parse_label
 <'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
-    evercddl_label
+    label
     <'a>
 {
     let test: bool = validate_int(c);
-    let res1: evercddl_label_ugly =
+    let res1: label_ugly =
         if test
         {
             let res: evercddl_int = parse_int(c);
-            evercddl_label_ugly::Inl { v: res }
+            label_ugly::Inl { v: res }
         }
         else
         {
             let res: &[u8] = parse_tstr(c);
-            evercddl_label_ugly::Inr { v: res }
+            label_ugly::Inr { v: res }
         };
-    evercddl_label_right(res1)
+    label_right(res1)
 }
 
 /**
-Serializer for evercddl_label
+Serializer for label
 */
 pub fn
-serialize_label(c: evercddl_label, out: &mut [u8]) ->
+serialize_label(c: label, out: &mut [u8]) ->
     usize
 {
-    let c·: evercddl_label_ugly = evercddl_label_left(c);
+    let c·: label_ugly = label_left(c);
     match c·
     {
-        evercddl_label_ugly::Inl { v: c1 } => serialize_int(c1, out),
-        evercddl_label_ugly::Inr { v: c2 } => serialize_tstr(c2, out),
+        label_ugly::Inl { v: c1 } => serialize_int(c1, out),
+        label_ugly::Inr { v: c2 } => serialize_tstr(c2, out),
         _ => panic!("Incomplete pattern matching")
     }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_label···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_label···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (evercddl_label <'a>, &'a [u8]) }
+    Some { v: (label <'a>, &'a [u8]) }
 }
 
 pub fn validate_and_parse_label <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_label···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_label···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -3347,7 +3328,7 @@ pub fn validate_and_parse_label <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_label···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_label···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -3358,12 +3339,12 @@ pub fn validate_and_parse_label <'a>(s: &'a [u8]) ->
               let test: bool = validate_label(rl);
               if test
               {
-                  let x: evercddl_label = parse_label(rl);
-                  option__·COSE_Format_evercddl_label···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: label = parse_label(rl);
+                  option__·COSE_Format_label···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              { option__·COSE_Format_evercddl_label···Pulse_Lib_Slice_slice·uint8_t·::None }
+              { option__·COSE_Format_label···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -3499,7 +3480,7 @@ pub fn aux_env29_map_constraint_1(x: crate::cbordetveraux::cbor_map_entry) -> bo
     }
 }
 
-pub fn validate_COSE_Key_OKP(c: crate::cbordetveraux::cbor_raw) -> bool
+pub fn validate_cose_key_okp(c: crate::cbordetveraux::cbor_raw) -> bool
 {
     let ty: u8 = crate::cbordetver::cbor_det_major_type(c);
     if ty == crate::cbordetveraux::cbor_major_type_map
@@ -4012,7 +3993,7 @@ pub fn validate_COSE_Key_OKP(c: crate::cbordetveraux::cbor_raw) -> bool
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__COSE_Format_evercddl_bstr <'a>
+pub enum option__COSE_Format_bstr <'a>
 {
     None,
     Some { v: &'a [u8] }
@@ -4020,14 +4001,14 @@ pub enum option__COSE_Format_evercddl_bstr <'a>
 
 #[derive(PartialEq, Clone, Copy)]
 pub struct
-map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
 <'a>
 {
     pub cddl_map_iterator_contents:
     crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>,
     pub cddl_map_iterator_impl_validate1: fn (crate::cbordetveraux::cbor_raw) -> bool,
     pub cddl_map_iterator_impl_parse1:
-    for<'a1> fn (crate::cbordetveraux::cbor_raw <'a1>) -> evercddl_label <'a1>,
+    for<'a1> fn (crate::cbordetveraux::cbor_raw <'a1>) -> label <'a1>,
     pub cddl_map_iterator_impl_validate_ex: fn (crate::cbordetveraux::cbor_map_entry) -> bool,
     pub cddl_map_iterator_impl_validate2: fn (crate::cbordetveraux::cbor_raw) -> bool,
     pub cddl_map_iterator_impl_parse2:
@@ -4036,78 +4017,74 @@ map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum
-either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values
+either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values
 <'a>
 {
-    Inl { v: &'a [(evercddl_label <'a>, crate::cbordetveraux::cbor_raw <'a>)] },
+    Inl { v: &'a [(label <'a>, crate::cbordetveraux::cbor_raw <'a>)] },
     Inr
     {
         v:
-        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
         <'a>
     }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub struct evercddl_COSE_Key_OKP <'a>
+pub struct cose_key_okp <'a>
 {
-    pub intkeyneg1: evercddl_label_ugly <'a>,
-    pub intkeyneg2: option__COSE_Format_evercddl_bstr <'a>,
-    pub intkeyneg4: option__COSE_Format_evercddl_bstr <'a>,
+    pub intkeyneg1: label_ugly <'a>,
+    pub intkeyneg2: option__COSE_Format_bstr <'a>,
+    pub intkeyneg4: option__COSE_Format_bstr <'a>,
     pub _x0:
-    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values
+    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values
     <'a>
 }
 
-pub fn uu___is_Mkevercddl_COSE_Key_OKP0(projectee: evercddl_COSE_Key_OKP) -> bool
+pub fn uu___is_Mkcose_key_okp0(projectee: cose_key_okp) -> bool
 {
-    crate::lowstar::ignore::ignore::<evercddl_COSE_Key_OKP>(projectee);
+    crate::lowstar::ignore::ignore::<cose_key_okp>(projectee);
     true
 }
 
-fn evercddl_COSE_Key_OKP_right <'a>(
+fn cose_key_okp_right <'a>(
     x5:
-    (((((), evercddl_label_ugly <'a>), option__COSE_Format_evercddl_bstr <'a>),
-    option__COSE_Format_evercddl_bstr
-    <'a>),
-    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values
+    (((((), label_ugly <'a>), option__COSE_Format_bstr <'a>), option__COSE_Format_bstr <'a>),
+    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values
     <'a>)
 ) ->
-    evercddl_COSE_Key_OKP
+    cose_key_okp
     <'a>
 {
     match x5
     {
         ((((_x6,x7),x8),x9),x10) =>
-          evercddl_COSE_Key_OKP { intkeyneg1: x7, intkeyneg2: x8, intkeyneg4: x9, _x0: x10 }
+          cose_key_okp { intkeyneg1: x7, intkeyneg2: x8, intkeyneg4: x9, _x0: x10 }
     }
 }
 
-fn evercddl_COSE_Key_OKP_left <'a>(x11: evercddl_COSE_Key_OKP <'a>) ->
-    (((((), evercddl_label_ugly <'a>), option__COSE_Format_evercddl_bstr <'a>),
-    option__COSE_Format_evercddl_bstr
-    <'a>),
-    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values
+fn cose_key_okp_left <'a>(x11: cose_key_okp <'a>) ->
+    (((((), label_ugly <'a>), option__COSE_Format_bstr <'a>), option__COSE_Format_bstr <'a>),
+    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values
     <'a>)
 {
-    let x19: evercddl_label_ugly = x11.intkeyneg1;
-    let x20: option__COSE_Format_evercddl_bstr = x11.intkeyneg2;
-    let x21: option__COSE_Format_evercddl_bstr = x11.intkeyneg4;
+    let x19: label_ugly = x11.intkeyneg1;
+    let x20: option__COSE_Format_bstr = x11.intkeyneg2;
+    let x21: option__COSE_Format_bstr = x11.intkeyneg4;
     let
     x22:
-    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values
+    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values
     =
         x11._x0;
     (((((),x19),x20),x21),x22)
 }
 
 /**
-Parser for evercddl_COSE_Key_OKP
+Parser for cose_key_okp
 */
 pub fn
-parse_COSE_Key_OKP
+parse_cose_key_okp
 <'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
-    evercddl_COSE_Key_OKP
+    cose_key_okp
     <'a>
 {
     let mty: crate::cbordetver::cbor_det_int_kind = crate::cbordetver::cbor_det_int_kind::UInt64;
@@ -4146,7 +4123,7 @@ parse_COSE_Key_OKP
             _ => panic!("Incomplete pattern matching")
         };
     let _letpattern2: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow0;
-    let w2: evercddl_label_ugly =
+    let w2: label_ugly =
         match _letpattern2
         {
             crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: w } =>
@@ -4155,17 +4132,17 @@ parse_COSE_Key_OKP
                   if test
                   {
                       let res: evercddl_int = parse_int(w);
-                      evercddl_label_ugly::Inl { v: res }
+                      label_ugly::Inl { v: res }
                   }
                   else
                   {
                       let res: &[u8] = parse_tstr(w);
-                      evercddl_label_ugly::Inr { v: res }
+                      label_ugly::Inr { v: res }
                   }
               },
             _ => panic!("Incomplete pattern matching")
         };
-    let w1: ((), evercddl_label_ugly) = ((),w2);
+    let w1: ((), label_ugly) = ((),w2);
     let dummy: [u64; 1] = [0u64; 1usize];
     crate::lowstar::ignore::ignore::<&[u64]>(&dummy);
     let mty1: crate::cbordetver::cbor_det_int_kind =
@@ -4201,7 +4178,7 @@ parse_COSE_Key_OKP
               },
             _ => panic!("Incomplete pattern matching")
         };
-    let w20: option__COSE_Format_evercddl_bstr =
+    let w20: option__COSE_Format_bstr =
         if crate::cbordetveraux::uu___is_MGOK(test1)
         {
             let mty2: crate::cbordetver::cbor_det_int_kind =
@@ -4231,11 +4208,11 @@ parse_COSE_Key_OKP
                       parse_bstr(w),
                     _ => panic!("Incomplete pattern matching")
                 };
-            option__COSE_Format_evercddl_bstr::Some { v: w11 }
+            option__COSE_Format_bstr::Some { v: w11 }
         }
         else
-        { option__COSE_Format_evercddl_bstr::None };
-    let w10: (((), evercddl_label_ugly), option__COSE_Format_evercddl_bstr) = (w1,w20);
+        { option__COSE_Format_bstr::None };
+    let w10: (((), label_ugly), option__COSE_Format_bstr) = (w1,w20);
     let dummy0: [u64; 1] = [0u64; 1usize];
     crate::lowstar::ignore::ignore::<&[u64]>(&dummy0);
     let mty2: crate::cbordetver::cbor_det_int_kind =
@@ -4271,7 +4248,7 @@ parse_COSE_Key_OKP
               },
             _ => panic!("Incomplete pattern matching")
         };
-    let w21: option__COSE_Format_evercddl_bstr =
+    let w21: option__COSE_Format_bstr =
         if crate::cbordetveraux::uu___is_MGOK(test10)
         {
             let mty3: crate::cbordetver::cbor_det_int_kind =
@@ -4301,16 +4278,11 @@ parse_COSE_Key_OKP
                       parse_bstr(w),
                     _ => panic!("Incomplete pattern matching")
                 };
-            option__COSE_Format_evercddl_bstr::Some { v: w11 }
+            option__COSE_Format_bstr::Some { v: w11 }
         }
         else
-        { option__COSE_Format_evercddl_bstr::None };
-    let
-    w11:
-    ((((), evercddl_label_ugly), option__COSE_Format_evercddl_bstr),
-    option__COSE_Format_evercddl_bstr)
-    =
-        (w10,w21);
+        { option__COSE_Format_bstr::None };
+    let w11: ((((), label_ugly), option__COSE_Format_bstr), option__COSE_Format_bstr) = (w10,w21);
     let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
     let _letpattern5: crate::cbordetver::cbor_det_view = v1;
     let i: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
@@ -4322,9 +4294,9 @@ parse_COSE_Key_OKP
         };
     let
     rres:
-    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
     =
-        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
         {
             cddl_map_iterator_contents: i,
             cddl_map_iterator_impl_validate1: validate_label,
@@ -4335,80 +4307,67 @@ parse_COSE_Key_OKP
         };
     let
     w22:
-    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values
+    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values
     =
-        either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values::Inr
+        either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values::Inr
         { v: rres };
     let
     res1:
-    (((((), evercddl_label_ugly), option__COSE_Format_evercddl_bstr),
-    option__COSE_Format_evercddl_bstr),
-    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values)
+    (((((), label_ugly), option__COSE_Format_bstr), option__COSE_Format_bstr),
+    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values)
     =
         (w11,w22);
-    evercddl_COSE_Key_OKP_right(res1)
+    cose_key_okp_right(res1)
 }
 
 /**
-Serializer for evercddl_COSE_Key_OKP
+Serializer for cose_key_okp
 */
 pub fn
-serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP, out: &mut [u8]) ->
+serialize_cose_key_okp(c: cose_key_okp, out: &mut [u8]) ->
     usize
 {
     let
     c·:
-    (((((), evercddl_label_ugly), option__COSE_Format_evercddl_bstr),
-    option__COSE_Format_evercddl_bstr),
-    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values)
+    (((((), label_ugly), option__COSE_Format_bstr), option__COSE_Format_bstr),
+    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values)
     =
-        evercddl_COSE_Key_OKP_left(c);
+        cose_key_okp_left(c);
     let mut pcount: [u64; 1] = [0u64; 1usize];
     let mut psize: [usize; 1] = [0usize; 1usize];
     let
     _letpattern:
-    (((((), evercddl_label_ugly), option__COSE_Format_evercddl_bstr),
-    option__COSE_Format_evercddl_bstr),
-    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values)
+    (((((), label_ugly), option__COSE_Format_bstr), option__COSE_Format_bstr),
+    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values)
     =
         c·;
     let res: bool =
         {
-            let
-            c1:
-            ((((), evercddl_label_ugly), option__COSE_Format_evercddl_bstr),
-            option__COSE_Format_evercddl_bstr)
-            =
+            let c1: ((((), label_ugly), option__COSE_Format_bstr), option__COSE_Format_bstr) =
                 _letpattern.0;
             let
             c2:
-            either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values
+            either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values
             =
                 _letpattern.1;
             let
-            _letpattern1:
-            ((((), evercddl_label_ugly), option__COSE_Format_evercddl_bstr),
-            option__COSE_Format_evercddl_bstr)
+            _letpattern1: ((((), label_ugly), option__COSE_Format_bstr), option__COSE_Format_bstr)
             =
                 c1;
             let res1: bool =
                 {
-                    let c11: (((), evercddl_label_ugly), option__COSE_Format_evercddl_bstr) =
-                        _letpattern1.0;
-                    let c21: option__COSE_Format_evercddl_bstr = _letpattern1.1;
-                    let
-                    _letpattern2: (((), evercddl_label_ugly), option__COSE_Format_evercddl_bstr)
-                    =
-                        c11;
+                    let c11: (((), label_ugly), option__COSE_Format_bstr) = _letpattern1.0;
+                    let c21: option__COSE_Format_bstr = _letpattern1.1;
+                    let _letpattern2: (((), label_ugly), option__COSE_Format_bstr) = c11;
                     let res1: bool =
                         {
-                            let c12: ((), evercddl_label_ugly) = _letpattern2.0;
-                            let c22: option__COSE_Format_evercddl_bstr = _letpattern2.1;
-                            let _letpattern3: ((), evercddl_label_ugly) = c12;
+                            let c12: ((), label_ugly) = _letpattern2.0;
+                            let c22: option__COSE_Format_bstr = _letpattern2.1;
+                            let _letpattern3: ((), label_ugly) = c12;
                             let res1: bool =
                                 {
                                     _letpattern3.0;
-                                    let c23: evercddl_label_ugly = _letpattern3.1;
+                                    let c23: label_ugly = _letpattern3.1;
                                     let count: u64 = (&pcount)[0];
                                     let res1: bool =
                                         if count < 18446744073709551615u64
@@ -4528,9 +4487,9 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP, out: &mut [u8]) ->
                                                 let res2: usize =
                                                     match c23
                                                     {
-                                                        evercddl_label_ugly::Inl { v: c14 } =>
+                                                        label_ugly::Inl { v: c14 } =>
                                                           serialize_int(c14, out2),
-                                                        evercddl_label_ugly::Inr { v: c24 } =>
+                                                        label_ugly::Inr { v: c24 } =>
                                                           serialize_tstr(c24, out2),
                                                         _ => panic!("Incomplete pattern matching")
                                                     };
@@ -4571,7 +4530,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP, out: &mut [u8]) ->
                             {
                                 match c22
                                 {
-                                    option__COSE_Format_evercddl_bstr::Some { v: c13 } =>
+                                    option__COSE_Format_bstr::Some { v: c13 } =>
                                       {
                                           let count: u64 = (&pcount)[0];
                                           if count < 18446744073709551615u64
@@ -4642,7 +4601,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP, out: &mut [u8]) ->
                                           else
                                           { false }
                                       },
-                                    option__COSE_Format_evercddl_bstr::None => true,
+                                    option__COSE_Format_bstr::None => true,
                                     _ => panic!("Incomplete pattern matching")
                                 }
                             }
@@ -4653,7 +4612,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP, out: &mut [u8]) ->
                     {
                         match c21
                         {
-                            option__COSE_Format_evercddl_bstr::Some { v: c12 } =>
+                            option__COSE_Format_bstr::Some { v: c12 } =>
                               {
                                   let count: u64 = (&pcount)[0];
                                   if count < 18446744073709551615u64
@@ -4720,7 +4679,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP, out: &mut [u8]) ->
                                   else
                                   { false }
                               },
-                            option__COSE_Format_evercddl_bstr::None => true,
+                            option__COSE_Format_bstr::None => true,
                             _ => panic!("Incomplete pattern matching")
                         }
                     }
@@ -4731,24 +4690,21 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP, out: &mut [u8]) ->
             {
                 match c2
                 {
-                    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values::Inl
+                    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values::Inl
                     { v: c11 }
                     =>
                       {
-                          let i: &[(evercddl_label, crate::cbordetveraux::cbor_raw)] = c11;
-                          let pi: [&[(evercddl_label, crate::cbordetveraux::cbor_raw)]; 1] =
-                              [i; 1usize];
-                          crate::lowstar::ignore::ignore::<&[&[(evercddl_label,
+                          let i: &[(label, crate::cbordetveraux::cbor_raw)] = c11;
+                          let pi: [&[(label, crate::cbordetveraux::cbor_raw)]; 1] = [i; 1usize];
+                          crate::lowstar::ignore::ignore::<&[&[(label,
                           crate::cbordetveraux::cbor_raw)]]>(&pi);
-                          let mut pc: [&[(evercddl_label, crate::cbordetveraux::cbor_raw)]; 1] =
-                              [i; 1usize];
+                          let mut pc: [&[(label, crate::cbordetveraux::cbor_raw)]; 1] = [i; 1usize];
                           let mut pres: [bool; 1] = [true; 1usize];
                           let res: bool = (&pres)[0];
                           let mut cond: bool =
                               if res
                               {
-                                  let c3: &[(evercddl_label, crate::cbordetveraux::cbor_raw)] =
-                                      (&pc)[0];
+                                  let c3: &[(label, crate::cbordetveraux::cbor_raw)] = (&pc)[0];
                                   let em: bool = c3.len() == 0usize;
                                   ! em
                               }
@@ -4763,36 +4719,25 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP, out: &mut [u8]) ->
                               else
                               {
                                   let count·: u64 = count.wrapping_add(1u64);
-                                  let i1: &[(evercddl_label, crate::cbordetveraux::cbor_raw)] =
-                                      (&pc)[0];
-                                  let res0: (evercddl_label, crate::cbordetveraux::cbor_raw) =
-                                      i1[0usize];
+                                  let i1: &[(label, crate::cbordetveraux::cbor_raw)] = (&pc)[0];
+                                  let res0: (label, crate::cbordetveraux::cbor_raw) = i1[0usize];
                                   let
                                   _letpattern10:
-                                  (&[(evercddl_label, crate::cbordetveraux::cbor_raw)],
-                                  &[(evercddl_label, crate::cbordetveraux::cbor_raw)])
+                                  (&[(label, crate::cbordetveraux::cbor_raw)],
+                                  &[(label, crate::cbordetveraux::cbor_raw)])
                                   =
                                       i1.split_at(1usize);
-                                  let
-                                  _letpattern11: (evercddl_label, crate::cbordetveraux::cbor_raw)
-                                  =
+                                  let _letpattern11: (label, crate::cbordetveraux::cbor_raw) =
                                       {
-                                          let
-                                          _il: &[(evercddl_label, crate::cbordetveraux::cbor_raw)]
-                                          =
+                                          let _il: &[(label, crate::cbordetveraux::cbor_raw)] =
                                               _letpattern10.0;
-                                          let
-                                          ir: &[(evercddl_label, crate::cbordetveraux::cbor_raw)]
-                                          =
+                                          let ir: &[(label, crate::cbordetveraux::cbor_raw)] =
                                               _letpattern10.1;
-                                          let
-                                          i·: &[(evercddl_label, crate::cbordetveraux::cbor_raw)]
-                                          =
-                                              ir;
+                                          let i·: &[(label, crate::cbordetveraux::cbor_raw)] = ir;
                                           (&mut pc)[0] = i·;
                                           res0
                                       };
-                                  let ck: evercddl_label = _letpattern11.0;
+                                  let ck: label = _letpattern11.0;
                                   let cv: crate::cbordetveraux::cbor_raw = _letpattern11.1;
                                   let size0: usize = (&psize)[0];
                                   let _letpattern2: (&mut [u8], &mut [u8]) =
@@ -4919,8 +4864,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP, out: &mut [u8]) ->
                               let ite: bool =
                                   if res0
                                   {
-                                      let c3: &[(evercddl_label, crate::cbordetveraux::cbor_raw)] =
-                                          (&pc)[0];
+                                      let c3: &[(label, crate::cbordetveraux::cbor_raw)] = (&pc)[0];
                                       let em: bool = c3.len() == 0usize;
                                       ! em
                                   }
@@ -4930,14 +4874,14 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP, out: &mut [u8]) ->
                           };
                           (&pres)[0]
                       },
-                    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values::Inr
+                    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values::Inr
                     { v: c21 }
                     =>
                       {
                           let
                           mut
                           pc:
-                          [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values;
+                          [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values;
                           1]
                           =
                               [c21; 1usize];
@@ -4948,7 +4892,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP, out: &mut [u8]) ->
                               {
                                   let
                                   c3:
-                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
                                   =
                                       (&pc)[0];
                                   let
@@ -5031,7 +4975,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP, out: &mut [u8]) ->
                                   let count·: u64 = count.wrapping_add(1u64);
                                   let
                                   i:
-                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
                                   =
                                       (&pc)[0];
                                   let
@@ -5093,7 +5037,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP, out: &mut [u8]) ->
                                   let hd1: crate::cbordetveraux::cbor_map_entry = (&phd)[0];
                                   let hd_key0: crate::cbordetveraux::cbor_raw =
                                       crate::cbordetver::cbor_det_map_entry_key(hd1);
-                                  let hd_key_res: evercddl_label =
+                                  let hd_key_res: label =
                                       (i.cddl_map_iterator_impl_parse1)(hd_key0);
                                   let hd_value: crate::cbordetveraux::cbor_raw =
                                       crate::cbordetver::cbor_det_map_entry_value(hd1);
@@ -5106,9 +5050,9 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP, out: &mut [u8]) ->
                                       (&pj)[0];
                                   let
                                   i·:
-                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
                                   =
-                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
                                       {
                                           cddl_map_iterator_contents: j,
                                           cddl_map_iterator_impl_validate1:
@@ -5123,11 +5067,9 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP, out: &mut [u8]) ->
                                           i.cddl_map_iterator_impl_parse2
                                       };
                                   (&mut pc)[0] = i·;
-                                  let
-                                  _letpattern10: (evercddl_label, crate::cbordetveraux::cbor_raw)
-                                  =
+                                  let _letpattern10: (label, crate::cbordetveraux::cbor_raw) =
                                       (hd_key_res,hd_value_res);
-                                  let ck: evercddl_label = _letpattern10.0;
+                                  let ck: label = _letpattern10.0;
                                   let cv: crate::cbordetveraux::cbor_raw = _letpattern10.1;
                                   let size0: usize = (&psize)[0];
                                   let _letpattern2: (&mut [u8], &mut [u8]) =
@@ -5256,7 +5198,7 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP, out: &mut [u8]) ->
                                   {
                                       let
                                       c3:
-                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
                                       =
                                           (&pc)[0];
                                       let
@@ -5355,14 +5297,14 @@ serialize_COSE_Key_OKP(c: evercddl_COSE_Key_OKP, out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_COSE_Key_OKP···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_cose_key_okp···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (evercddl_COSE_Key_OKP <'a>, &'a [u8]) }
+    Some { v: (cose_key_okp <'a>, &'a [u8]) }
 }
 
-pub fn validate_and_parse_COSE_Key_OKP <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_COSE_Key_OKP···Pulse_Lib_Slice_slice·uint8_t·
+pub fn validate_and_parse_cose_key_okp <'a>(s: &'a [u8]) ->
+    option__·COSE_Format_cose_key_okp···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -5373,7 +5315,7 @@ pub fn validate_and_parse_COSE_Key_OKP <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_COSE_Key_OKP···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_cose_key_okp···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -5381,25 +5323,23 @@ pub fn validate_and_parse_COSE_Key_OKP <'a>(s: &'a [u8]) ->
               let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
               let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
               let rem: &[u8] = _letpattern.1;
-              let test: bool = validate_COSE_Key_OKP(rl);
+              let test: bool = validate_cose_key_okp(rl);
               if test
               {
-                  let x: evercddl_COSE_Key_OKP = parse_COSE_Key_OKP(rl);
-                  option__·COSE_Format_evercddl_COSE_Key_OKP···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: cose_key_okp = parse_cose_key_okp(rl);
+                  option__·COSE_Format_cose_key_okp···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              {
-                  option__·COSE_Format_evercddl_COSE_Key_OKP···Pulse_Lib_Slice_slice·uint8_t·::None
-              }
+              { option__·COSE_Format_cose_key_okp···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
-pub fn is_empty_iterate_map_evercddl_label_and_evercddl_values(
+pub fn is_empty_iterate_map_label_and_values(
     i:
-    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
 ) ->
     bool
 {
@@ -5452,17 +5392,17 @@ pub fn is_empty_iterate_map_evercddl_label_and_evercddl_values(
     (&pres)[0]
 }
 
-pub fn next_iterate_map_evercddl_label_and_evercddl_values <'a>(
+pub fn next_iterate_map_label_and_values <'a>(
     pi:
     &'a mut
-    [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+    [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
     <'a>]
 ) ->
-    (evercddl_label <'a>, crate::cbordetveraux::cbor_raw <'a>)
+    (label <'a>, crate::cbordetveraux::cbor_raw <'a>)
 {
     let
     i:
-    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
     =
         pi[0];
     let mut pj: [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] =
@@ -5507,16 +5447,16 @@ pub fn next_iterate_map_evercddl_label_and_evercddl_values <'a>(
     };
     let hd1: crate::cbordetveraux::cbor_map_entry = (&phd)[0];
     let hd_key0: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_map_entry_key(hd1);
-    let hd_key_res: evercddl_label = (i.cddl_map_iterator_impl_parse1)(hd_key0);
+    let hd_key_res: label = (i.cddl_map_iterator_impl_parse1)(hd_key0);
     let hd_value: crate::cbordetveraux::cbor_raw =
         crate::cbordetver::cbor_det_map_entry_value(hd1);
     let hd_value_res: crate::cbordetveraux::cbor_raw = (i.cddl_map_iterator_impl_parse2)(hd_value);
     let j: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pj)[0];
     let
     i·:
-    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
     =
-        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
         {
             cddl_map_iterator_contents: j,
             cddl_map_iterator_impl_validate1: i.cddl_map_iterator_impl_validate1,
@@ -5529,56 +5469,54 @@ pub fn next_iterate_map_evercddl_label_and_evercddl_values <'a>(
     (hd_key_res,hd_value_res)
 }
 
-pub fn validate_COSE_Key(c: crate::cbordetveraux::cbor_raw) -> bool
-{ validate_COSE_Key_OKP(c) }
+pub fn validate_cose_key(c: crate::cbordetveraux::cbor_raw) -> bool
+{ validate_cose_key_okp(c) }
 
-pub type evercddl_COSE_Key <'a> = evercddl_COSE_Key_OKP <'a>;
+pub type cose_key <'a> = cose_key_okp <'a>;
 
-pub fn uu___is_Mkevercddl_COSE_Key0(projectee: evercddl_COSE_Key_OKP) -> bool
+pub fn uu___is_Mkcose_key0(projectee: cose_key_okp) -> bool
 {
-    crate::lowstar::ignore::ignore::<evercddl_COSE_Key_OKP>(projectee);
+    crate::lowstar::ignore::ignore::<cose_key_okp>(projectee);
     true
 }
 
-fn evercddl_COSE_Key_right <'a>(x1: evercddl_COSE_Key_OKP <'a>) -> evercddl_COSE_Key_OKP <'a>
-{ x1 }
+fn cose_key_right <'a>(x1: cose_key_okp <'a>) -> cose_key_okp <'a> { x1 }
 
-fn evercddl_COSE_Key_left <'a>(x3: evercddl_COSE_Key_OKP <'a>) -> evercddl_COSE_Key_OKP <'a>
-{ x3 }
+fn cose_key_left <'a>(x3: cose_key_okp <'a>) -> cose_key_okp <'a> { x3 }
 
 /**
-Parser for evercddl_COSE_Key
+Parser for cose_key
 */
 pub fn
-parse_COSE_Key
+parse_cose_key
 <'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
-    evercddl_COSE_Key_OKP
+    cose_key_okp
     <'a>
 {
-    let res1: evercddl_COSE_Key_OKP = parse_COSE_Key_OKP(c);
-    evercddl_COSE_Key_right(res1)
+    let res1: cose_key_okp = parse_cose_key_okp(c);
+    cose_key_right(res1)
 }
 
 /**
-Serializer for evercddl_COSE_Key
+Serializer for cose_key
 */
 pub fn
-serialize_COSE_Key(c: evercddl_COSE_Key_OKP, out: &mut [u8]) ->
+serialize_cose_key(c: cose_key_okp, out: &mut [u8]) ->
     usize
 {
-    let c·: evercddl_COSE_Key_OKP = evercddl_COSE_Key_left(c);
-    serialize_COSE_Key_OKP(c·, out)
+    let c·: cose_key_okp = cose_key_left(c);
+    serialize_cose_key_okp(c·, out)
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_COSE_Key···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_cose_key···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (evercddl_COSE_Key_OKP <'a>, &'a [u8]) }
+    Some { v: (cose_key_okp <'a>, &'a [u8]) }
 }
 
-pub fn validate_and_parse_COSE_Key <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_COSE_Key···Pulse_Lib_Slice_slice·uint8_t·
+pub fn validate_and_parse_cose_key <'a>(s: &'a [u8]) ->
+    option__·COSE_Format_cose_key···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -5589,7 +5527,7 @@ pub fn validate_and_parse_COSE_Key <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_COSE_Key···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_cose_key···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -5597,17 +5535,15 @@ pub fn validate_and_parse_COSE_Key <'a>(s: &'a [u8]) ->
               let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
               let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
               let rem: &[u8] = _letpattern.1;
-              let test: bool = validate_COSE_Key(rl);
+              let test: bool = validate_cose_key(rl);
               if test
               {
-                  let x: evercddl_COSE_Key_OKP = parse_COSE_Key(rl);
-                  option__·COSE_Format_evercddl_COSE_Key···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: cose_key_okp = parse_cose_key(rl);
+                  option__·COSE_Format_cose_key···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              {
-                  option__·COSE_Format_evercddl_COSE_Key···Pulse_Lib_Slice_slice·uint8_t·::None
-              }
+              { option__·COSE_Format_cose_key···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -5629,17 +5565,17 @@ pub fn aux_env32_validate_1(
     }
 }
 
-pub type aux_env32_type_1 <'a> = evercddl_label <'a>;
+pub type aux_env32_type_1 <'a> = label <'a>;
 
-pub fn uu___is_Mkaux_env32_type_10(projectee: evercddl_label) -> bool
+pub fn uu___is_Mkaux_env32_type_10(projectee: label) -> bool
 {
-    crate::lowstar::ignore::ignore::<evercddl_label>(projectee);
+    crate::lowstar::ignore::ignore::<label>(projectee);
     true
 }
 
-fn aux_env32_type_1_right <'a>(x1: evercddl_label <'a>) -> evercddl_label <'a> { x1 }
+fn aux_env32_type_1_right <'a>(x1: label <'a>) -> label <'a> { x1 }
 
-fn aux_env32_type_1_left <'a>(x3: evercddl_label <'a>) -> evercddl_label <'a> { x3 }
+fn aux_env32_type_1_left <'a>(x3: label <'a>) -> label <'a> { x3 }
 
 /**
 Parser for aux_env32_type_1
@@ -5647,14 +5583,14 @@ Parser for aux_env32_type_1
 pub fn
 aux_env32_parse_1
 <'a>(c: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>) ->
-    evercddl_label
+    label
     <'a>
 {
     let mut pc: [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
         [c; 1usize];
     let x: crate::cbordetveraux::cbor_raw =
         crate::cbordetver::cbor_det_array_iterator_next(&mut pc);
-    let res1: evercddl_label = parse_label(x);
+    let res1: label = parse_label(x);
     aux_env32_type_1_right(res1)
 }
 
@@ -5662,15 +5598,10 @@ aux_env32_parse_1
 Serializer for aux_env32_type_1
 */
 pub fn
-aux_env32_serialize_1(
-    c: evercddl_label,
-    out: &mut [u8],
-    out_count: &mut [u64],
-    out_size: &mut [usize]
-) ->
+aux_env32_serialize_1(c: label, out: &mut [u8], out_count: &mut [u64], out_size: &mut [usize]) ->
     bool
 {
-    let c·: evercddl_label = aux_env32_type_1_left(c);
+    let c·: label = aux_env32_type_1_left(c);
     let count: u64 = out_count[0];
     if count < 18446744073709551615u64
     {
@@ -7200,12 +7131,10 @@ pub fn validate_header_map(c: crate::cbordetveraux::cbor_raw) -> bool
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum
-option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr
-<'a>
+pub enum option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr <'a>
 {
     None,
-    Some { v: evercddl_label_ugly <'a> }
+    Some { v: label_ugly <'a> }
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -7219,11 +7148,7 @@ array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type
     fn (&mut [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw]) -> bool,
     pub cddl_array_iterator_impl_parse:
     for<'a1>
-    fn
-    (crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a1>)
-    ->
-    evercddl_label
-    <'a1>
+    fn (crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a1>) -> label <'a1>
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -7231,7 +7156,7 @@ pub enum
 either__CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1
 <'a>
 {
-    Inl { v: &'a [evercddl_label <'a>] },
+    Inl { v: &'a [label <'a>] },
     Inr
     {
         v:
@@ -7255,151 +7180,141 @@ option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_t
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum either__COSE_Format_evercddl_tstr_COSE_Format_evercddl_int <'a>
+pub enum either__COSE_Format_tstr_COSE_Format_evercddl_int <'a>
 {
     Inl { v: &'a [u8] },
     Inr { v: evercddl_int }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum
-option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int
-<'a>
+pub enum option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int <'a>
 {
     None,
-    Some { v: either__COSE_Format_evercddl_tstr_COSE_Format_evercddl_int <'a> }
+    Some { v: either__COSE_Format_tstr_COSE_Format_evercddl_int <'a> }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__COSE_Format_evercddl_everparsenomatch
+pub enum option__COSE_Format_everparsenomatch
 {
     None,
-    Some { v: evercddl_everparsenomatch }
+    Some { v: everparsenomatch }
 }
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum
-either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_·FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·
+either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_·FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·
 <'a>
 {
-    Inl { v: (&'a [u8], option__COSE_Format_evercddl_everparsenomatch) },
+    Inl { v: (&'a [u8], option__COSE_Format_everparsenomatch) },
+    Inr { v: (option__COSE_Format_everparsenomatch, option__COSE_Format_everparsenomatch) }
+}
+
+#[derive(PartialEq, Clone, Copy)]
+pub enum
+either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_FStar_Pervasives_either··COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·
+<'a>
+{
+    Inl { v: (&'a [u8], option__COSE_Format_everparsenomatch) },
     Inr
     {
         v:
-        (option__COSE_Format_evercddl_everparsenomatch,
-        option__COSE_Format_evercddl_everparsenomatch)
-    }
-}
-
-#[derive(PartialEq, Clone, Copy)]
-pub enum
-either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_FStar_Pervasives_either··COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·
-<'a>
-{
-    Inl { v: (&'a [u8], option__COSE_Format_evercddl_everparsenomatch) },
-    Inr
-    {
-        v:
-        either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_·FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·
+        either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_·FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·
         <'a>
     }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub struct evercddl_header_map <'a>
+pub struct header_map <'a>
 {
-    pub intkey1:
-    option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr <'a>,
+    pub intkey1: option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr <'a>,
     pub intkey2:
     option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1
     <'a>,
-    pub intkey3:
-    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int <'a>,
-    pub intkey4: option__COSE_Format_evercddl_bstr <'a>,
+    pub intkey3: option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int <'a>,
+    pub intkey4: option__COSE_Format_bstr <'a>,
     pub _x0:
-    either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_FStar_Pervasives_either··COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·
+    either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_FStar_Pervasives_either··COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·
     <'a>,
     pub _x1:
-    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values
+    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values
     <'a>
 }
 
-pub fn uu___is_Mkevercddl_header_map0(projectee: evercddl_header_map) -> bool
+pub fn uu___is_Mkheader_map0(projectee: header_map) -> bool
 {
-    crate::lowstar::ignore::ignore::<evercddl_header_map>(projectee);
+    crate::lowstar::ignore::ignore::<header_map>(projectee);
     true
 }
 
-fn evercddl_header_map_right <'a>(
+fn header_map_right <'a>(
     x6:
-    (((((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr
+    (((((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr
     <'a>,
     option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1
     <'a>),
-    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int
+    option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int
     <'a>),
-    option__COSE_Format_evercddl_bstr
+    option__COSE_Format_bstr
     <'a>),
-    either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_FStar_Pervasives_either··COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·
+    either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_FStar_Pervasives_either··COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·
     <'a>),
-    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values
+    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values
     <'a>)
 ) ->
-    evercddl_header_map
+    header_map
     <'a>
 {
     match x6
     {
         (((((x7,x8),x9),x10),x11),x12) =>
-          evercddl_header_map
-          { intkey1: x7, intkey2: x8, intkey3: x9, intkey4: x10, _x0: x11, _x1: x12 }
+          header_map { intkey1: x7, intkey2: x8, intkey3: x9, intkey4: x10, _x0: x11, _x1: x12 }
     }
 }
 
-fn evercddl_header_map_left <'a>(x13: evercddl_header_map <'a>) ->
-    (((((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr
+fn header_map_left <'a>(x13: header_map <'a>) ->
+    (((((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr
     <'a>,
     option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1
     <'a>),
-    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int
+    option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int
     <'a>),
-    option__COSE_Format_evercddl_bstr
+    option__COSE_Format_bstr
     <'a>),
-    either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_FStar_Pervasives_either··COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·
+    either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_FStar_Pervasives_either··COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·
     <'a>),
-    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values
+    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values
     <'a>)
 {
-    let x21: option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr =
+    let x21: option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr =
         x13.intkey1;
     let
     x22:
     option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1
     =
         x13.intkey2;
-    let x23: option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int =
+    let x23: option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int =
         x13.intkey3;
-    let x24: option__COSE_Format_evercddl_bstr = x13.intkey4;
+    let x24: option__COSE_Format_bstr = x13.intkey4;
     let
     x25:
-    either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_FStar_Pervasives_either··COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·
+    either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_FStar_Pervasives_either··COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·
     =
         x13._x0;
     let
     x26:
-    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values
+    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values
     =
         x13._x1;
     (((((x21,x22),x23),x24),x25),x26)
 }
 
 /**
-Parser for evercddl_header_map
+Parser for header_map
 */
 pub fn
 parse_header_map
 <'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
-    evercddl_header_map
+    header_map
     <'a>
 {
     let dummy: [u64; 1] = [0u64; 1usize];
@@ -7431,7 +7346,7 @@ parse_header_map
               },
             _ => panic!("Incomplete pattern matching")
         };
-    let w1: option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr =
+    let w1: option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr =
         if crate::cbordetveraux::uu___is_MGOK(test1)
         {
             let mty0: crate::cbordetver::cbor_det_int_kind =
@@ -7448,7 +7363,7 @@ parse_header_map
                     _ => panic!("Incomplete pattern matching")
                 };
             let _letpattern1: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow;
-            let w1: evercddl_label_ugly =
+            let w1: label_ugly =
                 match _letpattern1
                 {
                     crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: w } =>
@@ -7457,23 +7372,21 @@ parse_header_map
                           if test
                           {
                               let res: evercddl_int = parse_int(w);
-                              evercddl_label_ugly::Inl { v: res }
+                              label_ugly::Inl { v: res }
                           }
                           else
                           {
                               let res: &[u8] = parse_tstr(w);
-                              evercddl_label_ugly::Inr { v: res }
+                              label_ugly::Inr { v: res }
                           }
                       },
                     _ => panic!("Incomplete pattern matching")
                 };
-            option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr::Some
+            option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr::Some
             { v: w1 }
         }
         else
-        {
-            option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr::None
-        };
+        { option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr::None };
     let dummy0: [u64; 1] = [0u64; 1usize];
     crate::lowstar::ignore::ignore::<&[u64]>(&dummy0);
     let mty0: crate::cbordetver::cbor_det_int_kind = crate::cbordetver::cbor_det_int_kind::UInt64;
@@ -7656,7 +7569,7 @@ parse_header_map
         };
     let
     w10:
-    (option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr,
+    (option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr,
     option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1)
     =
         (w1,w2);
@@ -7689,7 +7602,7 @@ parse_header_map
               },
             _ => panic!("Incomplete pattern matching")
         };
-    let w20: option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int =
+    let w20: option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int =
         if crate::cbordetveraux::uu___is_MGOK(test11)
         {
             let mty2: crate::cbordetver::cbor_det_int_kind =
@@ -7706,7 +7619,7 @@ parse_header_map
                     _ => panic!("Incomplete pattern matching")
                 };
             let _letpattern3: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow;
-            let w11: either__COSE_Format_evercddl_tstr_COSE_Format_evercddl_int =
+            let w11: either__COSE_Format_tstr_COSE_Format_evercddl_int =
                 match _letpattern3
                 {
                     crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: w } =>
@@ -7715,30 +7628,26 @@ parse_header_map
                           if test
                           {
                               let res: &[u8] = parse_tstr(w);
-                              either__COSE_Format_evercddl_tstr_COSE_Format_evercddl_int::Inl
-                              { v: res }
+                              either__COSE_Format_tstr_COSE_Format_evercddl_int::Inl { v: res }
                           }
                           else
                           {
                               let res: evercddl_int = parse_int(w);
-                              either__COSE_Format_evercddl_tstr_COSE_Format_evercddl_int::Inr
-                              { v: res }
+                              either__COSE_Format_tstr_COSE_Format_evercddl_int::Inr { v: res }
                           }
                       },
                     _ => panic!("Incomplete pattern matching")
                 };
-            option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int::Some
+            option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int::Some
             { v: w11 }
         }
         else
-        {
-            option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int::None
-        };
+        { option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int::None };
     let
     w11:
-    ((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr,
+    ((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr,
     option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1),
-    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int)
+    option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int)
     =
         (w10,w20);
     let dummy2: [u64; 1] = [0u64; 1usize];
@@ -7769,7 +7678,7 @@ parse_header_map
               },
             _ => panic!("Incomplete pattern matching")
         };
-    let w21: option__COSE_Format_evercddl_bstr =
+    let w21: option__COSE_Format_bstr =
         if crate::cbordetveraux::uu___is_MGOK(test12)
         {
             let mty3: crate::cbordetver::cbor_det_int_kind =
@@ -7793,16 +7702,16 @@ parse_header_map
                       parse_bstr(w),
                     _ => panic!("Incomplete pattern matching")
                 };
-            option__COSE_Format_evercddl_bstr::Some { v: w110 }
+            option__COSE_Format_bstr::Some { v: w110 }
         }
         else
-        { option__COSE_Format_evercddl_bstr::None };
+        { option__COSE_Format_bstr::None };
     let
     w12:
-    (((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr,
+    (((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr,
     option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1),
-    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int),
-    option__COSE_Format_evercddl_bstr)
+    option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int),
+    option__COSE_Format_bstr)
     =
         (w11,w21);
     let mut dummy3: [u64; 1] = [0u64; 1usize];
@@ -7889,7 +7798,7 @@ parse_header_map
         };
     let
     w22:
-    either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_FStar_Pervasives_either··COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·
+    either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_FStar_Pervasives_either··COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·
     =
         if crate::cbordetveraux::uu___is_MGOK(test13)
         {
@@ -7944,7 +7853,7 @@ parse_header_map
                       },
                     _ => panic!("Incomplete pattern matching")
                 };
-            let w22: option__COSE_Format_evercddl_everparsenomatch =
+            let w22: option__COSE_Format_everparsenomatch =
                 if crate::cbordetveraux::uu___is_MGOK(test110)
                 {
                     let mty6: crate::cbordetver::cbor_det_int_kind =
@@ -7962,7 +7871,7 @@ parse_header_map
                             _ => panic!("Incomplete pattern matching")
                         };
                     let _letpattern8: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw = ow0;
-                    let w120: evercddl_everparsenomatch =
+                    let w120: everparsenomatch =
                         match _letpattern8
                         {
                             crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some
@@ -7970,12 +7879,12 @@ parse_header_map
                             => parse_everparsenomatch(w),
                             _ => panic!("Incomplete pattern matching")
                         };
-                    option__COSE_Format_evercddl_everparsenomatch::Some { v: w120 }
+                    option__COSE_Format_everparsenomatch::Some { v: w120 }
                 }
                 else
-                { option__COSE_Format_evercddl_everparsenomatch::None };
-            let w111: (&[u8], option__COSE_Format_evercddl_everparsenomatch) = (w110,w22);
-            either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_FStar_Pervasives_either··COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·::Inl
+                { option__COSE_Format_everparsenomatch::None };
+            let w111: (&[u8], option__COSE_Format_everparsenomatch) = (w110,w22);
+            either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_FStar_Pervasives_either··COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·::Inl
             { v: w111 }
         }
         else
@@ -8068,7 +7977,7 @@ parse_header_map
                 };
             let
             w22:
-            either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_·FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·
+            either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_·FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·
             =
                 if crate::cbordetveraux::uu___is_MGOK(test110)
                 {
@@ -8128,7 +8037,7 @@ parse_header_map
                               },
                             _ => panic!("Incomplete pattern matching")
                         };
-                    let w22: option__COSE_Format_evercddl_everparsenomatch =
+                    let w22: option__COSE_Format_everparsenomatch =
                         if crate::cbordetveraux::uu___is_MGOK(test120)
                         {
                             let mty7: crate::cbordetver::cbor_det_int_kind =
@@ -8149,7 +8058,7 @@ parse_header_map
                             _letpattern9: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw
                             =
                                 ow0;
-                            let w120: evercddl_everparsenomatch =
+                            let w120: everparsenomatch =
                                 match _letpattern9
                                 {
                                     crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some
@@ -8157,12 +8066,12 @@ parse_header_map
                                     => parse_everparsenomatch(w),
                                     _ => panic!("Incomplete pattern matching")
                                 };
-                            option__COSE_Format_evercddl_everparsenomatch::Some { v: w120 }
+                            option__COSE_Format_everparsenomatch::Some { v: w120 }
                         }
                         else
-                        { option__COSE_Format_evercddl_everparsenomatch::None };
-                    let w111: (&[u8], option__COSE_Format_evercddl_everparsenomatch) = (w110,w22);
-                    either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_·FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·::Inl
+                        { option__COSE_Format_everparsenomatch::None };
+                    let w111: (&[u8], option__COSE_Format_everparsenomatch) = (w110,w22);
+                    either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_·FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·::Inl
                     { v: w111 }
                 }
                 else
@@ -8200,7 +8109,7 @@ parse_header_map
                               },
                             _ => panic!("Incomplete pattern matching")
                         };
-                    let w110: option__COSE_Format_evercddl_everparsenomatch =
+                    let w110: option__COSE_Format_everparsenomatch =
                         if crate::cbordetveraux::uu___is_MGOK(test120)
                         {
                             let mty6: crate::cbordetver::cbor_det_int_kind =
@@ -8221,7 +8130,7 @@ parse_header_map
                             _letpattern7: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw
                             =
                                 ow;
-                            let w110: evercddl_everparsenomatch =
+                            let w110: everparsenomatch =
                                 match _letpattern7
                                 {
                                     crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some
@@ -8229,10 +8138,10 @@ parse_header_map
                                     => parse_everparsenomatch(w),
                                     _ => panic!("Incomplete pattern matching")
                                 };
-                            option__COSE_Format_evercddl_everparsenomatch::Some { v: w110 }
+                            option__COSE_Format_everparsenomatch::Some { v: w110 }
                         }
                         else
-                        { option__COSE_Format_evercddl_everparsenomatch::None };
+                        { option__COSE_Format_everparsenomatch::None };
                     let dummy21: [u64; 1] = [0u64; 1usize];
                     crate::lowstar::ignore::ignore::<&[u64]>(&dummy21);
                     let mty6: crate::cbordetver::cbor_det_int_kind =
@@ -8266,7 +8175,7 @@ parse_header_map
                               },
                             _ => panic!("Incomplete pattern matching")
                         };
-                    let w22: option__COSE_Format_evercddl_everparsenomatch =
+                    let w22: option__COSE_Format_everparsenomatch =
                         if crate::cbordetveraux::uu___is_MGOK(test121)
                         {
                             let mty7: crate::cbordetver::cbor_det_int_kind =
@@ -8287,7 +8196,7 @@ parse_header_map
                             _letpattern8: crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw
                             =
                                 ow;
-                            let w120: evercddl_everparsenomatch =
+                            let w120: everparsenomatch =
                                 match _letpattern8
                                 {
                                     crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some
@@ -8295,29 +8204,28 @@ parse_header_map
                                     => parse_everparsenomatch(w),
                                     _ => panic!("Incomplete pattern matching")
                                 };
-                            option__COSE_Format_evercddl_everparsenomatch::Some { v: w120 }
+                            option__COSE_Format_everparsenomatch::Some { v: w120 }
                         }
                         else
-                        { option__COSE_Format_evercddl_everparsenomatch::None };
+                        { option__COSE_Format_everparsenomatch::None };
                     let
                     w23:
-                    (option__COSE_Format_evercddl_everparsenomatch,
-                    option__COSE_Format_evercddl_everparsenomatch)
+                    (option__COSE_Format_everparsenomatch, option__COSE_Format_everparsenomatch)
                     =
                         (w110,w22);
-                    either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_·FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·::Inr
+                    either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_·FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·::Inr
                     { v: w23 }
                 };
-            either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_FStar_Pervasives_either··COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·::Inr
+            either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_FStar_Pervasives_either··COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·::Inr
             { v: w22 }
         };
     let
     w13:
-    ((((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr,
+    ((((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr,
     option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1),
-    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int),
-    option__COSE_Format_evercddl_bstr),
-    either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_FStar_Pervasives_either··COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·)
+    option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int),
+    option__COSE_Format_bstr),
+    either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_FStar_Pervasives_either··COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·)
     =
         (w12,w22);
     let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
@@ -8331,9 +8239,9 @@ parse_header_map
         };
     let
     rres:
-    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+    map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
     =
-        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+        map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
         {
             cddl_map_iterator_contents: i,
             cddl_map_iterator_impl_validate1: validate_label,
@@ -8344,133 +8252,133 @@ parse_header_map
         };
     let
     w23:
-    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values
+    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values
     =
-        either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values::Inr
+        either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values::Inr
         { v: rres };
     let
     res10:
-    (((((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr,
+    (((((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr,
     option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1),
-    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int),
-    option__COSE_Format_evercddl_bstr),
-    either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_FStar_Pervasives_either··COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·),
-    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values)
+    option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int),
+    option__COSE_Format_bstr),
+    either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_FStar_Pervasives_either··COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·),
+    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values)
     =
         (w13,w23);
-    evercddl_header_map_right(res10)
+    header_map_right(res10)
 }
 
 /**
-Serializer for evercddl_header_map
+Serializer for header_map
 */
 pub fn
-serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
+serialize_header_map(c: header_map, out: &mut [u8]) ->
     usize
 {
     let
     c·:
-    (((((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr,
+    (((((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr,
     option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1),
-    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int),
-    option__COSE_Format_evercddl_bstr),
-    either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_FStar_Pervasives_either··COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·),
-    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values)
+    option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int),
+    option__COSE_Format_bstr),
+    either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_FStar_Pervasives_either··COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·),
+    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values)
     =
-        evercddl_header_map_left(c);
+        header_map_left(c);
     let mut pcount: [u64; 1] = [0u64; 1usize];
     let mut psize: [usize; 1] = [0usize; 1usize];
     let
     _letpattern:
-    (((((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr,
+    (((((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr,
     option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1),
-    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int),
-    option__COSE_Format_evercddl_bstr),
-    either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_FStar_Pervasives_either··COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·),
-    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values)
+    option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int),
+    option__COSE_Format_bstr),
+    either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_FStar_Pervasives_either··COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·),
+    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values)
     =
         c·;
     let res: bool =
         {
             let
             c1:
-            ((((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr,
+            ((((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr,
             option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1),
-            option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int),
-            option__COSE_Format_evercddl_bstr),
-            either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_FStar_Pervasives_either··COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·)
+            option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int),
+            option__COSE_Format_bstr),
+            either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_FStar_Pervasives_either··COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·)
             =
                 _letpattern.0;
             let
             c2:
-            either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values
+            either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values
             =
                 _letpattern.1;
             let
             _letpattern1:
-            ((((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr,
+            ((((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr,
             option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1),
-            option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int),
-            option__COSE_Format_evercddl_bstr),
-            either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_FStar_Pervasives_either··COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·)
+            option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int),
+            option__COSE_Format_bstr),
+            either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_FStar_Pervasives_either··COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·)
             =
                 c1;
             let res1: bool =
                 {
                     let
                     c11:
-                    (((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr,
+                    (((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr,
                     option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1),
-                    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int),
-                    option__COSE_Format_evercddl_bstr)
+                    option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int),
+                    option__COSE_Format_bstr)
                     =
                         _letpattern1.0;
                     let
                     c21:
-                    either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_FStar_Pervasives_either··COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·
+                    either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_FStar_Pervasives_either··COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·
                     =
                         _letpattern1.1;
                     let
                     _letpattern2:
-                    (((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr,
+                    (((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr,
                     option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1),
-                    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int),
-                    option__COSE_Format_evercddl_bstr)
+                    option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int),
+                    option__COSE_Format_bstr)
                     =
                         c11;
                     let res1: bool =
                         {
                             let
                             c12:
-                            ((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr,
+                            ((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr,
                             option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1),
-                            option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int)
+                            option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int)
                             =
                                 _letpattern2.0;
-                            let c22: option__COSE_Format_evercddl_bstr = _letpattern2.1;
+                            let c22: option__COSE_Format_bstr = _letpattern2.1;
                             let
                             _letpattern3:
-                            ((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr,
+                            ((option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr,
                             option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1),
-                            option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int)
+                            option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int)
                             =
                                 c12;
                             let res1: bool =
                                 {
                                     let
                                     c13:
-                                    (option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr,
+                                    (option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr,
                                     option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1)
                                     =
                                         _letpattern3.0;
                                     let
                                     c23:
-                                    option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int
+                                    option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int
                                     =
                                         _letpattern3.1;
                                     let
                                     _letpattern4:
-                                    (option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr,
+                                    (option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr,
                                     option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1)
                                     =
                                         c13;
@@ -8478,7 +8386,7 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                         {
                                             let
                                             c14:
-                                            option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr
+                                            option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr
                                             =
                                                 _letpattern4.0;
                                             let
@@ -8489,7 +8397,7 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                             let res1: bool =
                                                 match c14
                                                 {
-                                                    option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr::Some
+                                                    option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr::Some
                                                     { v: c15 }
                                                     =>
                                                       {
@@ -8551,11 +8459,11 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                                                   let res2: usize =
                                                                       match c15
                                                                       {
-                                                                          evercddl_label_ugly::Inl
+                                                                          label_ugly::Inl
                                                                           { v: c16 }
                                                                           =>
                                                                             serialize_int(c16, out2),
-                                                                          evercddl_label_ugly::Inr
+                                                                          label_ugly::Inr
                                                                           { v: c25 }
                                                                           =>
                                                                             serialize_tstr(
@@ -8605,7 +8513,7 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                                           else
                                                           { false }
                                                       },
-                                                    option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_evercddl_tstr::None
+                                                    option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr::None
                                                     => true,
                                                     _ => panic!("Incomplete pattern matching")
                                                 };
@@ -8714,10 +8622,7 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                                                                 {
                                                                                     let i: usize =
                                                                                         (&pi)[0];
-                                                                                    let
-                                                                                    x:
-                                                                                    evercddl_label
-                                                                                    =
+                                                                                    let x: label =
                                                                                         c16[i];
                                                                                     let res2: bool =
                                                                                         aux_env32_serialize_1(
@@ -8883,8 +8788,7 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                                                                                 )
                                                                                             );
                                                                                         let
-                                                                                        x:
-                                                                                        evercddl_label
+                                                                                        x: label
                                                                                         =
                                                                                             (i.cddl_array_iterator_impl_parse)(
                                                                                                 tri
@@ -9009,7 +8913,7 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                     {
                                         match c23
                                         {
-                                            option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int::Some
+                                            option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int::Some
                                             { v: c14 }
                                             =>
                                               {
@@ -9059,10 +8963,10 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                                           let res2: usize =
                                                               match c14
                                                               {
-                                                                  either__COSE_Format_evercddl_tstr_COSE_Format_evercddl_int::Inl
+                                                                  either__COSE_Format_tstr_COSE_Format_evercddl_int::Inl
                                                                   { v: c15 }
                                                                   => serialize_tstr(c15, out2),
-                                                                  either__COSE_Format_evercddl_tstr_COSE_Format_evercddl_int::Inr
+                                                                  either__COSE_Format_tstr_COSE_Format_evercddl_int::Inr
                                                                   { v: c24 }
                                                                   => serialize_int(c24, out2),
                                                                   _ =>
@@ -9105,7 +9009,7 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                                   else
                                                   { false }
                                               },
-                                            option__FStar_Pervasives_either·COSE_Format_evercddl_tstr·COSE_Format_evercddl_int::None
+                                            option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int::None
                                             => true,
                                             _ => panic!("Incomplete pattern matching")
                                         }
@@ -9117,7 +9021,7 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                             {
                                 match c22
                                 {
-                                    option__COSE_Format_evercddl_bstr::Some { v: c13 } =>
+                                    option__COSE_Format_bstr::Some { v: c13 } =>
                                       {
                                           let count: u64 = (&pcount)[0];
                                           if count < 18446744073709551615u64
@@ -9182,7 +9086,7 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                           else
                                           { false }
                                       },
-                                    option__COSE_Format_evercddl_bstr::None => true,
+                                    option__COSE_Format_bstr::None => true,
                                     _ => panic!("Incomplete pattern matching")
                                 }
                             }
@@ -9193,18 +9097,14 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                     {
                         match c21
                         {
-                            either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_FStar_Pervasives_either··COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·::Inl
+                            either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_FStar_Pervasives_either··COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·::Inl
                             { v: c12 }
                             =>
                               {
-                                  let
-                                  _letpattern20:
-                                  (&[u8], option__COSE_Format_evercddl_everparsenomatch)
-                                  =
+                                  let _letpattern20: (&[u8], option__COSE_Format_everparsenomatch) =
                                       c12;
                                   let c13: &[u8] = _letpattern20.0;
-                                  let c22: option__COSE_Format_evercddl_everparsenomatch =
-                                      _letpattern20.1;
+                                  let c22: option__COSE_Format_everparsenomatch = _letpattern20.1;
                                   let count: u64 = (&pcount)[0];
                                   let res11: bool =
                                       if count < 18446744073709551615u64
@@ -9270,9 +9170,7 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                   {
                                       match c22
                                       {
-                                          option__COSE_Format_evercddl_everparsenomatch::Some
-                                          { v: c14 }
-                                          =>
+                                          option__COSE_Format_everparsenomatch::Some { v: c14 } =>
                                             {
                                                 let count0: u64 = (&pcount)[0];
                                                 if count0 < 18446744073709551615u64
@@ -9349,30 +9247,28 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                                 else
                                                 { false }
                                             },
-                                          option__COSE_Format_evercddl_everparsenomatch::None =>
-                                            true,
+                                          option__COSE_Format_everparsenomatch::None => true,
                                           _ => panic!("Incomplete pattern matching")
                                       }
                                   }
                                   else
                                   { false }
                               },
-                            either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_FStar_Pervasives_either··COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·::Inr
+                            either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_FStar_Pervasives_either··COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·::Inr
                             { v: c22 }
                             =>
                               match c22
                               {
-                                  either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_·FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·::Inl
+                                  either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_·FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·::Inl
                                   { v: c12 }
                                   =>
                                     {
                                         let
-                                        _letpattern20:
-                                        (&[u8], option__COSE_Format_evercddl_everparsenomatch)
+                                        _letpattern20: (&[u8], option__COSE_Format_everparsenomatch)
                                         =
                                             c12;
                                         let c13: &[u8] = _letpattern20.0;
-                                        let c23: option__COSE_Format_evercddl_everparsenomatch =
+                                        let c23: option__COSE_Format_everparsenomatch =
                                             _letpattern20.1;
                                         let count: u64 = (&pcount)[0];
                                         let res11: bool =
@@ -9441,7 +9337,7 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                         {
                                             match c23
                                             {
-                                                option__COSE_Format_evercddl_everparsenomatch::Some
+                                                option__COSE_Format_everparsenomatch::Some
                                                 { v: c14 }
                                                 =>
                                                   {
@@ -9531,32 +9427,31 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                                       else
                                                       { false }
                                                   },
-                                                option__COSE_Format_evercddl_everparsenomatch::None
-                                                => true,
+                                                option__COSE_Format_everparsenomatch::None => true,
                                                 _ => panic!("Incomplete pattern matching")
                                             }
                                         }
                                         else
                                         { false }
                                     },
-                                  either__·COSE_Format_evercddl_bstr···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·_·FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_evercddl_everparsenomatch·::Inr
+                                  either__·COSE_Format_bstr···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·_·FStar_Pervasives_Native_option·COSE_Format_everparsenomatch···FStar_Pervasives_Native_option·COSE_Format_everparsenomatch·::Inr
                                   { v: c23 }
                                   =>
                                     {
                                         let
                                         _letpattern20:
-                                        (option__COSE_Format_evercddl_everparsenomatch,
-                                        option__COSE_Format_evercddl_everparsenomatch)
+                                        (option__COSE_Format_everparsenomatch,
+                                        option__COSE_Format_everparsenomatch)
                                         =
                                             c23;
-                                        let c12: option__COSE_Format_evercddl_everparsenomatch =
+                                        let c12: option__COSE_Format_everparsenomatch =
                                             _letpattern20.0;
-                                        let c24: option__COSE_Format_evercddl_everparsenomatch =
+                                        let c24: option__COSE_Format_everparsenomatch =
                                             _letpattern20.1;
                                         let res11: bool =
                                             match c12
                                             {
-                                                option__COSE_Format_evercddl_everparsenomatch::Some
+                                                option__COSE_Format_everparsenomatch::Some
                                                 { v: c13 }
                                                 =>
                                                   {
@@ -9646,15 +9541,14 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                                       else
                                                       { false }
                                                   },
-                                                option__COSE_Format_evercddl_everparsenomatch::None
-                                                => true,
+                                                option__COSE_Format_everparsenomatch::None => true,
                                                 _ => panic!("Incomplete pattern matching")
                                             };
                                         if res11
                                         {
                                             match c24
                                             {
-                                                option__COSE_Format_evercddl_everparsenomatch::Some
+                                                option__COSE_Format_everparsenomatch::Some
                                                 { v: c13 }
                                                 =>
                                                   {
@@ -9744,8 +9638,7 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                                       else
                                                       { false }
                                                   },
-                                                option__COSE_Format_evercddl_everparsenomatch::None
-                                                => true,
+                                                option__COSE_Format_everparsenomatch::None => true,
                                                 _ => panic!("Incomplete pattern matching")
                                             }
                                         }
@@ -9764,24 +9657,21 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
             {
                 match c2
                 {
-                    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values::Inl
+                    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values::Inl
                     { v: c11 }
                     =>
                       {
-                          let i: &[(evercddl_label, crate::cbordetveraux::cbor_raw)] = c11;
-                          let pi: [&[(evercddl_label, crate::cbordetveraux::cbor_raw)]; 1] =
-                              [i; 1usize];
-                          crate::lowstar::ignore::ignore::<&[&[(evercddl_label,
+                          let i: &[(label, crate::cbordetveraux::cbor_raw)] = c11;
+                          let pi: [&[(label, crate::cbordetveraux::cbor_raw)]; 1] = [i; 1usize];
+                          crate::lowstar::ignore::ignore::<&[&[(label,
                           crate::cbordetveraux::cbor_raw)]]>(&pi);
-                          let mut pc: [&[(evercddl_label, crate::cbordetveraux::cbor_raw)]; 1] =
-                              [i; 1usize];
+                          let mut pc: [&[(label, crate::cbordetveraux::cbor_raw)]; 1] = [i; 1usize];
                           let mut pres: [bool; 1] = [true; 1usize];
                           let res: bool = (&pres)[0];
                           let mut cond: bool =
                               if res
                               {
-                                  let c3: &[(evercddl_label, crate::cbordetveraux::cbor_raw)] =
-                                      (&pc)[0];
+                                  let c3: &[(label, crate::cbordetveraux::cbor_raw)] = (&pc)[0];
                                   let em: bool = c3.len() == 0usize;
                                   ! em
                               }
@@ -9796,36 +9686,25 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                               else
                               {
                                   let count·: u64 = count.wrapping_add(1u64);
-                                  let i1: &[(evercddl_label, crate::cbordetveraux::cbor_raw)] =
-                                      (&pc)[0];
-                                  let res0: (evercddl_label, crate::cbordetveraux::cbor_raw) =
-                                      i1[0usize];
+                                  let i1: &[(label, crate::cbordetveraux::cbor_raw)] = (&pc)[0];
+                                  let res0: (label, crate::cbordetveraux::cbor_raw) = i1[0usize];
                                   let
                                   _letpattern10:
-                                  (&[(evercddl_label, crate::cbordetveraux::cbor_raw)],
-                                  &[(evercddl_label, crate::cbordetveraux::cbor_raw)])
+                                  (&[(label, crate::cbordetveraux::cbor_raw)],
+                                  &[(label, crate::cbordetveraux::cbor_raw)])
                                   =
                                       i1.split_at(1usize);
-                                  let
-                                  _letpattern11: (evercddl_label, crate::cbordetveraux::cbor_raw)
-                                  =
+                                  let _letpattern11: (label, crate::cbordetveraux::cbor_raw) =
                                       {
-                                          let
-                                          _il: &[(evercddl_label, crate::cbordetveraux::cbor_raw)]
-                                          =
+                                          let _il: &[(label, crate::cbordetveraux::cbor_raw)] =
                                               _letpattern10.0;
-                                          let
-                                          ir: &[(evercddl_label, crate::cbordetveraux::cbor_raw)]
-                                          =
+                                          let ir: &[(label, crate::cbordetveraux::cbor_raw)] =
                                               _letpattern10.1;
-                                          let
-                                          i·: &[(evercddl_label, crate::cbordetveraux::cbor_raw)]
-                                          =
-                                              ir;
+                                          let i·: &[(label, crate::cbordetveraux::cbor_raw)] = ir;
                                           (&mut pc)[0] = i·;
                                           res0
                                       };
-                                  let ck: evercddl_label = _letpattern11.0;
+                                  let ck: label = _letpattern11.0;
                                   let cv: crate::cbordetveraux::cbor_raw = _letpattern11.1;
                                   let size0: usize = (&psize)[0];
                                   let _letpattern2: (&mut [u8], &mut [u8]) =
@@ -9952,8 +9831,7 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                               let ite: bool =
                                   if res0
                                   {
-                                      let c3: &[(evercddl_label, crate::cbordetveraux::cbor_raw)] =
-                                          (&pc)[0];
+                                      let c3: &[(label, crate::cbordetveraux::cbor_raw)] = (&pc)[0];
                                       let em: bool = c3.len() == 0usize;
                                       ! em
                                   }
@@ -9963,14 +9841,14 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                           };
                           (&pres)[0]
                       },
-                    either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_evercddl_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_evercddl_values::Inr
+                    either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values::Inr
                     { v: c21 }
                     =>
                       {
                           let
                           mut
                           pc:
-                          [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values;
+                          [map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values;
                           1]
                           =
                               [c21; 1usize];
@@ -9981,7 +9859,7 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                               {
                                   let
                                   c3:
-                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
                                   =
                                       (&pc)[0];
                                   let
@@ -10064,7 +9942,7 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                   let count·: u64 = count.wrapping_add(1u64);
                                   let
                                   i:
-                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
                                   =
                                       (&pc)[0];
                                   let
@@ -10126,7 +10004,7 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                   let hd1: crate::cbordetveraux::cbor_map_entry = (&phd)[0];
                                   let hd_key0: crate::cbordetveraux::cbor_raw =
                                       crate::cbordetver::cbor_det_map_entry_key(hd1);
-                                  let hd_key_res: evercddl_label =
+                                  let hd_key_res: label =
                                       (i.cddl_map_iterator_impl_parse1)(hd_key0);
                                   let hd_value: crate::cbordetveraux::cbor_raw =
                                       crate::cbordetver::cbor_det_map_entry_value(hd1);
@@ -10139,9 +10017,9 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                       (&pj)[0];
                                   let
                                   i·:
-                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+                                  map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
                                   =
-                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
                                       {
                                           cddl_map_iterator_contents: j,
                                           cddl_map_iterator_impl_validate1:
@@ -10156,11 +10034,9 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                           i.cddl_map_iterator_impl_parse2
                                       };
                                   (&mut pc)[0] = i·;
-                                  let
-                                  _letpattern10: (evercddl_label, crate::cbordetveraux::cbor_raw)
-                                  =
+                                  let _letpattern10: (label, crate::cbordetveraux::cbor_raw) =
                                       (hd_key_res,hd_value_res);
-                                  let ck: evercddl_label = _letpattern10.0;
+                                  let ck: label = _letpattern10.0;
                                   let cv: crate::cbordetveraux::cbor_raw = _letpattern10.1;
                                   let size0: usize = (&psize)[0];
                                   let _letpattern2: (&mut [u8], &mut [u8]) =
@@ -10289,7 +10165,7 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
                                   {
                                       let
                                       c3:
-                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_evercddl_label_COSE_Format_evercddl_values
+                                      map_iterator_t__CBOR_Pulse_Raw_Type_cbor_raw_CBOR_Pulse_Raw_Type_cbor_map_entry_CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry_COSE_Format_label_COSE_Format_values
                                       =
                                           (&pc)[0];
                                       let
@@ -10388,14 +10264,14 @@ serialize_header_map(c: evercddl_header_map, out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_header_map···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_header_map···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (evercddl_header_map <'a>, &'a [u8]) }
+    Some { v: (header_map <'a>, &'a [u8]) }
 }
 
 pub fn validate_and_parse_header_map <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_header_map···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_header_map···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -10406,7 +10282,7 @@ pub fn validate_and_parse_header_map <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_header_map···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_header_map···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -10417,14 +10293,12 @@ pub fn validate_and_parse_header_map <'a>(s: &'a [u8]) ->
               let test: bool = validate_header_map(rl);
               if test
               {
-                  let x: evercddl_header_map = parse_header_map(rl);
-                  option__·COSE_Format_evercddl_header_map···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: header_map = parse_header_map(rl);
+                  option__·COSE_Format_header_map···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              {
-                  option__·COSE_Format_evercddl_header_map···Pulse_Lib_Slice_slice·uint8_t·::None
-              }
+              { option__·COSE_Format_header_map···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -10443,7 +10317,7 @@ pub fn next_iterate_array_aux_env32_type_1 <'a>(
     [array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env32_type_1
     <'a>]
 ) ->
-    evercddl_label
+    label
     <'a>
 {
     let
@@ -10540,70 +10414,62 @@ pub fn validate_empty_or_serialized_map(c: crate::cbordetveraux::cbor_raw) -> bo
 }
 
 #[derive(PartialEq, Clone, Copy)]
-enum evercddl_empty_or_serialized_map_ugly <'a>
+enum empty_or_serialized_map_ugly <'a>
 {
-    Inl { v: evercddl_header_map <'a> },
+    Inl { v: header_map <'a> },
     Inr { v: &'a [u8] }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-enum evercddl_empty_or_serialized_map_tags
+enum empty_or_serialized_map_tags
 {
-    Mkevercddl_empty_or_serialized_map0,
-    Mkevercddl_empty_or_serialized_map1
+    Mkempty_or_serialized_map0,
+    Mkempty_or_serialized_map1
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum evercddl_empty_or_serialized_map <'a>
+pub enum empty_or_serialized_map <'a>
 {
-    Mkevercddl_empty_or_serialized_map0 { _x0: evercddl_header_map <'a> },
-    Mkevercddl_empty_or_serialized_map1 { _x0: &'a [u8] }
+    Mkempty_or_serialized_map0 { _x0: header_map <'a> },
+    Mkempty_or_serialized_map1 { _x0: &'a [u8] }
 }
 
-pub fn uu___is_Mkevercddl_empty_or_serialized_map0(projectee: evercddl_empty_or_serialized_map) ->
-    bool
-{
-    match projectee
-    {
-        evercddl_empty_or_serialized_map::Mkevercddl_empty_or_serialized_map0 { .. } => true,
-        _ => false
-    }
-}
-
-pub fn uu___is_Mkevercddl_empty_or_serialized_map1(projectee: evercddl_empty_or_serialized_map) ->
-    bool
+pub fn uu___is_Mkempty_or_serialized_map0(projectee: empty_or_serialized_map) -> bool
 {
     match projectee
-    {
-        evercddl_empty_or_serialized_map::Mkevercddl_empty_or_serialized_map1 { .. } => true,
-        _ => false
-    }
+    { empty_or_serialized_map::Mkempty_or_serialized_map0 { .. } => true, _ => false }
 }
 
-fn evercddl_empty_or_serialized_map_right <'a>(x2: evercddl_empty_or_serialized_map_ugly <'a>) ->
-    evercddl_empty_or_serialized_map
+pub fn uu___is_Mkempty_or_serialized_map1(projectee: empty_or_serialized_map) -> bool
+{
+    match projectee
+    { empty_or_serialized_map::Mkempty_or_serialized_map1 { .. } => true, _ => false }
+}
+
+fn empty_or_serialized_map_right <'a>(x2: empty_or_serialized_map_ugly <'a>) ->
+    empty_or_serialized_map
     <'a>
 {
     match x2
     {
-        evercddl_empty_or_serialized_map_ugly::Inl { v: x3 } =>
-          evercddl_empty_or_serialized_map::Mkevercddl_empty_or_serialized_map0 { _x0: x3 },
-        evercddl_empty_or_serialized_map_ugly::Inr { v: x4 } =>
-          evercddl_empty_or_serialized_map::Mkevercddl_empty_or_serialized_map1 { _x0: x4 },
+        empty_or_serialized_map_ugly::Inl { v: x3 } =>
+          empty_or_serialized_map::Mkempty_or_serialized_map0 { _x0: x3 },
+        empty_or_serialized_map_ugly::Inr { v: x4 } =>
+          empty_or_serialized_map::Mkempty_or_serialized_map1 { _x0: x4 },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
-fn evercddl_empty_or_serialized_map_left <'a>(x7: evercddl_empty_or_serialized_map <'a>) ->
-    evercddl_empty_or_serialized_map_ugly
+fn empty_or_serialized_map_left <'a>(x7: empty_or_serialized_map <'a>) ->
+    empty_or_serialized_map_ugly
     <'a>
 {
     match x7
     {
-        evercddl_empty_or_serialized_map::Mkevercddl_empty_or_serialized_map0 { _x0: x10 } =>
-          evercddl_empty_or_serialized_map_ugly::Inl { v: x10 },
-        evercddl_empty_or_serialized_map::Mkevercddl_empty_or_serialized_map1 { _x0: x12 } =>
-          evercddl_empty_or_serialized_map_ugly::Inr { v: x12 },
+        empty_or_serialized_map::Mkempty_or_serialized_map0 { _x0: x10 } =>
+          empty_or_serialized_map_ugly::Inl { v: x10 },
+        empty_or_serialized_map::Mkempty_or_serialized_map1 { _x0: x12 } =>
+          empty_or_serialized_map_ugly::Inr { v: x12 },
         _ => panic!("Incomplete pattern matching")
     }
 }
@@ -10620,12 +10486,12 @@ fn fst__CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice·uint8_t <'a>(
 }
 
 /**
-Parser for evercddl_empty_or_serialized_map
+Parser for empty_or_serialized_map
 */
 pub fn
 parse_empty_or_serialized_map
 <'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
-    evercddl_empty_or_serialized_map
+    empty_or_serialized_map
     <'a>
 {
     let mt: u8 = crate::cbordetver::cbor_det_major_type(c);
@@ -10664,7 +10530,7 @@ parse_empty_or_serialized_map
         }
         else
         { false };
-    let res1: evercddl_empty_or_serialized_map_ugly =
+    let res1: empty_or_serialized_map_ugly =
         if test0
         {
             let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
@@ -10680,7 +10546,7 @@ parse_empty_or_serialized_map
             crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
             =
                 crate::cbordetver::cbor_det_parse(cs);
-            let res: evercddl_header_map =
+            let res: header_map =
                 match cp
                 {
                     crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
@@ -10693,7 +10559,7 @@ parse_empty_or_serialized_map
                       },
                     _ => panic!("Incomplete pattern matching")
                 };
-            evercddl_empty_or_serialized_map_ugly::Inl { v: res }
+            empty_or_serialized_map_ugly::Inl { v: res }
         }
         else
         {
@@ -10706,22 +10572,22 @@ parse_empty_or_serialized_map
                     _ => panic!("Incomplete pattern matching")
                 };
             let res: &[u8] = s;
-            evercddl_empty_or_serialized_map_ugly::Inr { v: res }
+            empty_or_serialized_map_ugly::Inr { v: res }
         };
-    evercddl_empty_or_serialized_map_right(res1)
+    empty_or_serialized_map_right(res1)
 }
 
 /**
-Serializer for evercddl_empty_or_serialized_map
+Serializer for empty_or_serialized_map
 */
 pub fn
-serialize_empty_or_serialized_map(c: evercddl_empty_or_serialized_map, out: &mut [u8]) ->
+serialize_empty_or_serialized_map(c: empty_or_serialized_map, out: &mut [u8]) ->
     usize
 {
-    let c·: evercddl_empty_or_serialized_map_ugly = evercddl_empty_or_serialized_map_left(c);
+    let c·: empty_or_serialized_map_ugly = empty_or_serialized_map_left(c);
     match c·
     {
-        evercddl_empty_or_serialized_map_ugly::Inl { v: c1 } =>
+        empty_or_serialized_map_ugly::Inl { v: c1 } =>
           {
               let sz: usize = serialize_header_map(c1, out);
               if sz == 0usize || sz > 18446744073709551615u64 as usize
@@ -10735,7 +10601,7 @@ serialize_empty_or_serialized_map(c: evercddl_empty_or_serialized_map, out: &mut
                   )
               }
           },
-        evercddl_empty_or_serialized_map_ugly::Inr { v: c2 } =>
+        empty_or_serialized_map_ugly::Inr { v: c2 } =>
           {
               let len: usize = c2.len();
               if (0u64 as usize) <= len && len <= 0u64 as usize
@@ -10826,15 +10692,15 @@ serialize_empty_or_serialized_map(c: evercddl_empty_or_serialized_map, out: &mut
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum
-option__·COSE_Format_evercddl_empty_or_serialized_map···Pulse_Lib_Slice_slice·uint8_t·
+option__·COSE_Format_empty_or_serialized_map···Pulse_Lib_Slice_slice·uint8_t·
 <'a>
 {
     None,
-    Some { v: (evercddl_empty_or_serialized_map <'a>, &'a [u8]) }
+    Some { v: (empty_or_serialized_map <'a>, &'a [u8]) }
 }
 
 pub fn validate_and_parse_empty_or_serialized_map <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_empty_or_serialized_map···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_empty_or_serialized_map···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -10845,8 +10711,7 @@ pub fn validate_and_parse_empty_or_serialized_map <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        =>
-          option__·COSE_Format_evercddl_empty_or_serialized_map···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_empty_or_serialized_map···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -10857,20 +10722,20 @@ pub fn validate_and_parse_empty_or_serialized_map <'a>(s: &'a [u8]) ->
               let test: bool = validate_empty_or_serialized_map(rl);
               if test
               {
-                  let x: evercddl_empty_or_serialized_map = parse_empty_or_serialized_map(rl);
-                  option__·COSE_Format_evercddl_empty_or_serialized_map···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: empty_or_serialized_map = parse_empty_or_serialized_map(rl);
+                  option__·COSE_Format_empty_or_serialized_map···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
               {
-                  option__·COSE_Format_evercddl_empty_or_serialized_map···Pulse_Lib_Slice_slice·uint8_t·::None
+                  option__·COSE_Format_empty_or_serialized_map···Pulse_Lib_Slice_slice·uint8_t·::None
               }
           },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
-pub fn validate_Sig_structure(c: crate::cbordetveraux::cbor_raw) -> bool
+pub fn validate_sig_structure(c: crate::cbordetveraux::cbor_raw) -> bool
 {
     let ty: u8 = crate::cbordetver::cbor_det_major_type(c);
     if ty == crate::cbordetveraux::cbor_major_type_array
@@ -11206,68 +11071,65 @@ pub fn validate_Sig_structure(c: crate::cbordetveraux::cbor_raw) -> bool
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum
-either__·COSE_Format_evercddl_empty_or_serialized_map····COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr··_·COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr·
+either__·COSE_Format_empty_or_serialized_map····COSE_Format_bstr···COSE_Format_bstr··_·COSE_Format_bstr···COSE_Format_bstr·
 <'a>
 {
-    Inl { v: (evercddl_empty_or_serialized_map <'a>, (&'a [u8], &'a [u8])) },
+    Inl { v: (empty_or_serialized_map <'a>, (&'a [u8], &'a [u8])) },
     Inr { v: (&'a [u8], &'a [u8]) }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub struct evercddl_Sig_structure <'a>
+pub struct sig_structure <'a>
 {
     pub context: evercddl_int_ugly_tags,
-    pub body_protected: evercddl_empty_or_serialized_map <'a>,
+    pub body_protected: empty_or_serialized_map <'a>,
     pub _x0:
-    either__·COSE_Format_evercddl_empty_or_serialized_map····COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr··_·COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr·
+    either__·COSE_Format_empty_or_serialized_map····COSE_Format_bstr···COSE_Format_bstr··_·COSE_Format_bstr···COSE_Format_bstr·
     <'a>
 }
 
-pub fn uu___is_Mkevercddl_Sig_structure0(projectee: evercddl_Sig_structure) -> bool
+pub fn uu___is_Mksig_structure0(projectee: sig_structure) -> bool
 {
-    crate::lowstar::ignore::ignore::<evercddl_Sig_structure>(projectee);
+    crate::lowstar::ignore::ignore::<sig_structure>(projectee);
     true
 }
 
-fn evercddl_Sig_structure_right <'a>(
+fn sig_structure_right <'a>(
     x3:
     (evercddl_int_ugly_tags,
-    (evercddl_empty_or_serialized_map
+    (empty_or_serialized_map
     <'a>,
-    either__·COSE_Format_evercddl_empty_or_serialized_map····COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr··_·COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr·
+    either__·COSE_Format_empty_or_serialized_map····COSE_Format_bstr···COSE_Format_bstr··_·COSE_Format_bstr···COSE_Format_bstr·
     <'a>))
 ) ->
-    evercddl_Sig_structure
+    sig_structure
     <'a>
-{
-    match x3
-    { (x4,(x5,x6)) => evercddl_Sig_structure { context: x4, body_protected: x5, _x0: x6 } }
-}
+{ match x3 { (x4,(x5,x6)) => sig_structure { context: x4, body_protected: x5, _x0: x6 } } }
 
-fn evercddl_Sig_structure_left <'a>(x7: evercddl_Sig_structure <'a>) ->
+fn sig_structure_left <'a>(x7: sig_structure <'a>) ->
     (evercddl_int_ugly_tags,
-    (evercddl_empty_or_serialized_map
+    (empty_or_serialized_map
     <'a>,
-    either__·COSE_Format_evercddl_empty_or_serialized_map····COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr··_·COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr·
+    either__·COSE_Format_empty_or_serialized_map····COSE_Format_bstr···COSE_Format_bstr··_·COSE_Format_bstr···COSE_Format_bstr·
     <'a>))
 {
     let x12: evercddl_int_ugly_tags = x7.context;
-    let x13: evercddl_empty_or_serialized_map = x7.body_protected;
+    let x13: empty_or_serialized_map = x7.body_protected;
     let
     x14:
-    either__·COSE_Format_evercddl_empty_or_serialized_map····COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr··_·COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr·
+    either__·COSE_Format_empty_or_serialized_map····COSE_Format_bstr···COSE_Format_bstr··_·COSE_Format_bstr···COSE_Format_bstr·
     =
         x7._x0;
     (x12,(x13,x14))
 }
 
 /**
-Parser for evercddl_Sig_structure
+Parser for sig_structure
 */
 pub fn
-parse_Sig_structure
+parse_sig_structure
 <'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
-    evercddl_Sig_structure
+    sig_structure
     <'a>
 {
     let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
@@ -11576,7 +11438,7 @@ parse_Sig_structure
         [c0·1; 1usize];
     let x0: crate::cbordetveraux::cbor_raw =
         crate::cbordetver::cbor_det_array_iterator_next(&mut pc2);
-    let w11: evercddl_empty_or_serialized_map = parse_empty_or_serialized_map(x0);
+    let w11: empty_or_serialized_map = parse_empty_or_serialized_map(x0);
     let mut pc20: [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
         [c11; 1usize];
     let i1: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = (&pc20)[0];
@@ -11626,7 +11488,7 @@ parse_Sig_structure
         { false };
     let
     w2:
-    either__·COSE_Format_evercddl_empty_or_serialized_map····COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr··_·COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr·
+    either__·COSE_Format_empty_or_serialized_map····COSE_Format_bstr···COSE_Format_bstr··_·COSE_Format_bstr···COSE_Format_bstr·
     =
         if test10
         {
@@ -11662,7 +11524,7 @@ parse_Sig_structure
                 [c0·2; 1usize];
             let x1: crate::cbordetveraux::cbor_raw =
                 crate::cbordetver::cbor_det_array_iterator_next(&mut pc4);
-            let w12: evercddl_empty_or_serialized_map = parse_empty_or_serialized_map(x1);
+            let w12: empty_or_serialized_map = parse_empty_or_serialized_map(x1);
             let rlen03: u64 = crate::cbordetver::cbor_det_array_iterator_length(c12);
             let
             mut pc40: [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1]
@@ -11704,8 +11566,8 @@ parse_Sig_structure
                 crate::cbordetver::cbor_det_array_iterator_next(&mut pc50);
             let w2: &[u8] = parse_bstr(x3);
             let w20: (&[u8], &[u8]) = (w13,w2);
-            let w120: (evercddl_empty_or_serialized_map, (&[u8], &[u8])) = (w12,w20);
-            either__·COSE_Format_evercddl_empty_or_serialized_map····COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr··_·COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr·::Inl
+            let w120: (empty_or_serialized_map, (&[u8], &[u8])) = (w12,w20);
+            either__·COSE_Format_empty_or_serialized_map····COSE_Format_bstr···COSE_Format_bstr··_·COSE_Format_bstr···COSE_Format_bstr·::Inl
             { v: w120 }
         }
         else
@@ -11751,46 +11613,46 @@ parse_Sig_structure
                 crate::cbordetver::cbor_det_array_iterator_next(&mut pc40);
             let w2: &[u8] = parse_bstr(x2);
             let w20: (&[u8], &[u8]) = (w12,w2);
-            either__·COSE_Format_evercddl_empty_or_serialized_map····COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr··_·COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr·::Inr
+            either__·COSE_Format_empty_or_serialized_map····COSE_Format_bstr···COSE_Format_bstr··_·COSE_Format_bstr···COSE_Format_bstr·::Inr
             { v: w20 }
         };
     let
     w20:
-    (evercddl_empty_or_serialized_map,
-    either__·COSE_Format_evercddl_empty_or_serialized_map····COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr··_·COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr·)
+    (empty_or_serialized_map,
+    either__·COSE_Format_empty_or_serialized_map····COSE_Format_bstr···COSE_Format_bstr··_·COSE_Format_bstr···COSE_Format_bstr·)
     =
         (w11,w2);
     let
     res1:
     (evercddl_int_ugly_tags,
-    (evercddl_empty_or_serialized_map,
-    either__·COSE_Format_evercddl_empty_or_serialized_map····COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr··_·COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr·))
+    (empty_or_serialized_map,
+    either__·COSE_Format_empty_or_serialized_map····COSE_Format_bstr···COSE_Format_bstr··_·COSE_Format_bstr···COSE_Format_bstr·))
     =
         (w1,w20);
-    evercddl_Sig_structure_right(res1)
+    sig_structure_right(res1)
 }
 
 /**
-Serializer for evercddl_Sig_structure
+Serializer for sig_structure
 */
 pub fn
-serialize_Sig_structure(c: evercddl_Sig_structure, out: &mut [u8]) ->
+serialize_sig_structure(c: sig_structure, out: &mut [u8]) ->
     usize
 {
     let
     c·:
     (evercddl_int_ugly_tags,
-    (evercddl_empty_or_serialized_map,
-    either__·COSE_Format_evercddl_empty_or_serialized_map····COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr··_·COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr·))
+    (empty_or_serialized_map,
+    either__·COSE_Format_empty_or_serialized_map····COSE_Format_bstr···COSE_Format_bstr··_·COSE_Format_bstr···COSE_Format_bstr·))
     =
-        evercddl_Sig_structure_left(c);
+        sig_structure_left(c);
     let mut pcount: [u64; 1] = [0u64; 1usize];
     let mut psize: [usize; 1] = [0usize; 1usize];
     let
     _letpattern:
     (evercddl_int_ugly_tags,
-    (evercddl_empty_or_serialized_map,
-    either__·COSE_Format_evercddl_empty_or_serialized_map····COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr··_·COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr·))
+    (empty_or_serialized_map,
+    either__·COSE_Format_empty_or_serialized_map····COSE_Format_bstr···COSE_Format_bstr··_·COSE_Format_bstr···COSE_Format_bstr·))
     =
         c·;
     let res: bool =
@@ -11798,8 +11660,8 @@ serialize_Sig_structure(c: evercddl_Sig_structure, out: &mut [u8]) ->
             let c1: evercddl_int_ugly_tags = _letpattern.0;
             let
             c2:
-            (evercddl_empty_or_serialized_map,
-            either__·COSE_Format_evercddl_empty_or_serialized_map····COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr··_·COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr·)
+            (empty_or_serialized_map,
+            either__·COSE_Format_empty_or_serialized_map····COSE_Format_bstr···COSE_Format_bstr··_·COSE_Format_bstr···COSE_Format_bstr·)
             =
                 _letpattern.1;
             let count: u64 = (&pcount)[0];
@@ -11942,14 +11804,14 @@ serialize_Sig_structure(c: evercddl_Sig_structure, out: &mut [u8]) ->
             {
                 let
                 _letpattern1:
-                (evercddl_empty_or_serialized_map,
-                either__·COSE_Format_evercddl_empty_or_serialized_map····COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr··_·COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr·)
+                (empty_or_serialized_map,
+                either__·COSE_Format_empty_or_serialized_map····COSE_Format_bstr···COSE_Format_bstr··_·COSE_Format_bstr···COSE_Format_bstr·)
                 =
                     c2;
-                let c11: evercddl_empty_or_serialized_map = _letpattern1.0;
+                let c11: empty_or_serialized_map = _letpattern1.0;
                 let
                 c21:
-                either__·COSE_Format_evercddl_empty_or_serialized_map····COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr··_·COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr·
+                either__·COSE_Format_empty_or_serialized_map····COSE_Format_bstr···COSE_Format_bstr··_·COSE_Format_bstr···COSE_Format_bstr·
                 =
                     _letpattern1.1;
                 let count0: u64 = (&pcount)[0];
@@ -11976,13 +11838,12 @@ serialize_Sig_structure(c: evercddl_Sig_structure, out: &mut [u8]) ->
                 {
                     match c21
                     {
-                        either__·COSE_Format_evercddl_empty_or_serialized_map····COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr··_·COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr·::Inl
+                        either__·COSE_Format_empty_or_serialized_map····COSE_Format_bstr···COSE_Format_bstr··_·COSE_Format_bstr···COSE_Format_bstr·::Inl
                         { v: c12 }
                         =>
                           {
-                              let _letpattern2: (evercddl_empty_or_serialized_map, (&[u8], &[u8])) =
-                                  c12;
-                              let c13: evercddl_empty_or_serialized_map = _letpattern2.0;
+                              let _letpattern2: (empty_or_serialized_map, (&[u8], &[u8])) = c12;
+                              let c13: empty_or_serialized_map = _letpattern2.0;
                               let c22: (&[u8], &[u8]) = _letpattern2.1;
                               let count1: u64 = (&pcount)[0];
                               let res12: bool =
@@ -12061,7 +11922,7 @@ serialize_Sig_structure(c: evercddl_Sig_structure, out: &mut [u8]) ->
                               else
                               { false }
                           },
-                        either__·COSE_Format_evercddl_empty_or_serialized_map····COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr··_·COSE_Format_evercddl_bstr···COSE_Format_evercddl_bstr·::Inr
+                        either__·COSE_Format_empty_or_serialized_map····COSE_Format_bstr···COSE_Format_bstr··_·COSE_Format_bstr···COSE_Format_bstr·::Inr
                         { v: c22 }
                         =>
                           {
@@ -12135,16 +11996,14 @@ serialize_Sig_structure(c: evercddl_Sig_structure, out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum
-option__·COSE_Format_evercddl_Sig_structure···Pulse_Lib_Slice_slice·uint8_t·
-<'a>
+pub enum option__·COSE_Format_sig_structure···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (evercddl_Sig_structure <'a>, &'a [u8]) }
+    Some { v: (sig_structure <'a>, &'a [u8]) }
 }
 
-pub fn validate_and_parse_Sig_structure <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_Sig_structure···Pulse_Lib_Slice_slice·uint8_t·
+pub fn validate_and_parse_sig_structure <'a>(s: &'a [u8]) ->
+    option__·COSE_Format_sig_structure···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -12155,7 +12014,7 @@ pub fn validate_and_parse_Sig_structure <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_Sig_structure···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_sig_structure···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -12163,23 +12022,21 @@ pub fn validate_and_parse_Sig_structure <'a>(s: &'a [u8]) ->
               let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
               let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
               let rem: &[u8] = _letpattern.1;
-              let test: bool = validate_Sig_structure(rl);
+              let test: bool = validate_sig_structure(rl);
               if test
               {
-                  let x: evercddl_Sig_structure = parse_Sig_structure(rl);
-                  option__·COSE_Format_evercddl_Sig_structure···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: sig_structure = parse_sig_structure(rl);
+                  option__·COSE_Format_sig_structure···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              {
-                  option__·COSE_Format_evercddl_Sig_structure···Pulse_Lib_Slice_slice·uint8_t·::None
-              }
+              { option__·COSE_Format_sig_structure···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
-pub fn validate_COSE_Sign1(c: crate::cbordetveraux::cbor_raw) -> bool
+pub fn validate_cose_sign1(c: crate::cbordetveraux::cbor_raw) -> bool
 {
     let ty: u8 = crate::cbordetver::cbor_det_major_type(c);
     if ty == crate::cbordetveraux::cbor_major_type_array
@@ -12272,60 +12129,60 @@ pub fn validate_COSE_Sign1(c: crate::cbordetveraux::cbor_raw) -> bool
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil <'a>
+pub enum either__COSE_Format_bstr_COSE_Format_nil <'a>
 {
     Inl { v: &'a [u8] },
-    Inr { v: evercddl_nil }
+    Inr { v: nil }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub struct evercddl_COSE_Sign1 <'a>
+pub struct cose_sign1 <'a>
 {
-    pub protected: evercddl_empty_or_serialized_map <'a>,
-    pub unprotected: evercddl_header_map <'a>,
-    pub payload: either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil <'a>,
+    pub protected: empty_or_serialized_map <'a>,
+    pub unprotected: header_map <'a>,
+    pub payload: either__COSE_Format_bstr_COSE_Format_nil <'a>,
     pub signature: &'a [u8]
 }
 
-pub fn uu___is_Mkevercddl_COSE_Sign10(projectee: evercddl_COSE_Sign1) -> bool
+pub fn uu___is_Mkcose_sign10(projectee: cose_sign1) -> bool
 {
-    crate::lowstar::ignore::ignore::<evercddl_COSE_Sign1>(projectee);
+    crate::lowstar::ignore::ignore::<cose_sign1>(projectee);
     true
 }
 
-fn evercddl_COSE_Sign1_right <'a>(
+fn cose_sign1_right <'a>(
     x4:
-    ((evercddl_empty_or_serialized_map <'a>, evercddl_header_map <'a>),
-    (either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil <'a>, &'a [u8]))
+    ((empty_or_serialized_map <'a>, header_map <'a>),
+    (either__COSE_Format_bstr_COSE_Format_nil <'a>, &'a [u8]))
 ) ->
-    evercddl_COSE_Sign1
+    cose_sign1
     <'a>
 {
     match x4
     {
         ((x5,x6),(x7,x8)) =>
-          evercddl_COSE_Sign1 { protected: x5, unprotected: x6, payload: x7, signature: x8 }
+          cose_sign1 { protected: x5, unprotected: x6, payload: x7, signature: x8 }
     }
 }
 
-fn evercddl_COSE_Sign1_left <'a>(x9: evercddl_COSE_Sign1 <'a>) ->
-    ((evercddl_empty_or_serialized_map <'a>, evercddl_header_map <'a>),
-    (either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil <'a>, &'a [u8]))
+fn cose_sign1_left <'a>(x9: cose_sign1 <'a>) ->
+    ((empty_or_serialized_map <'a>, header_map <'a>),
+    (either__COSE_Format_bstr_COSE_Format_nil <'a>, &'a [u8]))
 {
-    let x15: evercddl_empty_or_serialized_map = x9.protected;
-    let x16: evercddl_header_map = x9.unprotected;
-    let x17: either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil = x9.payload;
+    let x15: empty_or_serialized_map = x9.protected;
+    let x16: header_map = x9.unprotected;
+    let x17: either__COSE_Format_bstr_COSE_Format_nil = x9.payload;
     let x18: &[u8] = x9.signature;
     ((x15,x16),(x17,x18))
 }
 
 /**
-Parser for evercddl_COSE_Sign1
+Parser for cose_sign1
 */
 pub fn
-parse_COSE_Sign1
+parse_cose_sign1
 <'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
-    evercddl_COSE_Sign1
+    cose_sign1
     <'a>
 {
     let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
@@ -12396,13 +12253,13 @@ parse_COSE_Sign1
         [c0·1; 1usize];
     let x: crate::cbordetveraux::cbor_raw =
         crate::cbordetver::cbor_det_array_iterator_next(&mut pc2);
-    let w1: evercddl_empty_or_serialized_map = parse_empty_or_serialized_map(x);
+    let w1: empty_or_serialized_map = parse_empty_or_serialized_map(x);
     let mut pc20: [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
         [c11; 1usize];
     let x0: crate::cbordetveraux::cbor_raw =
         crate::cbordetver::cbor_det_array_iterator_next(&mut pc20);
-    let w2: evercddl_header_map = parse_header_map(x0);
-    let w10: (evercddl_empty_or_serialized_map, evercddl_header_map) = (w1,w2);
+    let w2: header_map = parse_header_map(x0);
+    let w10: (empty_or_serialized_map, header_map) = (w1,w2);
     let rlen010: u64 = crate::cbordetver::cbor_det_array_iterator_length(c1);
     let mut pc10: [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
         [c1; 1usize];
@@ -12428,63 +12285,58 @@ parse_COSE_Sign1
     let x1: crate::cbordetveraux::cbor_raw =
         crate::cbordetver::cbor_det_array_iterator_next(&mut pc21);
     let test: bool = validate_bstr(x1);
-    let w11: either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil =
+    let w11: either__COSE_Format_bstr_COSE_Format_nil =
         if test
         {
             let res: &[u8] = parse_bstr(x1);
-            either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil::Inl { v: res }
+            either__COSE_Format_bstr_COSE_Format_nil::Inl { v: res }
         }
         else
         {
-            let res: evercddl_nil = parse_nil(x1);
-            either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil::Inr { v: res }
+            let res: nil = parse_nil(x1);
+            either__COSE_Format_bstr_COSE_Format_nil::Inr { v: res }
         };
     let mut pc22: [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
         [c110; 1usize];
     let x2: crate::cbordetveraux::cbor_raw =
         crate::cbordetver::cbor_det_array_iterator_next(&mut pc22);
     let w20: &[u8] = parse_bstr(x2);
-    let w21: (either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil, &[u8]) = (w11,w20);
+    let w21: (either__COSE_Format_bstr_COSE_Format_nil, &[u8]) = (w11,w20);
     let
     res1:
-    ((evercddl_empty_or_serialized_map, evercddl_header_map),
-    (either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil, &[u8]))
+    ((empty_or_serialized_map, header_map), (either__COSE_Format_bstr_COSE_Format_nil, &[u8]))
     =
         (w10,w21);
-    evercddl_COSE_Sign1_right(res1)
+    cose_sign1_right(res1)
 }
 
 /**
-Serializer for evercddl_COSE_Sign1
+Serializer for cose_sign1
 */
 pub fn
-serialize_COSE_Sign1(c: evercddl_COSE_Sign1, out: &mut [u8]) ->
+serialize_cose_sign1(c: cose_sign1, out: &mut [u8]) ->
     usize
 {
     let
-    c·:
-    ((evercddl_empty_or_serialized_map, evercddl_header_map),
-    (either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil, &[u8]))
+    c·: ((empty_or_serialized_map, header_map), (either__COSE_Format_bstr_COSE_Format_nil, &[u8]))
     =
-        evercddl_COSE_Sign1_left(c);
+        cose_sign1_left(c);
     let mut pcount: [u64; 1] = [0u64; 1usize];
     let mut psize: [usize; 1] = [0usize; 1usize];
     let
     _letpattern:
-    ((evercddl_empty_or_serialized_map, evercddl_header_map),
-    (either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil, &[u8]))
+    ((empty_or_serialized_map, header_map), (either__COSE_Format_bstr_COSE_Format_nil, &[u8]))
     =
         c·;
     let res: bool =
         {
-            let c1: (evercddl_empty_or_serialized_map, evercddl_header_map) = _letpattern.0;
-            let c2: (either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil, &[u8]) =
-                _letpattern.1;
-            let _letpattern1: (evercddl_empty_or_serialized_map, evercddl_header_map) = c1;
+            let c1: (empty_or_serialized_map, header_map) = _letpattern.0;
+            let c2: (either__COSE_Format_bstr_COSE_Format_nil, &[u8]) = _letpattern.1;
+            let _letpattern1: (empty_or_serialized_map, header_map) = c1;
             let res1: bool =
                 {
-                    let c11: evercddl_empty_or_serialized_map = _letpattern1.0;
-                    let c21: evercddl_header_map = _letpattern1.1;
+                    let c11: empty_or_serialized_map = _letpattern1.0;
+                    let c21: header_map = _letpattern1.1;
                     let count: u64 = (&pcount)[0];
                     let res1: bool =
                         if count < 18446744073709551615u64
@@ -12532,12 +12384,8 @@ serialize_COSE_Sign1(c: evercddl_COSE_Sign1, out: &mut [u8]) ->
                 };
             if res1
             {
-                let
-                _letpattern10: (either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil, &[u8])
-                =
-                    c2;
-                let c11: either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil =
-                    _letpattern10.0;
+                let _letpattern10: (either__COSE_Format_bstr_COSE_Format_nil, &[u8]) = c2;
+                let c11: either__COSE_Format_bstr_COSE_Format_nil = _letpattern10.0;
                 let c21: &[u8] = _letpattern10.1;
                 let count: u64 = (&pcount)[0];
                 let res11: bool =
@@ -12550,12 +12398,10 @@ serialize_COSE_Sign1(c: evercddl_COSE_Sign1, out: &mut [u8]) ->
                         let size1: usize =
                             match c11
                             {
-                                either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil::Inl
-                                { v: c12 }
-                                => serialize_bstr(c12, out1),
-                                either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil::Inr
-                                { v: c22 }
-                                => serialize_nil(c22, out1),
+                                either__COSE_Format_bstr_COSE_Format_nil::Inl { v: c12 } =>
+                                  serialize_bstr(c12, out1),
+                                either__COSE_Format_bstr_COSE_Format_nil::Inr { v: c22 } =>
+                                  serialize_nil(c22, out1),
                                 _ => panic!("Incomplete pattern matching")
                             };
                         if size1 == 0usize
@@ -12608,14 +12454,14 @@ serialize_COSE_Sign1(c: evercddl_COSE_Sign1, out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_COSE_Sign1···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_cose_sign1···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (evercddl_COSE_Sign1 <'a>, &'a [u8]) }
+    Some { v: (cose_sign1 <'a>, &'a [u8]) }
 }
 
-pub fn validate_and_parse_COSE_Sign1 <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_COSE_Sign1···Pulse_Lib_Slice_slice·uint8_t·
+pub fn validate_and_parse_cose_sign1 <'a>(s: &'a [u8]) ->
+    option__·COSE_Format_cose_sign1···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -12626,7 +12472,7 @@ pub fn validate_and_parse_COSE_Sign1 <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_COSE_Sign1···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_cose_sign1···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -12634,23 +12480,21 @@ pub fn validate_and_parse_COSE_Sign1 <'a>(s: &'a [u8]) ->
               let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
               let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
               let rem: &[u8] = _letpattern.1;
-              let test: bool = validate_COSE_Sign1(rl);
+              let test: bool = validate_cose_sign1(rl);
               if test
               {
-                  let x: evercddl_COSE_Sign1 = parse_COSE_Sign1(rl);
-                  option__·COSE_Format_evercddl_COSE_Sign1···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: cose_sign1 = parse_cose_sign1(rl);
+                  option__·COSE_Format_cose_sign1···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              {
-                  option__·COSE_Format_evercddl_COSE_Sign1···Pulse_Lib_Slice_slice·uint8_t·::None
-              }
+              { option__·COSE_Format_cose_sign1···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
-pub fn validate_COSE_Sign1_Tagged(c: crate::cbordetveraux::cbor_raw) -> bool
+pub fn validate_cose_sign1_tagged(c: crate::cbordetveraux::cbor_raw) -> bool
 {
     let k: u8 = crate::cbordetver::cbor_det_major_type(c);
     if k == crate::cbordetveraux::cbor_major_type_tagged
@@ -12673,7 +12517,7 @@ pub fn validate_COSE_Sign1_Tagged(c: crate::cbordetveraux::cbor_raw) -> bool
                     crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
                 };
-            validate_COSE_Sign1(c·)
+            validate_cose_sign1(c·)
         }
         else
         { false }
@@ -12682,31 +12526,25 @@ pub fn validate_COSE_Sign1_Tagged(c: crate::cbordetveraux::cbor_raw) -> bool
     { false }
 }
 
-pub type evercddl_COSE_Sign1_Tagged <'a> = evercddl_COSE_Sign1 <'a>;
+pub type cose_sign1_tagged <'a> = cose_sign1 <'a>;
 
-pub fn uu___is_Mkevercddl_COSE_Sign1_Tagged0(projectee: evercddl_COSE_Sign1) -> bool
+pub fn uu___is_Mkcose_sign1_tagged0(projectee: cose_sign1) -> bool
 {
-    crate::lowstar::ignore::ignore::<evercddl_COSE_Sign1>(projectee);
+    crate::lowstar::ignore::ignore::<cose_sign1>(projectee);
     true
 }
 
-fn evercddl_COSE_Sign1_Tagged_right <'a>(x1: evercddl_COSE_Sign1 <'a>) ->
-    evercddl_COSE_Sign1
-    <'a>
-{ x1 }
+fn cose_sign1_tagged_right <'a>(x1: cose_sign1 <'a>) -> cose_sign1 <'a> { x1 }
 
-fn evercddl_COSE_Sign1_Tagged_left <'a>(x3: evercddl_COSE_Sign1 <'a>) ->
-    evercddl_COSE_Sign1
-    <'a>
-{ x3 }
+fn cose_sign1_tagged_left <'a>(x3: cose_sign1 <'a>) -> cose_sign1 <'a> { x3 }
 
 /**
-Parser for evercddl_COSE_Sign1_Tagged
+Parser for cose_sign1_tagged
 */
 pub fn
-parse_COSE_Sign1_Tagged
+parse_cose_sign1_tagged
 <'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
-    evercddl_COSE_Sign1
+    cose_sign1
     <'a>
 {
     let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
@@ -12717,22 +12555,22 @@ parse_COSE_Sign1_Tagged
             crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
             _ => panic!("Incomplete pattern matching")
         };
-    let res1: evercddl_COSE_Sign1 = parse_COSE_Sign1(cpl);
-    evercddl_COSE_Sign1_Tagged_right(res1)
+    let res1: cose_sign1 = parse_cose_sign1(cpl);
+    cose_sign1_tagged_right(res1)
 }
 
 /**
-Serializer for evercddl_COSE_Sign1_Tagged
+Serializer for cose_sign1_tagged
 */
 pub fn
-serialize_COSE_Sign1_Tagged(c: evercddl_COSE_Sign1, out: &mut [u8]) ->
+serialize_cose_sign1_tagged(c: cose_sign1, out: &mut [u8]) ->
     usize
 {
-    let c·: evercddl_COSE_Sign1 = evercddl_COSE_Sign1_Tagged_left(c);
-    let c·1: (u64, evercddl_COSE_Sign1) = (18u64,c·);
-    let _letpattern: (u64, evercddl_COSE_Sign1) = c·1;
+    let c·: cose_sign1 = cose_sign1_tagged_left(c);
+    let c·1: (u64, cose_sign1) = (18u64,c·);
+    let _letpattern: (u64, cose_sign1) = c·1;
     let ctag: u64 = _letpattern.0;
-    let cpayload: evercddl_COSE_Sign1 = _letpattern.1;
+    let cpayload: cose_sign1 = _letpattern.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
     if tsz == 0usize
     { 0usize }
@@ -12740,22 +12578,20 @@ serialize_COSE_Sign1_Tagged(c: evercddl_COSE_Sign1, out: &mut [u8]) ->
     {
         let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
         let out2: &mut [u8] = _letpattern1.1;
-        let psz: usize = serialize_COSE_Sign1(cpayload, out2);
+        let psz: usize = serialize_cose_sign1(cpayload, out2);
         if psz == 0usize { 0usize } else { tsz.wrapping_add(psz) }
     }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum
-option__·COSE_Format_evercddl_COSE_Sign1_Tagged···Pulse_Lib_Slice_slice·uint8_t·
-<'a>
+pub enum option__·COSE_Format_cose_sign1_tagged···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (evercddl_COSE_Sign1 <'a>, &'a [u8]) }
+    Some { v: (cose_sign1 <'a>, &'a [u8]) }
 }
 
-pub fn validate_and_parse_COSE_Sign1_Tagged <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_COSE_Sign1_Tagged···Pulse_Lib_Slice_slice·uint8_t·
+pub fn validate_and_parse_cose_sign1_tagged <'a>(s: &'a [u8]) ->
+    option__·COSE_Format_cose_sign1_tagged···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -12766,8 +12602,7 @@ pub fn validate_and_parse_COSE_Sign1_Tagged <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        =>
-          option__·COSE_Format_evercddl_COSE_Sign1_Tagged···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_cose_sign1_tagged···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -12775,23 +12610,23 @@ pub fn validate_and_parse_COSE_Sign1_Tagged <'a>(s: &'a [u8]) ->
               let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
               let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
               let rem: &[u8] = _letpattern.1;
-              let test: bool = validate_COSE_Sign1_Tagged(rl);
+              let test: bool = validate_cose_sign1_tagged(rl);
               if test
               {
-                  let x: evercddl_COSE_Sign1 = parse_COSE_Sign1_Tagged(rl);
-                  option__·COSE_Format_evercddl_COSE_Sign1_Tagged···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: cose_sign1 = parse_cose_sign1_tagged(rl);
+                  option__·COSE_Format_cose_sign1_tagged···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
               {
-                  option__·COSE_Format_evercddl_COSE_Sign1_Tagged···Pulse_Lib_Slice_slice·uint8_t·::None
+                  option__·COSE_Format_cose_sign1_tagged···Pulse_Lib_Slice_slice·uint8_t·::None
               }
           },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
-pub fn validate_COSE_Signature(c: crate::cbordetveraux::cbor_raw) -> bool
+pub fn validate_cose_signature(c: crate::cbordetveraux::cbor_raw) -> bool
 {
     let ty: u8 = crate::cbordetver::cbor_det_major_type(c);
     if ty == crate::cbordetveraux::cbor_major_type_array
@@ -12866,45 +12701,42 @@ pub fn validate_COSE_Signature(c: crate::cbordetveraux::cbor_raw) -> bool
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub struct evercddl_COSE_Signature <'a>
+pub struct cose_signature <'a>
 {
-    pub protected: evercddl_empty_or_serialized_map <'a>,
-    pub unprotected: evercddl_header_map <'a>,
+    pub protected: empty_or_serialized_map <'a>,
+    pub unprotected: header_map <'a>,
     pub signature: &'a [u8]
 }
 
-pub fn uu___is_Mkevercddl_COSE_Signature0(projectee: evercddl_COSE_Signature) -> bool
+pub fn uu___is_Mkcose_signature0(projectee: cose_signature) -> bool
 {
-    crate::lowstar::ignore::ignore::<evercddl_COSE_Signature>(projectee);
+    crate::lowstar::ignore::ignore::<cose_signature>(projectee);
     true
 }
 
-fn evercddl_COSE_Signature_right <'a>(
-    x3: ((evercddl_empty_or_serialized_map <'a>, evercddl_header_map <'a>), &'a [u8])
-) ->
-    evercddl_COSE_Signature
+fn cose_signature_right <'a>(x3: ((empty_or_serialized_map <'a>, header_map <'a>), &'a [u8])) ->
+    cose_signature
     <'a>
 {
-    match x3
-    { ((x4,x5),x6) => evercddl_COSE_Signature { protected: x4, unprotected: x5, signature: x6 } }
+    match x3 { ((x4,x5),x6) => cose_signature { protected: x4, unprotected: x5, signature: x6 } }
 }
 
-fn evercddl_COSE_Signature_left <'a>(x7: evercddl_COSE_Signature <'a>) ->
-    ((evercddl_empty_or_serialized_map <'a>, evercddl_header_map <'a>), &'a [u8])
+fn cose_signature_left <'a>(x7: cose_signature <'a>) ->
+    ((empty_or_serialized_map <'a>, header_map <'a>), &'a [u8])
 {
-    let x12: evercddl_empty_or_serialized_map = x7.protected;
-    let x13: evercddl_header_map = x7.unprotected;
+    let x12: empty_or_serialized_map = x7.protected;
+    let x13: header_map = x7.unprotected;
     let x14: &[u8] = x7.signature;
     ((x12,x13),x14)
 }
 
 /**
-Parser for evercddl_COSE_Signature
+Parser for cose_signature
 */
 pub fn
-parse_COSE_Signature
+parse_cose_signature
 <'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
-    evercddl_COSE_Signature
+    cose_signature
     <'a>
 {
     let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
@@ -12975,43 +12807,42 @@ parse_COSE_Signature
         [c0·1; 1usize];
     let x: crate::cbordetveraux::cbor_raw =
         crate::cbordetver::cbor_det_array_iterator_next(&mut pc2);
-    let w1: evercddl_empty_or_serialized_map = parse_empty_or_serialized_map(x);
+    let w1: empty_or_serialized_map = parse_empty_or_serialized_map(x);
     let mut pc20: [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
         [c11; 1usize];
     let x0: crate::cbordetveraux::cbor_raw =
         crate::cbordetver::cbor_det_array_iterator_next(&mut pc20);
-    let w2: evercddl_header_map = parse_header_map(x0);
-    let w10: (evercddl_empty_or_serialized_map, evercddl_header_map) = (w1,w2);
+    let w2: header_map = parse_header_map(x0);
+    let w10: (empty_or_serialized_map, header_map) = (w1,w2);
     let mut pc10: [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
         [c1; 1usize];
     let x1: crate::cbordetveraux::cbor_raw =
         crate::cbordetver::cbor_det_array_iterator_next(&mut pc10);
     let w20: &[u8] = parse_bstr(x1);
-    let res1: ((evercddl_empty_or_serialized_map, evercddl_header_map), &[u8]) = (w10,w20);
-    evercddl_COSE_Signature_right(res1)
+    let res1: ((empty_or_serialized_map, header_map), &[u8]) = (w10,w20);
+    cose_signature_right(res1)
 }
 
 /**
-Serializer for evercddl_COSE_Signature
+Serializer for cose_signature
 */
 pub fn
-serialize_COSE_Signature(c: evercddl_COSE_Signature, out: &mut [u8]) ->
+serialize_cose_signature(c: cose_signature, out: &mut [u8]) ->
     usize
 {
-    let c·: ((evercddl_empty_or_serialized_map, evercddl_header_map), &[u8]) =
-        evercddl_COSE_Signature_left(c);
+    let c·: ((empty_or_serialized_map, header_map), &[u8]) = cose_signature_left(c);
     let mut pcount: [u64; 1] = [0u64; 1usize];
     let mut psize: [usize; 1] = [0usize; 1usize];
-    let _letpattern: ((evercddl_empty_or_serialized_map, evercddl_header_map), &[u8]) = c·;
+    let _letpattern: ((empty_or_serialized_map, header_map), &[u8]) = c·;
     let res: bool =
         {
-            let c1: (evercddl_empty_or_serialized_map, evercddl_header_map) = _letpattern.0;
+            let c1: (empty_or_serialized_map, header_map) = _letpattern.0;
             let c2: &[u8] = _letpattern.1;
-            let _letpattern1: (evercddl_empty_or_serialized_map, evercddl_header_map) = c1;
+            let _letpattern1: (empty_or_serialized_map, header_map) = c1;
             let res1: bool =
                 {
-                    let c11: evercddl_empty_or_serialized_map = _letpattern1.0;
-                    let c21: evercddl_header_map = _letpattern1.1;
+                    let c11: empty_or_serialized_map = _letpattern1.0;
+                    let c21: header_map = _letpattern1.1;
                     let count: u64 = (&pcount)[0];
                     let res1: bool =
                         if count < 18446744073709551615u64
@@ -13093,16 +12924,14 @@ serialize_COSE_Signature(c: evercddl_COSE_Signature, out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum
-option__·COSE_Format_evercddl_COSE_Signature···Pulse_Lib_Slice_slice·uint8_t·
-<'a>
+pub enum option__·COSE_Format_cose_signature···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (evercddl_COSE_Signature <'a>, &'a [u8]) }
+    Some { v: (cose_signature <'a>, &'a [u8]) }
 }
 
-pub fn validate_and_parse_COSE_Signature <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_COSE_Signature···Pulse_Lib_Slice_slice·uint8_t·
+pub fn validate_and_parse_cose_signature <'a>(s: &'a [u8]) ->
+    option__·COSE_Format_cose_signature···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -13113,7 +12942,7 @@ pub fn validate_and_parse_COSE_Signature <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_COSE_Signature···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_cose_signature···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -13121,17 +12950,15 @@ pub fn validate_and_parse_COSE_Signature <'a>(s: &'a [u8]) ->
               let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
               let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
               let rem: &[u8] = _letpattern.1;
-              let test: bool = validate_COSE_Signature(rl);
+              let test: bool = validate_cose_signature(rl);
               if test
               {
-                  let x: evercddl_COSE_Signature = parse_COSE_Signature(rl);
-                  option__·COSE_Format_evercddl_COSE_Signature···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: cose_signature = parse_cose_signature(rl);
+                  option__·COSE_Format_cose_signature···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              {
-                  option__·COSE_Format_evercddl_COSE_Signature···Pulse_Lib_Slice_slice·uint8_t·::None
-              }
+              { option__·COSE_Format_cose_signature···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -13149,25 +12976,21 @@ pub fn aux_env39_validate_1(
     else
     {
         let c: crate::cbordetveraux::cbor_raw = crate::cbordetver::cbor_det_array_iterator_next(pi);
-        validate_COSE_Signature(c)
+        validate_cose_signature(c)
     }
 }
 
-pub type aux_env39_type_1 <'a> = evercddl_COSE_Signature <'a>;
+pub type aux_env39_type_1 <'a> = cose_signature <'a>;
 
-pub fn uu___is_Mkaux_env39_type_10(projectee: evercddl_COSE_Signature) -> bool
+pub fn uu___is_Mkaux_env39_type_10(projectee: cose_signature) -> bool
 {
-    crate::lowstar::ignore::ignore::<evercddl_COSE_Signature>(projectee);
+    crate::lowstar::ignore::ignore::<cose_signature>(projectee);
     true
 }
 
-fn aux_env39_type_1_right <'a>(x1: evercddl_COSE_Signature <'a>) ->
-    evercddl_COSE_Signature
-    <'a>
-{ x1 }
+fn aux_env39_type_1_right <'a>(x1: cose_signature <'a>) -> cose_signature <'a> { x1 }
 
-fn aux_env39_type_1_left <'a>(x3: evercddl_COSE_Signature <'a>) -> evercddl_COSE_Signature <'a>
-{ x3 }
+fn aux_env39_type_1_left <'a>(x3: cose_signature <'a>) -> cose_signature <'a> { x3 }
 
 /**
 Parser for aux_env39_type_1
@@ -13175,14 +12998,14 @@ Parser for aux_env39_type_1
 pub fn
 aux_env39_parse_1
 <'a>(c: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>) ->
-    evercddl_COSE_Signature
+    cose_signature
     <'a>
 {
     let mut pc: [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
         [c; 1usize];
     let x: crate::cbordetveraux::cbor_raw =
         crate::cbordetver::cbor_det_array_iterator_next(&mut pc);
-    let res1: evercddl_COSE_Signature = parse_COSE_Signature(x);
+    let res1: cose_signature = parse_cose_signature(x);
     aux_env39_type_1_right(res1)
 }
 
@@ -13191,14 +13014,14 @@ Serializer for aux_env39_type_1
 */
 pub fn
 aux_env39_serialize_1(
-    c: evercddl_COSE_Signature,
+    c: cose_signature,
     out: &mut [u8],
     out_count: &mut [u64],
     out_size: &mut [usize]
 ) ->
     bool
 {
-    let c·: evercddl_COSE_Signature = aux_env39_type_1_left(c);
+    let c·: cose_signature = aux_env39_type_1_left(c);
     let count: u64 = out_count[0];
     if count < 18446744073709551615u64
     {
@@ -13206,7 +13029,7 @@ aux_env39_serialize_1(
         let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(size);
         let _out0: &[u8] = _letpattern.0;
         let out1: &mut [u8] = _letpattern.1;
-        let size1: usize = serialize_COSE_Signature(c·, out1);
+        let size1: usize = serialize_cose_signature(c·, out1);
         if size1 == 0usize
         { false }
         else
@@ -13220,7 +13043,7 @@ aux_env39_serialize_1(
     { false }
 }
 
-pub fn validate_COSE_Sign(c: crate::cbordetveraux::cbor_raw) -> bool
+pub fn validate_cose_sign(c: crate::cbordetveraux::cbor_raw) -> bool
 {
     let ty: u8 = crate::cbordetver::cbor_det_major_type(c);
     if ty == crate::cbordetveraux::cbor_major_type_array
@@ -13328,7 +13151,7 @@ pub fn validate_COSE_Sign(c: crate::cbordetveraux::cbor_raw) -> bool
                                 {
                                     let c2: crate::cbordetveraux::cbor_raw =
                                         crate::cbordetver::cbor_det_array_iterator_next(&mut pi1);
-                                    validate_COSE_Signature(c2)
+                                    validate_cose_signature(c2)
                                 };
                             let b_success: bool =
                                 if test12
@@ -13358,7 +13181,7 @@ pub fn validate_COSE_Sign(c: crate::cbordetveraux::cbor_raw) -> bool
                                                     crate::cbordetver::cbor_det_array_iterator_next(
                                                         &mut pi1
                                                     );
-                                                validate_COSE_Signature(c2)
+                                                validate_cose_signature(c2)
                                             };
                                         if ! cont
                                         {
@@ -13418,7 +13241,7 @@ array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type
     fn
     (crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a1>)
     ->
-    evercddl_COSE_Signature
+    cose_signature
     <'a1>
 }
 
@@ -13427,7 +13250,7 @@ pub enum
 either__CDDL_Pulse_Types_slice·COSE_Format_aux_env39_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env39_type_1
 <'a>
 {
-    Inl { v: &'a [evercddl_COSE_Signature <'a>] },
+    Inl { v: &'a [cose_signature <'a>] },
     Inr
     {
         v:
@@ -13437,50 +13260,50 @@ either__CDDL_Pulse_Types_slice·COSE_Format_aux_env39_type_1_CDDL_Pulse_Parse_Ar
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub struct evercddl_COSE_Sign <'a>
+pub struct cose_sign <'a>
 {
-    pub protected: evercddl_empty_or_serialized_map <'a>,
-    pub unprotected: evercddl_header_map <'a>,
-    pub payload: either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil <'a>,
+    pub protected: empty_or_serialized_map <'a>,
+    pub unprotected: header_map <'a>,
+    pub payload: either__COSE_Format_bstr_COSE_Format_nil <'a>,
     pub signatures:
     either__CDDL_Pulse_Types_slice·COSE_Format_aux_env39_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env39_type_1
     <'a>
 }
 
-pub fn uu___is_Mkevercddl_COSE_Sign0(projectee: evercddl_COSE_Sign) -> bool
+pub fn uu___is_Mkcose_sign0(projectee: cose_sign) -> bool
 {
-    crate::lowstar::ignore::ignore::<evercddl_COSE_Sign>(projectee);
+    crate::lowstar::ignore::ignore::<cose_sign>(projectee);
     true
 }
 
-fn evercddl_COSE_Sign_right <'a>(
+fn cose_sign_right <'a>(
     x4:
-    ((evercddl_empty_or_serialized_map <'a>, evercddl_header_map <'a>),
-    (either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil
+    ((empty_or_serialized_map <'a>, header_map <'a>),
+    (either__COSE_Format_bstr_COSE_Format_nil
     <'a>,
     either__CDDL_Pulse_Types_slice·COSE_Format_aux_env39_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env39_type_1
     <'a>))
 ) ->
-    evercddl_COSE_Sign
+    cose_sign
     <'a>
 {
     match x4
     {
         ((x5,x6),(x7,x8)) =>
-          evercddl_COSE_Sign { protected: x5, unprotected: x6, payload: x7, signatures: x8 }
+          cose_sign { protected: x5, unprotected: x6, payload: x7, signatures: x8 }
     }
 }
 
-fn evercddl_COSE_Sign_left <'a>(x9: evercddl_COSE_Sign <'a>) ->
-    ((evercddl_empty_or_serialized_map <'a>, evercddl_header_map <'a>),
-    (either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil
+fn cose_sign_left <'a>(x9: cose_sign <'a>) ->
+    ((empty_or_serialized_map <'a>, header_map <'a>),
+    (either__COSE_Format_bstr_COSE_Format_nil
     <'a>,
     either__CDDL_Pulse_Types_slice·COSE_Format_aux_env39_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env39_type_1
     <'a>))
 {
-    let x15: evercddl_empty_or_serialized_map = x9.protected;
-    let x16: evercddl_header_map = x9.unprotected;
-    let x17: either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil = x9.payload;
+    let x15: empty_or_serialized_map = x9.protected;
+    let x16: header_map = x9.unprotected;
+    let x17: either__COSE_Format_bstr_COSE_Format_nil = x9.payload;
     let
     x18:
     either__CDDL_Pulse_Types_slice·COSE_Format_aux_env39_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env39_type_1
@@ -13490,12 +13313,12 @@ fn evercddl_COSE_Sign_left <'a>(x9: evercddl_COSE_Sign <'a>) ->
 }
 
 /**
-Parser for evercddl_COSE_Sign
+Parser for cose_sign
 */
 pub fn
-parse_COSE_Sign
+parse_cose_sign
 <'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
-    evercddl_COSE_Sign
+    cose_sign
     <'a>
 {
     let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
@@ -13566,13 +13389,13 @@ parse_COSE_Sign
         [c0·1; 1usize];
     let x: crate::cbordetveraux::cbor_raw =
         crate::cbordetver::cbor_det_array_iterator_next(&mut pc2);
-    let w1: evercddl_empty_or_serialized_map = parse_empty_or_serialized_map(x);
+    let w1: empty_or_serialized_map = parse_empty_or_serialized_map(x);
     let mut pc20: [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
         [c11; 1usize];
     let x0: crate::cbordetveraux::cbor_raw =
         crate::cbordetver::cbor_det_array_iterator_next(&mut pc20);
-    let w2: evercddl_header_map = parse_header_map(x0);
-    let w10: (evercddl_empty_or_serialized_map, evercddl_header_map) = (w1,w2);
+    let w2: header_map = parse_header_map(x0);
+    let w10: (empty_or_serialized_map, header_map) = (w1,w2);
     let rlen010: u64 = crate::cbordetver::cbor_det_array_iterator_length(c1);
     let mut pc10: [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
         [c1; 1usize];
@@ -13598,16 +13421,16 @@ parse_COSE_Sign
     let x1: crate::cbordetveraux::cbor_raw =
         crate::cbordetver::cbor_det_array_iterator_next(&mut pc21);
     let test: bool = validate_bstr(x1);
-    let w11: either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil =
+    let w11: either__COSE_Format_bstr_COSE_Format_nil =
         if test
         {
             let res: &[u8] = parse_bstr(x1);
-            either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil::Inl { v: res }
+            either__COSE_Format_bstr_COSE_Format_nil::Inl { v: res }
         }
         else
         {
-            let res: evercddl_nil = parse_nil(x1);
-            either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil::Inr { v: res }
+            let res: nil = parse_nil(x1);
+            either__COSE_Format_bstr_COSE_Format_nil::Inr { v: res }
         };
     let mut pc22: [crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
         [c110; 1usize];
@@ -13640,57 +13463,57 @@ parse_COSE_Sign
         { v: i2 };
     let
     w21:
-    (either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil,
+    (either__COSE_Format_bstr_COSE_Format_nil,
     either__CDDL_Pulse_Types_slice·COSE_Format_aux_env39_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env39_type_1)
     =
         (w11,w20);
     let
     res1:
-    ((evercddl_empty_or_serialized_map, evercddl_header_map),
-    (either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil,
+    ((empty_or_serialized_map, header_map),
+    (either__COSE_Format_bstr_COSE_Format_nil,
     either__CDDL_Pulse_Types_slice·COSE_Format_aux_env39_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env39_type_1))
     =
         (w10,w21);
-    evercddl_COSE_Sign_right(res1)
+    cose_sign_right(res1)
 }
 
 /**
-Serializer for evercddl_COSE_Sign
+Serializer for cose_sign
 */
 pub fn
-serialize_COSE_Sign(c: evercddl_COSE_Sign, out: &mut [u8]) ->
+serialize_cose_sign(c: cose_sign, out: &mut [u8]) ->
     usize
 {
     let
     c·:
-    ((evercddl_empty_or_serialized_map, evercddl_header_map),
-    (either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil,
+    ((empty_or_serialized_map, header_map),
+    (either__COSE_Format_bstr_COSE_Format_nil,
     either__CDDL_Pulse_Types_slice·COSE_Format_aux_env39_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env39_type_1))
     =
-        evercddl_COSE_Sign_left(c);
+        cose_sign_left(c);
     let mut pcount: [u64; 1] = [0u64; 1usize];
     let mut psize: [usize; 1] = [0usize; 1usize];
     let
     _letpattern:
-    ((evercddl_empty_or_serialized_map, evercddl_header_map),
-    (either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil,
+    ((empty_or_serialized_map, header_map),
+    (either__COSE_Format_bstr_COSE_Format_nil,
     either__CDDL_Pulse_Types_slice·COSE_Format_aux_env39_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env39_type_1))
     =
         c·;
     let res: bool =
         {
-            let c1: (evercddl_empty_or_serialized_map, evercddl_header_map) = _letpattern.0;
+            let c1: (empty_or_serialized_map, header_map) = _letpattern.0;
             let
             c2:
-            (either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil,
+            (either__COSE_Format_bstr_COSE_Format_nil,
             either__CDDL_Pulse_Types_slice·COSE_Format_aux_env39_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env39_type_1)
             =
                 _letpattern.1;
-            let _letpattern1: (evercddl_empty_or_serialized_map, evercddl_header_map) = c1;
+            let _letpattern1: (empty_or_serialized_map, header_map) = c1;
             let res1: bool =
                 {
-                    let c11: evercddl_empty_or_serialized_map = _letpattern1.0;
-                    let c21: evercddl_header_map = _letpattern1.1;
+                    let c11: empty_or_serialized_map = _letpattern1.0;
+                    let c21: header_map = _letpattern1.1;
                     let count: u64 = (&pcount)[0];
                     let res1: bool =
                         if count < 18446744073709551615u64
@@ -13740,12 +13563,11 @@ serialize_COSE_Sign(c: evercddl_COSE_Sign, out: &mut [u8]) ->
             {
                 let
                 _letpattern10:
-                (either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil,
+                (either__COSE_Format_bstr_COSE_Format_nil,
                 either__CDDL_Pulse_Types_slice·COSE_Format_aux_env39_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env39_type_1)
                 =
                     c2;
-                let c11: either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil =
-                    _letpattern10.0;
+                let c11: either__COSE_Format_bstr_COSE_Format_nil = _letpattern10.0;
                 let
                 c21:
                 either__CDDL_Pulse_Types_slice·COSE_Format_aux_env39_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env39_type_1
@@ -13762,12 +13584,10 @@ serialize_COSE_Sign(c: evercddl_COSE_Sign, out: &mut [u8]) ->
                         let size1: usize =
                             match c11
                             {
-                                either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil::Inl
-                                { v: c12 }
-                                => serialize_bstr(c12, out1),
-                                either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil::Inr
-                                { v: c22 }
-                                => serialize_nil(c22, out1),
+                                either__COSE_Format_bstr_COSE_Format_nil::Inl { v: c12 } =>
+                                  serialize_bstr(c12, out1),
+                                either__COSE_Format_bstr_COSE_Format_nil::Inr { v: c22 } =>
+                                  serialize_nil(c22, out1),
                                 _ => panic!("Incomplete pattern matching")
                             };
                         if size1 == 0usize
@@ -13818,7 +13638,7 @@ serialize_COSE_Sign(c: evercddl_COSE_Sign, out: &mut [u8]) ->
                                       cond
                                       {
                                           let i: usize = (&pi)[0];
-                                          let x: evercddl_COSE_Signature = c12[i];
+                                          let x: cose_signature = c12[i];
                                           let res0: bool =
                                               aux_env39_serialize_1(
                                                   x,
@@ -13935,7 +13755,7 @@ serialize_COSE_Sign(c: evercddl_COSE_Sign, out: &mut [u8]) ->
                                                       i.cddl_array_iterator_contents,
                                                       len0.wrapping_sub(len1)
                                                   );
-                                              let x: evercddl_COSE_Signature =
+                                              let x: cose_signature =
                                                   (i.cddl_array_iterator_impl_parse)(tri);
                                               let res0: bool =
                                                   aux_env39_serialize_1(
@@ -14007,14 +13827,14 @@ serialize_COSE_Sign(c: evercddl_COSE_Sign, out: &mut [u8]) ->
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_COSE_Sign···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_cose_sign···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (evercddl_COSE_Sign <'a>, &'a [u8]) }
+    Some { v: (cose_sign <'a>, &'a [u8]) }
 }
 
-pub fn validate_and_parse_COSE_Sign <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_COSE_Sign···Pulse_Lib_Slice_slice·uint8_t·
+pub fn validate_and_parse_cose_sign <'a>(s: &'a [u8]) ->
+    option__·COSE_Format_cose_sign···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -14025,7 +13845,7 @@ pub fn validate_and_parse_COSE_Sign <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_COSE_Sign···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_cose_sign···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -14033,17 +13853,15 @@ pub fn validate_and_parse_COSE_Sign <'a>(s: &'a [u8]) ->
               let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
               let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
               let rem: &[u8] = _letpattern.1;
-              let test: bool = validate_COSE_Sign(rl);
+              let test: bool = validate_cose_sign(rl);
               if test
               {
-                  let x: evercddl_COSE_Sign = parse_COSE_Sign(rl);
-                  option__·COSE_Format_evercddl_COSE_Sign···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: cose_sign = parse_cose_sign(rl);
+                  option__·COSE_Format_cose_sign···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              {
-                  option__·COSE_Format_evercddl_COSE_Sign···Pulse_Lib_Slice_slice·uint8_t·::None
-              }
+              { option__·COSE_Format_cose_sign···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -14062,7 +13880,7 @@ pub fn next_iterate_array_aux_env39_type_1 <'a>(
     [array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env39_type_1
     <'a>]
 ) ->
-    evercddl_COSE_Signature
+    cose_signature
     <'a>
 {
     let
@@ -14097,7 +13915,7 @@ pub fn next_iterate_array_aux_env39_type_1 <'a>(
     (i.cddl_array_iterator_impl_parse)(tri)
 }
 
-pub fn validate_COSE_Sign_Tagged(c: crate::cbordetveraux::cbor_raw) -> bool
+pub fn validate_cose_sign_tagged(c: crate::cbordetveraux::cbor_raw) -> bool
 {
     let k: u8 = crate::cbordetver::cbor_det_major_type(c);
     if k == crate::cbordetveraux::cbor_major_type_tagged
@@ -14120,7 +13938,7 @@ pub fn validate_COSE_Sign_Tagged(c: crate::cbordetveraux::cbor_raw) -> bool
                     crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
                 };
-            validate_COSE_Sign(c·)
+            validate_cose_sign(c·)
         }
         else
         { false }
@@ -14129,27 +13947,25 @@ pub fn validate_COSE_Sign_Tagged(c: crate::cbordetveraux::cbor_raw) -> bool
     { false }
 }
 
-pub type evercddl_COSE_Sign_Tagged <'a> = evercddl_COSE_Sign <'a>;
+pub type cose_sign_tagged <'a> = cose_sign <'a>;
 
-pub fn uu___is_Mkevercddl_COSE_Sign_Tagged0(projectee: evercddl_COSE_Sign) -> bool
+pub fn uu___is_Mkcose_sign_tagged0(projectee: cose_sign) -> bool
 {
-    crate::lowstar::ignore::ignore::<evercddl_COSE_Sign>(projectee);
+    crate::lowstar::ignore::ignore::<cose_sign>(projectee);
     true
 }
 
-fn evercddl_COSE_Sign_Tagged_right <'a>(x1: evercddl_COSE_Sign <'a>) -> evercddl_COSE_Sign <'a>
-{ x1 }
+fn cose_sign_tagged_right <'a>(x1: cose_sign <'a>) -> cose_sign <'a> { x1 }
 
-fn evercddl_COSE_Sign_Tagged_left <'a>(x3: evercddl_COSE_Sign <'a>) -> evercddl_COSE_Sign <'a>
-{ x3 }
+fn cose_sign_tagged_left <'a>(x3: cose_sign <'a>) -> cose_sign <'a> { x3 }
 
 /**
-Parser for evercddl_COSE_Sign_Tagged
+Parser for cose_sign_tagged
 */
 pub fn
-parse_COSE_Sign_Tagged
+parse_cose_sign_tagged
 <'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
-    evercddl_COSE_Sign
+    cose_sign
     <'a>
 {
     let v1: crate::cbordetver::cbor_det_view = crate::cbordetver::cbor_det_destruct(c);
@@ -14160,22 +13976,22 @@ parse_COSE_Sign_Tagged
             crate::cbordetver::cbor_det_view::Tagged { payload: a, .. } => a,
             _ => panic!("Incomplete pattern matching")
         };
-    let res1: evercddl_COSE_Sign = parse_COSE_Sign(cpl);
-    evercddl_COSE_Sign_Tagged_right(res1)
+    let res1: cose_sign = parse_cose_sign(cpl);
+    cose_sign_tagged_right(res1)
 }
 
 /**
-Serializer for evercddl_COSE_Sign_Tagged
+Serializer for cose_sign_tagged
 */
 pub fn
-serialize_COSE_Sign_Tagged(c: evercddl_COSE_Sign, out: &mut [u8]) ->
+serialize_cose_sign_tagged(c: cose_sign, out: &mut [u8]) ->
     usize
 {
-    let c·: evercddl_COSE_Sign = evercddl_COSE_Sign_Tagged_left(c);
-    let c·1: (u64, evercddl_COSE_Sign) = (98u64,c·);
-    let _letpattern: (u64, evercddl_COSE_Sign) = c·1;
+    let c·: cose_sign = cose_sign_tagged_left(c);
+    let c·1: (u64, cose_sign) = (98u64,c·);
+    let _letpattern: (u64, cose_sign) = c·1;
     let ctag: u64 = _letpattern.0;
-    let cpayload: evercddl_COSE_Sign = _letpattern.1;
+    let cpayload: cose_sign = _letpattern.1;
     let tsz: usize = crate::cbordetver::cbor_det_serialize_tag(ctag, out);
     if tsz == 0usize
     { 0usize }
@@ -14183,22 +13999,20 @@ serialize_COSE_Sign_Tagged(c: evercddl_COSE_Sign, out: &mut [u8]) ->
     {
         let _letpattern1: (&mut [u8], &mut [u8]) = out.split_at_mut(tsz);
         let out2: &mut [u8] = _letpattern1.1;
-        let psz: usize = serialize_COSE_Sign(cpayload, out2);
+        let psz: usize = serialize_cose_sign(cpayload, out2);
         if psz == 0usize { 0usize } else { tsz.wrapping_add(psz) }
     }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum
-option__·COSE_Format_evercddl_COSE_Sign_Tagged···Pulse_Lib_Slice_slice·uint8_t·
-<'a>
+pub enum option__·COSE_Format_cose_sign_tagged···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (evercddl_COSE_Sign <'a>, &'a [u8]) }
+    Some { v: (cose_sign <'a>, &'a [u8]) }
 }
 
-pub fn validate_and_parse_COSE_Sign_Tagged <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_COSE_Sign_Tagged···Pulse_Lib_Slice_slice·uint8_t·
+pub fn validate_and_parse_cose_sign_tagged <'a>(s: &'a [u8]) ->
+    option__·COSE_Format_cose_sign_tagged···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -14209,8 +14023,7 @@ pub fn validate_and_parse_COSE_Sign_Tagged <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        =>
-          option__·COSE_Format_evercddl_COSE_Sign_Tagged···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_cose_sign_tagged···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -14218,140 +14031,128 @@ pub fn validate_and_parse_COSE_Sign_Tagged <'a>(s: &'a [u8]) ->
               let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
               let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
               let rem: &[u8] = _letpattern.1;
-              let test: bool = validate_COSE_Sign_Tagged(rl);
+              let test: bool = validate_cose_sign_tagged(rl);
               if test
               {
-                  let x: evercddl_COSE_Sign = parse_COSE_Sign_Tagged(rl);
-                  option__·COSE_Format_evercddl_COSE_Sign_Tagged···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: cose_sign = parse_cose_sign_tagged(rl);
+                  option__·COSE_Format_cose_sign_tagged···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              {
-                  option__·COSE_Format_evercddl_COSE_Sign_Tagged···Pulse_Lib_Slice_slice·uint8_t·::None
-              }
+              { option__·COSE_Format_cose_sign_tagged···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
-pub fn validate_COSE_Tagged_Message(c: crate::cbordetveraux::cbor_raw) -> bool
+pub fn validate_cose_tagged_message(c: crate::cbordetveraux::cbor_raw) -> bool
 {
-    let test: bool = validate_COSE_Sign_Tagged(c);
-    if test { true } else { validate_COSE_Sign1_Tagged(c) }
+    let test: bool = validate_cose_sign_tagged(c);
+    if test { true } else { validate_cose_sign1_tagged(c) }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-enum evercddl_COSE_Tagged_Message_ugly <'a>
+enum cose_tagged_message_ugly <'a>
 {
-    Inl { v: evercddl_COSE_Sign <'a> },
-    Inr { v: evercddl_COSE_Sign1 <'a> }
+    Inl { v: cose_sign <'a> },
+    Inr { v: cose_sign1 <'a> }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-enum evercddl_COSE_Tagged_Message_tags
+enum cose_tagged_message_tags
 {
-    Mkevercddl_COSE_Tagged_Message0,
-    Mkevercddl_COSE_Tagged_Message1
+    Mkcose_tagged_message0,
+    Mkcose_tagged_message1
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum evercddl_COSE_Tagged_Message <'a>
+pub enum cose_tagged_message <'a>
 {
-    Mkevercddl_COSE_Tagged_Message0 { _x0: evercddl_COSE_Sign <'a> },
-    Mkevercddl_COSE_Tagged_Message1 { _x0: evercddl_COSE_Sign1 <'a> }
+    Mkcose_tagged_message0 { _x0: cose_sign <'a> },
+    Mkcose_tagged_message1 { _x0: cose_sign1 <'a> }
 }
 
-pub fn uu___is_Mkevercddl_COSE_Tagged_Message0(projectee: evercddl_COSE_Tagged_Message) -> bool
-{
-    match projectee
-    { evercddl_COSE_Tagged_Message::Mkevercddl_COSE_Tagged_Message0 { .. } => true, _ => false }
-}
+pub fn uu___is_Mkcose_tagged_message0(projectee: cose_tagged_message) -> bool
+{ match projectee { cose_tagged_message::Mkcose_tagged_message0 { .. } => true, _ => false } }
 
-pub fn uu___is_Mkevercddl_COSE_Tagged_Message1(projectee: evercddl_COSE_Tagged_Message) -> bool
-{
-    match projectee
-    { evercddl_COSE_Tagged_Message::Mkevercddl_COSE_Tagged_Message1 { .. } => true, _ => false }
-}
+pub fn uu___is_Mkcose_tagged_message1(projectee: cose_tagged_message) -> bool
+{ match projectee { cose_tagged_message::Mkcose_tagged_message1 { .. } => true, _ => false } }
 
-fn evercddl_COSE_Tagged_Message_right <'a>(x2: evercddl_COSE_Tagged_Message_ugly <'a>) ->
-    evercddl_COSE_Tagged_Message
+fn cose_tagged_message_right <'a>(x2: cose_tagged_message_ugly <'a>) ->
+    cose_tagged_message
     <'a>
 {
     match x2
     {
-        evercddl_COSE_Tagged_Message_ugly::Inl { v: x3 } =>
-          evercddl_COSE_Tagged_Message::Mkevercddl_COSE_Tagged_Message0 { _x0: x3 },
-        evercddl_COSE_Tagged_Message_ugly::Inr { v: x4 } =>
-          evercddl_COSE_Tagged_Message::Mkevercddl_COSE_Tagged_Message1 { _x0: x4 },
+        cose_tagged_message_ugly::Inl { v: x3 } =>
+          cose_tagged_message::Mkcose_tagged_message0 { _x0: x3 },
+        cose_tagged_message_ugly::Inr { v: x4 } =>
+          cose_tagged_message::Mkcose_tagged_message1 { _x0: x4 },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
-fn evercddl_COSE_Tagged_Message_left <'a>(x7: evercddl_COSE_Tagged_Message <'a>) ->
-    evercddl_COSE_Tagged_Message_ugly
-    <'a>
+fn cose_tagged_message_left <'a>(x7: cose_tagged_message <'a>) -> cose_tagged_message_ugly <'a>
 {
     match x7
     {
-        evercddl_COSE_Tagged_Message::Mkevercddl_COSE_Tagged_Message0 { _x0: x10 } =>
-          evercddl_COSE_Tagged_Message_ugly::Inl { v: x10 },
-        evercddl_COSE_Tagged_Message::Mkevercddl_COSE_Tagged_Message1 { _x0: x12 } =>
-          evercddl_COSE_Tagged_Message_ugly::Inr { v: x12 },
+        cose_tagged_message::Mkcose_tagged_message0 { _x0: x10 } =>
+          cose_tagged_message_ugly::Inl { v: x10 },
+        cose_tagged_message::Mkcose_tagged_message1 { _x0: x12 } =>
+          cose_tagged_message_ugly::Inr { v: x12 },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
 /**
-Parser for evercddl_COSE_Tagged_Message
+Parser for cose_tagged_message
 */
 pub fn
-parse_COSE_Tagged_Message
+parse_cose_tagged_message
 <'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
-    evercddl_COSE_Tagged_Message
+    cose_tagged_message
     <'a>
 {
-    let test: bool = validate_COSE_Sign_Tagged(c);
-    let res1: evercddl_COSE_Tagged_Message_ugly =
+    let test: bool = validate_cose_sign_tagged(c);
+    let res1: cose_tagged_message_ugly =
         if test
         {
-            let res: evercddl_COSE_Sign = parse_COSE_Sign_Tagged(c);
-            evercddl_COSE_Tagged_Message_ugly::Inl { v: res }
+            let res: cose_sign = parse_cose_sign_tagged(c);
+            cose_tagged_message_ugly::Inl { v: res }
         }
         else
         {
-            let res: evercddl_COSE_Sign1 = parse_COSE_Sign1_Tagged(c);
-            evercddl_COSE_Tagged_Message_ugly::Inr { v: res }
+            let res: cose_sign1 = parse_cose_sign1_tagged(c);
+            cose_tagged_message_ugly::Inr { v: res }
         };
-    evercddl_COSE_Tagged_Message_right(res1)
+    cose_tagged_message_right(res1)
 }
 
 /**
-Serializer for evercddl_COSE_Tagged_Message
+Serializer for cose_tagged_message
 */
 pub fn
-serialize_COSE_Tagged_Message(c: evercddl_COSE_Tagged_Message, out: &mut [u8]) ->
+serialize_cose_tagged_message(c: cose_tagged_message, out: &mut [u8]) ->
     usize
 {
-    let c·: evercddl_COSE_Tagged_Message_ugly = evercddl_COSE_Tagged_Message_left(c);
+    let c·: cose_tagged_message_ugly = cose_tagged_message_left(c);
     match c·
     {
-        evercddl_COSE_Tagged_Message_ugly::Inl { v: c1 } => serialize_COSE_Sign_Tagged(c1, out),
-        evercddl_COSE_Tagged_Message_ugly::Inr { v: c2 } => serialize_COSE_Sign1_Tagged(c2, out),
+        cose_tagged_message_ugly::Inl { v: c1 } => serialize_cose_sign_tagged(c1, out),
+        cose_tagged_message_ugly::Inr { v: c2 } => serialize_cose_sign1_tagged(c2, out),
         _ => panic!("Incomplete pattern matching")
     }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum
-option__·COSE_Format_evercddl_COSE_Tagged_Message···Pulse_Lib_Slice_slice·uint8_t·
-<'a>
+pub enum option__·COSE_Format_cose_tagged_message···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (evercddl_COSE_Tagged_Message <'a>, &'a [u8]) }
+    Some { v: (cose_tagged_message <'a>, &'a [u8]) }
 }
 
-pub fn validate_and_parse_COSE_Tagged_Message <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_COSE_Tagged_Message···Pulse_Lib_Slice_slice·uint8_t·
+pub fn validate_and_parse_cose_tagged_message <'a>(s: &'a [u8]) ->
+    option__·COSE_Format_cose_tagged_message···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -14362,8 +14163,7 @@ pub fn validate_and_parse_COSE_Tagged_Message <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        =>
-          option__·COSE_Format_evercddl_COSE_Tagged_Message···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_cose_tagged_message···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -14371,148 +14171,136 @@ pub fn validate_and_parse_COSE_Tagged_Message <'a>(s: &'a [u8]) ->
               let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
               let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
               let rem: &[u8] = _letpattern.1;
-              let test: bool = validate_COSE_Tagged_Message(rl);
+              let test: bool = validate_cose_tagged_message(rl);
               if test
               {
-                  let x: evercddl_COSE_Tagged_Message = parse_COSE_Tagged_Message(rl);
-                  option__·COSE_Format_evercddl_COSE_Tagged_Message···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: cose_tagged_message = parse_cose_tagged_message(rl);
+                  option__·COSE_Format_cose_tagged_message···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
               {
-                  option__·COSE_Format_evercddl_COSE_Tagged_Message···Pulse_Lib_Slice_slice·uint8_t·::None
+                  option__·COSE_Format_cose_tagged_message···Pulse_Lib_Slice_slice·uint8_t·::None
               }
           },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
-pub fn validate_COSE_Untagged_Message(c: crate::cbordetveraux::cbor_raw) -> bool
+pub fn validate_cose_untagged_message(c: crate::cbordetveraux::cbor_raw) -> bool
 {
-    let test: bool = validate_COSE_Sign(c);
-    if test { true } else { validate_COSE_Sign1(c) }
+    let test: bool = validate_cose_sign(c);
+    if test { true } else { validate_cose_sign1(c) }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-enum evercddl_COSE_Untagged_Message_ugly <'a>
+enum cose_untagged_message_ugly <'a>
 {
-    Inl { v: evercddl_COSE_Sign <'a> },
-    Inr { v: evercddl_COSE_Sign1 <'a> }
+    Inl { v: cose_sign <'a> },
+    Inr { v: cose_sign1 <'a> }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-enum evercddl_COSE_Untagged_Message_tags
+enum cose_untagged_message_tags
 {
-    Mkevercddl_COSE_Untagged_Message0,
-    Mkevercddl_COSE_Untagged_Message1
+    Mkcose_untagged_message0,
+    Mkcose_untagged_message1
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum evercddl_COSE_Untagged_Message <'a>
+pub enum cose_untagged_message <'a>
 {
-    Mkevercddl_COSE_Untagged_Message0 { _x0: evercddl_COSE_Sign <'a> },
-    Mkevercddl_COSE_Untagged_Message1 { _x0: evercddl_COSE_Sign1 <'a> }
+    Mkcose_untagged_message0 { _x0: cose_sign <'a> },
+    Mkcose_untagged_message1 { _x0: cose_sign1 <'a> }
 }
 
-pub fn uu___is_Mkevercddl_COSE_Untagged_Message0(projectee: evercddl_COSE_Untagged_Message) ->
-    bool
+pub fn uu___is_Mkcose_untagged_message0(projectee: cose_untagged_message) -> bool
 {
-    match projectee
-    {
-        evercddl_COSE_Untagged_Message::Mkevercddl_COSE_Untagged_Message0 { .. } => true,
-        _ => false
-    }
+    match projectee { cose_untagged_message::Mkcose_untagged_message0 { .. } => true, _ => false }
 }
 
-pub fn uu___is_Mkevercddl_COSE_Untagged_Message1(projectee: evercddl_COSE_Untagged_Message) ->
-    bool
+pub fn uu___is_Mkcose_untagged_message1(projectee: cose_untagged_message) -> bool
 {
-    match projectee
-    {
-        evercddl_COSE_Untagged_Message::Mkevercddl_COSE_Untagged_Message1 { .. } => true,
-        _ => false
-    }
+    match projectee { cose_untagged_message::Mkcose_untagged_message1 { .. } => true, _ => false }
 }
 
-fn evercddl_COSE_Untagged_Message_right <'a>(x2: evercddl_COSE_Untagged_Message_ugly <'a>) ->
-    evercddl_COSE_Untagged_Message
+fn cose_untagged_message_right <'a>(x2: cose_untagged_message_ugly <'a>) ->
+    cose_untagged_message
     <'a>
 {
     match x2
     {
-        evercddl_COSE_Untagged_Message_ugly::Inl { v: x3 } =>
-          evercddl_COSE_Untagged_Message::Mkevercddl_COSE_Untagged_Message0 { _x0: x3 },
-        evercddl_COSE_Untagged_Message_ugly::Inr { v: x4 } =>
-          evercddl_COSE_Untagged_Message::Mkevercddl_COSE_Untagged_Message1 { _x0: x4 },
+        cose_untagged_message_ugly::Inl { v: x3 } =>
+          cose_untagged_message::Mkcose_untagged_message0 { _x0: x3 },
+        cose_untagged_message_ugly::Inr { v: x4 } =>
+          cose_untagged_message::Mkcose_untagged_message1 { _x0: x4 },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
-fn evercddl_COSE_Untagged_Message_left <'a>(x7: evercddl_COSE_Untagged_Message <'a>) ->
-    evercddl_COSE_Untagged_Message_ugly
+fn cose_untagged_message_left <'a>(x7: cose_untagged_message <'a>) ->
+    cose_untagged_message_ugly
     <'a>
 {
     match x7
     {
-        evercddl_COSE_Untagged_Message::Mkevercddl_COSE_Untagged_Message0 { _x0: x10 } =>
-          evercddl_COSE_Untagged_Message_ugly::Inl { v: x10 },
-        evercddl_COSE_Untagged_Message::Mkevercddl_COSE_Untagged_Message1 { _x0: x12 } =>
-          evercddl_COSE_Untagged_Message_ugly::Inr { v: x12 },
+        cose_untagged_message::Mkcose_untagged_message0 { _x0: x10 } =>
+          cose_untagged_message_ugly::Inl { v: x10 },
+        cose_untagged_message::Mkcose_untagged_message1 { _x0: x12 } =>
+          cose_untagged_message_ugly::Inr { v: x12 },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
 /**
-Parser for evercddl_COSE_Untagged_Message
+Parser for cose_untagged_message
 */
 pub fn
-parse_COSE_Untagged_Message
+parse_cose_untagged_message
 <'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
-    evercddl_COSE_Untagged_Message
+    cose_untagged_message
     <'a>
 {
-    let test: bool = validate_COSE_Sign(c);
-    let res1: evercddl_COSE_Untagged_Message_ugly =
+    let test: bool = validate_cose_sign(c);
+    let res1: cose_untagged_message_ugly =
         if test
         {
-            let res: evercddl_COSE_Sign = parse_COSE_Sign(c);
-            evercddl_COSE_Untagged_Message_ugly::Inl { v: res }
+            let res: cose_sign = parse_cose_sign(c);
+            cose_untagged_message_ugly::Inl { v: res }
         }
         else
         {
-            let res: evercddl_COSE_Sign1 = parse_COSE_Sign1(c);
-            evercddl_COSE_Untagged_Message_ugly::Inr { v: res }
+            let res: cose_sign1 = parse_cose_sign1(c);
+            cose_untagged_message_ugly::Inr { v: res }
         };
-    evercddl_COSE_Untagged_Message_right(res1)
+    cose_untagged_message_right(res1)
 }
 
 /**
-Serializer for evercddl_COSE_Untagged_Message
+Serializer for cose_untagged_message
 */
 pub fn
-serialize_COSE_Untagged_Message(c: evercddl_COSE_Untagged_Message, out: &mut [u8]) ->
+serialize_cose_untagged_message(c: cose_untagged_message, out: &mut [u8]) ->
     usize
 {
-    let c·: evercddl_COSE_Untagged_Message_ugly = evercddl_COSE_Untagged_Message_left(c);
+    let c·: cose_untagged_message_ugly = cose_untagged_message_left(c);
     match c·
     {
-        evercddl_COSE_Untagged_Message_ugly::Inl { v: c1 } => serialize_COSE_Sign(c1, out),
-        evercddl_COSE_Untagged_Message_ugly::Inr { v: c2 } => serialize_COSE_Sign1(c2, out),
+        cose_untagged_message_ugly::Inl { v: c1 } => serialize_cose_sign(c1, out),
+        cose_untagged_message_ugly::Inr { v: c2 } => serialize_cose_sign1(c2, out),
         _ => panic!("Incomplete pattern matching")
     }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum
-option__·COSE_Format_evercddl_COSE_Untagged_Message···Pulse_Lib_Slice_slice·uint8_t·
-<'a>
+pub enum option__·COSE_Format_cose_untagged_message···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (evercddl_COSE_Untagged_Message <'a>, &'a [u8]) }
+    Some { v: (cose_untagged_message <'a>, &'a [u8]) }
 }
 
-pub fn validate_and_parse_COSE_Untagged_Message <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_COSE_Untagged_Message···Pulse_Lib_Slice_slice·uint8_t·
+pub fn validate_and_parse_cose_untagged_message <'a>(s: &'a [u8]) ->
+    option__·COSE_Format_cose_untagged_message···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -14523,8 +14311,7 @@ pub fn validate_and_parse_COSE_Untagged_Message <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        =>
-          option__·COSE_Format_evercddl_COSE_Untagged_Message···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_cose_untagged_message···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -14532,140 +14319,124 @@ pub fn validate_and_parse_COSE_Untagged_Message <'a>(s: &'a [u8]) ->
               let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
               let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
               let rem: &[u8] = _letpattern.1;
-              let test: bool = validate_COSE_Untagged_Message(rl);
+              let test: bool = validate_cose_untagged_message(rl);
               if test
               {
-                  let x: evercddl_COSE_Untagged_Message = parse_COSE_Untagged_Message(rl);
-                  option__·COSE_Format_evercddl_COSE_Untagged_Message···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: cose_untagged_message = parse_cose_untagged_message(rl);
+                  option__·COSE_Format_cose_untagged_message···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
               {
-                  option__·COSE_Format_evercddl_COSE_Untagged_Message···Pulse_Lib_Slice_slice·uint8_t·::None
+                  option__·COSE_Format_cose_untagged_message···Pulse_Lib_Slice_slice·uint8_t·::None
               }
           },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
-pub fn validate_COSE_Messages(c: crate::cbordetveraux::cbor_raw) -> bool
+pub fn validate_cose_messages(c: crate::cbordetveraux::cbor_raw) -> bool
 {
-    let test: bool = validate_COSE_Untagged_Message(c);
-    if test { true } else { validate_COSE_Tagged_Message(c) }
+    let test: bool = validate_cose_untagged_message(c);
+    if test { true } else { validate_cose_tagged_message(c) }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-enum evercddl_COSE_Messages_ugly <'a>
+enum cose_messages_ugly <'a>
 {
-    Inl { v: evercddl_COSE_Untagged_Message <'a> },
-    Inr { v: evercddl_COSE_Tagged_Message <'a> }
+    Inl { v: cose_untagged_message <'a> },
+    Inr { v: cose_tagged_message <'a> }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-enum evercddl_COSE_Messages_tags
+enum cose_messages_tags
 {
-    Mkevercddl_COSE_Messages0,
-    Mkevercddl_COSE_Messages1
+    Mkcose_messages0,
+    Mkcose_messages1
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum evercddl_COSE_Messages <'a>
+pub enum cose_messages <'a>
 {
-    Mkevercddl_COSE_Messages0 { _x0: evercddl_COSE_Untagged_Message <'a> },
-    Mkevercddl_COSE_Messages1 { _x0: evercddl_COSE_Tagged_Message <'a> }
+    Mkcose_messages0 { _x0: cose_untagged_message <'a> },
+    Mkcose_messages1 { _x0: cose_tagged_message <'a> }
 }
 
-pub fn uu___is_Mkevercddl_COSE_Messages0(projectee: evercddl_COSE_Messages) -> bool
-{
-    match projectee
-    { evercddl_COSE_Messages::Mkevercddl_COSE_Messages0 { .. } => true, _ => false }
-}
+pub fn uu___is_Mkcose_messages0(projectee: cose_messages) -> bool
+{ match projectee { cose_messages::Mkcose_messages0 { .. } => true, _ => false } }
 
-pub fn uu___is_Mkevercddl_COSE_Messages1(projectee: evercddl_COSE_Messages) -> bool
-{
-    match projectee
-    { evercddl_COSE_Messages::Mkevercddl_COSE_Messages1 { .. } => true, _ => false }
-}
+pub fn uu___is_Mkcose_messages1(projectee: cose_messages) -> bool
+{ match projectee { cose_messages::Mkcose_messages1 { .. } => true, _ => false } }
 
-fn evercddl_COSE_Messages_right <'a>(x2: evercddl_COSE_Messages_ugly <'a>) ->
-    evercddl_COSE_Messages
-    <'a>
+fn cose_messages_right <'a>(x2: cose_messages_ugly <'a>) -> cose_messages <'a>
 {
     match x2
     {
-        evercddl_COSE_Messages_ugly::Inl { v: x3 } =>
-          evercddl_COSE_Messages::Mkevercddl_COSE_Messages0 { _x0: x3 },
-        evercddl_COSE_Messages_ugly::Inr { v: x4 } =>
-          evercddl_COSE_Messages::Mkevercddl_COSE_Messages1 { _x0: x4 },
+        cose_messages_ugly::Inl { v: x3 } => cose_messages::Mkcose_messages0 { _x0: x3 },
+        cose_messages_ugly::Inr { v: x4 } => cose_messages::Mkcose_messages1 { _x0: x4 },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
-fn evercddl_COSE_Messages_left <'a>(x7: evercddl_COSE_Messages <'a>) ->
-    evercddl_COSE_Messages_ugly
-    <'a>
+fn cose_messages_left <'a>(x7: cose_messages <'a>) -> cose_messages_ugly <'a>
 {
     match x7
     {
-        evercddl_COSE_Messages::Mkevercddl_COSE_Messages0 { _x0: x10 } =>
-          evercddl_COSE_Messages_ugly::Inl { v: x10 },
-        evercddl_COSE_Messages::Mkevercddl_COSE_Messages1 { _x0: x12 } =>
-          evercddl_COSE_Messages_ugly::Inr { v: x12 },
+        cose_messages::Mkcose_messages0 { _x0: x10 } => cose_messages_ugly::Inl { v: x10 },
+        cose_messages::Mkcose_messages1 { _x0: x12 } => cose_messages_ugly::Inr { v: x12 },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
 /**
-Parser for evercddl_COSE_Messages
+Parser for cose_messages
 */
 pub fn
-parse_COSE_Messages
+parse_cose_messages
 <'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
-    evercddl_COSE_Messages
+    cose_messages
     <'a>
 {
-    let test: bool = validate_COSE_Untagged_Message(c);
-    let res1: evercddl_COSE_Messages_ugly =
+    let test: bool = validate_cose_untagged_message(c);
+    let res1: cose_messages_ugly =
         if test
         {
-            let res: evercddl_COSE_Untagged_Message = parse_COSE_Untagged_Message(c);
-            evercddl_COSE_Messages_ugly::Inl { v: res }
+            let res: cose_untagged_message = parse_cose_untagged_message(c);
+            cose_messages_ugly::Inl { v: res }
         }
         else
         {
-            let res: evercddl_COSE_Tagged_Message = parse_COSE_Tagged_Message(c);
-            evercddl_COSE_Messages_ugly::Inr { v: res }
+            let res: cose_tagged_message = parse_cose_tagged_message(c);
+            cose_messages_ugly::Inr { v: res }
         };
-    evercddl_COSE_Messages_right(res1)
+    cose_messages_right(res1)
 }
 
 /**
-Serializer for evercddl_COSE_Messages
+Serializer for cose_messages
 */
 pub fn
-serialize_COSE_Messages(c: evercddl_COSE_Messages, out: &mut [u8]) ->
+serialize_cose_messages(c: cose_messages, out: &mut [u8]) ->
     usize
 {
-    let c·: evercddl_COSE_Messages_ugly = evercddl_COSE_Messages_left(c);
+    let c·: cose_messages_ugly = cose_messages_left(c);
     match c·
     {
-        evercddl_COSE_Messages_ugly::Inl { v: c1 } => serialize_COSE_Untagged_Message(c1, out),
-        evercddl_COSE_Messages_ugly::Inr { v: c2 } => serialize_COSE_Tagged_Message(c2, out),
+        cose_messages_ugly::Inl { v: c1 } => serialize_cose_untagged_message(c1, out),
+        cose_messages_ugly::Inr { v: c2 } => serialize_cose_tagged_message(c2, out),
         _ => panic!("Incomplete pattern matching")
     }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum
-option__·COSE_Format_evercddl_COSE_Messages···Pulse_Lib_Slice_slice·uint8_t·
-<'a>
+pub enum option__·COSE_Format_cose_messages···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (evercddl_COSE_Messages <'a>, &'a [u8]) }
+    Some { v: (cose_messages <'a>, &'a [u8]) }
 }
 
-pub fn validate_and_parse_COSE_Messages <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_COSE_Messages···Pulse_Lib_Slice_slice·uint8_t·
+pub fn validate_and_parse_cose_messages <'a>(s: &'a [u8]) ->
+    option__·COSE_Format_cose_messages···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -14676,7 +14447,7 @@ pub fn validate_and_parse_COSE_Messages <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_COSE_Messages···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_cose_messages···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -14684,78 +14455,68 @@ pub fn validate_and_parse_COSE_Messages <'a>(s: &'a [u8]) ->
               let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
               let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
               let rem: &[u8] = _letpattern.1;
-              let test: bool = validate_COSE_Messages(rl);
+              let test: bool = validate_cose_messages(rl);
               if test
               {
-                  let x: evercddl_COSE_Messages = parse_COSE_Messages(rl);
-                  option__·COSE_Format_evercddl_COSE_Messages···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: cose_messages = parse_cose_messages(rl);
+                  option__·COSE_Format_cose_messages···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              {
-                  option__·COSE_Format_evercddl_COSE_Messages···Pulse_Lib_Slice_slice·uint8_t·::None
-              }
+              { option__·COSE_Format_cose_messages···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
-pub fn validate_Internal_Types(c: crate::cbordetveraux::cbor_raw) -> bool
-{ validate_Sig_structure(c) }
+pub fn validate_internal_types(c: crate::cbordetveraux::cbor_raw) -> bool
+{ validate_sig_structure(c) }
 
-pub type evercddl_Internal_Types <'a> = evercddl_Sig_structure <'a>;
+pub type internal_types <'a> = sig_structure <'a>;
 
-pub fn uu___is_Mkevercddl_Internal_Types0(projectee: evercddl_Sig_structure) -> bool
+pub fn uu___is_Mkinternal_types0(projectee: sig_structure) -> bool
 {
-    crate::lowstar::ignore::ignore::<evercddl_Sig_structure>(projectee);
+    crate::lowstar::ignore::ignore::<sig_structure>(projectee);
     true
 }
 
-fn evercddl_Internal_Types_right <'a>(x1: evercddl_Sig_structure <'a>) ->
-    evercddl_Sig_structure
-    <'a>
-{ x1 }
+fn internal_types_right <'a>(x1: sig_structure <'a>) -> sig_structure <'a> { x1 }
 
-fn evercddl_Internal_Types_left <'a>(x3: evercddl_Sig_structure <'a>) ->
-    evercddl_Sig_structure
-    <'a>
-{ x3 }
+fn internal_types_left <'a>(x3: sig_structure <'a>) -> sig_structure <'a> { x3 }
 
 /**
-Parser for evercddl_Internal_Types
+Parser for internal_types
 */
 pub fn
-parse_Internal_Types
+parse_internal_types
 <'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
-    evercddl_Sig_structure
+    sig_structure
     <'a>
 {
-    let res1: evercddl_Sig_structure = parse_Sig_structure(c);
-    evercddl_Internal_Types_right(res1)
+    let res1: sig_structure = parse_sig_structure(c);
+    internal_types_right(res1)
 }
 
 /**
-Serializer for evercddl_Internal_Types
+Serializer for internal_types
 */
 pub fn
-serialize_Internal_Types(c: evercddl_Sig_structure, out: &mut [u8]) ->
+serialize_internal_types(c: sig_structure, out: &mut [u8]) ->
     usize
 {
-    let c·: evercddl_Sig_structure = evercddl_Internal_Types_left(c);
-    serialize_Sig_structure(c·, out)
+    let c·: sig_structure = internal_types_left(c);
+    serialize_sig_structure(c·, out)
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum
-option__·COSE_Format_evercddl_Internal_Types···Pulse_Lib_Slice_slice·uint8_t·
-<'a>
+pub enum option__·COSE_Format_internal_types···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (evercddl_Sig_structure <'a>, &'a [u8]) }
+    Some { v: (sig_structure <'a>, &'a [u8]) }
 }
 
-pub fn validate_and_parse_Internal_Types <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_Internal_Types···Pulse_Lib_Slice_slice·uint8_t·
+pub fn validate_and_parse_internal_types <'a>(s: &'a [u8]) ->
+    option__·COSE_Format_internal_types···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -14766,7 +14527,7 @@ pub fn validate_and_parse_Internal_Types <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_Internal_Types···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_internal_types···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -14774,17 +14535,15 @@ pub fn validate_and_parse_Internal_Types <'a>(s: &'a [u8]) ->
               let _letpattern: (crate::cbordetveraux::cbor_raw, &[u8]) = rlrem;
               let rl: crate::cbordetveraux::cbor_raw = _letpattern.0;
               let rem: &[u8] = _letpattern.1;
-              let test: bool = validate_Internal_Types(rl);
+              let test: bool = validate_internal_types(rl);
               if test
               {
-                  let x: evercddl_Sig_structure = parse_Internal_Types(rl);
-                  option__·COSE_Format_evercddl_Internal_Types···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: sig_structure = parse_internal_types(rl);
+                  option__·COSE_Format_internal_types···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              {
-                  option__·COSE_Format_evercddl_Internal_Types···Pulse_Lib_Slice_slice·uint8_t·::None
-              }
+              { option__·COSE_Format_internal_types···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -14792,106 +14551,106 @@ pub fn validate_and_parse_Internal_Types <'a>(s: &'a [u8]) ->
 
 pub fn validate_start(c: crate::cbordetveraux::cbor_raw) -> bool
 {
-    let test: bool = validate_COSE_Messages(c);
-    if test { true } else { validate_Internal_Types(c) }
+    let test: bool = validate_cose_messages(c);
+    if test { true } else { validate_internal_types(c) }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-enum evercddl_start_ugly <'a>
+enum start_ugly <'a>
 {
-    Inl { v: evercddl_COSE_Messages <'a> },
-    Inr { v: evercddl_Sig_structure <'a> }
+    Inl { v: cose_messages <'a> },
+    Inr { v: sig_structure <'a> }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-enum evercddl_start_tags
+enum start_tags
 {
-    Mkevercddl_start0,
-    Mkevercddl_start1
+    Mkstart0,
+    Mkstart1
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum evercddl_start <'a>
+pub enum start <'a>
 {
-    Mkevercddl_start0 { _x0: evercddl_COSE_Messages <'a> },
-    Mkevercddl_start1 { _x0: evercddl_Sig_structure <'a> }
+    Mkstart0 { _x0: cose_messages <'a> },
+    Mkstart1 { _x0: sig_structure <'a> }
 }
 
-pub fn uu___is_Mkevercddl_start0(projectee: evercddl_start) -> bool
-{ match projectee { evercddl_start::Mkevercddl_start0 { .. } => true, _ => false } }
+pub fn uu___is_Mkstart0(projectee: start) -> bool
+{ match projectee { start::Mkstart0 { .. } => true, _ => false } }
 
-pub fn uu___is_Mkevercddl_start1(projectee: evercddl_start) -> bool
-{ match projectee { evercddl_start::Mkevercddl_start1 { .. } => true, _ => false } }
+pub fn uu___is_Mkstart1(projectee: start) -> bool
+{ match projectee { start::Mkstart1 { .. } => true, _ => false } }
 
-fn evercddl_start_right <'a>(x2: evercddl_start_ugly <'a>) -> evercddl_start <'a>
+fn start_right <'a>(x2: start_ugly <'a>) -> start <'a>
 {
     match x2
     {
-        evercddl_start_ugly::Inl { v: x3 } => evercddl_start::Mkevercddl_start0 { _x0: x3 },
-        evercddl_start_ugly::Inr { v: x4 } => evercddl_start::Mkevercddl_start1 { _x0: x4 },
+        start_ugly::Inl { v: x3 } => start::Mkstart0 { _x0: x3 },
+        start_ugly::Inr { v: x4 } => start::Mkstart1 { _x0: x4 },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
-fn evercddl_start_left <'a>(x7: evercddl_start <'a>) -> evercddl_start_ugly <'a>
+fn start_left <'a>(x7: start <'a>) -> start_ugly <'a>
 {
     match x7
     {
-        evercddl_start::Mkevercddl_start0 { _x0: x10 } => evercddl_start_ugly::Inl { v: x10 },
-        evercddl_start::Mkevercddl_start1 { _x0: x12 } => evercddl_start_ugly::Inr { v: x12 },
+        start::Mkstart0 { _x0: x10 } => start_ugly::Inl { v: x10 },
+        start::Mkstart1 { _x0: x12 } => start_ugly::Inr { v: x12 },
         _ => panic!("Incomplete pattern matching")
     }
 }
 
 /**
-Parser for evercddl_start
+Parser for start
 */
 pub fn
 parse_start
 <'a>(c: crate::cbordetveraux::cbor_raw <'a>) ->
-    evercddl_start
+    start
     <'a>
 {
-    let test: bool = validate_COSE_Messages(c);
-    let res1: evercddl_start_ugly =
+    let test: bool = validate_cose_messages(c);
+    let res1: start_ugly =
         if test
         {
-            let res: evercddl_COSE_Messages = parse_COSE_Messages(c);
-            evercddl_start_ugly::Inl { v: res }
+            let res: cose_messages = parse_cose_messages(c);
+            start_ugly::Inl { v: res }
         }
         else
         {
-            let res: evercddl_Sig_structure = parse_Internal_Types(c);
-            evercddl_start_ugly::Inr { v: res }
+            let res: sig_structure = parse_internal_types(c);
+            start_ugly::Inr { v: res }
         };
-    evercddl_start_right(res1)
+    start_right(res1)
 }
 
 /**
-Serializer for evercddl_start
+Serializer for start
 */
 pub fn
-serialize_start(c: evercddl_start, out: &mut [u8]) ->
+serialize_start(c: start, out: &mut [u8]) ->
     usize
 {
-    let c·: evercddl_start_ugly = evercddl_start_left(c);
+    let c·: start_ugly = start_left(c);
     match c·
     {
-        evercddl_start_ugly::Inl { v: c1 } => serialize_COSE_Messages(c1, out),
-        evercddl_start_ugly::Inr { v: c2 } => serialize_Internal_Types(c2, out),
+        start_ugly::Inl { v: c1 } => serialize_cose_messages(c1, out),
+        start_ugly::Inr { v: c2 } => serialize_internal_types(c2, out),
         _ => panic!("Incomplete pattern matching")
     }
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·COSE_Format_evercddl_start···Pulse_Lib_Slice_slice·uint8_t· <'a>
+pub enum option__·COSE_Format_start···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (evercddl_start <'a>, &'a [u8]) }
+    Some { v: (start <'a>, &'a [u8]) }
 }
 
 pub fn validate_and_parse_start <'a>(s: &'a [u8]) ->
-    option__·COSE_Format_evercddl_start···Pulse_Lib_Slice_slice·uint8_t·
+    option__·COSE_Format_start···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let
@@ -14902,7 +14661,7 @@ pub fn validate_and_parse_start <'a>(s: &'a [u8]) ->
     match q
     {
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None
-        => option__·COSE_Format_evercddl_start···Pulse_Lib_Slice_slice·uint8_t·::None,
+        => option__·COSE_Format_start···Pulse_Lib_Slice_slice·uint8_t·::None,
         crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
         { v: rlrem }
         =>
@@ -14913,12 +14672,12 @@ pub fn validate_and_parse_start <'a>(s: &'a [u8]) ->
               let test: bool = validate_start(rl);
               if test
               {
-                  let x: evercddl_start = parse_start(rl);
-                  option__·COSE_Format_evercddl_start···Pulse_Lib_Slice_slice·uint8_t·::Some
+                  let x: start = parse_start(rl);
+                  option__·COSE_Format_start···Pulse_Lib_Slice_slice·uint8_t·::Some
                   { v: (x,rem) }
               }
               else
-              { option__·COSE_Format_evercddl_start···Pulse_Lib_Slice_slice·uint8_t·::None }
+              { option__·COSE_Format_start···Pulse_Lib_Slice_slice·uint8_t·::None }
           },
         _ => panic!("Incomplete pattern matching")
     }

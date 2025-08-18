@@ -21,7 +21,7 @@ int main()
     other_elems[0].fst = 42;
     other_elems[0].snd = 4242;
 
-    Basic1_evercddl_map18 m = {
+    Basic1_map18 m = {
         .intkey18 = 1818,
         ._x0 = {
                 .tag = FStar_Pervasives_Inl,
@@ -39,7 +39,7 @@ int main()
     }
 
     /* Validate it, make sure it parses back. */
-    FStar_Pervasives_Native_option___Basic1_evercddl_map18___Pulse_Lib_Slice_slice_uint8_t_
+    FStar_Pervasives_Native_option___Basic1_map18___Pulse_Lib_Slice_slice_uint8_t_
       m_opt = Basic1_validate_and_parse_map18(slice);
     assert (m_opt.tag == FStar_Pervasives_Native_Some);
     assert (m_opt.v.fst.intkey18 == m.intkey18);
@@ -47,7 +47,7 @@ int main()
 
     /* We can also parse it back as a map42, given that we added a pair with key
     42 in the other_elems above. The intkey42 is mapped to 4242 as expected. */
-    FStar_Pervasives_Native_option___Basic1_evercddl_map42___Pulse_Lib_Slice_slice_uint8_t_
+    FStar_Pervasives_Native_option___Basic1_map42___Pulse_Lib_Slice_slice_uint8_t_
       m2_opt = Basic1_validate_and_parse_map42(slice);
     assert (m2_opt.tag == FStar_Pervasives_Native_Some);
     assert (m2_opt.v.fst.intkey42 == 4242);

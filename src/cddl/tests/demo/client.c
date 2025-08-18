@@ -5,7 +5,7 @@ int main(void) {
     .tag = FStar_Pervasives_Native_Some,
     .v = 42L
   };
-  CDDLTest_Test_evercddl_test1 test = {
+  CDDLTest_Test_test1 test = {
     .foo = 18L,
     .bar = test_snd
   };
@@ -25,7 +25,7 @@ int main(void) {
   cbor_det_t obj = cbor_det_parse(out, sz);
   if (! (CDDLTest_Test_validate_test1(obj)))
     return 3;
-  CDDLTest_Test_evercddl_test1 ret = CDDLTest_Test_parse_test1(obj);
+  CDDLTest_Test_test1 ret = CDDLTest_Test_parse_test1(obj);
   if (! (ret.foo == test.foo && ret.bar.tag == test.bar.tag && ret.bar.v == test.bar.v))
     return 4;
   return CDDLTest_Client_main();

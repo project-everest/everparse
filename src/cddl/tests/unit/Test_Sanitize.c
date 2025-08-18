@@ -5,7 +5,7 @@
 
 int main()
 {
-  Sanitize_evercddl_player s;
+  Sanitize_player s;
   s.id_1 = 0;
   s.id_2 = 0;
   s._id3 = 0;

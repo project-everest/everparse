@@ -28,10 +28,10 @@ uint64_t bigrand() {
     return r;
 }
 
-bool lookup1(BenchMap_evercddl_map m, uint64_t key, uint64_t *val) {
+bool lookup1(BenchMap_map m, uint64_t key, uint64_t *val) {
   assert (val);
   CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_BenchMap_evercddl_uint_BenchMap_evercddl_uint
-    it = m.case_Mkevercddl_map1;
+    it = m.case_Mkmap1;
 
   while (!BenchMap_is_empty_iterate_map_evercddl_uint_and_evercddl_uint(it)) {
     K___BenchMap_evercddl_uint_BenchMap_evercddl_uint k =
@@ -51,10 +51,10 @@ bool lookup1(BenchMap_evercddl_map m, uint64_t key, uint64_t *val) {
   return false;
 }
 
-bool lookup1_no_short(BenchMap_evercddl_map m, uint64_t key, uint64_t *val) {
+bool lookup1_no_short(BenchMap_map m, uint64_t key, uint64_t *val) {
   assert (val);
   CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_BenchMap_evercddl_uint_BenchMap_evercddl_uint
-  it = m.case_Mkevercddl_map1;
+  it = m.case_Mkmap1;
 
   while (!BenchMap_is_empty_iterate_map_evercddl_uint_and_evercddl_uint(it)) {
     K___BenchMap_evercddl_uint_BenchMap_evercddl_uint k =
@@ -197,9 +197,9 @@ int main()
         elems[i].snd = bigrand ();
     }
 
-    BenchMap_evercddl_map m = {
-        .tag = BenchMap_Mkevercddl_map0,
-        .case_Mkevercddl_map0 = {
+    BenchMap_map m = {
+        .tag = BenchMap_Mkmap0,
+        .case_Mkmap0 = {
             .elt = elems,
             .len = N,
         }
@@ -219,7 +219,7 @@ int main()
     printf(" >>> SERIALIZATION BANDWIDTH: %f MB/s\n", size / f / 1e6);
 
     /* Validate it, make sure it parses back. */
-    FStar_Pervasives_Native_option___BenchMap_evercddl_map___Pulse_Lib_Slice_slice_uint8_t_
+    FStar_Pervasives_Native_option___BenchMap_map___Pulse_Lib_Slice_slice_uint8_t_
       m_opt = TIME(BenchMap_validate_and_parse_map(slice), &f);
 
     printf(" >>> EVERCDDL VALIDATION TOOK %f us\n", f * 1e6);
@@ -227,8 +227,8 @@ int main()
 
     assert (m_opt.tag == FStar_Pervasives_Native_Some);
     assert (m_opt.v.snd.len == BSIZE - size); /* len is whatever remains */
-    BenchMap_evercddl_map m2 = m_opt.v.fst;
-    assert (m2.tag == BenchMap_Mkevercddl_map1);
+    BenchMap_map m2 = m_opt.v.fst;
+    assert (m2.tag == BenchMap_Mkmap1);
 
     uint64_t keys[K];
     for (int i = 0; i < K; i++)

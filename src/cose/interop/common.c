@@ -1,8 +1,8 @@
 #include "common.h"
 
 EVP_PKEY *parse_ed25519_private_key(bstr cose_key) {
-    FStar_Pervasives_Native_option___COSE_Format_evercddl_COSE_Key_OKP___Pulse_Lib_Slice_slice_uint8_t_
-        parsed_key = COSE_Format_validate_and_parse_COSE_Key_OKP(cose_key);
+    FStar_Pervasives_Native_option___COSE_Format_cose_key_okp___Pulse_Lib_Slice_slice_uint8_t_
+        parsed_key = COSE_Format_validate_and_parse_cose_key_okp(cose_key);
     check(parsed_key.tag);
     check(parsed_key.v.fst.intkeyneg1.tag == COSE_Format_Inl);
     check(parsed_key.v.fst.intkeyneg1.case_Inl.tag == COSE_Format_Mkevercddl_int0);
@@ -15,8 +15,8 @@ EVP_PKEY *parse_ed25519_private_key(bstr cose_key) {
 }
 
 EVP_PKEY *parse_ed25519_public_key(bstr cose_key) {
-    FStar_Pervasives_Native_option___COSE_Format_evercddl_COSE_Key_OKP___Pulse_Lib_Slice_slice_uint8_t_
-        parsed_key = COSE_Format_validate_and_parse_COSE_Key_OKP(cose_key);
+    FStar_Pervasives_Native_option___COSE_Format_cose_key_okp___Pulse_Lib_Slice_slice_uint8_t_
+        parsed_key = COSE_Format_validate_and_parse_cose_key_okp(cose_key);
     check(parsed_key.tag);
     check(parsed_key.v.fst.intkeyneg1.tag == COSE_Format_Inl);
     check(parsed_key.v.fst.intkeyneg1.case_Inl.tag == COSE_Format_Mkevercddl_int0);

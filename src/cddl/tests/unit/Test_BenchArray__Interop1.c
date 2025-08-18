@@ -105,7 +105,7 @@ int main()
         .len = len
     };
 
-    BenchArray_evercddl_map m = TIME(build(), &f0);
+    BenchArray_map m = TIME(build(), &f0);
 
     size_t size = TIME(BenchArray_serialize_map(m, slice), &f);
     if (size == 0) {

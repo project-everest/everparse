@@ -17,12 +17,12 @@ open CDDLTest.DPE.Common
 
 fn parse_certify_key_input x (w:erased _) res
 requires
-  rel_evercddl_certifykeyinputargs x w **
-  Trade.trade (rel_evercddl_certifykeyinputargs x w) res
+  rel_certifykeyinputargs x w **
+  Trade.trade (rel_certifykeyinputargs x w) res
 returns x:option (Slice.slice UInt8.t)
 ensures is_slice_opt x res
 {
-  unfold_with_trade (`%rel_evercddl_certifykeyinputargs) (rel_evercddl_certifykeyinputargs x w);
+  unfold_with_trade (`%rel_certifykeyinputargs) (rel_certifykeyinputargs x w);
   Trade.trade_compose _ _ res;
   destruct_rel_fun _ _ _ _ _;
   Trade.trade_compose _ _ res;
@@ -46,8 +46,8 @@ ensures is_slice_opt x res
       let sl = destruct_rel_option _ _ _;
       Trade.trade_compose _ _ res;
       rewrite each (Tactics.PrettifyType.named "public_key"
-            spect_evercddl_bytes)
-        as spect_evercddl_bytes;
+            spect_bytes)
+        as spect_bytes;
       let sl = extract_bytes _ _;
       Trade.trade_compose _ _ res;
       fold (is_slice_opt (Some sl) res);
