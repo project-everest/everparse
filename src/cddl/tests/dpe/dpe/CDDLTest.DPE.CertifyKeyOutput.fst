@@ -15,7 +15,7 @@ open CBOR.Spec.API.Type
 open CDDL.Spec.Base
 open CDDLTest.DPE.Common
 
-let struct_has_pubkey_and_cert (hres:spect_evercddl_certifykeyoutputargs_pretty) (pk cert:Seq.seq UInt8.t) =
+let struct_has_pubkey_and_cert (hres:spect_evercddl_certifykeyoutputargs) (pk cert:Seq.seq UInt8.t) =
   hres.certificate == Some (pretty_bytes pk) /\
   hres.derived_public_key == Some (pretty_bytes cert) /\
   hres.new_context_handle == None
@@ -28,18 +28,18 @@ requires
           x w
 ensures 
   rel_evercddl_certifykeyoutputargs 
-    (evercddl_certifykeyoutputargs_pretty_right x)
-    (spect_evercddl_certifykeyoutputargs_pretty_right w)
+    (evercddl_certifykeyoutputargs_right x)
+    (spect_evercddl_certifykeyoutputargs_right w)
 {
   rewrite (rel_pair (rel_pair (rel_option rel_evercddl_bytes) (rel_option rel_evercddl_bytes))
                     (rel_option rel_evercddl_bytes)
                   x w)
   as (rel_evercddl_certifykeyoutputargs 
-             (evercddl_certifykeyoutputargs_pretty_right x)
-             (spect_evercddl_certifykeyoutputargs_pretty_right w));
+             (evercddl_certifykeyoutputargs_right x)
+             (spect_evercddl_certifykeyoutputargs_right w));
 }
 
-let res_has_pk_and_cert (res:evercddl_certifykeyoutputargs_pretty) (pk cert:Slice.slice UInt8.t) p q =
+let res_has_pk_and_cert (res:evercddl_certifykeyoutputargs) (pk cert:Slice.slice UInt8.t) p q =
   of_bytes_option #p res.certificate (Some pk) /\
   of_bytes_option #q res.derived_public_key (Some cert) /\
   of_bytes_option #q res.new_context_handle None
@@ -58,10 +58,10 @@ ensures
     pure (struct_has_pubkey_and_cert hres pk c /\ 
           res_has_pk_and_cert res pubkey cert p q)
 {
-  let pk = mk_evercddl_bytes_pretty pubkey;
-  let cert = mk_evercddl_bytes_pretty cert;
+  let pk = mk_evercddl_bytes pubkey;
+  let cert = mk_evercddl_bytes cert;
   mk_rel_pair (rel_option rel_evercddl_bytes) (rel_option rel_evercddl_bytes) pk cert;
-  mk_evercddl_bytes_pretty_none ();
+  mk_evercddl_bytes_none ();
   mk_rel_pair (rel_pair (rel_option rel_evercddl_bytes) (rel_option rel_evercddl_bytes)) (rel_option rel_evercddl_bytes) _ None;
   fold_certify_key_output_args _ _;
   with res hres. assert (rel_evercddl_certifykeyoutputargs res hres);
@@ -72,7 +72,7 @@ let is_serialized_certify_key_output hres w =
   exists sz.
     impl_serialize_post (coerce_spec bundle_certifykeyoutputargs
                 .b_spec
-              spect_evercddl_certifykeyoutputargs_pretty
+              spect_evercddl_certifykeyoutputargs
               ())
           hres
           w

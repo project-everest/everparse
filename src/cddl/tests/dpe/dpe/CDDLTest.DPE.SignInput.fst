@@ -45,7 +45,7 @@ ensures exists* p s.
   pts_to tbs #p s **
   Trade.trade (pts_to tbs #p s)
               (rel_evercddl_signinputargs x w) **
-  pure (bytes_of_evercddl_bytes s (Mkspect_evercddl_signinputargs_pretty0?.to_be_signed w))
+  pure (bytes_of_evercddl_bytes s (Mkspect_evercddl_signinputargs0?.to_be_signed w))
 {
   extract_to_be_signed x w;
   let tbs = extract_bytes _ _;
@@ -54,9 +54,9 @@ ensures exists* p s.
 }
 
 let is_tbs_bytes (tbs_bytes:Seq.seq UInt8.t) (w:Seq.seq UInt8.t) =
-  exists (wx:spect_evercddl_signinputargs_pretty) (wr:Seq.seq UInt8.t).
+  exists (wx:spect_evercddl_signinputargs) (wr:Seq.seq UInt8.t).
           validate_and_parse_postcond_some bundle_signinputargs.b_spec.parser w wx wr /\
-          wx.to_be_signed == spect_evercddl_bytes_pretty_right (spect_evercddl_bstr_pretty_right tbs_bytes)
+          wx.to_be_signed == spect_evercddl_bytes_right (spect_evercddl_bstr_right tbs_bytes)
 
 let parse_failed (w:Seq.seq UInt8.t) =
   validate_and_parse_postcond_none bundle_signinputargs.b_typ w

@@ -24,22 +24,22 @@ EverCrypt_Ed25519_verify(
   uint8_t *signature
 );
 
-COSE_Format_evercddl_int_pretty COSE_EverCrypt_mk_int(int32_t i)
+COSE_Format_evercddl_int COSE_EverCrypt_mk_int(int32_t i)
 {
   if (i < (int32_t)0)
     return
       (
-        (COSE_Format_evercddl_int_pretty){
-          .tag = COSE_Format_Mkevercddl_int_pretty1,
-          { .case_Mkevercddl_int_pretty1 = (uint64_t)((int32_t)-1 - i) }
+        (COSE_Format_evercddl_int){
+          .tag = COSE_Format_Mkevercddl_int1,
+          { .case_Mkevercddl_int1 = (uint64_t)((int32_t)-1 - i) }
         }
       );
   else
     return
       (
-        (COSE_Format_evercddl_int_pretty){
-          .tag = COSE_Format_Mkevercddl_int_pretty0,
-          { .case_Mkevercddl_int_pretty0 = (uint64_t)i }
+        (COSE_Format_evercddl_int){
+          .tag = COSE_Format_Mkevercddl_int0,
+          { .case_Mkevercddl_int0 = (uint64_t)i }
         }
       );
 }
@@ -53,7 +53,7 @@ subslice__uint8_t(Pulse_Lib_Slice_slice__uint8_t s, size_t i, size_t j)
 void
 COSE_EverCrypt_create_sig(
   uint8_t *privkey,
-  COSE_Format_evercddl_empty_or_serialized_map_pretty phdr,
+  COSE_Format_evercddl_empty_or_serialized_map phdr,
   Pulse_Lib_Slice_slice__uint8_t aad,
   Pulse_Lib_Slice_slice__uint8_t payload,
   uint8_t *sigbuf
@@ -65,7 +65,7 @@ COSE_EverCrypt_create_sig(
   size_t
   written =
     COSE_Format_serialize_Sig_structure((
-        (COSE_Format_evercddl_Sig_structure_pretty){
+        (COSE_Format_evercddl_Sig_structure){
           .context = COSE_Format_Inr,
           .body_protected = phdr,
           ._x0 = { .tag = COSE_Format_Inr, { .case_Inr = { .fst = aad, .snd = payload } } }
@@ -86,18 +86,17 @@ COSE_EverCrypt_create_sig(
   }
 }
 
-K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
-COSE_EverCrypt_dummy_map_val(void)
+K___COSE_Format_evercddl_label_COSE_Format_evercddl_values COSE_EverCrypt_dummy_map_val(void)
 {
   return
     (
-      (K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty){
+      (K___COSE_Format_evercddl_label_COSE_Format_evercddl_values){
         .fst = {
-          .tag = COSE_Format_Mkevercddl_label_pretty0,
+          .tag = COSE_Format_Mkevercddl_label0,
           {
-            .case_Mkevercddl_label_pretty0 = {
-              .tag = COSE_Format_Mkevercddl_int_pretty0,
-              { .case_Mkevercddl_int_pretty0 = 0ULL }
+            .case_Mkevercddl_label0 = {
+              .tag = COSE_Format_Mkevercddl_int0,
+              { .case_Mkevercddl_int0 = 0ULL }
             }
           }
         },
@@ -106,34 +105,34 @@ COSE_EverCrypt_dummy_map_val(void)
     );
 }
 
-static Pulse_Lib_Slice_slice___COSE_Format_evercddl_label_pretty___COSE_Format_evercddl_values_pretty_
-from_array___COSE_Format_evercddl_label_pretty___COSE_Format_evercddl_values_pretty_(
-  K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty *a,
+static Pulse_Lib_Slice_slice___COSE_Format_evercddl_label___COSE_Format_evercddl_values_
+from_array___COSE_Format_evercddl_label___COSE_Format_evercddl_values_(
+  K___COSE_Format_evercddl_label_COSE_Format_evercddl_values *a,
   size_t alen
 )
 {
   return
     (
-      (Pulse_Lib_Slice_slice___COSE_Format_evercddl_label_pretty___COSE_Format_evercddl_values_pretty_){
+      (Pulse_Lib_Slice_slice___COSE_Format_evercddl_label___COSE_Format_evercddl_values_){
         .elt = a,
         .len = alen
       }
     );
 }
 
-COSE_Format_evercddl_empty_or_serialized_map_pretty
+COSE_Format_evercddl_empty_or_serialized_map
 COSE_EverCrypt_mk_phdrs(
   int32_t alg,
-  K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty *rest
+  K___COSE_Format_evercddl_label_COSE_Format_evercddl_values *rest
 )
 {
-  COSE_Format_evercddl_int_pretty alg_ = COSE_EverCrypt_mk_int(alg);
+  COSE_Format_evercddl_int alg_ = COSE_EverCrypt_mk_int(alg);
   return
     (
-      (COSE_Format_evercddl_empty_or_serialized_map_pretty){
-        .tag = COSE_Format_Mkevercddl_empty_or_serialized_map_pretty0,
+      (COSE_Format_evercddl_empty_or_serialized_map){
+        .tag = COSE_Format_Mkevercddl_empty_or_serialized_map0,
         {
-          .case_Mkevercddl_empty_or_serialized_map_pretty0 = {
+          .case_Mkevercddl_empty_or_serialized_map0 = {
             .intkey1 = {
               .tag = FStar_Pervasives_Native_Some,
               .v = { .tag = COSE_Format_Inl, { .case_Inl = alg_ } }
@@ -157,7 +156,7 @@ COSE_EverCrypt_mk_phdrs(
             ._x1 = {
               .tag = COSE_Format_Inl,
               {
-                .case_Inl = from_array___COSE_Format_evercddl_label_pretty___COSE_Format_evercddl_values_pretty_(rest,
+                .case_Inl = from_array___COSE_Format_evercddl_label___COSE_Format_evercddl_values_(rest,
                   (size_t)0U)
               }
             }
@@ -170,26 +169,24 @@ COSE_EverCrypt_mk_phdrs(
 Pulse_Lib_Slice_slice__uint8_t
 COSE_EverCrypt_sign1(
   uint8_t *privkey,
-  COSE_Format_evercddl_header_map_pretty uhdr,
+  COSE_Format_evercddl_header_map uhdr,
   Pulse_Lib_Slice_slice__uint8_t aad,
   Pulse_Lib_Slice_slice__uint8_t payload,
   Pulse_Lib_Slice_slice__uint8_t outbuf
 )
 {
-  KRML_CHECK_SIZE(sizeof (
-      K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
-    ),
+  KRML_CHECK_SIZE(sizeof (K___COSE_Format_evercddl_label_COSE_Format_evercddl_values),
     (size_t)0U);
-  K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty phdrauxbuf[0U];
+  K___COSE_Format_evercddl_label_COSE_Format_evercddl_values phdrauxbuf[0U];
   for (uint32_t _i = 0U; _i < (size_t)0U; ++_i)
     phdrauxbuf[_i] = COSE_EverCrypt_dummy_map_val();
-  COSE_Format_evercddl_int_pretty alg_ = COSE_EverCrypt_mk_int((int32_t)-8);
-  COSE_Format_evercddl_empty_or_serialized_map_pretty
+  COSE_Format_evercddl_int alg_ = COSE_EverCrypt_mk_int((int32_t)-8);
+  COSE_Format_evercddl_empty_or_serialized_map
   phdr =
     {
-      .tag = COSE_Format_Mkevercddl_empty_or_serialized_map_pretty0,
+      .tag = COSE_Format_Mkevercddl_empty_or_serialized_map0,
       {
-        .case_Mkevercddl_empty_or_serialized_map_pretty0 = {
+        .case_Mkevercddl_empty_or_serialized_map0 = {
           .intkey1 = {
             .tag = FStar_Pervasives_Native_Some,
             .v = { .tag = COSE_Format_Inl, { .case_Inl = alg_ } }
@@ -213,7 +210,7 @@ COSE_EverCrypt_sign1(
           ._x1 = {
             .tag = COSE_Format_Inl,
             {
-              .case_Inl = from_array___COSE_Format_evercddl_label_pretty___COSE_Format_evercddl_values_pretty_(phdrauxbuf,
+              .case_Inl = from_array___COSE_Format_evercddl_label___COSE_Format_evercddl_values_(phdrauxbuf,
                 (size_t)0U)
             }
           }
@@ -226,7 +223,7 @@ COSE_EverCrypt_sign1(
   size_t
   outbuf_sz =
     COSE_Format_serialize_COSE_Sign1_Tagged((
-        (COSE_Format_evercddl_COSE_Sign1_pretty){
+        (COSE_Format_evercddl_COSE_Sign1){
           .protected = phdr,
           .unprotected = uhdr,
           .payload = { .tag = COSE_Format_Inl, { .case_Inl = payload } },
@@ -250,14 +247,12 @@ COSE_EverCrypt_sign1_simple(
   Pulse_Lib_Slice_slice__uint8_t outbuf
 )
 {
-  KRML_CHECK_SIZE(sizeof (
-      K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
-    ),
+  KRML_CHECK_SIZE(sizeof (K___COSE_Format_evercddl_label_COSE_Format_evercddl_values),
     (size_t)0U);
-  K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty buf0[0U];
+  K___COSE_Format_evercddl_label_COSE_Format_evercddl_values buf0[0U];
   for (uint32_t _i = 0U; _i < (size_t)0U; ++_i)
     buf0[_i] = COSE_EverCrypt_dummy_map_val();
-  COSE_Format_evercddl_header_map_pretty
+  COSE_Format_evercddl_header_map
   uhdr =
     {
       .intkey1 = { .tag = FStar_Pervasives_Native_None },
@@ -281,7 +276,7 @@ COSE_EverCrypt_sign1_simple(
       ._x1 = {
         .tag = COSE_Format_Inl,
         {
-          .case_Inl = from_array___COSE_Format_evercddl_label_pretty___COSE_Format_evercddl_values_pretty_(buf0,
+          .case_Inl = from_array___COSE_Format_evercddl_label___COSE_Format_evercddl_values_(buf0,
             (size_t)0U)
         }
       }
@@ -299,7 +294,7 @@ COSE_EverCrypt_sign1_simple(
 bool
 COSE_EverCrypt_verify_sig(
   uint8_t *pubkey,
-  COSE_Format_evercddl_empty_or_serialized_map_pretty phdr,
+  COSE_Format_evercddl_empty_or_serialized_map phdr,
   Pulse_Lib_Slice_slice__uint8_t aad,
   Pulse_Lib_Slice_slice__uint8_t payload,
   uint8_t *sigbuf
@@ -311,7 +306,7 @@ COSE_EverCrypt_verify_sig(
   size_t
   written =
     COSE_Format_serialize_Sig_structure((
-        (COSE_Format_evercddl_Sig_structure_pretty){
+        (COSE_Format_evercddl_Sig_structure){
           .context = COSE_Format_Inr,
           .body_protected = phdr,
           ._x0 = { .tag = COSE_Format_Inr, { .case_Inr = { .fst = aad, .snd = payload } } }
@@ -339,9 +334,8 @@ COSE_EverCrypt_verify_sig(
 }
 
 static bool
-uu___is_Inl__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty(
-  FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty
-  projectee
+uu___is_Inl__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil(
+  FStar_Pervasives_either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil projectee
 )
 {
   if (projectee.tag == COSE_Format_Inl)
@@ -357,7 +351,7 @@ COSE_EverCrypt_verify1(
   Pulse_Lib_Slice_slice__uint8_t msg
 )
 {
-  FStar_Pervasives_Native_option___COSE_Format_evercddl_COSE_Sign1_Tagged_pretty___Pulse_Lib_Slice_slice_uint8_t_
+  FStar_Pervasives_Native_option___COSE_Format_evercddl_COSE_Sign1_Tagged___Pulse_Lib_Slice_slice_uint8_t_
   scrut0 = COSE_Format_validate_and_parse_COSE_Sign1_Tagged(msg);
   if (scrut0.tag == FStar_Pervasives_Native_None)
     return
@@ -368,14 +362,13 @@ COSE_EverCrypt_verify1(
       );
   else if (scrut0.tag == FStar_Pervasives_Native_Some)
   {
-    K___COSE_Format_evercddl_COSE_Sign1_Tagged_pretty_Pulse_Lib_Slice_slice_uint8_t
-    res1 = scrut0.v;
-    COSE_Format_evercddl_COSE_Sign1_pretty x = res1.fst;
+    K___COSE_Format_evercddl_COSE_Sign1_Tagged_Pulse_Lib_Slice_slice_uint8_t res1 = scrut0.v;
+    COSE_Format_evercddl_COSE_Sign1 x = res1.fst;
     Pulse_Lib_Slice_slice__uint8_t rem = res1.snd;
     if
     (
       Pulse_Lib_Slice_len__uint8_t(rem) == (size_t)0U &&
-        uu___is_Inl__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty(x.payload)
+        uu___is_Inl__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil(x.payload)
     )
     {
       Pulse_Lib_Slice_slice__uint8_t sig = x.signature;
@@ -383,7 +376,7 @@ COSE_EverCrypt_verify1(
       if (Pulse_Lib_Slice_len__uint8_t(sig) == (size_t)64U)
       {
         uint8_t *sig_ = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(sig);
-        FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty
+        FStar_Pervasives_either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil
         scrut = x.payload;
         Pulse_Lib_Slice_slice__uint8_t ite;
         if (scrut.tag == COSE_Format_Inl)
@@ -398,7 +391,7 @@ COSE_EverCrypt_verify1(
         ite0 = false;
       if (ite0)
       {
-        FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty
+        FStar_Pervasives_either__COSE_Format_evercddl_bstr_COSE_Format_evercddl_nil
         scrut = x.payload;
         Pulse_Lib_Slice_slice__uint8_t ite;
         if (scrut.tag == COSE_Format_Inl)

@@ -28,13 +28,13 @@ uint64_t bigrand() {
     return r;
 }
 
-bool lookup1(BenchMap_evercddl_map_pretty m, uint64_t key, uint64_t *val) {
+bool lookup1(BenchMap_evercddl_map m, uint64_t key, uint64_t *val) {
   assert (val);
-  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_BenchMap_evercddl_uint_pretty_BenchMap_evercddl_uint_pretty
-    it = m.case_Mkevercddl_map_pretty1;
+  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_BenchMap_evercddl_uint_BenchMap_evercddl_uint
+    it = m.case_Mkevercddl_map1;
 
   while (!BenchMap_is_empty_iterate_map_evercddl_uint_and_evercddl_uint(it)) {
-    K___BenchMap_evercddl_uint_pretty_BenchMap_evercddl_uint_pretty k =
+    K___BenchMap_evercddl_uint_BenchMap_evercddl_uint k =
         BenchMap_next_iterate_map_evercddl_uint_and_evercddl_uint(&it);
     // printf("EVERCDDL read key %llu\n", k.fst);
     if (k.fst == key) {
@@ -51,13 +51,13 @@ bool lookup1(BenchMap_evercddl_map_pretty m, uint64_t key, uint64_t *val) {
   return false;
 }
 
-bool lookup1_no_short(BenchMap_evercddl_map_pretty m, uint64_t key, uint64_t *val) {
+bool lookup1_no_short(BenchMap_evercddl_map m, uint64_t key, uint64_t *val) {
   assert (val);
-  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_BenchMap_evercddl_uint_pretty_BenchMap_evercddl_uint_pretty
-  it = m.case_Mkevercddl_map_pretty1;
+  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_BenchMap_evercddl_uint_BenchMap_evercddl_uint
+  it = m.case_Mkevercddl_map1;
 
   while (!BenchMap_is_empty_iterate_map_evercddl_uint_and_evercddl_uint(it)) {
-    K___BenchMap_evercddl_uint_pretty_BenchMap_evercddl_uint_pretty k =
+    K___BenchMap_evercddl_uint_BenchMap_evercddl_uint k =
         BenchMap_next_iterate_map_evercddl_uint_and_evercddl_uint(&it);
     if (k.fst == key) {
       if (val) {
@@ -189,17 +189,17 @@ int main()
         .len = len
     };
 
-    K___BenchMap_evercddl_uint_pretty_BenchMap_evercddl_uint_pretty *elems =
-      (K___BenchMap_evercddl_uint_pretty_BenchMap_evercddl_uint_pretty*)
+    K___BenchMap_evercddl_uint_BenchMap_evercddl_uint *elems =
+      (K___BenchMap_evercddl_uint_BenchMap_evercddl_uint*)
       malloc(2 * N * 8);
     for (int i = 0; i < N; i++) {
         elems[i].fst = bigrand ();
         elems[i].snd = bigrand ();
     }
 
-    BenchMap_evercddl_map_pretty m = {
-        .tag = BenchMap_Mkevercddl_map_pretty0,
-        .case_Mkevercddl_map_pretty0 = {
+    BenchMap_evercddl_map m = {
+        .tag = BenchMap_Mkevercddl_map0,
+        .case_Mkevercddl_map0 = {
             .elt = elems,
             .len = N,
         }
@@ -219,7 +219,7 @@ int main()
     printf(" >>> SERIALIZATION BANDWIDTH: %f MB/s\n", size / f / 1e6);
 
     /* Validate it, make sure it parses back. */
-    FStar_Pervasives_Native_option___BenchMap_evercddl_map_pretty___Pulse_Lib_Slice_slice_uint8_t_
+    FStar_Pervasives_Native_option___BenchMap_evercddl_map___Pulse_Lib_Slice_slice_uint8_t_
       m_opt = TIME(BenchMap_validate_and_parse_map(slice), &f);
 
     printf(" >>> EVERCDDL VALIDATION TOOK %f us\n", f * 1e6);
@@ -227,8 +227,8 @@ int main()
 
     assert (m_opt.tag == FStar_Pervasives_Native_Some);
     assert (m_opt.v.snd.len == BSIZE - size); /* len is whatever remains */
-    BenchMap_evercddl_map_pretty m2 = m_opt.v.fst;
-    assert (m2.tag == BenchMap_Mkevercddl_map_pretty1);
+    BenchMap_evercddl_map m2 = m_opt.v.fst;
+    assert (m2.tag == BenchMap_Mkevercddl_map1);
 
     uint64_t keys[K];
     for (int i = 0; i < K; i++)

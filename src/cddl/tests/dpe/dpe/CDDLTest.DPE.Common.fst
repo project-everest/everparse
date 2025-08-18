@@ -12,23 +12,23 @@ open CBOR.Spec.API.Type
 open CDDL.Spec.Base
 
 let tstr_any = 
-  (rel_either_left (rel_slice_of_table (mk_eq_test_bij spect_evercddl_uint_pretty_right
-                      spect_evercddl_uint_pretty_left
-                      spect_evercddl_uint_pretty_left_right
-                      spect_evercddl_uint_pretty_right_left
+  (rel_either_left (rel_slice_of_table (mk_eq_test_bij spect_evercddl_uint_right
+                      spect_evercddl_uint_left
+                      spect_evercddl_uint_left_right
+                      spect_evercddl_uint_right_left
                       (EqTest.eqtype_eq UInt64.t))
                   rel_evercddl_uint
                   rel_evercddl_any)
               (rel_map_iterator CBOR.Pulse.API.Det.C.cbor_det_match
                   CBOR.Pulse.API.Det.C.cbor_det_map_entry_match
                   CBOR.Pulse.API.Det.C.cbor_det_map_iterator_match
-                  evercddl_uint_pretty
-                  evercddl_any_pretty
+                  evercddl_uint
+                  evercddl_any
                   (CDDL.Pulse.Iterator.Base.mk_spec rel_evercddl_uint)
                   (CDDL.Pulse.Iterator.Base.mk_spec rel_evercddl_any)))
 
-let bytes_of_evercddl_bytes (yy:Seq.seq UInt8.t) (ww:spect_evercddl_bytes_pretty) =
-  yy == spect_evercddl_bstr_pretty_left (spect_evercddl_bytes_pretty_left ww)
+let bytes_of_evercddl_bytes (yy:Seq.seq UInt8.t) (ww:spect_evercddl_bytes) =
+  yy == spect_evercddl_bstr_left (spect_evercddl_bytes_left ww)
 
 fn extract_bytes x (y:erased _)
 requires rel_evercddl_bytes x y
@@ -46,8 +46,8 @@ ensures
   with (res:slice UInt8.t) (resy:_). assert (rel_slice_of_seq false res resy);
   rewrite each (rel_slice_of_seq false res resy) as (pts_to res.s #res.p resy ** pure (false == false));
   Trade.trade_compose _ _ (rel_fun rel_evercddl_bstr
-          evercddl_bytes_pretty_left
-          spect_evercddl_bytes_pretty_left
+          evercddl_bytes_left
+          spect_evercddl_bytes_left
           x
           y);
   Trade.Util.elim_hyp_r _ _ _;
@@ -55,7 +55,7 @@ ensures
 }
 
 fn destruct_evercddl_bytes_head 
-    (x:evercddl_bytes_pretty)
+    (x:evercddl_bytes)
     (w:erased _)
     (rest done res:slprop)
 requires
@@ -78,7 +78,7 @@ ensures
 }
 
 fn destruct_evercddl_nint_head 
-    (x:evercddl_nint_pretty)
+    (x:evercddl_nint)
     (w:erased _)
     (rest done res:slprop)
 requires
@@ -86,17 +86,17 @@ requires
   Trade.trade ((rel_evercddl_nint x w ** rest) ** done) res
 returns xx:UInt64.t
 ensures
-  pure (xx == evercddl_nint_pretty_left x /\ xx == spect_evercddl_nint_pretty_left w) **
+  pure (xx == evercddl_nint_left x /\ xx == spect_evercddl_nint_left w) **
   Trade.trade (rest ** done) res
 {
-  rewrite each (rel_evercddl_nint x w) as pure (evercddl_nint_pretty_left x == spect_evercddl_nint_pretty_left w);
+  rewrite each (rel_evercddl_nint x w) as pure (evercddl_nint_left x == spect_evercddl_nint_left w);
   Trade.Util.assoc_hyp_r _ _ _ _;
   Trade.Util.elim_hyp_l (pure _) _ _;
-  evercddl_nint_pretty_left x
+  evercddl_nint_left x
 }
 
 fn destruct_evercddl_tstr_head 
-    (x:evercddl_tstr_pretty)
+    (x:evercddl_tstr)
     (w:erased _)
     (rest done res:slprop)
 requires
@@ -130,23 +130,23 @@ let is_slice_opt
       Trade.trade (pts_to sl #perm b) dflt
 
 let pretty_bytes (x:Seq.seq UInt8.t) =
-  spect_evercddl_bytes_pretty_right (spect_evercddl_bstr_pretty_right x)
+  spect_evercddl_bytes_right (spect_evercddl_bstr_right x)
 
 let pretty_slice (x:slice UInt8.t) =
-  evercddl_bytes_pretty_right (evercddl_bstr_pretty_right x)
+  evercddl_bytes_right (evercddl_bstr_right x)
 
-let of_bytes (#p:perm) (x:evercddl_bytes_pretty) (s:Slice.slice UInt8.t) =
-  let x = evercddl_bstr_pretty_left (evercddl_bytes_pretty_left x) in
+let of_bytes (#p:perm) (x:evercddl_bytes) (s:Slice.slice UInt8.t) =
+  let x = evercddl_bstr_left (evercddl_bytes_left x) in
   x.s == s /\
   x.p == p
 
-let of_bytes_option #p (x:option evercddl_bytes_pretty) (s:option (Slice.slice UInt8.t)) =
+let of_bytes_option #p (x:option evercddl_bytes) (s:option (Slice.slice UInt8.t)) =
   match x, s with
   | None, None -> True
   | Some x, Some s -> of_bytes #p x s
   | _ -> False
 
-fn mk_evercddl_bytes_pretty
+fn mk_evercddl_bytes
     (x:Slice.slice UInt8.t)
     (#p #w:erased _)
 requires
@@ -162,7 +162,7 @@ ensures
   Some (pretty_slice res)
 }
 
-fn mk_evercddl_bytes_pretty_none ()
+fn mk_evercddl_bytes_none ()
 requires emp
 ensures
   rel_option rel_evercddl_bytes None None
@@ -248,7 +248,7 @@ ensures
 
 
 // // let pretty_bytes (x:Seq.seq UInt8.t) =
-// //   spect_evercddl_bytes_pretty_right (spect_evercddl_bstr_pretty_right x)
+// //   spect_evercddl_bytes_right (spect_evercddl_bstr_right x)
 
 // let pretty_slice (x:slice UInt8.t) =
-//   evercddl_bytes_pretty_right (evercddl_bstr_pretty_right x)
+//   evercddl_bytes_right (evercddl_bstr_right x)

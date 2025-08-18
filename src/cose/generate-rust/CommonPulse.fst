@@ -15,17 +15,17 @@ open CDDL.Pulse.Types
 let borrows (what from: slprop) : slprop =
   what ** trade what from
 
-let specnint_of_int (i: int { - pow2 64 <= i /\ i < 0 }) : GTot spect_evercddl_nint_pretty =
-  Mkspect_evercddl_nint_pretty0 (UInt64.uint_to_t (-i-1))
+let specnint_of_int (i: int { - pow2 64 <= i /\ i < 0 }) : GTot spect_evercddl_nint =
+  Mkspect_evercddl_nint0 (UInt64.uint_to_t (-i-1))
 
-let specuint_of_int (i: int { 0 <= i /\ i < pow2 64 }) : GTot spect_evercddl_uint_pretty =
-  Mkspect_evercddl_uint_pretty0 (UInt64.uint_to_t i)
+let specuint_of_int (i: int { 0 <= i /\ i < pow2 64 }) : GTot spect_evercddl_uint =
+  Mkspect_evercddl_uint0 (UInt64.uint_to_t i)
 
-let specint_of_int (i: int { -pow2 64 <= i /\ i < pow2 64 }) : GTot spect_evercddl_int_pretty =
+let specint_of_int (i: int { -pow2 64 <= i /\ i < pow2 64 }) : GTot spect_evercddl_int =
   if i >= 0 then
-    Mkspect_evercddl_int_pretty0 (specuint_of_int i)
+    Mkspect_evercddl_int0 (specuint_of_int i)
   else
-    Mkspect_evercddl_int_pretty1 (specnint_of_int i)
+    Mkspect_evercddl_int1 (specnint_of_int i)
 
 inline_for_extraction noextract
 let i32_to_u64_safe (i: Int32.t { Int32.v i >= 0 }) : j:UInt64.t { UInt64.v j == Int32.v i } =
@@ -33,17 +33,17 @@ let i32_to_u64_safe (i: Int32.t { Int32.v i >= 0 }) : j:UInt64.t { UInt64.v j ==
   Math.Lemmas.small_mod (Int32.v i) (pow2 64);
   Int.Cast.int32_to_uint64 i
 
-let specint_of_i32 (i: Int32.t) : GTot spect_evercddl_int_pretty =
+let specint_of_i32 (i: Int32.t) : GTot spect_evercddl_int =
   Math.Lemmas.pow2_lt_compat 64 31;
   specint_of_int (Int32.v i)
 
-let rel_evercddl_uint_eq a b : squash (rel_evercddl_uint a b == pure (Mkevercddl_uint_pretty0?._x0 a == Mkspect_evercddl_uint_pretty0?._x0 b)) = ()
-let rel_evercddl_nint_eq a b : squash (rel_evercddl_nint a b == pure (Mkevercddl_nint_pretty0?._x0 a == Mkspect_evercddl_nint_pretty0?._x0 b)) = ()
+let rel_evercddl_uint_eq a b : squash (rel_evercddl_uint a b == pure (Mkevercddl_uint0?._x0 a == Mkspect_evercddl_uint0?._x0 b)) = ()
+let rel_evercddl_nint_eq a b : squash (rel_evercddl_nint a b == pure (Mkevercddl_nint0?._x0 a == Mkspect_evercddl_nint0?._x0 b)) = ()
 
 let rel_evercddl_int_eq a b : squash (rel_evercddl_int a b ==
   (match a, b with
-   | Mkevercddl_int_pretty0 a, Mkspect_evercddl_int_pretty0 b -> rel_evercddl_uint a b
-   | Mkevercddl_int_pretty1 a, Mkspect_evercddl_int_pretty1 b -> rel_evercddl_nint a b
+   | Mkevercddl_int0 a, Mkspect_evercddl_int0 b -> rel_evercddl_uint a b
+   | Mkevercddl_int1 a, Mkspect_evercddl_int1 b -> rel_evercddl_nint a b
    | _ -> pure False)) =
   ()
 
@@ -53,7 +53,7 @@ ghost fn rw_l #a #b (h: squash (a == b)) requires b ensures a { rewrite b as a }
 let i32_lt_iff a b : squash (Int32.lt a b <==> Int32.v a < Int32.v b) = ()
 
 fn mk_int (i: Int32.t)
-  returns j: evercddl_int_pretty
+  returns j: evercddl_int
   ensures rel_evercddl_int j (specint_of_i32 i)
 {
   if Int32.lt i 0l {
@@ -61,23 +61,23 @@ fn mk_int (i: Int32.t)
     let k = Int32.sub (-1l) i;
     let j = i32_to_u64_safe k;
     Math.Lemmas.pow2_lt_compat 64 31;
-    rw_l (rel_evercddl_nint_eq (Mkevercddl_nint_pretty0 j) (specnint_of_int (Int32.v i)));
-    rw_l (rel_evercddl_int_eq (Mkevercddl_int_pretty1 (Mkevercddl_nint_pretty0 j)) (Mkspect_evercddl_int_pretty1 (specnint_of_int (Int32.v i))));
-    rewrite each Mkspect_evercddl_int_pretty1 (specnint_of_int (Int32.v i)) as specint_of_i32 i;
-    Mkevercddl_int_pretty1 (Mkevercddl_nint_pretty0 j)
+    rw_l (rel_evercddl_nint_eq (Mkevercddl_nint0 j) (specnint_of_int (Int32.v i)));
+    rw_l (rel_evercddl_int_eq (Mkevercddl_int1 (Mkevercddl_nint0 j)) (Mkspect_evercddl_int1 (specnint_of_int (Int32.v i))));
+    rewrite each Mkspect_evercddl_int1 (specnint_of_int (Int32.v i)) as specint_of_i32 i;
+    Mkevercddl_int1 (Mkevercddl_nint0 j)
   } else {
     let j = i32_to_u64_safe i;
-    rw_l (rel_evercddl_uint_eq (Mkevercddl_uint_pretty0 j) (specuint_of_int (UInt64.v j)));
-    rw_l (rel_evercddl_int_eq (Mkevercddl_int_pretty0 (Mkevercddl_uint_pretty0 j)) (Mkspect_evercddl_int_pretty0 (specuint_of_int (UInt64.v j))));
-    rewrite each Mkspect_evercddl_int_pretty0 (specuint_of_int (UInt64.v j)) as specint_of_i32 i;
-    Mkevercddl_int_pretty0 (Mkevercddl_uint_pretty0 j)
+    rw_l (rel_evercddl_uint_eq (Mkevercddl_uint0 j) (specuint_of_int (UInt64.v j)));
+    rw_l (rel_evercddl_int_eq (Mkevercddl_int0 (Mkevercddl_uint0 j)) (Mkspect_evercddl_int0 (specuint_of_int (UInt64.v j))));
+    rewrite each Mkspect_evercddl_int0 (specuint_of_int (UInt64.v j)) as specint_of_i32 i;
+    Mkevercddl_int0 (Mkevercddl_uint0 j)
   }
 }
 
-let rel_sig_structure_eq (a: evercddl_Sig_structure_pretty) (b: spect_evercddl_Sig_structure_pretty) :
+let rel_sig_structure_eq (a: evercddl_Sig_structure) (b: spect_evercddl_Sig_structure) :
   squash (rel_evercddl_Sig_structure a b == (match a, b with
-    | Mkevercddl_Sig_structure_pretty0 context body_protected rest,
-      Mkspect_evercddl_Sig_structure_pretty0 vcontext vbody_protected vrest ->
+    | Mkevercddl_Sig_structure0 context body_protected rest,
+      Mkspect_evercddl_Sig_structure0 vcontext vbody_protected vrest ->
         rel_either rel_unit rel_unit context vcontext **
         (rel_evercddl_empty_or_serialized_map body_protected vbody_protected **
           (match rest, vrest with
@@ -93,10 +93,10 @@ inline_for_extraction noextract
 let signature1: either unit unit = Inr ()
 
 let mk_sig_structure_spec
-    (phdr: spect_evercddl_empty_or_serialized_map_pretty)
-    (aad payload: spect_evercddl_bstr_pretty)
-    : GTot spect_evercddl_Sig_structure_pretty =
-  Mkspect_evercddl_Sig_structure_pretty0 signature1 phdr (Inr (aad, payload))
+    (phdr: spect_evercddl_empty_or_serialized_map)
+    (aad payload: spect_evercddl_bstr)
+    : GTot spect_evercddl_Sig_structure =
+  Mkspect_evercddl_Sig_structure0 signature1 phdr (Inr (aad, payload))
 
 ghost fn norm_r p s
   requires p
@@ -117,13 +117,13 @@ fn mk_sig_structure phdr aad payload
   requires rel_evercddl_empty_or_serialized_map phdr vphdr
   requires rel_evercddl_bstr aad vaad
   requires rel_evercddl_bstr payload vpayload
-  returns r: evercddl_Sig_structure_pretty
+  returns r: evercddl_Sig_structure
   ensures borrows (rel_evercddl_Sig_structure r (mk_sig_structure_spec vphdr vaad vpayload))
     (rel_evercddl_empty_or_serialized_map phdr vphdr ** rel_evercddl_bstr aad vaad ** rel_evercddl_bstr payload vpayload)
 {
   rewrite emp as rel_either rel_unit rel_unit signature1 signature1;
-  rw_l (rel_sig_structure_eq (Mkevercddl_Sig_structure_pretty0 signature1 phdr (Inr (aad, payload)))
-    (Mkspect_evercddl_Sig_structure_pretty0 signature1 vphdr (Inr (reveal vaad, reveal vpayload))));
+  rw_l (rel_sig_structure_eq (Mkevercddl_Sig_structure0 signature1 phdr (Inr (aad, payload)))
+    (Mkspect_evercddl_Sig_structure0 signature1 vphdr (Inr (reveal vaad, reveal vpayload))));
   with res vres. assert rel_evercddl_Sig_structure res vres;
   rewrite each vres as mk_sig_structure_spec vphdr vaad vpayload;
 
@@ -149,8 +149,8 @@ let ser_to_inj #t #st s x y y' :
   ()
 
 let to_be_signed_spec
-    (phdr: spect_evercddl_empty_or_serialized_map_pretty)
-    (aad payload: spect_evercddl_bstr_pretty)
+    (phdr: spect_evercddl_empty_or_serialized_map)
+    (aad payload: spect_evercddl_bstr)
     (tbs: Seq.seq UInt8.t)
     : prop =
   ser_to bundle_Sig_structure''.b_spec (mk_sig_structure_spec phdr aad payload) tbs
@@ -210,79 +210,79 @@ fn create_sig privkey phdr aad payload (sigbuf: S.slice UInt8.t)
 }
 
 let rel_inl_map =
-(rel_slice_of_table (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_label_pretty_right
-                      spect_evercddl_label_pretty_left
-                      spect_evercddl_label_pretty_left_right
-                      spect_evercddl_label_pretty_right_left
-                      (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_int_pretty_right
-                              spect_evercddl_int_pretty_left
-                              spect_evercddl_int_pretty_left_right
-                              spect_evercddl_int_pretty_right_left
-                              (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_uint_pretty_right
-                                      spect_evercddl_uint_pretty_left
-                                      spect_evercddl_uint_pretty_left_right
-                                      spect_evercddl_uint_pretty_right_left
+(rel_slice_of_table (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_label_right
+                      spect_evercddl_label_left
+                      spect_evercddl_label_left_right
+                      spect_evercddl_label_right_left
+                      (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_int_right
+                              spect_evercddl_int_left
+                              spect_evercddl_int_left_right
+                              spect_evercddl_int_right_left
+                              (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_uint_right
+                                      spect_evercddl_uint_left
+                                      spect_evercddl_uint_left_right
+                                      spect_evercddl_uint_right_left
                                       (CDDL.Spec.EqTest.eqtype_eq UInt64.t))
-                                  (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_nint_pretty_right
-                                      spect_evercddl_nint_pretty_left
-                                      spect_evercddl_nint_pretty_left_right
-                                      spect_evercddl_nint_pretty_right_left
+                                  (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_nint_right
+                                      spect_evercddl_nint_left
+                                      spect_evercddl_nint_left_right
+                                      spect_evercddl_nint_right_left
                                       (CDDL.Spec.EqTest.eqtype_eq UInt64.t))))
-                          (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_tstr_pretty_right
-                              spect_evercddl_tstr_pretty_left
-                              spect_evercddl_tstr_pretty_left_right
-                              spect_evercddl_tstr_pretty_right_left
+                          (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_tstr_right
+                              spect_evercddl_tstr_left
+                              spect_evercddl_tstr_left_right
+                              spect_evercddl_tstr_right_left
                               (CDDL.Spec.EqTest.eqtype_eq (Seq.Base.seq UInt8.t)))))
                   rel_evercddl_label
                   rel_evercddl_values)
 
-let dummy_map_val () : evercddl_label_pretty & evercddl_values_pretty =
-  Mkevercddl_label_pretty0
-    (Mkevercddl_int_pretty0 (Mkevercddl_uint_pretty0 0uL)),
-  Mkevercddl_values_pretty0 (Mkevercddl_any_pretty0
+let dummy_map_val () : evercddl_label & evercddl_values =
+  Mkevercddl_label0
+    (Mkevercddl_int0 (Mkevercddl_uint0 0uL)),
+  Mkevercddl_values0 (Mkevercddl_any0
     { c = CBOR.Pulse.API.Det.Rust.dummy_cbor_det_t (); p = 0.5R })
 
 let assert_norm' (p: prop) : Pure (squash p) (requires normalize p) (ensures fun _ -> True) = ()
 
-let rel_inl_map_eq (x: slice (evercddl_label_pretty & evercddl_values_pretty)) y = assert_norm' (rel_inl_map x y == 
+let rel_inl_map_eq (x: slice (evercddl_label & evercddl_values)) y = assert_norm' (rel_inl_map x y == 
   (exists* l .
     (exists* s . pts_to x.s #x.p s ** Pulse.Lib.SeqMatch.seq_list_match s l (rel_pair rel_evercddl_label rel_evercddl_values) ** pure (false == false)) **
       pure (y == map_of_list_pair
-      (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_label_pretty_right
-                      spect_evercddl_label_pretty_left
-                      spect_evercddl_label_pretty_left_right
-                      spect_evercddl_label_pretty_right_left
-                      (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_int_pretty_right
-                              spect_evercddl_int_pretty_left
-                              spect_evercddl_int_pretty_left_right
-                              spect_evercddl_int_pretty_right_left
-                              (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_uint_pretty_right
-                                      spect_evercddl_uint_pretty_left
-                                      spect_evercddl_uint_pretty_left_right
-                                      spect_evercddl_uint_pretty_right_left
+      (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_label_right
+                      spect_evercddl_label_left
+                      spect_evercddl_label_left_right
+                      spect_evercddl_label_right_left
+                      (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_int_right
+                              spect_evercddl_int_left
+                              spect_evercddl_int_left_right
+                              spect_evercddl_int_right_left
+                              (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_uint_right
+                                      spect_evercddl_uint_left
+                                      spect_evercddl_uint_left_right
+                                      spect_evercddl_uint_right_left
                                       (CDDL.Spec.EqTest.eqtype_eq UInt64.t))
-                                  (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_nint_pretty_right
-                                      spect_evercddl_nint_pretty_left
-                                      spect_evercddl_nint_pretty_left_right
-                                      spect_evercddl_nint_pretty_right_left
+                                  (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_nint_right
+                                      spect_evercddl_nint_left
+                                      spect_evercddl_nint_left_right
+                                      spect_evercddl_nint_right_left
                                       (CDDL.Spec.EqTest.eqtype_eq UInt64.t))))
-                          (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_tstr_pretty_right
-                              spect_evercddl_tstr_pretty_left
-                              spect_evercddl_tstr_pretty_left_right
-                              spect_evercddl_tstr_pretty_right_left
+                          (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_tstr_right
+                              spect_evercddl_tstr_left
+                              spect_evercddl_tstr_left_right
+                              spect_evercddl_tstr_right_left
                               (CDDL.Spec.EqTest.eqtype_eq (Seq.Base.seq UInt8.t)))))
       l)))
 
 let sign1_phdrs_spec (alg: Int32.t) =
-  Mkspect_evercddl_empty_or_serialized_map_pretty0
-    (Mkspect_evercddl_header_map_pretty0
+  Mkspect_evercddl_empty_or_serialized_map0
+    (Mkspect_evercddl_header_map0
       (Some (Inl (specint_of_i32 alg)))
       None None None (Inr (Inr (None, None)))
       (CDDL.Spec.Map.empty _ _))
 
 let rel_map_sign1_phdrs_eq (alg: Int32.t) alg' s =
-  assert_norm' (rel_evercddl_empty_or_serialized_map (Mkevercddl_empty_or_serialized_map_pretty0
-    (Mkevercddl_header_map_pretty0 (Some (Inl alg')) None None None (Inr (Inr (None, None)))
+  assert_norm' (rel_evercddl_empty_or_serialized_map (Mkevercddl_empty_or_serialized_map0
+    (Mkevercddl_header_map0 (Some (Inl alg')) None None None (Inr (Inr (None, None)))
       (Inl s)))
     (sign1_phdrs_spec alg) ==
     (((((rel_evercddl_int alg' (specint_of_i32 alg) **
@@ -290,10 +290,10 @@ let rel_map_sign1_phdrs_eq (alg: Int32.t) alg' s =
       rel_inl_map s (CDDL.Spec.Map.empty _ _)))
 
 inline_for_extraction
-fn mk_phdrs (alg: Int32.t) (rest: A.larray (evercddl_label_pretty & evercddl_values_pretty) 0)
+fn mk_phdrs (alg: Int32.t) (rest: A.larray (evercddl_label & evercddl_values) 0)
     #prest (#vrest: erased _)
   requires pts_to rest #prest vrest
-  returns res: evercddl_empty_or_serialized_map_pretty
+  returns res: evercddl_empty_or_serialized_map
   ensures borrows (rel_evercddl_empty_or_serialized_map res (sign1_phdrs_spec alg))
     (pts_to rest #prest vrest)
 {
@@ -326,23 +326,23 @@ fn mk_phdrs (alg: Int32.t) (rest: A.larray (evercddl_label_pretty & evercddl_val
 }
 
 let sign1_emphdrs_spec () : GTot _ =
-    (Mkspect_evercddl_header_map_pretty0
+    (Mkspect_evercddl_header_map0
       None None None None (Inr (Inr (None, None)))
       (CDDL.Spec.Map.empty _ _))
 
 let rel_map_sign1_emphdrs_eq s =
   assert_norm' (rel_evercddl_header_map (
-    (Mkevercddl_header_map_pretty0 None None None None (Inr (Inr (None, None)))
+    (Mkevercddl_header_map0 None None None None (Inr (Inr (None, None)))
       (Inl s)))
     (sign1_emphdrs_spec ()) ==
     (((((emp ** emp) ** emp) ** emp) ** (emp ** emp)) **
       rel_inl_map s (CDDL.Spec.Map.empty _ _)))
 
 inline_for_extraction noextract
-fn mk_emphdrs (rest: A.larray (evercddl_label_pretty & evercddl_values_pretty) 0)
+fn mk_emphdrs (rest: A.larray (evercddl_label & evercddl_values) 0)
     #prest (#vrest: erased _)
   requires pts_to rest #prest vrest
-  returns res: evercddl_header_map_pretty
+  returns res: evercddl_header_map
   ensures borrows (rel_evercddl_header_map res (sign1_emphdrs_spec ())) (pts_to rest #prest vrest)
 {
   A.pts_to_len rest;
@@ -374,23 +374,23 @@ fn mk_emphdrs (rest: A.larray (evercddl_label_pretty & evercddl_values_pretty) 0
 }
 
 let sign1_tagged_spec (alg: Int32.t) uhdr payload sig =
-  Mkspect_evercddl_COSE_Sign1_Tagged_pretty0 (Mkspect_evercddl_COSE_Sign1_pretty0
+  Mkspect_evercddl_COSE_Sign1_Tagged0 (Mkspect_evercddl_COSE_Sign10
     (sign1_phdrs_spec alg) uhdr (Inl payload) sig)
 
 let rel_sign1_tagged_eq1 phdr uhdr payload sig vphdr vuhdr vpayload vsig =
   assert_norm' (rel_evercddl_COSE_Sign1_Tagged
-      (Mkevercddl_COSE_Sign1_Tagged_pretty0
-        (Mkevercddl_COSE_Sign1_pretty0 phdr uhdr (Inl payload) sig))
-      (Mkspect_evercddl_COSE_Sign1_Tagged_pretty0 (Mkspect_evercddl_COSE_Sign1_pretty0
+      (Mkevercddl_COSE_Sign1_Tagged0
+        (Mkevercddl_COSE_Sign10 phdr uhdr (Inl payload) sig))
+      (Mkspect_evercddl_COSE_Sign1_Tagged0 (Mkspect_evercddl_COSE_Sign10
         vphdr vuhdr (Inl vpayload) vsig)) ==
   (rel_evercddl_empty_or_serialized_map phdr vphdr **
     rel_evercddl_header_map uhdr vuhdr) **
     (rel_evercddl_bstr payload vpayload ** rel_evercddl_bstr sig vsig))
 
-let rel_bstr_eq (x: evercddl_bstr_pretty) (y: spect_evercddl_bstr_pretty) =
+let rel_bstr_eq (x: evercddl_bstr) (y: spect_evercddl_bstr) =
   assert_norm' (rel_evercddl_bstr x y ==
     (match x, y with
-    | Mkevercddl_bstr_pretty0 { s; p }, Mkspect_evercddl_bstr_pretty0 y ->
+    | Mkevercddl_bstr0 { s; p }, Mkspect_evercddl_bstr0 y ->
       pts_to s #p y ** pure (false == false))
     )
 
@@ -399,14 +399,14 @@ ghost fn rw_l_wt #a #b (h: squash (a == b)) requires b ensures a ** trade a b { 
 
 let sign1_spec
     privkey
-    (uhdr: spect_evercddl_header_map_pretty)
-    (aad payload: spect_evercddl_bstr_pretty)
+    (uhdr: spect_evercddl_header_map)
+    (aad payload: spect_evercddl_bstr)
     (msg: Seq.seq UInt8.t)
     : prop =
   let phdr = sign1_phdrs_spec (-8l) in
   exists tbs. to_be_signed_spec phdr aad payload tbs /\
   ser_to bundle_COSE_Sign1_Tagged''.b_spec
-    (Mkspect_evercddl_COSE_Sign1_Tagged_pretty0 (Mkspect_evercddl_COSE_Sign1_pretty0
+    (Mkspect_evercddl_COSE_Sign1_Tagged0 (Mkspect_evercddl_COSE_Sign10
         phdr uhdr (Inl payload) { _x0 = spec_ed25519_sign privkey tbs }))
     msg
 
@@ -449,7 +449,7 @@ fn sign1 privkey uhdr aad payload (outbuf: S.slice UInt8.t)
   // S.to_array sigbuf2 #_ #(spec_ed25519_sign vprivkey _);
   with tbs. assert S.pts_to sigbuf2 (spec_ed25519_sign vprivkey tbs);
   // let sigbuf3 = S.from_array sigbuf 64sz;
-  with sigbuf4. assert pure ((sigbuf4 <: evercddl_bstr_pretty) == { _x0 = { p = 1.0R; s = sigbuf2 } });
+  with sigbuf4. assert pure ((sigbuf4 <: evercddl_bstr) == { _x0 = { p = 1.0R; s = sigbuf2 } });
   rw_l_wt (rel_bstr_eq sigbuf4 { _x0 = spec_ed25519_sign vprivkey tbs });
   rw_l_wt (rel_sign1_tagged_eq1 phdr _ payload sigbuf4 (sign1_phdrs_spec alg) _ vpayload _);
   let outbuf_sz = serialize_COSE_Sign1_Tagged' _ outbuf;
@@ -489,11 +489,11 @@ fn sign1_simple privkey payload (outbuf: S.slice UInt8.t)
   let uhdr = mk_emphdrs uhdrauxbuf;
   let mut aadbuf = [| 0uy; 0sz |];
   let aadslice = S.from_array aadbuf 0sz;
-  with aad. assert pure ((aad <: evercddl_bstr_pretty) == Mkevercddl_bstr_pretty0 { s = aadslice; p = 1.0R });
-  rw_l (rel_bstr_eq aad (Mkspect_evercddl_bstr_pretty0 _));
+  with aad. assert pure ((aad <: evercddl_bstr) == Mkevercddl_bstr0 { s = aadslice; p = 1.0R });
+  rw_l (rel_bstr_eq aad (Mkspect_evercddl_bstr0 _));
   let res = sign1 privkey uhdr aad payload outbuf;
   with msg. assert pts_to res msg;
-  rw_r (rel_bstr_eq aad (Mkspect_evercddl_bstr_pretty0 _));
+  rw_r (rel_bstr_eq aad (Mkspect_evercddl_bstr0 _));
   S.to_array aadslice;
   elim_trade _ (A.pts_to uhdrauxbuf _);
   res
@@ -548,7 +548,7 @@ fn verify_sig pubkey phdr aad payload (sigbuf: S.slice UInt8.t)
   }
 }
 
-let rel_sign1_tagged_eq (a: evercddl_COSE_Sign1_Tagged_pretty) (b: spect_evercddl_COSE_Sign1_Tagged_pretty) =
+let rel_sign1_tagged_eq (a: evercddl_COSE_Sign1_Tagged) (b: spect_evercddl_COSE_Sign1_Tagged) =
   assert_norm' (rel_evercddl_COSE_Sign1_Tagged a b ==
     ((COSE.Format.rel_evercddl_empty_or_serialized_map a._x0.protected b._x0.protected **
             COSE.Format.rel_evercddl_header_map a._x0.unprotected b._x0.unprotected) **
@@ -557,7 +557,7 @@ let rel_sign1_tagged_eq (a: evercddl_COSE_Sign1_Tagged_pretty) (b: spect_evercdd
             COSE.Format.rel_evercddl_bstr a._x0.signature b._x0.signature))
     )
 
-let rel_bstr_eq' (x: evercddl_bstr_pretty) (y: spect_evercddl_bstr_pretty) =
+let rel_bstr_eq' (x: evercddl_bstr) (y: spect_evercddl_bstr) =
   assert_norm' (rel_evercddl_bstr x y ==
       pts_to x._x0.s #x._x0.p y._x0 ** pure (false == false))
 
@@ -565,9 +565,9 @@ inline_for_extraction noextract
 let sixty_four: v: SizeT.t { SizeT.v v == 64 } = 64sz
 
 inline_for_extraction noextract
-fn verify1_core pubkey aad (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x0.payload })
+fn verify1_core pubkey aad (msg: evercddl_COSE_Sign1_Tagged { Inl? msg._x0.payload })
     #ppubkey (#vpubkey: erased (Seq.seq UInt8.t) { Seq.length vpubkey == 32 })
-    (#vaad: erased _) (#vmsg: erased spect_evercddl_COSE_Sign1_Tagged_pretty { Inl? (reveal vmsg)._x0.payload })
+    (#vaad: erased _) (#vmsg: erased spect_evercddl_COSE_Sign1_Tagged { Inl? (reveal vmsg)._x0.payload })
   requires S.pts_to pubkey #ppubkey vpubkey
   requires rel_evercddl_COSE_Sign1_Tagged msg vmsg
   requires rel_evercddl_bstr aad vaad
@@ -613,8 +613,8 @@ fn verify1_core pubkey aad (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x
 
 inline_for_extraction noextract
 fn borrow_payload
-    (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x0.payload })
-    (#vmsg: erased spect_evercddl_COSE_Sign1_Tagged_pretty { Inl? (reveal vmsg)._x0.payload })
+    (msg: evercddl_COSE_Sign1_Tagged { Inl? msg._x0.payload })
+    (#vmsg: erased spect_evercddl_COSE_Sign1_Tagged { Inl? (reveal vmsg)._x0.payload })
   requires rel_evercddl_COSE_Sign1_Tagged msg vmsg
   returns payload: S.slice UInt8.t
   ensures
@@ -656,9 +656,9 @@ let parses_from #t #st (s: CDDL.Spec.Base.spec t st true) (x: st) y : prop =
 
 let good_signature (pubkey: Seq.seq UInt8.t { Seq.length pubkey == 32 })
     (msg: Seq.seq UInt8.t) (aad: Seq.seq UInt8.t) (payload: Seq.seq UInt8.t) : prop =
-  exists (vmsg: spect_evercddl_COSE_Sign1_Tagged_pretty) tbs.
+  exists (vmsg: spect_evercddl_COSE_Sign1_Tagged) tbs.
   parses_from bundle_COSE_Sign1_Tagged''.b_spec vmsg msg /\
-  vmsg._x0.payload == Inl (Mkspect_evercddl_bstr_pretty0 payload) /\
+  vmsg._x0.payload == Inl (Mkspect_evercddl_bstr0 payload) /\
   Seq.length vmsg._x0.signature._x0 == 64 /\
   to_be_signed_spec vmsg._x0.protected { _x0 = aad } { _x0 = payload } tbs /\
   spec_ed25519_verify pubkey tbs vmsg._x0.signature._x0
@@ -756,10 +756,10 @@ fn verify1_simple pubkey msg
 {
   let mut aadbuf = [| 0uy; 0sz |];
   let aadslice = S.from_array aadbuf 0sz;
-  with aad. assert pure ((aad <: evercddl_bstr_pretty) == Mkevercddl_bstr_pretty0 { s = aadslice; p = 1.0R });
-  rw_l (rel_bstr_eq aad (Mkspect_evercddl_bstr_pretty0 _));
+  with aad. assert pure ((aad <: evercddl_bstr) == Mkevercddl_bstr0 { s = aadslice; p = 1.0R });
+  rw_l (rel_bstr_eq aad (Mkspect_evercddl_bstr0 _));
   let res = verify1 pubkey aad msg;
-  rw_r (rel_bstr_eq aad (Mkspect_evercddl_bstr_pretty0 _));
+  rw_r (rel_bstr_eq aad (Mkspect_evercddl_bstr0 _));
   S.to_array aadslice;
   res
 }

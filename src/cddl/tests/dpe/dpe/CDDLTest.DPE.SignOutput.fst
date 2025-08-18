@@ -16,7 +16,7 @@ open CDDL.Spec.Base
 open CDDLTest.DPE.Common
 
 let struct_has_sig
-    (hres:spect_evercddl_signoutputargs_pretty) 
+    (hres:spect_evercddl_signoutputargs) 
     (sig :Seq.seq UInt8.t) =
   hres.signature == Some (pretty_bytes sig) /\
   hres.new_context_handle == None
@@ -28,18 +28,18 @@ requires
           x w
 ensures 
   rel_evercddl_signoutputargs
-    (evercddl_signoutputargs_pretty_right x)
-    (spect_evercddl_signoutputargs_pretty_right w)
+    (evercddl_signoutputargs_right x)
+    (spect_evercddl_signoutputargs_right w)
 {
   rewrite (rel_pair (rel_option rel_evercddl_bytes) (rel_option rel_evercddl_bytes)
                   x w)
   as (rel_evercddl_signoutputargs 
-             (evercddl_signoutputargs_pretty_right x)
-             (spect_evercddl_signoutputargs_pretty_right w));
+             (evercddl_signoutputargs_right x)
+             (spect_evercddl_signoutputargs_right w));
 }
 
 let res_has_sig
-    (res:evercddl_signoutputargs_pretty)
+    (res:evercddl_signoutputargs)
     (sig:Slice.slice UInt8.t) p =
   of_bytes_option #p res.signature (Some sig) /\
   of_bytes_option #1.0R res.new_context_handle None
@@ -56,8 +56,8 @@ ensures
     pure (struct_has_sig hres s /\
           res_has_sig res sign p)
 {
-  let pk = mk_evercddl_bytes_pretty sign;
-  mk_evercddl_bytes_pretty_none ();
+  let pk = mk_evercddl_bytes sign;
+  mk_evercddl_bytes_none ();
   mk_rel_pair (rel_option rel_evercddl_bytes)
               (rel_option rel_evercddl_bytes) _ None;
   fold_sign_output_args _ _;
@@ -69,7 +69,7 @@ let is_serialized_sign_output hres w =
   exists sz.
     impl_serialize_post (coerce_spec bundle_signoutputargs
                 .b_spec
-              spect_evercddl_signoutputargs_pretty
+              spect_evercddl_signoutputargs
               ())
           hres
           w

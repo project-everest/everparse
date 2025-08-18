@@ -20,23 +20,23 @@ open CDDLTest.DPE.Common
 
 ghost
 fn unfold_rel_initialize_context_input_args
-    (x:evercddl_initialize_context_input_args_pretty)
-    (y:spect_evercddl_initialize_context_input_args_pretty)
+    (x:evercddl_initialize_context_input_args)
+    (y:spect_evercddl_initialize_context_input_args)
 requires rel_evercddl_initialize_context_input_args x y
 ensures 
   rel_pair (rel_pair (rel_pair (rel_option rel_evercddl_bool)
                 (rel_option rel_evercddl_bool))
             (rel_option rel_evercddl_bytes))
             tstr_any
-  (evercddl_initialize_context_input_args_pretty_left x)
-  (spect_evercddl_initialize_context_input_args_pretty_left y) **
+  (evercddl_initialize_context_input_args_left x)
+  (spect_evercddl_initialize_context_input_args_left y) **
   Trade.trade
     (rel_pair (rel_pair (rel_pair (rel_option rel_evercddl_bool)
                 (rel_option rel_evercddl_bool))
             (rel_option rel_evercddl_bytes))
             tstr_any
-      (evercddl_initialize_context_input_args_pretty_left x)
-      (spect_evercddl_initialize_context_input_args_pretty_left y))
+      (evercddl_initialize_context_input_args_left x)
+      (spect_evercddl_initialize_context_input_args_left y))
   (rel_evercddl_initialize_context_input_args x y)
 {
   Trade.rewrite_with_trade
@@ -45,8 +45,8 @@ ensures
                 (rel_option rel_evercddl_bool))
             (rel_option rel_evercddl_bytes))
             tstr_any
-      (evercddl_initialize_context_input_args_pretty_left x)
-      (spect_evercddl_initialize_context_input_args_pretty_left y));
+      (evercddl_initialize_context_input_args_left x)
+      (spect_evercddl_initialize_context_input_args_left y));
 }
 
 
@@ -105,14 +105,14 @@ ensures
 }
 
 let is_uds_bytes (uds:Seq.seq UInt8.t) (w:Seq.seq UInt8.t) =
-  exists (wx:spect_evercddl_initialize_context_input_args_pretty) (wr:Seq.seq UInt8.t).
+  exists (wx:spect_evercddl_initialize_context_input_args) (wr:Seq.seq UInt8.t).
           validate_and_parse_postcond_some bundle_initialize_context_input_args.b_spec.parser
           w
           wx
           wr 
           /\
           wx.seed ==
-          Some (spect_evercddl_bytes_pretty_right (spect_evercddl_bstr_pretty_right uds))
+          Some (spect_evercddl_bytes_right (spect_evercddl_bstr_right uds))
         
 let parsed_initialize_context_input 
     (s:Slice.slice UInt8.t) (#p:perm) (w:erased _)
@@ -152,7 +152,7 @@ ensures parsed_initialize_context_input s #p w x
       Trade.Util.elim_hyp_l _ _ (pts_to s #p w);
       Trade.Util.elim_hyp_l _ _ (pts_to s #p w);
       rel_option_cases (rel_evercddl_bytes) _ _;
-      match proj_3_4 (evercddl_initialize_context_input_args_pretty_left x) {
+      match proj_3_4 (evercddl_initialize_context_input_args_left x) {
         None -> {
           Trade.elim_trade _ _;
           fold (parsed_initialize_context_input s #p w None);
