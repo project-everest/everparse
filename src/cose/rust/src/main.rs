@@ -43,12 +43,12 @@ impl Display for NotACOSEKey {
     }
 }
 
-fn read_cose_key(path: PathBuf, buf: &mut Vec<u8>) -> Result<coseformat::evercddl_COSE_Key_OKP_pretty, Box<dyn std::error::Error>> {
+fn read_cose_key(path: PathBuf, buf: &mut Vec<u8>) -> Result<coseformat::cose_key_okp, Box<dyn std::error::Error>> {
     File::open(path)?.read_to_end(buf)?;
-    match coseformat::validate_and_parse_COSE_Key_OKP(buf.as_slice()) {
-        coseformat::option__·COSE_Format_evercddl_COSE_Key_OKP_pretty···Pulse_Lib_Slice_slice·uint8_t·::None =>
+    match coseformat::validate_and_parse_cose_key_okp(buf.as_slice()) {
+        coseformat::option__·COSE_Format_cose_key_okp···Pulse_Lib_Slice_slice·uint8_t·::None =>
             Err(Box::new(NotACOSEKey{})),
-        coseformat::option__·COSE_Format_evercddl_COSE_Key_OKP_pretty···Pulse_Lib_Slice_slice·uint8_t·::Some {v: (k, _)} =>
+        coseformat::option__·COSE_Format_cose_key_okp···Pulse_Lib_Slice_slice·uint8_t·::Some {v: (k, _)} =>
             Ok(k),
     }
 }
@@ -63,7 +63,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let mut privkeybuf = Vec::new();
             let privkey = match read_cose_key(privkey, &mut privkeybuf)? {
-                coseformat::evercddl_COSE_Key_OKP_pretty { intkeyneg4: coseformat::option__COSE_Format_evercddl_bstr_pretty::Some {v: privkey}, .. } =>
+                coseformat::cose_key_okp { intkeyneg4: coseformat::option__COSE_Format_bstr::Some {v: privkey}, .. } =>
                     privkey,
                 _ => panic!("wrong key format"),
             };
@@ -80,7 +80,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let mut pubkeybuf = Vec::new();
             let pubkey = match read_cose_key(pubkey, &mut pubkeybuf)? {
-                coseformat::evercddl_COSE_Key_OKP_pretty { intkeyneg2: coseformat::option__COSE_Format_evercddl_bstr_pretty::Some {v: pubkey}, .. } =>
+                coseformat::cose_key_okp { intkeyneg2: coseformat::option__COSE_Format_bstr::Some {v: pubkey}, .. } =>
                     pubkey,
                 _ => panic!("wrong key format"),
             };

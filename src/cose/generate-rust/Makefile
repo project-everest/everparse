@@ -1,4 +1,4 @@
-all: build-rust
+all: extract-all
 
 EVERPARSE_SRC_PATH = $(realpath ../..)
 
@@ -32,4 +32,4 @@ endif
 .PHONY: test
 
 # Uncomment if you want to edit the produced F* file
-# include extract.Makefile
+include extract.Makefile

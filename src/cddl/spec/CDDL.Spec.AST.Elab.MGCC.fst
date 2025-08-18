@@ -112,7 +112,7 @@ let rec map_group_choice_compatible'
             (| RSuccess (), () |)
           end
         end
-      | WfMLiteral cut key value _ ->
+      | WfMLiteral cut name key value _ ->
         begin match map_group_footprint typ_disjoint fuel env g2 with
         | RSuccess te2 ->
           begin match map_constraint_disjoint typ_disjoint typ_included env (MCKeyValue (TElem (ELiteral key)) (if cut then TElem EAny else value)) te2 with
@@ -126,7 +126,7 @@ let rec map_group_choice_compatible'
             else begin match s2 with
             | WfMNop _ -> (| RSuccess (), () |)
             | WfMConcat g2l s2l g2r s2r ->
-              let _ : squash (elab_map_group_sem env.e_sem_env g1 == Spec.map_group_match_item_for false (eval_literal key) (typ_sem env.e_sem_env value)) = assert_norm (elab_map_group_sem env.e_sem_env (MGMatch false key value) == Spec.map_group_match_item_for false (eval_literal key) (typ_sem env.e_sem_env value)) in
+              let _ : squash (elab_map_group_sem env.e_sem_env g1 == Spec.map_group_match_item_for false (eval_literal key) (typ_sem env.e_sem_env value)) = assert_norm (elab_map_group_sem env.e_sem_env (MGMatch false name key value) == Spec.map_group_match_item_for false (eval_literal key) (typ_sem env.e_sem_env value)) in
               elab_map_group_sem_concat env.e_sem_env g2l g2r;
               spec_wf_parse_map_group_concat env.e_sem_env g2l s2l g2r s2r;
               let (| res1, _ |) = map_group_choice_compatible' env s1 s2l () in
@@ -155,7 +155,7 @@ let rec map_group_choice_compatible'
                 Spec.map_group_choice_compatible_match_item_for_zero_or_one_right cut (eval_literal key) (typ_sem env.e_sem_env value) (elab_map_group_sem env.e_sem_env g);
                 (| RSuccess (), () |)
               end
-            | WfMLiteral cut2 key2 value2 _ ->
+            | WfMLiteral cut2 _ key2 value2 _ ->
               if key <> key2
               then begin // this case should already have been eliminated by the typ_disjoint test above
                 Classical.forall_intro_2 byte_seq_of_ascii_string_diff;

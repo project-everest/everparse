@@ -22,9 +22,6 @@ with `docker run -i -t evercddl`
 
 A pre-built Docker image is [available on GitHub Packages](https://github.com/project-everest/everparse/pkgs/container/evercbor)
 
-NOTE: These Docker images only contain CBOR, CDDL and COSE. They do not
-contain the rest of EverParse.
-
 The *Use* sections of the instructions below apply to the pre-built
 Docker image as well as when building by hand.
 

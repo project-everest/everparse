@@ -15,6 +15,8 @@ let typ_included
 : typ_included_t
 = fun e t1 t2 ->
   match t1, t2 with
+  | TNamed _ t1, t2
+  | t1, TNamed _ t2 -> typ_included e t1 t2
   | _, TElem EAny
   | TElem EAlwaysFalse, _ -> RSuccess ()
   | _ ->

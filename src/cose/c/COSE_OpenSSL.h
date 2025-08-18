@@ -12,11 +12,11 @@ typedef Pulse_Lib_Slice_slice__uint8_t bstr;
 bstr COSE_OpenSSL_sign_eddsa(EVP_PKEY *signing_key, const bstr tbs);
 bool COSE_OpenSSL_validate(EVP_PKEY *signing_key, bstr tbs, bstr sig);
 
-COSE_Format_evercddl_header_map_pretty COSE_OpenSSL_empty_sig_headers();
+COSE_Format_header_map COSE_OpenSSL_empty_sig_headers();
 
 bstr COSE_OpenSSL_sign1(EVP_PKEY *signing_key,
-        COSE_Format_evercddl_header_map_pretty protected_headers,
-        COSE_Format_evercddl_header_map_pretty unprotected_headers,
+        COSE_Format_header_map protected_headers,
+        COSE_Format_header_map unprotected_headers,
         bstr aad, bstr payload);
 
 bstr COSE_OpenSSL_verify1(EVP_PKEY *signing_key, bstr aad, bstr msg);

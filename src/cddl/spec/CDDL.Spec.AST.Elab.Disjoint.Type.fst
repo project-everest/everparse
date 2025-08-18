@@ -17,6 +17,8 @@ let typ_disjoint
 : typ_disjoint_t
 = fun e t1 t2 ->
   match t1, t2 with
+  | TNamed _ t1, t2
+  | t1, TNamed _ t2 -> typ_disjoint e t1 t2
   | TElem EAlwaysFalse, _
   | _, TElem EAlwaysFalse -> RSuccess ()
   | TElem EAny, _

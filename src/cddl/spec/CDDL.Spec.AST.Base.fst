@@ -1,4 +1,5 @@
 module CDDL.Spec.AST.Base
+include CDDL.Spec.Attr
 include CDDL.Spec.EqTest
 module Spec = CDDL.Spec.All
 module U64 = FStar.UInt64
@@ -95,6 +96,7 @@ and typ =
 | TDef of string
 | TArray of group
 | TMap of group
+| TNamed: (name: string) -> (body: typ) -> typ
 | TTagged: (tag: option int) -> (body: typ) -> typ
 | TChoice: typ -> typ -> typ
 | TRange: typ -> inclusive: bool -> typ -> typ
@@ -191,6 +193,7 @@ and typ_bounded
   | TDef s -> env s = Some NType
   | TArray g -> group_bounded env g
   | TMap g -> group_bounded env g
+  | TNamed _ t' -> typ_bounded env t'
   | TTagged v t' ->
     begin match v with
     | None -> true
@@ -256,6 +259,7 @@ and typ_bounded_incr
   | TElem _
   | TDef _
   -> ()
+  | TNamed _ t'
   | TTagged _ t' -> typ_bounded_incr env env' t'
   | TArray g -> group_bounded_incr env env' g
   | TMap g -> group_bounded_incr env env' g
@@ -508,7 +512,7 @@ let t_size
         )
       )
 
-let extract_int_value
+let rec extract_int_value
   (env: sem_env)
   (x: typ)
 : Pure (option int_value)
@@ -525,9 +529,10 @@ let extract_int_value
     if x < 0
     then Some (SNegInt (U64.uint_to_t (-1 - x)))
     else Some (SUInt (U64.uint_to_t x))
+  | TNamed _ t -> extract_int_value env t
   | _ -> None
 
-let extract_range_value
+let rec extract_range_value
   (env: sem_env)
   (x: typ)
 : Pure (option (int_value & int_value))
@@ -557,6 +562,7 @@ let extract_range_value
       end
     | _ -> None
     end
+  | TNamed _ t -> extract_range_value env t
   | _ -> None
   end
 
@@ -615,6 +621,7 @@ and typ_sem
     Spec.t_array (array_group_sem env g)
   | TMap g ->
     Spec.t_map (map_group_sem env g)
+  | TNamed _ t -> typ_sem env t
   | TChoice t1 t2 ->
     Spec.t_choice
       (typ_sem env t1)
@@ -631,6 +638,42 @@ and typ_sem
       Spec.t_int_range (eval_int_value low) (eval_int_value high)
     | _ -> Spec.t_always_false
     end
+
+let rec extract_int_value_incr
+  (env env': sem_env)
+  (x: typ)
+: Lemma
+  (requires typ_bounded env.se_bound x /\
+    sem_env_included env env'
+  )
+  (ensures typ_bounded env'.se_bound x /\
+    extract_int_value env' x == extract_int_value env x
+  )
+  [SMTPatOr [
+    [SMTPat (sem_env_included env env'); SMTPat (extract_int_value env x);];
+    [SMTPat (sem_env_included env env'); SMTPat (extract_int_value env' x);];
+  ]]
+= match x with
+  | TNamed _ x' -> extract_int_value_incr env env' x'
+  | _ -> ()
+
+let rec extract_range_value_incr
+  (env env': sem_env)
+  (x: typ)
+: Lemma
+  (requires typ_bounded env.se_bound x /\
+    sem_env_included env env'
+  )
+  (ensures typ_bounded env'.se_bound x /\
+    extract_range_value env' x == extract_range_value env x
+  )
+  [SMTPatOr [
+    [SMTPat (sem_env_included env env'); SMTPat (extract_range_value env x);];
+    [SMTPat (sem_env_included env env'); SMTPat (extract_range_value env' x);];
+  ]]
+= match x with
+  | TNamed _ x' -> extract_range_value_incr env env' x'
+  | _ -> ()
 
 let rec array_group_sem_incr
   (env env': sem_env)
@@ -722,6 +765,7 @@ and typ_sem_incr
     array_group_sem_incr env env' g
   | TMap g ->
     map_group_sem_incr env env' g
+  | TNamed _ t -> typ_sem_incr env env' t
   | TSize t1 t2
   | TRange t1 _ t2
   | TDetCbor t1 t2
@@ -730,14 +774,14 @@ and typ_sem_incr
     typ_sem_incr env env' t2
 
 [@@ sem_attr ]
-let typ_sem_elem
+let rec typ_sem_elem
   (env: sem_env)
   (x: typ)
 : Pure type_sem
   (requires (typ_bounded env.se_bound x))
   (ensures (fun y ->
     typ_bounded env.se_bound x /\
-    Spec.typ_equiv (sem_of_type_sem y) (typ_sem env x)
+    sem_of_type_sem y == typ_sem env x
   ))
 = match x with
   | TDef n -> env.se_env n
@@ -746,9 +790,10 @@ let typ_sem_elem
     then SInt (SNegInt (U64.uint_to_t (-1 - x)))
     else SInt (SUInt (U64.uint_to_t x))
 (* TODO: range *)
+  | TNamed _ t -> typ_sem_elem env t
   | _ -> Sem (typ_sem env x)
 
-let typ_sem_elem_incr
+let rec typ_sem_elem_incr
   (env env': sem_env)
   (x: typ)
 : Lemma
@@ -760,7 +805,13 @@ let typ_sem_elem_incr
     typ_bounded env'.se_bound x /\
     typ_sem_elem env' x == typ_sem_elem env x
   ))
-= ()
+  [SMTPatOr [
+    [SMTPat (sem_env_included env env'); SMTPat (typ_sem_elem env x);];
+    [SMTPat (sem_env_included env env'); SMTPat (typ_sem_elem env' x);];
+  ]]
+= match x with
+  | TNamed _ x' -> typ_sem_elem_incr env env' x'
+  | _ -> ()
 
 (* Annotated AST and their semantics *)
 
@@ -862,6 +913,7 @@ type elab_map_group =
 | MGAlwaysFalse
 | MGMatch:
   cut: bool ->
+  name: option string ->
   key: literal ->
   value: typ ->
   elab_map_group
@@ -894,7 +946,7 @@ let rec bounded_elab_map_group
 = match g with
   | MGNop
   | MGAlwaysFalse -> true
-  | MGMatch _ key value ->
+  | MGMatch _ _ key value ->
     wf_literal key &&
     typ_bounded env value
   | MGMatchWithCut key value ->
@@ -943,7 +995,7 @@ let rec elab_map_group_sem
 = match g with
   | MGNop -> Spec.map_group_nop
   | MGAlwaysFalse -> Spec.map_group_always_false
-  | MGMatch cut key value ->
+  | MGMatch cut _ key value ->
     Spec.map_group_match_item_for cut (eval_literal key) (typ_sem env value)
   | MGMatchWithCut key value ->
     Spec.map_group_match_item true (typ_sem env key) (typ_sem env value)
@@ -1027,7 +1079,7 @@ let rec spec_map_group_footprint
       Spec.map_group_is_det s
     )
 = match g with
-  | MGMatch cut key value
+  | MGMatch cut _ key value
   -> Spec.map_group_footprint_match_item_for cut (eval_literal key) (typ_sem env value);
     Ghost.hide (Spec.map_group_match_item_for_footprint cut (eval_literal key) (typ_sem env value))
   | MGTable key value except // TODO: extend to GOneOrMore
@@ -1215,10 +1267,11 @@ and ast0_wf_parse_map_group
     ast0_wf_parse_map_group (MGChoice g MGNop)
 | WfMLiteral:
     cut: bool ->
+    name: option string ->
     key: literal ->
     value: typ ->
     s: ast0_wf_typ value ->
-    ast0_wf_parse_map_group (MGMatch cut key value)
+    ast0_wf_parse_map_group (MGMatch cut name key value)
 | WfMZeroOrMore:
     key: typ ->
     value: typ ->
@@ -1418,7 +1471,7 @@ and bounded_wf_parse_map_group
 | WfMZeroOrOne g s ->
     bounded_elab_map_group env g &&
     bounded_wf_parse_map_group env g s
-| WfMLiteral cut key value s ->
+| WfMLiteral cut _ key value s ->
     wf_literal key &&
     bounded_wf_typ env value s
 | WfMZeroOrMore key value except s_key s_value s_except ->
@@ -1604,7 +1657,7 @@ and bounded_wf_parse_map_group_incr
     bounded_wf_parse_map_group_incr env env' g2' s2
   | WfMZeroOrOne g s ->
     bounded_wf_parse_map_group_incr env env' g s
-  | WfMLiteral cut key value s ->
+  | WfMLiteral cut _ key value s ->
     bounded_wf_typ_incr env env' value s
   | WfMZeroOrMore key value except s_key s_value s_except ->
     bounded_wf_typ_incr env env' key s_key;
@@ -1749,7 +1802,7 @@ and bounded_wf_parse_map_group_bounded
     bounded_wf_typ_bounded env key s_key;
     bounded_wf_map_constraint_bounded env except s_except;
     bounded_wf_typ_bounded env value s_value
-  | WfMLiteral cut key value s ->
+  | WfMLiteral cut _ key value s ->
     bounded_wf_typ_bounded env value s
   | WfMZeroOrOne _ _
   | WfMConcat _ _ _ _
@@ -1888,7 +1941,7 @@ and spec_wf_parse_map_group
 | WfMZeroOrOne g s ->
     spec_wf_parse_map_group env g s /\
     Spec.MapGroupFail? (Spec.apply_map_group_det (elab_map_group_sem env g) Cbor.cbor_map_empty)
-| WfMLiteral cut key value s ->
+| WfMLiteral cut _ key value s ->
     spec_wf_typ env true value s
 | WfMZeroOrMore key value except s_key s_value s_except ->
     spec_wf_typ env true key s_key /\
@@ -2145,7 +2198,7 @@ and spec_wf_parse_map_group_incr
     spec_wf_parse_map_group_incr env env' g2' s2
   | WfMZeroOrOne g s ->
     spec_wf_parse_map_group_incr env env' g s
-  | WfMLiteral cut key value s ->
+  | WfMLiteral cut _ key value s ->
     spec_wf_typ_incr env env' true value s
   | WfMZeroOrMore key value except s_key s_value s_except ->
     spec_wf_typ_incr env env' true key s_key;
@@ -2403,6 +2456,7 @@ let wf_ast_env_extend_typ_with
       ast_env_included e e' /\
       e'.e_sem_env.se_bound == extend_name_env e.e_sem_env.se_bound new_name NType /\
       e'.e_sem_env.se_bound new_name == Some NType /\
+      sem_of_type_sem (e'.e_sem_env.se_env new_name) == typ_sem e.e_sem_env t /\
       (e'.e_env new_name <: typ) == t
   })
 = ast_env_set_wf (ast_env_extend_gen e new_name NType t) new_name { wf_typ = (Some (| (), t_wf |)) }
@@ -2442,6 +2496,7 @@ let wf_ast_env_extend_typ_with_weak
       ast_env_included e e' /\
       e'.e_sem_env.se_bound == extend_name_env e.e_sem_env.se_bound new_name NType /\
       e'.e_sem_env.se_bound new_name == Some NType /\
+      sem_of_type_sem (e'.e_sem_env.se_env new_name) == typ_sem e.e_sem_env t /\
       (e'.e_env new_name <: typ) == t
   })
 = wf_ast_env_extend_typ_with e new_name t t_wf
@@ -2877,7 +2932,7 @@ and target_type_of_wf_map_group
   | WfMChoice _ s1 _ s2 -> TTUnion (target_type_of_wf_map_group s1) (target_type_of_wf_map_group s2)
   | WfMConcat _ s1 _ s2 -> TTPair (target_type_of_wf_map_group s1) (target_type_of_wf_map_group s2)
   | WfMZeroOrOne _ s -> TTOption (target_type_of_wf_map_group s)
-  | WfMLiteral _ _ _ s -> target_type_of_wf_typ s
+  | WfMLiteral _ _ _ _ s -> target_type_of_wf_typ s
   | WfMZeroOrMore _ _ _ s_key s_value _ -> TTTable (target_type_of_wf_typ s_key) (target_type_of_wf_typ s_value)
 
 (*
@@ -2955,7 +3010,7 @@ and target_type_of_wf_map_group_bounded
     target_type_of_wf_map_group_bounded env s1;
     target_type_of_wf_map_group_bounded env s2
   | WfMZeroOrOne _ s -> target_type_of_wf_map_group_bounded env s
-  | WfMLiteral _ _ _ s -> target_type_of_wf_typ_bounded env s
+  | WfMLiteral _ _ _ _ s -> target_type_of_wf_typ_bounded env s
   | WfMZeroOrMore _ _ _ s_key s_value _ ->
     target_type_of_wf_typ_bounded env s_key;
     target_type_of_wf_typ_bounded env s_value
@@ -3058,3 +3113,35 @@ let array_group_concat_maybe_close_equiv
     )
   )
 = ()
+
+[@@bundle_attr]
+let name_from_literal (l : literal) : option string =
+  match l with
+  | LTextString s -> Some s
+  | LSimple i
+  | LInt i ->
+    Some (if i >= 0
+          then "intkey" ^ string_of_int i
+          else "intkeyneg" ^ string_of_int (-i))
+
+[@@bundle_attr]
+let rec extract_name_map_group (t : ast0_wf_parse_map_group 'a) : option string =
+  match t with
+  | WfMLiteral _ (Some name) _ _ _ -> Some name
+  | WfMLiteral _ None l _ _ -> name_from_literal l
+  | WfMZeroOrOne _g sub -> extract_name_map_group sub
+  | _ -> None
+
+[@@bundle_attr]
+let name_from_array_key (key : typ) : option string =
+  match key with
+  | TNamed n _ -> Some n
+  | TElem (ELiteral l) -> name_from_literal l
+  | _ -> None
+
+[@@bundle_attr]
+let rec extract_name_array_group (t : ast0_wf_array_group 'a) : option string =
+  match t with
+  | WfAElem _ key _ _ -> name_from_array_key key
+  | WfAZeroOrOne _g sub -> extract_name_array_group sub
+  | _ -> None

@@ -8,7 +8,7 @@
 #include "COSE_Format.h"
 #include "CBORDetAbstract.h"
 
-COSE_Format_evercddl_int_pretty COSE_EverCrypt_mk_int(int32_t i);
+COSE_Format_evercddl_int COSE_EverCrypt_mk_int(int32_t i);
 
 typedef void *COSE_EverCrypt_ser_to;
 
@@ -17,27 +17,23 @@ typedef void *COSE_EverCrypt_to_be_signed_spec;
 void
 COSE_EverCrypt_create_sig(
   uint8_t *privkey,
-  COSE_Format_evercddl_empty_or_serialized_map_pretty phdr,
+  COSE_Format_empty_or_serialized_map phdr,
   Pulse_Lib_Slice_slice__uint8_t aad,
   Pulse_Lib_Slice_slice__uint8_t payload,
   uint8_t *sigbuf
 );
 
-K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty
-COSE_EverCrypt_dummy_map_val(void);
+K___COSE_Format_label_COSE_Format_values COSE_EverCrypt_dummy_map_val(void);
 
-COSE_Format_evercddl_empty_or_serialized_map_pretty
-COSE_EverCrypt_mk_phdrs(
-  int32_t alg,
-  K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty *rest
-);
+COSE_Format_empty_or_serialized_map
+COSE_EverCrypt_mk_phdrs(int32_t alg, K___COSE_Format_label_COSE_Format_values *rest);
 
 typedef void *COSE_EverCrypt_sign1_spec;
 
 Pulse_Lib_Slice_slice__uint8_t
 COSE_EverCrypt_sign1(
   uint8_t *privkey,
-  COSE_Format_evercddl_header_map_pretty uhdr,
+  COSE_Format_header_map uhdr,
   Pulse_Lib_Slice_slice__uint8_t aad,
   Pulse_Lib_Slice_slice__uint8_t payload,
   Pulse_Lib_Slice_slice__uint8_t outbuf
@@ -53,7 +49,7 @@ COSE_EverCrypt_sign1_simple(
 bool
 COSE_EverCrypt_verify_sig(
   uint8_t *pubkey,
-  COSE_Format_evercddl_empty_or_serialized_map_pretty phdr,
+  COSE_Format_empty_or_serialized_map phdr,
   Pulse_Lib_Slice_slice__uint8_t aad,
   Pulse_Lib_Slice_slice__uint8_t payload,
   uint8_t *sigbuf

@@ -128,8 +128,10 @@ let rec mk_elab_map_group
   then ROutOfFuel
   else let fuel' : nat = fuel - 1 in
   match g with
+  | GElem cut (TNamed name (TElem (ELiteral key))) value ->
+    RSuccess (MGMatch cut (Some name) key value)  
   | GElem cut (TElem (ELiteral key)) value ->
-    RSuccess (MGMatch cut key value)
+    RSuccess (MGMatch cut (name_from_literal key) key value)
   | GElem cut (TDef nkey) value ->
     begin match env.e_sem_env.se_bound nkey with
     | Some NType ->
@@ -330,7 +332,7 @@ let rec extract_cut
   (g: elab_map_group)
 : Tot map_constraint
 = match g with
-  | MGMatch cut key value -> MCKeyValue (TElem (ELiteral key)) (if cut then TElem EAny else value)
+  | MGMatch cut _ key value -> MCKeyValue (TElem (ELiteral key)) (if cut then TElem EAny else value)
   | MGMatchWithCut key _ -> MCKeyValue key (TElem EAny)
   | MGChoice g1 _ -> extract_cut g1
   | _ -> MCFalse
@@ -381,7 +383,7 @@ let rec extract_cut_correct
   match g with
   | MGChoice g1 _ ->
     extract_cut_correct env g1 m
-  | MGMatch true key _ -> ()
+  | MGMatch true _ key _ -> ()
   | MGMatchWithCut key _ -> ()
   | _ -> cbor_map_disjoint_from_footprint_always_false m
 
@@ -431,7 +433,7 @@ let rec annot_tables
     let except = cut in
     RSuccess (MCOr cut (MCKeyValue key value), MGTable key value except)
   | MGTable _ _ _ -> RFailure "annot_tables cannot be run twice"
-  | MGMatch cut' key value ->
+  | MGMatch cut' _ key value ->
     let fp = (MCKeyValue (TElem (ELiteral key)) (TElem EAny)) in
     RSuccess (MCOr cut fp, g) // TODO: rewrite the group if cut' is true and key \included cut
   | MGMatchWithCut key _ ->
@@ -591,17 +593,18 @@ let annot_tables_correct_aux_match
   (env: ast_env)
   (cut: map_constraint)
   (c: bool)
+  (name: option string)
   (key: literal)
   (value: typ)
   (m: Cbor.cbor_map)
   (sq: squash (
-    let g = MGMatch c key value in
+    let g = MGMatch c name key value in
     bounded_map_constraint env.e_sem_env.se_bound cut /\
     bounded_elab_map_group env.e_sem_env.se_bound g /\
     Spec.cbor_map_disjoint_from_footprint m (map_constraint_sem env.e_sem_env cut)
   ))
 : Tot (squash (
-    let g = MGMatch c key value in
+    let g = MGMatch c name key value in
     annot_tables_correct_postcond fuel env cut g m
   ))
 =
@@ -610,13 +613,13 @@ let annot_tables_correct_aux_match
     let fp' = map_constraint_sem env.e_sem_env fp in
     Spec.map_group_footprint_match_item_for c (eval_literal key) (typ_sem env.e_sem_env value);
     let cut' = MCOr cut fp in
-    let g = MGMatch c key value in
+    let g = MGMatch c name key value in
     let sq1 : squash (
       bounded_map_constraint env.e_sem_env.se_bound cut /\
       bounded_elab_map_group env.e_sem_env.se_bound g
     ) = () in
     let sq2 : squash (annot_tables fuel env cut g == RSuccess (cut', g)) =
-      assert (annot_tables fuel env cut (MGMatch c key value) == RSuccess (cut', MGMatch c key value)) by (FStar.Tactics.trefl ())
+      assert (annot_tables fuel env cut (MGMatch c name key value) == RSuccess (cut', MGMatch c name key value)) by (FStar.Tactics.trefl ())
     in
     begin match Cbor.cbor_map_get m (eval_literal key) with
     | None ->
@@ -808,8 +811,8 @@ let rec annot_tables_correct_aux'
     annot_tables_correct_aux'_choice g (fun g' fuel env cut m sq -> annot_tables_correct_aux' fuel env cut g' m sq) fuel env cut m sq
   | MGConcat g1 g2 ->
     annot_tables_correct_aux'_concat g (fun g' fuel env cut m sq -> annot_tables_correct_aux' fuel env cut g' m sq) fuel env cut m sq
-  | MGMatch c key value ->
-    annot_tables_correct_aux_match fuel env cut c key value m ()
+  | MGMatch c name key value ->
+    annot_tables_correct_aux_match fuel env cut c name key value m ()
   | MGTable key value MCFalse ->
     annot_tables_correct_aux_table fuel env cut key value m ()
   | _ -> assert (annot_tables_correct_postcond fuel env cut g m)
@@ -988,7 +991,7 @@ let rec annot_tables'
     | res -> coerce_failure res
     end
   | MGTable _ _ _ -> RFailure "annot_tables cannot be run twice"
-  | MGMatch cut' key value ->
+  | MGMatch cut' name key value ->
     let fp = (MCKeyValue (TElem (ELiteral key)) (TElem EAny)) in
     begin match mk_mc_or fuel env cut fp with
     | RSuccess mc' -> RSuccess (mc', g) // TODO: rewrite the group if cut' is true and key \included cut
@@ -1170,6 +1173,11 @@ let rec mk_wf_typ
   then ROutOfFuel
   else let fuel' : nat = fuel - 1 in
   match g with
+  | TNamed _ t ->
+    begin match mk_wf_typ fuel' env guard_choices t with
+    | RSuccess s -> RSuccess (WfTRewrite g t s)
+    | res -> coerce_failure res
+    end
   | TElem e ->
     RSuccess (WfTElem e)
   | TArray g' ->
@@ -1431,9 +1439,9 @@ and mk_wf_parse_map_group
       end
     | res -> coerce_failure res
     end
-  | MGMatch cut key value ->
+  | MGMatch cut name key value ->
     begin match mk_wf_typ fuel' env true value with
-    | RSuccess tvalue -> RSuccess (WfMLiteral cut key value tvalue)
+    | RSuccess tvalue -> RSuccess (WfMLiteral cut name key value tvalue)
     | res -> coerce_failure res
     end
   | MGTable key value except ->

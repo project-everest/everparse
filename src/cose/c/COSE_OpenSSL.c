@@ -13,9 +13,9 @@ void COSE_OpenSSL_openssl_error_msg(const char *msg) {
 const COSE_Format_evercddl_int_tags signature1 = 1;
 
 static
-bstr mk_sig_structure(COSE_Format_evercddl_empty_or_serialized_map_pretty protected_headers,
+bstr mk_sig_structure(COSE_Format_empty_or_serialized_map protected_headers,
         bstr aad, bstr payload) {
-    COSE_Format_evercddl_Sig_structure_pretty c = {
+    COSE_Format_sig_structure c = {
         .context = signature1,
         .body_protected = protected_headers,
         ._x0 = {
@@ -31,13 +31,13 @@ bstr mk_sig_structure(COSE_Format_evercddl_empty_or_serialized_map_pretty protec
     out.len = 1024; // TODO
     check(out.elt = malloc(out.len));
 
-    check(out.len = COSE_Format_serialize_Sig_structure(c, out));
+    check(out.len = COSE_Format_serialize_sig_structure(c, out));
 
     return out;
 }
 
-COSE_Format_evercddl_header_map_pretty COSE_OpenSSL_empty_sig_headers() {
-    return (COSE_Format_evercddl_header_map_pretty) {
+COSE_Format_header_map COSE_OpenSSL_empty_sig_headers() {
+    return (COSE_Format_header_map) {
         .intkey1 = { .tag = FStar_Pervasives_Native_None },
         .intkey2 = { .tag = FStar_Pervasives_Native_None },
         .intkey3 = { .tag = FStar_Pervasives_Native_None },
@@ -55,7 +55,7 @@ COSE_Format_evercddl_header_map_pretty COSE_OpenSSL_empty_sig_headers() {
         ._x1 = {
             .tag = COSE_Format_Inl,
             .case_Inl = {
-                .elt = (K___COSE_Format_evercddl_label_pretty_COSE_Format_evercddl_values_pretty[]) {},
+                .elt = (K___COSE_Format_label_COSE_Format_values[]) {},
                 .len = 0,
             },
         },
@@ -79,29 +79,29 @@ bstr COSE_OpenSSL_sign_eddsa(EVP_PKEY *signing_key, const bstr tbs) {
 }
 
 bstr COSE_OpenSSL_sign1(EVP_PKEY *signing_key,
-        COSE_Format_evercddl_header_map_pretty protected_headers,
-        COSE_Format_evercddl_header_map_pretty unprotected_headers,
+        COSE_Format_header_map protected_headers,
+        COSE_Format_header_map unprotected_headers,
         bstr aad, bstr payload) {
-    protected_headers.intkey1 = (FStar_Pervasives_Native_option__FStar_Pervasives_either_COSE_Format_evercddl_int_pretty_COSE_Format_evercddl_tstr_pretty) {
+    protected_headers.intkey1 = (FStar_Pervasives_Native_option__FStar_Pervasives_either_COSE_Format_evercddl_int_COSE_Format_tstr) {
         .tag = FStar_Pervasives_Native_Some,
         .v = {
             .tag = COSE_Format_Inl,
             .case_Inl = { // I just hope this is -8 (COSE_ALGORITHM_EDDSA)
-                .tag = COSE_Format_Mkevercddl_int_pretty1,
-                .case_Mkevercddl_int_pretty1 = 7,
+                .tag = COSE_Format_Mkevercddl_int1,
+                .case_Mkevercddl_int1 = 7,
             }
         },
     };
-    COSE_Format_evercddl_empty_or_serialized_map_pretty protected_headers_ = {
-        .tag = COSE_Format_Mkevercddl_empty_or_serialized_map_pretty0,
-        .case_Mkevercddl_empty_or_serialized_map_pretty0 = protected_headers,
+    COSE_Format_empty_or_serialized_map protected_headers_ = {
+        .tag = COSE_Format_Mkempty_or_serialized_map0,
+        .case_Mkempty_or_serialized_map0 = protected_headers,
     };
 
     bstr sig_structure = mk_sig_structure(protected_headers_, aad, payload);
     bstr sig = COSE_OpenSSL_sign_eddsa(signing_key, sig_structure);
     free(sig_structure.elt);
 
-    COSE_Format_evercddl_COSE_Sign1_pretty c = {
+    COSE_Format_cose_sign1 c = {
         .protected = protected_headers_,
         .unprotected = unprotected_headers,
         .payload = { .tag = COSE_Format_Inl, .case_Inl = payload },
@@ -111,7 +111,7 @@ bstr COSE_OpenSSL_sign1(EVP_PKEY *signing_key,
     bstr out;
     out.len = 1024; // TODO
     check(out.elt = malloc(out.len));
-    check(out.len = COSE_Format_serialize_COSE_Sign1_Tagged(c, out));
+    check(out.len = COSE_Format_serialize_cose_sign1_tagged(c, out));
 
     OPENSSL_free(sig.elt);
 
@@ -133,8 +133,8 @@ bool COSE_OpenSSL_validate(EVP_PKEY *signing_key, bstr tbs, bstr sig) {
 }
 
 bstr COSE_OpenSSL_verify1(EVP_PKEY *signing_key, bstr aad, bstr msg) {
-    FStar_Pervasives_Native_option___COSE_Format_evercddl_COSE_Sign1_Tagged_pretty___Pulse_Lib_Slice_slice_uint8_t_ parsed_msg =
-        COSE_Format_validate_and_parse_COSE_Sign1_Tagged(msg);
+    FStar_Pervasives_Native_option___COSE_Format_cose_sign1_tagged___Pulse_Lib_Slice_slice_uint8_t_ parsed_msg =
+        COSE_Format_validate_and_parse_cose_sign1_tagged(msg);
     check(parsed_msg.tag);
 
     check(parsed_msg.v.fst.payload.tag == COSE_Format_Inl); // detached payload not supported
@@ -142,7 +142,7 @@ bstr COSE_OpenSSL_verify1(EVP_PKEY *signing_key, bstr aad, bstr msg) {
 
     bstr sig = parsed_msg.v.fst.signature;
     
-    COSE_Format_evercddl_empty_or_serialized_map_pretty protected_headers =
+    COSE_Format_empty_or_serialized_map protected_headers =
         parsed_msg.v.fst.protected;
     // TODO check algorithm
   

@@ -181,7 +181,7 @@ and validate_map_group
         ()
       )
       _ _ ()
-  | AST.WfMLiteral cut key value s' ->
+  | AST.WfMLiteral cut _ key value s' ->
     impl_map_group_match_item_for
       impl.cbor_map_get
       cut

@@ -66,7 +66,7 @@ void bench_parse(EVP_PKEY *pkey) {
     bstr signed_msg = COSE_OpenSSL_sign1(pkey, COSE_OpenSSL_empty_sig_headers(), COSE_OpenSSL_empty_sig_headers(), aad, payload);
     clock_gettime(CLOCK_MONOTONIC, &start);
     for (unsigned i = 0; i < nruns; i++) {
-        COSE_Format_validate_and_parse_COSE_Sign1_Tagged(signed_msg);
+        COSE_Format_validate_and_parse_cose_sign1_tagged(signed_msg);
     }
     clock_gettime(CLOCK_MONOTONIC, &finish);
     free(signed_msg.elt);
@@ -82,12 +82,12 @@ void bench_serialize(EVP_PKEY *pkey) {
     out.elt = malloc(out.len);
 
     bstr signed_msg = COSE_OpenSSL_sign1(pkey, COSE_OpenSSL_empty_sig_headers(), COSE_OpenSSL_empty_sig_headers(), aad, payload);
-    COSE_Format_evercddl_COSE_Sign1_pretty c =
-        COSE_Format_validate_and_parse_COSE_Sign1_Tagged(signed_msg).v.fst;
+    COSE_Format_cose_sign1 c =
+        COSE_Format_validate_and_parse_cose_sign1_tagged(signed_msg).v.fst;
 
     clock_gettime(CLOCK_MONOTONIC, &start);
     for (unsigned i = 0; i < nruns; i++) {
-        COSE_Format_serialize_COSE_Sign1_Tagged(c, out);
+        COSE_Format_serialize_cose_sign1_tagged(c, out);
     }
     clock_gettime(CLOCK_MONOTONIC, &finish);
 
@@ -105,9 +105,9 @@ void bench_serialize_sig_struct(EVP_PKEY *pkey) {
     out.elt = malloc(out.len);
 
     bstr signed_msg = COSE_OpenSSL_sign1(pkey, COSE_OpenSSL_empty_sig_headers(), COSE_OpenSSL_empty_sig_headers(), aad, payload);
-    COSE_Format_evercddl_COSE_Sign1_pretty c =
-        COSE_Format_validate_and_parse_COSE_Sign1_Tagged(signed_msg).v.fst;
-    COSE_Format_evercddl_Sig_structure_pretty sig_struct = {
+    COSE_Format_cose_sign1 c =
+        COSE_Format_validate_and_parse_cose_sign1_tagged(signed_msg).v.fst;
+    COSE_Format_sig_structure sig_struct = {
         .context = 1,
         .body_protected = c.protected,
         ._x0 = {
@@ -121,7 +121,7 @@ void bench_serialize_sig_struct(EVP_PKEY *pkey) {
 
     clock_gettime(CLOCK_MONOTONIC, &start);
     for (unsigned i = 0; i < nruns; i++) {
-        COSE_Format_serialize_Sig_structure(sig_struct, out);
+        COSE_Format_serialize_sig_structure(sig_struct, out);
     }
     clock_gettime(CLOCK_MONOTONIC, &finish);
 
@@ -135,7 +135,7 @@ void bench_ed25519_sign(EVP_PKEY *pkey) {
     unsigned nruns = 100000;
     struct timespec start, finish;
 
-    COSE_Format_evercddl_Sig_structure_pretty sig_struct = {
+    COSE_Format_sig_structure sig_struct = {
         .context = 1,
         .body_protected = {},
         ._x0 = {
@@ -148,7 +148,7 @@ void bench_ed25519_sign(EVP_PKEY *pkey) {
     };
     bstr tbs = { .len = 1024 };
     check(tbs.elt = malloc(tbs.len));
-    COSE_Format_serialize_Sig_structure(sig_struct, tbs);
+    COSE_Format_serialize_sig_structure(sig_struct, tbs);
 
     clock_gettime(CLOCK_MONOTONIC, &start);
     for (unsigned i = 0; i < nruns; i++) {
@@ -165,7 +165,7 @@ void bench_ed25519_verify(EVP_PKEY *pkey) {
     unsigned nruns = 100000;
     struct timespec start, finish;
 
-    COSE_Format_evercddl_Sig_structure_pretty sig_struct = {
+    COSE_Format_sig_structure sig_struct = {
         .context = 1,
         .body_protected = {},
         ._x0 = {
@@ -178,7 +178,7 @@ void bench_ed25519_verify(EVP_PKEY *pkey) {
     };
     bstr tbs = { .len = 1024 };
     check(tbs.elt = malloc(tbs.len));
-    COSE_Format_serialize_Sig_structure(sig_struct, tbs);
+    COSE_Format_serialize_sig_structure(sig_struct, tbs);
     bstr sig = COSE_OpenSSL_sign_eddsa(pkey, tbs);
 
     clock_gettime(CLOCK_MONOTONIC, &start);
