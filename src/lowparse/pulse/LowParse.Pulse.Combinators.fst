@@ -1,6 +1,8 @@
 module LowParse.Pulse.Combinators
 #lang-pulse
 include LowParse.Spec.Combinators
+include LowParse.Spec.RtoLPair
+include LowParse.Spec.RtoLDepPair
 include LowParse.Pulse.Base
 open FStar.Tactics.V2
 open Pulse.Lib.Pervasives open Pulse.Lib.Slice.Util open Pulse.Lib.Trade
@@ -667,6 +669,51 @@ fn validate_nondep_then
     false
   }
 }
+
+inline_for_extraction
+let sz_sub (x y: SZ.t) (sq: squash (SZ.v x >= SZ.v y)) : Tot SZ.t =
+  SZ.sub x y
+
+inline_for_extraction
+fn validate_nondep_then_rtol
+  (v2_sz: SZ.t)
+  (#t1 #t2: Type0)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 t2 { k2.parser_kind_high == Some (k2.parser_kind_low) /\ k2.parser_kind_low == SZ.v v2_sz } )
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t1 { k1.parser_kind_subkind == Some ParserConsumesAll } )
+  (v1: validator p1)
+  (v2: validator p2)
+: validator #(t2 & t1) #(nondep_then_rtol_kind k1 k2.parser_kind_low) (parse_nondep_then_rtol #k2 #t2 p2 #k1 #t1 p1)
+= 
+  (input: slice byte)
+  (poffset: _)
+  (#offset: _)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  pts_to_len input;
+  let input_len = len input;
+  let offset = !poffset;
+  if (SZ.lt (SZ.sub input_len offset) v2_sz) {
+    false
+  } else {
+    let off = sz_sub input_len v2_sz ();
+    let mut poff = off;
+    let is_valid2 = validate v2 input poff;
+    // admit();
+    if is_valid2 {
+      let (l, r) = split_trade input off;
+      let is_valid1 = v1 l poffset;
+      Trade.elim _ _;
+      poffset := input_len;
+
+      parser_kind_prop_equiv (nondep_then_rtol_kind k1 k2.parser_kind_low) (parse_nondep_then_rtol p2 p1);
+      is_valid1
+    }
+  }
+}
+
 
 inline_for_extraction
 fn validate_dtuple2
