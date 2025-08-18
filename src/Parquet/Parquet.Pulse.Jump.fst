@@ -48,6 +48,32 @@ ensures exists* v' .
   s1
 }
 
+inline_for_extraction
+fn validate_pred_jump_with_offset_and_size_then_parse
+  (#t: Type0)
+  (offset: SZ.t)
+  (size: SZ.t)
+  (#k: Ghost.erased parser_kind)
+  (#p: Ghost.erased (tot_parser k t))
+  (u: validator (parser_of_tot_parser p))
+  (input: S.slice byte)
+  (#pm: perm)
+  (v: Ghost.erased bytes)
+requires
+  pts_to input #pm v ** pure (
+    SZ.v offset + SZ.v size <= Seq.length v
+  )
+returns res: bool
+ensures 
+  pts_to input #pm v **
+  pure (
+    SZ.v offset + SZ.v size <= Seq.length v /\
+    res == pred_jump_with_offset_and_size_then_parse (SZ.v offset) (SZ.v size) p v
+  )
+{
+  admit();
+}
+
 open LowParse.Pulse.Combinators
 open LowParse.Pulse.SeqBytes
 
