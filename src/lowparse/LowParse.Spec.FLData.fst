@@ -8,13 +8,12 @@ module Classical = FStar.Classical
 
 inline_for_extraction
 val parse_fldata'
-  (#k: parser_kind)
   (#t: Type)
-  (p: parser k t)
+  (p: bare_parser t)
   (sz: nat)
 : Tot (bare_parser t)
 
-let parse_fldata' #k #t p sz =
+let parse_fldata' #t p sz =
   let () = () in // Necessary to pass arity checking
   fun (s: bytes) ->
   if Seq.length s < sz

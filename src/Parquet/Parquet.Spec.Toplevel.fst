@@ -688,20 +688,24 @@ let offset_of_column_chunk (cmd: column_meta_data) : int64 =
     | Some off -> if I64.v off < I64.v cmd.data_page_offset then off else cmd.data_page_offset
     | None -> cmd.data_page_offset
 
-let rec columns_are_contiguous (prev: column_chunk) (cols: list column_chunk)
-    : Tot bool (decreases cols) =
-  match cols with
-  | [] -> true
-  | cc :: rest ->
-    match prev.meta_data, cc.meta_data with
-    | Some (prev_md: column_meta_data), Some cc_md ->
-      let prev_offset = I64.v (offset_of_column_chunk prev_md) in
-      let cc_offset = I64.v (offset_of_column_chunk cc_md) in
-      let prev_size = I64.v prev_md.total_compressed_size in
-      prev_offset + prev_size = cc_offset && columns_are_contiguous cc rest
-    | _ ->
-      // if metadata is missing, we can't check contiguity
-      true
+module J = Parquet.Spec.Jump
+
+let nat_of_int64 (x: I64.t) : Tot nat =
+  let res = I64.v x in if res < 0 then 0 else res
+
+let nat_of_int32 (x: I32.t) : Tot nat =
+  let res = I32.v x in if res < 0 then 0 else res
+
+let columns_are_sorted (cols: list column_chunk) : Tot bool =
+  J.offsets_and_sizes_are_sorted
+   (List.Tot.map
+     (fun col -> 
+       match col.meta_data with
+       | Some col -> (nat_of_int64 (offset_of_column_chunk col), nat_of_int64 col.total_compressed_size)
+       | _ -> ((0 <: nat), (0 <: nat)) (* dummy *)
+     )
+     cols
+   )
 
 val validate_row_group: row_group -> Tot bool
 
@@ -735,16 +739,14 @@ let validate_row_group rg =
       | None -> true
       | Some total_sz -> total_sz = I64.v sz
   in
-  let contiguous_ok =
-    (* cols should be contiguous *)
-    match rg.columns with
-    | [] -> true
-    | first :: rest -> columns_are_contiguous first rest
+  let sorted_ok =
+    (* cols should be contiguous according to the documentation, but we found some counterexamples, so we relax the requirement to cols being sorted *)
+    columns_are_sorted rg.columns
   in
   let cols_ok =
     List.Tot.for_all (fun cc -> validate_column_chunk cc) rg.columns (* each column chunk passes *)
   in
-  offset_ok && rg_size_ok && contiguous_ok && cols_ok
+  offset_ok && rg_size_ok && sorted_ok && cols_ok
 
 let cc_idx_ranges (cc: column_chunk) : list range =
   match
@@ -809,7 +811,7 @@ let rec page_offsets_are_distinct_and_inbound (page_offs: list int64) (bound: in
 
 (** Top‑level file metadata validation ------------------------------- *)
 
-val validate_file_meta_data: file_meta_data -> int64 -> Tot bool
+val validate_file_meta_data: file_meta_data -> nat -> Tot bool
 
 let validate_file_meta_data fmd footer_start =
   let page_offs:// get a flat list of all page offsets
@@ -827,27 +829,23 @@ let validate_file_meta_data fmd footer_start =
       fmd.row_groups
   in
   // page_offs should all be distinct and inbound
-  page_offsets_are_distinct_and_inbound page_offs (footer_start) && ranges_disjoint ranges &&
+  FStar.Int.fits footer_start 64 &&
+  page_offsets_are_distinct_and_inbound page_offs (I64.int_to_t footer_start) && ranges_disjoint ranges &&
   ranges_in_bound ranges
     // ranges should be mutually disjoint and non-overlapping with the footer
-    (I64.v footer_start) &&
+    (footer_start) &&
   List.Tot.for_all (fun rg -> validate_row_group rg) fmd.row_groups
 
-let rec page_offsets_are_contiguous (prev: page_location) (locs: list page_location)
-    : Tot bool (decreases locs) =
-  match locs with
-  | [] -> true
-  | loc :: rest ->
-    I64.v loc.offset = I64.v prev.offset + I32.v prev.compressed_page_size &&
-    page_offsets_are_contiguous loc rest
-
+let page_offsets_are_contiguous (locs: list page_location) : Tot bool =
+  J.offsets_and_sizes_are_contiguous
+    (List.Tot.map (fun loc -> (nat_of_int64 loc.offset, nat_of_int32 loc.compressed_page_size)) locs)
 
 
 (* Once jump to OffsetIndex, validate its structure against the corresponding column_chunk *)
 
-val validate_offset_index (oi: offset_index) (cc: column_chunk) : Tot bool
+val validate_offset_index (cc: column_chunk) (oi: offset_index) : Tot bool
 
-let validate_offset_index (oi: offset_index) (cc: column_chunk) : Tot bool =
+let validate_offset_index (cc: column_chunk) (oi: offset_index) : Tot bool =
   let locs = oi.page_locations in
   let first_loc =
     // the first page location must be consistent with the (computed) page location in cc
@@ -888,9 +886,7 @@ let validate_offset_index (oi: offset_index) (cc: column_chunk) : Tot bool =
       s = I64.v md.total_compressed_size
   in
   let contiguous_ok =
-    match locs with
-    | [] -> true
-    | first :: rest -> page_offsets_are_contiguous first rest
+    page_offsets_are_contiguous locs
   in
   // let ordered =
   //   (* ordered by offset and disjoint *)
@@ -920,17 +916,6 @@ assume
 val parse_footer:parser parse_footer_kind file_meta_data
 // val parse_footer:parser parse_footer_kind footer_t
 
-assume
-val parse_pages_kind:parser_kind
-
-assume
-val pages_t (footer: file_meta_data) : Type0
-// val pages_t (footer: footer_t) : Type0
-
-assume
-val parse_pages (footer: file_meta_data) : parser parse_pages_kind (pages_t footer)
-// val parse_pages (footer: footer_t) : parser parse_pages_kind (pages_t footer)
-
 let is_PAR1 (s: Seq.lseq byte 4) : bool =
   let v0 = Seq.index s 0 in
   let v1 = Seq.index s 1 in
@@ -940,6 +925,59 @@ let is_PAR1 (s: Seq.lseq byte 4) : bool =
   (U32.v (FStar.Char.u32_of_char 'R') = U8.v v2) &&
   (U32.v (FStar.Char.u32_of_char '1') = U8.v v3)
 
+assume
+val parse_offset_index_kind: parser_kind
+
+assume
+val parse_offset_index: tot_parser parse_offset_index_kind offset_index
+
+assume
+val parse_page_header_kind: (k: parser_kind { k.parser_kind_subkind == Some ParserStrong })
+
+assume
+val parse_page_header: tot_parser parse_page_header_kind page_header
+
+let validate_page_data (h: page_header) (d: bytes) : Tot bool =
+  I32.v h.compressed_page_size = Seq.length d &&
+  true (* TODO: validate data against schema *)
+
+let parse_page = tot_parse_dtuple2 parse_page_header (fun h -> tot_parse_filter tot_parse_seq_all_bytes (validate_page_data h))
+
+let validate_offset_index_all (cc: column_chunk) (data: bytes) (oi: offset_index) : Tot bool =
+  validate_offset_index cc oi &&
+  List.Tot.for_all
+    (fun pl ->
+      J.pred_jump_with_offset_and_size_then_parse
+        (nat_of_int64 pl.offset)
+        (nat_of_int32 pl.compressed_page_size)
+        parse_page
+        data
+    )
+    oi.page_locations
+
+let validate_all (fmd: file_meta_data) (data: bytes) : Tot bool =
+  validate_file_meta_data fmd (Seq.length data) &&
+  J.pred_jump_with_offset_and_size_then_parse 0 4 (tot_parse_filter (tot_parse_seq_flbytes 4) is_PAR1) data &&
+  List.Tot.for_all
+    (fun rg ->
+      List.Tot.for_all
+        (fun cc ->
+          match cc.offset_index_offset, cc.offset_index_length with
+          | Some offset, Some length ->
+            J.pred_jump_with_offset_and_size_then_parse
+              (nat_of_int64 offset)
+              (nat_of_int32 length)
+              (tot_parse_filter
+                parse_offset_index
+                (validate_offset_index_all cc data)
+              )
+              data
+          | _ -> true
+        )
+        rg.columns
+    )
+    fmd.row_groups
+
 let parse_parquet (file_size: nat) =
   parse_nondep_then_rtol (parse_filter (parse_seq_flbytes 4) is_PAR1)
     (parse_dtuple2_rtol parse_u32_le
@@ -947,10 +985,5 @@ let parse_parquet (file_size: nat) =
             (weaken (dtuple2_rtol_kind parse_seq_all_bytes_kind 0)
                 (parse_dtuple2_rtol (parse_fldata parse_footer (U32.v len))
                     (fun footer ->
-                        if file_size >= U32.v len + 8 && validate_file_meta_data footer (I64.int_to_t (file_size - U32.v len - 8))
-                        // if true 
-                        then parse_seq_all_bytes
-                        else fail_parser _ _
-                      // parse_pages footer
-                      // (parse_seq_all_bytes)
+                        parse_filter parse_seq_all_bytes (validate_all footer)
                       )))))

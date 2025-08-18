@@ -22,7 +22,7 @@ let parse_seq_all_bytes_kind =
 
 let parse_seq_all_bytes'
   (input: bytes)
-: GTot (option (bytes * consumed_length input))
+: Tot (option (bytes * consumed_length input))
 = let len = Seq.length input in
     Some (input, len)
 
@@ -50,9 +50,13 @@ let parse_seq_all_bytes : parser parse_seq_all_bytes_kind bytes =
   parse_seq_all_bytes_correct ();
   parse_seq_all_bytes'
 
+let tot_parse_seq_all_bytes : tot_parser parse_seq_all_bytes_kind bytes =
+  parse_seq_all_bytes_correct ();
+  parse_seq_all_bytes'
+
 let serialize_seq_all_bytes'
   (input: bytes)
-: GTot bytes
+: Tot bytes
 = input
 
 #set-options "--z3rlimit 32"
@@ -73,6 +77,10 @@ let serialize_seq_all_bytes_correct () : Lemma (serializer_correct parse_seq_all
 #reset-options
 
 let serialize_seq_all_bytes : serializer parse_seq_all_bytes =
+  serialize_seq_all_bytes_correct ();
+  serialize_seq_all_bytes'
+
+let tot_serialize_seq_all_bytes : tot_serializer tot_parse_seq_all_bytes =
   serialize_seq_all_bytes_correct ();
   serialize_seq_all_bytes'
 
