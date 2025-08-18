@@ -121,6 +121,7 @@ fn cbor_match_serialized_map_intro_aux
   intro_trade _ _ _ aux
 }
 
+#push-options "--z3rlimit 20"
 fn cbor_read
   (input: S.slice byte)
   (#pm: perm)
@@ -212,3 +213,4 @@ fn cbor_read
     cbor_match_simple_intro_trade (pts_to_serialized serialize_raw_data_item input #pm v) i
   }
 }
+#pop-options
