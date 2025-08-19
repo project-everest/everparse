@@ -1,0 +1,36 @@
+informative_response_payload = {
+   0 => array, ; 'tp_info' (transport-specific information)
+ ? 1 => bstr,  ; 'ph_req' (transport-independent information)
+ ? 2 => bstr,  ; 'last_notif' (transport-independent information)
+ ? 3 => uint,  ; 'next_not_before'
+ ? 4 => int  ; 'ending' ; TODO: support float, ~time
+}
+
+array = [ * any ]
+
+tp_info = [
+    tpi_server: CRI-no-local,  ; Addressing information of the server
+;  ? tpi_details                ; Further information about the request ; TODO: what are elements?
+]
+
+; tpi_details = (
+;   + elements  ; The number, format, and encoding of the elements
+;               ; depend on the scheme-id and authority of the CRI
+;               ; specified as tpi_server
+; )
+
+CRI-no-local = [
+  scheme-id,
+  authority
+]
+
+scheme-id = nint  ; -1 - scheme-number
+
+authority = [?userinfo, host, ?port]
+userinfo  = (false, text) ; TODO: support .feature "userinfo"
+host      = host-name ; (host-ip // host-name) ; same problem as core-href
+host-name = (*text) ; lowercase, NFC labels
+host-ip   = (bytes .size 4 //
+               (bytes .size 16, ?zone-id))
+zone-id   = text
+port      = 0..65535

@@ -1,0 +1,54 @@
+; RFC 9711 Appendix D
+ Claims-Set = {
+       * $$Claims-Set-Claims
+       * Claim-Label => any ; TODO: support .feature "extended-claims-label"
+   }
+   Claim-Label = int / text
+   string-or-uri = text
+
+   $$Claims-Set-Claims //= ( iss-claim-label => string-or-uri  )
+   $$Claims-Set-Claims //= ( sub-claim-label => string-or-uri  )
+   $$Claims-Set-Claims //= ( aud-claim-label => string-or-uri  )
+;   $$Claims-Set-Claims //= ( exp-claim-label => ~time ) ; TODO: support ~
+;   $$Claims-Set-Claims //= ( nbf-claim-label => ~time )
+;   $$Claims-Set-Claims //= ( iat-claim-label => ~time )
+   $$Claims-Set-Claims //= ( cti-claim-label => bytes )
+
+   iss-claim-label = 1 ; TODO: support generics JC<"iss", 1>
+   sub-claim-label = 2 ; JC<"sub", 2>
+   aud-claim-label = 3 ; JC<"aud", 3>
+   exp-claim-label = 4 ; JC<"exp", 4>
+   nbf-claim-label = 5 ; JC<"nbf", 5>
+   iat-claim-label = 6 ; JC<"iat", 6>
+   cti-claim-label = 7 ; TODO: support CBOR-ONLY<7>  ; jti in JWT: different name and text
+
+;   JSON-ONLY<J> = J .feature "json"
+;   CBOR-ONLY<C> = C .feature "cbor"
+
+;   JC<J,C> = JSON-ONLY<J> / CBOR-ONLY<C>
+
+   ; A JWT message is either a JSON Web Signature (JWS) or a JSON Web
+   ; Encryption (JWE) in compact serialization form with the payload
+   ; as a Claims-Set. Compact serialization is the protected headers,
+   ; payload, and signature that are each b64url-encoded and separated
+   ; by a ".". This CDDL simply matches the top-level syntax of a JWS
+   ; or JWE as it is not possible to do more in CDDL.
+
+   JWT-Message =
+      text ; TODO: support .regexp "[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+"
+
+   ; Note that the payload of a JWT is defined in the CDDL description
+   ; of claims-set. That definition is common to CBOR and JSON.
+
+   ; This is some CDDL describing a CWT at the top level. This is
+   ; not normative. RFC 8392 is the normative definition of CWT.
+
+   CWT-Messages = CWT-Tagged-Message ; / CWT-Untagged-Message ; TODO: resurrect COSE_Messages
+
+   ; The payload of the COSE_Message is always a Claims-Set.
+
+   ; The contents of a CWT tag must always be a COSE tag.
+   CWT-Tagged-Message = #6.61(COSE_Tagged_Message)
+
+   ; An untagged CWT may be a COSE tag or not.
+;   CWT-Untagged-Message = COSE_Messages

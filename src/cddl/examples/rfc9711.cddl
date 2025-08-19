@@ -1,0 +1,253 @@
+  time-int = #6.1(int)
+
+  binary-data = bstr ; TODO: support JC< base64-url-text, bstr>
+
+  base64-url-text = tstr ; TODO: support .regexp "[A-Za-z0-9_-]+"
+
+  general-oid = bstr ; JC< json-oid, ~oid > ; TODO: support JC, ~
+
+  ;  json-oid = tstr .regexp "([0-2])((\\.0)|(\\.[1-9][0-9]*))*"
+
+  general-uri = tstr ; JC< text, ~uri > ; TODO: support JC, ~
+
+  coap-content-format = 0 .. 65535 ; TODO: support uint .le 65535
+
+   $$Claims-Set-Claims //=
+       (nonce-label => nonce-type / [ 2* nonce-type ])
+
+   nonce-type = bstr .size (8..64) ; JC< tstr .size (8..88), bstr .size (8..64)>
+
+   $$Claims-Set-Claims //= (ueid-label => ueid-type)
+
+   ueid-type = bstr .size (7..33) ; JC<base64-url-text .size (10..44) , bstr .size (7..33)>
+
+  $$Claims-Set-Claims //= (sueids-label => sueids-type)
+
+   sueids-type = {
+       * tstr => ueid-type ; TODO: support +
+   }
+
+   $$Claims-Set-Claims //= (
+       oemid-label => oemid-pen / oemid-ieee / oemid-random
+   )
+
+   oemid-pen = int
+
+   oemid-ieee = oemid-ieee-cbor ; JC<oemid-ieee-json, oemid-ieee-cbor>
+   oemid-ieee-cbor = bstr .size 3
+  ; oemid-ieee-json = base64-url-text .size 4 ; JSON only
+
+   oemid-random = oemid-random-cbor ; JC<oemid-random-json, oemid-random-cbor>
+   oemid-random-cbor = bstr .size 16
+  ; oemid-random-json = base64-url-text .size 24 ; JSON only
+
+   $$Claims-Set-Claims //=  (
+       hardware-version-label => hardware-version-type
+   )
+
+   hardware-version-type = [
+       version:  tstr,
+       ? scheme:  $version-scheme
+   ]
+
+   $$Claims-Set-Claims //= (
+       hardware-model-label => hardware-model-type
+   )
+
+   hardware-model-type = ; JC<base64-url-text .size (4..44),
+                            bytes .size (1..32) ; >
+
+   $$Claims-Set-Claims //= ( sw-name-label => tstr )
+
+   $$Claims-Set-Claims //= (sw-version-label => sw-version-type)
+
+   sw-version-type = [
+       version:  tstr
+       ? scheme:  $version-scheme
+   ]
+
+   $$Claims-Set-Claims //= (oem-boot-label => bool)
+
+   $$Claims-Set-Claims //= ( debug-status-label => debug-status-type )
+
+   debug-status-type = ds-enabled /
+                       disabled /
+                       disabled-since-boot /
+                       disabled-permanently /
+                       disabled-fully-and-permanently
+
+   ds-enabled                     = 0 ; JC< "enabled", 0 >
+   disabled                       = 1 ; JC< "disabled", 1 >
+   disabled-since-boot            = 2 ; JC< "disabled-since-boot", 2 >
+   disabled-permanently           = 3 ; JC< "disabled-permanently", 3 >
+   disabled-fully-and-permanently =
+   4
+;                          JC< "disabled-fully-and-permanently", 4 >
+
+   $$Claims-Set-Claims //= (location-label => location-type)
+
+   location-type = {
+       latitude => number,
+       longitude => number,
+       ? altitude => number,
+       ? accuracy => number,
+       ? altitude-accuracy => number,
+       ? heading => number,
+       ? speed => number,
+       ? timestamp => int, ; ~time-int, ; TODO: support ~
+       ? age => uint
+   }
+
+   latitude          = 1 ; JC< "latitude",          1 >
+   longitude         = 2 ; JC< "longitude",         2 >
+   altitude          = 3 ; JC< "altitude",          3 >
+   accuracy          = 4 ; JC< "accuracy",          4 >
+   altitude-accuracy = 5 ; JC< "altitude-accuracy", 5 >
+   heading           = 6 ; JC< "heading",           6 >
+   speed             = 7 ; JC< "speed",             7 >
+   timestamp         = 8 ; JC< "timestamp",         8 >
+   age               = 9 ; JC< "age",               9 >
+
+  $$Claims-Set-Claims //= (uptime-label => uint)
+
+  $$Claims-Set-Claims //=  (boot-seed-label => binary-data)
+
+  $$Claims-Set-Claims //= (boot-count-label => uint)
+
+  $$Claims-Set-Claims //= ( intended-use-label => intended-use-type )
+
+  intended-use-type = int ; JC< text, int>
+
+   $$Claims-Set-Claims //= (
+       dloas-label => [ + dloa-type ]
+   )
+
+   dloa-type = [
+       dloa_registrar: general-uri
+       dloa_platform_label: text
+       ? dloa_application_label: text
+   ]
+
+   $$Claims-Set-Claims //= (profile-label => general-uri / general-oid)
+
+   $$Claims-Set-Claims //= (
+       manifests-label => manifests-type
+   )
+
+   manifests-type = [+ manifest-format]
+
+   manifest-format = [
+       content-type:   coap-content-format,
+       content-format: ; JC< $manifest-body-json,
+                           $manifest-body-cbor ; >
+   ]
+
+   $manifest-body-cbor /= bytes ; .cbor untagged-coswid ; TODO: where is untagged-coswid
+   $manifest-body-json /= base64-url-text
+
+   $$Claims-Set-Claims //= (
+       measurements-label => measurements-type
+   )
+
+   measurements-type = [+ measurements-format]
+
+   measurements-format = [
+       content-type:   coap-content-format,
+       content-format: ; JC< $measurements-body-json, ; TODO: support JC
+                           $measurements-body-cbor ; >
+   ]
+
+  $measurements-body-cbor /= bytes ; .cbor untagged-coswid ; TODO: where is untagged-coswid defined?
+  ;  $measurements-body-json /= base64-url-text ; JSON only
+
+   $$Claims-Set-Claims //= (
+       measurement-results-label =>
+           [ + measurement-results-group ] )
+
+   measurement-results-group = [
+       measurement-system: tstr,
+       measurement-results: [ + individual-result ]
+   ]
+
+   individual-result = [
+       result-id:  tstr / binary-data,
+       result:     result-type,
+   ]
+
+   result-type = comparison-success /
+                 comparison-fail /
+                 comparison-not-run /
+                 measurement-absent
+
+   comparison-success       = 1 ; JC< "success",       1 >
+   comparison-fail          = 2 ; JC< "fail",          2 >
+   comparison-not-run       = 3 ; JC< "not-run",       3 >
+   measurement-absent       = 4 ; JC< "absent",        4 >
+
+   Detached-Submodule-Digest = [
+      hash-algorithm : text / int,
+      digest         : binary-data
+   ]
+
+  BUNDLE-Messages = BUNDLE-Tagged-Message / BUNDLE-Untagged-Message
+
+  BUNDLE-Tagged-Message   = #6.602(BUNDLE-Untagged-Message)
+  BUNDLE-Untagged-Message = Detached-EAT-Bundle
+
+   Detached-EAT-Bundle = [
+       main-token : Nested-Token,
+       detached-claims-sets: {
+            * tstr => cbor-wrapped-claims-set ; TODO: support +, JC
+;           + tstr => JC<json-wrapped-claims-set,
+;                        cbor-wrapped-claims-set>
+       }
+   ]
+
+  ;  json-wrapped-claims-set = base64-url-text
+
+  cbor-wrapped-claims-set = bstr .everparse-det-cbor Claims-Set ; .cbor Claims-Set ; TODO: properly support .cbor, see comment in cose.cddl
+
+  nonce-label                = 10 ; JC< "eat_nonce",    10 >
+  ueid-label                 = 256 ; JC< "ueid",         256 >
+  sueids-label               = 257 ; JC< "sueids",       257 >
+  oemid-label                = 258 ; JC< "oemid",        258 >
+  hardware-model-label       = 259 ; JC< "hwmodel",      259 >
+  hardware-version-label     = 260 ; JC< "hwversion",    260 >
+  uptime-label               = 261 ; JC< "uptime",       261 >
+  oem-boot-label             = 262 ; JC< "oemboot",      262 >
+  debug-status-label         = 263 ; JC< "dbgstat",      263 >
+  location-label             = 264 ; JC< "location",     264 >
+  profile-label                 = 265 ; JC< "eat_profile",  265 >
+  ;  submods-label              = JC< "submods",      266 >
+  boot-count-label           = 267 ; JC< "bootcount",    267 >
+  boot-seed-label            = 268 ; JC< "bootseed",     268 >
+  dloas-label                = 269 ; JC< "dloas",        269 >
+  sw-name-label              = 270 ; JC< "swname",       270 >
+  sw-version-label           = 271 ; JC< "swversion",    271 >
+  manifests-label            = 272 ; JC< "manifests",    272 >
+  measurements-label         = 273 ; JC< "measurements", 273 >
+  measurement-results-label  = 274 ; JC< "measres" ,     274 >
+  intended-use-label         = 275 ; JC< "intuse",       275 >
+
+  EAT-JSON-Token = $EAT-JSON-Token-Formats
+
+     $EAT-JSON-Token-Formats /= JWT-Message
+     $EAT-JSON-Token-Formats /= BUNDLE-Untagged-Message
+
+   Nested-Token = $JSON-Selector ; TODO: support overloading of JSON-Selector and $JSon-Selector
+
+;   JSON-Selector = $JSON-Selector
+
+   $JSON-Selector /= [type: "JWT", nested-token: JWT-Message]
+   $JSON-Selector /= [type: "CBOR", nested-token:
+     CBOR-Token-Inside-JSON-Token]
+   ; $JSON-Selector /= [type: "BUNDLE", nested-token: Detached-EAT-Bundle] ; TODO: support recursion arising from bstr .cbor
+   $JSON-Selector /= [type: "DIGEST", nested-token:
+     Detached-Submodule-Digest]
+
+   CBOR-Token-Inside-JSON-Token = base64-url-text
+
+;   $$Claims-Set-Claims //= (submods-label => { + text => Submodule }) ; TODO: support recursive CDDL specs
+
+   Submodule = Claims-Set / $JSON-Selector ; JSON-Selector
+   
