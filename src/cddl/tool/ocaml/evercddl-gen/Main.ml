@@ -217,6 +217,8 @@ let rust_krml_list =
     (Filename.concat everparse_src_cddl_tool "extraction-rust")
     "rust.lst"
 
+let skip_compilation = ref false
+
 let _ =
   let argspec = ref [
       ("--admit", Arg.Unit (fun _ -> admit := true), "Admit proofs");
@@ -224,6 +226,7 @@ let _ =
       ("--mname", Arg.String (fun m -> mname := m), "Set the module name");
       ("--odir", Arg.String (fun d -> odir := d), "Set the output directory (default .)");
       ("--fstar_only", Arg.Unit (fun _ -> fstar_only := true), "Only generate F*");
+      ("--skip_compilation", Arg.Unit (fun _ -> skip_compilation := true), "Do not compile produced C files");
       ("--tmpdir", Arg.String (fun d -> tmpdir := d), "Set the temporary directory (default automatically generated)");
     ]
   in
@@ -304,7 +307,7 @@ let _ =
     else
       [
           "-warn-error"; "@1..27";
-          "-skip-compilation";
+          (if !skip_compilation then "-skip-compilation" else "-skip-linking");
           "-tmpdir"; !odir;
           "-header"; Filename.concat everparse_src_cddl_tool "noheader.txt";
         "-fstar"; fstar_exe;
@@ -316,6 +319,7 @@ let _ =
         "-bundle"; "CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\\*[rename=CBORDetAPI]";
 	"-bundle"; (!mname ^ "=\\*");
 	"-add-include"; "\"CBORDetAbstract.h\"";
+        "-I"; Filename.concat (Filename.concat everparse_src_cbor_pulse "det") "c";
         krml_file;
       ] @
         c_krml_list
