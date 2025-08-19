@@ -76,12 +76,13 @@ certify-key-input-args = {
   * &(tstr:uint) => any 
 } 
  
-$policy-type /= &(tcg-dice-kp-identityInit:6) ;; add a space before 6 and this file takes forever to parse
-$policy-type /= &(tcg-dice-kp-identityLoc:7)
-$policy-type /= &(tcg-dice-kp-attestInit:8)
-$policy-type /= &(tcg-dice-kp-attestLoc:9) 
-$policy-type /= &(tcg-dice-kp-assertInit:10)
-$policy-type /= &(tcg-dice-kp-assertLoc:11)
+; test various whitespaces for CDDL parsing
+$policy-type /= &(tcg-dice-kp-identityInit: 6)
+$policy-type /= &(tcg-dice-kp-identityLoc :7)
+$policy-type /= &( tcg-dice-kp-attestInit:8)
+$policy-type /= &(tcg-dice-kp-attestLoc:9 ) 
+$policy-type /= & (tcg-dice-kp-assertInit:10)
+$policy-type /= & ( tcg-dice-kp-assertLoc : 11 )
 
 certify-key-output-args = { 
   ? &(certificate:1) ^=> bytes, 
