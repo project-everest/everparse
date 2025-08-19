@@ -49,7 +49,7 @@ ensures exists* v' .
 }
 
 inline_for_extraction
-fn validate_pred_jump_with_offset_and_size_then_parse
+fn validate_jump_with_offset_and_size_then_parse
   (#t: Type0)
   (offset: SZ.t)
   (size: SZ.t)
@@ -65,13 +65,24 @@ requires
   )
 returns res: bool
 ensures 
-  pts_to input #pm v **
-  pure (
-    SZ.v offset + SZ.v size <= Seq.length v /\
+  pts_to input #pm v ** pure (
     res == pred_jump_with_offset_and_size_then_parse (SZ.v offset) (SZ.v size) p v
   )
 {
-  admit();
+  let (s0, s12) = S.split_trade input offset;
+  Trade.elim_hyp_l _ _ _;
+  let (s1, s2) = S.split_trade s12 size;
+  Trade.elim_hyp_r _ _ _;
+  Trade.trans _ _ (pts_to input #pm v);
+  let mut poffset = 0sz;
+  let is_valid = u s1 poffset;
+  let off = !poffset;
+  Trade.elim _ _;
+  if SZ.eq off size {
+    is_valid
+  } else {
+    false
+  }
 }
 
 open LowParse.Pulse.Combinators
