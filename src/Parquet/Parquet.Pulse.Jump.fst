@@ -69,20 +69,13 @@ ensures
     res == pred_jump_with_offset_and_size_then_parse (SZ.v offset) (SZ.v size) p v
   )
 {
-  let (s0, s12) = S.split_trade input offset;
-  Trade.elim_hyp_l _ _ _;
-  let (s1, s2) = S.split_trade s12 size;
-  Trade.elim_hyp_r _ _ _;
-  Trade.trans _ _ (pts_to input #pm v);
-  let mut poffset = 0sz;
+  S.pts_to_len input;
+  let (s1, s2) = S.split_trade input (SZ.add offset size);
+  let mut poffset = offset;
   let is_valid = u s1 poffset;
   let off = !poffset;
   Trade.elim _ _;
-  if SZ.eq off size {
-    is_valid
-  } else {
-    false
-  }
+  (SZ.eq off (SZ.add offset size) && is_valid)
 }
 
 open LowParse.Pulse.Combinators
