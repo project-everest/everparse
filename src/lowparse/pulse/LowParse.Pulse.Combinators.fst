@@ -412,6 +412,52 @@ let read_synth'
 = read_synth r f2 f1 (fun x -> read_synth_cont_init (f2 x))
 
 inline_for_extraction
+let validate_filter_test_gen_t
+  (precond: slprop)
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (f: (t -> GTot bool))
+: Tot Type
+= 
+  (x: slice byte) -> (#pm: perm) -> (#v: Ghost.erased t) -> stt bool
+    (requires precond ** pts_to_serialized s x #pm v)
+    (ensures fun res -> precond ** pts_to_serialized s x #pm v ** pure (res == f v))
+
+inline_for_extraction
+fn validate_filter_gen'
+  (#precond: slprop)
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (w: validator_gen precond p)
+  (s: serializer p)
+  (f: (t -> GTot bool))
+  (f': validate_filter_test_gen_t precond s f)
+: validator_gen precond #_ #(parse_filter_kind k) (parse_filter p f)
+=
+  (input: slice byte)
+  (poffset: _)
+  (#offset: _)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  parse_filter_eq p f (Seq.slice v (SZ.v offset) (Seq.length v));
+  let offset = !poffset;
+  let is_valid = w input poffset;
+  if is_valid {
+    let off = !poffset;
+    let x = peek_trade_gen s input offset off;
+    let res = f' x;
+    Trade.elim _ _;
+    res
+  } else {
+    false
+  }
+}
+
+inline_for_extraction
 let validate_filter_test_t
   (#t: Type0)
   (#k: parser_kind)
@@ -707,6 +753,49 @@ fn validate_nondep_then_rtol
       Trade.elim _ _;
       poffset := input_len;
       parser_kind_prop_equiv (nondep_then_rtol_kind k1 k2.parser_kind_low) (parse_nondep_then_rtol p2 p1);
+      is_valid1
+    } else {
+      false
+    }
+  }
+}
+
+inline_for_extraction
+fn validate_dtuple2_rtol_gen
+  (v2_sz: SZ.t)
+  (#t2: Type0)
+  (#t1: t2 -> Type0)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 t2 { k2.parser_kind_high == Some (k2.parser_kind_low) /\ k2.parser_kind_low == SZ.v v2_sz } )
+  (s2: serializer p2)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: (x: t2) -> parser k1 (t1 x) { k1.parser_kind_subkind == Some ParserConsumesAll } )
+  (v1: (x: Ghost.erased t2) -> (y: slice byte) -> (pm: perm) -> validator_gen (pts_to_serialized s2 y #pm x) (p1 x))
+  (v2: validator p2)
+: validator #(dtuple2 t2 t1) #(dtuple2_rtol_kind k1 k2.parser_kind_low) (parse_dtuple2_rtol #k2 #t2 p2 #k1 #t1 p1)
+= 
+  (input: slice byte)
+  (poffset: _)
+  (#offset: _)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  pts_to_len input;
+  let input_len = len input;
+  let offset = !poffset;
+  if (SZ.lt (SZ.sub input_len offset) v2_sz) {
+    false
+  } else {
+    let off = sz_sub input_len v2_sz ();
+    let mut poff = off;
+    let is_valid2 = validate v2 input poff;
+    if is_valid2 {
+      let off' = !poff;
+      let (l, (y, r)) = peek_trade_gen' s2 input off off';
+      let is_valid1 = v1 _ y pm l poffset;
+      Trade.elim _ _;
+      poffset := input_len;
+      parser_kind_prop_equiv (dtuple2_rtol_kind k1 k2.parser_kind_low) (parse_dtuple2_rtol p2 p1);
       is_valid1
     } else {
       false
