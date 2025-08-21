@@ -116,7 +116,7 @@ type ancillaries_aux_t (se: sem_env) = {
 let compute_wf_typ_ret
   (env: sem_env)
   (t: typ)
-= result (nat & (ast0_wf_typ t & ((ancillaries_t env -> option (P.ask_for env)) & wf_ast_env)))
+= result (nat & (ast0_wf_typ t & ((ancillaries_t env -> P.option_ask_for env) & wf_ast_env)))
 
 let compute_wf_typ_post
   (env: wf_ast_env)
@@ -142,7 +142,7 @@ let rec compute_wf_typ
   | RFailure s -> RFailure s
   | ROutOfFuel -> compute_wf_typ env name t (fuel + 1)
   | RSuccess wt ->
-    let f (anc: ancillaries_t env.e_sem_env) : Tot (option (P.ask_for env.e_sem_env)) =
+    let f (anc: ancillaries_t env.e_sem_env) : Tot (P.option_ask_for env.e_sem_env) =
       P.ask_zero_copy_wf_type anc.validators anc.parsers anc.array_parsers anc.map_constraint_checkers wt
     in
     RSuccess (fuel, (wt, (f, wf_ast_env_extend_typ_with_weak env name t wt)))
@@ -223,13 +223,13 @@ produce_parser0 env env_anc' validator parser serializer typename bundle
 
 let produce_ask_for_validator env wf validator =
 "let _ : unit = _ by (FStar.Tactics.print (\"validator\"); FStar.Tactics.exact (`()))
-let is_type_"^wf^" () : squash (Parse.option_ask_for_is_type "^env^".be_ast.e_sem_env "^wf^") = (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
+let is_type_"^wf^" () : squash (Parse.option_ask_for_is_type "^wf^") = (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 [@@normalize_for_extraction (nbe :: T.steps)]
 let "^validator^" = Parse.validate_ask_for_type Det.cbor_det_impl "^env^".be_v "^wf^" (is_type_"^wf^" ())"
 
 let produce_ask_for_map_constraint env wf map_constraint =
 "let _ : unit = _ by (FStar.Tactics.print (\"map_constraint\"); FStar.Tactics.exact (`()))
-let is_map_constraint_"^wf^" () : squash (Parse.option_ask_for_is_map_constraint "^env^".be_ast.e_sem_env "^wf^") = (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
+let is_map_constraint_"^wf^" () : squash (Parse.option_ask_for_is_map_constraint "^wf^") = (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 [@@normalize_for_extraction (nbe :: T.steps)]
 let "^map_constraint^" = Parse.validate_ask_for_map_constraint Det.cbor_det_impl "^env^".be_v "^wf^" (is_map_constraint_"^wf^" ())"
 
@@ -302,7 +302,7 @@ let "^bundle^" = array_bundle_set_parser_and_serializer g"^bundle^"'' "^typename
 let rec compute_ancillaries_aux
   (#se: sem_env)
   (anc: ancillaries_aux_t se)
-  (ask: option (P.ask_for se))
+  (ask: P.option_ask_for se)
   (env: string)
   (wf: string)
   (validator: string)
@@ -393,7 +393,7 @@ let a"^anc_env'^" = a"^anc_env^"
 [@@bundle_attr; noextract_to "^krml^"; "^opaque_to_smt^"] noextract
 let amc"^anc_env'^" = amc" ^ anc_env ^ "
 [@@bundle_attr; noextract_to "^krml^"; "^opaque_to_smt^"] noextract
-let aa"^anc_env'^" = ancillary_array_bundle_env_set_ask_for aa"^anc_env^" "^wf^" (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ())) "^validator^" "^bundle
+let aa"^anc_env'^" = ancillary_array_bundle_env_set_ask_for aa"^anc_env^" "^wf^" (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ())) "^validator^" "^bundle^"\n"
       in
       { anc with
         anc = {
@@ -416,7 +416,7 @@ let "^wf'^"' = Parse.ask_zero_copy_ask_for_option (Parse.ancillary_validate_env_
 and init_compute_ancillaries_aux
   (#se: sem_env)
   (anc: ancillaries_aux_t se)
-  (ask': option (P.ask_for se))
+  (ask': P.option_ask_for se)
   (env: string)
   (msg: (string -> string))
 : FStar.All.ML // Dv
@@ -427,10 +427,10 @@ and init_compute_ancillaries_aux
     let msg' = "
 let _ : unit = _ by (FStar.Tactics.print (\"ancillary "^wf'^"'\"); FStar.Tactics.exact (`()))"^msg wf'^"
 let _ : unit = _ by (FStar.Tactics.print (\"ancillary "^wf'^"\"); FStar.Tactics.exact (`()))
-[@@base_attr; noextract_to "^krml^"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_steps); FStar.Tactics.trefl ()); "^opaque_to_smt^"; "^opaque_to_smt^"] noextract
+[@@base_attr; noextract_to "^krml^"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: delta :: iota :: zeta :: primops :: []); FStar.Tactics.trefl ()); "^opaque_to_smt^"; "^opaque_to_smt^"] noextract
 let "^wf'^" = "^wf'^"'
 // let _ : unit = _ by (FStar.Tactics.print (\"ancillary "^wf'^"_eq\"); FStar.Tactics.exact (`()))
-// let "^wf'^"_eq () : Lemma ("^wf'^"' == "^wf'^") = assert ("^wf'^" == "^wf'^"') by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ())"
+// let "^wf'^"_eq () : Lemma ("^wf'^"' == "^wf'^") = assert ("^wf'^" == "^wf'^"') by (FStar.Tactics.norm (nbe :: delta :: iota :: zeta :: primops :: []); T.trefl_or_trivial ())"
     in
     let validator' = "aux_" ^ env ^ "_validate_" ^ candidate in
     let parser' = "aux_" ^ env ^ "_parse_" ^ candidate in
@@ -448,7 +448,7 @@ let "^wf'^" = "^wf'^"'
 
 let rec compute_ancillaries
   (#se: sem_env)
-  (init: ancillaries_t se -> option (P.ask_for se))
+  (init: ancillaries_t se -> P.option_ask_for se)
   (anc: ancillaries_aux_t se)
   (env: string)
   (wf: string)
@@ -718,14 +718,14 @@ let o"^wf^" = compute_wf_typ' "^env^".be_ast (T.pull_name "^source^" ("^source^"
 let _ : unit = _ by (FStar.Tactics.print (\"owf\"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; "^opaque_to_smt^"; "^opaque_to_smt^"] noextract
 let o"^wf^"' = o"^wf^"
-let o"^wf^"_eq () : Lemma (o"^wf^"' == o"^wf^") = assert (o"^wf^"' == o"^wf^") by (T.trefl_or_norm ())
+let o"^wf^"_eq () : Lemma (o"^wf^"' == o"^wf^") = assert (o"^wf^"' == o"^wf^") by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print (\"wf'\"); FStar.Tactics.exact (`()))
 [@@noextract_to "^krml^"; "^opaque_to_smt^"] noextract
 let "^wf^" = extract_computed_wf_typ' "^env^".be_ast (T.pull_name "^source^" ("^source^"_cons ())) (T.pull_type "^source^" ("^source^"_cons ()) ("^source^"_type ())) "^fuel^" o"^wf^" o"^wf^"' (o"^wf^"_eq ()) (_ by (T.trefl_or_norm ()))
 let _ : unit = _ by (FStar.Tactics.print (\"wf\"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; base_attr; "^opaque_to_smt^"] noextract
 let "^wf^"' = "^wf^"
-let "^wf^"_eq () : Lemma ("^wf^"' == "^wf^") = assert ("^wf^"' == "^wf^") by (T.trefl_or_norm ())"^
+let "^wf^"_eq () : Lemma ("^wf^"' == "^wf^") = assert ("^wf^"' == "^wf^") by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())"^
 anc1.output^produce_parser env env_anc' wf validator parser serializer parsertype bundle ^"
 let _ : unit = _ by (FStar.Tactics.print (\"env'\"); FStar.Tactics.exact (`()))
 [@@noextract_to "^krml^"; sem_attr; bundle_attr; "^opaque_to_smt^"] noextract
