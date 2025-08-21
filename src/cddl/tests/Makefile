@@ -8,7 +8,7 @@ unit.do:
 
 rust.do:
 
-test: demo.do dpe.do rust.do unit.do
+test: demo.do dpe.do rust.do unit.do ietf.do
 
 %.do:
 	+$(MAKE) -C $(basename $@)
