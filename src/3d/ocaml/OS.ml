@@ -5,7 +5,7 @@ let dirname = Filename.dirname
 let mkdir dir =
   if Sys.file_exists dir && Sys.is_directory dir
   then ()
-  else Sys.mkdir dir 0o755
+  else try Sys.mkdir dir 0o755 with _ -> ()
 
 (* The filename without its path *)
 

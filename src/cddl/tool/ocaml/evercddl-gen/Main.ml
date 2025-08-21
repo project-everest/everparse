@@ -26,6 +26,11 @@ let list_is_empty = function
 
 let fstar_only = ref false
 
+let mkdir dir =
+  if Sys.file_exists dir && Sys.is_directory dir
+  then ()
+  else try Sys.mkdir dir 0o755 with _ -> ()
+
 let produce_fst_file (dir: string) : string =
   let filenames = List.rev !rev_filenames in
   match ParseFromFile.parse_from_files filenames with
@@ -42,7 +47,7 @@ let produce_fst_file (dir: string) : string =
          let basename = !mname ^ ".fst" in
          let filename = Filename.concat dir basename in
          let filename_tmp = filename ^ ".tmp" in
-         if not (Sys.file_exists dir && Sys.is_directory dir) then Sys.mkdir dir 0o755;
+         mkdir dir;
          let ch = open_out filename_tmp in
          output_string ch str;
          close_out ch;
