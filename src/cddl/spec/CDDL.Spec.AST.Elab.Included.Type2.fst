@@ -20,10 +20,10 @@ let typ_included2
   | _, TElem EAny
   | TElem EAlwaysFalse, _ -> RSuccess ()
   | TDef i, t2 ->
-    let t1' = e.e_env i in
+    let ENType t1' = e.e_env i in
     typ_included e  t1' t2
   | t2, TDef i ->
-    let t1' = e.e_env i in
+    let ENType t1' = e.e_env i in
     typ_included e  t2 t1'
   | TElem EAny, _ -> RFailure "typ_included: TElem EAny"
   | t1, TElem EAlwaysFalse ->

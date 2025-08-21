@@ -135,7 +135,7 @@ let rec mk_elab_map_group
   | GElem cut (TDef nkey) value ->
     begin match env.e_sem_env.se_bound nkey with
     | Some NType ->
-      let t = env.e_env nkey in // this type is supposed to be already rewritten
+      let ENType t = env.e_env nkey in // this type is supposed to be already rewritten
       mk_elab_map_group fuel' env (GElem cut t value)
     | _ -> RFailure ("mk_elab_map_group: GElem TDef: " ^ nkey ^ " is not a type" )
     end
@@ -171,7 +171,7 @@ let rec mk_elab_map_group
   | GDef n ->
     begin match env.e_sem_env.se_bound n with
     | Some NGroup ->
-      let g1 = env.e_env n in
+      let ENGroup g1 = env.e_env n in
       let (g2, res) = rewrite_group fuel true g1 in
       if res
       then mk_elab_map_group fuel' env g2
@@ -181,7 +181,7 @@ let rec mk_elab_map_group
   | GZeroOrMore (GDef n) ->
     begin match env.e_sem_env.se_bound n with
     | Some NGroup ->
-      let g1 = env.e_env n in
+      let ENGroup g1 = env.e_env n in
       let (g2, res) = rewrite_group fuel true (GZeroOrMore g1) in
       if res
       then mk_elab_map_group fuel' env g2
@@ -212,13 +212,13 @@ let rec mk_elab_map_group_bounded
     mk_elab_map_group_bounded fuel' env g1;
     mk_elab_map_group_bounded fuel' env g2
   | GDef n ->
-    let g' = (env.e_env n) in
+    let ENGroup g' = (env.e_env n) in
     rewrite_group_bounded env.e_sem_env.se_bound fuel true g';
     mk_elab_map_group_bounded fuel' env (fst (rewrite_group fuel true g'))
   | GZeroOrMore (GDef n) ->
     begin match env.e_sem_env.se_bound n with
     | Some NGroup ->
-      let g1 = env.e_env n in
+      let ENGroup g1 = env.e_env n in
       let (g2, res) = rewrite_group fuel true (GZeroOrMore g1) in
       if res
       then begin
@@ -228,7 +228,7 @@ let rec mk_elab_map_group_bounded
       else ()
     end
   | GElem cut (TDef nkey) value ->
-    let t = env.e_env nkey in
+    let ENType t = env.e_env nkey in
     mk_elab_map_group_bounded fuel' env (GElem cut t value)
   | _ -> ()
 
@@ -261,15 +261,15 @@ let rec mk_elab_map_group_correct
       (Util.notp (Util.andp (Spec.matches_map_group_entry (typ_sem env.e_sem_env key) (typ_sem env.e_sem_env value)) (Util.notp Spec.map_constraint_empty)))
       (Util.notp (Spec.matches_map_group_entry (typ_sem env.e_sem_env key) (typ_sem env.e_sem_env value)))
   | GDef n ->
-    let g' = (env.e_env n) in
+    let ENGroup g' = (env.e_env n) in
     rewrite_group_correct env.e_sem_env fuel true g';
     mk_elab_map_group_correct fuel' env (fst (rewrite_group fuel true g'))
   | GZeroOrMore (GDef n) ->
-    let g' = (env.e_env n) in
+    let ENGroup g' = (env.e_env n) in
     rewrite_group_correct env.e_sem_env fuel true (GZeroOrMore g');
     mk_elab_map_group_correct fuel' env (fst (rewrite_group fuel true (GZeroOrMore g')))
   | GElem cut (TDef nkey) value ->
-    let t = env.e_env nkey in
+    let ENType t = env.e_env nkey in
     assert (Spec.typ_equiv (typ_sem env.e_sem_env t) (sem_of_type_sem (env.e_sem_env.se_env nkey)));
     Spec.map_group_match_item_ext cut (typ_sem env.e_sem_env t) (typ_sem env.e_sem_env value) (sem_of_type_sem (env.e_sem_env.se_env nkey)) (typ_sem env.e_sem_env value);
     assert (map_group_sem env.e_sem_env (GElem cut t value) == map_group_sem env.e_sem_env (GElem cut (TDef nkey) value));
@@ -319,7 +319,7 @@ let rec typ_inter_underapprox
     | res -> res
     end
   | TDef i ->
-    let t1' = env.e_env i in
+    let ENType t1' = env.e_env i in
     typ_inter_underapprox fuel' env t1' t2
   | _ ->
     begin match typ_included fuel env t1 t2 with
@@ -1375,7 +1375,7 @@ and mk_wf_array_group
     | res -> coerce_failure res
     end
   | GDef n ->
-    let g2 = env.e_env n in
+    let ENGroup g2 = env.e_env n in
     begin match mk_wf_array_group fuel' env g2 with
     | RSuccess s2 -> RSuccess (WfARewrite g g2 s2)
     | res -> coerce_failure res
@@ -1700,7 +1700,7 @@ let typ_of
   (name: string)
 : Tot typ
 = match e.e_sem_env.se_bound name with
-  | Some NType -> e.e_env name
+  | Some NType -> ENType?._0 (e.e_env name)
   | _ -> TElem EAlwaysFalse
 
 let mk_wf_typ_fuel_for
@@ -1786,7 +1786,7 @@ let wf_ast_env_extend_typ
 : Tot (e': wf_ast_env {
       ast_env_included e e' /\
       e'.e_sem_env.se_bound new_name == Some NType /\
-      t == e'.e_env new_name
+      ENType t == e'.e_env new_name
   })
 = let t_wf = RSuccess?._0 (mk_wf_typ' fuel e t) in
   assert (wf_ast_env_extend_typ_with_weak_pre e new_name t t_wf);

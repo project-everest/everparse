@@ -28,8 +28,8 @@ let extend_validator_env_with_typ_weak
   (ty: typ)
   (ty_bounded: squash (typ_bounded v_sem_env.se_bound ty))
   (w: impl_typ vmatch (typ_sem v_sem_env ty))
-: validator_env vmatch (sem_env_extend_gen v_sem_env new_name NType (ast_env_elem0_sem v_sem_env ty))
-= let v_sem_env' = sem_env_extend_gen v_sem_env new_name NType (ast_env_elem0_sem v_sem_env ty) in
+: validator_env vmatch (sem_env_extend_gen v_sem_env new_name NType (ast_env_elem0_sem v_sem_env NType (ENType ty)))
+= let v_sem_env' = sem_env_extend_gen v_sem_env new_name NType (ast_env_elem0_sem v_sem_env NType (ENType ty)) in
   (fun n -> if n = new_name then w else (env n))
 
 [@@sem_attr]
@@ -42,8 +42,8 @@ let extend_validator_env_with_group
   (g: group)
   (new_name_is_type: squash (v_sem_env.se_bound new_name == None))
   (sq: squash (group_bounded v_sem_env.se_bound g))
-: validator_env vmatch (sem_env_extend_gen v_sem_env new_name NGroup (ast_env_elem0_sem v_sem_env g))
-= let v_sem_env' = sem_env_extend_gen v_sem_env new_name NGroup (ast_env_elem0_sem v_sem_env g) in
+: validator_env vmatch (sem_env_extend_gen v_sem_env new_name NGroup (ast_env_elem0_sem v_sem_env NGroup (ENGroup g)))
+= let v_sem_env' = sem_env_extend_gen v_sem_env new_name NGroup (ast_env_elem0_sem v_sem_env NGroup (ENGroup g)) in
   (fun (n: typ_name v_sem_env'.se_bound) -> (env n))
 
 [@@sem_attr]

@@ -30,7 +30,7 @@ let typ_disjoint
   match t1, t2 with
   | t2, TDef i
   | TDef i, t2 ->
-    let t1' = e.e_env i in
+    let ENType t1' = e.e_env i in
     typ_disjoint e t1' t2
   | TChoice t1l t1r, t2
   | t2, TChoice t1l t1r ->

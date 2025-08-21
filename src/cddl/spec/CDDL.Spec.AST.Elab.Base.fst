@@ -809,7 +809,7 @@ let rec typ_sub_underapprox
     | res -> res
     end
   | TDef i ->
-    let t1' = env.e_env i in
+    let ENType t1' = env.e_env i in
     typ_sub_underapprox typ_disjoint fuel' env t1' t2
   | _ ->
     begin match typ_disjoint env t1 t2 with
@@ -876,7 +876,7 @@ let rec array_group_is_nonempty
   then ROutOfFuel
   else let fuel' : nat = fuel - 1 in
   match g with
-  | GDef n -> array_group_is_nonempty fuel' env (env.e_env n)
+  | GDef n -> array_group_is_nonempty fuel' env (ENGroup?._0 (env.e_env n))
   | GOneOrMore g' -> array_group_is_nonempty fuel' env g'
   | GZeroOrOne _ -> RFailure "array_group_is_nonempty: GZeroOrOne"
   | GZeroOrMore _ -> RFailure "array_group_is_nonempty: GZeroOrMore"
@@ -960,10 +960,10 @@ let rec array_group_concat_unique_strong
   | _ ->
     begin match destruct_group g2 with
     | (GDef i, g2r) ->
-      let g2' = GConcat (env.e_env i) g2r in
+      let g2' = GConcat (ENGroup?._0 (env.e_env i)) g2r in
       Spec.array_group_concat_equiv
         (fst (Ghost.reveal (env.e_sem_env.se_env i) <: (Spec.array_group None & Spec.map_group)))
-        (array_group_sem env.e_sem_env (env.e_env i))
+        (array_group_sem env.e_sem_env (ENGroup?._0 (env.e_env i)))
         (array_group_sem env.e_sem_env g2r)
         (array_group_sem env.e_sem_env g2r);
       rewrite_group_correct env.e_sem_env fuel false g2';

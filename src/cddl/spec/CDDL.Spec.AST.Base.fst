@@ -2206,32 +2206,31 @@ and spec_wf_parse_map_group_incr
     spec_wf_typ_incr env env' true value s_value
 
 [@@  sem_attr]
-inline_for_extraction
-let ast_env_elem0 (s: name_env_elem) : Tot Type0 =
-  match s with
-  | NType -> typ
-  | NGroup -> group
+type ast_env_elem0 : Type0 =
+  | ENType of typ
+  | ENGroup of group
 
 [@@  sem_attr]
-let ast_env_elem0_bounded (env: name_env) (#s: name_env_elem) (x: ast_env_elem0 s) : Tot bool =
-  match s with
-  | NType ->
+let ast_env_elem0_bounded (env: name_env) (s: name_env_elem) (x: ast_env_elem0) : Tot bool =
+  match s, x with
+  | NType, ENType x ->
     typ_bounded env x
-  | NGroup ->
+  | NGroup, ENGroup x ->
     group_bounded env x
+  | _ -> false
 
 [@@ sem_attr]
-let ast_env_elem0_sem (e_sem_env: sem_env) (#s: name_env_elem) (x: ast_env_elem0 s) : Pure (sem_env_elem s)
-  (requires ast_env_elem0_bounded e_sem_env.se_bound x)
+let ast_env_elem0_sem (e_sem_env: sem_env) (s: name_env_elem) (x: ast_env_elem0) : Pure (sem_env_elem s)
+  (requires ast_env_elem0_bounded e_sem_env.se_bound s x)
   (ensures fun _ -> True)
-= match s with
-  | NType -> typ_sem_elem e_sem_env x
-  | NGroup -> Ghost.hide (array_group_sem e_sem_env x, map_group_sem e_sem_env x)
+= match s, x with
+  | NType, ENType x -> typ_sem_elem e_sem_env x
+  | NGroup, ENGroup x -> Ghost.hide (array_group_sem e_sem_env x, map_group_sem e_sem_env x)
   
-let ast_env_elem_prop (e_sem_env: sem_env) (s: name_env_elem) (phi: sem_env_elem s) (x: ast_env_elem0 s) : GTot prop =
-  ast_env_elem0_bounded e_sem_env.se_bound x /\
+let ast_env_elem_prop (e_sem_env: sem_env) (s: name_env_elem) (phi: sem_env_elem s) (x: ast_env_elem0) : GTot prop =
+  ast_env_elem0_bounded e_sem_env.se_bound s x /\
   begin
-    let sem = ast_env_elem0_sem e_sem_env x in
+    let sem = ast_env_elem0_sem e_sem_env s x in
     match s with
     | NType ->
       Spec.typ_equiv #None (sem_of_type_sem sem) (sem_of_type_sem phi)
@@ -2241,7 +2240,7 @@ let ast_env_elem_prop (e_sem_env: sem_env) (s: name_env_elem) (phi: sem_env_elem
       Spec.array_group_equiv #None (fst sem) (fst phi) /\ snd sem == snd phi
   end
 
-let ast_env_elem_prop_included (e1 e2: sem_env) (s: name_env_elem) (phi: sem_env_elem s) (x: ast_env_elem0 s) : Lemma
+let ast_env_elem_prop_included (e1 e2: sem_env) (s: name_env_elem) (phi: sem_env_elem s) (x: ast_env_elem0) : Lemma
   (requires sem_env_included e1 e2 /\
     ast_env_elem_prop e1 s phi x
   )
@@ -2249,23 +2248,23 @@ let ast_env_elem_prop_included (e1 e2: sem_env) (s: name_env_elem) (phi: sem_env
   [SMTPat (ast_env_elem_prop e1 s phi x); SMTPat (ast_env_elem_prop e2 s phi x)]
 = ()
 
-[@@ sem_attr]
+[@@ sem_attr] inline_for_extraction
 let ast_env_elem (e_sem_env: sem_env) (s: name_env_elem) (phi: sem_env_elem s) : Type0 =
-  (x: ast_env_elem0 s { ast_env_elem_prop e_sem_env s phi x })
+  (x: ast_env_elem0 { ast_env_elem_prop e_sem_env s phi x })
 
 [@@ sem_attr]
 noeq
-type wf_ast_env_elem0 (s: name_env_elem) (x: ast_env_elem0 s) : Type0 =
+type wf_ast_env_elem0 (s: name_env_elem) (x: ast_env_elem0) : Type0 =
 {
-  wf_typ: option (_: squash (s == NType) & ast0_wf_typ x);
+  wf_typ: option (_: squash (s == NType /\ ENType? x) & ast0_wf_typ (ENType?._0 x));
 //  wf_array: option (_: squash (s == NGroup) & ast0_wf_array_group x);
   // TODO: wf_map
 }
 
-let wf_ast_env_elem_prop (e_sem_env: sem_env) (s: name_env_elem) (x: ast_env_elem0 s) (y: (wf_ast_env_elem0 s x)) : GTot prop =
+let wf_ast_env_elem_prop (e_sem_env: sem_env) (s: name_env_elem) (x: ast_env_elem0) (y: (wf_ast_env_elem0 s x)) : GTot prop =
   begin match y.wf_typ with
   | None -> True
-  | Some (| _, y |) -> spec_wf_typ e_sem_env true x y
+  | Some (| _, y |) -> spec_wf_typ e_sem_env true (ENType?._0 x) y
   end
   /\ True (* begin match y.wf_array with
   | None -> True
@@ -2274,16 +2273,16 @@ let wf_ast_env_elem_prop (e_sem_env: sem_env) (s: name_env_elem) (x: ast_env_ele
 *)
   // TODO: wf_map
 
-let wf_ast_env_elem_prop_included (e1 e2: sem_env) (s: name_env_elem) (x: ast_env_elem0 s) (y: (wf_ast_env_elem0 s x)) : Lemma
+let wf_ast_env_elem_prop_included (e1 e2: sem_env) (s: name_env_elem) (x: ast_env_elem0) (y: (wf_ast_env_elem0 s x)) : Lemma
   (requires sem_env_included e1 e2 /\
     wf_ast_env_elem_prop e1 s x y
   )
   (ensures wf_ast_env_elem_prop e2 s x y)
-  [SMTPat (ast_env_elem_prop e1 s x y); SMTPat (ast_env_elem_prop e2 s x y)]
+//  [SMTPat (ast_env_elem_prop e1 s x y); SMTPat (ast_env_elem_prop e2 s x y)]
 = ()
 
-[@@ sem_attr]
-let wf_ast_env_elem (e_sem_env: sem_env) (s: name_env_elem) (x: ast_env_elem0 s) =
+[@@ sem_attr] inline_for_extraction
+let wf_ast_env_elem (e_sem_env: sem_env) (s: name_env_elem) (x: ast_env_elem0) =
   (y: (wf_ast_env_elem0 s x) { wf_ast_env_elem_prop e_sem_env s x y })
 
 [@@  sem_attr]
@@ -2329,21 +2328,21 @@ let ast_env_extend_gen
   (e: ast_env)
   (new_name: string)
   (kind: name_env_elem)
-  (x: ast_env_elem0 kind)
+  (x: ast_env_elem0)
 : Pure ast_env
     (requires
-      ast_env_elem0_bounded e.e_sem_env.se_bound x /\
+      ast_env_elem0_bounded e.e_sem_env.se_bound kind x /\
       (~ (new_name `name_mem` e.e_sem_env.se_bound))
     )
     (ensures fun e' ->
-      let s = ast_env_elem0_sem e.e_sem_env x in
+      let s = ast_env_elem0_sem e.e_sem_env kind x in
       e'.e_sem_env == sem_env_extend_gen e.e_sem_env new_name kind s /\
       ast_env_included e e' /\
       e'.e_env new_name == x /\
       None? (e'.e_wf new_name).wf_typ /\
       True // None? (e'.e_wf new_name).wf_array
     )
-= let s = ast_env_elem0_sem e.e_sem_env x in
+= let s = ast_env_elem0_sem e.e_sem_env kind x in
   let se' = sem_env_extend_gen e.e_sem_env new_name kind s in
   {
     e_sem_env = se';
@@ -2365,10 +2364,10 @@ let ast_env_extend_gen'
   (new_name: string)
   (new_name_fresh: squash (~ (new_name `name_mem` e.e_sem_env.se_bound)))
   (kind: name_env_elem)
-  (x: ast_env_elem0 kind)
-  (x_bounded: squash (ast_env_elem0_bounded e.e_sem_env.se_bound x))
+  (x: ast_env_elem0)
+  (x_bounded: squash (ast_env_elem0_bounded e.e_sem_env.se_bound kind x))
 : Tot (e' : ast_env {
-      let s = ast_env_elem0_sem e.e_sem_env x in
+      let s = ast_env_elem0_sem e.e_sem_env kind x in
       e'.e_sem_env == sem_env_extend_gen e.e_sem_env new_name kind s /\
       ast_env_included e e' /\
       e'.e_env new_name == x
@@ -2410,7 +2409,7 @@ let ast_env_extend_typ_with_pre
     e.e_sem_env.se_bound new_name == None /\
     typ_bounded e.e_sem_env.se_bound t /\
     bounded_wf_typ (extend_name_env e.e_sem_env.se_bound new_name NType) t t_wf /\
-    spec_wf_typ (ast_env_extend_gen e new_name NType t).e_sem_env true t t_wf
+    spec_wf_typ (ast_env_extend_gen e new_name NType (ENType t)).e_sem_env true t t_wf
 
 [@@sem_attr]
 let ast_env_extend_typ_with
@@ -2423,9 +2422,9 @@ let ast_env_extend_typ_with
 : Tot (e': ast_env {
       ast_env_included e e' /\
       e'.e_sem_env.se_bound new_name == Some NType /\
-      t == e'.e_env new_name
+      ENType t == e'.e_env new_name
   })
-= ast_env_set_wf (ast_env_extend_gen e new_name NType t) new_name { wf_typ = Some (| (), t_wf |) ; (* wf_array = None *) }
+= ast_env_set_wf (ast_env_extend_gen e new_name NType (ENType t)) new_name { wf_typ = Some (| (), t_wf |) ; (* wf_array = None *) }
 
 let wf_ast_env = (e: ast_env { forall (i: typ_name e.e_sem_env.se_bound) . Some? (e.e_wf i).wf_typ })
 
@@ -2442,7 +2441,7 @@ let wf_ast_env_extend_typ_with_pre
     e.e_sem_env.se_bound new_name == None /\
     typ_bounded e.e_sem_env.se_bound t /\
     bounded_wf_typ (extend_name_env e.e_sem_env.se_bound new_name NType) t t_wf /\
-    spec_wf_typ (ast_env_extend_gen e new_name NType t).e_sem_env true t t_wf
+    spec_wf_typ (ast_env_extend_gen e new_name NType (ENType t)).e_sem_env true t t_wf
 
 [@@sem_attr]
 let wf_ast_env_extend_typ_with
@@ -2457,9 +2456,9 @@ let wf_ast_env_extend_typ_with
       e'.e_sem_env.se_bound == extend_name_env e.e_sem_env.se_bound new_name NType /\
       e'.e_sem_env.se_bound new_name == Some NType /\
       sem_of_type_sem (e'.e_sem_env.se_env new_name) == typ_sem e.e_sem_env t /\
-      (e'.e_env new_name <: typ) == t
+      e'.e_env new_name == ENType t
   })
-= ast_env_set_wf (ast_env_extend_gen e new_name NType t) new_name { wf_typ = (Some (| (), t_wf |)) }
+= ast_env_set_wf (ast_env_extend_gen e new_name NType (ENType t)) new_name { wf_typ = (Some (| (), t_wf |)) }
 
 let wf_ast_env_extend_typ_with_weak_pre
   (e: ast_env)
@@ -2482,7 +2481,7 @@ let wf_ast_env_extend_typ_with_weak_pre_correct
   (requires wf_ast_env_extend_typ_with_weak_pre e new_name t t_wf)
   (ensures wf_ast_env_extend_typ_with_pre e new_name t t_wf)
   [SMTPat (wf_ast_env_extend_typ_with_weak_pre e new_name t t_wf)]
-= bounded_wf_typ_incr e.e_sem_env.se_bound (ast_env_extend_gen e new_name NType t).e_sem_env.se_bound t t_wf
+= bounded_wf_typ_incr e.e_sem_env.se_bound (ast_env_extend_gen e new_name NType (ENType t)).e_sem_env.se_bound t t_wf
 
 [@@sem_attr]
 let wf_ast_env_extend_typ_with_weak
@@ -2497,7 +2496,7 @@ let wf_ast_env_extend_typ_with_weak
       e'.e_sem_env.se_bound == extend_name_env e.e_sem_env.se_bound new_name NType /\
       e'.e_sem_env.se_bound new_name == Some NType /\
       sem_of_type_sem (e'.e_sem_env.se_env new_name) == typ_sem e.e_sem_env t /\
-      (e'.e_env new_name <: typ) == t
+      e'.e_env new_name == ENType t
   })
 = wf_ast_env_extend_typ_with e new_name t t_wf
 
@@ -2511,9 +2510,9 @@ let wf_ast_env_extend_group
 : Tot (e': wf_ast_env {
       ast_env_included e e' /\
       e'.e_sem_env.se_bound new_name == Some NGroup /\
-      (e'.e_env new_name <: group) == t
+      e'.e_env new_name == ENGroup t
   })
-= ast_env_extend_gen e new_name NGroup t
+= ast_env_extend_gen e new_name NGroup (ENGroup t)
 
 [@@ base_attr ]
 noeq

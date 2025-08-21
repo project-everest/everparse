@@ -76,14 +76,14 @@ let array_group_included
     end
     else ROutOfFuel
   | (_, (GDef n, a1r)), (a2, _) ->
-    let a1' = GConcat (e.e_env n) a1r in
+    let a1' = GConcat (ENGroup?._0 (e.e_env n)) a1r in
     rewrite_group_correct e.e_sem_env fuel false a1';
     let (a1_, res) = rewrite_group fuel false a1' in
     if res
     then array_group_included e close (a1_) a2
     else ROutOfFuel
   | (a2, _), (_, (GDef n, a1r)) ->
-    let a1' = GConcat (e.e_env n) a1r in
+    let a1' = GConcat (ENGroup?._0 (e.e_env n)) a1r in
     rewrite_group_correct e.e_sem_env fuel false a1';
     let (a1_, res) = rewrite_group fuel false a1' in
     if res

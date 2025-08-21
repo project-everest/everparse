@@ -22,7 +22,7 @@ let typ_diff_disjoint
     | res -> res
     end
   | TDef i ->
-    let t1' = env.e_env i in
+    let ENType t1' = env.e_env i in
     typ_diff_disjoint env t1' d1 t2 d2
   | _ ->
     begin match t2 with
@@ -32,7 +32,7 @@ let typ_diff_disjoint
       | res -> res
       end
     | TDef i ->
-      let t2' = env.e_env i in
+      let ENType t2' = env.e_env i in
       typ_diff_disjoint env t1 d1 t2' d2
     | _ ->
       begin match typ_disjoint env t1 t2 with

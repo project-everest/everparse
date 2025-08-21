@@ -30,7 +30,7 @@ let ast_env_extend_typ_with_pre
     e.e_sem_env.se_bound new_name == None /\
     typ_bounded e.e_sem_env.se_bound t /\
     bounded_wf_typ (extend_name_env e.e_sem_env.se_bound new_name NType) t t_wf /\
-    spec_wf_typ (ast_env_extend_gen e new_name NType t).e_sem_env true t t_wf
+    spec_wf_typ (ast_env_extend_gen e new_name NType (ENType t)).e_sem_env true t t_wf
 
 let check_name (env: name_env) (name: string) (k: name_env_elem) : Tot (option name_env) =
   match env name with
@@ -70,14 +70,14 @@ let rec topological_sort'
       | DGroup g ->
         if group_bounded (env.e_sem_env.se_bound) g
         then
-          let env' = ast_env_extend_gen env new_name NGroup g in
+          let env' = ast_env_extend_gen env new_name NGroup (ENGroup g) in
           topological_sort' bound env' (elt :: res) [] (List.Tot.rev_acc accu q)
         else
           topological_sort' bound env res (elt :: accu) q
       | DType t ->
         if typ_bounded (env.e_sem_env.se_bound) t
         then
-          let env' = ast_env_extend_gen env new_name NType t in
+          let env' = ast_env_extend_gen env new_name NType (ENType t) in
           topological_sort' bound env' (elt :: res) [] (List.Tot.rev_acc accu q)
         else
           topological_sort' bound env res (elt :: accu) q

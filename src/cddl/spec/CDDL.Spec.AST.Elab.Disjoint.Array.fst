@@ -35,7 +35,7 @@ let array_group_disjoint
     else array_group_disjoint e  close1 close2 a1r a2
   | (_, close1, (GDef n, a1r)), (a2, close2, _)
   | (a2, close2, _), (_, close1, (GDef n, a1r)) ->
-    let a1' = GConcat (e.e_env n) a1r in
+    let a1' = GConcat (ENGroup?._0 (e.e_env n)) a1r in
     rewrite_group_correct e.e_sem_env  fuel false a1';
     let (a1_, res) = rewrite_group  fuel false a1' in
     if res
