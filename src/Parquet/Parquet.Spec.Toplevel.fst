@@ -978,7 +978,7 @@ let validate_all (fmd: file_meta_data) (data: bytes) : Tot bool =
     )
     fmd.row_groups
 
-let parse_parquet (file_size: nat) =
+let parse_parquet =
   parse_nondep_then_rtol (parse_filter (parse_seq_flbytes 4) is_PAR1)
     (parse_dtuple2_rtol parse_u32_le
         (fun len ->
