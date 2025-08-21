@@ -31,10 +31,10 @@ let is_engine_record_core
       (e:engine_record)
       (wx:spec_engine_record)
 : slprop
-= rel_bytes e.l0_image_header wx.l0_image_header **
-  rel_bytes e.l0_image_header_sig wx.l0_image_header_sig **
-  rel_bytes e.l0_binary wx.l0_binary **
-  rel_bytes e.l0_binary_hash wx.l0_binary_hash **
+= (((rel_bytes e.l0_image_header wx.l0_image_header **
+  rel_bytes e.l0_image_header_sig wx.l0_image_header_sig) **
+  rel_bytes e.l0_binary wx.l0_binary) **
+  rel_bytes e.l0_binary_hash wx.l0_binary_hash) **
   rel_bytes e.l0_image_auth_pubkey wx.l0_image_auth_pubkey
 
 [@@pulse_unfold]
@@ -55,10 +55,10 @@ ensures is_engine_record x w (rel_derive_context_engine_record x w)
 
 let spec_device_id_csr_ingredients = spect_device_id_csr_ingredients
 let is_device_id_csr_ingredients_core (e:device_id_csr_ingredients) (se:spec_device_id_csr_ingredients) : slprop =
-    rel_nint e.ku se.ku **
-    rel_nint e.version se.version **
-    rel_tstr e.s_common se.s_common **
-    rel_tstr e.s_org se.s_org **
+    (((rel_nint e.ku se.ku **
+    rel_nint e.version se.version) **
+    rel_tstr e.s_common se.s_common) **
+    rel_tstr e.s_org se.s_org) **
     rel_tstr e.s_country se.s_country
 
 [@@pulse_unfold]
@@ -79,16 +79,16 @@ ensures is_device_id_csr_ingredients x w (rel_device_id_csr_ingredients x w)
 let spec_alias_key_crt_ingredients = spect_alias_key_crt_ingredients
 
 let is_alias_key_crt_ingredients_core (e:alias_key_crt_ingredients) (s:spec_alias_key_crt_ingredients) =
-  rel_nint e.version s.version **
-  rel_bytes e.serial_number s.serial_number **
-  rel_tstr e.i_common s.i_common **
-  rel_tstr e.i_org s.i_org **
-  rel_bytes e.not_before s.not_before **
-  rel_bytes e.not_after s.not_after **
-  rel_tstr e.s_common s.s_common **
-  rel_tstr e.s_org s.s_org **
-  rel_tstr e.s_country s.s_country **
-  rel_nint e.ku s.ku **
+  (((((((((rel_nint e.version s.version **
+  rel_bytes e.serial_number s.serial_number) **
+  rel_tstr e.i_common s.i_common) **
+  rel_tstr e.i_org s.i_org) **
+  rel_bytes e.not_before s.not_before) **
+  rel_bytes e.not_after s.not_after) **
+  rel_tstr e.s_common s.s_common) **
+  rel_tstr e.s_org s.s_org) **
+  rel_tstr e.s_country s.s_country) **
+  rel_nint e.ku s.ku) **
   rel_nint e.l0_version s.l0_version
 
 [@@pulse_unfold]
@@ -109,10 +109,10 @@ ensures is_alias_key_crt_ingredients x w (rel_alias_key_crt_ingredients x w)
 let l0_record = derive_context_l0_record
 let spec_l0_record = spect_derive_context_l0_record
 let is_l0_record_core (e:l0_record) (wx:spec_l0_record) : slprop =
-  rel_bytes e.fwid wx.fwid **
-  rel_bytes e.device_id_label wx.device_id_label **
-  rel_bytes e.alias_key_label wx.alias_key_label **
-  is_device_id_csr_ingredients_core e.device_id_csr_ingredients wx.device_id_csr_ingredients **
+  (((rel_bytes e.fwid wx.fwid **
+  rel_bytes e.device_id_label wx.device_id_label) **
+  rel_bytes e.alias_key_label wx.alias_key_label) **
+  is_device_id_csr_ingredients_core e.device_id_csr_ingredients wx.device_id_csr_ingredients) **
   is_alias_key_crt_ingredients_core e.alias_key_crt_ingredients wx.alias_key_crt_ingredients
 
 [@@pulse_unfold]
