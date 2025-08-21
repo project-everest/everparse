@@ -85,7 +85,39 @@ val serialize_bounded_integer_le
 
 val serialize_u16_le : serializer parse_u16_le
 
+val serialize_u16_le_spec
+  (x: U16.t)
+: Lemma
+  (serialize serialize_u16_le x == E.n_to_le 2 (U16.v x))
+
+val parse_u16_le_spec
+  (b: bytes)
+: Lemma
+  (requires (Seq.length b >= 2))
+  (ensures (
+    let pp = parse parse_u16_le b in
+    Some? pp /\ (
+    let (Some (v, consumed)) = pp in
+    U16.v v == E.le_to_n (Seq.slice b 0 2)
+  )))
+
 val serialize_u32_le : serializer parse_u32_le
+
+val serialize_u32_le_spec
+  (x: U32.t)
+: Lemma
+  (serialize serialize_u32_le x == E.n_to_le 4 (U32.v x))
+
+val parse_u32_le_spec
+  (b: bytes)
+: Lemma
+  (requires (Seq.length b >= 4))
+  (ensures (
+    let pp = parse parse_u32_le b in
+    Some? pp /\ (
+    let (Some (v, consumed)) = pp in
+    U32.v v == E.le_to_n (Seq.slice b 0 4)
+  )))
 
 inline_for_extraction
 let log256'

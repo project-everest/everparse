@@ -1,6 +1,6 @@
 module LowParse.Pulse.Int
 #lang-pulse
-include LowParse.Spec.Int
+include LowParse.Spec.BoundedInt
 include LowParse.Pulse.Base
 open Pulse.Lib.Pervasives open Pulse.Lib.Slice.Util open Pulse.Lib.Trade
 
@@ -70,6 +70,14 @@ let jump_u16 : jumper parse_u16 =
   jump_constant_size parse_u16 2sz
 
 inline_for_extraction
+let validate_u16_le : validator parse_u16_le =
+  validate_total_constant_size parse_u16_le 2sz
+
+inline_for_extraction
+let jump_u16_le : jumper parse_u16_le =
+  jump_constant_size parse_u16_le 2sz
+
+inline_for_extraction
 noextract
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta_attr [`%E.must_reduce]; iota; zeta; primops]; FStar.Tactics.trefl ())]
 let be_to_n_2 = (E.mk_be_to_n EI.uint16 2)
@@ -91,8 +99,33 @@ inline_for_extraction
 let read_u16 : reader serialize_u16 = reader_of_leaf_reader (read_u16' ())
 
 inline_for_extraction
+noextract
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta_attr [`%E.must_reduce]; iota; zeta; primops]; FStar.Tactics.trefl ())]
+let le_to_n_2 = (E.mk_le_to_n EI.uint16 2)
+
+inline_for_extraction
+fn read_u16_le' (_: unit) : leaf_reader #FStar.UInt16.t #parse_u16_kind #parse_u16_le serialize_u16_le
+= (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased FStar.UInt16.t)
+{
+  unfold (pts_to_serialized serialize_u16_le input #pm v);
+  serialize_u16_le_spec v;
+  let res = le_to_n_2 input 0sz;
+  fold (pts_to_serialized serialize_u16_le input #pm v);
+  res
+}
+
+inline_for_extraction
+let read_u16_le : reader serialize_u16_le = reader_of_leaf_reader (read_u16_le' ())
+
+inline_for_extraction
 let size_u16 (#t: Type) (vmatch: t -> FStar.UInt16.t -> slprop) : compute_remaining_size vmatch serialize_u16 =
   compute_remaining_size_constant_size vmatch serialize_u16 2sz
+
+inline_for_extraction
+let size_u16_le (#t: Type) (vmatch: t -> FStar.UInt16.t -> slprop) : compute_remaining_size vmatch serialize_u16_le =
+  compute_remaining_size_constant_size vmatch serialize_u16_le 2sz
 
 inline_for_extraction
 noextract
@@ -114,12 +147,38 @@ fn l2r_leaf_write_u16 (_: unit) : l2r_leaf_writer u#0 #FStar.UInt16.t #parse_u16
 }
 
 inline_for_extraction
+noextract
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta_attr [`%E.must_reduce]; iota; zeta; primops]; FStar.Tactics.trefl ())]
+let n_to_le_2 =  (E.mk_n_to_le EI.uint16 2)
+
+inline_for_extraction
+fn l2r_leaf_write_u16_le (_: unit) : l2r_leaf_writer u#0 #FStar.UInt16.t #parse_u16_kind #parse_u16_le serialize_u16_le
+= (n: _)
+  (x: _)
+  (pos: SZ.t)
+  (#v: Ghost.erased (Seq.seq byte))
+{
+  pts_to_len x;
+  serialize_u16_le_spec n;
+  n_to_le_2 n x pos;
+  SZ.add pos 2sz;
+}
+
+inline_for_extraction
 let validate_u32 : validator parse_u32 =
   validate_total_constant_size parse_u32 4sz
 
 inline_for_extraction
 let jump_u32 : jumper parse_u32 =
   jump_constant_size parse_u32 4sz
+
+inline_for_extraction
+let validate_u32_le : validator parse_u32_le =
+  validate_total_constant_size parse_u32_le 4sz
+
+inline_for_extraction
+let jump_u32_le : jumper parse_u32_le =
+  jump_constant_size parse_u32_le 4sz
 
 inline_for_extraction
 noextract
@@ -143,8 +202,33 @@ inline_for_extraction
 let read_u32 : reader serialize_u32 = reader_of_leaf_reader (read_u32' ())
 
 inline_for_extraction
+noextract
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta_attr [`%E.must_reduce]; iota; zeta; primops]; FStar.Tactics.trefl ())]
+let le_to_n_4 = (E.mk_le_to_n EI.uint32 4)
+
+inline_for_extraction
+fn read_u32_le' (_: unit) : leaf_reader #FStar.UInt32.t #parse_u32_kind #parse_u32_le serialize_u32_le
+= (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased FStar.UInt32.t)
+{
+  unfold (pts_to_serialized serialize_u32_le input #pm v);
+  serialize_u32_le_spec v;
+  let res = le_to_n_4 input 0sz;
+  fold (pts_to_serialized serialize_u32_le input #pm v);
+  res
+}
+
+inline_for_extraction
+let read_u32_le : reader serialize_u32_le = reader_of_leaf_reader (read_u32_le' ())
+
+inline_for_extraction
 let size_u32 (#t: Type) (vmatch: t -> FStar.UInt32.t -> slprop) : compute_remaining_size vmatch serialize_u32 =
   compute_remaining_size_constant_size vmatch serialize_u32 4sz
+
+inline_for_extraction
+let size_u32_le (#t: Type) (vmatch: t -> FStar.UInt32.t -> slprop) : compute_remaining_size vmatch serialize_u32_le =
+  compute_remaining_size_constant_size vmatch serialize_u32_le 4sz
 
 inline_for_extraction
 noextract
@@ -163,6 +247,24 @@ fn l2r_leaf_write_u32 (_: unit) : l2r_leaf_writer u#0 #FStar.UInt32.t #parse_u32
   let pos' = SZ.add pos 4sz;
   n_to_be_4 n x pos';
   pos'
+}
+
+inline_for_extraction
+noextract
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta_attr [`%E.must_reduce]; iota; zeta; primops]; FStar.Tactics.trefl ())]
+let n_to_le_4 =  (E.mk_n_to_le EI.uint32 4)
+
+inline_for_extraction
+fn l2r_leaf_write_u32_le (_: unit) : l2r_leaf_writer u#0 #FStar.UInt32.t #parse_u32_kind #parse_u32_le serialize_u32_le
+= (n: _)
+  (x: _)
+  (pos: SZ.t)
+  (#v: Ghost.erased (Seq.seq byte))
+{
+  pts_to_len x;
+  serialize_u32_le_spec n;
+  n_to_le_4 n x pos;
+  SZ.add pos 4sz;
 }
 
 inline_for_extraction
