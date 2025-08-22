@@ -143,6 +143,10 @@ let impl_raw_uint64_optimal
     end
   else false
 
+#push-options "--z3rlimit 32"
+
+#restart-solver
+
 ghost fn pts_to_serialized_nlist_raw_data_item_head_header
   (a: slice byte)
   (n: pos)
@@ -245,7 +249,7 @@ fn nondep_then_fst_tot_kind
   nondep_then_fst s1 j1 s2 input
 }
 
-#push-options "--z3rlimit 32"
+#restart-solver
 
 fn cbor_raw_ints_optimal (_: unit) : LowParse.Pulse.Recursive.impl_pred_t u#0 u#0 #_ serialize_raw_data_item_param R.raw_data_item_ints_optimal_elem
 = (a: _)
