@@ -130,3 +130,18 @@ fn compute_remaining_size_lseq_bytes_copy
     true
   }
 }
+
+inline_for_extraction
+fn validate_seq_all_bytes (_: unit) :
+  validator #_ #_ parse_seq_all_bytes
+=
+  (input: _)
+  (poffset: _)
+  (#offset: _)
+  (#pm: _)
+  (#v: _)
+{
+  S.pts_to_len input;
+  poffset := S.len input;
+  true
+}

@@ -208,6 +208,23 @@ let serialize_u16_le : serializer parse_u16_le =
     synth_u16_le_recip
     ()
 
+let serialize_u16_le_spec x =
+  serialize_synth_eq
+    _
+    synth_u16_le
+    (serialize_bounded_integer_le 2)
+    synth_u16_le_recip
+    ()
+    x
+
+let parse_u16_le_spec b =
+  parse_synth_eq
+    (parse_bounded_integer_le 2)
+    synth_u16_le
+    b;
+  let b' = Seq.slice b 0 2 in
+  E.lemma_le_to_n_is_bounded b'
+
 inline_for_extraction
 let synth_u32_le_recip
   (x: U32.t)
@@ -221,6 +238,23 @@ let serialize_u32_le =
     (serialize_bounded_integer_le 4)
     synth_u32_le_recip
     ()
+
+let serialize_u32_le_spec x =
+  serialize_synth_eq
+    _
+    synth_u32_le
+    (serialize_bounded_integer_le 4)
+    synth_u32_le_recip
+    ()
+    x
+
+let parse_u32_le_spec b =
+  parse_synth_eq
+    (parse_bounded_integer_le 4)
+    synth_u32_le
+    b;
+  let b' = Seq.slice b 0 4 in
+  E.lemma_le_to_n_is_bounded b'
 
 let parse_bounded_int32
   min max

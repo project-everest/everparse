@@ -203,15 +203,29 @@ let validator_postcond (#k: parser_kind) (#t: Type) (p: parser k t) (offset: SZ.
 module R = Pulse.Lib.Reference
 
 inline_for_extraction
-let validator (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
+let validator_gen (precond: slprop) (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
   (input: slice byte) ->
   (poffset: R.ref SZ.t) ->
   (#offset: Ghost.erased SZ.t) ->
   (#pm: perm) ->
   (#v: Ghost.erased bytes) ->
   stt bool
-    (pts_to input #pm v ** R.pts_to poffset offset ** pure (SZ.v offset <= Seq.length v))
-    (fun res -> pts_to input #pm v ** (exists* off . R.pts_to poffset off ** pure (validator_postcond p offset v off res)))
+    (precond ** pts_to input #pm v ** R.pts_to poffset offset ** pure (SZ.v offset <= Seq.length v))
+    (fun res -> precond ** pts_to input #pm v ** (exists* off . R.pts_to poffset off ** pure (validator_postcond p offset v off res)))
+
+inline_for_extraction
+let validator (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
+  validator_gen emp p
+
+inline_for_extraction
+fn validator_gen_of_validator
+  (precond: slprop) (#t: Type0) (#k: parser_kind) (#p: parser k t) (w: validator p)
+: validator_gen precond #t #k p
+=
+  (input: _) (poffset: _) (#offset: _) (#pm: _) (#v: _)
+  {
+    w input poffset
+  }
 
 inline_for_extraction
 fn validate
@@ -442,6 +456,7 @@ let peek_trade_post'
 = exists* v1 v2 . pts_to_serialized s left #pm v1 ** pts_to right #pm v2 ** trade (pts_to_serialized s left #pm v1 ** pts_to right #pm v2) (pts_to input #pm v) ** pure (
     bare_serialize s v1 `Seq.append` v2 == v /\
     Seq.length (bare_serialize s v1) == SZ.v consumed /\
+    Seq.slice v (SZ.v consumed) (Seq.length v) `Seq.equal` v2 /\
     begin match parse p v with
     | Some (v2, consumed2) -> v1 == v2 /\ SZ.v consumed == consumed2
     | _ -> False
@@ -502,6 +517,35 @@ fn peek_trade
 }
 
 inline_for_extraction
+fn peek_trade_gen'
+  (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (s: serializer p)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (offset: SZ.t)
+  (off: SZ.t)
+  requires (pts_to input #pm v ** pure (validator_success #k #t p offset v (off)))
+  returns res: (slice byte & (slice byte & slice byte))
+  ensures (
+    let (input1, (input', input2)) = res in
+    exists* v1 v' v2 . pts_to input1 #pm v1 ** (pts_to_serialized s input' #pm v' ** pts_to input2 #pm v2) ** trade (pts_to input1 #pm v1 ** (pts_to_serialized s input' #pm v' ** pts_to input2 #pm v2)) (pts_to input #pm v) ** pure (
+    validator_success #k #t p offset v off /\
+    parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (v', SZ.v off - SZ.v offset) /\
+    Seq.slice v 0 (SZ.v offset) == v1 /\
+    Seq.slice v (SZ.v off) (Seq.length v) == v2
+  ))
+{
+  let input1, input23 = split_trade input offset;
+  with v23 . assert (pts_to input23 #pm v23);
+  let consumed = SZ.sub off offset;
+  let input2, input3 = peek_trade s input23 consumed;
+  unfold (peek_trade_post s input23 pm v23 consumed (input2, input3));
+  unfold (peek_trade_post' s input23 pm v23 consumed input2 input3);
+  Trade.trans_hyp_r _ _ _ (pts_to input #pm _);
+  (input1, (input2, input3))
+}
+
+inline_for_extraction
 fn peek_trade_gen
   (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (s: serializer p)
   (input: slice byte)
@@ -516,16 +560,9 @@ fn peek_trade_gen
     parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (v', SZ.v off - SZ.v offset)
   )
 {
-  let input1, input23 = split_trade input offset;
-  with v23 . assert (pts_to input23 #pm v23);
-  Trade.elim_hyp_l (pts_to input1 #pm _) (pts_to input23 #pm v23) _;
-  let consumed = SZ.sub off offset;
-  let input2, input3 = peek_trade s input23 consumed;
-  unfold (peek_trade_post s input23 pm v23 consumed (input2, input3));
-  unfold (peek_trade_post' s input23 pm v23 consumed input2 input3);
-  with v' . assert (pts_to_serialized s input2 #pm v');
-  Trade.elim_hyp_r (pts_to_serialized s input2 #pm _) (pts_to input3 #pm _) (pts_to input23 #pm v23);
-  Trade.trans (pts_to_serialized s input2 #pm _) (pts_to input23 #pm _) (pts_to input #pm _);
+  let _, (input2, _) = peek_trade_gen' s input offset off;
+  Trade.elim_hyp_l _ _ _;
+  Trade.elim_hyp_r _ _ _;
   input2
 }
 

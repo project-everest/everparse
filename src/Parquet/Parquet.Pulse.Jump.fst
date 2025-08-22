@@ -50,21 +50,24 @@ ensures exists* v' .
 
 inline_for_extraction
 fn validate_jump_with_offset_and_size_then_parse
+  (precond: slprop)
   (#t: Type0)
   (offset: SZ.t)
   (size: SZ.t)
   (#k: Ghost.erased parser_kind)
   (#p: Ghost.erased (tot_parser k t))
-  (u: validator (parser_of_tot_parser p))
+  (u: validator_gen precond (parser_of_tot_parser p))
   (input: S.slice byte)
   (#pm: perm)
   (v: Ghost.erased bytes)
 requires
+  precond **
   pts_to input #pm v ** pure (
     SZ.v offset + SZ.v size <= Seq.length v
   )
 returns res: bool
 ensures 
+  precond **
   pts_to input #pm v ** pure (
     res == pred_jump_with_offset_and_size_then_parse (SZ.v offset) (SZ.v size) p v
   )
