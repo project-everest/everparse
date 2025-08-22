@@ -916,6 +916,10 @@ assume
 val parse_footer:parser parse_footer_kind file_meta_data
 // val parse_footer:parser parse_footer_kind footer_t
 
+assume
+val serialize_footer:serializer parse_footer
+// val parse_footer:parser parse_footer_kind footer_t
+
 let is_PAR1 (s: Seq.lseq byte 4) : bool =
   let v0 = Seq.index s 0 in
   let v1 = Seq.index s 1 in
@@ -978,12 +982,12 @@ let validate_all (fmd: file_meta_data) (data: bytes) : Tot bool =
     )
     fmd.row_groups
 
-let parse_parquet (file_size: nat) =
+let parse_parquet =
   parse_nondep_then_rtol (parse_filter (parse_seq_flbytes 4) is_PAR1)
     (parse_dtuple2_rtol parse_u32_le
         (fun len ->
             (weaken (dtuple2_rtol_kind parse_seq_all_bytes_kind 0)
-                (parse_dtuple2_rtol (parse_fldata parse_footer (U32.v len))
+                (parse_dtuple2_rtol (parse_fldata_strong serialize_footer (U32.v len))
                     (fun footer ->
                         parse_filter parse_seq_all_bytes (validate_all footer)
                       )))))
