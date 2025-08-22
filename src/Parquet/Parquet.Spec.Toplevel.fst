@@ -945,7 +945,20 @@ let validate_page_data (h: page_header) (d: bytes) : Tot bool =
   I32.v h.compressed_page_size = Seq.length d &&
   true (* TODO: validate data against schema *)
 
-let parse_page = tot_parse_dtuple2 parse_page_header (fun h -> tot_parse_filter tot_parse_seq_all_bytes (validate_page_data h))
+let tot_parse_page = tot_parse_dtuple2 parse_page_header (fun h -> tot_parse_filter tot_parse_seq_all_bytes (validate_page_data h))
+
+let parse_page = parse_dtuple2 (parser_of_tot_parser parse_page_header) (fun h -> parse_filter parse_seq_all_bytes (validate_page_data h))
+
+let parse_page_equiv' (b: bytes) : Lemma
+  (parse (parser_of_tot_parser tot_parse_page) b == parse parse_page b)
+= parse_dtuple2_eq (parser_of_tot_parser parse_page_header) (fun h -> parse_filter parse_seq_all_bytes (validate_page_data h)) b;
+  match parse (parser_of_tot_parser parse_page_header) b with
+  | None -> ()
+  | Some (ph, consumed) ->
+    let b' = Seq.slice b consumed (Seq.length b) in
+    parse_filter_eq parse_seq_all_bytes (validate_page_data ph) b'
+
+let parse_page_equiv : squash (forall b . parse (parser_of_tot_parser tot_parse_page) b == parse parse_page b) = Classical.forall_intro parse_page_equiv'
 
 let validate_offset_index_all (cc: column_chunk) (data: bytes) (oi: offset_index) : Tot bool =
   validate_offset_index cc oi &&
@@ -954,7 +967,7 @@ let validate_offset_index_all (cc: column_chunk) (data: bytes) (oi: offset_index
       J.pred_jump_with_offset_and_size_then_parse
         (nat_of_int64 pl.offset)
         (nat_of_int32 pl.compressed_page_size)
-        parse_page
+        tot_parse_page
         data
     )
     oi.page_locations
