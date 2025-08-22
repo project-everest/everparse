@@ -294,7 +294,7 @@ and type2 () = debug "type2" (
       concat lbrack (fun _ -> concat s (fun _ -> concat (group ()) (fun x -> concat s (fun _ -> concat rbrack (fun _ -> ret (TArray x))))));
 (* TODO: "~" s typename option(genericarg) *)
 (* TODO: "&" s "(" s group s ")" *)
-      concat amp (fun _ -> concat lparen (fun _ -> concat bareword (fun (_, name) -> concat colon (fun _ -> concat (type_ ()) (fun ty -> concat rparen (fun _ -> ret (TNamed (name, ty))))))));
+      concat amp (fun _ -> concat s (fun _ -> concat lparen (fun _ -> concat s (fun _ -> concat bareword (fun (_, name) -> concat s (fun _ -> concat colon (fun _ -> concat s (fun _ -> concat (type_ ()) (fun ty -> concat s (fun _ -> concat rparen (fun _ -> ret (TNamed (name, ty)))))))))))));
 (* TODO: "&" s groupname option(genericarg) *)
       concat pound6 (fun _ -> concat (option tag) (fun tag -> concat lparen (fun _ -> concat s (fun _ -> concat (type_ ()) (fun x -> concat s (fun _ -> concat rparen (fun _ -> ret (TTagged (tag, x)))))))));
 (* TODO: generalize "#"DIGIT option(tag) *)

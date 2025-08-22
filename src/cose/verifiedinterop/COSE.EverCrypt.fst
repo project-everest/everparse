@@ -133,6 +133,8 @@ fn mk_sig_structure phdr aad payload
     ensures rel_empty_or_serialized_map phdr vphdr ** rel_bstr aad vaad ** rel_bstr payload vpayload
   {
     unfold_plus (rel_sig_structure _ _) [`%mk_sig_structure_spec];
+    rewrite each (mk_sig_structure_spec vphdr vaad vpayload)
+      as (Mkspect_sig_structure0 signature1 vphdr (Inr (reveal vaad, reveal vpayload))); // FIXME: WHY WHY WHY?
     rw_r (rel_sig_structure_eq _ _);
     rewrite rel_either rel_unit rel_unit signature1 signature1 as emp;
   };

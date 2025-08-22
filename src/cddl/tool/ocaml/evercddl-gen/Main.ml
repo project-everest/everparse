@@ -26,6 +26,11 @@ let list_is_empty = function
 
 let fstar_only = ref false
 
+let mkdir dir =
+  if Sys.file_exists dir && Sys.is_directory dir
+  then ()
+  else try Sys.mkdir dir 0o755 with _ -> ()
+
 let produce_fst_file (dir: string) : string =
   let filenames = List.rev !rev_filenames in
   match ParseFromFile.parse_from_files filenames with
@@ -42,7 +47,7 @@ let produce_fst_file (dir: string) : string =
          let basename = !mname ^ ".fst" in
          let filename = Filename.concat dir basename in
          let filename_tmp = filename ^ ".tmp" in
-         if not (Sys.file_exists dir && Sys.is_directory dir) then Sys.mkdir dir 0o755;
+         mkdir dir;
          let ch = open_out filename_tmp in
          output_string ch str;
          close_out ch;
@@ -217,6 +222,8 @@ let rust_krml_list =
     (Filename.concat everparse_src_cddl_tool "extraction-rust")
     "rust.lst"
 
+let skip_compilation = ref false
+
 let _ =
   let argspec = ref [
       ("--admit", Arg.Unit (fun _ -> admit := true), "Admit proofs");
@@ -224,6 +231,7 @@ let _ =
       ("--mname", Arg.String (fun m -> mname := m), "Set the module name");
       ("--odir", Arg.String (fun d -> odir := d), "Set the output directory (default .)");
       ("--fstar_only", Arg.Unit (fun _ -> fstar_only := true), "Only generate F*");
+      ("--skip_compilation", Arg.Unit (fun _ -> skip_compilation := true), "Do not compile produced C files");
       ("--tmpdir", Arg.String (fun d -> tmpdir := d), "Set the temporary directory (default automatically generated)");
     ]
   in
@@ -304,7 +312,7 @@ let _ =
     else
       [
           "-warn-error"; "@1..27";
-          "-skip-compilation";
+          (if !skip_compilation then "-skip-compilation" else "-skip-linking");
           "-tmpdir"; !odir;
           "-header"; Filename.concat everparse_src_cddl_tool "noheader.txt";
         "-fstar"; fstar_exe;
@@ -316,6 +324,7 @@ let _ =
         "-bundle"; "CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\\*[rename=CBORDetAPI]";
 	"-bundle"; (!mname ^ "=\\*");
 	"-add-include"; "\"CBORDetAbstract.h\"";
+        "-I"; Filename.concat (Filename.concat everparse_src_cbor_pulse "det") "c";
         krml_file;
       ] @
         c_krml_list

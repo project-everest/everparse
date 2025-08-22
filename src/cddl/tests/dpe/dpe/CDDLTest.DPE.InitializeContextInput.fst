@@ -60,12 +60,12 @@ fn trans_hyp_l_2
   (p1 p2 q1 q2 r: slprop)
 requires
   trade p1 p2 **
-  trade (p2 ** q1 ** q2) r
+  trade ((p2 ** q1) ** q2) r
 ensures
-  trade (p1 ** q1 ** q2) r
+  trade ((p1 ** q1) ** q2) r
 {
   slprop_equivs();
-  rewrite each (p2 ** q1 ** q2) as (p2 ** (q1 ** q2));
+  rewrite each ((p2 ** q1) ** q2) as (p2 ** (q1 ** q2));
   Trade.Util.trans_hyp_l _ _ _ r;
 }
 
@@ -78,15 +78,16 @@ fn destruct_quad
 requires 
   rel_pair (rel_pair (rel_pair r0 r1) r2) r3 x y
 ensures
-  r0 (proj_1_4 x) (proj_1_4 y) **
-  r1 (proj_2_4 x) (proj_2_4 y) **
-  r2 (proj_3_4 x) (proj_3_4 y) **
-  r3 (proj_4_4 x) (proj_4_4 y) **
-  Trade.trade (r0 (proj_1_4 x) (proj_1_4 y) **
-               r1 (proj_2_4 x) (proj_2_4 y) **
-               r2 (proj_3_4 x) (proj_3_4 y) **
-               r3 (proj_4_4 x) (proj_4_4 y))
-              (rel_pair (rel_pair (rel_pair r0 r1) r2) r3 x y)
+  (((r0 (proj_1_4 x) (proj_1_4 y) **
+  r1 (proj_2_4 x) (proj_2_4 y)) **
+  r2 (proj_3_4 x) (proj_3_4 y)) **
+  r3 (proj_4_4 x) (proj_4_4 y)) **
+  Trade.trade
+    (((r0 (proj_1_4 x) (proj_1_4 y) **
+    r1 (proj_2_4 x) (proj_2_4 y)) **
+    r2 (proj_3_4 x) (proj_3_4 y)) **
+    r3 (proj_4_4 x) (proj_4_4 y))
+    (rel_pair (rel_pair (rel_pair r0 r1) r2) r3 x y)
 {
   destruct_pair _ r3 _ _ ();
   destruct_pair _ r2 _ _ ();

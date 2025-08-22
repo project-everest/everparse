@@ -92,8 +92,8 @@ ensures
     pts_to cert #q c
 {
   rewrite (rel_certifykeyoutputargs x hres) as
-          (rel_bytes (Some?.v x.certificate) (Some?.v hres.certificate) **
-           rel_bytes (Some?.v x.derived_public_key) (Some?.v hres.derived_public_key) **
+          ((rel_bytes (Some?.v x.certificate) (Some?.v hres.certificate) **
+           rel_bytes (Some?.v x.derived_public_key) (Some?.v hres.derived_public_key)) **
            emp);
   let xx = extract_bytes_ghost (Some?.v x.certificate) _;
   let yy = extract_bytes_ghost (Some?.v x.derived_public_key) _;
