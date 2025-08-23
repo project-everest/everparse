@@ -1,0 +1,21 @@
+[submodule "opt/FStar"]
+	path = opt/FStar
+	url = https://github.com/FStarLang/FStar.git
+[submodule "opt/karamel"]
+	path = opt/karamel
+	url = https://github.com/FStarLang/karamel.git
+[submodule "opt/pulse"]
+	path = opt/pulse
+	url = https://github.com/FStarLang/pulse.git
+[submodule "opt/everest"]
+	path = opt/everest
+	url = https://github.com/project-everest/everest.git
+[submodule "src/cddl/tests/unit/QCBOR"]
+	path = src/cddl/tests/unit/QCBOR
+	url = https://github.com/laurencelundblade/QCBOR.git
+[submodule "src/cddl/tests/unit/tinycbor"]
+	path = src/cddl/tests/unit/tinycbor
+	url = https://github.com/intel/tinycbor.git
+[submodule "src/cose/verifiedinterop/test/hacl-star"]
+	path = src/cose/verifiedinterop/test/hacl-star
+	url = https://github.com/hacl-star/hacl-star.git
