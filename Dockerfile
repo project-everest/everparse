@@ -1,15 +1,13 @@
 # This Dockerfile should be run from the root EverParse directory
 
 ARG ocaml_version=4.14
-FROM ocaml/opam:ubuntu-24.04-ocaml-$ocaml_version
+FROM ocaml/opam:ubuntu-24.04-ocaml-$ocaml_version AS deps
+
+SHELL ["/bin/bash", "--login", "-c"]
 
 # install rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends llvm-dev libclang-dev clang libgmp-dev pkg-config
-RUN . "$HOME/.cargo/env" && rustup component add rustfmt && cargo install bindgen-cli
-
-# Install other dependencies
-RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends \
+RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends llvm-dev libclang-dev clang libgmp-dev pkg-config \
   libssl-dev \
   cmake \
   python-is-python3 \
@@ -18,14 +16,25 @@ RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends \
   time \
   wget
 
+# Set up Rust environment
+RUN echo "source $HOME/.cargo/env" >> $(if test -f $HOME/.bash_profile ; then echo $HOME/.bash_profile ; else echo $HOME/.profile ; fi)
+
 # Bring in the contents
 ADD --chown=opam:opam ./ /mnt/everparse/
 WORKDIR /mnt/everparse
 RUN git clean -ffdx || true
 
-# Build and publish the release
-ARG CI_THREADS=24
-RUN sudo apt-get update && . "$HOME/.cargo/env" && env OPAMYES=1 make -j $CI_THREADS -C opt && env OTHERFLAGS='--admit_smt_queries true' make -j $CI_THREADS all cbor-test cddl-test cose-test
+ARG CI_THREADS
+RUN sudo apt-get update && env OPAMYES=1 make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" -C opt
 
 ENTRYPOINT ["/mnt/everparse/opt/shell.sh", "--login", "-c"]
 CMD ["/bin/bash"]
+SHELL ["/mnt/everparse/opt/shell.sh", "--login", "-c"]
+
+FROM deps AS all
+
+RUN OTHERFLAGS='--admit_smt_queries true' make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" all
+
+FROM all AS test
+
+RUN OTHERFLAGS='--admit_smt_queries true' make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" test
