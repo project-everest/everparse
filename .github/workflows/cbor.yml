@@ -57,7 +57,7 @@ jobs:
         run: |
           nproc=$(sysctl -n hw.logicalcpu)
           if [[ $nproc -gt 8 ]] ; then nproc=8 ; fi
-          cd everparse && opam exec -- gmake -j$nproc -k cddl-test
+          cd everparse && gmake -j$nproc -k cddl-test
 
   build-docker:
     runs-on: ubuntu-latest
