@@ -21,7 +21,8 @@ RUN sudo apt-get install --yes \
 # Bring in the contents
 ARG CACHE_BUST
 RUN sudo mkdir /mnt/everparse && sudo chown opam:opam /mnt/everparse
-RUN git clone https://github.com/project-everest/everparse /mnt/everparse && echo $CACHE_BUST
+ARG CI_BRANCH=master
+RUN git clone --recurse-submodules --branch CI_BRANCH https://github.com/project-everest/everparse /mnt/everparse && echo $CACHE_BUST
 WORKDIR /mnt/everparse
 
 # Build and publish the release
