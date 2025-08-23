@@ -19,3 +19,6 @@
 [submodule "src/cose/verifiedinterop/test/hacl-star"]
 	path = src/cose/verifiedinterop/test/hacl-star
 	url = https://github.com/hacl-star/hacl-star.git
+[submodule "opt/opam-repository"]
+	path = opt/opam-repository
+	url = https://github.com/ocaml/opam-repository.git
