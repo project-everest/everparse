@@ -27,7 +27,7 @@ RUN git clone --recurse-submodules --branch CI_BRANCH https://github.com/project
 WORKDIR /mnt/everparse
 
 ARG CI_THREADS
-RUN sudo apt-get update && env OPAMYES=1 make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" -C opt
+RUN sudo apt-get update && env OPAMYES=1 make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" -C opt && make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" lowparse-dep
 
 ENTRYPOINT ["/mnt/everparse/opt/shell.sh", "--login", "-c"]
 CMD ["/bin/bash"]
