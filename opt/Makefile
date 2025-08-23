@@ -1,4 +1,4 @@
-all: FStar.do karamel.do pulse.do z3
+all: FStar.do karamel.do pulse.do z3 python-venv.do qcbor.do tinycbor.do hacl-star.do
 
 .PHONY: all %.do
 
@@ -8,6 +8,7 @@ opam-env.Makefile: everest
 	./opam-env.sh > $@
 
 export EVERPARSE_OPT_PATH=$(realpath .)
+export EVERPARSE_SRC_PATH=$(realpath ../src)
 
 include opam-env.Makefile
 
@@ -36,3 +37,26 @@ karamel.do: karamel FStar.do
 
 pulse.do: pulse FStar.do
 	+$(MAKE) -C $< ADMIT=1
+
+python-venv.do: $(EVERPARSE_SRC_PATH)/cose/.venv
+
+$(EVERPARSE_SRC_PATH)/cose/.venv:
+	+$(MAKE) -C $(dir $@) $(notdir $@)
+
+qcbor.do: $(EVERPARSE_SRC_PATH)/cddl/tests/unit/QCBOR
+	+$(MAKE) -C $<
+
+$(EVERPARSE_SRC_PATH)/cddl/tests/unit/QCBOR:
+	+$(MAKE) -C $(dir $@) $(notdir $@)
+
+tinycbor.do: $(EVERPARSE_SRC_PATH)/cddl/tests/unit/tinycbor
+	+$(MAKE) -C $(dir $<) -f tinycbor.Makefile
+
+$(EVERPARSE_SRC_PATH)/cddl/tests/unit/tinycbor:
+	+$(MAKE) -C $(dir $@) $(notdir $@)
+
+hacl-star.do: $(EVERPARSE_SRC_PATH)/cose/verifiedinterop/test/hacl-star karamel
+	+$(MAKE) -C $</dist/gcc-compatible
+
+$(EVERPARSE_SRC_PATH)/cose/verifiedinterop/test/hacl-star:
+	+$(MAKE) -C $(dir $@) $(notdir $@)
