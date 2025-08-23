@@ -4,7 +4,7 @@ all: FStar.do karamel.do pulse.do z3
 
 opam-env.Makefile: everest
 	opam init --no-setup --root=opam
-	opam exec --root=opam --set-root -- env OPAMNODEPEXTS=1 everest/everest opam
+	opam exec --root=opam --set-root -- everest/everest opam
 	./opam-env.sh > $@
 
 export EVERPARSE_OPT_PATH=$(realpath .)
