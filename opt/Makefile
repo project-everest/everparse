@@ -3,7 +3,7 @@ all: FStar.do karamel.do pulse.do z3
 .PHONY: all %.do
 
 opam-env.Makefile: everest
-	opam init --no-setup --root=opam
+	opam init --no-setup --root=opam --kind=local default ./opam-repository
 	opam exec --root=opam --set-root -- everest/everest opam
 	./opam-env.sh > $@
 
