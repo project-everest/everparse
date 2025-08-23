@@ -94,7 +94,16 @@ asn1-test: asn1
 lowparse-bitfields-test: lowparse
 	+$(MAKE) -C tests/bitfields
 
-lowparse-test: lowparse-unit-test lowparse-bitfields-test
+ifeq (,$(NO_PULSE))
+lowparse-pulse-test:
+else
+lowparse-pulse-test: lowparse
+	+$(MAKE) -C tests/pulse
+endif
+
+.PHONY: lowparse-pulse-test
+
+lowparse-test: lowparse-unit-test lowparse-bitfields-test lowparse-pulse-test
 
 quackyducky-unit-test: gen-test lowparse
 	+$(MAKE) -C tests/unit
