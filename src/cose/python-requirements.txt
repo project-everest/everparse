@@ -1,0 +1,11 @@
+asn1crypto==1.5.1
+attrs==25.3.0
+cbor2==5.7.0
+certvalidator==0.11.1
+cffi==1.17.1
+cryptography==45.0.6
+ecdsa==0.19.1
+oscrypto==1.3.0
+pycose==1.1.0
+pycparser==2.22
+six==1.17.0
