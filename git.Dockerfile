@@ -22,7 +22,7 @@ RUN echo "source $HOME/.cargo/env" >> $(if test -f $HOME/.bash_profile ; then ec
 # Bring in the contents
 ARG CACHE_BUST
 RUN sudo mkdir /mnt/everparse && sudo chown opam:opam /mnt/everparse
-ARG CI_BRANCH=master
+ARG CI_BRANCH=taramana_ccs2025
 RUN git clone --recurse-submodules --branch $CI_BRANCH https://github.com/project-everest/everparse /mnt/everparse && echo $CACHE_BUST
 WORKDIR /mnt/everparse
 
