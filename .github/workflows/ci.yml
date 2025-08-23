@@ -116,6 +116,7 @@ jobs:
 
       - uses: actions/checkout@master
         with:
+          submodules: true
           path: everparse
 
       - name: Everparse CI
