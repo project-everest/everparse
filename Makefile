@@ -2,7 +2,13 @@
 # 1. Add them to FSTAR_OPTIONS in src/fstar.Makefile
 # 2. Add them to fstar_args0 in src/3d/ocaml/Batch.ml
 
-all: package-subset asn1 cbor cddl cbor-interface cose
+all: evercbor-all
+
+evercbor-all: cbor cddl cbor-interface cose
+
+everparse-all: package-subset asn1 evercbor-all
+
+.PHONY: everparse-all evercbor-all
 
 export EVERPARSE_OPT_PATH=$(realpath opt)
 -include $(EVERPARSE_OPT_PATH)/opam-env.Makefile
@@ -47,6 +53,12 @@ lowparse: $(filter-out src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKE
 ifeq (,$(NO_PULSE))
 lowparse: $(filter src/lowparse/pulse/%,$(ALL_CHECKED_FILES))
 endif
+
+lowparse-dep: FSTAR_OPTIONS += --admit_smt_queries true
+
+lowparse-dep: $(filter-out src/lowparse/pulse/% src/lowparse/LowParse.Spec.Recursive.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+
+.PHONY: lowparse-dep
 
 # lowparse needed because of .fst behind .fsti for extraction
 3d-prelude: $(filter src/3d/prelude/%,$(ALL_CHECKED_FILES)) $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
@@ -119,7 +131,13 @@ quackyducky-sample0-test: quackyducky lowparse
 
 quackyducky-test: quackyducky-unit-test quackyducky-sample-test quackyducky-sample0-test quackyducky-sample-low-test
 
-test: all lowparse-test quackyducky-test 3d-test asn1-test cbor-test cddl-test cose-test
+test: evercbor-test
+
+evercbor-test: cbor-test cddl-test cose-test
+
+everparse-test: everparse-all lowparse-test quackyducky-test 3d-test asn1-test evercbor-test
+
+.PHONY: everparse-test evercbor-test
 
 submodules:
 	$(MAKE) -C $(EVERPARSE_OPT_PATH) submodules
@@ -267,7 +285,7 @@ cddl-test: cddl cddl-unit-tests
 
 .PHONY: cddl-test
 
-ci: test 3d-doc-ci
+ci: everparse-test 3d-doc-ci
 
 # cbor needed because we regenerate its Rust documentation
 3d-doc-ci: 3d-doc-test cbor
