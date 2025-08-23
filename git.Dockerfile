@@ -26,7 +26,7 @@ WORKDIR /mnt/everparse
 
 # Build and publish the release
 ARG CI_THREADS=24
-RUN sudo apt-get update && . "$HOME/.cargo/env" && env OPAMYES=1 make _opam && eval $(opam env) && make -j $CI_THREADS -C opt && env OTHERFLAGS='--admit_smt_queries true' make -j $CI_THREADS all cbor-test cddl-test cose-test
+RUN sudo apt-get update && . "$HOME/.cargo/env" && env OPAMYES=1 make -j $CI_THREADS -C opt && env OTHERFLAGS='--admit_smt_queries true' make -j $CI_THREADS all cbor-test cddl-test cose-test
 
 ENTRYPOINT ["/mnt/everparse/opt/shell.sh", "--login", "-c"]
 CMD ["/bin/bash"]
