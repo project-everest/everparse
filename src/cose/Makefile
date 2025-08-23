@@ -29,7 +29,7 @@ test-extract-rust:
 .venv:
 	rm -rf $@ $@.tmp
 	python3 -m venv $@.tmp
-	$@.tmp/bin/python3 -m pip install pycose
+	$@.tmp/bin/python3 -m pip install -r python-requirements.txt
 	mv $@.tmp $@
 
 .PHONY: test-interop
