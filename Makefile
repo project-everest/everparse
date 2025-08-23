@@ -2,7 +2,7 @@
 # 1. Add them to FSTAR_OPTIONS in src/fstar.Makefile
 # 2. Add them to fstar_args0 in src/3d/ocaml/Batch.ml
 
-all: evercbor-all
+all: evercbor-all cbor-verify cose-extract-test
 
 evercbor-all: cbor cddl cbor-interface cose
 
@@ -131,7 +131,7 @@ quackyducky-sample0-test: quackyducky lowparse
 
 quackyducky-test: quackyducky-unit-test quackyducky-sample-test quackyducky-sample0-test quackyducky-sample-low-test
 
-test: evercbor-test
+test: evercbor-test lowparse-pulse-test
 
 evercbor-test: cbor-test cddl-test cose-test
 
