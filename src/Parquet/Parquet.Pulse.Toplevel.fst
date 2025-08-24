@@ -29,12 +29,7 @@ open FStar.Real
 
 open FStar.List.Tot
 
-// a custom vector type for extractionnoeq
-noeq
-type vec (t:Type0) = {
-  data: Vec.vec t;
-  len: (len:SZ.t { SZ.v len == Vec.length data });
-}
+open Parquet.Pulse.Vec
 
 type byte = U8.byte
 type bytes = vec byte

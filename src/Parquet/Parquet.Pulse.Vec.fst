@@ -9,20 +9,26 @@ module GR = Pulse.Lib.GhostReference
 module SZ = FStar.SizeT
 module Rel = CDDL.Pulse.Types.Base
 
+// a custom vector type for extractionnoeq
 noeq
-type vec (t: Type) = {
-  len: SZ.t;
-  v: V.vec t;
+type vec (t:Type0) = {
+  data: V.vec t;
+  len: (len:SZ.t { SZ.v len == V.length data });
 }
+
 
 let rel_vec_of_list
   (#low #high: Type)
   (r: Rel.rel low high)
 : Rel.rel (vec low) (list high)
 = Rel.mk_rel (fun x y ->
-    exists* s . pts_to x.v s ** SM.seq_list_match s y r ** pure (V.is_full_vec x.v /\ V.length x.v == SZ.v x.len)
+    exists* s . pts_to x.data s ** SM.seq_list_match s y r ** pure (V.is_full_vec x.data /\ V.length x.data == SZ.v x.len)
   )
 
+// Two possible views:
+// impl_pred #spec_footer_t #pulse_footer_t (p_data |-> data) r_spec_pulse_footer validate_all
+// alternative: 
+// impl_pred #seq u8 #slice u8 (r_spec_pulse_footer spec_footer impl_footer) (|->) validate_all
 inline_for_extraction
 let impl_pred
   (#spect #implt: Type0)
@@ -49,8 +55,8 @@ fn impl_for_all
   (y: _)
 {
   unfold (rel_vec_of_list r x y);
-  V.pts_to_len x.v;
-  with s . assert (pts_to x.v s);
+  V.pts_to_len x.data;
+  with s . assert (pts_to x.data s);
   SM.seq_list_match_length r s y;
   Trade.refl (SM.seq_list_match s y r);
   let mut pi = 0sz;
@@ -66,7 +72,7 @@ fn impl_for_all
   ) invariant b . exists* i ll lr sr res . (
     precond **
     pts_to pi i **
-    pts_to x.v s **
+    pts_to x.data s **
     pts_to pres res **
     GR.pts_to pll ll **
     SM.seq_list_match sr lr r **
@@ -91,7 +97,7 @@ fn impl_for_all
       (r _ _)
       (r (Seq.index s (SZ.v i)) (List.Tot.hd lr));
     Trade.trans_hyp_l _ _ _ _;
-    let elt = V.op_Array_Access x.v i;
+    let elt = V.op_Array_Access x.data i;
     let res = implf elt _;
     pres := res;
     if (res) {
