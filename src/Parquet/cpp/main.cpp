@@ -45,7 +45,7 @@ static bool read_all(const std::string& path, std::vector<uint8_t>& out) {
 static bool check_magic(const uint8_t* p) { return std::memcmp(p, MAGIC, 4) == 0; }
 
 static bool extract_footer_slice(const std::vector<uint8_t>& file,
-                                 const uint8_t** footer_data, uint32_t* footer_size) {
+                                 const uint8_t** footer_data, size_t* footer_size) {
   if (file.size() < 12) return false;
 
   // Verify header magic at the start
@@ -69,7 +69,7 @@ static bool extract_footer_slice(const std::vector<uint8_t>& file,
 }
 
 static parquet::FileMetaData parse_footer_thrift(const uint8_t* footer_data,
-                                                 uint32_t footer_size) {
+                                                 size_t footer_size) {
   // Parquet metadata is Thrift-serialized using Compact Protocol
   auto mem =
       std::make_shared<TMemoryBuffer>(const_cast<uint8_t*>(footer_data), footer_size);
@@ -78,6 +78,22 @@ static parquet::FileMetaData parse_footer_thrift(const uint8_t* footer_data,
   parquet::FileMetaData meta;
   meta.read(proto.get());
   return meta;
+}
+
+bool validate_footer(Parquet_Pulse_Toplevel_bytes input, size_t* poffset) {
+  try {
+    parse_footer_thrift(input.data + *poffset, input.len - *poffset);
+    return true;
+  } catch (apache::thrift::protocol::TProtocolException&) {
+    return false;
+  }
+}
+
+// Should only be called after validate_footer returned true.
+Parquet_Pulse_Toplevel_file_meta_data read_footer(Parquet_Pulse_Toplevel_bytes footer) {
+  parquet::FileMetaData meta = parse_footer_thrift(footer.data, footer.len);
+
+  return shim_parquet_pulse::to_pulse_file_metadata(meta);
 }
 
 static void print_summary(const std::string& path, const parquet::FileMetaData& m,
@@ -109,7 +125,7 @@ int main(int argc, char** argv) {
       }
 
       const uint8_t* footer = nullptr;
-      uint32_t footer_len = 0;
+      size_t footer_len = 0;
       if (!extract_footer_slice(file, &footer, &footer_len)) {
         std::cerr << "Error: invalid Parquet file or unsupported layout: " << path
                   << "\n";
