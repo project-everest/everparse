@@ -40,6 +40,7 @@ type bytes = Seq.seq byte
 
 // Enumerated Types
 
+[@@no_auto_projectors]
 type physical_type =
   | BOOLEAN
   | INT32
@@ -50,6 +51,7 @@ type physical_type =
   | BYTE_ARRAY
   | FIXED_LEN_BYTE_ARRAY
 
+[@@no_auto_projectors]
 type converted_type =
   | DEPRECATED_UTF8
   | DEPRECATED_MAP
@@ -74,13 +76,16 @@ type converted_type =
   | DEPRECATED_BSON
   | DEPRECATED_INTERVAL
 
+[@@no_auto_projectors]
 type field_repetition_type =
   | REQUIRED
   | OPTIONAL
   | REPEATED
 
+[@@no_auto_projectors]
 type encoding =
   | PLAIN
+  | GROUP_VAR_INT of (squash False) // deprecated; a hack s.t. the numbers of the variants are corrected 
   | PLAIN_DICTIONARY
   | RLE
   | BIT_PACKED
@@ -90,6 +95,7 @@ type encoding =
   | RLE_DICTIONARY
   | BYTE_STREAM_SPLIT
 
+[@@no_auto_projectors]
 type compression_codec =
   | UNCOMPRESSED
   | SNAPPY
@@ -100,25 +106,26 @@ type compression_codec =
   | ZSTD
   | LZ4_RAW
 
+[@@no_auto_projectors]
 type page_type =
   | DATA_PAGE
   | INDEX_PAGE
   | DICTIONARY_PAGE
   | DATA_PAGE_V2
 
+[@@no_auto_projectors]
 type boundary_order =
   | UNORDERED
   | ASCENDING
   | DESCENDING
 
+[@@no_auto_projectors]
 type edge_interpolation_algorithm =
   | SPHERICAL
   | VINCENTY
   | THOMAS
   | ANDOYER
   | KARNEY
-
-
 
 // Statistics and Metadata Structures
 

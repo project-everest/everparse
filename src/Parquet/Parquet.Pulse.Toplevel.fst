@@ -31,99 +31,28 @@ open FStar.List.Tot
 
 open Parquet.Pulse.Vec
 
+module PS = Parquet.Spec.Toplevel
+
 type byte = U8.byte
 type bytes = vec byte
 
 // Enumerated Types
 
-[@@no_auto_projectors]
-type physical_type =
-  | BOOLEAN
-  | INT32
-  | INT64
-  | INT96
-  | FLOAT
-  | DOUBLE
-  | BYTE_ARRAY
-  | FIXED_LEN_BYTE_ARRAY
+type physical_type = PS.physical_type
 
-[@@no_auto_projectors]
-type converted_type =
-  | DEPRECATED_UTF8
-  | DEPRECATED_MAP
-  | DEPRECATED_MAP_KEY_VALUE
-  | DEPRECATED_LIST
-  | DEPRECATED_ENUM
-  | DEPRECATED_DECIMAL
-  | DEPRECATED_DATE
-  | DEPRECATED_TIME_MILLIS
-  | DEPRECATED_TIME_MICROS
-  | DEPRECATED_TIMESTAMP_MILLIS
-  | DEPRECATED_TIMESTAMP_MICROS
-  | DEPRECATED_UINT_8
-  | DEPRECATED_UINT_16
-  | DEPRECATED_UINT_32
-  | DEPRECATED_UINT_64
-  | DEPRECATED_INT_8
-  | DEPRECATED_INT_16
-  | DEPRECATED_INT_32
-  | DEPRECATED_INT_64
-  | DEPRECATED_JSON
-  | DEPRECATED_BSON
-  | DEPRECATED_INTERVAL
+type converted_type = PS.converted_type
 
-[@@no_auto_projectors]
-type field_repetition_type =
-  | REQUIRED
-  | OPTIONAL
-  | REPEATED
+type field_repetition_type = PS.field_repetition_type
 
-[@@no_auto_projectors]
-type encoding =
-  | PLAIN
-  | GROUP_VAR_INT of (squash False) // deprecated; a hack s.t. the numbers of the variants are corrected 
-  | PLAIN_DICTIONARY
-  | RLE
-  | BIT_PACKED
-  | DELTA_BINARY_PACKED
-  | DELTA_LENGTH_BYTE_ARRAY
-  | DELTA_BYTE_ARRAY
-  | RLE_DICTIONARY
-  | BYTE_STREAM_SPLIT
+type encoding = PS.encoding
 
-[@@no_auto_projectors]
-type compression_codec =
-  | UNCOMPRESSED
-  | SNAPPY
-  | GZIP
-  | LZO
-  | BROTLI
-  | LZ4
-  | ZSTD
-  | LZ4_RAW
+type compression_codec = PS.compression_codec
+  
+type page_type = PS.page_type
 
-[@@no_auto_projectors]
-type page_type =
-  | DATA_PAGE
-  | INDEX_PAGE
-  | DICTIONARY_PAGE
-  | DATA_PAGE_V2
+type boundary_order = PS.boundary_order
 
-[@@no_auto_projectors]
-type boundary_order =
-  | UNORDERED
-  | ASCENDING
-  | DESCENDING
-
-[@@no_auto_projectors]
-type edge_interpolation_algorithm =
-  | SPHERICAL
-  | VINCENTY
-  | THOMAS
-  | ANDOYER
-  | KARNEY
-
-
+type edge_interpolation_algorithm = PS.edge_interpolation_algorithm
 
 // Statistics and Metadata Structures
 
@@ -142,17 +71,7 @@ type size_statistics = {
   definition_level_histogram:option (vec int64)
 }
 
-noeq
-type bounding_box = {
-  xmin:real;
-  xmax:real;
-  ymin:real;
-  ymax:real;
-  zmin:option real;
-  zmax:option real;
-  mmin:option real;
-  mmax:option real
-}
+type bounding_box = PS.bounding_box
 
 noeq
 type geospatial_statistics = {
@@ -176,103 +95,53 @@ type statistics = {
 
 // Logical Types
 
-type string_type = unit
+type string_type = PS.string_type
 
-type uuid_type = unit
+type uuid_type = PS.uuid_type
 
-type map_type = unit
+type map_type = PS.map_type
 
-type list_type = unit
+type list_type = PS.list_type
 
-type enum_type = unit
+type enum_type = PS.enum_type
 
-type date_type = unit
+type date_type = PS.date_type
 
-type float16_type = unit
+type float16_type = PS.float16_type
 
-type null_type = unit
+type null_type = PS.null_type
 
-type json_type = unit
+type json_type = PS.json_type
 
-type bson_type = unit
+type bson_type = PS.bson_type
 
-type decimal_type = {
-  scale:int32;
-  precision:int32
-}
+type decimal_type = PS.decimal_type
 
-type milli_seconds = unit
+type milli_seconds = PS.milli_seconds
 
-type micro_seconds = unit
+type micro_seconds = PS.micro_seconds
 
-type nano_seconds = unit
+type nano_seconds = PS.nano_seconds
 
-type time_unit =
-  | MILLIS of milli_seconds
-  | MICROS of micro_seconds
-  | NANOS of nano_seconds
+type time_unit = PS.time_unit
 
-type timestamp_type = {
-  isAdjustedToUTC:bool;
-  unit:time_unit
-}
+type timestamp_type = PS.timestamp_type
 
-type time_type = {
-  isAdjustedToUTC:bool;
-  unit:time_unit
-}
+type time_type = PS.time_type
 
-type int_type = {
-  bitWidth:int8;
-  isSigned:bool
-}
+type int_type = PS.int_type
 
-type variant_type = { specification_version:option int8 }
+type variant_type = PS.variant_type
 
-type geometry_type = { crs:option string }
+type geometry_type = PS.geometry_type
 
-type geography_type = {
-  crs:option string;
-  algorithm:option edge_interpolation_algorithm
-}
+type geography_type = PS.geography_type
 
-type logical_type =
-  | STRING of string_type
-  | MAP of map_type
-  | LIST of list_type
-  | ENUM of enum_type
-  | DECIMAL of decimal_type
-  | DATE of date_type
-  | TIME of time_type
-  | TIMESTAMP of timestamp_type
-  | INTEGER of int_type
-  | UNKNOWN of null_type
-  | JSON of json_type
-  | BSON of bson_type
-  | UUID of uuid_type
-  | FLOAT16 of float16_type
-  | VARIANT of variant_type
-  | GEOMETRY of geometry_type
-  | GEOGRAPHY of geography_type
-
-
+type logical_type = PS.logical_type
 
 // Schema elements
 
-type schema_element = {
-  type_:option physical_type;
-  type_length:option int32;
-  repetition_type:option field_repetition_type;
-  name:string;
-  num_children:option int32;
-  converted_type:option converted_type;
-  scale:option int32;
-  precision:option int32;
-  field_id:option int32;
-  logical_type:option logical_type
-}
-
-
+type schema_element = PS.schema_element
 
 // Page structures
 
@@ -285,13 +154,9 @@ type data_page_header = {
   statistics:option statistics
 }
 
-type index_page_header = unit
+type index_page_header = PS.index_page_header
 
-type dictionary_page_header = {
-  num_values:int32;
-  encoding:encoding;
-  is_sorted:option bool
-}
+type dictionary_page_header = PS.dictionary_page_header
 
 noeq
 type data_page_header_v2 = {
@@ -309,24 +174,19 @@ type data_page_header_v2 = {
 
 // Bloom Filters
 
-type split_block_algorithm = unit
+type split_block_algorithm = PS.split_block_algorithm
 
-type bloom_filter_algorithm = | BLOCK of split_block_algorithm
+type bloom_filter_algorithm = PS.bloom_filter_algorithm
 
-type xx_hash = unit
+type xx_hash = PS.xx_hash
 
-type bloom_filter_hash = | XXHASH of xx_hash
+type bloom_filter_hash = PS.bloom_filter_hash
 
-type uncompressed = unit
+type uncompressed = PS.uncompressed
 
-type bloom_filter_compression = | UN_COMPRESSED of uncompressed
+type bloom_filter_compression = PS.bloom_filter_compression
 
-type bloom_filter_header = {
-  numBytes:int32;
-  algorithm:bloom_filter_algorithm;
-  hash:bloom_filter_hash;
-  compression:bloom_filter_compression
-}
+type bloom_filter_header = PS.bloom_filter_header
 
 
 
@@ -354,22 +214,11 @@ type page_header = {
 
 // header:page_header_variants // sum type instead of "tagged union"
 
-type key_value = {
-  key:string;
-  value:option string
-}
+type key_value = PS.key_value
 
-type sorting_column = {
-  column_idx:int32;
-  descending:bool;
-  nulls_first:bool
-}
+type sorting_column = PS.sorting_column
 
-type page_encoding_stats = {
-  page_type:page_type;
-  encoding:encoding;
-  count:int32
-}
+type page_encoding_stats = PS.page_encoding_stats
 
 noeq
 type column_meta_data = {
@@ -392,7 +241,7 @@ type column_meta_data = {
   geospatial_statistics:option geospatial_statistics
 }
 
-type encryption_with_footer_key = unit
+type encryption_with_footer_key = PS.encryption_with_footer_key
 
 noeq
 type encryption_with_column_key = {
@@ -429,15 +278,11 @@ type row_group = {
   ordinal:option int16
 }
 
-type type_defined_order = unit
+type type_defined_order = PS.type_defined_order
 
-type column_order = | TYPE_ORDER of type_defined_order
+type column_order = PS.column_order
 
-type page_location = {
-  offset:int64;
-  compressed_page_size:int32;
-  first_row_index:int64
-}
+type page_location = PS.page_location
 
 noeq
 type offset_index = {
@@ -453,24 +298,14 @@ type column_index = {
   boundary_order:boundary_order;
   null_counts:option (vec int64);
   repetition_level_histograms:option (vec int64);
-  definition_level_histograms:option (Vec.vec int64)
+  definition_level_histograms:option (vec int64)
 }
 
-type aes_gcm_v1 = {
-  aad_prefix:option string;
-  aad_file_unique:option string;
-  supply_aad_prefix:option bool
-}
+type aes_gcm_v1 = PS.aes_gcm_v1
 
-type aes_gcm_ctr_v1 = {
-  aad_prefix:option string;
-  aad_file_unique:option string;
-  supply_aad_prefix:option bool
-}
+type aes_gcm_ctr_v1 = PS.aes_gcm_ctr_v1
 
-type encryption_algorithm =
-  | AES_GCM_V1 of aes_gcm_v1
-  | AES_GCM_CTR_V1 of aes_gcm_ctr_v1
+type encryption_algorithm = PS.encryption_algorithm
 
 noeq
 type file_meta_data = {
@@ -485,8 +320,5 @@ type file_meta_data = {
   footer_signing_key_metadata:option string
 }
 
-type file_crypto_meta_data = {
-  encryption_algorithm:encryption_algorithm;
-  key_metadata:option string
-}
+type file_crypto_meta_data = PS.file_crypto_meta_data
 
