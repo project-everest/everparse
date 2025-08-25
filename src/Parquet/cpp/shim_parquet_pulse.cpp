@@ -472,8 +472,8 @@ static parquet::FileMetaData parse_footer_thrift(const uint8_t* footer_data,
   return meta;
 }
 
-bool Parquet_Pulse_Toplevel0_validate_footer(Parquet_Pulse_Toplevel_bytes input,
-                                             size_t* poffset) {
+extern "C" bool Parquet_Pulse_Toplevel0_validate_footer(
+    Parquet_Pulse_Toplevel_bytes input, size_t* poffset) {
   try {
     parse_footer_thrift(input.data + *poffset, input.len - *poffset);
     return true;
@@ -483,7 +483,7 @@ bool Parquet_Pulse_Toplevel0_validate_footer(Parquet_Pulse_Toplevel_bytes input,
 }
 
 // Should only be called after validate_footer returned true.
-Parquet_Pulse_Toplevel_file_meta_data Parquet_Pulse_Toplevel0_read_footer(
+extern "C" Parquet_Pulse_Toplevel_file_meta_data Parquet_Pulse_Toplevel0_read_footer(
     Parquet_Pulse_Toplevel_bytes footer) {
   parquet::FileMetaData meta = parse_footer_thrift(footer.data, footer.len);
 
