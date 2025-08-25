@@ -117,3 +117,38 @@ fn impl_for_all
   fold (rel_vec_of_list r x y);
   !pres
 }
+
+inline_for_extraction
+let impl_pred2
+  (#spect1 #implt1: Type0)
+  (#spect2 #implt2: Type0)
+  (precond: slprop)
+  (r1: Rel.rel implt1 spect1)
+  (r2: Rel.rel implt2 spect2)
+  (f12: (spect1 -> spect2 -> Tot bool))
+=
+  (x1: implt1) ->
+  (y1: Ghost.erased spect1) ->
+  impl_pred (precond ** r1 x1 y1) r2 (f12 y1)
+
+inline_for_extraction
+fn impl_pred2_swap
+  (#spect1 #implt1: Type0)
+  (#spect2 #implt2: Type0)
+  (#precond: slprop)
+  (#r1: Rel.rel implt1 spect1)
+  (#r2: Rel.rel implt2 spect2)
+  (#f12: Ghost.erased (spect1 -> spect2 -> Tot bool))
+  (impl12: impl_pred2 precond r1 r2 f12)
+  (f21: Ghost.erased (spect2 -> spect1 -> Tot bool) {
+    forall x1 x2 . Ghost.reveal f12 x1 x2 == Ghost.reveal f21 x2 x1
+  })
+: impl_pred2 #_ #_ #_ #_ precond r2 r1 (Ghost.reveal f21)
+=
+  (x2: _)
+  (y2: _)
+  (x1: _)
+  (y1: _)
+{
+  impl12 x1 y1 x2 y2
+}

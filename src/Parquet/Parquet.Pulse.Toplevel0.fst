@@ -11,6 +11,10 @@ include Parquet.Spec.Toplevel
 module SZ = FStar.SizeT
 module S = Pulse.Lib.Slice.Util
 module Trade = Pulse.Lib.Trade.Util
+module Rel = CDDL.Pulse.Types.Base
+module PV = Parquet.Pulse.Vec
+
+include Parquet.Pulse.Rel
 
 assume val validate_is_PAR1 : validate_filter_test_t
   (serialize_seq_flbytes 4)
@@ -18,9 +22,17 @@ assume val validate_is_PAR1 : validate_filter_test_t
 
 assume val validate_footer : validator parse_footer
 
+assume val read_footer : zero_copy_parse rel_file_meta_data serialize_footer
+
 module U32 = FStar.UInt32
 
-assume val impl_validate_all 
+[@@pulse_unfold] noextract
+let pts_to_bytes (pm: perm) (x: S.slice byte) (y: bytes) : Tot slprop =
+  pts_to x #pm y
+
+assume val impl_validate_all0 (pm: perm) : PV.impl_pred2 emp rel_file_meta_data (pts_to_bytes pm) validate_all
+
+fn impl_validate_all
   (len: U32.t)
   (footer: Ghost.erased (parse_fldata_strong_t serialize_footer (U32.v len)))
   (y: Pulse.Lib.Slice.slice LowParse.Bytes.byte)
@@ -29,8 +41,23 @@ assume val impl_validate_all
 validate_filter_test_gen_t (pts_to_serialized (serialize_fldata_strong serialize_footer (U32.v len))
       y  #pm
       footer)
+  #_ #_ #_
   serialize_seq_all_bytes
   (validate_all footer)
+=
+  (x: _)
+  (#pm': _)
+  (#v: _)
+{
+  pts_to_serialized_fldata_strong_elim_trade serialize_footer (U32.v len) y;
+  let f = read_footer y;
+  Trade.trans (rel_file_meta_data _ _) _ _;
+  pts_to_serialized_elim_trade serialize_seq_all_bytes x;
+  let res = impl_validate_all0 _ f _ x _;
+  Trade.elim (pts_to_bytes _ x _) _;
+  Trade.elim (rel_file_meta_data _ _) _;
+  res
+}
 
 let validate_parquet (sq: squash SZ.fits_u32) : validator parse_parquet =
   validate_nondep_then_rtol
