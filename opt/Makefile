@@ -1,4 +1,4 @@
-all: FStar.do karamel.do pulse.do z3 python-venv.do qcbor.do tinycbor.do hacl-star.do
+all: FStar.do karamel.do pulse.do z3 python-venv.do qcbor.do tinycbor.do hacl-star.do dice.do
 
 .PHONY: all %.do
 
@@ -60,3 +60,6 @@ hacl-star.do: $(EVERPARSE_SRC_PATH)/cose/verifiedinterop/test/hacl-star karamel
 
 $(EVERPARSE_SRC_PATH)/cose/verifiedinterop/test/hacl-star:
 	+$(MAKE) -C $(dir $@) $(notdir $@)
+
+dice.do: pulse.do
+	+$(MAKE) -C $(EVERPARSE_SRC_PATH)/cddl/tests/dpe -f dice.Makefile
