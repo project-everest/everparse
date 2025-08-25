@@ -714,10 +714,10 @@ let columns_are_sorted (cols: list column_chunk) : Tot bool =
      cols
    )
 
-val validate_row_group: row_group -> Tot bool
-
-let validate_row_group rg =
-  let col_offset =
+let first_column_offset
+  (rg: row_group)
+: Tot (option _)
+=
     // column offset is the first page offset
     match rg.columns with
     | [] -> None
@@ -725,15 +725,11 @@ let validate_row_group rg =
       match first.meta_data with
       | None -> None
       | Some cmd -> Some (offset_of_column_chunk cmd)
-  in
-  let offset_ok =
-    match rg.file_offset with
-    | None -> true
-    | Some off ->
-      match col_offset with
-      | None -> true
-      | Some col_off -> I64.v off = I64.v col_off
-  in
+
+val validate_row_group: row_group -> Tot bool
+
+let validate_row_group rg =
+  let col_offset = first_column_offset rg in
   let rg_size_ok =
     (* sum of col sizes equals row‑group size (when available) *)
     match rg.total_compressed_size with
@@ -753,7 +749,7 @@ let validate_row_group rg =
   let cols_ok =
     List.Tot.for_all (fun cc -> validate_column_chunk cc) rg.columns (* each column chunk passes *)
   in
-  offset_ok && rg_size_ok && sorted_ok && cols_ok
+  rg_size_ok && sorted_ok && cols_ok
 
 let cc_idx_ranges (cc: column_chunk) : list range =
   match
@@ -767,7 +763,7 @@ let cc_idx_ranges (cc: column_chunk) : list range =
   | _ -> []
 
 let rg_range (rg: row_group) : option range =
-  match rg.file_offset, rg.total_compressed_size with
+  match first_column_offset rg, rg.total_compressed_size with
   | Some off, Some sz -> Some ({ start = I64.v off; len = I64.v sz })
   | _ ->
     let total_size = cols_size rg.columns in
