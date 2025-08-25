@@ -1,4 +1,4 @@
-module Parquet.Spec.Toplevel
+module Parquet.Spec.Toplevel.Old
 
 module U32 = FStar.UInt32
 
@@ -333,6 +333,27 @@ let rg_range (rg: row_group) : option range =
 
 // get a flat list of all page offsets
 
+let get_all_page_offs (rgs: list row_group) : list int64 =
+  List.Tot.collect (fun rg ->
+        List.Tot.collect (fun cc ->
+              match cc.meta_data with
+              | None -> []
+              | Some cmd ->
+                let dict_off =
+                  match cmd.dictionary_page_offset with
+                  | None -> []
+                  | Some off -> [off]
+                in
+                let idx_off =
+                  match cmd.index_page_offset with
+                  | None -> []
+                  | Some off -> [off]
+                in
+                let data_off = [cmd.data_page_offset] in
+                dict_off @ idx_off @ data_off)
+          rg.columns)
+    rgs
+
 let rec page_offsets_are_distinct_and_inbound (page_offs: list int64) (bound: int64)
     : Tot bool (decreases page_offs) =
   match page_offs with
@@ -345,21 +366,29 @@ let rec page_offsets_are_distinct_and_inbound (page_offs: list int64) (bound: in
 
 (** Top‑level file metadata validation ------------------------------- *)
 
-let rec list_option_map (#t1 #t2: Type) (f: (t1 -> option t2)) (l: list t1) : Tot (list t2) =
-  match l with
-  | [] -> []
-  | a :: q ->
-    let q' = list_option_map f q in
-    begin match f a with
-    | None -> q'
-    | Some a' -> a' :: q'
-    end
-
 val validate_file_meta_data: file_meta_data -> nat -> Tot bool
 
 let validate_file_meta_data fmd footer_start =
+  let page_offs:// get a flat list of all page offsets
+  list int64 =
+    get_all_page_offs fmd.row_groups
+  in
+  let ranges:// get a flat list of all rg ranges and idx ranges
+  list range =
+    List.Tot.collect (fun rg ->
+          let rg_range_opt = rg_range rg in
+          let cc_ranges = List.Tot.collect cc_idx_ranges rg.columns in
+          match rg_range_opt with
+          | None -> cc_ranges
+          | Some rg_range -> rg_range :: cc_ranges)
+      fmd.row_groups
+  in
+  // page_offs should all be distinct and inbound
   FStar.Int.fits footer_start 64 &&
-  ranges_disjoint (list_option_map rg_range fmd.row_groups) &&
+  page_offsets_are_distinct_and_inbound page_offs (I64.int_to_t footer_start) && ranges_disjoint ranges &&
+  ranges_in_bound ranges
+    // ranges should be mutually disjoint and non-overlapping with the footer
+    (footer_start) &&
   List.Tot.for_all (fun rg -> validate_row_group rg) fmd.row_groups
 
 let page_offsets_are_contiguous (locs: list page_location) : Tot bool =
