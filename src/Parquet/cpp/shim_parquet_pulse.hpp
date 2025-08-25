@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstring>
-#include "Parquet_Pulse_Toplevel.h"  // the KaRaMeL output (C header)
+#include "EverParquet.h"  // the KaRaMeL output (C header)
 #include "parquet_types.hpp"         // Thrift C++ generated types (namespace parquet)
 
 namespace shim_parquet_pulse {

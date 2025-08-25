@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "Parquet_Pulse_Toplevel.h"  // KaRaMeL C API types
+#include "EverParquet.h"  // KaRaMeL C API types
 #include "parquet_types.hpp"         // Thrift-generated C++ header
 #include "pretty_print.hpp"
 #include "shim_parquet_pulse.hpp"  // your shim header

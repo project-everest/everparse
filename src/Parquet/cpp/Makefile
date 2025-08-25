@@ -15,7 +15,7 @@ RM      := rm -f
 BIN     := parquet_checker
 
 # ---- sources ----
-SRCS_C   := Parquet_Pulse_Toplevel.c
+SRCS_C   := EverParquet.c
 SRCS_CPP := parquet_types.cpp shim_parquet_pulse.cpp main.cpp
 
 OBJS_C    := $(SRCS_C:.c=.o)
