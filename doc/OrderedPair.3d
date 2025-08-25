@@ -1,4 +1,0 @@
-entrypoint typedef struct _orderedPair {
-  UINT32 lesser;
-  UINT32 greater { lesser <= greater };
-} orderedPair;

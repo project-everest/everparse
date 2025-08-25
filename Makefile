@@ -1,14 +1,15 @@
 # NOTE: if you want to add global F* options, you need to do the following:
 # 1. Add them to FSTAR_OPTIONS in src/fstar.Makefile
-# 2. Add them to fstar_args0 in src/3d/ocaml/Batch.ml
 
-all: pulseparse evercbor-all
+all: pulseparse cbor cddl cose
 
-evercbor-all: cbor cddl cose
+.PHONY: all
 
-everparse-all: package-subset asn1 evercbor-all
+test: pulseparse-test cbor-test cddl-test cose-test
 
-.PHONY: everparse-all evercbor-all
+.PHONY: test
+
+# Dependencies and Configuration
 
 export EVERPARSE_OPT_PATH=$(realpath opt)
 -include $(EVERPARSE_OPT_PATH)/opam-env.Makefile
@@ -24,156 +25,77 @@ include $(EVERPARSE_OPT_PATH)/env.Makefile
 $(EVERPARSE_OPT_PATH)/everest:
 	+$(MAKE) -C $(EVERPARSE_OPT_PATH) everest
 
-package-subset: quackyducky lowparse 3d
-
-.PHONY: package-subset
-
 EVERPARSE_SRC_PATH = $(realpath src)
 
 ALREADY_CACHED := *,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,
 
-SRC_DIRS += src/lowparse src/ASN1 src/3d/prelude src/cbor/spec src/cbor/spec/raw src/cbor/spec/raw/everparse src/cddl/spec
+SRC_DIRS += src/lowparse src/cbor/spec src/cbor/spec/raw src/cbor/spec/raw/everparse src/cddl/spec
 
-ifeq (,$(NO_PULSE))
-  SRC_DIRS += src/lowparse/pulse src/cbor/pulse src/cbor/pulse/raw src/cbor/pulse/raw/everparse src/cddl/pulse src/cddl/tool
-endif
+SRC_DIRS += src/lowparse/pulse src/cbor/pulse src/cbor/pulse/raw src/cbor/pulse/raw/everparse src/cddl/pulse src/cddl/tool
 
 ifneq (,$(FSTAR_EXE))
 
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-ifeq (,$(NO_PULSE))
-  include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-endif
+include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 endif
 
-lowparse: $(filter-out src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+# PulseParse
 
-ifeq (,$(NO_PULSE))
-lowparse: $(filter src/lowparse/pulse/%,$(ALL_CHECKED_FILES))
-endif
+pulseparse_filter := src/lowparse/pulse/% src/lowparse/LowParse.Spec.Recursive.%
 
-lowparse-dep: FSTAR_OPTIONS += --admit_smt_queries true
+lowparse_files := $(filter-out $(pulseparse_filter),$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
 
-lowparse-dep: $(filter-out src/lowparse/pulse/% src/lowparse/LowParse.Spec.Recursive.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+pulseparse_files := $(filter $(pulseparse_filter),$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
 
-.PHONY: lowparse-dep
+# This is LowParse from Ramananandro et al.'s EverParse (USENIX Security 2019)
+$(lowparse_files): FSTAR_OPTIONS += --admit_smt_queries true
 
-pulseparse: lowparse
+lowparse: $(lowparse_files)
+
+.PHONY: lowparse
+
+pulseparse: $(pulseparse_files)
 
 .PHONY: pulseparse
 
-# lowparse needed because of .fst behind .fsti for extraction
-3d-prelude: $(filter src/3d/prelude/%,$(ALL_CHECKED_FILES)) $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
-	+$(MAKE) -C src/3d prelude
+# PulseParse tests
 
-.PHONY: 3d-prelude
-
-3d-exe:
-	+$(MAKE) -C src/3d 3d
-
-.PHONY: 3d-exe
-
-3d: 3d-prelude 3d-exe
-
-# filter-out comes from NOT_INCLUDED in src/ASN1/Makefile
-asn1: $(filter-out $(addprefix src/ASN1/,$(addsuffix .checked,ASN1.Tmp.fst ASN1.Test.Interpreter.fst ASN1.Low.% ASN1Test.fst ASN1.bak%)),$(filter src/ASN1/%,$(ALL_CHECKED_FILES)))
-
-quackyducky:
-	+$(MAKE) -C src/qd
-
-bin/qd.exe: quackyducky
-
-.gen-test.touch: bin/qd.exe tests/unittests.rfc tests/bitcoin.rfc
-	rm -f tests/unit/*.fst tests/unit/*.fsti
-	bin/qd.exe -odir tests/unit tests/unittests.rfc
-	bin/qd.exe -low -odir tests/unit tests/bitcoin.rfc
-	touch $@
-
-gen-test: .gen-test.touch
-
-lowparse-unit-test: lowparse
-	+$(MAKE) -C tests/lowparse
-
-3d-unit-test: 3d
-	+$(MAKE) -C src/3d test
-
-3d-doc-test: 3d
-	+$(MAKE) -C doc 3d-test
-
-3d-test: 3d-unit-test 3d-doc-test
-
-asn1-test: asn1
-	+$(MAKE) -C src/ASN1 test
-
-lowparse-bitfields-test: lowparse
-	+$(MAKE) -C tests/bitfields
-
-ifeq (,$(NO_PULSE))
-pulseparse-test:
-else
-pulseparse-test: lowparse
+pulseparse-test: pulseparse
 	+$(MAKE) -C tests/pulse
-endif
 
 .PHONY: pulseparse-test
 
-lowparse-test: lowparse-unit-test lowparse-bitfields-test pulseparse-test
+# EverCBOR
 
-quackyducky-unit-test: gen-test lowparse
-	+$(MAKE) -C tests/unit
+cbor-verify: $(filter src/cbor/spec/% src/cbor/pulse/%,$(ALL_CHECKED_FILES))
 
-quackyducky-sample-test: quackyducky lowparse
-	+$(MAKE) -C tests/sample
+.PHONY: cbor-verify
 
-quackyducky-sample-low-test: quackyducky lowparse
-	+$(MAKE) -C tests/sample_low
+cbor-extract-pre: cbor-verify pulseparse
 
-quackyducky-sample0-test: quackyducky lowparse
-	+$(MAKE) -C tests/sample0
+.PHONY: cbor-extract-pre
 
-quackyducky-test: quackyducky-unit-test quackyducky-sample-test quackyducky-sample0-test quackyducky-sample-low-test
+cbor: cbor-extract-pre
+	+$(MAKE) -C src/cbor snapshot
 
-test: evercbor-test pulseparse-test
+.PHONY: cbor
 
-evercbor-test: cbor-test cddl-test cose-test
-
-everparse-test: everparse-all lowparse-test quackyducky-test 3d-test asn1-test evercbor-test
-
-.PHONY: everparse-test evercbor-test
-
-submodules:
-	$(MAKE) -C $(EVERPARSE_OPT_PATH) submodules
-
-.PHONY: submodules
-
-cbor-interface: $(filter-out src/cbor/spec/raw/%,$(filter src/cbor/spec/%,$(ALL_CHECKED_FILES)))
-
-ifeq (,$(NO_PULSE))
-cbor-interface: $(filter-out src/cbor/pulse/raw/%,$(filter src/cbor/pulse/%,$(ALL_CHECKED_FILES)))
-endif
-
-.PHONY: cbor-interface
+# EverCBOR tests
 
 cbor-det-c-test: cbor
 	+$(MAKE) -C src/cbor/pulse/det/c all-tests
 
-ifeq (,$(NO_PULSE))
-cbor-det-c-vertest: cbor cbor-interface
+.PHONY: cbor-det-c-test
+
+cbor-det-c-vertest: cbor
 	+$(MAKE) -C src/cbor/pulse/det/vertest/c
-else
-cbor-det-c-vertest:
-endif
 
 .PHONY: cbor-det-c-vertest
 
-ifeq (,$(NO_PULSE))
-cbor-det-common-vertest: cbor cbor-interface
+cbor-det-common-vertest: cbor
 	+$(MAKE) -C src/cbor/pulse/det/vertest/common
-else
-cbor-det-common-vertest:
-endif
 
 .PHONY: cbor-det-common-vertest
 
@@ -181,25 +103,7 @@ endif
 cbor-det-rust-test: cbor
 	+cd src/cbor/pulse/det/rust && cargo test
 
-cbor-verify: $(filter src/cbor/spec/%,$(ALL_CHECKED_FILES))
-
-ifeq (,$(NO_PULSE))
-cbor-verify: $(filter src/cbor/pulse/%,$(ALL_CHECKED_FILES))
-endif
-
-.PHONY: cbor-verify
-
-# lowparse needed for extraction because of .fst files behind .fsti
-ifeq (,$(NO_PULSE))
-cbor-extract-pre: cbor-verify $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
-
-.PHONY: cbor-extract-pre
-
-cbor: cbor-extract-pre
-	+$(MAKE) -C src/cbor snapshot
-else
-cbor:
-endif
+.PHONY: cbor-det-rust-test
 
 cbor-test-unverified: cbor-det-c-test cbor-det-rust-test
 
@@ -209,100 +113,56 @@ cbor-test-verified: cbor-det-c-vertest cbor-det-common-vertest
 
 .PHONY: cbor-test-verified
 
-cbor-test-extracted: cbor-test-unverified cbor-test-verified
+cbor-test: cbor-test-unverified cbor-test-verified
 
-.PHONY: cbor-test-extracted
+.PHONY: cbor-test
 
-cbor-test: cbor-test-extracted
+# EverCDDL
 
 cddl-spec: $(filter src/cddl/spec/%,$(ALL_CHECKED_FILES))
 
-ifeq (,$(NO_PULSE))
+.PHONY: cddl-spec
+
 cddl-pulse: cddl-spec $(filter src/cddl/pulse/%,$(ALL_CHECKED_FILES))
 
-# cbor-extract-pre needed because Rust extraction extracts CBOR and COSE altogether
-cddl-tool: cddl-pulse $(filter src/cddl/tool/%,$(ALL_CHECKED_FILES)) cbor-extract-pre
+.PHONY: cddl-pulse
+
+cddl: cbor cddl-pulse $(filter src/cddl/tool/%,$(ALL_CHECKED_FILES))
 	+$(MAKE) -C src/cddl/tool
-else
-cddl-tool:
-endif
 
-cddl: cbor cddl-spec cddl-tool
+.PHONY: cddl
 
-.PHONY: cddl-spec cddl-tool
+# EverCDDL tests
 
-.PHONY: cbor cbor-det-c-test cbor-det-rust-test cbor-test cddl
-
-ifeq (,$(NO_PULSE))
 cddl-unit-tests: cddl
 	+$(MAKE) -C src/cddl/tests unit.do
+
+.PHONY: cddl-unit-tests
 
 cddl-dpe: cddl
 	+$(MAKE) -C src/cddl/tests dpe.do
 
+.PHONY: cddl-dpe
+
 cddl-other-tests: cddl
 	+$(MAKE) -C src/cddl/tests others
 
-else
-cddl-unit-tests:
-cddl-dpe:
-cddl-other-tests:
-endif
-
-.PHONY: cddl-unit-tests cddl-dpe 
-
-ifeq (,$(NO_PULSE))
-cose: cddl
-	+$(MAKE) -C src/cose snapshot
-else
-cose:
-endif
-
-.PHONY: cose-extract-test
-
-.PHONY: cose-extracted-test
-
-cose-test: cose-extracted-test
-
-.PHONY: cose-test
-
-.PHONY: cose
+.PHONY: cddl-other-tests
 
 cddl-test: cddl cddl-unit-tests cddl-dpe cddl-other-tests
 
 .PHONY: cddl-test
 
-ci: everparse-test 3d-doc-ci
+# EverCOSE
 
-# cbor needed because we regenerate its Rust documentation
-3d-doc-ci: 3d-doc-test cbor
-	+$(MAKE) -C doc 3d-ci
+cose: cddl
+	+$(MAKE) -C src/cose snapshot
 
-.PHONY: 3d-doc-ci
+.PHONY: cose
 
-3d-doc-snapshot: 3d
-	+$(MAKE) -C doc 3d-snapshot
+# EverCOSE tests
 
-.PHONY: 3d-doc-snapshot
+cose-test: cose
+	+$(MAKE) -C src/cose test-extracted
 
-clean-3d:
-	+$(MAKE) -C src/3d clean
-
-clean-lowparse:
-	+$(MAKE) -C src/lowparse clean
-
-clean-quackyducky:
-	+$(MAKE) -C src/qd clean
-
-clean: clean-3d clean-lowparse clean-quackyducky
-	rm -rf bin
-
-.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test quackyducky-test lowparse-fstar-test quackyducky-sample-test quackyducky-sample0-test quackyducky-unit-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse 3d-unit-test 3d-doc-test ci clean-3d clean-lowparse clean-quackyducky asn1 asn1-test
-
-release package package-noversion nuget-noversion everparse:
-	+$(MAKE) -f package.Makefile $@
-
-# For F* testing purposes, cf. FStarLang/FStar@fc30456a163c749843c50ee5f86fa22de7f8ad7a
-
-lowparse-fstar-test:
-	+$(MAKE) -C src/lowparse fstar-test
+.PHONY: cose-test

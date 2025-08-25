@@ -1,3 +1,0 @@
-(lang dune 2.8)
-(name qd)
-(using menhir 2.0)

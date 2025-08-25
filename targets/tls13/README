@@ -1,4 +1,0 @@
-These files were obtained through the following command (issued on the
-QuackyDucky root directory):
-
-./qd -odir targets/tls13 extractrfc/tls13_extracted.txt

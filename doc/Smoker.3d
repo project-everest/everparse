@@ -1,4 +1,0 @@
-entrypoint typedef struct _smoker {
-  UINT32 age { age >= 21 };
-  UINT8 cigarettesConsumed;
-} smoker;

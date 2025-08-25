@@ -1,7 +1,0 @@
-entrypoint
-typedef struct _test1 {
-  UINT32 a;
-  UINT16 b;
-  UINT8 c;
-  UINT16 remainder[:consume-all];
-} test1;

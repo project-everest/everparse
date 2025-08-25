@@ -1,6 +1,0 @@
-entrypoint
-typedef struct _PAIR (mutable AA::OPAIR *pair)
-{
-  UINT32 fst {:act pair->fst = fst; };
-  UINT32 snd {:act pair->snd = snd; };
-} PAIR;

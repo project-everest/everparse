@@ -1,7 +1,0 @@
-entrypoint
-typedef struct _TRIPLE (mutable AA::OTRIPLE *p)
-{
-  UINT32 fst {:act p->fst = fst; };
-  UINT32 snd {:act p->snd = snd; };
-  UINT32 thd {:act p->thd = thd; };
-} PAIR;

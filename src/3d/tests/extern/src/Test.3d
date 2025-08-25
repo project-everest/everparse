@@ -1,6 +1,0 @@
-entrypoint
-typedef struct _POINT {
-  UINT32  x;
-  UINT32  y { y >= 18 };
-  UINT32  z;
-} POINT;

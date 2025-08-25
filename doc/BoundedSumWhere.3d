@@ -1,6 +1,0 @@
-entrypoint typedef struct _boundedSum (UINT32 bound)
-where bound <= 1729
-{
-  UINT32 left;
-  UINT32 right { left <= bound && right <= bound - left };
-} boundedSum;

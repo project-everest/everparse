@@ -1,5 +1,0 @@
-// NO entrypoint
-typedef struct _dummy {
-   UINT32 a;
-   UINT32 b;
-} dummy;

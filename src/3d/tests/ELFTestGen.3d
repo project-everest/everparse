@@ -1,5 +1,0 @@
-entrypoint
-typedef struct _ELFTestGen
-{
-  ELF::ELF(256) elf;
-} ELFTestGen;

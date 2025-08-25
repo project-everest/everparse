@@ -1,8 +1,0 @@
-#ifndef COMPILE_TIME_FLAGS_H
-
-#define COMPILE_TIME_FLAGS_H
-
-#define ABOVEDIAGONAL 1
-#define STRICT 0
-
-#endif

@@ -1,5 +1,0 @@
-entrypoint
-typedef struct _dummy {
-   UINT8 a:4[2];
-   UINT32 b;
-} dummy;

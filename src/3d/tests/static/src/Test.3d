@@ -1,9 +1,0 @@
-entrypoint
-typedef struct _POINT(mutable PUINT8 *out) {
-  UINT32  x;
-  UINT32  y {:on-success
-    var is_not_null = *out = field_ptr_after(18uL);
-    return is_not_null;
-  };
-  UINT32  z;
-} POINT;

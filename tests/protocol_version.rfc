@@ -1,9 +1,0 @@
-enum {
-SSL_3p0(0x0300),
-TLS_1p0(0x0301),
-TLS_1p1(0x0302),
-TLS_1p2(0x0303),
-TLS_1p3(0x0304),
-(65535)
-} protocolVersion;
-

@@ -1,4 +1,0 @@
-all:
-	echo QD_FILES = $(wildcard *.fst *.fsti) > .qd_files
-
-.PHONY: all
