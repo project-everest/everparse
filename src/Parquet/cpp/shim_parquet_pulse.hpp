@@ -1,8 +1,8 @@
 #pragma once
 
 #include <cstring>
-#include "EverParquet.h"  // the KaRaMeL output (C header)
-#include "parquet_types.hpp"         // Thrift C++ generated types (namespace parquet)
+#include "EverParquet.h"      // the KaRaMeL output (C header)
+#include "parquet_types.hpp"  // Thrift C++ generated types (namespace parquet)
 
 namespace shim_parquet_pulse {
 
@@ -13,9 +13,11 @@ Parquet_Pulse_Toplevel_file_meta_data to_pulse_file_metadata(
 
 // input: &file[0..file.len() - 8]
 // poffset: [0, input.len], or more specifically, it will be file.len() - 8 - footer_len
-bool validate_footer(Parquet_Pulse_Toplevel_bytes input, size_t* poffset);
+bool Parquet_Pulse_Toplevel0_validate_footer(Parquet_Pulse_Toplevel_bytes input,
+                                             size_t* poffset);
 
-Parquet_Pulse_Toplevel_file_meta_data read_footer(Parquet_Pulse_Toplevel_bytes input);
+Parquet_Pulse_Toplevel_file_meta_data Parquet_Pulse_Toplevel0_read_footer(
+    Parquet_Pulse_Toplevel_bytes input);
 
 void free_file_metadata(Parquet_Pulse_Toplevel_file_meta_data& m);
 

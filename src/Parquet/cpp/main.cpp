@@ -10,8 +10,8 @@
 #include <string>
 #include <vector>
 
-#include "EverParquet.h"  // KaRaMeL C API types
-#include "parquet_types.hpp"         // Thrift-generated C++ header
+#include "EverParquet.h"      // KaRaMeL C API types
+#include "parquet_types.hpp"  // Thrift-generated C++ header
 #include "pretty_print.hpp"
 #include "shim_parquet_pulse.hpp"  // your shim header
 
@@ -80,22 +80,6 @@ static parquet::FileMetaData parse_footer_thrift(const uint8_t* footer_data,
   return meta;
 }
 
-bool validate_footer(Parquet_Pulse_Toplevel_bytes input, size_t* poffset) {
-  try {
-    parse_footer_thrift(input.data + *poffset, input.len - *poffset);
-    return true;
-  } catch (apache::thrift::protocol::TProtocolException&) {
-    return false;
-  }
-}
-
-// Should only be called after validate_footer returned true.
-Parquet_Pulse_Toplevel_file_meta_data read_footer(Parquet_Pulse_Toplevel_bytes footer) {
-  parquet::FileMetaData meta = parse_footer_thrift(footer.data, footer.len);
-
-  return shim_parquet_pulse::to_pulse_file_metadata(meta);
-}
-
 static void print_summary(const std::string& path, const parquet::FileMetaData& m,
                           const Parquet_Pulse_Toplevel_file_meta_data& pm) {
   pretty::print_file_metadata(path, m);
@@ -143,7 +127,7 @@ int main(int argc, char** argv) {
       print_summary(path, meta, pulse);
 
       // When done, release only the small arrays we allocated in the shim.
-      shim_parquet_pulse::free_file_metadata(pulse);
+      // shim_parquet_pulse::free_file_metadata(pulse);
     } catch (const std::exception& e) {
       std::cerr << "Exception while processing " << path << ": " << e.what() << "\n";
       exit_code = 1;

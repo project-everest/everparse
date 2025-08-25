@@ -1,6 +1,9 @@
 #include "shim_parquet_pulse.hpp"
 #include <cassert>
 #include <cstdlib>
+// Thrift libs
+#include <thrift/protocol/TCompactProtocol.h>
+#include <thrift/transport/TBufferTransports.h>
 
 using namespace parquet;
 
@@ -38,54 +41,54 @@ static inline FStar_Pervasives_Native_option__bool opt_bool_none() {
   o.v = false;
   return o;
 }
-static inline FStar_Pervasives_Native_option__Parquet_Pulse_Toplevel_physical_type
+static inline FStar_Pervasives_Native_option__Parquet_Spec_Toplevel_Types_physical_type
 opt_physical_none() {
-  FStar_Pervasives_Native_option__Parquet_Pulse_Toplevel_physical_type o;
+  FStar_Pervasives_Native_option__Parquet_Spec_Toplevel_Types_physical_type o;
   o.tag = FStar_Pervasives_Native_None;
   o.v = 0;
   return o;
 }
-static inline FStar_Pervasives_Native_option__Parquet_Pulse_Toplevel_physical_type
+static inline FStar_Pervasives_Native_option__Parquet_Spec_Toplevel_Types_physical_type
 opt_physical_some(uint8_t v) {
-  FStar_Pervasives_Native_option__Parquet_Pulse_Toplevel_physical_type o;
+  FStar_Pervasives_Native_option__Parquet_Spec_Toplevel_Types_physical_type o;
   o.tag = FStar_Pervasives_Native_Some;
   o.v = v;
   return o;
 }
 
-static inline FStar_Pervasives_Native_option__Parquet_Pulse_Toplevel_field_repetition_type
+static inline FStar_Pervasives_Native_option__Parquet_Spec_Toplevel_Types_field_repetition_type
 opt_repetition_none() {
-  FStar_Pervasives_Native_option__Parquet_Pulse_Toplevel_field_repetition_type o;
+  FStar_Pervasives_Native_option__Parquet_Spec_Toplevel_Types_field_repetition_type o;
   o.tag = FStar_Pervasives_Native_None;
   o.v = 0;
   return o;
 }
-static inline FStar_Pervasives_Native_option__Parquet_Pulse_Toplevel_field_repetition_type
+static inline FStar_Pervasives_Native_option__Parquet_Spec_Toplevel_Types_field_repetition_type
 opt_repetition_some(uint8_t v) {
-  FStar_Pervasives_Native_option__Parquet_Pulse_Toplevel_field_repetition_type o;
+  FStar_Pervasives_Native_option__Parquet_Spec_Toplevel_Types_field_repetition_type o;
   o.tag = FStar_Pervasives_Native_Some;
   o.v = v;
   return o;
 }
 
-static inline FStar_Pervasives_Native_option__Parquet_Pulse_Toplevel_converted_type
+static inline FStar_Pervasives_Native_option__Parquet_Spec_Toplevel_Types_converted_type
 opt_converted_none() {
-  FStar_Pervasives_Native_option__Parquet_Pulse_Toplevel_converted_type o;
+  FStar_Pervasives_Native_option__Parquet_Spec_Toplevel_Types_converted_type o;
   o.tag = FStar_Pervasives_Native_None;
   o.v = 0;
   return o;
 }
-static inline FStar_Pervasives_Native_option__Parquet_Pulse_Toplevel_converted_type
+static inline FStar_Pervasives_Native_option__Parquet_Spec_Toplevel_Types_converted_type
 opt_converted_some(uint8_t v) {
-  FStar_Pervasives_Native_option__Parquet_Pulse_Toplevel_converted_type o;
+  FStar_Pervasives_Native_option__Parquet_Spec_Toplevel_Types_converted_type o;
   o.tag = FStar_Pervasives_Native_Some;
   o.v = v;
   return o;
 }
 
-static inline FStar_Pervasives_Native_option__Parquet_Pulse_Toplevel_encryption_algorithm
+static inline FStar_Pervasives_Native_option__Parquet_Spec_Toplevel_Types_encryption_algorithm
 opt_encryption_none() {
-  FStar_Pervasives_Native_option__Parquet_Pulse_Toplevel_encryption_algorithm o;
+  FStar_Pervasives_Native_option__Parquet_Spec_Toplevel_Types_encryption_algorithm o;
   o.tag = FStar_Pervasives_Native_None;
   // o.v is a union; leaving it uninitialized is fine because tag=None
   return o;
@@ -93,9 +96,9 @@ opt_encryption_none() {
 
 // logical_type is a nested union on both sides — start with None.
 // (Easy to extend later.)
-static inline FStar_Pervasives_Native_option__Parquet_Pulse_Toplevel_logical_type
+static inline FStar_Pervasives_Native_option__Parquet_Spec_Toplevel_Types_logical_type
 opt_logical_none() {
-  FStar_Pervasives_Native_option__Parquet_Pulse_Toplevel_logical_type o;
+  FStar_Pervasives_Native_option__Parquet_Spec_Toplevel_Types_logical_type o;
   o.tag = FStar_Pervasives_Native_None;
   // o.v is a union; leaving it uninitialized is fine because tag=None
   return o;
@@ -106,9 +109,9 @@ static inline Prims_string make_string(const std::string& s) { return s.c_str();
 
 // ---------- vectors ----------
 
-static Parquet_Pulse_Toplevel_vec__Prims_string make_vec_strings(
+static Parquet_Pulse_Vec_vec__Prims_string make_vec_strings(
     const std::vector<std::string>& v) {
-  Parquet_Pulse_Toplevel_vec__Prims_string out;
+  Parquet_Pulse_Vec_vec__Prims_string out;
   out.len = v.size();
   out.data = (Prims_string*)std::malloc(sizeof(Prims_string) * out.len);
   if (!out.data) {
@@ -119,10 +122,10 @@ static Parquet_Pulse_Toplevel_vec__Prims_string make_vec_strings(
   return out;
 }
 
-static Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_column_order
+static Parquet_Pulse_Vec_vec__Parquet_Spec_Toplevel_Types_column_order
 make_vec_column_orders(const std::vector<parquet::ColumnOrder>& v) {
   // KaRaMeL side exposes only TYPE_ORDER tag; map everything to TYPE_ORDER.
-  Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_column_order out;
+  Parquet_Pulse_Vec_vec__Parquet_Spec_Toplevel_Types_column_order out;
   out.len = v.size();
   out.data = (Parquet_Pulse_Toplevel_column_order*)std::malloc(
       sizeof(Parquet_Pulse_Toplevel_column_order) * out.len);
@@ -131,7 +134,7 @@ make_vec_column_orders(const std::vector<parquet::ColumnOrder>& v) {
     return out;
   }
   for (size_t i = 0; i < out.len; ++i) {
-    out.data[i] = Parquet_Pulse_Toplevel_TYPE_ORDER;
+    out.data[i] = Parquet_Spec_Toplevel_Types_TYPE_ORDER;
   }
   return out;
 }
@@ -173,9 +176,9 @@ static Parquet_Pulse_Toplevel_schema_element to_pulse_schema_element(
   return dst;
 }
 
-static Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_schema_element make_vec_schema(
+static Parquet_Pulse_Vec_vec__Parquet_Spec_Toplevel_Types_schema_element make_vec_schema(
     const std::vector<parquet::SchemaElement>& v) {
-  Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_schema_element out;
+  Parquet_Pulse_Vec_vec__Parquet_Spec_Toplevel_Types_schema_element out;
   out.len = v.size();
   out.data = (Parquet_Pulse_Toplevel_schema_element*)std::malloc(
       sizeof(Parquet_Pulse_Toplevel_schema_element) * out.len);
@@ -212,9 +215,9 @@ static Parquet_Pulse_Toplevel_key_value to_pulse_kv(const parquet::KeyValue& kv)
   return out;
 }
 
-static Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_key_value make_vec_key_values(
+static Parquet_Pulse_Vec_vec__Parquet_Spec_Toplevel_Types_key_value make_vec_key_values(
     const std::vector<parquet::KeyValue>& v) {
-  Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_key_value out;
+  Parquet_Pulse_Vec_vec__Parquet_Spec_Toplevel_Types_key_value out;
   out.len = v.size();
   out.data = (Parquet_Pulse_Toplevel_key_value*)std::malloc(
       sizeof(Parquet_Pulse_Toplevel_key_value) * out.len);
@@ -226,9 +229,9 @@ static Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_key_value make_vec_key
   return out;
 }
 
-static Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_encoding make_vec_encodings(
+static Parquet_Pulse_Vec_vec__Parquet_Spec_Toplevel_Types_encoding make_vec_encodings(
     const std::vector<parquet::Encoding>& v) {
-  Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_encoding out;
+  Parquet_Pulse_Vec_vec__Parquet_Spec_Toplevel_Types_encoding out;
   out.len = v.size();
   out.data = (Parquet_Pulse_Toplevel_encoding*)std::malloc(
       sizeof(Parquet_Pulse_Toplevel_encoding) * out.len);
@@ -248,9 +251,9 @@ static Parquet_Pulse_Toplevel_page_encoding_stats to_pulse_page_encoding_stats(
   out.count = s.count;
   return out;
 }
-static Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_page_encoding_stats
+static Parquet_Pulse_Vec_vec__Parquet_Spec_Toplevel_Types_page_encoding_stats
 make_vec_page_encoding_stats(const std::vector<parquet::PageEncodingStats>& v) {
-  Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_page_encoding_stats out;
+  Parquet_Pulse_Vec_vec__Parquet_Spec_Toplevel_Types_page_encoding_stats out;
   out.len = v.size();
   out.data = (Parquet_Pulse_Toplevel_page_encoding_stats*)std::malloc(
       sizeof(Parquet_Pulse_Toplevel_page_encoding_stats) * out.len);
@@ -270,7 +273,7 @@ static Parquet_Pulse_Toplevel_column_meta_data to_pulse_column_meta_data(
   out.encodings = make_vec_encodings(md.encodings);
   out.path_in_schema = make_vec_strings(md.path_in_schema);
   out.codec = static_cast<uint8_t>(md.codec);
-  out.num_values3 = md.num_values;
+  out.num_values2 = md.num_values;
   out.total_uncompressed_size = md.total_uncompressed_size;
   out.total_compressed_size = md.total_compressed_size;
 
@@ -359,9 +362,9 @@ static Parquet_Pulse_Toplevel_column_chunk to_pulse_column_chunk(
   return out;
 }
 
-static Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_column_chunk
-make_vec_column_chunks(const std::vector<parquet::ColumnChunk>& v) {
-  Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_column_chunk out;
+static Parquet_Pulse_Vec_vec__Parquet_Pulse_Toplevel_column_chunk make_vec_column_chunks(
+    const std::vector<parquet::ColumnChunk>& v) {
+  Parquet_Pulse_Vec_vec__Parquet_Pulse_Toplevel_column_chunk out;
   out.len = v.size();
   out.data = (Parquet_Pulse_Toplevel_column_chunk*)std::malloc(
       sizeof(Parquet_Pulse_Toplevel_column_chunk) * out.len);
@@ -394,9 +397,9 @@ static Parquet_Pulse_Toplevel_row_group to_pulse_row_group(const parquet::RowGro
   return out;
 }
 
-static Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_row_group make_vec_row_groups(
+static Parquet_Pulse_Vec_vec__Parquet_Pulse_Toplevel_row_group make_vec_row_groups(
     const std::vector<parquet::RowGroup>& v) {
-  Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_row_group out;
+  Parquet_Pulse_Vec_vec__Parquet_Pulse_Toplevel_row_group out;
   out.len = v.size();
   out.data = (Parquet_Pulse_Toplevel_row_group*)std::malloc(
       sizeof(Parquet_Pulse_Toplevel_row_group) * out.len);
@@ -455,74 +458,106 @@ Parquet_Pulse_Toplevel_file_meta_data to_pulse_file_metadata(
   return dst;
 }
 
+using apache::thrift::protocol::TCompactProtocolT;
+using apache::thrift::transport::TMemoryBuffer;
+static parquet::FileMetaData parse_footer_thrift(const uint8_t* footer_data,
+                                                 size_t footer_size) {
+  // Parquet metadata is Thrift-serialized using Compact Protocol
+  auto mem =
+      std::make_shared<TMemoryBuffer>(const_cast<uint8_t*>(footer_data), footer_size);
+  auto proto = std::make_shared<TCompactProtocolT<TMemoryBuffer>>(mem);
+
+  parquet::FileMetaData meta;
+  meta.read(proto.get());
+  return meta;
+}
+
+bool Parquet_Pulse_Toplevel0_validate_footer(Parquet_Pulse_Toplevel_bytes input,
+                                             size_t* poffset) {
+  try {
+    parse_footer_thrift(input.data + *poffset, input.len - *poffset);
+    return true;
+  } catch (apache::thrift::protocol::TProtocolException&) {
+    return false;
+  }
+}
+
+// Should only be called after validate_footer returned true.
+Parquet_Pulse_Toplevel_file_meta_data Parquet_Pulse_Toplevel0_read_footer(
+    Parquet_Pulse_Toplevel_bytes footer) {
+  parquet::FileMetaData meta = parse_footer_thrift(footer.data, footer.len);
+
+  return shim_parquet_pulse::to_pulse_file_metadata(meta);
+}
+
 // ------ free helpers (do NOT free any strings) ------
 
-static void free_vec_strings(Parquet_Pulse_Toplevel_vec__Prims_string v) {
-  std::free(v.data);
-}
-
-static void free_vec_encodings(
-    Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_encoding v) {
-  std::free(v.data);
-}
-
-static void free_vec_page_encoding_stats(
-    Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_page_encoding_stats v) {
-  std::free(v.data);
-}
-
-static void free_vec_key_values(
-    Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_key_value v) {
-  std::free(v.data);
-}
-
-static void free_vec_schema(
-    Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_schema_element v) {
-  std::free(v.data);
-}
-
-static void free_column_meta_data(Parquet_Pulse_Toplevel_column_meta_data& md) {
-  free_vec_encodings(md.encodings);
-  free_vec_strings(md.path_in_schema);
-  if (md.key_value_metadata.tag == FStar_Pervasives_Native_Some) {
-    free_vec_key_values(md.key_value_metadata.v);
-  }
-  if (md.encoding_stats.tag == FStar_Pervasives_Native_Some) {
-    free_vec_page_encoding_stats(md.encoding_stats.v);
-  }
-}
-
-static void free_vec_column_chunks(
-    Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_column_chunk v) {
-  for (size_t i = 0; i < v.len; ++i) {
-    Parquet_Pulse_Toplevel_column_chunk& cc = v.data[i];
-    if (cc.meta_data.tag == FStar_Pervasives_Native_Some) {
-      free_column_meta_data(cc.meta_data.v);
-    }
-  }
-  std::free(v.data);
-}
-
-static void free_vec_row_groups(
-    Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_row_group v) {
-  for (size_t i = 0; i < v.len; ++i) {
-    free_vec_column_chunks(v.data[i].columns);
-  }
-  std::free(v.data);
-}
-
-void free_file_metadata(Parquet_Pulse_Toplevel_file_meta_data& m) {
-  free_vec_schema(m.schema);
-
-  free_vec_row_groups(m.row_groups);
-
-  if (m.key_value_metadata1.tag == FStar_Pervasives_Native_Some) {
-    free_vec_key_values(m.key_value_metadata1.v);
-  }
-
-  if (m.column_orders.tag == FStar_Pervasives_Native_Some) {
-    std::free(m.column_orders.v.data);
-  }
-}
+// static void free_vec_strings(Parquet_Pulse_Toplevel_vec__Prims_string v) {
+//   std::free(v.data);
+// }
+//
+// static void free_vec_encodings(
+//     Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_encoding v) {
+//   std::free(v.data);
+// }
+//
+// static void free_vec_page_encoding_stats(
+//     Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_page_encoding_stats v) {
+//   std::free(v.data);
+// }
+//
+// static void free_vec_key_values(
+//     Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_key_value v) {
+//   std::free(v.data);
+// }
+//
+// static void free_vec_schema(
+//     Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_schema_element v) {
+//   std::free(v.data);
+// }
+//
+// static void free_column_meta_data(Parquet_Pulse_Toplevel_column_meta_data& md) {
+//   free_vec_encodings(md.encodings);
+//   free_vec_strings(md.path_in_schema);
+//   if (md.key_value_metadata.tag == FStar_Pervasives_Native_Some) {
+//     free_vec_key_values(md.key_value_metadata.v);
+//   }
+//   if (md.encoding_stats.tag == FStar_Pervasives_Native_Some) {
+//     free_vec_page_encoding_stats(md.encoding_stats.v);
+//   }
+// }
+//
+// static void free_vec_column_chunks(
+//     Parquet_Pulse_Vec_vec__Parquet_Pulse_Toplevel_column_chunk v) {
+//   for (size_t i = 0; i < v.len; ++i) {
+//     Parquet_Pulse_Toplevel_column_chunk& cc = v.data[i];
+//     if (cc.meta_data.tag == FStar_Pervasives_Native_Some) {
+//       free_column_meta_data(cc.meta_data.v);
+//     }
+//   }
+//   std::free(v.data);
+// }
+//
+// static void free_vec_row_groups(
+//     Parquet_Pulse_Toplevel_vec__Parquet_Pulse_Toplevel_row_group v) {
+//   for (size_t i = 0; i < v.len; ++i) {
+//     free_vec_column_chunks(v.data[i].columns);
+//   }
+//   std::free(v.data);
+// }
+//
+// void free_file_metadata(Parquet_Pulse_Toplevel_file_meta_data& m) {
+//   free_vec_schema(m.schema);
+//
+//   free_vec_row_groups(m.row_groups);
+//
+//   if (m.key_value_metadata1.tag == FStar_Pervasives_Native_Some) {
+//     free_vec_key_values(m.key_value_metadata1.v);
+//   }
+//
+//   if (m.column_orders.tag == FStar_Pervasives_Native_Some) {
+//     std::free(m.column_orders.v.data);
+//   }
+// }
 
 }  // namespace shim_parquet_pulse
