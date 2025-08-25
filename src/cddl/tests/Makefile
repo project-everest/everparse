@@ -8,7 +8,11 @@ unit.do:
 
 rust.do:
 
-test: demo.do dpe.do rust.do unit.do
+others: demo.do rust.do
+
+.PHONY: others
+
+test: others dpe.do unit.do
 
 %.do:
 	+$(MAKE) -C $(basename $@)

@@ -1,18 +1,31 @@
-This EverParse branch contains a verified implementation of CBOR and COSE signing, as well as a verified parser and serializer generator from CDDL descriptions.
+This is the artifact for ACM CCS 2025 B accepted paper #1288: "Secure Parsing and Serializing with Separation Logic Applied to CBOR, CDDL and COSE."
 
-A Dockerfile is included to rebuild everything, including Everest dependencies, F*, etc. To build it, just run `docker build -t evercbor .`
+Since this artifact is single-blind, we are using public names for our work: SEPARSE becomes PulseParse; VERCOR becomes EverCBOR; VERCDL becomes EverCDDL.
 
-Then, you can experiment with `docker run -i -t evercbor` ; there, you can use the following Makefile rules:
-* `make cbor-test` tests the CBOR library
-* `make cbor-verify` entirely reverifies the CBOR library. (This may take 1 hour.)
-* `make cose-test` tests the COSE library
-* `make cddl-test` tests the CDDL library
-* `make cbor-snapshot` regenerates the CBOR library. This rule is incompatible with `cbor-test`
-* `make cose-snapshot` rebuilds the COSE library. This rule is incompatible with `cddl-test`
+Three Docker images are included in this artifact:
 
-If you are interested in the proofs, you can read [our
-paper](https://doi.org/10.48550/arXiv.2505.17335). Below is the
-matching between the paper and the proofs.
+* `ccs2025-test`, an image with everything (including tests) built
+* `ccs2025-build`, an image with EverCBOR, EverCDDL and EverCOSE verified, extracted and built, but tests not built
+* `ccs2025-deps`, an image with only dependencies built, and EverCBOR, EverCDDL and EverCOSE not verified, extracted, built or tested
+
+From the `ccs2025-deps` image:
+* to verify PulseParse from Section 2, run `make pulseparse`
+* to verify, extract and build EverCBOR from Section 3, run `make cbor`
+* to verify EverCDDL from Section 4, run `make cddl`
+
+At this point, you have reached the state of the `ccs2025-build` image.
+
+From the `ccs2025-build` image:
+* to run CBOR benchmark tests from Section 5.1 (which use CDDL), run `make cddl-unit-tests`
+* to verify, extract and build EverCOSE from Section 5.2, run `make cose`
+* to test EverCOSE from Section 5.2, run `make cose-test`
+* to verify the arithmetic example from Appendix A, run `make pulseparse-test`
+* to verify and extract the DPE example from Appendix C, run `make cddl-dpe`
+* there are other CBOR and CDDL tests not described in the paper, which you can run with `make cbor-test` and `make cddl-other-tests` respectively.
+
+At this point, you have reached the state of the `ccs2025-test` image.
+
+More details about the source code follow.
 
 Section 2.2:
 - the Pulse implementation combinators are in `/src/lowparse/pulse`

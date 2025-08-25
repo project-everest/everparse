@@ -2,9 +2,9 @@
 # 1. Add them to FSTAR_OPTIONS in src/fstar.Makefile
 # 2. Add them to fstar_args0 in src/3d/ocaml/Batch.ml
 
-all: evercbor-all cbor-verify cose-extract-test
+all: pulseparse evercbor-all
 
-evercbor-all: cbor cddl cbor-interface cose
+evercbor-all: cbor cddl cose
 
 everparse-all: package-subset asn1 evercbor-all
 
@@ -60,6 +60,10 @@ lowparse-dep: $(filter-out src/lowparse/pulse/% src/lowparse/LowParse.Spec.Recur
 
 .PHONY: lowparse-dep
 
+pulseparse: lowparse
+
+.PHONY: pulseparse
+
 # lowparse needed because of .fst behind .fsti for extraction
 3d-prelude: $(filter src/3d/prelude/%,$(ALL_CHECKED_FILES)) $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
 	+$(MAKE) -C src/3d prelude
@@ -107,15 +111,15 @@ lowparse-bitfields-test: lowparse
 	+$(MAKE) -C tests/bitfields
 
 ifeq (,$(NO_PULSE))
-lowparse-pulse-test:
+pulseparse-test:
 else
-lowparse-pulse-test: lowparse
+pulseparse-test: lowparse
 	+$(MAKE) -C tests/pulse
 endif
 
-.PHONY: lowparse-pulse-test
+.PHONY: pulseparse-test
 
-lowparse-test: lowparse-unit-test lowparse-bitfields-test lowparse-pulse-test
+lowparse-test: lowparse-unit-test lowparse-bitfields-test pulseparse-test
 
 quackyducky-unit-test: gen-test lowparse
 	+$(MAKE) -C tests/unit
@@ -131,7 +135,7 @@ quackyducky-sample0-test: quackyducky lowparse
 
 quackyducky-test: quackyducky-unit-test quackyducky-sample-test quackyducky-sample0-test quackyducky-sample-low-test
 
-test: evercbor-test lowparse-pulse-test
+test: evercbor-test pulseparse-test
 
 evercbor-test: cbor-test cddl-test cose-test
 
@@ -143,9 +147,6 @@ submodules:
 	$(MAKE) -C $(EVERPARSE_OPT_PATH) submodules
 
 .PHONY: submodules
-
-cbor:
-	+$(MAKE) -C src/cbor/pulse/det
 
 cbor-interface: $(filter-out src/cbor/spec/raw/%,$(filter src/cbor/spec/%,$(ALL_CHECKED_FILES)))
 
@@ -194,23 +195,11 @@ cbor-extract-pre: cbor-verify $(filter-out src/lowparse/LowParse.SLow.% src/lowp
 
 .PHONY: cbor-extract-pre
 
-cbor-test-snapshot: cbor-extract-pre
-	+$(MAKE) -C src/cbor test-snapshot
-else
-cbor-test-snapshot: cbor-verify
-endif
-
-.PHONY: cbor-test-snapshot
-
-# This rule is incompatible with `cbor` and `cbor-test-snapshot`
-ifeq (,$(NO_PULSE))
-cbor-snapshot: cbor-extract-pre
+cbor: cbor-extract-pre
 	+$(MAKE) -C src/cbor snapshot
 else
-cbor-snapshot:
+cbor:
 endif
-
-.PHONY: cbor-snapshot
 
 cbor-test-unverified: cbor-det-c-test cbor-det-rust-test
 
@@ -224,7 +213,7 @@ cbor-test-extracted: cbor-test-unverified cbor-test-verified
 
 .PHONY: cbor-test-extracted
 
-cbor-test: cbor-test-extracted cbor-test-snapshot
+cbor-test: cbor-test-extracted
 
 cddl-spec: $(filter src/cddl/spec/%,$(ALL_CHECKED_FILES))
 
@@ -238,7 +227,7 @@ else
 cddl-tool:
 endif
 
-cddl: cbor cbor-interface cddl-spec cddl-tool
+cddl: cbor cddl-spec cddl-tool
 
 .PHONY: cddl-spec cddl-tool
 
@@ -246,42 +235,40 @@ cddl: cbor cbor-interface cddl-spec cddl-tool
 
 ifeq (,$(NO_PULSE))
 cddl-unit-tests: cddl
-	+$(MAKE) -C src/cddl test
+	+$(MAKE) -C src/cddl/tests unit.do
+
+cddl-dpe: cddl
+	+$(MAKE) -C src/cddl/tests dpe.do
+
+cddl-other-tests: cddl
+	+$(MAKE) -C src/cddl/tests others
+
 else
 cddl-unit-tests:
+cddl-dpe:
+cddl-other-tests:
 endif
 
-.PHONY: cddl-unit-tests
+.PHONY: cddl-unit-tests cddl-dpe 
 
 ifeq (,$(NO_PULSE))
-cose-extract-test: cddl
-	+$(MAKE) -C src/cose test-extract
-
-# This rule is incompatible with cose-extract-test
-cose-snapshot: cddl
+cose: cddl
 	+$(MAKE) -C src/cose snapshot
 else
-cose-extract-test:
-cose-snapshot:
+cose:
 endif
 
-.PHONY: cose-extract-test cose-snapshot
-
-cose-extracted-test: cose
-	+$(MAKE) -C src/cose test-extracted
+.PHONY: cose-extract-test
 
 .PHONY: cose-extracted-test
 
-cose-test: cose-extract-test cose-extracted-test
+cose-test: cose-extracted-test
 
 .PHONY: cose-test
 
-cose: cbor
-	+$(MAKE) -C src/cose
-
 .PHONY: cose
 
-cddl-test: cddl cddl-unit-tests
+cddl-test: cddl cddl-unit-tests cddl-dpe cddl-other-tests
 
 .PHONY: cddl-test
 

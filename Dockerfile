@@ -33,10 +33,10 @@ ENTRYPOINT ["/mnt/everparse/opt/shell.sh", "--login", "-c"]
 CMD ["/bin/bash"]
 SHELL ["/mnt/everparse/opt/shell.sh", "--login", "-c"]
 
-FROM deps AS all
+FROM deps AS build
 
 RUN OTHERFLAGS='--admit_smt_queries true' make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" all
 
-FROM all AS test
+FROM build AS test
 
 RUN OTHERFLAGS='--admit_smt_queries true' make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" test
