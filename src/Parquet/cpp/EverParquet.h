@@ -926,9 +926,24 @@ extern Parquet_Pulse_Toplevel_file_meta_data
 Parquet_Pulse_Toplevel0_read_footer(Pulse_Lib_Slice_slice__uint8_t uu___);
 
 extern bool
+Parquet_Pulse_Toplevel0_impl_validate_file_meta_data(
+  size_t footer_start,
+  Parquet_Pulse_Toplevel_file_meta_data x0
+);
+
+extern bool
+Parquet_Pulse_Toplevel0_impl_validate_all_row_groups(
+  Pulse_Lib_Slice_slice__uint8_t x0,
+  Parquet_Pulse_Toplevel_row_group x1
+);
+
+bool
+Parquet_Pulse_Toplevel0_validate_header_magic_number(Pulse_Lib_Slice_slice__uint8_t input);
+
+bool
 Parquet_Pulse_Toplevel0_impl_validate_all0(
-  Parquet_Pulse_Toplevel_file_meta_data x0,
-  Pulse_Lib_Slice_slice__uint8_t x1
+  Parquet_Pulse_Toplevel_file_meta_data fmd,
+  Pulse_Lib_Slice_slice__uint8_t data
 );
 
 bool

@@ -14,7 +14,9 @@ module PP = Parquet.Pulse.Toplevel
 
 let rel = Rel.rel
 let rel_opt = Rel.rel_option
+[@@pulse_unfold]
 let rel_vec_of_list = PV.rel_vec_of_list
+[@@pulse_unfold]
 let mk_rel = Rel.mk_rel
 
 

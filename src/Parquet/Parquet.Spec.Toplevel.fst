@@ -355,9 +355,9 @@ let rec list_option_map (#t1 #t2: Type) (f: (t1 -> option t2)) (l: list t1) : To
     | Some a' -> a' :: q'
     end
 
-val validate_file_meta_data: file_meta_data -> nat -> Tot bool
+val validate_file_meta_data: nat -> file_meta_data -> Tot bool
 
-let validate_file_meta_data fmd footer_start =
+let validate_file_meta_data footer_start fmd =
   FStar.Int.fits footer_start 64 &&
   ranges_disjoint (list_option_map rg_range fmd.row_groups) &&
   List.Tot.for_all (fun rg -> validate_row_group rg) fmd.row_groups
@@ -498,13 +498,12 @@ let validate_offset_index_all (cc: column_chunk) (data: bytes) (oi: offset_index
     )
     oi.page_locations
 
-let validate_all (fmd: file_meta_data) (data: bytes) : Tot bool =
-  validate_file_meta_data fmd (Seq.length data) &&
-  J.pred_jump_with_offset_and_size_then_parse 0 4 (tot_parse_filter (tot_parse_seq_flbytes 4) is_PAR1) data &&
-  List.Tot.for_all
-    (fun rg ->
-      List.Tot.for_all
-        (fun cc ->
+let validate_all_column_chunks
+  (data: bytes)
+  (rg: row_group)
+  (cc: column_chunk)
+: Tot bool
+=
           match cc.offset_index_offset, cc.offset_index_length with
           | Some offset, Some length ->
             J.pred_jump_with_offset_and_size_then_parse
@@ -516,10 +515,17 @@ let validate_all (fmd: file_meta_data) (data: bytes) : Tot bool =
               )
               data
           | _ -> true
-        )
-        rg.columns
-    )
-    fmd.row_groups
+
+let validate_all_row_groups
+  (data: bytes)
+  (rg: row_group)
+: Tot bool
+= List.Tot.for_all (validate_all_column_chunks data rg) rg.columns
+
+let validate_all (fmd: file_meta_data) (data: bytes) : Tot bool =
+  validate_file_meta_data (Seq.length data) fmd &&
+  J.pred_jump_with_offset_and_size_then_parse 0 4 (tot_parse_filter (tot_parse_seq_flbytes 4) is_PAR1) data &&
+  List.Tot.for_all (validate_all_row_groups data) fmd.row_groups
 
 let parse_parquet =
   parse_nondep_then_rtol (parse_filter (parse_seq_flbytes 4) is_PAR1)

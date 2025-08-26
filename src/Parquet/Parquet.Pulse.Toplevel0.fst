@@ -13,6 +13,8 @@ module S = Pulse.Lib.Slice.Util
 module Trade = Pulse.Lib.Trade.Util
 module Rel = CDDL.Pulse.Types.Base
 module PV = Parquet.Pulse.Vec
+module U64 = FStar.UInt64
+module U32 = FStar.UInt32
 
 include Parquet.Pulse.Rel
 
@@ -24,13 +26,43 @@ assume val validate_footer : validator parse_footer
 
 assume val read_footer : zero_copy_parse rel_file_meta_data serialize_footer
 
-module U32 = FStar.UInt32
-
 [@@pulse_unfold] noextract
 let pts_to_bytes (pm: perm) (x: S.slice byte) (y: bytes) : Tot slprop =
   pts_to x #pm y
 
-assume val impl_validate_all0 (pm: perm) : PV.impl_pred2 emp rel_file_meta_data (pts_to_bytes pm) validate_all
+assume val impl_validate_file_meta_data (footer_start: SZ.t) : PV.impl_pred emp rel_file_meta_data (validate_file_meta_data (SZ.v footer_start))
+
+assume val impl_validate_all_row_groups (pm: perm) : PV.impl_pred2 emp (pts_to_bytes pm) rel_row_group validate_all_row_groups
+
+let validate_header_magic_number =
+  let _ = tot_parse_filter_equiv (tot_parse_seq_flbytes 4) is_PAR1 (parse_seq_flbytes 4) in
+  validate_jump_with_offset_and_size_then_parse emp 0sz 4sz (validator_gen_of_validator emp (validate_ext (validate_filter_gen (validate_total_constant_size (parse_seq_flbytes 4) 4sz) (serialize_seq_flbytes 4) is_PAR1 validate_is_PAR1) (parser_of_tot_parser (tot_parse_filter (tot_parse_seq_flbytes 4) is_PAR1))))
+
+fn impl_validate_all0 (pm: perm) : PV.impl_pred2 #_ #_ #_ #_ emp rel_file_meta_data (pts_to_bytes pm) validate_all
+=
+  (fmd: _)
+  (vfmd: _)
+  (data: _)
+  (vdata: _)
+{
+  S.pts_to_len data;
+  let footer_start = S.len data;
+  let res1 = impl_validate_file_meta_data footer_start fmd _;
+  if (res1) {
+    tot_parse_filter_equiv (tot_parse_seq_flbytes 4) is_PAR1 (parse_seq_flbytes 4);
+    let res2 = validate_header_magic_number data vdata;
+    if (res2) {
+      unfold (rel_file_meta_data fmd vfmd);
+      let res = PV.impl_for_all _ _ _ (impl_validate_all_row_groups pm data vdata) fmd.row_groups vfmd.row_groups;
+      fold (rel_file_meta_data fmd vfmd);
+      res
+    } else {
+      false
+    }
+  } else {
+    false
+  }
+}
 
 fn impl_validate_all
   (len: U32.t)
