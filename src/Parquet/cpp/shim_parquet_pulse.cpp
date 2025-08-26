@@ -458,6 +458,110 @@ Parquet_Pulse_Toplevel_file_meta_data to_pulse_file_metadata(
   return dst;
 }
 
+// ---------- OffsetIndex ----------
+
+Parquet_Pulse_Toplevel_page_location to_pulse_page_location(
+    const parquet::PageLocation& src) {
+  Parquet_Pulse_Toplevel_page_location dst;
+  dst.offset = src.offset;
+  dst.compressed_page_size1 = src.compressed_page_size;
+  dst.first_row_index = src.first_row_index;
+  return dst;
+}
+
+Parquet_Pulse_Toplevel_offset_index to_pulse_offset_index(
+    const parquet::OffsetIndex& src) {
+  Parquet_Pulse_Toplevel_offset_index dst;
+  dst.page_locations.len = src.page_locations.size();
+  dst.page_locations.data = (Parquet_Pulse_Toplevel_page_location*)std::malloc(
+      sizeof(Parquet_Pulse_Toplevel_page_location) * dst.page_locations.len);
+  if (!dst.page_locations.data) {
+    dst.page_locations.len = 0;
+    return dst;
+  }
+  for (size_t i = 0; i < dst.page_locations.len; ++i) {
+    dst.page_locations.data[i] = to_pulse_page_location(src.page_locations[i]);
+  }
+  return dst;
+}
+
+// ---------- PageHeader ----------
+
+Parquet_Pulse_Toplevel_data_page_header to_pulse_data_page_header(
+    const parquet::DataPageHeader& src) {
+  Parquet_Pulse_Toplevel_data_page_header dst;
+  dst.num_values = src.num_values;
+  dst.encoding_ = static_cast<uint8_t>(src.encoding);
+  dst.definition_level_encoding = static_cast<uint8_t>(src.definition_level_encoding);
+  dst.repetition_level_encoding = static_cast<uint8_t>(src.repetition_level_encoding);
+  // statistics - none for now
+  dst.statistics.tag = FStar_Pervasives_Native_None;
+  return dst;
+}
+
+Parquet_Pulse_Toplevel_dictionary_page_header to_pulse_dictionary_page_header(
+    const parquet::DictionaryPageHeader& src) {
+  Parquet_Pulse_Toplevel_dictionary_page_header dst;
+  dst.num_values1 = src.num_values;
+  dst.encoding = static_cast<uint8_t>(src.encoding);
+  dst.is_sorted.tag =
+      src.__isset.is_sorted ? FStar_Pervasives_Native_Some : FStar_Pervasives_Native_None;
+  dst.is_sorted.v = src.is_sorted;
+  return dst;
+}
+
+Parquet_Pulse_Toplevel_data_page_header_v2 to_pulse_data_page_header_v2(
+    const parquet::DataPageHeaderV2& src) {
+  Parquet_Pulse_Toplevel_data_page_header_v2 dst;
+  dst.num_values1 = src.num_values;
+  dst.num_nulls = src.num_nulls;
+  dst.num_rows = src.num_rows;
+  dst.encoding = static_cast<uint8_t>(src.encoding);
+  dst.definition_levels_byte_length = src.definition_levels_byte_length;
+  dst.repetition_levels_byte_length = src.repetition_levels_byte_length;
+  dst.is_compressed.tag = src.__isset.is_compressed ? FStar_Pervasives_Native_Some
+                                                    : FStar_Pervasives_Native_None;
+  dst.is_compressed.v = src.is_compressed;
+  // statistics - none for now
+  dst.statistics1.tag = FStar_Pervasives_Native_None;
+  return dst;
+}
+
+Parquet_Pulse_Toplevel_page_header to_pulse_page_header(const parquet::PageHeader& src) {
+  Parquet_Pulse_Toplevel_page_header dst;
+
+  dst.ptype = static_cast<uint8_t>(src.type);
+
+  dst.uncompressed_page_size = src.uncompressed_page_size;
+  dst.compressed_page_size = src.compressed_page_size;
+
+  // crc - none for now
+  dst.crc.tag = FStar_Pervasives_Native_None;
+
+  // page header variants
+  if (src.__isset.data_page_header) {
+    dst.data_page_header.tag = FStar_Pervasives_Native_Some;
+    dst.data_page_header.v = to_pulse_data_page_header(src.data_page_header);
+  }
+
+  if (src.__isset.index_page_header) {
+    dst.index_page_header = 0;
+  }
+
+  if (src.__isset.dictionary_page_header) {
+    dst.dictionary_page_header.tag = FStar_Pervasives_Native_Some;
+    dst.dictionary_page_header.v =
+        to_pulse_dictionary_page_header(src.dictionary_page_header);
+  }
+
+  if (src.__isset.data_page_header_v2) {
+    dst.data_page_header_v2.tag = FStar_Pervasives_Native_Some;
+    dst.data_page_header_v2.v = to_pulse_data_page_header_v2(src.data_page_header_v2);
+  }
+
+  return dst;
+}
+
 using apache::thrift::protocol::TCompactProtocolT;
 using apache::thrift::transport::TMemoryBuffer;
 static parquet::FileMetaData parse_footer_thrift(const uint8_t* footer_data,
@@ -470,6 +574,24 @@ static parquet::FileMetaData parse_footer_thrift(const uint8_t* footer_data,
   parquet::FileMetaData meta;
   meta.read(proto.get());
   return meta;
+}
+
+static parquet::OffsetIndex parse_offset_index_thrift(const uint8_t* oi_data,
+                                                      size_t oi_size) {
+  auto mem = std::make_shared<TMemoryBuffer>(const_cast<uint8_t*>(oi_data), oi_size);
+  auto proto = std::make_shared<TCompactProtocolT<TMemoryBuffer>>(mem);
+  parquet::OffsetIndex oi;
+  oi.read(proto.get());
+  return oi;
+}
+
+static parquet::PageHeader parse_page_header_thrift(const uint8_t* ph_data,
+                                                    size_t ph_size) {
+  auto mem = std::make_shared<TMemoryBuffer>(const_cast<uint8_t*>(ph_data), ph_size);
+  auto proto = std::make_shared<TCompactProtocolT<TMemoryBuffer>>(mem);
+  parquet::PageHeader ph;
+  ph.read(proto.get());
+  return ph;
 }
 
 extern "C" bool Parquet_Pulse_Toplevel0_validate_footer(
@@ -488,6 +610,38 @@ extern "C" Parquet_Pulse_Toplevel_file_meta_data Parquet_Pulse_Toplevel0_read_fo
   parquet::FileMetaData meta = parse_footer_thrift(footer.data, footer.len);
 
   return shim_parquet_pulse::to_pulse_file_metadata(meta);
+}
+
+extern "C" bool Parquet_Pulse_Toplevel0_validate_offset_index(
+    Parquet_Pulse_Toplevel_bytes input, size_t* poffset) {
+  try {
+    parse_offset_index_thrift(input.data + *poffset, input.len - *poffset);
+    return true;
+  } catch (apache::thrift::protocol::TProtocolException&) {
+    return false;
+  }
+}
+
+extern "C" Parquet_Pulse_Toplevel_offset_index Parquet_Pulse_Toplevel0_read_offset_index(
+    Parquet_Pulse_Toplevel_bytes input) {
+  parquet::OffsetIndex oi = parse_offset_index_thrift(input.data, input.len);
+  return to_pulse_offset_index(oi);
+}
+
+extern "C" bool Parquet_Pulse_Toplevel0_validate_page_header(
+    Parquet_Pulse_Toplevel_bytes input, size_t* poffset) {
+  try {
+    parse_page_header_thrift(input.data + *poffset, input.len - *poffset);
+    return true;
+  } catch (apache::thrift::protocol::TProtocolException&) {
+    return false;
+  }
+}
+
+extern "C" Parquet_Pulse_Toplevel_page_header Parquet_Pulse_Toplevel0_read_page_header(
+    Parquet_Pulse_Toplevel_bytes input) {
+  parquet::PageHeader ph = parse_page_header_thrift(input.data, input.len);
+  return to_pulse_page_header(ph);
 }
 
 // ------ free helpers (do NOT free any strings) ------
