@@ -280,7 +280,7 @@ let validate_row_group rg =
       (* so we can’t check the size *)
       match total_size with
       | None -> true
-      | Some total_sz -> total_sz = I64.v sz
+      | Some total_sz -> total_sz <= (* should be =, but column chunks are not contiguous, see below *) I64.v sz
   in
   let sorted_ok =
     (* cols should be contiguous according to the documentation, but we found some counterexamples, so we relax the requirement to cols being sorted *)
