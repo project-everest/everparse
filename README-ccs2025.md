@@ -8,27 +8,35 @@ Three Docker images are included in this artifact:
 * `ccs2025-build`, an image with EverCBOR, EverCDDL and EverCOSE verified, extracted and built, but tests not built
 * `ccs2025-deps`, an image with only dependencies built, and EverCBOR, EverCDDL and EverCOSE not verified, extracted, built or tested
 
+To load an image (say `ccs-test`) and open a container into it:
+1. Download `ccs2025-test.tar.gz` from the Zenodo record.
+2. Run `gunzip ccs2025-test.tar.gz`
+3. Run `docker load < ccs2025-test.tar`
+4. Run `docker run -i -t ccs2025-test`
+
 From the `ccs2025-deps` image:
 * to verify PulseParse from Section 2, run `make pulseparse`
 * to verify, extract and build EverCBOR from Section 3, run `make cbor`
 * to verify EverCDDL from Section 4, run `make cddl`
+* to verify, extract and build EverCOSE from Section 5.2, run `make cose`
+* to verify extract and build all of the above, run `make`
 
 At this point, you have reached the state of the `ccs2025-build` image.
 
 From the `ccs2025-build` image:
 * to run CBOR benchmark tests from Section 5.1 (which use CDDL), run `make cddl-unit-tests`
-* to verify, extract and build EverCOSE from Section 5.2, run `make cose`
 * to test EverCOSE from Section 5.2, run `make cose-test`
 * to verify the arithmetic example from Appendix A, run `make pulseparse-test`
 * to verify and extract the DPE example from Appendix C, run `make cddl-dpe`
 * there are other CBOR and CDDL tests not described in the paper, which you can run with `make cbor-test` and `make cddl-other-tests` respectively.
+* to test all of the above, run `make test`
 
 At this point, you have reached the state of the `ccs2025-test` image.
 
 More details about the source code follow.
 
 Section 2.2:
-- the Pulse implementation combinators are in `/src/lowparse/pulse`
+- the PulseParse implementation combinators are in `/src/lowparse/pulse`
 - the recursive combinator specification is in `/src/lowparse/LowParse.Spec.Recursive.fst*`
 - in particular, the validator and jumper for the recursive format is in `/src/lowparse/pulse/LowParse.Pulse.Recursive.fst`
 
@@ -71,7 +79,7 @@ Section 5.2: in directory `/src/cose`
 - The COSE specification is at `cose.cddl`
 - The verified C code obtained after extracting COSE is in the `c` subdirectory
 - The unverified interoperability tests with OpenSSL are in subdirectory `interop`.  The interesting file is `common.c`, which uses the generated C API.
-- The verified signature creation and verification code using HACL* EverCrypt is in subdirectory `verifiedinterop`.  The main file is `CBOR.EverCrypt.fst`. It extracts to `/src/cose/c/COSE_EverCrypt.c`
+- The verified signature creation and verification code using HACL* EverCrypt is in subdirectory `verifiedinterop`.  The main file is `COSE.EverCrypt.fst`. It extracts to `/src/cose/c/COSE_EverCrypt.c`
 - The verified Rust code obtained after extracting COSE is in the `rust` subdirectory. It can be built (resp. tested) by running `cargo build` (resp. `cargo test`) from that directory.
 
 Appendix A:
@@ -80,5 +88,5 @@ Appendix A:
 Appendix C: in directory `/src/cddl/tests/dpe`
 - The DPE CDDL specifications are in `dpe.cddl`
 - The verified Pulse code formatting objects to and from byte arrays is in the `dpe` subdirectory
-- The in-memory profile DPE API is in `dpe/DPESlice.fsti`, adapted from Ebner et al. 2025 to be standalone
+- The in-memory profile DPE API is in `dpe/DPESlice.fsti`, adapted from Ebner et al. PLDI 2025 to be standalone
 - The main API implementing the CBOR profile is in `dpe/DPEMain.fst`
