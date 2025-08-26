@@ -249,19 +249,13 @@ let offset_of_column_chunk (cmd: column_meta_data) : int64 =
 
 module J = Parquet.Spec.Jump
 
-let nat_of_int64 (x: I64.t) : Tot nat =
-  let res = I64.v x in if res < 0 then 0 else res
-
-let nat_of_int32 (x: I32.t) : Tot nat =
-  let res = I32.v x in if res < 0 then 0 else res
-
 let columns_are_sorted (cols: list column_chunk) : Tot bool =
   J.offsets_and_sizes_are_sorted
    (List.Tot.map
      (fun col -> 
        match col.meta_data with
-       | Some col -> (nat_of_int64 (offset_of_column_chunk col), nat_of_int64 col.total_compressed_size)
-       | _ -> ((0 <: nat), (0 <: nat)) (* dummy *)
+       | Some col -> (I64.v (offset_of_column_chunk col), I64.v col.total_compressed_size)
+       | _ -> (0, 0) (* dummy *)
      )
      cols
    )
@@ -393,7 +387,7 @@ let validate_file_meta_data fmd footer_start =
 
 let page_offsets_are_contiguous (locs: list page_location) : Tot bool =
   J.offsets_and_sizes_are_contiguous
-    (List.Tot.map (fun loc -> (nat_of_int64 loc.offset, nat_of_int32 loc.compressed_page_size)) locs)
+    (List.Tot.map (fun loc -> ((I64.v loc.offset <: int), (I32.v loc.compressed_page_size <: int))) locs)
 
 
 (* Once jump to OffsetIndex, validate its structure against the corresponding column_chunk *)
@@ -519,9 +513,11 @@ let validate_offset_index_all (cc: column_chunk) (data: bytes) (oi: offset_index
   validate_offset_index cc oi &&
   List.Tot.for_all
     (fun pl ->
+      I64.v pl.offset >= 0 &&
+      I32.v pl.compressed_page_size >= 0 &&
       J.pred_jump_with_offset_and_size_then_parse
-        (nat_of_int64 pl.offset)
-        (nat_of_int32 pl.compressed_page_size)
+        (I64.v pl.offset)
+        (I32.v pl.compressed_page_size)
         tot_parse_page
         data
     )
@@ -536,9 +532,11 @@ let validate_all (fmd: file_meta_data) (data: bytes) : Tot bool =
         (fun cc ->
           match cc.offset_index_offset, cc.offset_index_length with
           | Some offset, Some length ->
+            I64.v offset >= 0 &&
+            I32.v length >= 0 &&
             J.pred_jump_with_offset_and_size_then_parse
-              (nat_of_int64 offset)
-              (nat_of_int32 length)
+              (I64.v offset)
+              (I32.v length)
               (tot_parse_filter
                 parse_offset_index
                 (validate_offset_index_all cc data)

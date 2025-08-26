@@ -70,25 +70,27 @@ let andp_g (#t: Type) (g1 g2: (t -> GTot bool)) (x: t) : GTot bool =
   g1 x && g2 x
 
 let rec offsets_and_sizes_are_contiguous
-  (l: list (nat & nat))
+  (l: list (int & int))
 : Tot bool
 = match l with
   | (off1, sz1) :: (off2, sz2) :: q ->
+    off1 >= 0 && sz1 >= 0 &&
     off1 + sz1 = off2 &&
     offsets_and_sizes_are_contiguous ((off2, sz2) :: q)
   | _ -> true
 
 let rec offsets_and_sizes_are_sorted
-  (l: list (nat & nat))
+  (l: list (int & int))
 : Tot bool
 = match l with
   | (off1, sz1) :: (off2, sz2) :: q ->
+    off1 >= 0 && sz1 >= 0 &&
     off1 + sz1 <= off2 &&
     offsets_and_sizes_are_sorted ((off2, sz2) :: q)
   | _ -> true
 
 let rec offsets_and_sizes_are_contiguous_implies_sorted
-  (l: list (nat & nat))
+  (l: list (int & int))
 : Lemma
   (requires (offsets_and_sizes_are_contiguous l))
   (ensures (offsets_and_sizes_are_sorted l))
@@ -98,7 +100,7 @@ let rec offsets_and_sizes_are_contiguous_implies_sorted
   | _ -> ()
 
 let rec offsets_and_sizes_are_sorted_disjoint
-  (l: list (nat & nat))
+  (l: list (int & int))
   (i1 i2: nat)
 : Lemma
   (requires (
