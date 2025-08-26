@@ -932,9 +932,15 @@ Parquet_Pulse_Toplevel0_impl_validate_file_meta_data(
 );
 
 extern bool
-Parquet_Pulse_Toplevel0_impl_validate_all_row_groups(
+Parquet_Pulse_Toplevel0_impl_validate_all_validate_column_chunk(
   Pulse_Lib_Slice_slice__uint8_t x0,
-  Parquet_Pulse_Toplevel_row_group x1
+  Parquet_Pulse_Toplevel_column_chunk x1
+);
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_all_validate_row_group(
+  Pulse_Lib_Slice_slice__uint8_t data,
+  Parquet_Pulse_Toplevel_row_group rg
 );
 
 bool

@@ -498,9 +498,8 @@ let validate_offset_index_all (cc: column_chunk) (data: bytes) (oi: offset_index
     )
     oi.page_locations
 
-let validate_all_column_chunks
+let validate_all_validate_column_chunk
   (data: bytes)
-  (rg: row_group)
   (cc: column_chunk)
 : Tot bool
 =
@@ -516,16 +515,16 @@ let validate_all_column_chunks
               data
           | _ -> true
 
-let validate_all_row_groups
+let validate_all_validate_row_group
   (data: bytes)
   (rg: row_group)
 : Tot bool
-= List.Tot.for_all (validate_all_column_chunks data rg) rg.columns
+= List.Tot.for_all (validate_all_validate_column_chunk data) rg.columns
 
 let validate_all (fmd: file_meta_data) (data: bytes) : Tot bool =
   validate_file_meta_data (Seq.length data) fmd &&
   J.pred_jump_with_offset_and_size_then_parse 0 4 (tot_parse_filter (tot_parse_seq_flbytes 4) is_PAR1) data &&
-  List.Tot.for_all (validate_all_row_groups data) fmd.row_groups
+  List.Tot.for_all (validate_all_validate_row_group data) fmd.row_groups
 
 let parse_parquet =
   parse_nondep_then_rtol (parse_filter (parse_seq_flbytes 4) is_PAR1)

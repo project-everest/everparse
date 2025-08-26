@@ -32,7 +32,20 @@ let pts_to_bytes (pm: perm) (x: S.slice byte) (y: bytes) : Tot slprop =
 
 assume val impl_validate_file_meta_data (footer_start: SZ.t) : PV.impl_pred emp rel_file_meta_data (validate_file_meta_data (SZ.v footer_start))
 
-assume val impl_validate_all_row_groups (pm: perm) : PV.impl_pred2 emp (pts_to_bytes pm) rel_row_group validate_all_row_groups
+assume val impl_validate_all_validate_column_chunk (pm: perm) : PV.impl_pred2 #_ #_ #_ #_ emp (pts_to_bytes pm) rel_column_chunk validate_all_validate_column_chunk
+
+fn impl_validate_all_validate_row_group (pm: perm) : PV.impl_pred2 #_ #_ #_ #_ emp (pts_to_bytes pm) rel_row_group validate_all_validate_row_group
+=
+  (data: _)
+  (vdata: _)
+  (rg: _)
+  (vrg: _)
+{
+  unfold (rel_row_group rg vrg);
+  let res = PV.impl_for_all _ _ _ (impl_validate_all_validate_column_chunk pm data vdata) rg.columns _;
+  fold (rel_row_group rg vrg);
+  res
+}
 
 let validate_header_magic_number =
   let _ = tot_parse_filter_equiv (tot_parse_seq_flbytes 4) is_PAR1 (parse_seq_flbytes 4) in
@@ -53,7 +66,7 @@ fn impl_validate_all0 (pm: perm) : PV.impl_pred2 #_ #_ #_ #_ emp rel_file_meta_d
     let res2 = validate_header_magic_number data vdata;
     if (res2) {
       unfold (rel_file_meta_data fmd vfmd);
-      let res = PV.impl_for_all _ _ _ (impl_validate_all_row_groups pm data vdata) fmd.row_groups vfmd.row_groups;
+      let res = PV.impl_for_all _ _ _ (impl_validate_all_validate_row_group pm data vdata) fmd.row_groups vfmd.row_groups;
       fold (rel_file_meta_data fmd vfmd);
       res
     } else {

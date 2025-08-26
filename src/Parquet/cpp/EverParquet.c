@@ -28,6 +28,45 @@ Parquet_Pulse_Toplevel_uu___is_ENCRYPTION_WITH_COLUMN_KEY(
     return false;
 }
 
+bool
+Parquet_Pulse_Toplevel0_impl_validate_all_validate_row_group(
+  Pulse_Lib_Slice_slice__uint8_t data,
+  Parquet_Pulse_Toplevel_row_group rg
+)
+{
+  size_t pi = (size_t)0U;
+  bool pres = true;
+  bool __anf0 = pres;
+  bool cond;
+  if (__anf0)
+  {
+    size_t i = pi;
+    cond = i < rg.columns.len;
+  }
+  else
+    cond = false;
+  while (cond)
+  {
+    size_t i0 = pi;
+    Parquet_Pulse_Toplevel_column_chunk elt = rg.columns.data[i0];
+    bool res = Parquet_Pulse_Toplevel0_impl_validate_all_validate_column_chunk(data, elt);
+    pres = res;
+    if (res)
+      pi = i0 + (size_t)1U;
+    bool __anf0 = pres;
+    bool ite;
+    if (__anf0)
+    {
+      size_t i = pi;
+      ite = i < rg.columns.len;
+    }
+    else
+      ite = false;
+    cond = ite;
+  }
+  return pres;
+}
+
 static size_t len__uint8_t(Pulse_Lib_Slice_slice__uint8_t s)
 {
   return s.len;
@@ -149,7 +188,7 @@ Parquet_Pulse_Toplevel0_impl_validate_all0(
       {
         size_t i0 = pi;
         Parquet_Pulse_Toplevel_row_group elt = fmd.row_groups.data[i0];
-        bool res = Parquet_Pulse_Toplevel0_impl_validate_all_row_groups(data, elt);
+        bool res = Parquet_Pulse_Toplevel0_impl_validate_all_validate_row_group(data, elt);
         pres = res;
         if (res)
           pi = i0 + (size_t)1U;
