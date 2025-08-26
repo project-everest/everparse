@@ -1,0 +1,3 @@
+[submodule "src/Parquet/cpp/thrift"]
+	path = src/Parquet/cpp/thrift
+	url = https://github.com/apache/thrift.git

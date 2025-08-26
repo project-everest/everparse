@@ -23,13 +23,16 @@ OBJS_CPP  := $(SRCS_CPP:.cpp=.o)
 OBJS      := $(OBJS_C) $(OBJS_CPP)
 
 # ---- flags ----
-CPPFLAGS := -I. \
+THRIFT_PREFIX ?= $(CURDIR)/thrift-build
+
+CPPFLAGS += -I. \
+            -I$(THRIFT_PREFIX)/include \
             -I$(KRML_INC) -I$(KRML_MIN)
 
-CFLAGS   := -O2 -Wall -Wextra -Wpedantic -fvisibility=hidden
-CXXFLAGS := -O2 -std=c++17 -Wall -Wextra -Wpedantic -fvisibility=hidden
+CFLAGS   += -O2 -Wall -Wextra -Wpedantic -fvisibility=hidden
+CXXFLAGS += -O2 -std=c++17 -Wall -Wextra -Wpedantic -fvisibility=hidden
 
-LDLIBS   := -lthrift
+LDLIBS   += -lthrift -L$(THRIFT_PREFIX)/lib
 
 # Some platforms need pthread explicitly with Thrift:
 LDLIBS   += -pthread
@@ -39,15 +42,18 @@ LDLIBS   += -pthread
 
 all: $(BIN)
 
-$(BIN): $(OBJS)
-	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+$(CURDIR)/thrift-build:
+	+cd thrift && ./bootstrap.sh && ./configure --prefix=$@ --with-cpp --without-perl --without-python --disable-dependency-tracking && $(MAKE) && $(MAKE) install
+
+$(BIN): $(OBJS) $(THRIFT_PREFIX)
+	$(CXX) $(LDFLAGS) -o $@ $(OBJS) $(LDLIBS)
 
 # Compile C (KaRaMeL)
-%.o: %.c
+%.o: %.c $(THRIFT_PREFIX)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
 
 # Compile C++ (Thrift + shim + main)
-%.o: %.cpp
+%.o: %.cpp $(THRIFT_PREFIX)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
 
 clean:
