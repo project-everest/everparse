@@ -4,25 +4,25 @@ Since this artifact is single-blind, we are using public names for our work: SEP
 
 Three Docker images are included in this artifact:
 
-* `ccs2025-test`, an image with everything (including tests) built
-* `ccs2025-build`, an image with EverCBOR, EverCDDL and EverCOSE verified, extracted and built, but tests not built
-* `ccs2025-deps`, an image with only dependencies built, and EverCBOR, EverCDDL and EverCOSE not verified, extracted, built or tested
+* `evercbor-ccs2025-test`, an image with everything (including tests) built
+* `evercbor-ccs2025-build`, an image with EverCBOR, EverCDDL and EverCOSE verified, extracted and built, but tests not built
+* `evercbor-ccs2025-deps`, an image with only dependencies built, and EverCBOR, EverCDDL and EverCOSE not verified, extracted, built or tested
 
-To load an image (say `ccs-test`) and open a container into it:
-1. Download `ccs2025-test.tar.gz` from the Zenodo record.
-2. Run `zcat ccs2025-test.tar.gz | docker load`
-3. Run `docker run -i -t ccs2025-test`
+To load an image (say `evercbor-ccs2025-test`) and open a container into it:
+1. Download `evercbor-ccs2025.tar.gz` from the Zenodo record. This archive contains all three images.
+2. Run `zcat evercbor-ccs2025.tar.gz | docker load`
+3. Run `docker run -i -t evercbor-ccs2025-test`
 
-From the `ccs2025-deps` image:
+From the `evercbor-ccs2025-deps` image:
 * to verify PulseParse from Section 2, run `make pulseparse`
 * to verify, extract and build EverCBOR from Section 3, run `make cbor`
 * to verify EverCDDL from Section 4, run `make cddl`
 * to verify, extract and build EverCOSE from Section 5.2, run `make cose`
 * to verify extract and build all of the above, run `make`
 
-At this point, you have reached the state of the `ccs2025-build` image.
+At this point, you have reached the state of the `evercbor-ccs2025-build` image.
 
-From the `ccs2025-build` image:
+From the `evercbor-ccs2025-build` image:
 * to run CBOR benchmark tests from Section 5.1 (which use CDDL), run `make cddl-unit-tests`
 * to test EverCOSE from Section 5.2, run `make cose-test`
 * to verify the arithmetic example from Appendix A, run `make pulseparse-test`
@@ -30,7 +30,7 @@ From the `ccs2025-build` image:
 * there are other CBOR and CDDL tests not described in the paper, which you can run with `make cbor-test` and `make cddl-other-tests` respectively.
 * to test all of the above, run `make test`
 
-At this point, you have reached the state of the `ccs2025-test` image.
+At this point, you have reached the state of the `evercbor-ccs2025-test` image.
 
 More details about the source code follow.
 
