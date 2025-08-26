@@ -318,19 +318,6 @@ let rg_range (rg: row_group) : option range =
         | Some total_sz -> Some ({ start = I64.v (offset_of_column_chunk cmd); len = total_sz })
 
 
-
-// get a flat list of all page offsets
-
-let rec page_offsets_are_distinct_and_inbound (page_offs: list int64) (bound: int64)
-    : Tot bool (decreases page_offs) =
-  match page_offs with
-  | [] -> true
-  | x :: xs ->
-    not (List.Tot.contains x xs) && I64.v x < I64.v bound &&
-    page_offsets_are_distinct_and_inbound xs bound
-
-
-
 (** Top‑level file metadata validation ------------------------------- *)
 
 let rec list_option_map (#t1 #t2: Type) (f: (t1 -> option t2)) (l: list t1) : Tot (list t2) =
@@ -383,12 +370,14 @@ let validate_offset_index (cc: column_chunk) (oi: offset_index) : Tot bool =
     | None -> true
     | Some cmd ->
       let all_page_offsets = List.Tot.map (fun pl -> pl.offset) locs in
-      let contains (off: int64) = List.Tot.contains off all_page_offsets in
-      (match cmd.dictionary_page_offset, cmd.index_page_offset with
-        | Some dict_off, Some idx_off -> contains dict_off && contains idx_off
-        | Some dict_off, None -> contains dict_off
-        | None, Some idx_off -> contains idx_off
-        | None, None -> true) &&
+      let contains (off: int64) = List.Tot.mem off all_page_offsets in
+      begin match cmd.dictionary_page_offset with
+      | Some dict_off -> contains dict_off
+      | None -> true
+      end && begin match cmd.index_page_offset with
+      | Some idx_off -> contains idx_off
+      | None -> true
+      end &&
       contains cmd.data_page_offset
   in
   let col_size_ok =
