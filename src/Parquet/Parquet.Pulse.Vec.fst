@@ -34,7 +34,7 @@ let impl_pred
   (#spect #implt: Type0)
   (precond: slprop)
   (r: Rel.rel implt spect)
-  (f: (spect -> Tot bool))
+  (f: (spect -> GTot bool))
 =
   (x: implt) ->
   (y: Ghost.erased spect) ->
@@ -151,4 +151,82 @@ fn impl_pred2_swap
   (y1: _)
 {
   impl12 x1 y1 x2 y2
+}
+
+inline_for_extraction
+let impl_f_t
+  (#t' #implt #spect: Type0)
+  (f: (spect -> GTot t'))
+  (r: Rel.rel implt spect)
+= (x: implt) ->
+  (y: Ghost.erased spect) ->
+  stt t'
+    (r x y)
+    (fun res -> r x y ** pure (res == f y))
+
+inline_for_extraction
+fn impl_mem_map
+  (#spect #implt: Type0)
+  (#t' : eqtype)
+  (r: Rel.rel implt spect)
+  (f: Ghost.erased (spect -> Tot t'))
+  (implf: impl_f_t f r)
+  (a: t')
+: impl_pred #_ #_ emp (rel_vec_of_list r) (fun l -> List.Tot.mem a (List.Tot.map (Ghost.reveal f) l))
+=
+  (x: _)
+  (y: _)
+{
+  unfold (rel_vec_of_list r x y);
+  V.pts_to_len x.data;
+  with s . assert (pts_to x.data s);
+  SM.seq_list_match_length r s y;
+  Trade.refl (SM.seq_list_match s y r);
+  let mut pi = 0sz;
+  let mut pres = false;
+  while (
+    if (!pres) {
+      false
+    } else {
+      let i = !pi;
+      (SZ.lt i x.len)
+    }
+  ) invariant b . exists* i lr sr res . (
+    pts_to pi i **
+    pts_to x.data s **
+    pts_to pres res **
+    SM.seq_list_match sr lr r **
+    Trade.trade
+      (SM.seq_list_match sr lr r)
+      (SM.seq_list_match s y r) **
+    pure (
+      SZ.v i <= Seq.length s /\
+      sr == Seq.slice s (SZ.v i) (Seq.length s) /\
+      b == ((not res) && (SZ.v i < Seq.length s)) /\
+      List.Tot.mem a (List.Tot.map f y) == (res || List.Tot.mem a (List.Tot.map f lr))
+    )
+  ) {
+    with sr lr . assert (SM.seq_list_match sr lr r);
+    SM.seq_list_match_length _ _ _;
+    SM.seq_list_match_cons_elim_trade _ _ _;
+    with gelt gl . assert (r gelt gl);
+    let i = !pi;
+    let elt = V.op_Array_Access x.data i;
+    rewrite each gelt as elt;
+    let z = implf elt _;
+    let res = (z = a);
+    pres := res;
+    if (res) {
+      Trade.elim _ (SM.seq_list_match sr lr r);
+      pres := true
+    } else {
+      Trade.elim_hyp_l _ _ _;
+      Trade.trans _ (SM.seq_list_match sr lr r) _;
+      pi := SZ.add i 1sz;
+    }
+  };
+  SM.seq_list_match_length _ _ _;
+  Trade.elim _ _;
+  fold (rel_vec_of_list r x y);
+  !pres
 }
