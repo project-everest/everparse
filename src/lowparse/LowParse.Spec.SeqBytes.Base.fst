@@ -19,10 +19,9 @@ let parse_seq_flbytes
 
 let serialize_seq_flbytes'
   (sz: nat)
-: Tot (bare_serializer (Seq.lseq byte sz))
-= fun (x: Seq.lseq byte sz) -> (
-    x
-  )
+  (x: Seq.lseq byte sz)
+: Tot bytes
+= x
 
 let serialize_seq_flbytes_correct
   (sz: nat)
@@ -43,5 +42,11 @@ let serialize_seq_flbytes_correct
 let serialize_seq_flbytes
   (sz: nat)
 : Tot (serializer (parse_seq_flbytes sz))
+= serialize_seq_flbytes_correct sz;
+  serialize_seq_flbytes' sz
+
+let tot_serialize_seq_flbytes
+  (sz: nat)
+: Tot (tot_serializer (tot_parse_seq_flbytes sz))
 = serialize_seq_flbytes_correct sz;
   serialize_seq_flbytes' sz

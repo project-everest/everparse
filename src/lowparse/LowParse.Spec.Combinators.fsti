@@ -2184,6 +2184,23 @@ let tot_parse_filter_eq
   ))
 = parse_filter_eq #k p f input
 
+let tot_parse_filter_equiv
+  (#k1: parser_kind)
+  (#t: Type)
+  (p1: tot_parser k1 t)
+  (f: (t -> Tot bool))
+  (#k2: parser_kind)
+  (p2: parser k2 t)
+: Lemma
+  (requires (
+    (forall input . parse p1 input == parse p2 input)
+  ))
+  (ensures (
+    forall input . parse (tot_parse_filter p1 f) input == parse (parse_filter p2 f) input
+  ))
+= Classical.forall_intro (tot_parse_filter_eq p1 f);
+  Classical.forall_intro (parse_filter_eq p2 f)
+
 let serialize_filter'
   (#k: parser_kind)
   (#t: Type)
