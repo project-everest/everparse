@@ -76,7 +76,7 @@ fn impl_validate_all_validate_row_group (pm: perm) : PV.impl_pred2 #_ #_ #_ #_ e
 
 let validate_header_magic_number =
   let _ = tot_parse_filter_equiv (tot_parse_seq_flbytes 4) is_PAR1 (parse_seq_flbytes 4) in
-  validate_jump_with_offset_and_size_then_parse emp 0sz 4sz (validator_gen_of_validator emp (validate_ext (validate_filter_gen (validate_total_constant_size (parse_seq_flbytes 4) 4sz) (serialize_seq_flbytes 4) is_PAR1 validate_is_PAR1) (parser_of_tot_parser (tot_parse_filter (tot_parse_seq_flbytes 4) is_PAR1))))
+  validate_jump_with_offset_and_size_then_parse emp 0sz 4sz (validator_gen_of_validator emp (validate_ext (validate_filter_gen (validate_total_constant_size (parse_seq_flbytes 4) 4sz) (serialize_seq_flbytes 4) is_PAR1 (validate_is_PAR1 ())) (parser_of_tot_parser (tot_parse_filter (tot_parse_seq_flbytes 4) is_PAR1))))
 
 fn impl_validate_all0 (pm: perm) : PV.impl_pred2 #_ #_ #_ #_ emp rel_file_meta_data (pts_to_bytes pm) validate_all
 =

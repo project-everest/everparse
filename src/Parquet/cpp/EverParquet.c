@@ -28,6 +28,20 @@ Parquet_Pulse_Toplevel_uu___is_ENCRYPTION_WITH_COLUMN_KEY(
     return false;
 }
 
+static uint8_t op_Array_Access__uint8_t(Pulse_Lib_Slice_slice__uint8_t a, size_t i)
+{
+  return a.elt[i];
+}
+
+bool Parquet_Pulse_Toplevel0_validate_is_PAR1(Pulse_Lib_Slice_slice__uint8_t input)
+{
+  uint8_t v0 = op_Array_Access__uint8_t(input, (size_t)0U);
+  uint8_t v1 = op_Array_Access__uint8_t(input, (size_t)1U);
+  uint8_t v2 = op_Array_Access__uint8_t(input, (size_t)2U);
+  uint8_t v3 = op_Array_Access__uint8_t(input, (size_t)3U);
+  return 80U == v0 && 65U == v1 && 82U == v2 && 49U == v3;
+}
+
 bool
 Parquet_Pulse_Toplevel0_impl_validate_all_validate_row_group(
   Pulse_Lib_Slice_slice__uint8_t data,
@@ -222,11 +236,6 @@ Parquet_Pulse_Toplevel0_impl_validate_all(
   KRML_MAYBE_UNUSED_VAR(len);
   Parquet_Pulse_Toplevel_file_meta_data f = Parquet_Pulse_Toplevel0_read_footer(y);
   return Parquet_Pulse_Toplevel0_impl_validate_all0(f, x);
-}
-
-static uint8_t op_Array_Access__uint8_t(Pulse_Lib_Slice_slice__uint8_t a, size_t i)
-{
-  return a.elt[i];
 }
 
 bool

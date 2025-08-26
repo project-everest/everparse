@@ -917,7 +917,7 @@ typedef struct Pulse_Lib_Slice_slice__uint8_t_s
 }
 Pulse_Lib_Slice_slice__uint8_t;
 
-extern bool Parquet_Pulse_Toplevel0_validate_is_PAR1(Pulse_Lib_Slice_slice__uint8_t uu___);
+bool Parquet_Pulse_Toplevel0_validate_is_PAR1(Pulse_Lib_Slice_slice__uint8_t input);
 
 extern bool
 Parquet_Pulse_Toplevel0_validate_footer(Pulse_Lib_Slice_slice__uint8_t uu___, size_t *x0);
