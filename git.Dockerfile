@@ -23,7 +23,7 @@ RUN echo "source $HOME/.cargo/env" >> $(if test -f $HOME/.bash_profile ; then ec
 ARG CACHE_BUST
 RUN sudo mkdir /mnt/everparse && sudo chown opam:opam /mnt/everparse
 ARG CI_BRANCH=master
-RUN git clone --recurse-submodules --branch CI_BRANCH https://github.com/project-everest/everparse /mnt/everparse && echo $CACHE_BUST
+RUN git clone --recurse-submodules --branch $CI_BRANCH https://github.com/project-everest/everparse /mnt/everparse && echo $CACHE_BUST
 WORKDIR /mnt/everparse
 
 FROM base AS deps
