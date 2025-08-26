@@ -62,9 +62,7 @@ fn validate_jump_with_offset_and_size_then_parse
   (v: Ghost.erased bytes)
 requires
   precond **
-  pts_to input #pm v ** pure (
-    SZ.v offset + SZ.v size <= Seq.length v
-  )
+  pts_to input #pm v
 returns res: bool
 ensures 
   precond **
@@ -73,12 +71,18 @@ ensures
   )
 {
   S.pts_to_len input;
-  let (s1, s2) = S.split_trade input (SZ.add offset size);
-  let mut poffset = offset;
-  let is_valid = u s1 poffset;
-  let off = !poffset;
-  Trade.elim _ _;
-  (SZ.eq off (SZ.add offset size) && is_valid)
+  if (SZ.gt offset (S.len input)) {
+    false
+  } else if (SZ.gt size (SZ.sub (S.len input) offset)) {
+    false
+  } else {
+    let (s1, s2) = S.split_trade input (SZ.add offset size);
+    let mut poffset = offset;
+    let is_valid = u s1 poffset;
+    let off = !poffset;
+    Trade.elim _ _;
+    (SZ.eq off (SZ.add offset size) && is_valid)
+  }
 }
 
 open LowParse.Pulse.Combinators
@@ -98,7 +102,6 @@ fn impl_pred_jump_with_offset_and_size_then_parse_pts_to_serialized_filter
   (v: Ghost.erased bytes { phi v })
 requires
   pts_to_serialized (serialize_filter serialize_seq_all_bytes phi) input #pm v ** pure (
-    SZ.v offset + SZ.v size <= Seq.length v /\
     (phi v ==> pred_jump_with_offset_and_size_then_parse (SZ.v offset) (SZ.v size) p v)
   )
 returns res: S.slice byte
