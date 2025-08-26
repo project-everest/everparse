@@ -451,7 +451,8 @@ let is_PAR1 (s: Seq.lseq byte 4) : bool =
   let v1 = Seq.index s 1 in
   let v2 = Seq.index s 2 in
   let v3 = Seq.index s 3 in
-  (U32.v (FStar.Char.u32_of_char 'P') = U8.v v0) && (U32.v (FStar.Char.u32_of_char 'A') = U8.v v1) &&
+  (U32.v (FStar.Char.u32_of_char 'P') = U8.v v0) && 
+  (U32.v (FStar.Char.u32_of_char 'A') = U8.v v1) &&
   (U32.v (FStar.Char.u32_of_char 'R') = U8.v v2) &&
   (U32.v (FStar.Char.u32_of_char '1') = U8.v v3)
 

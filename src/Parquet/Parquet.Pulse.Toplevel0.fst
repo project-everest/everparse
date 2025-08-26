@@ -14,11 +14,38 @@ module Trade = Pulse.Lib.Trade.Util
 module Rel = CDDL.Pulse.Types.Base
 module PV = Parquet.Pulse.Vec
 
+module U32 = FStar.UInt32
+module U8 = FStar.UInt8
+
 include Parquet.Pulse.Rel
 
-assume val validate_is_PAR1 : validate_filter_test_t
+fn validate_is_PAR1 ()
+: validate_filter_test_t
+  #_ #_ #_
   (serialize_seq_flbytes 4)
   is_PAR1
+
+=
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased Seq.lseq byte 4)
+{
+
+  unfold (pts_to_serialized (serialize_seq_flbytes 4) input #pm v);
+  S.pts_to_len input #pm #v;
+  let v0 = S.op_Array_Access input 0sz;
+  let v1 = S.op_Array_Access input 1sz;
+  let v2 = S.op_Array_Access input 2sz;
+  let v3 = S.op_Array_Access input 3sz;
+  let res = (
+    (80uy = v0) && // 'P'
+    (65uy = v1) && // 'A'
+    (82uy = v2) && // 'R'
+    (49uy = v3)    // '1'
+  );
+  fold (pts_to_serialized (serialize_seq_flbytes 4) input #pm v);
+  res
+}
 
 assume val validate_footer : validator parse_footer
 
@@ -90,5 +117,5 @@ let validate_parquet (sq: squash SZ.fits_u32) : validator parse_parquet =
       (validate_total_constant_size (parse_seq_flbytes 4) 4sz)
       (serialize_seq_flbytes 4)
       is_PAR1
-      validate_is_PAR1
+      (validate_is_PAR1 ())
     )
