@@ -1,7 +1,7 @@
 # This Dockerfile should be run from the root EverParse directory
 
 ARG ocaml_version=4.14
-FROM ocaml/opam:ubuntu-24.04-ocaml-$ocaml_version
+FROM ocaml/opam:ubuntu-24.04-ocaml-$ocaml_version AS base
 
 SHELL ["/bin/bash", "--login", "-c"]
 
@@ -25,6 +25,8 @@ RUN sudo mkdir /mnt/everparse && sudo chown opam:opam /mnt/everparse
 ARG CI_BRANCH=master
 RUN git clone --recurse-submodules --branch CI_BRANCH https://github.com/project-everest/everparse /mnt/everparse && echo $CACHE_BUST
 WORKDIR /mnt/everparse
+
+FROM base AS deps
 
 ARG CI_THREADS
 RUN sudo apt-get update && env OPAMYES=1 make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" -C opt

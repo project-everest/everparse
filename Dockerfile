@@ -1,7 +1,7 @@
 # This Dockerfile should be run from the root EverParse directory
 
 ARG ocaml_version=4.14
-FROM ocaml/opam:ubuntu-24.04-ocaml-$ocaml_version AS deps
+FROM ocaml/opam:ubuntu-24.04-ocaml-$ocaml_version AS base
 
 SHELL ["/bin/bash", "--login", "-c"]
 
@@ -23,6 +23,8 @@ RUN echo "source $HOME/.cargo/env" >> $(if test -f $HOME/.bash_profile ; then ec
 ADD --chown=opam:opam ./ /mnt/everparse/
 WORKDIR /mnt/everparse
 RUN git clean -ffdx || true
+
+FROM base AS deps
 
 ARG CI_THREADS
 RUN sudo apt-get update && env OPAMYES=1 make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" -C opt
