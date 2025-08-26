@@ -11,11 +11,6 @@ run_docker () {
 run_docker --pull -t ccs2025-deps --target deps
 run_docker -t ccs2025-build --target build
 run_docker -t ccs2025-test --target test
-docker save ccs2025-deps > ccs2025-deps.tar
-gzip ccs2025-deps.tar
-docker save ccs2025-deps > ccs2025-deps.tar
-gzip ccs2025-deps.tar
-docker save ccs2025-build > ccs2025-build.tar
-gzip ccs2025-build.tar
-docker save ccs2025-test > ccs2025-test.tar
-gzip ccs2025-test.tar
+docker save ccs2025-deps | gzip > ccs2025-deps.tar.gz
+docker save ccs2025-build | gzip > ccs2025-build.tar.gz
+docker save ccs2025-test | gzip > ccs2025-test.tar.gz

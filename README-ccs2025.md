@@ -10,9 +10,8 @@ Three Docker images are included in this artifact:
 
 To load an image (say `ccs-test`) and open a container into it:
 1. Download `ccs2025-test.tar.gz` from the Zenodo record.
-2. Run `gunzip ccs2025-test.tar.gz`
-3. Run `docker load < ccs2025-test.tar`
-4. Run `docker run -i -t ccs2025-test`
+2. Run `zcat ccs2025-test.tar.gz | docker load`
+3. Run `docker run -i -t ccs2025-test`
 
 From the `ccs2025-deps` image:
 * to verify PulseParse from Section 2, run `make pulseparse`
