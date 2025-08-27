@@ -429,6 +429,9 @@ val parse_page_header_kind: (k: parser_kind { k.parser_kind_subkind == Some Pars
 assume
 val parse_page_header: tot_parser parse_page_header_kind page_header
 
+assume
+val serialize_page_header: tot_serializer parse_page_header
+
 let validate_page_data (h: page_header) (d: bytes) : Tot bool =
   I32.v h.compressed_page_size = Seq.length d &&
   true (* TODO: validate data against schema *)

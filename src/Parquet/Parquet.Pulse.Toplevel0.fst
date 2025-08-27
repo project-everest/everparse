@@ -235,6 +235,48 @@ fn impl_validate_file_meta_data (footer_start: SZ.t) : PV.impl_pred #_ #_ emp re
   admit ()
 }
 
+module I32 = FStar.Int32
+
+assume val validate_page_header : validator (parser_of_tot_parser parse_page_header)
+
+assume val read_page_header : zero_copy_parse rel_page_header (serializer_of_tot_serializer serialize_page_header)
+
+fn impl_validate_page_data (vph: Ghost.erased page_header) (ph: _) (pm: perm) : validate_filter_test_gen_t (pts_to_serialized (serializer_of_tot_serializer serialize_page_header) ph #pm vph) #_ #_ #_ serialize_seq_all_bytes (validate_page_data vph) =
+  (data: _)
+  (#pm: _)
+  (#vdata: _)
+{
+  let ph' = read_page_header ph;
+  pts_to_serialized_elim_trade serialize_seq_all_bytes data;
+  S.pts_to_len data;
+  Trade.elim _ (pts_to_serialized serialize_seq_all_bytes data #pm vdata);
+  assume (pure SZ.fits_u32);
+  unfold (rel_page_header ph' vph);
+  Rel.rel_pure_peek ph'.compressed_page_size _;
+  fold (rel_page_header ph' vph);
+  Trade.elim _ _;
+  if (I32.lt ph'.compressed_page_size 0l) {
+    false
+  } else {
+    (SZ.uint32_to_sizet (FStar.Int.Cast.int32_to_uint32 ph'.compressed_page_size) = S.len data)
+  }
+}
+
+let validate_page : validator (parser_of_tot_parser tot_parse_page) =
+  validate_ext #_ #_ #parse_page
+    (validate_dtuple2_gen
+      validate_page_header
+      serialize_page_header
+      (fun vph ph pm ->
+        validate_filter_gen'
+          (validator_gen_of_validator _ (validate_seq_all_bytes ()))
+          serialize_seq_all_bytes
+          (validate_page_data vph)
+          (impl_validate_page_data vph ph pm)
+      )
+    )
+    _
+
 fn impl_validate_offset_index_all (pm: perm) : PV.impl_pred3 #_ #_ #_ #_ #_ #_ emp rel_column_chunk (pts_to_bytes pm) rel_offset_index validate_offset_index_all
 =
   (cc: _)
@@ -246,8 +288,6 @@ fn impl_validate_offset_index_all (pm: perm) : PV.impl_pred3 #_ #_ #_ #_ #_ #_ e
 {
   admit ()
 }
-
-module I32 = FStar.Int32
 
 assume val validate_offset_index : validator (parser_of_tot_parser parse_offset_index)
 
