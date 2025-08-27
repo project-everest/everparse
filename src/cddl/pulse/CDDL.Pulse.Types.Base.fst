@@ -37,6 +37,16 @@ ensures rel_pure t x x
   fold (rel_pure _ x x)
 }
 
+ghost fn rel_pure_peek
+  (#t: Type0)
+  (x y: t)
+requires rel_pure t x y
+ensures rel_pure t x y ** pure (x == y)
+{
+  unfold (rel_pure _ x y);
+  fold (rel_pure _ x y)
+}
+
 let rel_unit : rel unit unit = mk_rel (fun _ _ -> emp)
 
 noeq
