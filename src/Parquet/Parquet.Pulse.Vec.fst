@@ -125,7 +125,7 @@ let impl_pred2
   (precond: slprop)
   (r1: Rel.rel implt1 spect1)
   (r2: Rel.rel implt2 spect2)
-  (f12: (spect1 -> spect2 -> Tot bool))
+  (f12: (spect1 -> spect2 -> GTot bool))
 =
   (x1: implt1) ->
   (y1: Ghost.erased spect1) ->
@@ -230,3 +230,18 @@ fn impl_mem_map
   fold (rel_vec_of_list r x y);
   !pres
 }
+
+inline_for_extraction
+let impl_pred3
+  (#spect1 #implt1: Type0)
+  (#spect2 #implt2: Type0)
+  (#spect3 #implt3: Type0)
+  (precond: slprop)
+  (r1: Rel.rel implt1 spect1)
+  (r2: Rel.rel implt2 spect2)
+  (r3: Rel.rel implt3 spect3)
+  (f123: (spect1 -> spect2 -> spect3 -> GTot bool))
+=
+  (x1: implt1) ->
+  (y1: Ghost.erased spect1) ->
+  impl_pred2 (precond ** r1 x1 y1) r2 r3 (f123 y1)

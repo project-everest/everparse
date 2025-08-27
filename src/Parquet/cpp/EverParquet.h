@@ -932,16 +932,45 @@ Parquet_Pulse_Toplevel0_compute_cols_size(
   int64_t bound
 );
 
-extern bool
+bool
 Parquet_Pulse_Toplevel0_impl_validate_file_meta_data(
   size_t footer_start,
-  Parquet_Pulse_Toplevel_file_meta_data x0
+  Parquet_Pulse_Toplevel_file_meta_data md
+);
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_offset_index_all(
+  Parquet_Pulse_Toplevel_column_chunk cc,
+  Pulse_Lib_Slice_slice__uint8_t data,
+  Parquet_Pulse_Toplevel_offset_index oi
 );
 
 extern bool
+Parquet_Pulse_Toplevel0_validate_offset_index(Pulse_Lib_Slice_slice__uint8_t uu___, size_t *x0);
+
+extern Parquet_Pulse_Toplevel_offset_index
+Parquet_Pulse_Toplevel0_read_offset_index(Pulse_Lib_Slice_slice__uint8_t uu___);
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_offset_index_all0(
+  Pulse_Lib_Slice_slice__uint8_t data,
+  Parquet_Pulse_Toplevel_column_chunk cc,
+  Pulse_Lib_Slice_slice__uint8_t x
+);
+
+bool
+Parquet_Pulse_Toplevel0_validate_jump_offset_index(
+  size_t offset_sz,
+  size_t length_sz,
+  Pulse_Lib_Slice_slice__uint8_t data,
+  Parquet_Pulse_Toplevel_column_chunk cc,
+  Pulse_Lib_Slice_slice__uint8_t input
+);
+
+bool
 Parquet_Pulse_Toplevel0_impl_validate_all_validate_column_chunk(
-  Pulse_Lib_Slice_slice__uint8_t x0,
-  Parquet_Pulse_Toplevel_column_chunk x1
+  Pulse_Lib_Slice_slice__uint8_t data,
+  Parquet_Pulse_Toplevel_column_chunk cc
 );
 
 bool

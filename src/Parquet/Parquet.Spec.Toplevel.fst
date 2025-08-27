@@ -113,20 +113,23 @@ let validate_column_chunk cc =
     | None -> true
     | Some cmd ->
       let data_off = I64.v cmd.data_page_offset in
-      match cmd.dictionary_page_offset, cmd.index_page_offset with
-      | None, _ -> true
-      | Some dict_off, None -> I64.v dict_off < data_off
-      | Some dict_off, Some idx_off -> I64.v dict_off < data_off && I64.v dict_off < I64.v idx_off
+      begin match cmd.dictionary_page_offset with
+      | None -> true
+      | Some dict_off ->
+        I64.v dict_off < data_off &&
+        begin match cmd.index_page_offset with
+        | None -> true
+        | Some idx_off -> I64.v dict_off < I64.v idx_off
+        end
+      end
   in
   let idx_ok:// OffsetIndex may be present even if ColumnIndex is not.
   // If ColumnIndex is present, OffsetIndex must also be present.
   // If offset is present, the corresponding length must be present
   bool =
-    match
-      cc.offset_index_offset, cc.offset_index_length, cc.column_index_offset, cc.column_index_length
-    with
-    | Some _, Some _, Some _, Some _ | Some _, Some _, None, None | None, None, None, None -> true
-    | _ -> false
+    (Some? cc.offset_index_offset = Some? cc.offset_index_length) &&
+    (Some? cc.column_index_offset = Some? cc.column_index_length) &&
+    (if Some? cc.column_index_offset then Some? cc.offset_index_offset else true)
   in
   offsets_ok && idx_ok
 
@@ -270,11 +273,13 @@ val validate_row_group : I64.t -> row_group -> Tot bool
 let validate_row_group data_size rg =
   let rg_size_ok = validate_row_group_size data_size rg in
   let sorted_ok =
+    if List.Tot.for_all (fun c -> Some? c.meta_data) rg.columns then
     (* cols should be contiguous according to the documentation, but we found some counterexamples, so we relax the requirement to cols being sorted *)
     columns_are_sorted rg.columns
+    else true
   in
   let cols_ok =
-    List.Tot.for_all (fun cc -> validate_column_chunk cc) rg.columns (* each column chunk passes *)
+    List.Tot.for_all validate_column_chunk rg.columns (* each column chunk passes *)
   in
   rg_size_ok && sorted_ok && cols_ok
 
@@ -311,7 +316,7 @@ val validate_file_meta_data: nat -> file_meta_data -> Tot bool
 let validate_file_meta_data footer_start fmd =
   FStar.Int.fits footer_start 64 &&
   ranges_disjoint (list_option_map rg_range fmd.row_groups) &&
-  List.Tot.for_all (fun rg -> validate_row_group (I64.int_to_t footer_start) rg) fmd.row_groups
+  List.Tot.for_all (validate_row_group (I64.int_to_t footer_start)) fmd.row_groups
 
 let page_offsets_are_contiguous (locs: list page_location) : Tot bool =
   J.offsets_and_sizes_are_contiguous
@@ -416,6 +421,9 @@ assume
 val parse_offset_index: tot_parser parse_offset_index_kind offset_index
 
 assume
+val serialize_offset_index : tot_serializer parse_offset_index
+
+assume
 val parse_page_header_kind: (k: parser_kind { k.parser_kind_subkind == Some ParserStrong })
 
 assume
@@ -440,10 +448,7 @@ let parse_page_equiv' (b: bytes) : Lemma
 
 let parse_page_equiv : squash (forall b . parse (parser_of_tot_parser tot_parse_page) b == parse parse_page b) = Classical.forall_intro parse_page_equiv'
 
-let validate_offset_index_all (cc: column_chunk) (data: bytes) (oi: offset_index) : Tot bool =
-  validate_offset_index cc oi &&
-  List.Tot.for_all
-    (fun pl ->
+let validate_page_location_all (data: bytes) (pl: page_location) : Tot bool =
       I64.v pl.offset >= 0 &&
       I32.v pl.compressed_page_size >= 0 &&
       J.pred_jump_with_offset_and_size_then_parse
@@ -451,8 +456,15 @@ let validate_offset_index_all (cc: column_chunk) (data: bytes) (oi: offset_index
         (I32.v pl.compressed_page_size)
         tot_parse_page
         data
-    )
+
+let validate_offset_index_all_aux (data: bytes) (oi: offset_index) : Tot bool =
+  List.Tot.for_all
+    (validate_page_location_all data)
     oi.page_locations
+
+let validate_offset_index_all (cc: column_chunk) (data: bytes) (oi: offset_index) : Tot bool =
+  validate_offset_index cc oi &&
+  validate_offset_index_all_aux data oi
 
 let validate_all_validate_column_chunk
   (data: bytes)

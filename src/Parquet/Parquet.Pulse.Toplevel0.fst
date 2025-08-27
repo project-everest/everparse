@@ -228,9 +228,91 @@ ensures exists* overflow .
   !paccu
 }
 
-assume val impl_validate_file_meta_data (footer_start: SZ.t) : PV.impl_pred emp rel_file_meta_data (validate_file_meta_data (SZ.v footer_start))
+fn impl_validate_file_meta_data (footer_start: SZ.t) : PV.impl_pred #_ #_ emp rel_file_meta_data (validate_file_meta_data (SZ.v footer_start)) =
+  (md: _)
+  (vmd: _)
+{
+  admit ()
+}
 
-assume val impl_validate_all_validate_column_chunk (pm: perm) : PV.impl_pred2 #_ #_ #_ #_ emp (pts_to_bytes pm) rel_column_chunk validate_all_validate_column_chunk
+fn impl_validate_offset_index_all (pm: perm) : PV.impl_pred3 #_ #_ #_ #_ #_ #_ emp rel_column_chunk (pts_to_bytes pm) rel_offset_index validate_offset_index_all
+=
+  (cc: _)
+  (vcc: _)
+  (data: _)
+  (vdata: _)
+  (oi: _)
+  (voi: _)
+{
+  admit ()
+}
+
+module I32 = FStar.Int32
+
+assume val validate_offset_index : validator (parser_of_tot_parser parse_offset_index)
+
+assume val read_offset_index : zero_copy_parse rel_offset_index (serializer_of_tot_serializer serialize_offset_index)
+
+fn impl_validate_offset_index_all0
+  (pm: perm)
+  (data: Pulse.Lib.Slice.slice byte)
+  (vdata: erased bytes)
+  (cc: Toplevel.column_chunk)
+  (vcc: erased column_chunk)
+:
+validate_filter_test_gen_t (pts_to_bytes pm data vdata ** rel_column_chunk cc vcc) #_ #_ #_
+  (serializer_of_tot_serializer serialize_offset_index)
+  (validate_offset_index_all vcc vdata)
+=
+  (x: _)
+  (#pm': _)
+  (#v' : _)
+{
+  let oi = read_offset_index x;
+  let res = impl_validate_offset_index_all _ cc _ data _ oi _;
+  Trade.elim _ _;
+  res
+}
+
+let validate_jump_offset_index (offset_sz: SZ.t) (length_sz: SZ.t) (pm: perm) (data: S.slice byte) (vdata: Ghost.erased bytes) (cc: Parquet.Pulse.Toplevel.column_chunk) (vcc: Ghost.erased column_chunk) =
+  validate_jump_with_offset_and_size_then_parse
+    (pts_to_bytes pm data vdata ** rel_column_chunk cc vcc) offset_sz length_sz 
+    (validate_gen_ext 
+      (validate_filter_gen' (validator_gen_of_validator _ validate_offset_index) (serializer_of_tot_serializer serialize_offset_index) (validate_offset_index_all vcc vdata) (impl_validate_offset_index_all0 pm data vdata cc vcc))
+      (parser_of_tot_parser (tot_parse_filter parse_offset_index (validate_offset_index_all vcc vdata)))
+    )
+
+fn impl_validate_all_validate_column_chunk (pm: perm) : PV.impl_pred2 #_ #_ #_ #_ emp (pts_to_bytes pm) rel_column_chunk validate_all_validate_column_chunk
+=
+  (data: _)
+  (vdata: _)
+  (cc: _)
+  (vcc: _)
+{
+  unfold (rel_column_chunk cc vcc);
+  Rel.rel_pure_peek cc.offset_index_offset _;
+  Rel.rel_pure_peek cc.offset_index_length _;
+  fold (rel_column_chunk cc vcc);
+  if (Some? cc.offset_index_offset && Some? cc.offset_index_length) {
+    let Some offset = cc.offset_index_offset;
+    let Some length = cc.offset_index_length;
+    assume (pure (SZ.fits_u64));
+    assume (pure (SZ.fits_u32));
+    let offset_sz = SZ.uint64_to_sizet (FStar.Int.Cast.int64_to_uint64 offset);
+    let length_sz = SZ.uint32_to_sizet (FStar.Int.Cast.int32_to_uint32 length);
+    if (I64.lte 0L offset && I32.lte 0l length) {
+      S.share data;
+      tot_parse_filter_equiv parse_offset_index (validate_offset_index_all vcc vdata) (parser_of_tot_parser parse_offset_index);
+      let res = validate_jump_offset_index offset_sz length_sz _ data vdata cc vcc data _;
+      S.gather data;
+      res
+    } else {
+      false
+    }
+  } else {
+    true
+  }
+}
 
 fn impl_validate_all_validate_row_group (pm: perm) : PV.impl_pred2 #_ #_ #_ #_ emp (pts_to_bytes pm) rel_row_group validate_all_validate_row_group
 =
