@@ -848,6 +848,46 @@ fn validate_dtuple2_rtol
   }
 }
 
+inline_for_extraction
+fn validate_dtuple2_gen
+  (#t1: Type0)
+  (#t2: t1 -> Type0)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t1)
+  (v1: validator p1)
+  (s1: serializer p1)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: ((x: t1) -> parser k2 (t2 x)))
+  (v2: ((x: Ghost.erased t1) -> (y: slice byte) -> (pm: perm) -> validator_gen (pts_to_serialized s1 y #pm x) (p2 x)))
+: validator #(dtuple2 t1 t2) #(and_then_kind k1 k2) (parse_dtuple2 #k1 #t1 p1 #k2 #t2 p2)
+=
+  (input: slice byte)
+  (poffset: _)
+  (#offset: _)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  parse_dtuple2_eq p1 p2 (Seq.slice v (SZ.v offset) (Seq.length v));
+  let offset = !poffset;
+  let is_valid1 = v1 input poffset;
+  if is_valid1 {
+    let off = !poffset;
+    pts_to_len input;
+    let (_, (x, xr)) = peek_trade_gen' s1 input offset off;
+    poffset := 0sz;
+    let res = v2 _ x _ xr poffset;
+    Trade.elim _ _;
+    if (res) {
+      let off' = !poffset;
+      poffset := SZ.add off off';
+      true
+    } else {
+      false
+    }
+  } else {
+    false
+  }
+}
 
 inline_for_extraction
 fn validate_dtuple2
