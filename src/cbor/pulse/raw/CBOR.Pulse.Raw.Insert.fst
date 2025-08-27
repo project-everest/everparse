@@ -309,6 +309,9 @@ ensures exists* v .
         SZ.v off + Seq.length (serialize_cbor_map l2) == SZ.v off2
       ));
       assert (pure (
+        Seq.length slkv' + Seq.length sl2' == Seq.length (serialize_cbor_map l2)
+      ));
+      assert (pure (
         SZ.v off + (Seq.length slkv' + Seq.length sl2') == SZ.v off2
       ));
       assert (pure (
