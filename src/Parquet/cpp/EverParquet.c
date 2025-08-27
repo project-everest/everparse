@@ -42,6 +42,87 @@ bool Parquet_Pulse_Toplevel0_validate_is_PAR1(Pulse_Lib_Slice_slice__uint8_t inp
   return 80U == v0 && 65U == v1 && 82U == v2 && 49U == v3;
 }
 
+static bool uu___is_Some__int64_t(FStar_Pervasives_Native_option__int64_t projectee)
+{
+  if (projectee.tag == FStar_Pervasives_Native_Some)
+    return true;
+  else
+    return false;
+}
+
+FStar_Pervasives_Native_option__int64_t
+Parquet_Pulse_Toplevel0_compute_cols_size(
+  bool *poverflow,
+  Parquet_Pulse_Vec_vec__Parquet_Pulse_Toplevel_column_chunk cc,
+  int64_t bound
+)
+{
+  *poverflow = bound < (int64_t)0;
+  FStar_Pervasives_Native_option__int64_t
+  paccu = { .tag = FStar_Pervasives_Native_Some, .v = (int64_t)0 };
+  size_t pi = (size_t)0U;
+  FStar_Pervasives_Native_option__int64_t accu0 = paccu;
+  bool cond;
+  if (uu___is_Some__int64_t(accu0))
+  {
+    size_t i = pi;
+    cond = i < cc.len;
+  }
+  else
+    cond = false;
+  while (cond)
+  {
+    size_t i0 = pi;
+    Parquet_Pulse_Toplevel_column_chunk impl = cc.data[i0];
+    if (impl.meta_data.tag == FStar_Pervasives_Native_None)
+      paccu = ((FStar_Pervasives_Native_option__int64_t){ .tag = FStar_Pervasives_Native_None });
+    else if (impl.meta_data.tag == FStar_Pervasives_Native_Some)
+    {
+      Parquet_Pulse_Toplevel_column_meta_data md = impl.meta_data.v;
+      bool overflow = *poverflow;
+      pi = i0 + (size_t)1U;
+      if (!overflow)
+      {
+        FStar_Pervasives_Native_option__int64_t __anf0 = paccu;
+        int64_t accu;
+        if (__anf0.tag == FStar_Pervasives_Native_Some)
+          accu = __anf0.v;
+        else
+          accu = KRML_EABORT(int64_t, "unreachable (pattern matches are exhaustive in F*)");
+        if (bound - accu < md.total_compressed_size)
+          *poverflow = true;
+        else
+          paccu =
+            (
+              (FStar_Pervasives_Native_option__int64_t){
+                .tag = FStar_Pervasives_Native_Some,
+                .v = accu + md.total_compressed_size
+              }
+            );
+      }
+    }
+    else
+    {
+      KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+        __FILE__,
+        __LINE__,
+        "unreachable (pattern matches are exhaustive in F*)");
+      KRML_HOST_EXIT(255U);
+    }
+    FStar_Pervasives_Native_option__int64_t accu = paccu;
+    bool ite;
+    if (uu___is_Some__int64_t(accu))
+    {
+      size_t i = pi;
+      ite = i < cc.len;
+    }
+    else
+      ite = false;
+    cond = ite;
+  }
+  return paccu;
+}
+
 bool
 Parquet_Pulse_Toplevel0_impl_validate_all_validate_row_group(
   Pulse_Lib_Slice_slice__uint8_t data,

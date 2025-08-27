@@ -93,18 +93,6 @@ let disjoint (r1 r2: range) : Tot bool =
   (r1.start >= end2) || (r2.start >= end1)
 
 
-
-(* Check if a list of ranges are in-bound *)
-
-let rec ranges_in_bound (rs: list range) (max_len: int) : Tot bool =
-  match rs with
-  | [] -> true
-  | r :: rest ->
-    let end_ = range_end r in
-    end_ <= max_len && ranges_in_bound rest max_len
-
-
-
 (* Check if a list of ranges are disjoint *)
 
 let rec ranges_disjoint (rs: list range) : Tot bool =
@@ -214,21 +202,16 @@ type schema_tree =
 
 (* Calculate the total size of all column chunks in a row group *)
 
-let cols_size (ccs: list column_chunk) : option int =
-  let col_sizes:list (option int64) =
-    List.Tot.map (fun cc ->
-          match cc.meta_data with
-          | None -> None
-          | Some md -> Some md.total_compressed_size)
-      ccs
-  in
-  List.Tot.fold_left (fun acc sz_opt ->
-        match acc, sz_opt with
-        | Some acc_sz, Some sz -> Some (acc_sz + I64.v sz)
-        | _, _ -> None)
-    (Some 0)
-    col_sizes
-
+let rec cols_size (ccs: list column_chunk) : option int =
+  match ccs with
+  | [] -> Some 0
+  | cc :: q ->
+    match cc.meta_data with
+    | None -> None
+    | Some md ->
+      match cols_size q with
+      | None -> None
+      | Some sz -> Some (I64.v md.total_compressed_size + sz)
 
 
 (* dictionary_page_offset ? dictionary_page_offset : min (index_page_offset, data_page_offset) *)
@@ -266,22 +249,26 @@ let first_column_offset
       | None -> None
       | Some cmd -> Some (offset_of_column_chunk cmd)
 
-val validate_row_group: row_group -> Tot bool
-
-let validate_row_group rg =
-  let col_offset = first_column_offset rg in
-  let rg_size_ok =
+let validate_row_group_size (data_size: I64.t) (rg: row_group) : Tot bool =
     (* sum of col sizes equals row‑group size (when available) *)
-    match rg.total_compressed_size with
-    | None -> true
-    | Some sz ->
+    let total_row_size = match rg.total_compressed_size with
+    | None -> data_size
+    | Some sz -> sz
+    in
+    I64.v total_row_size <= I64.v data_size &&
+    begin
       let total_size = cols_size rg.columns in
       (* total_size is None if any column chunk is missing metadata *)
       (* so we can’t check the size *)
       match total_size with
       | None -> true
-      | Some total_sz -> total_sz <= (* should be =, but column chunks are not contiguous, see below *) I64.v sz
-  in
+      | Some total_sz -> total_sz <= (* should be =, but column chunks are not contiguous, see below *) I64.v total_row_size
+    end
+
+val validate_row_group : I64.t -> row_group -> Tot bool
+
+let validate_row_group data_size rg =
+  let rg_size_ok = validate_row_group_size data_size rg in
   let sorted_ok =
     (* cols should be contiguous according to the documentation, but we found some counterexamples, so we relax the requirement to cols being sorted *)
     columns_are_sorted rg.columns
@@ -290,17 +277,6 @@ let validate_row_group rg =
     List.Tot.for_all (fun cc -> validate_column_chunk cc) rg.columns (* each column chunk passes *)
   in
   rg_size_ok && sorted_ok && cols_ok
-
-let cc_idx_ranges (cc: column_chunk) : list range =
-  match
-    cc.offset_index_offset, cc.offset_index_length, cc.column_index_offset, cc.column_index_length
-  with
-  | Some off, Some len, Some col_off, Some col_len ->
-    let off_idx = { start = I64.v off; len = I32.v len } in
-    let col_idx = { start = I64.v col_off; len = I32.v col_len } in
-    [off_idx; col_idx]
-  | Some off, Some len, None, None -> [{ start = I64.v off; len = I32.v len }]
-  | _ -> []
 
 let rg_range (rg: row_group) : option range =
   match first_column_offset rg, rg.total_compressed_size with
@@ -335,7 +311,7 @@ val validate_file_meta_data: nat -> file_meta_data -> Tot bool
 let validate_file_meta_data footer_start fmd =
   FStar.Int.fits footer_start 64 &&
   ranges_disjoint (list_option_map rg_range fmd.row_groups) &&
-  List.Tot.for_all (fun rg -> validate_row_group rg) fmd.row_groups
+  List.Tot.for_all (fun rg -> validate_row_group (I64.int_to_t footer_start) rg) fmd.row_groups
 
 let page_offsets_are_contiguous (locs: list page_location) : Tot bool =
   J.offsets_and_sizes_are_contiguous

@@ -13,6 +13,7 @@ module PS = Parquet.Spec.Toplevel
 module PP = Parquet.Pulse.Toplevel
 
 let rel = Rel.rel
+[@@pulse_unfold]
 let rel_opt = Rel.rel_option
 [@@pulse_unfold]
 let rel_vec_of_list = PV.rel_vec_of_list
@@ -25,39 +26,63 @@ let rel_vec_of_seq
 : rel (PV.vec t) (Seq.seq t)
 = mk_rel (fun (x: PV.vec t) y -> (x.data |-> y) ** pure (V.is_full_vec x.data /\ V.length x.data == SZ.v x.len))
 
+[@@pulse_unfold]
 let rel_byte : rel PP.byte PS.byte = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_bytes : rel PP.bytes PS.bytes = rel_vec_of_seq
 
+[@@pulse_unfold]
 let rel_bool    : rel bool bool = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_int8    : rel PP.int8 PS.int8 = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_int16   : rel PP.int16 PS.int16 = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_int32   : rel PP.int32 PS.int32 = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_int64   : rel PP.int64 PS.int64 = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_string  : rel string string = Rel.rel_pure _
 
 // Enums
+[@@pulse_unfold]
 let rel_physical_type          : rel PP.physical_type PS.physical_type = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_converted_type         : rel PP.converted_type PS.converted_type = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_field_repetition_type  : rel PP.field_repetition_type PS.field_repetition_type = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_encoding               : rel PP.encoding PS.encoding = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_compression_codec      : rel PP.compression_codec PS.compression_codec = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_page_type              : rel PP.page_type PS.page_type = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_boundary_order         : rel PP.boundary_order PS.boundary_order = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_edge_interp_alg        : rel PP.edge_interpolation_algorithm PS.edge_interpolation_algorithm = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_time_unit              : rel PP.time_unit PS.time_unit = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_logical_type           : rel PP.logical_type PS.logical_type = Rel.rel_pure _
 
+[@@pulse_unfold]
 let rel_bounding_box           : rel PP.bounding_box PS.bounding_box = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_string_type            : rel PP.string_type PS.string_type   = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_uuid_type              : rel PP.uuid_type   PS.uuid_type     = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_key_value : rel PP.key_value PS.key_value = Rel.rel_pure _
 // ... 
 
 
 // sorting_column { column_idx:int32; descending:bool; nulls_first:bool }
+[@@pulse_unfold]
 let rel_sorting_column : rel PP.sorting_column PS.sorting_column = Rel.rel_pure _
 
 // page_encoding_stats { page_type; encoding; count }
+[@@pulse_unfold]
 let rel_page_encoding_stats : rel PP.page_encoding_stats PS.page_encoding_stats = Rel.rel_pure _
 
 // size_statistics: only vec<->list conversions
@@ -212,13 +237,18 @@ let rel_column_index : rel PP.column_index PS.column_index =
     rel_opt (rel_vec_of_list rel_int64) x.definition_level_histograms y.definition_level_histograms
   )
 
+[@@pulse_unfold]
 let rel_aes_gcm_v1     : rel PP.aes_gcm_v1 PS.aes_gcm_v1         = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_aes_gcm_ctr_v1 : rel PP.aes_gcm_ctr_v1 PS.aes_gcm_ctr_v1 = Rel.rel_pure _
 
+[@@pulse_unfold]
 let rel_encryption_algorithm : rel PP.encryption_algorithm PS.encryption_algorithm = Rel.rel_pure _
 
+[@@pulse_unfold]
 let rel_schema_element : rel PP.schema_element PS.schema_element = Rel.rel_pure _
 
+[@@pulse_unfold]
 let rel_column_order : rel PP.column_order PS.column_order = Rel.rel_pure _
 
 let rel_file_meta_data : rel PP.file_meta_data PS.file_meta_data =

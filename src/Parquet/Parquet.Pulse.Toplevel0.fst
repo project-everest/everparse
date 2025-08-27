@@ -57,6 +57,177 @@ assume val read_footer : zero_copy_parse rel_file_meta_data serialize_footer
 let pts_to_bytes (pm: perm) (x: S.slice byte) (y: bytes) : Tot slprop =
   pts_to x #pm y
 
+noextract [@@noextract_to "krml"]
+let list_for_all_option_map_pred
+  (#t1 #t2: Type)
+  (f: (t1 -> option t2))
+  (p: (t2 -> bool))
+  (x: t1)
+: Tot bool
+= match f x with
+  | None -> true
+  | Some y -> p y
+
+let rec list_for_all_option_map
+  (#t1 #t2: Type)
+  (f: (t1 -> option t2))
+  (p: (t2 -> bool))
+  (l: list t1)
+: Lemma
+  (List.Tot.for_all p (list_option_map f l) == List.Tot.for_all (list_for_all_option_map_pred f p) l)
+= match l with
+  | [] -> ()
+  | a :: q -> list_for_all_option_map f p q
+
+module I64 = FStar.Int64
+
+noextract [@@noextract_to "krml"]
+let compute_cols_size_postcond
+  (vcc: list Parquet.Spec.Toplevel.Types.column_chunk)
+  (bound: I64.t)
+  (overflow: bool)
+  (res: option I64.t)
+: Tot prop
+= match cols_size vcc, res with
+  | None, None -> True
+  | Some md, Some md' ->
+    if overflow then md > I64.v bound else md == I64.v md'
+  | _ -> False
+
+noextract [@@noextract_to "krml"]
+let column_size_nonnegative
+  (cc: column_chunk)
+: Tot bool
+= match cc.meta_data with
+  | None -> true
+  | Some md -> I64.v md.total_compressed_size >= 0
+
+let rec cols_size_nonnegative
+  (cc: list column_chunk)
+: Lemma
+  (ensures (List.Tot.for_all column_size_nonnegative cc ==> begin match cols_size cc with
+  | None -> True
+  | Some sz -> sz >= 0
+  end
+  ))
+  [SMTPat (cols_size cc)]
+= match cc with
+  | [] -> ()
+  | c :: q -> cols_size_nonnegative q
+
+noextract [@@noextract_to "krml"]
+let compute_cols_size_invariant
+  (bound: I64.t)
+  (vcc: list Parquet.Spec.Toplevel.Types.column_chunk)
+  (vccr: list Parquet.Spec.Toplevel.Types.column_chunk)
+  (overflow: bool)
+  (accu: option I64.t)
+: Tot prop
+= List.Tot.for_all column_size_nonnegative vccr /\
+  begin match accu with
+  | Some accu' -> 0 <= I64.v accu' /\ ((~ overflow) ==> I64.v accu' <= I64.v bound)
+  | None -> True
+  end /\
+  begin match accu, cols_size vcc, cols_size vccr with
+  | _, None, None -> True
+  | Some accu', Some md, Some md' -> if overflow then md > I64.v bound else md == I64.v accu' + md'
+  | _ -> False
+  end
+
+module Vec = Pulse.Lib.Vec
+module SM = Pulse.Lib.SeqMatch.Util
+
+fn compute_cols_size
+  (poverflow: ref bool)
+  (#overflow0: Ghost.erased bool)
+  (cc: PV.vec Parquet.Pulse.Toplevel.column_chunk)
+  (#vcc: Ghost.erased (list Parquet.Spec.Toplevel.Types.column_chunk))
+  (bound: I64.t)
+requires
+  PV.rel_vec_of_list rel_column_chunk cc vcc **
+  pts_to poverflow overflow0 **
+  pure (List.Tot.for_all column_size_nonnegative vcc)
+returns res: option I64.t
+ensures exists* overflow .
+  PV.rel_vec_of_list rel_column_chunk cc vcc **
+  pts_to poverflow overflow **
+  pure (compute_cols_size_postcond vcc bound overflow res)
+{
+  poverflow := (I64.lt bound 0L);
+  unfold (PV.rel_vec_of_list rel_column_chunk cc vcc);
+  with s . assert (Vec.pts_to cc.data s);
+  Vec.pts_to_len cc.data;
+  SM.seq_list_match_length rel_column_chunk _ _;
+  Trade.refl (SM.seq_list_match s vcc rel_column_chunk);
+  let mut paccu = Some 0L;
+  let mut pi = 0sz;
+  while (
+    let accu = !paccu;
+    if (Some? accu) {
+      let i = !pi;
+      SZ.lt i cc.len
+    } else {
+      false
+    }
+  ) invariant b . exists* sr vcr accu i overflow .
+    Vec.pts_to cc.data s **
+    SM.seq_list_match sr vcr rel_column_chunk **
+    pts_to paccu accu **
+    pts_to pi i **
+    pts_to poverflow overflow **
+    Trade.trade (SM.seq_list_match sr vcr rel_column_chunk) (SM.seq_list_match s vcc rel_column_chunk) **
+    pure (
+      compute_cols_size_invariant bound vcc vcr overflow accu /\
+      SZ.v i <= Seq.length s /\
+      sr == Seq.slice s (SZ.v i) (Seq.length s) /\
+      b == (Some? accu && SZ.v i < Seq.length s)
+    )
+  {
+    SM.seq_list_match_length rel_column_chunk _ _;
+    SM.seq_list_match_cons_elim_trade _ _ rel_column_chunk;
+    with gimpl gspec . assert (rel_column_chunk gimpl gspec);
+    let i = !pi;
+    let impl = Vec.op_Array_Access cc.data i;
+    rewrite each gimpl as impl;
+    unfold (rel_column_chunk impl gspec);
+    Rel.rel_option_cases rel_column_meta_data impl.meta_data gspec.meta_data;
+    match impl.meta_data {
+      None -> {
+        fold (rel_column_chunk impl gspec);
+        Trade.elim (rel_column_chunk _ _ ** _) _;
+        paccu := None;
+      }
+      Some md -> {
+        Rel.rel_option_eq_some rel_column_meta_data md (Some?.v gspec.meta_data);
+        Trade.rewrite_with_trade
+          (rel_opt rel_column_meta_data impl.meta_data gspec.meta_data)
+          (rel_column_meta_data md (Some?.v gspec.meta_data));
+        unfold (rel_column_meta_data md (Some?.v gspec.meta_data));
+        Rel.rel_pure_peek md.total_compressed_size _;
+        fold (rel_column_meta_data md (Some?.v gspec.meta_data));
+        Trade.elim (rel_column_meta_data _ _) _;
+        fold (rel_column_chunk impl gspec);
+        Trade.elim_hyp_l (rel_column_chunk _ _) _ _;
+        Trade.trans _ _ (SM.seq_list_match s vcc rel_column_chunk);
+        let overflow = !poverflow;
+        pi := SZ.add i 1sz;
+        if (not overflow) {
+          let accu = Some?.v !paccu;
+          if (I64.lt (I64.sub bound accu) md.total_compressed_size) {
+            poverflow := true;
+          } else {
+            paccu := Some (I64.add accu md.total_compressed_size);
+          }
+        }
+      }
+    }
+  };
+  SM.seq_list_match_length rel_column_chunk _ _;
+  Trade.elim _ _;
+  fold (PV.rel_vec_of_list rel_column_chunk cc vcc);
+  !paccu
+}
+
 assume val impl_validate_file_meta_data (footer_start: SZ.t) : PV.impl_pred emp rel_file_meta_data (validate_file_meta_data (SZ.v footer_start))
 
 assume val impl_validate_all_validate_column_chunk (pm: perm) : PV.impl_pred2 #_ #_ #_ #_ emp (pts_to_bytes pm) rel_column_chunk validate_all_validate_column_chunk
