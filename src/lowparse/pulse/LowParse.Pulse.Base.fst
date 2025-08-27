@@ -291,6 +291,10 @@ fn validate_nonempty (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t)
 }
 
 inline_for_extraction
+let validate_gen_ext (#t: Type0) (#k1: Ghost.erased parser_kind) (#p1: parser k1 t) (#precond: slprop) (v1: validator_gen precond p1) (#k2: Ghost.erased parser_kind) (p2: parser k2 t { forall x . parse p1 x == parse p2 x }) : validator_gen precond #_ #k2 p2 =
+  v1
+
+inline_for_extraction
 let validate_ext (#t: Type0) (#k1: Ghost.erased parser_kind) (#p1: parser k1 t) (v1: validator p1) (#k2: Ghost.erased parser_kind) (p2: parser k2 t { forall x . parse p1 x == parse p2 x }) : validator #_ #k2 p2 =
   v1
 
