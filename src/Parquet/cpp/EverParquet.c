@@ -42,6 +42,13 @@ bool Parquet_Pulse_Toplevel0_validate_is_PAR1(Pulse_Lib_Slice_slice__uint8_t inp
   return 80U == v0 && 65U == v1 && 82U == v2 && 49U == v3;
 }
 
+bool Parquet_Pulse_Toplevel0_impl_validate_row_group_aux(Parquet_Pulse_Toplevel_row_group rg)
+{
+  KRML_MAYBE_UNUSED_VAR(rg);
+  KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n", __FILE__, __LINE__, "");
+  KRML_HOST_EXIT(255U);
+}
+
 static bool uu___is_Some__int64_t(FStar_Pervasives_Native_option__int64_t projectee)
 {
   if (projectee.tag == FStar_Pervasives_Native_Some)
@@ -124,15 +131,69 @@ Parquet_Pulse_Toplevel0_compute_cols_size(
 }
 
 bool
+Parquet_Pulse_Toplevel0_impl_validate_file_meta_data_aux(
+  int64_t data_size,
+  Parquet_Pulse_Toplevel_file_meta_data md
+)
+{
+  KRML_MAYBE_UNUSED_VAR(data_size);
+  KRML_MAYBE_UNUSED_VAR(md);
+  KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n", __FILE__, __LINE__, "");
+  KRML_HOST_EXIT(255U);
+}
+
+bool
 Parquet_Pulse_Toplevel0_impl_validate_file_meta_data(
   size_t footer_start,
   Parquet_Pulse_Toplevel_file_meta_data md
 )
 {
-  KRML_MAYBE_UNUSED_VAR(footer_start);
-  KRML_MAYBE_UNUSED_VAR(md);
-  KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n", __FILE__, __LINE__, "");
-  KRML_HOST_EXIT(255U);
+  uint64_t footer_start_u64 = (uint64_t)footer_start;
+  if ((size_t)footer_start_u64 != footer_start)
+    return false;
+  else if (footer_start_u64 >= 9223372036854775808ULL)
+    return false;
+  else
+  {
+    int64_t footer_start64 = (int64_t)footer_start_u64;
+    bool __anf0 = Parquet_Pulse_Toplevel0_impl_validate_file_meta_data_aux(footer_start64, md);
+    if (__anf0)
+    {
+      size_t pi = (size_t)0U;
+      bool pres = true;
+      bool __anf01 = pres;
+      bool cond;
+      if (__anf01)
+      {
+        size_t i = pi;
+        cond = i < md.row_groups.len;
+      }
+      else
+        cond = false;
+      while (cond)
+      {
+        size_t i0 = pi;
+        Parquet_Pulse_Toplevel_row_group elt = md.row_groups.data[i0];
+        bool res = Parquet_Pulse_Toplevel0_impl_validate_row_group_aux(elt);
+        pres = res;
+        if (res)
+          pi = i0 + (size_t)1U;
+        bool __anf01 = pres;
+        bool ite;
+        if (__anf01)
+        {
+          size_t i = pi;
+          ite = i < md.row_groups.len;
+        }
+        else
+          ite = false;
+        cond = ite;
+      }
+      return pres;
+    }
+    else
+      return false;
+  }
 }
 
 static size_t len__uint8_t(Pulse_Lib_Slice_slice__uint8_t s)

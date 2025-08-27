@@ -2,8 +2,8 @@ all: verify extract
 
 EVERPARSE_SRC_PATH = $(realpath ..)
 
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/lowparse/pulse $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/pulse
-ALREADY_CACHED := *,-Parquet,-CDDL.Pulse.Types.Base,-CDDL.Spec.Bijection,
+INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/lowparse/pulse $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/pulse
+ALREADY_CACHED := *,-Parquet,-CDDL.Pulse.Types.Base,-CDDL.Spec.Bijection,-CBOR.Spec.Util
 FSTAR_DEP_OPTIONS += --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice'
 OUTPUT_DIRECTORY := _output
 

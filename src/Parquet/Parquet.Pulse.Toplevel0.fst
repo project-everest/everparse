@@ -94,14 +94,6 @@ let compute_cols_size_postcond
     if overflow then md > I64.v bound else md == I64.v md'
   | _ -> False
 
-noextract [@@noextract_to "krml"]
-let column_size_nonnegative
-  (cc: column_chunk)
-: Tot bool
-= match cc.meta_data with
-  | None -> true
-  | Some md -> I64.v md.total_compressed_size >= 0
-
 let rec cols_size_nonnegative
   (cc: list column_chunk)
 : Lemma
@@ -136,6 +128,13 @@ let compute_cols_size_invariant
 
 module Vec = Pulse.Lib.Vec
 module SM = Pulse.Lib.SeqMatch.Util
+
+fn impl_validate_row_group_aux () : PV.impl_pred #_ #_ emp rel_row_group validate_row_group_aux =
+  (rg: _)
+  (vrg: _)
+{
+  admit ()
+}
 
 fn compute_cols_size
   (poverflow: ref bool)
@@ -228,11 +227,57 @@ ensures exists* overflow .
   !paccu
 }
 
-fn impl_validate_file_meta_data (footer_start: SZ.t) : PV.impl_pred #_ #_ emp rel_file_meta_data (validate_file_meta_data (SZ.v footer_start)) =
+noextract [@@noextract_to "krml"]
+let validate_file_meta_data_aux (data_size: I64.t) (md: file_meta_data) : Tot bool =
+  List.Tot.for_all (validate_row_group_size data_size) md.row_groups &&
+  ranges_disjoint (list_option_map rg_range md.row_groups)
+
+fn impl_validate_file_meta_data_aux (data_size: I64.t) : PV.impl_pred #_ #_ emp rel_file_meta_data (validate_file_meta_data_aux data_size) =
   (md: _)
   (vmd: _)
 {
   admit ()
+}
+
+module U = CBOR.Spec.Util
+
+let _ : squash (pow2 63 == 9223372036854775808) = _ by (FStar.Tactics.trefl ())
+
+let list_for_all_validate_row_group_eq
+  (footer_start64: I64.t)
+  (l: list row_group)
+: Lemma
+  (List.Tot.for_all (validate_row_group footer_start64) l == (
+    List.Tot.for_all (validate_row_group_size footer_start64) l &&
+    List.Tot.for_all validate_row_group_aux l
+  ))
+=
+  U.list_for_all_ext (validate_row_group footer_start64) (U.andp (validate_row_group_size footer_start64) validate_row_group_aux) l (fun _ -> ());
+  U.list_for_all_andp (validate_row_group_size footer_start64) validate_row_group_aux l
+
+fn impl_validate_file_meta_data (footer_start: SZ.t) : PV.impl_pred #_ #_ emp rel_file_meta_data (validate_file_meta_data (SZ.v footer_start)) =
+  (md: _)
+  (vmd: _)
+{
+  assume (pure (SZ.fits_u64));
+  let footer_start_u64 = SZ.sizet_to_uint64 footer_start;
+  if (SZ.uint64_to_sizet footer_start_u64 <> footer_start) {
+    false
+  } else if (U64.gte footer_start_u64 9223372036854775808uL) {
+    false
+  } else {
+    let footer_start64 = FStar.Int.Cast.uint64_to_int64 footer_start_u64;
+    assert (pure (I64.v footer_start64 == SZ.v footer_start));
+    list_for_all_validate_row_group_eq footer_start64 vmd.row_groups;
+    if (impl_validate_file_meta_data_aux footer_start64 md _) {
+      unfold (rel_file_meta_data md vmd);
+      let res = PV.impl_for_all _ _ _ (impl_validate_row_group_aux ()) md.row_groups _;
+      fold (rel_file_meta_data md vmd);
+      res
+    } else {
+      false
+    }
+  }
 }
 
 module I32 = FStar.Int32

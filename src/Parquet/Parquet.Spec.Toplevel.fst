@@ -252,8 +252,29 @@ let first_column_offset
       | None -> None
       | Some cmd -> Some (offset_of_column_chunk cmd)
 
+let validate_row_group_aux (rg: row_group) : Tot bool =
+  let sorted_ok =
+    if List.Tot.for_all (fun c -> Some? c.meta_data) rg.columns then
+    (* cols should be contiguous according to the documentation, but we found some counterexamples, so we relax the requirement to cols being sorted *)
+    columns_are_sorted rg.columns
+    else true
+  in
+  let cols_ok =
+    List.Tot.for_all validate_column_chunk rg.columns (* each column chunk passes *)
+  in
+  sorted_ok && cols_ok
+
+let column_size_nonnegative
+  (cc: column_chunk)
+: Tot bool
+= match cc.meta_data with
+  | None -> true
+  | Some md -> I64.v md.total_compressed_size >= 0
+
 let validate_row_group_size (data_size: I64.t) (rg: row_group) : Tot bool =
     (* sum of col sizes equals row‑group size (when available) *)
+  List.Tot.for_all column_size_nonnegative rg.columns &&
+  begin
     let total_row_size = match rg.total_compressed_size with
     | None -> data_size
     | Some sz -> sz
@@ -267,21 +288,13 @@ let validate_row_group_size (data_size: I64.t) (rg: row_group) : Tot bool =
       | None -> true
       | Some total_sz -> total_sz <= (* should be =, but column chunks are not contiguous, see below *) I64.v total_row_size
     end
+  end
 
 val validate_row_group : I64.t -> row_group -> Tot bool
 
 let validate_row_group data_size rg =
-  let rg_size_ok = validate_row_group_size data_size rg in
-  let sorted_ok =
-    if List.Tot.for_all (fun c -> Some? c.meta_data) rg.columns then
-    (* cols should be contiguous according to the documentation, but we found some counterexamples, so we relax the requirement to cols being sorted *)
-    columns_are_sorted rg.columns
-    else true
-  in
-  let cols_ok =
-    List.Tot.for_all validate_column_chunk rg.columns (* each column chunk passes *)
-  in
-  rg_size_ok && sorted_ok && cols_ok
+  validate_row_group_size data_size rg &&
+  validate_row_group_aux rg
 
 let rg_range (rg: row_group) : option range =
   match first_column_offset rg, rg.total_compressed_size with
