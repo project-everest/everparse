@@ -42,6 +42,12 @@ let rel_int32   : rel PP.int32 PS.int32 = Rel.rel_pure _
 [@@pulse_unfold]
 let rel_int64   : rel PP.int64 PS.int64 = Rel.rel_pure _
 [@@pulse_unfold]
+let rel_opt_int16   : rel (option PP.int16) (option PS.int16) = Rel.rel_pure _
+[@@pulse_unfold]
+let rel_opt_int32   : rel (option PP.int32) (option PS.int32) = Rel.rel_pure _
+[@@pulse_unfold]
+let rel_opt_int64   : rel (option PP.int64) (option PS.int64) = Rel.rel_pure _
+[@@pulse_unfold]
 let rel_string  : rel string string = Rel.rel_pure _
 
 // Enums
@@ -88,7 +94,7 @@ let rel_page_encoding_stats : rel PP.page_encoding_stats PS.page_encoding_stats 
 // size_statistics: only vec<->list conversions
 let rel_size_statistics : rel PP.size_statistics PS.size_statistics =
   mk_rel (fun (x: PP.size_statistics) (y: PS.size_statistics) ->
-    rel_opt rel_int64 x.unencoded_byte_array_data_bytes y.unencoded_byte_array_data_bytes **
+    rel_opt_int64 x.unencoded_byte_array_data_bytes y.unencoded_byte_array_data_bytes **
     rel_opt (rel_vec_of_list rel_int64) x.repetition_level_histogram y.repetition_level_histogram **
     rel_opt (rel_vec_of_list rel_int64) x.definition_level_histogram y.definition_level_histogram
   )
@@ -103,8 +109,8 @@ let rel_statistics : rel PP.statistics PS.statistics =
   mk_rel (fun (x: PP.statistics) (y: PS.statistics) ->
     rel_opt rel_bytes x.max y.max **
     rel_opt rel_bytes x.min y.min **
-    rel_opt rel_int64 x.null_count y.null_count **
-    rel_opt rel_int64 x.distinct_count y.distinct_count **
+    rel_opt_int64 x.null_count y.null_count **
+    rel_opt_int64 x.distinct_count y.distinct_count **
     rel_opt rel_bytes x.max_value y.max_value **
     rel_opt rel_bytes x.min_value y.min_value **
     rel_opt rel_bool  x.is_max_value_exact y.is_max_value_exact **
@@ -146,7 +152,7 @@ let rel_page_header : rel PP.page_header PS.page_header =
     rel_page_type x.ptype y.ptype **
     rel_int32 x.uncompressed_page_size y.uncompressed_page_size **
     rel_int32 x.compressed_page_size y.compressed_page_size **
-    rel_opt rel_int32 x.crc y.crc **
+    rel_opt_int32 x.crc y.crc **
     rel_opt rel_data_page_header x.data_page_header y.data_page_header **
     rel_opt rel_index_page_header x.index_page_header y.index_page_header **
     rel_opt rel_dictionary_page_header x.dictionary_page_header y.dictionary_page_header **
@@ -164,12 +170,12 @@ let rel_column_meta_data : rel PP.column_meta_data PS.column_meta_data =
     rel_int64 x.total_compressed_size y.total_compressed_size **
     rel_opt (rel_vec_of_list rel_key_value) x.key_value_metadata y.key_value_metadata **
     rel_int64 x.data_page_offset y.data_page_offset **
-    rel_opt rel_int64 x.index_page_offset y.index_page_offset **
-    rel_opt rel_int64 x.dictionary_page_offset y.dictionary_page_offset **
+    rel_opt_int64 x.index_page_offset y.index_page_offset **
+    rel_opt_int64 x.dictionary_page_offset y.dictionary_page_offset **
     rel_opt rel_statistics x.statistics y.statistics **
     rel_opt (rel_vec_of_list rel_page_encoding_stats) x.encoding_stats y.encoding_stats **
-    rel_opt rel_int64 x.bloom_filter_offset y.bloom_filter_offset **
-    rel_opt rel_int32 x.bloom_filter_length y.bloom_filter_length **
+    rel_opt_int64 x.bloom_filter_offset y.bloom_filter_offset **
+    rel_opt_int32 x.bloom_filter_length y.bloom_filter_length **
     rel_opt rel_size_statistics x.size_statistics y.size_statistics **
     rel_opt rel_geospatial_statistics x.geospatial_statistics y.geospatial_statistics
   )
@@ -199,10 +205,10 @@ let rel_column_chunk : rel PP.column_chunk PS.column_chunk =
     rel_opt rel_string x.file_path y.file_path **
     rel_int64 x.file_offset y.file_offset **
     rel_opt rel_column_meta_data x.meta_data y.meta_data **
-    rel_opt rel_int64 x.offset_index_offset y.offset_index_offset **
-    rel_opt rel_int32 x.offset_index_length y.offset_index_length **
-    rel_opt rel_int64 x.column_index_offset y.column_index_offset **
-    rel_opt rel_int32 x.column_index_length y.column_index_length **
+    rel_opt_int64 x.offset_index_offset y.offset_index_offset **
+    rel_opt_int32 x.offset_index_length y.offset_index_length **
+    rel_opt_int64 x.column_index_offset y.column_index_offset **
+    rel_opt_int32 x.column_index_length y.column_index_length **
     rel_opt rel_column_crypto_meta_data x.crypto_metadata y.crypto_metadata **
     rel_opt rel_string x.encrypted_column_metadata y.encrypted_column_metadata
   )
@@ -213,9 +219,9 @@ let rel_row_group : rel PP.row_group PS.row_group =
     rel_int64 x.total_byte_size y.total_byte_size **
     rel_int64 x.num_rows y.num_rows **
     rel_opt (rel_vec_of_list rel_sorting_column) x.sorting_columns y.sorting_columns **
-    rel_opt rel_int64 x.file_offset y.file_offset **
-    rel_opt rel_int64 x.total_compressed_size y.total_compressed_size **
-    rel_opt rel_int16 x.ordinal y.ordinal
+    rel_opt_int64 x.file_offset y.file_offset **
+    rel_opt_int64 x.total_compressed_size y.total_compressed_size **
+    rel_opt_int16 x.ordinal y.ordinal
   )
 
 let rel_page_location : rel PP.page_location PS.page_location = Rel.rel_pure _
