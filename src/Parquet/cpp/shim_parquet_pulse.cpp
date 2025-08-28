@@ -598,6 +598,7 @@ extern "C" bool Parquet_Pulse_Toplevel0_validate_footer(
     Parquet_Pulse_Toplevel_bytes input, size_t* poffset) {
   try {
     parse_footer_thrift(input.data + *poffset, input.len - *poffset);
+    *poffset = input.len;
     return true;
   } catch (apache::thrift::protocol::TProtocolException&) {
     return false;
@@ -616,6 +617,7 @@ extern "C" bool Parquet_Pulse_Toplevel0_validate_offset_index(
     Parquet_Pulse_Toplevel_bytes input, size_t* poffset) {
   try {
     parse_offset_index_thrift(input.data + *poffset, input.len - *poffset);
+    *poffset = input.len;
     return true;
   } catch (apache::thrift::protocol::TProtocolException&) {
     return false;
@@ -632,6 +634,7 @@ extern "C" bool Parquet_Pulse_Toplevel0_validate_page_header(
     Parquet_Pulse_Toplevel_bytes input, size_t* poffset) {
   try {
     parse_page_header_thrift(input.data + *poffset, input.len - *poffset);
+    *poffset = input.len;
     return true;
   } catch (apache::thrift::protocol::TProtocolException&) {
     return false;
