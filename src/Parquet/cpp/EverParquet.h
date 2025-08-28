@@ -935,9 +935,46 @@ Parquet_Pulse_Toplevel0_compute_cols_size(
 );
 
 bool
+Parquet_Pulse_Toplevel0_impl_column_size_nonnegative(Parquet_Pulse_Toplevel_column_chunk cc);
+
+int64_t
+Parquet_Pulse_Toplevel0_impl_offset_of_column_chunk(Parquet_Pulse_Toplevel_column_meta_data cc);
+
+FStar_Pervasives_Native_option__int64_t
+Parquet_Pulse_Toplevel0_impl_first_column_offset(Parquet_Pulse_Toplevel_row_group rg);
+
+typedef struct K___int64_t_int64_t_s
+{
+  int64_t fst;
+  int64_t snd;
+}
+K___int64_t_int64_t;
+
+typedef struct FStar_Pervasives_Native_option___int64_t___int64_t__s
+{
+  FStar_Pervasives_Native_option____ tag;
+  K___int64_t_int64_t v;
+}
+FStar_Pervasives_Native_option___int64_t___int64_t_;
+
+FStar_Pervasives_Native_option___int64_t___int64_t_
+Parquet_Pulse_Toplevel0_impl_rg_range(
+  Parquet_Pulse_Toplevel_row_group rg,
+  FStar_Pervasives_Native_option__int64_t csz
+);
+
+bool
+Parquet_Pulse_Toplevel0_impl_rg_disjoint(
+  FStar_Pervasives_Native_option___int64_t___int64_t_ rg,
+  size_t n,
+  FStar_Pervasives_Native_option___int64_t___int64_t_ *crg,
+  size_t i
+);
+
+bool
 Parquet_Pulse_Toplevel0_impl_validate_file_meta_data_aux(
   int64_t data_size,
-  Parquet_Pulse_Toplevel_file_meta_data md
+  Parquet_Pulse_Vec_vec__Parquet_Pulse_Toplevel_row_group l
 );
 
 bool

@@ -281,6 +281,66 @@ let option_i64_v_pair (x: option (I64.t & I64.t)) : Tot (option range) =
 
 module GR = Pulse.Lib.GhostReference
 
+fn impl_offset_of_column_chunk (_: unit) : PV.impl_f_t #_ #_ #_ offset_of_column_chunk rel_column_meta_data
+= (cc: _) (vcc: _) {
+  unfold (rel_column_meta_data cc vcc);
+  Rel.rel_pure_peek cc.dictionary_page_offset _;
+  Rel.rel_pure_peek cc.index_page_offset _;
+  Rel.rel_pure_peek cc.data_page_offset _;
+  fold (rel_column_meta_data cc vcc);
+  (match cc.dictionary_page_offset with
+  | Some off -> off
+  | None ->
+    match cc.index_page_offset with
+    | Some off -> if I64.lt off cc.data_page_offset then off else cc.data_page_offset
+    | None -> cc.data_page_offset
+  )
+}
+
+fn impl_first_column_offset (_: unit) : PV.impl_f_t #_ #_ #_ first_column_offset rel_row_group
+= (rg: _) (vrg: _) {
+  unfold (rel_row_group rg vrg);
+  let first_column = PV.impl_hd rel_column_chunk rg.columns;
+  Rel.rel_option_cases rel_column_chunk first_column _;
+  match first_column {
+    None -> {
+      Trade.elim _ _;
+      fold (rel_row_group rg vrg);
+      None
+    }
+    Some first -> {
+      let gfirst = Ghost.hide (List.Tot.hd vrg.columns);
+      Trade.rewrite_with_trade
+        (Rel.rel_option rel_column_chunk _ _)
+        (rel_column_chunk first gfirst);
+      Trade.trans (rel_column_chunk first gfirst) _ _;
+      unfold (rel_column_chunk first gfirst);
+      Rel.rel_option_cases rel_column_meta_data first.meta_data _;
+      match first.meta_data {
+        norewrite
+        Some cmd -> {
+          Trade.rewrite_with_trade
+            (Rel.rel_option rel_column_meta_data _ _)
+            (rel_column_meta_data cmd (Some?.v gfirst.meta_data));
+          let res = impl_offset_of_column_chunk () cmd _;
+          Trade.elim (rel_column_meta_data _ _) _;
+          fold (rel_column_chunk first gfirst);
+          Trade.elim _ _;
+          fold (rel_row_group rg vrg);
+          Some res
+        }
+        norewrite
+        None -> {
+          fold (rel_column_chunk first gfirst);
+          Trade.elim _ _;
+          fold (rel_row_group rg vrg);
+          None
+        }
+      }
+    }
+  }
+}
+
 fn impl_rg_range
   (rg: Parquet.Pulse.Toplevel.row_group)
   (vrg: Ghost.erased row_group)
@@ -291,7 +351,60 @@ returns res: option (I64.t & I64.t)
 ensures
   rel_row_group rg vrg ** pure (option_i64_v_pair res == rg_range vrg)
 {
-  admit ()
+  let fco = impl_first_column_offset () rg _;
+  unfold (rel_row_group rg vrg);
+  Rel.rel_pure_peek rg.total_compressed_size _;
+  if (Some? fco && Some? rg.total_compressed_size) {
+    fold (rel_row_group rg vrg);
+    Some (Some?.v fco, Some?.v rg.total_compressed_size)
+  } else {
+    match csz {
+      None -> {
+        fold (rel_row_group rg vrg);
+        None
+      }
+      Some total_sz -> {
+        let o = PV.impl_hd _ rg.columns;
+        Rel.rel_option_cases rel_column_chunk o _;
+        match o {
+          None -> {
+            Trade.elim _ _;
+            fold (rel_row_group rg vrg);
+            None
+          }
+          Some first -> {
+            Trade.rewrite_with_trade
+              (Rel.rel_option rel_column_chunk _ _)
+              (rel_column_chunk first (List.Tot.hd vrg.columns));
+            Trade.trans (rel_column_chunk _ _) _ _;
+            unfold (rel_column_chunk first (List.Tot.hd vrg.columns));
+            Rel.rel_option_cases rel_column_meta_data first.meta_data _;
+            match first.meta_data {
+              norewrite
+              None -> {
+                fold (rel_column_chunk first (List.Tot.hd vrg.columns));
+                Trade.elim _ _;
+                fold (rel_row_group rg vrg);
+                None
+              }
+              norewrite
+              Some cmd -> {
+                Trade.rewrite_with_trade
+                  (Rel.rel_option rel_column_meta_data _ _)
+                  (rel_column_meta_data cmd (Some?.v (List.Tot.hd vrg.columns).meta_data));
+                let off = impl_offset_of_column_chunk () cmd _;
+                Trade.elim (rel_column_meta_data cmd (Some?.v (List.Tot.hd vrg.columns).meta_data)) _;
+                fold (rel_column_chunk first (List.Tot.hd vrg.columns));
+                Trade.elim _ _;
+                fold (rel_row_group rg vrg);
+                Some (off, total_sz)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 fn impl_rg_disjoint

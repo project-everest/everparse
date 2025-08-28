@@ -25,6 +25,65 @@ let rel_vec_of_list
     exists* s . pts_to x.data s ** SM.seq_list_match s y r ** pure (V.is_full_vec x.data /\ V.length x.data == SZ.v x.len)
   )
 
+let option_hd
+  (#t: Type)
+  (l: list t)
+: Tot (option t)
+= match l with
+  | [] -> None
+  | a :: _ -> Some a
+
+inline_for_extraction
+fn impl_hd
+  (#implt #spect: Type0)
+  (r: Rel.rel implt spect)
+  (x: vec implt)
+  (#y: Ghost.erased (list spect))
+requires
+  rel_vec_of_list r x y
+returns z: option implt
+ensures
+  Rel.rel_option r z (option_hd y) **
+  Trade.trade
+    (Rel.rel_option r z (option_hd y))
+    (rel_vec_of_list r x y)
+{
+  unfold (rel_vec_of_list r x y);
+  V.pts_to_len x.data;
+  SM.seq_list_match_length r _ y;
+  if (0sz = x.len) {
+    fold (rel_vec_of_list r x y);
+    rewrite emp as (Rel.rel_option r None (option_hd y));
+    ghost fn aux (_: unit)
+    requires rel_vec_of_list r x y ** Rel.rel_option r None (option_hd y)
+    ensures rel_vec_of_list r x y
+    {
+      rewrite (Rel.rel_option r None (option_hd y)) as emp
+    };
+    Trade.intro _ _ _ aux;
+    None
+  } else {
+    with s . assert (pts_to x.data s ** SM.seq_list_match s y r);
+    ghost fn aux (_: unit)
+    requires emp ** (pts_to x.data s ** SM.seq_list_match s y r)
+    ensures rel_vec_of_list r x y
+    {
+      fold (rel_vec_of_list r x y)
+    };
+    Trade.intro _ _ _ aux;
+    let rv = V.op_Array_Access x.data 0sz;
+    Trade.elim_hyp_l _ _ _;
+    SM.seq_list_match_cons_elim_trade _ _ r;
+    Trade.trans _ _ (rel_vec_of_list r x y);
+    Trade.elim_hyp_r _ _ _;
+    Trade.rewrite_with_trade
+      (r _ _)
+      (Rel.rel_option r (Some rv) (option_hd y));
+    Trade.trans _ _ (rel_vec_of_list r x y);
+    Some rv
+  }
+}
+
 // Two possible views:
 // impl_pred #spec_footer_t #pulse_footer_t (p_data |-> data) r_spec_pulse_footer validate_all
 // alternative: 
