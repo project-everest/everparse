@@ -18,12 +18,15 @@ submodules:
 
 FStar:
 	git clone "https://github.com/FStarLang/FStar" $@
+	cd $@ && git checkout 627e8590a81fd0afb9d9b20391105d7d355922b4
 
 karamel:
 	git clone "https://github.com/FStarLang/karamel" $@
+	cd $@ && git checkout 354791911c6b40d15a41cda7a0e3560da1cf31a1
 
 pulse:
 	git clone "https://github.com/FStarLang/pulse" $@
+	cd $@ && git checkout 5080e77ae60d2e7e30e2f6a1c3d2ec1f61d1a9df
 
 everest:
 	git clone "https://github.com/project-everest/everest" $@
