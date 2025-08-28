@@ -32,7 +32,7 @@ CPPFLAGS += -I. \
 CFLAGS   += -O2 -Wall -Wextra -Wpedantic -fvisibility=hidden
 CXXFLAGS += -O2 -std=c++17 -Wall -Wextra -Wpedantic -fvisibility=hidden
 
-LDLIBS   += -lthrift -L$(THRIFT_PREFIX)/lib
+LDLIBS   += $(THRIFT_PREFIX)/lib/libthrift.a -L$(THRIFT_PREFIX)/lib
 
 # Some platforms need pthread explicitly with Thrift:
 LDLIBS   += -pthread
