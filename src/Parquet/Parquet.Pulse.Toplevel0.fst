@@ -91,7 +91,8 @@ let compute_cols_size_postcond
 = match cols_size vcc, res with
   | None, None -> True
   | Some md, Some md' ->
-    if overflow then md > I64.v bound else md == I64.v md'
+    (overflow == (md > I64.v bound)) /\
+    ((~ overflow) ==> md == I64.v md')
   | _ -> False
 
 let rec cols_size_nonnegative
@@ -228,15 +229,218 @@ ensures exists* overflow .
 }
 
 noextract [@@noextract_to "krml"]
-let validate_file_meta_data_aux (data_size: I64.t) (md: file_meta_data) : Tot bool =
-  List.Tot.for_all (validate_row_group_size data_size) md.row_groups &&
-  ranges_disjoint (list_option_map rg_range md.row_groups)
+let validate_file_meta_data_aux (data_size: I64.t) (rg: list row_group) : Tot bool =
+  List.Tot.for_all (validate_row_group_size data_size) rg &&
+  ranges_disjoint (list_option_map rg_range rg)
 
-fn impl_validate_file_meta_data_aux (data_size: I64.t) : PV.impl_pred #_ #_ emp rel_file_meta_data (validate_file_meta_data_aux data_size) =
-  (md: _)
-  (vmd: _)
+fn impl_column_size_nonnegative () : PV.impl_pred #_ #_  emp rel_column_chunk column_size_nonnegative
+= (cc: _)
+  (vcc: _)
+{
+  unfold (rel_column_chunk cc vcc);
+  Rel.rel_option_cases rel_column_meta_data _ _;
+  match cc.meta_data {
+    norewrite
+    None -> {
+      fold (rel_column_chunk cc vcc);
+      true
+    }
+    norewrite
+    Some md -> {
+      Trade.rewrite_with_trade
+        (Rel.rel_option rel_column_meta_data _ _)
+        (rel_column_meta_data md (Some?.v vcc.meta_data));
+      unfold (rel_column_meta_data md (Some?.v vcc.meta_data));
+      Rel.rel_pure_peek md.total_compressed_size _;
+      fold (rel_column_meta_data md (Some?.v vcc.meta_data));
+      Trade.elim _ _;
+      fold (rel_column_chunk cc vcc);
+      (I64.lte 0L md.total_compressed_size);
+    }
+  }
+}
+
+let rec validate_file_meta_data_aux_append (data_size: I64.t) (ll lr: list row_group) : Lemma
+  (ensures validate_file_meta_data_aux data_size (List.Tot.append ll lr) ==> validate_file_meta_data_aux data_size lr)
+  (decreases ll)
+= match ll with
+  | [] -> ()
+  | a :: q -> validate_file_meta_data_aux_append data_size q lr
+
+noextract [@@noextract_to "krml"]
+let option_i64_v (x: option I64.t) : Tot (option int) =
+  match x with
+  | None -> None
+  | Some x' -> Some (I64.v x')
+
+noextract [@@noextract_to "krml"]
+let option_i64_v_pair (x: option (I64.t & I64.t)) : Tot (option range) =
+  match x with
+  | None -> None
+  | Some (x', y') -> Some ({ start = I64.v x'; len = I64.v y' })
+
+module GR = Pulse.Lib.GhostReference
+
+fn impl_rg_range
+  (rg: Parquet.Pulse.Toplevel.row_group)
+  (vrg: Ghost.erased row_group)
+  (csz: option I64.t)
+requires
+  rel_row_group rg vrg ** pure (option_i64_v csz == cols_size vrg.columns)
+returns res: option (I64.t & I64.t)
+ensures
+  rel_row_group rg vrg ** pure (option_i64_v_pair res == rg_range vrg)
 {
   admit ()
+}
+
+fn impl_rg_disjoint
+  (rg: option (I64.t & I64.t))
+  (n: SZ.t)
+  (crg: Vec.vec (option (I64.t & I64.t)))
+  (srg: Ghost.erased (Seq.seq (option (I64.t & I64.t))))
+  (i: SZ.t)
+requires
+  Vec.pts_to crg srg ** pure (SZ.v i <= SZ.v n /\ SZ.v n == Seq.length srg)
+returns res: bool
+ensures
+  Vec.pts_to crg srg ** pure (SZ.v i <= SZ.v n /\ SZ.v n == Seq.length srg /\
+    res == (if Some? rg then List.Tot.for_all (disjoint (Some?.v (option_i64_v_pair rg))) (list_option_map option_i64_v_pair (Seq.seq_to_list (Seq.slice srg (SZ.v i) (Seq.length srg)))) else true)
+  )
+{
+  admit ()
+}
+
+fn impl_validate_file_meta_data_aux (data_size: I64.t) : PV.impl_pred #_ #_ emp (PV.rel_vec_of_list rel_row_group) (validate_file_meta_data_aux data_size) =
+  (l: _)
+  (vl: _)
+{
+  unfold (PV.rel_vec_of_list rel_row_group l vl);
+  Vec.pts_to_len l.data;
+  SM.seq_list_match_length rel_row_group _ _;
+  with s . assert (Vec.pts_to l.data s);
+  if (0sz = l.len) {
+    fold (PV.rel_vec_of_list rel_row_group l vl);
+    true
+  } else {
+    let rg_ranges = Vec.alloc (None #(I64.t & I64.t)) l.len;
+    let mut pres = true;
+    let mut pi = (l.len <: SZ.t);
+    let pll = GR.alloc (Ghost.reveal vl);
+    let plr = GR.alloc (Nil #row_group);
+    SM.seq_list_match_nil_intro Seq.empty [] rel_row_group;
+    List.Tot.append_l_nil vl;
+    while (
+      let res = !pres;
+      if (res) {
+        (!pi <> 0sz)
+      } else {
+        false
+      }
+    ) invariant b . exists* res sl sr vll vlr i cl . (
+      Vec.pts_to l.data s **
+      GR.pts_to pll vll **
+      GR.pts_to plr vlr **
+      SM.seq_list_match sl vll rel_row_group **
+      SM.seq_list_match sr vlr rel_row_group **
+      pts_to pres res **
+      pts_to pi i **
+      Vec.pts_to rg_ranges cl **
+      pure (
+        Ghost.reveal vl == List.Tot.append vll vlr /\
+        SZ.v i <= Seq.length s /\
+        SZ.v i == List.Tot.length vll /\
+        sl == Seq.slice s 0 (SZ.v i) /\
+        Seq.equal sr (Seq.slice s (SZ.v i) (Seq.length s)) /\
+        b == (res && Cons? vll) /\
+        Seq.length cl == Seq.length s /\
+        (res ==> (
+          validate_file_meta_data_aux data_size vlr /\
+          list_option_map option_i64_v_pair (Seq.seq_to_list (Seq.slice cl (SZ.v i) (Seq.length cl))) == list_option_map rg_range vlr
+        )) /\
+        ((~ res) ==> (~ (validate_file_meta_data_aux data_size vl)))
+      )
+    ) {
+      with sl sr vll vlr . assert (
+        GR.pts_to pll vll ** SM.seq_list_match sl vll rel_row_group **
+        GR.pts_to plr vlr ** SM.seq_list_match sr vlr rel_row_group
+      );
+      SM.seq_list_match_length rel_row_group sl vll;
+      let i' = !pi;
+      let i = SZ.sub i' 1sz;
+      let rg = Vec.op_Array_Access l.data i;
+      Seq.lemma_split sl (SZ.v i);
+      let sl1 = Ghost.hide (Seq.slice sl 0 (SZ.v i));
+      let sl2 = Ghost.hide (Seq.slice sl (SZ.v i) (Seq.length sl));
+      List.Tot.lemma_unsnoc_snoc vll;
+      List.Tot.lemma_unsnoc_length vll;
+      let vll' = Ghost.hide (fst (List.Tot.unsnoc vll));
+      let vrg = Ghost.hide (snd (List.Tot.unsnoc vll));
+      rewrite (SM.seq_list_match sl vll rel_row_group)
+        as (SM.seq_list_match (Seq.append sl1 sl2) (List.Tot.append vll' [Ghost.reveal vrg]) rel_row_group);
+      SM.seq_list_match_append_elim rel_row_group _ _ _ _;
+      SM.seq_list_match_cons_elim sl2 [Ghost.reveal vrg] rel_row_group;
+      SM.seq_list_match_nil_elim _ [] rel_row_group;
+      with grg . assert (rel_row_group grg vrg);
+      rewrite (rel_row_group grg vrg) as (rel_row_group rg vrg);
+      pi := i;
+      GR.op_Colon_Equals pll (Ghost.reveal vll');
+      GR.op_Colon_Equals plr (Ghost.reveal vrg :: vlr);
+      List.Tot.append_assoc vll' [Ghost.reveal vrg] vlr;
+      validate_file_meta_data_aux_append data_size vll' (Ghost.reveal vrg :: vlr);
+      unfold (rel_row_group rg vrg);
+      if not (PV.impl_for_all _ _ _ (impl_column_size_nonnegative ()) rg.columns _) {
+        fold (rel_row_group rg vrg);
+        SM.seq_list_match_cons_intro rg (Ghost.reveal vrg) sr vlr rel_row_group;
+        pres := false;
+      } else {
+        let mut poverflow = false;
+        Rel.rel_pure_peek rg.total_compressed_size _;
+        let bound = (match rg.total_compressed_size with None -> data_size | Some sz -> sz);
+        if (I64.lt data_size bound) {
+          fold (rel_row_group rg vrg);
+          SM.seq_list_match_cons_intro rg (Ghost.reveal vrg) sr vlr rel_row_group;
+          pres := false;
+        } else {
+          let csz = compute_cols_size poverflow rg.columns bound;
+          let overflow = !poverflow;
+          if (match csz with Some sz -> overflow || I64.gt sz bound | _ -> false) {
+            fold (rel_row_group rg vrg);
+            SM.seq_list_match_cons_intro rg (Ghost.reveal vrg) sr vlr rel_row_group;
+            pres := false;
+          } else {
+            with cl . assert (Vec.pts_to rg_ranges cl);
+            Vec.pts_to_len rg_ranges;
+            fold (rel_row_group rg vrg);
+            let rrg = impl_rg_range rg _ csz;
+            Vec.op_Array_Assignment rg_ranges i rrg;
+            with cl' . assert (Vec.pts_to rg_ranges cl');
+            Vec.pts_to_len rg_ranges;
+            assert (pure (validate_row_group_size data_size vrg));
+            Seq.cons_head_tail (Seq.slice cl' (SZ.v i) (Seq.length cl'));
+            Seq.lemma_seq_to_list_cons rrg (Seq.slice cl (SZ.v i + 1) (Seq.length cl));
+            assert (pure (list_option_map option_i64_v_pair (Seq.seq_to_list (Seq.slice cl' (SZ.v i) (Seq.length cl'))) == list_option_map rg_range (Ghost.reveal vrg :: vlr)));
+            SM.seq_list_match_cons_intro rg (Ghost.reveal vrg) sr vlr rel_row_group;
+            pres := impl_rg_disjoint rrg l.len rg_ranges _ i';
+          }
+        }
+      }
+    };
+    with sl sr vll vlr . assert (
+      GR.pts_to pll vll ** SM.seq_list_match sl vll rel_row_group **
+      GR.pts_to plr vlr ** SM.seq_list_match sr vlr rel_row_group
+    );
+    SM.seq_list_match_append_intro rel_row_group sl vll sr vlr;
+    with gi . assert (pts_to pi gi);
+    Seq.lemma_split s (SZ.v gi);
+    rewrite (SM.seq_list_match (Seq.append sl sr) (List.Tot.append vll vlr) rel_row_group)
+      as (SM.seq_list_match s vl rel_row_group);
+    fold (PV.rel_vec_of_list rel_row_group l vl);
+    GR.free pll;
+    GR.free plr;
+    Vec.free rg_ranges;
+    !pres
+  }
 }
 
 module U = CBOR.Spec.Util
@@ -269,12 +473,13 @@ fn impl_validate_file_meta_data (footer_start: SZ.t) : PV.impl_pred #_ #_ emp re
     let footer_start64 = FStar.Int.Cast.uint64_to_int64 footer_start_u64;
     assert (pure (I64.v footer_start64 == SZ.v footer_start));
     list_for_all_validate_row_group_eq footer_start64 vmd.row_groups;
-    if (impl_validate_file_meta_data_aux footer_start64 md _) {
-      unfold (rel_file_meta_data md vmd);
+    unfold (rel_file_meta_data md vmd);
+    if (impl_validate_file_meta_data_aux footer_start64 md.row_groups _) {
       let res = PV.impl_for_all _ _ _ (impl_validate_row_group_aux ()) md.row_groups _;
       fold (rel_file_meta_data md vmd);
       res
     } else {
+      fold (rel_file_meta_data md vmd);
       false
     }
   }
