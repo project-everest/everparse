@@ -847,13 +847,15 @@ fn impl_validate_page_location_all (pm: perm) : PV.impl_pred2 #_ #_ #_ #_ emp (p
   (vpl: _)
 {
   unfold rel_page_location pl vpl;
-  // Rel.rel_pure_peek pl _;
+  Rel.rel_pure_peek pl _;
+  assume (pure (SZ.fits_u64));
+  assume (pure (SZ.fits_u32));
   let offset_sz = SZ.uint64_to_sizet (FStar.Int.Cast.int64_to_uint64 pl.offset);
   let length_sz = SZ.uint32_to_sizet (FStar.Int.Cast.int32_to_uint32 pl.compressed_page_size);
   let res = 
   (
-    (pl.offset >= 0L) &&
-    (pl.compressed_page_size >= 0L) &&
+    (I64.gte pl.offset 0L) &&
+    (I32.gte pl.compressed_page_size 0l) &&
     (validate_jump_page offset_sz length_sz pm data vdata pl vpl data vdata)
     // validate_jump_with_offset_and_size_then_parse 
     //   emp offset_sz length_sz validate_page data vdata
@@ -904,14 +906,8 @@ fn impl_validate_offset_index_all (pm: perm) : PV.impl_pred3 #_ #_ #_ #_ #_ #_ e
   (oi: _)
   (voi: _)
 {
-  unfold (rel_column_chunk cc vcc);
-  unfold (rel_offset_index oi voi);
-  let res = 
   ( impl_validate_offset_index () cc vcc oi voi &&
   impl_validate_offset_index_all_aux pm data vdata oi voi );
-  fold (rel_offset_index oi voi);
-  fold (rel_column_chunk cc vcc);
-  res
   // admit ()
 }
 

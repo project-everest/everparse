@@ -1039,17 +1039,109 @@ Parquet_Pulse_Toplevel0_validate_page(Pulse_Lib_Slice_slice__uint8_t input, size
 }
 
 bool
+Parquet_Pulse_Toplevel0_validate_jump_page(
+  size_t offset_sz,
+  size_t size_sz,
+  Pulse_Lib_Slice_slice__uint8_t data,
+  Parquet_Spec_Toplevel_Types_page_location pl,
+  Pulse_Lib_Slice_slice__uint8_t input
+)
+{
+  KRML_MAYBE_UNUSED_VAR(data);
+  KRML_MAYBE_UNUSED_VAR(pl);
+  if (offset_sz > len__uint8_t(input))
+    return false;
+  else if (size_sz > len__uint8_t(input) - offset_sz)
+    return false;
+  else
+  {
+    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    s_ = split__uint8_t(input, offset_sz + size_sz);
+    Pulse_Lib_Slice_slice__uint8_t s1 = s_.fst;
+    Pulse_Lib_Slice_slice__uint8_t s2 = s_.snd;
+    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    _letpattern = { .fst = s1, .snd = s2 };
+    Pulse_Lib_Slice_slice__uint8_t s10 = _letpattern.fst;
+    size_t poffset = offset_sz;
+    bool is_valid = Parquet_Pulse_Toplevel0_validate_page(s10, &poffset);
+    size_t off = poffset;
+    return off == offset_sz + size_sz && is_valid;
+  }
+}
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_page_location_all(
+  Pulse_Lib_Slice_slice__uint8_t data,
+  Parquet_Spec_Toplevel_Types_page_location pl
+)
+{
+  size_t offset_sz = (size_t)(uint64_t)pl.offset;
+  size_t length_sz = (size_t)(uint32_t)pl.compressed_page_size1;
+  bool __anf0 = Parquet_Pulse_Toplevel0_validate_jump_page(offset_sz, length_sz, data, pl, data);
+  return pl.offset >= (int64_t)0 && pl.compressed_page_size1 >= (int32_t)0 && __anf0;
+}
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_offset_index_all_aux(
+  Pulse_Lib_Slice_slice__uint8_t data,
+  Parquet_Pulse_Toplevel_offset_index oi
+)
+{
+  size_t pi = (size_t)0U;
+  bool pres = true;
+  bool __anf0 = pres;
+  bool cond;
+  if (__anf0)
+  {
+    size_t i = pi;
+    cond = i < oi.page_locations.len;
+  }
+  else
+    cond = false;
+  while (cond)
+  {
+    size_t i0 = pi;
+    Parquet_Spec_Toplevel_Types_page_location elt = oi.page_locations.data[i0];
+    bool res = Parquet_Pulse_Toplevel0_impl_validate_page_location_all(data, elt);
+    pres = res;
+    if (res)
+      pi = i0 + (size_t)1U;
+    bool __anf0 = pres;
+    bool ite;
+    if (__anf0)
+    {
+      size_t i = pi;
+      ite = i < oi.page_locations.len;
+    }
+    else
+      ite = false;
+    cond = ite;
+  }
+  return pres;
+}
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_offset_index(
+  Parquet_Pulse_Toplevel_column_chunk cc,
+  Parquet_Pulse_Toplevel_offset_index oi
+)
+{
+  KRML_MAYBE_UNUSED_VAR(cc);
+  KRML_MAYBE_UNUSED_VAR(oi);
+  KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n", __FILE__, __LINE__, "");
+  KRML_HOST_EXIT(255U);
+}
+
+bool
 Parquet_Pulse_Toplevel0_impl_validate_offset_index_all(
   Parquet_Pulse_Toplevel_column_chunk cc,
   Pulse_Lib_Slice_slice__uint8_t data,
   Parquet_Pulse_Toplevel_offset_index oi
 )
 {
-  KRML_MAYBE_UNUSED_VAR(cc);
-  KRML_MAYBE_UNUSED_VAR(data);
-  KRML_MAYBE_UNUSED_VAR(oi);
-  KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n", __FILE__, __LINE__, "");
-  KRML_HOST_EXIT(255U);
+  bool __anf1 = Parquet_Pulse_Toplevel0_impl_validate_offset_index(cc, oi);
+  bool __anf0 = Parquet_Pulse_Toplevel0_impl_validate_offset_index_all_aux(data, oi);
+  return __anf1 && __anf0;
 }
 
 bool

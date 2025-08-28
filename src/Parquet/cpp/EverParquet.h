@@ -1031,6 +1031,33 @@ bool
 Parquet_Pulse_Toplevel0_validate_page(Pulse_Lib_Slice_slice__uint8_t input, size_t *poffset);
 
 bool
+Parquet_Pulse_Toplevel0_validate_jump_page(
+  size_t offset_sz,
+  size_t size_sz,
+  Pulse_Lib_Slice_slice__uint8_t data,
+  Parquet_Spec_Toplevel_Types_page_location pl,
+  Pulse_Lib_Slice_slice__uint8_t input
+);
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_page_location_all(
+  Pulse_Lib_Slice_slice__uint8_t data,
+  Parquet_Spec_Toplevel_Types_page_location pl
+);
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_offset_index_all_aux(
+  Pulse_Lib_Slice_slice__uint8_t data,
+  Parquet_Pulse_Toplevel_offset_index oi
+);
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_offset_index(
+  Parquet_Pulse_Toplevel_column_chunk cc,
+  Parquet_Pulse_Toplevel_offset_index oi
+);
+
+bool
 Parquet_Pulse_Toplevel0_impl_validate_offset_index_all(
   Parquet_Pulse_Toplevel_column_chunk cc,
   Pulse_Lib_Slice_slice__uint8_t data,
