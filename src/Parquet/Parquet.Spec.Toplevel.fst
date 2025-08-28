@@ -90,7 +90,10 @@ let range_end (r: range) : int = r.start + r.len
 let disjoint (r1 r2: range) : Tot bool =
   let end1 = range_end r1 in
   let end2 = range_end r2 in
+  r1.start >= 0 && r1.len >= 0 &&
+  r2.start >= 0 && r2.len >= 0 && (
   (r1.start >= end2) || (r2.start >= end1)
+)
 
 
 (* Check if a list of ranges are disjoint *)

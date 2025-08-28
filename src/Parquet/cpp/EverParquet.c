@@ -348,6 +348,67 @@ Parquet_Pulse_Toplevel0_impl_rg_range(
 }
 
 bool
+Parquet_Pulse_Toplevel0_impl_disjoint(
+  FStar_Pervasives_Native_option___int64_t___int64_t_ rg,
+  FStar_Pervasives_Native_option___int64_t___int64_t_ rg1
+)
+{
+  if (rg.tag == FStar_Pervasives_Native_Some)
+  {
+    int64_t len = rg.v.snd;
+    int64_t st = rg.v.fst;
+    if (rg1.tag == FStar_Pervasives_Native_Some)
+    {
+      int64_t len1 = rg1.v.snd;
+      int64_t st1 = rg1.v.fst;
+      if ((int64_t)0 <= st && (int64_t)0 <= len && (int64_t)0 <= st1 && (int64_t)0 <= len1)
+      {
+        bool ite;
+        if (st <= st1)
+          ite = st1 - st >= len;
+        else
+          ite = false;
+        if (ite)
+          return true;
+        else if (st1 <= st)
+          return st - st1 >= len1;
+        else
+          return false;
+      }
+      else
+        return false;
+    }
+    else
+    {
+      KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+        __FILE__,
+        __LINE__,
+        "unreachable (pattern matches are exhaustive in F*)");
+      KRML_HOST_EXIT(255U);
+    }
+  }
+  else
+  {
+    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
+  }
+}
+
+static bool
+uu___is_None___int64_t___int64_t_(
+  FStar_Pervasives_Native_option___int64_t___int64_t_ projectee
+)
+{
+  if (projectee.tag == FStar_Pervasives_Native_None)
+    return true;
+  else
+    return false;
+}
+
+bool
 Parquet_Pulse_Toplevel0_impl_rg_disjoint(
   FStar_Pervasives_Native_option___int64_t___int64_t_ rg,
   size_t n,
@@ -355,12 +416,45 @@ Parquet_Pulse_Toplevel0_impl_rg_disjoint(
   size_t i
 )
 {
-  KRML_MAYBE_UNUSED_VAR(rg);
-  KRML_MAYBE_UNUSED_VAR(n);
-  KRML_MAYBE_UNUSED_VAR(crg);
-  KRML_MAYBE_UNUSED_VAR(i);
-  KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n", __FILE__, __LINE__, "");
-  KRML_HOST_EXIT(255U);
+  if (uu___is_None___int64_t___int64_t_(rg))
+    return true;
+  else
+  {
+    size_t pj = i;
+    bool pres = true;
+    bool __anf0 = pres;
+    bool cond;
+    if (__anf0)
+    {
+      size_t __anf01 = pj;
+      cond = __anf01 < n;
+    }
+    else
+      cond = false;
+    while (cond)
+    {
+      size_t j = pj;
+      FStar_Pervasives_Native_option___int64_t___int64_t_ rg1 = crg[j];
+      if (uu___is_None___int64_t___int64_t_(rg1))
+        pj = j + (size_t)1U;
+      else
+      {
+        pres = Parquet_Pulse_Toplevel0_impl_disjoint(rg, rg1);
+        pj = j + (size_t)1U;
+      }
+      bool __anf0 = pres;
+      bool ite;
+      if (__anf0)
+      {
+        size_t __anf01 = pj;
+        ite = __anf01 < n;
+      }
+      else
+        ite = false;
+      cond = ite;
+    }
+    return pres;
+  }
 }
 
 bool

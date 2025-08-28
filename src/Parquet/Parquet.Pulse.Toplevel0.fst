@@ -407,6 +407,21 @@ ensures
   }
 }
 
+let impl_disjoint
+  (rg: option (I64.t & I64.t))
+  (rg1: option (I64.t & I64.t))
+: Pure bool
+  (requires Some? rg /\ Some? rg1)
+  (ensures (fun res ->  res == disjoint (Some?.v (option_i64_v_pair rg)) (Some?.v (option_i64_v_pair rg1))))
+=
+  let Some (st, len) = rg in
+  let Some (st1, len1) = rg1 in
+  if I64.lte 0L st && I64.lte 0L len && I64.lte 0L st1 && I64.lte 0L len1
+  then
+    (if I64.lte st st1 then I64.gte (I64.sub st1 st) len else false) ||
+    (if I64.lte st1 st then I64.gte (I64.sub st st1) len1 else false)
+  else false
+
 fn impl_rg_disjoint
   (rg: option (I64.t & I64.t))
   (n: SZ.t)
@@ -421,7 +436,40 @@ ensures
     res == (if Some? rg then List.Tot.for_all (disjoint (Some?.v (option_i64_v_pair rg))) (list_option_map option_i64_v_pair (Seq.seq_to_list (Seq.slice srg (SZ.v i) (Seq.length srg)))) else true)
   )
 {
-  admit ()
+  if (None? rg) {
+      true
+  } else {
+      let mut pj = i;
+      let mut pres = true;
+      Vec.pts_to_len crg;
+      while (
+        if (!pres) {
+          SZ.lt !pj n;
+        } else {
+          false
+        }
+      ) invariant b . exists* j res . (
+        Vec.pts_to crg srg **
+        pts_to pj j **
+        pts_to pres res **
+        pure (
+          SZ.v j <= SZ.v n /\
+          b == (SZ.v j < SZ.v n && res) /\
+          List.Tot.for_all (disjoint (Some?.v (option_i64_v_pair rg))) (list_option_map option_i64_v_pair (Seq.seq_to_list (Seq.slice srg (SZ.v i) (Seq.length srg)))) == (res && List.Tot.for_all (disjoint (Some?.v (option_i64_v_pair rg))) (list_option_map option_i64_v_pair (Seq.seq_to_list (Seq.slice srg (SZ.v j) (Seq.length srg)))))
+        )
+      ) {
+        let j = !pj;
+        Seq.cons_head_tail (Seq.slice srg (SZ.v j) (Seq.length srg));
+        let rg1 = Vec.op_Array_Access crg j;
+        if (None? rg1) {
+            pj := (SZ.add j 1sz);
+        } else {
+            pres := impl_disjoint rg rg1;
+            pj := (SZ.add j 1sz);
+        }
+      };
+      !pres
+  }
 }
 
 fn impl_validate_file_meta_data_aux (data_size: I64.t) : PV.impl_pred #_ #_ emp (PV.rel_vec_of_list rel_row_group) (validate_file_meta_data_aux data_size) =

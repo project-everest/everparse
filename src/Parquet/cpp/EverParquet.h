@@ -964,6 +964,12 @@ Parquet_Pulse_Toplevel0_impl_rg_range(
 );
 
 bool
+Parquet_Pulse_Toplevel0_impl_disjoint(
+  FStar_Pervasives_Native_option___int64_t___int64_t_ rg,
+  FStar_Pervasives_Native_option___int64_t___int64_t_ rg1
+);
+
+bool
 Parquet_Pulse_Toplevel0_impl_rg_disjoint(
   FStar_Pervasives_Native_option___int64_t___int64_t_ rg,
   size_t n,
