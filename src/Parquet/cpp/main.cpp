@@ -91,6 +91,14 @@ static void print_summary(const std::string& path, const parquet::FileMetaData& 
             << "\n";
 }
 
+extern "C" bool Parquet_Pulse_Toplevel0_print_bool(Prims_string s, bool x) {
+  if (! x) {
+    std::cout << s << " FAILED" << std::endl;
+  }
+  return x;
+}
+
+
 int main(int argc, char** argv) {
   if (argc < 2) {
     std::cerr << "Usage: " << argv[0] << " <file.parquet> [more.parquet ...]\n";

@@ -21,6 +21,8 @@ module U8 = FStar.UInt8
 
 include Parquet.Pulse.Rel
 
+assume val print_bool (s: string) (x: bool) : stt bool emp (fun y -> pure (x == y))
+
 fn validate_is_PAR1 ()
 : validate_filter_test_t
   #_ #_ #_
@@ -248,7 +250,7 @@ fn impl_column_size_nonnegative () : PV.impl_pred #_ #_  emp rel_column_chunk co
       fold (rel_column_meta_data md (Some?.v vcc.meta_data));
       Trade.elim _ _;
       fold (rel_column_chunk cc vcc);
-      (I64.lte 0L md.total_compressed_size);
+      print_bool "impl_column_size_nonnegative" (I64.lte 0L md.total_compressed_size);
     }
   }
 }
@@ -326,7 +328,7 @@ fn impl_validate_column_chunk_offsets_ok () : PV.impl_pred #_ #_ emp rel_column_
       fold (rel_column_meta_data cmd (Some?.v vcc.meta_data));
       Trade.elim _ _;
       fold (rel_column_chunk cc vcc);
-      res
+      print_bool "impl_validate_column_chunk_offsets_ok" res
     }
   }
 }
@@ -346,7 +348,7 @@ fn impl_validate_column_chunk_idx_ok () : PV.impl_pred #_ #_ emp rel_column_chun
     (if Some? cc.column_index_offset then Some? cc.offset_index_offset else true)
   );
   fold (rel_column_chunk cc vcc);
-  res
+  print_bool "impl_validate_column_chunk_idx_ok" res
 }
 
 fn impl_validate_column_chunk () : PV.impl_pred #_ #_ emp rel_column_chunk validate_column_chunk =
@@ -420,7 +422,7 @@ fn impl_validate_row_group_sorted_ok () : PV.impl_pred #_ #_ emp rel_row_group v
   if (PV.impl_for_all _ _ (fun cc -> Some? cc.meta_data) (impl_column_chunk_some_meta_data ()) rg.columns _) {
     let res = impl_offsets_and_sizes_are_sorted _ _ (impl_column_chunk_offset ()) (impl_column_chunk_size ()) rg.columns;
     fold (rel_row_group rg vrg);
-    res
+    print_bool "impl_validate_row_group_sorted_ok" res
   } else {
     fold (rel_row_group rg vrg);
     true
@@ -435,7 +437,7 @@ fn impl_validate_row_group_aux () : PV.impl_pred #_ #_ emp rel_row_group validat
     unfold (rel_row_group rg vrg);
     let res = PV.impl_for_all _ _ _ (impl_validate_column_chunk ()) rg.columns _;
     fold (rel_row_group rg vrg);
-    res
+    print_bool "impl_validate_row_group_aux" res
   } else {
     false
   }
@@ -612,7 +614,7 @@ ensures
             pj := (SZ.add j 1sz);
         }
       };
-      !pres
+      print_bool "impl_rg_disjoint" !pres
   }
 }
 
@@ -744,7 +746,7 @@ fn impl_validate_file_meta_data_aux (data_size: I64.t) : PV.impl_pred #_ #_ emp 
     GR.free pll;
     GR.free plr;
     Vec.free rg_ranges;
-    !pres
+    print_bool "impl_validate_file_meta_data_aux" !pres
   }
 }
 
@@ -771,9 +773,9 @@ fn impl_validate_file_meta_data (footer_start: SZ.t) : PV.impl_pred #_ #_ emp re
   assume (pure (SZ.fits_u64));
   let footer_start_u64 = SZ.sizet_to_uint64 footer_start;
   if (SZ.uint64_to_sizet footer_start_u64 <> footer_start) {
-    false
+    print_bool "impl_validate_file_meta_data footer_start_fits" false
   } else if (U64.gte footer_start_u64 9223372036854775808uL) {
-    false
+    print_bool "impl_validate_file_meta_data footer_start_nonnegative" false
   } else {
     let footer_start64 = FStar.Int.Cast.uint64_to_int64 footer_start_u64;
     assert (pure (I64.v footer_start64 == SZ.v footer_start));
@@ -811,9 +813,9 @@ fn impl_validate_page_data (vph: Ghost.erased page_header) (ph: _) (pm: perm) : 
   fold (rel_page_header ph' vph);
   Trade.elim _ _;
   if (I32.lt ph'.compressed_page_size 0l) {
-    false
+    print_bool "impl_validate_page_data nonnegative" false
   } else {
-    (SZ.uint32_to_sizet (FStar.Int.Cast.int32_to_uint32 ph'.compressed_page_size) = S.len data)
+    print_bool "impl_validate_page_data" (SZ.uint32_to_sizet (FStar.Int.Cast.int32_to_uint32 ph'.compressed_page_size) = S.len data)
   }
 }
 
@@ -861,7 +863,7 @@ fn impl_validate_page_location_all (pm: perm) : PV.impl_pred2 #_ #_ #_ #_ emp (p
     //   emp offset_sz length_sz validate_page data vdata
   );
   fold rel_page_location pl vpl;
-  res
+  print_bool "impl_validate_page_location_all" res
 }
 
 fn impl_validate_offset_index_all_aux (pm: perm) : PV.impl_pred2 #_ #_ #_ #_ emp (pts_to_bytes pm) rel_offset_index validate_offset_index_all_aux
@@ -921,7 +923,7 @@ fn impl_validate_offset_index_first_loc () : PV.impl_pred2 #_ #_ #_ #_ emp rel_c
           let off = impl_offset_of_column_chunk () cmd _;
           Trade.elim _ _;
           fold (rel_column_chunk cc vcc);
-          (loc.offset = off)
+          print_bool "impl_validate_offset_index_first_loc" (loc.offset = off)
         }
       }
     }
@@ -991,7 +993,7 @@ fn impl_validate_offset_index_cc_page_offsets () : PV.impl_pred2 #_ #_ #_ #_ emp
         PV.impl_mem_map _ (fun pl -> pl.offset) (page_location_access_offset ()) cmd.data_page_offset oi.page_locations _
       );
       fold (rel_offset_index oi voi);
-      res
+      print_bool "impl_validate_offset_index_cc_page_offsets" res
     }
   }
 }
@@ -1089,7 +1091,7 @@ fn impl_validate_offset_index_col_size () : PV.impl_pred2 #_ #_ #_ #_ emp rel_co
       Trade.elim _ _;
       fold (PV.rel_vec_of_list rel_page_location oi.page_locations voi.page_locations);
       fold (rel_offset_index oi voi);
-      (!pres && (!paccu = md.total_compressed_size))
+      print_bool "impl_validate_offset_index_col_size" (!pres && (!paccu = md.total_compressed_size))
     }
   }
 }
@@ -1129,7 +1131,7 @@ fn impl_validate_offset_index () : PV.impl_pred2 #_ #_ #_ #_ emp rel_column_chun
           oi.page_locations;
         fold (rel_offset_index oi voi);
         assert (pure (res == page_offsets_are_contiguous voi.page_locations));
-        res
+        print_bool "impl_validate_offset_index" res
       } else {
         false
       }
@@ -1210,7 +1212,7 @@ fn impl_validate_all_validate_column_chunk (pm: perm) : PV.impl_pred2 #_ #_ #_ #
       tot_parse_filter_equiv parse_offset_index (validate_offset_index_all vcc vdata) (parser_of_tot_parser parse_offset_index);
       let res = validate_jump_offset_index offset_sz length_sz _ data vdata cc vcc data _;
       S.gather data;
-      res
+      print_bool "impl_validate_all_validate_column_chunk" res
     } else {
       false
     }
@@ -1279,6 +1281,7 @@ validate_filter_test_gen_t (pts_to_serialized (serialize_fldata_strong serialize
   (#pm': _)
   (#v: _)
 {
+  let _ = print_bool "Entering impl_validate_all" false;
   pts_to_serialized_fldata_strong_elim_trade serialize_footer (U32.v len) y;
   let f = read_footer y;
   Trade.trans (rel_file_meta_data _ _) _ _;
@@ -1286,7 +1289,7 @@ validate_filter_test_gen_t (pts_to_serialized (serialize_fldata_strong serialize
   let res = impl_validate_all0 _ f _ x _;
   Trade.elim (pts_to_bytes _ x _) _;
   Trade.elim (rel_file_meta_data _ _) _;
-  res
+  print_bool "impl_validate_all0" res
 }
 
 let validate_parquet (sq: squash SZ.fits_u32) : validator parse_parquet =

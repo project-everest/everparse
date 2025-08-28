@@ -910,6 +910,8 @@ Parquet_Pulse_Toplevel_file_meta_data;
 typedef Parquet_Spec_Toplevel_Types_file_crypto_meta_data
 Parquet_Pulse_Toplevel_file_crypto_meta_data;
 
+extern bool Parquet_Pulse_Toplevel0_print_bool(Prims_string s, bool x);
+
 typedef struct Pulse_Lib_Slice_slice__uint8_t_s
 {
   uint8_t *elt;

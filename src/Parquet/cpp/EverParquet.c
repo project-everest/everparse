@@ -131,7 +131,9 @@ Parquet_Pulse_Toplevel0_impl_column_size_nonnegative(Parquet_Pulse_Toplevel_colu
   else if (cc.meta_data.tag == FStar_Pervasives_Native_Some)
   {
     Parquet_Pulse_Toplevel_column_meta_data md = cc.meta_data.v;
-    return (int64_t)0 <= md.total_compressed_size;
+    return
+      Parquet_Pulse_Toplevel0_print_bool("impl_column_size_nonnegative",
+        (int64_t)0 <= md.total_compressed_size);
   }
   else
   {
@@ -188,38 +190,32 @@ Parquet_Pulse_Toplevel0_impl_validate_column_chunk_offsets_ok(
   {
     Parquet_Pulse_Toplevel_column_meta_data cmd = cc.meta_data.v;
     int64_t data_off = cmd.data_page_offset;
+    bool res;
     if (cmd.dictionary_page_offset.tag == FStar_Pervasives_Native_None)
-      return true;
+      res = true;
     else if (cmd.dictionary_page_offset.tag == FStar_Pervasives_Native_Some)
     {
       int64_t dict_off = cmd.dictionary_page_offset.v;
       if (dict_off < data_off)
+      {
+        bool ite;
         if (cmd.index_page_offset.tag == FStar_Pervasives_Native_None)
-          return true;
+          ite = true;
         else if (cmd.index_page_offset.tag == FStar_Pervasives_Native_Some)
         {
           int64_t idx_off = cmd.index_page_offset.v;
-          return dict_off < idx_off;
+          ite = dict_off < idx_off;
         }
         else
-        {
-          KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
-            __FILE__,
-            __LINE__,
-            "unreachable (pattern matches are exhaustive in F*)");
-          KRML_HOST_EXIT(255U);
-        }
+          ite = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
+        res = ite;
+      }
       else
-        return false;
+        res = false;
     }
     else
-    {
-      KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
-        __FILE__,
-        __LINE__,
-        "unreachable (pattern matches are exhaustive in F*)");
-      KRML_HOST_EXIT(255U);
-    }
+      res = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
+    return Parquet_Pulse_Toplevel0_print_bool("impl_validate_column_chunk_offsets_ok", res);
   }
   else
   {
@@ -244,18 +240,24 @@ Parquet_Pulse_Toplevel0_impl_validate_column_chunk_idx_ok(
   Parquet_Pulse_Toplevel_column_chunk cc
 )
 {
+  bool res;
   if
   (
     uu___is_Some__int64_t(cc.offset_index_offset) == uu___is_Some__int32_t(cc.offset_index_length)
     &&
       uu___is_Some__int64_t(cc.column_index_offset) == uu___is_Some__int32_t(cc.column_index_length)
   )
+  {
+    bool ite;
     if (uu___is_Some__int64_t(cc.column_index_offset))
-      return uu___is_Some__int64_t(cc.offset_index_offset);
+      ite = uu___is_Some__int64_t(cc.offset_index_offset);
     else
-      return true;
+      ite = true;
+    res = ite;
+  }
   else
-    return false;
+    res = false;
+  return Parquet_Pulse_Toplevel0_print_bool("impl_validate_column_chunk_idx_ok", res);
 }
 
 bool Parquet_Pulse_Toplevel0_impl_validate_column_chunk(Parquet_Pulse_Toplevel_column_chunk cc)
@@ -356,8 +358,10 @@ Parquet_Pulse_Toplevel0_impl_validate_row_group_sorted_ok(Parquet_Pulse_Toplevel
   }
   bool __anf00 = pres0;
   if (__anf00)
+  {
+    bool res0;
     if (rg.columns.len < (size_t)2U)
-      return true;
+      res0 = true;
     else
     {
       Parquet_Pulse_Toplevel_column_chunk __anf01 = rg.columns.data[0U];
@@ -411,8 +415,10 @@ Parquet_Pulse_Toplevel0_impl_validate_row_group_sorted_ok(Parquet_Pulse_Toplevel
           ite = false;
         cond = ite;
       }
-      return pres;
+      res0 = pres;
     }
+    return Parquet_Pulse_Toplevel0_print_bool("impl_validate_row_group_sorted_ok", res0);
+  }
   else
     return true;
 }
@@ -452,7 +458,8 @@ bool Parquet_Pulse_Toplevel0_impl_validate_row_group_aux(Parquet_Pulse_Toplevel_
         ite = false;
       cond = ite;
     }
-    return pres;
+    bool res = pres;
+    return Parquet_Pulse_Toplevel0_print_bool("impl_validate_row_group_aux", res);
   }
   else
     return false;
@@ -727,7 +734,8 @@ Parquet_Pulse_Toplevel0_impl_rg_disjoint(
         ite = false;
       cond = ite;
     }
-    return pres;
+    bool __anf00 = pres;
+    return Parquet_Pulse_Toplevel0_print_bool("impl_rg_disjoint", __anf00);
   }
 }
 
@@ -852,7 +860,8 @@ Parquet_Pulse_Toplevel0_impl_validate_file_meta_data_aux(
       cond0 = ite;
     }
     KRML_HOST_FREE(rg_ranges);
-    return pres;
+    bool __anf0 = pres;
+    return Parquet_Pulse_Toplevel0_print_bool("impl_validate_file_meta_data_aux", __anf0);
   }
 }
 
@@ -864,9 +873,13 @@ Parquet_Pulse_Toplevel0_impl_validate_file_meta_data(
 {
   uint64_t footer_start_u64 = (uint64_t)footer_start;
   if ((size_t)footer_start_u64 != footer_start)
-    return false;
+    return
+      Parquet_Pulse_Toplevel0_print_bool("impl_validate_file_meta_data footer_start_fits",
+        false);
   else if (footer_start_u64 >= 9223372036854775808ULL)
-    return false;
+    return
+      Parquet_Pulse_Toplevel0_print_bool("impl_validate_file_meta_data footer_start_nonnegative",
+        false);
   else
   {
     int64_t footer_start64 = (int64_t)footer_start_u64;
@@ -926,9 +939,11 @@ Parquet_Pulse_Toplevel0_impl_validate_page_data(
 {
   Parquet_Pulse_Toplevel_page_header ph_ = Parquet_Pulse_Toplevel0_read_page_header(ph);
   if (ph_.compressed_page_size < (int32_t)0)
-    return false;
+    return Parquet_Pulse_Toplevel0_print_bool("impl_validate_page_data nonnegative", false);
   else
-    return (size_t)(uint32_t)ph_.compressed_page_size == len__uint8_t(data);
+    return
+      Parquet_Pulse_Toplevel0_print_bool("impl_validate_page_data",
+        (size_t)(uint32_t)ph_.compressed_page_size == len__uint8_t(data));
 }
 
 typedef struct __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t_s
@@ -1078,7 +1093,8 @@ Parquet_Pulse_Toplevel0_impl_validate_page_location_all(
   size_t offset_sz = (size_t)(uint64_t)pl.offset;
   size_t length_sz = (size_t)(uint32_t)pl.compressed_page_size1;
   bool __anf0 = Parquet_Pulse_Toplevel0_validate_jump_page(offset_sz, length_sz, data, pl, data);
-  return pl.offset >= (int64_t)0 && pl.compressed_page_size1 >= (int32_t)0 && __anf0;
+  bool res = pl.offset >= (int64_t)0 && pl.compressed_page_size1 >= (int32_t)0 && __anf0;
+  return Parquet_Pulse_Toplevel0_print_bool("impl_validate_page_location_all", res);
 }
 
 bool
@@ -1159,7 +1175,9 @@ Parquet_Pulse_Toplevel0_impl_validate_offset_index_first_loc(
     {
       Parquet_Pulse_Toplevel_column_meta_data cmd = cc.meta_data.v;
       int64_t off = Parquet_Pulse_Toplevel0_impl_offset_of_column_chunk(cmd);
-      return loc.offset == off;
+      return
+        Parquet_Pulse_Toplevel0_print_bool("impl_validate_offset_index_first_loc",
+          loc.offset == off);
     }
     else
     {
@@ -1297,7 +1315,8 @@ Parquet_Pulse_Toplevel0_impl_validate_offset_index_cc_page_offsets(
       cond = ite;
     }
     bool __anf00 = pres;
-    return __anf2 && __anf1 && __anf00;
+    bool res = __anf2 && __anf1 && __anf00;
+    return Parquet_Pulse_Toplevel0_print_bool("impl_validate_offset_index_cc_page_offsets", res);
   }
   else
   {
@@ -1346,7 +1365,9 @@ Parquet_Pulse_Toplevel0_impl_validate_offset_index_col_size(
     }
     bool __anf10 = pres;
     int64_t __anf0 = paccu;
-    return __anf10 && __anf0 == md.total_compressed_size;
+    return
+      Parquet_Pulse_Toplevel0_print_bool("impl_validate_offset_index_col_size",
+        __anf10 && __anf0 == md.total_compressed_size);
   }
   else
   {
@@ -1384,8 +1405,10 @@ Parquet_Pulse_Toplevel0_impl_validate_offset_index(
     {
       bool __anf02 = Parquet_Pulse_Toplevel0_impl_validate_offset_index_col_size(cc, oi);
       if (__anf02)
+      {
+        bool res0;
         if (oi.page_locations.len < (size_t)2U)
-          return true;
+          res0 = true;
         else
         {
           Parquet_Spec_Toplevel_Types_page_location __anf03 = oi.page_locations.data[0U];
@@ -1439,8 +1462,10 @@ Parquet_Pulse_Toplevel0_impl_validate_offset_index(
               ite = false;
             cond = ite;
           }
-          return pres;
+          res0 = pres;
         }
+        return Parquet_Pulse_Toplevel0_print_bool("impl_validate_offset_index", res0);
+      }
       else
         return false;
     }
@@ -1558,12 +1583,16 @@ Parquet_Pulse_Toplevel0_impl_validate_all_validate_column_chunk(
         size_t offset_sz = (size_t)(uint64_t)offset;
         size_t length_sz = (size_t)(uint32_t)length;
         if ((int64_t)0 <= offset && (int32_t)0 <= length)
-          return
+        {
+          bool
+          res =
             Parquet_Pulse_Toplevel0_validate_jump_offset_index(offset_sz,
               length_sz,
               data,
               cc,
               data);
+          return Parquet_Pulse_Toplevel0_print_bool("impl_validate_all_validate_column_chunk", res);
+        }
         else
           return false;
       }
@@ -1751,8 +1780,10 @@ Parquet_Pulse_Toplevel0_impl_validate_all(
 )
 {
   KRML_MAYBE_UNUSED_VAR(len);
+  Parquet_Pulse_Toplevel0_print_bool("Entering impl_validate_all", false);
   Parquet_Pulse_Toplevel_file_meta_data f = Parquet_Pulse_Toplevel0_read_footer(y);
-  return Parquet_Pulse_Toplevel0_impl_validate_all0(f, x);
+  bool res = Parquet_Pulse_Toplevel0_impl_validate_all0(f, x);
+  return Parquet_Pulse_Toplevel0_print_bool("impl_validate_all0", res);
 }
 
 bool
