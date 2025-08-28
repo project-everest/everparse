@@ -335,16 +335,19 @@ let validate_file_meta_data footer_start fmd =
   ranges_disjoint (list_option_map rg_range fmd.row_groups) &&
   List.Tot.for_all (validate_row_group (I64.int_to_t footer_start)) fmd.row_groups
 
+let page_location_offset_and_size
+  (loc: page_location)
+: Tot (int & int)
+= ((I64.v loc.offset <: int), (I32.v loc.compressed_page_size <: int))
+
 let page_offsets_are_contiguous (locs: list page_location) : Tot bool =
   J.offsets_and_sizes_are_contiguous
-    (List.Tot.map (fun loc -> ((I64.v loc.offset <: int), (I32.v loc.compressed_page_size <: int))) locs)
+    (List.Tot.map page_location_offset_and_size locs)
 
 
 (* Once jump to OffsetIndex, validate its structure against the corresponding column_chunk *)
 
-val validate_offset_index (cc: column_chunk) (oi: offset_index) : Tot bool
-
-let validate_offset_index (cc: column_chunk) (oi: offset_index) : Tot bool =
+let validate_offset_index_first_loc (cc: column_chunk) (oi: offset_index) : Tot bool =
   let locs = oi.page_locations in
   let first_loc =
     // the first page location must be consistent with the (computed) page location in cc
@@ -362,6 +365,10 @@ let validate_offset_index (cc: column_chunk) (oi: offset_index) : Tot bool =
     | Some loc, Some off -> I64.v loc.offset = off
     | _ -> true
   in
+  first_loc_ok
+
+let validate_offset_index_cc_page_offsets (cc: column_chunk) (oi: offset_index) : Tot bool =
+  let locs = oi.page_locations in
   let cc_page_offsets_ok =
     // all page offsets (if present) in cc should be listed in `page_locations`
     match cc.meta_data with
@@ -378,14 +385,31 @@ let validate_offset_index (cc: column_chunk) (oi: offset_index) : Tot bool =
       end &&
       contains cmd.data_page_offset
   in
+  cc_page_offsets_ok
+
+let validate_offset_index_col_size_add
+  (acc: int)
+  (pl: page_location)
+: Tot int
+= acc + (let sz = I32.v pl.compressed_page_size in if sz >= 0 then sz else 0)
+
+let validate_offset_index_col_size (cc: column_chunk) (oi: offset_index) : Tot bool =
+  let locs = oi.page_locations in
   let col_size_ok =
     //compressed size matches meta
     match cc.meta_data with
     | None -> true
     | Some md ->
-      let s = List.Tot.fold_left (fun acc pl -> acc + I32.v pl.compressed_page_size) 0 locs in
+      let s = List.Tot.fold_left validate_offset_index_col_size_add 0 locs in
       s = I64.v md.total_compressed_size
   in
+  col_size_ok
+
+let validate_offset_index (cc: column_chunk) (oi: offset_index) : Tot bool =
+  let locs = oi.page_locations in
+  let first_loc_ok = validate_offset_index_first_loc cc oi in
+  let cc_page_offsets_ok = validate_offset_index_cc_page_offsets cc oi in
+  let col_size_ok = validate_offset_index_col_size cc oi in
   let contiguous_ok =
     page_offsets_are_contiguous locs
   in

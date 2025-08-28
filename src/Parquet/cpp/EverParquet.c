@@ -1120,16 +1120,335 @@ Parquet_Pulse_Toplevel0_impl_validate_offset_index_all_aux(
   return pres;
 }
 
+typedef struct option__Parquet_Spec_Toplevel_Types_page_location_s
+{
+  FStar_Pervasives_Native_option____ tag;
+  Parquet_Spec_Toplevel_Types_page_location v;
+}
+option__Parquet_Spec_Toplevel_Types_page_location;
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_offset_index_first_loc(
+  Parquet_Pulse_Toplevel_column_chunk cc,
+  Parquet_Pulse_Toplevel_offset_index oi
+)
+{
+  option__Parquet_Spec_Toplevel_Types_page_location first_loc;
+  if ((size_t)0U == oi.page_locations.len)
+    first_loc =
+      ((option__Parquet_Spec_Toplevel_Types_page_location){ .tag = FStar_Pervasives_Native_None });
+  else
+  {
+    Parquet_Spec_Toplevel_Types_page_location rv = oi.page_locations.data[0U];
+    first_loc =
+      (
+        (option__Parquet_Spec_Toplevel_Types_page_location){
+          .tag = FStar_Pervasives_Native_Some,
+          .v = rv
+        }
+      );
+  }
+  if (first_loc.tag == FStar_Pervasives_Native_None)
+    return true;
+  else if (first_loc.tag == FStar_Pervasives_Native_Some)
+  {
+    Parquet_Spec_Toplevel_Types_page_location loc = first_loc.v;
+    if (cc.meta_data.tag == FStar_Pervasives_Native_None)
+      return true;
+    else if (cc.meta_data.tag == FStar_Pervasives_Native_Some)
+    {
+      Parquet_Pulse_Toplevel_column_meta_data cmd = cc.meta_data.v;
+      int64_t off = Parquet_Pulse_Toplevel0_impl_offset_of_column_chunk(cmd);
+      return loc.offset == off;
+    }
+    else
+    {
+      KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+        __FILE__,
+        __LINE__,
+        "unreachable (pattern matches are exhaustive in F*)");
+      KRML_HOST_EXIT(255U);
+    }
+  }
+  else
+  {
+    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
+  }
+}
+
+int64_t
+Parquet_Pulse_Toplevel0_page_location_access_offset(
+  Parquet_Spec_Toplevel_Types_page_location pl
+)
+{
+  return pl.offset;
+}
+
+bool
+Parquet_Pulse_Toplevel0_option_offset_in_page_locations(
+  FStar_Pervasives_Native_option__int64_t o,
+  Parquet_Pulse_Vec_vec__Parquet_Spec_Toplevel_Types_page_location pl
+)
+{
+  if (o.tag == FStar_Pervasives_Native_None)
+    return true;
+  else if (o.tag == FStar_Pervasives_Native_Some)
+  {
+    int64_t off = o.v;
+    size_t pi = (size_t)0U;
+    bool pres = false;
+    bool __anf0 = pres;
+    bool cond;
+    if (__anf0)
+      cond = false;
+    else
+    {
+      size_t i = pi;
+      cond = i < pl.len;
+    }
+    while (cond)
+    {
+      size_t i0 = pi;
+      Parquet_Spec_Toplevel_Types_page_location elt = pl.data[i0];
+      int64_t z = Parquet_Pulse_Toplevel0_page_location_access_offset(elt);
+      bool res = z == off;
+      pres = res;
+      if (res)
+        pres = true;
+      else
+        pi = i0 + (size_t)1U;
+      bool __anf0 = pres;
+      bool ite;
+      if (__anf0)
+        ite = false;
+      else
+      {
+        size_t i = pi;
+        ite = i < pl.len;
+      }
+      cond = ite;
+    }
+    return pres;
+  }
+  else
+  {
+    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
+  }
+}
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_offset_index_cc_page_offsets(
+  Parquet_Pulse_Toplevel_column_chunk cc,
+  Parquet_Pulse_Toplevel_offset_index oi
+)
+{
+  if (cc.meta_data.tag == FStar_Pervasives_Native_None)
+    return true;
+  else if (cc.meta_data.tag == FStar_Pervasives_Native_Some)
+  {
+    Parquet_Pulse_Toplevel_column_meta_data cmd = cc.meta_data.v;
+    bool
+    __anf2 =
+      Parquet_Pulse_Toplevel0_option_offset_in_page_locations(cmd.dictionary_page_offset,
+        oi.page_locations);
+    bool
+    __anf1 =
+      Parquet_Pulse_Toplevel0_option_offset_in_page_locations(cmd.index_page_offset,
+        oi.page_locations);
+    size_t pi = (size_t)0U;
+    bool pres = false;
+    bool __anf0 = pres;
+    bool cond;
+    if (__anf0)
+      cond = false;
+    else
+    {
+      size_t i = pi;
+      cond = i < oi.page_locations.len;
+    }
+    while (cond)
+    {
+      size_t i0 = pi;
+      Parquet_Spec_Toplevel_Types_page_location elt = oi.page_locations.data[i0];
+      int64_t z = Parquet_Pulse_Toplevel0_page_location_access_offset(elt);
+      bool res = z == cmd.data_page_offset;
+      pres = res;
+      if (res)
+        pres = true;
+      else
+        pi = i0 + (size_t)1U;
+      bool __anf0 = pres;
+      bool ite;
+      if (__anf0)
+        ite = false;
+      else
+      {
+        size_t i = pi;
+        ite = i < oi.page_locations.len;
+      }
+      cond = ite;
+    }
+    bool __anf00 = pres;
+    return __anf2 && __anf1 && __anf00;
+  }
+  else
+  {
+    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
+  }
+}
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_offset_index_col_size(
+  Parquet_Pulse_Toplevel_column_chunk cc,
+  Parquet_Pulse_Toplevel_offset_index oi
+)
+{
+  if (cc.meta_data.tag == FStar_Pervasives_Native_None)
+    return true;
+  else if (cc.meta_data.tag == FStar_Pervasives_Native_Some)
+  {
+    Parquet_Pulse_Toplevel_column_meta_data md = cc.meta_data.v;
+    bool pres = (int64_t)0 <= md.total_compressed_size;
+    int64_t paccu = (int64_t)0;
+    size_t pi = (size_t)0U;
+    bool __anf1 = pres;
+    size_t __anf00 = pi;
+    bool cond = __anf1 && __anf00 < oi.page_locations.len;
+    while (cond)
+    {
+      size_t i = pi;
+      Parquet_Spec_Toplevel_Types_page_location pl = oi.page_locations.data[i];
+      pi = i + (size_t)1U;
+      if ((int32_t)0 <= pl.compressed_page_size1)
+      {
+        int64_t accu = paccu;
+        int64_t psz = (int64_t)pl.compressed_page_size1;
+        if (md.total_compressed_size - accu < psz)
+          pres = false;
+        else
+          paccu = accu + psz;
+      }
+      bool __anf1 = pres;
+      size_t __anf0 = pi;
+      cond = __anf1 && __anf0 < oi.page_locations.len;
+    }
+    bool __anf10 = pres;
+    int64_t __anf0 = paccu;
+    return __anf10 && __anf0 == md.total_compressed_size;
+  }
+  else
+  {
+    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
+  }
+}
+
+int64_t
+Parquet_Pulse_Toplevel0_impl_page_location_offset(Parquet_Spec_Toplevel_Types_page_location pl)
+{
+  return pl.offset;
+}
+
+int64_t
+Parquet_Pulse_Toplevel0_impl_page_location_size(Parquet_Spec_Toplevel_Types_page_location pl)
+{
+  return (int64_t)pl.compressed_page_size1;
+}
+
 bool
 Parquet_Pulse_Toplevel0_impl_validate_offset_index(
   Parquet_Pulse_Toplevel_column_chunk cc,
   Parquet_Pulse_Toplevel_offset_index oi
 )
 {
-  KRML_MAYBE_UNUSED_VAR(cc);
-  KRML_MAYBE_UNUSED_VAR(oi);
-  KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n", __FILE__, __LINE__, "");
-  KRML_HOST_EXIT(255U);
+  bool __anf0 = Parquet_Pulse_Toplevel0_impl_validate_offset_index_first_loc(cc, oi);
+  if (__anf0)
+  {
+    bool __anf01 = Parquet_Pulse_Toplevel0_impl_validate_offset_index_cc_page_offsets(cc, oi);
+    if (__anf01)
+    {
+      bool __anf02 = Parquet_Pulse_Toplevel0_impl_validate_offset_index_col_size(cc, oi);
+      if (__anf02)
+        if (oi.page_locations.len < (size_t)2U)
+          return true;
+        else
+        {
+          Parquet_Spec_Toplevel_Types_page_location __anf03 = oi.page_locations.data[0U];
+          Parquet_Spec_Toplevel_Types_page_location pl = __anf03;
+          bool pres = true;
+          size_t pi = (size_t)1U;
+          bool res = pres;
+          bool cond;
+          if (res)
+          {
+            size_t i = pi;
+            cond = i < oi.page_locations.len;
+          }
+          else
+            cond = false;
+          while (cond)
+          {
+            Parquet_Spec_Toplevel_Types_page_location impl1 = pl;
+            int64_t off1 = Parquet_Pulse_Toplevel0_impl_page_location_offset(impl1);
+            if (off1 < (int64_t)0)
+              pres = false;
+            else
+            {
+              int64_t sz1 = Parquet_Pulse_Toplevel0_impl_page_location_size(impl1);
+              if (sz1 < (int64_t)0)
+                pres = false;
+              else
+              {
+                size_t i = pi;
+                Parquet_Spec_Toplevel_Types_page_location impl2 = oi.page_locations.data[i];
+                int64_t off2 = Parquet_Pulse_Toplevel0_impl_page_location_offset(impl2);
+                if (off2 < off1)
+                  pres = false;
+                else if (sz1 != off2 - off1)
+                  pres = false;
+                else
+                {
+                  pl = impl2;
+                  pi = i + (size_t)1U;
+                }
+              }
+            }
+            bool res = pres;
+            bool ite;
+            if (res)
+            {
+              size_t i = pi;
+              ite = i < oi.page_locations.len;
+            }
+            else
+              ite = false;
+            cond = ite;
+          }
+          return pres;
+        }
+      else
+        return false;
+    }
+    else
+      return false;
+  }
+  else
+    return false;
 }
 
 bool

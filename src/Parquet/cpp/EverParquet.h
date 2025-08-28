@@ -1052,6 +1052,41 @@ Parquet_Pulse_Toplevel0_impl_validate_offset_index_all_aux(
 );
 
 bool
+Parquet_Pulse_Toplevel0_impl_validate_offset_index_first_loc(
+  Parquet_Pulse_Toplevel_column_chunk cc,
+  Parquet_Pulse_Toplevel_offset_index oi
+);
+
+int64_t
+Parquet_Pulse_Toplevel0_page_location_access_offset(
+  Parquet_Spec_Toplevel_Types_page_location pl
+);
+
+bool
+Parquet_Pulse_Toplevel0_option_offset_in_page_locations(
+  FStar_Pervasives_Native_option__int64_t o,
+  Parquet_Pulse_Vec_vec__Parquet_Spec_Toplevel_Types_page_location pl
+);
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_offset_index_cc_page_offsets(
+  Parquet_Pulse_Toplevel_column_chunk cc,
+  Parquet_Pulse_Toplevel_offset_index oi
+);
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_offset_index_col_size(
+  Parquet_Pulse_Toplevel_column_chunk cc,
+  Parquet_Pulse_Toplevel_offset_index oi
+);
+
+int64_t
+Parquet_Pulse_Toplevel0_impl_page_location_offset(Parquet_Spec_Toplevel_Types_page_location pl);
+
+int64_t
+Parquet_Pulse_Toplevel0_impl_page_location_size(Parquet_Spec_Toplevel_Types_page_location pl);
+
+bool
 Parquet_Pulse_Toplevel0_impl_validate_offset_index(
   Parquet_Pulse_Toplevel_column_chunk cc,
   Parquet_Pulse_Toplevel_offset_index oi

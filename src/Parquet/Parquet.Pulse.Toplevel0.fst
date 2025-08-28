@@ -877,12 +877,238 @@ fn impl_validate_offset_index_all_aux (pm: perm) : PV.impl_pred2 #_ #_ #_ #_ emp
   res
 }
 
-// fn page_location_access_offset (): PV.impl_f_t #_ #_ #_ (fun (pl: page_location) -> pl.offset) rel_page_location
-//   ()
-// = {
-//   // TODO(Tahina)
-//   admit ()
-// }
+fn impl_validate_offset_index_first_loc () : PV.impl_pred2 #_ #_ #_ #_ emp rel_column_chunk rel_offset_index validate_offset_index_first_loc
+=
+  (cc: _)
+  (vcc: _)
+  (oi: _)
+  (voi: _)
+{
+  unfold (rel_offset_index oi voi);
+  let first_loc = PV.impl_hd _ oi.page_locations;
+  Rel.rel_option_cases rel_page_location _ _;
+  match first_loc {
+    norewrite
+    None -> {
+      Trade.elim _ _;
+      fold (rel_offset_index oi voi);
+      true
+    }
+    norewrite
+    Some loc -> {
+      Trade.rewrite_with_trade
+        (Rel.rel_option rel_page_location _ _)
+        (rel_page_location loc (List.Tot.hd voi.page_locations));
+      Trade.trans (rel_page_location loc (List.Tot.hd voi.page_locations)) _ _;
+      unfold (rel_page_location loc (List.Tot.hd voi.page_locations));
+      Rel.rel_pure_peek loc _;
+      fold (rel_page_location loc (List.Tot.hd voi.page_locations));
+      Trade.elim _ _;
+      fold (rel_offset_index oi voi);
+      unfold (rel_column_chunk cc vcc);
+      Rel.rel_option_cases rel_column_meta_data _ _;
+      match cc.meta_data {
+        norewrite
+        None -> {
+          fold (rel_column_chunk cc vcc);
+          true
+        }
+        norewrite
+        Some cmd -> {
+          Trade.rewrite_with_trade
+            (Rel.rel_option rel_column_meta_data _ _)
+            (rel_column_meta_data cmd (Some?.v vcc.meta_data));
+          let off = impl_offset_of_column_chunk () cmd _;
+          Trade.elim _ _;
+          fold (rel_column_chunk cc vcc);
+          (loc.offset = off)
+        }
+      }
+    }
+  }
+}
+
+fn page_location_access_offset (): PV.impl_f_t #_ #_ #_ (fun (pl: page_location) -> pl.offset) rel_page_location
+= (pl: _) (vpl: _)
+{
+  unfold (rel_page_location pl vpl);
+  Rel.rel_pure_peek _ _;
+  fold (rel_page_location pl vpl);
+  pl.offset
+}
+
+noextract [@@noextract_to "krml"]
+let list_mem_option_map (#t: Type0) (#t' : eqtype) (f: t -> t') (x: option t') (l: list t) : Tot bool =
+  match x with
+  | None -> true
+  | Some x' -> List.Tot.mem x' (List.Tot.map f l)
+
+fn option_offset_in_page_locations (o: option I64.t) : PV.impl_pred #_ #_ emp (rel_vec_of_list rel_page_location) (list_mem_option_map (fun pl -> pl.offset) o)
+= (pl: _)
+  (vpl: _)
+{
+  match o {
+    None -> {
+      true
+    }
+    Some off -> {
+      PV.impl_mem_map _ (fun pl -> pl.offset) (page_location_access_offset ()) off pl _ // FIXME: Pulse cannot infer lambdas
+    }
+  }
+}
+
+fn impl_validate_offset_index_cc_page_offsets () : PV.impl_pred2 #_ #_ #_ #_ emp rel_column_chunk rel_offset_index validate_offset_index_cc_page_offsets
+=
+  (cc: _)
+  (vcc: _)
+  (oi: _)
+  (voi: _)
+{
+  unfold (rel_column_chunk cc vcc);
+  Rel.rel_option_cases rel_column_meta_data _ _;
+  match cc.meta_data {
+    norewrite
+    None -> {
+      fold (rel_column_chunk cc vcc);
+      true
+    }
+    norewrite
+    Some cmd -> {
+      Trade.rewrite_with_trade
+        (Rel.rel_option rel_column_meta_data _ _)
+        (rel_column_meta_data cmd (Some?.v vcc.meta_data));
+      unfold (rel_column_meta_data cmd (Some?.v vcc.meta_data));
+      Rel.rel_pure_peek cmd.dictionary_page_offset _;
+      Rel.rel_pure_peek cmd.index_page_offset _;
+      Rel.rel_pure_peek cmd.data_page_offset _;
+      fold (rel_column_meta_data cmd (Some?.v vcc.meta_data));
+      Trade.elim _ _;
+      fold (rel_column_chunk cc vcc);
+      unfold (rel_offset_index oi voi);
+      let res = (
+        option_offset_in_page_locations cmd.dictionary_page_offset oi.page_locations _ &&
+        option_offset_in_page_locations cmd.index_page_offset oi.page_locations _ &&
+        PV.impl_mem_map _ (fun pl -> pl.offset) (page_location_access_offset ()) cmd.data_page_offset oi.page_locations _
+      );
+      fold (rel_offset_index oi voi);
+      res
+    }
+  }
+}
+
+let rec list_fold_validate_offset_index_col_size_add_nonnegative
+  (acc: int)
+  (l: list page_location)
+: Lemma
+  (ensures acc >= 0 ==> List.Tot.fold_left validate_offset_index_col_size_add acc l >= acc)
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q ->
+    list_fold_validate_offset_index_col_size_add_nonnegative (validate_offset_index_col_size_add acc a) q
+
+fn impl_validate_offset_index_col_size () : PV.impl_pred2 #_ #_ #_ #_ emp rel_column_chunk rel_offset_index validate_offset_index_col_size
+=
+  (cc: _)
+  (vcc: _)
+  (oi: _)
+  (voi: _)
+{
+  unfold (rel_column_chunk cc vcc);
+  Rel.rel_option_cases rel_column_meta_data _ _;
+  match cc.meta_data {
+    norewrite
+    None -> {
+      fold (rel_column_chunk cc vcc);
+      true
+    }
+    norewrite
+    Some md -> {
+      Trade.rewrite_with_trade
+        (Rel.rel_option rel_column_meta_data _ _)
+        (rel_column_meta_data md (Some?.v vcc.meta_data));
+      unfold (rel_column_meta_data md (Some?.v vcc.meta_data));
+      Rel.rel_pure_peek md.total_compressed_size _;
+      fold (rel_column_meta_data md (Some?.v vcc.meta_data));
+      Trade.elim _ _;
+      fold (rel_column_chunk cc vcc);
+      unfold (rel_offset_index oi voi);
+      let mut pres = (I64.lte 0L md.total_compressed_size);
+      let mut paccu = 0L;
+      let mut pi = 0sz;
+      unfold (PV.rel_vec_of_list rel_page_location oi.page_locations voi.page_locations);
+      Vec.pts_to_len oi.page_locations.data;
+      SM.seq_list_match_length rel_page_location _ _;
+      with s . assert (Vec.pts_to oi.page_locations.data s ** SM.seq_list_match s voi.page_locations rel_page_location);
+      Trade.refl (SM.seq_list_match s voi.page_locations rel_page_location);
+      list_fold_validate_offset_index_col_size_add_nonnegative 0 voi.page_locations;
+      while (
+        SM.seq_list_match_length rel_page_location _ _;
+        (!pres && SZ.lt !pi oi.page_locations.len)
+      ) invariant b . exists* res accu i sr vlr . (
+        Vec.pts_to oi.page_locations.data s **
+        pts_to pres res **
+        pts_to paccu accu **
+        pts_to pi i **
+        SM.seq_list_match sr vlr rel_page_location **
+        Trade.trade
+          (SM.seq_list_match sr vlr rel_page_location)
+          (SM.seq_list_match s voi.page_locations rel_page_location) **
+        pure (
+          0 <= I64.v accu /\
+          (let goal = List.Tot.fold_left validate_offset_index_col_size_add 0 voi.page_locations in if res then I64.v accu <= I64.v md.total_compressed_size /\ goal == List.Tot.fold_left validate_offset_index_col_size_add (I64.v accu) vlr else goal <> I64.v md.total_compressed_size) /\
+          SZ.v i <= Seq.length s /\
+          sr == Seq.slice s (SZ.v i) (Seq.length s) /\
+          b == (res && (Cons? vlr))
+        )
+      ) {
+        with sr vlr . assert (SM.seq_list_match sr vlr rel_page_location);
+        SM.seq_list_match_length rel_page_location _ _;
+        SM.seq_list_match_cons_elim_trade sr vlr rel_page_location;
+        Trade.trans _ (SM.seq_list_match sr vlr rel_page_location) _;
+        with gpl vpl . assert (rel_page_location gpl vpl);
+        let i = !pi;
+        let pl = Vec.op_Array_Access oi.page_locations.data i;
+        rewrite each gpl as pl;
+        unfold (rel_page_location pl vpl);
+        Rel.rel_pure_peek pl _;
+        fold (rel_page_location pl vpl);
+        Trade.elim_hyp_l _ _ _;
+        pi := SZ.add i 1sz;
+        if (I32.lte 0l pl.compressed_page_size) {
+          let accu = !paccu;
+          list_fold_validate_offset_index_col_size_add_nonnegative (I64.v accu + I32.v pl.compressed_page_size) (List.Tot.tl vlr);
+          let psz = FStar.Int.Cast.int32_to_int64 pl.compressed_page_size;
+          if (I64.lt (I64.sub md.total_compressed_size accu) psz) {
+            pres := false
+          } else {
+            paccu := I64.add accu psz
+          }
+        }
+      };
+      Trade.elim _ _;
+      fold (PV.rel_vec_of_list rel_page_location oi.page_locations voi.page_locations);
+      fold (rel_offset_index oi voi);
+      (!pres && (!paccu = md.total_compressed_size))
+    }
+  }
+}
+
+fn impl_page_location_offset () : impl_fst_f #_ #_ page_location_offset_and_size rel_page_location
+= (pl: _) (vpl: _) {
+  unfold (rel_page_location pl vpl);
+  Rel.rel_pure_peek _ _;
+  fold (rel_page_location pl vpl);
+  pl.offset
+}
+
+fn impl_page_location_size () : impl_snd_f #_ #_ page_location_offset_and_size rel_page_location
+= (pl: _) (vpl: _) {
+  unfold (rel_page_location pl vpl);
+  Rel.rel_pure_peek _ _;
+  fold (rel_page_location pl vpl);
+  FStar.Int.Cast.int32_to_int64 pl.compressed_page_size
+}
 
 fn impl_validate_offset_index () : PV.impl_pred2 #_ #_ #_ #_ emp rel_column_chunk rel_offset_index validate_offset_index
 =
@@ -891,11 +1117,29 @@ fn impl_validate_offset_index () : PV.impl_pred2 #_ #_ #_ #_ emp rel_column_chun
   (oi: _)
   (voi: _)
 {
-  // PV.impl_mem_map
-  // TODO(Tahina)
-  admit ()
+  if impl_validate_offset_index_first_loc () cc _ oi _ {
+    if impl_validate_offset_index_cc_page_offsets () cc _ oi _ {
+      if impl_validate_offset_index_col_size () cc _ oi _ {
+        unfold (rel_offset_index oi voi);
+        let res = impl_offsets_and_sizes_are_contiguous
+          page_location_offset_and_size
+          rel_page_location
+          (impl_page_location_offset ())
+          (impl_page_location_size ())
+          oi.page_locations;
+        fold (rel_offset_index oi voi);
+        assert (pure (res == page_offsets_are_contiguous voi.page_locations));
+        res
+      } else {
+        false
+      }
+    } else {
+      false
+    }
+  } else {
+    false
+  }
 }
-
 
 fn impl_validate_offset_index_all (pm: perm) : PV.impl_pred3 #_ #_ #_ #_ #_ #_ emp rel_column_chunk (pts_to_bytes pm) rel_offset_index validate_offset_index_all
 =
@@ -908,7 +1152,6 @@ fn impl_validate_offset_index_all (pm: perm) : PV.impl_pred3 #_ #_ #_ #_ #_ #_ e
 {
   ( impl_validate_offset_index () cc vcc oi voi &&
   impl_validate_offset_index_all_aux pm data vdata oi voi );
-  // admit ()
 }
 
 assume val validate_offset_index : validator (parser_of_tot_parser parse_offset_index)
