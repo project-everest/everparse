@@ -42,13 +42,6 @@ bool Parquet_Pulse_Toplevel0_validate_is_PAR1(Pulse_Lib_Slice_slice__uint8_t inp
   return 80U == v0 && 65U == v1 && 82U == v2 && 49U == v3;
 }
 
-bool Parquet_Pulse_Toplevel0_impl_validate_row_group_aux(Parquet_Pulse_Toplevel_row_group rg)
-{
-  KRML_MAYBE_UNUSED_VAR(rg);
-  KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n", __FILE__, __LINE__, "");
-  KRML_HOST_EXIT(255U);
-}
-
 static bool uu___is_Some__int64_t(FStar_Pervasives_Native_option__int64_t projectee)
 {
   if (projectee.tag == FStar_Pervasives_Native_Some)
@@ -182,6 +175,287 @@ Parquet_Pulse_Toplevel0_impl_offset_of_column_chunk(Parquet_Pulse_Toplevel_colum
       "unreachable (pattern matches are exhaustive in F*)");
     KRML_HOST_EXIT(255U);
   }
+}
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_column_chunk_offsets_ok(
+  Parquet_Pulse_Toplevel_column_chunk cc
+)
+{
+  if (cc.meta_data.tag == FStar_Pervasives_Native_None)
+    return true;
+  else if (cc.meta_data.tag == FStar_Pervasives_Native_Some)
+  {
+    Parquet_Pulse_Toplevel_column_meta_data cmd = cc.meta_data.v;
+    int64_t data_off = cmd.data_page_offset;
+    if (cmd.dictionary_page_offset.tag == FStar_Pervasives_Native_None)
+      return true;
+    else if (cmd.dictionary_page_offset.tag == FStar_Pervasives_Native_Some)
+    {
+      int64_t dict_off = cmd.dictionary_page_offset.v;
+      if (dict_off < data_off)
+        if (cmd.index_page_offset.tag == FStar_Pervasives_Native_None)
+          return true;
+        else if (cmd.index_page_offset.tag == FStar_Pervasives_Native_Some)
+        {
+          int64_t idx_off = cmd.index_page_offset.v;
+          return dict_off < idx_off;
+        }
+        else
+        {
+          KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+            __FILE__,
+            __LINE__,
+            "unreachable (pattern matches are exhaustive in F*)");
+          KRML_HOST_EXIT(255U);
+        }
+      else
+        return false;
+    }
+    else
+    {
+      KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+        __FILE__,
+        __LINE__,
+        "unreachable (pattern matches are exhaustive in F*)");
+      KRML_HOST_EXIT(255U);
+    }
+  }
+  else
+  {
+    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
+  }
+}
+
+static bool uu___is_Some__int32_t(FStar_Pervasives_Native_option__int32_t projectee)
+{
+  if (projectee.tag == FStar_Pervasives_Native_Some)
+    return true;
+  else
+    return false;
+}
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_column_chunk_idx_ok(
+  Parquet_Pulse_Toplevel_column_chunk cc
+)
+{
+  if
+  (
+    uu___is_Some__int64_t(cc.offset_index_offset) == uu___is_Some__int32_t(cc.offset_index_length)
+    &&
+      uu___is_Some__int64_t(cc.column_index_offset) == uu___is_Some__int32_t(cc.column_index_length)
+  )
+    if (uu___is_Some__int64_t(cc.column_index_offset))
+      return uu___is_Some__int64_t(cc.offset_index_offset);
+    else
+      return true;
+  else
+    return false;
+}
+
+bool Parquet_Pulse_Toplevel0_impl_validate_column_chunk(Parquet_Pulse_Toplevel_column_chunk cc)
+{
+  bool __anf0 = Parquet_Pulse_Toplevel0_impl_validate_column_chunk_idx_ok(cc);
+  if (__anf0)
+    return Parquet_Pulse_Toplevel0_impl_validate_column_chunk_offsets_ok(cc);
+  else
+    return false;
+}
+
+static bool
+uu___is_Some__Parquet_Pulse_Toplevel_column_meta_data(
+  FStar_Pervasives_Native_option__Parquet_Pulse_Toplevel_column_meta_data projectee
+)
+{
+  if (projectee.tag == FStar_Pervasives_Native_Some)
+    return true;
+  else
+    return false;
+}
+
+int64_t
+Parquet_Pulse_Toplevel0_impl_column_chunk_offset(Parquet_Pulse_Toplevel_column_chunk cc)
+{
+  if (uu___is_Some__Parquet_Pulse_Toplevel_column_meta_data(cc.meta_data))
+  {
+    Parquet_Pulse_Toplevel_column_meta_data md;
+    if (cc.meta_data.tag == FStar_Pervasives_Native_Some)
+      md = cc.meta_data.v;
+    else
+      md =
+        KRML_EABORT(Parquet_Pulse_Toplevel_column_meta_data,
+          "unreachable (pattern matches are exhaustive in F*)");
+    return Parquet_Pulse_Toplevel0_impl_offset_of_column_chunk(md);
+  }
+  else
+    return (int64_t)0;
+}
+
+int64_t Parquet_Pulse_Toplevel0_impl_column_chunk_size(Parquet_Pulse_Toplevel_column_chunk cc)
+{
+  if (uu___is_Some__Parquet_Pulse_Toplevel_column_meta_data(cc.meta_data))
+  {
+    Parquet_Pulse_Toplevel_column_meta_data md;
+    if (cc.meta_data.tag == FStar_Pervasives_Native_Some)
+      md = cc.meta_data.v;
+    else
+      md =
+        KRML_EABORT(Parquet_Pulse_Toplevel_column_meta_data,
+          "unreachable (pattern matches are exhaustive in F*)");
+    return md.total_compressed_size;
+  }
+  else
+    return (int64_t)0;
+}
+
+bool
+Parquet_Pulse_Toplevel0_impl_column_chunk_some_meta_data(
+  Parquet_Pulse_Toplevel_column_chunk cc
+)
+{
+  return uu___is_Some__Parquet_Pulse_Toplevel_column_meta_data(cc.meta_data);
+}
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_row_group_sorted_ok(Parquet_Pulse_Toplevel_row_group rg)
+{
+  size_t pi0 = (size_t)0U;
+  bool pres0 = true;
+  bool __anf0 = pres0;
+  bool cond0;
+  if (__anf0)
+  {
+    size_t i = pi0;
+    cond0 = i < rg.columns.len;
+  }
+  else
+    cond0 = false;
+  while (cond0)
+  {
+    size_t i0 = pi0;
+    Parquet_Pulse_Toplevel_column_chunk elt = rg.columns.data[i0];
+    bool res = Parquet_Pulse_Toplevel0_impl_column_chunk_some_meta_data(elt);
+    pres0 = res;
+    if (res)
+      pi0 = i0 + (size_t)1U;
+    bool __anf0 = pres0;
+    bool ite;
+    if (__anf0)
+    {
+      size_t i = pi0;
+      ite = i < rg.columns.len;
+    }
+    else
+      ite = false;
+    cond0 = ite;
+  }
+  bool __anf00 = pres0;
+  if (__anf00)
+    if (rg.columns.len < (size_t)2U)
+      return true;
+    else
+    {
+      Parquet_Pulse_Toplevel_column_chunk __anf01 = rg.columns.data[0U];
+      Parquet_Pulse_Toplevel_column_chunk pl = __anf01;
+      bool pres = true;
+      size_t pi = (size_t)1U;
+      bool res = pres;
+      bool cond;
+      if (res)
+      {
+        size_t i = pi;
+        cond = i < rg.columns.len;
+      }
+      else
+        cond = false;
+      while (cond)
+      {
+        Parquet_Pulse_Toplevel_column_chunk impl1 = pl;
+        int64_t off1 = Parquet_Pulse_Toplevel0_impl_column_chunk_offset(impl1);
+        if (off1 < (int64_t)0)
+          pres = false;
+        else
+        {
+          int64_t sz1 = Parquet_Pulse_Toplevel0_impl_column_chunk_size(impl1);
+          if (sz1 < (int64_t)0)
+            pres = false;
+          else
+          {
+            size_t i = pi;
+            Parquet_Pulse_Toplevel_column_chunk impl2 = rg.columns.data[i];
+            int64_t off2 = Parquet_Pulse_Toplevel0_impl_column_chunk_offset(impl2);
+            if (off2 < off1)
+              pres = false;
+            else if (sz1 > off2 - off1)
+              pres = false;
+            else
+            {
+              pl = impl2;
+              pi = i + (size_t)1U;
+            }
+          }
+        }
+        bool res = pres;
+        bool ite;
+        if (res)
+        {
+          size_t i = pi;
+          ite = i < rg.columns.len;
+        }
+        else
+          ite = false;
+        cond = ite;
+      }
+      return pres;
+    }
+  else
+    return true;
+}
+
+bool Parquet_Pulse_Toplevel0_impl_validate_row_group_aux(Parquet_Pulse_Toplevel_row_group rg)
+{
+  bool __anf0 = Parquet_Pulse_Toplevel0_impl_validate_row_group_sorted_ok(rg);
+  if (__anf0)
+  {
+    size_t pi = (size_t)0U;
+    bool pres = true;
+    bool __anf01 = pres;
+    bool cond;
+    if (__anf01)
+    {
+      size_t i = pi;
+      cond = i < rg.columns.len;
+    }
+    else
+      cond = false;
+    while (cond)
+    {
+      size_t i0 = pi;
+      Parquet_Pulse_Toplevel_column_chunk elt = rg.columns.data[i0];
+      bool res = Parquet_Pulse_Toplevel0_impl_validate_column_chunk(elt);
+      pres = res;
+      if (res)
+        pi = i0 + (size_t)1U;
+      bool __anf01 = pres;
+      bool ite;
+      if (__anf01)
+      {
+        size_t i = pi;
+        ite = i < rg.columns.len;
+      }
+      else
+        ite = false;
+      cond = ite;
+    }
+    return pres;
+  }
+  else
+    return false;
 }
 
 typedef struct option__Parquet_Pulse_Toplevel_column_chunk_s
@@ -849,14 +1123,6 @@ Parquet_Pulse_Toplevel0_validate_jump_offset_index(
     size_t off = poffset;
     return off == offset_sz + length_sz && is_valid;
   }
-}
-
-static bool uu___is_Some__int32_t(FStar_Pervasives_Native_option__int32_t projectee)
-{
-  if (projectee.tag == FStar_Pervasives_Native_Some)
-    return true;
-  else
-    return false;
 }
 
 bool

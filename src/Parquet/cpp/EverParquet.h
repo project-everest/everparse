@@ -925,8 +925,6 @@ Parquet_Pulse_Toplevel0_validate_footer(Pulse_Lib_Slice_slice__uint8_t uu___, si
 extern Parquet_Pulse_Toplevel_file_meta_data
 Parquet_Pulse_Toplevel0_read_footer(Pulse_Lib_Slice_slice__uint8_t uu___);
 
-bool Parquet_Pulse_Toplevel0_impl_validate_row_group_aux(Parquet_Pulse_Toplevel_row_group rg);
-
 FStar_Pervasives_Native_option__int64_t
 Parquet_Pulse_Toplevel0_compute_cols_size(
   bool *poverflow,
@@ -939,6 +937,34 @@ Parquet_Pulse_Toplevel0_impl_column_size_nonnegative(Parquet_Pulse_Toplevel_colu
 
 int64_t
 Parquet_Pulse_Toplevel0_impl_offset_of_column_chunk(Parquet_Pulse_Toplevel_column_meta_data cc);
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_column_chunk_offsets_ok(
+  Parquet_Pulse_Toplevel_column_chunk cc
+);
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_column_chunk_idx_ok(
+  Parquet_Pulse_Toplevel_column_chunk cc
+);
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_column_chunk(Parquet_Pulse_Toplevel_column_chunk cc);
+
+int64_t
+Parquet_Pulse_Toplevel0_impl_column_chunk_offset(Parquet_Pulse_Toplevel_column_chunk cc);
+
+int64_t Parquet_Pulse_Toplevel0_impl_column_chunk_size(Parquet_Pulse_Toplevel_column_chunk cc);
+
+bool
+Parquet_Pulse_Toplevel0_impl_column_chunk_some_meta_data(
+  Parquet_Pulse_Toplevel_column_chunk cc
+);
+
+bool
+Parquet_Pulse_Toplevel0_impl_validate_row_group_sorted_ok(Parquet_Pulse_Toplevel_row_group rg);
+
+bool Parquet_Pulse_Toplevel0_impl_validate_row_group_aux(Parquet_Pulse_Toplevel_row_group rg);
 
 FStar_Pervasives_Native_option__int64_t
 Parquet_Pulse_Toplevel0_impl_first_column_offset(Parquet_Pulse_Toplevel_row_group rg);

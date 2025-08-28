@@ -107,10 +107,7 @@ let rec ranges_disjoint (rs: list range) : Tot bool =
 
 (** Validation of a single column‑chunk ------------------------------ *)
 
-val validate_column_chunk: column_chunk -> Tot bool
-
-let validate_column_chunk cc =
-  let offsets_ok =
+let validate_column_chunk_offsets_ok (cc: column_chunk) : Tot bool =
     // dictionary_page, if present, should be the first in every column
     match cc.meta_data with
     | None -> true
@@ -125,16 +122,18 @@ let validate_column_chunk cc =
         | Some idx_off -> I64.v dict_off < I64.v idx_off
         end
       end
-  in
-  let idx_ok:// OffsetIndex may be present even if ColumnIndex is not.
+
+let validate_column_chunk_idx_ok (cc: column_chunk) : Tot bool =
+  // OffsetIndex may be present even if ColumnIndex is not.
   // If ColumnIndex is present, OffsetIndex must also be present.
   // If offset is present, the corresponding length must be present
-  bool =
     (Some? cc.offset_index_offset = Some? cc.offset_index_length) &&
     (Some? cc.column_index_offset = Some? cc.column_index_length) &&
     (if Some? cc.column_index_offset then Some? cc.offset_index_offset else true)
-  in
-  offsets_ok && idx_ok
+
+let validate_column_chunk (cc: column_chunk) : Tot bool =
+  validate_column_chunk_idx_ok cc &&
+  validate_column_chunk_offsets_ok cc
 
 
 
@@ -232,14 +231,15 @@ let offset_of_column_chunk (cmd: column_meta_data) : int64 =
 
 module J = Parquet.Spec.Jump
 
-let columns_are_sorted (cols: list column_chunk) : Tot bool =
-  J.offsets_and_sizes_are_sorted
-   (List.Tot.map
-     (fun col -> 
+let column_chunk_offset_and_size (col: column_chunk) : Tot (int & int) =
        match col.meta_data with
        | Some col -> (I64.v (offset_of_column_chunk col), I64.v col.total_compressed_size)
        | _ -> (0, 0) (* dummy *)
-     )
+
+let columns_are_sorted (cols: list column_chunk) : Tot bool =
+  J.offsets_and_sizes_are_sorted
+   (List.Tot.map
+     column_chunk_offset_and_size
      cols
    )
 
@@ -255,17 +255,18 @@ let first_column_offset
       | None -> None
       | Some cmd -> Some (offset_of_column_chunk cmd)
 
-let validate_row_group_aux (rg: row_group) : Tot bool =
-  let sorted_ok =
+let validate_row_group_sorted_ok (rg: row_group) : Tot bool =
     if List.Tot.for_all (fun c -> Some? c.meta_data) rg.columns then
     (* cols should be contiguous according to the documentation, but we found some counterexamples, so we relax the requirement to cols being sorted *)
     columns_are_sorted rg.columns
     else true
-  in
-  let cols_ok =
+
+let validate_row_group_cols_ok (rg: row_group) : Tot bool =
     List.Tot.for_all validate_column_chunk rg.columns (* each column chunk passes *)
-  in
-  sorted_ok && cols_ok
+
+let validate_row_group_aux (rg: row_group) : Tot bool =
+  validate_row_group_sorted_ok rg &&
+  validate_row_group_cols_ok rg
 
 let column_size_nonnegative
   (cc: column_chunk)

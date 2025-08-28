@@ -130,13 +130,6 @@ let compute_cols_size_invariant
 module Vec = Pulse.Lib.Vec
 module SM = Pulse.Lib.SeqMatch.Util
 
-fn impl_validate_row_group_aux () : PV.impl_pred #_ #_ emp rel_row_group validate_row_group_aux =
-  (rg: _)
-  (vrg: _)
-{
-  admit ()
-}
-
 fn compute_cols_size
   (poverflow: ref bool)
   (#overflow0: Ghost.erased bool)
@@ -295,6 +288,157 @@ fn impl_offset_of_column_chunk (_: unit) : PV.impl_f_t #_ #_ #_ offset_of_column
     | Some off -> if I64.lt off cc.data_page_offset then off else cc.data_page_offset
     | None -> cc.data_page_offset
   )
+}
+
+fn impl_validate_column_chunk_offsets_ok () : PV.impl_pred #_ #_ emp rel_column_chunk validate_column_chunk_offsets_ok =
+  (cc: _)
+  (vcc: _)
+{
+  unfold (rel_column_chunk cc vcc);
+  Rel.rel_option_cases rel_column_meta_data _ _;
+  match cc.meta_data {
+    norewrite
+    None -> {
+      fold (rel_column_chunk cc vcc);
+      true
+    }
+    norewrite
+    Some cmd -> {
+      Trade.rewrite_with_trade
+        (Rel.rel_option rel_column_meta_data _ _)
+        (rel_column_meta_data cmd (Some?.v vcc.meta_data));
+      unfold (rel_column_meta_data cmd (Some?.v vcc.meta_data));
+      Rel.rel_pure_peek cmd.data_page_offset _;
+      Rel.rel_pure_peek cmd.dictionary_page_offset _;
+      Rel.rel_pure_peek cmd.index_page_offset _;
+      let res = (
+        let data_off = cmd.data_page_offset in
+        begin match cmd.dictionary_page_offset with
+        | None -> true
+        | Some dict_off ->
+          I64.lt dict_off data_off &&
+          begin match cmd.index_page_offset with
+          | None -> true
+          | Some idx_off -> I64.lt dict_off idx_off
+          end
+        end
+      );
+      fold (rel_column_meta_data cmd (Some?.v vcc.meta_data));
+      Trade.elim _ _;
+      fold (rel_column_chunk cc vcc);
+      res
+    }
+  }
+}
+
+fn impl_validate_column_chunk_idx_ok () : PV.impl_pred #_ #_ emp rel_column_chunk validate_column_chunk_idx_ok =
+  (cc: _)
+  (vcc: _)
+{
+  unfold (rel_column_chunk cc vcc);
+  Rel.rel_pure_peek cc.offset_index_offset _;
+  Rel.rel_pure_peek cc.offset_index_length _;
+  Rel.rel_pure_peek cc.column_index_offset _;
+  Rel.rel_pure_peek cc.column_index_length _;
+  let res = (
+    (Some? cc.offset_index_offset = Some? cc.offset_index_length) &&
+    (Some? cc.column_index_offset = Some? cc.column_index_length) &&
+    (if Some? cc.column_index_offset then Some? cc.offset_index_offset else true)
+  );
+  fold (rel_column_chunk cc vcc);
+  res
+}
+
+fn impl_validate_column_chunk () : PV.impl_pred #_ #_ emp rel_column_chunk validate_column_chunk =
+  (cc: _)
+  (vcc: _)
+{
+  if impl_validate_column_chunk_idx_ok () cc _ {
+    impl_validate_column_chunk_offsets_ok () cc _
+  } else {
+    false
+  }
+}
+
+fn impl_column_chunk_offset () : impl_fst_f #_ #_ column_chunk_offset_and_size rel_column_chunk
+= (cc: _) (vcc: _)
+{
+  unfold (rel_column_chunk cc vcc);
+  Rel.rel_option_cases rel_column_meta_data _ _;
+  if (Some? cc.meta_data) {
+    let md = Some?.v cc.meta_data;
+    Trade.rewrite_with_trade
+      (Rel.rel_option rel_column_meta_data cc.meta_data _)
+      (rel_column_meta_data md (Some?.v vcc.meta_data));
+    let res = impl_offset_of_column_chunk () md _;
+    Trade.elim _ _;
+    fold (rel_column_chunk cc vcc);
+    res
+  } else {
+    fold (rel_column_chunk cc vcc);
+    0L
+  }
+}
+
+fn impl_column_chunk_size () : impl_snd_f #_ #_ column_chunk_offset_and_size rel_column_chunk
+= (cc: _) (vcc: _)
+{
+  unfold (rel_column_chunk cc vcc);
+  Rel.rel_option_cases rel_column_meta_data _ _;
+  if (Some? cc.meta_data) {
+    let md = Some?.v cc.meta_data;
+    Trade.rewrite_with_trade
+      (Rel.rel_option rel_column_meta_data cc.meta_data _)
+      (rel_column_meta_data md (Some?.v vcc.meta_data));
+    unfold (rel_column_meta_data md (Some?.v vcc.meta_data));
+    Rel.rel_pure_peek md.total_compressed_size _;
+    fold (rel_column_meta_data md (Some?.v vcc.meta_data));
+    Trade.elim _ _;
+    fold (rel_column_chunk cc vcc);
+    md.total_compressed_size
+  } else {
+    fold (rel_column_chunk cc vcc);
+    0L
+  }
+}
+
+fn impl_column_chunk_some_meta_data () : PV.impl_pred #_ #_ emp rel_column_chunk (fun cc -> Some? cc.meta_data)
+= (cc: _) (vcc: _)
+{
+  unfold (rel_column_chunk cc vcc);
+  Rel.rel_option_cases rel_column_meta_data _ _;
+  let res = Some? cc.meta_data;
+  fold (rel_column_chunk cc vcc);
+  res
+}
+
+fn impl_validate_row_group_sorted_ok () : PV.impl_pred #_ #_ emp rel_row_group validate_row_group_sorted_ok =
+  (rg: _)
+  (vrg: _)
+{
+  unfold (rel_row_group rg vrg);
+  if (PV.impl_for_all _ _ (fun cc -> Some? cc.meta_data) (impl_column_chunk_some_meta_data ()) rg.columns _) {
+    let res = impl_offsets_and_sizes_are_sorted _ _ (impl_column_chunk_offset ()) (impl_column_chunk_size ()) rg.columns;
+    fold (rel_row_group rg vrg);
+    res
+  } else {
+    fold (rel_row_group rg vrg);
+    true
+  };
+}
+
+fn impl_validate_row_group_aux () : PV.impl_pred #_ #_ emp rel_row_group validate_row_group_aux =
+  (rg: _)
+  (vrg: _)
+{
+  if (impl_validate_row_group_sorted_ok () rg _) {
+    unfold (rel_row_group rg vrg);
+    let res = PV.impl_for_all _ _ _ (impl_validate_column_chunk ()) rg.columns _;
+    fold (rel_row_group rg vrg);
+    res
+  } else {
+    false
+  }
 }
 
 fn impl_first_column_offset (_: unit) : PV.impl_f_t #_ #_ #_ first_column_offset rel_row_group
