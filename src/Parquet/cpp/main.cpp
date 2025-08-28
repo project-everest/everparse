@@ -10,7 +10,9 @@
 #include <string>
 #include <vector>
 
+extern "C" {
 #include "EverParquet.h"      // KaRaMeL C API types
+}
 #include "parquet_types.hpp"  // Thrift-generated C++ header
 #include "pretty_print.hpp"
 #include "shim_parquet_pulse.hpp"  // your shim header
@@ -108,6 +110,15 @@ int main(int argc, char** argv) {
         continue;
       }
 
+      Pulse_Lib_Slice_slice__uint8_t input = { .elt = file.data(), .len = file.size() };
+      size_t offset = 0;
+      std::cout << "Validating " << input.len << " bytes" << std::endl;
+      if (Parquet_Pulse_Toplevel0_validate_parquet(input, &offset)) {
+	std::cout << "File is valid" << std::endl;
+      } else {
+	std::cout << "File is INVALID" << std::endl;
+      }
+      
       const uint8_t* footer = nullptr;
       size_t footer_len = 0;
       if (!extract_footer_slice(file, &footer, &footer_len)) {
