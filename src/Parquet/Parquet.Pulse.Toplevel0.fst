@@ -322,6 +322,69 @@ let validate_page : validator (parser_of_tot_parser tot_parse_page) =
     )
     _
 
+let validate_jump_page (offset_sz: SZ.t) (size_sz: SZ.t) (pm: perm) (data: S.slice byte) (vdata: Ghost.erased bytes) (pl: Parquet.Pulse.Toplevel.page_location) (vpl: Ghost.erased page_location)
+=
+  validate_jump_with_offset_and_size_then_parse 
+  emp
+  // (pts_to_bytes pm data vdata ** rel_page_location pl vpl)
+  offset_sz size_sz validate_page
+
+fn impl_validate_page_location_all (pm: perm) : PV.impl_pred2 #_ #_ #_ #_ emp (pts_to_bytes pm) rel_page_location validate_page_location_all
+=
+  (data: _)
+  (vdata: _)
+  (pl: _)
+  (vpl: _)
+{
+  unfold rel_page_location pl vpl;
+  // Rel.rel_pure_peek pl _;
+  let offset_sz = SZ.uint64_to_sizet (FStar.Int.Cast.int64_to_uint64 pl.offset);
+  let length_sz = SZ.uint32_to_sizet (FStar.Int.Cast.int32_to_uint32 pl.compressed_page_size);
+  let res = 
+  (
+    (pl.offset >= 0L) &&
+    (pl.compressed_page_size >= 0L) &&
+    (validate_jump_page offset_sz length_sz pm data vdata pl vpl data vdata)
+    // validate_jump_with_offset_and_size_then_parse 
+    //   emp offset_sz length_sz validate_page data vdata
+  );
+  fold rel_page_location pl vpl;
+  res
+}
+
+fn impl_validate_offset_index_all_aux (pm: perm) : PV.impl_pred2 #_ #_ #_ #_ emp (pts_to_bytes pm) rel_offset_index validate_offset_index_all_aux
+= 
+  (data: _)
+  (vdata: _)
+  (oi: _)
+  (voi: _)
+{
+  unfold rel_offset_index oi voi;
+  let res = PV.impl_for_all _ _ _ (impl_validate_page_location_all pm data vdata) oi.page_locations voi.page_locations;
+  fold rel_offset_index oi voi;
+  res
+}
+
+// fn page_location_access_offset (): PV.impl_f_t #_ #_ #_ (fun (pl: page_location) -> pl.offset) rel_page_location
+//   ()
+// = {
+//   // TODO(Tahina)
+//   admit ()
+// }
+
+fn impl_validate_offset_index () : PV.impl_pred2 #_ #_ #_ #_ emp rel_column_chunk rel_offset_index validate_offset_index
+=
+  (cc: _)
+  (vcc: _)
+  (oi: _)
+  (voi: _)
+{
+  // PV.impl_mem_map
+  // TODO(Tahina)
+  admit ()
+}
+
+
 fn impl_validate_offset_index_all (pm: perm) : PV.impl_pred3 #_ #_ #_ #_ #_ #_ emp rel_column_chunk (pts_to_bytes pm) rel_offset_index validate_offset_index_all
 =
   (cc: _)
@@ -331,7 +394,15 @@ fn impl_validate_offset_index_all (pm: perm) : PV.impl_pred3 #_ #_ #_ #_ #_ #_ e
   (oi: _)
   (voi: _)
 {
-  admit ()
+  unfold (rel_column_chunk cc vcc);
+  unfold (rel_offset_index oi voi);
+  let res = 
+  ( impl_validate_offset_index () cc vcc oi voi &&
+  impl_validate_offset_index_all_aux pm data vdata oi voi );
+  fold (rel_offset_index oi voi);
+  fold (rel_column_chunk cc vcc);
+  res
+  // admit ()
 }
 
 assume val validate_offset_index : validator (parser_of_tot_parser parse_offset_index)
