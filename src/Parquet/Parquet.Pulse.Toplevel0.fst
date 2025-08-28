@@ -1281,7 +1281,6 @@ validate_filter_test_gen_t (pts_to_serialized (serialize_fldata_strong serialize
   (#pm': _)
   (#v: _)
 {
-  let _ = print_bool "Entering impl_validate_all" false;
   pts_to_serialized_fldata_strong_elim_trade serialize_footer (U32.v len) y;
   let f = read_footer y;
   Trade.trans (rel_file_meta_data _ _) _ _;

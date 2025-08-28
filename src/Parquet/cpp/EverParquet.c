@@ -1780,7 +1780,6 @@ Parquet_Pulse_Toplevel0_impl_validate_all(
 )
 {
   KRML_MAYBE_UNUSED_VAR(len);
-  Parquet_Pulse_Toplevel0_print_bool("Entering impl_validate_all", false);
   Parquet_Pulse_Toplevel_file_meta_data f = Parquet_Pulse_Toplevel0_read_footer(y);
   bool res = Parquet_Pulse_Toplevel0_impl_validate_all0(f, x);
   return Parquet_Pulse_Toplevel0_print_bool("impl_validate_all0", res);
