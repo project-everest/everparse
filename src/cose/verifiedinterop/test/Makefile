@@ -47,7 +47,7 @@ verifytest: verifytest.c common.c COSE_EverCrypt.o COSE_Format.o CBOR_Det.o $(HA
 bench: bench.c common.c COSE_EverCrypt.o COSE_Format.o CBOR_Det.o $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a
 	$(CC) $(CFLAGS) $^ -o $@
 
-run-bench: bench
+run-bench: bench test
 	./$<
 
 .PHONY: run-bench
