@@ -3,7 +3,7 @@ all: FStar.do karamel.do pulse.do z3 python-venv.do qcbor.do tinycbor.do hacl-st
 .PHONY: all %.do
 
 opam-env.Makefile: everest
-	opam init --no-setup --root=opam --kind=local default ./opam-repository
+	opam init --no-setup --root=opam --kind=local --compiler=5.3.0 default ./opam-repository
 	opam exec --root=opam --set-root -- everest/everest opam
 	./opam-env.sh > $@
 
