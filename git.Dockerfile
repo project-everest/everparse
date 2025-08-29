@@ -3,8 +3,6 @@
 ARG ocaml_version=4.14
 FROM ocaml/opam:ubuntu-24.04-ocaml-$ocaml_version AS base
 
-SHELL ["/usr/bin/env", "BASH_ENV=/home/opam/.bashrc", "/bin/bash", "-c"]
-
 # install rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends llvm-dev libclang-dev clang libgmp-dev pkg-config \
@@ -15,6 +13,9 @@ RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends ll
   python3-venv \
   time \
   wget
+
+# Automatically set up Rust environment
+SHELL ["/usr/bin/env", "BASH_ENV=/home/opam/.cargo/env", "/bin/bash", "-c"]
 
 # Set up code-server
 RUN wget https://github.com/coder/code-server/releases/download/v4.103.2/code-server_4.103.2_amd64.deb \
@@ -36,9 +37,10 @@ FROM base AS deps
 ARG CI_THREADS
 RUN sudo apt-get update && env OPAMYES=1 make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" -C opt && make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" lowparse
 
-ENTRYPOINT ["/usr/bin/env", "BASH_ENV=/home/opam/.bashrc", "/mnt/everparse/opt/shell.sh", "-c"]
+# Automatically set up Rust environment
+ENTRYPOINT ["/usr/bin/env", "BASH_ENV=/home/opam/.cargo/env", "/mnt/everparse/opt/shell.sh", "-c"]
 CMD ["/bin/bash", "-i"]
-SHELL ["/usr/bin/env", "BASH_ENV=/home/opam/.bashrc", "/mnt/everparse/opt/shell.sh", "-c"]
+SHELL ["/usr/bin/env", "BASH_ENV=/home/opam/.cargo/env", "/mnt/everparse/opt/shell.sh", "-c"]
 
 FROM deps AS build
 
