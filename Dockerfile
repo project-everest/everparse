@@ -19,6 +19,14 @@ RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends ll
 # Set up Rust environment
 RUN echo "source $HOME/.cargo/env" >> $(if test -f $HOME/.bash_profile ; then echo $HOME/.bash_profile ; else echo $HOME/.profile ; fi)
 
+# Set up code-server
+RUN wget https://github.com/coder/code-server/releases/download/v4.103.2/code-server_4.103.2_amd64.deb \
+ && sudo dpkg -i code-server*.deb \
+ && rm code-server*.deb
+RUN wget https://github.com/FStarLang/fstar-vscode-assistant/releases/download/v0.19.2/fstar-vscode-assistant-0.19.2.vsix \
+ && code-server --install-extension fstar-vscode-assistant-*.vsix \
+ && rm fstar-vscode-assistant-*.vsix
+
 # Bring in the contents
 ADD --chown=opam:opam ./ /mnt/everparse/
 WORKDIR /mnt/everparse
