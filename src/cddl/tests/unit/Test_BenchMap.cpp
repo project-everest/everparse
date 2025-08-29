@@ -177,7 +177,9 @@ bool tinycbor_lookup1_no_short(uint8_t *buf, size_t len, uint64_t key, uint64_t 
 
 int main()
 {
-    printf("testing\n");
+    printf("This test benchmarks lookups in a CBOR map with EverCDDL,\n"
+           "EverCBOR (i.e. without the CDDL layer), QCBOR and TinyCBOR.\n"
+           "The maps are filled with big random numbers, so most lookups miss.\n");
 
     size_t len = BSIZE;
     uint8_t *buf = (uint8_t*)malloc(len);
@@ -214,7 +216,7 @@ int main()
     for (int i = 0; i < 20 && i < size; i++) {
         printf("%02x ", slice.elt[i]);
     }
-    printf("\n");
+    printf("... \n");
 
     printf(" >>> SERIALIZATION BANDWIDTH: %f MB/s\n", size / f / 1e6);
 
@@ -236,6 +238,7 @@ int main()
 
     int nfound = 0, ncheck;
 
+    /* Lookup via the CDDL iterator API. */
     TIME_void(
     ({
         for (int lap = 0; lap < LAPS; lap++) {
@@ -247,9 +250,11 @@ int main()
         }
     }), &f);
     printf(" NFOUND = %d\n", nfound);
-
     printf(" >>> EVERCDDL LOOKUP: %f us\n", f * 1e6/ K / LAPS);
 
+    /* Lookup via the CDDL iterator API, but do not stop when we've reached
+    a key greater than the one we're looking for (i.e., we don't take advantage
+    of the sorting to make it faster). */
     ncheck = 0;
     TIME_void(
     ({
@@ -265,6 +270,7 @@ int main()
 
     printf(" >>> EVERCDDL LOOKUP (NO SHORT): %f us\n", f * 1e6 / K / LAPS);
 
+    /* Lookup via the pure CBOR API. This is much faster. */
     ncheck = 0;
     TIME_void(
     ({
@@ -318,8 +324,6 @@ int main()
     // }), &f);
     // printf (" >>> TINYCBOR LOOKUP (NO SHORT): %f us\n", f * 1e6 / K / LAPS);
     // assert (ncheck == nfound);
-
-    printf("ok\n");
 
     return 0;
 }

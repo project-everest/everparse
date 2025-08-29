@@ -4,7 +4,7 @@
 .DELETE_ON_ERROR:
 
 all: all-c
-all: all-run
+all: all-build
 
 ODIR := _output
 
@@ -108,7 +108,10 @@ QCBOR:
 	mv $@.tmp $@
 
 QCBOR/libqcbor.a: QCBOR
-	$(MAKE) -C QCBOR
+	# Override the CFLAGS to use -O3, for a more fair comparison
+	$(MAKE) -C QCBOR CFLAGS="-I inc -I test -O3 -fPIC"
+
+
 
 include tinycbor.Makefile
 
@@ -133,6 +136,9 @@ run-qcbor_bench: qcbor_bench
 	./$<
 
 # all: run
+
+.PHONY: all-build
+all-build: $(patsubst %,$(ODIR)/Test_%.exe,$(RUN))
 
 .PHONY: all-run
 all-run: $(patsubst %,%.run,$(RUN))

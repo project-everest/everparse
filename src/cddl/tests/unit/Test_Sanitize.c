@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "Sanitize.h"
 
-/* Just checking that the names are correct. */
+/* Just checking that the field names are correct. */
 
 int main()
 {
