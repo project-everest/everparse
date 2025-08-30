@@ -17,6 +17,9 @@ RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends ll
 # Automatically set up Rust environment
 SHELL ["/usr/bin/env", "BASH_ENV=/home/opam/.cargo/env", "/bin/bash", "-c"]
 
+# Disable rustc warnings globally
+ENV RUSTFLAGS="-A unused_variables -A dead_code -A mismatched_lifetime_syntaxes -A unused_comparisons -A unpredictable_function_pointer_comparisons -A unreachable_code -A unused_mut -A non_upper_case_globals"
+
 # Set up code-server
 RUN wget https://github.com/coder/code-server/releases/download/v4.103.2/code-server_4.103.2_amd64.deb \
  && sudo dpkg -i code-server*.deb \
