@@ -69,7 +69,7 @@ let a"^env'^"_0 : ancillary_bundle_env Det.cbor_det_match "^env'^".be_ast.e_sem_
 let aa"^env'^"_0 : ancillary_array_bundle_env Det.cbor_det_array_iterator_match "^env'^".be_ast.e_sem_env =
   ancillary_array_bundle_env_extend aa"^ancillary_env^" _
 let _ : unit = _ by (FStar.Tactics.print (\"source'\"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; base_attr; "^opaque_to_smt^"] noextract
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [nbe; delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; base_attr; "^opaque_to_smt^"] noextract
 let "^source'^" = T.list_tl "^source^" ("^source^"_cons ())"
 
 let extend_ancillaries_for_typ env env' ancillary_index source source' =
