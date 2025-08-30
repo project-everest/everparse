@@ -18,7 +18,7 @@ export OTHERFLAGS=--admit_smt_queries true # because Karamel Makefiles do not ho
 export FSTAR_EXE  := $(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe
 export KRML_HOME  := $(EVERPARSE_OPT_PATH)/karamel
 export PULSE_HOME := $(EVERPARSE_OPT_PATH)/pulse/out
-export PATH := $(EVERPARSE_OPT_PATH)/z3:$(PATH)
+export PATH := $(realpath $(EVERPARSE_OPT_PATH)/..)/bin:$(EVERPARSE_OPT_PATH)/z3:$(PATH)
 
 include env.Makefile
 

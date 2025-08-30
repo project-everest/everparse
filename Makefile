@@ -18,7 +18,7 @@ export FSTAR_EXE ?= $(wildcard $(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe)
 export KRML_HOME ?= $(EVERPARSE_OPT_PATH)/karamel
 export PULSE_HOME ?= $(EVERPARSE_OPT_PATH)/pulse/out
 EVEREST_HOME ?= $(EVERPARSE_OPT_PATH)/everest
-export PATH := $(EVERPARSE_OPT_PATH)/z3:$(PATH)
+export PATH := $(PWD)/bin:$(EVERPARSE_OPT_PATH)/z3:$(PATH)
 
 include $(EVERPARSE_OPT_PATH)/env.Makefile
 
