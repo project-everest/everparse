@@ -7,7 +7,7 @@ open CBOR.Spec.API.Type
 open CBOR.Pulse.API.Base
 module EqTest = CDDL.Spec.EqTest
 
-inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"]
 noeq
 type array_bundle
   (#cbor_array_iterator_t: Type0)
