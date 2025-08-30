@@ -1,4 +1,4 @@
-all: build
+all: snapshot
 
 EVERPARSE_SRC_PATH = $(realpath ..)
 
@@ -18,14 +18,6 @@ build: build-c build-rust
 
 .PHONY: all
 
-test-extract-c:
-	+$(MAKE) -C verifiedinterop test
-
-test-extract-rust:
-	+$(MAKE) -C generate-rust test
-
-.PHONY: test-extract-c test-extract-rust
-
 .venv:
 	rm -rf $@ $@.tmp
 	python3 -m venv $@.tmp
@@ -33,14 +25,14 @@ test-extract-rust:
 	mv $@.tmp $@
 
 .PHONY: test-interop
-test-interop: build-c .venv
+test-interop: snapshot-c .venv
 	+$(MAKE) -C interop
 
 .PHONY: test-verified-interop
-test-verified-interop: build-c .venv
+test-verified-interop: snapshot-c .venv
 	+$(MAKE) -C verifiedinterop/test
 
-test-rust: build-rust
+test-rust: snapshot-rust
 	cd rust && cargo test
 
 .PHONY: test-rust
@@ -49,23 +41,10 @@ test-extracted: test-interop test-verified-interop test-rust
 
 .PHONY: test-extracted
 
-test-batch-c: cose.cddl
-	rm -rf $@ $@.tmp
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe --odir $@.tmp --tmpdir $@.tmp $< $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl --mname COSEBatchTest --admit
-	mv $@.tmp $@
+test: test-extracted
 
-test-batch-rust: cose.cddl
-	rm -rf $@ $@.tmp
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe --odir $@.tmp --tmpdir $@.tmp $< $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl --mname COSEBatchTest --rust --admit
-	mv $@.tmp $@
+.PHONY: test
 
-test-extract: test-extract-c test-extract-rust test-batch-c test-batch-rust
-
-test: test-extract test-extracted
-
-.PHONY: test-extract test
-
-# This rule is incompatible with `test-extract`
 snapshot: snapshot-c snapshot-rust
 
 .PHONY: snapshot

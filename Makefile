@@ -156,13 +156,13 @@ cddl-test: cddl cddl-unit-tests cddl-dpe cddl-other-tests
 # EverCOSE
 
 cose: cddl
-	+$(MAKE) -C src/cose snapshot
+	+$(MAKE) -C src/cose
 
 .PHONY: cose
 
 # EverCOSE tests
 
 cose-test: cose
-	+$(MAKE) -C src/cose test-extracted
+	+$(MAKE) -C src/cose test
 
 .PHONY: cose-test

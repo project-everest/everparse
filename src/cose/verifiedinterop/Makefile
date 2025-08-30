@@ -1,4 +1,4 @@
-all: extract
+all: snapshot
 
 .PHONY: all
 
@@ -43,11 +43,6 @@ extract: $(ALL_KRML_FILES)
 		-no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -no-prefix Abort \
 		-skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -header noheader.txt
 
-%.diff: extract
-	diff ../c/$(basename $@) $(OUTPUT_DIRECTORY)/$(basename $@)
-
-.PHONY: %.diff
-
 snapshot: extract
 	mkdir -p ../c/internal
 	rm -f $(addprefix ../c/,$(C_FILES))
@@ -55,8 +50,3 @@ snapshot: extract
 	cp $(addprefix $(OUTPUT_DIRECTORY)/internal/,$(INTERNAL_C_FILES)) ../c/internal/
 
 .PHONY: snapshot
-
-test: extract
-ifeq ($(EVERPARSE_NO_DIFF),) # Set this variable to disable diffs
-test: $(addsuffix .diff,$(C_FILES))
-endif
