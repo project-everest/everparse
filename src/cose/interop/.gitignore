@@ -1,3 +1,4 @@
 *.do
 message.*
 .venv
+*.exe
