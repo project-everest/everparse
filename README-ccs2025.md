@@ -36,8 +36,8 @@ More details about the source code follow.
 
 Section 2.2:
 - the PulseParse implementation combinators are in `/src/lowparse/pulse`
-- the recursive combinator specification is in `/src/lowparse/LowParse.Spec.Recursive.fst*`
-- in particular, the validator and jumper for the recursive format is in `/src/lowparse/pulse/LowParse.Pulse.Recursive.fst`
+- the recursive combinator specification is in `/src/lowparse/pulse/LowParse.Spec.Recursive.fst*`
+- the validator and jumper for the recursive format is in `/src/lowparse/pulse/LowParse.Pulse.Recursive.fst`
 
 Section 3.2: in directory `/src/cbor`
 - the CBOR raw data type is defined in `spec/raw/CBOR.Spec.Raw.Base.fst`

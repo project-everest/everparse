@@ -43,7 +43,7 @@ endif
 
 # PulseParse
 
-pulseparse_filter := src/lowparse/pulse/% src/lowparse/LowParse.Spec.Recursive.%
+pulseparse_filter := src/lowparse/pulse/%
 
 lowparse_files := $(filter-out $(pulseparse_filter),$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
 
