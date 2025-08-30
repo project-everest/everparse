@@ -29,6 +29,7 @@ RUN wget https://github.com/FStarLang/fstar-vscode-assistant/releases/download/v
 ADD --chown=opam:opam ./ /mnt/everparse/
 WORKDIR /mnt/everparse
 RUN git clean -ffdx || true
+RUN { git submodule init && git submodule update && git submodule foreach --recursive git clean -ffdx ; } || true
 
 FROM base AS deps
 
