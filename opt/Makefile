@@ -44,7 +44,7 @@ $(EVERPARSE_SRC_PATH)/cose/.venv:
 	+$(MAKE) -C $(dir $@) $(notdir $@)
 
 qcbor.do: $(EVERPARSE_SRC_PATH)/cddl/tests/unit/QCBOR
-	+$(MAKE) -C $<
+	+$(MAKE) -C $(dir $<) -f qcbor.Makefile
 
 $(EVERPARSE_SRC_PATH)/cddl/tests/unit/QCBOR:
 	+$(MAKE) -C $(dir $@) $(notdir $@)
