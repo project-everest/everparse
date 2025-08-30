@@ -1,4 +1,4 @@
-all: FStar.do karamel.do pulse.do z3 python-venv.do qcbor.do tinycbor.do hacl-star.do dice.do
+all: FStar.do karamel.do pulse.do z3 python-venv.do qcbor.do tinycbor.do hacl-star.do dice.do lowparse.do
 
 .PHONY: all %.do
 
@@ -63,3 +63,7 @@ $(EVERPARSE_SRC_PATH)/cose/verifiedinterop/test/hacl-star:
 
 dice.do: pulse.do
 	+$(MAKE) -C $(EVERPARSE_SRC_PATH)/cddl/tests/dpe -f dice.Makefile
+
+# This is LowParse from Ramananandro et al.'s EverParse (USENIX Security 2019)
+lowparse.do: karamel.do
+	+$(MAKE) -C $(EVERPARSE_SRC_PATH)/lowparse
