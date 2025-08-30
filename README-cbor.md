@@ -55,11 +55,12 @@ Section 5.1: in directory `/src/cddl/tests/unit`
 - Array benchmark: CDDL description in `BenchArray.cddl`. The driver `Test_BenchArray.c` serializes and parses with our tool. `Test_BenchArray__Interop1.c` serializes with our tool and parses with QCBOR. `Test_BenchArray__Interop2.c` serialized with QCBOR and parses with our tool. Finall, `Test_BenchArray__Interop3.cpp` tests against TinyCBOR.
 
 Section 5.2: in directory `/src/cose`
-- The COSE specification is at `cose.cddl`
-- The verified C code obtained after extracting COSE is in the `c` subdirectory
-- The unverified interoperability tests with OpenSSL are in subdirectory `interop`.  The interesting file is `common.c`, which uses the generated C API.
+- The COSE specification is at `cose-sign.cddl`, `cose-encrypt.cddl` and `cose-mac.cddl`
+- The verified C code obtained after extracting COSE signing and verification is in the `c` subdirectory
+- The verified C code obtained after extracting COSE encryption (resp. MAC) formats is in the `encrypt` (resp. `mac`) subdirectory
+- The unverified signing and verification interoperability tests with OpenSSL are in subdirectory `interop`.  The interesting file is `common.c`, which uses the generated C API.
 - The verified signature creation and verification code using HACL* EverCrypt is in subdirectory `verifiedinterop`.  The main file is `CBOR.EverCrypt.fst`. It extracts to `/src/cose/c/COSE_EverCrypt.c`
-- The verified Rust code obtained after extracting COSE is in the `rust` subdirectory. It can be built (resp. tested) by running `cargo build` (resp. `cargo test`) from that directory.
+- The verified Rust code obtained after extracting COSE signing and verification is in the `rust` subdirectory. It can be built (resp. tested) by running `cargo build` (resp. `cargo test`) from that directory.
 
 Appendix A:
 - The arithmetic example is in `/tests/pulse`
