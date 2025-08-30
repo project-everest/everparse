@@ -15,8 +15,8 @@ $(EVERPARSE_PATH)/lib/evercddl/lib \
 $(EVERPARSE_PATH)/lib/evercddl/plugin \
 ../util \
 ../_output \
-$(DICE_HOME) \
-$(DICE_HOME)/_cache
+$(DICE_HOME)
+
 
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
