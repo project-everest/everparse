@@ -1,12 +1,7 @@
 all: build
-all: encrypt mac
+all: encrypt
 
 encrypt: cose-encrypt.cddl ../cddl/spec/postlude.cddl
-	rm -rf $@.tmp $@
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --odir $@.tmp
-	mv $@.tmp $@
-
-mac: cose-mac.cddl ../cddl/spec/postlude.cddl
 	rm -rf $@.tmp $@
 	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --odir $@.tmp
 	mv $@.tmp $@

@@ -37,12 +37,21 @@ Generic_Headers = (
        external_aad : bstr
    ]
 
+   MAC_structure = [
+        context : "MAC" / "MAC0",
+        protected : empty_or_serialized_map,
+        external_aad : bstr,
+        payload : bstr
+   ]
+
   COSE_Encrypt_Tagged = #6.96(COSE_Encrypt)
+
+COSE_recipients = [+COSE_recipient]
 
   COSE_Encrypt = [
        Headers,
        ciphertext : bstr / nil,
-       recipients : [+COSE_recipient]
+       recipients : COSE_recipients
    ]
 
 ; FIXME: in RFC 9052, COSE_recipient is recursive, but Appendix B says
@@ -82,4 +91,22 @@ COSE_recipient3 = [
    COSE_Encrypt0 = [
        Headers,
        ciphertext : bstr / nil,
+   ]
+
+   COSE_Mac_Tagged = #6.97(COSE_Mac)
+
+   COSE_Mac = [
+      Headers,
+      payload : bstr / nil,
+      tag : bstr,
+      recipients : COSE_recipients
+   ]
+
+   COSE_Mac0_Tagged = #6.17(COSE_Mac0)
+
+
+   COSE_Mac0 = [
+      Headers,
+      payload : bstr / nil,
+      tag : bstr,
    ]
