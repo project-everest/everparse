@@ -167,35 +167,37 @@ let _ : unit = _ by (FStar.Tactics.print (\"type\"); FStar.Tactics.exact (`()))
 [@@ \"KrmlPrivate\"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
 let "^uglify typename^" = "^bundle^"'.b_impl_type
 let _ : unit = _ by (FStar.Tactics.print (\"teq\"); FStar.Tactics.exact (`()))
-let teq"^bundle^" () : squash ("^bundle^"'.b_impl_type == "^uglify typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())"^
+let teq"^bundle^" () : squash ("^bundle^"'.b_impl_type == "^uglify typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.norm [delta_only [`%"^uglify typename^"]]; FStar.Tactics.trefl ())
+let _ : unit = _ by (FStar.Tactics.print (\"prettify impl\"); FStar.Tactics.exact (`()))"^
 produce_splice typename ""^"
 let _ : unit = _ by (FStar.Tactics.print (\"spec type\"); FStar.Tactics.exact (`()))
 noextract [@@noextract_to "^krml^"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_spec_type_steps); FStar.Tactics.trefl ())]
 let spect_"^uglify typename^" = "^bundle^"'.b_spec_type
 let _ : unit = _ by (FStar.Tactics.print (\"specteq\"); FStar.Tactics.exact (`()))
-let specteq"^bundle^" () : squash ("^bundle^"'.b_spec_type == spect_"^uglify typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_spec_type_steps); FStar.Tactics.trefl ())"^
+let specteq"^bundle^" () : squash ("^bundle^"'.b_spec_type == spect_"^uglify typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_spec_type_steps); FStar.Tactics.norm [delta_only [`%spect_"^uglify typename^"]]; FStar.Tactics.trefl ())
+let _ : unit = _ by (FStar.Tactics.print (\"prettify spec\"); FStar.Tactics.exact (`()))"^
 produce_splice ("spect_"^typename) ("noextract [@@noextract_to "^krml^"]")^"
 inline_for_extraction noextract [@@noextract_to "^krml^"; bundle_attr; bundle_get_impl_type_attr]
 let "^bundle^"'' = bundle_bij "^bundle^"' spect_"^typename^"_right spect_"^typename^"_left spect_"^typename^"_left_right spect_"^typename^"_right_left (T.eq_sym (specteq"^bundle^" ())) "^typename^"_right "^typename^"_left "^typename^"_left_right "^typename^"_right_left (T.eq_sym (teq"^bundle^" ()))
 [@@bundle_attr; bundle_get_impl_type_attr]
 let g"^bundle^"'' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide "^bundle^"''
 let _ : unit = _ by (FStar.Tactics.print (\"relteq\"); FStar.Tactics.exact (`()))
-let relteq"^bundle^" () : squash (rel "^typename^" spect_"^typename^" == rel "^bundle^"''.b_impl_type "^bundle^"''.b_spec_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_rel_steps); FStar.Tactics.trefl ())
+let relteq"^bundle^" () : squash (rel "^typename^" spect_"^typename^" == rel "^bundle^"''.b_impl_type "^bundle^"''.b_spec_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_rel_steps); FStar.Tactics.norm [delta_only [`%"^typename^"; `%spect_"^typename^"]]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print (\"rel\"); FStar.Tactics.exact (`()))
 noextract [@@noextract_to "^krml^"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_rel_steps); FStar.Tactics.trefl ())]
 let rel_"^typename^" : rel "^typename^" spect_"^typename^" = coerce_eq (T.eq_sym (relteq"^bundle^" ())) "^bundle^"''.b_rel
 let _ : unit = _ by (FStar.Tactics.print (\"releq\"); FStar.Tactics.exact (`()))
-let releq"^bundle^" () : squash (rel_"^typename^" == coerce_eq (T.eq_sym (relteq"^bundle^" ())) "^bundle^"''.b_rel) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_rel_steps); FStar.Tactics.trefl ())
+let releq"^bundle^" () : squash (rel_"^typename^" == coerce_eq (T.eq_sym (relteq"^bundle^" ())) "^bundle^"''.b_rel) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_rel_steps); FStar.Tactics.norm [delta_only [`%rel_"^typename^"]]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print (\"grelteq\"); FStar.Tactics.exact (`()))
 let grelteq"^bundle^" () : squash (rel "^typename^" spect_"^typename^" == rel g"^bundle^"''.b_impl_type g"^bundle^"''.b_spec_type) = coerce_eq (_ by (FStar.Tactics.norm [delta_only [`%g"^bundle^"''; `%coerce_eq]; primops]; FStar.Tactics.trefl ())) (relteq"^bundle^" ())
 let _ : unit = _ by (FStar.Tactics.print (\"greleq\"); FStar.Tactics.exact (`()))
 let greleq"^bundle^" () : squash (rel_"^typename^" == coerce_eq (T.eq_sym (grelteq"^bundle^" ())) g"^bundle^"''.b_rel) = coerce_eq (_ by (FStar.Tactics.norm [delta_only [`%g"^bundle^"''; `%coerce_eq]; primops]; FStar.Tactics.trefl ())) (releq"^bundle^" ())
 let _ : unit = _ by (FStar.Tactics.print (\"specteq\"); FStar.Tactics.exact (`()))
-let specteq"^bundle^"'' () : squash ("^bundle^"''.b_spec_type == spect_"^typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_spec_type_steps); FStar.Tactics.trefl ())
+let specteq"^bundle^"'' () : squash ("^bundle^"''.b_spec_type == spect_"^typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_spec_type_steps); FStar.Tactics.norm [delta_only [`%spect_"^typename^"]]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print (\"gspecteq\"); FStar.Tactics.exact (`()))
 let gspecteq"^bundle^"'' () : squash (g"^bundle^"''.b_spec_type == spect_"^typename^") = coerce_eq (_ by (FStar.Tactics.norm [delta_only [`%g"^bundle^"''; `%coerce_eq]; primops]; FStar.Tactics.trefl ())) (specteq"^bundle^"'' ())
 let _ : unit = _ by (FStar.Tactics.print (\"teq\"); FStar.Tactics.exact (`()))
-let teq"^bundle^"'' () : squash ("^bundle^"''.b_impl_type == "^typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let teq"^bundle^"'' () : squash ("^bundle^"''.b_impl_type == "^typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.norm [delta_only [`%"^typename^"]]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print (\"gteq\"); FStar.Tactics.exact (`()))
 let gteq"^bundle^"'' () : squash (g"^bundle^"''.b_impl_type == "^typename^") = coerce_eq (_ by (FStar.Tactics.norm [delta_only [`%g"^bundle^"''; `%coerce_eq]; primops]; FStar.Tactics.trefl ())) (teq"^bundle^"'' ())
 let peq"^bundle^" () = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match "^bundle^"''.b_spec.parser "^bundle^"''.b_rel "^typename^" (teq"^bundle^"'' ())
@@ -255,35 +257,37 @@ let _ : unit = _ by (FStar.Tactics.print (\"type\"); FStar.Tactics.exact (`()))
 [@@ \"KrmlPrivate\"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
 let "^uglify typename^" = "^bundle^"'.ab_impl_type
 let _ : unit = _ by (FStar.Tactics.print (\"teq\"); FStar.Tactics.exact (`()))
-let teq"^bundle^" () : squash ("^bundle^"'.ab_impl_type == "^uglify typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())"^
+let teq"^bundle^" () : squash ("^bundle^"'.ab_impl_type == "^uglify typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.norm [delta_only [`%"^uglify typename^"]]; FStar.Tactics.trefl ())
+let _ : unit = _ by (FStar.Tactics.print (\"prettify impl\"); FStar.Tactics.exact (`()))"^
 produce_splice typename ""^"
 let _ : unit = _ by (FStar.Tactics.print (\"spec type\"); FStar.Tactics.exact (`()))
 noextract [@@noextract_to "^krml^"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_spec_type_steps); FStar.Tactics.trefl ())]
 let spect_"^uglify typename^" = "^bundle^"'.ab_spec_type
 let _ : unit = _ by (FStar.Tactics.print (\"specteq\"); FStar.Tactics.exact (`()))
-let specteq"^bundle^" () : squash ("^bundle^"'.ab_spec_type == spect_"^uglify typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_spec_type_steps); FStar.Tactics.trefl ())"^
+let specteq"^bundle^" () : squash ("^bundle^"'.ab_spec_type == spect_"^uglify typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_spec_type_steps); FStar.Tactics.norm [delta_only [`%spect_"^uglify typename^"]]; FStar.Tactics.trefl ())
+let _ : unit = _ by (FStar.Tactics.print (\"prettify spec\"); FStar.Tactics.exact (`()))"^
 produce_splice ("spect_"^typename) ("noextract [@@noextract_to "^krml^"]")^"
 inline_for_extraction noextract [@@noextract_to "^krml^"; bundle_attr; bundle_get_impl_type_attr]
 let "^bundle^"'' = CDDL.Pulse.Bundle.ArrayGroup.bundle_array_group_bij "^bundle^"' spect_"^typename^"_right spect_"^typename^"_left spect_"^typename^"_left_right spect_"^typename^"_right_left (T.eq_sym (specteq"^bundle^" ())) "^typename^"_right "^typename^"_left "^typename^"_left_right "^typename^"_right_left (T.eq_sym (teq"^bundle^" ()))
 [@@bundle_attr; bundle_get_impl_type_attr]
 let g"^bundle^"'' : Ghost.erased (array_bundle Det.cbor_det_array_iterator_match) = Ghost.hide "^bundle^"''
 let _ : unit = _ by (FStar.Tactics.print (\"relteq\"); FStar.Tactics.exact (`()))
-let relteq"^bundle^" () : squash (rel "^typename^" spect_"^typename^" == rel "^bundle^"''.ab_impl_type "^bundle^"''.ab_spec_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_rel_steps); FStar.Tactics.trefl ())
+let relteq"^bundle^" () : squash (rel "^typename^" spect_"^typename^" == rel "^bundle^"''.ab_impl_type "^bundle^"''.ab_spec_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_rel_steps); FStar.Tactics.norm [delta_only [`%"^typename^"; `%spect_"^typename^"]]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print (\"rel\"); FStar.Tactics.exact (`()))
 noextract [@@noextract_to "^krml^"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_rel_steps); FStar.Tactics.trefl ())]
 let rel_"^typename^" : rel "^typename^" spect_"^typename^" = coerce_eq (T.eq_sym (relteq"^bundle^" ())) "^bundle^"''.ab_rel
 let _ : unit = _ by (FStar.Tactics.print (\"releq\"); FStar.Tactics.exact (`()))
-let releq"^bundle^" () : squash (rel_"^typename^" == coerce_eq (T.eq_sym (relteq"^bundle^" ())) "^bundle^"''.ab_rel) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_rel_steps); FStar.Tactics.trefl ())
+let releq"^bundle^" () : squash (rel_"^typename^" == coerce_eq (T.eq_sym (relteq"^bundle^" ())) "^bundle^"''.ab_rel) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_rel_steps); FStar.Tactics.norm [delta_only [`%rel_"^typename^"]]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print (\"grelteq\"); FStar.Tactics.exact (`()))
 let grelteq"^bundle^" () : squash (rel "^typename^" spect_"^typename^" == rel g"^bundle^"''.ab_impl_type g"^bundle^"''.ab_spec_type) = coerce_eq (_ by (FStar.Tactics.norm [delta_only [`%g"^bundle^"''; `%coerce_eq]; primops]; FStar.Tactics.trefl ())) (relteq"^bundle^" ())
 let _ : unit = _ by (FStar.Tactics.print (\"greleq\"); FStar.Tactics.exact (`()))
 let greleq"^bundle^" () : squash (rel_"^typename^" == coerce_eq (T.eq_sym (grelteq"^bundle^" ())) g"^bundle^"''.ab_rel) = coerce_eq (_ by (FStar.Tactics.norm [delta_only [`%g"^bundle^"''; `%coerce_eq]; primops]; FStar.Tactics.trefl ())) (releq"^bundle^" ())
 let _ : unit = _ by (FStar.Tactics.print (\"specteq\"); FStar.Tactics.exact (`()))
-let specteq"^bundle^"'' () : squash ("^bundle^"''.ab_spec_type == spect_"^typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_spec_type_steps); FStar.Tactics.trefl ())
+let specteq"^bundle^"'' () : squash ("^bundle^"''.ab_spec_type == spect_"^typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_spec_type_steps); FStar.Tactics.norm [delta_only [`%spect_"^typename^"]]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print (\"gspecteq\"); FStar.Tactics.exact (`()))
 let gspecteq"^bundle^"'' () : squash (g"^bundle^"''.ab_spec_type == spect_"^typename^") = coerce_eq (_ by (FStar.Tactics.norm [delta_only [`%g"^bundle^"''; `%coerce_eq]; primops]; FStar.Tactics.trefl ())) (specteq"^bundle^"'' ())
 let _ : unit = _ by (FStar.Tactics.print (\"teq\"); FStar.Tactics.exact (`()))
-let teq"^bundle^"'' () : squash ("^bundle^"''.ab_impl_type == "^typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let teq"^bundle^"'' () : squash ("^bundle^"''.ab_impl_type == "^typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.norm [delta_only [`%"^typename^"]]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print (\"gteq\"); FStar.Tactics.exact (`()))
 let gteq"^bundle^"'' () : squash (g"^bundle^"''.ab_impl_type == "^typename^") = coerce_eq (_ by (FStar.Tactics.norm [delta_only [`%g"^bundle^"''; `%coerce_eq]; primops]; FStar.Tactics.trefl ())) (teq"^bundle^"'' ())
 let peq"^bundle^" () = CDDL.Pulse.Parse.ArrayGroup.impl_zero_copy_array_group_t_eq Det.cbor_det_array_iterator_match "^bundle^"''.ab_spec.ag_parser "^bundle^"''.ab_rel "^typename^" (teq"^bundle^"'' ())
