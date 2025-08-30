@@ -1,10 +1,11 @@
 # Note: no postlude added to these tests.
 
-.NOTINTERMEDIATE:
-.DELETE_ON_ERROR:
-
 all: all-c
 all: all-build
+all: all-run
+
+.NOTINTERMEDIATE:
+.DELETE_ON_ERROR:
 
 ODIR := _output
 
