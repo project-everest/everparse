@@ -110,11 +110,7 @@ QCBOR:
 	cd $@.tmp && git checkout 83c4af09d3752afa64ae66e2a3382192bf682541
 	mv $@.tmp $@
 
-QCBOR/libqcbor.a: QCBOR
-	# Override the CFLAGS to use -O3, for a more fair comparison
-	$(MAKE) -C QCBOR CFLAGS="-I inc -I test -O3 -fPIC"
-
-
+include qcbor.Makefile
 
 tinycbor:
 	rm -rf $@.tmp
