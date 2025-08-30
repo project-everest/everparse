@@ -16,6 +16,7 @@ bin/3d.exe
 bin/cddl.exe
 lib/evercddl
 .depend.rsp
+code-server.log
 
 # package.sh creates there
 __fstar-install
