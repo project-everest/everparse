@@ -56,6 +56,9 @@ ifneq ($(RESOURCEMONITOR),)
 	RUNLIM=runlim -p -o $@.$(MONPREFIX)runlim
 endif
 
+# Disable warnings 
+FSTAR_OPTIONS := --warn_error -152-242-249-250-271-274-285-288-290-302-321-337-349-361 $(FSTAR_OPTIONS)
+
 FSTAR_EXE ?= fstar.exe
 
 FSTAR=$(RUNLIM) $(FSTAR_EXE) $(SIL) $(FSTAR_OPTIONS)
