@@ -12,6 +12,7 @@ RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends ll
   python3-pip \
   python3-venv \
   time \
+  vim emacs-nox \
   wget
 
 # Automatically set up Rust environment
