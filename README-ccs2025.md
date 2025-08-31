@@ -224,13 +224,13 @@ Section 4.1: in directory `/src/cddl/spec` (except otherwise mentioned)
 Section 4.2: in directory `/src/cddl/pulse`
 - The CDDL validator implementation combinators are defined in `CDDL.Pulse.Base.fst`, `CDDL.Pulse.Misc.fst`, `CDDL.Pulse.ArrayGroup.fst` and `CDDL.Pulse.MapGroup.fst`
 - The CDDL parser implementation combinators are defined in `CDDL.Pulse.Parse.*`
-- The CDDL sserializer implementation combinators are defined in `CDDL.Pulse.Serialize.*`
+- The CDDL serializer implementation combinators are defined in `CDDL.Pulse.Serialize.*`
 - The CDDL code generator is defined as `impl_bundle_wf_type` in `CDDL.Pulse.AST.Bundle.fst`
 
 Section 5.1: in directory `/src/cddl/tests/unit`
 - Record benchmark: CDDL description in `BenchFlat.cddl`, driver code in `Test_BenchFlat.cpp`.
 - Map benchmark: CDDL description in `BenchMap.cddl`, driver code in `Test_BenchMap.cpp`.
-- Array benchmark: CDDL description in `BenchArray.cddl`. The driver `Test_BenchArray.c` serializes and parses with our tool. `Test_BenchArray__Interop1.c` serializes with our tool and parses with QCBOR. `Test_BenchArray__Interop2.c` serialized with QCBOR and parses with our tool. Finall, `Test_BenchArray__Interop3.cpp` tests against TinyCBOR.
+- Array benchmark: CDDL description in `BenchArray.cddl`. The driver `Test_BenchArray.c` serializes and parses with our tool. `Test_BenchArray__Interop1.c` serializes with our tool and parses with QCBOR. `Test_BenchArray__Interop2.c` serialized with QCBOR and parses with our tool. Finally, `Test_BenchArray__Interop3.cpp` tests against TinyCBOR.
 
 Section 5.2: in directory `/src/cose`
 - The COSE specification is at `cose-sign.cddl` and `cose-encrypt.cddl`
