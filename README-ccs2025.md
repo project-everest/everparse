@@ -63,6 +63,12 @@ following instructions will load the 3 images all at once:
 
 2. Run `gunzip -c evercbor-ccs2025.tar.gz | docker load`
 
+3. Run `docker image list --no-trunc 'evercbor-ccs2025-*'`
+   (do not forget the single quotes)
+
+4. Check the output of this command against the sha256 image IDs
+   listed in the description of the Zenodo record.
+
 Then, to open a container based on (say) the `evercbor-ccs2025-deps`
 image:
 
