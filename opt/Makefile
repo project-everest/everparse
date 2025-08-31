@@ -1,4 +1,4 @@
-all: FStar.do karamel.do pulse.do z3 python-venv.do qcbor.do tinycbor.do hacl-star.do dice.do lowparse.do
+all: FStar.do karamel.do pulse.do z3 python-venv.do qcbor.do tinycbor.do hacl-star.do dice.do lowparse.do cbor-rust-deps.do cose-rust-deps.do
 
 .PHONY: all %.do
 
@@ -67,3 +67,9 @@ dice.do: pulse.do
 # This is LowParse from Ramananandro et al.'s EverParse (USENIX Security 2019)
 lowparse.do: karamel.do
 	+$(MAKE) -C $(EVERPARSE_SRC_PATH)/lowparse
+
+cbor-rust-deps.do:
+	cd $(EVERPARSE_SRC_PATH)/cbor/pulse/det/rust && cargo fetch
+
+cose-rust-deps.do:
+	cd $(EVERPARSE_SRC_PATH)/cose/rust && cargo fetch
