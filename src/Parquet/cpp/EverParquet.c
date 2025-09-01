@@ -90,7 +90,10 @@ Parquet_Pulse_Toplevel0_compute_cols_size(
         else
           accu = KRML_EABORT(int64_t, "unreachable (pattern matches are exhaustive in F*)");
         if (bound - accu < md.total_compressed_size)
+        {
+          Parquet_Pulse_Toplevel0_print_bool("compute_cols_size", false);
           *poverflow = true;
+        }
         else
           paccu =
             (

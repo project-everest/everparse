@@ -209,6 +209,7 @@ ensures exists* overflow .
         if (not overflow) {
           let accu = Some?.v !paccu;
           if (I64.lt (I64.sub bound accu) md.total_compressed_size) {
+            print_bool "compute_cols_size" false;
             poverflow := true;
           } else {
             paccu := Some (I64.add accu md.total_compressed_size);
