@@ -172,9 +172,9 @@ If you want to read our verified implementation, you can actually use
 a Web version of Visual Studio Code, which can be set up automatically
 using the following instructions:
 
-1. On Linux, run `docker run -p 8080:8080 evercbor-ccs2025-test`
+1. On Linux, run `docker run -p 8080:8080 -i -t evercbor-ccs2025-test`
 
-   On MacOS, run `docker run --platform=linux/amd64 -p 8080:8080 evercbor-ccs2025-test`
+   On MacOS, run `docker run --platform=linux/amd64 -p 8080:8080 -i -t evercbor-ccs2025-test`
 
 2. In the container, run `./start-code-server.sh`
 
@@ -184,7 +184,7 @@ This will open a Web-based instance of Visual Studio Code, where you
 can browse the contents of the artifact in the container. For
 instance, if you open a F* file (file name extension `.fst` or
 `.fsti`), move to some location within this file, and then hit the
-keystroke sequence `CTRL+C CTRL+.` , then Visual Studio Code will have
+keystroke `CTRL+.` , then Visual Studio Code will have
 F* verify the contents of the file down to that point. A green bar on
 the left-hand-side will show which parts of the code F* has
 verified. For more information, the container includes the manual of the
