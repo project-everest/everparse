@@ -99,7 +99,7 @@ fn slice_from_array_trade
 
 #pop-options
 
-#push-options "--fuel 8 --z3rlimit 32"
+#push-options "--fuel 8 --z3rlimit 64"
 
 #restart-solver
 inline_for_extraction

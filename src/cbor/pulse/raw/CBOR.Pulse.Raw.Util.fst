@@ -33,7 +33,7 @@ let half_mul (a b: real) : Lemma
 
 let perm_mul_div (a b: perm) : Lemma
   (a `perm_mul` (b `perm_div` a) == b)
-= ()
+= assert (a *. (b /. a) == b)
 
 let perm_half_mult
   (pm ip: perm)
