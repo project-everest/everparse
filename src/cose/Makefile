@@ -1,5 +1,4 @@
 all: build
-all: encrypt
 
 encrypt: cose-encrypt.cddl ../cddl/spec/postlude.cddl
 	rm -rf $@.tmp $@
@@ -65,7 +64,7 @@ test-batch-rust: cose.cddl
 	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe --odir $@.tmp --tmpdir $@.tmp $< $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl --mname COSEBatchTest --rust --admit
 	mv $@.tmp $@
 
-test-extract: test-extract-c test-extract-rust test-batch-c test-batch-rust
+test-extract: test-extract-c test-extract-rust test-batch-c test-batch-rust encrypt
 
 test: test-extract test-extracted
 
