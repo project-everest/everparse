@@ -108,15 +108,16 @@ ensures
     (vmatch xl v)
 {
   fold (eq_as_slprop unit () v);
-  ghost fn aux (_: unit)
-  requires
-    vmatch xl v ** eq_as_slprop unit () v
-  ensures
-    vmatch xl v
+  intro
+    (Trade.trade
+      (eq_as_slprop unit () v)
+      (vmatch xl v)
+    )
+    #(vmatch xl v)
+    fn _
   {
     unfold (eq_as_slprop unit () v)
   };
-  Trade.intro _ _ _ aux
 }
 
 inline_for_extraction
@@ -258,15 +259,16 @@ fn pts_to_serialized_synth_trade
   ensures pts_to_serialized (serialize_synth p f s f' ()) input #pm (f v) ** trade (pts_to_serialized (serialize_synth p f s f' ()) input #pm (f v)) (pts_to_serialized s input #pm v)
 {
   pts_to_serialized_synth_intro s f f' input;
-  ghost
-  fn aux
-    (_: unit)
-    requires emp ** pts_to_serialized (serialize_synth p f s f' ()) input #pm (f v)
-    ensures pts_to_serialized s input #pm v
+  intro
+    (Trade.trade
+      (pts_to_serialized (serialize_synth p f s f' ()) input #pm (f v))
+      (pts_to_serialized s input #pm v)
+    )
+    #emp
+    fn _
   {
     pts_to_serialized_synth_elim s f f' input v 
   };
-  intro_trade _ _ _ aux
 }
 
 ghost
@@ -322,15 +324,16 @@ fn pts_to_serialized_synth_l2r_trade
   ensures pts_to_serialized s input #pm (f' v) ** trade (pts_to_serialized s input #pm (f' v)) (pts_to_serialized (serialize_synth p f s f' ()) input #pm v)
 {
   pts_to_serialized_synth_l2r s f f' input;
-  ghost
-  fn aux
-    (_: unit)
-    requires emp ** pts_to_serialized s input #pm (f' v)
-    ensures pts_to_serialized (serialize_synth p f s f' ()) input #pm v
+  intro
+    (Trade.trade
+      (pts_to_serialized s input #pm (f' v))
+      (pts_to_serialized (serialize_synth p f s f' ()) input #pm v)
+    )
+    #emp
+    fn _
   {
     pts_to_serialized_synth_r2l s f f' input v
   };
-  intro_trade _ _ _ aux
 }
 
 ghost
@@ -578,13 +581,16 @@ fn pts_to_serialized_filter_elim_trade
   ensures exists* (v': t) . pts_to_serialized s input #pm v' ** Trade.trade (pts_to_serialized s input #pm v') (pts_to_serialized (serialize_filter s f) input #pm v) ** pure (v' == v)
 {
   pts_to_serialized_filter_elim s f input;
-  ghost fn aux (_: unit)
-  requires emp ** pts_to_serialized s input #pm v
-  ensures (pts_to_serialized (serialize_filter s f) input #pm v)
+  intro
+    (Trade.trade
+      (pts_to_serialized s input #pm v)
+      (pts_to_serialized (serialize_filter s f) input #pm v)
+    )
+    #emp
+    fn _
   {
     pts_to_serialized_filter_intro s f input
   };
-  Trade.intro _ _ _ aux
 }
 
 inline_for_extraction
@@ -1224,18 +1230,19 @@ ghost fn pts_to_serialized_dtuple2_nondep_then_assoc_l2r
   join_nondep_then s1 (fst res12) (s2 (dfst v12)) (snd res12) (fst res);
   join_nondep_then (serialize_nondep_then s1 (s2 (dfst v12))) (fst res) s3 (snd res) input;
   with v_ . assert (pts_to_serialized (serialize_nondep_then (serialize_nondep_then s1 (s2 (dfst v12))) s3) input #pm v_);
-  ghost fn aux (_: unit)
-  requires
-    (emp ** pts_to_serialized (serialize_nondep_then (serialize_nondep_then s1 (s2 (dfst v12))) s3) input #pm v_)
-  ensures
-    (pts_to_serialized (serialize_nondep_then (serialize_dtuple2 s1 s2) s3) input #pm v)
+  intro
+    (Trade.trade
+      (pts_to_serialized (serialize_nondep_then (serialize_nondep_then s1 (s2 (dfst v12))) s3) input #pm v_)
+      (pts_to_serialized (serialize_nondep_then (serialize_dtuple2 s1 s2) s3) input #pm v)
+    )
+    #emp
+    fn _
   {
     let res = ghost_split_nondep_then (serialize_nondep_then s1 (s2 (dfst v12))) s3 input;
     let res12 = ghost_split_nondep_then s1 (s2 (dfst v12)) (fst res);
     join_dtuple2 s1 (fst res12) s2 (snd res12) (fst res);
     join_nondep_then (serialize_dtuple2 s1 s2) (fst res) s3 (snd res) input
   };
-  Trade.intro _ _ _ aux;
   pts_to_serialized_nondep_then_assoc_l2r s1 (s2 (dfst v12)) s3 input;
   Trade.trans _ _ (pts_to_serialized (serialize_nondep_then (serialize_dtuple2 s1 s2) s3) input #pm v)
 }
@@ -1268,17 +1275,18 @@ fn pts_to_serialized_synth_l2r_nondep_then_left
   pts_to_serialized_synth_l2r s f f' (fst res);
   join_nondep_then s (fst res) s2 (snd res) input;
   with v' . assert (pts_to_serialized (serialize_nondep_then s s2) input #pm v');
-  ghost
-  fn aux
-    (_: unit)
-    requires emp ** (pts_to_serialized (serialize_nondep_then s s2) input #pm v')
-    ensures pts_to_serialized (serialize_nondep_then (serialize_synth p f s f' ()) s2) input #pm v
+  intro
+    (Trade.trade
+      (pts_to_serialized (serialize_nondep_then s s2) input #pm v')
+      (pts_to_serialized (serialize_nondep_then (serialize_synth p f s f' ()) s2) input #pm v)
+    )
+    #emp
+    fn _
   {
     let res = ghost_split_nondep_then s s2 input;
     pts_to_serialized_synth_intro s f f' (fst res);
     join_nondep_then (serialize_synth p f s f' ()) (fst res) s2 (snd res) input;
   };
-  intro_trade _ _ _ aux
 }
 
 ghost
@@ -1306,15 +1314,18 @@ fn pts_to_serialized_filter_elim_nondep_then_left
   pts_to_serialized_filter_elim s f (fst res);
   join_nondep_then s (fst res) s2 (snd res) input;
   with v' . assert (pts_to_serialized (s `serialize_nondep_then` s2) input #pm v');
-  ghost fn aux (_: unit)
-  requires emp ** (pts_to_serialized (s `serialize_nondep_then` s2) input #pm v')
-  ensures (pts_to_serialized (serialize_filter s f `serialize_nondep_then` s2) input #pm v)
+  intro
+    (Trade.trade
+      (pts_to_serialized (s `serialize_nondep_then` s2) input #pm v')
+      (pts_to_serialized (serialize_filter s f `serialize_nondep_then` s2) input #pm v)
+    )
+    #emp
+    fn _
   {
     let res = ghost_split_nondep_then s s2 input;
     pts_to_serialized_filter_intro s f (fst res);
     join_nondep_then (serialize_filter s f) (fst res) s2 (snd res) input;
   };
-  Trade.intro _ _ _ aux
 }
 
 ghost
@@ -1372,13 +1383,16 @@ fn pts_to_serialized_ext_nondep_then_left
 {
   pts_to_serialized_ext_nondep_then_left' s1 s2 s3 input;
   with v23 . assert (pts_to_serialized (serialize_nondep_then s2 s3) input #pm v23);
-  ghost fn aux (_: unit)
-  requires (emp ** pts_to_serialized (serialize_nondep_then s2 s3) input #pm v23)
-  ensures (pts_to_serialized (serialize_nondep_then s1 s3) input #pm v)
+  intro
+    (Trade.trade
+      (pts_to_serialized (serialize_nondep_then s2 s3) input #pm v23)
+      (pts_to_serialized (serialize_nondep_then s1 s3) input #pm v)
+    )
+    #emp
+    fn _
   {
     pts_to_serialized_ext_nondep_then_left' s2 s1 s3 input;
   };
-  Trade.intro _ _ _ aux
 }
 
 inline_for_extraction
@@ -1805,15 +1819,18 @@ ensures
   unfold (eq_as_slprop (dtuple2 th1 th2) x' (| xh1, x |));
   let res : Ghost.erased (th2 xh1) = dsnd x';
   fold (eq_as_slprop (th2 xh1) res x);
-  ghost fn aux (_: unit)
-    requires emp ** eq_as_slprop (th2 xh1) res x
-    ensures vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1 x' x
+  intro
+    (Trade.trade
+      (eq_as_slprop (th2 xh1) res x)
+      (vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1 x' x)
+    )
+    #emp
+    fn _
   {
     unfold (eq_as_slprop (th2 xh1) res x);
     fold (eq_as_slprop (dtuple2 th1 th2) x' (| xh1, x |));
     fold (vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1 x' x);
   };
-  Trade.intro _ _ _ aux;
   res
 }
 
@@ -2533,13 +2550,16 @@ fn zero_copy_parse_filter_recip
   unfold (vmatch_filter_recip f vmatch res v');
   with v'' . assert (vmatch res v'');
   rewrite (vmatch res v'') as (vmatch res v);
-  ghost fn aux ()
-  requires emp ** vmatch res v
-  ensures vmatch_filter_recip f vmatch res v'
+  intro
+    (Trade.trade
+      (vmatch res v)
+      (vmatch_filter_recip f vmatch res v')
+    )
+    #emp
+    fn _
   {
     fold (vmatch_filter_recip f vmatch res v')
   };
-  Trade.intro _ _ _ aux;
   Trade.trans (vmatch res v) _ _;
   res
 }

@@ -250,15 +250,18 @@ fn impl_zero_copy_array_group_concat
   CBOR.Spec.Util.list_splitAt_append_elim gl1 gl2;
   let rlen0 = length c0;
   share c0;
-  ghost fn aux (_: unit)
-  requires emp ** (cbor_array_iterator_match (p /. 2.0R) c0 l ** cbor_array_iterator_match (p /. 2.0R) c0 l)
-  ensures cbor_array_iterator_match p c0 l
+  intro
+    (Trade.trade
+      (cbor_array_iterator_match (p /. 2.0R) c0 l ** cbor_array_iterator_match (p /. 2.0R) c0 l)
+      (cbor_array_iterator_match p c0 l)
+    )
+    #emp
+    fn _
   {
     gather c0 #(p /. 2.0R) #l #(p /. 2.0R) #l;
     rewrite (cbor_array_iterator_match (p /. 2.0R +. p /. 2.0R) c0 l)
       as (cbor_array_iterator_match p c0 l)
   };
-  Trade.intro _ _ _ aux;
   let mut pc = c0;
   let _tmp = v1 pc;
   assert (pure (_tmp));
@@ -661,13 +664,16 @@ fn cddl_array_iterator_next
   let i = !pi;
   unfold (rel_array_iterator cbor_array_iterator_match spec i l);
   with pmi li . assert (cbor_array_iterator_match pmi i.cddl_array_iterator_contents li);
-  ghost fn aux1 (_: unit)
-  requires emp ** cbor_array_iterator_match pmi i.cddl_array_iterator_contents li
-  ensures rel_array_iterator cbor_array_iterator_match spec i l
+  intro
+    (Trade.trade
+      (cbor_array_iterator_match pmi i.cddl_array_iterator_contents li)
+      (rel_array_iterator cbor_array_iterator_match spec i l)
+    )
+    #emp
+    fn _
   {
     fold (rel_array_iterator cbor_array_iterator_match spec i l)
   };
-  Trade.intro _ _ _ aux1;
   array_group_concat_unique_weak_zero_or_more_right i.ty i.ty;
   array_group_concat_unique_weak_elim1 i.ty (array_group_zero_or_more i.ty) li;
   let li1 = Ghost.hide (fst (Some?.v (Ghost.reveal i.ty li)));
@@ -676,15 +682,18 @@ fn cddl_array_iterator_next
   CBOR.Spec.Util.list_splitAt_append_elim li1 li2;
   assert (pure (Ghost.reveal i.ty li1 == Some (Ghost.reveal li1, [])));
   share i.cddl_array_iterator_contents;
-  ghost fn aux2 (_: unit)
-  requires emp ** (cbor_array_iterator_match (pmi /. 2.0R) i.cddl_array_iterator_contents li ** cbor_array_iterator_match (pmi /. 2.0R) i.cddl_array_iterator_contents li )
-  ensures cbor_array_iterator_match pmi i.cddl_array_iterator_contents li
+  intro
+    (Trade.trade
+      (cbor_array_iterator_match (pmi /. 2.0R) i.cddl_array_iterator_contents li ** cbor_array_iterator_match (pmi /. 2.0R) i.cddl_array_iterator_contents li )
+      (cbor_array_iterator_match pmi i.cddl_array_iterator_contents li)
+    )
+    #emp
+    fn _
   {
     gather i.cddl_array_iterator_contents #(pmi /. 2.0R) #li #(pmi /. 2.0R) #li;
     rewrite (cbor_array_iterator_match (pmi /. 2.0R +. pmi /. 2.0R) i.cddl_array_iterator_contents li)
       as (cbor_array_iterator_match pmi i.cddl_array_iterator_contents li)
   };
-  Trade.intro _ _ _ aux2;
   Trade.trans _ _ (rel_array_iterator cbor_array_iterator_match spec gi l);
   let len0 = length i.cddl_array_iterator_contents;
   let mut pj = i.cddl_array_iterator_contents;
@@ -707,9 +716,13 @@ fn cddl_array_iterator_next
   rewrite (cbor_array_iterator_match (pmj /. 2.0R) ji lj)
     as (cbor_array_iterator_match j.pm j.cddl_array_iterator_contents lj);
   fold (rel_array_iterator cbor_array_iterator_match spec j (List.Tot.tl l));
-  ghost fn aux3 (_: unit)
-  requires cbor_array_iterator_match (pmj /. 2.0R) ji lj ** rel_array_iterator cbor_array_iterator_match spec j (List.Tot.tl l)
-  ensures cbor_array_iterator_match pmj ji lj
+  intro
+    (Trade.trade
+      (rel_array_iterator cbor_array_iterator_match spec j (List.Tot.tl l))
+      (cbor_array_iterator_match pmj ji lj)
+    )
+    #(cbor_array_iterator_match (pmj /. 2.0R) ji lj)
+    fn _
   {
     unfold (rel_array_iterator cbor_array_iterator_match spec j (List.Tot.tl l));
     with lj' . assert (cbor_array_iterator_match j.pm j.cddl_array_iterator_contents lj');
@@ -719,7 +732,6 @@ fn cddl_array_iterator_next
     rewrite (cbor_array_iterator_match (pmj /. 2.0R +. pmj /. 2.0R) ji lj)
       as (cbor_array_iterator_match pmj ji lj)
   };
-  Trade.intro _ _ _ aux3;
   Trade.trans_hyp_r _ _ _ _;
   pi := j;
   let tri : cbor_array_iterator_t = truncate i.cddl_array_iterator_contents (U64.sub len0 len1);
@@ -770,9 +782,13 @@ fn impl_zero_copy_array_group_zero_or_more'
     as (cbor_array_iterator_match res.pm res.cddl_array_iterator_contents l);
   rel_array_iterator_cond_intro cbor_array_iterator_match r1 res v l;
   fold (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) res (Ghost.reveal v));
-  ghost fn aux (_: unit)
-  requires cbor_array_iterator_match (p /. 2.0R) c l ** rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) res (Ghost.reveal v)
-  ensures cbor_array_iterator_match p c l
+  intro
+    (Trade.trade
+      (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) res (Ghost.reveal v))
+      (cbor_array_iterator_match p c l)
+    )
+    #(cbor_array_iterator_match (p /. 2.0R) c l)
+    fn _
   {
     unfold (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) res (Ghost.reveal v));
     with (l1: list cbor) . assert (cbor_array_iterator_match res.pm res.cddl_array_iterator_contents l1);
@@ -782,7 +798,6 @@ fn impl_zero_copy_array_group_zero_or_more'
     rewrite (cbor_array_iterator_match (p /. 2.0R +. p /. 2.0R) c l) // FIXME: WHY WHY WHY is `rewrite` always needed when head symbol is a variable
       as (cbor_array_iterator_match p c l)
   };
-  Trade.intro _ _ _ aux;
   res
 }
 

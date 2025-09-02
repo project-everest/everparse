@@ -116,15 +116,12 @@ fn pts_to_serialized_ext_trade_gen
     )
 {
   pts_to_serialized_ext s1 s2 input;
-  ghost
-  fn aux
-    (_: unit)
-    requires emp ** pts_to_serialized s2 input #pm v
-    ensures pts_to_serialized s1 input #pm v
-  {
-    pts_to_serialized_ext s2 s1 input
-  };
-  intro_trade _ _ _ aux
+  intro
+    (Trade.trade (pts_to_serialized s2 input #pm v) (pts_to_serialized s1 input #pm v))
+    #emp
+    fn _{
+      pts_to_serialized_ext s2 s1 input
+    };
 }
 
 ghost
@@ -145,15 +142,12 @@ fn pts_to_serialized_ext_trade
   ensures pts_to_serialized s2 input #pm v ** trade (pts_to_serialized s2 input #pm v) (pts_to_serialized s1 input #pm v)
 {
   pts_to_serialized_ext s1 s2 input;
-  ghost
-  fn aux
-    (_: unit)
-    requires emp ** pts_to_serialized s2 input #pm v
-    ensures pts_to_serialized s1 input #pm v
-  {
+  intro
+    (Trade.trade (pts_to_serialized s2 input #pm v) (pts_to_serialized s1 input #pm v))
+    #emp
+    fn _{
     pts_to_serialized_ext s2 s1 input
   };
-  intro_trade _ _ _ aux
 }
 
 ghost
@@ -791,13 +785,9 @@ ensures
 {
   unfold (vmatch_ext t2 vmatch x' x2);
   with x1 . assert (vmatch x' x1);
-  ghost fn aux (_: unit)
-    requires emp ** vmatch x' x1
-    ensures vmatch_ext t2 vmatch x' x2
-  {
+  intro (Trade.trade (vmatch x' x1) (vmatch_ext t2 vmatch x' x2)) #emp fn _{
     fold (vmatch_ext t2 vmatch x' x2);
   };
-  Trade.intro _ _ _ aux;
   x1
 }
 
@@ -896,13 +886,9 @@ ensures
   pure (cond xl)
 {
   unfold (vmatch_with_cond vmatch cond xl xh);
-  ghost fn aux (_: unit)
-    requires emp ** vmatch xl xh
-    ensures vmatch_with_cond vmatch cond xl xh
-  {
+  intro (Trade.trade (vmatch xl xh) (vmatch_with_cond vmatch cond xl xh)) #emp fn _{
     fold (vmatch_with_cond vmatch cond xl xh)
   };
-  Trade.intro _ _ _ aux
 }
 
 let pnot (#t: Type) (cond: t -> GTot bool) (x: t) : GTot bool = not (cond x)
@@ -1024,20 +1010,6 @@ let eq_as_slprop (t: Type) (x x': t) : slprop = pure (x == x')
 let ref_pts_to (t: Type0) (p: perm) (r: ref t) (v: t) : slprop =
   R.pts_to r #p v
 
-ghost
-fn ref_pts_to_lens_aux
-  (#t: Type)
-  (p: perm)
-  (r: R.ref t)
-  (v: t)
-  (x: t)
-  (_: unit)
-  requires ref_pts_to t p r v ** eq_as_slprop t x v
-  ensures ref_pts_to t p r v
-{
-  unfold (eq_as_slprop t x v)
-}
-
 inline_for_extraction
 fn ref_pts_to_lens
   (t: Type0)
@@ -1051,7 +1023,9 @@ fn ref_pts_to_lens
   let x = !r;
   fold (ref_pts_to t p r v);
   fold (eq_as_slprop t x v);
-  Trade.intro _ _ _ (ref_pts_to_lens_aux p r v x);
+  intro (Trade.trade (eq_as_slprop t x v) (ref_pts_to t p r v)) #(ref_pts_to t p r v) fn _{
+    unfold (eq_as_slprop t x v)
+  };
   x
 }
 
@@ -1609,13 +1583,9 @@ ensures exists* vl .
 {
   unfold (vmatch_ref vmatch r vh);
   with vl . assert (R.pts_to r.v #r.p vl ** vmatch vl vh);
-  ghost fn aux ()
-  requires emp ** (R.pts_to r.v #r.p vl ** vmatch vl vh)
-  ensures vmatch_ref vmatch r vh
-  {
+  intro (Trade.trade (R.pts_to r.v #r.p vl ** vmatch vl vh) (vmatch_ref vmatch r vh)) #emp fn _{
     fold (vmatch_ref vmatch r vh)
   };
-  Trade.intro _ _ _ aux
 }
 
 inline_for_extraction
@@ -1817,13 +1787,9 @@ fn zero_copy_parse_read
 {
   let res = r input;
   fold (eq_as_slprop t res v);
-  ghost fn aux ()
-  requires pts_to_serialized s input #pm v ** eq_as_slprop t res v
-  ensures pts_to_serialized s input #pm v
-  {
+  intro (Trade.trade (eq_as_slprop t res v) (pts_to_serialized s input #pm v)) #(pts_to_serialized s input #pm v) fn _{
     unfold (eq_as_slprop t res v)
   };
-  Trade.intro _ _ _ aux;
   res
 }
 
@@ -1842,13 +1808,9 @@ fn zero_copy_parse_ignore
   (#v: Ghost.erased _)
 {
   fold (vmatch_ignore () (Ghost.reveal v));
-  ghost fn aux ()
-  requires pts_to_serialized s input #pm v ** (vmatch_ignore () (Ghost.reveal v))
-  ensures pts_to_serialized s input #pm v
-  {
+  intro (Trade.trade (vmatch_ignore () (Ghost.reveal v)) (pts_to_serialized s input #pm v)) #(pts_to_serialized s input #pm v) fn _{
     unfold (vmatch_ignore () (Ghost.reveal v))
   };
-  Trade.intro _ _ _ aux;
   ()
 }
 

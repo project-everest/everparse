@@ -658,13 +658,16 @@ fn impl_serialize_array_group_zero_or_more_slice
   let ps = Ghost.hide (ag_spec_zero_or_more ps1);
   unfold (rel_slice_of_list r1 false c v);
   with s . assert (pts_to c.s #c.p s ** SM.seq_list_match s v r1);
-  ghost fn aux (_: unit)
-  requires emp ** (pts_to c.s #c.p s ** SM.seq_list_match s v r1)
-  ensures rel_slice_of_list r1 false c v
+  intro
+    (Trade.trade
+      (pts_to c.s #c.p s ** SM.seq_list_match s v r1)
+      (rel_slice_of_list r1 false c v)
+    )
+    #emp
+    fn _
   {
     fold (rel_slice_of_list r1 false c v)
   };
-  Trade.intro _ _ _ aux;
   let pl1 : GR.ref (list tgt1) = GR.alloc (Nil #tgt1);
   let mut pres = true;
   let mut pi = 0sz;

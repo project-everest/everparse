@@ -276,9 +276,13 @@ ensures (
   nlist_cons_as_nondep_then_intro s n (fst res);
   join_nondep_then (serialize_nondep_then s (serialize_nlist (n - 1) s)) (fst res) s' (snd res) input;
   with v1 . assert (pts_to_serialized (serialize_nondep_then (serialize_nondep_then s (serialize_nlist (n - 1) s)) s') input #pm v1);
-  ghost fn aux (_: unit)
-  requires emp ** pts_to_serialized (serialize_nondep_then (serialize_nondep_then s (serialize_nlist (n - 1) s)) s') input #pm v1
-  ensures pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v
+  intro
+    (Trade.trade
+      (pts_to_serialized (serialize_nondep_then (serialize_nondep_then s (serialize_nlist (n - 1) s)) s') input #pm v1)
+      (pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v)
+    )
+    #emp
+    fn _
   {
     let res = ghost_split_nondep_then
       (serialize_nondep_then s (serialize_nlist (n - 1) s))
@@ -287,7 +291,6 @@ ensures (
     nlist_cons_as_nondep_then_elim s (n - 1) (fst res);
     join_nondep_then (serialize_nlist n s) (fst res) s' (snd res) input
   };
-  Trade.intro _ _ _ aux;
   pts_to_serialized_nondep_then_assoc_l2r
     s
     (serialize_nlist (n - 1) s)
@@ -1327,14 +1330,18 @@ ensures exists* c .
 {
   nlist_match_slice0_elim vmatch n a l;
   with c . assert (pts_to a.v #a.p c);
-  ghost fn aux ()
-  requires emp ** (pts_to a.v #a.p c **
-        PM.seq_list_match c l (vmatch))
-  ensures (nlist_match_slice0 vmatch n a l)
+  intro
+    (Trade.trade
+      (pts_to a.v #a.p c **
+        PM.seq_list_match c l (vmatch)
+      )
+      (nlist_match_slice0 vmatch n a l)
+    )
+    #emp
+    fn _
   {
     nlist_match_slice0_intro vmatch n a l c
   };
-  Trade.intro _ _ _ aux;
 }
 
 inline_for_extraction

@@ -183,15 +183,17 @@ fn impl_zero_copy_bytes_gen
   };
   rewrite each s as w.s;
   fold (rel_slice_of_seq false w vs);
-  ghost fn aux (_: unit)
-  requires
-    (Trade.trade (pts_to w.s #ps vs) (vmatch p c v) ** rel_slice_of_seq false w vs)
-  ensures vmatch p c v
+  intro
+    (Trade.trade
+      (rel_slice_of_seq false w vs)
+      (vmatch p c v)
+    )
+    #(Trade.trade (pts_to w.s #ps vs) (vmatch p c v))
+    fn _
   {
     unfold (rel_slice_of_seq false w vs);
     Trade.elim _ _;
   };
-  Trade.intro_trade _ _ _ aux;
   w
 }
 
@@ -361,16 +363,19 @@ fn impl_zero_copy_tagged_none
   rewrite (r rhs rv) as (r (snd res) (snd resv));
   fold (rel_pure U64.t (fst res) (fst resv));
   fold (rel_pair (rel_pure U64.t) r res resv);
-  ghost fn aux (_: unit)
-  requires (Trade.trade (r rhs rv) (vmatch p c v) ** rel_pair (rel_pure U64.t) r res resv)
-  ensures vmatch p c v
+  intro
+    (Trade.trade
+      (rel_pair (rel_pure U64.t) r res resv)
+      (vmatch p c v)
+    )
+    #(Trade.trade (r rhs rv) (vmatch p c v))
+    fn _
   {
     unfold (rel_pair (rel_pure U64.t) r res resv);
     unfold (rel_pure U64.t (fst res) (fst resv));
     rewrite (r (snd res) (snd resv)) as (r rhs rv);
     Trade.elim _ _
   };
-  Trade.intro_trade _ _ _ aux;
   res
 }
 
@@ -471,13 +476,16 @@ fn impl_zero_copy_any
   };
   rewrite (vmatch p c v) as (vmatch res.p res.c v);
   fold (rel_cbor_not_freeable vmatch false res v);
-  ghost fn aux (_: unit)
-  requires emp ** rel_cbor_not_freeable vmatch false res v
-  ensures vmatch p c v
+  intro
+    (Trade.trade
+      (rel_cbor_not_freeable vmatch false res v)
+      (vmatch p c v)
+    )
+    #emp
+    fn _
   {
     unfold (rel_cbor_not_freeable vmatch false res v);
     rewrite (vmatch res.p res.c v) as (vmatch p c v);
   };
-  Trade.intro _ _ _ aux;
   res
 }

@@ -346,13 +346,16 @@ ensures
     (vmatch_slice_list_scalar sl sh)
 {
   vmatch_slice_list_of_vmatch_slice_list_scalar sl sh;
-  ghost fn aux (_: unit)
-    requires emp ** vmatch_slice_list (eq_as_slprop th) sl sh
-    ensures vmatch_slice_list_scalar sl sh
+  intro
+    (Trade.trade
+      (vmatch_slice_list (eq_as_slprop th) sl sh)
+      (vmatch_slice_list_scalar sl sh)
+    )
+    #emp
+    fn _
   {
     vmatch_slice_list_scalar_of_vmatch_slice_list sl sh
   };
-  Trade.intro _ _ _ aux;
 }
 
 inline_for_extraction

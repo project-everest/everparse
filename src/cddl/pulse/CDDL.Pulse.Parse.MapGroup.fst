@@ -176,13 +176,16 @@ fn impl_zero_copy_map_nop
   (v2: _)
 {
   rewrite emp as (rel_unit () ());
-  ghost fn aux (_: unit)
-  requires vmatch p c v ** rel_unit () ()
-  ensures vmatch p c v
+  intro
+    (Trade.trade
+      (rel_unit () ())
+      (vmatch p c v)
+    )
+    #(vmatch p c v)
+    fn _
   {
     rewrite (rel_unit () ()) as emp
   };
-  Trade.intro _ _ _ aux;
   ()
 }
 
@@ -372,16 +375,19 @@ fn impl_zero_copy_map_concat
   map_group_footprint_concat t1 t2 fp1 fp2;
   map_group_parser_spec_concat_eq (Ghost.reveal s1) (Ghost.reveal s2) (mg_spec_concat_size (Ghost.reveal tgt_size1) (Ghost.reveal tgt_size2)) (mg_spec_concat_serializable (Ghost.reveal s1) (Ghost.reveal s2)) v1;
   share c;
-  ghost fn aux (_: unit)
-  requires emp ** (vmatch (p /. 2.0R) c v ** vmatch (p /. 2.0R) c v)
-  ensures vmatch p c v
+  intro
+    (Trade.trade
+      (vmatch (p /. 2.0R) c v ** vmatch (p /. 2.0R) c v)
+      (vmatch p c v)
+    )
+    #emp
+    fn _
   {
     gather c #(p /. 2.0R) #v #(p /. 2.0R) #v;
     half_plus_half_eq p;
     rewrite (vmatch (p /. 2.0R +. p /. 2.0R) c v)
       as (vmatch p c v)
   };
-  Trade.intro _ _ _ aux;
   let m1 = Ghost.hide (cbor_map_filter (fp1) v1);
   let cm1 = Ghost.hide (cbor_map_sub v1 m1);
   let v21 = Ghost.hide (cbor_map_union cm1 v2);
@@ -1074,9 +1080,13 @@ ensures exists* l .
   rewrite (cbor_map_iterator_match (pm /. 2.0R) contents li)
     as (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents li);
   fold (rel_map_iterator vmatch vmatch2 cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l);
-  ghost fn aux (_: unit)
-  requires cbor_map_iterator_match (pm /. 2.0R) contents li ** rel_map_iterator vmatch vmatch2 cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l
-  ensures cbor_map_iterator_match pm contents li
+  intro
+    (Trade.trade
+      (rel_map_iterator vmatch vmatch2 cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l)
+      (cbor_map_iterator_match pm contents li)
+    )
+    #(cbor_map_iterator_match (pm /. 2.0R) contents li)
+    fn _
   {
     unfold (rel_map_iterator vmatch vmatch2 cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l);
     with li' . assert (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents li');
@@ -1086,7 +1096,6 @@ ensures exists* l .
     rewrite (cbor_map_iterator_match (pm /. 2.0R +. pm /. 2.0R) contents li)
       as (cbor_map_iterator_match pm contents li)
   };
-  Trade.intro _ _ _ aux
 }
 
 inline_for_extraction
@@ -1114,15 +1123,18 @@ fn cddl_map_iterator_next
   let i = !pi;
   rewrite (cbor_map_iterator_match gi.pm gi.cddl_map_iterator_contents li)
     as (cbor_map_iterator_match gi.pm i.cddl_map_iterator_contents li);
-  ghost fn aux (_: unit)
-  requires emp ** cbor_map_iterator_match gi.pm i.cddl_map_iterator_contents li
-  ensures rel_map_iterator vmatch vmatch2 cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 gi l
+  intro
+    (Trade.trade
+      (cbor_map_iterator_match gi.pm i.cddl_map_iterator_contents li)
+      (rel_map_iterator vmatch vmatch2 cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 gi l)
+    )
+    #emp
+    fn _
   {
     rewrite (cbor_map_iterator_match gi.pm i.cddl_map_iterator_contents li)
       as (cbor_map_iterator_match gi.pm gi.cddl_map_iterator_contents li);
     fold (rel_map_iterator vmatch vmatch2 cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 gi l)
   };
-  Trade.intro _ _ _ aux;
   let mut pj = i.cddl_map_iterator_contents;
   let hd0 = map_next pj;
   Trade.trans _ _ (rel_map_iterator vmatch vmatch2 cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 gi l);
@@ -1176,15 +1188,18 @@ fn cddl_map_iterator_next
     (vmatch2 pmhd hd vhd);
   Trade.trans_hyp_l _ _ _ _;
   map_entry_share hd;
-  ghost fn aux_hd (_: unit)
-  requires emp ** (vmatch2 (pmhd /. 2.0R) hd vhd ** vmatch2 (pmhd /. 2.0R) hd vhd)
-  ensures vmatch2 pmhd hd vhd
+  intro
+    (Trade.trade
+      (vmatch2 (pmhd /. 2.0R) hd vhd ** vmatch2 (pmhd /. 2.0R) hd vhd)
+      (vmatch2 pmhd hd vhd)
+    )
+    #emp
+    fn _
   {
     map_entry_gather hd;
     rewrite (vmatch2 (pmhd /. 2.0R +. pmhd /. 2.0R) hd vhd)
       as (vmatch2 pmhd hd vhd)
   };
-  Trade.intro _ _ _ aux_hd;
   let hd_key = map_entry_key hd;
   Trade.trans_hyp_l _ _ _ (vmatch2 pmhd hd vhd);
   let hd_key_res = cddl_map_iterator_impl_parse1 i hd_key;

@@ -71,15 +71,18 @@ fn cbor_match_array_elim
 {
   unfold (cbor_match_array c p r cbor_match);
   with s . assert (pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) s);
-  ghost
-  fn aux (_: unit)
-    requires emp ** (pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) s **
-        PM.seq_list_match s (Array?.v r) (cbor_match (p `perm_mul` c.cbor_array_payload_perm)))
-    ensures cbor_match_array c p r cbor_match
+  intro
+    (Trade.trade
+      (pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) s **
+        PM.seq_list_match s (Array?.v r) (cbor_match (p `perm_mul` c.cbor_array_payload_perm))
+      )
+      (cbor_match_array c p r cbor_match)
+    )
+    #emp
+    fn _
   {
     fold (cbor_match_array c p r cbor_match)
   };
-  Trade.intro _ _ _ aux
 }
 
 fn cbor_array_item
@@ -365,15 +368,18 @@ fn cbor_match_map_elim
 {
   unfold (cbor_match_map p c r);
   with s . assert (pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) s);
-  ghost
-  fn aux (_: unit)
-    requires emp ** (pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) s **
-        PM.seq_list_match s (Map?.v r) (cbor_match_map_entry (p `perm_mul` c.cbor_map_payload_perm)))
-    ensures cbor_match_map p c r
+  intro
+    (Trade.trade
+      (pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) s **
+        PM.seq_list_match s (Map?.v r) (cbor_match_map_entry (p `perm_mul` c.cbor_map_payload_perm))
+      )
+      (cbor_match_map p c r)
+    )
+    #emp
+    fn _
   {
     fold (cbor_match_map p c r)
   };
-  Trade.intro _ _ _ aux
 }
 
 let cbor_map_iterator_match

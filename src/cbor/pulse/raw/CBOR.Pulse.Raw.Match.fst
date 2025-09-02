@@ -236,10 +236,16 @@ ensures
   (cbor_match_map p c r ** trade (cbor_match_map p c r) (cbor_match_map0 c p r cbor_match))
 {
   cbor_match_map0_map c p r;
-  ghost fn aux (_: unit) requires emp ** cbor_match_map p c r ensures cbor_match_map0 c p r cbor_match {
+  intro
+    (Trade.trade
+      (cbor_match_map p c r)
+      (cbor_match_map0 c p r cbor_match)
+    )
+    #emp
+    fn _
+  {
     cbor_match_map_map0 c p r;
   };
-  Trade.intro _ _ _ aux
 }
 
 ghost
@@ -253,10 +259,16 @@ ensures
   (cbor_match_map0 c p r cbor_match ** trade (cbor_match_map0 c p r cbor_match) (cbor_match_map p c r))
 {
   cbor_match_map_map0 c p r;
-  ghost fn aux (_: unit) requires emp ** cbor_match_map0 c p r cbor_match ensures cbor_match_map p c r {
+  intro
+    (Trade.trade
+      (cbor_match_map0 c p r cbor_match)
+      (cbor_match_map p c r)
+    )
+    #emp
+    fn _
+  {
     cbor_match_map0_map c p r;
   };
-  Trade.intro _ _ _ aux
 }
 
 let cbor_match_cases_pred
@@ -303,14 +315,16 @@ fn cbor_match_int_intro_trade_aux
   ensures
     trade (cbor_match_int res v) q
 { 
-  ghost
-  fn aux (_: unit)
-     requires q ** cbor_match_int res v
-     ensures q
+  intro
+    (Trade.trade
+      (cbor_match_int res v)
+      q
+    )
+    #q
+    fn _
   {
     unfold (cbor_match_int res v)
   };
-  intro_trade _ _ _ aux
 }
 
 inline_for_extraction
@@ -427,14 +441,16 @@ fn cbor_match_simple_intro_trade_aux
   ensures
     trade (cbor_match_simple res v) q
 { 
-  ghost
-  fn aux (_: unit)
-     requires q ** cbor_match_simple res v
-     ensures q
+  intro
+    (Trade.trade
+      (cbor_match_simple res v)
+      q
+    )
+    #q
+    fn _
   {
     unfold (cbor_match_simple res v)
   };
-  intro_trade _ _ _ aux
 }
 
 inline_for_extraction
@@ -523,15 +539,18 @@ fn cbor_match_string_intro_aux
 {
   rewrite each input as c.cbor_string_ptr;
   fold (cbor_match_string c 1.0R r);
-  ghost fn aux (_: unit)
-    requires emp ** cbor_match_string c 1.0R r
-    ensures pts_to input #pm v
+  intro
+    (Trade.trade
+      (cbor_match_string c 1.0R r)
+      (pts_to input #pm v)
+    )
+    #emp
+    fn _
   {
     unfold (cbor_match_string c 1.0R r);
     rewrite each c.cbor_string_ptr as input;
     ();
   };
-  intro_trade _ _ _ aux
 }
 
 inline_for_extraction
@@ -648,7 +667,17 @@ ensures exists* p' (v': Seq.seq U8.t) .
   let CBOR_Case_String c' = c;
   Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_string c' p v);
   unfold (cbor_match_string c' p v);
-  Trade.intro _ _ _ (cbor_match_string_elim_payload_aux c' p v _);
+  with v' . assert (pts_to c'.cbor_string_ptr #(p `perm_mul` c'.cbor_string_perm) v');
+  intro
+    (Trade.trade
+      (pts_to c'.cbor_string_ptr #(p `perm_mul` c'.cbor_string_perm) v')
+      (cbor_match_string c' p v)
+    )
+    #emp
+    fn _
+  {
+    fold (cbor_match_string c' p v)
+  };
   Trade.trans _ _ (cbor_match p c v);
   c'.cbor_string_ptr
 }
@@ -718,46 +747,18 @@ fn cbor_match_tagged_elim
   unfold (cbor_match_tagged c p r cbor_match);
   with c' . assert (R.pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) c' **
     cbor_match (p `perm_mul` c.cbor_tagged_payload_perm) c' (Tagged?.v r));
-  ghost fn aux (_: unit)
-    requires emp ** (R.pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) c' **
-      cbor_match (p `perm_mul` c.cbor_tagged_payload_perm) c' (Tagged?.v r))
-    ensures cbor_match_tagged c p r cbor_match
+  intro
+    (Trade.trade
+      (R.pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) c' **
+        cbor_match (p `perm_mul` c.cbor_tagged_payload_perm) c' (Tagged?.v r)
+      )
+      (cbor_match_tagged c p r cbor_match)
+    )
+    #emp
+    fn _
   {
     fold (cbor_match_tagged c p r cbor_match)
   };
-  intro_trade _ _ _ aux
-}
-
-inline_for_extraction
-ghost
-fn cbor_match_tagged_intro_aux
-  (tag: raw_uint64)
-  (pc: R.ref cbor_raw)
-  (pr: perm)
-  (c: cbor_raw)
-  (pm: perm)
-  (r: raw_data_item)
-  (res': cbor_tagged)
-  (_: unit)
-requires
-  (pure (
-    res' == {
-       cbor_tagged_tag = tag;
-       cbor_tagged_ptr = pc;
-       cbor_tagged_ref_perm = pr /. 2.0R;
-       cbor_tagged_payload_perm = pm;
-    }) **
-    R.pts_to pc #(pr /. 2.0R) c
-  ) **
-  cbor_match_tagged res' 1.0R (Tagged tag r) cbor_match
-ensures
-  R.pts_to pc #pr c ** cbor_match pm c r
-{
-  unfold (cbor_match_tagged res' 1.0R (Tagged tag r) cbor_match);
-  with c' . assert (R.pts_to res'.cbor_tagged_ptr #res'.cbor_tagged_ref_perm c');
-  rewrite (R.pts_to res'.cbor_tagged_ptr #res'.cbor_tagged_ref_perm c')
-    as (R.pts_to pc #(pr /. 2.0R) c');
-  R.gather pc
 }
 
 inline_for_extraction
@@ -786,7 +787,20 @@ fn cbor_match_tagged_intro
   rewrite (R.pts_to pc #(pr /. 2.0R) c)
     as (R.pts_to res'.cbor_tagged_ptr #res'.cbor_tagged_ref_perm c);
   fold (cbor_match_tagged res' 1.0R (Tagged tag r) cbor_match);
-  Trade.intro _ _ _ (cbor_match_tagged_intro_aux tag pc pr c pm r res');
+  intro
+    (Trade.trade
+      (cbor_match_tagged res' 1.0R (Tagged tag r) cbor_match)
+      (R.pts_to pc #pr c ** cbor_match pm c r)
+    )
+    #(R.pts_to pc #(pr /. 2.0R) c)
+    fn _
+  {
+    unfold (cbor_match_tagged res' 1.0R (Tagged tag r) cbor_match);
+    with c' . assert (R.pts_to res'.cbor_tagged_ptr #res'.cbor_tagged_ref_perm c');
+    rewrite (R.pts_to res'.cbor_tagged_ptr #res'.cbor_tagged_ref_perm c')
+      as (R.pts_to pc #(pr /. 2.0R) c');
+    R.gather pc
+  };
   cbor_match_eq_tagged 1.0R res' (Tagged tag r);
   let res = CBOR_Case_Tagged res';
   Trade.rewrite_with_trade
@@ -842,43 +856,6 @@ ensures
   }
 }
 
-ghost
-fn cbor_match_array_intro_aux
-  (len: raw_uint64)
-  (pc: S.slice cbor_raw)
-  (pr: perm)
-  (c: (Seq.seq cbor_raw))
-  (pm: perm)
-  (r: nlist raw_data_item (U64.v len.value))
-  (res': cbor_array)
-  (_: unit)
-requires
-  (pure (
-    SZ.v (S.len pc) == U64.v len.value /\
-    res' == {
-       cbor_array_length_size = len.size;
-       cbor_array_ptr = pc;
-       cbor_array_array_perm = pr /. 2.0R;
-       cbor_array_payload_perm = pm;
-    }) **
-    pts_to pc #(pr /. 2.0R) c
-  ) **
-  cbor_match_array res' 1.0R (Array len r) cbor_match
-ensures
-  pts_to pc #pr c **
-  PM.seq_list_match c r (cbor_match pm)
-{
-  unfold (cbor_match_array res' 1.0R (Array len r) cbor_match);
-  with c' . assert (pts_to res'.cbor_array_ptr #(1.0R `perm_mul` res'.cbor_array_array_perm) c');
-  rewrite (pts_to res'.cbor_array_ptr #res'.cbor_array_array_perm c')
-       as (pts_to pc #(pr /. 2.0R) c');
-  S.gather pc;
-  with v _x _y.
-    assert PM.seq_list_match #cbor_raw #raw_data_item v _x _y;
-  rewrite each v as c;
-  ()
-}
-
 inline_for_extraction
 fn cbor_match_array_intro
   (len: raw_uint64)
@@ -908,7 +885,26 @@ fn cbor_match_array_intro
   rewrite (pts_to pc #(pr /. 2.0R) c)
     as (pts_to res'.cbor_array_ptr #(1.0R `perm_mul` res'.cbor_array_array_perm) c);
   fold (cbor_match_array res' 1.0R (Array len r) cbor_match);
-  Trade.intro _ _ _ (cbor_match_array_intro_aux len pc pr c pm r res');
+  intro
+    (Trade.trade
+      (cbor_match_array res' 1.0R (Array len r) cbor_match)
+      (pts_to pc #pr c **
+        PM.seq_list_match c r (cbor_match pm)
+      )
+    )
+    #(pts_to pc #(pr /. 2.0R) c)
+    fn _
+  {
+    unfold (cbor_match_array res' 1.0R (Array len r) cbor_match);
+    with c' . assert (pts_to res'.cbor_array_ptr #(1.0R `perm_mul` res'.cbor_array_array_perm) c');
+    rewrite (pts_to res'.cbor_array_ptr #res'.cbor_array_array_perm c')
+            as (pts_to pc #(pr /. 2.0R) c');
+    S.gather pc;
+    with v _x _y.
+      assert PM.seq_list_match #cbor_raw #raw_data_item v _x _y;
+    rewrite each v as c;
+    ()
+  };
   cbor_match_eq_array 1.0R res' (Array len r);
   let res = CBOR_Case_Array res';
   Trade.rewrite_with_trade
@@ -964,43 +960,6 @@ ensures
   }
 }
 
-ghost
-fn cbor_match_map_intro_aux
-  (len: raw_uint64)
-  (pc: S.slice cbor_map_entry)
-  (pr: perm)
-  (c: (Seq.seq cbor_map_entry))
-  (pm: perm)
-  (r: nlist (raw_data_item & raw_data_item) (U64.v len.value))
-  (res': cbor_map)
-  (_: unit)
-requires
-  (pure (
-    SZ.v (S.len pc) == U64.v len.value /\
-    res' == {
-       cbor_map_length_size = len.size;
-       cbor_map_ptr = pc;
-       cbor_map_array_perm = pr /. 2.0R;
-       cbor_map_payload_perm = pm;
-    }) **
-    pts_to pc #(pr /. 2.0R) c
-  ) **
-  cbor_match_map 1.0R res' (Map len r)
-ensures
-  pts_to pc #pr c **
-  PM.seq_list_match c r (cbor_match_map_entry pm)
-{
-  unfold (cbor_match_map 1.0R res' (Map len r));
-  with c' . assert (pts_to res'.cbor_map_ptr #(1.0R `perm_mul` res'.cbor_map_array_perm) c');
-  rewrite (pts_to res'.cbor_map_ptr #res'.cbor_map_array_perm c')
-    as (pts_to pc #(pr /. 2.0R) c');
-  S.gather pc;
-  with v _x _y.
-    assert PM.seq_list_match #cbor_map_entry #(raw_data_item & raw_data_item) v _x _y;
-  rewrite each v as c;
-  ()
-}
-
 inline_for_extraction
 fn cbor_match_map_intro
   (len: raw_uint64)
@@ -1030,7 +989,26 @@ fn cbor_match_map_intro
   rewrite (pts_to pc #(pr /. 2.0R) c)
     as (pts_to res'.cbor_map_ptr #(1.0R `perm_mul` res'.cbor_map_array_perm) c);
   fold (cbor_match_map 1.0R res' (Map len r));
-  Trade.intro _ _ _ (cbor_match_map_intro_aux len pc pr c pm r res');
+  intro
+    (Trade.trade
+      (cbor_match_map 1.0R res' (Map len r))
+      (pts_to pc #pr c **
+        PM.seq_list_match c r (cbor_match_map_entry pm)
+      )
+    )
+    #(pts_to pc #(pr /. 2.0R) c)
+    fn _
+  {
+    unfold (cbor_match_map 1.0R res' (Map len r));
+    with c' . assert (pts_to res'.cbor_map_ptr #(1.0R `perm_mul` res'.cbor_map_array_perm) c');
+    rewrite (pts_to res'.cbor_map_ptr #res'.cbor_map_array_perm c')
+      as (pts_to pc #(pr /. 2.0R) c');
+    S.gather pc;
+    with v _x _y.
+      assert PM.seq_list_match #cbor_map_entry #(raw_data_item & raw_data_item) v _x _y;
+    rewrite each v as c;
+    ()
+  };
   cbor_match_map_map0_trade res' 1.0R (Map len r);
   Trade.trans _ (cbor_match_map 1.0R res' (Map len r)) _;
   cbor_match_eq_map0 1.0R res' (Map len r);
@@ -1096,15 +1074,18 @@ fn cbor_string_reset_perm_correct
   unfold (cbor_match_string c p r);
   rewrite each c.cbor_string_ptr as c'.cbor_string_ptr;
   fold (cbor_match_string c' 1.0R r);
-  ghost fn aux (_: unit)
-    requires (emp ** cbor_match_string c' 1.0R r)
-    ensures (cbor_match_string c p r)
+  intro
+    (Trade.trade
+      (cbor_match_string c' 1.0R r)
+      (cbor_match_string c p r)
+    )
+    #emp
+    fn _
   {
     unfold (cbor_match_string c' 1.0R r);
     rewrite each c'.cbor_string_ptr as c.cbor_string_ptr;
     fold (cbor_match_string c p r)
   };
-  intro_trade _ _ _ aux
 }
 
 ghost
@@ -1128,9 +1109,13 @@ fn cbor_tagged_reset_perm_correct
   rewrite (pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) s)
     as (pts_to c'.cbor_tagged_ptr #(1.0R `perm_mul` c'.cbor_tagged_ref_perm) s);
   fold (cbor_match_tagged c' 1.0R r cbor_match);
-  ghost fn aux (_: unit)
-    requires (emp ** cbor_match_tagged c' 1.0R r cbor_match)
-    ensures (cbor_match_tagged c p r cbor_match)
+  intro
+    (Trade.trade
+      (cbor_match_tagged c' 1.0R r cbor_match)
+      (cbor_match_tagged c p r cbor_match)
+    )
+    #emp
+    fn _
   {
     unfold (cbor_match_tagged c' 1.0R r);
     with s . assert (pts_to c'.cbor_tagged_ptr #(1.0R `perm_mul` c'.cbor_tagged_ref_perm) s);
@@ -1138,7 +1123,6 @@ fn cbor_tagged_reset_perm_correct
       as (pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) s);
     fold (cbor_match_tagged c p r cbor_match)
   };
-  intro_trade _ _ _ aux
 }
 
 ghost
@@ -1162,9 +1146,13 @@ fn cbor_array_reset_perm_correct
   rewrite (pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) s)
     as (pts_to c'.cbor_array_ptr #(1.0R `perm_mul` c'.cbor_array_array_perm) s);
   fold (cbor_match_array c' 1.0R r cbor_match);
-  ghost fn aux (_: unit)
-    requires (emp ** cbor_match_array c' 1.0R r cbor_match)
-    ensures (cbor_match_array c p r cbor_match)
+  intro
+    (Trade.trade
+      (cbor_match_array c' 1.0R r cbor_match)
+      (cbor_match_array c p r cbor_match)
+    )
+    #emp
+    fn _
   {
     unfold (cbor_match_array c' 1.0R r);
     with s . assert (pts_to c'.cbor_array_ptr #(1.0R `perm_mul` c'.cbor_array_array_perm) s);
@@ -1172,7 +1160,6 @@ fn cbor_array_reset_perm_correct
       as (pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) s);
     fold (cbor_match_array c p r cbor_match)
   };
-  intro_trade _ _ _ aux
 }
 
 ghost
@@ -1196,9 +1183,13 @@ fn cbor_map_reset_perm_correct
   rewrite (pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) s)
     as (pts_to c'.cbor_map_ptr #(1.0R `perm_mul` c'.cbor_map_array_perm) s);
   fold (cbor_match_map0 c' 1.0R r cbor_match);
-  ghost fn aux (_: unit)
-    requires (emp ** cbor_match_map0 c' 1.0R r cbor_match)
-    ensures (cbor_match_map0 c p r cbor_match)
+  intro
+    (Trade.trade
+      (cbor_match_map0 c' 1.0R r cbor_match)
+      (cbor_match_map0 c p r cbor_match)
+    )
+    #emp
+    fn _
   {
     unfold (cbor_match_map0 c' 1.0R r);
     with s . assert (pts_to c'.cbor_map_ptr #(1.0R `perm_mul` c'.cbor_map_array_perm) s);
@@ -1206,7 +1197,6 @@ fn cbor_map_reset_perm_correct
       as (pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) s);
     fold (cbor_match_map0 c p r cbor_match)
   };
-  intro_trade _ _ _ aux
 }
 
 ghost
