@@ -54,12 +54,12 @@ test-extracted: test-interop test-verified-interop test-rust
 
 .PHONY: test-extracted
 
-test-batch-c: cose.cddl
+test-batch-c: cose-sign.cddl
 	rm -rf $@ $@.tmp
 	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe --odir $@.tmp --tmpdir $@.tmp $< $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl --mname COSEBatchTest --admit
 	mv $@.tmp $@
 
-test-batch-rust: cose.cddl
+test-batch-rust: cose-sign.cddl
 	rm -rf $@ $@.tmp
 	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe --odir $@.tmp --tmpdir $@.tmp $< $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl --mname COSEBatchTest --rust --admit
 	mv $@.tmp $@
