@@ -39,14 +39,17 @@ fn cbor_match_serialized_tagged_intro_aux
 {
   fold (cbor_match_serialized_payload_tagged pc (1.0R `perm_mul` res.cbor_serialized_perm) v);
   fold (cbor_match_serialized_tagged res 1.0R r);
-  ghost fn aux (_: unit)
-    requires emp ** cbor_match_serialized_tagged res 1.0R r
-    ensures pts_to_serialized serialize_raw_data_item pc #pm v
+  intro
+    (Trade.trade
+      (cbor_match_serialized_tagged res 1.0R r)
+      (pts_to_serialized serialize_raw_data_item pc #pm v)
+    )
+    #emp
+    fn _
   {
     unfold (cbor_match_serialized_tagged res 1.0R r);
     unfold (cbor_match_serialized_payload_tagged pc pm v)
   };
-  intro_trade _ _ _ aux
 }
 
 ghost
@@ -75,14 +78,17 @@ fn cbor_match_serialized_array_intro_aux
 {
   fold (cbor_match_serialized_payload_array pc (1.0R `perm_mul` pm) v);
   fold (cbor_match_serialized_array res 1.0R r);
-  ghost fn aux (_: unit)
-    requires emp ** cbor_match_serialized_array res 1.0R r
-    ensures (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n serialize_raw_data_item) pc #pm v)
+  intro
+    (Trade.trade
+      (cbor_match_serialized_array res 1.0R r)
+      (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n serialize_raw_data_item) pc #pm v)
+    )
+    #emp
+    fn _
   {
     unfold (cbor_match_serialized_array res 1.0R r);
     unfold (cbor_match_serialized_payload_array pc pm (Array?.v r))
   };
-  intro_trade _ _ _ aux
 }
 
 ghost
@@ -111,14 +117,17 @@ fn cbor_match_serialized_map_intro_aux
 {
   fold (cbor_match_serialized_payload_map pc (1.0R `perm_mul` pm) v);
   fold (cbor_match_serialized_map res 1.0R r);
-  ghost fn aux (_: unit)
-    requires emp ** cbor_match_serialized_map res 1.0R r
-    ensures (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) pc #pm v)
+  intro
+    (Trade.trade
+      (cbor_match_serialized_map res 1.0R r)
+      (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) pc #pm v)
+    )
+    #emp
+    fn _
   {
     unfold (cbor_match_serialized_map res 1.0R r);
     unfold (cbor_match_serialized_payload_map pc pm (Map?.v r))
   };
-  intro_trade _ _ _ aux
 }
 
 #push-options "--z3rlimit 20"

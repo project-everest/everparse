@@ -56,16 +56,18 @@ ensures
   with sq . assert (pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
      PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm))
   );
-  ghost
-  fn aux ()
-  requires emp ** (pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
-         PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm))
-       )
-  ensures cbor_raw_slice_iterator_match elt_match pm c l
+  intro
+    (Trade.trade
+      (pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
+        PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm))
+      )
+      (cbor_raw_slice_iterator_match elt_match pm c l)
+    )
+    #emp
+    fn _
   {
     fold (cbor_raw_slice_iterator_match elt_match pm c l);
   };
-  Trade.intro _ _ _ aux
 }
 
 ghost
@@ -93,13 +95,15 @@ ensures
   with _pm _sq .
     rewrite pts_to c.s #_pm _sq as pts_to c'.s #_pm sq;
   fold (cbor_raw_slice_iterator_match elt_match pm c' l);
-  ghost
-  fn aux ()
-  requires (pts_to c.s #((pm `perm_mul` c.slice_perm) /. 2.0R) sq ** cbor_raw_slice_iterator_match elt_match pm c' l)
-  ensures
-       (pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
+  intro
+    (Trade.trade
+      (cbor_raw_slice_iterator_match elt_match pm c' l)
+      (pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
          PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm))
-       )
+      )
+    )
+    #(pts_to c.s #((pm `perm_mul` c.slice_perm) /. 2.0R) sq)
+    fn _
   {
     unfold (cbor_raw_slice_iterator_match elt_match pm c' l);
     with _pm _sq.
@@ -110,7 +114,6 @@ ensures
     rewrite each c as sq;
     ();
   };
-  Trade.intro _ _ _ aux
 }
 
 inline_for_extraction
@@ -213,16 +216,6 @@ let slice_split_right_postcond
   v' == Seq.slice v (SZ.v i) (Seq.length v)
 
 
-ghost
-fn slice_split_right_aux (#t: Type0) (s1: S.slice t) (p: perm) (v1: Seq.seq t) (s2: S.slice t) (v2: Seq.seq t) (i: SZ.t) (s: S.slice t) (v: Seq.seq t) (sq: squash (v == v1 `Seq.append` v2)) (_: unit)
-requires
-    ((S.is_split s s1 s2 ** pts_to s1 #p v1) ** pts_to s2 #p v2)
-ensures
-    (pts_to s #p v)
-{
-  S.join s1 s2 s
-}
-
 inline_for_extraction
 fn slice_split_right (#t: Type0) (s: S.slice t) (#p: perm) (#v: Ghost.erased (Seq.seq t)) (i: SZ.t)
     requires pts_to s #p v ** pure (SZ.v i <= Seq.length v)
@@ -235,7 +228,16 @@ fn slice_split_right (#t: Type0) (s: S.slice t) (#p: perm) (#v: Ghost.erased (Se
   with v1 . assert (pts_to s1 #p v1);
   with v2 . assert (pts_to s2 #p v2);
   let sq : squash (Ghost.reveal v == v1 `Seq.append` v2) = Seq.lemma_split v (SZ.v i);
-  Trade.intro _ _ _ (slice_split_right_aux s1 p v1 s2 v2 i s v sq);
+  intro
+    (Trade.trade
+      (pts_to s2 #p v2)
+      (pts_to s #p v)
+    )
+    #(S.is_split s s1 s2 ** pts_to s1 #p v1)
+    fn _
+  {
+    S.join s1 s2 s
+  };
   s2
 }
 

@@ -28,14 +28,17 @@ fn cbor_match_serialized_tagged_elim
   unfold (cbor_match_serialized_tagged c pm r);
   unfold (cbor_match_serialized_payload_tagged c.cbor_serialized_payload (pm `perm_mul` c.cbor_serialized_perm) (Tagged?.v r));
   with pm' . assert (pts_to_serialized serialize_raw_data_item c.cbor_serialized_payload #pm' (Tagged?.v r));
-  ghost fn aux (_: unit)
-    requires emp ** (pts_to_serialized serialize_raw_data_item c.cbor_serialized_payload #pm' (Tagged?.v r))
-    ensures (cbor_match_serialized_tagged c pm r)
+  intro
+    (Trade.trade
+      (pts_to_serialized serialize_raw_data_item c.cbor_serialized_payload #pm' (Tagged?.v r))
+      (cbor_match_serialized_tagged c pm r)
+    )
+    #emp
+    fn _
   {
     fold (cbor_match_serialized_payload_tagged c.cbor_serialized_payload (pm `perm_mul` c.cbor_serialized_perm) (Tagged?.v r));
     fold (cbor_match_serialized_tagged c pm r);
   };
-  intro_trade _ _ _ aux
 }
 
 fn cbor_match_serialized_tagged_get_payload
@@ -75,14 +78,17 @@ fn cbor_match_serialized_array_elim
   unfold (cbor_match_serialized_array c pm r);
   unfold (cbor_match_serialized_payload_array c.cbor_serialized_payload (pm `perm_mul` c.cbor_serialized_perm) (Array?.v r));
   with pm' . assert (pts_to_serialized (LP.serialize_nlist (U64.v (Array?.len r).value)  serialize_raw_data_item) c.cbor_serialized_payload #pm' (Array?.v r));
-  ghost fn aux (_: unit)
-    requires emp ** (pts_to_serialized (LP.serialize_nlist (U64.v (Array?.len r).value)  serialize_raw_data_item) c.cbor_serialized_payload #pm' (Array?.v r))
-    ensures (cbor_match_serialized_array c pm r)
+  intro
+    (Trade.trade
+      (pts_to_serialized (LP.serialize_nlist (U64.v (Array?.len r).value)  serialize_raw_data_item) c.cbor_serialized_payload #pm' (Array?.v r))
+      (cbor_match_serialized_array c pm r)
+    )
+    #emp
+    fn _
   {
     fold (cbor_match_serialized_payload_array c.cbor_serialized_payload (pm `perm_mul` c.cbor_serialized_perm) (Array?.v r));
     fold (cbor_match_serialized_array c pm r);
   };
-  intro_trade _ _ _ aux
 }
 
 fn cbor_serialized_array_item
@@ -209,14 +215,17 @@ fn cbor_match_serialized_map_elim
   unfold (cbor_match_serialized_map c pm r);
   unfold (cbor_match_serialized_payload_map c.cbor_serialized_payload (pm `perm_mul` c.cbor_serialized_perm) (Map?.v r));
   with pm' . assert (pts_to_serialized (LP.serialize_nlist (U64.v (Map?.len r).value)  (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c.cbor_serialized_payload #pm' (Map?.v r));
-  ghost fn aux (_: unit)
-    requires emp ** (pts_to_serialized (LP.serialize_nlist (U64.v (Map?.len r).value)  (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c.cbor_serialized_payload #pm' (Map?.v r))
-    ensures (cbor_match_serialized_map c pm r)
+  intro
+    (Trade.trade
+      (pts_to_serialized (LP.serialize_nlist (U64.v (Map?.len r).value)  (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c.cbor_serialized_payload #pm' (Map?.v r))
+      (cbor_match_serialized_map c pm r)
+    )
+    #emp
+    fn _
   {
     fold (cbor_match_serialized_payload_map c.cbor_serialized_payload (pm `perm_mul` c.cbor_serialized_perm) (Map?.v r));
     fold (cbor_match_serialized_map c pm r);
   };
-  intro_trade _ _ _ aux
 }
 
 fn cbor_serialized_map_iterator_init

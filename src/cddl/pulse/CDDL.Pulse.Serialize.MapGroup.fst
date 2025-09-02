@@ -1765,10 +1765,15 @@ fn map_slice_iterator_next
   Trade.rewrite_with_trade
     (rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) i'.key_eq (dsnd spec1) (dsnd spec2) i'.base m')
     (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 i' m');
-  ghost fn aux (_: unit)
-  requires (S.is_split i.base.s il ir ** pts_to il #i.base.p sl (* ** pts_to ir #(i.base.p /. 2.0R) sr *) ) ** (
-    r res gv ** rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) i'.key_eq (dsnd spec1) (dsnd spec2) i'.base m')
-  ensures (rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) i.key_eq (dsnd spec1) (dsnd spec2) i.base m)
+  intro
+    (Trade.trade
+      (
+        r res gv ** rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) i'.key_eq (dsnd spec1) (dsnd spec2) i'.base m'
+      )
+      (rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) i.key_eq (dsnd spec1) (dsnd spec2) i.base m)
+    )
+    #(S.is_split i.base.s il ir ** pts_to il #i.base.p sl (* ** pts_to ir #(i.base.p /. 2.0R) sr *) )
+    fn _
   {
     unfold (rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) i'.key_eq (dsnd spec1) (dsnd spec2) i'.base m');
     with l' . assert (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false i'.base l');
@@ -1786,7 +1791,6 @@ fn map_slice_iterator_next
     );
     fold (rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) i.key_eq (dsnd spec1) (dsnd spec2) i.base m);
   };
-  Trade.intro _ _ _ aux;
   Trade.trans_hyp_r _ _ _ _;
   Trade.trans _ _ (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 gi m);
   Trade.rewrite_with_trade

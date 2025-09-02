@@ -214,6 +214,7 @@ fn cbor_det_serialize
   (output: S.slice U8.t)
   (#y: Ghost.erased Spec.cbor)
   (#pm: perm)
+norewrite
 requires
     (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (Seq.length (Spec.cbor_det_serialize y) <= SZ.v (S.len output)))
 returns res: SZ.t
@@ -526,14 +527,17 @@ decreases v
   if (Nil? v) {
     SM.seq_list_match_nil_elim c v (cbor_det_match p);
     SM.seq_list_match_nil_intro c (List.Tot.map mk_det_raw_cbor v) (Raw.cbor_match p);
-    ghost fn aux (_: unit)
-      requires emp ** SM.seq_list_match c (List.Tot.map mk_det_raw_cbor v) (Raw.cbor_match p)
-      ensures SM.seq_list_match c v (cbor_det_match p)
+    intro
+      (Trade.trade
+        (SM.seq_list_match c (List.Tot.map mk_det_raw_cbor v) (Raw.cbor_match p))
+        (SM.seq_list_match c v (cbor_det_match p))
+      )
+      #emp
+      fn _
     {
       SM.seq_list_match_nil_elim c (List.Tot.map mk_det_raw_cbor v) (Raw.cbor_match p);
       SM.seq_list_match_nil_intro c v (cbor_det_match p);
     };
-    Trade.intro _ _ _ aux
   } else {
     SM.seq_list_match_cons_elim_trade c v (cbor_det_match p);
     Trade.rewrite_with_trade
@@ -668,14 +672,17 @@ decreases v
   if (Nil? v) {
     SM.seq_list_match_nil_elim c v (cbor_det_map_entry_match p);
     SM.seq_list_match_nil_intro c (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry v) (Raw.cbor_match_map_entry p);
-    ghost fn aux (_: unit)
-      requires emp ** SM.seq_list_match c (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry v) (Raw.cbor_match_map_entry p)
-      ensures SM.seq_list_match c v (cbor_det_map_entry_match p)
+    intro
+      (Trade.trade
+        (SM.seq_list_match c (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry v) (Raw.cbor_match_map_entry p))
+        (SM.seq_list_match c v (cbor_det_map_entry_match p))
+      )
+      #emp
+      fn _
     {
       SM.seq_list_match_nil_elim c (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry v) (Raw.cbor_match_map_entry p);
       SM.seq_list_match_nil_intro c v (cbor_det_map_entry_match p);
     };
-    Trade.intro _ _ _ aux
   } else {
     SM.seq_list_match_cons_elim_trade c v (cbor_det_map_entry_match p);
     Trade.rewrite_with_trade
@@ -818,14 +825,17 @@ decreases v
   if (Nil? v) {
     SM.seq_list_match_nil_elim c v (Raw.cbor_match_map_entry p);
     SM.seq_list_match_nil_intro c (List.Tot.map mk_cbor_map_entry v) (cbor_det_map_entry_match p);
-    ghost fn aux (_: unit)
-      requires emp ** SM.seq_list_match c (List.Tot.map mk_cbor_map_entry v) (cbor_det_map_entry_match p)
-      ensures SM.seq_list_match c v (Raw.cbor_match_map_entry p)
+    intro
+      (Trade.trade
+        (SM.seq_list_match c (List.Tot.map mk_cbor_map_entry v) (cbor_det_map_entry_match p))
+        (SM.seq_list_match c v (Raw.cbor_match_map_entry p))
+      )
+      #emp
+      fn _
     {
       SM.seq_list_match_nil_elim c (List.Tot.map mk_cbor_map_entry v) (cbor_det_map_entry_match p);
       SM.seq_list_match_nil_intro c v (Raw.cbor_match_map_entry p);
     };
-    Trade.intro _ _ _ aux
   } else {
     SM.seq_list_match_cons_elim_trade c v (Raw.cbor_match_map_entry p);
     SpecRaw.mk_det_raw_cbor_mk_cbor (fst (List.Tot.hd v));
@@ -1614,15 +1624,18 @@ fn cbor_det_map_entry_key (_: unit) : map_entry_key_t u#0 u#0 #_ #_ cbor_det_map
   unfold (cbor_det_map_entry_match p x2 v2);
   unfold (Raw.cbor_match_map_entry p x2 (SpecRaw.mk_det_raw_cbor (fst v2), SpecRaw.mk_det_raw_cbor (snd v2)));
   fold (cbor_det_match p x2.cbor_map_entry_key (fst v2));
-  ghost fn aux (_: unit)
-    requires Raw.cbor_match p x2.cbor_map_entry_value (SpecRaw.mk_det_raw_cbor (snd v2)) ** cbor_det_match p x2.cbor_map_entry_key (fst v2)
-    ensures cbor_det_map_entry_match p x2 v2
+  intro
+    (Trade.trade
+      (cbor_det_match p x2.cbor_map_entry_key (fst v2))
+      (cbor_det_map_entry_match p x2 v2)
+    )
+    #(Raw.cbor_match p x2.cbor_map_entry_value (SpecRaw.mk_det_raw_cbor (snd v2)))
+    fn _
   {
     unfold (cbor_det_match p x2.cbor_map_entry_key (fst v2));
     fold (Raw.cbor_match_map_entry p x2 (SpecRaw.mk_det_raw_cbor (fst v2), SpecRaw.mk_det_raw_cbor (snd v2)));
     fold (cbor_det_map_entry_match p x2 v2);
   };
-  Trade.intro _ _ _ aux;
   x2.cbor_map_entry_key
 }
 
@@ -1635,15 +1648,18 @@ fn cbor_det_map_entry_value (_: unit) : map_entry_value_t u#0 u#0 #_ #_ cbor_det
   unfold (cbor_det_map_entry_match p x2 v2);
   unfold (Raw.cbor_match_map_entry p x2 (SpecRaw.mk_det_raw_cbor (fst v2), SpecRaw.mk_det_raw_cbor (snd v2)));
   fold (cbor_det_match p x2.cbor_map_entry_value (snd v2));
-  ghost fn aux (_: unit)
-    requires Raw.cbor_match p x2.cbor_map_entry_key (SpecRaw.mk_det_raw_cbor (fst v2)) ** cbor_det_match p x2.cbor_map_entry_value (snd v2)
-    ensures cbor_det_map_entry_match p x2 v2
+  intro
+    (Trade.trade
+      (cbor_det_match p x2.cbor_map_entry_value (snd v2))
+      (cbor_det_map_entry_match p x2 v2)
+    )
+    #(Raw.cbor_match p x2.cbor_map_entry_key (SpecRaw.mk_det_raw_cbor (fst v2)))
+    fn _
   {
     unfold (cbor_det_match p x2.cbor_map_entry_value (snd v2));
     fold (Raw.cbor_match_map_entry p x2 (SpecRaw.mk_det_raw_cbor (fst v2), SpecRaw.mk_det_raw_cbor (snd v2)));
     fold (cbor_det_map_entry_match p x2 v2);
   };
-  Trade.intro _ _ _ aux;
   x2.cbor_map_entry_value
 }
 

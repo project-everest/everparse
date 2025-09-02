@@ -84,13 +84,16 @@ fn slice_from_array_trade
     )
 {
   let s = S.from_array a alen;
-  ghost fn aux (_: unit)
-    requires S.is_from_array a s ** pts_to s #p v
-    ensures pts_to a #p v
+  intro
+    (Trade.trade
+      (pts_to s #p v)
+      (pts_to a #p v)
+    )
+    #(S.is_from_array a s)
+    fn _
   {
     S.to_array s
   };
-  Trade.intro _ _ _ aux;
   s
 }
 

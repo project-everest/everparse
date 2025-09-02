@@ -890,6 +890,7 @@ fn get_header_and_contents
   (outh: R.ref header)
   (#pm: perm)
   (#v: Ghost.erased raw_data_item)
+  norewrite
   requires exists* h . pts_to_serialized serialize_raw_data_item input #pm v ** pts_to outh h
   returns outc: S.slice byte
   ensures exists* h c .

@@ -595,13 +595,16 @@ ensures
       emp
 {
   let res = cbor_mk_simple v;
-  ghost fn aux (_: unit)
-  requires emp ** vmatch 1.0R res (pack (CSimple v))
-  ensures emp
+  intro
+    (Trade.trade
+      (vmatch 1.0R res (pack (CSimple v)))
+      emp
+    )
+    #emp
+    fn _
   {
     cbor_elim_simple res
   };
-  Trade.intro _ _ _ aux;
   res
 }
 
@@ -633,13 +636,16 @@ ensures
       emp
 {
   let res = cbor_mk_int64 ty v;
-  ghost fn aux (_: unit)
-  requires emp ** vmatch 1.0R res (pack (CInt64 ty v))
-  ensures emp
+  intro
+    (Trade.trade
+      (vmatch 1.0R res (pack (CInt64 ty v)))
+      emp
+    )
+    #emp
+    fn _
   {
     cbor_elim_int64 res
   };
-  Trade.intro _ _ _ aux;
   res
 }
 
@@ -721,13 +727,16 @@ fn mk_string_from_array
   A.pts_to_len a;
   let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
   let s = S.from_array a (SZ.uint64_to_sizet len);
-  ghost fn aux (_: unit)
-    requires S.is_from_array a s ** pts_to s #p v
-    ensures A.pts_to a #p v
+  intro
+    (Trade.trade
+      (pts_to s #p v)
+      (A.pts_to a #p v)
+    )
+    #(S.is_from_array a s)
+    fn _
   {
     S.to_array s;
   };
-  Trade.intro _ _ _ aux;
   S.pts_to_len s;
   let res = mk_string ty s;
   with p' v' . assert (vmatch p' res (pack (CString ty v')));
@@ -984,13 +993,16 @@ fn mk_array_from_array
   A.pts_to_len a;
   let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
   let s = S.from_array a (SZ.uint64_to_sizet len);
-  ghost fn aux (_: unit)
-    requires S.is_from_array a s ** pts_to s #pa va
-    ensures A.pts_to a #pa va
+  intro
+    (Trade.trade
+      (pts_to s #pa va)
+      (A.pts_to a #pa va)
+    )
+    #(S.is_from_array a s)
+    fn _
   {
     S.to_array s;
   };
-  Trade.intro _ _ _ aux;
   Trade.reg_r (pts_to s #pa va) (A.pts_to a #pa va) (PM.seq_list_match va vv (vmatch pv));
   S.pts_to_len s;
   let res = mk_array s;
@@ -1239,13 +1251,16 @@ fn mk_map_from_array
           PM.seq_list_match va vv (cbor_map_entry_match pv)
         )
   );
-  ghost fn aux (_: unit)
-    requires S.is_from_array a s ** pts_to s va'
-    ensures A.pts_to a va'
+  intro
+    (Trade.trade
+      (pts_to s va')
+      (A.pts_to a va')
+    )
+    #(S.is_from_array a s)
+    fn _
   {
     S.to_array s;
   };
-  Trade.intro _ _ _ aux;
   Trade.reg_r (pts_to s va') (A.pts_to a va') (PM.seq_list_match va vv (cbor_map_entry_match pv));
   Trade.trans (cbor_match p' res (pack (CMap v'))) _ _;
   res
