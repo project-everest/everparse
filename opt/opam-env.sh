@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 unset CDPATH
 SED=$(which gsed >/dev/null 2>&1 && echo gsed || echo sed)
-if [[ -z "$OPAMROOT" ]] ; then
+if [[ -z "$EVERPARSE_USE_OPAMROOT" ]] ; then
     OPAMROOT=$(pwd)/opam
     root_opam=--root=opam
 else
+    if [[ -z "$OPAMROOT" ]] ; then
+	OPAMROOT="$(opam var root)"
+    fi
     root_opam="--root=$OPAMROOT"
 fi
 opam env "$root_opam" --set-root --shell=sh | grep -v '^PATH=' |
