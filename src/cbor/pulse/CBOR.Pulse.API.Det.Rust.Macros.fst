@@ -131,13 +131,16 @@ fn cbor_det_get_string'
   Trade.trans _ _ (cbor_det_match p x y);
   unfold (cbor_det_string_match t' p' a y);
   with v' . assert (pts_to a #p' v');
-  ghost fn aux (_: unit)
-  requires emp ** pts_to a #p' v'
-  ensures cbor_det_string_match t' p' a y
+  intro
+    (Trade.trade
+      (pts_to a #p' v')
+      (cbor_det_string_match t' p' a y)
+    )
+    #emp
+    fn _
   {
     fold (cbor_det_string_match t' p' a y);
   };
-  Trade.intro _ _ _ aux;
   Trade.trans _ _ (cbor_det_match p x y);
   a
 }
@@ -179,14 +182,17 @@ fn cbor_det_get_tagged_payload'
   unfold (cbor_det_view_match p' (Tagged tag a) y);
   unfold (cbor_det_tagged_match p' tag a y);
   with v' . assert (cbor_det_match p' a v');
-  ghost fn aux (_: unit)
-  requires emp ** cbor_det_match p' a v'
-  ensures cbor_det_view_match p' (Tagged tag a) y
+  intro
+    (Trade.trade
+      (cbor_det_match p' a v')
+      (cbor_det_view_match p' (Tagged tag a) y)
+    )
+    #emp
+    fn _
   {
     fold (cbor_det_tagged_match p' tag a y);
     fold (cbor_det_view_match p' (Tagged tag a) y);
   };
-  Trade.intro _ _ _ aux;
   Trade.trans _ _ (cbor_det_match p x y);
   a
 }

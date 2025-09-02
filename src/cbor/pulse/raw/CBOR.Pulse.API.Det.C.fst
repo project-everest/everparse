@@ -67,14 +67,17 @@ ensures
   let v1v2 = cbor_det_validate_success_elim len v;
   assert (pure (Seq.equal (Seq.slice v 0 (SZ.v len)) (Spec.cbor_det_serialize (fst v1v2))));
   let gr : Ghost.erased (AP.ptr U8.t) = AP.ghost_split input len;
-  ghost fn aux (_: unit)
-  requires pts_to (Ghost.reveal gr) #pm (Seq.slice v (SZ.v len) (Seq.length v)) ** pts_to input #pm (Seq.slice v 0 (SZ.v len))
-  ensures pts_to input #pm v
+  intro
+    (Trade.trade
+      (pts_to input #pm (Seq.slice v 0 (SZ.v len)))
+      (pts_to input #pm v)
+    )
+    #(pts_to (Ghost.reveal gr) #pm (Seq.slice v (SZ.v len) (Seq.length v)))
+    fn _
   {
     Seq.lemma_split v (SZ.v len);
     AP.join input gr
   };
-  Trade.intro _ _ _ aux;
   Seq.append_empty_r (Spec.cbor_det_serialize (fst v1v2));
   let s = SU.arrayptr_to_slice_intro_trade input len;
   Trade.trans _ _ (pts_to input #pm v);
@@ -93,6 +96,7 @@ fn cbor_det_serialize
   (output_len: SZ.t)
   (#y: Ghost.erased Spec.cbor)
   (#pm: perm)
+norewrite
 requires
     (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (SZ.v output_len == Seq.length v /\ Seq.length (Spec.cbor_det_serialize y) <= SZ.v output_len))
 returns res: SZ.t
@@ -216,13 +220,16 @@ ensures
     Some vres -> {
       unfold (mk_map_gen_post vmatch1 vmatch2 s va pv vv (Some vres));
       with w va' . assert (Trade.trade (vmatch1 1.0R vres w) (pts_to s va' ** PM.seq_list_match va vv (vmatch2 pv)));
-      ghost fn aux (_: unit)
-      requires S.is_from_array a s ** S.pts_to s va'
-      ensures A.pts_to a va'
+      intro
+        (Trade.trade
+          (S.pts_to s va')
+          (A.pts_to a va')
+        )
+        #(S.is_from_array a s)
+        fn _
       {
         S.to_array s;
       };
-      Trade.intro _ _ _ aux;
       Trade.trans_concl_l _ _ _ _;
       rewrite each vres as vdest;
       fold (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest true);

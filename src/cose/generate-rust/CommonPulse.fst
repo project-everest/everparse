@@ -47,8 +47,8 @@ let rel_evercddl_int_eq a b : squash (rel_evercddl_int a b ==
    | _ -> pure False)) =
   ()
 
-ghost fn rw_r #a #b (h: squash (a == b)) requires a ensures b { rewrite a as b }
-ghost fn rw_l #a #b (h: squash (a == b)) requires b ensures a { rewrite b as a }
+ghost fn rw_r (#a: slprop) (#b: slprop) (h: squash (a == b)) requires a ensures b { rewrite a as b }
+ghost fn rw_l (#a: slprop) (#b: slprop) (h: squash (a == b)) requires b ensures a { rewrite b as a }
 
 let i32_lt_iff a b : squash (Int32.lt a b <==> Int32.v a < Int32.v b) = ()
 
@@ -127,9 +127,13 @@ fn mk_sig_structure phdr aad payload
   with res vres. assert rel_sig_structure res vres;
   rewrite each vres as mk_sig_structure_spec vphdr vaad vpayload;
 
-  ghost fn aux ()
-    requires emp ** rel_sig_structure res (mk_sig_structure_spec vphdr vaad vpayload)
-    ensures rel_empty_or_serialized_map phdr vphdr ** rel_bstr aad vaad ** rel_bstr payload vpayload
+  intro
+    (trade
+      (rel_sig_structure res (mk_sig_structure_spec vphdr vaad vpayload))
+      (rel_empty_or_serialized_map phdr vphdr ** rel_bstr aad vaad ** rel_bstr payload vpayload)
+    )
+    #emp
+    fn _
   {
     unfold_plus (rel_sig_structure _ _) [`%mk_sig_structure_spec];
     rewrite each (mk_sig_structure_spec vphdr vaad vpayload)
@@ -137,7 +141,6 @@ fn mk_sig_structure phdr aad payload
     rw_r (rel_sig_structure_eq _ _);
     rewrite rel_either rel_unit rel_unit signature1 signature1 as emp;
   };
-  intro_trade _ _ _ aux;
 
   res
 }
@@ -308,9 +311,13 @@ fn mk_phdrs (alg: Int32.t) (rest: A.larray (label & values) 0)
   rw_l (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
   rw_l (rel_map_sign1_phdrs_eq alg alg' _);
   with res. assert rel_empty_or_serialized_map res (sign1_phdrs_spec alg);
-  ghost fn aux ()
-    requires S.is_from_array rest rest2 ** rel_empty_or_serialized_map res (sign1_phdrs_spec alg)
-    ensures pts_to rest #prest vrest
+  intro
+    (trade
+      (rel_empty_or_serialized_map res (sign1_phdrs_spec alg))
+      (pts_to rest #prest vrest)
+    )
+    #(S.is_from_array rest rest2)
+    fn _
   {
     rw_r (rel_map_sign1_phdrs_eq alg alg' _);
     rw_r (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
@@ -323,7 +330,6 @@ fn mk_phdrs (alg: Int32.t) (rest: A.larray (label & values) 0)
       rel_evercddl_int alg' (specint_of_i32 alg)
     );
   };
-  intro_trade _ _ _ aux;
   res
 }
 
@@ -356,9 +362,13 @@ fn mk_emphdrs (rest: A.larray (label & values) 0)
   rw_l (rel_map_sign1_emphdrs_eq _);
   with res. assert rel_header_map res (sign1_emphdrs_spec ());
 
-  ghost fn aux ()
-    requires S.is_from_array rest rest2 ** rel_header_map res (sign1_emphdrs_spec ())
-    ensures pts_to rest #prest vrest
+  intro
+    (trade
+      (rel_header_map res (sign1_emphdrs_spec ()))
+      (pts_to rest #prest vrest)
+    )
+    #(S.is_from_array rest rest2)
+    fn _
   {
     rw_r (rel_map_sign1_emphdrs_eq _);
     rw_r (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
@@ -370,7 +380,6 @@ fn mk_emphdrs (rest: A.larray (label & values) 0)
       Pulse.Lib.SeqMatch.seq_list_match _ _ (rel_pair rel_label rel_values)
     );
   };
-  intro_trade _ _ _ aux;
 
   res
 }
@@ -396,8 +405,8 @@ let rel_bstr_eq (x: bstr) (y: spect_bstr) =
       pts_to s #p y ** pure (false == false))
     )
 
-ghost fn rw_r_wt #a #b (h: squash (a == b)) requires a ensures b ** trade b a { rewrite_with_trade a b }
-ghost fn rw_l_wt #a #b (h: squash (a == b)) requires b ensures a ** trade a b { rewrite_with_trade b a }
+ghost fn rw_r_wt (#a: slprop) (#b: slprop) (h: squash (a == b)) requires a ensures b ** trade b a { rewrite_with_trade a b }
+ghost fn rw_l_wt (#a: slprop) (#b: slprop) (h: squash (a == b)) requires b ensures a ** trade a b { rewrite_with_trade b a }
 
 let sign1_spec
     privkey
@@ -415,11 +424,14 @@ let sign1_spec
 ghost fn trade_exists (#t: Type0) (p: t->slprop) x
   ensures trade (p x) (exists* y. p y)
 {
-  ghost fn aux ()
-    requires emp ** p x
-    ensures exists* y. p y
+  intro
+    (trade
+      (p x)
+      (exists* y. p y)
+    )
+    #emp
+    fn _
   { () };
-  intro_trade _ _ _ aux;
 }
 
 inline_for_extraction // Karamel's lifetime support is massively lacking
@@ -628,8 +640,17 @@ fn borrow_payload
     (rel_either rel_bstr rel_nil msg._x0.payload (reveal vmsg)._x0.payload)
     (rel_bstr (Inl?.v msg._x0.payload) (Inl?.v (reveal vmsg)._x0.payload));
   rw_r (rel_bstr_eq' (Inl?.v msg._x0.payload) _);
-  ghost fn aux ()
-    requires
+  intro
+    (trade
+      (
+        S.pts_to (Inl?.v msg._x0.payload)._x0.s #(Inl?.v msg._x0.payload)._x0.p
+        (Inl?.v (reveal vmsg)._x0.payload)._x0
+      )
+      (
+        rel_cose_sign1_tagged msg vmsg
+      )
+    )
+    #(
       rel_bstr msg._x0.signature (reveal vmsg)._x0.signature **
       rel_empty_or_serialized_map msg._x0.protected (reveal vmsg)._x0.protected **
       rel_header_map msg._x0.unprotected (reveal vmsg)._x0.unprotected **
@@ -638,15 +659,13 @@ fn borrow_payload
             rel_nil
             msg._x0.payload
             (reveal vmsg)._x0.payload)
-    requires S.pts_to (Inl?.v msg._x0.payload)._x0.s #(Inl?.v msg._x0.payload)._x0.p
-      (Inl?.v (reveal vmsg)._x0.payload)._x0
-    ensures rel_cose_sign1_tagged msg vmsg
+    )
+    fn _
   {
     rw_l (rel_bstr_eq' (Inl?.v msg._x0.payload) _);
     elim_trade _ _;
     rw_l (rel_sign1_tagged_eq _ _);
   };
-  intro_trade _ _ _ aux;
   (Inl?.v msg._x0.payload)._x0.s
 }
 

@@ -255,13 +255,16 @@ ensures exists* p' .
     let k = (if ty = cbor_major_type_uint64 then UInt64 else NegInt64);
     let i = cbor_det_read_uint64 () c;
     fold (cbor_det_view_match p (Int64 k i) v);
-    ghost fn aux (_: unit)
-      requires cbor_det_match p c v ** cbor_det_view_match p (Int64 k i) v
-      ensures cbor_det_match p c v
+    intro
+      (Trade.trade
+        (cbor_det_view_match p (Int64 k i) v)
+        (cbor_det_match p c v)
+      )
+      #(cbor_det_match p c v)
+      fn _
     {
       unfold (cbor_det_view_match p (Int64 k i) v)
     };
-    Trade.intro _ _ _ aux;
     Int64 k i
   }
   else if (ty = cbor_major_type_byte_string || ty = cbor_major_type_text_string) {
@@ -270,14 +273,17 @@ ensures exists* p' .
     with p' v' . assert (pts_to s #p' v');
     fold (cbor_det_string_match ty p' s v);
     fold (cbor_det_view_match p' (String k s) v);
-    ghost fn aux (_: unit)
-    requires emp ** cbor_det_view_match p' (String k s) v
-    ensures pts_to s #p' v'
+    intro
+      (Trade.trade
+        (cbor_det_view_match p' (String k s) v)
+        (pts_to s #p' v')
+      )
+      #emp
+      fn _
     {
       unfold (cbor_det_view_match p' (String k s) v);
       unfold (cbor_det_string_match ty p' s v);
     };
-    Trade.intro _ _ _ aux;
     Trade.trans _ _ (cbor_det_match p c v);
     String k s
   }
@@ -285,28 +291,34 @@ ensures exists* p' .
     let res : cbor_det_array = { array = c };
     fold (cbor_det_array_match p res v);
     fold (cbor_det_view_match p (Array res) v);
-    ghost fn aux (_: unit)
-    requires emp ** cbor_det_view_match p (Array res) v
-    ensures cbor_det_match p c v
+    intro
+      (Trade.trade
+        (cbor_det_view_match p (Array res) v)
+        (cbor_det_match p c v)
+      )
+      #emp
+      fn _
     {
       unfold (cbor_det_view_match p (Array res) v);
       unfold (cbor_det_array_match p res v);
     };
-    Trade.intro _ _ _ aux;
     Array res
   }
   else if (ty = cbor_major_type_map) {
     let res : cbor_det_map = { map = c };
     fold (cbor_det_map_match p res v);
     fold (cbor_det_view_match p (Map res) v);
-    ghost fn aux (_: unit)
-    requires emp ** cbor_det_view_match p (Map res) v
-    ensures cbor_det_match p c v
+    intro
+      (Trade.trade
+        (cbor_det_view_match p (Map res) v)
+        (cbor_det_match p c v)
+      )
+      #emp
+      fn _
     {
       unfold (cbor_det_view_match p (Map res) v);
       unfold (cbor_det_map_match p res v);
     };
-    Trade.intro _ _ _ aux;
     Map res
   }
   else if (ty = cbor_major_type_tagged) {
@@ -315,27 +327,33 @@ ensures exists* p' .
     with p' v' . assert (cbor_det_match p' payload v');
     fold (cbor_det_tagged_match p' tag payload v);
     fold (cbor_det_view_match p' (Tagged tag payload) v);
-    ghost fn aux (_: unit)
-    requires emp ** cbor_det_view_match p' (Tagged tag payload) v
-    ensures cbor_det_match p' payload v'
+    intro
+      (Trade.trade
+        (cbor_det_view_match p' (Tagged tag payload) v)
+        (cbor_det_match p' payload v')
+      )
+      #emp
+      fn _
     {
       unfold (cbor_det_view_match p' (Tagged tag payload) v);
       unfold (cbor_det_tagged_match p' tag payload v);
     };
-    Trade.intro _ _ _ aux;
     Trade.trans _ _ (cbor_det_match p c v);
     Tagged tag payload
   }
   else {
     let i = cbor_det_read_simple_value () c;
     fold (cbor_det_view_match p (SimpleValue i) v);
-    ghost fn aux (_: unit)
-      requires cbor_det_match p c v ** cbor_det_view_match p (SimpleValue i) v
-      ensures cbor_det_match p c v
+    intro
+      (Trade.trade
+        (cbor_det_view_match p (SimpleValue i) v)
+        (cbor_det_match p c v)
+      )
+      #(cbor_det_match p c v)
+      fn _
     {
       unfold (cbor_det_view_match p (SimpleValue i) v)
     };
-    Trade.intro _ _ _ aux;
     SimpleValue i
   }
 }
@@ -373,13 +391,16 @@ ensures cbor_det_match p x.array y **
   pure (Spec.CArray? (Spec.unpack y))
 {
   unfold (cbor_det_array_match p x y);
-  ghost fn aux (_: unit)
-  requires emp ** cbor_det_match p x.array y
-  ensures cbor_det_array_match p x y
+  intro
+    (Trade.trade
+      (cbor_det_match p x.array y)
+      (cbor_det_array_match p x y)
+    )
+    #emp
+    fn _
   {
     fold (cbor_det_array_match p x y);
   };
-  Trade.intro _ _ _ aux;
 }
 
 let cbor_det_array_iterator_t = cbor_det_array_iterator_t
@@ -477,13 +498,16 @@ ensures cbor_det_match p x.map y **
   pure (Spec.CMap? (Spec.unpack y))
 {
   unfold (cbor_det_map_match p x y);
-  ghost fn aux (_: unit)
-  requires emp ** cbor_det_match p x.map y
-  ensures cbor_det_map_match p x y
+  intro
+    (Trade.trade
+      (cbor_det_match p x.map y)
+      (cbor_det_map_match p x y)
+    )
+    #emp
+    fn _
   {
     fold (cbor_det_map_match p x y);
   };
-  Trade.intro _ _ _ aux;
 }
 
 let cbor_det_map_iterator_t = Det.cbor_det_map_iterator_t
