@@ -2,12 +2,23 @@ all: FStar.do karamel.do pulse.do z3
 
 .PHONY: all %.do
 
+export EVERPARSE_OPT_PATH=$(realpath .)
+
+ifeq (,$(OPAMROOT))
 opam-env.Makefile: everest
 	opam init --no-setup --root=opam --compiler=5.3.0
 	opam exec --root=opam --set-root -- everest/everest opam
-	./opam-env.sh > $@
-
-export EVERPARSE_OPT_PATH=$(realpath .)
+else
+opam-env.Makefile:
+endif
+	rm -rf $@.tmp
+	./opam-env.sh > $@.tmp
+	echo >> $@.tmp
+	echo env: opam-env >> $@.tmp
+	echo .PHONY: opam-env >> $@.tmp
+	echo opam-env: >> $@.tmp
+	echo "	OPAMROOT=\"$(OPAMROOT)\" \"$(EVERPARSE_OPT_PATH)\"/opam-env.sh --shell" >> $@.tmp
+	mv $@.tmp $@
 
 include opam-env.Makefile
 
