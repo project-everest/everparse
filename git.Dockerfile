@@ -27,7 +27,7 @@ WORKDIR /mnt/everparse
 FROM base AS deps
 
 ARG CI_THREADS
-RUN sudo apt-get update && env OPAMYES=1 make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" -C opt
+RUN sudo apt-get update && env OPAMNODEPEXTS=0 make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" deps
 
 # Automatically set up Rust environment
 ENTRYPOINT ["/usr/bin/env", "BASH_ENV=/home/opam/.cargo/env", "/mnt/everparse/opt/shell.sh", "-c"]

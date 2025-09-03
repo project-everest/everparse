@@ -22,7 +22,7 @@ jobs:
       - name: Everparse CI
         id: cistep
         run: |
-          . $HOME/.cargo/env && make -C everparse cbor-test-unverified cose-extracted-test -kj$(nproc)
+          . $HOME/.cargo/env && make -C everparse -f nofstar.Makefile test -kj$(nproc)
 
   build-cddl-ubuntu:
     runs-on: ubuntu-latest
@@ -37,7 +37,7 @@ jobs:
           path: everparse
       - name: Everparse CI
         run: |
-          ./everparse/build-evercddl.sh
+          make -C everparse -j$(nproc) -k cddl
 
   build-cddl-macos:
     runs-on: macOS-latest
@@ -53,9 +53,6 @@ jobs:
         with:
           submodules: true
           path: everparse
-      - name: Everparse CI
-        run: |
-          ./everparse/build-evercddl.sh
       - name: Test
         run: |
           nproc=$(sysctl -n hw.logicalcpu)

@@ -1,28 +1,143 @@
-# NOTE: if you want to add global F* options, you need to do the following:
+#NOTE: if you want to add global F* options, you need to do the following:
 # 1. Add them to FSTAR_OPTIONS in src/fstar.Makefile
 # 2. Add them to fstar_args0 in src/3d/ocaml/Batch.ml
 
-all: package-subset asn1 cbor cddl cbor-interface cose
+all: package-subset asn1 cbor cose
 
-export EVERPARSE_OPT_PATH=$(realpath opt)
--include $(EVERPARSE_OPT_PATH)/opam-env.Makefile
+ifeq (,$(NO_PULSE))
+all: cddl cbor-interface
+endif
 
-export FSTAR_EXE ?= $(wildcard $(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe)
-export KRML_HOME ?= $(EVERPARSE_OPT_PATH)/karamel
-export PULSE_HOME ?= $(EVERPARSE_OPT_PATH)/pulse/out
-EVEREST_HOME ?= $(EVERPARSE_OPT_PATH)/everest
-export PATH := $(EVERPARSE_OPT_PATH)/z3:$(PATH)
-
-include $(EVERPARSE_OPT_PATH)/env.Makefile
-
-$(EVERPARSE_OPT_PATH)/everest:
-	+$(MAKE) -C $(EVERPARSE_OPT_PATH) everest
+.PHONY: all
 
 package-subset: quackyducky lowparse 3d
 
 .PHONY: package-subset
 
-EVERPARSE_SRC_PATH = $(realpath src)
+include nofstar.Makefile
+
+export EVERPARSE_OPT_PATH := $(realpath opt)
+
+$(EVERPARSE_OPT_PATH)/everest:
+	+$(MAKE) -C $(dir $@) -f git-clone.Makefile $(notdir $@)
+
+ifeq (,$(OPAMNODEPEXTS))
+export OPAMNODEPEXTS := 1
+endif
+ifeq (,$(OPAMYES))
+export OPAMYES := 1
+endif
+
+$(EVERPARSE_OPT_PATH)/opam: $(EVERPARSE_OPT_PATH)/everest
+	rm -rf $@ $@.tmp
+	if ! { opam init --no-setup --root=$(EVERPARSE_OPT_PATH)/opam --compiler=5.3.0 && opam exec --root=$(EVERPARSE_OPT_PATH)/opam --set-root -- $(EVERPARSE_OPT_PATH)/everest/everest opam ; } ; then mv $@ $@.tmp ; exit 1 ; fi
+
+NEED_OPAM :=
+ifeq (,$(EVERPARSE_USE_OPAMROOT))
+NEED_OPAM := $(EVERPARSE_OPT_PATH)/opam
+with_opam := opam exec --root="$(EVERPARSE_OPT_PATH)/opam" --set-root --
+endif
+
+Z3_VERSION := 4.13.3
+
+NEED_FSTAR :=
+ifeq (,$(FSTAR_EXE))
+export FSTAR_EXE := $(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe
+NEED_FSTAR := $(FSTAR_EXE)
+z3_exe := $(shell $(FSTAR_EXE) --locate_z3 \$(Z3_VERSION) 2>/dev/null)
+else
+# F* already exists, so we assume its fstar-lib is already compiled
+NEED_OPAM :=
+endif
+
+NEED_KRML :=
+ifeq (,$(KRML_HOME))
+export KRML_HOME := $(EVERPARSE_OPT_PATH)/karamel
+NEED_KRML := $(KRML_HOME)/krml
+else
+ifneq (,$(NEED_FSTAR))
+$(error "Inconsistent setup: KRML_HOME set but FSTAR_EXE not set")
+endif
+endif
+
+NEED_PULSE :=
+ifeq (,$(NO_PULSE))
+ifeq (,$(PULSE_HOME))
+export PULSE_HOME := $(EVERPARSE_OPT_PATH)/pulse/out
+NEED_PULSE := $(PULSE_HOME)
+else
+ifneq (,$(NEED_FSTAR))
+$(error "Inconsistent setup: PULSE_HOME set but FSTAR_EXE not set")
+endif
+endif
+endif
+
+opam-env.Makefile: $(NEED_OPAM)
+	rm -rf $@.tmp
+	$(EVERPARSE_OPT_PATH)/opam-env.sh > $@.tmp
+	echo >> $@.tmp
+	echo env: opam-env >> $@.tmp
+	echo .PHONY: opam-env >> $@.tmp
+	echo opam-env: >> $@.tmp
+	echo "	\"$(EVERPARSE_OPT_PATH)\"/opam-env.sh --shell" >> $@.tmp
+	mv $@.tmp $@
+
+include opam-env.Makefile
+
+$(EVERPARSE_OPT_PATH)/FStar:
+	+$(MAKE) -C $(dir $@) -f git-clone.Makefile $(notdir $@)
+
+$(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe: $(EVERPARSE_OPT_PATH)/FStar $(NEED_OPAM)
+	+$(with_opam) $(MAKE) -C $< ADMIT=1
+	touch $@
+
+$(EVERPARSE_OPT_PATH)/z3: $(EVERPARSE_OPT_PATH)/FStar
+	rm -rf $@ $@.tmp
+	mkdir -p $@.tmp
+	$</.scripts/get_fstar_z3.sh $@.tmp
+	rm -rf $@.tmp/z3-4.8.5
+	mv $@.tmp $@
+
+ifeq (,$(z3_exe))
+z3_exe := $(shell which z3-$(Z3_VERSION))
+endif
+ifeq (,$(z3_exe))
+NEED_Z3 := $(EVERPARSE_OPT_PATH)/z3
+export PATH := $(NEED_Z3):$(PATH)
+else
+NEED_Z3 := 
+endif
+ifeq (1,$(ADMIT))
+OTHERFLAGS += --admit_smt_queries true
+export OTHERFLAGS
+NEED_Z3 :=
+endif
+
+$(EVERPARSE_OPT_PATH)/karamel:
+	+$(MAKE) -C $(dir $@) -f git-clone.Makefile $(notdir $@)
+
+$(EVERPARSE_OPT_PATH)/karamel/krml: $(EVERPARSE_OPT_PATH)/karamel $(NEED_FSTAR) $(NEED_OPAM)
+	+env OTHERFLAGS='--admit_smt_queries true' $(with_opam) $(MAKE) -C $<
+	touch $@
+
+$(EVERPARSE_OPT_PATH)/pulse:
+	+$(MAKE) -C $(dir $@) -f git-clone.Makefile $(notdir $@)
+
+$(EVERPARSE_OPT_PATH)/pulse/out: $(EVERPARSE_OPT_PATH)/pulse $(NEED_FSTAR) $(NEED_OPAM)
+	+$(with_opam) $(MAKE) -C $< ADMIT=1
+	touch $@
+
+env:
+	@echo export FSTAR_EXE=$(FSTAR_EXE)
+	@echo export KRML_HOME=$(KRML_HOME)
+ifeq (,$(NO_PULSE))
+	@echo export PULSE_HOME=$(PULSE_HOME)
+endif
+	@echo export PATH=$(EVERPARSE_OPT_PATH)/FStar/bin:$(EVERPARSE_OPT_PATH)/z3:\"'$$PATH'\"
+
+.PHONY: env
+
+EVERPARSE_SRC_PATH := $(realpath src)
 
 ALREADY_CACHED := *,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,
 
@@ -32,15 +147,19 @@ ifeq (,$(NO_PULSE))
   SRC_DIRS += src/lowparse/pulse src/cbor/pulse src/cbor/pulse/raw src/cbor/pulse/raw/everparse src/cddl/pulse src/cddl/tool
 endif
 
-ifneq (,$(FSTAR_EXE))
-
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 ifeq (,$(NO_PULSE))
   include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 endif
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 
-endif
+$(FSTAR_DEP_FILE): $(NEED_FSTAR) $(NEED_KRML) $(NEED_PULSE)
+
+$(ALL_CHECKED_FILES): %.checked: $(NEED_FSTAR) $(NEED_Z3) $(NEED_KRML) $(NEED_PULSE)
+
+deps: $(NEED_OPAM) $(NEED_FSTAR) $(NEED_Z3) $(NEED_KRML) $(NEED_PULSE)
+
+.PHONY: deps
 
 lowparse: $(filter-out src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
 
@@ -54,7 +173,7 @@ endif
 
 .PHONY: 3d-prelude
 
-3d-exe:
+3d-exe: $(NEED_Z3)
 	+$(MAKE) -C src/3d 3d
 
 .PHONY: 3d-exe
@@ -126,9 +245,6 @@ submodules:
 
 .PHONY: submodules
 
-cbor:
-	+$(MAKE) -C src/cbor/pulse/det
-
 cbor-interface: $(filter-out src/cbor/spec/raw/%,$(filter src/cbor/spec/%,$(ALL_CHECKED_FILES)))
 
 ifeq (,$(NO_PULSE))
@@ -136,9 +252,6 @@ cbor-interface: $(filter-out src/cbor/pulse/raw/%,$(filter src/cbor/pulse/%,$(AL
 endif
 
 .PHONY: cbor-interface
-
-cbor-det-c-test: cbor
-	+$(MAKE) -C src/cbor/pulse/det/c all-tests
 
 ifeq (,$(NO_PULSE))
 cbor-det-c-vertest: cbor cbor-interface
@@ -157,10 +270,6 @@ cbor-det-common-vertest:
 endif
 
 .PHONY: cbor-det-common-vertest
-
-# NOTE: I wish we could use `cargo -C ...` but see https://github.com/rust-lang/cargo/pull/11960
-cbor-det-rust-test: cbor
-	+cd src/cbor/pulse/det/rust && cargo test
 
 cbor-verify: $(filter src/cbor/spec/%,$(ALL_CHECKED_FILES))
 
@@ -194,10 +303,6 @@ endif
 
 .PHONY: cbor-snapshot
 
-cbor-test-unverified: cbor-det-c-test cbor-det-rust-test
-
-.PHONY: cbor-test-unverified
-
 cbor-test-verified: cbor-det-c-vertest cbor-det-common-vertest
 
 .PHONY: cbor-test-verified
@@ -224,7 +329,7 @@ cddl: cbor cbor-interface cddl-spec cddl-tool
 
 .PHONY: cddl-spec cddl-tool
 
-.PHONY: cbor cbor-det-c-test cbor-det-rust-test cbor-test cddl
+.PHONY: cbor-det-c-test cbor-det-rust-test cbor-test cddl
 
 ifeq (,$(NO_PULSE))
 cddl-unit-tests: cddl
@@ -249,19 +354,9 @@ endif
 
 .PHONY: cose-extract-test cose-snapshot
 
-cose-extracted-test: cose
-	+$(MAKE) -C src/cose test-extracted
-
-.PHONY: cose-extracted-test
-
 cose-test: cose-extract-test cose-extracted-test
 
 .PHONY: cose-test
-
-cose: cbor
-	+$(MAKE) -C src/cose
-
-.PHONY: cose
 
 cddl-test: cddl cddl-unit-tests
 

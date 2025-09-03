@@ -28,3 +28,4 @@ everparse_*.zip
 .*.touch
 .opam
 .opam.tmp
+opam-env.Makefile

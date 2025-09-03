@@ -103,7 +103,7 @@ EverCDDL is already built in the Docker image. If you are not using that image, 
 
 1. Install opam 2.x, which you can install following the [official instructions](https://opam.ocaml.org/doc/Install.html). You do not need to install OCaml, though.
 
-2. Run `./build-evercddl.sh` . This will build EverCDDL using a local
+2. Run `make cddl` . This will build EverCDDL using a local
    opam switch, so this will not impact your existing opam switches if
    any.
 
