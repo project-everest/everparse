@@ -28,9 +28,14 @@ ifeq (,$(OPAMYES))
 export OPAMYES := 1
 endif
 
+cygwin_local_install :=
+ifeq ($(OS),Windows_NT)
+cygwin_local_install += --cygwin-local-install
+endif
+
 $(EVERPARSE_OPT_PATH)/opam: $(EVERPARSE_OPT_PATH)/everest
 	rm -rf $@ $@.tmp
-	if ! { opam init --no-setup --root=$(EVERPARSE_OPT_PATH)/opam --compiler=5.3.0 && opam exec --root=$(EVERPARSE_OPT_PATH)/opam --set-root -- $(EVERPARSE_OPT_PATH)/everest/everest opam ; } ; then mv $@ $@.tmp ; exit 1 ; fi
+	if ! { opam init $(cygwin_local_install) --no-setup --root=$(EVERPARSE_OPT_PATH)/opam --compiler=5.3.0 && opam exec --root=$(EVERPARSE_OPT_PATH)/opam --set-root -- $(EVERPARSE_OPT_PATH)/everest/everest opam ; } ; then mv $@ $@.tmp ; exit 1 ; fi
 
 NEED_OPAM :=
 ifeq (,$(EVERPARSE_USE_OPAMROOT))
