@@ -66,7 +66,7 @@ jobs:
       - name: Build package
         shell: C:\cygwin\bin\bash.exe --login '{0}'
         run: >-
-          cd $GITHUB_WORKSPACE && eval $(opam env) && CC=x86_64-w64-mingw32-gcc.exe make -f package.Makefile nuget-noversion -kj$(nproc)
+          cd $GITHUB_WORKSPACE && eval $(opam env) && make -f package.Makefile nuget-noversion -kj$(nproc)
 
       - uses: actions/upload-artifact@v4
         with:
