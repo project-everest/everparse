@@ -25,7 +25,66 @@ on:
         required: true
 
 jobs:
+  fstar-src:
+    ## NOTE: This is copied from build-src in the F* repo.
+
+    runs-on: ubuntu-22.04
+    # We prefer slightly older Ubuntu so we get binaries that work on
+    # all more recent versions.
+    steps:
+      - uses: actions/checkout@master
+        id: checkout
+        with:
+          repository: ${{ inputs.fstar_repo || 'FStarLang/FStar' }}
+          ref: ${{ inputs.fstar_ref || 'master' }}
+
+      - name: Check cache
+        id: check-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: fstar-src.tar.gz
+          key: FStar-src-${{steps.checkout.outputs.commit}}
+
+      - uses: ocaml/setup-ocaml@v3
+        if: steps.check-cache.outputs.cache-hit != 'true'
+        with:
+          ocaml-compiler: 4.14.2
+
+      - name: Prepare
+        if: steps.check-cache.outputs.cache-hit != 'true'
+        run: |
+          ./.scripts/get_fstar_z3.sh $HOME/bin
+          echo "PATH=$HOME/bin:$PATH" >> $GITHUB_ENV
+          opam install --deps-only ./fstar.opam
+
+      - name: Set F* version
+        if: steps.check-cache.outputs.cache-hit != 'true'
+        run: |
+          echo FSTAR_VERSION="$(git describe --tags --dirty)" >> $GITHUB_ENV
+
+      # NB: release workflow later adds version number to the name
+      - name: Build package
+        if: steps.check-cache.outputs.cache-hit != 'true'
+        run: |
+          eval $(opam env)
+          export FSTAR_TAG=
+          # ^ no tag in source package
+          make -skj$(nproc) package-src ADMIT=1
+
+      - name: Save
+        if: steps.check-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: fstar-src.tar.gz
+          key: FStar-src-${{steps.checkout.outputs.commit}}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          path: fstar-src.tar.gz
+          name: package-src
+
   build:
+    needs: fstar-src
     runs-on: windows-2025
     steps:
 
@@ -51,11 +110,14 @@ jobs:
         run: >-
           cd "$GITHUB_WORKSPACE"/opt/everest && "$GITHUB_WORKSPACE"/src/package/windows/install-cygwin-packages.sh
 
-      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
-          path: opt/FStar
-          repository: ${{ inputs.fstar_repo || 'FStarLang/FStar' }}
-          ref: ${{ inputs.fstar_ref || 'master' }}
+          name: package-src
+
+      - name: Expand F* source package
+        shell: C:\cygwin\bin\bash.exe --login '{0}'
+        run: >-
+          cd "$GITHUB_WORKSPACE" && tar xzf fstar-src.tar.gz && mv fstar opt/FStar
 
       - uses: actions/checkout@v4
         with:
@@ -66,7 +128,7 @@ jobs:
       - name: Build package
         shell: C:\cygwin\bin\bash.exe --login '{0}'
         run: >-
-          cd $GITHUB_WORKSPACE && eval $(opam env) && make -f package.Makefile nuget-noversion -kj$(nproc)
+          cd $GITHUB_WORKSPACE && eval $(opam env) && env V=1 make -f package.Makefile nuget-noversion -kj$(nproc)
 
       - uses: actions/upload-artifact@v4
         with:
