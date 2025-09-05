@@ -354,6 +354,7 @@ let rec coerce_fields (e:env) (r0 r1:record)
             probe_and_copy_type e af0.v.field_ident af0.v.field_type (coerce_fields e tl0 tl1)
           )
           else (
+            let _ = check_scope_type e af0.v.field_ident af0.v.field_type in
             match Generate32BitTypes.has_32bit_coercion e.benv af0.v.field_type af1.v.field_type with
             | Some id -> (
               let insts, _ = GeneralizeProbes.generic_instantiations_for_type e.benv af0.v.field_type in
