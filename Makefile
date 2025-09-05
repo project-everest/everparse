@@ -36,6 +36,7 @@ endif
 $(EVERPARSE_OPT_PATH)/opam: $(EVERPARSE_OPT_PATH)/everest
 	rm -rf $@ $@.tmp
 	if ! { opam init $(cygwin_local_install) --no-setup --root=$(EVERPARSE_OPT_PATH)/opam --compiler=5.3.0 && opam exec --root=$(EVERPARSE_OPT_PATH)/opam --set-root -- bash $(EVERPARSE_OPT_PATH)/everest/everest opam ; } ; then mv $@ $@.tmp ; exit 1 ; fi
+	touch $@
 
 NEED_OPAM :=
 ifeq (,$(EVERPARSE_USE_OPAMROOT))
@@ -58,7 +59,7 @@ endif
 NEED_KRML :=
 ifeq (,$(KRML_HOME))
 export KRML_HOME := $(EVERPARSE_OPT_PATH)/karamel
-NEED_KRML := $(KRML_HOME)/krml
+NEED_KRML := $(KRML_HOME)/_build/default/src/Karamel.exe
 else
 ifneq (,$(NEED_FSTAR))
 $(error "Inconsistent setup: KRML_HOME set but FSTAR_EXE not set")
@@ -77,6 +78,24 @@ endif
 endif
 endif
 
+ifeq (,$(z3_exe))
+z3_exe := $(shell which z3-$(Z3_VERSION))
+ifneq (0,$(.SHELLSTATUS))
+z3_exe :=
+endif
+endif
+ifeq (,$(z3_exe))
+NEED_Z3 := $(EVERPARSE_OPT_PATH)/z3
+export PATH := $(NEED_Z3):$(PATH)
+else
+NEED_Z3 := 
+endif
+ifeq (1,$(ADMIT))
+OTHERFLAGS += --admit_smt_queries true
+export OTHERFLAGS
+NEED_Z3 :=
+endif
+
 opam-env.Makefile: $(NEED_OPAM)
 	rm -rf $@.tmp
 	$(EVERPARSE_OPT_PATH)/opam-env.sh > $@.tmp
@@ -86,6 +105,7 @@ opam-env.Makefile: $(NEED_OPAM)
 	echo opam-env: >> $@.tmp
 	echo "	\"$(EVERPARSE_OPT_PATH)\"/opam-env.sh --shell" >> $@.tmp
 	mv $@.tmp $@
+	touch $@
 
 include opam-env.Makefile
 
@@ -102,26 +122,12 @@ $(EVERPARSE_OPT_PATH)/z3: $(EVERPARSE_OPT_PATH)/FStar
 	$</.scripts/get_fstar_z3.sh $@.tmp
 	rm -rf $@.tmp/z3-4.8.5
 	mv $@.tmp $@
-
-ifeq (,$(z3_exe))
-z3_exe := $(shell which z3-$(Z3_VERSION))
-endif
-ifeq (,$(z3_exe))
-NEED_Z3 := $(EVERPARSE_OPT_PATH)/z3
-export PATH := $(NEED_Z3):$(PATH)
-else
-NEED_Z3 := 
-endif
-ifeq (1,$(ADMIT))
-OTHERFLAGS += --admit_smt_queries true
-export OTHERFLAGS
-NEED_Z3 :=
-endif
+	touch $@
 
 $(EVERPARSE_OPT_PATH)/karamel:
 	+$(MAKE) -C $(dir $@) -f git-clone.Makefile $(notdir $@)
 
-$(EVERPARSE_OPT_PATH)/karamel/krml: $(EVERPARSE_OPT_PATH)/karamel $(NEED_FSTAR) $(NEED_OPAM)
+$(EVERPARSE_OPT_PATH)/karamel/_build/default/src/Karamel.exe: $(EVERPARSE_OPT_PATH)/karamel $(NEED_FSTAR) $(NEED_OPAM)
 	+env OTHERFLAGS='--admit_smt_queries true' $(with_opam) $(MAKE) -C $<
 	touch $@
 
