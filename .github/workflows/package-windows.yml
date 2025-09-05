@@ -131,7 +131,7 @@ jobs:
       - name: Build package
         shell: C:\cygwin\bin\bash.exe --login '{0}'
         run: >-
-          cd $GITHUB_WORKSPACE && eval $(opam env) && env V=1 make -f package.Makefile nuget-noversion -kj$(nproc)
+          cd $GITHUB_WORKSPACE && eval $(opam env) && env V=1 MAKE=make make -f package.Makefile nuget-noversion -kj$(nproc)
 
       - uses: actions/upload-artifact@v4
         with:
