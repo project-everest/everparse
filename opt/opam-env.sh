@@ -17,8 +17,14 @@ opam env "$root_opam" --set-root --shell=sh | grep -v '^PATH=' |
 if [[ "$1" = --shell ]] ; then
     equal="='"
     epath="'"':"$PATH"'
+    eocamlpath=";'"'"$OCAMLPATH"'
 else
     equal=':='
     epath=':$(PATH)'
+    eocamlpath=';$(OCAMLPATH)'
+fi
+if [[ "$OS" = Windows_NT ]] ; then
+    # Work around an opam bug about `opam var lib`
+    echo 'export OCAMLPATH'$equal"$(cygpath -m "$OPAMROOT")/$(opam switch "$root_opam" show | $SED 's!\r!!g')/lib$eocamlpath"
 fi
 echo 'export PATH'$equal"$OPAMROOT/$(opam switch "$root_opam" show | $SED 's!\r!!g')/bin$epath"
