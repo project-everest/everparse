@@ -128,7 +128,7 @@ jobs:
         # if: steps.check-cache.outputs.cache-hit != 'true'
         shell: C:\cygwin\bin\bash.exe --login '{0}'
         run: >-
-          cd $GITHUB_WORKSPACE && opam install --deps-only ./fstar.opam
+          cd $GITHUB_WORKSPACE && eval "$(opam env)" && opam install --deps-only ./fstar.opam
 
       - name: Build a package
         # if: steps.check-cache.outputs.cache-hit != 'true'
