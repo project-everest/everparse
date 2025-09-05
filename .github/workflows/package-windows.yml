@@ -1,5 +1,8 @@
 name: Build everparse package (windows)
 on:
+  push:
+    branches:
+    - _taramana_test
   pull_request:
   workflow_dispatch:
     inputs:
@@ -87,8 +90,15 @@ jobs:
     runs-on: windows-latest
     needs: fstar-src
     steps:
+
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 4.14.2
+        # This will install Cygwin as well
+
       - name: clean
-        shell: C:\cygwin64\bin\bash.exe --login '{0}'
+        shell: C:\cygwin\bin\bash.exe --login '{0}'
         run: cd $GITHUB_WORKSPACE/ && rm -rf * && echo "There is a CR at the end of this line"
 
       - uses: actions/download-artifact@v4
@@ -104,13 +114,13 @@ jobs:
 
       - run: cd $GITHUB_WORKSPACE && tar xzf fstar-src.tar.gz && echo ""
         # if: steps.check-cache.outputs.cache-hit != 'true'
-        shell: C:\cygwin64\bin\bash.exe --login '{0}'
+        shell: C:\cygwin\bin\bash.exe --login '{0}'
 
       - name: Build a package
         # if: steps.check-cache.outputs.cache-hit != 'true'
-        shell: C:\cygwin64\bin\bash.exe --login '{0}'
+        shell: C:\cygwin\bin\bash.exe --login '{0}'
         run: |
-          cd $GITHUB_WORKSPACE && cd fstar && eval $(opam env) && make clean && CC=x86_64-w64-mingw32-gcc.exe DUNE_CONFIG__BACKGROUND_SANDBOXES=disabled make -j$(nproc) package V=1 ADMIT=1 && mv fstar.zip .. && echo "There is a CR at the end of this line"
+          cd $GITHUB_WORKSPACE && cd fstar && eval $(opam env) && make clean && make -j$(nproc) package V=1 ADMIT=1 && mv fstar.zip .. && echo "There is a CR at the end of this line"
         
       # - name: Save
       #   if: steps.check-cache.outputs.cache-hit != 'true'
