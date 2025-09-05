@@ -17,6 +17,9 @@ package-subset: quackyducky lowparse 3d
 include nofstar.Makefile
 
 export EVERPARSE_OPT_PATH := $(realpath opt)
+ifeq ($(OS),Windows_NT)
+export EVERPARSE_OPT_PATH := $(shell cygpath -m $(EVERPARSE_OPT_PATH))
+endif
 
 $(EVERPARSE_OPT_PATH)/everest:
 	+$(MAKE) -C $(dir $@) -f git-clone.Makefile $(notdir $@)

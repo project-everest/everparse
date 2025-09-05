@@ -12,6 +12,9 @@ INCLUDE_PATHS += $(SRC_DIRS)
 
 # A place to put all build artifacts
 ifneq (,$(OUTPUT_DIRECTORY))
+ifeq ($(OS),Windows_NT)
+  OUTPUT_DIRECTORY := $(shell cygpath -m $(OUTPUT_DIRECTORY))
+endif
   FSTAR_OPTIONS += --odir $(OUTPUT_DIRECTORY)
 endif
 
@@ -19,6 +22,9 @@ endif
 # each .checked file will be generated right next to its corresponding
 # source file.
 ifneq (,$(CACHE_DIRECTORY))
+ifeq ($(OS),Windows_NT)
+  CACHE_DIRECTORY := $(shell cygpath -m $(CACHE_DIRECTORY)
+endif
   FSTAR_OPTIONS += --cache_dir $(CACHE_DIRECTORY)
   INCLUDE_PATHS+=$(CACHE_DIRECTORY)
 endif
@@ -36,9 +42,15 @@ FSTAR_ML_CODEGEN ?= OCaml
 FSTAR_OPTIONS += $(PROFILE)
 
 # List the roots from where all dependencies are computed
+ifeq ($(OS),Windows_NT)
+SRC_DIRS := $(shell cygpath -m $(SRC_DIRS))
+endif
 FSTAR_FILES ?= $(wildcard $(addsuffix /*.fst,$(SRC_DIRS)) $(addsuffix /*.fsti,$(SRC_DIRS)))
 
 # `ALREADY_CACHED` expected to be empty or to end with a comma
+ifeq ($(OS),Windows_NT)
+INCLUDE_PATHS := $(shell cygpath -m $(INCLUDE_PATHS))
+endif
 FSTAR_OPTIONS += $(OTHERFLAGS) $(addprefix --include ,$(INCLUDE_PATHS)) --cache_checked_modules --warn_error @241 --already_cached $(ALREADY_CACHED)Prims,FStar,LowStar --cmi --ext context_pruning
 
 # https://github.com/FStarLang/FStar/pull/3861
