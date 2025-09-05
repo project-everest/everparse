@@ -84,7 +84,7 @@ jobs:
           name: package-src
 
   fstar-binary:
-    runs-on: [self-hosted, windows, X64, opam-2-3]
+    runs-on: windows-latest
     needs: fstar-src
     steps:
       - name: clean
@@ -125,7 +125,7 @@ jobs:
           path: fstar.zip
 
   build:
-    runs-on: [self-hosted, windows, X64, opam-2-3]
+    runs-on: windows-latest
     needs: fstar-binary
     steps:
       - uses: actions/checkout@master
