@@ -116,6 +116,20 @@ jobs:
         # if: steps.check-cache.outputs.cache-hit != 'true'
         shell: C:\cygwin\bin\bash.exe --login '{0}'
 
+      - name: Check out repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.fstar_repo || 'FStarLang/FStar' }}
+          ref: ${{ inputs.fstar_ref || 'master' }}
+          sparse-checkout: fstar.opam
+          path: ${{ github.workspace }}\
+
+      - name: Build dependencies
+        # if: steps.check-cache.outputs.cache-hit != 'true'
+        shell: C:\cygwin\bin\bash.exe --login '{0}'
+        run: >-
+          cd $GITHUB_WORKSPACE && opam install --deps-only ./fstar.opam
+
       - name: Build a package
         # if: steps.check-cache.outputs.cache-hit != 'true'
         shell: C:\cygwin\bin\bash.exe --login '{0}'
