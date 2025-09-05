@@ -35,13 +35,13 @@ endif
 
 $(EVERPARSE_OPT_PATH)/opam: $(EVERPARSE_OPT_PATH)/everest
 	rm -rf $@ $@.tmp
-	if ! { opam init $(cygwin_local_install) --no-setup --root=$(EVERPARSE_OPT_PATH)/opam --compiler=5.3.0 && opam exec --root=$(EVERPARSE_OPT_PATH)/opam --set-root -- bash $(EVERPARSE_OPT_PATH)/everest/everest opam ; } ; then mv $@ $@.tmp ; exit 1 ; fi
+	if ! { opam init $(cygwin_local_install) --no-setup --root=$(EVERPARSE_OPT_PATH)/opam --compiler=5.3.0 && eval "$$(opam env --root=$(EVERPARSE_OPT_PATH)/opam --set-root)" && bash $(EVERPARSE_OPT_PATH)/everest/everest opam ; } ; then mv $@ $@.tmp ; exit 1 ; fi
 	touch $@
 
 NEED_OPAM :=
 ifeq (,$(EVERPARSE_USE_OPAMROOT))
 NEED_OPAM := $(EVERPARSE_OPT_PATH)/opam
-with_opam := opam exec --root="$(EVERPARSE_OPT_PATH)/opam" --set-root --
+with_opam := eval "$$(opam env --root="$(EVERPARSE_OPT_PATH)/opam" --set-root)" &&
 endif
 
 Z3_VERSION := 4.13.3
@@ -128,7 +128,7 @@ $(EVERPARSE_OPT_PATH)/karamel:
 	+$(MAKE) -C $(dir $@) -f git-clone.Makefile $(notdir $@)
 
 $(EVERPARSE_OPT_PATH)/karamel/_build/default/src/Karamel.exe: $(EVERPARSE_OPT_PATH)/karamel $(NEED_FSTAR) $(NEED_OPAM)
-	+env OTHERFLAGS='--admit_smt_queries true' $(with_opam) $(MAKE) -C $<
+	+$(with_opam) env OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $<
 	touch $@
 
 $(EVERPARSE_OPT_PATH)/pulse:
