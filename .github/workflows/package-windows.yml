@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - _taramana_standalone_deps_windows
+      - _taramana_standalone_deps_windows_no_src
   pull_request:
   workflow_dispatch:
     inputs:
