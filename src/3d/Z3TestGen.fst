@@ -1469,7 +1469,7 @@ let rec print_outparameter
     out "
   printf(\"// ";
     out expr;
-    out " = %ld\\n\", ((uint64_t) (";
+    out " = %llu\\n\", ((uint64_t) (";
     out expr;
     out ")));\n"
   | ArgExtern _ -> ()
@@ -2058,9 +2058,9 @@ static void TestErrorHandler (
   (void) error_code;
   (void) input;
   if (*context) {
-    printf(\"// Reached from position %ld: type name %s, field name %s\\n\", start_pos, typename_s, fieldname);
+    printf(\"// Reached from position %llu: type name %s, field name %s\\n\", start_pos, typename_s, fieldname);
   } else {
-    printf(\"// Parsing failed at position %ld: type name %s, field name %s. Reason: %s\\n\", start_pos, typename_s, fieldname, reason);
+    printf(\"// Parsing failed at position %llu: type name %s, field name %s. Reason: %s\\n\", start_pos, typename_s, fieldname, reason);
     *context = 1;
   }
 }
@@ -2116,7 +2116,7 @@ BOOLEAN "^name^"(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE
   if (src < state->count) {
     uint64_t got_len = state->layers[src].len;
     if (len != got_len) {
-      printf(\"ProbeAndCopy: layer length does not match spec. Expected %ld, got %ld\\n\", len, got_len);
+      printf(\"ProbeAndCopy: layer length does not match spec. Expected %llu, got %llu\\n\", len, got_len);
       exit(4);
     } else {
       state->cur = src;
@@ -2373,12 +2373,12 @@ int main(int argc, char** argv) {
     vbuf = mmap(NULL, len, PROT_READ, MAP_PRIVATE, testfile, 0);
     if (vbuf == MAP_FAILED) {
       close(testfile);
-      printf(\"Cannot read %ld bytes from %s\\n\", len, filename);
+      printf(\"Cannot read %llu bytes from %s\\n\", len, filename);
       return 3;
     };
     buf = (uint8_t *) vbuf;
   };
-  printf(\"Read %ld bytes from %s\\n\", len, filename);
+  printf(\"Read %llu bytes from %s\\n\", len, filename);
   uint8_t context = 0;
   uint64_t result = "^validator_name^"("^call_args_lhs^"&context, &TestErrorHandler, buf, len, 0);
   if (len > 0)
@@ -2389,7 +2389,7 @@ int main(int argc, char** argv) {
     return 2;
   };
   if (result != (uint64_t) len) { // consistent with the postcondition of validate_with_action_t' (see also valid_length)
-    printf(\"// Witness from %s REJECTED because validator only consumed %ld out of %ld bytes\\n\", filename, result, len);
+    printf(\"// Witness from %s REJECTED because validator only consumed %llu out of %llu bytes\\n\", filename, result, len);
     return 1;
   }
   printf(\"// Witness from %s ACCEPTED\\n\", filename);
