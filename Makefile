@@ -89,7 +89,11 @@ endif
 endif
 ifeq (,$(z3_exe))
 NEED_Z3 := $(EVERPARSE_OPT_PATH)/z3
+ifeq ($(OS),Windows_NT)
+export PATH := $(shell cygpath -u $(NEED_Z3)):$(PATH)
+else
 export PATH := $(NEED_Z3):$(PATH)
+endif
 else
 NEED_Z3 := 
 endif
@@ -147,7 +151,11 @@ env:
 ifeq (,$(NO_PULSE))
 	@echo export PULSE_HOME=$(PULSE_HOME)
 endif
+ifeq ($(OS),Windows_NT)
+	@echo export PATH=$(shell cygpath -u $(EVERPARSE_OPT_PATH))/FStar/bin:$(shell cygpath -u $(EVERPARSE_OPT_PATH))/z3:\"'$$PATH'\"
+else
 	@echo export PATH=$(EVERPARSE_OPT_PATH)/FStar/bin:$(EVERPARSE_OPT_PATH)/z3:\"'$$PATH'\"
+endif
 
 .PHONY: env
 
