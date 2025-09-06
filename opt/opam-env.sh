@@ -7,6 +7,9 @@ if [[ -z "$EVERPARSE_USE_OPAMROOT" ]] ; then
 elif [[ -z "$OPAMROOT" ]] ; then
 	OPAMROOT="$(opam var root | $SED 's!\r!!g')"
 fi
+if [[ "$OS" = Windows_NT ]] ; then
+    OPAMROOT="$(cygpath -m "$OPAMROOT")"
+fi
 root_opam="--root=$OPAMROOT"
 opam env "$root_opam" --set-root --shell=sh | grep -v '^PATH=' |
     if [[ "$1" = --shell ]] ; then
@@ -26,5 +29,7 @@ fi
 if [[ "$OS" = Windows_NT ]] ; then
     # Work around an opam bug about `opam var lib`
     echo 'export OCAMLPATH'$equal"$(cygpath -m "$OPAMROOT")/$(opam switch "$root_opam" show | $SED 's!\r!!g')/lib$eocamlpath"
+    # convert back because I need Unix-style PATH
+    OPAMROOT="$(cygpath -u "$OPAMROOT")"
 fi
 echo 'export PATH'$equal"$OPAMROOT/$(opam switch "$root_opam" show | $SED 's!\r!!g')/bin$epath"
