@@ -25,6 +25,11 @@ if [[ "$OS" = "Windows_NT" ]] ; then
    is_windows=true
 fi
 
+is_macos=false
+if [[ "$OS" = "Darwin" ]] ; then
+    is_macos=true
+fi
+
 fixpath () {
     if $is_windows ; then
         cygpath -m "$1"
@@ -113,6 +118,9 @@ make_everparse() {
     if $is_windows
     then
         $cp $LIBGMP10_DLL everparse/bin/
+    elif $is_macos
+    then
+	true
     else
         {
             # Locate libffi
