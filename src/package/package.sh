@@ -113,8 +113,6 @@ make_everparse() {
     if $is_windows
     then
         $cp $LIBGMP10_DLL everparse/bin/
-        # copy libffi-6 in all cases (ocaml-sha also seems to need it)
-        $cp $(which libffi-6.dll) everparse/bin/
     else
         {
             # Locate libffi
