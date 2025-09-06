@@ -203,7 +203,8 @@ make_everparse() {
 
     # Set executable permissions on EXE and DLL on Windows
     if $is_windows ; then
-        chmod a+x everparse/bin/*.exe everparse/bin/*.dll everparse/lib/fstar/z3-*/bin/*.exe everparse/lib/fstar/z3-*/bin/*.dll
+        chmod a+x everparse/bin/*.exe everparse/bin/*.dll everparse/lib/fstar/z3-*/bin/*.exe
+	chmod a+x everparse/lib/fstar/z3-*/bin/*.dll || true
     fi
 
     # licenses
