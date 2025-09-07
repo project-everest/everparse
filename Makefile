@@ -8,6 +8,9 @@ all: package-subset asn1 cbor cose
 
 package-subset: quackyducky lowparse 3d
 
+ifeq (,$(OS))
+export OS := $(shell uname)
+endif
 ifneq ($(OS),Windows_NT)
 package-subset: cddl
 endif
@@ -228,7 +231,9 @@ lowparse-unit-test: lowparse
 	+$(MAKE) -C tests/lowparse
 
 3d-unit-test: 3d
+ifneq ($(OS),Darwin)
 	+$(MAKE) -C src/3d test
+endif
 
 3d-doc-test: 3d
 	+$(MAKE) -C doc 3d-test
