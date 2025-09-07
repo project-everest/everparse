@@ -23,6 +23,9 @@ fstar-src/fstar/*.checked
 everparse/**
 everparse_*.tar.gz
 everparse_*.zip
+EverParse.nupkg
+nuget.exe
+nuget_package
 
 # make touchfiles
 .*.touch
