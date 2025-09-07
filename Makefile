@@ -4,13 +4,13 @@
 
 all: package-subset asn1 cbor cose
 
-ifeq (,$(NO_PULSE))
-all: cddl cbor-interface
-endif
-
 .PHONY: all
 
-package-subset: quackyducky lowparse 3d cddl
+package-subset: quackyducky lowparse 3d
+
+ifneq ($(OS),Windows_NT)
+package-subset: cddl
+endif
 
 .PHONY: package-subset
 
@@ -21,6 +21,10 @@ ifeq ($(OS),Windows_NT)
 export EVERPARSE_OPT_PATH := $(shell cygpath -m $(EVERPARSE_OPT_PATH))
 # Pulse does not compile on Windows
 NO_PULSE := 1
+endif
+
+ifeq (,$(NO_PULSE))
+all: cddl cbor-interface
 endif
 
 $(EVERPARSE_OPT_PATH)/everest:
