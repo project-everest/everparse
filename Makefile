@@ -19,6 +19,8 @@ include nofstar.Makefile
 export EVERPARSE_OPT_PATH := $(realpath opt)
 ifeq ($(OS),Windows_NT)
 export EVERPARSE_OPT_PATH := $(shell cygpath -m $(EVERPARSE_OPT_PATH))
+# Pulse does not compile on Windows
+NO_PULSE := 1
 endif
 
 $(EVERPARSE_OPT_PATH)/everest:
@@ -347,7 +349,7 @@ else
 cddl-tool:
 endif
 
-cddl: cbor cbor-interface cddl-spec cddl-tool
+cddl: cbor-interface cddl-spec cddl-tool
 
 .PHONY: cddl-spec cddl-tool
 
