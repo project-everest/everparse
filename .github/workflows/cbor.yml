@@ -24,7 +24,7 @@ jobs:
         run: |
           . $HOME/.cargo/env && make -C everparse -f nofstar.Makefile test -kj$(nproc)
 
-  build-cddl-ubuntu:
+  build-ubuntu:
     runs-on: ubuntu-latest
     steps:
       - name: Set-up OCaml
@@ -37,9 +37,9 @@ jobs:
           path: everparse
       - name: Everparse CI
         run: |
-          make -C everparse -j$(nproc) -k cddl
+          make -C everparse -j$(nproc) -k test
 
-  build-cddl-macos:
+  build-macos:
     runs-on: macOS-latest
     steps:
       - name: Set-up OCaml
@@ -57,7 +57,7 @@ jobs:
         run: |
           nproc=$(sysctl -n hw.logicalcpu)
           if [[ $nproc -gt 8 ]] ; then nproc=8 ; fi
-          cd everparse && gmake -j$nproc -k cddl-test
+          cd everparse && gmake -j$nproc -k test
 
   build-docker:
     runs-on: ubuntu-latest
