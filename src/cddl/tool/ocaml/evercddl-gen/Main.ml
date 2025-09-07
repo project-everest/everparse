@@ -102,13 +102,24 @@ let fstar_exe =
      let opt_fstar_exe = Filename.concat (Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "FStar") "bin") "fstar.exe" in
      if Sys.file_exists opt_fstar_exe
      then opt_fstar_exe
-     else "fstar.exe" (* rely on PATH *)
+     else
+       (* assume a binary package *)
+       let fstar_exe = Filename.concat (Filename.concat everparse_home "bin") "fstar.exe" in
+       if Sys.file_exists fstar_exe
+       then fstar_exe
+       else "fstar.exe" (* rely on PATH *)
 
 let krml_home =
   try
     Sys.getenv "KRML_HOME"
   with
-  | Not_found -> Filename.concat (Filename.concat everparse_home "opt") "karamel"
+  | Not_found ->
+     let opt_krml = Filename.concat (Filename.concat everparse_home "opt") "karamel" in
+     if Sys.file_exists opt_krml
+     then opt_krml
+     else
+       (* assume a binary package *)
+       everparse_home
 
 let krml_exe =
   let krml = "krml" ^ (if Sys.cygwin then ".exe" else "") in
@@ -121,7 +132,13 @@ let pulse_home =
   try
     Sys.getenv "PULSE_HOME"
   with
-  | Not_found -> Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "pulse") "out"
+  | Not_found ->
+     let opt_pulse = Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "pulse") "out" in
+     if Sys.file_exists opt_pulse
+     then opt_pulse
+     else
+       (* assume a binary package *)
+       everparse_home
 
 let z3_version = "4.13.3"
 
