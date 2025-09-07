@@ -202,9 +202,9 @@ make_everparse() {
     $EVERPARSE_HOME/bin/3d.exe --version >> everparse/README
 
     # Copy Pulse, evercbor and evercddl
+    if ! $is_windows; then
     $cp -r $EVERPARSE_HOME/src/cbor everparse/src/cbor
     $cp -r $EVERPARSE_HOME/src/cddl everparse/src/cddl
-    if ! $is_windows; then
 	$cp -r $PULSE_HOME/lib/pulse everparse/lib/
 	$cp $EVERPARSE_HOME/bin/cddl.exe everparse/bin/cddl.exe
     fi
