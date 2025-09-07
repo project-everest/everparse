@@ -633,5 +633,17 @@ let get_z3_use_ptr () : ML bool =
 
 let get_fstar_exe () : ML string =
   match !fstar_exe with
-  | None -> "fstar.exe"
+  | None ->
+    begin match OS.getenv_opt "FSTAR_EXE" with
+    | Some s -> s
+    | None ->
+      let opt_fstar = OS.concat (OS.concat (OS.concat (OS.concat (OS.concat OS.everparse_home "opt") "FStar") "out") "bin") "fstar.exe" in
+      if OS.file_exists opt_fstar
+      then opt_fstar
+      else
+        let fstar_exe = OS.concat (OS.concat OS.everparse_home "bin") "fstar.exe" in
+        if OS.file_exists fstar_exe
+        then fstar_exe
+        else "fstar.exe"
+    end
   | Some s -> s
