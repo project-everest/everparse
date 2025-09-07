@@ -1,6 +1,8 @@
 name: Build everparse package (MacOS)
 on:
   push:
+    branches-ignore:
+    - _**
   pull_request:
   workflow_dispatch:
     inputs:
