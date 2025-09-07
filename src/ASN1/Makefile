@@ -65,10 +65,13 @@ Test.c: krml.rsp
 # test: ASN1Test.c # test.exe
 #	cat $^
 
-compile: extract
+compile: evaluation/ASN1_Parser.exe
+
+evaluation/ASN1_Parser.exe: $(ALL_ML_FILES)
 	$(MAKE) -C ocaml
 	cp ocaml/_build/default/ASN1_Parser.exe evaluation/
-	chmod +w evaluation/ASN1_Parser.exe
+	chmod +w $@
+	touch $@
 
 test: eval
 
