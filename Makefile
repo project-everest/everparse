@@ -10,7 +10,7 @@ endif
 
 .PHONY: all
 
-package-subset: quackyducky lowparse 3d
+package-subset: quackyducky lowparse 3d cddl
 
 .PHONY: package-subset
 

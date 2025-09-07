@@ -105,7 +105,6 @@ make_everparse() {
     rm -f "$EVERPARSE_HOME/opam-env.Makefile"
 
     # Rebuild EverParse
-    export NO_PULSE=1
     $MAKE -C "$EVERPARSE_HOME" "$@" deps
     ADMIT=1 $MAKE -C "$EVERPARSE_HOME" "$@" package-subset
 
@@ -201,6 +200,14 @@ make_everparse() {
         $cp -r $EVERPARSE_HOME/src/package/README.pkg everparse/README
     fi
     $EVERPARSE_HOME/bin/3d.exe --version >> everparse/README
+
+    # Copy Pulse, evercbor and evercddl
+    $cp -r $EVERPARSE_HOME/src/cbor everparse/src/cbor
+    $cp -r $EVERPARSE_HOME/src/cddl everparse/src/cddl
+    if ! $is_windows; then
+	$cp -r $PULSE_HOME/lib/pulse everparse/lib/
+	$cp $EVERPARSE_HOME/bin/cddl.exe everparse/bin/cddl.exe
+    fi
 
     # Download and copy clang-format
     if $is_windows ; then

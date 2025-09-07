@@ -110,6 +110,13 @@ let krml_home =
   with
   | Not_found -> Filename.concat (Filename.concat everparse_home "opt") "karamel"
 
+let krml_exe =
+  let krml = "krml" ^ (if Sys.cygwin then ".exe" else "") in
+  let res1 = Filename.concat krml_home krml in
+  if Sys.file_exists res1
+  then res1
+  else Filename.concat (Filename.concat krml_home "bin") krml
+
 let pulse_home =
   try
     Sys.getenv "PULSE_HOME"
@@ -331,7 +338,7 @@ let _ =
   in
   let res =
     run_cmd
-      (Filename.concat krml_home "krml")
+      krml_exe
       krml_options
   in
   if res = 0 then print_endline "EverCDDL succeeded!";
