@@ -200,7 +200,7 @@ endif
 
 # lowparse needed because of .fst behind .fsti for extraction
 3d-prelude: $(filter src/3d/prelude/%,$(ALL_CHECKED_FILES)) $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
-	+$(MAKE) -C src/3d prelude
+	+$(MAKE) -C src/3d/prelude
 
 .PHONY: 3d-prelude
 
