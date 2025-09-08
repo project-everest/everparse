@@ -48,9 +48,7 @@ jobs:
           ocaml-compiler: 5
       - name: Install Homebrew tools
         run: |
-          brew install bash gnu-getopt make gnu-time openssl
-          brew link --force openssl
-          pkg-config --modversion openssl
+          brew install bash gnu-getopt make gnu-time
       - uses: actions/checkout@master
         with:
           submodules: true

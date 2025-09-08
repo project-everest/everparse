@@ -2,7 +2,7 @@
 # 1. Add them to FSTAR_OPTIONS in src/fstar.Makefile
 # 2. Add them to fstar_args0 in src/3d/ocaml/Batch.ml
 
-all: package-subset asn1 cbor cose
+all: package-subset asn1 cbor
 
 .PHONY: all
 
@@ -13,6 +13,9 @@ export OS := $(shell uname)
 endif
 ifneq ($(OS),Windows_NT)
 package-subset: cddl
+endif
+ifneq ($(OS),Darwin)
+all: cose
 endif
 
 .PHONY: package-subset
