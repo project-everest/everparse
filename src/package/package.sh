@@ -84,16 +84,6 @@ print_date_utc_of_iso_hr() {
     $DATE --utc --date="$1" '+%Y-%m-%d %H:%M:%S'
 }
 
-if [[ -z "$everparse_version" ]] ; then
-    everparse_version=$(sed 's!\r!!g' $EVERPARSE_HOME/version.txt)
-    everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
-    if everparse_commit=$(git show --no-patch --format=%h) ; then
-        if [[ $everparse_commit != $everparse_last_version ]] ; then
-            everparse_version=$everparse_commit
-        fi
-    fi
-fi
-
 make_everparse() {
     cp0=$(which gcp >/dev/null 2>&1 && echo gcp || echo cp)
     cp="$cp0 --preserve=mode,timestamps"
@@ -266,7 +256,10 @@ zip_everparse() {
     else
         time tar cvzf everparse$ext everparse/*
     fi
-    if $with_version ; then mv everparse$ext everparse_"$everparse_version"_"$OS"_"$platform"$ext ; fi
+    if $with_version ; then
+	everparse_version="$(everparse/bin/3d.exe --short_version)"
+	mv everparse$ext everparse_"$everparse_version"_"$OS"_"$platform"$ext
+    fi
 }
 
 nuget_everparse() {
