@@ -157,7 +157,9 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v4
         with:
-          sparse-checkout: src\3d\tests
+          sparse-checkout: |
+            src/3d/tests
+            src/cddl/tests/demo/test.cddl
           path: ${{ github.workspace }}\everparse
       - name: Test EverParse
         shell: cmd
@@ -171,3 +173,7 @@ jobs:
         shell: cmd
         run: |
           ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\probe\src\Probe.3d --odir ${{ github.workspace }}\test-probe --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5
+      - name: Test EverCDDL
+        shell: cmd
+        run: |
+          ${{ github.workspace }}\test\bin\cddl.exe ${{ github.workspace }}\everparse\src\cddl\tests\demo\test.cddl

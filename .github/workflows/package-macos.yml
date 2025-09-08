@@ -81,7 +81,9 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v4
         with:
-          sparse-checkout: src/3d/tests
+          sparse-checkout: |
+            src/3d/tests
+            src/cddl/tests/demo/test.cddl
           path: ${{ github.workspace }}/everparse
       - name: Test EverParse
         run: |
@@ -89,3 +91,6 @@ jobs:
       - name: Test EverParse test case generation
         run: |
           bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+      - name: Test EverCDDL
+        run: |
+          ${{ github.workspace }}/test/bin/cddl.exe ${{ github.workspace }}/everparse/src/cddl/tests/demo/test.cddl
