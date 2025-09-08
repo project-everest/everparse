@@ -6,11 +6,6 @@ everparse:
 
 .PHONY: everparse
 
-release:
-	+src/package/release.sh
-
-.PHONY: release
-
 package:
 	+src/package/package.sh -zip
 
