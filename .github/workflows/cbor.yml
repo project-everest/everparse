@@ -48,7 +48,7 @@ jobs:
           ocaml-compiler: 5
       - name: Install Homebrew tools
         run: |
-          brew install bash gnu-getopt make gnu-time
+          brew install bash gnu-getopt make gnu-time openssl
       - uses: actions/checkout@master
         with:
           submodules: true
@@ -57,7 +57,7 @@ jobs:
         run: |
           nproc=$(sysctl -n hw.logicalcpu)
           if [[ $nproc -gt 8 ]] ; then nproc=8 ; fi
-          cd everparse && gmake -j$nproc -k test
+          cd everparse && gmake -j$nproc -k all cddl-test
 
   build-docker:
     runs-on: ubuntu-latest
