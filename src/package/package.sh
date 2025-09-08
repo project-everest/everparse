@@ -207,6 +207,7 @@ make_everparse() {
     $cp -r $EVERPARSE_HOME/src/cddl everparse/src/cddl
 	$cp -r $PULSE_HOME/lib/pulse everparse/lib/
 	$cp $EVERPARSE_HOME/bin/cddl.exe everparse/bin/cddl.exe
+	$cp -r $EVERPARSE_HOME/lib/evercddl everparse/lib/
     fi
 
     # Download and copy clang-format
