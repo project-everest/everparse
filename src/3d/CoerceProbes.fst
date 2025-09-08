@@ -155,6 +155,12 @@ let icopy_bytes (n:int) =
   in
   with_dummy_range <| Probe_action_var hd
 
+let size_of_integral_typ = function
+  | UInt8 -> 1
+  | UInt16 -> 2
+  | UInt32 -> 4
+  | UInt64 -> 8
+
 let probe_and_copy_alignment 
     (e:env)
     (n0 n1:int)
@@ -239,7 +245,6 @@ let probe_copy_and_maybe_return_type (e:env) (return:bool) (fn:ident) (t0:typ) (
       )
   )
   | Some i -> 
-   
     if return
     then (
       let reader = find_probe_fn e.benv (PQRead i) fn.range in
@@ -248,27 +253,14 @@ let probe_copy_and_maybe_return_type (e:env) (return:bool) (fn:ident) (t0:typ) (
       Probe_action_let
         (cstring (print_ident fn))
         fn
-        (Probe_action_read reader)
-        (with_dummy_range <|
-          (Probe_action_seq
-            (cstring (print_ident fn))
-            (with_dummy_range <|
-              Probe_atomic_action
-                (Probe_action_write writer (mk_expr (print_ident fn))))
-            k))
+        (Probe_action_copy_and_return reader writer i)
+        k
     )
     else (
-      let size =
-        match i with
-        | UInt8 -> 1
-        | UInt16 -> 2
-        | UInt32 -> 4
-        | UInt64 -> 8
-      in
       with_dummy_range <|
       Probe_action_seq
         (cstring <| print_ident fn)
-        (icopy_bytes size)
+        (icopy_bytes (size_of_integral_typ i))
         k
     )
   
@@ -555,11 +547,20 @@ let rec optimize_coercion (p:probe_action)
     )
     | _ -> def ()
   )
-  | Probe_action_let d i 
-      (Probe_action_read reader)
-      {v=Probe_action_seq _ ({v=Probe_atomic_action (Probe_action_write writer v)}) k} ->
+  | Probe_action_let d i (Probe_action_copy_and_return reader write ity) k ->
     let k = optimize_coercion k in
-    admit()
+    let vs = free_vars_of_probe_action k in
+    if List.existsb (fun j -> eq_idents i j) vs
+    then { p with v = Probe_action_let d i (Probe_action_copy_and_return reader write ity) k }
+    else (
+      let c = 
+        with_dummy_range <|
+        Probe_action_seq d
+          (icopy_bytes (size_of_integral_typ ity))
+          k
+      in
+      optimize_coercion c
+    )
   | Probe_action_let d i a k ->
     { p with v = Probe_action_let d i a (optimize_coercion k) }
   | Probe_action_ite e t f ->

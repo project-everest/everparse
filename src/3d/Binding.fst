@@ -1342,6 +1342,22 @@ let rec check_probe env a : ML (probe_action & typ) =
         error (Printf.sprintf "Probe function %s not found or not a read function" (print_ident f))
               f.range
     )
+    | Probe_action_copy_and_return r w ity -> (
+      let r_resolved = match GlobalEnv.resolve_probe_fn env.globals r (PQRead ity) with
+        | None ->
+          error (Printf.sprintf "Probe reader function %s not found" (print_ident r))
+                r.range
+        | Some id -> id
+      in
+      let w_resolved = match GlobalEnv.resolve_probe_fn env.globals w (PQWrite ity) with
+        | None ->
+          error (Printf.sprintf "Probe writer function %s not found" (print_ident w))
+                w.range
+        | Some id -> id
+      in
+      let ty = check_typ false env (type_of_integer_type ity) in
+      Probe_action_copy_and_return r_resolved w_resolved ity, ty
+    )
     | Probe_action_copy f v -> (
       match GlobalEnv.resolve_probe_fn env.globals f PQWithOffsets with
       | None ->

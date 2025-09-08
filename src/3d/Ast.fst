@@ -502,7 +502,7 @@ type probe_atomic_action =
   | Probe_action_call : f:ident -> args:list expr -> probe_atomic_action
   | Probe_action_read : f:ident -> probe_atomic_action
   | Probe_action_write : f:ident -> value:expr -> probe_atomic_action
-  | Probe_action_copy_and_return: reader:ident -> writer:ident -> ty:typ -> probe_atomic_action
+  | Probe_action_copy_and_return: reader:ident -> writer:ident -> ty:integer_type -> probe_atomic_action
   | Probe_action_copy : f:ident -> len:expr -> probe_atomic_action
   | Probe_action_skip_read : len:expr -> probe_atomic_action
   | Probe_action_skip_write : len:expr -> probe_atomic_action
@@ -1068,7 +1068,7 @@ and print_probe_atomic_action (p:probe_atomic_action)
   | Probe_action_call f args -> Printf.sprintf "(Probe_action_call %s(%s));" (print_ident f) (String.concat ", " (List.map print_expr args))
   | Probe_action_read f -> Printf.sprintf "(Probe_action_read %s);" (print_ident f)
   | Probe_action_write f v ->Printf.sprintf "(Probe_action_write %s(%s));" (print_ident f) (print_expr v)
-  | Probe_action_copy_and_return r w ty -> Printf.sprintf "(Probe_action_copy_and_return %s %s %s);" (print_ident r) (print_ident w) (print_typ ty)
+  | Probe_action_copy_and_return r w ty -> Printf.sprintf "(Probe_action_copy_and_return %s %s %s);" (print_ident r) (print_ident w) (print_integer_type ty)
   | Probe_action_copy f v -> Printf.sprintf "(Probe_action_copy %s(%s));" (print_ident f) (print_expr v)
   | Probe_action_skip_read n -> Printf.sprintf "(Probe_action_skip_read %s);" (print_expr n)
   | Probe_action_skip_write n -> Printf.sprintf "(Probe_action_skip_write %s);" (print_expr n)
@@ -1608,7 +1608,7 @@ let subst_probe_atomic_action (s:subst) (aa:probe_atomic_action) : ML probe_atom
   | Probe_action_call f args -> Probe_action_call f (List.map (subst_expr s) args)
   | Probe_action_read f -> Probe_action_read f
   | Probe_action_write f value -> Probe_action_write f (subst_expr s value)
-  | Probe_action_copy_and_return r w ty -> Probe_action_copy_and_return r w (subst_typ s ty)
+  | Probe_action_copy_and_return r w ty -> Probe_action_copy_and_return r w ty
   | Probe_action_copy f len -> Probe_action_copy f (subst_expr s len)
   | Probe_action_skip_read len -> Probe_action_skip_read (subst_expr s len)
   | Probe_action_skip_write len -> Probe_action_skip_write (subst_expr s len)
@@ -1795,6 +1795,33 @@ let rec free_vars_of_typ (t:typ)
     List.fold_left (fun out p -> free_vars_of_typ_param p @ out) [] ps
   | Pointer t q -> free_vars_of_typ t
   | Type_arrow ts t -> List.fold_left (fun out t -> free_vars_of_typ t @ out) (free_vars_of_typ t) ts
+
+let rec free_vars_of_probe_action (a:probe_action)
+: ML (list ident)
+= match a.v with
+  | Probe_atomic_action aa -> free_vars_of_probe_atomic_action aa
+  | Probe_action_var i -> free_vars_of_expr i
+  | Probe_action_seq _ hd tl -> free_vars_of_probe_action hd @ free_vars_of_probe_action tl
+  | Probe_action_let _ _ aa k -> free_vars_of_probe_atomic_action aa @ free_vars_of_probe_action k
+  | Probe_action_ite hd then_ else_ ->
+    free_vars_of_expr hd @ 
+    free_vars_of_probe_action then_ @
+    free_vars_of_probe_action else_
+  | Probe_action_array len action ->
+    free_vars_of_expr len @ free_vars_of_probe_action action
+  | Probe_action_copy_init_sz _ -> []
+and free_vars_of_probe_atomic_action (aa:probe_atomic_action)
+: ML (list ident)
+= match aa with
+  | Probe_action_return e -> free_vars_of_expr e
+  | Probe_action_call _ args -> List.fold_left (fun out e -> free_vars_of_expr e @ out) [] args
+  | Probe_action_read _ -> []
+  | Probe_action_write _ value -> free_vars_of_expr value
+  | Probe_action_copy_and_return .. -> []
+  | Probe_action_copy _ len -> free_vars_of_expr len
+  | Probe_action_skip_read len -> free_vars_of_expr len
+  | Probe_action_skip_write len -> free_vars_of_expr len
+  | Probe_action_fail -> []
 
 let name32 (head_name:ident) : ident =
   let gen = reserved_prefix ^ "specialized32_" ^ head_name.v.name in
