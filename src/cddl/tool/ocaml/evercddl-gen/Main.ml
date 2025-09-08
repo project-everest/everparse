@@ -321,7 +321,6 @@ let _ =
   let krml_options =
     if is_rust () then
       [
-        "-fstar"; fstar_exe;
         "-backend"; "rust";
         "-fno-box";
         "-fkeep-tuples";
@@ -341,7 +340,6 @@ let _ =
           (if !skip_compilation then "-skip-compilation" else "-skip-linking");
           "-tmpdir"; !odir;
           "-header"; Filename.concat everparse_src_cddl_tool "noheader.txt";
-        "-fstar"; fstar_exe;
         "-fnoshort-enums";
         "-bundle"; "FStar.\\*,LowStar.\\*,C.\\*,C,PulseCore.\\*,Pulse.\\*[rename=fstar]";
         "-no-prefix"; "CBOR.Pulse.API.Det.C";
