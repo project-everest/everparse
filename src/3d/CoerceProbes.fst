@@ -555,6 +555,11 @@ let rec optimize_coercion (p:probe_action)
     )
     | _ -> def ()
   )
+  | Probe_action_let d i 
+      (Probe_action_read reader)
+      {v=Probe_action_seq _ ({v=Probe_atomic_action (Probe_action_write writer v)}) k} ->
+    let k = optimize_coercion k in
+    admit()
   | Probe_action_let d i a k ->
     { p with v = Probe_action_let d i a (optimize_coercion k) }
   | Probe_action_ite e t f ->
