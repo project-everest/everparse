@@ -15,6 +15,8 @@ let lowparse_home = filename_concat (filename_concat everparse_home "src") "lowp
 let ddd_home = filename_concat (filename_concat everparse_home "src") "3d"
 let ddd_prelude_home = filename_concat (filename_concat (filename_concat everparse_home "src") "3d") "prelude"
 
+let _ = Unix.putenv "KRML_HOME" krml_home
+
 let cl_wrapper () = filename_concat krml_home (filename_concat "misc" "cl-wrapper.bat")
 
 let ddd_actions_home input_stream_binding =
