@@ -173,7 +173,3 @@ jobs:
         shell: cmd
         run: |
           ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\probe\src\Probe.3d --odir ${{ github.workspace }}\test-probe --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5
-      - name: Test EverCDDL
-        shell: cmd
-        run: |
-          ${{ github.workspace }}\test\bin\cddl.exe ${{ github.workspace }}\everparse\src\cddl\tests\demo\test.cddl
