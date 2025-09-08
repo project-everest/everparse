@@ -1,15 +1,11 @@
 # This Dockerfile should be run from the root EverParse directory
 
 ARG ocaml_version=4.14
-FROM ocaml/opam:ubuntu-24.04-ocaml-$ocaml_version
+FROM ocaml/opam:ubuntu-24.04-ocaml-$ocaml_version AS base
 
 # install rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends llvm-dev libclang-dev clang libgmp-dev pkg-config
-RUN . "$HOME/.cargo/env" && rustup component add rustfmt && cargo install bindgen-cli
-
-# Install other dependencies
-RUN sudo apt-get install --yes \
+RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends llvm-dev libclang-dev clang libgmp-dev pkg-config \
   libssl-dev \
   cmake \
   python-is-python3 \
@@ -18,15 +14,30 @@ RUN sudo apt-get install --yes \
   time \
   wget
 
+# Automatically set up Rust environment
+SHELL ["/usr/bin/env", "BASH_ENV=/home/opam/.cargo/env", "/bin/bash", "-c"]
+
 # Bring in the contents
 ARG CACHE_BUST
 RUN sudo mkdir /mnt/everparse && sudo chown opam:opam /mnt/everparse
-RUN git clone https://github.com/project-everest/everparse /mnt/everparse && echo $CACHE_BUST
+ARG CI_BRANCH=master
+RUN git clone --recurse-submodules --branch $CI_BRANCH https://github.com/project-everest/everparse /mnt/everparse && echo $CACHE_BUST
 WORKDIR /mnt/everparse
 
-# Build and publish the release
-ARG CI_THREADS=24
-RUN sudo apt-get update && . "$HOME/.cargo/env" && env OPAMYES=1 make _opam && eval $(opam env) && make -j $CI_THREADS -C opt && env OTHERFLAGS='--admit_smt_queries true' make -j $CI_THREADS all cbor-test cddl-test cose-test
+FROM base AS deps
 
-ENTRYPOINT ["/mnt/everparse/opt/shell.sh", "--login", "-c"]
-CMD ["/bin/bash"]
+ARG CI_THREADS
+RUN sudo apt-get update && env OPAMYES=1 make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" -C opt
+
+# Automatically set up Rust environment
+ENTRYPOINT ["/usr/bin/env", "BASH_ENV=/home/opam/.cargo/env", "/mnt/everparse/opt/shell.sh", "-c"]
+CMD ["/bin/bash", "-i"]
+SHELL ["/usr/bin/env", "BASH_ENV=/home/opam/.cargo/env", "/mnt/everparse/opt/shell.sh", "-c"]
+
+FROM deps AS build
+
+RUN OTHERFLAGS='--admit_smt_queries true' make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" all
+
+FROM build AS test
+
+RUN OTHERFLAGS='--admit_smt_queries true' make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" test

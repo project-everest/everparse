@@ -1,9 +1,29 @@
 all: FStar.do karamel.do pulse.do z3
 
-export ADMIT=1
-export OTHERFLAGS=--admit_smt_queries true # because Karamel Makefiles do not honor ADMIT
+.PHONY: all %.do
 
 export EVERPARSE_OPT_PATH=$(realpath .)
+
+ifeq (,$(EVERPARSE_USE_OPAMROOT))
+opam-env.Makefile: everest
+	opam init --no-setup --root=opam --compiler=5.3.0
+	opam exec --root=opam --set-root -- everest/everest opam
+else
+opam-env.Makefile:
+endif
+	rm -rf $@.tmp
+	./opam-env.sh > $@.tmp
+	echo >> $@.tmp
+	echo env: opam-env >> $@.tmp
+	echo .PHONY: opam-env >> $@.tmp
+	echo opam-env: >> $@.tmp
+	echo "	\"$(EVERPARSE_OPT_PATH)\"/opam-env.sh --shell" >> $@.tmp
+	mv $@.tmp $@
+
+include opam-env.Makefile
+
+export ADMIT=1
+export OTHERFLAGS=--admit_smt_queries true # because Karamel Makefiles do not honor ADMIT
 
 export FSTAR_EXE  := $(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe
 export KRML_HOME  := $(EVERPARSE_OPT_PATH)/karamel
@@ -12,26 +32,12 @@ export PATH := $(EVERPARSE_OPT_PATH)/z3:$(PATH)
 
 include env.Makefile
 
-submodules:
-	git submodule init
-	git submodule update
-
-FStar:
-	git clone "https://github.com/FStarLang/FStar" $@
-
-karamel:
-	git clone "https://github.com/FStarLang/karamel" $@
-
-pulse:
-	git clone "https://github.com/FStarLang/pulse" $@
-
-everest:
-	git clone "https://github.com/project-everest/everest" $@
+include git-clone.Makefile
 
 FStar.do: FStar
 	+$(MAKE) -C $< ADMIT=1
 
-z3: FStar.do
+z3: FStar
 	mkdir -p $@
 	FStar/.scripts/get_fstar_z3.sh $(realpath .)/$@
 	rm -rf $@/z3-4.8.5
@@ -41,5 +47,3 @@ karamel.do: karamel FStar.do
 
 pulse.do: pulse FStar.do
 	+$(MAKE) -C $< ADMIT=1
-
-.PHONY: all submodules %.do
