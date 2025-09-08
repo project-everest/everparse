@@ -158,6 +158,7 @@ make_everparse() {
     cp -L $FSTAR_PKG_ROOT/lib/fstar/fstar.include everparse/lib/fstar/
     cp -L -r $FSTAR_PKG_ROOT/lib/fstar/ulib everparse/lib/fstar/ulib
     cp -L -r $FSTAR_PKG_ROOT/lib/fstar/ulib.checked everparse/lib/fstar/ulib.checked
+    cp -L -r $FSTAR_PKG_ROOT/lib/fstar/pluginlib everparse/lib/fstar/pluginlib
     z3_version=4.13.3
     if ! z3=$(which z3-$z3_version$exe) ; then
 	z3="$FSTAR_PKG_ROOT/lib/fstar/z3-$z3_version$exe"
