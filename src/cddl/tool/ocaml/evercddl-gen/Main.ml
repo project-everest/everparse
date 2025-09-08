@@ -121,6 +121,8 @@ let krml_home =
        (* assume a binary package *)
        everparse_home
 
+let _ = Unix.putenv "KRML_HOME" krml_home
+
 let krml_exe =
   let krml = "krml" ^ (if Sys.cygwin then ".exe" else "") in
   let res1 = Filename.concat krml_home krml in
