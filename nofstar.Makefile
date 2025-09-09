@@ -1,6 +1,6 @@
-all: cbor cose
+all-nofstar: cbor cose
 
-.PHONY: all
+.PHONY: all-nofstar
 
 cbor:
 	+$(MAKE) -C src/cbor/pulse/det
@@ -32,6 +32,6 @@ cose-extracted-test: cose
 
 .PHONY: cose-extracted-test
 
-test: all cbor-test-unverified cose-extracted-test
+test-nofstar: all-nofstar cbor-test-unverified cose-extracted-test
 
-.PHONY: test
+.PHONY: test-nofstar

@@ -22,7 +22,7 @@ jobs:
       - name: Everparse CI
         id: cistep
         run: |
-          . $HOME/.cargo/env && make -C everparse -f nofstar.Makefile test -kj$(nproc)
+          . $HOME/.cargo/env && make -C everparse -f nofstar.Makefile test-nofstar -kj$(nproc)
 
   build-ubuntu:
     runs-on: ubuntu-latest
