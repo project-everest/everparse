@@ -6,6 +6,9 @@ all: package-subset asn1 cbor
 
 .PHONY: all
 
+# Include specific options on release branches (e.g. EVERPARSE_OPAM_REPOSITORY)
+-include release.Makefile
+
 package-subset: quackyducky lowparse 3d
 
 ifeq (,$(OS))
@@ -50,7 +53,7 @@ endif
 
 $(EVERPARSE_OPT_PATH)/opam: $(EVERPARSE_OPT_PATH)/everest
 	rm -rf $@ $@.tmp
-	if ! { opam init $(cygwin_local_install) --no-setup --root=$(EVERPARSE_OPT_PATH)/opam --compiler=5.3.0 && eval "$$(opam env --root=$(EVERPARSE_OPT_PATH)/opam --set-root)" && bash $(EVERPARSE_OPT_PATH)/everest/everest opam ; } ; then mv $@ $@.tmp ; exit 1 ; fi
+	if ! { opam init $(cygwin_local_install) --no-setup --root=$(EVERPARSE_OPT_PATH)/opam --compiler=5.3.0 $(EVERPARSE_OPAM_REPOSITORY) && eval "$$(opam env --root=$(EVERPARSE_OPT_PATH)/opam --set-root)" && bash $(EVERPARSE_OPT_PATH)/everest/everest opam ; } ; then mv $@ $@.tmp ; exit 1 ; fi
 	touch $@
 
 NEED_OPAM :=

@@ -7,7 +7,7 @@ everparse:
 .PHONY: everparse
 
 package:
-	+src/package/package.sh -zip
+	+src/package/package.sh -zip -nuget
 
 .PHONY: package
 
@@ -18,6 +18,11 @@ package-noversion:
 
 # Nuget package only (needed by the Windows workflow, since we let
 # GitHub Actions produce the .zip from the everparse directory)
+nuget:
+	+src/package/package.sh -nuget
+
+.PHONY: nuget
+
 nuget-noversion:
 	+src/package/package.sh -nuget-noversion
 

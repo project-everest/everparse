@@ -303,7 +303,10 @@ nuget_everparse() {
         pushd $nuget_base
 
 
-	if [[ -z "$everparse_nuget_version" ]] ; then
+	if [[ -f "$EVERPARSE_HOME/version.txt" ]] ; then
+	        everparse_nuget_version=$(cat "$EVERPARSE_HOME/version.txt")
+		everparse_nuget_version=${everparse_nuget_version:1} # strip the v
+	else
 		everparse_nuget_version=1.0.0
 	fi
 	# NoDefaultExcludes for .clang-format file that nuget pack excludes
