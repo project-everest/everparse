@@ -722,7 +722,7 @@ type decl' =
       
   | CoerceProbeFunctionStub:
       ident ->
-    list param ->
+      list param ->
       p:probe_function_type { CoerceProbeFunction? p \/ CoerceProbeFunctionPlaceholder? p } ->
       decl'
 
