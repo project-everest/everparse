@@ -1423,18 +1423,18 @@ The probe block will first call ``ProbeInit``, initializing the ``destS``
 buffer, preparing it to receive ``sizeof(S64)`` bytes. Then, within the probe
 block, it executes a sequence of actions:
 
-* Copy the first 4 bytes references by ``ptrS``--this is the ``s1`` field
+* Copy the first 4 bytes referenced by ``ptrS``--this is the ``s1`` field
 
 * Skip 4 bytes of alignment padding
 
-* Then read a 32 bit pointer ``ptrT``, coerce it to 64-butes, and write it into
+* Then read a 32 bit pointer ``ptrT``, coerce it to 64-bytes, and write it into
   the destination buffer
 
 * Then copy the next 4 bytes from the input buffer (field ``s2``)
 
 * Finally, skip 4 bytes of padding at the end
 
-After the probe block executed, we validate the ``EverParseStreamOf(destS)`` to
+After the probe block executes, we validate the ``EverParseStreamOf(destS)`` to
 contain a valid  ``S64(r1, destT)``, which in turn will probe ``ptrT`` etc.
 
 This does what we want, in the sense that if validation succeeds, then ``destS``
@@ -1470,7 +1470,7 @@ callbacks.
   :start-after: SNIPPET_START: specialize$
   :end-before: SNIPPET_END: specialize$
 
-The first callback, a ``UlongToPtr`` coercions, we saw :ref:`before
+The first callback, a ``UlongToPtr`` coercion, we saw :ref:`before
 <Coercing_pointers>`: we'll need it to coerce a 32-bit pointer to 64-bits. It
 produces the following C signature:
 
