@@ -353,60 +353,228 @@ jobs:
         run: |
           ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\probe\src\Probe.3d --odir ${{ github.workspace }}\test-probe --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5
 
-  publish:
+  build-docker:
+    needs: prepare
     runs-on: ubuntu-latest
-    needs: [test-macos, test-linux, test-windows]
+    steps:
+      - name: Download hash
+        uses: actions/download-artifact@v4
+        with:
+          name: hash
+
+      - name: Populate environment
+        run: |
+          echo CI_THREADS=$(nproc) >> $GITHUB_ENV
+          echo CI_HASH="$(cat hash.txt)" >> $GITHUB_ENV
+
+      - uses: actions/checkout@master
+        with:
+          ref: ${{ env.CI_HASH }}
+          path: everparse
+          sparse-checkout: |
+            git.Dockerfile
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@master
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build a Docker image
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          build-args: |
+            CI_REPO=${{ github.repository }}
+            CI_BRANCH=_dzomo_release_${{ github.run_id }}
+            CI_HASH=${{ env.CI_HASH }}
+            CI_THREADS=${{ env.CI_THREADS }}
+          context: everparse
+          file: ${{ github.workspace }}/everparse/git.Dockerfile
+          pull: true
+          push: true
+          target: build
+          tags: ghcr.io/${{ github.repository }}:_dzomo_release_${{ github.run_id }}
+
+  test-docker:
+    needs: build-docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download hash
+        uses: actions/download-artifact@v4
+        with:
+          name: hash
+      - name: Test Docker image
+        run: |
+          docker run ghcr.io/${{ github.repository }}:_dzomo_release_${{ github.run_id }} '[[ "$(git rev-parse HEAD)" = '"$(cat hash.txt)"' ]] && make -j$(nproc) test'
+
+  push-tag:
+    runs-on: ubuntu-latest
+    needs: [test-macos, test-linux, test-windows, test-docker]
     steps:
       - name: Set up git
         run: |
           git config --global user.name "Dzomo, the Everest Yak"
           git config --global user.email "24394600+dzomo@users.noreply.github.com"
 
-      - uses: actions/checkout@v4
-
-      - name: Download packages
+      - name: Download hash
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
-          pattern: everparse-*
+          name: hash
+
+      - name: Populate environment
+        run: |
+          echo CI_HASH="$(cat hash.txt)" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CI_HASH }}
+          sparse-checkout: |
+            version.txt
+
+      - name: Publish tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CI_TAG=$(cat version.txt)
+          git tag -a -m "EverParse $CI_TAG" "$CI_TAG" "$CI_HASH"
+          git push origin "$CI_TAG"
+
+  push-release:
+    runs-on: ubuntu-latest
+    needs: push-tag
+    steps:
+      - name: Set up git
+        run: |
+          git config --global user.name "Dzomo, the Everest Yak"
+          git config --global user.email "24394600+dzomo@users.noreply.github.com"
 
       - name: Download hash
         uses: actions/download-artifact@v4
         with:
           name: hash
 
-      - name: Check hash
+      - name: Populate environment
         run: |
-          expected="$(cat version.txt)"
-          real=$(git rev-parse origin/_dzomo_release_${{ github.run_id }})
-          echo "Expected: $expected"
-          echo "Real: $real"
-          [[ "$expected" = "$real" ]]
+          echo CI_HASH="$(cat hash.txt)" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CI_HASH }}
+          sparse-checkout: |
+            version.txt
+
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: everparse-*
+          merge-multiple: true
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          V=$(cat version.txt)
-          HASH=$(cat hash.txt)
-          # --target with a specific SHA makes sure that if _dzomo_release
-          # advanced while we were running, the release is still created
-          # at the commit where this workflow started. Note however
-          # that it seems this workflow seems to fail when trying
-          # to tag something other than the lates commit on master
-          # (probably some Github config should be changed).. but that's
-          # preferable to silently tagging something untested.
-
-          TAG="$V"
-          # Create and push annotated tag to repo.
-          git tag -a -m "EverParse $V" "$TAG" "$HASH"
-          git push origin "$TAG"
-
-          # Create github release.
+          CI_TAG=$(cat version.txt)
           gh release create --prerelease \
             --generate-notes \
-            -t "EverParse $V" \
-            "$TAG" artifacts/*
+            -t "EverParse $CI_TAG" \
+            "$CI_TAG" artifacts/*
 
-          # Delete branch
-          git push origin --delete _dzomo_release_${{ github.run_id }} || true
+  push-docker:
+    needs: push-tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download hash
+        uses: actions/download-artifact@v4
+        with:
+          name: hash
+
+      - name: Populate environment with hash
+        run: |
+          echo CI_HASH="$(cat hash.txt)" >> $GITHUB_ENV
+
+      - uses: actions/checkout@master
+        with:
+          path: everparse
+          ref: ${{ env.CI_HASH }}
+          sparse-checkout: |
+            src/package/tag.Dockerfile
+            version.txt
+
+      - name: Populate environment with version
+        run: |
+          echo CI_TAG="$(cat everparse/version.txt)" >> $GITHUB_ENV
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@master
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build a Docker image
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          build-args: |
+            CI_REPO=${{ github.repository }}
+            CI_BRANCH=_dzomo_release_${{ github.run_id }}
+            CI_HASH=${{ env.CI_HASH }}
+            CI_TAG=${{ env.CI_TAG }}
+          context: everparse
+          file: ${{ github.workspace }}/everparse/src/package/tag.Dockerfile
+          pull: true
+          push: true
+          tags: ghcr.io/${{ github.repository }}:${{ env.CI_TAG }}
+
+  delete-docker:
+    needs: push-docker
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: castlabs/get-package-version-id-action@v2.0
+        id: version
+        with:
+          version: _dzomo_release_${{ github.run_id }}
+
+      - uses: actions/delete-package-versions@v2
+        if: ${{ steps.version.outputs.ids != '' }}
+        with:
+          package-version-ids: "${{ steps.version.outputs.ids }}"
+          package-name: "${{ github.event.repository.name }}"
+          package-type: 'docker'
+
+  delete-release:
+    runs-on: ubuntu-latest
+    needs: push-release
+    steps:
+    - uses: geekyeggo/delete-artifact@v5
+      with:
+        name: |
+          everparse-*
+
+  delete-branch:
+    needs: [delete-docker, delete-release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download hash
+        uses: actions/download-artifact@v4
+        with:
+          name: hash
+
+      - name: Populate environment with hash
+        run: |
+          echo CI_HASH="$(cat hash.txt)" >> $GITHUB_ENV
+
+      - uses: actions/checkout@master
+        with:
+          path: everparse
+          ref: ${{ env.CI_HASH }}
+          sparse-checkout: |
+            version.txt
+
+      - name: Delete branch
+        run: |
+          git push origin --delete _dzomo_release_${{ github.run_id }}

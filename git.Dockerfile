@@ -20,9 +20,14 @@ SHELL ["/usr/bin/env", "BASH_ENV=/home/opam/.cargo/env", "/bin/bash", "-c"]
 # Bring in the contents
 ARG CACHE_BUST
 RUN sudo mkdir /mnt/everparse && sudo chown opam:opam /mnt/everparse
+ARG CI_REPO=project-everest/everparse
 ARG CI_BRANCH=master
-RUN git clone --recurse-submodules --branch $CI_BRANCH https://github.com/project-everest/everparse /mnt/everparse && echo $CACHE_BUST
+RUN git clone --recurse-submodules --branch $CI_BRANCH https://github.com/$CI_REPO /mnt/everparse && echo $CACHE_BUST
 WORKDIR /mnt/everparse
+
+# For the release process: check if the current hash matches the hash being released
+ARG CI_HASH
+RUN if [[ -n "$CI_HASH" ]] ; then [[ "$CI_HASH" = "$(git rev-parse HEAD)" ]] ; fi
 
 FROM base AS deps
 
