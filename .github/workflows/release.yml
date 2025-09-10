@@ -194,13 +194,18 @@ jobs:
           path: ${{ github.workspace }}/everparse
       - name: Test EverParse
         run: |
-          bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/Arithmetic.3d ${{ github.workspace }}/everparse/src/3d/tests/FieldDependence0.3d && bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace ${{ github.workspace }}/everparse/src/3d/tests/Comments.3d
+          bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/Arithmetic.3d ${{ github.workspace }}/everparse/src/3d/tests/FieldDependence0.3d && cd ${{ github.workspace }}/everparse/src/3d/tests/ && bash ${{ github.workspace }}/test/everparse.sh Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
       - name: Test EverParse test case generation
         run: |
           bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
       - name: Test EverCDDL
         run: |
           ${{ github.workspace }}/test/bin/cddl.exe ${{ github.workspace }}/everparse/src/cddl/tests/demo/test.cddl
+      - name: Upload test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: everparse/src/3d/tests/Comments*
+          name: everparse-test-macos
 
   build-linux:
     runs-on: Ubuntu-22.04
@@ -263,13 +268,18 @@ jobs:
           path: ${{ github.workspace }}/everparse
       - name: Test EverParse
         run: |
-          bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/Arithmetic.3d ${{ github.workspace }}/everparse/src/3d/tests/FieldDependence0.3d && bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace ${{ github.workspace }}/everparse/src/3d/tests/Comments.3d
+          bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/Arithmetic.3d ${{ github.workspace }}/everparse/src/3d/tests/FieldDependence0.3d && cd ${{ github.workspace }}/everparse/src/3d/tests/ && bash ${{ github.workspace }}/test/everparse.sh Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
       - name: Test EverParse test case generation
         run: |
           bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
       - name: Test EverCDDL
         run: |
           ${{ github.workspace }}/test/bin/cddl.exe ${{ github.workspace }}/everparse/src/cddl/tests/demo/test.cddl
+      - name: Upload test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: everparse/src/3d/tests/Comments*
+          name: everparse-test-linux
 
   build-windows:
     runs-on: windows-2025
@@ -343,7 +353,7 @@ jobs:
       - name: Test EverParse
         shell: cmd
         run: |
-          ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\Arithmetic.3d ${{ github.workspace }}\everparse\src\3d\tests\FieldDependence0.3d && ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\Comments.3d && ${{ github.workspace }}\test\everparse.cmd --check_hashes inplace ${{ github.workspace }}\everparse\src\3d\tests\Comments.3d
+          ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\Arithmetic.3d ${{ github.workspace }}\everparse\src\3d\tests\FieldDependence0.3d && cd ${{ github.workspace }}\everparse\src\3d\tests && ${{ github.workspace }}\test\everparse.cmd Comments.3d && ${{ github.workspace }}\test\everparse.cmd --check_hashes inplace Comments.3d
       - name: Test EverParse test case generation
         shell: cmd
         run: |
@@ -352,6 +362,108 @@ jobs:
         shell: cmd
         run: |
           ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\probe\src\Probe.3d --odir ${{ github.workspace }}\test-probe --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5
+      - name: Upload test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: everparse\src\3d\tests\Comments*
+          name: everparse-test-windows
+
+  test-interop-macos:
+    needs: [build-macos, test-linux, test-windows]
+    runs-on: macos-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-macos
+          path: test0
+      - name: Extract artifact
+        run: |
+          pushd test0
+          tar xzf everparse_*.tar.gz
+          popd
+          mv test0/everparse test
+      - name: Download Linux test
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-linux
+          path: linux
+      - name: Test EverParse
+        run: |
+          cd ${{ github.workspace }}/linux/ && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+      - name: Download Windows test
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-windows
+          path: windows
+      - name: Test EverParse
+        run: |
+          cd ${{ github.workspace }}/windows/ && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+
+  test-interop-linux:
+    needs: [build-linux, test-macos, test-windows]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-linux
+          path: test0
+      - name: Extract artifact
+        run: |
+          pushd test0
+          tar xzf everparse_*.tar.gz
+          popd
+          mv test0/everparse test
+      - name: Download Macos test
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-macos
+          path: macos
+      - name: Test EverParse
+        run: |
+          cd ${{ github.workspace }}/macos/ && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+      - name: Download Windows test
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-windows
+          path: windows
+      - name: Test EverParse
+        run: |
+          cd ${{ github.workspace }}/windows/ && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+
+  test-interop-windows:
+    needs: [build-windows, test-linux, test-macos]
+    runs-on: windows-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-windows
+          path: test0
+      - name: Extract artifact
+        shell: pwsh
+        run: |
+          Expand-Archive -Path test0\everparse_*.zip -DestinationPath test1
+          Move-Item -Path test1\everparse -Destination test
+      - name: Download Linux test
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-linux
+          path: linux
+      - name: Test EverParse
+        shell: cmd
+        run: |
+          cd ${{ github.workspace }}\linux && ${{ github.workspace }}\test\everparse.cmd --check_hashes inplace Comments.3d
+      - name: Download Macos test
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-macos
+          path: macos
+      - name: Test EverParse
+        shell: cmd
+        run: |
+          cd ${{ github.workspace }}\macos && ${{ github.workspace }}\test\everparse.cmd --check_hashes inplace Comments.3d
 
   build-docker:
     needs: prepare
@@ -411,7 +523,7 @@ jobs:
 
   push-tag:
     runs-on: ubuntu-latest
-    needs: [test-macos, test-linux, test-windows, test-docker]
+    needs: [test-interop-macos, test-interop-linux, test-interop-windows, test-docker]
     steps:
       - name: Set up git
         run: |
