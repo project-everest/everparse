@@ -682,7 +682,6 @@ jobs:
 
       - uses: actions/checkout@master
         with:
-          path: everparse
           ref: ${{ env.CI_HASH }}
           sparse-checkout: |
             version.txt
