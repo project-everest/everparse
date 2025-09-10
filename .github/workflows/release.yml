@@ -168,7 +168,7 @@ jobs:
         with:
           path: |
             everparse_*.tar.gz
-          name: everparse-macos
+          name: everparse-build-macos
 
   test-macos:
     needs: build-macos
@@ -177,7 +177,7 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: everparse-macos
+          name: everparse-build-macos
           path: test0
       - name: Extract artifact
         run: |
@@ -242,7 +242,7 @@ jobs:
         with:
           path: |
             everparse_*.tar.gz
-          name: everparse-linux
+          name: everparse-build-linux
 
   test-linux:
     needs: build-linux
@@ -251,7 +251,7 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: everparse-linux
+          name: everparse-build-linux
           path: test0
       - name: Extract artifact
         run: |
@@ -322,12 +322,12 @@ jobs:
         with:
           path: |
             everparse_*.zip
-          name: everparse-windows
+          name: everparse-build-windows
       - uses: actions/upload-artifact@v4
         with:
           path: |
             EverParse*.nupkg
-          name: everparse-nupkg
+          name: everparse-build-nupkg
 
   test-windows:
     needs: build-windows
@@ -336,7 +336,7 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: everparse-windows
+          name: everparse-build-windows
           path: test0
       - name: Extract artifact
         shell: pwsh
@@ -375,7 +375,7 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: everparse-macos
+          name: everparse-build-macos
           path: test0
       - name: Extract artifact
         run: |
@@ -407,7 +407,7 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: everparse-linux
+          name: everparse-build-linux
           path: test0
       - name: Extract artifact
         run: |
@@ -439,7 +439,7 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: everparse-windows
+          name: everparse-build-windows
           path: test0
       - name: Extract artifact
         shell: pwsh
@@ -581,7 +581,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          pattern: everparse-*
+          pattern: everparse-build-*
           merge-multiple: true
 
       - name: Publish release
