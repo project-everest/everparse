@@ -1,7 +1,7 @@
 
 
-#ifndef __Align_H
-#define __Align_H
+#ifndef Align_H
+#define Align_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -31,5 +31,5 @@ AlignValidateColoredPoint1(
 }
 #endif
 
-#define __Align_H_DEFINED
-#endif
+#define Align_H_DEFINED
+#endif /* Align_H */

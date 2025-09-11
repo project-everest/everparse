@@ -1,0 +1,22 @@
+{
+    "fstar_exe": "../../opt/FStar/bin/fstar.exe",
+    "options": [
+      "--warn_error", "-342", 
+      "--odir", "_output",
+      "--cache_checked_modules",
+      "--warn_error", "@241",
+      "--already_cached", "PulseCore,Pulse,C,LowStar,*,-CDDL.Pulse,Prims,FStar,LowStar",
+      "--cmi",
+      "--ext", "context_pruning"
+    ],
+    "include_dirs": [
+      "../../src/cddl/spec",
+      "../../src/cbor/spec",
+      "../../src/cbor/pulse",
+      "../../opt/karamel/krmllib",
+      "../../opt/karamel/krmllib/obj",
+      "../../opt/pulse/out/lib/pulse",
+      "../../src/cddl/pulse"
+    ]
+  }
+  

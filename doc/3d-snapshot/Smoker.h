@@ -1,7 +1,7 @@
 
 
-#ifndef __Smoker_H
-#define __Smoker_H
+#ifndef Smoker_H
+#define Smoker_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -31,5 +31,5 @@ SmokerValidateSmoker(
 }
 #endif
 
-#define __Smoker_H_DEFINED
-#endif
+#define Smoker_H_DEFINED
+#endif /* Smoker_H */

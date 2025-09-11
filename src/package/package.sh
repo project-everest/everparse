@@ -165,7 +165,7 @@ make_everparse() {
     fi
 
     # Rebuild EverParse
-    $MAKE -C "$EVERPARSE_HOME" "$@"
+    NO_PULSE=1 $MAKE -C "$EVERPARSE_HOME" "$@" package-subset
 
     # Copy dependencies
     mkdir -p everparse/bin
@@ -212,7 +212,6 @@ make_everparse() {
     cp $FSTAR_PKG_ROOT/lib/fstar/fstar.include everparse/lib/fstar/
     cp -r $FSTAR_PKG_ROOT/lib/fstar/ulib everparse/lib/fstar/ulib
     cp -r $FSTAR_PKG_ROOT/lib/fstar/ulib.checked everparse/lib/fstar/ulib.checked
-    cp -r $FSTAR_PKG_ROOT/lib/fstar/z3-4.8.5 everparse/lib/fstar/
     cp -r $FSTAR_PKG_ROOT/lib/fstar/z3-4.13.3 everparse/lib/fstar/
 
     # Copy KaRaMeL

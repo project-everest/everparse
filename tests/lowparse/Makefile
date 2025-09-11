@@ -1,10 +1,14 @@
 all: verify-all extract-all
 
+EVERPARSE_SRC_PATH ?= $(realpath ../../src)
+
 LOWPARSE_HOME ?= ../../src/lowparse
 
 FSTAR_OUT_DIR?=.fstar-out
 
 FSTAR_EXE ?= fstar.exe
+
+include $(EVERPARSE_SRC_PATH)/fstar.Makefile
 
 ifndef KRML_HOME
   KRMLLIB:=$(shell ocamlfind query karamel)
@@ -30,7 +34,7 @@ INTERMEDIATE_LEVEL=$(LOWPARSE_HOME)/LowParse_TestLib_SLow_c.c -ccopt -Wno-error-
 
 LOW_LEVEL=$(LOWPARSE_HOME)/LowParse_TestLib_Low_c.c
 
-MY_KRML=$(KRML_EXE) -bundle 'LowParse.\*'  -add-include '"krml/internal/compat.h"'
+MY_KRML=$(KRML_EXE) -fstar $(FSTAR_EXE) -bundle 'LowParse.\*'  -add-include '"krml/internal/compat.h"'
 
 EXAMPLES=Example Example2 Example3 Example5 Example6 Example7 Example8 Example9 Example10 Example11 Example12 ExampleMono ExamplePair ExampleDepLen ExampleConstInt32le
 

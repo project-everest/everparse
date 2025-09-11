@@ -1,0 +1,12 @@
+map18 = [
+  18 : uint,
+  * uint => uint
+]
+
+map42 = [
+  42 : uint,
+  * uint => uint
+]
+
+; Should this be in a prelude?
+uint = #0

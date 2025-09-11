@@ -514,7 +514,7 @@ let validate_dep_pair
 
 #pop-options
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 128"
 #restart-solver
 
 inline_for_extraction noextract

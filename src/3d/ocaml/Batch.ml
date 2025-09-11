@@ -60,6 +60,7 @@ let krml out_dir =
 
 (* command lines *)
 let fstar_args0 =
+  "--z3version" :: "4.13.3" ::
   "--already_cached" :: "Prims,LowStar,FStar,LowParse,C,EverParse3d.\\*,Spec" ::
     "--include" :: lowparse_home ::
       "--include" :: krmllib ::
@@ -470,7 +471,7 @@ let produce_one_c_file
   let krml_args = krml_args input_stream_binding emit_output_types_defs add_include true out_dir ((file, modul) :: dep_files_and_modules) in
   let krml_args =
     krml_args@
-      List.concat (List.map (fun (_, m) -> ["-library"; Printf.sprintf "%s,%s.Types" m m]) dep_files_and_modules) @ [
+(*      List.concat (List.map (fun (_, m) -> ["-library"; Printf.sprintf "%s,%s.Types" m m]) dep_files_and_modules) @ *) [
         "-bundle" ;
         Printf.sprintf "%s=%s" modul (String.concat "," (Printf.sprintf "%s.Types" modul :: List.map (fun (_, m) -> Printf.sprintf "%s,%s.Types" m m) dep_files_and_modules));
       ]

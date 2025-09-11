@@ -637,10 +637,9 @@ used with ``-z3_test`` or ``--z3_diff_test``:
 
   Specify a path to the Z3 executable that should be used to generate
   the test cases. This option does not affect the verification of the
-  generated F* files. Test cases are best generated with z3 4.13.3,
-  but verification of the generated F* files works only with Z3 4.8.5
-  at the moment. The standalone binary package on Linux includes both
-  versions of z3 and ``everparse.sh`` / ``everparse.bat`` already sets
+  generated F* files. EverParse has been tested with Z3 4.13.3 for both
+  test case generation and verification of the generated F* files.
+  ``everparse.sh`` / ``everparse.bat`` already sets
   ``--z3_executable`` accordingly.
 
 * ``--z3_options 'option1 ... optionK'``

@@ -1,7 +1,7 @@
 
 
-#ifndef __SpecializeDep1_H
-#define __SpecializeDep1_H
+#ifndef SpecializeDep1_H
+#define SpecializeDep1_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -35,5 +35,5 @@ SpecializeDep1ValidateEntry(
 }
 #endif
 
-#define __SpecializeDep1_H_DEFINED
-#endif
+#define SpecializeDep1_H_DEFINED
+#endif /* SpecializeDep1_H */

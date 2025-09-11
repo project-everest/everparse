@@ -1,7 +1,7 @@
 
 
-#ifndef __GetFieldPtr_H
-#define __GetFieldPtr_H
+#ifndef GetFieldPtr_H
+#define GetFieldPtr_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -51,5 +51,5 @@ GetFieldPtrValidateTact(
 }
 #endif
 
-#define __GetFieldPtr_H_DEFINED
-#endif
+#define GetFieldPtr_H_DEFINED
+#endif /* GetFieldPtr_H */

@@ -1,17 +1,28 @@
 {
-    "fstar_exe": "fstar.exe",
+    "fstar_exe": "./opt/FStar/bin/fstar.exe",
     "options": [
       "--initial_fuel", "0",
       "--max_fuel", "2",
       "--initial_ifuel", "2",
       "--max_ifuel", "2",
       "--initial_ifuel", "2",
-      "--ext", "context_pruning"
+      "--ext", "optimize_let_vc"
     ],
     "include_dirs": [
       "./src/lowparse",
-      "${KRML_HOME}/krmllib",
-      "${KRML_HOME}/krmllib/obj",
+      "./src/lowparse/pulse",
+      "./opt/karamel/krmllib",
+      "./opt/karamel/krmllib/obj",
+      "./opt/pulse/out/lib/pulse",
+      "./src/cbor/spec",
+      "./src/cbor/spec/raw",
+      "./src/cbor/spec/raw/everparse",
+      "./src/cbor/pulse",
+      "./src/cbor/pulse/raw",
+      "./src/cbor/pulse/raw/everparse",
+      "./src/cddl/pulse",
+      "./src/cddl/spec",
+      "./src/cddl/tool",
       "./src/3d",
       "./src/3d/prelude",
       "./src/ASN1"

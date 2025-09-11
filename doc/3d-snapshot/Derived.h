@@ -1,7 +1,7 @@
 
 
-#ifndef __Derived_H
-#define __Derived_H
+#ifndef Derived_H
+#define Derived_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -49,5 +49,5 @@ DerivedValidateQuad(
 }
 #endif
 
-#define __Derived_H_DEFINED
-#endif
+#define Derived_H_DEFINED
+#endif /* Derived_H */

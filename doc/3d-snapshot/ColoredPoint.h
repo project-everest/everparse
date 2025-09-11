@@ -1,7 +1,7 @@
 
 
-#ifndef __ColoredPoint_H
-#define __ColoredPoint_H
+#ifndef ColoredPoint_H
+#define ColoredPoint_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -49,5 +49,5 @@ ColoredPointValidateColoredPoint2(
 }
 #endif
 
-#define __ColoredPoint_H_DEFINED
-#endif
+#define ColoredPoint_H_DEFINED
+#endif /* ColoredPoint_H */

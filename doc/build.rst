@@ -143,8 +143,8 @@ sources, you can build a binary package:
 
      .. note::
 
-        z3 is downloaded only for Windows or Linux. On other platforms, you need to have Z3 4.8.5
-        reachable from your PATH. You will most likely need to compile it from `its sources <https://github.com/z3prover/z3/tree/Z3-4.8.5>`_.
+        z3 is downloaded only for Windows or Linux. On other platforms, you need to have Z3 4.13.3
+        reachable from your PATH. You will most likely need to compile it from `its sources <https://github.com/z3prover/z3/tree/z3-4.13.3>`_.
 
 
    * ``make package``
@@ -189,8 +189,8 @@ fetch and build EverParse sources:
 
    .. note::
 
-      z3 is downloaded only for Windows or Linux. On other platforms, you need to have Z3 4.8.5
-      reachable from your PATH. You will most likely need to compile it from `its sources <https://github.com/z3prover/z3/tree/Z3-4.8.5>`_.
+      z3 is downloaded only for Windows or Linux. On other platforms, you need to have Z3 4.13.3
+      reachable from your PATH. You will most likely need to compile it from `its sources <https://github.com/z3prover/z3/tree/z3-4.13.3>`_.
 
 
 2. Run ``./everest pull`` to fetch and pull the latest versions of F\*,
