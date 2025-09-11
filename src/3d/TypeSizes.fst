@@ -284,11 +284,13 @@ let sum_size (n : size) (m:size)
 
 open FStar.List.Tot
 
+let align_t = x:int{x == 1 \/ x == 2 \/ x == 4 \/ x == 8}
+
 let union_padding (env:env_t) (swc:(expr & list case)) (size_and_alignments:list (size & alignment))
-: ML (expr & list case)
+: ML ((expr & list case) & size & alignment)
 = let scru, cases = swc in
   let max_size, max_alignment =
-    List.fold_left #_ #(size & alignment)
+    List.fold_left #(int & align_t) #(size & alignment)
       (fun (max_sz, max_align) (size, align) ->
         let max_sz =
           match size with
@@ -306,11 +308,11 @@ let union_padding (env:env_t) (swc:(expr & list case)) (size_and_alignments:list
   let pad_case (c:case) (n:nat) : ML case =
     match c with
     | Case p f ->
-      let padding_fields = padding_field env (mk_ident "<union>") (Printf.sprintf "(case %s)" (print_expr p)) n in
-      Case p (with_dummy_range <| RecordField (f :: padding_fields) (mk_ident "<union>"))
+      let padding_fields = padding_field env (mk_ident "__union_case_") (Printf.sprintf "(case %s)" (print_expr p)) n in
+      Case p (with_dummy_range (RecordField (f :: padding_fields) (mk_ident "__union_case_")))
     | DefaultCase f ->
-      let padding_fields = padding_field env (mk_ident "<union>") "(default case)" n in
-      DefaultCase (with_dummy_range <| RecordField (f :: padding_fields) (mk_ident "<union>"))
+      let padding_fields = padding_field env (mk_ident "__union_case_") "(default case)" n in
+      DefaultCase (with_dummy_range (RecordField (f :: padding_fields) (mk_ident "__union_case_")))
   in
   let cases =
     List.map2
@@ -323,7 +325,7 @@ let union_padding (env:env_t) (swc:(expr & list case)) (size_and_alignments:list
         | _ -> case)
       cases size_and_alignments
   in
-  scru, cases
+  (scru, cases), Fixed max_size, Some max_alignment
 
 let rec size_and_alignment_of_field (env:env_t)
                                     (should_align:bool)
@@ -427,7 +429,7 @@ let rec size_and_alignment_of_field (env:env_t)
       in
       let alignment = if Fixed? size then alignment else None in
       let swc = fst swc, cases in
-      let swc =
+      let swc, size, alignment =
         if should_align
         then (
           let all_cases_fixed =
@@ -456,10 +458,10 @@ let rec size_and_alignment_of_field (env:env_t)
                 f.range
           );
           if Fixed? size
-          then swc
+          then swc, size, alignment
           else union_padding env swc size_and_alignments
        )
-        else swc
+        else swc, size, alignment
       in
       let f = { f with v = SwitchCaseField swc field_name } in
       f, size, alignment
