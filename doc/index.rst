@@ -40,21 +40,20 @@ of `Project Everest <https://project-everest.github.io/>`_.
 Releases
 --------
 
-We produce public releases under the form of a Windows or Linux
-standalone binary (x86_64) package and a platform-independent source
+We produce public releases under the form of a Windows, Linux (x86_64) or MacOS
+standalone binary package and a platform-independent source
 package.
 
 The latest release of EverParse can be found `here <https://github.com/project-everest/everparse/releases>`_.
 
-Those public releases do not contain EverCBOR/EverCDDL. By contrast,
-we produce `pre-built Docker images containing only EverCBOR and EverCDDL <https://github.com/project-everest/everparse/pkgs/container/evercbor>`_
+We produce `pre-built Docker images <https://github.com/project-everest/everparse/pkgs/container>`_
 
 Manual
 ------
 
 * :ref:`3d` (includes the full documentation of the EverParse binary package)
 
-* :ref:`build`
+* Build instructions are available in the `README <https://github.com/project-everest/everparse/blob/master/README.md>`_
 
 * EverCBOR:
 
@@ -107,7 +106,6 @@ Papers
    :caption: Contents:
 
    3d
-   build
 
 
 Licenses

@@ -3,9 +3,9 @@ ARG CI_BRANCH
 FROM ghcr.io/$CI_REPO:$CI_BRANCH
 
 # Automatically set up Rust environment
-ENTRYPOINT ["/usr/bin/env", "BASH_ENV=/home/opam/.cargo/env", "/mnt/everparse/opt/shell.sh", "-c"]
+ENTRYPOINT ["/usr/bin/env", "BASH_ENV=/home/opam/.cargo/env", "/mnt/everparse/shell.sh", "-c"]
 CMD ["/bin/bash", "-i"]
-SHELL ["/usr/bin/env", "BASH_ENV=/home/opam/.cargo/env", "/mnt/everparse/opt/shell.sh", "-c"]
+SHELL ["/usr/bin/env", "BASH_ENV=/home/opam/.cargo/env", "/mnt/everparse/shell.sh", "-c"]
 
 # For the release process: check if the current hash matches the hash being released
 ARG CI_HASH

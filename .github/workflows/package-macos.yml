@@ -55,12 +55,12 @@ jobs:
 
       - name: Install Homebrew tools
         run: |
-          brew install bash gnu-getopt make gnu-time coreutils
+          brew install bash gnu-getopt make gnu-time coreutils gmp libffi pkgconf sqlite
 
       - name: Build package
         run: |
           eval $(opam env)
-          env OPAMNODEPEXTS=0 make -f package.Makefile everparse -kj$(sysctl -n hw.logicalcpu)
+          make -f package.Makefile everparse -kj$(sysctl -n hw.logicalcpu)
 
       - uses: actions/upload-artifact@v4
         with:

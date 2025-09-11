@@ -17,6 +17,14 @@ RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends ll
 # Automatically set up Rust environment
 SHELL ["/usr/bin/env", "BASH_ENV=/home/opam/.cargo/env", "/bin/bash", "-c"]
 
+# Set up code-server
+RUN wget https://github.com/coder/code-server/releases/download/v4.103.2/code-server_4.103.2_amd64.deb \
+ && sudo dpkg -i code-server*.deb \
+ && rm code-server*.deb
+RUN wget https://github.com/FStarLang/fstar-vscode-assistant/releases/download/v0.19.2/fstar-vscode-assistant-0.19.2.vsix \
+ && code-server --install-extension fstar-vscode-assistant-*.vsix \
+ && rm fstar-vscode-assistant-*.vsix
+
 # Bring in the contents
 ARG CACHE_BUST
 RUN sudo mkdir /mnt/everparse && sudo chown opam:opam /mnt/everparse
@@ -33,11 +41,12 @@ FROM base AS deps
 
 ARG CI_THREADS
 RUN sudo apt-get update && env OPAMNODEPEXTS=0 make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" deps
+RUN cp src/package/start-code-server.sh .
 
 # Automatically set up Rust environment
-ENTRYPOINT ["/usr/bin/env", "BASH_ENV=/home/opam/.cargo/env", "/mnt/everparse/opt/shell.sh", "-c"]
+ENTRYPOINT ["/usr/bin/env", "BASH_ENV=/home/opam/.cargo/env", "/mnt/everparse/shell.sh", "-c"]
 CMD ["/bin/bash", "-i"]
-SHELL ["/usr/bin/env", "BASH_ENV=/home/opam/.cargo/env", "/mnt/everparse/opt/shell.sh", "-c"]
+SHELL ["/usr/bin/env", "BASH_ENV=/home/opam/.cargo/env", "/mnt/everparse/shell.sh", "-c"]
 
 FROM deps AS build
 
