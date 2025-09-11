@@ -1,6 +1,9 @@
 //SNIPPET_START: main$
 extern probe ProbeAndCopy
+extern probe (READ UINT8) ProbeAndReadU8
+extern probe (WRITE UINT8) WriteU8
 extern probe (READ UINT32) ProbeAndReadU32
+extern probe (WRITE UINT32) WriteU32
 extern probe (WRITE UINT64) WriteU64
 extern probe (INIT) ProbeInit
 extern PURE UINT64 UlongToPtr(UINT32 ptr)
