@@ -23,6 +23,7 @@ WORKDIR $HOME/everparse
 # Install other dependencies
 RUN sudo apt-get install --yes \
   python-is-python3 \
+  time \
   wget
 
 # Build and publish the release
