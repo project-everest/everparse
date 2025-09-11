@@ -93,6 +93,14 @@ WRAPPER_64 w64_array[4] = {
 {0 , {.p0={2, 3}}},
 {.Tag=84, {.p={168}}}
 };
+
+
+WRAPPER_64 w64_array_bad[4] = { 
+{0 , {.p0={0, 1}}},
+{0, {.p={42}}},
+{0 , {.p0={2, 3}}},
+{.Tag=0, {.p={168}}}
+};
   
 typedef struct _PAYLOAD_0_32 {
   uint32_t f0;
@@ -125,6 +133,14 @@ WRAPPER_64 w32_array_coerced[4] = {
 {13, {.p={26}}},
 {0 , {.p0={6, 7}}},
 {.Tag=3141, {.p={59}}}
+};
+
+
+WRAPPER_32 w32_array_bad[4] = { 
+{0 , {.p0={4, 5}}},
+{0, {.p={26}}},
+{0 , {.p0={6, 7}}},
+{.Tag=0, {.p={59}}}
 };
 
 BOOLEAN eq_payload_0_64(PAYLOAD_0_64 x, PAYLOAD_0_64 y)
@@ -183,6 +199,11 @@ BOOLEAN GetSrcPointer(uint64_t src, uint8_t **out, uint64_t *size)
   {
     *out = (uint8_t*) w32_array;
     *size = sizeof(w32_array);
+  }
+  else if (src == (uint64_t)w32_array_bad)
+  {
+    *out = (uint8_t*) w32_array_bad;
+    *size = sizeof(w32_array_bad);
   }
   else
   {
@@ -337,10 +358,60 @@ int testuh32(void) {
   return 1;
 }
 
+
+int testuh64_bad(void) {
+  WRAPPER_64 dest64[4];
+  copy_buffer_t out_64 = (copy_buffer_t) {
+    .buf = (uint8_t*)dest64,
+    .len = sizeof(dest64)
+  };
+  uint64_t w64_ptr = (uint64_t)w64_array_bad;
+  uint8_t *input_buffer = (uint8_t*)&w64_ptr;
+  printf("Calling validator with pointer %lu, whereas w64=%lu\n", Load64Le(input_buffer), w64_ptr);
+  if (SpecializeTaggedUnionArrayCheckMain(
+      true,
+      4,
+      (EVERPARSE_COPY_BUFFER_T) &out_64,
+      input_buffer,
+      sizeof(uint64_t)
+      ))
+  {
+    printf("Validation succeeded for 64-bit array, when it should have failed\n");
+    return 1;
+  }
+  return 0;
+}
+
+
+int testuh32_bad(void) {
+  WRAPPER_64 dest64[4];
+  copy_buffer_t out_64 = (copy_buffer_t) {
+    .buf = (uint8_t*)dest64,
+    .len = sizeof(dest64)
+  };
+  uint64_t w32_ptr = (uint64_t)w32_array_bad;
+  uint8_t *input_buffer = (uint8_t*)&w32_ptr;
+  printf("Calling validator with pointer %lu, whereas w32=%lu\n", Load64Le(input_buffer), w32_ptr);
+  if (SpecializeTaggedUnionArrayCheckMain(
+      true,
+      4,
+      (EVERPARSE_COPY_BUFFER_T) &out_64,
+      input_buffer,
+      sizeof(uint64_t)
+      ))
+  {
+    printf("Validation succeeded for 32-bit array, when it should have failed\n");
+    return 1;
+  }
+  return 0;
+}
+
 int main(void) {
   int result = 0;
-  // result |= testuh64();
+  result |= testuh64();
   result |= testuh32();
+  result |= testuh64_bad();
+  result |= testuh32_bad();
   if (result == 0)
   {
     printf("All tests passed\n");

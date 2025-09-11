@@ -13,7 +13,7 @@ extern PURE UINT64 UlongToPtr(UINT32 ptr)
 //32 bit size: 8
 aligned
 typedef struct _PAYLOAD_0 {
-    UINT32 f0;
+    UINT32 f0 { f0 == 0 || f0 == 2 || f0 == 4 || f0 == 6 };
     UINT8 *ptr;
 } PAYLOAD_0;
 
