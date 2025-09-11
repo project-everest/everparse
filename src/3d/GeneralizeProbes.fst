@@ -62,7 +62,7 @@ let find_probe_fn (e:B.env) (q:probe_qualifier) r
 = match GlobalEnv.extern_probe_fn_qual (B.global_env_of_env e) r q with
   | None ->
     error (Printf.sprintf "Cannot find probe function for %s" (print_probe_qualifier q))
-          dummy_range
+          r
   | Some id ->
     id
   
