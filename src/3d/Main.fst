@@ -120,7 +120,11 @@ let parse_check_and_desugar (en:env) (mname:string) (fn:string)
   let decls = TypeSizes.size_of_decls benv en.typesizes_env decls in
 
   Options.debug_print_string "=============After typesizes pass=============\n";
+  Options.debug_print_string (print_decls decls);
+  Options.debug_print_string "\n";
 
+  Options.debug_print_string "=============Starting coerce probes=============\n";
+ 
   let decls = CoerceProbes.replace_stubs benv decls in
 
   Options.debug_print_string "=============After coerce probes =============\n";

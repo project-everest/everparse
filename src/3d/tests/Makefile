@@ -39,7 +39,10 @@ clean_out_files=\
 
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
-all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs probe iter z3-testgen-test exttype z3-testgen-probe-test specialize_test specialize_test2
+all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules \
+	 tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs \
+	 probe iter z3-testgen-test exttype z3-testgen-probe-test specialize_test specialize_test2 \
+	 specialize_tagged_union_array
 
 .PHONY: exttype
 
