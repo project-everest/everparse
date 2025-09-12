@@ -15,13 +15,6 @@ RUN apt-get update && apt-get install --yes --no-install-recommends \
   time \
   opam
 
-# For the `test` layer
-RUN apt-get update && apt-get install --yes --no-install-recommends \
-    cmake \
-    python3-pip \
-    python3-venv \
-    sudo
-
 # Create a new user and give them sudo rights
 RUN useradd -d /home/test test
 RUN echo 'test ALL=NOPASSWD: ALL' >> /etc/sudoers
@@ -65,6 +58,13 @@ SHELL ["/usr/bin/env", "BASH_ENV=/home/test/.cargo/env", "/mnt/everparse/shell.s
 FROM deps AS build
 
 RUN OTHERFLAGS='--admit_smt_queries true' make -j"$(if test -z "$CI_THREADS" ; then nproc ; else echo $CI_THREADS ; fi)" all
+
+# For the `test` layer
+RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends \
+    cmake \
+    python3-pip \
+    python3-venv \
+    sudo
 
 FROM build AS test
 
