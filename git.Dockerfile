@@ -42,7 +42,7 @@ RUN curl -L --output fstar-vscode-assistant.vsix https://github.com/FStarLang/fs
 
 # Bring in the contents
 ARG CACHE_BUST
-RUN sudo mkdir /mnt/everparse && sudo chown opam:opam /mnt/everparse
+RUN sudo mkdir /mnt/everparse && sudo chown test:test /mnt/everparse
 ARG CI_REPO=project-everest/everparse
 ARG CI_BRANCH=master
 RUN git clone --recurse-submodules --branch $CI_BRANCH https://github.com/$CI_REPO /mnt/everparse && echo $CACHE_BUST
