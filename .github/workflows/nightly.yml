@@ -25,7 +25,7 @@ jobs:
       - name: Everparse CI
         id: cistep
         run: |
-          . $HOME/.cargo/env && env OPAMYES=1 make _opam && eval $(opam env) && make -C opt -j$(nproc) && env OTHERFLAGS='--admit_smt_queries true' make cbor-snapshot 3d-doc-snapshot -kj$(nproc) && env OTHERFLAGS='--admit_smt_queries true' make cose-snapshot -kj$(nproc)
+          . $HOME/.cargo/env && env ADMIT=1 make cbor-snapshot 3d-doc-snapshot -kj$(nproc) && env ADMIT=1 make cose-snapshot -kj$(nproc)
 
       - name: commit changes
         run: |

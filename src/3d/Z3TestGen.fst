@@ -1469,7 +1469,7 @@ let rec print_outparameter
     out "
   printf(\"// ";
     out expr;
-    out " = %ld\\n\", ((uint64_t) (";
+    out " = %\" PRIu64 \"\\n\", ((uint64_t) (";
     out expr;
     out ")));\n"
   | ArgExtern _ -> ()
@@ -2058,9 +2058,9 @@ static void TestErrorHandler (
   (void) error_code;
   (void) input;
   if (*context) {
-    printf(\"// Reached from position %ld: type name %s, field name %s\\n\", start_pos, typename_s, fieldname);
+    printf(\"// Reached from position %\" PRIu64 \": type name %s, field name %s\\n\", start_pos, typename_s, fieldname);
   } else {
-    printf(\"// Parsing failed at position %ld: type name %s, field name %s. Reason: %s\\n\", start_pos, typename_s, fieldname, reason);
+    printf(\"// Parsing failed at position %\" PRIu64 \": type name %s, field name %s. Reason: %s\\n\", start_pos, typename_s, fieldname, reason);
     *context = 1;
   }
 }
@@ -2116,7 +2116,7 @@ BOOLEAN "^name^"(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE
   if (src < state->count) {
     uint64_t got_len = state->layers[src].len;
     if (len != got_len) {
-      printf(\"ProbeAndCopy: layer length does not match spec. Expected %ld, got %ld\\n\", len, got_len);
+      printf(\"ProbeAndCopy: layer length does not match spec. Expected %\" PRIu64 \", got %\" PRIu64 \"\\n\", len, got_len);
       exit(4);
     } else {
       state->cur = src;
@@ -2185,7 +2185,9 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
   let sargs = List.Tot.map snd args in
   let modul, validator_name = module_and_validator_name name1 in
   let nargs = count_args sargs in with_option_out_file out_file (fun cout ->
-  cout "#include <stdio.h>
+  cout "#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+#include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 #include \"";
@@ -2264,7 +2266,9 @@ let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
   let modul1, validator_name1 = module_and_validator_name name1 in
   let modul2, validator_name2 = module_and_validator_name name2 in
   with_option_out_file out_file (fun cout ->
-  cout "#include <stdio.h>
+  cout "#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+#include <stdio.h>
 #include <stdbool.h>
 #include \"";
   cout modul1;
@@ -2331,6 +2335,8 @@ let test_checker_c
   let nb_cmd_and_args_s = string_of_int nb_cmd_and_args in
   let nb_args_s = string_of_int (nb_cmd_and_args - 1) in
   "
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include \""^modul^".h\"
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -2373,12 +2379,12 @@ int main(int argc, char** argv) {
     vbuf = mmap(NULL, len, PROT_READ, MAP_PRIVATE, testfile, 0);
     if (vbuf == MAP_FAILED) {
       close(testfile);
-      printf(\"Cannot read %ld bytes from %s\\n\", len, filename);
+      printf(\"Cannot read %\" PRIuPTR \" bytes from %s\\n\", len, filename);
       return 3;
     };
     buf = (uint8_t *) vbuf;
   };
-  printf(\"Read %ld bytes from %s\\n\", len, filename);
+  printf(\"Read %\" PRIuPTR \" bytes from %s\\n\", len, filename);
   uint8_t context = 0;
   uint64_t result = "^validator_name^"("^call_args_lhs^"&context, &TestErrorHandler, buf, len, 0);
   if (len > 0)
@@ -2389,7 +2395,7 @@ int main(int argc, char** argv) {
     return 2;
   };
   if (result != (uint64_t) len) { // consistent with the postcondition of validate_with_action_t' (see also valid_length)
-    printf(\"// Witness from %s REJECTED because validator only consumed %ld out of %ld bytes\\n\", filename, result, len);
+    printf(\"// Witness from %s REJECTED because validator only consumed %\" PRIu64 \" out of %\" PRIuPTR \" bytes\\n\", filename, result, len);
     return 1;
   }
   printf(\"// Witness from %s ACCEPTED\\n\", filename);

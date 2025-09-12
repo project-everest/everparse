@@ -1,5 +1,8 @@
 name: Build everparse package (windows)
 on:
+  push:
+    branches-ignore:
+    - _**
   pull_request:
   workflow_dispatch:
     inputs:
@@ -83,79 +86,52 @@ jobs:
           path: fstar-src.tar.gz
           name: package-src
 
-  fstar-binary:
-    runs-on: [self-hosted, windows, X64, opam-2-3]
+  build:
     needs: fstar-src
+    runs-on: windows-2025
     steps:
-      - name: clean
-        shell: C:\cygwin64\bin\bash.exe --login '{0}'
-        run: cd $GITHUB_WORKSPACE/ && rm -rf * && echo "There is a CR at the end of this line"
+
+      - run: git config --global core.autocrlf input
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/checkout@v4
+        with:
+          path: opt/everest
+          repository: project-everest/everest
+
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 4.14.2
+        # This will install Cygwin as well
+
+      - name: Install Cygwin packages
+        shell: C:\cygwin\bin\bash.exe --login '{0}'
+        run: >-
+          cd "$GITHUB_WORKSPACE"/opt/everest && "$GITHUB_WORKSPACE"/src/package/windows/install-cygwin-packages.sh
 
       - uses: actions/download-artifact@v4
         with:
           name: package-src
-          
-      # - name: Check cache
-      #   id: check-cache
-      #   uses: actions/cache/restore@v4
-      #   with:
-      #     path: fstar.zip
-      #     key: FStar-${{runner.os}}-${{ hashFiles('/fstar-src.tar.gz') }}
 
-      - run: cd $GITHUB_WORKSPACE && tar xzf fstar-src.tar.gz && echo ""
-        # if: steps.check-cache.outputs.cache-hit != 'true'
-        shell: C:\cygwin64\bin\bash.exe --login '{0}'
+      - name: Expand F* source package
+        shell: C:\cygwin\bin\bash.exe --login '{0}'
+        run: >-
+          cd "$GITHUB_WORKSPACE" && tar xzf fstar-src.tar.gz && mv fstar opt/FStar
 
-      - name: Build a package
-        # if: steps.check-cache.outputs.cache-hit != 'true'
-        shell: C:\cygwin64\bin\bash.exe --login '{0}'
-        run: |
-          cd $GITHUB_WORKSPACE && cd fstar && eval $(opam env) && make clean && CC=x86_64-w64-mingw32-gcc.exe DUNE_CONFIG__BACKGROUND_SANDBOXES=disabled make -j$(nproc) package V=1 ADMIT=1 && mv fstar.zip .. && echo "There is a CR at the end of this line"
-        
-      # - name: Save
-      #   if: steps.check-cache.outputs.cache-hit != 'true'
-      #   uses: actions/cache/save@v4
-      #   with:
-      #     path: fstar.zip
-      #     key: FStar-${{runner.os}}-${{ hashFiles('/fstar-src.tar.gz') }}
-
-      - uses: actions/upload-artifact@v4
+      - uses: actions/checkout@v4
         with:
-          name: fstar-package
-          path: fstar.zip
-
-  build:
-    runs-on: [self-hosted, windows, X64, opam-2-3]
-    needs: fstar-binary
-    steps:
-      - uses: actions/checkout@master
-
-      - uses: actions/checkout@master
-        with:
-          path: karamel
+          path: opt/karamel
           repository: ${{ inputs.karamel_repo || 'FStarLang/karamel' }}
           ref: ${{ inputs.karamel_ref || 'master' }}
 
-      - uses: actions/download-artifact@v4
-        with:
-          name: fstar-package
-
-      - name: Prepare
-        # opam install --deps-only FStar/fstar.opam
-        # ^ relying on the fact that F* dependencies are already installed
-        if: false
-        # Disabling this, I get
-        # Error:  Package karamel has no version opam.
-        # but karamel.opam should refer to the file? This also did not
-        # work with karamel/karamel.opam (without cd'ing).
-        shell: C:\cygwin64\bin\bash.exe --login '{0}'
-        run: |
-          cd $GITHUB_WORKSPACE && eval $(opam env) && cd karamel && sed -i '/"fstar"/d' karamel.opam && opam install --deps-only karamel.opam && opam install hex re sexplib && echo ""
-
       - name: Build package
-        shell: C:\cygwin64\bin\bash.exe --login '{0}'
-        run: |
-          cd $GITHUB_WORKSPACE && eval $(opam env) && CC=x86_64-w64-mingw32-gcc.exe make -f package.Makefile nuget-noversion -kj$(nproc) && echo ""
+        shell: C:\cygwin\bin\bash.exe --login '{0}'
+        run: >-
+          cd $GITHUB_WORKSPACE && eval $(opam env) && env V=1 MAKE=make make -f package.Makefile nuget-noversion -kj$(nproc)
 
       - uses: actions/upload-artifact@v4
         with:
@@ -181,7 +157,9 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v4
         with:
-          sparse-checkout: src\3d\tests
+          sparse-checkout: |
+            src/3d/tests
+            src/cddl/tests/demo/test.cddl
           path: ${{ github.workspace }}\everparse
       - name: Test EverParse
         shell: cmd

@@ -39,13 +39,13 @@ jobs:
 
       - uses: actions/checkout@master
         with:
-          path: FStar
+          path: opt/FStar
           repository: ${{ inputs.fstar_repo || 'FStarLang/FStar' }}
           ref: ${{ inputs.fstar_ref || 'master' }}
 
       - uses: actions/checkout@master
         with:
-          path: karamel
+          path: opt/karamel
           repository: ${{ inputs.karamel_repo || 'FStarLang/karamel' }}
           ref: ${{ inputs.karamel_ref || 'master' }}
 
@@ -53,21 +53,10 @@ jobs:
         with:
           ocaml-compiler: 4.14.2
 
-      - name: Prepare
-        run: |
-          eval $(opam env)
-          sudo apt-get update || true
-          opam install --deps-only FStar/fstar.opam
-          sed -i '/"fstar"/d' karamel/karamel.opam
-          # ^ remove F* dependency of karamel, it is outdated and will conflict.
-          opam install --deps-only karamel/karamel.opam
-          opam install hex re sexplib
-          # ^ everparse deps
-
       - name: Build package
         run: |
           eval $(opam env)
-          make -f package.Makefile everparse -kj$(nproc)
+          env OPAMNODEPEXTS=0 make -f package.Makefile everparse -kj$(nproc)
 
       - uses: actions/upload-artifact@v4
         with:
@@ -88,7 +77,9 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v4
         with:
-          sparse-checkout: src/3d/tests
+          sparse-checkout: |
+            src/3d/tests
+            src/cddl/tests/demo/test.cddl
           path: ${{ github.workspace }}/everparse
       - name: Test EverParse
         run: |
@@ -96,3 +87,6 @@ jobs:
       - name: Test EverParse test case generation
         run: |
           bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+      - name: Test EverCDDL
+        run: |
+          ${{ github.workspace }}/test/bin/cddl.exe ${{ github.workspace }}/everparse/src/cddl/tests/demo/test.cddl

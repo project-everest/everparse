@@ -23,8 +23,12 @@ fstar-src/fstar/*.checked
 everparse/**
 everparse_*.tar.gz
 everparse_*.zip
+EverParse.nupkg
+nuget.exe
+nuget_package
 
 # make touchfiles
 .*.touch
-_opam
-_opam.tmp
+.opam
+.opam.tmp
+opam-env.Makefile

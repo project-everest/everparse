@@ -1,15 +1,8 @@
 {
-    "fstar_exe": "fstar.exe",
-    "options": [
-      "--max_fuel", "0",
-      "--max_ifuel", "2",
-      "--initial_ifuel", "2",
-      "--z3rlimit_factor", "8",
-      "--z3cliopt", "smt.qi.eager_threshold=100"
-    ],
+    "fstar_exe": "${FSTAR_EXE}",
     "include_dirs": [
       "..",
-      "${EVERPARSE_HOME}/src/lowparse", 
+      "../../../lowparse",
       "${KRML_HOME}/krmllib",
       "${KRML_HOME}/krmllib/obj"
     ]

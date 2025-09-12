@@ -6,11 +6,6 @@ include $(EVERPARSE_SRC_PATH)/windows.Makefile
 
 FSTAR_EXE ?= fstar.exe
 
-FSTAR_VERSION != $(FSTAR_EXE) --version
-ifneq ($(.SHELLSTATUS),0)
-  $(error "F* version check failed (FSTAR_EXE = $(FSTAR_EXE))" )
-endif
-
 export FSTAR_EXE
 
 # Add common options here

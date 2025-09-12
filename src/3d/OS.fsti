@@ -14,6 +14,8 @@ val concat : string -> string -> Tot string
 
 val concat_if_not_absolute: string -> string -> Tot string
 
+val everparse_home : string
+
 (* The filename without its extension *)
 
 val remove_extension: string -> Tot string
@@ -25,6 +27,8 @@ val extension: string -> Tot string
 (* The filename where all `\` have been replaced with `/` (because GNU Make uses `/` even on Windows) *)
 
 val replace_backslashes: string -> Tot string
+
+val getenv_opt: string -> FStar.All.ML (option string)
 
 (* Run a command *)
 val run_cmd: string -> list string -> FStar.All.ML unit

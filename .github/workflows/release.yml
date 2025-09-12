@@ -2,6 +2,11 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
+      release_branch:
+        description: Release branch
+        default: _release
+        type: string
+        required: true
       fstar_repo:
         description: F* repository (use org/repo for Github repos)
         default: 'FStarLang/FStar'
@@ -12,23 +17,717 @@ on:
         default: 'master'
         type: string
         required: true
-      karamel_repo:
-        description: Karamel repository (use org/repo for Github repos)
-        default: 'FStarLang/karamel'
-        type: string
-        required: true
-      karamel_ref:
-        description: Karamel ref (branch, or tag, or commit hash)
-        default: 'master'
-        type: string
-        required: true
 
 defaults:
   run:
     shell: bash
 
 jobs:
-  build:
-    runs-on: macos-latest
+  fstar-src:
+    ## NOTE: This is copied from build-src in the F* repo.
+
+    runs-on: ubuntu-22.04
+    # We prefer slightly older Ubuntu so we get binaries that work on
+    # all more recent versions.
     steps:
       - uses: actions/checkout@master
+        id: checkout
+        with:
+          repository: ${{ inputs.fstar_repo || 'FStarLang/FStar' }}
+          ref: ${{ inputs.fstar_ref || 'master' }}
+
+      - name: Check cache
+        id: check-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: fstar-src.tar.gz
+          key: FStar-src-${{steps.checkout.outputs.commit}}
+
+      - uses: ocaml/setup-ocaml@v3
+        if: steps.check-cache.outputs.cache-hit != 'true'
+        with:
+          ocaml-compiler: 4.14.2
+
+      - name: Prepare
+        if: steps.check-cache.outputs.cache-hit != 'true'
+        run: |
+          ./.scripts/get_fstar_z3.sh $HOME/bin
+          echo "PATH=$HOME/bin:$PATH" >> $GITHUB_ENV
+          opam install --deps-only ./fstar.opam
+
+      - name: Set F* version
+        if: steps.check-cache.outputs.cache-hit != 'true'
+        run: |
+          echo FSTAR_VERSION="$(git describe --tags --dirty)" >> $GITHUB_ENV
+
+      # NB: release workflow later adds version number to the name
+      - name: Build package
+        if: steps.check-cache.outputs.cache-hit != 'true'
+        run: |
+          eval $(opam env)
+          export FSTAR_TAG=
+          # ^ no tag in source package
+          make -skj$(nproc) package-src ADMIT=1
+
+      - name: Save
+        if: steps.check-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: fstar-src.tar.gz
+          key: FStar-src-${{steps.checkout.outputs.commit}}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          path: fstar-src.tar.gz
+          name: fstar-src
+
+  prepare:
+    runs-on: Ubuntu-22.04
+    needs: fstar-src
+    steps:
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Set up git
+        run: |
+          git config --global user.name "Dzomo, the Everest Yak"
+          git config --global user.email "24394600+dzomo@users.noreply.github.com"
+
+      - run: |
+          git merge --no-edit --no-ff origin/${{ inputs.release_branch }}
+          git diff --exit-code ${{ github.sha }}..HEAD
+
+      - name: Create submodules
+        run: |
+          cd $GITHUB_WORKSPACE
+          git config --local user.name "Dzomo, the Everest Yak"
+          git config --local user.email "dzomo@users.noreply.github.com"
+          if ! [[ -e opt/karamel ]] ; then git submodule add --force https://github.com/FStarLang/karamel opt/karamel ; fi
+          if ! [[ -e opt/pulse ]] ; then git submodule add --force https://github.com/FStarLang/pulse opt/pulse ; fi
+          if ! [[ -e opt/everest ]] ; then git submodule add --force https://github.com/project-everest/everest opt/everest ; fi
+          if ! [[ -e opt/opam-repository ]] ; then git submodule add --force https://github.com/ocaml/opam-repository opt/opam-repository ; fi
+          echo export EVERPARSE_OPAM_REPOSITORY:=opt/opam-repository > release.Makefile
+          git add release.Makefile
+          git commit -m 'Create submodules'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: fstar-src
+
+      - name: Expand F* source package
+        run: |
+          cd "$GITHUB_WORKSPACE" && tar xzf fstar-src.tar.gz && mv fstar opt/FStar && git add --force opt/FStar && git commit -m 'Add F* source package'
+
+      - name: Create new version
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          if ! [[ -e version.txt ]] ; then
+            date '+v%Y.%m.%d' > version.txt
+            git add version.txt
+            git commit -m 'Set version number'
+          fi
+
+      - name: Push new branch
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          git checkout -b _dzomo_release_${{ github.run_id }}
+          git push origin _dzomo_release_${{ github.run_id }}
+          git rev-parse HEAD > hash.txt
+
+      - name: Upload hash
+        uses: actions/upload-artifact@v4
+        with:
+          path: |
+            hash.txt
+          name: hash
+
+  build-macos:
+    runs-on: macos-latest
+    needs: prepare
+    steps:
+      - uses: actions/checkout@master
+        with:
+          submodules: true
+          ref: _dzomo_release_${{ github.run_id }}
+
+      - name: Download hash
+        uses: actions/download-artifact@v4
+        with:
+          name: hash
+
+      - name: Check hash
+        run: |
+          expected="$(cat hash.txt)"
+          real=$(git rev-parse HEAD)
+          echo "Expected: $expected"
+          echo "Real: $real"
+          [[ "$expected" = "$real" ]]
+
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 4.14.2
+
+      - name: Install Homebrew tools
+        run: |
+          brew install bash gnu-getopt make gnu-time coreutils
+
+      - name: Build package
+        run: |
+          eval $(opam env)
+          env OPAMNODEPEXTS=0 make -f package.Makefile package -kj$(sysctl -n hw.logicalcpu)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          path: |
+            everparse_*.tar.gz
+          name: everparse-build-macos
+
+  test-macos:
+    needs: build-macos
+    runs-on: macos-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-build-macos
+          path: test0
+      - name: Extract artifact
+        run: |
+          pushd test0
+          tar xzf everparse_*.tar.gz
+          popd
+          mv test0/everparse test
+      - name: Check out repo
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            src/3d/tests
+            src/cddl/tests/demo/test.cddl
+          path: ${{ github.workspace }}/everparse
+      - name: Test EverParse
+        run: |
+          bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/Arithmetic.3d ${{ github.workspace }}/everparse/src/3d/tests/FieldDependence0.3d && cd ${{ github.workspace }}/everparse/src/3d/tests/ && bash ${{ github.workspace }}/test/everparse.sh Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+      - name: Test EverParse test case generation
+        run: |
+          bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+      - name: Test EverCDDL
+        run: |
+          ${{ github.workspace }}/test/bin/cddl.exe ${{ github.workspace }}/everparse/src/cddl/tests/demo/test.cddl
+      - name: Upload test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: everparse/src/3d/tests/Comments*
+          name: everparse-test-macos
+
+  build-linux:
+    runs-on: Ubuntu-22.04
+    needs: prepare
+    steps:
+      - uses: actions/checkout@master
+        with:
+          submodules: true
+          ref: _dzomo_release_${{ github.run_id }}
+
+      - name: Download hash
+        uses: actions/download-artifact@v4
+        with:
+          name: hash
+
+      - name: Check hash
+        run: |
+          expected="$(cat hash.txt)"
+          real=$(git rev-parse HEAD)
+          echo "Expected: $expected"
+          echo "Real: $real"
+          [[ "$expected" = "$real" ]]
+
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 4.14.2
+
+      - name: Build package
+        run: |
+          eval $(opam env)
+          env OPAMNODEPEXTS=0 make -f package.Makefile package -kj$(nproc)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          path: |
+            everparse_*.tar.gz
+          name: everparse-build-linux
+
+  test-linux:
+    needs: build-linux
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-build-linux
+          path: test0
+      - name: Extract artifact
+        run: |
+          pushd test0
+          tar xzf everparse_*.tar.gz
+          popd
+          mv test0/everparse test
+      - name: Check out repo
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            src/3d/tests
+            src/cddl/tests/demo/test.cddl
+          path: ${{ github.workspace }}/everparse
+      - name: Test EverParse
+        run: |
+          bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/Arithmetic.3d ${{ github.workspace }}/everparse/src/3d/tests/FieldDependence0.3d && cd ${{ github.workspace }}/everparse/src/3d/tests/ && bash ${{ github.workspace }}/test/everparse.sh Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+      - name: Test EverParse test case generation
+        run: |
+          bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+      - name: Test EverCDDL
+        run: |
+          ${{ github.workspace }}/test/bin/cddl.exe ${{ github.workspace }}/everparse/src/cddl/tests/demo/test.cddl
+      - name: Upload test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: everparse/src/3d/tests/Comments*
+          name: everparse-test-linux
+
+  build-windows:
+    runs-on: windows-2025
+    needs: prepare
+    steps:
+      - uses: actions/checkout@master
+        with:
+          submodules: true
+          ref: _dzomo_release_${{ github.run_id }}
+
+      - run: git config --global core.autocrlf input
+
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 4.14.2
+        # This will install Cygwin as well
+
+      - name: Install Cygwin packages
+        shell: C:\cygwin\bin\bash.exe --login '{0}'
+        run: >-
+          cd "$GITHUB_WORKSPACE"/opt/everest && "$GITHUB_WORKSPACE"/src/package/windows/install-cygwin-packages.sh
+
+      - name: Download hash
+        uses: actions/download-artifact@v4
+        with:
+          name: hash
+
+      - name: Check hash
+        shell: C:\cygwin\bin\bash.exe --login '{0}'
+        run: >-
+          cd $GITHUB_WORKSPACE && expected="$(cat hash.txt)" && real=$(git rev-parse HEAD) && echo "Expected: $expected" && echo "Real: $real" && [[ "$expected" = "$real" ]]
+
+      - name: Build package
+        shell: C:\cygwin\bin\bash.exe --login '{0}'
+        run: >-
+          cd $GITHUB_WORKSPACE && eval $(opam env) && env V=1 MAKE=make make -f package.Makefile package -kj$(nproc)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          path: |
+            everparse_*.zip
+          name: everparse-build-windows
+      - uses: actions/upload-artifact@v4
+        with:
+          path: |
+            EverParse*.nupkg
+          name: everparse-build-nupkg
+
+  test-windows:
+    needs: build-windows
+    runs-on: windows-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-build-windows
+          path: test0
+      - name: Extract artifact
+        shell: pwsh
+        run: |
+          Expand-Archive -Path test0\everparse_*.zip -DestinationPath test1
+          Move-Item -Path test1\everparse -Destination test
+      - name: Check out repo
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            src/3d/tests
+            src/cddl/tests/demo/test.cddl
+          path: ${{ github.workspace }}\everparse
+      - name: Test EverParse
+        shell: cmd
+        run: |
+          ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\Arithmetic.3d ${{ github.workspace }}\everparse\src\3d\tests\FieldDependence0.3d && cd ${{ github.workspace }}\everparse\src\3d\tests && ${{ github.workspace }}\test\everparse.cmd Comments.3d && ${{ github.workspace }}\test\everparse.cmd --check_hashes inplace Comments.3d
+      - name: Test EverParse test case generation
+        shell: cmd
+        run: |
+          ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\ELFTestGen.3d --odir ${{ github.workspace }}\test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+      - name: Test EverParse test case generation with probe
+        shell: cmd
+        run: |
+          ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\probe\src\Probe.3d --odir ${{ github.workspace }}\test-probe --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5
+      - name: Upload test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: everparse\src\3d\tests\Comments*
+          name: everparse-test-windows
+
+  test-interop-macos:
+    needs: [build-macos, test-linux, test-windows]
+    runs-on: macos-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-build-macos
+          path: test0
+      - name: Extract artifact
+        run: |
+          pushd test0
+          tar xzf everparse_*.tar.gz
+          popd
+          mv test0/everparse test
+      - name: Download Linux test
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-linux
+          path: linux
+      - name: Test EverParse
+        run: |
+          cd ${{ github.workspace }}/linux/ && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+      - name: Download Windows test
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-windows
+          path: windows
+      - name: Test EverParse
+        run: |
+          cd ${{ github.workspace }}/windows/ && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+
+  test-interop-linux:
+    needs: [build-linux, test-macos, test-windows]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-build-linux
+          path: test0
+      - name: Extract artifact
+        run: |
+          pushd test0
+          tar xzf everparse_*.tar.gz
+          popd
+          mv test0/everparse test
+      - name: Download Macos test
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-macos
+          path: macos
+      - name: Test EverParse
+        run: |
+          cd ${{ github.workspace }}/macos/ && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+      - name: Download Windows test
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-windows
+          path: windows
+      - name: Test EverParse
+        run: |
+          cd ${{ github.workspace }}/windows/ && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
+
+  test-interop-windows:
+    needs: [build-windows, test-linux, test-macos]
+    runs-on: windows-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-build-windows
+          path: test0
+      - name: Extract artifact
+        shell: pwsh
+        run: |
+          Expand-Archive -Path test0\everparse_*.zip -DestinationPath test1
+          Move-Item -Path test1\everparse -Destination test
+      - name: Download Linux test
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-linux
+          path: linux
+      - name: Test EverParse
+        shell: cmd
+        run: |
+          cd ${{ github.workspace }}\linux && ${{ github.workspace }}\test\everparse.cmd --check_hashes inplace Comments.3d
+      - name: Download Macos test
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse-test-macos
+          path: macos
+      - name: Test EverParse
+        shell: cmd
+        run: |
+          cd ${{ github.workspace }}\macos && ${{ github.workspace }}\test\everparse.cmd --check_hashes inplace Comments.3d
+
+  build-docker:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download hash
+        uses: actions/download-artifact@v4
+        with:
+          name: hash
+
+      - name: Populate environment
+        run: |
+          echo CI_THREADS=$(nproc) >> $GITHUB_ENV
+          echo CI_HASH="$(cat hash.txt)" >> $GITHUB_ENV
+
+      - uses: actions/checkout@master
+        with:
+          ref: ${{ env.CI_HASH }}
+          path: everparse
+          sparse-checkout: |
+            git.Dockerfile
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@master
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build a Docker image
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          build-args: |
+            CI_REPO=${{ github.repository }}
+            CI_BRANCH=_dzomo_release_${{ github.run_id }}
+            CI_HASH=${{ env.CI_HASH }}
+            CI_THREADS=${{ env.CI_THREADS }}
+          context: everparse
+          file: ${{ github.workspace }}/everparse/git.Dockerfile
+          pull: true
+          push: true
+          target: build
+          tags: ghcr.io/${{ github.repository }}:_dzomo_release_${{ github.run_id }}
+
+  test-docker:
+    needs: build-docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download hash
+        uses: actions/download-artifact@v4
+        with:
+          name: hash
+      - name: Test Docker image
+        run: |
+          docker run ghcr.io/${{ github.repository }}:_dzomo_release_${{ github.run_id }} '[[ "$(git rev-parse HEAD)" = '"$(cat hash.txt)"' ]] && make -j$(nproc) test'
+
+  push-tag:
+    runs-on: ubuntu-latest
+    needs: [test-interop-macos, test-interop-linux, test-interop-windows, test-docker]
+    steps:
+      - name: Set up git
+        run: |
+          git config --global user.name "Dzomo, the Everest Yak"
+          git config --global user.email "24394600+dzomo@users.noreply.github.com"
+
+      - name: Download hash
+        uses: actions/download-artifact@v4
+        with:
+          name: hash
+
+      - name: Populate environment
+        run: |
+          echo CI_HASH="$(cat hash.txt)" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CI_HASH }}
+          sparse-checkout: |
+            version.txt
+
+      - name: Publish tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CI_TAG=$(cat version.txt)
+          git tag -a -m "EverParse $CI_TAG" "$CI_TAG" "$CI_HASH"
+          git push origin "$CI_TAG"
+
+  push-release:
+    runs-on: ubuntu-latest
+    needs: push-tag
+    steps:
+      - name: Set up git
+        run: |
+          git config --global user.name "Dzomo, the Everest Yak"
+          git config --global user.email "24394600+dzomo@users.noreply.github.com"
+
+      - name: Download hash
+        uses: actions/download-artifact@v4
+        with:
+          name: hash
+
+      - name: Populate environment
+        run: |
+          echo CI_HASH="$(cat hash.txt)" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CI_HASH }}
+          sparse-checkout: |
+            version.txt
+
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: everparse-build-*
+          merge-multiple: true
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CI_TAG=$(cat version.txt)
+          gh release create --prerelease \
+            --generate-notes \
+            -t "EverParse $CI_TAG" \
+            "$CI_TAG" artifacts/*
+
+  push-docker:
+    needs: push-tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download hash
+        uses: actions/download-artifact@v4
+        with:
+          name: hash
+
+      - name: Populate environment with hash
+        run: |
+          echo CI_HASH="$(cat hash.txt)" >> $GITHUB_ENV
+
+      - uses: actions/checkout@master
+        with:
+          path: everparse
+          ref: ${{ env.CI_HASH }}
+          sparse-checkout: |
+            src/package/tag.Dockerfile
+            version.txt
+
+      - name: Populate environment with version
+        run: |
+          echo CI_TAG="$(cat everparse/version.txt)" >> $GITHUB_ENV
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@master
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build a Docker image
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          build-args: |
+            CI_REPO=${{ github.repository }}
+            CI_BRANCH=_dzomo_release_${{ github.run_id }}
+            CI_HASH=${{ env.CI_HASH }}
+            CI_TAG=${{ env.CI_TAG }}
+          context: everparse
+          file: ${{ github.workspace }}/everparse/src/package/tag.Dockerfile
+          pull: true
+          push: true
+          tags: ghcr.io/${{ github.repository }}:${{ env.CI_TAG }}
+
+  delete-docker:
+    needs: push-docker
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: castlabs/get-package-version-id-action@v2.0
+        id: version
+        with:
+          version: _dzomo_release_${{ github.run_id }}
+
+      - uses: actions/delete-package-versions@v2
+        if: ${{ steps.version.outputs.ids != '' }}
+        with:
+          package-version-ids: "${{ steps.version.outputs.ids }}"
+          package-name: "${{ github.event.repository.name }}"
+          package-type: 'docker'
+
+  delete-release:
+    runs-on: ubuntu-latest
+    needs: push-release
+    steps:
+    - uses: geekyeggo/delete-artifact@v5
+      with:
+        name: |
+          everparse-*
+
+  push-release-branch:
+    runs-on: ubuntu-latest
+    needs: push-release
+    steps:
+      - name: Set up git
+        run: |
+          git config --global user.name "Dzomo, the Everest Yak"
+          git config --global user.email "24394600+dzomo@users.noreply.github.com"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_branch }}
+          fetch-depth: 0
+
+      - name: Download hash
+        uses: actions/download-artifact@v4
+        with:
+          name: hash
+
+      - name: Advance release branch
+        run: |
+          git merge --no-ff --no-edit ${{ github.sha }}
+          git merge --no-ff --no-edit $(cat hash.txt)
+          git revert --no-edit -m 1 HEAD
+          git diff --exit-code ${{ github.sha }}..HEAD
+          git push
+
+  delete-branch:
+    needs: [delete-docker, delete-release, push-release-branch]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download hash
+        uses: actions/download-artifact@v4
+        with:
+          name: hash
+
+      - name: Populate environment with hash
+        run: |
+          echo CI_HASH="$(cat hash.txt)" >> $GITHUB_ENV
+
+      - uses: actions/checkout@master
+        with:
+          ref: ${{ env.CI_HASH }}
+          sparse-checkout: |
+            version.txt
+
+      - name: Delete branch
+        run: |
+          git push origin --delete _dzomo_release_${{ github.run_id }}
