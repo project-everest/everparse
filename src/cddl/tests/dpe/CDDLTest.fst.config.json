@@ -1,31 +1,23 @@
 {
-    "fstar_exe": "../../../../opt/FStar/bin/fstar.exe",
+    "fstar_exe": "${FSTAR_EXE}",
     "options": [
       "--load_cmxs", "evercddl_lib",
-        "--load_cmxs", "evercddl_plugin",
-        "--warn_error", "-342", 
-        "--odir", ".",
-        "--cache_checked_modules",
-        "--warn_error", "@241",
-        "--already_cached", "PulseCore,Pulse,C,LowStar,*,-CDDLTest,Prims,FStar,LowStar",
-        "--cmi"
+        "--load_cmxs", "evercddl_plugin"
     ],
     "include_dirs": [
-        "../../../../src/cbor/spec",
-        "../../../../src/cddl/spec",
-        "../../../../src/cddl/tool",
-        "../../../../lib/evercddl/lib",
-        "../../../../lib/evercddl/plugin", 
-        "../../../../src/cbor/pulse",
-        "../../../../src/cddl/pulse",
+      "${PULSE_HOME}/lib/pulse",
+      "../../../../src/cbor/spec",
+      "../../../../src/cbor/pulse",
+      "../../../../src/cddl/pulse",
+      "../../../../src/cddl/spec",
+      "../../../../src/cddl/tool",
+      "../../../../lib/evercddl/plugin",
+      "../../../../lib/evercddl/lib",
         "_output",
         "util",
         "dpe",
-        "../../../../opt/karamel/krmllib",
-        "../../../../opt/karamel/krmllib/obj",
-        "../../../../opt/pulse/out/lib/pulse",
-        "../../../../opt/pulse/share/pulse/examples/dice/_cache",
-        "../../../../opt/pulse/share/pulse/examples/dice"
+        "${PULSE_HOME}/share/pulse/examples/dice/_cache",
+        "${PULSE_HOME}/share/pulse/examples/dice"
     ]
   }
   

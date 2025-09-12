@@ -167,8 +167,10 @@ ifeq (,$(NO_PULSE))
 	@echo export PULSE_HOME=$(PULSE_HOME)
 endif
 ifeq ($(OS),Windows_NT)
+	@echo export EVERPARSE_HOME=$(shell cygpath -u $(CURDIR))
 	@echo export PATH=$(shell cygpath -u $(EVERPARSE_OPT_PATH))/FStar/bin:$(shell cygpath -u $(EVERPARSE_OPT_PATH))/z3:\"'$$PATH'\"
 else
+	@echo export EVERPARSE_HOME=$(CURDIR)
 	@echo export PATH=$(EVERPARSE_OPT_PATH)/FStar/bin:$(EVERPARSE_OPT_PATH)/z3:\"'$$PATH'\"
 endif
 
