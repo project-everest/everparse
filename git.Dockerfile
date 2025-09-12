@@ -18,12 +18,12 @@ RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends ll
 SHELL ["/usr/bin/env", "BASH_ENV=/home/opam/.cargo/env", "/bin/bash", "-c"]
 
 # Set up code-server
-RUN wget https://github.com/coder/code-server/releases/download/v4.103.2/code-server_4.103.2_amd64.deb \
- && sudo dpkg -i code-server*.deb \
- && rm code-server*.deb
-RUN wget https://github.com/FStarLang/fstar-vscode-assistant/releases/download/v0.19.2/fstar-vscode-assistant-0.19.2.vsix \
- && code-server --install-extension fstar-vscode-assistant-*.vsix \
- && rm fstar-vscode-assistant-*.vsix
+RUN curl -L --output code-server.deb https://github.com/coder/code-server/releases/download/v4.103.2/code-server_4.103.2_amd64.deb \
+ && sudo dpkg -i code-server.deb \
+ && rm code-server.deb
+RUN curl -L --output fstar-vscode-assistant.vsix https://github.com/FStarLang/fstar-vscode-assistant/releases/download/v0.19.2/fstar-vscode-assistant-0.19.2.vsix \
+ && code-server --install-extension fstar-vscode-assistant.vsix \
+ && rm fstar-vscode-assistant.vsix
 
 # Bring in the contents
 ARG CACHE_BUST
