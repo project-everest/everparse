@@ -3,6 +3,7 @@
 FROM ubuntu:24.04 AS base
 
 # For the `deps` and `build` layers
+# sudo for the Docker image
 RUN apt-get update && apt-get install --yes --no-install-recommends \
   ca-certificates \
   curl \
@@ -13,7 +14,8 @@ RUN apt-get update && apt-get install --yes --no-install-recommends \
   libsqlite3-dev \
   libssl-dev \
   time \
-  opam
+  opam \
+  sudo
 
 # Create a new user and give them sudo rights
 RUN useradd -d /home/test test
@@ -63,8 +65,7 @@ RUN OTHERFLAGS='--admit_smt_queries true' make -j"$(if test -z "$CI_THREADS" ; t
 RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends \
     cmake \
     python3-pip \
-    python3-venv \
-    sudo
+    python3-venv
 
 FROM build AS test
 
