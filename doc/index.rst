@@ -11,7 +11,7 @@ formatters from domain-specific format specification languages.
 The framework contains several components:
 
 **LowParse**: At the core of EverParse is *LowParse*, a verified library
-of parsing and formatting combinators programmed and verified in F\*.
+of parsing and formatting combinators programmed and verified in F\* and Pulse.
 
 **3D**: A frontend for EverParse to enable specifying data
 formats in an style resembling type definitions in the C programming
@@ -46,20 +46,20 @@ package.
 
 The latest release of EverParse can be found `here <https://github.com/project-everest/everparse/releases>`_.
 
-We produce `pre-built Docker images <https://github.com/project-everest/everparse/pkgs/container>`_
+We produce `pre-built linux/amd64 Docker images <https://github.com/project-everest/everparse/pkgs/container/everparse>`_
 
 Manual
 ------
 
 * :ref:`3d` (includes the full documentation of the EverParse binary package)
 
-* Build instructions are available in the `README <https://github.com/project-everest/everparse/blob/master/README.md>`_
-
 * EverCBOR:
 
   + `Documented C example <https://github.com/project-everest/everparse/blob/master/src/cbor/pulse/det/c/example/main.c>`_
 
   + `Rust API reference <https://project-everest.github.io/everparse/evercbor-rust/cborrs/>`_
+
+* EverParse build instructions are available in the `README <https://github.com/project-everest/everparse/blob/master/README.md>`_
   
 In the News
 -----------

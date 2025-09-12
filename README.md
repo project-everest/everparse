@@ -4,11 +4,19 @@ EverParse is a framework for generating verified secure parsers from DSL format 
 It consists of several components:
 
 * LowParse, a verified combinator library written in F\*, Low\* and Pulse
-* QuackyDucky, an untrusted message format specification language compiler from TLS RFC-style descriptions
-* 3D, an untrusted format specification language compiler from data-dependent descriptions. 3D is more expressive than QuackyDucky
+* 3D: A frontend for EverParse to enable specifying data formats in an
+  style resembling type definitions in the C programming language, but
+  with data dependencies. We have used it to generate message
+  validation code for use within several low-level C programs.
+* QuackyDucky: A frontend for EverParse that accepts data formats in a
+  style common to many RFCs. We have used it to generate message
+  processing code for several networking protocols, including TLS and
+  QUIC.
 * EverCBOR, a standalone verified C/Rust implementation of CBOR
 * EverCOSign, a standalone verified C/Rust implementation of COSE signing and verification
-* EverCDDL, an untrusted format specification language compiler from CDDL data format descriptions
+* EverCDDL, a frontend for EverParse that accepts data formats for
+  CBOR objects in CDDL, and generates verified C or Rust data types,
+  parsers and serializers.
 
 For more information, you can read:
 * The [EverParse project website and user manual](https://project-everest.github.io/everparse), also available in the `doc` subdirectory of this repository as `*.rst` reStructuredText files.
