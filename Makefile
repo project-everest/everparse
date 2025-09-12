@@ -222,18 +222,12 @@ endif
 # filter-out comes from NOT_INCLUDED in src/ASN1/Makefile
 asn1: $(filter-out $(addprefix src/ASN1/,$(addsuffix .checked,ASN1.Tmp.fst ASN1.Test.Interpreter.fst ASN1.Low.% ASN1Test.fst ASN1.bak%)),$(filter src/ASN1/%,$(ALL_CHECKED_FILES)))
 
-quackyducky: bin/qd.exe lowparse
+quackyducky: qd-exe lowparse
 
-bin/qd.exe: $(NEED_OPAM)
+qd-exe: $(NEED_OPAM)
 	+$(MAKE) -C src/qd
 
-.gen-test.touch: bin/qd.exe tests/unittests.rfc tests/bitcoin.rfc
-	rm -f tests/unit/*.fst tests/unit/*.fsti
-	bin/qd.exe -odir tests/unit tests/unittests.rfc
-	bin/qd.exe -low -odir tests/unit tests/bitcoin.rfc
-	touch $@
-
-gen-test: .gen-test.touch
+.PHONY: qd-exe
 
 lowparse-unit-test: lowparse
 	+$(MAKE) -C tests/lowparse
@@ -265,19 +259,8 @@ endif
 
 lowparse-test: lowparse-unit-test lowparse-bitfields-test lowparse-pulse-test
 
-quackyducky-unit-test: gen-test lowparse
-	+$(MAKE) -C tests/unit
-
-quackyducky-sample-test: quackyducky lowparse
-	+$(MAKE) -C tests/sample
-
-quackyducky-sample-low-test: quackyducky lowparse
-	+$(MAKE) -C tests/sample_low
-
-quackyducky-sample0-test: quackyducky lowparse
-	+$(MAKE) -C tests/sample0
-
-quackyducky-test: quackyducky-unit-test quackyducky-sample-test quackyducky-sample0-test quackyducky-sample-low-test
+quackyducky-test: quackyducky
+	+$(MAKE) -C tests
 
 test: all lowparse-test quackyducky-test 3d-test asn1-test cbor-test cddl-test cose-test
 
@@ -428,7 +411,7 @@ clean-quackyducky:
 clean: clean-3d clean-lowparse clean-quackyducky
 	rm -rf bin
 
-.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test quackyducky-test lowparse-fstar-test quackyducky-sample-test quackyducky-sample0-test quackyducky-unit-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse 3d-unit-test 3d-doc-test ci clean-3d clean-lowparse clean-quackyducky asn1 asn1-test
+.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test lowparse-fstar-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse 3d-unit-test 3d-doc-test ci clean-3d clean-lowparse clean-quackyducky asn1 asn1-test
 
 release package package-noversion nuget-noversion everparse:
 	+$(MAKE) -f package.Makefile $@
