@@ -227,6 +227,26 @@ Run `make 3d`
 
 Run `make quackyducky`
 
+## Build a binary package
+
+To build a standalone native binary package on Linux or MacOS that
+would work similarly to a GitHub Releases binary package, run one of
+the following commands:
+
+* `make -f package.Makefile everparse` to get a directory called `everparse` containing native binaries for EverParse
+* `make -f package.Makefile package` to get a compressed archive thereof
+
+NOTE: These commands can also be run from Windows+Cygwin with opam
+installed, to obtain native binary packages for Windows (rather than
+Linux binaries with WSL2), but only from commits tagged with a GitHub
+Releases tag. (Such tagged EverParse commits contain sources of F\*
+that can natively build on Windows, which is not the case for the
+regular F\* repository.) In that case, you may need to install
+additional Cygwin packages by running
+`src/package/windows/install-cygwin-packages.sh` beforehand. Then, you
+can also run `make -f package.Makefile nuget` to build a NuGet
+package.
+
 # Advanced
 
 ## Writing F\* proofs
@@ -310,3 +330,5 @@ variables:
   of the directory where Pulse was compiled (in most cases, the `out/`
   subdirectory of the Pulse clone.) This requires `FSTAR_EXE` to be
   set.
+
+NOTES: These settings are all ignored when building a binary package.
