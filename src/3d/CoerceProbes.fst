@@ -212,7 +212,7 @@ let find_probe_fn_for_type (e:env) (id:ident) (r:range)
   | None ->
     GlobalEnv.find_probe_fn (B.global_env_of_env e.benv) r (CoerceProbeFunction(id,id))
   | p -> p
-let probe_copy_and_maybe_return_type (e:env) (return:bool) (fn:ident) (t0:typ) (k:probe_action)
+let probe_copy_and_maybe_return_type (e:env) (return:bool) (fn:ident) (t0:typ) (constraint:option expr) (k:probe_action)
 : ML probe_action
 = let probe_and_copy_n = find_probe_fn e.benv PQWithOffsets fn.range in
   let t = B.unfold_typ_abbrev_and_enum e.benv t0 in
@@ -249,11 +249,22 @@ let probe_copy_and_maybe_return_type (e:env) (return:bool) (fn:ident) (t0:typ) (
     then (
       let reader = find_probe_fn e.benv (PQRead i) fn.range in
       let writer = find_probe_fn e.benv (PQWrite i) fn.range in
+      let maybe_warn =
+        if Some? constraint `_or_` Binding.is_enum e.benv t0
+        then Some (
+          Printf.sprintf
+            "Coercive probes cannot read integer or pointer types with constraints or enum types; \
+            field %s has type %s%s"
+            (print_ident fn) (print_typ t0)
+            (match constraint with | None -> "" | Some e -> Printf.sprintf " with constraint %s" (print_expr e)), fn.range
+        )
+        else None
+      in
       with_dummy_range <|
       Probe_action_let
         (cstring (print_ident fn))
         fn
-        (Probe_action_copy_and_return reader writer i)
+        (Probe_action_copy_and_return reader writer i maybe_warn)
         k
     )
     else (
@@ -364,7 +375,9 @@ let rec coerce_fields (e:env) (r0 r1:record)
           then (
             let _ = check_scope_type e af0.v.field_ident af0.v.field_type in
             let e' = if af0.v.field_dependence then push_field af0 e else e in
-            probe_copy_and_maybe_return_type e af0.v.field_dependence af0.v.field_ident af0.v.field_type
+            probe_copy_and_maybe_return_type
+              e af0.v.field_dependence af0.v.field_ident
+              af0.v.field_type af0.v.field_constraint
               (coerce_fields e' tl0 tl1)
           )
           else (
@@ -547,11 +560,15 @@ let rec optimize_coercion (p:probe_action)
     )
     | _ -> def ()
   )
-  | Probe_action_let d i (Probe_action_copy_and_return reader write ity) k ->
+  | Probe_action_let d i (Probe_action_copy_and_return reader write ity maybe_warn) k ->
     let k = optimize_coercion k in
     let vs = free_vars_of_probe_action k in
     if List.existsb (fun j -> eq_idents i j) vs
-    then { p with v = Probe_action_let d i (Probe_action_copy_and_return reader write ity) k }
+    then begin
+      match maybe_warn with
+      | None -> { p with v = Probe_action_let d i (Probe_action_copy_and_return reader write ity None) k }
+      | Some (msg, r) -> error msg r
+    end
     else (
       let c = 
         with_dummy_range <|

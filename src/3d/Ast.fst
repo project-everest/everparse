@@ -31,6 +31,7 @@ type either a b =
   | Inr of b
 
 /// pos: Source locations
+[@@ PpxDerivingYoJson ]
 type pos = {
   filename: string;
   line:int;
@@ -81,6 +82,7 @@ let string_of_pos p =
   Printf.sprintf "%s:(%d,%d)" p.filename p.line p.col
 
 /// range: A source extent
+[@@ PpxDerivingYoJson ]
 let range = pos * pos
 
 /// comment: A list of line comments, i.e., a list of strings
@@ -502,7 +504,7 @@ type probe_atomic_action =
   | Probe_action_call : f:ident -> args:list expr -> probe_atomic_action
   | Probe_action_read : f:ident -> probe_atomic_action
   | Probe_action_write : f:ident -> value:expr -> probe_atomic_action
-  | Probe_action_copy_and_return: reader:ident -> writer:ident -> ty:integer_type -> probe_atomic_action
+  | Probe_action_copy_and_return: reader:ident -> writer:ident -> ty:integer_type -> maybe_warn:option (string & range) -> probe_atomic_action
   | Probe_action_copy : f:ident -> len:expr -> probe_atomic_action
   | Probe_action_skip_read : len:expr -> probe_atomic_action
   | Probe_action_skip_write : len:expr -> probe_atomic_action
@@ -1068,7 +1070,7 @@ and print_probe_atomic_action (p:probe_atomic_action)
   | Probe_action_call f args -> Printf.sprintf "(Probe_action_call %s(%s));" (print_ident f) (String.concat ", " (List.map print_expr args))
   | Probe_action_read f -> Printf.sprintf "(Probe_action_read %s);" (print_ident f)
   | Probe_action_write f v ->Printf.sprintf "(Probe_action_write %s(%s));" (print_ident f) (print_expr v)
-  | Probe_action_copy_and_return r w ty -> Printf.sprintf "(Probe_action_copy_and_return %s %s %s);" (print_ident r) (print_ident w) (print_integer_type ty)
+  | Probe_action_copy_and_return r w ty maybe_warn -> Printf.sprintf "(Probe_action_copy_and_return %s %s %s);" (print_ident r) (print_ident w) (print_integer_type ty)
   | Probe_action_copy f v -> Printf.sprintf "(Probe_action_copy %s(%s));" (print_ident f) (print_expr v)
   | Probe_action_skip_read n -> Printf.sprintf "(Probe_action_skip_read %s);" (print_expr n)
   | Probe_action_skip_write n -> Printf.sprintf "(Probe_action_skip_write %s);" (print_expr n)
@@ -1608,7 +1610,7 @@ let subst_probe_atomic_action (s:subst) (aa:probe_atomic_action) : ML probe_atom
   | Probe_action_call f args -> Probe_action_call f (List.map (subst_expr s) args)
   | Probe_action_read f -> Probe_action_read f
   | Probe_action_write f value -> Probe_action_write f (subst_expr s value)
-  | Probe_action_copy_and_return r w ty -> Probe_action_copy_and_return r w ty
+  | Probe_action_copy_and_return r w ty maybe_warn -> Probe_action_copy_and_return r w ty maybe_warn
   | Probe_action_copy f len -> Probe_action_copy f (subst_expr s len)
   | Probe_action_skip_read len -> Probe_action_skip_read (subst_expr s len)
   | Probe_action_skip_write len -> Probe_action_skip_write (subst_expr s len)

@@ -266,25 +266,6 @@ let lookup_macro_definition (e:env) (i:ident) =
   with
   | _ -> None
 
-let try_lookup_enum_cases (e:env) (i:ident)
-  : ML (option (list ident & typ))
-  = match lookup e i with
-    | Inr ({d_decl={v=Enum t _ tags}}, _) ->
-      Some (Desugar.check_desugared_enum_cases tags, t)
-    | _ -> None
-
-let lookup_enum_cases (e:env) (i:ident)
-  : ML (list ident & typ)
-  = match try_lookup_enum_cases e i with
-    | Some (tags, t) -> tags, t
-    | _ -> error (Printf.sprintf "Type %s is not an enumeration" (ident_to_string i)) i.range
-
-let is_enum (e:env) (t:typ) =
-  match t.v with
-  | Type_app i KindSpec [] [] ->
-    Some? (try_lookup_enum_cases e i)
-  | _ -> false
-
 let is_used (e:env) (i:ident) : ML bool =
   match H.try_find e.locals i.v with
   | Some (_, t, b) -> b
@@ -375,6 +356,25 @@ let typ_has_reader env (t:typ) : ML bool =
   | Pointer _ _ -> true
   | Type_app hd _ _ _ ->
     has_reader env.globals hd
+  | _ -> false
+
+let try_lookup_enum_cases (e:env) (i:ident)
+  : ML (option (list ident & typ))
+  = match lookup e i with
+    | Inr ({d_decl={v=Enum t _ tags}}, _) ->
+      Some (Desugar.check_desugared_enum_cases tags, t)
+    | _ -> None
+
+let lookup_enum_cases (e:env) (i:ident)
+  : ML (list ident & typ)
+  = match try_lookup_enum_cases e i with
+    | Some (tags, t) -> tags, t
+    | _ -> error (Printf.sprintf "Type %s is not an enumeration" (ident_to_string i)) i.range
+
+let is_enum (e:env) (t:typ) =
+  match t.v with
+  | Type_app i KindSpec [] [] ->
+    Some? (try_lookup_enum_cases e i)
   | _ -> false
 
 let rec unfold_typ_abbrev_only (env:env) (t:typ) : ML typ =
@@ -1342,7 +1342,7 @@ let rec check_probe env a : ML (probe_action & typ) =
         error (Printf.sprintf "Probe function %s not found or not a read function" (print_ident f))
               f.range
     )
-    | Probe_action_copy_and_return r w ity -> (
+    | Probe_action_copy_and_return r w ity maybe_warn -> (
       let r_resolved = match GlobalEnv.resolve_probe_fn env.globals r (PQRead ity) with
         | None ->
           error (Printf.sprintf "Probe reader function %s not found" (print_ident r))
@@ -1356,7 +1356,7 @@ let rec check_probe env a : ML (probe_action & typ) =
         | Some id -> id
       in
       let ty = check_typ false env (type_of_integer_type ity) in
-      Probe_action_copy_and_return r_resolved w_resolved ity, ty
+      Probe_action_copy_and_return r_resolved w_resolved ity maybe_warn, ty
     )
     | Probe_action_copy f v -> (
       match GlobalEnv.resolve_probe_fn env.globals f PQWithOffsets with
