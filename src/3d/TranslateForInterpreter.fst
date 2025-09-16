@@ -806,6 +806,8 @@ let rec translate_probe_action (a:A.probe_action) : ML (T.probe_action & T.decls
       T.Atomic_probe_and_read f
     | A.Probe_action_write f v ->
       T.Atomic_probe_write_at_offset (translate_expr v) f
+    | A.Probe_action_copy_and_return r w ty maybe_warn ->
+      failwith "Probe_action_copy_and_return should already have been desugared in the outer pass"
     | A.Probe_action_copy f v ->
       T.Atomic_probe_and_copy (translate_expr v) f
     | A.Probe_action_skip_read n ->
@@ -824,6 +826,16 @@ let rec translate_probe_action (a:A.probe_action) : ML (T.probe_action & T.decls
     let hd, ds1 = translate_probe_action hd in
     let tl, ds2 = translate_probe_action tl in
     T.Probe_action_seq (translate_expr d) hd tl, ds1@ds2
+  | A.Probe_action_let d i (A.Probe_action_copy_and_return reader writer _ _) k ->
+    let reader = A.Probe_action_read reader in
+    let writer = A.Probe_action_write writer (A.with_dummy_range <| Identifier i) in
+    let simplified = 
+      with_dummy_range <|
+        A.Probe_action_let d i reader
+          (with_dummy_range <|
+            A.Probe_action_seq d (with_dummy_range <| A.Probe_atomic_action writer) k)
+    in
+    translate_probe_action simplified
   | A.Probe_action_let d i a k ->
     let a = translate_atomic a in
     let tl, ds2 = translate_probe_action k in

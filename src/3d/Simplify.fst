@@ -121,6 +121,8 @@ let simplify_probe_atomic_action (env:T.env_t) (a:probe_atomic_action)
       Probe_action_read f
     | Probe_action_write f v ->
       Probe_action_write f (simplify_expr env v)
+    | Probe_action_copy_and_return r w ty maybe_warn ->
+      Probe_action_copy_and_return r w ty maybe_warn
     | Probe_action_copy f v ->
       Probe_action_copy f (simplify_expr env v)
     | Probe_action_skip_read e ->

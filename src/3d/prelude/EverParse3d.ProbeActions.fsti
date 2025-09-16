@@ -30,6 +30,10 @@ noextract
 val probe_and_read_at_offset_t (t:Type0) (size_t:U64.t) : Type0
 
 inline_for_extraction
+let probe_and_read_at_offset_uint8 = probe_and_read_at_offset_t U8.t 1uL
+inline_for_extraction
+let probe_and_read_at_offset_uint16 = probe_and_read_at_offset_t U16.t 2uL
+inline_for_extraction
 let probe_and_read_at_offset_uint32 = probe_and_read_at_offset_t U32.t 4uL
 inline_for_extraction
 let probe_and_read_at_offset_uint64 = probe_and_read_at_offset_t U64.t 8uL

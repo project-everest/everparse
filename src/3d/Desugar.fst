@@ -327,6 +327,7 @@ let resolve_probe_atomic_action (env:qenv) (ac:probe_atomic_action) : ML probe_a
     Probe_action_call (resolve_ident env f) (List.map (resolve_expr env) args)
   | Probe_action_read f -> Probe_action_read (resolve_ident env f)
   | Probe_action_write f v -> Probe_action_write (resolve_ident env f) (resolve_expr env v)
+  | Probe_action_copy_and_return r w ty maybe_warn -> Probe_action_copy_and_return (resolve_ident env r) (resolve_ident env w) ty maybe_warn
   | Probe_action_copy f v -> Probe_action_copy (resolve_ident env f) (resolve_expr env v)
   | Probe_action_skip_read n -> Probe_action_skip_read (resolve_expr env n)
   | Probe_action_skip_write n -> Probe_action_skip_write (resolve_expr env n)

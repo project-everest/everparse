@@ -25,10 +25,10 @@ void DefaultErrorHandler(
 	);
 }
 
-BOOLEAN SpecializeDep1CheckEntry(BOOLEAN ___Requestor32, uint8_t ___Expected, uint16_t ___Len, EVERPARSE_COPY_BUFFER_T ___Output, uint8_t *base, uint32_t len) {
+BOOLEAN SpecializeDep1CheckEntry(BOOLEAN ___Requestor32, uint16_t ___Len, EVERPARSE_COPY_BUFFER_T ___Output, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	frame.filled = FALSE;
-	uint64_t result = SpecializeDep1ValidateEntry(___Requestor32, ___Expected, ___Len, ___Output,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	uint64_t result = SpecializeDep1ValidateEntry(___Requestor32, ___Len, ___Output,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 	if (EverParseIsError(result))
 	{
 		if (frame.filled)
