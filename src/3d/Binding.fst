@@ -266,25 +266,6 @@ let lookup_macro_definition (e:env) (i:ident) =
   with
   | _ -> None
 
-let try_lookup_enum_cases (e:env) (i:ident)
-  : ML (option (list ident & typ))
-  = match lookup e i with
-    | Inr ({d_decl={v=Enum t _ tags}}, _) ->
-      Some (Desugar.check_desugared_enum_cases tags, t)
-    | _ -> None
-
-let lookup_enum_cases (e:env) (i:ident)
-  : ML (list ident & typ)
-  = match try_lookup_enum_cases e i with
-    | Some (tags, t) -> tags, t
-    | _ -> error (Printf.sprintf "Type %s is not an enumeration" (ident_to_string i)) i.range
-
-let is_enum (e:env) (t:typ) =
-  match t.v with
-  | Type_app i KindSpec [] [] ->
-    Some? (try_lookup_enum_cases e i)
-  | _ -> false
-
 let is_used (e:env) (i:ident) : ML bool =
   match H.try_find e.locals i.v with
   | Some (_, t, b) -> b
@@ -375,6 +356,25 @@ let typ_has_reader env (t:typ) : ML bool =
   | Pointer _ _ -> true
   | Type_app hd _ _ _ ->
     has_reader env.globals hd
+  | _ -> false
+
+let try_lookup_enum_cases (e:env) (i:ident)
+  : ML (option (list ident & typ))
+  = match lookup e i with
+    | Inr ({d_decl={v=Enum t _ tags}}, _) ->
+      Some (Desugar.check_desugared_enum_cases tags, t)
+    | _ -> None
+
+let lookup_enum_cases (e:env) (i:ident)
+  : ML (list ident & typ)
+  = match try_lookup_enum_cases e i with
+    | Some (tags, t) -> tags, t
+    | _ -> error (Printf.sprintf "Type %s is not an enumeration" (ident_to_string i)) i.range
+
+let is_enum (e:env) (t:typ) =
+  match t.v with
+  | Type_app i KindSpec [] [] ->
+    Some? (try_lookup_enum_cases e i)
   | _ -> false
 
 let rec unfold_typ_abbrev_only (env:env) (t:typ) : ML typ =
@@ -1342,6 +1342,22 @@ let rec check_probe env a : ML (probe_action & typ) =
         error (Printf.sprintf "Probe function %s not found or not a read function" (print_ident f))
               f.range
     )
+    | Probe_action_copy_and_return r w ity maybe_warn -> (
+      let r_resolved = match GlobalEnv.resolve_probe_fn env.globals r (PQRead ity) with
+        | None ->
+          error (Printf.sprintf "Probe reader function %s not found" (print_ident r))
+                r.range
+        | Some id -> id
+      in
+      let w_resolved = match GlobalEnv.resolve_probe_fn env.globals w (PQWrite ity) with
+        | None ->
+          error (Printf.sprintf "Probe writer function %s not found" (print_ident w))
+                w.range
+        | Some id -> id
+      in
+      let ty = check_typ false env (type_of_integer_type ity) in
+      Probe_action_copy_and_return r_resolved w_resolved ity maybe_warn, ty
+    )
     | Probe_action_copy f v -> (
       match GlobalEnv.resolve_probe_fn env.globals f PQWithOffsets with
       | None ->
@@ -1487,11 +1503,37 @@ let check_probe_call (env:env) (ft:typ) (p:probe_call)
                         dest.range;
     dest
   in
+  let check_type_is_record_or_case env ty r : ML unit =
+    Options.debug_print_string (Printf.sprintf "Checking that %s is a record or case type\n"
+                                      (print_typ ty));
+    let fail #a () : ML a =
+      error (Printf.sprintf "Probes are only allowed on record or case type fields, got %s"
+              (print_typ ty)) r
+    in
+    match (unfold_typ_abbrev_only env ty).v with
+    | Type_app i KindSpec _ _ ->
+      let d, attrs = 
+        try
+          lookup_type_decl env i
+        with _ -> fail ()
+      in
+      if attrs.primitive then fail();
+      begin
+      match d with
+      | { d_decl = { v = Record _ _ _ _ _ } }
+      | { d_decl = { v = CaseType _ _ _ _ } } -> ()
+      | _ -> fail()
+      end
+    | _ ->
+      fail()
+  in
   let check_probe_ptr_as_u64 env (as_u64:option ident) 
     : ML (option ident)
     = let ptr_size =
         match ft.v with
-        | Pointer _ pq -> pq_as_integer_type pq
+        | Pointer ty pq ->
+          check_type_is_record_or_case env ty ft.range;
+          pq_as_integer_type pq
         | _ ->
           error (
               Printf.sprintf "Probes are only allowed on pointer fields, got %s"
@@ -2167,7 +2209,8 @@ let elaborate_record_decl (e:global_env)
         bit_order = None;
         has_reader = false;
         parser_weak_kind = weak_kind_of_record env fields;
-        parser_kind_nz = None
+        parser_kind_nz = None;
+        primitive = false
       }
     in
     add_global e tdnames.typedef_name d (Inl attrs);
@@ -2321,7 +2364,8 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
         bit_order = bit_order;
         has_reader = typ_has_reader env t;
         parser_weak_kind = wk;
-        parser_kind_nz = None
+        parser_kind_nz = None;
+        primitive = false
       }
     in
     let d = decl_with_v d (TypeAbbrev attribs t i gs ps) in
@@ -2348,7 +2392,8 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
         bit_order = Some bit_order;
         has_reader = false; //it's a refinement, so you can't read it again because of double fetches
         parser_weak_kind = WeakKindStrongPrefix;
-        parser_kind_nz = None
+        parser_kind_nz = None;
+        primitive = false
       }
     in
     let d = decl_with_v d (Enum t i cases) in
@@ -2372,7 +2417,8 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
       bit_order = None;
       has_reader = false;
       parser_weak_kind = wk;
-      parser_kind_nz = None
+      parser_kind_nz = None;
+      primitive = false
     } in
     let d = mk_decl (CaseType tdnames generics params switch) d.d_decl.range d.d_decl.comments d.d_exported in
     add_global e tdnames.typedef_name d (Inl attrs);
@@ -2459,7 +2505,8 @@ let initial_global_env mname =
           bit_order = None;
           has_reader = true;
           parser_weak_kind = WeakKindStrongPrefix;
-          parser_kind_nz = Some false
+          parser_kind_nz = Some false;
+          primitive = true
         });
       ("Bool",
         {
@@ -2468,7 +2515,8 @@ let initial_global_env mname =
           bit_order = None;
           has_reader = true;
           parser_weak_kind = WeakKindStrongPrefix;
-          parser_kind_nz = Some true
+          parser_kind_nz = Some true;
+          primitive = true
         });
       ("string",
         {
@@ -2477,7 +2525,8 @@ let initial_global_env mname =
           bit_order = None;
           has_reader = false;
           parser_weak_kind = WeakKindWeak;
-          parser_kind_nz = None
+          parser_kind_nz = None;
+          primitive = true
         });
       ("UINT8",
         {
@@ -2486,7 +2535,8 @@ let initial_global_env mname =
           bit_order = Some LSBFirst;
           has_reader = true;
           parser_weak_kind = WeakKindStrongPrefix;
-          parser_kind_nz = Some true
+          parser_kind_nz = Some true;
+          primitive = true
         });
       ("UINT16",
         {
@@ -2495,7 +2545,8 @@ let initial_global_env mname =
           bit_order = Some LSBFirst;
           has_reader = true;
           parser_weak_kind = WeakKindStrongPrefix;
-          parser_kind_nz = Some true
+          parser_kind_nz = Some true;
+          primitive = true
         });
       ("UINT32",
         {
@@ -2504,7 +2555,8 @@ let initial_global_env mname =
           bit_order = Some LSBFirst;
           has_reader = true;
           parser_weak_kind = WeakKindStrongPrefix;
-          parser_kind_nz = Some true
+          parser_kind_nz = Some true;
+          primitive = true
         });
       ("UINT64",
         {
@@ -2513,7 +2565,8 @@ let initial_global_env mname =
           bit_order = Some LSBFirst;
           has_reader = true;
           parser_weak_kind = WeakKindStrongPrefix;
-          parser_kind_nz = Some true
+          parser_kind_nz = Some true;
+          primitive = true
         });
       ("UINT8BE",
         {
@@ -2522,7 +2575,8 @@ let initial_global_env mname =
           bit_order = Some MSBFirst;
           has_reader = true;
           parser_weak_kind = WeakKindStrongPrefix;
-          parser_kind_nz = Some true
+          parser_kind_nz = Some true;
+          primitive = true
         });
       ("UINT16BE",
         {
@@ -2531,7 +2585,8 @@ let initial_global_env mname =
           bit_order = Some MSBFirst;
           has_reader = true;
           parser_weak_kind = WeakKindStrongPrefix;
-          parser_kind_nz = Some true
+          parser_kind_nz = Some true;
+          primitive = true
         });
       ("UINT32BE",
         {
@@ -2540,7 +2595,8 @@ let initial_global_env mname =
           bit_order = Some MSBFirst;
           has_reader = true;
           parser_weak_kind = WeakKindStrongPrefix;
-          parser_kind_nz = Some true
+          parser_kind_nz = Some true;
+          primitive = true
         });
       ("UINT64BE",
         {
@@ -2549,7 +2605,8 @@ let initial_global_env mname =
           bit_order = Some MSBFirst;
           has_reader = true;
           parser_weak_kind = WeakKindStrongPrefix;
-          parser_kind_nz = Some true
+          parser_kind_nz = Some true;
+          primitive = true
         });
       ("field_id",
         {
@@ -2558,7 +2615,8 @@ let initial_global_env mname =
           bit_order = None;
           has_reader = false;
           parser_weak_kind = WeakKindStrongPrefix;
-          parser_kind_nz = Some true
+          parser_kind_nz = Some true;
+          primitive = true
         });
       ("all_bytes",
         {
@@ -2567,7 +2625,8 @@ let initial_global_env mname =
           bit_order = None;
           has_reader = false;
           parser_weak_kind = WeakKindConsumesAll;
-          parser_kind_nz = Some false
+          parser_kind_nz = Some false;
+          primitive = true
         });
       ("all_zeros",
         {
@@ -2576,7 +2635,8 @@ let initial_global_env mname =
           bit_order = None;
           has_reader = false;
           parser_weak_kind = WeakKindConsumesAll;
-          parser_kind_nz = Some false
+          parser_kind_nz = Some false;
+          primitive = true
         });
       ("PUINT8",
         {
@@ -2585,7 +2645,8 @@ let initial_global_env mname =
           bit_order = None;
           has_reader = false;
           parser_weak_kind = WeakKindStrongPrefix;
-          parser_kind_nz = Some true
+          parser_kind_nz = Some true;
+          primitive = true
         });
       ("EVERPARSE_COPY_BUFFER_T",
         {
@@ -2594,7 +2655,8 @@ let initial_global_env mname =
           bit_order = None;
           has_reader = false;
           parser_weak_kind = WeakKindStrongPrefix;
-          parser_kind_nz = Some true
+          parser_kind_nz = Some true;
+          primitive = true
         });
       ("probe_m_unit",
         {
@@ -2603,7 +2665,8 @@ let initial_global_env mname =
           bit_order = None;
           has_reader = false;
           parser_weak_kind = WeakKindWeak;
-          parser_kind_nz = None
+          parser_kind_nz = None;
+          primitive = true
         });
 
     ] |>
