@@ -1676,7 +1676,7 @@ advance:
 This works: if the caller can bound the entire size of the pointed to data and
 pass it to ``WRAPPER`` as a parameter ``Len``, then we can use that as a bound.
 
-.. literalinclude:: SpecializeDep2.3d
+.. literalinclude:: SpecializeDep1.3d
   :language: 3d
   :start-after: //SNIPPET_START: main$
   :end-before: //SNIPPET_END: main$
@@ -1700,7 +1700,7 @@ The error message reported by 3d is as follows:
 
 .. code-block:: text
 
-    ./SpecializeDep2.3d:(24,11):
+    ./SpecializeDep1.3d:(24,11):
     (Error) Coercive probes cannot read integer or pointer types with constraints or enum types;
     field tag has type UINT8 with constraint (((tag = 0uy) || (tag = 1uy)) || (tag = 2uy))
 
@@ -1719,7 +1719,7 @@ then once again 3d's reports an error:
 
 .. code-block:: text
 
-    ./SpecializeDep2.3d:(25,12): (Error) Coercive probes cannot read integer or pointer types with constraints or enum types;
+    ./SpecializeDep1.3d:(25,12): (Error) Coercive probes cannot read integer or pointer types with constraints or enum types;
     field length has type UINT32 with constraint (length = (UINT32) Len)
     
 Note, one does not always need the calling context to pass in arguments like
