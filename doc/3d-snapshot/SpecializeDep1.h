@@ -12,7 +12,6 @@ extern "C" {
 uint64_t
 SpecializeDep1ValidateEntry(
   BOOLEAN Requestor32,
-  uint8_t Expected,
   uint16_t Len,
   EVERPARSE_COPY_BUFFER_T Output,
   uint8_t *Ctxt,

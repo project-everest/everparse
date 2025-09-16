@@ -13,7 +13,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-BOOLEAN SpecializeDep1CheckEntry(BOOLEAN ___Requestor32, uint8_t ___Expected, uint16_t ___Len, EVERPARSE_COPY_BUFFER_T ___Output, uint8_t *base, uint32_t len);
+BOOLEAN SpecializeDep1CheckEntry(BOOLEAN ___Requestor32, uint16_t ___Len, EVERPARSE_COPY_BUFFER_T ___Output, uint8_t *base, uint32_t len);
 #ifdef __cplusplus
 }
 #endif
