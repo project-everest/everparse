@@ -332,11 +332,15 @@ variables:
   
 * If you want to use your own Karamel, first set
   `EVERPARSE_USE_KRML_HOME=1`, then set `KRML_HOME` to the full path
-  of your clone of the Karamel repository.
+  of your clone of the Karamel repository. This will automatically set
+  `EVERPARSE_USE_FSTAR_HOME=1`, since the Karamel library must be
+  compiled with the same F\* as EverParse.
 
 * If you want to use your own Pulse, first set
   `EVERPARSE_USE_PULSE_HOME=1`, then set `PULSE_HOME` to the full path
   of the directory where Pulse was compiled (in most cases, the `out/`
-  subdirectory of the Pulse clone.)
+  subdirectory of the Pulse clone.) This will automatically set
+  `EVERPARSE_USE_FSTAR_HOME=1`, since Pulse must be compiled with the
+  same F\* as EverParse.
 
 NOTES: These settings are all ignored when building a binary package.
