@@ -31,6 +31,7 @@ type either a b =
   | Inr of b
 
 /// pos: Source locations
+[@@ PpxDerivingYoJson ]
 type pos = {
   filename: string;
   line:int;
@@ -81,6 +82,7 @@ let string_of_pos p =
   Printf.sprintf "%s:(%d,%d)" p.filename p.line p.col
 
 /// range: A source extent
+[@@ PpxDerivingYoJson ]
 let range = pos * pos
 
 /// comment: A list of line comments, i.e., a list of strings
@@ -502,6 +504,7 @@ type probe_atomic_action =
   | Probe_action_call : f:ident -> args:list expr -> probe_atomic_action
   | Probe_action_read : f:ident -> probe_atomic_action
   | Probe_action_write : f:ident -> value:expr -> probe_atomic_action
+  | Probe_action_copy_and_return: reader:ident -> writer:ident -> ty:integer_type -> maybe_warn:option (string & range) -> probe_atomic_action
   | Probe_action_copy : f:ident -> len:expr -> probe_atomic_action
   | Probe_action_skip_read : len:expr -> probe_atomic_action
   | Probe_action_skip_write : len:expr -> probe_atomic_action
@@ -721,7 +724,7 @@ type decl' =
       
   | CoerceProbeFunctionStub:
       ident ->
-    list param ->
+      list param ->
       p:probe_function_type { CoerceProbeFunction? p \/ CoerceProbeFunctionPlaceholder? p } ->
       decl'
 
@@ -1067,6 +1070,7 @@ and print_probe_atomic_action (p:probe_atomic_action)
   | Probe_action_call f args -> Printf.sprintf "(Probe_action_call %s(%s));" (print_ident f) (String.concat ", " (List.map print_expr args))
   | Probe_action_read f -> Printf.sprintf "(Probe_action_read %s);" (print_ident f)
   | Probe_action_write f v ->Printf.sprintf "(Probe_action_write %s(%s));" (print_ident f) (print_expr v)
+  | Probe_action_copy_and_return r w ty maybe_warn -> Printf.sprintf "(Probe_action_copy_and_return %s %s %s);" (print_ident r) (print_ident w) (print_integer_type ty)
   | Probe_action_copy f v -> Printf.sprintf "(Probe_action_copy %s(%s));" (print_ident f) (print_expr v)
   | Probe_action_skip_read n -> Printf.sprintf "(Probe_action_skip_read %s);" (print_expr n)
   | Probe_action_skip_write n -> Printf.sprintf "(Probe_action_skip_write %s);" (print_expr n)
@@ -1588,12 +1592,25 @@ and subst_action_opt (s:subst) (a:option action) : ML (option action) =
   match a with
   | None -> None
   | Some a -> Some (subst_action s a)
+//No need to substitute in output expressions
+let subst_out_expr (s:subst) (o:out_expr) : out_expr = o
+let subst_typ_param (s:subst) (p:typ_param) : ML typ_param =
+  match p with
+  | Inl e -> Inl (subst_expr s e)
+  | Inr oe -> Inr (subst_out_expr s oe)
+let rec subst_typ (s:subst) (t:typ) : ML typ =
+  match t.v with
+  | Type_app hd k gs ps -> { t with v = Type_app hd k (List.map (subst_expr s) gs)  (List.map (subst_typ_param s) ps) }
+  | Pointer t q -> {t with v = Pointer (subst_typ s t) q }
+  | Type_arrow ts t -> mk_arrow (List.map (subst_typ s) ts) (subst_typ s t)
+
 let subst_probe_atomic_action (s:subst) (aa:probe_atomic_action) : ML probe_atomic_action =
   match aa with
   | Probe_action_return e -> Probe_action_return (subst_expr s e)
   | Probe_action_call f args -> Probe_action_call f (List.map (subst_expr s) args)
   | Probe_action_read f -> Probe_action_read f
   | Probe_action_write f value -> Probe_action_write f (subst_expr s value)
+  | Probe_action_copy_and_return r w ty maybe_warn -> Probe_action_copy_and_return r w ty maybe_warn
   | Probe_action_copy f len -> Probe_action_copy f (subst_expr s len)
   | Probe_action_skip_read len -> Probe_action_skip_read (subst_expr s len)
   | Probe_action_skip_write len -> Probe_action_skip_write (subst_expr s len)
@@ -1615,17 +1632,6 @@ let rec subst_probe_action (s:subst) (a:probe_action) : ML probe_action =
     {a with v = Probe_action_array (subst_expr s len) (subst_probe_action s action) }
   | Probe_action_copy_init_sz f ->
     {a with v = Probe_action_copy_init_sz f }
-//No need to substitute in output expressions
-let subst_out_expr (s:subst) (o:out_expr) : out_expr = o
-let subst_typ_param (s:subst) (p:typ_param) : ML typ_param =
-  match p with
-  | Inl e -> Inl (subst_expr s e)
-  | Inr oe -> Inr (subst_out_expr s oe)
-let rec subst_typ (s:subst) (t:typ) : ML typ =
-  match t.v with
-  | Type_app hd k gs ps -> { t with v = Type_app hd k (List.map (subst_expr s) gs)  (List.map (subst_typ_param s) ps) }
-  | Pointer t q -> {t with v = Pointer (subst_typ s t) q }
-  | Type_arrow ts t -> mk_arrow (List.map (subst_typ s) ts) (subst_typ s t)
 
 let subst_field_array (s:subst) (f:field_array_t) : ML field_array_t =
   match f with
@@ -1791,6 +1797,33 @@ let rec free_vars_of_typ (t:typ)
     List.fold_left (fun out p -> free_vars_of_typ_param p @ out) [] ps
   | Pointer t q -> free_vars_of_typ t
   | Type_arrow ts t -> List.fold_left (fun out t -> free_vars_of_typ t @ out) (free_vars_of_typ t) ts
+
+let rec free_vars_of_probe_action (a:probe_action)
+: ML (list ident)
+= match a.v with
+  | Probe_atomic_action aa -> free_vars_of_probe_atomic_action aa
+  | Probe_action_var i -> free_vars_of_expr i
+  | Probe_action_seq _ hd tl -> free_vars_of_probe_action hd @ free_vars_of_probe_action tl
+  | Probe_action_let _ _ aa k -> free_vars_of_probe_atomic_action aa @ free_vars_of_probe_action k
+  | Probe_action_ite hd then_ else_ ->
+    free_vars_of_expr hd @ 
+    free_vars_of_probe_action then_ @
+    free_vars_of_probe_action else_
+  | Probe_action_array len action ->
+    free_vars_of_expr len @ free_vars_of_probe_action action
+  | Probe_action_copy_init_sz _ -> []
+and free_vars_of_probe_atomic_action (aa:probe_atomic_action)
+: ML (list ident)
+= match aa with
+  | Probe_action_return e -> free_vars_of_expr e
+  | Probe_action_call _ args -> List.fold_left (fun out e -> free_vars_of_expr e @ out) [] args
+  | Probe_action_read _ -> []
+  | Probe_action_write _ value -> free_vars_of_expr value
+  | Probe_action_copy_and_return .. -> []
+  | Probe_action_copy _ len -> free_vars_of_expr len
+  | Probe_action_skip_read len -> free_vars_of_expr len
+  | Probe_action_skip_write len -> free_vars_of_expr len
+  | Probe_action_fail -> []
 
 let name32 (head_name:ident) : ident =
   let gen = reserved_prefix ^ "specialized32_" ^ head_name.v.name in

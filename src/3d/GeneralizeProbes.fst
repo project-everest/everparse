@@ -62,7 +62,7 @@ let find_probe_fn (e:B.env) (q:probe_qualifier) r
 = match GlobalEnv.extern_probe_fn_qual (B.global_env_of_env e) r q with
   | None ->
     error (Printf.sprintf "Cannot find probe function for %s" (print_probe_qualifier q))
-          dummy_range
+          r
   | Some id ->
     id
   
@@ -81,8 +81,8 @@ let should_generalize_ident (e:env) (id:ident) =
 let should_generalize (e:env) (n:typedef_names) = should_generalize_ident e n.typedef_abbrev
 let gen_signature (e:env) (id:ident) : ML generalized_signature = 
   match H.try_find e.should_generalize id.v with
-  | None -> failwith "No generalization signature for this type"
-  | Some None -> failwith "No generalization signature for this type"
+  | None -> failwith (Printf.sprintf "No generalization signature for this type <None>: %s" (print_ident id))
+  | Some None -> failwith (Printf.sprintf "No generalization signature for this type <Some None>: %s" (print_ident id))
   | Some (Some sig) -> sig
 
 let mark_for_probe (e:env) (id:ident) 
@@ -99,6 +99,10 @@ let mark_for_generalize (e:env) (id:ident)
     H.insert e.should_generalize id.v None;
     e, true
   )
+
+let clear_generalization (e:env) (n:typedef_names)
+: ML unit
+= H.remove e.should_generalize n.typedef_abbrev.v
 
 let set_generalization_signature (e:env) (id:ident) (sig:generalized_signature)
 : ML env
@@ -193,7 +197,7 @@ and needs_probe_case (maybe_generalize:bool) (enclosing_type:typedef_names) (e:e
   | Case _ f -> needs_probe_field maybe_generalize enclosing_type e f
   | DefaultCase f -> needs_probe_field maybe_generalize enclosing_type e f
 
-let need_probe_decl (e:env) (d:decl) 
+let needs_probe_decl (e:env) (d:decl) 
 : ML (env & bool)
 = let maybe_generalize = not (is_entrypoint d) in
   let should_descend n : ML bool =
@@ -204,7 +208,7 @@ let need_probe_decl (e:env) (d:decl)
   | Record names _ _ _ fields ->
     if should_descend names
     then fold_left_changed (needs_probe_field maybe_generalize names) e fields
-   else e, false
+    else e, false
   | CaseType names _ _ sw ->
     if should_descend names
     then fold_left_changed (needs_probe_case maybe_generalize names) e (snd sw)
@@ -214,11 +218,11 @@ let need_probe_decl (e:env) (d:decl)
   )
   | _ -> e, false
 
-let need_probe_decls (e:env) (ds:list decl)
+let needs_probe_decls (e:env) (ds:list decl)
 : ML (env & bool)
 = let any_change : ref bool = alloc false in
   let rec aux (e:env) (ds:list decl) : ML (env & bool) = 
-    let e, changed = fold_left_changed need_probe_decl e ds in
+    let e, changed = fold_left_changed needs_probe_decl e ds in
     if changed 
     then (
       any_change := true;
@@ -255,45 +259,46 @@ let rec generic_instantiations_for_type (e:B.env) (tt:typ)
     args, mk_arrow_ps params probe_m_t
   | _ -> failwith "Impossible: field type is an arrow"
 
-let generate_probe_function_stubs (e:env) (d:decl)
-: ML (list decl)
-= let simple_probe (names:_{should_generate_probe e names}) params
-    : ML decl
-    = let simple_probe_name = simple_probe_function_for_type names.typedef_abbrev in
-      let probe_size =
-          with_range (
-            App SizeOf [with_range (Identifier names.typedef_abbrev) names.typedef_name.range]
-          ) d.d_decl.range
-      in
-      let probe_and_copy_n = find_probe_fn e.benv PQWithOffsets d.d_decl.range in
-      let simple_probe =
-          with_range
-          (Probe_atomic_action (
-            Probe_action_copy probe_and_copy_n probe_size
-          ))
-          d.d_decl.range
-      in
-      let params = List.Tot.filter (should_retain_param_for_probe e.benv) params in
-      let d' = 
-        mk_decl         
-        //  (ProbeFunction simple_probe_name params simple_probe 
-        //     (SimpleProbeFunction names.typedef_abbrev))
-          (CoerceProbeFunctionStub 
-            (Ast.name32 simple_probe_name)
-            params
-            (CoerceProbeFunctionPlaceholder names.typedef_abbrev))
-          dummy_range
-          []
-          false
-      in
-      d'
+let simple_probe_for (e:env) (tid:ident) params
+: ML decl
+= let simple_probe_name = simple_probe_function_for_type tid in
+  let probe_size =
+    with_range (
+        App SizeOf [with_range (Identifier tid) tid.range]
+      ) tid.range
   in
+  let probe_and_copy_n = find_probe_fn e.benv PQWithOffsets tid.range in
+  let simple_probe =
+      with_range
+      (Probe_atomic_action (
+        Probe_action_copy probe_and_copy_n probe_size
+      ))
+      tid.range
+  in
+  let params = List.Tot.filter (should_retain_param_for_probe e.benv) params in
+  let d' = 
+    mk_decl         
+    //  (ProbeFunction simple_probe_name params simple_probe 
+    //     (SimpleProbeFunction names.typedef_abbrev))
+      (CoerceProbeFunctionStub 
+        (Ast.name32 simple_probe_name)
+        params
+        (CoerceProbeFunctionPlaceholder tid))
+      dummy_range
+      []
+      false
+  in
+  d'
+  
+let generate_probe_function_stubs_for_one_decl (e:env) (seen_probe_primitive:bool) (d:decl)
+: ML (list decl)
+= let simple_probe name params = simple_probe_for e name params in
   match d.d_decl.v with
   | Record names gs params w fields -> (
     if not <| should_generate_probe e names
     then [d]
     else (
-      let d' = simple_probe names params in
+      let d' = simple_probe names.typedef_abbrev params in
       [d;d']
     )
   )
@@ -301,11 +306,52 @@ let generate_probe_function_stubs (e:env) (d:decl)
     if not <| should_generate_probe e names
     then [d]
     else (
-      let d' = simple_probe names params in
+      let d' = simple_probe names.typedef_abbrev params in
+      [d;d']
+    )
+  )
+  | TypeAbbrev _attrs ty name gs params -> (
+    if not <| List.mem name.v e.needs_probe
+    then [d]
+    else (
+      let d' = simple_probe name params in
       [d;d']
     )
   )
   | _ -> [d]
+
+let generate_primitive_probe_function_stubs (e:env) (ids:list ident')
+: ML (list decl)
+= let generate_probe_for (id:ident')
+  : ML (list decl)
+  = let id = with_dummy_range id in
+    let ty = with_dummy_range <| Type_app id KindSpec [] [] in
+    if Binding.typ_is_integral e.benv ty
+    then [simple_probe_for e id []]
+    else []
+  in
+  List.collect generate_probe_for ids
+
+let generate_probe_function_stubs (e:env) (ds:list decl)
+: ML (list decl)
+= let aux seen_probe_primitive (d:decl) 
+  : ML (list decl & bool)
+  = match d.d_decl.v with
+    | ExternProbe _ PQWithOffsets ->
+      [d], true
+    | _ ->
+      generate_probe_function_stubs_for_one_decl e seen_probe_primitive d, seen_probe_primitive
+  in
+  let ds, _ =
+    List.fold_left
+    (fun (ds, seen_probe_primitive) d ->
+      let ds', seen_probe_primitive = aux seen_probe_primitive d in
+      ds'::ds, seen_probe_primitive)
+    ([], false) ds
+  in
+  List.rev ds |> List.flatten
+  
+
 
 let generalized_name (e:env) (head_name:ident) : ident = head_name
 
@@ -510,7 +556,9 @@ let do_generalization (e:env) (d:decl)
   | Record names gs params w fields -> (
     let fields, gs', sig = generalize_probe_fields e "" fields in
     match gs' with
-    | [] -> [d]
+    | [] -> (
+      [d]
+    )
     | _ -> (
       Options.debug_print_string
         (Printf.sprintf "**************************For type %s\nInstantiations with signature %s for fields: %s\n"
@@ -544,7 +592,9 @@ let do_generalization (e:env) (d:decl)
   | CaseType names gs params (v, cases) -> (
     let cases, gs', sig = generalize_probe_cases e "" cases in
     match gs' with
-    | [] -> [d]
+    | [] -> (
+      [d]
+    )
     | _ -> (
       Options.debug_print_string
         (Printf.sprintf "**************************For type %s\nInstantiations with signature %s for fields: %s\n"
@@ -575,12 +625,14 @@ let do_generalization (e:env) (d:decl)
       )
     )
   )
-  | _ -> [d]
+  | _ -> (
+    [d]
+  )
 
 let generalize_probe_decls (e:GlobalEnv.global_env) (ds:list decl)
 : ML (list decl)
 = let e = { benv = Binding.mk_env e; needs_probe = []; should_generalize = H.create 10 } in
-  let e, any_change = need_probe_decls e ds in
+  let e, any_change = needs_probe_decls e ds in
   let print_ident (i:ident') = i.name in
   let _ = 
     List.iter
@@ -600,7 +652,7 @@ let generalize_probe_decls (e:GlobalEnv.global_env) (ds:list decl)
       (String.concat ", " (H.fold (fun k _ out -> print_ident k::out) e.should_generalize [])));
   if not any_change then ds
   else (
-    let ds = List.collect (generate_probe_function_stubs e) ds in
+    let ds = generate_probe_function_stubs e ds in
     Options.debug_print_string "=============After generate probe functions=============\n";
     Options.debug_print_string (print_decls ds);
     Options.debug_print_string "\n";

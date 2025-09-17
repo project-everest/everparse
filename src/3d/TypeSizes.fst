@@ -284,6 +284,49 @@ let sum_size (n : size) (m:size)
 
 open FStar.List.Tot
 
+let align_t = x:int{x == 1 \/ x == 2 \/ x == 4 \/ x == 8}
+
+let union_padding (env:env_t) (swc:(expr & list case)) (size_and_alignments:list (size & alignment))
+: ML ((expr & list case) & size & alignment)
+= let scru, cases = swc in
+  let max_size, max_alignment =
+    List.fold_left #(int & align_t) #(size & alignment)
+      (fun (max_sz, max_align) (size, align) ->
+        let max_sz =
+          match size with
+          | Fixed n -> Math.Lib.max n max_sz
+          | _ -> max_sz
+        in
+        let max_align =
+          match align with
+          | None -> max_align
+          | Some a -> Math.Lib.max a max_align
+      in
+      max_sz, max_align
+    ) (0, 1) size_and_alignments
+  in
+  let pad_case (c:case) (n:nat) : ML case =
+    match c with
+    | Case p f ->
+      let padding_fields = padding_field env (mk_ident "__union_case_") (Printf.sprintf "(case %s)" (print_expr p)) n in
+      Case p (with_dummy_range (RecordField (f :: padding_fields) (mk_ident "__union_case_")))
+    | DefaultCase f ->
+      let padding_fields = padding_field env (mk_ident "__union_case_") "(default case)" n in
+      DefaultCase (with_dummy_range (RecordField (f :: padding_fields) (mk_ident "__union_case_")))
+  in
+  let cases =
+    List.map2
+      (fun case (size, align) ->
+        match size with
+        | Fixed sz ->
+          if sz < max_size
+          then pad_case case (max_size - sz)
+          else case
+        | _ -> case)
+      cases size_and_alignments
+  in
+  (scru, cases), Fixed max_size, Some max_alignment
+
 let rec size_and_alignment_of_field (env:env_t)
                                     (should_align:bool)
                                     (diag_enclosing_type_name:ident)
@@ -385,24 +428,41 @@ let rec size_and_alignment_of_field (env:env_t)
         | Some s -> s
       in
       let alignment = if Fixed? size then alignment else None in
-      if should_align
-      then (
-        let all_cases_fixed =
-          List.for_all (function (Fixed _, _) -> true | _ -> false) size_and_alignments
-        in
-        if all_cases_fixed
-        && not (Fixed? size)
-        then error 
-              (Printf.sprintf
-                "Type %s is a union with an 'aligned' qualifier. \
-                All cases of a union with a fixed size \
-                must have the same size; \
-                union padding is not yet supported"
-               (ident_to_string diag_enclosing_type_name)
-              )
-               f.range
-      );
       let swc = fst swc, cases in
+      let swc, size, alignment =
+        if should_align
+        then (
+          let all_cases_fixed =
+            List.for_all (function (Fixed _, _) -> true | _ -> false) size_and_alignments
+          in
+          if not all_cases_fixed
+          then (
+            let cases = List.zip cases size_and_alignments in
+            let non_fixed_cases = List.filter (function (_, (Fixed _, _)) -> false | _ -> true) cases in
+            error 
+                (Printf.sprintf
+                  "Type %s is a union with an 'aligned' qualifier. \
+                  All cases of a union must have a fixed size to enable union padding;\n\
+                  The following cases do not have a fixed size:\n%s\n"
+                (ident_to_string diag_enclosing_type_name)
+                (String.concat "\n"
+                  (List.map
+                    (fun (c, (s, _)) ->
+                      Printf.sprintf "  case %s : size %s"
+                        (match c with
+                         | Case p _ -> print_expr p
+                         | DefaultCase _ -> "(default case)")
+                        (print_size s))
+                    non_fixed_cases)
+                ))
+                f.range
+          );
+          if Fixed? size
+          then swc, size, alignment
+          else union_padding env swc size_and_alignments
+       )
+        else swc, size, alignment
+      in
       let f = { f with v = SwitchCaseField swc field_name } in
       f, size, alignment
 

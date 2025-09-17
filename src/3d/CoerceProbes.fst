@@ -34,6 +34,10 @@ type env = {
   benv:B.env;
   params:params;
 }
+let push_field (f:atomic_field) (e:env)
+: env
+= let gs, ps = e.params in
+  { e with params = (gs, (f.v.field_type, f.v.field_ident, Immutable)::ps) }
 let probe_fail
 : probe_action
 = with_dummy_range <|
@@ -151,6 +155,12 @@ let icopy_bytes (n:int) =
   in
   with_dummy_range <| Probe_action_var hd
 
+let size_of_integral_typ = function
+  | UInt8 -> 1
+  | UInt16 -> 2
+  | UInt32 -> 4
+  | UInt64 -> 8
+
 let probe_and_copy_alignment 
     (e:env)
     (n0 n1:int)
@@ -202,7 +212,7 @@ let find_probe_fn_for_type (e:env) (id:ident) (r:range)
   | None ->
     GlobalEnv.find_probe_fn (B.global_env_of_env e.benv) r (CoerceProbeFunction(id,id))
   | p -> p
-let probe_and_copy_type (e:env) (fn:ident) (t0:typ) (k:probe_action)
+let probe_copy_and_maybe_return_type (e:env) (return:bool) (fn:ident) (t0:typ) (constraint:option expr) (k:probe_action)
 : ML probe_action
 = let probe_and_copy_n = find_probe_fn e.benv PQWithOffsets fn.range in
   let t = B.unfold_typ_abbrev_and_enum e.benv t0 in
@@ -235,18 +245,35 @@ let probe_and_copy_type (e:env) (fn:ident) (t0:typ) (k:probe_action)
       )
   )
   | Some i -> 
-    let size =
-      match i with
-      | UInt8 -> 1
-      | UInt16 -> 2
-      | UInt32 -> 4
-      | UInt64 -> 8
-    in
-    with_dummy_range <|
-    Probe_action_seq
-      (cstring <| print_ident fn)
-      (icopy_bytes size)
-      k
+    if return
+    then (
+      let reader = find_probe_fn e.benv (PQRead i) fn.range in
+      let writer = find_probe_fn e.benv (PQWrite i) fn.range in
+      let maybe_warn =
+        if Some? constraint `_or_` Binding.is_enum e.benv t0
+        then Some (
+          Printf.sprintf
+            "Coercive probes cannot read integer or pointer types with constraints or enum types; \
+            field %s has type %s%s"
+            (print_ident fn) (print_typ t0)
+            (match constraint with | None -> "" | Some e -> Printf.sprintf " with constraint %s" (print_expr e)), fn.range
+        )
+        else None
+      in
+      with_dummy_range <|
+      Probe_action_let
+        (cstring (print_ident fn))
+        fn
+        (Probe_action_copy_and_return reader writer i maybe_warn)
+        k
+    )
+    else (
+      with_dummy_range <|
+      Probe_action_seq
+        (cstring <| print_ident fn)
+        (icopy_bytes (size_of_integral_typ i))
+        k
+    )
   
 
 let alignment_bytes (af:atomic_field)
@@ -255,38 +282,34 @@ let alignment_bytes (af:atomic_field)
   | FieldArrayQualified ({v=Constant (Int _ n)}, ByteArrayByteSize) -> n                  
   | _ -> failwith "Not an alignment field"
 
-let check_scope (env:env) (e:expr)
+let check_scope_fvs (env:env) fvs
 : ML unit
-= let fvs = free_vars_of_expr e in
-  List.iter (fun i -> 
+= List.iter (fun i -> 
     if not (List.existsb (fun (_, j, _) -> eq_idents i j) (snd env.params))
+    && not (List.existsb (fun (GenericProbeFunction j _ _) -> eq_idents i j) (fst env.params))
     then (
-      error 
-        (Printf.sprintf
-          "Cannot coerce a type with a data-dependent length; \
-           the length of this type may depend on the field `%s`"
-           (print_ident i))
-        i.range
+      try
+        B.lookup_expr_name env.benv i |> ignore
+      with
+      | _ -> 
+        error 
+          (Printf.sprintf
+            "Cannot coerce a type with a data-dependent length; \
+            the length of this type may depend on the field `%s`"
+            (print_ident i))
+          i.range
     ))
   fvs
+
+let check_scope (env:env) (e:expr)
+: ML unit
+= check_scope_fvs env <| free_vars_of_expr e
 
 let check_scope_type (env:env) (field_name:ident) (t:typ)
 : ML unit
 = let fvs = free_vars_of_typ t in
-  List.iter (fun i -> 
-    if not (List.existsb (fun (_, j, _) -> eq_idents i j) (snd env.params))
-    then (
-      error 
-        (Printf.sprintf
-          "Cannot coerce a type with data-dependency; \
-           field %s of type %s may depend on the field `%s`"
-          (print_ident field_name)
-          (print_typ t)
-          (print_ident i))
-        i.range
-    ))
-  fvs
-
+  check_scope_fvs env fvs
+  
 let rec coerce_fields (e:env) (r0 r1:record)
 : ML probe_action
 = match r0, r1 with
@@ -351,9 +374,14 @@ let rec coerce_fields (e:env) (r0 r1:record)
           else if eq_typ af0.v.field_type af1.v.field_type
           then (
             let _ = check_scope_type e af0.v.field_ident af0.v.field_type in
-            probe_and_copy_type e af0.v.field_ident af0.v.field_type (coerce_fields e tl0 tl1)
+            let e' = if af0.v.field_dependence then push_field af0 e else e in
+            probe_copy_and_maybe_return_type
+              e af0.v.field_dependence af0.v.field_ident
+              af0.v.field_type af0.v.field_constraint
+              (coerce_fields e' tl0 tl1)
           )
           else (
+            let _ = check_scope_type e af0.v.field_ident af0.v.field_type in
             match Generate32BitTypes.has_32bit_coercion e.benv af0.v.field_type af1.v.field_type with
             | Some id -> (
               let insts, _ = GeneralizeProbes.generic_instantiations_for_type e.benv af0.v.field_type in
@@ -532,6 +560,24 @@ let rec optimize_coercion (p:probe_action)
     )
     | _ -> def ()
   )
+  | Probe_action_let d i (Probe_action_copy_and_return reader write ity maybe_warn) k ->
+    let k = optimize_coercion k in
+    let vs = free_vars_of_probe_action k in
+    if List.existsb (fun j -> eq_idents i j) vs
+    then begin
+      match maybe_warn with
+      | None -> { p with v = Probe_action_let d i (Probe_action_copy_and_return reader write ity None) k }
+      | Some (msg, r) -> error msg r
+    end
+    else (
+      let c = 
+        with_dummy_range <|
+        Probe_action_seq d
+          (icopy_bytes (size_of_integral_typ ity))
+          k
+      in
+      optimize_coercion c
+    )
   | Probe_action_let d i a k ->
     { p with v = Probe_action_let d i a (optimize_coercion k) }
   | Probe_action_ite e t f ->
@@ -550,7 +596,12 @@ let replace_stub (e:B.env) (d:decl { CoerceProbeFunctionStub? d.d_decl.v })
       i.v.name (print_ident t0) (print_ident t1);
     let d0, _ = B.lookup_type_decl e t0 in
     let d1, _ = B.lookup_type_decl e t1 in
-    let e = { benv=e; params=B.params_of_decl d } in
+    let e_params = 
+      let g, p = B.params_of_decl d in
+      let g0, p0 = B.params_of_decl d0 in
+      g@g0, p@p0
+    in
+    let e = { benv=e; params=e_params} in
     let coercion =
       match d0.d_decl.v, d1.d_decl.v with
       | Record _ _ _ _ r0, Record _ _ _ _ r1 ->
