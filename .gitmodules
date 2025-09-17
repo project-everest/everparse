@@ -1,0 +1,9 @@
+[submodule "FStar"]
+	path = FStar
+	url = https://github.com/FStarLang/FStar.git
+[submodule "karamel"]
+	path = karamel
+	url = https://github.com/FStarLang/karamel.git
+[submodule "everest"]
+	path = everest
+	url = https://github.com/project-everest/everest.git
