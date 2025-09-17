@@ -55,6 +55,9 @@ ifeq (,$(FSTAR_EXE))
 export FSTAR_EXE := $(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe
 NEED_FSTAR := $(FSTAR_EXE)
 z3_exe := $(shell $(FSTAR_EXE) --locate_z3 \$(Z3_VERSION) 2>/dev/null)
+ifneq (0,$(.SHELLSTATUS))
+z3_exe :=
+endif
 else
 # F* already exists, so we assume its fstar-lib is already compiled
 NEED_OPAM :=
@@ -91,17 +94,23 @@ endif
 ifeq (,$(z3_exe))
 NEED_Z3 := $(EVERPARSE_OPT_PATH)/z3
 ifeq ($(OS),Windows_NT)
-export PATH := $(shell cygpath -u $(NEED_Z3)):$(PATH)
+z3_dir := $(shell cygpath -u $(NEED_Z3))
 else
-export PATH := $(NEED_Z3):$(PATH)
+z3_dir := $(NEED_Z3)
 endif
 else
 NEED_Z3 := 
+z3_dir := $(dir $(z3_exe))
+ifeq ($(OS),Windows_NT)
+z3_dir := $(shell cygpath -u $(z3_dir))
+endif
 endif
 ifeq (1,$(ADMIT))
 OTHERFLAGS += --admit_smt_queries true
 export OTHERFLAGS
 NEED_Z3 :=
+else
+export PATH := $(z3_dir):$(PATH)
 endif
 
 opam-env.Makefile: $(NEED_OPAM)
@@ -117,17 +126,19 @@ opam-env.Makefile: $(NEED_OPAM)
 
 include opam-env.Makefile
 
-$(EVERPARSE_OPT_PATH)/FStar:
-	+$(MAKE) -C $(dir $@) -f git-clone.Makefile $(notdir $@)
-
-$(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe: $(EVERPARSE_OPT_PATH)/FStar $(NEED_OPAM)
-	+$(with_opam) $(MAKE) -C $< ADMIT=1
+# point to the Makefile because Z3 depends on the F* directory only but when I build F* the directory timestamp changes
+$(EVERPARSE_OPT_PATH)/FStar/Makefile:
+	+$(MAKE) -C $(EVERPARSE_OPT_PATH) -f git-clone.Makefile FStar
 	touch $@
 
-$(EVERPARSE_OPT_PATH)/z3: $(EVERPARSE_OPT_PATH)/FStar
+$(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe: $(EVERPARSE_OPT_PATH)/FStar/Makefile $(NEED_OPAM)
+	+$(with_opam) $(MAKE) -C $(dir $<) ADMIT=1
+	touch $@
+
+$(EVERPARSE_OPT_PATH)/z3: $(EVERPARSE_OPT_PATH)/FStar/Makefile
 	rm -rf $@ $@.tmp
 	mkdir -p $@.tmp
-	$</.scripts/get_fstar_z3.sh $@.tmp
+	$(dir $<)/.scripts/get_fstar_z3.sh $@.tmp
 	rm -rf $@.tmp/z3-4.8.5
 	mv $@.tmp $@
 	touch $@
@@ -154,11 +165,10 @@ ifeq (,$(NO_PULSE))
 endif
 ifeq ($(OS),Windows_NT)
 	@echo export EVERPARSE_HOME=$(shell cygpath -u $(CURDIR))
-	@echo export PATH=$(shell cygpath -u $(EVERPARSE_OPT_PATH))/FStar/bin:$(shell cygpath -u $(EVERPARSE_OPT_PATH))/z3:\"'$$PATH'\"
 else
 	@echo export EVERPARSE_HOME=$(CURDIR)
-	@echo export PATH=$(EVERPARSE_OPT_PATH)/FStar/bin:$(EVERPARSE_OPT_PATH)/z3:\"'$$PATH'\"
 endif
+	@echo export PATH=\"$(z3_dir):'$$PATH'\"
 
 .PHONY: env
 
