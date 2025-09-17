@@ -42,16 +42,35 @@ $(EVERPARSE_OPT_PATH)/opam: $(EVERPARSE_OPT_PATH)/everest
 	if ! { opam init $(cygwin_local_install) --no-setup --root=$(EVERPARSE_OPT_PATH)/opam --compiler=5.3.0 $(EVERPARSE_OPAM_REPOSITORY) && eval "$$(opam env --root=$(EVERPARSE_OPT_PATH)/opam --set-root)" && bash $(EVERPARSE_OPT_PATH)/everest/everest opam ; } ; then mv $@ $@.tmp ; exit 1 ; fi
 	touch $@
 
-NEED_OPAM :=
-ifeq (,$(EVERPARSE_USE_OPAMROOT))
-NEED_OPAM := $(EVERPARSE_OPT_PATH)/opam
-with_opam := eval "$$(opam env --root="$(EVERPARSE_OPT_PATH)/opam" --set-root)" &&
-endif
-
 Z3_VERSION := 4.13.3
 
+NEED_KRML :=
+ifneq (1,$(EVERPARSE_USE_KRML_HOME))
+export KRML_HOME := $(EVERPARSE_OPT_PATH)/karamel
+NEED_KRML := $(KRML_HOME)/_build/default/src/Karamel.exe
+else
+export EVERPARSE_USE_FSTAR_EXE:=1
+ifeq (,$(KRML_HOME))
+# TODO: fix Karamel to not require KRML_HOME set
+$(error "Inconsistent setup: EVERPARSE_USE_KRML_HOME set but KRML_HOME not set")
+endif
+endif
+
+NEED_PULSE :=
+ifeq (,$(NO_PULSE))
+ifneq (1,$(EVERPARSE_USE_PULSE_HOME))
+export PULSE_HOME := $(EVERPARSE_OPT_PATH)/pulse/out
+NEED_PULSE := $(PULSE_HOME)
+else
+export EVERPARSE_USE_FSTAR_EXE:=1
+ifeq (,$(PULSE_HOME))
+$(error "Inconsistent setup: EVERPARSE_USE_PULSE_HOME set but PULSE_HOME not set")
+endif
+endif
+endif
+
 NEED_FSTAR :=
-ifeq (,$(FSTAR_EXE))
+ifneq (1,$(EVERPARSE_USE_FSTAR_EXE))
 export FSTAR_EXE := $(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe
 NEED_FSTAR := $(FSTAR_EXE)
 z3_exe := $(shell $(FSTAR_EXE) --locate_z3 \$(Z3_VERSION) 2>/dev/null)
@@ -60,31 +79,20 @@ z3_exe :=
 endif
 else
 # F* already exists, so we assume its fstar-lib is already compiled
+export EVERPARSE_USE_OPAMROOT:=1
+ifeq (,$(FSTAR_EXE))
+# rely on PATH
+export FSTAR_EXE := fstar.exe
+endif
+endif
+
 NEED_OPAM :=
+ifneq (1,$(EVERPARSE_USE_OPAMROOT))
+NEED_OPAM := $(EVERPARSE_OPT_PATH)/opam
+with_opam := eval "$$(opam env --root="$(EVERPARSE_OPT_PATH)/opam" --set-root)" &&
 endif
 
-NEED_KRML :=
-ifeq (,$(KRML_HOME))
-export KRML_HOME := $(EVERPARSE_OPT_PATH)/karamel
-NEED_KRML := $(KRML_HOME)/_build/default/src/Karamel.exe
-else
-ifneq (,$(NEED_FSTAR))
-$(error "Inconsistent setup: KRML_HOME set but FSTAR_EXE not set")
-endif
-endif
-
-NEED_PULSE :=
-ifeq (,$(NO_PULSE))
-ifeq (,$(PULSE_HOME))
-export PULSE_HOME := $(EVERPARSE_OPT_PATH)/pulse/out
-NEED_PULSE := $(PULSE_HOME)
-else
-ifneq (,$(NEED_FSTAR))
-$(error "Inconsistent setup: PULSE_HOME set but FSTAR_EXE not set")
-endif
-endif
-endif
-
+NEED_Z3 :=
 ifeq (,$(z3_exe))
 z3_exe := $(shell which z3-$(Z3_VERSION))
 ifneq (0,$(.SHELLSTATUS))
@@ -158,6 +166,10 @@ $(EVERPARSE_OPT_PATH)/pulse/out: $(EVERPARSE_OPT_PATH)/pulse $(NEED_FSTAR) $(NEE
 	touch $@
 
 env:
+	@echo export EVERPARSE_USE_OPAMROOT=$(EVERPARSE_USE_OPAMROOT)
+	@echo export EVERPARSE_USE_FSTAR_EXE=$(EVERPARSE_USE_FSTAR_EXE)
+	@echo export EVERPARSE_USE_KRML_HOME=$(EVERPARSE_USE_KRML_HOME)
+	@echo export EVERPARSE_USE_PULSE_HOME=$(EVERPARSE_USE_PULSE_HOME)
 	@echo export FSTAR_EXE=$(FSTAR_EXE)
 	@echo export KRML_HOME=$(KRML_HOME)
 ifeq (,$(NO_PULSE))

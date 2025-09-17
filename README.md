@@ -319,22 +319,24 @@ variables:
   opam installation (the value of `OPAMROOT` if set, otherwise
   `$HOME/.opam`) instead of creating a local install
 
-* If you want to use your own F\*, set `FSTAR_EXE` to the full path of
-  your `fstar.exe` executable.
+* If you want to use your own F\*, first set
+  `EVERPARSE_USE_FSTAR_EXE=1`, then set `FSTAR_EXE` to the full path
+  of your `fstar.exe` executable (by default, `fstar.exe` via your
+  `PATH`.)
   
   NOTE: If you want to use EverCDDL, you cannot use a F\* binary
   package because EverCDDL has a F\* plugin that needs to be compiled
   with the very same OCaml environment as the one used to compile
-  F\*. This is why setting `FSTAR_EXE` will automatically set
+  F\*. This is why setting `EVERPARSE_USE_FSTAR_EXE` will automatically set
   `EVERPARSE_USE_OPAMROOT=1`.
   
-* If you want to use your own Karamel, set `KRML_HOME` to the full
-  path of your clone of the Karamel repository. This requires
-  `FSTAR_EXE` to be set.
+* If you want to use your own Karamel, first set
+  `EVERPARSE_USE_KRML_HOME=1`, then set `KRML_HOME` to the full path
+  of your clone of the Karamel repository.
 
-* If you want to use your own Pulse, set `PULSE_HOME` to the full path
+* If you want to use your own Pulse, first set
+  `EVERPARSE_USE_PULSE_HOME=1`, then set `PULSE_HOME` to the full path
   of the directory where Pulse was compiled (in most cases, the `out/`
-  subdirectory of the Pulse clone.) This requires `FSTAR_EXE` to be
-  set.
+  subdirectory of the Pulse clone.)
 
 NOTES: These settings are all ignored when building a binary package.

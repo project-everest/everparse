@@ -2,7 +2,7 @@
 unset CDPATH
 cd "$( dirname "${BASH_SOURCE[0]}" )"
 SED=$(which gsed >/dev/null 2>&1 && echo gsed || echo sed)
-if [[ -z "$EVERPARSE_USE_OPAMROOT" ]] ; then
+if ! [[ "$EVERPARSE_USE_OPAMROOT" = 1 ]] ; then
         OPAMROOT="$(pwd)/opam"
 elif [[ -z "$OPAMROOT" ]] ; then
 	OPAMROOT="$(opam var root | $SED 's!\r!!g')"

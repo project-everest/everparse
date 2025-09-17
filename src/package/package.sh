@@ -90,8 +90,9 @@ make_everparse() {
 
     ## Clear all variables
     export EVERPARSE_USE_OPAMROOT=
-    export FSTAR_EXE=
-    export KRML_HOME=
+    export EVERPARSE_USE_FSTAR_EXE=
+    export EVERPARSE_USE_KRML_HOME=
+    export EVERPARSE_USE_PULSE_HOME=
     rm -f "$EVERPARSE_HOME/opam-env.Makefile"
 
     # Rebuild EverParse
