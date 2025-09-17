@@ -7,6 +7,6 @@ if [[ "$OS" = "Windows_NT" ]] ; then
 else
    MAKE="$(which gmake >/dev/null 2>&1 && echo gmake || echo make)"
 fi
-$MAKE -C "$EVERPARSE_HOME" -s deps
-eval "$($MAKE -C "$EVERPARSE_HOME" -s env)"
+$MAKE -C "$EVERPARSE_HOME" -f deps.Makefile -s
+eval "$($MAKE -C "$EVERPARSE_HOME" -f deps.Makefile -s env)"
 exec bash "$@"
