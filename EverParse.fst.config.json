@@ -1,5 +1,5 @@
 {
-    "fstar_exe": "${FSTAR_EXE}",
+    "fstar_exe": "./fstar.sh",
     "options": [
       "--load_cmxs", "evercddl_lib",
       "--load_cmxs", "evercddl_plugin"
@@ -7,9 +7,6 @@
     "include_dirs": [
       "./src/lowparse",
       "./src/lowparse/pulse",
-      "${KRML_HOME}/krmllib",
-      "${KRML_HOME}/krmllib/obj",
-      "${PULSE_HOME}/lib/pulse",
       "./src/cbor/spec",
       "./src/cbor/pulse",
       "./src/cddl/pulse",

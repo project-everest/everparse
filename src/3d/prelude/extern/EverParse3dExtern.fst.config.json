@@ -1,10 +1,7 @@
 {
-    "fstar_exe": "${FSTAR_EXE}",
+    "fstar_exe": "../../../../fstar.sh",
     "include_dirs": [
       "..",
-      "../../../lowparse",
-      "${KRML_HOME}/krmllib",
-      "${KRML_HOME}/krmllib/obj"
+      "../../../lowparse"
     ]
   }
-  

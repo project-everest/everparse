@@ -1,11 +1,10 @@
 {
-    "fstar_exe": "${FSTAR_EXE}",
+    "fstar_exe": "./fstar.sh",
     "options": [
       "--load_cmxs", "evercddl_lib",
         "--load_cmxs", "evercddl_plugin"
     ],
     "include_dirs": [
-      "${PULSE_HOME}/lib/pulse",
       "../../../../src/cbor/spec",
       "../../../../src/cbor/pulse",
       "../../../../src/cddl/pulse",
@@ -15,9 +14,7 @@
       "../../../../lib/evercddl/lib",
         "_output",
         "util",
-        "dpe",
-        "${PULSE_HOME}/share/pulse/examples/dice/_cache",
-        "${PULSE_HOME}/share/pulse/examples/dice"
+        "dpe"
     ]
   }
   

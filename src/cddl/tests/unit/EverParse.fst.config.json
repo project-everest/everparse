@@ -1,12 +1,11 @@
 {
     "_comment": "This allows to interactively edit the generated files. Make sure to build the plugins before.",
-    "fstar_exe": "${FSTAR_EXE}",
+    "fstar_exe": "../../../../fstar.sh",
     "options": [
       "--load_cmxs", "evercddl_lib",
       "--load_cmxs", "evercddl_plugin"
     ],
     "include_dirs": [
-      "${PULSE_HOME}/lib/pulse",
       "../../../../src/cbor/spec",
       "../../../../src/cbor/pulse",
       "../../../../src/cddl/pulse",

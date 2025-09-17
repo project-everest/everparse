@@ -267,20 +267,26 @@ the instructions below.
 
 ### From the source repository
 
-You can run a custom Bash shell with `./shell.sh`
-
-This script will locally install EverParse dependencies and open a new
-Bash shell with appropriately populated environment variables for
-opam, OCaml, F\*, etc.
-
-Alternatively, if you are already in a Bash shell session, you can also
-directly populate its environment with `make deps && eval "$(make -s env)"`
-
-Then, from this shell, you can call Visual Studio Code and install the
+You can call Visual Studio Code and install the
 F\* VSCode Assistant extension to edit the F\* files present in the
 EverParse repository with full F\* editing features.
 
+The configuration files are using a custom F\* script, `fstar.sh`,
+that sets up the environment properly.
+
 NOTE: On Windows+WSL2, you also need to install the [WSL extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl), needed to make the Linux paths in the environment variables work.
+
+If you want to do more than just editing files in Visual Studio Code
+(e.g. run `make` in subdirectories of EverParse), you need to properly
+set up environment variables.
+
+You can run a custom Bash shell with `./shell.sh`. This script will
+locally install EverParse dependencies and open a new Bash shell with
+appropriately populated environment variables for opam, OCaml, F\*,
+etc.
+
+Alternatively, if you are already in a Bash shell session, you can also
+directly populate its environment with `make deps && eval "$(make -s env)"`
 
 ### From a Docker image
 

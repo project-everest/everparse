@@ -1,6 +1,6 @@
 {
     "_comment": "These settings allow to navigate through the EverParse proofs when editing and verifying F* files with Visual Studio Code and the F* VSCode Assistant extension. If you are not using the official EverParse Docker image, make sure to build EverParse before and call VSCode from a shell started with `shell.sh` from the EverParse clone.",
-    "fstar_exe": "${FSTAR_EXE}",
+    "fstar_exe": "${EVERPARSE_HOME}/fstar.sh",
     "options": [
       "--load_cmxs", "evercddl_lib",
       "--load_cmxs", "evercddl_plugin"
@@ -8,9 +8,6 @@
     "include_dirs": [
       "${EVERPARSE_HOME}/src/lowparse",
       "${EVERPARSE_HOME}/src/lowparse/pulse",
-      "${KRML_HOME}/krmllib",
-      "${KRML_HOME}/krmllib/obj",
-      "${PULSE_HOME}/lib/pulse",
       "${EVERPARSE_HOME}/src/cbor/spec",
       "${EVERPARSE_HOME}/src/cbor/pulse",
       "${EVERPARSE_HOME}/src/cddl/pulse",
