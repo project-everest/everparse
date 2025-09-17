@@ -105,13 +105,13 @@ ifeq ($(OS),Windows_NT)
 z3_dir := $(shell cygpath -u $(z3_dir))
 endif
 endif
+NEED_Z3_TESTGEN := $(NEED_Z3)
 ifeq (1,$(ADMIT))
 OTHERFLAGS += --admit_smt_queries true
 export OTHERFLAGS
 NEED_Z3 :=
-else
-export PATH := $(z3_dir):$(PATH)
 endif
+export PATH := $(z3_dir):$(PATH)
 
 opam-env.Makefile: $(NEED_OPAM)
 	rm -rf $@.tmp

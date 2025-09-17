@@ -70,7 +70,7 @@ qd-exe: $(NEED_OPAM)
 lowparse-unit-test: lowparse
 	+$(MAKE) -C tests/lowparse
 
-3d-unit-test: 3d
+3d-unit-test: 3d $(NEED_Z3_TESTGEN)
 ifneq ($(OS),Darwin)
 	+$(MAKE) -C src/3d test
 endif
