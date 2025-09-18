@@ -25,12 +25,13 @@ jobs:
       - name: Everparse CI
         id: cistep
         run: |
-          . $HOME/.cargo/env && env ADMIT=1 make cbor-snapshot 3d-doc-snapshot -kj$(nproc) && env ADMIT=1 make cose-snapshot -kj$(nproc)
+          . $HOME/.cargo/env && make -C opt -f git-clone.Makefile advance && make cbor-snapshot 3d-doc-snapshot -kj$(nproc) && make cose-snapshot -kj$(nproc) && make -kj$(nproc) test
 
       - name: commit changes
         run: |
           git config --local user.name "Dzomo, the Everest Yak"
           git config --local user.email "dzomo@users.noreply.github.com"
+          git add opt/hashes.Makefile
           git add doc/3d-snapshot src/cbor/pulse/det/c src/cbor/pulse/det/rust src/cose/c src/cose/rust
           git commit --allow-empty -m "[CI] regenerate hints and dist"
 
