@@ -18,3 +18,4 @@ do
     echo $f"_hash := "${!g} >> hashes.Makefile.tmp
 done
 mv hashes.Makefile.tmp hashes.Makefile
+touch hashes.Makefile

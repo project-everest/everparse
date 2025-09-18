@@ -3,11 +3,7 @@ git-clone:
 
 .PHONY: git-clone
 
-FStar_hash := master
-karamel_hash := master
-pulse_hash := main
-
--include hashes.Makefile
+include hashes.Makefile
 
 # This rule is necessary for the package and release CI rules to pull
 # the right hash when building the F* source package for Windows
@@ -20,36 +16,30 @@ FStar:
 ifeq ($(OS),Windows_NT)
 	$(error "Cannot build F* from the repository on Windows. Please download and extract a F* source package.")
 endif
-	rm -rf $@.tmp
-	git clone "https://github.com/FStarLang/FStar" $@.tmp
-	cd $@.tmp && git checkout $(FStar_hash)
-	mv $@.tmp $@
+	git clone "https://github.com/FStarLang/FStar"
 
 karamel pulse: %:
-	rm -rf $@.tmp
-	git clone "https://github.com/FStarLang/$@" $@.tmp
-	cd $@.tmp && git checkout $($@_hash)
-	mv $@.tmp $@
+	git clone "https://github.com/FStarLang/$@" $@
+
+%/Makefile: % hashes.Makefile
+	if test -d $</.git ; then cd $< && git fetch && git checkout $($<_hash) ; fi
+	touch -c $@
+	test -f $@
 
 everest:
 	git clone "https://github.com/project-everest/everest" $@
 
-clean:
-	rm -rf FStar
-	rm -rf karamel
-	rm -rf pulse
-
-.PHONY: clean
-
 snapshot:
 	./snapshot.sh
+	touch -c FStar/Makefile karamel/Makefile pulse/Makefile
 
 .PHONY: snapshot
 
 advance:
-	+$(MAKE) -f git-clone.Makefile clean
 	rm -f hashes.Makefile
-	+$(MAKE) -f git-clone.Makefile FStar karamel pulse
+	cp advance.Makefile hashes.Makefile
+	touch hashes.Makefile
+	+$(MAKE) -f git-clone.Makefile FStar/Makefile karamel/Makefile pulse/Makefile
 	+$(MAKE) -f git-clone.Makefile snapshot
 
 .PHONY: advance
