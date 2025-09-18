@@ -18,12 +18,12 @@ jobs:
         with:
           path: everparse
           sparse-checkout: |
-            opt/git-clone.Makefile
+            opt/Makefile
             opt/hashes.Makefile
 
       - name: Get F* hash
         run: |
-          echo "fstar_hash=$(make -s -C everparse/opt -f git-clone.Makefile echo-FStar-hash)" >> $GITHUB_ENV
+          echo "fstar_hash=$(make -s -C everparse/opt echo-FStar-hash)" >> $GITHUB_ENV
 
       - uses: actions/checkout@master
         id: checkout

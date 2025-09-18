@@ -25,7 +25,7 @@ jobs:
       - name: Everparse CI
         id: cistep
         run: |
-          . $HOME/.cargo/env && make -C opt -f git-clone.Makefile advance && make cbor-snapshot 3d-doc-snapshot -kj$(nproc) && make cose-snapshot -kj$(nproc) && make -kj$(nproc) test
+          . $HOME/.cargo/env && make -C opt advance && make cbor-snapshot 3d-doc-snapshot -kj$(nproc) && make cose-snapshot -kj$(nproc) && make -kj$(nproc) test
 
       - name: commit changes
         run: |

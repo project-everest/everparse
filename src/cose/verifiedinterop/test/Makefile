@@ -26,7 +26,7 @@ $(CURDIR)/hacl-star:
 	mv $@.tmp $@
 
 $(EVERPARSE_PATH)/opt/karamel:
-	+$(MAKE) -C $(dir $@) -f git-clone.Makefile $(notdir $@)
+	+$(MAKE) -C $(dir $@) $(notdir $@)
 
 COSE_EVERCRYPT_O=../../c/COSE_EverCrypt.o
 COSE_FORMAT_O=../../c/COSE_Format.o

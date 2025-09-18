@@ -39,7 +39,7 @@ advance:
 	rm -f hashes.Makefile
 	cp advance.Makefile hashes.Makefile
 	touch hashes.Makefile
-	+$(MAKE) -f git-clone.Makefile FStar/Makefile karamel/Makefile pulse/Makefile
-	+$(MAKE) -f git-clone.Makefile snapshot
+	+$(MAKE) FStar/Makefile karamel/Makefile pulse/Makefile
+	+$(MAKE) snapshot
 
 .PHONY: advance

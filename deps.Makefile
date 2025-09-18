@@ -23,7 +23,7 @@ NO_PULSE := 1
 endif
 
 $(EVERPARSE_OPT_PATH)/everest:
-	+$(MAKE) -C $(dir $@) -f git-clone.Makefile $(notdir $@)
+	+$(MAKE) -C $(dir $@) $(notdir $@)
 
 ifeq (,$(OPAMNODEPEXTS))
 export OPAMNODEPEXTS := 1
@@ -136,7 +136,7 @@ include opam-env.Makefile
 
 # point to the Makefile because Z3 depends on the F* directory only but when I build F* the directory timestamp changes
 $(EVERPARSE_OPT_PATH)/FStar/Makefile: $(EVERPARSE_OPT_PATH)/hashes.Makefile
-	+$(MAKE) -C $(EVERPARSE_OPT_PATH) -f git-clone.Makefile FStar/Makefile
+	+$(MAKE) -C $(EVERPARSE_OPT_PATH) FStar/Makefile
 
 $(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe: $(EVERPARSE_OPT_PATH)/FStar/Makefile $(NEED_OPAM)
 	+$(with_opam) $(MAKE) -C $(dir $<) ADMIT=1
@@ -151,14 +151,14 @@ $(EVERPARSE_OPT_PATH)/z3: $(EVERPARSE_OPT_PATH)/FStar/Makefile
 	touch $@
 
 $(EVERPARSE_OPT_PATH)/karamel/Makefile: $(EVERPARSE_OPT_PATH)/hashes.Makefile
-	+$(MAKE) -C $(EVERPARSE_OPT_PATH) -f git-clone.Makefile karamel/Makefile
+	+$(MAKE) -C $(EVERPARSE_OPT_PATH) karamel/Makefile
 
 $(EVERPARSE_OPT_PATH)/karamel/_build/default/src/Karamel.exe: $(EVERPARSE_OPT_PATH)/karamel/Makefile $(NEED_FSTAR) $(NEED_OPAM)
 	+$(with_opam) env OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $(dir $<)
 	touch $@
 
 $(EVERPARSE_OPT_PATH)/pulse/Makefile: $(EVERPARSE_OPT_PATH)/hashes.Makefile
-	+$(MAKE) -C $(EVERPARSE_OPT_PATH) -f git-clone.Makefile pulse/Makefile
+	+$(MAKE) -C $(EVERPARSE_OPT_PATH) pulse/Makefile
 
 $(EVERPARSE_OPT_PATH)/pulse/out: $(EVERPARSE_OPT_PATH)/pulse/Makefile $(NEED_FSTAR) $(NEED_OPAM)
 	+$(with_opam) $(MAKE) -C $(dir $<) ADMIT=1
