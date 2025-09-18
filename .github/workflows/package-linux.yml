@@ -5,27 +5,6 @@ on:
     - _**
   pull_request:
   workflow_dispatch:
-    inputs:
-      fstar_repo:
-        description: F* repository (use org/repo for Github repos)
-        default: 'FStarLang/FStar'
-        type: string
-        required: true
-      fstar_ref:
-        description: F* ref (branch, or tag, or commit hash)
-        default: 'master'
-        type: string
-        required: true
-      karamel_repo:
-        description: Karamel repository (use org/repo for Github repos)
-        default: 'FStarLang/karamel'
-        type: string
-        required: true
-      karamel_ref:
-        description: Karamel ref (branch, or tag, or commit hash)
-        default: 'master'
-        type: string
-        required: true
 
 defaults:
   run:
@@ -36,18 +15,6 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@master
-
-      - uses: actions/checkout@master
-        with:
-          path: opt/FStar
-          repository: ${{ inputs.fstar_repo || 'FStarLang/FStar' }}
-          ref: ${{ inputs.fstar_ref || 'master' }}
-
-      - uses: actions/checkout@master
-        with:
-          path: opt/karamel
-          repository: ${{ inputs.karamel_repo || 'FStarLang/karamel' }}
-          ref: ${{ inputs.karamel_ref || 'master' }}
 
       - uses: ocaml/setup-ocaml@v3
         with:

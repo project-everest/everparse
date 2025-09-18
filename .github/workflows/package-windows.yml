@@ -5,27 +5,6 @@ on:
     - _**
   pull_request:
   workflow_dispatch:
-    inputs:
-      fstar_repo:
-        description: F* repository (use org/repo for Github repos)
-        default: 'FStarLang/FStar'
-        type: string
-        required: true
-      fstar_ref:
-        description: F* ref (branch, or tag, or commit hash)
-        default: 'master'
-        type: string
-        required: true
-      karamel_repo:
-        description: Karamel repository (use org/repo for Github repos)
-        default: 'FStarLang/karamel'
-        type: string
-        required: true
-      karamel_ref:
-        description: Karamel ref (branch, or tag, or commit hash)
-        default: 'master'
-        type: string
-        required: true
 
 jobs:
   fstar-src:
@@ -36,10 +15,21 @@ jobs:
     # all more recent versions.
     steps:
       - uses: actions/checkout@master
+        with:
+          path: everparse
+          sparse-checkout: |
+            opt/git-clone.Makefile
+            opt/hashes.Makefile
+
+      - name: Get F* hash
+        run: |
+          echo "fstar_hash=$(make -s -C everparse/opt -f git-clone.Makefile echo-FStar-hash)" >> $GITHUB_ENV
+
+      - uses: actions/checkout@master
         id: checkout
         with:
-          repository: ${{ inputs.fstar_repo || 'FStarLang/FStar' }}
-          ref: ${{ inputs.fstar_ref || 'master' }}
+          repository: FStarLang/FStar
+          ref: ${{ env.fstar_hash }}
 
       - name: Check cache
         id: check-cache
@@ -121,12 +111,6 @@ jobs:
         shell: C:\cygwin\bin\bash.exe --login '{0}'
         run: >-
           cd "$GITHUB_WORKSPACE" && tar xzf fstar-src.tar.gz && mv fstar opt/FStar
-
-      - uses: actions/checkout@v4
-        with:
-          path: opt/karamel
-          repository: ${{ inputs.karamel_repo || 'FStarLang/karamel' }}
-          ref: ${{ inputs.karamel_ref || 'master' }}
 
       - name: Build package
         shell: C:\cygwin\bin\bash.exe --login '{0}'

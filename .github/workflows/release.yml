@@ -7,16 +7,6 @@ on:
         default: _release
         type: string
         required: true
-      fstar_repo:
-        description: F* repository (use org/repo for Github repos)
-        default: 'FStarLang/FStar'
-        type: string
-        required: true
-      fstar_ref:
-        description: F* ref (branch, or tag, or commit hash)
-        default: 'master'
-        type: string
-        required: true
 
 defaults:
   run:
@@ -31,10 +21,21 @@ jobs:
     # all more recent versions.
     steps:
       - uses: actions/checkout@master
+        with:
+          path: everparse
+          sparse-checkout: |
+            opt/git-clone.Makefile
+            opt/hashes.Makefile
+
+      - name: Get F* hash
+        run: |
+          echo "fstar_hash=$(make -s -C everparse/opt -f git-clone.Makefile echo-FStar-hash)" >> $GITHUB_ENV
+
+      - uses: actions/checkout@master
         id: checkout
         with:
-          repository: ${{ inputs.fstar_repo || 'FStarLang/FStar' }}
-          ref: ${{ inputs.fstar_ref || 'master' }}
+          repository: FStarLang/FStar
+          ref: ${{ env.fstar_hash }}
 
       - name: Check cache
         id: check-cache
@@ -105,8 +106,6 @@ jobs:
           cd $GITHUB_WORKSPACE
           git config --local user.name "Dzomo, the Everest Yak"
           git config --local user.email "dzomo@users.noreply.github.com"
-          if ! [[ -e opt/karamel ]] ; then git submodule add --force https://github.com/FStarLang/karamel opt/karamel ; fi
-          if ! [[ -e opt/pulse ]] ; then git submodule add --force https://github.com/FStarLang/pulse opt/pulse ; fi
           if ! [[ -e opt/everest ]] ; then git submodule add --force https://github.com/project-everest/everest opt/everest ; fi
           if ! [[ -e opt/opam-repository ]] ; then git submodule add --force https://github.com/ocaml/opam-repository opt/opam-repository ; fi
           echo export EVERPARSE_OPAM_REPOSITORY:=opt/opam-repository > release.Makefile

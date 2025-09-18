@@ -9,6 +9,13 @@ pulse_hash := main
 
 -include hashes.Makefile
 
+# This rule is necessary for the package and release CI rules to pull
+# the right hash when building the F* source package for Windows
+echo-FStar-hash:
+	echo $(FStar_hash)
+
+.PHONY: echo-FStar-hash
+
 FStar:
 ifeq ($(OS),Windows_NT)
 	$(error "Cannot build F* from the repository on Windows. Please download and extract a F* source package.")
