@@ -2,6 +2,9 @@
 set -e
 set -x
 
+unset CDPATH
+cd "$( dirname "${BASH_SOURCE[0]}" )"
+
 cygwin_has () {
   (( $(cygcheck -c -d $1 | wc -l) > 2 ))
 }
