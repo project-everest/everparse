@@ -1,0 +1,23 @@
+opam-version: "2.0"
+version: "0.0~dev"
+maintainer: "taramana@microsoft.com"
+authors: "Tahina Ramananandro <taramana@microsoft.com>,Gabriel Ebner <gabrielebner@microsoft.com>,Guido Martinez <guimartinez@microsoft.com>,Nik Swamy <nswamy@microsoft.com>,Antoine Delignat-Lavaud <adl@microsoft.com>"
+homepage: "https://project-everest.github.com/everparse"
+license: "Apache-2.0"
+depends: [
+  "ocaml"
+  "ctypes"
+  "hex"
+  "re"
+  "sexplib"
+  "sha"
+]
+build: [
+  ["false"]
+]
+install: [
+  ["false"]
+]
+dev-repo: "git://github.com/project-everest/everparse"
+bug-reports: "https://github.com/project-everest/everparse/issues"
+synopsis: "EverParse: Verified parsers and serializers for binary data formats"

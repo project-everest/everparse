@@ -2,9 +2,6 @@ deps:
 
 .PHONY: deps
 
-# Include specific options on release branches (e.g. EVERPARSE_OPAM_REPOSITORY)
--include release.Makefile
-
 ifeq (,$(OS))
 export OS := $(shell uname)
 endif
@@ -21,26 +18,6 @@ export EVERPARSE_OPT_PATH := $(shell cygpath -m $(EVERPARSE_OPT_PATH))
 # Pulse does not compile on Windows
 NO_PULSE := 1
 endif
-
-$(EVERPARSE_OPT_PATH)/everest:
-	+$(MAKE) -C $(dir $@) $(notdir $@)
-
-ifeq (,$(OPAMNODEPEXTS))
-export OPAMNODEPEXTS := 1
-endif
-ifeq (,$(OPAMYES))
-export OPAMYES := 1
-endif
-
-cygwin_local_install :=
-ifeq ($(OS),Windows_NT)
-cygwin_local_install += --cygwin-local-install
-endif
-
-$(EVERPARSE_OPT_PATH)/opam: $(EVERPARSE_OPT_PATH)/everest
-	rm -rf $@ $@.tmp
-	if ! { opam init $(cygwin_local_install) --no-setup --root=$(EVERPARSE_OPT_PATH)/opam --compiler=5.3.0 $(EVERPARSE_OPAM_REPOSITORY) && eval "$$(opam env --root=$(EVERPARSE_OPT_PATH)/opam --set-root)" && bash $(EVERPARSE_OPT_PATH)/everest/everest opam ; } ; then mv $@ $@.tmp ; exit 1 ; fi
-	touch $@
 
 Z3_VERSION := 4.13.3
 
@@ -86,9 +63,11 @@ export FSTAR_EXE := fstar.exe
 endif
 endif
 
+NEED_OPAM_DIR :=
 NEED_OPAM :=
 ifneq (1,$(EVERPARSE_USE_OPAMROOT))
-NEED_OPAM := $(EVERPARSE_OPT_PATH)/opam
+NEED_OPAM_DIR := $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh
+NEED_OPAM := $(EVERPARSE_OPT_PATH)/opam.done
 with_opam := eval "$$(opam env --root="$(EVERPARSE_OPT_PATH)/opam" --set-root)" &&
 endif
 
@@ -121,7 +100,10 @@ NEED_Z3 :=
 endif
 export PATH := $(z3_dir):$(PATH)
 
-opam-env.Makefile: $(NEED_OPAM)
+$(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh:
+	+$(MAKE) -C $(EVERPARSE_OPT_PATH) opam
+
+opam-env.Makefile: $(NEED_OPAM_DIR)
 	rm -rf $@.tmp
 	$(EVERPARSE_OPT_PATH)/opam-env.sh > $@.tmp
 	echo >> $@.tmp
@@ -138,6 +120,15 @@ include opam-env.Makefile
 $(EVERPARSE_OPT_PATH)/FStar/Makefile: $(EVERPARSE_OPT_PATH)/hashes.Makefile
 	+$(MAKE) -C $(EVERPARSE_OPT_PATH) FStar/Makefile
 
+$(EVERPARSE_OPT_PATH)/karamel/Makefile: $(EVERPARSE_OPT_PATH)/hashes.Makefile
+	+$(MAKE) -C $(EVERPARSE_OPT_PATH) karamel/Makefile
+
+$(EVERPARSE_OPT_PATH)/pulse/Makefile: $(EVERPARSE_OPT_PATH)/hashes.Makefile
+	+$(MAKE) -C $(EVERPARSE_OPT_PATH) pulse/Makefile
+
+$(EVERPARSE_OPT_PATH)/opam.done: $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh $(EVERPARSE_OPT_PATH)/FStar/Makefile $(EVERPARSE_OPT_PATH)/karamel/Makefile $(EVERPARSE_OPT_PATH)/pulse/Makefile
+	+$(MAKE) -C $(EVERPARSE_OPT_PATH) opam.done
+
 $(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe: $(EVERPARSE_OPT_PATH)/FStar/Makefile $(NEED_OPAM)
 	+$(with_opam) $(MAKE) -C $(dir $<) ADMIT=1
 	touch $@
@@ -150,15 +141,9 @@ $(EVERPARSE_OPT_PATH)/z3: $(EVERPARSE_OPT_PATH)/FStar/Makefile
 	mv $@.tmp $@
 	touch $@
 
-$(EVERPARSE_OPT_PATH)/karamel/Makefile: $(EVERPARSE_OPT_PATH)/hashes.Makefile
-	+$(MAKE) -C $(EVERPARSE_OPT_PATH) karamel/Makefile
-
 $(EVERPARSE_OPT_PATH)/karamel/_build/default/src/Karamel.exe: $(EVERPARSE_OPT_PATH)/karamel/Makefile $(NEED_FSTAR) $(NEED_OPAM)
 	+$(with_opam) env OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $(dir $<)
 	touch $@
-
-$(EVERPARSE_OPT_PATH)/pulse/Makefile: $(EVERPARSE_OPT_PATH)/hashes.Makefile
-	+$(MAKE) -C $(EVERPARSE_OPT_PATH) pulse/Makefile
 
 $(EVERPARSE_OPT_PATH)/pulse/out: $(EVERPARSE_OPT_PATH)/pulse/Makefile $(NEED_FSTAR) $(NEED_OPAM)
 	+$(with_opam) $(MAKE) -C $(dir $<) ADMIT=1

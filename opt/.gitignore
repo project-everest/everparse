@@ -5,3 +5,7 @@ karamel
 pulse
 opam
 opam-env.Makefile
+fstar-deps.opam
+karamel-deps.opam
+pulse-deps.opam
+opam.done

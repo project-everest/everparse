@@ -101,17 +101,6 @@ jobs:
           git merge --no-edit --no-ff origin/${{ inputs.release_branch }}
           git diff --exit-code ${{ github.sha }}..HEAD
 
-      - name: Create submodules
-        run: |
-          cd $GITHUB_WORKSPACE
-          git config --local user.name "Dzomo, the Everest Yak"
-          git config --local user.email "dzomo@users.noreply.github.com"
-          if ! [[ -e opt/everest ]] ; then git submodule add --force https://github.com/project-everest/everest opt/everest ; fi
-          if ! [[ -e opt/opam-repository ]] ; then git submodule add --force https://github.com/ocaml/opam-repository opt/opam-repository ; fi
-          echo export EVERPARSE_OPAM_REPOSITORY:=opt/opam-repository > release.Makefile
-          git add release.Makefile
-          git commit -m 'Create submodules'
-
       - uses: actions/download-artifact@v4
         with:
           name: fstar-src
@@ -119,6 +108,17 @@ jobs:
       - name: Expand F* source package
         run: |
           cd "$GITHUB_WORKSPACE" && tar xzf fstar-src.tar.gz && mv fstar opt/FStar && git add --force opt/FStar && git commit -m 'Add F* source package'
+
+      - name: Use frozen opam packages
+        run: |
+          sudo apt-get update && sudo apt-get --yes install --no-install-recommends opam
+          cd $GITHUB_WORKSPACE
+          git config --local user.name "Dzomo, the Everest Yak"
+          git config --local user.email "dzomo@users.noreply.github.com"
+          make -C opt release
+          git add opt/fstar-deps.opam.locked opt/karamel-deps.opam.locked opt/pulse-deps.opam.locked opt/everparse-deps.opam.locked
+          git mv opt/release.Makefile{.disabled,}
+          git commit -m 'Use frozen opam packages'
 
       - name: Create new version
         run: |
@@ -315,7 +315,7 @@ jobs:
       - name: Install Cygwin packages
         shell: C:\cygwin\bin\bash.exe --login '{0}'
         run: >-
-          cd "$GITHUB_WORKSPACE"/opt/everest && "$GITHUB_WORKSPACE"/src/package/windows/install-cygwin-packages.sh
+          "$GITHUB_WORKSPACE"/src/package/windows/install-cygwin-packages.sh
 
       - name: Download hash
         uses: actions/download-artifact@v4

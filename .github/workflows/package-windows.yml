@@ -87,11 +87,6 @@ jobs:
         with:
           submodules: true
 
-      - uses: actions/checkout@v4
-        with:
-          path: opt/everest
-          repository: project-everest/everest
-
       - name: Set-up OCaml
         uses: ocaml/setup-ocaml@v3
         with:
@@ -101,7 +96,7 @@ jobs:
       - name: Install Cygwin packages
         shell: C:\cygwin\bin\bash.exe --login '{0}'
         run: >-
-          cd "$GITHUB_WORKSPACE"/opt/everest && "$GITHUB_WORKSPACE"/src/package/windows/install-cygwin-packages.sh
+          "$GITHUB_WORKSPACE"/src/package/windows/install-cygwin-packages.sh
 
       - uses: actions/download-artifact@v4
         with:
