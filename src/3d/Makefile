@@ -23,7 +23,8 @@ prelude:
 	+$(MAKE) -C prelude
 
 Version.fst:
-	env EVERPARSE_HOME=$(EVERPARSE_HOME) ./version.sh
+	env EVERPARSE_HOME=$(EVERPARSE_HOME) ./version.sh > $@.tmp
+	mv $@.tmp $@
 
 3d: $(EVERPARSE_3D)
 

@@ -1,0 +1,14 @@
+{
+    "fstar_exe": "../../fstar.sh",
+    "include_dirs": [
+      "../lowparse",
+      "../lowparse/pulse",
+      "spec",
+      "spec/raw",
+      "spec/raw/everparse",
+      "pulse",
+      "pulse/raw",
+      "pulse/raw/everparse"
+    ]
+  }
+  

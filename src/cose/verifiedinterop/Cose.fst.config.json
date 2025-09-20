@@ -5,10 +5,7 @@
       "--load_cmxs", "evercddl_plugin"
     ],
     "include_dirs": [
-      ".",
       "./_output",
-      "../../../src/lowparse",
-      "../../../src/lowparse/pulse",
       "../../../src/cbor/spec",
       "../../../src/cbor/pulse",
       "../../../src/cddl/pulse",

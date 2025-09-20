@@ -16,14 +16,15 @@ jobs:
     steps:
       - uses: actions/checkout@master
         with:
+          submodules: true
           path: everparse
       - run: sudo apt update && sudo apt install -y libssl-dev
       - name: Everparse CI
         id: cistep
         run: |
-          . $HOME/.cargo/env && make -C everparse cbor-test-unverified cose-extracted-test -kj$(nproc)
+          . $HOME/.cargo/env && make -C everparse -f nofstar.Makefile test-nofstar -kj$(nproc)
 
-  build-cddl-ubuntu:
+  build-ubuntu:
     runs-on: ubuntu-latest
     steps:
       - name: Set-up OCaml
@@ -32,12 +33,13 @@ jobs:
           ocaml-compiler: 5
       - uses: actions/checkout@master
         with:
+          submodules: true
           path: everparse
       - name: Everparse CI
         run: |
-          ./everparse/build-evercddl.sh
+          make -C everparse -j$(nproc) -k test
 
-  build-cddl-macos:
+  build-macos:
     runs-on: macOS-latest
     steps:
       - name: Set-up OCaml
@@ -49,21 +51,20 @@ jobs:
           brew install bash gnu-getopt make gnu-time
       - uses: actions/checkout@master
         with:
+          submodules: true
           path: everparse
-      - name: Everparse CI
-        run: |
-          ./everparse/build-evercddl.sh
       - name: Test
         run: |
           nproc=$(sysctl -n hw.logicalcpu)
           if [[ $nproc -gt 8 ]] ; then nproc=8 ; fi
-          cd everparse && opam exec -- gmake -j$nproc -k cddl-test
+          cd everparse && gmake -j$nproc -k all cddl-test
 
   build-docker:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
         with:
+          submodules: true
           path: everparse
       - name: Havoc .depend
         run: |
