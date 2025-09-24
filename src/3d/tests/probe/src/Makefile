@@ -27,3 +27,8 @@ all: Probe.3d
 	$(3D) --z3_executable $(3D_Z3_EXECUTABLE) --batch --odir out.z3-testgen Probe.3d --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5 --z3_flight_name titatu --z3_use_ptr
 
 .PHONY: all
+
+clean:
+	rm -rf out.z3-testgen
+
+.PHONY: clean

@@ -12,5 +12,12 @@ extract-all: $(OUTPUT) $(wildcard *.fst)
 
 .PHONY: extract-all all
 
+clean_rules += clean-output
+
+clean-output:
+	rm -rf _output
+
+.PHONY: clean-output
+
 # Uncomment if you want to edit the produced F* file
 include extract.Makefile

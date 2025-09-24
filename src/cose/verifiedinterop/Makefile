@@ -20,6 +20,8 @@ FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice,-CDDL.Pulse.Bundle,-CDDL.Pulse.AST.Bundle,-CDDL.Tool'
 FSTAR_FILES := $(OUTPUT) $(wildcard *.fst *.fsti)
 
+clean_rules += clean-output
+
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 include $(EVERPARSE_SRC_PATH)/common.Makefile
@@ -60,3 +62,8 @@ test: extract
 ifeq ($(EVERPARSE_NO_DIFF),) # Set this variable to disable diffs
 test: $(addsuffix .diff,$(C_FILES))
 endif
+
+clean-output:
+	rm -rf $(OUTPUT_DIRECTORY)
+
+.PHONY: clean-output

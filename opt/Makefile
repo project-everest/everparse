@@ -92,3 +92,26 @@ release:
 	eval "$$(opam env --root=opam --set-root)" && opam upgrade && opam lock $(addprefix ./,$(EVERPARSE_OPAM_FILES_DEFAULT))
 
 .PHONY: release
+
+ifeq (,$(do_not_clean_FStar))
+FStar.clean:
+	rm -rf FStar
+else
+FStar.clean:
+endif
+
+clean_rules := $(addsuffix .clean,karamel pulse z3 opam)
+
+$(clean_rules): %.clean:
+	rm -rf $(basename $@)
+
+.PHONY: %.clean
+
+clean: FStar.clean $(clean_rules) clean-opam
+
+.PHONY: clean
+
+clean-opam:
+	rm -f $(addsuffix -deps.opam,fstar karamel pulse) opam.done
+
+.PHONY: clean-opam

@@ -36,3 +36,8 @@ FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
 	mkdir -p $@
 
 .PHONY: all interpret modules modules_batch
+
+clean:
+	rm -rf interpret.out modules/obj modules_batch/basic.out
+
+.PHONY: clean

@@ -85,7 +85,6 @@ all-diffs-nobuild: $(addsuffix -nobuild, $(3D_DIFF))
 accept-all: $(addsuffix .accept, $(subst .diff,,$(3D_DIFF)))
 
 clean:
-	rm -rf _build
-	git clean -fdx out
+	rm -rf _build .venv __pycache__ out
 
 .PHONY: accept-all all-diffs-nobuild

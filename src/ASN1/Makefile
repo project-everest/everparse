@@ -28,7 +28,9 @@ ALL_SOURCE_FILES = $(filter-out $(NOT_INCLUDED), $(wildcard *.fst *.fsti))
 
 depend: .depend
 
+ifeq (,$(filter clean,$(MAKECMDGOALS)))
 -include .depend
+endif
 
 $(ALL_CHECKED_FILES): %.checked:
 	$(FSTAR) $<
@@ -78,8 +80,16 @@ test: eval
 eval: compile
 	$(MAKE) -C evaluation
 
-clean:
+clean-files:
 	-rm -rf *.checked *.krml .depend *.c *.h *.o test.exe krml.rsp *.tmp compile_flags.txt
-	$(MAKE) -C ocaml clean
+
+.PHONY: clean-files
+
+%.clean:
+	$(MAKE) -C $(basename $@) clean
+
+.PHONY: %.clean
+
+clean: ocaml.clean evaluation.clean clean-files
 
 .PHONY: all verify clean depend compile test eval

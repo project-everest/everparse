@@ -4,6 +4,10 @@ endif
 
 include $(EVERPARSE_SRC_PATH)/fstar.Makefile
 
+# Clean rules (excluding clean itself)
+clean_rules += clean-checked clean-krml clean-ml clean-depend
+other_clean_rules += clean
+
 # List the directories of all root files
 SRC_DIRS += .
 
@@ -86,7 +90,9 @@ endif
 	$(Q)$(FSTAR) $(FSTAR_DEP_OPTIONS) --dep full @$@.rsp --output_deps_to $@.aux
 	mv $@.aux $@
 
+ifeq (,$(filter $(clean_rules) $(other_clean_rules),$(MAKECMDGOALS)))
 include $(FSTAR_DEP_FILE)
+endif
 
 $(ALL_CHECKED_FILES): %.checked:
 	$(call msg, "CHECK", $(basename $(notdir $@)))
@@ -109,3 +115,36 @@ $(ALL_KRML_FILES): %.krml:
 	touch -c $@
 
 .PHONY: all verify %.fst-in %.fsti-in
+
+clean-checked:
+ifneq (,$(CACHE_DIRECTORY))
+	rm -f $(CACHE_DIRECTORY)/*.checked
+endif
+	rm -f *.checked
+
+.PHONY: clean-checked
+
+clean-krml:
+ifneq (,$(OUTPUT_DIRECTORY))
+	rm -f $(OUTPUT_DIRECTORY)/*.krml
+endif
+	rm -f *.krml
+
+.PHONY: clean-krml
+
+clean-ml:
+ifneq (,$(OUTPUT_DIRECTORY))
+	rm -f $(OUTPUT_DIRECTORY)/*.ml
+endif
+	rm -f *.ml
+
+.PHONY: clean-ml
+
+clean-depend:
+	rm -f $(FSTAR_DEP_FILE) $(FSTAR_DEP_FILE).aux $(FSTAR_DEP_FILE).rsp
+
+.PHONY: clean-depend
+
+clean: $(clean_rules)
+
+.PHONY: clean

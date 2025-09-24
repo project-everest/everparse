@@ -7,6 +7,8 @@ FSTAR_FILES := Main.fst Version.fst
 FSTAR_DEP_OPTIONS := --extract '* -Prims -FStar'
 OUTPUT_DIRECTORY := ocaml/generated
 
+clean_rules += clean-prelude clean-3d
+
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 EVERPARSE_3D=$(EVERPARSE_HOME)/bin/3d.exe
@@ -39,8 +41,10 @@ $(EVERPARSE_3D_MAIN): $(ALL_ML_FILES) $(filter-out %~,$(wildcard ocaml/*.ml*))
 clean-prelude:
 	+$(MAKE) -C prelude clean
 
+.PHONY: clean-prelude
+
 clean-3d:
 	+$(MAKE) -C ocaml clean
 	rm -rf *.checked *~ Version.fst $(EVERPARSE_HOME)/bin/3d.exe
 
-clean: clean-3d clean-prelude
+.PHONY: clean-3d

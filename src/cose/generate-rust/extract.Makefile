@@ -13,6 +13,8 @@ FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice,-CDDL.Pulse.Bundle,-CDDL.Pulse.AST.Bundle,-CDDL.Tool'
 FSTAR_FILES := $(OUTPUT_DIRECTORY)/COSE.Format.fst CommonPulse.fst
 
+clean_rules += clean-output
+
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 include $(EVERPARSE_SRC_PATH)/common.Makefile
@@ -33,3 +35,8 @@ extract: $(ALL_KRML_FILES)
 #	$(KRML) -bundle COSE.Format=*[rename=COSEFormat] -add-include '"CBORDetAbstract.h"' -no-prefix CBOR.Pulse.API.Det.Rust -no-prefix CBOR.Spec.Constants -skip-compilation $^ -tmpdir $(OUTPUT_DIRECTORY) -backend rust -fno-box -fkeep-tuples -fcontained-type cbor_raw_iterator
 
 .PHONY: extract
+
+clean-output:
+	rm -rf $(OUTPUT_DIRECTORY)
+
+.PHONY: clean-output

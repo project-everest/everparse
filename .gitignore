@@ -9,7 +9,6 @@ _build
 *.cmxa
 *.krml
 tests/unit/*
-!tests/unit/Makefile
 **/out
 bin/qd.exe
 bin/3d.exe

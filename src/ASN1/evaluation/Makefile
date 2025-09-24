@@ -21,3 +21,8 @@ run_X509_negative: prepare
 run: run_X509_negative run_X509_positive run_CRL_negative run_CRL_positive
 
 .PHONY: prepare all run run_X509_negative run_X509_positive run_CRL_negative run_CRL_positive
+
+clean:
+	rm -rf ASN1_Parser.exe data
+
+.PHONY: clean

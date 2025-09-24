@@ -10,6 +10,9 @@ package-subset: quackyducky lowparse 3d
 
 .PHONY: package-subset
 
+clean_rules += clean-3d clean-lowparse clean-quackyducky clean-cbor-verify clean-cddl clean-bin clean-cose-test clean-asn1 clean-tests clean-3d-tests clean-doc
+other_clean_rules += distclean
+
 include nofstar.Makefile
 
 include deps.Makefile
@@ -237,6 +240,11 @@ ci: test 3d-doc-ci
 
 .PHONY: 3d-doc-snapshot
 
+clean-asn1:
+	+$(MAKE) -C src/ASN1 clean
+
+.PHONY: clean-asn1
+
 clean-3d:
 	+$(MAKE) -C src/3d clean
 
@@ -246,8 +254,40 @@ clean-lowparse:
 clean-quackyducky:
 	+$(MAKE) -C src/qd clean
 
-clean: clean-3d clean-lowparse clean-quackyducky
-	rm -rf bin
+clean-cbor-verify:
+	+$(MAKE) -C src/cbor clean-verify
+
+clean-cddl:
+	+$(MAKE) -C src/cddl clean
+
+.PHONY: clean-cbor-verify
+
+clean-bin:
+	rm -rf bin lib
+
+.PHONY: clean-bin
+
+clean-cose-test:
+	+$(MAKE) -C src/cose clean-extract
+
+.PHONY: clean-cose-test
+
+clean-tests:
+	+$(MAKE) -C tests clean
+
+.PHONY: clean-tests
+
+clean-3d-tests:
+	+$(MAKE) -C src/3d/tests clean
+
+.PHONY: clean-3d-tests
+
+clean-doc:
+	+$(MAKE) -C doc clean
+
+.PHONY: clean-doc
+
+clean: $(clean_rules)
 
 .PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test lowparse-fstar-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse 3d-unit-test 3d-doc-test ci clean-3d clean-lowparse clean-quackyducky asn1 asn1-test
 

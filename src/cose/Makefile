@@ -82,5 +82,53 @@ snapshot-rust:
 
 .PHONY: snapshot-c
 
+clean-c:
+	+$(MAKE) -C c clean
+
+.PHONY: clean-c
+
+clean-test-verified-interop:
+	+$(MAKE) -C verifiedinterop/test clean
+
+.PHONY: clean-test-verified-interop
+
+clean-test-interop:
+	+$(MAKE) -C interop clean
+
+.PHONY: clean-test-interop
+
+clean-venv:
+	rm -rf .venv
+
+.PHONY: clean-venv
+
+clean-rust:
+	cd rust && cargo clean
+
+.PHONY: clean-rust
+
+clean: clean-c clean-rust clean-test-verified-interop clean-venv clean-test-interop clean-test-batch
+
+.PHONY: clean
+
+clean-extract-c:
+	+$(MAKE) -C verifiedinterop clean
+
+.PHONY: clean-extract-c
+
+clean-extract-rust:
+	+$(MAKE) -C generate-rust clean
+
+.PHONY: clean-extract-rust
+
+clean-extract: clean-extract-c clean-extract-rust
+
+.PHONY: clean-extract
+
+clean-test-batch:
+	rm -rf test-batch-c test-batch-rust
+
+.PHONY: clean-test-batch
+
 # Uncomment if you want to edit the produced F* file
 # include extract.Makefile

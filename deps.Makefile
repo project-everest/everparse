@@ -103,6 +103,7 @@ export PATH := $(z3_dir):$(PATH)
 $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh:
 	+$(MAKE) -C $(EVERPARSE_OPT_PATH) opam
 
+ifeq (,$(filter clean distclean $(clean_rules),$(MAKECMDGOALS)))
 opam-env.Makefile: $(NEED_OPAM_DIR)
 	rm -rf $@.tmp
 	$(EVERPARSE_OPT_PATH)/opam-env.sh > $@.tmp
@@ -115,6 +116,9 @@ opam-env.Makefile: $(NEED_OPAM_DIR)
 	touch $@
 
 include opam-env.Makefile
+else
+-include opam-env.Makefile
+endif
 
 # point to the Makefile because Z3 depends on the F* directory only but when I build F* the directory timestamp changes
 $(EVERPARSE_OPT_PATH)/FStar/Makefile: $(EVERPARSE_OPT_PATH)/hashes.Makefile
@@ -171,3 +175,11 @@ endif
 deps: $(NEED_OPAM) $(NEED_FSTAR) $(NEED_Z3) $(NEED_KRML) $(NEED_PULSE)
 
 .PHONY: deps
+
+distclean: clean
+	rm -rf opam-env.Makefile
+	+$(MAKE) -C opt clean
+
+clean:
+
+.PHONY: clean distclean

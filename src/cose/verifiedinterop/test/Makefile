@@ -47,3 +47,9 @@ bench: bench.c common.c $(COSE_EVERCRYPT_O) $(COSE_FORMAT_O) $(CBORDET_O) $(HACL
 .PHONY: test
 test: signtest verifytest ../../.venv
 	../../.venv/bin/python test.py
+
+clean:
+	rm -f *.o signtest verifytest bench message.*
+	rm -rf hacl-star
+
+.PHONY: clean

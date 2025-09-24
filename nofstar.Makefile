@@ -1,5 +1,7 @@
 all-nofstar: cbor cose
 
+clean_rules += clean-cbor clean-cose
+
 .PHONY: all-nofstar
 
 cbor:
@@ -35,3 +37,17 @@ cose-extracted-test: cose
 test-nofstar: all-nofstar cbor-test-unverified cose-extracted-test
 
 .PHONY: test-nofstar
+
+clean-cbor:
+	+$(MAKE) -C src/cbor clean
+
+.PHONY: clean-cbor
+
+clean-cose:
+	+$(MAKE) -C src/cose clean
+
+.PHONY: clean-cose
+
+clean: $(clean_rules)
+
+.PHONY: clean

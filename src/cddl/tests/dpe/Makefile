@@ -11,6 +11,8 @@ FSTAR_OPTIONS += --warn_error -342
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 FSTAR_FILES := $(OUTPUT_DIRECTORY)/CDDLTest.Test.fst
 
+clean_rules += clean-test dpe.clean util.clean
+
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 include $(EVERPARSE_SRC_PATH)/common.Makefile
@@ -19,11 +21,21 @@ $(OUTPUT_DIRECTORY)/CDDLTest.Test.fst: dpe.cddl dpe_postlude.cddl
 	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --odir $(OUTPUT_DIRECTORY) --fstar_only
 	cp extract0.Makefile $(OUTPUT_DIRECTORY)/Makefile
 
+clean-test:
+	rm -rf $(OUTPUT_DIRECTORY)
+
+.PHONY: clean-test
+
 dpe: $(ALL_CHECKED_FILES) dice util
 	+$(MAKE) -C $@
 
 util:
 	+$(MAKE) -C $@
+
+%.clean:
+	+$(MAKE) -C $(basename $@) clean
+
+.PHONY: %.clean
 
 # The Pulse DPE Makefile cannot be used outside of the Pulse
 # repository, so we need to build it by hand
