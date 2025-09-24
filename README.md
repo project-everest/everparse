@@ -363,6 +363,9 @@ variables:
   `EVERPARSE_USE_FSTAR_HOME=1`, since Pulse must be compiled with the
   same F\* as EverParse.
 
+As a shortcut, setting `EVERPARSE_USE_MY_DEPS=1` has the same effect
+as setting all of those environment variables to 1.
+
 NOTES: These settings are all ignored when building a binary package.
 
 NOTE: DO NOT use the clones from the opt/ subdirectory with
