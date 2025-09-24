@@ -98,6 +98,7 @@ FStar.clean:
 	rm -rf FStar
 else
 FStar.clean:
+	+if test -d FStar ; then $(MAKE) -C FStar clean ; fi
 endif
 
 clean_rules := $(addsuffix .clean,karamel pulse z3 opam)
