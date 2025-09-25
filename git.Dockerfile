@@ -70,6 +70,7 @@ RUN OTHERFLAGS='--admit_smt_queries true' make -j"$(if test -z "$CI_THREADS" ; t
 # For the `test` layer
 RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends \
     cmake \
+    clang \
     python3-pip \
     python3-venv
 
