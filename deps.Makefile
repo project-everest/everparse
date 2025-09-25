@@ -31,7 +31,7 @@ endif
 NEED_KRML :=
 ifneq (1,$(EVERPARSE_USE_KRML_HOME))
 export KRML_HOME := $(EVERPARSE_OPT_PATH)/karamel
-NEED_KRML := $(KRML_HOME)/_build/default/src/Karamel.exe
+NEED_KRML := $(EVERPARSE_OPT_PATH)/karamel.done
 else
 export EVERPARSE_USE_FSTAR_EXE:=1
 ifeq (,$(KRML_HOME))
@@ -44,7 +44,7 @@ NEED_PULSE :=
 ifeq (,$(NO_PULSE))
 ifneq (1,$(EVERPARSE_USE_PULSE_HOME))
 export PULSE_HOME := $(EVERPARSE_OPT_PATH)/pulse/out
-NEED_PULSE := $(PULSE_HOME)
+NEED_PULSE := $(EVERPARSE_OPT_PATH)/pulse.done
 else
 export EVERPARSE_USE_FSTAR_EXE:=1
 ifeq (,$(PULSE_HOME))
@@ -56,7 +56,7 @@ endif
 NEED_FSTAR :=
 ifneq (1,$(EVERPARSE_USE_FSTAR_EXE))
 export FSTAR_EXE := $(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe
-NEED_FSTAR := $(FSTAR_EXE)
+NEED_FSTAR := $(EVERPARSE_OPT_PATH)/FStar.done
 z3_exe := $(shell $(FSTAR_EXE) --locate_z3 \$(Z3_VERSION) 2>/dev/null)
 ifneq (0,$(.SHELLSTATUS))
 z3_exe :=
@@ -140,8 +140,9 @@ $(EVERPARSE_OPT_PATH)/pulse/Makefile: $(EVERPARSE_OPT_PATH)/hashes.Makefile
 $(EVERPARSE_OPT_PATH)/opam.done: $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh $(EVERPARSE_OPT_PATH)/FStar/Makefile $(EVERPARSE_OPT_PATH)/karamel/Makefile $(EVERPARSE_OPT_PATH)/pulse/Makefile
 	+$(MAKE) -C $(EVERPARSE_OPT_PATH) opam.done
 
-$(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe: $(EVERPARSE_OPT_PATH)/FStar/Makefile $(NEED_OPAM)
-	+$(with_opam) $(MAKE) -C $(dir $<) ADMIT=1
+$(EVERPARSE_OPT_PATH)/FStar.done: $(EVERPARSE_OPT_PATH)/FStar/Makefile $(NEED_OPAM)
+	rm -f $@
+	+$(with_opam) $(MAKE) -C $(EVERPARSE_OPT_PATH)/FStar ADMIT=1
 	touch $@
 
 $(EVERPARSE_OPT_PATH)/z3: $(EVERPARSE_OPT_PATH)/FStar/Makefile
@@ -152,12 +153,14 @@ $(EVERPARSE_OPT_PATH)/z3: $(EVERPARSE_OPT_PATH)/FStar/Makefile
 	mv $@.tmp $@
 	touch $@
 
-$(EVERPARSE_OPT_PATH)/karamel/_build/default/src/Karamel.exe: $(EVERPARSE_OPT_PATH)/karamel/Makefile $(NEED_FSTAR) $(NEED_OPAM)
-	+$(with_opam) env OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $(dir $<)
+$(EVERPARSE_OPT_PATH)/karamel.done: $(EVERPARSE_OPT_PATH)/karamel/Makefile $(NEED_FSTAR) $(NEED_OPAM)
+	rm -f $@
+	+$(with_opam) env OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $(EVERPARSE_OPT_PATH)/karamel
 	touch $@
 
-$(EVERPARSE_OPT_PATH)/pulse/out: $(EVERPARSE_OPT_PATH)/pulse/Makefile $(NEED_FSTAR) $(NEED_OPAM)
-	+$(with_opam) $(MAKE) -C $(dir $<) ADMIT=1
+$(EVERPARSE_OPT_PATH)/pulse.done: $(EVERPARSE_OPT_PATH)/pulse/Makefile $(NEED_FSTAR) $(NEED_OPAM)
+	rm -f $@
+	+$(with_opam) $(MAKE) -C $(EVERPARSE_OPT_PATH)/pulse ADMIT=1
 	touch $@
 
 env:

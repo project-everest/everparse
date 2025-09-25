@@ -93,18 +93,18 @@ release:
 
 .PHONY: release
 
-ifeq (,$(do_not_clean_FStar))
 FStar.clean:
+	rm -f FStar.done
+ifeq (,$(do_not_clean_FStar))
 	rm -rf FStar
 else
-FStar.clean:
 	+if test -d FStar ; then $(MAKE) -C FStar clean ; fi
 endif
 
 clean_rules := $(addsuffix .clean,karamel pulse z3 opam)
 
 $(clean_rules): %.clean:
-	rm -rf $(basename $@)
+	rm -rf $(basename $@) $(basename $@).done
 
 .PHONY: %.clean
 

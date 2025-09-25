@@ -9,3 +9,6 @@ fstar-deps.opam
 karamel-deps.opam
 pulse-deps.opam
 opam.done
+FStar.done
+karamel.done
+pulse.done
