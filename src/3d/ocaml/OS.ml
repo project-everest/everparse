@@ -36,6 +36,19 @@ let concat_if_not_absolute dir file =
   then file
   else concat dir file
 
+let get_absolute_filename n =
+  if is_path_absolute n
+  then n
+  else Filename.concat (Sys.getcwd ()) n
+
+let everparse_home =
+  try
+    Sys.getenv "EVERPARSE_HOME"
+  with
+  | Not_found ->
+     (* assume the executable is in the bin/ subdirectory *)
+     get_absolute_filename (Filename.concat (Filename.dirname Sys.executable_name) Filename.parent_dir_name)
+
 (* The filename without its extension *)
 
 let remove_extension = Filename.remove_extension
@@ -65,6 +78,11 @@ let getenv var =
   with Not_found ->
     raise (Undefined_environment_variable var)
 
+let getenv_opt var =
+  try
+    Some (getenv var)
+  with Undefined_environment_variable _ -> None
+
 let getenv_array var =
   try
     String.split_on_char ' ' (String.trim (getenv var))
@@ -73,7 +91,7 @@ let getenv_array var =
 (* Run program prog with argument args (starting from $1, so prog need
    not be duplicated). *)
 
-let run_cmd prog args =
+let run_cmd_with_code prog args =
   let cmd = String.concat " " (prog :: args) in
   print_endline (Printf.sprintf "Running: %s" cmd);
   let args = Array.of_list args in
@@ -86,14 +104,19 @@ let run_cmd prog args =
      Providing exit_status to Process.run would leave no chance to
      print out the command output *)
   match out.Process.Output.exit_status with
-  | Process.Exit.Exit 0 -> ()
+  | Process.Exit.Exit 0 -> 0
   | st ->
     prerr_endline (Process.Exit.to_string st);
-    exit
       begin match st with
       | Process.Exit.Exit n -> n
       | _ -> 127
       end
+
+let run_cmd prog args =
+  let ret = run_cmd_with_code prog args in
+  if ret = 0
+  then ()
+  else exit ret
 
 (* Copy a file. target must be a filename *)
 

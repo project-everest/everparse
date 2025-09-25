@@ -218,6 +218,8 @@ let cbor_pair_is_serialized
     end
   | _ -> None
 
+#push-options "--z3rlimit 32"
+
 #restart-solver
 inline_for_extraction
 fn cbor_compare_body
@@ -371,6 +373,8 @@ fn cbor_compare_body
     c
   }
 }
+
+#pop-options
 
 fn rec impl_cbor_compare
   (x1: cbor_raw)

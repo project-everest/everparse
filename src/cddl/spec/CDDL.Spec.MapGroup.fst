@@ -60,7 +60,7 @@ let map_group_choice_compatible_match_item_for
 
 #pop-options
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 
 #restart-solver
 let map_group_footprint_concat_consumes_all_recip
@@ -566,5 +566,29 @@ let rec list_fold_map_group_zero_or_more_match_item_serializer_length
   | [] -> ()
   | a :: q ->
     list_fold_map_group_zero_or_more_match_item_serializer_length pkey pvalue except m (map_group_zero_or_more_match_item_serializer_op pkey pvalue except m accu a) q
+
+#restart-solver
+let map_group_zero_or_more_match_item_parser_inj
+  (#tkey #tvalue: Type)
+  (#key #value: typ)
+  (pkey: spec key tkey true)
+  (#inj: bool)
+  (pvalue: spec value tvalue inj)
+  (except: map_constraint)
+  (m: cbor_map { map_group_serializer_spec_arg_prop (map_group_filtered_table key value except) (Util.andp (matches_map_group_entry key value) (Util.notp except)) m })
+: Lemma
+  (requires inj)
+  (ensures (
+    map_group_zero_or_more_match_item_serializer pkey pvalue except (map_group_zero_or_more_match_item_parser pkey pvalue except m) `cbor_map_equal'` m
+  ))
+= let y = map_group_zero_or_more_match_item_parser pkey pvalue except m in
+  let sy = map_group_zero_or_more_match_item_serializer pkey pvalue except y in
+  assert (forall k . Some? (cbor_map_get m k) ==> cbor_map_mem (k, Some?.v (cbor_map_get m k)) m);
+  assert (forall k . Map.defined k y ==> Map.mem (k, Some?.v (Map.get y k)) y);
+  assert (cbor_map_filter (Util.andp (matches_map_group_entry key value) (Util.notp except)) m `cbor_map_equal` m);
+  assert (forall (kv: (cbor & cbor)) . cbor_map_mem kv m ==> value (snd kv));
+  assert (forall (kv: (cbor & cbor)) . cbor_map_mem kv m ==> (value (snd kv) /\ Map.mem (pkey.parser (fst kv), [pvalue.parser (snd kv)]) y));
+  ()
+
 
 #pop-options

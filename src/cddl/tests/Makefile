@@ -14,3 +14,12 @@ test: demo.do dpe.do rust.do unit.do
 	+$(MAKE) -C $(basename $@)
 
 .PHONY: all test %.do
+
+clean: demo.clean dpe.clean rust.clean unit.clean
+
+.PHONY: clean
+
+%.clean:
+	+$(MAKE) -C $(basename $@) clean
+
+.PHONY: %.clean

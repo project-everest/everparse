@@ -8,6 +8,8 @@ CBORDET_PATH := $(realpath ../../c)
 
 CFLAGS += -I $(CBORDET_PATH)
 
+clean_rules += clean-extracted
+
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 include $(EVERPARSE_SRC_PATH)/common.Makefile
@@ -30,3 +32,8 @@ $(OUTPUT_DIRECTORY)/CBORTest.rs: $(ALL_KRML_FILES)
 
 test: extract
 	$(OUTPUT_DIRECTORY)/test.exe
+
+clean-extracted:
+	rm -rf extracted
+
+.PHONY: clean-extracted

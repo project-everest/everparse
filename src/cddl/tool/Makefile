@@ -5,6 +5,8 @@ INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec
 
 ALREADY_CACHED := *,-CDDL.Tool,
 
+clean_rules += c.clean rust.clean clean-ocaml clean-done
+
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 include $(EVERPARSE_SRC_PATH)/common.Makefile
@@ -40,3 +42,19 @@ extraction-rust: $(ALL_CHECKED_FILES)
 extraction-all: extraction-c extraction-rust
 
 .PHONY: extraction extraction-c extraction-rust extraction-all
+
+%.clean:
+	rm -rf extraction-$(basename $@)
+
+.PHONY: %.clean
+
+clean-ocaml:
+	if which dune ; then cd ocaml && dune clean ; fi
+
+.PHONY: clean-ocaml
+
+clean-done:
+	rm -f *.depend *.depend.rsp *.done
+	rm -rf ocaml/evercddl-lib/extracted ocaml/evercddl-plugin/extracted
+
+.PHONY: clean-done

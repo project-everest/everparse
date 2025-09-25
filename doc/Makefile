@@ -16,11 +16,11 @@ export KRML_HOME?=$(realpath $(EVERPARSE_HOME)/../karamel)
 3D_FILES=$(filter-out $(3D_EXCLUDE) $(3D_FILES_WITH_CONFIG),$(wildcard *.3d))
 3D_MODULES=$(basename $(3D_FILES) $(3D_FILES_WITH_CONFIG))
 3D_MODULES_AND_WRAPPERS=$(3D_MODULES) $(addsuffix Wrapper,$(3D_MODULES))
-3D_C_AND_H_FILES=$(filter-out BaseWrapper.c BaseWrapper.h,$(addsuffix .c,$(3D_MODULES_AND_WRAPPERS)) $(addsuffix .h,$(3D_MODULES_AND_WRAPPERS)))
+3D_C_AND_H_FILES=$(filter-out BaseWrapper.c BaseWrapper.h,$(addsuffix .c,$(3D_MODULES_AND_WRAPPERS)) $(addsuffix .h,$(3D_MODULES_AND_WRAPPERS))) $(addsuffix StaticAssertions.c,AlignAuto Align Specialize1StandaloneAuto)
 3D_DIFF=$(addsuffix .diff,$(3D_C_AND_H_FILES))
 3D_OUT=$(addprefix out/,$(3D_C_AND_H_FILES))
 3D_SNAPSHOT=$(addprefix 3d-snapshot/,$(3D_C_AND_H_FILES))
-AUX_HEADERS=GetFieldPtrBase.h
+AUX_HEADERS=GetFieldPtrBase.h arch_flags.h
 
 # You can set these variables from the command line.
 SPHINXOPTS    = -W
@@ -85,7 +85,6 @@ all-diffs-nobuild: $(addsuffix -nobuild, $(3D_DIFF))
 accept-all: $(addsuffix .accept, $(subst .diff,,$(3D_DIFF)))
 
 clean:
-	rm -rf _build
-	git clean -fdx out
+	rm -rf _build .venv __pycache__ out
 
 .PHONY: accept-all all-diffs-nobuild

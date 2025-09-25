@@ -21,3 +21,8 @@ $(OBJ_FILES): %.o: %.c
 
 CBORDetTest.exe: $(OBJ_FILES) $(CBOR_LIB_PATH)/CBORDet.o
 	$(CC) -o CBORDetTest.exe $^
+
+clean:
+	rm -f CBORDetTest.exe *.o
+
+.PHONY: clean

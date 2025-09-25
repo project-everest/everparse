@@ -46,3 +46,8 @@ CBOR_DET_O=$(EVERPARSE_SRC_PATH)/cbor/pulse/det/c/CBORDet.o
 
 bench signtest verifytest: %:
 	$(CC) $+ $(COSE_OPENSSL_O) $(COSE_FORMAT_O) $(CBOR_DET_O) $(LDFLAGS) -o $@
+
+clean:
+	rm -f *.o signtest verifytest bench message.*
+
+.PHONY: clean

@@ -66,6 +66,8 @@ CBOR_KRML_MODULES += FStar.Pervasives.Native
 
 FSTAR_DEP_OPTIONS += $(addprefix --extract +,$(CBOR_KRML_MODULES))
 
+clean_rules += clean-tinycbor clean-QCBOR clean-c clean-output
+
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 include $(EVERPARSE_SRC_PATH)/common.Makefile
@@ -146,3 +148,23 @@ run-qcbor_bench: qcbor_bench
 
 .PHONY: all-run
 all-run: $(patsubst %,%.run,$(RUN))
+
+clean-tinycbor:
+	rm -rf tinycbor tinycbor-build
+
+.PHONY: clean-tinycbor
+
+clean-QCBOR:
+	rm -rf QCBOR
+
+.PHONY: clean-QCBOR
+
+clean-c:
+	rm -f *.o qcbor_bench $(ODIR)/*.o $(ODIR)/*.exe
+
+.PHONY: clean-c
+
+clean-output:
+	rm -rf $(OUTPUT_DIRECTORY)
+
+.PHONY: clean-output

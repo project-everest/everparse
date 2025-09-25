@@ -1025,6 +1025,10 @@ let rec array_group_concat_unique_strong
       end
     end
 
+#pop-options
+
+#push-options "--z3rlimit 128 --split_queries always --query_stats --fuel 4 --ifuel 8"
+
 #restart-solver
 let rec array_group_concat_unique_weak
   (array_group_disjoint: array_group_disjoint_t)
