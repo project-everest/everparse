@@ -12,7 +12,7 @@ module Trade = Pulse.Lib.Trade.Util
 
 let vmatch_with_perm
   (#high #low: Type0)
-  (vmatch: perm -> low -> high -> slprop)
+  (vmatch: lifetime -> low -> high -> slprop)
   (xl: with_perm low)
   (xh: high)
 : Tot slprop

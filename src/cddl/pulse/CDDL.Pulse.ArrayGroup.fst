@@ -220,7 +220,7 @@ fn impl_array_group_item
   (#cbor_array_iterator_t: Type)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
   (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (cbor_array_iterator_is_done: array_iterator_is_empty_t cbor_array_iterator_match)
   (cbor_array_iterator_next: array_iterator_next_t vmatch cbor_array_iterator_match)
     (#b: Ghost.erased (option cbor))
@@ -251,7 +251,7 @@ fn impl_array_group_item
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_t_array
   (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (#cbor_array_iterator_t: Type)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
   (cbor_get_major_type: get_major_type_t vmatch)

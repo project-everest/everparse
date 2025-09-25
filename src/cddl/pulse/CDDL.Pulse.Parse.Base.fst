@@ -10,7 +10,7 @@ module Trade = Pulse.Lib.Trade.Util
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_copyful_parse
     (#ty: Type0)
-    (vmatch: perm -> ty -> cbor -> slprop)
+    (vmatch: lifetime -> ty -> cbor -> slprop)
     (#t: typ)
     (#tgt: Type0)
     (#tgt_serializable: tgt -> bool)
@@ -34,7 +34,7 @@ let impl_copyful_parse
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_zero_copy_parse
     (#ty: Type0)
-    (vmatch: perm -> ty -> cbor -> slprop)
+    (vmatch: lifetime -> ty -> cbor -> slprop)
     (#t: typ)
     (#tgt: Type0)
     (#tgt_serializable: tgt -> bool)
@@ -134,7 +134,7 @@ let validate_and_parse_post
 inline_for_extraction noextract [@@noextract_to "krml"]
 let validate_and_parse_t
   (#ty: Type0)
-  ( vmatch: perm -> ty -> cbor -> slprop)
+  ( vmatch: lifetime -> ty -> cbor -> slprop)
   ( t1: typ)
   (# t: typ)
   (# tgt: Type0)
@@ -155,7 +155,7 @@ let validate_and_parse_t
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn validate_and_parse
   (#ty: Type)
-  (# [@@@erasable] vmatch: perm -> ty -> cbor -> slprop)
+  (# [@@@erasable] vmatch: lifetime -> ty -> cbor -> slprop)
   (parse: cbor_det_parse_t vmatch)
   (# [@@@erasable] t1: Ghost.erased typ)
   (v1: impl_typ vmatch t1)
@@ -211,7 +211,7 @@ fn validate_and_parse
 
 let impl_zero_copy_parse_t_eq_gen
     (#ty: Type0)
-    (vmatch: perm -> ty -> cbor -> slprop)
+    (vmatch: lifetime -> ty -> cbor -> slprop)
     (#t: typ)
     (#tgt: Type0)
     (#tgt_serializable: tgt -> bool)
@@ -227,7 +227,7 @@ let impl_zero_copy_parse_t_eq_gen
 
 let impl_zero_copy_parse_t_eq
     (#ty: Type0)
-    (vmatch: perm -> ty -> cbor -> slprop)
+    (vmatch: lifetime -> ty -> cbor -> slprop)
     (#t: typ)
     (#tgt: Type0)
     (#tgt_serializable: tgt -> bool)
@@ -242,7 +242,7 @@ let impl_zero_copy_parse_t_eq
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_copyful_unit
     (#ty: Type0)
-    (vmatch: perm -> ty -> cbor -> slprop)
+    (vmatch: lifetime -> ty -> cbor -> slprop)
     (#[@@@erasable]t: Ghost.erased typ)
     (#[@@@erasable]tgt_serializable: Ghost.erased (unit -> bool))
     ([@@@erasable]ps: Ghost.erased (parser_spec t unit tgt_serializable))
@@ -260,7 +260,7 @@ fn impl_copyful_unit
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_unit
     (#ty: Type0)
-    (vmatch: perm -> ty -> cbor -> slprop)
+    (vmatch: lifetime -> ty -> cbor -> slprop)
     (#[@@@erasable]t: Ghost.erased typ)
     (#[@@@erasable]tgt_serializable: Ghost.erased (unit -> bool))
     ([@@@erasable]ps: Ghost.erased (parser_spec t unit tgt_serializable))
@@ -286,7 +286,7 @@ fn impl_zero_copy_unit
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_copyful_always_false
     (#ty: Type0)
-    (vmatch: perm -> ty -> cbor -> slprop)
+    (vmatch: lifetime -> ty -> cbor -> slprop)
     (#t: Ghost.erased typ)
     (#tgt_serializable: Ghost.erased (squash False -> bool))
     (ps: Ghost.erased (parser_spec t (squash False) tgt_serializable))
@@ -307,7 +307,7 @@ let reveal_squash_false (x: Ghost.hide (squash False)) : Tot (squash False) = Gh
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_always_false
     (#ty: Type0)
-    (vmatch: perm -> ty -> cbor -> slprop)
+    (vmatch: lifetime -> ty -> cbor -> slprop)
     (#[@@@erasable]t: Ghost.erased typ)
     (#[@@@erasable]tgt_serializable: Ghost.erased (squash False -> bool))
     ([@@@erasable]ps: Ghost.erased (parser_spec t (squash False) tgt_serializable))
@@ -327,7 +327,7 @@ fn impl_zero_copy_always_false
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_copyful_pure_as_zero_copy
     (#ty: Type0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (#[@@@erasable]t: Ghost.erased typ)
     (#[@@@erasable]tgt: Type0)
     (#[@@@erasable]tgt_serializable: Ghost.erased (tgt -> bool))
@@ -354,7 +354,7 @@ fn impl_copyful_pure_as_zero_copy
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_copyful_ext
     (#ty: Type0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (#[@@@erasable]t: Ghost.erased typ)
     (#[@@@erasable]tgt: Type0)
     (#[@@@erasable]tgt_serializable: Ghost.erased (tgt -> bool))
@@ -381,7 +381,7 @@ fn impl_copyful_ext
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_ext
     (#ty: Type0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (#[@@@erasable]t: Ghost.erased typ)
     (#[@@@erasable]tgt: Type0)
     (#[@@@erasable]tgt_serializable: Ghost.erased (tgt -> bool))
@@ -408,7 +408,7 @@ fn impl_zero_copy_ext
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_bij
     (#ty: Type0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (#[@@@erasable]t: Ghost.erased typ)
     (#[@@@erasable]tgt: Type0)
     (#[@@@erasable]tgt_serializable: Ghost.erased (tgt -> bool))
@@ -445,7 +445,7 @@ fn impl_zero_copy_bij
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_choice
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (#[@@@erasable]t1: Ghost.erased typ)
     (#[@@@erasable]tgt1: Type0)
     (#[@@@erasable]tgt_serializable1: Ghost.erased (tgt1 -> bool))
@@ -489,7 +489,7 @@ fn impl_zero_copy_choice
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_copyful_skip
     (#ty: Type0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (#t: Ghost.erased typ)
     (#tgt: Type0)
     (#tgt_serializable: Ghost.erased (tgt -> bool))
@@ -508,7 +508,7 @@ fn impl_copyful_skip
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_copyful_either_skip
     (#ty: Type0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (#t: Ghost.erased typ)
     (#tgt: Type0)
     (#tgt_serializable: Ghost.erased (tgt -> bool))
@@ -529,7 +529,7 @@ fn impl_copyful_either_skip
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_skip
     (#ty: Type0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (#t: Ghost.erased typ)
     (#tgt: Type0)
     (#tgt_serializable: Ghost.erased (tgt -> bool))
@@ -555,7 +555,7 @@ fn impl_zero_copy_skip
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_either_skip
     (#ty: Type0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (skippable: Ghost.erased bool)
     (#t: Ghost.erased typ)
     (#tgt: Type0)

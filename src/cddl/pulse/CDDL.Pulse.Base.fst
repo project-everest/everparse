@@ -8,7 +8,7 @@ open CBOR.Pulse.API.Base
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_typ
     (#ty: Type)
-    (vmatch: perm -> ty -> cbor -> slprop)
+    (vmatch: lifetime -> ty -> cbor -> slprop)
     (#b: option cbor)
     (t: bounded_typ_gen b)
 =
@@ -27,7 +27,7 @@ let impl_typ
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_coerce_to_bounded_typ
     (#ty: Type u#0)
-    (vmatch: perm -> ty -> cbor -> slprop)
+    (vmatch: lifetime -> ty -> cbor -> slprop)
     (b: Ghost.erased (option cbor))
     (#t: Ghost.erased typ)
     (f: impl_typ vmatch t)
@@ -42,7 +42,7 @@ fn impl_coerce_to_bounded_typ
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_t_choice
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (#b: Ghost.erased (option cbor))
     (#t1 #t2: Ghost.erased (bounded_typ_gen b))
     (f1: impl_typ vmatch t1)
@@ -65,7 +65,7 @@ fn impl_t_choice
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_t_choice_none // FIXME: WHY WHY WHY can F* not automatically infer t1 and t2 by reducing (reveal (hide None)) to None?
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (#t1 #t2: bounded_typ_gen None)
     (f1: impl_typ vmatch t1)
     (f2: impl_typ vmatch t2)
@@ -75,7 +75,7 @@ let impl_t_choice_none // FIXME: WHY WHY WHY can F* not automatically infer t1 a
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_any
     (#ty: Type u#0)
-    (vmatch: perm -> ty -> cbor -> slprop)
+    (vmatch: lifetime -> ty -> cbor -> slprop)
 : impl_typ u#0 #ty vmatch #None any
 =
     (c: ty)
@@ -88,7 +88,7 @@ fn impl_any
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_ext
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (#[@@@erasable] t1: Ghost.erased typ)
     (f1: impl_typ vmatch t1)
     ([@@@erasable] t2: Ghost.erased typ { typ_equiv t1 t2 })
@@ -103,7 +103,7 @@ fn impl_ext
 inline_for_extraction
 let with_cbor_literal_cont_t
   (#t: Type0)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
   (k: cbor)
   (pre: slprop)
   (t' : Type0)
@@ -118,7 +118,7 @@ let with_cbor_literal_cont_t
 inline_for_extraction
 let with_cbor_literal_t
   (#t: Type0)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
   (k: cbor)
 =
   (pre: slprop) ->
@@ -132,7 +132,7 @@ let with_cbor_literal_t
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_always_false
     (#ty: Type u#0)
-    (vmatch: perm -> ty -> cbor -> slprop)
+    (vmatch: lifetime -> ty -> cbor -> slprop)
 : impl_typ u#0 #ty vmatch #None t_always_false
 =
     (c: ty)

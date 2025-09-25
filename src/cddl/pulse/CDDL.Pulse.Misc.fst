@@ -15,7 +15,7 @@ module U64 = FStar.UInt64
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_uint
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_get_major_type: get_major_type_t vmatch)
 : impl_typ u#0 #ty vmatch #None uint
 =
@@ -30,7 +30,7 @@ fn impl_uint
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_neg_int
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_get_major_type: get_major_type_t vmatch)
 : impl_typ u#0 #ty vmatch #None nint
 =
@@ -45,7 +45,7 @@ fn impl_neg_int
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_uint_range
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_get_major_type: get_major_type_t vmatch)
     (cbor_destr_int64: read_uint64_t vmatch)
     (lo hi: U64.t)
@@ -67,7 +67,7 @@ fn impl_uint_range
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_neg_int_range
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_get_major_type: get_major_type_t vmatch)
     (cbor_destr_int64: read_uint64_t vmatch)
     (lo hi: U64.t)
@@ -92,7 +92,7 @@ module Cast = FStar.Int.Cast
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_int_range
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_get_major_type: get_major_type_t vmatch)
     (cbor_destr_int64: read_uint64_t vmatch)
     (lo hi: I64.t)
@@ -109,7 +109,7 @@ let impl_int_range
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_uint_literal
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_get_major_type: get_major_type_t vmatch)
     (cbor_destr_int64: read_uint64_t vmatch)
     (n: U64.t)
@@ -131,7 +131,7 @@ fn impl_uint_literal
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_neg_int_literal
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_get_major_type: get_major_type_t vmatch)
     (cbor_destr_int64: read_uint64_t vmatch)
     (n: U64.t)
@@ -153,7 +153,7 @@ fn impl_neg_int_literal
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn with_cbor_literal_int
     (#t: Type0)
-    (#vmatch: perm -> t -> cbor -> slprop)
+    (#vmatch: lifetime -> t -> cbor -> slprop)
     (mk_int64: mk_int64_t vmatch)
     (elim_int64: elim_int64_t vmatch)
     (k: major_type_uint64_or_neg_int64)
@@ -173,7 +173,7 @@ fn with_cbor_literal_int
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_bytes
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_get_major_type: get_major_type_t vmatch)
 : impl_typ u#0 #ty vmatch #None bytes
 =
@@ -188,7 +188,7 @@ fn impl_bytes
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_text
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_get_major_type: get_major_type_t vmatch)
 : impl_typ u#0 #ty vmatch #None text
 =
@@ -205,7 +205,7 @@ let _ = SZ.t // FIXME: WHY WHY WHY? Pulse will complain otherwise
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_str_size
     (#t: Type u#0)
-    (#vmatch: perm -> t -> cbor -> slprop)
+    (#vmatch: lifetime -> t -> cbor -> slprop)
     (cbor_get_major_type: get_major_type_t vmatch)
     (cbor_destr_string: get_string_t vmatch)
     (ty: major_type_byte_string_or_text_string)
@@ -232,7 +232,7 @@ fn impl_str_size
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_simple
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_get_major_type: get_major_type_t vmatch)
 : impl_typ u#0 #ty vmatch #None t_simple
 =
@@ -247,7 +247,7 @@ fn impl_simple
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_simple_literal
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_get_major_type: get_major_type_t vmatch)
     (cbor_destr_simple: read_simple_value_t vmatch)
     (x: simple_value)
@@ -269,7 +269,7 @@ fn impl_simple_literal
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn with_cbor_literal_simple
     (#t: Type0)
-    (#vmatch: perm -> t -> cbor -> slprop)
+    (#vmatch: lifetime -> t -> cbor -> slprop)
     (mk_simple: mk_simple_t vmatch)
     (elim_simple: elim_simple_t vmatch)
     (x: simple_value)
@@ -293,7 +293,7 @@ let cddl_simple_value_true : simple_value = 21uy
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_bool
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_get_major_type: get_major_type_t vmatch)
     (cbor_destr_simple: read_simple_value_t vmatch)
 : impl_typ vmatch t_bool
@@ -304,7 +304,7 @@ let impl_bool
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_tagged_some
   (#ty: Type u#0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (cbor_get_major_type: get_major_type_t vmatch)
   (cbor_get_tagged_tag: get_tagged_tag_t vmatch)
   (cbor_get_tagged_payload: get_tagged_payload_t vmatch)
@@ -335,7 +335,7 @@ fn impl_tagged_some
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_tagged_none
   (#ty: Type u#0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (cbor_get_major_type: get_major_type_t vmatch)
   (cbor_get_tagged_payload: get_tagged_payload_t vmatch)
   (#t: Ghost.erased typ)
@@ -359,7 +359,7 @@ fn impl_tagged_none
 inline_for_extraction
 fn impl_det_cbor
   (#ty #ty': Type u#0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#vmatch': perm -> ty' -> cbor -> slprop)
   (cbor_get_major_type: get_major_type_t vmatch)
   (cbor_destr_string: get_string_t vmatch)

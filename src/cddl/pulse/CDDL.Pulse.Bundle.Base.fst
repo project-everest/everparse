@@ -62,7 +62,7 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 noeq
 type bundle
   (#cbor_t: Type)
-  (vmatch: perm -> cbor_t -> cbor -> slprop)
+  (vmatch: lifetime -> cbor_t -> cbor -> slprop)
 = {
   [@@@erasable] b_typ: Ghost.erased typ;
   b_spec_type: Type0;
@@ -77,7 +77,7 @@ type bundle
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let get_bundle_impl_type
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (b: bundle vmatch)
 : Pure Type0
   (requires True)
@@ -109,7 +109,7 @@ let mk_eq_test_bij
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_bij
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (b: bundle vmatch)
   (#tgt: Type0)
   (#tgt' : Type0)
@@ -141,14 +141,14 @@ let bundle_bij
 
 let bundle_parser_t
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (b: bundle vmatch)
 : Tot Type
 = impl_zero_copy_parse vmatch b.b_spec.parser b.b_rel
 
 let bundle_parser_eq_intro
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (#t0 #t: Type)
   (sq0: squash (t0 == t))
   (b1: bundle vmatch)
@@ -161,14 +161,14 @@ let bundle_parser_eq_intro
 unfold
 let bundle_serializer_t
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (b: bundle vmatch)
 : Tot Type
 = impl_serialize b.b_spec b.b_rel
 
 let bundle_serializer_eq_intro
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (#t0 #t: Type)
   (sq0: squash (t0 == t))
   (b1: bundle vmatch)
@@ -181,7 +181,7 @@ let bundle_serializer_eq_intro
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_set_parser_and_serializer
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   ([@@@erasable] b: Ghost.erased (bundle vmatch))
   (t: Type0)
   ([@@@erasable] t_eq: squash (b.b_impl_type == t))
@@ -210,7 +210,7 @@ let bundle_set_parser_and_serializer
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_always_false
   (#cbor_t: Type)
-  (vmatch: perm -> cbor_t -> cbor -> slprop)
+  (vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (#[@@@erasable] ty: Ghost.erased typ)
   ([@@@erasable] sp: Ghost.erased (spec ty (squash False) true))
 : bundle vmatch
@@ -228,7 +228,7 @@ let bundle_always_false
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_ext
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (b: bundle vmatch)
   (#[@@@erasable] t': Ghost.erased typ)
   ([@@@erasable] sp': Ghost.erased (spec t' b.b_spec_type true))
@@ -252,7 +252,7 @@ let bundle_ext
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_type_ext
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (b: bundle vmatch)
   ([@@@erasable] t': Ghost.erased typ)
   ([@@@erasable] sq: squash (
@@ -264,7 +264,7 @@ let bundle_type_ext
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_choice
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (b1: bundle vmatch)
   (v1: impl_typ vmatch b1.b_typ)
   (b2: bundle vmatch)

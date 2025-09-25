@@ -11,7 +11,7 @@ module U64 = FStar.UInt64
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_copyful_uint64_gen
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_destr_int64: read_uint64_t vmatch)
     (#[@@@erasable]t: Ghost.erased typ)
     (#[@@@erasable]ser: Ghost.erased (U64.t -> bool))
@@ -33,7 +33,7 @@ fn impl_copyful_uint64_gen
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_copyful_uint
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_destr_int64: read_uint64_t vmatch)
 : impl_copyful_parse #ty vmatch #uint #U64.t #_ spec_uint.parser #_ (rel_pure U64.t)
 = impl_copyful_uint64_gen cbor_destr_int64 _ ()
@@ -41,7 +41,7 @@ let impl_copyful_uint
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_copyful_nint
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_destr_int64: read_uint64_t vmatch)
 : impl_copyful_parse #ty vmatch #nint #U64.t #_ spec_nint.parser #_ (rel_pure U64.t)
 = impl_copyful_uint64_gen cbor_destr_int64 _ ()
@@ -49,7 +49,7 @@ let impl_copyful_nint
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_copyful_int_range_uint64
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_destr_int64: read_uint64_t vmatch)
     (lo hi: Ghost.erased U64.t)
 : impl_copyful_parse vmatch (spec_int_range_uint64 lo hi).parser (rel_pure U64.t)
@@ -60,7 +60,7 @@ module I64 = FStar.Int64
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_copyful_int_range_int64
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_get_major_type: get_major_type_t vmatch)
     (cbor_destr_int64: read_uint64_t vmatch)
     (lo hi: Ghost.erased I64.t)
@@ -81,7 +81,7 @@ fn impl_copyful_int_range_int64
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_copyful_int_range_neg_int64
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_destr_int64: read_uint64_t vmatch)
     (lo hi: Ghost.erased U64.t)
 : impl_copyful_parse vmatch (spec_int_range_neg_int64 lo hi).parser (rel_pure U64.t)
@@ -96,7 +96,7 @@ module A = Pulse.Lib.Array
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_copyful_bytes_gen
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_destr_string: get_string_t vmatch)
     (#t: Ghost.erased typ)
     (#ser: Ghost.erased (Seq.seq U8.t -> bool))
@@ -135,7 +135,7 @@ fn impl_copyful_bytes_gen
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_copyful_bytes
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_destr_string: get_string_t vmatch)
 : impl_copyful_parse #ty vmatch #bstr #(Seq.seq U8.t) #_ spec_bstr.parser #_ (rel_vec_of_seq)
 = impl_copyful_bytes_gen cbor_destr_string _ ()
@@ -143,7 +143,7 @@ let impl_copyful_bytes
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_copyful_text
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_destr_string: get_string_t vmatch)
 : impl_copyful_parse #ty vmatch #tstr #(Seq.seq U8.t) #_ spec_tstr.parser #_ (rel_vec_of_seq)
 = impl_copyful_bytes_gen cbor_destr_string _ ()
@@ -151,7 +151,7 @@ let impl_copyful_text
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_copyful_str_size
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_destr_string: get_string_t vmatch)
     (mt: Ghost.erased major_type_byte_string_or_text_string)
     (lo hi: Ghost.erased U64.t)
@@ -161,7 +161,7 @@ let impl_copyful_str_size
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_bytes_gen
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_destr_string: get_string_t vmatch)
     (#[@@@erasable]t: Ghost.erased typ)
     (#[@@@erasable]ser: Ghost.erased (Seq.seq U8.t -> bool))
@@ -200,7 +200,7 @@ fn impl_zero_copy_bytes_gen
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_zero_copy_bytes
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_destr_string: get_string_t vmatch)
 : impl_zero_copy_parse #ty vmatch #bstr #(Seq.seq U8.t) #_ spec_bstr.parser #_ (rel_slice_of_seq false )
 = impl_zero_copy_bytes_gen cbor_destr_string _ ()
@@ -208,7 +208,7 @@ let impl_zero_copy_bytes
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_zero_copy_text
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_destr_string: get_string_t vmatch)
 : impl_zero_copy_parse #ty vmatch #tstr #(Seq.seq U8.t) #_ spec_tstr.parser #_ (rel_slice_of_seq false )
 = impl_zero_copy_bytes_gen cbor_destr_string _ ()
@@ -216,7 +216,7 @@ let impl_zero_copy_text
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_zero_copy_str_size
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_destr_string: get_string_t vmatch)
     (mt: Ghost.erased major_type_byte_string_or_text_string)
     (lo hi: Ghost.erased U64.t)
@@ -226,7 +226,7 @@ let impl_zero_copy_str_size
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_copyful_simple
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_destr_simple: read_simple_value_t vmatch)
 : impl_copyful_parse #ty vmatch #t_simple #U8.t #_ (spec_simple).parser #_ (rel_pure U8.t)
 =
@@ -242,7 +242,7 @@ fn impl_copyful_simple
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_copyful_bool
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_destr_simple: read_simple_value_t vmatch)
 : impl_copyful_parse #ty vmatch #t_bool #bool #_ (spec_bool).parser #_ (rel_pure bool)
 =
@@ -259,7 +259,7 @@ fn impl_copyful_bool
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_copyful_tagged_some
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_get_tagged_payload: get_tagged_payload_t vmatch)
     (tag: Ghost.erased U64.t)
     (#t: Ghost.erased typ)
@@ -284,7 +284,7 @@ fn impl_copyful_tagged_some
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_copyful_tagged_none
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_get_tagged_tag: get_tagged_tag_t vmatch)
     (cbor_get_tagged_payload: get_tagged_payload_t vmatch)
     (#t: Ghost.erased typ)
@@ -314,7 +314,7 @@ fn impl_copyful_tagged_none
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_tagged_some
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_get_tagged_payload: get_tagged_payload_t vmatch)
     ([@@@erasable]tag: Ghost.erased U64.t)
     (#[@@@erasable]t: Ghost.erased typ)
@@ -339,7 +339,7 @@ fn impl_zero_copy_tagged_some
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_tagged_none
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (cbor_get_tagged_tag: get_tagged_tag_t vmatch)
     (cbor_get_tagged_payload: get_tagged_payload_t vmatch)
     (#[@@@erasable]t: Ghost.erased typ)
@@ -382,7 +382,7 @@ fn impl_zero_copy_tagged_none
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_copyful_det_cbor
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (#ty': Type0)
     (#vmatch': perm -> ty -> cbor -> slprop)
     (cbor_destr_string: get_string_t vmatch)
@@ -422,7 +422,7 @@ fn impl_copyful_det_cbor
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_det_cbor
     (#ty: Type u#0)
-    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#vmatch: lifetime -> ty -> cbor -> slprop)
     (#ty': Type0)
     (#vmatch': perm -> ty' -> cbor -> slprop)
     (cbor_destr_string: get_string_t vmatch)
@@ -463,7 +463,7 @@ fn impl_zero_copy_det_cbor
 inline_for_extraction
 fn impl_zero_copy_any
     (#ty: Type u#0)
-    (vmatch: perm -> ty -> cbor -> slprop)
+    (vmatch: lifetime -> ty -> cbor -> slprop)
 : impl_zero_copy_parse #ty vmatch #any #cbor #(spec_any).serializable (spec_any).parser #(cbor_with_perm ty) (rel_cbor_not_freeable vmatch false)
 =
     (c: ty)

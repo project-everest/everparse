@@ -613,7 +613,7 @@ module Trade = Pulse.Lib.Trade
 
 let rel_cbor_copy_vec_some
   (cbor_t: Type0)
-  (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (vmatch: lifetime -> cbor_t -> Cbor.cbor -> slprop)
   (base: V.vec U8.t)
   (cbor: cbor_t)
   (y: Cbor.cbor)
@@ -626,7 +626,7 @@ let rel_cbor_copy_vec_some
 
 let rel_cbor_copy_vec
   (cbor_t: Type0)
-  (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (vmatch: lifetime -> cbor_t -> Cbor.cbor -> slprop)
   (freeable: bool)
   (x: cbor_copy_t cbor_t)
   (y: Cbor.cbor)
@@ -637,7 +637,7 @@ let rel_cbor_copy_vec
 
 let rel_cbor_copy
   (cbor_t: Type0)
-  (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (vmatch: lifetime -> cbor_t -> Cbor.cbor -> slprop)
   (freeable: bool)
 : rel (cbor_copy_t cbor_t) (Cbor.cbor)
 = mk_rel (fun x y ->
@@ -658,7 +658,7 @@ module Cbor = CBOR.Spec.API.Format
 
 let rel_cbor_not_freeable
   (#cbor_t: Type)
-  (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (vmatch: lifetime -> cbor_t -> Cbor.cbor -> slprop)
   (freeable: bool)
 : Tot (rel (cbor_with_perm cbor_t) Cbor.cbor)
 = mk_rel (fun x1 x2 -> vmatch x1.p x1.c x2 ** pure (freeable == false))

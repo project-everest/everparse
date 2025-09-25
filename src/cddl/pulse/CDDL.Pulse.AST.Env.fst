@@ -49,7 +49,7 @@ let extend_validator_env_with_group
 [@@sem_attr]
 type parse_env
   (#cbor_t: Type)
-  (vmatch: perm -> cbor_t -> cbor -> slprop)
+  (vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (#se: sem_env)
   (#s_env: target_type_env se.se_bound)
   (r_env: rel_env s_env)
@@ -58,6 +58,6 @@ type parse_env
 
 let empty_parse_env
   (#cbor_t: Type)
-  (vmatch: perm -> cbor_t -> cbor -> slprop)
+  (vmatch: lifetime -> cbor_t -> cbor -> slprop)
 : parse_env vmatch empty_rel_env (empty_spec_env _)
 = fun _ -> false_elim ()

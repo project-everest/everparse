@@ -3,6 +3,8 @@ module CBOR.Pulse.API.Base
 open CBOR.Spec.API.Type
 open Pulse.Lib.Pervasives
 module T = CBOR.Spec.API.Type
+module BS = CBOR.Pulse.API.Borrow.Slice
+module BA = CBOR.Pulse.API.Borrow.Array
 module S = Pulse.Lib.Slice.Util
 module Trade = Pulse.Lib.Trade.Util
 module SZ = FStar.SizeT
@@ -10,6 +12,7 @@ module U64 = FStar.UInt64
 module U8 = FStar.UInt8
 module R = Pulse.Lib.Reference
 module PM = Pulse.Lib.SeqMatch
+open CBOR.Pulse.API.Borrow
 
 (** Destructors *)
 
@@ -25,57 +28,53 @@ let cbor_major_type (c: cbor) : Tot T.major_type_t =
 inline_for_extraction
 let equal_for_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
   (v1: cbor)
 = (x2: t) ->
-  (#p2: perm) ->
+  (#p2: lifetime) ->
   (#v2: Ghost.erased cbor) ->
   stt bool
-    (vmatch p2 x2 v2)
-    (fun res -> vmatch p2 x2 v2 ** pure (res == (v1 = Ghost.reveal v2)))
+    (p2 ** vmatch p2 x2 v2)
+    (fun res -> p2 ** vmatch p2 x2 v2 ** pure (res == (v1 = Ghost.reveal v2)))
 
 inline_for_extraction
 let equal_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (x1: t) ->
   (x2: t) ->
-  (#p1: perm) ->
-  (#p2: perm) ->
+  (#p1: lifetime) ->
+  (#p2: lifetime) ->
   (#v1: Ghost.erased cbor) ->
   (#v2: Ghost.erased cbor) ->
   stt bool
-    (vmatch p1 x1 v1 ** vmatch p2 x2 v2)
-    (fun res -> vmatch p1 x1 v1 ** vmatch p2 x2 v2 ** pure (res == true <==> (Ghost.reveal v1 == Ghost.reveal v2)))
+    (p1 ** p2 ** vmatch p1 x1 v1 ** vmatch p2 x2 v2)
+    (fun res -> p1 ** p2 ** vmatch p1 x1 v1 ** vmatch p2 x2 v2 ** pure (res == true <==> (Ghost.reveal v1 == Ghost.reveal v2)))
 
 inline_for_extraction
 let ghost_get_size_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
-  (vmatch_with_size: nat -> perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
+  (vmatch_with_size: nat -> lifetime -> t -> cbor -> slprop)
 = (x: t) ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#x': cbor) ->
   stt_ghost unit emp_inames
-    (vmatch p x x')
-    (fun _ -> exists* p' v . vmatch_with_size v p' x x' **
-      Trade.trade
-        (vmatch_with_size v p' x x')
-        (vmatch p x x')
-    )
+    (p ** vmatch p x x')
+    (fun _ -> exists* v. p ** vmatch_with_size v p x x')
 
 inline_for_extraction
 let get_size_t
   (#t: Type)
-  (vmatch_with_size: nat -> perm -> t -> cbor -> slprop)
+  (vmatch_with_size: nat -> lifetime -> t -> cbor -> slprop)
 = (x: t) ->
   (bound: SZ.t) ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#x': Ghost.erased cbor) ->
   (#v: Ghost.erased nat) ->
   stt SZ.t
-    (vmatch_with_size v p x x')
-    (fun res -> vmatch_with_size v p x x' ** pure (
+    (p ** vmatch_with_size v p x x')
+    (fun res -> p ** vmatch_with_size v p x x' ** pure (
       (SZ.v res = 0 <==> Ghost.reveal v > SZ.v bound) /\
       (SZ.v res > 0 ==> Ghost.reveal v == SZ.v res)
     ))
@@ -83,26 +82,22 @@ let get_size_t
 inline_for_extraction
 let ignore_size_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
-  (vmatch_with_size: nat -> perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
+  (vmatch_with_size: nat -> lifetime -> t -> cbor -> slprop)
 = (x: t) ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#x': cbor) ->
   (#v: nat) ->
   stt_ghost unit emp_inames
-    (vmatch_with_size v p x x')
-    (fun _ -> exists* p' . vmatch p' x x' **
-      Trade.trade
-        (vmatch p' x x')
-        (vmatch_with_size v p x x')
-    )
+    (p ** vmatch_with_size v p x x')
+    (fun _ -> p ** vmatch p x x')
 
 inline_for_extraction
 let get_major_type_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (x: t) ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#y: Ghost.erased cbor) ->
   stt T.major_type_t
     (vmatch p x y)
@@ -111,24 +106,24 @@ let get_major_type_t
 inline_for_extraction
 let read_simple_value_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (x: t) ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#y: Ghost.erased cbor) ->
   stt T.simple_value
-    (vmatch p x y ** pure (CSimple? (unpack y)))
-    (fun res -> vmatch p x y ** pure (unpack y == CSimple res))
+    (p ** vmatch p x y ** pure (CSimple? (unpack y)))
+    (fun res -> p ** vmatch p x y ** pure (unpack y == CSimple res))
 
 inline_for_extraction
 let elim_simple_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (x: t) ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#y: cbor) ->
   stt_ghost unit emp_inames
-    (vmatch p x y ** pure (CSimple? (unpack y)))
-    (fun _ -> emp)
+    (p ** vmatch p x y ** pure (CSimple? (unpack y)))
+    (fun _ -> p)
 
 let read_uint64_post
   (y: cbor)
@@ -141,24 +136,24 @@ let read_uint64_post
 inline_for_extraction
 let read_uint64_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (x: t) ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#y: Ghost.erased cbor) ->
   stt FStar.UInt64.t
-    (vmatch p x y ** pure (CInt64? (unpack y)))
-    (fun res -> vmatch p x y ** pure (read_uint64_post y res))
+    (p ** vmatch p x y ** pure (CInt64? (unpack y)))
+    (fun res -> p ** vmatch p x y ** pure (read_uint64_post y res))
 
 inline_for_extraction
 let elim_int64_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (x: t) ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#y: cbor) ->
   stt_ghost unit emp_inames
-    (vmatch p x y ** pure (CInt64? (unpack y)))
-    (fun _ -> emp)
+    (p ** vmatch p x y ** pure (CInt64? (unpack y)))
+    (fun _ -> p)
 
 let get_string_length_post
   (y: cbor)
@@ -171,14 +166,14 @@ let get_string_length_post
 inline_for_extraction
 let get_string_length_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (x: t) ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#y: Ghost.erased cbor) ->
   stt U64.t
-    (vmatch p x y ** pure (CString? (unpack y)))
+    (p ** vmatch p x y ** pure (CString? (unpack y)))
     (fun res ->
-      vmatch p x y ** 
+      p ** vmatch p x y ** 
       pure (get_string_length_post y res)
     )
 
@@ -193,17 +188,15 @@ let get_string_post
 inline_for_extraction
 let get_string_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (x: t) ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#y: Ghost.erased cbor) ->
-  stt (S.slice FStar.UInt8.t)
-    (vmatch p x y ** pure (CString? (unpack y)))
-    (fun res -> exists* p' v' .
-      pts_to res #p' v' **
-      Trade.trade
-        (pts_to res #p' v')
-        (vmatch p x y) **
+  stt (BS.bslice p FStar.UInt8.t)
+    (p ** vmatch p x y ** pure (CString? (unpack y)))
+    (fun res -> exists* v' .
+      p **
+      res |-> v' **
       pure (get_string_post y v')
     )
 
@@ -218,13 +211,13 @@ let get_tagged_tag_post
 inline_for_extraction
 let get_tagged_tag_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (x: t) ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#y: Ghost.erased cbor) ->
   stt FStar.UInt64.t
-    (vmatch p x y ** pure (CTagged? (unpack y)))
-    (fun res -> vmatch p x y ** pure (
+    (p ** vmatch p x y ** pure (CTagged? (unpack y)))
+    (fun res -> p ** vmatch p x y ** pure (
       get_tagged_tag_post y res
     ))
 
@@ -239,17 +232,15 @@ let get_tagged_payload_post
 inline_for_extraction
 let get_tagged_payload_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (x: t) ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#y: Ghost.erased cbor) ->
   stt t
-    (vmatch p x y ** pure (CTagged? (unpack y)))
-    (fun res -> exists* p' v' .
-      vmatch p' res v' **
-      Trade.trade
-        (vmatch p' res v')
-        (vmatch p x y) **
+    (p ** vmatch p x y ** pure (CTagged? (unpack y)))
+    (fun res -> exists* v' .
+      p **
+      vmatch p res v' **
       pure (get_tagged_payload_post y v')
     )
 
@@ -264,13 +255,13 @@ let get_array_length_post
 inline_for_extraction
 let get_array_length_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (x: t) ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#y: Ghost.erased cbor) ->
   stt FStar.UInt64.t
-    (vmatch p x y ** pure (CArray? (unpack y)))
-    (fun res -> vmatch p x y ** pure (
+    (p ** vmatch p x y ** pure (CArray? (unpack y)))
+    (fun res -> p ** vmatch p x y ** pure (
        get_array_length_post y res
       )
     )
@@ -296,34 +287,31 @@ let get_array_item_post
 inline_for_extraction
 let get_array_item_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (x: t) ->
   (i: FStar.UInt64.t) ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#y: Ghost.erased cbor) ->
   stt t
-    (vmatch p x y ** pure (get_array_item_pre i y))
-    (fun res -> exists* p' y' .
-      vmatch p' res y' **
-      Trade.trade (vmatch p' res y') (vmatch p x y) **
+    (p ** vmatch p x y ** pure (get_array_item_pre i y))
+    (fun res -> exists* y' .
+      p ** vmatch p res y' **
       pure (get_array_item_post i y y')
     )
 
 inline_for_extraction
 let array_iterator_start_t
   (#t #t': Type)
-  (vmatch: perm -> t -> cbor -> slprop)
-  (iter: perm -> t' -> list cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
+  (iter: lifetime -> t' -> list cbor -> slprop)
 = (x: t) ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#y: Ghost.erased cbor) ->
   stt t'
-    (vmatch p x y ** pure (CArray? (unpack y)))
-    (fun res -> exists* p' l' .
-      iter p' res l' **
-      Trade.trade
-        (iter p' res l')
-        (vmatch p x y) **
+    (p ** vmatch p x y ** pure (CArray? (unpack y)))
+    (fun res -> exists* l' .
+      p **
+      iter p res l' **
       pure (
         unpack y == CArray l'
     ))
@@ -331,43 +319,41 @@ let array_iterator_start_t
 inline_for_extraction
 let array_iterator_is_empty_t
   (#t': Type)
-  (iter: perm -> t' -> list cbor -> slprop)
+  (iter: lifetime -> t' -> list cbor -> slprop)
 = (x: t') ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#y: Ghost.erased (list cbor)) ->
   stt bool
-    (iter p x y)
-    (fun res -> iter p x y ** pure (res == Nil? y))
+    (p ** iter p x y)
+    (fun res -> p ** iter p x y ** pure (res == Nil? y))
 
 inline_for_extraction
 let array_iterator_length_t
   (#t': Type)
-  (iter: perm -> t' -> list cbor -> slprop)
+  (iter: lifetime -> t' -> list cbor -> slprop)
 = (x: t') ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#y: Ghost.erased (list cbor)) ->
   stt U64.t
-    (iter p x y)
-    (fun res -> iter p x y ** pure (U64.v res == List.Tot.length y))
+    (p ** iter p x y)
+    (fun res -> p ** iter p x y ** pure (U64.v res == List.Tot.length y))
 
 inline_for_extraction
 let array_iterator_next_t
   (#t #t': Type)
-  (vmatch: perm -> t -> cbor -> slprop)
-  (iter: perm -> t' -> list cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
+  (iter: lifetime -> t' -> list cbor -> slprop)
 = (x: R.ref t') ->
   (#y: Ghost.erased t') ->
-  (#py: perm) ->
+  (#py: lifetime) ->
   (#z: Ghost.erased (list cbor)) ->
   stt t
-    (R.pts_to x y ** iter py y z ** pure (Cons? z))
-    (fun res -> exists* p' v' y' z' .
-      vmatch p' res v' **
+    (py ** R.pts_to x y ** iter py y z ** pure (Cons? z))
+    (fun res -> exists* v' y' z' .
+      py **
+      vmatch py res v' **
       R.pts_to x y' **
       iter py y' z' **
-      Trade.trade
-        (vmatch p' res v' ** iter py y' z')
-        (iter py y z) **
       pure (Ghost.reveal z == v' :: z')
     )
 
@@ -415,13 +401,13 @@ let get_map_length_post
 inline_for_extraction
 let get_map_length_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (x: t) ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#y: Ghost.erased cbor) ->
   stt FStar.UInt64.t
-    (vmatch p x y ** pure (CMap? (unpack y)))
-    (fun res -> vmatch p x y ** pure (
+    (p ** vmatch p x y ** pure (CMap? (unpack y)))
+    (fun res -> p **vmatch p x y ** pure (
        get_map_length_post y res
       )
     )
@@ -439,18 +425,15 @@ let map_iterator_start_post
 inline_for_extraction
 let map_iterator_start_t
   (#t #t': Type)
-  (vmatch: perm -> t -> cbor -> slprop)
-  (iter: perm -> t' -> list (cbor & cbor) -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
+  (iter: lifetime -> t' -> list (cbor & cbor) -> slprop)
 = (x: t) ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#y: Ghost.erased cbor) ->
   stt t'
-    (vmatch p x y ** pure (CMap? (unpack y)))
-    (fun res -> exists* p' l' .
-      iter p' res l' **
-      Trade.trade
-        (iter p' res l')
-        (vmatch p x y) **
+    (p ** vmatch p x y ** pure (CMap? (unpack y)))
+    (fun res -> exists* l' .
+      p ** iter p res l' **
       pure (
         map_iterator_start_post y l'
     ))
@@ -458,32 +441,29 @@ let map_iterator_start_t
 inline_for_extraction
 let map_iterator_is_empty_t
   (#t': Type)
-  (iter: perm -> t' -> list (cbor & cbor) -> slprop)
+  (iter: lifetime -> t' -> list (cbor & cbor) -> slprop)
 = (x: t') ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#y: Ghost.erased (list (cbor & cbor))) ->
   stt bool
-    (iter p x y)
-    (fun res -> iter p x y ** pure (res == Nil? y))
+    (p ** iter p x y)
+    (fun res -> p ** iter p x y ** pure (res == Nil? y))
 
 inline_for_extraction
 let map_iterator_next_t
   (#t #t': Type)
-  (vmatch2: perm -> t -> cbor & cbor -> slprop)
-  (iter: perm -> t' -> list (cbor & cbor) -> slprop)
+  (vmatch2: lifetime -> t -> cbor & cbor -> slprop)
+  (iter: lifetime -> t' -> list (cbor & cbor) -> slprop)
 = (x: R.ref t') ->
   (#y: Ghost.erased t') ->
-  (#py: perm) ->
+  (#py: lifetime) ->
   (#z: Ghost.erased (list (cbor & cbor))) ->
   stt t
-    (R.pts_to x y ** iter py y z ** pure (Cons? z))
-    (fun res -> exists* p' v' y' z' .
-      vmatch2 p' res v' **
+    (py ** R.pts_to x y ** iter py y z ** pure (Cons? z))
+    (fun res -> exists* v' y' z' .
+      py ** vmatch2 py res v' **
       R.pts_to x y' **
       iter py y' z' **
-      Trade.trade
-        (vmatch2 p' res v' ** iter py y' z')
-        (iter py y z) **
       pure (Ghost.reveal z == v' :: z')
     )
 
@@ -491,7 +471,7 @@ inline_for_extraction
 let map_entry_key_t
   (#t2 #t: Type)
   (vmatch2: perm -> t2 -> cbor & cbor -> slprop)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (x2: t2) ->
   (#p: perm) ->
   (#v2: Ghost.erased (cbor & cbor)) ->
@@ -506,7 +486,7 @@ inline_for_extraction
 let map_entry_value_t
   (#t2 #t: Type)
   (vmatch2: perm -> t2 -> cbor & cbor -> slprop)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (x2: t2) ->
   (#p: perm) ->
   (#v2: Ghost.erased (cbor & cbor)) ->
@@ -522,131 +502,72 @@ let map_entry_value_t
 inline_for_extraction
 let share_t
   (#t1 #t2: Type)
-  (vmatch: perm -> t1 -> t2 -> slprop)
+  (vmatch: lifetime -> t1 -> t2 -> slprop)
 =
   (x1: t1) ->
-  (#p: perm) ->
+  (#p: lifetime) ->
   (#x2: t2) ->
   stt_ghost unit emp_inames
   (vmatch p x1 x2)
-  (fun _ ->
-    let open FStar.Real in
-    vmatch (p /. 2.0R) x1 x2 ** vmatch (p /. 2.0R) x1 x2
-  )
-
-inline_for_extraction
-let gather_t
-  (#t1 #t2: Type)
-  (vmatch: perm -> t1 -> t2 -> slprop)
-=
-  (x1: t1) ->
-  (#p: perm) ->
-  (#x2: t2) ->
-  (#p': perm) ->
-  (#x2': t2) ->
-  stt_ghost unit emp_inames
-  (vmatch p x1 x2 ** vmatch p' x1 x2')
-  (fun _ ->
-    let open FStar.Real in
-    vmatch (p +. p') x1 x2 **
-    pure (x2 == x2')
-  )
-
-inline_for_extraction
-let reset_perm_t
-  (#t1 #t2: Type)
-  (vmatch: perm -> t1 -> t2 -> slprop)
-=
-  (x1: t1) ->
-  (#p: perm) ->
-  (#x2: Ghost.erased t2) ->
-  stt t1
-    (vmatch p x1 x2)
-    (fun res -> vmatch 1.0R res x2 **
-      Trade.trade (vmatch 1.0R res x2) (vmatch p x1 x2)
-    )
+  (fun _ -> vmatch p x1 x2 ** vmatch p x1 x2)
 
 (** Constructors *)
 
 inline_for_extraction
 let mk_simple_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 =
   (v: simple_value) ->
+  p: lifetime ->
   stt t
     (emp)
-    (fun res -> vmatch 1.0R res (pack (CSimple v)))
+    (fun res -> vmatch p res (pack (CSimple v)))
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn mk_simple_value_trade
   (#t: Type0)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
   (cbor_mk_simple: mk_simple_t vmatch)
   (cbor_elim_simple: elim_simple_t vmatch)
   (v: simple_value)
+  (p: lifetime)
 requires emp
 returns res: t
 ensures
-    vmatch 1.0R res (pack (CSimple v)) **
-    Trade.trade
-      (vmatch 1.0R res (pack (CSimple v)))
-      emp
+    vmatch p res (pack (CSimple v))
 {
-  let res = cbor_mk_simple v;
-  intro
-    (Trade.trade
-      (vmatch 1.0R res (pack (CSimple v)))
-      emp
-    )
-    #emp
-    fn _
-  {
-    cbor_elim_simple res
-  };
-  res
+  cbor_mk_simple v p;
 }
 
 inline_for_extraction
 let mk_int64_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (ty: major_type_uint64_or_neg_int64) ->
   (v: U64.t) ->
+  p: lifetime ->
   stt t
     (emp)
-    (fun res -> vmatch 1.0R res (pack (CInt64 ty v)))
+    (fun res -> vmatch p res (pack (CInt64 ty v)))
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn mk_int64_trade
   (#t: Type0)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
   (cbor_mk_int64: mk_int64_t vmatch)
   (cbor_elim_int64: elim_int64_t vmatch)
   (ty: major_type_uint64_or_neg_int64)
   (v: U64.t)
+  (p: lifetime)
 requires emp
 returns res: t
 ensures
-    vmatch 1.0R res (pack (CInt64 ty v)) **
-    Trade.trade
-      (vmatch 1.0R res (pack (CInt64 ty v)))
-      emp
+    vmatch p res (pack (CInt64 ty v))
 {
-  let res = cbor_mk_int64 ty v;
-  intro
-    (Trade.trade
-      (vmatch 1.0R res (pack (CInt64 ty v)))
-      emp
-    )
-    #emp
-    fn _
-  {
-    cbor_elim_int64 res
-  };
-  res
+  cbor_mk_int64 ty v p;
 }
 
 inline_for_extraction
@@ -661,48 +582,43 @@ let impl_utf8_correct_t =
 inline_for_extraction
 let mk_string_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (ty: major_type_byte_string_or_text_string) ->
-  (s: S.slice U8.t) ->
-  (#p: perm) ->
+  (#p: lifetime) ->
+  (s: BS.bslice p U8.t) ->
   (#v: Ghost.erased (Seq.seq U8.t)) ->
   stt t
-    (pts_to s #p v ** pure (
+    (s |-> v ** pure (
       FStar.UInt.fits (Seq.length v) 64 /\
       (ty == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v)
     ))
     (fun res -> exists* v' .
-      vmatch 1.0R res (pack (CString ty v')) **
-      Trade.trade
-        (vmatch 1.0R res (pack (CString ty v')))
-        (pts_to s #p v) **
+      vmatch p res (pack (CString ty v')) **
       pure (v' == Ghost.reveal v)
     )
 
 module A = Pulse.Lib.Array
 module AP = Pulse.Lib.ArrayPtr
+module BAP = CBOR.Pulse.API.Borrow.ArrayPtr
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let mk_string_from_array_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 =
   (ty: major_type_byte_string_or_text_string) ->
-  (a: A.array U8.t) ->
+  (#p: lifetime) ->
+  (a: BA.barray p U8.t) ->
   (len: U64.t) ->
-  (#p: perm) ->
   (#v: Ghost.erased (Seq.seq U8.t)) ->
   stt t
-    (pts_to a #p v ** pure (
+    (a |-> v ** pure (
       Seq.length v == U64.v len /\
       (ty == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v)
     ))
     (fun res -> exists* v' .
-      vmatch 1.0R res v' **
-      Trade.trade
-        (vmatch 1.0R res v')
-        (pts_to a #p v) **
+      vmatch p res v' **
       pure (
         CString? (unpack v') /\
         CString?.typ (unpack v') == ty /\
@@ -714,57 +630,39 @@ inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn mk_string_from_array
   (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (mk_string: mk_string_t vmatch)
 : mk_string_from_array_t u#0 #_ vmatch
 =
   (ty: major_type_byte_string_or_text_string)
-  (a: A.array U8.t)
+  (#p: lifetime)
+  (a: BA.barray p U8.t)
   (len: U64.t)
-  (#p: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
 {
-  A.pts_to_len a;
   let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
-  let s = S.from_array a (SZ.uint64_to_sizet len);
-  intro
-    (Trade.trade
-      (pts_to s #p v)
-      (A.pts_to a #p v)
-    )
-    #(S.is_from_array a s)
-    fn _
-  {
-    S.to_array s;
-  };
-  S.pts_to_len s;
-  let res = mk_string ty s;
-  with p' v' . assert (vmatch p' res (pack (CString ty v')));
-  Trade.trans (vmatch p' res (pack (CString ty v'))) _ _;
-  res
+  let s = BS.bslice_of_barray a (SZ.uint64_to_sizet len);
+  mk_string ty s
 }
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let mk_string_from_arrayptr_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 =
   (ty: major_type_byte_string_or_text_string) ->
-  (a: AP.ptr U8.t) ->
+  (#p: lifetime) ->
+  (a: BAP.bptr p U8.t) ->
   (len: U64.t) ->
-  (#p: perm) ->
   (#v: Ghost.erased (Seq.seq U8.t)) ->
   stt t
-    (pts_to a #p v ** pure (
+    (a |-> v ** pure (
       Seq.length v == U64.v len /\
       (ty == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v)
     ))
     (fun res -> exists* v' .
-      vmatch 1.0R res v' **
-      Trade.trade
-        (vmatch 1.0R res v')
-        (pts_to a #p v) **
+      vmatch p res v' **
       pure (
         CString? (unpack v') /\
         CString?.typ (unpack v') == ty /\
@@ -776,93 +674,75 @@ inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn mk_string_from_arrayptr
   (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (mk_string: mk_string_t vmatch)
 : mk_string_from_arrayptr_t u#0 #_ vmatch
 =
   (ty: major_type_byte_string_or_text_string)
-  (a: AP.ptr U8.t)
+  #p
+  (a: BAP.bptr p U8.t)
   (len: U64.t)
-  (#p: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
 {
   let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
-  let s = S.arrayptr_to_slice_intro_trade a (SZ.uint64_to_sizet len);
-  S.pts_to_len s;
-  let res = mk_string ty s;
-  with p' v' . assert (vmatch p' res (pack (CString ty v')));
-  Trade.trans (vmatch p' res (pack (CString ty v'))) _ _;
-  res
+  let s = BS.bslice_of_bptr a (SZ.uint64_to_sizet len);
+  mk_string ty s
 }
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn mk_string_from_slice
   (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (mk_string: mk_string_from_arrayptr_t vmatch)
 : mk_string_t u#0 #_ vmatch
 =
   (ty: major_type_byte_string_or_text_string)
-  (s: S.slice U8.t)
-  (#p: perm)
+  (#p: lifetime)
+  (s: BS.bslice p U8.t)
   (#v: Ghost.erased (Seq.seq U8.t))
 {
-  S.pts_to_len s;
-  let a = S.slice_to_arrayptr_intro_trade s;
-  let res = mk_string ty a (SZ.sizet_to_uint64 (S.len s));
-  Trade.trans _ _ (S.pts_to s #p v);
-  with v' . assert (vmatch 1.0R res v');
-  Trade.rewrite_with_trade
-    (vmatch 1.0R res v')
-    (vmatch 1.0R res (pack (CString ty v)));
-  Trade.trans _ _ (S.pts_to s #p v);
+  BS.pts_to_len s;
+  let a = BS.bptr_of_bslice s;
+  let res = mk_string ty a (SZ.sizet_to_uint64 (BS.len s));
+  with v'. rewrite vmatch p res v' as vmatch p res (T.pack (T.CString ty v));
   res
 }
+
+open CBOR.Pulse.API.Borrow.Ref
 
 inline_for_extraction
 let mk_tagged_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (tag: U64.t) ->
-  (r: R.ref t) ->
-  (#pr: perm) ->
+  (#p: lifetime) ->
+  (r: bref p t) ->
   (#v: Ghost.erased t) ->
-  (#pv: perm) ->
   (#v': Ghost.erased cbor) ->
   stt t
-    (R.pts_to r #pr v ** vmatch pv v v')
-    (fun res ->
-      vmatch 1.0R res (pack (CTagged tag v')) **
-      Trade.trade
-        (vmatch 1.0R res (pack (CTagged tag v')))
-        (R.pts_to r #pr v ** vmatch pv v v')
-    )
+    (p ** r |-> v ** vmatch p v v')
+    (fun res -> p **
+      vmatch p res (pack (CTagged tag v')))
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let mk_array_from_array_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 =
-  (a: A.array t) ->
+  (#p: lifetime) ->
+  (a: BA.barray p t) ->
   (len: U64.t) ->
-  (#pa: perm) ->
   (#va: Ghost.erased (Seq.seq t)) ->
-  (#pv: perm) ->
   (#vv: Ghost.erased (list cbor)) ->
   stt t
-    (A.pts_to a #pa va **
-      PM.seq_list_match va vv (vmatch pv) **
-      pure (A.length a == U64.v len)
+    (p ** a |-> va **
+      PM.seq_list_match va vv (vmatch p) **
+      pure (Seq.length va == U64.v len)
     )
-    (fun res -> exists* v' .
-      vmatch 1.0R res v' **
-      Trade.trade
-        (vmatch 1.0R res v')
-        (A.pts_to a #pa va **
-          PM.seq_list_match va vv (vmatch pv)
-        ) **
+    (fun res -> exists* v' . p **
+      vmatch p res v' **
         pure (
           CArray? (unpack v') /\
           Ghost.reveal vv == CArray?.v (unpack v')
@@ -873,66 +753,49 @@ inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn mk_array_from_array'
   (#t: Type)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (mk_array_from_array: mk_array_from_array_t vmatch)
-  (a: A.array t)
+  (#p: lifetime)
+  (a: BA.barray p t)
   (len: U64.t)
   (va0: Ghost.erased (Seq.seq t))
-  (#pa: perm)
   (#va: Ghost.erased (Seq.seq t))
-  (#pv: perm)
   (#vv: Ghost.erased (list cbor))
 requires
-    (A.pts_to a #pa va **
-      PM.seq_list_match va0 vv (vmatch pv) **
-      pure (A.length a == U64.v len /\
+    (p ** a |-> va **
+      PM.seq_list_match va0 vv (vmatch p) **
+      pure (Seq.length va == U64.v len /\
         Seq.equal va0 va
       )
     )
 returns res: t
 ensures
-    (exists* v' .
-      vmatch 1.0R res v' **
-      Trade.trade
-        (vmatch 1.0R res v')
-        (A.pts_to a #pa va **
-          PM.seq_list_match va0 vv (vmatch pv)
-        ) **
+    (exists* v' . p **
+      vmatch p res v' **
         pure (
           CArray? (unpack v') /\
           Ghost.reveal vv == CArray?.v (unpack v')
         )
     )
 {
-  Trade.rewrite_with_trade
-    (PM.seq_list_match va0 vv (vmatch pv))
-    (PM.seq_list_match va vv (vmatch pv));
-  let res = mk_array_from_array a len;
-  Trade.trans_concl_r _ _ _ (PM.seq_list_match va0 vv (vmatch pv));
-  res
+  mk_array_from_array a len;
 }
 
 inline_for_extraction
 let mk_array_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
-= (a: S.slice t) ->
-  (#pa: perm) ->
+  (vmatch: lifetime -> t -> cbor -> slprop)
+= (#p: lifetime) ->
+  (a: BS.bslice p t) ->
   (#va: Ghost.erased (Seq.seq t)) ->
-  (#pv: perm) ->
   (#vv: Ghost.erased (list cbor)) ->
   stt t
-    (pts_to a #pa va **
-      PM.seq_list_match va vv (vmatch pv) **
-      pure (FStar.UInt.fits (SZ.v (S.len a)) U64.n)
+    (p ** a |-> va **
+      PM.seq_list_match va vv (vmatch p) **
+      pure (FStar.UInt.fits (SZ.v (BS.len a)) U64.n)
     )
-    (fun res -> exists* v' .
-      vmatch 1.0R res (pack (CArray v')) **
-      Trade.trade
-        (vmatch 1.0R res (pack (CArray v')))
-        (pts_to a #pa va **
-          PM.seq_list_match va vv (vmatch pv)
-        ) **
+    (fun res -> exists* v' . p **
+      vmatch p res (pack (CArray v')) **
         pure (v' == Ghost.reveal vv)
     )
 
@@ -940,95 +803,64 @@ inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn mk_array'
   (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (mk_array: mk_array_t vmatch)
-  (a: S.slice t)
+  (#p: lifetime)
+  (a: BS.bslice p t)
   (va0: Ghost.erased (Seq.seq t))
-  (#pa: perm)
   (#va: Ghost.erased (Seq.seq t))
-  (#pv: perm)
   (#vv: Ghost.erased (list cbor))
 requires
-    (pts_to a #pa va **
-      PM.seq_list_match va0 vv (vmatch pv) **
-      pure (FStar.UInt.fits (SZ.v (S.len a)) U64.n /\
+    (p ** a |-> va **
+      PM.seq_list_match va0 vv (vmatch p) **
+      pure (FStar.UInt.fits (SZ.v (BS.len a)) U64.n /\
         Seq.equal va va0
       )
     )
 returns res: t
 ensures
-    (exists* v' .
-      vmatch 1.0R res (pack (CArray v')) **
-      Trade.trade
-        (vmatch 1.0R res (pack (CArray v')))
-        (pts_to a #pa va **
-          PM.seq_list_match va0 vv (vmatch pv)
-        ) **
+    (exists* v' . p **
+      vmatch p res (pack (CArray v')) **
         pure ((v' <: list cbor) == Ghost.reveal vv)
     )
 {
-  Trade.rewrite_with_trade
-    (PM.seq_list_match va0 vv (vmatch pv))
-    (PM.seq_list_match va vv (vmatch pv));
-  let res = mk_array a;
-  Trade.trans_concl_r _ _ _ (PM.seq_list_match va0 vv (vmatch pv));
-  res
+  mk_array a;
 }
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn mk_array_from_array
   (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (mk_array: mk_array_t vmatch)
 : mk_array_from_array_t #_ vmatch
 =
-  (a: A.array t)
+  (#p: lifetime)
+  (a: BA.barray p t)
   (len: U64.t)
-  (#pa: perm)
   (#va: Ghost.erased (Seq.seq t))
-  (#pv: perm)
   (#vv: Ghost.erased (list cbor))
 {
-  A.pts_to_len a;
   let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
-  let s = S.from_array a (SZ.uint64_to_sizet len);
-  intro
-    (Trade.trade
-      (pts_to s #pa va)
-      (A.pts_to a #pa va)
-    )
-    #(S.is_from_array a s)
-    fn _
-  {
-    S.to_array s;
-  };
-  Trade.reg_r (pts_to s #pa va) (A.pts_to a #pa va) (PM.seq_list_match va vv (vmatch pv));
-  S.pts_to_len s;
-  let res = mk_array s;
-  with p' v' . assert (vmatch p' res (pack (CArray v')));
-  Trade.trans (vmatch p' res (pack (CArray v'))) _ _;
-  res
+  let s = BS.bslice_of_barray a (SZ.uint64_to_sizet len);
+  BS.pts_to_len s;
+  mk_array s;
 }
 
 inline_for_extraction
 let mk_map_entry_t
   (#t #t2: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
-  (vmatch2: perm -> t2 -> cbor & cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
+  (vmatch2: lifetime -> t2 -> cbor & cbor -> slprop)
 = (xk: t) ->
   (xv: t) ->
-  (#pk: perm) ->
+  (#p: lifetime) ->
   (#vk: Ghost.erased cbor) ->
-  (#pv: perm) ->
   (#vv: Ghost.erased cbor) ->
   stt t2
-    (vmatch pk xk vk ** vmatch pv xv vv)
-    (fun res ->
-      vmatch2 1.0R res (Ghost.reveal vk, Ghost.reveal vv) **
-      Trade.trade
-        (vmatch2 1.0R res (Ghost.reveal vk, Ghost.reveal vv))
-        (vmatch pk xk vk ** vmatch pv xv vv)
+    (p ** vmatch p xk vk ** vmatch p xv vv)
+    (fun res -> p **
+      vmatch2 p res (Ghost.reveal vk, Ghost.reveal vv)
     )
 
 let mk_map_gen_none_postcond
@@ -1048,24 +880,24 @@ let mk_map_gen_post
   (#t1 #t2: Type)
   (vmatch1: perm -> t1 -> cbor -> slprop)
   (vmatch2: perm -> t2 -> (cbor & cbor) -> slprop)
+  (p: lifetime)
   (a: S.slice t2)
   (va: (Seq.seq t2))
-  (pv: perm)
   (vv: (list (cbor & cbor)))
   (res: option t1)
 : Tot slprop
 = match res with
   | None -> exists* va' vv' .
     pts_to a va' **
-    PM.seq_list_match va' vv' (vmatch2 pv) **
+    PM.seq_list_match va' vv' (vmatch2 p) **
     Trade.trade 
-      (PM.seq_list_match va' vv' (vmatch2 pv))
-      (PM.seq_list_match va vv (vmatch2 pv)) **
+      (PM.seq_list_match va' vv' (vmatch2 p))
+      (PM.seq_list_match va vv (vmatch2 p)) **
     pure (
       mk_map_gen_none_postcond va vv va' vv'
     )
   | Some res -> exists* (v': cbor_map {FStar.UInt.fits (cbor_map_length v') 64}) va' .
-      vmatch1 1.0R res (pack (CMap v')) **
+      vmatch1 p res (pack (CMap v')) **
       Trade.trade
         (vmatch1 1.0R res (pack (CMap v')))
         (pts_to a va' ** // this function potentially sorts the input array, so we lose the link to the initial array contents
@@ -1417,7 +1249,7 @@ fn mk_map_from_ref
 
 let map_get_post_none
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
   (x: t)
   (px: perm)
   (vx: cbor)
@@ -1428,7 +1260,7 @@ let map_get_post_none
 
 let map_get_post_some
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
   (x: t)
   (px: perm)
   (vx: cbor)
@@ -1444,7 +1276,7 @@ let map_get_post_some
 
 let map_get_post
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
   (x: t)
   (px: perm)
   (vx: cbor)
@@ -1458,7 +1290,7 @@ let map_get_post
 inline_for_extraction
 let map_get_by_ref_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (x: t) ->
   (k: t) ->
   (dest: R.ref t) ->
@@ -1481,7 +1313,7 @@ let map_get_by_ref_t
 inline_for_extraction
 let map_get_t
   (#t: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
 = (x: t) ->
   (k: t) ->
   (#px: perm) ->
@@ -1499,7 +1331,7 @@ let map_get_t
 inline_for_extraction
 fn map_get_as_option
   (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (m: map_get_by_ref_t vmatch)
 : map_get_t u#0 #t vmatch
 =
@@ -1737,7 +1569,7 @@ inline_for_extraction
 let cbor_copy_t
   (#t: Type)
   (#tf: Type)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
   (freeable: tf -> slprop)
   (get_cbor: (tf -> t))
 =

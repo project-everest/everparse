@@ -57,7 +57,7 @@ let impl_map_group_post
 inline_for_extraction
 let impl_map_group_t
   (#t: Type0)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
   (g: map_group)
   (f: map_constraint)
 =
@@ -84,7 +84,7 @@ let impl_map_group_t
 inline_for_extraction
 fn apply_impl_map_group
   (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (#g: Ghost.erased map_group)
   (#f: Ghost.erased map_constraint)
   (w: impl_map_group_t vmatch g f)
@@ -118,7 +118,7 @@ ensures
 inline_for_extraction
 fn impl_t_map_group
   (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (cbor_get_major_type: get_major_type_t vmatch)
   (get_map_length: get_map_length_t vmatch)
   (#g1: Ghost.erased map_group)
@@ -157,7 +157,7 @@ fn impl_t_map_group
 inline_for_extraction
 fn impl_map_group_nop
   (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (_: unit)
 : impl_map_group_t #_ vmatch (map_group_nop) (map_constraint_empty)
 = (c: _)
@@ -175,7 +175,7 @@ fn impl_map_group_nop
 inline_for_extraction
 fn impl_map_group_always_false
   (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (_: unit)
 : impl_map_group_t #_ vmatch (map_group_always_false) (map_constraint_empty)
 = (c: _)
@@ -193,7 +193,7 @@ fn impl_map_group_always_false
 inline_for_extraction
 fn impl_map_group_concat
   (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (#g1: Ghost.erased map_group)
   (#f1: Ghost.erased map_constraint)
   (w1: impl_map_group_t vmatch g1 f1)
@@ -239,7 +239,7 @@ fn impl_map_group_concat
 inline_for_extraction
 fn impl_map_group_choice
   (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (#g1: Ghost.erased map_group)
   (#f1: Ghost.erased map_constraint)
   (w1: impl_map_group_t vmatch g1 f1)
@@ -280,7 +280,7 @@ fn impl_map_group_choice
 inline_for_extraction
 fn impl_map_group_ext
   (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (#g1: Ghost.erased map_group)
   (#f1: Ghost.erased map_constraint)
   (impl1: impl_map_group_t vmatch g1 f1)
@@ -307,7 +307,7 @@ fn impl_map_group_ext
 inline_for_extraction
 let impl_map_group_zero_or_one
   (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (#g1: Ghost.erased map_group)
   (#f1: Ghost.erased map_constraint)
   (w1: impl_map_group_t vmatch g1 f1)
@@ -324,7 +324,7 @@ let impl_map_group_zero_or_one
 
 let impl_map_group_match_item_for_body_post
   (#t: Type0)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
   (cut: bool)
   (k: Ghost.erased cbor)
   (dest: Ghost.erased typ)
@@ -345,7 +345,7 @@ let impl_map_group_match_item_for_body_post
 inline_for_extraction
 fn impl_map_group_match_item_for_body
   (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (map_get: map_get_t vmatch)
   (cut: bool)
   (k: Ghost.erased cbor)
@@ -410,7 +410,7 @@ fn impl_map_group_match_item_for_body
 inline_for_extraction
 fn impl_map_group_match_item_for
   (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (map_get: map_get_t vmatch)
   (cut: bool)
   (#k: Ghost.erased cbor)
@@ -504,7 +504,7 @@ module GR = Pulse.Lib.GhostReference
 let impl_map_group_filter_invariant
   (#t: Type0)
   (#cbor_map_iterator_t: Type0)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
   (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (f: ((cbor & cbor) -> bool))
   (c: t)
@@ -679,7 +679,7 @@ ensures
 inline_for_extraction
 fn impl_map_group_filter
   (#t #t2: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (#vmatch2: perm -> t2 -> cbor & cbor -> slprop)
   (#cbor_map_iterator_t: Type0)
   (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
@@ -793,7 +793,7 @@ if (not count) {
 inline_for_extraction
 fn impl_map_entry_cond_matches_map_group_entry
   (#t #t2: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (#vmatch2: perm -> t2 -> cbor & cbor -> slprop)
   (map_entry_key: map_entry_key_t vmatch2 vmatch)
   (map_entry_value: map_entry_value_t vmatch2 vmatch)
@@ -892,7 +892,7 @@ inline_for_extraction
 let impl_zero_or_more_map_group_match_item_except
   (#t #t2: Type0)
   (#cbor_map_iterator_t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch: lifetime -> t -> cbor -> slprop)
   (#vmatch2: perm -> t2 -> (cbor & cbor) -> slprop)
   (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (cbor_map_iterator_init: map_iterator_start_t vmatch cbor_map_iterator_match)

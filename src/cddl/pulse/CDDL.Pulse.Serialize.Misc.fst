@@ -17,7 +17,7 @@ module I64 = FStar.Int64
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_uint
   (#ty: Type u#0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (cbor_det_serialize: cbor_det_serialize_t vmatch)
   (cbor_mk_int64: mk_int64_t vmatch)
   (cbor_elim_int64: elim_int64_t vmatch)
@@ -48,7 +48,7 @@ fn impl_serialize_uint
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_nint
   (#ty: Type u#0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (cbor_det_serialize: cbor_det_serialize_t vmatch)
   (cbor_mk_int64: mk_int64_t vmatch)
   (cbor_elim_int64: elim_int64_t vmatch)
@@ -79,7 +79,7 @@ fn impl_serialize_nint
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_int_range_uint64
   (#ty: Type u#0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (cbor_det_serialize: cbor_det_serialize_t vmatch)
   (cbor_mk_int64: mk_int64_t vmatch)
   (cbor_elim_int64: elim_int64_t vmatch)
@@ -104,7 +104,7 @@ fn impl_serialize_int_range_uint64
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_int_range_int64
   (#ty: Type u#0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (cbor_det_serialize: cbor_det_serialize_t vmatch)
   (cbor_mk_int64: mk_int64_t vmatch)
   (cbor_elim_int64: elim_int64_t vmatch)
@@ -141,7 +141,7 @@ fn impl_serialize_int_range_int64
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_int_range_neg_int64
   (#ty: Type u#0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (cbor_det_serialize: cbor_det_serialize_t vmatch)
   (cbor_mk_int64: mk_int64_t vmatch)
   (cbor_elim_int64: elim_int64_t vmatch)
@@ -166,7 +166,7 @@ fn impl_serialize_int_range_neg_int64
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_literal_cont
   (#ty: Type u#0)
-  (#[@@@erasable] vmatch: perm -> ty -> cbor -> slprop)
+  (#[@@@erasable] vmatch: lifetime -> ty -> cbor -> slprop)
   (cbor_det_serialize: cbor_det_serialize_t vmatch)
   (#[@@@erasable] u: Ghost.erased cbor)
   (c: unit)
@@ -198,7 +198,7 @@ fn impl_serialize_literal_cont
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_literal
   (#ty: Type u#0)
-  (#[@@@erasable] vmatch: perm -> ty -> cbor -> slprop)
+  (#[@@@erasable] vmatch: lifetime -> ty -> cbor -> slprop)
   (cbor_det_serialize: cbor_det_serialize_t vmatch)
   (#[@@@erasable] u: Ghost.erased cbor)
   (w: with_cbor_literal_t vmatch u)
@@ -224,7 +224,7 @@ let pow2_64_m1_eq : squash (U64.v pow2_64_m1 == pow2 64 - 1) = _ by (
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_bstr
   (#ty: Type u#0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (cbor_det_serialize: cbor_det_serialize_t vmatch)
   (cbor_mk_string: mk_string_t vmatch)
   (freeable: Ghost.erased bool)
@@ -262,7 +262,7 @@ fn impl_serialize_bstr
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_tstr
   (#ty: Type u#0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (cbor_utf8_correct: impl_utf8_correct_t)
   (cbor_det_serialize: cbor_det_serialize_t vmatch)
   (cbor_mk_string: mk_string_t vmatch)
@@ -307,7 +307,7 @@ fn impl_serialize_tstr
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_str_size
   (#ty: Type u#0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (cbor_utf8_correct: impl_utf8_correct_t)
   (cbor_det_serialize: cbor_det_serialize_t vmatch)
   (cbor_mk_string: mk_string_t vmatch)
@@ -340,7 +340,7 @@ fn impl_serialize_str_size
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_simple
   (#ty: Type u#0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (cbor_det_serialize: cbor_det_serialize_t vmatch)
   (cbor_mk_simple: mk_simple_t vmatch)
   (cbor_elim_simple: elim_simple_t vmatch)
@@ -375,7 +375,7 @@ fn impl_serialize_simple
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_bool
   (#ty: Type u#0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (cbor_det_serialize: cbor_det_serialize_t vmatch)
   (cbor_mk_simple: mk_simple_t vmatch)
   (cbor_elim_simple: elim_simple_t vmatch)
@@ -501,7 +501,7 @@ fn impl_serialize_bstr_cbor_det
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_any
   (#ty: Type u#0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (cbor_det_serialize: cbor_det_serialize_t vmatch)
 : impl_serialize #_ #_ #_ spec_any #_ (rel_cbor_not_freeable vmatch false)
 =

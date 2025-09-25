@@ -34,7 +34,7 @@ let impl_elem_type_sem
 
 let rel_elem_type_sem
   (#cbor_t: Type0)
-  (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (vmatch: lifetime -> cbor_t -> Cbor.cbor -> slprop)
   (t: target_elem_type)
 : Tot (rel (impl_elem_type_sem cbor_t t) (target_elem_type_sem t))
 = match t returns rel (impl_elem_type_sem cbor_t t) (target_elem_type_sem t) with
@@ -66,7 +66,7 @@ let empty_rel_env : rel_env empty_target_type_env = fun _ -> false_elim ()
 let rec impl_type_sem
   (#bound: name_env)
   (#cbor_t: Type0)
-  (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (vmatch: lifetime -> cbor_t -> Cbor.cbor -> slprop)
   (#cbor2_t: Type0)
   (vmatch2: perm -> cbor2_t -> Cbor.cbor & Cbor.cbor -> slprop)
   (#cbor_array_iterator_t: Type0)
@@ -157,7 +157,7 @@ let extend_rel_env_gen
 let rec impl_type_sem_incr
   (#bound1: name_env)
   (cbor_t: Type0)
-  (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (vmatch: lifetime -> cbor_t -> Cbor.cbor -> slprop)
   (#cbor2_t: Type0)
   (vmatch2: perm -> cbor2_t -> Cbor.cbor & Cbor.cbor -> slprop)
   (#cbor_array_iterator_t: Type0)

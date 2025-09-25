@@ -43,7 +43,7 @@ let impl_zero_copy_map_group_post
 inline_for_extraction
 let impl_zero_copy_map_group
   (#t: Type0)
-  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch: lifetime -> t -> cbor -> slprop)
   (#g: det_map_group)
   (#f: map_constraint)
   (#tgt: Type0)
@@ -74,7 +74,7 @@ module Util = CBOR.Spec.Util
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_map
   (#ty: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
     (#[@@@erasable]t: Ghost.erased (det_map_group))
     (#[@@@erasable]fp: Ghost.erased map_constraint)
     (#[@@@erasable]tgt: Type0)
@@ -126,7 +126,7 @@ let impl_zero_copy_map_ext_precond
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_map_ext
   (#ty: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
     (#[@@@erasable]t1: Ghost.erased (det_map_group))
     (#[@@@erasable]fp1: Ghost.erased map_constraint)
     (#[@@@erasable]tgt1: Type0)
@@ -159,14 +159,14 @@ fn impl_zero_copy_map_ext
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_zero_copy_map_nop_t
   (#ty: Type0)
-  (vmatch: perm -> ty -> cbor -> slprop)
+  (vmatch: lifetime -> ty -> cbor -> slprop)
 = impl_zero_copy_map_group #ty vmatch #_ #_
 #unit #_ #_ mg_spec_nop.mg_parser  #(unit) (rel_unit)
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_map_nop
   (#ty: Type0)
-  (vmatch: perm -> ty -> cbor -> slprop)
+  (vmatch: lifetime -> ty -> cbor -> slprop)
 : impl_zero_copy_map_nop_t #_ vmatch
 =
   (c: _)
@@ -198,7 +198,7 @@ fn impl_zero_copy_map_nop
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_map_choice
   (#ty: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
     (#[@@@erasable]t1: Ghost.erased (det_map_group))
     (#[@@@erasable]fp1: Ghost.erased map_constraint)
     (#[@@@erasable]tgt1: Type0)
@@ -268,7 +268,7 @@ fn impl_zero_copy_map_choice
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_map_zero_or_one
   (#ty: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
     (#[@@@erasable]t1: Ghost.erased (det_map_group))
     (#[@@@erasable]fp1: Ghost.erased map_constraint)
     (#[@@@erasable]tgt1: Type0)
@@ -330,7 +330,7 @@ let half_plus_half_eq
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_map_concat
   (#ty: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (share: share_t vmatch)
   (gather: gather_t vmatch)
     (#[@@@erasable]t1: Ghost.erased (det_map_group))
@@ -424,7 +424,7 @@ fn impl_zero_copy_map_concat
 inline_for_extraction
 fn impl_zero_copy_match_item_for_cont
   (#ty: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (get: map_get_t vmatch)
   ([@@@erasable]key: Ghost.erased cbor)
   ([@@@erasable]cut: Ghost.erased bool)
@@ -467,7 +467,7 @@ fn impl_zero_copy_match_item_for_cont
 inline_for_extraction
 fn impl_zero_copy_match_item_for
   (#ty: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (get: map_get_t vmatch)
   (#[@@@erasable]key: Ghost.erased cbor)
   (lkey: with_cbor_literal_t vmatch (Ghost.reveal key))
@@ -498,7 +498,7 @@ noeq
 type map_iterator_t
   (#ty: Type0) (#ty2: Type0) (cbor_map_iterator_t: Type0)
   (impl_elt1: Type0) (impl_elt2: Type0)
-  (vmatch: perm -> ty -> cbor -> slprop)
+  (vmatch: lifetime -> ty -> cbor -> slprop)
   (vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   ([@@@erasable]spec1: Ghost.erased (Iterator.type_spec impl_elt1)) ([@@@erasable]spec2: Ghost.erased (Iterator.type_spec impl_elt2)) // hopefully there should be at most one spec per impl_elt, otherwise Karamel monomorphization will introduce conflicts. Anyway, src_elt MUST NOT be extracted (it contains list types, etc.)
 : Type0 = {
@@ -520,7 +520,7 @@ type map_iterator_t
 
 inline_for_extraction
 let cddl_map_iterator_impl_validate1
-  (#ty: Type0) (#ty2: Type0) (#vmatch: perm -> ty -> cbor -> slprop)
+  (#ty: Type0) (#ty2: Type0) (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
@@ -531,7 +531,7 @@ let cddl_map_iterator_impl_validate1
 
 inline_for_extraction
 let cddl_map_iterator_impl_parse1
-  (#ty: Type0) (#ty2: Type0) (#vmatch: perm -> ty -> cbor -> slprop)
+  (#ty: Type0) (#ty2: Type0) (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
@@ -542,7 +542,7 @@ let cddl_map_iterator_impl_parse1
 
 inline_for_extraction
 let cddl_map_iterator_impl_validate_ex
-  (#ty: Type0) (#ty2: Type0) (#vmatch: perm -> ty -> cbor -> slprop)
+  (#ty: Type0) (#ty2: Type0) (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
@@ -553,7 +553,7 @@ let cddl_map_iterator_impl_validate_ex
 
 inline_for_extraction
 let cddl_map_iterator_impl_validate2
-  (#ty: Type0) (#ty2: Type0) (#vmatch: perm -> ty -> cbor -> slprop)
+  (#ty: Type0) (#ty2: Type0) (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
@@ -564,7 +564,7 @@ let cddl_map_iterator_impl_validate2
 
 inline_for_extraction
 let cddl_map_iterator_impl_parse2
-  (#ty: Type0) (#ty2: Type0) (#vmatch: perm -> ty -> cbor -> slprop)
+  (#ty: Type0) (#ty2: Type0) (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
@@ -576,7 +576,7 @@ let cddl_map_iterator_impl_parse2
 inline_for_extraction
 let mk_map_iterator
   (#ty #ty2: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (#cbor_map_iterator_t: Type0)
   (cddl_map_iterator_contents: cbor_map_iterator_t)
@@ -618,7 +618,7 @@ let mk_map_iterator
 
 let mk_map_iterator_eq_postcond
   (#ty #ty2: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (#cbor_map_iterator_t: Type0)
   (cddl_map_iterator_contents: cbor_map_iterator_t)
@@ -649,7 +649,7 @@ let mk_map_iterator_eq_postcond
 
 let mk_map_iterator_eq
   (#ty #ty2: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (#cbor_map_iterator_t: Type0)
   (cddl_map_iterator_contents: cbor_map_iterator_t)
@@ -753,7 +753,7 @@ let rec parse_table_entries_no_repeats
     else ()
 
 let rel_map_iterator_cond
-  (#ty #ty2: Type0) (#vmatch: perm -> ty -> cbor -> slprop)
+  (#ty #ty2: Type0) (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
@@ -767,7 +767,7 @@ let rel_map_iterator_cond
   /\ List.Tot.no_repeats_p (List.Tot.map fst l)
 
 let rel_map_iterator_cond_post
-  (#ty #ty2: Type0) (#vmatch: perm -> ty -> cbor -> slprop)
+  (#ty #ty2: Type0) (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
@@ -783,7 +783,7 @@ let rel_map_iterator_cond_post
 = ()
 
 let rel_map_iterator
-  (#ty #ty2: Type0) (vmatch: perm -> ty -> cbor -> slprop)
+  (#ty #ty2: Type0) (vmatch: lifetime -> ty -> cbor -> slprop)
   (vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (impl_elt1: Type0) (impl_elt2: Type0)
@@ -831,7 +831,7 @@ let rel_map_iterator_length
 
 ghost
 fn rel_map_iterator_prop
-  (#ty #ty2: Type0) (#vmatch: perm -> ty -> cbor -> slprop)
+  (#ty #ty2: Type0) (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
@@ -851,7 +851,7 @@ fn rel_map_iterator_prop
 
 ghost
 fn rel_map_iterator_prop'
-  (#ty #ty2: Type0) (#vmatch: perm -> ty -> cbor -> slprop)
+  (#ty #ty2: Type0) (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
@@ -884,7 +884,7 @@ let cddl_map_iterator_is_empty_gen_t
 
 inline_for_extraction
 let cddl_map_iterator_is_empty_t
-  (#ty #ty2: Type0) (vmatch: perm -> ty -> cbor -> slprop)
+  (#ty #ty2: Type0) (vmatch: lifetime -> ty -> cbor -> slprop)
   (vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (impl_elt1: Type0) (impl_elt2: Type0)
@@ -896,7 +896,7 @@ let cddl_map_iterator_is_empty_t
 #restart-solver
 
 let rec rel_map_iterator_cond_is_empty
-  (#ty #ty2: Type0) (#vmatch: perm -> ty -> cbor -> slprop)
+  (#ty #ty2: Type0) (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
@@ -934,7 +934,7 @@ let rec rel_map_iterator_cond_is_empty
 
 inline_for_extraction
 fn cddl_map_iterator_is_empty
-  (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (#ty: Type0) (#vmatch: lifetime -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (#ty2: Type0) (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (map_is_empty: map_iterator_is_empty_t cbor_map_iterator_match)
   (map_next: map_iterator_next_t vmatch2 cbor_map_iterator_match)
@@ -1036,7 +1036,7 @@ let cddl_map_iterator_next_gen_t
 
 inline_for_extraction
 let cddl_map_iterator_next_t
-  (#ty #ty2: Type0) (vmatch: perm -> ty -> cbor -> slprop)
+  (#ty #ty2: Type0) (vmatch: lifetime -> ty -> cbor -> slprop)
   (vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)  
   (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (impl_elt1: Type0) (impl_elt2: Type0)
@@ -1047,7 +1047,7 @@ let cddl_map_iterator_next_t
 
 ghost
 fn rel_map_iterator_fold
-  (#ty #ty2: Type0) (#vmatch: perm -> ty -> cbor -> slprop)
+  (#ty #ty2: Type0) (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)  
   (#cbor_map_iterator_t: Type0) 
   (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
@@ -1100,7 +1100,7 @@ ensures exists* l .
 
 inline_for_extraction
 fn cddl_map_iterator_next
-  (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (#ty: Type0) (#vmatch: lifetime -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (#ty2: Type0) (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (map_share: share_t cbor_map_iterator_match)
   (map_gather: gather_t cbor_map_iterator_match)
@@ -1299,7 +1299,7 @@ let map_of_list_pair_parse_table_entries_correct
 // FIXME: WHY WHY WHY is it SO tedious to prove this:
 let impl_zero_copy_map_zero_or_more_aux
   (#ty #ty2: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)  
   (#cbor_map_iterator_t: Type0)
     (#key: Ghost.erased typ)
@@ -1355,7 +1355,7 @@ let impl_zero_copy_map_zero_or_more_aux
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_map_zero_or_more'
   (#ty #ty2: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)  
   (#cbor_map_iterator_t: Type0)
   (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
@@ -1412,7 +1412,7 @@ fn impl_zero_copy_map_zero_or_more'
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_map_zero_or_more
   (#ty #ty2: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)  
   (#cbor_map_iterator_t: Type0)
   (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)

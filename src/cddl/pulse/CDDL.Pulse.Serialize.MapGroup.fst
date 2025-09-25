@@ -463,7 +463,7 @@ fn impl_serialize_match_item_for
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_serialize_map_zero_or_more_iterator_t
-  (#ty #ty2: Type0) (vmatch: perm -> ty -> cbor -> slprop)
+  (#ty #ty2: Type0) (vmatch: lifetime -> ty -> cbor -> slprop)
   (#vmatch2: perm -> ty2 -> cbor & cbor -> slprop)
   (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
     (#key: typ)
@@ -1603,7 +1603,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_serialize_map_zero_or_more_iterator
-  (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (#ty: Type0) (#vmatch: lifetime -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (#ty2: Type0) (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (map_share: share_t cbor_map_iterator_match)
   (map_gather: gather_t cbor_map_iterator_match)
@@ -1867,7 +1867,7 @@ fn impl_serialize_map_zero_or_more_slice
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_serialize_map_zero_or_more
-  (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (#ty: Type0) (#vmatch: lifetime -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (#ty2: Type0) (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (map_share: share_t cbor_map_iterator_match)
   (map_gather: gather_t cbor_map_iterator_match)

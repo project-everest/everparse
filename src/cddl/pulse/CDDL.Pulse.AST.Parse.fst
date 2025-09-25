@@ -14,14 +14,14 @@ module Bundle = CDDL.Pulse.Bundle.Base // for bundle_attr
 [@@sem_attr; Bundle.bundle_attr]
 let ancillary_validate_env
   (#cbor_t: Type)
-  (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (vmatch: lifetime -> cbor_t -> Cbor.cbor -> slprop)
   (se: sem_env)
 = (t: typ { typ_bounded se.se_bound t}) -> option (impl_typ vmatch (typ_sem se t))
 
 [@@sem_attr; Bundle.bundle_attr]
 let ancillary_validate_env_is_some
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> Cbor.cbor -> slprop)
   (#se: sem_env)
   (env: ancillary_validate_env vmatch se)
 : Tot (ancillary_validate_env_bool se.se_bound)
@@ -30,7 +30,7 @@ let ancillary_validate_env_is_some
 [@@sem_attr; Bundle.bundle_attr]
 let ancillary_validate_env_extend
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> Cbor.cbor -> slprop)
   (#se: sem_env)
   (env1: ancillary_validate_env vmatch se)
   (se2: sem_env {
@@ -47,7 +47,7 @@ let ancillary_validate_env_extend
 [@@sem_attr; Bundle.bundle_attr]
 let ancillary_validate_env_set
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> Cbor.cbor -> slprop)
   (#se: sem_env)
   (env: ancillary_validate_env vmatch se)
   (t': typ { typ_bounded se.se_bound t'})
@@ -83,7 +83,7 @@ let validate_ask_for_type
 [@@sem_attr; Bundle.bundle_attr]
 let ancillary_validate_env_set_ask_for
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> Cbor.cbor -> slprop)
   (#se: sem_env)
   (env: ancillary_validate_env vmatch se)
   (a: option (ask_for se))
@@ -118,7 +118,7 @@ let ancillary_map_constraint_env
 [@@sem_attr; Bundle.bundle_attr]
 let ancillary_map_constraint_env_set
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> Cbor.cbor & Cbor.cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> Cbor.cbor & Cbor.cbor -> slprop)
   (#se: sem_env)
   (env: ancillary_map_constraint_env vmatch se)
   (t': map_constraint { bounded_map_constraint se.se_bound t'})
@@ -132,7 +132,7 @@ let ancillary_map_constraint_env_set
 [@@sem_attr; Bundle.bundle_attr]
 let ancillary_map_constraint_env_set_ask_for
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> Cbor.cbor & Cbor.cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> Cbor.cbor & Cbor.cbor -> slprop)
   (#se: sem_env)
   (env: ancillary_map_constraint_env vmatch se)
   (a: option (ask_for se))

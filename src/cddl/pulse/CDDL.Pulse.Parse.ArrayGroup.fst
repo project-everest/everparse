@@ -72,7 +72,7 @@ let impl_zero_copy_array_group_t_eq
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_array
   (#ty: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#cbor_array_iterator_t: Type)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
   (cbor_array_iterator_start: array_iterator_start_t vmatch cbor_array_iterator_match)
@@ -175,7 +175,7 @@ fn impl_zero_copy_array_group_bij
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_array_group_item
   (#ty: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#cbor_array_iterator_t: Type)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
   (cbor_array_iterator_next: array_iterator_next_t vmatch cbor_array_iterator_match)

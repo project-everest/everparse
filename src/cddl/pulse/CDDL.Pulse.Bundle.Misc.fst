@@ -10,7 +10,7 @@ module EqTest = CDDL.Spec.EqTest
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_uint
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (cbor_destr_int64: read_uint64_t vmatch)
   (cbor_serialize: cbor_det_serialize_t vmatch)
   (cbor_mk_int64: mk_int64_t vmatch)
@@ -30,7 +30,7 @@ let bundle_uint
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_nint
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (cbor_destr_int64: read_uint64_t vmatch)
   (cbor_serialize: cbor_det_serialize_t vmatch)
   (cbor_mk_int64: mk_int64_t vmatch)
@@ -52,7 +52,7 @@ module U64 = FStar.UInt64
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_int_range_uint64
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (cbor_destr_int64: read_uint64_t vmatch)
   (cbor_serialize: cbor_det_serialize_t vmatch)
   (cbor_mk_int64: mk_int64_t vmatch)
@@ -75,7 +75,7 @@ module I64 = FStar.Int64
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_int_range_int64
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (cbor_get_major_type: get_major_type_t vmatch)
   (cbor_destr_int64: read_uint64_t vmatch)
   (cbor_serialize: cbor_det_serialize_t vmatch)
@@ -97,7 +97,7 @@ let bundle_int_range_int64
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_int_range_neg_int64
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (cbor_destr_int64: read_uint64_t vmatch)
   (cbor_serialize: cbor_det_serialize_t vmatch)
   (cbor_mk_int64: mk_int64_t vmatch)
@@ -118,7 +118,7 @@ let bundle_int_range_neg_int64
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_bytes
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (cbor_destr_string: get_string_t vmatch)
   (cbor_serialize: cbor_det_serialize_t vmatch)
   (cbor_mk_string: mk_string_t vmatch)
@@ -137,7 +137,7 @@ let bundle_bytes
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_text
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (cbor_destr_string: get_string_t vmatch)
   (impl_utf8_correct: impl_utf8_correct_t)
   (cbor_serialize: cbor_det_serialize_t vmatch)
@@ -157,7 +157,7 @@ let bundle_text
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_str_size
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (cbor_destr_string: get_string_t vmatch)
   (impl_utf8_correct: impl_utf8_correct_t)
   (cbor_serialize: cbor_det_serialize_t vmatch)
@@ -179,7 +179,7 @@ let bundle_str_size
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_simple
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (cbor_destr_simple: read_simple_value_t vmatch)
   (cbor_serialize: cbor_det_serialize_t vmatch)
   (cbor_mk_simple: mk_simple_t vmatch)
@@ -199,7 +199,7 @@ let bundle_simple
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_bool
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (cbor_destr_simple: read_simple_value_t vmatch)
   (cbor_serialize: cbor_det_serialize_t vmatch)
   (cbor_mk_simple: mk_simple_t vmatch)
@@ -219,7 +219,7 @@ let bundle_bool
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_tagged_some
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (cbor_get_tagged_payload: get_tagged_payload_t vmatch)
   (cbor_serialize_tagged_tag: cbor_det_serialize_tag_t)
   (tag: U64.t)
@@ -241,7 +241,7 @@ let bundle_tagged_some
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_tagged_none
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (cbor_get_tagged_tag: get_tagged_tag_t vmatch)
   (cbor_get_tagged_payload: get_tagged_payload_t vmatch)
   (cbor_serialize_tagged_tag: cbor_det_serialize_tag_t)
@@ -263,7 +263,7 @@ let bundle_tagged_none
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_det_cbor
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (#vmatch': perm -> cbor_t -> cbor -> slprop)
   (cbor_destr_string: get_string_t vmatch)
   (cbor_det_parse: cbor_det_parse_t vmatch')
@@ -286,7 +286,7 @@ let bundle_det_cbor
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_any
   (#cbor_t: Type)
-  (vmatch: perm -> cbor_t -> cbor -> slprop)
+  (vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (cbor_serialize: cbor_det_serialize_t vmatch)
 : bundle vmatch
 = {
@@ -303,7 +303,7 @@ let bundle_any
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_literal
   (#cbor_t: Type)
-  (vmatch: perm -> cbor_t -> cbor -> slprop)
+  (vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (cbor_serialize: cbor_det_serialize_t vmatch)
   (# [@@@erasable] l: Ghost.erased cbor)
   (w: with_cbor_literal_t vmatch l)

@@ -182,7 +182,7 @@ let bundle_env_extend_group
 [@@bundle_attr; sem_attr] // sem_attr for ask
 let ancillary_bundle_env
   (#cbor_t: Type)
-  (vmatch: perm -> cbor_t -> cbor -> slprop)
+  (vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (se: sem_env)
 = (t: typ) -> (t_wf: ast0_wf_typ t {
       spec_wf_typ se true t t_wf
@@ -198,7 +198,7 @@ let ancillary_bundle_env
 [@@sem_attr]
 let ancillary_bundle_env_is_some
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (#se: sem_env)
   (env: ancillary_bundle_env vmatch se)
 : Tot (Parse.ancillary_parse_env_bool se)
@@ -207,7 +207,7 @@ let ancillary_bundle_env_is_some
 [@@bundle_attr; sem_attr] // sem_attr for ask
 let ancillary_bundle_env_extend
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (#se: sem_env)
   (env1: ancillary_bundle_env vmatch se)
   (se2: sem_env {
@@ -224,7 +224,7 @@ let ancillary_bundle_env_extend
 [@@bundle_attr; sem_attr] // sem_attr for ask
 let ancillary_bundle_env_set
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (#se: sem_env)
   (env1: ancillary_bundle_env vmatch se)
   (t': typ)
@@ -719,7 +719,7 @@ let impl_bundle_wf_ask_for_array_group
 [@@bundle_attr; sem_attr] // sem_attr for ask
 let ancillary_bundle_env_set_ask_for
   (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#vmatch: lifetime -> cbor_t -> cbor -> slprop)
   (#se: sem_env)
   (env1: ancillary_bundle_env vmatch se)
   (a: option (Parse.ask_for se))

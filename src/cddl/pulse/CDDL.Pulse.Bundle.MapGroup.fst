@@ -11,7 +11,7 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 noeq
 type map_bundle
   (#ty: Type0)
-  (vmatch: perm -> ty -> cbor -> slprop)
+  (vmatch: lifetime -> ty -> cbor -> slprop)
 = {
   [@@@erasable] mb_typ: Ghost.erased (det_map_group);
   [@@@erasable] mb_footprint: Ghost.erased map_constraint;
@@ -49,7 +49,7 @@ let impl_serialize_map_ext_precond
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr ]
 let bundle_map
   (#ty: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (cbor_serialize_map: cbor_det_serialize_map_t)
   (mb: map_bundle vmatch)
 : Tot (bundle vmatch)
@@ -69,7 +69,7 @@ let bundle_map
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_map_ext
   (#ty: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (mb1: map_bundle vmatch)
   (#[@@@erasable] t2: Ghost.erased det_map_group)
   (#[@@@erasable] fp2: Ghost.erased map_constraint)
@@ -97,7 +97,7 @@ let bundle_map_ext
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_map_ext'
   (#ty: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (mb1: map_bundle vmatch)
   ([@@@erasable] fp2: Ghost.erased map_constraint)
   ([@@@erasable] sq: squash (
@@ -109,7 +109,7 @@ let bundle_map_ext'
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_map_nop
   (#ty: Type0)
-  (vmatch: perm -> ty -> cbor -> slprop)
+  (vmatch: lifetime -> ty -> cbor -> slprop)
 : Tot (map_bundle vmatch)
 = {
   mb_typ = _;
@@ -127,7 +127,7 @@ let bundle_map_nop
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_map_choice
   (#ty: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (mb1: map_bundle vmatch)
   (v1: impl_map_group_t vmatch mb1.mb_typ mb1.mb_footprint)
   (mb2: map_bundle vmatch)
@@ -155,7 +155,7 @@ let bundle_map_choice
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_map_zero_or_one
   (#ty: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (mb1: map_bundle vmatch)
   (v1: impl_map_group_t vmatch mb1.mb_typ mb1.mb_footprint)
   (nm : option string)
@@ -181,7 +181,7 @@ let bundle_map_zero_or_one
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_map_concat
   (#ty: Type0)
-  (#[@@@erasable] vmatch: perm -> ty -> cbor -> slprop)
+  (#[@@@erasable] vmatch: lifetime -> ty -> cbor -> slprop)
   ([@@@erasable] share: share_t vmatch)
   ([@@@erasable] gather: gather_t vmatch)
   (mb1: map_bundle vmatch)
@@ -210,7 +210,7 @@ let bundle_map_concat
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_map_match_item_for
   (#ty: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (get: map_get_t vmatch)
   (insert: cbor_det_serialize_map_insert_t)
   (serialize: cbor_det_serialize_t vmatch)
@@ -240,7 +240,7 @@ module EqTest = CDDL.Spec.EqTest
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_map_zero_or_more
   (#ty: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch: lifetime -> ty -> cbor -> slprop)
   (#cbor_map_iterator_t: Type0)
   (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (#ty2: Type0) (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
