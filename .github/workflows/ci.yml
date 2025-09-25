@@ -14,119 +14,18 @@ defaults:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    container: mtzguido/dev-base
     steps:
-      - name: Cleanup
-        run: sudo find . -delete
-
-      - run: echo "HOME=/home/user" | sudo tee -a $GITHUB_ENV
-      - uses: mtzguido/set-opam-env@master
-      - run: opam install -y hex re ctypes sha sexplib
-      - run: sudo apt update && sudo apt install -y cmake libssl-dev
-      # ^ not in base
-
-      - uses: actions/checkout@master
-        id: checkout-fstar
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
         with:
-          path: FStar
-          repository: FStarLang/FStar
-          ref: master
-
-      - name: Try fetch built F*
-        id: cache-fstar
-        uses: actions/cache/restore@v4
-        with:
-          path: FStar
-          key: FStar-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}
-
-      - name: Build F*
-        if: steps.cache-fstar.outputs.cache-hit != 'true'
-        run: |
-          make -C FStar -sj$(nproc) ADMIT=1
-
-      - name: Save built F*
-        if: steps.cache-fstar.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: FStar
-          key: FStar-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}
-
-      - run: echo "FSTAR_EXE=$(pwd)/FStar/bin/fstar.exe" | sudo tee -a $GITHUB_ENV
-
-      - uses: actions/checkout@master
-        id: checkout-karamel
-        with:
-          path: karamel
-          repository: FStarLang/karamel
-          ref: master
-
-      - name: Try fetch built karamel
-        id: cache-karamel
-        uses: actions/cache/restore@v4
-        with:
-          path: karamel
-          key: karamel-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}-${{ steps.checkout-karamel.outputs.commit }}
-
-      - name: Build karamel (if not cached)
-        if: steps.cache-karamel.outputs.cache-hit != 'true'
-        run: |
-          make -C karamel -sj$(nproc) ADMIT=1
-
-      - name: Save built karamel
-        if: steps.cache-karamel.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: karamel
-          key: karamel-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}-${{ steps.checkout-karamel.outputs.commit }}
-
-      - run: echo "KRML_HOME=$(pwd)/karamel" | sudo tee -a $GITHUB_ENV
-
-      - run: echo "EVERPARSE_USE_KRML_HOME=1" | sudo tee -a $GITHUB_ENV
-
-      - name: Install python3-venv
-        run: |
-          sudo apt-get update
-          sudo apt-get --yes install --no-install-recommends python3-venv
-
-      - uses: actions/checkout@master
-        id: checkout-pulse
-        with:
-          path: pulse
-          repository: FStarLang/pulse
-          ref: main
-
-      - name: Try fetch built pulse
-        id: cache-pulse
-        uses: actions/cache/restore@v4
-        with:
-          path: pulse
-          key: pulse-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}-${{ steps.checkout-pulse.outputs.commit }}
-
-      - name: Build pulse (if not cached)
-        if: steps.cache-pulse.outputs.cache-hit != 'true'
-        run: |
-          make -C pulse -sj$(nproc) ADMIT=1
-
-      - name: Save built pulse
-        if: steps.cache-pulse.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: pulse
-          key: pulse-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}-${{ steps.checkout-pulse.outputs.commit }}
-
-      - run: echo "PULSE_HOME=$(pwd)/pulse"/out | sudo tee -a $GITHUB_ENV
-
-      - run: echo "EVERPARSE_USE_PULSE_HOME=1" | sudo tee -a $GITHUB_ENV
-
+          ocaml-compiler: 5
       - uses: actions/checkout@master
         with:
           submodules: true
           path: everparse
-
       - name: Everparse CI
-        id: cistep
         run: |
-          . $HOME/.cargo/env && make -C everparse ci -kj$(nproc) branchname=${{ github.head_ref || github.ref_name }}
+          make -C everparse -j$(nproc) -k ci branchname=${{ github.head_ref || github.ref_name }}
         env:
           DZOMO_GITHUB_TOKEN: ${{ secrets.DZOMO_GITHUB_TOKEN }}
 
@@ -144,29 +43,6 @@ jobs:
             sed -i 's!payloads!payload!g' Test.rfc
             make -j$(nproc)
             git checkout Test.rfc
-
-      - name: Calculate Time
-        if: ${{ always () }}
-        id: duration
-        uses: RockyIsHere/actions-calculate-log-time@v0.2.4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Post result to Zulip
-        if: ${{ always () }} # && secrets.ZULIP_API_KEY != '' }}
-        continue-on-error: true
-        uses: zulip/github-actions-zulip/send-message@v1
-        with:
-          api-key: ${{ secrets.ZULIP_API_KEY }}
-          email: "github-commits-bot@fstar.zulipchat.com"
-          organization-url: "https://fstar.zulipchat.com"
-          to: "everparse-ci"
-          type: "stream"
-          topic: "CI on '${{github.ref_name}}'"
-          content: |
-            '${{ github.event.head_commit.message || github.event.pull_request.title || github.head_commit.message }}' by ${{ github.event.head_commit.author.username || github.event.pull_request.user.login || github.head_commit.author.username }} (commit [${{github.sha}}](${{ github.event.head_commit.url || github.even.pull_request.html_url}}))
-            Status: ${{ steps.cistep.outcome == 'success' && '✅' || steps.cistep.outcome == 'cancelled' && '⚠' || '❌' }} ([link](https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}))
-            Elapsed time: ${{ steps.duration.outputs.duration }}
 
   # Branch protection points here.
   ciok:
