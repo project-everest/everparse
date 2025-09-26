@@ -131,7 +131,7 @@ BOOLEAN ProbeAndCopy(
   return ProbeAndCopyLenAux(bytes_to_read, read_offset, write_offset, src_ptr, src_len, dst);
 }
 
-BOOLEAN ProbeInit(uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
+BOOLEAN ProbeInit(const char* typename, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
   printf("ProbeInit: len=%lu\n", len);
   return true;
 }

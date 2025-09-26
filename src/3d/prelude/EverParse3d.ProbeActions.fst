@@ -43,6 +43,7 @@ let probe_fn_incremental =
 inline_for_extraction
 noextract
 let init_probe_dest_t =
+  struct_name:string ->
   sz:U64.t ->
   dest:copy_buffer_t ->
   Stack bool
@@ -223,10 +224,10 @@ let probe_fn_incremental_as_probe_m (f:probe_fn_incremental) (bytes_to_read:U64.
 
 inline_for_extraction
 noextract
-let init_probe_m (f:init_probe_dest_t)
+let init_probe_m struct_name (f:init_probe_dest_t)
 : probe_m unit false false
 = fun _ _ _ ctxt err read_offset write_offset failed src sz dest ->
-    let ok = f sz dest in
+    let ok = f struct_name sz dest in
     if ok
     then ()
     else (
@@ -527,11 +528,12 @@ inline_for_extraction
 noextract
 let init_and_probe
       (#mz:bool)
+      (struct_name:string)
       (init:init_probe_dest_t)
       (probe:probe_m unit true mz)
 : probe_m unit false mz
 = fun tn fn det ctxt err read_offset write_offset failed src sz dest ->
-    let ok = init sz dest in
+    let ok = init struct_name sz dest in
     if ok
     then (
       probe tn fn det ctxt err read_offset write_offset failed src sz dest
