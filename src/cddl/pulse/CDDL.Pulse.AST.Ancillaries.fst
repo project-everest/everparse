@@ -38,14 +38,21 @@ let ask_for_spec
   | AskForArrayGroup t t_wf -> spec_wf_array_group se t t_wf
   | AskForMapConstraint t t_wf -> spec_wf_map_constraint se t t_wf
 
-let ask_for
+let option_ask_for_spec
   (se: sem_env)
-= (a: ask_for' { ask_for_spec se a })
+  (a: option ask_for')
+: Tot prop
+= match a with
+  | None -> True
+  | Some a' -> ask_for_spec se a'
+
+let option_ask_for
+  (se: sem_env)
+= (a: option ask_for' { option_ask_for_spec se a })
 
 [@@base_attr]
 let option_ask_for_is_type
-  (v_sem_env: sem_env)
-  (a: option (ask_for v_sem_env))
+  (a: option ask_for')
 : Tot prop
 = match a with
   | Some (AskForType _ _ _) -> True
@@ -53,15 +60,14 @@ let option_ask_for_is_type
 
 let option_ask_for_get_type
   (v_sem_env: sem_env)
-  (a: option (ask_for v_sem_env))
-  (sq: squash (option_ask_for_is_type v_sem_env a))
+  (a: option_ask_for v_sem_env)
+  (sq: squash (option_ask_for_is_type a))
 : Tot (Ghost.erased CDDL.Spec.Base.typ)
 = typ_sem v_sem_env (AskForType?.t (Some?.v a))
 
 [@@base_attr]
 let option_ask_for_is_array_group
-  (v_sem_env: sem_env)
-  (a: option (ask_for v_sem_env))
+  (a: option ask_for')
 : Tot prop
 = match a with
   | Some (AskForArrayGroup _ _) -> True
@@ -69,8 +75,7 @@ let option_ask_for_is_array_group
 
 [@@base_attr]
 let option_ask_for_is_map_constraint
-  (v_sem_env: sem_env)
-  (a: option (ask_for v_sem_env))
+  (a: option ask_for')
 : Tot prop
 = match a with
   | Some (AskForMapConstraint _ _) -> True
@@ -78,8 +83,8 @@ let option_ask_for_is_map_constraint
 
 let option_ask_for_get_map_constraint
   (v_sem_env: sem_env)
-  (a: option (ask_for v_sem_env))
-  (sq: squash (option_ask_for_is_map_constraint v_sem_env a))
+  (a: option_ask_for v_sem_env)
+  (sq: squash (option_ask_for_is_map_constraint a))
 : Tot (Ghost.erased CDDL.Spec.MapGroup.map_constraint)
 = map_constraint_sem v_sem_env (AskForMapConstraint?.t (Some?.v a))
 
@@ -108,7 +113,7 @@ let rec ask_zero_copy_wf_type
   (t_wf: ast0_wf_typ t {
     spec_wf_typ se true t t_wf
   })
-: Tot (option (ask_for se))
+: Tot (option_ask_for se)
     (decreases t_wf)
 = match t_wf with
   | WfTRewrite _ _ s ->
@@ -141,7 +146,7 @@ and ask_zero_copy_wf_array_group
   (t_wf: ast0_wf_array_group t {
     spec_wf_array_group se t t_wf
   })
-: Tot (option (ask_for se))
+: Tot (option_ask_for se)
     (decreases t_wf)
 = match t_wf with
   | WfAElem _ _ _ t_wf' ->
@@ -178,7 +183,7 @@ and ask_zero_copy_wf_map_group
   (t_wf: ast0_wf_parse_map_group t {
     spec_wf_parse_map_group se t t_wf
   })
-: Tot (option (ask_for se))
+: Tot (option_ask_for se)
     (decreases t_wf)
 = match t_wf with
   | WfMNop _ -> None
@@ -209,20 +214,18 @@ and ask_zero_copy_wf_map_group
 
 [@@base_attr]
 let option_ask_for_is_guarded_type
-  (v_sem_env: sem_env)
-  (a: option (ask_for v_sem_env))
+  (a: option ask_for')
 : Tot prop
 = match a with
   | Some (AskForType _ _ true) -> True
   | _ -> False
 
 let option_ask_for_is_guarded_type_is_type
-  (v_sem_env: sem_env)
-  (a: option (ask_for v_sem_env))
+  (a: option ask_for')
 : Lemma
-  (requires (option_ask_for_is_guarded_type v_sem_env a))
-  (ensures (option_ask_for_is_type v_sem_env a))
-  [SMTPat (option_ask_for_is_guarded_type v_sem_env a)]
+  (requires (option_ask_for_is_guarded_type a))
+  (ensures (option_ask_for_is_type a))
+  [SMTPat (option_ask_for_is_guarded_type a)]
 = ()
 
 [@@bundle_attr]
@@ -232,8 +235,8 @@ let ask_zero_copy_ask_for_option
   (ancillary: ancillary_parse_env_bool se)
   (ancillary_ag: ancillary_parse_array_group_env_bool se)
   (ancillary_mg: ancillary_map_constraint_env_bool se.se_bound)
-  (a: option (ask_for se))
-: Tot (option (ask_for se))
+  (a: option_ask_for se)
+: Tot (option_ask_for se)
 = match a with
   | None -> None
   | Some (AskForType _ _ false) -> None

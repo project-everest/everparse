@@ -1,5 +1,4 @@
-signtest
-verifytest
-bench
+*.do
 message.*
 .venv
+*.exe

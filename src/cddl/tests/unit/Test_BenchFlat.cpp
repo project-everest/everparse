@@ -338,13 +338,12 @@ void bench_tinycbor () {
 
 int main()
 {
-    printf("Testing\n");
+    printf("This test benchmarks serializing and parsing a flat structure\n"
+           "using EverCDDL, TinyCBOR, and QCBOR.\n");
 
     bench_evercddl ();
     bench_qcbor ();
     bench_tinycbor ();
-
-    printf("DONE\n");
 
     return 0;
 }

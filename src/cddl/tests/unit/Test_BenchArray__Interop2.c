@@ -61,19 +61,20 @@ UsefulBufC Encode(const BigMap *p, UsefulBuf Buffer)
 
 int main()
 {
-    printf("Entry\n");
     BigMap *init;
 
     init = malloc(sizeof(BigMap));
     assert(init);
 
     uint8_t *buf = malloc(100 + 3*N + N * N * sizeof(int));
-    printf("Allocated %p\n", buf);
     fflush(stdout);
     assert(buf);
     UsefulBuf Buffer = { buf, 100 + 3*N + N * N * sizeof(int) };
     assert(Buffer.ptr != NULL);
     // printf("Allocated\n");
+
+    printf("This tests serializes an array with QCBOR and parses it back\n"
+           "with EverCDDL.\n");
 
     UsefulBufC Encoded;
 
@@ -87,7 +88,8 @@ int main()
         exit(1);
     }
     assert (Encoded.ptr == buf);
-    printf("Encoded in %zu bytes\n", Encoded.len);
+    // printf("Encoded in %zu bytes\n", Encoded.len);
+
     printf(" >>> QCBOR SERIALIZATION BANDWITH : %f MB/s\n",
            (double)Encoded.len / f / 1e6);
     for (int i = 0; i < 20 && i < Encoded.len; i++) {
@@ -101,17 +103,17 @@ int main()
     };
 
     /* Validate it, make sure it parses back. */
-    FStar_Pervasives_Native_option___BenchArray_map___Pulse_Lib_Slice_slice_uint8_t_
-      m_opt = TIME(BenchArray_validate_and_parse_map(slice), &f);
+    FStar_Pervasives_Native_option___BenchArray_arr___Pulse_Lib_Slice_slice_uint8_t_
+      m_opt = TIME(BenchArray_validate_and_parse_arr(slice), &f);
     assert (m_opt.tag == FStar_Pervasives_Native_Some);
-    printf("Parsed %zu bytes\n", m_opt.v.snd.len);
-    printf("Original len %zu\n", Encoded.len);
+    // printf("Original len %zu\n", Encoded.len);
+    // printf("%zu bytes were NOT parsed\n", m_opt.v.snd.len);
     assert (m_opt.v.snd.len == 0); /* len is whatever remains */
 
-    BenchArray_map m =  m_opt.v.fst;
-    assert (m.tag == BenchArray_Mkmap1);
+    BenchArray_arr m =  m_opt.v.fst;
+    assert (m.tag == BenchArray_Mkarr1);
     CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_BenchArray_aux_env4_type_1
-      it = m.case_Mkmap1;
+      it = m.case_Mkarr1;
 
     printf(" >>> EVERCDDL VALIDATION BANDWIDTH: %f MB/s\n", Encoded.len / f / 1e6);
 
@@ -124,7 +126,6 @@ int main()
     printf(" >>> EVERCDDL PARSING BANDWIDTH: %f MB/s\n", Encoded.len / f2 / 1e6);
     printf(" >>> EVERCDDL COMBINED BANDWIDTH: %f MB/s\n", Encoded.len / (f + f2) / 1e6);
 
-    printf("Done\n");
 
     return 0;
 }

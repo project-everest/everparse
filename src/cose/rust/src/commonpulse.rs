@@ -84,7 +84,7 @@ pub fn mk_phdrs <'a>(
             crate::coseformat::option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr::Some
             { v: crate::coseformat::label_ugly::Inl { v: alg· } },
             intkey2:
-            crate::coseformat::option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1::None,
+            crate::coseformat::option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env34_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env34_type_1::None,
             intkey3:
             crate::coseformat::option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int::None,
             intkey4: crate::coseformat::option__COSE_Format_bstr::None,
@@ -133,7 +133,7 @@ pub fn sign1 <'a>(
                 crate::coseformat::option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr::Some
                 { v: crate::coseformat::label_ugly::Inl { v: alg· } },
                 intkey2:
-                crate::coseformat::option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1::None,
+                crate::coseformat::option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env34_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env34_type_1::None,
                 intkey3:
                 crate::coseformat::option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int::None,
                 intkey4: crate::coseformat::option__COSE_Format_bstr::None,
@@ -195,7 +195,7 @@ pub fn sign1_simple <'a>(privkey: &'a [u8], payload: &'a [u8], outbuf: &'a mut [
             intkey1:
             crate::coseformat::option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr::None,
             intkey2:
-            crate::coseformat::option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1::None,
+            crate::coseformat::option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env34_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env34_type_1::None,
             intkey3:
             crate::coseformat::option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int::None,
             intkey4: crate::coseformat::option__COSE_Format_bstr::None,
@@ -232,7 +232,7 @@ pub fn sign1_simple <'a>(privkey: &'a [u8], payload: &'a [u8], outbuf: &'a mut [
                 crate::coseformat::option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr::Some
                 { v: crate::coseformat::label_ugly::Inl { v: alg· } },
                 intkey2:
-                crate::coseformat::option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env32_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env32_type_1::None,
+                crate::coseformat::option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env34_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env34_type_1::None,
                 intkey3:
                 crate::coseformat::option__FStar_Pervasives_either·COSE_Format_tstr·COSE_Format_evercddl_int::None,
                 intkey4: crate::coseformat::option__COSE_Format_bstr::None,
