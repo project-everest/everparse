@@ -17,6 +17,13 @@ include nofstar.Makefile
 
 include deps.Makefile
 
+ifneq ($(OS),Windows_NT)
+package-subset: cddl
+endif
+ifneq ($(OS),Darwin)
+all: cose
+endif
+
 ifeq (,$(NO_PULSE))
 all: cddl cbor-interface
 endif
