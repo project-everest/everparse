@@ -367,7 +367,7 @@ ValidateS64(
           uint64_t readOffset = 0ULL;
           uint64_t writeOffset = 0ULL;
           BOOLEAN failed = FALSE;
-          BOOLEAN ok = ProbeInit0((uint64_t)8U, Dest);
+          BOOLEAN ok = ProbeInit0("_S64.ptrT", (uint64_t)8U, Dest);
           if (ok)
           {
             ProbePtrT(s1,
@@ -716,7 +716,7 @@ ValidateR64(
     uint64_t readOffset = 0ULL;
     uint64_t writeOffset = 0ULL;
     BOOLEAN failed = FALSE;
-    BOOLEAN ok = ProbeInit0((uint64_t)24U, DestS);
+    BOOLEAN ok = ProbeInit0("_R64.ptrS", (uint64_t)24U, DestS);
     if (ok)
     {
       ProbePtrS(r1,
@@ -878,7 +878,7 @@ ValidateSpecializedR32(
     uint64_t readOffset = 0ULL;
     uint64_t writeOffset = 0ULL;
     BOOLEAN failed = FALSE;
-    BOOLEAN ok = ProbeInit0((uint64_t)24U, DestS);
+    BOOLEAN ok = ProbeInit0("___specialized_R32.ptrS", (uint64_t)24U, DestS);
     if (ok)
     {
       Specialized32ProbeS64("___specialized_R32",
