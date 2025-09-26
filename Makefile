@@ -110,7 +110,11 @@ lowparse-test: lowparse-unit-test lowparse-bitfields-test lowparse-pulse-test
 quackyducky-test: quackyducky
 	+$(MAKE) -C tests
 
-test: all lowparse-test quackyducky-test 3d-test asn1-test cbor-test cddl-test cose-test
+test: all lowparse-test quackyducky-test 3d-test asn1-test cbor-test cddl-test
+
+ifneq ($(OS),Darwin)
+test: cose-test
+endif
 
 submodules:
 	$(MAKE) -C $(EVERPARSE_OPT_PATH) submodules
