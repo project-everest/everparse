@@ -5,7 +5,8 @@ EVERPARSE_SRC_PATH = $(realpath ../../../../..)
 CBOR_LIB_PATH = $(realpath ..)
 CBOR_INCLUDE_PATH = $(realpath ..)
 
-CFLAGS += -Werror -I $(CBOR_INCLUDE_PATH) -g
+# -Wno-pointer-sign because of string to uint8_t* conversion
+CFLAGS += -Werror -I $(CBOR_INCLUDE_PATH) -g -Wno-pointer-sign
 
 .PHONY: all
 

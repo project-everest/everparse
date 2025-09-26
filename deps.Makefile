@@ -5,12 +5,6 @@ deps:
 ifeq (,$(OS))
 export OS := $(shell uname)
 endif
-ifneq ($(OS),Windows_NT)
-package-subset: cddl
-endif
-ifneq ($(OS),Darwin)
-all: cose
-endif
 
 export EVERPARSE_OPT_PATH := $(realpath opt)
 ifeq ($(OS),Windows_NT)
