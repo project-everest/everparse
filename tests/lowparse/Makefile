@@ -61,7 +61,9 @@ clean:
 	 $(MAKE) EXCLUDE_KRML_FILES='$(EXCLUDE_KRML_FILES)' EXAMPLE=$$f -f Makefile.example ; \
 	done
 
+ifeq (,$(filter clean,$(MAKECMDGOALS)))
 include .depend
+endif
 
 verify-all: $(ALL_CHECKED_FILES)
 

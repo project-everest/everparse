@@ -8,7 +8,8 @@ endif
 PULSE_LIB=$(PULSE_HOME)/lib/pulse
 
 ifeq ($(OS),Windows_NT)
-    OCAMLPATH := $(PULSE_LIB);$(OCAMLPATH)
+    export PULSE_HOME := $(shell cygpath -m $(PULSE_HOME))
+    OCAMLPATH := $(shell cygpath -m $(PULSE_LIB));$(OCAMLPATH)
 else
     OCAMLPATH := $(PULSE_LIB):$(OCAMLPATH)
 endif

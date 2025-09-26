@@ -93,8 +93,6 @@ int parse_qcbor(uint8_t *buf, size_t len, uint64_t *sum)
 
 int main()
 {
-    printf("testing\n");
-
     size_t len = BSIZE;
     char *buf = malloc(len);
     float f, f0, f2;
@@ -105,9 +103,12 @@ int main()
         .len = len
     };
 
-    BenchArray_map m = TIME(build(), &f0);
+    printf("This test serializes the array with EverCDDL and parses it back with QCBOR.\n");
 
-    size_t size = TIME(BenchArray_serialize_map(m, slice), &f);
+    BenchArray_arr m = TIME(build(), &f0);
+    printf(" >>> Time to build the array in memory: %fs\n", f0);
+
+    size_t size = TIME(BenchArray_serialize_arr(m, slice), &f);
     if (size == 0) {
         printf("Serialization failed\n");
         return 1;
@@ -116,12 +117,15 @@ int main()
     for (int i = 0; i < 20 && i < size; i++) {
         printf("%02x ", slice.elt[i]);
     }
-    printf("\n");
+    printf("... \n");
 
     printf(" >>> SERIALIZATION BANDWIDTH: %f MB/s\n", size / f / 1e6);
     printf(" >>> SERIALIZATION BANDWIDTH (COMBINED): %f MB/s\n", size / (f + f0) / 1e6);
 
-    /* Now parse it with QCBOR */
+    /* Now parse it with QCBOR.
+       We go through the array twice, to match the guarantees
+       of EverCDLL (if the array is corrupt/invalid, we should not allow
+       to parse a single element out of it). */
 
     int rc = TIME(valid_qcbor(slice.elt, size), &f);
     if (rc != 0) {
@@ -142,7 +146,6 @@ int main()
     printf(" >>> QCBOR PARSING BANDWIDTH: %f MB/s\n", size / f2 / 1e6);
     printf(" >>> QCBOR COMBINED BANDWIDTH: %f MB/s\n", size / (f + f2) / 1e6);
 
-    printf("ok\n");
 
     return 0;
 }

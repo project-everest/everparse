@@ -825,7 +825,7 @@ let map_of_list_maps_to_nonempty_cons
   (map_of_list_maps_to_nonempty (map_of_list_cons k_eq k v m))
 = ()
 
-#push-options "--z3rlimit 96"
+#push-options "--z3rlimit 256"
 
 #restart-solver
 let impl_serialize_map_group_valid_map_zero_or_more_snoc_disjoint1

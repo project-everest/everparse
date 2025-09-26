@@ -1,19 +1,14 @@
 {
-    "fstar_exe": "../../../opt/FStar/bin/fstar.exe",
+    "fstar_exe": "../../../fstar.sh",
     "options": [
       "--load_cmxs", "evercddl_lib",
-      "--load_cmxs", "evercddl_plugin",
-      "--already_cached", "PulseCore,Pulse,C,LowStar,*,-COSE,Prims,FStar,LowStar,-EverCrypt,-CommonPulse,-CommonAbort",
-      "--ext", "context_pruning"
+      "--load_cmxs", "evercddl_plugin"
     ],
     "include_dirs": [
       ".",
       "./_output",
       "../../../src/lowparse",
       "../../../src/lowparse/pulse",
-      "../../../opt/karamel/krmllib",
-      "../../../opt/karamel/krmllib/obj",
-      "../../../opt/pulse/out/lib/pulse",
       "../../../src/cbor/spec",
       "../../../src/cbor/pulse",
       "../../../src/cddl/pulse",
@@ -23,4 +18,3 @@
       "../../../src/cddl/tool"
     ]
   }
-  

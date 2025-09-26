@@ -57,7 +57,9 @@ $(everparse_makefile): $(wildcard src/*.3d) $(EVERPARSE_OUTPUT_DIR)
 	$(EVERPARSE_CMD) --makefile gmake --makefile_name $@ src/Probe.3d
 
 # Include the generated Makefile
+ifeq (,$(filter clean,$(MAKECMDGOALS)))
 include $(everparse_makefile)
+endif
 
 #############################
 # Building the test program #
@@ -116,8 +118,17 @@ testgen: $(EVERPARSE_OUTPUT_DIR)/testgen.exe
 
 # Since everything is output to the same directory, including the
 # generated Makefile, it is enough to remove that directory.
-clean:
+clean-files:
 	rm -rf $(EVERPARSE_OUTPUT_DIR)
+
+.PHONY: clean-files
+
+clean-testgen:
+	+$(MAKE) -C $(EVERPARSE_INPUT_DIR) clean
+
+.PHONY: clean-testgen
+
+clean: clean-files clean-testgen
 
 #######################################################
 # Specifying the `world` rule run by the default rule #

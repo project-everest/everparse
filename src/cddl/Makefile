@@ -14,3 +14,12 @@ test: tests.do
 	+$(MAKE) -C $(basename $@)
 
 .PHONY: all test %.do
+
+clean: spec.clean pulse.clean tool.clean tests.clean
+
+.PHONY: clean
+
+%.clean:
+	+$(MAKE) -C $(basename $@) clean
+
+.PHONY: %.clean

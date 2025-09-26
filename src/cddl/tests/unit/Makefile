@@ -1,10 +1,11 @@
 # Note: no postlude added to these tests.
 
+all: all-c
+all: all-build
+all: all-run
+
 .NOTINTERMEDIATE:
 .DELETE_ON_ERROR:
-
-all: all-c
-all: all-run
 
 ODIR := _output
 
@@ -66,6 +67,8 @@ CBOR_KRML_MODULES += FStar.Pervasives.Native
 
 FSTAR_DEP_OPTIONS += $(addprefix --extract +,$(CBOR_KRML_MODULES))
 
+clean_rules += clean-tinycbor clean-QCBOR clean-c clean-output
+
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 include $(EVERPARSE_SRC_PATH)/common.Makefile
@@ -107,8 +110,7 @@ QCBOR:
 	cd $@.tmp && git checkout 83c4af09d3752afa64ae66e2a3382192bf682541
 	mv $@.tmp $@
 
-QCBOR/libqcbor.a: QCBOR
-	$(MAKE) -C QCBOR
+include qcbor.Makefile
 
 tinycbor:
 	rm -rf $@.tmp
@@ -144,5 +146,28 @@ run-qcbor_bench: qcbor_bench
 
 # all: run
 
+.PHONY: all-build
+all-build: $(patsubst %,$(ODIR)/Test_%.exe,$(RUN))
+
 .PHONY: all-run
 all-run: $(patsubst %,%.run,$(RUN))
+
+clean-tinycbor:
+	rm -rf tinycbor tinycbor-build
+
+.PHONY: clean-tinycbor
+
+clean-QCBOR:
+	rm -rf QCBOR
+
+.PHONY: clean-QCBOR
+
+clean-c:
+	rm -f *.o qcbor_bench $(ODIR)/*.o $(ODIR)/*.exe
+
+.PHONY: clean-c
+
+clean-output:
+	rm -rf $(OUTPUT_DIRECTORY)
+
+.PHONY: clean-output

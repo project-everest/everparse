@@ -1,22 +1,5 @@
- $start /= COSE_Messages
- $start /= Internal_Types
-; / COSE_Key / COSE_KeySet
-;  / Internal_Types
-
-Internal_Types = Sig_structure ; / Enc_structure / MAC_structure
-
 label = int / tstr
 values = any
-
-COSE_Messages = COSE_Untagged_Message / COSE_Tagged_Message
-
-COSE_Untagged_Message = COSE_Sign / COSE_Sign1 ; /
-;    COSE_Encrypt / COSE_Encrypt0 /
-;    COSE_Mac / COSE_Mac0
-
-COSE_Tagged_Message = COSE_Sign_Tagged / COSE_Sign1_Tagged ; /
-;    COSE_Encrypt_Tagged / COSE_Encrypt0_Tagged /
-;    COSE_Mac_Tagged / COSE_Mac0_Tagged
 
 Headers = (
     protected : empty_or_serialized_map,
@@ -106,11 +89,13 @@ COSE_Key_OKP = {
     * label => values
 }
 
-;COSE_Key_Generic = {
-;    1 => tstr / int,          ; kty
-;    ? 2 => bstr,              ; kid
-;    ? 3 => tstr / int,        ; alg
-;    ? 4 => [+ (tstr / int) ], ; key_ops
-;    ? 5 => bstr,              ; Base IV
-;    * label => values
-;}
+COSE_Key_Generic = {
+   1 => tstr / int,          ; kty
+   ? 2 => bstr,              ; kid
+   ? 3 => tstr / int,        ; alg
+   ? 4 => [+ (tstr / int) ], ; key_ops
+   ? 5 => bstr,              ; Base IV
+   * label => values
+}
+
+COSE_KeySet = [ + COSE_Key_Generic ]

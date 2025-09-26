@@ -19,3 +19,22 @@ all-tests: test example
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
+
+clean-o:
+	rm -f *.o
+
+.PHONY: clean-o
+
+clean: test.clean example.clean clean-o clean-extracted
+
+.PHONY: clean
+
+clean-extracted:
+	rm -rf extracted
+
+.PHONY: clean-extracted
+
+%.clean:
+	+$(MAKE) -C $(basename $@) clean
+
+.PHONY: %.clean

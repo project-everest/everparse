@@ -5,3 +5,8 @@ all: Test.3d
 	+$(MAKE) -f test.Makefile
 
 .PHONY: all
+
+clean:
+	rm -rf tmp
+
+.PHONY: clean

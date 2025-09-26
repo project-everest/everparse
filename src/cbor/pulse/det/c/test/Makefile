@@ -27,3 +27,8 @@ $(OBJ_FILES): %.o: %.c
 #CBORDetTest.exe: CBORDetTest.o $(EVERPARSE_LIB_PATH)/evercbor.a
 CBORDetTest.exe: $(OBJ_FILES) $(EVERPARSE_LIB_PATH)/CBORDet.o
 	$(CC) -o CBORDetTest.exe $^
+
+clean:
+	rm -f CBORDetTest.exe *.o
+
+.PHONY: clean

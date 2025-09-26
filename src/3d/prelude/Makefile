@@ -27,7 +27,9 @@ ALREADY_CACHED=--already_cached '+Prims +LowStar +FStar +LowParse +C +Spec.Loops
 .depend: $(ROOT)
 	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract 'krml:*,-Prims,-EverParse3d.Interpreter,-FStar.Tactics' --output_deps_to $@
 
+ifeq (,$(filter clean clean-buffer clean-extern,$(MAKECMDGOALS)))
 include .depend
+endif
 
 buffer: EverParse.rsp
 	+$(MAKE) -C buffer

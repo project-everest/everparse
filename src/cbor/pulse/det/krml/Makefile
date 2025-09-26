@@ -14,6 +14,8 @@ FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 C_DIRECTORY:=$(realpath ../c)/extracted
 RUST_DIRECTORY:=rust-extracted
 
+clean_rules += clean-extracted
+
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 include $(EVERPARSE_SRC_PATH)/everparse.Makefile
 include $(EVERPARSE_SRC_PATH)/common.Makefile
@@ -28,3 +30,8 @@ $(RUST_DIRECTORY)/cbordetver.rs: $(filter-out %CBOR_Pulse_API_Det_C.krml,$(ALL_K
 extract: $(C_DIRECTORY)/CBORDet.c $(RUST_DIRECTORY)/cbordetver.rs
 
 .PHONY: extract
+
+clean-extracted:
+	rm -rf extracted rust-extracted
+
+.PHONY: clean-extracted

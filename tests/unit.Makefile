@@ -33,7 +33,7 @@ HEADERS = $(addprefix -add-include ,'"krml/internal/compat.h"')
 
 KRML = $(KRML_HOME)/krml \
 	 -fstar $(FSTAR_EXE) \
-	 -ccopt "-Ofast" \
+	 -ccopt "-O3" -ccopt "-ffast-math" \
 	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
 	 -tmpdir out -I .. \
 	 -bundle 'LowParse.\*' \

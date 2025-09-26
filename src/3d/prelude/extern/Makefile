@@ -61,4 +61,5 @@ EverParse.h: EverParse.rsp
 .PHONY: all extract clean verify extract-extern extract-static
 
 clean:
-	rm -f *.checked *.krml EverParse.h EverParse.rsp .depend *.tmp .depend.tmp *~ ../static
+	rm -f *.checked *.krml EverParse.h EverParse.rsp .depend *.tmp .depend.tmp *~
+	rm -rf ../static
