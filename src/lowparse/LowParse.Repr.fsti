@@ -429,8 +429,7 @@ let stable_repr_ptr t= p:repr_ptr t { valid_if_live p }
 // Note: the next proof is flaky and occasionally enters a triggering
 // vortex with the notorious FStar.Seq.Properties.slice_slice
 // Removing that from the context makes the proof instantaneous
-#push-options "--max_ifuel 1 --initial_ifuel 1 \
-                --using_facts_from '* -FStar.Seq.Properties.slice_slice'"
+#push-options "--max_ifuel 1 --initial_ifuel 1"
 let valid_if_live_intro (#t:Type u#t) (r:repr_ptr t) (h:HS.mem)
   : Lemma
     (requires (
@@ -456,10 +455,10 @@ let valid_if_live_intro (#t:Type u#t) (r:repr_ptr t) (h:HS.mem)
           LP.valid_ext_intro m.parser h (slice_of_repr_ptr r) 0ul h' (slice_of_repr_ptr r) 0ul
     in
     ()
-
 #pop-options
 
-let sub_ptr_stable (#t0 #t1:_) (r0:repr_ptr t0) (r1:repr_ptr t1) (h:HS.mem)
+#restart-solver
+let sub_ptr_stable (#t0:Type u#t0) (#t1:Type u#t1) (r0:repr_ptr t0) (r1:repr_ptr t1) (h:HS.mem)
   : Lemma
     (requires
       r0 `sub_ptr` r1 /\
