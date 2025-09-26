@@ -85,8 +85,11 @@ ifneq ($(OS),Darwin)
 	+$(MAKE) -C src/3d test
 endif
 
+
 3d-doc-test: 3d
+ifneq ($(OS),Darwin)
 	+$(MAKE) -C doc 3d-test
+endif
 
 3d-test: 3d-unit-test 3d-doc-test
 
