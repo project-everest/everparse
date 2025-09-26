@@ -115,14 +115,14 @@ bool Decode(uint8_t* buf, size_t len, uint64_t *sum)
 
 int main()
 {
-    printf("Entry\n");
+    printf ("This test serializes an array using TinyCBOR, then parses it\n"
+            "back both with TinyCBOR and EverCDDL.\n");
     BigMap *init;
 
     init = (BigMap*)malloc(sizeof(BigMap));
     assert(init);
 
     uint8_t *buf = (uint8_t*)malloc(100 + 3*N + N * N * sizeof(int));
-    printf("Allocated %p\n", buf);
     fflush(stdout);
     assert(buf);
     // printf("Allocated\n");
@@ -143,7 +143,7 @@ int main()
     for (int i = 0; i < 20 && i < len; i++) {
         printf("%02x ", ((uint8_t *) buf)[i]);
     }
-    printf("\n");
+    printf("... \n");
 
     Pulse_Lib_Slice_slice__uint8_t slice = {
         .elt = (uint8_t *) buf,
@@ -151,14 +151,14 @@ int main()
     };
 
     /* Validate it, make sure it parses back. */
-    FStar_Pervasives_Native_option___BenchArray_map___Pulse_Lib_Slice_slice_uint8_t_
-      m_opt = TIME(BenchArray_validate_and_parse_map(slice), &f);
+    FStar_Pervasives_Native_option___BenchArray_arr___Pulse_Lib_Slice_slice_uint8_t_
+      m_opt = TIME(BenchArray_validate_and_parse_arr(slice), &f);
     assert (m_opt.tag == FStar_Pervasives_Native_Some);
-    printf("Parsed %zu bytes\n", m_opt.v.snd.len);
-    printf("Original len %zu\n", len);
+    // printf("Original len %zu\n", len);
+    // printf("%zu bytes NOT parsed\n", m_opt.v.snd.len);
     assert (m_opt.v.snd.len == 0); /* len is whatever remains */
 
-    BenchArray_map m =  m_opt.v.fst;
+    BenchArray_arr m = m_opt.v.fst;
 
     printf(" >>> VALIDATION BANDWIDTH: %f MB/s\n", len / f / 1e6);
 

@@ -1,10 +1,11 @@
 # Note: no postlude added to these tests.
 
+all: all-c
+all: all-build
+all: all-run
+
 .NOTINTERMEDIATE:
 .DELETE_ON_ERROR:
-
-all: all-c
-all: all-run
 
 ODIR := _output
 
@@ -109,8 +110,7 @@ QCBOR:
 	cd $@.tmp && git checkout 83c4af09d3752afa64ae66e2a3382192bf682541
 	mv $@.tmp $@
 
-QCBOR/libqcbor.a: QCBOR
-	$(MAKE) -C QCBOR
+include qcbor.Makefile
 
 tinycbor:
 	rm -rf $@.tmp
@@ -145,6 +145,9 @@ run-qcbor_bench: qcbor_bench
 	./$<
 
 # all: run
+
+.PHONY: all-build
+all-build: $(patsubst %,$(ODIR)/Test_%.exe,$(RUN))
 
 .PHONY: all-run
 all-run: $(patsubst %,%.run,$(RUN))

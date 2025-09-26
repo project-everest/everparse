@@ -74,8 +74,8 @@ let validate_ask_for_type
   (impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
   (#v_sem_env: sem_env)
   (env: validator_env vmatch v_sem_env { SZ.fits_u64 })
-  (a: option (ask_for v_sem_env))
-  (sq: squash (option_ask_for_is_type v_sem_env a))
+  (a: option_ask_for v_sem_env)
+  (sq: squash (option_ask_for_is_type a))
 : impl_typ vmatch (option_ask_for_get_type v_sem_env a sq)
 = let Some (AskForType t t_wf guarded) = a in
   V.validate_typ impl env guarded t t_wf
@@ -86,11 +86,12 @@ let ancillary_validate_env_set_ask_for
   (#vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
   (#se: sem_env)
   (env: ancillary_validate_env vmatch se)
-  (a: option (ask_for se))
-  (sq: squash (option_ask_for_is_type se a))
+  (a: option_ask_for se)
+  (sq: squash (option_ask_for_is_type a))
   (i: impl_typ vmatch (option_ask_for_get_type se a sq))
 : Tot (ancillary_validate_env vmatch se)
-= ancillary_validate_env_set env (AskForType?.t (Some?.v a)) i
+= let Some (AskForType t _ _) = a in
+  ancillary_validate_env_set env t i
 
 [@@sem_attr; Bundle.bundle_attr]
 let validate_ask_for_map_constraint
@@ -102,8 +103,8 @@ let validate_ask_for_map_constraint
   (impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
   (#v_sem_env: sem_env)
   (env: validator_env vmatch v_sem_env { SZ.fits_u64 })
-  (a: option (ask_for v_sem_env))
-  (sq: squash (option_ask_for_is_map_constraint v_sem_env a))
+  (a: option_ask_for v_sem_env)
+  (sq: squash (option_ask_for_is_map_constraint a))
 : impl_map_entry_cond vmatch2 (option_ask_for_get_map_constraint v_sem_env a sq)
 = let Some (AskForMapConstraint t t_wf) = a in
   V.validate_map_constraint impl env t t_wf
@@ -135,11 +136,12 @@ let ancillary_map_constraint_env_set_ask_for
   (#vmatch: perm -> cbor_t -> Cbor.cbor & Cbor.cbor -> slprop)
   (#se: sem_env)
   (env: ancillary_map_constraint_env vmatch se)
-  (a: option (ask_for se))
-  (sq: squash (option_ask_for_is_map_constraint se a))
+  (a: option_ask_for se)
+  (sq: squash (option_ask_for_is_map_constraint a))
   (i: impl_map_entry_cond vmatch (option_ask_for_get_map_constraint se a sq))
 : Tot (ancillary_map_constraint_env vmatch se)
-= ancillary_map_constraint_env_set env (AskForMapConstraint?.t (Some?.v a)) i
+= let Some (AskForMapConstraint t _) = a in
+  ancillary_map_constraint_env_set env t i
 
 [@@sem_attr; Bundle.bundle_attr]
 let ancillary_map_constraint_env_is_some
@@ -177,8 +179,8 @@ let validate_ask_for_array_group
   (impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
   (#v_sem_env: sem_env)
   (env: validator_env vmatch v_sem_env { SZ.fits_u64 })
-  (a: option (ask_for v_sem_env))
-  (sq: squash (option_ask_for_is_array_group v_sem_env a))
+  (a: option_ask_for v_sem_env)
+  (sq: squash (option_ask_for_is_array_group a))
 : impl_array_group cbor_array_iterator_match (array_group_sem v_sem_env (AskForArrayGroup?.t (Some?.v a)))
 = let Some (AskForArrayGroup t t_wf) = a in
   V.validate_array_group impl env t t_wf

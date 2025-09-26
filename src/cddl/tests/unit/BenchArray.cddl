@@ -1,5 +1,5 @@
-submap = [ * uint ]
-map = [ * submap ]
+subarr = [ * uint ]
+arr = [ * subarr ]
 
 uint = #0
 ; bstr = #2

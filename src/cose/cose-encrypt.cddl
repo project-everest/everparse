@@ -1,10 +1,6 @@
 label = int / tstr
 values = any
 
-COSE_Tagged_Message = COSE_Sign_Tagged / COSE_Sign1_Tagged /
-    COSE_Encrypt_Tagged / COSE_Encrypt0_Tagged /
-    COSE_Mac_Tagged / COSE_Mac0_Tagged
-
 Headers = (
     protected : empty_or_serialized_map,
     unprotected : header_map
@@ -22,90 +18,17 @@ header_map = {
 ; specification.
 empty_or_serialized_map = bstr .everparse-det-cbor header_map / bstr .size 0
 
-; Also, I replaced `=>` with `:` (to avoid the pattern described in
-; RFC 8610 Section 3.5.4; this is likely a COSE spec bug)
-
 ; Also, I introduced a CDDL constant type, `everparse-no-match`, to
 ; model empty types. This is sufficient to model the fact that keys 5
 ; and 6 shall not appear together
 
 Generic_Headers = (
-  ? 1 : int / tstr,  ; algorithm identifier
-  ? 2 : [+label],    ; criticality
-  ? 3 : tstr / int,  ; content type
-  ? 4 : bstr,        ; key identifier
+  ? 1 => int / tstr,  ; algorithm identifier
+  ? 2 => [+label],    ; criticality
+  ? 3 => tstr / int,  ; content type
+  ? 4 => bstr,        ; key identifier
   ((5 => bstr, ? 6 : everparse-no-match) // (6 => bstr, ? 5 : everparse-no-match) // (? 6 : everparse-no-match, ? 5 : everparse-no-match)) ; this expresses the constraint that 5 and 6 must not appear together, but they are allowed to not appear at all; in all cases, 5 and 6 must mot match any further entry beyond Generic_Headers, as enforced by the cuts.
 )
-
-COSE_Sign_Tagged = #6.98(COSE_Sign)
-
-COSE_Sign = [
-    Headers,
-    payload : bstr / nil,
-    signatures : [+ COSE_Signature]
-]
-
-COSE_Signature =  [
-    Headers,
-    signature : bstr
-]
-
-COSE_Sign1_Tagged = #6.18(COSE_Sign1)
-
-COSE_Sign1 = [
-    Headers,
-    payload : bstr / nil,
-    signature : bstr
-]
-
-; FIXME: This CDDL specification is buggy with the greedy semantics
-; for `?`: even if `sign_protected` is not required, `external_aad`
-; will require a bstr, which will be caught by `?sign_protected`.
-
-; Sig_structure = [
-;     context : "Signature" / "Signature1",
-;     body_protected : empty_or_serialized_map,
-;     ? sign_protected : empty_or_serialized_map,
-;     external_aad : bstr,
-;     payload : bstr
-; ]
-
-; To circumvent this bug, we need to rewrite the specification as
-; follows:
-
-Sig_structure = [
-    context : "Signature" / "Signature1",
-    body_protected : empty_or_serialized_map,
-    (
-        sign_protected : empty_or_serialized_map,
-        external_aad : bstr,
-        payload : bstr
-     //
-        external_aad : bstr,
-        payload : bstr
-    )
-]
-
-COSE_Key_OKP = {
-    1: 1,                ; kty
-    -1: int / tstr,      ; crv: EC identifier - Taken from the "COSE Elliptic Curves" registry
-    ? -2: bstr,          ; x: x-coordinate
-    ? -4: bstr,          ; d: private key
-    * label => values
-}
-
-; FIXME: RFC 9052 does not have cuts, see remark above
-
-COSE_Key = {
-   1 : tstr / int,          ; kty
-   ? 2 : bstr,              ; kid
-   ? 3 : tstr / int,        ; alg
-   ? 4 : [+ (tstr / int) ], ; key_ops
-   ? 5 : bstr,              ; Base IV
-   * label => values
-}
-
-COSE_KeySet = [ + COSE_Key ]
 
   Enc_structure = [
        context : "Encrypt" / "Encrypt0" / "Enc_Recipient" /
@@ -123,10 +46,12 @@ COSE_KeySet = [ + COSE_Key ]
 
   COSE_Encrypt_Tagged = #6.96(COSE_Encrypt)
 
+COSE_recipients = [+COSE_recipient]
+
   COSE_Encrypt = [
        Headers,
        ciphertext : bstr / nil,
-       recipients : [+COSE_recipient]
+       recipients : COSE_recipients
    ]
 
 ; FIXME: in RFC 9052, COSE_recipient is recursive, but Appendix B says
@@ -174,7 +99,7 @@ COSE_recipient3 = [
       Headers,
       payload : bstr / nil,
       tag : bstr,
-      recipients : [+COSE_recipient]
+      recipients : COSE_recipients
    ]
 
    COSE_Mac0_Tagged = #6.17(COSE_Mac0)
