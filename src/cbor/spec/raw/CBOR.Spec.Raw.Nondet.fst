@@ -66,14 +66,26 @@ let rec setoid_assoc_eq_with_overflow
   (xr: (t1 & t2))
 : Tot (option bool)
   (decreases ll)
-= let (x1, x2) = xr in
-  match ll with
+= match ll with
   | [] -> Some false
-  | (y1, y2) :: q ->
-    match equiv1 x1 y1 with
+  | y :: q ->
+    match equiv1 (fst xr) (fst y) with
     | None -> None
-    | Some true -> equiv2 x2 y2
+    | Some true -> equiv2 (snd xr) (snd y)
     | Some false -> setoid_assoc_eq_with_overflow equiv1 equiv2 q xr
+
+(*
+let setoid_assoc_eq_with_overflow_eq
+  (#t1 #t2: Type)
+  (equiv1: t1 -> t1 -> option bool)
+  (equiv2: t2 -> t2 -> option bool)
+  (ll: list (t1 & t2))
+  (xr: (t1 & t2))
+: Tot (squash (
+    setoid_assoc_eq_with_overflow equiv1 equiv2 ll xr == setoid_assoc_eq_with_overflow' equiv1 equiv2 ll xr
+  ))
+= _ by (FStar.Tactics.trefl ())
+*)
 
 let rec list_for_all_with_overflow
   (#t: Type)
@@ -296,6 +308,7 @@ let check_equiv_cond
   | None -> (map_depth x1 `exceeds_bound` map_bound) \/ (map_depth x2 `exceeds_bound` map_bound)
   | Some v -> v == Valid.equiv data_model x1 x2
 
+unfold
 let check_equiv_map_cond
   (data_model: (raw_data_item -> raw_data_item -> bool))
   (map_bound: option nat)
@@ -406,6 +419,32 @@ let check_equiv_aux_precond
     check_equiv_map_cond data_model map_bound x1 x2 (equiv x1 x2)
   )
 
+let check_equiv_aux_precond_intro
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (map_bound: option nat)
+  (bound: nat)
+  (equiv: (x1: raw_data_item) -> (x2: raw_data_item { raw_data_item_size x1 + raw_data_item_size x2 <= bound }) -> option bool)
+  (x1 x2: raw_data_item)
+  (sq1: squash (
+    Valid.valid data_model x1 /\ Valid.valid data_model x2 /\
+    raw_data_item_size x1 + raw_data_item_size x2 <= bound
+  ))
+  (sq2: (
+    (x1: raw_data_item) ->
+    (x2: raw_data_item { raw_data_item_size x1 + raw_data_item_size x2 <= bound }) ->
+    Lemma
+    (requires 
+      Valid.valid data_model x1 /\ Valid.valid data_model x2
+    )
+    (ensures
+      check_equiv_map_cond data_model map_bound x1 x2 (equiv x1 x2)
+    )
+  ))
+: Lemma
+  (check_equiv_aux_precond data_model map_bound bound equiv x1 x2)
+= Classical.forall_intro_2 (fun x1' x2' -> Classical.move_requires (sq2 x1') x2');
+  ()
+
 let check_equiv_aux_correct
   (data_model: (raw_data_item -> raw_data_item -> bool))
   (map_bound: option nat)
@@ -420,19 +459,227 @@ let check_equiv_aux_correct
 
 let check_equiv_map_precond
   (data_model: (raw_data_item -> raw_data_item -> bool))
-  (map_bound: option nat)
   (x1 x2: raw_data_item)
 : Tot prop
 = Valid.valid data_model x1 /\ Valid.valid data_model x2
 
-let check_equiv_map_correct
+let setoid_assoc_eq_with_overflow_equiv_precond
   (data_model: (raw_data_item -> raw_data_item -> bool))
+  (map_bound: option nat)
+  (equiv: (x1: raw_data_item) -> (x2: raw_data_item) -> option bool)
+  (bound: nat)
+  (l1: list (raw_data_item & raw_data_item))
+  (x2: (raw_data_item & raw_data_item))
+: Tot prop
+= List.Tot.for_all (Valid.valid data_model) (List.Tot.map fst l1) /\
+  List.Tot.for_all (Valid.valid data_model) (List.Tot.map snd l1) /\
+  Valid.valid data_model (fst x2) /\
+  Valid.valid data_model (snd x2) /\
+  list_sum (pair_sum raw_data_item_size raw_data_item_size) l1 + raw_data_item_size (fst x2) + raw_data_item_size (snd x2) <= bound /\ (
+    forall (x1: raw_data_item) (x2: raw_data_item { raw_data_item_size x1 + raw_data_item_size x2 <= bound }) .
+    (Valid.valid data_model x1 /\ Valid.valid data_model x2) ==>
+    check_equiv_cond data_model map_bound x1 x2 (equiv x1 x2)
+  )
+
+unfold
+let setoid_assoc_eq_with_overflow_equiv_postcond
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (map_bound: option nat)
+  (l1: list (raw_data_item & raw_data_item))
+  (x2: (raw_data_item & raw_data_item))
+  (y: option bool)
+: Tot prop
+= match y with
+  | None ->
+    list_max map_depth_pair l1 `exceeds_bound` map_bound \/
+    map_depth_pair x2 `exceeds_bound` map_bound
+  | Some b ->
+    b == setoid_assoc_eq (Valid.equiv data_model) (Valid.equiv data_model) l1 x2
+
+let rec setoid_assoc_eq_with_overflow_equiv_correct
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (map_bound: option nat)
+  (equiv: (x1: raw_data_item) -> (x2: raw_data_item) -> option bool)
+  (bound: nat)
+  (l1: list (raw_data_item & raw_data_item))
+  (x2: (raw_data_item & raw_data_item))
+: Lemma
+  (requires setoid_assoc_eq_with_overflow_equiv_precond data_model map_bound equiv bound l1 x2)
+  (ensures setoid_assoc_eq_with_overflow_equiv_postcond data_model map_bound l1 x2 (setoid_assoc_eq_with_overflow equiv equiv l1 x2))
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | y :: q ->
+    setoid_assoc_eq_with_overflow_equiv_correct data_model map_bound equiv bound q x2
+
+let list_for_all_with_overflow_setoid_assoc_eq_with_overflow_equiv_gen_precond
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (map_bound: option nat)
+  (f: (x2: (raw_data_item & raw_data_item)) -> option bool)
+  (bound: nat)
+  (l1 l2: list (raw_data_item & raw_data_item))
+: Tot prop
+= List.Tot.for_all (Valid.valid data_model) (List.Tot.map fst l1) /\
+  List.Tot.for_all (Valid.valid data_model) (List.Tot.map snd l1) /\
+  List.Tot.for_all (Valid.valid data_model) (List.Tot.map fst l2) /\
+  List.Tot.for_all (Valid.valid data_model) (List.Tot.map snd l2) /\
+  list_sum (pair_sum raw_data_item_size raw_data_item_size) l1 + list_sum (pair_sum raw_data_item_size raw_data_item_size) l2 <= bound /\
+  (forall (x2: (raw_data_item & raw_data_item) { list_sum (pair_sum raw_data_item_size raw_data_item_size) l1 + raw_data_item_size (fst x2) + raw_data_item_size (snd x2) <= bound }) .
+    (Valid.valid data_model (fst x2) /\ Valid.valid data_model (snd x2)) ==>
+    setoid_assoc_eq_with_overflow_equiv_postcond data_model map_bound l1 x2 (f x2)
+  )
+
+let list_for_all_with_overflow_setoid_assoc_eq_with_overflow_equiv_postcond
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (map_bound: option nat)
+  (f: (x2: (raw_data_item & raw_data_item)) -> option bool)
+  (l1 l2: list (raw_data_item & raw_data_item))
+: Tot prop
+= match list_for_all_with_overflow f l2 with
+  | None -> 
+    list_max map_depth_pair l1 `exceeds_bound` map_bound \/
+    list_max map_depth_pair l2 `exceeds_bound` map_bound
+  | Some b -> b == List.Tot.for_all (setoid_assoc_eq (Valid.equiv data_model) (Valid.equiv data_model) l1) l2
+
+let rec list_for_all_with_overflow_setoid_assoc_eq_with_overflow_equiv_correct_gen
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (map_bound: option nat)
+  (f: (x2: (raw_data_item & raw_data_item)) -> option bool)
+  (bound: nat)
+  (l1 l2: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires list_for_all_with_overflow_setoid_assoc_eq_with_overflow_equiv_gen_precond data_model map_bound f bound l1 l2)
+  (ensures list_for_all_with_overflow_setoid_assoc_eq_with_overflow_equiv_postcond data_model map_bound f l1 l2)
+  (decreases l2)
+= match l2 with
+  | [] -> ()
+  | a :: q ->
+    list_for_all_with_overflow_setoid_assoc_eq_with_overflow_equiv_correct_gen data_model map_bound f bound l1 q
+
+unfold
+let list_for_all_with_overflow_setoid_assoc_eq_with_overflow_equiv_precond
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (map_bound: option nat)
+  (equiv: (x1: raw_data_item) -> (x2: raw_data_item) -> option bool)
+  (bound: nat)
+  (l1 l2: list (raw_data_item & raw_data_item))
+: Tot prop
+= List.Tot.for_all (Valid.valid data_model) (List.Tot.map fst l1) /\
+  List.Tot.for_all (Valid.valid data_model) (List.Tot.map snd l1) /\
+  List.Tot.for_all (Valid.valid data_model) (List.Tot.map fst l2) /\
+  List.Tot.for_all (Valid.valid data_model) (List.Tot.map snd l2) /\
+  list_sum (pair_sum raw_data_item_size raw_data_item_size) l1 + list_sum (pair_sum raw_data_item_size raw_data_item_size) l2 <= bound /\ (
+    forall (x1: raw_data_item) (x2: raw_data_item) .
+    (Valid.valid data_model x1 /\ Valid.valid data_model x2 /\ raw_data_item_size x1 + raw_data_item_size x2 <= bound) ==>
+    check_equiv_cond data_model map_bound x1 x2 (equiv x1 x2)
+  )
+
+let list_for_all_with_overflow_setoid_assoc_eq_with_overflow_equiv_correct
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (map_bound: option nat)
+  (equiv: (x1: raw_data_item) -> (x2: raw_data_item) -> option bool)
+  (bound: nat)
+  (l1 l2: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires list_for_all_with_overflow_setoid_assoc_eq_with_overflow_equiv_precond data_model map_bound equiv bound l1 l2)
+  (ensures list_for_all_with_overflow_setoid_assoc_eq_with_overflow_equiv_postcond data_model map_bound (setoid_assoc_eq_with_overflow equiv equiv l1) l1 l2)
+= Classical.forall_intro (Classical.move_requires (setoid_assoc_eq_with_overflow_equiv_correct data_model map_bound equiv bound l1));
+  list_for_all_with_overflow_setoid_assoc_eq_with_overflow_equiv_correct_gen data_model map_bound (setoid_assoc_eq_with_overflow equiv equiv l1) bound l1 l2
+
+#push-options "--z3rlimit 32"
+
+let rec check_equiv_map_correct
+  (data_model: (raw_data_item -> raw_data_item -> bool) {
+    (forall x1 x2 . data_model x1 x2 == data_model x2 x1) /\
+    (forall x1 x2 x3 . (data_model x1 x2 /\ equiv data_model x2 x3) ==> data_model x1 x3)
+  })
   (map_bound: option nat)
   (x1 x2: raw_data_item)
 : Lemma
-  (requires check_equiv_map_precond data_model map_bound x1 x2)
+  (requires check_equiv_map_precond data_model x1 x2)
   (ensures check_equiv_map_cond data_model map_bound x1 x2 (check_equiv_map data_model map_bound x1 x2))
-= admit ()
+  (decreases (raw_data_item_size x1 + raw_data_item_size x2))
+= check_equiv_map_eq data_model map_bound x1 x2;
+  if data_model x1 x2
+  then ()
+  else match x1, x2 with
+  | Map _ v1, Map _ v2 ->
+    if map_bound = Some 0
+    then ()
+    else begin
+      Valid.equiv_eq data_model x1 x2;
+      raw_data_item_size_eq x1;
+      raw_data_item_size_eq x2;
+      Valid.valid_eq data_model x1;
+      Valid.valid_eq data_model x2;
+      Valid.equiv_refl_forall data_model;
+      Valid.equiv_sym_forall data_model;
+      Valid.equiv_trans_forall data_model;
+      list_setoid_assoc_eq_refl (Valid.equiv data_model) (Valid.equiv data_model) v1;
+      list_setoid_assoc_eq_refl (Valid.equiv data_model) (Valid.equiv data_model) v2;
+      assert (List.Tot.for_all (setoid_assoc_eq (equiv data_model) (equiv data_model) v1) v1 == true);
+      assert (List.Tot.for_all (setoid_assoc_eq (equiv data_model) (equiv data_model) v2) v2 == true);
+      map_depth_eq x1;
+      map_depth_eq x2;
+      let map_bound' : option nat = (match map_bound with None -> None | Some x -> Some (x - 1)) in
+      let bound = list_sum (pair_sum raw_data_item_size raw_data_item_size) v1 + list_sum (pair_sum raw_data_item_size raw_data_item_size) v2 in
+      assert (
+        check_equiv_map' data_model map_bound x1 x2 ==
+        begin match list_for_all_with_overflow (setoid_assoc_eq_with_overflow (check_equiv_aux bound (check_equiv_map data_model map_bound')) (check_equiv_aux bound (check_equiv_map data_model map_bound')) v2) v1 with
+        | Some true ->
+          list_for_all_with_overflow (setoid_assoc_eq_with_overflow (check_equiv_aux bound (check_equiv_map data_model map_bound')) (check_equiv_aux bound (check_equiv_map data_model map_bound')) v1) v2
+        | r -> r
+        end
+      );
+      let rec_prf (x1' x2': raw_data_item) : Lemma
+      (requires 
+        check_equiv_map_precond data_model x1' x2' /\
+        raw_data_item_size x1' + raw_data_item_size x2' <= bound
+      )
+      (ensures
+        check_equiv_map_cond data_model map_bound' x1' x2' (check_equiv_map data_model map_bound' x1' x2')
+      )
+      = check_equiv_map_correct data_model map_bound' x1' x2'
+      in
+      let prf1
+        (x1' : raw_data_item)
+        (x2' : raw_data_item)
+      : Lemma
+        (requires
+          Valid.valid data_model x1' /\ Valid.valid data_model x2' /\
+          raw_data_item_size x1' + raw_data_item_size x2' <= bound
+        )
+        (ensures
+          check_equiv_cond data_model map_bound' x1' x2' (check_equiv_aux bound (check_equiv_map data_model map_bound') x1' x2')
+        )
+      =
+        check_equiv_aux_precond_intro data_model map_bound' bound (check_equiv_map data_model map_bound') x1' x2' () (fun x1_ x2_ ->
+          rec_prf x1_ x2_
+        );
+        check_equiv_aux_correct data_model map_bound' bound (check_equiv_map data_model map_bound') x1' x2';
+        ()
+      in
+      let prf2
+        (x1' : raw_data_item)
+        (x2' : raw_data_item)
+      : Lemma
+        (
+          (
+            Valid.valid data_model x1' /\ Valid.valid data_model x2' /\
+            raw_data_item_size x1' + raw_data_item_size x2' <= bound
+          ) ==>
+          check_equiv_cond data_model map_bound' x1' x2' (check_equiv_aux bound (check_equiv_map data_model map_bound') x1' x2')
+        )
+      = Classical.move_requires (prf1 x1') x2'
+      in
+      Classical.forall_intro_2 prf2;
+      list_for_all_with_overflow_setoid_assoc_eq_with_overflow_equiv_correct data_model map_bound' (check_equiv_aux bound (check_equiv_map data_model map_bound')) bound v2 v1;
+      list_for_all_with_overflow_setoid_assoc_eq_with_overflow_equiv_correct data_model map_bound' (check_equiv_aux bound (check_equiv_map data_model map_bound')) bound v1 v2;
+      ()
+    end
+  | _ -> ()
+
+#pop-options
 
 let check_equiv_precond
   (data_model: (raw_data_item -> raw_data_item -> bool))
@@ -442,7 +689,10 @@ let check_equiv_precond
 = Valid.valid data_model x1 /\ Valid.valid data_model x2
 
 let check_equiv_correct
-  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (data_model: (raw_data_item -> raw_data_item -> bool) {
+    (forall x1 x2 . data_model x1 x2 == data_model x2 x1) /\
+    (forall x1 x2 x3 . (data_model x1 x2 /\ equiv data_model x2 x3) ==> data_model x1 x3)
+  })
   (map_bound: option nat)
   (x1 x2: raw_data_item)
 : Lemma
