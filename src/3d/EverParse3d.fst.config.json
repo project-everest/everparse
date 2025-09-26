@@ -1,0 +1,10 @@
+{
+    "fstar_exe": "../../fstar.sh",
+    "options": [
+    ],
+    "include_dirs": [
+      "../../src/lowparse",
+      "../../src/lowparse/pulse",
+      "./prelude"
+    ]
+  }

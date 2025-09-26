@@ -1939,7 +1939,7 @@ let probe_then_validate
         true
       )
       else (
-        let b = PA.run_probe_m (PA.init_and_probe init probe) typename fieldname "probe" ctxt error_handler_fn src64 prep_dest_sz dest in
+        let b = PA.run_probe_m (PA.init_and_probe (typename ^ "." ^ fieldname) init probe) typename fieldname "probe" ctxt error_handler_fn src64 prep_dest_sz dest in
         let h1 = HST.get () in
         modifies_address_liveness_insensitive_unused_in h0 h1;
         if b <> 0uL

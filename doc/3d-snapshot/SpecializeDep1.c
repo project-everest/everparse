@@ -549,7 +549,7 @@ ValidateWrapper(
         uint64_t readOffset = 0ULL;
         uint64_t writeOffset = 0ULL;
         BOOLEAN failed = FALSE;
-        BOOLEAN ok = ProbeInit((uint64_t)Len, Output);
+        BOOLEAN ok = ProbeInit("_WRAPPER.tlv", (uint64_t)Len, Output);
         if (ok)
         {
           ProbeTlv((uint32_t)Len - (uint32_t)(uint16_t)5U,
@@ -711,7 +711,7 @@ ValidateSpecializedWrapper32(
         uint64_t readOffset = 0ULL;
         uint64_t writeOffset = 0ULL;
         BOOLEAN failed = FALSE;
-        BOOLEAN ok = ProbeInit((uint64_t)Len, Output);
+        BOOLEAN ok = ProbeInit("___specialized_WRAPPER_32.tlv", (uint64_t)Len, Output);
         if (ok)
         {
           Specialized32ProbeTlv((uint32_t)Len - (uint32_t)(uint16_t)5U,

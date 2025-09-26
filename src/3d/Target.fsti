@@ -239,6 +239,7 @@ type typedef_body =
 
 noeq
 type probe_entrypoint = {
+  probe_ep_init: A.ident;
   probe_ep_fn: A.ident;
   probe_ep_length: expr;
 }
