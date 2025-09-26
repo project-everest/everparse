@@ -9,6 +9,8 @@ let lowparse_home = filename_concat (filename_concat everparse_home "src") "lowp
 let ddd_home = filename_concat (filename_concat everparse_home "src") "3d"
 let ddd_prelude_home = filename_concat (filename_concat (filename_concat everparse_home "src") "3d") "prelude"
 
+let cl_wrapper () = filename_concat krml_home (filename_concat "misc" "cl-wrapper.bat")
+
 let ddd_actions_home input_stream_binding =
   let input_stream_dir =
     match string_of_input_stream_binding input_stream_binding with
@@ -58,6 +60,7 @@ let krml out_dir =
 
 (* command lines *)
 let fstar_args0 =
+  "--z3version" :: "4.13.3" ::
   "--already_cached" :: "Prims,LowStar,FStar,LowParse,C,EverParse3d.\\*,Spec" ::
     "--include" :: lowparse_home ::
       "--include" :: krmllib ::
@@ -468,7 +471,7 @@ let produce_one_c_file
   let krml_args = krml_args input_stream_binding emit_output_types_defs add_include true out_dir ((file, modul) :: dep_files_and_modules) in
   let krml_args =
     krml_args@
-      List.concat (List.map (fun (_, m) -> ["-library"; Printf.sprintf "%s,%s.Types" m m]) dep_files_and_modules) @ [
+(*      List.concat (List.map (fun (_, m) -> ["-library"; Printf.sprintf "%s,%s.Types" m m]) dep_files_and_modules) @ *) [
         "-bundle" ;
         Printf.sprintf "%s=%s" modul (String.concat "," (Printf.sprintf "%s.Types" modul :: List.map (fun (_, m) -> Printf.sprintf "%s,%s.Types" m m) dep_files_and_modules));
       ]
@@ -779,6 +782,7 @@ let produce_and_postprocess_c
       (add_include: string list)
       (clang_format: bool)
       (clang_format_executable: string)
+      (copy_clang_format_opt: bool)
       (skip_c_makefiles: bool)
       (cleanup: bool)
       (no_everparse_h: bool)
@@ -793,7 +797,7 @@ let produce_and_postprocess_c
   if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
   then failwith "krml produced some EverParse.h, should not have happened";
   (* postprocess the produced C files *)
-  postprocess_c input_stream_binding true true clang_format clang_format_executable true skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
+  postprocess_c input_stream_binding true true clang_format clang_format_executable copy_clang_format_opt skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
 
 let produce_and_postprocess_one_c
       input_stream_binding
@@ -832,6 +836,7 @@ let postprocess_fst
       (add_include: string list)
       (clang_format: bool)
       (clang_format_executable: string)
+      (copy_clang_format_opt: bool)
       (skip_c_makefiles: bool)
       (cleanup: bool)
       (no_everparse_h: bool)
@@ -844,7 +849,7 @@ let postprocess_fst
      FIXME: modules can be processed in parallel *)
   List.iter (verify_and_extract_module fstar_exe input_stream_binding out_dir) files_and_modules;
   (* produce the .c and .h files and format them *)
-  produce_and_postprocess_c input_stream_binding emit_output_types_defs add_include clang_format clang_format_executable skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
+  produce_and_postprocess_c input_stream_binding emit_output_types_defs add_include clang_format clang_format_executable copy_clang_format_opt skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
 
 let check_all_hashes
       (ch: check_hashes_t)

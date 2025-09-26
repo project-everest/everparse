@@ -457,7 +457,9 @@ let valid_if_live_intro (#t:Type u#t) (r:repr_ptr t) (h:HS.mem)
     in
     ()
 
-let sub_ptr_stable (#t0:Type u#t0) (#t1:Type u#t1) (r0:repr_ptr t0) (r1:repr_ptr t1) (h:HS.mem)
+#pop-options
+
+let sub_ptr_stable (#t0 #t1:_) (r0:repr_ptr t0) (r1:repr_ptr t1) (h:HS.mem)
   : Lemma
     (requires
       r0 `sub_ptr` r1 /\

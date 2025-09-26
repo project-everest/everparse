@@ -1,0 +1,54 @@
+name: Build 3D doc, CBOR, COSE snapshots
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 22 * * 0,3"
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5
+      - uses: actions/checkout@master
+      - run: sudo apt update && sudo apt install -y libssl-dev
+      - name: Everparse CI
+        id: cistep
+        run: |
+          . $HOME/.cargo/env && env OPAMYES=1 make _opam && eval $(opam env) && make -C opt -j$(nproc) && env OTHERFLAGS='--admit_smt_queries true' make cbor-snapshot 3d-doc-snapshot -kj$(nproc) && env OTHERFLAGS='--admit_smt_queries true' make cose-snapshot -kj$(nproc)
+
+      - name: commit changes
+        run: |
+          git config --local user.name "Dzomo, the Everest Yak"
+          git config --local user.email "dzomo@users.noreply.github.com"
+          git add doc/3d-snapshot src/cbor/pulse/det/c src/cbor/pulse/det/rust src/cose/c src/cose/rust
+          git commit --allow-empty -m "[CI] regenerate hints and dist"
+
+      - name: leave no uncommitted changes
+        run: |
+          git restore .
+          git clean -xfd
+
+      - name: avoid trivial changes
+        id: checktrivial
+        continue-on-error: true
+        run: |
+          [[ 0 -lt $(git diff --compact-summary HEAD~.. | wc -l) ]]
+
+      - name: create pull request
+        if: ${{ steps.checktrivial.outcome == 'success' }}
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.EVERPARSE_GITHUB_TOKEN }}
+          branch: "hints-and-dist-main"
+          title: "[CI] regenerate hints and dist"

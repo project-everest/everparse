@@ -146,6 +146,7 @@ type qenv = {
   output_types : H.t ident' unit;
   extern_types : H.t ident' unit;
   local_names : list string;
+  generic_names : list string;
   global_env: GlobalEnv.global_env;
 }
 
@@ -163,6 +164,17 @@ let push_extern_type (env:qenv) (td:typedef_names) : ML unit =
 let push_name (env:qenv) (name:string) : qenv =
   { env with local_names = name::env.local_names }
 
+let push_generic (env:qenv) (g:generic_param)
+: ML qenv
+= let GenericProbeFunction p _ _ = g in
+  if List.mem p.v.name env.generic_names
+  then error (Printf.sprintf "Generic name %s already in scope" p.v.name) p.range
+  else { env with generic_names = p.v.name::env.generic_names }
+
+let push_generics (env:qenv) (g:list generic_param) : ML qenv =
+  List.fold_left push_generic env g
+
+
 let prim_consts = [
   "unit"; "Bool"; "UINT8"; "UINT16"; "UINT32"; "UINT64";
   "UINT8BE"; "UINT16BE"; "UINT32BE"; "UINT64BE";
@@ -171,11 +183,16 @@ let prim_consts = [
   "is_range_okay";
   "void" ]
 
+let resolve_generic (env:qenv) (i:ident) : ML ident =
+  if List.mem i.v.name env.generic_names
+  then i
+  else error (Printf.sprintf "Generic name %s not in scope" i.v.name) i.range
+
 let resolve_ident (env:qenv) (i:ident) : ML ident =
   let resolve_to_current_module i =
     { i with v = { i.v with modul_name = Some env.mname } }
   in
-  let maybe_resolve_as_ifdef i 
+  let maybe_resolve_as_ifdef (i:ident) 
     : ML ident
     = match env.global_env.ge_cfg with
       | None -> resolve_to_current_module i
@@ -263,12 +280,14 @@ let kind_of_ident (env:qenv) (i:ident)
     
 let rec resolve_typ' (env:qenv) (t:typ') : ML typ' =
   match t with
-  | Type_app hd _ args ->
+  | Type_app hd _ gs args ->
     let hd = resolve_ident env hd in
+    let gs = List.map (resolve_expr env) gs in
     //Set is_out argument to the Type_app appropriately
     let k = kind_of_ident env hd in
-    Type_app hd k (List.map (resolve_typ_param env) args)
-  | Pointer t -> Pointer (resolve_typ env t)
+    Type_app hd k gs (List.map (resolve_typ_param env) args)
+  | Pointer t q -> Pointer (resolve_typ env t) q
+  | Type_arrow ts t -> (mk_arrow (List.map (resolve_typ env) ts) (resolve_typ env t)).v
 
 and resolve_typ (env:qenv) (t:typ) : ML typ = { t with v = resolve_typ' env t.v }
 
@@ -301,6 +320,36 @@ let rec resolve_action' (env:qenv) (act:action') : ML action' =
 and resolve_action (env:qenv) (act:action) : ML action =
   { act with v = resolve_action' env act.v }
 
+let resolve_probe_atomic_action (env:qenv) (ac:probe_atomic_action) : ML probe_atomic_action =
+  match ac with
+  | Probe_action_return e -> Probe_action_return (resolve_expr env e)
+  | Probe_action_call f args ->
+    Probe_action_call (resolve_ident env f) (List.map (resolve_expr env) args)
+  | Probe_action_read f -> Probe_action_read (resolve_ident env f)
+  | Probe_action_write f v -> Probe_action_write (resolve_ident env f) (resolve_expr env v)
+  | Probe_action_copy_and_return r w ty maybe_warn -> Probe_action_copy_and_return (resolve_ident env r) (resolve_ident env w) ty maybe_warn
+  | Probe_action_copy f v -> Probe_action_copy (resolve_ident env f) (resolve_expr env v)
+  | Probe_action_skip_read n -> Probe_action_skip_read (resolve_expr env n)
+  | Probe_action_skip_write n -> Probe_action_skip_write (resolve_expr env n)
+  | Probe_action_fail -> Probe_action_fail
+
+let rec resolve_probe_action' (env:qenv) (act:probe_action') : ML probe_action' =
+  match act with
+  | Probe_atomic_action ac -> Probe_atomic_action (resolve_probe_atomic_action env ac)
+  | Probe_action_var i -> Probe_action_var (resolve_expr env i)
+  | Probe_action_seq d hd tl ->
+    Probe_action_seq d (resolve_probe_action env hd) (resolve_probe_action env tl)
+  | Probe_action_let d i a k ->
+    Probe_action_let d i (resolve_probe_atomic_action env a) (resolve_probe_action (push_name env i.v.name) k)
+  | Probe_action_ite hd then_ else_ ->
+    Probe_action_ite (resolve_expr env hd) (resolve_probe_action env then_) (resolve_probe_action env else_)
+  | Probe_action_array len body ->
+    Probe_action_array (resolve_expr env len) (resolve_probe_action env body)
+  | Probe_action_copy_init_sz f ->
+    Probe_action_copy_init_sz (resolve_ident env f)
+and resolve_probe_action (env:qenv) (act:probe_action) : ML probe_action =
+  { act with v = resolve_probe_action' env act.v }
+
 let resolve_param (env:qenv) (p:param) : ML (param & qenv) =
   let t, i, q = p in
   (resolve_typ env t, i, q),
@@ -331,11 +380,18 @@ let resolve_field_array_t (env:qenv) (farr:field_array_t) : ML field_array_t =
   | FieldString (Some e) -> FieldString (Some (resolve_expr env e))
   | FieldConsumeAll -> farr
 
+let resolve_probe_field env = function
+  | ProbeLength e -> ProbeLength (resolve_expr env e)
+  | ProbeDest e -> ProbeDest (resolve_expr env e)
+
 let resolve_probe_call env pc =
+  let { probe_dest; probe_block; probe_ptr_as_u64 } = pc in
   {
-    probe_fn = map_opt (resolve_ident env) pc.probe_fn;
-    probe_length = resolve_expr env pc.probe_length;
-    probe_dest = resolve_ident env pc.probe_dest;
+    probe_dest = resolve_ident env probe_dest;
+    probe_block = resolve_probe_action env probe_block;
+    probe_ptr_as_u64 = map_opt (resolve_ident env) probe_ptr_as_u64;
+    probe_dest_sz = resolve_expr env pc.probe_dest_sz;
+    probe_init = map_opt (resolve_ident env) pc.probe_init;
   }
 
 let rec resolve_field (env:qenv) (ff:field) : ML (field & qenv) =
@@ -391,7 +447,7 @@ let resolve_typedef_names (env:qenv) (td_names:typedef_names) : ML typedef_names
   {
     typedef_name = resolve_ident env td_names.typedef_name;
     typedef_abbrev = resolve_ident env td_names.typedef_abbrev;
-    typedef_ptr_abbrev = resolve_ident env td_names.typedef_ptr_abbrev;
+    typedef_ptr_abbrev = map_opt (resolve_ident env) td_names.typedef_ptr_abbrev;
     typedef_attributes = List.map (resolve_typedef_attribute env) td_names.typedef_attributes;
   }
 
@@ -413,26 +469,48 @@ let resolve_out_type (env:qenv) (out_t:out_typ) : ML out_typ =
     out_typ_names = resolve_typedef_names env out_t.out_typ_names;
     out_typ_fields = List.map (resolve_out_field env) out_t.out_typ_fields }
 
+let resolve_probe_function_type env = function
+    | SimpleProbeFunction id -> SimpleProbeFunction (resolve_ident env id)
+    | CoerceProbeFunctionPlaceholder i -> CoerceProbeFunctionPlaceholder (resolve_ident env i)
+    | CoerceProbeFunction (x, y) -> CoerceProbeFunction (resolve_ident env x, resolve_ident env y)
+    | HelperProbeFunction -> HelperProbeFunction
+
 let resolve_decl' (env:qenv) (d:decl') : ML decl' =
   match d with
   | ModuleAbbrev i m -> push_module_abbrev env i.v.name m.v.name; d
   | Define i topt c ->
     Define (resolve_ident env i) (map_opt (resolve_typ env) topt) c
-  | TypeAbbrev t i ->
-    TypeAbbrev (resolve_typ env t) (resolve_ident env i)
+  | TypeAbbrev attrs t i gs ps ->
+    let attrs = List.map (resolve_typedef_attribute env) attrs in
+    let env = push_generics env gs in    
+    let params, env = resolve_params env ps in
+    TypeAbbrev attrs (resolve_typ env t) (resolve_ident env i) gs ps
   | Enum t i ecs ->
     Enum (resolve_typ env t) (resolve_ident env i) (List.map (resolve_enum_case env) ecs)
-  | Record td_names params where flds ->
+  | Record td_names generics params where flds ->
     let td_names = resolve_typedef_names env td_names in
+    let env = push_generics env generics in
     let params, env = resolve_params env params in
     let where = map_opt (resolve_expr env) where in
     let flds, _ = resolve_fields env flds in
-    Record td_names params where flds
-  | CaseType td_names params sc ->
+    Record td_names generics params where flds
+  | CaseType td_names generics params sc ->
     let td_names = resolve_typedef_names env td_names in
+    let env = push_generics env generics in
     let params, env = resolve_params env params in
     let sc = resolve_switch_case env sc in
-    CaseType td_names params sc
+    CaseType td_names generics params sc
+  | ProbeFunction f params act tn ->
+    let tn = resolve_probe_function_type env tn in
+    let params, env = resolve_params env params in
+    let act = resolve_probe_action env act in
+    ProbeFunction f params act tn
+  | CoerceProbeFunctionStub id params tn ->
+    let tn = resolve_probe_function_type env tn in
+    let params, env = resolve_params env params in
+    CoerceProbeFunctionStub id params tn
+  | Specialize qs t0 t1 ->
+    Specialize qs (resolve_ident env t0) (resolve_ident env t1)
   | OutputType out_t ->
     let out_t = resolve_out_type env out_t in
     push_output_type env out_t;
@@ -441,17 +519,24 @@ let resolve_decl' (env:qenv) (d:decl') : ML decl' =
     let td_names = resolve_typedef_names env td_names in
     push_extern_type env td_names;
     ExternType td_names
-  | ExternFn id ret params ->
+  | ExternFn id ret params pure ->
     let id = resolve_ident env id in
     let ret = resolve_typ env ret in
     let params, _ = resolve_params env params in
-    ExternFn id ret params
-  | ExternProbe id ->
+    ExternFn id ret params pure
+  | ExternProbe id q ->
     let id = resolve_ident env id in
-    ExternProbe id
+    ExternProbe id q
 
 let resolve_decl (env:qenv) (d:decl) : ML decl = decl_with_v d (resolve_decl' env d.d_decl.v)
 
+let hoist_extern_probes (decls:list decl) : ML (list decl) =
+  let externs, rest = List.partition (fun d -> match d.d_decl.v with
+                                               | ExternProbe _ _ -> true
+                                               | _ -> false) decls in
+  externs @ rest
+
+(* The main desugaring function *)
 let desugar (genv:GlobalEnv.global_env) (mname:string) (p:prog) : ML prog =
   let decls, refinement = p in
   let decls = List.collect desugar_one_enum decls in
@@ -461,10 +546,12 @@ let desugar (genv:GlobalEnv.global_env) (mname:string) (p:prog) : ML prog =
     output_types=H.create 10;
     extern_types=H.create 10;
     local_names=[];
+    generic_names=[];
     global_env=genv
   } in
   H.insert env.extern_types (Ast.to_ident' "void") ();
   let decls = List.map (resolve_decl env) decls in
+  let decls = hoist_extern_probes decls in
   decls,
   (match refinement with
    | None -> None

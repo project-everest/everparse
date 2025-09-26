@@ -1,0 +1,11 @@
+(include_subdirs unqualified)
+(executable
+  (name Main)
+  (public_name cddl.exe)
+  (libraries
+    re
+    evercddl.lib
+  )
+ (modes native)
+ (flags (:standard -w -8-9-11-26-27-33-39))
+)

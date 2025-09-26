@@ -22,6 +22,7 @@ jobs:
       - run: echo "HOME=/home/user" | sudo tee -a $GITHUB_ENV
       - uses: mtzguido/set-opam-env@master
       - run: opam install -y hex re ctypes sha sexplib
+      - run: sudo apt update && sudo apt install -y cmake libssl-dev
       # ^ not in base
 
       - uses: actions/checkout@master
@@ -50,10 +51,7 @@ jobs:
           path: FStar
           key: FStar-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}
 
-      - run: echo "FSTAR_HOME=$(pwd)/FStar" | sudo tee -a $GITHUB_ENV
       - run: echo "FSTAR_EXE=$(pwd)/FStar/bin/fstar.exe" | sudo tee -a $GITHUB_ENV
-      - run: echo "$(pwd)/FStar/bin" | sudo tee -a $GITHUB_PATH
-      # FSTAR_HOME just for compat. *Either* of the other two should suffice, eventually.
 
       - uses: actions/checkout@master
         id: checkout-karamel
@@ -82,8 +80,39 @@ jobs:
           key: karamel-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}-${{ steps.checkout-karamel.outputs.commit }}
 
       - run: echo "KRML_HOME=$(pwd)/karamel" | sudo tee -a $GITHUB_ENV
-      - run: echo "KRML_EXE=$(pwd)/karamel/krml" | sudo tee -a $GITHUB_ENV
-      - run: echo "$(pwd)/karamel" | sudo tee -a $GITHUB_PATH
+
+      - name: Install python3-venv
+        run: |
+          sudo apt-get update
+          sudo apt-get --yes install --no-install-recommends python3-venv
+
+      - uses: actions/checkout@master
+        id: checkout-pulse
+        with:
+          path: pulse
+          repository: FStarLang/pulse
+          ref: main
+
+      - name: Try fetch built pulse
+        id: cache-pulse
+        uses: actions/cache/restore@v4
+        with:
+          path: pulse
+          key: pulse-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}-${{ steps.checkout-pulse.outputs.commit }}
+
+      - name: Build pulse (if not cached)
+        if: steps.cache-pulse.outputs.cache-hit != 'true'
+        run: |
+          make -C pulse -sj$(nproc) ADMIT=1
+
+      - name: Save built pulse
+        if: steps.cache-pulse.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: pulse
+          key: pulse-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}-${{ steps.checkout-pulse.outputs.commit }}
+
+      - run: echo "PULSE_HOME=$(pwd)/pulse"/out | sudo tee -a $GITHUB_ENV
 
       - uses: actions/checkout@master
         with:
@@ -91,7 +120,10 @@ jobs:
 
       - name: Everparse CI
         id: cistep
-        run: make -C everparse ci -skj$(nproc)
+        run: |
+          . $HOME/.cargo/env && make -C everparse ci -kj$(nproc) branchname=${{ github.head_ref || github.ref_name }}
+        env:
+          DZOMO_GITHUB_TOKEN: ${{ secrets.DZOMO_GITHUB_TOKEN }}
 
       # I'm leaving this disabled as I do not get good incrementality
       # when trying this out by hand due to dependence hash mismatches
@@ -131,9 +163,12 @@ jobs:
             Status: ${{ steps.cistep.outcome == 'success' && '✅' || steps.cistep.outcome == 'cancelled' && '⚠' || '❌' }} ([link](https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}))
             Elapsed time: ${{ steps.duration.outputs.duration }}
 
-  # No-op job for branch protection.
+  # Branch protection points here.
   ciok:
     runs-on: ubuntu-latest
     needs: ci
+    if: ${{ cancelled() || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'failure') }}
     steps:
-      - run: exit 0
+      # Note: we only run on failure. Otherwise this is skipped, which counts
+      # as a success.
+      - run: exit 1

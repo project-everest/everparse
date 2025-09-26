@@ -13,9 +13,18 @@ tests/unit/*
 **/out
 bin/qd.exe
 bin/3d.exe
+bin/cddl.exe
+lib/evercddl
+.depend.rsp
 
 # package.sh creates there
 __fstar-install
+fstar-src/fstar/*.checked
 everparse/**
 everparse_*.tar.gz
 everparse_*.zip
+
+# make touchfiles
+.*.touch
+_opam
+_opam.tmp

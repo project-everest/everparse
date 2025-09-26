@@ -1,0 +1,12 @@
+(include_subdirs unqualified)
+(library
+ (name evercddl_plugin)
+ (public_name evercddl.plugin)
+ (libraries
+    fstar.pluginlib
+    evercddl.lib
+ )
+ (flags (:standard -w -8-9-11-26-27-33-39))
+ (wrapped false)
+ (modes native)
+)

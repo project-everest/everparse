@@ -1,0 +1,79 @@
+name: Test CBOR, CDDL, COSE
+on:
+  push:
+    branches-ignore:
+    - _**
+  pull_request:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+        with:
+          path: everparse
+      - run: sudo apt update && sudo apt install -y libssl-dev
+      - name: Everparse CI
+        id: cistep
+        run: |
+          . $HOME/.cargo/env && make -C everparse cbor-test-unverified cose-extracted-test -kj$(nproc)
+
+  build-cddl-ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5
+      - uses: actions/checkout@master
+        with:
+          path: everparse
+      - name: Everparse CI
+        run: |
+          ./everparse/build-evercddl.sh
+
+  build-cddl-macos:
+    runs-on: macOS-latest
+    steps:
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5
+      - name: Install Homebrew tools
+        run: |
+          brew install bash gnu-getopt make gnu-time
+      - uses: actions/checkout@master
+        with:
+          path: everparse
+      - name: Everparse CI
+        run: |
+          ./everparse/build-evercddl.sh
+      - name: Test
+        run: |
+          nproc=$(sysctl -n hw.logicalcpu)
+          if [[ $nproc -gt 8 ]] ; then nproc=8 ; fi
+          cd everparse && opam exec -- gmake -j$nproc -k cddl-test
+
+  build-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+        with:
+          path: everparse
+      - name: Havoc .depend
+        run: |
+          echo '$(error "This file should have been cleaned away")' > everparse/.depend
+      - name: Get number of processors
+        run: |
+          echo CI_THREADS=$(nproc) >> $GITHUB_ENV
+      - name: Build a Docker image
+        uses: docker/build-push-action@v6
+        with:
+          build-args: |
+            CI_THREADS=${{ env.CI_THREADS }}
+          context: everparse

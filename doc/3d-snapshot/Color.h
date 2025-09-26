@@ -1,7 +1,7 @@
 
 
-#ifndef __Color_H
-#define __Color_H
+#ifndef Color_H
+#define Color_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -46,5 +46,5 @@ ColorValidateColoredPoint(
 }
 #endif
 
-#define __Color_H_DEFINED
-#endif
+#define Color_H_DEFINED
+#endif /* Color_H */

@@ -1,7 +1,7 @@
 
 
-#ifndef __ReadPair_H
-#define __ReadPair_H
+#ifndef ReadPair_H
+#define ReadPair_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -33,5 +33,5 @@ ReadPairValidatePair(
 }
 #endif
 
-#define __ReadPair_H_DEFINED
-#endif
+#define ReadPair_H_DEFINED
+#endif /* ReadPair_H */

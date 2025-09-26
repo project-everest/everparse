@@ -6,7 +6,7 @@
 .. note::
 
    The documentation from this page covers the EverParse/3d releases
-   v2021.03.05 or later. Documentations for earlier versions may be
+   v2025.05.20 or later. Documentations for earlier versions may be
    found in the Git history.
 
 EverParse/3d lets you write a data format description and
@@ -82,13 +82,6 @@ following properties:
   contain valid representations of the message according to its
   specification, rejecting all others.
 
-The 3d Dependent Data Description language
-------------------------------------------
-
-.. toctree::
-   :maxdepth: 1
-
-   3d-lang
 
 Download and install
 --------------------
@@ -129,10 +122,28 @@ On Linux: ``everparse.sh`` [options] input_files
 From the source tree: ``bin/3d.exe``. Caveat: in that case, no options
 are toggled by default (not even ``--batch`` or ``--clang_format``)
 and you need to provide all options by hand.
+  
+Options are treated from left to right, with higher priority on
+right-most options. Thus, any ``--no_clang_format`` will override any
+occurrence of ``--clang_format`` or ``--clang_format_executable`` to
+its left, and vice-versa.
+
+You can provide one or more ``input_files`` to EverParse. Then,
+``EverParse.h`` and ``EverParseEndianness.h`` will be shared across
+``.c`` and ``.h`` files produced for all the ``.3d`` files that you
+provided.
+
+.. note::
+
+  EverParse input files must all bear the ``.3d`` file name extension,
+  and their names must start with a capital letter.
 
 
 Default mode
 ^^^^^^^^^^^^
+
+In default mode, EverParse3d produces C code corresponding to
+validators proven correct with respect to the 3d specification.
 
 Options are treated from left to right:
 
@@ -174,6 +185,12 @@ Options are treated from left to right:
   This option automatically toggles ``--clang_format`` and
   ``--batch``.
 
+* ``--clang_format_use_custom_config``
+
+  With ``--clang_format``, skip copying the ``.clang-format`` file
+  from the EverParse distribution, and assume that there is already an
+  existing ``.clang-format``
+  
 * ``--cleanup``
 
   With ``--batch``, remove all produced intermediate files other than
@@ -184,20 +201,126 @@ Options are treated from left to right:
 
   Keep all produced intermediate files. This is toggled by default.
 
-Options are treated from left to right, with higher priority on
-right-most options. Thus, any ``--no_clang_format`` will override any
-occurrence of ``--clang_format`` or ``--clang_format_executable`` to
-its left, and vice-versa.
+* ``--skip_c_makefiles``
 
-You can provide one or more ``input_files`` to EverParse. Then,
-``EverParse.h`` and ``EverParseEndianness.h`` will be shared across
-``.c`` and ``.h`` files produced for all the ``.3d`` files that you
-provided.
+  Skip generating the default Makefiles produced by Karamel to compile
+  the produced C code.
 
-.. note::
+* ``--add_include <myinclude.h>``
 
-  EverParse input files must all bear the ``.3d`` file name extension,
-  and their names must start with a capital letter.
+  ``--add_include "myinclude.h"``
+
+  Prepend each produced C file with a ``#include <myinclude.h>`` or a
+  ``#include "myinclude.h"`` C preprocessor directive.
+
+* ``--config myfile.config``
+
+  Use the specified JSON file ``myfile.config`` to declare
+  compile-time flags (see compile-time configuration in the 3D
+  language reference.)
+
+* ``--fstar path/to/fstar.exe``
+
+  Allows to specify the location of the F* executable. The
+  ``everparse.sh`` / ``everparse.cmd`` script in the EverParse binary
+  package is already configured to use the F* executable provided in
+  the package. Otherwise, the default is to use the ``fstar.exe``
+  found from the ``PATH``.
+  
+* ``--input_stream buffer|extern|static``
+
+  Specifies the format of validator input buffers:
+
+  + With ``buffer`` (which is the default), a validator takes as
+    argument a byte array and its length.
+
+  + With ``extern``, a validator takes as argument a value of a
+    user-defined ``EVERPARSE_INPUT_STREAM_BASE`` type, representing an
+    input byte stream, for which the following functions need to be
+    defined:
+
+    .. code-block:: c
+
+       extern BOOLEAN EverParseHas(
+         EVERPARSE_EXTRA_T _extra_t,
+         EVERPARSE_INPUT_STREAM_BASE x,
+         uint64_t n
+       );
+
+    ``EverParseHas`` returns ``1`` if the input stream ``x`` has ``n``
+    bytes available to read, ``0`` otherwise.
+
+    .. code-block:: c
+
+       extern uint8_t* EverParseRead(
+         EVERPARSE_EXTRA_T _extra_t,
+         EVERPARSE_INPUT_STREAM_BASE x,
+         uint64_t n,
+         uint8_t *dst
+       );
+
+    ``EverParseRead`` takes and reads ``n`` bytes from the input
+    stream ``x``, possibly copying them into ``dst``, and returns a
+    byte array containing the bytes read. There is no requirement that
+    the function returns ``dst``, or even that a copy to ``dst`` is
+    made.  `
+
+    .. code-block:: c
+
+       extern void EverParseSkip(
+         EVERPARSE_EXTRA_T _extra_t,
+         EVERPARSE_INPUT_STREAM_BASE x,
+         uint64_t n
+       );
+
+    ``EverParseSkip`` advances the input stream ``x`` by ``n`` bytes
+    without reading them.
+
+    .. code-block:: c
+
+       extern uint8_t* EverParsePeep(
+         EVERPARSE_EXTRA_T _extra_t,
+         EVERPARSE_INPUT_STREAM_BASE x,
+         uint64_t n
+       );
+
+    ``EverParsePeep`` returns a pointer to a byte array that is part
+    of the input stream ``x`` and points to its next ``n`` bytes, then
+    advances the input stream by ``n``. If such operation is
+    impossible, then returns ``NULL``. Such a pointer is returned by
+    the ``field_ptr`` action (see "Atomic actions" in the 3d language
+    reference), so it is the responsibility of the application to
+    ensure double-fetch freedom on the contents of the returned field
+    is preserved.
+
+    .. code-block:: c
+
+       extern uint64_t EverParseEmpty(
+         EVERPARSE_EXTRA_T _extra_t,
+         EVERPARSE_INPUT_STREAM_BASE x
+       );
+
+    ``EverParseEmpty`` skips to the end of the input stream ``x`` and
+    returns the number of bytes so skipped, without reading them.
+
+    In all such functions, ``EVERPARSE_EXTRA_T`` is a user-defined
+    type for the context used for error handling (see "Error handling"
+    in the 3d language reference.)
+    
+  + ``static`` is like ``extern`` except that the functions on
+    ``EVERPARSE_INPUT_STREAM_BASE`` are declared ``static``.
+
+  In any case, to compile the C code produced by EverParse, you need
+  to add to the include path the subdirectory
+  ``src/3d/prelude/<input_stream_format>`` of the EverParse binary
+  package or repository; this directory contains the ``EverParse.h``
+  corresponding to the input stream format given by ``--input_stream``
+
+* ``--input_stream_include myinclude.h``
+
+  With ``--input_stream``, defines the name of the C include file that
+  provides definitions for ``EVERPARSE_INPUT_STREAM_BASE`` and its
+  associated functions.
 
 Alternate mode: generating a Makefile
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -245,6 +368,18 @@ The produced Makefile, by default called ``EverParse.Makefile``, is
 meant to be included in the main ``Makefile`` of your project. On
 Linux, such a typical main ``Makefile`` for use with GNU Make may look
 like:
+
+Also valid in Makefile generation mode are the following options:
+
+* ``--clang_format``
+
+  Add ``.clang-format`` as a dependency of generated ``.c`` and ``.h``
+  files, and produce a rule to generate ``.clang-format``
+
+* ``--clang_format_use_custom_config``
+
+  Same as ``--clang_format``, but do not produce a rule to generate
+  ``.clang-format``
 
 .. literalinclude:: Sample.EverParse.Makefile
     :language: make
@@ -320,7 +455,228 @@ Options relevant to this mode:
   ``.c``) file in which to check the hash. This option can be
   specified several times to provide several such pairs to check.
 
+Alternate mode: test case generation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Given a 3d specification, EverParse can now generate positive (resp.
+negative) test cases. Internally, EverParse converts the 3d
+specification into a
+`SMT2 <https://stp.readthedocs.io/en/latest/smt-input-language.html>`_
+theory, and then asks `Z3 <https://github.com/z3prover/z3>`_ for the following satisfiability question: is
+there any sequence of bytes passing (resp.  failing) the parser
+specification?
+
+.. note::
+
+   Test case generation currently does not work with probes that
+   coerce pointer types or specialization for different pointer sizes.
+   
+The following options are mutually exclusive:
+
+* ``--z3_test MyModule.my_parser``
+
+  (requires ``MyModule.3d`` to be specified on the command line)
+  produces positive and negative test cases for ``my_parser`` defined
+  in ``MyModule.3d`` .
+
+  This option produces the following results:
+
+  + a series of binary files containing the contents of each test
+    case. Each binary file is named as follows:
+
+    ``witness.n.POS.i.validatorname.args.dat``
+
+    where:
+
+    - ``n`` is the test case number
+
+    - ``POS`` (resp. ``NEG``) indicates a positive (resp. negative) test case
+
+    - ``i`` is a *probe counter*: ``0`` corresponds to the input
+      buffer passed to the validator; a positive value corresponds to
+      the ``i``-th time a ``probe`` 3d construct is encountered. (If
+      the 3d specification contains no ``probe`` construct, then only
+      the ``0`` file will be created for each test case.)
+
+      More precisely, when encountering a ``T *ptr probe
+      ProbeFunction(length = ..., destination = ...)`` pointer field,
+      the binary contents for that field in a test case is the
+      big-endian representation of a positive 64-bit integer ``i`` so
+      that the contents of the file with probe index ``i`` is meant to
+      be passed to the validator for ``T``.
+      
+    - ``validatorname`` is the name of the validator function produced
+      by EverParse. It has the shape ``ModuleValidateMyParser``
+
+    - ``args`` is the sequence of the non-outparameter argument values
+      passed to the validator, separated by ``.`` ; all of those
+      argument values are integers.
+    
+  + a C test program, ``testcases.c``, that produces C definitions of
+    the test cases, and calls to the validator with those test cases.
+
+    A given test case is an array of *layers*; a layer is a byte array
+    and its length. Layer 0 contains the byte array passed to the
+    validator; layer of a positive index ``i`` contains the byte array
+    passed to the validator corresponding to the ``i``-th time a
+    ``probe`` pointer field is encountered.
+
+  + with ``--batch`` (set by default when using the ``everparse.sh`` /
+    ``everparse.bat`` script from the binary package), this option
+    also compiles the C test program into ``test.exe`` and runs it to
+    check whether the generated test cases are actually accepted or
+    rejected by the verified validator implementations for the given
+    3d parser specifications. Then, the test program prints on
+    standard output the C definitions of the test cases.
+
+    Use ``--no_batch`` to disable compilation of the C test program.
+
+* ``--z3_diff_test MyModule1.my_parser1,MyModule2.my_parser2``
+  
+  (requires ``MyModule1.3d`` and ``MyModule2.3d`` to be specified on
+  the command line) produces a set of test cases that are positive for
+  ``my_parser1`` but negative for ``my_parser2``, and a set of test
+  cases for the converse.
+
+  The shape of the produced results is similar to those produced by
+  ``--z3_test`` (see above), except that the test file name also
+  contains the name of the second validator against which it is
+  negative.
+
+.. note::
+
+   If Z3 produces no test cases and instead answers ``unsat`` both
+   ways (``my_parser1`` and not ``my_parser2``; and ``my_parser2`` and
+   not ``my_parser1``), then the two specifications are equivalent in
+   terms of validation: they accept the exact same inputs. However,
+   they do not necessarily write the same values into outparameters.
+  
+* ``--emit_smt_encoding``
+
+  produces the SMT2 encoding corresponding to the ``.3d`` files passed
+  as argument. Such encoding is printed on standard output.
+
+* ``--test_checker MyModule.my_parser``
+
+  (requires ``MyModule.3d`` to be specified on the command line)
+  produces a test checker executable for the given parser,
+  ``test.exe``. The test checker takes as arguments:
+
+  + a binary file name containing the contents of the input buffer to
+    be passed to the validator
+
+  + the non-outparameter integer argument values to be passed to the
+    validator
+
+  The test checker executable returns exit code:
+
+  + 0 if validation succeeds and consumes all input bytes
+  + 1 if validation succeeds but the validator does not consume all input bytes
+  + 2 if validation fails
+  + 3 if the input file is larger than 4 GB, or if any system error
+    occurs (file does not exist, read error, etc.)
+    
+  .. note::
+
+     The test checker executable currently does not work with 3d
+     specifications containing probes.
+
+Options for ``--z3_test``
+.........................
+
+* ``--z3_test_mode pos``
+
+  Only produces positive test cases
+
+* ``--z3_test_mode neg``
+
+  Only produces negative test cases
+
+Options related to the C test program
+.....................................
+
+Unless explicitly specified otherwise, the following options can be
+used with ``-z3_test`` or ``--z3_diff_test``:
+  
+* ``--z3_skip_testcases_c``
+
+  Do not produce the C test program ``testcases.c``
+
+* ``--z3_flight_name myflight``
+
+  In the produced C test program and on its standard output, prefixes
+  each C test case with ``witnessmyflight`` instead of ``witness``.
+
+* ``--z3_skip_c_initializers``
+
+  Do not use C99 designated initializers (struct initializers with
+  field labels, of the form ``{ .field = value, ... }``) for test
+  cases. This option is needed if the code is meant to be used with a
+  C++ compiler in a mode older than C++20.
+
+* ``-z3_use_ptr``
+
+  In the produced C test program, use pointers rather than array
+  indices for probe pointer field values. The architecture-specific
+  binary representation of pointers will be used.
+
+  .. note::
+
+     This option currently only works with 64-bit pointers.
+  
+  This option does not affect the produced ``*.dat`` binary test
+  files, which will still use array indices.
+
+Options related to Z3 and SMT2
+..............................
+
+Unless explicitly specified otherwise, the following options can be
+used with ``-z3_test`` or ``--z3_diff_test``:
+
+* ``--z3_executable path/to/z3.exe``
+
+  Specify a path to the Z3 executable that should be used to generate
+  the test cases. This option does not affect the verification of the
+  generated F* files. EverParse has been tested with Z3 4.13.3 for both
+  test case generation and verification of the generated F* files.
+  ``everparse.sh`` / ``everparse.bat`` already sets
+  ``--z3_executable`` accordingly.
+
+* ``--z3_options 'option1 ... optionK'``
+
+  Pass command-line options to Z3 verbatim.
+
+  Example: ``--z3_options -t:1000`` imposes a per-query timeout of
+  ``1000`` milliseconds.
+
+* ``--save_z3_transcript file.smt2``
+
+  Saves the Z3 transcript (SMT2 commands sent to Z3, and response from
+  Z3 as comments) to the specified ``file.smt2``
+
+Branch coverage analysis
+........................
+
+Unless explicitly specified otherwise, the following options can be
+used with ``-z3_test`` or ``--z3_diff_test``:
+  
+* ``--z3_branch_depth n``
+
+  Ask z3 to generate test cases for all possible branches of a 3D
+  specification up to depth ``n``, by depth-first search.  Branching
+  points in a 3D specification are field constraints and ``casetype``;
+  a *branch* is a sequence of choices performed at successive
+  branching points. Default value for ``n`` is ``0`` to not perform
+  branch coverage analysis.
+  
+* ``--z3_witnesses n``
+
+  If ``--z3_test_mode`` is specified, then this option produces ``n``
+  test cases for each branch. Otherwise, produce ``n`` positive and
+  ``n`` negative tests for each branch. In both cases, ``n`` must be a
+  positive integer.
+
+  
 Alternate mode: help and version
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -337,3 +693,12 @@ version message:
   Show the usage message and the status of some options given so far,
   and exit (do not process any further options to the right, nor any
   files at all.)
+
+Language Reference
+------------------
+
+.. toctree::
+   :maxdepth: 4
+   :caption: Contents:
+ 
+   3d-lang

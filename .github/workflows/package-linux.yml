@@ -1,0 +1,98 @@
+name: Build everparse package (Linux)
+on:
+  push:
+    branches-ignore:
+    - _**
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      fstar_repo:
+        description: F* repository (use org/repo for Github repos)
+        default: 'FStarLang/FStar'
+        type: string
+        required: true
+      fstar_ref:
+        description: F* ref (branch, or tag, or commit hash)
+        default: 'master'
+        type: string
+        required: true
+      karamel_repo:
+        description: Karamel repository (use org/repo for Github repos)
+        default: 'FStarLang/karamel'
+        type: string
+        required: true
+      karamel_ref:
+        description: Karamel ref (branch, or tag, or commit hash)
+        default: 'master'
+        type: string
+        required: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@master
+
+      - uses: actions/checkout@master
+        with:
+          path: FStar
+          repository: ${{ inputs.fstar_repo || 'FStarLang/FStar' }}
+          ref: ${{ inputs.fstar_ref || 'master' }}
+
+      - uses: actions/checkout@master
+        with:
+          path: karamel
+          repository: ${{ inputs.karamel_repo || 'FStarLang/karamel' }}
+          ref: ${{ inputs.karamel_ref || 'master' }}
+
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 4.14.2
+
+      - name: Prepare
+        run: |
+          eval $(opam env)
+          sudo apt-get update || true
+          opam install --deps-only FStar/fstar.opam
+          sed -i '/"fstar"/d' karamel/karamel.opam
+          # ^ remove F* dependency of karamel, it is outdated and will conflict.
+          opam install --deps-only karamel/karamel.opam
+          opam install hex re sexplib
+          # ^ everparse deps
+
+      - name: Build package
+        run: |
+          eval $(opam env)
+          make -f package.Makefile everparse -kj$(nproc)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          path: |
+            everparse
+          name: everparse
+
+  test:
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download and extract artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse
+          path: ${{ github.workspace }}/test
+      - name: Check out repo
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: src/3d/tests
+          path: ${{ github.workspace }}/everparse
+      - name: Test EverParse
+        run: |
+          bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/Arithmetic.3d ${{ github.workspace }}/everparse/src/3d/tests/FieldDependence0.3d && bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace ${{ github.workspace }}/everparse/src/3d/tests/Comments.3d
+      - name: Test EverParse test case generation
+        run: |
+          bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5

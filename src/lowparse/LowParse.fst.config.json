@@ -1,7 +1,7 @@
 {
     "fstar_exe": "fstar.exe",
     "options": [
-      "--ext", "context_pruning"
+      "--ext", "optimize_let_vc"
     ],
     "include_dirs": [
       "${KRML_HOME}/krmllib",

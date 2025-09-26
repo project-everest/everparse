@@ -1,0 +1,51 @@
+extern probe ProbeAndCopy
+extern probe (READ UINT32) ProbeAndReadU32
+extern probe (WRITE UINT64) WriteU64
+extern probe (INIT) ProbeInit
+extern PURE UINT64 UlongToPtr(UINT32 ptr)
+
+typedef UINT16 USHORT;
+typedef UINT8 UNINTERPRETED;
+
+aligned
+typedef struct _UNKNOWN_HEADER_64
+{
+    USHORT NameLength;
+    USHORT RawValueLength;
+    UNINTERPRETED *pName;
+    UNINTERPRETED *pRawValue;
+
+} UNKNOWN_HEADER_64;
+
+typedef struct _UNKNOWN_HEADERS_INTERNAL_64(
+    USHORT UnknownHeaderCount)
+{
+	UNKNOWN_HEADER_64 UnknownHeaders[:byte-size(
+				sizeof(UNKNOWN_HEADER_64) * 
+				UnknownHeaderCount)];
+} UNKNOWN_HEADERS_INTERNAL_64;
+
+typedef struct _UNKNOWN_HEADERS_64(
+    USHORT UnknownHeaderCount,
+    EVERPARSE_COPY_BUFFER_T UnknownHeaderProbe)
+{
+    UNKNOWN_HEADERS_INTERNAL_64(UnknownHeaderCount) *pointer(UINT64) pUnknownHeaders 
+        probe ProbeAndCopy(length=sizeof(UNKNOWN_HEADER_64) * UnknownHeaderCount, destination=UnknownHeaderProbe);
+} UNKNOWN_HEADERS_64;
+
+specialize (pointer(*), pointer(UINT32)) UNKNOWN_HEADERS_64 UNKNOWN_HEADERS_32;
+
+entrypoint
+casetype _UNKNOWN_HEADERS(
+    Bool Requestor32,
+    USHORT UnknownHeaderCount,
+    EVERPARSE_COPY_BUFFER_T UnknownHeaderProbe)
+{
+    switch (Requestor32)
+    {
+        case true:
+            UNKNOWN_HEADERS_32(UnknownHeaderCount, UnknownHeaderProbe) pUnknownHeaders32;
+        case false:
+            UNKNOWN_HEADERS_64(UnknownHeaderCount, UnknownHeaderProbe) pUnknownHeaders64;
+        }
+} UNKNOWN_HEADERS;

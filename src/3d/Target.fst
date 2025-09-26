@@ -15,10 +15,11 @@
 *)
 module Target
 (* The abstract syntax for the code produced by 3d *)
+#set-options "--warn_error -290"
 open FStar.All
 module A = Ast
 open Binding
-
+open FStar.List.Tot
 let lookup (s:subst) (i:A.ident) : option expr =
   List.Tot.assoc i.v s
 
@@ -46,11 +47,40 @@ and subst_fields s fs =
   | [] -> []
   | (i, e)::fs -> (i, subst_expr s e)::subst_fields s fs
 
+let eq_op (o1 o2:op) : bool =
+match o1, o2 with
+| Eq, Eq -> true
+| Neq, Neq -> true
+| And, And -> true
+| Or, Or -> true
+| Not, Not -> true
+| Plus t1, Plus t2
+| Minus t1, Minus t2
+| Mul t1, Mul t2
+| Division t1, Division t2
+| Remainder t1, Remainder t2
+| BitwiseAnd t1, BitwiseAnd t2
+| BitwiseXor t1, BitwiseXor t2
+| BitwiseOr t1, BitwiseOr t2
+| BitwiseNot t1, BitwiseNot t2
+| ShiftRight t1, ShiftRight t2
+| ShiftLeft t1, ShiftLeft t2
+| LT t1, LT t2
+| GT t1, GT t2
+| LE t1, LE t2
+| GE t1, GE t2 -> t1 = t2
+| IfThenElse, IfThenElse -> true
+| BitFieldOf s1 o1, BitFieldOf s2 o2 -> s1 = s2 && o1 = o2
+| Cast f1 t1, Cast f2 t2 -> f1 = f2 && t1 = t2
+| Ext s1, Ext s2 -> s1 = s2
+| ProbeFunctionName i1, ProbeFunctionName i2 -> A.(eq_idents i1 i2)
+| _, _ -> false
+
 let rec expr_eq e1 e2 =
   match fst e1, fst e2 with
   | Constant c1, Constant c2 -> c1=c2
   | Identifier i1, Identifier i2 -> A.(i1.v = i2.v)
-  | App hd1 args1, App hd2 args2 -> hd1 = hd2 && exprs_eq args1 args2
+  | App hd1 args1, App hd2 args2 -> eq_op hd1 hd2 && exprs_eq args1 args2
   | Record t1 fields1, Record t2 fields2 -> A.(t1.v = t2.v) && fields_eq fields1 fields2
   | _ -> false
 and exprs_eq es1 es2 =
@@ -302,6 +332,7 @@ let print_op_with_range ropt o =
     then "EverParse3d.Prelude.id"
     else Printf.sprintf "EverParse3d.Prelude.%s_to_%s" tfrom tto
   | Ext s -> s
+  | ProbeFunctionName i -> print_ident i
 
 let print_op = print_op_with_range None
 
@@ -367,13 +398,13 @@ let print_expr_lam (mname:string) (x:lam expr) : ML string =
 let rec is_output_type (t:typ) : bool =
   match t with
   | T_app _ A.KindOutput [] -> true
-  | T_pointer t -> is_output_type t
+  | T_pointer t A.UInt64 -> is_output_type t
   | _ -> false
 
 let rec is_extern_type (t:typ) : bool =
   match t with
   | T_app _ A.KindExtern [] -> true
-  | T_pointer t -> is_extern_type t
+  | T_pointer t A.UInt64 -> is_extern_type t
   | _ -> false
 
 (*
@@ -387,7 +418,7 @@ let print_output_type (qual:bool) (t:typ) : ML string =
     = match t with
       | T_app id _ _ ->
         id.v.modul_name, print_ident id
-      | T_pointer t ->
+      | T_pointer t A.UInt64 ->
         let m, i = aux t in
         m, Printf.sprintf "p_%s" i
       | _ -> failwith "Print: not an output type"
@@ -436,12 +467,16 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
       (print_expr mname e)
       (print_typ mname t1)
       (print_typ mname t2)
-  | T_pointer t -> Printf.sprintf "bpointer (%s)" (print_typ mname t)
+  | T_pointer t i -> Printf.sprintf "bpointer (%s)" (print_typ mname t)
   | T_with_action t _
   | T_with_dep_action t _
   | T_with_comment t _ -> print_typ mname t
-  | T_with_probe t _ _ _ -> Printf.sprintf "bpointer (%s)" (print_typ mname t)
-
+  | T_with_probe t _ _ _ _ _ _ _ -> Printf.sprintf "%s probe" (print_typ mname t)
+  | T_arrow [] t -> print_typ mname t
+  | T_arrow ts t ->
+    Printf.sprintf "(%s -> %s)"
+      (String.concat " -> " (List.map (print_typ mname) ts))
+      (print_typ mname t)
 and print_indexes (mname:string) (is:list index) : ML (list string) = //(decreases is) =
   match is with
   | [] -> []
@@ -481,6 +516,21 @@ let rec print_kind (mname:string) (k:parser_kind) : Tot string =
       (print_kind mname k)
   | PK_string ->
     "parse_string_kind"
+
+let print_params (mname:string) (params:list param) : ML string =
+  String.concat " " <|
+  List.map 
+    (fun (id, t) -> 
+      Printf.sprintf "(%s:%s)"
+                    (print_ident id)
+                    (print_typ mname t))
+    params
+
+let print_typedef_name (mname:string) (tdn:typedef_name) : ML string =
+  Printf.sprintf "%s %s"
+                 (print_ident tdn.td_name)
+                 (print_params mname tdn.td_params)
+
 
 let rec print_action (mname:string) (a:action) : ML string =
   let print_atomic_action (a:atomic_action)
@@ -528,17 +578,55 @@ let rec print_action (mname:string) (a:action) : ML string =
     Printf.sprintf "(action_act %s)" 
       (print_action mname a)
       
-
-let print_typedef_name (mname:string) (tdn:typedef_name) : ML string =
-  Printf.sprintf "%s %s"
-                 (print_ident tdn.td_name)
-                 (String.concat " "
-                   (List.map 
-                     (fun (id, t) -> 
-                       Printf.sprintf "(%s:%s)"
-                                      (print_ident id)
-                                      (print_typ mname t))
-                     tdn.td_params))
+let rec print_probe_action (mname:string) (p:probe_action) : ML string =
+  let print_atomic_probe_action (p:atomic_probe_action) : ML string =
+    match p with
+    | Atomic_probe_and_copy bytes_to_read probe_fn ->
+      Printf.sprintf "(Atomic_probe_and_copy %s %s)"
+      (print_expr mname bytes_to_read)
+      (print_ident probe_fn)
+    | Atomic_probe_and_read reader ->
+      Printf.sprintf "(Atomic_probe_and_read %s)"
+      (print_ident reader)
+    | Atomic_probe_write_at_offset v writer ->
+      Printf.sprintf "(Atomic_probe_write_at_offset %s %s)"
+      (print_expr mname v)
+      (print_ident writer)
+    | Atomic_probe_call_pure f args ->
+      Printf.sprintf "(Atomic_probe_call_pure (%s %s))"
+      (print_ident f)
+      (String.concat " " (List.map (print_expr mname) args))
+    | Atomic_probe_skip_read n ->
+      Printf.sprintf "(Atomic_probe_skip_read %s)"
+      (print_expr mname n)
+    | Atomic_probe_skip_write n ->
+      Printf.sprintf "(Atomic_probe_skip_write %s)"
+      (print_expr mname n)
+    | Atomic_probe_init f n ->
+      Printf.sprintf "(Atomic_probe_init %s %s)"
+      (print_ident f)
+      (print_expr mname n)
+    | Atomic_probe_return v ->
+      Printf.sprintf "(Atomic_probe_return %s)"
+      (print_expr mname v)
+    | Atomic_probe_fail ->
+      "(Atomic_probe_fail)"
+  in
+  match p with
+  | Probe_action_atomic a ->
+    Printf.sprintf "(Probe_action_atomic %s)" (print_atomic_probe_action a)
+  | Probe_action_var e ->
+    Printf.sprintf "(Probe_action_var %s)" (print_expr mname e)
+  | Probe_action_seq d p1 p2 ->
+    Printf.sprintf "(Probe_action_seq %s %s %s)" (print_expr mname d) (print_probe_action mname p1) (print_probe_action mname p2)
+  | Probe_action_let d i m1 m2 ->
+    Printf.sprintf "(Probe_action_let %s %s (fun %s -> %s))" (print_expr mname d) (print_atomic_probe_action m1) (print_ident i) (print_probe_action mname m2)
+  | Probe_action_ite cond m1 m2 ->
+    Printf.sprintf "(Probe_action_ite %s %s %s)" (print_expr mname cond) (print_probe_action mname m1) (print_probe_action mname m2)
+  | Probe_action_array len b ->
+    Printf.sprintf "(Probe_action_array %s %s)" (print_expr mname len) (print_probe_action mname b)
+  | Probe_action_copy_init_sz f ->
+    Printf.sprintf "(Probe_action_copy_init_sz %s)" (print_ident f)
 
 let print_typedef_typ (tdn:typedef_name) : ML string =
   Printf.sprintf "%s %s"
@@ -648,7 +736,8 @@ let print_definition (mname:string) (d:decl { Definition? (fst d)} ) : ML string
       td_name = x;
       td_params = params;
       td_entrypoint_probes = [];
-      td_entrypoint = false
+      td_entrypoint = false;
+      td_noextract = false;
     } in
     Printf.sprintf "%slet %s : %s = %s\n\n"
       (print_attributes false (snd d))
@@ -663,30 +752,6 @@ let print_assumption (mname:string) (d:decl { Assumption? (fst d) } ) : ML strin
       (if (snd d).is_if_def then "[@@ CIfDef ]\n" else "")
       (print_ident x)      
       (print_typ mname t) 
-
-let print_decl_for_types (mname:string) (d:decl) : ML string =
-  match fst d with
-  | Assumption _ -> ""
-  
-  | Definition _ ->
-    print_definition mname d
-
-  | Type_decl td ->
-    Printf.sprintf "noextract\ninline_for_extraction\ntype %s = %s\n\n"
-      (print_typedef_name mname td.decl_name)
-      (print_typedef_body mname td.decl_typ)
-    `strcat`
-    maybe_print_type_equality mname td
-
-  | Output_type _
-
-  | Output_type_expr _ _
-
-  | Extern_type _
-
-  | Extern_fn _ _ _
-  
-  | Extern_probe _ -> ""
 
 /// Print a decl for M.fst
 ///
@@ -745,7 +810,7 @@ let uppercase (name:string) : string = String.uppercase name
 let rec print_as_c_type (t:typ) : ML string =
     let open Ast in
     match t with
-    | T_pointer t ->
+    | T_pointer t A.UInt64 ->
           Printf.sprintf "%s*" (print_as_c_type t)
     | T_app {v={name="Bool"}} _ [] ->
           "BOOLEAN"
@@ -782,7 +847,7 @@ let rec get_output_typ_dep (modul:string) (t:typ) : ML (option string) =
   | T_app {v={modul_name=Some m}} _ _ ->
     if m = modul then None
     else Some m
-  | T_pointer t -> get_output_typ_dep modul t
+  | T_pointer t _ -> get_output_typ_dep modul t
   | _ -> failwith "get_typ_deps: unexpected output type"
 
 let wrapper_name
@@ -824,6 +889,8 @@ let expr_to_c
   (e: expr)
 : ML string
 = match fst e with
+  | Constant (A.String s) ->
+    Printf.sprintf "\"%s\"" s //(String.escaped s)
   | Constant (A.Int _ i) -> Printf.sprintf "%dU" i
   | Constant (A.XInt tag x) ->
     let print_tag = function
@@ -901,7 +968,7 @@ let print_c_entry
    let wrapped_call_probe_buffer wrappedName params (probe: probe_entrypoint) : ML string =
      let len = expr_to_c probe.probe_ep_length in
      Printf.sprintf
-      "if (%s(probeAddr, %s, probeDest)) {
+      "if (%s(%s, 0, 0, probeAddr, probeDest)) {
          uint8_t * base = EverParseStreamOf(probeDest);
          return %s(%s base, %s);
        } else {
@@ -938,7 +1005,7 @@ let print_c_entry
    let wrapped_call_probe_stream wrappedName params (probe: probe_entrypoint) : ML string =
      let len = print_expr modul probe.probe_ep_length in
      Printf.sprintf
-      "if (%s(probeAddr, %s, probeDest)) {
+      "if (%s(%s, 0, 0, probeAddr, probeDest)) {
          EVERPARSE_INPUT_STREAM_BASE * base = EverParseStreamOf(probeDest);
          return %s(%s base);
        } else {
@@ -1121,16 +1188,33 @@ let print_c_entry
                 else ";")
     else ""
   in
+  let external_api_from_decl (accu: list string) (d: decl) : Tot (list string) =
+    match fst d with
+      | Type_decl d ->
+        let probe_modules = List.Tot.map (fun ep -> match ep.probe_ep_fn.v.modul_name with Some s -> s | _ -> "") d.decl_name.td_entrypoint_probes in
+        List.Tot.filter (fun x -> x <> "" && not (List.Tot.mem x accu)) probe_modules `List.Tot.append` accu
+      | _ -> accu
+  in
+  let include_external_api_from_module (accu: string) (modu: string) : Tot string =
+    Printf.sprintf "%s#include \"%s_ExternalAPI.h\"\n" accu modu
+  in
+  let include_external_api =
+    ds
+    |> List.Tot.fold_left external_api_from_decl []
+    |> List.Tot.fold_left include_external_api_from_module ""
+  in
   let impl =
     Printf.sprintf
       "#include \"%sWrapper.h\"\n\
        #include \"EverParse.h\"\n\
        #include \"%s.h\"\n\
+       %s\
        %s\n\n\
        %s\n\n\
        %s\n"
       modul
       modul
+      include_external_api
       error_callback_proto
       default_error_handler
       (impls |> String.concat "\n\n")
@@ -1155,7 +1239,7 @@ let print_c_entry
 let rec out_bt_name (t:typ) : ML string =
   match t with
   | T_app i _ _ -> A.ident_name i
-  | T_pointer t -> out_bt_name t
+  | T_pointer t A.UInt64 -> out_bt_name t
   | _ -> failwith "Impossible, out_bt_name received a non output type!"
 
 let out_expr_bt_name (oe:output_expr) : ML string = out_bt_name oe.oe_bt
@@ -1184,7 +1268,7 @@ type set = H.t string unit
 let rec base_output_type (t:typ) : ML A.ident =
   match t with
   | T_app id A.KindOutput [] -> id
-  | T_pointer t -> base_output_type t
+  | T_pointer t A.UInt64 -> base_output_type t
   | _ -> failwith "Target.base_output_type called with a non-output type"
 #push-options "--fuel 1"
 let rec print_output_type_val (tbl:set) (t:typ) : ML string =
@@ -1197,7 +1281,7 @@ let rec print_output_type_val (tbl:set) (t:typ) : ML string =
             match t with
             | T_app id KindOutput [] ->
               Printf.sprintf "\n\nval %s : Type0\n\n" s
-            | T_pointer bt ->
+            | T_pointer bt A.UInt64 ->
               let bs = print_output_type_val tbl bt in
               bs ^ (Printf.sprintf "\n\ninline_for_extraction noextract type %s = bpointer %s\n\n" s (print_output_type false bt))
   else ""
@@ -1327,7 +1411,7 @@ let print_external_types_fstar_interpreter (modul:string) (ds:decls) : ML string
       let t = T_app ot.out_typ_names.typedef_abbrev A.KindOutput [] in
       Printf.sprintf "%s%s"
         (print_output_type_val tbl t)
-        (print_output_type_val tbl (T_pointer t))
+        (print_output_type_val tbl (T_pointer t A.UInt64))
     | Extern_type i ->
       Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
     | _ -> "")) in
@@ -1355,15 +1439,33 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
          else print_out_expr_get_fstar tbl modul oe)
     | Extern_type i ->
       Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
-    | Extern_fn f ret params ->
+    | Extern_fn f ret params false ->
       Printf.sprintf "\n\nval %s %s : extern_action %s (NonTrivial output_loc)\n"
         (print_ident f)
         (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
           (print_ident i)
           (print_typ modul t))))
         (print_typ modul ret)
-    | Extern_probe f ->
-      Printf.sprintf "\n\nval %s : EverParse3d.CopyBuffer.probe_fn\n\n" (print_ident f)
+    | Extern_fn f ret params true ->
+      Printf.sprintf "\n\nval %s %s : EverParse3d.ProbeActions.pure_external_action %s\n"
+        (print_ident f)
+        (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
+          (print_ident i)
+          (print_typ modul t))))
+        (print_typ modul ret)
+    | Extern_probe f PQWithOffsets ->
+      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.probe_fn_incremental\n\n" (print_ident f)
+    | Extern_probe f (PQRead t) ->
+      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.probe_and_read_at_offset_%s \n\n" 
+              (print_ident f)
+              (print_integer_type t)
+    | Extern_probe f (PQWrite t) ->
+      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.write_at_offset_%s \n\n" 
+              (print_ident f)
+              (print_integer_type t)
+    | Extern_probe f PQInit ->
+      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.init_probe_dest_t \n\n" 
+              (print_ident f)
     | _ -> "")) in
 
    let external_types_include =
@@ -1442,11 +1544,17 @@ let print_out_exprs_c modul (ds:decls) : ML string =
 
 let rec atyp_to_ttyp (t:A.typ) : ML typ =
   match t.v with
-  | A.Pointer t ->
-    let t = atyp_to_ttyp t in
-    T_pointer t
-  | A.Type_app hd _b _args ->
+  | A.Pointer t pq ->
+    let t = atyp_to_ttyp t in    
+    T_pointer t A.UInt64
+
+  | A.Type_app hd _b _gs _args ->
     T_app hd _b []
+  
+  | A.Type_arrow ts t ->
+    let ts = List.map atyp_to_ttyp ts in
+    let t = atyp_to_ttyp t in
+    T_arrow ts t
 
 let rec print_output_types_fields (flds:list A.out_field) : ML string =
   List.fold_left (fun s fld ->

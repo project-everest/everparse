@@ -20,14 +20,14 @@ RUN { type -p curl >/dev/null || sudo apt-get install curl -y ; } \
 ADD --chown=opam:opam ./ $HOME/everparse/
 WORKDIR $HOME/everparse
 
-# Install opam package dependencies
-RUN eval $(opam env) && src/package/windows/everest.sh opam
-
 # Install other dependencies
-RUN sudo apt-get install --yes wget
+RUN sudo apt-get install --yes \
+  python-is-python3 \
+  wget
 
 # Build and publish the release
 ARG CI_THREADS=24
 ARG EVERPARSE_RELEASE_ORG=project-everest
 ARG EVERPARSE_RELEASE_REPO=everparse
-RUN --mount=type=secret,id=DZOMO_GITHUB_TOKEN eval $(opam env) && GH_TOKEN=$(sudo cat /run/secrets/DZOMO_GITHUB_TOKEN) EVERPARSE_RELEASE_ORG=$EVERPARSE_RELEASE_ORG EVERPARSE_RELEASE_REPO=$EVERPARSE_RELEASE_REPO make -j $CI_THREADS release
+ARG EVERPARSE_TEST_RELEASE=
+RUN --mount=type=secret,id=DZOMO_GITHUB_TOKEN eval $(opam env) && GH_TOKEN=$(sudo cat /run/secrets/DZOMO_GITHUB_TOKEN) EVERPARSE_RELEASE_ORG=$EVERPARSE_RELEASE_ORG EVERPARSE_RELEASE_REPO=$EVERPARSE_RELEASE_REPO EVERPARSE_TEST_RELEASE=$EVERPARSE_TEST_RELEASE make -j $CI_THREADS release

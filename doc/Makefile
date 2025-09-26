@@ -24,20 +24,32 @@ AUX_HEADERS=GetFieldPtrBase.h
 
 # You can set these variables from the command line.
 SPHINXOPTS    = -W
-SPHINXBUILD   = sphinx-build
+SPHINXBUILD   = .venv/bin/sphinx-build
 SPHINXPROJ    = EverParseDoc
 SOURCEDIR     = .
 BUILDDIR      = _build
 
+# jinja2==3.0.0 because of https://github.com/mkdocs/mkdocs/issues/2799
+.venv:
+	rm -rf $@ $@.tmp
+	python3 -m venv $@.tmp
+	mv $@.tmp $@
+	if ! $@/bin/python3 -m pip install pytz tzdata sphinx==1.7.2 jinja2==3.0.0 alabaster==0.7.13 sphinx-rtd-theme ; then mv $@ $@.tmp ; exit 1 ; fi
+
 # Put it first so that "make" without argument is like "make help".
-help:
+help: .venv
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 .PHONY: help Makefile test all 3d clean 3d-do-tests %.diff 3d-snapshot 3d-ci %.diff-nobuild
 
-# Catch-all target: route all unknown targets to Sphinx using the new
-# "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-%: Makefile
+.PHONYH: 3d-test
+
+3d-test: 3d html
+
+3d-ci: html
+	./ci.sh
+
+html: Makefile .venv
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 3d: $(3D_DIFF)
@@ -73,6 +85,7 @@ all-diffs-nobuild: $(addsuffix -nobuild, $(3D_DIFF))
 accept-all: $(addsuffix .accept, $(subst .diff,,$(3D_DIFF)))
 
 clean:
-	rm -rf out _build
+	rm -rf _build
+	git clean -fdx out
 
 .PHONY: accept-all all-diffs-nobuild

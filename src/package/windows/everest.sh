@@ -243,7 +243,7 @@ do_update_z3 () {
   else
     local current_z3=$(parse_z3_version)
     echo "... version of z3 found in PATH: $current_z3"
-    local new_z3=4.8.5
+    local new_z3=4.13.3
     if [[ $new_z3 != $current_z3 ]]; then
         red "This is not z3 $current_z3"
         magenta "Use our existing z3? [Yn]"

@@ -43,10 +43,7 @@ EnumConstraintValidateEnumConstraint(
     uint32_t col = Load32Le(Input + (uint32_t)StartPosition);
     BOOLEAN
     colConstraintIsOk =
-      col
-      == ENUMCONSTRAINT_RED
-      || col == ENUMCONSTRAINT_GREEN
-      || col == ENUMCONSTRAINT_BLUE;
+      col == ENUMCONSTRAINT_RED || col == ENUMCONSTRAINT_GREEN || col == ENUMCONSTRAINT_BLUE;
     uint64_t positionAftercol1 = EverParseCheckConstraintOk(colConstraintIsOk, positionAftercol);
     if (EverParseIsError(positionAftercol1))
     {

@@ -10,6 +10,8 @@ FSTAR_EXE ?= fstar.exe
 
 3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
 
+3D_Z3_EXECUTABLE ?= z3-4.13.3
+
 ifeq (,$(KRML_HOME))
   KRML_HOME := $(realpath ../../../../karamel)
 endif
@@ -22,27 +24,37 @@ INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffe
 
 FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
 
-positive_tests=$(filter-out $(wildcard FAIL*.3d) FieldDependence0.3d ActAndCheck.3d ELF.3d,$(wildcard *.3d))
+positive_tests=$(filter-out $(wildcard FAIL*.3d) FieldDependence0.3d ActAndCheck.3d,$(wildcard *.3d))
 positive_tests_nosuffix=$(basename $(positive_tests))
 modules_or_wrappers=$(positive_tests_nosuffix) $(addsuffix Wrapper,$(positive_tests_nosuffix))
-modules_static_assertions=TestFieldPtrStaticAssertions.c AlignStaticAssertions.c
+modules_static_assertions=$(addsuffix StaticAssertions.c, TestFieldPtr Align)
+modules_auto_static_assertions=$(addsuffix AutoStaticAssertions.c, Align Specialize2 Specialize3 Specialize5 Specialize6 FineGrainedProbe FineGrainedProbeSpecialize)
+module_extern_apis=$(addsuffix _ExternalAPI.h, Specialize2 Specialize3 Specialize5 Specialize6 FineGrainedProbe FineGrainedProbeSpecialize)
 clean_out_files=\
 	$(addsuffix .c,$(modules_or_wrappers)) \
 	$(modules_static_assertions) \
-	$(addsuffix .h,$(modules_or_wrappers))
+	$(modules_auto_static_assertions) \
+	$(addsuffix .h,$(modules_or_wrappers)) \
+	$(module_extern_apis)
 
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
-all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs probe iter
+all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules \
+	 tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs \
+	 probe iter z3-testgen-test exttype z3-testgen-probe-test specialize_test specialize_test2 \
+	 specialize_tagged_union_array
+
+.PHONY: exttype
+
+exttype:
+	+$(MAKE) -C $@
 
 .PHONY: iter
 
 iter:
 	+$(MAKE) -C $@
 
-#AR: TODO: remove ELF.3d from here
-
-INTERPRETABLE_FILES=$(filter-out FAIL%.3d ELF.3d, $(wildcard *.3d))
+INTERPRETABLE_FILES=$(filter-out FAIL%.3d, $(wildcard *.3d))
 INTERPRETABLE_MODULES=$(basename $(INTERPRETABLE_FILES))
 interpret_all: $(addsuffix .interpret, $(INTERPRETABLE_MODULES))
 
@@ -71,11 +83,15 @@ output-types:
 probe:
 	+$(MAKE) -C $@
 
+.PHONY: specialize_test
+specialize_test:
+	+$(MAKE) -C $@
+
 batch-test-negative: $(addsuffix .negtest,$(wildcard FAIL*.3d))
 
 %.3d.negtest: %.3d
 	mkdir -p out.fail.batch
-	! $(3D) --odir out.fail.batch --batch $<
+	! $(3D) --odir out.fail.batch --batch $< >$@.out 2>$@.err
 
 batch-test:
 	mkdir -p out.batch
@@ -92,19 +108,35 @@ batch-interpret-test:
 	./test-cpp.exe
 
 elf-test: ELF.3d
-	mkdir -p out.batch
-	$(3D) --odir out.batch --batch ELF.3d
-	$(CXX) -o out.batch/elf-test -I out.batch $(addprefix out.batch/, ELF.c ELFWrapper.c) TestELF.cpp
+	mkdir -p out.elf
+	$(3D) --odir out.elf --batch ELF.3d
+	$(CXX) -o out.elf/elf-test -I out.elf $(addprefix out.elf/, ELF.c ELFWrapper.c) TestELF.cpp
 
-%-test: %.3d
-	mkdir -p out.batch
-	$(3D) $(FLAGS3D) --odir out.batch --batch $^
+z3-testgen-test: ELF.3d
+	mkdir -p out.z3-testgen
+	$(3D) --z3_executable $(3D_Z3_EXECUTABLE) --batch --odir out.z3-testgen ELFTestGen.3d --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+
+.PHONY: z3-testgen-test
+
+z3-testgen-probe-test: probe/src/Probe.3d
+	+$(MAKE) -C probe/src
+
+.PHONY: z3-testgen-probe-test
 
 inplace-hash-test:
 	mkdir -p out.inplace-hash
 	$(3D) --odir out.inplace-hash --batch --no_copy_everparse_h Comments.3d
 	$(3D) --odir out.inplace-hash --batch --check_hashes inplace Comments.3d
 	$(3D) --check_inplace_hash Comments.3d=out.inplace-hash/Comments.h
+
+echo-clean-out-files:
+	echo "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
+
+echo-out-files:
+	echo "$$(ls out.cleanup | sort)"
+
+test-cleanup:
+	test "$$(ls out.cleanup | sort)" = "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
 
 batch-cleanup-test:
 	mkdir -p out.cleanup
@@ -118,6 +150,9 @@ batch-cleanup-test:
 	$(3D) --batch $^
 
 clean:
-	rm -rf out.batch out.fail.batch out.cleanup out.inplace-hash test-cpp.exe out.batch-interpret
+	rm -rf out.batch out.fail.batch out.cleanup out.elf out.inplace-hash out.pos test-cpp.exe out.batch-interpret out.z3-testgen
+	make -C specialize_test clean
+	make -C specialize_test2 clean
+	make -C probe clean
 
 .PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules tcpip extern %.interpret batch-interpret-test static funptr ifdefs

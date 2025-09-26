@@ -439,9 +439,8 @@ let produce_output_types_o_rule
       to = o;
       args = c_to_o mtype o c; }]
   else
-    let _ = FStar.IO.print_string (Printf.sprintf "%s has no output types\n" modul) in
     []
-    
+
 let produce_o_rule
   mtype
   (everparse_h: bool)
@@ -498,9 +497,10 @@ let produce_static_assertions_o_rule
 
 let produce_clang_format_rule
   (clang_format: bool)
+  (copy_clang_format_opt: bool)
 : Tot (list rule_t)
 =
-  if clang_format
+  if clang_format && copy_clang_format_opt
   then [{
    ty = EverParse;
    from = [];
@@ -541,6 +541,7 @@ let produce_makefile
   (emit_output_types_defs: bool)
   (skip_o_rules: bool)
   (clang_format: bool)
+  (copy_clang_format_opt: bool)
   (files: list string)
 : FStar.All.ML produce_makefile_res
 =
@@ -549,7 +550,7 @@ let produce_makefile
   let all_modules = List.map Options.get_module_name all_files in
   let rules =
     produce_everparse_h_rule everparse_h `List.Tot.append`
-    produce_clang_format_rule clang_format `List.Tot.append`
+    produce_clang_format_rule clang_format copy_clang_format_opt `List.Tot.append`
     (if skip_o_rules then [] else
       List.Tot.concatMap (produce_wrapper_o_rule mtype everparse_h g) all_modules `List.Tot.append`
       List.Tot.concatMap (produce_static_assertions_o_rule mtype everparse_h g) all_modules `List.Tot.append`
@@ -579,12 +580,14 @@ let write_makefile
   (emit_output_types_defs: bool)
   (skip_o_rules: bool)
   (clang_format: bool)
+  (copy_clang_format_opt: bool)
   (files: list string)
 : FStar.All.ML unit
 =
-  let makefile = Options.get_makefile_name () in
-  let file = FStar.IO.open_write_file makefile in
-  let {graph = g; rules; all_files} = produce_makefile mtype everparse_h emit_output_types_defs skip_o_rules clang_format files in
+  let makefile_final = Options.get_makefile_name () in
+  let makefile_tmp = makefile_final ^ ".tmp" in
+  let file = FStar.IO.open_write_file makefile_tmp in
+  let {graph = g; rules; all_files} = produce_makefile mtype everparse_h emit_output_types_defs skip_o_rules clang_format copy_clang_format_opt files in
   FStar.IO.write_string file (String.concat "" (List.Tot.map (print_make_rule mtype everparse_h input_stream_binding) rules));
   let write_all_ext_files (ext_cap: string) (ext: string) : FStar.All.ML unit =
     let ln =
@@ -618,4 +621,5 @@ let write_makefile
   write_all_ext_files "H" "h";
   write_all_ext_files "C" "c";
   write_all_ext_files "O" (oext mtype);
-  FStar.IO.close_write_file file
+  FStar.IO.close_write_file file;
+  OS.rename makefile_tmp makefile_final

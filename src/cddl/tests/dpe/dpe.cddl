@@ -1,0 +1,107 @@
+initialize_context_input_args = { 
+  ? &(simulation:1) ^=> bool,  ; Default = false 
+  ? &(use_default_context:2) ^=> bool,  ; Default = false 
+  ? &(seed:3) ^=> bytes, 
+  * &(tstr:uint) => any 
+}
+
+derive_context_engine_record = {
+  l0_image_header:bytes,
+  l0_image_header_sig:bytes,
+  l0_binary:bytes,
+  l0_binary_hash:bytes,
+  l0_image_auth_pubkey: bytes
+}
+
+device_id_csr_ingredients = {
+  ku : nint,
+  version: nint,
+  s_common: tstr,
+  s_org: tstr,
+  s_country: tstr
+}
+
+alias_key_crt_ingredients = {
+  version: nint,
+  serial_number: bytes,
+  i_common: tstr,
+  i_org: tstr,
+  not_before: bytes,
+  not_after: bytes,
+  s_common: tstr,
+  s_org: tstr,
+  s_country: tstr,
+  ku: nint,
+  l0_version: nint
+}
+
+
+derive_context_l0_record = {
+  fwid: bytes,
+  device_id_label: bytes, 
+  alias_key_label: bytes,
+  device_id_csr_ingredients: device_id_csr_ingredients,
+  alias_key_crt_ingredients: alias_key_crt_ingredients
+}
+
+derive_context_input_args_data = {
+  &(engine_record:1) => derive_context_engine_record //
+  &(l0_record:2) => derive_context_l0_record
+}
+
+
+derive_context_input_args = { 
+? &(context_handle:1) ^=> bytes, 
+? &(retain_parent_context:2) ^=> bool,  ; Default = false 
+? &(allow_new_context_to_derive:3) ^=> bool,  ; Default = true 
+? &(create_certificate:4) ^=> bool,  ; Default = true 
+? &(new_session_initiator_handshake:5) ^=> bytes, 
+? &(input_data:6) ^=> derive_context_input_args_data,
+? &(internal_inputs:7) ^=> [* (1 // 2) ], 
+? &(target_locality:8) ^=> bytes, 
+? &(return_certificate:9) ^=> bool,  ; Default = false 
+? &(allow_new_context_to_export:10) ^=> bool,  ; Default = false 
+? &(export_cdi:11) ^=> bool,  ; Default = false 
+? &(recursive:12) ^=> bool,  ; Default = false 
+* &(tstr:uint) => any 
+}
+
+certify-key-input-args = { 
+  ? &(context-handle:1) ^=> bytes, 
+  ? &(retain-context:2) ^=> bool,  ; Default = false 
+  ? &(public-key:3) ^=> bytes, 
+  ? &(label:4) ^=> bytes, 
+  ? &(policies:5) ^=> [* $policy-type], 
+  ? &(additional-input:6) ^=> bytes, 
+  * &(tstr:uint) => any 
+} 
+ 
+; test various whitespaces for CDDL parsing
+$policy-type /= &(tcg-dice-kp-identityInit: 6)
+$policy-type /= &(tcg-dice-kp-identityLoc :7)
+$policy-type /= &( tcg-dice-kp-attestInit:8)
+$policy-type /= &(tcg-dice-kp-attestLoc:9 ) 
+$policy-type /= & (tcg-dice-kp-assertInit:10)
+$policy-type /= & ( tcg-dice-kp-assertLoc : 11 )
+
+certify-key-output-args = { 
+  ? &(certificate:1) ^=> bytes, 
+  ? &(derived-public-key:2) ^=> bytes, 
+  ? &(new-context-handle:3) ^=> bytes
+;;  * &(tstr:uint) => any 
+}
+
+sign-input-args = { 
+  ? &(context-handle:1) ^=> bytes, 
+  ? &(retain-context:2) ^=> bool, ; Default = false 
+  ? &(label:3) ^=> bytes, 
+  ? &(is-symmetric:4) ^=> bool, ; Default = false 
+  &(to-be-signed:5) ^=> bytes, 
+  * &(tstr:uint) => any 
+} 
+ 
+sign-output-args = { 
+  ? &(signature:1) ^=> bytes, 
+  ? &(new-context-handle:2) ^=> bytes  ; If retained 
+;;  * &(tstr:uint) => any 
+}
