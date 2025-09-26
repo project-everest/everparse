@@ -2272,8 +2272,24 @@ let check_attribute
 : ML attribute
 = match a with
   | Entrypoint (Some p) ->
+    let ep_len = check_entrypoint_probe_length e p.probe_ep_length in
+    let ep_init =
+      match p.probe_ep_init with
+      | None ->
+        (match GlobalEnv.extern_probe_fn_qual e.globals p.probe_ep_fn.range PQInit with
+         | Some id -> Some id
+         | _ ->
+           error (Printf.sprintf "Probe init function not found")
+                 p.probe_ep_fn.range)
+      | Some i ->
+        (match GlobalEnv.resolve_probe_fn_any e.globals i with
+         | Some (id, Inr PQInit) -> Some id
+         | _ ->
+           error (Printf.sprintf "Probe function %s not found or not an init function" (print_ident i))
+                 i.range)
+    in
     Entrypoint (Some ({
-      p with probe_ep_length = check_entrypoint_probe_length e p.probe_ep_length
+      p with probe_ep_init = ep_init; probe_ep_length = ep_len
     }))
   | _ -> a
 

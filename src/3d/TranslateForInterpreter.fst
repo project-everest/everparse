@@ -405,7 +405,13 @@ let rec translate_typ (t:A.typ) : ML (T.typ & T.decls) =
 let translate_probe_entrypoint
   (p: A.probe_entrypoint)
 : ML T.probe_entrypoint
-= {
+= let init =
+    match p.probe_ep_init with
+    | None -> failwith "Impossible, probe_ep_init should be set after elaboration!"
+    | Some i -> i
+  in
+  {
+    probe_ep_init = init;
     probe_ep_fn = p.probe_ep_fn;
     probe_ep_length = translate_expr p.probe_ep_length;
   }

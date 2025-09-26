@@ -588,6 +588,7 @@ and switch_case = expr & list case
 [@@ PpxDerivingYoJson ]
 noeq
 type probe_entrypoint = {
+  probe_ep_init: option ident;
   probe_ep_fn: ident;
   probe_ep_length:expr;
 }
