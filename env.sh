@@ -1,8 +1,11 @@
 # This file is meant to be sourced rather than run
-if [[ "$OS" = "Windows_NT" ]] ; then
+if [[ -z "$OS" ]] ; then
+  OS=$(uname)
+fi
+if [[ "$OS" != "Darwin" ]] ; then
    MAKE=make
 else
-   MAKE="$(which gmake >/dev/null 2>&1 && echo gmake || echo make)"
+   MAKE=gmake
 fi
 $MAKE -C "$EVERPARSE_HOME" -f deps.Makefile -s
 eval "$($MAKE -C "$EVERPARSE_HOME" -f deps.Makefile -s env)"
