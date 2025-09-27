@@ -748,6 +748,18 @@ let rec list_existsb_with_overflow_equiv_correct
     check_equiv_correct data_model map_bound x1 x2;
     list_existsb_with_overflow_equiv_correct data_model map_bound x1 q
 
+let list_no_setoid_repeats_with_overflow_existsb_with_overflow_equiv_postcond
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (map_bound: option nat)
+  (l: list raw_data_item)
+  (y: option bool)
+: Tot prop
+=
+    begin match y with
+    | None -> list_max map_depth l `exceeds_bound` map_bound
+    | Some b -> b == list_no_setoid_repeats (Valid.equiv data_model) l
+    end
+
 let rec list_no_setoid_repeats_with_overflow_existsb_with_overflow_equiv_correct
   (data_model: (raw_data_item -> raw_data_item -> bool) {
     (forall x1 x2 . data_model x1 x2 == data_model x2 x1) /\
@@ -760,10 +772,8 @@ let rec list_no_setoid_repeats_with_overflow_existsb_with_overflow_equiv_correct
     List.Tot.for_all (Valid.valid data_model) l
   )
   (ensures
-    begin match list_no_setoid_repeats_with_overflow (check_equiv data_model map_bound) l with
-    | None -> list_max map_depth l `exceeds_bound` map_bound
-    | Some b -> b == list_no_setoid_repeats (Valid.equiv data_model) l
-    end
+    list_no_setoid_repeats_with_overflow_existsb_with_overflow_equiv_postcond data_model map_bound l
+      (list_no_setoid_repeats_with_overflow (check_equiv data_model map_bound) l)
   )
   (decreases l)
 = match l with
@@ -940,24 +950,66 @@ let check_valid_implies_valid
     check_valid data_model map_bound x
   ))
   (ensures (
-    Valid.valid data_model x
+    Valid.valid data_model x /\
+    map_key_depth_contains map_bound x
   ))
 = Valid.valid_eq' data_model x;
+  holds_on_raw_data_item_map_key_depth_contains map_bound x;
+  holds_on_raw_data_item_andp
+    (Valid.valid_item data_model)
+    (map_key_depth_contains map_bound)
+    x;
   holds_on_raw_data_item_implies
     (check_valid_item data_model map_bound)
-    (Valid.valid_item data_model)
+    (andp (Valid.valid_item data_model) (map_key_depth_contains map_bound))
     x
     (fun x' -> 
+      map_key_depth_eq x';
+      pre_holds_on_raw_data_item_andp
+        (Valid.valid_item data_model)
+        (map_key_depth_contains map_bound)
+        x';
       match x' with
       | Map _ l ->
         list_of_pair_list_map (holds_on_raw_data_item (Valid.valid_item data_model)) l;
         list_for_all_ext (holds_on_raw_data_item (Valid.valid_item data_model)) (Valid.valid data_model) (List.Tot.map fst l) (fun x ->
           Valid.valid_eq' data_model x
         );
+        assert (Some true = list_no_setoid_repeats_with_overflow
+      (check_equiv data_model map_bound)
+      (List.Tot.map fst l));
         list_no_setoid_repeats_with_overflow_existsb_with_overflow_equiv_correct
           data_model
           map_bound
           (List.Tot.map fst l);
+        assert (list_no_setoid_repeats_with_overflow_existsb_with_overflow_equiv_postcond data_model map_bound (List.Tot.map fst l)
+          (list_no_setoid_repeats_with_overflow
+      (check_equiv data_model map_bound)
+      (List.Tot.map fst l)));
+        assert (~ (list_max map_depth (List.Tot.map fst l) `exceeds_bound` map_bound));
+        list_of_pair_list_map (holds_on_raw_data_item (map_key_depth_contains map_bound)) l;
+        list_for_all_ext (holds_on_raw_data_item (map_key_depth_contains map_bound)) (map_key_depth_contains map_bound) (List.Tot.map snd l) (fun x ->
+          holds_on_raw_data_item_map_key_depth_contains map_bound x
+        );
+        List.Tot.for_all_mem (map_key_depth_contains map_bound) (List.Tot.map snd l);
+        list_max_bound_contains_intro
+          map_bound
+          map_key_depth
+          (List.Tot.map snd l)
+          (fun _ -> ());
+        list_max_map_key_dep_pair l;
+        admit ()
+      | Array _ l ->
+        list_for_all_ext (holds_on_raw_data_item (map_key_depth_contains map_bound)) (map_key_depth_contains map_bound) l (fun x ->
+          holds_on_raw_data_item_map_key_depth_contains map_bound x
+        );
+        assert (List.Tot.for_all (map_key_depth_contains map_bound) l);
+        List.Tot.for_all_mem (map_key_depth_contains map_bound) l;
+        list_max_bound_contains_intro
+          map_bound
+          map_key_depth
+          l
+          (fun _ -> ());
         ()
       | _ -> ()
     )
