@@ -184,9 +184,10 @@ let rec list_no_setoid_repeats_with_overflow
   | [] -> Some true
   | a :: q ->
     match list_existsb_with_overflow (equiv a) q with
+    | Some true -> Some false
     | Some false ->
       list_no_setoid_repeats_with_overflow equiv q
-    | r -> r
+    | None -> None
 
 let check_valid_item
   (data_model: (raw_data_item -> raw_data_item -> bool))
@@ -250,6 +251,13 @@ let rec wf_list_max_eq (#t: Type) (f: t -> nat) (l: list t) : Lemma
 = match l with
   | [] -> ()
   | _ :: q -> wf_list_max_eq f q
+
+let list_max_correct
+  (#t: Type) (f: t -> nat) (l: list t) (x: t)
+: Lemma
+  (ensures List.Tot.memP x l ==> (x << l /\ f x <= list_max f l))
+= wf_list_max_eq f l;
+  wf_list_max_correct l f x
 
 let rec map_depth (x: raw_data_item) : Tot nat =
   match x with
@@ -701,3 +709,323 @@ let check_equiv_correct
 = Classical.forall_intro_2 (fun x1 x2 -> Classical.move_requires (check_equiv_map_correct data_model map_bound x1) x2);
   check_equiv_aux_correct data_model map_bound (raw_data_item_size x1 + raw_data_item_size x2) (check_equiv_map data_model map_bound) x1 x2;
   ()
+
+let rec list_max_map_dep_pair
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (list_max map_depth_pair l == (
+    let l1 = list_max map_depth (List.Tot.map fst l) in
+    let l2 = list_max map_depth (List.Tot.map snd l) in
+    if l1 > l2 then l1 else l2
+  ))
+= match l with
+  | [] -> ()
+  | _ :: q -> list_max_map_dep_pair q
+
+let rec list_existsb_with_overflow_equiv_correct
+  (data_model: (raw_data_item -> raw_data_item -> bool) {
+    (forall x1 x2 . data_model x1 x2 == data_model x2 x1) /\
+    (forall x1 x2 x3 . (data_model x1 x2 /\ equiv data_model x2 x3) ==> data_model x1 x3)
+  })
+  (map_bound: option nat)
+  (x1: raw_data_item)
+  (l: list raw_data_item)
+: Lemma
+  (requires 
+    List.Tot.for_all (Valid.valid data_model) l /\
+    Valid.valid data_model x1
+  )
+  (ensures
+    begin match list_existsb_with_overflow (check_equiv data_model map_bound x1) l with
+    | Some b -> b == List.Tot.existsb (Valid.equiv data_model x1) l
+    | None -> map_depth x1 `exceeds_bound` map_bound \/ list_max map_depth l `exceeds_bound` map_bound
+    end
+  )
+  (decreases l)
+= match l with
+  | [] -> ()
+  | x2 :: q ->
+    check_equiv_correct data_model map_bound x1 x2;
+    list_existsb_with_overflow_equiv_correct data_model map_bound x1 q
+
+let rec list_no_setoid_repeats_with_overflow_existsb_with_overflow_equiv_correct
+  (data_model: (raw_data_item -> raw_data_item -> bool) {
+    (forall x1 x2 . data_model x1 x2 == data_model x2 x1) /\
+    (forall x1 x2 x3 . (data_model x1 x2 /\ equiv data_model x2 x3) ==> data_model x1 x3)
+  })
+  (map_bound: option nat)
+  (l: list raw_data_item)
+: Lemma
+  (requires
+    List.Tot.for_all (Valid.valid data_model) l
+  )
+  (ensures
+    begin match list_no_setoid_repeats_with_overflow (check_equiv data_model map_bound) l with
+    | None -> list_max map_depth l `exceeds_bound` map_bound
+    | Some b -> b == list_no_setoid_repeats (Valid.equiv data_model) l
+    end
+  )
+  (decreases l)
+= match l with
+  | [] -> ()
+  | x1 :: q ->
+    list_no_setoid_repeats_with_overflow_existsb_with_overflow_equiv_correct data_model map_bound q;
+    list_existsb_with_overflow_equiv_correct data_model map_bound x1 q;
+    ()
+
+let map_key_depth_eq (x: raw_data_item) : Lemma
+  (map_key_depth x == begin match x with
+  | Map _ l -> list_max map_key_depth_pair l
+  | Array _ l -> list_max map_key_depth l
+  | Tagged _ y -> map_key_depth y
+  | _ -> 0
+  end)
+= match x with
+  | Map len l ->
+    assert_norm (map_key_depth (Map len l) == wf_list_max l map_key_depth_pair);
+    wf_list_max_eq map_key_depth_pair l
+  | Array len l ->
+    assert_norm (map_key_depth (Array len l) == wf_list_max l map_key_depth);
+    wf_list_max_eq map_key_depth l
+  | _ -> ()
+
+let rec list_max_map_key_dep_pair
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (list_max map_key_depth_pair l == (
+    let l1 = list_max map_depth (List.Tot.map fst l) in
+    let l2 = list_max map_key_depth (List.Tot.map snd l) in
+    if l1 > l2 then l1 else l2
+  ))
+= match l with
+  | [] -> ()
+  | _ :: q -> list_max_map_key_dep_pair q
+
+let rec list_max_le
+  (#t: Type0)
+  (f1: t -> nat)
+  (f2: t -> nat)
+  (l: list t)
+  (prf: (x: t { List.Tot.memP x l /\ x << l }) -> Lemma
+    (f1 x <= f2 x)
+  )
+: Lemma
+  (ensures (list_max f1 l <= list_max f2 l))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q -> prf a; list_max_le f1 f2 q prf
+
+let rec map_key_depth_le_map_depth
+  (x: raw_data_item)
+: Lemma
+  (ensures (map_key_depth x <= map_depth x))
+  (decreases x)
+= map_key_depth_eq x;
+  map_depth_eq x;
+  match x with
+  | Map _ l ->
+    list_max_le map_key_depth_pair map_depth_pair l (fun x -> map_key_depth_le_map_depth (snd x))
+  | Array _ l ->
+    list_max_le map_key_depth map_depth l (fun x -> map_key_depth_le_map_depth x)
+  | Tagged _ y -> map_key_depth_le_map_depth y
+  | _ -> ()
+
+let rec list_max_bound_contains_intro
+  (#t: Type0)
+  (bound: option nat)
+  (f: t -> nat)
+  (l: list t)
+  (prf: (x: t { List.Tot.memP x l /\ x << l }) -> Lemma
+    (not (f x `exceeds_bound` bound))
+  )
+: Lemma
+  (ensures (not (list_max f l `exceeds_bound` bound)))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q -> prf a; list_max_bound_contains_intro bound f q prf
+
+let map_depth_contains
+  (bound: option nat)
+  (x: raw_data_item)
+: Tot bool
+= not (map_depth x `exceeds_bound` bound)
+
+let rec holds_on_raw_data_item_map_depth_contains'
+  (bound: option nat)
+  (x: raw_data_item)
+: Lemma
+  (requires map_depth_contains bound x)
+  (ensures holds_on_raw_data_item (map_depth_contains bound) x)
+  (decreases x)
+= holds_on_raw_data_item_eq (map_depth_contains bound) x;
+  map_depth_eq x;
+  match x with
+  | Tagged _ x -> holds_on_raw_data_item_map_depth_contains' bound x
+  | Array _ l ->
+    list_for_all_intro (holds_on_raw_data_item (map_depth_contains bound)) l (fun x ->
+      list_max_correct map_depth l x;
+      holds_on_raw_data_item_map_depth_contains' bound x
+    );
+    ()
+  | Map _ l ->
+    list_for_all_intro (holds_on_pair (holds_on_raw_data_item (map_depth_contains bound))) l (fun x ->
+      list_max_correct map_depth_pair l x;
+      holds_on_raw_data_item_map_depth_contains' bound (fst x);
+      holds_on_raw_data_item_map_depth_contains' bound (snd x)
+    );
+    ()
+  | _ -> ()
+
+let holds_on_raw_data_item_map_depth_contains
+  (bound: option nat)
+  (x: raw_data_item)
+: Lemma
+  (ensures (map_depth_contains bound x == holds_on_raw_data_item (map_depth_contains bound) x))
+= holds_on_raw_data_item_eq (map_depth_contains bound) x;
+  Classical.move_requires (holds_on_raw_data_item_map_depth_contains' bound) x
+
+let map_key_depth_contains
+  (bound: option nat)
+  (x: raw_data_item)
+: Tot bool
+= not (map_key_depth x `exceeds_bound` bound)
+
+let rec holds_on_raw_data_item_map_key_depth_contains'
+  (bound: option nat)
+  (x: raw_data_item)
+: Lemma
+  (requires map_key_depth_contains bound x)
+  (ensures holds_on_raw_data_item (map_key_depth_contains bound) x)
+  (decreases x)
+= holds_on_raw_data_item_eq (map_key_depth_contains bound) x;
+  map_key_depth_eq x;
+  match x with
+  | Tagged _ x -> holds_on_raw_data_item_map_key_depth_contains' bound x
+  | Array _ l ->
+    list_for_all_intro (holds_on_raw_data_item (map_key_depth_contains bound)) l (fun x ->
+      list_max_correct map_key_depth l x;
+      holds_on_raw_data_item_map_key_depth_contains' bound x
+    );
+    ()
+  | Map _ l ->
+    list_for_all_intro (holds_on_pair (holds_on_raw_data_item (map_key_depth_contains bound))) l (fun x ->
+      list_max_correct map_key_depth_pair l x;
+      map_key_depth_le_map_depth (fst x);
+      holds_on_raw_data_item_map_key_depth_contains' bound (fst x);
+      holds_on_raw_data_item_map_key_depth_contains' bound (snd x);
+      ()
+    );
+    ()
+  | _ -> ()
+
+let holds_on_raw_data_item_map_key_depth_contains
+  (bound: option nat)
+  (x: raw_data_item)
+: Lemma
+  (ensures (map_key_depth_contains bound x == holds_on_raw_data_item (map_key_depth_contains bound) x))
+= holds_on_raw_data_item_eq (map_key_depth_contains bound) x;
+  Classical.move_requires (holds_on_raw_data_item_map_key_depth_contains' bound) x
+
+let check_valid_implies_valid
+  (data_model: (raw_data_item -> raw_data_item -> bool) {
+    (forall x1 x2 . data_model x1 x2 == data_model x2 x1) /\
+    (forall x1 x2 x3 . (data_model x1 x2 /\ equiv data_model x2 x3) ==> data_model x1 x3)
+  })
+  (map_bound: option nat)
+  (x: raw_data_item)
+: Lemma
+  (requires (
+    check_valid data_model map_bound x
+  ))
+  (ensures (
+    Valid.valid data_model x
+  ))
+= Valid.valid_eq' data_model x;
+  holds_on_raw_data_item_implies
+    (check_valid_item data_model map_bound)
+    (Valid.valid_item data_model)
+    x
+    (fun x' -> 
+      match x' with
+      | Map _ l ->
+        list_of_pair_list_map (holds_on_raw_data_item (Valid.valid_item data_model)) l;
+        list_for_all_ext (holds_on_raw_data_item (Valid.valid_item data_model)) (Valid.valid data_model) (List.Tot.map fst l) (fun x ->
+          Valid.valid_eq' data_model x
+        );
+        list_no_setoid_repeats_with_overflow_existsb_with_overflow_equiv_correct
+          data_model
+          map_bound
+          (List.Tot.map fst l);
+        ()
+      | _ -> ()
+    )
+
+let valid_bounded_implies_check_valid
+  (data_model: (raw_data_item -> raw_data_item -> bool) {
+    (forall x1 x2 . data_model x1 x2 == data_model x2 x1) /\
+    (forall x1 x2 x3 . (data_model x1 x2 /\ equiv data_model x2 x3) ==> data_model x1 x3)
+  })
+  (map_bound: option nat)
+  (x: raw_data_item)
+: Lemma
+  (requires (
+    Valid.valid data_model x /\
+    ~ (map_key_depth x `exceeds_bound` map_bound)
+  ))
+  (ensures (
+    check_valid data_model map_bound x
+  ))
+= Valid.valid_eq' data_model x;
+  holds_on_raw_data_item_map_key_depth_contains map_bound x;
+  holds_on_raw_data_item_andp
+    (Valid.valid_item data_model)
+    (map_key_depth_contains map_bound)
+    x;
+  holds_on_raw_data_item_implies
+    (andp (Valid.valid_item data_model) (map_key_depth_contains map_bound))
+    (check_valid_item data_model map_bound)
+    x
+    (fun x' ->
+      pre_holds_on_raw_data_item_andp
+        (Valid.valid_item data_model)
+        (map_key_depth_contains map_bound)
+        x';
+      match x' with
+      | Map _ l ->
+        list_of_pair_list_map (holds_on_raw_data_item (Valid.valid_item data_model)) l;
+        list_for_all_ext (holds_on_raw_data_item (Valid.valid_item data_model)) (Valid.valid data_model) (List.Tot.map fst l) (fun x ->
+          Valid.valid_eq' data_model x
+        );
+        list_no_setoid_repeats_with_overflow_existsb_with_overflow_equiv_correct
+          data_model
+          map_bound
+          (List.Tot.map fst l);
+        map_key_depth_eq x';
+        list_max_map_key_dep_pair l;
+        ()
+      | _ -> ()
+    )
+
+let check_valid_correct
+  (data_model: (raw_data_item -> raw_data_item -> bool) {
+    (forall x1 x2 . data_model x1 x2 == data_model x2 x1) /\
+    (forall x1 x2 x3 . (data_model x1 x2 /\ equiv data_model x2 x3) ==> data_model x1 x3)
+  })
+  (map_bound: option nat)
+  (x: raw_data_item)
+: Lemma
+  (ensures (
+    let z = Valid.valid data_model x in
+    if check_valid data_model map_bound x
+    then z
+    else (map_key_depth x `exceeds_bound` map_bound \/ ~z)
+  ))
+= if check_valid data_model map_bound x
+  then check_valid_implies_valid data_model map_bound x
+  else if map_key_depth x `exceeds_bound` map_bound
+  then ()
+  else if Valid.valid data_model x
+  then valid_bounded_implies_check_valid data_model map_bound x
+  else ()

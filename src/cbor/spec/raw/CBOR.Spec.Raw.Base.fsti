@@ -139,51 +139,78 @@ let rec holds_on_raw_data_item_andp
   | Tagged _ x' -> holds_on_raw_data_item_andp p1 p2 x'
   | _ -> ()
 
+let pre_holds_on_raw_data_item_andp
+  (p1 p2: (raw_data_item -> bool))
+  (x: raw_data_item)
+: Lemma
+  (ensures (
+    pre_holds_on_raw_data_item (andp p1 p2) x == (pre_holds_on_raw_data_item p1 x && pre_holds_on_raw_data_item p2 x)
+  ))
+  (decreases x)
+= match x with
+  | Array _ l ->
+    list_for_all_ext (holds_on_raw_data_item (andp p1 p2)) (andp (holds_on_raw_data_item p1) (holds_on_raw_data_item p2)) l (fun x -> holds_on_raw_data_item_andp p1 p2 x);
+    list_for_all_andp (holds_on_raw_data_item p1) (holds_on_raw_data_item p2) l
+  | Map _ l ->
+    list_for_all_ext (holds_on_pair (holds_on_raw_data_item (andp p1 p2))) (andp (holds_on_pair (holds_on_raw_data_item p1)) (holds_on_pair (holds_on_raw_data_item p2))) l (fun x ->
+      holds_on_raw_data_item_andp p1 p2 (fst x);
+      holds_on_raw_data_item_andp p1 p2 (snd x)
+    );
+    list_for_all_andp (holds_on_pair (holds_on_raw_data_item p1)) (holds_on_pair (holds_on_raw_data_item p2)) l
+  | Tagged _ x' -> holds_on_raw_data_item_andp p1 p2 x'
+  | _ -> ()
+
+
 let rec holds_on_raw_data_item_implies
   (p1 p2: (raw_data_item -> bool))
+  (x: raw_data_item)
   (prf: ((x': raw_data_item) -> Lemma
-    (requires (holds_on_raw_data_item p1 x' == true))
+    (requires (holds_on_raw_data_item p1 x' == true /\ pre_holds_on_raw_data_item p2 x' == true /\ (x' << x \/ x' == x)))
     (ensures (p2 x' == true))
   ))
-  (x: raw_data_item)
 : Lemma
   (requires (holds_on_raw_data_item p1 x))
   (ensures (holds_on_raw_data_item p2 x == true))
   (decreases x)
 = holds_on_raw_data_item_eq p1 x;
   holds_on_raw_data_item_eq p2 x;
-  prf x;
   match x with
   | Array _ v ->
-    list_for_all_implies (holds_on_raw_data_item p1) (holds_on_raw_data_item p2) v (fun x -> holds_on_raw_data_item_implies p1 p2 prf x)
-  | Tagged _ v -> holds_on_raw_data_item_implies p1 p2 prf v
+    list_for_all_implies (holds_on_raw_data_item p1) (holds_on_raw_data_item p2) v (fun x' ->
+      holds_on_raw_data_item_implies p1 p2 x' prf
+    );
+    prf x
+  | Tagged _ v -> 
+    holds_on_raw_data_item_implies p1 p2 v prf;
+    prf x
   | Map _ v ->
     list_for_all_implies (holds_on_pair (holds_on_raw_data_item p1)) (holds_on_pair (holds_on_raw_data_item p2)) v (fun x ->
-      holds_on_raw_data_item_implies p1 p2 prf (fst x);
-      holds_on_raw_data_item_implies p1 p2 prf (snd x)
-    )
-  | _ -> ()
+      holds_on_raw_data_item_implies p1 p2 (fst x) prf;
+      holds_on_raw_data_item_implies p1 p2 (snd x) prf
+    );
+    prf x
+  | _ -> prf x
 
 // FIXME: avoid this code duplication
 let pre_holds_on_raw_data_item_implies
   (p1 p2: (raw_data_item -> bool))
+  (x: raw_data_item)
   (prf: ((x': raw_data_item) -> Lemma
-    (requires (holds_on_raw_data_item p1 x' == true))
+    (requires (holds_on_raw_data_item p1 x' == true /\ pre_holds_on_raw_data_item p2 x' == true /\ x' << x))
     (ensures (p2 x' == true))
   ))
-  (x: raw_data_item)
 : Lemma
   (requires (pre_holds_on_raw_data_item p1 x))
   (ensures (pre_holds_on_raw_data_item p2 x == true))
   (decreases x)
 = match x with
   | Array _ v ->
-    list_for_all_implies (holds_on_raw_data_item p1) (holds_on_raw_data_item p2) v (fun x -> holds_on_raw_data_item_implies p1 p2 prf x)
-  | Tagged _ v -> holds_on_raw_data_item_implies p1 p2 prf v
+    list_for_all_implies (holds_on_raw_data_item p1) (holds_on_raw_data_item p2) v (fun x -> holds_on_raw_data_item_implies p1 p2 x prf)
+  | Tagged _ v -> holds_on_raw_data_item_implies p1 p2 v prf
   | Map _ v ->
     list_for_all_implies (holds_on_pair (holds_on_raw_data_item p1)) (holds_on_pair (holds_on_raw_data_item p2)) v (fun x ->
-      holds_on_raw_data_item_implies p1 p2 prf (fst x);
-      holds_on_raw_data_item_implies p1 p2 prf (snd x)
+      holds_on_raw_data_item_implies p1 p2 (fst x) prf;
+      holds_on_raw_data_item_implies p1 p2 (snd x) prf
     )
   | _ -> ()
 
@@ -320,17 +347,17 @@ let holds_on_raw_data_item_fmap_inv
   (ensures (holds_on_raw_data_item p (raw_data_item_fmap f x) == true))
 = holds_on_raw_data_item_fmap_gen f p truep
     (fun x ->
-      pre_holds_on_raw_data_item_implies (p `andp` truep) p (fun x -> holds_on_raw_data_item_eq (p `andp` truep) x) (pre_raw_data_item_fmap f x);
+      pre_holds_on_raw_data_item_implies (p `andp` truep) p (pre_raw_data_item_fmap f x) (fun x -> holds_on_raw_data_item_eq (p `andp` truep) x);
       prf1 x
     )
     (fun x ->
       holds_on_raw_data_item_truep x;
       holds_on_raw_data_item_eq truep x;
       prf x;
-      holds_on_raw_data_item_implies p (p `andp` truep) (fun x -> holds_on_raw_data_item_eq p x) (f x)
+      holds_on_raw_data_item_implies p (p `andp` truep) (f x) (fun x -> holds_on_raw_data_item_eq p x)
     )
     x;
-  holds_on_raw_data_item_implies (p `andp` truep) p (fun x -> holds_on_raw_data_item_eq p x) (raw_data_item_fmap f x)
+  holds_on_raw_data_item_implies (p `andp` truep) p (raw_data_item_fmap f x) (fun x -> holds_on_raw_data_item_eq p x)
 
 let holds_on_raw_data_item_fmap
   (f: raw_data_item -> raw_data_item)
@@ -354,8 +381,8 @@ let holds_on_raw_data_item_fmap
       holds_on_raw_data_item_implies
         p
         (truep `andp` p)
-        (fun _ -> ())
         (f x)
+        (fun _ -> ())
     )
     x;
-  holds_on_raw_data_item_implies (truep `andp` p) p (fun _ -> ()) (raw_data_item_fmap f x)
+  holds_on_raw_data_item_implies (truep `andp` p) p (raw_data_item_fmap f x) (fun _ -> ())
