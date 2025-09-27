@@ -31,9 +31,11 @@ FSTAR = $(FSTAR_EXE) $(FSTAR_OPTIONS)
 
 HEADERS = $(addprefix -add-include ,'"krml/internal/compat.h"')
 
+# -Wno-tautological-overlap-compare because of T32
 KRML = $(KRML_HOME)/krml \
 	 -fstar $(FSTAR_EXE) \
-	 -ccopt "-Ofast" \
+	 -ccopt "-O3" -ccopt "-ffast-math" \
+	 -ccopt "-Wno-tautological-overlap-compare" \
 	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
 	 -tmpdir out -I .. \
 	 -bundle 'LowParse.\*' \

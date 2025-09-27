@@ -2,12 +2,20 @@ open OS
 open HashingOptions
 
 (* paths *)
-let krml_home = OS.getenv "KRML_HOME"
+let krml_home =
+  match OS.getenv_opt "KRML_HOME" with
+  | Some k -> k
+  | _ ->
+     let opt_krml = filename_concat (filename_concat everparse_home "opt") "karamel" in
+     if Sys.file_exists opt_krml
+     then opt_krml
+     else everparse_home
 let krmllib = filename_concat krml_home "krmllib"
-let everparse_home = OS.getenv "EVERPARSE_HOME"
 let lowparse_home = filename_concat (filename_concat everparse_home "src") "lowparse"
 let ddd_home = filename_concat (filename_concat everparse_home "src") "3d"
 let ddd_prelude_home = filename_concat (filename_concat (filename_concat everparse_home "src") "3d") "prelude"
+
+let _ = Unix.putenv "KRML_HOME" krml_home
 
 let cl_wrapper () = filename_concat krml_home (filename_concat "misc" "cl-wrapper.bat")
 
@@ -60,7 +68,6 @@ let krml out_dir =
 
 (* command lines *)
 let fstar_args0 =
-  "--z3version" :: "4.13.3" ::
   "--already_cached" :: "Prims,LowStar,FStar,LowParse,C,EverParse3d.\\*,Spec" ::
     "--include" :: lowparse_home ::
       "--include" :: krmllib ::
@@ -72,6 +79,18 @@ let fstar_args0 =
 
 let list_snoc q a =
   q @ [a]
+
+let z3_version = "4.13.3"
+
+let z3_executable_option fstar_exe =
+  let test = run_cmd_with_code fstar_exe ["--locate_z3"; z3_version] in
+  if test = 0
+  then ["--z3version"; z3_version]
+  else
+    let opt_z3 = Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "z3") ("z3-" ^ z3_version) in
+    if Sys.file_exists opt_z3
+    then ["--smt"; opt_z3]
+    else []
 
 let fstar_args
   input_stream_binding
@@ -90,6 +109,7 @@ let verify_fst_file
   file
 =
   let fstar_args = list_snoc (fstar_args input_stream_binding out_dir) file in
+  let fstar_args = z3_executable_option fstar_exe @ fstar_args in
   run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args)
 
 let fstar_modul_of_filename fst =

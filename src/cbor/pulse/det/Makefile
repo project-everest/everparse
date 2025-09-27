@@ -48,3 +48,15 @@ test-snapshot: rust.test-snapshot c.test-snapshot
 	+$(MAKE) -C $(source_dir) -f $(local_curdir)/snapshot.Makefile target_dir=$(target_dir) $(subst .,,$(suffix $@))
 
 .PHONY: %.test-snapshot test-snapshot
+
+clean_dirs = $(addsuffix .clean,c krml vertest/c vertest/common)
+
+$(clean_dirs): %.clean:
+	+$(MAKE) -C $(basename $@) clean
+
+rust.clean:
+	cd $(basename $@) && cargo clean
+
+.PHONY: %.clean
+
+clean: $(clean_dirs) rust.clean

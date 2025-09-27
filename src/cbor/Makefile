@@ -33,3 +33,16 @@ pulse/det/krml.do: pulse/raw/everparse.do
 .PHONY: all %.do
 
 .PHONY: interface snapshot test-snapshot
+
+clean: pulse/det.clean
+
+.PHONY: clean
+
+clean-verify: spec.clean spec/raw.clean spec/raw/everparse.clean pulse.clean pulse/raw.clean pulse/raw/everparse.clean pulse/det/krml.clean
+
+.PHONY: clean-verify
+
+%.clean:
+	+$(MAKE) -C $(basename $@) clean
+
+.PHONY: %.clean

@@ -11,6 +11,8 @@ FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice,-CDDL.Pulse.Bundle,-CDDL.Pulse.AST.Bundle,-CDDL.Tool'
 FSTAR_FILES := $(OUTPUT_DIRECTORY)/CDDLTest.Test.fst CDDLTest.Client.fst
 
+clean_rules += clean-test
+
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 include $(EVERPARSE_SRC_PATH)/common.Makefile
@@ -31,3 +33,8 @@ test: extract
 	$(OUTPUT_DIRECTORY)/test.exe
 
 .PHONY: extract test
+
+clean-test:
+	rm -f $(OUTPUT_DIRECTORY)/CDDLExtractionTest.o $(OUTPUT_DIRECTORY)/test.exe
+
+.PHONY: clean-test

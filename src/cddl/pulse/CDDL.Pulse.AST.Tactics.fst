@@ -191,7 +191,9 @@ let bundle_get_rel_steps =
     `%Mkbundle?.b_spec_type ::
     `%Mkbundle?.b_spec_type_eq ::
     `%Mkarray_bundle?.ab_spec_type ::
+    `%Mkarray_bundle?.ab_spec_type_eq ::
     `%Mkmap_bundle?.mb_spec_type ::
+    `%Mkmap_bundle?.mb_spec_type_eq ::
     `%Mkbundle?.b_impl_type ::
     `%Mkarray_bundle?.ab_impl_type ::
     `%Mkmap_bundle?.mb_impl_type ::

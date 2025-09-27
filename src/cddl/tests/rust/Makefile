@@ -15,5 +15,11 @@ build-rust: extract-all
 
 .PHONY: build-rust extract-all all
 
+clean:
+	cargo clean
+	+$(MAKE) -f extract.Makefile clean
+
+.PHONY: clean
+
 # Uncomment if you want to edit the produced F* file
 # include extract.Makefile

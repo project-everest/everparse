@@ -1013,6 +1013,7 @@ ProbeInit``. This results in the following extern C declaration in
 .. code-block:: c
 
   extern BOOLEAN ProbeInit(
+    char *typeAndFieldName,
     uint64_t size,
     EVERPARSE_COPY_BUFFER_T dst
   )
@@ -1058,8 +1059,8 @@ Instructs the parser to:
 
   * First, read the contents of the ``tpointer`` field into a local vairable ``src``
 
-  * Then, call ``ProbeInit(4, dest)`` to prepare the destination buffer, where
-    ``sizeof(T)=4``.
+  * Then, call ``ProbeInit("S.tpointer", 4, dest)`` to prepare the destination
+    buffer, where ``sizeof(T)=4``.
 
   * Then, if ``ProbeInit`` succeeds, use ``ProbeAndCopy(sizeof(T), 0, 0, src,
     destS)`` check that the ``sizeof(T)`` bytes starting at the address pointed
@@ -1105,7 +1106,7 @@ Operationally, the validator for ``U`` proceeds by:
 
 * Then, reading ``spointer`` into ``srcS`` and
 
-  - Calling ``ProbeInit(sizeof(S), destS)``
+  - Calling ``ProbeInit("U.spointer", sizeof(S), destS)``
 
   - Then, ``ProbeAndCopy(sizeof(S), 0, 0, srcS, destS)``
 

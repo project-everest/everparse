@@ -28,7 +28,9 @@ ALL_SOURCE_FILES = $(filter-out $(NOT_INCLUDED), $(wildcard *.fst *.fsti))
 
 depend: .depend
 
+ifeq (,$(filter clean,$(MAKECMDGOALS)))
 -include .depend
+endif
 
 $(ALL_CHECKED_FILES): %.checked:
 	$(FSTAR) $<
@@ -65,18 +67,29 @@ Test.c: krml.rsp
 # test: ASN1Test.c # test.exe
 #	cat $^
 
-compile: extract
+compile: evaluation/ASN1_Parser.exe
+
+evaluation/ASN1_Parser.exe: $(ALL_ML_FILES)
 	$(MAKE) -C ocaml
 	cp ocaml/_build/default/ASN1_Parser.exe evaluation/
-	chmod +w evaluation/ASN1_Parser.exe
+	chmod +w $@
+	touch $@
 
 test: eval
 
 eval: compile
 	$(MAKE) -C evaluation
 
-clean:
+clean-files:
 	-rm -rf *.checked *.krml .depend *.c *.h *.o test.exe krml.rsp *.tmp compile_flags.txt
-	$(MAKE) -C ocaml clean
+
+.PHONY: clean-files
+
+%.clean:
+	$(MAKE) -C $(basename $@) clean
+
+.PHONY: %.clean
+
+clean: ocaml.clean evaluation.clean clean-files
 
 .PHONY: all verify clean depend compile test eval

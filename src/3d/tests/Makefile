@@ -87,6 +87,14 @@ probe:
 specialize_test:
 	+$(MAKE) -C $@
 
+.PHONY: specialize_test2
+specialize_test2:
+	+$(MAKE) -C $@
+
+.PHONY: specialize_tagged_union_array
+specialize_tagged_union_array:
+	+$(MAKE) -C $@
+	
 batch-test-negative: $(addsuffix .negtest,$(wildcard FAIL*.3d))
 
 %.3d.negtest: %.3d
@@ -149,10 +157,16 @@ batch-cleanup-test:
 %.interpret: %.3d
 	$(3D) --batch $^
 
-clean:
-	rm -rf out.batch out.fail.batch out.cleanup out.elf out.inplace-hash out.pos test-cpp.exe out.batch-interpret out.z3-testgen
-	make -C specialize_test clean
-	make -C specialize_test2 clean
-	make -C probe clean
+%.clean:
+	make -C $(basename $@) clean
+
+.PHONY: %.clean
+
+clean-files:
+	rm -rf out.batch out.fail.batch out.cleanup out.elf out.inplace-hash out.pos test-cpp.exe out.batch-interpret out.z3-testgen *.out *.err
+
+.PHONY: clean-files
+
+clean: clean-files specialize_test.clean specialize_test2.clean probe.clean extern.clean exttype.clean funptr.clean ifdefs.clean iter/coarse.clean iter/fine.clean modules.clean output_types.clean static.clean tcpip.clean
 
 .PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules tcpip extern %.interpret batch-interpret-test static funptr ifdefs

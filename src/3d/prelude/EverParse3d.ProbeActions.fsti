@@ -56,7 +56,7 @@ val probe_fn_incremental_as_probe_m (f:probe_fn_incremental) (bytes_to_read:U64.
 
 inline_for_extraction
 noextract
-val init_probe_m (f:init_probe_dest_t)
+val init_probe_m (probe_struct_name:string) (f:init_probe_dest_t)
 : probe_m unit false false
 
 inline_for_extraction
@@ -134,6 +134,7 @@ inline_for_extraction
 noextract
 val init_and_probe 
       (#mz:bool)
+      (struct_name:string)
       (init:init_probe_dest_t)
       (probe:probe_m unit true mz)
 : probe_m unit false mz

@@ -102,19 +102,45 @@ let fstar_exe =
      let opt_fstar_exe = Filename.concat (Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "FStar") "bin") "fstar.exe" in
      if Sys.file_exists opt_fstar_exe
      then opt_fstar_exe
-     else "fstar.exe" (* rely on PATH *)
+     else
+       (* assume a binary package *)
+       let fstar_exe = Filename.concat (Filename.concat everparse_home "bin") "fstar.exe" in
+       if Sys.file_exists fstar_exe
+       then fstar_exe
+       else "fstar.exe" (* rely on PATH *)
 
 let krml_home =
   try
     Sys.getenv "KRML_HOME"
   with
-  | Not_found -> Filename.concat (Filename.concat everparse_home "opt") "karamel"
+  | Not_found ->
+     let opt_krml = Filename.concat (Filename.concat everparse_home "opt") "karamel" in
+     if Sys.file_exists opt_krml
+     then opt_krml
+     else
+       (* assume a binary package *)
+       everparse_home
+
+let _ = Unix.putenv "KRML_HOME" krml_home
+
+let krml_exe =
+  let krml = "krml" ^ (if Sys.cygwin then ".exe" else "") in
+  let res1 = Filename.concat krml_home krml in
+  if Sys.file_exists res1
+  then res1
+  else Filename.concat (Filename.concat krml_home "bin") krml
 
 let pulse_home =
   try
     Sys.getenv "PULSE_HOME"
   with
-  | Not_found -> Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "pulse") "out"
+  | Not_found ->
+     let opt_pulse = Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "pulse") "out" in
+     if Sys.file_exists opt_pulse
+     then opt_pulse
+     else
+       (* assume a binary package *)
+       everparse_home
 
 let z3_version = "4.13.3"
 
@@ -295,7 +321,6 @@ let _ =
   let krml_options =
     if is_rust () then
       [
-        "-fstar"; fstar_exe;
         "-backend"; "rust";
         "-fno-box";
         "-fkeep-tuples";
@@ -315,7 +340,6 @@ let _ =
           (if !skip_compilation then "-skip-compilation" else "-skip-linking");
           "-tmpdir"; !odir;
           "-header"; Filename.concat everparse_src_cddl_tool "noheader.txt";
-        "-fstar"; fstar_exe;
         "-fnoshort-enums";
         "-bundle"; "FStar.\\*,LowStar.\\*,C.\\*,C,PulseCore.\\*,Pulse.\\*[rename=fstar]";
         "-no-prefix"; "CBOR.Pulse.API.Det.C";
@@ -331,7 +355,7 @@ let _ =
   in
   let res =
     run_cmd
-      (Filename.concat krml_home "krml")
+      krml_exe
       krml_options
   in
   if res = 0 then print_endline "EverCDDL succeeded!";
