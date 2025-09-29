@@ -26,19 +26,19 @@ jobs:
           git config --global user.email "24394600+dzomo@users.noreply.github.com"
       - name: Advance hashes
         run: |
-          make -C opt -j$(nproc) advance
-          if ! git diff --exit-code -- opt/hashes.Makefile ; then git add -u opt/hashes.Makefile && git commit -m 'Update hashes' ; fi
+          make -C opt -j$(nproc) advance &&
+          if ! git diff --exit-code -- opt/hashes.Makefile ; then git add -u opt/hashes.Makefile && git commit -m 'Update hashes' ; fi &&
           git diff --exit-code
       - name: Generate snapshot
         run: |
-          make ADMIT=1 cbor-snapshot 3d-doc-snapshot -kj$(nproc) && make ADMIT=1 cose-snapshot -kj$(nproc)
-          git add doc/3d-snapshot src/cbor/pulse/det/c src/cbor/pulse/det/rust src/cose/c src/cose/rust
-          if ! git diff --staged --exit-code ; then git commit -m "3D doc, CBOR, COSE snapshot" ; fi
+          make ADMIT=1 cbor-snapshot 3d-doc-snapshot -kj$(nproc) && make ADMIT=1 cose-snapshot -kj$(nproc) &&
+          git add doc/3d-snapshot src/cbor/pulse/det/c src/cbor/pulse/det/rust src/cose/c src/cose/rust &&
+          if ! git diff --staged --exit-code ; then git commit -m "3D doc, CBOR, COSE snapshot" ; fi &&
           git diff --exit-code
       - name: Push new branch
         run: |
-          git checkout -b _dzomo_upgrade_${{ github.run_id }}
-          git push origin _dzomo_upgrade_${{ github.run_id }}
+          git checkout -b _dzomo_upgrade_${{ github.run_id }} &&
+          git push origin _dzomo_upgrade_${{ github.run_id }} &&
           git rev-parse HEAD > hash.txt
       - name: Upload hash
         uses: actions/upload-artifact@v4
@@ -90,9 +90,9 @@ jobs:
           path: test0
       - name: Extract artifact
         run: |
-          pushd test0
-          tar xzf everparse_*.tar.gz
-          popd
+          pushd test0 &&
+          tar xzf everparse_*.tar.gz &&
+          popd &&
           mv test0/everparse test
       - name: Check out repo
         uses: actions/checkout@v4
@@ -540,7 +540,8 @@ jobs:
           echo "Expected: $expected"
           echo "Real: $real"
           [[ "$expected" = "$real" ]]
-          echo "updated_sha=$real" >> $GITHUB_ENV
+      - name: Record hash
+          echo "updated_sha=$(cat hash.txt)" >> $GITHUB_ENV
       - name: create pull request
         if: ${{ env.updated_sha != github.sha }}
         uses: peter-evans/create-pull-request@v6
