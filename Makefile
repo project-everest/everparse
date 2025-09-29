@@ -85,7 +85,7 @@ lowparse-unit-test: lowparse
 3d-unit-test: 3d $(NEED_Z3_TESTGEN)
 	+$(MAKE) -C src/3d test
 
-3d-doc-test: 3d
+3d-doc-test: 3d $(NEED_Z3_TESTGEN)
 	+$(MAKE) -C doc 3d-test
 
 3d-test: 3d-unit-test 3d-doc-test
