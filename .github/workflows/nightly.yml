@@ -24,6 +24,9 @@ jobs:
         run: |
           git config --global user.name "Dzomo, the Everest Yak"
           git config --global user.email "24394600+dzomo@users.noreply.github.com"
+      - name: Install opam
+        run: |
+          sudo apt-get update && sudo apt-get install --yes --no-install-recommends opam
       - name: Advance hashes
         run: |
           make -C opt -j$(nproc) advance &&
