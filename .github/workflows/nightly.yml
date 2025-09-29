@@ -541,13 +541,12 @@ jobs:
           echo "Real: $real"
           [[ "$expected" = "$real" ]]
       - name: Record hash
+        run: |
           echo "updated_sha=$(cat hash.txt)" >> $GITHUB_ENV
       - name: create pull request
         if: ${{ env.updated_sha != github.sha }}
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.EVERPARSE_GITHUB_TOKEN }}
-          branch: _dzomo_upgrade_${{ github.run_id }}
           title: "[CI] upgrade hashes and snapshots"
       - name: Delete branch
         if: ${{ env.updated_sha == github.sha }}
