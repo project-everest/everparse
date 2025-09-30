@@ -269,9 +269,6 @@ jobs:
       - uses: actions/checkout@master
         with:
           ref: ${{ env.hash }}
-          sparse-checkout: |
-            opt/Makefile
-            opt/hashes.Makefile
       - name: Set-up OCaml
         uses: ocaml/setup-ocaml@v3
         with:
