@@ -2028,7 +2028,7 @@ let t_map_ext g1 g2 =
 
 #pop-options
 
-#push-options "--z3rlimit 128"
+#push-options "--z3rlimit 256"
 
 #restart-solver
 let t_map_concat_cut_r_gen
