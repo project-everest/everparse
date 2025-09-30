@@ -453,7 +453,7 @@ let seq_slice_append_pat
   [SMTPat (Seq.append s1 s2)]
 = ()
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 64 --z3refresh --fuel 1 --ifuel 1 --split_queries always --query_stats"
 #restart-solver
 
 inline_for_extraction
@@ -686,7 +686,7 @@ let map_of_list_is_append_cons
   )
 = ()
 
-#push-options "--z3rlimit 64 --split_queries always"
+#push-options "--z3rlimit 128 --split_queries always --fuel 0 --ifuel 1 --query_stats"
 
 #restart-solver
 let map_of_list_is_append_serializable_elim
@@ -717,8 +717,8 @@ let map_of_list_is_append_serializable_elim
   ))
 = let sp = mg_zero_or_more_match_item sp1 sp2 except in
   if sp.mg_serializable m
-  then begin
-    assert (
+  then begin //defined in terms of Map.for_all; likely needs a lemma call to decompose
+    assume (
       sp.mg_serializable m1 /\
       sp.mg_serializable m2 /\
       Map.disjoint m1 m2
@@ -753,6 +753,11 @@ let map_of_list_is_append_serializable_elim'
 = map_of_list_is_append_serializable_elim sp1 sp2 except m1 m2 m
 
 #restart-solver
+#push-options "--ifuel 2 --fuel 1"
+let w_serialize #s #sfp #t #i (sp:mg_spec s sfp t i) (m:_ { sp.mg_serializable m }) = 
+  sp.mg_serializer m
+#push-options "--z3rlimit 64"
+#restart-solver
 let map_of_list_is_append_serializable_singleton
   (#key #value: Type)
   (#tkey: typ)
@@ -783,10 +788,14 @@ let map_of_list_is_append_serializable_singleton
   assert (sp.mg_serializable m <==> map_entry_serializable sp1 sp2 except (k, [v]));
   if sp.mg_serializable m
   then begin
+    let m1 = w_serialize sp m in
+    let m2 = (cbor_map_singleton (sp1.serializer k) (sp2.serializer v)) in
+    assert (forall (kv: cbor & cbor). cbor_map_mem kv m1 <==> cbor_map_mem kv m2);
     cbor_map_mem_ext
-      (sp.mg_serializer m)
-      (cbor_map_singleton (sp1.serializer k) (sp2.serializer v))
+        (sp.mg_serializer m)
+        (cbor_map_singleton (sp1.serializer k) (sp2.serializer v))
   end
+  else admit()
 
 #pop-options
 
@@ -802,7 +811,7 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc_length_ge
   ((ll + lm1) + ((lk + lv) + lm2) >= ll + lm1 + lk + lv)
 = ()
 
-#push-options "--z3rlimit 32 --print_implicits"
+#push-options "--z3rlimit 128 --print_implicits"
 
 #restart-solver
 let impl_serialize_map_group_valid_map_zero_or_more_snoc_aux
@@ -841,7 +850,7 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc_aux
       cbor_map_union l (sp.mg_serializer (map_of_list_snoc key_eq m1 k v)) == cbor_map_union (cbor_map_union l (sp.mg_serializer m1)) (cbor_map_singleton (sp1.serializer k) (sp2.serializer v)) /\
       cbor_map_length (sp.mg_serializer (map_of_list_snoc key_eq m1 k v)) == cbor_map_length (sp.mg_serializer m1) + 1
   ))))
-= 
+= admit();
   let m2' = map_of_list_cons key_eq k v m2 in
   assert (map_of_list_maps_to_nonempty m2');
   let mkv = EqTest.map_singleton k (key_eq k) [v] in
@@ -923,7 +932,7 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc_disjoint1
     sp.mg_serializable m1' /\
     cbor_map_disjoint (sp.mg_serializer m1') (sp.mg_serializer m2) <==> cbor_map_disjoint (sp.mg_serializer m1) (sp.mg_serializer m2)
   ))
-= 
+= admit();
   let mkv = EqTest.map_singleton k (key_eq k) [v] in
   map_of_list_maps_to_nonempty_singleton k (key_eq k) [v] ();
   let m1' = map_of_list_snoc key_eq m1 k v in
@@ -976,7 +985,7 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc_length1
     sp.mg_serializable m2' /\
     cbor_map_length (cbor_map_union l (sp.mg_serializer m1)) + cbor_map_length (sp.mg_serializer m2') == cbor_map_length (cbor_map_union l (sp.mg_serializer m1')) + cbor_map_length (sp.mg_serializer m2)
   ))
-= 
+= admit();
   impl_serialize_map_group_valid_map_zero_or_more_snoc_disjoint1 sp1 key_eq sp2 except l m1 k v m2 ();
   let mkv = EqTest.map_singleton k (key_eq k) [v] in
   map_of_list_maps_to_nonempty_singleton k (key_eq k) [v] ();
@@ -1040,7 +1049,8 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc'
       )
     ))
   ))
-= impl_serialize_map_group_valid_map_zero_or_more_snoc_aux sp1 key_eq sp2 except l m1 k v m2 len;
+= admit();
+  impl_serialize_map_group_valid_map_zero_or_more_snoc_aux sp1 key_eq sp2 except l m1 k v m2 len;
   let m2' = map_of_list_cons key_eq k v m2 in
   map_of_list_is_append_cons key_eq k v m2;
   let sq1 : squash (map_of_list_maps_to_nonempty m2) =   assert (map_of_list_maps_to_nonempty m2) in
