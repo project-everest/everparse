@@ -253,7 +253,7 @@ ci: test 3d-doc-ci
 
 .PHONY: 3d-doc-ci
 
-3d-doc-snapshot: 3d
+3d-doc-snapshot: 3d $(NEED_Z3_TESTGEN)
 	+$(MAKE) -C doc 3d-snapshot
 
 .PHONY: 3d-doc-snapshot
