@@ -350,6 +350,9 @@ fn cbor_det_serialize_string
   res
 }
 
+#show-options
+#push-options "--query_stats --fuel 0 --ifuel 0 --z3rlimit_factor 4"
+#restart-solver
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn cbor_det_serialize_map_insert
@@ -430,9 +433,9 @@ fn cbor_det_mk_simple_value (_: unit) : mk_simple_t u#0 #_ cbor_det_match
   fold (cbor_det_match 1.0R res (Spec.pack (Spec.CSimple v)));
   res
 }
-
-#push-options "--z3rlimit 32"
-
+#pop-options
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 1 --split_queries always --query_stats"
+#restart-solver
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_mk_int64 (_: unit) : mk_int64_t u#0 #_ cbor_det_match
 = (ty: _)
@@ -444,6 +447,7 @@ fn cbor_det_mk_int64 (_: unit) : mk_int64_t u#0 #_ cbor_det_match
   res
 }
 
+//produces 160 SMT queries!
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_mk_string (_: unit) : mk_string_t u#0 #_ cbor_det_match
 = (ty: _)
