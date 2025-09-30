@@ -1,5 +1,6 @@
 module CDDL.Pulse.Serialize.MapGroup
 #lang-pulse
+#push-options "--query_stats"
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_map
@@ -101,6 +102,68 @@ fn impl_serialize_map_group_nop
 }
 
 #push-options "--z3rlimit 32"
+#restart-solver
+#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 2 --query_stats --log_queries"
+
+let compose_choice_l
+    ([@@@erasable]t1: Ghost.erased det_map_group)
+    ([@@@erasable]tgt1: Type0)
+    ([@@@erasable] fp1: Ghost.erased map_constraint)
+    ([@@@erasable] inj1: Ghost.erased bool)
+    ([@@@erasable]ps1: Ghost.erased (mg_spec t1 fp1 tgt1 inj1))
+    ([@@@erasable]t2: Ghost.erased det_map_group)
+    ([@@@erasable]tgt2: Type0)
+    ([@@@erasable] fp2: Ghost.erased map_constraint)
+    ([@@@erasable] inj2: Ghost.erased bool)
+    ([@@@erasable]ps2: Ghost.erased (mg_spec t2 fp2 tgt2 inj2))
+    (v l:_)
+    (count size w res: _)
+ : Lemma 
+  (requires
+      map_group_footprint t1 fp1 /\
+      map_group_footprint t2 fp2 /\
+      map_group_choice_compatible t1 t2  /\
+    impl_serialize_map_group_post
+      count size l #t1 #fp1 #tgt1 #inj1 ps1 v w res)
+  (ensures
+    impl_serialize_map_group_post
+      count size l #(map_group_choice t1 t2) #(map_constraint_choice fp1 fp2) #(either tgt1 tgt2) #(inj1 && inj2) 
+        (mg_spec_choice ps1 ps2) (Inl v) w res)
+  [SMTPat
+      (impl_serialize_map_group_post
+        count size l #(map_group_choice t1 t2) #(map_constraint_choice fp1 fp2) #(either tgt1 tgt2) #(inj1 && inj2) 
+          (mg_spec_choice ps1 ps2) (Inl v) w res)]
+= ()
+
+let compose_choice_r
+    ([@@@erasable]t1: Ghost.erased det_map_group)
+    ([@@@erasable]tgt1: Type0)
+    ([@@@erasable] fp1: Ghost.erased map_constraint)
+    ([@@@erasable] inj1: Ghost.erased bool)
+    ([@@@erasable]ps1: Ghost.erased (mg_spec t1 fp1 tgt1 inj1))
+    ([@@@erasable]t2: Ghost.erased det_map_group)
+    ([@@@erasable]tgt2: Type0)
+    ([@@@erasable] fp2: Ghost.erased map_constraint)
+    ([@@@erasable] inj2: Ghost.erased bool)
+    ([@@@erasable]ps2: Ghost.erased (mg_spec t2 fp2 tgt2 inj2))
+    (v l:_)
+    (count size w res: _)
+ : Lemma 
+  (requires
+      map_group_footprint t1 fp1 /\
+      map_group_footprint t2 fp2 /\
+      map_group_choice_compatible t1 t2  /\
+    impl_serialize_map_group_post
+      count size l #t2 #fp2 #tgt2 #inj2 ps2 v w res)
+  (ensures
+    impl_serialize_map_group_post
+      count size l #(map_group_choice t1 t2) #(map_constraint_choice fp1 fp2) #(either tgt1 tgt2) #(inj1 && inj2) 
+        (mg_spec_choice ps1 ps2) (Inr v) w res)
+  [SMTPat
+      (impl_serialize_map_group_post
+        count size l #(map_group_choice t1 t2) #(map_constraint_choice fp1 fp2) #(either tgt1 tgt2) #(inj1 && inj2) 
+          (mg_spec_choice ps1 ps2) (Inr   v) w res)]
+= ()
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_map_group_choice
@@ -141,6 +204,7 @@ fn impl_serialize_map_group_choice
       Trade.rewrite_with_trade (rel_either r1 r2 c v) (r1 c1 (Inl?.v v));
       let res = i1 c1 out out_count out_size l;
       Trade.elim _ _;
+      // compose_choice t1 tgt1 fp1 inj1 ps1 t2 tgt2 fp2 inj2 ps2 v l ();
       res
     }
     norewrite
@@ -293,6 +357,7 @@ let cbor_map_length_disjoint_union_pat (m1 m2: cbor_map) : Lemma
 #push-options "--z3rlimit 32"
 
 #restart-solver
+#push-options "--z3rlimit_factor 4 --split_queries always --query_stats"
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_map_group_concat
     (#[@@@erasable]t1: Ghost.erased det_map_group)
@@ -825,7 +890,7 @@ let map_of_list_maps_to_nonempty_cons
   (map_of_list_maps_to_nonempty (map_of_list_cons k_eq k v m))
 = ()
 
-#push-options "--z3rlimit 256"
+#push-options "--z3rlimit 256 --fuel 1 --ifuel 1 --split_queries always"
 
 #restart-solver
 let impl_serialize_map_group_valid_map_zero_or_more_snoc_disjoint1

@@ -91,6 +91,7 @@ let validate_tot_nlist_recursive_progress
 
 #restart-solver
 
+#push-options "--z3rlimit_factor 4 --split_queries always"
 let validate_tot_nlist_recursive_overflow
   (p: parse_recursive_param)
   (v: bytes)
@@ -118,6 +119,7 @@ let validate_tot_nlist_recursive_overflow
   let Some (h, consumed) = parse p.parse_header (Seq.slice v off (Seq.length v)) in
   let offset = off + consumed in
   parse_nlist_recursive_bound_correct p (p.count h + (n - 1)) (Seq.slice v (offset) (Seq.length v))
+#pop-options
 
 #restart-solver
 
@@ -386,6 +388,7 @@ let synth_nlist_recursive_cons_injective
   (n: pos)
 : Lemma
   (C.synth_injective (synth_nlist_recursive_cons p n))
+  [SMTPat (C.synth_injective (synth_nlist_recursive_cons p n))]
 = ()
 
 let parse_nlist_recursive_cons
@@ -457,6 +460,7 @@ let synth_nlist_recursive_cons_recip_inverse
   (n: pos)
 : Lemma
   (C.synth_inverse (synth_nlist_recursive_cons p n) (synth_nlist_recursive_cons_recip s n))
+  [SMTPat (C.synth_inverse (synth_nlist_recursive_cons p n) (synth_nlist_recursive_cons_recip s n))]
 = ()
 
 let serialize_nlist_recursive_cons_payload
