@@ -61,7 +61,7 @@ jobs:
       - name: Read hash
         run: |
           hash="$(cat hash.txt)"
-          echo "hash=$hash >> $GITHUB_ENV
+          echo "hash=$hash" >> $GITHUB_ENV
       - uses: actions/checkout@master
         with:
           submodules: true
@@ -130,7 +130,7 @@ jobs:
       - name: Read hash
         run: |
           hash="$(cat hash.txt)"
-          echo "hash=$hash >> $GITHUB_ENV
+          echo "hash=$hash" >> $GITHUB_ENV
       - uses: actions/checkout@master
         with:
           submodules: true
@@ -199,7 +199,7 @@ jobs:
       - name: Read hash
         run: |
           hash="$(cat hash.txt)"
-          echo "hash=$hash >> $GITHUB_ENV
+          echo "hash=$hash" >> $GITHUB_ENV
       - uses: actions/checkout@master
         with:
           path: everparse
@@ -264,7 +264,7 @@ jobs:
       - name: Read hash
         run: |
           hash="$(cat hash.txt)"
-          echo "hash=$hash >> $GITHUB_ENV
+          echo "hash=$hash" >> $GITHUB_ENV
       - run: git config --global core.autocrlf input
       - uses: actions/checkout@master
         with:
@@ -353,7 +353,7 @@ jobs:
       - name: Read hash
         run: |
           hash="$(cat hash.txt)"
-          echo "hash=$hash >> $GITHUB_ENV
+          echo "hash=$hash" >> $GITHUB_ENV
       - uses: actions/checkout@master
         with:
           submodules: true
@@ -378,7 +378,7 @@ jobs:
       - name: Read hash
         run: |
           hash="$(cat hash.txt)"
-          echo "hash=$hash >> $GITHUB_ENV
+          echo "hash=$hash" >> $GITHUB_ENV
       - uses: actions/checkout@master
         with:
           submodules: true
@@ -408,7 +408,7 @@ jobs:
       - name: Read hash
         run: |
           hash="$(cat hash.txt)"
-          echo "hash=$hash >> $GITHUB_ENV
+          echo "hash=$hash" >> $GITHUB_ENV
       - uses: actions/checkout@master
         with:
           submodules: true
