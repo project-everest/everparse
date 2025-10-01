@@ -595,11 +595,11 @@ let tot_parse_leaf_eq (input: bytes) : Lemma
   [SMTPat (parse tot_parse_leaf input)]
 = tot_parse_dtuple2_eq' tot_parse_header tot_parse_leaf_content parse_header parse_leaf_content input
 
-let remaining_data_items
-  (l: leaf)
+let remaining_data_items_header
+  (h: header)
 : Tot nat
-= match l with
-  | (| (| b, long_arg |), _ |) ->
+= match h with
+  | (| b, long_arg |) ->
       if b.major_type = cbor_major_type_array
       then
         U64.v (argument_as_uint64 b long_arg)
@@ -610,6 +610,12 @@ let remaining_data_items
       else if b.major_type = cbor_major_type_tagged
       then 1
       else 0
+
+let remaining_data_items
+  (l: leaf)
+: Tot nat
+= match l with
+  | (| h, _ |) -> remaining_data_items_header h
 
 let rec pair_list_of_list
   (t: Type)
@@ -1090,13 +1096,17 @@ let tot_serialize_leaf_content
 let serialize_leaf_content
   (h: header)
 : Tot (serializer (parse_leaf_content h))
-= serialize_ext (parser_of_tot_parser (tot_parse_leaf_content h)) (serializer_of_tot_serializer (tot_serialize_leaf_content h)) (parse_leaf_content h)
+=  match h with
+  | (| b, long_arg |) ->
+      if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
+      then serialize_weaken _ (serialize_synth _ (LeafContentSeq ()) (serialize_filter (serialize_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) (lseq_utf8_correct b.major_type _)) LeafContentSeq?.v ())
+      else serialize_weaken _ (serialize_synth _ (LeafContentEmpty ()) serialize_empty LeafContentEmpty?.v ())
 
 let tot_serialize_leaf : tot_serializer tot_parse_leaf =
   tot_serialize_dtuple2 tot_serialize_header tot_serialize_leaf_content
 
 let serialize_leaf : serializer parse_leaf =
-  serialize_ext (parser_of_tot_parser tot_parse_leaf) (serializer_of_tot_serializer tot_serialize_leaf) parse_leaf
+  serialize_dtuple2 serialize_header serialize_leaf_content
 
 (* Construction of the serializer, by "step indexing" over the "level"
    (in fact the depth) of the raw data item. *)

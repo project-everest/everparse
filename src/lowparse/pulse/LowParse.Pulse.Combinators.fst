@@ -1172,6 +1172,46 @@ ensures exists* v' .
     (pts_to_serialized (serialize_nondep_then s1 (serialize_nondep_then s2 s3)) x #pm v')
 }
 
+ghost fn pts_to_serialized_nondep_then_assoc_r2l
+  (#t1: Type0)
+  (#t2: Type0)
+  (#t3: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#p2: (parser k2 (t2)))
+  (s2: serializer (p2) { k2.parser_kind_subkind == Some ParserStrong })
+  (#k3: parser_kind)
+  (#p3: (parser k3 (t3)))
+  (s3: serializer (p3))
+  (x: slice byte)
+  (#pm: perm)
+  (#v: (t1 & (t2 & t3)))
+requires
+  pts_to_serialized (serialize_nondep_then s1 (serialize_nondep_then s2 s3)) x #pm v
+ensures exists* v' .
+  pts_to_serialized (serialize_nondep_then (serialize_nondep_then s1 s2) s3) x #pm v' **
+  Trade.trade
+    (pts_to_serialized (serialize_nondep_then (serialize_nondep_then s1 s2) s3) x #pm v')
+    (pts_to_serialized (serialize_nondep_then s1 (serialize_nondep_then s2 s3)) x #pm v) **
+  pure (v' == ((fst v, fst (snd v)), snd (snd v)))
+{
+  let v1 = fst v;
+  let v2 = fst (snd v);
+  let v3 = snd (snd v);
+  serialize_nondep_then_eq s1 (serialize_nondep_then s2 s3) v;
+  serialize_nondep_then_eq s2 s3 (snd v);
+  let v12 = (v1, v2);
+  serialize_nondep_then_eq s1 s2 v12;
+  let v' = (v12, v3);
+  serialize_nondep_then_eq (serialize_nondep_then s1 s2) s3 v';
+  Seq.append_assoc (serialize s1 v1) (serialize s2 v2) (serialize s3 v3);
+  Trade.rewrite_with_trade
+    (pts_to_serialized (serialize_nondep_then s1 (serialize_nondep_then s2 s3)) x #pm v)
+    (pts_to_serialized (serialize_nondep_then (serialize_nondep_then s1 s2) s3) x #pm v')
+}
+
 ghost fn pts_to_serialized_dtuple2_as_nondep_then
   (#t1: Type0)
   (#t2: t1 -> Type0)
@@ -1394,6 +1434,74 @@ fn pts_to_serialized_ext_nondep_then_left
     pts_to_serialized_ext_nondep_then_left' s2 s1 s3 input;
   };
 }
+
+ghost
+fn pts_to_serialized_ext_nondep_then_right'
+  (#t1 #t2 #t3: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2)
+  (#k3: parser_kind)
+  (#p3: parser k3 t3)
+  (s3: serializer p3)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: (t1 & t2))
+  requires pts_to_serialized (serialize_nondep_then s1 s2) input #pm v ** pure (
+    pts_to_serialized_ext_trade_gen_precond p2 p3
+  )
+  ensures exists* v13 .
+    pts_to_serialized (serialize_nondep_then s1 s3) input #pm v13 **
+    pure (t2 == t3 /\
+      v == v13
+    )
+{
+  let res = ghost_split_nondep_then s1 s2 input;
+  pts_to_serialized_ext s2 s3 (snd res);
+  join_nondep_then s1 (fst res) s3 (snd res) input;
+}
+
+ghost
+fn pts_to_serialized_ext_nondep_then_right
+  (#t1 #t2 #t3: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2)
+  (#k3: parser_kind)
+  (#p3: parser k3 t3)
+  (s3: serializer p3)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: (t1 & t2))
+  requires pts_to_serialized (serialize_nondep_then s1 s2) input #pm v ** pure (
+    pts_to_serialized_ext_trade_gen_precond p2 p3
+  )
+  ensures exists* v13 .
+    pts_to_serialized (serialize_nondep_then s1 s3) input #pm v13 ** trade (pts_to_serialized (serialize_nondep_then s1 s3) input #pm v13) (pts_to_serialized (serialize_nondep_then s1 s2) input #pm v) **
+    pure (t2 == t3 /\
+      v == v13
+    )
+{
+  pts_to_serialized_ext_nondep_then_right' s1 s2 s3 input;
+  with v13 . assert (pts_to_serialized (serialize_nondep_then s1 s3) input #pm v13);
+  intro
+    (Trade.trade
+      (pts_to_serialized (serialize_nondep_then s1 s3) input #pm v13)
+      (pts_to_serialized (serialize_nondep_then s1 s2) input #pm v)
+    )
+    #emp
+    fn _
+  {
+    pts_to_serialized_ext_nondep_then_right' s1 s3 s2 input;
+  };
+}
+
 
 inline_for_extraction
 fn nondep_then_fst

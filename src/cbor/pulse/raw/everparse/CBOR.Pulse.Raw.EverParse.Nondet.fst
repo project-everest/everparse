@@ -38,6 +38,37 @@ let impl_equiv_t
     )
 
 inline_for_extraction
+let impl_equiv_hd_t
+  (bound: nat)
+  (equiv: (x1: raw_data_item) -> (x2: raw_data_item { raw_data_item_size x1 + raw_data_item_size x2 <= bound }) -> option bool)
+=
+  (n1: Ghost.erased nat) ->
+  (l1: S.slice byte) ->
+  (n2: Ghost.erased nat) ->
+  (l2: S.slice byte) ->
+  (#p1: perm) ->
+  (#gl1: Ghost.erased (nlist n1 raw_data_item)) ->
+  (#p2: perm) ->
+  (#gl2: Ghost.erased (nlist n2 raw_data_item)) ->
+  stt (option bool)
+    (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
+      pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2 **
+      pure (
+        n1 > 0 /\ n2 > 0 /\
+        raw_data_item_size (List.Tot.hd gl1) + raw_data_item_size (List.Tot.hd gl2) <= bound
+      )
+    )
+    (fun res ->
+pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
+      pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2 **
+      pure (
+        n1 > 0 /\ n2 > 0 /\
+        raw_data_item_size (List.Tot.hd gl1) + raw_data_item_size (List.Tot.hd gl2) <= bound /\
+        res == equiv (List.Tot.hd gl1) (List.Tot.hd gl2)
+      )
+    )
+
+inline_for_extraction
 fn impl_check_equiv_list
   (n1: SZ.t)
   (l1: S.slice byte)
@@ -48,7 +79,7 @@ fn impl_check_equiv_list
   (#p2: perm)
   (#gl2: Ghost.erased (nlist (SZ.v n2) raw_data_item))
   (#equiv: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item { raw_data_item_size x1 + raw_data_item_size x2 <= list_sum raw_data_item_size gl1 + list_sum raw_data_item_size gl2 }) -> option bool))
-  (impl_equiv: impl_equiv_t (list_sum raw_data_item_size gl1 + list_sum raw_data_item_size gl2) equiv)
+  (impl_equiv: impl_equiv_hd_t (list_sum raw_data_item_size gl1 + list_sum raw_data_item_size gl2) equiv)
 requires
   pts_to_serialized (serialize_nlist (SZ.v n1) serialize_raw_data_item) l1 #p1 gl1 **
   pts_to_serialized (serialize_nlist (SZ.v n2) serialize_raw_data_item) l2 #p2 gl2
@@ -97,37 +128,18 @@ ensures
         check_equiv_list gl1 gl2 equiv == (if res = Some true then check_equiv_list gl1' gl2' equiv else res)
       )
     {
-      let n = !pn;
       let l1' = !pl1;
-      with gl1' . assert (pts_to_serialized (serialize_nlist (SZ.v n) serialize_raw_data_item) l1' #p1 gl1');
-      nlist_cons_as_nondep_then serialize_raw_data_item (SZ.v n) l1';
-      Classical.forall_intro parse_raw_data_item_eq;
-      pts_to_serialized_ext_nondep_then_left
-        serialize_raw_data_item
-        (serialize_synth _ synth_raw_data_item (serialize_dtuple2 serialize_header serialize_content) synth_raw_data_item_recip ())
-        (serialize_nlist (SZ.v n - 1) serialize_raw_data_item)
-        l1';
-      Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) serialize_raw_data_item) l1' #p1 gl1');
-      pts_to_serialized_synth_l2r_nondep_then_left
-        (serialize_dtuple2 serialize_header serialize_content)
-        synth_raw_data_item
-        synth_raw_data_item_recip
-        (serialize_nlist (SZ.v n - 1) serialize_raw_data_item)
-        l1';
-      Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) serialize_raw_data_item) l1' #p1 gl1');
-      with w1 . assert (
-        pts_to_serialized (serialize_nondep_then (serialize_dtuple2 serialize_header serialize_content) (serialize_nlist (SZ.v n - 1) serialize_raw_data_item)) l1' #p1 w1
-      );
-      pts_to_serialized_dtuple2_nondep_then_assoc_l2r
-        serialize_header
-        serialize_content
-        (serialize_nlist (SZ.v n - 1) serialize_raw_data_item)
-        l1';
-      Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) serialize_raw_data_item) l1' #p1 gl1');
       let l2' = !pl2;
-      with gl2' . assert (pts_to_serialized (serialize_nlist (SZ.v n) serialize_raw_data_item) l2' #p2 gl2');
-      nlist_cons_as_nondep_then serialize_raw_data_item (SZ.v n) l2';
-      admit ()
+      let r = impl_equiv _ l1' _ l2';
+      if (r <> Some false) {
+        pres := r
+      } else {
+        let n = !pn;
+        let n' : SZ.t = SZ.sub n 1sz;
+        pts_to_serialized_nlist_raw_data_item_head_header' l1' (SZ.v n);
+        pts_to_serialized_nlist_raw_data_item_head_header' l2' (SZ.v n);
+        admit ()
+      }
     };
     Trade.elim _ (pts_to_serialized (serialize_nlist (SZ.v n1) serialize_raw_data_item) l1 #p1 gl1);
     Trade.elim _ (pts_to_serialized (serialize_nlist (SZ.v n1) serialize_raw_data_item) l2 #p2 gl2);

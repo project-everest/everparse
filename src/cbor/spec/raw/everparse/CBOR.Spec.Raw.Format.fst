@@ -173,6 +173,8 @@ let serialize_cbor_list_nil () = ()
 let serialize_cbor_list_cons a q =
   LPL.tot_serialize_nlist_cons (List.Tot.length q) F.tot_serialize_raw_data_item a q
 
+#push-options "--z3rlimit 32"
+
 let serialize_array_eq
   (len1: raw_uint64)
   (x1: list raw_data_item {List.Tot.length x1 == U64.v len1.value})
@@ -192,6 +194,8 @@ let serialize_array_eq
   let v1' = F.synth_raw_data_item_recip v1 in
   LP.serialize_dtuple2_eq F.serialize_header F.serialize_content v1';
   LowParse.Spec.VCList.tot_serialize_nlist_serialize_nlist (List.Tot.length x1) F.tot_serialize_raw_data_item x1
+
+#pop-options
 
 let serialize_cbor_array_length_gt_list len l =
   serialize_array_eq len l;
