@@ -535,9 +535,64 @@ jobs:
         run: |
           docker run ghcr.io/${{ github.repository }}:_dzomo_release_${{ github.run_id }} '[[ "$(git rev-parse HEAD)" = '"$(cat hash.txt)"' ]] && make -j$(nproc) test'
 
+  ci-linux:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download hash
+        uses: actions/download-artifact@v4
+        with:
+          name: hash
+      - name: Read hash
+        run: |
+          hash="$(cat hash.txt)"
+          echo "hash=$hash" >> $GITHUB_ENV
+      - uses: actions/checkout@master
+        with:
+          submodules: true
+          ref: ${{ env.hash }}
+          path: everparse
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5
+      - name: Everparse CI
+        run: |
+          make -C everparse -j$(nproc) -k test
+
+  ci-macos:
+    needs: prepare
+    runs-on: macOS-latest
+    steps:
+      - name: Download hash
+        uses: actions/download-artifact@v4
+        with:
+          name: hash
+      - name: Read hash
+        run: |
+          hash="$(cat hash.txt)"
+          echo "hash=$hash" >> $GITHUB_ENV
+      - uses: actions/checkout@master
+        with:
+          submodules: true
+          ref: ${{ env.hash }}
+          path: everparse
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5
+      - name: Install Homebrew tools
+        run: |
+          brew install bash gnu-getopt make gnu-time
+      - name: Test
+        run: |
+          nproc=$(sysctl -n hw.logicalcpu)
+          if [[ $nproc -gt 8 ]] ; then nproc=8 ; fi
+          cd everparse && gmake -j$nproc -k all test
+
   push-tag:
     runs-on: ubuntu-latest
-    needs: [test-interop-macos, test-interop-linux, test-interop-windows, test-docker]
+    needs: [test-interop-macos, test-interop-linux, test-interop-windows, test-docker, ci-linux, ci-macos]
     steps:
       - name: Set up git
         run: |
