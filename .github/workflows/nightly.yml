@@ -32,12 +32,12 @@ jobs:
           make -C opt -j$(nproc) advance &&
           if ! git diff --exit-code -- opt/hashes.Makefile ; then git add -u opt/hashes.Makefile && git commit -m 'Update hashes' ; fi &&
           git diff --exit-code
-      - name: Generate snapshot
-        run: |
-          make ADMIT=1 cbor-snapshot 3d-doc-snapshot -kj$(nproc) && make ADMIT=1 cose-snapshot -kj$(nproc) &&
-          git add doc/3d-snapshot src/cbor/pulse/det/c src/cbor/pulse/det/rust src/cose/c src/cose/rust &&
-          if ! git diff --staged --exit-code ; then git commit -m "3D doc, CBOR, COSE snapshot" ; fi &&
-          git diff --exit-code
+      # - name: Generate snapshot
+      #   run: |
+      #     make ADMIT=1 cbor-snapshot 3d-doc-snapshot -kj$(nproc) && make ADMIT=1 cose-snapshot -kj$(nproc) &&
+      #     git add doc/3d-snapshot src/cbor/pulse/det/c src/cbor/pulse/det/rust src/cose/c src/cose/rust &&
+      #     if ! git diff --staged --exit-code ; then git commit -m "3D doc, CBOR, COSE snapshot" ; fi &&
+      #     git diff --exit-code
       - name: Push new branch
         run: |
           git checkout -b _dzomo_upgrade_${{ github.run_id }} &&
