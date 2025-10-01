@@ -525,31 +525,24 @@ jobs:
     needs: [advance-hashes]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
-        with:
-          submodules: true
-          ref: _dzomo_upgrade_${{ github.run_id }}
       - name: Download hash
         uses: actions/download-artifact@v4
         with:
           name: hash
-      - name: Check hash
-        run: |
-          expected="$(cat hash.txt)"
-          real=$(git rev-parse HEAD)
-          echo "Expected: $expected"
-          echo "Real: $real"
-          [[ "$expected" = "$real" ]]
       - name: Record hash and remove hash file
         run: |
           echo "updated_sha=$(cat hash.txt)" >> $GITHUB_ENV && rm hash.txt
+      - uses: actions/checkout@master
+        with:
+          submodules: true
+          fetch-depth: 0
+          ref: ${{ env.updated_sha }}
       - name: create pull request
-        if: ${{ env.updated_sha != github.sha }}
         uses: peter-evans/create-pull-request@v7
         with:
           title: "[CI] upgrade hashes and snapshots"
           base: ${{ github.ref_name }}
+          branch: _dzomo_pr_${{ github.run_id }}
       - name: Delete branch
-        if: ${{ env.updated_sha == github.sha }}
         run: |
-          git branch --unset-upstream && git push origin --delete _dzomo_upgrade_${{ github.run_id }}
+          if [[ "$(git rev-parse origin/_dzomo_upgrade_${{ github.run_id }})" = "$updated_sha" ]] ; then git push origin --delete _dzomo_upgrade_${{ github.run_id }} ; fi
