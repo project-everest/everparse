@@ -538,11 +538,8 @@ jobs:
           fetch-depth: 0
           ref: ${{ env.updated_sha }}
       - name: create pull request
-        uses: peter-evans/create-pull-request@v7
-        with:
-          title: "[CI] upgrade hashes and snapshots"
-          base: ${{ github.ref_name }}
-          branch: _dzomo_pr_${{ github.run_id }}
+        run: |
+          if [[ "$updated_sha" != ${{ github.sha }} ]] ; then git checkout -b _dzomo_pr_${{ github.run_id }} && gh pr create --base ${{ github.ref_name }} ; fi
       - name: Delete branch
         run: |
           if [[ "$(git rev-parse origin/_dzomo_upgrade_${{ github.run_id }})" = "$updated_sha" ]] ; then git push origin --delete _dzomo_upgrade_${{ github.run_id }} ; fi
