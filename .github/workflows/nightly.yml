@@ -539,7 +539,7 @@ jobs:
           ref: ${{ env.updated_sha }}
       - name: create pull request
         run: |
-          if [[ "$updated_sha" != ${{ github.sha }} ]] ; then git checkout -b _dzomo_pr_${{ github.run_id }} && gh pr create --base ${{ github.ref_name }} --title "Update hashes and snapshots" --fill-verbose ; fi
+          if [[ "$updated_sha" != ${{ github.sha }} ]] ; then git checkout -b _dzomo_pr_${{ github.run_id }} && git push --set-upstream origin _dzomo_pr_${{ github.run_id }} && gh pr create --base ${{ github.ref_name }} --title "Update hashes and snapshots" --fill-verbose ; fi
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Delete branch
