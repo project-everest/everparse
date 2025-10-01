@@ -540,16 +540,16 @@ jobs:
           echo "Expected: $expected"
           echo "Real: $real"
           [[ "$expected" = "$real" ]]
-      - name: Record hash
+      - name: Record hash and remove hash file
         run: |
-          echo "updated_sha=$(cat hash.txt)" >> $GITHUB_ENV
+          echo "updated_sha=$(cat hash.txt)" >> $GITHUB_ENV && rm hash.txt
       - name: create pull request
         if: ${{ env.updated_sha != github.sha }}
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v7
         with:
           title: "[CI] upgrade hashes and snapshots"
+          base: ${{ github.ref_name }}
       - name: Delete branch
         if: ${{ env.updated_sha == github.sha }}
         run: |
-          git branch --unset-upstream
-          git push origin --delete _dzomo_upgrade_${{ github.run_id }}
+          git branch --unset-upstream && git push origin --delete _dzomo_upgrade_${{ github.run_id }}
