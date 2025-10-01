@@ -540,6 +540,8 @@ jobs:
       - name: create pull request
         run: |
           if [[ "$updated_sha" != ${{ github.sha }} ]] ; then git checkout -b _dzomo_pr_${{ github.run_id }} && gh pr create --base ${{ github.ref_name }} ; fi
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Delete branch
         run: |
           if [[ "$(git rev-parse origin/_dzomo_upgrade_${{ github.run_id }})" = "$updated_sha" ]] ; then git push origin --delete _dzomo_upgrade_${{ github.run_id }} ; fi
