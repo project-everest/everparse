@@ -25,7 +25,7 @@ jobs:
           path: everparse
       - name: Everparse CI
         run: |
-          make -C everparse -j$(nproc) -k ci branchname=${{ github.head_ref || github.ref_name }}
+          ADMIT_LIBS=1 make -C everparse -j$(nproc) -k ci branchname=${{ github.head_ref || github.ref_name }}
         env:
           DZOMO_GITHUB_TOKEN: ${{ secrets.DZOMO_GITHUB_TOKEN }}
 
@@ -44,10 +44,27 @@ jobs:
             make -j$(nproc)
             git checkout Test.rfc
 
+  ci-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5
+      - uses: actions/checkout@master
+        with:
+          submodules: true
+          path: everparse
+      - name: Everparse CI
+        run: |
+          make -C everparse -j$(nproc) -k all branchname=${{ github.head_ref || github.ref_name }}
+        env:
+          DZOMO_GITHUB_TOKEN: ${{ secrets.DZOMO_GITHUB_TOKEN }}
+
   # Branch protection points here.
   ciok:
     runs-on: ubuntu-latest
-    needs: ci
+    needs: [ci, ci-build]
     if: ${{ cancelled() || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'failure') }}
     steps:
       # Note: we only run on failure. Otherwise this is skipped, which counts

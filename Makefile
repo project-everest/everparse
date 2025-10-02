@@ -50,6 +50,10 @@ $(FSTAR_DEP_FILE): $(NEED_FSTAR) $(NEED_KRML) $(NEED_PULSE)
 
 $(ALL_CHECKED_FILES): %.checked: $(NEED_FSTAR) $(NEED_Z3) $(NEED_KRML) $(NEED_PULSE)
 
+ifeq (1,$(ADMIT_LIBS))
+$(ALL_CHECKED_FILES): ADMIT := 1
+endif
+
 lowparse: $(filter-out src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
 
 ifeq (,$(NO_PULSE))

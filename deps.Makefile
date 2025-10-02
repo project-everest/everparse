@@ -95,8 +95,6 @@ endif
 endif
 NEED_Z3_TESTGEN := $(NEED_Z3)
 ifeq (1,$(ADMIT))
-OTHERFLAGS += --admit_smt_queries true
-export OTHERFLAGS
 NEED_Z3 :=
 endif
 export PATH := $(z3_dir):$(PATH)
