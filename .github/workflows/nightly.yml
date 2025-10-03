@@ -545,3 +545,47 @@ jobs:
       - name: Delete branch
         run: |
           if [[ "$(git rev-parse origin/_dzomo_upgrade_${{ github.run_id }})" = "$updated_sha" ]] ; then git push origin --delete _dzomo_upgrade_${{ github.run_id }} ; fi
+
+  deps:
+    runs-on: ubuntu-latest
+    needs: create-pr
+    steps:
+      - name: Download hash
+        uses: actions/download-artifact@v4
+        with:
+          name: hash
+      - name: Record hash and remove hash file
+        run: |
+          echo "updated_sha=$(cat hash.txt)" >> $GITHUB_ENV && rm hash.txt
+      - uses: actions/checkout@master
+        with:
+          submodules: true
+          ref: ${{ env.updated_sha }}
+          sparse-checkout: |
+            Dockerfile
+            deps.Makefile
+            opt/Makefile
+            opt/hashes.Makefile
+            src/package/start-code-server.sh
+      - uses: actions/cache/restore@v4
+        id: cache
+        with:
+          path: deps.tgz
+          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile') }}
+          lookup-only: true
+          fail-on-cache-miss: false
+      - name: Build dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          rm -rf .git && docker build -t dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile') }} --pull --target deps .
+      - name: Save image
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          docker save dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile') }} | gzip > deps.tgz
+      - name: Upload image into cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            deps.tgz
+          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile') }}
