@@ -50,8 +50,12 @@ $(FSTAR_DEP_FILE): $(NEED_FSTAR) $(NEED_KRML) $(NEED_PULSE)
 
 $(ALL_CHECKED_FILES): %.checked: $(NEED_FSTAR) $(NEED_Z3) $(NEED_KRML) $(NEED_PULSE)
 
-ifeq (1,$(ADMIT_LIBS))
-$(ALL_CHECKED_FILES): ADMIT := 1
+ifeq (1,$(ADMIT_LOWPARSE))
+$(filter src/lowparse/%,$(ALL_CHECKED_FILES)): ADMIT := 1
+endif
+
+ifeq (1,$(ADMIT_CBOR_CDDL))
+$(filter src/cbor/% src/cddl/%,$(ALL_CHECKED_FILES)): ADMIT := 1
 endif
 
 lowparse: $(filter-out src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
@@ -248,8 +252,6 @@ cose-test: cose-extract-test cose-extracted-test
 cddl-test: cddl cddl-unit-tests
 
 .PHONY: cddl-test
-
-ci: test 3d-doc-ci
 
 # cbor needed because we regenerate its Rust documentation
 3d-doc-ci: 3d-doc-test cbor
