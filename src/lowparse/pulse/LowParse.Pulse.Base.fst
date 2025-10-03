@@ -40,7 +40,7 @@ ghost
 fn pts_to_serialized_length
   (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm: perm) (#v: t)
   requires (pts_to_serialized s input #pm v)
-  ensures (pts_to_serialized s input #pm v ** pure (Seq.length (bare_serialize s v) == SZ.v (len input)))
+  ensures (pts_to_serialized s input #pm v ** pure (Seq.length (serialize s v) == SZ.v (len input)))
 {
   unfold (pts_to_serialized s input #pm v);
   pts_to_len input;

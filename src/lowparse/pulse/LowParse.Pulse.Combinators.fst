@@ -1064,6 +1064,36 @@ fn split_nondep_then
   (input1, input2)
 }
 
+inline_for_extraction
+fn split_nondep_then'
+  (#t1 #t2: Type0)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (j1: jumper p1)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (t1 & t2))
+  requires pts_to_serialized (serialize_nondep_then s1 s2) input #pm v
+  returns res: (slice byte & slice byte)
+  ensures (
+  let (left, right) = res in
+  pts_to_serialized s1 left #pm (fst v) **
+  pts_to_serialized s2 right #pm (snd v) **
+  trade (pts_to_serialized s1 left #pm (fst v) **
+  pts_to_serialized s2 right #pm (snd v))
+    (pts_to_serialized (serialize_nondep_then s1 s2) input #pm v)
+  )
+{
+  let (left, right) = split_nondep_then s1 j1 s2 input;
+  unfold (split_nondep_then_post s1 s2 input pm v (left, right));
+  unfold (split_nondep_then_post' s1 s2 input pm v left right);
+  (left, right)
+}
+
 ghost fn ghost_split_nondep_then
   (#t1 #t2: Type0)
   (#k1: parser_kind)

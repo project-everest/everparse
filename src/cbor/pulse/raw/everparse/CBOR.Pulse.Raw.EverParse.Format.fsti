@@ -28,6 +28,18 @@ val jump_leaf
   (sq: squash (SZ.fits_u64))
 : Tot (jumper parse_leaf)
 
+val impl_remaining_data_items_header
+  (bound: Ghost.erased SZ.t)
+  (h: header)
+: Pure SZ.t
+  (requires
+    SZ.fits_u64 /\
+    remaining_data_items_header h <= SZ.v bound
+  )
+  (ensures fun res ->
+    SZ.v res == remaining_data_items_header h
+  )
+
 val jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
   jump_recursive_step_count #parse_raw_data_item_param serialize_raw_data_item_param
 
@@ -174,11 +186,11 @@ val pts_to_serialized_nlist_raw_data_item_head_header'
   (n: pos)
   (#pm: perm)
   (#va: LowParse.Spec.VCList.nlist n raw_data_item)
-: stt_ghost unit emp_inames
+: stt_ghost (Ghost.erased header) emp_inames
 (requires
   pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n serialize_raw_data_item) a #pm va
 )
-(ensures fun _ -> exists* (h: header) v' .
+(ensures fun h -> exists* v' .
   pts_to_serialized
     (LowParse.Spec.Combinators.serialize_nondep_then
       serialize_header
@@ -205,7 +217,7 @@ val pts_to_serialized_nlist_raw_data_item_head_header'
       )
       a #pm v'
     )
-    (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va) **
+    (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n serialize_raw_data_item) a #pm va) **
   pure (
     pts_to_serialized_nlist_raw_data_item_head_header'_post n va h v'
   )

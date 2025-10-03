@@ -808,6 +808,34 @@ fn validate_recursive_step_count_leaf (_: squash SZ.fits_u64) :
   }
 }
 
+let impl_remaining_data_items_header
+  (bound: Ghost.erased SZ.t)
+  (h: header)
+: Pure SZ.t
+  (requires
+    SZ.fits_u64 /\
+    remaining_data_items_header h <= SZ.v bound
+  )
+  (ensures fun res ->
+    SZ.v res == remaining_data_items_header h
+  )
+= 
+  let typ = get_header_major_type h in
+  if (typ = cbor_major_type_array)
+  then
+    let arg64 = get_header_argument_as_uint64 h in
+    SZ.uint64_to_sizet arg64
+  else if (typ = cbor_major_type_map)
+  then
+    let arg64 = get_header_argument_as_uint64 h in
+    let arg = SZ.uint64_to_sizet arg64 in
+    SZ.add arg arg
+  else if (typ = cbor_major_type_tagged)
+  then
+    1sz
+  else
+    0sz
+
 fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
   jump_recursive_step_count #parse_raw_data_item_param serialize_raw_data_item_param
 =
@@ -828,22 +856,7 @@ fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
     (pts_to_serialized serialize_header input1 #pm (dfst va) ** pts_to_serialized (serialize_leaf_content (dfst va)) input2 #pm (dsnd va))
     (pts_to_serialized (serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
   elim_trade _ _;
-  let typ = get_header_major_type h;
-  if (typ = cbor_major_type_array) {
-    let arg64 = get_header_argument_as_uint64 h;
-    SZ.uint64_to_sizet arg64
-  }
-  else if (typ = cbor_major_type_map) {
-    let arg64 = get_header_argument_as_uint64 h;
-    let arg = SZ.uint64_to_sizet arg64;
-    SZ.add arg arg
-  }
-  else if (typ = cbor_major_type_tagged) {
-    1sz
-  }
-  else {
-    0sz
-  }
+  impl_remaining_data_items_header bound h
 }
 
 inline_for_extraction
@@ -1033,6 +1046,9 @@ fn get_map_payload
   get_map_payload' input v
 }
 
+#push-options "--z3rlimit 32"
+#restart-solver
+
 ghost fn pts_to_serialized_nlist_raw_data_item_head_header
   (a: slice byte)
   (n: pos)
@@ -1112,9 +1128,6 @@ ensures exists* (l: leaf) (h: header) v' .
   Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
 }
 
-#push-options "--z3rlimit 32"
-#restart-solver
-
 ghost fn pts_to_serialized_nlist_raw_data_item_head_header'
   (a: slice byte)
   (n: pos)
@@ -1122,7 +1135,8 @@ ghost fn pts_to_serialized_nlist_raw_data_item_head_header'
   (#va: LowParse.Spec.VCList.nlist n raw_data_item)
 requires
   pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n serialize_raw_data_item) a #pm va
-ensures exists* (h: header) v' .
+returns h: Ghost.erased header
+ensures exists* v' .
   pts_to_serialized
     (LowParse.Spec.Combinators.serialize_nondep_then
       serialize_header
@@ -1149,7 +1163,7 @@ ensures exists* (h: header) v' .
       )
       a #pm v'
     )
-    (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va) **
+    (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n serialize_raw_data_item) a #pm va) **
   pure (
     pts_to_serialized_nlist_raw_data_item_head_header'_post n va h v'
   )
@@ -1193,7 +1207,7 @@ ensures exists* (h: header) v' .
     )
     a;
   Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
-  ()
+  h
 }
 
 #pop-options

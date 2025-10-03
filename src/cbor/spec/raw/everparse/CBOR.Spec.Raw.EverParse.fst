@@ -549,8 +549,8 @@ type leaf_content
 let tot_parse_leaf_content
   (h: header)
 : tot_parser parse_content_kind (leaf_content h)
-= match h with
-  | (| b, long_arg |) ->
+= let b = dfst h in
+  let long_arg = dsnd h in
       if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
       then tot_weaken _ (tot_parse_filter (tot_parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) (lseq_utf8_correct (dfst h).major_type _) `tot_parse_synth` LeafContentSeq ())
       else tot_weaken _ (tot_parse_empty `tot_parse_synth` LeafContentEmpty ())
@@ -558,8 +558,8 @@ let tot_parse_leaf_content
 let parse_leaf_content
   (h: header)
 : parser parse_content_kind (leaf_content h)
-= match h with
-  | (| b, long_arg |) ->
+= let b = dfst h in
+  let long_arg = dsnd h in
       if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
       then weaken _ (parse_filter (parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) (lseq_utf8_correct (dfst h).major_type _) `parse_synth` LeafContentSeq ())
       else weaken _ (parse_empty `parse_synth` LeafContentEmpty ())
@@ -570,8 +570,8 @@ let tot_parse_leaf_content_eq
 : Lemma
   (ensures (parse (tot_parse_leaf_content h) input == parse (parse_leaf_content h) input))
   [SMTPat (parse (tot_parse_leaf_content h) input)]
-= match h with
-  | (| b, long_arg |) ->
+= let b = dfst h in
+  let long_arg = dsnd h in
       if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
       then begin
         tot_parse_filter_eq (tot_parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) (lseq_utf8_correct (dfst h).major_type _) input;
@@ -631,9 +631,8 @@ let rec list_of_pair_list
   (nb_pairs: nat)
   (x: nlist nb_pairs (t & t))
 : Tot (nlist (nb_pairs + nb_pairs) t)
-= match x with
-  | [] -> []
-  | (a, b) :: q -> a :: b :: list_of_pair_list t (nb_pairs - 1) q
+= CBOR.Spec.Util.list_of_pair_list_length x;
+  CBOR.Spec.Util.list_of_pair_list x
 
 let rec list_of_pair_list_of_list
   (#t: Type)
