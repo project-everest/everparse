@@ -68,7 +68,7 @@ jobs:
           { gunzip < deps.tgz | docker load ; } && rm deps.tgz
       - name: Upload EverParse in a container
         run: |
-          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/fstar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
       - name: Build LowParse without proofs
         run: |
          docker exec $container make -kj$(nproc) lowparse ADMIT=1
@@ -99,7 +99,7 @@ jobs:
           { gunzip < deps.tgz | docker load ; } && rm deps.tgz
       - name: Upload EverParse in a container
         run: |
-          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/fstar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
       - name: Build LowParse
         run: |
           docker exec $container make -kj$(nproc) lowparse
@@ -124,7 +124,7 @@ jobs:
           { gunzip < deps.tgz | docker load ; } && rm deps.tgz
       - name: Upload EverParse in a container
         run: |
-          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/fstar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
       - name: Download lowparse proofs
         uses: actions/download-artifact@v4
         with:
@@ -156,7 +156,7 @@ jobs:
           { gunzip < deps.tgz | docker load ; } && rm deps.tgz
       - name: Upload EverParse in a container
         run: |
-          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/fstar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
       - name: Download lowparse proofs
         uses: actions/download-artifact@v4
         with:
@@ -188,7 +188,7 @@ jobs:
           { gunzip < deps.tgz | docker load ; } && rm deps.tgz
       - name: Upload EverParse in a container
         run: |
-          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/fstar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
       - name: Download lowparse proofs
         uses: actions/download-artifact@v4
         with:
