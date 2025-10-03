@@ -216,7 +216,7 @@ else
 cddl-tool:
 endif
 
-cddl: cbor-interface cddl-spec cddl-tool
+cddl: cbor cbor-interface cddl-spec cddl-tool
 
 .PHONY: cddl-spec cddl-tool
 
