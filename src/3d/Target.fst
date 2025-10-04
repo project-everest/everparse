@@ -833,7 +833,7 @@ let rec print_as_c_type (t:typ) : ML string =
 
 let error_code_macros = 
    //To be kept consistent with EverParse3d.ErrorCode.error_reason_of_result
-   "#define EVERPARSE_SUCCESS 0ul
+   "#define EVERPARSE_SUCCESS 0ul\n\
     #define EVERPARSE_ERROR_GENERIC 1uL\n\
     #define EVERPARSE_ERROR_NOT_ENOUGH_DATA 2uL\n\
     #define EVERPARSE_ERROR_IMPOSSIBLE 3uL\n\
@@ -841,7 +841,7 @@ let error_code_macros =
     #define EVERPARSE_ERROR_ACTION_FAILED 5uL\n\
     #define EVERPARSE_ERROR_CONSTRAINT_FAILED 6uL\n\
     #define EVERPARSE_ERROR_UNEXPECTED_PADDING 7uL\n\
-    // Probe wrapper error codes
+    // Probe wrapper error codes\n\
     #define EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE 256uL\n\
     #define EVERPARSE_PROBE_FAILURE_INIT 257uL\n\
     #define EVERPARSE_PROBE_FAILURE_PROBE 258uL\n\
@@ -975,52 +975,42 @@ let print_c_entry
    let probe_prefix probe wrappedName : ML string =
     let len = expr_to_c probe.probe_ep_length in
     Printf.sprintf 
-   "if(providedSize < %s)
-    {
-      // Not enough space for probe
-      return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
-    }
-    if(!%s(\"%s\", %s, probeDest))
-    {
-      // ProbeInit failed
-      return EVERPARSE_PROBE_FAILURE_INIT;
+   "if(providedSize < %s)\n\t\
+    {\n\t\t\
+      // Not enough space for probe\n\t\t\
+      return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;\n\t\
+    }\n\t\
+    if(!%s(\"%s\", %s, probeDest))\n\t\
+    {\n\t\t\
+      // ProbeInit failed\n\t\t\
+      return EVERPARSE_PROBE_FAILURE_INIT;\n\t\
     }"
     len
     (probe_fn_to_c probe.probe_ep_init)
     wrappedName
     len
    in  
-   let probe_suffix =
-   "else
-    {
-      // we currently assume that the probe function handles its own error
-      return EVERPARSE_PROBE_FAILURE_PROBE;
-    }"
-   in
    let wrapped_call_probe_buffer wrappedName params (probe: probe_entrypoint) : ML string =
      let len = expr_to_c probe.probe_ep_length in
      Printf.sprintf 
-   "%s
-    if (%s(%s, 0, 0, probeAddr, probeDest))
-    {
-      uint8_t * base = EverParseStreamOf(probeDest);
-      if (%s(%s base, %s))
-      {
-        return EVERPARSE_SUCCESS;
-      }
-      else
-      {
-        return EVERPARSE_PROBE_FAILURE_VALIDATION;
-      }
-    }
-    %s"
+   "%s\n\t\
+    if (!%s(%s, 0, 0, probeAddr, probeDest))\n\t\
+    {\n\t\t\
+      // Probe failed\n\t\t\
+      return EVERPARSE_PROBE_FAILURE_PROBE;\n\t\
+    }\n\t\
+    uint8_t * base = EverParseStreamOf(probeDest);\n\t\
+    if (!%s(%s base, %s))\n\t\
+    {\n\t\t\
+      return EVERPARSE_PROBE_FAILURE_VALIDATION;\n\t\
+    }\n\t\
+    return EVERPARSE_SUCCESS;"
        (probe_prefix probe wrappedName)
        (probe_fn_to_c probe.probe_ep_fn)
        len
        wrappedName
        params
        len
-       probe_suffix
    in
    let wrapped_call_stream name params =
      Printf.sprintf
