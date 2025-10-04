@@ -92,6 +92,10 @@ let map_group_footprint_concat_consumes_all_recip
   cbor_map_equiv r1 cbor_map_empty;
   (m1, m2)
 
+#pop-options
+
+#push-options "--z3rlimit 128"
+
 #restart-solver
 let matches_map_group_equiv_concat'
   (g1 g1' g2 g2': det_map_group)

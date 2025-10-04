@@ -12,7 +12,198 @@ defaults:
     shell: bash
 
 jobs:
-  ci:
+  deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+        with:
+          submodules: true
+          sparse-checkout: |
+            Dockerfile
+            deps.Makefile
+            opt/Makefile
+            opt/hashes.Makefile
+            src/package/start-code-server.sh
+
+      - uses: actions/cache/restore@v4
+        id: cache
+        with:
+          path: deps.tgz
+          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile') }}
+          lookup-only: true
+          fail-on-cache-miss: false
+
+      - name: Build dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          rm -rf .git && docker build -t dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile') }} --pull --target deps .
+
+      - name: Save image
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          docker save dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile') }} | gzip > deps.tgz
+
+      - name: Upload image into cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            deps.tgz
+          key: dzomoeverparsedeps${{ hashFiles('opt/hashes.Makefile') }}
+
+  lowparse:
+    runs-on: ubuntu-latest
+    needs: deps
+    steps:
+      - uses: actions/checkout@master
+        with:
+          submodules: true
+          path: everparse
+      - uses: actions/cache/restore@v4
+        with:
+          path: deps.tgz
+          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }}
+      - name: Load deps image
+        run: |
+          { gunzip < deps.tgz | docker load ; } && rm deps.tgz
+      - name: Upload EverParse in a container
+        run: |
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/opam.done opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
+      - name: Build LowParse without proofs
+        run: |
+         docker exec $container make -kj$(nproc) lowparse ADMIT=1
+      - name: Save LowParse proofs
+        run: |
+          docker exec $container /bin/bash -c "tar -c src/lowparse/*.checked src/lowparse/pulse/*.checked" | gzip > lowparse.tgz && docker stop $container && docker rm $container
+      - name: Upload image as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: |
+            lowparse.tgz
+          name: lowparse
+
+  test-lowparse:
+    runs-on: ubuntu-latest
+    needs: deps
+    steps:
+      - uses: actions/checkout@master
+        with:
+          submodules: true
+          path: everparse
+      - uses: actions/cache/restore@v4
+        with:
+          path: deps.tgz
+          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }}
+      - name: Load deps image
+        run: |
+          { gunzip < deps.tgz | docker load ; } && rm deps.tgz
+      - name: Upload EverParse in a container
+        run: |
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/opam.done opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
+      - name: Build LowParse
+        run: |
+          docker exec $container make -kj$(nproc) lowparse
+      - name: Remove container
+        run: |
+          docker stop $container && docker rm $container
+
+  test-3d-qd:
+    runs-on: ubuntu-latest
+    needs: lowparse
+    steps:
+      - uses: actions/checkout@master
+        with:
+          submodules: true
+          path: everparse
+      - uses: actions/cache/restore@v4
+        with:
+          path: deps.tgz
+          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }}
+      - name: Load deps image
+        run: |
+          { gunzip < deps.tgz | docker load ; } && rm deps.tgz
+      - name: Upload EverParse in a container
+        run: |
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/opam.done opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
+      - name: Download lowparse proofs
+        uses: actions/download-artifact@v4
+        with:
+          name: lowparse
+      - name: Upload lowparse proofs into the container
+        run: |
+          { gunzip < lowparse.tgz | docker exec -i $container tar -x ; } && rm lowparse.tgz && docker exec $container /bin/bash -c "touch src/lowparse/*.checked src/lowparse/pulse/*.checked"
+      - name: Test 3D/QD
+        run: |
+          docker exec $container make -kj$(nproc) 3d-test quackyducky-test lowparse-test asn1-test ADMIT_LOWPARSE=1
+      - name: Remove container
+        run: |
+          docker stop $container && docker rm $container
+
+  build-cbor-cddl:
+    runs-on: ubuntu-latest
+    needs: lowparse
+    steps:
+      - uses: actions/checkout@master
+        with:
+          submodules: true
+          path: everparse
+      - uses: actions/cache/restore@v4
+        with:
+          path: deps.tgz
+          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }}
+      - name: Load deps image
+        run: |
+          { gunzip < deps.tgz | docker load ; } && rm deps.tgz
+      - name: Upload EverParse in a container
+        run: |
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/opam.done opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
+      - name: Download lowparse proofs
+        uses: actions/download-artifact@v4
+        with:
+          name: lowparse
+      - name: Upload lowparse proofs into the container
+        run: |
+          { gunzip < lowparse.tgz | docker exec -i $container tar -x ; } && rm lowparse.tgz && docker exec $container /bin/bash -c "touch src/lowparse/*.checked src/lowparse/pulse/*.checked"
+      - name: Build CBOR/CDDL
+        run: |
+          docker exec $container /usr/bin/env BASH_ENV=/home/test/.cargo/env /bin/bash -c "make -kj$(nproc) cddl cbor-verify ADMIT_LOWPARSE=1"
+      - name: Remove container
+        run: |
+          docker stop $container && docker rm $container
+
+  test-cbor-cddl:
+    runs-on: ubuntu-latest
+    needs: lowparse
+    steps:
+      - uses: actions/checkout@master
+        with:
+          submodules: true
+          path: everparse
+      - uses: actions/cache/restore@v4
+        with:
+          path: deps.tgz
+          key: dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }}
+      - name: Load deps image
+        run: |
+          { gunzip < deps.tgz | docker load ; } && rm deps.tgz
+      - name: Upload EverParse in a container
+        run: |
+          container=$(docker run -d dzomoeverparsedeps${{ hashFiles('everparse/opt/hashes.Makefile') }} "sleep infinity") && cd everparse && rm -rf .git && { tar c . | docker exec -i $container tar --overwrite -x ; } && docker exec $container touch opam-env.Makefile opt/opam.done opt/FStar.done opt/karamel.done opt/pulse.done opt/z3 && { echo container=$container >> $GITHUB_ENV ; }
+      - name: Download lowparse proofs
+        uses: actions/download-artifact@v4
+        with:
+          name: lowparse
+      - name: Upload lowparse proofs into the container
+        run: |
+          { gunzip < lowparse.tgz | docker exec -i $container tar -x ; } && rm lowparse.tgz && docker exec $container /bin/bash -c "touch src/lowparse/*.checked src/lowparse/pulse/*.checked"
+      - name: Test CBOR/CDDL
+        run: |
+          docker exec $container /usr/bin/env BASH_ENV=/home/test/.cargo/env /bin/bash -c "make -kj$(nproc) cddl-test cbor-test cose-test ADMIT_LOWPARSE=1 ADMIT_CBOR_CDDL=1"
+      - name: Remove container
+        run: |
+          docker stop $container && docker rm $container
+
+  ci-3d:
     runs-on: ubuntu-latest
     steps:
       - name: Set-up OCaml
@@ -25,29 +216,14 @@ jobs:
           path: everparse
       - name: Everparse CI
         run: |
-          make -C everparse -j$(nproc) -k ci branchname=${{ github.head_ref || github.ref_name }}
+          ADMIT=1 make -C everparse -j$(nproc) -k 3d-doc-ci branchname=${{ github.head_ref || github.ref_name }}
         env:
           DZOMO_GITHUB_TOKEN: ${{ secrets.DZOMO_GITHUB_TOKEN }}
-
-      # I'm leaving this disabled as I do not get good incrementality
-      # when trying this out by hand due to dependence hash mismatches
-      # everywhere.
-      - name: Incrementality test
-        if: false
-        working-directory: everparse/tests/sample
-        run: |
-            echo 'let foo : FStar.UInt32.t = 42ul' >> Data.fsti
-            echo 'let foo : FStar.UInt32.t = Data.foo' >> Test.fst
-            make -j$(nproc)
-            git checkout Test.fst
-            sed -i 's!payloads!payload!g' Test.rfc
-            make -j$(nproc)
-            git checkout Test.rfc
 
   # Branch protection points here.
   ciok:
     runs-on: ubuntu-latest
-    needs: ci
+    needs: [test-lowparse, test-3d-qd, build-cbor-cddl, test-cbor-cddl, ci-3d]
     if: ${{ cancelled() || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'failure') }}
     steps:
       # Note: we only run on failure. Otherwise this is skipped, which counts

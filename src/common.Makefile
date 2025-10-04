@@ -96,7 +96,7 @@ endif
 
 $(ALL_CHECKED_FILES): %.checked:
 	$(call msg, "CHECK", $(basename $(notdir $@)))
-	$(Q)$(RUNLIM) $(FSTAR) $(SIL) $(COMPAT_INDEXED_EFFECTS) $<
+	$(Q)$(RUNLIM) $(FSTAR) $(SIL) $(COMPAT_INDEXED_EFFECTS) $(if $(filter 1,$(ADMIT)),--admit_smt_queries true,) $<
 	touch -c $@
 
 verify: $(ALL_CHECKED_FILES)

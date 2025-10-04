@@ -50,6 +50,14 @@ $(FSTAR_DEP_FILE): $(NEED_FSTAR) $(NEED_KRML) $(NEED_PULSE)
 
 $(ALL_CHECKED_FILES): %.checked: $(NEED_FSTAR) $(NEED_Z3) $(NEED_KRML) $(NEED_PULSE)
 
+ifeq (1,$(ADMIT_LOWPARSE))
+$(filter src/lowparse/%,$(ALL_CHECKED_FILES)): ADMIT := 1
+endif
+
+ifeq (1,$(ADMIT_CBOR_CDDL))
+$(filter src/cbor/% src/cddl/%,$(ALL_CHECKED_FILES)): ADMIT := 1
+endif
+
 lowparse: $(filter-out src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
 
 ifeq (,$(NO_PULSE))
@@ -85,7 +93,7 @@ lowparse-unit-test: lowparse
 3d-unit-test: 3d $(NEED_Z3_TESTGEN)
 	+$(MAKE) -C src/3d test
 
-3d-doc-test: 3d
+3d-doc-test: 3d $(NEED_Z3_TESTGEN)
 	+$(MAKE) -C doc 3d-test
 
 3d-test: 3d-unit-test 3d-doc-test
@@ -208,7 +216,7 @@ else
 cddl-tool:
 endif
 
-cddl: cbor-interface cddl-spec cddl-tool
+cddl: cbor cbor-interface cddl-spec cddl-tool
 
 .PHONY: cddl-spec cddl-tool
 
@@ -245,15 +253,13 @@ cddl-test: cddl cddl-unit-tests
 
 .PHONY: cddl-test
 
-ci: test 3d-doc-ci
-
 # cbor needed because we regenerate its Rust documentation
 3d-doc-ci: 3d-doc-test cbor
 	+$(MAKE) -C doc 3d-ci
 
 .PHONY: 3d-doc-ci
 
-3d-doc-snapshot: 3d
+3d-doc-snapshot: 3d $(NEED_Z3_TESTGEN)
 	+$(MAKE) -C doc 3d-snapshot
 
 .PHONY: 3d-doc-snapshot

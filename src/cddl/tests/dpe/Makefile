@@ -13,12 +13,18 @@ FSTAR_FILES := $(OUTPUT_DIRECTORY)/CDDLTest.Test.fst
 
 clean_rules += clean-test dpe.clean util.clean
 
+ifeq (1,$(ADMIT))
+CDDL_ADMIT := --admit
+else
+CDDL_ADMIT :=
+endif
+
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 $(OUTPUT_DIRECTORY)/CDDLTest.Test.fst: dpe.cddl dpe_postlude.cddl
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --odir $(OUTPUT_DIRECTORY) --fstar_only
+	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --odir $(OUTPUT_DIRECTORY) --fstar_only $(CDDL_ADMIT)
 	cp extract0.Makefile $(OUTPUT_DIRECTORY)/Makefile
 
 clean-test:
