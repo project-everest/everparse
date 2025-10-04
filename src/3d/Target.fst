@@ -975,7 +975,7 @@ let print_c_entry
    let probe_prefix probe wrappedName : ML string =
     let len = expr_to_c probe.probe_ep_length in
     Printf.sprintf 
-   "if(providedBufferSize < %s)
+   "if(providedSize < %s)
     {
       // Not enough space for probe
       return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
@@ -1117,7 +1117,7 @@ let print_c_entry
       let probe_fn = probe_fn_to_c probe.probe_ep_fn in
       let probe_wrapper_name = probe_wrapper_name modul probe_fn d.decl_name.td_name.A.v.A.name in
       Printf.sprintf
-            "%s %s(%sEVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedBufferSize)"
+            "%s %s(%sEVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize)"
              return_type
              probe_wrapper_name
              pparams
