@@ -1252,17 +1252,19 @@ of probing entry point, and one for the non-probing variant:
 
 .. code-block:: c
 
-  BOOLEAN ProbeProbeAndCopyCheckMultiProbe(
+  uint32_t ProbeProbeAndCopyCheckMultiProbe(
     EVERPARSE_COPY_BUFFER_T destT1,
     EVERPARSE_COPY_BUFFER_T destT2,
     EVERPARSE_COPY_BUFFER_T probeDest,
-    uint64_t probeAddr);
+    uint64_t probeAddr,
+    uint64_t providedSize);
 
-  BOOLEAN ProbeProbeAndCopyAltCheckMultiProbe(
+  uint32_t ProbeProbeAndCopyAltCheckMultiProbe(
     EVERPARSE_COPY_BUFFER_T destT1,
     EVERPARSE_COPY_BUFFER_T destT2,
     EVERPARSE_COPY_BUFFER_T probeDest,
-    uint64_t probeAddr);
+    uint64_t probeAddr,
+    uint64_t providedSize);
 
   BOOLEAN ProbeCheckMultiProbe(
     EVERPARSE_COPY_BUFFER_T destT1,
@@ -1270,6 +1272,18 @@ of probing entry point, and one for the non-probing variant:
     uint8_t *base,
     uint32_t len);
 
+
+The ``providedSize`` argument on the first two function signatures allows the
+caller to provide a claimed size of valid probed memory.
+
+If the requested size of greater than this claimed size, the function failed
+immediately with the error code ``EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE``
+without doing anything else.
+
+If the probe init function itself fails, we return
+``EVERPARSE_PROBE_FAILURE_INIT``; if the probe function itself fails we return
+``EVERPARSE_PROBE_FAILURE_PROBE``; if the underlying validator fails, we return
+``EVERPARE_PROBE_FAILURE_VALIDATION``.
 
 .. note:: 
 
