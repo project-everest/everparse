@@ -367,7 +367,7 @@ ValidateS64(
           uint64_t readOffset = 0ULL;
           uint64_t writeOffset = 0ULL;
           BOOLEAN failed = FALSE;
-          BOOLEAN ok = ProbeInit1((uint64_t)8U, Dest);
+          BOOLEAN ok = ProbeInit1("_S64.ptrT", (uint64_t)8U, Dest);
           if (ok)
           {
             ProbePtrT(s1,
@@ -716,7 +716,7 @@ ValidateR64(
     uint64_t readOffset = 0ULL;
     uint64_t writeOffset = 0ULL;
     BOOLEAN failed = FALSE;
-    BOOLEAN ok = ProbeInit1((uint64_t)24U, DestS);
+    BOOLEAN ok = ProbeInit1("_R64.ptrS", (uint64_t)24U, DestS);
     if (ok)
     {
       ProbePtrS(r1,
@@ -878,7 +878,7 @@ ValidateSpecializedR32(
     uint64_t readOffset = 0ULL;
     uint64_t writeOffset = 0ULL;
     BOOLEAN failed = FALSE;
-    BOOLEAN ok = ProbeInit1((uint64_t)24U, DestS);
+    BOOLEAN ok = ProbeInit1("___specialized_R32.ptrS", (uint64_t)24U, DestS);
     if (ok)
     {
       Specialized32ProbeS64("___specialized_R32",
@@ -1245,7 +1245,7 @@ ValidateS32Attempt(
         uint64_t readOffset = 0ULL;
         uint64_t writeOffset = 0ULL;
         BOOLEAN failed = FALSE;
-        BOOLEAN ok = ProbeInit1((uint64_t)8U, Dest);
+        BOOLEAN ok = ProbeInit1("_S32_Attempt.ptrT", (uint64_t)8U, Dest);
         if (ok)
         {
           S32attemptProbePtrTT("_S32_Attempt",
@@ -1507,7 +1507,7 @@ ValidateR32Attempt(
     uint64_t readOffset = 0ULL;
     uint64_t writeOffset = 0ULL;
     BOOLEAN failed = FALSE;
-    BOOLEAN ok = ProbeInit1((uint64_t)12U, DestS);
+    BOOLEAN ok = ProbeInit1("_R32_Attempt.ptrS", (uint64_t)12U, DestS);
     if (ok)
     {
       R32AttemptProbePtrSS32attempt("_R32_Attempt",

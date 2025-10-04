@@ -87,6 +87,14 @@ probe:
 specialize_test:
 	+$(MAKE) -C $@
 
+.PHONY: specialize_test2
+specialize_test2:
+	+$(MAKE) -C $@
+
+.PHONY: specialize_tagged_union_array
+specialize_tagged_union_array:
+	+$(MAKE) -C $@
+	
 batch-test-negative: $(addsuffix .negtest,$(wildcard FAIL*.3d))
 
 %.3d.negtest: %.3d

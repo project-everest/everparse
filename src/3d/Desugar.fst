@@ -438,6 +438,7 @@ let resolve_typedef_attribute (env: qenv) (a: attribute) : ML attribute =
   match a with
   | Entrypoint (Some p) ->
     Entrypoint (Some ({
+      probe_ep_init = map_opt (resolve_ident env) p.probe_ep_init;
       probe_ep_fn = resolve_ident env p.probe_ep_fn;
       probe_ep_length = resolve_expr env p.probe_ep_length;
     }))

@@ -967,14 +967,25 @@ let print_c_entry
    in
    let wrapped_call_probe_buffer wrappedName params (probe: probe_entrypoint) : ML string =
      let len = expr_to_c probe.probe_ep_length in
-     Printf.sprintf
-      "if (%s(%s, 0, 0, probeAddr, probeDest)) {
-         uint8_t * base = EverParseStreamOf(probeDest);
-         return %s(%s base, %s);
-       } else {
-         // FIXME: we currently assume that the probe function handles its own error
-         return FALSE;
-       }"
+     Printf.sprintf 
+   "if(!%s(\"%s\", %s, probeDest))
+    {
+      // ProbeInit failed
+      return FALSE;
+    }
+    if (%s(%s, 0, 0, probeAddr, probeDest))
+    {
+      uint8_t * base = EverParseStreamOf(probeDest);
+      return %s(%s base, %s);
+    } 
+    else
+    {
+      // we currently assume that the probe function handles its own error
+      return FALSE;
+    }"
+       (probe_fn_to_c probe.probe_ep_init)
+       wrappedName
+       len
        (probe_fn_to_c probe.probe_ep_fn)
        len
        wrappedName
@@ -1004,14 +1015,25 @@ let print_c_entry
    in
    let wrapped_call_probe_stream wrappedName params (probe: probe_entrypoint) : ML string =
      let len = print_expr modul probe.probe_ep_length in
-     Printf.sprintf
-      "if (%s(%s, 0, 0, probeAddr, probeDest)) {
-         EVERPARSE_INPUT_STREAM_BASE * base = EverParseStreamOf(probeDest);
-         return %s(%s base);
-       } else {
-         // FIXME: we currently assume that the probe function handles its own error
-         return 0;
-       }"
+     Printf.sprintf 
+   "if(!%s(\"%s\", %s, probeDest)) 
+    {
+      // ProbeInit failed
+      return FALSE;
+    }
+    if (%s(%s, 0, 0, probeAddr, probeDest))
+    {
+      EVERPARSE_INPUT_STREAM_BASE * base = EverParseStreamOf(probeDest);
+      return %s(%s base);
+    } 
+    else
+    {
+      // we currently assume that the probe function handles its own error
+      return 0;
+    }"
+       (probe_fn_to_c probe.probe_ep_init)
+       len
+       wrappedName
        (probe_fn_to_c probe.probe_ep_fn)
        len
        wrappedName
