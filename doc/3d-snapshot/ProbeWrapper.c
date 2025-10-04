@@ -86,22 +86,28 @@ BOOLEAN ProbeCheckIndirect(uint8_t *base, uint32_t len) {
 	return TRUE;
 }
 
-BOOLEAN ProbeProbeAndCopyCheckIndirect(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr) {
+uint32_t ProbeProbeAndCopyCheckIndirect(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
+	if(providedSize < 9U)
+	{
+		// Not enough space for probe
+		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
+	}
 	if(!ProbeInit("ProbeCheckIndirect", 9U, probeDest))
-    {
-      // ProbeInit failed
-      return FALSE;
-    }
-    if (ProbeAndCopy(9U, 0, 0, probeAddr, probeDest))
-    {
-      uint8_t * base = EverParseStreamOf(probeDest);
-      return ProbeCheckIndirect( base, 9U);
-    } 
-    else
-    {
-      // we currently assume that the probe function handles its own error
-      return FALSE;
-    }
+	{
+		// ProbeInit failed
+		return EVERPARSE_PROBE_FAILURE_INIT;
+	}
+	if (!ProbeAndCopy(9U, 0, 0, probeAddr, probeDest))
+	{
+		// Probe failed
+		return EVERPARSE_PROBE_FAILURE_PROBE;
+	}
+	uint8_t * base = EverParseStreamOf(probeDest);
+	if (!ProbeCheckIndirect( base, 9U))
+	{
+		return EVERPARSE_PROBE_FAILURE_VALIDATION;
+	}
+	return EVERPARSE_SUCCESS;
 }
 
 BOOLEAN ProbeCheckI(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
@@ -134,40 +140,52 @@ BOOLEAN ProbeCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFF
 	return TRUE;
 }
 
-BOOLEAN ProbeProbeAndCopyCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2, EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr) {
+uint32_t ProbeProbeAndCopyCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2, EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
+	if(providedSize < 25U)
+	{
+		// Not enough space for probe
+		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
+	}
 	if(!ProbeInit("ProbeCheckMultiProbe", 25U, probeDest))
-    {
-      // ProbeInit failed
-      return FALSE;
-    }
-    if (ProbeAndCopy(25U, 0, 0, probeAddr, probeDest))
-    {
-      uint8_t * base = EverParseStreamOf(probeDest);
-      return ProbeCheckMultiProbe(destT1, destT2,  base, 25U);
-    } 
-    else
-    {
-      // we currently assume that the probe function handles its own error
-      return FALSE;
-    }
+	{
+		// ProbeInit failed
+		return EVERPARSE_PROBE_FAILURE_INIT;
+	}
+	if (!ProbeAndCopy(25U, 0, 0, probeAddr, probeDest))
+	{
+		// Probe failed
+		return EVERPARSE_PROBE_FAILURE_PROBE;
+	}
+	uint8_t * base = EverParseStreamOf(probeDest);
+	if (!ProbeCheckMultiProbe(destT1, destT2,  base, 25U))
+	{
+		return EVERPARSE_PROBE_FAILURE_VALIDATION;
+	}
+	return EVERPARSE_SUCCESS;
 }
 
-BOOLEAN ProbeProbeAndCopyAltCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2, EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr) {
+uint32_t ProbeProbeAndCopyAltCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2, EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
+	if(providedSize < 25U)
+	{
+		// Not enough space for probe
+		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
+	}
 	if(!ProbeInit("ProbeCheckMultiProbe", 25U, probeDest))
-    {
-      // ProbeInit failed
-      return FALSE;
-    }
-    if (ProbeAndCopyAlt(25U, 0, 0, probeAddr, probeDest))
-    {
-      uint8_t * base = EverParseStreamOf(probeDest);
-      return ProbeCheckMultiProbe(destT1, destT2,  base, 25U);
-    } 
-    else
-    {
-      // we currently assume that the probe function handles its own error
-      return FALSE;
-    }
+	{
+		// ProbeInit failed
+		return EVERPARSE_PROBE_FAILURE_INIT;
+	}
+	if (!ProbeAndCopyAlt(25U, 0, 0, probeAddr, probeDest))
+	{
+		// Probe failed
+		return EVERPARSE_PROBE_FAILURE_PROBE;
+	}
+	uint8_t * base = EverParseStreamOf(probeDest);
+	if (!ProbeCheckMultiProbe(destT1, destT2,  base, 25U))
+	{
+		return EVERPARSE_PROBE_FAILURE_VALIDATION;
+	}
+	return EVERPARSE_SUCCESS;
 }
 
 BOOLEAN ProbeCheckMaybeT(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
