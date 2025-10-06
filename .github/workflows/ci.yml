@@ -224,8 +224,8 @@ jobs:
   ciok:
     runs-on: ubuntu-latest
     needs: [test-lowparse, test-3d-qd, build-cbor-cddl, test-cbor-cddl, ci-3d]
-    if: ${{ cancelled() || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'failure') }}
+    if: always()
     steps:
-      # Note: we only run on failure. Otherwise this is skipped, which counts
-      # as a success.
       - run: exit 1
+        if: ${{ cancelled() || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'failure') }}
+      - run: exit 0
