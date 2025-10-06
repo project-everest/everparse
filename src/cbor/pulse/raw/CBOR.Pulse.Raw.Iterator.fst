@@ -70,6 +70,7 @@ ensures
   };
 }
 
+#push-options "--z3rlimit 20"
 ghost
 fn cbor_raw_slice_iterator_match_fold
   (#elt_low #elt_high: Type0)
@@ -115,6 +116,7 @@ ensures
     ();
   };
 }
+#pop-options
 
 inline_for_extraction
 fn cbor_raw_slice_iterator_init
