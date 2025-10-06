@@ -9,6 +9,8 @@ snapshot: $(addsuffix .snapshot,$(files))
 
 ifeq ($(EVERPARSE_NO_DIFF),) # Set this variable to disable diffs
 test-snapshot: $(addsuffix .test-snapshot,$(files))
+else
+test-snapshot:
 endif
 
 %.test-snapshot:

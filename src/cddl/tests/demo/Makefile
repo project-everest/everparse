@@ -4,8 +4,14 @@ EVERPARSE_SRC_PATH = $(realpath ../../..)
 
 OUTPUT=_output/CDDLTest.Test.fst
 
+ifeq (1,$(ADMIT))
+CDDL_ADMIT := --admit
+else
+CDDL_ADMIT :=
+endif
+
 $(OUTPUT): test.cddl
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --odir $(dir $(OUTPUT)) --fstar_only
+	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --odir $(dir $(OUTPUT)) --fstar_only $(CDDL_ADMIT)
 
 extract-all: $(OUTPUT) $(wildcard *.fst)
 	+$(MAKE) -f extract.Makefile test
