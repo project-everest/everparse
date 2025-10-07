@@ -1094,6 +1094,71 @@ fn split_nondep_then'
   (left, right)
 }
 
+let split_nondep_then''_precond
+  (#t0 #t1 #t2: Type0)
+  (#k0: Ghost.erased parser_kind)
+  (p0: parser k0 t0)
+  (#k1: Ghost.erased parser_kind)
+  (p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind)
+  (p2: parser k2 t2)
+: Tot prop
+= t0 == (t1 & t2) /\
+  k1.parser_kind_subkind == Some ParserStrong /\
+  (forall b . parse p0 b == parse (nondep_then p1 p2) b)
+
+let split_nondep_then''_postcond
+  (#t0 #t1 #t2: Type)
+  (v: t0)
+  (v1: t1)
+  (v2: t2)
+: Tot prop
+= t0 == (t1 & t2) /\
+  v == coerce_eq () (v1, v2)
+
+inline_for_extraction
+fn split_nondep_then''
+  (#t0 #t1 #t2: Type0)
+  (#k0: Ghost.erased parser_kind)
+  (#p0: parser k0 t0)
+  (#s0: serializer p0)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1)
+  (j1: jumper p1)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t0)
+  (sq: squash (
+    split_nondep_then''_precond p0 p1 p2
+  ))
+  requires pts_to_serialized s0 input #pm v
+  returns res: (slice byte & slice byte)
+  ensures (
+  let (left, right) = res in
+  exists* v1 v2 .
+  pts_to_serialized s1 left #pm v1 **
+  pts_to_serialized s2 right #pm v2 **
+  trade (pts_to_serialized s1 left #pm v1 **
+  pts_to_serialized s2 right #pm v2)
+    (pts_to_serialized s0 input #pm v) **
+  pure (split_nondep_then''_postcond (Ghost.reveal v) v1 v2)
+  )
+{
+  pts_to_serialized_ext_trade
+    s0
+    (serialize_nondep_then s1 s2)
+    input;
+  let (left, right) = split_nondep_then s1 j1 s2 input;
+  unfold (split_nondep_then_post s1 s2 input pm v (left, right));
+  unfold (split_nondep_then_post' s1 s2 input pm v left right);
+  Trade.trans _ _ (pts_to_serialized s0 input #pm v);
+  (left, right)
+}
+
 ghost fn ghost_split_nondep_then
   (#t1 #t2: Type0)
   (#k1: parser_kind)
@@ -1555,6 +1620,65 @@ fn nondep_then_fst
   unfold (split_nondep_then_post s1 s2 input pm v (input1, input2));
   unfold (split_nondep_then_post' s1 s2 input pm v input1 input2);
   Trade.elim_hyp_r _ _ _;
+  input1
+}
+
+let nondep_then_fst'_precond
+  (#t0 #t1 #t2: Type0)
+  (#k0: Ghost.erased parser_kind)
+  (p0: parser k0 t0)
+  (#k1: Ghost.erased parser_kind)
+  (p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind)
+  (p2: parser k2 t2)
+: Tot prop
+= t0 == (t1 & t2) /\
+  k1.parser_kind_subkind == Some ParserStrong /\
+  (forall b . parse p0 b == parse (nondep_then p1 p2) b)
+
+let nondep_then_fst'_postcond
+  (#t0 #t1 t2: Type)
+  (v: t0)
+  (v': t1)
+: Tot prop
+= t0 == (t1 & t2) /\
+  v' == fst #t1 #t2 (coerce_eq () v)
+
+inline_for_extraction
+fn nondep_then_fst'
+  (#t0 #t1 #t2: Type0)
+  (#k0: Ghost.erased parser_kind)
+  (#p0: parser k0 t0)
+  (#s0: serializer p0)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1)
+  (j1: jumper p1)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t0)
+  (sq: squash (
+    nondep_then_fst'_precond p0 p1 p2
+  ))
+  requires pts_to_serialized s0 input #pm v
+  returns res: slice byte
+  ensures exists* v' . pts_to_serialized s1 res #pm v' **
+    trade (pts_to_serialized s1 res #pm v') (pts_to_serialized s0 input #pm v) **
+    pure (nondep_then_fst'_postcond #t0 #t1 t2 v v')
+{
+  pts_to_serialized_ext_trade
+    s0
+    (serialize_nondep_then s1 s2)
+    input;
+  let v0 : Ghost.erased (t1 & t2) = Ghost.hide (coerce_eq () (Ghost.reveal v));
+  let input1, input2 = split_nondep_then s1 j1 s2 input;
+  unfold (split_nondep_then_post s1 s2 input pm v0 (input1, input2));
+  unfold (split_nondep_then_post' s1 s2 input pm v0 input1 input2);
+  Trade.elim_hyp_r _ _ _;
+  Trade.trans _ _ (pts_to_serialized s0 input #pm v);
   input1
 }
 
