@@ -564,7 +564,7 @@ let serialize_list_of_pair_list
 #push-options "--print_implicits"
 
 inline_for_extraction
-fn impl_check_setoid_assoc_eq_with_overflow
+fn impl_setoid_assoc_eq_with_overflow
   (#equiv: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> option bool))
   (#bound: Ghost.erased nat)
   (impl_equiv: impl_equiv_t bound equiv)
@@ -743,5 +743,157 @@ ensures
     }
   };
   Trade.elim _ (pts_to_serialized (serialize_nlist (SZ.v nl) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) ll #pl gll);
+  !pres
+}
+
+inline_for_extraction
+fn impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow
+  (#equiv: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> option bool))
+  (#bound: Ghost.erased nat)
+  (impl_equiv: impl_equiv_t bound equiv)
+  (nl1: SZ.t)
+  (l1: S.slice byte)
+  (nl2: SZ.t)
+  (l2: S.slice byte)
+  (#pl1: perm)
+  (#gl1: Ghost.erased (nlist (SZ.v nl1) (raw_data_item & raw_data_item)))
+  (#pl2: perm)
+  (#gl2: Ghost.erased (nlist (SZ.v nl2) (raw_data_item & raw_data_item)))
+requires
+  pts_to_serialized (serialize_nlist (SZ.v nl1) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l1 #pl1 gl1 **
+  pts_to_serialized (serialize_nlist (SZ.v nl2) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l2 #pl2 gl2 **
+  pure (list_sum (pair_sum raw_data_item_size raw_data_item_size) gl1 + list_sum (pair_sum raw_data_item_size raw_data_item_size) gl2 <= bound)
+returns res: option bool
+ensures
+  pts_to_serialized (serialize_nlist (SZ.v nl1) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l1 #pl1 gl1 **
+  pts_to_serialized (serialize_nlist (SZ.v nl2) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l2 #pl2 gl2 **
+  pure (list_sum (pair_sum raw_data_item_size raw_data_item_size) gl1 + list_sum (pair_sum raw_data_item_size raw_data_item_size) gl2 <= bound /\
+    res == list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv gl1) gl2
+  )
+{
+  Trade.refl
+    (pts_to_serialized (serialize_nlist (SZ.v nl2) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l2 #pl2 gl2);
+  let mut pl = l2;
+  let mut pn = nl2;
+  let mut pres = Some true;
+  while (
+    let n = !pn;
+    let res = !pres;
+    (SZ.gt n 0sz && (res = Some true))
+  ) invariant b . exists* l n (gl: nlist (SZ.v n) (raw_data_item & raw_data_item)) res .
+    pts_to pl l **
+    pts_to pn n **
+    pts_to_serialized
+      (serialize_nlist (SZ.v n) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+      l #pl2
+      gl **
+    Trade.trade
+      (pts_to_serialized
+        (serialize_nlist (SZ.v n) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+        l #pl2
+        gl
+      )
+      (pts_to_serialized (serialize_nlist (SZ.v nl2) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l2 #pl2 gl2) **
+    pts_to pres res **
+    pts_to_serialized (serialize_nlist (SZ.v nl1) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l1 #pl1 gl1 **
+    pure (
+      b == (SZ.v n > 0 && res = Some true) /\
+      list_sum (pair_sum raw_data_item_size raw_data_item_size) gl1 + list_sum (pair_sum raw_data_item_size raw_data_item_size) gl <= bound /\
+      list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv gl1) gl2 == (if res = Some true then list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv gl1) gl else res)
+    )
+  {
+    let l = !pl;
+    with gn (gl: nlist (SZ.v gn) (raw_data_item & raw_data_item)) . assert (
+      pts_to pn gn **
+      pts_to_serialized
+        (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+        l #pl2
+        gl
+    );
+    let n = !pn;
+    let n' = SZ.sub n 1sz;
+    nlist_cons_as_nondep_then
+      (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
+      (SZ.v n)
+      l;
+    pts_to_serialized_nondep_then_assoc_l2r
+      serialize_raw_data_item
+      serialize_raw_data_item
+      (serialize_nlist (SZ.v n') (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+      l;
+    Trade.trans _ _ (
+      pts_to_serialized
+        (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+        l #pl2
+        gl
+    );
+    let ki : Ghost.erased parser_kind = and_then_kind
+      parse_raw_data_item_kind
+      (parse_nlist_kind (SZ.v n') (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind));
+    let pi : parser ki (raw_data_item & nlist (SZ.v n') (raw_data_item & raw_data_item)) = nondep_then
+        parse_raw_data_item
+        (parse_nlist (SZ.v n') (nondep_then parse_raw_data_item parse_raw_data_item));
+    let si : serializer pi = serialize_nondep_then
+        serialize_raw_data_item
+        (serialize_nlist (SZ.v n') (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item));
+    assume (pure (SZ.fits_u64));
+    let (lh, lt) = split_nondep_then'
+      serialize_raw_data_item
+      (jump_raw_data_item ())
+      si
+      l;
+    Trade.trans _ _ (
+      pts_to_serialized
+        (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+        l #pl2
+        gl
+    );
+    let kj : Ghost.erased parser_kind = (parse_nlist_kind (SZ.v n') (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind));
+    let pj : parser kj (nlist (SZ.v n') (raw_data_item & raw_data_item)) =
+        (parse_nlist (SZ.v n') (nondep_then parse_raw_data_item parse_raw_data_item));
+    let sj : serializer pj =
+        (serialize_nlist (SZ.v n') (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item));
+    assert (pure (si == serialize_nondep_then serialize_raw_data_item sj));
+    let sq : squash (split_nondep_then''_precond pi parse_raw_data_item pj) = ();
+    let (lv, lt') = split_nondep_then''
+      serialize_raw_data_item
+      (jump_raw_data_item ())
+      sj
+      lt
+      sq;
+    let res = impl_setoid_assoc_eq_with_overflow impl_equiv nl1 l1 lh lv;
+    Trade.elim_hyp_l (pts_to_serialized serialize_raw_data_item lv #pl2 _) _ _;
+    Trade.trans_hyp_r _ _ _ (
+      pts_to_serialized
+        (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+        l #pl2
+        gl
+    );
+    Trade.elim_hyp_l (pts_to_serialized serialize_raw_data_item lh #pl2 _) _ _;
+    if (res = Some true) {
+      Trade.trans _ (
+        pts_to_serialized
+          (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+          l #pl2
+          gl
+      ) _;
+      pts_to_serialized_ext_trade
+        sj
+        (serialize_nlist (SZ.v n') (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+        lt';
+      Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v nl2) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l2 #pl2 gl2);
+      pl := lt';
+      pn := n';
+    } else {
+      Trade.elim _ (
+        pts_to_serialized
+          (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+          l #pl2
+          gl
+      );
+      pres := res
+    }
+  };
+  Trade.elim _ (pts_to_serialized (serialize_nlist (SZ.v nl2) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l2 #pl2 gl2);
   !pres
 }
