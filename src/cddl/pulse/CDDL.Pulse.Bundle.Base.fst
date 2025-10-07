@@ -11,7 +11,7 @@ open FStar.List.Tot.Base { (@) }
 let allowed (c: Char.char) : bool =
   let open FStar.UInt32 in
   let code = FStar.Char.u32_of_char c in
-  (code `gte` FStar.Char.u32_of_char 'a' &&
+  (code `gte` FStar.Char.u32_of_char 'A' &&
     code `lte` FStar.Char.u32_of_char 'Z') ||
   (code `gte` FStar.Char.u32_of_char 'a' &&
     code `lte` FStar.Char.u32_of_char 'z') ||
