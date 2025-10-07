@@ -224,9 +224,13 @@ let serialize_string_eq
   LP.serialize_dtuple2_eq F.serialize_header F.serialize_content v1';
   ()
 
+#push-options "--z3rlimit 32"
+
 let serialize_cbor_string_length_gt ty len l =
   serialize_string_eq ty len l;
   LP.serialize_length F.serialize_header (F.raw_uint64_as_argument ty len)
+
+#pop-options
 
 let serialize_cbor_map l =
   LPL.tot_serialize_nlist (List.Tot.length l) (LP.tot_serialize_nondep_then  F.tot_serialize_raw_data_item F.tot_serialize_raw_data_item) l
