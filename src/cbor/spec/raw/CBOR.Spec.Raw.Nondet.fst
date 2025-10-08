@@ -174,8 +174,8 @@ let rec list_existsb_with_overflow
     | Some false -> list_existsb_with_overflow p q
     | r -> r
 
-let rec check_map_depth_aux
-  (md: list raw_data_item -> bool)
+let rec check_map_depth
+  (bound: nat)
   (l: list raw_data_item)
 : Tot bool
   (decreases (list_sum raw_data_item_size l))
@@ -184,25 +184,19 @@ let rec check_map_depth_aux
   | a :: q ->
     raw_data_item_size_eq a;
     match a with
-    | Tagged _ v -> check_map_depth_aux md (v :: q)
+    | Tagged _ v -> check_map_depth bound (v :: q)
     | Array _ v ->
       list_sum_append raw_data_item_size v q;
-      check_map_depth_aux md (List.Tot.append v q)
+      check_map_depth bound (List.Tot.append v q)
     | Map _ v ->
-      if md (list_of_pair_list v)
-      then check_map_depth_aux md q
+      list_of_pair_list_sum raw_data_item_size v;
+      if bound = 0
+      then false
+      else if check_map_depth (bound - 1) (list_of_pair_list v)
+      then check_map_depth bound q
       else false
     | _ ->
-      check_map_depth_aux md q
-
-let constant_function (#a #b: Type) (y: b) (x: a) : Tot b = y
-
-let rec check_map_depth
-  (bound: nat)
-  (l: list raw_data_item)
-: Tot bool
-  (decreases bound)
-= check_map_depth_aux (if bound = 0 then constant_function false else check_map_depth (bound - 1)) l
+      check_map_depth bound q
 
 let rec list_no_setoid_repeats_with_overflow
   (equiv: raw_data_item -> raw_data_item -> option bool)
@@ -791,20 +785,11 @@ let rec list_existsb_with_overflow_equiv_correct
     check_equiv_correct data_model map_bound x1 x2;
     list_existsb_with_overflow_equiv_correct data_model map_bound x1 q
 
-let check_map_depth_aux_precond
+let rec check_map_depth_correct
   (map_bound: nat)
-  (md: list raw_data_item -> bool)
-: Tot prop
-= forall (l: list raw_data_item) .
-    md l == (list_max map_depth l < map_bound)
-
-let rec check_map_depth_aux_correct
-  (map_bound: nat)
-  (md: list raw_data_item -> bool)
   (l: list raw_data_item)
 : Lemma
-  (requires check_map_depth_aux_precond map_bound md)
-  (ensures check_map_depth_aux md l == (list_max map_depth l <= map_bound))
+  (ensures check_map_depth map_bound l == (list_max map_depth l <= map_bound))
   (decreases (list_sum raw_data_item_size l))
 = match l with
   | [] -> ()
@@ -812,45 +797,27 @@ let rec check_map_depth_aux_correct
     raw_data_item_size_eq a;
     map_depth_eq a;
     match a with
-    | Tagged _ v -> check_map_depth_aux_correct map_bound md (v :: q)
+    | Tagged _ v -> check_map_depth_correct map_bound (v :: q)
     | Array _ v ->
       list_sum_append raw_data_item_size v q;
       list_max_append map_depth v q;
-      check_map_depth_aux_correct map_bound md (List.Tot.append v q);
+      check_map_depth_correct map_bound (List.Tot.append v q);
       ()
     | Map _ v ->
       list_max_map_dep_pair_list_of_pair_list v;
-      if md (list_of_pair_list v)
-      then begin
-        check_map_depth_aux_correct map_bound md q;
-        ()
+      list_of_pair_list_sum raw_data_item_size v;
+      if map_bound = 0
+      then ()
+      else begin
+        check_map_depth_correct (map_bound - 1) (list_of_pair_list v);
+        if check_map_depth (map_bound - 1) (list_of_pair_list v)
+        then begin
+          check_map_depth_correct map_bound q;
+          ()
+        end
+        else ()
       end
-      else ()
-    | _ -> check_map_depth_aux_correct map_bound md q
-
-let rec check_map_depth_correct
-  (bound: nat)
-  (l: list raw_data_item)
-: Lemma
-  (ensures check_map_depth bound l == (list_max map_depth l <= bound))
-  (decreases bound)
-= assert_norm (check_map_depth bound l == check_map_depth_aux (if bound = 0 then constant_function false else check_map_depth (bound - 1)) l);
-  if bound = 0
-  then begin
-    check_map_depth_aux_correct bound (constant_function false) l;
-    ()
-  end
-  else begin
-    let prf
-      (l: list raw_data_item)
-    : Lemma
-      (ensures (check_map_depth (bound - 1) l == (list_max map_depth l < bound)))
-    = check_map_depth_correct (bound - 1) l
-    in
-    Classical.forall_intro prf;
-    check_map_depth_aux_correct bound (check_map_depth (bound - 1)) l;
-    ()
-  end
+    | _ -> check_map_depth_correct map_bound q
 
 let list_no_setoid_repeats_with_overflow_existsb_with_overflow_equiv_postcond
   (data_model: (raw_data_item -> raw_data_item -> bool))
