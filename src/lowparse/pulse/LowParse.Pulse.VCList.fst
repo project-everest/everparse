@@ -320,6 +320,37 @@ ensures
   res
 }
 
+inline_for_extraction
+fn nlist_hd_tl'
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (j: jumper p)
+  (n: Ghost.erased pos)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (nlist n t))
+requires
+  pts_to_serialized (serialize_nlist n s) input #pm v
+returns res : (slice byte & slice byte)
+ensures (
+  let (hd, tl) = res in
+  pts_to_serialized s hd #pm (List.Tot.hd v) **
+  pts_to_serialized (serialize_nlist (n - 1) s) tl #pm (List.Tot.tl v) **
+  Trade.trade
+    (pts_to_serialized s hd #pm (List.Tot.hd v) **
+      pts_to_serialized (serialize_nlist (n - 1) s) tl #pm (List.Tot.tl v))
+    (pts_to_serialized (serialize_nlist n s) input #pm v)
+)
+{
+  let (hd, tl) = nlist_hd_tl s sq j n input;
+  unfold (nlist_hd_tl_post s sq n input pm v (hd, tl));
+  unfold (nlist_hd_tl_post' s sq n input pm v hd tl);
+  (hd, tl)
+}
+
 ghost fn nlist_as_nondep_then_nondep_then_left
   (#t: Type0)
   (#k: parser_kind)
@@ -473,6 +504,36 @@ ensures exists* v' .
   Trade.trans (pts_to_serialized s res #pm _) _ _;
   res
 }
+
+inline_for_extraction
+fn nlist_hd'
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (j: jumper p)
+  (n: Ghost.erased nat)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (nlist n t))
+  (sq: squash (n > 0))
+requires
+  pts_to_serialized (serialize_nlist n s) input #pm v
+returns input' : slice byte
+ensures exists* v' .
+  pts_to_serialized s input' #pm v' **
+  trade (pts_to_serialized s input' #pm v') (pts_to_serialized (serialize_nlist n s) input #pm v) **
+  pure (
+    Cons? v /\
+    v' == List.Tot.hd v
+  )
+{
+  nlist_cons_as_nondep_then s n input;
+  let res = nondep_then_fst #_ #(nlist (n - 1) t) s j #(parse_nlist_kind (n - 1) k) #(coerce_eq () (parse_nlist (n - 1) p)) (coerce_eq () (serialize_nlist (n - 1) s <: serializer #(parse_nlist_kind (n - 1) k) (parse_nlist (n - 1) p))) input; // FIXME: WHY WHY WHY are those reveal (hide (...)) NOT reduced?
+  Trade.trans (pts_to_serialized s res #pm _) _ _;
+  res
+}
+
 
 inline_for_extraction
 fn nlist_tl

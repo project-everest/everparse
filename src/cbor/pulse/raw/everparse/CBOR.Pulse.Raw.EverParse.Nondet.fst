@@ -561,8 +561,6 @@ let serialize_list_of_pair_list
     (serialize (serialize_nlist (n + n) serialize_raw_data_item) l');
   ()
 
-#push-options "--print_implicits"
-
 inline_for_extraction
 fn impl_setoid_assoc_eq_with_overflow
   (#equiv: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> option bool))
@@ -897,3 +895,202 @@ ensures
   Trade.elim _ (pts_to_serialized (serialize_nlist (SZ.v nl2) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l2 #pl2 gl2);
   !pres
 }
+
+inline_for_extraction
+let impl_data_model_hd_t
+  (data_model: (x1: raw_data_item) -> (x2: raw_data_item) -> bool)
+=
+  (n1: Ghost.erased nat) ->
+  (l1: S.slice byte) ->
+  (n2: Ghost.erased nat) ->
+  (l2: S.slice byte) ->
+  (#p1: perm) ->
+  (#gl1: Ghost.erased (nlist n1 raw_data_item)) ->
+  (#p2: perm) ->
+  (#gl2: Ghost.erased (nlist n2 raw_data_item)) ->
+  stt (bool)
+    (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
+      pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2 **
+      pure (
+        n1 > 0 /\ n2 > 0
+      )
+    )
+    (fun res ->
+pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
+      pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2 **
+      pure (
+        n1 > 0 /\ n2 > 0 /\
+        res == data_model (List.Tot.hd gl1) (List.Tot.hd gl2)
+      )
+    )
+
+let option_sz_v (x: option SZ.t) : GTot (option nat) =
+  match x with
+  | None -> None
+  | Some x' -> Some (SZ.v x')
+
+inline_for_extraction
+let impl_check_equiv_map_hd_t
+  (check_equiv_map: option nat -> (x1: raw_data_item) -> (x2: raw_data_item) -> option bool)
+=
+  (map_bound: option SZ.t) ->
+  (n1: Ghost.erased nat) ->
+  (l1: S.slice byte) ->
+  (n2: Ghost.erased nat) ->
+  (l2: S.slice byte) ->
+  (#p1: perm) ->
+  (#gl1: Ghost.erased (nlist n1 raw_data_item)) ->
+  (#p2: perm) ->
+  (#gl2: Ghost.erased (nlist n2 raw_data_item)) ->
+  stt (option bool)
+    (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
+      pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2 **
+      pure (
+        n1 > 0 /\ n2 > 0
+      )
+    )
+    (fun res ->
+pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
+      pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2 **
+      pure (
+        n1 > 0 /\ n2 > 0 /\
+        res == check_equiv_map (option_sz_v map_bound) (List.Tot.hd gl1) (List.Tot.hd gl2)
+      )
+    )
+
+inline_for_extraction
+fn impl_check_equiv_hd_of_check_equiv_map
+  (check_equiv_map: Ghost.erased (option nat -> (x1: raw_data_item) -> (x2: raw_data_item) -> option bool)) // FIXME: WHY WHY WHY can this argument not be optional?
+  (impl: impl_check_equiv_map_hd_t check_equiv_map)
+  (bound: Ghost.erased nat)
+  (map_bound: option SZ.t)
+: impl_equiv_hd_t (Ghost.reveal bound) (Ghost.reveal check_equiv_map (option_sz_v map_bound))
+=
+  (n1: Ghost.erased nat)
+  (l1: S.slice byte)
+  (n2: Ghost.erased nat)
+  (l2: S.slice byte)
+  (#p1: perm)
+  (#gl1: Ghost.erased (nlist n1 raw_data_item))
+  (#p2: perm)
+  (#gl2: Ghost.erased (nlist n2 raw_data_item))
+{
+  impl map_bound n1 l1 n2 l2
+}
+
+inline_for_extraction
+fn impl_check_equiv_map_hd_body
+  (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
+  (impl_data_model: impl_data_model_hd_t data_model)
+  (impl_check_equiv_map_hd: impl_check_equiv_map_hd_t (check_equiv_map data_model))
+: impl_check_equiv_map_hd_t (check_equiv_map data_model)
+=
+  (map_bound: _)
+  (n1: Ghost.erased nat)
+  (l1: S.slice byte)
+  (n2: Ghost.erased nat)
+  (l2: S.slice byte)
+  (#p1: perm)
+  (#gl1: Ghost.erased (nlist n1 raw_data_item))
+  (#p2: perm)
+  (#gl2: Ghost.erased (nlist n2 raw_data_item))
+{
+  check_equiv_map_eq data_model (option_sz_v map_bound) (List.Tot.hd gl1) (List.Tot.hd gl2);
+  if impl_data_model n1 l1 n2 l2 {
+    Some true
+  } else {
+    let _ = pts_to_serialized_nlist_raw_data_item_head_header' l1 n1;
+    let ph1 = nondep_then_fst
+      serialize_header
+      (jump_header ())
+      _
+      l1;
+    Trade.trans _ _ (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1);
+    let h1 = read_header () ph1;
+    Trade.elim _ (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1);
+    let _ = pts_to_serialized_nlist_raw_data_item_head_header' l2 n2;
+    let ph2 = nondep_then_fst
+      serialize_header
+      (jump_header ())
+      _
+      l2;
+    Trade.trans _ _ (pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2);
+    let h2 = read_header () ph2;
+    Trade.elim _ (pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2);
+    let mt1 = get_header_major_type h1;
+    let mt2 = get_header_major_type h2;
+    if (mt1 = cbor_major_type_map && mt2 = cbor_major_type_map) {
+      if (map_bound = Some 0sz) {
+        None
+      } else {
+        let map_bound' : option SZ.t = (match map_bound with None -> None | Some b -> Some (SZ.sub b 1sz));
+        let bound : Ghost.erased nat = Ghost.hide (
+          let Map _ v1 = List.Tot.hd gl1 in
+          let Map _ v2 = List.Tot.hd gl2 in
+          list_sum (pair_sum raw_data_item_size raw_data_item_size) v1 + list_sum (pair_sum raw_data_item_size raw_data_item_size) v2
+        );
+        assume (pure (SZ.fits_u64));
+        let nv1 = SZ.uint64_to_sizet (argument_as_uint64 (dfst h1) (dsnd h1));
+        let nv2 = SZ.uint64_to_sizet (argument_as_uint64 (dfst h2) (dsnd h2));
+        let map1 = nlist_hd' serialize_raw_data_item (jump_raw_data_item ()) n1 l1 ();
+        let mut ph = h1;
+        let c1 = get_header_and_contents map1 ph;
+        Trade.trans _ _ (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1);
+        get_map_payload c1 (List.Tot.hd gl1);
+        Trade.trans _ _ (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1);
+        pts_to_serialized_nlist_ext
+          (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
+          (U64.v (Map?.len (List.Tot.hd gl1)).value)
+          c1
+          (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
+          (SZ.v nv1);
+        Trade.trans _ _ (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1);
+        let map2 = nlist_hd' serialize_raw_data_item (jump_raw_data_item ()) n2 l2 ();
+        let c2 = get_header_and_contents map2 ph;
+        Trade.trans _ _ (pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2);
+        get_map_payload c2 (List.Tot.hd gl2);
+        Trade.trans _ _ (pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2);
+        pts_to_serialized_nlist_ext
+          (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
+          (U64.v (Map?.len (List.Tot.hd gl2)).value)
+          c2
+          (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
+          (SZ.v nv2);
+        Trade.trans _ _ (pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2);
+        let res = impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow
+          (impl_check_equiv_aux
+            (impl_check_equiv_hd_of_check_equiv_map
+              _
+              impl_check_equiv_map_hd 
+              bound
+              map_bound'
+            )
+          )
+          nv2 c2 nv1 c1;
+        if (res = Some true) {
+          let res = impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow
+          (impl_check_equiv_aux
+            (impl_check_equiv_hd_of_check_equiv_map
+              _
+              impl_check_equiv_map_hd 
+              bound
+              map_bound'
+            )
+          )
+          nv1 c1 nv2 c2;
+          Trade.elim _ (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1);
+          Trade.elim _ (pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2);
+          res
+        } else {
+          Trade.elim _ (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1);
+          Trade.elim _ (pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2);
+          res
+        }
+      }
+    } else {
+      Some false
+    }
+  }
+}
+
+#pop-options
