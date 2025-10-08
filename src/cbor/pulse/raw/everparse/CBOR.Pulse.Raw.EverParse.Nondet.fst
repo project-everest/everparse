@@ -1072,3 +1072,198 @@ fn impl_check_equiv_map_hd_body
 }
 
 #pop-options
+
+inline_for_extraction
+let impl_equiv_t
+  (#t: Type)
+  (equiv: (x1: raw_data_item) -> (x2: raw_data_item) -> t)
+=
+  (l1: S.slice byte) ->
+  (l2: S.slice byte) ->
+  (#p1: perm) ->
+  (#gl1: Ghost.erased (raw_data_item)) ->
+  (#p2: perm) ->
+  (#gl2: Ghost.erased (raw_data_item)) ->
+  stt t
+    (pts_to_serialized (serialize_raw_data_item) l1 #p1 gl1 **
+      pts_to_serialized (serialize_raw_data_item) l2 #p2 gl2
+    )
+    (fun res ->
+      pts_to_serialized (serialize_raw_data_item) l1 #p1 gl1 **
+      pts_to_serialized (serialize_raw_data_item) l2 #p2 gl2 **
+      pure (
+        res == equiv gl1 gl2
+      )
+    )
+
+inline_for_extraction
+fn impl_check_equiv
+  (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
+  (impl_check_equiv_map_hd: impl_check_equiv_map_hd_t data_model)
+  (map_bound: option SZ.t)
+: impl_equiv_t #_ (check_equiv data_model (option_sz_v map_bound))
+=
+  (l1: S.slice byte)
+  (l2: S.slice byte)
+  (#p1: perm)
+  (#gl1: Ghost.erased (raw_data_item))
+  (#p2: perm)
+  (#gl2: Ghost.erased (raw_data_item))
+{
+  impl_check_equiv_aux
+    (impl_equiv_hd_with_bound_of_equiv_hd
+      _
+      (impl_check_equiv_map_hd map_bound)
+      (raw_data_item_size gl1 + raw_data_item_size gl2)
+    )
+    l1 l2
+}
+
+inline_for_extraction
+let impl_fun_with_invariant_t
+  (#t: Type)
+  (f: (x1: raw_data_item) -> t)
+  (inv: slprop)
+=
+  (l1: S.slice byte) ->
+  (#p1: perm) ->
+  (#gl1: Ghost.erased (raw_data_item)) ->
+  stt t
+    (inv ** pts_to_serialized (serialize_raw_data_item) l1 #p1 gl1)
+    (fun res ->
+      inv ** pts_to_serialized (serialize_raw_data_item) l1 #p1 gl1 **
+      pure (
+        res == f gl1
+      )
+    )
+
+inline_for_extraction
+fn impl_list_existsb_with_overflow_map_fst
+  (#p: Ghost.erased (raw_data_item -> option bool))
+  (#inv: slprop)
+  (impl_p: impl_fun_with_invariant_t p inv)
+  (n0: SZ.t)
+  (l0: S.slice byte)
+  (#pm: perm)
+  (#gl0: Ghost.erased (nlist (SZ.v n0) (raw_data_item & raw_data_item)))
+requires
+  inv **
+  pts_to_serialized (serialize_nlist (SZ.v n0) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l0 #pm gl0
+returns res: option bool
+ensures
+  inv **
+  pts_to_serialized (serialize_nlist (SZ.v n0) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l0 #pm gl0 **
+  pure (
+    res == list_existsb_with_overflow p (List.Tot.map fst gl0)
+  )
+{
+  Trade.refl
+    (pts_to_serialized (serialize_nlist (SZ.v n0) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l0 #pm gl0);
+  let mut pl = l0;
+  let mut pn = n0;
+  let mut pres = Some false;
+  while (
+    let n = !pn;
+    let res = !pres;
+    (SZ.gt n 0sz && res = Some false)
+  ) invariant b . exists* n l (gl: nlist (SZ.v n) (raw_data_item & raw_data_item)) res . (
+    inv **
+    pts_to pn n **
+    pts_to pl l **
+    pts_to_serialized (serialize_nlist (SZ.v n) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l #pm gl **
+    Trade.trade
+      (pts_to_serialized (serialize_nlist (SZ.v n) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l #pm gl)
+      (pts_to_serialized (serialize_nlist (SZ.v n0) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l0 #pm gl0) **
+    pts_to pres res **
+    pure (
+      b == (res = Some false && SZ.gt n 0sz) /\
+      list_existsb_with_overflow p (List.Tot.map fst gl0) == (if res = Some false then list_existsb_with_overflow p (List.Tot.map fst gl) else res)
+    )
+  )
+  {
+    let n = !pn;
+    let n' = SZ.sub n 1sz;
+    let l = !pl;
+    with gn (gl: nlist (SZ.v gn) (raw_data_item & raw_data_item)) . assert (
+      pts_to pn gn **
+      pts_to_serialized
+        (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+        l #pm
+        gl
+    );
+    nlist_cons_as_nondep_then
+      (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
+      (SZ.v n)
+      l;
+    pts_to_serialized_nondep_then_assoc_l2r
+      serialize_raw_data_item
+      serialize_raw_data_item
+      (serialize_nlist (SZ.v n') (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+      l;
+    Trade.trans _ _ (
+      pts_to_serialized
+        (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+        l #pm
+        gl
+    );
+    let ki : Ghost.erased parser_kind = and_then_kind
+      parse_raw_data_item_kind
+      (parse_nlist_kind (SZ.v n') (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind));
+    let pi : parser ki (raw_data_item & nlist (SZ.v n') (raw_data_item & raw_data_item)) = nondep_then
+        parse_raw_data_item
+        (parse_nlist (SZ.v n') (nondep_then parse_raw_data_item parse_raw_data_item));
+    let si : serializer pi = serialize_nondep_then
+        serialize_raw_data_item
+        (serialize_nlist (SZ.v n') (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item));
+    assume (pure (SZ.fits_u64));
+    let (lh, lt) = split_nondep_then'
+      serialize_raw_data_item
+      (jump_raw_data_item ())
+      si
+      l;
+    Trade.trans _ _ (
+      pts_to_serialized
+        (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+        l #pm
+        gl
+    );
+    let res = impl_p lh;
+    if (res = Some false) {
+      Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n0) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l0 #pm gl0);
+      Trade.elim_hyp_l _ _ _;
+      let kj : Ghost.erased parser_kind = (parse_nlist_kind (SZ.v n') (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind));
+      let pj : parser kj (nlist (SZ.v n') (raw_data_item & raw_data_item)) =
+          (parse_nlist (SZ.v n') (nondep_then parse_raw_data_item parse_raw_data_item));
+      let sj : serializer pj =
+          (serialize_nlist (SZ.v n') (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item));
+      assert (pure (si == serialize_nondep_then serialize_raw_data_item sj));
+      let sq : squash (split_nondep_then''_precond pi parse_raw_data_item pj) = ();
+      let (lv, lt') = split_nondep_then''
+        serialize_raw_data_item
+        (jump_raw_data_item ())
+        sj
+        lt
+        sq;
+      Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n0) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l0 #pm gl0);
+      Trade.elim_hyp_l _ _ _;
+      pts_to_serialized_ext_trade
+        sj
+        (serialize_nlist (SZ.v n') (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+        lt';
+      Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n0) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l0 #pm gl0);
+      pl := lt';
+      pn := n';
+      ()
+    } else {
+      Trade.elim _ (
+        pts_to_serialized
+          (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+          l #pm
+          gl
+      );
+      pres := res;
+    }
+  };
+  Trade.elim _ _;
+  !pres
+}
