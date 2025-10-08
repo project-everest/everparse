@@ -1267,3 +1267,162 @@ ensures
   Trade.elim _ _;
   !pres
 }
+
+module GR = Pulse.Lib.GhostReference
+
+#push-options "--z3rlimit 32"
+
+fn rec impl_check_map_depth_aux
+  (bound: SZ.t)
+  (pl: ref (S.slice byte))
+  (n1: SZ.t)
+  (l1: Ghost.erased (list raw_data_item))
+  (l2: Ghost.erased (list raw_data_item))
+  (#l0: Ghost.erased (S.slice byte))
+  (#pm: perm)
+  (#gn0: Ghost.erased nat)
+  (#gl0: Ghost.erased (nlist gn0 raw_data_item))
+requires
+  pts_to pl l0 **
+  pts_to_serialized (serialize_nlist gn0 serialize_raw_data_item) l0 #pm gl0 **
+  pure (
+    (Ghost.reveal gl0 <: list raw_data_item) == List.Tot.append l1 l2 /\
+    List.Tot.length l1 == SZ.v n1
+  )
+returns res: bool
+ensures exists* l' gn' (gl': nlist gn' raw_data_item) .
+  pts_to pl l' **
+  pts_to_serialized (serialize_nlist gn' serialize_raw_data_item) l' #pm gl' **
+  Trade.trade
+    (pts_to_serialized (serialize_nlist gn' serialize_raw_data_item) l' #pm gl')
+    (pts_to_serialized (serialize_nlist gn0 serialize_raw_data_item) l0 #pm gl0) **
+  pure (
+    res == check_map_depth (SZ.v bound) l1 /\
+    (res ==> (gl' <: list raw_data_item) == Ghost.reveal l2)
+  )
+{
+  Trade.refl (pts_to_serialized (serialize_nlist gn0 serialize_raw_data_item) l0 #pm gl0);
+  List.Tot.append_length l1 l2;
+  let mut pn = n1;
+  let mut pres = true;
+  let pl1 = GR.alloc (Ghost.reveal l1);
+  while (
+    let res = !pres;
+    let n = !pn;
+    (res && (SZ.gt n 0sz))
+  ) invariant b . exists* n l gn (gl: nlist gn raw_data_item) res ll . (
+    pts_to pn n **
+    pts_to pl l **
+    pts_to_serialized (serialize_nlist gn serialize_raw_data_item) l #pm gl **
+    Trade.trade
+      (pts_to_serialized (serialize_nlist gn serialize_raw_data_item) l #pm gl)
+      (pts_to_serialized (serialize_nlist gn0 serialize_raw_data_item) l0 #pm gl0) **
+    pts_to pres res **
+    GR.pts_to pl1 ll **
+    pure (
+      check_map_depth (SZ.v bound) l1 == (res && check_map_depth (SZ.v bound) ll) /\
+      (res ==> (List.Tot.length ll == SZ.v n /\ gn == SZ.v n + List.Tot.length l2 /\ (gl <: list raw_data_item) == List.Tot.append ll l2)) /\
+      b == (res && SZ.v n > 0)
+    )
+  ) {
+    let l = !pl;
+    let n = !pn;
+    let n' = SZ.sub n 1sz;
+    with gn (gl: nlist gn raw_data_item) . assert (pts_to_serialized (serialize_nlist gn serialize_raw_data_item) l #pm gl);
+    let gn' : Ghost.erased nat = gn - 1;
+    let gh = pts_to_serialized_nlist_raw_data_item_head_header'
+      l
+      gn;
+    let (hd, tl') = split_nondep_then'
+        _ (jump_header ())
+        _ l;
+    Trade.trans _ _ (pts_to_serialized (serialize_nlist gn serialize_raw_data_item) l #pm gl);
+    let h = read_header () hd;
+    Trade.elim_hyp_l _ _ _;
+    rewrite each gh as h;
+    assume (pure (SZ.fits_u64));
+    let (_, tl) = split_nondep_then'
+      _ (jump_leaf_content () h)
+      _ tl';
+    Trade.trans _ _ (pts_to_serialized (serialize_nlist gn serialize_raw_data_item) l #pm gl);
+    Trade.elim_hyp_l _ _ _;
+    pts_to_serialized_nlist_append
+      serialize_raw_data_item
+      tl _ _;
+    Trade.trans _ _ (pts_to_serialized (serialize_nlist gn serialize_raw_data_item) l #pm gl);
+    let m = get_header_major_type h;
+    with ll . assert (GR.pts_to pl1 ll);
+    if (m = cbor_major_type_tagged) {
+      GR.op_Colon_Equals pl1 (Tagged?.v (List.Tot.hd ll) :: List.Tot.tl ll);
+      Trade.trans _ (pts_to_serialized (serialize_nlist gn serialize_raw_data_item) l #pm gl) _;
+      pl := tl;
+      ()
+    } else if (m = cbor_major_type_array) {
+      List.Tot.append_assoc (Array?.v (List.Tot.hd ll)) (List.Tot.tl ll) l2;
+      List.Tot.append_length (Array?.v (List.Tot.hd ll)) (List.Tot.tl ll);
+      let ll' = Ghost.hide (List.Tot.append (Array?.v (List.Tot.hd ll)) (List.Tot.tl ll));
+      List.Tot.append_length ll' l2;
+      pts_to_serialized_length _ tl;
+      GR.op_Colon_Equals pl1 ll';
+      Trade.trans _ (pts_to_serialized (serialize_nlist gn serialize_raw_data_item) l #pm gl) _;
+      pl := tl;
+      pn := SZ.add (SZ.uint64_to_sizet (argument_as_uint64 (dfst h) (dsnd h))) n';
+      ()
+    } else if (m = cbor_major_type_map) {
+      if (bound = 0sz) {
+        Trade.elim _ (pts_to_serialized (serialize_nlist gn serialize_raw_data_item) l #pm gl);
+        pres := false
+      } else {
+        list_of_pair_list_length (Map?.v (List.Tot.hd ll));
+        let ll' = Ghost.hide (CBOR.Spec.Util.list_of_pair_list (Map?.v (List.Tot.hd ll)));
+        List.Tot.append_assoc ll' (List.Tot.tl ll) l2;
+        let l2' = Ghost.hide (List.Tot.append (List.Tot.tl ll) l2);
+        List.Tot.append_length ll' l2;
+        pts_to_serialized_length _ tl;
+        Trade.trans _ (pts_to_serialized (serialize_nlist gn serialize_raw_data_item) l #pm gl) _;
+        pl := tl;
+        let npairs = SZ.uint64_to_sizet (argument_as_uint64 (dfst h) (dsnd h));
+        let res = impl_check_map_depth_aux (SZ.sub bound 1sz) pl (SZ.add npairs npairs) ll' l2';
+        Trade.trans _ _ (pts_to_serialized (serialize_nlist gn0 serialize_raw_data_item) l0 #pm gl0);
+        if res {
+          GR.op_Colon_Equals pl1 (List.Tot.tl ll);
+          pn := n';
+          ()
+        } else {
+          pres := false
+        }
+      }
+    } else {
+      Trade.trans _ (pts_to_serialized (serialize_nlist gn serialize_raw_data_item) l #pm gl) _;
+      pl := tl;
+      pn := n';
+      GR.op_Colon_Equals pl1 (List.Tot.tl ll);
+    }
+  };
+  GR.free pl1;
+  !pres
+}
+
+#pop-options
+
+fn impl_check_map_depth
+  (bound: SZ.t)
+  (n0: SZ.t)
+  (l0: S.slice byte)
+  (#pm: perm)
+  (#gl0: Ghost.erased (nlist (SZ.v n0) raw_data_item))
+requires
+  pts_to_serialized (serialize_nlist (SZ.v n0) serialize_raw_data_item) l0 #pm gl0
+returns res: bool
+ensures
+  pts_to_serialized (serialize_nlist (SZ.v n0) serialize_raw_data_item) l0 #pm gl0 **
+  pure (
+    res == check_map_depth (SZ.v bound) gl0
+  )
+{
+  let mut pl = l0;
+  List.Tot.append_l_nil gl0;
+  let res = impl_check_map_depth_aux bound pl n0 (Ghost.hide (Ghost.reveal gl0)) [];
+  Trade.elim _ _;
+  res
+}
