@@ -239,95 +239,6 @@ let check_valid
 
 (** Correctness *)
 
-let rec wf_list_max (#t: Type) (l: list t) (f: (x: t { List.Tot.memP x l /\ x << l }) -> nat) : Tot nat (decreases l) =
-  match l with
-  | [] -> 0
-  | a :: q -> 
-    let n1 = f a in
-    let n2 = wf_list_max q f in
-    if n1 > n2 then n1 else n2
-
-let rec wf_list_max_correct (#t: Type) (l: list t) (f: (x: t { List.Tot.memP x l /\ x << l }) -> nat) (x: t) : Lemma
-  (ensures (List.Tot.memP x l ==> (x << l /\ f x <= wf_list_max l f)))
-  (decreases l)
-= Classical.move_requires (List.Tot.memP_precedes x) l;
-  match l with
-  | [] -> ()
-  | _ :: q -> wf_list_max_correct q f x
-
-let rec list_max (#t: Type) (f: t -> nat) (l: list t) : Tot nat =
-  match l with
-  | [] -> 0
-  | a :: q ->
-    let n1 = f a in
-    let n2 = list_max f q in
-    if n1 > n2 then n1 else n2
-
-let rec list_max_append (#t: Type) (f: t -> nat) (l1 l2: list t) : Lemma
-  (ensures (
-    let n1 = list_max f l1 in
-    let n2 = list_max f l2 in
-    list_max f (List.Tot.append l1 l2) == (if n1 > n2 then n1 else n2)
-  ))
-  (decreases l1)
-= match l1 with
-  | [] -> ()
-  | _ :: q -> list_max_append f q l2
-
-let rec wf_list_max_eq (#t: Type) (f: t -> nat) (l: list t) : Lemma
-  (ensures (wf_list_max l f == list_max f l))
-  (decreases l)
-= match l with
-  | [] -> ()
-  | _ :: q -> wf_list_max_eq f q
-
-let list_max_correct
-  (#t: Type) (f: t -> nat) (l: list t) (x: t)
-: Lemma
-  (ensures List.Tot.memP x l ==> (x << l /\ f x <= list_max f l))
-= wf_list_max_eq f l;
-  wf_list_max_correct l f x
-
-let rec map_depth (x: raw_data_item) : Tot nat =
-  match x with
-  | Map _ l -> 1 + wf_list_max l map_depth_pair
-  | Array _ l -> wf_list_max l map_depth
-  | Tagged _ y -> map_depth y
-  | _ -> 0
-
-and map_depth_pair (x: (raw_data_item & raw_data_item)) : Tot nat =
-  let y1 = map_depth (fst x) in
-  let y2 = map_depth (snd x) in
-  if y1 > y2 then y1 else y2
-
-let map_depth_eq (x: raw_data_item) : Lemma
-  (map_depth x == begin match x with
-  | Map _ l -> 1 + list_max map_depth_pair l
-  | Array _ l -> list_max map_depth l
-  | Tagged _ y -> map_depth y
-  | _ -> 0
-  end)
-= match x with
-  | Map len l ->
-    assert_norm (map_depth (Map len l) == 1 + wf_list_max l map_depth_pair);
-    wf_list_max_eq map_depth_pair l
-  | Array len l ->
-    assert_norm (map_depth (Array len l) == wf_list_max l map_depth);
-    wf_list_max_eq map_depth l
-  | _ -> ()
-
-let rec map_key_depth (x: raw_data_item) : Tot nat =
-  match x with
-  | Map _ l -> wf_list_max l map_key_depth_pair
-  | Array _ l -> wf_list_max l map_key_depth
-  | Tagged _ y -> map_key_depth y
-  | _ -> 0
-
-and map_key_depth_pair (x: (raw_data_item & raw_data_item)) : Tot nat =
-  let y1 = map_depth (fst x) in
-  let y2 = map_key_depth (snd x) in
-  if y1 > y2 then y1 else y2
-
 module Valid = CBOR.Spec.Raw.Valid
 
 let exceeds_bound (a: nat) (b: option nat) : Tot bool =
@@ -739,26 +650,6 @@ let check_equiv_correct
   check_equiv_aux_correct data_model map_bound (raw_data_item_size x1 + raw_data_item_size x2) (check_equiv_map data_model map_bound) x1 x2;
   ()
 
-let rec list_max_map_dep_pair
-  (l: list (raw_data_item & raw_data_item))
-: Lemma
-  (list_max map_depth_pair l == (
-    let l1 = list_max map_depth (List.Tot.map fst l) in
-    let l2 = list_max map_depth (List.Tot.map snd l) in
-    if l1 > l2 then l1 else l2
-  ))
-= match l with
-  | [] -> ()
-  | _ :: q -> list_max_map_dep_pair q
-
-let rec list_max_map_dep_pair_list_of_pair_list
-  (l: list (raw_data_item & raw_data_item))
-: Lemma
-  (list_max map_depth_pair l == list_max map_depth (list_of_pair_list l))
-= match l with
-  | [] -> ()
-  | _ :: q -> list_max_map_dep_pair_list_of_pair_list q
-
 let rec list_existsb_with_overflow_equiv_correct
   (data_model: (raw_data_item -> raw_data_item -> bool) {
     (forall x1 x2 . data_model x1 x2 == data_model x2 x1) /\
@@ -863,64 +754,6 @@ let rec list_no_setoid_repeats_with_overflow_existsb_with_overflow_equiv_correct
        ()
       end
     | _ -> ()
-
-let map_key_depth_eq (x: raw_data_item) : Lemma
-  (map_key_depth x == begin match x with
-  | Map _ l -> list_max map_key_depth_pair l
-  | Array _ l -> list_max map_key_depth l
-  | Tagged _ y -> map_key_depth y
-  | _ -> 0
-  end)
-= match x with
-  | Map len l ->
-    assert_norm (map_key_depth (Map len l) == wf_list_max l map_key_depth_pair);
-    wf_list_max_eq map_key_depth_pair l
-  | Array len l ->
-    assert_norm (map_key_depth (Array len l) == wf_list_max l map_key_depth);
-    wf_list_max_eq map_key_depth l
-  | _ -> ()
-
-let rec list_max_map_key_dep_pair
-  (l: list (raw_data_item & raw_data_item))
-: Lemma
-  (list_max map_key_depth_pair l == (
-    let l1 = list_max map_depth (List.Tot.map fst l) in
-    let l2 = list_max map_key_depth (List.Tot.map snd l) in
-    if l1 > l2 then l1 else l2
-  ))
-= match l with
-  | [] -> ()
-  | _ :: q -> list_max_map_key_dep_pair q
-
-let rec list_max_le
-  (#t: Type0)
-  (f1: t -> nat)
-  (f2: t -> nat)
-  (l: list t)
-  (prf: (x: t { List.Tot.memP x l /\ x << l }) -> Lemma
-    (f1 x <= f2 x)
-  )
-: Lemma
-  (ensures (list_max f1 l <= list_max f2 l))
-  (decreases l)
-= match l with
-  | [] -> ()
-  | a :: q -> prf a; list_max_le f1 f2 q prf
-
-let rec map_key_depth_le_map_depth
-  (x: raw_data_item)
-: Lemma
-  (ensures (map_key_depth x <= map_depth x))
-  (decreases x)
-= map_key_depth_eq x;
-  map_depth_eq x;
-  match x with
-  | Map _ l ->
-    list_max_le map_key_depth_pair map_depth_pair l (fun x -> map_key_depth_le_map_depth (snd x))
-  | Array _ l ->
-    list_max_le map_key_depth map_depth l (fun x -> map_key_depth_le_map_depth x)
-  | Tagged _ y -> map_key_depth_le_map_depth y
-  | _ -> ()
 
 let rec list_max_bound_contains_intro
   (#t: Type0)

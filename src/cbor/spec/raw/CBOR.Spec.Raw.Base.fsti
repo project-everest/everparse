@@ -386,3 +386,106 @@ let holds_on_raw_data_item_fmap
     )
     x;
   holds_on_raw_data_item_implies (truep `andp` p) p (raw_data_item_fmap f x) (fun _ -> ())
+
+let rec map_depth (x: raw_data_item) : Tot nat =
+  match x with
+  | Map _ l -> 1 + wf_list_max l map_depth_pair
+  | Array _ l -> wf_list_max l map_depth
+  | Tagged _ y -> map_depth y
+  | _ -> 0
+
+and map_depth_pair (x: (raw_data_item & raw_data_item)) : Tot nat =
+  let y1 = map_depth (fst x) in
+  let y2 = map_depth (snd x) in
+  if y1 > y2 then y1 else y2
+
+let map_depth_eq (x: raw_data_item) : Lemma
+  (map_depth x == begin match x with
+  | Map _ l -> 1 + list_max map_depth_pair l
+  | Array _ l -> list_max map_depth l
+  | Tagged _ y -> map_depth y
+  | _ -> 0
+  end)
+= match x with
+  | Map len l ->
+    assert_norm (map_depth (Map len l) == 1 + wf_list_max l map_depth_pair);
+    wf_list_max_eq map_depth_pair l
+  | Array len l ->
+    assert_norm (map_depth (Array len l) == wf_list_max l map_depth);
+    wf_list_max_eq map_depth l
+  | _ -> ()
+
+let rec map_key_depth (x: raw_data_item) : Tot nat =
+  match x with
+  | Map _ l -> wf_list_max l map_key_depth_pair
+  | Array _ l -> wf_list_max l map_key_depth
+  | Tagged _ y -> map_key_depth y
+  | _ -> 0
+
+and map_key_depth_pair (x: (raw_data_item & raw_data_item)) : Tot nat =
+  let y1 = map_depth (fst x) in
+  let y2 = map_key_depth (snd x) in
+  if y1 > y2 then y1 else y2
+
+let rec list_max_map_dep_pair
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (list_max map_depth_pair l == (
+    let l1 = list_max map_depth (List.Tot.map fst l) in
+    let l2 = list_max map_depth (List.Tot.map snd l) in
+    if l1 > l2 then l1 else l2
+  ))
+= match l with
+  | [] -> ()
+  | _ :: q -> list_max_map_dep_pair q
+
+let rec list_max_map_dep_pair_list_of_pair_list
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (list_max map_depth_pair l == list_max map_depth (list_of_pair_list l))
+= match l with
+  | [] -> ()
+  | _ :: q -> list_max_map_dep_pair_list_of_pair_list q
+
+let map_key_depth_eq (x: raw_data_item) : Lemma
+  (map_key_depth x == begin match x with
+  | Map _ l -> list_max map_key_depth_pair l
+  | Array _ l -> list_max map_key_depth l
+  | Tagged _ y -> map_key_depth y
+  | _ -> 0
+  end)
+= match x with
+  | Map len l ->
+    assert_norm (map_key_depth (Map len l) == wf_list_max l map_key_depth_pair);
+    wf_list_max_eq map_key_depth_pair l
+  | Array len l ->
+    assert_norm (map_key_depth (Array len l) == wf_list_max l map_key_depth);
+    wf_list_max_eq map_key_depth l
+  | _ -> ()
+
+let rec list_max_map_key_dep_pair
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (list_max map_key_depth_pair l == (
+    let l1 = list_max map_depth (List.Tot.map fst l) in
+    let l2 = list_max map_key_depth (List.Tot.map snd l) in
+    if l1 > l2 then l1 else l2
+  ))
+= match l with
+  | [] -> ()
+  | _ :: q -> list_max_map_key_dep_pair q
+
+let rec map_key_depth_le_map_depth
+  (x: raw_data_item)
+: Lemma
+  (ensures (map_key_depth x <= map_depth x))
+  (decreases x)
+= map_key_depth_eq x;
+  map_depth_eq x;
+  match x with
+  | Map _ l ->
+    list_max_le map_key_depth_pair map_depth_pair l (fun x -> map_key_depth_le_map_depth (snd x))
+  | Array _ l ->
+    list_max_le map_key_depth map_depth l (fun x -> map_key_depth_le_map_depth x)
+  | Tagged _ y -> map_key_depth_le_map_depth y
+  | _ -> ()

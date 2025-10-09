@@ -181,3 +181,15 @@ val mk_det_raw_cbor_map_raw_snoc
   (
     mk_det_raw_cbor_map_raw_snoc_post m key value
   )
+
+val mk_cbor_map_depth
+  (x: raw_data_item)
+: Lemma
+  (requires R.valid_raw_data_item x)
+  (ensures cbor_map_depth (mk_cbor x) == R.map_depth x)
+
+val mk_cbor_map_key_depth
+  (x: raw_data_item)
+: Lemma
+  (requires R.valid_raw_data_item x)
+  (ensures cbor_map_key_depth (mk_cbor x) == R.map_key_depth x)

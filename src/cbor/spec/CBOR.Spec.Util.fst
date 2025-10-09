@@ -1183,6 +1183,26 @@ let rec list_sum_map (#t1: Type) (f1: t1 -> nat) (l1: list t1) (#t2: Type) (f2: 
 let pair_sum (#t1: Type) (#t2: Type) (f1: t1 -> nat) (f2: t2 -> nat) (x: (t1 & t2)) : Tot nat =
   f1 (fst x) + f2 (snd x)
 
+let rec list_max (#t: Type) (f: t -> nat) (l: list t) : Tot nat =
+  match l with
+  | [] -> 0
+  | a :: q ->
+    let n1 = f a in
+    let n2 = list_max f q in
+    if n1 > n2 then n1 else n2
+
+let rec list_max_append (#t: Type) (f: t -> nat) (l1 l2: list t) : Lemma
+  (ensures (
+    let n1 = list_max f l1 in
+    let n2 = list_max f l2 in
+    list_max f (List.Tot.append l1 l2) == (if n1 > n2 then n1 else n2)
+  ))
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | _ :: q -> list_max_append f q l2
+
+
 let rec list_of_pair_list
   (#t: Type)
   (x: list (t & t))
@@ -1617,6 +1637,60 @@ let list_assoc_append
   list_setoid_assoc_eqtype k l1;
   list_setoid_assoc_eqtype k l2
 
+let equiv_fst
+  (#t1 #t2: Type)
+  (equiv: t1 -> t1 -> bool)
+  (a: t1)
+  (b: (t1 & t2))
+: Tot bool
+= equiv a (fst b)
+
+let notp (#t: Type) (p: t -> bool) (x: t) : Tot bool =
+  not (p x)
+
+let rec setoid_assoc_eq_filter_notp_equiv_fst
+  (#t1 #t2: Type)
+  (equiv1: t1 -> t1 -> bool)
+  (equiv2: t2 -> t2 -> bool)
+  (a: t1)
+  (b: (t1 & t2))
+  (l: list (t1 & t2))
+: Lemma
+  (requires
+    equiv1 a (fst b) == false /\
+    (forall x y . equiv1 x y == equiv1 y x) /\
+    order_trans equiv1
+  )
+  (ensures
+    setoid_assoc_eq equiv1 equiv2 l b == setoid_assoc_eq equiv1 equiv2 (List.Tot.filter (notp (equiv_fst equiv1 a)) l) b
+  )
+= match l with
+  | (k, v) :: q ->
+    setoid_assoc_eq_filter_notp_equiv_fst equiv1 equiv2 a b q
+  | _ -> ()
+
+let rec list_for_all_setoid_assoc_eq_filter_notp_equiv_fst
+  (#t1 #t2: Type)
+  (equiv1: t1 -> t1 -> bool)
+  (equiv2: t2 -> t2 -> bool)
+  (a: t1)
+  (ll lr: list (t1 & t2))
+: Lemma
+  (requires 
+    (forall x y . equiv1 x y == equiv1 y x) /\
+    order_trans equiv1 /\
+    ~ (List.Tot.existsb (equiv1 a) (List.Tot.map fst lr))
+  )
+  (ensures
+    List.Tot.for_all (setoid_assoc_eq equiv1 equiv2 ll) lr == List.Tot.for_all (setoid_assoc_eq equiv1 equiv2 (List.Tot.filter (notp (equiv_fst equiv1 a)) ll)) lr
+  )
+  (decreases lr)
+= match lr with
+  | [] -> ()
+  | b :: q ->
+    setoid_assoc_eq_filter_notp_equiv_fst equiv1 equiv2 a b ll;
+    list_for_all_setoid_assoc_eq_filter_notp_equiv_fst equiv1 equiv2 a ll q
+
 let rec list_assoc_mem_intro
   (#tk: eqtype)
   (#tv: Type)
@@ -2041,9 +2115,6 @@ let rec list_fold_filter
     then list_fold_filter f q phi (phi accu a)
     else list_fold_filter f q phi accu
 
-let notp (#t: Type) (p: t -> bool) (x: t) : Tot bool =
-  not (p x)
-
 let rec list_no_repeats_filter
   (#t: Type)
   (f: (t -> bool))
@@ -2211,3 +2282,74 @@ let rec wf_list_map_length (#t1 #t2: Type) (l: list t1) (f: (x1: t1 { List.Tot.m
 = match l with
   | [] -> ()
   | _ :: q -> wf_list_map_length q f
+
+let rec wf_list_max (#t: Type) (l: list t) (f: (x: t { List.Tot.memP x l /\ x << l }) -> nat) : Tot nat (decreases l) =
+  match l with
+  | [] -> 0
+  | a :: q -> 
+    let n1 = f a in
+    let n2 = wf_list_max q f in
+    if n1 > n2 then n1 else n2
+
+let rec wf_list_max_correct (#t: Type) (l: list t) (f: (x: t { List.Tot.memP x l /\ x << l }) -> nat) (x: t) : Lemma
+  (ensures (List.Tot.memP x l ==> (x << l /\ f x <= wf_list_max l f)))
+  (decreases l)
+= Classical.move_requires (List.Tot.memP_precedes x) l;
+  match l with
+  | [] -> ()
+  | _ :: q -> wf_list_max_correct q f x
+
+let rec wf_list_max_eq (#t: Type) (f: t -> nat) (l: list t) : Lemma
+  (ensures (wf_list_max l f == list_max f l))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | _ :: q -> wf_list_max_eq f q
+
+let list_max_correct
+  (#t: Type) (f: t -> nat) (l: list t) (x: t)
+: Lemma
+  (ensures List.Tot.memP x l ==> (x << l /\ f x <= list_max f l))
+= wf_list_max_eq f l;
+  wf_list_max_correct l f x
+
+let rec list_max_le
+  (#t: Type0)
+  (f1: t -> nat)
+  (f2: t -> nat)
+  (l: list t)
+  (prf: (x: t { List.Tot.memP x l /\ x << l }) -> Lemma
+    (f1 x <= f2 x)
+  )
+: Lemma
+  (ensures (list_max f1 l <= list_max f2 l))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q -> prf a; list_max_le f1 f2 q prf
+
+let rec list_max_filter
+  (#t: Type0)
+  (f: t -> nat)
+  (p: t -> bool)
+  (l: list t)
+: Lemma
+  (list_max f l == (
+    let n1 = list_max f (List.Tot.filter p l) in
+    let n2 = list_max f (List.Tot.filter (notp p) l) in
+    if n1 >= n2 then n1 else n2
+  ))
+= match l with
+  | [] -> ()
+  | a :: q -> list_max_filter f p q
+
+let rec list_sum_filter
+  (#t: Type0)
+  (f: t -> nat)
+  (p: t -> bool)
+  (l: list t)
+: Lemma
+  (list_sum f l == list_sum f (List.Tot.filter p l) + list_sum f (List.Tot.filter (notp p) l))
+= match l with
+  | [] -> ()
+  | a :: q -> list_sum_filter f p q

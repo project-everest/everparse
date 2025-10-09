@@ -550,3 +550,13 @@ val size_unpack
   | CTagged _ v -> size v < size c
   | _ -> True
   )
+
+val cbor_map_depth
+  #order #compare
+  (c: cbor order compare)
+: Tot nat
+
+val cbor_map_key_depth
+  #order #compare
+  (c: cbor order compare)
+: Tot nat
