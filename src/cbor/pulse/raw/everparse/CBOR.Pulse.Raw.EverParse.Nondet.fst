@@ -1607,3 +1607,93 @@ ensures
   Trade.elim _ _;
   !pres
 }
+
+#push-options "--z3rlimit 32"
+
+inline_for_extraction
+fn impl_check_valid_item
+  (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
+  (impl_check_equiv_map_hd: impl_check_equiv_map_hd_t data_model)
+  (map_bound: option SZ.t)
+  (strict_bound_check: bool)
+: LowParse.Pulse.Recursive.impl_pred_t #_ serialize_raw_data_item_param (check_valid_item data_model (option_sz_v map_bound) strict_bound_check)
+=
+  (a: S.slice byte)
+  (n: SZ.t)
+  (#pm: perm)
+  (#va: _)
+{
+  pts_to_serialized_nlist_raw_data_item_head_header
+    a
+    (SZ.v n);
+  with l gh v' . assert (
+    pts_to_serialized
+      (LowParse.Spec.Combinators.serialize_nondep_then
+        serialize_header
+        (LowParse.Spec.Combinators.serialize_nondep_then
+          (serialize_leaf_content gh)
+          (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param (SZ.v n) l)
+        )
+      )
+      a #pm v'
+  );
+  let (ah, a1) = split_nondep_then'
+    _ (jump_header ())
+    _ a;
+  Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+  assume (pure (SZ.fits_u64));
+  let h = read_header () ah;
+  Trade.elim _ _;
+  if (get_header_major_type h = cbor_major_type_map) {
+    pts_to_serialized_nlist_ext
+      _
+      (SZ.v n)
+      a
+      serialize_raw_data_item
+      (SZ.v n);
+    let hd = nlist_hd
+      serialize_raw_data_item
+      (jump_raw_data_item ())
+      (SZ.v n)
+      a;
+    Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+    let mut ph = h;
+    let c = get_header_and_contents hd ph;
+    Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+    get_map_payload c (List.Tot.hd va);
+    Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+    let res = impl_list_no_setoid_repeats_with_overflow_map_fst
+      (impl_check_equiv impl_check_equiv_map_hd map_bound)
+      (if strict_bound_check then map_bound else None)
+      (SZ.uint64_to_sizet (argument_as_uint64 (dfst h) (dsnd h)))
+      c;
+    Trade.elim _ _;
+    (res = Some true)
+  } else {
+    true
+  }
+}
+
+#pop-options
+
+inline_for_extraction
+fn impl_check_valid
+  (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
+  (impl_check_equiv_map_hd: impl_check_equiv_map_hd_t data_model)
+  (map_bound: option SZ.t)
+  (strict_bound_check: bool)
+: impl_fun_with_invariant_t #_
+    (check_valid data_model (option_sz_v map_bound) strict_bound_check)
+    emp
+=
+  (l1: S.slice byte)
+  (#p1: perm)
+  (#gl1: _)
+{
+  assume (pure (SZ.fits_u64));
+  impl_holds_on_raw_data_item
+    ()
+    _
+    (impl_check_valid_item impl_check_equiv_map_hd map_bound strict_bound_check)
+    l1
+}

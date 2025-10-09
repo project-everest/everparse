@@ -222,3 +222,15 @@ val pts_to_serialized_nlist_raw_data_item_head_header'
     pts_to_serialized_nlist_raw_data_item_head_header'_post n va h v'
   )
 )
+
+inline_for_extraction
+val impl_holds_on_raw_data_item
+  (f64: squash SZ.fits_u64)
+  (p: Ghost.erased (raw_data_item -> bool))
+  (impl_p: LowParse.Pulse.Recursive.impl_pred_t serialize_raw_data_item_param p)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased raw_data_item)
+: stt bool
+  (requires pts_to_serialized serialize_raw_data_item input #pm v)
+  (ensures fun res -> pts_to_serialized serialize_raw_data_item input #pm v ** pure (res == holds_on_raw_data_item p v))
