@@ -1,16 +1,5 @@
 module CBOR.Pulse.Raw.EverParse.Nondet
 #lang-pulse
-include CBOR.Spec.Raw.Nondet
-open CBOR.Spec.Util
-open CBOR.Spec.Raw.EverParse
-include CBOR.Pulse.Raw.EverParse.Format
-open LowParse.Spec.VCList
-open LowParse.Pulse.VCList
-open Pulse.Lib.Pervasives
-
-module S = Pulse.Lib.Slice.Util
-module SZ = FStar.SizeT
-module Trade = Pulse.Lib.Trade.Util
 
 inline_for_extraction
 let impl_equiv_with_bound_t
@@ -897,47 +886,6 @@ ensures
   !pres
 }
 
-let option_sz_v (x: option SZ.t) : GTot (option nat) =
-  match x with
-  | None -> None
-  | Some x' -> Some (SZ.v x')
-
-inline_for_extraction
-let impl_equiv_hd_t
-  (#t: Type)
-  (equiv: (x1: raw_data_item) -> (x2: raw_data_item) -> t)
-=
-  (n1: Ghost.erased nat) ->
-  (l1: S.slice byte) ->
-  (n2: Ghost.erased nat) ->
-  (l2: S.slice byte) ->
-  (#p1: perm) ->
-  (#gl1: Ghost.erased (nlist n1 raw_data_item)) ->
-  (#p2: perm) ->
-  (#gl2: Ghost.erased (nlist n2 raw_data_item)) ->
-  stt t
-    (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
-      pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2 **
-      pure (
-        n1 > 0 /\ n2 > 0
-      )
-    )
-    (fun res ->
-pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
-      pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2 **
-      pure (
-        n1 > 0 /\ n2 > 0 /\
-        res == equiv (List.Tot.hd gl1) (List.Tot.hd gl2)
-      )
-    )
-
-inline_for_extraction
-let impl_check_equiv_map_hd_t
-  (data_model: (raw_data_item -> raw_data_item -> bool))
-=
-  (map_bound: option SZ.t) ->
-  impl_equiv_hd_t (check_equiv_map data_model (option_sz_v map_bound))
-
 inline_for_extraction
 fn impl_equiv_hd_with_bound_of_equiv_hd
   (#t: Type0)
@@ -1072,36 +1020,6 @@ fn impl_check_equiv_map_hd_body
 }
 
 #pop-options
-
-inline_for_extraction
-let impl_fun_with_invariant_t
-  (#t: Type)
-  (f: (x1: raw_data_item) -> t)
-  (inv: slprop)
-=
-  (l1: S.slice byte) ->
-  (#p1: perm) ->
-  (#gl1: Ghost.erased (raw_data_item)) ->
-  stt t
-    (inv ** pts_to_serialized (serialize_raw_data_item) l1 #p1 gl1)
-    (fun res ->
-      inv ** pts_to_serialized (serialize_raw_data_item) l1 #p1 gl1 **
-      pure (
-        res == f gl1
-      )
-    )
-
-inline_for_extraction
-let impl_equiv_t
-  (#t: Type)
-  (equiv: (x1: raw_data_item) -> (x2: raw_data_item) -> t)
-=
-  (l1: S.slice byte) ->
-  (#p1: perm) ->
-  (#gl1: Ghost.erased (raw_data_item)) ->
-  impl_fun_with_invariant_t
-    (equiv gl1)
-    (pts_to_serialized (serialize_raw_data_item) l1 #p1 gl1)
 
 inline_for_extraction
 fn impl_check_equiv
@@ -1613,8 +1531,8 @@ ensures
 inline_for_extraction
 fn impl_check_valid_item
   (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
-  (impl_check_equiv_map_hd: impl_check_equiv_map_hd_t data_model)
   (map_bound: option SZ.t)
+  (impl_check_equiv: impl_equiv_t #_ (check_equiv data_model (option_sz_v map_bound)))
   (strict_bound_check: bool)
 : LowParse.Pulse.Recursive.impl_pred_t #_ serialize_raw_data_item_param (check_valid_item data_model (option_sz_v map_bound) strict_bound_check)
 =
@@ -1663,7 +1581,7 @@ fn impl_check_valid_item
     get_map_payload c (List.Tot.hd va);
     Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
     let res = impl_list_no_setoid_repeats_with_overflow_map_fst
-      (impl_check_equiv impl_check_equiv_map_hd map_bound)
+      (impl_check_equiv)
       (if strict_bound_check then map_bound else None)
       (SZ.uint64_to_sizet (argument_as_uint64 (dfst h) (dsnd h)))
       c;
@@ -1679,8 +1597,8 @@ fn impl_check_valid_item
 inline_for_extraction
 fn impl_check_valid
   (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
-  (impl_check_equiv_map_hd: impl_check_equiv_map_hd_t data_model)
   (map_bound: option SZ.t)
+  (impl_check_equiv: impl_equiv_t #_ (check_equiv data_model (option_sz_v map_bound)))
   (strict_bound_check: bool)
 : impl_fun_with_invariant_t #_
     (check_valid data_model (option_sz_v map_bound) strict_bound_check)
@@ -1694,6 +1612,6 @@ fn impl_check_valid
   impl_holds_on_raw_data_item
     ()
     _
-    (impl_check_valid_item impl_check_equiv_map_hd map_bound strict_bound_check)
+    (impl_check_valid_item map_bound impl_check_equiv strict_bound_check)
     l1
 }
