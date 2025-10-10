@@ -1,4 +1,4 @@
-module CBOR.Pulse.Raw.EverParse.Nondet
+module CBOR.Pulse.Raw.EverParse.Nondet.Gen
 include CBOR.Spec.Raw.Nondet
 open CBOR.Spec.Util
 open CBOR.Spec.Raw.EverParse

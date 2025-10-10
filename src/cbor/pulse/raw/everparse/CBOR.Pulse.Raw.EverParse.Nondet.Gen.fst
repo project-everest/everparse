@@ -1,4 +1,4 @@
-module CBOR.Pulse.Raw.EverParse.Nondet
+module CBOR.Pulse.Raw.EverParse.Nondet.Gen
 #lang-pulse
 
 inline_for_extraction
