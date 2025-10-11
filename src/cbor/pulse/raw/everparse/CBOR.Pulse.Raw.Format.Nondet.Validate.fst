@@ -1,4 +1,4 @@
-module CBOR.Pulse.Raw.Format.Nondet
+module CBOR.Pulse.Raw.Format.Nondet.Validate
 #lang-pulse
 friend CBOR.Spec.Raw.Format
 module EP = CBOR.Pulse.Raw.EverParse.Format

@@ -1,4 +1,4 @@
-module CBOR.Pulse.Raw.Format.Nondet
+module CBOR.Pulse.Raw.Format.Nondet.Validate
 open CBOR.Spec.Raw.Format
 open CBOR.Spec.Raw.Nondet
 open Pulse.Lib.Pervasives
