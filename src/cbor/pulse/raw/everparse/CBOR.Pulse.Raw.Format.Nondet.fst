@@ -28,7 +28,16 @@ ensures
       input
       0sz
       off;
-    admit ()
+    with v' . assert (LowParse.Pulse.Base.pts_to_serialized CBOR.Spec.Raw.EverParse.serialize_raw_data_item input' #pm v');
+    LowParse.Spec.Base.parser_kind_prop_equiv CBOR.Spec.Raw.EverParse.parse_raw_data_item_kind CBOR.Spec.Raw.EverParse.parse_raw_data_item;
+    let res = EPND.impl_check_valid_basic map_key_bound strict_check input';
+    Trade.elim _ _;
+    CBOR.Spec.Raw.Nondet.check_valid_correct basic_data_model (EPND.option_sz_v map_key_bound) strict_check v';
+    if (res) {
+      off
+    } else {
+      0sz
+    }
   } else {
     0sz
   }
