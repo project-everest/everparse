@@ -408,8 +408,8 @@ let check_equiv_aux_correct
 let check_equiv_map_precond
   (data_model: (raw_data_item -> raw_data_item -> bool))
   (x1 x2: raw_data_item)
-: Tot prop
-= Valid.valid data_model x1 /\ Valid.valid data_model x2
+: Tot bool
+= Valid.valid data_model x1 && Valid.valid data_model x2
 
 let setoid_assoc_eq_with_overflow_equiv_precond
   (data_model: (raw_data_item -> raw_data_item -> bool))
@@ -544,10 +544,12 @@ let rec check_equiv_map_correct
   (map_bound: option nat)
   (x1 x2: raw_data_item)
 : Lemma
-  (requires check_equiv_map_precond data_model x1 x2)
-  (ensures check_equiv_map_cond data_model map_bound x1 x2 (check_equiv_map data_model map_bound x1 x2))
+  (ensures check_equiv_map_precond data_model x1 x2 ==> check_equiv_map_cond data_model map_bound x1 x2 (check_equiv_map data_model map_bound x1 x2))
   (decreases (raw_data_item_size x1 + raw_data_item_size x2))
-= check_equiv_map_eq data_model map_bound x1 x2;
+=
+if check_equiv_map_precond data_model x1 x2
+then begin
+  check_equiv_map_eq data_model map_bound x1 x2;
   if data_model x1 x2
   then ()
   else match x1, x2 with
@@ -626,6 +628,7 @@ let rec check_equiv_map_correct
       ()
     end
   | _ -> ()
+end
 
 #pop-options
 
@@ -649,6 +652,27 @@ let check_equiv_correct
 = Classical.forall_intro_2 (fun x1 x2 -> Classical.move_requires (check_equiv_map_correct data_model map_bound x1) x2);
   check_equiv_aux_correct data_model map_bound (raw_data_item_size x1 + raw_data_item_size x2) (check_equiv_map data_model map_bound) x1 x2;
   ()
+
+let check_equiv_eq
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (map_bound: option nat)
+  (x1 x2: raw_data_item)
+: Lemma
+  (check_equiv data_model map_bound x1 x2 == check_equiv_list [x1] [x2] (check_equiv_map data_model map_bound))
+= ()
+
+let check_equiv_list_check_map_correct
+  (data_model: (raw_data_item -> raw_data_item -> bool) {
+    (forall x1 x2 . data_model x1 x2 == data_model x2 x1) /\
+    (forall x1 x2 x3 . (data_model x1 x2 /\ equiv data_model x2 x3) ==> data_model x1 x3)
+  })
+  (map_bound: option nat)
+  (l1 l2: list raw_data_item)
+: Lemma
+  (requires List.Tot.for_all (Valid.valid data_model) l1 /\ List.Tot.for_all (Valid.valid data_model) l2)
+  (ensures check_equiv_list_postcond data_model map_bound l1 l2 (check_equiv_map data_model map_bound))
+= Classical.forall_intro_2 (check_equiv_map_correct data_model map_bound);
+  check_equiv_list_correct data_model map_bound l1 l2 (check_equiv_map data_model map_bound)
 
 let rec list_existsb_with_overflow_equiv_correct
   (data_model: (raw_data_item -> raw_data_item -> bool) {

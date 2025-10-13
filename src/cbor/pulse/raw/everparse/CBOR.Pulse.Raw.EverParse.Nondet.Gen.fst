@@ -295,7 +295,41 @@ ensures
 }
 
 inline_for_extraction
+let impl_check_equiv_list_with_bound_t
+  (bound: Ghost.erased nat)
+  (equiv: ((x1: raw_data_item) -> (x2: raw_data_item { raw_data_item_size x1 + raw_data_item_size x2 <= bound }) -> option bool))
+=
+  (n1: SZ.t) ->
+  (l1: S.slice byte) ->
+  (n2: SZ.t) ->
+  (l2: S.slice byte) ->
+  (#p1: perm) ->
+  (#gl1: Ghost.erased (nlist (SZ.v n1) raw_data_item)) ->
+  (#p2: perm) ->
+  (#gl2: Ghost.erased (nlist (SZ.v n2) raw_data_item)) ->
+  (sq: squash (
+    list_sum raw_data_item_size gl1 + list_sum raw_data_item_size gl2 <= bound
+  )) ->
+  stt (option bool)
+(requires
+  pts_to_serialized (serialize_nlist (SZ.v n1) serialize_raw_data_item) l1 #p1 gl1 **
+  pts_to_serialized (serialize_nlist (SZ.v n2) serialize_raw_data_item) l2 #p2 gl2
+)
+(ensures fun res ->
+  pts_to_serialized (serialize_nlist (SZ.v n1) serialize_raw_data_item) l1 #p1 gl1 **
+  pts_to_serialized (serialize_nlist (SZ.v n2) serialize_raw_data_item) l2 #p2 gl2 **
+  pure (
+    res == check_equiv_list gl1 gl2 equiv
+  )
+)
+
+inline_for_extraction
 fn impl_check_equiv_list
+  (#bound: Ghost.erased nat)
+  (#equiv: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item { raw_data_item_size x1 + raw_data_item_size x2 <= bound }) -> option bool))
+  (impl_equiv: impl_equiv_hd_with_bound_t bound equiv)
+: impl_check_equiv_list_with_bound_t bound equiv
+=
   (n1: SZ.t)
   (l1: S.slice byte)
   (n2: SZ.t)
@@ -304,22 +338,9 @@ fn impl_check_equiv_list
   (#gl1: Ghost.erased (nlist (SZ.v n1) raw_data_item))
   (#p2: perm)
   (#gl2: Ghost.erased (nlist (SZ.v n2) raw_data_item))
-  (#bound: Ghost.erased nat)
-  (#equiv: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item { raw_data_item_size x1 + raw_data_item_size x2 <= bound }) -> option bool))
-  (impl_equiv: impl_equiv_hd_with_bound_t bound equiv)
   (sq: squash (
     list_sum raw_data_item_size gl1 + list_sum raw_data_item_size gl2 <= bound
   ))
-requires
-  pts_to_serialized (serialize_nlist (SZ.v n1) serialize_raw_data_item) l1 #p1 gl1 **
-  pts_to_serialized (serialize_nlist (SZ.v n2) serialize_raw_data_item) l2 #p2 gl2
-returns res: option bool
-ensures
-  pts_to_serialized (serialize_nlist (SZ.v n1) serialize_raw_data_item) l1 #p1 gl1 **
-  pts_to_serialized (serialize_nlist (SZ.v n2) serialize_raw_data_item) l2 #p2 gl2 **
-  pure (
-    res == check_equiv_list gl1 gl2 equiv
-  )
 {
   if (n1 <> n2) {
     Some false
