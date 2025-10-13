@@ -527,7 +527,7 @@ inline_for_extraction
 fn impl_check_equiv_aux
   (#bound: Ghost.erased nat)
   (#equiv: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item { raw_data_item_size x1 + raw_data_item_size x2 <= bound }) -> option bool))
-  (impl_equiv: impl_equiv_hd_with_bound_t bound equiv)
+  (impl_equiv: impl_check_equiv_list_with_bound_t bound equiv)
 : impl_equiv_with_bound_t #_ bound (check_equiv_aux bound equiv)
 =
   (l1: S.slice byte)
@@ -544,7 +544,7 @@ fn impl_check_equiv_aux
     serialize_raw_data_item
     l2;
   let sq : squash (list_sum raw_data_item_size [Ghost.reveal gl1] + list_sum raw_data_item_size [Ghost.reveal gl2] <= bound) = ();
-  let res = impl_check_equiv_list 1sz l1 1sz l2 impl_equiv sq;
+  let res = impl_equiv 1sz l1 1sz l2 sq;
   Trade.elim _ (pts_to_serialized serialize_raw_data_item l1 #p1 gl1);
   Trade.elim _ (pts_to_serialized serialize_raw_data_item l2 #p2 gl2);
   res
@@ -1008,20 +1008,24 @@ fn impl_check_equiv_map_hd_body
         Trade.trans _ _ (pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2);
         let res = impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow
           (impl_check_equiv_aux
-            (impl_equiv_hd_with_bound_of_equiv_hd
-              _
-              (impl_check_equiv_map_hd map_bound')
-              bound
+            (impl_check_equiv_list
+              (impl_equiv_hd_with_bound_of_equiv_hd
+                _
+                (impl_check_equiv_map_hd map_bound')
+                bound
+              )
             )
           )
           nv2 c2 nv1 c1;
         if (res = Some true) {
           let res = impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow
           (impl_check_equiv_aux
-            (impl_equiv_hd_with_bound_of_equiv_hd
-              _
-              (impl_check_equiv_map_hd map_bound')
-              bound
+            (impl_check_equiv_list
+              (impl_equiv_hd_with_bound_of_equiv_hd
+                _
+                (impl_check_equiv_map_hd map_bound')
+                bound
+              )
             )
           )
           nv1 c1 nv2 c2;
@@ -1043,10 +1047,68 @@ fn impl_check_equiv_map_hd_body
 #pop-options
 
 inline_for_extraction
-fn impl_check_equiv
+fn impl_check_equiv_list_map
   (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
   (impl_check_equiv_map_hd: impl_check_equiv_map_hd_t data_model)
   (map_bound: option SZ.t)
+: impl_check_equiv_list_t (check_equiv_map data_model (option_sz_v map_bound))
+=
+  (n1: Ghost.erased nat)
+  (l1: S.slice byte)
+  (n2: Ghost.erased nat)
+  (l2: S.slice byte)
+  (#p1: perm)
+  (#gl1: Ghost.erased (nlist n1 raw_data_item))
+  (#p2: perm)
+  (#gl2: Ghost.erased (nlist n2 raw_data_item))
+{
+  let bound : Ghost.erased nat = list_sum raw_data_item_size gl1 + list_sum raw_data_item_size gl2;
+  let sq : squash (
+    list_sum raw_data_item_size gl1 + list_sum raw_data_item_size gl2 <= bound
+  ) = ();
+  impl_check_equiv_list
+    (impl_equiv_hd_with_bound_of_equiv_hd
+      _
+      (impl_check_equiv_map_hd map_bound)
+      bound
+    )
+    n1 l1 n2 l2
+    sq
+}
+
+inline_for_extraction
+fn impl_check_equiv_list_with_bound_of_check_equiv_list
+  (#equiv: Ghost.erased (raw_data_item -> raw_data_item -> option bool))
+  (i: impl_check_equiv_list_t equiv)
+  (bound: Ghost.erased nat)
+: impl_check_equiv_list_with_bound_t bound equiv
+=
+  (n1: SZ.t)
+  (l1: S.slice byte)
+  (n2: SZ.t)
+  (l2: S.slice byte)
+  (#p1: perm)
+  (#gl1: Ghost.erased (nlist (SZ.v n1) raw_data_item))
+  (#p2: perm)
+  (#gl2: Ghost.erased (nlist (SZ.v n2) raw_data_item))
+  (sq: squash (
+    list_sum raw_data_item_size gl1 + list_sum raw_data_item_size gl2 <= bound
+  ))
+{
+  if (n1 <> n2) {
+    Some false
+  } else if (n1 = 0sz) {
+    Some true
+  } else  {
+    i n1 l1 n2 l2
+  }
+}
+
+inline_for_extraction
+fn impl_check_equiv
+  (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
+  (map_bound: option SZ.t)
+  (impl_check_equiv_list: impl_check_equiv_list_t (check_equiv_map data_model (option_sz_v map_bound)))
 : impl_equiv_t #_ (check_equiv data_model (option_sz_v map_bound))
 =
   (l1: S.slice byte)
@@ -1057,9 +1119,8 @@ fn impl_check_equiv
   (#gl2: Ghost.erased (raw_data_item))
 {
   impl_check_equiv_aux
-    (impl_equiv_hd_with_bound_of_equiv_hd
-      _
-      (impl_check_equiv_map_hd map_bound)
+    (impl_check_equiv_list_with_bound_of_check_equiv_list
+      impl_check_equiv_list
       (raw_data_item_size gl1 + raw_data_item_size gl2)
     )
     l1 l2

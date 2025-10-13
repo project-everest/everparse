@@ -58,10 +58,15 @@ pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
   impl_check_equiv_map_hd_body (impl_basic_data_model ()) (impl_check_equiv_map_hd_basic) map_bound n1 l1 n2 l2
 }
 
+let impl_check_equiv_list_basic
+  (map_bound: option SZ.t)
+: impl_check_equiv_list_t (check_equiv_map basic_data_model (option_sz_v map_bound))
+= impl_check_equiv_list_map impl_check_equiv_map_hd_basic map_bound
+
 let impl_check_equiv_basic
   (map_bound: option SZ.t)
 : impl_equiv_t #_ (check_equiv basic_data_model (option_sz_v map_bound))
-= impl_check_equiv impl_check_equiv_map_hd_basic map_bound
+= impl_check_equiv map_bound (impl_check_equiv_list_basic map_bound)
 
 let impl_check_valid_basic
   (map_bound: option SZ.t)
