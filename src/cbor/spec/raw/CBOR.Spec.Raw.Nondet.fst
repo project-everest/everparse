@@ -284,9 +284,9 @@ let check_equiv_list_postcond
   (data_model: (raw_data_item -> raw_data_item -> bool))
   (map_bound: option nat)
   (l1 l2: list raw_data_item)
-  (equiv: (x1: raw_data_item) -> (x2: raw_data_item { raw_data_item_size x1 + raw_data_item_size x2 <= list_sum raw_data_item_size l1 + list_sum raw_data_item_size l2 }) -> option bool)
+  (y: option bool)
 : Tot prop
-= match check_equiv_list l1 l2 equiv with
+= match y with
   | None -> (list_max map_depth l1 `exceeds_bound` map_bound) \/ (list_max map_depth l2 `exceeds_bound` map_bound)
   | Some v -> v == list_for_all2 (Valid.equiv data_model) l1 l2
 
@@ -299,7 +299,7 @@ let rec check_equiv_list_correct
   (equiv: (x1: raw_data_item) -> (x2: raw_data_item { raw_data_item_size x1 + raw_data_item_size x2 <= list_sum raw_data_item_size l1 + list_sum raw_data_item_size l2 }) -> option bool)
 : Lemma
   (requires check_equiv_list_precond data_model map_bound l1 l2 equiv)
-  (ensures check_equiv_list_postcond data_model map_bound l1 l2 equiv)
+  (ensures check_equiv_list_postcond data_model map_bound l1 l2 (check_equiv_list l1 l2 equiv))
   (decreases (list_sum raw_data_item_size l1 + list_sum raw_data_item_size l2))
 = Classical.move_requires (list_for_all2_length (Valid.equiv data_model) l1) l2;
   if List.Tot.length l1 <> List.Tot.length l2
@@ -661,7 +661,7 @@ let check_equiv_eq
   (check_equiv data_model map_bound x1 x2 == check_equiv_list [x1] [x2] (check_equiv_map data_model map_bound))
 = ()
 
-let check_equiv_list_check_map_correct
+let check_equiv_list_map_correct
   (data_model: (raw_data_item -> raw_data_item -> bool) {
     (forall x1 x2 . data_model x1 x2 == data_model x2 x1) /\
     (forall x1 x2 x3 . (data_model x1 x2 /\ equiv data_model x2 x3) ==> data_model x1 x3)
@@ -669,8 +669,13 @@ let check_equiv_list_check_map_correct
   (map_bound: option nat)
   (l1 l2: list raw_data_item)
 : Lemma
-  (requires List.Tot.for_all (Valid.valid data_model) l1 /\ List.Tot.for_all (Valid.valid data_model) l2)
-  (ensures check_equiv_list_postcond data_model map_bound l1 l2 (check_equiv_map data_model map_bound))
+  (requires
+    List.Tot.for_all (Valid.valid data_model) l1 /\
+    List.Tot.for_all (Valid.valid data_model) l2
+  )
+  (ensures
+    check_equiv_list_postcond data_model map_bound l1 l2 (check_equiv_list l1 l2 (check_equiv_map data_model map_bound))
+  )
 = Classical.forall_intro_2 (check_equiv_map_correct data_model map_bound);
   check_equiv_list_correct data_model map_bound l1 l2 (check_equiv_map data_model map_bound)
 
