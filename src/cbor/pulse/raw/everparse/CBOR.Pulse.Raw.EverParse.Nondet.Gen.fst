@@ -756,7 +756,7 @@ ensures
 }
 
 inline_for_extraction
-fn impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow
+fn impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow_with_bound
   (#equiv: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> option bool))
   (#bound: Ghost.erased nat)
   (impl_equiv: impl_equiv_with_bound_t bound equiv)
@@ -908,6 +908,55 @@ ensures
 }
 
 inline_for_extraction
+fn impl_equiv_with_bound_of_equiv
+  (#t: Type0)
+  (#equiv: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> t))
+  (impl: impl_equiv_t equiv)
+  (bound: Ghost.erased nat)
+: impl_equiv_with_bound_t #t (Ghost.reveal bound) (Ghost.reveal equiv)
+=
+  (l1: S.slice byte)
+  (l2: S.slice byte)
+  (#p1: perm)
+  (#gl1: Ghost.erased (raw_data_item))
+  (#p2: perm)
+  (#gl2: Ghost.erased (raw_data_item))
+{
+  impl l1 l2
+}
+
+inline_for_extraction
+fn impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow
+  (#equiv: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> option bool))
+  (impl_equiv: impl_equiv_t equiv)
+  (nl1: SZ.t)
+  (l1: S.slice byte)
+  (nl2: SZ.t)
+  (l2: S.slice byte)
+  (#pl1: perm)
+  (#gl1: Ghost.erased (nlist (SZ.v nl1) (raw_data_item & raw_data_item)))
+  (#pl2: perm)
+  (#gl2: Ghost.erased (nlist (SZ.v nl2) (raw_data_item & raw_data_item)))
+requires
+  pts_to_serialized (serialize_nlist (SZ.v nl1) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l1 #pl1 gl1 **
+  pts_to_serialized (serialize_nlist (SZ.v nl2) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l2 #pl2 gl2
+returns res: option bool
+ensures
+  pts_to_serialized (serialize_nlist (SZ.v nl1) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l1 #pl1 gl1 **
+  pts_to_serialized (serialize_nlist (SZ.v nl2) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l2 #pl2 gl2 **
+  pure (
+    res == list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv gl1) gl2
+  )
+{
+  impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow_with_bound
+    (impl_equiv_with_bound_of_equiv
+      impl_equiv
+      (list_sum (pair_sum raw_data_item_size raw_data_item_size) gl1 + list_sum (pair_sum raw_data_item_size raw_data_item_size) gl2)
+    )
+    nl1 l1 nl2 l2
+}
+
+inline_for_extraction
 fn impl_equiv_hd_with_bound_of_equiv_hd
   (#t: Type0)
   (equiv: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> t))
@@ -1006,7 +1055,7 @@ fn impl_check_equiv_map_hd_body
           (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
           (SZ.v nv2);
         Trade.trans _ _ (pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2);
-        let res = impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow
+        let res = impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow_with_bound
           (impl_check_equiv_aux
             (impl_check_equiv_list
               (impl_equiv_hd_with_bound_of_equiv_hd
@@ -1018,7 +1067,7 @@ fn impl_check_equiv_map_hd_body
           )
           nv2 c2 nv1 c1;
         if (res = Some true) {
-          let res = impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow
+          let res = impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow_with_bound
           (impl_check_equiv_aux
             (impl_check_equiv_list
               (impl_equiv_hd_with_bound_of_equiv_hd
@@ -1259,7 +1308,7 @@ ensures
 
 module GR = Pulse.Lib.GhostReference
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 
 fn rec impl_check_map_depth_aux
   (bound: SZ.t)

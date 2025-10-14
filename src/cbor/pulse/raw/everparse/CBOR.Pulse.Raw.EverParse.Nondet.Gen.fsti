@@ -76,6 +76,31 @@ pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
     )
 
 inline_for_extraction
+val impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow
+  (#equiv: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> option bool))
+  (impl_equiv: impl_equiv_t equiv)
+  (nl1: SZ.t)
+  (l1: S.slice byte)
+  (nl2: SZ.t)
+  (l2: S.slice byte)
+  (#pl1: perm)
+  (#gl1: Ghost.erased (nlist (SZ.v nl1) (raw_data_item & raw_data_item)))
+  (#pl2: perm)
+  (#gl2: Ghost.erased (nlist (SZ.v nl2) (raw_data_item & raw_data_item)))
+: stt (option bool)
+(requires
+  pts_to_serialized (serialize_nlist (SZ.v nl1) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l1 #pl1 gl1 **
+  pts_to_serialized (serialize_nlist (SZ.v nl2) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l2 #pl2 gl2
+)
+(ensures fun res ->
+  pts_to_serialized (serialize_nlist (SZ.v nl1) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l1 #pl1 gl1 **
+  pts_to_serialized (serialize_nlist (SZ.v nl2) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l2 #pl2 gl2 **
+  pure (
+    res == list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv gl1) gl2
+  )
+)
+
+inline_for_extraction
 let impl_check_equiv_map_hd_t
   (data_model: (raw_data_item -> raw_data_item -> bool))
 =
@@ -103,16 +128,12 @@ let impl_check_equiv_list_t
   (#gl2: Ghost.erased (nlist (SZ.v n2) raw_data_item)) ->
   stt (option bool)
     (pts_to_serialized (serialize_nlist (SZ.v n1) serialize_raw_data_item) l1 #p1 gl1 **
-      pts_to_serialized (serialize_nlist (SZ.v n2) serialize_raw_data_item) l2 #p2 gl2 **
-      pure (
-        SZ.v n1 > 0 /\ SZ.v n2 > 0
-      )
+      pts_to_serialized (serialize_nlist (SZ.v n2) serialize_raw_data_item) l2 #p2 gl2
     )
     (fun res ->
       pts_to_serialized (serialize_nlist (SZ.v n1) serialize_raw_data_item) l1 #p1 gl1 **
       pts_to_serialized (serialize_nlist (SZ.v n2) serialize_raw_data_item) l2 #p2 gl2 **
       pure (
-        SZ.v n1 > 0 /\ SZ.v n2 > 0 /\
         res == check_equiv_list gl1 gl2 equiv
       )
     )

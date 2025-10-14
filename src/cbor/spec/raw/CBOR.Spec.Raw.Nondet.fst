@@ -634,10 +634,9 @@ end
 
 let check_equiv_precond
   (data_model: (raw_data_item -> raw_data_item -> bool))
-  (map_bound: option nat)
   (x1 x2: raw_data_item)
-: Tot prop
-= Valid.valid data_model x1 /\ Valid.valid data_model x2
+: Tot bool
+= Valid.valid data_model x1 && Valid.valid data_model x2
 
 let check_equiv_correct
   (data_model: (raw_data_item -> raw_data_item -> bool) {
@@ -647,11 +646,13 @@ let check_equiv_correct
   (map_bound: option nat)
   (x1 x2: raw_data_item)
 : Lemma
-  (requires check_equiv_precond data_model map_bound x1 x2)
-  (ensures check_equiv_cond data_model map_bound x1 x2 (check_equiv data_model map_bound x1 x2))
-= Classical.forall_intro_2 (fun x1 x2 -> Classical.move_requires (check_equiv_map_correct data_model map_bound x1) x2);
+  (ensures check_equiv_precond data_model x1 x2 ==> check_equiv_cond data_model map_bound x1 x2 (check_equiv data_model map_bound x1 x2))
+= if check_equiv_precond data_model x1 x2
+  then begin
+  Classical.forall_intro_2 (fun x1 x2 -> Classical.move_requires (check_equiv_map_correct data_model map_bound x1) x2);
   check_equiv_aux_correct data_model map_bound (raw_data_item_size x1 + raw_data_item_size x2) (check_equiv_map data_model map_bound) x1 x2;
   ()
+  end
 
 let check_equiv_eq
   (data_model: (raw_data_item -> raw_data_item -> bool))

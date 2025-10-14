@@ -35,7 +35,7 @@ val cbor_match_compare_serialized_array
 : stt bool
   (cbor_match_serialized_array c1 pm1 r1 **
     cbor_match_serialized_array c2 pm2 r2 **
-    pure (Array?.len r1 == Array?.len r2 /\
+    pure (
       valid_raw_data_item r1 /\
       valid_raw_data_item r2
     )
@@ -57,7 +57,7 @@ val cbor_match_compare_serialized_map
 : stt bool
   (cbor_match_serialized_map c1 pm1 r1 **
     cbor_match_serialized_map c2 pm2 r2 **
-    pure (Map?.len r1 == Map?.len r2 /\
+    pure (
       valid_raw_data_item r1 /\
       valid_raw_data_item r2
     )
