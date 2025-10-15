@@ -4,6 +4,7 @@ friend CBOR.Pulse.API.Det.Type
 friend CBOR.Spec.API.Format
 open CBOR.Pulse.Raw.Match
 open Pulse.Lib.Pervasives
+open CBOR.Pulse.API.Base
 
 module Spec = CBOR.Spec.API.Format
 module Raw = CBOR.Pulse.Raw.Match
@@ -24,6 +25,65 @@ let cbor_nondet_match
     SpecRaw.valid_raw_data_item v' /\
     SpecRaw.mk_cbor v' == v
   )
+
+ghost fn cbor_nondet_match_elim
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Spec.cbor)
+requires
+  cbor_nondet_match p c v
+returns v': Ghost.erased SpecRaw.raw_data_item
+ensures
+  Raw.cbor_match p c v' **
+  Trade.trade
+    (Raw.cbor_match p c v')
+    (cbor_nondet_match p c v) **
+  pure (
+    SpecRaw.valid_raw_data_item v' /\
+    SpecRaw.mk_cbor v' == v
+  )
+{
+  unfold (cbor_nondet_match p c v);
+  with v' . assert (Raw.cbor_match p c v');
+  intro
+    (Trade.trade
+      (Raw.cbor_match p c v')
+      (cbor_nondet_match p c v)
+    )
+    fn _ {
+      fold (cbor_nondet_match p c v)
+    };
+    v'
+}
+
+ghost fn cbor_nondet_match_intro
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: SpecRaw.raw_data_item)
+requires
+  Raw.cbor_match p c v **
+  pure (
+    SpecRaw.valid_raw_data_item v
+  )
+ensures 
+  cbor_nondet_match (p /. 2.0R) c (SpecRaw.mk_cbor v) **
+  Trade.trade
+    (cbor_nondet_match (p /. 2.0R) c (SpecRaw.mk_cbor v))
+    (Raw.cbor_match p c v)
+{
+  CBOR.Pulse.Raw.Match.Perm.cbor_raw_share _ c _;
+  fold (cbor_nondet_match (p /. 2.0R) c (SpecRaw.mk_cbor v));
+  intro
+    (Trade.trade
+      (cbor_nondet_match (p /. 2.0R) c (SpecRaw.mk_cbor v))
+      (cbor_match p c v)
+    )
+    #(cbor_match (p /. 2.0R) c v)
+    fn _ {
+      unfold (cbor_nondet_match (p /. 2.0R) c (SpecRaw.mk_cbor v));
+      CBOR.Pulse.Raw.Match.Perm.cbor_raw_gather (p /. 2.0R) c v _ _;
+    };
+}
 
 ghost
 fn cbor_nondet_share
@@ -148,21 +208,10 @@ fn cbor_nondet_parse_valid (_: unit) : cbor_nondet_parse_valid_t #cbor_nondet_t 
   S.pts_to_len input;
   Seq.lemma_split v (SZ.v len);
   let res = CBOR.Pulse.Raw.Format.Parse.cbor_parse input len;
-  CBOR.Pulse.Raw.Match.Perm.cbor_raw_share _ res _;
-  with v1 . assert (cbor_match 0.5R res v1);
+  with v1 . assert (cbor_match 1.0R res v1);
   CBOR.Spec.Raw.Format.serialize_parse_cbor v1;
   CBOR.Spec.Raw.Format.parse_cbor_prefix (CBOR.Spec.Raw.Format.serialize_cbor v1) v;
-  fold (cbor_nondet_match 0.5R res (SpecRaw.mk_cbor v1));
-  intro
-    (Trade.trade
-      (cbor_nondet_match 0.5R res (SpecRaw.mk_cbor v1))
-      (cbor_match 1.0R res v1)
-    )
-    #(cbor_match 0.5R res v1)
-    fn _ {
-      unfold (cbor_nondet_match 0.5R res (SpecRaw.mk_cbor v1));
-      CBOR.Pulse.Raw.Match.Perm.cbor_raw_gather 0.5R res v1 _ _;
-    };
+  cbor_nondet_match_intro res;
   Trade.trans _ _ (pts_to input #pm v);
   res
 }
@@ -241,3 +290,151 @@ fn cbor_nondet_serialize
     Some res
   }
 }
+
+(* Destructors *)
+
+fn cbor_nondet_major_type (_: unit) : get_major_type_t u#0 #_ cbor_nondet_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_nondet_match p x v);
+  with p' v' . assert (cbor_match p' x v');
+  SpecRaw.mk_cbor_eq v';
+  let res = CBOR.Pulse.Raw.Compare.impl_major_type x;
+  fold (cbor_nondet_match p x v);
+  res
+}
+
+fn cbor_nondet_read_simple_value (_: unit) : read_simple_value_t u#0 #_ cbor_nondet_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_nondet_match p x v);
+  with p' v' . assert (cbor_match p' x v');
+  SpecRaw.mk_cbor_eq v';
+  let res = Raw.cbor_match_simple_elim x;
+  fold (cbor_nondet_match p x v);
+  res
+}
+
+fn cbor_nondet_elim_simple (_: unit) : elim_simple_t u#0 #_ cbor_nondet_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_nondet_match p x v);
+  with p' v' . assert (cbor_match p' x v');
+  Raw.cbor_match_cases x;
+  SpecRaw.mk_cbor_eq v';
+  rewrite (Raw.cbor_match p x v')
+    as (Raw.cbor_match_simple (Raw.CBOR_Case_Simple?.v x) v');
+  unfold (Raw.cbor_match_simple (Raw.CBOR_Case_Simple?.v x) v')
+}
+
+fn cbor_nondet_read_uint64 (_: unit) : read_uint64_t u#0 #_ cbor_nondet_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_nondet_match p x v);
+  with p' v' . assert (cbor_match p' x v');
+  SpecRaw.mk_cbor_eq v';
+  let res = Raw.cbor_match_int_elim_value x;
+  fold (cbor_nondet_match p x v);
+  res.value
+}
+
+fn cbor_nondet_elim_int64 (_: unit) : elim_int64_t u#0 #_ cbor_nondet_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_nondet_match p x v);
+  with p' v' . assert (cbor_match p' x v');
+  Raw.cbor_match_cases x;
+  SpecRaw.mk_cbor_eq v';
+  rewrite (Raw.cbor_match p x v')
+    as (Raw.cbor_match_int (Raw.CBOR_Case_Int?.v x) v');
+  unfold (Raw.cbor_match_int (Raw.CBOR_Case_Int?.v x) v')
+}
+
+fn cbor_nondet_get_string_length (_: unit) : get_string_length_t u#0 #_ cbor_nondet_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_nondet_match p x v);
+  with p' v' . assert (cbor_match p' x v');
+  SpecRaw.mk_cbor_eq v';
+  let res = Raw.cbor_match_string_elim_length x;
+  fold (cbor_nondet_match p x v);
+  res.value
+}
+
+fn cbor_nondet_get_string (_: unit) : get_string_t u#0 #_ cbor_nondet_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  let v' = cbor_nondet_match_elim x;
+  SpecRaw.mk_cbor_eq v';
+  let res = Raw.cbor_match_string_elim_payload x;
+  Trade.trans _ _ (cbor_nondet_match p x v);
+  res
+}
+
+fn cbor_nondet_get_tagged_tag (_: unit) : get_tagged_tag_t u#0 #_ cbor_nondet_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_nondet_match p x v);
+  with p' v' . assert (cbor_match p' x v');
+  SpecRaw.mk_cbor_eq v';
+  let res = Raw.cbor_match_tagged_get_tag x;
+  fold (cbor_nondet_match p x v);
+  res.value
+}
+
+fn cbor_nondet_get_tagged_payload (_: unit) : get_tagged_payload_t u#0 #_ cbor_nondet_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  let v' = cbor_nondet_match_elim x;
+  SpecRaw.mk_cbor_eq v';
+  SpecRaw.valid_eq SpecRaw.basic_data_model v';
+  let res = CBOR.Pulse.Raw.Read.cbor_match_tagged_get_payload x;
+  Trade.trans _ _ (cbor_nondet_match p x v);
+  cbor_nondet_match_intro res;
+  Trade.trans _ _ (cbor_nondet_match p x v);
+  res
+}
+
+fn cbor_nondet_get_array_length (_: unit) : get_array_length_t u#0 #_ cbor_nondet_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_nondet_match p x v);
+  with p' v' . assert (cbor_match p' x v');
+  SpecRaw.mk_cbor_eq v';
+  let res = Raw.cbor_match_array_get_length x;
+  fold (cbor_nondet_match p x v);
+  res.value
+}
+
+let cbor_nondet_array_iterator_t = CBOR.Pulse.Raw.Read.cbor_array_iterator
+
+let cbor_nondet_array_iterator_match
+  (p: perm)
+  (i: cbor_nondet_array_iterator_t)
+  (l: list Spec.cbor)
+: Tot slprop
+= exists* l' .
+    CBOR.Pulse.Raw.Read.cbor_array_iterator_match p i l' **
+    pure (List.Tot.for_all SpecRaw.valid_raw_data_item l' /\
+      l == List.Tot.map SpecRaw.mk_cbor l'
+    )
