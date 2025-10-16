@@ -383,10 +383,10 @@ let array_iterator_truncate_t
     (iter p x y **
       pure (U64.v len <= List.Tot.length y)
     )
-    (fun res ->
-      iter 1.0R res (fst (List.Tot.splitAt (U64.v len) y)) **
+    (fun res -> exists* p' .
+      iter p' res (fst (List.Tot.splitAt (U64.v len) y)) **
       Trade.trade
-        (iter 1.0R res (fst (List.Tot.splitAt (U64.v len) y)))
+        (iter p' res (fst (List.Tot.splitAt (U64.v len) y)))
         (iter p x y)
     )
 
