@@ -560,10 +560,11 @@ let reset_perm_t
   (x1: t1) ->
   (#p: perm) ->
   (#x2: Ghost.erased t2) ->
+  (q: perm) ->
   stt t1
     (vmatch p x1 x2)
-    (fun res -> vmatch 1.0R res x2 **
-      Trade.trade (vmatch 1.0R res x2) (vmatch p x1 x2)
+    (fun res -> vmatch q res x2 **
+      Trade.trade (vmatch q res x2) (vmatch p x1 x2)
     )
 
 (** Constructors *)
