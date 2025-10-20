@@ -438,3 +438,131 @@ let cbor_nondet_array_iterator_match
     pure (List.Tot.for_all SpecRaw.valid_raw_data_item l' /\
       l == List.Tot.map SpecRaw.mk_cbor l'
     )
+
+module Read = CBOR.Pulse.Raw.Read
+
+ghost fn cbor_nondet_array_iterator_match_elim
+  (i: cbor_nondet_array_iterator_t)
+  (#p: perm)
+  (#l: list Spec.cbor)
+requires
+  cbor_nondet_array_iterator_match p i l
+returns l': Ghost.erased (list SpecRaw.raw_data_item)
+ensures
+    CBOR.Pulse.Raw.Read.cbor_array_iterator_match p i l' **
+    Trade.trade
+      (CBOR.Pulse.Raw.Read.cbor_array_iterator_match p i l')
+      (cbor_nondet_array_iterator_match p i l) **
+    pure (List.Tot.for_all SpecRaw.valid_raw_data_item l' /\
+      l == List.Tot.map SpecRaw.mk_cbor l'
+    )
+{
+  unfold (cbor_nondet_array_iterator_match p i l);
+  with l' . assert (
+    CBOR.Pulse.Raw.Read.cbor_array_iterator_match p i l' 
+  );
+  intro
+    (Trade.trade
+      (CBOR.Pulse.Raw.Read.cbor_array_iterator_match p i l')
+      (cbor_nondet_array_iterator_match p i l)
+    )
+    fn _ {
+      fold (cbor_nondet_array_iterator_match p i l)
+    };
+  l'
+}
+
+ghost fn cbor_nondet_array_iterator_match_intro
+  (i: cbor_nondet_array_iterator_t)
+  (#p: perm)
+  (#v: list SpecRaw.raw_data_item)
+requires
+  Read.cbor_array_iterator_match p i v **
+  pure (
+    List.Tot.for_all SpecRaw.valid_raw_data_item v
+  )
+ensures 
+  cbor_nondet_array_iterator_match (p /. 2.0R) i (List.Tot.map SpecRaw.mk_cbor v) **
+  Trade.trade
+    (cbor_nondet_array_iterator_match (p /. 2.0R) i (List.Tot.map SpecRaw.mk_cbor v))
+    (Read.cbor_array_iterator_match p i v)
+{
+  Read.cbor_array_iterator_share i;
+  fold (cbor_nondet_array_iterator_match (p /. 2.0R) i (List.Tot.map SpecRaw.mk_cbor v));
+  intro
+    (Trade.trade
+      (cbor_nondet_array_iterator_match (p /. 2.0R) i (List.Tot.map SpecRaw.mk_cbor v))
+      (Read.cbor_array_iterator_match p i v)
+    )
+    #(Read.cbor_array_iterator_match (p /. 2.0R) i v)
+    fn _ {
+      unfold (cbor_nondet_array_iterator_match (p /. 2.0R) i (List.Tot.map SpecRaw.mk_cbor v));
+      Read.cbor_array_iterator_gather i #(p /. 2.0R) #v;
+    };
+}
+
+fn cbor_nondet_array_iterator_start (_: unit) : array_iterator_start_t u#0 u#0 #_ #_ cbor_nondet_match cbor_nondet_array_iterator_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  let v' = cbor_nondet_match_elim x;
+  SpecRaw.mk_cbor_eq v'; 
+  SpecRaw.valid_eq SpecRaw.basic_data_model v';
+  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  let res = Read.cbor_array_iterator_init f64 x;
+  Trade.trans _ _ (cbor_nondet_match p x v);
+  with p' l . assert (Read.cbor_array_iterator_match p' res l);
+  cbor_nondet_array_iterator_match_intro res;
+  Trade.trans _ _ (cbor_nondet_match p x v);
+  res
+}
+
+fn cbor_nondet_array_iterator_is_empty (_: unit) : array_iterator_is_empty_t u#0 #_ cbor_nondet_array_iterator_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_nondet_array_iterator_match p x v);
+  let res = Read.cbor_array_iterator_is_empty x;
+  fold (cbor_nondet_array_iterator_match p x v);
+  res
+}
+
+fn cbor_nondet_array_iterator_length (_: unit) : array_iterator_length_t u#0 #_ cbor_nondet_array_iterator_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_nondet_array_iterator_match p x v);
+  let res = Read.cbor_array_iterator_length x;
+  fold (cbor_nondet_array_iterator_match p x v);
+  res
+}
+
+fn cbor_nondet_array_iterator_next (_: unit) : array_iterator_next_t u#0 #_ #_ cbor_nondet_match cbor_nondet_array_iterator_match
+= (x: _)
+  (#y: _)
+  (#py: _)
+  (#z: _)
+{
+  let l' = cbor_nondet_array_iterator_match_elim y;
+  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  let res = Read.cbor_array_iterator_next f64 x;
+  Trade.trans _ _ (cbor_nondet_array_iterator_match py y z);
+  with y' z' . assert (pts_to x y' ** Read.cbor_array_iterator_match py y' z');
+  cbor_nondet_array_iterator_match_intro y';
+  Trade.trans_hyp_r _ _ _ (cbor_nondet_array_iterator_match py y z);
+  Trade.rewrite_with_trade
+    (cbor_nondet_array_iterator_match (py /. 2.0R) y' _)
+    (cbor_nondet_array_iterator_match (py /. 2.0R) y' (List.Tot.tl z));
+  Trade.trans_hyp_r _ _ _ (cbor_nondet_array_iterator_match py y z);
+  cbor_nondet_match_intro res;
+  Trade.trans_hyp_l _ _ _ (cbor_nondet_array_iterator_match py y z);
+  with p' v' . assert (cbor_nondet_match p' res v');
+  Trade.rewrite_with_trade
+    (cbor_nondet_match p' res v')
+    (cbor_nondet_match p' res (List.Tot.hd z));
+  Trade.trans_hyp_l _ _ _ (cbor_nondet_array_iterator_match py y z);
+  res
+}

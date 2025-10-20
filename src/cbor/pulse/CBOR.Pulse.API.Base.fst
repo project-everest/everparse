@@ -361,12 +361,12 @@ let array_iterator_next_t
   (#z: Ghost.erased (list cbor)) ->
   stt t
     (R.pts_to x y ** iter py y z ** pure (Cons? z))
-    (fun res -> exists* p' v' y' z' .
+    (fun res -> exists* p' py' v' y' z' .
       vmatch p' res v' **
       R.pts_to x y' **
-      iter py y' z' **
+      iter py' y' z' **
       Trade.trade
-        (vmatch p' res v' ** iter py y' z')
+        (vmatch p' res v' ** iter py' y' z')
         (iter py y z) **
       pure (Ghost.reveal z == v' :: z')
     )
