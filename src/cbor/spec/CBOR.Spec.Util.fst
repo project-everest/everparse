@@ -1,5 +1,21 @@
 module CBOR.Spec.Util
 
+let rec list_index_map
+  (#t1 #t2: Type)
+  (f: (t1 -> t2))
+  (l: list t1)
+  (i: nat)
+: Lemma
+  (requires (i < List.Tot.length l))
+  (ensures (
+    let l' = List.Tot.map f l in
+    i < List.Tot.length l' /\
+    List.Tot.index l' i == f (List.Tot.index l i)
+  ))
+= if i = 0
+  then ()
+  else list_index_map f (List.Tot.tl l) (i - 1)
+
 let rec list_for_all2 (#t1 #t2: Type) (p: t1 -> t2 -> bool) (l1: list t1) (l2: list t2) : Tot bool (decreases l1) =
   match l1, l2 with
   | [], [] -> true
@@ -1839,6 +1855,28 @@ let op_comm
   (f: accu -> t -> accu)
 : Tot prop
 = forall a x1 x2 . f (f a x1) x2 == f (f a x2) x1
+
+let rec list_map_splitAt
+  (#t1 #t2: Type)
+  (f: t1 -> t2)
+  (l: list t1)
+  (n: nat)
+: Lemma
+  (List.Tot.map f (fst (List.Tot.splitAt n l)) == fst (List.Tot.splitAt n (List.Tot.map f l)))
+= if n = 0 then () else
+  match l with
+  | [] -> ()
+  | a :: q -> list_map_splitAt f q (n - 1)
+
+let list_for_all_splitAt
+  (#t: Type)
+  (f: t -> bool)
+  (l: list t)
+  (n: nat)
+: Lemma
+  (List.Tot.for_all f l == (List.Tot.for_all f (fst (List.Tot.splitAt n l)) && List.Tot.for_all f (snd (List.Tot.splitAt n l))))
+= list_splitAt_append n l;
+  List.Tot.for_all_append f (fst (List.Tot.splitAt n l)) (snd (List.Tot.splitAt n l))
 
 let rec list_memP_extract
   (#t: Type)

@@ -566,3 +566,429 @@ fn cbor_nondet_array_iterator_next (_: unit) : array_iterator_next_t u#0 #_ #_ c
   Trade.trans_hyp_l _ _ _ (cbor_nondet_array_iterator_match py y z);
   res
 }
+
+module U64 = FStar.UInt64
+
+fn cbor_nondet_array_iterator_truncate (_: unit) : array_iterator_truncate_t u#0 #_ cbor_nondet_array_iterator_match
+= (x: _)
+  (len: _)
+  (#py: _)
+  (#z: _)
+{
+  let l' = cbor_nondet_array_iterator_match_elim x;
+  let res = Read.cbor_array_iterator_truncate x len;
+  Trade.trans _ _ (cbor_nondet_array_iterator_match py x z);
+  CBOR.Spec.Util.list_map_splitAt SpecRaw.mk_cbor l' (U64.v len);
+  CBOR.Spec.Util.list_for_all_splitAt SpecRaw.valid_raw_data_item l' (U64.v len);
+  cbor_nondet_array_iterator_match_intro res;
+  Trade.trans _ _ (cbor_nondet_array_iterator_match py x z);
+  res
+}
+
+ghost
+fn cbor_nondet_array_iterator_share (_: unit) : share_t u#0 u#0 #_ #_ cbor_nondet_array_iterator_match
+= (x: _)
+  (#py: _)
+  (#z: _)
+{
+  unfold (cbor_nondet_array_iterator_match py x z);
+  Read.cbor_array_iterator_share x;
+  fold (cbor_nondet_array_iterator_match (py /. 2.0R) x z);
+  fold (cbor_nondet_array_iterator_match (py /. 2.0R) x z);
+}
+
+ghost
+fn cbor_nondet_array_iterator_gather (_: unit) : gather_t u#0 u#0 #_ #_ cbor_nondet_array_iterator_match
+= (x: _)
+  (#py1: _)
+  (#z1: _)
+  (#py2: _)
+  (#z2: _)
+{
+  unfold (cbor_nondet_array_iterator_match py1 x z1);
+  unfold (cbor_nondet_array_iterator_match py2 x z2);
+  Read.cbor_array_iterator_gather x #py1 #_ #py2 #_;
+  fold (cbor_nondet_array_iterator_match (py1 +. py2) x z1);
+}
+
+fn cbor_nondet_get_array_item (_: unit) : get_array_item_t u#0 #_ cbor_nondet_match
+= (x: _)
+  (i: _)
+  (#p: _)
+  (#v: _)
+{
+  let l : Ghost.erased (list Spec.cbor) = Ghost.hide (Spec.CArray?.v (Spec.unpack v));
+  let v' = cbor_nondet_match_elim x;
+  SpecRaw.mk_cbor_eq v';
+  SpecRaw.valid_eq SpecRaw.basic_data_model v';
+  let l' : Ghost.erased (list SpecRaw.raw_data_item) = Ghost.hide (SpecRaw.Array?.v v');
+  let res = Read.cbor_array_item (assume (SZ.fits_u64)) x i;
+  Trade.trans _ _ (cbor_nondet_match p x v);
+  List.Tot.lemma_index_memP l' (U64.v i);
+  List.Tot.for_all_mem SpecRaw.valid_raw_data_item l';
+  CBOR.Spec.Util.list_index_map SpecRaw.mk_cbor l' (U64.v i);
+  cbor_nondet_match_intro res;
+  Trade.trans _ _ (cbor_nondet_match p x v);
+  res
+}
+
+fn cbor_nondet_get_map_length (_: unit) : get_map_length_t u#0 #_ cbor_nondet_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  let v' = cbor_nondet_match_elim x;
+  SpecRaw.mk_cbor_eq v';
+  let res = Raw.cbor_match_map_get_length x;
+  Trade.elim _ _;
+  res.value
+}
+
+let cbor_nondet_map_iterator_t = CBOR.Pulse.Raw.Read.cbor_map_iterator
+
+let cbor_nondet_map_iterator_match
+  (p: perm)
+  (i: cbor_nondet_map_iterator_t)
+  (l: list (Spec.cbor & Spec.cbor))
+: Tot slprop
+= exists* l' . Read.cbor_map_iterator_match p i l' **
+  pure (
+    List.Tot.for_all (SpecRaw.valid_raw_data_item) (List.Tot.map fst l') /\
+    List.Tot.for_all (SpecRaw.valid_raw_data_item) (List.Tot.map snd l') /\
+    CBOR.Spec.Util.list_no_setoid_repeats (SpecRaw.raw_equiv) (List.Tot.map fst l') /\
+    l == List.Tot.map SpecRaw.mk_cbor_map_entry l'
+  )
+
+ghost fn cbor_nondet_map_iterator_match_intro
+  (i: cbor_nondet_map_iterator_t)
+  (#p: perm)
+  (#l': list (SpecRaw.raw_data_item & SpecRaw.raw_data_item))
+requires
+  Read.cbor_map_iterator_match p i l' **
+  pure (
+    List.Tot.for_all (SpecRaw.valid_raw_data_item) (List.Tot.map fst l') /\
+    List.Tot.for_all (SpecRaw.valid_raw_data_item) (List.Tot.map snd l') /\
+    CBOR.Spec.Util.list_no_setoid_repeats (SpecRaw.raw_equiv) (List.Tot.map fst l')
+  )
+ensures
+  cbor_nondet_map_iterator_match (p /. 2.0R) i (List.Tot.map SpecRaw.mk_cbor_map_entry l') **
+  Trade.trade
+    (cbor_nondet_map_iterator_match (p /. 2.0R) i (List.Tot.map SpecRaw.mk_cbor_map_entry l'))
+    (Read.cbor_map_iterator_match p i l')
+{
+  Read.cbor_map_iterator_share i;
+  fold (cbor_nondet_map_iterator_match (p /. 2.0R) i (List.Tot.map SpecRaw.mk_cbor_map_entry l'));
+  intro
+    (Trade.trade
+      (cbor_nondet_map_iterator_match (p /. 2.0R) i (List.Tot.map SpecRaw.mk_cbor_map_entry l'))
+      (Read.cbor_map_iterator_match p i l')
+    )
+    #(Read.cbor_map_iterator_match (p /. 2.0R) i l')
+  fn _ {
+    unfold (cbor_nondet_map_iterator_match (p /. 2.0R) i (List.Tot.map SpecRaw.mk_cbor_map_entry l'));
+    Read.cbor_map_iterator_gather i #_ #l'
+  }
+}
+
+ghost fn cbor_nondet_map_iterator_match_elim
+  (i: cbor_nondet_map_iterator_t)
+  (#p: perm)
+  (#l: list (Spec.cbor & Spec.cbor))
+requires
+  cbor_nondet_map_iterator_match p i l
+returns l' : Ghost.erased (list (SpecRaw.raw_data_item & SpecRaw.raw_data_item))
+ensures
+  Read.cbor_map_iterator_match p i l' **
+  Trade.trade
+    (Read.cbor_map_iterator_match p i l')
+    (cbor_nondet_map_iterator_match p i l) **
+  pure (
+    List.Tot.for_all (SpecRaw.valid_raw_data_item) (List.Tot.map fst l') /\
+    List.Tot.for_all (SpecRaw.valid_raw_data_item) (List.Tot.map snd l') /\
+    CBOR.Spec.Util.list_no_setoid_repeats (SpecRaw.raw_equiv) (List.Tot.map fst l') /\
+    l == List.Tot.map SpecRaw.mk_cbor_map_entry l'
+  )
+{
+  unfold (cbor_nondet_map_iterator_match p i l);
+  with l' . assert (Read.cbor_map_iterator_match p i l');
+  intro
+    (Trade.trade
+      (Read.cbor_map_iterator_match p i l')
+      (cbor_nondet_map_iterator_match p i l)
+    )
+    fn _ {
+      fold (cbor_nondet_map_iterator_match p i l)
+    };
+  l'
+}
+
+let rec cbor_nondet_map_iterator_start_assoc'
+  (l': list (SpecRaw.raw_data_item & SpecRaw.raw_data_item))
+  (x: SpecRaw.raw_data_item)
+: Lemma
+  (requires (
+    List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l') /\
+    List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd l') /\
+    SpecRaw.valid_raw_data_item x
+  ))
+  (ensures (
+    let l = List.Tot.map SpecRaw.mk_cbor_map_entry l' in
+    begin match CBOR.Spec.Util.list_setoid_assoc SpecRaw.raw_equiv x l', List.Tot.assoc (SpecRaw.mk_cbor x) l with
+    | None, None -> True
+    | Some y', Some y -> SpecRaw.valid_raw_data_item y' /\ y == SpecRaw.mk_cbor y'
+    | _ -> False
+    end
+  ))
+  (decreases l')
+= match l' with
+  | [] -> ()
+  | (k', v') :: q' ->
+    SpecRaw.mk_cbor_equiv x k';
+    if SpecRaw.raw_equiv x k'
+    then ()
+    else cbor_nondet_map_iterator_start_assoc' q' x
+
+let cbor_nondet_map_iterator_start_assoc
+  (m: Spec.cbor_map)
+  (l': list (SpecRaw.raw_data_item & SpecRaw.raw_data_item))
+  (sq: squash (
+    List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l') /\
+    List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd l') /\
+    SpecRaw.mk_cbor_match_map l' m
+  ))
+  (x: Spec.cbor)
+: Lemma
+  (ensures (
+    let l = List.Tot.map SpecRaw.mk_cbor_map_entry l' in
+    Spec.cbor_map_get m x == List.Tot.assoc x l
+  ))
+= assert (SpecRaw.mk_cbor_match_map_elem l' m (SpecRaw.mk_det_raw_cbor x));
+  cbor_nondet_map_iterator_start_assoc' l' (SpecRaw.mk_det_raw_cbor x)
+
+let rec cbor_nondet_map_iterator_start_no_repeats'
+  (l': list (SpecRaw.raw_data_item & SpecRaw.raw_data_item))
+  (x: SpecRaw.raw_data_item)
+: Lemma
+  (requires (
+    List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l') /\
+    List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd l') /\
+    SpecRaw.valid_raw_data_item x /\
+    List.Tot.memP (SpecRaw.mk_cbor x) (List.Tot.map fst (List.Tot.map SpecRaw.mk_cbor_map_entry l'))
+  ))
+  (ensures (
+    List.Tot.existsb (SpecRaw.raw_equiv x) (List.Tot.map fst l')
+  ))
+  (decreases l')
+= match l' with
+  | [] -> ()
+  | (k', _) :: q ->
+    SpecRaw.mk_cbor_equiv x k';
+    Classical.move_requires (cbor_nondet_map_iterator_start_no_repeats' q) x
+
+let rec cbor_nondet_map_iterator_start_no_repeats
+  (l': list (SpecRaw.raw_data_item & SpecRaw.raw_data_item))
+: Lemma
+  (requires (
+    List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l') /\
+    List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd l') /\
+    CBOR.Spec.Util.list_no_setoid_repeats SpecRaw.raw_equiv (List.Tot.map fst l')
+  ))
+  (ensures (
+    List.Tot.no_repeats_p (List.Tot.map fst (List.Tot.map SpecRaw.mk_cbor_map_entry l'))
+  ))
+  (decreases l')
+= match l' with
+  | [] -> ()
+  | (k', v') :: q ->
+    Classical.move_requires (cbor_nondet_map_iterator_start_no_repeats' q) k';
+    cbor_nondet_map_iterator_start_no_repeats q
+
+fn cbor_nondet_map_iterator_start (_: unit) : map_iterator_start_t u#0 u#0 #_ #_ cbor_nondet_match cbor_nondet_map_iterator_match
+= (x: _)
+  (#p: _)
+  (#y: _)
+{
+  let y' = cbor_nondet_match_elim x;
+  SpecRaw.mk_cbor_eq y';
+  SpecRaw.valid_eq SpecRaw.basic_data_model y';
+  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  let res = Read.cbor_map_iterator_init f64 x;
+  Trade.trans _ _ (cbor_nondet_match p x y);
+  cbor_nondet_map_iterator_match_intro res;
+  Trade.trans _ _ (cbor_nondet_match p x y);
+  let m : Ghost.erased Spec.cbor_map = Spec.CMap?.c (Spec.unpack y);
+  let l' : Ghost.erased (list (SpecRaw.raw_data_item & SpecRaw.raw_data_item)) = SpecRaw.Map?.v y';
+  let l : Ghost.erased (list (Spec.cbor & Spec.cbor)) = List.Tot.map SpecRaw.mk_cbor_map_entry l';
+  Classical.forall_intro (cbor_nondet_map_iterator_start_assoc m l' ());
+  assert (pure (forall k . Spec.cbor_map_get m k == List.Tot.assoc k l));
+  cbor_nondet_map_iterator_start_no_repeats l';
+  assert (pure (List.Tot.no_repeats_p (List.Tot.map fst l)));
+  res
+}
+
+fn cbor_nondet_map_iterator_is_empty (_: unit) : map_iterator_is_empty_t u#0 #_ cbor_nondet_map_iterator_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_nondet_map_iterator_match p x v);
+  let res = Read.cbor_map_iterator_is_empty x;
+  fold (cbor_nondet_map_iterator_match p x v);
+  res
+}
+
+let cbor_nondet_map_entry_t = Raw.cbor_map_entry
+
+let cbor_nondet_map_entry_match
+  (p: perm)
+  (x: cbor_nondet_map_entry_t)
+  (y: Spec.cbor & Spec.cbor)
+: Tot slprop
+= cbor_nondet_match p x.cbor_map_entry_key (fst y) **
+  cbor_nondet_match p x.cbor_map_entry_value (snd y)
+
+ghost
+fn cbor_nondet_map_entry_match_intro
+  (res: cbor_nondet_map_entry_t)
+  (#p: perm)
+  (#a: SpecRaw.raw_data_item & SpecRaw.raw_data_item)
+requires
+  Raw.cbor_match_map_entry p res a **
+  pure (
+    SpecRaw.valid_raw_data_item (fst a) /\
+    SpecRaw.valid_raw_data_item (snd a)
+  )
+ensures
+  cbor_nondet_map_entry_match (p /. 2.0R) res (SpecRaw.mk_cbor (fst a), SpecRaw.mk_cbor (snd a)) **
+  Trade.trade
+    (cbor_nondet_map_entry_match (p /. 2.0R) res (SpecRaw.mk_cbor (fst a), SpecRaw.mk_cbor (snd a)))
+    (Raw.cbor_match_map_entry p res a)
+{
+  Trade.rewrite_with_trade
+    (Raw.cbor_match_map_entry p res a)
+    (Raw.cbor_match p res.cbor_map_entry_key (fst a) ** Raw.cbor_match p res.cbor_map_entry_value (snd a));
+  cbor_nondet_match_intro res.cbor_map_entry_key;
+  Trade.trans_hyp_l _ _ _ (Raw.cbor_match_map_entry p res a);
+  cbor_nondet_match_intro res.cbor_map_entry_value;
+  Trade.trans_hyp_r _ _ _ (Raw.cbor_match_map_entry p res a);
+  Trade.rewrite_with_trade
+    (cbor_nondet_match (p /. 2.0R) res.cbor_map_entry_key (SpecRaw.mk_cbor (fst a)) **
+      cbor_nondet_match (p /. 2.0R) res.cbor_map_entry_value (SpecRaw.mk_cbor (snd a))
+    )
+    (cbor_nondet_map_entry_match (p /. 2.0R) res (SpecRaw.mk_cbor_map_entry a));
+  Trade.trans _ _ (Raw.cbor_match_map_entry p res a)
+}
+
+fn cbor_nondet_map_iterator_next (_: unit) : map_iterator_next_t u#0 #_ #_ cbor_nondet_map_entry_match cbor_nondet_map_iterator_match
+= (x: _)
+  (#y: _)
+  (#py: _)
+  (#z: _)
+{
+  let l' = cbor_nondet_map_iterator_match_elim y;
+  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  let res = Read.cbor_map_iterator_next f64 x;
+  Trade.trans _ _ (cbor_nondet_map_iterator_match py y z);
+  cbor_nondet_map_entry_match_intro res;
+  Trade.trans_hyp_l _ _ _ (cbor_nondet_map_iterator_match py y z);
+  with y' z' . assert (Read.cbor_map_iterator_match py y' z');
+  cbor_nondet_map_iterator_match_intro y';
+  Trade.trans_hyp_r _ _ _ (cbor_nondet_map_iterator_match py y z);
+  res
+}
+
+ghost
+fn cbor_nondet_map_iterator_share (_: unit) : share_t u#0 u#0 #_ #_ cbor_nondet_map_iterator_match
+= (x: _)
+  (#py: _)
+  (#z: _)
+{
+  unfold (cbor_nondet_map_iterator_match py x z);
+  Read.cbor_map_iterator_share x;
+  fold (cbor_nondet_map_iterator_match (py /. 2.0R) x z);
+  fold (cbor_nondet_map_iterator_match (py /. 2.0R) x z);
+}
+
+ghost
+fn cbor_nondet_map_iterator_gather (_: unit) : gather_t u#0 u#0 #_ #_ cbor_nondet_map_iterator_match
+= (x: _)
+  (#py1: _)
+  (#z1: _)
+  (#py2: _)
+  (#z2: _)
+{
+  unfold (cbor_nondet_map_iterator_match py1 x z1);
+  unfold (cbor_nondet_map_iterator_match py2 x z2);
+  Read.cbor_map_iterator_gather x #py1 #_ #py2 #_;
+  fold (cbor_nondet_map_iterator_match (py1 +. py2) x z1);
+}
+
+fn cbor_nondet_map_entry_key (_: unit) : map_entry_key_t u#0 u#0 #_ #_ cbor_nondet_map_entry_match cbor_nondet_match
+= (x2: _)
+  (#p: _)
+  (#v2: _)
+{
+  unfold (cbor_nondet_map_entry_match p x2 v2);
+  intro
+    (Trade.trade
+      (cbor_nondet_match p x2.cbor_map_entry_key (fst v2))
+      (cbor_nondet_map_entry_match p x2 v2)
+    )
+    #(cbor_nondet_match p x2.cbor_map_entry_value (snd v2))
+    fn _
+  {
+    fold (cbor_nondet_map_entry_match p x2 v2);
+  };
+  x2.cbor_map_entry_key
+}
+
+fn cbor_nondet_map_entry_value (_: unit) : map_entry_value_t u#0 u#0 #_ #_ cbor_nondet_map_entry_match cbor_nondet_match
+= (x2: _)
+  (#p: _)
+  (#v2: _)
+{
+  unfold (cbor_nondet_map_entry_match p x2 v2);
+  intro
+    (Trade.trade
+      (cbor_nondet_match p x2.cbor_map_entry_value (snd v2))
+      (cbor_nondet_map_entry_match p x2 v2)
+    )
+    #(cbor_nondet_match p x2.cbor_map_entry_key (fst v2))
+    fn _
+  {
+    fold (cbor_nondet_map_entry_match p x2 v2);
+  };
+  x2.cbor_map_entry_value
+}
+
+ghost
+fn cbor_nondet_map_entry_share
+  (_: unit)
+: share_t u#0 u#0 #_ #_ cbor_nondet_map_entry_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_nondet_map_entry_match p x v);
+  cbor_nondet_share () x.cbor_map_entry_key;
+  cbor_nondet_share () x.cbor_map_entry_value;
+  fold (cbor_nondet_map_entry_match (p /. 2.0R) x v);
+  fold (cbor_nondet_map_entry_match (p /. 2.0R) x v);
+}
+
+ghost
+fn cbor_nondet_map_entry_gather
+  (_: unit)
+: gather_t u#0 u#0 #_ #_ cbor_nondet_map_entry_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+  (#p': _)
+  (#v': _)
+{
+  unfold (cbor_nondet_map_entry_match p x v);
+  unfold (cbor_nondet_map_entry_match p' x v');
+  cbor_nondet_gather () x.cbor_map_entry_key #p;
+  cbor_nondet_gather () x.cbor_map_entry_value #p;
+  fold (cbor_nondet_map_entry_match (p +. p') x v);
+}

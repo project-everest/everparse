@@ -10,6 +10,11 @@ module U64 = FStar.UInt64
 
 val mk_cbor (r: R.raw_data_item) : Tot cbor
 
+let mk_cbor_map_entry
+  (l: (raw_data_item & raw_data_item))
+: Tot (cbor & cbor)
+= (mk_cbor (fst l), mk_cbor (snd l))
+
 val mk_cbor_equiv (r1 r2: R.raw_data_item) : Lemma
   (requires (
     R.valid_raw_data_item r1 == true /\
