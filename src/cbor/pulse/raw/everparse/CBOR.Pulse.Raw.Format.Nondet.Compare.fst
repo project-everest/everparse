@@ -15,7 +15,7 @@ fn cbor_match_equal_serialized_tagged
 requires
   (cbor_match_serialized_tagged c1 pm1 r1 **
     cbor_match_serialized_tagged c2 pm2 r2 **
-    pure (Tagged?.tag r1 == Tagged?.tag r2 /\
+    pure (
       valid_raw_data_item r1 /\
       valid_raw_data_item r2
     ) 
@@ -37,6 +37,13 @@ ensures
   valid_eq basic_data_model r1;
   valid_eq basic_data_model r2;
   raw_equiv_eq_valid r1 r2;
+if ((c1.cbor_serialized_header.value <: FStar.UInt64.t) <> c2.cbor_serialized_header.value) {
+  fold (cbor_match_serialized_payload_tagged c2.cbor_serialized_payload (pm2 `perm_mul` c2.cbor_serialized_perm) (Tagged?.v r2));
+  fold (cbor_match_serialized_payload_tagged c1.cbor_serialized_payload (pm1 `perm_mul` c1.cbor_serialized_perm) (Tagged?.v r1));
+  fold (cbor_match_serialized_tagged c1 pm1 r1);
+  fold (cbor_match_serialized_tagged c2 pm2 r2);
+  false
+} else {
   CBOR.Spec.Raw.Nondet.check_equiv_correct basic_data_model None (Tagged?.v r1) (Tagged?.v r2);
   let res = EP.impl_check_equiv_basic None c1.cbor_serialized_payload c2.cbor_serialized_payload;
   fold (cbor_match_serialized_payload_tagged c2.cbor_serialized_payload (pm2 `perm_mul` c2.cbor_serialized_perm) (Tagged?.v r2));
@@ -44,6 +51,7 @@ ensures
   fold (cbor_match_serialized_tagged c1 pm1 r1);
   fold (cbor_match_serialized_tagged c2 pm2 r2);
   (res = Some true)
+}
 }
 
 fn cbor_match_compare_serialized_array

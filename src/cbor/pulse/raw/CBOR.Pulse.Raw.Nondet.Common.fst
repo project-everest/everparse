@@ -772,35 +772,33 @@ let rec cbor_nondet_map_iterator_start_no_repeats'
   (requires (
     List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l') /\
     List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd l') /\
-    SpecRaw.valid_raw_data_item x /\
-    List.Tot.memP (SpecRaw.mk_cbor x) (List.Tot.map fst (List.Tot.map SpecRaw.mk_cbor_map_entry l'))
+    SpecRaw.valid_raw_data_item x
   ))
   (ensures (
-    List.Tot.existsb (SpecRaw.raw_equiv x) (List.Tot.map fst l')
+    List.Tot.memP (SpecRaw.mk_cbor x) (List.Tot.map fst (List.Tot.map SpecRaw.mk_cbor_map_entry l')) <==> List.Tot.existsb (SpecRaw.raw_equiv x) (List.Tot.map fst l')
   ))
   (decreases l')
 = match l' with
   | [] -> ()
   | (k', _) :: q ->
     SpecRaw.mk_cbor_equiv x k';
-    Classical.move_requires (cbor_nondet_map_iterator_start_no_repeats' q) x
+    cbor_nondet_map_iterator_start_no_repeats' q x
 
 let rec cbor_nondet_map_iterator_start_no_repeats
   (l': list (SpecRaw.raw_data_item & SpecRaw.raw_data_item))
 : Lemma
   (requires (
     List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l') /\
-    List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd l') /\
-    CBOR.Spec.Util.list_no_setoid_repeats SpecRaw.raw_equiv (List.Tot.map fst l')
+    List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd l')
   ))
   (ensures (
-    List.Tot.no_repeats_p (List.Tot.map fst (List.Tot.map SpecRaw.mk_cbor_map_entry l'))
+    CBOR.Spec.Util.list_no_setoid_repeats SpecRaw.raw_equiv (List.Tot.map fst l') <==> List.Tot.no_repeats_p (List.Tot.map fst (List.Tot.map SpecRaw.mk_cbor_map_entry l'))
   ))
   (decreases l')
 = match l' with
   | [] -> ()
   | (k', v') :: q ->
-    Classical.move_requires (cbor_nondet_map_iterator_start_no_repeats' q) k';
+    cbor_nondet_map_iterator_start_no_repeats' q k';
     cbor_nondet_map_iterator_start_no_repeats q
 
 fn cbor_nondet_map_iterator_start (_: unit) : map_iterator_start_t u#0 u#0 #_ #_ cbor_nondet_match cbor_nondet_map_iterator_match
@@ -991,4 +989,31 @@ fn cbor_nondet_map_entry_gather
   cbor_nondet_gather () x.cbor_map_entry_key #p;
   cbor_nondet_gather () x.cbor_map_entry_value #p;
   fold (cbor_nondet_map_entry_match (p +. p') x v);
+}
+
+(* Equality *)
+
+fn cbor_nondet_equal
+  (x1: cbor_nondet_t)
+  (#p1: perm)
+  (#v1: Ghost.erased Spec.cbor)
+  (x2: cbor_nondet_t)
+  (#p2: perm)
+  (#v2: Ghost.erased Spec.cbor)
+requires
+  cbor_nondet_match p1 x1 v1 **
+  cbor_nondet_match p2 x2 v2
+returns res: bool
+ensures
+  cbor_nondet_match p1 x1 v1 **
+  cbor_nondet_match p2 x2 v2 **
+  pure (res == true <==> Ghost.reveal v1 == Ghost.reveal v2)
+{
+  let v1' = cbor_nondet_match_elim x1;
+  let v2' = cbor_nondet_match_elim x2;
+  SpecRaw.mk_cbor_equiv v1' v2';
+  let res = CBOR.Pulse.Raw.Nondet.Compare.cbor_nondet_equiv x1 x2;
+  Trade.elim _ (cbor_nondet_match p1 x1 v1);
+  Trade.elim _ _;
+  res
 }

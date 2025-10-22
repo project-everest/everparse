@@ -13,7 +13,7 @@ val cbor_match_equal_serialized_tagged
 : stt bool
   (cbor_match_serialized_tagged c1 pm1 r1 **
     cbor_match_serialized_tagged c2 pm2 r2 **
-    pure (Tagged?.tag r1 == Tagged?.tag r2 /\
+    pure (
       valid_raw_data_item r1 /\
       valid_raw_data_item r2
     ) 
