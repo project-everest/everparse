@@ -93,66 +93,6 @@ ensures
 
 #push-options "--z3rlimit 32 --print_implicits"
 
-let cbor_array_iterator_match (p: perm) (i: cbor_array_iterator) (l: list SpecRaw.raw_data_item) : slprop =
-  Read.cbor_array_iterator_match p i l
-
-inline_for_extraction noextract [@@noextract_to "krml"]
-let cbor_array_iterator_init :
-  (fits: squash (SZ.fits_u64)) ->
-  (c: cbor_raw) ->
-  (#pm: perm) ->
-  (#r: Ghost.erased SpecRaw.raw_data_item { SpecRaw.Array? r }) ->
-  stt cbor_array_iterator
-(requires
-    (cbor_match pm c r)
-)
-(ensures fun res -> exists* p .
-      cbor_array_iterator_match p res (SpecRaw.Array?.v r) **
-      Trade.trade
-        (cbor_array_iterator_match p res (SpecRaw.Array?.v r))
-        (cbor_match pm c r)
-)
-= Read.cbor_array_iterator_init
-
-inline_for_extraction noextract [@@noextract_to "krml"]
-let cbor_array_iterator_is_empty :
-  (c: cbor_array_iterator) ->
-  (#pm: perm) ->
-  (#r: Ghost.erased (list SpecRaw.raw_data_item)) ->
-stt bool
-(requires
-    cbor_array_iterator_match pm c r
-)
-(ensures fun res ->
-    cbor_array_iterator_match pm c r **
-    pure (res == Nil? r)
-)
-= Read.cbor_array_iterator_is_empty
-
-inline_for_extraction noextract [@@noextract_to "krml"]
-let cbor_array_iterator_next :
-  (sq: squash SZ.fits_u64) ->
-  (pi: ref cbor_array_iterator) ->
-  (#pm: perm) ->
-  (#i: Ghost.erased cbor_array_iterator) ->
-  (#l: Ghost.erased (list SpecRaw.raw_data_item)) ->
-  stt Raw.cbor_raw
-(requires
-    pts_to pi i **
-    cbor_array_iterator_match pm i l **
-    pure (Cons? l)
-)
-(ensures fun res -> exists* a p i' q .
-    cbor_match p res a **
-    pts_to pi i' **
-    cbor_array_iterator_match pm i' q **
-    Trade.trade
-      (cbor_match p res a ** cbor_array_iterator_match pm i' q)
-      (cbor_array_iterator_match pm i l) **
-    pure (Ghost.reveal l == a :: q)
-)
-= Read.cbor_array_iterator_next
-
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn cbor_nondet_equiv_body
@@ -247,15 +187,15 @@ fn cbor_nondet_equiv_body
       if ((len1.value <: U64.t) <> len2.value) {
         false
       } else {
-        let i1 = cbor_array_iterator_init () x1;
-        let i2 = cbor_array_iterator_init () x2;
+        let i1 = Read.cbor_array_iterator_init () x1;
+        let i2 = Read.cbor_array_iterator_init () x2;
         let mut pi1 = i1;
         let mut pi2 = i2;
         let mut pres = true;
         while (
           if (!pres) {
             let i1 = !pi1;
-            not (cbor_array_iterator_is_empty i1)
+            not (Read.cbor_array_iterator_is_empty i1)
           } else {
             false
           }
@@ -263,13 +203,13 @@ fn cbor_nondet_equiv_body
           pts_to pi1 i1 **
           pts_to pi2 i2 **
           pts_to pres res **
-          cbor_array_iterator_match pj1 i1 l1 **
-          cbor_array_iterator_match pj2 i2 l2 **
+          Read.cbor_array_iterator_match pj1 i1 l1 **
+          Read.cbor_array_iterator_match pj2 i2 l2 **
           Trade.trade
-            (cbor_array_iterator_match pj1 i1 l1)
+            (Read.cbor_array_iterator_match pj1 i1 l1)
             (cbor_match p1 x1 v1) **
           Trade.trade
-            (cbor_array_iterator_match pj2 i2 l2)
+            (Read.cbor_array_iterator_match pj2 i2 l2)
             (cbor_match p2 x2 v2) **
           pure (
             List.Tot.length l1 == List.Tot.length l2 /\
@@ -278,9 +218,9 @@ fn cbor_nondet_equiv_body
             b == (Cons? l1 && res) /\
             (SpecRaw.raw_equiv v1 v2 == (res && CBOR.Spec.Util.list_for_all2 SpecRaw.raw_equiv l1 l2))
         )) {
-          let y1 = cbor_array_iterator_next () pi1;
+          let y1 = Read.cbor_array_iterator_next () pi1;
           Trade.trans _ _ (cbor_match p1 x1 v1);
-          let y2 = cbor_array_iterator_next () pi2;
+          let y2 = Read.cbor_array_iterator_next () pi2;
           Trade.trans _ _ (cbor_match p2 x2 v2);
           pres := cbor_nondet_equiv y1 y2;
           Trade.elim_hyp_l _ _ (cbor_match p1 x1 v1);
