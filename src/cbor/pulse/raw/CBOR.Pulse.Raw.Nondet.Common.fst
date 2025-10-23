@@ -722,85 +722,6 @@ ensures
   l'
 }
 
-let rec cbor_nondet_map_iterator_start_assoc'
-  (l': list (SpecRaw.raw_data_item & SpecRaw.raw_data_item))
-  (x: SpecRaw.raw_data_item)
-: Lemma
-  (requires (
-    List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l') /\
-    List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd l') /\
-    SpecRaw.valid_raw_data_item x
-  ))
-  (ensures (
-    let l = List.Tot.map SpecRaw.mk_cbor_map_entry l' in
-    begin match CBOR.Spec.Util.list_setoid_assoc SpecRaw.raw_equiv x l', List.Tot.assoc (SpecRaw.mk_cbor x) l with
-    | None, None -> True
-    | Some y', Some y -> SpecRaw.valid_raw_data_item y' /\ y == SpecRaw.mk_cbor y'
-    | _ -> False
-    end
-  ))
-  (decreases l')
-= match l' with
-  | [] -> ()
-  | (k', v') :: q' ->
-    SpecRaw.mk_cbor_equiv x k';
-    if SpecRaw.raw_equiv x k'
-    then ()
-    else cbor_nondet_map_iterator_start_assoc' q' x
-
-let cbor_nondet_map_iterator_start_assoc
-  (m: Spec.cbor_map)
-  (l': list (SpecRaw.raw_data_item & SpecRaw.raw_data_item))
-  (sq: squash (
-    List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l') /\
-    List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd l') /\
-    SpecRaw.mk_cbor_match_map l' m
-  ))
-  (x: Spec.cbor)
-: Lemma
-  (ensures (
-    let l = List.Tot.map SpecRaw.mk_cbor_map_entry l' in
-    Spec.cbor_map_get m x == List.Tot.assoc x l
-  ))
-= assert (SpecRaw.mk_cbor_match_map_elem l' m (SpecRaw.mk_det_raw_cbor x));
-  cbor_nondet_map_iterator_start_assoc' l' (SpecRaw.mk_det_raw_cbor x)
-
-let rec cbor_nondet_map_iterator_start_no_repeats'
-  (l': list (SpecRaw.raw_data_item & SpecRaw.raw_data_item))
-  (x: SpecRaw.raw_data_item)
-: Lemma
-  (requires (
-    List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l') /\
-    List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd l') /\
-    SpecRaw.valid_raw_data_item x
-  ))
-  (ensures (
-    List.Tot.memP (SpecRaw.mk_cbor x) (List.Tot.map fst (List.Tot.map SpecRaw.mk_cbor_map_entry l')) <==> List.Tot.existsb (SpecRaw.raw_equiv x) (List.Tot.map fst l')
-  ))
-  (decreases l')
-= match l' with
-  | [] -> ()
-  | (k', _) :: q ->
-    SpecRaw.mk_cbor_equiv x k';
-    cbor_nondet_map_iterator_start_no_repeats' q x
-
-let rec cbor_nondet_map_iterator_start_no_repeats
-  (l': list (SpecRaw.raw_data_item & SpecRaw.raw_data_item))
-: Lemma
-  (requires (
-    List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l') /\
-    List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd l')
-  ))
-  (ensures (
-    CBOR.Spec.Util.list_no_setoid_repeats SpecRaw.raw_equiv (List.Tot.map fst l') <==> List.Tot.no_repeats_p (List.Tot.map fst (List.Tot.map SpecRaw.mk_cbor_map_entry l'))
-  ))
-  (decreases l')
-= match l' with
-  | [] -> ()
-  | (k', v') :: q ->
-    cbor_nondet_map_iterator_start_no_repeats' q k';
-    cbor_nondet_map_iterator_start_no_repeats q
-
 fn cbor_nondet_map_iterator_start (_: unit) : map_iterator_start_t u#0 u#0 #_ #_ cbor_nondet_match cbor_nondet_map_iterator_match
 = (x: _)
   (#p: _)
@@ -817,9 +738,9 @@ fn cbor_nondet_map_iterator_start (_: unit) : map_iterator_start_t u#0 u#0 #_ #_
   let m : Ghost.erased Spec.cbor_map = Spec.CMap?.c (Spec.unpack y);
   let l' : Ghost.erased (list (SpecRaw.raw_data_item & SpecRaw.raw_data_item)) = SpecRaw.Map?.v y';
   let l : Ghost.erased (list (Spec.cbor & Spec.cbor)) = List.Tot.map SpecRaw.mk_cbor_map_entry l';
-  Classical.forall_intro (cbor_nondet_map_iterator_start_assoc m l' ());
+  Classical.forall_intro (SpecRaw.list_assoc_map_mk_cbor_map_entry m l' ());
   assert (pure (forall k . Spec.cbor_map_get m k == List.Tot.assoc k l));
-  cbor_nondet_map_iterator_start_no_repeats l';
+  SpecRaw.list_no_repeats_map_fst_mk_cbor_map_entry l';
   assert (pure (List.Tot.no_repeats_p (List.Tot.map fst l)));
   res
 }
