@@ -361,3 +361,108 @@ ensures
 {
   cbor_nondet_equiv_body cbor_nondet_equiv x1 x2
 }
+
+module S = Pulse.Lib.Slice.Util
+module SM = Pulse.Lib.SeqMatch.Util
+
+fn cbor_nondet_no_setoid_repeats
+  (x: S.slice cbor_map_entry)
+  (#px: perm)
+  (#s: Ghost.erased (Seq.seq cbor_map_entry))
+  (#ps: perm)
+  (#l: Ghost.erased (list (SpecRaw.raw_data_item & SpecRaw.raw_data_item)))
+requires
+  pts_to x #px s **
+  SM.seq_list_match s l (Raw.cbor_match_map_entry ps) **
+  pure (
+    List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l)
+  )
+returns res: bool
+ensures
+  pts_to x #px s **
+  SM.seq_list_match s l (Raw.cbor_match_map_entry ps) **
+  pure (res == CBOR.Spec.Util.list_no_setoid_repeats SpecRaw.raw_equiv (List.Tot.map fst l))
+{
+  S.pts_to_len x;
+  let mut pn1 = 0sz;
+  let mut pres = true;
+  Trade.refl (SM.seq_list_match s l (Raw.cbor_match_map_entry ps));
+  while (
+    if (!pres) {
+      SM.seq_list_match_length (Raw.cbor_match_map_entry ps) _ _;
+      SZ.lt !pn1 (S.len x)
+    } else {
+      false
+    }
+  ) invariant b . exists* n1 res s1 l1 . (
+    pts_to x #px s **
+    pts_to pn1 n1 **
+    pts_to pres res **
+    SM.seq_list_match s1 l1 (Raw.cbor_match_map_entry ps) **
+    Trade.trade
+      (SM.seq_list_match s1 l1 (Raw.cbor_match_map_entry ps))
+      (SM.seq_list_match s l (Raw.cbor_match_map_entry ps)) **
+    pure (
+      b == (res && Cons? l1) /\
+      SZ.v n1 <= Seq.length s /\
+      Seq.equal s1 (Seq.slice s (SZ.v n1) (Seq.length s)) /\
+      List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l1) /\
+      CBOR.Spec.Util.list_no_setoid_repeats SpecRaw.raw_equiv (List.Tot.map fst l) == (res && CBOR.Spec.Util.list_no_setoid_repeats SpecRaw.raw_equiv (List.Tot.map fst l1))
+    )
+  ) {
+    SM.seq_list_match_length (Raw.cbor_match_map_entry ps) _ _;
+    let n1 = !pn1;
+    let x1 = S.op_Array_Access x n1;
+    SM.seq_list_match_cons_elim_trade _ _ (Raw.cbor_match_map_entry ps);
+    Trade.trans _ _ (SM.seq_list_match s l (Raw.cbor_match_map_entry ps));
+    with y1 . assert (Raw.cbor_match_map_entry ps x1 y1);
+    let n2 : SZ.t = SZ.add n1 1sz;
+    pn1 := n2;
+    let mut pn2 = n2;
+    with s1' l1' . assert (SM.seq_list_match s1' l1' (Raw.cbor_match_map_entry ps));
+    Trade.refl (SM.seq_list_match s1' l1' (Raw.cbor_match_map_entry ps));
+    while (
+      if (!pres) {
+        SM.seq_list_match_length (Raw.cbor_match_map_entry ps) _ _;
+        SZ.lt !pn2 (S.len x)
+      } else {
+        false
+      }
+    ) invariant b . exists* n2 res s2 l2 . (
+      pts_to x #px s **
+      Raw.cbor_match_map_entry ps x1 y1 **
+      pts_to pn2 n2 **
+      pts_to pres res **
+      SM.seq_list_match s2 l2 (Raw.cbor_match_map_entry ps) **
+      Trade.trade
+        (SM.seq_list_match s2 l2 (Raw.cbor_match_map_entry ps))
+        (SM.seq_list_match s1' l1' (Raw.cbor_match_map_entry ps)) **
+      pure (
+        b == (res && Cons? l2) /\
+        SZ.v n2 <= Seq.length s /\
+        Seq.equal s2 (Seq.slice s (SZ.v n2) (Seq.length s)) /\
+        List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l2) /\
+        CBOR.Spec.Util.list_no_setoid_repeats SpecRaw.raw_equiv (List.Tot.map fst l) == (res && (not (List.Tot.existsb (SpecRaw.raw_equiv (fst y1)) (List.Tot.map fst l2))) && CBOR.Spec.Util.list_no_setoid_repeats SpecRaw.raw_equiv (List.Tot.map fst l1'))
+      )
+    ) {
+      SM.seq_list_match_length (Raw.cbor_match_map_entry ps) _ _;
+      let n2 = !pn2;
+      let x2 = S.op_Array_Access x n2;
+      SM.seq_list_match_cons_elim_trade _ _ (Raw.cbor_match_map_entry ps);
+      with y2 . assert (Raw.cbor_match_map_entry ps x1 y1 ** Raw.cbor_match_map_entry ps x2 y2);
+      unfold (Raw.cbor_match_map_entry ps x1 y1);
+      unfold (Raw.cbor_match_map_entry ps x2 y2);
+      pres := not (cbor_nondet_equiv x1.cbor_map_entry_key x2.cbor_map_entry_key);
+      fold (Raw.cbor_match_map_entry ps x1 y1);
+      fold (Raw.cbor_match_map_entry ps x2 y2);
+      Trade.elim_hyp_l (Raw.cbor_match_map_entry ps x2 y2) _ _;
+      Trade.trans _ _ (SM.seq_list_match s1' l1' (Raw.cbor_match_map_entry ps));
+      pn2 := SZ.add n2 1sz;
+    };
+    Trade.elim_hyp_l _ _ _;
+    Trade.elim _ (SM.seq_list_match s1' l1' (Raw.cbor_match_map_entry ps));
+    ()
+  };
+  Trade.elim _ _;
+  !pres
+}
