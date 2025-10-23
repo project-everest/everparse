@@ -1017,3 +1017,176 @@ ensures
   Trade.elim _ _;
   res
 }
+
+let cbor_nondet_map_get_invariant_true_postcond
+  (vx: Spec.cbor)
+  (vk: Spec.cbor)
+  (vv: Spec.cbor)
+: Tot prop
+= Spec.CMap? (Spec.unpack vx) /\
+  Spec.cbor_map_get (Spec.CMap?.c (Spec.unpack vx)) vk == Some vv
+
+let cbor_nondet_map_get_invariant_true
+  (px: perm)
+  (x: cbor_nondet_t)
+  (vx: Spec.cbor)
+  (vk: Spec.cbor)
+  (vdest: cbor_nondet_t)
+: Tot slprop
+= exists* pv vv .
+    cbor_nondet_match pv vdest vv **
+    Trade.trade
+      (cbor_nondet_match pv vdest vv)
+      (cbor_nondet_match px x vx) **
+    pure (
+      cbor_nondet_map_get_invariant_true_postcond vx vk vv
+    )
+
+let cbor_nondet_map_get_invariant_false_postcond
+  (vx: Spec.cbor)
+  (vk: Spec.cbor)
+  (l: list (Spec.cbor & Spec.cbor))
+: Tot prop
+= Spec.CMap? (Spec.unpack vx) /\
+  Spec.cbor_map_get (Spec.CMap?.c (Spec.unpack vx)) vk == List.Tot.assoc vk l
+
+let cbor_nondet_map_get_invariant_false
+  (px: perm)
+  (x: cbor_nondet_t)
+  (vx: Spec.cbor)
+  (vdest0: cbor_nondet_t)
+  (vk: Spec.cbor)
+  (vdest: cbor_nondet_t)
+  (i: cbor_nondet_map_iterator_t)
+  (cont: bool)
+: Tot slprop
+= exists* p' l .
+    cbor_nondet_map_iterator_match p' i l **
+    Trade.trade
+      (cbor_nondet_map_iterator_match p' i l)
+      (cbor_nondet_match px x vx) **
+    pure (
+      cbor_nondet_map_get_invariant_false_postcond vx vk l /\
+      vdest == vdest0 /\
+      cont == Cons? l
+    )
+
+let cbor_nondet_map_get_invariant
+  (px: perm)
+  (x: cbor_nondet_t)
+  (vx: Spec.cbor)
+  (vdest0: cbor_nondet_t)
+  (vk: Spec.cbor)
+  (vdest: cbor_nondet_t)
+  (i: cbor_nondet_map_iterator_t)
+  (cont: bool)
+  (res: bool)
+: Tot slprop
+= if res
+  then cbor_nondet_map_get_invariant_true px x vx vk vdest
+  else cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest i cont
+
+ghost fn cbor_nondet_map_get_concl
+  (px: perm)
+  (x: cbor_nondet_t)
+  (vx: Spec.cbor)
+  (vdest0: cbor_nondet_t)
+  (vk: Spec.cbor)
+  (vdest: cbor_nondet_t)
+  (i: cbor_nondet_map_iterator_t)
+  (bres: bool)
+requires
+  cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i false bres
+ensures
+  exists* res .
+      map_get_post cbor_nondet_match x px vx vk res **
+      pure (Spec.CMap? (Spec.unpack vx) /\ (Some? (Spec.cbor_map_get (Spec.CMap?.c (Spec.unpack vx)) vk) == Some? res) /\
+        mk_map_gen_by_ref_postcond (Ghost.reveal vdest0) res vdest bres
+      )
+{
+  if bres {
+    rewrite (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i false bres)
+      as (cbor_nondet_map_get_invariant_true px x vx vk vdest);
+    unfold (cbor_nondet_map_get_invariant_true px x vx vk vdest);
+    fold (map_get_post_some cbor_nondet_match x px vx vk vdest);
+    fold (map_get_post cbor_nondet_match x px vx vk (Some vdest));
+  } else {
+    rewrite (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i false bres)
+      as (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest i false);
+    unfold (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest i false);
+    Trade.elim _ _;
+    fold (map_get_post_none cbor_nondet_match x px vx vk);
+    fold (map_get_post cbor_nondet_match x px vx vk None);
+  }
+}
+
+fn cbor_nondet_map_get (_: unit)
+: map_get_by_ref_t #_ cbor_nondet_match
+= (x: _)
+  (k: _)
+  (dest: _)
+  (#px: _)
+  (#vx: _)
+  (#pk: _)
+  (#vk: _)
+  (#vdest0: _)
+{
+  let i = cbor_nondet_map_iterator_start () x;
+  with p0 l0 . assert (cbor_nondet_map_iterator_match p0 i l0);
+  let mut pi = i;
+  let mut pres = false;
+  let cont = not (cbor_nondet_map_iterator_is_empty () i);
+  let mut pcont = cont;
+  fold (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest0 i cont);
+  rewrite (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest0 i cont)
+    as (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest0 i cont false);
+  while (
+    let res = !pres;
+    let cont = !pcont;
+    (cont && not res)
+  ) invariant b . exists* i vdest res cont . (
+    pts_to pi i **
+    pts_to dest vdest **
+    pts_to pres res **
+    pts_to pcont cont **
+    cbor_nondet_match pk k vk **
+    cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i cont res **
+    pure (b == (cont && not res))
+  ) {
+    with gi vdest gres gcont . assert (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest gi gcont gres);
+    rewrite (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest gi gcont gres)
+      as (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest gi true);
+    unfold (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest gi true);
+    let y = cbor_nondet_map_iterator_next () pi;
+    Trade.trans _ _ (cbor_nondet_match px x vx);
+    with py y vy . assert (cbor_nondet_map_entry_match py y vy);
+    Trade.rewrite_with_trade
+      (cbor_nondet_map_entry_match py y vy)
+      (cbor_nondet_match py y.cbor_map_entry_key (fst vy) ** cbor_nondet_match py y.cbor_map_entry_value (snd vy));
+    if (cbor_nondet_equal y.cbor_map_entry_key k) {
+      Trade.elim_hyp_l _ _ (cbor_nondet_map_entry_match py y vy);
+      Trade.trans_hyp_l _ _ _ (cbor_nondet_match px x vx);
+      Trade.elim_hyp_r _ _ _;
+      dest := y.cbor_map_entry_value;
+      pres := true;
+      fold (cbor_nondet_map_get_invariant_true px x vx vk y.cbor_map_entry_value);
+      with i . assert (pts_to pi i);
+      rewrite (cbor_nondet_map_get_invariant_true px x vx vk y.cbor_map_entry_value)
+        as (cbor_nondet_map_get_invariant px x vx vdest0 vk y.cbor_map_entry_value i true true);
+    } else {
+      Trade.elim _ (cbor_nondet_map_entry_match py y vy);
+      Trade.elim_hyp_l _ _ _;
+      let i = !pi;
+      let cont = not (cbor_nondet_map_iterator_is_empty () i);
+      pcont := cont;
+      fold (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest i cont);
+      rewrite (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest i cont)
+        as (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i cont gres)
+    }
+  };
+  let res = !pres;
+  with vdest . assert (pts_to dest vdest);
+  with i . assert (pts_to pi i);
+  cbor_nondet_map_get_concl px x vx vdest0 vk vdest i res;
+  res
+}
