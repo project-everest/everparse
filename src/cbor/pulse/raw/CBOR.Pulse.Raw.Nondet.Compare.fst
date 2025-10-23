@@ -60,7 +60,50 @@ ensures
   cbor_match_map_entry p2 x2 v2 **
   pure (res == CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1 v2)
 {
-  admit ()
+  Trade.refl (Read.cbor_map_iterator_match p1 i1 v1);
+  let mut pi1 = i1;
+  let mut pres = (None #bool);
+  let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  while (
+    if (Some? !pres) {
+      false
+    } else {
+      let i1 = !pi1;
+      not (Read.cbor_map_iterator_is_empty i1)
+    }
+  ) invariant b . exists* gi1 l1 res . (
+    pts_to pi1 gi1 **
+    Read.cbor_map_iterator_match p1 gi1 l1 **
+    Trade.trade
+      (Read.cbor_map_iterator_match p1 gi1 l1)
+      (Read.cbor_map_iterator_match p1 i1 v1) **
+    pts_to pres res **
+    cbor_match_map_entry p2 x2 v2 **
+    pure (
+      List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l1) /\
+      List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd l1) /\
+      CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1 v2 == (match res with Some r -> r | _ -> CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv l1 v2) /\
+      b == (Cons? l1 && None? res)
+    )
+  ) {
+    let x1 = Read.cbor_map_iterator_next () pi1;
+    Trade.trans _ _ (Read.cbor_map_iterator_match p1 i1 v1);
+    with px1 vx1 . assert (Read.cbor_match_map_entry px1 x1 vx1);
+    unfold (Read.cbor_match_map_entry px1 x1 vx1);
+    unfold (Read.cbor_match_map_entry p2 x2 v2);
+    if (cbor_nondet_equiv x2.cbor_map_entry_key x1.cbor_map_entry_key) {
+      pres := Some (cbor_nondet_equiv x2.cbor_map_entry_value x1.cbor_map_entry_value);
+      fold (Read.cbor_match_map_entry px1 x1 vx1);
+      fold (Read.cbor_match_map_entry p2 x2 v2);
+      Trade.elim_hyp_l _ _ _
+    } else {
+      fold (Read.cbor_match_map_entry px1 x1 vx1);
+      fold (Read.cbor_match_map_entry p2 x2 v2);
+      Trade.elim_hyp_l _ _ _
+    }
+  };
+  Trade.elim _ _;
+  (!pres = Some true)
 }
 
 inline_for_extraction
@@ -88,7 +131,39 @@ ensures
   Read.cbor_map_iterator_match p2 i2 v2 **
   pure (res == List.Tot.for_all (CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1) v2)
 {
-  admit ()
+  let mut pi2 = i2;
+  Trade.refl (Read.cbor_map_iterator_match p2 i2 v2);
+  let mut pres = true;
+  let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  while (
+    if (!pres) {
+      let i2 = !pi2;
+      not (Read.cbor_map_iterator_is_empty i2)
+    } else {
+      false
+    }
+  ) invariant b . exists* gi2 l2 res . (
+    Read.cbor_map_iterator_match p1 i1 v1 **
+    pts_to pi2 gi2 **
+    Read.cbor_map_iterator_match p2 gi2 l2 **
+    pts_to pres res **
+    Trade.trade
+      (Read.cbor_map_iterator_match p2 gi2 l2)
+      (Read.cbor_map_iterator_match p2 i2 v2) **
+    pure (
+      List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l2) /\
+      List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd l2) /\
+      List.Tot.for_all (CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1) v2 == (res && List.Tot.for_all (CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1) l2) /\
+      b == (res && Cons? l2)
+    )
+  ) {
+    let x2 = Read.cbor_map_iterator_next () pi2;
+    Trade.trans _ _ (Read.cbor_map_iterator_match p2 i2 v2);
+    pres := cbor_nondet_setoid_assoc_eq cbor_nondet_equiv i1 x2;
+    Trade.elim_hyp_l _ _ _
+  };
+  Trade.elim _ _;
+  !pres
 }
 
 #push-options "--z3rlimit 32 --print_implicits"

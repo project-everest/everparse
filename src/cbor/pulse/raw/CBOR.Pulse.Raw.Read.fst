@@ -385,7 +385,8 @@ fn cbor_match_map_elim
   };
 }
 
-let cbor_map_iterator_match
+// see cbor_array_iterator_match for why the annotation is necessary
+let cbor_map_iterator_match : perm -> cbor_map_iterator -> list (raw_data_item & raw_data_item) -> slprop
 = cbor_raw_iterator_match
     cbor_match_map_entry
     cbor_serialized_map_iterator_match
