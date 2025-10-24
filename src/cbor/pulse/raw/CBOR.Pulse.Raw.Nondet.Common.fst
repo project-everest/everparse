@@ -85,6 +85,29 @@ ensures
     };
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_nondet_reset_perm
+  (p: perm)
+  (c: cbor_nondet_t)
+  (r: Ghost.erased Spec.cbor)
+  (q: perm)
+  requires
+    cbor_nondet_match p c r
+  returns c' : cbor_raw
+  ensures
+    cbor_nondet_match q c' r **
+    Trade.trade
+      (cbor_nondet_match q c' r)
+      (cbor_nondet_match p c r)
+{
+  let r' = cbor_nondet_match_elim c;
+  let res = Raw.cbor_raw_reset_perm _ c _ (2.0R *. q);
+  Trade.trans _ _ (cbor_nondet_match p c r);
+  cbor_nondet_match_intro res;
+  Trade.trans _ _ (cbor_nondet_match p c r);
+  res
+}
+
 ghost
 fn cbor_nondet_share
   (_: unit)
@@ -1110,4 +1133,210 @@ fn cbor_nondet_map_get (_: unit)
   with i . assert (pts_to pi i);
   cbor_nondet_map_get_concl px x vx vdest0 vk vdest i res;
   res
+}
+
+(* Constructors *)
+
+fn cbor_nondet_mk_simple_value (_: unit) : mk_simple_t u#0 #_ cbor_nondet_match
+= (v: _)
+{
+  let res = Raw.cbor_match_simple_intro v;
+  SpecRaw.valid_eq SpecRaw.basic_data_model (SpecRaw.Simple v);
+  SpecRaw.mk_cbor_eq (SpecRaw.Simple v);
+  fold (cbor_nondet_match 1.0R res (Spec.pack (Spec.CSimple v)));
+  res
+}
+
+fn cbor_nondet_mk_int64 (_: unit) : mk_int64_t u#0 #_ cbor_nondet_match
+= (ty: _)
+  (v: _)
+{
+  let res = Raw.cbor_match_int_intro ty (SpecRaw.mk_raw_uint64 v);
+  SpecRaw.valid_eq SpecRaw.basic_data_model (SpecRaw.Int64 ty (SpecRaw.mk_raw_uint64 v));
+  SpecRaw.mk_cbor_eq (SpecRaw.Int64 ty (SpecRaw.mk_raw_uint64 v));
+  fold (cbor_nondet_match 1.0R res (Spec.pack (Spec.CInt64 ty v)));
+  res
+}
+
+fn cbor_nondet_mk_string (_: unit) : mk_string_t u#0 #_ cbor_nondet_match
+= (ty: _)
+  (s: _)
+  (#p: _)
+  (#v: _)
+{
+  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  S.pts_to_len s;
+  let len64 = SpecRaw.mk_raw_uint64 (SZ.sizet_to_uint64 (S.len s));
+  let res1 = Raw.cbor_match_string_intro ty len64 s;
+  with r. assert Raw.cbor_match 1.0R res1 r;
+  SpecRaw.valid_eq SpecRaw.basic_data_model (SpecRaw.String ty len64 v);
+  SpecRaw.mk_cbor_eq (SpecRaw.String ty len64 v);
+  cbor_nondet_match_intro res1;
+  Trade.trans _ _ (S.pts_to s #p v);
+  let res = cbor_nondet_reset_perm _ res1 _ 1.0R;
+  Trade.trans _ _ (S.pts_to s #p v);
+  Trade.rewrite_with_trade
+    (cbor_nondet_match 1.0R res (SpecRaw.mk_cbor (SpecRaw.String ty len64 v)))
+    (cbor_nondet_match 1.0R res (Spec.pack (Spec.CString ty v)));
+  Trade.trans _ _ (S.pts_to s #p v);
+  res
+}
+
+fn cbor_nondet_mk_tagged (_: unit) : mk_tagged_t #_ cbor_nondet_match
+= (tag: _)
+  (r: _)
+  (#pr: _)
+  (#v: _)
+  (#pv: _)
+  (#v': _)
+{
+  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  let tag64 = SpecRaw.mk_raw_uint64 tag;
+  let w' = cbor_nondet_match_elim v;
+  let res1 = Raw.cbor_match_tagged_intro tag64 r;
+  Trade.trans_concl_r _ _ _ _;
+  SpecRaw.valid_eq SpecRaw.basic_data_model (SpecRaw.Tagged tag64 w');
+  SpecRaw.mk_cbor_eq (SpecRaw.Tagged tag64 w');
+  cbor_nondet_match_intro res1;
+  Trade.trans _ _ (_ ** _);
+  let res = cbor_nondet_reset_perm _ res1 _ 1.0R;
+  Trade.trans _ _ (_ ** _);
+  res
+}
+
+module SM = Pulse.Lib.SeqMatch.Util
+
+ghost
+fn rec seq_list_array_cbor_nondet_match_elim
+  (p: perm)
+  (c: Seq.seq cbor_nondet_t)
+  (v: list (Spec.cbor))
+requires
+  SM.seq_list_match c v (cbor_nondet_match p)
+returns v': Ghost.erased (list SpecRaw.raw_data_item)
+ensures
+  SM.seq_list_match c v' (Raw.cbor_match p) **
+  Trade.trade
+    (SM.seq_list_match c v' (Raw.cbor_match p))
+    (SM.seq_list_match c v (cbor_nondet_match p)) **
+    pure (
+      List.Tot.for_all SpecRaw.valid_raw_data_item v' /\
+      Ghost.reveal v == List.Tot.map SpecRaw.mk_cbor v'
+    )
+decreases v
+{
+  SM.seq_list_match_length (cbor_nondet_match p) c v;
+  if (Nil? v) {
+    SM.seq_list_match_nil_elim c v (cbor_nondet_match p);
+    SM.seq_list_match_nil_intro c [] (Raw.cbor_match p);
+    intro
+      (Trade.trade
+        (SM.seq_list_match c [] (Raw.cbor_match p))
+        (SM.seq_list_match c v (cbor_nondet_match p))
+      )
+      #emp
+      fn _
+    {
+      SM.seq_list_match_nil_elim c [] (Raw.cbor_match p);
+      SM.seq_list_match_nil_intro c v (cbor_nondet_match p);
+    };
+    []
+  } else {
+    SM.seq_list_match_cons_elim_trade c v (cbor_nondet_match p);
+    let h = cbor_nondet_match_elim (Seq.head c);
+    Trade.trans_hyp_l _ _ _ (SM.seq_list_match c v (cbor_nondet_match p));
+    let q = seq_list_array_cbor_nondet_match_elim p (Seq.tail c) (List.Tot.tl v);
+    Trade.trans_hyp_r _ _ _ (SM.seq_list_match c v (cbor_nondet_match p));
+    SM.seq_list_match_cons_intro_trade (Seq.head c) (Ghost.reveal h) (Seq.tail c) q (Raw.cbor_match p);
+    Trade.trans _ _ (SM.seq_list_match c v (cbor_nondet_match p));
+    rewrite each Seq.cons (Seq.head c) (Seq.tail c) as c;
+    (Ghost.reveal h :: q);
+  }
+}
+
+fn cbor_nondet_mk_array (_: unit) : mk_array_t #_ cbor_nondet_match
+= (a: _)
+  (#pa: _)
+  (#va: _)
+  (#pv: _)
+  (#vv: _)
+{
+  S.pts_to_len a;
+  SM.seq_list_match_length (cbor_nondet_match pv) va vv;
+  let len64 = SpecRaw.mk_raw_uint64 (SZ.sizet_to_uint64 (S.len a));
+  let v' = seq_list_array_cbor_nondet_match_elim _ _ _;
+  SpecRaw.valid_eq SpecRaw.basic_data_model (SpecRaw.Array len64 v');
+  SpecRaw.mk_cbor_eq (SpecRaw.Array len64 v');
+  let res1 = Raw.cbor_match_array_intro len64 a;
+  Trade.trans_concl_r _ _ _ _;
+  cbor_nondet_match_intro res1;
+  Trade.trans _ _ (_ ** _);
+  let res = cbor_nondet_reset_perm _ res1 _ 1.0R;
+  Trade.trans _ _ (_ ** _);
+  Trade.rewrite_with_trade
+    (cbor_nondet_match 1.0R res _)
+    (cbor_nondet_match 1.0R res (Spec.pack (Spec.CArray (List.Tot.map SpecRaw.mk_cbor v'))));
+  Trade.trans _ _ (_ ** _);
+  res
+}
+
+ghost
+fn rec seq_list_map_cbor_nondet_match_elim
+  (p: perm)
+  (c: Seq.seq cbor_nondet_map_entry_t)
+  (v: list (Spec.cbor & Spec.cbor))
+requires
+  SM.seq_list_match c v (cbor_nondet_map_entry_match p)
+returns v': Ghost.erased (list (SpecRaw.raw_data_item & SpecRaw.raw_data_item))
+ensures
+  SM.seq_list_match c v' (Raw.cbor_match_map_entry p) **
+  Trade.trade
+    (SM.seq_list_match c v' (Raw.cbor_match_map_entry p))
+    (SM.seq_list_match c v (cbor_nondet_map_entry_match p)) **
+    pure (
+      List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst v') /\
+      List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd v') /\
+      Ghost.reveal v == List.Tot.map SpecRaw.mk_cbor_map_entry v'
+    )
+decreases v
+{
+  SM.seq_list_match_length (cbor_nondet_map_entry_match p) c v;
+  if (Nil? v) {
+    SM.seq_list_match_nil_elim c v (cbor_nondet_map_entry_match p);
+    SM.seq_list_match_nil_intro c [] (Raw.cbor_match_map_entry p);
+    intro
+      (Trade.trade
+        (SM.seq_list_match c [] (Raw.cbor_match_map_entry p))
+        (SM.seq_list_match c v (cbor_nondet_map_entry_match p))
+      )
+      #emp
+      fn _
+    {
+      SM.seq_list_match_nil_elim c [] (Raw.cbor_match_map_entry p);
+      SM.seq_list_match_nil_intro c v (cbor_nondet_map_entry_match p);
+    };
+    []
+  } else {
+    SM.seq_list_match_cons_elim_trade c v (cbor_nondet_map_entry_match p);
+    with w . assert (cbor_nondet_map_entry_match p (Seq.head c) w);
+    Trade.rewrite_with_trade
+      (cbor_nondet_map_entry_match p (Seq.head c) w)
+      (cbor_nondet_match p (Seq.head c).cbor_map_entry_key (fst w) ** cbor_nondet_match p (Seq.head c).cbor_map_entry_value (snd w));
+    let hfst = cbor_nondet_match_elim (Seq.head c).cbor_map_entry_key;
+    let hsnd = cbor_nondet_match_elim (Seq.head c).cbor_map_entry_value;
+    Trade.prod _ (cbor_nondet_match p (Seq.head c).cbor_map_entry_key _) _ (cbor_nondet_match p (Seq.head c).cbor_map_entry_value _);
+    Trade.trans _ (cbor_nondet_match p (Seq.head c).cbor_map_entry_key (fst w) ** cbor_nondet_match p (Seq.head c).cbor_map_entry_value (snd w)) _;
+    let h = (Ghost.reveal hfst, Ghost.reveal hsnd);
+    Trade.rewrite_with_trade
+      (Raw.cbor_match p (Seq.head c).cbor_map_entry_key hfst ** Raw.cbor_match p (Seq.head c).cbor_map_entry_value hsnd)
+      (Raw.cbor_match_map_entry p (Seq.head c) h);
+    Trade.trans (Raw.cbor_match_map_entry p (Seq.head c) h) _ _;
+    Trade.trans_hyp_l _ _ _ (SM.seq_list_match c v (cbor_nondet_map_entry_match p));
+    let q = seq_list_map_cbor_nondet_match_elim p (Seq.tail c) (List.Tot.tl v);
+    Trade.trans_hyp_r _ _ _ (SM.seq_list_match c v (cbor_nondet_map_entry_match p));
+    SM.seq_list_match_cons_intro_trade (Seq.head c) (Ghost.reveal h) (Seq.tail c) q (Raw.cbor_match_map_entry p);
+    Trade.trans _ _ (SM.seq_list_match c v (cbor_nondet_map_entry_match p));
+    rewrite each Seq.cons (Seq.head c) (Seq.tail c) as c;
+    (h :: q);
+  }
 }
