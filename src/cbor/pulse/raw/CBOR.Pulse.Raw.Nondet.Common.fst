@@ -3,16 +3,9 @@ module CBOR.Pulse.Raw.Nondet.Common
 friend CBOR.Pulse.API.Det.Type
 friend CBOR.Spec.API.Format
 open CBOR.Pulse.Raw.Match
-open Pulse.Lib.Pervasives
-open CBOR.Pulse.API.Base
 
-module Spec = CBOR.Spec.API.Format
 module Raw = CBOR.Pulse.Raw.Match
 module SpecRaw = CBOR.Spec.Raw
-module U8 = FStar.UInt8
-module SZ = FStar.SizeT
-module S = Pulse.Lib.Slice.Util
-module Trade = Pulse.Lib.Trade.Util
 
 type cbor_nondet_t = cbor_raw
 
@@ -138,23 +131,6 @@ fn cbor_nondet_gather
   fold (cbor_nondet_match (p +. p') x v);
 }
 
-noextract [@@noextract_to "krml"]
-let cbor_nondet_validate_post
-  (map_key_bound: option SZ.t)
-  (strict_check: bool)
-  (v: Seq.seq U8.t)
-  (res: SZ.t)
-: Tot prop
-=
-  let r = Spec.cbor_parse v in
-  if SZ.v res = 0
-  then (Some? r ==> (Some? map_key_bound /\ Spec.cbor_map_key_depth (fst (Some?.v r)) > SZ.v (Some?.v map_key_bound)))
-  else (
-    Some? r /\
-    SZ.v res == snd (Some?.v r) /\
-    ((Some? map_key_bound /\ strict_check) ==> Spec.cbor_map_key_depth (fst (Some?.v r)) <= SZ.v (Some?.v map_key_bound))
-  )
-
 let cbor_nondet_validate_post_weaken
   (map_key_bound: option SZ.t)
   (strict_check: bool)
@@ -166,21 +142,6 @@ let cbor_nondet_validate_post_weaken
   (ensures cbor_nondet_validate_post None false v res)
 = ()
 
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-let cbor_nondet_validate_t
-=
-  (map_key_bound: option SZ.t) ->
-  (strict_check: bool) ->
-  (input: S.slice U8.t) ->
-  (#pm: perm) ->
-  (#v: Ghost.erased (Seq.seq U8.t)) ->
-  stt SZ.t
-    (pts_to input #pm v)
-    (fun res -> pts_to input #pm v ** pure (
-      cbor_nondet_validate_post map_key_bound strict_check v res
-    ))
-
 fn cbor_nondet_validate (_: unit) : cbor_nondet_validate_t = 
   (map_key_bound: _)
   (strict_check: _)
@@ -191,36 +152,6 @@ fn cbor_nondet_validate (_: unit) : cbor_nondet_validate_t =
   Classical.forall_intro (Classical.move_requires SpecRaw.mk_cbor_map_key_depth);
   CBOR.Pulse.Raw.Format.Nondet.Validate.cbor_validate_nondet map_key_bound strict_check input;
 }
-
-noextract [@@noextract_to "krml"]
-let cbor_nondet_parse_valid_post
-  (v: Seq.seq U8.t)
-  (v': Spec.cbor)
-: Tot prop
-= let w = Spec.cbor_parse v in
-  Some? w /\
-  v' == fst (Some?.v w)
-
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-let cbor_nondet_parse_valid_t
-  (#cbor_nondet_t: Type)
-  (cbor_nondet_match: perm -> cbor_nondet_t -> Spec.cbor -> slprop)
-=
-  (input: S.slice U8.t) ->
-  (len: SZ.t) ->
-  (#pm: perm) ->
-  (#v: Ghost.erased (Seq.seq U8.t)) ->
-  stt cbor_nondet_t
-    (pts_to input #pm v ** pure (
-      cbor_nondet_validate_post None false v len /\
-      SZ.v len > 0
-    ))
-    (fun res -> exists* p' v' .
-      cbor_nondet_match p' res v' **
-      Trade.trade (cbor_nondet_match p' res v') (pts_to input #pm v) ** pure (
-        cbor_nondet_parse_valid_post v v'
-    ))
 
 fn cbor_nondet_parse_valid (_: unit) : cbor_nondet_parse_valid_t #cbor_nondet_t cbor_nondet_match =
   (input: S.slice U8.t)
@@ -238,46 +169,6 @@ fn cbor_nondet_parse_valid (_: unit) : cbor_nondet_parse_valid_t #cbor_nondet_t 
   Trade.trans _ _ (pts_to input #pm v);
   res
 }
-
-noextract [@@noextract_to "krml"]
-let cbor_nondet_serialize_postcond
-  (y: Spec.cbor)
-  (v: Seq.seq U8.t)
-  (v': Seq.seq U8.t)
-  (res: option SZ.t)
-: Tot prop
-= match res with
-  | None -> True // TODO: specify maximum length
-  | Some len ->
-    SZ.v len <= Seq.length v' /\
-    Seq.length v' == Seq.length v /\
-    Seq.equal (Seq.slice v' (SZ.v len) (Seq.length v)) (Seq.slice v (SZ.v len) (Seq.length v)) /\
-    Spec.cbor_parse v' == Some (y, SZ.v len)
-
-noextract [@@noextract_to "krml"]
-let cbor_nondet_serialize_postcond_c
-  (y: Spec.cbor)
-  (v: Seq.seq U8.t)
-  (v': Seq.seq U8.t)
-  (res: SZ.t)
-: Tot prop
-= cbor_nondet_serialize_postcond y v v' (if res = 0sz then None else Some res)
-
-inline_for_extraction
-let cbor_nondet_serialize_t
-  (#cbordet: Type)
-  (cbor_det_match: perm -> cbordet -> Spec.cbor -> slprop)
-=
-  (x: cbordet) ->
-  (output: S.slice U8.t) ->
-  (#y: Ghost.erased Spec.cbor) ->
-  (#pm: perm) ->
-  (#v: Ghost.erased (Seq.seq U8.t)) ->
-  stt (option SZ.t)
-    (cbor_det_match pm x y ** pts_to output v)
-    (fun res -> exists* v' . cbor_det_match pm x y ** pts_to output v' ** pure (
-      cbor_nondet_serialize_postcond y v v' res
-    ))
 
 fn cbor_nondet_serialize
   (_: unit)
@@ -1203,8 +1094,6 @@ fn cbor_nondet_mk_tagged (_: unit) : mk_tagged_t #_ cbor_nondet_match
   Trade.trans _ _ (_ ** _);
   res
 }
-
-module SM = Pulse.Lib.SeqMatch.Util
 
 ghost
 fn rec seq_list_array_cbor_nondet_match_elim

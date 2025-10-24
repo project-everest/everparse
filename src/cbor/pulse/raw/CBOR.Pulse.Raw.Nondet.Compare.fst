@@ -214,7 +214,7 @@ fn cbor_nondet_equiv_body
       (res = 0s)
     }
   } else if (mt1 = Spec.cbor_major_type_tagged) {
-    if (Raw.CBOR_Case_Serialized_Tagged? x1 && Raw.CBOR_Case_Serialized_Tagged? x2) {
+    if (match x1, x2 with Raw.CBOR_Case_Serialized_Tagged _, Raw.CBOR_Case_Serialized_Tagged _ -> true | _ -> false) {
       norewrite let Raw.CBOR_Case_Serialized_Tagged cs1 = x1;
       norewrite let Raw.CBOR_Case_Serialized_Tagged cs2 = x2;
       Trade.rewrite_with_trade
@@ -242,7 +242,7 @@ fn cbor_nondet_equiv_body
       }
     }
   } else if (mt1 = Spec.cbor_major_type_array) {
-    if (Raw.CBOR_Case_Serialized_Array? x1 && Raw.CBOR_Case_Serialized_Array? x2) {
+    if (match x1, x2 with Raw.CBOR_Case_Serialized_Array _, Raw.CBOR_Case_Serialized_Array _ -> true | _ -> false) {
       norewrite let Raw.CBOR_Case_Serialized_Array cs1 = x1;
       norewrite let Raw.CBOR_Case_Serialized_Array cs2 = x2;
       Trade.rewrite_with_trade
@@ -308,7 +308,7 @@ fn cbor_nondet_equiv_body
     }
   } else {
     assert (pure (mt1 == Spec.cbor_major_type_map));
-    if (Raw.CBOR_Case_Serialized_Map? x1 && Raw.CBOR_Case_Serialized_Map? x2) {
+    if (match x1, x2 with Raw.CBOR_Case_Serialized_Map _, Raw.CBOR_Case_Serialized_Map _ -> true | _ -> false) {
       norewrite let Raw.CBOR_Case_Serialized_Map cs1 = x1;
       norewrite let Raw.CBOR_Case_Serialized_Map cs2 = x2;
       Trade.rewrite_with_trade
