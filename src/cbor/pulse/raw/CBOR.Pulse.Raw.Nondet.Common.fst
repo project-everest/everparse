@@ -79,19 +79,12 @@ ensures
 }
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-fn cbor_nondet_reset_perm
-  (p: perm)
+fn cbor_nondet_reset_perm (_: unit) : reset_perm_t #_ cbor_nondet_match
+=
   (c: cbor_nondet_t)
-  (r: Ghost.erased Spec.cbor)
+  (#p: perm)
+  (#r: Ghost.erased Spec.cbor)
   (q: perm)
-  requires
-    cbor_nondet_match p c r
-  returns c' : cbor_raw
-  ensures
-    cbor_nondet_match q c' r **
-    Trade.trade
-      (cbor_nondet_match q c' r)
-      (cbor_nondet_match p c r)
 {
   let r' = cbor_nondet_match_elim c;
   let res = Raw.cbor_raw_reset_perm _ c _ (2.0R *. q);
@@ -1064,7 +1057,7 @@ fn cbor_nondet_mk_string (_: unit) : mk_string_t u#0 #_ cbor_nondet_match
   SpecRaw.mk_cbor_eq (SpecRaw.String ty len64 v);
   cbor_nondet_match_intro res1;
   Trade.trans _ _ (S.pts_to s #p v);
-  let res = cbor_nondet_reset_perm _ res1 _ 1.0R;
+  let res = cbor_nondet_reset_perm () res1 1.0R;
   Trade.trans _ _ (S.pts_to s #p v);
   Trade.rewrite_with_trade
     (cbor_nondet_match 1.0R res (SpecRaw.mk_cbor (SpecRaw.String ty len64 v)))
@@ -1090,7 +1083,7 @@ fn cbor_nondet_mk_tagged (_: unit) : mk_tagged_t #_ cbor_nondet_match
   SpecRaw.mk_cbor_eq (SpecRaw.Tagged tag64 w');
   cbor_nondet_match_intro res1;
   Trade.trans _ _ (_ ** _);
-  let res = cbor_nondet_reset_perm _ res1 _ 1.0R;
+  let res = cbor_nondet_reset_perm () res1 1.0R;
   Trade.trans _ _ (_ ** _);
   res
 }
@@ -1160,7 +1153,7 @@ fn cbor_nondet_mk_array (_: unit) : mk_array_t #_ cbor_nondet_match
   Trade.trans_concl_r _ _ _ _;
   cbor_nondet_match_intro res1;
   Trade.trans _ _ (_ ** _);
-  let res = cbor_nondet_reset_perm _ res1 _ 1.0R;
+  let res = cbor_nondet_reset_perm () res1 1.0R;
   Trade.trans _ _ (_ ** _);
   Trade.rewrite_with_trade
     (cbor_nondet_match 1.0R res _)
@@ -1246,6 +1239,26 @@ let nlist_intro
 : Tot (SpecRaw.nlist t n)
 = l
 
+fn cbor_nondet_mk_map_entry (_: unit) : mk_map_entry_t #_ #_ cbor_nondet_match cbor_nondet_map_entry_match
+=
+  (xk: _)
+  (xv: _)
+  (#pk: perm)
+  (#vk: _)
+  (#pv: perm)
+  (#vv: _)
+{
+  let xk' = cbor_nondet_reset_perm () xk 1.0R;
+  let xv' = cbor_nondet_reset_perm () xv 1.0R;
+  Trade.prod (cbor_nondet_match 1.0R xk' vk) _ (cbor_nondet_match 1.0R xv' vv) _;
+  let res : cbor_nondet_map_entry_t = { cbor_map_entry_key = xk'; cbor_map_entry_value = xv' };
+  Trade.rewrite_with_trade
+    (cbor_nondet_match 1.0R xk' vk ** cbor_nondet_match 1.0R xv' vv)
+    (cbor_nondet_map_entry_match 1.0R res (Ghost.reveal vk, Ghost.reveal vv));
+  Trade.trans (cbor_nondet_map_entry_match 1.0R res (Ghost.reveal vk, Ghost.reveal vv)) _ _;
+  res
+}
+
 fn cbor_nondet_mk_map_gen (_: unit)
 : mk_map_gen_by_ref_t #cbor_nondet_t #cbor_nondet_map_entry_t cbor_nondet_match cbor_nondet_map_entry_match
 = (a: _)
@@ -1281,7 +1294,7 @@ fn cbor_nondet_mk_map_gen (_: unit)
       Trade.trans_concl_r _ _ _ _;
       cbor_nondet_match_intro res1;
       Trade.trans _ _ (_ ** _);
-      let res = cbor_nondet_reset_perm _ res1 _ 1.0R;
+      let res = cbor_nondet_reset_perm () res1 1.0R;
       Trade.trans _ _ (_ ** _);
       let m : Ghost.erased Spec.cbor_map = Ghost.hide (Spec.CMap?.c (Spec.unpack (SpecRaw.mk_cbor cr)));
       Trade.rewrite_with_trade
