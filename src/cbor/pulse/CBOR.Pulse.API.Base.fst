@@ -1794,9 +1794,18 @@ let cbor_nondet_validate_t
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
+let mk_map_key_bound
+  (check_map_key_bound: bool)
+  (map_key_bound: SZ.t)
+: Tot (option SZ.t)
+= if check_map_key_bound then Some map_key_bound else None
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
 let cbor_nondet_validate_from_arrayptr_t
 =
-  (map_key_bound: option SZ.t) ->
+  (check_map_key_bound: bool) ->
+  (map_key_bound: SZ.t) ->
   (strict_check: bool) ->
   (input: AP.ptr U8.t) ->
   (len: SZ.t) ->
@@ -1807,7 +1816,7 @@ let cbor_nondet_validate_from_arrayptr_t
       Seq.length v == SZ.v len
     ))
     (fun res -> pts_to input #pm v ** pure (
-      cbor_nondet_validate_post map_key_bound strict_check v res
+      cbor_nondet_validate_post (mk_map_key_bound check_map_key_bound map_key_bound) strict_check v res
     ))
 
 inline_for_extraction
@@ -1816,7 +1825,8 @@ fn cbor_nondet_validate_from_arrayptr
   (f: cbor_nondet_validate_t)
 : cbor_nondet_validate_from_arrayptr_t
 =
-  (map_key_bound: option SZ.t)
+  (check_map_key_bound: bool)
+  (map_key_bound: SZ.t)
   (strict_check: bool)
   (input: AP.ptr U8.t)
   (len: SZ.t)
@@ -1824,7 +1834,7 @@ fn cbor_nondet_validate_from_arrayptr
   (#v: Ghost.erased (Seq.seq U8.t))
 {
   let s = S.arrayptr_to_slice_intro input len;
-  let res = f map_key_bound strict_check s;
+  let res = f (mk_map_key_bound check_map_key_bound map_key_bound) strict_check s;
   S.arrayptr_to_slice_elim s;
   res
 }
@@ -1965,11 +1975,11 @@ let cbor_nondet_serialize_to_arrayptr_t
   (#y: Ghost.erased Spec.cbor) ->
   (#pm: perm) ->
   (#v: Ghost.erased (Seq.seq U8.t)) ->
-  stt (option SZ.t)
+  stt (SZ.t)
     (cbor_det_match pm x y ** pts_to output v ** pure (Seq.length v == SZ.v len))
     (fun res -> exists* v' . cbor_det_match pm x y ** pts_to output v' ** pure (
       Seq.length v' == SZ.v len /\
-      cbor_nondet_serialize_postcond y v v' res
+      cbor_nondet_serialize_postcond_c y v v' res
     ))
 
 noextract [@@noextract_to "krml"]
@@ -1992,7 +2002,14 @@ fn cbor_nondet_serialize_to_arrayptr
   let res = f x s;
   S.pts_to_len s;
   S.arrayptr_to_slice_elim s;
-  res
+  match res {
+    None -> {
+      0sz
+    }
+    Some res -> {
+      res
+    }
+  }
 }
 
 noextract [@@noextract_to "krml"]

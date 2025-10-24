@@ -6,7 +6,7 @@
 
 static int do_test(uint8_t *source_bytes, size_t len, bool success) {
   clock_t start = clock ();
-  size_t validate = cbor_nondet_validate(source_bytes, len);
+  size_t validate = cbor_nondet_validate(false, 0, false, source_bytes, len);
   clock_t stop = clock ();
   printf("Time elapsed: %f\n", ((double) (stop - start)) / CLOCKS_PER_SEC);
   if ((validate == 0) == success) {

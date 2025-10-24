@@ -15,12 +15,19 @@ let gen_int (x: int) (name: string) : c list =
 let quote_string s = Yojson.Safe.to_string (`String s)
 
 let gen_string (s: string) (name: string) : c list =
-  [`Instr ("cbor_nondet_t " ^ name ^ " = cbor_nondet_mk_string_from_arrayptr(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *" ^ ")" ^ quote_string s ^ ", " ^ string_of_int (String.length s) ^ ")")]
+  [`Instr ("cbor_nondet_t " ^ name ^ " = cbor_nondet_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *" ^ ")" ^ quote_string s ^ ", " ^ string_of_int (String.length s) ^ ")")]
 
 let gen_map (gen: Yojson.Safe.t -> string -> c list) (l: (string * Yojson.Safe.t) list) (name: string) : c list =
   let len = List.length l in
   let elt i = name ^ "_map[" ^ string_of_int i ^ "]" in
-  let accu = [`Instr ("cbor_nondet_t " ^ name ^ " = cbor_nondet_mk_map_from_array(" ^ name ^ "_map, " ^ string_of_int len ^ ")")] in
+  let accu = [
+      `Instr ("cbor_nondet_t " ^ name ^ ";");
+      `If ("! cbor_nondet_mk_map_gen(" ^ name ^ "_map, " ^ string_of_int len ^ ", &" ^ name ^ ")");
+      `Block [
+          `Instr ("printf(\"Map build failed for " ^ name ^ "\\n\")");
+          `Instr ("return 1");
+        ];
+    ] in
   let rec aux accu i = function
   | [] -> accu
   | (s, x) :: q->
@@ -41,7 +48,7 @@ let gen_map (gen: Yojson.Safe.t -> string -> c list) (l: (string * Yojson.Safe.t
 let gen_array (gen: Yojson.Safe.t -> string -> c list) (l: Yojson.Safe.t list) (name: string) : c list =
   let len = List.length l in
   let elt i = name ^ "_array[" ^ string_of_int i ^ "]" in
-  let accu = [`Instr ("cbor_nondet_t " ^ name ^ " = cbor_nondet_mk_array_from_array(" ^ name ^ "_array, " ^ string_of_int len ^ ")")] in
+  let accu = [`Instr ("cbor_nondet_t " ^ name ^ " = cbor_nondet_mk_array(" ^ name ^ "_array, " ^ string_of_int len ^ ")")] in
   let rec aux accu i = function
   | [] -> accu
   | x :: q->
@@ -109,39 +116,41 @@ let gen_encoding_test_c
     `Instr source_bytes ::
     decoded_c @
     `Instr ("uint8_t target_bytes[" ^ size_s ^ "]") ::
-    `Instr ("size_t target_byte_size = cbor_nondet_size(source_cbor, " ^ size_s ^ ")") ::
-    `If ("target_byte_size != " ^ size_s) ::
-    `Block (
-        `Instr ("printf(\"Size computation failed: expected " ^ size_s ^ " bytes, got %ld\\n\", target_byte_size)") ::
-        `Instr ("return 1") ::
-        []
-     ) ::
-    `Instr ("target_byte_size = cbor_nondet_serialize (source_cbor, target_bytes, " ^ size_s ^ ")") ::
-    `If ("target_byte_size != " ^ size_s) ::
+    `Instr ("size_t target_byte_size = cbor_nondet_serialize (source_cbor, target_bytes, " ^ size_s ^ ")") ::
+    `If ("target_byte_size == 0") ::
     `Block (
         `Instr ("printf(\"Encoding failed: expected " ^ size_s ^ " bytes, wrote %ld\\n\", target_byte_size)") ::
         `Instr ("dump_encoding_test_failure(target_bytes, target_byte_size)") ::
         `Instr ("return 1") ::
         []
      ) ::
-    `Instr ("int compare_encoding = memcmp(source_bytes, target_bytes, " ^ size_s ^ ")") ::
-    `If ("compare_encoding != 0") ::
-    `Block (
-        `Instr ("printf(\"Encoding mismatch: expected " ^ hex_encoded ^ "\\n\")") ::
-        `Instr ("dump_encoding_test_failure(target_bytes, target_byte_size)") ::
-        `Instr ("return 1") ::
-        []
-     ) ::
     `Instr ("printf(\"Encoding succeeded!\\n\")") ::
-    `Instr ("target_byte_size = cbor_nondet_validate(source_bytes, " ^ size_s ^ ")") ::
-    `If ("target_byte_size != " ^ size_s) ::
+    `Instr ("size_t target_byte_size2 = cbor_nondet_validate(false, 0, false, target_bytes, target_byte_size)") ::
+    `If ("target_byte_size2 != target_byte_size") ::
     `Block (
         `Instr ("printf(\"Validation failed: expected " ^ size_s ^ " bytes, got %ld\\n\", target_byte_size)") ::
         `Instr ("return 1") ::
         []
     ) ::
     `Instr ("printf(\"Validation succeeded!\\n\")") ::
-    `Instr ("cbor_nondet_t target_cbor = cbor_nondet_parse(source_bytes, target_byte_size)") ::
+    `Instr ("cbor_nondet_t target_cbor = cbor_nondet_parse_valid(target_bytes, target_byte_size2)") ::
+    `Instr ("printf(\"Parsing succeeded!\\n\")") ::
+    `If ("! (cbor_nondet_equal(source_cbor, target_cbor))") ::
+    `Block (
+        `Instr ("printf(\"Decoding mismatch!\\n\")") ::
+        `Instr ("return 1") ::
+        []
+    ) ::
+    `Instr ("printf(\"Decoding succeeded!\\n\")") ::
+    `Instr ("target_byte_size2 = cbor_nondet_validate(false, 0, false, source_bytes, target_byte_size)") ::
+    `If ("target_byte_size2 == 0") ::
+    `Block (
+        `Instr ("printf(\"Validation failed: expected " ^ size_s ^ " bytes, got 0\\n\")") ::
+        `Instr ("return 1") ::
+        []
+    ) ::
+    `Instr ("printf(\"Validation succeeded!\\n\")") ::
+    `Instr ("target_cbor = cbor_nondet_parse_valid(source_bytes, target_byte_size2)") ::
     `Instr ("printf(\"Parsing succeeded!\\n\")") ::
     `If ("! (cbor_nondet_equal(source_cbor, target_cbor))") ::
     `Block (
@@ -235,33 +244,26 @@ let gen_utf8_tests () : c list = In_channel.with_open_bin "./utf8tests.txt" (fun
            let accu' = `Block begin
                `Instr ("printf(\"UTF-8 Test " ^ id ^ ". Testing text string encoding and UTF-8 validation for: " ^ strhex ^ "\\n\")") ::
                `Instr hex ::
-               `Instr ("cbor_nondet_t mycbor = cbor_nondet_mk_string_from_arrayptr(CBOR_MAJOR_TYPE_TEXT_STRING, mystr, " ^ len ^ ")") ::
-               `Instr ("size_t size = cbor_nondet_size(mycbor, " ^ outlen ^ ")") ::
-               `If ("size == 0") ::
-               `Block [
-                   `Instr ("printf(\"UTF-8 test too large\\n\")");
-                   `Instr ("return 1")
-                 ] ::
-               `Instr ("printf(\"Size computation succeeded!\\n\")") ::
+               `Instr ("cbor_nondet_t mycbor = cbor_nondet_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mystr, " ^ len ^ ")") ::
                `Instr ("uint8_t output[" ^ outlen ^ "]") ::
                `Instr ("size_t serialized_size = cbor_nondet_serialize(mycbor, output, " ^ outlen ^ ")") ::
-               `If ("size != serialized_size") ::
+               `If ("serialized_size == 0") ::
                `Block [
-                   `Instr ("printf(\"Serialized a different size: expected %ld, got %ld\\n\", size, serialized_size)");
+                   `Instr ("printf(\"Could not serialize: expected " ^ outlen ^ ", got %ld\\n\", serialized_size)");
                    `Instr ("return 1")
                  ] ::
                `Instr ("printf(\"Serialization succeeded!\\n\")") ::
-               `Instr ("size_t test = cbor_nondet_validate(output, size)") ::
+               `Instr ("size_t test = cbor_nondet_validate(false, 0, false, output, " ^ outlen ^ ")") ::
                begin
                  if is_valid
                  then
-                   `If ("test != size") ::
+                   `If ("test != serialized_size") ::
                    `Block [
                        `Instr ("printf(\"Validation failed, but it was expected to succeed\\n\")");
                        `Instr ("return 1")
                    ] ::
                    `Instr ("printf(\"Validation succeeded!\\n\")") ::
-                   `Instr ("cbor_nondet_t outcbor = cbor_nondet_parse(output, size)") ::
+                   `Instr ("cbor_nondet_t outcbor = cbor_nondet_parse_valid(output, serialized_size)") ::
                    `If ("! cbor_nondet_equal(mycbor, outcbor)") ::
                    `Block [
                        `Instr ("printf(\"Round-trip failed\\n\")");
