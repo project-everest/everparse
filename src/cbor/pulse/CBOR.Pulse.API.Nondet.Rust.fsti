@@ -1,4 +1,4 @@
-module CBOR.Pulse.Raw.Nondet.Common
+module CBOR.Pulse.API.Nondet.Rust
 include CBOR.Pulse.API.Nondet.Type
 open CBOR.Pulse.API.Base
 open Pulse.Lib.Pervasives
