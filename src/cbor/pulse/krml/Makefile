@@ -4,7 +4,6 @@ EVERPARSE_SRC_PATH = $(realpath ../../..)
 SRC_DIRS += $(EVERPARSE_SRC_PATH)/cbor/pulse
 INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cbor/spec/raw $(EVERPARSE_SRC_PATH)/cbor/spec/raw/everparse $(EVERPARSE_SRC_PATH)/cbor/pulse/raw $(EVERPARSE_SRC_PATH)/cbor/pulse/raw/everparse $(EVERPARSE_SRC_PATH)/lowparse $(EVERPARSE_SRC_PATH)/lowparse/pulse
 
-FSTAR_FILES := $(wildcard $(addsuffix /*.fst,$(SRC_DIRS)) $(addsuffix /*.fsti,$(SRC_DIRS))) $(EVERPARSE_SRC_PATH)/cbor/pulse/raw/CBOR.Pulse.Raw.Nondet.Common.fst
 FSTAR_OPTIONS += --warn_error -342
 FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice,-CBOR.Spec,+CBOR.Spec.Constants,+CBOR.Spec.Raw.EverParse,+CBOR.Spec.Raw.Base,+CBOR.Spec.Raw.Optimal'
 
@@ -12,9 +11,10 @@ ALREADY_CACHED := '*,'
 OUTPUT_DIRECTORY:=extracted
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 
-NONDET_C_DIRECTORY:=$(realpath ../nondet/c)/extracted
+NONDET_C_DIRECTORY:=$(realpath ..)/nondet/c/extracted
 DET_C_DIRECTORY:=$(realpath ../det/c)/extracted
 DET_RUST_DIRECTORY:=$(realpath ../det)/rust-extracted
+NONDET_RUST_DIRECTORY:=$(realpath ..)/nondet/rust-extracted
 
 clean_rules += clean-extracted
 
@@ -33,7 +33,10 @@ $(DET_C_DIRECTORY)/CBORDet.c: $(filter-out %CBOR_Pulse_API_Det_Rust.krml,$(ALL_K
 $(DET_RUST_DIRECTORY)/cbordetver.rs: $(filter-out %CBOR_Pulse_API_Det_C.krml,$(ALL_KRML_FILES))
 	$(KRML_HOME)/krml $(KRML_OPTS) -backend rust -fno-box -fkeep-tuples -fcontained-type cbor_raw_iterator -warn-error @1..27 -skip-linking -bundle 'CBOR.Pulse.API.Det.Rust=[rename=CBORDetVer]' -bundle 'CBOR.Spec.Constants+CBOR.Pulse.Raw.Type+CBOR.Pulse.API.Det.Type=\*[rename=CBORDetVerAux]' -tmpdir $(DET_RUST_DIRECTORY) -skip-compilation $^
 
-extract: $(NONDET_C_DIRECTORY)/CBORNondet.c $(DET_C_DIRECTORY)/CBORDet.c $(DET_RUST_DIRECTORY)/cbordetver.rs
+$(NONDET_RUST_DIRECTORY)/cbornondetver.rs: $(filter-out %CBOR_Pulse_API_Det_C.krml %CBOR_Pulse_API_Det_Rust.krml %CBOR_Pulse_API_Nondet_C.krml,$(ALL_KRML_FILES))
+	$(KRML_HOME)/krml $(KRML_OPTS) -backend rust -fno-box -fkeep-tuples -fcontained-type cbor_raw_iterator -warn-error @1..27 -skip-linking -bundle 'CBOR.Pulse.API.Nondet.Rust=[rename=CBORNondetVer]' -bundle 'CBOR.Spec.Constants+CBOR.Pulse.Raw.Type+CBOR.Pulse.API.Nondet.Type=\*[rename=CBORNondetVerAux]' -tmpdir $(NONDET_RUST_DIRECTORY) -skip-compilation $^
+
+extract: $(NONDET_RUST_DIRECTORY)/cbornondetver.rs $(DET_C_DIRECTORY)/CBORDet.c $(DET_RUST_DIRECTORY)/cbordetver.rs
 
 .PHONY: extract
 
