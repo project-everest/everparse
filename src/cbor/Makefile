@@ -2,11 +2,25 @@ all: snapshot
 
 interface: spec.do pulse.do
 
-snapshot: extract
-	+$(MAKE) -C pulse/det $@
+snapshot: det/snapshot nondet/snapshot
 
-test-snapshot: extract
-	+$(MAKE) -C pulse/det $@
+.PHONY: det/snapshot nondet/snapshot
+
+det/snapshot: extract
+	+$(MAKE) -C pulse/$(dir $@) $(notdir $@)
+
+nondet/snapshot: extract
+	+$(MAKE) -C pulse/$(dir $@) $(notdir $@)
+
+test-snapshot: det/test-snapshot nondet/test-snapshot
+
+.PHONY: det/test-snapshot nondet/test-snapshot
+
+det/test-snapshot: extract
+	+$(MAKE) -C pulse/$(dir $@) $(notdir $@)
+
+nondet/test-snapshot: extract
+	+$(MAKE) -C pulse/$(dir $@) $(notdir $@)
 
 extract:
 	+$(MAKE) -C pulse/krml ALREADY_CACHED='*,-CBOR,'

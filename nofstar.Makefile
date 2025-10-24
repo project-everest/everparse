@@ -4,10 +4,15 @@ clean_rules += clean-cbor clean-cose
 
 .PHONY: all-nofstar
 
-cbor:
+cbor: cbor-det cbor-nondet
+
+cbor-det:
 	+$(MAKE) -C src/cbor/pulse/det
 
-.PHONY: cbor
+cbor-nondet:
+	+$(MAKE) -C src/cbor/pulse/nondet
+
+.PHONY: cbor cbor-det cbor-nondet
 
 cose: cbor
 	+$(MAKE) -C src/cose

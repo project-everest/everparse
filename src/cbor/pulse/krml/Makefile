@@ -11,7 +11,7 @@ ALREADY_CACHED := '*,'
 OUTPUT_DIRECTORY:=extracted
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 
-NONDET_C_DIRECTORY:=$(realpath ..)/nondet/c/extracted
+NONDET_C_DIRECTORY:=$(realpath ..)/nondet/c-extracted
 DET_C_DIRECTORY:=$(realpath ../det/c)/extracted
 DET_RUST_DIRECTORY:=$(realpath ../det)/rust-extracted
 NONDET_RUST_DIRECTORY:=$(realpath ..)/nondet/rust-extracted
@@ -41,6 +41,6 @@ extract: $(NONDET_C_DIRECTORY)/CBORNondet.c $(NONDET_RUST_DIRECTORY)/cbornondetv
 .PHONY: extract
 
 clean-extracted:
-	rm -rf extracted rust-extracted
+	rm -rf extracted
 
 .PHONY: clean-extracted
