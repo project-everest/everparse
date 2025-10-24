@@ -1,13 +1,11 @@
 module CBOR.Pulse.Raw.Nondet.Common
 #lang-pulse
-friend CBOR.Pulse.API.Det.Type
+friend CBOR.Pulse.API.Nondet.Type
 friend CBOR.Spec.API.Format
 open CBOR.Pulse.Raw.Match
 
 module Raw = CBOR.Pulse.Raw.Match
 module SpecRaw = CBOR.Spec.Raw
-
-type cbor_nondet_t = cbor_raw
 
 let cbor_nondet_match
   (p: perm)
@@ -333,8 +331,6 @@ fn cbor_nondet_get_array_length (_: unit) : get_array_length_t u#0 #_ cbor_nonde
   res.value
 }
 
-let cbor_nondet_array_iterator_t = CBOR.Pulse.Raw.Read.cbor_array_iterator
-
 let cbor_nondet_array_iterator_match
   (p: perm)
   (i: cbor_nondet_array_iterator_t)
@@ -551,8 +547,6 @@ fn cbor_nondet_get_map_length (_: unit) : get_map_length_t u#0 #_ cbor_nondet_ma
   res.value
 }
 
-let cbor_nondet_map_iterator_t = CBOR.Pulse.Raw.Read.cbor_map_iterator
-
 let cbor_nondet_map_iterator_match
   (p: perm)
   (i: cbor_nondet_map_iterator_t)
@@ -662,8 +656,6 @@ fn cbor_nondet_map_iterator_is_empty (_: unit) : map_iterator_is_empty_t u#0 #_ 
   fold (cbor_nondet_map_iterator_match p x v);
   res
 }
-
-let cbor_nondet_map_entry_t = Raw.cbor_map_entry
 
 let cbor_nondet_map_entry_match
   (p: perm)

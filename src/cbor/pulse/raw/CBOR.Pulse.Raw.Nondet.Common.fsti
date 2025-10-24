@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.Nondet.Common
+include CBOR.Pulse.API.Nondet.Type
 open CBOR.Pulse.API.Base
 open Pulse.Lib.Pervasives
 
@@ -8,8 +9,6 @@ module U8 = FStar.UInt8
 module S = Pulse.Lib.Slice.Util
 module Trade = Pulse.Lib.Trade.Util
 module SM = Pulse.Lib.SeqMatch.Util
-
-val cbor_nondet_t: Type0
 
 val cbor_nondet_match: perm -> cbor_nondet_t -> Spec.cbor -> slprop
 
@@ -54,8 +53,6 @@ val cbor_nondet_get_tagged_payload (_: unit) : get_tagged_payload_t u#0 #_ cbor_
 
 val cbor_nondet_get_array_length (_: unit) : get_array_length_t u#0 #_ cbor_nondet_match
 
-val cbor_nondet_array_iterator_t: Type0
-
 val cbor_nondet_array_iterator_match: perm -> cbor_nondet_array_iterator_t -> list Spec.cbor -> slprop
 
 val cbor_nondet_array_iterator_start (_: unit) : array_iterator_start_t u#0 u#0 #_ #_ cbor_nondet_match cbor_nondet_array_iterator_match
@@ -76,15 +73,11 @@ val cbor_nondet_get_array_item (_: unit) : get_array_item_t u#0 #_ cbor_nondet_m
 
 val cbor_nondet_get_map_length (_: unit) : get_map_length_t u#0 #_ cbor_nondet_match
 
-val cbor_nondet_map_iterator_t: Type0
-
 val cbor_nondet_map_iterator_match: perm -> cbor_nondet_map_iterator_t -> list (Spec.cbor & Spec.cbor) -> slprop
 
 val cbor_nondet_map_iterator_start (_: unit) : map_iterator_start_t u#0 u#0 #_ #_ cbor_nondet_match cbor_nondet_map_iterator_match
 
 val cbor_nondet_map_iterator_is_empty (_: unit) : map_iterator_is_empty_t u#0 #_ cbor_nondet_map_iterator_match
-
-val cbor_nondet_map_entry_t: Type0
 
 val cbor_nondet_map_entry_match: perm -> cbor_nondet_map_entry_t -> Spec.cbor & Spec.cbor -> slprop
 
