@@ -851,20 +851,8 @@ validate_recursive_step_count_leaf(
   }
 }
 
-static size_t jump_recursive_step_count_leaf(Pulse_Lib_Slice_slice__uint8_t a)
+static size_t impl_remaining_data_items_header(header h)
 {
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  scrut = split__uint8_t(a, jump_header(a, (size_t)0U));
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  scrut0 = { .fst = scrut.fst, .snd = scrut.snd };
-  header
-  h =
-    read_header((
-        (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
-          .fst = scrut0.fst,
-          .snd = scrut0.snd
-        }
-      ).fst);
   uint8_t typ = get_header_major_type(h);
   if (typ == CBOR_MAJOR_TYPE_ARRAY)
     return (size_t)argument_as_uint64(h.fst, h.snd);
@@ -877,6 +865,21 @@ static size_t jump_recursive_step_count_leaf(Pulse_Lib_Slice_slice__uint8_t a)
     return (size_t)1U;
   else
     return (size_t)0U;
+}
+
+static size_t jump_recursive_step_count_leaf(Pulse_Lib_Slice_slice__uint8_t a)
+{
+  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  scrut = split__uint8_t(a, jump_header(a, (size_t)0U));
+  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  scrut0 = { .fst = scrut.fst, .snd = scrut.snd };
+  return
+    impl_remaining_data_items_header(read_header((
+          (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+            .fst = scrut0.fst,
+            .snd = scrut0.snd
+          }
+        ).fst));
 }
 
 static bool validate_raw_data_item(Pulse_Lib_Slice_slice__uint8_t input, size_t *poffset)
