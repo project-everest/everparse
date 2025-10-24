@@ -6327,16 +6327,27 @@ Pulse_Lib_Slice_arrayptr_to_slice_intro__uint8_t(uint8_t *a, size_t alen)
 
 size_t
 cbor_nondet_validate(
-  FStar_Pervasives_Native_option__size_t map_key_bound,
+  bool check_map_key_bound,
+  size_t map_key_bound,
   bool strict_check,
   uint8_t *input,
   size_t len
 )
 {
-  return
-    CBOR_Pulse_API_Nondet_Rust_cbor_nondet_validate(map_key_bound,
-      strict_check,
-      Pulse_Lib_Slice_arrayptr_to_slice_intro__uint8_t(input, len));
+  Pulse_Lib_Slice_slice__uint8_t
+  s = Pulse_Lib_Slice_arrayptr_to_slice_intro__uint8_t(input, len);
+  FStar_Pervasives_Native_option__size_t ite;
+  if (check_map_key_bound)
+    ite =
+      (
+        (FStar_Pervasives_Native_option__size_t){
+          .tag = FStar_Pervasives_Native_Some,
+          .v = map_key_bound
+        }
+      );
+  else
+    ite = ((FStar_Pervasives_Native_option__size_t){ .tag = FStar_Pervasives_Native_None });
+  return CBOR_Pulse_API_Nondet_Rust_cbor_nondet_validate(ite, strict_check, s);
 }
 
 cbor_raw cbor_nondet_parse_valid(uint8_t *input, size_t len)
@@ -6347,12 +6358,24 @@ cbor_raw cbor_nondet_parse_valid(uint8_t *input, size_t len)
       len);
 }
 
-FStar_Pervasives_Native_option__size_t
-cbor_nondet_serialize(cbor_raw x, uint8_t *output, size_t len)
+size_t cbor_nondet_serialize(cbor_raw x, uint8_t *output, size_t len)
 {
-  return
+  FStar_Pervasives_Native_option__size_t
+  scrut =
     CBOR_Pulse_API_Nondet_Rust_cbor_nondet_serialize(x,
       Pulse_Lib_Slice_arrayptr_to_slice_intro__uint8_t(output, len));
+  if (scrut.tag == FStar_Pervasives_Native_None)
+    return (size_t)0U;
+  else if (scrut.tag == FStar_Pervasives_Native_Some)
+    return scrut.v;
+  else
+  {
+    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
+  }
 }
 
 uint8_t cbor_nondet_major_type(cbor_raw x)

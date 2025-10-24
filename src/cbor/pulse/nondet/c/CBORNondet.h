@@ -228,7 +228,8 @@ typedef cbor_map_entry cbor_nondet_map_entry_t;
 
 size_t
 cbor_nondet_validate(
-  FStar_Pervasives_Native_option__size_t map_key_bound,
+  bool check_map_key_bound,
+  size_t map_key_bound,
   bool strict_check,
   uint8_t *input,
   size_t len
@@ -236,8 +237,7 @@ cbor_nondet_validate(
 
 cbor_raw cbor_nondet_parse_valid(uint8_t *input, size_t len);
 
-FStar_Pervasives_Native_option__size_t
-cbor_nondet_serialize(cbor_raw x, uint8_t *output, size_t len);
+size_t cbor_nondet_serialize(cbor_raw x, uint8_t *output, size_t len);
 
 uint8_t cbor_nondet_major_type(cbor_raw x);
 
