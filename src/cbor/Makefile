@@ -9,7 +9,7 @@ test-snapshot: extract
 	+$(MAKE) -C pulse/det $@
 
 extract:
-	+$(MAKE) -C pulse/det/krml ALREADY_CACHED='*,-CBOR,'
+	+$(MAKE) -C pulse/krml ALREADY_CACHED='*,-CBOR,'
 
 .PHONY: extract
 
@@ -25,7 +25,7 @@ pulse/raw.do: spec/raw.do pulse.do
 
 pulse/raw/everparse.do: pulse/raw.do spec/raw/everparse.do
 
-pulse/det/krml.do: pulse/raw/everparse.do
+pulse/krml.do: pulse/raw/everparse.do
 
 %.do:
 	+$(MAKE) -C $(basename $@)
@@ -38,7 +38,7 @@ clean: pulse/det.clean
 
 .PHONY: clean
 
-clean-verify: spec.clean spec/raw.clean spec/raw/everparse.clean pulse.clean pulse/raw.clean pulse/raw/everparse.clean pulse/det/krml.clean
+clean-verify: spec.clean spec/raw.clean spec/raw/everparse.clean pulse.clean pulse/raw.clean pulse/raw/everparse.clean pulse/krml.clean
 
 .PHONY: clean-verify
 

@@ -1,6 +1,6 @@
 all: extract
 
-EVERPARSE_SRC_PATH = $(realpath ../../../..)
+EVERPARSE_SRC_PATH = $(realpath ../../..)
 SRC_DIRS += $(EVERPARSE_SRC_PATH)/cbor/pulse
 INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cbor/spec/raw $(EVERPARSE_SRC_PATH)/cbor/spec/raw/everparse $(EVERPARSE_SRC_PATH)/cbor/pulse/raw $(EVERPARSE_SRC_PATH)/cbor/pulse/raw/everparse $(EVERPARSE_SRC_PATH)/lowparse $(EVERPARSE_SRC_PATH)/lowparse/pulse
 
@@ -11,8 +11,8 @@ ALREADY_CACHED := '*,'
 OUTPUT_DIRECTORY:=extracted
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 
-C_DIRECTORY:=$(realpath ../c)/extracted
-RUST_DIRECTORY:=rust-extracted
+C_DIRECTORY:=$(realpath ../det/c)/extracted
+RUST_DIRECTORY:=$(realpath ../det)/rust-extracted
 
 clean_rules += clean-extracted
 
