@@ -2453,12 +2453,15 @@ let cbor_nondet_serialize_postcond
 
 noextract [@@noextract_to "krml"]
 let cbor_nondet_serialize_postcond_c
+  (output: AP.ptr U8.t)
   (y: Spec.cbor)
   (v: Seq.seq U8.t)
   (v': Seq.seq U8.t)
   (res: SZ.t)
 : Tot prop
-= cbor_nondet_serialize_postcond y v v' (if res = 0sz then None else Some res)
+= if AP.g_is_null output
+  then res == 0sz
+  else cbor_nondet_serialize_postcond y v v' (if res = 0sz then None else Some res)
 
 inline_for_extraction
 let cbor_nondet_serialize_t
@@ -2488,10 +2491,10 @@ let cbor_nondet_serialize_to_arrayptr_t
   (#pm: perm) ->
   (#v: Ghost.erased (Seq.seq U8.t)) ->
   stt (SZ.t)
-    (cbor_det_match pm x y ** pts_to output v ** pure (Seq.length v == SZ.v len))
-    (fun res -> exists* v' . cbor_det_match pm x y ** pts_to output v' ** pure (
+    (cbor_det_match pm x y ** AP.pts_to_or_null output v ** pure (Seq.length v == SZ.v len))
+    (fun res -> exists* v' . cbor_det_match pm x y ** AP.pts_to_or_null output v' ** pure (
       Seq.length v' == SZ.v len /\
-      cbor_nondet_serialize_postcond_c y v v' res
+      cbor_nondet_serialize_postcond_c output y v v' res
     ))
 
 noextract [@@noextract_to "krml"]
@@ -2509,17 +2512,23 @@ fn cbor_nondet_serialize_to_arrayptr
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
 {
-  let s = S.arrayptr_to_slice_intro output len;
-  S.pts_to_len s;
-  let res = f x s;
-  S.pts_to_len s;
-  S.arrayptr_to_slice_elim s;
-  match res {
-    None -> {
-      0sz
-    }
-    Some res -> {
-      res
+  if (AP.is_null output) {
+    0sz
+  } else {
+    rewrite AP.pts_to_or_null output v as AP.pts_to output v;
+    let s = S.arrayptr_to_slice_intro output len;
+    S.pts_to_len s;
+    let res = f x s;
+    S.pts_to_len s;
+    S.arrayptr_to_slice_elim s;
+    with v' . rewrite AP.pts_to output v' as AP.pts_to_or_null output v';
+    match res {
+      None -> {
+        0sz
+      }
+      Some res -> {
+        res
+      }
     }
   }
 }
