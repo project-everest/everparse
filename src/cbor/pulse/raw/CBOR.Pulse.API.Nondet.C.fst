@@ -91,7 +91,9 @@ let cbor_nondet_mk_simple_value () v = Rust.cbor_nondet_mk_simple_value () v
 
 let cbor_nondet_mk_int64 () ty v = Rust.cbor_nondet_mk_int64 () ty v
 
-let cbor_nondet_mk_string () = mk_string_from_arrayptr (Rust.cbor_nondet_mk_string ())
+let cbor_nondet_mk_byte_string () = mk_string_from_arrayptr (Rust.cbor_nondet_mk_string ()) cbor_major_type_byte_string
+
+let cbor_nondet_mk_text_string () = mk_string_from_arrayptr (Rust.cbor_nondet_mk_string ()) cbor_major_type_text_string
 
 let cbor_nondet_mk_tagged () tag r #pr #v #pv #v' = Rust.cbor_nondet_mk_tagged () tag r #pr #v #pv #v'
 

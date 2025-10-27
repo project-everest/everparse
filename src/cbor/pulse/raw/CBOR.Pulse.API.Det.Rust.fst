@@ -110,7 +110,7 @@ ensures cbor_det_match 1.0R res (Spec.pack (Spec.CInt64 (if ty = UInt64 then cbo
 let uint64_max_prop : squash (pow2 64 - 1 == 18446744073709551615) =
   assert_norm (pow2 64 - 1 == 18446744073709551615)
 
-module UTF8 = CBOR.Pulse.Raw.UTF8
+module UTF8 = CBOR.Pulse.API.UTF8
 
 fn cbor_impl_utf8_correct () : Base.impl_utf8_correct_t =
   (s: _)

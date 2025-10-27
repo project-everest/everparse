@@ -1,5 +1,6 @@
 module CBOR.Pulse.API.Nondet.C
 include CBOR.Pulse.API.Nondet.Type
+open CBOR.Spec.Constants
 open CBOR.Pulse.API.Base
 open Pulse.Lib.Pervasives
 
@@ -127,7 +128,9 @@ val cbor_nondet_mk_simple_value (_: unit) : mk_simple_t u#0 #_ cbor_nondet_match
 
 val cbor_nondet_mk_int64 (_: unit) : mk_int64_t u#0 #_ cbor_nondet_match
 
-val cbor_nondet_mk_string (_: unit) : mk_string_from_arrayptr_t u#0 #_ cbor_nondet_match
+val cbor_nondet_mk_byte_string (_: unit) : mk_string_from_arrayptr_t #_ cbor_nondet_match cbor_major_type_byte_string
+
+val cbor_nondet_mk_text_string (_: unit) : mk_string_from_arrayptr_t #_ cbor_nondet_match cbor_major_type_text_string
 
 val cbor_nondet_mk_tagged (_: unit) : mk_tagged_t #_ cbor_nondet_match
 

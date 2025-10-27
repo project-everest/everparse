@@ -927,7 +927,7 @@ fn cbor_det_mk_map_gen (_: unit)
 }
 
 let cbor_det_utf8_correct () =
-  CBOR.Pulse.Raw.UTF8.impl_utf8_correct
+  CBOR.Pulse.API.UTF8.impl_utf8_correct
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_equal (_: unit) : equal_t u#0 #_ cbor_det_match

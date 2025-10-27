@@ -614,6 +614,49 @@ let mk_simple_t
     (emp)
     (fun res -> vmatch 1.0R res (pack (CSimple v)))
 
+let ref_pts_to_or_null
+  (#t: Type)
+  (r: ref t)
+  (p: perm)
+  (v: t)
+: Tot slprop
+= if R.is_null r then emp else pts_to r #p v
+
+let mk_simple_safe_res
+  (#t: Type)
+  (v: U8.t)
+  (dest: R.ref t)
+: GTot bool
+= simple_value_wf v && not (R.is_null dest)
+
+let mk_simple_safe_post
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (v: U8.t)
+  (dest: R.ref t)
+  (w: t)
+  (w': t)
+: Tot slprop
+= if mk_simple_safe_res v dest
+  then vmatch 1.0R w' (pack (CSimple v))
+  else pure (w' == w)
+
+inline_for_extraction
+let mk_simple_safe_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+=
+  (v: U8.t) ->
+  (dest: R.ref t) ->
+  (#w: Ghost.erased t) ->
+  stt bool
+    (ref_pts_to_or_null dest 1.0R w)
+    (fun res -> exists* w' .
+      ref_pts_to_or_null dest 1.0R w' **
+      mk_simple_safe_post vmatch v dest w w' **
+      pure (res == mk_simple_safe_res v dest)
+    )
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn mk_simple_value_trade
@@ -645,14 +688,22 @@ ensures
 }
 
 inline_for_extraction
+let mk_int64_gen_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (ty: major_type_uint64_or_neg_int64)
+= (v: U64.t) ->
+  stt t
+    (emp)
+    (fun res -> vmatch 1.0R res (pack (CInt64 ty v)))
+
+
+inline_for_extraction
 let mk_int64_t
   (#t: Type)
   (vmatch: perm -> t -> cbor -> slprop)
 = (ty: major_type_uint64_or_neg_int64) ->
-  (v: U64.t) ->
-  stt t
-    (emp)
-    (fun res -> vmatch 1.0R res (pack (CInt64 ty v)))
+  mk_int64_gen_t vmatch ty
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -779,33 +830,120 @@ fn mk_string_from_array
   res
 }
 
+let mk_string_from_arrayptr_res
+  (#t: Type)
+  (ty: major_type_byte_string_or_text_string)
+  (a: AP.ptr U8.t)
+  (dest: R.ref t)
+  (v: Seq.seq U8.t)
+: GTot bool
+= (not (AP.g_is_null a)) &&
+  (not (R.is_null dest)) &&
+  FStar.UInt.fits (Seq.length v) 64 &&
+  begin if ty = cbor_major_type_text_string
+  then CBOR.Spec.API.UTF8.correct v
+  else true
+  end
+
+let mk_string_from_arrayptr_post_true
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (ty: major_type_byte_string_or_text_string)
+  (a: AP.ptr U8.t)
+  (p: perm)
+  (dest: R.ref t)
+  (v: Seq.seq U8.t)
+  (w': t)
+  (sq: squash (mk_string_from_arrayptr_res ty a dest v))
+: Tot slprop
+= vmatch 1.0R w' (pack (CString ty v)) **
+  Trade.trade
+    (vmatch 1.0R w' (pack (CString ty v)))
+    (pts_to a #p v)
+
+let mk_string_from_arrayptr_post_false
+  (#t: Type)
+  (a: AP.ptr U8.t)
+  (p: perm)
+  (v: Seq.seq U8.t)
+  (w: t)
+  (w': t)
+: Tot slprop
+= AP.pts_to_or_null a #p v ** pure (w' == w)
+
+let mk_string_from_arrayptr_post
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (ty: major_type_byte_string_or_text_string)
+  (a: AP.ptr U8.t)
+  (p: perm)
+  (dest: R.ref t)
+  (v: Seq.seq U8.t)
+  (w: t)
+  (w': t)
+: Tot slprop
+= if mk_string_from_arrayptr_res ty a dest v
+  then mk_string_from_arrayptr_post_true vmatch ty a p dest v w' ()
+  else mk_string_from_arrayptr_post_false a p v w w'
+
+let mk_string_from_arrayptr_post_eq_false
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (ty: major_type_byte_string_or_text_string)
+  (a: AP.ptr U8.t)
+  (p: perm)
+  (dest: R.ref t)
+  (v: Seq.seq U8.t)
+  (w: t)
+  (w': t)
+  (sq: squash (mk_string_from_arrayptr_res ty a dest v == false))
+: Tot (squash (mk_string_from_arrayptr_post vmatch ty a p dest v w w' == mk_string_from_arrayptr_post_false a p v w w'))
+= ()
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let mk_string_from_arrayptr_t
   (#t: Type)
   (vmatch: perm -> t -> cbor -> slprop)
+  (ty: major_type_byte_string_or_text_string)
 =
-  (ty: major_type_byte_string_or_text_string) ->
   (a: AP.ptr U8.t) ->
   (len: U64.t) ->
+  (dest: R.ref t) ->
   (#p: perm) ->
   (#v: Ghost.erased (Seq.seq U8.t)) ->
-  stt t
-    (pts_to a #p v ** pure (
-      Seq.length v == U64.v len /\
-      (ty == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v)
+  (#w: Ghost.erased t) ->
+  stt bool
+    (AP.pts_to_or_null a #p v ** 
+      ref_pts_to_or_null dest 1.0R w ** pure (
+      Seq.length v == U64.v len
     ))
-    (fun res -> exists* v' .
-      vmatch 1.0R res v' **
-      Trade.trade
-        (vmatch 1.0R res v')
-        (pts_to a #p v) **
-      pure (
-        CString? (unpack v') /\
-        CString?.typ (unpack v') == ty /\
-        Ghost.reveal v == CString?.v (unpack v')
-      )
+    (fun res -> exists* w' .
+      ref_pts_to_or_null dest 1.0R w' **
+      mk_string_from_arrayptr_post vmatch ty a p dest v w w' **
+      pure (res == mk_string_from_arrayptr_res ty a dest v)
     )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn impl_utf8_correct_if_text_string
+  (ty: major_type_byte_string_or_text_string)
+  (s: S.slice U8.t)
+  (#p: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+requires
+    (pts_to s #p v)
+returns res: bool
+ensures
+    (pts_to s #p v ** pure (res == true <==> (ty == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v)))
+{
+  if (ty = cbor_major_type_text_string) {
+    CBOR.Pulse.API.UTF8.impl_utf8_correct s
+  } else {
+    true
+  }
+}
+
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -813,21 +951,51 @@ fn mk_string_from_arrayptr
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
   (mk_string: mk_string_t vmatch)
-: mk_string_from_arrayptr_t u#0 #_ vmatch
-=
   (ty: major_type_byte_string_or_text_string)
+: mk_string_from_arrayptr_t #_ vmatch ty
+=
   (a: AP.ptr U8.t)
   (len: U64.t)
+  (dest: _)
   (#p: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
+  (#w: _)
 {
   let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
-  let s = S.arrayptr_to_slice_intro_trade a (SZ.uint64_to_sizet len);
-  S.pts_to_len s;
-  let res = mk_string ty s;
-  with p' v' . assert (vmatch p' res (pack (CString ty v')));
-  Trade.trans (vmatch p' res (pack (CString ty v'))) _ _;
-  res
+  if (AP.is_null a || R.is_null dest) {
+    fold (mk_string_from_arrayptr_post_false a p v (Ghost.reveal w) (Ghost.reveal w));
+    rewrite (mk_string_from_arrayptr_post_false a p v (Ghost.reveal w) (Ghost.reveal w))
+      as (mk_string_from_arrayptr_post vmatch ty a p dest v w w);
+    false
+  } else {
+    rewrite (AP.pts_to_or_null a #p v)
+      as (AP.pts_to a #p v);
+    let s = S.arrayptr_to_slice_intro_trade a (SZ.uint64_to_sizet len);
+    S.pts_to_len s;
+    if (impl_utf8_correct_if_text_string ty s) {
+      let res = mk_string ty s;
+      with p' v' . assert (vmatch p' res (pack (CString ty v')));
+      Trade.trans (vmatch p' res (pack (CString ty v'))) _ _;
+      Trade.rewrite_with_trade
+        (vmatch p' res (pack (CString ty v')))
+        (vmatch p' res (pack (CString ty v)));
+      Trade.trans (vmatch p' res (pack (CString ty v))) _ _;
+      rewrite (ref_pts_to_or_null dest 1.0R w) as (pts_to dest w);
+      dest := res;
+      fold (mk_string_from_arrayptr_post_true vmatch ty a p dest v res ());
+      rewrite (mk_string_from_arrayptr_post_true vmatch ty a p dest v res ())
+        as (mk_string_from_arrayptr_post vmatch ty a p dest v w res);
+      rewrite (pts_to dest res) as (ref_pts_to_or_null dest 1.0R res);
+      true
+    } else {
+      Trade.elim _ _;
+      rewrite (AP.pts_to a #p v) as (AP.pts_to_or_null a #p v);
+      fold (mk_string_from_arrayptr_post_false a p v (Ghost.reveal w) (Ghost.reveal w));
+      rewrite (mk_string_from_arrayptr_post_false a p v (Ghost.reveal w) (Ghost.reveal w))
+        as (mk_string_from_arrayptr_post vmatch ty a p dest v (Ghost.reveal w) (Ghost.reveal w));
+      false
+    }
+  }
 }
 
 inline_for_extraction
@@ -835,7 +1003,8 @@ noextract [@@noextract_to "krml"]
 fn mk_string_from_slice
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
-  (mk_string: mk_string_from_arrayptr_t vmatch)
+  (mk_string: (ty: major_type_byte_string_or_text_string) -> mk_string_from_arrayptr_t vmatch ty)
+  (dummy: t)
 : mk_string_t u#0 #_ vmatch
 =
   (ty: major_type_byte_string_or_text_string)
@@ -845,7 +1014,18 @@ fn mk_string_from_slice
 {
   S.pts_to_len s;
   let a = S.slice_to_arrayptr_intro_trade s;
-  let res = mk_string ty a (SZ.sizet_to_uint64 (S.len s));
+  let mut pres = dummy;
+  R.pts_to_not_null pres;
+  rewrite (pts_to pres dummy) as (ref_pts_to_or_null pres 1.0R dummy);
+  AP.pts_to_not_null a;
+  rewrite (AP.pts_to a #p v) as (AP.pts_to_or_null a #p v);
+  mk_string ty a (SZ.sizet_to_uint64 (S.len s)) pres;
+  with gres . rewrite (ref_pts_to_or_null pres 1.0R gres)
+    as (pts_to pres gres);
+  let res = !pres;
+  rewrite (mk_string_from_arrayptr_post vmatch ty a p pres v dummy res)
+    as (mk_string_from_arrayptr_post_true vmatch ty a p pres v res ());
+  unfold (mk_string_from_arrayptr_post_true vmatch ty a p pres v res ());
   Trade.trans _ _ (S.pts_to s #p v);
   with v' . assert (vmatch 1.0R res v');
   Trade.rewrite_with_trade
