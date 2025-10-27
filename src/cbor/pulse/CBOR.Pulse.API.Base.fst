@@ -1054,6 +1054,122 @@ let mk_tagged_t
         (R.pts_to r #pr v ** vmatch pv v v')
     )
 
+let mk_tagged_safe_res
+  (#t: Type)
+  (r: R.ref t)
+  (dest: R.ref t)
+: GTot bool
+= (not (R.is_null r)) &&
+  (not (R.is_null dest))
+
+let mk_tagged_safe_post_true
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (tag: U64.t)
+  (r: R.ref t)
+  (pr: perm)
+  (v: t)
+  (pv: perm)
+  (v': cbor)
+  (w: t)
+  (w': t)
+: Tot slprop
+=
+  vmatch 1.0R w' (pack (CTagged tag v')) **
+  Trade.trade
+    (vmatch 1.0R w' (pack (CTagged tag v')))
+    (R.pts_to r #pr v ** vmatch pv v v')
+
+let mk_tagged_safe_post_false
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (r: R.ref t)
+  (pr: perm)
+  (v: t)
+  (pv: perm)
+  (v': cbor)
+  (w: t)
+  (w': t)
+: Tot slprop
+= ref_pts_to_or_null r pr v **
+  vmatch pv v v' **
+  pure (w' == w)
+
+let mk_tagged_safe_post
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (tag: U64.t)
+  (r: R.ref t)
+  (dest: R.ref t)
+  (pr: perm)
+  (v: t)
+  (pv: perm)
+  (v': cbor)
+  (w: t)
+  (w': t)
+: Tot slprop
+= if mk_tagged_safe_res r dest
+  then mk_tagged_safe_post_true vmatch tag r pr v pv v' w w'
+  else mk_tagged_safe_post_false vmatch r pr v pv v' w w'
+
+inline_for_extraction
+let mk_tagged_safe_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+= (tag: U64.t) ->
+  (r: R.ref t) ->
+  (dest: R.ref t) ->
+  (#pr: perm) ->
+  (#v: Ghost.erased t) ->
+  (#pv: perm) ->
+  (#v': Ghost.erased cbor) ->
+  (#w: Ghost.erased t) ->
+  stt bool
+    (ref_pts_to_or_null r pr v **
+      ref_pts_to_or_null dest 1.0R w **
+      vmatch pv v v'
+    )
+    (fun res -> exists* w' .
+      ref_pts_to_or_null dest 1.0R w' **
+      mk_tagged_safe_post vmatch tag r dest pr v pv v' w w' **
+      pure (res == mk_tagged_safe_res r dest)
+    )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn mk_tagged_safe
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (mk_tagged: mk_tagged_t vmatch)
+: mk_tagged_safe_t #_ vmatch
+=
+  (tag: _)
+  (r: _)
+  (dest: _)
+  (#pr: _)
+  (#v: _)
+  (#pv: _)
+  (#v': _)
+  (#w: _)
+{
+  if (R.is_null r || R.is_null dest) {
+    fold (mk_tagged_safe_post_false vmatch r pr v pv v' (Ghost.reveal w) (Ghost.reveal w));
+    rewrite (mk_tagged_safe_post_false vmatch r pr v pv v' (Ghost.reveal w) (Ghost.reveal w))
+      as (mk_tagged_safe_post vmatch tag r dest pr v pv v' (Ghost.reveal w) (Ghost.reveal w));
+    false
+  } else {
+    rewrite (ref_pts_to_or_null r pr v) as (pts_to r #pr v);
+    rewrite (ref_pts_to_or_null dest 1.0R w) as (pts_to dest w);
+    dest := mk_tagged tag r;
+    with res . assert (pts_to dest res);
+    fold (mk_tagged_safe_post_true vmatch tag r pr v pv v' w res);
+    rewrite (mk_tagged_safe_post_true vmatch tag r pr v pv v' w res)
+      as (mk_tagged_safe_post vmatch tag r dest pr v pv v' w res);
+    rewrite (pts_to dest res) as (ref_pts_to_or_null dest 1.0R res);
+    true
+  }
+}
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let mk_array_from_array_t
@@ -1226,24 +1342,25 @@ fn mk_array_from_array
   res
 }
 
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-let mk_array_from_arrayptr_t
+let mk_array_from_arrayptr_res
+  (#t: Type)
+  (a: AP.ptr t)
+  (dest: R.ref t)
+: GTot bool
+= (not (AP.g_is_null a)) &&
+  (not (R.is_null dest))
+
+let mk_array_from_arrayptr_post_true
   (#t: Type)
   (vmatch: perm -> t -> cbor -> slprop)
-=
-  (a: AP.ptr t) ->
-  (len: U64.t) ->
-  (#pa: perm) ->
-  (#va: Ghost.erased (Seq.seq t)) ->
-  (#pv: perm) ->
-  (#vv: Ghost.erased (list cbor)) ->
-  stt t
-    (AP.pts_to a #pa va **
-      PM.seq_list_match va vv (vmatch pv) **
-      pure (Seq.length va == U64.v len)
-    )
-    (fun res -> exists* v' .
+  (a: AP.ptr t)
+  (pa: perm)
+  (va: (Seq.seq t))
+  (pv: perm)
+  (vv: (list cbor))
+  (res: t)
+: Tot slprop
+= exists* v' .
       vmatch 1.0R res v' **
       Trade.trade
         (vmatch 1.0R res v')
@@ -1252,8 +1369,65 @@ let mk_array_from_arrayptr_t
         ) **
         pure (
           CArray? (unpack v') /\
-          Ghost.reveal vv == CArray?.v (unpack v')
+          vv == CArray?.v (unpack v')
         )
+
+let mk_array_from_arrayptr_post_false
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (a: AP.ptr t)
+  (pa: perm)
+  (va: (Seq.seq t))
+  (pv: perm)
+  (vv: (list cbor))
+  (w: t)
+  (res: t)
+: Tot slprop
+=
+  AP.pts_to_or_null a #pa va **
+  PM.seq_list_match va vv (vmatch pv) **
+  pure (res == w)
+
+let mk_array_from_arrayptr_post
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (a: AP.ptr t)
+  (dest: R.ref t)
+  (pa: perm)
+  (va: (Seq.seq t))
+  (pv: perm)
+  (vv: (list cbor))
+  (w: t)
+  (res: t)
+: Tot slprop
+= if mk_array_from_arrayptr_res a dest
+  then mk_array_from_arrayptr_post_true vmatch a pa va pv vv res
+  else mk_array_from_arrayptr_post_false vmatch a pa va pv vv w res
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let mk_array_from_arrayptr_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+=
+  (a: AP.ptr t) ->
+  (len: U64.t) ->
+  (dest: R.ref t) ->
+  (#pa: perm) ->
+  (#va: Ghost.erased (Seq.seq t)) ->
+  (#pv: perm) ->
+  (#vv: Ghost.erased (list cbor)) ->
+  (#w: Ghost.erased t) ->
+  stt bool
+    (AP.pts_to_or_null a #pa va **
+      PM.seq_list_match va vv (vmatch pv) **
+      ref_pts_to_or_null dest 1.0R w **
+      pure (Seq.length va == U64.v len)
+    )
+    (fun b -> exists* res .
+      ref_pts_to_or_null dest 1.0R res **
+      mk_array_from_arrayptr_post vmatch a dest pa va pv vv w res **
+      pure (b == mk_array_from_arrayptr_res a dest)
     )
 
 inline_for_extraction
@@ -1266,29 +1440,45 @@ fn mk_array_from_arrayptr
 =
   (a: AP.ptr t)
   (len: U64.t)
+  (dest: _)
   (#pa: perm)
   (#va: Ghost.erased (Seq.seq t))
   (#pv: perm)
   (#vv: Ghost.erased (list cbor))
+  (#w: _)
 {
-  let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
-  let s = S.arrayptr_to_slice_intro a (SZ.uint64_to_sizet len);
-  intro
-    (Trade.trade
-      (pts_to s #pa va)
-      (AP.pts_to a #pa va)
-    )
-    #(S.arrayptr_to_slice a s)
-    fn _
-  {
-    S.arrayptr_to_slice_elim s;
-  };
-  Trade.reg_r (pts_to s #pa va) (AP.pts_to a #pa va) (PM.seq_list_match va vv (vmatch pv));
-  S.pts_to_len s;
-  let res = mk_array s;
-  with p' v' . assert (vmatch p' res (pack (CArray v')));
-  Trade.trans (vmatch p' res (pack (CArray v'))) _ _;
-  res
+  if (AP.is_null a || R.is_null dest) {
+    fold (mk_array_from_arrayptr_post_false vmatch a pa va pv vv w w);
+    rewrite (mk_array_from_arrayptr_post_false vmatch a pa va pv vv w w)
+      as (mk_array_from_arrayptr_post vmatch a dest pa va pv vv w w);
+    false
+  } else {
+    let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
+    rewrite (AP.pts_to_or_null a #pa va) as (AP.pts_to a #pa va);
+    rewrite (ref_pts_to_or_null dest 1.0R w) as (pts_to dest w);
+    let s = S.arrayptr_to_slice_intro a (SZ.uint64_to_sizet len);
+    intro
+      (Trade.trade
+        (pts_to s #pa va)
+        (AP.pts_to a #pa va)
+      )
+      #(S.arrayptr_to_slice a s)
+      fn _
+    {
+      S.arrayptr_to_slice_elim s;
+    };
+    Trade.reg_r (pts_to s #pa va) (AP.pts_to a #pa va) (PM.seq_list_match va vv (vmatch pv));
+    S.pts_to_len s;
+    let res = mk_array s;
+    with p' v' . assert (vmatch p' res (pack (CArray v')));
+    Trade.trans (vmatch p' res (pack (CArray v'))) _ _;
+    dest := res;
+    rewrite (pts_to dest res) as (ref_pts_to_or_null dest 1.0R res);
+    fold (mk_array_from_arrayptr_post_true vmatch a pa va pv vv res);
+    rewrite (mk_array_from_arrayptr_post_true vmatch a pa va pv vv res)
+      as (mk_array_from_arrayptr_post vmatch a dest pa va pv vv w res);
+    true
+  }
 }
 
 inline_for_extraction
@@ -1653,11 +1843,26 @@ let mk_map_from_array_safe_t
       mk_map_from_array_safe_post cbor_match cbor_map_entry_match a va pv vv vdest res
     )
 
+let mk_map_from_arrayptr_none_postcond
+  (#t1: Type)
+  (#t2: Type)
+  (a: AP.ptr t2)
+  (va: Seq.seq t2)
+  (vv: list (cbor & cbor))
+  (va': Seq.seq t2)
+  (vv': list (cbor & cbor))
+  (dest: R.ref t1)
+: Tot prop
+= AP.g_is_null a \/
+  R.is_null dest \/
+  mk_map_gen_none_postcond va vv va' vv'
+
 let mk_map_from_arrayptr_safe_post
   (#t1 #t2: Type)
   (vmatch1: perm -> t1 -> cbor -> slprop)
   (vmatch2: perm -> t2 -> (cbor & cbor) -> slprop)
   (a: AP.ptr t2)
+  (dest: R.ref t1)
   (va: (Seq.seq t2))
   (pv: perm)
   (vv: (list (cbor & cbor)))
@@ -1680,13 +1885,13 @@ let mk_map_from_arrayptr_safe_post
         )
   else
     exists* va' vv' .
-    pts_to a va' **
+    AP.pts_to_or_null a va' **
     PM.seq_list_match va' vv' (vmatch2 pv) **
     Trade.trade 
       (PM.seq_list_match va' vv' (vmatch2 pv))
       (PM.seq_list_match va vv (vmatch2 pv)) **
     pure (
-      mk_map_gen_none_postcond va vv va' vv'
+      mk_map_from_arrayptr_none_postcond a va vv va' vv' dest
     )
 
 inline_for_extraction
@@ -1704,14 +1909,14 @@ let mk_map_from_arrayptr_safe_t
   (#pv: perm) ->
   (#vv: Ghost.erased (list (cbor & cbor))) ->
   stt bool
-    (AP.pts_to a va **
+    (AP.pts_to_or_null a va **
       PM.seq_list_match va vv (cbor_map_entry_match pv) **
-      (exists* vdest . R.pts_to dest vdest) **
+      (exists* vdest . ref_pts_to_or_null dest 1.0R vdest) **
       pure (Seq.length va == U64.v len)
     )
     (fun res -> exists* vdest .
-      R.pts_to dest vdest **
-      mk_map_from_arrayptr_safe_post cbor_match cbor_map_entry_match a va pv vv vdest res
+      ref_pts_to_or_null dest 1.0R vdest **
+      mk_map_from_arrayptr_safe_post cbor_match cbor_map_entry_match a dest va pv vv vdest res
     )
 
 ghost fn map_gen_post_to_arrayptr
@@ -1719,6 +1924,7 @@ ghost fn map_gen_post_to_arrayptr
   (vmatch1: perm -> t1 -> cbor -> slprop)
   (vmatch2: perm -> t2 -> (cbor & cbor) -> slprop)
   (a: AP.ptr t2)
+  (dest: R.ref t1)
   (s: S.slice t2)
   (va: (Seq.seq t2))
   (pv: perm)
@@ -1734,13 +1940,15 @@ requires
     mk_map_gen_by_ref_postcond vdest0 res vdest bres
   )
 ensures
-  mk_map_from_arrayptr_safe_post vmatch1 vmatch2 a va pv vv vdest bres
+  mk_map_from_arrayptr_safe_post vmatch1 vmatch2 a dest va pv vv vdest bres
 {
   match res {
     None -> {
       unfold (mk_map_gen_post vmatch1 vmatch2 s va pv vv None);
       S.arrayptr_to_slice_elim s;
-      fold (mk_map_from_arrayptr_safe_post vmatch1 vmatch2 a va pv vv vdest false);
+      AP.pts_to_not_null a;
+      with va' . rewrite (AP.pts_to a va') as (AP.pts_to_or_null a #1.0R va');
+      fold (mk_map_from_arrayptr_safe_post vmatch1 vmatch2 a dest va pv vv vdest false);
     }
     Some vres -> {
       unfold (mk_map_gen_post vmatch1 vmatch2 s va pv vv (Some vres));
@@ -1757,7 +1965,7 @@ ensures
       };
       Trade.trans_concl_l _ _ _ _;
       rewrite each vres as vdest;
-      fold (mk_map_from_arrayptr_safe_post vmatch1 vmatch2 a va pv vv vdest true);
+      fold (mk_map_from_arrayptr_safe_post vmatch1 vmatch2 a dest va pv vv vdest true);
     }
   }
 }
@@ -1779,16 +1987,25 @@ fn cbor_mk_map_from_arrayptr_safe
   (#pv: _)
   (#vv: _)
 {
-  with vdest0 . assert (pts_to dest vdest0);
-  let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;  
-  let s = S.arrayptr_to_slice_intro a (SZ.uint64_to_sizet len);
-  S.pts_to_len s;
-  PM.seq_list_match_length (cbor_map_entry_match pv) va vv;
-  let bres = cbor_mk_map_gen s dest;
-  with res . assert (mk_map_gen_post cbor_match cbor_map_entry_match s va pv vv res);
-  with vdest . assert (pts_to dest vdest);
-  map_gen_post_to_arrayptr _ _ a s va pv vv vdest0 bres res vdest;
-  bres
+  with vdest0 . assert (ref_pts_to_or_null dest 1.0R vdest0);
+  if (AP.is_null a || R.is_null dest) {
+    Trade.refl (PM.seq_list_match va vv (cbor_map_entry_match pv));
+    fold (mk_map_from_arrayptr_safe_post cbor_match cbor_map_entry_match a dest va pv vv vdest0 false);
+    false
+  } else {
+    rewrite (ref_pts_to_or_null dest 1.0R vdest0) as (pts_to dest vdest0);
+    rewrite (AP.pts_to_or_null a va) as (AP.pts_to a va);
+    let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;  
+    let s = S.arrayptr_to_slice_intro a (SZ.uint64_to_sizet len);
+    S.pts_to_len s;
+    PM.seq_list_match_length (cbor_map_entry_match pv) va vv;
+    let bres = cbor_mk_map_gen s dest;
+    with res . assert (mk_map_gen_post cbor_match cbor_map_entry_match s va pv vv res);
+    with vdest . assert (pts_to dest vdest);
+    map_gen_post_to_arrayptr _ _ a dest s va pv vv vdest0 bres res vdest;
+    rewrite (pts_to dest vdest) as (ref_pts_to_or_null dest 1.0R vdest);
+    bres
+  }
 }
 
 inline_for_extraction
