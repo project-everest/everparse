@@ -6526,11 +6526,47 @@ cbor_raw cbor_nondet_mk_int64(uint8_t ty, uint64_t v)
   return CBOR_Pulse_API_Nondet_Rust_cbor_nondet_mk_int64(ty, v);
 }
 
-cbor_raw cbor_nondet_mk_string(uint8_t ty, uint8_t *a, uint64_t len)
+bool cbor_nondet_mk_byte_string(uint8_t *a, uint64_t len, cbor_raw *dest)
 {
-  return
-    CBOR_Pulse_API_Nondet_Rust_cbor_nondet_mk_string(ty,
-      Pulse_Lib_Slice_arrayptr_to_slice_intro__uint8_t(a, (size_t)len));
+  bool __anf0 = a == NULL;
+  if (__anf0 || dest == NULL)
+    return false;
+  else
+  {
+    Pulse_Lib_Slice_slice__uint8_t
+    s = Pulse_Lib_Slice_arrayptr_to_slice_intro__uint8_t(a, (size_t)len);
+    bool ite;
+    if (CBOR_MAJOR_TYPE_BYTE_STRING == CBOR_MAJOR_TYPE_TEXT_STRING)
+      ite = CBOR_Pulse_Raw_EverParse_UTF8_impl_correct(s);
+    else
+      ite = true;
+    if (ite)
+    {
+      *dest = CBOR_Pulse_API_Nondet_Rust_cbor_nondet_mk_string(CBOR_MAJOR_TYPE_BYTE_STRING, s);
+      return true;
+    }
+    else
+      return false;
+  }
+}
+
+bool cbor_nondet_mk_text_string(uint8_t *a, uint64_t len, cbor_raw *dest)
+{
+  bool __anf0 = a == NULL;
+  if (__anf0 || dest == NULL)
+    return false;
+  else
+  {
+    Pulse_Lib_Slice_slice__uint8_t
+    s = Pulse_Lib_Slice_arrayptr_to_slice_intro__uint8_t(a, (size_t)len);
+    if (CBOR_Pulse_Raw_EverParse_UTF8_impl_correct(s))
+    {
+      *dest = CBOR_Pulse_API_Nondet_Rust_cbor_nondet_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, s);
+      return true;
+    }
+    else
+      return false;
+  }
 }
 
 cbor_raw cbor_nondet_mk_tagged(uint64_t tag, cbor_raw *r)

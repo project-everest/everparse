@@ -308,7 +308,9 @@ cbor_raw cbor_nondet_mk_simple_value(uint8_t v);
 
 cbor_raw cbor_nondet_mk_int64(uint8_t ty, uint64_t v);
 
-cbor_raw cbor_nondet_mk_string(uint8_t ty, uint8_t *a, uint64_t len);
+bool cbor_nondet_mk_byte_string(uint8_t *a, uint64_t len, cbor_raw *dest);
+
+bool cbor_nondet_mk_text_string(uint8_t *a, uint64_t len, cbor_raw *dest);
 
 cbor_raw cbor_nondet_mk_tagged(uint64_t tag, cbor_raw *r);
 

@@ -4698,22 +4698,69 @@ cbor_raw cbor_det_mk_tagged(uint64_t tag, cbor_raw *r)
     );
 }
 
-cbor_raw cbor_det_mk_string_from_arrayptr(uint8_t ty, uint8_t *a, uint64_t len)
+bool cbor_det_mk_byte_string_from_arrayptr(uint8_t *a, uint64_t len, cbor_raw *dest)
 {
-  Pulse_Lib_Slice_slice__uint8_t s = arrayptr_to_slice_intro__uint8_t(a, (size_t)len);
-  return
-    (
-      (cbor_raw){
-        .tag = CBOR_Case_String,
-        {
-          .case_CBOR_Case_String = {
-            .cbor_string_type = ty,
-            .cbor_string_size = mk_raw_uint64((uint64_t)len__uint8_t(s)).size,
-            .cbor_string_ptr = s
+  bool __anf0 = a == NULL;
+  if (__anf0 || dest == NULL)
+    return false;
+  else
+  {
+    Pulse_Lib_Slice_slice__uint8_t s = arrayptr_to_slice_intro__uint8_t(a, (size_t)len);
+    bool ite;
+    if (CBOR_MAJOR_TYPE_BYTE_STRING == CBOR_MAJOR_TYPE_TEXT_STRING)
+      ite = impl_correct(s);
+    else
+      ite = true;
+    if (ite)
+    {
+      *dest =
+        (
+          (cbor_raw){
+            .tag = CBOR_Case_String,
+            {
+              .case_CBOR_Case_String = {
+                .cbor_string_type = CBOR_MAJOR_TYPE_BYTE_STRING,
+                .cbor_string_size = mk_raw_uint64((uint64_t)len__uint8_t(s)).size,
+                .cbor_string_ptr = s
+              }
+            }
           }
-        }
-      }
-    );
+        );
+      return true;
+    }
+    else
+      return false;
+  }
+}
+
+bool cbor_det_mk_text_string_from_arrayptr(uint8_t *a, uint64_t len, cbor_raw *dest)
+{
+  bool __anf0 = a == NULL;
+  if (__anf0 || dest == NULL)
+    return false;
+  else
+  {
+    Pulse_Lib_Slice_slice__uint8_t s = arrayptr_to_slice_intro__uint8_t(a, (size_t)len);
+    if (impl_correct(s))
+    {
+      *dest =
+        (
+          (cbor_raw){
+            .tag = CBOR_Case_String,
+            {
+              .case_CBOR_Case_String = {
+                .cbor_string_type = CBOR_MAJOR_TYPE_TEXT_STRING,
+                .cbor_string_size = mk_raw_uint64((uint64_t)len__uint8_t(s)).size,
+                .cbor_string_ptr = s
+              }
+            }
+          }
+        );
+      return true;
+    }
+    else
+      return false;
+  }
 }
 
 cbor_raw cbor_det_mk_array_from_array(cbor_raw *a, uint64_t len)
