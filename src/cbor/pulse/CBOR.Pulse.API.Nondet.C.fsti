@@ -23,9 +23,7 @@ val cbor_nondet_gather
   (_: unit)
 : CBOR.Pulse.API.Base.gather_t u#0 u#0 #_ #_ cbor_nondet_match
 
-val cbor_nondet_validate (_: unit) : cbor_nondet_validate_from_arrayptr_t
-
-val cbor_nondet_parse_valid (_: unit) : cbor_nondet_parse_valid_from_arrayptr_t #cbor_nondet_t cbor_nondet_match
+val cbor_nondet_parse (_: unit) : cbor_nondet_parse_from_arrayptr_t #cbor_nondet_t cbor_nondet_match
 
 val cbor_nondet_serialize
   (_: unit)

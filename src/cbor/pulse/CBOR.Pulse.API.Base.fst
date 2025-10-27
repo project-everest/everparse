@@ -2163,15 +2163,21 @@ let cbor_nondet_validate_post
   (strict_check: bool)
   (v: Seq.seq U8.t)
   (res: SZ.t)
-: Tot prop
+: GTot bool
 =
   let r = Spec.cbor_parse v in
   if SZ.v res = 0
-  then (Some? r ==> (Some? map_key_bound /\ Spec.cbor_map_key_depth (fst (Some?.v r)) > SZ.v (Some?.v map_key_bound)))
+  then
+    if Some? r
+    then (Some? map_key_bound && Spec.cbor_map_key_depth (fst (Some?.v r)) > SZ.v (Some?.v map_key_bound))
+    else true
   else (
-    Some? r /\
-    SZ.v res == snd (Some?.v r) /\
-    ((Some? map_key_bound /\ strict_check) ==> Spec.cbor_map_key_depth (fst (Some?.v r)) <= SZ.v (Some?.v map_key_bound))
+    Some? r &&
+    SZ.v res = snd (Some?.v r) &&
+    begin if Some? map_key_bound && strict_check
+    then Spec.cbor_map_key_depth (fst (Some?.v r)) <= SZ.v (Some?.v map_key_bound)
+    else true
+    end
   )
 
 inline_for_extraction
@@ -2266,59 +2272,168 @@ let cbor_nondet_parse_valid_t
         cbor_nondet_parse_valid_post v v'
     ))
 
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-let cbor_nondet_parse_valid_from_arrayptr_t
+let cbor_nondet_parse_from_arrayptr_postcond
+  (#cbor_nondet_t: Type)
+  (check_map_key_bound: bool)
+  (map_key_bound: SZ.t)
+  (strict_check: bool)
+  (pinput: R.ref (AP.ptr U8.t))
+  (plen: R.ref SZ.t)
+  (input: AP.ptr U8.t)
+  (v: Seq.seq U8.t)
+  (dest: R.ref cbor_nondet_t)
+  (res: SZ.t)
+: GTot bool
+= if (R.is_null pinput || R.is_null plen || AP.g_is_null input || R.is_null dest)
+  then res = 0sz
+  else cbor_nondet_validate_post (if check_map_key_bound then Some map_key_bound else None) strict_check v res
+
+let cbor_nondet_parse_from_arrayptr_post_true
   (#cbor_nondet_t: Type)
   (cbor_nondet_match: perm -> cbor_nondet_t -> Spec.cbor -> slprop)
+  (input: AP.ptr U8.t)
+  (input': AP.ptr U8.t)
+  (pm: perm)
+  (v: Seq.seq U8.t)
+  (res: cbor_nondet_t)
+: Tot slprop
 =
-  (input: AP.ptr U8.t) ->
-  (len: SZ.t) ->
-  (#pm: perm) ->
-  (#v: Ghost.erased (Seq.seq U8.t)) ->
-  stt cbor_nondet_t
-    (pts_to input #pm v ** pure (
-      cbor_nondet_validate_post None false v len /\
-      SZ.v len > 0
-    ))
-    (fun res -> exists* p' v' .
+     exists* p' v' v1 .
       cbor_nondet_match p' res v' **
-      Trade.trade (cbor_nondet_match p' res v') (pts_to input #pm v) ** pure (
-        cbor_nondet_parse_valid_post v v'
-    ))
+      Trade.trade (cbor_nondet_match p' res v') (pts_to input #pm v1) ** pure (
+        AP.adjacent input (Seq.length v1) input' /\
+        not (AP.g_is_null input') /\
+        Seq.length v1 <= Seq.length v /\
+        v1 == Seq.slice v 0 (Seq.length v1) /\
+        Spec.cbor_parse v1 == Some (v', Seq.length v1) /\
+        Spec.cbor_parse v == Some (v', Seq.length v1)
+    )
+
+let cbor_nondet_parse_from_arrayptr_post
+  (#cbor_nondet_t: Type)
+  (cbor_nondet_match: perm -> cbor_nondet_t -> Spec.cbor -> slprop)
+  (input: AP.ptr U8.t)
+  (input': AP.ptr U8.t)
+  (pm: perm)
+  (v: Seq.seq U8.t)
+  (res: cbor_nondet_t)
+  (b: bool)
+: Tot slprop
+= if b
+  then cbor_nondet_parse_from_arrayptr_post_true cbor_nondet_match input input' pm v res
+  else emp
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-fn cbor_nondet_parse_valid_from_arrayptr
+let cbor_nondet_parse_from_arrayptr_t
+  (#cbor_nondet_t: Type)
+  (cbor_nondet_match: perm -> cbor_nondet_t -> Spec.cbor -> slprop)
+=
+  (check_map_key_bound: bool) ->
+  (map_key_bound: SZ.t) ->
+  (strict_check: bool) ->
+  (pinput: R.ref (AP.ptr U8.t)) ->
+  (plen: R.ref SZ.t) ->
+  (dest: R.ref cbor_nondet_t) ->
+  (#input: Ghost.erased (AP.ptr U8.t)) ->
+  (#len: Ghost.erased SZ.t) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  (#vdest: Ghost.erased cbor_nondet_t) ->
+  stt bool
+    (
+      ref_pts_to_or_null pinput 1.0R input **
+      AP.pts_to_or_null input #pm v **
+      ref_pts_to_or_null plen 1.0R len **
+      ref_pts_to_or_null dest 1.0R vdest **
+      pure (
+      SZ.v len == Seq.length v
+    ))
+    (fun b -> exists* input' len' v' res .
+      ref_pts_to_or_null pinput 1.0R input' **
+      AP.pts_to_or_null input' #pm v' **
+      ref_pts_to_or_null plen 1.0R len' **
+      ref_pts_to_or_null dest 1.0R res **
+      cbor_nondet_parse_from_arrayptr_post cbor_nondet_match input input' pm v res b **
+      pure (
+        SZ.v len == Seq.length v /\
+        SZ.v len' <= SZ.v len /\
+        v' == Seq.slice v (SZ.v len - SZ.v len') (Seq.length v) /\
+        b == (SZ.v len' < SZ.v len) /\
+        (b == false ==> input' == Ghost.reveal input) /\
+        cbor_nondet_parse_from_arrayptr_postcond check_map_key_bound map_key_bound strict_check pinput plen input v dest (SZ.sub len len')
+      )
+    )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_nondet_parse_from_arrayptr
   (#cbor_nondet_t: Type0)
   (#cbor_nondet_match: perm -> cbor_nondet_t -> Spec.cbor -> slprop)
+  (validate: cbor_nondet_validate_t)
   (f: cbor_nondet_parse_valid_t cbor_nondet_match)
-: cbor_nondet_parse_valid_from_arrayptr_t #_ cbor_nondet_match
+: cbor_nondet_parse_from_arrayptr_t #_ cbor_nondet_match
 =
-  (input: AP.ptr U8.t)
-  (len: SZ.t)
+  (check_map_key_bound: bool)
+  (map_key_bound: SZ.t)
+  (strict_check: bool)
+  (pinput: R.ref (AP.ptr U8.t))
+  (plen: R.ref SZ.t)
+  (dest: R.ref cbor_nondet_t)
+  (#input: Ghost.erased (AP.ptr U8.t))
+  (#len: Ghost.erased SZ.t)
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
+  (#vdest: Ghost.erased cbor_nondet_t)
 {
-  Seq.lemma_split v (SZ.v len);
-  let ar = AP.ghost_split input len;
-  with vl . assert (pts_to input #pm vl);
-  with vr . assert (pts_to (Ghost.reveal ar) #pm vr);
-  intro
-    (Trade.trade
-      (pts_to input #pm vl)
-      (pts_to input #pm v)
-    )
-    #(pts_to (Ghost.reveal ar) #pm vr)
-    fn _ {
-      AP.join input ar
-    };
-  let s = S.arrayptr_to_slice_intro_trade input len;
-  Trade.trans _ _ (pts_to input #pm v);
-  Spec.cbor_parse_prefix v vl;
-  let res = f s len;
-  Trade.trans _ _ (pts_to input #pm v);
-  res
+  if (R.is_null pinput || R.is_null plen || R.is_null dest) {
+    fold (cbor_nondet_parse_from_arrayptr_post cbor_nondet_match input input pm v vdest false);
+    false
+  } else {
+    rewrite ref_pts_to_or_null pinput 1.0R input as pts_to pinput input;
+    let input = !pinput;
+    if (AP.is_null !pinput) {
+      rewrite pts_to pinput input as ref_pts_to_or_null pinput 1.0R input;
+      fold (cbor_nondet_parse_from_arrayptr_post cbor_nondet_match input input pm v vdest false);
+      false
+    } else {
+      rewrite AP.pts_to_or_null input #pm v as AP.pts_to input #pm v;
+      rewrite ref_pts_to_or_null plen 1.0R len as pts_to plen len;
+      let len = !plen;
+      let s = S.arrayptr_to_slice_intro_trade input len;
+      S.pts_to_len s;
+      let consume = validate (if check_map_key_bound then Some map_key_bound else None) strict_check s;
+      Trade.elim _ _;
+      if (consume = 0sz) {
+        rewrite pts_to plen len as ref_pts_to_or_null plen 1.0R len;
+        rewrite AP.pts_to input #pm v as AP.pts_to_or_null input #pm v;
+        rewrite pts_to pinput input as ref_pts_to_or_null pinput 1.0R input;
+        fold (cbor_nondet_parse_from_arrayptr_post cbor_nondet_match input input pm v vdest false);
+        false
+      } else {
+        Seq.lemma_split v (SZ.v consume);
+        Spec.cbor_parse_prefix v (Seq.slice v 0 (SZ.v consume));
+        let input' = AP.split input consume;
+        pinput := input';
+        let len' = SZ.sub len consume;
+        plen := len';
+        let s = S.arrayptr_to_slice_intro_trade input consume;
+        let res = f s consume;
+        Trade.trans _ _ (pts_to input #pm _);
+        rewrite ref_pts_to_or_null dest 1.0R vdest as pts_to dest vdest;
+        dest := res;
+        rewrite pts_to dest res as ref_pts_to_or_null dest 1.0R res;
+        rewrite pts_to plen len' as ref_pts_to_or_null plen 1.0R len';
+        AP.pts_to_not_null input';
+        with v' . rewrite AP.pts_to input' #pm v' as AP.pts_to_or_null input' #pm v';
+        rewrite pts_to pinput input' as ref_pts_to_or_null pinput 1.0R input';
+        fold (cbor_nondet_parse_from_arrayptr_post_true cbor_nondet_match input input' pm v res);
+        rewrite (cbor_nondet_parse_from_arrayptr_post_true cbor_nondet_match input input' pm v res)
+          as (cbor_nondet_parse_from_arrayptr_post cbor_nondet_match input input' pm v res true);
+        true
+      }
+    }
+  }
 }
 
 noextract [@@noextract_to "krml"]

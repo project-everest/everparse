@@ -11,9 +11,7 @@ let cbor_nondet_share = Rust.cbor_nondet_share
 
 let cbor_nondet_gather = Rust.cbor_nondet_gather
 
-let cbor_nondet_validate () = cbor_nondet_validate_from_arrayptr (Rust.cbor_nondet_validate ())
-
-let cbor_nondet_parse_valid () = cbor_nondet_parse_valid_from_arrayptr (Rust.cbor_nondet_parse_valid ())
+let cbor_nondet_parse () = cbor_nondet_parse_from_arrayptr (Rust.cbor_nondet_validate ()) (Rust.cbor_nondet_parse_valid ())
 
 let cbor_nondet_serialize () = cbor_nondet_serialize_to_arrayptr (Rust.cbor_nondet_serialize ())
 
