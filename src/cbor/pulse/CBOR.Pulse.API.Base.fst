@@ -1726,6 +1726,31 @@ let mk_simple_safe_t
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
+fn mk_simple_safe
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (f: mk_simple_t vmatch)
+: mk_simple_safe_t #_ vmatch
+=
+  (v: _)
+  (dest: _)
+  (#w: _)
+{
+  if (R.is_null dest || not (simple_value_wf v)) {
+    rewrite (pure (Ghost.reveal w == Ghost.reveal w)) as (mk_simple_safe_post vmatch v dest w w);
+    false
+  } else {
+    rewrite ref_pts_to_or_null dest 1.0R w as pts_to dest w;
+    let res = f v;
+    dest := res;
+    rewrite pts_to dest res as ref_pts_to_or_null dest 1.0R res;
+    rewrite (vmatch 1.0R res (pack (CSimple v))) as (mk_simple_safe_post vmatch v dest w res);
+    true
+  }
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
 fn mk_simple_value_trade
   (#t: Type0)
   (vmatch: perm -> t -> cbor -> slprop)
