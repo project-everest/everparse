@@ -12,6 +12,14 @@ module R = Pulse.Lib.Reference
 module PM = Pulse.Lib.SeqMatch
 module AP = Pulse.Lib.ArrayPtr
 
+let ref_pts_to_or_null
+  (#t: Type)
+  (r: ref t)
+  (p: perm)
+  (v: t)
+: Tot slprop
+= if R.is_null r then emp else pts_to r #p v
+
 (** Destructors *)
 
 let cbor_major_type (c: cbor) : Tot T.major_type_t =
@@ -120,6 +128,63 @@ let read_simple_value_t
     (vmatch p x y ** pure (CSimple? (unpack y)))
     (fun res -> vmatch p x y ** pure (unpack y == CSimple res))
 
+let read_simple_value_safe_postcond
+  (dest: ref U8.t)
+  (y: cbor)
+  (vdest: U8.t)
+  (res: bool)
+  (vdest': U8.t)
+: Tot prop
+=
+      res == (CSimple? (unpack y) && not (R.is_null dest)) /\
+      (if res
+      then CSimple? (unpack y) /\ (CSimple?.v (unpack y) <: U8.t) == vdest'
+      else vdest' == Ghost.reveal vdest
+      )
+
+inline_for_extraction
+let read_simple_value_safe_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+= (x: t) ->
+  (dest: ref U8.t) ->
+  (#p: perm) ->
+  (#y: Ghost.erased cbor) ->
+  (#vdest: Ghost.erased U8.t) ->
+  stt bool
+    (vmatch p x y ** ref_pts_to_or_null dest 1.0R vdest)
+    (fun res -> exists* vdest' . vmatch p x y ** ref_pts_to_or_null dest 1.0R vdest' ** pure (
+      read_simple_value_safe_postcond dest y vdest res vdest'
+    ))
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn read_simple_value_safe
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (mt: get_major_type_t vmatch)
+  (f: read_simple_value_t vmatch)
+: read_simple_value_safe_t #_ vmatch
+=
+  (x: _)
+  (dest: _)
+  (#p: _)
+  (#y: _)
+  (#vdest: _)
+{
+  if (R.is_null dest) {
+    false
+  } else if (mt x <> cbor_major_type_simple_value) {
+    false
+  } else {
+    rewrite ref_pts_to_or_null dest 1.0R vdest as pts_to dest vdest;
+    let res = f x;
+    dest := res;
+    rewrite pts_to dest (res <: U8.t) as ref_pts_to_or_null dest 1.0R res;
+    true
+  }
+}
+
 inline_for_extraction
 let elim_simple_t
   (#t: Type)
@@ -149,6 +214,66 @@ let read_uint64_t
   stt FStar.UInt64.t
     (vmatch p x y ** pure (CInt64? (unpack y)))
     (fun res -> vmatch p x y ** pure (read_uint64_post y res))
+
+let read_uint64_safe_postcond
+  (dest: ref U64.t)
+  (y: cbor)
+  (vdest: U64.t)
+  (res: bool)
+  (vdest': U64.t)
+: Tot prop
+=
+      res == (CInt64? (unpack y) && not (R.is_null dest)) /\
+      (if res
+      then CInt64? (unpack y) /\ (CInt64?.v (unpack y)) == vdest'
+      else vdest' == Ghost.reveal vdest
+      )
+
+inline_for_extraction
+let read_uint64_safe_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+= (x: t) ->
+  (dest: ref U64.t) ->
+  (#p: perm) ->
+  (#y: Ghost.erased cbor) ->
+  (#vdest: Ghost.erased U64.t) ->
+  stt bool
+    (vmatch p x y ** ref_pts_to_or_null dest 1.0R vdest)
+    (fun res -> exists* vdest' . vmatch p x y ** ref_pts_to_or_null dest 1.0R vdest' ** pure (
+      read_uint64_safe_postcond dest y vdest res vdest'
+    ))
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn read_uint64_safe
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (mt: get_major_type_t vmatch)
+  (f: read_uint64_t vmatch)
+: read_uint64_safe_t #_ vmatch
+=
+  (x: _)
+  (dest: _)
+  (#p: _)
+  (#y: _)
+  (#vdest: _)
+{
+  if (R.is_null dest) {
+    false
+  } else {
+    let ty = mt x;
+    if (ty <> cbor_major_type_uint64 && ty <> cbor_major_type_neg_int64) {
+      false
+    } else {
+      rewrite ref_pts_to_or_null dest 1.0R vdest as pts_to dest vdest;
+      let res = f x;
+      dest := res;
+      rewrite pts_to dest res as ref_pts_to_or_null dest 1.0R res;
+      true
+    }
+  }
+}
 
 inline_for_extraction
 let elim_int64_t
@@ -242,6 +367,129 @@ fn get_string_as_arrayptr
   res
 }
 
+let get_string_as_arrayptr_safe_res
+  (dest: R.ref (AP.ptr U8.t))
+  (dlen: R.ref U64.t)
+  (y: cbor)
+: GTot bool
+= (not (R.is_null dest)) &&
+  (not (R.is_null dlen)) &&
+  CString? (unpack y)
+
+let get_string_as_arrayptr_safe_post_true
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (x: t)
+  (p: perm)
+  (y: cbor)
+  (vdest': AP.ptr U8.t)
+  (vlen': U64.t)
+: Tot slprop
+= exists* p' v' .
+      pts_to vdest' #p' v' **
+      Trade.trade
+        (pts_to vdest' #p' v')
+        (vmatch p x y) **
+      pure (get_string_post y v' /\
+        U64.v vlen' == Seq.length v'
+      )
+
+let get_string_as_arrayptr_safe_post_false
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (x: t)
+  (p: perm)
+  (y: Ghost.erased cbor)
+  (vdest: (AP.ptr U8.t))
+  (vlen: U64.t)
+  (vdest': AP.ptr U8.t)
+  (vlen': U64.t)
+: slprop
+= vmatch p x y ** pure (vdest' == vdest /\ vlen' == vlen)
+
+let get_string_as_arrayptr_safe_post
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (x: t)
+  (dest: R.ref (AP.ptr U8.t))
+  (dlen: R.ref U64.t)
+  (p: perm)
+  (y: cbor)
+  (vdest: (AP.ptr U8.t))
+  (vlen: U64.t)
+  (vdest': AP.ptr U8.t)
+  (vlen': U64.t)
+: Tot slprop
+= if get_string_as_arrayptr_safe_res dest dlen y
+  then get_string_as_arrayptr_safe_post_true vmatch x p y vdest' vlen'
+  else get_string_as_arrayptr_safe_post_false vmatch x p y vdest vlen vdest' vlen'
+
+inline_for_extraction
+let get_string_as_arrayptr_safe_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+= (x: t) ->
+  (dest: R.ref (AP.ptr U8.t)) ->
+  (dlen: R.ref U64.t) ->
+  (#p: perm) ->
+  (#y: Ghost.erased cbor) ->
+  (#vdest: Ghost.erased (AP.ptr U8.t)) ->
+  (#vlen: Ghost.erased U64.t) ->
+  stt bool
+    (vmatch p x y ** ref_pts_to_or_null dest 1.0R vdest ** ref_pts_to_or_null dlen 1.0R vlen)
+    (fun res -> exists* vdest' vlen' .
+      ref_pts_to_or_null dest 1.0R vdest' ** ref_pts_to_or_null dlen 1.0R vlen' **
+      get_string_as_arrayptr_safe_post vmatch x dest dlen p y vdest vlen vdest' vlen' **
+      pure (res == get_string_as_arrayptr_safe_res dest dlen y)
+    )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn get_string_as_arrayptr_safe
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (mt: get_major_type_t vmatch)
+  (f: get_string_length_t vmatch)
+  (g: get_string_as_arrayptr_t vmatch)
+: get_string_as_arrayptr_safe_t #_ vmatch
+=
+  (x: _)
+  (dest: _)
+  (dlen: _)
+  (#p: _)
+  (#y: _)
+  (#vdest: _)
+  (#vlen: _)
+{
+  if (R.is_null dest || R.is_null dlen) {
+    fold (get_string_as_arrayptr_safe_post_false vmatch x p y vdest vlen vdest vlen);
+    rewrite (get_string_as_arrayptr_safe_post_false vmatch x p y vdest vlen vdest vlen)
+      as (get_string_as_arrayptr_safe_post vmatch x dest dlen p y vdest vlen vdest vlen);
+    false
+  } else {
+    let ty = mt x;
+    if (ty <> cbor_major_type_byte_string && ty <> cbor_major_type_text_string) {
+      fold (get_string_as_arrayptr_safe_post_false vmatch x p y vdest vlen vdest vlen);
+      rewrite (get_string_as_arrayptr_safe_post_false vmatch x p y vdest vlen vdest vlen)
+        as (get_string_as_arrayptr_safe_post vmatch x dest dlen p y vdest vlen vdest vlen);
+      false
+    } else {
+      rewrite ref_pts_to_or_null dest 1.0R vdest as pts_to dest vdest;
+      rewrite ref_pts_to_or_null dlen 1.0R vlen as pts_to dlen vlen;
+      let len = f x;
+      let res = g x;
+      dlen := len;
+      dest := res;
+      rewrite pts_to dest res as ref_pts_to_or_null dest 1.0R res;
+      rewrite pts_to dlen len as ref_pts_to_or_null dlen 1.0R len;
+      fold (get_string_as_arrayptr_safe_post_true vmatch x p y res len);
+      rewrite (get_string_as_arrayptr_safe_post_true vmatch x p y res len) as
+        (get_string_as_arrayptr_safe_post vmatch x dest dlen p y vdest vlen res len);
+      true
+    }
+  }
+}
+
 let get_tagged_tag_post
   (y: cbor)
   (res: FStar.UInt64.t)
@@ -288,6 +536,125 @@ let get_tagged_payload_t
       pure (get_tagged_payload_post y v')
     )
 
+let get_tagged_safe_res
+  (#t: Type)
+  (dest: R.ref t)
+  (dtag: R.ref U64.t)
+  (y: cbor)
+: GTot bool
+= (not (R.is_null dest)) &&
+  (not (R.is_null dtag)) &&
+  CTagged? (unpack y)
+
+let get_tagged_safe_post_true
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (x: t)
+  (p: perm)
+  (y: cbor)
+  (vdest': t)
+  (vtag': U64.t)
+: Tot slprop
+= exists* p' v' .
+      vmatch p' vdest' v' **
+      Trade.trade
+        (vmatch p' vdest' v')
+        (vmatch p x y) **
+      pure (y == pack (CTagged vtag' v'))
+
+let get_tagged_safe_post_false
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (x: t)
+  (p: perm)
+  (y: cbor)
+  (vdest: t)
+  (vtag: U64.t)
+  (vdest': t)
+  (vtag': U64.t)
+: slprop
+= vmatch p x y ** pure (vdest' == vdest /\ vtag' == vtag)
+
+let get_tagged_safe_post
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (x: t)
+  (dest: R.ref t)
+  (dtag: R.ref U64.t)
+  (p: perm)
+  (y: cbor)
+  (vdest: t)
+  (vtag: U64.t)
+  (vdest': t)
+  (vtag': U64.t)
+: Tot slprop
+= if get_tagged_safe_res dest dtag y
+  then get_tagged_safe_post_true vmatch x p y vdest' vtag'
+  else get_tagged_safe_post_false vmatch x p y vdest vtag vdest' vtag'
+
+inline_for_extraction
+let get_tagged_safe_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+= (x: t) ->
+  (dest: R.ref t) ->
+  (dtag: R.ref U64.t) ->
+  (#p: perm) ->
+  (#y: Ghost.erased cbor) ->
+  (#vdest: Ghost.erased t) ->
+  (#vtag: Ghost.erased U64.t) ->
+  stt bool
+    (vmatch p x y ** ref_pts_to_or_null dest 1.0R vdest ** ref_pts_to_or_null dtag 1.0R vtag)
+    (fun res -> exists* vdest' vtag' .
+      ref_pts_to_or_null dest 1.0R vdest' ** ref_pts_to_or_null dtag 1.0R vtag' **
+      get_tagged_safe_post vmatch x dest dtag p y vdest vtag vdest' vtag' **
+      pure (res == get_tagged_safe_res dest dtag y)
+    )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn get_tagged_safe
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (mt: get_major_type_t vmatch)
+  (f: get_tagged_tag_t vmatch)
+  (g: get_tagged_payload_t vmatch)
+: get_tagged_safe_t #_ vmatch
+=
+  (x: _)
+  (dest: _)
+  (dtag: _)
+  (#p: _)
+  (#y: _)
+  (#vdest: _)
+  (#vtag: _)
+{
+  if (R.is_null dest || R.is_null dtag) {
+    fold (get_tagged_safe_post_false vmatch x p y (Ghost.reveal vdest) (Ghost.reveal vtag) (Ghost.reveal vdest) (Ghost.reveal vtag));
+    rewrite (get_tagged_safe_post_false vmatch x p y vdest vtag vdest vtag)
+      as (get_tagged_safe_post vmatch x dest dtag p y vdest vtag vdest vtag);
+    false
+  } else if (mt x <> cbor_major_type_tagged) {
+    fold (get_tagged_safe_post_false vmatch x p y vdest vtag vdest vtag);
+    rewrite (get_tagged_safe_post_false vmatch x p y vdest vtag vdest vtag)
+      as (get_tagged_safe_post vmatch x dest dtag p y vdest vtag vdest vtag);
+    false
+  } else {
+    rewrite ref_pts_to_or_null dest 1.0R vdest as pts_to dest vdest;
+    rewrite ref_pts_to_or_null dtag 1.0R vtag as pts_to dtag vtag;
+    let tag = f x;
+    let res = g x;
+    dtag := tag;
+    dest := res;
+    rewrite pts_to dest res as ref_pts_to_or_null dest 1.0R res;
+    rewrite pts_to dtag tag as ref_pts_to_or_null dtag 1.0R tag;
+    fold (get_tagged_safe_post_true vmatch x p y res tag);
+    rewrite (get_tagged_safe_post_true vmatch x p y res tag) as
+      (get_tagged_safe_post vmatch x dest dtag p y vdest vtag res tag);
+    true
+  }
+}
+
 let get_array_length_post
   (y: cbor)
   (res: FStar.UInt64.t)
@@ -309,6 +676,52 @@ let get_array_length_t
        get_array_length_post y res
       )
     )
+
+inline_for_extraction
+let get_array_length_safe_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+= (x: t) ->
+  (dest: R.ref U64.t) ->
+  (#p: perm) ->
+  (#y: Ghost.erased cbor) ->
+  (#vdest: Ghost.erased U64.t) ->
+  stt bool
+    (vmatch p x y ** ref_pts_to_or_null dest 1.0R vdest)
+    (fun b ->
+      exists* vdest' . vmatch p x y ** ref_pts_to_or_null dest 1.0R vdest' ** pure (
+        b == ((not (R.is_null dest)) && CArray? (unpack y)) /\
+        (b == true ==> get_array_length_post y vdest') /\
+        (b == false ==> vdest' == Ghost.reveal vdest)
+      )
+    )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn get_array_length_safe
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (mt: get_major_type_t vmatch)
+  (f: get_array_length_t vmatch)
+: get_array_length_safe_t #_ vmatch
+= (x: t)
+  (dest: R.ref U64.t)
+  (#p: perm)
+  (#y: Ghost.erased cbor)
+  (#vdest: Ghost.erased U64.t)
+{
+  if (R.is_null dest) {
+    false
+  } else if (mt x <> cbor_major_type_array) {
+    false
+  } else {
+    rewrite ref_pts_to_or_null dest 1.0R vdest as pts_to dest vdest;
+    let len = f x;
+    dest := len;
+    rewrite pts_to dest len as ref_pts_to_or_null dest 1.0R len;
+    true
+  }
+}
 
 let get_array_item_pre
   (i: FStar.UInt64.t)
@@ -344,6 +757,118 @@ let get_array_item_t
       pure (get_array_item_post i y y')
     )
 
+let get_array_item_safe_res
+  (#t: Type)
+  (i: U64.t)
+  (dest: R.ref t)
+  (y: cbor)
+: GTot bool
+= (not (R.is_null dest)) &&
+  CArray? (unpack y) &&
+  U64.v i < List.Tot.length (CArray?.v (unpack y))
+
+let get_array_item_safe_post_true
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (x: t)
+  (i: U64.t)
+  (p: perm)
+  (y: cbor)
+  (vdest': t)
+: Tot slprop
+= exists* p' y' .
+      vmatch p' vdest' y' **
+      Trade.trade (vmatch p' vdest' y') (vmatch p x y) **
+      pure (get_array_item_post i y y')
+
+let get_array_item_safe_post_false
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (x: t)
+  (p: perm)
+  (y: cbor)
+  (vdest: t)
+  (vdest': t)
+: slprop
+= vmatch p x y ** pure (vdest' == vdest)
+
+let get_array_item_safe_post
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (x: t)
+  (i: U64.t)
+  (dest: R.ref t)
+  (p: perm)
+  (y: cbor)
+  (vdest: t)
+  (vdest': t)
+: Tot slprop
+= if get_array_item_safe_res i dest y
+  then get_array_item_safe_post_true vmatch x i p y vdest'
+  else get_array_item_safe_post_false vmatch x p y vdest vdest'
+
+inline_for_extraction
+let get_array_item_safe_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+= (x: t) ->
+  (i: U64.t) ->
+  (dest: R.ref t) ->
+  (#p: perm) ->
+  (#y: Ghost.erased cbor) ->
+  (#vdest: Ghost.erased t) ->
+  stt bool
+    (vmatch p x y ** ref_pts_to_or_null dest 1.0R vdest)
+    (fun res -> exists* vdest' .
+      ref_pts_to_or_null dest 1.0R vdest' **
+      get_array_item_safe_post vmatch x i dest p y vdest vdest' **
+      pure (res == get_array_item_safe_res i dest y)
+    )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn get_array_item_safe
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (mt: get_major_type_t vmatch)
+  (f: get_array_length_t vmatch)
+  (g: get_array_item_t vmatch)
+: get_array_item_safe_t #_ vmatch
+=
+  (x: _)
+  (i: _)
+  (dest: _)
+  (#p: _)
+  (#y: _)
+  (#vdest: _)
+{
+  if (R.is_null dest) {
+    fold (get_array_item_safe_post_false vmatch x p y (Ghost.reveal vdest) (Ghost.reveal vdest));
+    rewrite (get_array_item_safe_post_false vmatch x p y vdest vdest)
+      as (get_array_item_safe_post vmatch x i dest p y vdest vdest);
+    false
+  } else if (mt x <> cbor_major_type_array) {
+    fold (get_array_item_safe_post_false vmatch x p y (Ghost.reveal vdest) (Ghost.reveal vdest));
+    rewrite (get_array_item_safe_post_false vmatch x p y vdest vdest)
+      as (get_array_item_safe_post vmatch x i dest p y vdest vdest);
+    false
+  } else if (U64.lte (f x) i) {
+    fold (get_array_item_safe_post_false vmatch x p y (Ghost.reveal vdest) (Ghost.reveal vdest));
+    rewrite (get_array_item_safe_post_false vmatch x p y vdest vdest)
+      as (get_array_item_safe_post vmatch x i dest p y vdest vdest);
+    false
+  } else {
+    rewrite ref_pts_to_or_null dest 1.0R vdest as pts_to dest vdest;
+    let res = g x i;
+    dest := res;
+    rewrite pts_to dest res as ref_pts_to_or_null dest 1.0R res;
+    fold (get_array_item_safe_post_true vmatch x i p y res);
+    rewrite (get_array_item_safe_post_true vmatch x i p y res) as
+      (get_array_item_safe_post vmatch x i dest p y vdest res);
+    true
+  }
+}
+
 inline_for_extraction
 let array_iterator_start_t
   (#t #t': Type)
@@ -362,6 +887,114 @@ let array_iterator_start_t
       pure (
         unpack y == CArray l'
     ))
+
+let array_iterator_start_safe_res
+  (#t': Type)
+  (dest: R.ref t')
+  (y: cbor)
+: GTot bool
+= (not (R.is_null dest)) &&
+  CArray? (unpack y)
+
+let array_iterator_start_safe_post_true
+  (#t #t': Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (iter: perm -> t' -> list cbor -> slprop)
+  (x: t)
+  (p: perm)
+  (y: cbor)
+  (vdest': t')
+: Tot slprop
+= exists* p' l' .
+      iter p' vdest' l' **
+      Trade.trade
+        (iter p' vdest' l')
+        (vmatch p x y) **
+      pure (
+        unpack y == CArray l'
+    )
+
+let array_iterator_start_safe_post_false
+  (#t #t': Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (x: t)
+  (p: perm)
+  (y: cbor)
+  (vdest: t')
+  (vdest': t')
+: slprop
+= vmatch p x y ** pure (vdest' == vdest)
+
+let array_iterator_start_safe_post
+  (#t #t': Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (iter: perm -> t' -> list cbor -> slprop)
+  (x: t)
+  (dest: R.ref t')
+  (p: perm)
+  (y: cbor)
+  (vdest: t')
+  (vdest': t')
+: Tot slprop
+= if array_iterator_start_safe_res dest y
+  then array_iterator_start_safe_post_true vmatch iter x p y vdest'
+  else array_iterator_start_safe_post_false vmatch x p y vdest vdest'
+
+inline_for_extraction
+let array_iterator_start_safe_t
+  (#t #t': Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (iter: perm -> t' -> list cbor -> slprop)
+= (x: t) ->
+  (dest: R.ref t') ->
+  (#p: perm) ->
+  (#y: Ghost.erased cbor) ->
+  (#vdest: Ghost.erased t') ->
+  stt bool
+    (vmatch p x y ** ref_pts_to_or_null dest 1.0R vdest)
+    (fun res -> exists* vdest' .
+      ref_pts_to_or_null dest 1.0R vdest' **
+      array_iterator_start_safe_post vmatch iter x dest p y vdest vdest' **
+      pure (res == array_iterator_start_safe_res dest y)
+    )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn array_iterator_start_safe
+  (#t #t': Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (#iter: perm -> t' -> list cbor -> slprop)
+  (mt: get_major_type_t vmatch)
+  (g: array_iterator_start_t vmatch iter)
+: array_iterator_start_safe_t #_ #_ vmatch iter
+=
+  (x: _)
+  (dest: _)
+  (#p: _)
+  (#y: _)
+  (#vdest: _)
+{
+  if (R.is_null dest) {
+    fold (array_iterator_start_safe_post_false vmatch x p y (Ghost.reveal vdest) (Ghost.reveal vdest));
+    rewrite (array_iterator_start_safe_post_false vmatch x p y (Ghost.reveal vdest) (Ghost.reveal vdest))
+      as (array_iterator_start_safe_post vmatch iter x dest p y vdest vdest);
+    false
+  } else if (mt x <> cbor_major_type_array) {
+    fold (array_iterator_start_safe_post_false vmatch x p y (Ghost.reveal vdest) (Ghost.reveal vdest));
+    rewrite (array_iterator_start_safe_post_false vmatch x p y (Ghost.reveal vdest) (Ghost.reveal vdest))
+      as (array_iterator_start_safe_post vmatch iter x dest p y vdest vdest);
+    false
+  } else {
+    rewrite ref_pts_to_or_null dest 1.0R vdest as pts_to dest vdest;
+    let res = g x;
+    dest := res;
+    rewrite pts_to dest res as ref_pts_to_or_null dest 1.0R res;
+    fold (array_iterator_start_safe_post_true vmatch iter x p y res);
+    rewrite (array_iterator_start_safe_post_true vmatch iter x p y res) as
+      (array_iterator_start_safe_post vmatch iter x dest p y vdest res);
+    true
+  }
+}
 
 inline_for_extraction
 let array_iterator_is_empty_t
@@ -406,6 +1039,129 @@ let array_iterator_next_t
       pure (Ghost.reveal z == v' :: z')
     )
 
+let array_iterator_next_safe_res
+  (#t #t': Type)
+  (x: R.ref t')
+  (dest: R.ref t)
+  (y: list cbor)
+: GTot bool
+= (not (R.is_null x)) &&
+  (not (R.is_null dest)) &&
+  Cons? y
+
+let array_iterator_next_safe_post_true
+  (#t #t': Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (iter: perm -> t' -> list cbor -> slprop)
+  (y: t')
+  (p: perm)
+  (z: list cbor)
+  (y': t')
+  (vdest': t)
+: Tot slprop
+= exists* p' py' v' z' .
+      vmatch p' vdest' v' **
+      iter py' y' z' **
+      Trade.trade
+        (vmatch p' vdest' v' ** iter py' y' z')
+        (iter p y z) **
+      pure (z == v' :: z')
+
+let array_iterator_next_safe_post_false
+  (#t #t': Type)
+  (iter: perm -> t' -> list cbor -> slprop)
+  (y: t')
+  (p: perm)
+  (z: list cbor)
+  (vdest: t)
+  (y': t')
+  (vdest': t)
+: slprop
+= iter p y z ** pure (y' == y /\ vdest' == vdest)
+
+let array_iterator_next_safe_post
+  (#t #t': Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (iter: perm -> t' -> list cbor -> slprop)
+  (x: R.ref t')
+  (dest: R.ref t)
+  (y: t')
+  (p: perm)
+  (z: list cbor)
+  (vdest: t)
+  (y': t')
+  (vdest': t)
+: Tot slprop
+= if array_iterator_next_safe_res x dest z
+  then array_iterator_next_safe_post_true vmatch iter y p z y' vdest'
+  else array_iterator_next_safe_post_false iter y p z vdest y' vdest'
+
+inline_for_extraction
+let array_iterator_next_safe_t
+  (#t #t': Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (iter: perm -> t' -> list cbor -> slprop)
+= (x: R.ref t') ->
+  (dest: R.ref t) ->
+  (#y: Ghost.erased t') ->
+  (#p: perm) ->
+  (#z: Ghost.erased (list cbor)) ->
+  (#vdest: Ghost.erased t) ->
+  stt bool
+    (ref_pts_to_or_null x 1.0R y ** iter p y z ** ref_pts_to_or_null dest 1.0R vdest)
+    (fun res -> exists* y' vdest' .
+      ref_pts_to_or_null x 1.0R y' **
+      ref_pts_to_or_null dest 1.0R vdest' **
+      array_iterator_next_safe_post vmatch iter x dest y p z vdest y' vdest' **
+      pure (res == array_iterator_next_safe_res x dest z)
+    )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn array_iterator_next_safe
+  (#t #t': Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (#iter: perm -> t' -> list cbor -> slprop)
+  (f: array_iterator_is_empty_t iter)
+  (g: array_iterator_next_t vmatch iter)
+: array_iterator_next_safe_t #_ #_ vmatch iter
+=
+  (x: _)
+  (dest: _)
+  (#y: _)
+  (#p: _)
+  (#z: _)
+  (#vdest: _)
+{
+  if (R.is_null x || R.is_null dest) {
+    fold (array_iterator_next_safe_post_false iter y p z (Ghost.reveal vdest) y (Ghost.reveal vdest));
+    rewrite (array_iterator_next_safe_post_false iter y p z (Ghost.reveal vdest) y (Ghost.reveal vdest))
+      as array_iterator_next_safe_post vmatch iter x dest y p z vdest y vdest;
+    false
+  } else {
+    rewrite ref_pts_to_or_null x 1.0R y as pts_to x y;
+    let y = !x;
+    if f y {
+      rewrite pts_to x y as ref_pts_to_or_null x 1.0R y;
+      fold (array_iterator_next_safe_post_false iter y p z (Ghost.reveal vdest) y (Ghost.reveal vdest));
+      rewrite (array_iterator_next_safe_post_false iter y p z (Ghost.reveal vdest) y (Ghost.reveal vdest))
+        as array_iterator_next_safe_post vmatch iter x dest y p z vdest y vdest;
+      false
+    } else {
+      rewrite ref_pts_to_or_null dest 1.0R vdest as pts_to dest vdest;
+      let res = g x;
+      dest := res;
+      rewrite pts_to dest res as ref_pts_to_or_null dest 1.0R res;
+      with p' y' z' . assert (pts_to x y' ** iter p' y' z');
+      rewrite pts_to x y' as ref_pts_to_or_null x 1.0R y';
+      fold (array_iterator_next_safe_post_true vmatch iter y p z y' res);
+      rewrite (array_iterator_next_safe_post_true vmatch iter y p z y' res) as
+        array_iterator_next_safe_post vmatch iter x dest y p z vdest y' res;
+      true
+    }
+  }
+}
+
 inline_for_extraction
 let array_iterator_truncate_t
   (#t': Type)
@@ -424,6 +1180,8 @@ let array_iterator_truncate_t
         (iter p' res (fst (List.Tot.splitAt (U64.v len) y)))
         (iter p x y)
     )
+
+(* TODO: array_iterator_truncate_safe_t *)
 
 inline_for_extraction
 let array_iterator_get_length_t
@@ -461,6 +1219,52 @@ let get_map_length_t
       )
     )
 
+inline_for_extraction
+let get_map_length_safe_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+= (x: t) ->
+  (dest: R.ref U64.t) ->
+  (#p: perm) ->
+  (#y: Ghost.erased cbor) ->
+  (#vdest: Ghost.erased U64.t) ->
+  stt bool
+    (vmatch p x y ** ref_pts_to_or_null dest 1.0R vdest)
+    (fun b ->
+      exists* vdest' . vmatch p x y ** ref_pts_to_or_null dest 1.0R vdest' ** pure (
+        b == ((not (R.is_null dest)) && CMap? (unpack y)) /\
+        (b == true ==> get_map_length_post y vdest') /\
+        (b == false ==> vdest' == Ghost.reveal vdest)
+      )
+    )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn get_map_length_safe
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (mt: get_major_type_t vmatch)
+  (f: get_map_length_t vmatch)
+: get_map_length_safe_t #_ vmatch
+= (x: t)
+  (dest: R.ref U64.t)
+  (#p: perm)
+  (#y: Ghost.erased cbor)
+  (#vdest: Ghost.erased U64.t)
+{
+  if (R.is_null dest) {
+    false
+  } else if (mt x <> cbor_major_type_map) {
+    false
+  } else {
+    rewrite ref_pts_to_or_null dest 1.0R vdest as pts_to dest vdest;
+    let len = f x;
+    dest := len;
+    rewrite pts_to dest len as ref_pts_to_or_null dest 1.0R len;
+    true
+  }
+}
+
 let map_iterator_start_post
   (y: cbor)
   (l' : list (cbor & cbor))
@@ -489,6 +1293,114 @@ let map_iterator_start_t
       pure (
         map_iterator_start_post y l'
     ))
+
+let map_iterator_start_safe_res
+  (#t': Type)
+  (dest: R.ref t')
+  (y: cbor)
+: GTot bool
+= (not (R.is_null dest)) &&
+  CMap? (unpack y)
+
+let map_iterator_start_safe_post_true
+  (#t #t': Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (iter: perm -> t' -> list (cbor & cbor) -> slprop)
+  (x: t)
+  (p: perm)
+  (y: cbor)
+  (vdest': t')
+: Tot slprop
+= exists* p' l' .
+      iter p' vdest' l' **
+      Trade.trade
+        (iter p' vdest' l')
+        (vmatch p x y) **
+      pure (
+        map_iterator_start_post y l'
+    )
+
+let map_iterator_start_safe_post_false
+  (#t #t': Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (x: t)
+  (p: perm)
+  (y: cbor)
+  (vdest: t')
+  (vdest': t')
+: slprop
+= vmatch p x y ** pure (vdest' == vdest)
+
+let map_iterator_start_safe_post
+  (#t #t': Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (iter: perm -> t' -> list (cbor & cbor) -> slprop)
+  (x: t)
+  (dest: R.ref t')
+  (p: perm)
+  (y: cbor)
+  (vdest: t')
+  (vdest': t')
+: Tot slprop
+= if map_iterator_start_safe_res dest y
+  then map_iterator_start_safe_post_true vmatch iter x p y vdest'
+  else map_iterator_start_safe_post_false vmatch x p y vdest vdest'
+
+inline_for_extraction
+let map_iterator_start_safe_t
+  (#t #t': Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (iter: perm -> t' -> list (cbor & cbor) -> slprop)
+= (x: t) ->
+  (dest: R.ref t') ->
+  (#p: perm) ->
+  (#y: Ghost.erased cbor) ->
+  (#vdest: Ghost.erased t') ->
+  stt bool
+    (vmatch p x y ** ref_pts_to_or_null dest 1.0R vdest)
+    (fun res -> exists* vdest' .
+      ref_pts_to_or_null dest 1.0R vdest' **
+      map_iterator_start_safe_post vmatch iter x dest p y vdest vdest' **
+      pure (res == map_iterator_start_safe_res dest y)
+    )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn map_iterator_start_safe
+  (#t #t': Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (#iter: perm -> t' -> list (cbor & cbor) -> slprop)
+  (mt: get_major_type_t vmatch)
+  (g: map_iterator_start_t vmatch iter)
+: map_iterator_start_safe_t #_ #_ vmatch iter
+=
+  (x: _)
+  (dest: _)
+  (#p: _)
+  (#y: _)
+  (#vdest: _)
+{
+  if (R.is_null dest) {
+    fold (map_iterator_start_safe_post_false vmatch x p y (Ghost.reveal vdest) (Ghost.reveal vdest));
+    rewrite (map_iterator_start_safe_post_false vmatch x p y (Ghost.reveal vdest) (Ghost.reveal vdest))
+      as (map_iterator_start_safe_post vmatch iter x dest p y vdest vdest);
+    false
+  } else if (mt x <> cbor_major_type_map) {
+    fold (map_iterator_start_safe_post_false vmatch x p y (Ghost.reveal vdest) (Ghost.reveal vdest));
+    rewrite (map_iterator_start_safe_post_false vmatch x p y (Ghost.reveal vdest) (Ghost.reveal vdest))
+      as (map_iterator_start_safe_post vmatch iter x dest p y vdest vdest);
+    false
+  } else {
+    rewrite ref_pts_to_or_null dest 1.0R vdest as pts_to dest vdest;
+    let res = g x;
+    dest := res;
+    rewrite pts_to dest res as ref_pts_to_or_null dest 1.0R res;
+    fold (map_iterator_start_safe_post_true vmatch iter x p y res);
+    rewrite (map_iterator_start_safe_post_true vmatch iter x p y res) as
+      (map_iterator_start_safe_post vmatch iter x dest p y vdest res);
+    true
+  }
+}
 
 inline_for_extraction
 let map_iterator_is_empty_t
@@ -552,6 +1464,95 @@ let map_entry_value_t
       Trade.trade (vmatch p' res (snd v2)) (vmatch2 p x2 v2)
     )
 
+let map_iterator_next_safe_res
+  (#t #t': Type)
+  (x: R.ref t')
+  (dest_key dest_value: R.ref t)
+  (y: list (cbor & cbor))
+: GTot bool
+= (not (R.is_null x)) &&
+  (not (R.is_null dest_key)) &&
+  (not (R.is_null dest_value)) &&
+  Cons? y
+
+let map_iterator_next_safe_post_true
+  (#t #t': Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (iter: perm -> t' -> list (cbor & cbor) -> slprop)
+  (y: t')
+  (p: perm)
+  (z: list (cbor & cbor))
+  (y': t')
+  (vdest_key': t)
+  (vdest_value': t)
+: Tot slprop
+= exists* pkey pvalue py' vk' vv' z' .
+      vmatch pkey vdest_key' vk' **
+      vmatch pvalue vdest_value' vv' **
+      iter py' y' z' **
+      Trade.trade
+        ((vmatch pkey vdest_key' vk' ** vmatch pvalue vdest_value' vv') ** iter py' y' z')
+        (iter p y z) **
+      pure (z == (vk', vv') :: z')
+
+let map_iterator_next_safe_post_false
+  (#t #t': Type)
+  (iter: perm -> t' -> list (cbor & cbor) -> slprop)
+  (y: t')
+  (p: perm)
+  (z: list (cbor & cbor))
+  (vdest_key: t)
+  (vdest_value: t)
+  (y': t')
+  (vdest_key': t)
+  (vdest_value': t)
+: slprop
+= iter p y z ** pure (y' == y /\ vdest_key' == vdest_key /\ vdest_value' == vdest_value)
+
+let map_iterator_next_safe_post
+  (#t #t': Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (iter: perm -> t' -> list (cbor & cbor) -> slprop)
+  (x: R.ref t')
+  (dest_key: R.ref t)
+  (dest_value: R.ref t)
+  (y: t')
+  (p: perm)
+  (z: list (cbor & cbor))
+  (vdest_key vdest_value: t)
+  (y': t')
+  (vdest_key' vdest_value': t)
+: Tot slprop
+= if map_iterator_next_safe_res x dest_key dest_value z
+  then map_iterator_next_safe_post_true vmatch iter y p z y' vdest_key' vdest_value'
+  else map_iterator_next_safe_post_false iter y p z vdest_key vdest_value y' vdest_key' vdest_value'
+
+inline_for_extraction
+let map_iterator_next_safe_t
+  (#t #t': Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (iter: perm -> t' -> list (cbor & cbor) -> slprop)
+= (x: R.ref t') ->
+  (dest_key: R.ref t) ->
+  (dest_value: R.ref t) ->
+  (#y: Ghost.erased t') ->
+  (#p: perm) ->
+  (#z: Ghost.erased (list (cbor & cbor))) ->
+  (#vdest_key: Ghost.erased t) ->
+  (#vdest_value: Ghost.erased t) ->
+  stt bool
+    (ref_pts_to_or_null x 1.0R y ** iter p y z ** 
+      ref_pts_to_or_null dest_key 1.0R vdest_key **
+      ref_pts_to_or_null dest_value 1.0R vdest_value
+    )
+    (fun res -> exists* y' vdest_key' vdest_value' .
+      ref_pts_to_or_null x 1.0R y' **
+      ref_pts_to_or_null dest_key 1.0R vdest_key' **
+      ref_pts_to_or_null dest_value 1.0R vdest_value' **
+      map_iterator_next_safe_post vmatch iter x dest_key dest_value y p z vdest_key vdest_value y' vdest_key' vdest_value' **
+      pure (res == map_iterator_next_safe_res x dest_key dest_value z)
+    )
+
 (** Permissions *)
 
 inline_for_extraction
@@ -587,6 +1588,80 @@ let gather_t
     pure (x2 == x2')
   )
 
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn map_iterator_next_safe
+  (#t #t' #t2: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch2: perm -> t2 -> cbor & cbor -> slprop)
+  (#iter: perm -> t' -> list (cbor & cbor) -> slprop)
+  (f: map_iterator_is_empty_t iter)
+  (g: map_iterator_next_t vmatch2 iter)
+  (gshare: share_t vmatch2)
+  (ggather: gather_t vmatch2)
+  (gkey: map_entry_key_t vmatch2 vmatch)
+  (gvalue: map_entry_value_t vmatch2 vmatch)
+: map_iterator_next_safe_t #_ #_ vmatch iter
+=
+  (x: _)
+  (dest_key: _)
+  (dest_value: _)
+  (#y: _)
+  (#p: _)
+  (#z: _)
+  (#vdest_key: _)
+  (#vdest_value: _)
+{
+  if (R.is_null x || R.is_null dest_key || R.is_null dest_value) {
+    fold (map_iterator_next_safe_post_false iter y p z (Ghost.reveal vdest_key) (Ghost.reveal vdest_value) y (Ghost.reveal vdest_key) (Ghost.reveal vdest_value));
+    rewrite (map_iterator_next_safe_post_false iter y p z (Ghost.reveal vdest_key) (Ghost.reveal vdest_value) y (Ghost.reveal vdest_key) (Ghost.reveal vdest_value))
+      as map_iterator_next_safe_post vmatch iter x dest_key dest_value y p z vdest_key vdest_value y vdest_key vdest_value;
+    false
+  } else {
+    rewrite ref_pts_to_or_null x 1.0R y as pts_to x y;
+    let y = !x;
+    if f y {
+      rewrite pts_to x y as ref_pts_to_or_null x 1.0R y;
+      fold (map_iterator_next_safe_post_false iter y p z (Ghost.reveal vdest_key) (Ghost.reveal vdest_value) y (Ghost.reveal vdest_key) (Ghost.reveal vdest_value));
+      rewrite (map_iterator_next_safe_post_false iter y p z (Ghost.reveal vdest_key) (Ghost.reveal vdest_value) y (Ghost.reveal vdest_key) (Ghost.reveal vdest_value))
+        as map_iterator_next_safe_post vmatch iter x dest_key dest_value y p z vdest_key vdest_value y vdest_key vdest_value;
+      false
+    } else {
+      rewrite ref_pts_to_or_null dest_key 1.0R vdest_key as pts_to dest_key vdest_key;
+      rewrite ref_pts_to_or_null dest_value 1.0R vdest_value as pts_to dest_value vdest_value;
+      let res = g x;
+      with pres vres . assert (vmatch2 pres res vres);
+      gshare res;
+      intro
+        (Trade.trade
+          (vmatch2 (pres /. 2.0R) res vres ** vmatch2 (pres /. 2.0R) res vres)
+          (vmatch2 pres res vres)
+        )
+        fn _ {
+          ggather res;
+          rewrite vmatch2 (pres /. 2.0R +. pres /. 2.0R) res vres
+            as vmatch2 pres res vres
+        };
+      let res_key = gkey res;
+      Trade.trans_hyp_l _ _ _ (vmatch2 pres res vres);
+      let res_value = gvalue res;
+      Trade.trans_hyp_r _ _ _ (vmatch2 pres res vres);
+      Trade.trans_hyp_l _ (vmatch2 pres res vres) _ _;
+      dest_key := res_key;
+      dest_value := res_value;
+      rewrite pts_to dest_key res_key as ref_pts_to_or_null dest_key 1.0R res_key;
+      rewrite pts_to dest_value res_value as ref_pts_to_or_null dest_value 1.0R res_value;
+      with p' y' z' . assert (pts_to x y' ** iter p' y' z');
+      rewrite pts_to x y' as ref_pts_to_or_null x 1.0R y';
+      fold (map_iterator_next_safe_post_true vmatch iter y p z y' res_key res_value);
+      rewrite (map_iterator_next_safe_post_true vmatch iter y p z y' res_key res_value) as
+        map_iterator_next_safe_post vmatch iter x dest_key dest_value y p z vdest_key vdest_value y' res_key res_value;
+      true
+    }
+  }
+}
+
 inline_for_extraction
 let reset_perm_t
   (#t1 #t2: Type)
@@ -613,14 +1688,6 @@ let mk_simple_t
   stt t
     (emp)
     (fun res -> vmatch 1.0R res (pack (CSimple v)))
-
-let ref_pts_to_or_null
-  (#t: Type)
-  (r: ref t)
-  (p: perm)
-  (v: t)
-: Tot slprop
-= if R.is_null r then emp else pts_to r #p v
 
 let mk_simple_safe_res
   (#t: Type)
