@@ -562,6 +562,7 @@ fn cbor_det_map_get_post_to_safe
   (vk: Spec.cbor)
   (res: option cbordet)
 requires
+  pure (Spec.CMap? (Spec.unpack vx) /\ Some? (Spec.cbor_map_get (Spec.CMap?.c (Spec.unpack vx)) vk) == Some? res) **
   map_get_post cbor_det_match x.map px vx vk res **
   Trade.trade (cbor_det_match px x.map vx) (cbor_det_map_match px x vx)
 ensures

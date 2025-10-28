@@ -3126,7 +3126,7 @@ let map_get_post_none
   (vk: cbor)
 : Tot slprop
 =
-  vmatch px x vx ** pure (CMap? (unpack vx) /\ None? (cbor_map_get (CMap?.c (unpack vx)) vk))
+  vmatch px x vx
 
 let map_get_post_some
   (#t: Type)
@@ -3179,6 +3179,75 @@ let map_get_by_ref_t
         mk_map_gen_by_ref_postcond (Ghost.reveal vdest0) res vdest bres
       )
     )
+
+let map_get_by_ref_safe_postcond
+  (#t: Type)
+  (dest: R.ref t)
+  (vx: cbor)
+  (vk: cbor)
+  (vdest0: t)
+  (vdest: t)
+  (res: option t)
+  (bres: bool)
+: Tot prop
+= bres == ((not (R.is_null dest)) && CMap? (unpack vx) && Some? (cbor_map_get (CMap?.c (unpack vx)) vk)) /\
+  mk_map_gen_by_ref_postcond vdest0 res vdest bres
+
+inline_for_extraction
+let map_get_by_ref_safe_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+= (x: t) ->
+  (k: t) ->
+  (dest: R.ref t) ->
+  (#px: perm) ->
+  (#vx: Ghost.erased cbor) ->
+  (#pk: perm) ->
+  (#vk: Ghost.erased cbor) ->
+  (#vdest0: Ghost.erased t) ->
+  stt bool
+    (vmatch px x vx ** vmatch pk k vk ** ref_pts_to_or_null dest 1.0R vdest0)
+    (fun bres -> exists* vdest res .
+      vmatch pk k vk **
+      map_get_post vmatch x px vx vk res **
+      ref_pts_to_or_null dest 1.0R vdest **
+      pure (
+        map_get_by_ref_safe_postcond dest vx vk vdest0 vdest res bres
+      )
+    )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn map_get_by_ref_safe
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (mt: get_major_type_t vmatch)
+  (f: map_get_by_ref_t vmatch)
+: map_get_by_ref_safe_t #_ vmatch
+= (x: t)
+  (k: t)
+  (dest: R.ref t)
+  (#px: perm)
+  (#vx: Ghost.erased cbor)
+  (#pk: perm)
+  (#vk: Ghost.erased cbor)
+  (#vdest0: Ghost.erased t)
+{
+  if R.is_null dest {
+    fold (map_get_post_none vmatch x px vx vk);
+    fold (map_get_post vmatch x px vx vk None);
+    false
+  } else if (mt x <> cbor_major_type_map) {
+    fold (map_get_post_none vmatch x px vx vk);
+    fold (map_get_post vmatch x px vx vk None);
+    false
+  } else {
+    rewrite ref_pts_to_or_null dest 1.0R vdest0 as pts_to dest vdest0;
+    let bres = f x k dest;
+    with vdest . rewrite pts_to dest vdest as ref_pts_to_or_null dest 1.0R vdest;
+    bres
+  }
+}
 
 inline_for_extraction
 let map_get_t
