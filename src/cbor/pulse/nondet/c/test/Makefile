@@ -16,7 +16,7 @@ CFLAGS += -Werror -I $(EVERPARSE_INCLUDE_PATH)
 CBORNondetTest: CBORNondetTest.exe
 	./CBORNondetTest.exe
 
-OBJ_FILES=CBORNondetTest.o main.o
+OBJ_FILES=CBORNondetTest.o main.o qcbortests.o
 
 $(OBJ_FILES): %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<

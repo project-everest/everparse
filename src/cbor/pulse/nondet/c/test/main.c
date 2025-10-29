@@ -3,6 +3,7 @@
 #include <time.h>
 #include "CBORNondet.h"
 #include "CBORNondetTest.h"
+#include "qcbortests.h"
 
 static int do_test(uint8_t *source_bytes, size_t len, bool success) {
   clock_t start = clock ();
@@ -66,6 +67,9 @@ int main(void) {
   if (res != 0)
     return res;
   res = large_array_test();
+  if (res != 0)
+    return res;
+  res = qcbortests();
   if (res != 0)
     return res;
   return 0;
