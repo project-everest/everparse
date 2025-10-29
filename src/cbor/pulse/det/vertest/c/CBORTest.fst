@@ -68,7 +68,7 @@ let exit_impossible : I32.t = 2l
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let cbor_det_mk_string_from_array () =
-  mk_string_from_array (mk_string_from_slice (cbor_det_mk_string_from_arrayptr ()))
+  mk_string_from_array (mk_string_from_slice (mk_string_from_arrayptr_dispatch (cbor_det_mk_byte_string_from_arrayptr ()) (cbor_det_mk_text_string_from_arrayptr ())) (dummy_cbor_det_t ()))
 
 #push-options "--z3rlimit 32"
 

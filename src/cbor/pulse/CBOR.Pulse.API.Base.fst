@@ -1799,6 +1799,29 @@ let mk_int64_t
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
+fn mk_int64_dispatch
+  (#t: Type0)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (mk_uint64: mk_int64_gen_t #_ vmatch cbor_major_type_uint64)
+  (mk_neg_int64: mk_int64_gen_t #_ vmatch cbor_major_type_neg_int64)
+: mk_int64_t #_ vmatch
+= (ty: _)
+  (v: _)
+{
+  let ty2 = ty;
+  if (ty2 = cbor_major_type_uint64) {
+    let res = mk_uint64 v;
+    rewrite (vmatch 1.0R res (pack (CInt64 cbor_major_type_uint64 v))) as (vmatch 1.0R res (pack (CInt64 ty v)));
+    res
+  } else {
+    let res = mk_neg_int64 v;
+    rewrite (vmatch 1.0R res (pack (CInt64 cbor_major_type_neg_int64 v))) as (vmatch 1.0R res (pack (CInt64 ty v)));
+    res
+  }
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
 fn mk_int64_trade
   (#t: Type0)
   (vmatch: perm -> t -> cbor -> slprop)
@@ -2087,6 +2110,29 @@ fn mk_string_from_arrayptr
         as (mk_string_from_arrayptr_post vmatch ty a p dest v (Ghost.reveal w) (Ghost.reveal w));
       false
     }
+  }
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn mk_string_from_arrayptr_dispatch
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (mk_byte: mk_string_from_arrayptr_t vmatch cbor_major_type_byte_string)
+  (mk_text: mk_string_from_arrayptr_t vmatch cbor_major_type_text_string)
+  (ty: major_type_byte_string_or_text_string)
+: mk_string_from_arrayptr_t #_ vmatch ty
+= (a: _)
+  (len: _)
+  (dest: _)
+  (#p: _)
+  (#v: _)
+  (#w: _)
+{
+  if (ty = cbor_major_type_byte_string) {
+    mk_byte a len dest
+  } else {
+    mk_text a len dest
   }
 }
 
