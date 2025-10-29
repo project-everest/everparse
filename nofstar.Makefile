@@ -24,13 +24,18 @@ cbor-det-c-test: cbor
 
 .PHONY: cbor-det-c-test
 
+cbor-nondet-c-test: cbor
+	+$(MAKE) -C src/cbor/pulse/nondet/c all-tests
+
+.PHONY: cbor-nondet-c-test
+
 # NOTE: I wish we could use `cargo -C ...` but see https://github.com/rust-lang/cargo/pull/11960
 cbor-det-rust-test: cbor
 	+cd src/cbor/pulse/det/rust && cargo test
 
 .PHONY: cbor-det-rust-test
 
-cbor-test-unverified: cbor-det-c-test cbor-det-rust-test
+cbor-test-unverified: cbor-det-c-test cbor-det-rust-test cbor-nondet-c-test
 
 .PHONY: cbor-test-unverified
 
