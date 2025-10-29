@@ -48,7 +48,7 @@ pulse/krml.do: pulse/raw/everparse.do
 
 .PHONY: interface snapshot test-snapshot
 
-clean: pulse/det.clean
+clean: pulse/det.clean pulse/nondet.clean
 
 .PHONY: clean
 
