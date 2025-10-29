@@ -7,22 +7,23 @@ type c = [
 let gen_int (x: int) (name: string) : c list =
   let major_type, count =
     if x >= 0
-    then ("UINT64", x)
-    else ("NEG_INT64", -1-x)
+    then ("u", x)
+    else ("neg_", -1-x)
   in
-  [`Instr ("cbor_nondet_t " ^ name ^ " = cbor_nondet_mk_int64(CBOR_MAJOR_TYPE_" ^ major_type ^ "," ^ string_of_int count ^ ")")]
+  [`Instr ("cbor_nondet_t " ^ name ^ " = cbor_nondet_mk_" ^ major_type ^ "int64(" ^ string_of_int count ^ ")")]
 
 let quote_string s = Yojson.Safe.to_string (`String s)
 
 let gen_string (s: string) (name: string) : c list =
-  [`Instr ("cbor_nondet_t " ^ name ^ " = cbor_nondet_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *" ^ ")" ^ quote_string s ^ ", " ^ string_of_int (String.length s) ^ ")")]
+  [`Instr ("cbor_nondet_t " ^ name);
+   `Instr ("assert (cbor_nondet_mk_text_string((uint8_t *" ^ ")" ^ quote_string s ^ ", " ^ string_of_int (String.length s) ^ ", &" ^ name ^ "))")]
 
 let gen_map (gen: Yojson.Safe.t -> string -> c list) (l: (string * Yojson.Safe.t) list) (name: string) : c list =
   let len = List.length l in
   let elt i = name ^ "_map[" ^ string_of_int i ^ "]" in
   let accu = [
       `Instr ("cbor_nondet_t " ^ name ^ ";");
-      `If ("! cbor_nondet_mk_map_gen(" ^ name ^ "_map, " ^ string_of_int len ^ ", &" ^ name ^ ")");
+      `If ("! cbor_nondet_mk_map(" ^ name ^ "_map, " ^ string_of_int len ^ ", &" ^ name ^ ")");
       `Block [
           `Instr ("printf(\"Map build failed for " ^ name ^ "\\n\")");
           `Instr ("return 1");
@@ -48,11 +49,15 @@ let gen_map (gen: Yojson.Safe.t -> string -> c list) (l: (string * Yojson.Safe.t
 let gen_array (gen: Yojson.Safe.t -> string -> c list) (l: Yojson.Safe.t list) (name: string) : c list =
   let len = List.length l in
   let elt i = name ^ "_array[" ^ string_of_int i ^ "]" in
-  let accu = [`Instr ("cbor_nondet_t " ^ name ^ " = cbor_nondet_mk_array(" ^ name ^ "_array, " ^ string_of_int len ^ ")")] in
+  let accu = [
+      `Instr ("cbor_nondet_t " ^ name);
+      `Instr ("assert (cbor_nondet_mk_array(" ^ name ^ "_array, " ^ string_of_int len ^ ", &" ^ name ^ "))");
+  ]
+  in
   let rec aux accu i = function
   | [] -> accu
   | x :: q->
-    let value_name = name ^ "_map_" ^ string_of_int i in
+    let value_name = name ^ "_array_" ^ string_of_int i in
     let accu' =
       gen x value_name @
       `Instr (elt i ^ " = " ^ value_name) ::
@@ -125,16 +130,17 @@ let gen_encoding_test_c
         []
      ) ::
     `Instr ("printf(\"Encoding succeeded!\\n\")") ::
-    `Instr ("size_t target_byte_size2 = cbor_nondet_validate(false, 0, false, target_bytes, target_byte_size)") ::
-    `If ("target_byte_size2 != target_byte_size") ::
+    `Instr ("size_t remaining_size = " ^ size_s) ::
+    `Instr ("uint8_t *target_bytes2 = target_bytes") ::
+    `Instr ("cbor_nondet_t target_cbor") ::
+    `Instr ("bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor)") ::
+    `If (size_s ^ " - remaining_size != target_byte_size || ! valid") ::
     `Block (
-        `Instr ("printf(\"Validation failed: expected " ^ size_s ^ " bytes, got %ld\\n\", target_byte_size)") ::
+        `Instr ("printf(\"Validation failed: expected " ^ size_s ^ " bytes, got %ld\\n\", " ^ size_s ^ " - remaining_size)") ::
         `Instr ("return 1") ::
         []
     ) ::
-    `Instr ("printf(\"Validation succeeded!\\n\")") ::
-    `Instr ("cbor_nondet_t target_cbor = cbor_nondet_parse_valid(target_bytes, target_byte_size2)") ::
-    `Instr ("printf(\"Parsing succeeded!\\n\")") ::
+    `Instr ("printf(\"Validation and parsing succeeded!\\n\")") ::
     `If ("! (cbor_nondet_equal(source_cbor, target_cbor))") ::
     `Block (
         `Instr ("printf(\"Decoding mismatch!\\n\")") ::
@@ -142,16 +148,16 @@ let gen_encoding_test_c
         []
     ) ::
     `Instr ("printf(\"Decoding succeeded!\\n\")") ::
-    `Instr ("target_byte_size2 = cbor_nondet_validate(false, 0, false, source_bytes, target_byte_size)") ::
-    `If ("target_byte_size2 == 0") ::
+    `Instr ("remaining_size = " ^ size_s) ::
+    `Instr ("target_bytes2 = source_bytes") ::
+    `Instr ("valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor)") ::
+    `If (size_s ^ " - remaining_size != target_byte_size || ! valid") ::
     `Block (
-        `Instr ("printf(\"Validation failed: expected " ^ size_s ^ " bytes, got 0\\n\")") ::
+        `Instr ("printf(\"Validation failed: expected " ^ size_s ^ " bytes, got %ld\\n\", " ^ size_s ^ " - remaining_size)") ::
         `Instr ("return 1") ::
         []
     ) ::
-    `Instr ("printf(\"Validation succeeded!\\n\")") ::
-    `Instr ("target_cbor = cbor_nondet_parse_valid(source_bytes, target_byte_size2)") ::
-    `Instr ("printf(\"Parsing succeeded!\\n\")") ::
+    `Instr ("printf(\"Validation and parsing succeeded!\\n\")") ::
     `If ("! (cbor_nondet_equal(source_cbor, target_cbor))") ::
     `Block (
         `Instr ("printf(\"Decoding mismatch!\\n\")") ::
@@ -241,29 +247,38 @@ let gen_utf8_tests () : c list = In_channel.with_open_bin "./utf8tests.txt" (fun
            let (nlen, hex) = gen_hex strhex "mystr" in
            let len = string_of_int nlen in
            let outlen = string_of_int (nlen + 9) in
-           let accu' = `Block begin
+           let succeeded = if is_valid then "succeeded" else "failed" in
+           let failed = if is_valid then "failed" else "succeeded" in
+           let accu_block = begin
                `Instr ("printf(\"UTF-8 Test " ^ id ^ ". Testing text string encoding and UTF-8 validation for: " ^ strhex ^ "\\n\")") ::
                `Instr hex ::
-               `Instr ("cbor_nondet_t mycbor = cbor_nondet_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mystr, " ^ len ^ ")") ::
+               `Instr ("cbor_nondet_t mycbor") ::
+               `If ((if is_valid then "!" else "") ^ "cbor_nondet_mk_text_string(mystr, " ^ len ^ ", &mycbor)") ::
+               `Block [
+                   `Instr("printf(\"CBOR object construction attempt " ^ failed ^ " but it was expected to have " ^ succeeded ^ "\\n\")");
+                   `Instr ("return 1");
+                 ] ::
+               `Instr("printf(\"CBOR object construction attempt " ^ succeeded ^ " as expected\\n\")") ::
+               []
+            end @ if is_valid then begin
                `Instr ("uint8_t output[" ^ outlen ^ "]") ::
                `Instr ("size_t serialized_size = cbor_nondet_serialize(mycbor, output, " ^ outlen ^ ")") ::
                `If ("serialized_size == 0") ::
                `Block [
-                   `Instr ("printf(\"Could not serialize: expected " ^ outlen ^ ", got %ld\\n\", serialized_size)");
+                   `Instr ("printf(\"Serialization failed\")");
                    `Instr ("return 1")
                  ] ::
                `Instr ("printf(\"Serialization succeeded!\\n\")") ::
-               `Instr ("size_t test = cbor_nondet_validate(false, 0, false, output, " ^ outlen ^ ")") ::
-               begin
-                 if is_valid
-                 then
-                   `If ("test != serialized_size") ::
+               `Instr ("size_t test = " ^ outlen) ::
+               `Instr ("uint8_t *output2 = output") ::
+               `Instr ("cbor_nondet_t outcbor") ::
+               `Instr ("bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor)") ::
+                   `If (outlen ^ " - test != serialized_size || ! valid") ::
                    `Block [
                        `Instr ("printf(\"Validation failed, but it was expected to succeed\\n\")");
                        `Instr ("return 1")
                    ] ::
                    `Instr ("printf(\"Validation succeeded!\\n\")") ::
-                   `Instr ("cbor_nondet_t outcbor = cbor_nondet_parse_valid(output, serialized_size)") ::
                    `If ("! cbor_nondet_equal(mycbor, outcbor)") ::
                    `Block [
                        `Instr ("printf(\"Round-trip failed\\n\")");
@@ -271,17 +286,9 @@ let gen_utf8_tests () : c list = In_channel.with_open_bin "./utf8tests.txt" (fun
                      ] ::
                    `Instr ("printf(\"Round-trip succeeded!\\n\")") ::
                    []
-                 else
-                   `If ("test != 0") ::
-                   `Block [
-                       `Instr ("printf(\"Validation succeeded, but it was expected to fail\\n\")");
-                       `Instr ("return 1")
-                   ] ::
-                   `Instr ("printf(\"Validation failed as expected!\\n\")") ::
-                   []
-               end
-             end :: accu
+             end else []
            in
+           let accu' = `Block accu_block :: accu in
            aux accu'
   in
   aux []
@@ -291,6 +298,7 @@ let mk_prog (x: c list) = "
 #include <string.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include <assert.h>
 #include \"CBORNondet.h\"
 #include \"CBORNondetTest.h\"
 
