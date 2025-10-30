@@ -91,6 +91,11 @@ standalone and does not need a separate installation of EverCBOR.
 
 More options are available, use `--help` for more details.
 
+NOTE: EverCDDL currently only supports the deterministic encoding of
+CBOR. While EverCBOR also offers an implementation for
+non-deterministic, definite-length CBOR objects, we have not connected
+it with EverCDDL yet.
+
 ## QuackyDucky
 
 Run `./bin/qd.exe -help` to get instructions on how to run QuackyDucky.
@@ -115,11 +120,22 @@ TODO: integrate [documentation and example by Samuel Chassot](https://github.com
 
 EverParse presents EverCBOR, our formally verified implementation of CBOR.
 
-NOTE: Currently, we only support the deterministic subset of CBOR. Full support of CBOR is coming soon.
+We offer two distributions: CBORNondet supports definite-length CBOR
+objects, and CBORDet supports deterministically encoded CBOR objects
+(RFC 8979 Section 4.2.1)
+
+NOTE: In both cases, we do not support floating-point values
+yet. Equivalence of floating-point NaNs for the purpose of map key
+comparisons has not been fully standardized in IETF CBOR yet; related
+discussions are ongoing, and we intend to extend our verified
+implementation with support for floating-point values once such
+discussions stabilize.
+
+NOTE: Currently, CBORNondet and CBORDet cannot be used together yet.
 
 * C:
 
-  + The generated C source files for CBOR are in
+  + The generated C source files for the CBOR deterministic encoding are in
     `src/cbor/pulse/det/c`, which also contains some tests in the
     `test` subdirectory. There, the header file is `CBORDet.h`. The
     object file is `CBORDet.o`, which you can link with your
@@ -128,15 +144,27 @@ NOTE: Currently, we only support the deterministic subset of CBOR. Full support 
   + A fully documented example is in
     `src/cbor/pulse/det/c/example`. There, `main.c` documents the C
     API; its `Makefile` shows how to compile and link against CBORDet.
+
+  + The generated C source files for CBORNondet are in
+    `src/cbor/pulse/nondet/c`, which also contains some tests in the
+    `test` subdirectory. There, the header file is `CBORNondet.h`. The
+    object file is `CBORNondet.o`, which you can link with your
+    application.
   
+  + A fully documented example is in
+    `src/cbor/pulse/nondet/c/example`. There, `main.c` documents the C
+    API; its `Makefile` shows how to compile and link against CBORNondet.
+
 * Rust:
 
-  + The generated Rust source files for CBOR are in
+  + The generated Rust source files for the CBOR deterministic encoding are in
     `src/cbor/pulse/det/rust` , where you can use `cargo build` and
     `cargo test` ; the crate is called `cborrs`.
 
   + The generated HTML documentation of `cborrs` is at
     `https://project-everest.github.io/everparse/evercbor-rust/cborrs/`
+
+  + TODO: Take a snapshot of the generated Rust source files for CBORNondet
 
 ## EverCOSign
 
