@@ -3483,7 +3483,6 @@ let cbor_nondet_parse_from_arrayptr_postcond
   (#cbor_nondet_t: Type)
   (check_map_key_bound: bool)
   (map_key_bound: SZ.t)
-  (strict_check: bool)
   (pinput: R.ref (AP.ptr U8.t))
   (plen: R.ref SZ.t)
   (input: AP.ptr U8.t)
@@ -3493,7 +3492,7 @@ let cbor_nondet_parse_from_arrayptr_postcond
 : GTot bool
 = if (R.is_null pinput || R.is_null plen || AP.g_is_null input || R.is_null dest)
   then res = 0sz
-  else cbor_nondet_validate_post (if check_map_key_bound then Some map_key_bound else None) strict_check v res
+  else cbor_nondet_validate_post (if check_map_key_bound then Some map_key_bound else None) check_map_key_bound v res
 
 let cbor_nondet_parse_from_arrayptr_post_true
   (#cbor_nondet_t: Type)
@@ -3538,7 +3537,6 @@ let cbor_nondet_parse_from_arrayptr_t
 =
   (check_map_key_bound: bool) ->
   (map_key_bound: SZ.t) ->
-  (strict_check: bool) ->
   (pinput: R.ref (AP.ptr U8.t)) ->
   (plen: R.ref SZ.t) ->
   (dest: R.ref cbor_nondet_t) ->
@@ -3568,7 +3566,7 @@ let cbor_nondet_parse_from_arrayptr_t
         v' == Seq.slice v (SZ.v len - SZ.v len') (Seq.length v) /\
         b == (SZ.v len' < SZ.v len) /\
         (b == false ==> input' == Ghost.reveal input) /\
-        cbor_nondet_parse_from_arrayptr_postcond check_map_key_bound map_key_bound strict_check pinput plen input v dest (SZ.sub len len')
+        cbor_nondet_parse_from_arrayptr_postcond check_map_key_bound map_key_bound pinput plen input v dest (SZ.sub len len')
       )
     )
 
@@ -3583,7 +3581,6 @@ fn cbor_nondet_parse_from_arrayptr
 =
   (check_map_key_bound: bool)
   (map_key_bound: SZ.t)
-  (strict_check: bool)
   (pinput: R.ref (AP.ptr U8.t))
   (plen: R.ref SZ.t)
   (dest: R.ref cbor_nondet_t)
@@ -3609,7 +3606,7 @@ fn cbor_nondet_parse_from_arrayptr
       let len = !plen;
       let s = S.arrayptr_to_slice_intro_trade input len;
       S.pts_to_len s;
-      let consume = validate (if check_map_key_bound then Some map_key_bound else None) strict_check s;
+      let consume = validate (if check_map_key_bound then Some map_key_bound else None) check_map_key_bound s;
       Trade.elim _ _;
       if (consume = 0sz) {
         rewrite pts_to plen len as ref_pts_to_or_null plen 1.0R len;
