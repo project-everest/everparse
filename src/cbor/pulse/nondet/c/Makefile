@@ -14,7 +14,7 @@ extract: $(OUTPUT_DIRECTORY)/CBORNondet.o
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-all-tests: test
+all-tests: test example
 
 .PHONY: all-tests
 
@@ -23,12 +23,17 @@ test: extract
 
 .PHONY: test
 
+example: extract
+	+$(MAKE) -C $@
+
+.PHONY: example
+
 clean-o:
 	rm -f *.o
 
 .PHONY: clean-o
 
-clean: clean-o test.clean
+clean: clean-o test.clean example.clean
 
 .PHONY: clean
 
