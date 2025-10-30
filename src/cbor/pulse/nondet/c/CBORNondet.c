@@ -6329,7 +6329,6 @@ bool
 cbor_nondet_parse(
   bool check_map_key_bound,
   size_t map_key_bound,
-  bool strict_check,
   uint8_t **pinput,
   size_t *plen,
   cbor_raw *dest
@@ -6358,7 +6357,7 @@ cbor_nondet_parse(
           );
       else
         ite = ((FStar_Pervasives_Native_option__size_t){ .tag = FStar_Pervasives_Native_None });
-      size_t consume = CBOR_Pulse_API_Nondet_Rust_cbor_nondet_validate(ite, strict_check, s);
+      size_t consume = CBOR_Pulse_API_Nondet_Rust_cbor_nondet_validate(ite, check_map_key_bound, s);
       if (consume == (size_t)0U)
         return false;
       else

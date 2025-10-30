@@ -230,7 +230,6 @@ bool
 cbor_nondet_parse(
   bool check_map_key_bound,
   size_t map_key_bound,
-  bool strict_check,
   uint8_t **pinput,
   size_t *plen,
   cbor_raw *dest
