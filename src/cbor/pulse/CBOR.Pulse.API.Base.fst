@@ -275,6 +275,90 @@ fn read_uint64_safe
   }
 }
 
+module I64 = FStar.Int64
+
+let read_int64_safe_postcond
+  (dest: ref I64.t)
+  (y: cbor)
+  (vdest: I64.t)
+  (res: bool)
+  (vdest': I64.t)
+: Tot prop
+=
+      res == (match unpack y with
+      | CInt64 ty v ->
+        not (R.is_null dest) && FStar.Int.fits (if ty = cbor_major_type_neg_int64 then -1 - U64.v v else U64.v v) 64
+      | _ -> false
+      ) /\
+      (if res
+      then
+        let CInt64 ty v = unpack y in
+        I64.v vdest' == (if ty = cbor_major_type_neg_int64 then -1 - U64.v v else U64.v v)
+      else vdest' == Ghost.reveal vdest
+      )
+
+inline_for_extraction
+let read_int64_safe_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+= (x: t) ->
+  (dest: ref I64.t) ->
+  (#p: perm) ->
+  (#y: Ghost.erased cbor) ->
+  (#vdest: Ghost.erased I64.t) ->
+  stt bool
+    (vmatch p x y ** ref_pts_to_or_null dest 1.0R vdest)
+    (fun res -> exists* vdest' . vmatch p x y ** ref_pts_to_or_null dest 1.0R vdest' ** pure (
+      read_int64_safe_postcond dest y vdest res vdest'
+    ))
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn read_int64_safe
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (mt: get_major_type_t vmatch)
+  (f: read_uint64_t vmatch)
+: read_int64_safe_t #_ vmatch
+=
+  (x: _)
+  (dest: _)
+  (#p: _)
+  (#y: _)
+  (#vdest: _)
+{
+  if (R.is_null dest) {
+    false
+  } else {
+    let ty = mt x;
+    if (ty = cbor_major_type_uint64) {
+      let raw = f x;
+      if (U64.gt raw 9223372036854775807UL) {
+        false
+      } else {
+        rewrite ref_pts_to_or_null dest 1.0R vdest as pts_to dest vdest;
+        let res : I64.t = FStar.Int.Cast.uint64_to_int64 raw;
+        dest := res;
+        rewrite pts_to dest res as ref_pts_to_or_null dest 1.0R res;
+        true
+      }
+    } else if (ty = cbor_major_type_neg_int64) {
+      let raw = f x;
+      if (U64.gt raw 9223372036854775807UL) {
+        false
+      } else {
+        rewrite ref_pts_to_or_null dest 1.0R vdest as pts_to dest vdest;
+        let res : I64.t = I64.sub (-1L) (FStar.Int.Cast.uint64_to_int64 raw);
+        dest := res;
+        rewrite pts_to dest res as ref_pts_to_or_null dest 1.0R res;
+        true
+      }
+    } else {
+      false
+    }
+  }
+}
+
 inline_for_extraction
 let elim_int64_t
   (#t: Type)
@@ -368,13 +452,15 @@ fn get_string_as_arrayptr
 }
 
 let get_string_as_arrayptr_safe_res
+  (ty: option major_type_byte_string_or_text_string)
   (dest: R.ref (AP.ptr U8.t))
   (dlen: R.ref U64.t)
   (y: cbor)
 : GTot bool
 = (not (R.is_null dest)) &&
   (not (R.is_null dlen)) &&
-  CString? (unpack y)
+  CString? (unpack y) &&
+  begin if Some? ty then CString?.typ (unpack y) = Some?.v ty else true end
 
 let get_string_as_arrayptr_safe_post_true
   (#t: Type)
@@ -408,6 +494,7 @@ let get_string_as_arrayptr_safe_post_false
 = vmatch p x y ** pure (vdest' == vdest /\ vlen' == vlen)
 
 let get_string_as_arrayptr_safe_post
+  (ty: option major_type_byte_string_or_text_string)
   (#t: Type)
   (vmatch: perm -> t -> cbor -> slprop)
   (x: t)
@@ -420,12 +507,13 @@ let get_string_as_arrayptr_safe_post
   (vdest': AP.ptr U8.t)
   (vlen': U64.t)
 : Tot slprop
-= if get_string_as_arrayptr_safe_res dest dlen y
+= if get_string_as_arrayptr_safe_res ty dest dlen y
   then get_string_as_arrayptr_safe_post_true vmatch x p y vdest' vlen'
   else get_string_as_arrayptr_safe_post_false vmatch x p y vdest vlen vdest' vlen'
 
 inline_for_extraction
-let get_string_as_arrayptr_safe_t
+let get_string_as_arrayptr_safe_gen_t
+  (ty: option major_type_byte_string_or_text_string)
   (#t: Type)
   (vmatch: perm -> t -> cbor -> slprop)
 = (x: t) ->
@@ -439,9 +527,12 @@ let get_string_as_arrayptr_safe_t
     (vmatch p x y ** ref_pts_to_or_null dest 1.0R vdest ** ref_pts_to_or_null dlen 1.0R vlen)
     (fun res -> exists* vdest' vlen' .
       ref_pts_to_or_null dest 1.0R vdest' ** ref_pts_to_or_null dlen 1.0R vlen' **
-      get_string_as_arrayptr_safe_post vmatch x dest dlen p y vdest vlen vdest' vlen' **
-      pure (res == get_string_as_arrayptr_safe_res dest dlen y)
+      get_string_as_arrayptr_safe_post ty vmatch x dest dlen p y vdest vlen vdest' vlen' **
+      pure (res == get_string_as_arrayptr_safe_res ty dest dlen y)
     )
+
+inline_for_extraction
+let get_string_as_arrayptr_safe_t = get_string_as_arrayptr_safe_gen_t None
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -464,14 +555,14 @@ fn get_string_as_arrayptr_safe
   if (R.is_null dest || R.is_null dlen) {
     fold (get_string_as_arrayptr_safe_post_false vmatch x p y vdest vlen vdest vlen);
     rewrite (get_string_as_arrayptr_safe_post_false vmatch x p y vdest vlen vdest vlen)
-      as (get_string_as_arrayptr_safe_post vmatch x dest dlen p y vdest vlen vdest vlen);
+      as (get_string_as_arrayptr_safe_post None vmatch x dest dlen p y vdest vlen vdest vlen);
     false
   } else {
     let ty = mt x;
     if (ty <> cbor_major_type_byte_string && ty <> cbor_major_type_text_string) {
       fold (get_string_as_arrayptr_safe_post_false vmatch x p y vdest vlen vdest vlen);
       rewrite (get_string_as_arrayptr_safe_post_false vmatch x p y vdest vlen vdest vlen)
-        as (get_string_as_arrayptr_safe_post vmatch x dest dlen p y vdest vlen vdest vlen);
+        as (get_string_as_arrayptr_safe_post None vmatch x dest dlen p y vdest vlen vdest vlen);
       false
     } else {
       rewrite ref_pts_to_or_null dest 1.0R vdest as pts_to dest vdest;
@@ -484,11 +575,41 @@ fn get_string_as_arrayptr_safe
       rewrite pts_to dlen len as ref_pts_to_or_null dlen 1.0R len;
       fold (get_string_as_arrayptr_safe_post_true vmatch x p y res len);
       rewrite (get_string_as_arrayptr_safe_post_true vmatch x p y res len) as
-        (get_string_as_arrayptr_safe_post vmatch x dest dlen p y vdest vlen res len);
+        (get_string_as_arrayptr_safe_post None vmatch x dest dlen p y vdest vlen res len);
       true
     }
   }
 }
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn get_string_as_arrayptr_safe_gen
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (mt: get_major_type_t vmatch)
+  (f: get_string_as_arrayptr_safe_t vmatch)
+  (ty: major_type_byte_string_or_text_string)
+: get_string_as_arrayptr_safe_gen_t (Some ty) #_ vmatch
+=
+  (x: _)
+  (dest: _)
+  (dlen: _)
+  (#p: _)
+  (#y: _)
+  (#vdest: _)
+  (#vlen: _)
+{
+  if (mt x <> ty) {
+    fold (get_string_as_arrayptr_safe_post_false vmatch x p y vdest vlen vdest vlen);
+    rewrite (get_string_as_arrayptr_safe_post_false vmatch x p y vdest vlen vdest vlen)
+      as (get_string_as_arrayptr_safe_post (Some ty) vmatch x
+      dest dlen p y vdest vlen vdest vlen);
+    false
+  } else {
+    f x dest dlen
+  }
+}
+
 
 let get_tagged_tag_post
   (y: cbor)
@@ -1789,7 +1910,6 @@ let mk_int64_gen_t
     (emp)
     (fun res -> vmatch 1.0R res (pack (CInt64 ty v)))
 
-
 inline_for_extraction
 let mk_int64_t
   (#t: Type)
@@ -1816,6 +1936,43 @@ fn mk_int64_dispatch
   } else {
     let res = mk_neg_int64 v;
     rewrite (vmatch 1.0R res (pack (CInt64 cbor_major_type_neg_int64 v))) as (vmatch 1.0R res (pack (CInt64 ty v)));
+    res
+  }
+}
+
+let major_int_type_of_int (x: int) : major_type_uint64_or_neg_int64 =
+  if x < 0 then cbor_major_type_neg_int64 else cbor_major_type_uint64
+
+let int_as_ones_complement_nat (x: int) : nat =
+  if x < 0 then -1 - x else x
+
+inline_for_extraction
+let mk_signed_int64_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+= (v: I64.t) ->
+  stt t
+    (emp)
+    (fun res -> vmatch 1.0R res (pack (CInt64 (major_int_type_of_int (I64.v v)) (U64.uint_to_t (int_as_ones_complement_nat (I64.v v))))))
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn mk_signed_int64
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (f: mk_int64_t vmatch)
+: mk_signed_int64_t #_ vmatch
+= (v: _)
+{
+  if (I64.lt v 0L) {
+    let res = f cbor_major_type_neg_int64 (FStar.Int.Cast.int64_to_uint64 (I64.sub (-1L) v));
+    rewrite vmatch 1.0R res (pack (CInt64 cbor_major_type_neg_int64 (FStar.Int.Cast.int64_to_uint64 (I64.sub (-1L) v))))
+    as vmatch 1.0R res (pack (CInt64 (major_int_type_of_int (I64.v v)) (U64.uint_to_t (int_as_ones_complement_nat (I64.v v)))));
+    res
+  } else {
+    let res = f cbor_major_type_uint64 (FStar.Int.Cast.int64_to_uint64 v);
+    rewrite vmatch 1.0R res (pack (CInt64 cbor_major_type_uint64 (FStar.Int.Cast.int64_to_uint64 v)))
+    as vmatch 1.0R res (pack (CInt64 (major_int_type_of_int (I64.v v)) (U64.uint_to_t (int_as_ones_complement_nat (I64.v v)))));
     res
   }
 }

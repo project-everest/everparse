@@ -23,9 +23,15 @@ let cbor_nondet_elim_simple () = Rust.cbor_nondet_elim_simple ()
 
 let cbor_nondet_read_uint64 () = read_uint64_safe (cbor_nondet_major_type ()) (Rust.cbor_nondet_read_uint64 ())
 
+let cbor_nondet_read_int64 () = read_int64_safe (cbor_nondet_major_type ()) (Rust.cbor_nondet_read_uint64 ())
+
 let cbor_nondet_elim_int64 () = Rust.cbor_nondet_elim_int64 ()
 
 let cbor_nondet_get_string () = get_string_as_arrayptr_safe (cbor_nondet_major_type ()) (Rust.cbor_nondet_get_string_length ()) (get_string_as_arrayptr (Rust.cbor_nondet_get_string ()))
+
+let cbor_nondet_get_byte_string () = get_string_as_arrayptr_safe_gen (cbor_nondet_major_type ()) (cbor_nondet_get_string ()) _
+
+let cbor_nondet_get_text_string () = get_string_as_arrayptr_safe_gen (cbor_nondet_major_type ()) (cbor_nondet_get_string ()) _
 
 let cbor_nondet_get_tagged () = get_tagged_safe (cbor_nondet_major_type ()) (Rust.cbor_nondet_get_tagged_tag ()) (Rust.cbor_nondet_get_tagged_payload ())
 
@@ -82,6 +88,8 @@ let cbor_nondet_mk_simple_value () = mk_simple_safe (Rust.cbor_nondet_mk_simple_
 let cbor_nondet_mk_uint64 () v = Rust.cbor_nondet_mk_int64 () cbor_major_type_uint64 v
 
 let cbor_nondet_mk_neg_int64 () v = Rust.cbor_nondet_mk_int64 () cbor_major_type_neg_int64 v
+
+let cbor_nondet_mk_int64 () = mk_signed_int64 (Rust.cbor_nondet_mk_int64 ())
 
 let cbor_nondet_mk_byte_string () = mk_string_from_arrayptr (Rust.cbor_nondet_mk_string ()) cbor_major_type_byte_string
 

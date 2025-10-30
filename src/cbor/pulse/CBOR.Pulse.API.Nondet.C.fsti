@@ -39,9 +39,15 @@ val cbor_nondet_elim_simple (_: unit) : elim_simple_t u#0 #_ cbor_nondet_match
 
 val cbor_nondet_read_uint64 (_: unit) : read_uint64_safe_t u#0 #_ cbor_nondet_match
 
+val cbor_nondet_read_int64 (_: unit) : read_int64_safe_t u#0 #_ cbor_nondet_match
+
 val cbor_nondet_elim_int64 (_: unit) : elim_int64_t u#0 #_ cbor_nondet_match
 
 val cbor_nondet_get_string (_: unit) : get_string_as_arrayptr_safe_t u#0 #_ cbor_nondet_match
+
+val cbor_nondet_get_byte_string (_: unit) : get_string_as_arrayptr_safe_gen_t u#0 (Some cbor_major_type_byte_string) #_ cbor_nondet_match
+
+val cbor_nondet_get_text_string (_: unit) : get_string_as_arrayptr_safe_gen_t u#0 (Some cbor_major_type_text_string) #_ cbor_nondet_match
 
 val cbor_nondet_get_tagged (_: unit) : get_tagged_safe_t #_ cbor_nondet_match
 
@@ -123,6 +129,8 @@ val cbor_nondet_mk_simple_value (_: unit) : mk_simple_safe_t #_ cbor_nondet_matc
 val cbor_nondet_mk_uint64 (_: unit) : mk_int64_gen_t u#0 #_ cbor_nondet_match cbor_major_type_uint64
 
 val cbor_nondet_mk_neg_int64 (_: unit) : mk_int64_gen_t u#0 #_ cbor_nondet_match cbor_major_type_neg_int64
+
+val cbor_nondet_mk_int64 (_: unit) : mk_signed_int64_t u#0 #_ cbor_nondet_match
 
 val cbor_nondet_mk_byte_string (_: unit) : mk_string_from_arrayptr_t #_ cbor_nondet_match cbor_major_type_byte_string
 
