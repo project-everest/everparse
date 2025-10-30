@@ -133,7 +133,7 @@ let gen_encoding_test_c
     `Instr ("size_t remaining_size = " ^ size_s) ::
     `Instr ("uint8_t *target_bytes2 = target_bytes") ::
     `Instr ("cbor_nondet_t target_cbor") ::
-    `Instr ("bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor)") ::
+    `Instr ("bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor)") ::
     `If (size_s ^ " - remaining_size != target_byte_size || ! valid") ::
     `Block (
         `Instr ("printf(\"Validation failed: expected " ^ size_s ^ " bytes, got %ld\\n\", " ^ size_s ^ " - remaining_size)") ::
@@ -150,7 +150,7 @@ let gen_encoding_test_c
     `Instr ("printf(\"Decoding succeeded!\\n\")") ::
     `Instr ("remaining_size = " ^ size_s) ::
     `Instr ("target_bytes2 = source_bytes") ::
-    `Instr ("valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor)") ::
+    `Instr ("valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor)") ::
     `If (size_s ^ " - remaining_size != target_byte_size || ! valid") ::
     `Block (
         `Instr ("printf(\"Validation failed: expected " ^ size_s ^ " bytes, got %ld\\n\", " ^ size_s ^ " - remaining_size)") ::
@@ -272,7 +272,7 @@ let gen_utf8_tests () : c list = In_channel.with_open_bin "./utf8tests.txt" (fun
                `Instr ("size_t test = " ^ outlen) ::
                `Instr ("uint8_t *output2 = output") ::
                `Instr ("cbor_nondet_t outcbor") ::
-               `Instr ("bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor)") ::
+               `Instr ("bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor)") ::
                    `If (outlen ^ " - test != serialized_size || ! valid") ::
                    `Block [
                        `Instr ("printf(\"Validation failed, but it was expected to succeed\\n\")");

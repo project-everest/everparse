@@ -242,23 +242,18 @@ int main(void) {
 
      * the expected maximum `depth` of map nesting in map keys. If the
        previous argument is true, then cbor_nondet_parse will use
-       O(depth) levels of call recursion.
-
-     * a Boolean, true if one wants to reject all objects with too
-       deep map nesting in map keys. If this Boolean is false, then
-       some such deep objects may be accepted if valid (for instance
-       if a map contains only one entry whose key has deeply nested
-       maps.) Ignored if the previous Boolean argument is false.
+       O(depth) levels of call recursion. Ignored if the previous
+       Boolean argument is false.
 
        For instance, a user can request to reject all maps in map keys
-       by passing `true, 0, true` to cbor_nondet_parse.
+       by passing `true, 0` to cbor_nondet_parse.
 
      * a _pointer to_ the input buffer
 
      * a pointer to the input buffer length
 
      If cbor_nondet_parse returns true, then the bytes are valid. If,
-     moreover, the two Boolean arguments are true, then the map
+     moreover, the preceding Boolean argument is true, then the map
      nesting in map keys is within the `depth` argument.
 
      If cbor_nondet_parse returns false and the first Boolean argument
@@ -281,7 +276,7 @@ int main(void) {
   uint8_t *input = output;
   size_t len = output_size;
   cbor_nondet_t parsed;
-  assert (cbor_nondet_parse(true, 0, true, &input, &len, &parsed));
+  assert (cbor_nondet_parse(true, 0, &input, &len, &parsed));
   assert (output_size > len);
   assert (output_size - len == cbor5_serialized_size);
   assert (cbor_nondet_major_type(parsed) == CBOR_MAJOR_TYPE_MAP);
@@ -299,7 +294,7 @@ int main(void) {
   output_fail[1] = 0;
   input = output_fail;
   len = output_fail_size;
-  assert (! cbor_nondet_parse(false, 0, false, &input, &len, &parsed));
+  assert (! cbor_nondet_parse(false, 0, &input, &len, &parsed));
 
   return 0;
 }

@@ -12,7 +12,7 @@
 
 bool check_equal_gen(cbor_nondet_t expected, uint8_t *input, size_t len) {
   cbor_nondet_t parsed;
-  print_assert (cbor_nondet_parse(false, 0, false, &input, &len, &parsed));
+  print_assert (cbor_nondet_parse(false, 0, &input, &len, &parsed));
 
   print_assert (cbor_nondet_equal(expected, parsed));
 
