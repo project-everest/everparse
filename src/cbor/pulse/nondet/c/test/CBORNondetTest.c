@@ -37,7 +37,7 @@ int gentest(void) {
     size_t remaining_size = 1;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (1 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", 1 - remaining_size);
@@ -52,7 +52,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 1;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (1 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", 1 - remaining_size);
@@ -83,7 +83,7 @@ int gentest(void) {
     size_t remaining_size = 1;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (1 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", 1 - remaining_size);
@@ -98,7 +98,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 1;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (1 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", 1 - remaining_size);
@@ -129,7 +129,7 @@ int gentest(void) {
     size_t remaining_size = 1;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (1 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", 1 - remaining_size);
@@ -144,7 +144,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 1;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (1 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", 1 - remaining_size);
@@ -175,7 +175,7 @@ int gentest(void) {
     size_t remaining_size = 1;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (1 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", 1 - remaining_size);
@@ -190,7 +190,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 1;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (1 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", 1 - remaining_size);
@@ -221,7 +221,7 @@ int gentest(void) {
     size_t remaining_size = 2;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (2 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 2 bytes, got %ld\n", 2 - remaining_size);
@@ -236,7 +236,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 2;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (2 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 2 bytes, got %ld\n", 2 - remaining_size);
@@ -267,7 +267,7 @@ int gentest(void) {
     size_t remaining_size = 2;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (2 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 2 bytes, got %ld\n", 2 - remaining_size);
@@ -282,7 +282,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 2;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (2 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 2 bytes, got %ld\n", 2 - remaining_size);
@@ -313,7 +313,7 @@ int gentest(void) {
     size_t remaining_size = 2;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (2 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 2 bytes, got %ld\n", 2 - remaining_size);
@@ -328,7 +328,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 2;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (2 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 2 bytes, got %ld\n", 2 - remaining_size);
@@ -359,7 +359,7 @@ int gentest(void) {
     size_t remaining_size = 3;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (3 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 3 bytes, got %ld\n", 3 - remaining_size);
@@ -374,7 +374,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 3;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (3 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 3 bytes, got %ld\n", 3 - remaining_size);
@@ -405,7 +405,7 @@ int gentest(void) {
     size_t remaining_size = 5;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (5 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 5 bytes, got %ld\n", 5 - remaining_size);
@@ -420,7 +420,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 5;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (5 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 5 bytes, got %ld\n", 5 - remaining_size);
@@ -451,7 +451,7 @@ int gentest(void) {
     size_t remaining_size = 9;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (9 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 9 bytes, got %ld\n", 9 - remaining_size);
@@ -466,7 +466,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 9;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (9 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 9 bytes, got %ld\n", 9 - remaining_size);
@@ -497,7 +497,7 @@ int gentest(void) {
     size_t remaining_size = 1;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (1 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", 1 - remaining_size);
@@ -512,7 +512,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 1;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (1 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", 1 - remaining_size);
@@ -543,7 +543,7 @@ int gentest(void) {
     size_t remaining_size = 1;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (1 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", 1 - remaining_size);
@@ -558,7 +558,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 1;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (1 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", 1 - remaining_size);
@@ -589,7 +589,7 @@ int gentest(void) {
     size_t remaining_size = 2;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (2 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 2 bytes, got %ld\n", 2 - remaining_size);
@@ -604,7 +604,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 2;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (2 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 2 bytes, got %ld\n", 2 - remaining_size);
@@ -635,7 +635,7 @@ int gentest(void) {
     size_t remaining_size = 3;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (3 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 3 bytes, got %ld\n", 3 - remaining_size);
@@ -650,7 +650,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 3;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (3 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 3 bytes, got %ld\n", 3 - remaining_size);
@@ -682,7 +682,7 @@ int gentest(void) {
     size_t remaining_size = 1;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (1 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", 1 - remaining_size);
@@ -697,7 +697,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 1;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (1 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", 1 - remaining_size);
@@ -729,7 +729,7 @@ int gentest(void) {
     size_t remaining_size = 2;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (2 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 2 bytes, got %ld\n", 2 - remaining_size);
@@ -744,7 +744,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 2;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (2 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 2 bytes, got %ld\n", 2 - remaining_size);
@@ -776,7 +776,7 @@ int gentest(void) {
     size_t remaining_size = 5;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (5 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 5 bytes, got %ld\n", 5 - remaining_size);
@@ -791,7 +791,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 5;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (5 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 5 bytes, got %ld\n", 5 - remaining_size);
@@ -823,7 +823,7 @@ int gentest(void) {
     size_t remaining_size = 3;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (3 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 3 bytes, got %ld\n", 3 - remaining_size);
@@ -838,7 +838,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 3;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (3 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 3 bytes, got %ld\n", 3 - remaining_size);
@@ -870,7 +870,7 @@ int gentest(void) {
     size_t remaining_size = 3;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (3 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 3 bytes, got %ld\n", 3 - remaining_size);
@@ -885,7 +885,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 3;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (3 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 3 bytes, got %ld\n", 3 - remaining_size);
@@ -917,7 +917,7 @@ int gentest(void) {
     size_t remaining_size = 4;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (4 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 4 bytes, got %ld\n", 4 - remaining_size);
@@ -932,7 +932,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 4;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (4 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 4 bytes, got %ld\n", 4 - remaining_size);
@@ -964,7 +964,7 @@ int gentest(void) {
     size_t remaining_size = 5;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (5 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 5 bytes, got %ld\n", 5 - remaining_size);
@@ -979,7 +979,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 5;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (5 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 5 bytes, got %ld\n", 5 - remaining_size);
@@ -1012,7 +1012,7 @@ int gentest(void) {
     size_t remaining_size = 1;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (1 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", 1 - remaining_size);
@@ -1027,7 +1027,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 1;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (1 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", 1 - remaining_size);
@@ -1066,7 +1066,7 @@ int gentest(void) {
     size_t remaining_size = 4;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (4 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 4 bytes, got %ld\n", 4 - remaining_size);
@@ -1081,7 +1081,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 4;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (4 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 4 bytes, got %ld\n", 4 - remaining_size);
@@ -1132,7 +1132,7 @@ int gentest(void) {
     size_t remaining_size = 8;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (8 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 8 bytes, got %ld\n", 8 - remaining_size);
@@ -1147,7 +1147,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 8;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (8 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 8 bytes, got %ld\n", 8 - remaining_size);
@@ -1230,7 +1230,7 @@ int gentest(void) {
     size_t remaining_size = 29;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (29 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 29 bytes, got %ld\n", 29 - remaining_size);
@@ -1245,7 +1245,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 29;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (29 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 29 bytes, got %ld\n", 29 - remaining_size);
@@ -1282,7 +1282,7 @@ int gentest(void) {
     size_t remaining_size = 1;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (1 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", 1 - remaining_size);
@@ -1297,7 +1297,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 1;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (1 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", 1 - remaining_size);
@@ -1348,7 +1348,7 @@ int gentest(void) {
     size_t remaining_size = 9;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (9 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 9 bytes, got %ld\n", 9 - remaining_size);
@@ -1363,7 +1363,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 9;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (9 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 9 bytes, got %ld\n", 9 - remaining_size);
@@ -1412,7 +1412,7 @@ int gentest(void) {
     size_t remaining_size = 8;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (8 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 8 bytes, got %ld\n", 8 - remaining_size);
@@ -1427,7 +1427,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 8;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (8 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 8 bytes, got %ld\n", 8 - remaining_size);
@@ -1489,7 +1489,7 @@ int gentest(void) {
     size_t remaining_size = 21;
     uint8_t *target_bytes2 = target_bytes;
     cbor_nondet_t target_cbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    bool valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (21 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 21 bytes, got %ld\n", 21 - remaining_size);
@@ -1504,7 +1504,7 @@ int gentest(void) {
     printf("Decoding succeeded!\n");
     remaining_size = 21;
     target_bytes2 = source_bytes;
-    valid = cbor_nondet_parse(false, 0, false, &target_bytes2, &remaining_size, &target_cbor);
+    valid = cbor_nondet_parse(false, 0, &target_bytes2, &remaining_size, &target_cbor);
     if (21 - remaining_size != target_byte_size || ! valid)
     {
       printf("Validation failed: expected 21 bytes, got %ld\n", 21 - remaining_size);
@@ -1539,7 +1539,7 @@ int gentest(void) {
     size_t test = 11;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (11 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -1585,7 +1585,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -1730,7 +1730,7 @@ int gentest(void) {
     size_t test = 10;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (10 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -1765,7 +1765,7 @@ int gentest(void) {
     size_t test = 17;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (17 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -1800,7 +1800,7 @@ int gentest(void) {
     size_t test = 17;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (17 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2220,7 +2220,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2255,7 +2255,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2290,7 +2290,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2325,7 +2325,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2360,7 +2360,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2395,7 +2395,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2430,7 +2430,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2465,7 +2465,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2500,7 +2500,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2535,7 +2535,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2570,7 +2570,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2605,7 +2605,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2640,7 +2640,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2675,7 +2675,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2710,7 +2710,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2745,7 +2745,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2780,7 +2780,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2815,7 +2815,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2850,7 +2850,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2885,7 +2885,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2920,7 +2920,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2955,7 +2955,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -2990,7 +2990,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3025,7 +3025,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3060,7 +3060,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3095,7 +3095,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3130,7 +3130,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3165,7 +3165,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3200,7 +3200,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3235,7 +3235,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3270,7 +3270,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3305,7 +3305,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3340,7 +3340,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3375,7 +3375,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3410,7 +3410,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3445,7 +3445,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3480,7 +3480,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3515,7 +3515,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3550,7 +3550,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3585,7 +3585,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3620,7 +3620,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3655,7 +3655,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3690,7 +3690,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3725,7 +3725,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3760,7 +3760,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3795,7 +3795,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3830,7 +3830,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3865,7 +3865,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3900,7 +3900,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -3935,7 +3935,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -5004,7 +5004,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -5039,7 +5039,7 @@ int gentest(void) {
     size_t test = 10;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (10 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -5074,7 +5074,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -5109,7 +5109,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -5144,7 +5144,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -5179,7 +5179,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -5214,7 +5214,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -5249,7 +5249,7 @@ int gentest(void) {
     size_t test = 11;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (11 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -5284,7 +5284,7 @@ int gentest(void) {
     size_t test = 10;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (10 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -5319,7 +5319,7 @@ int gentest(void) {
     size_t test = 11;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (11 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -5354,7 +5354,7 @@ int gentest(void) {
     size_t test = 11;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (11 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -5389,7 +5389,7 @@ int gentest(void) {
     size_t test = 11;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (11 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -5424,7 +5424,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -5459,7 +5459,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -5494,7 +5494,7 @@ int gentest(void) {
     size_t test = 11;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (11 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -5529,7 +5529,7 @@ int gentest(void) {
     size_t test = 13;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (13 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -5564,7 +5564,7 @@ int gentest(void) {
     size_t test = 12;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (12 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -5599,7 +5599,7 @@ int gentest(void) {
     size_t test = 11;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (11 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
@@ -5634,7 +5634,7 @@ int gentest(void) {
     size_t test = 10;
     uint8_t *output2 = output;
     cbor_nondet_t outcbor;
-    bool valid = cbor_nondet_parse(false, 0, false, &output2, &test, &outcbor);
+    bool valid = cbor_nondet_parse(false, 0, &output2, &test, &outcbor);
     if (10 - test != serialized_size || ! valid)
     {
       printf("Validation failed, but it was expected to succeed\n");
