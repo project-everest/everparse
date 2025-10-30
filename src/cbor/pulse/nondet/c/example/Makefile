@@ -1,7 +1,5 @@
 all: CBORNondetTest
 
-EVERPARSE_SRC_PATH = $(realpath ../../../../..)
-
 CBOR_LIB_PATH = $(realpath ..)
 CBOR_INCLUDE_PATH = $(realpath ..)
 

@@ -4,7 +4,6 @@ all: extract
 
 CFLAGS += -O3 -I . -Wall
 
-EVERPARSE_SRC_PATH = $(realpath ../../../..)
 OUTPUT_DIRECTORY:=.
 
 extract: $(OUTPUT_DIRECTORY)/CBORNondet.o
