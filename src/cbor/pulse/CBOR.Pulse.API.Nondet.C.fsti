@@ -25,9 +25,20 @@ val cbor_nondet_gather
 
 val cbor_nondet_parse (_: unit) : cbor_nondet_parse_from_arrayptr_t #cbor_nondet_t cbor_nondet_match
 
+val cbor_nondet_match_with_size
+  (size: nat)
+  (p: perm)
+  (c: cbor_nondet_t)
+  (v: Spec.cbor)
+: Tot slprop
+
+val cbor_nondet_match_with_size_intro (_: unit) : ghost_get_size_t #_ cbor_nondet_match cbor_nondet_match_with_size
+
+val cbor_nondet_size (_: unit) : get_size_t #_ cbor_nondet_match_with_size
+
 val cbor_nondet_serialize
   (_: unit)
-: cbor_nondet_serialize_to_arrayptr_t #cbor_nondet_t cbor_nondet_match
+: cbor_nondet_serialize_to_arrayptr_t #cbor_nondet_t cbor_nondet_match_with_size
 
 (* Destructors *)
 

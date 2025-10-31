@@ -161,22 +161,68 @@ fn cbor_nondet_parse_valid (_: unit) : cbor_nondet_parse_valid_t #cbor_nondet_t 
   res
 }
 
+let cbor_nondet_match_with_size
+  (size: nat)
+  (p: perm)
+  (c: cbor_raw)
+  (v: Spec.cbor)
+: Tot slprop
+= exists* v' . Raw.cbor_match p c v' ** pure (
+    SpecRaw.valid_raw_data_item v' /\
+    size == Seq.length (CBOR.Spec.Raw.Format.serialize_cbor v') /\
+    SpecRaw.mk_cbor v' == v
+  )
+
+ghost fn cbor_nondet_match_with_size_intro (_: unit) : ghost_get_size_t #_ cbor_nondet_match cbor_nondet_match_with_size
+= (x: _)
+  (#p: _)
+  (#x': _)
+{
+  unfold (cbor_nondet_match p x x');
+  with y . assert (Raw.cbor_match p x y);
+  let size = Seq.length (CBOR.Spec.Raw.Format.serialize_cbor y);
+  fold (cbor_nondet_match_with_size size p x x');
+  intro
+    (Trade.trade
+      (cbor_nondet_match_with_size size p x x')
+      (cbor_nondet_match p x x')
+    )
+    fn _ {
+      unfold (cbor_nondet_match_with_size size p x x');
+      fold (cbor_nondet_match p x x')
+    }
+}
+
+fn cbor_nondet_size (_: unit) : get_size_t #_ cbor_nondet_match_with_size
+= (x: _)
+  (bound: _)
+  (#p: _)
+  (#x': _)
+  (#v: _)
+{
+  unfold (cbor_nondet_match_with_size v p x x');
+  let res = CBOR.Pulse.Raw.Format.Serialize.cbor_size x bound;
+  fold (cbor_nondet_match_with_size v p x x');
+  res
+}
+
 fn cbor_nondet_serialize
   (_: unit)
-: cbor_nondet_serialize_t #cbor_nondet_t cbor_nondet_match
+: cbor_nondet_serialize_t #cbor_nondet_t cbor_nondet_match_with_size
 =
   (x: _)
   (output: _)
+  (#size: _)
   (#y: _)
   (#pm: _)
   (#v: _)
 {
-  unfold (cbor_nondet_match pm x y);
+  unfold (cbor_nondet_match_with_size size pm x y);
   with pm' w . assert (CBOR.Pulse.Raw.Match.cbor_match pm' x w);
   S.pts_to_len output;
   let len = CBOR.Pulse.Raw.Format.Serialize.cbor_size x (S.len output);
   if (len = 0sz) {
-    fold (cbor_nondet_match pm x y);
+    fold (cbor_nondet_match_with_size size pm x y);
     None
   } else {
     Seq.lemma_split v (SZ.v len);
@@ -191,7 +237,7 @@ fn cbor_nondet_serialize
     Seq.lemma_split v' (SZ.v len);
     CBOR.Spec.Raw.Format.serialize_parse_cbor w;
     CBOR.Spec.Raw.Format.parse_cbor_prefix (CBOR.Spec.Raw.Format.serialize_cbor w) v';
-    fold (cbor_nondet_match pm x y);
+    fold (cbor_nondet_match_with_size size pm x y);
     Some res
   }
 }

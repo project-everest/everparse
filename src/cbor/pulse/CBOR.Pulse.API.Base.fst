@@ -3799,14 +3799,18 @@ fn cbor_nondet_parse_from_arrayptr
 
 noextract [@@noextract_to "krml"]
 let cbor_nondet_serialize_postcond
+  (size: nat)
   (y: Spec.cbor)
   (v: Seq.seq U8.t)
   (v': Seq.seq U8.t)
   (res: option SZ.t)
 : Tot prop
 = match res with
-  | None -> True // TODO: specify maximum length
+  | None ->
+    v' == v /\
+    Seq.length v < size
   | Some len ->
+    SZ.v len == size /\
     SZ.v len <= Seq.length v' /\
     Seq.length v' == Seq.length v /\
     Seq.equal (Seq.slice v' (SZ.v len) (Seq.length v)) (Seq.slice v (SZ.v len) (Seq.length v)) /\
@@ -3815,6 +3819,7 @@ let cbor_nondet_serialize_postcond
 noextract [@@noextract_to "krml"]
 let cbor_nondet_serialize_postcond_c
   (output: AP.ptr U8.t)
+  (size: nat)
   (y: Spec.cbor)
   (v: Seq.seq U8.t)
   (v': Seq.seq U8.t)
@@ -3822,53 +3827,56 @@ let cbor_nondet_serialize_postcond_c
 : Tot prop
 = if AP.g_is_null output
   then res == 0sz
-  else cbor_nondet_serialize_postcond y v v' (if res = 0sz then None else Some res)
+  else cbor_nondet_serialize_postcond size y v v' (if res = 0sz then None else Some res)
 
 inline_for_extraction
 let cbor_nondet_serialize_t
   (#cbordet: Type)
-  (cbor_det_match: perm -> cbordet -> Spec.cbor -> slprop)
+  (cbor_det_match: nat -> perm -> cbordet -> Spec.cbor -> slprop)
 =
   (x: cbordet) ->
   (output: S.slice U8.t) ->
+  (#size: Ghost.erased nat) ->
   (#y: Ghost.erased Spec.cbor) ->
   (#pm: perm) ->
   (#v: Ghost.erased (Seq.seq U8.t)) ->
   stt (option SZ.t)
-    (cbor_det_match pm x y ** pts_to output v)
-    (fun res -> exists* v' . cbor_det_match pm x y ** pts_to output v' ** pure (
-      cbor_nondet_serialize_postcond y v v' res
+    (cbor_det_match size pm x y ** pts_to output v)
+    (fun res -> exists* v' . cbor_det_match size pm x y ** pts_to output v' ** pure (
+      cbor_nondet_serialize_postcond size y v v' res
     ))
 
 inline_for_extraction
 let cbor_nondet_serialize_to_arrayptr_t
   (#cbordet: Type)
-  (cbor_det_match: perm -> cbordet -> Spec.cbor -> slprop)
+  (cbor_det_match: nat -> perm -> cbordet -> Spec.cbor -> slprop)
 =
   (x: cbordet) ->
   (output: AP.ptr U8.t) ->
   (len: SZ.t) ->
+  (#size: Ghost.erased nat) ->
   (#y: Ghost.erased Spec.cbor) ->
   (#pm: perm) ->
   (#v: Ghost.erased (Seq.seq U8.t)) ->
   stt (SZ.t)
-    (cbor_det_match pm x y ** AP.pts_to_or_null output v ** pure (Seq.length v == SZ.v len))
-    (fun res -> exists* v' . cbor_det_match pm x y ** AP.pts_to_or_null output v' ** pure (
+    (cbor_det_match size pm x y ** AP.pts_to_or_null output v ** pure (Seq.length v == SZ.v len))
+    (fun res -> exists* v' . cbor_det_match size pm x y ** AP.pts_to_or_null output v' ** pure (
       Seq.length v' == SZ.v len /\
-      cbor_nondet_serialize_postcond_c output y v v' res
+      cbor_nondet_serialize_postcond_c output size y v v' res
     ))
 
 noextract [@@noextract_to "krml"]
 inline_for_extraction
 fn cbor_nondet_serialize_to_arrayptr
   (#cbordet: Type0)
-  (#cbor_nondet_match: perm -> cbordet -> Spec.cbor -> slprop)
+  (#cbor_nondet_match: nat -> perm -> cbordet -> Spec.cbor -> slprop)
   (f: cbor_nondet_serialize_t cbor_nondet_match)
 : cbor_nondet_serialize_to_arrayptr_t #_ cbor_nondet_match
 =
   (x: cbordet)
   (output: AP.ptr U8.t)
   (len: SZ.t)
+  (#size: Ghost.erased nat)
   (#y: Ghost.erased Spec.cbor)
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))

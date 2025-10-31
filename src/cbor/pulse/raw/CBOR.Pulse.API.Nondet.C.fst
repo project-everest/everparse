@@ -13,6 +13,12 @@ let cbor_nondet_gather = Rust.cbor_nondet_gather
 
 let cbor_nondet_parse () = cbor_nondet_parse_from_arrayptr (Rust.cbor_nondet_validate ()) (Rust.cbor_nondet_parse_valid ())
 
+let cbor_nondet_match_with_size = Rust.cbor_nondet_match_with_size
+
+let cbor_nondet_match_with_size_intro () = Rust.cbor_nondet_match_with_size_intro ()
+
+let cbor_nondet_size () x bound #p #x' #v = Rust.cbor_nondet_size () x bound #p #x' #v
+
 let cbor_nondet_serialize () = cbor_nondet_serialize_to_arrayptr (Rust.cbor_nondet_serialize ())
 
 let cbor_nondet_major_type () x #p #y = Rust.cbor_nondet_major_type () x #p #y
