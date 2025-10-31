@@ -5943,6 +5943,11 @@ CBOR_Pulse_API_Nondet_Rust_cbor_nondet_parse_valid(
   return CBOR_Pulse_Raw_Format_Parse_cbor_parse(input, len);
 }
 
+static size_t CBOR_Pulse_API_Nondet_Rust_cbor_nondet_size(cbor_raw x, size_t bound)
+{
+  return CBOR_Pulse_Raw_Format_Serialize_cbor_size(x, bound);
+}
+
 static FStar_Pervasives_Native_option__size_t
 CBOR_Pulse_API_Nondet_Rust_cbor_nondet_serialize(
   cbor_raw x,
@@ -6372,6 +6377,11 @@ cbor_nondet_parse(
       }
     }
   }
+}
+
+size_t cbor_nondet_size(cbor_raw x, size_t bound)
+{
+  return CBOR_Pulse_API_Nondet_Rust_cbor_nondet_size(x, bound);
 }
 
 size_t cbor_nondet_serialize(cbor_raw x, uint8_t *output, size_t len)

@@ -235,6 +235,8 @@ cbor_nondet_parse(
   cbor_raw *dest
 );
 
+size_t cbor_nondet_size(cbor_raw x, size_t bound);
+
 size_t cbor_nondet_serialize(cbor_raw x, uint8_t *output, size_t len);
 
 uint8_t cbor_nondet_major_type(cbor_raw x);
