@@ -108,3 +108,5 @@ let cbor_nondet_mk_array () = mk_array_from_arrayptr (Rust.cbor_nondet_mk_array 
 let cbor_nondet_mk_map_entry () xk xv #pk #vk #pv #vv = Rust.cbor_nondet_mk_map_entry () xk xv #pk #vk #pv #vv
 
 let cbor_nondet_mk_map () = cbor_mk_map_from_arrayptr_safe (Rust.cbor_nondet_mk_map_gen ())
+
+let cbor_nondet_map_get_multiple () = cbor_map_get_multiple_as_arrayptr cbor_nondet_map_get_multiple_entry_t (cbor_nondet_major_type ()) (Rust.cbor_nondet_map_get_multiple ())

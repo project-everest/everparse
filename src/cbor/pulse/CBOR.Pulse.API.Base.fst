@@ -9,7 +9,7 @@ module SZ = FStar.SizeT
 module U64 = FStar.UInt64
 module U8 = FStar.UInt8
 module R = Pulse.Lib.Reference
-module PM = Pulse.Lib.SeqMatch
+module PM = Pulse.Lib.SeqMatch.Util
 module AP = Pulse.Lib.ArrayPtr
 
 let ref_pts_to_or_null
@@ -1709,6 +1709,35 @@ let gather_t
     pure (x2 == x2')
   )
 
+ghost fn share_gather_trade
+  (#t1 #t2: Type0)
+  (#vmatch: perm -> t1 -> t2 -> slprop)
+  (share: share_t vmatch)
+  (gather: gather_t vmatch)
+  (x1: t1)
+  (#p: perm)
+  (#x2: t2)
+requires
+  vmatch p x1 x2
+returns p': Ghost.erased perm // FIXME: Pulse should detect perm as erasable type, but currently doesn't
+ensures
+  vmatch p' x1 x2 ** vmatch p' x1 x2 **
+  Trade.trade
+    (vmatch p' x1 x2 ** vmatch p' x1 x2)
+    (vmatch p x1 x2)
+{
+  share x1;
+  intro
+    (Trade.trade
+      (vmatch (p /. 2.0R) x1 x2 ** vmatch (p /. 2.0R) x1 x2)
+      (vmatch p x1 x2)
+    )
+    fn _ {
+      gather x1;
+      rewrite vmatch (p /. 2.0R +. p /. 2.0R) x1 x2 as vmatch p x1 x2
+    };
+  (p /. 2.0R)
+}  
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -4321,3 +4350,181 @@ let cbor_det_serialize_map_t =
     pts_to out v **
     pure (cbor_det_serialize_map_postcond l res v)
   )
+
+noeq
+type cbor_map_get_multiple_entry_t (t: Type) = {
+  key: t;
+  value: t;
+  found: bool
+}
+
+let cbor_map_get_multiple_entry_match_fst
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (px: perm)
+  (x: cbor_map_get_multiple_entry_t t)
+  (y: Spec.cbor)
+: slprop
+= vmatch px x.key y
+
+let cbor_map_get_multiple_entry_match_snd
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (res: bool)
+  (x: cbor_map_get_multiple_entry_t t)
+  (y: option Spec.cbor)
+: slprop
+= if res
+  then match x.found, y with
+  | true, Some v -> vmatch 1.0R x.value v
+  | false, None -> emp
+  | _ -> pure False
+  else emp
+
+let cbor_map_get_multiple_entry_match
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (res: bool)
+  (px: perm)
+  (x: cbor_map_get_multiple_entry_t t)
+  (y: Spec.cbor & option Spec.cbor)
+: slprop
+= vmatch px x.key (fst y) **
+  cbor_map_get_multiple_entry_match_snd vmatch res x (snd y)
+
+let seq_map
+  (#t1 #t2: Type)
+  (f: t1 -> t2)
+  (s: Seq.seq t1)
+: Tot (Seq.seq t2)
+= Seq.init (Seq.length s) (fun i -> f (Seq.index s i))
+
+let cbor_map_get_multiple_postcond
+  (#t: Type)
+  (vmap: Spec.cbor)
+  (s: Seq.seq (cbor_map_get_multiple_entry_t t))
+  (v: list Spec.cbor)
+  (s': Seq.seq (cbor_map_get_multiple_entry_t t))
+  (v': list (Spec.cbor & option Spec.cbor))
+  (res: bool)
+: Tot prop
+=
+  Seq.equal (seq_map Mkcbor_map_get_multiple_entry_t?.key s') (seq_map Mkcbor_map_get_multiple_entry_t?.key s) /\
+  List.Tot.map fst v' == Ghost.reveal v /\
+  (forall x . (List.Tot.memP x v' /\ res) ==> (Spec.CMap? (Spec.unpack vmap) /\ Spec.cbor_map_get (Spec.CMap?.c (Spec.unpack vmap)) (fst x) == snd x))
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_map_get_multiple_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+=
+  (map: t) ->
+  (dest: S.slice (cbor_map_get_multiple_entry_t t)) ->
+  (#pmap: perm) ->
+  (#vmap: Ghost.erased Spec.cbor) ->
+  (#s: Ghost.erased (Seq.seq (cbor_map_get_multiple_entry_t t))) ->
+  (#ps: perm) ->
+  (#v: Ghost.erased (list (Spec.cbor & option Spec.cbor))) ->
+  stt unit
+    (
+      S.pts_to dest s **
+      vmatch pmap map vmap **
+      PM.seq_list_match s v (cbor_map_get_multiple_entry_match vmatch false ps) **
+      pure (Spec.CMap? (Spec.unpack vmap))
+    )
+    (fun _ -> exists* s' v' .
+      S.pts_to dest s' **
+      PM.seq_list_match s' v' (cbor_map_get_multiple_entry_match vmatch true ps) **
+      Trade.trade
+        (PM.seq_list_match s' v' (cbor_map_get_multiple_entry_match vmatch true ps))
+        (vmatch pmap map vmap ** PM.seq_list_match s v (cbor_map_get_multiple_entry_match vmatch false ps)) **
+      pure (
+        cbor_map_get_multiple_postcond vmap s (List.Tot.map fst v) s' v' true
+      )
+    )
+
+ghost fn trade_concl_intro_l
+  (a b c: slprop)
+requires
+  a ** Trade.trade b c
+ensures
+  Trade.trade b (a ** c)
+{
+  intro
+    (Trade.trade b (a ** c))
+    #(a ** Trade.trade b c)
+    fn _ {
+      Trade.elim _ _
+    }
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_map_get_multiple_as_arrayptr_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (t': Type { t' == cbor_map_get_multiple_entry_t t})
+=
+  (map: t) ->
+  (dest: AP.ptr t') ->
+  (len: SZ.t) ->
+  (#pmap: perm) ->
+  (#vmap: Ghost.erased Spec.cbor) ->
+  (#s: Ghost.erased (Seq.seq (cbor_map_get_multiple_entry_t t))) ->
+  (#ps: perm) ->
+  (#v: Ghost.erased (list (Spec.cbor & option Spec.cbor))) ->
+  stt bool
+    (
+      AP.pts_to_or_null dest s **
+      vmatch pmap map vmap **
+      PM.seq_list_match s v (cbor_map_get_multiple_entry_match vmatch false ps) **
+      pure (SZ.v len == Seq.length s)
+    )
+    (fun res -> exists* s' v' .
+      AP.pts_to_or_null dest s' **
+      PM.seq_list_match s' v' (cbor_map_get_multiple_entry_match vmatch res ps) **
+      Trade.trade
+        (PM.seq_list_match s' v' (cbor_map_get_multiple_entry_match vmatch res ps))
+        (vmatch pmap map vmap ** PM.seq_list_match s v (cbor_map_get_multiple_entry_match vmatch false ps)) **
+      pure (
+        cbor_map_get_multiple_postcond vmap s (List.Tot.map fst v) s' v' res /\
+        (res == (Spec.CMap? (Spec.unpack vmap) && not (AP.g_is_null dest)))
+      )
+    )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_map_get_multiple_as_arrayptr
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (t': Type { t' == cbor_map_get_multiple_entry_t t})
+  (mt: get_major_type_t vmatch)
+  (f: cbor_map_get_multiple_t vmatch)
+: cbor_map_get_multiple_as_arrayptr_t #_ vmatch t'
+= (map: _)
+  (dest: _)
+  (len: _)
+  (#pmap: _)
+  (#vmap: _)
+  (#s: _)
+  (#ps: _)
+  (#v: _)
+{
+  if (AP.is_null dest) {
+    Trade.refl (PM.seq_list_match s v (cbor_map_get_multiple_entry_match vmatch false ps));
+    trade_concl_intro_l (vmatch _ _ _) _ _;
+    false
+  } else if (mt map <> cbor_major_type_map) {
+    Trade.refl (PM.seq_list_match s v (cbor_map_get_multiple_entry_match vmatch false ps));
+    trade_concl_intro_l (vmatch _ _ _) _ _;
+    false
+  } else {
+    rewrite AP.pts_to_or_null dest s as AP.pts_to dest s;
+    let dests = S.arrayptr_to_slice_intro dest len;
+    f map dests;
+    S.arrayptr_to_slice_elim dests;
+    with s' . rewrite AP.pts_to dest s' as AP.pts_to_or_null dest s';
+    true
+  } 
+}

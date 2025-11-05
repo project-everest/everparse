@@ -1351,3 +1351,592 @@ fn cbor_nondet_mk_map_gen (_: unit)
     }
   }
 }
+
+noextract [@noextract_to "krml"]
+let set_snd_None
+  (t1 t2: Type)
+  (x: (t1 & option t2))
+: Tot (t1 & option t2)
+= (fst x, None)
+
+module PM = Pulse.Lib.SeqMatch.Util
+
+ghost fn trade_assoc_hyp_r2l
+  (a b c d: slprop)
+requires
+  Trade.trade (a ** (b ** c)) d
+ensures
+  Trade.trade ((a ** b) ** c) d
+{
+  slprop_equivs ();
+  rewrite Trade.trade (a ** (b ** c)) d as Trade.trade ((a ** b) ** c) d
+}
+
+ghost fn trade_assoc_hyp_l2r
+  (a b c d: slprop)
+requires
+  Trade.trade ((a ** b) ** c) d
+ensures
+  Trade.trade (a ** (b ** c)) d
+{
+  slprop_equivs ();
+  rewrite Trade.trade ((a ** b) ** c) d as Trade.trade (a ** (b ** c)) d
+}
+
+ghost fn trade_assoc_concl_r2l
+  (a b c d: slprop)
+requires
+  Trade.trade a (b ** (c ** d))
+ensures
+  Trade.trade a ((b ** c) ** d)
+{
+  slprop_equivs ();
+  rewrite Trade.trade a (b ** (c ** d)) as Trade.trade a ((b ** c) ** d)
+}
+
+ghost fn trade_assoc_concl_l2r
+  (a b c d: slprop)
+requires
+  Trade.trade a ((b ** c) ** d)
+ensures
+  Trade.trade a (b ** (c ** d))
+{
+  slprop_equivs ();
+  rewrite Trade.trade a ((b ** c) ** d) as Trade.trade a (b ** (c ** d))
+}
+
+let list_memP_map_intro_forall
+  (#a #b: Type)
+  (f: a -> Tot b)
+  (l: list a)
+: Lemma
+  (requires True)
+  (ensures (forall x . List.Tot.memP x l ==> List.Tot.memP (f x) (List.Tot.map f l)))
+= let prf
+    (x: a)
+  : Lemma
+    (ensures List.Tot.memP x l ==> List.Tot.memP (f x) (List.Tot.map f l))
+  = List.Tot.memP_map_intro f x l
+  in
+  Classical.forall_intro prf
+
+ghost fn lemma_trade_ab_cd_e
+  (a b1 b2 c d1 d2 e: slprop)
+requires
+  Trade.trade (b1 ** d1) (b2 ** d2) **
+  Trade.trade ((a ** b2) ** (c ** d2)) e
+ensures
+  Trade.trade ((a ** b1) ** (c ** d1)) e
+{
+  slprop_equivs ();
+  rewrite (Trade.trade ((a ** b2) ** (c ** d2)) e) as Trade.trade ((a ** c) ** (b2 ** d2)) e;
+  Trade.trans_hyp_r (a ** c) _ _ _;
+  rewrite Trade.trade ((a ** c) ** (b1 ** d1)) e as (Trade.trade ((a ** b1) ** (c ** d1)) e)
+}
+
+ghost fn trade_prod_cancel_hyp_r_concl_l
+  (#a b #c #d #e: slprop)
+requires
+  Trade.trade (a ** b) c ** Trade.trade d (b ** e)
+ensures
+  Trade.trade (a ** d) (c ** e)
+{
+  intro
+    (Trade.trade (a ** d) (c ** e))
+    #(Trade.trade (a ** b) c ** Trade.trade d (b ** e))
+    fn _ {
+      Trade.elim d _;
+      Trade.elim (a ** b) _
+    }
+}
+
+ghost fn trade_prod_cancel_hyp_l_concl_l
+  (b #a #c #d #e: slprop)
+requires
+  Trade.trade (b ** a) c ** Trade.trade d (b ** e)
+ensures
+  Trade.trade (a ** d) (c ** e)
+{
+  slprop_equivs ();
+  rewrite Trade.trade (b ** a) c as Trade.trade (a ** b) c;
+  trade_prod_cancel_hyp_r_concl_l b
+}
+
+ghost fn trade_prod_cancel_hyp_r_concl_r
+  (#a b #c #d #e: slprop)
+requires
+  Trade.trade (a ** b) c ** Trade.trade d (e ** b)
+ensures
+  Trade.trade (a ** d) (c ** e)
+{
+  slprop_equivs ();
+  rewrite Trade.trade d (e ** b) as Trade.trade d (b ** e);
+  trade_prod_cancel_hyp_r_concl_l b
+}
+
+ghost fn trade_prod_cancel_hyp_l_concl_r
+  (b #a #c #d #e: slprop)
+requires
+  Trade.trade (b ** a) c ** Trade.trade d (e ** b)
+ensures
+  Trade.trade (a ** d) (c ** e)
+{
+  slprop_equivs ();
+  rewrite Trade.trade (b ** a) c as Trade.trade (a ** b) c;
+  trade_prod_cancel_hyp_r_concl_r b;
+}
+
+ghost fn trade_prod_cancel_concl_r_hyp_l
+  (#a #b c #d #e: slprop)
+requires
+  Trade.trade a (b ** c) ** Trade.trade (c ** d) e
+ensures
+  Trade.trade (a ** d) (b ** e)
+{
+  slprop_equivs ();
+  rewrite Trade.trade (c ** d) e as Trade.trade (d ** c) e;
+  trade_prod_cancel_hyp_r_concl_r c;
+  rewrite Trade.trade (d ** a) (e ** b) as Trade.trade (a ** d) (b ** e)
+}
+
+ghost fn trade_prod_cancel_concl_l_hyp_l
+  (#a c #b #d #e: slprop)
+requires
+  Trade.trade a (c ** b) ** Trade.trade (c ** d) e
+ensures
+  Trade.trade (a ** d) (b ** e)
+{
+  slprop_equivs ();
+  rewrite Trade.trade a (c ** b) as Trade.trade a (b ** c);
+  trade_prod_cancel_concl_r_hyp_l c;
+}
+
+ghost fn trade_prod_cancel_concl_r_hyp_r
+  (#a #b c #d #e: slprop)
+requires
+  Trade.trade a (b ** c) ** Trade.trade (d ** c) e
+ensures
+  Trade.trade (a ** d) (b ** e)
+{
+  slprop_equivs ();
+  rewrite Trade.trade (d ** c) e as Trade.trade (c ** d) e;
+  trade_prod_cancel_concl_r_hyp_l c
+}
+
+ghost fn trade_prod_cancel_concl_l_hyp_r
+  (#a c #b #d #e: slprop)
+requires
+  Trade.trade a (c ** b) ** Trade.trade (d ** c) e
+ensures
+  Trade.trade (a ** d) (b ** e)
+{
+  slprop_equivs ();
+  rewrite Trade.trade a (c ** b) as Trade.trade a (b ** c);
+  trade_prod_cancel_concl_r_hyp_r c
+}
+
+ghost fn trade_comm_concl
+  (a b c: slprop)
+requires Trade.trade a (b ** c)
+ensures Trade.trade a (c ** b)
+{
+  slprop_equivs();
+  rewrite Trade.trade a (b ** c) as Trade.trade a (c ** b)
+}
+
+let lemma_seq_assoc_cons
+  (#t: Type)
+  (a: Seq.seq t)
+  (b: t)
+  (c: Seq.seq t)
+: Lemma
+  (Seq.equal (Seq.append a (Seq.cons b c)) (Seq.append (Seq.append a (Seq.cons b Seq.empty)) c))
+= ()
+
+let lemma_seq_assoc_cons_upd
+  (#t: Type)
+  (a: Seq.seq t)
+  (c: Seq.seq t)
+  (b': t)
+: Lemma
+  (requires Seq.length c > 0)
+  (ensures Seq.equal
+    (Seq.upd (Seq.append a c) (Seq.length a) b')
+    (Seq.append (Seq.append a (Seq.cons b' Seq.empty)) (Seq.tail c))
+  )
+= ()
+
+ghost fn lemma_trade_rewrite5
+  (a b c d ef: slprop)
+requires
+   Trade.trade (((a **
+        b) **
+        c) **
+        d)
+      (ef)
+ensures
+   Trade.trade (a ** (d ** b ** c))
+      (ef)
+{
+  slprop_equivs ();
+  rewrite
+   Trade.trade (((a **
+        b) **
+        c) **
+        d)
+      (ef)
+  as Trade.trade (a ** (d ** b ** c))
+      (ef)
+}
+
+ghost fn cbor_map_get_multiple_entry_match_snd_prop
+  (#t: Type0)
+  (vmatch: perm -> t -> Spec.cbor -> slprop)
+  (x: cbor_map_get_multiple_entry_t t)
+  (y: option Spec.cbor)
+requires
+  cbor_map_get_multiple_entry_match_snd vmatch true x y
+ensures
+  cbor_map_get_multiple_entry_match_snd vmatch true x y **
+  pure (x.found == Some? y)
+{
+  if (x.found <> Some? y) {
+    rewrite cbor_map_get_multiple_entry_match_snd vmatch true x y as pure False;
+    rewrite emp as cbor_map_get_multiple_entry_match_snd vmatch true x y
+  }
+}
+
+#push-options "--z3rlimit 64"
+
+fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nondet_match
+=
+  (map: _)
+  (dest: _)
+  (#pmap: _)
+  (#vmap: _)
+  (#s: _)
+  (#ps: _)
+  (#v: _)
+{
+  PM.seq_list_match_nil_intro
+    Seq.empty
+    (List.Tot.map (set_snd_None Spec.cbor Spec.cbor) [])
+    (cbor_map_get_multiple_entry_match cbor_nondet_match true ps);
+  intro
+    (Trade.trade
+      (PM.seq_list_match
+        Seq.empty
+        (List.Tot.map (set_snd_None Spec.cbor Spec.cbor) [])
+        (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) **
+        (PM.seq_list_match s v (cbor_map_get_multiple_entry_match cbor_nondet_match false ps))
+      )
+      (PM.seq_list_match s v (cbor_map_get_multiple_entry_match cbor_nondet_match false ps))
+    )
+    fn _ {
+      PM.seq_list_match_nil_elim Seq.empty _ (cbor_map_get_multiple_entry_match cbor_nondet_match true ps);
+      ()
+    };
+  S.pts_to_len dest;
+  let mut pi = 0sz;
+  while (
+    let i = !pi;
+    (SZ.lt i (S.len dest))
+  ) invariant b . exists* i s' s1 s2 l1 l2 . (
+    pts_to pi i **
+    pts_to dest s' **
+    PM.seq_list_match s1 l1 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) **
+    PM.seq_list_match s2 l2 (cbor_map_get_multiple_entry_match cbor_nondet_match false ps) **
+    Trade.trade
+      (PM.seq_list_match s1 l1 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) **
+        PM.seq_list_match s2 l2 (cbor_map_get_multiple_entry_match cbor_nondet_match false ps))
+      (PM.seq_list_match s v (cbor_map_get_multiple_entry_match cbor_nondet_match false ps)) **
+    pure (
+      Seq.length s == Seq.length s' /\
+      Seq.equal s' (Seq.append s1 s2) /\
+      List.Tot.map fst v == List.Tot.map fst (List.Tot.append l1 l2) /\
+      Seq.equal (seq_map Mkcbor_map_get_multiple_entry_t?.key s') (seq_map Mkcbor_map_get_multiple_entry_t?.key s) /\
+      (forall x . List.Tot.memP x l1 ==> snd x == None) /\
+      List.Tot.count None (List.Tot.map snd l1) == List.Tot.length l1 /\
+      SZ.v i == Seq.length s1 /\
+      b == (SZ.v i < Seq.length s)
+    )
+  ) {
+    with s1 s2 l1 l2 . assert (
+      PM.seq_list_match s1 l1 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) **
+      PM.seq_list_match s2 l2 (cbor_map_get_multiple_entry_match cbor_nondet_match false ps)
+    );
+    PM.seq_list_match_length (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) _ _;
+    PM.seq_list_match_length (cbor_map_get_multiple_entry_match cbor_nondet_match false ps) _ _;
+    PM.seq_list_match_cons_elim_trade s2 l2 (cbor_map_get_multiple_entry_match cbor_nondet_match false ps);
+    let i = !pi;
+    let x = S.op_Array_Access dest i;
+    assert (pure (x == Seq.head s2));
+    let x' = { x with found = false };
+    S.op_Array_Assignment dest i x';
+    slprop_equivs ();
+    let y' : Ghost.erased (Spec.cbor & option Spec.cbor) = Ghost.hide (set_snd_None _ _ (List.Tot.hd l2));
+    Trade.rewrite_with_trade
+      (cbor_map_get_multiple_entry_match cbor_nondet_match false ps (Seq.head s2) (List.Tot.hd l2))
+      (cbor_map_get_multiple_entry_match cbor_nondet_match true ps x' y');
+    Trade.trans_hyp_l _ _ _ (PM.seq_list_match s2 l2 (cbor_map_get_multiple_entry_match cbor_nondet_match false ps));
+    PM.seq_list_match_singleton_intro_trade x' (Ghost.reveal y') (cbor_map_get_multiple_entry_match cbor_nondet_match true ps);
+    Trade.trans_hyp_l _ _ _ (PM.seq_list_match s2 l2 (cbor_map_get_multiple_entry_match cbor_nondet_match false ps));
+    Trade.trans_hyp_r _ _ _ (PM.seq_list_match s v (cbor_map_get_multiple_entry_match cbor_nondet_match false ps));
+    trade_assoc_hyp_r2l _ _ _ _;
+    PM.seq_list_match_append_intro_trade (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) s1 l1 _ _;
+    Trade.trans_hyp_l _ _ _ _;
+    List.Tot.map_append fst l1 l2;
+    List.Tot.append_assoc (List.Tot.map fst l1) [fst y'] (List.Tot.map fst (List.Tot.tl l2));
+    List.Tot.map_append fst l1 [(Ghost.reveal y')];
+    List.Tot.append_memP_forall l1 [Ghost.reveal y'];
+    List.Tot.map_append fst (List.Tot.append l1 [Ghost.reveal y']) (List.Tot.tl l2);
+    List.Tot.map_append snd l1 [Ghost.reveal y'];
+    List.Tot.append_count (List.Tot.map snd l1) [snd y'] None;
+    pi := SZ.add i 1sz;
+  };
+  with s1_ s2_ l1_ l2_ . assert (
+    PM.seq_list_match s1_ l1_ (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) **
+    PM.seq_list_match s2_ l2_ (cbor_map_get_multiple_entry_match cbor_nondet_match false ps)
+  );
+  PM.seq_list_match_length (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) _ _;
+  PM.seq_list_match_length (cbor_map_get_multiple_entry_match cbor_nondet_match false ps) _ _;
+  List.Tot.append_l_nil l1_;
+  Trade.elim_hyp_r _ _ _;
+  with s' . assert (S.pts_to dest s');
+  assert (pure (Seq.equal s' s1_));
+  rewrite (S.pts_to dest s') as (S.pts_to dest s1_);
+  let m = Ghost.hide (Spec.CMap?.c (Spec.unpack vmap));
+  let iter = cbor_nondet_map_iterator_start () map;
+  Trade.prod _ (cbor_nondet_match pmap map vmap) _ _;
+  let mut piter = iter;
+  while (
+    let i = !pi;
+    if (i = 0sz) {
+      false
+    } else {
+      let iter = !piter;
+      not (cbor_nondet_map_iterator_is_empty () iter)
+    }
+  ) invariant b . exists* i iter l s0 l0 pmi . (
+    pts_to pi i **
+    pts_to piter iter **
+    S.pts_to dest s0 **
+    cbor_nondet_map_iterator_match pmi iter l **
+    PM.seq_list_match s0 l0 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) **
+    Trade.trade
+      (cbor_nondet_map_iterator_match pmi iter l **
+        PM.seq_list_match s0 l0 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)
+      )
+      (cbor_nondet_match pmap map vmap ** 
+        PM.seq_list_match s v (cbor_map_get_multiple_entry_match cbor_nondet_match false ps)
+      ) **
+    pure (
+      Seq.equal (seq_map Mkcbor_map_get_multiple_entry_t?.key s0) (seq_map Mkcbor_map_get_multiple_entry_t?.key s) /\
+      List.Tot.map fst l0 == List.Tot.map fst v /\
+      List.Tot.count None (List.Tot.map snd l0) == SZ.v i /\
+      List.Tot.no_repeats_p (List.Tot.map fst l) /\
+      (forall x . Some? (List.Tot.assoc x l) ==> Spec.cbor_map_get m x == List.Tot.assoc x l) /\
+      (forall x . List.Tot.memP x l0 ==> Spec.cbor_map_get m (fst x) == (match snd x with None -> List.Tot.assoc (fst x) l | Some z -> Some z)) /\
+      b == (Cons? l && SZ.v i > 0)
+    )
+  ) {
+    let entry = cbor_nondet_map_iterator_next () piter;
+    Trade.trans_hyp_l _ (cbor_nondet_map_iterator_match _ _ _) _ _;
+    trade_assoc_hyp_l2r _ _ _ _;
+    with pentry ventry . assert (cbor_nondet_map_entry_match pentry entry ventry);
+    Trade.rewrite_with_trade
+      (cbor_nondet_map_entry_match pentry entry ventry)
+      (cbor_nondet_match pentry entry.cbor_map_entry_key (fst ventry) **
+        cbor_nondet_match pentry entry.cbor_map_entry_value (snd ventry)
+      );
+    Trade.trans_hyp_l _ (cbor_nondet_map_entry_match _ _ _) _ _;
+    with s0 l0 . assert (PM.seq_list_match s0 l0 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps));
+    Seq.append_empty_l s0;
+    Trade.rewrite_with_trade
+      (cbor_nondet_match pentry entry.cbor_map_entry_value (snd ventry) ** PM.seq_list_match s0 l0 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps))
+      (cbor_nondet_match pentry entry.cbor_map_entry_value (snd ventry) ** PM.seq_list_match (Seq.append Seq.empty s0) (List.Tot.append [] l0) (cbor_map_get_multiple_entry_match cbor_nondet_match true ps));
+    let mut pj = 0sz;
+    S.pts_to_len dest;
+    with iter pmi l . assert (cbor_nondet_map_iterator_match pmi iter l);
+    List.Tot.assoc_mem (fst ventry) l;
+    while (
+      let j = !pj;
+      let i = !pi;
+      (SZ.lt j (S.len dest) && SZ.gt i 0sz)
+    ) invariant b . exists* i j pvalue s' s1 l1 s2 l2 . (
+      pts_to pi i **
+      pts_to pj j **
+      S.pts_to dest s' **
+      cbor_nondet_match pvalue entry.cbor_map_entry_value (snd ventry) ** 
+      PM.seq_list_match (Seq.append s1 s2) (List.Tot.append l1 l2) (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) **
+      Trade.trade
+        (cbor_nondet_match pvalue entry.cbor_map_entry_value (snd ventry) ** 
+          PM.seq_list_match (Seq.append s1 s2) (List.Tot.append l1 l2) (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)
+        )
+        (cbor_nondet_match pentry entry.cbor_map_entry_value (snd ventry) ** 
+          PM.seq_list_match s0 l0 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)
+        ) **
+      cbor_nondet_match pentry entry.cbor_map_entry_key (fst ventry) ** 
+      pure (b == (SZ.v j < SZ.v (S.len dest) && SZ.v i > 0) /\
+        List.Tot.map fst (List.Tot.append l1 l2) == List.Tot.map fst v /\
+        List.Tot.count None (List.Tot.map snd (List.Tot.append l1 l2)) == SZ.v i /\
+        Seq.equal (seq_map Mkcbor_map_get_multiple_entry_t?.key s') (seq_map Mkcbor_map_get_multiple_entry_t?.key s) /\
+        Seq.equal s' (Seq.append s1 s2) /\
+        Seq.length s' == SZ.v (S.len dest) /\
+        SZ.v j <= SZ.v (S.len dest) /\
+        (forall x . List.Tot.memP x l1 ==> Spec.cbor_map_get m (fst x) == (match snd x with None -> List.Tot.assoc (fst x) l | Some z -> Some z)) /\
+        (forall x . List.Tot.memP x l2 ==> Spec.cbor_map_get m (fst x) == (match snd x with None -> List.Tot.assoc (fst x) (Ghost.reveal ventry :: l) | Some z -> Some z)) /\
+        SZ.v j == Seq.length s1 /\
+        Seq.length s1 == List.Tot.length l1
+      )
+    ) {
+      with pvalue . assert (cbor_nondet_match pvalue entry.cbor_map_entry_value (snd ventry));
+      S.pts_to_len dest;
+      PM.seq_list_match_length (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) _ _;
+      with s1 s2 l1 l2 . assert (PM.seq_list_match (Seq.append s1 s2) (List.Tot.append l1 l2) (cbor_map_get_multiple_entry_match cbor_nondet_match true ps));
+      List.Tot.append_length l1 l2;
+      PM.seq_list_match_append_elim_trade (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) _ _ _ _;
+      PM.seq_list_match_cons_elim_trade s2 l2 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps);
+      let j = !pj;
+      pj := SZ.add j 1sz;
+      let dest_entry = S.op_Array_Access dest j;
+      Trade.rewrite_with_trade
+        (cbor_map_get_multiple_entry_match cbor_nondet_match true ps (Seq.head s2) (List.Tot.hd l2))
+        (cbor_nondet_match ps dest_entry.key (fst (List.Tot.hd l2)) **
+          cbor_map_get_multiple_entry_match_snd cbor_nondet_match true dest_entry (snd (List.Tot.hd l2)));
+      cbor_map_get_multiple_entry_match_snd_prop cbor_nondet_match dest_entry (snd (List.Tot.hd l2));
+      Trade.elim_hyp_r _ (cbor_map_get_multiple_entry_match_snd cbor_nondet_match true dest_entry (snd (List.Tot.hd l2))) _;
+      if (cbor_nondet_equal dest_entry.key entry.cbor_map_entry_key) {
+        let pvalue' = share_gather_trade (cbor_nondet_share ()) (cbor_nondet_gather ()) entry.cbor_map_entry_value;
+        let entry_value = cbor_nondet_reset_perm () entry.cbor_map_entry_value 1.0R;
+        Trade.trans_hyp_r _ (cbor_nondet_match 1.0R entry_value _) _ _;
+        let dest_entry' = { dest_entry with found = true; value = entry_value };
+        S.op_Array_Assignment dest j dest_entry';
+        Trade.rewrite_with_trade
+          (cbor_nondet_match ps dest_entry.key (fst (List.Tot.hd l2)) **
+            cbor_nondet_match 1.0R entry_value (snd ventry)
+          )
+          (cbor_map_get_multiple_entry_match cbor_nondet_match true ps dest_entry' (fst (List.Tot.hd l2), Some (snd ventry)));
+        PM.seq_list_match_cons_intro_trade _ _ (Seq.tail s2) (List.Tot.tl l2) (cbor_map_get_multiple_entry_match cbor_nondet_match true ps);
+        PM.seq_list_match_append_intro_trade (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) s1 l1 _ _;
+        lemma_seq_assoc_cons s1 dest_entry' (Seq.tail s2);
+        List.Tot.append_assoc l1 [(fst (List.Tot.hd l2), Some (snd ventry))] (List.Tot.tl l2);
+        Trade.rewrite_with_trade
+          (PM.seq_list_match _ _ (cbor_map_get_multiple_entry_match cbor_nondet_match true ps))
+          (PM.seq_list_match
+            (Seq.append (Seq.append s1 (Seq.cons dest_entry' Seq.empty)) (Seq.tail s2))
+            (List.Tot.append (List.Tot.append l1 [(fst (List.Tot.hd l2), Some (snd ventry))]) (List.Tot.tl l2))
+            (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)
+          );
+        Trade.trans
+          (PM.seq_list_match
+            (Seq.append (Seq.append s1 (Seq.cons dest_entry' Seq.empty)) (Seq.tail s2))
+            (List.Tot.append (List.Tot.append l1 [(fst (List.Tot.hd l2), Some (snd ventry))]) (List.Tot.tl l2))
+            (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)
+          ) _ _;
+        Trade.trans_concl_l _ (cbor_nondet_match ps dest_entry.key (fst (List.Tot.hd l2))) _ _;
+        trade_prod_cancel_hyp_r_concl_r (cbor_nondet_match 1.0R _ _);
+        trade_prod_cancel_concl_r_hyp_l (cbor_map_get_multiple_entry_match cbor_nondet_match
+          true
+          ps
+          (Seq.Properties.head s2)
+          (List.Tot.Base.hd l2));
+        trade_prod_cancel_concl_r_hyp_r (Pulse.Lib.SeqMatch.seq_list_match s2
+          l2
+          (cbor_map_get_multiple_entry_match cbor_nondet_match true ps));
+        Trade.trans _ (cbor_nondet_match pvalue _ _ ** _) _;
+        Trade.trans_concl_r _ _ (Pulse.Lib.SeqMatch.seq_list_match (Seq.Base.cons dest_entry'
+              (Seq.Properties.tail s2))
+          ((fst (List.Tot.Base.hd l2), Some (snd ventry)) :: List.Tot.Base.tl l2)
+          (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)) _;
+        lemma_trade_rewrite5 _ _ _ _ _;
+        Trade.trans_hyp_r _ _ _ _;
+        let lx = Ghost.hide [(fst (List.Tot.Base.hd l2), Some (snd ventry))];
+        with s' . assert (S.pts_to dest s');
+        with s1' s2' l1' l2' . assert (Pulse.Lib.SeqMatch.seq_list_match (Seq.append s1' s2') (List.Tot.append l1' l2') (cbor_map_get_multiple_entry_match cbor_nondet_match true ps));
+        lemma_seq_assoc_cons_upd s1 s2 dest_entry';
+        assert (pure (Seq.equal s' (Seq.append s1' s2')));
+        assert (pure (l1' == List.Tot.append l1 lx));
+        assert (pure (l2' == List.Tot.tl l2));
+        List.Tot.map_append fst l1 l2;
+        List.Tot.map_append fst l1 lx;
+        List.Tot.map_append fst l1' (List.Tot.tl l2);
+        List.Tot.append_assoc (List.Tot.map fst l1) (List.Tot.map fst lx) (List.Tot.map fst (List.Tot.tl l2));
+        List.Tot.map_append snd l1 l2;
+        List.Tot.map_append snd l1 lx;
+        List.Tot.map_append snd l1' (List.Tot.tl l2);
+        List.Tot.append_count (List.Tot.map snd l1) (List.Tot.map snd l2) None;
+        List.Tot.append_count (List.Tot.map snd l1) (List.Tot.map snd lx) None;
+        List.Tot.append_count (List.Tot.map snd l1') (List.Tot.map snd (List.Tot.tl l2)) None;
+        assert (pure (List.Tot.count None (List.Tot.map snd (List.Tot.append l1 l2)) == List.Tot.count None (List.Tot.map snd l1) + List.Tot.count None (List.Tot.map snd l2)));
+        assert (pure (List.Tot.count None (List.Tot.map snd (List.Tot.append l1' (List.Tot.tl l2))) == List.Tot.count None (List.Tot.map snd l1) + List.Tot.count None (List.Tot.map snd lx) + List.Tot.count None (List.Tot.map snd (List.Tot.tl l2))));
+        assert (pure (List.Tot.count None (List.Tot.map snd lx) == 0));
+        assert (pure (List.Tot.count None (List.Tot.map snd l2) == (if dest_entry.found then 0 else 1) + List.Tot.count None (List.Tot.map snd (List.Tot.tl l2))));
+        List.Tot.append_memP_forall l1 lx;
+        assert (pure (forall x . List.Tot.memP x l1' ==> Spec.cbor_map_get m (fst x) == (match snd x with None -> List.Tot.assoc (fst x) l | Some z -> Some z)));
+        List.Tot.append_length l1 lx;
+        if (not dest_entry.found) { // TODO: I can remove this `if`, but at the expense of maintaining the left-hand-side list of already-seen items from the iterator in the enclosing loop.
+          let i = !pi;
+          pi := SZ.sub i 1sz;
+        }
+      } else {
+        Trade.elim _ (cbor_map_get_multiple_entry_match cbor_nondet_match true ps (Seq.head s2) (List.Tot.hd l2));
+        Trade.elim _ (Pulse.Lib.SeqMatch.seq_list_match s2
+          l2
+          (cbor_map_get_multiple_entry_match cbor_nondet_match true ps));
+        Trade.elim _ (Pulse.Lib.SeqMatch.seq_list_match (Seq.Base.append s1 s2)
+          (List.Tot.append l1 l2)
+          (cbor_map_get_multiple_entry_match cbor_nondet_match true ps));
+        List.Tot.append_assoc l1 [List.Tot.hd l2] (List.Tot.tl l2);
+        List.Tot.append_memP_forall l1 [List.Tot.hd l2];
+        List.Tot.append_length l1 [List.Tot.hd l2];
+        Seq.cons_head_tail s2;
+        assert (pure (Seq.equal s2 (Seq.append (Seq.cons (Seq.head s2) Seq.empty) (Seq.tail s2))));
+        Seq.append_assoc s1 (Seq.cons (Seq.head s2) Seq.empty) (Seq.tail s2);
+        assert (pure (Seq.equal (Seq.append s1 s2) (Seq.append (Seq.append s1 (Seq.cons (Seq.head s2) Seq.empty)) (Seq.tail s2))));
+        Trade.rewrite_with_trade
+          (Pulse.Lib.SeqMatch.seq_list_match (Seq.append s1 s2)
+            (List.Tot.append l1 l2)
+            (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)
+          )
+          (Pulse.Lib.SeqMatch.seq_list_match (Seq.append (Seq.append s1 (Seq.cons (Seq.head s2) Seq.empty)) (Seq.tail s2))
+            (List.Tot.append (List.Tot.append l1 [List.Tot.hd l2]) (List.Tot.tl l2))
+            (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)
+          );
+        Trade.trans_hyp_r _ _ (Pulse.Lib.SeqMatch.seq_list_match (Seq.Base.append s1 s2)
+          (List.Tot.append l1 l2)
+          (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)) _;
+        ()
+      }
+    };
+    S.pts_to_len dest;
+    PM.seq_list_match_length (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) _ _;
+    with s1 s2 l1 l2 . assert (PM.seq_list_match (Seq.append s1 s2) (List.Tot.append l1 l2) (cbor_map_get_multiple_entry_match cbor_nondet_match true ps));
+//    let j = !pj;
+    with gi . assert (pts_to pi gi);
+    lemma_trade_ab_cd_e _ _ _ _ _ _ _;
+    Trade.elim_hyp_l _ _ _;
+//    if (SZ.lt j (S.len dest)) {
+      List.Tot.map_append snd l1 l2;
+      List.Tot.append_count (List.Tot.map snd l1) (List.Tot.map snd l2) None;
+      List.Tot.append_memP_forall l1 l2;
+      List.Tot.mem_count (List.Tot.map snd l2) None;
+      List.Tot.mem_memP None (List.Tot.map snd l2);
+      list_memP_map_intro_forall snd l2;
+      assert (pure (forall x . (List.Tot.memP x l2 /\ SZ.v gi == 0) ==> Some? (snd x)));
+//      ()
+//    } else {
+      List.Tot.append_length l1 l2;
+//      assert (pure (Nil? l2));
+      List.Tot.append_l_nil l1;
+//    }
+  };
+  Trade.elim_hyp_l _ _ _;
+  with s' l' . assert (PM.seq_list_match s' l' (cbor_map_get_multiple_entry_match cbor_nondet_match true ps));
+  List.Tot.mem_count (List.Tot.map snd l') None;
+  List.Tot.mem_memP None (List.Tot.map snd l');
+  list_memP_map_intro_forall snd l';
+  ()
+}
+
+#pop-options
