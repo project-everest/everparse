@@ -190,6 +190,15 @@ __eq__FStar_Pervasives_Native_option__bool(
   FStar_Pervasives_Native_option__bool x
 );
 
+typedef struct
+CBOR_Pulse_API_Base_cbor_map_get_multiple_entry_t__CBOR_Pulse_Raw_Type_cbor_raw_s
+{
+  cbor_raw key;
+  cbor_raw value;
+  bool found;
+}
+CBOR_Pulse_API_Base_cbor_map_get_multiple_entry_t__CBOR_Pulse_Raw_Type_cbor_raw;
+
 #define CBOR_MAJOR_TYPE_SIMPLE_VALUE (7U)
 
 #define CBOR_MAJOR_TYPE_UINT64 (0U)
@@ -334,6 +343,16 @@ bool cbor_nondet_mk_array(cbor_raw *a, uint64_t len, cbor_raw *dest);
 cbor_map_entry cbor_nondet_mk_map_entry(cbor_raw xk, cbor_raw xv);
 
 bool cbor_nondet_mk_map(cbor_map_entry *a, uint64_t len, cbor_raw *dest);
+
+typedef CBOR_Pulse_API_Base_cbor_map_get_multiple_entry_t__CBOR_Pulse_Raw_Type_cbor_raw
+cbor_nondet_map_get_multiple_entry_t;
+
+bool
+cbor_nondet_map_get_multiple(
+  cbor_raw map,
+  CBOR_Pulse_API_Base_cbor_map_get_multiple_entry_t__CBOR_Pulse_Raw_Type_cbor_raw *dest,
+  size_t len
+);
 
 
 #define CBORNondet_H_DEFINED
