@@ -5,6 +5,7 @@
 
 #include "krmllib.h"
 
+#include "CBORNondetType.h"
 #include "../CBORNondet.h"
 
 size_t
