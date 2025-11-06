@@ -103,7 +103,7 @@ ensures
     }
   };
   Trade.elim _ _;
-  (!pres = Some true)
+  CBOR.Pulse.Raw.Util.eq_Some_true !pres
 }
 
 inline_for_extraction

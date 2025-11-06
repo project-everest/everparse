@@ -50,7 +50,7 @@ if ((c1.cbor_serialized_header.value <: FStar.UInt64.t) <> c2.cbor_serialized_he
   fold (cbor_match_serialized_payload_tagged c1.cbor_serialized_payload (pm1 `perm_mul` c1.cbor_serialized_perm) (Tagged?.v r1));
   fold (cbor_match_serialized_tagged c1 pm1 r1);
   fold (cbor_match_serialized_tagged c2 pm2 r2);
-  (res = Some true)
+  (CBOR.Pulse.Raw.Util.eq_Some_true res)
 }
 }
 
@@ -107,7 +107,7 @@ ensures
   fold (cbor_match_serialized_payload_array c1.cbor_serialized_payload (pm1 `perm_mul` c1.cbor_serialized_perm) (Array?.v r1));
   fold (cbor_match_serialized_array c1 pm1 r1);
   fold (cbor_match_serialized_array c2 pm2 r2);
-  (res = Some true)
+  (CBOR.Pulse.Raw.Util.eq_Some_true res)
 }
 
 fn cbor_match_compare_serialized_map
@@ -165,7 +165,7 @@ ensures
     n1
     c1.cbor_serialized_payload
   ;
-  if (res21 = Some true) {
+  if (CBOR.Pulse.Raw.Util.eq_Some_true res21) {
     let res12 = EP.impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow_basic
       n1
       c1.cbor_serialized_payload
@@ -178,7 +178,7 @@ ensures
     fold (cbor_match_serialized_payload_map c1.cbor_serialized_payload (pm1 `perm_mul` c1.cbor_serialized_perm) (Map?.v r1));
     fold (cbor_match_serialized_map c1 pm1 r1);
     fold (cbor_match_serialized_map c2 pm2 r2);
-    (res12 = Some true)
+    (CBOR.Pulse.Raw.Util.eq_Some_true res12)
   } else {
     Trade.elim (LowParse.Pulse.Base.pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n2) (LowParse.Spec.Combinators.serialize_nondep_then CBOR.Spec.Raw.EverParse.serialize_raw_data_item CBOR.Spec.Raw.EverParse.serialize_raw_data_item)) c2.cbor_serialized_payload #p2' _) _;
     Trade.elim (LowParse.Pulse.Base.pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n1) (LowParse.Spec.Combinators.serialize_nondep_then CBOR.Spec.Raw.EverParse.serialize_raw_data_item CBOR.Spec.Raw.EverParse.serialize_raw_data_item)) c1.cbor_serialized_payload #p1' _) _;

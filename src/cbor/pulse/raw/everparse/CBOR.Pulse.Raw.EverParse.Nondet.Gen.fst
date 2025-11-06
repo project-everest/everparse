@@ -358,7 +358,7 @@ fn impl_check_equiv_list
     while (
       let res = !pres;
       let n = !pn;
-      ((res = Some true) && SZ.gt n 0sz)
+      (CBOR.Pulse.Raw.Util.eq_Some_true res && SZ.gt n 0sz)
     )
     invariant b . exists* res n' l1' l2' gl1' gl2' .
       pts_to pres res **
@@ -391,7 +391,7 @@ fn impl_check_equiv_list
         assume (pure (SZ.fits_u64));
         raw_data_item_size_eq (List.Tot.hd gl1');
         raw_data_item_size_eq (List.Tot.hd gl2');
-        if (r = Some true) {
+        if (CBOR.Pulse.Raw.Util.eq_Some_true r) {
           let n' = SZ.sub n 1sz;
           let tl1 = LowParse.Pulse.VCList.nlist_tl
             serialize_raw_data_item
@@ -611,7 +611,7 @@ ensures
     let n = !pn;
     let res = !pres;
     let cont = !pcont;
-    (SZ.gt n 0sz && (res = Some false) && cont)
+    (SZ.gt n 0sz && CBOR.Pulse.Raw.Util.eq_Some_false res && cont)
   ) invariant b . exists* l n (gl: nlist (SZ.v n) (raw_data_item & raw_data_item)) res cont .
     pts_to pll l **
     pts_to pn n **
@@ -788,7 +788,7 @@ ensures
   while (
     let n = !pn;
     let res = !pres;
-    (SZ.gt n 0sz && (res = Some true))
+    (SZ.gt n 0sz && (CBOR.Pulse.Raw.Util.eq_Some_true res))
   ) invariant b . exists* l n (gl: nlist (SZ.v n) (raw_data_item & raw_data_item)) res .
     pts_to pl l **
     pts_to pn n **
@@ -879,7 +879,7 @@ ensures
         gl
     );
     Trade.elim_hyp_l (pts_to_serialized serialize_raw_data_item lh #pl2 _) _ _;
-    if (res = Some true) {
+    if (CBOR.Pulse.Raw.Util.eq_Some_true res) {
       Trade.trans _ (
         pts_to_serialized
           (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
@@ -1018,7 +1018,7 @@ fn impl_check_equiv_map_hd_body
     let mt1 = get_header_major_type h1;
     let mt2 = get_header_major_type h2;
     if (mt1 = cbor_major_type_map && mt2 = cbor_major_type_map) {
-      if (map_bound = Some 0sz) {
+      if (CBOR.Pulse.Raw.Util.eq_Some_0sz map_bound) {
         None
       } else {
         let map_bound' : option SZ.t = (match map_bound with None -> None | Some b -> Some (SZ.sub b 1sz));
@@ -1066,7 +1066,7 @@ fn impl_check_equiv_map_hd_body
             )
           )
           nv2 c2 nv1 c1;
-        if (res = Some true) {
+        if (CBOR.Pulse.Raw.Util.eq_Some_true res) {
           let res = impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow_with_bound
           (impl_check_equiv_aux
             (impl_check_equiv_list
@@ -1203,7 +1203,7 @@ ensures
   while (
     let n = !pn;
     let res = !pres;
-    (SZ.gt n 0sz && res = Some false)
+    (SZ.gt n 0sz && CBOR.Pulse.Raw.Util.eq_Some_false res)
   ) invariant b . exists* n l (gl: nlist (SZ.v n) (raw_data_item & raw_data_item)) res . (
     inv **
     pts_to pn n **
@@ -1266,7 +1266,7 @@ ensures
         gl
     );
     let res = impl_p lh;
-    if (res = Some false) {
+    if (CBOR.Pulse.Raw.Util.eq_Some_false res) {
       Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n0) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l0 #pm gl0);
       Trade.elim_hyp_l _ _ _;
       let kj : Ghost.erased parser_kind = (parse_nlist_kind (SZ.v n') (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind));
@@ -1513,7 +1513,7 @@ ensures
   while (
     let n = !pn;
     let res = !pres;
-    (SZ.gt n 0sz && res = Some true)
+    (SZ.gt n 0sz && CBOR.Pulse.Raw.Util.eq_Some_true res)
   ) invariant b . exists* n l (gl: nlist (SZ.v n) (raw_data_item & raw_data_item)) res . (
     pts_to pn n **
     pts_to pl l **
@@ -1717,7 +1717,7 @@ fn impl_check_valid_item
       (SZ.uint64_to_sizet (argument_as_uint64 (dfst h) (dsnd h)))
       c;
     Trade.elim _ _;
-    (res = Some true)
+    (CBOR.Pulse.Raw.Util.eq_Some_true res)
   } else {
     true
   }
