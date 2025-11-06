@@ -7,40 +7,6 @@
 
 #include "CBORNondetType.h"
 
-#define FStar_Pervasives_Native_None 0
-#define FStar_Pervasives_Native_Some 1
-
-typedef uint8_t
-FStar_Pervasives_Native_option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_tags;
-
-typedef struct FStar_Pervasives_Native_option__size_t_s
-{
-  FStar_Pervasives_Native_option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_tags
-  tag;
-  size_t v;
-}
-FStar_Pervasives_Native_option__size_t;
-
-typedef struct FStar_Pervasives_Native_option__bool_s
-{
-  FStar_Pervasives_Native_option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_tags
-  tag;
-  bool v;
-}
-FStar_Pervasives_Native_option__bool;
-
-bool
-__eq__FStar_Pervasives_Native_option__size_t(
-  FStar_Pervasives_Native_option__size_t y,
-  FStar_Pervasives_Native_option__size_t x
-);
-
-bool
-__eq__FStar_Pervasives_Native_option__bool(
-  FStar_Pervasives_Native_option__bool y,
-  FStar_Pervasives_Native_option__bool x
-);
-
 typedef struct
 CBOR_Pulse_API_Base_cbor_map_get_multiple_entry_t__CBOR_Pulse_Raw_Type_cbor_raw_s
 {
