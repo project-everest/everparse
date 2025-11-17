@@ -1,6 +1,6 @@
 module CBOR.Pulse.API.Nondet.C
 #lang-pulse
-module Rust = CBOR.Pulse.API.Nondet.Rust
+module Rust = CBOR.Pulse.Raw.Nondet
 
 [@@pulse_unfold]
 let cbor_nondet_match = Rust.cbor_nondet_match

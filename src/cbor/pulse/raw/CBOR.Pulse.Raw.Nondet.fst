@@ -1,4 +1,4 @@
-module CBOR.Pulse.API.Nondet.Rust
+module CBOR.Pulse.Raw.Nondet
 #lang-pulse
 friend CBOR.Pulse.API.Nondet.Type
 friend CBOR.Spec.API.Format
