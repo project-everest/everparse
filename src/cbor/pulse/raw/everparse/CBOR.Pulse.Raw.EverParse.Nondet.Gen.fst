@@ -257,10 +257,13 @@ ensures
 {
   let mt1 = get_header_major_type h1;
   if (mt1 = cbor_major_type_simple_value) {
-    (argument_as_simple_value (dfst h1) (dsnd h1) = argument_as_simple_value (dfst h2) (dsnd h2))
+    let sv1 = argument_as_simple_value (dfst h1) (dsnd h1);
+    let sv2 = argument_as_simple_value (dfst h2) (dsnd h2);
+    (sv1 = sv2)
   } else {
     let len = argument_as_uint64 (dfst h1) (dsnd h1);
-    if (len <> argument_as_uint64 (dfst h2) (dsnd h2)) {
+    let len2 = argument_as_uint64 (dfst h2) (dsnd h2);
+    if (len <> len2) {
       false
     } else if (mt1 = cbor_major_type_byte_string || mt1 = cbor_major_type_text_string) {
       pi_correct h1 mt1 len ();

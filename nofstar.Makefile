@@ -35,7 +35,12 @@ cbor-det-rust-test: cbor
 
 .PHONY: cbor-det-rust-test
 
-cbor-test-unverified: cbor-det-c-test cbor-det-rust-test cbor-nondet-c-test
+cbor-nondet-rust-test: cbor
+	+cd src/cbor/pulse/nondet/rust && cargo test
+
+.PHONY: cbor-nondet-rust-test
+
+cbor-test-unverified: cbor-det-c-test cbor-det-rust-test cbor-nondet-c-test cbor-nondet-rust-test
 
 .PHONY: cbor-test-unverified
 

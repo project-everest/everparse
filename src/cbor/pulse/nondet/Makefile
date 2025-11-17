@@ -1,11 +1,14 @@
-all: c.do
+all: c.do rust.do
 
 c.do:
 	+$(MAKE) -C $(basename $@)
 
+rust.do:
+	cd rust && cargo build && cargo doc --no-deps
+
 .PHONY: %.do
 
-snapshot: c.snapshot
+snapshot: c.snapshot rust.snapshot
 
 local_curdir := $(CURDIR)
 ifeq ($(OS),Windows_NT)
@@ -14,6 +17,9 @@ endif
 
 c.snapshot: source_dir=c-extracted
 c.snapshot: target_dir=../c
+
+rust.snapshot: source_dir=rust-extracted
+rust.snapshot: target_dir=../rust/src
 
 %.snapshot:
 	+$(MAKE) -C $(source_dir) -f $(local_curdir)/snapshot.Makefile target_dir=$(target_dir) $(subst .,,$(suffix $@))

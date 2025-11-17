@@ -27,6 +27,8 @@ val cbor_nondet_validate (_: unit) : cbor_nondet_validate_t
 
 val cbor_nondet_parse_valid (_: unit) : cbor_nondet_parse_valid_t #cbor_nondet_t cbor_nondet_match
 
+val cbor_nondet_parse (_: unit) : cbor_nondet_parse_t #cbor_nondet_t cbor_nondet_match
+
 val cbor_nondet_match_with_size
   (size: nat)
   (p: perm)
@@ -131,13 +133,17 @@ val cbor_nondet_equal
 )
 
 val cbor_nondet_map_get (_: unit)
-: map_get_by_ref_t #_ cbor_nondet_match
+: map_get_t #_ cbor_nondet_match
 
 (* Constructors *)
 
 val cbor_nondet_mk_simple_value (_: unit) : mk_simple_t u#0 #_ cbor_nondet_match
 
-val cbor_nondet_mk_int64 (_: unit) : mk_int64_t u#0 #_ cbor_nondet_match
+val cbor_nondet_mk_uint64 (_: unit) : mk_int64_gen_t u#0 #_ cbor_nondet_match Spec.cbor_major_type_uint64
+
+val cbor_nondet_mk_neg_int64 (_: unit) : mk_int64_gen_t u#0 #_ cbor_nondet_match Spec.cbor_major_type_neg_int64
+
+val cbor_nondet_mk_int64 (_: unit) : mk_signed_int64_t u#0 #_ cbor_nondet_match
 
 val cbor_nondet_mk_string (_: unit) : mk_string_t u#0 #_ cbor_nondet_match
 
@@ -147,7 +153,8 @@ val cbor_nondet_mk_array (_: unit) : mk_array_t #_ cbor_nondet_match
 
 val cbor_nondet_mk_map_entry (_: unit) : mk_map_entry_t #_ #_ cbor_nondet_match cbor_nondet_map_entry_match
 
-val cbor_nondet_mk_map_gen (_: unit)
-: mk_map_gen_by_ref_t #cbor_nondet_t #cbor_nondet_map_entry_t cbor_nondet_match cbor_nondet_map_entry_match
+val cbor_nondet_mk_map (_: unit)
+: mk_map_gen_t #cbor_nondet_t #cbor_nondet_map_entry_t cbor_nondet_match cbor_nondet_map_entry_match
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 val cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nondet_match

@@ -161,6 +161,32 @@ fn cbor_nondet_parse_valid (_: unit) : cbor_nondet_parse_valid_t #cbor_nondet_t 
   res
 }
 
+fn cbor_nondet_parse (_: unit) : cbor_nondet_parse_t #cbor_nondet_t cbor_nondet_match =
+  (map_key_bound: option SZ.t)
+  (strict_check: bool)
+  (input: S.slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+{
+  let len = cbor_nondet_validate () map_key_bound strict_check input;
+  if (len = 0sz) {
+    fold (cbor_nondet_parse_post cbor_nondet_match input pm v None);
+    None
+  } else {
+    S.pts_to_len input;
+    Seq.lemma_split v (SZ.v len);
+    let (inl, inr) = S.split_trade input len;
+    S.pts_to_len inl;
+    S.pts_to_len inr;
+    Spec.cbor_parse_prefix v (Seq.slice v 0 (SZ.v len));
+    let resl = cbor_nondet_parse_valid () inl len;
+    Trade.trans_hyp_l _ _ _ _;
+    fold (cbor_nondet_parse_post_some cbor_nondet_match input pm v resl inr);
+    fold (cbor_nondet_parse_post cbor_nondet_match input pm v (Some (resl, inr)));
+    Some (resl, inr);
+  }
+}
+
 let cbor_nondet_match_with_size
   (size: nat)
   (p: perm)
@@ -986,7 +1012,8 @@ ensures
   }
 }
 
-fn cbor_nondet_map_get (_: unit)
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_nondet_map_get_by_ref (_: unit)
 : map_get_by_ref_t #_ cbor_nondet_match
 = (x: _)
   (k: _)
@@ -1057,6 +1084,8 @@ fn cbor_nondet_map_get (_: unit)
   res
 }
 
+let cbor_nondet_map_get () = map_get_as_option (cbor_nondet_map_get_by_ref ())
+
 (* Constructors *)
 
 fn cbor_nondet_mk_simple_value (_: unit) : mk_simple_t u#0 #_ cbor_nondet_match
@@ -1069,7 +1098,7 @@ fn cbor_nondet_mk_simple_value (_: unit) : mk_simple_t u#0 #_ cbor_nondet_match
   res
 }
 
-fn cbor_nondet_mk_int64 (_: unit) : mk_int64_t u#0 #_ cbor_nondet_match
+fn cbor_nondet_mk_int64_gen (_: unit) : mk_int64_t u#0 #_ cbor_nondet_match
 = (ty: _)
   (v: _)
 {
@@ -1079,6 +1108,12 @@ fn cbor_nondet_mk_int64 (_: unit) : mk_int64_t u#0 #_ cbor_nondet_match
   fold (cbor_nondet_match 1.0R res (Spec.pack (Spec.CInt64 ty v)));
   res
 }
+
+let cbor_nondet_mk_uint64 () v = cbor_nondet_mk_int64_gen () Spec.cbor_major_type_uint64 v
+
+let cbor_nondet_mk_neg_int64 () v = cbor_nondet_mk_int64_gen () Spec.cbor_major_type_neg_int64 v
+
+let cbor_nondet_mk_int64 () = mk_signed_int64 (cbor_nondet_mk_int64_gen ())
 
 fn cbor_nondet_mk_string (_: unit) : mk_string_t u#0 #_ cbor_nondet_match
 = (ty: _)
@@ -1297,7 +1332,8 @@ fn cbor_nondet_mk_map_entry (_: unit) : mk_map_entry_t #_ #_ cbor_nondet_match c
   res
 }
 
-fn cbor_nondet_mk_map_gen (_: unit)
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_nondet_mk_map_gen_by_ref (_: unit)
 : mk_map_gen_by_ref_t #cbor_nondet_t #cbor_nondet_map_entry_t cbor_nondet_match cbor_nondet_map_entry_match
 = (a: _)
   (dest: _)
@@ -1351,6 +1387,8 @@ fn cbor_nondet_mk_map_gen (_: unit)
     }
   }
 }
+
+let cbor_nondet_mk_map () = mk_map_gen (CBOR_Case_Simple 0uy) (cbor_nondet_mk_map_gen_by_ref ())
 
 noextract [@noextract_to "krml"]
 let set_snd_None
@@ -1608,6 +1646,7 @@ ensures
 
 #push-options "--z3rlimit 64"
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nondet_match
 =
   (map: _)

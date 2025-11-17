@@ -2955,6 +2955,32 @@ fn mk_map_gen
 }
 
 inline_for_extraction
+fn mk_map_gen_by_ref
+  (#t1 #t2: Type0)
+  (#vmatch1: perm -> t1 -> cbor -> slprop)
+  (#vmatch2: perm -> t2 -> (cbor & cbor) -> slprop)
+  (m: mk_map_gen_t vmatch1 vmatch2)
+: mk_map_gen_by_ref_t #_ #_ vmatch1 vmatch2
+=
+  (a: S.slice t2)
+  (dest: R.ref t1)
+  (#va: Ghost.erased (Seq.seq t2))
+  (#pv: perm)
+  (#vv: Ghost.erased (list (cbor & cbor)))
+  (#vdest0: Ghost.erased t1)
+{
+  match m a {
+    None -> {
+      false
+    }
+    Some res -> {
+      dest := res;
+      true
+    }
+  }
+}
+
+inline_for_extraction
 let mk_map_t
   (#t1 #t2: Type)
   (vmatch1: perm -> t1 -> cbor -> slprop)
@@ -3548,6 +3574,32 @@ fn map_get_as_option
   }
 }
 
+inline_for_extraction
+fn map_get_as_ref
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (m: map_get_t u#0 #t vmatch)
+: map_get_by_ref_t vmatch
+= (x: t)
+  (k: t)
+  (dest: R.ref t)
+  (#px: perm)
+  (#vx: Ghost.erased cbor)
+  (#pk: perm)
+  (#vk: Ghost.erased cbor)
+  (#vdest0: Ghost.erased t)
+{
+  match m x k {
+    None -> {
+      false
+    }
+    Some res -> {
+      dest := res;
+      true
+    }
+  }
+}
+
 module Spec = CBOR.Spec.API.Format
 
 noextract [@@noextract_to "krml"]
@@ -3664,6 +3716,82 @@ let cbor_nondet_parse_valid_t
       Trade.trade (cbor_nondet_match p' res v') (pts_to input #pm v) ** pure (
         cbor_nondet_parse_valid_post v v'
     ))
+
+let cbor_nondet_parse_postcond_some
+  (v: Seq.seq U8.t)
+  (v': Spec.cbor)
+  (vrem: Seq.seq U8.t)
+: Tot prop
+= match Spec.cbor_parse v with
+  | None -> False
+  | Some (x, len) ->
+    x == v' /\
+    Seq.slice v len (Seq.length v) == vrem /\
+    v == Seq.append (Seq.slice v 0 len) (Seq.slice v len (Seq.length v))
+
+noextract [@@noextract_to "krml"]
+let cbor_nondet_parse_post_some
+  (#cbornondet: Type)
+  (cbor_nondet_match: perm -> cbornondet -> Spec.cbor -> slprop)
+  (input: S.slice U8.t)
+  (pm: perm)
+  (v: Seq.seq U8.t)
+  (res: cbornondet)
+  (rem: S.slice U8.t)
+: Tot slprop
+= exists* p' v' vrem .
+     cbor_nondet_match p' res v' **
+     pts_to rem #pm vrem **
+     Trade.trade // FIXME: I would need a forall_vrem here
+       (cbor_nondet_match p' res v' ** pts_to rem #pm vrem)
+       (pts_to input #pm v) **
+     pure (
+       cbor_nondet_parse_postcond_some v v' vrem
+     )
+
+noextract [@@noextract_to "krml"]
+let cbor_nondet_parse_post
+  (#cbornondet: Type)
+  (cbor_nondet_match: perm -> cbornondet -> Spec.cbor -> slprop)
+  (input: S.slice U8.t)
+  (pm: perm)
+  (v: Seq.seq U8.t)
+  (res: option (cbornondet & S.slice U8.t))
+: Tot slprop
+= match res with
+  | None -> pts_to input #pm v
+  | Some (res, rem) -> cbor_nondet_parse_post_some cbor_nondet_match input pm v res rem
+
+let cbor_nondet_parse_postcond
+  (map_key_bound: option SZ.t)
+  (strict_check: bool)
+  (v: Seq.seq U8.t)
+  (res: bool)
+: Tot prop
+= begin match Spec.cbor_parse v with
+  | None -> res == false
+  | Some (x, _) ->
+    if Some? map_key_bound && Spec.cbor_map_key_depth x > SZ.v (Some?.v map_key_bound)
+    then res == true ==> strict_check == false
+    else res == true
+  end
+
+inline_for_extraction
+let cbor_nondet_parse_t
+  (#cbornondet: Type)
+  (cbor_nondet_match: perm -> cbornondet -> Spec.cbor -> slprop)
+=
+  (map_key_bound: option SZ.t) ->
+  (strict_check: bool) ->
+  (input: S.slice U8.t) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  stt (option (cbornondet & S.slice U8.t))
+    (pts_to input #pm v)
+    (fun res ->
+      cbor_nondet_parse_post cbor_nondet_match input pm v res **
+      pure (cbor_nondet_parse_postcond map_key_bound strict_check v (Some? res))
+    )
 
 let cbor_nondet_parse_from_arrayptr_postcond
   (#cbor_nondet_t: Type)
