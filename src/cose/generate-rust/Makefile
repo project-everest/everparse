@@ -4,8 +4,14 @@ EVERPARSE_SRC_PATH = $(realpath ../..)
 
 OUTPUT=_output/COSE.Format.fst
 
+ifeq (1,$(ADMIT))
+CDDL_ADMIT := --admit
+else
+CDDL_ADMIT :=
+endif
+
 $(OUTPUT): ../cose-sign.cddl ../../cddl/spec/postlude.cddl
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --mname COSE.Format --odir $(dir $(OUTPUT)) --rust --fstar_only
+	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --mname COSE.Format --odir $(dir $(OUTPUT)) --rust --fstar_only $(CDDL_ADMIT)
 
 extract-all: $(OUTPUT)
 	+$(MAKE) -f extract.Makefile extract

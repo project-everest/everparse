@@ -1,8 +1,14 @@
 all: build
 
+ifeq (1,$(ADMIT))
+CDDL_ADMIT := --admit
+else
+CDDL_ADMIT :=
+endif
+
 encrypt: cose-encrypt.cddl ../cddl/spec/postlude.cddl
 	rm -rf $@.tmp $@
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --odir $@.tmp
+	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --odir $@.tmp $(CDDL_ADMIT)
 	mv $@.tmp $@
 
 EVERPARSE_SRC_PATH = $(realpath ..)
