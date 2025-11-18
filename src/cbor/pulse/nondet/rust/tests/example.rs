@@ -48,13 +48,13 @@ fn test()
 
     // Then, parse our object from the output array, and test reading
     // from it
-    let (read, rem) = cbor_nondet_parse(&output_bytes).unwrap();
+    let (read, rem) = cbor_nondet_parse(None, false, &output_bytes).unwrap();
     assert!(max_size - rem.len () == size);
     test_on(read);
 
     // Then, parse our object from only the written slice of the
     // output array, and test reading from it
-    let (read, rem) = cbor_nondet_parse(&output_bytes[0..size]).unwrap();
+    let (read, rem) = cbor_nondet_parse(None, false, &output_bytes[0..size]).unwrap();
     assert!(rem.len () == 0);
     test_on(read);
 }
