@@ -504,6 +504,7 @@ fn cbor_nondet_array_iterator_is_empty (_: unit) : array_iterator_is_empty_t u#0
   res
 }
 
+inline_for_extraction
 fn cbor_nondet_array_iterator_length (_: unit) : array_iterator_length_t u#0 #_ cbor_nondet_array_iterator_match
 = (x: _)
   (#p: _)
@@ -544,6 +545,7 @@ fn cbor_nondet_array_iterator_next (_: unit) : array_iterator_next_t u#0 #_ #_ c
 
 module U64 = FStar.UInt64
 
+inline_for_extraction
 fn cbor_nondet_array_iterator_truncate (_: unit) : array_iterator_truncate_t u#0 #_ cbor_nondet_array_iterator_match
 = (x: _)
   (len: _)
@@ -1388,7 +1390,10 @@ fn cbor_nondet_mk_map_gen_by_ref (_: unit)
   }
 }
 
-let cbor_nondet_mk_map () = mk_map_gen (CBOR_Case_Simple 0uy) (cbor_nondet_mk_map_gen_by_ref ())
+inline_for_extraction
+let dummy_cbor_nondet = CBOR_Case_Simple 0uy
+
+let cbor_nondet_mk_map () = mk_map_gen dummy_cbor_nondet (cbor_nondet_mk_map_gen_by_ref ())
 
 noextract [@noextract_to "krml"]
 let set_snd_None
@@ -1976,6 +1981,44 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
   List.Tot.mem_memP None (List.Tot.map snd l');
   list_memP_map_intro_forall snd l';
   ()
+}
+
+#pop-options
+
+(* SLProp-to-Prop abstraction vehicle to prove the correctness of type abstraction in the Rust API *)
+
+let cbor_nondet_case (x: cbor_nondet_t) : Tot cbor_nondet_case_t =
+  match x with
+  | Raw.CBOR_Case_Int _ -> CaseInt64
+  | Raw.CBOR_Case_String _ -> CaseString
+  | Raw.CBOR_Case_Tagged _
+  | Raw.CBOR_Case_Serialized_Tagged _
+    -> CaseTagged
+  | Raw.CBOR_Case_Array _
+  | Raw.CBOR_Case_Serialized_Array _
+    -> CaseArray
+  | Raw.CBOR_Case_Map _
+  | Raw.CBOR_Case_Serialized_Map _
+    -> CaseMap
+  | Raw.CBOR_Case_Simple _ -> CaseSimpleValue
+
+#push-options "--z3rlimit 32"
+
+ghost
+fn cbor_nondet_case_correct
+  (x: cbor_nondet_t)
+  (#p: perm)
+  (#v: Spec.cbor)
+requires
+    (cbor_nondet_match p x v)
+ensures
+    (cbor_nondet_match p x v ** pure (cbor_nondet_case_correct_post x v))
+{
+  cbor_nondet_match_elim x;
+  with p' v' . assert (Raw.cbor_match p' x v');
+  Raw.cbor_match_cases x;
+  SpecRaw.mk_cbor_eq v';
+  Trade.elim _ _;
 }
 
 #pop-options

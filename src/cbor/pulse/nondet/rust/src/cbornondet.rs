@@ -36,14 +36,22 @@ pub type CborNondet <'a> = crate::cbornondetver::cbornondet <'a>;
 /// implementation checks for the basic validity constraints of
 /// Section 5.3.1, i.e. the absence of duplicate map keys, and the
 /// well-formedness of UTF-8 text strings.
-pub fn cbor_nondet_parse <'a>(input: &'a [u8]) ->
+pub fn cbor_nondet_parse <'a>(map_key_bound: Option<usize>, strict_check: bool, input: &'a [u8]) ->
     Option<(CborNondet<'a>, &'a [u8])>
 {
-    match crate::cbornondetver::cbor_nondet_parse(input) {
-	crate::cbornondetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None => {
+	let map_key_bound0 : crate::cbornondetveraux::option__size_t = match map_key_bound {
+		None => {
+			crate::cbornondetveraux::option__size_t::None
+		}
+		Some(v) => {
+			crate::cbornondetveraux::option__size_t::Some {v: v}
+		}
+	};
+    match crate::cbornondetver::cbor_nondet_parse(map_key_bound0, strict_check, input) {
+	crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None => {
 	    return None;
 	}
-	crate::cbornondetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some {v} => {
+	crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some {v} => {
 	    let (object, rem) = v;
 	    return Some((object, rem));
 	}
@@ -62,14 +70,12 @@ pub fn cbor_nondet_parse <'a>(input: &'a [u8]) ->
 /// recursively nest into such subobjects.)
 pub fn cbor_nondet_size <'a>(x: CborNondet <'a>, bound: usize) -> Option<usize>
 {
-    match crate::cbornondetver::cbor_nondet_size(x, bound) {
-	crate::cbornondetver::option__size_t::None => {
+	let res = crate::cbornondetver::cbor_nondet_size(x, bound);
+    if res == 0 {
 	    return None;
+	} else {
+	    return Some(res);
 	}
-	crate::cbornondetver::option__size_t::Some {v} => {
-	    return Some(v);
-	}
-    }
 }
 
 /// Writes the binary representation of the CBOR object
@@ -88,10 +94,10 @@ pub fn cbor_nondet_serialize <'a>(x: CborNondet <'a>, output: &'a mut [u8]) ->
     Option<usize>
 {
     match crate::cbornondetver::cbor_nondet_serialize(x, output) {
-	crate::cbornondetver::option__size_t::None => {
+	crate::cbornondetveraux::option__size_t::None => {
 	    return None;
 	}
-	crate::cbornondetver::option__size_t::Some {v} => {
+	crate::cbornondetveraux::option__size_t::Some {v} => {
 	    return Some(v);
 	}
     }
@@ -104,10 +110,10 @@ pub fn cbor_nondet_serialize <'a>(x: CborNondet <'a>, output: &'a mut [u8]) ->
 pub fn cbor_nondet_mk_simple_value <'a>(v: u8) -> Option<CborNondet<'a>>
 {
     match crate::cbornondetver::cbor_nondet_mk_simple_value(v) {
-	crate::cbornondetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
 	    return None;
 	}
-	crate::cbornondetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
 	    return Some(v);
 	}
     }
@@ -128,14 +134,16 @@ pub enum CborNondetIntKind
 pub fn cbor_nondet_mk_int64 <'a>(ty: CborNondetIntKind, v: u64) ->
     CborNondet <'a>
 {
+    let ty· : crate::cbornondetver::cbor_nondet_int_kind =
 	match ty {
 	    CborNondetIntKind::UInt64 => {
-			crate::cbornondetver::cbor_nondet_mk_uint64(v)
+		crate::cbornondetver::cbor_nondet_int_kind::UInt64
 	    }
 	    CborNondetIntKind::NegInt64 => {
-			crate::cbornondetver::cbor_nondet_mk_neg_int64(v)
+		crate::cbornondetver::cbor_nondet_int_kind::NegInt64
 	    }
 	};
+    crate::cbornondetver::cbor_nondet_mk_int64(ty·, v)
 }
 
 /// Constructs a CBOR object of "text string" type, with
@@ -146,11 +154,13 @@ pub fn cbor_nondet_mk_int64 <'a>(ty: CborNondetIntKind, v: u64) ->
 pub fn cbor_nondet_mk_text_string <'a>(s: &'a str) ->
     Option<CborNondet<'a>>
 {
-    match crate::cbornondetver::cbor_nondet_mk_text_string(s.as_bytes()) {
-	crate::cbornondetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+    let ty· : crate::cbornondetver::cbor_nondet_string_kind =
+	crate::cbornondetver::cbor_nondet_string_kind::TextString;
+    match crate::cbornondetver::cbor_nondet_mk_string(ty·, s.as_bytes()) {
+	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbornondetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v } => {
+	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v } => {
 	    Some(v)
 	}
     }
@@ -163,11 +173,13 @@ pub fn cbor_nondet_mk_text_string <'a>(s: &'a str) ->
 pub fn cbor_nondet_mk_byte_string <'a>(s: &'a [u8]) ->
     Option<CborNondet<'a>>
 {
-    match crate::cbornondetver::cbor_nondet_mk_byte_string(s) {
-	crate::cbornondetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+    let ty· : crate::cbornondetver::cbor_nondet_string_kind =
+	crate::cbornondetver::cbor_nondet_string_kind::ByteString;
+    match crate::cbornondetver::cbor_nondet_mk_string(ty·, s) {
+	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbornondetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v } => {
+	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v } => {
 	    Some(v)
 	}
     }
@@ -196,10 +208,10 @@ pub fn cbor_nondet_mk_array <'a>(a: &'a [CborNondet <'a>]) ->
     Option<CborNondet<'a>>
 {
     match crate::cbornondetver::cbor_nondet_mk_array(a) {
-	crate::cbornondetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbornondetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
 	    Some(v)
 	}
     }
@@ -234,10 +246,10 @@ pub fn cbor_nondet_mk_map <'a>(a: &'a mut [CborNondetMapEntry <'a>]) ->
     Option<CborNondet<'a>>
 {
     match crate::cbornondetver::cbor_nondet_mk_map(a) {
-	crate::cbornondetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbornondetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
 	    Some(v)
 	}
     }
@@ -367,10 +379,10 @@ pub fn cbor_nondet_get_array_item <'a>(x: CborNondetArray <'a>, i: u64) ->
     Option<CborNondet<'a>>
 {
     match crate::cbornondetver::cbor_nondet_get_array_item(x.array, i) {
-	crate::cbornondetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbornondetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
 	    Some(v)
 	}
     }
@@ -428,10 +440,10 @@ pub fn cbor_nondet_map_get <'a>(
     Option<CborNondet<'a>>
 {
     match crate::cbornondetver::cbor_nondet_map_get(x.map, k) {
-	crate::cbornondetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbornondetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
 	    Some(v)
 	}
     }

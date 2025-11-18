@@ -72,6 +72,7 @@ val cbor_nondet_array_iterator_start (_: unit) : array_iterator_start_t u#0 u#0 
 
 val cbor_nondet_array_iterator_is_empty (_: unit) : array_iterator_is_empty_t u#0 #_ cbor_nondet_array_iterator_match
 
+inline_for_extraction
 val cbor_nondet_array_iterator_length (_: unit) : array_iterator_length_t u#0 #_ cbor_nondet_array_iterator_match
 
 val cbor_nondet_array_iterator_next (_: unit) : array_iterator_next_t u#0 #_ #_ cbor_nondet_match cbor_nondet_array_iterator_match
@@ -153,8 +154,47 @@ val cbor_nondet_mk_array (_: unit) : mk_array_t #_ cbor_nondet_match
 
 val cbor_nondet_mk_map_entry (_: unit) : mk_map_entry_t #_ #_ cbor_nondet_match cbor_nondet_map_entry_match
 
+inline_for_extraction
+val dummy_cbor_nondet: cbor_nondet_t
+
 val cbor_nondet_mk_map (_: unit)
 : mk_map_gen_t #cbor_nondet_t #cbor_nondet_map_entry_t cbor_nondet_match cbor_nondet_map_entry_match
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 val cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nondet_match
+
+(* SLProp-to-Prop abstraction vehicle to prove the correctness of type abstraction in the Rust API *)
+
+[@@erasable]
+noeq type cbor_nondet_case_t =
+| CaseInt64
+| CaseString
+| CaseTagged
+| CaseArray
+| CaseMap
+| CaseSimpleValue
+
+val cbor_nondet_case: cbor_nondet_t -> cbor_nondet_case_t
+
+noextract [@@noextract_to "krml"]
+let cbor_nondet_case_correct_post
+  (x: cbor_nondet_t)
+  (v: Spec.cbor)
+: Tot prop
+= match cbor_nondet_case x, Spec.unpack v with
+  | CaseInt64, Spec.CInt64 _ _
+  | CaseString, Spec.CString _ _
+  | CaseTagged, Spec.CTagged _ _
+  | CaseArray, Spec.CArray _
+  | CaseMap, Spec.CMap _
+  | CaseSimpleValue, Spec.CSimple _
+  -> True
+  | _ -> False
+
+val cbor_nondet_case_correct
+  (x: cbor_nondet_t)
+  (#p: perm)
+  (#v: Spec.cbor)
+: stt_ghost unit emp_inames
+    (cbor_nondet_match p x v)
+    (fun _ -> cbor_nondet_match p x v ** pure (cbor_nondet_case_correct_post x v))
