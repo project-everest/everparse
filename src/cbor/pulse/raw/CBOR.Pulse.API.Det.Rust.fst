@@ -272,7 +272,7 @@ ensures exists* p' .
     let s = cbor_det_get_string () c;
     with p' v' . assert (pts_to s #p' v');
     fold (cbor_det_string_match ty p' s v);
-    fold (cbor_det_view_match p' (String k s) v);
+    rewrite (cbor_det_string_match ty p' s v) as (cbor_det_view_match p' (String k s) v);
     intro
       (Trade.trade
         (cbor_det_view_match p' (String k s) v)
@@ -282,13 +282,14 @@ ensures exists* p' .
       fn _
     {
       unfold (cbor_det_view_match p' (String k s) v);
-      unfold (cbor_det_string_match ty p' s v);
+      with ty . unfold (cbor_det_string_match ty p' s v);
     };
     Trade.trans _ _ (cbor_det_match p c v);
     String k s
   }
   else if (ty = cbor_major_type_array) {
     let res : cbor_det_array = { array = c };
+    rewrite Det.cbor_det_match p c v as Det.cbor_det_match p res.array v;
     fold (cbor_det_array_match p res v);
     fold (cbor_det_view_match p (Array res) v);
     intro
@@ -301,11 +302,13 @@ ensures exists* p' .
     {
       unfold (cbor_det_view_match p (Array res) v);
       unfold (cbor_det_array_match p res v);
+      rewrite Det.cbor_det_match p res.array v as Det.cbor_det_match p c v;
     };
     Array res
   }
   else if (ty = cbor_major_type_map) {
     let res : cbor_det_map = { map = c };
+    rewrite Det.cbor_det_match p c v as Det.cbor_det_match p res.map v;
     fold (cbor_det_map_match p res v);
     fold (cbor_det_view_match p (Map res) v);
     intro
@@ -318,6 +321,7 @@ ensures exists* p' .
     {
       unfold (cbor_det_view_match p (Map res) v);
       unfold (cbor_det_map_match p res v);
+      rewrite Det.cbor_det_match p res.map v as Det.cbor_det_match p c v;
     };
     Map res
   }
@@ -337,6 +341,7 @@ ensures exists* p' .
     {
       unfold (cbor_det_view_match p' (Tagged tag payload) v);
       unfold (cbor_det_tagged_match p' tag payload v);
+      with v_ . rewrite Det.cbor_det_match p' payload v_ as Det.cbor_det_match p' payload v'
     };
     Trade.trans _ _ (cbor_det_match p c v);
     Tagged tag payload
@@ -573,12 +578,14 @@ ensures
       unfold (map_get_post_none cbor_det_match x.map px vx vk);
       Trade.elim _ _;
       fold (safe_map_get_post x px vx vk None);
+      rewrite (safe_map_get_post x px vx vk None) as (safe_map_get_post x px vx vk res)
     }
     Some res' -> {
       unfold (map_get_post cbor_det_match x.map px vx vk (Some res'));
       unfold (map_get_post_some cbor_det_match x.map px vx vk res');
       Trade.trans _ _ (cbor_det_map_match px x vx);
       fold (safe_map_get_post x px vx vk (Some res'));
+      rewrite (safe_map_get_post x px vx vk (Some res')) as (safe_map_get_post x px vx vk res)
     }
   }
 }

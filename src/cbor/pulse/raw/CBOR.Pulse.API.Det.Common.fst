@@ -180,6 +180,7 @@ fn cbor_det_parse_valid
   let res = Parse.cbor_parse input len;
   with v1' . assert (Raw.cbor_match 1.0R res v1');
   Classical.forall_intro_2 (cbor_det_parse_aux v (SZ.v len) v1');
+  rewrite Raw.cbor_match 1.0R res v1' as Raw.cbor_match 1.0R res (SpecRaw.mk_det_raw_cbor (SpecRaw.mk_cbor v1'));
   fold (cbor_det_match 1.0R res (SpecRaw.mk_cbor v1'));
   rewrite each 
     Raw.cbor_match 1.0R res v1'
@@ -430,6 +431,10 @@ fn cbor_det_mk_simple_value (_: unit) : mk_simple_t u#0 #_ cbor_det_match
 {
   let res = Raw.cbor_match_simple_intro v;
   SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CSimple v)));
+  rewrite Raw.cbor_match 1.0R res (SpecRaw.Simple v) as Raw.cbor_match 1.0R
+      res
+      (SpecRaw.mk_det_raw_cbor (CBOR.Spec.API.Type.pack (CBOR.Spec.API.Type.CSimple
+                v)));
   fold (cbor_det_match 1.0R res (Spec.pack (Spec.CSimple v)));
   res
 }
@@ -443,6 +448,10 @@ fn cbor_det_mk_int64 (_: unit) : mk_int64_t u#0 #_ cbor_det_match
 {
   let res = Raw.cbor_match_int_intro ty (SpecRaw.mk_raw_uint64 v);
   SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CInt64 ty v)));
+  rewrite Raw.cbor_match 1.0R res (SpecRaw.Int64 ty (SpecRaw.mk_raw_uint64 v)) as Raw.cbor_match 1.0R
+      res
+      (SpecRaw.mk_det_raw_cbor (CBOR.Spec.API.Type.pack (CBOR.Spec.API.Type.CInt64
+                  ty v)));
   fold (cbor_det_match 1.0R res (Spec.pack (Spec.CInt64 ty v)));
   res
 }
@@ -469,11 +478,16 @@ fn cbor_det_mk_string (_: unit) : mk_string_t u#0 #_ cbor_det_match
     (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CString ty v)))
     (SpecRaw.String ty len64 v);
   assert (pure (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CString ty v)) == SpecRaw.String ty len64 v));
+  rewrite Raw.cbor_match 1.0R res r as Raw.cbor_match 1.0R
+      res
+      (SpecRaw.mk_det_raw_cbor (CBOR.Spec.API.Type.pack (CBOR.Spec.API.Type.CString
+                  ty v)));
   fold (cbor_det_match 1.0R res (Spec.pack (Spec.CString ty v)));
   rewrite each
     Raw.cbor_match 1.0R res r
   as
     cbor_det_match 1.0R res (SpecRaw.mk_cbor r);
+  rewrite each (SpecRaw.mk_cbor r) as (CBOR.Spec.API.Type.pack (CBOR.Spec.API.Type.CString ty v));
   res
 }
 
@@ -505,11 +519,18 @@ fn cbor_det_mk_tagged (_: unit) : mk_tagged_t #_ cbor_det_match
     (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CTagged tag v')))
     (SpecRaw.Tagged tag64 w');
   assert (pure (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CTagged tag v')) == SpecRaw.Tagged tag64 w'));
+  rewrite Raw.cbor_match 1.0R res (SpecRaw.Tagged tag64 w') as
+    Raw.cbor_match 1.0R
+      res
+      (SpecRaw.mk_det_raw_cbor (CBOR.Spec.API.Type.pack (CBOR.Spec.API.Type.CTagged
+                  tag v')));
   fold (cbor_det_match 1.0R res (Spec.pack (Spec.CTagged tag v')));
   rewrite each
     Raw.cbor_match 1.0R res r
   as
     cbor_det_match 1.0R res (SpecRaw.mk_cbor r);
+  rewrite each (SpecRaw.mk_cbor (SpecRaw.Tagged tag64 w')) as
+    (CBOR.Spec.API.Type.pack (CBOR.Spec.API.Type.CTagged tag v'));
   res
 }
 
@@ -553,6 +574,9 @@ decreases v
     SM.seq_list_match_cons_intro_trade (Seq.head c) (mk_det_raw_cbor (List.Tot.hd v)) (Seq.tail c) (List.Tot.map mk_det_raw_cbor (List.Tot.tl v)) (Raw.cbor_match p);
     Trade.trans _ _ (SM.seq_list_match c v (cbor_det_match p));
     rewrite each Seq.cons (Seq.head c) (Seq.tail c) as c;
+    rewrite each (mk_det_raw_cbor (List.Tot.Base.hd v) ::
+            List.Tot.Base.map mk_det_raw_cbor (List.Tot.Base.tl v))
+      as List.Tot.Base.map mk_det_raw_cbor v;
     ();
   }
 }
@@ -594,12 +618,19 @@ fn cbor_det_mk_array (_: unit) : mk_array_t #_ cbor_det_match
   with r. assert Raw.cbor_match 1.0R res r;
   Trade.trans_concl_r _ _ _ _;
   Spec.unpack_pack (Spec.CArray vv);
+  rewrite Raw.cbor_match 1.0R res r
+  as
+  Raw.cbor_match 1.0R
+      res
+      (SpecRaw.mk_det_raw_cbor (CBOR.Spec.API.Type.pack (CBOR.Spec.API.Type.CArray
+                vv)));
   fold (cbor_det_match 1.0R res (Spec.pack (Spec.CArray vv)));
   rewrite
     each
       Raw.cbor_match 1.0R res r
     as
       cbor_det_match 1.0R res v';
+  rewrite each Ghost.reveal v' as (Spec.pack (Spec.CArray vv));
   res
 }
 
@@ -698,6 +729,11 @@ decreases v
     SM.seq_list_match_cons_intro_trade (Seq.head c) (SpecRaw.mk_det_raw_cbor_map_entry (List.Tot.hd v)) (Seq.tail c) (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry (List.Tot.tl v)) (Raw.cbor_match_map_entry p);
     Trade.trans _ _ (SM.seq_list_match c v (cbor_det_map_entry_match p));
     rewrite each Seq.cons (Seq.head c) (Seq.tail c) as c;
+    rewrite each (SpecRaw.mk_det_raw_cbor_map_entry (List.Tot.Base.hd v) ::
+            List.Tot.Base.map SpecRaw.mk_det_raw_cbor_map_entry
+              (List.Tot.Base.tl v)) as (
+            List.Tot.Base.map SpecRaw.mk_det_raw_cbor_map_entry
+              (v));
     ();
   }
 }
@@ -723,7 +759,8 @@ fn cbor_det_mk_map_entry
   Trade.rewrite_with_trade
     (Raw.cbor_match_map_entry 1.0R res (SpecRaw.mk_det_raw_cbor vk, SpecRaw.mk_det_raw_cbor vv))
     (cbor_det_map_entry_match 1.0R res (Ghost.reveal vk, Ghost.reveal vv));
-  Trade.trans (cbor_det_map_entry_match 1.0R res (Ghost.reveal vk, Ghost.reveal vv)) _ _;
+  CBOR.Pulse.Raw.Iterator.trade_trans_nounify (cbor_det_map_entry_match 1.0R res (Ghost.reveal vk, Ghost.reveal vv)) _ (Raw.cbor_match_map_entry 1.0R
+          res _) _;
   Trade.trans_concl_l (cbor_det_map_entry_match 1.0R res (Ghost.reveal vk, Ghost.reveal vv)) _ _ _;
   Trade.trans_concl_r (cbor_det_map_entry_match 1.0R res (Ghost.reveal vk, Ghost.reveal vv)) _ _ _;
   res
@@ -853,6 +890,9 @@ decreases v
     SM.seq_list_match_cons_intro_trade (Seq.head c) (mk_cbor_map_entry (List.Tot.hd v)) (Seq.tail c) (List.Tot.map mk_cbor_map_entry (List.Tot.tl v)) (cbor_det_map_entry_match p);
     Trade.trans _ _ (SM.seq_list_match c v (Raw.cbor_match_map_entry p));
     rewrite each Seq.cons (Seq.head c) (Seq.tail c) as c;
+    rewrite each (mk_cbor_map_entry (List.Tot.Base.hd v) ::
+            List.Tot.Base.map mk_cbor_map_entry (List.Tot.Base.tl v)) as (
+            List.Tot.Base.map mk_cbor_map_entry (v));
     ();
   }
 }
@@ -1788,6 +1828,8 @@ ensures
       Trade.elim _ _;
       fold (map_get_post_none cbor_det_match x px vx vk);
       fold (map_get_post cbor_det_match x px vx vk None);
+      rewrite (map_get_post cbor_det_match x px vx vk None)
+        as (map_get_post cbor_det_match x px vx vk res);
       ();
     }
     Some x' -> {
@@ -1795,6 +1837,8 @@ ensures
       unfold (cbor_det_map_get_invariant_some px x vx vk m x');
       fold (map_get_post_some cbor_det_match x px vx vk x');
       fold (map_get_post cbor_det_match x px vx vk (Some x'));
+      rewrite (map_get_post cbor_det_match x px vx vk (Some x'))
+       as (map_get_post cbor_det_match x px vx vk res);
     }
   }
 }
@@ -1833,6 +1877,8 @@ fn cbor_det_map_get (_: unit)
     pure (cont == cont')
   {
     with gb gi gres . assert (cbor_det_map_get_invariant gb px x vx vk m p' gi gres);
+    rewrite (cbor_det_map_get_invariant gb px x vx vk m p' gi gres)
+      as   (cbor_det_map_get_invariant gb px x vx vk m p' gi None);
     unfold (cbor_det_map_get_invariant gb px x vx vk m p' gi None);
     unfold (cbor_det_map_get_invariant_none gb px x vx vk m p' gi);
     let entry = cbor_det_map_iterator_next () pi;
@@ -1859,6 +1905,7 @@ fn cbor_det_map_get (_: unit)
       List.Tot.assoc_mem (Ghost.reveal vk) l';
       pcont := false;
       fold (cbor_det_map_get_invariant_none false px x vx vk m p' gi');
+      assert (pts_to pres None);
       fold (cbor_det_map_get_invariant false px x vx vk m p' gi' None);
     } else {
       Trade.elim_hyp_l _ _ (cbor_det_match px x vx);
@@ -1870,6 +1917,7 @@ fn cbor_det_map_get (_: unit)
       let cont = not is_empty;
       pcont := cont;
       fold (cbor_det_map_get_invariant_none cont px x vx vk m p' i');
+      assert (pts_to pres None);
       fold (cbor_det_map_get_invariant cont px x vx vk m p' i' None);
     }
   };

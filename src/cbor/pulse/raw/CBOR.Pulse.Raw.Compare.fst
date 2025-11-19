@@ -156,32 +156,41 @@ ensures
 {
   cbor_match_cases x;
   match x {
+    norewrite
     CBOR_Case_Simple _ -> {
       cbor_major_type_simple_value
     }
+    norewrite
     CBOR_Case_Int _ -> {
       let res = cbor_match_int_elim_type x;
       res
     }
+    norewrite
     CBOR_Case_String _ -> {
       let res = cbor_match_string_elim_type x;
       res
     }
+    norewrite
     CBOR_Case_Tagged _ -> {
       cbor_major_type_tagged
     }
+    norewrite
     CBOR_Case_Serialized_Tagged _ -> {
       cbor_major_type_tagged
     }
+    norewrite
     CBOR_Case_Array _ -> {
       cbor_major_type_array
     }
+    norewrite
     CBOR_Case_Serialized_Array _ -> {
       cbor_major_type_array
     }
+    norewrite
     CBOR_Case_Map _ -> {
       cbor_major_type_map
     }
+    norewrite
     CBOR_Case_Serialized_Map _ -> {
       cbor_major_type_map
     }

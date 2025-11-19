@@ -579,6 +579,16 @@ let serialize_recursive_bound_correct
   (count <= Seq.length (L.serialize_nlist count (serializer_of_tot_serializer (serialize_recursive s)) c))
 = parse_nlist_recursive_bound_correct' p count (L.serialize_nlist count (serializer_of_tot_serializer (serialize_recursive s)) c)
 
+ghost fn trade_rewrite_l
+  (p p' q: slprop)
+requires
+  trade p q ** pure (p == p')
+ensures
+  trade p' q
+{
+  rewrite each p as p'
+}
+
 inline_for_extraction
 fn impl_nlist_forall_pred_recursive
   (#p: Ghost.erased parse_recursive_param)
@@ -695,8 +705,12 @@ fn impl_nlist_forall_pred_recursive
       Trade.trans
         _ _
         (pts_to_serialized (L.serialize_nlist (SZ.v n0) (serializer_of_tot_serializer (serialize_recursive s))) input #pm v);
-      pn := SZ.add (SZ.sub n 1sz) count;
+      let n' = SZ.add (SZ.sub n 1sz) count;
+      pn := n';
       ppi := pc;
+      with vi' . assert (pts_to_serialized (L.serialize_nlist (SZ.v n') (serializer_of_tot_serializer (serialize_recursive s))) pc #pm vi');
+      trade_rewrite_l _ (pts_to_serialized (L.serialize_nlist (SZ.v n') (serializer_of_tot_serializer (serialize_recursive s))) pc #pm vi') _;
+      ()
     }
   };
   elim_trade _ _;

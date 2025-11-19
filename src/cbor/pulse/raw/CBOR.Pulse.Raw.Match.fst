@@ -351,6 +351,7 @@ fn cbor_match_int_intro
   let resi = cbor_match_int_intro_aux typ i;
   let res = CBOR_Case_Int resi;
   fold (cbor_match 1.0R (CBOR_Case_Int resi) (Int64 typ i));
+  rewrite (cbor_match 1.0R (CBOR_Case_Int resi) (Int64 typ i)) as cbor_match 1.0R res (Int64 typ i);
   res
 }
 
@@ -383,6 +384,7 @@ ensures
   cbor_match p c v ** pure (Int64? v /\ res == Int64?.typ v)
 {
   cbor_match_cases c;
+  norewrite
   let CBOR_Case_Int c' = c;
   Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_int c' v);
   unfold (cbor_match_int c' v);
@@ -403,6 +405,7 @@ ensures
   cbor_match p c v ** pure (Int64? v /\ res == Int64?.v v)
 {
   cbor_match_cases c;
+  norewrite
   let CBOR_Case_Int c' = c;
   Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_int c' v);
   unfold (cbor_match_int c' v);
@@ -426,6 +429,7 @@ ensures
   emp
 {
   cbor_match_cases c;
+  norewrite
   let CBOR_Case_Int c' = c;
   rewrite (cbor_match p c v) as (cbor_match_int c' v);
   unfold (cbor_match_int c' v)
@@ -463,6 +467,7 @@ fn cbor_match_simple_intro
   fold (cbor_match_simple i (Simple i));
   let res = CBOR_Case_Simple i;
   fold (cbor_match 1.0R (CBOR_Case_Simple i) (Simple i));
+  rewrite (cbor_match 1.0R (CBOR_Case_Simple i) (Simple i)) as cbor_match 1.0R res (Simple i);
   res
 }
 
@@ -494,6 +499,7 @@ ensures
   cbor_match p c v ** pure (v == Simple res)
 {
   cbor_match_cases c;
+  norewrite
   let CBOR_Case_Simple res = c;
   Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_simple res v);
   unfold (cbor_match_simple res v);
@@ -513,6 +519,7 @@ ensures
   emp
 {
   cbor_match_cases c;
+  norewrite
   let CBOR_Case_Simple res = c;
   rewrite (cbor_match p c v) as (cbor_match_simple res v);
   unfold (cbor_match_simple res v)
@@ -548,7 +555,7 @@ fn cbor_match_string_intro_aux
     fn _
   {
     unfold (cbor_match_string c 1.0R r);
-    rewrite each c.cbor_string_ptr as input;
+    rewrite S.pts_to c.cbor_string_ptr #pm v as S.pts_to input #pm v;
     ();
   };
 }
@@ -599,6 +606,7 @@ ensures
   cbor_match p c v ** pure (String? v /\ res == String?.typ v)
 {
   cbor_match_cases c;
+  norewrite
   let CBOR_Case_String c' = c;
   Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_string c' p v);
   unfold (cbor_match_string c' p v);
@@ -619,6 +627,7 @@ ensures
   cbor_match p c v ** pure (String? v /\ res == String?.len v)
 {
   cbor_match_cases c;
+  norewrite
   let CBOR_Case_String c' = c;
   Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_string c' p v);
   unfold (cbor_match_string c' p v);
@@ -664,6 +673,7 @@ ensures exists* p' (v': Seq.seq U8.t) .
   pure (String? v /\ v' == String?.v v)
 {
   cbor_match_cases c;
+  norewrite
   let CBOR_Case_String c' = c;
   Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_string c' p v);
   unfold (cbor_match_string c' p v);
@@ -712,6 +722,7 @@ ensures
 {
   cbor_match_cases c;
   match c {
+    norewrite
     CBOR_Case_Tagged c' -> {
       cbor_match_eq_tagged p c' v;
       Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_tagged c' p v cbor_match);
@@ -720,6 +731,7 @@ ensures
       Trade.elim _ _;
       c'.cbor_tagged_tag
     }
+    norewrite
     CBOR_Case_Serialized_Tagged c' -> {
       Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_serialized_tagged c' p v);
       unfold (cbor_match_serialized_tagged c' p v);
@@ -786,6 +798,7 @@ fn cbor_match_tagged_intro
   R.share pc;
   rewrite (R.pts_to pc #(pr /. 2.0R) c)
     as (R.pts_to res'.cbor_tagged_ptr #res'.cbor_tagged_ref_perm c);
+  rewrite cbor_match pm c r as cbor_match (perm_mul 1.0R res'.cbor_tagged_payload_perm) c (Tagged?.v (Tagged tag r));
   fold (cbor_match_tagged res' 1.0R (Tagged tag r) cbor_match);
   intro
     (Trade.trade
@@ -799,7 +812,12 @@ fn cbor_match_tagged_intro
     with c' . assert (R.pts_to res'.cbor_tagged_ptr #res'.cbor_tagged_ref_perm c');
     rewrite (R.pts_to res'.cbor_tagged_ptr #res'.cbor_tagged_ref_perm c')
       as (R.pts_to pc #(pr /. 2.0R) c');
-    R.gather pc
+    rewrite cbor_match (perm_mul 1.0R res'.cbor_tagged_payload_perm)
+      c'
+      (Tagged?.v (Tagged tag r))
+    as cbor_match pm c' r;
+    R.gather pc;
+    rewrite each c' as c
   };
   cbor_match_eq_tagged 1.0R res' (Tagged tag r);
   let res = CBOR_Case_Tagged res';
@@ -838,6 +856,7 @@ ensures
 {
   cbor_match_cases c;
   match c {
+    norewrite
     CBOR_Case_Array c' -> {
       cbor_match_eq_array p c' v;
       Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_array c' p v cbor_match);
@@ -846,6 +865,7 @@ ensures
       Trade.elim _ _;
       ({ size = c'.cbor_array_length_size; value = SZ.sizet_to_uint64 (S.len c'.cbor_array_ptr) })
     }
+    norewrite
     CBOR_Case_Serialized_Array c' -> {
       Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_serialized_array c' p v);
       unfold (cbor_match_serialized_array c' p v);
@@ -942,6 +962,7 @@ ensures
 {
   cbor_match_cases c;
   match c {
+    norewrite
     CBOR_Case_Map c' -> {
       cbor_match_eq_map0 p c' v;
       Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_map0 c' p v cbor_match);
@@ -950,6 +971,7 @@ ensures
       Trade.elim _ _;
       ({ size = c'.cbor_map_length_size; value = SZ.sizet_to_uint64 (S.len c'.cbor_map_ptr) })
     }
+    norewrite
     CBOR_Case_Serialized_Map c' -> {
       Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_serialized_map c' p v);
       unfold (cbor_match_serialized_map c' p v);
@@ -1086,6 +1108,7 @@ fn cbor_string_reset_perm_correct
     rewrite each c'.cbor_string_ptr as c.cbor_string_ptr;
     fold (cbor_match_string c p r)
   };
+  rewrite each c' as cbor_string_reset_perm p c;
 }
 
 ghost
@@ -1108,6 +1131,8 @@ fn cbor_tagged_reset_perm_correct
   with s . assert (pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) s);
   rewrite (pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) s)
     as (pts_to c'.cbor_tagged_ptr #(1.0R `perm_mul` c'.cbor_tagged_ref_perm) s);
+  with c_ . rewrite cbor_match (perm_mul p c.cbor_tagged_payload_perm) c_ (Tagged?.v r)
+    as cbor_match (perm_mul 1.0R c'.cbor_tagged_payload_perm) c_ (Tagged?.v r);
   fold (cbor_match_tagged c' 1.0R r cbor_match);
   intro
     (Trade.trade
@@ -1121,8 +1146,12 @@ fn cbor_tagged_reset_perm_correct
     with s . assert (pts_to c'.cbor_tagged_ptr #(1.0R `perm_mul` c'.cbor_tagged_ref_perm) s);
     rewrite (pts_to c'.cbor_tagged_ptr #(1.0R `perm_mul` c'.cbor_tagged_ref_perm) s)
       as (pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) s);
-    fold (cbor_match_tagged c p r cbor_match)
+  with c_ . rewrite  cbor_match (perm_mul 1.0R c'.cbor_tagged_payload_perm) c_ (Tagged?.v r)
+    as cbor_match (perm_mul p c.cbor_tagged_payload_perm) c_ (Tagged?.v r);
+    fold (cbor_match_tagged c p r cbor_match);
+    ()
   };
+  rewrite each c' as cbor_tagged_reset_perm p c;
 }
 
 ghost
@@ -1160,6 +1189,7 @@ fn cbor_array_reset_perm_correct
       as (pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) s);
     fold (cbor_match_array c p r cbor_match)
   };
+  rewrite each c' as cbor_array_reset_perm p c;
 }
 
 ghost
@@ -1197,6 +1227,7 @@ fn cbor_map_reset_perm_correct
       as (pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) s);
     fold (cbor_match_map0 c p r cbor_match)
   };
+  rewrite each c' as cbor_map_reset_perm p c;
 }
 
 ghost
@@ -1215,6 +1246,7 @@ fn cbor_raw_reset_perm_correct
   cbor_match_cases c;
   let c' = cbor_raw_reset_perm_tot p c;
   match c {
+    norewrite
     CBOR_Case_String v -> {
       Trade.rewrite_with_trade
         (cbor_match p c r)
@@ -1224,26 +1256,32 @@ fn cbor_raw_reset_perm_correct
         Trade.rewrite_with_trade
           (cbor_match_string (cbor_string_reset_perm p v) 1.0R r)
           (cbor_match 1.0R c' r);
-        Trade.trans _ _ (cbor_match p c r)
+        Trade.trans _ _ (cbor_match p c r);
+        rewrite each c' as cbor_raw_reset_perm_tot p c;
     }
+    norewrite
     CBOR_Case_Int v -> {
       Trade.rewrite_with_trade
         (cbor_match p c r)
         (cbor_match_int v r);
       Trade.rewrite_with_trade
         (cbor_match_int v r)
-        (cbor_match 1.0R c r);
-      Trade.trans _ _ (cbor_match p c r)
+        (cbor_match 1.0R c' r);
+      Trade.trans _ _ (cbor_match p c r);
+      rewrite each c' as cbor_raw_reset_perm_tot p c;
     }
+    norewrite
     CBOR_Case_Simple v -> {
       Trade.rewrite_with_trade
         (cbor_match p c r)
         (cbor_match_simple v r);
       Trade.rewrite_with_trade
         (cbor_match_simple v r)
-        (cbor_match 1.0R c r);
-      Trade.trans _ _ (cbor_match p c r)
+        (cbor_match 1.0R c' r);
+      Trade.trans _ _ (cbor_match p c r);
+      rewrite each c' as cbor_raw_reset_perm_tot p c;
     }
+    norewrite
     CBOR_Case_Tagged v -> {
       cbor_match_eq_tagged p v r;
       cbor_match_eq_tagged 1.0R (cbor_tagged_reset_perm p v) r;
@@ -1255,8 +1293,10 @@ fn cbor_raw_reset_perm_correct
       Trade.rewrite_with_trade
         (cbor_match_tagged (cbor_tagged_reset_perm p v) 1.0R r cbor_match)
         (cbor_match 1.0R c' r);
-      Trade.trans _ _ (cbor_match p c r)
+      Trade.trans _ _ (cbor_match p c r);
+      rewrite each c' as cbor_raw_reset_perm_tot p c;
     }
+    norewrite
     CBOR_Case_Array v -> {
       cbor_match_eq_array p v r;
       cbor_match_eq_array 1.0R (cbor_array_reset_perm p v) r;
@@ -1268,8 +1308,10 @@ fn cbor_raw_reset_perm_correct
       Trade.rewrite_with_trade
         (cbor_match_array (cbor_array_reset_perm p v) 1.0R r cbor_match)
         (cbor_match 1.0R c' r);
-      Trade.trans _ _ (cbor_match p c r)
+      Trade.trans _ _ (cbor_match p c r);
+      rewrite each c' as cbor_raw_reset_perm_tot p c;
     }
+    norewrite
     CBOR_Case_Map v -> {
       cbor_match_eq_map0 p v r;
       cbor_match_eq_map0 1.0R (cbor_map_reset_perm p v) r;
@@ -1281,22 +1323,29 @@ fn cbor_raw_reset_perm_correct
       Trade.rewrite_with_trade
         (cbor_match_map0 (cbor_map_reset_perm p v) 1.0R r cbor_match)
         (cbor_match 1.0R c' r);
-      Trade.trans _ _ (cbor_match p c r)
+      Trade.trans _ _ (cbor_match p c r);
+      rewrite each c' as cbor_raw_reset_perm_tot p c;
     }
+    norewrite
     CBOR_Case_Serialized_Tagged _ -> {
       Trade.rewrite_with_trade
         (cbor_match p c r)
-        (cbor_match 1.0R c' r)
+        (cbor_match 1.0R c' r);
+      rewrite each c' as cbor_raw_reset_perm_tot p c;
     }
+    norewrite
     CBOR_Case_Serialized_Array _ -> {
       Trade.rewrite_with_trade
         (cbor_match p c r)
-        (cbor_match 1.0R c' r)
+        (cbor_match 1.0R c' r);
+      rewrite each c' as cbor_raw_reset_perm_tot p c;
     }
+    norewrite
     CBOR_Case_Serialized_Map _ -> {
       Trade.rewrite_with_trade
         (cbor_match p c r)
-        (cbor_match 1.0R c' r)
+        (cbor_match 1.0R c' r);
+      rewrite each c' as cbor_raw_reset_perm_tot p c;
     }
   }
 }

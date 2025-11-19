@@ -367,40 +367,49 @@ ensures
 {
   cbor_match_cases xl;
   match xl {
+    norewrite
     CBOR_Case_Int _ -> {
       let ty = cbor_match_int_elim_type xl;
       let v = cbor_match_int_elim_value xl;
       raw_uint64_as_argument ty v
     }
+    norewrite
     CBOR_Case_String _ -> {
       let ty = cbor_match_string_elim_type xl;
       let len = cbor_match_string_elim_length xl;
       raw_uint64_as_argument ty len
     }
+    norewrite
     CBOR_Case_Tagged _ -> {
       let tag = cbor_match_tagged_get_tag xl;
       raw_uint64_as_argument cbor_major_type_tagged tag
     }
+    norewrite
     CBOR_Case_Serialized_Tagged _ -> {
       let tag = cbor_match_tagged_get_tag xl;
       raw_uint64_as_argument cbor_major_type_tagged tag
     }
+    norewrite
     CBOR_Case_Array _ -> {
       let len = cbor_match_array_get_length xl;
       raw_uint64_as_argument cbor_major_type_array len
     }
+    norewrite
     CBOR_Case_Serialized_Array _ -> {
       let len = cbor_match_array_get_length xl;
       raw_uint64_as_argument cbor_major_type_array len
     }
+    norewrite
     CBOR_Case_Map _ -> {
       let len = cbor_match_map_get_length xl;
       raw_uint64_as_argument cbor_major_type_map len
     }
+    norewrite
     CBOR_Case_Serialized_Map _ -> {
       let len = cbor_match_map_get_length xl;
       raw_uint64_as_argument cbor_major_type_map len
     }
+    norewrite
     CBOR_Case_Simple _ -> {
       let v = cbor_match_simple_elim xl;
       simple_value_as_argument v
@@ -585,7 +594,7 @@ vmatch_lens #_ #_ #_
     (cbor_match x1'.p x1'.v xh');
   Trade.trans
     (cbor_match x1'.p x1'.v xh')
-    _ _;
+    (cbor_match_with_perm x1' xh') _; // FIXME: WHY WHY WHY do I now have to help Pulse here?
   let s = cbor_match_string_elim_payload x1'.v;
   Trade.trans _ (cbor_match _ x1'.v xh') _;
   S.pts_to_len s;
@@ -601,11 +610,12 @@ vmatch_lens #_ #_ #_
     s
     z
     res;
-  Trade.trans
+  LowParse.Pulse.VCList.trade_trans_nounify
     (LowParse.Pulse.SeqBytes.pts_to_seqbytes
               (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
                       (get_header_long_argument xh1)))
       res x')
+    _
     _ _;
   Trade.rewrite_with_trade
     (LowParse.Pulse.SeqBytes.pts_to_seqbytes
@@ -1639,6 +1649,7 @@ fn ser_payload_tagged_not_tagged_lens
   };
   cbor_serialized_tagged_pts_to_serialized_with_perm_trade ser _ _ res;
   Trade.trans _ (cbor_match_serialized_tagged ser xl.p xh0) _;
+  rewrite each (Tagged?.v xh0) as v;
   res
 }
 

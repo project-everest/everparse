@@ -1059,6 +1059,18 @@ fn split_nondep_then
   unfold (split_dtuple2_post #t1 #(const_fun t2) s1 #k2 #(const_fun p2) (const_fun s2) input pm (dtuple2_of_pair v) (input1, input2));
   unfold (split_dtuple2_post' #t1 #(const_fun t2) s1 #_ #(const_fun p2) (const_fun s2) input pm (dtuple2_of_pair v) input1 input2);
   Trade.trans (_ ** _) _ _;
+  rewrite
+    (trade (pts_to_serialized s1 input1 #pm (dfst (dtuple2_of_pair v)) **
+        pts_to_serialized (const_fun s2 (dfst (dtuple2_of_pair v)))
+          input2 #pm
+          (dsnd (dtuple2_of_pair v)))
+      (pts_to_serialized (serialize_nondep_then s1 s2) input #pm v))
+    as
+    (trade (pts_to_serialized s1 input1 #pm (fst v) **
+        pts_to_serialized (const_fun s2 (fst v))
+          input2 #pm
+          (snd v))
+      (pts_to_serialized (serialize_nondep_then s1 s2) input #pm v));
   fold (split_nondep_then_post' s1 s2 input pm v input1 input2);
   fold (split_nondep_then_post s1 s2 input pm v (input1, input2));
   (input1, input2)
@@ -1848,6 +1860,10 @@ fn l2r_leaf_write_dtuple2_body_lens
   (x: Ghost.erased (th2 xh1))
 {
   let _ = l2r_leaf_write_dtuple2_body_lens_aux xh1 x' x;
+  with y . rewrite (trade (eq_as_slprop (th2 xh1) y x)
+      (vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1 x' x) ** eq_as_slprop (th2 xh1) y x)
+    as (trade (eq_as_slprop (th2 xh1) (dsnd x') x)
+      (vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1 x' x) ** eq_as_slprop (th2 xh1) (dsnd x') x);
   dsnd x'
 }
 
@@ -1986,6 +2002,7 @@ fn read_and_zero_copy_parse_dtuple2
   let v1 = w1 input1;
   Trade.elim_hyp_l _ _ _;
   let res = w2 v1 input2;
+  rewrite each (dfst v) as v1;
   Trade.trans (vmatch_dep_proj2 vmatch v1 res _) _ _;
   Trade.rewrite_with_trade
     (vmatch_dep_proj2 vmatch v1 res _)
@@ -2107,7 +2124,7 @@ returns xl1: tl1
 ensures
   vmatch1 xl1 (fst xh) ** trade (vmatch1 xl1 (fst xh)) (vmatch_pair vmatch1 vmatch2 xl xh)
 {
-  let (res, _) = xl;
+  norewrite let (res, _) = xl;
   Trade.rewrite_with_trade
     (vmatch_pair vmatch1 vmatch2 xl xh)
     (vmatch1 res (fst xh) ** vmatch2 (snd xl) (snd xh));
@@ -2128,7 +2145,7 @@ returns xl2: tl2
 ensures
   vmatch2 xl2 (snd xh) ** trade (vmatch2 xl2 (snd xh)) (vmatch_pair vmatch1 vmatch2 xl xh)
 {
-  let (_, res) = xl;
+  norewrite let (_, res) = xl;
   Trade.rewrite_with_trade
     (vmatch_pair vmatch1 vmatch2 xl xh)
     (vmatch1 (fst xl) (fst xh) ** vmatch2 res (snd xh));

@@ -1576,7 +1576,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
           S.pts_to_len outl2;
 //          assert (pure (S.len outl == size2));
           let Some oo1 = parse outl2;
-          let (o1, orem1) = oo1;
+          norewrite let (o1, orem1) = oo1;
           rewrite (cbor_det_parse_post vmatch' outl2 1.0R vl (Some oo1))
             as (cbor_det_parse_post_some vmatch' outl2 1.0R vl o1 orem1);
           unfold (cbor_det_parse_post_some vmatch' outl2 1.0R vl o1 orem1);
@@ -1585,7 +1585,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
           Cbor.cbor_det_serialize_inj_strong ke' (sp1.serializer ke) w1'' Seq.empty;
           assert (pure (Ghost.reveal ke' == sp1.serializer ke));
           let Some oo2 = parse out2;
-          let (o2, orem2) = oo2;
+          norewrite let (o2, orem2) = oo2;
           rewrite (cbor_det_parse_post vmatch' out2 1.0R w2 (Some oo2))
             as (cbor_det_parse_post_some vmatch' out2 1.0R w2 o2 orem2);
           unfold (cbor_det_parse_post_some vmatch' out2 1.0R w2 o2 orem2);
@@ -1862,7 +1862,11 @@ fn map_slice_iterator_next
     unfold (rel_slice_of_list r false i'.base l');
     with s' . assert (pts_to i'.base.s #i'.base.p s');
     SM.seq_list_match_cons_intro res (Ghost.reveal gv) s' l' r;
+    with s1 s2 s . rewrite (S.is_split s1 s2 s) as S.is_split i.base.s il i'.base.s;
     S.join il i'.base.s i.base.s;
+    with s1 . assert pts_to i.base.s #i.base.p s1;
+    with s2 . rewrite SM.seq_list_match s2 (Ghost.reveal gv :: l') (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2))
+      as SM.seq_list_match s1 (Ghost.reveal gv :: l') (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2));
     fold (rel_slice_of_list
       (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2))
       false

@@ -204,14 +204,18 @@ ensures
   freeable_match'_cases x ft;
   match x {
     CBOR_Copy_Unit -> {
+      rewrite each ft as FTUnit;
       unfold (freeable_match' CBOR_Copy_Unit FTUnit);
+      ()
     }
     CBOR_Copy_Bytes v -> {
+      rewrite each ft as FTBytes;
       unfold (freeable_match' (CBOR_Copy_Bytes v) FTBytes);
       V.free v
     }
     CBOR_Copy_Box b -> {
       let ft' = Ghost.hide (FTBox?.b ft);
+      rewrite each ft as (FTBox ft');
       unfold (freeable_match' (CBOR_Copy_Box b) (FTBox ft'));
       B.free b.box_cbor;
       let b' = ((let open Pulse.Lib.Box in ( ! )) b.box_footprint);
@@ -220,6 +224,7 @@ ensures
     }
     CBOR_Copy_Array a -> {
       let ft' = Ghost.hide (FTArray?.a ft);
+      rewrite each ft as (FTArray ft');
       unfold (freeable_match' (CBOR_Copy_Array a) (FTArray ft'));
       V.free a.array_cbor;
       with s . assert (pts_to a.array_footprint s ** SM.seq_list_match s ft' freeable_match');
@@ -246,6 +251,7 @@ ensures
         SM.seq_seq_match_dequeue_left freeable_match' s s' _ _;
         let i = !pi;
         let x' = V.op_Array_Access a.array_footprint i;
+        with x_ y_ . rewrite freeable_match' x_ y_ as freeable_match' x' y_;
         cbor_free' x' _;
         pi := (SZ.add i 1sz);
       };
@@ -254,6 +260,7 @@ ensures
     }
     CBOR_Copy_Map a -> {
       let ft' = Ghost.hide (FTMap?.m ft);
+      rewrite each ft as (FTMap ft');
       unfold (freeable_match' (CBOR_Copy_Map a) (FTMap ft'));
       V.free a.map_cbor;
       with s . assert (pts_to a.map_footprint s ** SM.seq_list_match s ft' (freeable_match_map_entry' ft freeable_match'));
@@ -281,6 +288,7 @@ ensures
         SM.seq_seq_match_dequeue_left freeable_match_map_entry s s' _ _;
         let i = !pi;
         let x' = V.op_Array_Access a.map_footprint i;
+        with x_ y_ . rewrite freeable_match_map_entry x_ y_ as freeable_match_map_entry x' y_;
         cbor_free_map_entry cbor_free' x' _;
         pi := (SZ.add i 1sz);
       };
@@ -442,10 +450,11 @@ ensures
     V.pts_to_len v';
     V.pts_to_len vf;
     let i = !pi;
-    with s1 sf st . assert (pts_to v' s1 ** pts_to vf sf ** Trade.trade
-      (SM.seq_seq_match (cbor_match 1.0R) s1 sl 0 (SZ.v i))
-      (SM.seq_seq_match freeable_match' sf st 0 (SZ.v i))
+    with s1 j sf st . assert (pts_to v' s1 ** pts_to vf sf ** Trade.trade
+      (SM.seq_seq_match (cbor_match 1.0R) s1 sl 0 j)
+      (SM.seq_seq_match freeable_match' sf st 0 j)
     );
+    rewrite each j as (SZ.v i);
     let c = ar.(i);
     SM.seq_list_match_index_trade (cbor_match pl) s l (SZ.v i);
     let c' = copy c;
@@ -478,15 +487,16 @@ ensures
     pi := (SZ.add i 1sz);
   };
   Trade.elim _ (cbor_match p x v);
-  with s1 sf st . assert (pts_to v' s1 ** pts_to vf sf ** 
-    SM.seq_seq_match (cbor_match 1.0R) s1 sl 0 (SZ.v len) **
+  with s1 j sf st . assert (pts_to v' s1 ** pts_to vf sf ** 
+    SM.seq_seq_match (cbor_match 1.0R) s1 sl 0 j **
     Trade.trade
-      (SM.seq_seq_match (cbor_match 1.0R) s1 sl 0 (SZ.v len))
-      (SM.seq_seq_match freeable_match' sf st 0 (SZ.v len))
+      (SM.seq_seq_match (cbor_match 1.0R) s1 sl 0 j)
+      (SM.seq_seq_match freeable_match' sf st 0 j)
   );
+  rewrite each j as (SZ.v len);
   V.pts_to_len v';
   SM.seq_seq_match_seq_list_match_trade (cbor_match 1.0R) s1 sl;
-  Trade.trans _ _ (SM.seq_seq_match freeable_match' sf st 0 (SZ.v len));
+  CBOR.Pulse.Raw.Iterator.trade_trans_nounify _ _ _ (SM.seq_seq_match freeable_match' sf st 0 (SZ.v len));
   V.pts_to_len vf;
   let lt = Ghost.hide (Seq.seq_to_list st);
   intro
@@ -530,9 +540,13 @@ ensures
    rewrite (pts_to v' s1) as (pts_to fa.array_cbor s1);
    rewrite (pts_to vf sf) as (pts_to fa.array_footprint sf);
    fold (freeable_match' (CBOR_Copy_Array fa) (FTArray lt));
+   rewrite freeable_match' (CBOR_Copy_Array fa) (FTArray lt) as
+     freeable_match' res.footprint res.tree;
    fold (freeable res)
   };
   Trade.trans _ _ (freeable res);
+  with r' . assert cbor_match 1.0R c' (Array len64 r');
+  rewrite each cbor_match 1.0R c' (Array len64 r') as cbor_match 1.0R res.cbor v;
   res
 }
 
@@ -633,10 +647,11 @@ ensures
     V.pts_to_len v';
     V.pts_to_len vf;
     let i = !pi;
-    with s1 sf st . assert (pts_to v' s1 ** pts_to vf sf ** Trade.trade
-      (SM.seq_seq_match (cbor_match_map_entry 1.0R) s1 sl 0 (SZ.v i))
-      (SM.seq_seq_match freeable_match_map_entry sf st 0 (SZ.v i))
+    with s1 j sf st . assert (pts_to v' s1 ** pts_to vf sf ** Trade.trade
+      (SM.seq_seq_match (cbor_match_map_entry 1.0R) s1 sl 0 j)
+      (SM.seq_seq_match freeable_match_map_entry sf st 0 j)
     );
+    rewrite each j as (SZ.v i);
     let c = S.op_Array_Access ar i;
     SM.seq_list_match_index_trade (cbor_match_map_entry pl) s l (SZ.v i);
     with v1 . assert (cbor_match_map_entry pl c v1);
@@ -692,15 +707,16 @@ ensures
     pi := (SZ.add i 1sz);
   };
   Trade.elim _ (cbor_match p x v);
-  with s1 sf st . assert (pts_to v' s1 ** pts_to vf sf ** 
-    SM.seq_seq_match (cbor_match_map_entry 1.0R) s1 sl 0 (SZ.v len) **
+  with s1 j sf st . assert (pts_to v' s1 ** pts_to vf sf ** 
+    SM.seq_seq_match (cbor_match_map_entry 1.0R) s1 sl 0 j **
     Trade.trade
-      (SM.seq_seq_match (cbor_match_map_entry 1.0R) s1 sl 0 (SZ.v len))
-      (SM.seq_seq_match freeable_match_map_entry sf st 0 (SZ.v len))
+      (SM.seq_seq_match (cbor_match_map_entry 1.0R) s1 sl 0 j)
+      (SM.seq_seq_match freeable_match_map_entry sf st 0 j)
   );
+  rewrite each j as (SZ.v len);
   V.pts_to_len v';
   SM.seq_seq_match_seq_list_match_trade (cbor_match_map_entry 1.0R) s1 sl;
-  Trade.trans _ _ (SM.seq_seq_match freeable_match_map_entry sf st 0 (SZ.v len));
+  CBOR.Pulse.Raw.Iterator.trade_trans_nounify _ _ _ (SM.seq_seq_match freeable_match_map_entry sf st 0 (SZ.v len));
   V.pts_to_len vf;
   let lt = Ghost.hide (Seq.seq_to_list st);
   intro
@@ -745,9 +761,13 @@ ensures
    rewrite (pts_to v' s1) as (pts_to fa.map_cbor s1);
    rewrite (pts_to vf sf) as (pts_to fa.map_footprint sf);
    fold (freeable_match' (CBOR_Copy_Map fa) (FTMap lt));
+   rewrite (freeable_match' (CBOR_Copy_Map fa) (FTMap lt)) as freeable_match' res.footprint res.tree;
    fold (freeable res)
   };
   Trade.trans _ _ (freeable res);
+  with r' . assert cbor_match 1.0R c' (Map len64 r');
+  rewrite each cbor_match 1.0R c' (Map len64 r') as
+  cbor_match 1.0R res.cbor v;
   res
 }
 
@@ -769,6 +789,7 @@ ensures
 {
   cbor_match_cases x;
   match x {
+    norewrite
     CBOR_Case_Int _ -> {
       let ty = cbor_match_int_elim_type x;
       let w = cbor_match_int_elim_value x;
@@ -788,10 +809,14 @@ ensures
       {
         cbor_match_int_free c';
         fold (freeable_match' CBOR_Copy_Unit FTUnit);
+        rewrite (freeable_match' CBOR_Copy_Unit FTUnit) as freeable_match' res.footprint res.tree;
         fold (freeable res)
       };
+      rewrite each cbor_match 1.0R c' (Int64 ty w)
+        as cbor_match 1.0R res.cbor v;
       res
     }
+    norewrite
     CBOR_Case_Simple _ -> {
       let w = cbor_match_simple_elim x;
       let c' = cbor_match_simple_intro w;
@@ -810,10 +835,13 @@ ensures
       {
         cbor_match_simple_free c';
         fold (freeable_match' CBOR_Copy_Unit FTUnit);
+        rewrite (freeable_match' CBOR_Copy_Unit FTUnit) as freeable_match' res.footprint res.tree;
         fold (freeable res)
       };
+      rewrite each cbor_match 1.0R c' (Simple w) as cbor_match 1.0R res.cbor v;
       res
     }
+    norewrite
     CBOR_Case_String _ -> {
       let ty = cbor_match_string_elim_type x;
       let len = cbor_match_string_elim_length x;
@@ -844,11 +872,15 @@ ensures
         S.to_array s';
         V.to_vec_pts_to v';
         fold (freeable_match' (CBOR_Copy_Bytes v') FTBytes);
+        rewrite (freeable_match' (CBOR_Copy_Bytes v') FTBytes) as freeable_match' res.footprint res.tree;
         fold (freeable res)
       };
       Trade.trans _ (pts_to s' vs') _;
+      with r_ . assert cbor_match 1.0R c' r_;
+      rewrite each cbor_match 1.0R c' r_ as cbor_match 1.0R res.cbor v;
       res
     }
+    norewrite
     CBOR_Case_Tagged _ -> {
       let tag = cbor_match_tagged_get_tag x;
       let pl = cbor_match_tagged_get_payload x;
@@ -882,18 +914,23 @@ ensures
         unfold (freeable cpl');
         fold (freeable_match_box fb cpl'.tree);
         freeable_match_box_eq fb cpl'.tree;
-        rewrite (freeable_match_box fb cpl'.tree) as (freeable_match' (CBOR_Copy_Box fb) (FTBox cpl'.tree));
+        rewrite (freeable_match_box fb cpl'.tree) as freeable_match' res.footprint res.tree;
         fold (freeable res)
       };
       Trade.trans _ _ (freeable res);
+      rewrite each cbor_match 1.0R c' (Tagged tag (Tagged?.v v))
+        as cbor_match 1.0R res.cbor v;
       res
     }
+    norewrite
     CBOR_Case_Array a -> {
-      cbor_copy_array cbor_copy0 (CBOR_Case_Array a);
+      cbor_copy_array cbor_copy0 x;
     }
+    norewrite
     CBOR_Case_Map a -> {
-      cbor_copy_map cbor_copy0 (CBOR_Case_Map a);
+      cbor_copy_map cbor_copy0 x;
     }
+    norewrite
     CBOR_Case_Serialized_Array a -> {
       Trade.rewrite_with_trade
         (cbor_match p x v)
@@ -913,6 +950,10 @@ ensures
         cbor_serialized_payload = s';
         cbor_serialized_perm = 1.0R;
       };
+      rewrite cbor_match_serialized_payload_array s' 1.0R (Array?.v v)
+        as cbor_match_serialized_payload_array a'.cbor_serialized_payload
+        (perm_mul 1.0R a'.cbor_serialized_perm)
+        (Array?.v v);
       fold (cbor_match_serialized_array a' 1.0R v);
       let res = {
         cbor = CBOR_Case_Serialized_Array a';
@@ -931,10 +972,15 @@ ensures
         fn _
       {
         unfold (cbor_match_serialized_array a' 1.0R v);
+        rewrite     cbor_match_serialized_payload_array a'.cbor_serialized_payload
+          (perm_mul 1.0R a'.cbor_serialized_perm)
+          (Array?.v v)
+          as cbor_match_serialized_payload_array s' 1.0R (Array?.v v);
         Trade.elim _ _;
         S.to_array s';
         V.to_vec_pts_to v';
         fold (freeable_match' (CBOR_Copy_Bytes v') FTBytes);
+        rewrite (freeable_match' (CBOR_Copy_Bytes v') FTBytes) as freeable_match' res.footprint res.tree;
         fold (freeable res)
       };
       Trade.rewrite_with_trade
@@ -943,6 +989,7 @@ ensures
       Trade.trans (cbor_match 1.0R res.cbor v) _ _;
       res
     }
+    norewrite
     CBOR_Case_Serialized_Map a -> {
       Trade.rewrite_with_trade
         (cbor_match p x v)
@@ -962,6 +1009,9 @@ ensures
         cbor_serialized_payload = s';
         cbor_serialized_perm = 1.0R;
       };
+      rewrite cbor_match_serialized_payload_map s' 1.0R (Map?.v v) as cbor_match_serialized_payload_map a'.cbor_serialized_payload
+        (perm_mul 1.0R a'.cbor_serialized_perm)
+        (Map?.v v);
       fold (cbor_match_serialized_map a' 1.0R v);
       let res = {
         cbor = CBOR_Case_Serialized_Map a';
@@ -980,10 +1030,15 @@ ensures
         fn _
       {
         unfold (cbor_match_serialized_map a' 1.0R v);
+        rewrite cbor_match_serialized_payload_map a'.cbor_serialized_payload
+          (perm_mul 1.0R a'.cbor_serialized_perm)
+          (Map?.v v)
+          as  cbor_match_serialized_payload_map s' 1.0R (Map?.v v);
         Trade.elim _ _;
         S.to_array s';
         V.to_vec_pts_to v';
         fold (freeable_match' (CBOR_Copy_Bytes v') FTBytes);
+        rewrite (freeable_match' (CBOR_Copy_Bytes v') FTBytes) as freeable_match' res.footprint res.tree;
         fold (freeable res)
       };
       Trade.rewrite_with_trade
@@ -992,6 +1047,7 @@ ensures
       Trade.trans (cbor_match 1.0R res.cbor v) _ _;
       res
     }
+    norewrite
     CBOR_Case_Serialized_Tagged a -> {
       Trade.rewrite_with_trade
         (cbor_match p x v)
@@ -1011,6 +1067,10 @@ ensures
         cbor_serialized_payload = s';
         cbor_serialized_perm = 1.0R;
       };
+      rewrite cbor_match_serialized_payload_tagged s' 1.0R (Tagged?.v v)
+        as cbor_match_serialized_payload_tagged a'.cbor_serialized_payload
+        (perm_mul 1.0R a'.cbor_serialized_perm)
+        (Tagged?.v v);
       fold (cbor_match_serialized_tagged a' 1.0R v);
       let res = {
         cbor = CBOR_Case_Serialized_Tagged a';
@@ -1029,10 +1089,14 @@ ensures
         fn _
       {
         unfold (cbor_match_serialized_tagged a' 1.0R v);
+        rewrite cbor_match_serialized_payload_tagged a'.cbor_serialized_payload
+          (perm_mul 1.0R a'.cbor_serialized_perm)
+          (Tagged?.v v) as cbor_match_serialized_payload_tagged s' 1.0R (Tagged?.v v);
         Trade.elim _ _;
         S.to_array s';
         V.to_vec_pts_to v';
         fold (freeable_match' (CBOR_Copy_Bytes v') FTBytes);
+        rewrite (freeable_match' (CBOR_Copy_Bytes v') FTBytes) as freeable_match' res.footprint res.tree;
         fold (freeable res)
       };
       Trade.rewrite_with_trade
