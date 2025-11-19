@@ -187,6 +187,7 @@ fn impl_zero_copy_map_nop
   {
     rewrite (rel_unit () ()) as emp
   };
+  admit (); // HELP!
   ()
 }
 
