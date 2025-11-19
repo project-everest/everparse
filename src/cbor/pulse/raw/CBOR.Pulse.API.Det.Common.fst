@@ -1169,7 +1169,7 @@ fn cbor_det_array_iterator_length (_: unit) : array_iterator_length_t u#0 #_ cbo
 }
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-fn cbor_det_array_iterator_next (_: unit) : array_iterator_next_t u#0 #_ #_ cbor_det_match cbor_det_array_iterator_match
+fn cbor_det_array_iterator_next (_: unit) : array_iterator_next_t u#0 u#0 #_ #_ cbor_det_match cbor_det_array_iterator_match
 = (x: _)
   (#y: _)
   (#py: _)
@@ -1554,7 +1554,7 @@ fn cbor_det_map_iterator_is_empty (_: unit) : map_iterator_is_empty_t u#0 #_ cbo
 }
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-fn cbor_det_map_iterator_next (_: unit) : map_iterator_next_t u#0 #_ #_ cbor_det_map_entry_match cbor_det_map_iterator_match
+fn cbor_det_map_iterator_next (_: unit) : map_iterator_next_t u#0 u#0 #_ #_ cbor_det_map_entry_match cbor_det_map_iterator_match
 = (x: _)
   (#y: _)
   (#py: _)

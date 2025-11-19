@@ -872,7 +872,7 @@ let mk_array_from_array_t
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn mk_array_from_array'
-  (#t: Type)
+  (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
   (mk_array_from_array: mk_array_from_array_t vmatch)
   (a: A.array t)
