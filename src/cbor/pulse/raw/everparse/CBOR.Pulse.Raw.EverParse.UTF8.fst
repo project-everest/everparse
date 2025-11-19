@@ -130,7 +130,8 @@ ensures
     pts_to pi i **
     pure (
       SZ.v i <= Seq.length v /\
-      correct v == (res && correct (Seq.slice v (SZ.v i) (Seq.length v))) /\
+      correct v == (res && correct (Seq.slice v (SZ.v i) (Seq.length v)))
+    ) ** pure (
       cont == (res && SZ.v i < Seq.length v)
     )
   {

@@ -1760,6 +1760,7 @@ let cbor_det_map_get_invariant_false_elim_precond
 
 ghost
 fn cbor_det_map_get_invariant_false_elim
+  (#gb: bool)
   (px: perm)
   (x: cbor_det_t)
   (vx: Spec.cbor)
@@ -1769,12 +1770,14 @@ fn cbor_det_map_get_invariant_false_elim
   (i: cbor_det_map_iterator_t)
   (res: option cbor_det_t)
 requires
-  cbor_det_map_get_invariant false px x vx vk m p' i res **
+  cbor_det_map_get_invariant gb px x vx vk m p' i res **
+  pure (gb == false) **
   pure (cbor_det_map_get_invariant_false_elim_precond vx m)
 ensures
   map_get_post cbor_det_match x px vx vk res **
   pure (Spec.CMap? (Spec.unpack vx) /\ (Some? (Spec.cbor_map_get (Spec.CMap?.c (Spec.unpack vx)) vk) == Some? res))
 {
+  rewrite each gb as false;
   match res {
     None -> {
       unfold (cbor_det_map_get_invariant false px x vx vk m p' i None);
@@ -1817,13 +1820,14 @@ fn cbor_det_map_get (_: unit)
   fold (cbor_det_map_get_invariant cont px x vx vk m p' i None);
   while (
     !pcont
-  ) invariant cont . exists* i res .
+  ) invariant cont . exists* i res cont' .
     pts_to pi i **
     pts_to pcont cont **
     pts_to pres res **
     cbor_det_match pk k vk **
-    cbor_det_map_get_invariant cont px x vx vk m p' i res **
-    pure (cont ==> None? res)
+    cbor_det_map_get_invariant cont' px x vx vk m p' i res **
+    pure (cont' == true ==>  None? res) **
+    pure (cont == cont')
   {
     with gb gi gres . assert (cbor_det_map_get_invariant gb px x vx vk m p' gi gres);
     unfold (cbor_det_map_get_invariant gb px x vx vk m p' gi None);

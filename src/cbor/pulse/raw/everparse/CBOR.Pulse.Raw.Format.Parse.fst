@@ -499,7 +499,8 @@ fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred
           (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va) **
         pure (
           vn == U64.v vpairs + U64.v vpairs /\
-          List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) l0 == (vres && sorted2 deterministically_encoded_cbor_map_key_order (vkey :: vvalue :: fst vtail)) /\
+          List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) l0 == (vres && sorted2 deterministically_encoded_cbor_map_key_order (vkey :: vvalue :: fst vtail))
+        ) ** pure (
           b == (vres && Cons? (fst vtail))
         )
       {

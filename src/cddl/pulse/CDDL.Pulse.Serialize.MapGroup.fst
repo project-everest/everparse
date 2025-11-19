@@ -1485,7 +1485,8 @@ fn impl_serialize_map_zero_or_more_iterator_gen
       (r (Iterator.mk_spec r1) (Iterator.mk_spec r2) c m2)
       (r (Iterator.mk_spec r1) (Iterator.mk_spec r2) c0 v0) **
     pure (
-      impl_serialize_map_zero_or_more_iterator_inv sp1 sp2 except v0 l res w m1 (Ghost.hide (Ghost.reveal m2)) m2' count size /\
+      impl_serialize_map_zero_or_more_iterator_inv sp1 sp2 except v0 l res w m1 (Ghost.hide (Ghost.reveal m2)) m2' count size
+    ) ** pure (
       b == (res && not (FStar.StrongExcludedMiddle.strong_excluded_middle (m2 == Map.empty _ _)))
     )
   ) {

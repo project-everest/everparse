@@ -238,7 +238,8 @@ ensures
         SM.seq_seq_match freeable_match' s s' j (SZ.v len) **
         pure (
           j == SZ.v i /\
-          SZ.v i <= SZ.v len /\
+          SZ.v i <= SZ.v len
+        ) ** pure (
           b == (SZ.v i < SZ.v len)
         )
       ) {
@@ -272,7 +273,8 @@ ensures
         SM.seq_seq_match freeable_match_map_entry s s' j (SZ.v len) **
         pure (
           j == SZ.v i /\
-          SZ.v i <= SZ.v len /\
+          SZ.v i <= SZ.v len
+        ) ** pure (
           b == (SZ.v i < SZ.v len)
         )
       ) {
@@ -431,8 +433,9 @@ ensures
     pure (
       j == SZ.v i /\
       j <= SZ.v len /\
-      b == (j < SZ.v len) /\
       Seq.length st == SZ.v len
+    ) ** pure (
+      b == (j < SZ.v len)
     )
   ) {
     S.pts_to_len ar;
@@ -621,8 +624,9 @@ ensures
     pure (
       j == SZ.v i /\
       j <= SZ.v len /\
-      b == (j < SZ.v len) /\
       Seq.length st == SZ.v len
+    ) ** pure (
+      b == (j < SZ.v len)
     )
   ) {
     S.pts_to_len ar;

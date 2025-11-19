@@ -976,8 +976,9 @@ fn cddl_map_iterator_is_empty
       (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents li) **
     pts_to pres res **
     pure (
-      b == (res && Cons? lj) /\
       Nil? (parse_table_entries i.sp1.parser i.tex i.ps2 li) == (res && Nil? (parse_table_entries i.sp1.parser i.tex i.ps2 lj))
+    ) ** pure (
+      b == (res && Cons? lj)
     )
   ) {
     let elt = map_next pj;
@@ -1174,9 +1175,10 @@ fn cddl_map_iterator_next
       (vmatch2 pmhd hd vhd ** cbor_map_iterator_match gi.pm j lj)
       (rel_map_iterator vmatch vmatch2 cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 gi l) **
     pure (
-      b == not (Ghost.reveal i.t1 (fst vhd) && not (Ghost.reveal i.tex (vhd)) && Ghost.reveal i.t2 (snd vhd)) /\
       List.Tot.no_repeats_p (List.Tot.map fst (vhd :: lj)) /\
       parse_table_entries i.sp1.parser i.tex i.ps2 li == parse_table_entries i.sp1.parser i.tex i.ps2 (vhd :: lj)
+    ) ** pure (
+      b == not (Ghost.reveal i.t1 (fst vhd) && not (Ghost.reveal i.tex (vhd)) && Ghost.reveal i.t2 (snd vhd))
     )
   {
     Trade.elim_hyp_l _ _ _;

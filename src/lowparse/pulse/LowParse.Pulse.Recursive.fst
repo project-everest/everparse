@@ -151,13 +151,15 @@ fn validate_tot_nlist_recursive
     pts_to poffset offset **
     pts_to input #pm v **
     pure (
-      SZ.v offset <= Seq.length v /\
-      b == (res && (SZ.gt n 0sz)) /\ (
+      SZ.v offset <= Seq.length v /\ (
         let pr0 = parse_consume (L.tot_parse_nlist (SZ.v n0) (parse_recursive p)) (Seq.slice v (SZ.v offset0) (Seq.length v)) in
         let pr = parse_consume (L.tot_parse_nlist (SZ.v n) (parse_recursive p)) (Seq.slice v (SZ.v offset) (Seq.length v)) in
         Some? pr0 == (res && Some? pr) /\
         (Some? pr0 ==> (SZ.v offset0 + Some?.v pr0 == SZ.v offset + Some?.v pr))
-    ))
+    )) **
+    pure (
+      b == (res && (SZ.gt n 0sz))
+    )
   {
     let off = !poffset;
     let n = !pn;
@@ -280,13 +282,14 @@ fn jump_tot_nlist_recursive
     pts_to poffset offset **
     pts_to input #pm v **
     pure (
-      SZ.v offset <= Seq.length v /\
-      b == (SZ.gt n 0sz) /\ (
+      SZ.v offset <= Seq.length v /\ (
         let pr0 = parse_consume (L.tot_parse_nlist (SZ.v n0) (parse_recursive p)) (Seq.slice v (SZ.v offset0) (Seq.length v)) in
         let pr = parse_consume (L.tot_parse_nlist (SZ.v n) (parse_recursive p)) (Seq.slice v (SZ.v offset) (Seq.length v)) in
         Some? pr0 /\ Some? pr /\
         (SZ.v offset0 + Some?.v pr0 == SZ.v offset + Some?.v pr)
-    ))
+    )) ** pure (
+      b == (SZ.gt n 0sz)
+    )
   {
     with gn . assert (pts_to pn gn);
     with goffset . assert (pts_to poffset goffset);
@@ -609,8 +612,9 @@ fn impl_nlist_forall_pred_recursive
       (pts_to_serialized (L.serialize_nlist (SZ.v n0) (serializer_of_tot_serializer (serialize_recursive s))) input #pm v
     ) **
     pure (
-      b == (res && (SZ.v n > 0)) /\
       List.Tot.for_all pr.pred v == (res && List.Tot.for_all pr.pred vi)
+    ) ** pure (
+      b == (res && (SZ.v n > 0))
   )) {
     let n = !pn;
     with pi'. assert pts_to ppi pi';

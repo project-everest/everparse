@@ -709,7 +709,8 @@ fn impl_serialize_array_group_zero_or_more_slice
       Ghost.reveal v == List.Tot.append l1 l2 /\
       ps.ag_serializable l1 /\
       (impl_serialize_array_group_valid l ps v (Seq.length w) == (res && impl_serialize_array_group_valid (l `List.Tot.append` ps.ag_serializer l1) ps l2 (Seq.length w))) /\
-      (res == true ==> impl_serialize_array_group_post count size l ps l1 w true) /\
+      (res == true ==> impl_serialize_array_group_post count size l ps l1 w true)
+    ) ** pure (
       b == (res && (SZ.v i < Seq.length s))
     )
   ) {
@@ -843,7 +844,8 @@ impl_serialize_array_group_zero_or_more_iterator
       (res == true ==> Ghost.reveal v == List.Tot.append l1 l2) /\
       ps.ag_serializable l1 /\
       (impl_serialize_array_group_valid l ps v (Seq.length w) == (res && impl_serialize_array_group_valid (l `List.Tot.append` ps.ag_serializer l1) ps l2 (Seq.length w))) /\
-      (res == true ==> impl_serialize_array_group_post count size l ps l1 w true) /\
+      (res == true ==> impl_serialize_array_group_post count size l ps l1 w true)
+    ) ** pure (
       b == (res && (Cons? l2))
     )
   ) {
