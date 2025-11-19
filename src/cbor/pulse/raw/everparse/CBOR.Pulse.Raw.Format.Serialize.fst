@@ -762,7 +762,7 @@ ensures
   Trade.rewrite_with_trade
     (cbor_match_with_perm xl xh0)
     (cbor_match xl.p xl.v xh0);
-  Trade.trans (cbor_match _ _ _) _ _;
+  Trade.trans (cbor_match _ _ _) (cbor_match_with_perm _ _) _; // FIXME: WHY WHY WHY do I need to help Pulse here?
   cbor_match_cases _;
   let CBOR_Case_Array a = xl.v;
   cbor_match_eq_array xl.p a xh0;
@@ -947,7 +947,7 @@ fn ser_payload_array_not_array_lens
   Trade.rewrite_with_trade
     (cbor_match_with_perm xl xh0)
     (cbor_match xl.p xl.v xh0);
-  Trade.trans (cbor_match xl.p xl.v xh0) _ _;
+  Trade.trans (cbor_match xl.p xl.v xh0) (cbor_match_with_perm xl xh0) _; // FIXME: WHY WHY WHY do I need to help Pulse there?
   cbor_match_cases xl.v;
   let CBOR_Case_Serialized_Array xs = xl.v;
   Trade.rewrite_with_trade
@@ -1220,7 +1220,7 @@ ensures
   Trade.rewrite_with_trade
     (cbor_match_with_perm xl xh0)
     (cbor_match xl.p xl.v xh0);
-  Trade.trans (cbor_match _ _ _) _ _;
+  Trade.trans (cbor_match _ _ _) (cbor_match_with_perm xl xh0) _; // FIXME: WHY WHY WHY do I need to help Pulse here?
   cbor_match_cases _;
   let CBOR_Case_Map a = xl.v;
   cbor_match_eq_map0 xl.p a xh0;
@@ -1403,7 +1403,7 @@ fn ser_payload_map_not_map_lens
   Trade.rewrite_with_trade
     (cbor_match_with_perm xl xh0)
     (cbor_match xl.p xl.v xh0);
-  Trade.trans (cbor_match xl.p xl.v xh0) _ _;
+  Trade.trans (cbor_match xl.p xl.v xh0) (cbor_match_with_perm xl xh0) _; // FIXME: WHY WHY WHY do I need to help Pulse here?
   cbor_match_cases xl.v;
   let CBOR_Case_Serialized_Map xs = xl.v;
   Trade.rewrite_with_trade
@@ -1550,7 +1550,7 @@ fn ser_payload_tagged_tagged_lens
   Trade.rewrite_with_trade
     (cbor_match_with_perm xl xh0)
     (cbor_match xl.p xl.v xh0);
-  Trade.trans (cbor_match xl.p xl.v xh0) _ _;
+  Trade.trans (cbor_match xl.p xl.v xh0) (cbor_match_with_perm xl xh0) _; // FIXME: WHY WHY WHY do I need to help Pulse here?
   cbor_match_cases xl.v;
   let CBOR_Case_Tagged tg = xl.v;
   cbor_match_eq_tagged xl.p tg xh0;
@@ -1626,7 +1626,7 @@ fn ser_payload_tagged_not_tagged_lens
   Trade.rewrite_with_trade
     (cbor_match_with_perm xl xh0)
     (cbor_match xl.p xl.v xh0);
-  Trade.trans (cbor_match xl.p xl.v xh0) _ _;
+  Trade.trans (cbor_match xl.p xl.v xh0) (cbor_match_with_perm xl xh0) _; // FIXME: WHY WHY WHY do I need to help Pulse here?
   cbor_match_cases xl.v;
   let CBOR_Case_Serialized_Tagged ser = xl.v;
   Trade.rewrite_with_trade

@@ -2189,7 +2189,7 @@ fn zero_copy_parse_nondep_then
   Trade.rewrite_with_trade
     (vmatch1 res1 _ ** vmatch2 res2 _)
     (vmatch_pair vmatch1 vmatch2 (res1, res2) v);
-  Trade.trans (vmatch_pair vmatch1 vmatch2 (res1, res2) v) _ _;
+  Trade.trans (vmatch_pair vmatch1 vmatch2 (res1, res2) v) (vmatch1 res1 (fst v) ** vmatch2 res2 (snd v)) _;
   (res1, res2)
 }
 
@@ -2334,7 +2334,7 @@ fn zero_copy_parse_synth
   Trade.rewrite_with_trade
     (vmatch res (f1 v))
     (vmatch_synth vmatch f1 res v);
-  Trade.trans (vmatch_synth vmatch f1 res v) _ _;
+  Trade.trans (vmatch_synth vmatch f1 res v) (vmatch res (f1 v)) _;
   res
 }
 

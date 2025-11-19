@@ -1872,7 +1872,7 @@ fn map_slice_iterator_next
     fold (rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) i.key_eq (dsnd spec1) (dsnd spec2) i.base m);
   };
   Trade.trans_hyp_r _ _ _ _;
-  Trade.trans _ _ (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 gi m);
+  Trade.trans _ (rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) i.key_eq (dsnd spec1) (dsnd spec2) i.base m) (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 gi m);
   Trade.rewrite_with_trade
     (r res gv)
     (dsnd spec1 (fst res) (fst gv) ** dsnd spec2 (snd res) (snd gv));
