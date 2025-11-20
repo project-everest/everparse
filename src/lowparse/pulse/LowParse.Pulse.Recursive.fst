@@ -59,6 +59,8 @@ let parse_nlist_recursive_bound_correct
 
 #restart-solver
 
+#push-options "--z3rlimit_factor 4"
+
 let validate_tot_nlist_recursive_progress
   (p: parse_recursive_param)
   (v: bytes)
@@ -88,6 +90,8 @@ let validate_tot_nlist_recursive_progress
     end
   ))
 = parse_consume_nlist_recursive_eq' p n (Seq.slice v off (Seq.length v))
+
+#pop-options
 
 #restart-solver
 
@@ -254,7 +258,7 @@ let jump_recursive_step_count
       (pts_to_serialized (serializer_of_tot_serializer s.serialize_header) a #pm va ** pure (p.count va <= SZ.v bound))
       (fun res -> pts_to_serialized (serializer_of_tot_serializer s.serialize_header) a #pm va ** pure (p.count va == SZ.v res))
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit_factor 16 --ifuel 4"
 
 #restart-solver
 inline_for_extraction
@@ -422,7 +426,7 @@ let tot_nondep_then_eq
   ))
 = C.nondep_then_eq #k1 p1 #k2 p2 b
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit_factor 8"
 
 #restart-solver
 
