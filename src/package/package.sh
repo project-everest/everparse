@@ -59,14 +59,6 @@ download () {
 
 platform=$(uname -m)
 
-if $is_windows ; then
-    LIBGMP10_DLL=$(which libgmp-10.dll)
-    if [[ -z "$LIBGMP10_DLL" ]] ; then
-        echo libgmp-10.dll is missing
-        exit 1
-    fi
-fi
-
 if [[ -d everparse ]] ; then
     echo everparse/ is already there, please make way
     exit 1
@@ -107,6 +99,19 @@ make_everparse() {
     mkdir -p everparse/bin
     if $is_windows
     then
+	# F* was built in this cygwin environment, and can run. There is
+	# somewhere a libgmp DLL that is being used, and that we must ship in
+	# order for systems without this DLL to able to run F*. Using `which
+	# libgmp-10.dll` returns a hit, but it seems to be (sometimes?) wrong and
+	# point to a 32-bit version of the library that does not work. Here, we
+	# use (Cygwin's) `ldd` to find out which dll we are using exactly, and
+	# ship that.
+	# (See FStarLang/FStar#4064)
+	LIBGMP10_DLL="$(ldd "$FSTAR_EXE" | sed -n 's/^[[:space:]]libgmp-10.dll => *\([^ ]*\) .*$/\1/p')"
+	if [[ -z "$LIBGMP10_DLL" ]] ; then
+            echo libgmp-10.dll is missing
+            exit 1
+	fi
         $cp $LIBGMP10_DLL everparse/bin/
     elif $is_macos
     then
