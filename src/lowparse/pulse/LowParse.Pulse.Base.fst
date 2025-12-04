@@ -40,7 +40,7 @@ ghost
 fn pts_to_serialized_length
   (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm: perm) (#v: t)
   requires (pts_to_serialized s input #pm v)
-  ensures (pts_to_serialized s input #pm v ** pure (Seq.length (bare_serialize s v) == SZ.v (len input)))
+  ensures (pts_to_serialized s input #pm v ** pure (Seq.length (serialize s v) == SZ.v (len input)))
 {
   unfold (pts_to_serialized s input #pm v);
   pts_to_len input;
@@ -1860,4 +1860,88 @@ fn zero_copy_parse_ifthenelse
   } else {
     rfalse () input
   }
+}
+
+let pts_to_serialized_strong_prefix
+  (#k: parser_kind) (#t: Type) (#p: parser k t)
+  (s: serializer p)
+  ([@@@mkey]input: slice byte)
+  (#[exact (`1.0R)] pm: perm)
+  (v: t)
+: slprop =
+  exists* v' .
+  S.pts_to input #pm v' **
+  pure (
+    let sv = bare_serialize s v in
+    k.parser_kind_subkind == Some ParserStrong /\
+    Seq.length sv <= Seq.length v' /\
+    Seq.slice v' 0 (Seq.length sv) == sv
+  )
+
+ghost fn pts_to_serialized_strong_prefix_intro
+  (#k: parser_kind) (#t: Type0) (#p: parser k t)
+  (s: serializer p)
+  (input: slice byte)
+  (#pm: perm)
+  (v: t)
+  (#v': bytes)
+requires
+  S.pts_to input #pm v' **
+  pure (
+    let sv = bare_serialize s v in
+    k.parser_kind_subkind == Some ParserStrong /\
+    Seq.length sv <= Seq.length v' /\
+    Seq.slice v' 0 (Seq.length sv) == sv
+  )
+ensures exists* pm' .
+  pts_to_serialized_strong_prefix s input #pm' v **
+  Trade.trade
+    (pts_to_serialized_strong_prefix s input #pm' v)
+    (S.pts_to input #pm v')
+{
+  S.share input;
+  let pm' = pm /. 2.0R;
+  fold (pts_to_serialized_strong_prefix s input #pm' v);
+  intro
+    (Trade.trade
+      (pts_to_serialized_strong_prefix s input #pm' v)
+      (S.pts_to input #pm v')
+    )
+    #(S.pts_to input #pm' v')
+    fn _ {
+      unfold (pts_to_serialized_strong_prefix s input #pm' v);
+      S.gather input
+    };
+}
+
+ghost fn pts_to_serialized_strong_prefix_intro_pts_to_serialized
+  (#k: parser_kind) (#t: Type0) (#p: parser k t)
+  (s: serializer p)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: t)
+requires
+  pts_to_serialized s input #pm v **
+  pure (
+    k.parser_kind_subkind == Some ParserStrong
+  )
+ensures
+  pts_to_serialized_strong_prefix s input #pm v **
+  Trade.trade
+    (pts_to_serialized_strong_prefix s input #pm v)
+    (pts_to_serialized s input #pm v)
+{
+  unfold (pts_to_serialized s input #pm v);
+  S.pts_to_len input;
+  fold (pts_to_serialized_strong_prefix s input #pm v);
+  intro
+    (Trade.trade
+      (pts_to_serialized_strong_prefix s input #pm v)
+      (pts_to_serialized s input #pm v)
+    )
+    fn _ {
+      unfold (pts_to_serialized_strong_prefix s input #pm v);
+      S.pts_to_len input;
+      fold (pts_to_serialized s input #pm v);
+    }
 }

@@ -1,4 +1,4 @@
-module CBOR.Pulse.Raw.UTF8
+module CBOR.Pulse.API.UTF8
 include CBOR.Spec.API.UTF8
 open Pulse.Lib.Pervasives
 

@@ -2,14 +2,28 @@ all: snapshot
 
 interface: spec.do pulse.do
 
-snapshot: extract
-	+$(MAKE) -C pulse/det $@
+snapshot: det/snapshot nondet/snapshot
 
-test-snapshot: extract
-	+$(MAKE) -C pulse/det $@
+.PHONY: det/snapshot nondet/snapshot
+
+det/snapshot: extract
+	+$(MAKE) -C pulse/$(dir $@) $(notdir $@)
+
+nondet/snapshot: extract
+	+$(MAKE) -C pulse/$(dir $@) $(notdir $@)
+
+test-snapshot: det/test-snapshot nondet/test-snapshot
+
+.PHONY: det/test-snapshot nondet/test-snapshot
+
+det/test-snapshot: extract
+	+$(MAKE) -C pulse/$(dir $@) $(notdir $@)
+
+nondet/test-snapshot: extract
+	+$(MAKE) -C pulse/$(dir $@) $(notdir $@)
 
 extract:
-	+$(MAKE) -C pulse/det/krml ALREADY_CACHED='*,-CBOR,'
+	+$(MAKE) -C pulse/krml ALREADY_CACHED='*,-CBOR,'
 
 .PHONY: extract
 
@@ -25,7 +39,7 @@ pulse/raw.do: spec/raw.do pulse.do
 
 pulse/raw/everparse.do: pulse/raw.do spec/raw/everparse.do
 
-pulse/det/krml.do: pulse/raw/everparse.do
+pulse/krml.do: pulse/raw/everparse.do
 
 %.do:
 	+$(MAKE) -C $(basename $@)
@@ -34,11 +48,11 @@ pulse/det/krml.do: pulse/raw/everparse.do
 
 .PHONY: interface snapshot test-snapshot
 
-clean: pulse/det.clean
+clean: pulse/det.clean pulse/nondet.clean
 
 .PHONY: clean
 
-clean-verify: spec.clean spec/raw.clean spec/raw/everparse.clean pulse.clean pulse/raw.clean pulse/raw/everparse.clean pulse/det/krml.clean
+clean-verify: spec.clean spec/raw.clean spec/raw/everparse.clean pulse.clean pulse/raw.clean pulse/raw/everparse.clean pulse/krml.clean
 
 .PHONY: clean-verify
 

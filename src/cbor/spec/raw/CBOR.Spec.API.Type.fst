@@ -100,3 +100,7 @@ let unpack_pack c = DM.unpack_pack (pack_aux c)
 let pack_unpack c = DM.pack_unpack c
 
 let unpack_precedes c = DM.unpack_precedes c
+
+let cbor_map_depth c = DM.cbor_map_depth c
+
+let cbor_map_key_depth c = DM.cbor_map_key_depth c

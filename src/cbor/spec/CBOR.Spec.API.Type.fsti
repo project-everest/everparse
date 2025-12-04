@@ -513,3 +513,7 @@ val unpack_precedes
   | _ -> True
   ))
   [SMTPat (unpack c)]
+
+val cbor_map_depth : cbor -> Tot nat
+
+val cbor_map_key_depth : cbor -> Tot nat

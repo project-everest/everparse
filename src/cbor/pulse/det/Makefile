@@ -6,9 +6,6 @@ c.do:
 rust.do:
 	cd rust && cargo build && cargo doc --no-deps
 
-krml.do:
-	+$(MAKE) -C $(basename $@)
-
 .PHONY: %.do
 
 snapshot: rust-snapshot c.snapshot
@@ -25,8 +22,8 @@ endif
 c.snapshot: source_dir=c/extracted
 c.snapshot: target_dir=..
 
-rust.snapshot: source_dir=krml/rust-extracted
-rust.snapshot: target_dir=../../rust/src
+rust.snapshot: source_dir=rust-extracted
+rust.snapshot: target_dir=../rust/src
 
 snapshot: c.snapshot rust.snapshot
 
@@ -39,8 +36,8 @@ snapshot: c.snapshot rust.snapshot
 c.test-snapshot: source_dir=c/extracted
 c.test-snapshot: target_dir=..
 
-rust.test-snapshot: source_dir=krml/rust-extracted
-rust.test-snapshot: target_dir=../../rust/src
+rust.test-snapshot: source_dir=rust-extracted
+rust.test-snapshot: target_dir=../rust/src
 
 test-snapshot: rust.test-snapshot c.test-snapshot
 
@@ -49,7 +46,7 @@ test-snapshot: rust.test-snapshot c.test-snapshot
 
 .PHONY: %.test-snapshot test-snapshot
 
-clean_dirs = $(addsuffix .clean,c krml vertest/c vertest/common)
+clean_dirs = $(addsuffix .clean,c vertest/c vertest/common)
 
 $(clean_dirs): %.clean:
 	+$(MAKE) -C $(basename $@) clean
@@ -57,6 +54,9 @@ $(clean_dirs): %.clean:
 rust.clean:
 	cd $(basename $@) && cargo clean
 
+rust-extracted.clean:
+	rm -rf $(basename $@)
+
 .PHONY: %.clean
 
-clean: $(clean_dirs) rust.clean
+clean: $(clean_dirs) rust.clean rust-extracted.clean

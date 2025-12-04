@@ -542,6 +542,7 @@ let raw_data_item_sorted_optimal_valid
   holds_on_raw_data_item_implies
     (andp (raw_data_item_sorted_elem order) raw_data_item_ints_optimal_elem)
     (valid_item basic_data_model)
+    x1
     (fun x ->
       match x with
       | Map len v ->
@@ -556,7 +557,6 @@ let raw_data_item_sorted_optimal_valid
           assert (valid_map basic_data_model v == true)
       | _ -> ()
     )
-    x1
 
 (* Equivalence and map access *)
 

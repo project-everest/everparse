@@ -10,6 +10,11 @@ module U64 = FStar.UInt64
 
 val mk_cbor (r: R.raw_data_item) : Tot cbor
 
+let mk_cbor_map_entry
+  (l: (raw_data_item & raw_data_item))
+: Tot (cbor & cbor)
+= (mk_cbor (fst l), mk_cbor (snd l))
+
 val mk_cbor_equiv (r1 r2: R.raw_data_item) : Lemma
   (requires (
     R.valid_raw_data_item r1 == true /\
@@ -181,3 +186,94 @@ val mk_det_raw_cbor_map_raw_snoc
   (
     mk_det_raw_cbor_map_raw_snoc_post m key value
   )
+
+let rec list_assoc_map_mk_cbor_map_entry'
+  (l': list (raw_data_item & raw_data_item))
+  (x: raw_data_item)
+: Lemma
+  (requires (
+    List.Tot.for_all valid_raw_data_item (List.Tot.map fst l') /\
+    List.Tot.for_all valid_raw_data_item (List.Tot.map snd l') /\
+    valid_raw_data_item x
+  ))
+  (ensures (
+    let l = List.Tot.map mk_cbor_map_entry l' in
+    begin match CBOR.Spec.Util.list_setoid_assoc raw_equiv x l', List.Tot.assoc (mk_cbor x) l with
+    | None, None -> True
+    | Some y', Some y -> valid_raw_data_item y' /\ y == mk_cbor y'
+    | _ -> False
+    end
+  ))
+  (decreases l')
+= match l' with
+  | [] -> ()
+  | (k', v') :: q' ->
+    mk_cbor_equiv x k';
+    if raw_equiv x k'
+    then ()
+    else list_assoc_map_mk_cbor_map_entry' q' x
+
+let list_assoc_map_mk_cbor_map_entry
+  (m: cbor_map)
+  (l': list (raw_data_item & raw_data_item))
+  (sq: squash (
+    List.Tot.for_all valid_raw_data_item (List.Tot.map fst l') /\
+    List.Tot.for_all valid_raw_data_item (List.Tot.map snd l') /\
+    mk_cbor_match_map l' m
+  ))
+  (x: cbor)
+: Lemma
+  (ensures (
+    let l = List.Tot.map mk_cbor_map_entry l' in
+    cbor_map_get m x == List.Tot.assoc x l
+  ))
+= assert (mk_cbor_match_map_elem l' m (mk_det_raw_cbor x));
+  list_assoc_map_mk_cbor_map_entry' l' (mk_det_raw_cbor x)
+
+let rec list_mem_map_fst_mk_cbor_map_entry
+  (l': list (raw_data_item & raw_data_item))
+  (x: raw_data_item)
+: Lemma
+  (requires (
+    List.Tot.for_all valid_raw_data_item (List.Tot.map fst l') /\
+    List.Tot.for_all valid_raw_data_item (List.Tot.map snd l') /\
+    valid_raw_data_item x
+  ))
+  (ensures (
+    List.Tot.memP (mk_cbor x) (List.Tot.map fst (List.Tot.map mk_cbor_map_entry l')) <==> List.Tot.existsb (raw_equiv x) (List.Tot.map fst l')
+  ))
+  (decreases l')
+= match l' with
+  | [] -> ()
+  | (k', _) :: q ->
+    mk_cbor_equiv x k';
+    list_mem_map_fst_mk_cbor_map_entry q x
+
+let rec list_no_repeats_map_fst_mk_cbor_map_entry
+  (l': list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    List.Tot.for_all valid_raw_data_item (List.Tot.map fst l') /\
+    List.Tot.for_all valid_raw_data_item (List.Tot.map snd l')
+  ))
+  (ensures (
+    CBOR.Spec.Util.list_no_setoid_repeats raw_equiv (List.Tot.map fst l') <==> List.Tot.no_repeats_p (List.Tot.map fst (List.Tot.map mk_cbor_map_entry l'))
+  ))
+  (decreases l')
+= match l' with
+  | [] -> ()
+  | (k', v') :: q ->
+    list_mem_map_fst_mk_cbor_map_entry q k';
+    list_no_repeats_map_fst_mk_cbor_map_entry q
+
+val mk_cbor_map_depth
+  (x: raw_data_item)
+: Lemma
+  (requires R.valid_raw_data_item x)
+  (ensures cbor_map_depth (mk_cbor x) == R.map_depth x)
+
+val mk_cbor_map_key_depth
+  (x: raw_data_item)
+: Lemma
+  (requires R.valid_raw_data_item x)
+  (ensures cbor_map_key_depth (mk_cbor x) == R.map_key_depth x)

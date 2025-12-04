@@ -1335,7 +1335,7 @@ let seq_slice_length_zero_left
   (Seq.length (Seq.slice s 0 len) == len)
 = ()
 
-#push-options "--z3rlimit 256 --fuel 2 --ifuel 2 --query_stats --print_implicits --split_queries always"
+#push-options "--z3rlimit 384 --fuel 2 --ifuel 2 --query_stats --print_implicits --split_queries always"
 
 #restart-solver
 inline_for_extraction noextract [@@noextract_to "krml"]

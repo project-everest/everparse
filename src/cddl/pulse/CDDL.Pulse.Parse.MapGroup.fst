@@ -956,22 +956,22 @@ fn cddl_map_iterator_is_empty
   while (
     let res = !pres;
     if (res) {
-      with gj lj . assert (pts_to pj gj ** cbor_map_iterator_match i.pm gj lj);
+      with p' gj lj . assert (pts_to pj gj ** cbor_map_iterator_match p' gj lj);
       let j = !pj;
-      Trade.rewrite_with_trade (cbor_map_iterator_match i.pm gj lj)
-        (cbor_map_iterator_match i.pm j lj);
+      Trade.rewrite_with_trade (cbor_map_iterator_match p' gj lj)
+        (cbor_map_iterator_match p' j lj);
       let test = map_is_empty j;
       let res = not test;
-      Trade.elim _ (cbor_map_iterator_match i.pm gj lj);
+      Trade.elim _ (cbor_map_iterator_match p' gj lj);
       res
     } else {
       false
     }
-  ) invariant b . exists* j lj res . (
+  ) invariant b . exists* p' j lj res . (
     pts_to pj j **
-    cbor_map_iterator_match i.pm j lj **
+    cbor_map_iterator_match p' j lj **
     Trade.trade
-      (cbor_map_iterator_match i.pm j lj)
+      (cbor_map_iterator_match p' j lj)
       (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents li) **
     pts_to pres res **
     pure (
@@ -1162,13 +1162,13 @@ fn cddl_map_iterator_next
         test_ex
       }
     }
-  ) invariant b . exists* hd pmhd vhd j lj .
+  ) invariant b . exists* p' hd pmhd vhd j lj .
     pts_to phd hd **
     vmatch2 pmhd hd vhd **
     pts_to pj j **
-    cbor_map_iterator_match gi.pm j lj **
+    cbor_map_iterator_match p' j lj **
     Trade.trade
-      (vmatch2 pmhd hd vhd ** cbor_map_iterator_match gi.pm j lj)
+      (vmatch2 pmhd hd vhd ** cbor_map_iterator_match p' j lj)
       (rel_map_iterator vmatch vmatch2 cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 gi l) **
     pure (
       b == not (Ghost.reveal i.t1 (fst vhd) && not (Ghost.reveal i.tex (vhd)) && Ghost.reveal i.t2 (snd vhd)) /\
@@ -1211,13 +1211,13 @@ fn cddl_map_iterator_next
   Trade.trans_hyp_r _ _ _ (vmatch2 pmhd hd vhd);
   with vhd_value_res . assert (dsnd spec2 hd_value_res vhd_value_res);
   Trade.trans_hyp_l _ (vmatch2 _ _ _) _ _;
-  with gj lj . assert (cbor_map_iterator_match gi.pm gj lj);
+  with p' gj lj . assert (cbor_map_iterator_match p' gj lj);
   let j = !pj;
   let i' : map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch vmatch2 spec1 spec2 = { i with
     cddl_map_iterator_contents = j;
-    pm = gi.pm /. 2.0R;
+    pm = p' /. 2.0R;
   };
-  rel_map_iterator_fold map_share map_gather i' gi.pm _ _;
+  rel_map_iterator_fold map_share map_gather i' p' _ _;
   Trade.trans_hyp_r _ _ _ _;
   pi := i';
   (hd_key_res, hd_value_res)

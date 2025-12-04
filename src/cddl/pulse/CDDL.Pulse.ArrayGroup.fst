@@ -25,11 +25,11 @@ let impl_array_group
             cbor_array_iterator_match p i l **
             pure (opt_precedes_list (Ghost.reveal l) b)
         )
-        (fun res -> exists* i' l'.
+        (fun res -> exists* p' i' l'.
             R.pts_to pi i' **
-            cbor_array_iterator_match p i' l' **
+            cbor_array_iterator_match p' i' l' **
             Trade.trade
-              (cbor_array_iterator_match p i' l')
+              (cbor_array_iterator_match p' i' l')
               (cbor_array_iterator_match p i l) **
             pure (
                 opt_precedes_list (Ghost.reveal l) b /\
@@ -172,11 +172,11 @@ fn impl_array_group_zero_or_more
     while (
       let cont = !pcont;
       cont
-    ) invariant cont . exists* gi1 l1 .
+    ) invariant cont . exists* p' gi1 l1 .
       R.pts_to pi gi1 **
-      cbor_array_iterator_match p gi1 l1 **
+      cbor_array_iterator_match p' gi1 l1 **
       Trade.trade
-        (cbor_array_iterator_match p gi1 l1)
+        (cbor_array_iterator_match p' gi1 l1)
         (cbor_array_iterator_match p gi l) **
       R.pts_to pcont cont **
       pure (
@@ -188,15 +188,15 @@ fn impl_array_group_zero_or_more
         (cont == false ==> None? (Ghost.reveal g1 l1))
       )
     {
-      with gi1 l1 . assert (cbor_array_iterator_match p gi1 l1);
+      with p' gi1 l1 . assert (cbor_array_iterator_match p' gi1 l1);
       let i1 = !pi;
       Trade.rewrite_with_trade
-        (cbor_array_iterator_match p gi1 l1)
-        (cbor_array_iterator_match p i1 l1);
+        (cbor_array_iterator_match p' gi1 l1)
+        (cbor_array_iterator_match p' i1 l1);
       Trade.trans _ _ (cbor_array_iterator_match p gi l);
       let cont = f1 pi;
       if (not cont) {
-        Trade.elim _ (cbor_array_iterator_match p i1 l1);
+        Trade.elim _ (cbor_array_iterator_match p' i1 l1);
         pi := i1;
         pcont := false;
       } else {
@@ -277,11 +277,11 @@ fn impl_t_array
         let b_success = ig pi #p' #i #l';
         Trade.trans _ _ (vmatch p c v);
         if (b_success) {
-          with l2 gi2 . assert (cbor_array_iterator_match p' gi2 l2);
+          with p2 l2 gi2 . assert (cbor_array_iterator_match p2 gi2 l2);
           let i' = ! pi;
           Trade.rewrite_with_trade
-            (cbor_array_iterator_match p' gi2 l2)
-            (cbor_array_iterator_match p' i' l2);
+            (cbor_array_iterator_match p2 gi2 l2)
+            (cbor_array_iterator_match p2 i' l2);
           Trade.trans _ _ (vmatch p c v);
           let b_end = cbor_array_iterator_is_done i';
           Trade.elim _ _;

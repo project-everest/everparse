@@ -139,51 +139,78 @@ let rec holds_on_raw_data_item_andp
   | Tagged _ x' -> holds_on_raw_data_item_andp p1 p2 x'
   | _ -> ()
 
+let pre_holds_on_raw_data_item_andp
+  (p1 p2: (raw_data_item -> bool))
+  (x: raw_data_item)
+: Lemma
+  (ensures (
+    pre_holds_on_raw_data_item (andp p1 p2) x == (pre_holds_on_raw_data_item p1 x && pre_holds_on_raw_data_item p2 x)
+  ))
+  (decreases x)
+= match x with
+  | Array _ l ->
+    list_for_all_ext (holds_on_raw_data_item (andp p1 p2)) (andp (holds_on_raw_data_item p1) (holds_on_raw_data_item p2)) l (fun x -> holds_on_raw_data_item_andp p1 p2 x);
+    list_for_all_andp (holds_on_raw_data_item p1) (holds_on_raw_data_item p2) l
+  | Map _ l ->
+    list_for_all_ext (holds_on_pair (holds_on_raw_data_item (andp p1 p2))) (andp (holds_on_pair (holds_on_raw_data_item p1)) (holds_on_pair (holds_on_raw_data_item p2))) l (fun x ->
+      holds_on_raw_data_item_andp p1 p2 (fst x);
+      holds_on_raw_data_item_andp p1 p2 (snd x)
+    );
+    list_for_all_andp (holds_on_pair (holds_on_raw_data_item p1)) (holds_on_pair (holds_on_raw_data_item p2)) l
+  | Tagged _ x' -> holds_on_raw_data_item_andp p1 p2 x'
+  | _ -> ()
+
+
 let rec holds_on_raw_data_item_implies
   (p1 p2: (raw_data_item -> bool))
+  (x: raw_data_item)
   (prf: ((x': raw_data_item) -> Lemma
-    (requires (holds_on_raw_data_item p1 x' == true))
+    (requires (holds_on_raw_data_item p1 x' == true /\ pre_holds_on_raw_data_item p2 x' == true /\ (x' << x \/ x' == x)))
     (ensures (p2 x' == true))
   ))
-  (x: raw_data_item)
 : Lemma
   (requires (holds_on_raw_data_item p1 x))
   (ensures (holds_on_raw_data_item p2 x == true))
   (decreases x)
 = holds_on_raw_data_item_eq p1 x;
   holds_on_raw_data_item_eq p2 x;
-  prf x;
   match x with
   | Array _ v ->
-    list_for_all_implies (holds_on_raw_data_item p1) (holds_on_raw_data_item p2) v (fun x -> holds_on_raw_data_item_implies p1 p2 prf x)
-  | Tagged _ v -> holds_on_raw_data_item_implies p1 p2 prf v
+    list_for_all_implies (holds_on_raw_data_item p1) (holds_on_raw_data_item p2) v (fun x' ->
+      holds_on_raw_data_item_implies p1 p2 x' prf
+    );
+    prf x
+  | Tagged _ v -> 
+    holds_on_raw_data_item_implies p1 p2 v prf;
+    prf x
   | Map _ v ->
     list_for_all_implies (holds_on_pair (holds_on_raw_data_item p1)) (holds_on_pair (holds_on_raw_data_item p2)) v (fun x ->
-      holds_on_raw_data_item_implies p1 p2 prf (fst x);
-      holds_on_raw_data_item_implies p1 p2 prf (snd x)
-    )
-  | _ -> ()
+      holds_on_raw_data_item_implies p1 p2 (fst x) prf;
+      holds_on_raw_data_item_implies p1 p2 (snd x) prf
+    );
+    prf x
+  | _ -> prf x
 
 // FIXME: avoid this code duplication
 let pre_holds_on_raw_data_item_implies
   (p1 p2: (raw_data_item -> bool))
+  (x: raw_data_item)
   (prf: ((x': raw_data_item) -> Lemma
-    (requires (holds_on_raw_data_item p1 x' == true))
+    (requires (holds_on_raw_data_item p1 x' == true /\ pre_holds_on_raw_data_item p2 x' == true /\ x' << x))
     (ensures (p2 x' == true))
   ))
-  (x: raw_data_item)
 : Lemma
   (requires (pre_holds_on_raw_data_item p1 x))
   (ensures (pre_holds_on_raw_data_item p2 x == true))
   (decreases x)
 = match x with
   | Array _ v ->
-    list_for_all_implies (holds_on_raw_data_item p1) (holds_on_raw_data_item p2) v (fun x -> holds_on_raw_data_item_implies p1 p2 prf x)
-  | Tagged _ v -> holds_on_raw_data_item_implies p1 p2 prf v
+    list_for_all_implies (holds_on_raw_data_item p1) (holds_on_raw_data_item p2) v (fun x -> holds_on_raw_data_item_implies p1 p2 x prf)
+  | Tagged _ v -> holds_on_raw_data_item_implies p1 p2 v prf
   | Map _ v ->
     list_for_all_implies (holds_on_pair (holds_on_raw_data_item p1)) (holds_on_pair (holds_on_raw_data_item p2)) v (fun x ->
-      holds_on_raw_data_item_implies p1 p2 prf (fst x);
-      holds_on_raw_data_item_implies p1 p2 prf (snd x)
+      holds_on_raw_data_item_implies p1 p2 (fst x) prf;
+      holds_on_raw_data_item_implies p1 p2 (snd x) prf
     )
   | _ -> ()
 
@@ -320,17 +347,17 @@ let holds_on_raw_data_item_fmap_inv
   (ensures (holds_on_raw_data_item p (raw_data_item_fmap f x) == true))
 = holds_on_raw_data_item_fmap_gen f p truep
     (fun x ->
-      pre_holds_on_raw_data_item_implies (p `andp` truep) p (fun x -> holds_on_raw_data_item_eq (p `andp` truep) x) (pre_raw_data_item_fmap f x);
+      pre_holds_on_raw_data_item_implies (p `andp` truep) p (pre_raw_data_item_fmap f x) (fun x -> holds_on_raw_data_item_eq (p `andp` truep) x);
       prf1 x
     )
     (fun x ->
       holds_on_raw_data_item_truep x;
       holds_on_raw_data_item_eq truep x;
       prf x;
-      holds_on_raw_data_item_implies p (p `andp` truep) (fun x -> holds_on_raw_data_item_eq p x) (f x)
+      holds_on_raw_data_item_implies p (p `andp` truep) (f x) (fun x -> holds_on_raw_data_item_eq p x)
     )
     x;
-  holds_on_raw_data_item_implies (p `andp` truep) p (fun x -> holds_on_raw_data_item_eq p x) (raw_data_item_fmap f x)
+  holds_on_raw_data_item_implies (p `andp` truep) p (raw_data_item_fmap f x) (fun x -> holds_on_raw_data_item_eq p x)
 
 let holds_on_raw_data_item_fmap
   (f: raw_data_item -> raw_data_item)
@@ -354,8 +381,111 @@ let holds_on_raw_data_item_fmap
       holds_on_raw_data_item_implies
         p
         (truep `andp` p)
-        (fun _ -> ())
         (f x)
+        (fun _ -> ())
     )
     x;
-  holds_on_raw_data_item_implies (truep `andp` p) p (fun _ -> ()) (raw_data_item_fmap f x)
+  holds_on_raw_data_item_implies (truep `andp` p) p (raw_data_item_fmap f x) (fun _ -> ())
+
+let rec map_depth (x: raw_data_item) : Tot nat =
+  match x with
+  | Map _ l -> 1 + wf_list_max l map_depth_pair
+  | Array _ l -> wf_list_max l map_depth
+  | Tagged _ y -> map_depth y
+  | _ -> 0
+
+and map_depth_pair (x: (raw_data_item & raw_data_item)) : Tot nat =
+  let y1 = map_depth (fst x) in
+  let y2 = map_depth (snd x) in
+  if y1 > y2 then y1 else y2
+
+let map_depth_eq (x: raw_data_item) : Lemma
+  (map_depth x == begin match x with
+  | Map _ l -> 1 + list_max map_depth_pair l
+  | Array _ l -> list_max map_depth l
+  | Tagged _ y -> map_depth y
+  | _ -> 0
+  end)
+= match x with
+  | Map len l ->
+    assert_norm (map_depth (Map len l) == 1 + wf_list_max l map_depth_pair);
+    wf_list_max_eq map_depth_pair l
+  | Array len l ->
+    assert_norm (map_depth (Array len l) == wf_list_max l map_depth);
+    wf_list_max_eq map_depth l
+  | _ -> ()
+
+let rec map_key_depth (x: raw_data_item) : Tot nat =
+  match x with
+  | Map _ l -> wf_list_max l map_key_depth_pair
+  | Array _ l -> wf_list_max l map_key_depth
+  | Tagged _ y -> map_key_depth y
+  | _ -> 0
+
+and map_key_depth_pair (x: (raw_data_item & raw_data_item)) : Tot nat =
+  let y1 = map_depth (fst x) in
+  let y2 = map_key_depth (snd x) in
+  if y1 > y2 then y1 else y2
+
+let rec list_max_map_dep_pair
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (list_max map_depth_pair l == (
+    let l1 = list_max map_depth (List.Tot.map fst l) in
+    let l2 = list_max map_depth (List.Tot.map snd l) in
+    if l1 > l2 then l1 else l2
+  ))
+= match l with
+  | [] -> ()
+  | _ :: q -> list_max_map_dep_pair q
+
+let rec list_max_map_dep_pair_list_of_pair_list
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (list_max map_depth_pair l == list_max map_depth (list_of_pair_list l))
+= match l with
+  | [] -> ()
+  | _ :: q -> list_max_map_dep_pair_list_of_pair_list q
+
+let map_key_depth_eq (x: raw_data_item) : Lemma
+  (map_key_depth x == begin match x with
+  | Map _ l -> list_max map_key_depth_pair l
+  | Array _ l -> list_max map_key_depth l
+  | Tagged _ y -> map_key_depth y
+  | _ -> 0
+  end)
+= match x with
+  | Map len l ->
+    assert_norm (map_key_depth (Map len l) == wf_list_max l map_key_depth_pair);
+    wf_list_max_eq map_key_depth_pair l
+  | Array len l ->
+    assert_norm (map_key_depth (Array len l) == wf_list_max l map_key_depth);
+    wf_list_max_eq map_key_depth l
+  | _ -> ()
+
+let rec list_max_map_key_dep_pair
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (list_max map_key_depth_pair l == (
+    let l1 = list_max map_depth (List.Tot.map fst l) in
+    let l2 = list_max map_key_depth (List.Tot.map snd l) in
+    if l1 > l2 then l1 else l2
+  ))
+= match l with
+  | [] -> ()
+  | _ :: q -> list_max_map_key_dep_pair q
+
+let rec map_key_depth_le_map_depth
+  (x: raw_data_item)
+: Lemma
+  (ensures (map_key_depth x <= map_depth x))
+  (decreases x)
+= map_key_depth_eq x;
+  map_depth_eq x;
+  match x with
+  | Map _ l ->
+    list_max_le map_key_depth_pair map_depth_pair l (fun x -> map_key_depth_le_map_depth (snd x))
+  | Array _ l ->
+    list_max_le map_key_depth map_depth l (fun x -> map_key_depth_le_map_depth x)
+  | Tagged _ y -> map_key_depth_le_map_depth y
+  | _ -> ()

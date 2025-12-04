@@ -869,6 +869,27 @@ fn validate_recursive_step_count_leaf(a: &[u8], bound: usize, prem: &mut [usize]
     }
 }
 
+fn impl_remaining_data_items_header(h: header) -> usize
+{
+    let typ: u8 = get_header_major_type(h);
+    if typ == cbor_major_type_array
+    {
+        let b: initial_byte_t = h.fst;
+        let l: long_argument = h.snd;
+        let arg64: u64 = argument_as_uint64(b, l);
+        arg64 as usize
+    }
+    else if typ == cbor_major_type_map
+    {
+        let b: initial_byte_t = h.fst;
+        let l: long_argument = h.snd;
+        let arg64: u64 = argument_as_uint64(b, l);
+        let arg: usize = arg64 as usize;
+        arg.wrapping_add(arg)
+    }
+    else if typ == cbor_major_type_tagged { 1usize } else { 0usize }
+}
+
 fn jump_recursive_step_count_leaf(a: &[u8]) -> usize
 {
     let i: usize = jump_header(a, 0usize);
@@ -888,23 +909,7 @@ fn jump_recursive_step_count_leaf(a: &[u8]) -> usize
     let input1: &[u8] = _letpattern0.0;
     let _input2: &[u8] = _letpattern0.1;
     let h: header = read_header(input1);
-    let typ: u8 = get_header_major_type(h);
-    if typ == cbor_major_type_array
-    {
-        let b: initial_byte_t = h.fst;
-        let l: long_argument = h.snd;
-        let arg64: u64 = argument_as_uint64(b, l);
-        arg64 as usize
-    }
-    else if typ == cbor_major_type_map
-    {
-        let b: initial_byte_t = h.fst;
-        let l: long_argument = h.snd;
-        let arg64: u64 = argument_as_uint64(b, l);
-        let arg: usize = arg64 as usize;
-        arg.wrapping_add(arg)
-    }
-    else if typ == cbor_major_type_tagged { 1usize } else { 0usize }
+    impl_remaining_data_items_header(h)
 }
 
 fn validate_raw_data_item(input: &[u8], poffset: &mut [usize]) -> bool

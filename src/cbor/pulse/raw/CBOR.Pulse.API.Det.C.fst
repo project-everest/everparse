@@ -166,7 +166,7 @@ fn cbor_det_impl_utf8_correct_from_array (_: unit) : cbor_det_impl_utf8_correct_
 {
   let sl = S.arrayptr_to_slice_intro s len;
   S.pts_to_len sl;
-  let res = CBOR.Pulse.Raw.UTF8.impl_utf8_correct sl;
+  let res = CBOR.Pulse.API.UTF8.impl_utf8_correct sl;
   S.arrayptr_to_slice_elim sl;
   res
 }
@@ -175,8 +175,11 @@ let cbor_det_mk_simple_value = CBOR.Pulse.API.Det.Common.cbor_det_mk_simple_valu
 let cbor_det_mk_int64 = CBOR.Pulse.API.Det.Common.cbor_det_mk_int64
 let cbor_det_mk_tagged = CBOR.Pulse.API.Det.Common.cbor_det_mk_tagged
 
-let cbor_det_mk_string_from_arrayptr (_: unit) =
-  mk_string_from_arrayptr (CBOR.Pulse.API.Det.Common.cbor_det_mk_string ())
+let cbor_det_mk_byte_string_from_arrayptr (_: unit) =
+  mk_string_from_arrayptr (CBOR.Pulse.API.Det.Common.cbor_det_mk_string ()) cbor_major_type_byte_string
+
+let cbor_det_mk_text_string_from_arrayptr (_: unit) =
+  mk_string_from_arrayptr (CBOR.Pulse.API.Det.Common.cbor_det_mk_string ()) cbor_major_type_text_string
 
 let cbor_det_mk_array_from_array (_: unit) =
   mk_array_from_array (CBOR.Pulse.API.Det.Common.cbor_det_mk_array ())

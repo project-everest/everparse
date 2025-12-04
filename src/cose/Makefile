@@ -118,9 +118,14 @@ clean-rust:
 
 .PHONY: clean-rust
 
-clean: clean-c clean-rust clean-test-verified-interop clean-venv clean-test-interop clean-test-batch
+clean: clean-c clean-rust clean-test-verified-interop clean-venv clean-test-interop clean-test-batch clean-encrypt
 
 .PHONY: clean
+
+clean-encrypt:
+	rm -rf encrypt
+
+.PHONY: clean-encrypt
 
 clean-extract-c:
 	+$(MAKE) -C verifiedinterop clean

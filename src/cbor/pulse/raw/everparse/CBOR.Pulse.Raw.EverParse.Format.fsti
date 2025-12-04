@@ -28,6 +28,18 @@ val jump_leaf
   (sq: squash (SZ.fits_u64))
 : Tot (jumper parse_leaf)
 
+val impl_remaining_data_items_header
+  (bound: Ghost.erased SZ.t)
+  (h: header)
+: Pure SZ.t
+  (requires
+    SZ.fits_u64 /\
+    remaining_data_items_header h <= SZ.v bound
+  )
+  (ensures fun res ->
+    SZ.v res == remaining_data_items_header h
+  )
+
 val jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
   jump_recursive_step_count #parse_raw_data_item_param serialize_raw_data_item_param
 
@@ -114,3 +126,111 @@ let get_map_payload_t
   )
 
 val get_map_payload (input: S.slice byte) : get_map_payload_t input
+
+val pts_to_serialized_nlist_raw_data_item_head_header
+  (a: slice byte)
+  (n: pos)
+  (#pm: perm)
+  (#va: LowParse.Spec.VCList.nlist n raw_data_item)
+: stt_ghost unit emp_inames
+(requires
+  pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va
+)
+(ensures fun _ -> exists* (l: leaf) (h: header) v' .
+  pts_to_serialized
+    (LowParse.Spec.Combinators.serialize_nondep_then
+      serialize_header
+      (LowParse.Spec.Combinators.serialize_nondep_then
+        (serialize_leaf_content h)
+        (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n l)
+      )
+    )
+    a #pm v' **
+  Trade.trade
+    (pts_to_serialized
+      (LowParse.Spec.Combinators.serialize_nondep_then
+        serialize_header
+        (LowParse.Spec.Combinators.serialize_nondep_then
+          (serialize_leaf_content h)
+          (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n l)
+        )
+      )
+      a #pm v'
+    )
+    (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va) **
+  pure (
+    h == get_raw_data_item_header (List.Tot.hd va) /\
+    l == dfst (synth_raw_data_item_from_alt_recip (List.Tot.hd va)) /\
+    fst v' == h /\
+    fst (snd v') == (dsnd l) /\
+    (fst (snd (snd v')) <: list raw_data_item) == (dsnd (synth_raw_data_item_from_alt_recip (List.Tot.hd va)) <: list raw_data_item) /\
+    (snd (snd (snd v')) <: list raw_data_item) == List.Tot.tl va
+  )
+)
+
+let pts_to_serialized_nlist_raw_data_item_head_header'_post
+  (n: pos)
+  (va: LowParse.Spec.VCList.nlist n raw_data_item)
+  (h: header) (v': (header & (leaf_content h & (nlist raw_data_item (remaining_data_items_header h) & nlist raw_data_item  (n - 1)))))
+: Tot prop
+=
+    let l = dfst (synth_raw_data_item_from_alt_recip (List.Tot.hd va)) in
+    h == get_raw_data_item_header (List.Tot.hd va) /\
+    fst v' == h /\
+    fst (snd v') == (dsnd l) /\
+    (fst (snd (snd v')) <: list raw_data_item) == (dsnd (synth_raw_data_item_from_alt_recip (List.Tot.hd va)) <: list raw_data_item) /\
+    (snd (snd (snd v')) <: list raw_data_item) == List.Tot.tl va
+
+val pts_to_serialized_nlist_raw_data_item_head_header'
+  (a: slice byte)
+  (n: pos)
+  (#pm: perm)
+  (#va: LowParse.Spec.VCList.nlist n raw_data_item)
+: stt_ghost (Ghost.erased header) emp_inames
+(requires
+  pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n serialize_raw_data_item) a #pm va
+)
+(ensures fun h -> exists* v' .
+  pts_to_serialized
+    (LowParse.Spec.Combinators.serialize_nondep_then
+      serialize_header
+      (LowParse.Spec.Combinators.serialize_nondep_then
+        (serialize_leaf_content h)
+        (LowParse.Spec.Combinators.serialize_nondep_then
+          (L.serialize_nlist (remaining_data_items_header h) serialize_raw_data_item)
+          (L.serialize_nlist (n - 1) serialize_raw_data_item)
+        )
+      )
+    )
+    a #pm v' **
+  Trade.trade
+    (pts_to_serialized
+      (LowParse.Spec.Combinators.serialize_nondep_then
+        serialize_header
+        (LowParse.Spec.Combinators.serialize_nondep_then
+          (serialize_leaf_content h)
+          (LowParse.Spec.Combinators.serialize_nondep_then
+            (L.serialize_nlist (remaining_data_items_header h) serialize_raw_data_item)
+            (L.serialize_nlist (n - 1) serialize_raw_data_item)
+          )
+        )
+      )
+      a #pm v'
+    )
+    (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n serialize_raw_data_item) a #pm va) **
+  pure (
+    pts_to_serialized_nlist_raw_data_item_head_header'_post n va h v'
+  )
+)
+
+inline_for_extraction
+val impl_holds_on_raw_data_item
+  (f64: squash SZ.fits_u64)
+  (p: Ghost.erased (raw_data_item -> bool))
+  (impl_p: LowParse.Pulse.Recursive.impl_pred_t serialize_raw_data_item_param p)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased raw_data_item)
+: stt bool
+  (requires pts_to_serialized serialize_raw_data_item input #pm v)
+  (ensures fun res -> pts_to_serialized serialize_raw_data_item input #pm v ** pure (res == holds_on_raw_data_item p v))
