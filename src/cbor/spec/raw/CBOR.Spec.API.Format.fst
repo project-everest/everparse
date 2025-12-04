@@ -275,3 +275,150 @@ let cbor_det_serialize_map_length_gt_list l =
   R.mk_cbor_eq_map (pack (CMap l));
   RF.cbor_serialize_map_length_gt_list (R.mk_raw_uint64 (U64.uint_to_t (cbor_map_length l))) (R.mk_det_raw_cbor_map_raw l);
   ()
+
+module U = CBOR.Spec.Util
+
+let cbor_det_parse_map
+  (n: nat)
+  (s: Seq.seq U8.t)
+: Pure (option (cbor_map & nat))
+  (requires True)
+  (ensures fun res -> match res with
+  | None -> True
+  | Some (_, len) ->
+    len <= Seq.length s
+  )
+= match RF.parse_cbor_map n s with
+  | None -> None
+  | Some (l, len) ->
+    if List.Tot.sorted (RF.map_entry_order RF.deterministically_encoded_cbor_map_key_order _) l &&
+    List.Tot.for_all (U.holds_on_pair (R.raw_data_item_sorted RF.deterministically_encoded_cbor_map_key_order)) l &&
+    List.Tot.for_all (U.holds_on_pair R.raw_data_item_ints_optimal) l
+    then
+      Some (R.mk_det_raw_cbor_map_sorted l, len)
+    else
+      None
+
+let cbor_det_parse_map_prefix
+  (n: nat)
+  (s1 s2: Seq.seq U8.t)
+: Lemma
+  (match cbor_det_parse_map n s1 with
+  | None -> True
+  | Some (l, len1) ->
+    (len1 <= Seq.length s2 /\ Seq.slice s1 0 len1 == Seq.slice s2 0 len1) ==>
+    cbor_det_parse_map n s2 == Some (l, len1)
+  )
+= RF.parse_cbor_map_prefix n s1 s2
+
+let mk_det_raw_cbor_map_sorted_mk_det_raw_cbor_map_raw
+  (m: cbor_map)
+: Lemma
+  (R.mk_det_raw_cbor_map_sorted (R.mk_det_raw_cbor_map_raw m) == m)
+= Classical.forall_intro (R.mk_det_raw_cbor_map_raw_assoc m);
+  assert (R.cbor_map_equal
+    (R.mk_det_raw_cbor_map_sorted (R.mk_det_raw_cbor_map_raw m))
+    m
+  )
+
+let mk_det_raw_cbor_map_raw_mk_det_raw_cbor_map_sorted
+  (l: list (RF.raw_data_item & RF.raw_data_item))
+: Lemma
+  (requires 
+    List.Tot.sorted (R.map_entry_order RF.deterministically_encoded_cbor_map_key_order _) l /\
+    List.Tot.for_all (U.holds_on_pair (R.raw_data_item_sorted RF.deterministically_encoded_cbor_map_key_order)) l /\
+    List.Tot.for_all (U.holds_on_pair R.raw_data_item_ints_optimal) l
+  )
+  (ensures
+    R.mk_det_raw_cbor_map_raw (R.mk_det_raw_cbor_map_sorted l) == l
+  )
+= let m = R.mk_det_raw_cbor_map_sorted l in
+  let l' = R.mk_det_raw_cbor_map_raw m in
+  CBOR.Spec.Raw.Optimal.list_sorted_map_assoc_ext
+    (RF.deterministically_encoded_cbor_map_key_order)
+    l
+    l'
+    () ()
+    (fun x ->
+      List.Tot.assoc_mem x l;
+      List.Tot.assoc_mem x l';
+      List.Tot.mem_memP x (List.Tot.map fst l);
+      List.Tot.mem_memP x (List.Tot.map fst l');
+      CBOR.Spec.Util.list_memP_map_forall fst l;
+      CBOR.Spec.Util.list_memP_map_forall fst l';
+      List.Tot.for_all_mem (U.holds_on_pair (R.raw_data_item_sorted RF.deterministically_encoded_cbor_map_key_order)) l;
+      List.Tot.for_all_mem (U.holds_on_pair (R.raw_data_item_sorted RF.deterministically_encoded_cbor_map_key_order)) l';
+      List.Tot.for_all_mem (U.holds_on_pair R.raw_data_item_ints_optimal) l;
+      List.Tot.for_all_mem (U.holds_on_pair R.raw_data_item_ints_optimal) l';
+      if (
+        R.raw_data_item_sorted RF.deterministically_encoded_cbor_map_key_order x &&
+        R.raw_data_item_ints_optimal x
+      ) then (
+        R.raw_data_item_sorted_optimal_valid RF.deterministically_encoded_cbor_map_key_order x;
+        R.mk_det_raw_cbor_mk_cbor x;
+        let k = R.mk_cbor x in
+        assert (R.mk_cbor_match_map_elem l m x);
+        R.mk_det_raw_cbor_map_raw_assoc m k;
+        assert (R.mk_cbor_match_map_elem l' m x);
+        assert (Some? (U.list_setoid_assoc R.raw_equiv x l) == Some? (U.list_setoid_assoc R.raw_equiv x l'));
+        U.list_setoid_assoc_equiv_gen R.raw_equiv ( = ) l x x (fun a ->
+          if R.raw_equiv x (fst a)
+          then R.raw_equiv_sorted_optimal RF.deterministically_encoded_cbor_map_key_order x (fst a)
+          else if x = fst a
+          then begin
+            R.raw_equiv_refl x;
+            assert (R.raw_equiv x x);
+            assert (R.raw_equiv x (fst a))
+          end
+          else ()
+        );
+        U.list_setoid_assoc_equiv_gen R.raw_equiv ( = ) l' x x (fun a ->
+          if R.raw_equiv x (fst a)
+          then R.raw_equiv_sorted_optimal RF.deterministically_encoded_cbor_map_key_order x (fst a)
+          else if x = fst a
+          then begin
+            R.raw_equiv_refl x;
+            assert (R.raw_equiv x x);
+            assert (R.raw_equiv x (fst a))
+          end
+          else ()
+        );
+        U.list_setoid_assoc_eqtype x l;
+        U.list_setoid_assoc_eqtype x l';
+        match U.list_setoid_assoc R.raw_equiv x l, U.list_setoid_assoc R.raw_equiv x l' with
+        | Some v1, Some v1' ->
+          let Some a = U.list_setoid_assoc_mem R.raw_equiv x l in
+          let Some a' = U.list_setoid_assoc_mem R.raw_equiv x l' in
+          R.mk_det_raw_cbor_mk_cbor v1;
+          R.mk_det_raw_cbor_mk_cbor v1';
+          ()
+        | _ -> ()
+      ) else ()
+    )
+
+let cbor_det_parse_map_equiv
+  (n: nat)
+  (s: Seq.seq U8.t)
+  (l: cbor_map)
+  (len: nat)
+: Lemma
+  (cbor_det_parse_map n s == Some (l, len) <==> (
+    n == cbor_map_length l /\
+    len <= Seq.length s /\
+    Seq.slice s 0 len == cbor_det_serialize_map l
+  ))
+= if cbor_det_parse_map n s = Some (l, len)
+  then begin
+    let Some (l', _) = RF.parse_cbor_map n s in
+    RF.parse_cbor_map_equiv n s l' len;
+    mk_det_raw_cbor_map_raw_mk_det_raw_cbor_map_sorted l';
+    ()
+  end
+  else if n = cbor_map_length l &&
+    len <= Seq.length s &&
+    Seq.slice s 0 len = cbor_det_serialize_map l
+  then begin
+    RF.parse_cbor_map_equiv n s (R.mk_det_raw_cbor_map_raw l) len;
+    mk_det_raw_cbor_map_sorted_mk_det_raw_cbor_map_raw l
+  end
+  else ()

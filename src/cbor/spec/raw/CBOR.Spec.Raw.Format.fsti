@@ -467,3 +467,36 @@ val cbor_serialize_map_length_gt_list
     U64.v len.value == List.Tot.length l /\
     Seq.length (serialize_cbor (Map len l)) > Seq.length (serialize_cbor_map l)
   ))
+
+val parse_cbor_map
+  (n: nat)
+  (s: Seq.seq U8.t)
+: Pure (option (list (raw_data_item & raw_data_item) & nat))
+    (requires True)
+    (ensures fun res -> match res with
+    | None -> True
+    | Some (_, len) -> len <= Seq.length s
+    )
+
+val parse_cbor_map_prefix
+  (n: nat)
+  (s1 s2: Seq.seq U8.t)
+: Lemma
+  (match parse_cbor_map n s1 with
+  | None -> True
+  | Some (l, len1) ->
+    (len1 <= Seq.length s2 /\ Seq.slice s1 0 len1 == Seq.slice s2 0 len1) ==>
+    parse_cbor_map n s2 == Some (l, len1)
+  )
+
+val parse_cbor_map_equiv
+  (n: nat)
+  (s: Seq.seq U8.t)
+  (l: list (raw_data_item & raw_data_item))
+  (len: nat)
+: Lemma
+  (parse_cbor_map n s == Some (l, len) <==> (
+    n == List.Tot.length l /\
+    len <= Seq.length s /\
+    Seq.slice s 0 len == serialize_cbor_map l
+  ))
