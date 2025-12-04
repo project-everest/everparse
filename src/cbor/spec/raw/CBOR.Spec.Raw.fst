@@ -147,6 +147,30 @@ let rec assoc_map_mk_det_raw_cbor_map_entry
   end
   | _ -> ()
 
+let mk_det_raw_cbor_map_sorted l' =
+  let m : cbor_map = l' in
+  DM.cbor_map_length_eq m;
+  assert (cbor_map_length m == List.Tot.length l');
+  let prf
+    (x: cbor)
+  : Lemma
+    (mk_cbor_match_map_elem l' m (mk_det_raw_cbor x))
+  =
+    List.Tot.for_all_mem (CBOR.Spec.Util.holds_on_pair R.raw_data_item_ints_optimal) l';
+    List.Tot.for_all_mem (CBOR.Spec.Util.holds_on_pair (R.raw_data_item_sorted RF.deterministically_encoded_cbor_map_key_order)) l';
+    let x' = mk_det_raw_cbor x in
+    assert (x' == x);
+    RS.list_setoid_assoc_sorted_optimal RF.deterministically_encoded_cbor_map_key_order x' l';
+    assert (Some? (U.list_setoid_assoc R.raw_equiv x' l') == Some? (cbor_map_get m x));
+    match List.Tot.assoc x' l' with
+    | None -> ()
+    | Some v ->
+      DM.list_assoc_cbor m x';
+      mk_det_raw_cbor_mk_cbor v
+  in
+  Classical.forall_intro prf;  
+  m
+
 let mk_det_raw_cbor_map
   l len
 =
