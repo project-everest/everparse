@@ -216,6 +216,8 @@ ensures
       unfold (mk_map_gen_post vmatch1 vmatch2 s va pv vv None);
       S.to_array s;
       fold (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest false);
+      rewrite (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest false)
+        as (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest bres);
     }
     Some vres -> {
       unfold (mk_map_gen_post vmatch1 vmatch2 s va pv vv (Some vres));
@@ -233,6 +235,8 @@ ensures
       Trade.trans_concl_l _ _ _ _;
       rewrite each vres as vdest;
       fold (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest true);
+      rewrite (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest true)
+        as (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest bres);
     }
   }
 }

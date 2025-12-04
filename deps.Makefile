@@ -13,7 +13,7 @@ export EVERPARSE_OPT_PATH := $(shell cygpath -m $(EVERPARSE_OPT_PATH))
 NO_PULSE := 1
 endif
 
-Z3_VERSION := 4.13.3
+EVERPARSE_Z3_VERSION ?= 4.15.3
 
 ifeq (1,$(EVERPARSE_USE_MY_DEPS))
 export EVERPARSE_USE_OPAMROOT:=1
@@ -51,7 +51,7 @@ NEED_FSTAR :=
 ifneq (1,$(EVERPARSE_USE_FSTAR_EXE))
 export FSTAR_EXE := $(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe
 NEED_FSTAR := $(EVERPARSE_OPT_PATH)/FStar.done
-z3_exe := $(shell $(FSTAR_EXE) --locate_z3 \$(Z3_VERSION) 2>/dev/null)
+z3_exe := $(shell $(FSTAR_EXE) --locate_z3 \$(EVERPARSE_Z3_VERSION) 2>/dev/null)
 ifneq (0,$(.SHELLSTATUS))
 z3_exe :=
 endif
@@ -74,7 +74,7 @@ endif
 
 NEED_Z3 :=
 ifeq (,$(z3_exe))
-z3_exe := $(shell which z3-$(Z3_VERSION))
+z3_exe := $(shell which z3-$(EVERPARSE_Z3_VERSION))
 ifneq (0,$(.SHELLSTATUS))
 z3_exe :=
 endif
@@ -170,6 +170,7 @@ ifeq ($(OS),Windows_NT)
 else
 	@echo export EVERPARSE_HOME=$(CURDIR)
 endif
+	@echo export EVERPARSE_Z3_VERSION=$(EVERPARSE_Z3_VERSION)
 	@echo export PATH=\"$(z3_dir):'$$PATH'\"
 
 .PHONY: env

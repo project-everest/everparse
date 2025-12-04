@@ -258,6 +258,7 @@ let map_group_footprint_consumes_all
   ()
 
 #restart-solver
+#push-options "--z3rlimit_factor 4"
 let map_group_footprint_concat_consumes_all
   (g1 g2: map_group)
   (f1 f2: map_constraint)
@@ -282,6 +283,7 @@ let map_group_footprint_concat_consumes_all
   assert (MapGroupDet?.consumed x `cbor_map_equal` (m1 `cbor_map_union` m2));
   assert (MapGroupDet?.remaining x `cbor_map_equal` cbor_map_empty);
   ()
+#pop-options
 
 let map_group_match_item_for_footprint // FIXME: necessary because Pulse does not handle `if then else` in `pure` conditions
   (cut: bool)
@@ -1620,6 +1622,7 @@ val map_group_parser_spec_concat_eq
   [SMTPat (map_group_parser_spec_concat s1 s2 target_size target_prop l)]
 
 #restart-solver
+#push-options "--z3rlimit_factor 4"
 let map_group_serializer_spec_concat
   (#source1: det_map_group)
   (#source_fp1: map_constraint)
@@ -1677,6 +1680,7 @@ let map_group_serializer_spec_concat
     assert (map_group_parser_spec_concat s1 s2 target_size target_prop res == x);
     cbor_map_length_disjoint_union l1 l2;
     res
+#pop-options
 
 let mg_spec_concat_size
   (#target1: Type)
@@ -1706,6 +1710,7 @@ let mg_spec_concat_serializable
 : Tot bool
 = target_prop1 (fst x) && target_prop2 (snd x) && cbor_map_disjoint_tot (s1 (fst x)) (s2 (snd x))
 
+#push-options "--z3rlimit_factor 8"
 let mg_spec_concat_inj
   (#source1: det_map_group)
   (#source_fp1: map_constraint)
@@ -1728,7 +1733,9 @@ let mg_spec_concat_inj
     map_group_serializer_spec_concat p1.mg_serializer p2.mg_serializer (mg_spec_concat_size p1.mg_size p2.mg_size) (mg_spec_concat_serializable p1.mg_serializer p2.mg_serializer) (map_group_parser_spec_concat p1.mg_serializer p2.mg_serializer (mg_spec_concat_size p1.mg_size p2.mg_size) (mg_spec_concat_serializable p1.mg_serializer p2.mg_serializer) m) == m
   ))
 = map_group_concat_footprint_disjoint source1 source_fp1 source2 source_fp2 m
+#pop-options
 
+#push-options "--z3rlimit_factor 4 --split_queries always"
 let mg_spec_concat_domain_inj'
   (#source1: det_map_group)
   (#source_fp1: map_constraint)
@@ -1736,6 +1743,7 @@ let mg_spec_concat_domain_inj'
   (#inj1: bool)
   (p1: mg_spec source1 source_fp1 target1 inj1)
   (#source2: det_map_group)
+
   (#source_fp2: map_constraint)
   (#target2: Type)
   (#inj2: bool)
@@ -1780,6 +1788,7 @@ let mg_spec_concat_domain_inj'
   assert (forall k . cbor_map_defined k x2' ==> cbor_map_defined k x2);
   assert (cbor_map_defined k x' ==> cbor_map_defined k x);
   ()
+#pop-options
 
 let mg_spec_concat_domain_inj
   (#source1: det_map_group)
@@ -2302,6 +2311,7 @@ let map_group_zero_or_more_match_item_parser_op
     Map.union accu (mk_map_singleton pkey (pkey.parser x) (pvalue.parser y))
 //    else accu
 
+#push-options "--z3rlimit_factor 4 --split_queries always"
 let map_group_zero_or_more_match_item_parser_op_comm
   (#tkey #tvalue: Type)
   (#key #value: typ)
@@ -2317,6 +2327,7 @@ let map_group_zero_or_more_match_item_parser_op_comm
   ))
   [SMTPat (map_group_zero_or_more_match_item_parser_op pkey pvalue except m (map_group_zero_or_more_match_item_parser_op pkey pvalue except m accu x1) x2)]
 = ()
+#pop-options
 
 let rec list_fold_map_group_zero_or_more_match_item_parser_op_mem
   (#tkey #tvalue: Type)
@@ -2727,6 +2738,8 @@ let map_group_zero_or_more_match_item_serializer'_length
   list_fold_map_group_zero_or_more_match_item_serializer_length pkey pvalue except m cbor_map_empty l
 
 #restart-solver
+#push-options "--z3rlimit_factor 4 --fuel 2 --ifuel 2 --split_queries always --query_stats"
+#restart-solver
 let map_group_zero_or_more_match_item_serializer
   (#tkey #tvalue: Type)
   (#key #value: typ)
@@ -2737,11 +2750,12 @@ let map_group_zero_or_more_match_item_serializer
 : Tot (map_group_serializer_spec (map_group_zero_or_more_match_item_parser pkey pvalue except))
 = fun x ->
   let y = map_group_zero_or_more_match_item_serializer' pkey pvalue except x in
-  assert (forall x . Some? (cbor_map_get y x) ==> cbor_map_mem (x, Some?.v (cbor_map_get y x)) y);
+  assert (forall x . {:pattern cbor_map_get y x} Some? (cbor_map_get y x) ==> cbor_map_mem (x, Some?.v (cbor_map_get y x)) y);
   let py = map_group_zero_or_more_match_item_parser' pkey pvalue except y in
-  assert (forall (kv: (tkey & list tvalue)) . Map.mem kv x ==> cbor_map_mem (pkey.serializer (fst kv), pvalue.serializer (List.Tot.hd (snd kv))) y);
+  assert (forall (kv: (tkey & list tvalue)) .{:pattern Map.mem kv x} Map.mem kv x ==> cbor_map_mem (pkey.serializer (fst kv), pvalue.serializer (List.Tot.hd (snd kv))) y);
   assert (Map.equal' py x);
   y
+#pop-options
 
 val map_group_zero_or_more_match_item_parser_inj
   (#tkey #tvalue: Type)

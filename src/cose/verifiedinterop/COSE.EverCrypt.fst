@@ -5,6 +5,7 @@ open COSE.Format
 open Pulse.Lib.Trade
 open Pulse.Lib.Trade.Util
 open EverCrypt.Ed25519
+module T = FStar.Tactics.V2
 module AP = Pulse.Lib.ArrayPtr
 module S = Pulse.Lib.Slice
 module V = Pulse.Lib.Vec
@@ -22,11 +23,13 @@ let specnint_of_int (i: int { - pow2 64 <= i /\ i < 0 }) : GTot spect_nint =
 let specuint_of_int (i: int { 0 <= i /\ i < pow2 64 }) : GTot spect_evercddl_uint =
   Mkspect_evercddl_uint0 (UInt64.uint_to_t i)
 
+#push-options "--fuel 0 --ifuel 0 --z3rlimit_factor 4"
 let specint_of_int (i: int { -pow2 64 <= i /\ i < pow2 64 }) : GTot spect_evercddl_int =
   if i >= 0 then
     Mkspect_evercddl_int0 (specuint_of_int i)
   else
     Mkspect_evercddl_int1 (specnint_of_int i)
+#pop-options
 
 inline_for_extraction noextract
 let i32_to_u64_safe (i: Int32.t { Int32.v i >= 0 }) : j:UInt64.t { UInt64.v j == Int32.v i } =
@@ -45,8 +48,7 @@ let rel_evercddl_int_eq a b : squash (rel_evercddl_int a b ==
   (match a, b with
    | Mkevercddl_int0 a, Mkspect_evercddl_int0 b -> rel_evercddl_uint a b
    | Mkevercddl_int1 a, Mkspect_evercddl_int1 b -> rel_nint a b
-   | _ -> pure False)) =
-  ()
+   | _ -> pure False)) = _ by (T.compute(); T.smt())
 
 ghost fn rw_r (#a: slprop) (#b: slprop) (h: squash (a == b)) requires a ensures b { rewrite a as b }
 ghost fn rw_l (#a: slprop) (#b: slprop) (h: squash (a == b)) requires b ensures a { rewrite b as a }
@@ -75,6 +77,7 @@ fn mk_int (i: Int32.t)
   }
 }
 
+#push-options "--fuel 0 --ifuel 0 --query_stats --z3rlimit_factor 4"
 let rel_sig_structure_eq (a: sig_structure) (b: spect_sig_structure) :
   squash (rel_sig_structure a b == (match a, b with
     | Mksig_structure0 context body_protected rest,
@@ -87,8 +90,8 @@ let rel_sig_structure_eq (a: sig_structure) (b: spect_sig_structure) :
             | Inl (sign_protected, (aad, payload)), Inl (vsign_protected, (vaad, vpayload)) ->
               rel_empty_or_serialized_map sign_protected vsign_protected **
                 (rel_bstr aad vaad ** rel_bstr payload vpayload)
-            | _ -> pure False)))) =
-  ()
+            | _ -> pure False)))) = _ by (T.compute(); T.smt())
+#pop-options
 
 inline_for_extraction noextract
 let signature1: either unit unit = Inr ()
@@ -149,10 +152,12 @@ fn mk_sig_structure phdr aad payload
 let ser_to #t #st (s: CDDL.Spec.Base.spec t st true) (x: st) y =
   s.serializable x /\ Seq.equal y (CBOR.Spec.API.Format.cbor_det_serialize (s.serializer x))
 
+#push-options "--fuel 0 --ifuel 0 --z3rlimit_factor 4"
 let ser_to_inj #t #st s x y y' :
     Lemma (requires ser_to #t #st s x y /\ ser_to s x y') (ensures y == y')
       [SMTPat (ser_to s x y); SMTPat (ser_to s x y')] =
   ()
+#pop-options
 
 let to_be_signed_spec
     (phdr: spect_empty_or_serialized_map)
@@ -166,7 +171,7 @@ let sz_to_u32_safe (i: SizeT.t { SizeT.v i < pow2 32 }) : j:UInt32.t { UInt32.v 
   Math.Lemmas.small_mod (SizeT.v i) (pow2 32);
   SizeT.sizet_to_uint32 i
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 32 --fuel 0 --ifuel 0"
 fn create_sig privkey phdr aad payload (sigbuf: AP.ptr UInt8.t)
     (#vphdr: erased _) (#vaad: erased _) (#vpayload: erased _) (#pprivkey: erased _)
     (#vprivkey: erased (Seq.seq UInt8.t) { Seq.length vprivkey == 32 })
@@ -431,6 +436,8 @@ ghost fn trade_exists (#t: Type0) (p: t->slprop) x
   { () };
 }
 
+#push-options "--fuel 0 --ifuel 0 --z3rlimit_factor 10 --query_stats"
+//the proof of pure sign1_spec takes a while---should profile it
 fn sign1 privkey uhdr aad payload (outbuf: S.slice UInt8.t)
     #pprivkey (#vprivkey: erased (Seq.seq UInt8.t) { Seq.length vprivkey == 32 })
     (#vuhdr: erased _) (#vaad: erased _) (#vpayload: erased _)
@@ -564,6 +571,7 @@ fn verify_sig pubkey phdr aad payload (sigbuf: AP.ptr UInt8.t)
 
 #pop-options
 
+#push-options "--fuel 0 --ifuel 0 --z3rlimit_factor 20 --query_stats --z3cliopt 'smt.qi.eager_threshold=100'"
 let rel_sign1_tagged_eq (a: cose_sign1_tagged) (b: spect_cose_sign1_tagged) =
   assert_norm' (rel_cose_sign1_tagged a b ==
     ((COSE.Format.rel_empty_or_serialized_map a._x0.protected b._x0.protected **
@@ -694,7 +702,8 @@ let nat_eq_of_diff_zero (a b: nat) : Lemma (requires a - b == 0) (ensures a == b
   int_eq_of_diff_zero a b
 
 #pop-options
-
+#pop-options
+#push-options "--z3rlimit_factor 50 --fuel 0 --ifuel 1"
 fn verify1 pubkey aad msg
     #ppubkey (#vpubkey: erased (Seq.seq UInt8.t) { Seq.length vpubkey == 32 })
     (#vaad: erased _) #pmsg (#vmsg: erased _)
@@ -785,3 +794,5 @@ fn verify1_simple pubkey msg
   S.to_array aadslice;
   res
 }
+#pop-options
+#pop-options
