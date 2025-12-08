@@ -170,7 +170,7 @@ ensures
   ;
   Trade.trans _ _ (cbor_match_serialized_array c pm r);
   cbor_raw_serialized_iterator_fold serialize_raw_data_item p res (Array?.v r);
-  Trade.trans _ _ (cbor_match_serialized_array c pm r);
+  LowParse.Pulse.VCList.trade_trans_nounify _ _ _ (cbor_match_serialized_array c pm r);
   fold (cbor_serialized_array_iterator_match p res (Array?.v r));
   res
 }
@@ -272,7 +272,7 @@ ensures
   ;
   Trade.trans _ _ (cbor_match_serialized_map c pm r);
   cbor_raw_serialized_iterator_fold (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) p res (Map?.v r);
-  Trade.trans _ _ (cbor_match_serialized_map c pm r);
+  LowParse.Pulse.VCList.trade_trans_nounify _ _ _ (cbor_match_serialized_map c pm r);
   fold (cbor_serialized_map_iterator_match p res (Map?.v r));
   res
 }
