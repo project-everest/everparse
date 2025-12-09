@@ -70,10 +70,10 @@ In the News
 Papers
 ------
 
-`Secure Parsing and Serializing with Separation Logic Applied to CBOR, CDDL and COSE <https://arxiv.org/abs/2505.17335>`_;
+`Secure Parsing and Serializing with Separation Logic Applied to CBOR, CDDL and COSE <https://www.microsoft.com/en-us/research/publication/evercbor/>`_;
   Tahina Ramananandro, Gabriel Ebner, Guido Martinez, Nikhil Swamy;
 
-  32nd ACM SIGSAC Conference on Computer and Communications Security (CCS), 2025 (accepted for publication, to appear)
+  32nd ACM SIGSAC Conference on Computer and Communications Security (CCS), 2025. **Distinguished Artifact Award!**
 
 `ASN1*: Provably Correct Non-Malleable Parsing for ASN.1 DER <https://www.microsoft.com/en-us/research/publication/asn1-provably-correct-non-malleable-parsing-for-asn-1-der/>`_;
   Haobin Ni, Antoine Delignat-Lavaud, Cédric Fournet, Tahina Ramananandro, Nikhil Swamy;
