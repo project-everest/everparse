@@ -150,7 +150,7 @@ let rec compute_wf_typ
 
 let produce_validator env wf validator = "
 let _ : unit = _ by (FStar.Tactics.print (\"validator\"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.steps)]
+[@@normalize_for_extraction (T.steps)]
 let "^validator^" = Impl.validate_typ' Det.cbor_det_impl "^env^".be_v true _ "^wf
 
 let uglify (s: string) = s ^ "_ugly"
@@ -203,10 +203,10 @@ let gteq"^bundle^"'' () : squash (g"^bundle^"''.b_impl_type == "^typename^") = c
 let peq"^bundle^" () = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match "^bundle^"''.b_spec.parser "^bundle^"''.b_rel "^typename^" (teq"^bundle^"'' ())
 let seq"^bundle^" () = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq "^bundle^"''.b_spec "^bundle^"''.b_rel "^typename^" (teq"^bundle^"'' ())
 let _ : unit = _ by (FStar.Tactics.print (\"parser\"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps);
+[@@normalize_for_extraction (T.bundle_steps);
    Comment \"Parser for "^typename^"\"]
 let "^parser^" = T.inline_coerce_eq (peq"^bundle^" ()) "^bundle^"''.b_parser
-[@@normalize_for_extraction (nbe :: T.bundle_steps);
+[@@normalize_for_extraction (T.bundle_steps);
    Comment \"Serializer for "^typename^"\"]
 let "^serializer^" = T.inline_coerce_eq (seq"^bundle^" ()) "^bundle^"''.b_serializer
 let _ : unit = _ by (FStar.Tactics.print (\"bundle'\"); FStar.Tactics.exact (`()))
@@ -226,13 +226,13 @@ produce_parser0 env env_anc' validator parser serializer typename bundle
 let produce_ask_for_validator env wf validator =
 "let _ : unit = _ by (FStar.Tactics.print (\"validator\"); FStar.Tactics.exact (`()))
 let is_type_"^wf^" () : squash (Parse.option_ask_for_is_type "^wf^") = (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
-[@@normalize_for_extraction (nbe :: T.steps)]
+[@@normalize_for_extraction (T.steps)]
 let "^validator^" = Parse.validate_ask_for_type Det.cbor_det_impl "^env^".be_v "^wf^" (is_type_"^wf^" ())"
 
 let produce_ask_for_map_constraint env wf map_constraint =
 "let _ : unit = _ by (FStar.Tactics.print (\"map_constraint\"); FStar.Tactics.exact (`()))
 let is_map_constraint_"^wf^" () : squash (Parse.option_ask_for_is_map_constraint "^wf^") = (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
-[@@normalize_for_extraction (nbe :: T.steps)]
+[@@normalize_for_extraction (T.steps)]
 let "^map_constraint^" = Parse.validate_ask_for_map_constraint Det.cbor_det_impl "^env^".be_v "^wf^" (is_map_constraint_"^wf^" ())"
 
 let produce_ask_for_parser env env_anc' wf validator parser serializer typename bundle =
@@ -244,7 +244,7 @@ produce_parser0 env env_anc' validator parser serializer typename bundle
 
 let produce_ask_for_array_validator env wf validator = "
 let _ : unit = _ by (FStar.Tactics.print (\"validator\"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.steps)]
+[@@normalize_for_extraction (T.steps)]
 let "^validator^" = Parse.validate_ask_for_array_group Det.cbor_det_impl "^env^".be_v "^wf^" (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))"
 
 let produce_ask_for_array_parser env env_anc' wf validator parser serializer typename bundle =
@@ -293,10 +293,10 @@ let gteq"^bundle^"'' () : squash (g"^bundle^"''.ab_impl_type == "^typename^") = 
 let peq"^bundle^" () = CDDL.Pulse.Parse.ArrayGroup.impl_zero_copy_array_group_t_eq Det.cbor_det_array_iterator_match "^bundle^"''.ab_spec.ag_parser "^bundle^"''.ab_rel "^typename^" (teq"^bundle^"'' ())
 let seq"^bundle^" () = CDDL.Pulse.Serialize.ArrayGroup.impl_serialize_array_group_t_eq "^bundle^"''.ab_spec "^bundle^"''.ab_rel "^typename^" (teq"^bundle^"'' ())
 let _ : unit = _ by (FStar.Tactics.print (\"parser\"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps);
+[@@normalize_for_extraction (T.bundle_steps);
    Comment \"Parser for "^typename^"\"]
 let "^parser^" = T.inline_coerce_eq (peq"^bundle^" ()) "^bundle^"''.ab_parser
-[@@normalize_for_extraction (nbe :: T.bundle_steps);
+[@@normalize_for_extraction (T.bundle_steps);
    Comment \"Serializer for "^typename^"\"]
 let "^serializer^" = T.inline_coerce_eq (seq"^bundle^" ()) "^bundle^"''.ab_serializer
 let _ : unit = _ by (FStar.Tactics.print (\"bundle'\"); FStar.Tactics.exact (`()))
