@@ -4,12 +4,12 @@
 
 static uint8_t get_bitfield_gen8(uint8_t x, uint32_t lo, uint32_t hi)
 {
-  return ((uint32_t)x << 8U - hi & 0xFFU) >> 8U - hi + lo;
+  return ((uint32_t)x << (8U - hi) & 0xFFU) >> (8U - hi + lo);
 }
 
 static uint8_t set_bitfield_gen8(uint8_t x, uint32_t lo, uint32_t hi, uint8_t v)
 {
-  return (uint32_t)x & (uint32_t)~(255U >> 8U - (hi - lo) << lo) | (uint32_t)v << lo;
+  return ((uint32_t)x & (uint32_t)~(255U >> (8U - (hi - lo)) << lo)) | (uint32_t)v << lo;
 }
 
 #define ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS (24U)
@@ -4208,6 +4208,7 @@ static int16_t impl_cbor_det_compare(cbor_raw x1, cbor_raw x2)
 void cbor_free_(cbor_freeable0 x)
 {
   if (!(x.tag == CBOR_Copy_Unit))
+  {
     if (x.tag == CBOR_Copy_Bytes)
       KRML_HOST_FREE(x.case_CBOR_Copy_Bytes);
     else if (x.tag == CBOR_Copy_Box)
@@ -4253,6 +4254,7 @@ void cbor_free_(cbor_freeable0 x)
         "unreachable (pattern matches are exhaustive in F*)");
       KRML_HOST_EXIT(255U);
     }
+  }
 }
 
 static void cbor_free0(cbor_freeable x)

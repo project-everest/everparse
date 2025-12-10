@@ -6,13 +6,13 @@
 
 static uint8_t LowParse_BitFields_get_bitfield_gen8(uint8_t x, uint32_t lo, uint32_t hi)
 {
-  return ((uint32_t)x << 8U - hi & 0xFFU) >> 8U - hi + lo;
+  return ((uint32_t)x << (8U - hi) & 0xFFU) >> (8U - hi + lo);
 }
 
 static uint8_t
 LowParse_BitFields_set_bitfield_gen8(uint8_t x, uint32_t lo, uint32_t hi, uint8_t v)
 {
-  return (uint32_t)x & (uint32_t)~(255U >> 8U - (hi - lo) << lo) | (uint32_t)v << lo;
+  return ((uint32_t)x & (uint32_t)~(255U >> (8U - (hi - lo)) << lo)) | (uint32_t)v << lo;
 }
 
 #define CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS (24U)
