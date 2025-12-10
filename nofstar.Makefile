@@ -4,10 +4,15 @@ clean_rules += clean-cbor clean-cose
 
 .PHONY: all-nofstar
 
-cbor:
+cbor: cbor-det cbor-nondet
+
+cbor-det:
 	+$(MAKE) -C src/cbor/pulse/det
 
-.PHONY: cbor
+cbor-nondet:
+	+$(MAKE) -C src/cbor/pulse/nondet
+
+.PHONY: cbor cbor-det cbor-nondet
 
 cose: cbor
 	+$(MAKE) -C src/cose
@@ -19,13 +24,23 @@ cbor-det-c-test: cbor
 
 .PHONY: cbor-det-c-test
 
+cbor-nondet-c-test: cbor
+	+$(MAKE) -C src/cbor/pulse/nondet/c all-tests
+
+.PHONY: cbor-nondet-c-test
+
 # NOTE: I wish we could use `cargo -C ...` but see https://github.com/rust-lang/cargo/pull/11960
 cbor-det-rust-test: cbor
 	+cd src/cbor/pulse/det/rust && cargo test
 
 .PHONY: cbor-det-rust-test
 
-cbor-test-unverified: cbor-det-c-test cbor-det-rust-test
+cbor-nondet-rust-test: cbor
+	+cd src/cbor/pulse/nondet/rust && cargo test
+
+.PHONY: cbor-nondet-rust-test
+
+cbor-test-unverified: cbor-det-c-test cbor-det-rust-test cbor-nondet-c-test cbor-nondet-rust-test
 
 .PHONY: cbor-test-unverified
 

@@ -851,20 +851,8 @@ validate_recursive_step_count_leaf(
   }
 }
 
-static size_t jump_recursive_step_count_leaf(Pulse_Lib_Slice_slice__uint8_t a)
+static size_t impl_remaining_data_items_header(header h)
 {
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  scrut = split__uint8_t(a, jump_header(a, (size_t)0U));
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  scrut0 = { .fst = scrut.fst, .snd = scrut.snd };
-  header
-  h =
-    read_header((
-        (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
-          .fst = scrut0.fst,
-          .snd = scrut0.snd
-        }
-      ).fst);
   uint8_t typ = get_header_major_type(h);
   if (typ == CBOR_MAJOR_TYPE_ARRAY)
     return (size_t)argument_as_uint64(h.fst, h.snd);
@@ -877,6 +865,21 @@ static size_t jump_recursive_step_count_leaf(Pulse_Lib_Slice_slice__uint8_t a)
     return (size_t)1U;
   else
     return (size_t)0U;
+}
+
+static size_t jump_recursive_step_count_leaf(Pulse_Lib_Slice_slice__uint8_t a)
+{
+  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  scrut = split__uint8_t(a, jump_header(a, (size_t)0U));
+  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  scrut0 = { .fst = scrut.fst, .snd = scrut.snd };
+  return
+    impl_remaining_data_items_header(read_header((
+          (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+            .fst = scrut0.fst,
+            .snd = scrut0.snd
+          }
+        ).fst));
 }
 
 static bool validate_raw_data_item(Pulse_Lib_Slice_slice__uint8_t input, size_t *poffset)
@@ -4695,22 +4698,69 @@ cbor_raw cbor_det_mk_tagged(uint64_t tag, cbor_raw *r)
     );
 }
 
-cbor_raw cbor_det_mk_string_from_arrayptr(uint8_t ty, uint8_t *a, uint64_t len)
+bool cbor_det_mk_byte_string_from_arrayptr(uint8_t *a, uint64_t len, cbor_raw *dest)
 {
-  Pulse_Lib_Slice_slice__uint8_t s = arrayptr_to_slice_intro__uint8_t(a, (size_t)len);
-  return
-    (
-      (cbor_raw){
-        .tag = CBOR_Case_String,
-        {
-          .case_CBOR_Case_String = {
-            .cbor_string_type = ty,
-            .cbor_string_size = mk_raw_uint64((uint64_t)len__uint8_t(s)).size,
-            .cbor_string_ptr = s
+  bool __anf0 = a == NULL;
+  if (__anf0 || dest == NULL)
+    return false;
+  else
+  {
+    Pulse_Lib_Slice_slice__uint8_t s = arrayptr_to_slice_intro__uint8_t(a, (size_t)len);
+    bool ite;
+    if (CBOR_MAJOR_TYPE_BYTE_STRING == CBOR_MAJOR_TYPE_TEXT_STRING)
+      ite = impl_correct(s);
+    else
+      ite = true;
+    if (ite)
+    {
+      *dest =
+        (
+          (cbor_raw){
+            .tag = CBOR_Case_String,
+            {
+              .case_CBOR_Case_String = {
+                .cbor_string_type = CBOR_MAJOR_TYPE_BYTE_STRING,
+                .cbor_string_size = mk_raw_uint64((uint64_t)len__uint8_t(s)).size,
+                .cbor_string_ptr = s
+              }
+            }
           }
-        }
-      }
-    );
+        );
+      return true;
+    }
+    else
+      return false;
+  }
+}
+
+bool cbor_det_mk_text_string_from_arrayptr(uint8_t *a, uint64_t len, cbor_raw *dest)
+{
+  bool __anf0 = a == NULL;
+  if (__anf0 || dest == NULL)
+    return false;
+  else
+  {
+    Pulse_Lib_Slice_slice__uint8_t s = arrayptr_to_slice_intro__uint8_t(a, (size_t)len);
+    if (impl_correct(s))
+    {
+      *dest =
+        (
+          (cbor_raw){
+            .tag = CBOR_Case_String,
+            {
+              .case_CBOR_Case_String = {
+                .cbor_string_type = CBOR_MAJOR_TYPE_TEXT_STRING,
+                .cbor_string_size = mk_raw_uint64((uint64_t)len__uint8_t(s)).size,
+                .cbor_string_ptr = s
+              }
+            }
+          }
+        );
+      return true;
+    }
+    else
+      return false;
+  }
 }
 
 cbor_raw cbor_det_mk_array_from_array(cbor_raw *a, uint64_t len)

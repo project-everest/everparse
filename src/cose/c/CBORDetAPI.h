@@ -57,7 +57,9 @@ extern cbor_det_t cbor_det_mk_int64(uint8_t x0, uint64_t x1);
 
 extern cbor_det_t cbor_det_mk_tagged(uint64_t x0, cbor_det_t *x1);
 
-extern cbor_det_t cbor_det_mk_string_from_arrayptr(uint8_t x0, uint8_t *x1, uint64_t x2);
+extern bool cbor_det_mk_byte_string_from_arrayptr(uint8_t *x0, uint64_t x1, cbor_det_t *x2);
+
+extern bool cbor_det_mk_text_string_from_arrayptr(uint8_t *x0, uint64_t x1, cbor_det_t *x2);
 
 extern cbor_det_t cbor_det_mk_array_from_array(cbor_det_t *x0, uint64_t x1);
 

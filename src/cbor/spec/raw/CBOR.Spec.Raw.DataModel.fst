@@ -517,3 +517,7 @@ let size_unpack #order #compare x =
     Classical.forall_intro (Classical.move_requires (list_cbor_of_cbor_list_size #order #compare v));
     ()
   | _ -> ()
+
+let cbor_map_depth x = map_depth x
+
+let cbor_map_key_depth x = map_key_depth x

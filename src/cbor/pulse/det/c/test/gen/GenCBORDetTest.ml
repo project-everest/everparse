@@ -15,7 +15,8 @@ let gen_int (x: int) (name: string) : c list =
 let quote_string s = Yojson.Safe.to_string (`String s)
 
 let gen_string (s: string) (name: string) : c list =
-  [`Instr ("cbor_det_t " ^ name ^ " = cbor_det_mk_string_from_arrayptr(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *" ^ ")" ^ quote_string s ^ ", " ^ string_of_int (String.length s) ^ ")")]
+  [`Instr ("cbor_det_t " ^ name);
+   `Instr ("assert (cbor_det_mk_text_string_from_arrayptr((uint8_t *" ^ ")" ^ quote_string s ^ ", " ^ string_of_int (String.length s) ^ ", &" ^ name ^ "))")]
 
 let gen_map (gen: Yojson.Safe.t -> string -> c list) (l: (string * Yojson.Safe.t) list) (name: string) : c list =
   let len = List.length l in
@@ -240,10 +241,20 @@ let gen_utf8_tests () : c list = In_channel.with_open_bin "./utf8tests.txt" (fun
            let (nlen, hex) = gen_hex strhex "mystr" in
            let len = string_of_int nlen in
            let outlen = string_of_int (nlen + 9) in
-           let accu' = `Block begin
+           let succeeded = if is_valid then "succeeded" else "failed" in
+           let failed = if is_valid then "failed" else "succeeded" in
+           let accu_block = begin
                `Instr ("printf(\"UTF-8 Test " ^ id ^ ". Testing text string encoding and UTF-8 validation for: " ^ strhex ^ "\\n\")") ::
                `Instr hex ::
-               `Instr ("cbor_det_t mycbor = cbor_det_mk_string_from_arrayptr(CBOR_MAJOR_TYPE_TEXT_STRING, mystr, " ^ len ^ ")") ::
+               `Instr ("cbor_det_t mycbor") ::
+               `If ((if is_valid then "!" else "") ^ "cbor_det_mk_text_string_from_arrayptr(mystr, " ^ len ^ ", &mycbor)") ::
+               `Block [
+                   `Instr("printf(\"CBOR object construction attempt " ^ failed ^ " but it was expected to have " ^ succeeded ^ "\\n\")");
+                   `Instr ("return 1");
+                 ] ::
+               `Instr("printf(\"CBOR object construction attempt " ^ succeeded ^ " as expected\\n\")") ::
+               []
+            end @ if is_valid then begin
                `Instr ("size_t size = cbor_det_size(mycbor, " ^ outlen ^ ")") ::
                `If ("size == 0") ::
                `Block [
@@ -260,9 +271,6 @@ let gen_utf8_tests () : c list = In_channel.with_open_bin "./utf8tests.txt" (fun
                  ] ::
                `Instr ("printf(\"Serialization succeeded!\\n\")") ::
                `Instr ("size_t test = cbor_det_validate(output, size)") ::
-               begin
-                 if is_valid
-                 then
                    `If ("test != size") ::
                    `Block [
                        `Instr ("printf(\"Validation failed, but it was expected to succeed\\n\")");
@@ -277,17 +285,9 @@ let gen_utf8_tests () : c list = In_channel.with_open_bin "./utf8tests.txt" (fun
                      ] ::
                    `Instr ("printf(\"Round-trip succeeded!\\n\")") ::
                    []
-                 else
-                   `If ("test != 0") ::
-                   `Block [
-                       `Instr ("printf(\"Validation succeeded, but it was expected to fail\\n\")");
-                       `Instr ("return 1")
-                   ] ::
-                   `Instr ("printf(\"Validation failed as expected!\\n\")") ::
-                   []
-               end
-             end :: accu
+             end else []
            in
+           let accu' = `Block accu_block :: accu in
            aux accu'
   in
   aux []
@@ -297,6 +297,7 @@ let mk_prog (x: c list) = "
 #include <string.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include <assert.h>
 #include \"CBORDet.h\"
 #include \"CBORDetTest.h\"
 
