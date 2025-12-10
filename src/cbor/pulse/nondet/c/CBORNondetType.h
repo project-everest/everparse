@@ -3,6 +3,10 @@
 #ifndef CBORNondetType_H
 #define CBORNondetType_H
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 #include "krmllib.h"
 
 typedef struct CBOR_Spec_Raw_Base_raw_uint64_s
@@ -164,6 +168,9 @@ typedef cbor_map_iterator cbor_nondet_map_iterator_t;
 
 typedef cbor_map_entry cbor_nondet_map_entry_t;
 
+#if defined(__cplusplus)
+}
+#endif
 
 #define CBORNondetType_H_DEFINED
 #endif /* CBORNondetType_H */
