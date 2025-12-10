@@ -117,8 +117,8 @@ let rec holds_on_raw_data_item_fmap_gen
     holds_on_raw_data_item_fmap_gen f p q prf1 prf v; 
     prf1 x;
     let x_ = Tagged tag (raw_data_item_fmap f v) in
-    pre_holds_on_raw_data_item_implies (p `andp` q) p (fun _ -> ()) x_;
-    pre_holds_on_raw_data_item_implies (p `andp` q) q (fun _ -> ()) x_;
+    pre_holds_on_raw_data_item_implies (p `andp` q) p x_ (fun _ -> ());
+    pre_holds_on_raw_data_item_implies (p `andp` q) q x_ (fun _ -> ());
     holds_on_raw_data_item_eq p x_;
     prf x_
   | Array len v ->
@@ -127,8 +127,8 @@ let rec holds_on_raw_data_item_fmap_gen
     );
     prf1 x;
     let x_ = Array len (List.Tot.map (raw_data_item_fmap f) v) in
-    pre_holds_on_raw_data_item_implies (p `andp` q) p (fun _ -> ()) x_;
-    pre_holds_on_raw_data_item_implies (p `andp` q) q (fun _ -> ()) x_;
+    pre_holds_on_raw_data_item_implies (p `andp` q) p x_ (fun _ -> ());
+    pre_holds_on_raw_data_item_implies (p `andp` q) q x_ (fun _ -> ());
     holds_on_raw_data_item_eq p x_;
     prf x_
   | Map len v ->
@@ -138,8 +138,8 @@ let rec holds_on_raw_data_item_fmap_gen
     );
     prf1 x;
     let x_ = Map len (List.Tot.map (apply_on_pair (raw_data_item_fmap f)) v) in
-    pre_holds_on_raw_data_item_implies (p `andp` q) p (fun _ -> ()) x_;
-    pre_holds_on_raw_data_item_implies (p `andp` q) q (fun _ -> ()) x_;
+    pre_holds_on_raw_data_item_implies (p `andp` q) p x_ (fun _ -> ());
+    pre_holds_on_raw_data_item_implies (p `andp` q) q x_ (fun _ -> ());
     holds_on_raw_data_item_eq p x_;
     prf x_
   | _ ->

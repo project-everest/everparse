@@ -50,6 +50,86 @@ let rec serialize_nlist_append
       (serialize (serialize_nlist n2 s) l2)
   end
 
+ghost
+fn pts_to_serialized_nlist_append
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (x: slice byte)
+  (n1: nat)
+  (n2: nat)
+  (#p: perm)
+  (#v: (nlist n1 t & nlist n2 t))
+requires
+  pts_to_serialized (serialize_nondep_then (serialize_nlist n1 s) (serialize_nlist n2 s)) x #p v
+ensures exists* v' .
+  pts_to_serialized (serialize_nlist (n1 + n2) s) x #p v' **
+  Trade.trade
+    (pts_to_serialized (serialize_nlist (n1 + n2) s) x #p v')
+    (pts_to_serialized (serialize_nondep_then (serialize_nlist n1 s) (serialize_nlist n2 s)) x #p v) **
+  pure (
+    List.Tot.append (fst v) (snd v) == v'
+  )
+{
+  serialize_nondep_then_eq (serialize_nlist n1 s) (serialize_nlist n2 s) v;
+  unfold (pts_to_serialized (serialize_nondep_then (serialize_nlist n1 s) (serialize_nlist n2 s)) x #p v);
+  serialize_nlist_append s n1 (fst v) n2 (snd v);
+  List.Tot.append_length (fst v) (snd v);
+  let v' : nlist (n1 + n2) t = List.Tot.append (fst v) (snd v);
+  fold (pts_to_serialized (serialize_nlist (n1 + n2) s) x #p v');
+  intro
+    (Trade.trade
+      (pts_to_serialized (serialize_nlist (n1 + n2) s) x #p v')
+      (pts_to_serialized (serialize_nondep_then (serialize_nlist n1 s) (serialize_nlist n2 s)) x #p v)
+    )
+    fn _ {
+      unfold (pts_to_serialized (serialize_nlist (n1 + n2) s) x #p v');
+      fold (pts_to_serialized (serialize_nondep_then (serialize_nlist n1 s) (serialize_nlist n2 s)) x #p v);
+    }
+}
+
+ghost
+fn pts_to_serialized_nlist_ext
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (n1: nat)
+  (x: slice byte)
+  (#k2: parser_kind)
+  (#t2: Type0)
+  (#p2: parser k2 t2)
+  (s2: serializer p2 { k2.parser_kind_subkind == Some ParserStrong })
+  (n2: nat)
+  (#p: perm)
+  (#v1: nlist n1 t1)
+requires
+  pts_to_serialized (serialize_nlist n1 s1) x #p v1 **
+  pure (t1 == t2) **
+  pure (
+    t1 == t2 /\
+    (forall b . parse p1 b == parse p2 b)
+  ) **
+  pure (n1 == n2)
+ensures exists* v2 .
+  pts_to_serialized (serialize_nlist n2 s2) x #p v2 **
+  Trade.trade
+    (pts_to_serialized (serialize_nlist n2 s2) x #p v2)
+    (pts_to_serialized (serialize_nlist n1 s1) x #p v1) **
+  pure (
+    t1 == t2 /\
+    n1 == n2 /\
+    (v1 <: list t1) == v2
+  )
+{
+  parse_nlist_ext_forall n1 p1 p2;
+  pts_to_serialized_ext_trade
+    (serialize_nlist n1 s1)
+    (serialize_nlist n2 s2)
+    x;
+}
+
 inline_for_extraction
 fn jump_nlist
    (#t: Type0)
@@ -240,6 +320,37 @@ ensures
   res
 }
 
+inline_for_extraction
+fn nlist_hd_tl'
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (j: jumper p)
+  (n: Ghost.erased pos)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (nlist n t))
+requires
+  pts_to_serialized (serialize_nlist n s) input #pm v
+returns res : (slice byte & slice byte)
+ensures (
+  let (hd, tl) = res in
+  pts_to_serialized s hd #pm (List.Tot.hd v) **
+  pts_to_serialized (serialize_nlist (n - 1) s) tl #pm (List.Tot.tl v) **
+  Trade.trade
+    (pts_to_serialized s hd #pm (List.Tot.hd v) **
+      pts_to_serialized (serialize_nlist (n - 1) s) tl #pm (List.Tot.tl v))
+    (pts_to_serialized (serialize_nlist n s) input #pm v)
+)
+{
+  let (hd, tl) = nlist_hd_tl s sq j n input;
+  unfold (nlist_hd_tl_post s sq n input pm v (hd, tl));
+  unfold (nlist_hd_tl_post' s sq n input pm v hd tl);
+  (hd, tl)
+}
+
 ghost fn nlist_as_nondep_then_nondep_then_left
   (#t: Type0)
   (#k: parser_kind)
@@ -393,6 +504,36 @@ ensures exists* v' .
   Trade.trans (pts_to_serialized s res #pm _) _ _;
   res
 }
+
+inline_for_extraction
+fn nlist_hd'
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (j: jumper p)
+  (n: Ghost.erased nat)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (nlist n t))
+  (sq: squash (n > 0))
+requires
+  pts_to_serialized (serialize_nlist n s) input #pm v
+returns input' : slice byte
+ensures exists* v' .
+  pts_to_serialized s input' #pm v' **
+  trade (pts_to_serialized s input' #pm v') (pts_to_serialized (serialize_nlist n s) input #pm v) **
+  pure (
+    Cons? v /\
+    v' == List.Tot.hd v
+  )
+{
+  nlist_cons_as_nondep_then s n input;
+  let res = nondep_then_fst #_ #(nlist (n - 1) t) s j #(parse_nlist_kind (n - 1) k) #(coerce_eq () (parse_nlist (n - 1) p)) (coerce_eq () (serialize_nlist (n - 1) s <: serializer #(parse_nlist_kind (n - 1) k) (parse_nlist (n - 1) p))) input; // FIXME: WHY WHY WHY are those reveal (hide (...)) NOT reduced?
+  Trade.trans (pts_to_serialized s res #pm _) _ _;
+  res
+}
+
 
 inline_for_extraction
 fn nlist_tl

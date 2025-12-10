@@ -1,0 +1,10 @@
+(include_subdirs unqualified)
+(executable
+ (name GenCBORNondetTest)
+ (public_name GenCBORNondetTest)
+ (libraries
+    yojson
+ )
+ (modes native)
+ (flags (:standard -w -A))
+)

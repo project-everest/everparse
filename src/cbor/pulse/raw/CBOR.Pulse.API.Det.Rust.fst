@@ -110,7 +110,7 @@ ensures cbor_det_match 1.0R res (Spec.pack (Spec.CInt64 (if ty = UInt64 then cbo
 let uint64_max_prop : squash (pow2 64 - 1 == 18446744073709551615) =
   assert_norm (pow2 64 - 1 == 18446744073709551615)
 
-module UTF8 = CBOR.Pulse.Raw.UTF8
+module UTF8 = CBOR.Pulse.API.UTF8
 
 fn cbor_impl_utf8_correct () : Base.impl_utf8_correct_t =
   (s: _)
@@ -562,6 +562,7 @@ fn cbor_det_map_get_post_to_safe
   (vk: Spec.cbor)
   (res: option cbordet)
 requires
+  pure (Spec.CMap? (Spec.unpack vx) /\ Some? (Spec.cbor_map_get (Spec.CMap?.c (Spec.unpack vx)) vk) == Some? res) **
   map_get_post cbor_det_match x.map px vx vk res **
   Trade.trade (cbor_det_match px x.map vx) (cbor_det_map_match px x vx)
 ensures

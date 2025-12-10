@@ -549,8 +549,8 @@ type leaf_content
 let tot_parse_leaf_content
   (h: header)
 : tot_parser parse_content_kind (leaf_content h)
-= match h with
-  | (| b, long_arg |) ->
+= let b = dfst h in
+  let long_arg = dsnd h in
       if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
       then tot_weaken _ (tot_parse_filter (tot_parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) (lseq_utf8_correct (dfst h).major_type _) `tot_parse_synth` LeafContentSeq ())
       else tot_weaken _ (tot_parse_empty `tot_parse_synth` LeafContentEmpty ())
@@ -558,8 +558,8 @@ let tot_parse_leaf_content
 let parse_leaf_content
   (h: header)
 : parser parse_content_kind (leaf_content h)
-= match h with
-  | (| b, long_arg |) ->
+= let b = dfst h in
+  let long_arg = dsnd h in
       if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
       then weaken _ (parse_filter (parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) (lseq_utf8_correct (dfst h).major_type _) `parse_synth` LeafContentSeq ())
       else weaken _ (parse_empty `parse_synth` LeafContentEmpty ())
@@ -570,8 +570,8 @@ let tot_parse_leaf_content_eq
 : Lemma
   (ensures (parse (tot_parse_leaf_content h) input == parse (parse_leaf_content h) input))
   [SMTPat (parse (tot_parse_leaf_content h) input)]
-= match h with
-  | (| b, long_arg |) ->
+= let b = dfst h in
+  let long_arg = dsnd h in
       if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
       then begin
         tot_parse_filter_eq (tot_parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) (lseq_utf8_correct (dfst h).major_type _) input;
@@ -595,11 +595,11 @@ let tot_parse_leaf_eq (input: bytes) : Lemma
   [SMTPat (parse tot_parse_leaf input)]
 = tot_parse_dtuple2_eq' tot_parse_header tot_parse_leaf_content parse_header parse_leaf_content input
 
-let remaining_data_items
-  (l: leaf)
+let remaining_data_items_header
+  (h: header)
 : Tot nat
-= match l with
-  | (| (| b, long_arg |), _ |) ->
+= match h with
+  | (| b, long_arg |) ->
       if b.major_type = cbor_major_type_array
       then
         U64.v (argument_as_uint64 b long_arg)
@@ -610,6 +610,12 @@ let remaining_data_items
       else if b.major_type = cbor_major_type_tagged
       then 1
       else 0
+
+let remaining_data_items
+  (l: leaf)
+: Tot nat
+= match l with
+  | (| h, _ |) -> remaining_data_items_header h
 
 let rec pair_list_of_list
   (t: Type)
@@ -625,9 +631,8 @@ let rec list_of_pair_list
   (nb_pairs: nat)
   (x: nlist nb_pairs (t & t))
 : Tot (nlist (nb_pairs + nb_pairs) t)
-= match x with
-  | [] -> []
-  | (a, b) :: q -> a :: b :: list_of_pair_list t (nb_pairs - 1) q
+= CBOR.Spec.Util.list_of_pair_list_length x;
+  CBOR.Spec.Util.list_of_pair_list x
 
 let rec list_of_pair_list_of_list
   (#t: Type)
@@ -1090,13 +1095,17 @@ let tot_serialize_leaf_content
 let serialize_leaf_content
   (h: header)
 : Tot (serializer (parse_leaf_content h))
-= serialize_ext (parser_of_tot_parser (tot_parse_leaf_content h)) (serializer_of_tot_serializer (tot_serialize_leaf_content h)) (parse_leaf_content h)
+=  match h with
+  | (| b, long_arg |) ->
+      if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
+      then serialize_weaken _ (serialize_synth _ (LeafContentSeq ()) (serialize_filter (serialize_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) (lseq_utf8_correct b.major_type _)) LeafContentSeq?.v ())
+      else serialize_weaken _ (serialize_synth _ (LeafContentEmpty ()) serialize_empty LeafContentEmpty?.v ())
 
 let tot_serialize_leaf : tot_serializer tot_parse_leaf =
   tot_serialize_dtuple2 tot_serialize_header tot_serialize_leaf_content
 
 let serialize_leaf : serializer parse_leaf =
-  serialize_ext (parser_of_tot_parser tot_parse_leaf) (serializer_of_tot_serializer tot_serialize_leaf) parse_leaf
+  serialize_dtuple2 serialize_header serialize_leaf_content
 
 (* Construction of the serializer, by "step indexing" over the "level"
    (in fact the depth) of the raw data item. *)
