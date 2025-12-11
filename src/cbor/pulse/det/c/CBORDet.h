@@ -3,6 +3,10 @@
 #ifndef CBORDet_H
 #define CBORDet_H
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 #include "krmllib.h"
 
 typedef struct CBOR_Spec_Raw_Base_raw_uint64_s
@@ -376,6 +380,9 @@ cbor_freeable cbor_copy(cbor_raw c);
 
 void cbor_free(cbor_freeable x);
 
+#if defined(__cplusplus)
+}
+#endif
 
 #define CBORDet_H_DEFINED
 #endif /* CBORDet_H */
