@@ -123,7 +123,6 @@ let validate_tot_nlist_recursive_overflow
   let Some (h, consumed) = parse p.parse_header (Seq.slice v off (Seq.length v)) in
   let offset = off + consumed in
   parse_nlist_recursive_bound_correct p (p.count h + (n - 1)) (Seq.slice v (offset) (Seq.length v))
-#pop-options
 
 #restart-solver
 
@@ -205,6 +204,8 @@ fn validate_tot_nlist_recursive
   } ;
   !pres
 }
+
+#pop-options
 
 inline_for_extraction
 fn validate_nlist_recursive
