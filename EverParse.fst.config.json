@@ -1,7 +1,8 @@
 {
     "fstar_exe": "./fstar.sh",
     "options": [
-      "--z3version", "4.15.3"
+      "--load_cmxs", "evercddl_lib",
+      "--load_cmxs", "evercddl_plugin"
     ],
     "include_dirs": [
       "./src/lowparse",
