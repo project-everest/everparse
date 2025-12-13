@@ -339,14 +339,7 @@ let cbor_serialize_map_length_gt_list
 #pop-options
 
 let parse_cbor_map
-  (n: nat)
-  (s: Seq.seq U8.t)
-: Pure (option (list (raw_data_item & raw_data_item) & nat))
-    (requires True)
-    (ensures fun res -> match res with
-    | None -> True
-    | Some (_, len) -> len <= Seq.length s
-    )
+  n s
 = 
   match
     LPL.tot_parse_nlist n (LP.tot_nondep_then F.tot_parse_raw_data_item F.tot_parse_raw_data_item) s

@@ -279,15 +279,7 @@ let cbor_det_serialize_map_length_gt_list l =
 module U = CBOR.Spec.Util
 
 let cbor_det_parse_map
-  (n: nat)
-  (s: Seq.seq U8.t)
-: Pure (option (cbor_map & nat))
-  (requires True)
-  (ensures fun res -> match res with
-  | None -> True
-  | Some (_, len) ->
-    len <= Seq.length s
-  )
+  n s
 = match RF.parse_cbor_map n s with
   | None -> None
   | Some (l, len) ->

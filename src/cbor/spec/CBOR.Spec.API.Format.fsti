@@ -218,7 +218,8 @@ val cbor_det_parse_map
   (requires True)
   (ensures fun res -> match res with
   | None -> True
-  | Some (_, len) ->
+  | Some (v, len) ->
+    n == cbor_map_length v /\
     len <= Seq.length s
   )
 
