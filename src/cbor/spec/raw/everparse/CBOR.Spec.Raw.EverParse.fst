@@ -1436,7 +1436,7 @@ let rec list_for_all_holds_on_pair_list_of_pair_list
   | [] -> ()
   | _ :: q -> list_for_all_holds_on_pair_list_of_pair_list pred q
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 
 #restart-solver
 let holds_on_raw_data_item_eq_recursive

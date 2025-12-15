@@ -2410,7 +2410,7 @@ let cbor_serialize_map_t =
 
 #pop-options
 
-#push-options "--z3rlimit 128"
+#push-options "--z3rlimit 256"
 
 #restart-solver
 
