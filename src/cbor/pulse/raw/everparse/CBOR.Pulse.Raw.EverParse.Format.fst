@@ -808,6 +808,8 @@ fn validate_recursive_step_count_leaf (_: squash SZ.fits_u64) :
   }
 }
 
+#push-options "--z3rlimit 20"
+
 fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
   jump_recursive_step_count #parse_raw_data_item_param serialize_raw_data_item_param
 =
@@ -845,6 +847,8 @@ fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
     0sz
   }
 }
+
+#pop-options
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -922,6 +926,8 @@ fn get_header_and_contents
                       v) as h;
   outc
 }
+
+#push-options "--z3rlimit 20"
 
 ghost
 fn get_string_payload
@@ -1072,6 +1078,8 @@ fn get_array_payload'
           (reveal #(content (reveal #header h)) c));
   ()
 }
+
+#pop-options
 
 ghost
 fn get_array_payload

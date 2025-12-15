@@ -352,7 +352,7 @@ fn cbor_match_with_perm_lens
   res
 }
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 
 fn cbor_raw_get_header
   (p: perm)
@@ -848,6 +848,8 @@ vmatch_lens #_ #_ #_
   x1'
 }
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction
 let ser_payload_array_array
   (f64: squash SZ.fits_u64)
@@ -887,6 +889,8 @@ let size_payload_array_array
       )
     )
     (serialize_content xh1)
+
+#pop-options
 
 ghost
 fn cbor_serialized_array_pts_to_serialized_with_perm_trade
@@ -1012,8 +1016,6 @@ fn ser_payload_array_not_array_lens
   res
 }
 
-#pop-options
-
 inline_for_extraction
 let ser_payload_array_not_array
   (xh1: header)
@@ -1045,6 +1047,8 @@ compute_remaining_size (vmatch_with_cond (match_cbor_payload xh1) (pnot cbor_wit
       ))
     )
     _
+
+#pop-options
 
 inline_for_extraction
 let ser_payload_array
@@ -1304,6 +1308,8 @@ vmatch_lens #_ #_ #_
   x1'
 }
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction
 let ser_payload_map_map
   (f64: squash SZ.fits_u64)
@@ -1343,6 +1349,8 @@ let size_payload_map_map
       )
     )
     (serialize_content xh1)
+
+#pop-options
 
 ghost
 fn cbor_serialized_map_pts_to_serialized_with_perm_trade
@@ -1473,8 +1481,6 @@ fn ser_payload_map_not_map_lens
   res
 }
 
-#pop-options
-
 inline_for_extraction
 let ser_payload_map_not_map
   (xh1: header)
@@ -1506,6 +1512,8 @@ compute_remaining_size (vmatch_with_cond (match_cbor_payload xh1) (pnot cbor_wit
       ))
     )
     _
+
+#pop-options
 
 inline_for_extraction
 let ser_payload_map
@@ -1653,6 +1661,8 @@ fn ser_payload_tagged_not_tagged_lens
   res
 }
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction
 let ser_payload_tagged
   (f: l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
@@ -1694,6 +1704,8 @@ let size_payload_tagged
       )
     )
     _
+
+#pop-options
 
 inline_for_extraction
 let ser_payload_scalar
@@ -2395,6 +2407,10 @@ let cbor_serialize_map_t =
     pure (cbor_serialize_map_precond len l off v)
   )
   (fun res -> cbor_serialize_map_post len out l off res)
+
+#pop-options
+
+#push-options "--z3rlimit 128"
 
 #restart-solver
 

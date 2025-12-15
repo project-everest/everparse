@@ -357,7 +357,7 @@ let cbor_map_length_disjoint_union_pat (m1 m2: cbor_map) : Lemma
 #push-options "--z3rlimit 32"
 
 #restart-solver
-#push-options "--z3rlimit_factor 4 --split_queries always --query_stats"
+#push-options "--z3rlimit_factor 8 --split_queries always --query_stats"
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_map_group_concat
     (#[@@@erasable]t1: Ghost.erased det_map_group)

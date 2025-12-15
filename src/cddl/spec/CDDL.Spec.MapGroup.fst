@@ -1,7 +1,7 @@
 module CDDL.Spec.MapGroup
 module U = CBOR.Spec.Util
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 
 (*
 #restart-solver
@@ -57,10 +57,6 @@ let map_group_choice_compatible_match_item_for
     cbor_map_split phi x;
     map_group_footprint_elim right fp (cbor_map_filter phi x) (cbor_map_filter (U.notp phi) x)
   )
-
-#pop-options
-
-#push-options "--z3rlimit 64"
 
 #restart-solver
 let map_group_footprint_concat_consumes_all_recip

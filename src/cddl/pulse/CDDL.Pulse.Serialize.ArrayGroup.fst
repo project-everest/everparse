@@ -556,6 +556,8 @@ let impl_serialize_array_group_valid_zero_or_more_true_intro_length
   ((x1 + x2) + (x3 + x4) == (x1 + (x2 + x3)) + x4)
 = ()
 
+#push-options "--z3rlimit 32"
+
 let impl_serialize_array_group_valid_zero_or_more_true_intro
   (l: list Cbor.cbor)
   (#t: array_group None)
@@ -639,7 +641,6 @@ let impl_serialize_array_group_valid_zero_or_more_true_intro
   end
   else ()
 
-#push-options "--z3rlimit 32"
 #restart-solver
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_array_group_zero_or_more_slice
