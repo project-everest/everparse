@@ -20,7 +20,13 @@ fn cbor_det_mk_int64'
   (v: _)
 {
   let mty = (if ty = cbor_major_type_uint64 then UInt64 else NegInt64);
-  cbor_det_mk_int64 mty v
+  let res = cbor_det_mk_int64 mty v;
+  with ty' . rewrite cbor_det_match 1.0R
+      res
+      (CBOR.Spec.API.Type.pack (CBOR.Spec.API.Type.CInt64 ty' v)) as cbor_det_match 1.0R
+      res
+      (CBOR.Spec.API.Type.pack (CBOR.Spec.API.Type.CInt64 ty v));
+  res
 }
 
 inline_for_extraction
@@ -32,6 +38,11 @@ fn cbor_det_mk_simple'
 {
   let Some res = cbor_det_mk_simple_value v;
   unfold (cbor_det_mk_simple_value_post v (Some res));
+  with res' . rewrite cbor_det_match 1.0R
+      res
+      res' as cbor_det_match 1.0R
+      res
+      (CBOR.Spec.API.Type.pack (CBOR.Spec.API.Type.CSimple v));
   res
 }
 
@@ -49,6 +60,7 @@ fn cbor_det_mk_string0
   let mty = (if ty = cbor_major_type_byte_string then ByteString else TextString);
   let res = cbor_det_mk_string mty s;
   let Some c = res;
+  with ty' res' . rewrite (cbor_det_mk_string_post ty' s p v res') as (cbor_det_mk_string_post ty s p v (Some c));
   unfold (cbor_det_mk_string_post ty s p v (Some c));
   c
 }
@@ -230,7 +242,7 @@ fn cbor_det_array_iterator_start'
   with p' . assert (cbor_det_view_match p' v y);
   let Array a = v;
   Trade.rewrite_with_trade
-    (cbor_det_view_match p' v y)
+    (cbor_det_view_match p' _ y)
     (cbor_det_array_match p' a y);
   Trade.trans _ _ (cbor_det_match p x y);
   let res = cbor_det_array_iterator_start a;
@@ -252,7 +264,7 @@ fn cbor_det_get_array_item'
   with p' . assert (cbor_det_view_match p' v y);
   let Array a = v;
   Trade.rewrite_with_trade
-    (cbor_det_view_match p' v y)
+    (cbor_det_view_match p' _ y)
     (cbor_det_array_match p' a y);
   Trade.trans _ _ (cbor_det_match p x y);
   let ores = cbor_det_get_array_item a i;
@@ -295,7 +307,7 @@ fn cbor_det_map_iterator_start'
   with p' . assert (cbor_det_view_match p' v y);
   let Map a = v;
   Trade.rewrite_with_trade
-    (cbor_det_view_match p' v y)
+    (cbor_det_view_match p' _ y)
     (cbor_det_map_match p' a y);
   Trade.trans _ _ (cbor_det_match p x y);
   let res = cbor_det_map_iterator_start a;
@@ -326,13 +338,15 @@ ensures
       unfold (safe_map_get_post m p' vx vk None);
       Trade.elim _ _;
       fold (Base.map_get_post_none cbor_det_match x px vx vk);
-      fold (Base.map_get_post cbor_det_match x px vx vk None)
+      fold (Base.map_get_post cbor_det_match x px vx vk None);
+      rewrite (Base.map_get_post cbor_det_match x px vx vk None) as (Base.map_get_post cbor_det_match x px vx vk res)
     }
     Some x' -> {
       unfold (safe_map_get_post m p' vx vk (Some x'));
       Trade.trans _ _ (cbor_det_match px x vx);
       fold (Base.map_get_post_some cbor_det_match x px vx vk x');
-      fold (Base.map_get_post cbor_det_match x px vx vk (Some x'))
+      fold (Base.map_get_post cbor_det_match x px vx vk (Some x'));
+      rewrite (Base.map_get_post cbor_det_match x px vx vk (Some x')) as (Base.map_get_post cbor_det_match x px vx vk res);
     }
   }
 }
@@ -353,7 +367,7 @@ fn cbor_det_map_get'
   with p' . assert (cbor_det_view_match p' x' vx);
   let Map m = x';
   Trade.rewrite_with_trade
-    (cbor_det_view_match p' x' vx)
+    (cbor_det_view_match p' _ vx)
     (cbor_det_map_match p' m vx);
   Trade.trans _ _ (cbor_det_match px x vx);
   let res = cbor_det_map_get m k;

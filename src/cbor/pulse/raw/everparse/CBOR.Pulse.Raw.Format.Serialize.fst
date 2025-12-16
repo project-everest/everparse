@@ -352,7 +352,7 @@ fn cbor_match_with_perm_lens
   res
 }
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 
 fn cbor_raw_get_header
   (p: perm)
@@ -367,40 +367,49 @@ ensures
 {
   cbor_match_cases xl;
   match xl {
+    norewrite
     CBOR_Case_Int _ -> {
       let ty = cbor_match_int_elim_type xl;
       let v = cbor_match_int_elim_value xl;
       raw_uint64_as_argument ty v
     }
+    norewrite
     CBOR_Case_String _ -> {
       let ty = cbor_match_string_elim_type xl;
       let len = cbor_match_string_elim_length xl;
       raw_uint64_as_argument ty len
     }
+    norewrite
     CBOR_Case_Tagged _ -> {
       let tag = cbor_match_tagged_get_tag xl;
       raw_uint64_as_argument cbor_major_type_tagged tag
     }
+    norewrite
     CBOR_Case_Serialized_Tagged _ -> {
       let tag = cbor_match_tagged_get_tag xl;
       raw_uint64_as_argument cbor_major_type_tagged tag
     }
+    norewrite
     CBOR_Case_Array _ -> {
       let len = cbor_match_array_get_length xl;
       raw_uint64_as_argument cbor_major_type_array len
     }
+    norewrite
     CBOR_Case_Serialized_Array _ -> {
       let len = cbor_match_array_get_length xl;
       raw_uint64_as_argument cbor_major_type_array len
     }
+    norewrite
     CBOR_Case_Map _ -> {
       let len = cbor_match_map_get_length xl;
       raw_uint64_as_argument cbor_major_type_map len
     }
+    norewrite
     CBOR_Case_Serialized_Map _ -> {
       let len = cbor_match_map_get_length xl;
       raw_uint64_as_argument cbor_major_type_map len
     }
+    norewrite
     CBOR_Case_Simple _ -> {
       let v = cbor_match_simple_elim xl;
       simple_value_as_argument v
@@ -585,7 +594,7 @@ vmatch_lens #_ #_ #_
     (cbor_match x1'.p x1'.v xh');
   Trade.trans
     (cbor_match x1'.p x1'.v xh')
-    _ _;
+    (cbor_match_with_perm x1' xh') _; // FIXME: WHY WHY WHY do I now have to help Pulse here?
   let s = cbor_match_string_elim_payload x1'.v;
   Trade.trans _ (cbor_match _ x1'.v xh') _;
   S.pts_to_len s;
@@ -601,11 +610,12 @@ vmatch_lens #_ #_ #_
     s
     z
     res;
-  Trade.trans
+  LowParse.Pulse.VCList.trade_trans_nounify
     (LowParse.Pulse.SeqBytes.pts_to_seqbytes
               (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
                       (get_header_long_argument xh1)))
       res x')
+    _
     _ _;
   Trade.rewrite_with_trade
     (LowParse.Pulse.SeqBytes.pts_to_seqbytes
@@ -762,7 +772,7 @@ ensures
   Trade.rewrite_with_trade
     (cbor_match_with_perm xl xh0)
     (cbor_match xl.p xl.v xh0);
-  Trade.trans (cbor_match _ _ _) _ _;
+  Trade.trans (cbor_match _ _ _) (cbor_match_with_perm _ _) _; // FIXME: WHY WHY WHY do I need to help Pulse here?
   cbor_match_cases _;
   let CBOR_Case_Array a = xl.v;
   cbor_match_eq_array xl.p a xh0;
@@ -838,6 +848,8 @@ vmatch_lens #_ #_ #_
   x1'
 }
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction
 let ser_payload_array_array
   (f64: squash SZ.fits_u64)
@@ -877,6 +889,8 @@ let size_payload_array_array
       )
     )
     (serialize_content xh1)
+
+#pop-options
 
 ghost
 fn cbor_serialized_array_pts_to_serialized_with_perm_trade
@@ -947,7 +961,7 @@ fn ser_payload_array_not_array_lens
   Trade.rewrite_with_trade
     (cbor_match_with_perm xl xh0)
     (cbor_match xl.p xl.v xh0);
-  Trade.trans (cbor_match xl.p xl.v xh0) _ _;
+  Trade.trans (cbor_match xl.p xl.v xh0) (cbor_match_with_perm xl xh0) _; // FIXME: WHY WHY WHY do I need to help Pulse there?
   cbor_match_cases xl.v;
   let CBOR_Case_Serialized_Array xs = xl.v;
   Trade.rewrite_with_trade
@@ -1002,8 +1016,6 @@ fn ser_payload_array_not_array_lens
   res
 }
 
-#pop-options
-
 inline_for_extraction
 let ser_payload_array_not_array
   (xh1: header)
@@ -1035,6 +1047,8 @@ compute_remaining_size (vmatch_with_cond (match_cbor_payload xh1) (pnot cbor_wit
       ))
     )
     _
+
+#pop-options
 
 inline_for_extraction
 let ser_payload_array
@@ -1220,7 +1234,7 @@ ensures
   Trade.rewrite_with_trade
     (cbor_match_with_perm xl xh0)
     (cbor_match xl.p xl.v xh0);
-  Trade.trans (cbor_match _ _ _) _ _;
+  Trade.trans (cbor_match _ _ _) (cbor_match_with_perm xl xh0) _; // FIXME: WHY WHY WHY do I need to help Pulse here?
   cbor_match_cases _;
   let CBOR_Case_Map a = xl.v;
   cbor_match_eq_map0 xl.p a xh0;
@@ -1294,6 +1308,8 @@ vmatch_lens #_ #_ #_
   x1'
 }
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction
 let ser_payload_map_map
   (f64: squash SZ.fits_u64)
@@ -1333,6 +1349,8 @@ let size_payload_map_map
       )
     )
     (serialize_content xh1)
+
+#pop-options
 
 ghost
 fn cbor_serialized_map_pts_to_serialized_with_perm_trade
@@ -1403,7 +1421,7 @@ fn ser_payload_map_not_map_lens
   Trade.rewrite_with_trade
     (cbor_match_with_perm xl xh0)
     (cbor_match xl.p xl.v xh0);
-  Trade.trans (cbor_match xl.p xl.v xh0) _ _;
+  Trade.trans (cbor_match xl.p xl.v xh0) (cbor_match_with_perm xl xh0) _; // FIXME: WHY WHY WHY do I need to help Pulse here?
   cbor_match_cases xl.v;
   let CBOR_Case_Serialized_Map xs = xl.v;
   Trade.rewrite_with_trade
@@ -1463,8 +1481,6 @@ fn ser_payload_map_not_map_lens
   res
 }
 
-#pop-options
-
 inline_for_extraction
 let ser_payload_map_not_map
   (xh1: header)
@@ -1496,6 +1512,8 @@ compute_remaining_size (vmatch_with_cond (match_cbor_payload xh1) (pnot cbor_wit
       ))
     )
     _
+
+#pop-options
 
 inline_for_extraction
 let ser_payload_map
@@ -1550,7 +1568,7 @@ fn ser_payload_tagged_tagged_lens
   Trade.rewrite_with_trade
     (cbor_match_with_perm xl xh0)
     (cbor_match xl.p xl.v xh0);
-  Trade.trans (cbor_match xl.p xl.v xh0) _ _;
+  Trade.trans (cbor_match xl.p xl.v xh0) (cbor_match_with_perm xl xh0) _; // FIXME: WHY WHY WHY do I need to help Pulse here?
   cbor_match_cases xl.v;
   let CBOR_Case_Tagged tg = xl.v;
   cbor_match_eq_tagged xl.p tg xh0;
@@ -1626,7 +1644,7 @@ fn ser_payload_tagged_not_tagged_lens
   Trade.rewrite_with_trade
     (cbor_match_with_perm xl xh0)
     (cbor_match xl.p xl.v xh0);
-  Trade.trans (cbor_match xl.p xl.v xh0) _ _;
+  Trade.trans (cbor_match xl.p xl.v xh0) (cbor_match_with_perm xl xh0) _; // FIXME: WHY WHY WHY do I need to help Pulse here?
   cbor_match_cases xl.v;
   let CBOR_Case_Serialized_Tagged ser = xl.v;
   Trade.rewrite_with_trade
@@ -1639,8 +1657,11 @@ fn ser_payload_tagged_not_tagged_lens
   };
   cbor_serialized_tagged_pts_to_serialized_with_perm_trade ser _ _ res;
   Trade.trans _ (cbor_match_serialized_tagged ser xl.p xh0) _;
+  rewrite each (Tagged?.v xh0) as v;
   res
 }
+
+#push-options "--z3rlimit 32"
 
 inline_for_extraction
 let ser_payload_tagged
@@ -1683,6 +1704,8 @@ let size_payload_tagged
       )
     )
     _
+
+#pop-options
 
 inline_for_extraction
 let ser_payload_scalar
@@ -2384,6 +2407,10 @@ let cbor_serialize_map_t =
     pure (cbor_serialize_map_precond len l off v)
   )
   (fun res -> cbor_serialize_map_post len out l off res)
+
+#pop-options
+
+#push-options "--z3rlimit 256"
 
 #restart-solver
 

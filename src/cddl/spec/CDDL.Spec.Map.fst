@@ -218,7 +218,7 @@ let empty key value =
     dom_fold_bool = fold_of_intro_empty dom bool;
     dom_fold_nat = fold_of_intro_empty dom nat;
     dom_key_set = F.on_dom (key_set_dom dom) #(key_set_codom dom) (fun d -> S.emptyset _);
-    map = F.on_dom key #(codom dom value) (fun _ -> UU);
+    map = F.on_dom key #(codom dom value) (fun _ -> UU u#a);
   }
 
 let get_empty #key value k = ()
@@ -245,7 +245,7 @@ let singleton #key #value k k_eq v =
     dom_fold_bool = fold_of_intro_singleton dom k bool;
     dom_fold_nat = fold_of_intro_singleton dom k nat;
     dom_key_set = F.on_dom (key_set_dom dom) #(key_set_codom dom) (fun d -> if d.dom_key_filter k then S.singleton _ k else S.emptyset _);
-    map = F.on_dom key #(codom dom value) (fun k' -> if k_eq k' then v else UU);
+    map = F.on_dom key #(codom dom value) (fun k' -> if k_eq k' then v else UU u#a);
   }
 
 let get_singleton k k_eq v k' = ()
@@ -387,8 +387,8 @@ let filter #key #value f m =
           let v = m.map k in
           if f (k, v)
           then v
-          else UU
-        else UU
+          else UU u#a
+        else UU u#a
       )
   }
 

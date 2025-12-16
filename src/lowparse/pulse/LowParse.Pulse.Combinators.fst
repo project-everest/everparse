@@ -1059,6 +1059,18 @@ fn split_nondep_then
   unfold (split_dtuple2_post #t1 #(const_fun t2) s1 #k2 #(const_fun p2) (const_fun s2) input pm (dtuple2_of_pair v) (input1, input2));
   unfold (split_dtuple2_post' #t1 #(const_fun t2) s1 #_ #(const_fun p2) (const_fun s2) input pm (dtuple2_of_pair v) input1 input2);
   Trade.trans (_ ** _) _ _;
+  rewrite
+    (trade (pts_to_serialized s1 input1 #pm (dfst (dtuple2_of_pair v)) **
+        pts_to_serialized (const_fun s2 (dfst (dtuple2_of_pair v)))
+          input2 #pm
+          (dsnd (dtuple2_of_pair v)))
+      (pts_to_serialized (serialize_nondep_then s1 s2) input #pm v))
+    as
+    (trade (pts_to_serialized s1 input1 #pm (fst v) **
+        pts_to_serialized (const_fun s2 (fst v))
+          input2 #pm
+          (snd v))
+      (pts_to_serialized (serialize_nondep_then s1 s2) input #pm v));
   fold (split_nondep_then_post' s1 s2 input pm v input1 input2);
   fold (split_nondep_then_post s1 s2 input pm v (input1, input2));
   (input1, input2)
@@ -2110,6 +2122,10 @@ fn l2r_leaf_write_dtuple2_body_lens
   (x: Ghost.erased (th2 xh1))
 {
   let _ = l2r_leaf_write_dtuple2_body_lens_aux xh1 x' x;
+  with y . rewrite (trade (eq_as_slprop (th2 xh1) y x)
+      (vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1 x' x) ** eq_as_slprop (th2 xh1) y x)
+    as (trade (eq_as_slprop (th2 xh1) (dsnd x') x)
+      (vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1 x' x) ** eq_as_slprop (th2 xh1) (dsnd x') x);
   dsnd x'
 }
 
@@ -2185,8 +2201,9 @@ let leaf_compute_remaining_size_dtuple2
       (leaf_compute_remaining_size_dtuple2_body w2)
     )
 
+// FIXME: WHY WHY WHY do my Pulse functions with functional types no longer typecheck? WHY WHY WHY do I need to expand the definition of the functional type in Pulse as below? In most cases this will be awfully painful!
 inline_for_extraction
-fn zero_copy_parse_dtuple2
+fn zero_copy_parse_dtuple2'
   (#tl1 #tl2 #th1: Type)
   (#th2: th1 -> Type)
   (#vmatch1: tl1 -> th1 -> slprop)
@@ -2201,10 +2218,17 @@ fn zero_copy_parse_dtuple2
   (#p2: (x: th1) -> parser k2 (th2 x))
   (#s2: (x: th1) -> serializer (p2 x))
   (w2: (xh: Ghost.erased th1) -> zero_copy_parse (vmatch2 xh) (s2 xh))
-: zero_copy_parse #(tl1 `cpair` tl2) #(dtuple2 th1 th2) (vmatch_dep_prod vmatch1 vmatch2) #(and_then_kind k1 k2) #(parse_dtuple2 p1 p2) (serialize_dtuple2 s1 s2)
-= (input: _)
-  (#pm: _)
-  (#v: _)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (dtuple2 th1 th2))
+requires
+  pts_to_serialized (serialize_dtuple2 s1 s2) input #pm v
+returns res: (tl1 `cpair` tl2)
+ensures
+  vmatch_dep_prod vmatch1 vmatch2 res v **
+  Trade.trade
+    (vmatch_dep_prod vmatch1 vmatch2 res v)
+    (pts_to_serialized (serialize_dtuple2 s1 s2) input #pm v)
 {
   let (input1, input2) = split_dtuple2 s1 j1 s2 input;
   unfold (split_dtuple2_post s1 s2 input pm v (input1, input2));
@@ -2221,6 +2245,25 @@ fn zero_copy_parse_dtuple2
   Trade.trans (vmatch_dep_prod vmatch1 vmatch2 res v) _ _;
   res
 }
+
+inline_for_extraction
+let zero_copy_parse_dtuple2
+  (#tl1 #tl2 #th1: Type)
+  (#th2: th1 -> Type)
+  (#vmatch1: tl1 -> th1 -> slprop)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 th1)
+  (#s1: serializer p1)
+  (j1: jumper p1)
+  (w1: zero_copy_parse vmatch1 s1)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (#vmatch2: (x: th1) -> tl2 -> th2 x -> slprop)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: (x: th1) -> parser k2 (th2 x))
+  (#s2: (x: th1) -> serializer (p2 x))
+  (w2: (xh: Ghost.erased th1) -> zero_copy_parse (vmatch2 xh) (s2 xh))
+: zero_copy_parse #(tl1 `cpair` tl2) #(dtuple2 th1 th2) (vmatch_dep_prod vmatch1 vmatch2) #(and_then_kind k1 k2) #(parse_dtuple2 p1 p2) (serialize_dtuple2 s1 s2)
+= zero_copy_parse_dtuple2' j1 w1 sq w2
 
 inline_for_extraction
 fn read_and_zero_copy_parse_dtuple2
@@ -2248,6 +2291,7 @@ fn read_and_zero_copy_parse_dtuple2
   let v1 = w1 input1;
   Trade.elim_hyp_l _ _ _;
   let res = w2 v1 input2;
+  rewrite each (dfst v) as v1;
   Trade.trans (vmatch_dep_proj2 vmatch v1 res _) _ _;
   Trade.rewrite_with_trade
     (vmatch_dep_proj2 vmatch v1 res _)
@@ -2369,7 +2413,7 @@ returns xl1: tl1
 ensures
   vmatch1 xl1 (fst xh) ** trade (vmatch1 xl1 (fst xh)) (vmatch_pair vmatch1 vmatch2 xl xh)
 {
-  let (res, _) = xl;
+  norewrite let (res, _) = xl;
   Trade.rewrite_with_trade
     (vmatch_pair vmatch1 vmatch2 xl xh)
     (vmatch1 res (fst xh) ** vmatch2 (snd xl) (snd xh));
@@ -2390,7 +2434,7 @@ returns xl2: tl2
 ensures
   vmatch2 xl2 (snd xh) ** trade (vmatch2 xl2 (snd xh)) (vmatch_pair vmatch1 vmatch2 xl xh)
 {
-  let (_, res) = xl;
+  norewrite let (_, res) = xl;
   Trade.rewrite_with_trade
     (vmatch_pair vmatch1 vmatch2 xl xh)
     (vmatch1 (fst xl) (fst xh) ** vmatch2 res (snd xh));
@@ -2451,7 +2495,7 @@ fn zero_copy_parse_nondep_then
   Trade.rewrite_with_trade
     (vmatch1 res1 _ ** vmatch2 res2 _)
     (vmatch_pair vmatch1 vmatch2 (res1, res2) v);
-  Trade.trans (vmatch_pair vmatch1 vmatch2 (res1, res2) v) _ _;
+  Trade.trans (vmatch_pair vmatch1 vmatch2 (res1, res2) v) (vmatch1 res1 (fst v) ** vmatch2 res2 (snd v)) _;
   (res1, res2)
 }
 
@@ -2596,7 +2640,7 @@ fn zero_copy_parse_synth
   Trade.rewrite_with_trade
     (vmatch res (f1 v))
     (vmatch_synth vmatch f1 res v);
-  Trade.trans (vmatch_synth vmatch f1 res v) _ _;
+  Trade.trans (vmatch_synth vmatch f1 res v) (vmatch res (f1 v)) _;
   res
 }
 

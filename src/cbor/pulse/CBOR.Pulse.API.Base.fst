@@ -2527,7 +2527,7 @@ let mk_array_from_array_t
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn mk_array_from_array'
-  (#t: Type)
+  (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
   (mk_array_from_array: mk_array_from_array_t vmatch)
   (a: A.array t)
@@ -2948,8 +2948,10 @@ fn mk_map_gen
   let bres = mk_map_gen_by_ref a dest;
   if bres {
     let res = !dest;
+    with res' . rewrite mk_map_gen_post vmatch1 vmatch2 a va pv vv res' as mk_map_gen_post vmatch1 vmatch2 a va pv vv (Some res);
     Some res
   } else {
+    with res' . rewrite mk_map_gen_post vmatch1 vmatch2 a va pv vv res' as mk_map_gen_post vmatch1 vmatch2 a va pv vv None;
     None #t1
   }
 }
@@ -3396,6 +3398,7 @@ fn mk_map_from_ref
   PM.seq_list_match_length (vmatch2 pv) va vv;
   let _ = mk_map_gen a dest;
   let res = !dest;
+  with res' . rewrite (mk_map_gen_post vmatch1 vmatch2 a va pv vv res') as (mk_map_gen_post vmatch1 vmatch2 a va pv vv (Some res));
   unfold (mk_map_gen_post vmatch1 vmatch2 a va pv vv (Some res));
   res
 }
@@ -3568,8 +3571,10 @@ fn map_get_as_option
   let bres = m x k dest;
   if bres {
     let res = !dest;
+    with res' . rewrite map_get_post vmatch x px vx vk res' as map_get_post vmatch x px vx vk (Some res);
     Some res
   } else {
+    with res' . rewrite map_get_post vmatch x px vx vk res' as map_get_post vmatch x px vx vk None;
     None #t
   }
 }

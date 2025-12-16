@@ -9,6 +9,7 @@ open EverCrypt.Ed25519
 module S = Pulse.Lib.Slice
 module V = Pulse.Lib.Vec
 module A = Pulse.Lib.Array
+module T = FStar.Tactics.V2
 open CDDL.Pulse.Types
 
 [@@pulse_unfold]
@@ -40,12 +41,13 @@ let specint_of_i32 (i: Int32.t) : GTot spect_evercddl_int =
 let rel_uint_eq a b : squash (rel_evercddl_uint a b == pure (Mkevercddl_uint0?._x0 a == Mkspect_evercddl_uint0?._x0 b)) = ()
 let rel_nint_eq a b : squash (rel_nint a b == pure (Mknint0?._x0 a == Mkspect_nint0?._x0 b)) = ()
 
+#push-options "--query_stats --fuel 0 --ifuel 0 --z3rlimit_factor 4"
+#restart-solver
 let rel_evercddl_int_eq a b : squash (rel_evercddl_int a b ==
   (match a, b with
    | Mkevercddl_int0 a, Mkspect_evercddl_int0 b -> rel_evercddl_uint a b
    | Mkevercddl_int1 a, Mkspect_evercddl_int1 b -> rel_nint a b
-   | _ -> pure False)) =
-  ()
+   | _ -> pure False)) = _ by (T.compute(); T.smt())
 
 ghost fn rw_r (#a: slprop) (#b: slprop) (h: squash (a == b)) requires a ensures b { rewrite a as b }
 ghost fn rw_l (#a: slprop) (#b: slprop) (h: squash (a == b)) requires b ensures a { rewrite b as a }
@@ -86,8 +88,8 @@ let rel_sig_structure_eq (a: sig_structure) (b: spect_sig_structure) :
             | Inl (sign_protected, (aad, payload)), Inl (vsign_protected, (vaad, vpayload)) ->
               rel_empty_or_serialized_map sign_protected vsign_protected **
                 (rel_bstr aad vaad ** rel_bstr payload vpayload)
-            | _ -> pure False)))) =
-  ()
+            | _ -> pure False))))
+ = _ by (T.compute(); T.smt())
 
 inline_for_extraction noextract
 let signature1: either unit unit = Inr ()
@@ -249,7 +251,8 @@ let dummy_map_val () : label & values =
 
 let assert_norm' (p: prop) : Pure (squash p) (requires normalize p) (ensures fun _ -> True) = ()
 
-let rel_inl_map_eq (x: slice (label & values)) y = assert_norm' (rel_inl_map x y == 
+let rel_inl_map_eq (x: slice (label & values)) y 
+= assert_norm' (rel_inl_map x y == 
   (exists* l .
     (exists* s . pts_to x.s #x.p s ** Pulse.Lib.SeqMatch.seq_list_match s l (rel_pair rel_label rel_values) ** pure (false == false)) **
       pure (y == map_of_list_pair
@@ -293,6 +296,7 @@ let rel_map_sign1_phdrs_eq (alg: Int32.t) alg' s =
     (((((rel_evercddl_int alg' (specint_of_i32 alg) **
       emp) ** emp) ** emp) ** (emp ** emp)) **
       rel_inl_map s (CDDL.Spec.Map.empty _ _)))
+#pop-options
 
 inline_for_extraction
 fn mk_phdrs (alg: Int32.t) (rest: A.larray (label & values) 0)
@@ -433,7 +437,8 @@ ghost fn trade_exists (#t: Type0) (p: t->slprop) x
     fn _
   { () };
 }
-
+#push-options "--fuel 0 --ifuel 0 --z3rlimit_factor 10 --query_stats"
+//the proof of pure sign1_spec takes a while---should profile it
 inline_for_extraction // Karamel's lifetime support is massively lacking
 fn sign1 privkey uhdr aad payload (outbuf: S.slice UInt8.t)
     #pprivkey (#vprivkey: erased (Seq.seq UInt8.t) { Seq.length vprivkey == 32 })
@@ -693,6 +698,7 @@ let int_eq_of_diff_zero (a b: int) : Lemma (requires a - b == 0) (ensures a == b
 let nat_eq_of_diff_zero (a b: nat) : Lemma (requires a - b == 0) (ensures a == b) =
   int_eq_of_diff_zero a b
 
+#push-options "--fuel 0 --ifuel 1 --z3rlimit_factor 10 --query_stats"
 inline_for_extraction // Karamel's lifetime support is massively lacking
 fn verify1 pubkey aad msg
     #ppubkey (#vpubkey: erased (Seq.seq UInt8.t) { Seq.length vpubkey == 32 })
@@ -784,3 +790,5 @@ fn verify1_simple pubkey msg
   S.to_array aadslice;
   res
 }
+#pop-options
+#pop-options

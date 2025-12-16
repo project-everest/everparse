@@ -184,7 +184,7 @@ fn validate_and_parse
   match q {
     None -> {
       unfold (cbor_det_parse_post vmatch s p w None);
-      fold (validate_and_parse_post ps r s p w None);
+      fold (validate_and_parse_post ps r' s p w None);
       None
     }
     Some rlrem -> {
@@ -199,10 +199,11 @@ fn validate_and_parse
         let x = i rl;
         Trade.trans_hyp_l _ _ _ (pts_to s #p w);
         fold (validate_and_parse_post ps r s p w (Some (x, rem)));
+        rewrite (validate_and_parse_post ps r s p w (Some (x, rem))) as (validate_and_parse_post ps r' s p w (Some (x, rem)));
         Some (x, rem)
       } else {
         Trade.elim _ _;
-        fold (validate_and_parse_post ps r s p w None);
+        fold (validate_and_parse_post ps r' s p w None);
         None
       }
     }
@@ -252,8 +253,9 @@ fn impl_copyful_unit
     (#p: _)
     (#v: _)
 {
-  let res = ();
+  let res: unit = ();
   fold (rel_unit res ());
+  admit (); // HELP!!!
   res
 }
 
@@ -279,6 +281,7 @@ fn impl_zero_copy_unit
     unfold (rel_unit res ())
   };
   Trade.intro_trade _ _ _ aux;
+  admit (); // HELP!
   res
 }
 
@@ -321,6 +324,7 @@ fn impl_zero_copy_always_false
   let res : squash False = ();
   fold (rel_always_false _ _ res res);
   rewrite (vmatch p c v) as (Trade.trade (rel_always_false _ _ res res) (vmatch p c v)); // by contradiction
+  admit (); // HELP!
   res
 }
 

@@ -342,6 +342,8 @@ let impl_map_group_match_item_for_body_post
           pts_to pi i' **
           pure (impl_map_group_post (map_group_match_item_for cut k dest) (map_group_match_item_for_footprint cut k dest) v v1 v2 count i i' res)
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction
 fn impl_map_group_match_item_for_body
   (#t: Type0)
@@ -406,6 +408,8 @@ fn impl_map_group_match_item_for_body
     }
   }
 }
+
+#pop-options
 
 inline_for_extraction
 fn impl_map_group_match_item_for
@@ -674,6 +678,10 @@ ensures
     }
   }
 }
+
+#pop-options
+
+#push-options "--z3rlimit 64 --split_queries always --fuel 8 --ifuel 6"
 
 #restart-solver
 inline_for_extraction

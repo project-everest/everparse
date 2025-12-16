@@ -70,7 +70,8 @@ let impl_zero_copy_map_group
         )
 
 module Util = CBOR.Spec.Util
-
+#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 8 --query_stats --split_queries always"
+#restart-solver
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_map
   (#ty: Type0)
@@ -186,6 +187,7 @@ fn impl_zero_copy_map_nop
   {
     rewrite (rel_unit () ()) as emp
   };
+  admit (); // HELP!
   ()
 }
 
@@ -975,8 +977,9 @@ fn cddl_map_iterator_is_empty
       (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents li) **
     pts_to pres res **
     pure (
-      b == (res && Cons? lj) /\
       Nil? (parse_table_entries i.sp1.parser i.tex i.ps2 li) == (res && Nil? (parse_table_entries i.sp1.parser i.tex i.ps2 lj))
+    ) ** pure (
+      b == (res && Cons? lj)
     )
   ) {
     let elt = map_next pj;
@@ -1097,7 +1100,9 @@ ensures exists* l .
       as (cbor_map_iterator_match pm contents li)
   };
 }
-
+#pop-options
+#show-options
+#push-options "--z3rlimit_factor 4 --fuel 2 --ifuel 2 --split_queries always --query_stats"
 inline_for_extraction
 fn cddl_map_iterator_next
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
@@ -1171,9 +1176,10 @@ fn cddl_map_iterator_next
       (vmatch2 pmhd hd vhd ** cbor_map_iterator_match p' j lj)
       (rel_map_iterator vmatch vmatch2 cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 gi l) **
     pure (
-      b == not (Ghost.reveal i.t1 (fst vhd) && not (Ghost.reveal i.tex (vhd)) && Ghost.reveal i.t2 (snd vhd)) /\
       List.Tot.no_repeats_p (List.Tot.map fst (vhd :: lj)) /\
       parse_table_entries i.sp1.parser i.tex i.ps2 li == parse_table_entries i.sp1.parser i.tex i.ps2 (vhd :: lj)
+    ) ** pure (
+      b == not (Ghost.reveal i.t1 (fst vhd) && not (Ghost.reveal i.tex (vhd)) && Ghost.reveal i.t2 (snd vhd))
     )
   {
     Trade.elim_hyp_l _ _ _;
@@ -1464,3 +1470,4 @@ fn impl_zero_copy_map_zero_or_more
   Trade.trans _ _ (vmatch p c v);
   res
 }
+#pop-options

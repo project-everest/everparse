@@ -836,6 +836,8 @@ let impl_remaining_data_items_header
   else
     0sz
 
+#push-options "--z3rlimit 20"
+
 fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
   jump_recursive_step_count #parse_raw_data_item_param serialize_raw_data_item_param
 =
@@ -858,6 +860,8 @@ fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
   elim_trade _ _;
   impl_remaining_data_items_header bound h
 }
+
+#pop-options
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -922,7 +926,7 @@ fn get_header_and_contents
     synth_raw_data_item
     synth_raw_data_item_recip
     input;
-  Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+  LowParse.Pulse.VCList.trade_trans_nounify _ _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
   with v' . assert (pts_to_serialized (serialize_dtuple2 serialize_header serialize_content) input #pm v');
   let ph, outc = split_dtuple2 serialize_header (jump_header ()) serialize_content input;
   unfold (split_dtuple2_post serialize_header serialize_content input pm v' (ph, outc));
@@ -931,8 +935,12 @@ fn get_header_and_contents
   let h = read_header () ph;
   Trade.elim_hyp_l _ _ _;
   outh := h;
+  rewrite each dfst (synth_raw_data_item_recip
+                      v) as h;
   outc
 }
+
+#push-options "--z3rlimit 20"
 
 ghost
 fn get_string_payload
@@ -977,7 +985,41 @@ fn get_tagged_payload
   pts_to_serialized_ext_trade
     (serialize_content h)
     serialize_raw_data_item
-    input
+    input;
+  rewrite
+  trade #emp_inames
+      (pts_to_serialized #parse_raw_data_item_kind
+          #(content (reveal #header h))
+          #parse_raw_data_item
+          serialize_raw_data_item
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (pts_to_serialized #parse_content_kind
+          #(content (reveal #header h))
+          #(parse_content parse_raw_data_item (reveal #header h))
+          (serialize_content (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+    as
+    trade #emp_inames
+      (pts_to_serialized #parse_raw_data_item_kind
+          #raw_data_item
+          #parse_raw_data_item
+          serialize_raw_data_item
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (pts_to_serialized #parse_content_kind
+          #(content (reveal #header h))
+          #(parse_content parse_raw_data_item (reveal #header h))
+          (serialize_content (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      ;
+  ()
 }
 
 ghost
@@ -996,8 +1038,61 @@ fn get_array_payload'
   pts_to_serialized_ext_trade
     (serialize_content h)
     (L.serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item)
-    input
+    input;
+  rewrite
+    trade #emp_inames
+      (pts_to_serialized #(L.parse_nlist_kind (U64.v (Array?.len (reveal #raw_data_item v))
+                    .value)
+              parse_raw_data_item_kind)
+          #(content (reveal #header h))
+          #(L.parse_nlist (U64.v (Array?.len (reveal #raw_data_item v)).value)
+              #parse_raw_data_item_kind
+              #raw_data_item
+              parse_raw_data_item)
+          (L.serialize_nlist (U64.v (Array?.len (reveal #raw_data_item v)).value)
+              #parse_raw_data_item_kind
+              #raw_data_item
+              #parse_raw_data_item
+              serialize_raw_data_item)
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (pts_to_serialized #parse_content_kind
+          #(content (reveal #header h))
+          #(parse_content parse_raw_data_item (reveal #header h))
+          (serialize_content (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))  
+   as
+    trade #emp_inames
+      (pts_to_serialized #(L.parse_nlist_kind (U64.v (Array?.len (reveal #raw_data_item v))
+                    .value)
+              parse_raw_data_item_kind)
+          #(L.nlist (U64.v (Array?.len (reveal #raw_data_item v)).value) raw_data_item)
+          #(L.parse_nlist (U64.v (Array?.len (reveal #raw_data_item v)).value)
+              #parse_raw_data_item_kind
+              #raw_data_item
+              parse_raw_data_item)
+          (L.serialize_nlist (U64.v (Array?.len (reveal #raw_data_item v)).value)
+              #parse_raw_data_item_kind
+              #raw_data_item
+              #parse_raw_data_item
+              serialize_raw_data_item)
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (pts_to_serialized #parse_content_kind
+          #(content (reveal #header h))
+          #(parse_content parse_raw_data_item (reveal #header h))
+          (serialize_content (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c));
+  ()
 }
+
+#pop-options
 
 ghost
 fn get_array_payload
@@ -1029,7 +1124,93 @@ fn get_map_payload'
   pts_to_serialized_ext_trade
     (serialize_content h)
     (L.serialize_nlist (U64.v (Map?.len v).value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
-    input
+    input;
+  rewrite
+  trade #emp_inames
+      (pts_to_serialized #(L.parse_nlist_kind (U64.v (Map?.len (reveal #raw_data_item v))
+                    .value)
+              (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind))
+          #(content (reveal #header h))
+          #(L.parse_nlist (U64.v (Map?.len (reveal #raw_data_item v)).value)
+              #(and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)
+              #(raw_data_item & raw_data_item)
+              (nondep_then #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item
+                  #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item))
+          (L.serialize_nlist (U64.v (Map?.len (reveal #raw_data_item v)).value)
+              #(and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)
+              #(raw_data_item & raw_data_item)
+              #(nondep_then #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item
+                  #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item)
+              (serialize_nondep_then #parse_raw_data_item_kind
+                  #raw_data_item
+                  #parse_raw_data_item
+                  serialize_raw_data_item
+                  #parse_raw_data_item_kind
+                  #raw_data_item
+                  #parse_raw_data_item
+                  serialize_raw_data_item))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (pts_to_serialized #parse_content_kind
+          #(content (reveal #header h))
+          #(parse_content parse_raw_data_item (reveal #header h))
+          (serialize_content (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+   as trade #emp_inames
+      (pts_to_serialized #(L.parse_nlist_kind (U64.v (Map?.len (reveal #raw_data_item v))
+                    .value)
+              (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind))
+          #(L.nlist (U64.v (Map?.len (reveal #raw_data_item v)).value)
+              (raw_data_item & raw_data_item))
+          #(L.parse_nlist (U64.v (Map?.len (reveal #raw_data_item v)).value)
+              #(and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)
+              #(raw_data_item & raw_data_item)
+              (nondep_then #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item
+                  #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item))
+          (L.serialize_nlist (U64.v (Map?.len (reveal #raw_data_item v)).value)
+              #(and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)
+              #(raw_data_item & raw_data_item)
+              #(nondep_then #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item
+                  #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item)
+              (serialize_nondep_then #parse_raw_data_item_kind
+                  #raw_data_item
+                  #parse_raw_data_item
+                  serialize_raw_data_item
+                  #parse_raw_data_item_kind
+                  #raw_data_item
+                  #parse_raw_data_item
+                  serialize_raw_data_item))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (pts_to_serialized #parse_content_kind
+          #(content (reveal #header h))
+          #(parse_content parse_raw_data_item (reveal #header h))
+          (serialize_content (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+    ;
+  ()
 }
 #pop-options
 

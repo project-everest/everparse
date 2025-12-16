@@ -130,6 +130,27 @@ ensures exists* v2 .
     x;
 }
 
+let jump_nlist_inv
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (p: parser k t)
+  (n0: SZ.t)
+  (offset0: SZ.t)
+  (v: Ghost.erased bytes)
+  (b: bool)
+  (n: SZ.t)
+  (offset: SZ.t)
+: Tot prop
+=
+    SZ.v offset0 <= Seq.length v /\
+    SZ.v offset <= Seq.length v /\ (
+    let pr0 = parse_consume (parse_nlist (SZ.v n0) p) (Seq.slice v (SZ.v offset0) (Seq.length v)) in
+    let pr = parse_consume (parse_nlist (SZ.v n) p) (Seq.slice v (SZ.v offset) (Seq.length v)) in
+    Some? pr0 /\ Some? pr /\
+    SZ.v offset0 + Some?.v pr0 == SZ.v offset + Some?.v pr /\
+    b == (SZ.v n > 0)
+  )
+
 inline_for_extraction
 fn jump_nlist
    (#t: Type0)
@@ -151,13 +172,9 @@ fn jump_nlist
     (SZ.gt n 0sz)
   ) invariant b . exists* n offset . (
     pts_to input #pm v ** R.pts_to pn n ** R.pts_to poffset offset ** pure (
-    SZ.v offset <= Seq.length v /\ (
-    let pr0 = parse_consume (parse_nlist (SZ.v n0) p) (Seq.slice v (SZ.v offset0) (Seq.length v)) in
-    let pr = parse_consume (parse_nlist (SZ.v n) p) (Seq.slice v (SZ.v offset) (Seq.length v)) in
-    Some? pr0 /\ Some? pr /\
-    SZ.v offset0 + Some?.v pr0 == SZ.v offset + Some?.v pr /\
-    b == (SZ.v n > 0)
-  ))) {
+    jump_nlist_inv #t #k p n0 offset0 v b n offset) **
+    pure (b == (SZ.v n > 0))
+  ) {
     let n = !pn;
     let offset = !poffset;
     parse_nlist_eq (SZ.v n) p (Seq.slice v (SZ.v offset) (Seq.length v));
@@ -248,9 +265,9 @@ ensures exists* v' .
   synth_inverse_2 t (n - 1);
   Trade.rewrite_with_trade
     (pts_to_serialized (serialize_nlist n s) input #pm v)
-    (pts_to_serialized (serialize_synth _ (synth_nlist (n - 1)) (serialize_nondep_then s (serialize_nlist' (n - 1) s)) (synth_nlist_recip (n - 1)) ()) input #pm v);
+    (pts_to_serialized (serialize_synth _ (synth_nlist (n - 1)) (serialize_nondep_then s (serialize_nlist (n - 1) s)) (synth_nlist_recip (n - 1)) ()) input #pm v);
   pts_to_serialized_synth_l2r_trade
-    (serialize_nondep_then s (serialize_nlist' (n - 1) s))
+    (serialize_nondep_then s (serialize_nlist (n - 1) s))
     (synth_nlist (n - 1))
     (synth_nlist_recip (n - 1))
     input;
@@ -315,8 +332,11 @@ ensures
   unfold (split_nondep_then_post s (serialize_nlist (n - 1) s) input pm v' (s1, s2));
   unfold (split_nondep_then_post' s (serialize_nlist (n - 1) s) input pm v' s1 s2);
   Trade.trans _ _ (pts_to_serialized (serialize_nlist n s) input #pm v);
+  rewrite each (fst v') as (List.Tot.hd v);
+  rewrite each (snd v') as (List.Tot.tl v);
   fold (nlist_hd_tl_post' s sq n input pm v s1 s2);
-  fold (nlist_hd_tl_post s sq n input pm v res);
+  rewrite (nlist_hd_tl_post' s sq n input pm v s1 s2)
+    as (nlist_hd_tl_post s sq n input pm v res);
   res
 }
 
@@ -474,6 +494,15 @@ ensures (
     hd tl
   );
   Trade.trans _ _ (pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v);
+  with vhd v' . assert (
+  pts_to_serialized s hd #pm vhd **
+  pts_to_serialized (serialize_nondep_then (serialize_nlist (n - 1) s) s') tl #pm v' **
+  Trade.trade
+    (pts_to_serialized s hd #pm vhd **
+  pts_to_serialized (serialize_nondep_then (serialize_nlist (n - 1) s) s') tl #pm v')
+    (pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v)
+  );
+  rewrite each vhd as (List.Tot.hd (fst v));
   (hd, tl)
 }
 
@@ -632,6 +661,33 @@ ensures (
   tl
 }
 
+ghost fn trade_trans_nounify
+  (a1 a2 a2' a3: slprop)
+requires
+  trade a1 a2 ** trade a2' a3 ** pure (a2 == a2')
+ensures
+  trade a1 a3
+{
+  rewrite each a2' as a2;
+  Trade.trans a1 a2 a3
+}
+
+let nlist_nth_inv
+  (#t: Type0)
+  (n0: Ghost.erased nat)
+  (v0: list t)
+  (i0: SZ.t)
+  (i: SZ.t)
+  (n: nat)
+  (v: list t)
+: Tot prop
+= SZ.v i0 < n0 /\
+  SZ.v i <= SZ.v i0 /\
+  n == n0 - SZ.v i /\
+  List.Tot.length v0 == Ghost.reveal n0 /\
+  List.Tot.length v == n /\
+  List.Tot.index v0 (SZ.v i0) == List.Tot.index v (SZ.v i0 - SZ.v i)
+
 inline_for_extraction
 fn nlist_nth
    (#t: Type0)
@@ -663,29 +719,31 @@ ensures exists* v .
     pts_to_serialized (serialize_nlist n s) res #pm v **
     trade (pts_to_serialized (serialize_nlist n s) res #pm v) (pts_to_serialized (serialize_nlist n0 s) input #pm v0) **
     pure (
-      SZ.v i <= SZ.v i0 /\
-      (b == (SZ.v i < SZ.v i0)) /\
-      n == n0 - SZ.v i /\
-      List.Tot.index v0 (SZ.v i0) == List.Tot.index v (SZ.v i0 - SZ.v i)
-  )) {
+      nlist_nth_inv #t n0 v0 i0 i n v
+    ) **
+    pure (
+      b == (SZ.v i < SZ.v i0)
+    )
+  ) {
     with 'res. assert R.pts_to pres 'res;
     let res = !pres;
     rewrite each 'res as res;
     let i = !pi;
+    with v . assert (pts_to_serialized (serialize_nlist (n0 - SZ.v i) s) res #pm v);
     let res2 = nlist_tl s j (n0 - SZ.v i) res;
     pi := (SZ.add i 1sz);
     pres := res2;
-    Trade.trans
-      (pts_to_serialized (serialize_nlist (n0 - SZ.v i - 1) s) res2 #pm _)
-      _
-      _
+    with v' . assert (pts_to_serialized (serialize_nlist (n0 - SZ.v i - 1) s) res2 #pm v');
+//    rewrite each (n') as (n0 - SZ.v i - 1);
+    trade_trans_nounify _ _ _ 
+      (pts_to_serialized (serialize_nlist n0 s) input #pm v0);
   };
   with 'res. assert R.pts_to pres 'res;
   let res = !pres;
   rewrite each 'res as res;
   let res2 = nlist_hd s j (n0 - SZ.v i0) res;
-  Trade.trans
-    (pts_to_serialized s res2 #pm _) _ _;
+  trade_trans_nounify
+    _ _ _ (pts_to_serialized (serialize_nlist n0 s) input #pm v0);
   res2
 }
 
@@ -731,14 +789,15 @@ ensures
     true
   } else {
     let pl = nlist_hd_tl s sq j (SZ.v n) a;
-    let s1, s2 = pl;
-    unfold (nlist_hd_tl_post s sq (SZ.v n) a pm v pl);
+    norewrite let s1, s2 = pl;
+    rewrite (nlist_hd_tl_post s sq (SZ.v n) a pm v pl) as (nlist_hd_tl_post' s sq (SZ.v n) a pm v s1 s2);
     unfold (nlist_hd_tl_post' s sq (SZ.v n) a pm v s1 s2);
     let mut phd = s1;
     let mut ptl = s2;
     let n' : SZ.t = SZ.sub n 1sz;
     let mut pi = n';
     let mut pres = true;
+    rewrite each (SZ.v n - 1) as SZ.v n';
     while (
       let i = !pi;
       let res = !pres;
@@ -755,7 +814,9 @@ ensures
           pts_to_serialized (serialize_nlist (SZ.v i) s) stl #pm tl)
         (pts_to_serialized (serialize_nlist (SZ.v n) s) a #pm v) **
       pure (
-        List.Tot.sorted order v == (res && List.Tot.sorted order (hd :: tl)) /\
+        List.Tot.sorted order v == (res && List.Tot.sorted order (hd :: tl))
+      ) **
+      pure (
         cont == (res && SZ.gt i 0sz)
       )
     {
@@ -765,8 +826,8 @@ ensures
       rewrite each 'stl as stl;
       with tl . assert (pts_to_serialized (serialize_nlist (SZ.v gi) s) stl #pm tl);
       let pl = nlist_hd_tl s sq j (SZ.v gi) stl;
-      let s1, s2 = pl;
-      unfold (nlist_hd_tl_post s sq (SZ.v gi) stl pm tl pl);
+      norewrite let s1, s2 = pl;
+      rewrite (nlist_hd_tl_post s sq (SZ.v gi) stl pm tl pl) as (nlist_hd_tl_post' s sq (SZ.v gi) stl pm tl s1 s2);
       unfold (nlist_hd_tl_post' s sq (SZ.v gi) stl pm tl s1 s2);
       with 'phd. assert R.pts_to phd 'phd;
       let shd = !phd;
@@ -780,6 +841,8 @@ ensures
         let i = !pi;
         let i' : SZ.t = SZ.sub i 1sz;
         pi := i';
+        rewrite each (SZ.v i - 1) as SZ.v i';
+        ()
       } else {
         Trade.elim _ (pts_to_serialized (serialize_nlist (SZ.v gi) s) stl #pm tl);
         pres := false;
@@ -962,7 +1025,6 @@ fn compute_remaining_size_nlist_as_array
       (PM.seq_list_match c x (vmatch arr))
     ** pure (
       SZ.v i <= SZ.v n /\
-      b == (res && (SZ.v i < SZ.v n)) /\
       Seq.length c == SZ.v n /\
       (res == false ==> SZ.v v < Seq.length (serialize (serialize_nlist (SZ.v n) s) x)) /\
       (res == true ==> (
@@ -971,6 +1033,8 @@ fn compute_remaining_size_nlist_as_array
         SZ.v v - Seq.length (serialize (serialize_nlist (SZ.v n) s) x) == SZ.v v1 - Seq.length (serialize (serialize_nlist (SZ.v n - SZ.v i) s) l2)
       )) /\
       True
+    ) ** pure (
+      b == (res && (SZ.v i < SZ.v n))
     )
   ) {
     let i = !pi;
@@ -1047,7 +1111,6 @@ fn l2r_write_nlist_as_array
       (PM.seq_list_match c x (vmatch arr)) **
     pure (
       SZ.v i <= SZ.v n /\
-      b == (SZ.v i < SZ.v n) /\
       Seq.length c == SZ.v n /\
       Seq.equal c2 (Seq.slice c (SZ.v i) (SZ.v n)) /\
       SZ.v offset <= SZ.v res /\
@@ -1058,6 +1121,8 @@ fn l2r_write_nlist_as_array
       Seq.slice v1 (SZ.v offset) (SZ.v res) `Seq.equal` bare_serialize (serialize_nlist (SZ.v i) s) l1 /\
       List.Tot.append l1 l2 == Ghost.reveal x /\
       True
+    ) ** pure (
+      b == (SZ.v i < SZ.v n)
     )
   ) {
     let i = !pi;
@@ -1224,7 +1289,6 @@ fn compute_remaining_size_nlist_as_slice
       (PM.seq_list_match c x (vmatch arr))
     ** pure (
       SZ.v i <= SZ.v n /\
-      b == (res && (SZ.v i < SZ.v n)) /\
       Seq.length c == SZ.v n /\
       (res == false ==> SZ.v v < Seq.length (serialize (serialize_nlist (SZ.v n) s) x)) /\
       (res == true ==> (
@@ -1233,6 +1297,8 @@ fn compute_remaining_size_nlist_as_slice
         SZ.v v - Seq.length (serialize (serialize_nlist (SZ.v n) s) x) == SZ.v v1 - Seq.length (serialize (serialize_nlist (SZ.v n - SZ.v i) s) l2)
       )) /\
       True
+    ) ** pure (
+      b == (res && (SZ.v i < SZ.v n))
     )
   ) {
     let i = !pi;
@@ -1310,7 +1376,6 @@ fn l2r_write_nlist_as_slice
       (PM.seq_list_match c x (vmatch arr)) **
     pure (
       SZ.v i <= SZ.v n /\
-      b == (SZ.v i < SZ.v n) /\
       Seq.length c == SZ.v n /\
       Seq.equal c2 (Seq.slice c (SZ.v i) (SZ.v n)) /\
       SZ.v offset <= SZ.v res /\
@@ -1321,6 +1386,8 @@ fn l2r_write_nlist_as_slice
       Seq.slice v1 (SZ.v offset) (SZ.v res) `Seq.equal` bare_serialize (serialize_nlist (SZ.v i) s) l1 /\
       List.Tot.append l1 l2 == Ghost.reveal x /\
       True
+    ) ** pure (
+      b == (SZ.v i < SZ.v n)
     )
   ) {
     let i = !pi;
@@ -1512,6 +1579,7 @@ fn l2r_write_nlist_as_slice0
   let n' = S.len arr.v;
   nlist_match_slice_intro Some (fun _ -> vmatch) (SZ.v n') arr x arr c;
   let res = l2r_write_nlist_as_slice Some (fun _ -> vmatch) s (fun _ -> w) n' arr out offset;
+  rewrite each SZ.v n' as n;
   fold (nlist_match_slice0 vmatch (n) arr x);
   res
 }

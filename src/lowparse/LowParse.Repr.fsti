@@ -248,7 +248,7 @@ val frame_valid (#t:_) (p:repr_ptr t) (l:B.loc) (h0 h1:HS.mem)
 #set-options "--z3rlimit 20"
 inline_for_extraction noextract
 let mk_from_const_slice
-         (#k:strong_parser_kind) #t (#parser:LP.parser k t)
+         (#k:strong_parser_kind) (#t:Type u#t) (#parser:LP.parser k t)
          (parser32:LS.parser32 parser)
          (b:const_slice)
          (from to:uint_32)
@@ -260,7 +260,7 @@ let mk_from_const_slice
       valid p h1 /\
       p.meta.v == LP.contents parser h1 (to_slice b) from /\
       p.b `C.const_sub_buffer from (to - from)` b.base)
-  = reveal_valid ();
+  = reveal_valid u#t ();
     let h = get () in
     let slice = to_slice b in
     LP.contents_exact_eq parser h slice from to;
@@ -358,20 +358,20 @@ let mk_from_serialize
 
 /// Computes the length in bytes of the representation
 /// Using a LowParse "jumper"
-let length #t (p: repr_ptr t) (j:LP.jumper p.meta.parser)
+let length (#t:Type u#t) (p: repr_ptr t) (j:LP.jumper p.meta.parser)
   : Stack U32.t
     (requires fun h ->
       valid p h)
     (ensures fun h n h' ->
       B.modifies B.loc_none h h' /\
       n == p.meta.len)
-  = reveal_valid ();
+  = reveal_valid u#t ();
     let s = temp_slice_of_repr_ptr p in
     (* TODO: Need to revise the type of jumpers to take a pointer as an argument, not a slice *)
     j s 0ul
 
 /// `to_bytes`: for intermediate purposes only, extract bytes from the repr
-let to_bytes #t (p: repr_ptr t) (len:uint_32)
+let to_bytes (#t:Type u#t) (p: repr_ptr t) (len:uint_32)
   : Stack FStar.Bytes.bytes
     (requires fun h ->
       valid p h /\
@@ -382,7 +382,7 @@ let to_bytes #t (p: repr_ptr t) (len:uint_32)
       FStar.Bytes.reveal x == p.meta.repr_bytes /\
       FStar.Bytes.len x == p.meta.len
     )
-  = reveal_valid ();
+  = reveal_valid u#t ();
     FStar.Bytes.of_buffer len (C.cast p.b)
 
 
@@ -429,9 +429,8 @@ let stable_repr_ptr t= p:repr_ptr t { valid_if_live p }
 // Note: the next proof is flaky and occasionally enters a triggering
 // vortex with the notorious FStar.Seq.Properties.slice_slice
 // Removing that from the context makes the proof instantaneous
-#push-options "--max_ifuel 1 --initial_ifuel 1 \
-                --using_facts_from '* -FStar.Seq.Properties.slice_slice'"
-let valid_if_live_intro #t (r:repr_ptr t) (h:HS.mem)
+#push-options "--max_ifuel 1 --initial_ifuel 1"
+let valid_if_live_intro (#t:Type u#t) (r:repr_ptr t) (h:HS.mem)
   : Lemma
     (requires (
       C.qbuf_qual (C.as_qbuf r.b) == C.IMMUTABLE /\
@@ -442,7 +441,7 @@ let valid_if_live_intro #t (r:repr_ptr t) (h:HS.mem)
        i `I.value_is` Ghost.hide m.repr_bytes)))
     (ensures
       valid_if_live r)
-  = reveal_valid ();
+  = reveal_valid u#t ();
     let i : I.ibuffer LP.byte = C.as_mbuf r.b in
     let aux (h':HS.mem)
         : Lemma
@@ -456,10 +455,10 @@ let valid_if_live_intro #t (r:repr_ptr t) (h:HS.mem)
           LP.valid_ext_intro m.parser h (slice_of_repr_ptr r) 0ul h' (slice_of_repr_ptr r) 0ul
     in
     ()
-
 #pop-options
 
-let sub_ptr_stable (#t0 #t1:_) (r0:repr_ptr t0) (r1:repr_ptr t1) (h:HS.mem)
+#restart-solver
+let sub_ptr_stable (#t0:Type u#t0) (#t1:Type u#t1) (r0:repr_ptr t0) (r1:repr_ptr t1) (h:HS.mem)
   : Lemma
     (requires
       r0 `sub_ptr` r1 /\
@@ -476,7 +475,8 @@ let sub_ptr_stable (#t0 #t1:_) (r0:repr_ptr t0) (r1:repr_ptr t1) (h:HS.mem)
     [SMTPat (r0 `sub_ptr` r1);
      SMTPat (valid_if_live r1);
      SMTPat (valid r0 h)]
-  = reveal_valid ();
+  = reveal_valid u#t0 ();
+    reveal_valid u#t1 ();
     let b0 : I.ibuffer LP.byte = C.cast r0.b in
     let b1 : I.ibuffer LP.byte = C.cast r1.b in
     assert (I.value_is b1 (Ghost.hide r1.meta.repr_bytes));
@@ -495,14 +495,14 @@ let sub_ptr_stable (#t0 #t1:_) (r0:repr_ptr t0) (r1:repr_ptr t1) (h:HS.mem)
 
 /// `recall_stable_repr_ptr` Main lemma: if the underlying buffer is live
 ///    then a stable repr_ptr is valid
-let recall_stable_repr_ptr #t (r:stable_repr_ptr t)
+let recall_stable_repr_ptr (#t:Type u#t) (r:stable_repr_ptr t)
   : Stack unit
     (requires fun h ->
       C.live h r.b)
     (ensures fun h0 _ h1 ->
       h0 == h1 /\
       valid r h1)
-  = reveal_valid ();
+  = reveal_valid u#t ();
     let h1 = get () in
     let i = C.to_ibuffer r.b in
     let aux (h:HS.mem)
@@ -570,7 +570,7 @@ let ralloc_and_blit (r:ST.drgn) (src:C.const_buffer LP.byte) (len:U32.t)
 
 /// `stash`: Main stateful operation
 ///    Copies a repr_ptr into a fresh stable repr_ptr in the given region
-let stash (rgn:ST.drgn) #t (r:repr_ptr t) (len:uint_32{len == r.meta.len})
+let stash (rgn:ST.drgn) (#t:Type u#t) (r:repr_ptr t) (len:uint_32{len == r.meta.len})
   : ST (stable_region_repr_ptr rgn t)
    (requires fun h ->
      valid r h /\
@@ -579,7 +579,7 @@ let stash (rgn:ST.drgn) #t (r:repr_ptr t) (len:uint_32{len == r.meta.len})
      B.modifies B.loc_none h0 h1 /\
      valid r' h1 /\
      r.meta == r'.meta)
- = reveal_valid ();
+ = reveal_valid u#t ();
    let buf' = ralloc_and_blit rgn r.b len in
    let s = MkSlice buf' len in
    let h = get () in
@@ -645,11 +645,12 @@ let field_accessor_t
         region_of q == region_of p)
 
 inline_for_extraction
-let get_field (#k1:strong_parser_kind) #t1 (#p1:LP.parser k1 t1)
-              (#k2: strong_parser_kind) (#t2:Type) (#p2:LP.parser k2 t2)
+let get_field (#k1:strong_parser_kind) (#t1:Type u#t1) (#p1:LP.parser k1 t1)
+              (#k2: strong_parser_kind) (#t2:Type u#t2) (#p2:LP.parser k2 t2)
               (f:field_accessor p1 p2)
    : field_accessor_t f
-   = reveal_valid ();
+   = reveal_valid u#t1 ();
+     reveal_valid u#t2 ();
      fun p ->
      [@inline_let] let FieldAccessor acc jump p2' = f in
      let b = temp_slice_of_repr_ptr p in
@@ -695,10 +696,11 @@ let field_reader_t
        pv == f.cl.LP.clens_get (value p))
 
 inline_for_extraction
-let read_field (#k1:strong_parser_kind) (#t1:_) (#p1:LP.parser k1 t1)
-               #t2 (f:field_reader p1 t2)
+let read_field (#k1:strong_parser_kind) (#t1:Type u#t1) (#p1:LP.parser k1 t1)
+               (#t2:Type u#t2) (f:field_reader p1 t2)
   : field_reader_t f
-  = reveal_valid ();
+  = reveal_valid u#t1 ();
+    reveal_valid u#t2 ();
     fun p ->
     [@inline_let]
     let FieldReader acc reader = f in
@@ -778,7 +780,7 @@ let end_pos #t #b (r:repr_pos t b)
   = r.start_pos + r.length
 
 let valid_repr_pos_elim
-  (#t: Type)
+  (#t: Type u#t)
   (#b: const_slice)
   (r: repr_pos t b)
   (h: HS.mem)
@@ -789,7 +791,7 @@ let valid_repr_pos_elim
   (ensures (
     LP.valid_content_pos r.meta.parser h (to_slice b) r.start_pos r.meta.v (end_pos r)
   ))
-= reveal_valid ();
+= reveal_valid u#t ();
   let p : repr_ptr t = as_ptr_spec r in
   let slice = slice_of_const_buffer (Ptr?.b p) (Ptr?.meta p).len in
   LP.valid_facts r.meta.parser h slice 0ul;
@@ -925,11 +927,12 @@ let get_field_pos_t (#k1: strong_parser_kind) (#t1: Type) (#p1: LP.parser k1 t1)
 
 
 inline_for_extraction
-let get_field_pos (#k1: strong_parser_kind) (#t1: Type) (#p1: LP.parser k1 t1)
-                  (#k2: strong_parser_kind) (#t2: Type) (#p2: LP.parser k2 t2)
+let get_field_pos (#k1: strong_parser_kind) (#t1: Type u#t1) (#p1: LP.parser k1 t1)
+                  (#k2: strong_parser_kind) (#t2: Type u#t2) (#p2: LP.parser k2 t2)
                   (f:field_accessor p1 p2)
  : get_field_pos_t f
- = reveal_valid ();
+ = reveal_valid u#t1 ();
+   reveal_valid u#t2 ();
    fun #b pp ->
     [@inline_let] let FieldAccessor acc jump p2' = f in
     let p = as_ptr pp in

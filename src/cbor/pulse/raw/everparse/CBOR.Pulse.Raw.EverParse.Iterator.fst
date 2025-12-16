@@ -260,7 +260,7 @@ fn cbor_raw_serialized_iterator_next
     i.s;
   unfold (LPC.split_nondep_then_post s s' i.s (pm *. i.p) v' (s1, s2));
   unfold (LPC.split_nondep_then_post' s s' i.s (pm *. i.p) v' s1 s2);
-  Trade.trans _ _ (cbor_raw_serialized_iterator_match s pm i l);
+  trade_trans_nounify _ _ _ (cbor_raw_serialized_iterator_match s pm i l);
   let res = phi s1;
   with pm' . assert (elt_match pm' res (fst v'));
   Trade.rewrite_with_trade
@@ -281,7 +281,7 @@ fn cbor_raw_serialized_iterator_next
     _
     (cbor_raw_serialized_iterator_match s pm i' (List.Tot.tl l))
     _;
-  Trade.trans _ _ (cbor_raw_serialized_iterator_match s pm i l);
+  trade_trans_nounify _ _ _ (cbor_raw_serialized_iterator_match s pm i l);
   res
 }
 
