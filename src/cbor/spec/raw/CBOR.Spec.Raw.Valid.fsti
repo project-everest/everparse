@@ -262,3 +262,143 @@ let raw_equiv_eq_valid
   if x1 = x2
   then raw_equiv'_refl_valid x1
   else ()
+
+let rec map_depth_raw_equiv_le
+  (x1 x2: raw_data_item)
+: Lemma
+  (requires raw_equiv x1 x2)
+  (ensures map_depth x1 <= map_depth x2)
+  (decreases raw_data_item_size x1 + raw_data_item_size x2)
+= equiv_eq basic_data_model x1 x2;
+  if x1 = x2
+  then ()
+  else begin
+    raw_data_item_size_eq x1;
+    raw_data_item_size_eq x2;
+    map_depth_eq x1;
+    map_depth_eq x2;
+    match x1, x2 with
+    | Array _ v1, Array _ v2 ->
+      array_map_depth_raw_equiv_le v1 v2
+    | Tagged _ v1, Tagged _ v2 ->
+      map_depth_raw_equiv_le v1 v2
+    | Map _ v1, Map _ v2 ->
+      map_map_depth_raw_equiv_le v1 v2
+    | _ -> ()
+  end
+
+and array_map_depth_raw_equiv_le
+  (x1 x2: list raw_data_item)
+: Lemma
+  (requires list_for_all2 raw_equiv x1 x2)
+  (ensures list_max map_depth x1 <= list_max map_depth x2)
+  (decreases 1 + list_sum raw_data_item_size x1 + list_sum raw_data_item_size x2)
+= match x1, x2 with
+  | a1 :: q1, a2 :: q2 ->
+    raw_data_item_size_eq a1;
+    raw_data_item_size_eq a2;
+    map_depth_raw_equiv_le a1 a2;
+    array_map_depth_raw_equiv_le q1 q2
+  | _ -> ()
+
+and map_map_depth_raw_equiv_le
+  (v1 v2: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires
+    List.Tot.for_all (setoid_assoc_eq (raw_equiv) (raw_equiv) v2) v1
+  )
+  (ensures
+    list_max map_depth_pair v1 <= list_max map_depth_pair v2
+  )
+  (decreases 1 + list_sum (pair_sum raw_data_item_size raw_data_item_size) v1 + list_sum (pair_sum raw_data_item_size raw_data_item_size) v2)
+= match v1 with
+  | [] -> ()
+  | (k1, w1) :: q1 ->
+    raw_data_item_size_eq k1;
+    raw_data_item_size_eq w1;
+    let Some w2 = list_setoid_assoc raw_equiv k1 v2 in
+    let Some k2 = list_setoid_assoc_mem raw_equiv k1 v2 in
+    list_max_correct map_depth_pair v2 (k2, w2);
+    list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v2 (k2, w2);
+    map_depth_raw_equiv_le k1 k2;
+    map_depth_raw_equiv_le w1 w2;
+    map_map_depth_raw_equiv_le q1 v2
+
+let map_depth_raw_equiv
+  (x1 x2: raw_data_item)
+: Lemma
+  (requires raw_equiv x1 x2)
+  (ensures map_depth x1 == map_depth x2)
+= raw_equiv_sym x1 x2;
+  map_depth_raw_equiv_le x1 x2;
+  map_depth_raw_equiv_le x2 x1
+
+let rec map_key_depth_raw_equiv_le
+  (x1 x2: raw_data_item)
+: Lemma
+  (requires raw_equiv x1 x2)
+  (ensures map_key_depth x1 <= map_key_depth x2)
+  (decreases raw_data_item_size x1 + raw_data_item_size x2)
+= equiv_eq basic_data_model x1 x2;
+  if x1 = x2
+  then ()
+  else begin
+    raw_data_item_size_eq x1;
+    raw_data_item_size_eq x2;
+    map_key_depth_eq x1;
+    map_key_depth_eq x2;
+    match x1, x2 with
+    | Array _ v1, Array _ v2 ->
+      array_map_key_depth_raw_equiv_le v1 v2
+    | Tagged _ v1, Tagged _ v2 ->
+      map_key_depth_raw_equiv_le v1 v2
+    | Map _ v1, Map _ v2 ->
+      map_map_key_depth_raw_equiv_le v1 v2
+    | _ -> ()
+  end
+
+and array_map_key_depth_raw_equiv_le
+  (x1 x2: list raw_data_item)
+: Lemma
+  (requires list_for_all2 raw_equiv x1 x2)
+  (ensures list_max map_key_depth x1 <= list_max map_key_depth x2)
+  (decreases 1 + list_sum raw_data_item_size x1 + list_sum raw_data_item_size x2)
+= match x1, x2 with
+  | a1 :: q1, a2 :: q2 ->
+    raw_data_item_size_eq a1;
+    raw_data_item_size_eq a2;
+    map_key_depth_raw_equiv_le a1 a2;
+    array_map_key_depth_raw_equiv_le q1 q2
+  | _ -> ()
+
+and map_map_key_depth_raw_equiv_le
+  (v1 v2: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires
+    List.Tot.for_all (setoid_assoc_eq (raw_equiv) (raw_equiv) v2) v1
+  )
+  (ensures
+    list_max map_key_depth_pair v1 <= list_max map_key_depth_pair v2
+  )
+  (decreases 1 + list_sum (pair_sum raw_data_item_size raw_data_item_size) v1 + list_sum (pair_sum raw_data_item_size raw_data_item_size) v2)
+= match v1 with
+  | [] -> ()
+  | (k1, w1) :: q1 ->
+    raw_data_item_size_eq k1;
+    raw_data_item_size_eq w1;
+    let Some w2 = list_setoid_assoc raw_equiv k1 v2 in
+    let Some k2 = list_setoid_assoc_mem raw_equiv k1 v2 in
+    list_max_correct map_key_depth_pair v2 (k2, w2);
+    list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v2 (k2, w2);
+    map_depth_raw_equiv_le k1 k2;
+    map_key_depth_raw_equiv_le w1 w2;
+    map_map_key_depth_raw_equiv_le q1 v2
+
+let map_key_depth_raw_equiv
+  (x1 x2: raw_data_item)
+: Lemma
+  (requires raw_equiv x1 x2)
+  (ensures map_key_depth x1 == map_key_depth x2)
+= raw_equiv_sym x1 x2;
+  map_key_depth_raw_equiv_le x1 x2;
+  map_key_depth_raw_equiv_le x2 x1

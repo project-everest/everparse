@@ -1,0 +1,10 @@
+{
+    "fstar_exe": "../../fstar.sh",
+    "include_dirs": [
+      "../cbor/spec",
+      "../cbor/pulse",
+      "./pulse",
+      "./spec",
+      "./tool"
+    ]
+  }

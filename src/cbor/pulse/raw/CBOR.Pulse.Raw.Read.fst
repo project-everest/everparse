@@ -136,7 +136,10 @@ ensures exists* p' y .
   }
 }
 
-let cbor_array_iterator_match
+// type annotation necessary, because without it, in CBOR.Pulse.Raw.Nondet.Compare.cbor_nondet_equiv_body, Pulse
+// will infer (Ghost.reveal #(CBOR.Pulse.Raw.Iterator.cbor_raw_iterator cbor_raw) ...) in the hypotheses and (Ghost.reveal #cbor_array_iterator _)
+// in the conclusion, and then will not be able to match properly and will complain about ambiguity
+let cbor_array_iterator_match : perm -> cbor_array_iterator -> list raw_data_item -> slprop
 = cbor_raw_iterator_match
     cbor_match
     cbor_serialized_array_iterator_match
@@ -382,7 +385,8 @@ fn cbor_match_map_elim
   };
 }
 
-let cbor_map_iterator_match
+// see cbor_array_iterator_match for why the annotation is necessary
+let cbor_map_iterator_match : perm -> cbor_map_iterator -> list (raw_data_item & raw_data_item) -> slprop
 = cbor_raw_iterator_match
     cbor_match_map_entry
     cbor_serialized_map_iterator_match

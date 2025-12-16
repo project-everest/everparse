@@ -315,3 +315,11 @@ let mk_det_raw_cbor_map_raw_snoc m key value =
     ()
 
 #pop-options
+
+let mk_cbor_map_depth x =
+  mk_cbor_equiv' x;
+  map_depth_raw_equiv x (mk_cbor x)
+
+let mk_cbor_map_key_depth x =
+  mk_cbor_equiv' x;
+  map_key_depth_raw_equiv x (mk_cbor x)

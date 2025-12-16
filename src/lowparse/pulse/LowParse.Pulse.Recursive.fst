@@ -89,6 +89,8 @@ let validate_tot_nlist_recursive_progress
   ))
 = parse_consume_nlist_recursive_eq' p n (Seq.slice v off (Seq.length v))
 
+#push-options "--z3rlimit 32"
+
 #restart-solver
 
 let validate_tot_nlist_recursive_overflow
@@ -118,6 +120,8 @@ let validate_tot_nlist_recursive_overflow
   let Some (h, consumed) = parse p.parse_header (Seq.slice v off (Seq.length v)) in
   let offset = off + consumed in
   parse_nlist_recursive_bound_correct p (p.count h + (n - 1)) (Seq.slice v (offset) (Seq.length v))
+
+#pop-options
 
 #restart-solver
 

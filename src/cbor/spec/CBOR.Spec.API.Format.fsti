@@ -10,7 +10,7 @@ val cbor_parse : (x: Seq.seq U8.t) -> Pure (option (cbor & nat))
   (requires True)
   (ensures (fun res -> match res with
   | None -> True
-  | Some (_, n) -> n <= Seq.length x
+  | Some (_, n) -> 0 < n /\ n <= Seq.length x
   ))
 
 val cbor_parse_prefix

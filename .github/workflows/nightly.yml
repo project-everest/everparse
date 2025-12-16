@@ -35,7 +35,7 @@ jobs:
       - name: Generate snapshot
         run: |
           make ADMIT=1 cbor-snapshot 3d-doc-snapshot -kj$(nproc) && make ADMIT=1 cose-snapshot -kj$(nproc) &&
-          git add doc/3d-snapshot src/cbor/pulse/det/c src/cbor/pulse/det/rust src/cose/c src/cose/rust &&
+          git add doc/3d-snapshot src/cbor/pulse/det/c src/cbor/pulse/nondet/c src/cbor/pulse/det/rust src/cose/c src/cose/rust &&
           if ! git diff --staged --exit-code ; then git commit -m "3D doc, CBOR, COSE snapshot" ; fi &&
           git diff --exit-code
       - name: Push new branch

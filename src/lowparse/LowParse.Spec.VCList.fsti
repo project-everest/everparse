@@ -288,6 +288,21 @@ let rec parse_nlist_ext
       parse_nlist_ext (n - 1) p p' b' prf
   end
 
+val parse_nlist_ext_forall
+  (n: nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: (parser k t))
+  (#k': parser_kind)
+  (p' : parser k' t)
+: Lemma
+  (requires
+    forall b . parse p b == parse p' b
+  )
+  (ensures
+    forall b . parse (parse_nlist n p) b == parse (parse_nlist n p') b
+  )
+
 let parse_nlist_fuel_ext
   (n: nat)
   (#k: parser_kind)
