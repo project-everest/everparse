@@ -31,13 +31,15 @@ let mkdir dir =
   then ()
   else try Sys.mkdir dir 0o755 with _ -> ()
 
+let nbe = ref true
+
 let produce_fst_file (dir: string) : string =
   let filenames = List.rev !rev_filenames in
   match ParseFromFile.parse_from_files filenames with
   | None -> failwith "Parsing failed"
   | Some l ->
      let filenames_str = List.fold_left (fun accu fn -> accu ^ "\"" ^ fn ^ "\";") "" filenames in
-     let str = CDDL_Tool_Gen.produce_defs_fst !mname !lang filenames_str l in
+     let str = CDDL_Tool_Gen.produce_defs_fst !nbe !mname !lang filenames_str l in
      if String.starts_with ~prefix:"Error: " str
      then begin
          print_endline str;
@@ -259,6 +261,7 @@ let _ =
       ("--fstar_only", Arg.Unit (fun _ -> fstar_only := true), "Only generate F*");
       ("--skip_compilation", Arg.Unit (fun _ -> skip_compilation := true), "Do not compile produced C files");
       ("--tmpdir", Arg.String (fun d -> tmpdir := d), "Set the temporary directory (default automatically generated)");
+      ("--__tmp_no_nbe", Arg.Unit (fun _ -> nbe := false), "(TEMP) Disable NBE for extraction");
     ]
   in
   let usagemsg = "EverCDDL: Produces a F* file to generate formally verified parsers and serializers from CDDL specifications.\nUsage: "^Sys.argv.(0) ^" [options] file1 [file2 ...]" in
