@@ -512,6 +512,7 @@ let t_size
         )
       )
 
+[@@sem_attr]
 let rec extract_int_value
   (env: sem_env)
   (x: typ)
@@ -532,6 +533,7 @@ let rec extract_int_value
   | TNamed _ t -> extract_int_value env t
   | _ -> None
 
+[@@sem_attr]
 let rec extract_range_value
   (env: sem_env)
   (x: typ)
