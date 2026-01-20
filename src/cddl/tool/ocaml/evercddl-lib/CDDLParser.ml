@@ -13,6 +13,36 @@ type cddl_t = state
 type 'a parser = (Tokens.token, state, 'a, cddl_t) ABNF.parser
 type symbol = unit parser
 
+let get_full_state () : (state * int) parser =
+  fun buf k -> k (TokenBuffer.get_state buf, TokenBuffer.history_length buf)
+
+let loop_detector : ((string * (state * int)), unit) Hashtbl.t =
+  Hashtbl.create 16
+
+let check_loop (x: (string * (state * int))) : bool =
+  if Hashtbl.mem loop_detector x
+  then true
+  else begin
+     Hashtbl.add loop_detector x ();
+     false
+    end
+
+let debug
+      (name: string)
+      (f: 'a parser)
+    : 'a parser
+  = ABNF.debug
+      name
+      (concat (get_full_state ()) (fun state ->
+           if check_loop (name, state)
+           then fail
+           else concat f (fun res ->
+                    Hashtbl.remove loop_detector (name, state);
+                    ret res
+                  )
+         )
+      )
+
 type id_kind =
 | Regular
 | SocketType

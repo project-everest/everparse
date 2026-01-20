@@ -46,6 +46,8 @@ let advance (x: ('a, 'b) t) : 'a =
   x.past <- a :: x.past;
   a
 
+let history_length x = List.length x.past
+
 let get_state : ('a, 'b) t -> 'b =
   fun buf -> buf.state
 
