@@ -45,3 +45,9 @@ let advance (x: ('a, 'b) t) : 'a =
   in
   x.past <- a :: x.past;
   a
+
+let get_state : ('a, 'b) t -> 'b =
+  fun buf -> buf.state
+
+let set_state : 'b -> ('a, 'b) t -> unit =
+  fun x buf -> buf.state <- x

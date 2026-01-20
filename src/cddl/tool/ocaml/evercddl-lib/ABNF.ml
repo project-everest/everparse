@@ -41,10 +41,10 @@ let debug_start
     debug name f buf k
 
 let get_state () : ('a, 'b, 'b, 'd) parser =
-  fun buf k -> k buf.state
+  fun buf k -> k (TokenBuffer.get_state buf)
 
 let set_state (x: 'b) : ('a, 'b, unit, 'd) parser =
-  fun buf k -> buf.state <- x; k ()
+  fun buf k -> TokenBuffer.set_state x buf; k ()
 
 let choice
       (f: ('a, 'b, 'c, 'd) parser)
