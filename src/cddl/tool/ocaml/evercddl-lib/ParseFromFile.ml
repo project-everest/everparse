@@ -24,7 +24,7 @@ let rec parse' env = function
      end
 
 let empty_env = {
-    CDDLParser.env = CDDL_Spec_AST_Base.empty_name_env;
+    CDDLParser.env = CDDLNameEnv.empty_name_env;
     sockets = [];
     result = [];
 }
@@ -36,7 +36,7 @@ let plug_empty_socket
 = if List.mem_assoc name accu
   then accu
   else
-    let def = match st.env name with
+    let def = match CDDLNameEnv.cddl_env_of_env st.env name with
     | Some CDDL_Spec_AST_Base.NType -> CDDL_Spec_AST_Base.DType (CDDL_Spec_AST_Base.TElem CDDL_Spec_AST_Base.EAlwaysFalse)
     | Some CDDL_Spec_AST_Base.NGroup -> CDDL_Spec_AST_Base.DGroup CDDL_Spec_AST_Base.GAlwaysFalse
     | _ -> failwith "plug_empty_socket: this should not happen. Please report"

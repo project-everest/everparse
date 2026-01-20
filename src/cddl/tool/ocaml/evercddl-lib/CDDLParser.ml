@@ -5,7 +5,7 @@ open FStar_Pervasives
 open CDDL_Spec_AST_Base
 
 type state = {
-  env: CDDL_Spec_AST_Base.name_env;
+  env: CDDLNameEnv.name_env;
   sockets: string list;
   result: CDDL_Spec_AST_Base.program;
 }
@@ -89,7 +89,7 @@ let typename = debug "typename"
     | Regular ->
       if List.mem n s.sockets
       then fail
-      else begin match CDDL_Spec_AST_Driver.check_name s.env n CDDL_Spec_AST_Base.NType with
+      else begin match CDDLNameEnv.check_name s.env n CDDL_Spec_AST_Base.NType with
       | None -> fail
       | Some s' ->
         let s' = { s with env = s' } in
@@ -97,17 +97,17 @@ let typename = debug "typename"
       end
     | SocketType ->
       if not (List.mem n s.sockets)
-      then begin match s.env n with
+      then begin match CDDLNameEnv.cddl_env_of_env s.env n with
       | None ->
         let s' = { s with
-          env = CDDL_Spec_AST_Base.extend_name_env s.env n CDDL_Spec_AST_Base.NType;
+          env = CDDLNameEnv.extend_name_env s.env n CDDL_Spec_AST_Base.NType;
           sockets = n :: s.sockets;
         }
         in
         concat (set_state s') (fun _ -> ret res)
       | _ -> fail
       end
-      else begin match s.env n with
+      else begin match CDDLNameEnv.cddl_env_of_env s.env n with
       | Some CDDL_Spec_AST_Base.NType -> ret res
       | _ -> fail
       end
@@ -120,7 +120,7 @@ let groupname = debug "groupname"
     | Regular ->
       if List.mem n s.sockets
       then fail
-      else begin match CDDL_Spec_AST_Driver.check_name s.env n CDDL_Spec_AST_Base.NGroup with
+      else begin match CDDLNameEnv.check_name s.env n CDDL_Spec_AST_Base.NGroup with
       | None -> fail
       | Some s' ->
         let s' = { s with env = s' } in
@@ -128,17 +128,17 @@ let groupname = debug "groupname"
       end
     | SocketGroup ->
       if not (List.mem n s.sockets)
-      then begin match s.env n with
+      then begin match CDDLNameEnv.cddl_env_of_env s.env n with
       | None ->
         let s' = { s with
-          env = CDDL_Spec_AST_Base.extend_name_env s.env n CDDL_Spec_AST_Base.NGroup;
+          env = CDDLNameEnv.extend_name_env s.env n CDDL_Spec_AST_Base.NGroup;
           sockets = n :: s.sockets;
         }
         in
         concat (set_state s') (fun _ -> ret res)
       | _ -> fail
       end
-      else begin match s.env n with
+      else begin match CDDLNameEnv.cddl_env_of_env s.env n with
       | Some CDDL_Spec_AST_Base.NGroup -> ret res
       | _ -> fail
       end
