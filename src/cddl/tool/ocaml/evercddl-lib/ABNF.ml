@@ -101,6 +101,22 @@ let terminal
   | Some y -> k y
   | None -> None
 
+let get_history_length () : ('a, 'b, int, 'd) parser =
+  fun buf k -> k (TokenBuffer.history_length buf)
+
+let nonempty
+          (f: ('a, 'b, 'c, 'd) parser)
+: ('a, 'b, 'c, 'd) parser
+= concat (get_history_length ()) (fun len ->
+      concat f (fun res ->
+          concat (get_history_length ()) (fun len' ->
+              if len < len'
+              then ret res
+              else fail
+            )
+        )
+    )
+
 let rec list
           (f: ('a, 'b, 'c, 'd) parser)
 : ('a, 'b, 'c list, 'd) parser
@@ -111,7 +127,7 @@ let rec list
 and nonempty_list
 (f: ('a, 'b, 'c, 'd) parser)
     : ('a, 'b, 'c list, 'd) parser
-  = concat f (fun a -> concat (list f) (fun q -> ret (a :: q)))
+  = concat (nonempty f) (fun a -> concat (list f) (fun q -> ret (a :: q)))
 
 let rec fold_left
           (f: ('a, 'b, ('c -> 'c), 'd) parser)
