@@ -194,7 +194,7 @@ let assignt ((k, x): (id_kind * string)) = debug "assignt"
     ))
   )
 
-let assigng ((k, x) : (id_kind * string)) = debug "assignt"
+let assigng ((k, x) : (id_kind * string)) = debug "assigng"
   (choice
     (concat eq (fun _ ->
       if k = Regular
