@@ -212,13 +212,18 @@ let rec mk_elab_map_group_bounded
     mk_elab_map_group_bounded fuel' env g1;
     mk_elab_map_group_bounded fuel' env g2
   | GDef n ->
-    let g' = (env.e_env n) in
+    let g' = match env.e_sem_env.se_bound n with
+    | Some NGroup -> (env.e_env n)
+    | Some NType -> GElem false (TElem EAny) (env.e_env n)
+    in
     rewrite_group_bounded env.e_sem_env.se_bound fuel true g';
     mk_elab_map_group_bounded fuel' env (fst (rewrite_group fuel true g'))
   | GZeroOrMore (GDef n) ->
-    begin match env.e_sem_env.se_bound n with
-    | Some NGroup ->
-      let g1 = env.e_env n in
+    begin 
+      let g1 = match env.e_sem_env.se_bound n with
+      | Some NGroup -> env.e_env n
+      | Some NType -> GElem false (TElem EAny) (env.e_env n)
+      in
       let (g2, res) = rewrite_group fuel true (GZeroOrMore g1) in
       if res
       then begin
@@ -261,11 +266,17 @@ let rec mk_elab_map_group_correct
       (Util.notp (Util.andp (Spec.matches_map_group_entry (typ_sem env.e_sem_env key) (typ_sem env.e_sem_env value)) (Util.notp Spec.map_constraint_empty)))
       (Util.notp (Spec.matches_map_group_entry (typ_sem env.e_sem_env key) (typ_sem env.e_sem_env value)))
   | GDef n ->
-    let g' = (env.e_env n) in
+    let g' = match env.e_sem_env.se_bound n with
+    | Some NGroup -> (env.e_env n)
+    | Some NType -> GElem false (TElem EAny) (env.e_env n)
+    in
     rewrite_group_correct env.e_sem_env fuel true g';
     mk_elab_map_group_correct fuel' env (fst (rewrite_group fuel true g'))
   | GZeroOrMore (GDef n) ->
-    let g' = (env.e_env n) in
+    let g' = match env.e_sem_env.se_bound n with
+    | Some NGroup -> (env.e_env n)
+    | Some NType -> GElem false (TElem EAny) (env.e_env n)
+    in
     rewrite_group_correct env.e_sem_env fuel true (GZeroOrMore g');
     mk_elab_map_group_correct fuel' env (fst (rewrite_group fuel true (GZeroOrMore g')))
   | GElem cut (TDef nkey) value ->
@@ -1375,7 +1386,10 @@ and mk_wf_array_group
     | res -> coerce_failure res
     end
   | GDef n ->
-    let g2 = env.e_env n in
+    let g2 = match env.e_sem_env.se_bound n with
+    | Some NGroup -> (env.e_env n)
+    | Some NType -> GElem false (TElem EAny) (env.e_env n)
+    in
     begin match mk_wf_array_group fuel' env g2 with
     | RSuccess s2 -> RSuccess (WfARewrite g g2 s2)
     | res -> coerce_failure res
