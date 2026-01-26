@@ -305,35 +305,36 @@ and type_tail () = debug "type_tail" (
     (ret (fun (x: typ) -> x))
 )
 
-and type1 () = debug "type1" (concat (type2 ()) (fun t -> concat (type1_tail ()) (fun f -> ret (f t))))
+and type1 () = debug "type1" (concat (type2 ()) (fun (t, needs_space) -> concat (type1_tail needs_space) (fun f -> ret (f t))))
 
-and type1_tail () =
+(* `needs_space` implements the remark "space may be needed before the operator if type2 ends in a name" *)
+and type1_tail (needs_space: bool) =
   debug "type1_tail"
     (choice
-      (concat s (fun _ -> concat rangeop_or_ctlop (fun f -> concat s (fun _ -> concat (type2 ()) (fun t2 -> ret (fun t1 -> f t1 t2))))))
+      (concat (if needs_space then nonempty_s else s) (fun _ -> concat rangeop_or_ctlop (fun f -> concat s (fun _ -> concat (type2 ()) (fun (t2, _) -> ret (fun t1 -> f t1 t2))))))
       (ret (fun t -> t))
     )
 
 and type2 () = debug "type2" (
   choices
     [
-      concat value (fun x -> ret (TElem (ELiteral x)));
-      concat typename (fun (_, x) -> (* option(genericarg) *) ret (TDef x));
-      concat lparen (fun _ -> concat s (fun _ -> concat (type_ ()) (fun x -> concat s (fun _ -> concat rparen (fun _ -> ret x)))));
-      concat lbrace (fun _ -> concat s (fun _ -> concat (group ()) (fun x -> concat s (fun _ -> concat rbrace (fun _ -> ret (TMap x))))));
-      concat lbrack (fun _ -> concat s (fun _ -> concat (group ()) (fun x -> concat s (fun _ -> concat rbrack (fun _ -> ret (TArray x))))));
+      concat value (fun x -> ret (TElem (ELiteral x), false));
+      concat typename (fun (_, x) -> (* option(genericarg) *) ret (TDef x, true));
+      concat lparen (fun _ -> concat s (fun _ -> concat (type_ ()) (fun x -> concat s (fun _ -> concat rparen (fun _ -> ret (x, false))))));
+      concat lbrace (fun _ -> concat s (fun _ -> concat (group ()) (fun x -> concat s (fun _ -> concat rbrace (fun _ -> ret (TMap x, false))))));
+      concat lbrack (fun _ -> concat s (fun _ -> concat (group ()) (fun x -> concat s (fun _ -> concat rbrack (fun _ -> ret (TArray x, false))))));
 (* TODO: "~" s typename option(genericarg) *)
 (* TODO: "&" s "(" s group s ")" *)
-      concat amp (fun _ -> concat s (fun _ -> concat lparen (fun _ -> concat s (fun _ -> concat bareword (fun (_, name) -> concat s (fun _ -> concat colon (fun _ -> concat s (fun _ -> concat (type_ ()) (fun ty -> concat s (fun _ -> concat rparen (fun _ -> ret (TNamed (name, ty)))))))))))));
+      concat amp (fun _ -> concat s (fun _ -> concat lparen (fun _ -> concat s (fun _ -> concat bareword (fun (_, name) -> concat s (fun _ -> concat colon (fun _ -> concat s (fun _ -> concat (type_ ()) (fun ty -> concat s (fun _ -> concat rparen (fun _ -> ret (TNamed (name, ty), false))))))))))));
 (* TODO: "&" s groupname option(genericarg) *)
-      concat pound6 (fun _ -> concat (option tag) (fun tag -> concat lparen (fun _ -> concat s (fun _ -> concat (type_ ()) (fun x -> concat s (fun _ -> concat rparen (fun _ -> ret (TTagged (tag, x)))))))));
+      concat pound6 (fun _ -> concat (option tag) (fun tag -> concat lparen (fun _ -> concat s (fun _ -> concat (type_ ()) (fun x -> concat s (fun _ -> concat rparen (fun _ -> ret (TTagged (tag, x), false))))))));
 (* TODO: generalize "#"DIGIT option(tag) *)
-      concat pound0 (fun _ -> ret (TElem EUInt));
-      concat pound1 (fun _ -> ret (TElem ENInt));
-      concat pound2 (fun _ -> ret (TElem EByteString));
-      concat pound3 (fun _ -> ret (TElem ETextString));
-      concat pound7 (fun _ -> concat (option tag) (fun tag -> ret (match tag with None -> TElem ESimple | Some v -> TElem (ELiteral (LSimple v)))));
-      concat pound (fun _ -> ret (TElem EAny));
+      concat pound0 (fun _ -> ret (TElem EUInt, false));
+      concat pound1 (fun _ -> ret (TElem ENInt, false));
+      concat pound2 (fun _ -> ret (TElem EByteString, false));
+      concat pound3 (fun _ -> ret (TElem ETextString, false));
+      concat pound7 (fun _ -> concat (option tag) (fun tag -> ret ((match tag with None -> TElem ESimple | Some v -> TElem (ELiteral (LSimple v))), false)));
+      concat pound (fun _ -> ret (TElem EAny, false));
     ]
 )
 
