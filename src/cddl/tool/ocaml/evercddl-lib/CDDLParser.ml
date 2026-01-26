@@ -353,20 +353,6 @@ and grpchoice () = debug "grpchoice" (
     (ret GNop)
 )
 
-(* NOTE: The following `group0` is necessary to avoid backtracking on cases like:
-`foo = bar baz = quux`
-where `group` will parse `foo = bar baz` as a group definition, leaving `=` pending. In a "greedy" ABNF interpretation, this will fail, so this would require backtracking.
-. *)
-and group0 () = debug "group0" (
-  concat (grpent ()) (fun a -> concat (group0_tail ()) (fun q -> ret (q a)))
-)
-
-and group0_tail () = debug "group0_tail" (
-  choice
-    (concat s (fun _ -> concat slashslash (fun _ -> concat s (fun _ -> concat (grpent ()) (fun a -> concat (group0_tail ()) (fun q -> ret (fun (x: group) -> GChoice (x, q a))))))))
-    (ret (fun (x: group) -> x))
-)
-
 and grpent () = debug "grpent" (
   choices
     [
@@ -404,5 +390,5 @@ and rule () : unit parser =
   debug "rule"
     (choice
        (concat typename (* option(genericparm) *) (fun name -> concat s (fun _ -> concat (assignt name) (fun f -> concat s (fun _ -> concat (type_ ()) (fun t -> concat (get_state ()) (fun env -> let env' = { env with result = f t env.result } in set_state env')))))))
-       (concat groupname (* option(genericparm) *) (fun name -> concat s (fun _ -> concat (assigng name) (fun f -> concat s (fun _ -> concat (group0 ()) (fun t -> concat (get_state ()) (fun env -> let env' = { env with result = f t env.result } in set_state env')))))))
+       (concat groupname (* option(genericparm) *) (fun name -> concat s (fun _ -> concat (assigng name) (fun f -> concat s (fun _ -> concat (grpent ()) (fun t -> concat (get_state ()) (fun env -> let env' = { env with result = f t env.result } in set_state env')))))))
     )
