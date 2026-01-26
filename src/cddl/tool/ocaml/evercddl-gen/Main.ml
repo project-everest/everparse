@@ -33,11 +33,16 @@ let mkdir dir =
 
 let nbe = ref true
 
-let produce_fst_file (dir: string) : string =
+let produce_fst_file (tmpdir: string) (dir: string) : string =
   let filenames = List.rev !rev_filenames in
   match ParseFromFile.parse_from_files filenames with
   | None -> failwith "Parsing failed"
   | Some l ->
+     let progstr = CDDL_Spec_AST_Print.program_to_string l in
+     let _ = mkdir tmpdir in
+     let progch = open_out (Filename.concat tmpdir (!mname ^ ".ml")) in
+     let _ = output_string progch progstr in
+     let _ = close_out progch in
      let filenames_str = List.fold_left (fun accu fn -> accu ^ "\"" ^ fn ^ "\";") "" filenames in
      let str = CDDL_Tool_Gen.produce_defs_fst !nbe !mname !lang filenames_str l in
      if String.starts_with ~prefix:"Error: " str
@@ -277,8 +282,9 @@ let _ =
       prerr_endline ("ERROR: Module name " ^ !mname ^ " contains a period. This has unintended consequences for Rust code generation. Please specify a module name with --mname");
       exit 1
     end;
-  let dir = if !fstar_only then !odir else if !tmpdir <> "" then !tmpdir else mk_tmp_dir_name () in
-  let basename = produce_fst_file dir in
+  let tmpdir = if !tmpdir <> "" then !tmpdir else mk_tmp_dir_name () in
+  let dir = if !fstar_only then !odir else tmpdir in
+  let basename = produce_fst_file tmpdir dir in
   if !fstar_only then exit 0;
   let filename = Filename.concat dir basename in
   let res = run_cmd fstar_exe
