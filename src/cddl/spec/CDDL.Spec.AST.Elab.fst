@@ -1388,7 +1388,7 @@ and mk_wf_array_group
   | GDef n ->
     let g2 = match env.e_sem_env.se_bound n with
     | Some NGroup -> (env.e_env n)
-    | Some NType -> GElem false (TElem EAny) (env.e_env n)
+    | Some NType -> GElem false (TElem EAny) (TDef n)
     in
     begin match mk_wf_array_group fuel' env g2 with
     | RSuccess s2 -> RSuccess (WfARewrite g g2 s2)
