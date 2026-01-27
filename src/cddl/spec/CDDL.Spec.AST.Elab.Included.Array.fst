@@ -6,7 +6,7 @@ module U64 = FStar.UInt64
 module Util = CBOR.Spec.Util
 module U8 = FStar.UInt8
 
-#push-options "--z3rlimit 256 --query_stats --split_queries always --fuel 4 --ifuel 8"
+#push-options "--z3rlimit 512 --query_stats --split_queries always --fuel 4 --ifuel 8"
 
 let array_group_included
   (typ_included: typ_included_t)
@@ -76,14 +76,22 @@ let array_group_included
     end
     else ROutOfFuel
   | (_, (GDef n, a1r)), (a2, _) ->
-    let a1' = GConcat (e.e_env n) a1r in
+    let en = match e.e_sem_env.se_bound n with
+    | Some NGroup -> (e.e_env n)
+    | Some NType -> GElem false (TElem EAny) (e.e_env n)
+    in
+    let a1' = GConcat en a1r in
     rewrite_group_correct e.e_sem_env fuel false a1';
     let (a1_, res) = rewrite_group fuel false a1' in
     if res
     then array_group_included e close (a1_) a2
     else ROutOfFuel
   | (a2, _), (_, (GDef n, a1r)) ->
-    let a1' = GConcat (e.e_env n) a1r in
+    let en = match e.e_sem_env.se_bound n with
+    | Some NGroup -> (e.e_env n)
+    | Some NType -> GElem false (TElem EAny) (e.e_env n)
+    in
+    let a1' = GConcat en a1r in
     rewrite_group_correct e.e_sem_env fuel false a1';
     let (a1_, res) = rewrite_group fuel false a1' in
     if res
