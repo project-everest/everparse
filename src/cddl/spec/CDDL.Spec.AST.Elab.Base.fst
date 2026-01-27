@@ -876,7 +876,11 @@ let rec array_group_is_nonempty
   then ROutOfFuel
   else let fuel' : nat = fuel - 1 in
   match g with
-  | GDef n -> array_group_is_nonempty fuel' env (env.e_env n)
+  | GDef n ->
+    begin match env.e_sem_env.se_bound n with
+    | Some NGroup -> array_group_is_nonempty fuel' env (env.e_env n)
+    | Some NType -> RSuccess ()
+    end
   | GOneOrMore g' -> array_group_is_nonempty fuel' env g'
   | GZeroOrOne _ -> RFailure "array_group_is_nonempty: GZeroOrOne"
   | GZeroOrMore _ -> RFailure "array_group_is_nonempty: GZeroOrMore"
@@ -894,7 +898,7 @@ let rec array_group_is_nonempty
   | GElem _ _ _
   | GAlwaysFalse -> RSuccess ()
 
-#push-options "--z3rlimit 64 --split_queries always --query_stats --fuel 4 --ifuel 8"
+#push-options "--z3rlimit 128 --split_queries always --query_stats --fuel 4 --ifuel 8"
 
 #restart-solver
 let rec array_group_concat_unique_strong
@@ -960,12 +964,12 @@ let rec array_group_concat_unique_strong
   | _ ->
     begin match destruct_group g2 with
     | (GDef i, g2r) ->
-      let g2' = GConcat (env.e_env i) g2r in
-      Spec.array_group_concat_equiv
-        (fst (Ghost.reveal (env.e_sem_env.se_env i) <: (Spec.array_group None & Spec.map_group)))
-        (array_group_sem env.e_sem_env (env.e_env i))
-        (array_group_sem env.e_sem_env g2r)
-        (array_group_sem env.e_sem_env g2r);
+      let ei = match env.e_sem_env.se_bound i with
+      | Some NType -> GElem false (TElem EAny) (env.e_env i)
+      | Some NGroup -> env.e_env i
+      in
+      let g2' = GConcat ei g2r in
+      assert (Spec.array_group_equiv (array_group_sem env.e_sem_env g2) (array_group_sem env.e_sem_env g2'));
       rewrite_group_correct env.e_sem_env fuel false g2';
       let (g22, res_) = rewrite_group fuel false g2' in
       Spec.array_group_concat_unique_strong_equiv
