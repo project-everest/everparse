@@ -358,6 +358,7 @@ let _ =
 	"-bundle"; (!mname ^ "=\\*");
 	"-add-include"; "\"CBORDetAbstract.h\"";
         "-I"; Filename.concat (Filename.concat everparse_src_cbor_pulse "det") "c";
+        "-ccopt"; "-Wno-unused-variable";
         krml_file;
       ] @
         c_krml_list
