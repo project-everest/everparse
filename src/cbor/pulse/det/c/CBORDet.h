@@ -3,6 +3,10 @@
 #ifndef CBORDet_H
 #define CBORDet_H
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 #include "krmllib.h"
 
 typedef struct CBOR_Spec_Raw_Base_raw_uint64_s
@@ -278,7 +282,9 @@ cbor_raw cbor_det_mk_int64(uint8_t ty, uint64_t v);
 
 cbor_raw cbor_det_mk_tagged(uint64_t tag, cbor_raw *r);
 
-cbor_raw cbor_det_mk_string_from_arrayptr(uint8_t ty, uint8_t *a, uint64_t len);
+bool cbor_det_mk_byte_string_from_arrayptr(uint8_t *a, uint64_t len, cbor_raw *dest);
+
+bool cbor_det_mk_text_string_from_arrayptr(uint8_t *a, uint64_t len, cbor_raw *dest);
 
 cbor_raw cbor_det_mk_array_from_array(cbor_raw *a, uint64_t len);
 
@@ -374,6 +380,9 @@ cbor_freeable cbor_copy(cbor_raw c);
 
 void cbor_free(cbor_freeable x);
 
+#if defined(__cplusplus)
+}
+#endif
 
 #define CBORDet_H_DEFINED
 #endif /* CBORDet_H */

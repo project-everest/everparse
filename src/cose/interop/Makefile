@@ -47,6 +47,6 @@ verifytest.exe: verifytest.o common.o COSE_OpenSSL.o COSE_Format.o CBOR_Det.o
 bench.exe: bench.o common.o COSE_OpenSSL.o COSE_Format.o CBOR_Det.o
 
 clean:
-	rm -f *.o signtest verifytest bench message.*
+	rm -f *.o signtest.exe verifytest.exe bench.exe message.*
 
 .PHONY: clean

@@ -19,6 +19,17 @@ let parse_nlist
 : Tot (y: parser (parse_nlist_kind n k) (nlist n t) { y == parse_nlist' n p } )
 = parse_nlist' n p
 
+let parse_nlist_ext_forall
+  n #k #t p #k' p'
+=
+  let prf
+    (b: bytes)
+  : Lemma
+    (parse (parse_nlist n p) b == parse (parse_nlist n p') b)
+  = parse_nlist_ext n p p' b (fun _ -> ())
+  in
+  Classical.forall_intro prf
+
 #push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 #restart-solver
 

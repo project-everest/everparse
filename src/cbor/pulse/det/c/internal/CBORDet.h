@@ -3,6 +3,10 @@
 #ifndef internal_CBORDet_H
 #define internal_CBORDet_H
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 #include "krmllib.h"
 
 #include "../CBORDet.h"
@@ -39,6 +43,9 @@ cbor_det_map_iterator_t;
 
 typedef cbor_freeable cbor_det_freeable_t;
 
+#if defined(__cplusplus)
+}
+#endif
 
 #define internal_CBORDet_H_DEFINED
 #endif /* internal_CBORDet_H */

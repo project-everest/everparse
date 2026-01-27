@@ -22,13 +22,15 @@ int main(void) {
   /* Stack-allocate a byte string object (major type 2) */
   #define my_bytes_len 4
   uint8_t my_bytes[my_bytes_len] = { 18, 42, 17, 29 };
-  cbor_det_t cbor2 = cbor_det_mk_string_from_arrayptr(CBOR_MAJOR_TYPE_BYTE_STRING, my_bytes, my_bytes_len);
+  cbor_det_t cbor2;
+  assert (cbor_det_mk_byte_string_from_arrayptr(my_bytes, my_bytes_len, &cbor2));
 
   /* Stack-allocate a text string object (major type 3) */
-  uint8_t * my_string = "Hello world!";
+  uint8_t my_string[] = "Hello world!";
   assert (sizeof(my_string) > 0);
   uint64_t my_string_len = sizeof(my_string) - 1; // we don't want the null terminator
-  cbor_det_t cbor3 = cbor_det_mk_string_from_arrayptr(CBOR_MAJOR_TYPE_TEXT_STRING, my_string, my_string_len);
+  cbor_det_t cbor3;
+  assert (cbor_det_mk_text_string_from_arrayptr(my_string, my_string_len, &cbor3));
 
   /* Stack-allocate an array object (major type 4) with array elements cbor0 and cbor1 */
   #define my_array_len 2

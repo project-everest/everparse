@@ -736,11 +736,11 @@ fn cddl_array_iterator_next
   pi := j;
   let tri : cbor_array_iterator_t = truncate i.cddl_array_iterator_contents (U64.sub len0 len1);
   Trade.trans_hyp_l _ _ _ _;
-  with li' . assert (cbor_array_iterator_match 1.0R tri li');
+  with p' li' . assert (cbor_array_iterator_match p' tri li');
   assert (pure (li' == li1));
   assert (pure (impl_zero_copy_array_group_precond i.ty li1));
 //  let wq : impl_zero_copy_array_group cbor_array_iterator_match i.ps (dsnd spec) = i.cddl_array_iterator_impl_parse;
-  let res : impl_elt = cddl_array_iterator_impl_parse i tri #1.0R #li';
+  let res : impl_elt = cddl_array_iterator_impl_parse i tri #p' #li';
   Trade.trans_hyp_l _ _ _ _;
   res;
 }

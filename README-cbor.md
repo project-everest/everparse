@@ -11,7 +11,7 @@ Then, you can experiment with `docker run -i -t evercbor` ; there, you can use t
 * `make cose-snapshot` rebuilds the COSE library. This rule is incompatible with `cddl-test`
 
 If you are interested in the proofs, you can read [our
-paper](https://doi.org/10.48550/arXiv.2505.17335). Below is the
+paper](https://www.microsoft.com/en-us/research/publication/evercbor/). Below is the
 matching between the paper and the proofs.
 
 Section 2.2:
