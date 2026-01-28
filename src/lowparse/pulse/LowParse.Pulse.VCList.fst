@@ -89,6 +89,8 @@ ensures exists* v' .
     }
 }
 
+#push-options "--print_implicits"
+
 ghost
 fn pts_to_serialized_nlist_ext
   (#k1: parser_kind)
@@ -128,6 +130,12 @@ ensures exists* v2 .
     (serialize_nlist n1 s1)
     (serialize_nlist n2 s2)
     x;
+  rewrite each
+  pts_to_serialized #(parse_nlist_kind n2 k2)
+          #(nlist n1 t1) (serialize_nlist n2 s2)
+    as
+    pts_to_serialized #(parse_nlist_kind n2 k2)
+          #(nlist n2 t2) (serialize_nlist n2 s2)
 }
 
 let jump_nlist_inv

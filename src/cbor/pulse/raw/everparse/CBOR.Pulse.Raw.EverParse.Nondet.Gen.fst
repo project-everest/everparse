@@ -59,6 +59,8 @@ pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
       )
     )
 
+#push-options "--z3rlimit 32"
+
 let pts_to_serialized_nlist_raw_data_item_head_header'_post_children
   (n: pos)
   (va: LowParse.Spec.VCList.nlist n raw_data_item)
@@ -77,6 +79,8 @@ let pts_to_serialized_nlist_raw_data_item_head_header'_post_children
   )
 = // assert (synth_raw_data_item_from_alt (synth_raw_data_item_from_alt_recip (List.Tot.hd va)) == List.Tot.hd va);
   ()
+
+#pop-options
 
 let check_equiv_head
   (a1 a2: raw_data_item)
@@ -130,7 +134,7 @@ let check_equiv_head_correct_post
     check_equiv_list gl1 gl2 equiv == (if check_equiv_head a1 a2 then check_equiv_list l1' l2' equiv else Some false)
   )
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 
 let check_equiv_head_correct
   (gl1: list raw_data_item)

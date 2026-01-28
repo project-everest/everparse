@@ -82,7 +82,8 @@ ensures
     pure (
       List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l1) /\
       List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd l1) /\
-      CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1 v2 == (match res with Some r -> r | _ -> CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv l1 v2) /\
+      CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1 v2 == (match res with Some r -> r | _ -> CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv l1 v2)
+    ) ** pure (
       b == (Cons? l1 && None? res)
     )
   ) {
@@ -153,7 +154,8 @@ ensures
     pure (
       List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l2) /\
       List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd l2) /\
-      List.Tot.for_all (CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1) v2 == (res && List.Tot.for_all (CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1) l2) /\
+      List.Tot.for_all (CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1) v2 == (res && List.Tot.for_all (CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1) l2)
+    ) ** pure (
       b == (res && Cons? l2)
     )
   ) {
@@ -290,8 +292,9 @@ fn cbor_nondet_equiv_body
             List.Tot.length l1 == List.Tot.length l2 /\
             List.Tot.for_all SpecRaw.valid_raw_data_item l1 /\
             List.Tot.for_all SpecRaw.valid_raw_data_item l2 /\
-            b == (Cons? l1 && res) /\
             (SpecRaw.raw_equiv v1 v2 == (res && CBOR.Spec.Util.list_for_all2 SpecRaw.raw_equiv l1 l2))
+          ) ** pure (
+              b == (Cons? l1 && res)
         )) {
           let y1 = Read.cbor_array_iterator_next () pi1;
           Trade.trans _ _ (cbor_match p1 x1 v1);
@@ -403,7 +406,8 @@ ensures
       (SM.seq_list_match s1 l1 (Raw.cbor_match_map_entry ps))
       (SM.seq_list_match s l (Raw.cbor_match_map_entry ps)) **
     pure (
-      b == (res && Cons? l1) /\
+      b == (res && Cons? l1)
+    ) ** pure (
       SZ.v n1 <= Seq.length s /\
       Seq.equal s1 (Seq.slice s (SZ.v n1) (Seq.length s)) /\
       List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l1) /\
@@ -415,7 +419,8 @@ ensures
     let x1 = S.op_Array_Access x n1;
     SM.seq_list_match_cons_elim_trade _ _ (Raw.cbor_match_map_entry ps);
     Trade.trans _ _ (SM.seq_list_match s l (Raw.cbor_match_map_entry ps));
-    with y1 . assert (Raw.cbor_match_map_entry ps x1 y1);
+    with gx1 y1 . assert Raw.cbor_match_map_entry ps gx1 y1;
+    rewrite each gx1 as x1;
     let n2 : SZ.t = SZ.add n1 1sz;
     pn1 := n2;
     let mut pn2 = n2;
@@ -438,7 +443,8 @@ ensures
         (SM.seq_list_match s2 l2 (Raw.cbor_match_map_entry ps))
         (SM.seq_list_match s1' l1' (Raw.cbor_match_map_entry ps)) **
       pure (
-        b == (res && Cons? l2) /\
+        b == (res && Cons? l2)
+      ) ** pure (
         SZ.v n2 <= Seq.length s /\
         Seq.equal s2 (Seq.slice s (SZ.v n2) (Seq.length s)) /\
         List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l2) /\
@@ -449,7 +455,8 @@ ensures
       let n2 = !pn2;
       let x2 = S.op_Array_Access x n2;
       SM.seq_list_match_cons_elim_trade _ _ (Raw.cbor_match_map_entry ps);
-      with y2 . assert (Raw.cbor_match_map_entry ps x1 y1 ** Raw.cbor_match_map_entry ps x2 y2);
+      with gx2 y2 . assert (Raw.cbor_match_map_entry ps x1 y1 ** Raw.cbor_match_map_entry ps gx2 y2);
+      rewrite each gx2 as x2;
       unfold (Raw.cbor_match_map_entry ps x1 y1);
       unfold (Raw.cbor_match_map_entry ps x2 y2);
       pres := not (cbor_nondet_equiv x1.cbor_map_entry_key x2.cbor_map_entry_key);

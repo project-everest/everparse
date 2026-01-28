@@ -73,6 +73,7 @@ ensures
     fn _ {
       unfold (cbor_nondet_match (p /. 2.0R) c (SpecRaw.mk_cbor v));
       CBOR.Pulse.Raw.Match.Perm.cbor_raw_gather (p /. 2.0R) c v _ _;
+      rewrite each (p /. 2.0R +. p /. 2.0R) as p
     };
 }
 
@@ -89,6 +90,8 @@ fn cbor_nondet_reset_perm (_: unit) : reset_perm_t #_ cbor_nondet_match
   Trade.trans _ _ (cbor_nondet_match p c r);
   cbor_nondet_match_intro res;
   Trade.trans _ _ (cbor_nondet_match p c r);
+  rewrite each (2.0R *. q /. 2.0R) as q;
+  rewrite each (SpecRaw.mk_cbor r') as r;
   res
 }
 
@@ -473,6 +476,7 @@ ensures
     fn _ {
       unfold (cbor_nondet_array_iterator_match (p /. 2.0R) i (List.Tot.map SpecRaw.mk_cbor v));
       Read.cbor_array_iterator_gather i #(p /. 2.0R) #v;
+      rewrite each (p /. 2.0R +. p /. 2.0R) as p
     };
 }
 
@@ -516,7 +520,7 @@ fn cbor_nondet_array_iterator_length (_: unit) : array_iterator_length_t u#0 #_ 
   res
 }
 
-fn cbor_nondet_array_iterator_next (_: unit) : array_iterator_next_t u#0 #_ #_ cbor_nondet_match cbor_nondet_array_iterator_match
+fn cbor_nondet_array_iterator_next (_: unit) : array_iterator_next_t #_ #_ cbor_nondet_match cbor_nondet_array_iterator_match
 = (x: _)
   (#y: _)
   (#py: _)

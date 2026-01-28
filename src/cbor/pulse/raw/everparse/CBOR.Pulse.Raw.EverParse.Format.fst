@@ -1227,46 +1227,15 @@ fn get_map_payload
   get_map_payload' input v
 }
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 #restart-solver
 
-ghost fn pts_to_serialized_nlist_raw_data_item_head_header
+ghost fn pts_to_serialized_nlist_raw_data_item_head_header_ (_: unit) : pts_to_serialized_nlist_raw_data_item_head_header_t
+=
   (a: slice byte)
   (n: pos)
   (#pm: perm)
   (#va: LowParse.Spec.VCList.nlist n raw_data_item)
-requires
-  pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va
-ensures exists* (l: leaf) (h: header) v' .
-  pts_to_serialized
-    (LowParse.Spec.Combinators.serialize_nondep_then
-      serialize_header
-      (LowParse.Spec.Combinators.serialize_nondep_then
-        (serialize_leaf_content h)
-        (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n l)
-      )
-    )
-    a #pm v' **
-  Trade.trade
-    (pts_to_serialized
-      (LowParse.Spec.Combinators.serialize_nondep_then
-        serialize_header
-        (LowParse.Spec.Combinators.serialize_nondep_then
-          (serialize_leaf_content h)
-          (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n l)
-        )
-      )
-      a #pm v'
-    )
-    (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va) **
-  pure (
-    h == get_raw_data_item_header (List.Tot.hd va) /\
-    l == dfst (synth_raw_data_item_from_alt_recip (List.Tot.hd va)) /\
-    fst v' == h /\
-    fst (snd v') == (dsnd l) /\
-    (fst (snd (snd v')) <: list raw_data_item) == (dsnd (synth_raw_data_item_from_alt_recip (List.Tot.hd va)) <: list raw_data_item) /\
-    (snd (snd (snd v')) <: list raw_data_item) == List.Tot.tl va
-  )
 {
   pts_to_serialized_ext_trade
     (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param)))
@@ -1308,6 +1277,13 @@ ensures exists* (l: leaf) (h: header) v' .
     a;
   Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
 }
+
+#pop-options
+
+let pts_to_serialized_nlist_raw_data_item_head_header = pts_to_serialized_nlist_raw_data_item_head_header_ ()
+
+#push-options "--z3rlimit 256"
+#restart-solver
 
 ghost fn pts_to_serialized_nlist_raw_data_item_head_header'
   (a: slice byte)

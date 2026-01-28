@@ -54,7 +54,7 @@ fn cbor_det_reset_perm
     (cbor_det_match p x1 x2)
     (Raw.cbor_match p x1 (SpecRaw.mk_det_raw_cbor x2));
   let res = Raw.cbor_raw_reset_perm _ x1 _ q;
-  Trade.trans _ _ (cbor_det_match p x1 x2);
+  Trade.trans (cbor_det_match q _ _) _ (cbor_det_match p x1 x2);
   Trade.rewrite_with_trade
     (Raw.cbor_match q res (SpecRaw.mk_det_raw_cbor x2))
     (cbor_det_match q res x2);
@@ -885,9 +885,9 @@ decreases v
     SM.seq_list_match_cons_intro_trade (Seq.head c) (SpecRaw.mk_cbor_map_entry (List.Tot.hd v)) (Seq.tail c) (List.Tot.map SpecRaw.mk_cbor_map_entry (List.Tot.tl v)) (cbor_det_map_entry_match p);
     Trade.trans _ _ (SM.seq_list_match c v (Raw.cbor_match_map_entry p));
     rewrite each Seq.cons (Seq.head c) (Seq.tail c) as c;
-    rewrite each (mk_cbor_map_entry (List.Tot.Base.hd v) ::
-            List.Tot.Base.map mk_cbor_map_entry (List.Tot.Base.tl v)) as (
-            List.Tot.Base.map mk_cbor_map_entry (v));
+    rewrite each (SpecRaw.mk_cbor_map_entry (List.Tot.Base.hd v) ::
+            List.Tot.Base.map SpecRaw.mk_cbor_map_entry (List.Tot.Base.tl v)) as (
+            List.Tot.Base.map SpecRaw.mk_cbor_map_entry (v));
     ();
   }
 }
@@ -1242,7 +1242,7 @@ fn cbor_det_array_iterator_truncate (_: unit) : array_iterator_truncate_t u#0 #_
   let res = Read.cbor_array_iterator_truncate x len;
   Trade.trans _ (Read.cbor_array_iterator_match py x (List.Tot.Base.map mk_det_raw_cbor z)
       ) (cbor_det_array_iterator_match py x z); // FIXME: WHY WHY WHY do I now need to help Pulse here?
-  list_map_splitAt mk_det_raw_cbor z (U64.v len);
+  CBOR.Spec.Util.list_map_splitAt mk_det_raw_cbor z (U64.v len);
   Trade.rewrite_with_trade
     (Read.cbor_array_iterator_match 1.0R res (fst (List.Tot.splitAt (U64.v len) (List.Tot.map mk_det_raw_cbor z))))
     (cbor_det_array_iterator_match 1.0R res (fst (List.Tot.splitAt (U64.v len) z)));
@@ -1791,7 +1791,7 @@ fn cbor_det_map_get_invariant_false_elim
   (i: cbor_det_map_iterator_t)
   (res: option cbor_det_t)
 requires
-  cbor_det_map_get_invariant gb px x vx vk m p' i res **
+  cbor_det_map_get_invariant gb px x vx vk m i res **
   pure (gb == false) **
   pure (cbor_det_map_get_invariant_false_elim_precond vx m)
 ensures
@@ -1850,15 +1850,15 @@ fn cbor_det_map_get (_: unit)
     pts_to pcont cont **
     pts_to pres res **
     cbor_det_match pk k vk **
-    cbor_det_map_get_invariant cont' px x vx vk m p' i res **
+    cbor_det_map_get_invariant cont' px x vx vk m i res **
     pure (cont' == true ==>  None? res) **
     pure (cont == cont')
   {
-    with gb gi gres . assert (cbor_det_map_get_invariant gb px x vx vk m p' gi gres);
-    rewrite (cbor_det_map_get_invariant gb px x vx vk m p' gi gres)
-      as   (cbor_det_map_get_invariant gb px x vx vk m p' gi None);
-    unfold (cbor_det_map_get_invariant gb px x vx vk m p' gi None);
-    unfold (cbor_det_map_get_invariant_none gb px x vx vk m p' gi);
+    with gb gi gres . assert (cbor_det_map_get_invariant gb px x vx vk m gi gres);
+    rewrite (cbor_det_map_get_invariant gb px x vx vk m gi gres)
+      as   (cbor_det_map_get_invariant gb px x vx vk m gi None);
+    unfold (cbor_det_map_get_invariant gb px x vx vk m gi None);
+    unfold (cbor_det_map_get_invariant_none gb px x vx vk m gi);
     let entry = cbor_det_map_iterator_next () pi;
     Trade.trans _ _ (cbor_det_match px x vx);
     with pentry ventry . assert (cbor_det_map_entry_match pentry entry ventry);
@@ -1882,9 +1882,9 @@ fn cbor_det_map_get (_: unit)
       Classical.move_requires (Map.list_sorted_map_entry_order_lt_tail cbor_det_order ventry l') vk;
       List.Tot.assoc_mem (Ghost.reveal vk) l';
       pcont := false;
-      fold (cbor_det_map_get_invariant_none false px x vx vk m p' gi');
+      fold (cbor_det_map_get_invariant_none false px x vx vk m gi');
       assert (pts_to pres None);
-      fold (cbor_det_map_get_invariant false px x vx vk m p' gi' None);
+      fold (cbor_det_map_get_invariant false px x vx vk m gi' None);
     } else {
       Trade.elim_hyp_l _ _ (cbor_det_match px x vx);
       let i' = !pi;
@@ -1894,9 +1894,9 @@ fn cbor_det_map_get (_: unit)
       let is_empty = cbor_det_map_iterator_is_empty () i';
       let cont = not is_empty;
       pcont := cont;
-      fold (cbor_det_map_get_invariant_none cont px x vx vk m p' i');
+      fold (cbor_det_map_get_invariant_none cont px x vx vk m i');
       assert (pts_to pres None);
-      fold (cbor_det_map_get_invariant cont px x vx vk m p' i' None);
+      fold (cbor_det_map_get_invariant cont px x vx vk m i' None);
     }
   };
   with gb gi gres . assert (cbor_det_map_get_invariant gb px x vx vk m gi gres);

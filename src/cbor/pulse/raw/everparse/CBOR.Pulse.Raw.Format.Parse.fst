@@ -368,10 +368,9 @@ fn split_nondep_then_tot_kind
 module GR = Pulse.Lib.GhostReference
 module Ref = Pulse.Lib.Reference
 
-#push-options "--z3rlimit 32"
-
 #restart-solver
-#push-options "--z3rlimit_factor 4 --query_stats --fuel 2 --ifuel 1 --split_queries always --z3refresh"
+// #push-options "--z3rlimit 256 --query_stats --fuel 2 --ifuel 1 --split_queries always --z3refresh"
+#push-options "--z3rlimit 128"
 fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred_t u#0 u#0 #_ serialize_raw_data_item_param (R.raw_data_item_sorted_elem deterministically_encoded_cbor_map_key_order)
 = (a: _)
   (n: _)
@@ -527,6 +526,8 @@ fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred
 }
 
 #pop-options
+
+#push-options "--z3rlimit 32"
 
 #restart-solver
 

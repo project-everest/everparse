@@ -681,7 +681,7 @@ ensures
 
 #pop-options
 
-#push-options "--z3rlimit 64 --split_queries always --fuel 8 --ifuel 6"
+#push-options "--z3rlimit 1024 --split_queries always --fuel 8 --ifuel 6"
 
 #restart-solver
 inline_for_extraction

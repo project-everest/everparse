@@ -606,7 +606,12 @@ fn get_string_as_arrayptr_safe_gen
       dest dlen p y vdest vlen vdest vlen);
     false
   } else {
-    f x dest dlen
+    let res = f x dest dlen;
+    with vdest' vlen' . rewrite (get_string_as_arrayptr_safe_post None vmatch x dest dlen p y vdest vlen
+      vdest' vlen')
+    as (get_string_as_arrayptr_safe_post (Some ty) vmatch x dest dlen p y vdest vlen
+      vdest' vlen');
+    res
   }
 }
 
@@ -2316,9 +2321,13 @@ fn mk_string_from_arrayptr_dispatch
   (#w: _)
 {
   if (ty = cbor_major_type_byte_string) {
-    mk_byte a len dest
+    let res = mk_byte a len dest;
+    rewrite each cbor_major_type_byte_string as ty;
+    res
   } else {
-    mk_text a len dest
+    let res = mk_text a len dest;
+    rewrite each cbor_major_type_text_string as ty;
+    res
   }
 }
 
@@ -3301,6 +3310,8 @@ ensures
       AP.pts_to_not_null a;
       with va' . rewrite (AP.pts_to a va') as (AP.pts_to_or_null a #1.0R va');
       fold (mk_map_from_arrayptr_safe_post vmatch1 vmatch2 a dest va pv vv vdest false);
+      rewrite (mk_map_from_arrayptr_safe_post vmatch1 vmatch2 a dest va pv vv vdest false)
+        as (mk_map_from_arrayptr_safe_post vmatch1 vmatch2 a dest va pv vv vdest bres)
     }
     Some vres -> {
       unfold (mk_map_gen_post vmatch1 vmatch2 s va pv vv (Some vres));
@@ -3318,6 +3329,8 @@ ensures
       Trade.trans_concl_l _ _ _ _;
       rewrite each vres as vdest;
       fold (mk_map_from_arrayptr_safe_post vmatch1 vmatch2 a dest va pv vv vdest true);
+      rewrite (mk_map_from_arrayptr_safe_post vmatch1 vmatch2 a dest va pv vv vdest true)
+        as (mk_map_from_arrayptr_safe_post vmatch1 vmatch2 a dest va pv vv vdest bres);
     }
   }
 }
@@ -4626,6 +4639,8 @@ let cbor_map_get_multiple_as_arrayptr_t
       )
     )
 
+#push-options "--print_implicits"
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn cbor_map_get_multiple_as_arrayptr
@@ -4647,10 +4662,62 @@ fn cbor_map_get_multiple_as_arrayptr
   if (AP.is_null dest) {
     Trade.refl (PM.seq_list_match s v (cbor_map_get_multiple_entry_match vmatch false ps));
     trade_concl_intro_l (vmatch _ _ _) _ _;
+    rewrite
+    Trade.trade #emp_inames
+      (Pulse.Lib.SeqMatch.seq_list_match #(cbor_map_get_multiple_entry_t t)
+          #(T.cbor & option T.cbor)
+          (reveal #(Seq.Base.seq (cbor_map_get_multiple_entry_t t)) s)
+          (reveal #(list (T.cbor & option T.cbor)) v)
+          (cbor_map_get_multiple_entry_match #t vmatch false ps))
+      (vmatch pmap map (reveal #T.cbor vmap) **
+        Pulse.Lib.SeqMatch.seq_list_match #(cbor_map_get_multiple_entry_t t)
+          #(T.cbor & option T.cbor)
+          (reveal #(Seq.Base.seq (cbor_map_get_multiple_entry_t t)) s)
+          (reveal #(list (T.cbor & option T.cbor)) v)
+          (cbor_map_get_multiple_entry_match #t vmatch false ps))
+      as
+        Trade.trade #emp_inames
+      (Pulse.Lib.SeqMatch.seq_list_match #t'
+          #(T.cbor & option T.cbor)
+          (reveal #(Seq.Base.seq (cbor_map_get_multiple_entry_t t)) s)
+          (reveal #(list (T.cbor & option T.cbor)) v)
+          (cbor_map_get_multiple_entry_match #t vmatch false ps))
+      (vmatch pmap map (reveal #T.cbor vmap) **
+        Pulse.Lib.SeqMatch.seq_list_match #(cbor_map_get_multiple_entry_t t)
+          #(T.cbor & option T.cbor)
+          (reveal #(Seq.Base.seq (cbor_map_get_multiple_entry_t t)) s)
+          (reveal #(list (T.cbor & option T.cbor)) v)
+          (cbor_map_get_multiple_entry_match #t vmatch false ps));
     false
   } else if (mt map <> cbor_major_type_map) {
     Trade.refl (PM.seq_list_match s v (cbor_map_get_multiple_entry_match vmatch false ps));
     trade_concl_intro_l (vmatch _ _ _) _ _;
+    rewrite
+    Trade.trade #emp_inames
+      (Pulse.Lib.SeqMatch.seq_list_match #(cbor_map_get_multiple_entry_t t)
+          #(T.cbor & option T.cbor)
+          (reveal #(Seq.Base.seq (cbor_map_get_multiple_entry_t t)) s)
+          (reveal #(list (T.cbor & option T.cbor)) v)
+          (cbor_map_get_multiple_entry_match #t vmatch false ps))
+      (vmatch pmap map (reveal #T.cbor vmap) **
+        Pulse.Lib.SeqMatch.seq_list_match #(cbor_map_get_multiple_entry_t t)
+          #(T.cbor & option T.cbor)
+          (reveal #(Seq.Base.seq (cbor_map_get_multiple_entry_t t)) s)
+          (reveal #(list (T.cbor & option T.cbor)) v)
+          (cbor_map_get_multiple_entry_match #t vmatch false ps))
+      as
+        Trade.trade #emp_inames
+      (Pulse.Lib.SeqMatch.seq_list_match #t'
+          #(T.cbor & option T.cbor)
+          (reveal #(Seq.Base.seq (cbor_map_get_multiple_entry_t t)) s)
+          (reveal #(list (T.cbor & option T.cbor)) v)
+          (cbor_map_get_multiple_entry_match #t vmatch false ps))
+      (vmatch pmap map (reveal #T.cbor vmap) **
+        Pulse.Lib.SeqMatch.seq_list_match #(cbor_map_get_multiple_entry_t t)
+          #(T.cbor & option T.cbor)
+          (reveal #(Seq.Base.seq (cbor_map_get_multiple_entry_t t)) s)
+          (reveal #(list (T.cbor & option T.cbor)) v)
+          (cbor_map_get_multiple_entry_match #t vmatch false ps));
     false
   } else {
     rewrite AP.pts_to_or_null dest s as AP.pts_to dest s;
@@ -4658,6 +4725,32 @@ fn cbor_map_get_multiple_as_arrayptr
     f map dests;
     S.arrayptr_to_slice_elim dests;
     with s' . rewrite AP.pts_to dest s' as AP.pts_to_or_null dest s';
+    with s' v' . rewrite
+    Trade.trade #emp_inames
+      (Pulse.Lib.SeqMatch.seq_list_match #(cbor_map_get_multiple_entry_t t)
+          #(T.cbor & option T.cbor)
+          s'
+          (reveal #(list (T.cbor & option T.cbor)) v')
+          (cbor_map_get_multiple_entry_match #t vmatch true ps))
+      (vmatch pmap map (reveal #T.cbor vmap) **
+        Pulse.Lib.SeqMatch.seq_list_match #(cbor_map_get_multiple_entry_t t)
+          #(T.cbor & option T.cbor)
+          (reveal #(Seq.Base.seq (cbor_map_get_multiple_entry_t t)) s)
+          (reveal #(list (T.cbor & option T.cbor)) v)
+          (cbor_map_get_multiple_entry_match #t vmatch false ps))
+      as
+     Trade.trade #emp_inames
+      (Pulse.Lib.SeqMatch.seq_list_match #t'
+          #(T.cbor & option T.cbor)
+          s'
+          (reveal #(list (T.cbor & option T.cbor)) v')
+          (cbor_map_get_multiple_entry_match #t vmatch true ps))
+      (vmatch pmap map (reveal #T.cbor vmap) **
+        Pulse.Lib.SeqMatch.seq_list_match #(cbor_map_get_multiple_entry_t t)
+          #(T.cbor & option T.cbor)
+          (reveal #(Seq.Base.seq (cbor_map_get_multiple_entry_t t)) s)
+          (reveal #(list (T.cbor & option T.cbor)) v)
+          (cbor_map_get_multiple_entry_match #t vmatch false ps));
     true
   } 
 }

@@ -952,7 +952,7 @@ let split_nondep_then_post'
   (s2: serializer p2)
   (input: slice byte)
   (pm: perm)
-  (v: Ghost.erased (t1 & t2))
+  (v: (t1 & t2))
   (left right: slice byte)
 : Tot slprop
 = pts_to_serialized s1 left #pm (fst v) **
@@ -971,7 +971,7 @@ let split_nondep_then_post
   (s2: serializer p2)
   (input: slice byte)
   (pm: perm)
-  (v: Ghost.erased (t1 & t2))
+  (v: (t1 & t2))
   (res: (slice byte & slice byte))
 : Tot slprop
 = let (left, right) = res in
@@ -1128,6 +1128,8 @@ let split_nondep_then''_postcond
 = t0 == (t1 & t2) /\
   v == coerce_eq () (v1, v2)
 
+#push-options "--print_implicits"
+
 inline_for_extraction
 fn split_nondep_then''
   (#t0 #t1 #t2: Type0)
@@ -1167,7 +1169,8 @@ fn split_nondep_then''
   let (left, right) = split_nondep_then s1 j1 s2 input;
   unfold (split_nondep_then_post s1 s2 input pm v (left, right));
   unfold (split_nondep_then_post' s1 s2 input pm v left right);
-  Trade.trans _ _ (pts_to_serialized s0 input #pm v);
+  rewrite each (t1 & t2) as t0;
+  Trade.trans (_ ** _) _ (pts_to_serialized s0 input #pm v);
   (left, right)
 }
 
@@ -1571,6 +1574,14 @@ fn pts_to_serialized_ext_nondep_then_right'
   join_nondep_then s1 (fst res) s3 (snd res) input;
 }
 
+let pts_to_serialized_ext_nondep_then_right_post
+  (#t1 #t2 #t3: Type)
+  (v: (t1 & t2))
+  (v13: (t1 & t3))
+: Tot prop
+= t2 == t3 /\
+  v == v13
+
 ghost
 fn pts_to_serialized_ext_nondep_then_right
   (#t1 #t2 #t3: Type0)
@@ -1591,8 +1602,8 @@ fn pts_to_serialized_ext_nondep_then_right
   )
   ensures exists* v13 .
     pts_to_serialized (serialize_nondep_then s1 s3) input #pm v13 ** trade (pts_to_serialized (serialize_nondep_then s1 s3) input #pm v13) (pts_to_serialized (serialize_nondep_then s1 s2) input #pm v) **
-    pure (t2 == t3 /\
-      v == v13
+    pure (
+      pts_to_serialized_ext_nondep_then_right_post v v13
     )
 {
   pts_to_serialized_ext_nondep_then_right' s1 s2 s3 input;
@@ -1687,9 +1698,10 @@ fn nondep_then_fst'
     input;
   let v0 : Ghost.erased (t1 & t2) = Ghost.hide (coerce_eq () (Ghost.reveal v));
   let input1, input2 = split_nondep_then s1 j1 s2 input;
-  unfold (split_nondep_then_post s1 s2 input pm v0 (input1, input2));
-  unfold (split_nondep_then_post' s1 s2 input pm v0 input1 input2);
+  unfold (split_nondep_then_post s1 s2 input pm v (input1, input2));
+  unfold (split_nondep_then_post' s1 s2 input pm v input1 input2);
   Trade.elim_hyp_r _ _ _;
+  rewrite each (t1 & t2) as t0;
   Trade.trans _ _ (pts_to_serialized s0 input #pm v);
   input1
 }
