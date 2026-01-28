@@ -1113,7 +1113,8 @@ fn cbor_string_reset_perm_correct
     rewrite each c'.cbor_string_ptr as c.cbor_string_ptr;
     fold (cbor_match_string c p r)
   };
-  rewrite each c' as cbor_string_reset_perm p c;
+  rewrite each c' as cbor_string_reset_perm (p /. q) c;
+  ()
 }
 
 ghost
@@ -1137,6 +1138,8 @@ fn cbor_tagged_reset_perm_correct
   with s . assert (pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) s);
   rewrite (pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) s)
     as (pts_to c'.cbor_tagged_ptr #(q `perm_mul` c'.cbor_tagged_ref_perm) s);
+  with c_ . rewrite cbor_match (perm_mul p c.cbor_tagged_payload_perm) c_ (Tagged?.v r)
+    as cbor_match (perm_mul q c'.cbor_tagged_payload_perm) c_ (Tagged?.v r);
   fold (cbor_match_tagged c' q r cbor_match);
   intro
     (Trade.trade
@@ -1150,12 +1153,12 @@ fn cbor_tagged_reset_perm_correct
     with s . assert (pts_to c'.cbor_tagged_ptr #(q `perm_mul` c'.cbor_tagged_ref_perm) s);
     rewrite (pts_to c'.cbor_tagged_ptr #(q `perm_mul` c'.cbor_tagged_ref_perm) s)
       as (pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) s);
-  with c_ . rewrite  cbor_match (perm_mul 1.0R c'.cbor_tagged_payload_perm) c_ (Tagged?.v r)
+  with c_ . rewrite  cbor_match (perm_mul q c'.cbor_tagged_payload_perm) c_ (Tagged?.v r)
     as cbor_match (perm_mul p c.cbor_tagged_payload_perm) c_ (Tagged?.v r);
     fold (cbor_match_tagged c p r cbor_match);
     ()
   };
-  rewrite each c' as cbor_tagged_reset_perm p c;
+  rewrite each c' as cbor_tagged_reset_perm (p /. q) c;
 }
 
 ghost
@@ -1194,7 +1197,7 @@ fn cbor_array_reset_perm_correct
       as (pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) s);
     fold (cbor_match_array c p r cbor_match)
   };
-  rewrite each c' as cbor_array_reset_perm p c;
+  rewrite each c' as cbor_array_reset_perm (p /. q) c;
 }
 
 ghost
@@ -1233,7 +1236,7 @@ fn cbor_map_reset_perm_correct
       as (pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) s);
     fold (cbor_match_map0 c p r cbor_match)
   };
-  rewrite each c' as cbor_map_reset_perm p c;
+  rewrite each c' as cbor_map_reset_perm (p /. q) c;
 }
 
 ghost
@@ -1263,6 +1266,7 @@ fn cbor_raw_reset_perm_correct
         Trade.rewrite_with_trade
           (cbor_match_string (cbor_string_reset_perm (p /. q) v) q r)
           (cbor_match q c' r);
+        rewrite each c' as cbor_raw_reset_perm_tot (p /. q) c;
         Trade.trans _ _ (cbor_match p c r)
     }
     norewrite
@@ -1273,6 +1277,7 @@ fn cbor_raw_reset_perm_correct
       Trade.rewrite_with_trade
         (cbor_match_int v r)
         (cbor_match q c r);
+      rewrite each (cbor_match q c r) as (cbor_match q (cbor_raw_reset_perm_tot (p /. q) c) r);
       Trade.trans _ _ (cbor_match p c r)
     }
     norewrite
@@ -1283,6 +1288,7 @@ fn cbor_raw_reset_perm_correct
       Trade.rewrite_with_trade
         (cbor_match_simple v r)
         (cbor_match q c r);
+      rewrite each (cbor_match q c r) as (cbor_match q (cbor_raw_reset_perm_tot (p /. q) c) r);
       Trade.trans _ _ (cbor_match p c r)
     }
     norewrite
@@ -1297,6 +1303,7 @@ fn cbor_raw_reset_perm_correct
       Trade.rewrite_with_trade
         (cbor_match_tagged (cbor_tagged_reset_perm (p /. q) v) q r cbor_match)
         (cbor_match q c' r);
+      rewrite each c' as cbor_raw_reset_perm_tot (p /. q) c;
       Trade.trans _ _ (cbor_match p c r)
     }
     norewrite
@@ -1311,6 +1318,7 @@ fn cbor_raw_reset_perm_correct
       Trade.rewrite_with_trade
         (cbor_match_array (cbor_array_reset_perm (p /. q) v) q r cbor_match)
         (cbor_match q c' r);
+      rewrite each c' as cbor_raw_reset_perm_tot (p /. q) c;
       Trade.trans _ _ (cbor_match p c r)
     }
     norewrite
@@ -1325,25 +1333,32 @@ fn cbor_raw_reset_perm_correct
       Trade.rewrite_with_trade
         (cbor_match_map0 (cbor_map_reset_perm (p /. q) v) q r cbor_match)
         (cbor_match q c' r);
+      rewrite each c' as cbor_raw_reset_perm_tot (p /. q) c;
       Trade.trans _ _ (cbor_match p c r)
     }
+    norewrite
     CBOR_Case_Serialized_Tagged s -> {
       perm_q_p_r q p s.cbor_serialized_perm;
       Trade.rewrite_with_trade
         (cbor_match p c r)
-        (cbor_match q c' r)
+        (cbor_match q c' r);
+      rewrite each c' as cbor_raw_reset_perm_tot (p /. q) c;
     }
+    norewrite
     CBOR_Case_Serialized_Array s -> {
       perm_q_p_r q p s.cbor_serialized_perm;
       Trade.rewrite_with_trade
         (cbor_match p c r)
-        (cbor_match q c' r)
+        (cbor_match q c' r);
+      rewrite each c' as cbor_raw_reset_perm_tot (p /. q) c;
     }
+    norewrite
     CBOR_Case_Serialized_Map s -> {
       perm_q_p_r q p s.cbor_serialized_perm;
       Trade.rewrite_with_trade
         (cbor_match p c r)
-        (cbor_match q c' r)
+        (cbor_match q c' r);
+      rewrite each c' as cbor_raw_reset_perm_tot (p /. q) c;
     }
   }
 }
