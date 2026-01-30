@@ -250,8 +250,6 @@ ensures
   res
 }
 
-#set-options "--print_universes --print_implicits"
-
 fn cbor_array_iterator_next
   (sq: squash SZ.fits_u64)
   (pi: R.ref cbor_array_iterator)
@@ -329,6 +327,22 @@ ensures
     c
     len;
   fold (cbor_array_iterator_match 1.0R res (fst (List.Tot.splitAt (U64.v len) r)));
+  rewrite
+    trade (cbor_raw_iterator_match cbor_match
+          cbor_serialized_array_iterator_match
+          1.0R
+          res
+          (fst (List.Tot.Base.splitAt (U64.v len) r)))
+      (cbor_raw_iterator_match cbor_match
+          cbor_serialized_array_iterator_match
+          pm
+          c
+          r)
+  as trade (cbor_array_iterator_match 1.0R
+          res
+          (fst (List.Tot.Base.splitAt (U64.v len) r)))
+      (cbor_array_iterator_match pm c r)
+    ;
   res
 }
 
@@ -476,6 +490,15 @@ ensures exists* p .
       Trade.trans _ _ (cbor_match pm c r);
       with p . assert (cbor_raw_iterator_match cbor_match_map_entry cbor_serialized_map_iterator_match p res (Map?.v r));
       fold (cbor_map_iterator_match p res (Map?.v r));
+      with _p . rewrite
+        trade (cbor_raw_iterator_match cbor_match_map_entry
+              cbor_serialized_map_iterator_match
+              _p
+              res
+              (Map?.v r))
+          (cbor_match pm c r)
+        as trade (cbor_map_iterator_match _p res (Map?.v r)) (cbor_match pm c r)
+        ;
       res
     }
   }

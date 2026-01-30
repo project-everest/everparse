@@ -124,8 +124,6 @@ ensures exists* y .
 let cbor_serialized_array_iterator_match = cbor_raw_serialized_iterator_match serialize_raw_data_item
 
 
-#set-options "--print_implicits"
-
 fn cbor_serialized_array_iterator_init
   (c: cbor_serialized)
   (#pm: perm)
@@ -172,6 +170,15 @@ ensures
   cbor_raw_serialized_iterator_fold serialize_raw_data_item p res (Array?.v r);
   LowParse.Pulse.VCList.trade_trans_nounify _ _ _ (cbor_match_serialized_array c pm r);
   fold (cbor_serialized_array_iterator_match p res (Array?.v r));
+  with _pm' . rewrite
+    trade (cbor_raw_serialized_iterator_match serialize_raw_data_item
+          _pm'
+          res
+          (Array?.v r))
+      (cbor_match_serialized_array c pm r)
+    as trade (cbor_serialized_array_iterator_match _pm' res (Array?.v r))
+      (cbor_match_serialized_array c pm r)
+    ;
   res
 }
 
@@ -274,6 +281,16 @@ ensures
   cbor_raw_serialized_iterator_fold (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) p res (Map?.v r);
   LowParse.Pulse.VCList.trade_trans_nounify _ _ _ (cbor_match_serialized_map c pm r);
   fold (cbor_serialized_map_iterator_match p res (Map?.v r));
+  with _pm' . rewrite
+    trade (cbor_raw_serialized_iterator_match (serialize_nondep_then serialize_raw_data_item
+              serialize_raw_data_item)
+          _pm'
+          res
+          (Map?.v r))
+      (cbor_match_serialized_map c pm r)
+    as trade (cbor_serialized_map_iterator_match _pm' res (Map?.v r))
+      (cbor_match_serialized_map c pm r)
+    ;
   res
 }
 

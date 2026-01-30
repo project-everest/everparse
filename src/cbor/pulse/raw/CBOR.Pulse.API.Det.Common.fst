@@ -54,7 +54,7 @@ fn cbor_det_reset_perm
     (cbor_det_match p x1 x2)
     (Raw.cbor_match p x1 (SpecRaw.mk_det_raw_cbor x2));
   let res = Raw.cbor_raw_reset_perm _ x1 _ q;
-  Trade.trans (cbor_det_match q _ _) _ (cbor_det_match p x1 x2);
+  Trade.trans _ _ (cbor_det_match p x1 x2);
   Trade.rewrite_with_trade
     (Raw.cbor_match q res (SpecRaw.mk_det_raw_cbor x2))
     (cbor_det_match q res x2);
