@@ -249,7 +249,10 @@ let rel_inl_map =
                   rel_label
                   rel_values)
 
-let dummy_map_val () : label & values =
+[@@noextract_to "krml"]
+inline_for_extraction noextract let dummy_map_type : Type0 = label & values
+
+let dummy_map_val () : dummy_map_type =
   Mklabel0
     (Mkevercddl_int0 (Mkevercddl_uint0 0uL)),
   Mkvalues0 (Mkany0
@@ -316,6 +319,8 @@ fn mk_phdrs (alg: Int32.t) (rest: A.larray (label & values) 0)
   Pulse.Lib.SeqMatch.seq_list_match_nil_intro (Seq.Base.create 0 (dummy_map_val ())) []
       (rel_pair rel_label rel_values);
   assert pure (Seq.Base.create 0 (dummy_map_val ()) `Seq.equal` vrest);
+  rewrite each (FStar.Seq.Base.create 0
+            (dummy_map_val ())) as vrest;
   rw_l (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
   rw_l (rel_map_sign1_phdrs_eq alg alg' _);
   with res. assert rel_empty_or_serialized_map res (sign1_phdrs_spec alg);
@@ -363,6 +368,8 @@ fn mk_emphdrs (rest: A.larray (label & values) 0)
   let rest2 = S.from_array rest 0sz;
   Pulse.Lib.SeqMatch.seq_list_match_nil_intro (Seq.Base.create 0 (dummy_map_val ())) []
       (rel_pair rel_label rel_values);
+  rewrite each (FStar.Seq.Base.create 0
+            (dummy_map_val ())) as vrest;
   rw_l (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
   rw_l (rel_map_sign1_emphdrs_eq _);
   with res. assert rel_header_map res (sign1_emphdrs_spec ());
@@ -420,7 +427,7 @@ let sign1_spec
   exists tbs. to_be_signed_spec phdr aad payload tbs /\
   ser_to bundle_cose_sign1_tagged''.b_spec
     (Mkspect_cose_sign1_tagged0 (Mkspect_cose_sign10
-        phdr uhdr (Inl payload) { _x0 = spec_ed25519_sign privkey tbs }))
+        phdr uhdr (Inl payload) (Mkspect_bstr0 (spec_ed25519_sign privkey tbs))))
     msg
 
 ghost fn trade_exists (#t: Type0) (p: t->slprop) x
@@ -457,7 +464,8 @@ fn sign1 privkey uhdr aad payload (outbuf: S.slice UInt8.t)
     pure (sign1_spec vprivkey vuhdr vaad vpayload msg)
 {
   let alg: Int32.t = -8l;
-  let mut phdrauxbuf = [| dummy_map_val (); 0sz |];
+  let mv: dummy_map_type = dummy_map_val ();
+  let mut phdrauxbuf = [| mv; 0sz |];
   let phdr = mk_phdrs alg phdrauxbuf;
   let mut sigbuf = [| 0uy; 64sz |];
   Seq.lemma_create_len (SizeT.v 64sz) 0uy; //?!?
@@ -466,12 +474,12 @@ fn sign1 privkey uhdr aad payload (outbuf: S.slice UInt8.t)
   AP.to_array sigbuf2 sigbuf #_ #(spec_ed25519_sign vprivkey _);
   with tbs. assert A.pts_to sigbuf (spec_ed25519_sign vprivkey tbs);
   let sigbuf3 = S.from_array sigbuf 64sz;
-  with sigbuf4. assert pure ((sigbuf4 <: bstr) == { _x0 = { p = 1.0R; s = sigbuf3 } });
-  rw_l_wt (rel_bstr_eq sigbuf4 { _x0 = spec_ed25519_sign vprivkey tbs });
+  with sigbuf4. assert pure ((sigbuf4 <: bstr) == Mkbstr0 { p = 1.0R; s = sigbuf3 });
+  rw_l_wt (rel_bstr_eq sigbuf4 (Mkspect_bstr0 (spec_ed25519_sign vprivkey tbs)));
   rw_l_wt (rel_sign1_tagged_eq1 phdr _ payload sigbuf4 (sign1_phdrs_spec alg) _ vpayload _);
   let outbuf_sz = serialize_cose_sign1_tagged' _ outbuf;
   elim_trade (rel_cose_sign1_tagged _ _) _;
-  elim_trade (rel_bstr sigbuf4 { _x0 = spec_ed25519_sign vprivkey tbs }) _;
+  elim_trade (rel_bstr sigbuf4 (Mkspect_bstr0 (spec_ed25519_sign vprivkey tbs))) _;
   S.to_array sigbuf3;
   elim_trade _ _;
   with voutbuf. assert S.pts_to outbuf voutbuf;
@@ -500,7 +508,7 @@ fn sign1_simple privkey payload (outbuf: S.slice UInt8.t)
   ensures rel_bstr payload vpayload
   ensures exists* msg.
     borrows (S.pts_to out msg) (exists* voutbuf. pts_to outbuf voutbuf) **
-    pure (sign1_spec vprivkey (sign1_emphdrs_spec ()) { _x0 = Seq.create 0 0uy } vpayload msg)
+    pure (sign1_spec vprivkey (sign1_emphdrs_spec ()) (Mkspect_bstr0 (Seq.create 0 0uy)) vpayload msg)
 {
   let mut uhdrauxbuf = [| dummy_map_val (); 0sz |];
   let uhdr = mk_emphdrs uhdrauxbuf;
@@ -694,7 +702,7 @@ let good_signature (pubkey: Seq.seq UInt8.t { Seq.length pubkey == 32 })
   parses_from bundle_cose_sign1_tagged''.b_spec vmsg msg /\
   vmsg._x0.payload == Inl (Mkspect_bstr0 payload) /\
   Seq.length vmsg._x0.signature._x0 == 64 /\
-  to_be_signed_spec vmsg._x0.protected { _x0 = aad } { _x0 = payload } tbs /\
+  to_be_signed_spec vmsg._x0.protected (Mkspect_bstr0 aad) (Mkspect_bstr0 payload) tbs /\
   spec_ed25519_verify pubkey tbs vmsg._x0.signature._x0
 
 let int_eq_of_diff_zero (a b: int) : Lemma (requires a - b == 0) (ensures a == b) = ()
