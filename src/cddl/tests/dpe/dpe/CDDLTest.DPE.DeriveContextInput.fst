@@ -149,30 +149,34 @@ ensures is_derive_context_input_args_data e res k **
         pure (Inl? e <==> Inl? res)
 {
   match e {
-    Inl e -> {
+    Inl e' -> {
       match res {
         Inr _ -> {
           unfold is_derive_context_input_args_data;
           assert pure (False);
           unreachable ()
         }
-        Inl res -> {
+        Inl res' -> {
           unfold is_derive_context_input_args_data;
-          fold (is_derive_context_input_args_data (Inl e) (Inl res) k);
+          fold (is_derive_context_input_args_data (Inl e') (Inl res') k);
+          rewrite (is_derive_context_input_args_data (Inl e') (Inl res') k)
+          as is_derive_context_input_args_data e res k;
         }
       }
     }
 
-    Inr e -> {
+    Inr e' -> {
       match res {
         Inl _ -> {
           unfold is_derive_context_input_args_data;
           assert pure (False);
           unreachable ()
         }
-        Inr res -> {
+        Inr res' -> {
           unfold is_derive_context_input_args_data;
-          fold (is_derive_context_input_args_data (Inr e) (Inr res) k);
+          fold (is_derive_context_input_args_data (Inr e') (Inr res') k);
+          rewrite (is_derive_context_input_args_data (Inr e') (Inr res') k)
+          as is_derive_context_input_args_data e res k;
         }
       }
     }
@@ -224,6 +228,8 @@ ensures
         Inl w -> {
           Trade.trade_compose _ _ k';
           fold (is_derive_context_input_args_data (Inl x) (Inl w) k');
+          rewrite (is_derive_context_input_args_data (Inl x) (Inl w) k')
+          as is_derive_context_input_args_data e res k';
         }
       }
 
@@ -239,6 +245,8 @@ ensures
         Inr w -> {
           Trade.trade_compose _ _ k';
           fold (is_derive_context_input_args_data (Inr x) (Inr w) k');
+          rewrite (is_derive_context_input_args_data (Inr x) (Inr w) k')
+          as is_derive_context_input_args_data e res k';
         }
       }
 
@@ -336,6 +344,11 @@ ensures is_derive_context_input_args_data
       rewrite each x as (derive_context_input_args_data_right (Inl xx));
       rewrite each w as (spect_derive_context_input_args_data_right (Inl yy));
       fold (is_derive_context_input_args_data (Inl xx) (Inl yy));
+      with k' . rewrite (is_derive_context_input_args_data (Inl xx) (Inl yy) k')
+      as is_derive_context_input_args_data 
+          (derive_context_input_args_data_left x)
+          (spect_derive_context_input_args_data_left w)
+          (rel_derive_context_input_args_data x w);
     }
 
     Inr l0 -> {
@@ -346,6 +359,11 @@ ensures is_derive_context_input_args_data
       rewrite each x as (derive_context_input_args_data_right (Inr xx));
       rewrite each w as (spect_derive_context_input_args_data_right (Inr yy));
       fold (is_derive_context_input_args_data (Inr xx) (Inr yy));
+      with k' . rewrite (is_derive_context_input_args_data (Inr xx) (Inr yy) k')
+      as is_derive_context_input_args_data 
+          (derive_context_input_args_data_left x)
+          (spect_derive_context_input_args_data_left w)
+          (rel_derive_context_input_args_data x w);
     }
   }
 }
@@ -376,20 +394,24 @@ ensures  is_record_opt e s k ** pure (Some? e <==> Some? s)
         None -> {
           unfold is_record_opt;
           fold (is_record_opt None None k);
+          rewrite (is_record_opt None None k)
+          as is_record_opt e s k;
         }
       }
     }
 
-    Some e -> {
+    Some e' -> {
       match s {
         None -> {
           unfold is_record_opt;
           assert pure (False);
           unreachable ()
         }
-        Some s -> {
+        Some s' -> {
           unfold is_record_opt;
-          fold (is_record_opt (Some e) (Some s) k);
+          fold (is_record_opt (Some e') (Some s') k);
+          rewrite (is_record_opt (Some e') (Some s') k)
+          as is_record_opt e s k;
         }
       }
     }
@@ -413,8 +435,10 @@ returns _:squash (Some? s)
 ensures is_derive_context_input_args_data r (Some?.v s) k
 {
   is_record_opt_cases _ _ _;
-  let Some s = s;
+  let Some s' = s;
   unfold is_record_opt;
+  rewrite is_derive_context_input_args_data r s' k
+  as is_derive_context_input_args_data r (Some?.v s) k;
 }
 
 ghost
@@ -432,6 +456,8 @@ ensures is_record_opt e res k'
         None -> {  
           Trade.elim_trade _ _;
           fold (is_record_opt None None k');
+          rewrite (is_record_opt None None k')
+          as is_record_opt e res k';
         }
         Some _ -> { 
           assert pure (False);
@@ -440,15 +466,17 @@ ensures is_record_opt e res k'
       }
     }
 
-    Some e -> {
+    Some e' -> {
       match res {
         None -> { 
           assert pure (False);
           unreachable ()
         }
-        Some res -> {
+        Some res' -> {
           trans_is_derive_context_input _ _ _ _;
-          fold (is_record_opt (Some e) (Some res) k');
+          fold (is_record_opt (Some e') (Some res') k');
+          rewrite (is_record_opt (Some e') (Some res') k')
+          as is_record_opt e res k';
         }
       }
     }
@@ -492,7 +520,12 @@ ensures
   match x {
     None -> { 
       rewrite each w as None;
-      fold (is_record_opt None None);
+      fold (is_record_opt None None (rel_option rel_derive_context_input_args_data None None));
+      with k' . rewrite (is_record_opt None None k')
+      as is_record_opt 
+        (map_opt x derive_context_input_args_data_left)
+        (map_opt w spect_derive_context_input_args_data_left)
+        (rel_option rel_derive_context_input_args_data x w);
       ()
     }
     Some v -> { 
@@ -502,6 +535,13 @@ ensures
       trans_is_derive_context_input _ _ _ (rel_option rel_derive_context_input_args_data x w);
       with xx yy k. assert (is_derive_context_input_args_data xx yy k);
       fold (is_record_opt (Some xx) (Some yy));
+      rewrite
+        is_record_opt (Some (derive_context_input_args_data_left (Some?.v x)))
+        (Some (spect_derive_context_input_args_data_left (Some?.v w)))
+        (rel_option rel_derive_context_input_args_data x w)
+      as is_record_opt (map_opt x derive_context_input_args_data_left)
+      (map_opt w spect_derive_context_input_args_data_left)
+      (rel_option rel_derive_context_input_args_data x w);
     }
   }
 }
@@ -580,6 +620,10 @@ ensures
   as spect_derive_context_input_args_data;
   extract_derive_context_input_args_data_opt _ _;
   is_record_opt_compose _ _ _ _;
+  with k l m . rewrite is_record_opt k l m
+  as is_record_opt (map_opt x.input_data derive_context_input_args_data_left)
+      (map_opt w.input_data spect_derive_context_input_args_data_left)
+      (rel_derive_context_input_args x w);
 }
 
 
