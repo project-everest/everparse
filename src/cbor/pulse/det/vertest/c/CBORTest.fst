@@ -109,6 +109,7 @@ ensures
         with pm vm vk . assert (map_get_post cbor_det_match m pm vm vk ov);
         Trade.elim (cbor_det_match _ bar _) _;
         match ov {
+          norewrite
           None -> {
             rewrite (map_get_post cbor_det_match m pm vm vk ov)
               as (map_get_post_none cbor_det_match m pm vm vk);
@@ -116,6 +117,7 @@ ensures
             Trade.elim (cbor_det_match _ m _) _;
             exit_impossible
           }
+          norewrite
           Some v -> {
             rewrite (map_get_post cbor_det_match m pm vm vk ov)
               as (map_get_post_some cbor_det_match m pm vm vk v);
