@@ -253,9 +253,8 @@ fn impl_copyful_unit
     (#p: _)
     (#v: _)
 {
-  let res: unit = ();
+  let res = ();
   fold (rel_unit res ());
-  admit (); // HELP!!!
   res
 }
 
@@ -281,7 +280,6 @@ fn impl_zero_copy_unit
     unfold (rel_unit res ())
   };
   Trade.intro_trade _ _ _ aux;
-  admit (); // HELP!
   res
 }
 
@@ -324,7 +322,6 @@ fn impl_zero_copy_always_false
   let res : squash False = ();
   fold (rel_always_false _ _ res res);
   rewrite (vmatch p c v) as (Trade.trade (rel_always_false _ _ res res) (vmatch p c v)); // by contradiction
-  admit (); // HELP!
   res
 }
 
