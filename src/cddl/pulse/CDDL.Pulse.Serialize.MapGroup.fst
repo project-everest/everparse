@@ -112,7 +112,7 @@ fn impl_serialize_map_group_nop
 
 #push-options "--z3rlimit 32"
 #restart-solver
-#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 2 --query_stats --log_queries"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 2 --query_stats"
 
 let compose_choice_l
     ([@@@erasable]t1: Ghost.erased det_map_group)
