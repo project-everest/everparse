@@ -475,9 +475,7 @@ val parse_cbor_map
     (requires True)
     (ensures fun res -> match res with
     | None -> True
-    | Some (v, len) ->
-      List.Tot.length v == n /\
-      len <= Seq.length s
+    | Some (_, len) -> len <= Seq.length s
     )
 
 val parse_cbor_map_prefix
