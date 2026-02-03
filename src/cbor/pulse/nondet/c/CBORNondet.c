@@ -298,6 +298,22 @@ static bool CBOR_Pulse_Raw_Util_eq_Some_0sz(FStar_Pervasives_Native_option__size
     return false;
 }
 
+static CBOR_Spec_Raw_Base_raw_uint64 CBOR_Spec_Raw_Optimal_mk_raw_uint64(uint64_t x)
+{
+  uint8_t ite;
+  if (x <= (uint64_t)MAX_SIMPLE_VALUE_ADDITIONAL_INFO)
+    ite = 0U;
+  else if (x < 256ULL)
+    ite = 1U;
+  else if (x < 65536ULL)
+    ite = 2U;
+  else if (x < 4294967296ULL)
+    ite = 3U;
+  else
+    ite = 4U;
+  return ((CBOR_Spec_Raw_Base_raw_uint64){ .size = ite, .value = x });
+}
+
 static cbor_string CBOR_Pulse_Raw_Match_cbor_string_reset_perm(cbor_string c)
 {
   return
@@ -416,22 +432,6 @@ static cbor_raw CBOR_Pulse_Raw_Match_cbor_raw_reset_perm_tot(cbor_raw c)
       );
   else
     return c;
-}
-
-static CBOR_Spec_Raw_Base_raw_uint64 CBOR_Spec_Raw_Optimal_mk_raw_uint64(uint64_t x)
-{
-  uint8_t ite;
-  if (x <= (uint64_t)MAX_SIMPLE_VALUE_ADDITIONAL_INFO)
-    ite = 0U;
-  else if (x < 256ULL)
-    ite = 1U;
-  else if (x < 65536ULL)
-    ite = 2U;
-  else if (x < 4294967296ULL)
-    ite = 3U;
-  else
-    ite = 4U;
-  return ((CBOR_Spec_Raw_Base_raw_uint64){ .size = ite, .value = x });
 }
 
 static int16_t CBOR_Pulse_Raw_Compare_Bytes_impl_uint8_compare(uint8_t x1, uint8_t x2)
