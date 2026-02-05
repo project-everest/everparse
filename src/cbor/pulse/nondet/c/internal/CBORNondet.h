@@ -3,6 +3,10 @@
 #ifndef internal_CBORNondet_H
 #define internal_CBORNondet_H
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 #include "krmllib.h"
 
 #include "CBORNondetType.h"
@@ -52,6 +56,9 @@ CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
 
 bool CBOR_Pulse_Raw_Nondet_Compare_cbor_nondet_equiv(cbor_raw x1, cbor_raw x2);
 
+#if defined(__cplusplus)
+}
+#endif
 
 #define internal_CBORNondet_H_DEFINED
 #endif /* internal_CBORNondet_H */

@@ -26,7 +26,7 @@ int main(void) {
   assert (cbor_nondet_mk_byte_string(my_bytes, my_bytes_len, &cbor2));
 
   /* Stack-allocate a text string object (major type 3) */
-  uint8_t * my_string = "Hello world!";
+  uint8_t my_string[] = "Hello world!";
   assert (sizeof(my_string) > 0);
   uint64_t my_string_len = sizeof(my_string) - 1; // we don't want the null terminator
   cbor_nondet_t cbor3;

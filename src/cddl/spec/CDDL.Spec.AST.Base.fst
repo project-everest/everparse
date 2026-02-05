@@ -170,7 +170,7 @@ let rec group_bounded
 : Tot bool
   (decreases g)
 = match g with
-  | GDef d -> env d = Some NGroup
+  | GDef d -> Some? (env d)
   | GElem _ key value -> typ_bounded env key && typ_bounded env value
   | GZeroOrMore g'
   | GZeroOrOne g'
@@ -512,6 +512,7 @@ let t_size
         )
       )
 
+[@@sem_attr]
 let rec extract_int_value
   (env: sem_env)
   (x: typ)
@@ -532,6 +533,7 @@ let rec extract_int_value
   | TNamed _ t -> extract_int_value env t
   | _ -> None
 
+[@@sem_attr]
 let rec extract_range_value
   (env: sem_env)
   (x: typ)
@@ -574,7 +576,11 @@ let rec array_group_sem
     (requires group_bounded env.se_bound g)
     (ensures fun _ -> True)
 = match g with
-  | GDef d -> fst (Ghost.reveal (env.se_env d) <: (Spec.array_group None & Spec.map_group))
+  | GDef d ->
+    begin match env.se_bound d with
+    | Some NGroup -> fst (Ghost.reveal (env.se_env d) <: (Spec.array_group None & Spec.map_group))
+    | Some NType -> Spec.array_group_item (sem_of_type_sem (env.se_env d))
+    end
   | GElem _ _ t -> Spec.array_group_item (typ_sem env t)
   | GAlwaysFalse -> Spec.array_group_always_false
   | GNop -> Spec.array_group_empty
@@ -591,7 +597,11 @@ and map_group_sem
     (requires group_bounded env.se_bound g)
     (ensures fun _ -> True)
 = match g with
-  | GDef d -> snd (Ghost.reveal (env.se_env d) <: (Spec.array_group None & Spec.map_group))
+  | GDef d ->
+    begin match env.se_bound d with
+    | Some NGroup -> snd (Ghost.reveal (env.se_env d) <: (Spec.array_group None & Spec.map_group))
+    | Some NType -> Spec.map_group_match_item false Spec.any (sem_of_type_sem (env.se_env d))
+    end
   | GElem cut key value -> Spec.map_group_match_item cut (typ_sem env key) (typ_sem env value)
   | GAlwaysFalse -> Spec.map_group_always_false
   | GNop -> Spec.map_group_nop
