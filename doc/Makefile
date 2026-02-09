@@ -34,7 +34,7 @@ BUILDDIR      = _build
 	rm -rf $@ $@.tmp
 	python3 -m venv $@.tmp
 	mv $@.tmp $@
-	if ! $@/bin/python3 -m pip install pytz tzdata sphinx==1.7.2 jinja2==3.0.0 alabaster==0.7.13 sphinx-rtd-theme ; then mv $@ $@.tmp ; exit 1 ; fi
+	if ! $@/bin/python3 -m pip install pytz tzdata sphinx==1.7.2 jinja2==3.0.0 alabaster==0.7.13 setuptools==81.0.0 sphinx-rtd-theme ; then mv $@ $@.tmp ; exit 1 ; fi
 
 # Put it first so that "make" without argument is like "make help".
 help: .venv
