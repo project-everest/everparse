@@ -77,7 +77,29 @@ val parse_bounded_integer_le
 
 val parse_u16_le : parser parse_u16_kind U16.t
 
+val parse_u16_le_spec
+  (b: bytes)
+: Lemma
+  (requires (Seq.length b >= 2))
+  (ensures (
+    let pp = parse parse_u16_le b in
+    Some? pp /\ (
+    let (Some (v, consumed)) = pp in
+    U16.v v == E.le_to_n (Seq.slice b 0 2) /\ consumed == 2
+  )))
+
 val parse_u32_le : parser parse_u32_kind U32.t
+
+val parse_u32_le_spec
+  (b: bytes)
+: Lemma
+  (requires (Seq.length b >= 4))
+  (ensures (
+    let pp = parse parse_u32_le b in
+    Some? pp /\ (
+    let (Some (v, consumed)) = pp in
+    U32.v v == E.le_to_n (Seq.slice b 0 4) /\ consumed == 4
+  )))
 
 val serialize_bounded_integer_le
   (sz: integer_size)
