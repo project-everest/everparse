@@ -92,7 +92,7 @@ make_everparse() {
     ADMIT=1 $MAKE -C "$EVERPARSE_HOME" "$@" package-subset
 
     # Set environment
-    eval "$($MAKE -C "$EVERPARSE_HOME" -s env)"
+    eval "$($MAKE -C "$EVERPARSE_HOME" -s --no-print-directory env)"
     FSTAR_PKG_ROOT="$(fixpath "$(dirname "$FSTAR_EXE")/..")"
     
     # Copy dependencies

@@ -313,7 +313,7 @@ appropriately populated environment variables for opam, OCaml, F\*,
 etc.
 
 Alternatively, if you are already in a Bash shell session, you can also
-directly populate its environment with `make deps && eval "$(make -s env)"`
+directly populate its environment with `make deps && eval "$(make -s --no-print-directory env)"`
 
 ### From a Docker image
 
