@@ -1,3 +1,3 @@
 FStar_hash := 2f105b9b241ec3e99d9f99dfa74186238833d18b
 karamel_hash := fb36fecb552c9fb202beb38a6c5a732c3f2cd49f
-pulse_hash := 70382960cfac1dfd14b3885500fd401aab298ed6
+pulse_hash := 4f9061791e4efd8006ff360b77259aca8ad9aa6a
