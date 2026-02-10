@@ -33,8 +33,9 @@ let parse_fldata_injective
   (p: parser k t)
   (sz: nat)
 : Lemma
-  (ensures (injective (parse_fldata' p sz)))
-= parser_kind_prop_equiv k p;
+  (ensures (k.parser_kind_injective == true ==> injective (parse_fldata' p sz)))
+= if k.parser_kind_injective then begin
+  parser_kind_prop_equiv k p;
   let f
     (b1 b2: bytes)
   : Lemma
@@ -43,6 +44,7 @@ let parse_fldata_injective
   = assert (injective_precond p (Seq.slice b1 0 sz) (Seq.slice b2 0 sz))
   in
   Classical.forall_intro_2 (fun b -> Classical.move_requires (f b))
+  end
 
 // unfold
 inline_for_extraction
@@ -50,11 +52,17 @@ let parse_fldata_kind
   (sz: nat)
   (k: parser_kind)
 : Tot parser_kind
-= strong_parser_kind sz sz (
-    match k.parser_kind_metadata with
-    | Some ParserKindMetadataFail -> Some ParserKindMetadataFail
-    | _ -> None
-  )
+= {
+    parser_kind_low = sz;
+    parser_kind_high = Some sz;
+    parser_kind_subkind = Some ParserStrong;
+    parser_kind_metadata = (
+      match k.parser_kind_metadata with
+      | Some ParserKindMetadataFail -> Some ParserKindMetadataFail
+      | _ -> None
+    );
+    parser_kind_injective = k.parser_kind_injective;
+  }
 
 inline_for_extraction
 val parse_fldata

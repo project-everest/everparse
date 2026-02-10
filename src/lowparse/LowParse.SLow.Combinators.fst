@@ -63,7 +63,7 @@ let parse32_and_then
   (#k': parser_kind)
   (#t':Type)
   (p': (t -> Tot (parser k' t')))
-  (u: unit { and_then_cases_injective p' } )
+  (u: unit { (and_then_kind k k').parser_kind_injective ==> and_then_cases_injective p' } )
   (p32' : ((x: t) -> Tot (parser32 (p' x))))
 : Tot (parser32 (p `and_then` p'))
 = fun (input: bytes32) ->
@@ -179,7 +179,7 @@ let serialize32_dtuple2
   (#t2: t1 -> Tot Type)
   (#p2: (x: t1) -> Tot (parser k2 (t2 x)))
   (#s2: (x: t1) -> Tot (serializer (p2 x)))
-  (s2' : (x: t1) -> serializer32 (s2 x))
+  (s2' : (x: t1) -> serializer32 (s2 x) { k2.parser_kind_injective == true })
 : Tot (serializer32 (serialize_dtuple2 s1 s2))
 = fun (input: dtuple2 t1 t2) ->
   [@inline_let]
@@ -396,7 +396,7 @@ let size32_dtuple2
   (#t2: t1 -> Tot Type)
   (#p2: (x: t1) -> Tot (parser k2 (t2 x)))
   (#s2: (x: t1) -> Tot (serializer (p2 x)))
-  (s2' : (x: t1) -> Tot (size32 (s2 x)))
+  (s2' : (x: t1) -> Tot (size32 (s2 x)) { k2.parser_kind_injective == true })
 : Tot (size32 (serialize_dtuple2 s1 s2))
 = fun x ->
   [@inline_let] let _ = serialize_dtuple2_eq s1 s2 x in
@@ -512,7 +512,7 @@ let serialize32_weaken
   (#t: Type)
   (#p2: parser k2 t)
   (#s2: serializer p2)
-  (s2' : serializer32 s2 { k1 `is_weaker_than` k2 })
+  (s2' : serializer32 s2 { k1 `is_weaker_than` k2 /\ k1.parser_kind_injective == true })
 : Tot (serializer32 (serialize_weaken k1 s2))
 = fun x -> s2' x
 
@@ -523,7 +523,7 @@ let size32_weaken
   (#t: Type)
   (#p2: parser k2 t)
   (#s2: serializer p2)
-  (s2' : size32 s2 { k1 `is_weaker_than` k2 })
+  (s2' : size32 s2 { k1 `is_weaker_than` k2 /\ k1.parser_kind_injective == true })
 : Tot (size32 (serialize_weaken k1 s2))
 = fun x -> s2' x
 
@@ -586,6 +586,7 @@ let serialize32_tagged_union
   (s32: (t: tag_t) -> Tot (serializer32 (s t)))
   (x: squash (
     kt.parser_kind_subkind == Some ParserStrong /\
+    k.parser_kind_injective == true /\
     begin match kt.parser_kind_high, k.parser_kind_high with
     | Some max1, Some max2 -> max1 + max2 < 4294967296
     | _ -> False

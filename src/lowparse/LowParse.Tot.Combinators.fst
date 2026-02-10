@@ -23,7 +23,7 @@ val parse_synth_eq
   (f2: t1 -> Tot t2)
   (b: bytes)
 : Lemma
-  (requires (synth_injective f2))
+  (requires (k.parser_kind_injective ==> synth_injective f2))
   (ensures (parse (parse_synth p1 f2) b == parse_synth' #k p1 f2 b))
 
 let parse_synth_eq #k #t1 #t2 = tot_parse_synth_eq #k #t1 #t2
@@ -49,7 +49,7 @@ let serialize_weaken
   (#t: Type)
   (k' : parser_kind)
   (#p: parser k t)
-  (s: serializer p { k' `is_weaker_than` k })
+  (s: serializer p { k' `is_weaker_than` k /\ k'.parser_kind_injective == true })
 : Tot (serializer (weaken k' p))
 = serialize_weaken #k k' s
 
@@ -95,7 +95,7 @@ val and_then_eq
   (p': (t -> Tot (parser k' t')))
   (input: bytes)
 : Lemma
-  (requires (and_then_cases_injective p'))
+  (requires ((and_then_kind k k').parser_kind_injective ==> and_then_cases_injective p'))
   (ensures (parse (and_then p p') input == and_then_bare p p' input))
 
 let and_then_eq #k #t p #k' #t' p' input = and_then_eq #k #t p #k' #t' p' input
@@ -169,7 +169,7 @@ val serialize_tagged_union
   (#p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
   (s: (t: tag_t) -> Tot (serializer (p t)))
 : Pure (serializer (parse_tagged_union pt tag_of_data p))
-  (requires (kt.parser_kind_subkind == Some ParserStrong))
+  (requires (kt.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_injective == true))
   (ensures (fun _ -> True))
 
 let serialize_tagged_union #kt st tag_of_data #k s = serialize_tot_tagged_union #kt st tag_of_data #k s

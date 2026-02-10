@@ -824,6 +824,7 @@ let gaccessor_clens_sum_payload_injective
   (sl sl' : bytes)
 : Lemma
   (requires (
+    (parse_sum_kind kt t pc).parser_kind_injective /\
     gaccessor_pre (parse_sum t p pc) (dsnd (pc k)) (clens_sum_payload t k) sl /\
     gaccessor_pre (parse_sum t p pc) (dsnd (pc k)) (clens_sum_payload t k) sl' /\
     injective_precond (parse_sum t p pc) sl sl'
@@ -851,8 +852,13 @@ let gaccessor_clens_sum_payload_no_lookahead
   (ensures (gaccessor_clens_sum_payload' t p pc k sl == gaccessor_clens_sum_payload' t p pc k sl'))
 = parse_sum_eq'' t p pc sl;
   parse_sum_eq'' t p pc sl' ;
-  parse_strong_prefix (parse_sum t p pc) sl sl' ;
-  parse_injective p sl sl'
+  let Some (_, off1) = parse p sl in
+  let Some (_, off_combo) = parse (parse_sum t p pc) sl in
+  assert (off1 <= off_combo);
+  assert (Seq.slice sl' 0 off_combo `Seq.equal` Seq.slice sl 0 off_combo);
+  assert (Seq.slice sl' 0 off1 `Seq.equal` Seq.slice (Seq.slice sl' 0 off_combo) 0 off1);
+  assert (Seq.slice sl 0 off1 `Seq.equal` Seq.slice (Seq.slice sl 0 off_combo) 0 off1);
+  parse_strong_prefix p sl sl'
 
 #pop-options
 
@@ -863,8 +869,7 @@ let gaccessor_clens_sum_payload
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (k: sum_key t)
 : Tot (gaccessor (parse_sum t p pc) (dsnd (pc k)) (clens_sum_payload t k))
-= Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_clens_sum_payload_injective t p pc k x));
-  Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_clens_sum_payload_no_lookahead t p pc k x));
+= Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_clens_sum_payload_no_lookahead t p pc k x));
   gaccessor_prop_equiv (parse_sum t p pc) (dsnd (pc k)) (clens_sum_payload t k) (gaccessor_clens_sum_payload' t p pc k);
   gaccessor_clens_sum_payload' t p pc k
 
@@ -1849,6 +1854,7 @@ let gaccessor_clens_dsum_payload_injective
   (sl sl' : bytes)
 : Lemma
   (requires (
+    (parse_dsum_kind kt t f ku).parser_kind_injective /\
     gaccessor_pre (parse_dsum t p f g) (parse_dsum_type_of_tag' t f g k) (clens_dsum_payload t k) sl /\
     gaccessor_pre (parse_dsum t p f g) (parse_dsum_type_of_tag' t f g k) (clens_dsum_payload t k) sl' /\
     injective_precond (parse_dsum t p f g) sl sl'
@@ -1883,8 +1889,13 @@ let gaccessor_clens_dsum_payload_no_lookahead
   ))
 = parse_dsum_eq3 t p f g sl;
   parse_dsum_eq3 t p f g sl';
-  parse_strong_prefix (parse_dsum t p f g) sl sl' ;
-  parse_injective p sl sl'
+  let Some (_, off1) = parse p sl in
+  let Some (_, off_combo) = parse (parse_dsum t p f g) sl in
+  assert (off1 <= off_combo);
+  assert (Seq.slice sl' 0 off_combo `Seq.equal` Seq.slice sl 0 off_combo);
+  assert (Seq.slice sl' 0 off1 `Seq.equal` Seq.slice (Seq.slice sl' 0 off_combo) 0 off1);
+  assert (Seq.slice sl 0 off1 `Seq.equal` Seq.slice (Seq.slice sl 0 off_combo) 0 off1);
+  parse_strong_prefix p sl sl'
 
 let gaccessor_clens_dsum_payload
   (#kt: parser_kind)
@@ -1895,8 +1906,7 @@ let gaccessor_clens_dsum_payload
   (g: parser ku (dsum_type_of_unknown_tag t))
   (k: dsum_key t)
 : Tot (gaccessor (parse_dsum t p f g) (parse_dsum_type_of_tag' t f g k) (clens_dsum_payload t k))
-= Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_clens_dsum_payload_injective t p f g k x));
-  Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_clens_dsum_payload_no_lookahead t p f g k x));
+= Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_clens_dsum_payload_no_lookahead t p f g k x));
   gaccessor_prop_equiv (parse_dsum t p f g) (parse_dsum_type_of_tag' t f g k) (clens_dsum_payload t k) (gaccessor_clens_dsum_payload' t p f g k);
   gaccessor_clens_dsum_payload' t p f g k
 
@@ -1984,6 +1994,7 @@ let gaccessor_clens_dsum_unknown_payload_injective
   (sl sl' : bytes)
 : Lemma
   (requires (
+    (parse_dsum_kind kt t f ku).parser_kind_injective /\
     gaccessor_pre (parse_dsum t p f g) g (clens_dsum_unknown_payload t) sl /\
     gaccessor_pre (parse_dsum t p f g) g (clens_dsum_unknown_payload t) sl' /\
     injective_precond (parse_dsum t p f g) sl sl'
@@ -2013,8 +2024,13 @@ let gaccessor_clens_dsum_unknown_payload_no_lookahead
 =
   parse_dsum_eq3 t p f g sl;
   parse_dsum_eq3 t p f g sl';
-  parse_strong_prefix (parse_dsum t p f g) sl sl' ;
-  parse_injective p sl sl'
+  let Some (_, off1) = parse p sl in
+  let Some (_, off_combo) = parse (parse_dsum t p f g) sl in
+  assert (off1 <= off_combo);
+  assert (Seq.slice sl' 0 off_combo `Seq.equal` Seq.slice sl 0 off_combo);
+  assert (Seq.slice sl' 0 off1 `Seq.equal` Seq.slice (Seq.slice sl' 0 off_combo) 0 off1);
+  assert (Seq.slice sl 0 off1 `Seq.equal` Seq.slice (Seq.slice sl 0 off_combo) 0 off1);
+  parse_strong_prefix p sl sl'
 
 let gaccessor_clens_dsum_unknown_payload
   (#kt: parser_kind)
@@ -2024,8 +2040,7 @@ let gaccessor_clens_dsum_unknown_payload
   (#ku: parser_kind)
   (g: parser ku (dsum_type_of_unknown_tag t))
 : Tot (gaccessor (parse_dsum t p f g) g (clens_dsum_unknown_payload t))
-= Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_clens_dsum_unknown_payload_injective t p f g x));
-  Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_clens_dsum_unknown_payload_no_lookahead t p f g x));
+= Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_clens_dsum_unknown_payload_no_lookahead t p f g x));
   gaccessor_prop_equiv (parse_dsum t p f g) g (clens_dsum_unknown_payload t) (gaccessor_clens_dsum_unknown_payload' t p f g); 
   gaccessor_clens_dsum_unknown_payload' t p f g
 

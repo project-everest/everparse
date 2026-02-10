@@ -533,6 +533,7 @@ let gaccessor_bounded_vlgen_payload_injective_1
   (sl sl' : bytes)
 : Lemma
   (requires (
+    (parse_bounded_vlgen_kind sk min max k).parser_kind_injective /\
     k.parser_kind_subkind == Some ParserStrong /\
     gaccessor_pre (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) sl /\
     gaccessor_pre (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) sl' /\
@@ -562,6 +563,7 @@ let gaccessor_bounded_vlgen_payload_injective_2
   (sl sl' : bytes)
 : Lemma
   (ensures ((
+    (parse_bounded_vlgen_kind sk min max k).parser_kind_injective /\
     k.parser_kind_subkind == Some ParserStrong /\
     gaccessor_pre (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) sl /\
     gaccessor_pre (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) sl' /\
@@ -599,8 +601,13 @@ let gaccessor_bounded_vlgen_payload_no_lookahead_1
   ))
 = parse_bounded_vlgen_unfold min max pk s sl;
   parse_bounded_vlgen_unfold min max pk s sl' ;
-  parse_strong_prefix (parse_bounded_vlgen min max pk s) sl sl' ;
-  parse_injective pk sl sl'
+  let Some (_, off1) = parse pk sl in
+  let Some (_, off_combo) = parse (parse_bounded_vlgen min max pk s) sl in
+  assert (off1 <= off_combo);
+  assert (Seq.slice sl' 0 off_combo `Seq.equal` Seq.slice sl 0 off_combo);
+  assert (Seq.slice sl' 0 off1 `Seq.equal` Seq.slice (Seq.slice sl' 0 off_combo) 0 off1);
+  assert (Seq.slice sl 0 off1 `Seq.equal` Seq.slice (Seq.slice sl 0 off_combo) 0 off1);
+  parse_strong_prefix pk sl sl'
 
 let gaccessor_bounded_vlgen_payload_no_lookahead_2
   (min: nat)
@@ -636,7 +643,6 @@ let gaccessor_bounded_vlgen_payload
   (s: serializer p {k.parser_kind_subkind == Some ParserStrong})
 : Tot (gaccessor (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s))
 = Classical.forall_intro_2 (gaccessor_bounded_vlgen_payload_no_lookahead_2 min max pk s);
-  Classical.forall_intro_2 (gaccessor_bounded_vlgen_payload_injective_2 min max pk s);
   gaccessor_prop_equiv (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) (gaccessor_bounded_vlgen_payload' min max pk s);
   gaccessor_bounded_vlgen_payload' min max pk s
 
@@ -706,6 +712,7 @@ let gaccessor_vlgen_payload_injective_1
   (sl sl' : bytes)
 : Lemma
   (requires (
+    (parse_bounded_vlgen_kind sk min max k).parser_kind_injective /\
     k.parser_kind_subkind == Some ParserStrong /\
     gaccessor_pre (parse_vlgen min max pk s) p (clens_id _) sl /\
     gaccessor_pre (parse_vlgen min max pk s) p (clens_id _) sl' /\
@@ -735,6 +742,7 @@ let gaccessor_vlgen_payload_injective_2
   (sl sl' : bytes)
 : Lemma
   (ensures ((
+    (parse_bounded_vlgen_kind sk min max k).parser_kind_injective /\
     k.parser_kind_subkind == Some ParserStrong /\
     gaccessor_pre (parse_vlgen min max pk s) p (clens_id _) sl /\
     gaccessor_pre (parse_vlgen min max pk s) p (clens_id _) sl' /\
@@ -772,8 +780,13 @@ let gaccessor_vlgen_payload_no_lookahead_1
   ))
 = parse_vlgen_unfold min max pk s sl;
   parse_vlgen_unfold min max pk s sl' ;
-  parse_strong_prefix (parse_vlgen min max pk s) sl sl' ;
-  parse_injective pk sl sl'
+  let Some (_, off1) = parse pk sl in
+  let Some (_, off_combo) = parse (parse_vlgen min max pk s) sl in
+  assert (off1 <= off_combo);
+  assert (Seq.slice sl' 0 off_combo `Seq.equal` Seq.slice sl 0 off_combo);
+  assert (Seq.slice sl' 0 off1 `Seq.equal` Seq.slice (Seq.slice sl' 0 off_combo) 0 off1);
+  assert (Seq.slice sl 0 off1 `Seq.equal` Seq.slice (Seq.slice sl 0 off_combo) 0 off1);
+  parse_strong_prefix pk sl sl'
 
 let gaccessor_vlgen_payload_no_lookahead_2
   (min: nat)
@@ -809,7 +822,6 @@ let gaccessor_vlgen_payload
   (s: serializer p { parse_vlgen_precond min max k /\ k.parser_kind_subkind == Some ParserStrong})
 : Tot (gaccessor (parse_vlgen min max pk s) p (clens_id _))
 = Classical.forall_intro_2 (gaccessor_vlgen_payload_no_lookahead_2 min max pk s);
-  Classical.forall_intro_2 (gaccessor_vlgen_payload_injective_2 min max pk s);
   gaccessor_prop_equiv (parse_vlgen min max pk s) p (clens_id _) (gaccessor_vlgen_payload' min max pk s);
   gaccessor_vlgen_payload' min max pk s
 

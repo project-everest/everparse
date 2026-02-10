@@ -858,6 +858,7 @@ let valid_exact_ext_elim
   (pos2' : U32.t)
 : Lemma
   (requires (
+    k.parser_kind_injective == true /\
     valid_exact p h1 s1 pos1 pos1' /\
     valid_exact p h2 s2 pos2 pos2' /\
     contents_exact p h1 s1 pos1 pos1' == contents_exact p h2 s2 pos2 pos2'
@@ -919,6 +920,7 @@ let valid_ext_elim
   (pos2: U32.t)
 : Lemma
   (requires (
+    k.parser_kind_injective == true /\
     valid p h1 s1 pos1 /\
     valid p h2 s2 pos2 /\
     k.parser_kind_subkind == Some ParserStrong /\
@@ -1049,7 +1051,7 @@ let gaccessor_injective
   (#p2: parser k2 t2)
   (#cl: clens t1 t2)
   (f: gaccessor' p1 p2 cl)
-= (forall (sl sl' : bytes) . {:pattern (f sl); (f sl')} (gaccessor_pre p1 p2 cl sl /\ gaccessor_pre p1 p2 cl sl' /\ injective_precond p1 sl sl') ==> f sl == f sl')
+= (forall (sl sl' : bytes) . {:pattern (f sl); (f sl')} (k1.parser_kind_injective /\ gaccessor_pre p1 p2 cl sl /\ gaccessor_pre p1 p2 cl sl' /\ injective_precond p1 sl sl') ==> f sl == f sl')
 
 let gaccessor_prop'
   (#k1: parser_kind)
@@ -1061,7 +1063,7 @@ let gaccessor_prop'
   (#cl: clens t1 t2)
   (f: gaccessor' p1 p2 cl)
 : GTot Type0
-= gaccessor_no_lookahead f /\ gaccessor_injective f
+= gaccessor_no_lookahead f
 
 val gaccessor_prop
   (#k1: parser_kind)
@@ -1334,25 +1336,6 @@ let gaccessor_compose'
   let pos3 = a23 input2 in
   pos2 + pos3
 
-val gaccessor_compose_injective
-  (#k1: parser_kind)
-  (#t1: Type)
-  (#p1: parser k1 t1)
-  (#k2: parser_kind)
-  (#t2: Type)
-  (#p2: parser k2 t2)
-  (#cl12: clens t1 t2)
-  (a12: gaccessor p1 p2 cl12)
-  (#k3: parser_kind)
-  (#t3: Type)
-  (#p3: parser k3 t3)
-  (#cl23: clens t2 t3)
-  (a23: gaccessor p2 p3 cl23)
-  (sl sl': bytes)
-: Lemma
-  (requires (gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl' /\ injective_precond p1 sl sl'))
-  (ensures (gaccessor_compose' a12 a23 sl == gaccessor_compose' a12 a23 sl'))
-
 val gaccessor_compose_no_lookahead
   (#k1: parser_kind)
   (#t1: Type)
@@ -1369,7 +1352,7 @@ val gaccessor_compose_no_lookahead
   (a23: gaccessor p2 p3 cl23)
   (sl sl': bytes)
 : Lemma
-  (requires (k1.parser_kind_subkind == Some ParserStrong /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl' /\ no_lookahead_on_precond p1 sl sl'))
+  (requires (k1.parser_kind_subkind == Some ParserStrong /\ k2.parser_kind_subkind == Some ParserStrong /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl' /\ no_lookahead_on_precond p1 sl sl'))
   (ensures (gaccessor_compose' a12 a23 sl == gaccessor_compose' a12 a23 sl'))
 
 val gaccessor_compose
@@ -1385,7 +1368,7 @@ val gaccessor_compose
   (#t3: Type)
   (#p3: parser k3 t3)
   (#cl23: clens t2 t3)
-  (a23: gaccessor p2 p3 cl23)
+  (a23: gaccessor p2 p3 cl23 { k2.parser_kind_subkind == Some ParserStrong })
 : Tot (gaccessor p1 p3 (clens_compose cl12 cl23))
 
 val gaccessor_compose_eq
@@ -1401,7 +1384,7 @@ val gaccessor_compose_eq
   (#t3: Type)
   (#p3: parser k3 t3)
   (#cl23: clens t2 t3)
-  (a23: gaccessor p2 p3 cl23)
+  (a23: gaccessor p2 p3 cl23 { k2.parser_kind_subkind == Some ParserStrong })
   (input: bytes)
 : Lemma
   (gaccessor_compose a12 a23 input == gaccessor_compose' a12 a23 input)

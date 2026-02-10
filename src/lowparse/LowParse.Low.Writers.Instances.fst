@@ -23,7 +23,8 @@ let swrite_weaken
   (k2: parser_kind)
   (w1: swriter s1 h0 space_beyond sout pout_from0 {
     (k2 `is_weaker_than` k1) /\
-    k2.parser_kind_subkind == Some ParserStrong
+    k2.parser_kind_subkind == Some ParserStrong /\
+    k2.parser_kind_injective == true
   })
 : Tot (w2: swriter (serialize_weaken k2 s1) h0 space_beyond sout pout_from0 {
     swvalue w2 == swvalue w1

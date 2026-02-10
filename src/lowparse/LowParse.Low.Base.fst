@@ -120,9 +120,8 @@ let accessor_compose
   (#t3: Type)
   (#p3: parser k3 t3)
   (#cl23: clens t2 t3)
-  (#a23: gaccessor p2 p3 cl23)
+  (#a23: gaccessor p2 p3 cl23 { k2.parser_kind_subkind == Some ParserStrong })
   (a23' : accessor a23)
-  (sq: unit) // squash (k2.parser_kind_subkind == Some ParserStrong))
 : Tot (accessor (gaccessor_compose a12 a23))
 = fun #rrel #rel input pos ->
   let h = HST.get () in
@@ -853,7 +852,7 @@ let serialize32_ext
   (#k2: parser_kind)
   (#t2: Type)
   (p2: parser k2 t2)
-  (u: squash (t1 == t2 /\ (forall (input: bytes) . parse p1 input == parse p2 input)))
+  (u: squash (t1 == t2 /\ k2.parser_kind_injective == true /\ (forall (input: bytes) . parse p1 input == parse p2 input)))
 : Tot (serializer32 (serialize_ext p1 s1 p2))
 = fun x #rrel #rel b pos -> s1' x b pos
 

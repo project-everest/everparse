@@ -623,7 +623,7 @@ let field_accessor_comp (#k1 #k2 #k3:strong_parser_kind)
    =
    [@inline_let] let FieldAccessor acc12 j2 p2' = f12 in
    [@inline_let] let FieldAccessor acc23 j3 p3' = f23 in
-   [@inline_let] let acc13 = LP.accessor_compose acc12 acc23 () in
+   [@inline_let] let acc13 = LP.accessor_compose acc12 acc23 in
      FieldAccessor acc13 j3 p3'
 
 unfold noextract
