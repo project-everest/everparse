@@ -20,6 +20,11 @@ jobs:
         with:
           submodules: true
           fetch-depth: 0
+          ref: ${{ github.event_name == 'schedule' && '_nik_smt_univs_2025' || '' }}
+      - name: Record base ref
+        run: |
+          echo "base_branch=${{ github.event_name == 'schedule' && '_nik_smt_univs_2025' || github.ref_name }}" > base_ref.txt
+          echo "base_sha=$(git rev-parse HEAD)" >> base_ref.txt
       - name: Set up git
         run: |
           git config --global user.name "Dzomo, the Everest Yak"
@@ -48,6 +53,7 @@ jobs:
         with:
           path: |
             hash.txt
+            base_ref.txt
           name: hash
 
   build-macos:
@@ -532,6 +538,10 @@ jobs:
       - name: Record hash and remove hash file
         run: |
           echo "updated_sha=$(cat hash.txt)" >> $GITHUB_ENV && rm hash.txt
+          source base_ref.txt
+          echo "base_branch=$base_branch" >> $GITHUB_ENV
+          echo "base_sha=$base_sha" >> $GITHUB_ENV
+          rm base_ref.txt
       - uses: actions/checkout@master
         with:
           submodules: true
@@ -539,7 +549,7 @@ jobs:
           ref: ${{ env.updated_sha }}
       - name: create pull request
         run: |
-          if [[ "$updated_sha" != ${{ github.sha }} ]] ; then git checkout -b _dzomo_pr_${{ github.run_id }} && git push --set-upstream origin _dzomo_pr_${{ github.run_id }} && gh pr create --base ${{ github.ref_name }} --title "Update hashes and snapshots" --fill-verbose ; fi
+          if [[ "$updated_sha" != "$base_sha" ]] ; then git checkout -b _dzomo_pr_${{ github.run_id }} && git push --set-upstream origin _dzomo_pr_${{ github.run_id }} && gh pr create --base "$base_branch" --title "Update hashes and snapshots" --fill-verbose ; fi
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Delete branch
