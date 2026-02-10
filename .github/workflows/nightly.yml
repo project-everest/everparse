@@ -1,6 +1,11 @@
 name: Upgrade hashes, 3D doc, CBOR, COSE snapshots
 on:
   workflow_dispatch:
+    inputs:
+      create_pr:
+        description: 'Create a pull request (if unchecked, push directly to branch)'
+        type: boolean
+        default: true
   schedule:
     - cron: "0 22 * * 0,3"
 
@@ -548,10 +553,15 @@ jobs:
           fetch-depth: 0
           ref: ${{ env.updated_sha }}
       - name: create pull request
+        if: github.event_name == 'schedule' || inputs.create_pr
         run: |
           if [[ "$updated_sha" != "$base_sha" ]] ; then git checkout -b _dzomo_pr_${{ github.run_id }} && git push --set-upstream origin _dzomo_pr_${{ github.run_id }} && gh pr create --base "$base_branch" --title "Update hashes and snapshots" --fill-verbose ; fi
         env:
           GH_TOKEN: ${{ github.token }}
+      - name: Push to branch directly
+        if: github.event_name == 'workflow_dispatch' && !inputs.create_pr
+        run: |
+          if [[ "$updated_sha" != "$base_sha" ]] ; then git push origin HEAD:"$base_branch" ; fi
       - name: Delete branch
         run: |
           if [[ "$(git rev-parse origin/_dzomo_upgrade_${{ github.run_id }})" = "$updated_sha" ]] ; then git push origin --delete _dzomo_upgrade_${{ github.run_id }} ; fi
