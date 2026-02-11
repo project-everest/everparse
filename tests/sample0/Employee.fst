@@ -128,11 +128,11 @@ inline_for_extraction noextract let accessor_employee_employee' : LL.accessor ga
 
 let gaccessor_employee_name = LL.gaccessor_ext (gaccessor_employee_employee' `LL.gaccessor_compose` gaccessor'_employee_name) clens_employee_name ()
 
-let accessor_employee_name = LL.accessor_ext (LL.accessor_compose accessor_employee_employee' accessor'_employee_name ()) clens_employee_name ()
+let accessor_employee_name = LL.accessor_ext (LL.accessor_compose accessor_employee_employee' accessor'_employee_name) clens_employee_name ()
 
 let gaccessor_employee_salary = LL.gaccessor_ext (gaccessor_employee_employee' `LL.gaccessor_compose` gaccessor'_employee_salary) clens_employee_salary ()
 
-let accessor_employee_salary = LL.accessor_ext (LL.accessor_compose accessor_employee_employee' accessor'_employee_salary ()) clens_employee_salary ()
+let accessor_employee_salary = LL.accessor_ext (LL.accessor_compose accessor_employee_employee' accessor'_employee_salary) clens_employee_salary ()
 
 let employee_valid h #_ #_ input pos0 =
   let name = LL.contents employee_name_parser h input pos0 in
