@@ -325,7 +325,7 @@ let gaccessor_compose_no_lookahead
   (a23: gaccessor p2 p3 cl23)
   (sl sl': bytes)
 : Lemma
-  (requires (k1.parser_kind_subkind == Some ParserStrong /\ k2.parser_kind_subkind == Some ParserStrong /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl' /\ no_lookahead_on_precond p1 sl sl'))
+  (requires (k1.parser_kind_subkind == Some ParserStrong /\ k2.parser_kind_injective == true /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl' /\ no_lookahead_on_precond p1 sl sl'))
   (ensures (gaccessor_compose' a12 a23 sl == gaccessor_compose' a12 a23 sl'))
 = parse_strong_prefix p1 sl sl';
   let off = a12 sl in
@@ -342,7 +342,55 @@ let gaccessor_compose_no_lookahead
   Seq.slice_slice sl off (Seq.length sl) 0 consumed2;
   Seq.slice_slice sl' off (Seq.length sl') 0 consumed2;
   assert (Seq.slice sl_ 0 consumed2 `Seq.equal` Seq.slice sl'_ 0 consumed2);
-  assert (no_lookahead_on_precond p2 sl_ sl'_)
+  assert (no_lookahead_on_precond p2 sl_ sl'_);
+  parser_kind_prop_equiv k2 p2;
+  assert (injective_precond p2 sl_ sl'_)
+
+let gaccessor_compose_injective
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl12: clens t1 t2)
+  (a12: gaccessor p1 p2 cl12)
+  (#k3: parser_kind)
+  (#t3: Type)
+  (#p3: parser k3 t3)
+  (#cl23: clens t2 t3)
+  (a23: gaccessor p2 p3 cl23)
+  (sl sl': bytes)
+: Lemma
+  (requires (k1.parser_kind_injective == true /\ k2.parser_kind_injective == true /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl' /\ injective_precond p1 sl sl'))
+  (ensures (gaccessor_compose' a12 a23 sl == gaccessor_compose' a12 a23 sl'))
+= parser_kind_prop_equiv k1 p1;
+  assert (injective_postcond p1 sl sl');
+  let Some (_, consumed1) = parse p1 sl in
+  let Some (_, consumed1') = parse p1 sl' in
+  assert (consumed1 == consumed1');
+  let off = a12 sl in
+  assert (a12 sl == a12 sl');
+  let sl_ = Seq.slice sl off (Seq.length sl) in
+  let sl'_ = Seq.slice sl' off (Seq.length sl') in
+  let Some (v2, consumed2) = parse p2 sl_ in
+  assert (gaccessor_post' p2 p3 cl23 sl_ (a23 sl_));
+  let Some (v2', consumed2') = parse p2 sl'_ in
+  assert (gaccessor_post' p2 p3 cl23 sl'_ (a23 sl'_));
+  // From injective_postcond p1 sl sl', consumed bytes of p1 are the same
+  // off <= consumed1, so sl[0..consumed1] == sl'[0..consumed1]
+  // From gaccessor_post' p1 p2 cl12, off + consumed2 <= consumed1
+  assert (off + consumed2 <= consumed1);
+  Seq.slice_slice sl 0 consumed1 off (off + consumed2);
+  Seq.slice_slice sl' 0 consumed1' off (off + consumed2);
+  assert (Seq.slice sl off (off + consumed2) `Seq.equal` Seq.slice sl' off (off + consumed2));
+  Seq.slice_slice sl off (Seq.length sl) 0 consumed2;
+  Seq.slice_slice sl' off (Seq.length sl') 0 consumed2;
+  assert (Seq.slice sl_ 0 consumed2 `Seq.equal` Seq.slice sl'_ 0 consumed2);
+  // Use no_lookahead of p2 to establish that p2 parses sl'_ to the same result
+  assert (no_lookahead_on_precond p2 sl_ sl'_);
+  parser_kind_prop_equiv k2 p2;
+  assert (injective_precond p2 sl_ sl'_)
 
 [@"opaque_to_smt"]
 let gaccessor_compose
@@ -358,9 +406,10 @@ let gaccessor_compose
   (#t3: Type)
   (#p3: parser k3 t3)
   (#cl23: clens t2 t3)
-  (a23: gaccessor p2 p3 cl23 { k2.parser_kind_subkind == Some ParserStrong })
+  (a23: gaccessor p2 p3 cl23 { k2.parser_kind_injective == true })
 : Tot (gaccessor p1 p3 (clens_compose cl12 cl23))
 = Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_compose_no_lookahead a12 a23 x));
+  Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_compose_injective a12 a23 x));
   gaccessor_compose' a12 a23
 
 let gaccessor_compose_eq
@@ -376,7 +425,7 @@ let gaccessor_compose_eq
   (#t3: Type)
   (#p3: parser k3 t3)
   (#cl23: clens t2 t3)
-  (a23: gaccessor p2 p3 cl23 { k2.parser_kind_subkind == Some ParserStrong })
+  (a23: gaccessor p2 p3 cl23 { k2.parser_kind_injective == true })
   (input: bytes)
 : Lemma
   (gaccessor_compose a12 a23 input == gaccessor_compose' a12 a23 input)

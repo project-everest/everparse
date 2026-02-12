@@ -1063,7 +1063,7 @@ let gaccessor_prop'
   (#cl: clens t1 t2)
   (f: gaccessor' p1 p2 cl)
 : GTot Type0
-= gaccessor_no_lookahead f
+= gaccessor_no_lookahead f /\ gaccessor_injective f
 
 val gaccessor_prop
   (#k1: parser_kind)
@@ -1352,7 +1352,26 @@ val gaccessor_compose_no_lookahead
   (a23: gaccessor p2 p3 cl23)
   (sl sl': bytes)
 : Lemma
-  (requires (k1.parser_kind_subkind == Some ParserStrong /\ k2.parser_kind_subkind == Some ParserStrong /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl' /\ no_lookahead_on_precond p1 sl sl'))
+  (requires (k1.parser_kind_subkind == Some ParserStrong /\ k2.parser_kind_injective == true /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl' /\ no_lookahead_on_precond p1 sl sl'))
+  (ensures (gaccessor_compose' a12 a23 sl == gaccessor_compose' a12 a23 sl'))
+
+val gaccessor_compose_injective
+  (#k1: parser_kind)
+  (#t1: Type)
+  (#p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (#p2: parser k2 t2)
+  (#cl12: clens t1 t2)
+  (a12: gaccessor p1 p2 cl12)
+  (#k3: parser_kind)
+  (#t3: Type)
+  (#p3: parser k3 t3)
+  (#cl23: clens t2 t3)
+  (a23: gaccessor p2 p3 cl23)
+  (sl sl': bytes)
+: Lemma
+  (requires (k1.parser_kind_injective == true /\ k2.parser_kind_injective == true /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl /\ gaccessor_pre p1 p3 (clens_compose cl12 cl23) sl' /\ injective_precond p1 sl sl'))
   (ensures (gaccessor_compose' a12 a23 sl == gaccessor_compose' a12 a23 sl'))
 
 val gaccessor_compose
@@ -1368,7 +1387,7 @@ val gaccessor_compose
   (#t3: Type)
   (#p3: parser k3 t3)
   (#cl23: clens t2 t3)
-  (a23: gaccessor p2 p3 cl23 { k2.parser_kind_subkind == Some ParserStrong })
+  (a23: gaccessor p2 p3 cl23 { k2.parser_kind_injective == true })
 : Tot (gaccessor p1 p3 (clens_compose cl12 cl23))
 
 val gaccessor_compose_eq
@@ -1384,7 +1403,7 @@ val gaccessor_compose_eq
   (#t3: Type)
   (#p3: parser k3 t3)
   (#cl23: clens t2 t3)
-  (a23: gaccessor p2 p3 cl23 { k2.parser_kind_subkind == Some ParserStrong })
+  (a23: gaccessor p2 p3 cl23 { k2.parser_kind_injective == true })
   (input: bytes)
 : Lemma
   (gaccessor_compose a12 a23 input == gaccessor_compose' a12 a23 input)

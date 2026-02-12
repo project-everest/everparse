@@ -643,6 +643,7 @@ let gaccessor_bounded_vlgen_payload
   (s: serializer p {k.parser_kind_subkind == Some ParserStrong})
 : Tot (gaccessor (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s))
 = Classical.forall_intro_2 (gaccessor_bounded_vlgen_payload_no_lookahead_2 min max pk s);
+  Classical.forall_intro_2 (gaccessor_bounded_vlgen_payload_injective_2 min max pk s);
   gaccessor_prop_equiv (parse_bounded_vlgen min max pk s) p (clens_bounded_vldata_strong_payload min max s) (gaccessor_bounded_vlgen_payload' min max pk s);
   gaccessor_bounded_vlgen_payload' min max pk s
 
@@ -822,6 +823,7 @@ let gaccessor_vlgen_payload
   (s: serializer p { parse_vlgen_precond min max k /\ k.parser_kind_subkind == Some ParserStrong})
 : Tot (gaccessor (parse_vlgen min max pk s) p (clens_id _))
 = Classical.forall_intro_2 (gaccessor_vlgen_payload_no_lookahead_2 min max pk s);
+  Classical.forall_intro_2 (gaccessor_vlgen_payload_injective_2 min max pk s);
   gaccessor_prop_equiv (parse_vlgen min max pk s) p (clens_id _) (gaccessor_vlgen_payload' min max pk s);
   gaccessor_vlgen_payload' min max pk s
 

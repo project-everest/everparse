@@ -732,7 +732,7 @@ let gaccessor_fst_then
   (#t' : Type)
   (#p': parser k' t')
   (#cl: clens t1 t')
-  (g: gaccessor p1 p' cl { k1.parser_kind_subkind == Some ParserStrong })
+  (g: gaccessor p1 p' cl { k1.parser_kind_injective == true })
   (#k2: parser_kind)
   (#t2: Type)
   (p2: parser k2 t2)
@@ -746,10 +746,10 @@ let gaccessor_then_fst
   (#p0: parser k0 t0)
   (#k1: parser_kind)
   (#t1: Type)
-  (#p1: parser k1 t1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#p1: parser k1 t1 { k1.parser_kind_injective == true })
   (#k2: parser_kind)
   (#t2: Type)
-  (#p2: parser k2 t2 { k2.parser_kind_subkind == Some ParserStrong })
+  (#p2: parser k2 t2 { k2.parser_kind_injective == true })
   (#cl: clens t0 (t1 & t2))
   (g: gaccessor p0 (p1 `nondep_then` p2) cl)
 : Tot (gaccessor p0 p1 (cl `clens_compose` clens_fst _ _))
@@ -843,6 +843,7 @@ let gaccessor_snd
   (p2: parser k2 t2)
 : Tot (gaccessor (p1 `nondep_then` p2) p2 (clens_snd _ _))
 = Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_snd_no_lookahead p1 p2 x));
+  Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_snd_injective p1 p2 x));
   gaccessor_prop_equiv (p1 `nondep_then` p2) p2 (clens_snd _ _) (gaccessor_snd' p1 p2);
   gaccessor_snd' p1 p2
 
@@ -864,10 +865,10 @@ let gaccessor_then_snd
   (#p0: parser k0 t0)
   (#k1: parser_kind)
   (#t1: Type)
-  (#p1: parser k1 t1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#p1: parser k1 t1 { k1.parser_kind_injective == true })
   (#k2: parser_kind)
   (#t2: Type)
-  (#p2: parser k2 t2 { k2.parser_kind_subkind == Some ParserStrong })
+  (#p2: parser k2 t2 { k2.parser_kind_injective == true })
   (#cl: clens t0 (t1 & t2))
   (g: gaccessor p0 (p1 `nondep_then` p2) cl)
 : Tot (gaccessor p0 p2 (cl `clens_compose` clens_snd _ _))
@@ -924,7 +925,7 @@ let accessor_fst_then
   (#t' : Type)
   (#p': parser k' t')
   (#cl: clens t1 t')
-  (#g: gaccessor p1 p' cl { k1.parser_kind_subkind == Some ParserStrong })
+  (#g: gaccessor p1 p' cl { k1.parser_kind_injective == true })
   (a: accessor g)
   (#k2: parser_kind)
   (#t2: Type)
@@ -940,10 +941,10 @@ let accessor_then_fst
   (#p0: parser k0 t0)
   (#k1: parser_kind)
   (#t1: Type)
-  (#p1: parser k1 t1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#p1: parser k1 t1 { k1.parser_kind_injective == true })
   (#k2: parser_kind)
   (#t2: Type)
-  (#p2: parser k2 t2 { k2.parser_kind_subkind == Some ParserStrong })
+  (#p2: parser k2 t2 { k2.parser_kind_injective == true })
   (#cl: clens t0 (t1 & t2))
   (#g: gaccessor p0 (p1 `nondep_then` p2) cl)
   (a: accessor g)
@@ -978,10 +979,10 @@ let accessor_then_snd
   (#p0: parser k0 t0)
   (#k1: parser_kind)
   (#t1: Type)
-  (#p1: parser k1 t1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#p1: parser k1 t1 { k1.parser_kind_injective == true })
   (#k2: parser_kind)
   (#t2: Type)
-  (#p2: parser k2 t2 { k2.parser_kind_subkind == Some ParserStrong })
+  (#p2: parser k2 t2 { k2.parser_kind_injective == true })
   (#cl: clens t0 (t1 & t2))
   (#g: gaccessor p0 (p1 `nondep_then` p2) cl)
   (a: accessor g)
@@ -1568,6 +1569,7 @@ let gaccessor_tagged_union_payload
   (t: tag_t)
 : Tot (gaccessor (parse_tagged_union pt tag_of_data p) (p t) (clens_tagged_union_payload tag_of_data t))
 = Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_tagged_union_payload_no_lookahead pt tag_of_data p t x));
+  Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_tagged_union_payload_injective pt tag_of_data p t x));
   gaccessor_prop_equiv (parse_tagged_union pt tag_of_data p) (p t) (clens_tagged_union_payload tag_of_data t) (gaccessor_tagged_union_payload' pt tag_of_data p t);
   gaccessor_tagged_union_payload' pt tag_of_data p t
 

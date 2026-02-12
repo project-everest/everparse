@@ -45,7 +45,8 @@ module I = LowStar.ImmutableBuffer
 /// property.
 let strong_parser_kind =
     k:LP.parser_kind{
-      LP.(k.parser_kind_subkind == Some ParserStrong)
+      LP.(k.parser_kind_subkind == Some ParserStrong /\
+          k.parser_kind_injective == true)
     }
 
 let preorder (c:C.const_buffer LP.byte) = C.qbuf_pre (C.as_qbuf c)

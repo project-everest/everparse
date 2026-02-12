@@ -870,6 +870,7 @@ let gaccessor_clens_sum_payload
   (k: sum_key t)
 : Tot (gaccessor (parse_sum t p pc) (dsnd (pc k)) (clens_sum_payload t k))
 = Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_clens_sum_payload_no_lookahead t p pc k x));
+  Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_clens_sum_payload_injective t p pc k x));
   gaccessor_prop_equiv (parse_sum t p pc) (dsnd (pc k)) (clens_sum_payload t k) (gaccessor_clens_sum_payload' t p pc k);
   gaccessor_clens_sum_payload' t p pc k
 
@@ -1907,6 +1908,7 @@ let gaccessor_clens_dsum_payload
   (k: dsum_key t)
 : Tot (gaccessor (parse_dsum t p f g) (parse_dsum_type_of_tag' t f g k) (clens_dsum_payload t k))
 = Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_clens_dsum_payload_no_lookahead t p f g k x));
+  Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_clens_dsum_payload_injective t p f g k x));
   gaccessor_prop_equiv (parse_dsum t p f g) (parse_dsum_type_of_tag' t f g k) (clens_dsum_payload t k) (gaccessor_clens_dsum_payload' t p f g k);
   gaccessor_clens_dsum_payload' t p f g k
 
@@ -2041,6 +2043,7 @@ let gaccessor_clens_dsum_unknown_payload
   (g: parser ku (dsum_type_of_unknown_tag t))
 : Tot (gaccessor (parse_dsum t p f g) g (clens_dsum_unknown_payload t))
 = Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_clens_dsum_unknown_payload_no_lookahead t p f g x));
+  Classical.forall_intro_2 (fun x -> Classical.move_requires (gaccessor_clens_dsum_unknown_payload_injective t p f g x));
   gaccessor_prop_equiv (parse_dsum t p f g) g (clens_dsum_unknown_payload t) (gaccessor_clens_dsum_unknown_payload' t p f g); 
   gaccessor_clens_dsum_unknown_payload' t p f g
 
