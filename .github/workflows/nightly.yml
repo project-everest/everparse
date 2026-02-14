@@ -42,9 +42,23 @@ jobs:
           make -C opt -j$(nproc) advance &&
           if ! git diff --exit-code -- opt/hashes.Makefile ; then git add -u opt/hashes.Makefile && git commit -m 'Update hashes' ; fi &&
           git diff --exit-code
-      - name: Generate snapshot
+      - name: Generate CBOR .krml files
         run: |
-          make ADMIT=1 cbor-snapshot 3d-doc-snapshot -kj$(nproc) && make ADMIT=1 cose-snapshot -kj$(nproc) &&
+          make ADMIT=1 cbor-extract-krml -kj$(nproc)
+      - name: Generate CBOR snapshot with Karamel
+        run: |
+          make ADMIT=1 cbor-snapshot -kj$(nproc) && make ADMIT=1 cbor -kj$(nproc)
+      - name: Generate COSE .krml files
+        run: |
+          make ADMIT=1 cose-extract-krml -kj$(nproc)
+      - name: Generate COSE snapshot with Karamel
+        run: |
+          make ADMIT=1 cose-snapshot -kj$(nproc) && make ADMIT=1 cose -kj$(nproc)
+      - name: Generate 3D doc snapshot
+        run: |
+          make ADMIT=1 3d-doc-snapshot -kj$(nproc)
+      - name: Stage in new snapshots
+        run: |
           git add doc/3d-snapshot src/cbor/pulse/det/c src/cbor/pulse/nondet/c src/cbor/pulse/det/rust src/cose/c src/cose/rust &&
           if ! git diff --staged --exit-code ; then git commit -m "3D doc, CBOR, COSE snapshot" ; fi &&
           git diff --exit-code
