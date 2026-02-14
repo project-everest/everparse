@@ -22,7 +22,12 @@ det/test-snapshot: extract
 nondet/test-snapshot: extract
 	+$(MAKE) -C pulse/$(dir $@) $(notdir $@)
 
-extract:
+extract-krml:
+	+$(MAKE) -C pulse/krml extract-krml ALREADY_CACHED='*,-CBOR,'
+
+.PHONY: extract-krml
+
+extract: extract-krml
 	+$(MAKE) -C pulse/krml ALREADY_CACHED='*,-CBOR,'
 
 .PHONY: extract

@@ -29,10 +29,24 @@ build: build-c build-rust
 
 .PHONY: all
 
-test-extract-c:
+extract-krml: extract-krml-c extract-krml-rust
+
+.PHONY: extract-krml
+
+extract-krml-c:
+	+$(MAKE) -C verifiedinterop extract-krml
+
+.PHONY: extract-krml-c
+
+extract-krml-rust:
+	+$(MAKE) -C generate-rust extract-krml
+
+.PHONY: extract-krml-rust
+
+test-extract-c: extract-krml-c
 	+$(MAKE) -C verifiedinterop test
 
-test-extract-rust:
+test-extract-rust: extract-krml-rust
 	+$(MAKE) -C generate-rust test
 
 .PHONY: test-extract-c test-extract-rust
@@ -81,13 +95,13 @@ snapshot: snapshot-c snapshot-rust
 
 .PHONY: snapshot
 
-snapshot-c:
+snapshot-c: extract-krml-c
 	+$(MAKE) -C verifiedinterop snapshot
 	+$(MAKE) build-c
 
 .PHONY: snapshot-c
 
-snapshot-rust:
+snapshot-rust: extract-krml-rust
 	+$(MAKE) -C generate-rust snapshot
 	+$(MAKE) build-rust
 
