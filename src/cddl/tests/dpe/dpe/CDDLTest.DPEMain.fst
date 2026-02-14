@@ -133,7 +133,7 @@ ensures record_perm record spec ** Trade.trade (record_perm record spec) k
       assert (DC.is_engine_record_core eng spec_l);
       rewrite 
         each (DC.is_engine_record_core eng spec_l)
-           as (record_perm (Inl eng) (Inl spec_l));
+           as (record_perm record spec);
     }
     Inr l0 -> {
       let Inr spec_r = spec;
@@ -141,7 +141,7 @@ ensures record_perm record spec ** Trade.trade (record_perm record spec) k
       assert (DC.is_l0_record_core l0 spec_r);
       rewrite 
         each (DC.is_l0_record_core l0 spec_r)
-           as (record_perm (Inr l0) (Inr spec_r));
+           as (record_perm record spec);
     }
   }
 }

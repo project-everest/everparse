@@ -38,6 +38,13 @@ fn cbor_match_serialized_tagged_intro_aux
       (pts_to_serialized serialize_raw_data_item pc #pm v)
 {
   fold (cbor_match_serialized_payload_tagged pc (1.0R `perm_mul` res.cbor_serialized_perm) v);
+  rewrite cbor_match_serialized_payload_tagged pc
+      (perm_mul 1.0R res.cbor_serialized_perm)
+      v
+    as
+   cbor_match_serialized_payload_tagged res.cbor_serialized_payload
+      (perm_mul 1.0R res.cbor_serialized_perm)
+      (Tagged?.v r);
   fold (cbor_match_serialized_tagged res 1.0R r);
   intro
     (Trade.trade
@@ -48,7 +55,13 @@ fn cbor_match_serialized_tagged_intro_aux
     fn _
   {
     unfold (cbor_match_serialized_tagged res 1.0R r);
-    unfold (cbor_match_serialized_payload_tagged pc pm v)
+    rewrite
+    cbor_match_serialized_payload_tagged res.cbor_serialized_payload
+      (perm_mul 1.0R res.cbor_serialized_perm)
+      (Tagged?.v r)
+      as (cbor_match_serialized_payload_tagged pc pm v);
+    unfold (cbor_match_serialized_payload_tagged pc pm v);
+    ()
   };
 }
 
@@ -77,6 +90,9 @@ fn cbor_match_serialized_array_intro_aux
       (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n serialize_raw_data_item) pc #pm v)
 {
   fold (cbor_match_serialized_payload_array pc (1.0R `perm_mul` pm) v);
+  rewrite cbor_match_serialized_payload_array pc (perm_mul 1.0R pm) v as cbor_match_serialized_payload_array res.cbor_serialized_payload
+      (perm_mul 1.0R res.cbor_serialized_perm)
+      (Array?.v r);
   fold (cbor_match_serialized_array res 1.0R r);
   intro
     (Trade.trade
@@ -87,6 +103,9 @@ fn cbor_match_serialized_array_intro_aux
     fn _
   {
     unfold (cbor_match_serialized_array res 1.0R r);
+    rewrite cbor_match_serialized_payload_array res.cbor_serialized_payload
+      (perm_mul 1.0R res.cbor_serialized_perm)
+      (Array?.v r) as cbor_match_serialized_payload_array pc pm (Array?.v r);
     unfold (cbor_match_serialized_payload_array pc pm (Array?.v r))
   };
 }
@@ -116,6 +135,9 @@ fn cbor_match_serialized_map_intro_aux
       (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) pc #pm v)
 {
   fold (cbor_match_serialized_payload_map pc (1.0R `perm_mul` pm) v);
+  rewrite cbor_match_serialized_payload_map pc (perm_mul 1.0R pm) v as cbor_match_serialized_payload_map res.cbor_serialized_payload
+      (perm_mul 1.0R res.cbor_serialized_perm)
+      (Map?.v r);
   fold (cbor_match_serialized_map res 1.0R r);
   intro
     (Trade.trade
@@ -126,6 +148,9 @@ fn cbor_match_serialized_map_intro_aux
     fn _
   {
     unfold (cbor_match_serialized_map res 1.0R r);
+    rewrite cbor_match_serialized_payload_map res.cbor_serialized_payload
+      (perm_mul 1.0R res.cbor_serialized_perm)
+      (Map?.v r) as cbor_match_serialized_payload_map pc pm (Map?.v r);
     unfold (cbor_match_serialized_payload_map pc pm (Map?.v r))
   };
 }
@@ -149,7 +174,9 @@ fn cbor_read
   if (typ = cbor_major_type_uint64 || typ = cbor_major_type_neg_int64) {
     elim_trade _ _;
     let i = get_int64_value v h;
-    cbor_match_int_intro_trade (pts_to_serialized serialize_raw_data_item input #pm v) typ i
+    let res = cbor_match_int_intro_trade (pts_to_serialized serialize_raw_data_item input #pm v) typ i;
+    rewrite each (Int64 typ i) as v;
+    res
   }
   else if (typ = cbor_major_type_text_string || typ = cbor_major_type_byte_string) {
     let i = get_string_length v h;
@@ -157,6 +184,8 @@ fn cbor_read
     Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
     let res = cbor_match_string_intro typ i pc;
     Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+    with r . assert cbor_match 1.0R res r;
+    rewrite each r as v;
     res
   }
   else if (typ = cbor_major_type_tagged) {
@@ -219,7 +248,9 @@ fn cbor_read
     assert (pure (typ == cbor_major_type_simple_value));
     elim_trade _ _;
     let i = get_simple_value v h;
-    cbor_match_simple_intro_trade (pts_to_serialized serialize_raw_data_item input #pm v) i
+    let res = cbor_match_simple_intro_trade (pts_to_serialized serialize_raw_data_item input #pm v) i;
+    rewrite each (Simple i) as v;
+    res
   }
 }
 #pop-options

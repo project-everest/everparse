@@ -9,10 +9,7 @@ pub type cbordet <'a> = crate::cbordetveraux::cbor_raw <'a>;
 pub fn cbor_det_reset_perm <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw
     <'a>
-{
-    let res: crate::cbordetveraux::cbor_raw = crate::cbordetveraux::cbor_raw_reset_perm_tot(x1);
-    res
-}
+{ crate::cbordetveraux::cbor_raw_reset_perm_tot(x1) }
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t· <'a>
@@ -181,11 +178,7 @@ pub fn cbor_det_mk_map_entry <'a>(
 ) ->
     crate::cbordetveraux::cbor_map_entry
     <'a>
-{
-    let res: crate::cbordetveraux::cbor_map_entry =
-        crate::cbordetveraux::cbor_mk_map_entry(xk, xv);
-    res
-}
+{ crate::cbordetveraux::cbor_mk_map_entry(xk, xv) }
 
 pub fn cbor_det_mk_array <'a>(a: &'a [crate::cbordetveraux::cbor_raw <'a>]) ->
     option__CBOR_Pulse_Raw_Type_cbor_raw
@@ -343,9 +336,8 @@ pub fn cbor_det_destruct <'a>(c: crate::cbordetveraux::cbor_raw <'a>) -> cbor_de
                 _ => panic!("Incomplete pattern matching")
             };
         let tag: u64 = res.value;
-        let res0: crate::cbordetveraux::cbor_raw =
+        let payload: crate::cbordetveraux::cbor_raw =
             crate::cbordetveraux::cbor_match_tagged_get_payload(c);
-        let payload: crate::cbordetveraux::cbor_raw = res0;
         cbor_det_view::Tagged { tag, payload }
     }
     else
@@ -382,12 +374,7 @@ crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>;
 pub fn cbor_det_array_iterator_start <'a>(x: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
     <'a>
-{
-    let res: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-        crate::cbordetveraux::cbor_array_iterator_init(x);
-    let res0: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = res;
-    res0
-}
+{ crate::cbordetveraux::cbor_array_iterator_init(x) }
 
 pub fn cbor_det_array_iterator_is_empty(
     x: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
@@ -400,10 +387,7 @@ pub fn cbor_det_array_iterator_next <'b, 'a>(
 ) ->
     crate::cbordetveraux::cbor_raw
     <'a>
-{
-    let res: crate::cbordetveraux::cbor_raw = crate::cbordetveraux::cbor_array_iterator_next(x);
-    res
-}
+{ crate::cbordetveraux::cbor_array_iterator_next(x) }
 
 pub fn cbor_det_array_iterator_length(
     x: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
@@ -417,11 +401,7 @@ pub fn cbor_det_array_iterator_truncate <'a>(
 ) ->
     crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
     <'a>
-{
-    let res: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-        crate::cbordetveraux::cbor_array_iterator_truncate(x, len);
-    res
-}
+{ crate::cbordetveraux::cbor_array_iterator_truncate(x, len) }
 
 pub fn cbor_det_get_array_item <'a>(x: crate::cbordetveraux::cbor_raw <'a>, i: u64) ->
     option__CBOR_Pulse_Raw_Type_cbor_raw
@@ -433,8 +413,7 @@ pub fn cbor_det_get_array_item <'a>(x: crate::cbordetveraux::cbor_raw <'a>, i: u
     else
     {
         let res: crate::cbordetveraux::cbor_raw = crate::cbordetveraux::cbor_array_item(x, i);
-        let res0: crate::cbordetveraux::cbor_raw = res;
-        option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: res0 }
+        option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: res }
     }
 }
 
@@ -462,8 +441,7 @@ pub fn cbor_det_map_iterator_start <'a>(x: crate::cbordetveraux::cbor_raw <'a>) 
 {
     let res: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
         crate::cbordetveraux::cbor_map_iterator_init(x);
-    let res0: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = res;
-    res0
+    res
 }
 
 pub fn cbor_det_map_iterator_is_empty(
@@ -477,11 +455,7 @@ pub fn cbor_det_map_iterator_next <'b, 'a>(
 ) ->
     crate::cbordetveraux::cbor_map_entry
     <'a>
-{
-    let res: crate::cbordetveraux::cbor_map_entry =
-        crate::cbordetveraux::cbor_map_iterator_next(x);
-    res
-}
+{ crate::cbordetveraux::cbor_map_iterator_next(x) }
 
 pub fn cbor_det_map_entry_key <'a>(x2: crate::cbordetveraux::cbor_map_entry <'a>) ->
     crate::cbordetveraux::cbor_raw
@@ -514,9 +488,8 @@ pub fn cbor_det_map_get <'a>(
     while
     (&pcont)[0]
     {
-        let res0: crate::cbordetveraux::cbor_map_entry =
+        let entry: crate::cbordetveraux::cbor_map_entry =
             crate::cbordetveraux::cbor_map_iterator_next(&mut pi);
-        let entry: crate::cbordetveraux::cbor_map_entry = res0;
         let key: crate::cbordetveraux::cbor_raw = entry.cbor_map_entry_key;
         let comp: i16 = crate::cbordetveraux::impl_cbor_det_compare(key, k);
         if comp == 0i16

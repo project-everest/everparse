@@ -47,7 +47,8 @@ let parse32_sum_cases'
             (synth_sum_case t k)
             (pc32 k)
             ()
-
+#restart-solver
+#push-options "--z3rlimit_factor 4 --split_queries always"
 let parse32_sum_aux
   (#kt: parser_kind)
   (t: sum)
@@ -82,6 +83,7 @@ let parse32_sum_aux
           Some ((x <: sum_type t), consumed_k `U32.add` consumed_x)
   in
   (res <: (res: option (sum_type t * U32.t) { parser32_correct (parse_sum t p pc) input res } ))
+#pop-options
 
 inline_for_extraction
 let parse32_sum_cases_t
@@ -137,6 +139,8 @@ let parse32_sum_cases
     (parse32_sum_cases_aux t pc pc32)
     k
 
+#restart-solver
+#push-options "--z3rlimit_factor 4 --split_queries always"
 inline_for_extraction
 let parse32_sum'
   (#kt: parser_kind)
@@ -172,6 +176,7 @@ let parse32_sum'
           k
   in
   res
+#pop-options
 
 inline_for_extraction
 let parse32_sum

@@ -326,6 +326,8 @@ let serialize_sum
 = // FIXME: WHY WHY WHY is implicit argument inference failing here? (i.e. introducing an eta-expansion)
   serialize_sum' t s #_ #(parse_sum_cases t pc) (serialize_sum_cases t pc sc)
 
+#push-options "--z3rlimit 16"
+
 let serialize_sum_eq
   (#kt: parser_kind)
   (t: sum)
@@ -346,6 +348,8 @@ let serialize_sum_eq
   synth_sum_case_injective t tg;
   synth_sum_case_inverse t tg;
   serialize_synth_eq (dsnd (pc tg)) (synth_sum_case t tg) (sc tg)  (synth_sum_case_recip t tg) () x
+
+#pop-options
 
 inline_for_extraction
 let make_sum

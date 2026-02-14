@@ -25,10 +25,10 @@ jobs:
         with:
           submodules: true
           fetch-depth: 0
-          ref: ${{ github.event_name == 'schedule' && '_nik_smt_univs_2025' || '' }}
+          ref: ${{ github.event_name == 'schedule' && 'master' || '' }}
       - name: Record base ref
         run: |
-          echo "base_branch=${{ github.event_name == 'schedule' && '_nik_smt_univs_2025' || github.ref_name }}" > base_ref.txt
+          echo "base_branch=${{ github.event_name == 'schedule' && 'master' || github.ref_name }}" > base_ref.txt
           echo "base_sha=$(git rev-parse HEAD)" >> base_ref.txt
       - name: Set up git
         run: |

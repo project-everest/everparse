@@ -67,6 +67,9 @@ ensures
   slprop_equivs();
   rewrite each ((p2 ** q1) ** q2) as (p2 ** (q1 ** q2));
   Trade.Util.trans_hyp_l _ _ _ r;
+  rewrite
+    trade (p1 ** q1 ** q2) r
+    as trade ((p1 ** q1) ** q2) r;
 }
 
 ghost
@@ -146,7 +149,11 @@ ensures parsed_initialize_context_input s #p w x
       unfold_rel_initialize_context_input_args _ _;
       destruct_quad _ _ _ _ _ _;
       Trade.Util.elim_hyp_r _ _ (pts_to s #p w);
-      Trade.trade_compose _ _ (pts_to s #p w);
+      with foo __ _wx12 . assert (trade foo (rel_initialize_context_input_args __
+          (reveal #spect_initialize_context_input_args _wx12)) // FIXME: WHY WHY WHY?
+      );
+      Trade.trade_compose _ _ (rel_initialize_context_input_args __
+          (reveal #spect_initialize_context_input_args _wx12));
       Trade.trade_compose _ _ (pts_to s #p w);
       Trade.Util.elim_hyp_r _ _ (pts_to s #p w);
       Trade.Util.assoc_hyp_r _ _ _ (pts_to s #p w);
