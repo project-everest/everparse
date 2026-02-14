@@ -176,7 +176,12 @@ cbor-extract-pre: cbor-verify $(filter-out src/lowparse/LowParse.SLow.% src/lowp
 
 .PHONY: cbor-extract-pre
 
-cbor-test-snapshot: cbor-extract-pre
+cbor-extract-krml: cbor-extract-pre
+	+$(MAKE) -C src/cbor extract-krml
+
+.PHONY: cbor-extract-krml
+
+cbor-test-snapshot: cbor-extract-krml
 	+$(MAKE) -C src/cbor test-snapshot
 else
 cbor-test-snapshot: cbor-verify
@@ -186,7 +191,7 @@ endif
 
 # This rule is incompatible with `cbor` and `cbor-test-snapshot`
 ifeq (,$(NO_PULSE))
-cbor-snapshot: cbor-extract-pre
+cbor-snapshot: cbor-extract-krml
 	+$(MAKE) -C src/cbor snapshot
 else
 cbor-snapshot:
@@ -232,18 +237,22 @@ endif
 .PHONY: cddl-unit-tests
 
 ifeq (,$(NO_PULSE))
-cose-extract-test: cddl
+cose-extract-krml: cddl
+	+$(MAKE) -C src/cose extract-krml
+
+cose-extract-test: cose-extract-krml
 	+$(MAKE) -C src/cose test-extract
 
 # This rule is incompatible with cose-extract-test
-cose-snapshot: cddl
+cose-snapshot: cose-extract-krml
 	+$(MAKE) -C src/cose snapshot
 else
+cose-extract-krml:
 cose-extract-test:
 cose-snapshot:
 endif
 
-.PHONY: cose-extract-test cose-snapshot
+.PHONY: cose-extract-krml cose-extract-test cose-snapshot
 
 cose-test: cose-extract-test cose-extracted-test
 
