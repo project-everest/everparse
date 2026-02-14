@@ -47,13 +47,13 @@ jobs:
           make ADMIT=1 cbor-extract-krml -kj$(nproc)
       - name: Generate CBOR snapshot with Karamel
         run: |
-          make ADMIT=1 cbor-snapshot -kj$(nproc) && make ADMIT=1 cbor -kj$(nproc)
+          make ADMIT=1 cbor-snapshot -Otarget -kj$(nproc) && make ADMIT=1 cbor -kj$(nproc)
       - name: Generate COSE .krml files
         run: |
           make ADMIT=1 cose-extract-krml -kj$(nproc)
       - name: Generate COSE snapshot with Karamel
         run: |
-          make ADMIT=1 cose-snapshot -kj$(nproc) && make ADMIT=1 cose -kj$(nproc)
+          make ADMIT=1 cose-snapshot -Otarget -kj$(nproc) && make ADMIT=1 cose -kj$(nproc)
       - name: Generate 3D doc snapshot
         run: |
           make ADMIT=1 3d-doc-snapshot -kj$(nproc)
