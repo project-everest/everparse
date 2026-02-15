@@ -153,6 +153,7 @@ type automata_default_parser_kind : parser_kind = {
   parser_kind_low = 0;
   parser_kind_high = None;
   parser_kind_subkind = Some ParserStrong;
+  parser_kind_injective = true;
 }
 
 noeq

@@ -42,23 +42,26 @@ let parse_recursive_kind
     parser_kind_high = None;
     parser_kind_subkind = Some ParserStrong;
     parser_kind_metadata = None;
+    parser_kind_injective = k.parser_kind_injective;
   }
 
 let parse_recursive_payload_kind
+  (inj: bool)
 : parser_kind
 = {
     parser_kind_low = 0;
     parser_kind_high = None;
     parser_kind_subkind = Some ParserStrong;
     parser_kind_metadata = None;
+    parser_kind_injective = inj;
   }
 
 let parse_recursive_payload
   (p: parse_recursive_param)
   (ih: tot_parser (parse_recursive_kind p.parse_header_kind) p.t)
   (h: p.header)
-: Tot (tot_parser parse_recursive_payload_kind (parse_recursive_payload_t p.t p.header p.count h))
-= tot_weaken parse_recursive_payload_kind (tot_parse_nlist (p.count h) ih)
+: Tot (tot_parser (parse_recursive_payload_kind p.parse_header_kind.parser_kind_injective) (parse_recursive_payload_t p.t p.header p.count h))
+= tot_weaken (parse_recursive_payload_kind p.parse_header_kind.parser_kind_injective) (tot_parse_nlist (p.count h) ih)
 
 let parse_recursive_alt
   (p: parse_recursive_param)
@@ -103,8 +106,8 @@ let spec_parse_recursive_payload
   (p: parse_recursive_param)
   (ih: parser (parse_recursive_kind p.parse_header_kind) p.t)
   (h: p.header)
-: Tot (parser parse_recursive_payload_kind (parse_recursive_payload_t p.t p.header p.count h))
-= weaken parse_recursive_payload_kind (parse_nlist (p.count h) ih)
+: Tot (parser (parse_recursive_payload_kind p.parse_header_kind.parser_kind_injective) (parse_recursive_payload_t p.t p.header p.count h))
+= weaken (parse_recursive_payload_kind p.parse_header_kind.parser_kind_injective) (parse_nlist (p.count h) ih)
 
 let spec_parse_recursive_aux
   (p: parse_recursive_param)

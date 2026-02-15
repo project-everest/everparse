@@ -75,7 +75,7 @@ let parser_kind_metadata_prop_fuel (fuel: nat) (#t: Type) (k: parser_kind) (f: b
   | Some ParserKindMetadataFail -> parser_always_fails_fuel fuel f
 
 let parser_kind_prop_fuel (fuel: nat) (#t: Type) (k: parser_kind) (f: bare_parser t) : Tot prop =
-  injective_fuel fuel f /\
+  (k.parser_kind_injective ==> injective_fuel fuel f) /\
   (Some? k.parser_kind_subkind ==> parser_subkind_prop_fuel fuel (Some?.v k.parser_kind_subkind) f) /\
   parses_at_least_fuel fuel k.parser_kind_low f /\
   (Some? k.parser_kind_high ==> (parses_at_most_fuel fuel (Some?.v k.parser_kind_high) f)) /\
@@ -83,7 +83,7 @@ let parser_kind_prop_fuel (fuel: nat) (#t: Type) (k: parser_kind) (f: bare_parse
 
 unfold
 let parser_kind_prop' (#t: Type) (k: parser_kind) (f: bare_parser t) : Tot prop =
-  injective f /\
+  (k.parser_kind_injective ==> injective f) /\
   (Some? k.parser_kind_subkind ==> parser_subkind_prop (Some?.v k.parser_kind_subkind) f) /\
   parses_at_least k.parser_kind_low f /\
   (Some? k.parser_kind_high ==> (parses_at_most (Some?.v k.parser_kind_high) f)) /\
@@ -134,7 +134,7 @@ let parser_kind_prop_fuel_correct
 : Lemma
   (requires (forall fuel . parser_kind_prop_fuel fuel k f))
   (ensures (parser_kind_prop' k f))
-= injective_fuel_correct f;
+= (if k.parser_kind_injective then injective_fuel_correct f else ());
   begin match k.parser_kind_subkind with
   | None -> ()
   | Some k' -> parser_subkind_prop_fuel_correct k' f

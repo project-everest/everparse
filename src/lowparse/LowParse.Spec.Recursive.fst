@@ -145,7 +145,7 @@ let mk_serialize_recursive_with_level
   (#pp: parse_recursive_param)
   (#sp: serialize_recursive_param pp)
   (n: nat)
-  (s: tot_serializer #(parse_filter_kind (and_then_kind pp.parse_header_kind parse_recursive_payload_kind)) (tot_parse_filter (parse_recursive_alt pp (parse_recursive pp)) (has_pred_level sp n)))
+  (s: tot_serializer #(parse_filter_kind (and_then_kind pp.parse_header_kind (parse_recursive_payload_kind pp.parse_header_kind.parser_kind_injective))) (tot_parse_filter (parse_recursive_alt pp (parse_recursive pp)) (has_pred_level sp n)))
 : Tot (tot_serializer #(parse_filter_kind (parse_recursive_kind pp.parse_header_kind)) (tot_parse_filter (parse_recursive pp) (has_level sp.level n)))
 = let s'
     (x: parse_filter_refine (has_level sp.level n))
@@ -170,8 +170,8 @@ let mk_serialize_recursive_alt_with_level
   (#pp: parse_recursive_param)
   (#sp: serialize_recursive_param pp)
   (n: nat)
-  (s: ((l: pp.header) -> tot_serializer #parse_recursive_payload_kind (tot_weaken parse_recursive_payload_kind (tot_parse_nlist (pp.count l) (parse_recursive pp) `tot_parse_filter` list_has_pred_level sp.level n))))
-: Tot (tot_serializer #(parse_filter_kind (and_then_kind pp.parse_header_kind parse_recursive_payload_kind)) #(parse_filter_refine #(parse_recursive_alt_t pp.t pp.header pp.count) (has_pred_level #pp sp n)) (tot_parse_filter #_ #(parse_recursive_alt_t pp.t pp.header pp.count) (parse_recursive_alt pp (parse_recursive pp)) (has_pred_level sp n)))
+  (s: ((l: pp.header) -> tot_serializer #(parse_recursive_payload_kind pp.parse_header_kind.parser_kind_injective) (tot_weaken (parse_recursive_payload_kind pp.parse_header_kind.parser_kind_injective) (tot_parse_nlist (pp.count l) (parse_recursive pp) `tot_parse_filter` list_has_pred_level sp.level n))))
+: Tot (tot_serializer #(parse_filter_kind (and_then_kind pp.parse_header_kind (parse_recursive_payload_kind pp.parse_header_kind.parser_kind_injective))) #(parse_filter_refine #(parse_recursive_alt_t pp.t pp.header pp.count) (has_pred_level #pp sp n)) (tot_parse_filter #_ #(parse_recursive_alt_t pp.t pp.header pp.count) (parse_recursive_alt pp (parse_recursive pp)) (has_pred_level sp n)))
 = let s1 = tot_serialize_dtuple2 sp.serialize_header s in
   let s'
     (x: parse_filter_refine (has_pred_level sp n))
@@ -179,7 +179,7 @@ let mk_serialize_recursive_alt_with_level
     s1 (| l, c |)
   in
   mk_tot_serializer
-//    #(parse_filter_kind (and_then_kind pp.parse_header_kind parse_recursive_payload_kind))
+//    #(parse_filter_kind (and_then_kind pp.parse_header_kind (parse_recursive_payload_kind pp.parse_header_kind.parser_kind_injective)))
 //    #(parse_filter_refine #(parse_recursive_alt_t pp.t pp.header pp.count) (has_pred_level #pp sp n))
   (tot_parse_filter #_ #(parse_recursive_alt_t pp.t pp.header pp.count) (parse_recursive_alt pp (parse_recursive pp)) (has_pred_level sp n))
     s'
@@ -189,10 +189,10 @@ let mk_serialize_recursive_alt_with_level
         pp.parse_header
         pp.parse_header
         (fun l ->
-          tot_weaken parse_recursive_payload_kind (tot_parse_nlist (pp.count l) (parse_recursive pp) `tot_parse_filter` list_has_pred_level sp.level n)
+          tot_weaken (parse_recursive_payload_kind pp.parse_header_kind.parser_kind_injective) (tot_parse_nlist (pp.count l) (parse_recursive pp) `tot_parse_filter` list_has_pred_level sp.level n)
         )
         (fun l ->
-          tot_weaken parse_recursive_payload_kind (tot_parse_nlist (pp.count l) (parse_recursive pp)) `tot_parse_filter` list_has_pred_level sp.level n
+          tot_weaken (parse_recursive_payload_kind pp.parse_header_kind.parser_kind_injective) (tot_parse_nlist (pp.count l) (parse_recursive pp)) `tot_parse_filter` list_has_pred_level sp.level n
         )
         b
         ()
@@ -202,7 +202,7 @@ let mk_serialize_recursive_alt_with_level
             (list_has_pred_level sp.level n)
             b';
           tot_parse_filter_eq
-            (tot_weaken parse_recursive_payload_kind (tot_parse_nlist (pp.count l) (parse_recursive pp)))
+            (tot_weaken (parse_recursive_payload_kind pp.parse_header_kind.parser_kind_injective) (tot_parse_nlist (pp.count l) (parse_recursive pp)))
             (list_has_pred_level sp.level n)
             b'
         );
@@ -210,7 +210,7 @@ let mk_serialize_recursive_alt_with_level
         pp.parse_header
         (parse_recursive_payload pp (parse_recursive pp))
         (fun _ -> list_has_pred_level sp.level n)
-        (fun l -> tot_weaken parse_recursive_payload_kind (tot_parse_nlist (pp.count l) (parse_recursive pp)) `tot_parse_filter` list_has_pred_level sp.level n)
+        (fun l -> tot_weaken (parse_recursive_payload_kind pp.parse_header_kind.parser_kind_injective) (tot_parse_nlist (pp.count l) (parse_recursive pp)) `tot_parse_filter` list_has_pred_level sp.level n)
         (has_pred_level sp n)
         b;
       tot_parse_filter_eq (parse_recursive_alt pp (parse_recursive pp)) (has_pred_level sp n) b;

@@ -114,6 +114,17 @@ let rec parse_nlist_kind_subkind
   then ()
   else parse_nlist_kind_subkind (n - 1) k
 
+let rec parse_nlist_kind_injective
+  (n: nat)
+  (k: parser_kind)
+: Lemma
+  ((parse_nlist_kind' n k).parser_kind_injective == (
+    if n = 0 then true else k.parser_kind_injective
+  ))
+= if n = 0
+  then ()
+  else parse_nlist_kind_injective (n - 1) k
+
 inline_for_extraction
 let parse_nlist_kind
   (n: nat)
@@ -125,7 +136,8 @@ let parse_nlist_kind
     parse_nlist_kind_low n k;
     parse_nlist_kind_high n k;
     parse_nlist_kind_metadata n k;
-    parse_nlist_kind_subkind n k
+    parse_nlist_kind_subkind n k;
+    parse_nlist_kind_injective n k
   in
   {
     parser_kind_low = n `mul` k.parser_kind_low;
@@ -135,6 +147,7 @@ let parse_nlist_kind
     );
     parser_kind_metadata = (if n = 0 then Some ParserKindMetadataTotal else k.parser_kind_metadata);
     parser_kind_subkind = (if n = 0 then Some ParserStrong else k.parser_kind_subkind);
+    parser_kind_injective = (if n = 0 then true else k.parser_kind_injective);
   }
 
 
@@ -857,6 +870,7 @@ let parse_vclist_payload_kind
     );
     parser_kind_metadata = (if max = 0 then Some ParserKindMetadataTotal else if min = 0 && k.parser_kind_metadata <> Some ParserKindMetadataTotal then None else k.parser_kind_metadata);
     parser_kind_subkind = (if max = 0 then Some ParserStrong else if min = 0 && k.parser_kind_subkind <> Some ParserStrong then None else k.parser_kind_subkind);
+    parser_kind_injective = (if max = 0 then true else k.parser_kind_injective);
   }
 
 let parse_vclist_payload_kind_is_weaker_than

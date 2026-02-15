@@ -132,7 +132,7 @@ let parse_nlist_total_fixed_size_aux
   FStar.Math.Lemmas.lemma_div_exact (U32.v n) k.LP.parser_kind_low;
   FStar.Math.Lemmas.nat_over_pos_is_nat (U32.v n) k.LP.parser_kind_low;
   LowParse.Spec.List.parse_list_total_constant_size p cnt x';
-  LP.parser_kind_prop_equiv LowParse.Spec.List.parse_list_kind (LowParse.Spec.List.parse_list p)
+  LP.parser_kind_prop_equiv (LowParse.Spec.List.parse_list_kind k.LP.parser_kind_injective) (LowParse.Spec.List.parse_list p)
 
 let parse_nlist_total_fixed_size_kind_correct
   (n:U32.t) (n_is_const:option nat { memoizes_n_as_const n_is_const n })
@@ -140,6 +140,7 @@ let parse_nlist_total_fixed_size_kind_correct
 : Lemma
   (requires (
     let open LP in
+    k.parser_kind_injective == true /\
     k.parser_kind_subkind == Some ParserStrong /\
     k.parser_kind_high == Some k.parser_kind_low /\
     U32.v n % k.parser_kind_low == 0 /\
@@ -149,7 +150,7 @@ let parse_nlist_total_fixed_size_kind_correct
     LP.parser_kind_prop (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist' n n_is_const p) /\
     (Some? n_is_const ==> kind_nlist k n_is_const == LP.total_constant_size_parser_kind (U32.v n))
   ))
-= LP.parser_kind_prop_equiv (LowParse.Spec.FLData.parse_fldata_kind (U32.v n) LowParse.Spec.List.parse_list_kind) (parse_nlist' n n_is_const p);
+= LP.parser_kind_prop_equiv (LowParse.Spec.FLData.parse_fldata_kind (U32.v n) (LowParse.Spec.List.parse_list_kind k.LP.parser_kind_injective)) (parse_nlist' n n_is_const p);
   LP.parser_kind_prop_equiv (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist' n n_is_const p);
   Classical.forall_intro (Classical.move_requires (parse_nlist_total_fixed_size_aux n n_is_const p))
 
@@ -158,7 +159,7 @@ let parse_nlist n n_is_const #wk #k #t p
   = let open LowParse.Spec.FLData in
     let open LowParse.Spec.List in
     let p' = parse_nlist' n n_is_const p in
-    LP.parser_kind_prop_equiv (parse_fldata_kind (U32.v n) (parse_list_kind)) p';
+    LP.parser_kind_prop_equiv (parse_fldata_kind (U32.v n) (parse_list_kind k.LP.parser_kind_injective)) p';
     LP.parser_kind_prop_equiv (kind_nlist k n_is_const) p';
     Classical.move_requires (parse_nlist_total_fixed_size_kind_correct n n_is_const #wk #k #t) p;
     p'

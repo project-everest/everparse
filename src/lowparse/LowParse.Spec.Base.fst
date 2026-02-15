@@ -41,6 +41,7 @@ let parse_injective
   (input2: bytes)
 : Lemma
   (requires (
+    k.parser_kind_injective == true /\
     injective_precond p input1 input2
   ))
   (ensures (
@@ -79,9 +80,10 @@ let serializer_correct_implies_complete
   (p: parser k t)
   (f: bare_serializer t)
 : Lemma
-  (requires (serializer_correct p f))
+  (requires (k.parser_kind_injective == true /\ serializer_correct p f))
   (ensures (serializer_complete p f))
-= let prf
+= parser_kind_prop_equiv k p;
+  let prf
     (s: bytes)
   : Lemma
     (requires (Some? (parse p s)))
@@ -106,6 +108,7 @@ let serializer_parser_unique'
   (x: bytes)
 : Lemma
   (requires (
+    k1.parser_kind_injective == true /\
     is_strong p1 /\
     is_strong p2 /\
     serializer_correct p1 s /\
@@ -115,7 +118,9 @@ let serializer_parser_unique'
   (ensures (
     parse p1 x == parse p2 x
   ))
-= serializer_correct_implies_complete p1 s;
+= assert (k1.parser_kind_injective == true);
+  parser_kind_prop_equiv k1 p1;
+  serializer_correct_implies_complete p1 s;
   let (Some (y, len)) = parse p1 x in
   let x' = Seq.slice x 0 len in
   assert (s y == x');
@@ -124,8 +129,7 @@ let serializer_parser_unique'
   assert (parse p1 x' == Some (y, len'));
   assert (parse p2 x' == Some (y, len'));
   assert (no_lookahead_on p2 x' x);
-  assert (no_lookahead_on_postcond p2 x' x);
-  assert (injective_postcond p2 x' x)
+  assert (no_lookahead_on_postcond p2 x' x)
 
 let serialize_length
   (#k: parser_kind)

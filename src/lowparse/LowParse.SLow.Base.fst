@@ -156,7 +156,7 @@ let serialize32_ext
   (#k2: parser_kind)
   (#t2: Type)
   (p2: parser k2 t2)
-  (u: squash (t1 == t2 /\ (forall (input: bytes) . parse p1 input == parse p2 input)))
+  (u: squash (t1 == t2 /\ k2.parser_kind_injective == true /\ (forall (input: bytes) . parse p1 input == parse p2 input)))
 : Tot (serializer32 (serialize_ext p1 s1 p2))
 = fun input -> s1' input
 
@@ -225,6 +225,7 @@ let parser32_injective
   (input1 input2: bytes32)
 : Lemma
   (requires (
+    k.parser_kind_injective == true /\ (
     let p1 = p32 input1 in
     let p2 = p32 input2 in
     Some? p1 /\
@@ -232,7 +233,7 @@ let parser32_injective
     let (Some (v1, _)) = p1 in
     let (Some (v2, _)) = p2 in
     v1 == v2
-  )))
+  ))))
   (ensures (
     let p1 = p32 input1 in
     let p2 = p32 input2 in
@@ -375,7 +376,7 @@ let size32_ext
   (#k2: parser_kind)
   (#t2: Type)
   (p2: parser k2 t2)
-  (u: squash (t1 == t2 /\ (forall (input: bytes) . parse p1 input == parse p2 input)))
+  (u: squash (t1 == t2 /\ k2.parser_kind_injective == true /\ (forall (input: bytes) . parse p1 input == parse p2 input)))
 : Tot (size32 (serialize_ext p1 s1 p2))
 = fun input -> s1' input
 

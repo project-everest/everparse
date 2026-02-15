@@ -27,6 +27,7 @@ let parser_kind_prop
   (k: LP.parser_kind)
 : Tot prop
 = (nz ==> (k.LP.parser_kind_low > 0)) /\
+  k.LP.parser_kind_injective == true /\
   begin match wk with
   | WeakKindStrongPrefix -> k.LP.parser_kind_subkind == Some LP.ParserStrong
   | WeakKindConsumesAll -> k.LP.parser_kind_subkind == Some LP.ParserConsumesAll
@@ -83,7 +84,8 @@ let kind_nlist_default
     parser_kind_low = 0;
     parser_kind_high = None;
     parser_kind_subkind = Some ParserStrong;
-    parser_kind_metadata = None
+    parser_kind_metadata = None;
+    parser_kind_injective = true;
   }
   
 inline_for_extraction
@@ -106,6 +108,7 @@ let kind_nlist #b #w kelt nopt
           parser_kind_high = Some byte_size;
           parser_kind_subkind = Some ParserStrong;
           parser_kind_metadata = Some ParserKindMetadataTotal;
+          parser_kind_injective = true;
         }
       )
       else kind_nlist_default
@@ -129,11 +132,12 @@ let parse_string_kind
      LP.parser_kind_high = None;
      LP.parser_kind_subkind = Some LP.ParserStrong;
      LP.parser_kind_metadata = None;
+     LP.parser_kind_injective = true;
     }
 
 let kind_all_zeros
   : parser_kind false WeakKindConsumesAll
-  = LowParse.Spec.List.parse_list_kind
+  = LowParse.Spec.List.parse_list_kind true
 
 inline_for_extraction noextract
 let kind____UINT8

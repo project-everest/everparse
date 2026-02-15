@@ -52,10 +52,8 @@ let access_a : accessor gaccess_a =
     (accessor_compose
       (accessor_compose
         (accessor_synth (parse_u16 `nondep_then` parse_u32 `nondep_then` parse_u16) synth_t synth_t_recip ())
-        (accessor_fst (parse_u16 `nondep_then` parse_u32) () parse_u16)
-        ())
-      (accessor_fst parse_u16 () parse_u32)
-      ())
+        (accessor_fst (parse_u16 `nondep_then` parse_u32) () parse_u16))
+      (accessor_fst parse_u16 () parse_u32))
     clens_a
     ()
 
@@ -81,10 +79,8 @@ let access_b : accessor gaccess_b =
     (accessor_compose
       (accessor_compose
         (accessor_synth (parse_u16 `nondep_then` parse_u32 `nondep_then` parse_u16) synth_t synth_t_recip ())
-        (accessor_fst (parse_u16 `nondep_then` parse_u32) () parse_u16)
-        ())
-      (accessor_snd jump_u16 parse_u32)
-      ())
+        (accessor_fst (parse_u16 `nondep_then` parse_u32) () parse_u16))
+      (accessor_snd jump_u16 parse_u32))
     clens_b
     ()
 
@@ -106,7 +102,6 @@ let access_c : accessor gaccess_c =
   accessor_ext
     (accessor_compose
       (accessor_synth (parse_u16 `nondep_then` parse_u32 `nondep_then` parse_u16) synth_t synth_t_recip ())
-      (accessor_snd (jump_u16 `jump_nondep_then` jump_u32) parse_u16)
-      ())
+      (accessor_snd (jump_u16 `jump_nondep_then` jump_u32) parse_u16))
     clens_c
     ()

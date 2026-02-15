@@ -70,7 +70,7 @@ let parse_byte_sorted_list
   (#t: Type)
   (#k: LPC.parser_kind)
   (p: LPC.parser k t)
-: Tot (LPC.parser (LPC.parse_filter_kind LPL.parse_list_kind) (list t))
+: Tot (LPC.parser (LPC.parse_filter_kind (LPL.parse_list_kind k.LPC.parser_kind_injective)) (list t))
 = LPL.parse_list p `LPC.parse_filter` parse_byte_sorted_list_filter byte_order p `LPC.parse_synth` synth_byte_sorted_list byte_order p
 
 module LPT = LowParse.Tot.Base
@@ -111,11 +111,13 @@ let repr_order_prop_intro
   (b1 b2: LPC.bytes)
 : Lemma
   (requires (
-    match p b1, p b2 with
+    k.LPC.parser_kind_injective == true /\
+    begin match p b1, p b2 with
     | Some (x1', consumed1), Some (x2', consumed2) ->
       x1' == x1 /\
       x2' == x2
     | _ -> False
+    end
   ))
   (ensures (
     let Some (_, consumed1) = p b1 in
@@ -160,6 +162,7 @@ let rec tot_parse_byte_sorted_list_aux_correct
   (b: LPT.bytes)
 : Lemma
   (requires (
+    k.LPC.parser_kind_injective == true /\
     k.parser_kind_subkind == Some LPC.ParserStrong /\
     begin match LPC.parse p previous_bytes with
     | None -> False
@@ -247,7 +250,7 @@ let tot_parse_byte_sorted_list_correct
   (tot_byte_order: ((x: LPC.bytes) -> (y: LPC.bytes) -> Pure bool True (fun z -> z == true <==> byte_order x y)))
   (#t: Type)
   (#k: LPC.parser_kind)
-  (p: LPT.parser k t {k.parser_kind_subkind == Some LPC.ParserStrong})
+  (p: LPT.parser k t {k.LPC.parser_kind_injective == true /\ k.parser_kind_subkind == Some LPC.ParserStrong})
   (b: LPT.bytes)
 : Lemma
   (ensures (
@@ -290,13 +293,13 @@ let tot_parse_byte_sorted_list
   (#t: Type)
   (#k: LPC.parser_kind)
   (p: LPT.parser k t)
-: Pure (LPT.parser (LPC.parse_filter_kind LPL.parse_list_kind) (list t))
-    (requires k.parser_kind_subkind == Some LPC.ParserStrong)
+: Pure (LPT.parser (LPC.parse_filter_kind (LPL.parse_list_kind k.LPC.parser_kind_injective)) (list t))
+    (requires k.LPC.parser_kind_injective == true /\ k.parser_kind_subkind == Some LPC.ParserStrong)
     (ensures (fun y -> forall x . y x == LPC.parse (parse_byte_sorted_list (prop_order_of_bool_order byte_order) #_ #k p) x))
 = Classical.forall_intro (tot_parse_byte_sorted_list_correct (prop_order_of_bool_order byte_order) (fun x1 x2 -> byte_order x1 x2) p);
   let p' = tot_parse_byte_sorted_list_bare (fun x1 x2 -> byte_order x1 x2) p in
   LPC.parser_kind_prop_ext
-    (LPC.parse_filter_kind LPL.parse_list_kind)
+    (LPC.parse_filter_kind (LPL.parse_list_kind k.LPC.parser_kind_injective))
     (parse_byte_sorted_list (prop_order_of_bool_order byte_order) #_ #k p)
     p';
   p'
