@@ -223,10 +223,10 @@ fn create_sig privkey phdr aad payload (sigbuf: AP.ptr UInt8.t)
 #pop-options
 
 let rel_inl_map =
-(rel_slice_of_table (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_label_right
-                      spect_label_left
-                      spect_label_left_right
-                      spect_label_right_left
+(rel_slice_of_table (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_label_right
+                      spect_evercddl_label_left
+                      spect_evercddl_label_left_right
+                      spect_evercddl_label_right_left
                       (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_int_right
                               spect_evercddl_int_left
                               spect_evercddl_int_left_right
@@ -246,28 +246,28 @@ let rel_inl_map =
                               spect_tstr_left_right
                               spect_tstr_right_left
                               (CDDL.Spec.EqTest.eqtype_eq (Seq.Base.seq UInt8.t)))))
-                  rel_label
+                  rel_evercddl_label
                   rel_values)
 
 [@@noextract_to "krml"]
-inline_for_extraction noextract let dummy_map_type : Type0 = label & values
+inline_for_extraction noextract let dummy_map_type : Type0 = evercddl_label & values
 
 let dummy_map_val () : dummy_map_type =
-  Mklabel0
+  Mkevercddl_label0
     (Mkevercddl_int0 (Mkevercddl_uint0 0uL)),
   Mkvalues0 (Mkany0
     { c = CBOR.Pulse.API.Det.Type.dummy_cbor_det_t (); p = 0.5R })
 
 let assert_norm' (p: prop) : Pure (squash p) (requires normalize p) (ensures fun _ -> True) = ()
 
-let rel_inl_map_eq (x: slice (label & values)) y = assert_norm' (rel_inl_map x y == 
+let rel_inl_map_eq (x: slice (evercddl_label & values)) y = assert_norm' (rel_inl_map x y == 
   (exists* l .
-    (exists* s . pts_to x.s #x.p s ** Pulse.Lib.SeqMatch.seq_list_match s l (rel_pair rel_label rel_values) ** pure (false == false)) **
+    (exists* s . pts_to x.s #x.p s ** Pulse.Lib.SeqMatch.seq_list_match s l (rel_pair rel_evercddl_label rel_values) ** pure (false == false)) **
       pure (y == map_of_list_pair
-      (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_label_right
-                      spect_label_left
-                      spect_label_left_right
-                      spect_label_right_left
+      (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_label_right
+                      spect_evercddl_label_left
+                      spect_evercddl_label_left_right
+                      spect_evercddl_label_right_left
                       (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_int_right
                               spect_evercddl_int_left
                               spect_evercddl_int_left_right
@@ -306,7 +306,7 @@ let rel_map_sign1_phdrs_eq (alg: Int32.t) alg' s =
       rel_inl_map s (CDDL.Spec.Map.empty _ _)))
 
 inline_for_extraction
-fn mk_phdrs (alg: Int32.t) (rest: A.larray (label & values) 0)
+fn mk_phdrs (alg: Int32.t) (rest: A.larray (evercddl_label & values) 0)
     #prest (#vrest: erased _)
   requires pts_to rest #prest vrest
   returns res: empty_or_serialized_map
@@ -317,7 +317,7 @@ fn mk_phdrs (alg: Int32.t) (rest: A.larray (label & values) 0)
   A.pts_to_len rest;
   let rest2 = S.from_array rest 0sz;
   Pulse.Lib.SeqMatch.seq_list_match_nil_intro (Seq.Base.create 0 (dummy_map_val ())) []
-      (rel_pair rel_label rel_values);
+      (rel_pair rel_evercddl_label rel_values);
   assert pure (Seq.Base.create 0 (dummy_map_val ()) `Seq.equal` vrest);
   rewrite each (FStar.Seq.Base.create 0
             (dummy_map_val ())) as vrest;
@@ -335,7 +335,7 @@ fn mk_phdrs (alg: Int32.t) (rest: A.larray (label & values) 0)
     with vrest'. assert pts_to rest #prest vrest';
     assert pure (Seq.equal vrest' vrest);
     drop_ (
-      Pulse.Lib.SeqMatch.seq_list_match _ _ (rel_pair rel_label rel_values) **
+      Pulse.Lib.SeqMatch.seq_list_match _ _ (rel_pair rel_evercddl_label rel_values) **
       rel_evercddl_int alg' (specint_of_i32 alg)
     );
   };
@@ -357,7 +357,7 @@ let rel_map_sign1_emphdrs_eq s =
       rel_inl_map s (CDDL.Spec.Map.empty _ _)))
 
 inline_for_extraction noextract
-fn mk_emphdrs (rest: A.larray (label & values) 0)
+fn mk_emphdrs (rest: A.larray (evercddl_label & values) 0)
     #prest (#vrest: erased _)
   requires pts_to rest #prest vrest
   returns res: header_map
@@ -367,7 +367,7 @@ fn mk_emphdrs (rest: A.larray (label & values) 0)
   assert pure (Seq.equal vrest (Seq.create 0 (dummy_map_val ())));
   let rest2 = S.from_array rest 0sz;
   Pulse.Lib.SeqMatch.seq_list_match_nil_intro (Seq.Base.create 0 (dummy_map_val ())) []
-      (rel_pair rel_label rel_values);
+      (rel_pair rel_evercddl_label rel_values);
   rewrite each (FStar.Seq.Base.create 0
             (dummy_map_val ())) as vrest;
   rw_l (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
@@ -385,7 +385,7 @@ fn mk_emphdrs (rest: A.larray (label & values) 0)
     with vrest'. assert pts_to rest #prest vrest';
     assert pure (Seq.equal vrest' vrest);
     drop_ (
-      Pulse.Lib.SeqMatch.seq_list_match _ _ (rel_pair rel_label rel_values)
+      Pulse.Lib.SeqMatch.seq_list_match _ _ (rel_pair rel_evercddl_label rel_values)
     );
   };
   intro_trade _ _ _ aux;
