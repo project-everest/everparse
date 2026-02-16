@@ -55,10 +55,10 @@ pub fn create_sig(
 }
 
 pub fn dummy_map_val <'a>() ->
-    (crate::coseformat::label <'a>, crate::cbordetveraux::cbor_raw <'a>)
+    (crate::coseformat::evercddl_label <'a>, crate::cbordetveraux::cbor_raw <'a>)
 {
     (
-        crate::coseformat::label::Mklabel0
+        crate::coseformat::evercddl_label::Mkevercddl_label0
         { _x0: crate::coseformat::evercddl_int::Mkevercddl_int0 { _x0: 0u64 } },crate::cbordetver::dummy_cbor_det_t(
 
         )
@@ -67,13 +67,13 @@ pub fn dummy_map_val <'a>() ->
 
 pub fn mk_phdrs <'a>(
     alg: i32,
-    rest: &'a [(crate::coseformat::label <'a>, crate::cbordetveraux::cbor_raw <'a>)]
+    rest: &'a [(crate::coseformat::evercddl_label <'a>, crate::cbordetveraux::cbor_raw <'a>)]
 ) ->
     crate::coseformat::empty_or_serialized_map
     <'a>
 {
     let alg·: crate::coseformat::evercddl_int = mk_int(alg);
-    let rest2: &[(crate::coseformat::label, crate::cbordetveraux::cbor_raw)] = rest;
+    let rest2: &[(crate::coseformat::evercddl_label, crate::cbordetveraux::cbor_raw)] = rest;
     crate::coseformat::empty_or_serialized_map::Mkempty_or_serialized_map0
     {
         _x0:
@@ -81,7 +81,7 @@ pub fn mk_phdrs <'a>(
         {
             intkey1:
             crate::coseformat::option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr::Some
-            { v: crate::coseformat::label_ugly::Inl { v: alg· } },
+            { v: crate::coseformat::evercddl_label_ugly::Inl { v: alg· } },
             intkey2:
             crate::coseformat::option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env34_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env34_type_1::None,
             intkey3:
@@ -100,7 +100,7 @@ pub fn mk_phdrs <'a>(
                 }
             },
             _x1:
-            crate::coseformat::either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values::Inl
+            crate::coseformat::either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_values::Inl
             { v: rest2 }
         }
     }
@@ -118,10 +118,11 @@ pub fn sign1 <'a>(
     &'a [u8]
 {
     let alg: i32 = -8i32;
-    let phdrauxbuf: [(crate::coseformat::label, crate::cbordetveraux::cbor_raw); 0] =
+    let phdrauxbuf: [(crate::coseformat::evercddl_label, crate::cbordetveraux::cbor_raw); 0] =
         [dummy_map_val(); 0usize];
     let alg·: crate::coseformat::evercddl_int = mk_int(alg);
-    let rest2: &[(crate::coseformat::label, crate::cbordetveraux::cbor_raw)] = &phdrauxbuf;
+    let rest2: &[(crate::coseformat::evercddl_label, crate::cbordetveraux::cbor_raw)] =
+        &phdrauxbuf;
     let phdr: crate::coseformat::empty_or_serialized_map =
         crate::coseformat::empty_or_serialized_map::Mkempty_or_serialized_map0
         {
@@ -130,7 +131,7 @@ pub fn sign1 <'a>(
             {
                 intkey1:
                 crate::coseformat::option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr::Some
-                { v: crate::coseformat::label_ugly::Inl { v: alg· } },
+                { v: crate::coseformat::evercddl_label_ugly::Inl { v: alg· } },
                 intkey2:
                 crate::coseformat::option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env34_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env34_type_1::None,
                 intkey3:
@@ -149,7 +150,7 @@ pub fn sign1 <'a>(
                     }
                 },
                 _x1:
-                crate::coseformat::either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values::Inl
+                crate::coseformat::either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_values::Inl
                 { v: rest2 }
             }
         };
@@ -183,9 +184,10 @@ pub fn sign1 <'a>(
 pub fn sign1_simple <'a>(privkey: &'a [u8], payload: &'a [u8], outbuf: &'a mut [u8]) ->
     &'a [u8]
 {
-    let uhdrauxbuf: [(crate::coseformat::label, crate::cbordetveraux::cbor_raw); 0] =
+    let uhdrauxbuf: [(crate::coseformat::evercddl_label, crate::cbordetveraux::cbor_raw); 0] =
         [dummy_map_val(); 0usize];
-    let rest2: &[(crate::coseformat::label, crate::cbordetveraux::cbor_raw)] = &uhdrauxbuf;
+    let rest2: &[(crate::coseformat::evercddl_label, crate::cbordetveraux::cbor_raw)] =
+        &uhdrauxbuf;
     let uhdr: crate::coseformat::header_map =
         crate::coseformat::header_map
         {
@@ -209,16 +211,17 @@ pub fn sign1_simple <'a>(privkey: &'a [u8], payload: &'a [u8], outbuf: &'a mut [
                 }
             },
             _x1:
-            crate::coseformat::either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values::Inl
+            crate::coseformat::either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_values::Inl
             { v: rest2 }
         };
     let aadbuf: [u8; 0] = [0u8; 0usize];
     let aadslice: &[u8] = &aadbuf;
     let alg: i32 = -8i32;
-    let phdrauxbuf: [(crate::coseformat::label, crate::cbordetveraux::cbor_raw); 0] =
+    let phdrauxbuf: [(crate::coseformat::evercddl_label, crate::cbordetveraux::cbor_raw); 0] =
         [dummy_map_val(); 0usize];
     let alg·: crate::coseformat::evercddl_int = mk_int(alg);
-    let rest20: &[(crate::coseformat::label, crate::cbordetveraux::cbor_raw)] = &phdrauxbuf;
+    let rest20: &[(crate::coseformat::evercddl_label, crate::cbordetveraux::cbor_raw)] =
+        &phdrauxbuf;
     let phdr: crate::coseformat::empty_or_serialized_map =
         crate::coseformat::empty_or_serialized_map::Mkempty_or_serialized_map0
         {
@@ -227,7 +230,7 @@ pub fn sign1_simple <'a>(privkey: &'a [u8], payload: &'a [u8], outbuf: &'a mut [
             {
                 intkey1:
                 crate::coseformat::option__FStar_Pervasives_either·COSE_Format_evercddl_int·COSE_Format_tstr::Some
-                { v: crate::coseformat::label_ugly::Inl { v: alg· } },
+                { v: crate::coseformat::evercddl_label_ugly::Inl { v: alg· } },
                 intkey2:
                 crate::coseformat::option__FStar_Pervasives_either·CDDL_Pulse_Types_slice·COSE_Format_aux_env34_type_1·CDDL_Pulse_Parse_ArrayGroup_array_iterator_t·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_raw·COSE_Format_aux_env34_type_1::None,
                 intkey3:
@@ -246,7 +249,7 @@ pub fn sign1_simple <'a>(privkey: &'a [u8], payload: &'a [u8], outbuf: &'a mut [
                     }
                 },
                 _x1:
-                crate::coseformat::either__CDDL_Pulse_Types_slice··COSE_Format_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_label·COSE_Format_values::Inl
+                crate::coseformat::either__CDDL_Pulse_Types_slice··COSE_Format_evercddl_label···COSE_Format_values·_CDDL_Pulse_Parse_MapGroup_map_iterator_t·CBOR_Pulse_Raw_Type_cbor_raw·CBOR_Pulse_Raw_Type_cbor_map_entry·CBOR_Pulse_Raw_Iterator_cbor_raw_iterator·CBOR_Pulse_Raw_Type_cbor_map_entry·COSE_Format_evercddl_label·COSE_Format_values::Inl
                 { v: rest20 }
             }
         };

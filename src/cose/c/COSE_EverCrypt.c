@@ -86,15 +86,15 @@ COSE_EverCrypt_create_sig(
   }
 }
 
-K___COSE_Format_label_COSE_Format_values COSE_EverCrypt_dummy_map_val(void)
+K___COSE_Format_evercddl_label_COSE_Format_values COSE_EverCrypt_dummy_map_val(void)
 {
   return
     (
-      (K___COSE_Format_label_COSE_Format_values){
+      (K___COSE_Format_evercddl_label_COSE_Format_values){
         .fst = {
-          .tag = COSE_Format_Mklabel0,
+          .tag = COSE_Format_Mkevercddl_label0,
           {
-            .case_Mklabel0 = {
+            .case_Mkevercddl_label0 = {
               .tag = COSE_Format_Mkevercddl_int0,
               { .case_Mkevercddl_int0 = 0ULL }
             }
@@ -105,18 +105,23 @@ K___COSE_Format_label_COSE_Format_values COSE_EverCrypt_dummy_map_val(void)
     );
 }
 
-static Pulse_Lib_Slice_slice___COSE_Format_label___COSE_Format_values_
-from_array___COSE_Format_label___COSE_Format_values_(
-  K___COSE_Format_label_COSE_Format_values *a,
+static Pulse_Lib_Slice_slice___COSE_Format_evercddl_label___COSE_Format_values_
+from_array___COSE_Format_evercddl_label___COSE_Format_values_(
+  K___COSE_Format_evercddl_label_COSE_Format_values *a,
   size_t alen
 )
 {
   return
-    ((Pulse_Lib_Slice_slice___COSE_Format_label___COSE_Format_values_){ .elt = a, .len = alen });
+    (
+      (Pulse_Lib_Slice_slice___COSE_Format_evercddl_label___COSE_Format_values_){
+        .elt = a,
+        .len = alen
+      }
+    );
 }
 
 COSE_Format_empty_or_serialized_map
-COSE_EverCrypt_mk_phdrs(int32_t alg, K___COSE_Format_label_COSE_Format_values *rest)
+COSE_EverCrypt_mk_phdrs(int32_t alg, K___COSE_Format_evercddl_label_COSE_Format_values *rest)
 {
   COSE_Format_evercddl_int alg_ = COSE_EverCrypt_mk_int(alg);
   return
@@ -147,7 +152,10 @@ COSE_EverCrypt_mk_phdrs(int32_t alg, K___COSE_Format_label_COSE_Format_values *r
             },
             ._x1 = {
               .tag = COSE_Format_Inl,
-              { .case_Inl = from_array___COSE_Format_label___COSE_Format_values_(rest, (size_t)0U) }
+              {
+                .case_Inl = from_array___COSE_Format_evercddl_label___COSE_Format_values_(rest,
+                  (size_t)0U)
+              }
             }
           }
         }
@@ -164,8 +172,8 @@ COSE_EverCrypt_sign1(
   Pulse_Lib_Slice_slice__uint8_t outbuf
 )
 {
-  KRML_CHECK_SIZE(sizeof (K___COSE_Format_label_COSE_Format_values), (size_t)0U);
-  K___COSE_Format_label_COSE_Format_values phdrauxbuf[0U];
+  KRML_CHECK_SIZE(sizeof (K___COSE_Format_evercddl_label_COSE_Format_values), (size_t)0U);
+  K___COSE_Format_evercddl_label_COSE_Format_values phdrauxbuf[0U];
   for (uint32_t _i = 0U; _i < (size_t)0U; ++_i)
     phdrauxbuf[_i] = COSE_EverCrypt_dummy_map_val();
   COSE_Format_evercddl_int alg_ = COSE_EverCrypt_mk_int((int32_t)-8);
@@ -198,7 +206,7 @@ COSE_EverCrypt_sign1(
           ._x1 = {
             .tag = COSE_Format_Inl,
             {
-              .case_Inl = from_array___COSE_Format_label___COSE_Format_values_(phdrauxbuf,
+              .case_Inl = from_array___COSE_Format_evercddl_label___COSE_Format_values_(phdrauxbuf,
                 (size_t)0U)
             }
           }
@@ -235,8 +243,8 @@ COSE_EverCrypt_sign1_simple(
   Pulse_Lib_Slice_slice__uint8_t outbuf
 )
 {
-  KRML_CHECK_SIZE(sizeof (K___COSE_Format_label_COSE_Format_values), (size_t)0U);
-  K___COSE_Format_label_COSE_Format_values buf0[0U];
+  KRML_CHECK_SIZE(sizeof (K___COSE_Format_evercddl_label_COSE_Format_values), (size_t)0U);
+  K___COSE_Format_evercddl_label_COSE_Format_values buf0[0U];
   for (uint32_t _i = 0U; _i < (size_t)0U; ++_i)
     buf0[_i] = COSE_EverCrypt_dummy_map_val();
   COSE_Format_header_map
@@ -262,7 +270,10 @@ COSE_EverCrypt_sign1_simple(
       },
       ._x1 = {
         .tag = COSE_Format_Inl,
-        { .case_Inl = from_array___COSE_Format_label___COSE_Format_values_(buf0, (size_t)0U) }
+        {
+          .case_Inl = from_array___COSE_Format_evercddl_label___COSE_Format_values_(buf0,
+            (size_t)0U)
+        }
       }
     };
   uint8_t buf[0U];
