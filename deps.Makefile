@@ -69,8 +69,8 @@ NEED_OPAM :=
 ifneq (1,$(EVERPARSE_USE_OPAMROOT))
 NEED_OPAM_DIR := $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh
 NEED_OPAM := $(EVERPARSE_OPT_PATH)/opam.done
-with_opam := eval "$$(opam env --root="$(EVERPARSE_OPT_PATH)/opam" --set-root)" &&
 endif
+with_opam := eval "$$($(EVERPARSE_OPT_PATH)/opam-env.sh --shell)" &&
 
 NEED_Z3 :=
 ifeq (,$(z3_exe))
