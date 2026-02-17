@@ -237,7 +237,7 @@ endif
 .PHONY: cddl-unit-tests
 
 ifeq (,$(NO_PULSE))
-cose-extract-krml: cddl
+cose-extract-krml: cddl-tool
 	+$(MAKE) -C src/cose extract-krml
 
 cose-extract-test: cose-extract-krml
