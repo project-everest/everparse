@@ -237,14 +237,14 @@ endif
 .PHONY: cddl-unit-tests
 
 ifeq (,$(NO_PULSE))
-cose-extract-krml: cddl
+cose-extract-krml: cddl-tool
 	+$(MAKE) -C src/cose extract-krml
 
-cose-extract-test: cose-extract-krml
+cose-extract-test: cose-extract-krml cbor
 	+$(MAKE) -C src/cose test-extract
 
 # This rule is incompatible with cose-extract-test
-cose-snapshot: cose-extract-krml
+cose-snapshot: cose-extract-krml cbor
 	+$(MAKE) -C src/cose snapshot
 else
 cose-extract-krml:
