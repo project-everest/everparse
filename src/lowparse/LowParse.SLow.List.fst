@@ -200,7 +200,7 @@ let parse32_list
 : Tot (parser32 (parse_list p))
 = fun (input: bytes32) -> ((
     parse_list_tailrec'_correct p32 input;
-    parser_kind_prop_equiv parse_list_kind (parse_list p);
+    parser_kind_prop_equiv (parse_list_kind k.parser_kind_injective) (parse_list p);
     match parse_list_tailrec p32 input with
     | None -> None
     | Some res ->

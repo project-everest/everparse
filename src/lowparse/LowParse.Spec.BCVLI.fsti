@@ -10,6 +10,7 @@ let parse_bcvli_kind = {
   parser_kind_high = Some 5;
   parser_kind_subkind = Some ParserStrong;
   parser_kind_metadata = None;
+  parser_kind_injective = true;
 }
 
 val parse_bcvli : parser parse_bcvli_kind U32.t
@@ -75,6 +76,7 @@ let parse_bounded_bcvli_kind
   parser_kind_high = Some (parse_bounded_bcvli_size max);
   parser_kind_subkind = Some ParserStrong;
   parser_kind_metadata = None;
+  parser_kind_injective = true;
 }
 
 val parse_bounded_bcvli

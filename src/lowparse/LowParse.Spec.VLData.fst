@@ -32,7 +32,7 @@ let parse_vldata_gen_eq_def
   (#t: Type)
   (p: parser k t)
 : Lemma
-  (and_then_cases_injective (parse_vldata_payload sz f p) /\
+  ((k.parser_kind_injective == true ==> and_then_cases_injective (parse_vldata_payload sz f p)) /\
   parse_vldata_gen_kind sz k == and_then_kind (parse_filter_kind (parse_bounded_integer_kind sz)) (parse_vldata_payload_kind sz k) /\
   parse_vldata_gen sz f p ==
   and_then

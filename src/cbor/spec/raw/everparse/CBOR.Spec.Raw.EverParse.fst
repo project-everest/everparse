@@ -482,6 +482,7 @@ let parse_content_kind : parser_kind = {
   parser_kind_high = None;
   parser_kind_subkind = Some ParserStrong;
   parser_kind_metadata = None;
+  parser_kind_injective = true;
 }
 
 inline_for_extraction
@@ -490,6 +491,7 @@ let parse_raw_data_item_kind : parser_kind = {
   parser_kind_high = None;
   parser_kind_subkind = Some ParserStrong;
   parser_kind_metadata = None;
+  parser_kind_injective = true;
 }
 
 let parse_content

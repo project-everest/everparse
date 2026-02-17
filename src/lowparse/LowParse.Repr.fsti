@@ -45,7 +45,8 @@ module I = LowStar.ImmutableBuffer
 /// property.
 let strong_parser_kind =
     k:LP.parser_kind{
-      LP.(k.parser_kind_subkind == Some ParserStrong)
+      LP.(k.parser_kind_subkind == Some ParserStrong /\
+          k.parser_kind_injective == true)
     }
 
 let preorder (c:C.const_buffer LP.byte) = C.qbuf_pre (C.as_qbuf c)
@@ -623,7 +624,7 @@ let field_accessor_comp (#k1 #k2 #k3:strong_parser_kind)
    =
    [@inline_let] let FieldAccessor acc12 j2 p2' = f12 in
    [@inline_let] let FieldAccessor acc23 j3 p3' = f23 in
-   [@inline_let] let acc13 = LP.accessor_compose acc12 acc23 () in
+   [@inline_let] let acc13 = LP.accessor_compose acc12 acc23 in
      FieldAccessor acc13 j3 p3'
 
 unfold noextract

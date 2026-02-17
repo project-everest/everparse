@@ -30,7 +30,7 @@ module List = FStar.List.Tot
 let parse_non_empty_list 
   (#k : parser_kind)
   (#t : Type)
-  (p : parser k t)
+  (p : parser k t {k.parser_kind_injective == true})
 : asn1_weak_parser (non_empty_list t)
 = weaken _ ((parse_list p) `parse_filter` isNonEmpty)
 
@@ -112,16 +112,16 @@ and dasn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_c
   | ASN1_ANY_DEFINED_BY id_decs_prefix prefix id key_k ls ofb pf pf' -> 
     let itemtwins = dasn1_sequence_as_parser prefix in //(l_as_list prefix) in
     let key_p_twin = 
-      (let kc = ASN1_TERMINAL key_k in
-      let p = dasn1_terminal_as_parser key_k in
-      let _ = parser_asn1_ILC_twin_case_injective id #kc p in
-      Mkparsertwin #asn1_strong_parser_kind #(asn1_terminal_t key_k) (parse_asn1_ILC id #kc p) (parse_asn1_ILC_twin id #kc p))
+      (let p = dasn1_terminal_as_parser key_k in
+      let _ = parser_asn1_ILC_twin_case_injective id #(ASN1_TERMINAL key_k) p in
+      Mkparsertwin #asn1_strong_parser_kind #(asn1_terminal_t key_k) (parse_asn1_ILC id #(ASN1_TERMINAL key_k) p) (parse_asn1_ILC_twin id #(ASN1_TERMINAL key_k) p))
     in
     let key_p = Mkparsertwin?.p key_p_twin in
     let key_fp = Mkparsertwin?.fp key_p_twin in
     let supported_p = dasn1_ls_as_parser (asn1_terminal_t key_k) ls in
     (match ofb with
     | None -> 
+      assert_norm (asn1_weak_parser_kind `is_weaker_than` (and_then_kind asn1_strong_parser_kind asn1_weak_parser_kind));
       let suffix_p_twin = (Mkparsertwin #asn1_weak_parser_kind #(make_gen_choice_type (extract_types supported_p))
         (weaken asn1_weak_parser_kind (make_gen_choice_weak_parser key_p supported_p))
         (let _ = make_gen_choice_weak_parser_twin_and_then_cases_injective key_fp supported_p in
@@ -129,6 +129,7 @@ and dasn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_c
       in
       make_asn1_sequence_any_parser itemtwins suffix_p_twin
     | Some gitems -> 
+      assert_norm (asn1_weak_parser_kind `is_weaker_than` (and_then_kind asn1_strong_parser_kind asn1_weak_parser_kind));
       let fallback_p = 
         Mkgenparser _
           (parse_debug "parse_any_fallback"
@@ -226,16 +227,16 @@ and asn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_co
   | ASN1_ANY_DEFINED_BY id_decs_prefix prefix id key_k ls ofb pf pf' -> 
     let itemtwins = asn1_sequence_as_parser prefix in
     let key_p_twin = 
-      (let kc = ASN1_TERMINAL key_k in
-      let p = asn1_terminal_as_parser key_k in
-      let _ = parser_asn1_ILC_twin_case_injective id #kc p in
-      Mkparsertwin #asn1_strong_parser_kind #(asn1_terminal_t key_k) (parse_asn1_ILC id #kc p) (parse_asn1_ILC_twin id #kc p))
+      (let p = asn1_terminal_as_parser key_k in
+      let _ = parser_asn1_ILC_twin_case_injective id #(ASN1_TERMINAL key_k) p in
+      Mkparsertwin #asn1_strong_parser_kind #(asn1_terminal_t key_k) (parse_asn1_ILC id #(ASN1_TERMINAL key_k) p) (parse_asn1_ILC_twin id #(ASN1_TERMINAL key_k) p))
     in
     let key_p = Mkparsertwin?.p key_p_twin in
     let key_fp = Mkparsertwin?.fp key_p_twin in
     let supported_p = asn1_ls_as_parser (asn1_terminal_t key_k) ls in
     (match ofb with
     | None -> 
+      assert_norm (asn1_weak_parser_kind `is_weaker_than` (and_then_kind asn1_strong_parser_kind asn1_weak_parser_kind));
       let suffix_p_twin = (Mkparsertwin #asn1_weak_parser_kind #(make_gen_choice_type (extract_types supported_p))
         (weaken asn1_weak_parser_kind (make_gen_choice_weak_parser key_p supported_p))
         (let _ = make_gen_choice_weak_parser_twin_and_then_cases_injective key_fp supported_p in
@@ -243,6 +244,7 @@ and asn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_co
       in
       make_asn1_sequence_any_parser itemtwins suffix_p_twin
     | Some gitems -> 
+      assert_norm (asn1_weak_parser_kind `is_weaker_than` (and_then_kind asn1_strong_parser_kind asn1_weak_parser_kind));
       let fallback_p = Mkgenparser _ (make_asn1_sequence_parser (asn1_sequence_as_parser (dsnd gitems))) in
       let suffix_p_twin = (Mkparsertwin #asn1_weak_parser_kind #(make_gen_choice_type_with_fallback (extract_types supported_p) (Mkgenparser?.t fallback_p))
         (weaken asn1_weak_parser_kind (make_gen_choice_with_fallback_weak_parser key_p supported_p fallback_p))

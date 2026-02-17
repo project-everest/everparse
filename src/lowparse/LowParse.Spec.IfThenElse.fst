@@ -133,11 +133,21 @@ let bare_serialize_ifthenelse_correct
   in
   Classical.forall_intro prf
 
+let serialize_ifthenelse_param_injective
+  (#p: parse_ifthenelse_param)
+  (s: serialize_ifthenelse_param p)
+: Lemma
+  ((parse_ifthenelse_kind p).parser_kind_injective == true)
+= serializer_parser_injective s.serialize_ifthenelse_tag_serializer;
+  serializer_parser_injective (s.serialize_ifthenelse_payload_serializer true);
+  serializer_parser_injective (s.serialize_ifthenelse_payload_serializer false)
+
 let serialize_ifthenelse
   (#p: parse_ifthenelse_param)
   (s: serialize_ifthenelse_param p { p.parse_ifthenelse_tag_kind.parser_kind_subkind == Some ParserStrong } )
 : Tot (serializer (parse_ifthenelse p))
 = bare_serialize_ifthenelse_correct s;
+  serialize_ifthenelse_param_injective s;
   bare_serialize_ifthenelse s
 
 let serialize_ifthenelse_synth_inverse'
