@@ -75,7 +75,8 @@ fn lex_compare_iterator
       pts_to pfin1 fin1 **
       pure (
         same_sign (lex_compare compare v1 v2) (if res = 0s then lex_compare compare l1 l2 else I16.v res) /\
-        (res == 0s ==> (Nil? l1 == Nil? l2 /\ fin1 == Nil? l1)) /\
+        (res == 0s ==> (Nil? l1 == Nil? l2 /\ fin1 == Nil? l1))
+      ) ** pure (
         cont == (res = 0s && Cons? l1)
       )
     ) {

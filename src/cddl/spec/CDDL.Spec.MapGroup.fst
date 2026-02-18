@@ -1,7 +1,7 @@
 module CDDL.Spec.MapGroup
 module U = CBOR.Spec.Util
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 
 (*
 #restart-solver
@@ -57,10 +57,6 @@ let map_group_choice_compatible_match_item_for
     cbor_map_split phi x;
     map_group_footprint_elim right fp (cbor_map_filter phi x) (cbor_map_filter (U.notp phi) x)
   )
-
-#pop-options
-
-#push-options "--z3rlimit 64"
 
 #restart-solver
 let map_group_footprint_concat_consumes_all_recip
@@ -286,7 +282,96 @@ let map_group_parser_spec_concat_eq
     (map_group_parser_spec_concat s1 s2 target_size target_prop l <: (target1 & target2)) == ((p1 l1 <: target1), (p2 l2 <: target2))
   )
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit_factor 8"
+let map_group_serializer_spec_concat
+  (#source1: det_map_group)
+  (#source_fp1: map_constraint)
+  (#target1: Type)
+  (#target_size1: target1 -> Tot nat)
+  (#target_prop1: target1 -> bool)
+  (#p1: map_group_parser_spec source1 source_fp1 target_size1 target_prop1)
+  (s1: map_group_serializer_spec p1)
+  (#source2: det_map_group)
+  (#source_fp2: map_constraint)
+  (#target2: Type)
+  (#target_size2: target2 -> Tot nat)
+  (#target_prop2: target2 -> bool)
+  (#p2: map_group_parser_spec source2 source_fp2 target_size2 target_prop2)
+  (s2: map_group_serializer_spec p2)
+  (target_size: (target1 & target2) -> Tot nat {
+    map_group_footprint source1 source_fp1 /\
+    map_group_footprint source2 source_fp2 /\
+    (
+      (map_constraint_disjoint source_fp1 source_fp2 /\
+        map_group_parser_spec_domain_inj p1 /\
+        map_group_parser_spec_domain_inj p2
+      ) \/ map_constraint_disjoint_domains source_fp1 source_fp2
+    ) /\
+    (forall x . target_size x == target_size1 (fst x) + target_size2 (snd x))
+  })
+  (target_prop: (target1 & target2) -> bool {
+    forall x . target_prop x <==> (target_prop1 (fst x) /\ target_prop2 (snd x) /\
+      cbor_map_disjoint (s1 (fst x)) (s2 (snd x))
+    )
+  })
+: Tot (map_group_serializer_spec (map_group_parser_spec_concat s1 s2 target_size target_prop))
+= fun x ->
+    map_group_footprint_concat source1 source2 source_fp1 source_fp2;
+    let (x1, x2) = x in
+    let l1 = s1 x1 in
+    let l2 = s2 x2 in
+    let res = l1 `cbor_map_union` l2 in
+    assert (cbor_map_disjoint l1 l2);
+    map_group_footprint_concat_consumes_all source1 source2 source_fp1 source_fp2 (l1) (l2);
+    assert (cbor_map_in_footprint (l1) (source_fp1 `map_constraint_choice` source_fp2));
+    assert (cbor_map_in_footprint (l2) (source_fp1 `map_constraint_choice` source_fp2));
+    assert (cbor_map_in_footprint (l1 `cbor_map_union` l2) (source_fp1 `map_constraint_choice` source_fp2));
+    assert (map_group_serializer_spec_arg_prop (source1 `map_group_concat` source2) (source_fp1 `map_constraint_choice` source_fp2) res);
+    let f1 = source_fp1 in
+    let f2 = source_fp2 in
+    let f = (source_fp1 `map_constraint_choice` source_fp2) in
+    cbor_map_filter_ext (f1 `orp` f2) f res;
+    assert (cbor_map_equal l1 (cbor_map_filter f1 l1));
+    assert (cbor_map_equal cbor_map_empty (cbor_map_filter f1 l2));
+    assert (cbor_map_equal l1 (cbor_map_filter f1 res));
+    assert (cbor_map_equal l2 (cbor_map_filter f2 l2));
+    assert (cbor_map_equal cbor_map_empty (cbor_map_filter f2 l1));
+    assert (cbor_map_equal l2 (cbor_map_filter f2 res));
+    assert (map_group_parser_spec_concat s1 s2 target_size target_prop res == x);
+    cbor_map_length_disjoint_union l1 l2;
+    res
+#pop-options
+
+let map_group_serializer_spec_concat_eq
+  s1 s2 target_size target_prop x
+= ()
+
+#push-options "--z3rlimit_factor 8"
+let mg_spec_concat_inj
+  (#source1: det_map_group)
+  (#source_fp1: map_constraint)
+  (#target1: Type)
+  (#inj1: bool)
+  (p1: mg_spec source1 source_fp1 target1 inj1)
+  (#source2: det_map_group)
+  (#source_fp2: map_constraint)
+  (#target2: Type)
+  (#inj2: bool)
+  (p2: mg_spec source2 source_fp2 target2 inj2 {
+    map_group_footprint source1 source_fp1 /\
+    map_group_footprint source2 source_fp2 /\
+    map_constraint_disjoint source_fp1 source_fp2
+  })
+  (m: cbor_map { map_group_serializer_spec_arg_prop (map_group_concat source1 source2) (source_fp1 `map_constraint_choice` source_fp2) m })
+: Lemma
+  (requires (inj1 && inj2))
+  (ensures (
+    map_group_serializer_spec_concat p1.mg_serializer p2.mg_serializer (mg_spec_concat_size p1.mg_size p2.mg_size) (mg_spec_concat_serializable p1.mg_serializer p2.mg_serializer) (map_group_parser_spec_concat p1.mg_serializer p2.mg_serializer (mg_spec_concat_size p1.mg_size p2.mg_size) (mg_spec_concat_serializable p1.mg_serializer p2.mg_serializer) m) == m
+  ))
+= map_group_concat_footprint_disjoint source1 source_fp1 source2 source_fp2 m
+#pop-options
+
+#push-options "--z3rlimit 64 --ifuel 8"
 
 #restart-solver
 let map_group_parser_spec_choice'
@@ -570,6 +655,30 @@ let rec list_fold_map_group_zero_or_more_match_item_serializer_length
   | [] -> ()
   | a :: q ->
     list_fold_map_group_zero_or_more_match_item_serializer_length pkey pvalue except m (map_group_zero_or_more_match_item_serializer_op pkey pvalue except m accu a) q
+
+#restart-solver
+#push-options "--z3rlimit_factor 4 --fuel 2 --ifuel 2 --split_queries always --query_stats"
+#restart-solver
+let map_group_zero_or_more_match_item_serializer
+  (#tkey #tvalue: Type)
+  (#key #value: typ)
+  (pkey: spec key tkey true)
+  (#inj: bool)
+  (pvalue: spec value tvalue inj)
+  (except: map_constraint { map_constraint_value_injective key pvalue.parser except })
+: Tot (map_group_serializer_spec (map_group_zero_or_more_match_item_parser pkey pvalue except))
+= fun x ->
+  let y = map_group_zero_or_more_match_item_serializer' pkey pvalue except x in
+  assert (forall x . {:pattern cbor_map_get y x} Some? (cbor_map_get y x) ==> cbor_map_mem (x, Some?.v (cbor_map_get y x)) y);
+  let py = map_group_zero_or_more_match_item_parser' pkey pvalue except y in
+  assert (forall (kv: (tkey & list tvalue)) .{:pattern Map.mem kv x} Map.mem kv x ==> cbor_map_mem (pkey.serializer (fst kv), pvalue.serializer (List.Tot.hd (snd kv))) y);
+  assert (Map.equal' py x);
+  y
+#pop-options
+
+let map_group_zero_or_more_match_item_serializer_eq
+  pkey pvalue except x
+= ()
 
 #restart-solver
 let map_group_zero_or_more_match_item_parser_inj

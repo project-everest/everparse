@@ -473,6 +473,8 @@ fn impl_serialize_tagged_some
   res
 }
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_bstr_cbor_det
   (cbor_det_serialize_string: cbor_det_serialize_string_t)
@@ -497,6 +499,8 @@ fn impl_serialize_bstr_cbor_det
     cbor_det_serialize_string cbor_major_type_byte_string (SZ.sizet_to_uint64 sz) out;
   }
 }
+
+#pop-options
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_any

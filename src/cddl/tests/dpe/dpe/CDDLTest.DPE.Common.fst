@@ -51,6 +51,9 @@ ensures
           x
           y);
   Trade.Util.elim_hyp_r _ _ _;
+  rewrite each
+  (rel_fun rel_bstr bytes_left spect_bytes_left x y)  
+   as (rel_bytes x y);
   res.s
 }
 

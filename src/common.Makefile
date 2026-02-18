@@ -60,6 +60,9 @@ FSTAR_OPTIONS += $(OTHERFLAGS) $(addprefix --include ,$(INCLUDE_PATHS)) --cache_
 # https://github.com/FStarLang/FStar/pull/3861
 # FSTAR_OPTIONS += --ext optimize_let_vc
 
+# Proof recovery
+FSTAR_OPTIONS += --proof_recovery
+
 # Passing RESOURCEMONITOR=1 will create .runlim files through the source tree with
 # information about the time and space taken by each F* invocation.
 ifneq ($(RESOURCEMONITOR),)

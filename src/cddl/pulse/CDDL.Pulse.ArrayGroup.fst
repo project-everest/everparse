@@ -11,7 +11,7 @@ module R = Pulse.Lib.Reference
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_array_group
-  (#cbor_array_iterator_t: Type)
+  (#cbor_array_iterator_t: Type0)
   (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
     (#b: Ghost.erased (option cbor))
     (g: array_group b)

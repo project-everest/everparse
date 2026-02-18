@@ -184,7 +184,7 @@ fn validate_and_parse
   match q {
     None -> {
       unfold (cbor_det_parse_post vmatch s p w None);
-      fold (validate_and_parse_post ps r s p w None);
+      fold (validate_and_parse_post ps r' s p w None);
       None
     }
     Some rlrem -> {
@@ -199,10 +199,11 @@ fn validate_and_parse
         let x = i rl;
         Trade.trans_hyp_l _ _ _ (pts_to s #p w);
         fold (validate_and_parse_post ps r s p w (Some (x, rem)));
+        rewrite (validate_and_parse_post ps r s p w (Some (x, rem))) as (validate_and_parse_post ps r' s p w (Some (x, rem)));
         Some (x, rem)
       } else {
         Trade.elim _ _;
-        fold (validate_and_parse_post ps r s p w None);
+        fold (validate_and_parse_post ps r' s p w None);
         None
       }
     }

@@ -422,7 +422,7 @@ let rewrite_group_correct_postcond
     end
   end
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 128 --ifuel 8 --split_queries always"
 
 #restart-solver
 let rec rewrite_typ_correct
