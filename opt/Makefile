@@ -50,7 +50,7 @@ opam:
 	touch $@
 
 %/Makefile: % hashes.Makefile
-	if test -d $</.git ; then cd $< && git remote set-url origin $($<_repo) && git fetch && git checkout $($<_hash) ; fi
+	if test -d $</.git && ! test -e hashes.lock ; then cd $< && git remote set-url origin $($<_repo) && git fetch && git checkout $($<_hash) ; fi
 	touch -c $@
 	test -f $@
 
