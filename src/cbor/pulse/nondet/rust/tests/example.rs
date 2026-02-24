@@ -1,6 +1,6 @@
-use cborrs::cbornondet::*;
-use cborrs::cbornondet::CborNondetIntKind::*;
-use cborrs::cbornondet::CborNondetView::*;
+use cborrs_nondet::cbornondet::*;
+use cborrs_nondet::cbornondet::CborNondetIntKind::*;
+use cborrs_nondet::cbornondet::CborNondetView::*;
 
 #[test]
 fn test()
