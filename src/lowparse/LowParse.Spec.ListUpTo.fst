@@ -79,6 +79,7 @@ let parse_list_up_to_payload_kind (k: parser_kind) : Tot (k' : parser_kind {k' `
   parser_kind_high = None;
   parser_kind_subkind = k.parser_kind_subkind;
   parser_kind_metadata = None;
+  parser_kind_injective = k.parser_kind_injective;
 }
 
 let tot_parse_list_up_to_payload

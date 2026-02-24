@@ -1505,7 +1505,6 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
         wl o "    (LL.%saccessor_compose\n" g;
         wl o "      (%s)\n" sum_tag_acc;
         wl o "      (LL.%saccessor_synth_inv parse_%s%s_key synth_%s synth_%s_inv ())\n" g maybe tn tn tn;
-        if g <> "g" then wl o "      ()\n";
         wl o "    )\n";
         wl o "    %s_clens_tag\n" n;
         wl o "    ()\n\n";
@@ -1826,20 +1825,19 @@ and compile_vldata o i is_private n ty li elem_li lenty smin smax =
     wl i "  LL.clens_get = (fun (x: %s) -> (x <: %s));\n" n (compile_type ty);
     wl i "}\n\n";
     wl i "val %s_gaccessor : LL.gaccessor %s_parser %s %s_clens\n\n" n n (pcombinator_name ty) n;
-    let write_accessor g compose_needs_unit jumper_or_parser =
+    let write_accessor g jumper_or_parser =
       wl o "let %s_%saccessor =\n" n g;
       wl o "  LL.%saccessor_ext\n" g;
       wl o "    (LL.%saccessor_compose\n" g;
       wl o "      (LL.%saccessor_synth %s'_parser synth_%s synth_%s_recip ())\n" g n n n;
       wl o "      (LL.%saccessor_bounded_vlgen_payload %d %d %s %s)\n" g smin smax jumper_or_parser (scombinator_name ty);
-      (if compose_needs_unit then wl o "      ()\n");
       wl o "    )\n";
       wl o "    %s_clens\n" n;
       wl o "    ()\n\n";
       () in
-    write_accessor "g" false (pcombinator_length_header_name lenty smin smax);
+    write_accessor "g" (pcombinator_length_header_name lenty smin smax);
     wl i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
-    write_accessor "" true (jumper_length_header_name lenty smin smax);
+    write_accessor "" (jumper_length_header_name lenty smin smax);
     ()
    end;
   (* TODO: lemma about bytesize *)
@@ -2163,21 +2161,20 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         wl i "  LL.clens_get = (fun (x: %s) -> (x <: %s));\n" n (compile_type ty);
         wl i "}\n\n";
         wl i "val %s_gaccessor : LL.gaccessor %s_parser %s %s_clens\n\n" n n (pcombinator_name ty) n;
-        let write_accessor g compose_needs_unit =
+        let write_accessor g =
           wl o "let %s_%saccessor =\n" n g;
           wl o "  LL.%saccessor_ext\n" g;
           wl o "    (LL.%saccessor_compose\n" g;
           wl o "      (LL.%saccessor_synth %s'_parser synth_%s synth_%s_recip ())\n" g n n n;
           wl o "      (LL.%saccessor_bounded_vldata_strong_payload %d %d %s)\n" g 0 smax (scombinator_name ty);
-          (if compose_needs_unit then wl o "      ()\n");
           wl o "    )\n";
           wl o "    %s_clens\n" n;
           wl o "    ()\n\n";
           ()
         in
-        write_accessor "g" false;
+        write_accessor "g";
         wl i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
-        write_accessor "" true;
+        write_accessor "";
         ()
        end;
       (* lemma about bytesize *)
@@ -2882,7 +2879,7 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
         wl i "val gaccessor_%s_%s : LL.gaccessor %s_parser %s clens_%s_%s\n\n" n fn n (pcombinator_name ty) n fn;
         wl o "let gaccessor_%s_%s = LL.gaccessor_ext (gaccessor_%s_%s' `LL.gaccessor_compose` gaccessor'_%s_%s) clens_%s_%s ()\n\n" n fn n n n fn n fn;
         wl i "val accessor_%s_%s : LL.accessor gaccessor_%s_%s\n\n" n fn n fn;
-        wl o "let accessor_%s_%s = LL.accessor_ext (LL.accessor_compose accessor_%s_%s' accessor'_%s_%s ()) clens_%s_%s ()\n\n" n fn n n n fn n fn
+        wl o "let accessor_%s_%s = LL.accessor_ext (LL.accessor_compose accessor_%s_%s' accessor'_%s_%s) clens_%s_%s ()\n\n" n fn n n n fn n fn
       )
       fields;
 

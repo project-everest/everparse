@@ -11,7 +11,7 @@ let parse_defaultable_bare (#k: parser_kind) (#t : Type) (defaultablev : option 
     | Some v -> if (Seq.length input = 0) then Some (v, 0) else (parse p input)
 
 let parse_defaultable_bare_injective (#k : parser_kind) (#t : Type) (defaultablev : option t) (p : parser k t) (b1 b2 : bytes) : Lemma
-  (requires ((parse_defaultable_injective_cond_prop defaultablev p) /\ (injective_precond (parse_defaultable_bare defaultablev p) b1 b2)))
+  (requires (k.parser_kind_injective == true /\ (parse_defaultable_injective_cond_prop defaultablev p) /\ (injective_precond (parse_defaultable_bare defaultablev p) b1 b2)))
   (ensures (injective_postcond (parse_defaultable_bare defaultablev p) b1 b2))
 = parser_kind_prop_equiv k p;
   match defaultablev with
