@@ -70,22 +70,24 @@ val parse_list_bare_injective
   (#t: Type)
   (p: parser k t)
 : Lemma
+  (requires (k.parser_kind_injective == true))
   (ensures (injective (parse_list_bare p)))
 
 inline_for_extraction
-let parse_list_kind =
+let parse_list_kind (inj: bool) =
   {
     parser_kind_low = 0;
     parser_kind_high = None;
     parser_kind_metadata = None;
     parser_kind_subkind = Some ParserConsumesAll;
+    parser_kind_injective = inj;
   }
 
 val parse_list
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-: Tot (parser parse_list_kind (list t))
+: Tot (parser (parse_list_kind k.parser_kind_injective) (list t))
 
 val parse_list_eq
   (#k: parser_kind)
@@ -134,7 +136,7 @@ val tot_parse_list
   (#k: parser_kind)
   (#t: Type)
   (p: tot_parser k t)
-: Pure (tot_parser parse_list_kind (list t))
+: Pure (tot_parser (parse_list_kind k.parser_kind_injective) (list t))
     (requires True)
     (ensures (fun y ->
       forall x . parse y x == parse (parse_list #k p) x

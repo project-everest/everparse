@@ -41,15 +41,18 @@ BASE_C_FILES=COSE_EverCrypt.c COSE_EverCrypt.h COSE_Format.c COSE_Format.h CBORD
 INTERNAL_C_FILES=COSE_Format.h
 C_FILES=$(BASE_C_FILES) $(addprefix internal/,$(INTERNAL_C_FILES))
 
+.PHONY: extract-krml
+extract-krml: $(ALL_KRML_FILES)
+
 .PHONY: extract
-extract: $(ALL_KRML_FILES)
+extract: extract-krml
 	$(KRML) -faggressive-inlining -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*[rename=fstar]' \
 		-bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]' \
 		-add-include '"CBORDetAbstract.h"' \
 		-bundle 'COSE.EverCrypt=Abort,EverCrypt.Ed25519' \
 		-bundle 'COSE.Format=*' \
 		-no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -no-prefix Abort \
-		-skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -header noheader.txt
+		-skip-linking $(ALL_KRML_FILES) -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -header noheader.txt
 
 %.diff: extract
 	diff ../c/$(basename $@) $(OUTPUT_DIRECTORY)/$(basename $@)

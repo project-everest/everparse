@@ -827,33 +827,78 @@ let rec weaken_parse_bitsum_cases_kind'
   (#bitsum'_size: nat)
   (b: bitsum' cl bitsum'_size)
   (f: (x: bitsum'_key_type b) -> Tot parser_kind)
-: Tot (k' : parser_kind & ((x: bitsum'_key_type b) -> Lemma (k' `is_weaker_than` f x)))
+  (inj: bool)
+: Tot (k' : parser_kind {
+    (forall (x: bitsum'_key_type b) . k' `is_weaker_than` f x) /\
+    ((inj /\ (forall (x: bitsum'_key_type b) . (f x).parser_kind_injective == true)) ==> k'.parser_kind_injective == true)
+  })
   (decreases (bitsum'_size))
 = match b with
-  | BitStop _ -> (| f (), (fun y -> ()) |)
+  | BitStop _ ->
+    f ()
   | BitField sz rest ->
-    let (| g, phi |) = weaken_parse_bitsum_cases_kind' rest (fun x -> f (bitsum'_key_type_intro_BitField cl bitsum'_size sz rest x)) in
-    (| g, (fun x -> phi (bitsum'_key_type_elim_BitField cl bitsum'_size sz rest x)) |)
+    weaken_parse_bitsum_cases_kind' rest
+      (fun x -> f (bitsum'_key_type_intro_BitField cl bitsum'_size sz rest x))
+      inj
   | BitSum' key key_size e payload ->
-    let keys : list key = List.Tot.map fst e in
-    let phi (x: key) : Tot (k: parser_kind & ((y: bitsum'_key_type b) -> Lemma
-      (requires (dfst (bitsum'_key_type_elim_BitSum' cl bitsum'_size key key_size e payload y) == x))
-      (ensures (k `is_weaker_than` f y)))) =
-      if List.Tot.mem x keys
-      then
-        let (| k, g |) = weaken_parse_bitsum_cases_kind' (payload x) (fun z -> f (bitsum'_key_type_intro_BitSum' cl bitsum'_size key key_size e payload (| x, z |))) in
-        (| k, (fun y ->
-          let (| y1, y2 |) = bitsum'_key_type_elim_BitSum' cl bitsum'_size key key_size e payload y in
-          assert (y1 == x);
-          g y2
-        ) |)
-      else (| default_parser_kind, (fun y -> ()) |)
+    let keys : list key = list_map fst e in
+    let phi (x: key) : Tot (k: parser_kind {
+      ((inj /\ (forall (y: bitsum'_key_type b) . (f y).parser_kind_injective == true)) ==> k.parser_kind_injective == true) /\
+      (forall (y: bitsum'_key_type b) . dfst (bitsum'_key_type_elim_BitSum' cl bitsum'_size key key_size e payload y) == x ==> k `is_weaker_than` f y)
+    }) =
+      if list_mem x keys
+      then begin
+        let g (z: bitsum'_key_type (payload x)) : Tot parser_kind = f (bitsum'_key_type_intro_BitSum' cl bitsum'_size key key_size e payload (| x, z |)) in
+        let k = weaken_parse_bitsum_cases_kind' (payload x) g inj in
+        let aux (y: bitsum'_key_type b) : Lemma
+          (requires (dfst (bitsum'_key_type_elim_BitSum' cl bitsum'_size key key_size e payload y) == x))
+          (ensures (k `is_weaker_than` f y))
+        = let (| x', z |) = bitsum'_key_type_elim_BitSum' cl bitsum'_size key key_size e payload y in
+          assert (x' == x);
+          assert (k `is_weaker_than` g z)
+        in
+        Classical.forall_intro (Classical.move_requires aux);
+        let aux2 (z: bitsum'_key_type (payload x)) : Lemma
+          (requires (forall (y: bitsum'_key_type b) . (f y).parser_kind_injective == true))
+          (ensures ((g z).parser_kind_injective == true))
+        = assert (g z == f (bitsum'_key_type_intro_BitSum' cl bitsum'_size key key_size e payload (| x, z |)))
+        in
+        let _ : squash ((inj /\ (forall (y: bitsum'_key_type b) . (f y).parser_kind_injective == true)) ==> k.parser_kind_injective == true) =
+          let aux3 (_: squash (inj /\ (forall (y: bitsum'_key_type b) . (f y).parser_kind_injective == true))) : Lemma (k.parser_kind_injective == true) =
+            Classical.forall_intro (Classical.move_requires aux2)
+          in
+          Classical.impl_intro aux3
+        in
+        k
+      end
+      else strong_parser_kind 0 0 None
     in
-    let k = glb_list_of #key (fun x -> dfst (phi x)) keys in
-    (| k, (fun y ->
-      let (| y1, y2 |) = bitsum'_key_type_elim_BitSum' cl bitsum'_size key key_size e payload y in
-      dsnd (phi y1) y
-    ) |)
+    if Cons? keys
+    then begin
+      let k = glb_list_of #key phi keys in
+      let _ : squash (forall (x: bitsum'_key_type b) . k `is_weaker_than` f x) =
+        let aux (y: bitsum'_key_type b) : Lemma (k `is_weaker_than` f y) =
+          let (| y1, _ |) = bitsum'_key_type_elim_BitSum' cl bitsum'_size key key_size e payload y in
+          assert (list_mem y1 keys == true);
+          glb_list_of_elim #key phi keys y1
+        in
+        Classical.forall_intro aux
+      in
+      let _ : squash ((inj /\ (forall (y: bitsum'_key_type b) . (f y).parser_kind_injective == true)) ==> k.parser_kind_injective == true) =
+        let aux4 (_: squash (inj /\ (forall (y: bitsum'_key_type b) . (f y).parser_kind_injective == true))) : Lemma (k.parser_kind_injective == true) =
+          let phi_inj (kl: key) : Lemma (requires (L.mem kl keys)) (ensures ((phi kl).parser_kind_injective == true))
+          = let k' : parser_kind = phi kl in
+            assert (((inj /\ (forall (y: bitsum'_key_type b) . (f y).parser_kind_injective == true)) ==> k'.parser_kind_injective == true))
+          in
+          Classical.forall_intro (Classical.move_requires phi_inj);
+          glb_list_of_injective #key phi keys
+        in
+        Classical.impl_intro aux4
+      in
+      k
+    end
+    else
+      strong_parser_kind 0 0 None
 
 let weaken_parse_bitsum_cases_kind
   (#tot: pos)
@@ -862,10 +907,11 @@ let weaken_parse_bitsum_cases_kind
   (b: bitsum' cl tot)
   (type_of_tag: (bitsum'_key_type b -> Tot Type))
   (f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
-: Tot (k: parser_kind { forall (x: bitsum'_key_type b) . k `is_weaker_than` dfst (f x) })
-= let (| k, phi |) = weaken_parse_bitsum_cases_kind' b (fun k -> dfst (f k)) in
-  Classical.forall_intro phi;
-  k
+: Tot (k: parser_kind {
+    (forall (x: bitsum'_key_type b) . k `is_weaker_than` dfst (f x)) /\
+    ((forall (x: bitsum'_key_type b) . (dfst (f x)).parser_kind_injective == true) ==> k.parser_kind_injective == true)
+  })
+= weaken_parse_bitsum_cases_kind' b (fun k -> dfst (f k)) true
 
 let synth_bitsum_case_injective
   (#tot: pos)
@@ -1049,8 +1095,12 @@ let serialize_bitsum_cases
 : Tot (serializer (parse_bitsum_cases b tag_of_data type_of_tag synth_case f x))
 = let tg = bitsum'_key_of_t b x in
   let (| _, p |) = f tg in
-  synth_bitsum_case_injective b tag_of_data type_of_tag synth_case x; // FIXME: WHY WHY WHY does the pattern not trigger?
-  synth_bitsum_case_recip_inverse b tag_of_data type_of_tag synth_case x; // FIXME: WHY WHY WHY does the pattern not trigger?
+  synth_bitsum_case_injective b tag_of_data type_of_tag synth_case x;
+  synth_bitsum_case_recip_inverse b tag_of_data type_of_tag synth_case x;
+  let aux (y: bitsum'_key_type b) : Lemma ((dfst (f y)).parser_kind_injective == true)
+  = serializer_parser_injective (g y)
+  in
+  Classical.forall_intro aux;
   serialize_weaken (weaken_parse_bitsum_cases_kind b type_of_tag f)
     (serialize_synth
       p
@@ -1074,7 +1124,11 @@ let serialize_bitsum
   (#f: (x: bitsum'_key_type b) -> Tot (k: parser_kind & parser k (type_of_tag x)))
   (g: (x: bitsum'_key_type b) -> Tot (serializer (dsnd (f x))))
 : Tot (serializer (parse_bitsum b tag_of_data type_of_tag synth_case p f))
-= serialize_tagged_union
+= let aux (y: bitsum'_key_type b) : Lemma ((dfst (f y)).parser_kind_injective == true)
+  = serializer_parser_injective (g y)
+  in
+  Classical.forall_intro aux;
+  serialize_tagged_union
     #(parse_filter_kind kt)
     #(bitsum'_type b)
     #(parse_bitsum' b p)
@@ -1124,7 +1178,11 @@ let serialize_bitsum_eq
   (x: data)
 : Lemma
   (serialize (serialize_bitsum b tag_of_data type_of_tag synth_case s g) x == serialize_bitsum_alt b tag_of_data type_of_tag synth_case s g x)
-= serialize_tagged_union_eq
+= let aux (y: bitsum'_key_type b) : Lemma ((dfst (f y)).parser_kind_injective == true)
+  = serializer_parser_injective (g y)
+  in
+  Classical.forall_intro aux;
+  serialize_tagged_union_eq
     #(parse_filter_kind kt)
     #(bitsum'_type b)
     #(parse_bitsum' b p)

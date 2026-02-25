@@ -1,6 +1,11 @@
 name: Upgrade hashes, 3D doc, CBOR, COSE snapshots
 on:
   workflow_dispatch:
+    inputs:
+      create_pr:
+        description: 'Create a pull request (if unchecked, push directly to branch)'
+        type: boolean
+        default: true
   schedule:
     - cron: "0 22 * * 0,3"
 
@@ -20,6 +25,11 @@ jobs:
         with:
           submodules: true
           fetch-depth: 0
+          ref: ${{ github.event_name == 'schedule' && '_nik_smt_univs_2025' || '' }}
+      - name: Record base ref
+        run: |
+          echo "base_branch=${{ github.event_name == 'schedule' && '_nik_smt_univs_2025' || github.ref_name }}" > base_ref.txt
+          echo "base_sha=$(git rev-parse HEAD)" >> base_ref.txt
       - name: Set up git
         run: |
           git config --global user.name "Dzomo, the Everest Yak"
@@ -32,9 +42,23 @@ jobs:
           make -C opt -j$(nproc) advance &&
           if ! git diff --exit-code -- opt/hashes.Makefile ; then git add -u opt/hashes.Makefile && git commit -m 'Update hashes' ; fi &&
           git diff --exit-code
-      - name: Generate snapshot
+      - name: Generate CBOR .krml files
         run: |
-          make ADMIT=1 cbor-snapshot 3d-doc-snapshot -kj$(nproc) && make ADMIT=1 cose-snapshot -kj$(nproc) &&
+          make ADMIT=1 cbor-extract-krml -kj$(nproc)
+      - name: Generate CBOR snapshot with Karamel
+        run: |
+          make ADMIT=1 cbor-snapshot -Otarget -kj$(nproc) && make ADMIT=1 cbor -kj$(nproc)
+      - name: Generate COSE .krml files
+        run: |
+          make ADMIT=1 cose-extract-krml -kj$(nproc)
+      - name: Generate COSE snapshot with Karamel
+        run: |
+          make ADMIT=1 cose-snapshot -Otarget -kj$(nproc) && make ADMIT=1 cose -kj$(nproc)
+      - name: Generate 3D doc snapshot
+        run: |
+          make ADMIT=1 3d-doc-snapshot -kj$(nproc)
+      - name: Stage in new snapshots
+        run: |
           git add doc/3d-snapshot src/cbor/pulse/det/c src/cbor/pulse/nondet/c src/cbor/pulse/det/rust src/cose/c src/cose/rust &&
           if ! git diff --staged --exit-code ; then git commit -m "3D doc, CBOR, COSE snapshot" ; fi &&
           git diff --exit-code
@@ -48,6 +72,7 @@ jobs:
         with:
           path: |
             hash.txt
+            base_ref.txt
           name: hash
 
   build-macos:
@@ -532,16 +557,25 @@ jobs:
       - name: Record hash and remove hash file
         run: |
           echo "updated_sha=$(cat hash.txt)" >> $GITHUB_ENV && rm hash.txt
+          source base_ref.txt
+          echo "base_branch=$base_branch" >> $GITHUB_ENV
+          echo "base_sha=$base_sha" >> $GITHUB_ENV
+          rm base_ref.txt
       - uses: actions/checkout@master
         with:
           submodules: true
           fetch-depth: 0
           ref: ${{ env.updated_sha }}
       - name: create pull request
+        if: (github.event_name == 'schedule' && env.base_branch == 'master') || (github.event_name == 'workflow_dispatch' && inputs.create_pr)
         run: |
-          if [[ "$updated_sha" != ${{ github.sha }} ]] ; then git checkout -b _dzomo_pr_${{ github.run_id }} && git push --set-upstream origin _dzomo_pr_${{ github.run_id }} && gh pr create --base ${{ github.ref_name }} --title "Update hashes and snapshots" --fill-verbose ; fi
+          if [[ "$updated_sha" != "$base_sha" ]] ; then git checkout -b _dzomo_pr_${{ github.run_id }} && git push --set-upstream origin _dzomo_pr_${{ github.run_id }} && gh pr create --base "$base_branch" --title "Update hashes and snapshots" --fill-verbose ; fi
         env:
           GH_TOKEN: ${{ github.token }}
+      - name: Push to branch directly
+        if: (github.event_name == 'schedule' && env.base_branch != 'master') || (github.event_name == 'workflow_dispatch' && !inputs.create_pr)
+        run: |
+          if [[ "$updated_sha" != "$base_sha" ]] ; then git push origin HEAD:"$base_branch" ; fi
       - name: Delete branch
         run: |
           if [[ "$(git rev-parse origin/_dzomo_upgrade_${{ github.run_id }})" = "$updated_sha" ]] ; then git push origin --delete _dzomo_upgrade_${{ github.run_id }} ; fi

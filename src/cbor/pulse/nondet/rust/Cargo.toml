@@ -1,5 +1,5 @@
 [package]
-name = "cborrs"
+name = "cborrs-nondet"
 version = "0.1.0"
 edition = "2021"
 

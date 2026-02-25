@@ -29,6 +29,7 @@ let parse_list_up_to_kind (k: parser_kind) : Tot (k' : parser_kind {k' `is_weake
   parser_kind_high = None;
   parser_kind_subkind = k.parser_kind_subkind;
   parser_kind_metadata = None;
+  parser_kind_injective = k.parser_kind_injective;
 }
 
 let consumes_if_not_cond

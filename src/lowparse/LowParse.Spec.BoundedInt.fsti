@@ -191,6 +191,7 @@ let parse_bounded_int32_kind
     parser_kind_high = Some sz;
     parser_kind_metadata = None;
     parser_kind_subkind = Some ParserStrong;
+    parser_kind_injective = true;
   }
 
 val parse_bounded_int32
@@ -222,6 +223,7 @@ let parse_bounded_int32_fixed_size_kind
     parser_kind_high = Some 4;
     parser_kind_metadata = None;
     parser_kind_subkind = Some ParserStrong;
+    parser_kind_injective = true;
   }
 
 val parse_bounded_int32_le_fixed_size
