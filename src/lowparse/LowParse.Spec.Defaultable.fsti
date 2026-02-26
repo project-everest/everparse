@@ -17,6 +17,7 @@ let parse_defaultable_kind (k : parser_kind) : Tot parser_kind = {
   parser_kind_low = 0;
   parser_kind_high = k.parser_kind_high;
   parser_kind_subkind = None;
+  parser_kind_injective = k.parser_kind_injective;
 }
 
 let parse_defaultable_injective_cond (#k : parser_kind) (#t : Type) (defaultablev : option t) (p : parser k t) (b : bytes) : GTot Type0 =

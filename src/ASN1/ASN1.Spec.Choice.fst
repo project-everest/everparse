@@ -22,6 +22,7 @@ let sanitify_parser_kind (k : parser_kind)
   parser_kind_high = k.parser_kind_high;
   parser_kind_subkind = k.parser_kind_subkind;
   parser_kind_metadata = (match k.parser_kind_metadata with Some ParserKindMetadataFail -> Some ParserKindMetadataFail | _ -> None);
+  parser_kind_injective = k.parser_kind_injective;
   }
 
 let rec make_gen_choice_kind

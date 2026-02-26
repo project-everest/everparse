@@ -133,11 +133,12 @@ let no_lookahead_on_postcond
 : GTot Type0
 = Some? (parse f x) ==> (
   let (Some v) = parse f x in
-  let (y, _) = v in
+  let (y, off) = v in
   Some? (parse f x') /\ (
   let (Some v') = parse f x' in
-  let (y', _) = v' in
-  y == y'
+  let (y', off') = v' in
+  y == y' /\
+  (off <: nat) == (off' <: nat)
   ))
 
 let no_lookahead_on
@@ -296,6 +297,7 @@ type parser_kind' = {
   parser_kind_high: option nat;
   parser_kind_subkind: option parser_subkind;
   parser_kind_metadata: parser_kind_metadata_t;
+  parser_kind_injective: bool;
 }
 
 let parser_kind = (x: parser_kind' {
@@ -311,6 +313,7 @@ let strong_parser_kind (lo hi: nat) (md: parser_kind_metadata_t) : Pure parser_k
     parser_kind_high = Some hi;
     parser_kind_subkind = Some ParserStrong;
     parser_kind_metadata = md;
+    parser_kind_injective = true;
   }
 
 inline_for_extraction
@@ -329,7 +332,7 @@ let parser_kind_metadata_prop (#t: Type) (k: parser_kind) (f: bare_parser t) : G
   | Some ParserKindMetadataFail -> parser_always_fails f
 
 let parser_kind_prop' (#t: Type) (k: parser_kind) (f: bare_parser t) : GTot Type0 =
-  injective f /\
+  (k.parser_kind_injective ==> injective f) /\
   (Some? k.parser_kind_subkind ==> parser_subkind_prop (Some?.v k.parser_kind_subkind) f) /\
   parses_at_least k.parser_kind_low f /\
   (Some? k.parser_kind_high ==> (parses_at_most (Some?.v k.parser_kind_high) f)) /\
@@ -416,7 +419,8 @@ let is_weaker_than
   (Some? k1.parser_kind_high ==> (
     Some? k2.parser_kind_high /\
     Some?.v k2.parser_kind_high <= Some?.v k1.parser_kind_high
-  ))))
+  )) /\
+  (k1.parser_kind_injective ==> k2.parser_kind_injective)))
   
 val is_weaker_than_correct
   (k1: parser_kind)
@@ -514,6 +518,7 @@ let glb
     parser_kind_high = k1.parser_kind_high;
     parser_kind_subkind = k1.parser_kind_subkind;
     parser_kind_metadata = (match k1.parser_kind_metadata with Some ParserKindMetadataFail -> Some ParserKindMetadataFail | _ -> None);
+    parser_kind_injective = k1.parser_kind_injective;
   }
   | Some ParserKindMetadataFail, _ ->
   {
@@ -521,6 +526,7 @@ let glb
     parser_kind_high = k2.parser_kind_high;
     parser_kind_subkind = k2.parser_kind_subkind;
     parser_kind_metadata = None;
+    parser_kind_injective = k2.parser_kind_injective;
   }
   | _ ->
   {
@@ -533,7 +539,8 @@ let glb
       else None
     );
     parser_kind_metadata = if k1.parser_kind_metadata = k2.parser_kind_metadata then k1.parser_kind_metadata else None;
-    parser_kind_subkind = if k1.parser_kind_subkind = k2.parser_kind_subkind then k1.parser_kind_subkind else None
+    parser_kind_subkind = if k1.parser_kind_subkind = k2.parser_kind_subkind then k1.parser_kind_subkind else None;
+    parser_kind_injective = k1.parser_kind_injective && k2.parser_kind_injective;
   }
 #pop-options
 #pop-options
@@ -541,7 +548,7 @@ let glb
 #push-options "--warn_error -271"
 let default_parser_kind : (x: parser_kind {
   forall (t: Type u#a) (p: bare_parser t) . {:pattern (parser_kind_prop x p)}
-  injective p ==> parser_kind_prop x p
+  parser_kind_prop x p
 })
 = let aux (t:Type u#a) (k:parser_kind) (p:bare_parser t)
     : Lemma (parser_kind_prop k p <==> parser_kind_prop' k p)
@@ -553,6 +560,7 @@ let default_parser_kind : (x: parser_kind {
     parser_kind_high = None;
     parser_kind_metadata = None;
     parser_kind_subkind = None;
+    parser_kind_injective = false;
   } in
   x
 #pop-options
@@ -577,6 +585,27 @@ let rec glb_list_of
   | k1 :: q ->
     let k' = glb_list_of f q in
     glb (f k1) k'
+
+let glb_list_of_elim
+  (#t: eqtype)
+  (f: (t -> Tot parser_kind))
+  (l: list t)
+  (x: t)
+: Lemma
+  (requires (L.mem x l))
+  (ensures (glb_list_of f l `is_weaker_than` f x))
+= ()
+
+let rec glb_list_of_injective
+  (#t: eqtype)
+  (f: (t -> Tot parser_kind))
+  (l: list t)
+: Lemma
+  (requires (Cons? l /\ (forall x . L.mem x l ==> (f x).parser_kind_injective == true)))
+  (ensures ((glb_list_of f l).parser_kind_injective == true))
+= match l with
+  | [_] -> ()
+  | _ :: q -> glb_list_of_injective f q
 
 #reset-options
 
@@ -631,6 +660,7 @@ val parse_injective
   (input2: bytes)
 : Lemma
   (requires (
+    k.parser_kind_injective == true /\
     injective_precond p input1 input2
   ))
   (ensures (
@@ -724,7 +754,7 @@ val serializer_correct_implies_complete
   (p: parser k t)
   (f: bare_serializer t)
 : Lemma
-  (requires (serializer_correct p f))
+  (requires (k.parser_kind_injective == true /\ serializer_correct p f))
   (ensures (serializer_complete p f))
 
 [@unifier_hint_injective]
@@ -734,7 +764,15 @@ let serializer
   (#t: Type)
   (p: parser k t)
 : Tot Type
-= (f: bare_serializer t { serializer_correct p f } )
+= (f: bare_serializer t { k.parser_kind_injective == true /\ serializer_correct p f } )
+
+let serializer_parser_injective
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+: Lemma (k.parser_kind_injective == true)
+= ()
 
 inline_for_extraction
 let tot_bare_serializer
@@ -748,7 +786,7 @@ let tot_serializer
   (#t: Type)
   (p: tot_parser k t)
 : Tot Type
-= (f: tot_bare_serializer t { serializer_correct #k p f } )
+= (f: tot_bare_serializer t { k.parser_kind_injective == true /\ serializer_correct #k p f } )
 
 let mk_tot_serializer
   (#k: parser_kind)
@@ -760,9 +798,11 @@ let mk_tot_serializer
     Lemma
     (parse p (f x) == Some (x, Seq.length (f x)))
   ))
-: Tot (tot_serializer p)
+: Pure (tot_serializer p)
+  (requires (k.parser_kind_injective == true))
+  (ensures (fun _ -> True))
 = Classical.forall_intro prf;
-  f
+  (f <: tot_serializer p)
 
 let mk_serializer
   (#k: parser_kind)
@@ -774,9 +814,11 @@ let mk_serializer
     Lemma
     (parse p (f x) == Some (x, Seq.length (f x)))
   ))
-: Tot (serializer p)
+: Pure (serializer p)
+  (requires (k.parser_kind_injective == true))
+  (ensures (fun _ -> True))
 = Classical.forall_intro prf;
-  f
+  (f <: serializer p)
 
 unfold
 let coerce_serializer
@@ -798,7 +840,7 @@ let serialize_ext
   (#t2: Type)
   (p2: parser k2 t2)
 : Pure (serializer p2)
-  (requires (t1 == t2 /\ (forall (input: bytes) . parse p1 input == parse p2 input)))
+  (requires (t1 == t2 /\ k2.parser_kind_injective == true /\ (forall (input: bytes) . parse p1 input == parse p2 input)))
   (ensures (fun _ -> True))
 = serializer_correct_ext p1 s1 p2;
   (s1 <: bare_serializer t2)
@@ -849,7 +891,7 @@ let tot_serialize_ext
   (#t2: Type)
   (p2: tot_parser k2 t2)
 : Pure (tot_serializer p2)
-  (requires (t1 == t2 /\ (forall (input: bytes) . parse p1 input == parse p2 input)))
+  (requires (t1 == t2 /\ k2.parser_kind_injective == true /\ (forall (input: bytes) . parse p1 input == parse p2 input)))
   (ensures (fun _ -> True))
 = serializer_correct_ext #k1 p1 s1 #k2 p2;
   (s1 <: tot_bare_serializer t2)
@@ -929,6 +971,7 @@ val serializer_parser_unique'
   (x: bytes)
 : Lemma
   (requires (
+    k1.parser_kind_injective == true /\
     is_strong p1 /\
     is_strong p2 /\
     serializer_correct p1 s /\
@@ -949,6 +992,8 @@ let serializer_parser_unique
   (x: bytes)
 : Lemma
   (requires (
+    k1.parser_kind_injective == true /\
+    k2.parser_kind_injective == true /\
     is_strong p1 /\
     is_strong p2 /\
     serializer_correct p1 s /\

@@ -21,7 +21,7 @@ let and_then_eq
   (p': (t -> Tot (parser k' t')))
   (input: bytes)
 : Lemma
-  (requires (and_then_cases_injective p'))
+  (requires ((and_then_kind k k').parser_kind_injective ==> and_then_cases_injective p'))
   (ensures (parse (and_then p p') input == and_then_bare p p' input))
 = ()
 
@@ -57,7 +57,7 @@ let parse_synth
   (f2: t1 -> GTot t2)
 : Pure (parser k t2)
   (requires (
-    synth_injective f2
+    k.parser_kind_injective ==> synth_injective f2
   ))
   (ensures (fun _ -> True))
 = coerce (parser k t2) (and_then p1 (fun v1 -> parse_fret f2 v1))
@@ -70,7 +70,7 @@ let parse_synth_eq
   (f2: t1 -> GTot t2)
   (b: bytes)
 : Lemma
-  (requires (synth_injective f2))
+  (requires (k.parser_kind_injective ==> synth_injective f2))
   (ensures (parse (parse_synth p1 f2) b == parse_synth' p1 f2 b))
 = ()
 
@@ -301,9 +301,10 @@ let serialize_tagged_union
   (#p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
   (s: (t: tag_t) -> Tot (serializer (p t)))
 : Pure (serializer (parse_tagged_union pt tag_of_data p))
-  (requires (kt.parser_kind_subkind == Some ParserStrong))
+  (requires (kt.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_injective == true))
   (ensures (fun _ -> True))
-= bare_serialize_tagged_union_correct st tag_of_data s;
+= serializer_parser_injective st;
+  bare_serialize_tagged_union_correct st tag_of_data s;
   bare_serialize_tagged_union st tag_of_data s
 
 let serialize_tagged_union_eq
@@ -318,7 +319,7 @@ let serialize_tagged_union_eq
   (s: (t: tag_t) -> Tot (serializer (p t)))
   (input: data_t)
 : Lemma
-  (requires (kt.parser_kind_subkind == Some ParserStrong))
+  (requires (kt.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_injective == true))
   (ensures (serialize (serialize_tagged_union st tag_of_data s) input == bare_serialize_tagged_union st tag_of_data s input))
   [SMTPat (serialize (serialize_tagged_union st tag_of_data s) input)]
 = ()
@@ -331,7 +332,7 @@ let serialize_dtuple2
   (#k2: parser_kind)
   (#t2: (t1 -> Tot Type))
   (#p2: (x: t1) -> parser k2 (t2 x))
-  (s2: (x: t1) -> serializer (p2 x))
+  (s2: (x: t1) -> serializer (p2 x) { k2.parser_kind_injective == true })
 : Tot (serializer (parse_dtuple2 p1 p2))
 = serialize_tagged_union
     s1
@@ -373,7 +374,7 @@ let serialize_dtuple2_eq
   (#k2: parser_kind)
   (#t2: (t1 -> Tot Type))
   (#p2: (x: t1) -> parser k2 (t2 x))
-  (s2: (x: t1) -> serializer (p2 x))
+  (s2: (x: t1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (xy: dtuple2 t1 t2)
 : Lemma
   (serialize (serialize_dtuple2 s1 s2) xy == serialize s1 (dfst xy) `Seq.append` serialize (s2 (dfst xy)) (dsnd xy))

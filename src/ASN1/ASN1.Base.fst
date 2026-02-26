@@ -486,6 +486,7 @@ type asn1_strong_parser_kind : parser_kind = {
   parser_kind_low = 0;
   parser_kind_high = None;
   parser_kind_subkind = Some ParserStrong;
+  parser_kind_injective = true;
 }
 
 type asn1_weak_parser_kind : parser_kind = {
@@ -493,6 +494,7 @@ type asn1_weak_parser_kind : parser_kind = {
   parser_kind_low = 0;
   parser_kind_high = None;
   parser_kind_subkind = None;
+  parser_kind_injective = true;
 }
 
 type asn1_strong_parser (t : Type) = parser asn1_strong_parser_kind t 

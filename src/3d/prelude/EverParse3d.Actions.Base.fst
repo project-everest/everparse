@@ -1104,7 +1104,7 @@ let validate_list'
   HST.pop_frame ();
   let h' = HST.get () in
   assert (B.modifies (app_loc ctxt l `B.loc_union` I.perm_footprint sl) h0 h');
-  LP.parser_kind_prop_equiv LPLL.parse_list_kind (LPLL.parse_list p);
+  LP.parser_kind_prop_equiv (LPLL.parse_list_kind k.LP.parser_kind_injective) (LPLL.parse_list p);
   finalResult
 
 inline_for_extraction

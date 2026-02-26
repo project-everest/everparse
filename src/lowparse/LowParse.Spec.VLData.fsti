@@ -26,11 +26,17 @@ let parse_vldata_payload_kind
   (sz: integer_size)
   (k: parser_kind)
 : parser_kind
-= strong_parser_kind 0 (parse_vldata_payload_size sz) (
-    match k.parser_kind_metadata with
-    | Some ParserKindMetadataFail -> Some ParserKindMetadataFail
-    | _ -> None
-  )
+= {
+    parser_kind_low = 0;
+    parser_kind_high = Some (parse_vldata_payload_size sz);
+    parser_kind_subkind = Some ParserStrong;
+    parser_kind_metadata = (
+      match k.parser_kind_metadata with
+      | Some ParserKindMetadataFail -> Some ParserKindMetadataFail
+      | _ -> None
+    );
+    parser_kind_injective = k.parser_kind_injective;
+  }
 
 let parse_vldata_payload
   (sz: integer_size)
@@ -51,8 +57,9 @@ let parse_fldata_and_then_cases_injective
   (#t: Type)
   (p: parser k t)
 : Lemma
-  (and_then_cases_injective (parse_vldata_payload sz f p))
-= parser_kind_prop_equiv k p;
+  (k.parser_kind_injective == true ==> and_then_cases_injective (parse_vldata_payload sz f p))
+= if k.parser_kind_injective then begin
+  parser_kind_prop_equiv k p;
   let g
     (len1 len2: (len: bounded_integer sz { f len == true } ))
     (b1 b2: bytes)
@@ -71,6 +78,7 @@ let parse_fldata_and_then_cases_injective
   = Classical.forall_intro (Classical.move_requires (g len1 len2 b1))
   in
   Classical.forall_intro_3 g'
+  end
 
 #reset-options
 
@@ -79,11 +87,17 @@ let parse_vldata_gen_kind
   (sz: integer_size)
   (k: parser_kind)
 : Tot parser_kind
-= strong_parser_kind sz (sz + parse_vldata_payload_size sz) (
-    match k.parser_kind_metadata with
-    | Some ParserKindMetadataFail -> Some ParserKindMetadataFail
-    | _ -> None
-  )
+= {
+    parser_kind_low = sz;
+    parser_kind_high = Some (sz + parse_vldata_payload_size sz);
+    parser_kind_subkind = Some ParserStrong;
+    parser_kind_metadata = (
+      match k.parser_kind_metadata with
+      | Some ParserKindMetadataFail -> Some ParserKindMetadataFail
+      | _ -> None
+    );
+    parser_kind_injective = k.parser_kind_injective;
+  }
 
 let parse_vldata_gen_kind_correct
   (sz: integer_size)
@@ -109,7 +123,7 @@ val parse_vldata_gen_eq_def
   (#t: Type)
   (p: parser k t)
 : Lemma
-  (and_then_cases_injective (parse_vldata_payload sz f p) /\
+  ((k.parser_kind_injective == true ==> and_then_cases_injective (parse_vldata_payload sz f p)) /\
   parse_vldata_gen_kind sz k == and_then_kind (parse_filter_kind (parse_bounded_integer_kind sz)) (parse_vldata_payload_kind sz k) /\
   parse_vldata_gen sz f p ==
   and_then
@@ -243,11 +257,17 @@ let parse_bounded_vldata_strong_kind
   [@inline_let]
   let max' = if max' < min' then min' else max' in
   (* the size of the length prefix must conform to the max bound given by the user, not on the metadata *)
-  strong_parser_kind (l + min') (l + max') (
-    match k.parser_kind_metadata with
-    | Some ParserKindMetadataFail -> Some ParserKindMetadataFail
-    | _ -> None
-  )
+  {
+    parser_kind_low = l + min';
+    parser_kind_high = Some (l + max');
+    parser_kind_subkind = Some ParserStrong;
+    parser_kind_metadata = (
+      match k.parser_kind_metadata with
+      | Some ParserKindMetadataFail -> Some ParserKindMetadataFail
+      | _ -> None
+    );
+    parser_kind_injective = k.parser_kind_injective;
+  }
 
 let parse_bounded_vldata_elim'
   (min: nat)

@@ -10,6 +10,7 @@ let parse_option_kind (k: parser_kind) : Tot parser_kind = {
   parser_kind_low = 0;
   parser_kind_high = k.parser_kind_high;
   parser_kind_subkind = None;
+  parser_kind_injective = k.parser_kind_injective;
 }
 
 let parse_option_bare (#k: parser_kind) (#t: Type) (p: parser k t) : Tot (bare_parser (option t)) =
@@ -19,7 +20,7 @@ let parse_option_bare (#k: parser_kind) (#t: Type) (p: parser k t) : Tot (bare_p
   | _ -> Some (None, (0 <: consumed_length input))
 
 let parse_option_bare_injective (#k: parser_kind) (#t: Type) (p: parser k t) (b1 b2: bytes) : Lemma
-  (requires (injective_precond (parse_option_bare p) b1 b2))
+  (requires (k.parser_kind_injective == true /\ injective_precond (parse_option_bare p) b1 b2))
   (ensures (injective_postcond (parse_option_bare p) b1 b2))
 = parser_kind_prop_equiv k p;
   match parse p b1, parse p b2 with
@@ -27,7 +28,7 @@ let parse_option_bare_injective (#k: parser_kind) (#t: Type) (p: parser k t) (b1
   | _ -> ()
 
 let parse_option (#k: parser_kind) (#t: Type) (p: parser k t) : Tot (parser (parse_option_kind k) (option t)) =
-  Classical.forall_intro_2 (fun x -> Classical.move_requires (parse_option_bare_injective p x));
+  (if k.parser_kind_injective then Classical.forall_intro_2 (fun x -> Classical.move_requires (parse_option_bare_injective p x)) else ());
   parser_kind_prop_equiv k p;
   parser_kind_prop_equiv (parse_option_kind k) (parse_option_bare p);
   parse_option_bare p

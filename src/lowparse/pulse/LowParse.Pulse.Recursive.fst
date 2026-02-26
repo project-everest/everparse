@@ -379,7 +379,7 @@ let parse_nlist_recursive_cons_payload
   (n: pos)
   (h: p.header)
 : Tot (parser _ (parse_nlist_recursive_cons_payload_t p n h))
-= L.weaken parse_recursive_payload_kind
+= L.weaken (parse_recursive_payload_kind p.parse_header_kind.parser_kind_injective)
     (L.parse_nlist (p.count h) (parser_of_tot_parser (parse_recursive p)) `C.nondep_then`
     L.parse_nlist (n - 1) (parser_of_tot_parser (parse_recursive p)))
 
@@ -478,7 +478,7 @@ let serialize_nlist_recursive_cons_payload
   (h: p.header)
 : Tot (serializer (parse_nlist_recursive_cons_payload p n h))
 = L.serialize_weaken
-    parse_recursive_payload_kind
+    (parse_recursive_payload_kind p.parse_header_kind.parser_kind_injective)
     (L.serialize_nlist (p.count h) (serialize_recursive s) `C.serialize_nondep_then`
     L.serialize_nlist (n - 1) (serialize_recursive s))
 
