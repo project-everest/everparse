@@ -237,6 +237,22 @@ static bool impl_correct(Pulse_Lib_Slice_slice__uint8_t s)
   return pres;
 }
 
+static CBOR_Spec_Raw_Base_raw_uint64 mk_raw_uint64(uint64_t x)
+{
+  uint8_t ite;
+  if (x <= (uint64_t)MAX_SIMPLE_VALUE_ADDITIONAL_INFO)
+    ite = 0U;
+  else if (x < 256ULL)
+    ite = 1U;
+  else if (x < 65536ULL)
+    ite = 2U;
+  else if (x < 4294967296ULL)
+    ite = 3U;
+  else
+    ite = 4U;
+  return ((CBOR_Spec_Raw_Base_raw_uint64){ .size = ite, .value = x });
+}
+
 static void
 copy__uint8_t(Pulse_Lib_Slice_slice__uint8_t dst, Pulse_Lib_Slice_slice__uint8_t src)
 {
@@ -393,22 +409,6 @@ static cbor_map_entry cbor_mk_map_entry(cbor_raw xk, cbor_raw xv)
         .cbor_map_entry_value = cbor_raw_reset_perm_tot(xv)
       }
     );
-}
-
-static CBOR_Spec_Raw_Base_raw_uint64 mk_raw_uint64(uint64_t x)
-{
-  uint8_t ite;
-  if (x <= (uint64_t)MAX_SIMPLE_VALUE_ADDITIONAL_INFO)
-    ite = 0U;
-  else if (x < 256ULL)
-    ite = 1U;
-  else if (x < 65536ULL)
-    ite = 2U;
-  else if (x < 4294967296ULL)
-    ite = 3U;
-  else
-    ite = 4U;
-  return ((CBOR_Spec_Raw_Base_raw_uint64){ .size = ite, .value = x });
 }
 
 static int16_t impl_uint8_compare(uint8_t x1, uint8_t x2)
@@ -4416,14 +4416,30 @@ cbor_freeable cbor_copy0(cbor_raw x)
   }
   else if (x.tag == CBOR_Case_Array)
   {
-    cbor_array a = x.case_CBOR_Case_Array;
-    CBOR_Spec_Raw_Base_raw_uint64
-    len64 =
-      {
-        .size = a.cbor_array_length_size,
-        .value = (uint64_t)len__CBOR_Pulse_Raw_Type_cbor_raw(a.cbor_array_ptr)
-      };
-    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw ar = a.cbor_array_ptr;
+    CBOR_Spec_Raw_Base_raw_uint64 len64;
+    if (x.tag == CBOR_Case_Array)
+    {
+      cbor_array c_ = x.case_CBOR_Case_Array;
+      len64 =
+        (
+          (CBOR_Spec_Raw_Base_raw_uint64){
+            .size = c_.cbor_array_length_size,
+            .value = (uint64_t)len__CBOR_Pulse_Raw_Type_cbor_raw(c_.cbor_array_ptr)
+          }
+        );
+    }
+    else if (x.tag == CBOR_Case_Serialized_Array)
+      len64 = x.case_CBOR_Case_Serialized_Array.cbor_serialized_header;
+    else
+      len64 =
+        KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
+          "unreachable (pattern matches are exhaustive in F*)");
+    cbor_array ite;
+    if (x.tag == CBOR_Case_Array)
+      ite = x.case_CBOR_Case_Array;
+    else
+      ite = KRML_EABORT(cbor_array, "unreachable (pattern matches are exhaustive in F*)");
+    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw ar = ite.cbor_array_ptr;
     size_t len = len__CBOR_Pulse_Raw_Type_cbor_raw(ar);
     KRML_CHECK_SIZE(sizeof (cbor_raw), len);
     cbor_raw *v_ = KRML_HOST_MALLOC(sizeof (cbor_raw) * len);
@@ -4467,14 +4483,30 @@ cbor_freeable cbor_copy0(cbor_raw x)
   }
   else if (x.tag == CBOR_Case_Map)
   {
-    cbor_map a = x.case_CBOR_Case_Map;
-    CBOR_Spec_Raw_Base_raw_uint64
-    len64 =
-      {
-        .size = a.cbor_map_length_size,
-        .value = (uint64_t)len__CBOR_Pulse_Raw_Type_cbor_map_entry(a.cbor_map_ptr)
-      };
-    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry ar = a.cbor_map_ptr;
+    CBOR_Spec_Raw_Base_raw_uint64 len64;
+    if (x.tag == CBOR_Case_Map)
+    {
+      cbor_map c_ = x.case_CBOR_Case_Map;
+      len64 =
+        (
+          (CBOR_Spec_Raw_Base_raw_uint64){
+            .size = c_.cbor_map_length_size,
+            .value = (uint64_t)len__CBOR_Pulse_Raw_Type_cbor_map_entry(c_.cbor_map_ptr)
+          }
+        );
+    }
+    else if (x.tag == CBOR_Case_Serialized_Map)
+      len64 = x.case_CBOR_Case_Serialized_Map.cbor_serialized_header;
+    else
+      len64 =
+        KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
+          "unreachable (pattern matches are exhaustive in F*)");
+    cbor_map ite;
+    if (x.tag == CBOR_Case_Map)
+      ite = x.case_CBOR_Case_Map;
+    else
+      ite = KRML_EABORT(cbor_map, "unreachable (pattern matches are exhaustive in F*)");
+    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry ar = ite.cbor_map_ptr;
     size_t len = len__CBOR_Pulse_Raw_Type_cbor_map_entry(ar);
     KRML_CHECK_SIZE(sizeof (cbor_map_entry), len);
     cbor_map_entry *v_ = KRML_HOST_MALLOC(sizeof (cbor_map_entry) * len);

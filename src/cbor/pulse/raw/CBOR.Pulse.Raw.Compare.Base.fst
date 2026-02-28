@@ -162,7 +162,8 @@ fn impl_lex_compare
       SZ.v i1 <= SZ.v n1 /\
       SZ.v i2 <= SZ.v n2 /\
       same_sign (lex_compare compare v1 v2) (if res = 0s then lex_compare' compare v1 v2 (SZ.v i1) (SZ.v i2) else I16.v res) /\
-      (res == 0s ==> (SZ.lt i1 n1 == SZ.lt i2 n2)) /\
+      (res == 0s ==> (SZ.lt i1 n1 == SZ.lt i2 n2))
+    ) ** pure (
       cont == (res = 0s && SZ.lt i1 n1)
     )
   ) {

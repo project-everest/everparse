@@ -83,7 +83,7 @@ let parse_list_up_to_payload_kind (k: parser_kind) : Tot (k' : parser_kind {k' `
 }
 
 let tot_parse_list_up_to_payload
-  (#t: Type)
+  (#t: Type u#t)
   (cond: (t -> Tot bool))
   (fuel: nat)
   (k: parser_kind { k.parser_kind_subkind <> Some ParserConsumesAll })
@@ -91,11 +91,11 @@ let tot_parse_list_up_to_payload
   (x: t)
 : Tot (tot_parser (parse_list_up_to_payload_kind k) (parse_list_up_to_payload_t cond fuel x))
 = if cond x
-  then tot_weaken (parse_list_up_to_payload_kind k) (tot_parse_ret UP_UNIT)
+  then tot_weaken (parse_list_up_to_payload_kind k) (tot_parse_ret (UP_UNIT u#t))
   else tot_weaken (parse_list_up_to_payload_kind k) ptail
 
 let parse_list_up_to_payload
-  (#t: Type)
+  (#t: Type u#t)
   (cond: (t -> GTot bool))
   (fuel: nat)
   (k: parser_kind { k.parser_kind_subkind <> Some ParserConsumesAll })
@@ -103,7 +103,7 @@ let parse_list_up_to_payload
   (x: t)
 : Tot (parser (parse_list_up_to_payload_kind k) (parse_list_up_to_payload_t cond fuel x))
 = if cond x
-  then weaken (parse_list_up_to_payload_kind k) (parse_ret UP_UNIT)
+  then weaken (parse_list_up_to_payload_kind k) (parse_ret (UP_UNIT u#t))
   else weaken (parse_list_up_to_payload_kind k) ptail
 
 let rec tot_parse_list_up_to_fuel
@@ -564,7 +564,7 @@ let tot_parse_list_up_to_eq
 (* serializer *)
 
 let serialize_list_up_to_payload
-  (#t: Type)
+  (#t: Type u#t)
   (cond: (t -> GTot bool))
   (fuel: nat)
   (k: parser_kind { k.parser_kind_subkind <> Some ParserConsumesAll })
@@ -573,11 +573,11 @@ let serialize_list_up_to_payload
   (x: t)
 : Tot (serializer (parse_list_up_to_payload cond fuel k ptail x))
 = if cond x
-  then serialize_weaken (parse_list_up_to_payload_kind k) (serialize_ret UP_UNIT (fun _ -> ()))
+  then serialize_weaken (parse_list_up_to_payload_kind k) (serialize_ret (UP_UNIT u#t) (fun _ -> ()))
   else serialize_weaken (parse_list_up_to_payload_kind k) stail
 
 let tot_serialize_list_up_to_payload
-  (#t: Type)
+  (#t: Type u#t)
   (cond: (t -> Tot bool))
   (fuel: nat)
   (k: parser_kind { k.parser_kind_subkind <> Some ParserConsumesAll })
@@ -586,18 +586,18 @@ let tot_serialize_list_up_to_payload
   (x: t)
 : Tot (tot_serializer (tot_parse_list_up_to_payload cond fuel k ptail x))
 = if cond x
-  then tot_serialize_weaken (parse_list_up_to_payload_kind k) (tot_serialize_ret UP_UNIT (fun _ -> ()))
+  then tot_serialize_weaken (parse_list_up_to_payload_kind k) (tot_serialize_ret (UP_UNIT u#t) (fun _ -> ()))
   else tot_serialize_weaken (parse_list_up_to_payload_kind k) stail
 
 let synth_list_up_to_fuel_recip
-  (#t: Type)
+  (#t: Type u#t)
   (cond: (t -> GTot bool))
   (fuel: nat)
   (xy: parse_list_up_to_fuel_t cond (fuel + 1))
 : Tot (dtuple2 t (parse_list_up_to_payload_t cond fuel))
 = let (l, z) = xy in
   match l with
-  | [] -> (| z, UP_UNIT |)
+  | [] -> (| z, UP_UNIT u#t |)
   | x :: y -> (| x, ((y <: llist (refine_with_cond (negate_cond cond)) fuel), z) |)
 
 let synth_list_up_to_fuel_inverse

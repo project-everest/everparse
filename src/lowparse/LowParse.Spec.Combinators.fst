@@ -339,6 +339,8 @@ let serialize_dtuple2
     dfst
     (fun (x: t1) -> serialize_synth (p2 x) (synth_dtuple2 x) (s2 x) (synth_dtuple2_recip x) ())
 
+#restart-solver
+#push-options "--z3rlimit_factor 4 --fuel 0 --ifuel 0"
 let parse_dtuple2_eq
   (#k1: parser_kind)
   (#t1: Type)
@@ -362,6 +364,7 @@ let parse_dtuple2_eq
   by (T.norm [delta_only [`%parse_dtuple2;]])
   
 = ()
+#pop-options
 
 let serialize_dtuple2_eq
   (#k1: parser_kind)
@@ -393,7 +396,8 @@ let nondep_then
     (fun x -> parse_synth p2 (fun y -> (x, y) <: refine_with_tag fst x))
 
 #set-options "--z3rlimit 16"
-
+#restart-solver
+#push-options "--z3rlimit_factor 8 --fuel 0 --ifuel 0"
 let nondep_then_eq
   (#k1: parser_kind)
   (#t1: Type)
@@ -417,6 +421,7 @@ let nondep_then_eq
   by (T.norm [delta_only [`%nondep_then;]])
   
 = ()
+#pop-options
 
 let tot_nondep_then_bare
   (#t1: Type)

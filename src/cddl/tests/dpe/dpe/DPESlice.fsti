@@ -240,9 +240,11 @@ let next_trace (t:trace) (s:g_session_state { valid_transition t s }) : trace =
     | [] -> [s]::t
     | l -> (s::l)::t
 
+module GR = Pulse.Lib.GhostPCMReference
+
 val dpe_pcm_carrier_t : Type u#1
 val dpe_pcm : PCM.pcm dpe_pcm_carrier_t
-let dpe_ghost_state = ghost_pcm_ref dpe_pcm
+let dpe_ghost_state = GR.gref dpe_pcm
 val sid_pts_to (r:dpe_ghost_state) (sid:sid_t) (t:trace) : slprop
 val trace_ref : dpe_ghost_state
 

@@ -192,6 +192,8 @@ let header = dtuple2 initial_byte long_argument
 
 module Cast = FStar.Int.Cast
 
+#push-options "--z3rlimit 20"
+
 inline_for_extraction
 let argument_as_raw_uint64
   (b: initial_byte { ~ (long_argument_simple_value_prop b) })
@@ -208,6 +210,8 @@ let argument_as_raw_uint64
     { size = 4uy; value = v }
   | LongArgumentOther _ _ ->
     { size = 0uy; value = Cast.uint8_to_uint64 b.additional_info }
+
+#pop-options
 
 let argument_as_uint64
   (b: initial_byte { ~ (long_argument_simple_value_prop b) })
@@ -704,7 +708,7 @@ let synth_inverse_list_of_pair_list
   [SMTPat (list_of_pair_list t nb_pairs)]
 = Classical.forall_intro (list_of_pair_list_of_list #t nb_pairs)
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 256"
 #restart-solver
 
 let rec parse_pair_list_as_list
@@ -772,7 +776,7 @@ let synth_raw_data_item'_from_alt
           then (| h, LeafContentSeq?.v lc |)
           else (| h, () |)
 
-#push-options "--ifuel 3"
+#push-options "--ifuel 3 --z3rlimit_factor 2"
 #restart-solver
 
 let synth_raw_data_item'_from_alt_injective : squash (synth_injective synth_raw_data_item'_from_alt) =
@@ -840,8 +844,7 @@ let tot_parse_nlist_parse_nlist'
   (ensures (tot_parse_nlist n p b == parse_nlist n #k p b))
 = tot_parse_nlist_parse_nlist n p b
 
-// #push-options "--z3rlimit 128 --ifuel 8"
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 1024 --ifuel 8 --split_queries always"
 
 #restart-solver
 let parse_raw_data_item_eq
@@ -923,7 +926,7 @@ let mk_initial_byte
     additional_info = x;
   }
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 64"
 
 let raw_uint64_as_argument
   (t: major_type_t)
@@ -999,6 +1002,8 @@ let serialize_initial_byte : serializer parse_initial_byte =
 
 #restart-solver
 
+#push-options "--z3rlimit 20"
+
 let tot_serialize_long_argument
   (b: initial_byte)
 : Tot (tot_serializer (tot_parse_long_argument b))
@@ -1016,6 +1021,8 @@ let tot_serialize_long_argument
     then tot_serialize_weaken _ (tot_serialize_synth _ (LongArgumentU64 ()) (tot_serialize_u64) LongArgumentU64?.v ())
     else tot_serialize_weaken _ (tot_serialize_synth _ (LongArgumentOther ()) tot_serialize_empty LongArgumentOther?.v ())
 
+#pop-options
+
 let serialize_long_argument
   (b: initial_byte)
 : Tot (serializer (parse_long_argument b))
@@ -1026,6 +1033,8 @@ let tot_serialize_header : tot_serializer tot_parse_header =
 
 let serialize_header : serializer parse_header =
   serialize_ext (parser_of_tot_parser tot_parse_header) (serializer_of_tot_serializer tot_serialize_header) parse_header
+
+#push-options "--z3rlimit 16"
 
 let synth_raw_data_item_recip
   (x: raw_data_item)
@@ -1043,8 +1052,6 @@ let synth_raw_data_item_recip
     (| raw_uint64_as_argument cbor_major_type_map len, v |)
   | Tagged tag v ->
     (| raw_uint64_as_argument cbor_major_type_tagged tag, v |)
-
-#push-options "--z3rlimit 16"
 
 #restart-solver
 let synth_raw_data_item_recip_inverse : squash (synth_inverse synth_raw_data_item synth_raw_data_item_recip) = ()
@@ -1085,6 +1092,8 @@ let synth_raw_data_item_from_alt_recip
 
 let synth_raw_data_item_from_alt_inverse : squash (synth_inverse synth_raw_data_item_from_alt synth_raw_data_item_from_alt_recip) = ()
 
+#push-options "--z3rlimit 20"
+
 let tot_serialize_leaf_content
   (h: header)
 : Tot (tot_serializer (tot_parse_leaf_content h))
@@ -1102,6 +1111,8 @@ let serialize_leaf_content
       if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
       then serialize_weaken _ (serialize_synth _ (LeafContentSeq ()) (serialize_filter (serialize_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) (lseq_utf8_correct b.major_type _)) LeafContentSeq?.v ())
       else serialize_weaken _ (serialize_synth _ (LeafContentEmpty ()) serialize_empty LeafContentEmpty?.v ())
+
+#pop-options
 
 let tot_serialize_leaf : tot_serializer tot_parse_leaf =
   tot_serialize_dtuple2 tot_serialize_header tot_serialize_leaf_content
@@ -1196,6 +1207,9 @@ let serialize_raw_data_item : serializer parse_raw_data_item =
 
 (* Serialization equations to prove the functional correctness of implementations *)
 
+#push-options "--z3rlimit 32"
+#restart-solver
+
 let serialize_content
   (h: header)
 : Tot (serializer (parse_content parse_raw_data_item h))
@@ -1210,6 +1224,8 @@ let serialize_content
       else if b.major_type = cbor_major_type_tagged
       then serialize_weaken _ serialize_raw_data_item
       else serialize_weaken _ serialize_empty
+
+#pop-options
 
 let serialize_raw_data_item_aux : serializer (parse_raw_data_item_aux parse_raw_data_item) =
   serialize_synth
@@ -1298,6 +1314,9 @@ let get_uint64_as_initial_byte
     x
     (fun h -> match h with (| b, _ |) -> mk_synth_initial_byte (synth_initial_byte_recip b))
 
+#push-options "--z3rlimit 32"
+#restart-solver
+
 let get_initial_byte_header_correct
   (h: header)
 : Lemma
@@ -1317,6 +1336,8 @@ let get_initial_byte_header_correct
     tot_serialize_u8
     (synth_initial_byte_recip b);
   serialize_u8_spec (synth_bitsum'_recip initial_byte_desc (synth_initial_byte_recip b))
+
+#pop-options
 
 #push-options "--z3rlimit 16"
 
@@ -1342,8 +1363,6 @@ let get_initial_byte_header_inj
   assert (synth_bitsum' initial_byte_desc b1' == synth_initial_byte_recip b1);
   assert (synth_bitsum' initial_byte_desc b2' == synth_initial_byte_recip b2)
 
-#pop-options
-
 let get_uint64_as_initial_byte_header_correct
   (ty: major_type_t { ty `U8.lt` cbor_major_type_simple_value })
   (x: raw_uint64)
@@ -1359,9 +1378,6 @@ let get_major_type_synth_raw_data_item_recip
 : Lemma
   (get_major_type x == get_header_major_type (dfst (synth_raw_data_item_recip x)))
 = ()
-
-
-#push-options "--z3rlimit 16"
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -1443,7 +1459,7 @@ let rec list_for_all_holds_on_pair_list_of_pair_list
   | [] -> ()
   | _ :: q -> list_for_all_holds_on_pair_list_of_pair_list pred q
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 256"
 
 #restart-solver
 let holds_on_raw_data_item_eq_recursive
@@ -1919,6 +1935,10 @@ let bytes_lex_compare_refl
 = Seq.append_empty_r x;
   bytes_lex_compare_prefix x Seq.empty Seq.empty
 
+#pop-options
+
+#push-options "--z3rlimit 256 --split_queries always"
+
 let serialized_lex_compare_simple_value
   (x1 x2: simple_value)
 : Lemma
@@ -2002,14 +2022,13 @@ let serialized_lex_compare_simple_value
     seq_to_list_length_one (bare_serialize (serialize_long_argument b2) l2);
     bytes_lex_compare_serialize_strong_prefix serialize_header h1 h2 (bare_serialize (serialize_content h1) c1) (bare_serialize (serialize_content h2) c2)
   end
+#pop-options
 
 let deterministically_encoded_cbor_map_key_order_simple_value_correct
   (x1 x2: simple_value)
 : Lemma
   (ensures (deterministically_encoded_cbor_map_key_order (Simple x1) (Simple x2) == x1 `U8.lt` x2))
 = serialized_lex_compare_simple_value x1 x2
-
-#pop-options
 
 #restart-solver
 let lex_compare_with_header_long_argument
@@ -2082,6 +2101,9 @@ let big_endian_lex_compare'
   end
   else ()
 
+#pop-options
+
+#push-options "--z3rlimit 64"
 #restart-solver
 let lex_compare_with_header_uint
   (ty1: major_type_t { ty1 `U8.lt` cbor_major_type_simple_value })
@@ -2207,7 +2229,7 @@ let raw_uint64_compare
       then int_compare (U64.v x1.value) (U64.v x2.value)
       else c
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 #restart-solver
 
 let lex_compare_header_intro
@@ -2277,6 +2299,11 @@ let lex_order_int64_correct
 : Lemma
   (ensures (bytes_lex_order (bare_serialize serialize_raw_data_item (Int64 ty x1)) (bare_serialize serialize_raw_data_item (Int64 ty x2)) == x1 `raw_uint64_lt` x2))
 = serialized_lex_compare_int64 ty x1 x2
+
+#pop-options
+
+#push-options "--z3rlimit 256"
+#restart-solver
 
 let serialized_lex_compare_string
   (ty: major_type_byte_string_or_text_string)
@@ -2441,7 +2468,7 @@ let rec lex_compare_ext
 
 #pop-options
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64 --split_queries always"
 
 let serialized_lex_compare_array_aux
   (len1: raw_uint64)
@@ -2483,6 +2510,10 @@ let serialized_lex_compare_array_aux
   let (| h2, c2 |) = v2' in
   lex_compare_header_intro cbor_major_type_array len1 len2;
   bytes_lex_compare_serialize_strong_prefix serialize_header h1 h2 (bare_serialize (serialize_content h1) c1) (bare_serialize (serialize_content h2) c2)
+
+#pop-options
+
+#push-options "--z3rlimit 32"
 
 let serialized_lex_compare_array
   (len1: raw_uint64)
@@ -2531,6 +2562,10 @@ let tot_nondep_then_eq_gen
   )
 = nondep_then_eq (parser_of_tot_parser pt1) (parser_of_tot_parser pt2) x;
   nondep_then_eq pg1 pg2 x
+
+#pop-options
+
+#push-options "--z3rlimit 64 --split_queries always"
 
 let serialized_lex_compare_map_aux
   (len1: raw_uint64)

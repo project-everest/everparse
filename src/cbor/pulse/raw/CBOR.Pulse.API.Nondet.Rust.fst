@@ -62,9 +62,13 @@ returns res: cbornondet
 ensures cbor_nondet_match 1.0R res (Spec.pack (Spec.CInt64 (if ty = UInt64 then cbor_major_type_uint64 else cbor_major_type_neg_int64) v))
 {
   if (ty = UInt64) {
-    Nondet.cbor_nondet_mk_uint64 () v
+    let res = Nondet.cbor_nondet_mk_uint64 () v;
+    with v' . rewrite cbor_nondet_match 1.0R res v' as cbor_nondet_match 1.0R res (Spec.pack (Spec.CInt64 (if ty = UInt64 then cbor_major_type_uint64 else cbor_major_type_neg_int64) v));
+    res
   } else {
-    Nondet.cbor_nondet_mk_neg_int64 () v
+    let res = Nondet.cbor_nondet_mk_neg_int64 () v;
+    with v' . rewrite cbor_nondet_match 1.0R res v' as cbor_nondet_match 1.0R res (Spec.pack (Spec.CInt64 (if ty = UInt64 then cbor_major_type_uint64 else cbor_major_type_neg_int64) v));
+    res
   }
 }
 
@@ -233,6 +237,7 @@ ensures exists* p' .
     let s = cbor_nondet_get_string () c;
     with p' v' . assert (pts_to s #p' v');
     fold (cbor_nondet_string_match ty p' s v);
+    rewrite each ty as (if ByteString? k then cbor_major_type_byte_string else cbor_major_type_text_string);
     fold (cbor_nondet_view_match p' (String k s) v);
     intro
       (Trade.trade
@@ -243,6 +248,7 @@ ensures exists* p' .
       fn _
     {
       unfold (cbor_nondet_view_match p' (String k s) v);
+      rewrite each (if ByteString? k then cbor_major_type_byte_string else cbor_major_type_text_string) as ty;
       unfold (cbor_nondet_string_match ty p' s v);
     };
     Trade.trans _ _ (cbor_nondet_match p c v);
@@ -250,6 +256,7 @@ ensures exists* p' .
   }
   else if (ty = cbor_major_type_array) {
     let res : cbor_nondet_array = { array = c };
+    rewrite each c as res.array;
     fold (cbor_nondet_array_match p res v);
     fold (cbor_nondet_view_match p (Array res) v);
     intro
@@ -262,11 +269,13 @@ ensures exists* p' .
     {
       unfold (cbor_nondet_view_match p (Array res) v);
       unfold (cbor_nondet_array_match p res v);
+      rewrite each res.array as c;
     };
     Array res
   }
   else if (ty = cbor_major_type_map) {
     let res : cbor_nondet_map = { map = c };
+    rewrite each c as res.map;
     fold (cbor_nondet_map_match p res v);
     fold (cbor_nondet_view_match p (Map res) v);
     intro
@@ -279,6 +288,7 @@ ensures exists* p' .
     {
       unfold (cbor_nondet_view_match p (Map res) v);
       unfold (cbor_nondet_map_match p res v);
+      rewrite each res.map as c;
     };
     Map res
   }
@@ -298,6 +308,7 @@ ensures exists* p' .
     {
       unfold (cbor_nondet_view_match p' (Tagged tag payload) v);
       unfold (cbor_nondet_tagged_match p' tag payload v);
+      with v_ . rewrite (cbor_nondet_match p' payload v_) as (cbor_nondet_match p' payload v')
     };
     Trade.trans _ _ (cbor_nondet_match p c v);
     Tagged tag payload
@@ -535,12 +546,14 @@ ensures
       unfold (Base.map_get_post_none cbor_nondet_match x.map px vx vk);
       Trade.elim _ _;
       fold (safe_map_get_post x px vx vk None);
+      rewrite (safe_map_get_post x px vx vk None) as (safe_map_get_post x px vx vk res)
     }
     Some res' -> {
       unfold (Base.map_get_post cbor_nondet_match x.map px vx vk (Some res'));
       unfold (Base.map_get_post_some cbor_nondet_match x.map px vx vk res');
       Trade.trans _ _ (cbor_nondet_map_match px x vx);
       fold (safe_map_get_post x px vx vk (Some res'));
+      rewrite (safe_map_get_post x px vx vk (Some res')) as (safe_map_get_post x px vx vk res);
     }
   }
 }

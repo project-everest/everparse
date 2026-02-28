@@ -520,6 +520,8 @@ let map_group_concat_cut_choice
     (map_group_concat (map_group_cut k) (map_group_choice g1 g2))
     (map_group_choice (map_group_concat (map_group_cut k) g1) (map_group_concat (map_group_cut k) g2))
 
+#push-options "--z3rlimit 10"
+
 let map_group_concat_choice_cut
   (g1 g2: det_map_group)
   (k: typ)
@@ -529,6 +531,8 @@ let map_group_concat_choice_cut
 = apply_map_group_det_map_group_equiv
     (map_group_concat (map_group_choice g1 g2) (map_group_cut k))
     (map_group_choice (map_group_concat g1 (map_group_cut k)) (map_group_concat g2 (map_group_cut k)))
+
+#pop-options
 
 val matches_map_group (g: map_group) (m: Cbor.cbor_map) : Tot bool
 

@@ -51,6 +51,12 @@ let debug
          )
       )
 
+let string_starts_with big small =
+  let small_len = String.length small in
+  if String.length big < small_len
+  then false
+  else String.sub big 0 small_len = small
+
 let terminal name f =
   terminal (fun x ->
       if enable_debug
@@ -111,7 +117,17 @@ let s = debug "s" (choice (nonempty_s) (ret ()))
 
 let id = debug "id"
   (choices [
-    concat raw_id (fun s -> ret (Regular, s));
+    concat raw_id (fun s ->
+        let s =
+          if List.mem s [
+                 "if"; "then"; "else"; "goto"; "label"; "begin"; "end"; "let"; "fn";
+               ] ||
+               string_starts_with "evercddl_" s
+          then ("evercddl_" ^ s)
+          else s
+        in
+        ret (Regular, s)
+    );
     concat dollar (fun _ -> concat raw_id (fun s -> ret (SocketType, s)));
     concat dollardollar (fun _ -> concat raw_id (fun s -> ret (SocketGroup, s)));
   ])

@@ -59,6 +59,8 @@ pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
       )
     )
 
+#push-options "--z3rlimit 32"
+
 let pts_to_serialized_nlist_raw_data_item_head_header'_post_children
   (n: pos)
   (va: LowParse.Spec.VCList.nlist n raw_data_item)
@@ -77,6 +79,8 @@ let pts_to_serialized_nlist_raw_data_item_head_header'_post_children
   )
 = // assert (synth_raw_data_item_from_alt (synth_raw_data_item_from_alt_recip (List.Tot.hd va)) == List.Tot.hd va);
   ()
+
+#pop-options
 
 let check_equiv_head
   (a1 a2: raw_data_item)
@@ -130,7 +134,7 @@ let check_equiv_head_correct_post
     check_equiv_list gl1 gl2 equiv == (if check_equiv_head a1 a2 then check_equiv_list l1' l2' equiv else Some false)
   )
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 128"
 
 let check_equiv_head_correct
   (gl1: list raw_data_item)
@@ -326,6 +330,10 @@ let impl_check_equiv_list_with_bound_t
   )
 )
 
+#pop-options
+
+#push-options "--z3rlimit 128"
+
 inline_for_extraction
 fn impl_check_equiv_list
   (#bound: Ghost.erased nat)
@@ -377,7 +385,8 @@ fn impl_check_equiv_list
         (pts_to_serialized (serialize_nlist (SZ.v n') serialize_raw_data_item) l2' #p2 gl2')
         (pts_to_serialized (serialize_nlist (SZ.v n1) serialize_raw_data_item) l2 #p2 gl2) **
       pure (
-        b == ((res = Some true) && SZ.v n' > 0) /\
+        b == ((res = Some true) && SZ.v n' > 0)
+      ) ** pure (
         list_sum raw_data_item_size gl1' + list_sum raw_data_item_size gl2' <= list_sum raw_data_item_size gl1 + list_sum raw_data_item_size gl2 /\
         check_equiv_list gl1 gl2 equiv == (if res = Some true then check_equiv_list gl1' gl2' equiv else res)
       )
@@ -575,6 +584,31 @@ let serialize_list_of_pair_list
     (serialize (serialize_nlist (n + n) serialize_raw_data_item) l');
   ()
 
+ghost
+fn nlist_cons_as_nondep_then'
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (n: pos)
+  (n': nat)
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: nlist n t)
+requires
+  pts_to_serialized (serialize_nlist n s) input #pm v ** pure (n' == n - 1)
+ensures exists* v' .
+  pts_to_serialized (serialize_nondep_then s (serialize_nlist n' s)) input #pm v' **
+  Trade.trade (pts_to_serialized (serialize_nondep_then s (serialize_nlist n' s)) input #pm v') (pts_to_serialized (serialize_nlist n s) input #pm v) **
+  pure (
+    (v <: list t) == (fst v' :: snd v')
+  )
+{
+  nlist_cons_as_nondep_then s n input;
+  rewrite each (n - 1) as n';
+  ()
+}
+
 inline_for_extraction
 fn impl_setoid_assoc_eq_with_overflow
   (#equiv: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> option bool))
@@ -634,7 +668,8 @@ ensures
     pts_to_serialized serialize_raw_data_item xr_value #pxr_value gxr_value **
     pts_to pcont cont **
     pure (
-      b == (SZ.v n > 0 && res = Some false && cont) /\
+      b == (SZ.v n > 0 && res = Some false && cont)
+    ) ** pure (
       list_sum (pair_sum raw_data_item_size raw_data_item_size) gl + (raw_data_item_size gxr_key + raw_data_item_size gxr_value) <= bound /\
       setoid_assoc_eq_with_overflow equiv equiv gll (Ghost.reveal gxr_key, Ghost.reveal gxr_value) == (if res = Some false && cont then setoid_assoc_eq_with_overflow equiv equiv gl (Ghost.reveal gxr_key, Ghost.reveal gxr_value) else res)
     )
@@ -649,9 +684,10 @@ ensures
     );
     let n = !pn;
     let n' = SZ.sub n 1sz;
-    nlist_cons_as_nondep_then
+    nlist_cons_as_nondep_then'
       (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
       (SZ.v n)
+      (SZ.v n')
       l;
     pts_to_serialized_nondep_then_assoc_l2r
       serialize_raw_data_item
@@ -679,7 +715,7 @@ ensures
       (jump_raw_data_item ())
       si
       l;
-    Trade.trans _ _ (
+    trade_trans_nounify (_ ** _) _ _ (
       pts_to_serialized
         (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
         l #pl
@@ -809,7 +845,8 @@ ensures
     pts_to pres res **
     pts_to_serialized (serialize_nlist (SZ.v nl1) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l1 #pl1 gl1 **
     pure (
-      b == (SZ.v n > 0 && res = Some true) /\
+      b == (SZ.v n > 0 && res = Some true)
+    ) ** pure (
       list_sum (pair_sum raw_data_item_size raw_data_item_size) gl1 + list_sum (pair_sum raw_data_item_size raw_data_item_size) gl <= bound /\
       list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv gl1) gl2 == (if res = Some true then list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv gl1) gl else res)
     )
@@ -824,9 +861,10 @@ ensures
     );
     let n = !pn;
     let n' = SZ.sub n 1sz;
-    nlist_cons_as_nondep_then
+    nlist_cons_as_nondep_then'
       (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
       (SZ.v n)
+      (SZ.v n')
       l;
     pts_to_serialized_nondep_then_assoc_l2r
       serialize_raw_data_item
@@ -854,7 +892,7 @@ ensures
       (jump_raw_data_item ())
       si
       l;
-    Trade.trans _ _ (
+    trade_trans_nounify (_ ** _) _ _ (
       pts_to_serialized
         (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
         l #pl2
@@ -979,6 +1017,91 @@ fn impl_equiv_hd_with_bound_of_equiv_hd
   impl n1 l1 n2 l2
 }
 
+#pop-options
+
+let check_equiv_map'_eq_left_post
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (map_bound: option nat)
+  (x1 x2: raw_data_item)
+  (map_bound': option nat)
+  (bound: nat)
+  (v1 v2: list (raw_data_item & raw_data_item))
+: Tot prop
+= (check_equiv_map' data_model map_bound x1 x2 == list_for_all_with_overflow (setoid_assoc_eq_with_overflow (check_equiv_aux bound (check_equiv_map data_model map_bound')) (check_equiv_aux bound (check_equiv_map data_model map_bound')) v1) v2)
+
+let map_bound'_eq_prop
+  (map_bound: option nat)
+  (map_bound': option nat)
+: Tot prop
+=
+  map_bound <> Some 0 /\
+  map_bound' ==       
+    (match map_bound with None -> None | Some x -> Some (x - 1))
+
+let is_map_payload_of (v1: list (raw_data_item & raw_data_item)) (x1: raw_data_item)
+: Tot prop
+= Map? x1 /\ v1 == Map?.v x1
+
+let map_bound_neq_some_0
+  (x: option nat)
+: Tot prop
+= x <> Some 0
+
+let bound_eq_prop
+  (v1 v2: list (raw_data_item & raw_data_item))
+  (bound: nat)
+: Tot prop
+=
+  bound == list_sum (pair_sum raw_data_item_size raw_data_item_size) v1 + list_sum (pair_sum raw_data_item_size raw_data_item_size) v2
+
+ghost
+fn check_equiv_map'_eq_left
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (map_bound: option nat)
+  (x1 x2: raw_data_item)
+  (sq: squash (data_model x1 x2 == false))
+  (v1 v2: list (raw_data_item & raw_data_item))
+  (sq1: squash (v1 `is_map_payload_of` x1))
+  (sq2: squash (v2 `is_map_payload_of` x2))
+  (sq_bound: squash (map_bound_neq_some_0 map_bound))
+  (map_bound': option nat)
+  (map_bound'_eq: squash (map_bound'_eq_prop map_bound map_bound'))
+  (bound: nat)
+  (bound_eq: squash (bound_eq_prop v1 v2 bound))
+  (sqrec: squash (list_for_all_with_overflow (setoid_assoc_eq_with_overflow (check_equiv_aux bound (check_equiv_map data_model map_bound')) (check_equiv_aux bound (check_equiv_map data_model map_bound')) v2) v1 == Some true))
+requires
+  emp
+ensures pure
+  (check_equiv_map'_eq_left_post data_model map_bound x1 x2 map_bound' bound v1 v2)
+{
+  ()
+}
+
+ghost
+fn check_equiv_map'_eq_right
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (map_bound: option nat)
+  (x1 x2: raw_data_item)
+  (sq: squash (data_model x1 x2 == false))
+  (v1 v2: list (raw_data_item & raw_data_item))
+  (sq1: squash (v1 `is_map_payload_of` x1))
+  (sq2: squash (v2 `is_map_payload_of` x2))
+  (sq_bound: squash (map_bound_neq_some_0 map_bound))
+  (map_bound': option nat)
+  (map_bound'_eq: squash (map_bound'_eq_prop map_bound map_bound'))
+  (bound: nat)
+  (bound_eq: squash (bound_eq_prop v1 v2 bound))
+  (sqrec: squash (list_for_all_with_overflow (setoid_assoc_eq_with_overflow (check_equiv_aux bound (check_equiv_map data_model map_bound')) (check_equiv_aux bound (check_equiv_map data_model map_bound')) v2) v1 <> Some true))
+requires
+  emp
+ensures pure
+  (check_equiv_map' data_model map_bound x1 x2 == list_for_all_with_overflow (setoid_assoc_eq_with_overflow (check_equiv_aux bound (check_equiv_map data_model map_bound')) (check_equiv_aux bound (check_equiv_map data_model map_bound')) v2) v1)
+{
+  ()
+}
+
+#push-options "--z3rlimit 128 --z3cliopt smt.arith.nl=false --z3cliopt smt.qi.eager_threshold=10 --fuel 4 --ifuel 8 --split_queries always"
+
 inline_for_extraction
 fn impl_check_equiv_map_hd_body
   (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
@@ -1000,6 +1123,7 @@ fn impl_check_equiv_map_hd_body
   if impl_data_model n1 l1 n2 l2 {
     Some true
   } else {
+    let sq: squash (Ghost.reveal data_model (List.Tot.hd gl1) (List.Tot.hd gl2) == false) = ();
     let _ = pts_to_serialized_nlist_raw_data_item_head_header' l1 n1;
     let ph1 = nondep_then_fst
       serialize_header
@@ -1025,11 +1149,19 @@ fn impl_check_equiv_map_hd_body
         None
       } else {
         let map_bound' : option SZ.t = (match map_bound with None -> None | Some b -> Some (SZ.sub b 1sz));
+        let gmap_bound' : Ghost.erased (option nat) = option_sz_v map_bound';
+        let x1 = Ghost.hide (List.Tot.hd gl1);
+        let x2 = Ghost.hide (List.Tot.hd gl2);
+        let v1 : Ghost.erased (list (raw_data_item & raw_data_item)) = (Ghost.hide (let Map _ v1 = List.Tot.hd gl1 in v1));
+        let v2 : Ghost.erased (list (raw_data_item & raw_data_item)) = (Ghost.hide (let Map _ v2 = List.Tot.hd gl2 in v2));
+        let sq1: squash (v1 `is_map_payload_of` x1) = ();
+        let sq2: squash (v2 `is_map_payload_of` x2) = ();
+        let sq_bound: squash (map_bound_neq_some_0 (option_sz_v map_bound)) = ();
         let bound : Ghost.erased nat = Ghost.hide (
-          let Map _ v1 = List.Tot.hd gl1 in
-          let Map _ v2 = List.Tot.hd gl2 in
           list_sum (pair_sum raw_data_item_size raw_data_item_size) v1 + list_sum (pair_sum raw_data_item_size raw_data_item_size) v2
         );
+        let bound_eq: squash (bound_eq_prop v1 v2 bound) = ();
+        let map_bound'_eq: squash (map_bound'_eq_prop (option_sz_v map_bound) gmap_bound') = ();
         assume (pure (SZ.fits_u64));
         let nv1 = SZ.uint64_to_sizet (argument_as_uint64 (dfst h1) (dsnd h1));
         let nv2 = SZ.uint64_to_sizet (argument_as_uint64 (dfst h2) (dsnd h2));
@@ -1083,10 +1215,30 @@ fn impl_check_equiv_map_hd_body
           nv1 c1 nv2 c2;
           Trade.elim _ (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1);
           Trade.elim _ (pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2);
+          assert pure (res == list_for_all_with_overflow (setoid_assoc_eq_with_overflow (check_equiv_aux bound (check_equiv_map data_model gmap_bound')) (check_equiv_aux bound (check_equiv_map data_model gmap_bound')) v1) v2);
+          check_equiv_map'_eq_left data_model (option_sz_v map_bound) x1 x2 sq v1 v2
+            sq1 sq2 sq_bound
+            gmap_bound'
+            map_bound'_eq
+            bound
+            bound_eq
+            (())
+            ;
+          assert pure (check_equiv_map' data_model (option_sz_v map_bound) (List.Tot.hd gl1) (List.Tot.hd gl2) == list_for_all_with_overflow (setoid_assoc_eq_with_overflow (check_equiv_aux bound (check_equiv_map data_model gmap_bound')) (check_equiv_aux bound (check_equiv_map data_model gmap_bound')) v1) v2);
+          assert pure (res == check_equiv_map' data_model (option_sz_v map_bound) (List.Tot.hd gl1) (List.Tot.hd gl2));
           res
         } else {
           Trade.elim _ (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1);
           Trade.elim _ (pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2);
+          check_equiv_map'_eq_right data_model (option_sz_v map_bound) x1 x2 sq v1 v2
+            sq1 sq2 sq_bound
+            gmap_bound'
+            map_bound'_eq
+            bound
+            bound_eq
+            (())
+            ;
+          assert pure (res == check_equiv_map' data_model (option_sz_v map_bound) (List.Tot.hd gl1) (List.Tot.hd gl2));
           res
         }
       }
@@ -1217,7 +1369,8 @@ ensures
       (pts_to_serialized (serialize_nlist (SZ.v n0) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l0 #pm gl0) **
     pts_to pres res **
     pure (
-      b == (res = Some false && SZ.gt n 0sz) /\
+      b == (res = Some false && SZ.gt n 0sz)
+    ) ** pure (
       list_existsb_with_overflow p (List.Tot.map fst gl0) == (if res = Some false then list_existsb_with_overflow p (List.Tot.map fst gl) else res)
     )
   )
@@ -1232,9 +1385,10 @@ ensures
         l #pm
         gl
     );
-    nlist_cons_as_nondep_then
+    nlist_cons_as_nondep_then'
       (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
       (SZ.v n)
+      (SZ.v n')
       l;
     pts_to_serialized_nondep_then_assoc_l2r
       serialize_raw_data_item
@@ -1262,7 +1416,7 @@ ensures
       (jump_raw_data_item ())
       si
       l;
-    Trade.trans _ _ (
+    trade_trans_nounify (_ ** _) _ _ (
       pts_to_serialized
         (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
         l #pm
@@ -1311,7 +1465,7 @@ ensures
 
 module GR = Pulse.Lib.GhostReference
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 128"
 
 fn rec impl_check_map_depth_aux
   (bound: SZ.t)
@@ -1362,7 +1516,8 @@ ensures exists* l' gn' (gl': nlist gn' raw_data_item) .
     GR.pts_to pl1 ll **
     pure (
       check_map_depth (SZ.v bound) l1 == (res && check_map_depth (SZ.v bound) ll) /\
-      (res ==> (List.Tot.length ll == SZ.v n /\ gn == SZ.v n + List.Tot.length l2 /\ (gl <: list raw_data_item) == List.Tot.append ll l2)) /\
+      (res ==> (List.Tot.length ll == SZ.v n /\ gn == SZ.v n + List.Tot.length l2 /\ (gl <: list raw_data_item) == List.Tot.append ll l2))
+    ) ** pure (
       b == (res && SZ.v n > 0)
     )
   ) {
@@ -1490,6 +1645,20 @@ ensures
   }
 }
 
+ghost
+fn trade_trans_hyp_l_nounify
+  (p1 p2 p2' q r: slprop)
+  requires
+  Trade.trade p1 p2 **
+  Trade.trade (p2' ** q) r **
+  pure (p2 == p2')
+  ensures
+  Trade.trade (p1 ** q) r
+{
+  rewrite each p2' as p2;
+  Trade.trans_hyp_l p1 p2 q r
+}
+
 inline_for_extraction
 fn impl_list_no_setoid_repeats_with_overflow_map_fst
   (#equiv: Ghost.erased (raw_data_item -> raw_data_item -> option bool))
@@ -1526,7 +1695,8 @@ ensures
       (pts_to_serialized (serialize_nlist (SZ.v n0) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l0 #pm gl0) **
     pts_to pres res **
     pure (
-      b == (res = Some true && SZ.gt n 0sz) /\
+      b == (res = Some true && SZ.gt n 0sz)
+    ) ** pure (
       list_no_setoid_repeats_with_overflow equiv (option_sz_v bound) (List.Tot.map fst gl0) == (if res = Some true then list_no_setoid_repeats_with_overflow equiv (option_sz_v bound) (List.Tot.map fst gl) else res)
     )
   )
@@ -1541,9 +1711,10 @@ ensures
         l #pm
         gl
     );
-    nlist_cons_as_nondep_then
+    nlist_cons_as_nondep_then'
       (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
       (SZ.v n)
+      (SZ.v n')
       l;
     pts_to_serialized_nondep_then_assoc_l2r
       serialize_raw_data_item
@@ -1571,7 +1742,7 @@ ensures
       (jump_raw_data_item ())
       si
       l;
-    Trade.trans _ _ (
+    trade_trans_nounify (_ ** _) _ _ (
       pts_to_serialized
         (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
         l #pm
@@ -1628,7 +1799,11 @@ ensures
       pts_to_serialized_nlist_1
         serialize_raw_data_item
         lh;
-      Trade.trans_hyp_l _ _ _ (
+      with _v' . assert (pts_to_serialized (serialize_nlist 1 serialize_raw_data_item) lh #pm _v');
+//      show_proof_state;
+      trade_trans_hyp_l_nounify (pts_to_serialized (serialize_nlist 1 serialize_raw_data_item)
+          lh #pm
+          _v') _ _ _ (
         pts_to_serialized
           (serialize_nlist (SZ.v gn) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
           l #pm
@@ -1660,7 +1835,7 @@ ensures
   !pres
 }
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 
 inline_for_extraction
 fn impl_check_valid_item

@@ -248,7 +248,7 @@ let swrite_bounded_vlgenbytes
 
 #pop-options
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 128"
 
 inline_for_extraction
 noextract

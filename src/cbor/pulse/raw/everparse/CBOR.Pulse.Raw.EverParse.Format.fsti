@@ -127,12 +127,12 @@ let get_map_payload_t
 
 val get_map_payload (input: S.slice byte) : get_map_payload_t input
 
-val pts_to_serialized_nlist_raw_data_item_head_header
-  (a: slice byte)
-  (n: pos)
-  (#pm: perm)
-  (#va: LowParse.Spec.VCList.nlist n raw_data_item)
-: stt_ghost unit emp_inames
+let pts_to_serialized_nlist_raw_data_item_head_header_t =
+  (a: slice byte) ->
+  (n: pos) ->
+  (#pm: perm) ->
+  (#va: LowParse.Spec.VCList.nlist n raw_data_item) ->
+  stt_ghost unit emp_inames
 (requires
   pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va
 )
@@ -162,11 +162,14 @@ val pts_to_serialized_nlist_raw_data_item_head_header
     h == get_raw_data_item_header (List.Tot.hd va) /\
     l == dfst (synth_raw_data_item_from_alt_recip (List.Tot.hd va)) /\
     fst v' == h /\
-    fst (snd v') == (dsnd l) /\
+    dfst l == h /\
+    fst (snd v') == dsnd l /\
     (fst (snd (snd v')) <: list raw_data_item) == (dsnd (synth_raw_data_item_from_alt_recip (List.Tot.hd va)) <: list raw_data_item) /\
     (snd (snd (snd v')) <: list raw_data_item) == List.Tot.tl va
   )
 )
+
+val pts_to_serialized_nlist_raw_data_item_head_header : pts_to_serialized_nlist_raw_data_item_head_header_t
 
 let pts_to_serialized_nlist_raw_data_item_head_header'_post
   (n: pos)

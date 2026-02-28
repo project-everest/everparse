@@ -564,6 +564,8 @@ let map_of_list_is_append_nil_r_elim
   (ensures (m1 == m2))
 = assert (Map.equal m1 m2)
 
+#push-options "--z3rlimit 32"
+
 let map_of_list_is_append_cons_snoc_equiv
   (#key #value: Type)
   (key_eq: EqTest.eq_test key)
@@ -577,6 +579,8 @@ let map_of_list_is_append_cons_snoc_equiv
 = match Map.get m1 k, Map.get m2 k with
   | Some l1, Some l2 -> List.Tot.append_assoc l1 [v] l2
   | _ -> ()
+
+#pop-options
 
 let map_of_list_maps_to_nonempty
   (#key #value: Type0)

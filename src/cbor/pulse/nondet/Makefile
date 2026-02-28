@@ -45,11 +45,16 @@ $(clean_dirs): %.clean:
 c-extracted.clean:
 	rm -rf $(basename $@)
 
+rust.clean:
+	cd $(basename $@) && cargo clean
+
 rust-extracted.clean:
 	rm -rf $(basename $@)
 
 .PHONY: %.clean
 
 clean: c-extracted.clean rust-extracted.clean c.clean
+
+clean: rust.clean
 
 .PHONY: clean

@@ -380,7 +380,7 @@ let abc_cba (a b c: nat) : Lemma
   (a + b + c == c + b + a)
 = ()
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 let rec equiv_trans'
   (data_model: (raw_data_item -> raw_data_item -> bool) {

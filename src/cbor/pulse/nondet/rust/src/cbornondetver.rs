@@ -9,11 +9,7 @@ pub type cbornondet <'a> = crate::cbornondetveraux::cbor_raw <'a>;
 pub fn cbor_nondet_reset_perm <'a>(c: crate::cbornondetveraux::cbor_raw <'a>) ->
     crate::cbornondetveraux::cbor_raw
     <'a>
-{
-    let res: crate::cbornondetveraux::cbor_raw =
-        crate::cbornondetveraux::cbor_raw_reset_perm_tot(c);
-    res
-}
+{ crate::cbornondetveraux::cbor_raw_reset_perm_tot(c) }
 
 pub fn cbor_nondet_parse <'a>(
     map_key_bound: crate::cbornondetveraux::option__size_t,
@@ -234,11 +230,7 @@ crate::cbornondetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>;
 pub fn cbor_nondet_array_iterator_start <'a>(x: crate::cbornondetveraux::cbor_raw <'a>) ->
     crate::cbornondetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
     <'a>
-{
-    let res: crate::cbornondetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-        crate::cbornondetveraux::cbor_nondet_array_iterator_start(x);
-    res
-}
+{ crate::cbornondetveraux::cbor_nondet_array_iterator_start(x) }
 
 pub fn cbor_nondet_array_iterator_is_empty(
     x: crate::cbornondetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
@@ -265,11 +257,7 @@ pub fn cbor_nondet_array_iterator_truncate <'a>(
 ) ->
     crate::cbornondetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
     <'a>
-{
-    let res: crate::cbornondetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-        crate::cbornondetveraux::cbor_array_iterator_truncate(x, len);
-    res
-}
+{ crate::cbornondetveraux::cbor_array_iterator_truncate(x, len) }
 
 pub fn cbor_nondet_get_array_item <'a>(x: crate::cbornondetveraux::cbor_raw <'a>, i: u64) ->
     crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw
@@ -295,11 +283,7 @@ crate::cbornondetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <
 pub fn cbor_nondet_map_iterator_start <'a>(x: crate::cbornondetveraux::cbor_raw <'a>) ->
     crate::cbornondetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
     <'a>
-{
-    let res: crate::cbornondetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-        crate::cbornondetveraux::cbor_nondet_map_iterator_start(x);
-    res
-}
+{ crate::cbornondetveraux::cbor_nondet_map_iterator_start(x) }
 
 pub fn cbor_nondet_map_iterator_is_empty(
     x: crate::cbornondetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
@@ -331,11 +315,7 @@ pub fn cbor_nondet_map_get <'a>(
 ) ->
     crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw
     <'a>
-{
-    let res: crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw =
-        crate::cbornondetveraux::cbor_nondet_map_get(x, k);
-    res
-}
+{ crate::cbornondetveraux::cbor_nondet_map_get(x, k) }
 
 pub fn dummy_cbor_nondet_t <'a>() -> crate::cbornondetveraux::cbor_raw <'a>
 { crate::cbornondetveraux::cbor_raw::CBOR_Case_Simple { v: 0u8 } }

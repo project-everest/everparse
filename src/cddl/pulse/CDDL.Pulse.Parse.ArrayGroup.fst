@@ -481,8 +481,6 @@ let array_group_parser_spec_zero_or_more0_mk_array_iterator_eq'
   ))
 = _ by (FStar.Tactics.trefl ()) // FIXME: WHY WHY WHY tactics? assert_norm does not work
 
-#push-options "--print_implicits"
-
 let array_group_parser_spec_zero_or_more0_mk_array_iterator_eq
   (#cbor_array_iterator_t: Type0) (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0)
   (#src_elt: Type0)
@@ -647,6 +645,8 @@ let cddl_array_iterator_next_t
       pure (Ghost.reveal l == a :: q)
     )
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction
 fn cddl_array_iterator_next
   (#cbor_array_iterator_t: Type0) (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
@@ -744,6 +744,8 @@ fn cddl_array_iterator_next
   Trade.trans_hyp_l _ _ _ _;
   res;
 }
+
+#pop-options
 
 #restart-solver
 

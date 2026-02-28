@@ -88,7 +88,7 @@ let parse_recursive_eq
     parse_recursive_step_ext p (c - 1) input'
   )
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 
 #restart-solver
 let parse_consume_nlist_recursive_eq'
