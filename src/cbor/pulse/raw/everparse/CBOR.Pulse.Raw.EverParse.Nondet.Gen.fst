@@ -134,7 +134,7 @@ let check_equiv_head_correct_post
     check_equiv_list gl1 gl2 equiv == (if check_equiv_head a1 a2 then check_equiv_list l1' l2' equiv else Some false)
   )
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 128"
 
 let check_equiv_head_correct
   (gl1: list raw_data_item)
