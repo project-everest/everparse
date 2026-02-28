@@ -192,6 +192,8 @@ let header = dtuple2 initial_byte long_argument
 
 module Cast = FStar.Int.Cast
 
+#push-options "--z3rlimit 20"
+
 inline_for_extraction
 let argument_as_raw_uint64
   (b: initial_byte { ~ (long_argument_simple_value_prop b) })
@@ -208,6 +210,8 @@ let argument_as_raw_uint64
     { size = 4uy; value = v }
   | LongArgumentOther _ _ ->
     { size = 0uy; value = Cast.uint8_to_uint64 b.additional_info }
+
+#pop-options
 
 let argument_as_uint64
   (b: initial_byte { ~ (long_argument_simple_value_prop b) })
@@ -704,7 +708,7 @@ let synth_inverse_list_of_pair_list
   [SMTPat (list_of_pair_list t nb_pairs)]
 = Classical.forall_intro (list_of_pair_list_of_list #t nb_pairs)
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 256"
 #restart-solver
 
 let rec parse_pair_list_as_list
@@ -922,7 +926,7 @@ let mk_initial_byte
     additional_info = x;
   }
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 64"
 
 let raw_uint64_as_argument
   (t: major_type_t)
@@ -998,6 +1002,8 @@ let serialize_initial_byte : serializer parse_initial_byte =
 
 #restart-solver
 
+#push-options "--z3rlimit 20"
+
 let tot_serialize_long_argument
   (b: initial_byte)
 : Tot (tot_serializer (tot_parse_long_argument b))
@@ -1014,6 +1020,8 @@ let tot_serialize_long_argument
     else if b.additional_info = additional_info_long_argument_64_bits
     then tot_serialize_weaken _ (tot_serialize_synth _ (LongArgumentU64 ()) (tot_serialize_u64) LongArgumentU64?.v ())
     else tot_serialize_weaken _ (tot_serialize_synth _ (LongArgumentOther ()) tot_serialize_empty LongArgumentOther?.v ())
+
+#pop-options
 
 let serialize_long_argument
   (b: initial_byte)
@@ -1084,6 +1092,8 @@ let synth_raw_data_item_from_alt_recip
 
 let synth_raw_data_item_from_alt_inverse : squash (synth_inverse synth_raw_data_item_from_alt synth_raw_data_item_from_alt_recip) = ()
 
+#push-options "--z3rlimit 20"
+
 let tot_serialize_leaf_content
   (h: header)
 : Tot (tot_serializer (tot_parse_leaf_content h))
@@ -1101,6 +1111,8 @@ let serialize_leaf_content
       if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
       then serialize_weaken _ (serialize_synth _ (LeafContentSeq ()) (serialize_filter (serialize_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) (lseq_utf8_correct b.major_type _)) LeafContentSeq?.v ())
       else serialize_weaken _ (serialize_synth _ (LeafContentEmpty ()) serialize_empty LeafContentEmpty?.v ())
+
+#pop-options
 
 let tot_serialize_leaf : tot_serializer tot_parse_leaf =
   tot_serialize_dtuple2 tot_serialize_header tot_serialize_leaf_content
@@ -1447,7 +1459,7 @@ let rec list_for_all_holds_on_pair_list_of_pair_list
   | [] -> ()
   | _ :: q -> list_for_all_holds_on_pair_list_of_pair_list pred q
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 256"
 
 #restart-solver
 let holds_on_raw_data_item_eq_recursive
@@ -2290,7 +2302,7 @@ let lex_order_int64_correct
 
 #pop-options
 
-#push-options "--z3rlimit 128"
+#push-options "--z3rlimit 256"
 #restart-solver
 
 let serialized_lex_compare_string

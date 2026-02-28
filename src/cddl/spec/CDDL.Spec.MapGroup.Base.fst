@@ -482,7 +482,7 @@ let map_group_concat_result_map
 : Tot map_group_item
 = (cbor_map_union consumed (fst x), snd x)
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 let map_group_concat_result_op
   (f: cbor_map)
@@ -1548,7 +1548,7 @@ let apply_map_group_det_filter
   f l
 = ()
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 
 #restart-solver
 let map_group_filter_filter
@@ -1661,6 +1661,7 @@ let map_group_concat_eq_l
   | _ -> ()
 
 #restart-solver
+#push-options "--z3rlimit 10"
 let map_group_zero_or_one_bound_match_item_filter
   (key value: typ)
   (l: cbor_map)
@@ -1693,6 +1694,7 @@ let map_group_zero_or_one_bound_match_item_filter
       (fun _ -> ());
     map_group_zero_or_one_match_item_filter key value p
   end
+#pop-options
 
 #restart-solver
 let map_group_zero_or_one_map_group_match_item_no_cut_nonempty
@@ -1815,7 +1817,7 @@ let map_group_fail_shorten_intro
   (map_group_fail_shorten g)
 = Classical.forall_intro_2 (fun m1 -> Classical.move_requires (prf m1))
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 128"
 
 #restart-solver
 
@@ -1979,6 +1981,8 @@ let apply_map_group_det_cut
   [SMTPat (apply_map_group_det (map_group_cut k) l)]
 = ()
 
+#push-options "--z3rlimit 20"
+
 let map_group_concat_match_item_cut_eq
   (k: cbor) (v: typ) (b: bool)
 : Lemma
@@ -1986,6 +1990,8 @@ let map_group_concat_match_item_cut_eq
 = apply_map_group_det_map_group_equiv
     (map_group_match_item_for b k v)
     (map_group_concat (map_group_match_item_for b k v) (map_group_cut (t_literal k)))
+
+#pop-options
 
 #push-options "--z3rlimit 64"
 

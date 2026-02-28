@@ -90,7 +90,7 @@ let map_group_footprint_concat_consumes_all_recip
 
 #pop-options
 
-#push-options "--z3rlimit 128"
+#push-options "--z3rlimit 256"
 
 #restart-solver
 let matches_map_group_equiv_concat'
@@ -198,7 +198,7 @@ let map_group_concat_footprint_disjoint
 #pop-options
 
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 
 #restart-solver
 let map_group_parser_spec_concat'

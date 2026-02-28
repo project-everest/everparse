@@ -936,6 +936,7 @@ let cbor_map_in_footprint
 = forall x . Some? (cbor_map_get m x) ==> (f (x, Some?.v (cbor_map_get m x)))
 
 #restart-solver
+#push-options "--z3rlimit 10"
 let matches_map_group_comm_aux'
   (g2 g3 g4: det_map_group)
   (t2 t3 t4: map_constraint)
@@ -974,6 +975,7 @@ let matches_map_group_comm_aux'
     MapGroupDet (cbor_map_union m3 (cbor_map_union m2 m4)) cbor_map_empty
   );
   ()
+#pop-options
 
 #restart-solver
 let matches_map_group_comm_aux

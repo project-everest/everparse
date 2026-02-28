@@ -78,6 +78,8 @@ let auto_asn1_sequence_any_t_equiv' (items : list asn1_gen_item_k) (suffix_t : T
   [SMTPat (asn1_sequence_any_t items suffix_t)]
 = asn1_sequence_any_t_equiv' items suffix_t
 
+#push-options "--z3rlimit 20"
+
 let rec dasn1_terminal_as_parser (k : asn1_terminal_k) : asn1_weak_parser (asn1_terminal_t k)  =
   parse_debug #(asn1_terminal_t k) #(asn1_weak_parser_kind) "asn1_terminal_as_parser"
   (match k with
@@ -200,6 +202,10 @@ and dasn1_decorated_as_parser_twin
     let p : asn1_weak_parser (asn1_decorated_pure_t item) = weaken _ ((dasn1_terminal_as_parser k) `parse_filter` is_valid) in
     Mkgendcparser item (parse_asn1_ILC id #(ASN1_RESTRICTED_TERMINAL k is_valid) p) (parse_asn1_ILC_twin id #(ASN1_RESTRICTED_TERMINAL k is_valid) p)
 
+#pop-options
+
+
+#push-options "--z3rlimit 20"
 
 let rec asn1_terminal_as_parser (k : asn1_terminal_k) : asn1_weak_parser (asn1_terminal_t k)  =
   match k with

@@ -97,7 +97,7 @@ ensures
   }
 }
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 #restart-solver
 

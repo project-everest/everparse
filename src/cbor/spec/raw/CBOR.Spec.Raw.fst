@@ -41,6 +41,8 @@ let mk_cbor_equiv
   Classical.move_requires (equiv_trans basic_data_model (mk_cbor r1) r2) (mk_cbor r2);
   Classical.move_requires (R.raw_equiv_sorted_optimal RF.deterministically_encoded_cbor_map_key_order (mk_cbor r1)) (mk_cbor r2)
 
+#push-options "--z3rlimit 40"
+
 let mk_cbor_eq
   r
 = valid_eq basic_data_model r;
@@ -131,6 +133,8 @@ let rec no_repeats_map_fst_mk_det_raw_cbor_map_entry
     CBOR.Spec.Util.list_memP_map_forall mk_det_raw_cbor_map_entry q;
     CBOR.Spec.Util.list_memP_map_forall fst (List.Tot.map mk_det_raw_cbor_map_entry q);
     no_repeats_map_fst_mk_det_raw_cbor_map_entry q
+
+#pop-options
 
 let rec assoc_map_mk_det_raw_cbor_map_entry
   (l: list (cbor & cbor))

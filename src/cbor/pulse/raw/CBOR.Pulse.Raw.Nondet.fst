@@ -1223,6 +1223,8 @@ decreases v
   }
 }
 
+#push-options "--z3rlimit 20"
+
 fn cbor_nondet_mk_array (_: unit) : mk_array_t #_ cbor_nondet_match
 = (a: _)
   (#pa: _)
@@ -1249,6 +1251,8 @@ fn cbor_nondet_mk_array (_: unit) : mk_array_t #_ cbor_nondet_match
   Trade.trans _ _ (_ ** _);
   res
 }
+
+#pop-options
 
 ghost
 fn rec seq_list_map_cbor_nondet_match_elim

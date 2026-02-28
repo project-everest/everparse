@@ -177,7 +177,7 @@ let serialize_cbor_list_nil () = ()
 let serialize_cbor_list_cons a q =
   LPL.tot_serialize_nlist_cons (List.Tot.length q) F.tot_serialize_raw_data_item a q
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 128"
 
 let serialize_array_eq
   (len1: raw_uint64)
@@ -237,7 +237,7 @@ let serialize_cbor_map l =
 
 let serialize_cbor_map_nil () = ()
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 128"
 
 let serialize_cbor_map_cons key value q =
   LPL.tot_serialize_nlist_cons (List.Tot.length q) (LP.tot_serialize_nondep_then  F.tot_serialize_raw_data_item F.tot_serialize_raw_data_item) (key, value) q;
