@@ -207,11 +207,13 @@ let impl_serialize_array_group_post
   (#inj: bool)
   (s: ag_spec t tgt inj)
   (v: tgt)
+  (w0: Seq.seq U8.t)
   (w: Seq.seq U8.t)
   (res: bool)
 : Tot prop
 = (impl_serialize_array_group_valid lmax l s v (Seq.length w - SZ.v size_before) ==> res == true) /\
   (impl_serialize_array_group_invalid lmin l s v (Seq.length w - SZ.v size_before) ==> res == false) /\
+  (SZ.v size_before <= Seq.length w0 /\ SZ.v size_before <= Seq.length w /\ Seq.equal (Seq.slice w0 0 (SZ.v size_before)) (Seq.slice w 0 (SZ.v size_before))) /\
   (res == true ==> (
     impl_serialize_array_group_requires l s v /\
     impl_serialize_array_group_pre p count size (List.Tot.append l (s.ag_serializer v)) w
@@ -234,14 +236,15 @@ let impl_serialize_array_group
   (out: S.slice U8.t) ->
   (out_count: R.ref U64.t) ->
   (out_size: R.ref SZ.t) ->
+  (#w0: Ghost.erased (Seq.seq U8.t)) ->
   (#size_before: Ghost.erased SZ.t) ->
   (l: Ghost.erased (list Cbor.cbor)) ->
   stt bool
-    (exists* w count . r c v ** pts_to out w ** pts_to out_count count ** pts_to out_size size_before **
-      pure (impl_serialize_array_group_pre p count size_before l w)
+    (exists* count . r c v ** pts_to out w0 ** pts_to out_count count ** pts_to out_size size_before **
+      pure (impl_serialize_array_group_pre p count size_before l w0)
     )
     (fun res -> exists* w count' size' . r c v ** pts_to out w ** pts_to out_count count' ** pts_to out_size size' ** pure (
-      impl_serialize_array_group_post lmin lmax count' size' size_before l s v w res
+      impl_serialize_array_group_post lmin lmax count' size' size_before l s v w0 w res
     ))
 
 let impl_serialize_array_group_t_eq
