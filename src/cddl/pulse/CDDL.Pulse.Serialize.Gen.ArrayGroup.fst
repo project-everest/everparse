@@ -1099,7 +1099,7 @@ let ag_spec_zero_or_more_serializer_cons
 
 #pop-options
 
-(* Helpers for zero_or_more - temporarily admitted *)
+(* Helpers for zero_or_more *)
 
 #push-options "--fuel 4 --ifuel 4 --z3rlimit_factor 16"
 #restart-solver
