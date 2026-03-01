@@ -98,6 +98,21 @@ let impl_serialize_t_eq
 : Tot (squash (impl_serialize s #impl_tgt r == impl_serialize s #impl_tgt2 (coerce_rel r impl_tgt2 ieq)))
 = ()
 
+let impl_serialize_elim_lemma
+    (#t: typ)
+    (#tgt: Type0)
+    (#inj: bool)
+    (s: spec t tgt inj)
+    (v: tgt)
+    (w: Seq.seq U8.t)
+    (res: SZ.t)
+: Lemma
+    (requires impl_serialize_post s v w res)
+    (ensures Gen.impl_serialize_post Gen.cbor_det_min_length Gen.cbor_det_max_length s v w res)
+    [SMTPat (impl_serialize_post s v w res)]
+= if s.serializable v
+  then Cbor.cbor_det_serialize_parse (s.serializer v)
+
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_elim
     (#[@@@erasable]t: Ghost.erased typ)
@@ -113,8 +128,24 @@ fn impl_serialize_elim
   (#v: _)
   (out: _)
 {
-  admit ()
+  let res = i c out;
+  res
 }
+
+let impl_serialize_intro_lemma
+    (#t: typ)
+    (#tgt: Type0)
+    (#inj: bool)
+    (s: spec t tgt inj)
+    (v: tgt)
+    (w: Seq.seq U8.t)
+    (res: SZ.t)
+: Lemma
+    (requires Gen.impl_serialize_post Gen.cbor_det_min_length Gen.cbor_det_max_length s v w res)
+    (ensures impl_serialize_post s v w res)
+    [SMTPat (Gen.impl_serialize_post Gen.cbor_det_min_length Gen.cbor_det_max_length s v w res)]
+= if s.serializable v
+  then Cbor.cbor_det_serialize_parse (s.serializer v)
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_intro
@@ -131,7 +162,8 @@ fn impl_serialize_intro
   (#v: _)
   (out: _)
 {
-  admit ()
+  let res = i c out;
+  res
 }
 
 inline_for_extraction noextract [@@noextract_to "krml"]
