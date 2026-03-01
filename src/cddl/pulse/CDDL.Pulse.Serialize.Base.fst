@@ -10,6 +10,7 @@ module S = Pulse.Lib.Slice
 module U8 = FStar.UInt8
 module SZ = FStar.SizeT
 module Cbor = CBOR.Spec.API.Format
+module Gen = CDDL.Pulse.Serialize.Gen.Base
 
 let impl_serialize_post
     (#t: typ)
@@ -96,6 +97,42 @@ let impl_serialize_t_eq
     (ieq: squash (impl_tgt == impl_tgt2))
 : Tot (squash (impl_serialize s #impl_tgt r == impl_serialize s #impl_tgt2 (coerce_rel r impl_tgt2 ieq)))
 = ()
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_elim
+    (#[@@@erasable]t: Ghost.erased typ)
+    (#[@@@erasable]tgt: Type0)
+    (#[@@@erasable] inj: Ghost.erased bool)
+    (#[@@@erasable]ps: Ghost.erased (spec t tgt inj))
+    (#impl_tgt: Type0)
+    (#[@@@erasable]r: rel impl_tgt tgt)
+    (i: impl_serialize ps r)
+: Gen.impl_serialize Gen.cbor_det_min_length Gen.cbor_det_max_length ps r
+=
+  (c: _)
+  (#v: _)
+  (out: _)
+{
+  admit ()
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_intro
+    (#[@@@erasable]t: Ghost.erased typ)
+    (#[@@@erasable]tgt: Type0)
+    (#[@@@erasable] inj: Ghost.erased bool)
+    (#[@@@erasable]ps: Ghost.erased (spec t tgt inj))
+    (#impl_tgt: Type0)
+    (#[@@@erasable]r: rel impl_tgt tgt)
+    (i: Gen.impl_serialize Gen.cbor_det_min_length Gen.cbor_det_max_length ps r)
+: impl_serialize ps r
+=
+  (c: _)
+  (#v: _)
+  (out: _)
+{
+  admit ()
+}
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_always_false
