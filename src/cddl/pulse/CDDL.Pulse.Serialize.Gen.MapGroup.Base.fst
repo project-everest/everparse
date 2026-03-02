@@ -235,6 +235,8 @@ let cbor_map_fold_max_length_accu_prop'
 
 #restart-solver
 
+#push-options "--z3rlimit 64"
+
 let cbor_map_fold_max_length_accu
   (f: cbor -> option nat)
   (m1 m2: cbor_map)
@@ -253,6 +255,8 @@ let cbor_map_fold_max_length_accu
       ()
     )
     m2
+
+#pop-options
 
 let cbor_map_max_length_union
   (f: cbor -> option nat)

@@ -365,7 +365,7 @@ let parse_cbor_map_prefix
       s1 s2
   | _ -> ()
 
-#push-options "--z3rlimit_factor 4"
+#push-options "--z3rlimit_factor 8"
 
 let parse_cbor_map_equiv
   (n: nat)
@@ -383,7 +383,10 @@ let parse_cbor_map_equiv
     (LP.parser_of_tot_parser (LPL.tot_parse_nlist n (LP.tot_nondep_then F.tot_parse_raw_data_item F.tot_parse_raw_data_item)))
     s (serialize_cbor_map l)
   else if n = List.Tot.length l && len <= Seq.length s && Seq.slice s 0 len = serialize_cbor_map l
-  then parse_cbor_map_prefix n (serialize_cbor_map l) s
+  then begin
+    assert (LPL.tot_parse_nlist n (LP.tot_nondep_then F.tot_parse_raw_data_item F.tot_parse_raw_data_item) (serialize_cbor_map l) == Some (l, Seq.length (serialize_cbor_map l)));
+    parse_cbor_map_prefix n (serialize_cbor_map l) s
+  end
   else ()
 
 #pop-options
