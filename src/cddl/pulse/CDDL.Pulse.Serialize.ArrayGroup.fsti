@@ -94,23 +94,23 @@ let impl_serialize_array_group_t_eq
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 val impl_serialize_array_group_intro
-    (#t: array_group None)
-    (#tgt: Type0)
-    (#inj: bool)
-    (#s: ag_spec t tgt inj)
+    (#[@@@erasable] t: Ghost.erased (array_group None))
+    (#[@@@erasable] tgt: Type0)
+    (#[@@@erasable] inj: Ghost.erased bool)
+    (#[@@@erasable] s: Ghost.erased (ag_spec t tgt inj))
     (#impl_tgt: Type0)
-    (#r: rel impl_tgt tgt)
+    (#[@@@erasable] r: rel impl_tgt tgt)
     (i: Gen.impl_serialize_array_group Gen.cbor_det_min_length Gen.cbor_det_max_length s r)
 :  impl_serialize_array_group s r
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 val impl_serialize_array_group_elim
-    (#t: array_group None)
-    (#tgt: Type0)
-    (#inj: bool)
-    (#s: ag_spec t tgt inj)
+    (#[@@@erasable] t: Ghost.erased (array_group None))
+    (#[@@@erasable] tgt: Type0)
+    (#[@@@erasable] inj: Ghost.erased bool)
+    (#[@@@erasable] s: Ghost.erased (ag_spec t tgt inj))
     (#impl_tgt: Type0)
-    (#r: rel impl_tgt tgt)
+    (#[@@@erasable] r: rel impl_tgt tgt)
     (i: impl_serialize_array_group s r)
 : Gen.impl_serialize_array_group Gen.cbor_det_min_length Gen.cbor_det_max_length s r
 
