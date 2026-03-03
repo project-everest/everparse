@@ -12,6 +12,7 @@ module SZ = FStar.SizeT
 module Cbor = CBOR.Spec.API.Format
 module U64 = FStar.UInt64
 module Iterator = CDDL.Pulse.Iterator.Base
+module Gen = CDDL.Pulse.Serialize.Gen.ArrayGroup
 
 let impl_serialize_array_group_pre
   (count: U64.t)
@@ -64,15 +65,18 @@ let impl_serialize_array_group
 =
   (c: impl_tgt) ->
   (#v: Ghost.erased tgt) ->
+  (#count0: Ghost.erased U64.t) ->
+  (#size0: Ghost.erased SZ.t) ->
   (out: S.slice U8.t) ->
   (out_count: R.ref U64.t) ->
   (out_size: R.ref SZ.t) ->
   (l: Ghost.erased (list Cbor.cbor)) ->
   stt bool
-    (exists* w count size . r c v ** pts_to out w ** pts_to out_count count ** pts_to out_size size **
-      pure (impl_serialize_array_group_pre count size l w)
+    (exists* w . r c v ** pts_to out w ** pts_to out_count count0 ** pts_to out_size size0 **
+      pure (impl_serialize_array_group_pre count0 size0 l w)
     )
     (fun res -> exists* w count' size' . r c v ** pts_to out w ** pts_to out_count count' ** pts_to out_size size' ** pure (
+      impl_serialize_array_group_pre count0 size0 l w /\
       impl_serialize_array_group_post count' size' l s v w res
     ))
 
@@ -87,6 +91,34 @@ let impl_serialize_array_group_t_eq
     (ieq: squash (impl_tgt == impl_tgt2))
 : Tot (squash (impl_serialize_array_group s #impl_tgt r == impl_serialize_array_group s #impl_tgt2 (coerce_rel r impl_tgt2 ieq)))
 = ()
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+val impl_serialize_array_group_intro
+    (#t: array_group None)
+    (#tgt: Type0)
+    (#inj: bool)
+    (#s: ag_spec t tgt inj)
+    (#impl_tgt: Type0)
+    (#r: rel impl_tgt tgt)
+    (i: Gen.impl_serialize_array_group Gen.cbor_det_min_length Gen.cbor_det_max_length s r)
+:  impl_serialize_array_group s r
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+val impl_serialize_array_group_elim
+    (#t: array_group None)
+    (#tgt: Type0)
+    (#inj: bool)
+    (#s: ag_spec t tgt inj)
+    (#impl_tgt: Type0)
+    (#r: rel impl_tgt tgt)
+    (i: impl_serialize_array_group s r)
+: Gen.impl_serialize_array_group Gen.cbor_det_min_length Gen.cbor_det_max_length s r
+
+(* Beyond this comment, all combinators should be implementable using:
+   * impl_serialize_array_group_intro, _elim
+   * the Gen combinators
+   * CDDL.Pulse.Serialize.Base.impl_serialize_intro, _elim
+*)
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 val impl_serialize_array

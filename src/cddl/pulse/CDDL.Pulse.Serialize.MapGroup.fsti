@@ -13,6 +13,7 @@ module Cbor = CBOR.Spec.API.Format
 module U64 = FStar.UInt64
 module Iterator = CDDL.Pulse.Iterator.Base
 module EqTest = CDDL.Spec.EqTest
+module Gen = CDDL.Pulse.Serialize.Gen.MapGroup
 
 let impl_serialize_map_group_pre
   (count: U64.t)
@@ -80,6 +81,36 @@ let impl_serialize_map_group
     (fun res -> exists* w count' size' . r c v ** pts_to out w ** pts_to out_count count' ** pts_to out_size size' ** pure (
       impl_serialize_map_group_post count' size' l s v w res
     ))
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+val impl_serialize_map_group_intro
+    (#t: det_map_group)
+    (#fp: map_constraint)
+    (#tgt: Type0)
+    (#inj: bool)
+    (#s: mg_spec t fp tgt inj)
+    (#impl_tgt: Type0)
+    (#r: rel impl_tgt tgt)
+    (i: Gen.impl_serialize_map_group Gen.cbor_det_parse_map Gen.cbor_det_min_length Gen.cbor_det_max_length s r)
+: impl_serialize_map_group s r
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+val impl_serialize_map_group_elim
+    (#t: det_map_group)
+    (#fp: map_constraint)
+    (#tgt: Type0)
+    (#inj: bool)
+    (#s: mg_spec t fp tgt inj)
+    (#impl_tgt: Type0)
+    (#r: rel impl_tgt tgt)
+    (i: impl_serialize_map_group s r)
+: Gen.impl_serialize_map_group Gen.cbor_det_parse_map Gen.cbor_det_min_length Gen.cbor_det_max_length s r
+
+(* Beyond this comment, all combinators should be implementable using:
+   * impl_serialize_map_group_intro, _elim
+   * the Gen combinators
+   * CDDL.Pulse.Serialize.Base.impl_serialize_intro, _elim
+*)
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 val impl_serialize_map
