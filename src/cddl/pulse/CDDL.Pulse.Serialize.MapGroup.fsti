@@ -113,7 +113,7 @@ val cbor_det_serialize_map_insert_elim
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 val cbor_det_parse_elim
-  (#cbor_t: Type)
+  (#cbor_t: Type0)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
   (f: cbor_det_parse_t vmatch)
 : Gen.cbor_parse_t Gen.cbor_det_parse vmatch
