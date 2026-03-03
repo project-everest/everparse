@@ -106,8 +106,21 @@ val impl_serialize_map_group_elim
     (i: impl_serialize_map_group s r)
 : Gen.impl_serialize_map_group Gen.cbor_det_parse_map Gen.cbor_det_min_length Gen.cbor_det_max_length s r
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+val cbor_det_serialize_map_insert_elim
+  (f: cbor_det_serialize_map_insert_t)
+: Gen.cbor_serialize_map_insert_t Gen.cbor_det_parse_map Gen.cbor_det_parse
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+val cbor_det_parse_elim
+  (#cbor_t: Type)
+  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (f: cbor_det_parse_t vmatch)
+: Gen.cbor_parse_t Gen.cbor_det_parse vmatch
+
 (* Beyond this comment, all combinators should be implementable using:
    * impl_serialize_map_group_intro, _elim
+   * cbor_det_serialize_map_insert_elim, cbor_det_parse_elim
    * the Gen combinators
    * CDDL.Pulse.Serialize.Base.impl_serialize_intro, _elim
 *)
