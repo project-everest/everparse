@@ -237,15 +237,13 @@ ensures
       while (
         let i = !pi;
         (SZ.lt i len)
-      ) invariant b . exists* i j . (
+      ) invariant exists* i j . (
         pts_to a.array_footprint s **
         pts_to pi i **
         SM.seq_seq_match freeable_match' s s' j (SZ.v len) **
         pure (
           j == SZ.v i /\
           SZ.v i <= SZ.v len
-        ) ** pure (
-          b == (SZ.v i < SZ.v len)
         )
       ) {
         SM.seq_seq_match_dequeue_left freeable_match' s s' _ _;
@@ -274,15 +272,13 @@ ensures
       while (
         let i = !pi;
         (SZ.lt i len)
-      ) invariant b . exists* i j . (
+      ) invariant exists* i j . (
         pts_to a.map_footprint s **
         pts_to pi i **
         SM.seq_seq_match freeable_match_map_entry s s' j (SZ.v len) **
         pure (
           j == SZ.v i /\
           SZ.v i <= SZ.v len
-        ) ** pure (
-          b == (SZ.v i < SZ.v len)
         )
       ) {
         SM.seq_seq_match_dequeue_left freeable_match_map_entry s s' _ _;
@@ -429,7 +425,7 @@ ensures
   while (
     let i = !pi;
     (SZ.lt i len)
-  ) invariant b . exists* i s1 j sf st . (
+  ) invariant exists* i s1 j sf st . (
     pts_to ar #ps s ** SM.seq_list_match s l (cbor_match pl) **
     pts_to pi i **
     pts_to v' s1 **
@@ -442,8 +438,6 @@ ensures
       j == SZ.v i /\
       j <= SZ.v len /\
       Seq.length st == SZ.v len
-    ) ** pure (
-      b == (j < SZ.v len)
     )
   ) {
     S.pts_to_len ar;
@@ -626,7 +620,7 @@ ensures
   while (
     let i = !pi;
     (SZ.lt i len)
-  ) invariant b . exists* i s1 j sf st . (
+  ) invariant exists* i s1 j sf st . (
     pts_to ar #ps s ** SM.seq_list_match s l (cbor_match_map_entry pl) **
     pts_to pi i **
     pts_to v' s1 **
@@ -639,8 +633,6 @@ ensures
       j == SZ.v i /\
       j <= SZ.v len /\
       Seq.length st == SZ.v len
-    ) ** pure (
-      b == (j < SZ.v len)
     )
   ) {
     S.pts_to_len ar;

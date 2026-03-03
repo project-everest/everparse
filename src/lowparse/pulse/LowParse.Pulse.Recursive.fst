@@ -146,7 +146,7 @@ fn validate_tot_nlist_recursive
     let res = !pres;
     let n = !pn;
     (res && (SZ.gt n 0sz))
-  ) invariant b . exists* res n offset .
+  ) invariant exists* res n offset .
     pts_to pres res **
     pts_to pn n **
     pts_to poffset offset **
@@ -157,10 +157,7 @@ fn validate_tot_nlist_recursive
         let pr = parse_consume (L.tot_parse_nlist (SZ.v n) (parse_recursive p)) (Seq.slice v (SZ.v offset) (Seq.length v)) in
         Some? pr0 == (res && Some? pr) /\
         (Some? pr0 ==> (SZ.v offset0 + Some?.v pr0 == SZ.v offset + Some?.v pr))
-    )) **
-    pure (
-      b == (res && (SZ.gt n 0sz))
-    )
+    ))
   {
     let off = !poffset;
     let n = !pn;
@@ -282,7 +279,7 @@ fn jump_tot_nlist_recursive
   while (
     let n = !pn;
     (SZ.gt n 0sz)
-  ) invariant b . exists* n offset .
+  ) invariant exists* n offset .
     pts_to pn n **
     pts_to poffset offset **
     pts_to input #pm v **
@@ -292,9 +289,7 @@ fn jump_tot_nlist_recursive
         let pr = parse_consume (L.tot_parse_nlist (SZ.v n) (parse_recursive p)) (Seq.slice v (SZ.v offset) (Seq.length v)) in
         Some? pr0 /\ Some? pr /\
         (SZ.v offset0 + Some?.v pr0 == SZ.v offset + Some?.v pr)
-    )) ** pure (
-      b == (SZ.gt n 0sz)
-    )
+    ))
   {
     with gn . assert (pts_to pn gn);
     with goffset . assert (pts_to poffset goffset);
@@ -618,7 +613,7 @@ fn impl_nlist_forall_pred_recursive
     let res = !pres;
     let n = !pn;
     (res && (SZ.gt n 0sz))
-  ) invariant b . exists* res n pi vi . (
+  ) invariant exists* res n pi vi . (
     pts_to pres res **
     pts_to pn n **
     pts_to ppi pi **
@@ -628,9 +623,7 @@ fn impl_nlist_forall_pred_recursive
     ) **
     pure (
       List.Tot.for_all pr.pred v == (res && List.Tot.for_all pr.pred vi)
-    ) ** pure (
-      b == (res && (SZ.v n > 0))
-  )) {
+    )) {
     let n = !pn;
     with pi'. assert pts_to ppi pi';
     let pi = !ppi;

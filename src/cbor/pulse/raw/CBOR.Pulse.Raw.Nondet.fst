@@ -1047,14 +1047,13 @@ fn cbor_nondet_map_get_by_ref (_: unit)
     let res = !pres;
     let cont = !pcont;
     (cont && not res)
-  ) invariant b . exists* i vdest res cont . (
+  ) invariant exists* i vdest res cont . (
     pts_to pi i **
     pts_to dest vdest **
     pts_to pres res **
     pts_to pcont cont **
     cbor_nondet_match pk k vk **
-    cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i cont res **
-    pure (b == (cont && not res))
+    cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i cont res
   ) {
     with gi vdest gres gcont . assert (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest gi gcont gres);
     rewrite (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest gi gcont gres)
@@ -1702,7 +1701,7 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
   while (
     let i = !pi;
     (SZ.lt i (S.len dest))
-  ) invariant b . exists* i s' s1 s2 l1 l2 . (
+  ) invariant exists* i s' s1 s2 l1 l2 . (
     pts_to pi i **
     pts_to dest s' **
     PM.seq_list_match s1 l1 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) **
@@ -1719,8 +1718,6 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
       (forall x . List.Tot.memP x l1 ==> snd x == None) /\
       List.Tot.count None (List.Tot.map snd l1) == List.Tot.length l1 /\
       SZ.v i == Seq.length s1
-    ) ** pure (
-      b == (SZ.v i < Seq.length s)
     )
   ) {
     with s1 s2 l1 l2 . assert (
@@ -1773,13 +1770,9 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
   let mut piter = iter;
   while (
     let i = !pi;
-    if (i = 0sz) {
-      false
-    } else {
-      let iter = !piter;
-      not (cbor_nondet_map_iterator_is_empty () iter)
-    }
-  ) invariant b . exists* i iter l s0 l0 pmi . (
+    let iter = !piter;
+    (i <> 0sz && not (cbor_nondet_map_iterator_is_empty () iter))
+  ) invariant exists* i iter l s0 l0 pmi . (
     pts_to pi i **
     pts_to piter iter **
     S.pts_to dest s0 **
@@ -1799,8 +1792,6 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
       List.Tot.no_repeats_p (List.Tot.map fst l) /\
       (forall x . Some? (List.Tot.assoc x l) ==> Spec.cbor_map_get m x == List.Tot.assoc x l) /\
       (forall x . List.Tot.memP x l0 ==> Spec.cbor_map_get m (fst x) == (match snd x with None -> List.Tot.assoc (fst x) l | Some z -> Some z))
-    ) ** pure (
-      b == (Cons? l && SZ.v i > 0)
     )
   ) {
     let entry = cbor_nondet_map_iterator_next () piter;
@@ -1826,7 +1817,7 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
       let j = !pj;
       let i = !pi;
       (SZ.lt j (S.len dest) && SZ.gt i 0sz)
-    ) invariant b . exists* i j pvalue s' s1 l1 s2 l2 . (
+    ) invariant exists* i j pvalue s' s1 l1 s2 l2 . (
       pts_to pi i **
       pts_to pj j **
       S.pts_to dest s' **
@@ -1840,7 +1831,6 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
           PM.seq_list_match s0 l0 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)
         ) **
       cbor_nondet_match pentry entry.cbor_map_entry_key (fst ventry) ** 
-      pure (b == (SZ.v j < SZ.v (S.len dest) && SZ.v i > 0)) **
       pure (
         List.Tot.map fst (List.Tot.append l1 l2) == List.Tot.map fst v /\
         List.Tot.count None (List.Tot.map snd (List.Tot.append l1 l2)) == SZ.v i /\
@@ -1914,7 +1904,9 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
           ((fst (List.Tot.Base.hd l2), Some (snd ventry)) :: List.Tot.Base.tl l2)
           (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)) _;
         lemma_trade_rewrite5 _ _ _ _ _;
-        Trade.trans_hyp_r _ _ _ _;
+        Trade.trans_hyp_r _ _ _
+          (cbor_nondet_match pentry entry.cbor_map_entry_value (snd ventry) ** 
+            PM.seq_list_match s0 l0 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps));
         let lx = Ghost.hide [(fst (List.Tot.Base.hd l2), Some (snd ventry))];
         with s' . assert (S.pts_to dest s');
         with s1' s2' l1' l2' . assert (Pulse.Lib.SeqMatch.seq_list_match (Seq.append s1' s2') (List.Tot.append l1' l2') (cbor_map_get_multiple_entry_match cbor_nondet_match true ps));

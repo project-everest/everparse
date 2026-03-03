@@ -1845,14 +1845,13 @@ fn cbor_det_map_get (_: unit)
   fold (cbor_det_map_get_invariant cont px x vx vk m i None);
   while (
     !pcont
-  ) invariant cont . exists* i res cont' .
+  ) invariant exists* i res cont .
     pts_to pi i **
     pts_to pcont cont **
     pts_to pres res **
     cbor_det_match pk k vk **
-    cbor_det_map_get_invariant cont' px x vx vk m i res **
-    pure (cont' == true ==>  None? res) **
-    pure (cont == cont')
+    cbor_det_map_get_invariant cont px x vx vk m i res **
+    pure (cont == true ==>  None? res)
   {
     with gb gi gres . assert (cbor_det_map_get_invariant gb px x vx vk m gi gres);
     rewrite (cbor_det_map_get_invariant gb px x vx vk m gi gres)

@@ -470,7 +470,7 @@ fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred
         let res = !pres;
         let pairs = !ppairs;
         (res && (U64.gt pairs 0uL))
-      ) invariant b . exists* skey vkey vvalue vpairs stail vn vtail vres .
+      ) invariant exists* skey vkey vvalue vpairs stail vn vtail vres .
         Ref.pts_to pkey skey **
         pts_to_serialized serialize_raw_data_item skey #pm vkey **
         GR.pts_to pvalue vvalue **
@@ -484,8 +484,6 @@ fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred
         pure (
           vn == U64.v vpairs + U64.v vpairs /\
           List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) l0 == (vres && sorted2 deterministically_encoded_cbor_map_key_order (vkey :: vvalue :: fst vtail))
-        ) ** pure (
-          b == (vres && Cons? (fst vtail))
         )
       {
         with vn stail vtail . assert (pts_to_serialized (serialize_nondep_then (LowParse.Spec.VCList.serialize_nlist vn serialize_raw_data_item) s) stail #pm vtail);

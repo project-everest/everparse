@@ -145,7 +145,6 @@ let jump_nlist_inv
   (n0: SZ.t)
   (offset0: SZ.t)
   (v: Ghost.erased bytes)
-  (b: bool)
   (n: SZ.t)
   (offset: SZ.t)
 : Tot prop
@@ -155,8 +154,7 @@ let jump_nlist_inv
     let pr0 = parse_consume (parse_nlist (SZ.v n0) p) (Seq.slice v (SZ.v offset0) (Seq.length v)) in
     let pr = parse_consume (parse_nlist (SZ.v n) p) (Seq.slice v (SZ.v offset) (Seq.length v)) in
     Some? pr0 /\ Some? pr /\
-    SZ.v offset0 + Some?.v pr0 == SZ.v offset + Some?.v pr /\
-    b == (SZ.v n > 0)
+    SZ.v offset0 + Some?.v pr0 == SZ.v offset + Some?.v pr
   )
 
 inline_for_extraction
@@ -178,10 +176,9 @@ fn jump_nlist
   while (
     let n = !pn;
     (SZ.gt n 0sz)
-  ) invariant b . exists* n offset . (
+  ) invariant exists* n offset . (
     pts_to input #pm v ** R.pts_to pn n ** R.pts_to poffset offset ** pure (
-    jump_nlist_inv #t #k p n0 offset0 v b n offset) **
-    pure (b == (SZ.v n > 0))
+    jump_nlist_inv #t #k p n0 offset0 v n offset)
   ) {
     let n = !pn;
     let offset = !poffset;
@@ -722,15 +719,12 @@ ensures exists* v .
   while (
     let i = !pi;
     (SZ.lt i i0)
-  ) invariant b . exists* i res (n: nat) (v: nlist n t) . (
+  ) invariant exists* i res (n: nat) (v: nlist n t) . (
     R.pts_to pi i ** R.pts_to pres res **
     pts_to_serialized (serialize_nlist n s) res #pm v **
     trade (pts_to_serialized (serialize_nlist n s) res #pm v) (pts_to_serialized (serialize_nlist n0 s) input #pm v0) **
     pure (
       nlist_nth_inv #t n0 v0 i0 i n v
-    ) **
-    pure (
-      b == (SZ.v i < SZ.v i0)
     )
   ) {
     with 'res. assert R.pts_to pres 'res;
@@ -810,7 +804,7 @@ ensures
       let i = !pi;
       let res = !pres;
       (res && SZ.gt i 0sz)
-    ) invariant cont . exists* shd stl i res hd tl .
+    ) invariant exists* shd stl i res hd tl .
       R.pts_to phd shd **
       R.pts_to ptl stl **
       R.pts_to pi i **
@@ -823,9 +817,6 @@ ensures
         (pts_to_serialized (serialize_nlist (SZ.v n) s) a #pm v) **
       pure (
         List.Tot.sorted order v == (res && List.Tot.sorted order (hd :: tl))
-      ) **
-      pure (
-        cont == (res && SZ.gt i 0sz)
       )
     {
       with gi . assert (R.pts_to pi gi);
@@ -1022,7 +1013,7 @@ fn compute_remaining_size_nlist_as_array
     let res = !pres;
     let i = !pi;
     (res && (SZ.lt i n))
-  ) invariant b . exists* res i c2 l2 v1 . (
+  ) invariant exists* res i c2 l2 v1 . (
     A.pts_to a.v #a.p c **
     R.pts_to pres res **
     R.pts_to pi i **
@@ -1041,8 +1032,6 @@ fn compute_remaining_size_nlist_as_array
         SZ.v v - Seq.length (serialize (serialize_nlist (SZ.v n) s) x) == SZ.v v1 - Seq.length (serialize (serialize_nlist (SZ.v n - SZ.v i) s) l2)
       )) /\
       True
-    ) ** pure (
-      b == (res && (SZ.v i < SZ.v n))
     )
   ) {
     let i = !pi;
@@ -1107,7 +1096,7 @@ fn l2r_write_nlist_as_array
   while (
     let i = !pi;
     SZ.lt i n
-  ) invariant b . exists* res i l1 c2 l2 v1 . (
+  ) invariant exists* res i l1 c2 l2 v1 . (
     A.pts_to a.v #a.p c **
     R.pts_to pres res **
     R.pts_to pi i **
@@ -1129,8 +1118,6 @@ fn l2r_write_nlist_as_array
       Seq.slice v1 (SZ.v offset) (SZ.v res) `Seq.equal` bare_serialize (serialize_nlist (SZ.v i) s) l1 /\
       List.Tot.append l1 l2 == Ghost.reveal x /\
       True
-    ) ** pure (
-      b == (SZ.v i < SZ.v n)
     )
   ) {
     let i = !pi;
@@ -1286,7 +1273,7 @@ fn compute_remaining_size_nlist_as_slice
     let res = !pres;
     let i = !pi;
     (res && (SZ.lt i n))
-  ) invariant b . exists* res i c2 l2 v1 . (
+  ) invariant exists* res i c2 l2 v1 . (
     pts_to a.v #a.p c **
     R.pts_to pres res **
     R.pts_to pi i **
@@ -1305,8 +1292,6 @@ fn compute_remaining_size_nlist_as_slice
         SZ.v v - Seq.length (serialize (serialize_nlist (SZ.v n) s) x) == SZ.v v1 - Seq.length (serialize (serialize_nlist (SZ.v n - SZ.v i) s) l2)
       )) /\
       True
-    ) ** pure (
-      b == (res && (SZ.v i < SZ.v n))
     )
   ) {
     let i = !pi;
@@ -1372,7 +1357,7 @@ fn l2r_write_nlist_as_slice
   while (
     let i = !pi;
     SZ.lt i n
-  ) invariant b . exists* res i l1 c2 l2 v1 . (
+  ) invariant exists* res i l1 c2 l2 v1 . (
     pts_to a.v #a.p c **
     R.pts_to pres res **
     R.pts_to pi i **
@@ -1394,8 +1379,6 @@ fn l2r_write_nlist_as_slice
       Seq.slice v1 (SZ.v offset) (SZ.v res) `Seq.equal` bare_serialize (serialize_nlist (SZ.v i) s) l1 /\
       List.Tot.append l1 l2 == Ghost.reveal x /\
       True
-    ) ** pure (
-      b == (SZ.v i < SZ.v n)
     )
   ) {
     let i = !pi;
