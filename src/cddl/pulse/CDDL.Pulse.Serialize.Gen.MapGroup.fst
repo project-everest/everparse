@@ -140,9 +140,31 @@ let impl_serialize_map_group_ext'
 
 (* impl_serialize_map_group_nop *)
 
-let impl_serialize_map_group_nop
-  #p #minl #maxl ()
-= admit ()
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_map_group_nop
+  (#minl: Ghost.erased (cbor -> nat))
+  (#maxl: Ghost.erased (cbor -> option nat))
+  (#p: Ghost.erased (cbor_map_parser minl maxl))
+  (_: unit)
+: impl_serialize_map_group p minl maxl mg_spec_nop rel_unit
+=
+    (c: _)
+    (#v: _)
+    (out: _)
+    (out_count: _)
+    (out_size: _)
+    (l: _)
+{
+  assert pure (cbor_map_union l (mg_spec_nop.mg_serializer v) == l);
+  with w . assert (pts_to out w);
+  with count . assert (pts_to out_count count);
+  with size . assert (pts_to out_size size);
+  assert pure (impl_serialize_map_group_pre p count size l w);
+  assert pure (cbor_map_min_length_prop' p minl (U64.v count) w);
+  assert pure (Some? (Ghost.reveal p (U64.v count) w));
+  assert pure (~ (impl_serialize_map_group_invalid minl l mg_spec_nop v (Seq.length w)));
+  true
+}
 
 (* impl_serialize_map_group_choice *)
 
@@ -785,11 +807,8 @@ let cbor_map_disjoint_defined_false
   (ensures cbor_map_disjoint_tot l (cbor_map_singleton key value) == false)
 = ()
 
-// For false branches where valid == false cannot be proven with abstract maxl
-// (count overflow, key/value serialization failure):
-// cbor_map_max_length is an abstract upper bound and we cannot always prove
-// valid == false when serialization into the buffer tail fails.
-let impl_serialize_match_item_for_post_false
+// Call site 1: insert failed, key already defined in l, so disjoint is false
+let impl_serialize_match_item_for_post_false_insert_failed
   (#pe: cbor_parser)
   (#minl: cbor_min_length pe) (#maxl: cbor_max_length pe)
   (p: cbor_map_parser minl maxl)
@@ -799,12 +818,90 @@ let impl_serialize_match_item_for_post_false
   (count: U64.t) (size: SZ.t) (l: cbor_map) (v: tgt)
   (w: Seq.seq U8.t)
 : Lemma
-  (impl_serialize_map_group_post p minl maxl count size l (mg_spec_match_item_for cut key pvalue) v w false)
-= admit ()
+  (requires cbor_map_defined key l)
+  (ensures impl_serialize_map_group_post p minl maxl count size l (mg_spec_match_item_for cut key pvalue) v w false)
+= mg_spec_match_item_for_serializer_eq cut key pvalue v;
+  if pvalue.serializable v then
+    cbor_map_disjoint_defined_false l key (pvalue.serializer v)
 
-#push-options "--z3rlimit 128 --split_queries always"
+// Call site 2: value serialization returned 0
+let impl_serialize_match_item_for_post_false_value_ser_failed
+  (#pe: cbor_parser)
+  (#minl: cbor_min_length pe) (#maxl: cbor_max_length pe)
+  (p: cbor_map_parser minl maxl)
+  (cut: bool) (key: cbor)
+  (#ty: typ) (#tgt: Type) (#inj: bool)
+  (pvalue: spec ty tgt inj)
+  (count: U64.t) (size: SZ.t) (l: cbor_map) (v: tgt)
+  (w: Seq.seq U8.t)
+  (szk: SZ.t) (w0 wk wv: Seq.seq U8.t) (res2: SZ.t)
+: Lemma
+  (requires (
+    Seq.length w0 == Seq.length w /\
+    impl_serialize_map_group_pre p count size l w0 /\
+    SZ.v szk > 0 /\
+    SZ.v size + SZ.v szk <= Seq.length w0 /\
+    impl_serialize_post minl maxl (spec_literal key) () wk szk /\
+    Seq.length wv == Seq.length w0 - SZ.v size - SZ.v szk /\
+    SZ.v res2 == 0 /\
+    impl_serialize_post minl maxl pvalue v wv res2
+  ))
+  (ensures impl_serialize_map_group_post p minl maxl count size l (mg_spec_match_item_for cut key pvalue) v w false)
+= mg_spec_match_item_for_serializer_eq cut key pvalue v;
+  if pvalue.serializable v then begin
+    cbor_map_max_length_singleton maxl key (pvalue.serializer v);
+    if cbor_map_disjoint_tot l (cbor_map_singleton key (pvalue.serializer v)) then
+      cbor_map_max_length_union maxl l (cbor_map_singleton key (pvalue.serializer v))
+  end
 
-#restart-solver
+// Call site 3: key serialization returned 0
+let impl_serialize_match_item_for_post_false_key_ser_failed
+  (#pe: cbor_parser)
+  (#minl: cbor_min_length pe) (#maxl: cbor_max_length pe)
+  (p: cbor_map_parser minl maxl)
+  (cut: bool) (key: cbor)
+  (#ty: typ) (#tgt: Type) (#inj: bool)
+  (pvalue: spec ty tgt inj)
+  (count: U64.t) (size: SZ.t) (l: cbor_map) (v: tgt)
+  (w: Seq.seq U8.t)
+  (szk: SZ.t) (w0 wk: Seq.seq U8.t)
+: Lemma
+  (requires (
+    Seq.length w0 == Seq.length w /\
+    impl_serialize_map_group_pre p count size l w0 /\
+    SZ.v szk == 0 /\
+    impl_serialize_post minl maxl (spec_literal key) () wk szk /\
+    Seq.length wk == Seq.length w0 - SZ.v size
+  ))
+  (ensures impl_serialize_map_group_post p minl maxl count size l (mg_spec_match_item_for cut key pvalue) v w false)
+= mg_spec_match_item_for_serializer_eq cut key pvalue v;
+  if pvalue.serializable v then begin
+    cbor_map_max_length_singleton maxl key (pvalue.serializer v);
+    if cbor_map_disjoint_tot l (cbor_map_singleton key (pvalue.serializer v)) then
+      cbor_map_max_length_union maxl l (cbor_map_singleton key (pvalue.serializer v))
+  end
+
+// Call site 4: count overflow (count >= pow2 64 - 1)
+let impl_serialize_match_item_for_post_false_count_overflow
+  (#pe: cbor_parser)
+  (#minl: cbor_min_length pe) (#maxl: cbor_max_length pe)
+  (p: cbor_map_parser minl maxl)
+  (cut: bool) (key: cbor)
+  (#ty: typ) (#tgt: Type) (#inj: bool)
+  (pvalue: spec ty tgt inj)
+  (count: U64.t) (size: SZ.t) (l: cbor_map) (v: tgt)
+  (w: Seq.seq U8.t)
+: Lemma
+  (requires (
+    U64.v count >= pow2 64 - 1 /\
+    cbor_map_length l == U64.v count
+  ))
+  (ensures impl_serialize_map_group_post p minl maxl count size l (mg_spec_match_item_for cut key pvalue) v w false)
+= mg_spec_match_item_for_serializer_eq cut key pvalue v;
+  if pvalue.serializable v then
+    cbor_map_length_singleton key (pvalue.serializer v)
+
+#push-options "--z3rlimit 512 --split_queries always"
 
 inline_for_extraction
 fn impl_serialize_match_item_for
@@ -836,6 +933,7 @@ fn impl_serialize_match_item_for
   if (U64.lt count pow2_64_m1) {
     mg_spec_match_item_for_serializer_eq cut key pvalue v;
     with w0 . assert (pts_to out w0);
+    S.pts_to_len out;
     let size0 = !out_size;
     Seq.lemma_split w0 (SZ.v size0);
     let (out0, out1) = S.split out size0;
@@ -874,28 +972,28 @@ fn impl_serialize_match_item_for
           with cf . assert (pts_to out_count cf);
           with sf . assert (pts_to out_size sf);
           cbor_map_disjoint_defined_false l key (pvalue.serializer (Ghost.reveal v));
-          impl_serialize_match_item_for_post_false (Ghost.reveal p) cut key pvalue cf sf l v wf;
+          impl_serialize_match_item_for_post_false_insert_failed (Ghost.reveal p) cut key pvalue cf sf l v wf;
           false
         }
       } else {
         with wf . assert (pts_to out wf);
         with cf . assert (pts_to out_count cf);
         with sf . assert (pts_to out_size sf);
-        impl_serialize_match_item_for_post_false (Ghost.reveal p) cut key pvalue cf sf l v wf;
+        impl_serialize_match_item_for_post_false_value_ser_failed (Ghost.reveal p) cut key pvalue cf sf l v wf res1 w0 w1 w2 res2;
         false
       }
     } else {
       with wf . assert (pts_to out wf);
       with cf . assert (pts_to out_count cf);
       with sf . assert (pts_to out_size sf);
-      impl_serialize_match_item_for_post_false (Ghost.reveal p) cut key pvalue cf sf l v wf;
+      impl_serialize_match_item_for_post_false_key_ser_failed (Ghost.reveal p) cut key pvalue cf sf l v wf res1 w0 w1;
       false
     }
   } else {
     with wf . assert (pts_to out wf);
     with cf . assert (pts_to out_count cf);
     with sf . assert (pts_to out_size sf);
-    impl_serialize_match_item_for_post_false (Ghost.reveal p) cut key pvalue cf sf l v wf;
+    impl_serialize_match_item_for_post_false_count_overflow (Ghost.reveal p) cut key pvalue cf sf l v wf;
     false
   }
 }

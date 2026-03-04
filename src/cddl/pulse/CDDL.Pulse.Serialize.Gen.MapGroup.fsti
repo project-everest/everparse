@@ -172,9 +172,9 @@ val impl_serialize_map_group_ext'
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 val impl_serialize_map_group_nop
-  (#p: Ghost.erased bare_cbor_map_parser)
   (#minl: Ghost.erased (cbor -> nat))
   (#maxl: Ghost.erased (cbor -> option nat))
+  (#p: Ghost.erased (cbor_map_parser minl maxl))
   (_: unit)
 : impl_serialize_map_group p minl maxl mg_spec_nop rel_unit
 
