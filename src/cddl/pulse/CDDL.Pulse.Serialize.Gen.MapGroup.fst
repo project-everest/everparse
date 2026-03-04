@@ -142,9 +142,31 @@ let impl_serialize_map_group_ext'
 
 (* impl_serialize_map_group_nop *)
 
-let impl_serialize_map_group_nop
-  #p #minl #maxl ()
-= admit ()
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_map_group_nop
+  (#minl: Ghost.erased (cbor -> nat))
+  (#maxl: Ghost.erased (cbor -> option nat))
+  (#p: Ghost.erased (cbor_map_parser minl maxl))
+  (_: unit)
+: impl_serialize_map_group p minl maxl mg_spec_nop rel_unit
+=
+    (c: _)
+    (#v: _)
+    (out: _)
+    (out_count: _)
+    (out_size: _)
+    (l: _)
+{
+  assert pure (cbor_map_union l (mg_spec_nop.mg_serializer v) == l);
+  with w . assert (pts_to out w);
+  with count . assert (pts_to out_count count);
+  with size . assert (pts_to out_size size);
+  assert pure (impl_serialize_map_group_pre p count size l w);
+  assert pure (cbor_map_min_length_prop' p minl (U64.v count) w);
+  assert pure (Some? (Ghost.reveal p (U64.v count) w));
+  assert pure (~ (impl_serialize_map_group_invalid minl l mg_spec_nop v (Seq.length w)));
+  true
+}
 
 (* impl_serialize_map_group_choice *)
 
