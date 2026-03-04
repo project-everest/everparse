@@ -1951,7 +1951,6 @@ let cbor_parse_prefix_apply
 
 #restart-solver
 
-(*
 // Helper: when pa1 returns 0, valid == false
 #push-options "--z3rlimit 256 --split_queries always"
 let impl_serialize_map_zero_or_more_valid_false_sz1_gen
@@ -2210,7 +2209,6 @@ let impl_serialize_map_zero_or_more_valid_false_sz2_gen
     end
   end
 #pop-options
-*)
 
 #restart-solver
 
@@ -2253,7 +2251,6 @@ fn impl_serialize_map_zero_or_more_iterator_gen
     (out_size: _)
     (l: _)
 {
-  admit () (*
   let sp = Ghost.hide (mg_zero_or_more_match_item sp1 sp2 except);
   let mut pc = c0;
   let pm1 = GR.alloc (Map.empty tkey (list tvalue));
@@ -2517,7 +2514,6 @@ fn impl_serialize_map_zero_or_more_iterator_gen
   GR.free pm2;
   Classical.move_requires (map_of_list_is_append_nil_r_elim m1) v0;
   !pres
-*)
 }
 
 #pop-options
