@@ -1128,7 +1128,342 @@ let impl_serialize_map_zero_or_more_valid_false_sz2_gen
 
 #restart-solver
 
+(* Helper: handles everything after both key and value serialized (after Trade.elim_hyp_l).
+   Takes the split slices and all mutable state; restores full output buffer and loop invariant. *)
+
 #push-options "--z3rlimit 512 --fuel 2 --ifuel 2 --split_queries always"
+
+(* Helper prop: except (sp1.serializer ke, sp2.serializer va) == false,
+   well-typed because sp1.serializer ke only appears under sp1.serializable ke guard *)
+let not_except_prop
+  (#key #value: typ) (#tkey #tvalue: Type) (#inj: bool)
+  (sp1: spec key tkey true) (sp2: spec value tvalue inj)
+  (except: map_constraint) (ke: tkey) (va: tvalue)
+: Tot prop
+= sp1.serializable ke /\ sp2.serializable va /\ except (sp1.serializer ke, sp2.serializer va) == false
+
+(* Inner helper: handles the insert path after except check passes (is_except = false).
+   Takes the joined output buffer and does split/insert/rejoin + invariant restoration. *)
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_map_zero_or_more_iterator_gen_insert_step
+  (#pe: Ghost.erased cbor_parser)
+  (#minl: Ghost.erased (cbor_min_length pe))
+  (#maxl: Ghost.erased (cbor_max_length pe))
+  (#p: Ghost.erased (cbor_map_parser minl maxl))
+  (insert: cbor_serialize_map_insert_t p pe)
+    (#[@@@erasable]key: Ghost.erased typ) (#[@@@erasable]tkey: Type0)
+    ([@@@erasable]key_eq: Ghost.erased (EqTest.eq_test tkey))
+    (#[@@@erasable]sp1: Ghost.erased (spec key tkey true))
+    (#[@@@erasable]value: Ghost.erased typ) (#[@@@erasable]tvalue: Type0)
+    (#[@@@erasable]inj: Ghost.erased bool)
+    (#[@@@erasable]sp2: Ghost.erased (spec value tvalue inj))
+    (#[@@@erasable]except: Ghost.erased map_constraint { Ghost.reveal inj \/ map_constraint_value_injective key sp2.parser except })
+    (out: S.slice U8.t)
+    (pres: R.ref bool)
+    (out_count: R.ref U64.t)
+    (out_size: R.ref SZ.t)
+    (pm1: GR.ref (Map.t tkey (list tvalue)))
+    (pm2: GR.ref (Map.t tkey (list tvalue)))
+    (l: Ghost.erased cbor_map)
+    (v0: Ghost.erased (Map.t tkey (list tvalue)))
+    (m1: Ghost.erased (Map.t tkey (list tvalue)))
+    (ke: Ghost.erased tkey)
+    (va: Ghost.erased tvalue)
+    (m2_rem: Ghost.erased (Map.t tkey (list tvalue)))
+    (m1': Ghost.erased (Map.t tkey (list tvalue)))
+    (count': U64.t)
+    (count_pre: U64.t)
+    (w_inv: Ghost.erased (Seq.seq U8.t))
+    (size0: SZ.t { SZ.v size0 <= Seq.length w_inv })
+    (sz1: SZ.t)
+    (sz2: SZ.t)
+    (z1l: Ghost.erased (Seq.seq U8.t))
+    (w1: Ghost.erased (Seq.seq U8.t) { SZ.v sz1 <= Seq.length w1 })
+    (z2l: Ghost.erased (Seq.seq U8.t))
+    (w2: Ghost.erased (Seq.seq U8.t))
+  requires (
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
+    pts_to out (Seq.append z1l (Seq.append z2l w2)) **
+    GR.pts_to pm1 m1 **
+    GR.pts_to pm2 (map_of_list_cons key_eq (Ghost.reveal ke) (Ghost.reveal va) m2_rem) **
+    pts_to out_size size0 **
+    pts_to out_count count_pre **
+    pts_to pres true **
+    pure (
+      z1l == Seq.slice w_inv 0 (SZ.v size0) /\
+      U64.v count_pre + 1 == U64.v count' /\
+      impl_serialize_map_zero_or_more_iterator_inv_gen p minl maxl sp1 sp2 except v0 l true w_inv m1 (Ghost.hide (Ghost.reveal (map_of_list_cons key_eq (Ghost.reveal ke) (Ghost.reveal va) m2_rem))) (map_of_list_cons key_eq (Ghost.reveal ke) (Ghost.reveal va) m2_rem) count_pre size0 /\
+      SZ.v sz1 > 0 /\
+      SZ.v sz2 > 0 /\
+      Seq.length z2l == SZ.v sz1 /\
+      z2l == Seq.slice w1 0 (SZ.v sz1) /\
+      Seq.length w1 == SZ.v sz1 + Seq.length w2 /\
+      m1' == map_of_list_snoc key_eq m1 (Ghost.reveal ke) (Ghost.reveal va) /\
+      impl_serialize_post minl maxl sp1 ke w1 sz1 /\
+      impl_serialize_post minl maxl sp2 va w2 sz2 /\
+      Seq.length w_inv == SZ.v size0 + Seq.length w1 /\
+      (map_of_list_is_append m1 (map_of_list_cons key_eq (Ghost.reveal ke) (Ghost.reveal va) m2_rem) v0 <==> map_of_list_is_append m1' m2_rem v0) /\
+      impl_serialize_map_group_valid maxl l (mg_zero_or_more_match_item sp1 sp2 except) v0 (Seq.length w_inv) ==
+        impl_serialize_map_group_valid maxl (cbor_map_union l ((mg_zero_or_more_match_item sp1 sp2 except).mg_serializer m1)) (mg_zero_or_more_match_item sp1 sp2 except) (map_of_list_cons key_eq (Ghost.reveal ke) (Ghost.reveal va) m2_rem) (Seq.length w_inv) /\
+      Seq.length (Seq.append z1l (Seq.append z2l w2)) == Seq.length w_inv /\
+      map_of_list_maps_to_nonempty m2_rem /\
+      not_except_prop sp1 sp2 (Ghost.reveal except) (Ghost.reveal ke) (Ghost.reveal va)
+    ))
+  returns _res: unit
+  ensures exists* res_out w_out m1_out m2'_out count_out size_out .
+    pts_to out w_out **
+    pts_to pres res_out **
+    pts_to out_count count_out **
+    pts_to out_size size_out **
+    GR.pts_to pm1 m1_out **
+    GR.pts_to pm2 m2'_out **
+    pure (
+      impl_serialize_map_zero_or_more_iterator_inv_gen p minl maxl sp1 sp2 except v0 l res_out w_out m1_out m2_rem m2'_out count_out size_out
+    )
+{
+  let sp = Ghost.hide (mg_zero_or_more_match_item sp1 sp2 except);
+  assert (pure (sp1.serializable ke));
+  assert (pure (sp2.serializable va));
+  S.pts_to_len out;
+  let size1 = SZ.add size0 sz1;
+  let size2 = SZ.add size1 sz2;
+  with w' . assert (pts_to out w');
+  impl_serialize_map_group_insert_prf_gen p pe w_inv (cbor_map_union l (sp.mg_serializer m1)) (SZ.v size0) (sp1.serializer ke) z2l (sp2.serializer va) w2 (SZ.v sz2);
+  assert (pure (
+    let z1l = Seq.slice w_inv 0 (SZ.v size0) in
+    w' == Seq.append z1l (Seq.append (Ghost.reveal z2l) (Ghost.reveal w2))
+  ));
+  assert (pure (
+    impl_serialize_map_group_insert_prf_gen_post p pe w' (cbor_map_union l (sp.mg_serializer m1)) (SZ.v size0) (sp1.serializer ke) (SZ.v sz1) (sp2.serializer va) (SZ.v sz2)
+  ));
+  let (outl, outr) = slice_split out size2;
+  S.pts_to_len outl;
+  S.pts_to_len outr;
+  with wl . assert (pts_to outl wl);
+  with wr . assert (pts_to outr wr);
+  let inserted = insert outl (cbor_map_union l (sp.mg_serializer m1)) size0 (sp1.serializer ke) size1 (sp2.serializer va);
+  S.pts_to_len outl;
+  with wl' . assert (pts_to outl wl');
+  S.join _ _ out;
+  S.pts_to_len out;
+  impl_serialize_map_group_valid_map_zero_or_more_snoc_gen maxl sp1 key_eq sp2 except l m1 ke va m2_rem (SZ.v (S.len out));
+  if (not inserted) {
+    pres := false
+  } else {
+    GR.op_Colon_Equals pm1 m1';
+    GR.op_Colon_Equals pm2 m2_rem;
+    out_count := count';
+    out_size := size2;
+    with w_ . assert (pts_to out w_);
+    seq_slice_append_pat wl' wr;
+    assert (pure (Seq.slice w_ 0 (SZ.v size2) == wl'));
+    assert (pure (cbor_map_length (cbor_map_union l (sp.mg_serializer m1')) == U64.v count'));
+    assert (pure (
+      cbor_map_union (cbor_map_union l (sp.mg_serializer m1)) (cbor_map_singleton (sp1.serializer ke) (sp2.serializer va)) == cbor_map_union l (sp.mg_serializer m1')
+    ));
+    assert (pure (Seq.length wl' == SZ.v size2));
+    assert (pure (Seq.slice w_ 0 (SZ.v size2) == wl'));
+    assert (pure (Seq.length w_ >= SZ.v size2));
+    assert (pure (Seq.equal (Seq.slice wl' 0 (SZ.v size2)) wl'));
+    assert (pure (Seq.slice wl' 0 (SZ.v size2) == Seq.slice w_ 0 (SZ.v size2)));
+    assert (pure (cbor_parse_map_prefix_prop' p (U64.v count') wl' w_));
+    assert (pure (Ghost.reveal p (U64.v count') wl' == Ghost.reveal p (U64.v count') w_));
+    assert (pure (
+      impl_serialize_map_group_pre p count' size2 (cbor_map_union l (sp.mg_serializer m1')) w_
+    ));
+    assert (pure (map_of_list_is_append m1' m2_rem v0));
+    map_of_list_maps_to_nonempty_snoc key_eq m1 (Ghost.reveal ke) (Ghost.reveal va);
+    assert (pure (map_of_list_maps_to_nonempty m1'));
+    assert (pure (sp.mg_serializable m1'));
+    assert (pure (cbor_map_disjoint l (sp.mg_serializer m1')));
+    assert (pure (Seq.length w_ == Seq.length w_inv));
+    ()
+  }
+}
+
+#restart-solver
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_map_zero_or_more_iterator_gen_kv_step
+  (#pe: Ghost.erased cbor_parser)
+  (#minl: Ghost.erased (cbor_min_length pe))
+  (#maxl: Ghost.erased (cbor_max_length pe))
+  (#p: Ghost.erased (cbor_map_parser minl maxl))
+  (#ty': Type0) (#vmatch': perm -> ty' -> cbor -> slprop)
+  (#ty2': Type0) (#vmatch2': perm -> ty2' -> cbor & cbor -> slprop)
+  (parse: cbor_parse_t pe vmatch')
+  (mk_map_entry: mk_map_entry_t vmatch' vmatch2')
+  (insert: cbor_serialize_map_insert_t p pe)
+    (#[@@@erasable]key: Ghost.erased typ) (#[@@@erasable]tkey: Type0)
+    ([@@@erasable]key_eq: Ghost.erased (EqTest.eq_test tkey))
+    (#[@@@erasable]sp1: Ghost.erased (spec key tkey true))
+    (#[@@@erasable]value: Ghost.erased typ) (#[@@@erasable]tvalue: Type0)
+    (#[@@@erasable]inj: Ghost.erased bool)
+    (#[@@@erasable]sp2: Ghost.erased (spec value tvalue inj))
+    (#[@@@erasable]except: Ghost.erased map_constraint { Ghost.reveal inj \/ map_constraint_value_injective key sp2.parser except })
+    (va_ex: impl_map_entry_cond vmatch2' except)
+    (out: S.slice U8.t)
+    (outl1: S.slice U8.t)
+    (out1: S.slice U8.t)
+    (outl2: S.slice U8.t)
+    (out2: S.slice U8.t)
+    (pres: R.ref bool)
+    (out_count: R.ref U64.t)
+    (out_size: R.ref SZ.t)
+    (pm1: GR.ref (Map.t tkey (list tvalue)))
+    (pm2: GR.ref (Map.t tkey (list tvalue)))
+    (l: Ghost.erased cbor_map)
+    (v0: Ghost.erased (Map.t tkey (list tvalue)))
+    (m1: Ghost.erased (Map.t tkey (list tvalue)))
+    (ke: Ghost.erased tkey)
+    (va: Ghost.erased tvalue)
+    (m2_rem: Ghost.erased (Map.t tkey (list tvalue)))
+    (m1': Ghost.erased (Map.t tkey (list tvalue)))
+    (count': U64.t)
+    (count_pre: U64.t)
+    (w_inv: Ghost.erased (Seq.seq U8.t))
+    (size0: SZ.t { SZ.v size0 <= Seq.length w_inv })
+    (sz1: SZ.t)
+    (sz2: SZ.t)
+    (z1l: Ghost.erased (Seq.seq U8.t))
+    (w1: Ghost.erased (Seq.seq U8.t) { SZ.v sz1 <= Seq.length w1 })
+    (z2l: Ghost.erased (Seq.seq U8.t))
+    (w2: Ghost.erased (Seq.seq U8.t))
+  requires (
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
+    S.is_split out outl1 out1 **
+    S.is_split out1 outl2 out2 **
+    pts_to outl1 z1l **
+    pts_to outl2 z2l **
+    pts_to out2 w2 **
+    pts_to pres true **
+    pts_to out_count count_pre **
+    pts_to out_size size0 **
+    GR.pts_to pm1 m1 **
+    GR.pts_to pm2 (map_of_list_cons key_eq (Ghost.reveal ke) (Ghost.reveal va) m2_rem) **
+    pure (
+      z1l == Seq.slice w_inv 0 (SZ.v size0) /\
+      U64.v count_pre + 1 == U64.v count' /\
+      SZ.v sz1 > 0 /\
+      Seq.length z2l == SZ.v sz1 /\
+      z2l == Seq.slice w1 0 (SZ.v sz1) /\
+      Seq.length w1 == SZ.v sz1 + Seq.length w2
+    ) **
+    pure (
+      m1' == map_of_list_snoc key_eq m1 (Ghost.reveal ke) (Ghost.reveal va) /\
+      impl_serialize_post minl maxl sp1 ke w1 sz1 /\
+      impl_serialize_post minl maxl sp2 va w2 sz2
+    ) **
+    pure (
+      (map_of_list_is_append m1 (map_of_list_cons key_eq (Ghost.reveal ke) (Ghost.reveal va) m2_rem) v0 <==> map_of_list_is_append m1' m2_rem v0) /\
+      map_of_list_maps_to_nonempty m2_rem
+    ) **
+    pure (
+      impl_serialize_map_zero_or_more_iterator_inv_gen p minl maxl sp1 sp2 except v0 l true w_inv m1 (Ghost.hide (Ghost.reveal (map_of_list_cons key_eq (Ghost.reveal ke) (Ghost.reveal va) m2_rem))) (map_of_list_cons key_eq (Ghost.reveal ke) (Ghost.reveal va) m2_rem) count_pre size0 /\
+      impl_serialize_map_group_valid maxl l (mg_zero_or_more_match_item sp1 sp2 except) v0 (Seq.length w_inv) ==
+        impl_serialize_map_group_valid maxl (cbor_map_union l ((mg_zero_or_more_match_item sp1 sp2 except).mg_serializer m1)) (mg_zero_or_more_match_item sp1 sp2 except) (map_of_list_cons key_eq (Ghost.reveal ke) (Ghost.reveal va) m2_rem) (Seq.length w_inv) /\
+      Seq.length w_inv == SZ.v size0 + Seq.length w1
+    ))
+  returns _res: unit
+  ensures exists* res_out w_out m1_out m2'_out count_out size_out .
+    pts_to out w_out **
+    pts_to pres res_out **
+    pts_to out_count count_out **
+    pts_to out_size size_out **
+    GR.pts_to pm1 m1_out **
+    GR.pts_to pm2 m2'_out **
+    pure (
+      impl_serialize_map_zero_or_more_iterator_inv_gen p minl maxl sp1 sp2 except v0 l res_out w_out m1_out m2_rem m2'_out count_out size_out
+    )
+{
+  let sp = Ghost.hide (mg_zero_or_more_match_item sp1 sp2 except);
+  assert (pure (sp.mg_serializable m1));
+  assert (pure (cbor_map_disjoint l (sp.mg_serializer m1)));
+  if (sz2 = 0sz) {
+    S.join _ _ out1;
+    S.pts_to_len out1;
+    S.pts_to_len outl1;
+    S.join _ _ out;
+    S.pts_to_len out;
+    impl_serialize_map_zero_or_more_valid_false_sz2_gen pe minl maxl p sp1 key_eq sp2 except l m1 ke va m2_rem v0 (SZ.v (S.len out)) count_pre size0 (SZ.v sz1) w_inv (Ghost.reveal z2l) w2;
+    pres := false
+  } else {
+    // Parse key
+    let oo1 = parse outl2;
+    match oo1 {
+      Some oo1s -> {
+        let (o1, orem1) = oo1s;
+        rewrite (cbor_parse_post (Ghost.reveal pe) vmatch' outl2 1.0R (Ghost.reveal z2l) (Some (o1, orem1)))
+          as (cbor_parse_post_some (Ghost.reveal pe) vmatch' outl2 1.0R (Ghost.reveal z2l) o1 orem1);
+        unfold (cbor_parse_post_some (Ghost.reveal pe) vmatch' outl2 1.0R (Ghost.reveal z2l) o1 orem1);
+        with ke' . assert (vmatch' 1.0R o1 ke');
+        with w1'' . assert (pts_to orem1 w1'');
+        // Parse value
+        let oo2 = parse out2;
+        match oo2 {
+          Some oo2s -> {
+            let (o2, orem2) = oo2s;
+            rewrite (cbor_parse_post (Ghost.reveal pe) vmatch' out2 1.0R (Ghost.reveal w2) (Some (o2, orem2)))
+              as (cbor_parse_post_some (Ghost.reveal pe) vmatch' out2 1.0R (Ghost.reveal w2) o2 orem2);
+            unfold (cbor_parse_post_some (Ghost.reveal pe) vmatch' out2 1.0R (Ghost.reveal w2) o2 orem2);
+            with va' . assert (vmatch' 1.0R o2 va');
+            with (w2'' : Seq.seq U8.t) . assert (pts_to orem2 w2'');
+            assert (pure (Ghost.reveal ke' == sp1.serializer ke));
+            cbor_parse_prefix_apply pe w2 (SZ.v sz2);
+            assert (pure (Ghost.reveal va' == sp2.serializer va));
+            let o = mk_map_entry o1 o2;
+            let is_except = va_ex o;
+            Trade.elim (vmatch2' 1.0R o _) _;
+            Trade.elim (vmatch' 1.0R o2 va' ** pts_to orem2 w2'') (pts_to out2 (Ghost.reveal w2));
+            Trade.elim (vmatch' 1.0R o1 ke' ** pts_to orem1 _) (pts_to outl2 _);
+            S.join outl2 out2 out1;
+            S.join outl1 out1 out;
+            S.pts_to_len out;
+            if (is_except) {
+              impl_serialize_map_zero_or_more_valid_false_except_gen maxl sp1 key_eq sp2 except l m1 ke va m2_rem v0 (SZ.v (S.len out));
+              pres := false
+            } else {
+              impl_serialize_map_zero_or_more_iterator_gen_insert_step
+                #pe #minl #maxl #p insert #key #tkey key_eq #sp1 #value #tvalue #inj #sp2 #except
+                out pres out_count out_size pm1 pm2
+                l v0 m1 ke va m2_rem m1' count' count_pre w_inv size0 sz1 sz2
+                z1l w1 z2l w2
+            }
+          }
+          None -> {
+            rewrite (cbor_parse_post (Ghost.reveal pe) vmatch' out2 1.0R (Ghost.reveal w2) None)
+              as (pts_to out2 #1.0R (Ghost.reveal w2) ** pure (None? (Ghost.reveal pe (Ghost.reveal w2))));
+            cbor_parse_prefix_apply pe w2 (SZ.v sz2);
+            assert (pure (Some? (Ghost.reveal pe (Ghost.reveal w2))));
+            assert (pure False);
+            Trade.elim (vmatch' 1.0R o1 ke' ** pts_to orem1 _) (pts_to outl2 _);
+            S.join outl2 out2 out1;
+            S.join outl1 out1 out;
+            S.pts_to_len out;
+            pres := false
+          }
+        }
+      }
+      None -> {
+        rewrite (cbor_parse_post (Ghost.reveal pe) vmatch' outl2 1.0R (Ghost.reveal z2l) None)
+          as (pts_to outl2 #1.0R (Ghost.reveal z2l) ** pure (None? (Ghost.reveal pe (Ghost.reveal z2l))));
+        assert (pure (Some? (Ghost.reveal pe (Ghost.reveal z2l))));
+        assert (pure False);
+        S.join outl2 out2 out1;
+        S.join outl1 out1 out;
+        S.pts_to_len out;
+        pres := false
+      }
+    }
+  }
+}
+
+#pop-options
+
+#push-options "--z3rlimit 1024 --fuel 2 --ifuel 2 --split_queries always"
+
+#restart-solver
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_map_zero_or_more_iterator_gen
@@ -1242,6 +1577,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
       Seq.lemma_split w (SZ.v size0);
       let (outl1, out1) = S.split out size0;
       with z1l . assert (pts_to outl1 z1l);
+      S.pts_to_len out1;
       let sz1 = pa1 ck out1;
       S.pts_to_len out1;
       if (sz1 = 0sz) {
@@ -1264,163 +1600,22 @@ fn impl_serialize_map_zero_or_more_iterator_gen
         S.pts_to_len out2;
         S.pts_to_len outl2;
         Trade.elim_hyp_l _ _ _;
-        if (sz2 = 0sz) {
-          // Value serialization failed — call helper lemma
-          S.join _ _ out1;
-          S.pts_to_len out1;
-          S.pts_to_len outl1;
-          S.join _ _ out;
-          S.pts_to_len out;
-          impl_serialize_map_zero_or_more_valid_false_sz2_gen pe minl maxl p sp1 key_eq sp2 except l m1 ke va m2_rem v0 (SZ.v (S.len out)) count size0 (SZ.v sz1) w_inv (Ghost.reveal z2l) w2;
-          pres := false
-        } else {
-          // Parse key
-          let oo1 = parse outl2;
-          match oo1 {
-            Some oo1s -> {
-              let (o1, orem1) = oo1s;
-              rewrite (cbor_parse_post (Ghost.reveal pe) vmatch' outl2 1.0R (Ghost.reveal z2l) (Some (o1, orem1)))
-                as (cbor_parse_post_some (Ghost.reveal pe) vmatch' outl2 1.0R (Ghost.reveal z2l) o1 orem1);
-              unfold (cbor_parse_post_some (Ghost.reveal pe) vmatch' outl2 1.0R (Ghost.reveal z2l) o1 orem1);
-              with ke' . assert (vmatch' 1.0R o1 ke');
-              with w1'' . assert (pts_to orem1 w1'');
-              // Parse value
-              let oo2 = parse out2;
-              match oo2 {
-                Some oo2s -> {
-                  let (o2, orem2) = oo2s;
-                  rewrite (cbor_parse_post (Ghost.reveal pe) vmatch' out2 1.0R w2 (Some (o2, orem2)))
-                    as (cbor_parse_post_some (Ghost.reveal pe) vmatch' out2 1.0R w2 o2 orem2);
-                  unfold (cbor_parse_post_some (Ghost.reveal pe) vmatch' out2 1.0R w2 o2 orem2);
-                  with va' . assert (vmatch' 1.0R o2 va');
-                  with (w2'' : Seq.seq U8.t) . assert (pts_to orem2 w2'');
-                  // Establish ke' == sp1.serializer ke and va' == sp2.serializer va
-                  // ke': parse on z2l gives pe z2l == Some (ke', _)
-                  //       pa1 gives pe z2l == Some (sp1.serializer ke, sz1) since z2l == Seq.slice w1 0 sz1
-                  assert (pure (Ghost.reveal ke' == sp1.serializer ke));
-                  // va': parse on w2 gives pe w2 == Some (va', _)
-                  //       pa2 gives pe (Seq.slice w2 0 sz2) == Some (sp2.serializer va, sz2)
-                  //       prefix property: pe w2 == pe (Seq.slice w2 0 sz2)
-                  cbor_parse_prefix_apply pe w2 (SZ.v sz2);
-                  assert (pure (Ghost.reveal va' == sp2.serializer va));
-                  // Make map entry and check except
-                  let o = mk_map_entry o1 o2;
-                  let is_except = va_ex o;
-                  // Give back resources
-                  Trade.elim (vmatch2' 1.0R o _) _;
-                  Trade.elim (vmatch' 1.0R o2 va' ** pts_to orem2 w2'') (pts_to out2 w2);
-                  Trade.elim (vmatch' 1.0R o1 ke' ** pts_to orem1 _) (pts_to outl2 _);
-                  S.join outl2 out2 out1;
-                  S.join outl1 out1 out;
-                  S.pts_to_len out;
-                  if (is_except) {
-                    // except holds, so valid == false
-                    impl_serialize_map_zero_or_more_valid_false_except_gen maxl sp1 key_eq sp2 except l m1 ke va m2_rem v0 (SZ.v (S.len out));
-                    pres := false
-                  } else {
-                    let size1 = SZ.add size0 sz1;
-                    let size2 = SZ.add size1 sz2;
-                    with w' . assert (pts_to out w');
-                    // w' == Seq.append z1l (Seq.append z2l w2) from the joins
-                    // z1l = Seq.slice w 0 size0 (from first split)
-                    // z2l = Seq.slice w1 0 sz1 (from second split), pe z2l == Some (ke, sz1) from pa1
-                    // w2 is out2 content, pe (Seq.slice w2 0 sz2) == Some (va, sz2) from pa2
-                    impl_serialize_map_group_insert_prf_gen p pe w (cbor_map_union l (sp.mg_serializer m1)) (SZ.v size0) (sp1.serializer ke) z2l (sp2.serializer va) w2 (SZ.v sz2);
-                    assert (pure (
-                      let z1l = Seq.slice w 0 (SZ.v size0) in
-                      w' == Seq.append z1l (Seq.append (Ghost.reveal z2l) w2)
-                    ));
-                    assert (pure (
-                      impl_serialize_map_group_insert_prf_gen_post p pe w' (cbor_map_union l (sp.mg_serializer m1)) (SZ.v size0) (sp1.serializer ke) (SZ.v sz1) (sp2.serializer va) (SZ.v sz2)
-                    ));
-                    let (outl, outr) = slice_split out size2;
-                    S.pts_to_len outl;
-                    S.pts_to_len outr;
-                    with wl . assert (pts_to outl wl);
-                    with wr . assert (pts_to outr wr);
-                    let inserted = insert outl (cbor_map_union l (sp.mg_serializer m1)) size0 (sp1.serializer ke) size1 (sp2.serializer va);
-                    S.pts_to_len outl;
-                    with wl' . assert (pts_to outl wl');
-                    S.join _ _ out;
-                    S.pts_to_len out;
-                    if (not inserted) {
-                      // insert returned false: key already defined in map
-                      // From snoc_gen condition 5: valid requires not (defined key l')
-                      // insert post gives defined key l', so valid == false
-                      impl_serialize_map_group_valid_map_zero_or_more_snoc_gen maxl sp1 key_eq sp2 except l m1 ke va m2_rem (SZ.v (S.len out));
-                      pres := false
-                    } else {
-                      GR.op_Colon_Equals pm1 m1';
-                      GR.op_Colon_Equals pm2 m2;
-                      out_count := count';
-                      out_size := size2;
-                      with w_ . assert (pts_to out w_);
-                      seq_slice_append_pat wl' wr;
-                      // Re-establish invariant
-                      // insert postcond: p (cbor_map_length m') wl' == Some (m', Seq.length wl')
-                      // where m' = union (union l (sm m1)) (singleton ke va) == union l (sm m1')
-                      // and wl' == Seq.slice w_ 0 size2
-                      assert (pure (Seq.slice w_ 0 (SZ.v size2) == wl'));
-                      assert (pure (cbor_map_length (cbor_map_union l (sp.mg_serializer m1')) == U64.v count'));
-                      // prefix prop: p count' wl' == Some(...) and Seq.slice w_ 0 size2 == wl' 
-                      // => p count' w_ == Some(...)
-                      // Connect insert postcond with snoc_gen
-                      assert (pure (
-                        cbor_map_union (cbor_map_union l (sp.mg_serializer m1)) (cbor_map_singleton (sp1.serializer ke) (sp2.serializer va)) == cbor_map_union l (sp.mg_serializer m1')
-                      ));
-                      assert (pure (Seq.length wl' == SZ.v size2));
-                      assert (pure (Seq.slice w_ 0 (SZ.v size2) == wl'));
-                      assert (pure (Seq.length w_ >= SZ.v size2));
-                      // Explicitly instantiate prefix property
-                      assert (pure (Seq.equal (Seq.slice wl' 0 (SZ.v size2)) wl'));
-                      assert (pure (Seq.slice wl' 0 (SZ.v size2) == Seq.slice w_ 0 (SZ.v size2)));
-                      assert (pure (cbor_parse_map_prefix_prop' p (U64.v count') wl' w_));
-                      assert (pure (Ghost.reveal p (U64.v count') wl' == Ghost.reveal p (U64.v count') w_));
-                      assert (pure (
-                        impl_serialize_map_group_pre p count' size2 (cbor_map_union l (sp.mg_serializer m1')) w_
-                      ));
-                      assert (pure (map_of_list_is_append m1' m2 v0));
-                      map_of_list_maps_to_nonempty_snoc key_eq m1 (Ghost.reveal ke) (Ghost.reveal va);
-                      assert (pure (map_of_list_maps_to_nonempty m1'));
-                      assert (pure (sp.mg_serializable m1'));
-                      assert (pure (cbor_map_disjoint l (sp.mg_serializer m1')));
-                      ()
-                    }
-                  }
-                }
-                None -> {
-                  // Value parse None: contradicts pa2's postcondition
-                  // pe w2 == None (from parse) but pe (Seq.slice w2 0 sz2) == Some (...) (from pa2)
-                  // prefix apply: pe w2 == pe (Seq.slice w2 0 sz2) == Some (...)
-                  rewrite (cbor_parse_post (Ghost.reveal pe) vmatch' out2 1.0R w2 None)
-                    as (pts_to out2 #1.0R w2 ** pure (None? (Ghost.reveal pe w2)));
-                  cbor_parse_prefix_apply pe w2 (SZ.v sz2);
-                  assert (pure (Some? (Ghost.reveal pe w2)));
-                  assert (pure False);
-                  // Give back key resources before joining
-                  Trade.elim (vmatch' 1.0R o1 ke' ** pts_to orem1 _) (pts_to outl2 _);
-                  S.join outl2 out2 out1;
-                  S.join outl1 out1 out;
-                  S.pts_to_len out;
-                  pres := false
-                }
-              }
-            }
-            None -> {
-              // Key parse None: contradicts pa1's postcondition
-              // pe z2l == None (from parse) but pe z2l == Some (sp1.serializer ke, sz1) (from pa1)
-              rewrite (cbor_parse_post (Ghost.reveal pe) vmatch' outl2 1.0R (Ghost.reveal z2l) None)
-                as (pts_to outl2 #1.0R (Ghost.reveal z2l) ** pure (None? (Ghost.reveal pe (Ghost.reveal z2l))));
-              assert (pure (Some? (Ghost.reveal pe (Ghost.reveal z2l))));
-              // Contradiction: None? and Some? on same value
-              assert (pure False);
-              S.join outl2 out2 out1;
-              S.join outl1 out1 out;
-              S.pts_to_len out;
-              pres := false
-            }
-          }
-        }
+        assert (pure (
+          impl_serialize_map_zero_or_more_iterator_inv_gen p minl maxl sp1 sp2 except v0 l true w_inv m1
+            (Ghost.hide (Ghost.reveal (map_of_list_cons key_eq (Ghost.reveal ke) (Ghost.reveal va) m2_rem)))
+            (map_of_list_cons key_eq (Ghost.reveal ke) (Ghost.reveal va) m2_rem)
+            count size0 /\
+          impl_serialize_map_group_valid maxl l (mg_zero_or_more_match_item sp1 sp2 except) v0 (Seq.length w_inv) ==
+            impl_serialize_map_group_valid maxl (cbor_map_union l ((mg_zero_or_more_match_item sp1 sp2 except).mg_serializer m1)) (mg_zero_or_more_match_item sp1 sp2 except) (map_of_list_cons key_eq (Ghost.reveal ke) (Ghost.reveal va) m2_rem) (Seq.length w_inv) /\
+          Seq.length w_inv == SZ.v size0 + Seq.length w1
+        ));
+        impl_serialize_map_zero_or_more_iterator_gen_kv_step
+          #pe #minl #maxl #p #ty' #vmatch' #ty2' #vmatch2'
+          parse mk_map_entry insert #key #tkey key_eq #sp1 #value #tvalue #inj #sp2 #except va_ex
+          out outl1 out1 outl2 out2
+          pres out_count out_size pm1 pm2
+          l v0 m1 ke va m2_rem m1' count' count w_inv size0 sz1 sz2
+          z1l w1 z2l w2
       }
     }
   };
@@ -1719,3 +1914,5 @@ let impl_serialize_map_zero_or_more
     (impl_serialize_map_zero_or_more_iterator
       map_share map_gather map_is_empty map_next map_entry_key map_entry_value map_entry_share map_entry_gather
       parse mk_map_entry insert key_eq pa1 pa2 va_ex)
+
+
