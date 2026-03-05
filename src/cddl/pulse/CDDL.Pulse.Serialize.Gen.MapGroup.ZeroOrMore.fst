@@ -1,5 +1,6 @@
-module CDDL.Pulse.Serialize.Gen.MapGroup
+module CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore
 open CDDL.Pulse.Serialize.Gen.MapGroup.Aux
+open CDDL.Pulse.Serialize.Gen.MapGroup.Choice
 #lang-pulse
 
 module GR = Pulse.Lib.GhostReference
