@@ -110,3 +110,38 @@ let cbor_parse_map_prefix_slice
 = let y = Seq.slice w 0 sz in
   Seq.lemma_eq_elim (Seq.slice w 0 sz) (Seq.slice y 0 sz);
   assert (cbor_parse_map_prefix_prop' p n w y)
+
+let cbor_map_mem_disjoint
+  (m1 m2: cbor_map)
+: Lemma
+  (requires (cbor_map_disjoint m1 m2))
+  (ensures (forall kv . cbor_map_mem kv (cbor_map_union m1 m2) <==> (cbor_map_mem kv m1 \/ cbor_map_mem kv m2)))
+= ()
+
+let cbor_map_mem_ext
+  (m1 m2: cbor_map)
+: Lemma
+  (requires (forall kv . cbor_map_mem kv m1 <==> cbor_map_mem kv m2))
+  (ensures (m1 == m2))
+= assert (forall k . match cbor_map_get m1 k with
+  | Some v -> cbor_map_mem (k, v) m1
+  | _ -> True
+  );
+  assert (forall k . match cbor_map_get m2 k with
+  | Some v -> cbor_map_mem (k, v) m2
+  | _ -> True
+  );
+  assert (cbor_map_equal m1 m2)
+
+let cbor_map_disjoint_union_r (l m1 m2: cbor_map) : Lemma
+  (requires cbor_map_disjoint l m1 /\ cbor_map_disjoint l m2 /\ cbor_map_disjoint m1 m2)
+  (ensures cbor_map_disjoint l (cbor_map_union m1 m2))
+= ()
+
+let seq_slice_length_zero_left
+  (#t: Type)
+  (s: Seq.seq t)
+  (len: nat { len <= Seq.length s })
+: Lemma
+  (Seq.length (Seq.slice s 0 len) == len)
+= ()

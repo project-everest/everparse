@@ -153,28 +153,6 @@ let map_of_list_is_append_serializable_intro_serializable
   ))
 = ()
 
-let cbor_map_mem_disjoint
-  (m1 m2: cbor_map)
-: Lemma
-  (requires (cbor_map_disjoint m1 m2))
-  (ensures (forall kv . cbor_map_mem kv (cbor_map_union m1 m2) <==> (cbor_map_mem kv m1 \/ cbor_map_mem kv m2)))
-= ()
-
-let cbor_map_mem_ext
-  (m1 m2: cbor_map)
-: Lemma
-  (requires (forall kv . cbor_map_mem kv m1 <==> cbor_map_mem kv m2))
-  (ensures (m1 == m2))
-= assert (forall k . match cbor_map_get m1 k with
-  | Some v -> cbor_map_mem (k, v) m1
-  | _ -> True
-  );
-  assert (forall k . match cbor_map_get m2 k with
-  | Some v -> cbor_map_mem (k, v) m2
-  | _ -> True
-  );
-  assert (cbor_map_equal m1 m2)
-
 #restart-solver
 let map_of_list_is_append_serializable_intro
   (#key #value: Type)
@@ -510,11 +488,6 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc_disjoint1_gen
 #pop-options
 
 #push-options "--z3rlimit 256 --split_queries always"
-
-let cbor_map_disjoint_union_r (l m1 m2: cbor_map) : Lemma
-  (requires cbor_map_disjoint l m1 /\ cbor_map_disjoint l m2 /\ cbor_map_disjoint m1 m2)
-  (ensures cbor_map_disjoint l (cbor_map_union m1 m2))
-= ()
 
 #restart-solver
 let impl_serialize_map_group_valid_map_zero_or_more_snoc_length1_gen
@@ -890,14 +863,6 @@ let seq_slice_append_pat (#t: Type) (s1 s2: Seq.seq t)
   [SMTPat (Seq.append s1 s2)]
 = Seq.lemma_split (Seq.append s1 s2) (Seq.length s1);
   Seq.append_slices s1 s2
-
-let seq_slice_length_zero_left
-  (#t: Type)
-  (s: Seq.seq t)
-  (len: nat { len <= Seq.length s })
-: Lemma
-  (Seq.length (Seq.slice s 0 len) == len)
-= ()
 
 let slice_split_post
   (#t: Type)
