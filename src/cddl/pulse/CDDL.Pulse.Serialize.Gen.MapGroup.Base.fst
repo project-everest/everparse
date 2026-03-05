@@ -235,7 +235,7 @@ let cbor_map_fold_max_length_accu_prop'
 
 #restart-solver
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 64 --split_queries always"
 
 let cbor_map_fold_max_length_accu
   (f: cbor -> option nat)
@@ -337,3 +337,212 @@ let cbor_map_parser
 let cbor_det_parse_map : cbor_map_parser cbor_det_min_length cbor_det_max_length =
   Classical.forall_intro_3 (Cbor.cbor_det_parse_map_prefix);
   Cbor.cbor_det_parse_map
+
+let impl_serialize_map_group_pre
+  (p: bare_cbor_map_parser)
+  (count: U64.t)
+  (size: SZ.t)
+  (l: cbor_map)
+  (w: Seq.seq U8.t)
+: Tot prop
+= cbor_map_length l == U64.v count /\
+  SZ.v size <= Seq.length w /\
+  p (U64.v count) w == Some (l, SZ.v size)
+
+let impl_serialize_map_group_valid
+  (maxl: cbor -> option nat)
+  (l: cbor_map)
+  (#t: det_map_group)
+  (#fp: map_constraint)
+  (#tgt: Type0)
+  (#inj: bool)
+  (s: mg_spec t fp tgt inj)
+  (v: tgt)
+  (len: nat)
+: Tot bool
+=   s.mg_serializable v &&
+    cbor_map_disjoint_tot l (s.mg_serializer v) &&
+    FStar.UInt.fits (cbor_map_length l + cbor_map_length (s.mg_serializer v)) 64 &&
+    Some? (cbor_map_max_length maxl (cbor_map_union l (s.mg_serializer v))) &&
+    Some?.v (cbor_map_max_length maxl (cbor_map_union l (s.mg_serializer v))) <= len
+
+let impl_serialize_map_group_invalid
+  (minl: cbor -> nat)
+  (l: cbor_map)
+  (#t: det_map_group)
+  (#fp: map_constraint)
+  (#tgt: Type0)
+  (#inj: bool)
+  (s: mg_spec t fp tgt inj)
+  (v: tgt)
+  (len: nat)
+: Tot bool
+= if
+    s.mg_serializable v &&
+    cbor_map_disjoint_tot l (s.mg_serializer v) &&
+    FStar.UInt.fits (cbor_map_length l + cbor_map_length (s.mg_serializer v)) 64
+  then
+    len < cbor_map_min_length minl (cbor_map_union l (s.mg_serializer v))
+  else
+    true
+
+let impl_serialize_map_group_post
+  (p: bare_cbor_map_parser)
+  (minl: cbor -> nat)
+  (maxl: cbor -> option nat)
+  (count: U64.t)
+  (size: SZ.t)
+  (l: cbor_map)
+  (#t: det_map_group)
+  (#fp: map_constraint)
+  (#tgt: Type0)
+  (#inj: bool)
+  (s: mg_spec t fp tgt inj)
+  (v: tgt)
+  (w: Seq.seq U8.t)
+  (res: bool)
+: Tot prop
+= (impl_serialize_map_group_valid maxl l s v (Seq.length w) ==> res == true) /\
+  (impl_serialize_map_group_invalid minl l s v (Seq.length w) ==> res == false) /\
+  (res == true ==> (
+    impl_serialize_map_group_pre p count size (cbor_map_union l (s.mg_serializer v)) w
+  ))
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let impl_serialize_map_group
+  (p: bare_cbor_map_parser)
+  (minl: cbor -> nat)
+  (maxl: cbor -> option nat)
+    (#t: det_map_group)
+    (#fp: map_constraint)
+    (#tgt: Type0)
+    (#inj: bool)
+    (s: mg_spec t fp tgt inj)
+    (#impl_tgt: Type0)
+    (r: rel impl_tgt tgt)
+=
+  (c: impl_tgt) ->
+  (#v: Ghost.erased tgt) ->
+  (out: S.slice U8.t) ->
+  (out_count: R.ref U64.t) ->
+  (out_size: R.ref SZ.t) ->
+  (l: Ghost.erased (cbor_map)) ->
+  stt bool
+    (exists* w count size . r c v ** pts_to out w ** pts_to out_count count ** pts_to out_size size **
+      pure (impl_serialize_map_group_pre p count size l w)
+    )
+    (fun res -> exists* w count' size' . r c v ** pts_to out w ** pts_to out_count count' ** pts_to out_size size' ** pure (
+      impl_serialize_map_group_post p minl maxl count' size' l s v w res
+    ))
+
+let cbor_serialize_map_insert_pre
+  (p: bare_cbor_map_parser)
+  (pe: bare_cbor_parser)
+  (m: cbor_map)
+  (off2: SZ.t)
+  (key: cbor)
+  (off3: SZ.t)
+  (value: cbor)
+  (v: Seq.seq U8.t)
+: Tot prop
+= SZ.v off2 <= SZ.v off3 /\
+  SZ.v off3 <= Seq.length v /\
+  p (cbor_map_length m) (Seq.slice v 0 (SZ.v off2)) == Some (m, SZ.v off2) /\
+  pe (Seq.slice v (SZ.v off2) (SZ.v off3)) == Some (key, SZ.v off3 - SZ.v off2) /\
+  pe (Seq.slice v (SZ.v off3) (Seq.length v)) == Some (value, Seq.length v - SZ.v off3)
+
+let cbor_serialize_map_insert_post
+  (p: bare_cbor_map_parser)
+  (m: cbor_map)
+  (key: cbor)
+  (value: cbor)
+  (res: bool)
+  (v': Seq.seq U8.t)
+: Tot prop
+= let m' = cbor_map_union m (cbor_map_singleton key value) in
+  (res == false <==> cbor_map_defined key m) /\
+  (res == true ==> p (cbor_map_length m') v' == Some (m', Seq.length v'))
+
+inline_for_extraction
+let cbor_serialize_map_insert_t
+  (p: bare_cbor_map_parser)
+  (pe: bare_cbor_parser)
+=
+  (out: S.slice U8.t) ->
+  (m: Ghost.erased cbor_map) ->
+  (off2: SZ.t) ->
+  (key: Ghost.erased cbor) ->
+  (off3: SZ.t) ->
+  (value: Ghost.erased cbor) ->
+  stt bool
+    (exists* v .
+      pts_to out v **
+      pure (cbor_serialize_map_insert_pre p pe m off2 key off3 value v)
+    )
+    (fun res -> exists* v .
+      pts_to out v **
+      pure (cbor_serialize_map_insert_post p m key value res v)
+    )
+
+let cbor_parse_postcond_some
+  (p: bare_cbor_parser)
+  (v: Seq.seq U8.t)
+  (v': cbor)
+  (vrem: Seq.seq U8.t)
+: Tot prop
+= match p v with
+  | None -> False
+  | Some (v_, len) ->
+    v_ == v' /\
+    Seq.slice v len (Seq.length v) == vrem
+
+noextract [@@noextract_to "krml"]
+let cbor_parse_post_some
+  (p: bare_cbor_parser)
+  (#cbor_t: Type)
+  (cbor_match: perm -> cbor_t -> cbor -> slprop)
+  (input: S.slice U8.t)
+  (pm: perm)
+  (v: Seq.seq U8.t)
+  (res: cbor_t)
+  (rem: S.slice U8.t)
+: Tot slprop
+= exists* v' vrem .
+     cbor_match 1.0R res v' **
+     pts_to rem #pm vrem **
+     Trade.trade // FIXME: I would need a forall_vrem here
+       (cbor_match 1.0R res v' ** pts_to rem #pm vrem)
+       (pts_to input #pm v) **
+     pure (
+       cbor_parse_postcond_some p v v' vrem
+     )
+
+noextract [@@noextract_to "krml"]
+let cbor_parse_post
+  (p: bare_cbor_parser)
+  (#cbor_t: Type)
+  (cbor_match: perm -> cbor_t -> cbor -> slprop)
+  (input: S.slice U8.t)
+  (pm: perm)
+  (v: Seq.seq U8.t)
+  (res: option (cbor_t & S.slice U8.t))
+: Tot slprop
+= match res with
+  | None -> pts_to input #pm v ** pure (None? (p v))
+  | Some (res, rem) -> cbor_parse_post_some p cbor_match input pm v res rem
+
+inline_for_extraction
+let cbor_parse_t
+  (p: bare_cbor_parser)
+  (#cbor_t: Type)
+  (cbor_match: perm -> cbor_t -> cbor -> slprop)
+=
+  (input: S.slice U8.t) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  stt (option (cbor_t & S.slice U8.t))
+    (pts_to input #pm v)
+    (fun res ->
+      cbor_parse_post p cbor_match input pm v res **
+      pure (Some? res == Some? (p v))
+    )
