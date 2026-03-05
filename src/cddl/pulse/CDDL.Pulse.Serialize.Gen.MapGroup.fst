@@ -824,6 +824,8 @@ let impl_serialize_match_item_for_post_false_insert_failed
   if pvalue.serializable v then
     cbor_map_disjoint_defined_false l key (pvalue.serializer v)
 
+#push-options "--z3rlimit 16"
+
 // Call site 2: value serialization returned 0
 let impl_serialize_match_item_for_post_false_value_ser_failed
   (#pe: cbor_parser)
@@ -853,6 +855,8 @@ let impl_serialize_match_item_for_post_false_value_ser_failed
     if cbor_map_disjoint_tot l (cbor_map_singleton key (pvalue.serializer v)) then
       cbor_map_max_length_union maxl l (cbor_map_singleton key (pvalue.serializer v))
   end
+
+#pop-options
 
 // Call site 3: key serialization returned 0
 let impl_serialize_match_item_for_post_false_key_ser_failed
