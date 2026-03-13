@@ -155,7 +155,11 @@ fn impl_serialize_map_zero_or_more_iterator_gen
               pem := is_empty _ _ !pc;
               out_size := size2';
               out_count := count';
-              assume pure False
+              GR.op_Colon_Equals gm (cbor_map_union m (cbor_map_singleton vk vv));
+              with vout' . assert (pts_to out vout');
+              with em' . assert (pts_to pem em');
+              with c' v' . assert (r _ _ c' v');
+              assume pure (impl_serialize_map_zero_or_more_iterator_gen_invariant0 p em' out vout' size2' count' (cbor_map_union m (cbor_map_singleton vk vv)) v' true)
             } else {
               pres := false
             }
