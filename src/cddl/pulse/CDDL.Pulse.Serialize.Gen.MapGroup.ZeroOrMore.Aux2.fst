@@ -170,6 +170,10 @@ fn impl_serialize_map_zero_or_more_iterator_gen
   };
   Trade.elim _ _;
   GR.free gm;
-  assume pure False;
+  with w' . assert (pts_to out w');
+  with count' . assert (pts_to out_count count');
+  with size' . assert (pts_to out_size size');
+  with res' . assert (pts_to pres res');
+  assume pure (impl_serialize_map_group_post p minl maxl count' size' l (mg_zero_or_more_match_item sp1 sp2 except) v0 w' res');
   !pres
 }
