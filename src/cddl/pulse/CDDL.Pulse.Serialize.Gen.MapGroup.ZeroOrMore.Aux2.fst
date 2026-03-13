@@ -1,6 +1,7 @@
 module CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2
 #lang-pulse
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Proof0
+open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma1
 
 module GR = Pulse.Lib.GhostReference
 module S = Pulse.Lib.Slice
@@ -118,7 +119,8 @@ fn impl_serialize_map_zero_or_more_iterator_gen
             as (cbor_parse_post_some pe vmatch' out1' 1.0R wk ck remk);
           unfold (cbor_parse_post_some pe vmatch' out1' 1.0R wk ck remk);
           with vk . assert (vmatch' 1.0R ck vk);
-          let (out2', _) = slice_split out2 size2;
+          let (out2', out2_tail) = slice_split out2 size2;
+          with w_out2_tail . assert (pts_to out2_tail w_out2_tail);
           let ocv = parse out2';
           assert pure (Some? ocv);
           let Some cv_ = ocv;
@@ -145,7 +147,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
             let (out_, _) = slice_split out size2';
             with w_ . assert (pts_to out_ w_);
             with m . assert (GR.pts_to gm m);
-            assume pure (cbor_serialize_map_insert_pre p pe m size0 vk size1' vv w_);
+            cbor_serialize_map_insert_pre_intro pe p m size0 size1 size1' size2 size2' vk vv w_ w0 wk wv w_out2_tail;
             let no_dup = insert out_ m size0 vk size1' vv;
             Pulse.Lib.Slice.join _ _ _;
             S.pts_to_len out;
