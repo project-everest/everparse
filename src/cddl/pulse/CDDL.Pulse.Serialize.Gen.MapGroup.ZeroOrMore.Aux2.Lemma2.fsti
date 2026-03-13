@@ -32,5 +32,5 @@ val impl_serialize_map_zero_or_more_iterator_gen_invariant0_insert
     (em' == true <==> v' == Map.empty _ _)
   )
   (ensures
-    impl_serialize_map_zero_or_more_iterator_gen_invariant p em' out vout' size2' count' (cbor_map_union m (cbor_map_singleton vk vv)) v' true
+    impl_serialize_map_zero_or_more_iterator_gen_invariant0 p em' out vout' size2' count' (cbor_map_union m (cbor_map_singleton vk vv)) v' true
   )
