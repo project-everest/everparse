@@ -26,6 +26,59 @@ let pow2_64_m1_eq : squash (U64.v pow2_64_m1 == pow2 64 - 1) = _ by (
   FStar.Tactics.trefl ()
 )
 
+let impl_serialize_map_zero_or_more_iterator_gen_invariant_min
+  (#pe: cbor_parser)
+  (#minl: (cbor_min_length pe))
+  (#maxl: (cbor_max_length pe))
+  (p: (cbor_map_parser minl maxl))
+  (#key: typ) (#tkey: Type0)
+  (sp1: (spec key tkey true))
+  (#value: typ) (#tvalue: Type0)
+  (#inj: bool)
+  (sp2: (spec value tvalue inj))
+  (except: map_constraint { inj \/ map_constraint_value_injective key sp2.parser except })
+  (n: nat)
+  (v0: Map.t tkey (list tvalue))
+  (v: Map.t tkey (list tvalue))
+: Tot prop
+= let sp = mg_zero_or_more_match_item sp1 sp2 except in
+  sp.mg_serializable v0 ==> (
+    sp.mg_serializable v /\ (
+      let min_sz0 = cbor_map_min_length minl (sp.mg_serializer v0) in
+      let min_sz = cbor_map_min_length minl (sp.mg_serializer v) in
+      min_sz0 == n + min_sz
+    )
+  )
+
+let impl_serialize_map_zero_or_more_iterator_gen_invariant_max
+  (#pe: cbor_parser)
+  (#minl: (cbor_min_length pe))
+  (#maxl: (cbor_max_length pe))
+  (p: (cbor_map_parser minl maxl))
+  (#key: typ) (#tkey: Type0)
+  (sp1: (spec key tkey true))
+  (#value: typ) (#tvalue: Type0)
+  (#inj: bool)
+  (sp2: (spec value tvalue inj))
+  (except: map_constraint { inj \/ map_constraint_value_injective key sp2.parser except })
+  (n: option nat)
+  (v0: Map.t tkey (list tvalue))
+  (v: Map.t tkey (list tvalue))
+: Tot prop
+= let sp = mg_zero_or_more_match_item sp1 sp2 except in
+  sp.mg_serializable v0 ==> (
+    sp.mg_serializable v /\ (
+      let max_sz0 = cbor_map_max_length maxl (sp.mg_serializer v0) in
+      let max_sz = cbor_map_max_length maxl (sp.mg_serializer v) in
+      (Some? max_sz0 ==> (
+        Some? n /\
+        Some? max_sz /\
+        Some?.v max_sz0 == Some?.v n + Some?.v max_sz
+      ))
+    )
+  )
+
+
 let impl_serialize_map_zero_or_more_iterator_gen_invariant0
   (#pe: cbor_parser)
   (#minl: (cbor_min_length pe))
