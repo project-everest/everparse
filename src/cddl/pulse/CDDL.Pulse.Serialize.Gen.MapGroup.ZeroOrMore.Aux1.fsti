@@ -283,7 +283,11 @@ fn slice_split (#t: Type) (s: S.slice t) (#p: perm) (i: SZ.t) (#v: Ghost.erased 
       pts_to s1 #p v1 **
       pts_to s2 #p v2 **
       S.is_split s s1 s2 **
-      pure (slice_split_post i v v1 v2)
+      pure (slice_split_post i v v1 v2 /\
+        SZ.v (S.len s) == Seq.length v /\
+        SZ.v (S.len s1) == Seq.length v1 /\
+        SZ.v (S.len s2) == Seq.length v2
+      )
     )
 
 (* Gen iterator type alias *)
