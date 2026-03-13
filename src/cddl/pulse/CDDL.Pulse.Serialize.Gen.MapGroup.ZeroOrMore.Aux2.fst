@@ -55,9 +55,6 @@ fn impl_serialize_map_zero_or_more_iterator_gen
   with w0 . assert (pts_to out w0);
   with count0 . assert (pts_to out_count count0);
   assert pure (cbor_parse_map_prefix_prop' p (U64.v count0) w0 (Seq.slice w0 0 (SZ.v size0)));
-  assume pure (
-    impl_serialize_map_zero_or_more_iterator_gen_invariant p em0 out w0 size0 count0 l v0 true
-  );
   while (
     !pres && not !pem
   )
@@ -78,7 +75,6 @@ fn impl_serialize_map_zero_or_more_iterator_gen
     let count = !out_count;
     if (count = pow2_64_m1) {
       pres := false;
-      assume pure False
     } else {
       let count' = U64.add count 1uL;
       S.pts_to_len out;
@@ -98,7 +94,6 @@ fn impl_serialize_map_zero_or_more_iterator_gen
         Pulse.Lib.Slice.join _ _ _;
         Trade.elim_hyp_l _ _ _;
         pres := false;
-        assume pure False
       } else {
         let (out1', out2) = slice_split out1 size1;
         with gv . assert (dsnd (Iterator.mk_spec r2) (snd (ek, ev)) gv);
@@ -113,7 +108,6 @@ fn impl_serialize_map_zero_or_more_iterator_gen
           Pulse.Lib.Slice.join _ _ out1;
           Pulse.Lib.Slice.join _ _ _;
           pres := false;
-          assume pure False
         } else {
           let ock = parse out1';
           assert pure (Some? ock);
@@ -145,7 +139,6 @@ fn impl_serialize_map_zero_or_more_iterator_gen
           S.pts_to_len out;
           if (ex) {
             pres := false;
-            assume pure False
           } else {
             let size1' = SZ.add size0 size1;
             let size2' = SZ.add size1' size2;

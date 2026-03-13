@@ -53,7 +53,7 @@ let impl_serialize_map_zero_or_more_iterator_gen_invariant0
         )
       )
 
-assume val impl_serialize_map_zero_or_more_iterator_gen_invariant
+let impl_serialize_map_zero_or_more_iterator_gen_invariant
   (#pe: cbor_parser)
   (#minl: (cbor_min_length pe))
   (#maxl: (cbor_max_length pe))
@@ -69,3 +69,4 @@ assume val impl_serialize_map_zero_or_more_iterator_gen_invariant
   (v: Map.t tkey (list tvalue))
   (res: bool)
 : prop
+= impl_serialize_map_zero_or_more_iterator_gen_invariant0 p em out vout size count m v res
