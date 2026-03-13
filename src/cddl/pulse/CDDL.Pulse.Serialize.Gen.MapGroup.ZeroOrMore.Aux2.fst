@@ -2,6 +2,7 @@ module CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2
 #lang-pulse
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Proof0
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma1
+open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma2
 
 module GR = Pulse.Lib.GhostReference
 module S = Pulse.Lib.Slice
@@ -149,6 +150,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
             with m . assert (GR.pts_to gm m);
             cbor_serialize_map_insert_pre_intro pe p m size0 size1 size1' size2 size2' vk vv w_ w0 wk wv w_out2_tail;
             let no_dup = insert out_ m size0 vk size1' vv;
+            S.pts_to_len out_;
             Pulse.Lib.Slice.join _ _ _;
             S.pts_to_len out;
             if (no_dup) {
@@ -159,7 +161,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
               with vout' . assert (pts_to out vout');
               with em' . assert (pts_to pem em');
               with c' v' . assert (r _ _ c' v');
-              assume pure (impl_serialize_map_zero_or_more_iterator_gen_invariant0 p em' out vout' size2' count' (cbor_map_union m (cbor_map_singleton vk vv)) v' true)
+              impl_serialize_map_zero_or_more_iterator_gen_invariant0_insert p em' out vout' size2' count count' m vk vv v'
             } else {
               pres := false
             }
