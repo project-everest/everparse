@@ -151,10 +151,14 @@ fn impl_serialize_map_zero_or_more_iterator_gen
             let no_dup = insert out_ m size0 vk size1' vv;
             Pulse.Lib.Slice.join _ _ _;
             S.pts_to_len out;
-            pem := is_empty _ _ !pc;
-            out_size := size2';
-            out_count := count';
-            assume pure False
+            if (no_dup) {
+              pem := is_empty _ _ !pc;
+              out_size := size2';
+              out_count := count';
+              assume pure False
+            } else {
+              pres := false
+            }
           }
         }
       }
