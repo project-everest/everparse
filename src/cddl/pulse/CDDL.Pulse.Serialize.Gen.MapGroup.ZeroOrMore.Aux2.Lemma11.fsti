@@ -6,6 +6,7 @@ module U8 = FStar.UInt8
 module SZ = FStar.SizeT
 module U64 = FStar.UInt64
 module Map = CDDL.Spec.Map
+module EqTest = CDDL.Spec.EqTest
 
 val invariant_excluded
   (#pe: cbor_parser)
@@ -35,7 +36,11 @@ val invariant_excluded
     SZ.v size <= Seq.length vout /\
     map_of_list_maps_to_nonempty v /\
     impl_serialize_map_zero_or_more_iterator_gen_invariant_min p sp1 sp2 except min v0 v /\
-    impl_serialize_map_zero_or_more_iterator_gen_invariant_max p sp1 sp2 except max v0 v
+    impl_serialize_map_zero_or_more_iterator_gen_invariant_max p sp1 sp2 except max v0 v /\
+    (exists (v_old: Map.t tkey (list tvalue)) (gk: tkey) (gv: tvalue) (key_eq: EqTest.eq_test tkey) .
+      v_old == map_of_list_cons key_eq gk gv v /\
+      sp1.serializable gk /\ sp2.serializable gv /\
+      except (sp1.serializer gk, sp2.serializer gv) == true)
   )
   (ensures
     impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max false
