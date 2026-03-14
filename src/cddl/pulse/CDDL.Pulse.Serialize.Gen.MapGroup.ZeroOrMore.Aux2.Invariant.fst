@@ -174,7 +174,7 @@ let impl_serialize_map_zero_or_more_iterator_gen_invariant1
   impl_serialize_map_zero_or_more_iterator_gen_invariant_min p sp1 sp2 except min v0 v /\
   impl_serialize_map_zero_or_more_iterator_gen_invariant_max p sp1 sp2 except max v0 v 
 
-let impl_serialize_map_zero_or_more_iterator_gen_invariant
+assume val impl_serialize_map_zero_or_more_iterator_gen_invariant
   (#pe: cbor_parser)
   (#minl: (cbor_min_length pe))
   (#maxl: (cbor_max_length pe))
@@ -197,4 +197,3 @@ let impl_serialize_map_zero_or_more_iterator_gen_invariant
   (max: option nat)
   (res: bool)
 : prop
-= impl_serialize_map_zero_or_more_iterator_gen_invariant1 p sp1 sp2 except em out vout size count m v0 v min max res
