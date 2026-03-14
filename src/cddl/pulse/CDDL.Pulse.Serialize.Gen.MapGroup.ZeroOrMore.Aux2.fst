@@ -273,6 +273,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
   with count' . assert (pts_to out_count count');
   with size' . assert (pts_to out_size size');
   with res' . assert (pts_to pres res');
+  S.pts_to_len out;
   invariant_to_post p key tkey sp1 value tvalue inj sp2 except em_final out w' size' count' m_final v0 v_final min_final max_final res' l;
   assert pure (impl_serialize_map_group_post p minl maxl count' size' l (mg_zero_or_more_match_item sp1 sp2 except) v0 w' res');
   !pres

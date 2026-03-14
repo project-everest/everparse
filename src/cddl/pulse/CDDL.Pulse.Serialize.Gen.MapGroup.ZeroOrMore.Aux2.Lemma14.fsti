@@ -32,6 +32,7 @@ val invariant_to_post
 : Lemma
   (requires
     impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res /\
+    Seq.length vout == SZ.v (S.len out) /\
     (res == false \/ em == true)
   )
   (ensures

@@ -30,6 +30,7 @@ val invariant_count_overflow
 : Lemma
   (requires
     impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max true /\
+    em == false /\
     U64.v count == pow2 64 - 1
   )
   (ensures

@@ -30,6 +30,7 @@ val invariant_insert_success
 : Lemma
   (requires
     impl_serialize_map_zero_or_more_iterator_gen_invariant0 p em out vout size count m v true /\
+    map_of_list_maps_to_nonempty v /\
     impl_serialize_map_zero_or_more_iterator_gen_invariant_min p sp1 sp2 except min v0 v /\
     impl_serialize_map_zero_or_more_iterator_gen_invariant_max p sp1 sp2 except max v0 v
   )
