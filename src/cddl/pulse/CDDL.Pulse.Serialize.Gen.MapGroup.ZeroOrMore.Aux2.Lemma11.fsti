@@ -30,8 +30,6 @@ val invariant_excluded
   (max: option nat)
 : Lemma
   (requires
-    (exists (em_old: bool) (vout_old: Seq.seq U8.t) (size_old: SZ.t) (count_old: U64.t) (m_old: cbor_map) (v_old_iter: Map.t tkey (list tvalue)) (min_old: nat) (max_old: option nat) .
-      impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_old out vout_old size_old count_old m_old v0 v_old_iter min_old max_old true) /\
     em == false /\
     U64.v count <> pow2 64 - 1 /\
     Seq.length vout == SZ.v (S.len out) /\
@@ -39,8 +37,10 @@ val invariant_excluded
     map_of_list_maps_to_nonempty v /\
     impl_serialize_map_zero_or_more_iterator_gen_invariant_min p sp1 sp2 except min v0 v /\
     impl_serialize_map_zero_or_more_iterator_gen_invariant_max p sp1 sp2 except max v0 v /\
-    (exists (v_old: Map.t tkey (list tvalue)) (gk: tkey) (gv: tvalue) (key_eq: EqTest.eq_test tkey) .
-      v_old == map_of_list_cons key_eq gk gv v /\
+    (exists (vout_old: Seq.seq U8.t) (gk: tkey) (gv: tvalue) (key_eq: EqTest.eq_test tkey) (min_old: nat) (max_old: option nat) .
+      impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout_old size count m v0 (map_of_list_cons key_eq gk gv v) min_old max_old true /\
+      min == impl_serialize_map_zero_or_more_iterator_gen_update_min minl sp1 sp2 except min_old gk gv /\
+      max == impl_serialize_map_zero_or_more_iterator_gen_update_max maxl sp1 sp2 except max_old gk gv /\
       sp1.serializable gk /\ sp2.serializable gv /\
       except (sp1.serializer gk, sp2.serializer gv) == true)
   )
