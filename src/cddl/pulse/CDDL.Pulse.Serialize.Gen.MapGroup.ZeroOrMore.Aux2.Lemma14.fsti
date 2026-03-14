@@ -31,7 +31,8 @@ val invariant_to_post
   (l: cbor_map)
 : Lemma
   (requires
-    impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res
+    impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res /\
+    (res == false \/ em == true)
   )
   (ensures
     impl_serialize_map_group_post p minl maxl count size l (mg_zero_or_more_match_item sp1 sp2 except) v0 vout res

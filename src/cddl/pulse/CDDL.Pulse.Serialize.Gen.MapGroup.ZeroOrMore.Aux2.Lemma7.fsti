@@ -29,6 +29,7 @@ val invariant_init
   (requires
     Seq.length w0 == SZ.v (S.len out) /\
     SZ.v size0 <= Seq.length w0 /\
+    impl_serialize_map_group_pre p count0 size0 l w0 /\
     cbor_parse_map_prefix_prop' p (U64.v count0) w0 (Seq.slice w0 0 (SZ.v size0)) /\
     (em0 == true <==> v0 == Map.empty _ _)
   )

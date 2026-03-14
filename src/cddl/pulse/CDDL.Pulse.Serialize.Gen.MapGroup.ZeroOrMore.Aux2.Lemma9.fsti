@@ -29,6 +29,8 @@ val invariant_key_ser_fail
   (max: option nat)
 : Lemma
   (requires
+    Seq.length vout == SZ.v (S.len out) /\
+    SZ.v size <= Seq.length vout /\
     impl_serialize_map_zero_or_more_iterator_gen_invariant_min p sp1 sp2 except min v0 v /\
     impl_serialize_map_zero_or_more_iterator_gen_invariant_max p sp1 sp2 except max v0 v
   )
