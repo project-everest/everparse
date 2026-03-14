@@ -88,7 +88,15 @@ fn impl_serialize_map_zero_or_more_iterator_gen
     let count = !out_count;
     if (count = pow2_64_m1) {
       pres := false;
-      assume pure False
+      with vout_ . assert (pts_to out vout_);
+      with em_ . assert (pts_to pem em_);
+      with size_ . assert (pts_to out_size size_);
+      with count_ . assert (pts_to out_count count_);
+      with m_ . assert (GR.pts_to gm m_);
+      with min_ . assert (GR.pts_to gmin min_);
+      with max_ . assert (GR.pts_to gmax max_);
+      with c_ v_ . assert (r _ _ c_ v_);
+      assume pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false)
     } else {
       let count' = U64.add count 1uL;
       S.pts_to_len out;
@@ -119,7 +127,15 @@ fn impl_serialize_map_zero_or_more_iterator_gen
         Pulse.Lib.Slice.join _ _ _;
         Trade.elim_hyp_l _ _ _;
         pres := false;
-        assume pure False
+        with vout_ . assert (pts_to out vout_);
+        with em_ . assert (pts_to pem em_);
+        with size_ . assert (pts_to out_size size_);
+        with count_ . assert (pts_to out_count count_);
+        with m_ . assert (GR.pts_to gm m_);
+        with min_ . assert (GR.pts_to gmin min_);
+        with max_ . assert (GR.pts_to gmax max_);
+        with c_ v_ . assert (r _ _ c_ v_);
+        assume pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false)
       } else {
         with w_out1 . assert (pts_to out1 w_out1);
         impl_serialize_parse_some minl maxl sp1 gk w_out1 size1;
@@ -135,7 +151,15 @@ fn impl_serialize_map_zero_or_more_iterator_gen
           Pulse.Lib.Slice.join _ _ out1;
           Pulse.Lib.Slice.join _ _ _;
           pres := false;
-          assume pure False
+          with vout_ . assert (pts_to out vout_);
+          with em_ . assert (pts_to pem em_);
+          with size_ . assert (pts_to out_size size_);
+          with count_ . assert (pts_to out_count count_);
+          with m_ . assert (GR.pts_to gm m_);
+          with min_ . assert (GR.pts_to gmin min_);
+          with max_ . assert (GR.pts_to gmax max_);
+          with c_ v_ . assert (r _ _ c_ v_);
+          assume pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false)
         } else {
           let ock = parse out1';
           let Some ck_ = ock;
@@ -168,7 +192,15 @@ fn impl_serialize_map_zero_or_more_iterator_gen
           S.pts_to_len out;
           if (ex) {
             pres := false;
-            assume pure False
+            with vout_ . assert (pts_to out vout_);
+            with em_ . assert (pts_to pem em_);
+            with size_ . assert (pts_to out_size size_);
+            with count_ . assert (pts_to out_count count_);
+            with m_ . assert (GR.pts_to gm m_);
+            with min_ . assert (GR.pts_to gmin min_);
+            with max_ . assert (GR.pts_to gmax max_);
+            with c_ v_ . assert (r _ _ c_ v_);
+            assume pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false)
           } else {
             let size1' = SZ.add size0 size1;
             let size2' = SZ.add size1' size2;
@@ -189,10 +221,23 @@ fn impl_serialize_map_zero_or_more_iterator_gen
               with em' . assert (pts_to pem em');
               with c' v' . assert (r _ _ c' v');
               impl_serialize_map_zero_or_more_iterator_gen_invariant0_insert p em' out vout' size2' count count' m vk vv v';
-              assume pure False
+              with m_ . assert (GR.pts_to gm m_);
+              with min_ . assert (GR.pts_to gmin min_);
+              with max_ . assert (GR.pts_to gmax max_);
+              with size_ . assert (pts_to out_size size_);
+              with count_ . assert (pts_to out_count count_);
+              assume pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em' out vout' size_ count_ m_ v0 v' min_ max_ true)
             } else {
               pres := false;
-              assume pure False
+              with vout_ . assert (pts_to out vout_);
+              with em_ . assert (pts_to pem em_);
+              with size_ . assert (pts_to out_size size_);
+              with count_ . assert (pts_to out_count count_);
+              with m_ . assert (GR.pts_to gm m_);
+              with min_ . assert (GR.pts_to gmin min_);
+              with max_ . assert (GR.pts_to gmax max_);
+              with c_ v_ . assert (r _ _ c_ v_);
+              assume pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false)
             }
           }
         }
