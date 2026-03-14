@@ -57,10 +57,12 @@ fn impl_serialize_map_zero_or_more_iterator_gen
   with w0 . assert (pts_to out w0);
   with count0 . assert (pts_to out_count count0);
   assert pure (cbor_parse_map_prefix_prop' p (U64.v count0) w0 (Seq.slice w0 0 (SZ.v size0)));
+  let gmin = GR.alloc (0 <: nat);
+  let gmax = GR.alloc (Some 0 <: option nat);
   while (
     !pres && not !pem
   )
-  invariant exists* c v em res vout size count m .
+  invariant exists* c v em res vout size count m min max .
     pts_to out vout **
     pts_to pc c **
     r _ _ c v **
@@ -68,10 +70,12 @@ fn impl_serialize_map_zero_or_more_iterator_gen
     pts_to pem em **
     pts_to pres res **
     GR.pts_to gm m **
+    GR.pts_to gmin min **
+    GR.pts_to gmax max **
     pts_to out_size size **
     pts_to out_count count **
     pure (
-      impl_serialize_map_zero_or_more_iterator_gen_invariant p em out vout size count m v res
+      impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res
     )
   {
     let count = !out_count;
@@ -81,9 +85,15 @@ fn impl_serialize_map_zero_or_more_iterator_gen
       let count' = U64.add count 1uL;
       S.pts_to_len out;
       with w0 . assert (pts_to out w0);
+      with min . assert (GR.pts_to gmin min);
+      with max . assert (GR.pts_to gmax max);
       let (ek, ev) = next _ _ pc;
       Trade.trans _ _ (r _ _ c0 v0);
       with gk . assert (dsnd (Iterator.mk_spec r1) (fst (ek, ev)) gk);
+      with gv . assert (dsnd (Iterator.mk_spec r2) (snd (ek, ev)) gv);
+      GR.op_Colon_Equals gmin (impl_serialize_map_zero_or_more_iterator_gen_update_min minl sp1 sp2 except min gk gv);
+      GR.op_Colon_Equals gmax (impl_serialize_map_zero_or_more_iterator_gen_update_max maxl sp1 sp2 except max gk gv);
+      assume pure False;
       Trade.rewrite_with_trade
         (dsnd (Iterator.mk_spec r1) (fst (ek, ev)) gk)
         (r1 ek gk);
@@ -98,7 +108,6 @@ fn impl_serialize_map_zero_or_more_iterator_gen
         pres := false;
       } else {
         let (out1', out2) = slice_split out1 size1;
-        with gv . assert (dsnd (Iterator.mk_spec r2) (snd (ek, ev)) gv);
         Trade.rewrite_with_trade
           (dsnd (Iterator.mk_spec r2) (snd (ek, ev)) gv)
           (r2 ev gv);
@@ -172,6 +181,8 @@ fn impl_serialize_map_zero_or_more_iterator_gen
   };
   Trade.elim _ _;
   GR.free gm;
+  GR.free gmin;
+  GR.free gmax;
   with w' . assert (pts_to out w');
   with count' . assert (pts_to out_count count');
   with size' . assert (pts_to out_size size');
