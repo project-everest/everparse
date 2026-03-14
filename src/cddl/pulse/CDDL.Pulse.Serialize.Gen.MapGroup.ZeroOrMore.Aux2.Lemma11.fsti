@@ -30,6 +30,8 @@ val invariant_excluded
   (max: option nat)
 : Lemma
   (requires
+    (exists (em_old: bool) (vout_old: Seq.seq U8.t) (size_old: SZ.t) (count_old: U64.t) (m_old: cbor_map) (v_old_iter: Map.t tkey (list tvalue)) (min_old: nat) (max_old: option nat) .
+      impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_old out vout_old size_old count_old m_old v0 v_old_iter min_old max_old true) /\
     em == false /\
     U64.v count <> pow2 64 - 1 /\
     Seq.length vout == SZ.v (S.len out) /\
