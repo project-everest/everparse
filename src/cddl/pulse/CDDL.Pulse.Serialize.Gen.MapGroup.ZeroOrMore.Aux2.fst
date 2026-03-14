@@ -7,7 +7,7 @@ open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma2
 module GR = Pulse.Lib.GhostReference
 module S = Pulse.Lib.Slice
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 256"
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_map_zero_or_more_iterator_gen
@@ -93,7 +93,11 @@ fn impl_serialize_map_zero_or_more_iterator_gen
       with gv . assert (dsnd (Iterator.mk_spec r2) (snd (ek, ev)) gv);
       GR.op_Colon_Equals gmin (impl_serialize_map_zero_or_more_iterator_gen_update_min minl sp1 sp2 except min gk gv);
       GR.op_Colon_Equals gmax (impl_serialize_map_zero_or_more_iterator_gen_update_max maxl sp1 sp2 except max gk gv);
-      assume pure False;
+      with min' . assert (GR.pts_to gmin min');
+      with max' . assert (GR.pts_to gmax max');
+      with c' v' . assert (r _ _ c' v');
+      assume pure (impl_serialize_map_zero_or_more_iterator_gen_invariant_min p sp1 sp2 except min' v0 v');
+      assume pure (impl_serialize_map_zero_or_more_iterator_gen_invariant_max p sp1 sp2 except max' v0 v');
       Trade.rewrite_with_trade
         (dsnd (Iterator.mk_spec r1) (fst (ek, ev)) gk)
         (r1 ek gk);
