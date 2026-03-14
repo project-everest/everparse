@@ -3,6 +3,8 @@ module CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Proof0
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma1
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma2
+open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma3
+open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma4
 
 module GR = Pulse.Lib.GhostReference
 module S = Pulse.Lib.Slice
@@ -97,6 +99,8 @@ fn impl_serialize_map_zero_or_more_iterator_gen
         Trade.elim_hyp_l _ _ _;
         pres := false;
       } else {
+        with w_out1 . assert (pts_to out1 w_out1);
+        impl_serialize_parse_some minl maxl sp1 gk w_out1 size1;
         let (out1', out2) = slice_split out1 size1;
         with gv . assert (dsnd (Iterator.mk_spec r2) (snd (ek, ev)) gv);
         Trade.rewrite_with_trade
@@ -112,7 +116,6 @@ fn impl_serialize_map_zero_or_more_iterator_gen
           pres := false;
         } else {
           let ock = parse out1';
-          assert pure (Some? ock);
           let Some ck_ = ock;
           let (ck, remk) = ck_;
           with wk . assert (cbor_parse_post pe vmatch' out1' 1.0R wk (Some (ck, remk)));
@@ -120,10 +123,11 @@ fn impl_serialize_map_zero_or_more_iterator_gen
             as (cbor_parse_post_some pe vmatch' out1' 1.0R wk ck remk);
           unfold (cbor_parse_post_some pe vmatch' out1' 1.0R wk ck remk);
           with vk . assert (vmatch' 1.0R ck vk);
+          with w_out2 . assert (pts_to out2 w_out2);
+          impl_serialize_parse_some_value minl maxl sp2 gv w_out2 size2;
           let (out2', out2_tail) = slice_split out2 size2;
           with w_out2_tail . assert (pts_to out2_tail w_out2_tail);
           let ocv = parse out2';
-          assert pure (Some? ocv);
           let Some cv_ = ocv;
           let (cv, remv) = cv_;
           with wv . assert (cbor_parse_post pe vmatch' out2' 1.0R wv (Some (cv, remv)));
