@@ -5,6 +5,8 @@ open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma1
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma2
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma3
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma4
+open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma5
+open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma6
 
 module GR = Pulse.Lib.GhostReference
 module S = Pulse.Lib.Slice
@@ -98,8 +100,9 @@ fn impl_serialize_map_zero_or_more_iterator_gen
       with min' . assert (GR.pts_to gmin min');
       with max' . assert (GR.pts_to gmax max');
       with c' v' . assert (r _ _ c' v');
-      assume pure (impl_serialize_map_zero_or_more_iterator_gen_invariant_min p sp1 sp2 except min' v0 v');
-      assume pure (impl_serialize_map_zero_or_more_iterator_gen_invariant_max p sp1 sp2 except max' v0 v');
+      rel_len c' v';
+      assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant_min p sp1 sp2 except min' v0 v');
+      assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant_max p sp1 sp2 except max' v0 v');
       Trade.rewrite_with_trade
         (dsnd (Iterator.mk_spec r1) (fst (ek, ev)) gk)
         (r1 ek gk);
