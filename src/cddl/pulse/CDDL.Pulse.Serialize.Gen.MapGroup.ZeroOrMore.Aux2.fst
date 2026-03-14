@@ -9,7 +9,7 @@ open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma4
 module GR = Pulse.Lib.GhostReference
 module S = Pulse.Lib.Slice
 
-#push-options "--z3rlimit 256"
+#push-options "--z3rlimit 64"
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_map_zero_or_more_iterator_gen
