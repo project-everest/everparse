@@ -64,7 +64,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
   let gmin = GR.alloc (0 <: nat);
   let gmax = GR.alloc (Some 0 <: option nat);
   assume pure (
-    impl_serialize_map_zero_or_more_iterator_gen_invariant p em0 out w0 size0 count0 l v0 true
+    impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em0 out w0 size0 count0 l v0 v0 0 (Some 0) true
   );
   while (
     !pres && not !pem
@@ -188,9 +188,11 @@ fn impl_serialize_map_zero_or_more_iterator_gen
               with vout' . assert (pts_to out vout');
               with em' . assert (pts_to pem em');
               with c' v' . assert (r _ _ c' v');
-              impl_serialize_map_zero_or_more_iterator_gen_invariant0_insert p em' out vout' size2' count count' m vk vv v'
+              impl_serialize_map_zero_or_more_iterator_gen_invariant0_insert p em' out vout' size2' count count' m vk vv v';
+              assume pure False
             } else {
-              pres := false
+              pres := false;
+              assume pure False
             }
           }
         }
