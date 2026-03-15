@@ -14,6 +14,7 @@ open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma10
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma11
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma12
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma13
+open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.LoopBody.InsertBranch
 
 module GR = Pulse.Lib.GhostReference
 module S = Pulse.Lib.Slice
@@ -232,46 +233,15 @@ ensures exists* c v em res vout size count m min max .
             invariant_excluded p key tkey sp1 value tvalue inj sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ w0 gk gv min max;
             assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false);
           } else {
-            let size1' = SZ.add size0 size1;
-            let size2' = SZ.add size1' size2;
-            let (out_, _) = slice_split out size2';
-            with w_ . assert (pts_to out_ w_);
-            with m . assert (GR.pts_to gm m);
-            cbor_serialize_map_insert_pre_intro pe p m size0 size1 size1' size2 size2' vk vv w_ w0 wk wv w_out2_tail;
-            let no_dup = insert out_ m size0 vk size1' vv;
-            S.pts_to_len out_;
-            Pulse.Lib.Slice.join _ _ _;
-            S.pts_to_len out;
-            if (no_dup) {
-              pem := is_empty _ _ !pc;
-              out_size := size2';
-              out_count := count';
-              GR.op_Colon_Equals gm (cbor_map_union m (cbor_map_singleton vk vv));
-              with vout' . assert (pts_to out vout');
-              with em' . assert (pts_to pem em');
-              with c' v' . assert (r _ _ c' v');
-              impl_serialize_map_zero_or_more_iterator_gen_invariant0_insert p em' out vout' size2' count count' m vk vv v';
-              with m_ . assert (GR.pts_to gm m_);
-              with min_ . assert (GR.pts_to gmin min_);
-              with max_ . assert (GR.pts_to gmax max_);
-              with size_ . assert (pts_to out_size size_);
-              with count_ . assert (pts_to out_count count_);
-              invariant_insert_success p key tkey sp1 value tvalue inj sp2 except em' out vout' size_ count_ m_ v0 v' min_ max_ w0 gk gv min max false size0 count m;
-              assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em' out vout' size_ count_ m_ v0 v' min_ max_ true);
-            } else {
-              pres := false;
-              with vout_ . assert (pts_to out vout_);
-              with em_ . assert (pts_to pem em_);
-              with size_ . assert (pts_to out_size size_);
-              with count_ . assert (pts_to out_count count_);
-              with m_ . assert (GR.pts_to gm m_);
-              with min_ . assert (GR.pts_to gmin min_);
-              with max_ . assert (GR.pts_to gmax max_);
-              with c_ v_ . assert (r _ _ c_ v_);
-              S.pts_to_len out;
-              invariant_insert_dup p key tkey sp1 value tvalue inj sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ w0 gk gv min max;
-              assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false);
-            }
+            with vout_w . assert (pts_to out vout_w);
+            with c_w v_w . assert (r _ _ c_w v_w);
+            with m_w . assert (GR.pts_to gm m_w);
+            with count_w . assert (pts_to out_count count_w);
+            impl_serialize_map_zero_or_more_insert_branch
+              insert sp1 sp2 except iterator r is_empty c0
+              out out_count out_size pres pc pem gm gmin gmax
+              vout_w c_w v_w min' max' m_w count_w
+              count' size0 size1 size2 vk vv w0 gk gv min max wk wv w_out2_tail;
           }
         }
       }
