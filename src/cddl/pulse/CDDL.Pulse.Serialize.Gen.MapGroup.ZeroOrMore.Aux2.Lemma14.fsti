@@ -29,13 +29,15 @@ val invariant_to_post
   (max: option nat)
   (res: bool)
   (l: cbor_map)
+  (count_init: Ghost.erased U64.t)
+  (size_init: Ghost.erased SZ.t)
+  (w_init: Ghost.erased (Seq.seq U8.t))
 : Lemma
   (requires
     impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res /\
     Seq.length vout == SZ.v (S.len out) /\
     (res == false \/ em == true) /\
-    (exists (count_init: U64.t) (size_init: SZ.t) (w_init: Seq.seq U8.t) .
-      impl_serialize_map_group_pre p count_init size_init l w_init)
+    impl_serialize_map_group_pre p (Ghost.reveal count_init) (Ghost.reveal size_init) l (Ghost.reveal w_init)
   )
   (ensures
     impl_serialize_map_group_post p minl maxl count size l (mg_zero_or_more_match_item sp1 sp2 except) v0 vout res

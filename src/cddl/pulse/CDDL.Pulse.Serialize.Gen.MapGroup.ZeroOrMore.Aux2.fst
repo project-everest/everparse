@@ -144,7 +144,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
         with max_ . assert (GR.pts_to gmax max_);
         with c_ v_ . assert (r _ _ c_ v_);
         S.pts_to_len out;
-        invariant_key_ser_fail p key tkey sp1 value tvalue inj sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_;
+        invariant_key_ser_fail p key tkey sp1 value tvalue inj sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ w0 gk gv min max;
         assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false);
       } else {
         with w_out1 . assert (pts_to out1 w_out1);
@@ -170,7 +170,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
           with max_ . assert (GR.pts_to gmax max_);
           with c_ v_ . assert (r _ _ c_ v_);
           S.pts_to_len out;
-          invariant_value_ser_fail p key tkey sp1 value tvalue inj sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_;
+          invariant_value_ser_fail p key tkey sp1 value tvalue inj sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ w0 gk gv min max;
           assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false);
         } else {
           let ock = parse out1';
@@ -212,7 +212,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
             with min_ . assert (GR.pts_to gmin min_);
             with max_ . assert (GR.pts_to gmax max_);
             with c_ v_ . assert (r _ _ c_ v_);
-            invariant_excluded p key tkey sp1 value tvalue inj sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_;
+            invariant_excluded p key tkey sp1 value tvalue inj sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ w0 gk gv min max;
             assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false);
           } else {
             let size1' = SZ.add size0 size1;
@@ -239,7 +239,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
               with max_ . assert (GR.pts_to gmax max_);
               with size_ . assert (pts_to out_size size_);
               with count_ . assert (pts_to out_count count_);
-              invariant_insert_success p key tkey sp1 value tvalue inj sp2 except em' out vout' size_ count_ m_ v0 v' min_ max_;
+              invariant_insert_success p key tkey sp1 value tvalue inj sp2 except em' out vout' size_ count_ m_ v0 v' min_ max_ w0 gk gv min max;
               assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em' out vout' size_ count_ m_ v0 v' min_ max_ true);
             } else {
               pres := false;
@@ -252,7 +252,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
               with max_ . assert (GR.pts_to gmax max_);
               with c_ v_ . assert (r _ _ c_ v_);
               S.pts_to_len out;
-              invariant_insert_dup p key tkey sp1 value tvalue inj sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_;
+              invariant_insert_dup p key tkey sp1 value tvalue inj sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ w0 gk gv min max;
               assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false);
             }
           }
@@ -274,7 +274,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
   with size' . assert (pts_to out_size size');
   with res' . assert (pts_to pres res');
   S.pts_to_len out;
-  invariant_to_post p key tkey sp1 value tvalue inj sp2 except em_final out w' size' count' m_final v0 v_final min_final max_final res' l;
+  invariant_to_post p key tkey sp1 value tvalue inj sp2 except em_final out w' size' count' m_final v0 v_final min_final max_final res' l count0 size0 w0;
   assert pure (impl_serialize_map_group_post p minl maxl count' size' l (mg_zero_or_more_match_item sp1 sp2 except) v0 w' res');
   !pres
 }
