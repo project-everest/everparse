@@ -33,6 +33,7 @@ val invariant_value_ser_fail
   (gv: tvalue)
   (min_old: nat)
   (max_old: option nat)
+  (sz1: nat)
 : Lemma
   (requires
     em == false /\
@@ -42,7 +43,7 @@ val invariant_value_ser_fail
     map_of_list_maps_to_nonempty v /\
     impl_serialize_map_zero_or_more_iterator_gen_invariant_min p sp1 sp2 except min v0 v /\
     impl_serialize_map_zero_or_more_iterator_gen_invariant_max p sp1 sp2 except max v0 v /\
-    (exists (keq: EqTest.eq_test tkey) (sz1: nat) .
+    (exists (keq: EqTest.eq_test tkey) .
       impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout_old size count m v0 (map_of_list_cons keq gk gv v) min_old max_old true /\
       min == impl_serialize_map_zero_or_more_iterator_gen_update_min minl sp1 sp2 except min_old gk gv /\
       max == impl_serialize_map_zero_or_more_iterator_gen_update_max maxl sp1 sp2 except max_old gk gv /\
