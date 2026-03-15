@@ -196,8 +196,18 @@ let impl_serialize_map_zero_or_more_iterator_gen_invariant2
   (min: nat)
   (max: option nat)
   (res: bool)
+  (l: cbor_map)
 : prop
-= admit ()
+= impl_serialize_map_zero_or_more_iterator_gen_invariant1 p sp1 sp2 except em out vout size count m v0 v min max res /\
+  (let sp = mg_zero_or_more_match_item sp1 sp2 except in
+   (res == true ==> sp.mg_serializable v0 ==> (
+     sp.mg_serializable v /\
+     cbor_map_union l (sp.mg_serializer v0) == cbor_map_union m (sp.mg_serializer v)
+   )) /\
+   (res == false ==>
+     ~ (impl_serialize_map_group_valid maxl l sp v0 (Seq.length vout))
+   )
+  )
 
 val impl_serialize_map_zero_or_more_iterator_gen_invariant
   (#pe: cbor_parser)
@@ -221,6 +231,7 @@ val impl_serialize_map_zero_or_more_iterator_gen_invariant
   (min: nat)
   (max: option nat)
   (res: bool)
+  (l: cbor_map)
 : prop
 
 val impl_serialize_map_zero_or_more_iterator_gen_invariant_reveal
@@ -245,7 +256,8 @@ val impl_serialize_map_zero_or_more_iterator_gen_invariant_reveal
   (min: nat)
   (max: option nat)
   (res: bool)
+  (l: cbor_map)
 : Lemma
-  (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res <==>
-    impl_serialize_map_zero_or_more_iterator_gen_invariant2 p sp1 sp2 except em out vout size count m v0 v min max res
+  (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res l <==>
+    impl_serialize_map_zero_or_more_iterator_gen_invariant2 p sp1 sp2 except em out vout size count m v0 v min max res l
   )

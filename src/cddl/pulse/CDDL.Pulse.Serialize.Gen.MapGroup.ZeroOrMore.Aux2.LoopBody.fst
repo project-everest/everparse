@@ -78,6 +78,7 @@ fn impl_serialize_map_zero_or_more_loop_body
     (m: Ghost.erased cbor_map)
     (min: Ghost.erased nat)
     (max: Ghost.erased (option nat))
+    (l: Ghost.erased cbor_map)
 requires
       pts_to out vout **
       pts_to pc c **
@@ -91,7 +92,7 @@ requires
       pts_to out_size size **
       pts_to out_count count **
       pure (
-        impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res /\
+        impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res l /\
         Ghost.reveal res == true /\ Ghost.reveal em == false
       )
 ensures exists* c v em res vout size count m min max .
@@ -107,7 +108,7 @@ ensures exists* c v em res vout size count m min max .
       pts_to out_size size **
       pts_to out_count count **
       pure (
-        impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res
+        impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res l
       )
 {
     let count = !out_count;
@@ -121,8 +122,8 @@ ensures exists* c v em res vout size count m min max .
       with min_ . assert (GR.pts_to gmin min_);
       with max_ . assert (GR.pts_to gmax max_);
       with c_ v_ . assert (r _ _ c_ v_);
-      invariant_count_overflow p key tkey sp1 value tvalue inj sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_;
-      assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false);
+      invariant_count_overflow p key tkey sp1 value tvalue inj sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ l;
+      assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false l);
     } else {
       let count' = U64.add count 1uL;
       S.pts_to_len out;
@@ -162,8 +163,8 @@ ensures exists* c v em res vout size count m min max .
         with max_ . assert (GR.pts_to gmax max_);
         with c_ v_ . assert (r _ _ c_ v_);
         S.pts_to_len out;
-        invariant_key_ser_fail p key tkey sp1 value tvalue inj sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ w0 gk gv min max;
-        assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false);
+        invariant_key_ser_fail p key tkey sp1 value tvalue inj sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ w0 gk gv min max l;
+        assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false l);
       } else {
         with w_out1 . assert (pts_to out1 w_out1);
         impl_serialize_parse_some minl maxl sp1 gk w_out1 size1;
@@ -188,8 +189,8 @@ ensures exists* c v em res vout size count m min max .
           with max_ . assert (GR.pts_to gmax max_);
           with c_ v_ . assert (r _ _ c_ v_);
           S.pts_to_len out;
-          invariant_value_ser_fail p key tkey sp1 value tvalue inj sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ w0 gk gv min max (SZ.v size1);
-          assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false);
+          invariant_value_ser_fail p key tkey sp1 value tvalue inj sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ w0 gk gv min max (SZ.v size1) l;
+          assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false l);
         } else {
           let ock = parse out1';
           let Some ck_ = ock;
@@ -230,8 +231,8 @@ ensures exists* c v em res vout size count m min max .
             with min_ . assert (GR.pts_to gmin min_);
             with max_ . assert (GR.pts_to gmax max_);
             with c_ v_ . assert (r _ _ c_ v_);
-            invariant_excluded p key tkey sp1 value tvalue inj sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ w0 gk gv min max;
-            assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false);
+            invariant_excluded p key tkey sp1 value tvalue inj sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ w0 gk gv min max l;
+            assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false l);
           } else {
             with vout_w . assert (pts_to out vout_w);
             with c_w v_w . assert (r _ _ c_w v_w);
@@ -241,7 +242,7 @@ ensures exists* c v em res vout size count m min max .
               insert sp1 sp2 except iterator r is_empty c0
               out out_count out_size pres pc pem gm gmin gmax
               vout_w c_w v_w min' max' m_w count_w
-              count' size0 size1 size2 vk vv w0 gk gv min max wk wv w_out2_tail;
+              count' size0 size1 size2 vk vv w0 gk gv min max wk wv w_out2_tail l;
           }
         }
       }

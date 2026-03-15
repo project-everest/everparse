@@ -62,7 +62,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
   let gmin = GR.alloc (0 <: nat);
   let gmax = GR.alloc (Some 0 <: option nat);
   invariant_init p key tkey sp1 value tvalue inj sp2 except em0 out w0 size0 count0 l v0;
-  assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em0 out w0 size0 count0 l v0 v0 0 (Some 0) true);
+  assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em0 out w0 size0 count0 l v0 v0 0 (Some 0) true l);
   while (
     !pres && not !pem
   )
@@ -79,14 +79,14 @@ fn impl_serialize_map_zero_or_more_iterator_gen
     pts_to out_size size **
     pts_to out_count count **
     pure (
-      impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res
+      impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res l
     )
   {
     with c_ v_ em_ res_ vout_ size_ count_ m_ min_ max_ . _;
     impl_serialize_map_zero_or_more_loop_body
       parse mk_map_entry insert key_eq pa1 pa2 va_ex iterator r is_empty next rel_len
       c0 out out_count out_size pres pc pem gm gmin gmax
-      c_ v_ em_ res_ vout_ size_ count_ m_ min_ max_
+      c_ v_ em_ res_ vout_ size_ count_ m_ min_ max_ l
   };
   with em_final . assert (pts_to pem em_final);
   with m_final . assert (GR.pts_to gm m_final);

@@ -50,6 +50,7 @@ let insert_branch_pure_pre
   (wk: Seq.seq U8.t)
   (wv: Seq.seq U8.t)
   (w_out2_tail: Seq.seq U8.t)
+  (l: cbor_map)
 : prop
 =
     Seq.length vout_cur == SZ.v (S.len out) /\
@@ -74,7 +75,7 @@ let insert_branch_pure_pre
     pe wv == Some (vv, SZ.v size2) /\
     cbor_map_length m_cur == U64.v count_old /\
     (exists (keq: EqTest.eq_test tkey) .
-      impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except false out w0_old size0 count_old m_cur v0 (map_of_list_cons keq gk gv v_cur) min_old max_old true /\
+      impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except false out w0_old size0 count_old m_cur v0 (map_of_list_cons keq gk gv v_cur) min_old max_old true l /\
       min_cur == impl_serialize_map_zero_or_more_iterator_gen_update_min minl sp1 sp2 except min_old gk gv /\
       max_cur == impl_serialize_map_zero_or_more_iterator_gen_update_max maxl sp1 sp2 except max_old gk gv)
 
@@ -128,6 +129,7 @@ val impl_serialize_map_zero_or_more_insert_branch
     (wk: Ghost.erased (Seq.seq U8.t))
     (wv: Ghost.erased (Seq.seq U8.t))
     (w_out2_tail: Ghost.erased (Seq.seq U8.t))
+    (l: Ghost.erased cbor_map)
 : stt unit
     (
       pts_to out vout_cur **
@@ -142,7 +144,7 @@ val impl_serialize_map_zero_or_more_insert_branch
       pts_to out_size size0 **
       pts_to out_count count_old **
       pure (
-        insert_branch_pure_pre p sp1 sp2 except out vout_cur v_cur min_cur max_cur m_cur count_old count' v0 size0 size1 size2 vk vv w0_old gk gv min_old max_old wk wv w_out2_tail
+        insert_branch_pure_pre p sp1 sp2 except out vout_cur v_cur min_cur max_cur m_cur count_old count' v0 size0 size1 size2 vk vv w0_old gk gv min_old max_old wk wv w_out2_tail l
       )
     )
     (fun _ -> exists* c v em res vout size count m min max .
@@ -158,6 +160,6 @@ val impl_serialize_map_zero_or_more_insert_branch
       pts_to out_size size **
       pts_to out_count count **
       pure (
-        impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res
+        impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res l
       )
     )

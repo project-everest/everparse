@@ -34,5 +34,5 @@ val invariant_init
     (em0 == true <==> v0 == Map.empty _ _)
   )
   (ensures
-    impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em0 out w0 size0 count0 l v0 v0 0 (Some 0) true
+    impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em0 out w0 size0 count0 l v0 v0 0 (Some 0) true l
   )

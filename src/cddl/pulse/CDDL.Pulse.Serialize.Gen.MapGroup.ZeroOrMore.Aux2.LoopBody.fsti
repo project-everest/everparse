@@ -76,6 +76,7 @@ val impl_serialize_map_zero_or_more_loop_body
     (m: Ghost.erased cbor_map)
     (min: Ghost.erased nat)
     (max: Ghost.erased (option nat))
+    (l: Ghost.erased cbor_map)
 : stt unit
     (
       pts_to out vout **
@@ -90,7 +91,7 @@ val impl_serialize_map_zero_or_more_loop_body
       pts_to out_size size **
       pts_to out_count count **
       pure (
-        impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res /\
+        impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res l /\
         Ghost.reveal res == true /\ Ghost.reveal em == false
       )
     )
@@ -107,6 +108,6 @@ val impl_serialize_map_zero_or_more_loop_body
       pts_to out_size size **
       pts_to out_count count **
       pure (
-        impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res
+        impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res l
       )
     )

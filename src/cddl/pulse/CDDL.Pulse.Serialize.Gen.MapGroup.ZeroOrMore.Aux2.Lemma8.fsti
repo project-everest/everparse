@@ -27,12 +27,13 @@ val invariant_count_overflow
   (v0 v: Map.t tkey (list tvalue))
   (min: nat)
   (max: option nat)
+  (l: cbor_map)
 : Lemma
   (requires
-    impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max true /\
+    impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max true l /\
     em == false /\
     U64.v count == pow2 64 - 1
   )
   (ensures
-    impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max false
+    impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max false l
   )

@@ -37,18 +37,19 @@ val invariant_insert_success
   (size_old: SZ.t)
   (count_old: U64.t)
   (m_old: cbor_map)
+  (l: cbor_map)
 : Lemma
   (requires
     map_of_list_maps_to_nonempty v /\
     impl_serialize_map_zero_or_more_iterator_gen_invariant_min p sp1 sp2 except min v0 v /\
     impl_serialize_map_zero_or_more_iterator_gen_invariant_max p sp1 sp2 except max v0 v /\
     (exists (keq: EqTest.eq_test tkey) .
-      impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_old out vout_old size_old count_old m_old v0 (map_of_list_cons keq gk gv v) min_old max_old true /\
+      impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_old out vout_old size_old count_old m_old v0 (map_of_list_cons keq gk gv v) min_old max_old true l /\
       min == impl_serialize_map_zero_or_more_iterator_gen_update_min minl sp1 sp2 except min_old gk gv /\
       max == impl_serialize_map_zero_or_more_iterator_gen_update_max maxl sp1 sp2 except max_old gk gv /\
       sp1.serializable gk /\ sp2.serializable gv /\
       except (sp1.serializer gk, sp2.serializer gv) == false)
   )
   (ensures
-    impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max true
+    impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max true l
   )
