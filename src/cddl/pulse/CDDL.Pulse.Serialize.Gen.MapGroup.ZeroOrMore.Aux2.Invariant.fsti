@@ -202,8 +202,10 @@ let impl_serialize_map_zero_or_more_iterator_gen_invariant2
   (let sp = mg_zero_or_more_match_item sp1 sp2 except in
    (res == true ==> sp.mg_serializable v0 ==> (
      sp.mg_serializable v /\
+     (cbor_map_disjoint_tot l (sp.mg_serializer v0) <==> cbor_map_disjoint m (sp.mg_serializer v)) /\
      cbor_map_union l (sp.mg_serializer v0) == cbor_map_union m (sp.mg_serializer v)
    )) /\
+   (res == true ==> sp.mg_serializable v ==> sp.mg_serializable v0) /\
    (res == false ==>
      ~ (impl_serialize_map_group_valid maxl l sp v0 (Seq.length vout))
    )
