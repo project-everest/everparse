@@ -18,6 +18,66 @@ module Iterator = CDDL.Pulse.Iterator.Base
 module EqTest = CDDL.Spec.EqTest
 module Map = CDDL.Spec.Map
 
+let insert_branch_pure_pre
+  (#pe: cbor_parser)
+  (#minl: cbor_min_length pe)
+  (#maxl: cbor_max_length pe)
+  (p: cbor_map_parser minl maxl)
+  (#key: typ) (#tkey: Type0)
+  (sp1: spec key tkey true)
+  (#value: typ) (#tvalue: Type0) (#inj: bool)
+  (sp2: spec value tvalue inj)
+  (except: map_constraint { inj \/ map_constraint_value_injective key sp2.parser except })
+  (out: S.slice U8.t)
+  (vout_cur: Seq.seq U8.t)
+  (v_cur: Map.t tkey (list tvalue))
+  (min_cur: nat)
+  (max_cur: option nat)
+  (m_cur: cbor_map)
+  (count_old: U64.t)
+  (count': U64.t)
+  (v0: Map.t tkey (list tvalue))
+  (size0: SZ.t)
+  (size1: SZ.t)
+  (size2: SZ.t)
+  (vk: cbor)
+  (vv: cbor)
+  (w0_old: Seq.seq U8.t)
+  (gk: tkey)
+  (gv: tvalue)
+  (min_old: nat)
+  (max_old: option nat)
+  (wk: Seq.seq U8.t)
+  (wv: Seq.seq U8.t)
+  (w_out2_tail: Seq.seq U8.t)
+: prop
+=
+    Seq.length vout_cur == SZ.v (S.len out) /\
+    SZ.v size0 <= Seq.length vout_cur /\
+    SZ.v size0 + SZ.v size1 <= SZ.v (S.len out) /\
+    SZ.v size0 + SZ.v size1 + SZ.v size2 <= SZ.v (S.len out) /\
+    U64.v count_old <> pow2 64 - 1 /\
+    U64.v count' == U64.v count_old + 1 /\
+    map_of_list_maps_to_nonempty v_cur /\
+    impl_serialize_map_zero_or_more_iterator_gen_invariant_min p sp1 sp2 except min_cur v0 v_cur /\
+    impl_serialize_map_zero_or_more_iterator_gen_invariant_max p sp1 sp2 except max_cur v0 v_cur /\
+    sp1.serializable gk /\ sp2.serializable gv /\
+    except (sp1.serializer gk, sp2.serializer gv) == false /\
+    vk == sp1.serializer gk /\
+    vv == sp2.serializer gv /\
+    SZ.v size0 <= Seq.length w0_old /\
+    Seq.length wk == SZ.v size1 /\
+    Seq.length wv == SZ.v size2 /\
+    vout_cur == Seq.append (Seq.slice w0_old 0 (SZ.v size0)) (Seq.append wk (Seq.append wv w_out2_tail)) /\
+    p (cbor_map_length m_cur) (Seq.slice w0_old 0 (SZ.v size0)) == Some (m_cur, SZ.v size0) /\
+    pe wk == Some (vk, SZ.v size1) /\
+    pe wv == Some (vv, SZ.v size2) /\
+    cbor_map_length m_cur == U64.v count_old /\
+    (exists (keq: EqTest.eq_test tkey) .
+      impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except false out w0_old size0 count_old m_cur v0 (map_of_list_cons keq gk gv v_cur) min_old max_old true /\
+      min_cur == impl_serialize_map_zero_or_more_iterator_gen_update_min minl sp1 sp2 except min_old gk gv /\
+      max_cur == impl_serialize_map_zero_or_more_iterator_gen_update_max maxl sp1 sp2 except max_old gk gv)
+
 inline_for_extraction noextract [@@noextract_to "krml"]
 val impl_serialize_map_zero_or_more_insert_branch
   (#pe: Ghost.erased cbor_parser)
@@ -81,7 +141,9 @@ val impl_serialize_map_zero_or_more_insert_branch
       GR.pts_to gmax max_cur **
       pts_to out_size size0 **
       pts_to out_count count_old **
-      pure True
+      pure (
+        insert_branch_pure_pre p sp1 sp2 except out vout_cur v_cur min_cur max_cur m_cur count_old count' v0 size0 size1 size2 vk vv w0_old gk gv min_old max_old wk wv w_out2_tail
+      )
     )
     (fun _ -> exists* c v em res vout size count m min max .
       pts_to out vout **
