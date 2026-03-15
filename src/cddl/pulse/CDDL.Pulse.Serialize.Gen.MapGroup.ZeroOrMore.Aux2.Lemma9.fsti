@@ -28,11 +28,11 @@ val invariant_key_ser_fail
   (v0 v: Map.t tkey (list tvalue))
   (min: nat)
   (max: option nat)
-  (vout_old: Ghost.erased (Seq.seq U8.t))
-  (gk: Ghost.erased tkey)
-  (gv: Ghost.erased tvalue)
-  (min_old: Ghost.erased nat)
-  (max_old: Ghost.erased (option nat))
+  (vout_old: Seq.seq U8.t)
+  (gk: tkey)
+  (gv: tvalue)
+  (min_old: nat)
+  (max_old: option nat)
 : Lemma
   (requires
     em == false /\
@@ -43,10 +43,10 @@ val invariant_key_ser_fail
     impl_serialize_map_zero_or_more_iterator_gen_invariant_min p sp1 sp2 except min v0 v /\
     impl_serialize_map_zero_or_more_iterator_gen_invariant_max p sp1 sp2 except max v0 v /\
     (exists (keq: EqTest.eq_test tkey) .
-      impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out (Ghost.reveal vout_old) size count m v0 (map_of_list_cons keq (Ghost.reveal gk) (Ghost.reveal gv) v) (Ghost.reveal min_old) (Ghost.reveal max_old) true /\
-      min == impl_serialize_map_zero_or_more_iterator_gen_update_min minl sp1 sp2 except (Ghost.reveal min_old) (Ghost.reveal gk) (Ghost.reveal gv) /\
-      max == impl_serialize_map_zero_or_more_iterator_gen_update_max maxl sp1 sp2 except (Ghost.reveal max_old) (Ghost.reveal gk) (Ghost.reveal gv) /\
-      ~ (sp1.serializable (Ghost.reveal gk) /\ Some? (maxl (sp1.serializer (Ghost.reveal gk))) /\ Some?.v (maxl (sp1.serializer (Ghost.reveal gk))) <= Seq.length vout - SZ.v size))
+      impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout_old size count m v0 (map_of_list_cons keq gk gv v) min_old max_old true /\
+      min == impl_serialize_map_zero_or_more_iterator_gen_update_min minl sp1 sp2 except min_old gk gv /\
+      max == impl_serialize_map_zero_or_more_iterator_gen_update_max maxl sp1 sp2 except max_old gk gv /\
+      ~ (sp1.serializable gk /\ Some? (maxl (sp1.serializer gk)) /\ Some?.v (maxl (sp1.serializer gk)) <= Seq.length vout - SZ.v size))
   )
   (ensures
     impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max false
