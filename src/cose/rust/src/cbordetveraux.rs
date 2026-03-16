@@ -362,20 +362,14 @@ pub(crate) fn impl_correct(s: &[u8]) -> bool
     let mut pi: [usize; 1] = [0usize; 1usize];
     let len: usize = s.len();
     let res: bool = (&pres)[0];
-    let mut cond: bool =
-        if res
-        {
-            let i: usize = (&pi)[0];
-            i < len
-        }
-        else
-        { false };
+    let i: usize = (&pi)[0];
+    let mut cond: bool = res && i < len;
     while
     cond
     {
-        let i: usize = (&pi)[0];
-        let byte1: u8 = s[i];
-        let i1: usize = i.wrapping_add(1usize);
+        let i0: usize = (&pi)[0];
+        let byte1: u8 = s[i0];
+        let i1: usize = i0.wrapping_add(1usize);
         if byte1 <= 0x7Fu8
         { (&mut pi)[0] = i1 }
         else if i1 == len
@@ -431,15 +425,8 @@ pub(crate) fn impl_correct(s: &[u8]) -> bool
             }
         };
         let res0: bool = (&pres)[0];
-        let ite: bool =
-            if res0
-            {
-                let i0: usize = (&pi)[0];
-                i0 < len
-            }
-            else
-            { false };
-        cond = ite
+        let i2: usize = (&pi)[0];
+        cond = res0 && i2 < len
     };
     (&pres)[0]
 }
@@ -1899,23 +1886,17 @@ pub(crate) fn cbor_raw_map_insert(out: &mut [u8], off2: usize, off3: usize) -> b
     let mut pres: [cbor_raw_map_insert_result; 1] =
         [cbor_raw_map_insert_result::CInProgress; 1usize];
     let res: cbor_raw_map_insert_result = (&pres)[0];
-    let mut cond: bool =
-        if uu___is_CInProgress(res)
-        {
-            let off: usize = (&poff)[0];
-            off < off2
-        }
-        else
-        { false };
+    let off: usize = (&poff)[0];
+    let mut cond: bool = uu___is_CInProgress(res) && off < off2;
     while
     cond
     {
-        let off: usize = (&poff)[0];
-        let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(off);
+        let off0: usize = (&poff)[0];
+        let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(off0);
         {
             let _out1: &[u8] = _letpattern.0;
             let out2kv: &mut [u8] = _letpattern.1;
-            let _letpattern1: (&[u8], &[u8]) = out2kv.split_at(off2.wrapping_sub(off));
+            let _letpattern1: (&[u8], &[u8]) = out2kv.split_at(off2.wrapping_sub(off0));
             let out2: &[u8] = _letpattern1.0;
             let outkv: &[u8] = _letpattern1.1;
             let _letpattern2: (&[u8], &[u8]) = outkv.split_at(off3.wrapping_sub(off2));
@@ -1929,15 +1910,15 @@ pub(crate) fn cbor_raw_map_insert(out: &mut [u8], off2: usize, off3: usize) -> b
             if c < 0i16
             {
                 let offq: usize = cbor_jump(outvq, 0usize);
-                let off·: usize = off.wrapping_add(offk.wrapping_add(offq));
+                let off·: usize = off0.wrapping_add(offk.wrapping_add(offq));
                 (&mut poff)[0] = off·
             }
             else if c > 0i16
             {
-                if ! (off2.wrapping_sub(off) == 0usize || off2.wrapping_sub(off) == out2kv.len())
+                if ! (off2.wrapping_sub(off0) == 0usize || off2.wrapping_sub(off0) == out2kv.len())
                 {
                     let mut pn: [usize; 1] = [out2kv.len(); 1usize];
-                    let mut pl: [usize; 1] = [off2.wrapping_sub(off); 1usize];
+                    let mut pl: [usize; 1] = [off2.wrapping_sub(off0); 1usize];
                     let __anf0: usize = (&pl)[0];
                     let mut cond0: bool = __anf0 > 0usize;
                     while
@@ -1974,14 +1955,14 @@ pub(crate) fn cbor_raw_map_insert(out: &mut [u8], off2: usize, off3: usize) -> b
                                 if
                                 idx.wrapping_sub(0usize)
                                 >=
-                                out2kv.len().wrapping_sub(off2.wrapping_sub(off))
+                                out2kv.len().wrapping_sub(off2.wrapping_sub(off0))
                                 {
                                     idx.wrapping_sub(
-                                        out2kv.len().wrapping_sub(off2.wrapping_sub(off))
+                                        out2kv.len().wrapping_sub(off2.wrapping_sub(off0))
                                     )
                                 }
                                 else
-                                { idx.wrapping_add(off2.wrapping_sub(off).wrapping_sub(0usize)) };
+                                { idx.wrapping_add(off2.wrapping_sub(off0).wrapping_sub(0usize)) };
                             let x: u8 = out2kv[idx·];
                             let j·: usize = j.wrapping_add(1usize);
                             out2kv[idx] = x;
@@ -2004,15 +1985,8 @@ pub(crate) fn cbor_raw_map_insert(out: &mut [u8], off2: usize, off3: usize) -> b
             { (&mut pres)[0] = cbor_raw_map_insert_result::CFailure }
         };
         let res0: cbor_raw_map_insert_result = (&pres)[0];
-        let ite: bool =
-            if uu___is_CInProgress(res0)
-            {
-                let off0: usize = (&poff)[0];
-                off0 < off2
-            }
-            else
-            { false };
-        cond = ite
+        let off1: usize = (&poff)[0];
+        cond = uu___is_CInProgress(res0) && off1 < off2
     };
     let res0: cbor_raw_map_insert_result = (&pres)[0];
     match res0

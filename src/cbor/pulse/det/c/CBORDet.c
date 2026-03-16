@@ -168,12 +168,7 @@ static bool impl_correct(Pulse_Lib_Slice_slice__uint8_t s)
   bool pres = true;
   size_t pi = (size_t)0U;
   size_t len = len__uint8_t(s);
-  bool cond;
-  if (pres)
-    cond = pi < len;
-  else
-    cond = false;
-  while (cond)
+  while (pres && pi < len)
   {
     size_t i = pi;
     uint8_t byte1 = op_Array_Access__uint8_t(s, i);
@@ -227,12 +222,6 @@ static bool impl_correct(Pulse_Lib_Slice_slice__uint8_t s)
         }
       }
     }
-    bool ite;
-    if (pres)
-      ite = pi < len;
-    else
-      ite = false;
-    cond = ite;
   }
   return pres;
 }
@@ -1710,11 +1699,8 @@ static bool cbor_raw_map_insert(Pulse_Lib_Slice_slice__uint8_t out, size_t off2,
 {
   size_t poff = (size_t)0U;
   cbor_raw_map_insert_result pres = CInProgress;
-  bool cond;
-  if (uu___is_CInProgress(pres))
-    cond = poff < off2;
-  else
-    cond = false;
+  size_t off0 = poff;
+  bool cond = uu___is_CInProgress(pres) && off0 < off2;
   while (cond)
   {
     size_t off = poff;
@@ -1774,12 +1760,8 @@ static bool cbor_raw_map_insert(Pulse_Lib_Slice_slice__uint8_t out, size_t off2,
     }
     else
       pres = CFailure;
-    bool ite;
-    if (uu___is_CInProgress(pres))
-      ite = poff < off2;
-    else
-      ite = false;
-    cond = ite;
+    size_t off0 = poff;
+    cond = uu___is_CInProgress(pres) && off0 < off2;
   }
   switch (pres)
   {

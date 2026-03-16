@@ -164,20 +164,14 @@ pub(crate) fn impl_correct(s: &[u8]) -> bool
     let mut pi: [usize; 1] = [0usize; 1usize];
     let len: usize = s.len();
     let res: bool = (&pres)[0];
-    let mut cond: bool =
-        if res
-        {
-            let i: usize = (&pi)[0];
-            i < len
-        }
-        else
-        { false };
+    let i: usize = (&pi)[0];
+    let mut cond: bool = res && i < len;
     while
     cond
     {
-        let i: usize = (&pi)[0];
-        let byte1: u8 = s[i];
-        let i1: usize = i.wrapping_add(1usize);
+        let i0: usize = (&pi)[0];
+        let byte1: u8 = s[i0];
+        let i1: usize = i0.wrapping_add(1usize);
         if byte1 <= 0x7Fu8
         { (&mut pi)[0] = i1 }
         else if i1 == len
@@ -233,15 +227,8 @@ pub(crate) fn impl_correct(s: &[u8]) -> bool
             }
         };
         let res0: bool = (&pres)[0];
-        let ite: bool =
-            if res0
-            {
-                let i0: usize = (&pi)[0];
-                i0 < len
-            }
-            else
-            { false };
-        cond = ite
+        let i2: usize = (&pi)[0];
+        cond = res0 && i2 < len
     };
     (&pres)[0]
 }
@@ -5812,9 +5799,6 @@ fn cbor_match_compare_serialized_map(c1: cbor_serialized, c2: cbor_serialized) -
     { false }
 }
 
-fn uu___is_Some__bool(projectee: option__bool) -> bool
-{ match projectee { option__bool::Some { .. } => true, _ => false } }
-
 pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
 {
     let mt1: u8 = impl_major_type(x1);
@@ -6018,16 +6002,10 @@ pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
                 let mut pi1: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] = [i1; 1usize];
                 let mut pi2: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] = [i2; 1usize];
                 let mut pres: [bool; 1] = [true; 1usize];
-                let __anf0: bool = (&pres)[0];
-                let mut cond: bool =
-                    if __anf0
-                    {
-                        let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = (&pi1)[0];
-                        let __anf01: bool = cbor_array_iterator_is_empty(i11);
-                        ! __anf01
-                    }
-                    else
-                    { false };
+                let res: bool = (&pres)[0];
+                let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = (&pi1)[0];
+                let __anf0: bool = cbor_array_iterator_is_empty(i11);
+                let mut cond: bool = res && ! __anf0;
                 while
                 cond
                 {
@@ -6035,17 +6013,10 @@ pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
                     let y2: cbor_raw = cbor_array_iterator_next(&mut pi2);
                     let __anf00: bool = cbor_nondet_equiv(y1, y2);
                     (&mut pres)[0] = __anf00;
-                    let __anf01: bool = (&pres)[0];
-                    let ite: bool =
-                        if __anf01
-                        {
-                            let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = (&pi1)[0];
-                            let __anf010: bool = cbor_array_iterator_is_empty(i11);
-                            ! __anf010
-                        }
-                        else
-                        { false };
-                    cond = ite
+                    let res0: bool = (&pres)[0];
+                    let i110: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = (&pi1)[0];
+                    let __anf01: bool = cbor_array_iterator_is_empty(i110);
+                    cond = res0 && ! __anf01
                 };
                 (&pres)[0]
             }
@@ -6081,32 +6052,20 @@ pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
         let i2: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = cbor_map_iterator_init(x2);
         let mut pi2: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] = [i1; 1usize];
         let mut pres: [bool; 1] = [true; 1usize];
-        let __anf0: bool = (&pres)[0];
-        let mut cond: bool =
-            if __anf0
-            {
-                let i21: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi2)[0];
-                let __anf01: bool = cbor_map_iterator_is_empty(i21);
-                ! __anf01
-            }
-            else
-            { false };
+        let res: bool = (&pres)[0];
+        let i21: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi2)[0];
+        let __anf0: bool = cbor_map_iterator_is_empty(i21);
+        let mut cond: bool = res && ! __anf0;
         while
         cond
         {
             let x21: cbor_map_entry = cbor_map_iterator_next(&mut pi2);
             let mut pi1: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] = [i2; 1usize];
             let mut pres1: [option__bool; 1] = [option__bool::None; 1usize];
-            let __anf00: option__bool = (&pres1)[0];
-            let mut cond0: bool =
-                if uu___is_Some__bool(__anf00)
-                { false }
-                else
-                {
-                    let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi1)[0];
-                    let __anf01: bool = cbor_map_iterator_is_empty(i11);
-                    ! __anf01
-                };
+            let res0: option__bool = (&pres1)[0];
+            let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi1)[0];
+            let __anf00: bool = cbor_map_iterator_is_empty(i11);
+            let mut cond0: bool = uu___is_None__bool(res0) && ! __anf00;
             while
             cond0
             {
@@ -6119,32 +6078,18 @@ pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
                         cbor_nondet_equiv(x21.cbor_map_entry_value, x11.cbor_map_entry_value);
                     (&mut pres1)[0] = option__bool::Some { v: __anf010 }
                 };
-                let __anf02: option__bool = (&pres1)[0];
-                let ite: bool =
-                    if uu___is_Some__bool(__anf02)
-                    { false }
-                    else
-                    {
-                        let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi1)[0];
-                        let __anf010: bool = cbor_map_iterator_is_empty(i11);
-                        ! __anf010
-                    };
-                cond0 = ite
+                let res1: option__bool = (&pres1)[0];
+                let i110: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi1)[0];
+                let __anf02: bool = cbor_map_iterator_is_empty(i110);
+                cond0 = uu___is_None__bool(res1) && ! __anf02
             };
             let __anf01: option__bool = (&pres1)[0];
             let __anf02: bool = eq_Some_true(__anf01);
             (&mut pres)[0] = __anf02;
-            let __anf03: bool = (&pres)[0];
-            let ite: bool =
-                if __anf03
-                {
-                    let i21: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi2)[0];
-                    let __anf010: bool = cbor_map_iterator_is_empty(i21);
-                    ! __anf010
-                }
-                else
-                { false };
-            cond = ite
+            let res1: bool = (&pres)[0];
+            let i210: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi2)[0];
+            let __anf03: bool = cbor_map_iterator_is_empty(i210);
+            cond = res1 && ! __anf03
         };
         let __anf00: bool = (&pres)[0];
         if ! __anf00
@@ -6153,16 +6098,10 @@ pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
         {
             let mut pi20: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] = [i2; 1usize];
             let mut pres0: [bool; 1] = [true; 1usize];
-            let __anf01: bool = (&pres0)[0];
-            let mut cond0: bool =
-                if __anf01
-                {
-                    let i21: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi20)[0];
-                    let __anf02: bool = cbor_map_iterator_is_empty(i21);
-                    ! __anf02
-                }
-                else
-                { false };
+            let res0: bool = (&pres0)[0];
+            let i210: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi20)[0];
+            let __anf01: bool = cbor_map_iterator_is_empty(i210);
+            let mut cond0: bool = res0 && ! __anf01;
             while
             cond0
             {
@@ -6170,16 +6109,10 @@ pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
                 let mut pi1: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] =
                     [i1; 1usize];
                 let mut pres1: [option__bool; 1] = [option__bool::None; 1usize];
-                let __anf010: option__bool = (&pres1)[0];
-                let mut cond1: bool =
-                    if uu___is_Some__bool(__anf010)
-                    { false }
-                    else
-                    {
-                        let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi1)[0];
-                        let __anf02: bool = cbor_map_iterator_is_empty(i11);
-                        ! __anf02
-                    };
+                let res1: option__bool = (&pres1)[0];
+                let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi1)[0];
+                let __anf010: bool = cbor_map_iterator_is_empty(i11);
+                let mut cond1: bool = uu___is_None__bool(res1) && ! __anf010;
                 while
                 cond1
                 {
@@ -6192,33 +6125,18 @@ pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
                             cbor_nondet_equiv(x21.cbor_map_entry_value, x11.cbor_map_entry_value);
                         (&mut pres1)[0] = option__bool::Some { v: __anf02 }
                     };
-                    let __anf012: option__bool = (&pres1)[0];
-                    let ite: bool =
-                        if uu___is_Some__bool(__anf012)
-                        { false }
-                        else
-                        {
-                            let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-                                (&pi1)[0];
-                            let __anf02: bool = cbor_map_iterator_is_empty(i11);
-                            ! __anf02
-                        };
-                    cond1 = ite
+                    let res2: option__bool = (&pres1)[0];
+                    let i110: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi1)[0];
+                    let __anf012: bool = cbor_map_iterator_is_empty(i110);
+                    cond1 = uu___is_None__bool(res2) && ! __anf012
                 };
                 let __anf011: option__bool = (&pres1)[0];
                 let __anf012: bool = eq_Some_true(__anf011);
                 (&mut pres0)[0] = __anf012;
-                let __anf013: bool = (&pres0)[0];
-                let ite: bool =
-                    if __anf013
-                    {
-                        let i21: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi20)[0];
-                        let __anf02: bool = cbor_map_iterator_is_empty(i21);
-                        ! __anf02
-                    }
-                    else
-                    { false };
-                cond0 = ite
+                let res2: bool = (&pres0)[0];
+                let i211: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi20)[0];
+                let __anf013: bool = cbor_map_iterator_is_empty(i211);
+                cond0 = res2 && ! __anf013
             };
             (&pres0)[0]
         }
@@ -6229,15 +6147,9 @@ fn cbor_nondet_no_setoid_repeats(x: &[cbor_map_entry]) -> bool
 {
     let mut pn1: [usize; 1] = [0usize; 1usize];
     let mut pres: [bool; 1] = [true; 1usize];
-    let __anf0: bool = (&pres)[0];
-    let mut cond: bool =
-        if __anf0
-        {
-            let __anf01: usize = (&pn1)[0];
-            __anf01 < x.len()
-        }
-        else
-        { false };
+    let res: bool = (&pres)[0];
+    let __anf0: usize = (&pn1)[0];
+    let mut cond: bool = res && __anf0 < x.len();
     while
     cond
     {
@@ -6246,15 +6158,9 @@ fn cbor_nondet_no_setoid_repeats(x: &[cbor_map_entry]) -> bool
         let n2: usize = n1.wrapping_add(1usize);
         (&mut pn1)[0] = n2;
         let mut pn2: [usize; 1] = [n2; 1usize];
-        let __anf00: bool = (&pres)[0];
-        let mut cond0: bool =
-            if __anf00
-            {
-                let __anf01: usize = (&pn2)[0];
-                __anf01 < x.len()
-            }
-            else
-            { false };
+        let res0: bool = (&pres)[0];
+        let __anf00: usize = (&pn2)[0];
+        let mut cond0: bool = res0 && __anf00 < x.len();
         while
         cond0
         {
@@ -6263,27 +6169,13 @@ fn cbor_nondet_no_setoid_repeats(x: &[cbor_map_entry]) -> bool
             let __anf01: bool = cbor_nondet_equiv(x1.cbor_map_entry_key, x2.cbor_map_entry_key);
             (&mut pres)[0] = ! __anf01;
             (&mut pn2)[0] = n21.wrapping_add(1usize);
-            let __anf02: bool = (&pres)[0];
-            let ite: bool =
-                if __anf02
-                {
-                    let __anf010: usize = (&pn2)[0];
-                    __anf010 < x.len()
-                }
-                else
-                { false };
-            cond0 = ite
+            let res1: bool = (&pres)[0];
+            let __anf02: usize = (&pn2)[0];
+            cond0 = res1 && __anf02 < x.len()
         };
-        let __anf01: bool = (&pres)[0];
-        let ite: bool =
-            if __anf01
-            {
-                let __anf010: usize = (&pn1)[0];
-                __anf010 < x.len()
-            }
-            else
-            { false };
-        cond = ite
+        let res1: bool = (&pres)[0];
+        let __anf01: usize = (&pn1)[0];
+        cond = res1 && __anf01 < x.len()
     };
     (&pres)[0]
 }
