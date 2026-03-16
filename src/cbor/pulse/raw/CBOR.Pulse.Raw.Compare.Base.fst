@@ -152,7 +152,7 @@ fn impl_lex_compare
     let i1 = !pi1;
     let i2 = !pi2;
     (res = 0s && SZ.lt i1 n1)
-  ) invariant cont . exists* res i1 i2 . (
+  ) invariant exists* res i1 i2 . (
     pts_to s1.v #s1.p c1 ** SM.seq_list_match c1 v1 vmatch **
     pts_to s2.v #s2.p c2 ** SM.seq_list_match c2 v2 vmatch **
     pts_to pres res **
@@ -163,8 +163,6 @@ fn impl_lex_compare
       SZ.v i2 <= SZ.v n2 /\
       same_sign (lex_compare compare v1 v2) (if res = 0s then lex_compare' compare v1 v2 (SZ.v i1) (SZ.v i2) else I16.v res) /\
       (res == 0s ==> (SZ.lt i1 n1 == SZ.lt i2 n2))
-    ) ** pure (
-      cont == (res = 0s && SZ.lt i1 n1)
     )
   ) {
     let i1 = !pi1;

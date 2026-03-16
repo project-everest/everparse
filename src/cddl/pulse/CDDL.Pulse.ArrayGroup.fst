@@ -172,7 +172,7 @@ fn impl_array_group_zero_or_more
     while (
       let cont = !pcont;
       cont
-    ) invariant cont . exists* p' gi1 l1 .
+    ) invariant exists* cont p' gi1 l1 .
       R.pts_to pi gi1 **
       cbor_array_iterator_match p' gi1 l1 **
       Trade.trade

@@ -371,7 +371,7 @@ fn impl_check_equiv_list
       let n = !pn;
       (CBOR.Pulse.Raw.Util.eq_Some_true res && SZ.gt n 0sz)
     )
-    invariant b . exists* res n' l1' l2' gl1' gl2' .
+    invariant exists* res n' l1' l2' gl1' gl2' .
       pts_to pres res **
       pts_to pn n' **
       pts_to pl1 l1' **
@@ -385,8 +385,6 @@ fn impl_check_equiv_list
         (pts_to_serialized (serialize_nlist (SZ.v n') serialize_raw_data_item) l2' #p2 gl2')
         (pts_to_serialized (serialize_nlist (SZ.v n1) serialize_raw_data_item) l2 #p2 gl2) **
       pure (
-        b == ((res = Some true) && SZ.v n' > 0)
-      ) ** pure (
         list_sum raw_data_item_size gl1' + list_sum raw_data_item_size gl2' <= list_sum raw_data_item_size gl1 + list_sum raw_data_item_size gl2 /\
         check_equiv_list gl1 gl2 equiv == (if res = Some true then check_equiv_list gl1' gl2' equiv else res)
       )
@@ -649,7 +647,7 @@ ensures
     let res = !pres;
     let cont = !pcont;
     (SZ.gt n 0sz && CBOR.Pulse.Raw.Util.eq_Some_false res && cont)
-  ) invariant b . exists* l n (gl: nlist (SZ.v n) (raw_data_item & raw_data_item)) res cont .
+  ) invariant exists* l n (gl: nlist (SZ.v n) (raw_data_item & raw_data_item)) res cont .
     pts_to pll l **
     pts_to pn n **
     pts_to_serialized
@@ -668,8 +666,6 @@ ensures
     pts_to_serialized serialize_raw_data_item xr_value #pxr_value gxr_value **
     pts_to pcont cont **
     pure (
-      b == (SZ.v n > 0 && res = Some false && cont)
-    ) ** pure (
       list_sum (pair_sum raw_data_item_size raw_data_item_size) gl + (raw_data_item_size gxr_key + raw_data_item_size gxr_value) <= bound /\
       setoid_assoc_eq_with_overflow equiv equiv gll (Ghost.reveal gxr_key, Ghost.reveal gxr_value) == (if res = Some false && cont then setoid_assoc_eq_with_overflow equiv equiv gl (Ghost.reveal gxr_key, Ghost.reveal gxr_value) else res)
     )
@@ -828,7 +824,7 @@ ensures
     let n = !pn;
     let res = !pres;
     (SZ.gt n 0sz && (CBOR.Pulse.Raw.Util.eq_Some_true res))
-  ) invariant b . exists* l n (gl: nlist (SZ.v n) (raw_data_item & raw_data_item)) res .
+  ) invariant exists* l n (gl: nlist (SZ.v n) (raw_data_item & raw_data_item)) res .
     pts_to pl l **
     pts_to pn n **
     pts_to_serialized
@@ -845,8 +841,6 @@ ensures
     pts_to pres res **
     pts_to_serialized (serialize_nlist (SZ.v nl1) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l1 #pl1 gl1 **
     pure (
-      b == (SZ.v n > 0 && res = Some true)
-    ) ** pure (
       list_sum (pair_sum raw_data_item_size raw_data_item_size) gl1 + list_sum (pair_sum raw_data_item_size raw_data_item_size) gl <= bound /\
       list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv gl1) gl2 == (if res = Some true then list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv gl1) gl else res)
     )
@@ -1166,6 +1160,7 @@ fn impl_check_equiv_map_hd_body
         assert (pure (~ (long_argument_simple_value_prop (dfst h1))));
         assert (pure (~ (long_argument_simple_value_prop (dfst h2))));
         let nv1 = SZ.uint64_to_sizet (argument_as_uint64 (dfst h1) (dsnd h1));
+        assume (pure (SZ.fits_u64));
         let nv2 = SZ.uint64_to_sizet (argument_as_uint64 (dfst h2) (dsnd h2));
         let map1 = nlist_hd' serialize_raw_data_item (jump_raw_data_item ()) n1 l1 ();
         let mut ph = h1;
@@ -1361,7 +1356,7 @@ ensures
     let n = !pn;
     let res = !pres;
     (SZ.gt n 0sz && CBOR.Pulse.Raw.Util.eq_Some_false res)
-  ) invariant b . exists* n l (gl: nlist (SZ.v n) (raw_data_item & raw_data_item)) res . (
+  ) invariant exists* n l (gl: nlist (SZ.v n) (raw_data_item & raw_data_item)) res . (
     inv **
     pts_to pn n **
     pts_to pl l **
@@ -1371,8 +1366,6 @@ ensures
       (pts_to_serialized (serialize_nlist (SZ.v n0) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l0 #pm gl0) **
     pts_to pres res **
     pure (
-      b == (res = Some false && SZ.gt n 0sz)
-    ) ** pure (
       list_existsb_with_overflow p (List.Tot.map fst gl0) == (if res = Some false then list_existsb_with_overflow p (List.Tot.map fst gl) else res)
     )
   )
@@ -1467,7 +1460,7 @@ ensures
 
 module GR = Pulse.Lib.GhostReference
 
-#push-options "--z3rlimit 128"
+#push-options "--z3rlimit 256 --fuel 4 --ext 'context_pruning:off'"
 
 fn rec impl_check_map_depth_aux
   (bound: SZ.t)
@@ -1507,7 +1500,7 @@ ensures exists* l' gn' (gl': nlist gn' raw_data_item) .
     let res = !pres;
     let n = !pn;
     (res && (SZ.gt n 0sz))
-  ) invariant b . exists* n l gn (gl: nlist gn raw_data_item) res ll . (
+  ) invariant exists* n l gn (gl: nlist gn raw_data_item) res ll . (
     pts_to pn n **
     pts_to pl l **
     pts_to_serialized (serialize_nlist gn serialize_raw_data_item) l #pm gl **
@@ -1519,8 +1512,6 @@ ensures exists* l' gn' (gl': nlist gn' raw_data_item) .
     pure (
       check_map_depth (SZ.v bound) l1 == (res && check_map_depth (SZ.v bound) ll) /\
       (res ==> (List.Tot.length ll == SZ.v n /\ gn == SZ.v n + List.Tot.length l2 /\ (gl <: list raw_data_item) == List.Tot.append ll l2))
-    ) ** pure (
-      b == (res && SZ.v n > 0)
     )
   ) {
     let l = !pl;
@@ -1587,6 +1578,10 @@ ensures exists* l' gn' (gl': nlist gn' raw_data_item) .
           pn := n';
           ()
         } else {
+          raw_data_item_size_eq (List.Tot.hd ll);
+          list_of_pair_list_sum raw_data_item_size (Map?.v (List.Tot.hd ll));
+          assert (pure (check_map_depth (SZ.v (SZ.sub bound 1sz)) (Ghost.reveal ll') == false));
+          assert (pure (SZ.v bound > 0));
           pres := false
         }
       }
@@ -1688,7 +1683,7 @@ ensures
     let n = !pn;
     let res = !pres;
     (SZ.gt n 0sz && CBOR.Pulse.Raw.Util.eq_Some_true res)
-  ) invariant b . exists* n l (gl: nlist (SZ.v n) (raw_data_item & raw_data_item)) res . (
+  ) invariant exists* n l (gl: nlist (SZ.v n) (raw_data_item & raw_data_item)) res . (
     pts_to pn n **
     pts_to pl l **
     pts_to_serialized (serialize_nlist (SZ.v n) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l #pm gl **
@@ -1697,8 +1692,6 @@ ensures
       (pts_to_serialized (serialize_nlist (SZ.v n0) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l0 #pm gl0) **
     pts_to pres res **
     pure (
-      b == (res = Some true && SZ.gt n 0sz)
-    ) ** pure (
       list_no_setoid_repeats_with_overflow equiv (option_sz_v bound) (List.Tot.map fst gl0) == (if res = Some true then list_no_setoid_repeats_with_overflow equiv (option_sz_v bound) (List.Tot.map fst gl) else res)
     )
   )

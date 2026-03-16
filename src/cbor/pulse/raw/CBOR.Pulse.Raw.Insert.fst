@@ -233,13 +233,9 @@ ensures exists* v .
   let mut pres = CInProgress;
   while (
     let res = !pres;
-    if (CInProgress? res) {
-      let off = !poff;
-      (SZ.lt off off2)
-    } else {
-      false
-    }
-  ) invariant b . exists* v l1 l2 off res . (
+    let off = !poff;
+    (CInProgress? res && SZ.lt off off2)
+  ) invariant exists* v l1 l2 off res . (
     pts_to out v **
     GR.pts_to pl1 l1 **
     GR.pts_to pl2 l2 **
@@ -247,8 +243,6 @@ ensures exists* v .
     R.pts_to pres res **
     pure (
       cbor_raw_map_insert_inv m off2 key off3 value v l1 l2 off res
-    ) ** pure (
-      b == (CInProgress? res && (SZ.v off < SZ.v off2))
     )
   ) {
     with l1 . assert (GR.pts_to pl1 l1);

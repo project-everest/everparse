@@ -65,13 +65,10 @@ ensures
   let mut pres = (None #bool);
   let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   while (
-    if (Some? !pres) {
-      false
-    } else {
-      let i1 = !pi1;
-      not (Read.cbor_map_iterator_is_empty i1)
-    }
-  ) invariant b . exists* gi1 l1 res . (
+    let res = !pres;
+    let i1 = !pi1;
+    (None? res && not (Read.cbor_map_iterator_is_empty i1))
+  ) invariant exists* gi1 l1 res . (
     pts_to pi1 gi1 **
     Read.cbor_map_iterator_match p1 gi1 l1 **
     Trade.trade
@@ -83,8 +80,6 @@ ensures
       List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l1) /\
       List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd l1) /\
       CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1 v2 == (match res with Some r -> r | _ -> CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv l1 v2)
-    ) ** pure (
-      b == (Cons? l1 && None? res)
     )
   ) {
     let x1 = Read.cbor_map_iterator_next () pi1;
@@ -137,13 +132,10 @@ ensures
   let mut pres = true;
   let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   while (
-    if (!pres) {
-      let i2 = !pi2;
-      not (Read.cbor_map_iterator_is_empty i2)
-    } else {
-      false
-    }
-  ) invariant b . exists* gi2 l2 res . (
+    let res = !pres;
+    let i2 = !pi2;
+    (res && not (Read.cbor_map_iterator_is_empty i2))
+  ) invariant exists* gi2 l2 res . (
     Read.cbor_map_iterator_match p1 i1 v1 **
     pts_to pi2 gi2 **
     Read.cbor_map_iterator_match p2 gi2 l2 **
@@ -155,8 +147,6 @@ ensures
       List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l2) /\
       List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd l2) /\
       List.Tot.for_all (CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1) v2 == (res && List.Tot.for_all (CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1) l2)
-    ) ** pure (
-      b == (res && Cons? l2)
     )
   ) {
     let x2 = Read.cbor_map_iterator_next () pi2;
@@ -270,13 +260,10 @@ fn cbor_nondet_equiv_body
         let mut pi2 = i2;
         let mut pres = true;
         while (
-          if (!pres) {
-            let i1 = !pi1;
-            not (Read.cbor_array_iterator_is_empty i1)
-          } else {
-            false
-          }
-        ) invariant b . exists* i1 i2 res l1 l2 pj1 pj2 . (
+          let res = !pres;
+          let i1 = !pi1;
+          (res && not (Read.cbor_array_iterator_is_empty i1))
+        ) invariant exists* i1 i2 res l1 l2 pj1 pj2 . (
           pts_to pi1 i1 **
           pts_to pi2 i2 **
           pts_to pres res **
@@ -293,9 +280,8 @@ fn cbor_nondet_equiv_body
             List.Tot.for_all SpecRaw.valid_raw_data_item l1 /\
             List.Tot.for_all SpecRaw.valid_raw_data_item l2 /\
             (SpecRaw.raw_equiv v1 v2 == (res && CBOR.Spec.Util.list_for_all2 SpecRaw.raw_equiv l1 l2))
-          ) ** pure (
-              b == (Cons? l1 && res)
-        )) {
+          )
+        ) {
           let y1 = Read.cbor_array_iterator_next () pi1;
           Trade.trans _ _ (cbor_match p1 x1 v1);
           let y2 = Read.cbor_array_iterator_next () pi2;
@@ -391,13 +377,10 @@ ensures
   let mut pres = true;
   Trade.refl (SM.seq_list_match s l (Raw.cbor_match_map_entry ps));
   while (
-    if (!pres) {
-      SM.seq_list_match_length (Raw.cbor_match_map_entry ps) _ _;
-      SZ.lt !pn1 (S.len x)
-    } else {
-      false
-    }
-  ) invariant b . exists* n1 res s1 l1 . (
+    let res = !pres;
+    SM.seq_list_match_length (Raw.cbor_match_map_entry ps) _ _;
+    (res && SZ.lt !pn1 (S.len x))
+  ) invariant exists* n1 res s1 l1 . (
     pts_to x #px s **
     pts_to pn1 n1 **
     pts_to pres res **
@@ -406,8 +389,6 @@ ensures
       (SM.seq_list_match s1 l1 (Raw.cbor_match_map_entry ps))
       (SM.seq_list_match s l (Raw.cbor_match_map_entry ps)) **
     pure (
-      b == (res && Cons? l1)
-    ) ** pure (
       SZ.v n1 <= Seq.length s /\
       Seq.equal s1 (Seq.slice s (SZ.v n1) (Seq.length s)) /\
       List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l1) /\
@@ -427,13 +408,10 @@ ensures
     with s1' l1' . assert (SM.seq_list_match s1' l1' (Raw.cbor_match_map_entry ps));
     Trade.refl (SM.seq_list_match s1' l1' (Raw.cbor_match_map_entry ps));
     while (
-      if (!pres) {
-        SM.seq_list_match_length (Raw.cbor_match_map_entry ps) _ _;
-        SZ.lt !pn2 (S.len x)
-      } else {
-        false
-      }
-    ) invariant b . exists* n2 res s2 l2 . (
+      let res = !pres;
+      SM.seq_list_match_length (Raw.cbor_match_map_entry ps) _ _;
+      (res && SZ.lt !pn2 (S.len x))
+    ) invariant exists* n2 res s2 l2 . (
       pts_to x #px s **
       Raw.cbor_match_map_entry ps x1 y1 **
       pts_to pn2 n2 **
@@ -443,8 +421,6 @@ ensures
         (SM.seq_list_match s2 l2 (Raw.cbor_match_map_entry ps))
         (SM.seq_list_match s1' l1' (Raw.cbor_match_map_entry ps)) **
       pure (
-        b == (res && Cons? l2)
-      ) ** pure (
         SZ.v n2 <= Seq.length s /\
         Seq.equal s2 (Seq.slice s (SZ.v n2) (Seq.length s)) /\
         List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l2) /\
