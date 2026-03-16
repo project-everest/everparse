@@ -49,6 +49,7 @@ val invariant_value_ser_fail
       min == impl_serialize_map_zero_or_more_iterator_gen_update_min minl sp1 sp2 except min_old gk gv /\
       max == impl_serialize_map_zero_or_more_iterator_gen_update_max maxl sp1 sp2 except max_old gk gv /\
       sp1.serializable gk /\ sz1 > 0 /\ sz1 <= Seq.length vout - SZ.v size /\
+      (Some? (maxl (sp1.serializer gk)) ==> sz1 <= Some?.v (maxl (sp1.serializer gk))) /\
       ~ (sp2.serializable gv /\ Some? (maxl (sp2.serializer gv)) /\ Some?.v (maxl (sp2.serializer gv)) <= Seq.length vout - SZ.v size - sz1))
   )
   (ensures
