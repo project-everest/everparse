@@ -6,8 +6,6 @@
 
 pub(crate) const _zero_for_deref: u32 = 0u32;
 
-#[derive(PartialEq, Clone, Copy)] pub struct raw_uint64 { pub size: u8, pub value: u64 }
-
 fn get_bitfield_gen8(x: u8, lo: u32, hi: u32) -> u8
 {
     let op1: u8 = x.wrapping_shl(8u32.wrapping_sub(hi));
@@ -24,6 +22,8 @@ fn set_bitfield_gen8(x: u8, lo: u32, hi: u32, v: u8) -> u8
     let op5: u8 = v.wrapping_shl(lo);
     op4 | op5
 }
+
+#[derive(PartialEq, Clone, Copy)] pub struct raw_uint64 { pub size: u8, pub value: u64 }
 
 const additional_info_long_argument_8_bits: u8 = 24u8;
 
@@ -158,98 +158,6 @@ fn get_header_major_type(h: header) -> u8
     b.major_type
 }
 
-pub(crate) fn impl_correct(s: &[u8]) -> bool
-{
-    let mut pres: [bool; 1] = [true; 1usize];
-    let mut pi: [usize; 1] = [0usize; 1usize];
-    let len: usize = s.len();
-    let res: bool = (&pres)[0];
-    let mut cond: bool =
-        if res
-        {
-            let i: usize = (&pi)[0];
-            i < len
-        }
-        else
-        { false };
-    while
-    cond
-    {
-        let i: usize = (&pi)[0];
-        let byte1: u8 = s[i];
-        let i1: usize = i.wrapping_add(1usize);
-        if byte1 <= 0x7Fu8
-        { (&mut pi)[0] = i1 }
-        else if i1 == len
-        { (&mut pres)[0] = false }
-        else
-        {
-            let byte2: u8 = s[i1];
-            let i2: usize = i1.wrapping_add(1usize);
-            if 0xC2u8 <= byte1 && byte1 <= 0xDFu8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
-            { (&mut pi)[0] = i2 }
-            else if i2 == len
-            { (&mut pres)[0] = false }
-            else
-            {
-                let byte3: u8 = s[i2];
-                let i3: usize = i2.wrapping_add(1usize);
-                if ! (0x80u8 <= byte3 && byte3 <= 0xBFu8)
-                { (&mut pres)[0] = false }
-                else if byte1 == 0xE0u8
-                {
-                    if 0xA0u8 <= byte2 && byte2 <= 0xBFu8
-                    { (&mut pi)[0] = i3 }
-                    else
-                    { (&mut pres)[0] = false }
-                }
-                else if byte1 == 0xEDu8
-                {
-                    if 0x80u8 <= byte2 && byte2 <= 0x9Fu8
-                    { (&mut pi)[0] = i3 }
-                    else
-                    { (&mut pres)[0] = false }
-                }
-                else if 0xE1u8 <= byte1 && byte1 <= 0xEFu8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
-                { (&mut pi)[0] = i3 }
-                else if i3 == len
-                { (&mut pres)[0] = false }
-                else
-                {
-                    let byte4: u8 = s[i3];
-                    let i4: usize = i3.wrapping_add(1usize);
-                    if ! (0x80u8 <= byte4 && byte4 <= 0xBFu8)
-                    { (&mut pres)[0] = false }
-                    else if byte1 == 0xF0u8 && 0x90u8 <= byte2 && byte2 <= 0xBFu8
-                    { (&mut pi)[0] = i4 }
-                    else if
-                    0xF1u8 <= byte1 && byte1 <= 0xF3u8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
-                    { (&mut pi)[0] = i4 }
-                    else if byte1 == 0xF4u8 && 0x80u8 <= byte2 && byte2 <= 0x8Fu8
-                    { (&mut pi)[0] = i4 }
-                    else
-                    { (&mut pres)[0] = false }
-                }
-            }
-        };
-        let res0: bool = (&pres)[0];
-        let ite: bool =
-            if res0
-            {
-                let i0: usize = (&pi)[0];
-                i0 < len
-            }
-            else
-            { false };
-        cond = ite
-    };
-    (&pres)[0]
-}
-
-#[derive(PartialEq, Clone, Copy)]
-pub struct cbor_raw_serialized_iterator <'a>
-{ pub s: &'a [u8], pub len: u64 }
-
 pub(crate) fn mk_raw_uint64(x: u64) -> raw_uint64
 {
     let size: u8 =
@@ -260,6 +168,62 @@ pub(crate) fn mk_raw_uint64(x: u64) -> raw_uint64
         else if x < 65536u64 { 2u8 } else if x < 4294967296u64 { 3u8 } else { 4u8 };
     raw_uint64 { size, value: x }
 }
+
+fn impl_uint8_compare(x1: u8, x2: u8) -> i16
+{ if x1 < x2 { -1i16 } else if x1 > x2 { 1i16 } else { 0i16 } }
+
+fn lex_compare_bytes(s1: &[u8], s2: &[u8]) -> i16
+{
+    let sp1: &[u8] = s1;
+    let sp2: &[u8] = s2;
+    let mut pi1: [usize; 1] = [0usize; 1usize];
+    let mut pi2: [usize; 1] = [0usize; 1usize];
+    let n1: usize = sp1.len();
+    let n2: usize = sp2.len();
+    let ite: i16 =
+        if 0usize < n1
+        { if 0usize < n2 { 0i16 } else { 1i16 } }
+        else if 0usize < n2 { -1i16 } else { 0i16 };
+    let mut pres: [i16; 1] = [ite; 1usize];
+    let res: i16 = (&pres)[0];
+    let i1: usize = (&pi1)[0];
+    let mut cond: bool = res == 0i16 && i1 < n1;
+    while
+    cond
+    {
+        let i10: usize = (&pi1)[0];
+        let x1: u8 = sp1[i10];
+        let i2: usize = (&pi2)[0];
+        let x2: u8 = sp2[i2];
+        let c: i16 = impl_uint8_compare(x1, x2);
+        if c == 0i16
+        {
+            let i1·: usize = i10.wrapping_add(1usize);
+            let i2·: usize = i2.wrapping_add(1usize);
+            let ci1·: bool = i1· < n1;
+            let ci2·: bool = i2· < n2;
+            if ci2· && ! ci1·
+            { (&mut pres)[0] = -1i16 }
+            else if ci1· && ! ci2·
+            { (&mut pres)[0] = 1i16 }
+            else
+            {
+                (&mut pi1)[0] = i1·;
+                (&mut pi2)[0] = i2·
+            }
+        }
+        else
+        { (&mut pres)[0] = c };
+        let res0: i16 = (&pres)[0];
+        let i11: usize = (&pi1)[0];
+        cond = res0 == 0i16 && i11 < n1
+    };
+    (&pres)[0]
+}
+
+#[derive(PartialEq, Clone, Copy)]
+pub struct cbor_raw_serialized_iterator <'a>
+{ pub s: &'a [u8], pub len: u64 }
 
 #[derive(PartialEq, Clone, Copy)]
 pub struct cbor_string <'a>
@@ -379,54 +343,103 @@ pub(crate) fn cbor_mk_map_entry <'a>(xk: cbor_raw <'a>, xv: cbor_raw <'a>) ->
     }
 }
 
-fn impl_uint8_compare(x1: u8, x2: u8) -> i16
-{ if x1 < x2 { -1i16 } else if x1 > x2 { 1i16 } else { 0i16 } }
+fn cbor_match_compare_serialized_tagged(c1: cbor_serialized, c2: cbor_serialized) -> i16
+{ lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload) }
 
-fn lex_compare_bytes(s1: &[u8], s2: &[u8]) -> i16
+fn cbor_match_compare_serialized_array(c1: cbor_serialized, c2: cbor_serialized) -> i16
+{ lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload) }
+
+fn cbor_match_compare_serialized_map(c1: cbor_serialized, c2: cbor_serialized) -> i16
+{ lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload) }
+
+pub(crate) const simple_value_false: u8 = 20u8;
+
+pub(crate) const simple_value_true: u8 = 21u8;
+
+pub(crate) fn impl_correct(s: &[u8]) -> bool
 {
-    let sp1: &[u8] = s1;
-    let sp2: &[u8] = s2;
-    let mut pi1: [usize; 1] = [0usize; 1usize];
-    let mut pi2: [usize; 1] = [0usize; 1usize];
-    let n1: usize = sp1.len();
-    let n2: usize = sp2.len();
-    let ite: i16 =
-        if 0usize < n1
-        { if 0usize < n2 { 0i16 } else { 1i16 } }
-        else if 0usize < n2 { -1i16 } else { 0i16 };
-    let mut pres: [i16; 1] = [ite; 1usize];
-    let res: i16 = (&pres)[0];
-    let i1: usize = (&pi1)[0];
-    let mut cond: bool = res == 0i16 && i1 < n1;
+    let mut pres: [bool; 1] = [true; 1usize];
+    let mut pi: [usize; 1] = [0usize; 1usize];
+    let len: usize = s.len();
+    let res: bool = (&pres)[0];
+    let mut cond: bool =
+        if res
+        {
+            let i: usize = (&pi)[0];
+            i < len
+        }
+        else
+        { false };
     while
     cond
     {
-        let i10: usize = (&pi1)[0];
-        let x1: u8 = sp1[i10];
-        let i2: usize = (&pi2)[0];
-        let x2: u8 = sp2[i2];
-        let c: i16 = impl_uint8_compare(x1, x2);
-        if c == 0i16
+        let i: usize = (&pi)[0];
+        let byte1: u8 = s[i];
+        let i1: usize = i.wrapping_add(1usize);
+        if byte1 <= 0x7Fu8
+        { (&mut pi)[0] = i1 }
+        else if i1 == len
+        { (&mut pres)[0] = false }
+        else
         {
-            let i1·: usize = i10.wrapping_add(1usize);
-            let i2·: usize = i2.wrapping_add(1usize);
-            let ci1·: bool = i1· < n1;
-            let ci2·: bool = i2· < n2;
-            if ci2· && ! ci1·
-            { (&mut pres)[0] = -1i16 }
-            else if ci1· && ! ci2·
-            { (&mut pres)[0] = 1i16 }
+            let byte2: u8 = s[i1];
+            let i2: usize = i1.wrapping_add(1usize);
+            if 0xC2u8 <= byte1 && byte1 <= 0xDFu8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
+            { (&mut pi)[0] = i2 }
+            else if i2 == len
+            { (&mut pres)[0] = false }
             else
             {
-                (&mut pi1)[0] = i1·;
-                (&mut pi2)[0] = i2·
+                let byte3: u8 = s[i2];
+                let i3: usize = i2.wrapping_add(1usize);
+                if ! (0x80u8 <= byte3 && byte3 <= 0xBFu8)
+                { (&mut pres)[0] = false }
+                else if byte1 == 0xE0u8
+                {
+                    if 0xA0u8 <= byte2 && byte2 <= 0xBFu8
+                    { (&mut pi)[0] = i3 }
+                    else
+                    { (&mut pres)[0] = false }
+                }
+                else if byte1 == 0xEDu8
+                {
+                    if 0x80u8 <= byte2 && byte2 <= 0x9Fu8
+                    { (&mut pi)[0] = i3 }
+                    else
+                    { (&mut pres)[0] = false }
+                }
+                else if 0xE1u8 <= byte1 && byte1 <= 0xEFu8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
+                { (&mut pi)[0] = i3 }
+                else if i3 == len
+                { (&mut pres)[0] = false }
+                else
+                {
+                    let byte4: u8 = s[i3];
+                    let i4: usize = i3.wrapping_add(1usize);
+                    if ! (0x80u8 <= byte4 && byte4 <= 0xBFu8)
+                    { (&mut pres)[0] = false }
+                    else if byte1 == 0xF0u8 && 0x90u8 <= byte2 && byte2 <= 0xBFu8
+                    { (&mut pi)[0] = i4 }
+                    else if
+                    0xF1u8 <= byte1 && byte1 <= 0xF3u8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
+                    { (&mut pi)[0] = i4 }
+                    else if byte1 == 0xF4u8 && 0x80u8 <= byte2 && byte2 <= 0x8Fu8
+                    { (&mut pi)[0] = i4 }
+                    else
+                    { (&mut pres)[0] = false }
+                }
             }
-        }
-        else
-        { (&mut pres)[0] = c };
-        let res0: i16 = (&pres)[0];
-        let i11: usize = (&pi1)[0];
-        cond = res0 == 0i16 && i11 < n1
+        };
+        let res0: bool = (&pres)[0];
+        let ite: bool =
+            if res0
+            {
+                let i0: usize = (&pi)[0];
+                i0 < len
+            }
+            else
+            { false };
+        cond = ite
     };
     (&pres)[0]
 }
@@ -3554,15 +3567,6 @@ fn cbor_serialize_map·(len: raw_uint64, out: &mut [u8], off: usize) -> usize
 pub(crate) fn cbor_serialize_map(len: raw_uint64, out: &mut [u8], off: usize) -> usize
 { cbor_serialize_map·(len, out, off) }
 
-fn cbor_match_compare_serialized_tagged(c1: cbor_serialized, c2: cbor_serialized) -> i16
-{ lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload) }
-
-fn cbor_match_compare_serialized_array(c1: cbor_serialized, c2: cbor_serialized) -> i16
-{ lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload) }
-
-fn cbor_match_compare_serialized_map(c1: cbor_serialized, c2: cbor_serialized) -> i16
-{ lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload) }
-
 pub(crate) fn impl_major_type(x: cbor_raw) -> u8
 {
     match x
@@ -4356,10 +4360,6 @@ pub(crate) fn cbor_raw_sort(a: &mut [cbor_map_entry]) -> bool { cbor_raw_sort_au
 
 pub(crate) fn impl_cbor_det_compare(x1: cbor_raw, x2: cbor_raw) -> i16
 { impl_cbor_compare(x1, x2) }
-
-pub(crate) const simple_value_false: u8 = 20u8;
-
-pub(crate) const simple_value_true: u8 = 21u8;
 
 #[derive(PartialEq, Clone, Copy)]
 pub(crate) enum impl_map_group_result

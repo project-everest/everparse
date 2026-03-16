@@ -17,9 +17,6 @@ ALL_C_FILES = $(patsubst %.cddl,$(ODIR)/%.c,$(ALL_CDDLS))
 RUN += $(patsubst Test_%.c,%,$(wildcard Test_*.c))
 RUN += $(patsubst Test_%.cpp,%,$(wildcard Test_*.cpp))
 
-# TODO: remove this once map serializers are implemented
-RUN := $(filter-out Basic1 BenchMap,$(RUN))
-
 ifeq (1,$(ADMIT))
 CDDL_ADMIT := --admit
 else
@@ -63,7 +60,7 @@ CBOR_KRML_MODULES += CDDL.Pulse.Misc
 CBOR_KRML_MODULES += CDDL.Spec.Misc
 CBOR_KRML_MODULES += CDDL.Pulse.MapGroup
 CBOR_KRML_MODULES += CDDL.Pulse.Parse.MapGroup
-CBOR_KRML_MODULES += CDDL.Pulse.Serialize.MapGroup
+CBOR_KRML_MODULES += CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore
 # CBOR_KRML_MODULES += CDDL.Pulse.ArrayGroup
 CBOR_KRML_MODULES += CDDL.Pulse.Parse.ArrayGroup
 # CBOR_KRML_MODULES += CDDL.Pulse.Serialize.ArrayGroup

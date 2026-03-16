@@ -1157,6 +1157,8 @@ fn impl_check_equiv_map_hd_body
         let bound_eq: squash (bound_eq_prop v1 v2 bound) = ();
         let map_bound'_eq: squash (map_bound'_eq_prop (option_sz_v map_bound) gmap_bound') = ();
         assume (pure (SZ.fits_u64));
+        assert (pure (~ (long_argument_simple_value_prop (dfst h1))));
+        assert (pure (~ (long_argument_simple_value_prop (dfst h2))));
         let nv1 = SZ.uint64_to_sizet (argument_as_uint64 (dfst h1) (dsnd h1));
         assume (pure (SZ.fits_u64));
         let nv2 = SZ.uint64_to_sizet (argument_as_uint64 (dfst h2) (dsnd h2));
