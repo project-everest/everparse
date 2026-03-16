@@ -1545,14 +1545,10 @@ fn impl_serialize_array_group_zero_or_more_slice
   ag_spec_zero_or_more_serializer_nil ps1;
   while (
     let res = !pres;
-    if (res) {
-      let i = !pi;
-      S.pts_to_len c.s;
-      (SZ.lt i slen)
-    } else {
-      false
-    }
-  ) invariant b. exists* l1 res i s2 l2 w count size . (
+    let i = !pi;
+    S.pts_to_len c.s;
+    (res && SZ.lt i slen)
+  ) invariant exists* l1 res i s2 l2 w count size . (
     GR.pts_to pl1 l1 **
     pts_to c.s #c.p s **
     pts_to pi i **
@@ -1579,8 +1575,6 @@ fn impl_serialize_array_group_zero_or_more_slice
         impl_serialize_array_group_pre p count size (l `List.Tot.append` ps.ag_serializer l1) w /\
         SZ.v size_before <= SZ.v size
       )
-    ) ** pure (
-      b == (res && (SZ.v i < Seq.length s))
     )
   ) {
     with s2 l2 . assert (SM.seq_list_match s2 l2 r1);
@@ -1742,17 +1736,13 @@ fn impl_serialize_array_group_zero_or_more_iterator
   ag_spec_zero_or_more_serializer_nil ps1;
   Trade.refl (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) c0 v);
   while (
+    with gc l2 . assert (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) gc l2);
+    let c = !pc;
+    rewrite each gc as c;
+    let em = cddl_array_iterator_is_empty is_empty impl_tgt1 _ c;
     let res = !pres;
-    if (res) {
-      with gc l2 . assert (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) gc l2);
-      let c = !pc;
-      rewrite each gc as c;
-      let em = cddl_array_iterator_is_empty is_empty impl_tgt1 _ c;
-      not em
-    } else {
-      false
-    }
-  ) invariant b. exists* l1 c res l2 w count size . (
+    (res && not em)
+  ) invariant exists* l1 c res l2 w count size . (
     GR.pts_to pl1 l1 **
     pts_to pc c **
     rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) c l2 **
@@ -1776,8 +1766,6 @@ fn impl_serialize_array_group_zero_or_more_iterator
         impl_serialize_array_group_pre p count size (l `List.Tot.append` ps.ag_serializer l1) w /\
         SZ.v size_before <= SZ.v size
       )
-    ) ** pure (
-      b == (res && Cons? l2)
     )
   ) {
     with gc l2 . assert (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) gc l2);
