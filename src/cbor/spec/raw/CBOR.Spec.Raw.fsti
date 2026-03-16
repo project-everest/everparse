@@ -100,6 +100,19 @@ val no_repeats_map_fst_mk_det_raw_cbor_map_entry
 : Lemma
   (List.Tot.no_repeats_p (List.Tot.map fst l) <==> List.Tot.no_repeats_p (List.Tot.map fst (List.Tot.map mk_det_raw_cbor_map_entry l)))
 
+val mk_det_raw_cbor_map_sorted
+  (l: list (raw_data_item & raw_data_item))
+: Pure cbor_map
+  (requires (List.Tot.sorted (map_entry_order RF.deterministically_encoded_cbor_map_key_order _) l /\
+    List.Tot.for_all (U.holds_on_pair (R.raw_data_item_sorted RF.deterministically_encoded_cbor_map_key_order)) l /\
+    List.Tot.for_all (U.holds_on_pair R.raw_data_item_ints_optimal) l
+  ))
+  (ensures (fun m ->
+      cbor_map_length m == List.Tot.length l /\
+      forall (k: cbor) .
+        (mk_cbor_match_map_elem l m (mk_det_raw_cbor k))
+  ))
+
 val mk_det_raw_cbor_map
   (l: list (cbor & cbor))
   (len: FStar.UInt64.t)
