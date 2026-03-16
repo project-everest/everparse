@@ -11,10 +11,7 @@ open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma7
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma8
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma9
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma10
-open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma11
-open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma12
-open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma13
-open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.LoopBody.InsertBranch
+open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.LoopBody.ParseBranch
 
 module GR = Pulse.Lib.GhostReference
 module S = Pulse.Lib.Slice
@@ -221,29 +218,10 @@ ensures exists* c v em res vout size count m min max .
           Pulse.Lib.Slice.join _ _ out1;
           Pulse.Lib.Slice.join _ _ _;
           S.pts_to_len out;
-          if (ex) {
-            pres := false;
-            with vout_ . assert (pts_to out vout_);
-            with em_ . assert (pts_to pem em_);
-            with size_ . assert (pts_to out_size size_);
-            with count_ . assert (pts_to out_count count_);
-            with m_ . assert (GR.pts_to gm m_);
-            with min_ . assert (GR.pts_to gmin min_);
-            with max_ . assert (GR.pts_to gmax max_);
-            with c_ v_ . assert (r _ _ c_ v_);
-            invariant_excluded p key tkey sp1 value tvalue inj sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ w0 gk gv min max l;
-            assert pure (impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em_ out vout_ size_ count_ m_ v0 v_ min_ max_ false l);
-          } else {
-            with vout_w . assert (pts_to out vout_w);
-            with c_w v_w . assert (r _ _ c_w v_w);
-            with m_w . assert (GR.pts_to gm m_w);
-            with count_w . assert (pts_to out_count count_w);
-            impl_serialize_map_zero_or_more_insert_branch
-              insert sp1 sp2 except iterator r is_empty c0
-              out out_count out_size pres pc pem gm gmin gmax
-              vout_w c_w v_w min' max' m_w count_w
-              count' size0 size1 size2 vk vv w0 gk gv min max wk wv w_out2_tail l;
-          }
+          impl_serialize_map_zero_or_more_parse_branch
+            insert sp1 sp2 except iterator r is_empty c0
+            out out_count out_size pres pc pem gm gmin gmax
+            _ _ v' min' max' _ _ count' size0 size1 size2 vk vv w0 gk gv min max wk wv w_out2_tail ex l;
         }
       }
     }
