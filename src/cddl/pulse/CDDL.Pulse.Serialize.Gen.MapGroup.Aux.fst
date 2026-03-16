@@ -52,7 +52,9 @@ let cbor_map_min_length_union_pat
   [SMTPat (cbor_map_min_length minl (cbor_map_union m1 m2))]
 = Classical.move_requires (cbor_map_min_length_union minl m1) m2
 
-inline_for_extraction
+inline_for_extraction noextract [@@noextract_to "krml";
+  FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
+]
 let pow2_64_m1 : U64.t = U64.uint_to_t (pow2 64 - 1)
 
 let pow2_64_m1_eq : squash (U64.v pow2_64_m1 == pow2 64 - 1) = _ by (
