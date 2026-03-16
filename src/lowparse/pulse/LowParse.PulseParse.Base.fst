@@ -314,3 +314,190 @@ ensures
       S.gather input
     };
 }
+
+module R = Pulse.Lib.Reference
+
+inline_for_extraction
+let leaf_reader
+  (#t: Type0)
+  (#k: parser_kind)
+  (p: parser k t)
+: Tot Type
+= (input: slice byte) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased t) ->
+  stt t (pts_to_parsed p input #pm v) (fun res ->
+    pts_to_parsed p input #pm v **
+    pure (res == Ghost.reveal v)
+  )
+
+inline_for_extraction
+let reader
+  (#t: Type0)
+  (#k: parser_kind)
+  (p: parser k t)
+: Tot Type
+= (input: slice byte) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased t) ->
+  (t': Type0) ->
+  (f: ((x: t { x == Ghost.reveal v }) -> Tot t')) ->
+  stt t' (pts_to_parsed p input #pm v) (fun x' -> pts_to_parsed p input #pm v ** pure (x' == f v))
+
+inline_for_extraction
+fn leaf_reader_of_reader
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (r: reader p)
+: leaf_reader #t #k p
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+{
+  r input #pm #v t id
+}
+
+inline_for_extraction
+fn reader_of_leaf_reader
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (r: leaf_reader p)
+: reader #t #k p
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+  (t': Type0)
+  (f: _)
+{
+  let x = r input #pm #v;
+  f x
+}
+
+inline_for_extraction
+fn leaf_reader_of_serialized
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (r: LPS.leaf_reader s)
+: leaf_reader #t #k p
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+{
+  pts_to_parsed_serialized s input;
+  let res = r input;
+  pts_to_serialized_parsed input;
+  Trade.trans (pts_to_parsed p input #pm v) (LPS.pts_to_serialized s input #pm v) (pts_to_parsed p input #pm v);
+  Trade.elim (pts_to_parsed p input #pm v) (pts_to_parsed p input #pm v);
+  res
+}
+
+inline_for_extraction
+fn reader_of_serialized
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (r: LPS.reader s)
+: reader #t #k p
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+  (t': Type0)
+  (f: _)
+{
+  pts_to_parsed_serialized s input;
+  let res = r input #pm #v t' f;
+  pts_to_serialized_parsed input;
+  Trade.trans (pts_to_parsed p input #pm v) (LPS.pts_to_serialized s input #pm v) (pts_to_parsed p input #pm v);
+  Trade.elim (pts_to_parsed p input #pm v) (pts_to_parsed p input #pm v);
+  res
+}
+
+inline_for_extraction
+fn read_parsed_from_validator_success
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t {k.parser_kind_subkind == Some ParserStrong})
+  (r: leaf_reader p)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (offset: SZ.t)
+  (off: SZ.t)
+  requires (pts_to input #pm v ** pure (LPS.validator_success #k #t p offset v (off)))
+  returns v' : t
+  ensures pts_to input #pm v ** pure (
+    LPS.validator_success #k #t p offset v off /\
+    parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (v', SZ.v off - SZ.v offset)
+  )
+{
+  parser_kind_prop_equiv k p;
+  let input1, input23 = split_trade input offset;
+  with v23 . assert (pts_to input23 #pm v23);
+  Trade.elim_hyp_l (pts_to input1 #pm _) (pts_to input23 #pm v23) _;
+  let consumed = SZ.sub off offset;
+  let input2, input3 = split_trade input23 consumed;
+  with v2 . assert (pts_to input2 #pm v2);
+  Trade.elim_hyp_r (pts_to input2 #pm v2) (pts_to input3 #pm _) (pts_to input23 #pm v23);
+  Trade.trans (pts_to input2 #pm v2) (pts_to input23 #pm _) (pts_to input #pm _);
+  let gv1 = Ghost.hide (fst (Some?.v (parse p v23)));
+  parse_strong_prefix p v23 v2;
+  pts_to_parsed_intro p input2 gv1;
+  let res = r input2;
+  Trade.elim (pts_to_parsed p input2 #(pm /. 2.0R) gv1) (pts_to input2 #pm v2);
+  Trade.elim (pts_to input2 #pm v2) (pts_to input #pm v);
+  res
+}
+
+inline_for_extraction
+fn ifthenelse_reader
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (p: parser k t)
+  (cond: bool)
+  (iftrue: squash (cond == true) -> reader p)
+  (iffalse: squash (cond == false) -> reader p)
+: reader #t #k p
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+  (t': Type0)
+  (f: _)
+{
+  if cond {
+    iftrue () input #pm #v t' f
+  } else {
+    iffalse () input #pm #v t' f
+  }
+}
+
+inline_for_extraction
+fn reader_ext
+  (#t: Type0)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t)
+  (r1: reader p1)
+  (#k2: Ghost.erased parser_kind)
+  (p2: parser k2 t { forall x . parse p1 x == parse p2 x })
+: reader #t #k2 p2
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+  (t': Type0)
+  (f: _)
+{
+  pts_to_parsed_ext_trade p1 input;
+  let res = r1 input #pm #v t' f;
+  Trade.elim _ _;
+  res
+}
