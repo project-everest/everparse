@@ -400,7 +400,7 @@ let validate_ret
   = fun ctxt error_handler_fn input input_length start_position ->
     start_position
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 128"
 
 module LPC = LowParse.Spec.Combinators
 
@@ -514,7 +514,7 @@ let validate_dep_pair
 
 #pop-options
 
-#push-options "--z3rlimit 128"
+#push-options "--z3rlimit 512"
 #restart-solver
 
 inline_for_extraction noextract

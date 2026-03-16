@@ -23,10 +23,10 @@ COSE_EverCrypt_create_sig(
   uint8_t *sigbuf
 );
 
-K___COSE_Format_label_COSE_Format_values COSE_EverCrypt_dummy_map_val(void);
+K___COSE_Format_evercddl_label_COSE_Format_values COSE_EverCrypt_dummy_map_val(void);
 
 COSE_Format_empty_or_serialized_map
-COSE_EverCrypt_mk_phdrs(int32_t alg, K___COSE_Format_label_COSE_Format_values *rest);
+COSE_EverCrypt_mk_phdrs(int32_t alg, K___COSE_Format_evercddl_label_COSE_Format_values *rest);
 
 typedef void *COSE_EverCrypt_sign1_spec;
 

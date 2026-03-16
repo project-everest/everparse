@@ -10,6 +10,7 @@ module S = Pulse.Lib.Slice
 module U8 = FStar.UInt8
 module SZ = FStar.SizeT
 module Cbor = CBOR.Spec.API.Format
+module Gen = CDDL.Pulse.Serialize.Gen.Base
 
 let impl_serialize_post
     (#t: typ)
@@ -96,6 +97,74 @@ let impl_serialize_t_eq
     (ieq: squash (impl_tgt == impl_tgt2))
 : Tot (squash (impl_serialize s #impl_tgt r == impl_serialize s #impl_tgt2 (coerce_rel r impl_tgt2 ieq)))
 = ()
+
+let impl_serialize_elim_lemma
+    (#t: typ)
+    (#tgt: Type0)
+    (#inj: bool)
+    (s: spec t tgt inj)
+    (v: tgt)
+    (w: Seq.seq U8.t)
+    (res: SZ.t)
+: Lemma
+    (requires impl_serialize_post s v w res)
+    (ensures Gen.impl_serialize_post Gen.cbor_det_min_length Gen.cbor_det_max_length s v w res)
+    [SMTPat (impl_serialize_post s v w res)]
+= if s.serializable v
+  then Cbor.cbor_det_serialize_parse (s.serializer v)
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_elim
+    (#[@@@erasable]t: Ghost.erased typ)
+    (#[@@@erasable]tgt: Type0)
+    (#[@@@erasable] inj: Ghost.erased bool)
+    (#[@@@erasable]ps: Ghost.erased (spec t tgt inj))
+    (#impl_tgt: Type0)
+    (#[@@@erasable]r: rel impl_tgt tgt)
+    (i: impl_serialize ps r)
+: Gen.impl_serialize Gen.cbor_det_min_length Gen.cbor_det_max_length ps r
+=
+  (c: _)
+  (#v: _)
+  (out: _)
+{
+  let res = i c out;
+  res
+}
+
+let impl_serialize_intro_lemma
+    (#t: typ)
+    (#tgt: Type0)
+    (#inj: bool)
+    (s: spec t tgt inj)
+    (v: tgt)
+    (w: Seq.seq U8.t)
+    (res: SZ.t)
+: Lemma
+    (requires Gen.impl_serialize_post Gen.cbor_det_min_length Gen.cbor_det_max_length s v w res)
+    (ensures impl_serialize_post s v w res)
+    [SMTPat (Gen.impl_serialize_post Gen.cbor_det_min_length Gen.cbor_det_max_length s v w res)]
+= if s.serializable v
+  then Cbor.cbor_det_serialize_parse (s.serializer v)
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_intro
+    (#[@@@erasable]t: Ghost.erased typ)
+    (#[@@@erasable]tgt: Type0)
+    (#[@@@erasable] inj: Ghost.erased bool)
+    (#[@@@erasable]ps: Ghost.erased (spec t tgt inj))
+    (#impl_tgt: Type0)
+    (#[@@@erasable]r: rel impl_tgt tgt)
+    (i: Gen.impl_serialize Gen.cbor_det_min_length Gen.cbor_det_max_length ps r)
+: impl_serialize ps r
+=
+  (c: _)
+  (#v: _)
+  (out: _)
+{
+  let res = i c out;
+  res
+}
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_always_false

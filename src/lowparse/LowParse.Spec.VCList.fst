@@ -235,4 +235,31 @@ let rec tot_serialize_nlist_refine_eq
     )
   end
 
+let bare_serialize_vclist_correct
+  (min: nat)
+  (max: nat { min <= max /\ max < 4294967296 } )
+  (#lk: parser_kind)
+  (#lp: parser lk U32.t)
+  (ls: serializer lp  { lk.parser_kind_subkind == Some ParserStrong } )
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
+: Lemma
+  (serializer_correct (parse_vclist min max lp p) (bare_serialize_vclist min max ls s))
+= let prf (x: vlarray t min max)
+  : Lemma
+    (let fx = bare_serialize_vclist min max ls s x in
+      parse (parse_vclist min max lp p) fx == Some (x, Seq.length fx))
+  = let fx = bare_serialize_vclist min max ls s x in
+    parse_vclist_eq min max lp p fx;
+    let n = L.length x in
+    let un = U32.uint_to_t n in
+    let fn = serialize ls un in
+    parse_strong_prefix lp fn fx;
+    let fl = serialize (serialize_nlist n s) x in
+    assert (fl `Seq.equal` Seq.slice fx (Seq.length fn) (Seq.length fx))
+  in
+  Classical.forall_intro prf
+
 #pop-options

@@ -150,6 +150,8 @@ let serialize_cbor_tag tag =
 let serialize_cbor_tag_length tag =
   LP.serialize_length F.serialize_header (F.raw_uint64_as_argument cbor_major_type_tagged tag)
 
+#push-options "--z3rlimit 32"
+
 let serialize_cbor_tag_correct tag payload =
   let v1 = Tagged tag payload in
   F.serialize_raw_data_item_aux_correct v1;
@@ -163,6 +165,8 @@ let serialize_cbor_tag_correct tag payload =
   let v1' = F.synth_raw_data_item_recip v1 in
   LP.serialize_dtuple2_eq F.serialize_header F.serialize_content v1'
 
+#pop-options
+
 module LPL = LowParse.Spec.VCList
 
 let serialize_cbor_list l =
@@ -173,7 +177,7 @@ let serialize_cbor_list_nil () = ()
 let serialize_cbor_list_cons a q =
   LPL.tot_serialize_nlist_cons (List.Tot.length q) F.tot_serialize_raw_data_item a q
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 128"
 
 let serialize_array_eq
   (len1: raw_uint64)
@@ -194,8 +198,6 @@ let serialize_array_eq
   let v1' = F.synth_raw_data_item_recip v1 in
   LP.serialize_dtuple2_eq F.serialize_header F.serialize_content v1';
   LowParse.Spec.VCList.tot_serialize_nlist_serialize_nlist (List.Tot.length x1) F.tot_serialize_raw_data_item x1
-
-#pop-options
 
 let serialize_cbor_array_length_gt_list len l =
   serialize_array_eq len l;
@@ -224,8 +226,6 @@ let serialize_string_eq
   LP.serialize_dtuple2_eq F.serialize_header F.serialize_content v1';
   ()
 
-#push-options "--z3rlimit 32"
-
 let serialize_cbor_string_length_gt ty len l =
   serialize_string_eq ty len l;
   LP.serialize_length F.serialize_header (F.raw_uint64_as_argument ty len)
@@ -237,12 +237,12 @@ let serialize_cbor_map l =
 
 let serialize_cbor_map_nil () = ()
 
+#push-options "--z3rlimit 128"
+
 let serialize_cbor_map_cons key value q =
   LPL.tot_serialize_nlist_cons (List.Tot.length q) (LP.tot_serialize_nondep_then  F.tot_serialize_raw_data_item F.tot_serialize_raw_data_item) (key, value) q;
   LPL.tot_serialize_nondep_then_eq F.tot_serialize_raw_data_item F.tot_serialize_raw_data_item (key, value);
   ()
-
-#push-options "--z3rlimit 32"
 
 #restart-solver
 
@@ -296,7 +296,7 @@ let parse_nlist_ext'
   (ensures (LP.parse (LowParse.Spec.VCList.parse_nlist n p) b == LP.parse (LowParse.Spec.VCList.parse_nlist n p') b))
 = LowParse.Spec.VCList.parse_nlist_ext n p p' b (fun x -> ())
 
-#push-options "--z3rlimit 32 --split_queries always"
+#push-options "--z3rlimit 64 --split_queries always"
 
 #restart-solver
 
@@ -338,3 +338,55 @@ let cbor_serialize_map_length_gt_list
 
 #pop-options
 
+let parse_cbor_map
+  n s
+= 
+  match
+    LPL.tot_parse_nlist n (LP.tot_nondep_then F.tot_parse_raw_data_item F.tot_parse_raw_data_item) s
+  with
+  | None -> None
+  | Some (l, len) -> Some (l, len)
+
+let parse_cbor_map_prefix
+  (n: nat)
+  (s1 s2: Seq.seq U8.t)
+: Lemma
+  (match parse_cbor_map n s1 with
+  | None -> True
+  | Some (l, len1) ->
+    (len1 <= Seq.length s2 /\ Seq.slice s1 0 len1 == Seq.slice s2 0 len1) ==>
+    parse_cbor_map n s2 == Some (l, len1)
+  )
+= match parse_cbor_map n s1 with
+  | Some (l, len1) ->
+    if len1 <= Seq.length s2 && Seq.slice s1 0 len1 = Seq.slice s2 0 len1
+    then LP.parse_strong_prefix
+      (LP.parser_of_tot_parser (LPL.tot_parse_nlist n (LP.tot_nondep_then F.tot_parse_raw_data_item F.tot_parse_raw_data_item)))
+      s1 s2
+  | _ -> ()
+
+#push-options "--z3rlimit_factor 8"
+
+let parse_cbor_map_equiv
+  (n: nat)
+  (s: Seq.seq U8.t)
+  (l: list (raw_data_item & raw_data_item))
+  (len: nat)
+: Lemma
+  (parse_cbor_map n s == Some (l, len) <==> (
+    n == List.Tot.length l /\
+    len <= Seq.length s /\
+    Seq.slice s 0 len == serialize_cbor_map l
+  ))
+= if parse_cbor_map n s = Some (l, len)
+  then LP.parse_injective
+    (LP.parser_of_tot_parser (LPL.tot_parse_nlist n (LP.tot_nondep_then F.tot_parse_raw_data_item F.tot_parse_raw_data_item)))
+    s (serialize_cbor_map l)
+  else if n = List.Tot.length l && len <= Seq.length s && Seq.slice s 0 len = serialize_cbor_map l
+  then begin
+    assert (LPL.tot_parse_nlist n (LP.tot_nondep_then F.tot_parse_raw_data_item F.tot_parse_raw_data_item) (serialize_cbor_map l) == Some (l, Seq.length (serialize_cbor_map l)));
+    parse_cbor_map_prefix n (serialize_cbor_map l) s
+  end
+  else ()
+
+#pop-options

@@ -791,7 +791,7 @@ let clens_sum_payload
     clens_get = (fun (x: sum_type s) -> synth_sum_case_recip s k x <: Ghost (sum_type_of_tag s k) (requires (sum_tag_of_data s x == k)) (ensures (fun _ -> True)));
   }
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 128"
 
 let gaccessor_clens_sum_payload'
   (t: sum)
@@ -813,7 +813,7 @@ let gaccessor_clens_sum_payload'
   in
   (res <: (res: _ { gaccessor_post'  (parse_sum t p pc) (dsnd (pc k)) (clens_sum_payload t k) input res } ))
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 256"
 
 let gaccessor_clens_sum_payload_injective
   (t: sum)
@@ -1302,7 +1302,7 @@ let read_dsum_tag
   [@inline_let] let _ = valid_dsum_elim_tag h t p f g input pos in
   read_maybe_enum_key p32 (dsum_enum t) destr input pos 
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 128"
 let valid_dsum_elim_known
   (h: HS.mem)
   (t: dsum)
@@ -1340,6 +1340,8 @@ let valid_dsum_elim_known
   valid_facts (dsnd (f k)) h input pos_payload
 #pop-options
 
+#push-options "--z3rlimit 20"
+
 let valid_dsum_elim_unknown
   (h: HS.mem)
   (t: dsum)
@@ -1375,6 +1377,8 @@ let valid_dsum_elim_unknown
   let Unknown r = contents (parse_maybe_enum_key p (dsum_enum t)) h input pos in
   let pos_payload = get_valid_pos (parse_maybe_enum_key p (dsum_enum t)) h input pos in
   valid_facts g h input pos_payload
+
+#pop-options
 
 inline_for_extraction
 let jump_dsum_cases_t

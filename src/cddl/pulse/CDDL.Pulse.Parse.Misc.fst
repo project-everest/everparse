@@ -407,6 +407,7 @@ fn impl_copyful_det_cbor
     Some cp_ -> {
       let cp = fst cp_;
       let rem = Ghost.hide (snd cp_);
+      with cp' . rewrite cbor_det_parse_post vmatch' cs ps s cp' as cbor_det_parse_post vmatch' cs ps s (Some (cp, Ghost.reveal rem));
       unfold (cbor_det_parse_post vmatch' cs ps s (Some (cp, Ghost.reveal rem)));
       unfold (cbor_det_parse_post_some vmatch' cs ps s cp rem);
       Trade.trans _ _ (vmatch p c v);
@@ -447,6 +448,7 @@ fn impl_zero_copy_det_cbor
     Some cp_ -> {
       let cp = fst cp_;
       let rem = Ghost.hide (snd cp_);
+      with cp' . rewrite (cbor_det_parse_post vmatch' cs ps s (Some cp')) as (cbor_det_parse_post vmatch' cs ps s (Some (cp, Ghost.reveal rem)));
       unfold (cbor_det_parse_post vmatch' cs ps s (Some (cp, Ghost.reveal rem)));
       unfold (cbor_det_parse_post_some vmatch' cs ps s cp rem);
       with ps vs . assert (vmatch' ps cp vs);

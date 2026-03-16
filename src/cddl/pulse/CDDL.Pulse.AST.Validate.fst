@@ -23,6 +23,8 @@ let sz_uint_to_t
 : Tot SZ.t
 = SZ.uint_to_t x
 
+#push-options "--z3rlimit 40"
+
 [@@AST.sem_attr]
 let rec validate_typ
   (#t #t2 #t_arr #t_map: Type0)

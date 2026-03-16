@@ -844,7 +844,7 @@ let accessor_vlbytes_get
 : Tot (accessor (gaccessor_vlbytes_get min max i))
 = accessor_vlbytes'_get min max (log256' max) i
 
-#push-options "--z3rlimit 128 --max_fuel 2 --initial_fuel 2 --max_ifuel 6 --initial_ifuel 6"
+#push-options "--z3rlimit 512 --max_fuel 2 --initial_fuel 2 --max_ifuel 6 --initial_ifuel 6"
 
 let valid_bounded_vlbytes'_intro
   (h: HS.mem)
@@ -903,6 +903,8 @@ let valid_bounded_vlbytes_intro
   ))
 = valid_bounded_vlbytes'_intro h min max (log256' max) input pos len
 
+#push-options "--z3rlimit 20"
+
 inline_for_extraction
 let finalize_bounded_vlbytes'
   (min: nat)
@@ -940,6 +942,8 @@ let finalize_bounded_vlbytes'
     valid_bounded_vlbytes'_intro h min max l input pos len
   in
   pos_payload `U32.add` len
+
+#pop-options
 
 inline_for_extraction
 let finalize_bounded_vlbytes

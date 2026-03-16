@@ -11,7 +11,7 @@ module R = Pulse.Lib.Reference
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_array_group
-  (#cbor_array_iterator_t: Type)
+  (#cbor_array_iterator_t: Type0)
   (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
     (#b: Ghost.erased (option cbor))
     (g: array_group b)
@@ -172,7 +172,7 @@ fn impl_array_group_zero_or_more
     while (
       let cont = !pcont;
       cont
-    ) invariant cont . exists* p' gi1 l1 .
+    ) invariant exists* cont p' gi1 l1 .
       R.pts_to pi gi1 **
       cbor_array_iterator_match p' gi1 l1 **
       Trade.trade

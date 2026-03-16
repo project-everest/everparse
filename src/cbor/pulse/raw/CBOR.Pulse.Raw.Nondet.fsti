@@ -75,7 +75,7 @@ val cbor_nondet_array_iterator_is_empty (_: unit) : array_iterator_is_empty_t u#
 inline_for_extraction
 val cbor_nondet_array_iterator_length (_: unit) : array_iterator_length_t u#0 #_ cbor_nondet_array_iterator_match
 
-val cbor_nondet_array_iterator_next (_: unit) : array_iterator_next_t u#0 #_ #_ cbor_nondet_match cbor_nondet_array_iterator_match
+val cbor_nondet_array_iterator_next (_: unit) : array_iterator_next_t #_ #_ cbor_nondet_match cbor_nondet_array_iterator_match
 
 val cbor_nondet_array_iterator_truncate (_: unit) : array_iterator_truncate_t u#0 #_ cbor_nondet_array_iterator_match
 
@@ -95,7 +95,7 @@ val cbor_nondet_map_iterator_is_empty (_: unit) : map_iterator_is_empty_t u#0 #_
 
 val cbor_nondet_map_entry_match: perm -> cbor_nondet_map_entry_t -> Spec.cbor & Spec.cbor -> slprop
 
-val cbor_nondet_map_iterator_next (_: unit) : map_iterator_next_t u#0 #_ #_ cbor_nondet_map_entry_match cbor_nondet_map_iterator_match
+val cbor_nondet_map_iterator_next (_: unit) : map_iterator_next_t #_ #_ cbor_nondet_map_entry_match cbor_nondet_map_iterator_match
 
 val cbor_nondet_map_iterator_share (_: unit) : share_t u#0 u#0 #_ #_ cbor_nondet_map_iterator_match
 

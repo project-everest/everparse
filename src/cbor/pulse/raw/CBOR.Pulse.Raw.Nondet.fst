@@ -73,6 +73,7 @@ ensures
     fn _ {
       unfold (cbor_nondet_match (p /. 2.0R) c (SpecRaw.mk_cbor v));
       CBOR.Pulse.Raw.Match.Perm.cbor_raw_gather (p /. 2.0R) c v _ _;
+      rewrite each (p /. 2.0R +. p /. 2.0R) as p
     };
 }
 
@@ -89,6 +90,8 @@ fn cbor_nondet_reset_perm (_: unit) : reset_perm_t #_ cbor_nondet_match
   Trade.trans _ _ (cbor_nondet_match p c r);
   cbor_nondet_match_intro res;
   Trade.trans _ _ (cbor_nondet_match p c r);
+  rewrite each (2.0R *. q /. 2.0R) as q;
+  rewrite each (SpecRaw.mk_cbor r') as r;
   res
 }
 
@@ -473,6 +476,7 @@ ensures
     fn _ {
       unfold (cbor_nondet_array_iterator_match (p /. 2.0R) i (List.Tot.map SpecRaw.mk_cbor v));
       Read.cbor_array_iterator_gather i #(p /. 2.0R) #v;
+      rewrite each (p /. 2.0R +. p /. 2.0R) as p
     };
 }
 
@@ -516,7 +520,7 @@ fn cbor_nondet_array_iterator_length (_: unit) : array_iterator_length_t u#0 #_ 
   res
 }
 
-fn cbor_nondet_array_iterator_next (_: unit) : array_iterator_next_t u#0 #_ #_ cbor_nondet_match cbor_nondet_array_iterator_match
+fn cbor_nondet_array_iterator_next (_: unit) : array_iterator_next_t #_ #_ cbor_nondet_match cbor_nondet_array_iterator_match
 = (x: _)
   (#y: _)
   (#py: _)
@@ -559,6 +563,8 @@ fn cbor_nondet_array_iterator_truncate (_: unit) : array_iterator_truncate_t u#0
   CBOR.Spec.Util.list_for_all_splitAt SpecRaw.valid_raw_data_item l' (U64.v len);
   cbor_nondet_array_iterator_match_intro res;
   Trade.trans _ _ (cbor_nondet_array_iterator_match py x z);
+  rewrite each (List.Tot.Base.map SpecRaw.mk_cbor
+          (fst (List.Tot.Base.splitAt (U64.v len) l'))) as fst (List.Tot.Base.splitAt (U64.v len) z);
   res
 }
 
@@ -661,7 +667,8 @@ ensures
     #(Read.cbor_map_iterator_match (p /. 2.0R) i l')
   fn _ {
     unfold (cbor_nondet_map_iterator_match (p /. 2.0R) i (List.Tot.map SpecRaw.mk_cbor_map_entry l'));
-    Read.cbor_map_iterator_gather i #_ #l'
+    Read.cbor_map_iterator_gather i #_ #l';
+    rewrite each (p /. 2.0R +. p /. 2.0R) as p;
   }
 }
 
@@ -771,7 +778,7 @@ ensures
   Trade.trans _ _ (Raw.cbor_match_map_entry p res a)
 }
 
-fn cbor_nondet_map_iterator_next (_: unit) : map_iterator_next_t u#0 #_ #_ cbor_nondet_map_entry_match cbor_nondet_map_iterator_match
+fn cbor_nondet_map_iterator_next (_: unit) : map_iterator_next_t #_ #_ cbor_nondet_map_entry_match cbor_nondet_map_iterator_match
 = (x: _)
   (#y: _)
   (#py: _)
@@ -988,9 +995,10 @@ ghost fn cbor_nondet_map_get_concl
   (vk: Spec.cbor)
   (vdest: cbor_nondet_t)
   (i: cbor_nondet_map_iterator_t)
+  (cont: bool)
   (bres: bool)
 requires
-  cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i false bres
+  cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i cont bres ** pure ((cont && not bres) == false)
 ensures
   exists* res .
       map_get_post cbor_nondet_match x px vx vk res **
@@ -999,13 +1007,13 @@ ensures
       )
 {
   if bres {
-    rewrite (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i false bres)
+    rewrite (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i cont bres)
       as (cbor_nondet_map_get_invariant_true px x vx vk vdest);
     unfold (cbor_nondet_map_get_invariant_true px x vx vk vdest);
     fold (map_get_post_some cbor_nondet_match x px vx vk vdest);
     fold (map_get_post cbor_nondet_match x px vx vk (Some vdest));
   } else {
-    rewrite (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i false bres)
+    rewrite (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i cont bres)
       as (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest i false);
     unfold (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest i false);
     Trade.elim _ _;
@@ -1039,14 +1047,13 @@ fn cbor_nondet_map_get_by_ref (_: unit)
     let res = !pres;
     let cont = !pcont;
     (cont && not res)
-  ) invariant b . exists* i vdest res cont . (
+  ) invariant exists* i vdest res cont . (
     pts_to pi i **
     pts_to dest vdest **
     pts_to pres res **
     pts_to pcont cont **
     cbor_nondet_match pk k vk **
-    cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i cont res **
-    pure (b == (cont && not res))
+    cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i cont res
   ) {
     with gi vdest gres gcont . assert (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest gi gcont gres);
     rewrite (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest gi gcont gres)
@@ -1066,8 +1073,9 @@ fn cbor_nondet_map_get_by_ref (_: unit)
       pres := true;
       fold (cbor_nondet_map_get_invariant_true px x vx vk y.cbor_map_entry_value);
       with i . assert (pts_to pi i);
+      with gcont . assert (pts_to pcont gcont);
       rewrite (cbor_nondet_map_get_invariant_true px x vx vk y.cbor_map_entry_value)
-        as (cbor_nondet_map_get_invariant px x vx vdest0 vk y.cbor_map_entry_value i true true);
+        as (cbor_nondet_map_get_invariant px x vx vdest0 vk y.cbor_map_entry_value i gcont true);
     } else {
       Trade.elim _ (cbor_nondet_map_entry_match py y vy);
       Trade.elim_hyp_l _ _ _;
@@ -1082,7 +1090,7 @@ fn cbor_nondet_map_get_by_ref (_: unit)
   let res = !pres;
   with vdest . assert (pts_to dest vdest);
   with i . assert (pts_to pi i);
-  cbor_nondet_map_get_concl px x vx vdest0 vk vdest i res;
+  cbor_nondet_map_get_concl px x vx vdest0 vk vdest i _ res;
   res
 }
 
@@ -1134,8 +1142,9 @@ fn cbor_nondet_mk_string (_: unit) : mk_string_t u#0 #_ cbor_nondet_match
   Trade.trans _ _ (S.pts_to s #p v);
   let res = cbor_nondet_reset_perm () res1 1.0R;
   Trade.trans _ _ (S.pts_to s #p v);
+  with _r . assert cbor_nondet_match 1.0R res (SpecRaw.mk_cbor _r);
   Trade.rewrite_with_trade
-    (cbor_nondet_match 1.0R res (SpecRaw.mk_cbor (SpecRaw.String ty len64 v)))
+    (cbor_nondet_match 1.0R res (SpecRaw.mk_cbor _r))
     (cbor_nondet_match 1.0R res (Spec.pack (Spec.CString ty v)));
   Trade.trans _ _ (S.pts_to s #p v);
   res
@@ -1160,6 +1169,8 @@ fn cbor_nondet_mk_tagged (_: unit) : mk_tagged_t #_ cbor_nondet_match
   Trade.trans _ _ (_ ** _);
   let res = cbor_nondet_reset_perm () res1 1.0R;
   Trade.trans _ _ (_ ** _);
+  rewrite each SpecRaw.mk_cbor (SpecRaw.Tagged tag64 w')
+    as CBOR.Spec.API.Type.pack (CBOR.Spec.API.Type.CTagged tag v');
   res
 }
 
@@ -1211,6 +1222,8 @@ decreases v
   }
 }
 
+#push-options "--z3rlimit 20"
+
 fn cbor_nondet_mk_array (_: unit) : mk_array_t #_ cbor_nondet_match
 = (a: _)
   (#pa: _)
@@ -1222,6 +1235,7 @@ fn cbor_nondet_mk_array (_: unit) : mk_array_t #_ cbor_nondet_match
   SM.seq_list_match_length (cbor_nondet_match pv) va vv;
   let len64 = SpecRaw.mk_raw_uint64 (SZ.sizet_to_uint64 (S.len a));
   let v' = seq_list_array_cbor_nondet_match_elim _ _ _;
+  List.Tot.map_lemma SpecRaw.mk_cbor v';
   SpecRaw.valid_eq SpecRaw.basic_data_model (SpecRaw.Array len64 v');
   SpecRaw.mk_cbor_eq (SpecRaw.Array len64 v');
   let res1 = Raw.cbor_match_array_intro len64 a;
@@ -1236,6 +1250,8 @@ fn cbor_nondet_mk_array (_: unit) : mk_array_t #_ cbor_nondet_match
   Trade.trans _ _ (_ ** _);
   res
 }
+
+#pop-options
 
 ghost
 fn rec seq_list_map_cbor_nondet_match_elim
@@ -1649,7 +1665,7 @@ ensures
   }
 }
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 128 --print_implicits"
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nondet_match
@@ -1685,7 +1701,7 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
   while (
     let i = !pi;
     (SZ.lt i (S.len dest))
-  ) invariant b . exists* i s' s1 s2 l1 l2 . (
+  ) invariant exists* i s' s1 s2 l1 l2 . (
     pts_to pi i **
     pts_to dest s' **
     PM.seq_list_match s1 l1 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) **
@@ -1701,8 +1717,7 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
       Seq.equal (seq_map Mkcbor_map_get_multiple_entry_t?.key s') (seq_map Mkcbor_map_get_multiple_entry_t?.key s) /\
       (forall x . List.Tot.memP x l1 ==> snd x == None) /\
       List.Tot.count None (List.Tot.map snd l1) == List.Tot.length l1 /\
-      SZ.v i == Seq.length s1 /\
-      b == (SZ.v i < Seq.length s)
+      SZ.v i == Seq.length s1
     )
   ) {
     with s1 s2 l1 l2 . assert (
@@ -1755,13 +1770,9 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
   let mut piter = iter;
   while (
     let i = !pi;
-    if (i = 0sz) {
-      false
-    } else {
-      let iter = !piter;
-      not (cbor_nondet_map_iterator_is_empty () iter)
-    }
-  ) invariant b . exists* i iter l s0 l0 pmi . (
+    let iter = !piter;
+    (i <> 0sz && not (cbor_nondet_map_iterator_is_empty () iter))
+  ) invariant exists* i iter l s0 l0 pmi . (
     pts_to pi i **
     pts_to piter iter **
     S.pts_to dest s0 **
@@ -1780,8 +1791,7 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
       List.Tot.count None (List.Tot.map snd l0) == SZ.v i /\
       List.Tot.no_repeats_p (List.Tot.map fst l) /\
       (forall x . Some? (List.Tot.assoc x l) ==> Spec.cbor_map_get m x == List.Tot.assoc x l) /\
-      (forall x . List.Tot.memP x l0 ==> Spec.cbor_map_get m (fst x) == (match snd x with None -> List.Tot.assoc (fst x) l | Some z -> Some z)) /\
-      b == (Cons? l && SZ.v i > 0)
+      (forall x . List.Tot.memP x l0 ==> Spec.cbor_map_get m (fst x) == (match snd x with None -> List.Tot.assoc (fst x) l | Some z -> Some z))
     )
   ) {
     let entry = cbor_nondet_map_iterator_next () piter;
@@ -1807,7 +1817,7 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
       let j = !pj;
       let i = !pi;
       (SZ.lt j (S.len dest) && SZ.gt i 0sz)
-    ) invariant b . exists* i j pvalue s' s1 l1 s2 l2 . (
+    ) invariant exists* i j pvalue s' s1 l1 s2 l2 . (
       pts_to pi i **
       pts_to pj j **
       S.pts_to dest s' **
@@ -1821,7 +1831,7 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
           PM.seq_list_match s0 l0 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)
         ) **
       cbor_nondet_match pentry entry.cbor_map_entry_key (fst ventry) ** 
-      pure (b == (SZ.v j < SZ.v (S.len dest) && SZ.v i > 0) /\
+      pure (
         List.Tot.map fst (List.Tot.append l1 l2) == List.Tot.map fst v /\
         List.Tot.count None (List.Tot.map snd (List.Tot.append l1 l2)) == SZ.v i /\
         Seq.equal (seq_map Mkcbor_map_get_multiple_entry_t?.key s') (seq_map Mkcbor_map_get_multiple_entry_t?.key s) /\
@@ -1894,7 +1904,9 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
           ((fst (List.Tot.Base.hd l2), Some (snd ventry)) :: List.Tot.Base.tl l2)
           (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)) _;
         lemma_trade_rewrite5 _ _ _ _ _;
-        Trade.trans_hyp_r _ _ _ _;
+        Trade.trans_hyp_r _ _ _
+          (cbor_nondet_match pentry entry.cbor_map_entry_value (snd ventry) ** 
+            PM.seq_list_match s0 l0 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps));
         let lx = Ghost.hide [(fst (List.Tot.Base.hd l2), Some (snd ventry))];
         with s' . assert (S.pts_to dest s');
         with s1' s2' l1' l2' . assert (Pulse.Lib.SeqMatch.seq_list_match (Seq.append s1' s2') (List.Tot.append l1' l2') (cbor_map_get_multiple_entry_match cbor_nondet_match true ps));
@@ -1974,6 +1986,13 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
 //      assert (pure (Nil? l2));
       List.Tot.append_l_nil l1;
 //    }
+      with _s1 _s2 _l1 _l2 . assert (Pulse.Lib.SeqMatch.seq_list_match (Seq.Base.append _s1 _s2)
+      (_l1 @ _l2)
+      (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)
+      );
+      with s0' . assert (pts_to dest s0');
+      rewrite each (Seq.Base.append _s1 _s2) as s0';
+      ()
   };
   Trade.elim_hyp_l _ _ _;
   with s' l' . assert (PM.seq_list_match s' l' (cbor_map_get_multiple_entry_match cbor_nondet_match true ps));
