@@ -91,7 +91,7 @@ let validate_sum_aux_payload_postcond
   (res: bool)
 : Tot prop
 = match k with
-  | Unknown _ -> res == false /\ SZ.v off <= Seq.length v
+  | Unknown _ -> res == false
   | Known k' -> B.validator_postcond (dsnd (pc k')) offset v off res
 
 inline_for_extraction
@@ -183,10 +183,60 @@ fn validate_sum_aux
     Seq.lemma_eq_elim
       (Seq.slice sinput (SZ.v off - SZ.v offset_val) (Seq.length sinput))
       (Seq.slice v_bytes (SZ.v off) (Seq.length v_bytes));
-    v_payload k' input poffset
+    let res = v_payload k' input poffset;
+    if res {
+      true
+    } else {
+      poffset := offset_val;
+      false
+    }
   } else {
     false
   }
 }
 
 #pop-options
+
+inline_for_extraction
+fn validate_sum_aux_payload'
+  (t: sum u#0 u#0)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (pc32: ((x: sum_key t) -> Tot (B.validator (dsnd (pc x)))))
+  (k: maybe_enum_key (sum_enum t))
+: (validate_sum_aux_payload_t t pc k)
+=
+  (input: S.slice byte)
+  (poffset: ref SZ.t)
+  (#offset: Ghost.erased SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  match k {
+    Known k' -> { pc32 k' input poffset }
+    Unknown _ -> { false }
+  }
+}
+
+inline_for_extraction
+let validate_sum_aux_payload
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (pc32: ((x: sum_key t) -> Tot (B.validator (dsnd (pc x)))))
+  (destr: dep_maybe_enum_destr_t (sum_enum t) (validate_sum_aux_payload_t t pc))
+  (k: sum_repr_type t)
+: Tot (validate_sum_aux_payload_t t pc (maybe_enum_key_of_repr (sum_enum t) k))
+= destr (fun _ -> eq_trivial) (validate_sum_aux_payload_if t pc) (fun _ _ -> ()) (fun _ _ _ _ -> ()) (validate_sum_aux_payload' t pc pc32) k
+
+inline_for_extraction
+let validate_sum
+  (t: sum)
+  (#kt: parser_kind)
+  (#p: parser kt (sum_repr_type t))
+  (v: B.validator p)
+  (p32: leaf_reader p)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (pc32: ((x: sum_key t) -> Tot (B.validator (dsnd (pc x)))))
+  (destr: dep_maybe_enum_destr_t (sum_enum t) (validate_sum_aux_payload_t t pc))
+  (_: squash (kt.parser_kind_subkind == Some ParserStrong))
+: Tot (B.validator (parse_sum t p pc))
+= validate_sum_aux t v p32 pc (validate_sum_aux_payload t pc pc32 destr) ()
