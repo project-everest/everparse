@@ -501,3 +501,36 @@ fn reader_ext
   Trade.elim _ _;
   res
 }
+
+inline_for_extraction
+fn peek_trade_gen
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (p: parser k t {k.parser_kind_subkind == Some ParserStrong})
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (offset: SZ.t)
+  (off: SZ.t)
+  requires (pts_to input #pm v ** pure (LPS.validator_success #k #t p offset v off))
+  returns input': slice byte
+  ensures exists* v' . pts_to_parsed p input' #(pm /. 2.0R) v' ** Trade.trade (pts_to_parsed p input' #(pm /. 2.0R) v') (pts_to input #pm v) ** pure (
+    LPS.validator_success #k #t p offset v off /\
+    parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (v', SZ.v off - SZ.v offset)
+  )
+{
+  parser_kind_prop_equiv k p;
+  let input1, input23 = split_trade input offset;
+  with v23 . assert (pts_to input23 #pm v23);
+  Trade.elim_hyp_l (pts_to input1 #pm _) (pts_to input23 #pm v23) _;
+  let consumed = SZ.sub off offset;
+  let input2, input3 = split_trade input23 consumed;
+  with v2 . assert (pts_to input2 #pm v2);
+  Trade.elim_hyp_r (pts_to input2 #pm v2) (pts_to input3 #pm _) (pts_to input23 #pm v23);
+  Trade.trans (pts_to input2 #pm v2) (pts_to input23 #pm _) (pts_to input #pm _);
+  let gv1 = Ghost.hide (fst (Some?.v (parse p v23)));
+  parse_strong_prefix p v23 v2;
+  pts_to_parsed_intro p input2 gv1;
+  Trade.trans (pts_to_parsed p input2 #(pm /. 2.0R) gv1) (pts_to input2 #pm v2) (pts_to input #pm v);
+  input2
+}
