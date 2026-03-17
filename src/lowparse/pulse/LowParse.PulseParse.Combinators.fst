@@ -428,3 +428,170 @@ fn jump_dtuple2
   let x = PPB.read_parsed_from_validator_success r1 input offset off1;
   v2 x input off1
 }
+
+(* validate_false: always fails *)
+
+inline_for_extraction
+fn validate_false ()
+: LPS.validator #_ #parse_false_kind parse_false
+=
+  (input: slice byte)
+  (poffset: _)
+  (#offset: _)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  false
+}
+
+(* validate_strengthen: strengthen the parser kind *)
+
+inline_for_extraction
+let validate_strengthen
+  (k2: parser_kind)
+  (#k1: Ghost.erased parser_kind)
+  (#t: Type0)
+  (#p1: parser k1 t)
+  (v1: LPS.validator p1)
+  (sq: squash (parser_kind_prop k2 p1))
+: LPS.validator (strengthen k2 p1)
+= LPS.validate_ext v1 (strengthen k2 p1)
+
+(* validate_lift_parser: lift a thunked parser *)
+
+inline_for_extraction
+let validate_lift_parser
+  (#k: parser_kind)
+  (#t: Type0)
+  (p: unit -> GTot (parser k t))
+  (v: LPS.validator #t #k (p ()))
+: LPS.validator #t #k (lift_parser p)
+= LPS.validate_ext v (lift_parser p)
+
+(* validate_filter_ret: filter on parse_ret, no reader needed *)
+
+inline_for_extraction
+fn validate_filter_ret
+  (#t: Type0)
+  (r: t)
+  (f: (t -> GTot bool))
+  (f': (x: t) -> (y: bool { y == f x }))
+: LPS.validator (parse_filter (parse_ret r) f)
+=
+  (input: slice byte)
+  (poffset: _)
+  (#offset: _)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  parse_filter_eq (parse_ret r) f (Seq.slice v (SZ.v offset) (Seq.length v));
+  f' r
+}
+
+(* validate_filter_and_then: validate filter then dependent parsing *)
+
+inline_for_extraction
+fn validate_filter_and_then
+  (#k1: parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (v1: LPS.validator p1)
+  (r1: PPB.leaf_reader p1)
+  (f: (t1 -> GTot bool))
+  (f': (x: t1) -> (y: bool { y == f x }))
+  (#k2: parser_kind)
+  (#t2: Type0)
+  (#p2: ((x: t1 { f x == true }) -> parser k2 t2))
+  (v2: ((x: t1 { f x == true }) -> LPS.validator (p2 x)))
+  (u: squash (
+    k1.parser_kind_subkind == Some ParserStrong /\
+    ((and_then_kind (parse_filter_kind k1) k2).parser_kind_injective ==> and_then_cases_injective p2)
+  ))
+: LPS.validator #_ #(and_then_kind (parse_filter_kind k1) k2) (parse_filter p1 f `and_then` p2)
+=
+  (input: slice byte)
+  (poffset: _)
+  (#offset: _)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
+  and_then_eq (parse_filter p1 f) p2 sinput;
+  parse_filter_eq p1 f sinput;
+  let offset = !poffset;
+  let is_valid = v1 input poffset;
+  if is_valid {
+    let off = !poffset;
+    let x = PPB.read_parsed_from_validator_success r1 input offset off;
+    if f' x {
+      v2 x input poffset
+    } else {
+      false
+    }
+  } else {
+    false
+  }
+}
+
+(* validate_synth: validate a parser composed with a synthesis function *)
+
+inline_for_extraction
+fn validate_synth
+  (#t #t': Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (w: LPS.validator p)
+  (f: (t -> GTot t') { synth_injective f })
+: LPS.validator #t' #k (parse_synth p f)
+=
+  (input: slice byte)
+  (poffset: _)
+  (#offset: _)
+  (#pm: _)
+  (#v: _)
+{
+  parse_synth_eq p f (Seq.slice v (SZ.v offset) (Seq.length v));
+  w input poffset #offset #pm #v
+}
+
+(* validate_nondep_then: validate two independent parsers in sequence *)
+
+inline_for_extraction
+fn validate_nondep_then
+  (#t1 #t2: Type0)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t1)
+  (v1: LPS.validator p1)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 t2)
+  (v2: LPS.validator p2)
+: LPS.validator #(t1 & t2) #(and_then_kind k1 k2) (nondep_then #k1 #t1 p1 #k2 #t2 p2)
+=
+  (input: slice byte)
+  (poffset: _)
+  (#offset: _)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  nondep_then_eq #k1 #t1 p1 #k2 #t2 p2 (Seq.slice v (SZ.v offset) (Seq.length v));
+  let is_valid1 = v1 input poffset;
+  if is_valid1 {
+    v2 input poffset
+  } else {
+    false
+  }
+}
+
+(* validate_compose_context: change the key type indexing a parser family *)
+
+inline_for_extraction
+let validate_compose_context
+  (#pk: parser_kind)
+  (#kt1 #kt2: Type0)
+  (f: (kt2 -> Tot kt1))
+  (t: (kt1 -> Tot Type0))
+  (p: ((k: kt1) -> Tot (parser pk (t k))))
+  (v: ((k: kt1) -> Tot (LPS.validator (p k))))
+  (k: kt2)
+: Tot (LPS.validator (p (f k)))
+= v (f k)
