@@ -91,7 +91,7 @@ let validate_sum_aux_payload_postcond
   (res: bool)
 : Tot prop
 = match k with
-  | Unknown _ -> res == false
+  | Unknown _ -> res == false /\ SZ.v off <= Seq.length v
   | Known k' -> B.validator_postcond (dsnd (pc k')) offset v off res
 
 inline_for_extraction
@@ -151,6 +151,10 @@ let validate_sum_aux_payload_if
 : Tot (if_combinator (validate_sum_aux_payload_t t pc k) eq_trivial)
 = validate_sum_aux_payload_if' t pc k
 
+module PPB = LowParse.PulseParse.Base
+
+#push-options "--z3rlimit 64"
+
 inline_for_extraction
 fn validate_sum_aux
   (t: sum u#0 u#0)
@@ -160,13 +164,29 @@ fn validate_sum_aux
   (p32: leaf_reader p)
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (v_payload: ((k: sum_repr_type t)) -> Tot (validate_sum_aux_payload_t t pc (maybe_enum_key_of_repr (sum_enum t) k)))
+  (_: squash (kt.parser_kind_subkind == Some ParserStrong))
 : (B.validator (parse_sum t p pc))
 =
   (input: S.slice byte)
   (poffset: ref SZ.t)
   (#offset: Ghost.erased SZ.t)
   (#pm: perm)
-  (#v: Ghost.erased bytes)
+  (#v_bytes: Ghost.erased bytes)
 {
-  admit ()
+  let sinput = Ghost.hide (Seq.slice v_bytes (SZ.v offset) (Seq.length v_bytes));
+  parse_sum_eq'' t p pc sinput;
+  let offset_val = !poffset;
+  let is_valid_tag = v input poffset;
+  if is_valid_tag {
+    let off = !poffset;
+    let k' = PPB.read_parsed_from_validator_success p32 input offset_val off;
+    Seq.lemma_eq_elim
+      (Seq.slice sinput (SZ.v off - SZ.v offset_val) (Seq.length sinput))
+      (Seq.slice v_bytes (SZ.v off) (Seq.length v_bytes));
+    v_payload k' input poffset
+  } else {
+    false
+  }
 }
+
+#pop-options
