@@ -84,7 +84,6 @@ make_everparse() {
     export EVERPARSE_USE_OPAMROOT=
     export EVERPARSE_USE_FSTAR_EXE=
     export EVERPARSE_USE_KRML_HOME=
-    export EVERPARSE_USE_PULSE_HOME=
     rm -f "$EVERPARSE_HOME/opam-env.Makefile"
 
     # Rebuild EverParse
@@ -202,7 +201,7 @@ make_everparse() {
     if ! $is_windows; then
     $cp -r $EVERPARSE_HOME/src/cbor everparse/src/cbor
     $cp -r $EVERPARSE_HOME/src/cddl everparse/src/cddl
-	$cp -r $PULSE_HOME/lib/pulse everparse/lib/
+	$cp -r $EVERPARSE_HOME/opt/FStar/pulse/lib/pulse everparse/lib/
 	$cp $EVERPARSE_HOME/bin/cddl.exe everparse/bin/cddl.exe
 	$cp -r $EVERPARSE_HOME/lib/evercddl everparse/lib/
     fi

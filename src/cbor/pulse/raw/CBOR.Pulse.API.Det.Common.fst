@@ -1,7 +1,7 @@
 module CBOR.Pulse.API.Det.Common
-#lang-pulse
 friend CBOR.Pulse.API.Det.Type
 friend CBOR.Spec.API.Format
+#lang-pulse
 
 module SpecRaw = CBOR.Spec.Raw
 module Raw = CBOR.Pulse.Raw.Match

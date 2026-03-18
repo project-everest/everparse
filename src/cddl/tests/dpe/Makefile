@@ -47,6 +47,5 @@ util:
 # repository, so we need to build it by hand
 dice:
 	+$(MAKE) -f dice.Makefile
-#	+OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $(PULSE_HOME)/../share/pulse/examples/dice verify
 
 .PHONY: dpe dice util

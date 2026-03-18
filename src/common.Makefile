@@ -55,7 +55,7 @@ FSTAR_FILES ?= $(wildcard $(addsuffix /*.fst,$(SRC_DIRS)) $(addsuffix /*.fsti,$(
 ifeq ($(OS),Windows_NT)
 INCLUDE_PATHS := $(shell cygpath -m $(INCLUDE_PATHS))
 endif
-FSTAR_OPTIONS += $(OTHERFLAGS) $(addprefix --include ,$(INCLUDE_PATHS)) --cache_checked_modules --warn_error @241 --already_cached $(ALREADY_CACHED)Prims,FStar,LowStar --cmi --ext context_pruning
+FSTAR_OPTIONS += $(OTHERFLAGS) $(addprefix --include ,$(INCLUDE_PATHS)) --cache_checked_modules --warn_error @241 --already_cached $(ALREADY_CACHED)Prims,FStar,LowStar --ext context_pruning
 
 # https://github.com/FStarLang/FStar/pull/3861
 # FSTAR_OPTIONS += --ext optimize_let_vc

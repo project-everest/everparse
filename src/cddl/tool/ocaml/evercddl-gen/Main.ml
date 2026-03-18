@@ -137,18 +137,6 @@ let krml_exe =
   then res1
   else Filename.concat (Filename.concat krml_home "bin") krml
 
-let pulse_home =
-  try
-    Sys.getenv "PULSE_HOME"
-  with
-  | Not_found ->
-     let opt_pulse = Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "pulse") "out" in
-     if Sys.file_exists opt_pulse
-     then opt_pulse
-     else
-       (* assume a binary package *)
-       everparse_home
-
 let z3_version = "4.13.3"
 
 let z3_executable_option =
@@ -186,7 +174,6 @@ let include_options =
       everparse_src_cddl_tool;
       krml_home_krmllib;
       Filename.concat krml_home_krmllib "obj";
-      Filename.concat (Filename.concat pulse_home "lib") "pulse";
       Filename.concat everparse_home_lib_evercddl "lib";
       Filename.concat everparse_home_lib_evercddl "plugin";
     ]

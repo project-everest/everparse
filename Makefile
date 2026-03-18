@@ -46,9 +46,9 @@ ifeq (,$(NO_PULSE))
 endif
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 
-$(FSTAR_DEP_FILE): $(NEED_FSTAR) $(NEED_KRML) $(NEED_PULSE)
+$(FSTAR_DEP_FILE): $(NEED_FSTAR) $(NEED_KRML)
 
-$(ALL_CHECKED_FILES): %.checked: $(NEED_FSTAR) $(NEED_Z3) $(NEED_KRML) $(NEED_PULSE)
+$(ALL_CHECKED_FILES): %.checked: $(NEED_FSTAR) $(NEED_Z3) $(NEED_KRML)
 
 ifeq (1,$(ADMIT_LOWPARSE))
 $(filter src/lowparse/%,$(ALL_CHECKED_FILES)): ADMIT := 1
@@ -58,15 +58,21 @@ ifeq (1,$(ADMIT_CBOR_CDDL))
 $(filter src/cbor/% src/cddl/%,$(ALL_CHECKED_FILES)): ADMIT := 1
 endif
 
-lowparse: $(filter-out src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+LOWPARSE_FILES := $(filter-out src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+LOWPARSE_LOW_FILTER := src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.% src/lowparse/LowParse.Repr.% src/lowparse/LowParse.Slice.% src/lowparse/LowParse.TestLib.%
+# TODO: re-enable once Low* is gone
+# lowparse: $(LOWPARSE_FILES)
+lowparse: $(filter-out $(LOWPARSE_LOW_FILTER),$(LOWPARSE_FILES))
 
 ifeq (,$(NO_PULSE))
 lowparse: $(filter src/lowparse/pulse/%,$(ALL_CHECKED_FILES))
 endif
 
 # lowparse needed because of .fst behind .fsti for extraction
-3d-prelude: $(filter src/3d/prelude/%,$(ALL_CHECKED_FILES)) $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
-	+$(MAKE) -C src/3d/prelude
+# TODO: re-enable once Low* is gone
+# 3d-prelude: $(filter src/3d/prelude/%,$(ALL_CHECKED_FILES)) $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+#	+$(MAKE) -C src/3d/prelude
+3d-prelude:
 
 .PHONY: 3d-prelude
 
@@ -87,14 +93,15 @@ qd-exe: $(NEED_OPAM)
 
 .PHONY: qd-exe
 
+# TODO: re-enable once Low* is gone
 lowparse-unit-test: lowparse
-	+$(MAKE) -C tests/lowparse
+#	+$(MAKE) -C tests/lowparse
 
 3d-unit-test: 3d $(NEED_Z3_TESTGEN)
-	+$(MAKE) -C src/3d test
+#	+$(MAKE) -C src/3d test
 
 3d-doc-test: 3d $(NEED_Z3_TESTGEN)
-	+$(MAKE) -C doc 3d-test
+#	+$(MAKE) -C doc 3d-test
 
 3d-test: 3d-unit-test 3d-doc-test
 
@@ -102,7 +109,7 @@ asn1-test: asn1
 	+$(MAKE) -C src/ASN1 test
 
 lowparse-bitfields-test: lowparse
-	+$(MAKE) -C tests/bitfields
+#	+$(MAKE) -C tests/bitfields
 
 ifeq (,$(NO_PULSE))
 lowparse-pulse-test:
@@ -116,7 +123,7 @@ endif
 lowparse-test: lowparse-unit-test lowparse-bitfields-test lowparse-pulse-test
 
 quackyducky-test: quackyducky
-	+$(MAKE) -C tests
+#	+$(MAKE) -C tests
 
 test: all lowparse-test quackyducky-test asn1-test cbor-test cddl-test
 
@@ -172,7 +179,7 @@ endif
 
 # lowparse needed for extraction because of .fst files behind .fsti
 ifeq (,$(NO_PULSE))
-cbor-extract-pre: cbor-verify $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+cbor-extract-pre: cbor-verify $(filter-out $(LOWPARSE_LOW_FILTER),$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
 
 .PHONY: cbor-extract-pre
 

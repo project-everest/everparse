@@ -1,7 +1,7 @@
 module CBOR.Pulse.Raw.Format.Compare
-#lang-pulse
 friend CBOR.Pulse.Raw.Format.Match
 friend CBOR.Spec.Raw.Format
+#lang-pulse
 module Bytes = CBOR.Pulse.Raw.Compare.Bytes
 module F = CBOR.Spec.Raw.EverParse
 module VCList = LowParse.Spec.VCList
