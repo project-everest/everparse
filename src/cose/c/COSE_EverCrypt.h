@@ -59,21 +59,21 @@ typedef void *COSE_EverCrypt_parses_from;
 
 typedef void *COSE_EverCrypt_good_signature;
 
-typedef struct FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice_uint8_t_s
+typedef struct FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__uint8_t_s
 {
   FStar_Pervasives_Native_option__size_t_tags tag;
   Pulse_Lib_Slice_slice__uint8_t v;
 }
-FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice_uint8_t;
+FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__uint8_t;
 
-FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice_uint8_t
+FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__uint8_t
 COSE_EverCrypt_verify1(
   uint8_t *pubkey,
   Pulse_Lib_Slice_slice__uint8_t aad,
   Pulse_Lib_Slice_slice__uint8_t msg
 );
 
-FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice_uint8_t
+FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__uint8_t
 COSE_EverCrypt_verify1_simple(uint8_t *pubkey, Pulse_Lib_Slice_slice__uint8_t msg);
 
 
