@@ -399,6 +399,27 @@ fn leaf_reader_of_serialized
 }
 
 inline_for_extraction
+fn serialized_of_leaf_reader
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (r: leaf_reader p)
+: LPS.leaf_reader #t #k #p s
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+{
+  pts_to_serialized_parsed input;
+  let res = r input;
+  pts_to_parsed_serialized s input;
+  Trade.trans (LPS.pts_to_serialized s input #pm v) (pts_to_parsed p input #pm v) (LPS.pts_to_serialized s input #pm v);
+  Trade.elim (LPS.pts_to_serialized s input #pm v) (LPS.pts_to_serialized s input #pm v);
+  res
+}
+
+inline_for_extraction
 fn reader_of_serialized
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
