@@ -9,7 +9,6 @@ INCLUDE_PATH = $(LOWPARSE_HOME)
 
 FSTAR_OPTIONS = --cache_checked_modules --ext optimize_let_vc \
 		--already_cached *,-ASN1Test,-ASN1 \
-		--cmi \
 	        --odir ocaml/extracted \
 		$(addprefix --include ,$(INCLUDE_PATH)) \
 		$(OTHERFLAGS)
