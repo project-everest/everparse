@@ -54,6 +54,46 @@ fn validate_fldata
 }
 
 inline_for_extraction
+let validate_fldata_gen
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (v: LPS.validator p)
+  (sz: SZ.t)
+: LPS.validator #t #(parse_fldata_kind (SZ.v sz) k) (parse_fldata p (SZ.v sz))
+= validate_fldata v sz
+
+inline_for_extraction
+let validate_fldata_consumes_all
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (v: LPS.validator p)
+  (sz: SZ.t)
+  (_: squash (k.parser_kind_subkind == Some ParserConsumesAll))
+: LPS.validator #t #(parse_fldata_kind (SZ.v sz) k) (parse_fldata p (SZ.v sz))
+= validate_fldata v sz
+
+inline_for_extraction
+fn validate_fldata_strong
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (v: LPS.validator p)
+  (sz: SZ.t)
+: LPS.validator #(parse_fldata_strong_t s (SZ.v sz)) #(parse_fldata_kind (SZ.v sz) k) (parse_fldata_strong s (SZ.v sz))
+=
+  (input: slice byte)
+  (poffset: R.ref SZ.t)
+  (#offset: Ghost.erased SZ.t)
+  (#pm: perm)
+  (#v_bytes: Ghost.erased bytes)
+{
+  validate_fldata v sz input poffset
+}
+
+inline_for_extraction
 fn jump_fldata
   (#k: parser_kind)
   (#t: Type0)
