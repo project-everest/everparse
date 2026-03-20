@@ -1,8 +1,8 @@
 module CBOR.Pulse.API.Det.C.Copy
-friend CBOR.Pulse.API.Det.C
-friend CBOR.Pulse.API.Det.Common
 friend CBOR.Pulse.API.Det.Type
 friend CBOR.Spec.API.Format
+friend CBOR.Pulse.API.Det.Common
+friend CBOR.Pulse.API.Det.C
 #lang-pulse
 
 module SpecRaw = CBOR.Spec.Raw

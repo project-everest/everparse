@@ -1,6 +1,6 @@
 module CBOR.Spec.Raw
-friend CBOR.Spec.API.Type
 friend CBOR.Spec.Raw.DataModel
+friend CBOR.Spec.API.Type
 
 module DM = CBOR.Spec.Raw.DataModel
 
