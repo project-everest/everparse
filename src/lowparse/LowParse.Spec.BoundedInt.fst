@@ -227,6 +227,15 @@ let parse_bounded_int32
 = let sz = log256' max in
   (parse_bounded_integer sz `parse_filter` in_bounds min max) `parse_synth` (fun x -> (x <: bounded_int32 min max))
 
+let parse_bounded_int32_eq
+  min max input
+= let sz = log256' max in
+  parse_synth_eq
+    (parse_bounded_integer sz `parse_filter` in_bounds min max)
+    (fun x -> (x <: bounded_int32 min max))
+    input;
+  parse_filter_eq (parse_bounded_integer sz) (in_bounds min max) input
+
 let serialize_bounded_int32
   min max
 = let sz = log256' max in
@@ -242,6 +251,15 @@ let parse_bounded_int32_le
 = let sz = log256' max in
   (parse_bounded_integer_le sz `parse_filter` in_bounds min max) `parse_synth` (fun x -> (x <: bounded_int32 min max))
 
+let parse_bounded_int32_le_eq
+  min max input
+= let sz = log256' max in
+  parse_synth_eq
+    (parse_bounded_integer_le sz `parse_filter` in_bounds min max)
+    (fun x -> (x <: bounded_int32 min max))
+    input;
+  parse_filter_eq (parse_bounded_integer_le sz) (in_bounds min max) input
+
 let serialize_bounded_int32_le
   min max
 = let sz = log256' max in
@@ -255,6 +273,10 @@ let serialize_bounded_int32_le
 let parse_bounded_int32_le_fixed_size
   min max
 = parse_filter parse_u32_le (in_bounds min max)
+
+let parse_bounded_int32_le_fixed_size_eq
+  min max input
+= parse_filter_eq parse_u32_le (in_bounds min max) input
 
 let serialize_bounded_int32_le_fixed_size
   min max
