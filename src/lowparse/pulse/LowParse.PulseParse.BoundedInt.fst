@@ -286,4 +286,98 @@ fn validate_bounded_int32_le_fixed_size
   }
 }
 
+(* Generic bounded int32 validators — caller provides sz and sub-validators *)
+
+inline_for_extraction
+fn validate_bounded_int32'
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+  (sz: integer_size { sz == log256' (U32.v max32) })
+  (v_base: LPS.validator (parse_bounded_integer sz))
+  (r: PPB.leaf_reader (parse_bounded_integer sz))
+: LPS.validator (parse_bounded_int32 (U32.v min32) (U32.v max32))
+=
+  (input: S.slice byte) (poffset: R.ref SZ.t) (#offset: Ghost.erased SZ.t) (#pm: perm) (#v: Ghost.erased bytes)
+{
+  let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
+  parse_bounded_int32_eq (U32.v min32) (U32.v max32) sinput;
+  let offset_val = !poffset;
+  let is_valid = v_base input poffset;
+  if is_valid {
+    let off = !poffset;
+    let x = PPB.read_parsed_from_validator_success r input offset_val off;
+    if (not (U32.lt x min32 || U32.lt max32 x)) { true } else { poffset := offset_val; false }
+  } else { false }
+}
+
+inline_for_extraction
+fn validate_bounded_int32_le'
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+  (sz: integer_size { sz == log256' (U32.v max32) })
+  (v_base: LPS.validator (parse_bounded_integer_le sz))
+  (r: PPB.leaf_reader (parse_bounded_integer_le sz))
+: LPS.validator (parse_bounded_int32_le (U32.v min32) (U32.v max32))
+=
+  (input: S.slice byte) (poffset: R.ref SZ.t) (#offset: Ghost.erased SZ.t) (#pm: perm) (#v: Ghost.erased bytes)
+{
+  let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
+  parse_bounded_int32_le_eq (U32.v min32) (U32.v max32) sinput;
+  let offset_val = !poffset;
+  let is_valid = v_base input poffset;
+  if is_valid {
+    let off = !poffset;
+    let x = PPB.read_parsed_from_validator_success r input offset_val off;
+    if (not (U32.lt x min32 || U32.lt max32 x)) { true } else { poffset := offset_val; false }
+  } else { false }
+}
+
+(* Runtime dispatchers *)
+
+inline_for_extraction
+fn validate_bounded_int32
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+  (r1: PPB.leaf_reader (parse_bounded_integer 1))
+  (r2: PPB.leaf_reader (parse_bounded_integer 2))
+  (r3: PPB.leaf_reader (parse_bounded_integer 3))
+  (r4: PPB.leaf_reader (parse_bounded_integer 4))
+: LPS.validator (parse_bounded_int32 (U32.v min32) (U32.v max32))
+=
+  (input: S.slice byte) (poffset: R.ref SZ.t) (#offset: Ghost.erased SZ.t) (#pm: perm) (#v: Ghost.erased bytes)
+{
+  if (U32.lt max32 256ul) {
+    validate_bounded_int32_1 min32 max32 r1 input poffset
+  } else if (U32.lt max32 65536ul) {
+    validate_bounded_int32_2 min32 max32 r2 input poffset
+  } else if (U32.lt max32 16777216ul) {
+    validate_bounded_int32_3 min32 max32 r3 input poffset
+  } else {
+    validate_bounded_int32_4 min32 max32 r4 input poffset
+  }
+}
+
+inline_for_extraction
+fn validate_bounded_int32_le
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+  (r1: PPB.leaf_reader (parse_bounded_integer_le 1))
+  (r2: PPB.leaf_reader (parse_bounded_integer_le 2))
+  (r3: PPB.leaf_reader (parse_bounded_integer_le 3))
+  (r4: PPB.leaf_reader (parse_bounded_integer_le 4))
+: LPS.validator (parse_bounded_int32_le (U32.v min32) (U32.v max32))
+=
+  (input: S.slice byte) (poffset: R.ref SZ.t) (#offset: Ghost.erased SZ.t) (#pm: perm) (#v: Ghost.erased bytes)
+{
+  if (U32.lt max32 256ul) {
+    validate_bounded_int32_le_1 min32 max32 r1 input poffset
+  } else if (U32.lt max32 65536ul) {
+    validate_bounded_int32_le_2 min32 max32 r2 input poffset
+  } else if (U32.lt max32 16777216ul) {
+    validate_bounded_int32_le_3 min32 max32 r3 input poffset
+  } else {
+    validate_bounded_int32_le_4 min32 max32 r4 input poffset
+  }
+}
+
 #pop-options
