@@ -66,6 +66,7 @@ CBOR_KRML_MODULES += CDDL.Pulse.Parse.ArrayGroup
 # CBOR_KRML_MODULES += CDDL.Pulse.Serialize.ArrayGroup
 CBOR_KRML_MODULES += CDDL.Pulse.Types
 
+CBOR_KRML_MODULES += Pulse.Lib.Pervasives
 CBOR_KRML_MODULES += Pulse.Lib.Slice
 
 CBOR_KRML_MODULES += FStar.Pervasives

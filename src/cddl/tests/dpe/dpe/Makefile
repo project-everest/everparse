@@ -29,7 +29,7 @@ include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 ALREADY_CACHED := *,-CDDLTest.DPE,-DPESlice,
 FSTAR_OPTIONS += --load_cmxs evercddl_lib --load_cmxs evercddl_plugin
 FSTAR_OPTIONS += --warn_error -342
-FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice,-CDDL.Pulse.Bundle,-CDDL.Pulse.AST.Bundle,-CDDL.Tool'
+FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Pervasives,+Pulse.Lib.Slice,-CDDL.Pulse.Bundle,-CDDL.Pulse.AST.Bundle,-CDDL.Tool'
 
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 

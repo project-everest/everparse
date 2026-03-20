@@ -73,7 +73,6 @@ let fstar_args0 =
       "--include" :: krmllib ::
         "--include" :: (filename_concat krmllib "obj") ::
           "--include" :: ddd_prelude_home ::
-            "--cmi" ::
             "--warn_error" :: "+241" ::
               OS.getenv_array "EVERPARSE_FSTAR_OPTIONS"
 
