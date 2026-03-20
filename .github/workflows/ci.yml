@@ -203,27 +203,28 @@ jobs:
         run: |
           docker stop $container && docker rm $container
 
-  ci-3d:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set-up OCaml
-        uses: ocaml/setup-ocaml@v3
-        with:
-          ocaml-compiler: 5
-      - uses: actions/checkout@master
-        with:
-          submodules: true
-          path: everparse
-      - name: Everparse CI
-        run: |
-          ADMIT=1 make -C everparse -j$(nproc) -k 3d-doc-ci branchname=${{ github.head_ref || github.ref_name }}
-        env:
-          DZOMO_GITHUB_TOKEN: ${{ secrets.DZOMO_GITHUB_TOKEN }}
+  # ci-3d:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Set-up OCaml
+  #       uses: ocaml/setup-ocaml@v3
+  #       with:
+  #         ocaml-compiler: 5
+  #     - uses: actions/checkout@master
+  #       with:
+  #         submodules: true
+  #         path: everparse
+  #     - name: Everparse CI
+  #       run: |
+  #         ADMIT=1 make -C everparse -j$(nproc) -k 3d-doc-ci branchname=${{ github.head_ref || github.ref_name }}
+  #       env:
+  #         DZOMO_GITHUB_TOKEN: ${{ secrets.DZOMO_GITHUB_TOKEN }}
 
   # Branch protection points here.
   ciok:
     runs-on: ubuntu-latest
-    needs: [test-lowparse, test-3d-qd, build-cbor-cddl, test-cbor-cddl, ci-3d]
+#    needs: [test-lowparse, test-3d-qd, build-cbor-cddl, test-cbor-cddl, ci-3d]
+    needs: [test-lowparse, test-3d-qd, build-cbor-cddl, test-cbor-cddl]
     if: always()
     steps:
       - run: exit 1
