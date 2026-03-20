@@ -109,7 +109,7 @@ void bench_serialize_sig_struct(EVP_PKEY *pkey) {
         COSE_Format_validate_and_parse_cose_sign1_tagged(signed_msg).v.fst;
     COSE_Format_sig_structure sig_struct = {
         .context = 1,
-        .body_protected = c.protected,
+        .body_protected = c.protected0,
         ._x0 = {
             .tag = COSE_Format_Inr,
             .case_Inr = {

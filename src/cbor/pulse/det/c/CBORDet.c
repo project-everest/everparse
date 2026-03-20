@@ -470,19 +470,19 @@ static initial_byte_t read_initial_byte_t(Pulse_Lib_Slice_slice__uint8_t input)
     );
 }
 
-typedef struct __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t_s
+typedef struct __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t_s
 {
   Pulse_Lib_Slice_slice__uint8_t fst;
   Pulse_Lib_Slice_slice__uint8_t snd;
 }
-__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t;
+__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t;
 
-static __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+static __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
 split__uint8_t(Pulse_Lib_Slice_slice__uint8_t s, size_t i)
 {
   return
     (
-      (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+      (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
         .fst = { .elt = s.elt, .len = i },
         .snd = { .elt = s.elt + i, .len = s.len - i }
       }
@@ -491,11 +491,11 @@ split__uint8_t(Pulse_Lib_Slice_slice__uint8_t s, size_t i)
 
 static header read_header(Pulse_Lib_Slice_slice__uint8_t input)
 {
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut = split__uint8_t(input, (size_t)1U);
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut0 = { .fst = scrut.fst, .snd = scrut.snd };
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
   Pulse_Lib_Slice_slice__uint8_t input2 = scrut1.snd;
   initial_byte_t x1 = read_initial_byte_t(scrut1.fst);
@@ -607,23 +607,23 @@ static bool validate_header(Pulse_Lib_Slice_slice__uint8_t input, size_t *poffse
   if (ite0)
   {
     size_t off = *poffset;
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut = split__uint8_t(input, offset2);
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut0 =
       split__uint8_t((
-          (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+          (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
             .fst = scrut.fst,
             .snd = scrut.snd
           }
         ).snd,
         off - offset2);
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
     initial_byte_t
     x =
       read_initial_byte_t((
-          (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+          (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
             .fst = scrut1.fst,
             .snd = scrut1.snd
           }
@@ -640,23 +640,23 @@ static bool validate_header(Pulse_Lib_Slice_slice__uint8_t input, size_t *poffse
   if (ite1)
   {
     size_t off = *poffset;
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut0 = split__uint8_t(input, offset1);
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut1 =
       split__uint8_t((
-          (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+          (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
             .fst = scrut0.fst,
             .snd = scrut0.snd
           }
         ).snd,
         off - offset1);
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut2 = { .fst = scrut1.fst, .snd = scrut1.snd };
     initial_byte_t
     x =
       read_initial_byte_t((
-          (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+          (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
             .fst = scrut2.fst,
             .snd = scrut2.snd
           }
@@ -677,23 +677,23 @@ static bool validate_header(Pulse_Lib_Slice_slice__uint8_t input, size_t *poffse
         if (ite)
         {
           size_t off1 = *poffset;
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           scrut = split__uint8_t(input, offset2);
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           scrut0 =
             split__uint8_t((
-                (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+                (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
                   .fst = scrut.fst,
                   .snd = scrut.snd
                 }
               ).snd,
               off1 - offset2);
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
           return
             MIN_SIMPLE_VALUE_LONG_ARGUMENT <=
               op_Array_Access__uint8_t((
-                  (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+                  (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
                     .fst = scrut1.fst,
                     .snd = scrut1.snd
                   }
@@ -757,23 +757,23 @@ static bool validate_header(Pulse_Lib_Slice_slice__uint8_t input, size_t *poffse
 static size_t jump_header(Pulse_Lib_Slice_slice__uint8_t input, size_t offset)
 {
   size_t off1 = offset + (size_t)1U;
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut = split__uint8_t(input, offset);
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut0 =
     split__uint8_t((
-        (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+        (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
           .fst = scrut.fst,
           .snd = scrut.snd
         }
       ).snd,
       off1 - offset);
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
   initial_byte_t
   x =
     read_initial_byte_t((
-        (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+        (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
           .fst = scrut1.fst,
           .snd = scrut1.snd
         }
@@ -787,7 +787,7 @@ static size_t jump_header(Pulse_Lib_Slice_slice__uint8_t input, size_t offset)
   else if (x.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_64_BITS)
     return off1 + (size_t)8U;
   else
-    return off1 + (size_t)0U;
+    return off1;
 }
 
 static bool
@@ -797,14 +797,14 @@ validate_recursive_step_count_leaf(
   size_t *prem
 )
 {
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut = split__uint8_t(a, jump_header(a, (size_t)0U));
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut0 = { .fst = scrut.fst, .snd = scrut.snd };
   header
   h =
     read_header((
-        (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+        (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
           .fst = scrut0.fst,
           .snd = scrut0.snd
         }
@@ -858,13 +858,13 @@ static size_t impl_remaining_data_items_header(header h)
 
 static size_t jump_recursive_step_count_leaf(Pulse_Lib_Slice_slice__uint8_t a)
 {
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut = split__uint8_t(a, jump_header(a, (size_t)0U));
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut0 = { .fst = scrut.fst, .snd = scrut.snd };
   return
     impl_remaining_data_items_header(read_header((
-          (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+          (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
             .fst = scrut0.fst,
             .snd = scrut0.snd
           }
@@ -888,23 +888,23 @@ static bool validate_raw_data_item(Pulse_Lib_Slice_slice__uint8_t input, size_t 
       if (validate_header(input, poffset))
       {
         size_t off1 = *poffset;
-        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
         scrut0 = split__uint8_t(input, offset1);
-        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
         scrut1 =
           split__uint8_t((
-              (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+              (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
                 .fst = scrut0.fst,
                 .snd = scrut0.snd
               }
             ).snd,
             off1 - offset1);
-        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
         scrut2 = { .fst = scrut1.fst, .snd = scrut1.snd };
         header
         x =
           read_header((
-              (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+              (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
                 .fst = scrut2.fst,
                 .snd = scrut2.snd
               }
@@ -927,23 +927,23 @@ static bool validate_raw_data_item(Pulse_Lib_Slice_slice__uint8_t input, size_t 
           if (ite)
           {
             size_t off2 = *poffset;
-            __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+            __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
             scrut = split__uint8_t(input, offset2);
-            __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+            __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
             scrut0 =
               split__uint8_t((
-                  (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+                  (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
                     .fst = scrut.fst,
                     .snd = scrut.snd
                   }
                 ).snd,
                 off2 - offset2);
-            __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+            __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
             scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
             Pulse_Lib_Slice_slice__uint8_t
             x1 =
               (
-                (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+                (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
                   .fst = scrut1.fst,
                   .snd = scrut1.snd
                 }
@@ -966,23 +966,23 @@ static bool validate_raw_data_item(Pulse_Lib_Slice_slice__uint8_t input, size_t 
       else
       {
         size_t offset1 = *poffset;
-        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
         scrut = split__uint8_t(input, off);
-        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
         scrut0 =
           split__uint8_t((
-              (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+              (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
                 .fst = scrut.fst,
                 .snd = scrut.snd
               }
             ).snd,
             offset1 - off);
-        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
         scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
         Pulse_Lib_Slice_slice__uint8_t
         input1 =
           (
-            (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+            (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
               .fst = scrut1.fst,
               .snd = scrut1.snd
             }
@@ -1008,23 +1008,23 @@ static size_t jump_raw_data_item(Pulse_Lib_Slice_slice__uint8_t input, size_t of
   {
     size_t off = poffset;
     size_t off10 = jump_header(input, off);
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut0 = split__uint8_t(input, off);
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut1 =
       split__uint8_t((
-          (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+          (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
             .fst = scrut0.fst,
             .snd = scrut0.snd
           }
         ).snd,
         off10 - off);
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut2 = { .fst = scrut1.fst, .snd = scrut1.snd };
     header
     x =
       read_header((
-          (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+          (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
             .fst = scrut2.fst,
             .snd = scrut2.snd
           }
@@ -1034,25 +1034,25 @@ static size_t jump_raw_data_item(Pulse_Lib_Slice_slice__uint8_t input, size_t of
     if (b.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
       off1 = off10 + (size_t)argument_as_uint64(x.fst, x.snd);
     else
-      off1 = off10 + (size_t)0U;
+      off1 = off10;
     poffset = off1;
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut = split__uint8_t(input, off);
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut3 =
       split__uint8_t((
-          (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+          (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
             .fst = scrut.fst,
             .snd = scrut.snd
           }
         ).snd,
         off1 - off);
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut4 = { .fst = scrut3.fst, .snd = scrut3.snd };
     Pulse_Lib_Slice_slice__uint8_t
     input1 =
       (
-        (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+        (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
           .fst = scrut4.fst,
           .snd = scrut4.snd
         }
@@ -1073,11 +1073,11 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
       .fst = { .major_type = CBOR_MAJOR_TYPE_SIMPLE_VALUE, .additional_info = 0U },
       .snd = { .tag = LongArgumentOther }
     };
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut = split__uint8_t(input, jump_header(input, (size_t)0U));
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut0 = { .fst = scrut.fst, .snd = scrut.snd };
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
   Pulse_Lib_Slice_slice__uint8_t outc = scrut1.snd;
   ph = read_header(scrut1.fst);
@@ -1299,16 +1299,16 @@ static bool impl_raw_uint64_optimal(CBOR_Spec_Raw_Base_raw_uint64 x)
 
 static bool cbor_raw_ints_optimal(Pulse_Lib_Slice_slice__uint8_t a)
 {
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut0 = split__uint8_t(a, jump_header(a, (size_t)0U));
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut2 = { .fst = scrut1.fst, .snd = scrut1.snd };
   header
   h =
     read_header((
-        (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+        (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
           .fst = scrut2.fst,
           .snd = scrut2.snd
         }
@@ -1367,13 +1367,13 @@ impl_deterministically_encoded_cbor_map_key_order(
 
 static bool cbor_raw_sorted(Pulse_Lib_Slice_slice__uint8_t a)
 {
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut0 = split__uint8_t(a, jump_header(a, (size_t)0U));
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut2 = { .fst = scrut1.fst, .snd = scrut1.snd };
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut3 = { .fst = scrut2.fst, .snd = scrut2.snd };
   Pulse_Lib_Slice_slice__uint8_t input2 = scrut3.snd;
   header h = read_header(scrut3.fst);
@@ -1388,48 +1388,48 @@ static bool cbor_raw_sorted(Pulse_Lib_Slice_slice__uint8_t a)
       size_t ite;
       if
       (b.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
-        ite = (size_t)0U + (size_t)argument_as_uint64(h.fst, h.snd);
+        ite = (size_t)argument_as_uint64(h.fst, h.snd);
       else
         ite = (size_t)0U;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       scrut0 = split__uint8_t(input2, ite);
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       scrut2 = { .fst = scrut1.fst, .snd = scrut1.snd };
       Pulse_Lib_Slice_slice__uint8_t
       input3 =
         (
-          (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+          (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
             .fst = scrut2.fst,
             .snd = scrut2.snd
           }
         ).snd;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       scrut3 = split__uint8_t(input3, jump_raw_data_item(input3, (size_t)0U));
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       scrut4 = { .fst = scrut3.fst, .snd = scrut3.snd };
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       scrut5 = { .fst = scrut4.fst, .snd = scrut4.snd };
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       scrut6 = { .fst = scrut5.fst, .snd = scrut5.snd };
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       scrut7 = { .fst = scrut6.fst, .snd = scrut6.snd };
       Pulse_Lib_Slice_slice__uint8_t input4 = scrut7.snd;
       Pulse_Lib_Slice_slice__uint8_t pkey = scrut7.fst;
       uint64_t ppairs = nbpairs - 1ULL;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       scrut = split__uint8_t(input4, jump_raw_data_item(input4, (size_t)0U));
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       scrut8 = { .fst = scrut.fst, .snd = scrut.snd };
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       scrut9 = { .fst = scrut8.fst, .snd = scrut8.snd };
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       scrut10 = { .fst = scrut9.fst, .snd = scrut9.snd };
       Pulse_Lib_Slice_slice__uint8_t
       ptail =
         (
-          (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+          (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
             .fst = scrut10.fst,
             .snd = scrut10.snd
           }
@@ -1438,32 +1438,32 @@ static bool cbor_raw_sorted(Pulse_Lib_Slice_slice__uint8_t a)
       while (pres && ppairs > 0ULL)
       {
         Pulse_Lib_Slice_slice__uint8_t tail = ptail;
-        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
         scrut = split__uint8_t(tail, jump_raw_data_item(tail, (size_t)0U));
-        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
         scrut0 = { .fst = scrut.fst, .snd = scrut.snd };
-        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
         scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
-        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
         scrut2 = { .fst = scrut1.fst, .snd = scrut1.snd };
-        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
         scrut3 = { .fst = scrut2.fst, .snd = scrut2.snd };
         Pulse_Lib_Slice_slice__uint8_t key2 = scrut3.fst;
         Pulse_Lib_Slice_slice__uint8_t tail2 = scrut3.snd;
         if (impl_deterministically_encoded_cbor_map_key_order(pkey, key2))
         {
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           scrut = split__uint8_t(tail2, jump_raw_data_item(tail2, (size_t)0U));
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           scrut0 = { .fst = scrut.fst, .snd = scrut.snd };
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           scrut2 = { .fst = scrut1.fst, .snd = scrut1.snd };
           Pulse_Lib_Slice_slice__uint8_t
           tail_ =
             (
-              (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+              (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
                 .fst = scrut2.fst,
                 .snd = scrut2.snd
               }
@@ -1489,23 +1489,23 @@ static size_t cbor_validate_det_(Pulse_Lib_Slice_slice__uint8_t input)
     return len;
   else
   {
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut0 = split__uint8_t(input, (size_t)0U);
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut1 =
       split__uint8_t((
-          (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+          (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
             .fst = scrut0.fst,
             .snd = scrut0.snd
           }
         ).snd,
         len - (size_t)0U);
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut2 = { .fst = scrut1.fst, .snd = scrut1.snd };
     Pulse_Lib_Slice_slice__uint8_t
     input1 =
       (
-        (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+        (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
           .fst = scrut2.fst,
           .snd = scrut2.snd
         }
@@ -1524,23 +1524,23 @@ static size_t cbor_validate_det_(Pulse_Lib_Slice_slice__uint8_t input)
       else
       {
         size_t off1 = jump_header(pi, (size_t)0U);
-        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
         scrut = split__uint8_t(pi, (size_t)0U);
-        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
         scrut0 =
           split__uint8_t((
-              (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+              (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
                 .fst = scrut.fst,
                 .snd = scrut.snd
               }
             ).snd,
             off1 - (size_t)0U);
-        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
         scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
         header
         x =
           read_header((
-              (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+              (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
                 .fst = scrut1.fst,
                 .snd = scrut1.snd
               }
@@ -1551,12 +1551,12 @@ static size_t cbor_validate_det_(Pulse_Lib_Slice_slice__uint8_t input)
         (b.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
           ite = off1 + (size_t)argument_as_uint64(x.fst, x.snd);
         else
-          ite = off1 + (size_t)0U;
-        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          ite = off1;
+        __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
         scrut2 = split__uint8_t(pi, ite);
-        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
         scrut3 = { .fst = scrut2.fst, .snd = scrut2.snd };
-        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
         scrut4 = { .fst = scrut3.fst, .snd = scrut3.snd };
         Pulse_Lib_Slice_slice__uint8_t ph = scrut4.fst;
         Pulse_Lib_Slice_slice__uint8_t pc = scrut4.snd;
@@ -1582,23 +1582,23 @@ static size_t cbor_validate_det_(Pulse_Lib_Slice_slice__uint8_t input)
         else
         {
           size_t off1 = jump_header(pi, (size_t)0U);
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           scrut = split__uint8_t(pi, (size_t)0U);
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           scrut0 =
             split__uint8_t((
-                (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+                (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
                   .fst = scrut.fst,
                   .snd = scrut.snd
                 }
               ).snd,
               off1 - (size_t)0U);
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
           header
           x =
             read_header((
-                (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+                (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
                   .fst = scrut1.fst,
                   .snd = scrut1.snd
                 }
@@ -1612,12 +1612,12 @@ static size_t cbor_validate_det_(Pulse_Lib_Slice_slice__uint8_t input)
           )
             ite = off1 + (size_t)argument_as_uint64(x.fst, x.snd);
           else
-            ite = off1 + (size_t)0U;
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+            ite = off1;
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           scrut2 = split__uint8_t(pi, ite);
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           scrut3 = { .fst = scrut2.fst, .snd = scrut2.snd };
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           scrut4 = { .fst = scrut3.fst, .snd = scrut3.snd };
           Pulse_Lib_Slice_slice__uint8_t ph = scrut4.fst;
           Pulse_Lib_Slice_slice__uint8_t pc = scrut4.snd;
@@ -1642,22 +1642,22 @@ static size_t cbor_validate_det(Pulse_Lib_Slice_slice__uint8_t input)
 
 static cbor_raw cbor_parse(Pulse_Lib_Slice_slice__uint8_t input, size_t len)
 {
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut = split__uint8_t(input, (size_t)0U);
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut0 =
     split__uint8_t((
-        (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+        (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
           .fst = scrut.fst,
           .snd = scrut.snd
         }
       ).snd,
       len - (size_t)0U);
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
   return
     cbor_read((
-        (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+        (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
           .fst = scrut1.fst,
           .snd = scrut1.snd
         }
@@ -1705,12 +1705,12 @@ static bool cbor_raw_map_insert(Pulse_Lib_Slice_slice__uint8_t out, size_t off2,
   {
     size_t off = poff;
     Pulse_Lib_Slice_slice__uint8_t out2kv = split__uint8_t(out, off).snd;
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut0 = split__uint8_t(out2kv, off2 - off);
     Pulse_Lib_Slice_slice__uint8_t out2 = scrut0.fst;
     Pulse_Lib_Slice_slice__uint8_t outk = split__uint8_t(scrut0.snd, off3 - off2).fst;
     size_t offk = cbor_jump(out2, (size_t)0U);
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut = split__uint8_t(out2, offk);
     Pulse_Lib_Slice_slice__uint8_t outvq = scrut.snd;
     int16_t c = lex_compare_bytes(scrut.fst, outk);
@@ -1798,16 +1798,16 @@ static cbor_raw cbor_serialized_array_item(cbor_serialized c, uint64_t i)
   {
     Pulse_Lib_Slice_slice__uint8_t res = pres;
     size_t i1 = pi;
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut = split__uint8_t(res, jump_raw_data_item(res, (size_t)0U));
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut0 = { .fst = scrut.fst, .snd = scrut.snd };
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
     Pulse_Lib_Slice_slice__uint8_t
     res2 =
       (
-        (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+        (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
           .fst = scrut1.fst,
           .snd = scrut1.snd
         }
@@ -1816,15 +1816,15 @@ static cbor_raw cbor_serialized_array_item(cbor_serialized c, uint64_t i)
     pres = res2;
   }
   Pulse_Lib_Slice_slice__uint8_t res = pres;
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut = split__uint8_t(res, jump_raw_data_item(res, (size_t)0U));
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut0 = { .fst = scrut.fst, .snd = scrut.snd };
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
   return
     cbor_read((
-        (__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){
+        (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
           .fst = scrut1.fst,
           .snd = scrut1.snd
         }
@@ -1865,13 +1865,13 @@ cbor_serialized_array_iterator_next(
   CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator i
 )
 {
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut = split__uint8_t(i.s, jump_raw_data_item(i.s, (size_t)0U));
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut0 = { .fst = scrut.fst, .snd = scrut.snd };
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut2 = { .fst = scrut1.fst, .snd = scrut1.snd };
   Pulse_Lib_Slice_slice__uint8_t s2 = scrut2.snd;
   cbor_raw res = cbor_read(scrut2.fst);
@@ -1920,23 +1920,23 @@ cbor_serialized_map_iterator_next(
   CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator i
 )
 {
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut0 = split__uint8_t(i.s, jump_raw_data_item(i.s, jump_raw_data_item(i.s, (size_t)0U)));
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut2 = { .fst = scrut1.fst, .snd = scrut1.snd };
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut3 = { .fst = scrut2.fst, .snd = scrut2.snd };
   Pulse_Lib_Slice_slice__uint8_t s1 = scrut3.fst;
   Pulse_Lib_Slice_slice__uint8_t s2 = scrut3.snd;
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut = split__uint8_t(s1, jump_raw_data_item(s1, (size_t)0U));
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut4 = { .fst = scrut.fst, .snd = scrut.snd };
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut5 = { .fst = scrut4.fst, .snd = scrut4.snd };
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
   scrut6 = { .fst = scrut5.fst, .snd = scrut5.snd };
   Pulse_Lib_Slice_slice__uint8_t s21 = scrut6.snd;
   cbor_raw res1 = cbor_read(scrut6.fst);
@@ -2070,14 +2070,14 @@ cbor_array_iterator_length(
 }
 
 typedef struct
-__Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_s
+__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_s
 {
   Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw fst;
   Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw snd;
 }
-__Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw;
+__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw;
 
-static __Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw
+static __Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw
 split__CBOR_Pulse_Raw_Type_cbor_raw(
   Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw s,
   size_t i
@@ -2085,7 +2085,7 @@ split__CBOR_Pulse_Raw_Type_cbor_raw(
 {
   return
     (
-      (__Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw){
+      (__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw){
         .fst = { .elt = s.elt, .len = i },
         .snd = { .elt = s.elt + i, .len = s.len - i }
       }
@@ -2133,7 +2133,7 @@ cbor_array_iterator_truncate(
 {
   if (c.tag == CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Slice)
   {
-    __Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw
+    __Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw
     scrut = split__CBOR_Pulse_Raw_Type_cbor_raw(c.case_CBOR_Raw_Iterator_Slice, (size_t)len);
     return
       (
@@ -2141,7 +2141,7 @@ cbor_array_iterator_truncate(
           .tag = CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Slice,
           {
             .case_CBOR_Raw_Iterator_Slice = (
-              (__Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw){
+              (__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw){
                 .fst = scrut.fst,
                 .snd = scrut.snd
               }
@@ -2239,14 +2239,14 @@ op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(
 }
 
 typedef struct
-__Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry_s
+__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry_s
 {
   Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry fst;
   Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry snd;
 }
-__Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry;
+__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry;
 
-static __Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry
+static __Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
 split__CBOR_Pulse_Raw_Type_cbor_map_entry(
   Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry s,
   size_t i
@@ -2254,7 +2254,7 @@ split__CBOR_Pulse_Raw_Type_cbor_map_entry(
 {
   return
     (
-      (__Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry){
+      (__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry){
         .fst = { .elt = s.elt, .len = i },
         .snd = { .elt = s.elt + i, .len = s.len - i }
       }
@@ -2709,25 +2709,25 @@ static header cbor_raw_with_perm_get_header(cbor_raw xl)
 #define Some 1
 
 typedef uint8_t
-option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_tags;
+option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_tags;
 
 typedef struct
-option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_s
+option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_s
 {
-  option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_tags
+  option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_tags
   tag;
   Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw v;
 }
-option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw;
+option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw;
 
 typedef struct
-option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry_s
+option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry_s
 {
-  option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_tags
+  option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_tags
   tag;
   Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry v;
 }
-option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry;
+option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry;
 
 size_t
 CBOR_Pulse_Raw_Format_Serialize_ser_(
@@ -2763,12 +2763,12 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
     if (ite)
     {
       cbor_raw scrut0 = x_;
-      option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw
+      option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw
       scrut;
       if (scrut0.tag == CBOR_Case_Array)
         scrut =
           (
-            (option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw){
+            (option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw){
               .tag = Some,
               .v = scrut0.case_CBOR_Case_Array.cbor_array_ptr
             }
@@ -2776,7 +2776,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
       else
         scrut =
           (
-            (option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw){
+            (option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw){
               .tag = None
             }
           );
@@ -2833,12 +2833,12 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
     if (ite)
     {
       cbor_raw scrut0 = x_;
-      option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry
+      option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
       scrut;
       if (scrut0.tag == CBOR_Case_Map)
         scrut =
           (
-            (option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry){
+            (option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry){
               .tag = Some,
               .v = scrut0.case_CBOR_Case_Map.cbor_map_ptr
             }
@@ -2846,7 +2846,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
       else
         scrut =
           (
-            (option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry){
+            (option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry){
               .tag = None
             }
           );
@@ -2976,12 +2976,12 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
       if (ite0)
       {
         cbor_raw scrut0 = x_;
-        option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw
+        option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw
         scrut;
         if (scrut0.tag == CBOR_Case_Array)
           scrut =
             (
-              (option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw){
+              (option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw){
                 .tag = Some,
                 .v = scrut0.case_CBOR_Case_Array.cbor_array_ptr
               }
@@ -2989,7 +2989,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
         else
           scrut =
             (
-              (option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw){
+              (option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw){
                 .tag = None
               }
             );
@@ -3054,12 +3054,12 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
       if (ite0)
       {
         cbor_raw scrut0 = x_;
-        option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry
+        option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
         scrut;
         if (scrut0.tag == CBOR_Case_Map)
           scrut =
             (
-              (option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry){
+              (option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry){
                 .tag = Some,
                 .v = scrut0.case_CBOR_Case_Map.cbor_map_ptr
               }
@@ -3067,7 +3067,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
         else
           scrut =
             (
-              (option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry){
+              (option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry){
                 .tag = None
               }
             );
@@ -3478,7 +3478,7 @@ __CBOR_Pulse_Raw_Type_cbor_serialized_CBOR_Pulse_Raw_Type_cbor_serialized;
 typedef struct
 option___CBOR_Pulse_Raw_Type_cbor_serialized___CBOR_Pulse_Raw_Type_cbor_serialized__s
 {
-  option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_tags
+  option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_tags
   tag;
   __CBOR_Pulse_Raw_Type_cbor_serialized_CBOR_Pulse_Raw_Type_cbor_serialized v;
 }
@@ -4087,7 +4087,7 @@ CBOR_Pulse_API_Det_Common_cbor_raw_sort_aux(
   else
   {
     size_t mi = len / (size_t)2U;
-    __Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry
+    __Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
     scrut = split__CBOR_Pulse_Raw_Type_cbor_map_entry(a, mi);
     Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a2 = scrut.snd;
     if (!CBOR_Pulse_API_Det_Common_cbor_raw_sort_aux(scrut.fst))
@@ -5078,7 +5078,7 @@ cbor_raw cbor_det_map_entry_value(cbor_map_entry x2)
 
 typedef struct option__CBOR_Pulse_Raw_Type_cbor_raw_s
 {
-  option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_tags
+  option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_tags
   tag;
   cbor_raw v;
 }
