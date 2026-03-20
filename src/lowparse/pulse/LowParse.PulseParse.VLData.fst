@@ -134,3 +134,68 @@ fn validate_bounded_vldata
 {
   validate_bounded_vldata' min max (log256' max) v lr () input poffset
 }
+
+(* validate_vldata_payload: payload validator for variable-length data *)
+
+inline_for_extraction
+let validate_vldata_payload
+  (sz: integer_size)
+  (f: ((x: bounded_integer sz) -> GTot bool))
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (v: LPS.validator p)
+  (i: bounded_integer sz { f i == true })
+  (_: squash FStar.SizeT.fits_u64)
+: Tot (LPS.validator (parse_vldata_payload sz f p i))
+= FStar.SizeT.fits_u64_implies_fits_32 ();
+  LPS.validate_weaken (parse_vldata_payload_kind sz k) (PPCF.validate_fldata v (SZ.uint32_to_sizet i))
+
+(* validate_bounded_vldata_strong': validates parse_bounded_vldata_strong' *)
+
+inline_for_extraction
+fn validate_bounded_vldata_strong'
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (l: nat { l >= log256' max /\ l <= 4 })
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (v: LPS.validator p)
+  (lr: PPB.leaf_reader (parse_bounded_integer l))
+  (u: squash FStar.SizeT.fits_u64)
+: LPS.validator #(parse_bounded_vldata_strong_t min max s) #(parse_bounded_vldata_strong_kind min max l k) (parse_bounded_vldata_strong' min max l s)
+=
+  (input: slice byte)
+  (poffset: R.ref SZ.t)
+  (#offset: Ghost.erased SZ.t)
+  (#pm: perm)
+  (#v_bytes: Ghost.erased bytes)
+{
+  validate_bounded_vldata' min max l v lr () input poffset
+}
+
+(* validate_bounded_vldata_strong: default log version *)
+
+inline_for_extraction
+fn validate_bounded_vldata_strong
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (v: LPS.validator p)
+  (lr: PPB.leaf_reader (parse_bounded_integer (log256' max)))
+  (u: squash FStar.SizeT.fits_u64)
+: LPS.validator #(parse_bounded_vldata_strong_t min max s) #(parse_bounded_vldata_strong_kind min max (log256' max) k) (parse_bounded_vldata_strong min max s)
+=
+  (input: slice byte)
+  (poffset: R.ref SZ.t)
+  (#offset: Ghost.erased SZ.t)
+  (#pm: perm)
+  (#v_bytes: Ghost.erased bytes)
+{
+  validate_bounded_vldata_strong' min max (log256' max) s v lr () input poffset
+}
