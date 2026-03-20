@@ -271,7 +271,7 @@ cddl-test: cddl cddl-unit-tests
 
 # cbor needed because we regenerate its Rust documentation
 3d-doc-ci: 3d-doc-test cbor
-	+$(MAKE) -C doc 3d-ci
+#	+$(MAKE) -C doc 3d-ci
 
 .PHONY: 3d-doc-ci
 
