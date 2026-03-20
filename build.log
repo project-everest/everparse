@@ -1,0 +1,226 @@
+true                                                                                                                                                                                                                                                                                                                                                                                                                  
+/home/taramana/ep/opt/FStar/out/bin/fstar.exe  --z3version 4.13.3   --include /home/taramana/ep/opt/karamel/krmllib --include /home/taramana/ep/opt/karamel/krmllib/obj --include /home/taramana/ep/opt/pulse/out/lib/pulse --include src/lowparse --include src/ASN1 --include src/3d/prelude --include src/cbor/spec --include src/cbor/spec/raw --include src/cbor/spec/raw/everparse --include src/cddl/spec --include src/lowparse/pulse --include src/cbor/pulse --include src/cbor/pulse/raw --include src/cbor/pulse/raw/everparse --include src/cddl/pulse --include src/cddl/tool --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,Prims,FStar,LowStar --cmi --ext context_pruning  --dep full @.depend.rsp --output_deps_to .depend.aux
+* Warning 274:
+  - Implicitly opening namespace 'cbor.pulse.api.det.' shadows module 'c'
+    in file "/home/taramana/ep/opt/karamel/krmllib/C.fst".
+  - Rename "/home/taramana/ep/opt/karamel/krmllib/C.fst" to avoid conflicts.
+
+mv .depend.aux .depend
+make -C src/cbor/pulse/det
+make[1]: Entering directory '/home/taramana/ep/src/cbor/pulse/det'
+make -C c
+make[2]: Entering directory '/home/taramana/ep/src/cbor/pulse/det/c'
+make[2]: Nothing to be done for 'all'.
+make[2]: Leaving directory '/home/taramana/ep/src/cbor/pulse/det/c'
+cd rust && cargo build && cargo doc --no-deps
+warning: enum `long_argument_tags` is never used
+  --> src/cbordetveraux.rs:43:6
+   |
+43 | enum long_argument_tags
+   |      ^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: enum `cbor_raw_tags` is never used
+   --> src/cbordetveraux.rs:311:6
+    |
+311 | enum cbor_raw_tags
+    |      ^^^^^^^^^^^^^
+
+warning: enum `cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_tags` is never used
+    --> src/cbordetveraux.rs:2104:6
+     |
+2104 | enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_tags
+     |      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: enum `option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags` is never used
+    --> src/cbordetveraux.rs:2843:1
+     |
+2843 | option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type alias `cbor_array_iterator` is never used
+    --> src/cbordetveraux.rs:4380:10
+     |
+4380 | pub type cbor_array_iterator <'a> = cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>;
+     |          ^^^^^^^^^^^^^^^^^^^
+
+warning: type alias `cbor_map_iterator` is never used
+    --> src/cbordetveraux.rs:4382:10
+     |
+4382 | pub type cbor_map_iterator <'a> = cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>;
+     |          ^^^^^^^^^^^^^^^^^
+
+warning: type alias `cbor_det_t` is never used
+    --> src/cbordetveraux.rs:4384:10
+     |
+4384 | pub type cbor_det_t <'a> = cbor_raw <'a>;
+     |          ^^^^^^^^^^
+
+warning: type alias `cbor_det_map_entry_t` is never used
+    --> src/cbordetveraux.rs:4386:10
+     |
+4386 | pub type cbor_det_map_entry_t <'a> = cbor_map_entry <'a>;
+     |          ^^^^^^^^^^^^^^^^^^^^
+
+warning: type alias `cbor_det_array_iterator_t` is never used
+    --> src/cbordetveraux.rs:4388:10
+     |
+4388 | pub type cbor_det_array_iterator_t <'a> = cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>;
+     |          ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type alias `cbor_det_map_iterator_t` is never used
+    --> src/cbordetveraux.rs:4390:10
+     |
+4390 | pub type cbor_det_map_iterator_t <'a> =
+     |          ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: enum `cbor_det_view_tags` is never used
+   --> src/cbordetver.rs:253:6
+    |
+253 | enum cbor_det_view_tags
+    |      ^^^^^^^^^^^^^^^^^^
+
+warning: `cborrs` (lib) generated 11 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
+   Generated /home/taramana/ep/src/cbor/pulse/det/rust/target/doc/cborrs/index.html
+make[1]: Leaving directory '/home/taramana/ep/src/cbor/pulse/det'
+make -C src/cbor/pulse/nondet
+make[1]: Entering directory '/home/taramana/ep/src/cbor/pulse/nondet'
+make -C c
+make[2]: Entering directory '/home/taramana/ep/src/cbor/pulse/nondet/c'
+make[2]: Nothing to be done for 'all'.
+make[2]: Leaving directory '/home/taramana/ep/src/cbor/pulse/nondet/c'
+cd rust && cargo build && cargo doc --no-deps
+warning: enum `long_argument_tags` is never used
+  --> src/cbornondetveraux.rs:43:6
+   |
+43 | enum long_argument_tags
+   |      ^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: enum `option__bool_tags` is never used
+   --> src/cbornondetveraux.rs:250:6
+    |
+250 | enum option__bool_tags
+    |      ^^^^^^^^^^^^^^^^^
+
+warning: enum `cbor_raw_tags` is never used
+   --> src/cbornondetveraux.rs:341:6
+    |
+341 | enum cbor_raw_tags
+    |      ^^^^^^^^^^^^^
+
+warning: enum `cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_tags` is never used
+    --> src/cbornondetveraux.rs:1454:6
+     |
+1454 | enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_tags
+     |      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type alias `cbor_array_iterator` is never used
+    --> src/cbornondetveraux.rs:6636:10
+     |
+6636 | pub type cbor_array_iterator <'a> = cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>;
+     |          ^^^^^^^^^^^^^^^^^^^
+
+warning: type alias `cbor_map_iterator` is never used
+    --> src/cbornondetveraux.rs:6638:10
+     |
+6638 | pub type cbor_map_iterator <'a> = cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>;
+     |          ^^^^^^^^^^^^^^^^^
+
+warning: type alias `cbor_nondet_t` is never used
+    --> src/cbornondetveraux.rs:6640:10
+     |
+6640 | pub type cbor_nondet_t <'a> = cbor_raw <'a>;
+     |          ^^^^^^^^^^^^^
+
+warning: type alias `cbor_nondet_array_iterator_t` is never used
+    --> src/cbornondetveraux.rs:6642:10
+     |
+6642 | pub type cbor_nondet_array_iterator_t <'a> =
+     |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type alias `cbor_nondet_map_iterator_t` is never used
+    --> src/cbornondetveraux.rs:6645:10
+     |
+6645 | pub type cbor_nondet_map_iterator_t <'a> =
+     |          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type alias `cbor_nondet_map_entry_t` is never used
+    --> src/cbornondetveraux.rs:6648:10
+     |
+6648 | pub type cbor_nondet_map_entry_t <'a> = cbor_map_entry <'a>;
+     |          ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: enum `cbor_nondet_view_tags` is never used
+   --> src/cbornondetver.rs:148:6
+    |
+148 | enum cbor_nondet_view_tags
+    |      ^^^^^^^^^^^^^^^^^^^^^
+
+warning: `cborrs-nondet` (lib) generated 11 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
+   Generated /home/taramana/ep/src/cbor/pulse/nondet/rust/target/doc/cborrs_nondet/index.html
+make[1]: Leaving directory '/home/taramana/ep/src/cbor/pulse/nondet'
+/home/taramana/ep/opt/FStar/out/bin/fstar.exe  --z3version 4.13.3   --include /home/taramana/ep/opt/karamel/krmllib --include /home/taramana/ep/opt/karamel/krmllib/obj --include /home/taramana/ep/opt/pulse/out/lib/pulse --include src/lowparse --include src/ASN1 --include src/3d/prelude --include src/cbor/spec --include src/cbor/spec/raw --include src/cbor/spec/raw/everparse --include src/cddl/spec --include src/lowparse/pulse --include src/cbor/pulse --include src/cbor/pulse/raw --include src/cbor/pulse/raw/everparse --include src/cddl/pulse --include src/cddl/tool --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,Prims,FStar,LowStar --cmi --ext context_pruning    src/cddl/pulse/CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.LoopBody.fsti
+* Info at src/cddl/pulse/CDDL.Pulse.Parse.MapGroup.fst(1103,0-1103,13):
+  - Option state:
+  - --warn_error "@241"
+    --include /home/taramana/ep/opt/karamel/krmllib,/home/taramana/ep/opt/karamel/krmllib/obj,/home/taramana/ep/opt/pulse/out/lib/pulse,src/lowparse,src/ASN1,src/3d/prelude,src/cbor/spec,src/cbor/spec/raw,src/cbor/spec/raw/everparse,src/cddl/spec,src/lowparse/pulse,src/cbor/pulse,src/cbor/pulse/raw,src/cbor/pulse/raw/everparse,src/cddl/pulse,src/cddl/tool,.
+    --ext "context_pruning"
+    --cmi true
+    --cache_checked_modules true
+    --already_cached "PulseCore,Pulse,C,LowStar,*,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,Prims,FStar,LowStar"
+
+Verified i'face (or impl+i'face): CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.LoopBody
+All verification conditions discharged successfully
+touch -c src/cddl/pulse/CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.LoopBody.fsti.checked
+make: Circular src/cddl/pulse/CDDL.Pulse.AST.Parse.fst.checked <- src/cddl/pulse/CDDL.Pulse.AST.Parse.fst.checked dependency dropped.
+/home/taramana/ep/opt/FStar/out/bin/fstar.exe  --z3version 4.13.3   --include /home/taramana/ep/opt/karamel/krmllib --include /home/taramana/ep/opt/karamel/krmllib/obj --include /home/taramana/ep/opt/pulse/out/lib/pulse --include src/lowparse --include src/ASN1 --include src/3d/prelude --include src/cbor/spec --include src/cbor/spec/raw --include src/cbor/spec/raw/everparse --include src/cddl/spec --include src/lowparse/pulse --include src/cbor/pulse --include src/cbor/pulse/raw --include src/cbor/pulse/raw/everparse --include src/cddl/pulse --include src/cddl/tool --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,Prims,FStar,LowStar --cmi --ext context_pruning    src/cddl/pulse/CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.fst
+* Info at src/cddl/pulse/CDDL.Pulse.Parse.MapGroup.fst(1103,0-1103,13):
+  - Option state:
+  - --warn_error "@241"
+    --include /home/taramana/ep/opt/karamel/krmllib,/home/taramana/ep/opt/karamel/krmllib/obj,/home/taramana/ep/opt/pulse/out/lib/pulse,src/lowparse,src/ASN1,src/3d/prelude,src/cbor/spec,src/cbor/spec/raw,src/cbor/spec/raw/everparse,src/cddl/spec,src/lowparse/pulse,src/cbor/pulse,src/cbor/pulse/raw,src/cbor/pulse/raw/everparse,src/cddl/pulse,src/cddl/tool,.
+    --ext "context_pruning"
+    --cmi true
+    --cache_checked_modules true
+    --already_cached "PulseCore,Pulse,C,LowStar,*,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,Prims,FStar,LowStar"
+
+* Warning 361 at src/cddl/pulse/CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.fst(15,0-108,1):
+  - Some #push-options have not been popped. Current depth is 1.
+
+Verified module: CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2
+All verification conditions discharged successfully
+touch -c src/cddl/pulse/CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.fst.checked
+/home/taramana/ep/opt/FStar/out/bin/fstar.exe  --z3version 4.13.3   --include /home/taramana/ep/opt/karamel/krmllib --include /home/taramana/ep/opt/karamel/krmllib/obj --include /home/taramana/ep/opt/pulse/out/lib/pulse --include src/lowparse --include src/ASN1 --include src/3d/prelude --include src/cbor/spec --include src/cbor/spec/raw --include src/cbor/spec/raw/everparse --include src/cddl/spec --include src/lowparse/pulse --include src/cbor/pulse --include src/cbor/pulse/raw --include src/cbor/pulse/raw/everparse --include src/cddl/pulse --include src/cddl/tool --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,Prims,FStar,LowStar --cmi --ext context_pruning    src/cddl/pulse/CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.LoopBody.fst
+* Info at src/cddl/pulse/CDDL.Pulse.Parse.MapGroup.fst(1103,0-1103,13):
+  - Option state:
+  - --warn_error "@241"
+    --include /home/taramana/ep/opt/karamel/krmllib,/home/taramana/ep/opt/karamel/krmllib/obj,/home/taramana/ep/opt/pulse/out/lib/pulse,src/lowparse,src/ASN1,src/3d/prelude,src/cbor/spec,src/cbor/spec/raw,src/cbor/spec/raw/everparse,src/cddl/spec,src/lowparse/pulse,src/cbor/pulse,src/cbor/pulse/raw,src/cbor/pulse/raw/everparse,src/cddl/pulse,src/cddl/tool,.
+    --ext "context_pruning"
+    --cmi true
+    --cache_checked_modules true
+    --already_cached "PulseCore,Pulse,C,LowStar,*,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,Prims,FStar,LowStar"
+
+* Warning 361 at src/cddl/pulse/CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.LoopBody.fst(32,0-279,1):
+  - Some #push-options have not been popped. Current depth is 1.
+
+Verified module: CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.LoopBody
+All verification conditions discharged successfully
+touch -c src/cddl/pulse/CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.LoopBody.fst.checked
+make: Circular src/cbor/spec/raw/CBOR.Spec.Raw.Map.fst.checked <- src/cbor/spec/raw/CBOR.Spec.Raw.Map.fst.checked dependency dropped.
+make -C src/cddl/tool
+make[1]: Entering directory '/home/taramana/ep/src/cddl/tool'
+make -f extraction-c.Makefile
+make[2]: Entering directory '/home/taramana/ep/src/cddl/tool'
+make[2]: Nothing to be done for 'all'.
+make[2]: Leaving directory '/home/taramana/ep/src/cddl/tool'
+make -f extraction-rust.Makefile
+make[2]: Entering directory '/home/taramana/ep/src/cddl/tool'
+make[2]: Nothing to be done for 'all'.
+make[2]: Leaving directory '/home/taramana/ep/src/cddl/tool'
+make[1]: Leaving directory '/home/taramana/ep/src/cddl/tool'

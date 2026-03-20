@@ -159,3 +159,55 @@ fn validate_bounded_bcvli
 }
 
 #pop-options
+
+#push-options "--z3rlimit 32 --z3cliopt smt.arith.nl=false --max_fuel 0"
+
+inline_for_extraction
+fn jump_bcvli
+  (r1: PPB.leaf_reader (parse_bounded_integer_le 1))
+: LPS.jumper parse_bcvli
+=
+  (input: S.slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
+  parse_bcvli_eq sinput;
+  parser_kind_prop_equiv (parse_bounded_integer_kind 1) (parse_bounded_integer_le 1);
+  pts_to_len input;
+  let off1 = SZ.add offset 1sz;
+  let x = PPB.read_parsed_from_validator_success r1 input offset off1;
+  Seq.lemma_eq_elim
+    (Seq.slice sinput (SZ.v off1 - SZ.v offset) (Seq.length sinput))
+    (Seq.slice v (SZ.v off1) (Seq.length v));
+  if (U32.lt x 253ul) {
+    off1
+  } else if (x = 253ul) {
+    parser_kind_prop_equiv (parse_bounded_integer_kind 2) (parse_bounded_integer_le 2);
+    SZ.add off1 2sz
+  } else {
+    parser_kind_prop_equiv (parse_bounded_integer_kind 4) (parse_bounded_integer_le 4);
+    SZ.add off1 4sz
+  }
+}
+
+inline_for_extraction
+fn jump_bounded_bcvli
+  (min: nat)
+  (max: nat { min <= max })
+  (r1: PPB.leaf_reader (parse_bounded_integer_le 1))
+: LPS.jumper (parse_bounded_bcvli min max)
+=
+  (input: S.slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
+  parse_bounded_bcvli_eq min max sinput;
+  parse_bcvli_eq sinput;
+  jump_bcvli r1 input offset
+}
+
+#pop-options

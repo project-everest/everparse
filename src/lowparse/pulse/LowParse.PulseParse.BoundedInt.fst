@@ -45,6 +45,95 @@ let validate_u32_le
 
 (* Bounded int32 validators (BE) — specialized per size *)
 
+(* Simple constant-size jumpers *)
+
+inline_for_extraction noextract
+let jump_bounded_integer (i: integer_size)
+: Tot (LPS.jumper (parse_bounded_integer i))
+= LPS.jump_constant_size (parse_bounded_integer i) (SZ.uint_to_t i)
+
+inline_for_extraction noextract
+let jump_bounded_integer_le (i: integer_size)
+: Tot (LPS.jumper (parse_bounded_integer_le i))
+= LPS.jump_constant_size (parse_bounded_integer_le i) (SZ.uint_to_t i)
+
+inline_for_extraction
+let jump_u16_le
+: LPS.jumper parse_u16_le
+= LPS.jump_constant_size parse_u16_le 2sz
+
+inline_for_extraction
+let jump_u32_le
+: LPS.jumper parse_u32_le
+= LPS.jump_constant_size parse_u32_le 4sz
+
+inline_for_extraction
+let jump_bounded_int32_le_fixed_size
+  (min32: U32.t)
+  (max32: U32.t { U32.v min32 <= U32.v max32 })
+: Tot (LPS.jumper (parse_bounded_int32_le_fixed_size (U32.v min32) (U32.v max32)))
+= LPS.jump_constant_size (parse_bounded_int32_le_fixed_size (U32.v min32) (U32.v max32)) 4sz
+
+(* Bounded int32 jumpers (BE) — all constant-size, sz = log256' max *)
+
+inline_for_extraction
+let jump_bounded_int32_1
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 256 })
+: Tot (LPS.jumper (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+= LPS.jump_constant_size (parse_bounded_int32 (U32.v min32) (U32.v max32)) 1sz
+
+inline_for_extraction
+let jump_bounded_int32_2
+  (min32: U32.t)
+  (max32: U32.t { 256 <= U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 65536 })
+: Tot (LPS.jumper (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+= LPS.jump_constant_size (parse_bounded_int32 (U32.v min32) (U32.v max32)) 2sz
+
+inline_for_extraction
+let jump_bounded_int32_3
+  (min32: U32.t)
+  (max32: U32.t { 65536 <= U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 16777216 })
+: Tot (LPS.jumper (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+= LPS.jump_constant_size (parse_bounded_int32 (U32.v min32) (U32.v max32)) 3sz
+
+inline_for_extraction
+let jump_bounded_int32_4
+  (min32: U32.t)
+  (max32: U32.t { 16777216 <= U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+: Tot (LPS.jumper (parse_bounded_int32 (U32.v min32) (U32.v max32)))
+= LPS.jump_constant_size (parse_bounded_int32 (U32.v min32) (U32.v max32)) 4sz
+
+(* Bounded int32 jumpers (LE) *)
+
+inline_for_extraction
+let jump_bounded_int32_le_1
+  (min32: U32.t)
+  (max32: U32.t { 0 < U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 256 })
+: Tot (LPS.jumper (parse_bounded_int32_le (U32.v min32) (U32.v max32)))
+= LPS.jump_constant_size (parse_bounded_int32_le (U32.v min32) (U32.v max32)) 1sz
+
+inline_for_extraction
+let jump_bounded_int32_le_2
+  (min32: U32.t)
+  (max32: U32.t { 256 <= U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 65536 })
+: Tot (LPS.jumper (parse_bounded_int32_le (U32.v min32) (U32.v max32)))
+= LPS.jump_constant_size (parse_bounded_int32_le (U32.v min32) (U32.v max32)) 2sz
+
+inline_for_extraction
+let jump_bounded_int32_le_3
+  (min32: U32.t)
+  (max32: U32.t { 65536 <= U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 16777216 })
+: Tot (LPS.jumper (parse_bounded_int32_le (U32.v min32) (U32.v max32)))
+= LPS.jump_constant_size (parse_bounded_int32_le (U32.v min32) (U32.v max32)) 3sz
+
+inline_for_extraction
+let jump_bounded_int32_le_4
+  (min32: U32.t)
+  (max32: U32.t { 16777216 <= U32.v max32 /\ U32.v min32 <= U32.v max32 /\ U32.v max32 < 4294967296 })
+: Tot (LPS.jumper (parse_bounded_int32_le (U32.v min32) (U32.v max32)))
+= LPS.jump_constant_size (parse_bounded_int32_le (U32.v min32) (U32.v max32)) 4sz
+
 #push-options "--z3rlimit 16"
 
 inline_for_extraction

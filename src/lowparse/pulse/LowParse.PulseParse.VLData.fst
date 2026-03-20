@@ -87,6 +87,129 @@ fn validate_vldata_gen
 
 #pop-options
 
+(* jump_vldata_gen: jump variable-length data with a bounded integer length prefix *)
+
+#push-options "--z3rlimit 32"
+
+inline_for_extraction
+fn jump_vldata_gen
+  (sz: integer_size)
+  (f: (bounded_integer sz -> GTot bool))
+  (#k: parser_kind)
+  (#t: Type0)
+  (p: parser k t)
+  (lr: LPS.leaf_reader (serialize_bounded_integer sz))
+  (u: squash FStar.SizeT.fits_u64)
+: LPS.jumper #t #(parse_vldata_gen_kind sz k) (parse_vldata_gen sz f p)
+=
+  (input: S.slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
+  parse_vldata_gen_eq sz f p sinput;
+  parser_kind_prop_equiv (parse_bounded_integer_kind sz) (parse_bounded_integer sz);
+  pts_to_len input;
+  SZ.fits_u64_implies_fits_32 ();
+  let sz_sz = SZ.uint32_to_sizet (U32.uint_to_t sz);
+  let off1 = SZ.add offset sz_sz;
+  let len = LPS.read_from_validator_success lr input offset off1;
+  let len_sz = SZ.uint32_to_sizet len;
+  SZ.add off1 len_sz
+}
+
+(* jump_bounded_vldata': bounded variable-length data *)
+
+inline_for_extraction
+fn jump_bounded_vldata'
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (l: nat { l >= log256' max /\ l <= 4 })
+  (#k: parser_kind)
+  (#t: Type0)
+  (p: parser k t)
+  (lr: LPS.leaf_reader (serialize_bounded_integer l))
+  (u: squash FStar.SizeT.fits_u64)
+: LPS.jumper #t #(parse_bounded_vldata_strong_kind min max l k) (parse_bounded_vldata' min max l p)
+=
+  (input: S.slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  parse_bounded_vldata_correct min max l p;
+  jump_vldata_gen l (in_bounds min max) p lr () input offset
+}
+
+(* jump_bounded_vldata: bounded variable-length data with default log *)
+
+inline_for_extraction
+fn jump_bounded_vldata
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (#k: parser_kind)
+  (#t: Type0)
+  (p: parser k t)
+  (lr: LPS.leaf_reader (serialize_bounded_integer (log256' max)))
+  (u: squash FStar.SizeT.fits_u64)
+: LPS.jumper #t #(parse_bounded_vldata_strong_kind min max (log256' max) k) (parse_bounded_vldata min max p)
+=
+  (input: S.slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  jump_bounded_vldata' min max (log256' max) p lr () input offset
+}
+
+(* jump_bounded_vldata_strong': strong bounded variable-length data *)
+
+inline_for_extraction
+fn jump_bounded_vldata_strong'
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (l: nat { l >= log256' max /\ l <= 4 })
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (lr: LPS.leaf_reader (serialize_bounded_integer l))
+  (u: squash FStar.SizeT.fits_u64)
+: LPS.jumper #(parse_bounded_vldata_strong_t min max s) #(parse_bounded_vldata_strong_kind min max l k) (parse_bounded_vldata_strong' min max l s)
+=
+  (input: S.slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  jump_bounded_vldata' min max l p lr () input offset
+}
+
+(* jump_bounded_vldata_strong: strong bounded variable-length data with default log *)
+
+inline_for_extraction
+fn jump_bounded_vldata_strong
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (lr: LPS.leaf_reader (serialize_bounded_integer (log256' max)))
+  (u: squash FStar.SizeT.fits_u64)
+: LPS.jumper #(parse_bounded_vldata_strong_t min max s) #(parse_bounded_vldata_strong_kind min max (log256' max) k) (parse_bounded_vldata_strong min max s)
+=
+  (input: S.slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  jump_bounded_vldata_strong' min max (log256' max) s lr () input offset
+}
+
+#pop-options
+
 (* validate_bounded_vldata': bounded variable-length data *)
 
 inline_for_extraction

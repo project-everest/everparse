@@ -48,3 +48,21 @@ let validate_maybe_enum_key
 = validate_synth
     v
     (maybe_enum_key_of_repr e)
+
+inline_for_extraction
+let jump_enum_key
+  (#key #repr: eqtype)
+  (#k: parser_kind) (#p: parser k repr) (j: B.jumper p)
+  (e: enum key repr)
+: Tot (B.jumper (parse_enum_key p e))
+= B.jump_synth
+    (B.jump_filter j (parse_enum_key_cond e))
+    (parse_enum_key_synth e)
+
+inline_for_extraction
+let jump_maybe_enum_key
+  (#key #repr: eqtype)
+  (#k: parser_kind) (#p: parser k repr) (j: B.jumper p)
+  (e: enum key repr)
+: Tot (B.jumper (parse_maybe_enum_key p e))
+= B.jump_synth j (maybe_enum_key_of_repr e)

@@ -364,3 +364,329 @@ fn validate_dsum
 }
 
 #pop-options
+
+(* ========== Sum jumpers ========== *)
+
+inline_for_extraction
+let jump_sum_cases_aux
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (jc: ((x: sum_key t) -> Tot (B.jumper (dsnd (pc x)))))
+  (k: sum_key t)
+: Tot (B.jumper (parse_sum_cases t pc k))
+= [@inline_let]
+  let _ = synth_sum_case_injective t k in
+  B.jump_synth
+    (B.jump_ext
+      (jc k)
+      (weaken (weaken_parse_cases_kind t pc) (dsnd (pc k)))
+    )
+    (synth_sum_case t k)
+
+inline_for_extraction
+let jump_sum_cases_t
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: sum_key t)
+: Tot Type
+= B.jumper (parse_sum_cases t pc k)
+
+inline_for_extraction
+fn jump_sum_cases_t_if'
+  (t: sum u#0 u#0)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: sum_key t)
+  (cond: bool)
+  (sv_true: (cond_true cond -> Tot (jump_sum_cases_t t pc k)))
+  (sv_false: (cond_false cond -> Tot (jump_sum_cases_t t pc k)))
+: (jump_sum_cases_t t pc k)
+=
+  (input: _)
+  (offset: _)
+  (#pm: _)
+  (#v: _)
+{
+  if cond {
+    sv_true () input offset
+  } else {
+    sv_false () input offset
+  }
+}
+
+inline_for_extraction
+let jump_sum_cases_t_if
+  (t: sum u#0 u#0)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: sum_key t)
+: (if_combinator (jump_sum_cases_t t pc k) eq_trivial)
+= jump_sum_cases_t_if' t pc k
+
+inline_for_extraction
+let jump_sum_cases
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (jc: ((x: sum_key t) -> Tot (B.jumper (dsnd (pc x)))))
+  (destr: dep_enum_destr (sum_enum t) (jump_sum_cases_t t pc))
+  (k: sum_key t)
+: Tot (B.jumper (parse_sum_cases t pc k))
+= destr
+    _
+    (jump_sum_cases_t_if t pc)
+    (fun _ _ -> ())
+    (fun _ _ _ _ -> ())
+    (jump_sum_cases_aux t pc jc)
+    k
+
+let jump_sum_aux_payload_postcond
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: maybe_enum_key (sum_enum t))
+  (offset: SZ.t)
+  (v: bytes)
+  (res: SZ.t)
+: Tot prop
+= match k with
+  | Unknown _ -> False
+  | Known k' -> B.validator_success (dsnd (pc k')) offset v res
+
+inline_for_extraction
+let jump_sum_aux_payload_t
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: maybe_enum_key (sum_enum t))
+: Tot Type
+=
+  (input: S.slice byte) ->
+  (offset: SZ.t) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased bytes) ->
+  stt SZ.t
+  (requires
+    pts_to input #pm v **
+    pure (
+      SZ.v offset <= Seq.length v /\ (
+      match k with
+      | Unknown _ -> False
+      | Known k' -> B.jumper_pre (dsnd (pc k')) offset v
+    ))
+  )
+  (ensures (fun res ->
+    pts_to input #pm v **
+    pure (jump_sum_aux_payload_postcond t pc k offset v res)
+  ))
+
+inline_for_extraction
+fn jump_sum_aux_payload_if'
+  (t: sum u#0 u#0)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: maybe_enum_key (sum_enum t))
+  (cond: bool)
+  (ift: ((cond_true cond) -> Tot (jump_sum_aux_payload_t t pc k)))
+  (iff: ((cond_false cond) -> Tot (jump_sum_aux_payload_t t pc k)))
+: (jump_sum_aux_payload_t t pc k)
+=
+  (input: S.slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  if cond {
+    ift () input offset
+  } else {
+    iff () input offset
+  }
+}
+
+inline_for_extraction
+let jump_sum_aux_payload_if
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: maybe_enum_key (sum_enum t))
+: Tot (if_combinator (jump_sum_aux_payload_t t pc k) eq_trivial)
+= jump_sum_aux_payload_if' t pc k
+
+#push-options "--z3rlimit 64"
+
+inline_for_extraction
+fn jump_sum_aux
+  (t: sum u#0 u#0)
+  (#kt: parser_kind)
+  (#p: parser kt (sum_repr_type t))
+  (j: B.jumper p)
+  (p32: leaf_reader p)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (j_payload: ((k: sum_repr_type t)) -> Tot (jump_sum_aux_payload_t t pc (maybe_enum_key_of_repr (sum_enum t) k)))
+  (_: squash (kt.parser_kind_subkind == Some ParserStrong))
+: (B.jumper (parse_sum t p pc))
+=
+  (input: S.slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v_bytes: Ghost.erased bytes)
+{
+  let sinput = Ghost.hide (Seq.slice v_bytes (SZ.v offset) (Seq.length v_bytes));
+  parse_sum_eq'' t p pc sinput;
+  S.pts_to_len input;
+  let off = j input offset;
+  let k' = PPB.read_parsed_from_validator_success p32 input offset off;
+  Seq.lemma_eq_elim
+    (Seq.slice sinput (SZ.v off - SZ.v offset) (Seq.length sinput))
+    (Seq.slice v_bytes (SZ.v off) (Seq.length v_bytes));
+  j_payload k' input off
+}
+
+#pop-options
+
+inline_for_extraction
+fn jump_sum_aux_payload'
+  (t: sum u#0 u#0)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (pc32: ((x: sum_key t) -> Tot (B.jumper (dsnd (pc x)))))
+  (k: maybe_enum_key (sum_enum t))
+: (jump_sum_aux_payload_t t pc k)
+=
+  (input: S.slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  match k {
+    Known k' -> { pc32 k' input offset }
+    Unknown _ -> { 0sz }
+  }
+}
+
+inline_for_extraction
+let jump_sum_aux_payload
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (pc32: ((x: sum_key t) -> Tot (B.jumper (dsnd (pc x)))))
+  (destr: dep_maybe_enum_destr_t (sum_enum t) (jump_sum_aux_payload_t t pc))
+  (k: sum_repr_type t)
+: Tot (jump_sum_aux_payload_t t pc (maybe_enum_key_of_repr (sum_enum t) k))
+= destr (fun _ -> eq_trivial) (jump_sum_aux_payload_if t pc) (fun _ _ -> ()) (fun _ _ _ _ -> ()) (jump_sum_aux_payload' t pc pc32) k
+
+inline_for_extraction
+let jump_sum
+  (t: sum)
+  (#kt: parser_kind)
+  (#p: parser kt (sum_repr_type t))
+  (j: B.jumper p)
+  (p32: leaf_reader p)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (pc32: ((x: sum_key t) -> Tot (B.jumper (dsnd (pc x)))))
+  (destr: dep_maybe_enum_destr_t (sum_enum t) (jump_sum_aux_payload_t t pc))
+  (_: squash (kt.parser_kind_subkind == Some ParserStrong))
+: Tot (B.jumper (parse_sum t p pc))
+= jump_sum_aux t j p32 pc (jump_sum_aux_payload t pc pc32 destr) ()
+
+(* ========== DSum jumpers ========== *)
+
+let jump_dsum_cases_t
+  (s: dsum)
+  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
+  (#k: parser_kind)
+  (g: parser k (dsum_type_of_unknown_tag s))
+  (x: dsum_key s)
+: Tot Type
+= B.jumper (parse_dsum_cases' s f g x)
+
+inline_for_extraction
+fn jump_dsum_cases_if'
+  (s: dsum u#0 u#0)
+  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
+  (#k: parser_kind)
+  (g: parser k (dsum_type_of_unknown_tag s))
+  (x: dsum_key s)
+  (cond: bool)
+  (ift: (cond_true cond -> Tot (jump_dsum_cases_t s f g x)))
+  (iff: (cond_false cond -> Tot (jump_dsum_cases_t s f g x)))
+: (jump_dsum_cases_t s f g x)
+=
+  (input: _)
+  (offset: _)
+  (#pm: _)
+  (#v: _)
+{
+  if cond {
+    ift () input offset
+  } else {
+    iff () input offset
+  }
+}
+
+inline_for_extraction
+let jump_dsum_cases_if
+  (s: dsum u#0 u#0)
+  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
+  (#k: parser_kind)
+  (g: parser k (dsum_type_of_unknown_tag s))
+  (x: dsum_key s)
+: Tot (if_combinator (jump_dsum_cases_t s f g x) eq_trivial)
+= jump_dsum_cases_if' s f g x
+
+inline_for_extraction
+let jump_dsum_cases'
+  (s: dsum)
+  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
+  (f': (x: dsum_known_key s) -> Tot (B.jumper (dsnd (f x))))
+  (#k: parser_kind)
+  (#g: parser k (dsum_type_of_unknown_tag s))
+  (g': B.jumper g)
+  (x: dsum_key s)
+: Tot (jump_dsum_cases_t s f g x)
+= [@inline_let]
+  let _ = synth_dsum_case_injective s x in
+  match x with
+  | Known x' -> B.jump_synth (f' x') (synth_dsum_case s (Known x'))
+  | Unknown x' -> B.jump_synth g' (synth_dsum_case s (Unknown x'))
+
+inline_for_extraction
+let jump_dsum_cases_dispatch
+  (t: dsum)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (f32: (x: dsum_known_key t) -> Tot (B.jumper (dsnd (f x))))
+  (#k': parser_kind)
+  (#g: parser k' (dsum_type_of_unknown_tag t))
+  (g32: B.jumper g)
+  (destr: dep_maybe_enum_destr_t (dsum_enum t) (jump_dsum_cases_t t f g))
+  (tg: dsum_repr_type t)
+: Tot (jump_dsum_cases_t t f g (maybe_enum_key_of_repr (dsum_enum t) tg))
+= destr (fun _ -> eq_trivial) (jump_dsum_cases_if t f g) (fun _ _ -> ()) (fun _ _ _ _ -> ()) (jump_dsum_cases' t f f32 g32) tg
+
+#push-options "--z3rlimit 64"
+
+inline_for_extraction
+fn jump_dsum
+  (#kt: parser_kind)
+  (t: dsum u#0 u#0)
+  (#p: parser kt (dsum_repr_type t))
+  (j: B.jumper p)
+  (p32: leaf_reader p)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (f32: (x: dsum_known_key t) -> Tot (B.jumper (dsnd (f x))))
+  (#k': parser_kind)
+  (#g: parser k' (dsum_type_of_unknown_tag t))
+  (g32: B.jumper g)
+  (destr: dep_maybe_enum_destr_t (dsum_enum t) (jump_dsum_cases_t t f g))
+  (_: squash (kt.parser_kind_subkind == Some ParserStrong))
+: B.jumper (parse_dsum t p f g)
+=
+  (input: S.slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v_bytes: Ghost.erased bytes)
+{
+  let sinput = Ghost.hide (Seq.slice v_bytes (SZ.v offset) (Seq.length v_bytes));
+  parse_dsum_eq' t p f g sinput;
+  S.pts_to_len input;
+  let off = j input offset;
+  let tg = PPB.read_parsed_from_validator_success p32 input offset off;
+  Seq.lemma_eq_elim
+    (Seq.slice sinput (SZ.v off - SZ.v offset) (Seq.length sinput))
+    (Seq.slice v_bytes (SZ.v off) (Seq.length v_bytes));
+  parse_dsum_cases_eq' t f g (maybe_enum_key_of_repr (dsum_enum t) tg) (Seq.slice v_bytes (SZ.v off) (Seq.length v_bytes));
+  jump_dsum_cases_dispatch t f f32 g32 destr tg input off
+}
+
+#pop-options

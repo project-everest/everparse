@@ -110,3 +110,22 @@ fn jump_fldata
   pts_to_len input;
   SZ.add offset sz
 }
+
+inline_for_extraction
+fn jump_fldata_strong
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (sz: SZ.t)
+: LPS.jumper #(parse_fldata_strong_t s (SZ.v sz)) #(parse_fldata_kind (SZ.v sz) k) (parse_fldata_strong s (SZ.v sz))
+=
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  parser_kind_prop_equiv (parse_fldata_kind (SZ.v sz) k) (parse_fldata_strong s (SZ.v sz));
+  pts_to_len input;
+  SZ.add offset sz
+}

@@ -25,6 +25,28 @@ let validate_flbytes
 = LPS.validate_total_constant_size (parse_flbytes sz) sz_sz
 
 inline_for_extraction
+let jump_flbytes
+  (sz: nat { sz < 4294967296 })
+  (sz_sz: SZ.t { SZ.v sz_sz == sz })
+: LPS.jumper (parse_flbytes sz)
+= LPS.jump_constant_size (parse_flbytes sz) sz_sz
+
+inline_for_extraction
+fn jump_all_bytes
+  (_: squash FStar.SizeT.fits_u64)
+: LPS.jumper parse_all_bytes
+=
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v_bytes: Ghost.erased bytes)
+{
+  pts_to_len input;
+  parser_kind_prop_equiv parse_all_bytes_kind parse_all_bytes;
+  len input
+}
+
+inline_for_extraction
 fn validate_all_bytes
   (_: squash FStar.SizeT.fits_u64)
 : LPS.validator parse_all_bytes
@@ -82,4 +104,41 @@ let validate_bounded_vlgenbytes
 : LPS.validator (parse_bounded_vlgenbytes vmin vmax pk)
 = PPC.validate_synth
     (PPVG.validate_bounded_vlgen vmin vmax vk rk serialize_all_bytes (validate_all_bytes ()) ())
+    (synth_bounded_vlbytes vmin vmax)
+
+module LPC = LowParse.Pulse.Combinators
+
+inline_for_extraction
+let jump_bounded_vlbytes'
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (l: nat { l >= log256' max /\ l <= 4 })
+  (lr: LPS.leaf_reader (serialize_bounded_integer l))
+  (_: squash FStar.SizeT.fits_u64)
+: LPS.jumper (parse_bounded_vlbytes' min max l)
+= LPC.jump_synth
+    (PPCV.jump_bounded_vldata_strong' min max l serialize_all_bytes lr ())
+    (synth_bounded_vlbytes min max)
+
+inline_for_extraction
+let jump_bounded_vlbytes
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (lr: LPS.leaf_reader (serialize_bounded_integer (log256' max)))
+  (_: squash FStar.SizeT.fits_u64)
+: LPS.jumper (parse_bounded_vlbytes min max)
+= jump_bounded_vlbytes' min max (log256' max) lr ()
+
+inline_for_extraction
+let jump_bounded_vlgenbytes
+  (vmin: der_length_t)
+  (vmax: der_length_t { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 })
+  (#sk: parser_kind)
+  (#pk: parser sk (bounded_int32 vmin vmax))
+  (jk: LPS.jumper pk)
+  (rk: PPB.leaf_reader pk)
+  (_: squash (sk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+: LPS.jumper (parse_bounded_vlgenbytes vmin vmax pk)
+= LPC.jump_synth
+    (PPVG.jump_bounded_vlgen vmin vmax jk rk serialize_all_bytes ())
     (synth_bounded_vlbytes vmin vmax)

@@ -382,3 +382,40 @@ fn validate_vclist
   }
 }
 #pop-options
+
+#push-options "--z3rlimit 32"
+
+inline_for_extraction
+fn jump_vclist
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max } )
+  (#lk: parser_kind)
+  (#lp: parser lk U32.t)
+  (lj: LPS.jumper lp)
+  (lr: PPB.leaf_reader lp)
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (j: LPS.jumper p)
+  (u: squash (lk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+: LPS.jumper #(vlarray t (U32.v min) (U32.v max)) #(parse_vclist_kind (U32.v min) (U32.v max) lk k) (parse_vclist (U32.v min) (U32.v max) lp p)
+=
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v_bytes: Ghost.erased bytes)
+{
+  let sinput = Ghost.hide (Seq.slice v_bytes (SZ.v offset) (Seq.length v_bytes));
+  parse_vclist_eq (U32.v min) (U32.v max) lp p sinput;
+  pts_to_len input;
+  let off1 = lj input offset;
+  let count = PPB.read_parsed_from_validator_success lr input offset off1;
+  SZ.fits_u64_implies_fits_32 ();
+  let n = SZ.uint32_to_sizet count;
+  Seq.lemma_eq_elim
+    (Seq.slice sinput (SZ.v off1 - SZ.v offset) (Seq.length sinput))
+    (Seq.slice v_bytes (SZ.v off1) (Seq.length v_bytes));
+  LPV.jump_nlist j n input off1
+}
+
+#pop-options

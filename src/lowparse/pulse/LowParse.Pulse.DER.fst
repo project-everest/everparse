@@ -224,3 +224,61 @@ fn validate_bounded_der_length32
 }
 
 #pop-options
+
+#push-options "--z3rlimit 32"
+
+module PPB = LowParse.PulseParse.Base
+
+inline_for_extraction
+fn jump_der_length_payload32
+  (x: U8.t { der_length_payload_size_of_tag x <= 4 })
+: LPS.jumper (parse_der_length_payload32 x)
+=
+  (input: S.slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
+  parse_der_length_payload32_unfold x sinput;
+  assert_norm (pow2 8 == 256);
+  assert_norm (pow2 16 == 65536);
+  assert_norm (pow2 24 == 16777216);
+  assert_norm (pow2 32 == 4294967296);
+  pts_to_len input;
+  if (U8.lt x 128uy) {
+    offset
+  } else {
+    let len = U8.sub x 128uy;
+    parser_kind_prop_equiv parse_u8_kind parse_u8;
+    parser_kind_prop_equiv (parse_bounded_integer_kind (U8.v len)) (parse_bounded_integer (U8.v len));
+    SZ.add offset (SZ.uint_to_t (U8.v len))
+  }
+}
+
+inline_for_extraction
+fn jump_bounded_der_length32
+  (vmin: der_length_t)
+  (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 })
+  (r_u8: PPB.leaf_reader parse_u8)
+: LPS.jumper (parse_bounded_der_length32 vmin vmax)
+=
+  (input: S.slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
+  parse_bounded_der_length32_unfold vmin vmax sinput;
+  parser_kind_prop_equiv parse_u8_kind parse_u8;
+  pts_to_len input;
+  let off1 = LPI.jump_u8 input offset;
+  let x = PPB.read_parsed_from_validator_success r_u8 input offset off1;
+  let _len = der_length_payload_size_of_tag8 x;
+  Seq.lemma_eq_elim
+    (Seq.slice sinput (SZ.v off1 - SZ.v offset) (Seq.length sinput))
+    (Seq.slice v (SZ.v off1) (Seq.length v));
+  jump_der_length_payload32 x input off1
+}
+
+#pop-options

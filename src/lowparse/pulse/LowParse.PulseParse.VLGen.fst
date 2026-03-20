@@ -105,3 +105,54 @@ fn validate_vlgen_weak
     false
   }
 }
+
+(* ========== VLGen jumpers ========== *)
+
+inline_for_extraction
+fn jump_bounded_vlgen
+  (vmin: der_length_t)
+  (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 })
+  (#sk: parser_kind)
+  (#pk: parser sk (bounded_int32 vmin vmax))
+  (jk: LPS.jumper pk)
+  (rk: PPB.leaf_reader pk)
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (_: squash (sk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+: LPS.jumper (parse_bounded_vlgen vmin vmax pk s)
+=
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
+  parse_bounded_vlgen_unfold_aux vmin vmax pk s sinput;
+  pts_to_len input;
+  let off1 = jk input offset;
+  let len = PPB.read_parsed_from_validator_success rk input offset off1;
+  SZ.fits_u64_implies_fits_32 ();
+  PPCF.jump_fldata_strong s (SZ.uint32_to_sizet len) input off1
+}
+
+module LPC = LowParse.Pulse.Combinators
+
+inline_for_extraction
+let jump_vlgen
+  (vmin: der_length_t)
+  (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 })
+  (#sk: parser_kind)
+  (#pk: parser sk (bounded_int32 vmin vmax))
+  (jk: LPS.jumper pk)
+  (rk: PPB.leaf_reader pk)
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p { parse_vlgen_precond vmin vmax k })
+  (sq: squash (sk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+: LPS.jumper (parse_vlgen vmin vmax pk s)
+= LPC.jump_synth
+    (jump_bounded_vlgen vmin vmax jk rk s sq)
+    (synth_vlgen vmin vmax s)

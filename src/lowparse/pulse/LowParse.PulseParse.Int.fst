@@ -21,9 +21,19 @@ let validate_u64_le
 = LPS.validate_total_constant_size parse_u64_le 8sz
 
 inline_for_extraction
+let jump_u64_le
+: LPS.jumper parse_u64_le
+= LPS.jump_constant_size parse_u64_le 8sz
+
+inline_for_extraction
 let validate_int32le
 : LPS.validator parse_int32le
 = LPS.validate_total_constant_size parse_int32le 4sz
+
+inline_for_extraction
+let jump_int32le
+: LPS.jumper parse_int32le
+= LPS.jump_constant_size parse_int32le 4sz
 
 inline_for_extraction
 fn validate_constint32le
@@ -54,3 +64,9 @@ fn validate_constint32le
     false
   }
 }
+
+inline_for_extraction
+let jump_constint32le
+  (v: nat { 0 <= v /\ v < 4294967296 })
+: Tot (LPS.jumper (parse_constint32le v))
+= LPS.jump_constant_size (parse_constint32le v) 4sz
