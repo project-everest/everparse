@@ -2246,10 +2246,10 @@ let lex_compare_header_intro
   then lex_compare_with_header_correct ty x1 ty x2
   else begin
     let h1 = raw_uint64_as_argument ty x1 in
-//    serialize_dtuple2_eq serialize_initial_byte serialize_long_argument h1;
+    serialize_dtuple2_eq serialize_initial_byte serialize_long_argument h1;
     let (| b1, l1 |) = h1 in
     let h2 = raw_uint64_as_argument ty x2 in
-//    serialize_dtuple2_eq serialize_initial_byte serialize_long_argument h2;
+    serialize_dtuple2_eq serialize_initial_byte serialize_long_argument h2;
     let (| b2, l2 |) = h2 in
     serialize_initial_byte_compare b1 b2;
     bytes_lex_compare_serialize_strong_prefix serialize_initial_byte b1 b2 (bare_serialize (serialize_long_argument b1) l1) (bare_serialize (serialize_long_argument b2) l2)
@@ -2468,7 +2468,7 @@ let rec lex_compare_ext
 
 #pop-options
 
-#push-options "--z3rlimit 64 --split_queries always"
+#push-options "--z3rlimit 128 --split_queries always"
 
 let serialized_lex_compare_array_aux
   (len1: raw_uint64)
