@@ -202,6 +202,9 @@ ensures
   slprop_equivs();
   rewrite each (rel_pair r0 r1 xl xh) as (rel_pair r0 r1 xl xh ** emp);
   let v = destruct_pair_concrete_nest r0 r1 xl xh res emp;
+  rewrite
+   trade (r0 (fst v) (fst xh) ** r1 (snd v) (snd xh) ** emp) res  
+   as trade (r0 (fst v) (fst xh) ** r1 (snd v) (snd xh)) res;
   v
 }
 

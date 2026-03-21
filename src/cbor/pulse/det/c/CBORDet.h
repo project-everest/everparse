@@ -54,10 +54,6 @@ typedef struct cbor_tagged_s
 }
 cbor_tagged;
 
-typedef struct cbor_raw_s cbor_raw;
-
-typedef struct cbor_raw_s cbor_raw;
-
 typedef struct Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_s
 {
   cbor_raw *elt;
@@ -168,8 +164,6 @@ typedef struct cbor_freeable_box_s
   cbor_freeable0 *box_footprint;
 }
 cbor_freeable_box;
-
-typedef struct cbor_freeable0_s cbor_freeable0;
 
 typedef struct cbor_freeable_array_s
 {

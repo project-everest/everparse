@@ -282,6 +282,8 @@ let serialize_sum_cases'
       ()
     )
 
+#push-options "--z3rlimit 20"
+
 let rec glb_list_of_injective
   (#key: eqtype)
   (#repr: eqtype)
@@ -306,6 +308,8 @@ let rec glb_list_of_injective
   | h :: t ->
     glb_list_of_injective e type_of_tag f sr t;
     serializer_parser_injective (sr h)
+
+#pop-options
 
 let weaken_parse_cases_kind_injective
   (s: sum)
@@ -373,6 +377,8 @@ let serialize_sum
   weaken_parse_cases_kind_injective t pc sc;
   serialize_sum' t s #_ #(parse_sum_cases t pc) (serialize_sum_cases t pc sc)
 
+#push-options "--z3rlimit 16"
+
 let serialize_sum_eq
   (#kt: parser_kind)
   (t: sum)
@@ -393,6 +399,8 @@ let serialize_sum_eq
   synth_sum_case_injective t tg;
   synth_sum_case_inverse t tg;
   serialize_synth_eq (dsnd (pc tg)) (synth_sum_case t tg) (sc tg)  (synth_sum_case_recip t tg) () x
+
+#pop-options
 
 inline_for_extraction
 let make_sum

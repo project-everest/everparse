@@ -164,20 +164,14 @@ pub(crate) fn impl_correct(s: &[u8]) -> bool
     let mut pi: [usize; 1] = [0usize; 1usize];
     let len: usize = s.len();
     let res: bool = (&pres)[0];
-    let mut cond: bool =
-        if res
-        {
-            let i: usize = (&pi)[0];
-            i < len
-        }
-        else
-        { false };
+    let i: usize = (&pi)[0];
+    let mut cond: bool = res && i < len;
     while
     cond
     {
-        let i: usize = (&pi)[0];
-        let byte1: u8 = s[i];
-        let i1: usize = i.wrapping_add(1usize);
+        let i0: usize = (&pi)[0];
+        let byte1: u8 = s[i0];
+        let i1: usize = i0.wrapping_add(1usize);
         if byte1 <= 0x7Fu8
         { (&mut pi)[0] = i1 }
         else if i1 == len
@@ -233,15 +227,8 @@ pub(crate) fn impl_correct(s: &[u8]) -> bool
             }
         };
         let res0: bool = (&pres)[0];
-        let ite: bool =
-            if res0
-            {
-                let i0: usize = (&pi)[0];
-                i0 < len
-            }
-            else
-            { false };
-        cond = ite
+        let i2: usize = (&pi)[0];
+        cond = res0 && i2 < len
     };
     (&pres)[0]
 }
@@ -279,6 +266,17 @@ fn eq_Some_0sz(x: option__size_t) -> bool
 #[derive(PartialEq, Clone, Copy)]
 pub struct cbor_raw_serialized_iterator <'a>
 { pub s: &'a [u8], pub len: u64 }
+
+fn mk_raw_uint64(x: u64) -> raw_uint64
+{
+    let size: u8 =
+        if x <= max_simple_value_additional_info as u64
+        { 0u8 }
+        else if x < 256u64
+        { 1u8 }
+        else if x < 65536u64 { 2u8 } else if x < 4294967296u64 { 3u8 } else { 4u8 };
+    raw_uint64 { size, value: x }
+}
 
 #[derive(PartialEq, Clone, Copy)]
 pub struct cbor_string <'a>
@@ -319,12 +317,8 @@ pub struct cbor_int
 { pub cbor_int_type: u8, pub cbor_int_size: u8, pub cbor_int_value: u64 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub struct cbor_map_entry <'a>
-{ pub cbor_map_entry_key: cbor_raw <'a>, pub cbor_map_entry_value: cbor_raw <'a> }
-
-#[derive(PartialEq, Clone, Copy)]
-pub struct cbor_map <'a>
-{ pub cbor_map_length_size: u8, pub cbor_map_ptr: &'a [cbor_map_entry <'a>] }
+pub struct cbor_array <'a>
+{ pub cbor_array_length_size: u8, pub cbor_array_ptr: &'a [cbor_raw <'a>] }
 
 #[derive(PartialEq, Clone, Copy)]
 enum cbor_raw_tags
@@ -355,7 +349,29 @@ pub enum cbor_raw <'a>
 }
 
 #[derive(PartialEq, Clone, Copy)]
-pub struct cbor_array <'a>
+pub struct cbor_map_entry <'a>
+{ pub cbor_map_entry_key: cbor_raw <'a>, pub cbor_map_entry_value: cbor_raw <'a> }
+
+#[derive(PartialEq, Clone, Copy)]
+pub struct cbor_map <'a>
+{ pub cbor_map_length_size: u8, pub cbor_map_ptr: &'a [cbor_map_entry <'a>] }
+
+#[derive(PartialEq, Clone, Copy)]
+pub enum cbor_rawÂ· <'a>
+{
+    CBOR_Case_Int { v: cbor_int },
+    CBOR_Case_Simple { v: u8 },
+    CBOR_Case_String { v: cbor_string <'a> },
+    CBOR_Case_Tagged { v: cbor_tagged <'a> },
+    CBOR_Case_Array { v: cbor_array <'a> },
+    CBOR_Case_Map { v: cbor_map <'a> },
+    CBOR_Case_Serialized_Tagged { v: cbor_serialized <'a> },
+    CBOR_Case_Serialized_Array { v: cbor_serialized <'a> },
+    CBOR_Case_Serialized_Map { v: cbor_serialized <'a> }
+}
+
+#[derive(PartialEq, Clone, Copy)]
+pub struct cbor_arrayÂ· <'a>
 { pub cbor_array_length_size: u8, pub cbor_array_ptr: &'a [cbor_raw <'a>] }
 
 fn cbor_array_reset_perm <'a>(c: cbor_array <'a>) -> cbor_array <'a>
@@ -385,17 +401,6 @@ pub(crate) fn cbor_raw_reset_perm_tot <'a>(c: cbor_raw <'a>) -> cbor_raw <'a>
           cbor_raw::CBOR_Case_Serialized_Map { v: cbor_serialized_reset_perm(v) },
         _ => c
     }
-}
-
-fn mk_raw_uint64(x: u64) -> raw_uint64
-{
-    let size: u8 =
-        if x <= max_simple_value_additional_info as u64
-        { 0u8 }
-        else if x < 256u64
-        { 1u8 }
-        else if x < 65536u64 { 2u8 } else if x < 4294967296u64 { 3u8 } else { 4u8 };
-    raw_uint64 { size, value: x }
 }
 
 fn impl_uint8_compare(x1: u8, x2: u8) -> i16
@@ -447,25 +452,18 @@ fn lex_compare_bytes(s1: &[u8], s2: &[u8]) -> i16
         let i11: usize = (&pi1)[0];
         cond = res0 == 0i16 && i11 < n1
     };
-    let res0: i16 = (&pres)[0];
-    let res1: i16 = res0;
-    res1
+    (&pres)[0]
 }
 
 fn read_initial_byte_t(input: &[u8]) -> initial_byte_t
 {
     let last: u8 = input[0usize];
     let x: u8 = last;
-    let res: initial_byte_t =
-        initial_byte_t
-        {
-            major_type: get_bitfield_gen8(x, 5u32, 8u32),
-            additional_info: get_bitfield_gen8(x, 0u32, 5u32)
-        };
-    let res0: initial_byte_t = res;
-    let res1: initial_byte_t = res0;
-    let res2: initial_byte_t = res1;
-    res2
+    initial_byte_t
+    {
+        major_type: get_bitfield_gen8(x, 5u32, 8u32),
+        additional_info: get_bitfield_gen8(x, 0u32, 5u32)
+    }
 }
 
 fn read_header(input: &[u8]) -> header
@@ -487,8 +485,7 @@ fn read_header(input: &[u8]) -> header
     let input1: &[u8] = _letpattern0.0;
     let input2: &[u8] = _letpattern0.1;
     let x: initial_byte_t = read_initial_byte_t(input1);
-    let res: initial_byte_t = x;
-    let x1: initial_byte_t = res;
+    let x1: initial_byte_t = x;
     let x2: long_argument =
         if x1.additional_info == additional_info_long_argument_8_bits
         {
@@ -496,18 +493,13 @@ fn read_header(input: &[u8]) -> header
             {
                 let last: u8 = input2[0usize];
                 let x0: u8 = last;
-                let res0: long_argument = long_argument::LongArgumentSimpleValue { v: x0 };
-                let res1: long_argument = res0;
-                let res2: long_argument = res1;
-                res2
+                long_argument::LongArgumentSimpleValue { v: x0 }
             }
             else
             {
                 let last: u8 = input2[0usize];
                 let x0: u8 = last;
-                let res0: long_argument = long_argument::LongArgumentU8 { v: x0 };
-                let res1: long_argument = res0;
-                res1
+                long_argument::LongArgumentU8 { v: x0 }
             }
         }
         else if x1.additional_info == additional_info_long_argument_16_bits
@@ -518,9 +510,7 @@ fn read_header(input: &[u8]) -> header
             let n: u16 = last1 as u16;
             let blast: u16 = last as u16;
             let x0: u16 = blast.wrapping_add(n.wrapping_mul(256u16));
-            let res0: long_argument = long_argument::LongArgumentU16 { v: x0 };
-            let res1: long_argument = res0;
-            res1
+            long_argument::LongArgumentU16 { v: x0 }
         }
         else if x1.additional_info == additional_info_long_argument_32_bits
         {
@@ -538,9 +528,7 @@ fn read_header(input: &[u8]) -> header
             let n1: u32 = blast0.wrapping_add(n0.wrapping_mul(256u32));
             let blast1: u32 = last as u32;
             let x0: u32 = blast1.wrapping_add(n1.wrapping_mul(256u32));
-            let res0: long_argument = long_argument::LongArgumentU32 { v: x0 };
-            let res1: long_argument = res0;
-            res1
+            long_argument::LongArgumentU32 { v: x0 }
         }
         else if x1.additional_info == additional_info_long_argument_64_bits
         {
@@ -574,9 +562,7 @@ fn read_header(input: &[u8]) -> header
             let n5: u64 = blast4.wrapping_add(n4.wrapping_mul(256u64));
             let blast5: u64 = last as u64;
             let x0: u64 = blast5.wrapping_add(n5.wrapping_mul(256u64));
-            let res0: long_argument = long_argument::LongArgumentU64 { v: x0 };
-            let res1: long_argument = res0;
-            res1
+            long_argument::LongArgumentU64 { v: x0 }
         }
         else
         { long_argument::LongArgumentOther };
@@ -629,8 +615,7 @@ fn validate_header(input: &[u8], poffset: &mut [usize]) -> bool
                     let _input3: &[u8] = _letpattern11.1;
                     input2
                 };
-            let res: initial_byte_t = read_initial_byte_t(input·);
-            let x: initial_byte_t = res;
+            let x: initial_byte_t = read_initial_byte_t(input·);
             let ite: bool =
                 if x.major_type == cbor_major_type_simple_value
                 { x.additional_info <= additional_info_long_argument_8_bits }
@@ -673,9 +658,7 @@ fn validate_header(input: &[u8], poffset: &mut [usize]) -> bool
                 input2
             };
         let x: initial_byte_t = read_initial_byte_t(input·);
-        let res: initial_byte_t = x;
-        let res0: initial_byte_t = res;
-        let x0: initial_byte_t = res0;
+        let x0: initial_byte_t = x;
         if x0.additional_info == additional_info_long_argument_8_bits
         {
             if x0.major_type == cbor_major_type_simple_value
@@ -723,8 +706,7 @@ fn validate_header(input: &[u8], poffset: &mut [usize]) -> bool
                             input2
                         };
                     let last: u8 = input·0[0usize];
-                    let res1: u8 = last;
-                    let x1: u8 = res1;
+                    let x1: u8 = last;
                     min_simple_value_long_argument <= x1
                 }
                 else
@@ -815,9 +797,7 @@ fn jump_header(input: &[u8], offset: usize) -> usize
             input2
         };
     let x: initial_byte_t = read_initial_byte_t(input·);
-    let res: initial_byte_t = x;
-    let res0: initial_byte_t = res;
-    let x0: initial_byte_t = res0;
+    let x0: initial_byte_t = x;
     if x0.additional_info == additional_info_long_argument_8_bits
     { off1.wrapping_add(1usize) }
     else if x0.additional_info == additional_info_long_argument_16_bits
@@ -827,7 +807,7 @@ fn jump_header(input: &[u8], offset: usize) -> usize
     else if x0.additional_info == additional_info_long_argument_64_bits
     { off1.wrapping_add(8usize) }
     else
-    { off1.wrapping_add(0usize) }
+    { off1 }
 }
 
 fn validate_recursive_step_count_leaf(a: &[u8], bound: usize, prem: &mut [usize]) -> bool
@@ -980,8 +960,7 @@ fn validate_raw_data_item(input: &[u8], poffset: &mut [usize]) -> bool
                             let _input3: &[u8] = _letpattern11.1;
                             input2
                         };
-                    let res0: header = read_header(input·);
-                    let x: header = res0;
+                    let x: header = read_header(input·);
                     let b: initial_byte_t = x.fst;
                     if
                     b.major_type == cbor_major_type_byte_string
@@ -1033,15 +1012,10 @@ fn validate_raw_data_item(input: &[u8], poffset: &mut [usize]) -> bool
                                     let _input3: &[u8] = _letpattern11.1;
                                     input2
                                 };
-                            let res1: bool =
-                                if get_header_major_type(x) == cbor_major_type_byte_string
-                                { true }
-                                else
-                                {
-                                    let res1: bool = impl_correct(x1);
-                                    res1
-                                };
-                            res1
+                            if get_header_major_type(x) == cbor_major_type_byte_string
+                            { true }
+                            else
+                            { impl_correct(x1) }
                         }
                         else
                         { false }
@@ -1144,8 +1118,7 @@ fn jump_raw_data_item(input: &[u8], offset: usize) -> usize
                 let _input3: &[u8] = _letpattern11.1;
                 input2
             };
-        let res: header = read_header(input·);
-        let x: header = res;
+        let x: header = read_header(input·);
         let b: initial_byte_t = x.fst;
         let off10: usize =
             if
@@ -1158,7 +1131,7 @@ fn jump_raw_data_item(input: &[u8], offset: usize) -> usize
                 off1.wrapping_add(argument_as_uint64(b0, l) as usize)
             }
             else
-            { off1.wrapping_add(0usize) };
+            { off1 };
         (&mut poffset)[0] = off10;
         let s·0: (&[u8], &[u8]) = input.split_at(off);
         let _letpattern0: (&[u8], &[u8]) =
@@ -1390,15 +1363,11 @@ fn cbor_parse <'a>(input: &'a [u8], len: usize) -> cbor_raw <'a>
             let _input3: &[u8] = _letpattern11.1;
             input2
         };
-    let res: cbor_raw = cbor_read(input1);
-    res
+    cbor_read(input1)
 }
 
 fn cbor_match_serialized_tagged_get_payload <'a>(c: cbor_serialized <'a>) -> cbor_raw <'a>
-{
-    let res: cbor_raw = cbor_read(c.cbor_serialized_payload);
-    res
-}
+{ cbor_read(c.cbor_serialized_payload) }
 
 fn cbor_serialized_array_item <'a>(c: cbor_serialized <'a>, i: u64) -> cbor_raw <'a>
 {
@@ -1432,13 +1401,12 @@ fn cbor_serialized_array_item <'a>(c: cbor_serialized <'a>, i: u64) -> cbor_raw 
                 let input2: &[u8] = _letpattern0.1;
                 (input1,input2)
             };
-        let res1: &[u8] =
+        let res2: &[u8] =
             {
                 let _input1: &[u8] = _letpattern1.0;
                 let input2: &[u8] = _letpattern1.1;
                 input2
             };
-        let res2: &[u8] = res1;
         (&mut pi)[0] = i10.wrapping_add(1usize);
         (&mut pres)[0] = res2;
         let i11: usize = (&pi)[0];
@@ -1465,16 +1433,13 @@ fn cbor_serialized_array_item <'a>(c: cbor_serialized <'a>, i: u64) -> cbor_raw 
             let input2: &[u8] = _letpattern0.1;
             (input1,input2)
         };
-    let res1: &[u8] =
+    let elt: &[u8] =
         {
             let input1: &[u8] = _letpattern1.0;
             let _input2: &[u8] = _letpattern1.1;
             input1
         };
-    let res2: &[u8] = res1;
-    let elt: &[u8] = res2;
-    let res0: cbor_raw = cbor_read(elt);
-    res0
+    cbor_read(elt)
 }
 
 fn cbor_serialized_array_iterator_init <'a>(c: cbor_serialized <'a>) ->
@@ -1635,10 +1600,7 @@ fn cbor_match_tagged_get_payload <'a>(c: cbor_raw <'a>) -> cbor_raw <'a>
     match c
     {
         cbor_raw::CBOR_Case_Serialized_Tagged { v: cs } =>
-          {
-              let res: cbor_raw = cbor_match_serialized_tagged_get_payload(cs);
-              res
-          },
+          cbor_match_serialized_tagged_get_payload(cs),
         cbor_raw::CBOR_Case_Tagged { v: ct } => ct.cbor_tagged_ptr[0],
         _ => panic!("Incomplete pattern matching")
     }
@@ -1648,16 +1610,8 @@ fn cbor_array_item <'a>(c: cbor_raw <'a>, i: u64) -> cbor_raw <'a>
 {
     match c
     {
-        cbor_raw::CBOR_Case_Serialized_Array { v: c· } =>
-          {
-              let res: cbor_raw = cbor_serialized_array_item(c·, i);
-              res
-          },
-        cbor_raw::CBOR_Case_Array { v: c· } =>
-          {
-              let res: cbor_raw = c·.cbor_array_ptr[i as usize];
-              res
-          },
+        cbor_raw::CBOR_Case_Serialized_Array { v: c· } => cbor_serialized_array_item(c·, i),
+        cbor_raw::CBOR_Case_Array { v: c· } => c·.cbor_array_ptr[i as usize],
         _ => panic!("Incomplete pattern matching")
     }
 }
@@ -1732,14 +1686,10 @@ fn cbor_array_iterator_next <'b, 'a>(
               pi[0] =
                   cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
                   { _0: i· };
-              let res0: cbor_raw = res;
-              res0
-          },
-        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized { _0: i1 } =>
-          {
-              let res: cbor_raw = cbor_serialized_array_iterator_next(pi, i1);
               res
           },
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized { _0: i1 } =>
+          cbor_serialized_array_iterator_next(pi, i1),
         _ => panic!("Incomplete pattern matching")
     }
 }
@@ -1839,16 +1789,11 @@ fn cbor_map_iterator_next <'b, 'a>(
               pi[0] =
                   cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
                   { _0: i· };
-              let res0: cbor_map_entry = res;
-              res0
+              res
           },
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
         { _0: i1 }
-        =>
-          {
-              let res: cbor_map_entry = cbor_serialized_map_iterator_next(pi, i1);
-              res
-          },
+        => cbor_serialized_map_iterator_next(pi, i1),
         _ => panic!("Incomplete pattern matching")
     }
 }
@@ -1903,139 +1848,136 @@ fn write_header(x: header, out: &mut [u8], offset: usize) -> usize
     let res1: usize = pos·;
     let x2·: long_argument =
         dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(x);
-    let res: usize =
-        if xh1.additional_info == additional_info_long_argument_8_bits
+    if xh1.additional_info == additional_info_long_argument_8_bits
+    {
+        if xh1.major_type == cbor_major_type_simple_value
         {
-            if xh1.major_type == cbor_major_type_simple_value
-            {
-                let pos·0: usize = res1.wrapping_add(1usize);
-                let n·0: u8 =
-                    match x2·
-                    {
-                        long_argument::LongArgumentSimpleValue { v } => v,
-                        _ => panic!("Incomplete pattern matching")
-                    };
-                out[pos·0.wrapping_sub(1usize)] = n·0;
-                pos·0
-            }
-            else
-            {
-                let pos·0: usize = res1.wrapping_add(1usize);
-                let n·0: u8 =
-                    match x2·
-                    {
-                        long_argument::LongArgumentU8 { v } => v,
-                        _ => panic!("Incomplete pattern matching")
-                    };
-                out[pos·0.wrapping_sub(1usize)] = n·0;
-                pos·0
-            }
-        }
-        else if xh1.additional_info == additional_info_long_argument_16_bits
-        {
-            let pos·0: usize = res1.wrapping_add(2usize);
-            let lo: u8 =
+            let pos·0: usize = res1.wrapping_add(1usize);
+            let n·0: u8 =
                 match x2·
                 {
-                    long_argument::LongArgumentU16 { v } => v,
+                    long_argument::LongArgumentSimpleValue { v } => v,
                     _ => panic!("Incomplete pattern matching")
-                }
-                as
-                u8;
-            let hi: u16 =
-                match x2·
-                {
-                    long_argument::LongArgumentU16 { v } => v,
-                    _ => panic!("Incomplete pattern matching")
-                }.wrapping_div(256u16);
-            let pos·1: usize = pos·0.wrapping_sub(1usize);
-            let n·0: u8 = hi as u8;
-            out[pos·1.wrapping_sub(1usize)] = n·0;
-            out[pos·1] = lo;
-            pos·0
-        }
-        else if xh1.additional_info == additional_info_long_argument_32_bits
-        {
-            let pos·0: usize = res1.wrapping_add(4usize);
-            let lo: u8 =
-                match x2·
-                {
-                    long_argument::LongArgumentU32 { v } => v,
-                    _ => panic!("Incomplete pattern matching")
-                }
-                as
-                u8;
-            let hi: u32 =
-                match x2·
-                {
-                    long_argument::LongArgumentU32 { v } => v,
-                    _ => panic!("Incomplete pattern matching")
-                }.wrapping_div(256u32);
-            let pos·1: usize = pos·0.wrapping_sub(1usize);
-            let lo1: u8 = hi as u8;
-            let hi1: u32 = hi.wrapping_div(256u32);
-            let pos·2: usize = pos·1.wrapping_sub(1usize);
-            let lo2: u8 = hi1 as u8;
-            let hi2: u32 = hi1.wrapping_div(256u32);
-            let pos·3: usize = pos·2.wrapping_sub(1usize);
-            let n·0: u8 = hi2 as u8;
-            out[pos·3.wrapping_sub(1usize)] = n·0;
-            out[pos·3] = lo2;
-            out[pos·2] = lo1;
-            out[pos·1] = lo;
-            pos·0
-        }
-        else if xh1.additional_info == additional_info_long_argument_64_bits
-        {
-            let pos·0: usize = res1.wrapping_add(8usize);
-            let lo: u8 =
-                match x2·
-                {
-                    long_argument::LongArgumentU64 { v } => v,
-                    _ => panic!("Incomplete pattern matching")
-                }
-                as
-                u8;
-            let hi: u64 =
-                match x2·
-                {
-                    long_argument::LongArgumentU64 { v } => v,
-                    _ => panic!("Incomplete pattern matching")
-                }.wrapping_div(256u64);
-            let pos·1: usize = pos·0.wrapping_sub(1usize);
-            let lo1: u8 = hi as u8;
-            let hi1: u64 = hi.wrapping_div(256u64);
-            let pos·2: usize = pos·1.wrapping_sub(1usize);
-            let lo2: u8 = hi1 as u8;
-            let hi2: u64 = hi1.wrapping_div(256u64);
-            let pos·3: usize = pos·2.wrapping_sub(1usize);
-            let lo3: u8 = hi2 as u8;
-            let hi3: u64 = hi2.wrapping_div(256u64);
-            let pos·4: usize = pos·3.wrapping_sub(1usize);
-            let lo4: u8 = hi3 as u8;
-            let hi4: u64 = hi3.wrapping_div(256u64);
-            let pos·5: usize = pos·4.wrapping_sub(1usize);
-            let lo5: u8 = hi4 as u8;
-            let hi5: u64 = hi4.wrapping_div(256u64);
-            let pos·6: usize = pos·5.wrapping_sub(1usize);
-            let lo6: u8 = hi5 as u8;
-            let hi6: u64 = hi5.wrapping_div(256u64);
-            let pos·7: usize = pos·6.wrapping_sub(1usize);
-            let n·0: u8 = hi6 as u8;
-            out[pos·7.wrapping_sub(1usize)] = n·0;
-            out[pos·7] = lo6;
-            out[pos·6] = lo5;
-            out[pos·5] = lo4;
-            out[pos·4] = lo3;
-            out[pos·3] = lo2;
-            out[pos·2] = lo1;
-            out[pos·1] = lo;
+                };
+            out[pos·0.wrapping_sub(1usize)] = n·0;
             pos·0
         }
         else
-        { res1 };
-    let res2: usize = res;
-    res2
+        {
+            let pos·0: usize = res1.wrapping_add(1usize);
+            let n·0: u8 =
+                match x2·
+                {
+                    long_argument::LongArgumentU8 { v } => v,
+                    _ => panic!("Incomplete pattern matching")
+                };
+            out[pos·0.wrapping_sub(1usize)] = n·0;
+            pos·0
+        }
+    }
+    else if xh1.additional_info == additional_info_long_argument_16_bits
+    {
+        let pos·0: usize = res1.wrapping_add(2usize);
+        let lo: u8 =
+            match x2·
+            {
+                long_argument::LongArgumentU16 { v } => v,
+                _ => panic!("Incomplete pattern matching")
+            }
+            as
+            u8;
+        let hi: u16 =
+            match x2·
+            {
+                long_argument::LongArgumentU16 { v } => v,
+                _ => panic!("Incomplete pattern matching")
+            }.wrapping_div(256u16);
+        let pos·1: usize = pos·0.wrapping_sub(1usize);
+        let n·0: u8 = hi as u8;
+        out[pos·1.wrapping_sub(1usize)] = n·0;
+        out[pos·1] = lo;
+        pos·0
+    }
+    else if xh1.additional_info == additional_info_long_argument_32_bits
+    {
+        let pos·0: usize = res1.wrapping_add(4usize);
+        let lo: u8 =
+            match x2·
+            {
+                long_argument::LongArgumentU32 { v } => v,
+                _ => panic!("Incomplete pattern matching")
+            }
+            as
+            u8;
+        let hi: u32 =
+            match x2·
+            {
+                long_argument::LongArgumentU32 { v } => v,
+                _ => panic!("Incomplete pattern matching")
+            }.wrapping_div(256u32);
+        let pos·1: usize = pos·0.wrapping_sub(1usize);
+        let lo1: u8 = hi as u8;
+        let hi1: u32 = hi.wrapping_div(256u32);
+        let pos·2: usize = pos·1.wrapping_sub(1usize);
+        let lo2: u8 = hi1 as u8;
+        let hi2: u32 = hi1.wrapping_div(256u32);
+        let pos·3: usize = pos·2.wrapping_sub(1usize);
+        let n·0: u8 = hi2 as u8;
+        out[pos·3.wrapping_sub(1usize)] = n·0;
+        out[pos·3] = lo2;
+        out[pos·2] = lo1;
+        out[pos·1] = lo;
+        pos·0
+    }
+    else if xh1.additional_info == additional_info_long_argument_64_bits
+    {
+        let pos·0: usize = res1.wrapping_add(8usize);
+        let lo: u8 =
+            match x2·
+            {
+                long_argument::LongArgumentU64 { v } => v,
+                _ => panic!("Incomplete pattern matching")
+            }
+            as
+            u8;
+        let hi: u64 =
+            match x2·
+            {
+                long_argument::LongArgumentU64 { v } => v,
+                _ => panic!("Incomplete pattern matching")
+            }.wrapping_div(256u64);
+        let pos·1: usize = pos·0.wrapping_sub(1usize);
+        let lo1: u8 = hi as u8;
+        let hi1: u64 = hi.wrapping_div(256u64);
+        let pos·2: usize = pos·1.wrapping_sub(1usize);
+        let lo2: u8 = hi1 as u8;
+        let hi2: u64 = hi1.wrapping_div(256u64);
+        let pos·3: usize = pos·2.wrapping_sub(1usize);
+        let lo3: u8 = hi2 as u8;
+        let hi3: u64 = hi2.wrapping_div(256u64);
+        let pos·4: usize = pos·3.wrapping_sub(1usize);
+        let lo4: u8 = hi3 as u8;
+        let hi4: u64 = hi3.wrapping_div(256u64);
+        let pos·5: usize = pos·4.wrapping_sub(1usize);
+        let lo5: u8 = hi4 as u8;
+        let hi5: u64 = hi4.wrapping_div(256u64);
+        let pos·6: usize = pos·5.wrapping_sub(1usize);
+        let lo6: u8 = hi5 as u8;
+        let hi6: u64 = hi5.wrapping_div(256u64);
+        let pos·7: usize = pos·6.wrapping_sub(1usize);
+        let n·0: u8 = hi6 as u8;
+        out[pos·7.wrapping_sub(1usize)] = n·0;
+        out[pos·7] = lo6;
+        out[pos·6] = lo5;
+        out[pos·5] = lo4;
+        out[pos·4] = lo3;
+        out[pos·3] = lo2;
+        out[pos·2] = lo1;
+        out[pos·1] = lo;
+        pos·0
+    }
+    else
+    { res1 }
 }
 
 fn size_header(x: header, out: &mut [usize]) -> bool
@@ -2056,55 +1998,52 @@ fn size_header(x: header, out: &mut [usize]) -> bool
         let x2·: long_argument =
             dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(x);
         crate::lowstar::ignore::ignore::<long_argument>(x2·);
-        let res: bool =
-            if xh1.additional_info == additional_info_long_argument_8_bits
-            {
-                let capacity0: usize = out[0];
-                if capacity0 < 1usize
-                { false }
-                else
-                {
-                    out[0] = capacity0.wrapping_sub(1usize);
-                    true
-                }
-            }
-            else if xh1.additional_info == additional_info_long_argument_16_bits
-            {
-                let capacity0: usize = out[0];
-                if capacity0 < 2usize
-                { false }
-                else
-                {
-                    out[0] = capacity0.wrapping_sub(2usize);
-                    true
-                }
-            }
-            else if xh1.additional_info == additional_info_long_argument_32_bits
-            {
-                let capacity0: usize = out[0];
-                if capacity0 < 4usize
-                { false }
-                else
-                {
-                    out[0] = capacity0.wrapping_sub(4usize);
-                    true
-                }
-            }
-            else if xh1.additional_info == additional_info_long_argument_64_bits
-            {
-                let capacity0: usize = out[0];
-                if capacity0 < 8usize
-                { false }
-                else
-                {
-                    out[0] = capacity0.wrapping_sub(8usize);
-                    true
-                }
-            }
+        if xh1.additional_info == additional_info_long_argument_8_bits
+        {
+            let capacity0: usize = out[0];
+            if capacity0 < 1usize
+            { false }
             else
-            { true };
-        let res2: bool = res;
-        res2
+            {
+                out[0] = capacity0.wrapping_sub(1usize);
+                true
+            }
+        }
+        else if xh1.additional_info == additional_info_long_argument_16_bits
+        {
+            let capacity0: usize = out[0];
+            if capacity0 < 2usize
+            { false }
+            else
+            {
+                out[0] = capacity0.wrapping_sub(2usize);
+                true
+            }
+        }
+        else if xh1.additional_info == additional_info_long_argument_32_bits
+        {
+            let capacity0: usize = out[0];
+            if capacity0 < 4usize
+            { false }
+            else
+            {
+                out[0] = capacity0.wrapping_sub(4usize);
+                true
+            }
+        }
+        else if xh1.additional_info == additional_info_long_argument_64_bits
+        {
+            let capacity0: usize = out[0];
+            if capacity0 < 8usize
+            { false }
+            else
+            {
+                out[0] = capacity0.wrapping_sub(8usize);
+                true
+            }
+        }
+        else
+        { true }
     }
     else
     { false }
@@ -2252,7 +2191,7 @@ fn cbor_raw_with_perm_get_header(xl: cbor_raw) -> header { cbor_raw_get_header(x
 
 #[derive(PartialEq, Clone, Copy)]
 enum
-option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw
+option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw
 <'a>
 {
     None,
@@ -2261,7 +2200,7 @@ option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Typ
 
 #[derive(PartialEq, Clone, Copy)]
 enum
-option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry
+option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry
 <'a>
 {
     None,
@@ -2273,51 +2212,109 @@ pub(crate) fn ser·(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
     let xh1: header = cbor_raw_with_perm_get_header(x·);
     let res1: usize = write_header(xh1, out, offset);
     let b: initial_byte_t = xh1.fst;
-    let res2: usize =
-        if
-        b.major_type == cbor_major_type_byte_string || b.major_type == cbor_major_type_text_string
+    if b.major_type == cbor_major_type_byte_string || b.major_type == cbor_major_type_text_string
+    {
+        let _letpattern: cbor_raw = x·;
+        let x2·: &[u8] =
+            match _letpattern
+            {
+                cbor_raw::CBOR_Case_String { v: c· } => c·.cbor_string_ptr,
+                _ => panic!("Incomplete pattern matching")
+            };
+        let length: usize = x2·.len();
+        let _letpattern0: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
+        let _sp11: &[u8] = _letpattern0.0;
+        let sp12: &mut [u8] = _letpattern0.1;
+        let _letpattern1: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
+        let sp21: &mut [u8] = _letpattern1.0;
+        let _sp22: &[u8] = _letpattern1.1;
+        sp21.copy_from_slice(x2·);
+        res1.wrapping_add(length)
+    }
+    else
+    {
+        let b0: initial_byte_t = xh1.fst;
+        if b0.major_type == cbor_major_type_array
         {
-            let _letpattern: cbor_raw = x·;
-            let x2·: &[u8] =
-                match _letpattern
+            if match x· { cbor_raw::CBOR_Case_Array { .. } => true, _ => false }
+            {
+                let x2·: cbor_raw = x·;
+                let a: &[cbor_raw] =
+                    match
+                    match x2·
+                    {
+                        cbor_raw::CBOR_Case_Array { v: a } =>
+                          option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
+                          { v: a.cbor_array_ptr },
+                        _ =>
+                          option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::None
+                    }
+                    {
+                        option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
+                        { v }
+                        => v,
+                        _ => panic!("Incomplete pattern matching")
+                    };
+                let mut pres: [usize; 1] = [res1; 1usize];
+                let mut pi: [usize; 1] = [0usize; 1usize];
+                let i: usize = (&pi)[0];
+                let mut cond: bool = i < argument_as_uint64(xh1.fst, xh1.snd) as usize;
+                while
+                cond
                 {
-                    cbor_raw::CBOR_Case_String { v: c· } => c·.cbor_string_ptr,
-                    _ => panic!("Incomplete pattern matching")
+                    let i0: usize = (&pi)[0];
+                    let off: usize = (&pres)[0];
+                    let e: cbor_raw = a[i0];
+                    let i·: usize = i0.wrapping_add(1usize);
+                    let x2·1: cbor_raw = e;
+                    let res: usize = ser·(x2·1, out, off);
+                    (&mut pi)[0] = i·;
+                    (&mut pres)[0] = res;
+                    let i1: usize = (&pi)[0];
+                    cond = i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
                 };
-            let length: usize = x2·.len();
-            let _letpattern0: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
-            let res: usize =
-                {
-                    let _sp11: &[u8] = _letpattern0.0;
-                    let sp12: &mut [u8] = _letpattern0.1;
-                    let _letpattern1: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
-                    let sp21: &mut [u8] = _letpattern1.0;
-                    let _sp22: &[u8] = _letpattern1.1;
-                    sp21.copy_from_slice(x2·);
-                    res1.wrapping_add(length)
-                };
-            res
+                (&pres)[0]
+            }
+            else
+            {
+                let _letpattern: cbor_raw = x·;
+                let x2·: &[u8] =
+                    match _letpattern
+                    {
+                        cbor_raw::CBOR_Case_Serialized_Array { v: xs } => xs.cbor_serialized_payload,
+                        _ => panic!("Incomplete pattern matching")
+                    };
+                let length: usize = x2·.len();
+                let _letpattern0: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
+                let _sp11: &[u8] = _letpattern0.0;
+                let sp12: &mut [u8] = _letpattern0.1;
+                let _letpattern1: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
+                let sp21: &mut [u8] = _letpattern1.0;
+                let _sp22: &[u8] = _letpattern1.1;
+                sp21.copy_from_slice(x2·);
+                res1.wrapping_add(length)
+            }
         }
         else
         {
-            let b0: initial_byte_t = xh1.fst;
-            if b0.major_type == cbor_major_type_array
+            let b1: initial_byte_t = xh1.fst;
+            if b1.major_type == cbor_major_type_map
             {
-                if match x· { cbor_raw::CBOR_Case_Array { .. } => true, _ => false }
+                if match x· { cbor_raw::CBOR_Case_Map { .. } => true, _ => false }
                 {
                     let x2·: cbor_raw = x·;
-                    let a: &[cbor_raw] =
+                    let a: &[cbor_map_entry] =
                         match
                         match x2·
                         {
-                            cbor_raw::CBOR_Case_Array { v: a } =>
-                              option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
-                              { v: a.cbor_array_ptr },
+                            cbor_raw::CBOR_Case_Map { v: a } =>
+                              option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
+                              { v: a.cbor_map_ptr },
                             _ =>
-                              option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::None
+                              option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::None
                         }
                         {
-                            option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
+                            option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
                             { v }
                             => v,
                             _ => panic!("Incomplete pattern matching")
@@ -2331,18 +2328,18 @@ pub(crate) fn ser·(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                     {
                         let i0: usize = (&pi)[0];
                         let off: usize = (&pres)[0];
-                        let e: cbor_raw = a[i0];
+                        let e: cbor_map_entry = a[i0];
                         let i·: usize = i0.wrapping_add(1usize);
-                        let x2·1: cbor_raw = e;
-                        let res: usize = ser·(x2·1, out, off);
-                        let res0: usize = res;
+                        let x11: cbor_raw = e.cbor_map_entry_key;
+                        let res11: usize = ser·(x11, out, off);
+                        let x2: cbor_raw = e.cbor_map_entry_value;
+                        let res: usize = ser·(x2, out, res11);
                         (&mut pi)[0] = i·;
-                        (&mut pres)[0] = res0;
+                        (&mut pres)[0] = res;
                         let i1: usize = (&pi)[0];
                         cond = i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
                     };
-                    let res: usize = (&pres)[0];
-                    res
+                    (&pres)[0]
                 }
                 else
                 {
@@ -2350,72 +2347,36 @@ pub(crate) fn ser·(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                     let x2·: &[u8] =
                         match _letpattern
                         {
-                            cbor_raw::CBOR_Case_Serialized_Array { v: xs } =>
+                            cbor_raw::CBOR_Case_Serialized_Map { v: xs } =>
                               xs.cbor_serialized_payload,
                             _ => panic!("Incomplete pattern matching")
                         };
                     let length: usize = x2·.len();
                     let _letpattern0: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
-                    let res: usize =
-                        {
-                            let _sp11: &[u8] = _letpattern0.0;
-                            let sp12: &mut [u8] = _letpattern0.1;
-                            let _letpattern1: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
-                            let sp21: &mut [u8] = _letpattern1.0;
-                            let _sp22: &[u8] = _letpattern1.1;
-                            sp21.copy_from_slice(x2·);
-                            res1.wrapping_add(length)
-                        };
-                    res
+                    let _sp11: &[u8] = _letpattern0.0;
+                    let sp12: &mut [u8] = _letpattern0.1;
+                    let _letpattern1: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
+                    let sp21: &mut [u8] = _letpattern1.0;
+                    let _sp22: &[u8] = _letpattern1.1;
+                    sp21.copy_from_slice(x2·);
+                    res1.wrapping_add(length)
                 }
             }
             else
             {
-                let b1: initial_byte_t = xh1.fst;
-                if b1.major_type == cbor_major_type_map
+                let b2: initial_byte_t = xh1.fst;
+                if b2.major_type == cbor_major_type_tagged
                 {
-                    if match x· { cbor_raw::CBOR_Case_Map { .. } => true, _ => false }
+                    if match x· { cbor_raw::CBOR_Case_Tagged { .. } => true, _ => false }
                     {
-                        let x2·: cbor_raw = x·;
-                        let a: &[cbor_map_entry] =
-                            match
-                            match x2·
+                        let _letpattern: cbor_raw = x·;
+                        let x2·: cbor_raw =
+                            match _letpattern
                             {
-                                cbor_raw::CBOR_Case_Map { v: a } =>
-                                  option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
-                                  { v: a.cbor_map_ptr },
-                                _ =>
-                                  option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::None
-                            }
-                            {
-                                option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
-                                { v }
-                                => v,
+                                cbor_raw::CBOR_Case_Tagged { v: tg } => tg.cbor_tagged_ptr[0],
                                 _ => panic!("Incomplete pattern matching")
                             };
-                        let mut pres: [usize; 1] = [res1; 1usize];
-                        let mut pi: [usize; 1] = [0usize; 1usize];
-                        let i: usize = (&pi)[0];
-                        let mut cond: bool = i < argument_as_uint64(xh1.fst, xh1.snd) as usize;
-                        while
-                        cond
-                        {
-                            let i0: usize = (&pi)[0];
-                            let off: usize = (&pres)[0];
-                            let e: cbor_map_entry = a[i0];
-                            let i·: usize = i0.wrapping_add(1usize);
-                            let x11: cbor_raw = e.cbor_map_entry_key;
-                            let res11: usize = ser·(x11, out, off);
-                            let x2: cbor_raw = e.cbor_map_entry_value;
-                            let res2: usize = ser·(x2, out, res11);
-                            let res: usize = res2;
-                            (&mut pi)[0] = i·;
-                            (&mut pres)[0] = res;
-                            let i1: usize = (&pi)[0];
-                            cond = i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
-                        };
-                        let res: usize = (&pres)[0];
-                        res
+                        ser·(x2·, out, res1)
                     }
                     else
                     {
@@ -2423,83 +2384,32 @@ pub(crate) fn ser·(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                         let x2·: &[u8] =
                             match _letpattern
                             {
-                                cbor_raw::CBOR_Case_Serialized_Map { v: xs } =>
-                                  xs.cbor_serialized_payload,
+                                cbor_raw::CBOR_Case_Serialized_Tagged { v: ser } =>
+                                  ser.cbor_serialized_payload,
                                 _ => panic!("Incomplete pattern matching")
                             };
                         let length: usize = x2·.len();
                         let _letpattern0: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
-                        let res: usize =
-                            {
-                                let _sp11: &[u8] = _letpattern0.0;
-                                let sp12: &mut [u8] = _letpattern0.1;
-                                let _letpattern1: (&mut [u8], &mut [u8]) =
-                                    sp12.split_at_mut(length);
-                                let sp21: &mut [u8] = _letpattern1.0;
-                                let _sp22: &[u8] = _letpattern1.1;
-                                sp21.copy_from_slice(x2·);
-                                res1.wrapping_add(length)
-                            };
-                        res
+                        let _sp11: &[u8] = _letpattern0.0;
+                        let sp12: &mut [u8] = _letpattern0.1;
+                        let _letpattern1: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
+                        let sp21: &mut [u8] = _letpattern1.0;
+                        let _sp22: &[u8] = _letpattern1.1;
+                        sp21.copy_from_slice(x2·);
+                        res1.wrapping_add(length)
                     }
                 }
                 else
-                {
-                    let b2: initial_byte_t = xh1.fst;
-                    if b2.major_type == cbor_major_type_tagged
-                    {
-                        if match x· { cbor_raw::CBOR_Case_Tagged { .. } => true, _ => false }
-                        {
-                            let _letpattern: cbor_raw = x·;
-                            let x2·: cbor_raw =
-                                match _letpattern
-                                {
-                                    cbor_raw::CBOR_Case_Tagged { v: tg } => tg.cbor_tagged_ptr[0],
-                                    _ => panic!("Incomplete pattern matching")
-                                };
-                            let res: usize = ser·(x2·, out, res1);
-                            res
-                        }
-                        else
-                        {
-                            let _letpattern: cbor_raw = x·;
-                            let x2·: &[u8] =
-                                match _letpattern
-                                {
-                                    cbor_raw::CBOR_Case_Serialized_Tagged { v: ser } =>
-                                      ser.cbor_serialized_payload,
-                                    _ => panic!("Incomplete pattern matching")
-                                };
-                            let length: usize = x2·.len();
-                            let _letpattern0: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
-                            let res: usize =
-                                {
-                                    let _sp11: &[u8] = _letpattern0.0;
-                                    let sp12: &mut [u8] = _letpattern0.1;
-                                    let _letpattern1: (&mut [u8], &mut [u8]) =
-                                        sp12.split_at_mut(length);
-                                    let sp21: &mut [u8] = _letpattern1.0;
-                                    let _sp22: &[u8] = _letpattern1.1;
-                                    sp21.copy_from_slice(x2·);
-                                    res1.wrapping_add(length)
-                                };
-                            res
-                        }
-                    }
-                    else
-                    { res1 }
-                }
+                { res1 }
             }
-        };
-    let res: usize = res2;
-    res
+        }
+    }
 }
 
 fn ser(x1·: cbor_raw, out: &mut [u8], offset: usize) -> usize
 {
     let x2·: cbor_raw = x1·;
-    let res: usize = ser·(x2·, out, offset);
-    res
+    ser·(x2·, out, offset)
 }
 
 fn cbor_serialize(x: cbor_raw, output: &mut [u8]) -> usize { ser(x, output, 0usize) }
@@ -2544,13 +2454,13 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
                         match x2·
                         {
                             cbor_raw::CBOR_Case_Array { v: a } =>
-                              option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
+                              option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
                               { v: a.cbor_array_ptr },
                             _ =>
-                              option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::None
+                              option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::None
                         }
                         {
-                            option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
+                            option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
                             { v }
                             => v,
                             _ => panic!("Incomplete pattern matching")
@@ -2567,20 +2477,18 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
                         let e: cbor_raw = a[i0];
                         let x2·1: cbor_raw = e;
                         let res0: bool = siz·(x2·1, out);
-                        let res2: bool = res0;
-                        if res2
+                        if res0
                         {
                             let i·: usize = i0.wrapping_add(1usize);
                             (&mut pi)[0] = i·
                         }
                         else
                         { (&mut pres)[0] = false };
-                        let res3: bool = (&pres)[0];
+                        let res2: bool = (&pres)[0];
                         let i1: usize = (&pi)[0];
-                        cond = res3 && i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
+                        cond = res2 && i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
                     };
-                    let res0: bool = (&pres)[0];
-                    res0
+                    (&pres)[0]
                 }
                 else
                 {
@@ -2616,13 +2524,13 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
                             match x2·
                             {
                                 cbor_raw::CBOR_Case_Map { v: a } =>
-                                  option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
+                                  option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
                                   { v: a.cbor_map_ptr },
                                 _ =>
-                                  option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::None
+                                  option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::None
                             }
                             {
-                                option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
+                                option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
                                 { v }
                                 => v,
                                 _ => panic!("Incomplete pattern matching")
@@ -2644,8 +2552,7 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
                                 if res11
                                 {
                                     let x2: cbor_raw = e.cbor_map_entry_value;
-                                    let res2: bool = siz·(x2, out);
-                                    res2
+                                    siz·(x2, out)
                                 }
                                 else
                                 { false };
@@ -2660,8 +2567,7 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
                             let i1: usize = (&pi)[0];
                             cond = res2 && i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
                         };
-                        let res0: bool = (&pres)[0];
-                        res0
+                        (&pres)[0]
                     }
                     else
                     {
@@ -2698,8 +2604,7 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
                                     cbor_raw::CBOR_Case_Tagged { v: tg } => tg.cbor_tagged_ptr[0],
                                     _ => panic!("Incomplete pattern matching")
                                 };
-                            let res: bool = siz·(x2·, out);
-                            res
+                            siz·(x2·, out)
                         }
                         else
                         {
@@ -2735,8 +2640,7 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
 fn siz(x1·: cbor_raw, out: &mut [usize]) -> bool
 {
     let x2·: cbor_raw = x1·;
-    let res: bool = siz·(x2·, out);
-    res
+    siz·(x2·, out)
 }
 
 fn cbor_size(x: cbor_raw, bound: usize) -> usize
@@ -2837,7 +2741,7 @@ pub(crate) fn impl_check_map_depth_aux(bound: usize, pl: &mut [&[u8]], n1: usize
                 {
                     let b0: initial_byte_t = h.fst;
                     let l3: long_argument = h.snd;
-                    0usize.wrapping_add(argument_as_uint64(b0, l3) as usize)
+                    argument_as_uint64(b0, l3) as usize
                 }
                 else
                 { 0usize };
@@ -2928,8 +2832,7 @@ pub(crate) fn impl_check_map_depth_aux(bound: usize, pl: &mut [&[u8]], n1: usize
 fn impl_check_map_depth(bound: usize, n0: usize, l0: &[u8]) -> bool
 {
     let mut pl: [&[u8]; 1] = [l0; 1usize];
-    let res: bool = impl_check_map_depth_aux(bound, &mut pl, n0);
-    res
+    impl_check_map_depth_aux(bound, &mut pl, n0)
 }
 
 fn uu___is_None__size_t(projectee: option__size_t) -> bool
@@ -3073,13 +2976,12 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                         let input2: &[u8] = _letpattern6.1;
                         (input1,input2)
                     };
-                let res: &[u8] =
+                let map1: &[u8] =
                     {
                         let input1: &[u8] = _letpattern7.0;
                         let _input2: &[u8] = _letpattern7.1;
                         input1
                     };
-                let map1: &[u8] = res;
                 let mut ph: [header; 1] = [h1; 1usize];
                 let i2: usize = jump_header(map1, 0usize);
                 let s2: (&[u8], &[u8]) = map1.split_at(i2);
@@ -3123,13 +3025,12 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                         let input2: &[u8] = _letpattern11.1;
                         (input1,input2)
                     };
-                let res0: &[u8] =
+                let map2: &[u8] =
                     {
                         let input1: &[u8] = _letpattern12.0;
                         let _input2: &[u8] = _letpattern12.1;
                         input1
                     };
-                let map2: &[u8] = res0;
                 let i4: usize = jump_header(map2, 0usize);
                 let s4: (&[u8], &[u8]) = map2.split_at(i4);
                 let _letpattern13: (&[u8], &[u8]) =
@@ -3156,8 +3057,8 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                 let mut pn: [usize; 1] = [nv1; 1usize];
                 let mut pres: [option__bool; 1] = [option__bool::Some { v: true }; 1usize];
                 let n: usize = (&pn)[0];
-                let res1: option__bool = (&pres)[0];
-                let mut cond: bool = n > 0usize && eq_Some_true(res1);
+                let res: option__bool = (&pres)[0];
+                let mut cond: bool = n > 0usize && eq_Some_true(res);
                 while
                 cond
                 {
@@ -3227,9 +3128,9 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                             [option__bool::Some { v: false }; 1usize];
                         let mut pcont: [bool; 1] = [true; 1usize];
                         let n3: usize = (&pn1)[0];
-                        let res2: option__bool = (&pres1)[0];
+                        let res0: option__bool = (&pres1)[0];
                         let cont: bool = (&pcont)[0];
-                        let mut cond0: bool = n3 > 0usize && eq_Some_false(res2) && cont;
+                        let mut cond0: bool = n3 > 0usize && eq_Some_false(res0) && cont;
                         while
                         cond0
                         {
@@ -3270,9 +3171,9 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                 let mut pl2: [&[u8]; 1] = [lh1; 1usize];
                                 let mut pres2: [option__bool; 1] =
                                     [option__bool::Some { v: true }; 1usize];
-                                let res3: option__bool = (&pres2)[0];
+                                let res1: option__bool = (&pres2)[0];
                                 let n4: usize = (&pn2)[0];
-                                let mut cond1: bool = eq_Some_true(res3) && n4 > 0usize;
+                                let mut cond1: bool = eq_Some_true(res1) && n4 > 0usize;
                                 while
                                 cond1
                                 {
@@ -3308,13 +3209,12 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                     let input2: &[u8] = _letpattern31.1;
                                                     (input1,input2)
                                                 };
-                                            let res4: &[u8] =
+                                            let tl1: &[u8] =
                                                 {
                                                     let _input1: &[u8] = _letpattern32.0;
                                                     let input2: &[u8] = _letpattern32.1;
                                                     input2
                                                 };
-                                            let tl1: &[u8] = res4;
                                             let i9: usize = jump_raw_data_item(l2·, 0usize);
                                             let s9: (&[u8], &[u8]) = l2·.split_at(i9);
                                             let _letpattern33: (&[u8], &[u8]) =
@@ -3335,13 +3235,12 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                     let input2: &[u8] = _letpattern34.1;
                                                     (input1,input2)
                                                 };
-                                            let res5: &[u8] =
+                                            let tl2: &[u8] =
                                                 {
                                                     let _input1: &[u8] = _letpattern35.0;
                                                     let input2: &[u8] = _letpattern35.1;
                                                     input2
                                                 };
-                                            let tl2: &[u8] = res5;
                                             (&mut pn2)[0] = n·2;
                                             (&mut pl1)[0] = tl1;
                                             (&mut pl2)[0] = tl2
@@ -3421,9 +3320,7 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                     {
                                                         let b0: initial_byte_t = h11.fst;
                                                         let l4: long_argument = h11.snd;
-                                                        0usize.wrapping_add(
-                                                            argument_as_uint64(b0, l4) as usize
-                                                        )
+                                                        argument_as_uint64(b0, l4) as usize
                                                     }
                                                     else
                                                     { 0usize };
@@ -3467,9 +3364,7 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                     {
                                                         let b1: initial_byte_t = h21.fst;
                                                         let l4: long_argument = h21.snd;
-                                                        0usize.wrapping_add(
-                                                            argument_as_uint64(b1, l4) as usize
-                                                        )
+                                                        argument_as_uint64(b1, l4) as usize
                                                     }
                                                     else
                                                     { 0usize };
@@ -3590,14 +3485,13 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                             }
                                         }
                                     };
-                                    let res4: option__bool = (&pres2)[0];
+                                    let res2: option__bool = (&pres2)[0];
                                     let n40: usize = (&pn2)[0];
-                                    cond1 = eq_Some_true(res4) && n40 > 0usize
+                                    cond1 = eq_Some_true(res2) && n40 > 0usize
                                 };
-                                let res4: option__bool = (&pres2)[0];
-                                let res5: option__bool = res4;
-                                if uu___is_None__bool(res5)
-                                { (&mut pres1)[0] = res5 }
+                                let res2: option__bool = (&pres2)[0];
+                                if uu___is_None__bool(res2)
+                                { (&mut pres1)[0] = res2 }
                                 else
                                 {
                                     let i8: usize = jump_raw_data_item(lt1, 0usize);
@@ -3629,7 +3523,7 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                     let lv1: &[u8] = _letpattern33.0;
                                     let lt·1: &[u8] = _letpattern33.1;
                                     if
-                                    match res5
+                                    match res2
                                     {
                                         option__bool::Some { v } => v,
                                         _ => panic!("Incomplete pattern matching")
@@ -3683,13 +3577,12 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                             let input2: &[u8] = _letpattern41.1;
                                                             (input1,input2)
                                                         };
-                                                    let res11: &[u8] =
+                                                    let tl1: &[u8] =
                                                         {
                                                             let _input1: &[u8] = _letpattern42.0;
                                                             let input2: &[u8] = _letpattern42.1;
                                                             input2
                                                         };
-                                                    let tl1: &[u8] = res11;
                                                     let i10: usize =
                                                         jump_raw_data_item(l2·, 0usize);
                                                     let s10: (&[u8], &[u8]) = l2·.split_at(i10);
@@ -3711,13 +3604,12 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                             let input2: &[u8] = _letpattern44.1;
                                                             (input1,input2)
                                                         };
-                                                    let res12: &[u8] =
+                                                    let tl2: &[u8] =
                                                         {
                                                             let _input1: &[u8] = _letpattern45.0;
                                                             let input2: &[u8] = _letpattern45.1;
                                                             input2
                                                         };
-                                                    let tl2: &[u8] = res12;
                                                     (&mut pn20)[0] = n·2;
                                                     (&mut pl10)[0] = tl1;
                                                     (&mut pl20)[0] = tl2
@@ -3804,11 +3696,7 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                             {
                                                                 let b0: initial_byte_t = h11.fst;
                                                                 let l4: long_argument = h11.snd;
-                                                                0usize.wrapping_add(
-                                                                    argument_as_uint64(b0, l4)
-                                                                    as
-                                                                    usize
-                                                                )
+                                                                argument_as_uint64(b0, l4) as usize
                                                             }
                                                             else
                                                             { 0usize };
@@ -3856,11 +3744,7 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                             {
                                                                 let b1: initial_byte_t = h21.fst;
                                                                 let l4: long_argument = h21.snd;
-                                                                0usize.wrapping_add(
-                                                                    argument_as_uint64(b1, l4)
-                                                                    as
-                                                                    usize
-                                                                )
+                                                                argument_as_uint64(b1, l4) as usize
                                                             }
                                                             else
                                                             { 0usize };
@@ -3987,8 +3871,7 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                             let n41: usize = (&pn20)[0];
                                             cond2 = eq_Some_true(res11) && n41 > 0usize
                                         };
-                                        let res11: option__bool = (&pres20)[0];
-                                        let __anf01: option__bool = res11;
+                                        let __anf01: option__bool = (&pres20)[0];
                                         (&mut pres1)[0] = __anf01;
                                         (&mut pcont)[0] = false
                                     }
@@ -4000,32 +3883,32 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                 }
                             };
                             let n31: usize = (&pn1)[0];
-                            let res3: option__bool = (&pres1)[0];
+                            let res1: option__bool = (&pres1)[0];
                             let cont0: bool = (&pcont)[0];
-                            cond0 = n31 > 0usize && eq_Some_false(res3) && cont0
+                            cond0 = n31 > 0usize && eq_Some_false(res1) && cont0
                         };
-                        let res3: option__bool = (&pres1)[0];
-                        if eq_Some_true(res3)
+                        let res1: option__bool = (&pres1)[0];
+                        if eq_Some_true(res1)
                         {
                             (&mut pl)[0] = lt·;
                             (&mut pn)[0] = n·
                         }
                         else
-                        { (&mut pres)[0] = res3 }
+                        { (&mut pres)[0] = res1 }
                     };
                     let n1: usize = (&pn)[0];
-                    let res2: option__bool = (&pres)[0];
-                    cond = n1 > 0usize && eq_Some_true(res2)
+                    let res0: option__bool = (&pres)[0];
+                    cond = n1 > 0usize && eq_Some_true(res0)
                 };
-                let res2: option__bool = (&pres)[0];
-                if eq_Some_true(res2)
+                let res0: option__bool = (&pres)[0];
+                if eq_Some_true(res0)
                 {
                     let mut pl0: [&[u8]; 1] = [c2; 1usize];
                     let mut pn0: [usize; 1] = [nv2; 1usize];
                     let mut pres0: [option__bool; 1] = [option__bool::Some { v: true }; 1usize];
                     let n0: usize = (&pn0)[0];
-                    let res10: option__bool = (&pres0)[0];
-                    let mut cond0: bool = n0 > 0usize && eq_Some_true(res10);
+                    let res1: option__bool = (&pres0)[0];
+                    let mut cond0: bool = n0 > 0usize && eq_Some_true(res1);
                     while
                     cond0
                     {
@@ -4095,9 +3978,9 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                 [option__bool::Some { v: false }; 1usize];
                             let mut pcont: [bool; 1] = [true; 1usize];
                             let n3: usize = (&pn1)[0];
-                            let res11: option__bool = (&pres1)[0];
+                            let res10: option__bool = (&pres1)[0];
                             let cont: bool = (&pcont)[0];
-                            let mut cond1: bool = n3 > 0usize && eq_Some_false(res11) && cont;
+                            let mut cond1: bool = n3 > 0usize && eq_Some_false(res10) && cont;
                             while
                             cond1
                             {
@@ -4138,9 +4021,9 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                     let mut pl2: [&[u8]; 1] = [lh1; 1usize];
                                     let mut pres2: [option__bool; 1] =
                                         [option__bool::Some { v: true }; 1usize];
-                                    let res12: option__bool = (&pres2)[0];
+                                    let res11: option__bool = (&pres2)[0];
                                     let n4: usize = (&pn2)[0];
-                                    let mut cond2: bool = eq_Some_true(res12) && n4 > 0usize;
+                                    let mut cond2: bool = eq_Some_true(res11) && n4 > 0usize;
                                     while
                                     cond2
                                     {
@@ -4176,13 +4059,12 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                         let input2: &[u8] = _letpattern31.1;
                                                         (input1,input2)
                                                     };
-                                                let res13: &[u8] =
+                                                let tl1: &[u8] =
                                                     {
                                                         let _input1: &[u8] = _letpattern32.0;
                                                         let input2: &[u8] = _letpattern32.1;
                                                         input2
                                                     };
-                                                let tl1: &[u8] = res13;
                                                 let i9: usize = jump_raw_data_item(l2·, 0usize);
                                                 let s9: (&[u8], &[u8]) = l2·.split_at(i9);
                                                 let _letpattern33: (&[u8], &[u8]) =
@@ -4203,13 +4085,12 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                         let input2: &[u8] = _letpattern34.1;
                                                         (input1,input2)
                                                     };
-                                                let res14: &[u8] =
+                                                let tl2: &[u8] =
                                                     {
                                                         let _input1: &[u8] = _letpattern35.0;
                                                         let input2: &[u8] = _letpattern35.1;
                                                         input2
                                                     };
-                                                let tl2: &[u8] = res14;
                                                 (&mut pn2)[0] = n·2;
                                                 (&mut pl1)[0] = tl1;
                                                 (&mut pl2)[0] = tl2
@@ -4292,9 +4173,7 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                         {
                                                             let b0: initial_byte_t = h11.fst;
                                                             let l4: long_argument = h11.snd;
-                                                            0usize.wrapping_add(
-                                                                argument_as_uint64(b0, l4) as usize
-                                                            )
+                                                            argument_as_uint64(b0, l4) as usize
                                                         }
                                                         else
                                                         { 0usize };
@@ -4338,9 +4217,7 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                         {
                                                             let b1: initial_byte_t = h21.fst;
                                                             let l4: long_argument = h21.snd;
-                                                            0usize.wrapping_add(
-                                                                argument_as_uint64(b1, l4) as usize
-                                                            )
+                                                            argument_as_uint64(b1, l4) as usize
                                                         }
                                                         else
                                                         { 0usize };
@@ -4463,14 +4340,13 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                 }
                                             }
                                         };
-                                        let res13: option__bool = (&pres2)[0];
+                                        let res12: option__bool = (&pres2)[0];
                                         let n40: usize = (&pn2)[0];
-                                        cond2 = eq_Some_true(res13) && n40 > 0usize
+                                        cond2 = eq_Some_true(res12) && n40 > 0usize
                                     };
-                                    let res13: option__bool = (&pres2)[0];
-                                    let res14: option__bool = res13;
-                                    if uu___is_None__bool(res14)
-                                    { (&mut pres1)[0] = res14 }
+                                    let res12: option__bool = (&pres2)[0];
+                                    if uu___is_None__bool(res12)
+                                    { (&mut pres1)[0] = res12 }
                                     else
                                     {
                                         let i8: usize = jump_raw_data_item(lt1, 0usize);
@@ -4502,7 +4378,7 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                         let lv1: &[u8] = _letpattern33.0;
                                         let lt·1: &[u8] = _letpattern33.1;
                                         if
-                                        match res14
+                                        match res12
                                         {
                                             option__bool::Some { v } => v,
                                             _ => panic!("Incomplete pattern matching")
@@ -4513,10 +4389,10 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                             let mut pl20: [&[u8]; 1] = [lv1; 1usize];
                                             let mut pres20: [option__bool; 1] =
                                                 [option__bool::Some { v: true }; 1usize];
-                                            let res20: option__bool = (&pres20)[0];
+                                            let res2: option__bool = (&pres20)[0];
                                             let n40: usize = (&pn20)[0];
                                             let mut cond3: bool =
-                                                eq_Some_true(res20) && n40 > 0usize;
+                                                eq_Some_true(res2) && n40 > 0usize;
                                             while
                                             cond3
                                             {
@@ -4557,14 +4433,13 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                                 let input2: &[u8] = _letpattern41.1;
                                                                 (input1,input2)
                                                             };
-                                                        let res21: &[u8] =
+                                                        let tl1: &[u8] =
                                                             {
                                                                 let _input1: &[u8] =
                                                                     _letpattern42.0;
                                                                 let input2: &[u8] = _letpattern42.1;
                                                                 input2
                                                             };
-                                                        let tl1: &[u8] = res21;
                                                         let i10: usize =
                                                             jump_raw_data_item(l2·, 0usize);
                                                         let s10: (&[u8], &[u8]) =
@@ -4587,14 +4462,13 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                                 let input2: &[u8] = _letpattern44.1;
                                                                 (input1,input2)
                                                             };
-                                                        let res22: &[u8] =
+                                                        let tl2: &[u8] =
                                                             {
                                                                 let _input1: &[u8] =
                                                                     _letpattern45.0;
                                                                 let input2: &[u8] = _letpattern45.1;
                                                                 input2
                                                             };
-                                                        let tl2: &[u8] = res22;
                                                         (&mut pn20)[0] = n·2;
                                                         (&mut pl10)[0] = tl1;
                                                         (&mut pl20)[0] = tl2
@@ -4683,11 +4557,9 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                                     let b0: initial_byte_t =
                                                                         h11.fst;
                                                                     let l4: long_argument = h11.snd;
-                                                                    0usize.wrapping_add(
-                                                                        argument_as_uint64(b0, l4)
-                                                                        as
-                                                                        usize
-                                                                    )
+                                                                    argument_as_uint64(b0, l4)
+                                                                    as
+                                                                    usize
                                                                 }
                                                                 else
                                                                 { 0usize };
@@ -4745,11 +4617,9 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                                     let b1: initial_byte_t =
                                                                         h21.fst;
                                                                     let l4: long_argument = h21.snd;
-                                                                    0usize.wrapping_add(
-                                                                        argument_as_uint64(b1, l4)
-                                                                        as
-                                                                        usize
-                                                                    )
+                                                                    argument_as_uint64(b1, l4)
+                                                                    as
+                                                                    usize
                                                                 }
                                                                 else
                                                                 { 0usize };
@@ -4888,12 +4758,11 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                                         }
                                                     }
                                                 };
-                                                let res21: option__bool = (&pres20)[0];
+                                                let res20: option__bool = (&pres20)[0];
                                                 let n41: usize = (&pn20)[0];
-                                                cond3 = eq_Some_true(res21) && n41 > 0usize
+                                                cond3 = eq_Some_true(res20) && n41 > 0usize
                                             };
-                                            let res21: option__bool = (&pres20)[0];
-                                            let __anf01: option__bool = res21;
+                                            let __anf01: option__bool = (&pres20)[0];
                                             (&mut pres1)[0] = __anf01;
                                             (&mut pcont)[0] = false
                                         }
@@ -4905,28 +4774,27 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                                     }
                                 };
                                 let n31: usize = (&pn1)[0];
-                                let res12: option__bool = (&pres1)[0];
+                                let res11: option__bool = (&pres1)[0];
                                 let cont0: bool = (&pcont)[0];
-                                cond1 = n31 > 0usize && eq_Some_false(res12) && cont0
+                                cond1 = n31 > 0usize && eq_Some_false(res11) && cont0
                             };
-                            let res12: option__bool = (&pres1)[0];
-                            if eq_Some_true(res12)
+                            let res11: option__bool = (&pres1)[0];
+                            if eq_Some_true(res11)
                             {
                                 (&mut pl0)[0] = lt·;
                                 (&mut pn0)[0] = n·
                             }
                             else
-                            { (&mut pres0)[0] = res12 }
+                            { (&mut pres0)[0] = res11 }
                         };
                         let n2: usize = (&pn0)[0];
-                        let res11: option__bool = (&pres0)[0];
-                        cond0 = n2 > 0usize && eq_Some_true(res11)
+                        let res10: option__bool = (&pres0)[0];
+                        cond0 = n2 > 0usize && eq_Some_true(res10)
                     };
-                    let res11: option__bool = (&pres0)[0];
-                    res11
+                    (&pres0)[0]
                 }
                 else
-                { res2 }
+                { res0 }
             }
         }
         else
@@ -4988,13 +4856,12 @@ fn impl_check_equiv_list_basic(
                             let input2: &[u8] = _letpattern0.1;
                             (input1,input2)
                         };
-                    let res0: &[u8] =
+                    let tl1: &[u8] =
                         {
                             let _input1: &[u8] = _letpattern1.0;
                             let input2: &[u8] = _letpattern1.1;
                             input2
                         };
-                    let tl1: &[u8] = res0;
                     let i0: usize = jump_raw_data_item(l2·, 0usize);
                     let s0: (&[u8], &[u8]) = l2·.split_at(i0);
                     let _letpattern2: (&[u8], &[u8]) =
@@ -5015,13 +4882,12 @@ fn impl_check_equiv_list_basic(
                             let input2: &[u8] = _letpattern3.1;
                             (input1,input2)
                         };
-                    let res1: &[u8] =
+                    let tl2: &[u8] =
                         {
                             let _input1: &[u8] = _letpattern4.0;
                             let input2: &[u8] = _letpattern4.1;
                             input2
                         };
-                    let tl2: &[u8] = res1;
                     (&mut pn)[0] = n·;
                     (&mut pl1)[0] = tl1;
                     (&mut pl2)[0] = tl2
@@ -5101,7 +4967,7 @@ fn impl_check_equiv_list_basic(
                             {
                                 let b0: initial_byte_t = h1.fst;
                                 let l: long_argument = h1.snd;
-                                0usize.wrapping_add(argument_as_uint64(b0, l) as usize)
+                                argument_as_uint64(b0, l) as usize
                             }
                             else
                             { 0usize };
@@ -5145,7 +5011,7 @@ fn impl_check_equiv_list_basic(
                             {
                                 let b1: initial_byte_t = h2.fst;
                                 let l: long_argument = h2.snd;
-                                0usize.wrapping_add(argument_as_uint64(b1, l) as usize)
+                                argument_as_uint64(b1, l) as usize
                             }
                             else
                             { 0usize };
@@ -5261,10 +5127,7 @@ fn impl_check_equiv_list_basic(
 }
 
 fn impl_check_equiv_basic(map_bound: option__size_t, l1: &[u8], l2: &[u8]) -> option__bool
-{
-    let res: option__bool = impl_check_equiv_list_basic(map_bound, 1usize, l1, 1usize, l2);
-    res
-}
+{ impl_check_equiv_list_basic(map_bound, 1usize, l1, 1usize, l2) }
 
 fn impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow_basic(
     nl1: usize,
@@ -5526,13 +5389,12 @@ fn impl_check_valid_basic(map_bound: option__size_t, strict_bound_check: bool, l
                             let input2: &[u8] = _letpattern11.1;
                             (input1,input2)
                         };
-                    let res0: &[u8] =
+                    let hd: &[u8] =
                         {
                             let input1: &[u8] = _letpattern12.0;
                             let _input2: &[u8] = _letpattern12.1;
                             input1
                         };
-                    let hd: &[u8] = res0;
                     let mut ph: [header; 1] = [h; 1usize];
                     let i1: usize = jump_header(hd, 0usize);
                     let s1: (&[u8], &[u8]) = hd.split_at(i1);
@@ -5571,8 +5433,8 @@ fn impl_check_valid_basic(map_bound: option__size_t, strict_bound_check: bool, l
                             1usize];
                     let mut pres1: [option__bool; 1] = [option__bool::Some { v: true }; 1usize];
                     let n1: usize = (&pn1)[0];
-                    let res1: option__bool = (&pres1)[0];
-                    let mut cond0: bool = n1 > 0usize && eq_Some_true(res1);
+                    let res0: option__bool = (&pres1)[0];
+                    let mut cond0: bool = n1 > 0usize && eq_Some_true(res0);
                     while
                     cond0
                     {
@@ -5641,8 +5503,8 @@ fn impl_check_valid_basic(map_bound: option__size_t, strict_bound_check: bool, l
                             let mut pres2: [option__bool; 1] =
                                 [option__bool::Some { v: false }; 1usize];
                             let n2: usize = (&pn2)[0];
-                            let res2: option__bool = (&pres2)[0];
-                            let mut cond1: bool = n2 > 0usize && eq_Some_false(res2);
+                            let res1: option__bool = (&pres2)[0];
+                            let mut cond1: bool = n2 > 0usize && eq_Some_false(res1);
                             while
                             cond1
                             {
@@ -5678,9 +5540,9 @@ fn impl_check_valid_basic(map_bound: option__size_t, strict_bound_check: bool, l
                                 {
                                     let lh1: &[u8] = _letpattern32.0;
                                     let lt1: &[u8] = _letpattern32.1;
-                                    let res3: option__bool =
+                                    let res2: option__bool =
                                         impl_check_equiv_basic(map_bound, lh, lh1);
-                                    if eq_Some_false(res3)
+                                    if eq_Some_false(res2)
                                     {
                                         let i5: usize = jump_raw_data_item(lt1, 0usize);
                                         let s5: (&[u8], &[u8]) = lt1.split_at(i5);
@@ -5714,17 +5576,17 @@ fn impl_check_valid_basic(map_bound: option__size_t, strict_bound_check: bool, l
                                         (&mut pn2)[0] = n·1
                                     }
                                     else
-                                    { (&mut pres2)[0] = res3 }
+                                    { (&mut pres2)[0] = res2 }
                                 };
                                 let n21: usize = (&pn2)[0];
-                                let res3: option__bool = (&pres2)[0];
-                                cond1 = n21 > 0usize && eq_Some_false(res3)
+                                let res2: option__bool = (&pres2)[0];
+                                cond1 = n21 > 0usize && eq_Some_false(res2)
                             };
-                            let res3: option__bool = (&pres2)[0];
-                            if uu___is_None__bool(res3)
+                            let res2: option__bool = (&pres2)[0];
+                            if uu___is_None__bool(res2)
                             { (&mut pres1)[0] = option__bool::None }
                             else if
-                            match res3
+                            match res2
                             {
                                 option__bool::Some { v } => v,
                                 _ => panic!("Incomplete pattern matching")
@@ -5748,11 +5610,11 @@ fn impl_check_valid_basic(map_bound: option__size_t, strict_bound_check: bool, l
                             }
                         };
                         let n11: usize = (&pn1)[0];
-                        let res2: option__bool = (&pres1)[0];
-                        cond0 = n11 > 0usize && eq_Some_true(res2)
+                        let res1: option__bool = (&pres1)[0];
+                        cond0 = n11 > 0usize && eq_Some_true(res1)
                     };
-                    let res2: option__bool = (&pres1)[0];
-                    eq_Some_true(res2)
+                    let res1: option__bool = (&pres1)[0];
+                    eq_Some_true(res1)
                 }
                 else
                 { true }
@@ -5791,8 +5653,7 @@ fn impl_check_valid_basic(map_bound: option__size_t, strict_bound_check: bool, l
                     let _input3: &[u8] = _letpattern12.1;
                     input2
                 };
-            let res1: header = read_header(input·);
-            let x: header = res1;
+            let x: header = read_header(input·);
             let b: initial_byte_t = x.fst;
             let i0: usize =
                 if
@@ -5805,7 +5666,7 @@ fn impl_check_valid_basic(map_bound: option__size_t, strict_bound_check: bool, l
                     off1.wrapping_add(argument_as_uint64(b0, l) as usize)
                 }
                 else
-                { off1.wrapping_add(0usize) };
+                { off1 };
             let s0: (&[u8], &[u8]) = pi.split_at(i0);
             let _letpattern4: (&[u8], &[u8]) =
                 {
@@ -5824,15 +5685,15 @@ fn impl_check_valid_basic(map_bound: option__size_t, strict_bound_check: bool, l
             let unused: usize = pc.len();
             crate::lowstar::ignore::ignore::<usize>(unused);
             let count: usize = jump_recursive_step_count_leaf(ph);
-            (&mut pn)[0] = n0.wrapping_sub(1usize).wrapping_add(count);
+            let n·: usize = n0.wrapping_sub(1usize).wrapping_add(count);
+            (&mut pn)[0] = n·;
             (&mut ppi)[0] = pc
         };
         let res1: bool = (&pres)[0];
         let n1: usize = (&pn)[0];
         cond = res1 && n1 > 0usize
     };
-    let res0: bool = (&pres)[0];
-    res0
+    (&pres)[0]
 }
 
 fn cbor_validate_nondet(map_key_bound: option__size_t, strict_check: bool, input: &[u8]) ->
@@ -5935,9 +5796,6 @@ fn cbor_match_compare_serialized_map(c1: cbor_serialized, c2: cbor_serialized) -
     else
     { false }
 }
-
-fn uu___is_Some__bool(projectee: option__bool) -> bool
-{ match projectee { option__bool::Some { .. } => true, _ => false } }
 
 pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
 {
@@ -6048,10 +5906,7 @@ pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
                       match _letpattern1
                       {
                           cbor_raw::CBOR_Case_Serialized_Tagged { v: cs2 } =>
-                            {
-                                let res: bool = cbor_match_equal_serialized_tagged(cs1, cs2);
-                                res
-                            },
+                            cbor_match_equal_serialized_tagged(cs1, cs2),
                           _ => panic!("Incomplete pattern matching")
                       }
                   },
@@ -6080,8 +5935,7 @@ pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
             {
                 let w1: cbor_raw = cbor_match_tagged_get_payload(x1);
                 let w2: cbor_raw = cbor_match_tagged_get_payload(x2);
-                let res: bool = cbor_nondet_equiv(w1, w2);
-                res
+                cbor_nondet_equiv(w1, w2)
             }
         }
     }
@@ -6108,10 +5962,7 @@ pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
                       match _letpattern1
                       {
                           cbor_raw::CBOR_Case_Serialized_Array { v: cs2 } =>
-                            {
-                                let res: bool = cbor_match_compare_serialized_array(cs1, cs2);
-                                res
-                            },
+                            cbor_match_compare_serialized_array(cs1, cs2),
                           _ => panic!("Incomplete pattern matching")
                       }
                   },
@@ -6149,16 +6000,10 @@ pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
                 let mut pi1: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] = [i1; 1usize];
                 let mut pi2: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] = [i2; 1usize];
                 let mut pres: [bool; 1] = [true; 1usize];
-                let __anf0: bool = (&pres)[0];
-                let mut cond: bool =
-                    if __anf0
-                    {
-                        let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = (&pi1)[0];
-                        let __anf01: bool = cbor_array_iterator_is_empty(i11);
-                        ! __anf01
-                    }
-                    else
-                    { false };
+                let res: bool = (&pres)[0];
+                let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = (&pi1)[0];
+                let __anf0: bool = cbor_array_iterator_is_empty(i11);
+                let mut cond: bool = res && ! __anf0;
                 while
                 cond
                 {
@@ -6166,17 +6011,10 @@ pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
                     let y2: cbor_raw = cbor_array_iterator_next(&mut pi2);
                     let __anf00: bool = cbor_nondet_equiv(y1, y2);
                     (&mut pres)[0] = __anf00;
-                    let __anf01: bool = (&pres)[0];
-                    let ite: bool =
-                        if __anf01
-                        {
-                            let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = (&pi1)[0];
-                            let __anf010: bool = cbor_array_iterator_is_empty(i11);
-                            ! __anf010
-                        }
-                        else
-                        { false };
-                    cond = ite
+                    let res0: bool = (&pres)[0];
+                    let i110: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = (&pi1)[0];
+                    let __anf01: bool = cbor_array_iterator_is_empty(i110);
+                    cond = res0 && ! __anf01
                 };
                 (&pres)[0]
             }
@@ -6199,10 +6037,7 @@ pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
                   match _letpattern1
                   {
                       cbor_raw::CBOR_Case_Serialized_Map { v: cs2 } =>
-                        {
-                            let res: bool = cbor_match_compare_serialized_map(cs1, cs2);
-                            res
-                        },
+                        cbor_match_compare_serialized_map(cs1, cs2),
                       _ => panic!("Incomplete pattern matching")
                   }
               },
@@ -6215,32 +6050,20 @@ pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
         let i2: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = cbor_map_iterator_init(x2);
         let mut pi2: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] = [i1; 1usize];
         let mut pres: [bool; 1] = [true; 1usize];
-        let __anf0: bool = (&pres)[0];
-        let mut cond: bool =
-            if __anf0
-            {
-                let i21: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi2)[0];
-                let __anf01: bool = cbor_map_iterator_is_empty(i21);
-                ! __anf01
-            }
-            else
-            { false };
+        let res: bool = (&pres)[0];
+        let i21: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi2)[0];
+        let __anf0: bool = cbor_map_iterator_is_empty(i21);
+        let mut cond: bool = res && ! __anf0;
         while
         cond
         {
             let x21: cbor_map_entry = cbor_map_iterator_next(&mut pi2);
             let mut pi1: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] = [i2; 1usize];
             let mut pres1: [option__bool; 1] = [option__bool::None; 1usize];
-            let __anf00: option__bool = (&pres1)[0];
-            let mut cond0: bool =
-                if uu___is_Some__bool(__anf00)
-                { false }
-                else
-                {
-                    let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi1)[0];
-                    let __anf01: bool = cbor_map_iterator_is_empty(i11);
-                    ! __anf01
-                };
+            let res0: option__bool = (&pres1)[0];
+            let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi1)[0];
+            let __anf00: bool = cbor_map_iterator_is_empty(i11);
+            let mut cond0: bool = uu___is_None__bool(res0) && ! __anf00;
             while
             cond0
             {
@@ -6253,32 +6076,18 @@ pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
                         cbor_nondet_equiv(x21.cbor_map_entry_value, x11.cbor_map_entry_value);
                     (&mut pres1)[0] = option__bool::Some { v: __anf010 }
                 };
-                let __anf02: option__bool = (&pres1)[0];
-                let ite: bool =
-                    if uu___is_Some__bool(__anf02)
-                    { false }
-                    else
-                    {
-                        let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi1)[0];
-                        let __anf010: bool = cbor_map_iterator_is_empty(i11);
-                        ! __anf010
-                    };
-                cond0 = ite
+                let res1: option__bool = (&pres1)[0];
+                let i110: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi1)[0];
+                let __anf02: bool = cbor_map_iterator_is_empty(i110);
+                cond0 = uu___is_None__bool(res1) && ! __anf02
             };
             let __anf01: option__bool = (&pres1)[0];
             let __anf02: bool = eq_Some_true(__anf01);
             (&mut pres)[0] = __anf02;
-            let __anf03: bool = (&pres)[0];
-            let ite: bool =
-                if __anf03
-                {
-                    let i21: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi2)[0];
-                    let __anf010: bool = cbor_map_iterator_is_empty(i21);
-                    ! __anf010
-                }
-                else
-                { false };
-            cond = ite
+            let res1: bool = (&pres)[0];
+            let i210: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi2)[0];
+            let __anf03: bool = cbor_map_iterator_is_empty(i210);
+            cond = res1 && ! __anf03
         };
         let __anf00: bool = (&pres)[0];
         if ! __anf00
@@ -6287,16 +6096,10 @@ pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
         {
             let mut pi20: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] = [i2; 1usize];
             let mut pres0: [bool; 1] = [true; 1usize];
-            let __anf01: bool = (&pres0)[0];
-            let mut cond0: bool =
-                if __anf01
-                {
-                    let i21: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi20)[0];
-                    let __anf02: bool = cbor_map_iterator_is_empty(i21);
-                    ! __anf02
-                }
-                else
-                { false };
+            let res0: bool = (&pres0)[0];
+            let i210: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi20)[0];
+            let __anf01: bool = cbor_map_iterator_is_empty(i210);
+            let mut cond0: bool = res0 && ! __anf01;
             while
             cond0
             {
@@ -6304,16 +6107,10 @@ pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
                 let mut pi1: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] =
                     [i1; 1usize];
                 let mut pres1: [option__bool; 1] = [option__bool::None; 1usize];
-                let __anf010: option__bool = (&pres1)[0];
-                let mut cond1: bool =
-                    if uu___is_Some__bool(__anf010)
-                    { false }
-                    else
-                    {
-                        let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi1)[0];
-                        let __anf02: bool = cbor_map_iterator_is_empty(i11);
-                        ! __anf02
-                    };
+                let res1: option__bool = (&pres1)[0];
+                let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi1)[0];
+                let __anf010: bool = cbor_map_iterator_is_empty(i11);
+                let mut cond1: bool = uu___is_None__bool(res1) && ! __anf010;
                 while
                 cond1
                 {
@@ -6326,36 +6123,20 @@ pub(crate) fn cbor_nondet_equiv(x1: cbor_raw, x2: cbor_raw) -> bool
                             cbor_nondet_equiv(x21.cbor_map_entry_value, x11.cbor_map_entry_value);
                         (&mut pres1)[0] = option__bool::Some { v: __anf02 }
                     };
-                    let __anf012: option__bool = (&pres1)[0];
-                    let ite: bool =
-                        if uu___is_Some__bool(__anf012)
-                        { false }
-                        else
-                        {
-                            let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-                                (&pi1)[0];
-                            let __anf02: bool = cbor_map_iterator_is_empty(i11);
-                            ! __anf02
-                        };
-                    cond1 = ite
+                    let res2: option__bool = (&pres1)[0];
+                    let i110: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi1)[0];
+                    let __anf012: bool = cbor_map_iterator_is_empty(i110);
+                    cond1 = uu___is_None__bool(res2) && ! __anf012
                 };
                 let __anf011: option__bool = (&pres1)[0];
                 let __anf012: bool = eq_Some_true(__anf011);
                 (&mut pres0)[0] = __anf012;
-                let __anf013: bool = (&pres0)[0];
-                let ite: bool =
-                    if __anf013
-                    {
-                        let i21: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi20)[0];
-                        let __anf02: bool = cbor_map_iterator_is_empty(i21);
-                        ! __anf02
-                    }
-                    else
-                    { false };
-                cond0 = ite
+                let res2: bool = (&pres0)[0];
+                let i211: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi20)[0];
+                let __anf013: bool = cbor_map_iterator_is_empty(i211);
+                cond0 = res2 && ! __anf013
             };
-            let res: bool = (&pres0)[0];
-            res
+            (&pres0)[0]
         }
     }
 }
@@ -6364,15 +6145,9 @@ fn cbor_nondet_no_setoid_repeats(x: &[cbor_map_entry]) -> bool
 {
     let mut pn1: [usize; 1] = [0usize; 1usize];
     let mut pres: [bool; 1] = [true; 1usize];
-    let __anf0: bool = (&pres)[0];
-    let mut cond: bool =
-        if __anf0
-        {
-            let __anf01: usize = (&pn1)[0];
-            __anf01 < x.len()
-        }
-        else
-        { false };
+    let res: bool = (&pres)[0];
+    let __anf0: usize = (&pn1)[0];
+    let mut cond: bool = res && __anf0 < x.len();
     while
     cond
     {
@@ -6381,15 +6156,9 @@ fn cbor_nondet_no_setoid_repeats(x: &[cbor_map_entry]) -> bool
         let n2: usize = n1.wrapping_add(1usize);
         (&mut pn1)[0] = n2;
         let mut pn2: [usize; 1] = [n2; 1usize];
-        let __anf00: bool = (&pres)[0];
-        let mut cond0: bool =
-            if __anf00
-            {
-                let __anf01: usize = (&pn2)[0];
-                __anf01 < x.len()
-            }
-            else
-            { false };
+        let res0: bool = (&pres)[0];
+        let __anf00: usize = (&pn2)[0];
+        let mut cond0: bool = res0 && __anf00 < x.len();
         while
         cond0
         {
@@ -6398,27 +6167,13 @@ fn cbor_nondet_no_setoid_repeats(x: &[cbor_map_entry]) -> bool
             let __anf01: bool = cbor_nondet_equiv(x1.cbor_map_entry_key, x2.cbor_map_entry_key);
             (&mut pres)[0] = ! __anf01;
             (&mut pn2)[0] = n21.wrapping_add(1usize);
-            let __anf02: bool = (&pres)[0];
-            let ite: bool =
-                if __anf02
-                {
-                    let __anf010: usize = (&pn2)[0];
-                    __anf010 < x.len()
-                }
-                else
-                { false };
-            cond0 = ite
+            let res1: bool = (&pres)[0];
+            let __anf02: usize = (&pn2)[0];
+            cond0 = res1 && __anf02 < x.len()
         };
-        let __anf01: bool = (&pres)[0];
-        let ite: bool =
-            if __anf01
-            {
-                let __anf010: usize = (&pn1)[0];
-                __anf010 < x.len()
-            }
-            else
-            { false };
-        cond = ite
+        let res1: bool = (&pres)[0];
+        let __anf01: usize = (&pn1)[0];
+        cond = res1 && __anf01 < x.len()
     };
     (&pres)[0]
 }
@@ -6428,10 +6183,7 @@ fn cbor_nondet_validate(map_key_bound: option__size_t, strict_check: bool, input
 { cbor_validate_nondet(map_key_bound, strict_check, input) }
 
 fn cbor_nondet_parse_valid <'a>(input: &'a [u8], len: usize) -> cbor_raw <'a>
-{
-    let res: cbor_raw = cbor_parse(input, len);
-    res
-}
+{ cbor_parse(input, len) }
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t· <'a>
@@ -6530,10 +6282,7 @@ pub(crate) fn cbor_nondet_get_tagged_tag(x: cbor_raw) -> u64
 }
 
 pub(crate) fn cbor_nondet_get_tagged_payload <'a>(x: cbor_raw <'a>) -> cbor_raw <'a>
-{
-    let res: cbor_raw = cbor_match_tagged_get_payload(x);
-    res
-}
+{ cbor_match_tagged_get_payload(x) }
 
 pub(crate) fn cbor_nondet_get_array_length(x: cbor_raw) -> u64
 {
@@ -6552,10 +6301,7 @@ pub(crate) fn cbor_nondet_get_array_length(x: cbor_raw) -> u64
 pub(crate) fn cbor_nondet_array_iterator_start <'a>(x: cbor_raw <'a>) ->
     cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
     <'a>
-{
-    let res: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = cbor_array_iterator_init(x);
-    res
-}
+{ cbor_array_iterator_init(x) }
 
 pub(crate) fn cbor_nondet_array_iterator_is_empty(
     x: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
@@ -6568,16 +6314,10 @@ pub(crate) fn cbor_nondet_array_iterator_next <'b, 'a>(
 ) ->
     cbor_raw
     <'a>
-{
-    let res: cbor_raw = cbor_array_iterator_next(x);
-    res
-}
+{ cbor_array_iterator_next(x) }
 
 pub(crate) fn cbor_nondet_get_array_item <'a>(x: cbor_raw <'a>, i: u64) -> cbor_raw <'a>
-{
-    let res: cbor_raw = cbor_array_item(x, i);
-    res
-}
+{ cbor_array_item(x, i) }
 
 pub(crate) fn cbor_nondet_get_map_length(x: cbor_raw) -> u64
 {
@@ -6611,10 +6351,7 @@ pub(crate) fn cbor_nondet_map_iterator_next <'b, 'a>(
 ) ->
     cbor_map_entry
     <'a>
-{
-    let res: cbor_map_entry = cbor_map_iterator_next(x);
-    res
-}
+{ cbor_map_iterator_next(x) }
 
 pub(crate) fn cbor_nondet_map_entry_key <'a>(x2: cbor_map_entry <'a>) -> cbor_raw <'a>
 { x2.cbor_map_entry_key }
@@ -6623,10 +6360,7 @@ pub(crate) fn cbor_nondet_map_entry_value <'a>(x2: cbor_map_entry <'a>) -> cbor_
 { x2.cbor_map_entry_value }
 
 pub(crate) fn cbor_nondet_equal(x1: cbor_raw, x2: cbor_raw) -> bool
-{
-    let res: bool = cbor_nondet_equiv(x1, x2);
-    res
-}
+{ cbor_nondet_equiv(x1, x2) }
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum option__CBOR_Pulse_Raw_Type_cbor_raw <'a>
@@ -6708,9 +6442,7 @@ pub(crate) fn cbor_nondet_mk_string <'a>(ty: u8, s: &'a [u8]) -> cbor_raw <'a>
     let ress: cbor_string =
         cbor_string { cbor_string_type: ty, cbor_string_size: len64.size, cbor_string_ptr: s };
     let res1: cbor_raw = cbor_raw::CBOR_Case_String { v: ress };
-    let res: cbor_raw = cbor_raw_reset_perm_tot(res1);
-    let res0: cbor_raw = res;
-    res0
+    cbor_raw_reset_perm_tot(res1)
 }
 
 pub(crate) fn cbor_nondet_mk_tagged <'a>(tag: u64, r: &'a [cbor_raw <'a>]) -> cbor_raw <'a>
@@ -6718,9 +6450,7 @@ pub(crate) fn cbor_nondet_mk_tagged <'a>(tag: u64, r: &'a [cbor_raw <'a>]) -> cb
     let tag64: raw_uint64 = mk_raw_uint64(tag);
     let res·: cbor_tagged = cbor_tagged { cbor_tagged_tag: tag64, cbor_tagged_ptr: r };
     let res1: cbor_raw = cbor_raw::CBOR_Case_Tagged { v: res· };
-    let res: cbor_raw = cbor_raw_reset_perm_tot(res1);
-    let res0: cbor_raw = res;
-    res0
+    cbor_raw_reset_perm_tot(res1)
 }
 
 pub(crate) fn cbor_nondet_mk_array <'a>(a: &'a [cbor_raw <'a>]) -> cbor_raw <'a>
@@ -6728,19 +6458,15 @@ pub(crate) fn cbor_nondet_mk_array <'a>(a: &'a [cbor_raw <'a>]) -> cbor_raw <'a>
     let len64: raw_uint64 = mk_raw_uint64(a.len() as u64);
     let res·: cbor_array = cbor_array { cbor_array_length_size: len64.size, cbor_array_ptr: a };
     let res1: cbor_raw = cbor_raw::CBOR_Case_Array { v: res· };
-    let res: cbor_raw = cbor_raw_reset_perm_tot(res1);
-    let res0: cbor_raw = res;
-    res0
+    cbor_raw_reset_perm_tot(res1)
 }
 
 pub(crate) fn cbor_nondet_mk_map_entry <'a>(xk: cbor_raw <'a>, xv: cbor_raw <'a>) ->
     cbor_map_entry
     <'a>
 {
-    let res: cbor_raw = cbor_raw_reset_perm_tot(xk);
-    let xk·: cbor_raw = res;
-    let res0: cbor_raw = cbor_raw_reset_perm_tot(xv);
-    let xv·: cbor_raw = res0;
+    let xk·: cbor_raw = cbor_raw_reset_perm_tot(xk);
+    let xv·: cbor_raw = cbor_raw_reset_perm_tot(xv);
     cbor_map_entry { cbor_map_entry_key: xk·, cbor_map_entry_value: xv· }
 }
 
@@ -6762,8 +6488,7 @@ pub(crate) fn cbor_nondet_mk_map <'a>(a: &'a [cbor_map_entry <'a>]) ->
                     cbor_map { cbor_map_length_size: raw_len.size, cbor_map_ptr: a };
                 let res1: cbor_raw = cbor_raw::CBOR_Case_Map { v: res· };
                 let res: cbor_raw = cbor_raw_reset_perm_tot(res1);
-                let res0: cbor_raw = res;
-                (&mut dest)[0] = res0;
+                (&mut dest)[0] = res;
                 true
             }
             else

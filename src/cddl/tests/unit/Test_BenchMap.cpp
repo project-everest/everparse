@@ -221,7 +221,7 @@ int main()
     printf(" >>> SERIALIZATION BANDWIDTH: %f MB/s\n", size / f / 1e6);
 
     /* Validate it, make sure it parses back. */
-    FStar_Pervasives_Native_option___BenchMap_map___Pulse_Lib_Slice_slice_uint8_t_
+    FStar_Pervasives_Native_option___BenchMap_map___Pulse_Lib_Slice_slice__uint8_t_
       m_opt = TIME(BenchMap_validate_and_parse_map(slice), &f);
 
     printf(" >>> EVERCDDL VALIDATION TOOK %f us\n", f * 1e6);

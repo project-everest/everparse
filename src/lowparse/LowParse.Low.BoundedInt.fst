@@ -118,7 +118,7 @@ let serialize32_bounded_integer_2 () =
   LE.store_post_modifies out (U32.v pos) 2 (fun s -> E.be_to_n s == U16.v v') h h';
   2ul
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 128"
 
 let serialize32_bounded_integer_3 () =
   fun (v: bounded_integer 3) #rrel #rel out pos ->
@@ -380,7 +380,7 @@ let serialize32_bounded_integer_le_2
 
 let write_bounded_integer_le_2 = leaf_writer_strong_of_serializer32 serialize32_bounded_integer_le_2 ()
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 128"
 
 let serialize32_bounded_integer_le_3
 = fun v #rrel #rel out pos ->

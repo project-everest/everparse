@@ -55,7 +55,7 @@ COSE_Format_header_map COSE_OpenSSL_empty_sig_headers() {
         ._x1 = {
             .tag = COSE_Format_Inl,
             .case_Inl = {
-                .elt = (K___COSE_Format_label_COSE_Format_values[]) {},
+                .elt = (K___COSE_Format_evercddl_label_COSE_Format_values[]) {},
                 .len = 0,
             },
         },
@@ -82,7 +82,7 @@ bstr COSE_OpenSSL_sign1(EVP_PKEY *signing_key,
         COSE_Format_header_map protected_headers,
         COSE_Format_header_map unprotected_headers,
         bstr aad, bstr payload) {
-    protected_headers.intkey1 = (FStar_Pervasives_Native_option__FStar_Pervasives_either_COSE_Format_evercddl_int_COSE_Format_tstr) {
+    protected_headers.intkey1 = (FStar_Pervasives_Native_option__COSE_Format_evercddl_label_ugly) {
         .tag = FStar_Pervasives_Native_Some,
         .v = {
             .tag = COSE_Format_Inl,
@@ -102,7 +102,7 @@ bstr COSE_OpenSSL_sign1(EVP_PKEY *signing_key,
     free(sig_structure.elt);
 
     COSE_Format_cose_sign1 c = {
-        .protected = protected_headers_,
+        .protected0 = protected_headers_,
         .unprotected = unprotected_headers,
         .payload = { .tag = COSE_Format_Inl, .case_Inl = payload },
         .signature = sig,
@@ -133,7 +133,7 @@ bool COSE_OpenSSL_validate(EVP_PKEY *signing_key, bstr tbs, bstr sig) {
 }
 
 bstr COSE_OpenSSL_verify1(EVP_PKEY *signing_key, bstr aad, bstr msg) {
-    FStar_Pervasives_Native_option___COSE_Format_cose_sign1_tagged___Pulse_Lib_Slice_slice_uint8_t_ parsed_msg =
+    FStar_Pervasives_Native_option___COSE_Format_cose_sign1_tagged___Pulse_Lib_Slice_slice__uint8_t_ parsed_msg =
         COSE_Format_validate_and_parse_cose_sign1_tagged(msg);
     check(parsed_msg.tag);
 
@@ -143,7 +143,7 @@ bstr COSE_OpenSSL_verify1(EVP_PKEY *signing_key, bstr aad, bstr msg) {
     bstr sig = parsed_msg.v.fst.signature;
     
     COSE_Format_empty_or_serialized_map protected_headers =
-        parsed_msg.v.fst.protected;
+        parsed_msg.v.fst.protected0;
     // TODO check algorithm
   
     bstr sig_structure = mk_sig_structure(protected_headers, aad, payload);

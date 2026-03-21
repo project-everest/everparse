@@ -342,6 +342,8 @@ let impl_map_group_match_item_for_body_post
           pts_to pi i' **
           pure (impl_map_group_post (map_group_match_item_for cut k dest) (map_group_match_item_for_footprint cut k dest) v v1 v2 count i i' res)
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction
 fn impl_map_group_match_item_for_body
   (#t: Type0)
@@ -406,6 +408,8 @@ fn impl_map_group_match_item_for_body
     }
   }
 }
+
+#pop-options
 
 inline_for_extraction
 fn impl_map_group_match_item_for
@@ -675,6 +679,10 @@ ensures
   }
 }
 
+#pop-options
+
+#push-options "--z3rlimit 1024 --split_queries always --fuel 8 --ifuel 6 --z3seed 42"
+
 #restart-solver
 inline_for_extraction
 fn impl_map_group_filter
@@ -711,25 +719,28 @@ if (not count) {
   let p1_future : GR.ref cbor_map = GR.alloc (Ghost.reveal v1);
   let p2_past : GR.ref cbor_map = GR.alloc cbor_map_empty;
   let p2_future : GR.ref cbor_map = GR.alloc (Ghost.reveal v2);
-  fold (impl_map_group_filter_invariant vmatch cbor_map_iterator_match f c p v pi v1 v2 pj pconsumed_past premaining_past p1_future p2_past p2_future (Cons? l0));
   let gres = Ghost.hide (apply_map_group_det (map_group_filter f) v1);
   let gconsumed = Ghost.hide (MapGroupDet?.consumed gres);
   let gremaining = Ghost.hide (MapGroupDet?.remaining gres);
   while (
-    with b . assert (impl_map_group_filter_invariant vmatch cbor_map_iterator_match f c p v pi v1 v2 pj pconsumed_past premaining_past p1_future p2_past p2_future b);
-    unfold (impl_map_group_filter_invariant vmatch cbor_map_iterator_match f c p v pi v1 v2 pj pconsumed_past premaining_past p1_future p2_past p2_future b);
-    with pl j_ l . assert (pts_to pj j_ ** cbor_map_iterator_match pl j_ l ** Trade.trade (cbor_map_iterator_match pl j_ l) (vmatch p c v));
     let j = !pj;
-    // FIXME: WHY WHY WHY those 2 rewrites?
-    rewrite (cbor_map_iterator_match pl j_ l) as (cbor_map_iterator_match pl j l);
-    rewrite (Trade.trade (cbor_map_iterator_match pl j_ l) (vmatch p c v)) as (Trade.trade (cbor_map_iterator_match pl j l) (vmatch p c v));
     let is_empty = cbor_map_iterator_is_empty j;
-    let res = not is_empty;
-    fold (impl_map_group_filter_invariant vmatch cbor_map_iterator_match f c p v pi v1 v2 pj pconsumed_past premaining_past p1_future p2_past p2_future res);
-    res
-  ) invariant b . impl_map_group_filter_invariant vmatch cbor_map_iterator_match f c p v pi v1 v2 pj pconsumed_past premaining_past p1_future p2_past p2_future b
+    not is_empty
+  ) invariant exists* pl l j vconsumed_past vremaining_past v1_future v2_past v2_future rem . (
+    pts_to pj j **
+    cbor_map_iterator_match pl j l **
+    Trade.trade
+      (cbor_map_iterator_match pl j l)
+      (vmatch p c v) **
+    GR.pts_to pconsumed_past vconsumed_past **
+    GR.pts_to premaining_past vremaining_past **
+    GR.pts_to p1_future v1_future **
+    GR.pts_to p2_past v2_past **
+    GR.pts_to p2_future v2_future **
+    R.pts_to pi rem **
+    pure (impl_map_group_filter_invariant_prop f v1 v2 l vconsumed_past vremaining_past v1_future v2_past v2_future rem (Cons? l))
+  )
   {
-    unfold (impl_map_group_filter_invariant vmatch cbor_map_iterator_match f c p v pi v1 v2 pj pconsumed_past premaining_past p1_future p2_past p2_future true);
     let chd = cbor_map_iterator_next pj;
     Trade.trans _ _ (vmatch p c v);
     with phd hd . assert (vmatch2 phd chd hd);
@@ -747,8 +758,7 @@ if (not count) {
     map_group_footprint_elim (map_group_filter f) phi v1_future v2_future;
     with v2_past . assert (GR.pts_to p2_past v2_past);
     if (test) {
-      impl_map_group_filter_aux_skip f phi v1 v2 hd_k hd_v tl pconsumed_past premaining_past p1_future p2_past p2_future pi;
-      fold (impl_map_group_filter_invariant vmatch cbor_map_iterator_match f c p v pi v1 v2 pj pconsumed_past premaining_past p1_future p2_past p2_future (Cons? tl))
+      impl_map_group_filter_aux_skip f phi v1 v2 hd_k hd_v tl pconsumed_past premaining_past p1_future p2_past p2_future pi
     } else {
       assert (pure (cbor_map_included s (cbor_map_filter (Util.notp f) v1_future)));
       assert (pure (cbor_map_included s v1_future));
@@ -765,11 +775,9 @@ if (not count) {
       pi := i' ;
       cbor_map_sub_union_l v1_future v2_future s;
       map_group_footprint_elim (map_group_filter f) phi v1_future' v2_future;
-      impl_map_group_filter_invariant_prop_intro f v1 v2 tl vconsumed_past' vremaining_past v1_future' v2_past v2_future i' (Cons? tl) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ());
-      fold (impl_map_group_filter_invariant vmatch cbor_map_iterator_match f c p v pi v1 v2 pj pconsumed_past premaining_past p1_future p2_past p2_future (Cons? tl));
+      impl_map_group_filter_invariant_prop_intro f v1 v2 tl vconsumed_past' vremaining_past v1_future' v2_past v2_future i' (Cons? tl) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ())
     }
   };
-  unfold (impl_map_group_filter_invariant vmatch cbor_map_iterator_match f c p v pi v1 v2 pj pconsumed_past premaining_past p1_future p2_past p2_future false);
   Trade.elim _ _;
   with vconsumed_past . assert (GR.pts_to pconsumed_past vconsumed_past);
   GR.free pconsumed_past;

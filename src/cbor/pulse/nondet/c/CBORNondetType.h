@@ -55,16 +55,12 @@ cbor_string;
 
 typedef struct cbor_raw_s cbor_raw;
 
-typedef struct cbor_raw_s cbor_raw;
-
 typedef struct cbor_tagged_s
 {
   CBOR_Spec_Raw_Base_raw_uint64 cbor_tagged_tag;
   cbor_raw *cbor_tagged_ptr;
 }
 cbor_tagged;
-
-typedef struct cbor_raw_s cbor_raw;
 
 typedef struct Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_s
 {

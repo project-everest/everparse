@@ -5,6 +5,7 @@ open COSE.Format
 open Pulse.Lib.Trade
 open Pulse.Lib.Trade.Util
 open EverCrypt.Ed25519
+module T = FStar.Tactics.V2
 module AP = Pulse.Lib.ArrayPtr
 module S = Pulse.Lib.Slice
 module V = Pulse.Lib.Vec
@@ -22,11 +23,13 @@ let specnint_of_int (i: int { - pow2 64 <= i /\ i < 0 }) : GTot spect_nint =
 let specuint_of_int (i: int { 0 <= i /\ i < pow2 64 }) : GTot spect_evercddl_uint =
   Mkspect_evercddl_uint0 (UInt64.uint_to_t i)
 
+#push-options "--fuel 0 --ifuel 0 --z3rlimit_factor 4"
 let specint_of_int (i: int { -pow2 64 <= i /\ i < pow2 64 }) : GTot spect_evercddl_int =
   if i >= 0 then
     Mkspect_evercddl_int0 (specuint_of_int i)
   else
     Mkspect_evercddl_int1 (specnint_of_int i)
+#pop-options
 
 inline_for_extraction noextract
 let i32_to_u64_safe (i: Int32.t { Int32.v i >= 0 }) : j:UInt64.t { UInt64.v j == Int32.v i } =
@@ -45,8 +48,7 @@ let rel_evercddl_int_eq a b : squash (rel_evercddl_int a b ==
   (match a, b with
    | Mkevercddl_int0 a, Mkspect_evercddl_int0 b -> rel_evercddl_uint a b
    | Mkevercddl_int1 a, Mkspect_evercddl_int1 b -> rel_nint a b
-   | _ -> pure False)) =
-  ()
+   | _ -> pure False)) = _ by (T.compute(); T.smt())
 
 ghost fn rw_r (#a: slprop) (#b: slprop) (h: squash (a == b)) requires a ensures b { rewrite a as b }
 ghost fn rw_l (#a: slprop) (#b: slprop) (h: squash (a == b)) requires b ensures a { rewrite b as a }
@@ -75,6 +77,7 @@ fn mk_int (i: Int32.t)
   }
 }
 
+#push-options "--fuel 0 --ifuel 0 --query_stats --z3rlimit_factor 4"
 let rel_sig_structure_eq (a: sig_structure) (b: spect_sig_structure) :
   squash (rel_sig_structure a b == (match a, b with
     | Mksig_structure0 context body_protected rest,
@@ -87,8 +90,8 @@ let rel_sig_structure_eq (a: sig_structure) (b: spect_sig_structure) :
             | Inl (sign_protected, (aad, payload)), Inl (vsign_protected, (vaad, vpayload)) ->
               rel_empty_or_serialized_map sign_protected vsign_protected **
                 (rel_bstr aad vaad ** rel_bstr payload vpayload)
-            | _ -> pure False)))) =
-  ()
+            | _ -> pure False)))) = _ by (T.compute(); T.smt())
+#pop-options
 
 inline_for_extraction noextract
 let signature1: either unit unit = Inr ()
@@ -149,10 +152,12 @@ fn mk_sig_structure phdr aad payload
 let ser_to #t #st (s: CDDL.Spec.Base.spec t st true) (x: st) y =
   s.serializable x /\ Seq.equal y (CBOR.Spec.API.Format.cbor_det_serialize (s.serializer x))
 
+#push-options "--fuel 0 --ifuel 0 --z3rlimit_factor 4"
 let ser_to_inj #t #st s x y y' :
     Lemma (requires ser_to #t #st s x y /\ ser_to s x y') (ensures y == y')
       [SMTPat (ser_to s x y); SMTPat (ser_to s x y')] =
   ()
+#pop-options
 
 let to_be_signed_spec
     (phdr: spect_empty_or_serialized_map)
@@ -166,7 +171,7 @@ let sz_to_u32_safe (i: SizeT.t { SizeT.v i < pow2 32 }) : j:UInt32.t { UInt32.v 
   Math.Lemmas.small_mod (SizeT.v i) (pow2 32);
   SizeT.sizet_to_uint32 i
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 32 --fuel 0 --ifuel 0"
 fn create_sig privkey phdr aad payload (sigbuf: AP.ptr UInt8.t)
     (#vphdr: erased _) (#vaad: erased _) (#vpayload: erased _) (#pprivkey: erased _)
     (#vprivkey: erased (Seq.seq UInt8.t) { Seq.length vprivkey == 32 })
@@ -218,10 +223,10 @@ fn create_sig privkey phdr aad payload (sigbuf: AP.ptr UInt8.t)
 #pop-options
 
 let rel_inl_map =
-(rel_slice_of_table (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_label_right
-                      spect_label_left
-                      spect_label_left_right
-                      spect_label_right_left
+(rel_slice_of_table (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_label_right
+                      spect_evercddl_label_left
+                      spect_evercddl_label_left_right
+                      spect_evercddl_label_right_left
                       (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_int_right
                               spect_evercddl_int_left
                               spect_evercddl_int_left_right
@@ -241,25 +246,28 @@ let rel_inl_map =
                               spect_tstr_left_right
                               spect_tstr_right_left
                               (CDDL.Spec.EqTest.eqtype_eq (Seq.Base.seq UInt8.t)))))
-                  rel_label
+                  rel_evercddl_label
                   rel_values)
 
-let dummy_map_val () : label & values =
-  Mklabel0
+[@@noextract_to "krml"]
+inline_for_extraction noextract let dummy_map_type : Type0 = evercddl_label & values
+
+let dummy_map_val () : dummy_map_type =
+  Mkevercddl_label0
     (Mkevercddl_int0 (Mkevercddl_uint0 0uL)),
   Mkvalues0 (Mkany0
     { c = CBOR.Pulse.API.Det.Type.dummy_cbor_det_t (); p = 0.5R })
 
 let assert_norm' (p: prop) : Pure (squash p) (requires normalize p) (ensures fun _ -> True) = ()
 
-let rel_inl_map_eq (x: slice (label & values)) y = assert_norm' (rel_inl_map x y == 
+let rel_inl_map_eq (x: slice (evercddl_label & values)) y = assert_norm' (rel_inl_map x y == 
   (exists* l .
-    (exists* s . pts_to x.s #x.p s ** Pulse.Lib.SeqMatch.seq_list_match s l (rel_pair rel_label rel_values) ** pure (false == false)) **
+    (exists* s . pts_to x.s #x.p s ** Pulse.Lib.SeqMatch.seq_list_match s l (rel_pair rel_evercddl_label rel_values) ** pure (false == false)) **
       pure (y == map_of_list_pair
-      (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_label_right
-                      spect_label_left
-                      spect_label_left_right
-                      spect_label_right_left
+      (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_label_right
+                      spect_evercddl_label_left
+                      spect_evercddl_label_left_right
+                      spect_evercddl_label_right_left
                       (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_int_right
                               spect_evercddl_int_left
                               spect_evercddl_int_left_right
@@ -298,7 +306,7 @@ let rel_map_sign1_phdrs_eq (alg: Int32.t) alg' s =
       rel_inl_map s (CDDL.Spec.Map.empty _ _)))
 
 inline_for_extraction
-fn mk_phdrs (alg: Int32.t) (rest: A.larray (label & values) 0)
+fn mk_phdrs (alg: Int32.t) (rest: A.larray (evercddl_label & values) 0)
     #prest (#vrest: erased _)
   requires pts_to rest #prest vrest
   returns res: empty_or_serialized_map
@@ -309,8 +317,10 @@ fn mk_phdrs (alg: Int32.t) (rest: A.larray (label & values) 0)
   A.pts_to_len rest;
   let rest2 = S.from_array rest 0sz;
   Pulse.Lib.SeqMatch.seq_list_match_nil_intro (Seq.Base.create 0 (dummy_map_val ())) []
-      (rel_pair rel_label rel_values);
+      (rel_pair rel_evercddl_label rel_values);
   assert pure (Seq.Base.create 0 (dummy_map_val ()) `Seq.equal` vrest);
+  rewrite each (FStar.Seq.Base.create 0
+            (dummy_map_val ())) as vrest;
   rw_l (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
   rw_l (rel_map_sign1_phdrs_eq alg alg' _);
   with res. assert rel_empty_or_serialized_map res (sign1_phdrs_spec alg);
@@ -325,7 +335,7 @@ fn mk_phdrs (alg: Int32.t) (rest: A.larray (label & values) 0)
     with vrest'. assert pts_to rest #prest vrest';
     assert pure (Seq.equal vrest' vrest);
     drop_ (
-      Pulse.Lib.SeqMatch.seq_list_match _ _ (rel_pair rel_label rel_values) **
+      Pulse.Lib.SeqMatch.seq_list_match _ _ (rel_pair rel_evercddl_label rel_values) **
       rel_evercddl_int alg' (specint_of_i32 alg)
     );
   };
@@ -347,7 +357,7 @@ let rel_map_sign1_emphdrs_eq s =
       rel_inl_map s (CDDL.Spec.Map.empty _ _)))
 
 inline_for_extraction noextract
-fn mk_emphdrs (rest: A.larray (label & values) 0)
+fn mk_emphdrs (rest: A.larray (evercddl_label & values) 0)
     #prest (#vrest: erased _)
   requires pts_to rest #prest vrest
   returns res: header_map
@@ -357,7 +367,9 @@ fn mk_emphdrs (rest: A.larray (label & values) 0)
   assert pure (Seq.equal vrest (Seq.create 0 (dummy_map_val ())));
   let rest2 = S.from_array rest 0sz;
   Pulse.Lib.SeqMatch.seq_list_match_nil_intro (Seq.Base.create 0 (dummy_map_val ())) []
-      (rel_pair rel_label rel_values);
+      (rel_pair rel_evercddl_label rel_values);
+  rewrite each (FStar.Seq.Base.create 0
+            (dummy_map_val ())) as vrest;
   rw_l (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
   rw_l (rel_map_sign1_emphdrs_eq _);
   with res. assert rel_header_map res (sign1_emphdrs_spec ());
@@ -373,7 +385,7 @@ fn mk_emphdrs (rest: A.larray (label & values) 0)
     with vrest'. assert pts_to rest #prest vrest';
     assert pure (Seq.equal vrest' vrest);
     drop_ (
-      Pulse.Lib.SeqMatch.seq_list_match _ _ (rel_pair rel_label rel_values)
+      Pulse.Lib.SeqMatch.seq_list_match _ _ (rel_pair rel_evercddl_label rel_values)
     );
   };
   intro_trade _ _ _ aux;
@@ -415,7 +427,7 @@ let sign1_spec
   exists tbs. to_be_signed_spec phdr aad payload tbs /\
   ser_to bundle_cose_sign1_tagged''.b_spec
     (Mkspect_cose_sign1_tagged0 (Mkspect_cose_sign10
-        phdr uhdr (Inl payload) { _x0 = spec_ed25519_sign privkey tbs }))
+        phdr uhdr (Inl payload) (Mkspect_bstr0 (spec_ed25519_sign privkey tbs))))
     msg
 
 ghost fn trade_exists (#t: Type0) (p: t->slprop) x
@@ -431,6 +443,8 @@ ghost fn trade_exists (#t: Type0) (p: t->slprop) x
   { () };
 }
 
+#push-options "--fuel 0 --ifuel 0 --z3rlimit_factor 10 --query_stats"
+//the proof of pure sign1_spec takes a while---should profile it
 fn sign1 privkey uhdr aad payload (outbuf: S.slice UInt8.t)
     #pprivkey (#vprivkey: erased (Seq.seq UInt8.t) { Seq.length vprivkey == 32 })
     (#vuhdr: erased _) (#vaad: erased _) (#vpayload: erased _)
@@ -450,7 +464,8 @@ fn sign1 privkey uhdr aad payload (outbuf: S.slice UInt8.t)
     pure (sign1_spec vprivkey vuhdr vaad vpayload msg)
 {
   let alg: Int32.t = -8l;
-  let mut phdrauxbuf = [| dummy_map_val (); 0sz |];
+  let mv: dummy_map_type = dummy_map_val ();
+  let mut phdrauxbuf = [| mv; 0sz |];
   let phdr = mk_phdrs alg phdrauxbuf;
   let mut sigbuf = [| 0uy; 64sz |];
   Seq.lemma_create_len (SizeT.v 64sz) 0uy; //?!?
@@ -459,12 +474,12 @@ fn sign1 privkey uhdr aad payload (outbuf: S.slice UInt8.t)
   AP.to_array sigbuf2 sigbuf #_ #(spec_ed25519_sign vprivkey _);
   with tbs. assert A.pts_to sigbuf (spec_ed25519_sign vprivkey tbs);
   let sigbuf3 = S.from_array sigbuf 64sz;
-  with sigbuf4. assert pure ((sigbuf4 <: bstr) == { _x0 = { p = 1.0R; s = sigbuf3 } });
-  rw_l_wt (rel_bstr_eq sigbuf4 { _x0 = spec_ed25519_sign vprivkey tbs });
+  with sigbuf4. assert pure ((sigbuf4 <: bstr) == Mkbstr0 { p = 1.0R; s = sigbuf3 });
+  rw_l_wt (rel_bstr_eq sigbuf4 (Mkspect_bstr0 (spec_ed25519_sign vprivkey tbs)));
   rw_l_wt (rel_sign1_tagged_eq1 phdr _ payload sigbuf4 (sign1_phdrs_spec alg) _ vpayload _);
   let outbuf_sz = serialize_cose_sign1_tagged' _ outbuf;
   elim_trade (rel_cose_sign1_tagged _ _) _;
-  elim_trade (rel_bstr sigbuf4 { _x0 = spec_ed25519_sign vprivkey tbs }) _;
+  elim_trade (rel_bstr sigbuf4 (Mkspect_bstr0 (spec_ed25519_sign vprivkey tbs))) _;
   S.to_array sigbuf3;
   elim_trade _ _;
   with voutbuf. assert S.pts_to outbuf voutbuf;
@@ -493,7 +508,7 @@ fn sign1_simple privkey payload (outbuf: S.slice UInt8.t)
   ensures rel_bstr payload vpayload
   ensures exists* msg.
     borrows (S.pts_to out msg) (exists* voutbuf. pts_to outbuf voutbuf) **
-    pure (sign1_spec vprivkey (sign1_emphdrs_spec ()) { _x0 = Seq.create 0 0uy } vpayload msg)
+    pure (sign1_spec vprivkey (sign1_emphdrs_spec ()) (Mkspect_bstr0 (Seq.create 0 0uy)) vpayload msg)
 {
   let mut uhdrauxbuf = [| dummy_map_val (); 0sz |];
   let uhdr = mk_emphdrs uhdrauxbuf;
@@ -564,6 +579,7 @@ fn verify_sig pubkey phdr aad payload (sigbuf: AP.ptr UInt8.t)
 
 #pop-options
 
+#push-options "--fuel 0 --ifuel 0 --z3rlimit_factor 20 --query_stats --z3cliopt 'smt.qi.eager_threshold=100'"
 let rel_sign1_tagged_eq (a: cose_sign1_tagged) (b: spect_cose_sign1_tagged) =
   assert_norm' (rel_cose_sign1_tagged a b ==
     ((COSE.Format.rel_empty_or_serialized_map a._x0.protected b._x0.protected **
@@ -686,7 +702,7 @@ let good_signature (pubkey: Seq.seq UInt8.t { Seq.length pubkey == 32 })
   parses_from bundle_cose_sign1_tagged''.b_spec vmsg msg /\
   vmsg._x0.payload == Inl (Mkspect_bstr0 payload) /\
   Seq.length vmsg._x0.signature._x0 == 64 /\
-  to_be_signed_spec vmsg._x0.protected { _x0 = aad } { _x0 = payload } tbs /\
+  to_be_signed_spec vmsg._x0.protected (Mkspect_bstr0 aad) (Mkspect_bstr0 payload) tbs /\
   spec_ed25519_verify pubkey tbs vmsg._x0.signature._x0
 
 let int_eq_of_diff_zero (a b: int) : Lemma (requires a - b == 0) (ensures a == b) = ()
@@ -694,7 +710,8 @@ let nat_eq_of_diff_zero (a b: nat) : Lemma (requires a - b == 0) (ensures a == b
   int_eq_of_diff_zero a b
 
 #pop-options
-
+#pop-options
+#push-options "--z3rlimit_factor 50 --fuel 0 --ifuel 1"
 fn verify1 pubkey aad msg
     #ppubkey (#vpubkey: erased (Seq.seq UInt8.t) { Seq.length vpubkey == 32 })
     (#vaad: erased _) #pmsg (#vmsg: erased _)
@@ -785,3 +802,5 @@ fn verify1_simple pubkey msg
   S.to_array aadslice;
   res
 }
+#pop-options
+#pop-options

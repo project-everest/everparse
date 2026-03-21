@@ -244,6 +244,8 @@ let parse_deplen_unfold
 
 (* a stronger version that further unfolds the payload *)
 
+#push-options "--z3rlimit 10"
+
 let parse_deplen_unfold2
   (min: nat)
   (max: nat { min <= max /\ max < 4294967296 } )
@@ -291,6 +293,7 @@ let parse_deplen_unfold2
     else
       Seq.slice_slice input consumed (Seq.length input) 0 sz
 
+#pop-options
 
 (* serializer spec *)
 

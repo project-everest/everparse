@@ -62,7 +62,7 @@ fn lex_compare_iterator
       let res = !pres;
       let fin1 = !pfin1;
       (res = 0s && not fin1)
-    ) invariant cont . exists* i1 i2 l1 l2 fin1 res . (
+    ) invariant exists* i1 i2 l1 l2 fin1 res . (
       pts_to pi1 i1 ** cbor_raw_iterator_match elt_match ser_match x1.p i1 l1 **
       Trade.trade
         (cbor_raw_iterator_match elt_match ser_match x1.p i1 l1) 
@@ -75,8 +75,7 @@ fn lex_compare_iterator
       pts_to pfin1 fin1 **
       pure (
         same_sign (lex_compare compare v1 v2) (if res = 0s then lex_compare compare l1 l2 else I16.v res) /\
-        (res == 0s ==> (Nil? l1 == Nil? l2 /\ fin1 == Nil? l1)) /\
-        cont == (res = 0s && Cons? l1)
+        (res == 0s ==> (Nil? l1 == Nil? l2 /\ fin1 == Nil? l1))
       )
     ) {
       let elt1 = cbor_raw_iterator_next elt_match ser_match ser_next pi1;

@@ -459,6 +459,83 @@ let cbor_map_fold_union
   cbor_map_fold_eq f (cbor_map_fold f x m1) m2 l2;
   U.list_fold_append f x l1 l2
 
+let cbor_map_ind_bounded
+  (m: cbor_map)
+  (p: (
+    (m': cbor_map {
+      cbor_map_included m' m
+    }) -> prop
+  ))
+  (p0: squash (p cbor_map_empty))
+  (ps: (
+    (m': cbor_map {
+      cbor_map_included m' m /\
+      p m'
+    }) ->
+    (x: cbor {
+      cbor_map_defined x m /\
+      ~ (cbor_map_defined x m')
+    }) ->
+    Lemma
+    (p (cbor_map_union m' (cbor_map_singleton x (Some?.v (cbor_map_get m x)))))
+  ))
+  (m': cbor_map {
+    cbor_map_included m' m
+  })
+: Lemma
+  (ensures p m')
+= let l = cbor_map_key_list m' in
+  let rec aux
+    (l1: list cbor)
+    (l2: list cbor {
+      l == List.Tot.append l1 l2
+    })
+    (m1: cbor_map {
+      cbor_map_included m1 m' /\
+      (forall x . cbor_map_defined x m1 <==> List.Tot.memP x l1) /\
+      p m1
+    })
+  : Lemma
+    (ensures p m')
+    (decreases l2)
+  = match l2 with
+    | [] ->
+      List.Tot.append_l_nil l1;
+      assert (cbor_map_equal m1 m')
+    | a :: q ->
+      List.Tot.append_assoc l1 [a] q;
+      List.Tot.append_memP_forall l1 l2;
+      List.Tot.append_memP_forall l1 [a];
+      List.Tot.no_repeats_p_append l1 l2;
+      ps m1 a;
+      aux (List.Tot.append l1 [a]) q (cbor_map_union m1 (cbor_map_singleton a (Some?.v (cbor_map_get m' a))))
+  in
+  aux [] l cbor_map_empty
+
+let cbor_map_ind
+  (p: (cbor_map -> prop))
+  (p0: squash (p cbor_map_empty))
+  (ps: (
+    (m': cbor_map {
+      p m'
+    }) ->
+    (x: cbor {
+      ~ (cbor_map_defined x m')
+    }) ->
+    (y: cbor) ->
+    Lemma
+    (p (cbor_map_union m' (cbor_map_singleton x y)))
+  ))
+  (m: cbor_map)
+: Lemma
+  (ensures p m)
+= cbor_map_ind_bounded
+    m
+    p
+    p0
+    (fun m' x -> ps m' x (Some?.v (cbor_map_get m x)))
+    m
+
 let cbor_map_singleton_elim
   (s: cbor_map)
 : Pure (cbor & cbor)

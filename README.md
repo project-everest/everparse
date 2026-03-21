@@ -356,6 +356,15 @@ Then, whenever you make a change in your clones:
 Then, in EverParse, `make` will automatically rebuild F\*, Karamel and
 Pulse from your clones with your patches.
 
+## Using a specific branch of F\*, Karamel, Pulse etc. 
+
+1. Run `make -C opt FStar pulse karamel` to clone the default branches of those repositories
+
+2. In the cloned directories, switch to your branch, e.g., `git checkout <mybranch>`
+
+3. Then run `make -C opt snapshot` to record the hashes you intend to use
+
+
 ## Using an existing opam root, F\*, etc.
 
 If you want to use existing dependencies instead of letting EverParse

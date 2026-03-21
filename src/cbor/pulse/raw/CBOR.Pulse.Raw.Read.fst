@@ -29,6 +29,7 @@ fn cbor_match_tagged_get_payload
 {
   cbor_match_cases c;
   match c {
+    norewrite
     CBOR_Case_Serialized_Tagged cs -> {
       Trade.rewrite_with_trade
         (cbor_match pm c r)
@@ -37,6 +38,7 @@ fn cbor_match_tagged_get_payload
       Trade.trans _ _ (cbor_match pm c r);
       res
     }
+    norewrite
     CBOR_Case_Tagged ct -> {
       cbor_match_eq_tagged pm ct r;
       Trade.rewrite_with_trade
@@ -108,6 +110,7 @@ ensures exists* p' y .
 {
   cbor_match_cases c;
   match c {
+    norewrite
     CBOR_Case_Serialized_Array c' -> {
       Trade.rewrite_with_trade
         (cbor_match pm c r)
@@ -116,6 +119,7 @@ ensures exists* p' y .
       Trade.trans _ _ (cbor_match pm c r);
       res
     }
+    norewrite
     CBOR_Case_Array c' -> { 
       assert_norm (cbor_match pm (CBOR_Case_Array c') (Array (Array?.len r) (Array?.v r)) ==
         cbor_match_array c' pm (Array (Array?.len r) (Array?.v r)) cbor_match
@@ -131,6 +135,7 @@ ensures exists* p' y .
       Trade.elim_hyp_l _ _ (cbor_match pm c r);
       PM.seq_list_match_index_trade (cbor_match (pm `perm_mul` c'.cbor_array_payload_perm)) _ _ (U64.v i);
       Trade.trans _ _ (cbor_match pm c r);
+      rewrite each (U64.v i) as (SZ.v (SZ.uint64_to_sizet i));
       res
     }
   }
@@ -160,6 +165,7 @@ ensures exists* p .
 {
   cbor_match_cases c;
   match c {
+    norewrite
     CBOR_Case_Serialized_Array c' -> {
       Trade.rewrite_with_trade
         (cbor_match pm c r)
@@ -180,6 +186,7 @@ ensures exists* p .
         (cbor_match pm c r);
       i
     }
+    norewrite
     CBOR_Case_Array c' -> {
       assert_norm (cbor_match pm (CBOR_Case_Array c') (Array (Array?.len r) (Array?.v r)) ==
         cbor_match_array c' pm (Array (Array?.len r) (Array?.v r)) cbor_match
@@ -243,8 +250,6 @@ ensures
   res
 }
 
-#set-options "--print_universes --print_implicits"
-
 fn cbor_array_iterator_next
   (sq: squash SZ.fits_u64)
   (pi: R.ref cbor_array_iterator)
@@ -272,10 +277,30 @@ ensures exists* a p i' q .
     (cbor_serialized_array_iterator_next sq)
     pi;
   with i'. assert (R.pts_to pi i');
+  with l' . rewrite cbor_raw_iterator_match #cbor_raw
+      #raw_data_item
+      cbor_match
+      cbor_serialized_array_iterator_match
+      pm
+      i'
+      l'
+    as
+    cbor_raw_iterator_match #cbor_raw
+      #raw_data_item
+      cbor_match
+      cbor_serialized_array_iterator_match
+      pm
+      i'
+      (List.Tot.Base.tl l)
+  ;
   fold (cbor_array_iterator_match pm i' (List.Tot.tl l));
-  with _pre _post.
-    rewrite trade _pre _post
-         as trade _pre (cbor_array_iterator_match pm i l);
+  with _pre1 _pre2 _post.
+    rewrite trade (_pre1 ** _pre2) _post
+         as trade (_pre1 ** cbor_array_iterator_match pm
+          (reveal u#0 #(cbor_raw_iterator cbor_raw) i')
+          (List.Tot.Base.tl u#0
+              #raw_data_item
+              (reveal u#0 #(list u#0 raw_data_item) l))) (cbor_array_iterator_match pm i l);
   res
 }
 
@@ -302,6 +327,22 @@ ensures
     c
     len;
   fold (cbor_array_iterator_match 1.0R res (fst (List.Tot.splitAt (U64.v len) r)));
+  rewrite
+    trade (cbor_raw_iterator_match cbor_match
+          cbor_serialized_array_iterator_match
+          1.0R
+          res
+          (fst (List.Tot.Base.splitAt (U64.v len) r)))
+      (cbor_raw_iterator_match cbor_match
+          cbor_serialized_array_iterator_match
+          pm
+          c
+          r)
+  as trade (cbor_array_iterator_match 1.0R
+          res
+          (fst (List.Tot.Base.splitAt (U64.v len) r)))
+      (cbor_array_iterator_match pm c r)
+    ;
   res
 }
 
@@ -407,6 +448,7 @@ ensures exists* p .
 {
   cbor_match_cases c;
   match c {
+    norewrite
     CBOR_Case_Serialized_Map c' -> {
       Trade.rewrite_with_trade
         (cbor_match pm c r)
@@ -427,6 +469,7 @@ ensures exists* p .
         (cbor_match pm c r);
       i
     }
+    norewrite
     CBOR_Case_Map c' -> {
       assert_norm (cbor_match pm (CBOR_Case_Map c') (Map (Map?.len r) (Map?.v r)) ==
         cbor_match_map0 c' pm (Map (Map?.len r) (Map?.v r)) cbor_match
@@ -447,6 +490,15 @@ ensures exists* p .
       Trade.trans _ _ (cbor_match pm c r);
       with p . assert (cbor_raw_iterator_match cbor_match_map_entry cbor_serialized_map_iterator_match p res (Map?.v r));
       fold (cbor_map_iterator_match p res (Map?.v r));
+      with _p . rewrite
+        trade (cbor_raw_iterator_match cbor_match_map_entry
+              cbor_serialized_map_iterator_match
+              _p
+              res
+              (Map?.v r))
+          (cbor_match pm c r)
+        as trade (cbor_map_iterator_match _p res (Map?.v r)) (cbor_match pm c r)
+        ;
       res
     }
   }
@@ -500,7 +552,53 @@ ensures exists* a p i' q .
     (cbor_serialized_map_iterator_next sq)
     pi;
   with i' . assert (R.pts_to pi i');
+  with l' . rewrite cbor_raw_iterator_match #cbor_map_entry
+      #(raw_data_item & raw_data_item)
+      cbor_match_map_entry
+      cbor_serialized_map_iterator_match
+      pm
+      (reveal u#0 #(cbor_raw_iterator cbor_map_entry) i')
+      l' as cbor_raw_iterator_match #cbor_map_entry
+      #(raw_data_item & raw_data_item)
+      cbor_match_map_entry
+      cbor_serialized_map_iterator_match
+      pm
+      (reveal u#0 #(cbor_raw_iterator cbor_map_entry) i')
+      (List.Tot.Base.tl u#0
+          #(raw_data_item & raw_data_item)
+          (reveal u#0 #(list u#0 (raw_data_item & raw_data_item)) l));
   fold (cbor_map_iterator_match pm i' (List.Tot.tl l));
+  with p a q . rewrite
+    trade #emp_inames
+      (cbor_match_map_entry p
+          res
+          a **
+        cbor_raw_iterator_match #cbor_map_entry
+          #(raw_data_item & raw_data_item)
+          cbor_match_map_entry
+          cbor_serialized_map_iterator_match
+          pm
+          (reveal u#0 #(cbor_raw_iterator cbor_map_entry) i')
+          q)
+      (cbor_raw_iterator_match #cbor_map_entry
+          #(raw_data_item & raw_data_item)
+          cbor_match_map_entry
+          cbor_serialized_map_iterator_match
+          pm
+          (reveal u#0 #(cbor_raw_iterator cbor_map_entry) i)
+          (reveal u#0 #(list u#0 (raw_data_item & raw_data_item)) l))
+    as  trade #emp_inames
+      (cbor_match_map_entry p
+          res
+          a **
+        cbor_map_iterator_match pm
+          (reveal u#0 #(cbor_raw_iterator cbor_map_entry) i')
+          (List.Tot.Base.tl u#0
+              #(raw_data_item & raw_data_item)
+              (reveal u#0 #(list u#0 (raw_data_item & raw_data_item)) l)))
+      (cbor_map_iterator_match pm
+          (reveal u#0 #cbor_map_iterator i)
+          (reveal u#0 #(list u#0 (raw_data_item & raw_data_item)) l));
   res
 }
 

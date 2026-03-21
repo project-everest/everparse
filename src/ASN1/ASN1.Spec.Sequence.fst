@@ -145,6 +145,8 @@ let and_then_cases_injective_some_elim
   (ensures (x1 == x2))
 = ()
 
+#push-options "--z3rlimit 20"
+
 let parse_asn1_sequence_item_twin_cases_injective
   (item : gen_decorated_parser_twin)
 : Lemma
@@ -186,6 +188,7 @@ let parse_asn1_sequence_item_twin_cases_injective
               and_then_cases_injective_elim fp id1 id2 b1 b2
           )
   
+#pop-options
 
 (* FIXME: using option type as the state might cause problems for extracting the validator *)
 
@@ -265,6 +268,8 @@ let make_asn1_sequence_parser_body_twin
     rp) in
     //assert (forall id. parse_defaultable_injective_cond_prop (generate_defaultable_items itemtwins) (ret id));
     ret  
+
+#push-options "--z3rlimit 10"
 
 let make_asn1_sequence_parser_body_twin_and_then_cases_injective
   (itemtwins : list (gen_decorated_parser_twin) {Cons? itemtwins})
@@ -353,6 +358,8 @@ let make_asn1_sequence_parser_body_twin_and_then_cases_injective
                 nondep_then_eq p' p2 b2;
                 and_then_cases_injective_some_elim (ploop tl) id1 id2 b1 b2))
 
+#pop-options
+
 let make_asn1_sequence_parser_body_twin_spec
   (#itemtwins : list (gen_decorated_parser_twin) {Cons? itemtwins})
   (pbodytwin : asn1_id_t -> (asn1_weak_parser (asn1_sequence_t (List.map (Mkgendcparser?.d) itemtwins))))
@@ -379,6 +386,8 @@ let make_asn1_sequence_parser_body
   | _ -> and_then_defaultable p pbodytwin ov) in
   weaken asn1_weak_parser_kind (p `and_then` pbodytwin)
 
+#push-options "--z3rlimit 10"
+
 let make_asn1_sequence_parser_body_and_then_cases_injective
   (#itemtwins : list (gen_decorated_parser_twin) {Cons? itemtwins})
 //  (pf : (asn1_sequence_k_wf (List.map project_set_decorator itemtwins)))
@@ -399,6 +408,8 @@ let make_asn1_sequence_parser_body_and_then_cases_injective
             let p2 = weaken k (parse_ret v2) in
             and_then_eq p2 p' b2;
             and_then_cases_injective_elim p' v1 v2 b1 b2)
+
+#pop-options
 
 let make_asn1_sequence_parser_body_spec
   (itemtwins : list (gen_decorated_parser_twin))

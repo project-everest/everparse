@@ -94,6 +94,15 @@ let pts_to_serialized_ext_trade_gen_precond
   t1 == t2 /\
   (forall x . parse p1 x == parse p2 x)
 
+let pts_to_serialized_ext_trade_gen_post
+  (t1 t2: Type0)
+  (v: t1)
+  (v2: t2)
+: Tot prop
+=
+  t1 == t2 /\
+  v == v2
+
 ghost
 fn pts_to_serialized_ext_trade_gen
   (#t1 #t2: Type0)
@@ -111,9 +120,7 @@ fn pts_to_serialized_ext_trade_gen
   )
   ensures exists* v2 .
     pts_to_serialized s2 input #pm v2 ** trade (pts_to_serialized s2 input #pm v2) (pts_to_serialized s1 input #pm v) **
-    pure (t1 == t2 /\
-      v == v2
-    )
+    pure (pts_to_serialized_ext_trade_gen_post t1 t2 v v2)
 {
   pts_to_serialized_ext s1 s2 input;
   intro

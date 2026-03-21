@@ -97,7 +97,7 @@ ensures
   }
 }
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 #restart-solver
 
@@ -118,20 +118,15 @@ ensures
   Seq.slice_length v;
   while (
     let res = !pres;
-    if res {
-      let i = !pi;
-      SZ.lt i len
-    } else {
-      false
-    }
-  ) invariant cont . exists* res i .
+    let i = !pi;
+    (res && SZ.lt i len)
+  ) invariant exists* res i .
     pts_to s #p v **
     pts_to pres res **
     pts_to pi i **
     pure (
       SZ.v i <= Seq.length v /\
-      correct v == (res && correct (Seq.slice v (SZ.v i) (Seq.length v))) /\
-      cont == (res && SZ.v i < Seq.length v)
+      correct v == (res && correct (Seq.slice v (SZ.v i) (Seq.length v)))
     )
   {
     impl_fetch_utf8_correct s len pi pres;
