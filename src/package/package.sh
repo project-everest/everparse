@@ -206,9 +206,15 @@ make_everparse() {
 	$cp -r $EVERPARSE_HOME/lib/evercddl everparse/lib/
     fi
 
-    # Download and copy clang-format
+    # Download and copy clang-format from the LLVM release
     if $is_windows ; then
-        download https://prereleases.llvm.org/win-snapshots/clang-format-2663a25f.exe everparse/bin/clang-format.exe
+        LLVM_VERSION=22.1.1
+        CLANG_LLVM_DIR=clang+llvm-$LLVM_VERSION-x86_64-pc-windows-msvc
+        CLANG_LLVM_ARCHIVE=$CLANG_LLVM_DIR.tar.xz
+        download https://github.com/llvm/llvm-project/releases/download/llvmorg-$LLVM_VERSION/$CLANG_LLVM_ARCHIVE $CLANG_LLVM_ARCHIVE
+        tar xf $CLANG_LLVM_ARCHIVE $CLANG_LLVM_DIR/bin/clang-format.exe
+        mv $CLANG_LLVM_DIR/bin/clang-format.exe everparse/bin/clang-format.exe
+        rm -rf $CLANG_LLVM_DIR $CLANG_LLVM_ARCHIVE
     fi
 
     # Set executable permissions on EXE and DLL on Windows
@@ -226,7 +232,7 @@ make_everparse() {
     download https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt everparse/licenses/z3
     download https://raw.githubusercontent.com/libffi/libffi/master/LICENSE everparse/licenses/libffi6
     if $is_windows ; then
-        download https://raw.githubusercontent.com/llvm/llvm-project/main/clang/LICENSE.TXT everparse/licenses/clang-format
+        download https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-$LLVM_VERSION/clang/LICENSE.TXT everparse/licenses/clang-format
     fi
     if $is_windows ; then
         {
