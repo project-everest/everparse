@@ -332,7 +332,7 @@ let impl_check_equiv_list_with_bound_t
 
 #pop-options
 
-#push-options "--z3rlimit 128"
+#push-options "--z3rlimit 256"
 
 inline_for_extraction
 fn impl_check_equiv_list

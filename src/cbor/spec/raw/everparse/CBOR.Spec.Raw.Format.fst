@@ -150,7 +150,7 @@ let serialize_cbor_tag tag =
 let serialize_cbor_tag_length tag =
   LP.serialize_length F.serialize_header (F.raw_uint64_as_argument cbor_major_type_tagged tag)
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 128"
 
 let serialize_cbor_tag_correct tag payload =
   let v1 = Tagged tag payload in
