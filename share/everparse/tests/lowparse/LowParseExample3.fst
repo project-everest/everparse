@@ -159,7 +159,7 @@ fn test ()
 
 module I32 = FStar.Int32
 
-fn main (_: I32.t) (_: FStar.Buffer.buffer (FStar.Buffer.buffer C.char))
+fn main ()
   requires emp
   returns r: I32.t
   ensures emp
