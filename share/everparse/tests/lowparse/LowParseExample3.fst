@@ -157,11 +157,13 @@ fn test ()
   ()
 }
 
-fn main (_: Int32.t) (_: FStar.Buffer.buffer (FStar.Buffer.buffer C.char))
+module I32 = FStar.Int32
+
+fn main (_: I32.t) (_: FStar.Buffer.buffer (FStar.Buffer.buffer C.char))
   requires emp
-  returns r: C.exit_code
+  returns r: I32.t
   ensures emp
 {
   test ();
-  C.EXIT_SUCCESS
+  0l
 }
