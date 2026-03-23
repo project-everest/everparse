@@ -91,7 +91,7 @@ ssh "$DEST" "git clone --branch fstar2 $WORKDIR/everparse.git $WORKDIR/everparse
 echo "Step 6: Cloned everparse on $DEST from bare repo"
 
 # Step 7: Run copilot on $DEST in background, collecting output
-ssh "$DEST" "cd $WORKDIR/everparse && nohup copilot -p 'Use \`opt/upgrade.md\` as your prompt' --yolo --alt-screen --autopilot > $WORKDIR/output.txt 2>&1 < /dev/null & disown"
+ssh -n "$DEST" "cd $WORKDIR/everparse && nohup copilot -p 'Use \`opt/upgrade.md\` as your prompt' --yolo --alt-screen --autopilot > $WORKDIR/output.txt 2>&1 < /dev/null & disown"
 echo "Step 7: Started copilot on $DEST (background)"
 
 # Step 8: Sleep-and-pull loop for up to 24 hours
