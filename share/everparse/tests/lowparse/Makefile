@@ -19,7 +19,7 @@ KRML_OPTS += -warn-error @4@6
 
 KRML=$(KRML_HOME)/krml -fstar $(FSTAR_EXE) $(KRML_OPTS)
 
-EXAMPLES=Example3
+EXAMPLES=Example3 ExampleConstInt32le Example2 Example5 ExampleEnum Example7 Example8 Example9 Example10 Example11 Example12 ExampleDepLen
 
 extract-all: $(EXAMPLES)
 
