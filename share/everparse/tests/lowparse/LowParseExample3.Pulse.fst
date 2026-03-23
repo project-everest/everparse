@@ -133,3 +133,35 @@ fn dummy
     0ul
   }
 }
+
+(* Test function: create a byte array, convert to slice, call dummy *)
+
+module A = Pulse.Lib.Array
+
+fn test ()
+  requires emp
+  ensures emp
+{
+  let mut arr = [| 0uy ; 8sz |];
+  let input = S.from_array arr 8sz;
+  input.(0sz) <- 0x01uy;
+  input.(1sz) <- 0x02uy;
+  input.(2sz) <- 0x55uy;
+  input.(3sz) <- 0xAAuy;
+  input.(4sz) <- 0x34uy;
+  input.(5sz) <- 0x45uy;
+  input.(6sz) <- 0xBAuy;
+  input.(7sz) <- 0xABuy;
+  let res = dummy input 42ul;
+  S.to_array input;
+  ()
+}
+
+fn main (_: Int32.t) (_: FStar.Buffer.buffer (FStar.Buffer.buffer C.char))
+  requires emp
+  returns r: C.exit_code
+  ensures emp
+{
+  test ();
+  C.EXIT_SUCCESS
+}
