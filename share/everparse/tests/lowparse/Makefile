@@ -3,7 +3,7 @@ LOWPARSE_PULSE_HOME ?= $(EVERPARSE_SRC_PATH)/lowparse/pulse
 
 FSTAR_OUT_DIR ?= _output
 
-INCLUDE_PATHS += $(LOWPARSE_PULSE_HOME)
+INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/lowparse $(LOWPARSE_PULSE_HOME)
 
 include $(EVERPARSE_SRC_PATH)/fstar.Makefile
 include $(EVERPARSE_SRC_PATH)/everparse.Makefile
