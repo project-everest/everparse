@@ -595,3 +595,183 @@ let validate_compose_context
   (k: kt2)
 : Tot (LPS.validator (p (f k)))
 = v (f k)
+
+(* zero_copy_parse combinators *)
+
+inline_for_extraction
+fn zero_copy_parse_synth
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#tl: Type0) (#vmatch: tl -> t1 -> slprop) (r: PPB.zero_copy_parse vmatch p1)
+  (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 })
+: PPB.zero_copy_parse #_ #_ (LPC.vmatch_synth vmatch f1) #_ (parse_synth p1 f2)
+= (input: slice byte)
+  (#pm: _)
+  (#v: _)
+{
+  pts_to_parsed_synth_l2r_trade p1 f2 f1 input;
+  let res = r input;
+  Trade.trans (vmatch res (f1 v)) _ _;
+  Trade.rewrite_with_trade
+    (vmatch res (f1 v))
+    (LPC.vmatch_synth vmatch f1 res v);
+  Trade.trans (LPC.vmatch_synth vmatch f1 res v) (vmatch res (f1 v)) _;
+  res
+}
+
+inline_for_extraction
+fn zero_copy_parse_filter
+  (#t: Type0) (#t1: Type0)
+  (vmatch: t -> t1 -> slprop)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1) (w: PPB.zero_copy_parse #t #t1 vmatch p1)
+  (f: (t1 -> GTot bool))
+: PPB.zero_copy_parse #t #(parse_filter_refine u#0 f) (LPC.vmatch_filter vmatch f) #(parse_filter_kind k1) (parse_filter p1 f)
+= (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  pts_to_parsed_filter_elim_trade p1 f input;
+  let res = w input;
+  with v' . assert (vmatch res v');
+  Trade.trans (vmatch res v') _ _;
+  Trade.rewrite_with_trade
+    (vmatch res v')
+    (LPC.vmatch_filter vmatch f res v);
+  Trade.trans _ (vmatch res v') _;
+  res
+}
+
+inline_for_extraction
+fn zero_copy_parse_nondep_then
+  (#tl1 #tl2 #th1 #th2: Type)
+  (#vmatch1: tl1 -> th1 -> slprop)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 th1)
+  (#vmatch2: tl2 -> th2 -> slprop)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 th2)
+  (j1: LPS.jumper p1)
+  (w1: PPB.zero_copy_parse vmatch1 p1)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (w2: PPB.zero_copy_parse vmatch2 p2)
+: PPB.zero_copy_parse #_ #(th1 & th2) (LPC.vmatch_pair vmatch1 vmatch2) #(and_then_kind k1 k2) (nondep_then p1 p2)
+= (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  PPB.pts_to_parsed_elim input;
+  with w . assert (S.pts_to input #pm w);
+  nondep_then_eq #k1 #th1 p1 #k2 #th2 p2 w;
+  parser_kind_prop_equiv k1 p1;
+  let off1 = j1 input 0sz;
+  let input1, input2 = split_trade input off1;
+  with wb1 . assert (S.pts_to input1 #pm wb1);
+  with wb2 . assert (S.pts_to input2 #pm wb2);
+  Trade.trans (S.pts_to input1 #pm wb1 ** S.pts_to input2 #pm wb2) (S.pts_to input #pm w) (PPB.pts_to_parsed (nondep_then p1 p2) input #pm v);
+  parse_strong_prefix p1 w wb1;
+  let gv1 = Ghost.hide (fst (Ghost.reveal v));
+  let gv2 = Ghost.hide (snd (Ghost.reveal v));
+  PPB.pts_to_parsed_intro p1 input1 gv1;
+  PPB.pts_to_parsed_intro p2 input2 gv2;
+  Trade.prod (PPB.pts_to_parsed p1 input1 #(pm /. 2.0R) gv1) (S.pts_to input1 #pm wb1) (PPB.pts_to_parsed p2 input2 #(pm /. 2.0R) gv2) (S.pts_to input2 #pm wb2);
+  Trade.trans (PPB.pts_to_parsed p1 input1 #(pm /. 2.0R) gv1 ** PPB.pts_to_parsed p2 input2 #(pm /. 2.0R) gv2) (S.pts_to input1 #pm wb1 ** S.pts_to input2 #pm wb2) (PPB.pts_to_parsed (nondep_then p1 p2) input #pm v);
+  let res1 = w1 input1;
+  Trade.trans_hyp_l (vmatch1 res1 _) _ _ _;
+  let res2 = w2 input2;
+  Trade.trans_hyp_r _ (vmatch2 res2 _) _ _;
+  Trade.rewrite_with_trade
+    (vmatch1 res1 _ ** vmatch2 res2 _)
+    (LPC.vmatch_pair vmatch1 vmatch2 (res1, res2) v);
+  Trade.trans (LPC.vmatch_pair vmatch1 vmatch2 (res1, res2) v) _ _;
+  (res1, res2)
+}
+
+inline_for_extraction
+fn zero_copy_parse_dtuple2
+  (#tl1 #tl2 #th1: Type)
+  (#th2: th1 -> Type)
+  (#vmatch1: tl1 -> th1 -> slprop)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 th1)
+  (#vmatch2: (x: th1) -> tl2 -> th2 x -> slprop)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: (x: th1) -> parser k2 (th2 x))
+  (j1: LPS.jumper p1)
+  (w1: PPB.zero_copy_parse vmatch1 p1)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (w2: (xh: Ghost.erased th1) -> PPB.zero_copy_parse (vmatch2 xh) (p2 xh))
+: PPB.zero_copy_parse #(LPC.cpair tl1 tl2) #(dtuple2 th1 th2) (LPC.vmatch_dep_prod vmatch1 vmatch2) #(and_then_kind k1 k2) (parse_dtuple2 p1 p2)
+= (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  PPB.pts_to_parsed_elim input;
+  with w . assert (S.pts_to input #pm w);
+  parse_dtuple2_eq p1 p2 w;
+  parser_kind_prop_equiv k1 p1;
+  let off1 = j1 input 0sz;
+  let input1, input2 = split_trade input off1;
+  with wb1 . assert (S.pts_to input1 #pm wb1);
+  with wb2 . assert (S.pts_to input2 #pm wb2);
+  Trade.trans (S.pts_to input1 #pm wb1 ** S.pts_to input2 #pm wb2) (S.pts_to input #pm w) (PPB.pts_to_parsed (parse_dtuple2 p1 p2) input #pm v);
+  parse_strong_prefix p1 w wb1;
+  let gdv1 = Ghost.hide (dfst (Ghost.reveal v));
+  let gdv2 = Ghost.hide (dsnd (Ghost.reveal v));
+  PPB.pts_to_parsed_intro p1 input1 gdv1;
+  PPB.pts_to_parsed_intro (p2 gdv1) input2 gdv2;
+  Trade.prod (PPB.pts_to_parsed p1 input1 #(pm /. 2.0R) gdv1) (S.pts_to input1 #pm wb1) (PPB.pts_to_parsed (p2 gdv1) input2 #(pm /. 2.0R) gdv2) (S.pts_to input2 #pm wb2);
+  Trade.trans (PPB.pts_to_parsed p1 input1 #(pm /. 2.0R) gdv1 ** PPB.pts_to_parsed (p2 gdv1) input2 #(pm /. 2.0R) gdv2) (S.pts_to input1 #pm wb1 ** S.pts_to input2 #pm wb2) (PPB.pts_to_parsed (parse_dtuple2 p1 p2) input #pm v);
+  let res1 = w1 input1;
+  with v1 . assert (vmatch1 res1 v1);
+  Trade.trans_hyp_l (vmatch1 res1 _) _ _ _;
+  let res2 = w2 v1 input2;
+  Trade.trans_hyp_r _ (vmatch2 v1 res2 _) _ _;
+  let res : LPC.cpair tl1 tl2 = (| res1, res2 |);
+  Trade.rewrite_with_trade
+    (vmatch1 res1 v1 ** vmatch2 v1 res2 _)
+    (LPC.vmatch_dep_prod vmatch1 vmatch2 res v);
+  Trade.trans (LPC.vmatch_dep_prod vmatch1 vmatch2 res v) _ _;
+  res
+}
+
+inline_for_extraction
+fn read_and_zero_copy_parse_dtuple2
+  (#tl #th1: Type)
+  (#th2: th1 -> Type)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 th1)
+  (#vmatch: tl -> dtuple2 th1 th2 -> slprop)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: (x: th1) -> parser k2 (th2 x))
+  (j1: LPS.jumper p1)
+  (r1: PPB.leaf_reader p1)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (w2: (xh: th1) -> PPB.zero_copy_parse (LPC.vmatch_dep_proj2 vmatch xh) (p2 xh))
+: PPB.zero_copy_parse #tl #(dtuple2 th1 th2) vmatch #(and_then_kind k1 k2) (parse_dtuple2 p1 p2)
+= (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  PPB.pts_to_parsed_elim input;
+  with w . assert (S.pts_to input #pm w);
+  parse_dtuple2_eq p1 p2 w;
+  parser_kind_prop_equiv k1 p1;
+  let off1 = j1 input 0sz;
+  let input1, input2 = split_trade input off1;
+  with wb1 . assert (S.pts_to input1 #pm wb1);
+  with wb2 . assert (S.pts_to input2 #pm wb2);
+  Trade.trans (S.pts_to input1 #pm wb1 ** S.pts_to input2 #pm wb2) (S.pts_to input #pm w) (PPB.pts_to_parsed (parse_dtuple2 p1 p2) input #pm v);
+  parse_strong_prefix p1 w wb1;
+  PPB.pts_to_parsed_intro p1 input1 (dfst v);
+  PPB.pts_to_parsed_intro (p2 (dfst v)) input2 (dsnd v);
+  Trade.prod (PPB.pts_to_parsed p1 input1 #(pm /. 2.0R) (dfst v)) (S.pts_to input1 #pm wb1) (PPB.pts_to_parsed (p2 (dfst v)) input2 #(pm /. 2.0R) (dsnd v)) (S.pts_to input2 #pm wb2);
+  Trade.trans (PPB.pts_to_parsed p1 input1 #(pm /. 2.0R) (dfst v) ** PPB.pts_to_parsed (p2 (dfst v)) input2 #(pm /. 2.0R) (dsnd v)) (S.pts_to input1 #pm wb1 ** S.pts_to input2 #pm wb2) (PPB.pts_to_parsed (parse_dtuple2 p1 p2) input #pm v);
+  let v1 = r1 input1;
+  Trade.elim_hyp_l _ _ _;
+  rewrite each (dfst v) as v1;
+  let res = w2 v1 input2;
+  Trade.trans (LPC.vmatch_dep_proj2 vmatch v1 res _) _ _;
+  Trade.rewrite_with_trade
+    (LPC.vmatch_dep_proj2 vmatch v1 res _)
+    (vmatch res v);
+  Trade.trans (vmatch res v) _ _;
+  res
+}

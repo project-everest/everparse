@@ -555,3 +555,156 @@ fn peek_trade_gen
   Trade.trans (pts_to_parsed p input2 #(pm /. 2.0R) gv1) (pts_to input2 #pm v2) (pts_to input #pm v);
   input2
 }
+
+(* zero_copy_parse: PulseParse version using pts_to_parsed instead of pts_to_serialized *)
+
+let pts_to_parsed_with_perm
+  (#t: Type0)
+  (#k: parser_kind)
+  (p: parser k t)
+  (input: LPS.with_perm (S.slice byte))
+  (v: t)
+: Tot slprop
+= pts_to_parsed p input.v #input.p v
+
+inline_for_extraction
+let zero_copy_parse
+  (#t' #t: Type0)
+  (vmatch: t' -> t -> slprop)
+  (#k: parser_kind)
+  (p: parser k t)
+=
+  (input: slice byte) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased t) ->
+  stt t'
+    (pts_to_parsed p input #pm v)
+    (fun res ->
+      vmatch res v **
+      Trade.trade
+        (vmatch res v)
+        (pts_to_parsed p input #pm v)
+    )
+
+inline_for_extraction
+fn zero_copy_parse_id
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (p: parser k t)
+: zero_copy_parse #_ #_ (pts_to_parsed_with_perm p) #_ p
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  let res = { LPS.v = input; LPS.p = pm };
+  Trade.rewrite_with_trade
+    (pts_to_parsed p input #pm v)
+    (pts_to_parsed_with_perm p res v);
+  res
+}
+
+inline_for_extraction
+fn zero_copy_parse_lens
+  (#t1'  #t: Type0)
+  (#vmatch1: t1' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (r: zero_copy_parse vmatch1 p)
+  (#t2': Type0)
+  (#vmatch2: t2' -> t -> slprop)
+  (lens: LPS.vmatch_lens vmatch1 vmatch2)
+: zero_copy_parse #_ #_ vmatch2 #_ p
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  let tmp = r input;
+  let res = lens tmp _;
+  Trade.trans (vmatch2 res _) _ _;
+  res
+}
+
+inline_for_extraction
+fn zero_copy_parse_read
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (r: leaf_reader p)
+: zero_copy_parse #_ #_ (LPS.eq_as_slprop t) #_ p
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  let res = r input;
+  fold (LPS.eq_as_slprop t res v);
+  intro (Trade.trade (LPS.eq_as_slprop t res v) (pts_to_parsed p input #pm v)) #(pts_to_parsed p input #pm v) fn _{
+    unfold (LPS.eq_as_slprop t res v)
+  };
+  res
+}
+
+inline_for_extraction
+fn zero_copy_parse_ignore
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (p: parser k t)
+: zero_copy_parse #_ #_ (LPS.vmatch_ignore #t) #_ p
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  fold (LPS.vmatch_ignore () (Ghost.reveal v));
+  intro (Trade.trade (LPS.vmatch_ignore () (Ghost.reveal v)) (pts_to_parsed p input #pm v)) #(pts_to_parsed p input #pm v) fn _{
+    unfold (LPS.vmatch_ignore () (Ghost.reveal v))
+  };
+  ()
+}
+
+inline_for_extraction
+fn zero_copy_parse_ext
+  (#t1'  #t: Type0)
+  (#vmatch1: t1' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (r: zero_copy_parse vmatch1 p)
+  (#k': Ghost.erased parser_kind)
+  (p': parser k' t {
+    forall b . parse p b == parse p' b
+  })
+: zero_copy_parse #_ #_ vmatch1 #_ p'
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  pts_to_parsed_ext_trade p input;
+  let res = r input;
+  Trade.trans (vmatch1 res v) _ _;
+  res
+}
+
+inline_for_extraction
+fn zero_copy_parse_ifthenelse
+  (#t1'  #t: Type0)
+  (#vmatch1: t1' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (cond: bool)
+  (rtrue: squash (cond == true) -> zero_copy_parse vmatch1 p)
+  (rfalse: squash (cond == false) -> zero_copy_parse vmatch1 p)
+: zero_copy_parse #_ #_ vmatch1 #_ p
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  if (cond) {
+    rtrue () input
+  } else {
+    rfalse () input
+  }
+}
