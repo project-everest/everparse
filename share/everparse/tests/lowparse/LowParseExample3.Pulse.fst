@@ -57,8 +57,42 @@ let validate_t : LPS.validator parse_t =
       LPI.validate_u16)
     synth_t
 
-(* Test function: validate parse_t, then read individual fields
-   by re-validating sub-parsers to read them *)
+let vmatch_a (x: U16.t) (v: t) : slprop = pure (x == v.a)
+let vmatch_b (x: U32.t) (v: t) : slprop = pure (x == v.b)  
+let vmatch_c (x: U16.t) (v: t) : slprop = pure (x == v.c)
+
+(* Accessors via zero_copy_parse composition *)
+
+inline_for_extraction
+let access_a : PPB.zero_copy_parse vmatch_a parse_t
+= synth_t_injective ();
+  PPC.zero_copy_parse_synth
+    (PPC.zero_copy_parse_fst #_ #(U16.t & U32.t) #U16.t parse_u16
+      (LPC.jump_nondep_then LPI.jump_u16 LPI.jump_u32)
+      (PPC.zero_copy_parse_fst #_ #U16.t #U32.t parse_u32 LPI.jump_u16
+        (PPB.zero_copy_parse_read leaf_read_u16) ()) ())
+    synth_t synth_t_recip
+
+inline_for_extraction
+let access_b : PPB.zero_copy_parse vmatch_b parse_t
+= synth_t_injective ();
+  PPC.zero_copy_parse_synth
+    (PPC.zero_copy_parse_fst #_ #(U16.t & U32.t) #U16.t parse_u16
+      (LPC.jump_nondep_then LPI.jump_u16 LPI.jump_u32)
+      (PPC.zero_copy_parse_snd #_ #U16.t #U32.t LPI.jump_u16
+        (PPB.zero_copy_parse_read leaf_read_u32) ()) ())
+    synth_t synth_t_recip
+
+inline_for_extraction
+let access_c : PPB.zero_copy_parse vmatch_c parse_t
+= synth_t_injective ();
+  PPC.zero_copy_parse_synth
+    (PPC.zero_copy_parse_snd #_ #(U16.t & U32.t) #U16.t
+      (LPC.jump_nondep_then LPI.jump_u16 LPI.jump_u32)
+      (PPB.zero_copy_parse_read leaf_read_u16) ())
+    synth_t synth_t_recip
+
+(* Test function: validate parse_t, then use accessors *)
 
 #set-options "--z3rlimit 32"
 
@@ -75,31 +109,25 @@ fn dummy
   let is_valid = validate_t input poffset;
   if is_valid {
     let off = !poffset;
-    parse_synth_eq parse_t_base synth_t (Seq.slice v 0 (Seq.length v));
-    nondep_then_eq (nondep_then parse_u16 parse_u32) parse_u16 (Seq.slice v 0 (Seq.length v));
-    nondep_then_eq parse_u16 parse_u32 (Seq.slice v 0 (Seq.length v));
-    parser_kind_prop_equiv parse_u16_kind parse_u16;
-    parser_kind_prop_equiv parse_u32_kind parse_u32;
+    R.free poffset;
+    let input' = PPB.peek_trade_gen parse_t input 0sz off;
     if (U32.eq which 42ul) {
-      poffset := 0sz;
-      let _ = LPI.validate_u16 input poffset;
-      let off = !poffset;
-      let x = PPB.read_parsed_from_validator_success leaf_read_u16 input 0sz off;
-      R.free poffset;
+      let x = access_a input';
+      with v' pm' . assert (Trade.trade (vmatch_a x v') (PPB.pts_to_parsed parse_t input' #pm' v'));
+      Trade.elim (vmatch_a x v') (PPB.pts_to_parsed parse_t input' #pm' v');
+      Trade.elim (PPB.pts_to_parsed parse_t input' #pm' v') (S.pts_to input #pm v);
       Cast.uint16_to_uint32 x
     } else if (U32.eq which 1729ul) {
-      poffset := 2sz;
-      let _ = LPI.validate_u32 input poffset;
-      let off = !poffset;
-      let x = PPB.read_parsed_from_validator_success leaf_read_u32 input 2sz off;
-      R.free poffset;
+      let x = access_b input';
+      with v' pm' . assert (Trade.trade (vmatch_b x v') (PPB.pts_to_parsed parse_t input' #pm' v'));
+      Trade.elim (vmatch_b x v') (PPB.pts_to_parsed parse_t input' #pm' v');
+      Trade.elim (PPB.pts_to_parsed parse_t input' #pm' v') (S.pts_to input #pm v);
       x
     } else {
-      poffset := 6sz;
-      let _ = LPI.validate_u16 input poffset;
-      let off = !poffset;
-      let x = PPB.read_parsed_from_validator_success leaf_read_u16 input 6sz off;
-      R.free poffset;
+      let x = access_c input';
+      with v' pm' . assert (Trade.trade (vmatch_c x v') (PPB.pts_to_parsed parse_t input' #pm' v'));
+      Trade.elim (vmatch_c x v') (PPB.pts_to_parsed parse_t input' #pm' v');
+      Trade.elim (PPB.pts_to_parsed parse_t input' #pm' v') (S.pts_to input #pm v);
       Cast.uint16_to_uint32 x
     }
   } else {
