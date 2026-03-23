@@ -1,4 +1,4 @@
-module LowParseExample3.Pulse
+module LowParseExample3
 #lang-pulse
 include LowParse.Spec.Int
 include LowParse.Spec.Combinators

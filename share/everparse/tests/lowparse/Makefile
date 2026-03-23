@@ -1,17 +1,36 @@
+all: verify extract-all
+
 EVERPARSE_SRC_PATH ?= $(realpath ../../../../src)
 LOWPARSE_PULSE_HOME ?= $(EVERPARSE_SRC_PATH)/lowparse/pulse
 
-FSTAR_OUT_DIR ?= _output
-
 INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/lowparse $(LOWPARSE_PULSE_HOME)
+ALREADY_CACHED := *,-LowParseTestLib,-LowParseExample,
 
-include $(EVERPARSE_SRC_PATH)/fstar.Makefile
+OUTPUT_DIRECTORY := _output
+FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
+FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice'
+
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/everparse.Makefile
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 
-ALREADY_CACHED := *,-LowParseTestLib,-LowParseExample,
+KRML_OPTS += -warn-error @4@6
 
-all: verify
+KRML=$(KRML_HOME)/krml -fstar $(FSTAR_EXE) $(KRML_OPTS)
 
-.PHONY: all verify clean
+EXAMPLES=Example3
+
+extract-all: $(EXAMPLES)
+
+$(EXAMPLES): %: verify %/a.out
+
+%/a.out: $(ALL_KRML_FILES)
+	$(KRML) -bundle 'LowParse$*=*[rename=LowParse$*]' -no-prefix 'LowParse$*' \
+		-warn-error '@2' -tmpdir $* $^ -o $@
+	./$@
+
+clean:
+	rm -rf $(OUTPUT_DIRECTORY) $(addsuffix /, $(EXAMPLES)) .depend
+
+.PHONY: all extract-all clean $(EXAMPLES)
