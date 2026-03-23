@@ -105,11 +105,10 @@ fn dummy
   returns res: U32.t
   ensures S.pts_to input #pm v
 {
-  let poffset = R.alloc 0sz;
+  let mut poffset = 0sz;
   let is_valid = validate_t input poffset;
   if is_valid {
     let off = !poffset;
-    R.free poffset;
     let input' = PPB.peek_trade_gen parse_t input 0sz off;
     if (U32.eq which 42ul) {
       let x = access_a input';
@@ -131,7 +130,6 @@ fn dummy
       Cast.uint16_to_uint32 x
     }
   } else {
-    R.free poffset;
     0ul
   }
 }
