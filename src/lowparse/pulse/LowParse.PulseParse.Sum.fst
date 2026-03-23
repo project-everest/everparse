@@ -3,8 +3,10 @@ module LowParse.PulseParse.Sum
 include LowParse.PulseParse.Enum
 include LowParse.Spec.Sum
 open LowParse.PulseParse.Combinators
+open Pulse.Lib.Pervasives open Pulse.Lib.Slice.Util open Pulse.Lib.Trade
 
 module B = LowParse.Pulse.Combinators
+module Trade = Pulse.Lib.Trade.Util
 
 inline_for_extraction
 let validate_sum_cases_aux
@@ -687,6 +689,113 @@ fn jump_dsum
     (Seq.slice v_bytes (SZ.v off) (Seq.length v_bytes));
   parse_dsum_cases_eq' t f g (maybe_enum_key_of_repr (dsum_enum t) tg) (Seq.slice v_bytes (SZ.v off) (Seq.length v_bytes));
   jump_dsum_cases_dispatch t f f32 g32 destr tg input off
+}
+
+#pop-options
+
+(* ========== Zero-copy parse: read sum tag ========== *)
+
+#push-options "--z3rlimit 64"
+
+inline_for_extraction
+fn read_sum_tag
+  (t: sum u#0 u#0)
+  (#kt: parser_kind)
+  (#p: parser kt (sum_repr_type t))
+  (j: B.jumper p)
+  (p32: leaf_reader p)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (_: squash (kt.parser_kind_subkind == Some ParserStrong))
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (sum_type t))
+  requires PPB.pts_to_parsed (parse_sum t p pc) input #pm v
+  returns tag : sum_key t
+  ensures PPB.pts_to_parsed (parse_sum t p pc) input #pm v **
+          pure (tag == sum_tag_of_data t v)
+{
+  PPB.pts_to_parsed_elim input;
+  with bytes . assert (S.pts_to input #pm bytes);
+  parse_sum_eq'' t p pc bytes;
+  parse_sum_eq' t p pc bytes;
+  S.pts_to_len input;
+  parser_kind_prop_equiv kt p;
+  Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
+  let off = j input 0sz;
+  let k' = PPB.read_parsed_from_validator_success p32 input 0sz off;
+  parse_enum_key_eq p (sum_enum t) bytes;
+  synth_sum_case_inverse t (sum_tag_of_data t v);
+  Trade.elim (S.pts_to input #pm bytes) (PPB.pts_to_parsed (parse_sum t p pc) input #pm v);
+  enum_key_of_repr (sum_enum t) k'
+}
+
+#pop-options
+
+(* ========== Zero-copy parse: sum payload for a known tag ========== *)
+
+let vmatch_sum_payload
+  (#tl: Type)
+  (t: sum)
+  (k: sum_key t)
+  (vmatch_k: tl -> sum_type_of_tag t k -> slprop)
+  (xl: tl)
+  (v: sum_type t)
+: slprop
+= if sum_tag_of_data t v = k then vmatch_k xl (synth_sum_case_recip t k v) else pure False
+
+#push-options "--z3rlimit 128"
+
+inline_for_extraction
+fn zero_copy_parse_sum_payload
+  (#tl: Type)
+  (t: sum u#0 u#0)
+  (#kt: parser_kind)
+  (#p: parser kt (sum_repr_type t))
+  (j: B.jumper p)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: sum_key t)
+  (#vmatch_k: tl -> sum_type_of_tag t k -> slprop)
+  (w_k: PPB.zero_copy_parse vmatch_k (dsnd (pc k)))
+  (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (sum_type t))
+  (tag_eq: squash (sum_tag_of_data t v == k))
+  requires PPB.pts_to_parsed (parse_sum t p pc) input #pm v
+  returns res : tl
+  ensures vmatch_sum_payload t k vmatch_k res v **
+    Trade.trade
+      (vmatch_sum_payload t k vmatch_k res v)
+      (PPB.pts_to_parsed (parse_sum t p pc) input #pm v)
+{
+  PPB.pts_to_parsed_elim input;
+  with bytes . assert (S.pts_to input #pm bytes);
+  parse_sum_eq'' t p pc bytes;
+  S.pts_to_len input;
+  parser_kind_prop_equiv kt p;
+  Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
+  synth_sum_case_injective t k;
+  synth_sum_case_inverse t k;
+  let off = j input 0sz;
+  let payload_bytes = Ghost.hide (Seq.slice bytes (SZ.v off) (Seq.length bytes));
+  parse_synth_eq (dsnd (pc k)) (synth_sum_case t k) payload_bytes;
+  let gx = Ghost.hide (fst (Some?.v (parse (dsnd (pc k)) payload_bytes)));
+  let input_tag, input_payload = split_trade input off;
+  with wb_tag . assert (S.pts_to input_tag #pm wb_tag);
+  with wb_payload . assert (S.pts_to input_payload #pm wb_payload);
+  Trade.elim_hyp_l (S.pts_to input_tag #pm wb_tag) (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes);
+  Trade.trans (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes) (PPB.pts_to_parsed (parse_sum t p pc) input #pm v);
+  Seq.lemma_eq_elim wb_payload (Ghost.reveal payload_bytes);
+  PPB.pts_to_parsed_intro (dsnd (pc k)) input_payload gx;
+  Trade.trans (PPB.pts_to_parsed (dsnd (pc k)) input_payload #(pm /. 2.0R) gx) (S.pts_to input_payload #pm wb_payload) (PPB.pts_to_parsed (parse_sum t p pc) input #pm v);
+  let res = w_k input_payload;
+  Trade.trans (vmatch_k res gx) (PPB.pts_to_parsed (dsnd (pc k)) input_payload #(pm /. 2.0R) gx) (PPB.pts_to_parsed (parse_sum t p pc) input #pm v);
+  Sum?.synth_case_recip_synth_case t k (Ghost.reveal gx);
+  Trade.rewrite_with_trade
+    (vmatch_k res gx)
+    (vmatch_sum_payload t k vmatch_k res v);
+  Trade.trans (vmatch_sum_payload t k vmatch_k res v) _ _;
+  res
 }
 
 #pop-options

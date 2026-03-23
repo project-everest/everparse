@@ -11,6 +11,7 @@ module R = Pulse.Lib.Reference
 module Trade = Pulse.Lib.Trade.Util
 module S = Pulse.Lib.Slice
 module LPS = LowParse.Pulse.Base
+module PPB = LowParse.PulseParse.Base
 
 inline_for_extraction
 fn validate_fldata
@@ -129,3 +130,58 @@ fn jump_fldata_strong
   pts_to_len input;
   SZ.add offset sz
 }
+
+#push-options "--z3rlimit 32"
+
+ghost
+fn pts_to_parsed_fldata_payload_trade
+  (#k: parser_kind) (#t: Type0) (p: parser k t)
+  (n: nat)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: t)
+  requires PPB.pts_to_parsed (parse_fldata p n) input #pm v
+  ensures PPB.pts_to_parsed p input #pm v **
+    Trade.trade (PPB.pts_to_parsed p input #pm v)
+                (PPB.pts_to_parsed (parse_fldata p n) input #pm v)
+{
+  unfold (PPB.pts_to_parsed (parse_fldata p n) input #pm v);
+  with w . assert (S.pts_to input #pm w);
+  S.pts_to_len input;
+  parser_kind_prop_equiv (parse_fldata_kind n k) (parse_fldata p n);
+  parser_kind_prop_equiv k p;
+  Seq.lemma_eq_elim (Seq.slice w 0 (Seq.length w)) w;
+  fold (PPB.pts_to_parsed p input #pm v);
+  intro
+    (Trade.trade
+      (PPB.pts_to_parsed p input #pm v)
+      (PPB.pts_to_parsed (parse_fldata p n) input #pm v)
+    )
+    #(pure (SZ.v (S.len input) == n))
+    fn _ {
+      unfold (PPB.pts_to_parsed p input #pm v);
+      with w' . assert (S.pts_to input #pm w');
+      S.pts_to_len input;
+      parser_kind_prop_equiv (parse_fldata_kind n k) (parse_fldata p n);
+      parser_kind_prop_equiv k p;
+      Seq.lemma_eq_elim (Seq.slice w' 0 (Seq.length w')) w';
+      fold (PPB.pts_to_parsed (parse_fldata p n) input #pm v)
+    }
+}
+
+inline_for_extraction
+fn zero_copy_parse_fldata
+  (#tl #t: Type0) (#vmatch: tl -> t -> slprop)
+  (#k: Ghost.erased parser_kind) (#p: parser k t)
+  (w: PPB.zero_copy_parse vmatch p)
+  (n: SZ.t)
+: PPB.zero_copy_parse vmatch (parse_fldata p (SZ.v n))
+= (input: _) (#pm: _) (#v: _)
+{
+  pts_to_parsed_fldata_payload_trade p (SZ.v n) input;
+  let res = w input;
+  Trade.trans (vmatch res v) _ _;
+  res
+}
+
+#pop-options
