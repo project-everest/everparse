@@ -96,9 +96,9 @@ let lemma_synth_kt_inv () : Lemma
 #set-options "--z3rlimit 120"
 
 inline_for_extraction unfold let known_kt_as_enum_key
-  (x: kt { norm [delta; zeta; iota; primops] (list_mem x (list_map fst kt_enum)) == true })
+  (x: kt { norm [delta_only [`%list_mem; `%list_map; `%fst; `%kt_enum]; zeta; iota; primops] (list_mem x (list_map fst kt_enum)) == true })
   : enum_key kt_enum =
-  [@inline_let] let _ = norm_spec [delta; zeta; iota; primops] (list_mem x (list_map fst kt_enum)) in x
+  [@inline_let] let _ = norm_spec [delta_only [`%list_mem; `%list_map; `%fst; `%kt_enum]; zeta; iota; primops] (list_mem x (list_map fst kt_enum)) in x
 
 inline_for_extraction let unknown_kt_as_enum_key (r:kt_repr) : Pure (unknown_enum_repr kt_enum)
   (requires known_kt_repr r == false) (ensures fun _ -> True) =
@@ -126,7 +126,7 @@ unfold inline_for_extraction let tt_value_type (x:maybe_enum_key kt_enum) =
 unfold inline_for_extraction let tt_refine (k:maybe_enum_key kt_enum) (x:tt)
   : Pure (refine_with_tag key_of_tt k)
   (requires key_of_tt x == k) (ensures fun y -> y == x) =
-  [@inline_let] let _ = norm_spec [delta; iota; zeta] (key_of_tt x) in x
+  [@inline_let] let _ = norm_spec [delta_only [`%key_of_tt]; iota; zeta] (key_of_tt x) in x
 
 unfold inline_for_extraction let tt_type_of_known_case (k: enum_key kt_enum)
   (x:kt) (q: squash ((k <: kt) == x))
