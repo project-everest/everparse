@@ -30,45 +30,41 @@ let pulse_jump_tt_cases (x: dsum_known_key tt_sum)
   | Kb -> (LPI.jump_u16 <: LPS.jumper (dsnd (parse_tt_cases Kb)))
   | _ -> LPS.jump_constant_size parse_false 0sz
 
-(* validate_t and jump_t use validate/jump_dsum_cases' for the inner dsum,
-   then compose_context + synth for the outer wrapping *)
+(* validate_t and jump_t: use validate_dsum_cases' with validate_ext,
+   wrapped in validate_compose_context + validate_synth,
+   matching the Low* pattern *)
 
 inline_for_extraction noextract
-let parse_dsum_cases_eq_forall (k: maybe_enum_key kt_enum)
-: Lemma (forall x . parse (parse_dsum_cases' tt_sum parse_tt_cases parse_u32 k) x == parse (parse_dsum_cases tt_sum parse_tt_cases parse_u32 k) x)
-= Classical.forall_intro (parse_dsum_cases_eq' tt_sum parse_tt_cases parse_u32 k)
-
-inline_for_extraction noextract
-let validate_dsum_case_for_compose (k: maybe_enum_key kt_enum)
-: Tot (LPS.validator (parse_dsum_cases tt_sum parse_tt_cases parse_u32 k))
-= parse_dsum_cases_eq_forall k;
+let validate_dsum_case (mk: dsum_key tt_sum)
+: Tot (LPS.validator (parse_dsum_cases tt_sum parse_tt_cases parse_u32 mk))
+= parse_dsum_cases_eq_forall tt_sum parse_tt_cases parse_u32 mk;
   LPS.validate_ext
-    (PPS.validate_dsum_cases' tt_sum parse_tt_cases pulse_validate_tt_cases LPI.validate_u32 k)
-    (parse_dsum_cases tt_sum parse_tt_cases parse_u32 k)
+    (PPS.validate_dsum_cases' tt_sum parse_tt_cases pulse_validate_tt_cases LPI.validate_u32 mk)
+    (parse_dsum_cases tt_sum parse_tt_cases parse_u32 mk)
 
-let validate_t (k: kt) : Tot (LPS.validator (parse_t k)) =
+noextract let validate_t (k: kt) : Tot (LPS.validator (parse_t k)) =
   lemma_synth_kt_inj ();
   PPC.validate_synth
     (PPC.validate_compose_context synth_kt_inv (refine_with_tag key_of_tt)
       (parse_dsum_cases tt_sum parse_tt_cases parse_u32)
-      validate_dsum_case_for_compose
+      validate_dsum_case
       k)
     (synth_t k)
 
 inline_for_extraction noextract
-let jump_dsum_case_for_compose (k: maybe_enum_key kt_enum)
-: Tot (LPS.jumper (parse_dsum_cases tt_sum parse_tt_cases parse_u32 k))
-= parse_dsum_cases_eq_forall k;
+let jump_dsum_case (mk: dsum_key tt_sum)
+: Tot (LPS.jumper (parse_dsum_cases tt_sum parse_tt_cases parse_u32 mk))
+= parse_dsum_cases_eq_forall tt_sum parse_tt_cases parse_u32 mk;
   LPS.jump_ext
-    (PPS.jump_dsum_cases' tt_sum parse_tt_cases pulse_jump_tt_cases LPI.jump_u32 k)
-    (parse_dsum_cases tt_sum parse_tt_cases parse_u32 k)
+    (PPS.jump_dsum_cases' tt_sum parse_tt_cases pulse_jump_tt_cases LPI.jump_u32 mk)
+    (parse_dsum_cases tt_sum parse_tt_cases parse_u32 mk)
 
 noextract let jump_t (k: kt) : Tot (LPS.jumper (parse_t k)) =
   lemma_synth_kt_inj ();
   LPC.jump_synth
     (PPC.jump_compose_context synth_kt_inv (refine_with_tag key_of_tt)
       (parse_dsum_cases tt_sum parse_tt_cases parse_u32)
-      jump_dsum_case_for_compose
+      jump_dsum_case
       k)
     (synth_t k)
 

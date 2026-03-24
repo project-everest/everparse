@@ -236,3 +236,12 @@ let serialize_t (k: kt) : LP.serializer (parse_t k) =
     (serialize_dsum_cases tt_sum parse_tt_cases serialize_tt_cases parse_u32 serialize_u32 (synth_kt_inv k))
     (synth_t_recip k)
     ()
+
+let parse_dsum_cases_eq_forall
+  (s: dsum)
+  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
+  (#k: parser_kind)
+  (g: parser k (dsum_type_of_unknown_tag s))
+  (x: dsum_key s)
+: Lemma (forall input . parse (parse_dsum_cases s f g x) input == parse (parse_dsum_cases' s f g x) input)
+= Classical.forall_intro (parse_dsum_cases_eq' s f g x)
