@@ -245,3 +245,12 @@ let parse_dsum_cases_eq_forall
   (x: dsum_key s)
 : Lemma (forall input . parse (parse_dsum_cases s f g x) input == parse (parse_dsum_cases' s f g x) input)
 = Classical.forall_intro (parse_dsum_cases_eq' s f g x)
+
+let parse_t_eq (k: kt) (input: bytes) : Lemma
+  (parse (parse_t k) input == (
+    let mk = synth_kt_inv k in
+    match parse (parse_dsum_cases tt_sum parse_tt_cases parse_u32 mk) input with
+    | None -> None
+    | Some (x, consumed) -> Some (synth_t k x, consumed)
+  ))
+= parse_synth_eq (parse_dsum_cases tt_sum parse_tt_cases parse_u32 (synth_kt_inv k)) (synth_t k) input
