@@ -51,7 +51,7 @@ let leaf_read_u32 : PPB.leaf_reader parse_u32 =
 
 inline_for_extraction
 let validate_t : LPS.validator parse_t =
-  PPC.validate_synth
+  LPC.validate_synth
     (PPC.validate_nondep_then
       (PPC.validate_nondep_then LPI.validate_u16 LPI.validate_u32)
       LPI.validate_u16)

@@ -535,25 +535,6 @@ fn validate_filter_and_then
 
 (* validate_synth: validate a parser composed with a synthesis function *)
 
-inline_for_extraction
-fn validate_synth
-  (#t #t': Type0)
-  (#k: Ghost.erased parser_kind)
-  (#p: parser k t)
-  (w: LPS.validator p)
-  (f: (t -> GTot t') { synth_injective f })
-: LPS.validator #t' #k (parse_synth p f)
-=
-  (input: slice byte)
-  (poffset: _)
-  (#offset: _)
-  (#pm: _)
-  (#v: _)
-{
-  parse_synth_eq p f (Seq.slice v (SZ.v offset) (Seq.length v));
-  w input poffset #offset #pm #v
-}
-
 (* validate_nondep_then: validate two independent parsers in sequence *)
 
 inline_for_extraction

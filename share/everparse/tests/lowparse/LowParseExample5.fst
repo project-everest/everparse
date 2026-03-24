@@ -74,13 +74,13 @@ let parse_t : parser _ t =
 
 inline_for_extraction
 let validate_inner : LPS.validator parse_inner =
-  PPC.validate_synth
+  LPC.validate_synth
     (PPC.validate_nondep_then LPI.validate_u16 LPI.validate_u16)
     synth_inner
 
 inline_for_extraction
 let validate_t : LPS.validator parse_t =
-  PPC.validate_synth
+  LPC.validate_synth
     (PPC.validate_nondep_then validate_inner LPI.validate_u32)
     synth_t
 

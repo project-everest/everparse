@@ -45,7 +45,7 @@ let validate_maybe_enum_key
   (#k: parser_kind) (#p: parser k repr) (v: B.validator p)
   (e: enum key repr)
 : Tot (B.validator (parse_maybe_enum_key p e))
-= validate_synth
+= B.validate_synth
     v
     (maybe_enum_key_of_repr e)
 

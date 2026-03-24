@@ -67,7 +67,7 @@ let validate_bitsum'
   (_: squash (k.parser_kind_subkind == Some ParserStrong))
 : Tot (LPS.validator (parse_bitsum' b p))
 = synth_bitsum'_injective b;
-  PPC.validate_synth
+  LPC.validate_synth
     (PPC.validate_filter
       v
       r

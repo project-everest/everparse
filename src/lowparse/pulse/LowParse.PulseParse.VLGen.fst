@@ -13,6 +13,7 @@ module S = Pulse.Lib.Slice
 module LPS = LowParse.Pulse.Base
 module PPB = LowParse.PulseParse.Base
 module PPC = LowParse.PulseParse.Combinators
+module LPC = LowParse.Pulse.Combinators
 module PPCF = LowParse.PulseParse.FLData
 module U32 = FStar.UInt32
 
@@ -67,7 +68,7 @@ let validate_vlgen
   (v: LPS.validator p)
   (sq: squash (sk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
 : LPS.validator (parse_vlgen vmin vmax pk s)
-= PPC.validate_synth
+= LPC.validate_synth
     (validate_bounded_vlgen vmin vmax vk rk s v sq)
     (synth_vlgen vmin vmax s)
 

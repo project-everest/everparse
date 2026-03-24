@@ -12,9 +12,13 @@ module Trade = Pulse.Lib.Trade.Util
 module S = Pulse.Lib.Slice
 module LPS = LowParse.Pulse.Base
 module PPC = LowParse.PulseParse.Combinators
+module LPC = LowParse.Pulse.Combinators
 module PPCF = LowParse.PulseParse.FLData
+module LPC = LowParse.Pulse.Combinators
 module PPCL = LowParse.PulseParse.List
+module LPC = LowParse.Pulse.Combinators
 module PPCV = LowParse.PulseParse.VLData
+module LPC = LowParse.Pulse.Combinators
 module PPB = LowParse.PulseParse.Base
 
 inline_for_extraction
@@ -33,7 +37,7 @@ let validate_array'
   })
 : LPS.validator (parse_array' s array_byte_size elem_count)
 = fldata_to_array_inj s array_byte_size elem_count ();
-  PPC.validate_synth
+  LPC.validate_synth
     (PPCF.validate_fldata_strong (serialize_list _ s) (PPCL.validate_list v ()) array_byte_size_sz)
     (fldata_to_array s array_byte_size elem_count ())
 
@@ -74,11 +78,10 @@ let validate_vlarray
   (_: squash (FStar.SizeT.fits_u64 /\ array_byte_size_max < 4294967296))
 : LPS.validator (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max u)
 = vldata_to_vlarray_inj array_byte_size_min array_byte_size_max s elem_count_min elem_count_max u;
-  PPC.validate_synth
+  LPC.validate_synth
     (PPCV.validate_bounded_vldata_strong array_byte_size_min array_byte_size_max (serialize_list _ s) (PPCL.validate_list v ()) lr ())
     (vldata_to_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ())
 
-module LPC = LowParse.Pulse.Combinators
 
 inline_for_extraction
 let jump_array

@@ -13,6 +13,7 @@ module S = Pulse.Lib.Slice
 module LPS = LowParse.Pulse.Base
 module PPB = LowParse.PulseParse.Base
 module PPC = LowParse.PulseParse.Combinators
+module LPC = LowParse.Pulse.Combinators
 module PPCV = LowParse.PulseParse.VLData
 module PPVG = LowParse.PulseParse.VLGen
 module U32 = FStar.UInt32
@@ -79,7 +80,7 @@ let validate_bounded_vlbytes'
   (lr: PPB.leaf_reader (parse_bounded_integer l))
   (_: squash FStar.SizeT.fits_u64)
 : LPS.validator (parse_bounded_vlbytes' min max l)
-= PPC.validate_synth
+= LPC.validate_synth
     (PPCV.validate_bounded_vldata_strong' min max l serialize_all_bytes (validate_all_bytes ()) lr ())
     (synth_bounded_vlbytes min max)
 
@@ -102,11 +103,10 @@ let validate_bounded_vlgenbytes
   (rk: PPB.leaf_reader pk)
   (_: squash (sk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
 : LPS.validator (parse_bounded_vlgenbytes vmin vmax pk)
-= PPC.validate_synth
+= LPC.validate_synth
     (PPVG.validate_bounded_vlgen vmin vmax vk rk serialize_all_bytes (validate_all_bytes ()) ())
     (synth_bounded_vlbytes vmin vmax)
 
-module LPC = LowParse.Pulse.Combinators
 
 inline_for_extraction
 let jump_bounded_vlbytes'

@@ -17,7 +17,7 @@ let validate_sum_cases_aux
 : Tot (B.validator (parse_sum_cases t pc k))
 = [@inline_let]
   let _ = synth_sum_case_injective t k in
-  validate_synth
+  B.validate_synth
     (B.validate_weaken
       (weaken_parse_cases_kind t pc)
       (vc k)
@@ -302,8 +302,8 @@ let validate_dsum_cases'
 = [@inline_let]
   let _ = synth_dsum_case_injective s x in
   match x with
-  | Known x' -> validate_synth (f' x') (synth_dsum_case s (Known x'))
-  | Unknown x' -> validate_synth g' (synth_dsum_case s (Unknown x'))
+  | Known x' -> B.validate_synth (f' x') (synth_dsum_case s (Known x'))
+  | Unknown x' -> B.validate_synth g' (synth_dsum_case s (Unknown x'))
 
 inline_for_extraction
 let validate_dsum_cases_dispatch
