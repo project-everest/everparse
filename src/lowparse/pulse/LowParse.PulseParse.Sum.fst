@@ -354,6 +354,29 @@ let validate_dsum_cases
 = Classical.forall_intro (parse_dsum_cases_eq' s f g x);
   B.validate_ext (validate_dsum_cases'_destr s f f' g' destr x) (parse_dsum_cases s f g x)
 
+inline_for_extraction
+fn validate_dsum_cases_fn
+  (s: dsum)
+  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
+  (f': (x: dsum_known_key s) -> Tot (B.validator (dsnd (f x))))
+  (#k: parser_kind)
+  (#g: parser k (dsum_type_of_unknown_tag s))
+  (g': B.validator g)
+  (destr: dep_maybe_enum_destr_t (dsum_enum s) (validate_dsum_cases_t s f g))
+  (x: dsum_key s)
+: B.validator (parse_dsum_cases s f g x)
+=
+  (input: S.slice byte)
+  (poffset: ref SZ.t)
+  (#offset: Ghost.erased SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
+  parse_dsum_cases_eq' s f g x sinput;
+  validate_dsum_cases_dispatch s f f' g' destr (repr_of_maybe_enum_key (dsum_enum s) x) input poffset
+}
+
 #push-options "--z3rlimit 64"
 
 inline_for_extraction
@@ -727,6 +750,28 @@ let jump_dsum_cases
 : Tot (B.jumper (parse_dsum_cases s f g x))
 = Classical.forall_intro (parse_dsum_cases_eq' s f g x);
   B.jump_ext (jump_dsum_cases'_destr s f f' g' destr x) (parse_dsum_cases s f g x)
+
+inline_for_extraction
+fn jump_dsum_cases_fn
+  (s: dsum)
+  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
+  (f': (x: dsum_known_key s) -> Tot (B.jumper (dsnd (f x))))
+  (#k: parser_kind)
+  (#g: parser k (dsum_type_of_unknown_tag s))
+  (g': B.jumper g)
+  (destr: dep_maybe_enum_destr_t (dsum_enum s) (jump_dsum_cases_t s f g))
+  (x: dsum_key s)
+: B.jumper (parse_dsum_cases s f g x)
+=
+  (input: S.slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
+  parse_dsum_cases_eq' s f g x sinput;
+  jump_dsum_cases_dispatch s f f' g' destr (repr_of_maybe_enum_key (dsum_enum s) x) input offset
+}
 
 #push-options "--z3rlimit 64"
 

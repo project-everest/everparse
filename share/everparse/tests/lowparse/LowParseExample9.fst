@@ -32,59 +32,41 @@ let pulse_jump_tt_cases (x: dsum_known_key tt_sum)
   | Kb -> (LPI.jump_u16 <: LPS.jumper (dsnd (parse_tt_cases Kb)))
   | _ -> LPS.jump_constant_size parse_false 0sz
 
-(* Use dep_maybe_enum_destr_t_tac to normalize ALL branches.
-   validate_dsum_cases_dispatch returns validate_dsum_cases_t which
-   has the same pre/post as validator but for parse_dsum_cases'. *)
+(* Pre-compute tactic-generated destructors *)
 
 inline_for_extraction noextract
-let validate_dcase : (tg: dsum_repr_type tt_sum) -> Tot (PPS.validate_dsum_cases_t tt_sum parse_tt_cases parse_u32 (maybe_enum_key_of_repr (dsum_enum tt_sum) tg))
-= PPS.validate_dsum_cases_dispatch tt_sum parse_tt_cases pulse_validate_tt_cases LPI.validate_u32
-    (_ by (dep_maybe_enum_destr_t_tac ()))
+let tt_validate_destr : dep_maybe_enum_destr_t (dsum_enum tt_sum) (PPS.validate_dsum_cases_t tt_sum parse_tt_cases parse_u32)
+= _ by (dep_maybe_enum_destr_t_tac ())
 
 inline_for_extraction noextract
-let jump_dcase : (tg: dsum_repr_type tt_sum) -> Tot (PPS.jump_dsum_cases_t tt_sum parse_tt_cases parse_u32 (maybe_enum_key_of_repr (dsum_enum tt_sum) tg))
-= PPS.jump_dsum_cases_dispatch tt_sum parse_tt_cases pulse_jump_tt_cases LPI.jump_u32
-    (_ by (dep_maybe_enum_destr_t_tac ()))
+let tt_jump_destr : dep_maybe_enum_destr_t (dsum_enum tt_sum) (PPS.jump_dsum_cases_t tt_sum parse_tt_cases parse_u32)
+= _ by (dep_maybe_enum_destr_t_tac ())
 
-(* validate_t as a Pulse fn — maps kt to dsum_key, dispatches, wraps *)
+(* validate_t and jump_t using generic PPS.validate_dsum_cases_fn *)
 
 #push-options "--z3rlimit 32"
 
 inline_for_extraction
-fn validate_t
-  (k: kt)
-: LPS.validator (parse_t k)
+fn validate_t (k: kt) : LPS.validator (parse_t k)
 =
-  (input: S.slice byte)
-  (poffset: R.ref SZ.t)
-  (#offset: Ghost.erased SZ.t)
-  (#pm: perm)
-  (#v: Ghost.erased bytes)
+  (input: S.slice byte) (poffset: R.ref SZ.t)
+  (#offset: Ghost.erased SZ.t) (#pm: perm) (#v: Ghost.erased bytes)
 {
-  let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
   lemma_synth_kt_inj ();
-  parse_t_eq k sinput;
-  let mk = synth_kt_inv k;
-  parse_dsum_cases_eq_forall tt_sum parse_tt_cases parse_u32 mk;
-  validate_dcase (repr_of_maybe_enum_key (dsum_enum tt_sum) mk) input poffset
+  parse_t_eq k (Seq.slice v (SZ.v offset) (Seq.length v));
+  PPS.validate_dsum_cases_fn tt_sum parse_tt_cases pulse_validate_tt_cases LPI.validate_u32
+    tt_validate_destr (synth_kt_inv k) input poffset
 }
 
 inline_for_extraction
-fn jump_t
-  (k: kt)
-: LPS.jumper (parse_t k)
+fn jump_t (k: kt) : LPS.jumper (parse_t k)
 =
-  (input: S.slice byte)
-  (offset: SZ.t)
-  (#pm: perm)
-  (#v: Ghost.erased bytes)
+  (input: S.slice byte) (offset: SZ.t) (#pm: perm) (#v: Ghost.erased bytes)
 {
-  let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
   lemma_synth_kt_inj ();
-  parse_t_eq k sinput;
-  let mk = synth_kt_inv k;
-  parse_dsum_cases_eq_forall tt_sum parse_tt_cases parse_u32 mk;
-  jump_dcase (repr_of_maybe_enum_key (dsum_enum tt_sum) mk) input offset
+  parse_t_eq k (Seq.slice v (SZ.v offset) (Seq.length v));
+  PPS.jump_dsum_cases_fn tt_sum parse_tt_cases pulse_jump_tt_cases LPI.jump_u32
+    tt_jump_destr (synth_kt_inv k) input offset
 }
 
 #pop-options
