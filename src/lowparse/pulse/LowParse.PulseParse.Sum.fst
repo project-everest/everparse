@@ -1042,3 +1042,9 @@ let clens_dsum_payload
    accessor_clens_dsum_payload : accessor (parse_dsum t p f g) (parse_dsum_cases t f g k) (clens_dsum_payload t k)
    Implementation uses parse_dsum_eq', split_trade, and pts_to_parsed_intro.
    These follow the exact same pattern as accessor_sum_tag and accessor_clens_sum_payload above. *)
+
+
+(* DSum accessors: clens definitions are available above.
+   The accessor fns are blocked by F*'s (x <: data_t) coercion
+   in parse_tagged_union_eq which loses the tag_of_data refinement.
+   A parse_dsum_tag_of_data lemma in LowParse.Spec.Sum would fix this. *)
