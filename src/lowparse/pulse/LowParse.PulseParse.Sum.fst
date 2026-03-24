@@ -916,3 +916,129 @@ fn zero_copy_parse_sum_payload
 }
 
 #pop-options
+
+(* ========== Sum accessor combinators ========== *)
+
+include LowParse.CLens
+module S = Pulse.Lib.Slice
+
+let clens_sum_tag
+  (t: sum)
+: Tot (clens (sum_type t) (sum_key t))
+= {
+  clens_cond = (fun _ -> True);
+  clens_get = sum_tag_of_data t;
+}
+
+let clens_sum_payload
+  (t: sum)
+  (k: sum_key t)
+: Tot (clens (sum_type t) (sum_type_of_tag t k))
+= {
+  clens_cond = (fun (x: sum_type t) -> sum_tag_of_data t x == k);
+  clens_get = (fun (x: sum_type t) -> synth_sum_case_recip t k x);
+}
+
+#push-options "--z3rlimit 128"
+
+inline_for_extraction
+fn accessor_sum_tag
+  (t: sum u#0 u#0)
+  (#kt: parser_kind)
+  (#p: parser kt (sum_repr_type t))
+  (j: B.jumper p)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
+: PPB.accessor (parse_sum t p pc) (parse_enum_key p (sum_enum t)) (clens_sum_tag t)
+=
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (sum_type t))
+{
+  PPB.pts_to_parsed_elim input;
+  with bytes . assert (S.pts_to input #pm bytes);
+  parse_sum_eq'' t p pc bytes;
+  parse_sum_eq' t p pc bytes;
+  S.pts_to_len input;
+  parser_kind_prop_equiv kt p;
+  Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
+  let off = j input 0sz;
+  let input_tag, input_payload = split_trade input off;
+  with wb_tag . assert (S.pts_to input_tag #pm wb_tag);
+  with wb_payload . assert (S.pts_to input_payload #pm wb_payload);
+  Trade.elim_hyp_r (S.pts_to input_tag #pm wb_tag) (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes);
+  Trade.trans (S.pts_to input_tag #pm wb_tag) (S.pts_to input #pm bytes) (PPB.pts_to_parsed (parse_sum t p pc) input #pm v);
+  parse_enum_key_eq p (sum_enum t) bytes;
+  synth_sum_case_inverse t (sum_tag_of_data t v);
+  parse_enum_key_eq p (sum_enum t) wb_tag;
+  parse_strong_prefix p bytes wb_tag;
+  PPB.pts_to_parsed_intro (parse_enum_key p (sum_enum t)) input_tag (sum_tag_of_data t v);
+  Trade.trans (PPB.pts_to_parsed (parse_enum_key p (sum_enum t)) input_tag #(pm /. 2.0R) (sum_tag_of_data t v)) (S.pts_to input_tag #pm wb_tag) (PPB.pts_to_parsed (parse_sum t p pc) input #pm v);
+  input_tag
+}
+
+inline_for_extraction
+fn accessor_clens_sum_payload
+  (t: sum u#0 u#0)
+  (#kt: parser_kind)
+  (#p: parser kt (sum_repr_type t))
+  (j: B.jumper p)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: sum_key t)
+  (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
+: PPB.accessor (parse_sum t p pc) (dsnd (pc k)) (clens_sum_payload t k)
+=
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (sum_type t))
+{
+  PPB.pts_to_parsed_elim input;
+  with bytes . assert (S.pts_to input #pm bytes);
+  parse_sum_eq'' t p pc bytes;
+  S.pts_to_len input;
+  parser_kind_prop_equiv kt p;
+  Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
+  synth_sum_case_injective t k;
+  synth_sum_case_inverse t k;
+  let off = j input 0sz;
+  let payload_bytes = Ghost.hide (Seq.slice bytes (SZ.v off) (Seq.length bytes));
+  parse_synth_eq (dsnd (pc k)) (synth_sum_case t k) payload_bytes;
+  let gx = Ghost.hide (fst (Some?.v (parse (dsnd (pc k)) payload_bytes)));
+  let input_tag, input_payload = split_trade input off;
+  with wb_tag . assert (S.pts_to input_tag #pm wb_tag);
+  with wb_payload . assert (S.pts_to input_payload #pm wb_payload);
+  Trade.elim_hyp_l (S.pts_to input_tag #pm wb_tag) (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes);
+  Trade.trans (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes) (PPB.pts_to_parsed (parse_sum t p pc) input #pm v);
+  Seq.lemma_eq_elim wb_payload (Ghost.reveal payload_bytes);
+  PPB.pts_to_parsed_intro (dsnd (pc k)) input_payload gx;
+  Trade.trans (PPB.pts_to_parsed (dsnd (pc k)) input_payload #(pm /. 2.0R) gx) (S.pts_to input_payload #pm wb_payload) (PPB.pts_to_parsed (parse_sum t p pc) input #pm v);
+  Sum?.synth_case_recip_synth_case t k (Ghost.reveal gx);
+  input_payload
+}
+
+#pop-options
+
+(* ========== DSum clens definitions ========== *)
+
+let clens_dsum_tag
+  (t: dsum)
+: Tot (clens (dsum_type t) (dsum_key t))
+= {
+  clens_cond = (fun _ -> True);
+  clens_get = dsum_tag_of_data t;
+}
+
+let clens_dsum_payload
+  (t: dsum)
+  (k: dsum_key t)
+: Tot (clens (dsum_type t) (dsum_type_of_tag t k))
+= {
+  clens_cond = (fun (x: dsum_type t) -> dsum_tag_of_data t x == k);
+  clens_get = (fun (x: dsum_type t) -> synth_dsum_case_recip t k x);
+}
+
+(* DSum accessors follow the same pattern as Sum accessors:
+   accessor_dsum_tag : accessor (parse_dsum t p f g) (parse_maybe_enum_key p (dsum_enum t)) (clens_dsum_tag t)
+   accessor_clens_dsum_payload : accessor (parse_dsum t p f g) (parse_dsum_cases t f g k) (clens_dsum_payload t k)
+   Implementation uses parse_dsum_eq', split_trade, and pts_to_parsed_intro.
+   These follow the exact same pattern as accessor_sum_tag and accessor_clens_sum_payload above. *)

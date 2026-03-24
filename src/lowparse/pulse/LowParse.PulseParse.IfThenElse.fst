@@ -81,3 +81,43 @@ fn jump_ifthenelse
 }
 
 #pop-options
+
+(* ========== IfThenElse accessor combinators ========== *)
+
+include LowParse.CLens
+
+let clens_ifthenelse_tag
+  (#p: parse_ifthenelse_param)
+  (s: serialize_ifthenelse_param p)
+: Tot (clens p.parse_ifthenelse_t p.parse_ifthenelse_tag_t)
+= {
+  clens_cond = (fun _ -> True);
+  clens_get = (fun (x: p.parse_ifthenelse_t) -> dfst (s.serialize_ifthenelse_synth_recip x));
+}
+
+let clens_ifthenelse_payload
+  (#p: parse_ifthenelse_param)
+  (s: serialize_ifthenelse_param p)
+  (b: bool)
+: Tot (clens p.parse_ifthenelse_t (p.parse_ifthenelse_payload_t b))
+= {
+  clens_cond = (fun (x: p.parse_ifthenelse_t) -> p.parse_ifthenelse_tag_cond (dfst (s.serialize_ifthenelse_synth_recip x)) == b);
+  clens_get = (fun (x: p.parse_ifthenelse_t) ->
+    (dsnd (s.serialize_ifthenelse_synth_recip x) <: Ghost (p.parse_ifthenelse_payload_t b)
+      (requires (p.parse_ifthenelse_tag_cond (dfst (s.serialize_ifthenelse_synth_recip x)) == b))
+      (ensures (fun _ -> True))));
+}
+
+#push-options "--z3rlimit 128"
+
+(* IfThenElse accessor implementations:
+   accessor_ifthenelse_tag : accessor (parse_ifthenelse p) p.parse_ifthenelse_tag_parser (clens_ifthenelse_tag s)
+   accessor_ifthenelse_payload : accessor (parse_ifthenelse p) (dsnd (p.parse_ifthenelse_payload_parser b)) (clens_ifthenelse_payload s b)
+   
+   These follow the same split_trade + pts_to_parsed_intro pattern as accessor_sum_tag/payload.
+   However, Pulse's type checker currently reports "Cannot check relation with uvars" when
+   instantiating the accessor type with parse_ifthenelse. This appears to be a limitation of
+   Pulse's uvar solver with computed parser kinds. The clens definitions and implementation
+   pattern are ready for when this limitation is resolved. *)
+
+#pop-options

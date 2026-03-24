@@ -161,3 +161,93 @@ let jump_vlgen
 = LPC.jump_synth
     (jump_bounded_vlgen vmin vmax jk rk s sq)
     (synth_vlgen vmin vmax s)
+
+(* ========== VLGen accessors ========== *)
+
+include LowParse.CLens
+module PPCV = LowParse.PulseParse.VLData
+
+#push-options "--z3rlimit 128"
+
+inline_for_extraction
+fn accessor_bounded_vlgen_payload
+  (vmin: nat)
+  (vmax: nat { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 })
+  (#sk: parser_kind)
+  (#pk: parser sk (bounded_int32 vmin vmax))
+  (jk: LPS.jumper pk)
+  (rk: PPB.leaf_reader pk)
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (sq: squash (sk.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+: PPB.accessor (parse_bounded_vlgen vmin vmax pk s) p (PPCV.clens_bounded_vldata_strong vmin vmax s)
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (parse_bounded_vldata_strong_t vmin vmax s))
+{
+  PPB.pts_to_parsed_elim input;
+  with bytes . assert (S.pts_to input #pm bytes);
+  S.pts_to_len input;
+  SZ.fits_u64_implies_fits_32 ();
+  Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
+  parse_bounded_vlgen_unfold_aux vmin vmax pk s bytes;
+  parser_kind_prop_equiv sk pk;
+  let off1 = jk input 0sz;
+  let len = PPB.read_parsed_from_validator_success rk input 0sz off1;
+  let input_key, input_payload = split_trade input off1;
+  with wb_key . assert (S.pts_to input_key #pm wb_key);
+  with wb_payload . assert (S.pts_to input_payload #pm wb_payload);
+  Trade.elim_hyp_l (S.pts_to input_key #pm wb_key) (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes);
+  Trade.trans (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes) (PPB.pts_to_parsed (parse_bounded_vlgen vmin vmax pk s) input #pm v);
+  parser_kind_prop_equiv (parse_fldata_kind (U32.v len) k) (parse_fldata_strong s (U32.v len));
+  parser_kind_prop_equiv (parse_fldata_kind (U32.v len) k) (parse_fldata p (U32.v len));
+  parser_kind_prop_equiv k p;
+  Seq.lemma_eq_elim wb_payload (Seq.slice wb_payload 0 (Seq.length wb_payload));
+  PPB.pts_to_parsed_intro p input_payload (Ghost.reveal v <: t);
+  Trade.trans (PPB.pts_to_parsed p input_payload #(pm /. 2.0R) (Ghost.reveal v <: t)) (S.pts_to input_payload #pm wb_payload) (PPB.pts_to_parsed (parse_bounded_vlgen vmin vmax pk s) input #pm v);
+  input_payload
+}
+
+inline_for_extraction
+fn accessor_vlgen_payload
+  (vmin: nat)
+  (vmax: nat { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 })
+  (#sk: parser_kind)
+  (#pk: parser sk (bounded_int32 vmin vmax))
+  (jk: LPS.jumper pk)
+  (rk: PPB.leaf_reader pk)
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p { parse_vlgen_precond vmin vmax k })
+  (sq: squash (sk.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+: PPB.accessor (parse_vlgen vmin vmax pk s) p (clens_id t)
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+{
+  PPB.pts_to_parsed_elim input;
+  with bytes . assert (S.pts_to input #pm bytes);
+  S.pts_to_len input;
+  SZ.fits_u64_implies_fits_32 ();
+  Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
+  parse_vlgen_unfold vmin vmax pk s bytes;
+  parser_kind_prop_equiv sk pk;
+  let off1 = jk input 0sz;
+  let len = PPB.read_parsed_from_validator_success rk input 0sz off1;
+  let input_key, input_payload = split_trade input off1;
+  with wb_key . assert (S.pts_to input_key #pm wb_key);
+  with wb_payload . assert (S.pts_to input_payload #pm wb_payload);
+  Trade.elim_hyp_l (S.pts_to input_key #pm wb_key) (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes);
+  Trade.trans (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes) (PPB.pts_to_parsed (parse_vlgen vmin vmax pk s) input #pm v);
+  Seq.lemma_eq_elim wb_payload (Seq.slice bytes (SZ.v off1) (SZ.v off1 + U32.v len));
+  PPB.pts_to_parsed_intro p input_payload (Ghost.reveal v);
+  Trade.trans (PPB.pts_to_parsed p input_payload #(pm /. 2.0R) (Ghost.reveal v)) (S.pts_to input_payload #pm wb_payload) (PPB.pts_to_parsed (parse_vlgen vmin vmax pk s) input #pm v);
+  input_payload
+}
+
+#pop-options

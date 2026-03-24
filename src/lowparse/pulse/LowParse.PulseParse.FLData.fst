@@ -12,6 +12,7 @@ module Trade = Pulse.Lib.Trade.Util
 module S = Pulse.Lib.Slice
 module LPS = LowParse.Pulse.Base
 module PPB = LowParse.PulseParse.Base
+include LowParse.CLens
 
 inline_for_extraction
 fn validate_fldata
@@ -182,6 +183,92 @@ fn zero_copy_parse_fldata
   let res = w input;
   Trade.trans (vmatch res v) _ _;
   res
+}
+
+#pop-options
+
+(* accessor_fldata: access the payload of fixed-length data *)
+
+inline_for_extraction
+fn accessor_fldata
+  (#k: parser_kind) (#t: Type0) (p: parser k t)
+  (n: nat)
+: PPB.accessor (parse_fldata p n) p (clens_id t)
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+{
+  pts_to_parsed_fldata_payload_trade p n input;
+  input
+}
+
+(* accessor_fldata_strong: access the payload of strong fixed-length data *)
+
+let clens_fldata_strong
+  (#k: parser_kind) (#t: Type) (#p: parser k t)
+  (s: serializer p) (sz: nat)
+: Tot (clens (parse_fldata_strong_t s sz) t)
+= {
+  clens_cond = (fun _ -> True);
+  clens_get = (fun (x: parse_fldata_strong_t s sz) -> (x <: t));
+}
+
+#push-options "--z3rlimit 32"
+
+ghost
+fn pts_to_parsed_fldata_strong_payload_trade
+  (#k: parser_kind) (#t: Type0) (#p: parser k t)
+  (s: serializer p)
+  (n: nat)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: parse_fldata_strong_t s n)
+  requires PPB.pts_to_parsed (parse_fldata_strong s n) input #pm v
+  ensures PPB.pts_to_parsed p input #pm (v <: t) **
+    Trade.trade (PPB.pts_to_parsed p input #pm (v <: t))
+                (PPB.pts_to_parsed (parse_fldata_strong s n) input #pm v)
+{
+  unfold (PPB.pts_to_parsed (parse_fldata_strong s n) input #pm v);
+  with w . assert (S.pts_to input #pm w);
+  S.pts_to_len input;
+  parser_kind_prop_equiv (parse_fldata_kind n k) (parse_fldata_strong s n);
+  parser_kind_prop_equiv (parse_fldata_kind n k) (parse_fldata p n);
+  parser_kind_prop_equiv k p;
+  Seq.lemma_eq_elim (Seq.slice w 0 (Seq.length w)) w;
+  fold (PPB.pts_to_parsed p input #pm (v <: t));
+  intro
+    (Trade.trade
+      (PPB.pts_to_parsed p input #pm (v <: t))
+      (PPB.pts_to_parsed (parse_fldata_strong s n) input #pm v)
+    )
+    #(pure (SZ.v (S.len input) == n))
+    fn _ {
+      unfold (PPB.pts_to_parsed p input #pm (v <: t));
+      with w' . assert (S.pts_to input #pm w');
+      S.pts_to_len input;
+      parser_kind_prop_equiv (parse_fldata_kind n k) (parse_fldata_strong s n);
+      parser_kind_prop_equiv (parse_fldata_kind n k) (parse_fldata p n);
+      parser_kind_prop_equiv k p;
+      Seq.lemma_eq_elim (Seq.slice w' 0 (Seq.length w')) w';
+      parse_fldata_strong_correct s n w' (Seq.length w') (Ghost.reveal v <: t);
+      fold (PPB.pts_to_parsed (parse_fldata_strong s n) input #pm v)
+    }
+}
+
+inline_for_extraction
+fn accessor_fldata_strong
+  (#k: parser_kind) (#t: Type0) (#p: parser k t)
+  (s: serializer p)
+  (n: nat)
+: PPB.accessor (parse_fldata_strong s n) p (clens_fldata_strong s n)
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (parse_fldata_strong_t s n))
+{
+  pts_to_parsed_fldata_strong_payload_trade s n input;
+  input
 }
 
 #pop-options

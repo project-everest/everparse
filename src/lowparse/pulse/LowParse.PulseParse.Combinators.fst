@@ -1099,3 +1099,82 @@ fn accessor_synth
   pts_to_parsed_synth_l2r_trade p f g input;
   input
 }
+
+inline_for_extraction
+let accessor_synth_inv
+  (#k: parser_kind) (#t1 #t2: Type0) (#p: parser k t1)
+  (f: (t1 -> GTot t2) { synth_injective f })
+  (g: (t2 -> GTot t1) { synth_inverse f g })
+: PPB.accessor (parse_synth p f) p (clens_synth_inv f g)
+= accessor_synth f g
+
+inline_for_extraction
+fn accessor_ext
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1)
+  (#k2: parser_kind) (#t2: Type0) (#p2: parser k2 t2)
+  (#cl: clens t1 t2)
+  (a: PPB.accessor p1 p2 cl)
+  (cl': clens t1 t2)
+  (sq: squash (clens_eq cl cl'))
+: PPB.accessor p1 p2 cl'
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t1)
+{
+  let result = a input;
+  with v2 pm' . assert (PPB.pts_to_parsed p2 result #pm' v2);
+  result
+}
+
+inline_for_extraction
+let accessor_compose_strong
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1)
+  (#k2: parser_kind) (#t2: Type0) (#p2: parser k2 t2)
+  (#k3: parser_kind) (#t3: Type0) (#p3: parser k3 t3)
+  (#cl12: clens t1 t2)
+  (#cl23: clens t2 t3)
+  (a12: PPB.accessor p1 p2 cl12)
+  (a23: PPB.accessor p2 p3 cl23)
+  (sq: squash (clens_compose_strong_pre cl12 cl23))
+: PPB.accessor p1 p3 (clens_compose_strong cl12 cl23)
+= accessor_compose a12 a23 sq
+
+inline_for_extraction
+let accessor_fst_then
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1)
+  (#k2: parser_kind) (#t2: Type0) (p2: parser k2 t2)
+  (#k': parser_kind) (#t': Type0) (#p': parser k' t')
+  (#cl: clens t1 t')
+  (a: PPB.accessor p1 p' cl)
+  (j1: LPS.jumper p1)
+  (sq1: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (sq2: squash (clens_compose_strong_pre (clens_fst t1 t2) cl))
+: PPB.accessor (nondep_then p1 p2) p' (clens_compose_strong (clens_fst t1 t2) cl)
+= accessor_compose (accessor_fst j1 sq1) a sq2
+
+inline_for_extraction
+let accessor_then_fst
+  (#k0: parser_kind) (#t0: Type0) (#p0: parser k0 t0)
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1)
+  (#k2: parser_kind) (#t2: Type0) (#p2: parser k2 t2)
+  (#cl: clens t0 (t1 & t2))
+  (a: PPB.accessor p0 (nondep_then p1 p2) cl)
+  (j1: LPS.jumper p1)
+  (sq1: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (sq2: squash (clens_compose_strong_pre cl (clens_fst t1 t2)))
+: PPB.accessor p0 p1 (clens_compose_strong cl (clens_fst t1 t2))
+= accessor_compose a (accessor_fst j1 sq1) sq2
+
+inline_for_extraction
+let accessor_then_snd
+  (#k0: parser_kind) (#t0: Type0) (#p0: parser k0 t0)
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1)
+  (#k2: parser_kind) (#t2: Type0) (#p2: parser k2 t2)
+  (#cl: clens t0 (t1 & t2))
+  (a: PPB.accessor p0 (nondep_then p1 p2) cl)
+  (j1: LPS.jumper p1)
+  (sq1: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (sq2: squash (clens_compose_strong_pre cl (clens_snd t1 t2)))
+: PPB.accessor p0 p2 (clens_compose_strong cl (clens_snd t1 t2))
+= accessor_compose a (accessor_snd j1 sq1) sq2
