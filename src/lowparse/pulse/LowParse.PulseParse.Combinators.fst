@@ -596,6 +596,17 @@ let validate_compose_context
 : Tot (LPS.validator (p (f k)))
 = v (f k)
 
+let jump_compose_context
+  (#pk: parser_kind)
+  (#kt1 #kt2: Type0)
+  (f: (kt2 -> Tot kt1))
+  (t: (kt1 -> Tot Type0))
+  (p: ((k: kt1) -> Tot (parser pk (t k))))
+  (j: ((k: kt1) -> Tot (LPS.jumper (p k))))
+  (k: kt2)
+: Tot (LPS.jumper (p (f k)))
+= j (f k)
+
 (* zero_copy_parse combinators *)
 
 inline_for_extraction
