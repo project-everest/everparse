@@ -46,7 +46,7 @@ let validate_dsum_case_for_compose (k: maybe_enum_key kt_enum)
     (PPS.validate_dsum_cases' tt_sum parse_tt_cases pulse_validate_tt_cases LPI.validate_u32 k)
     (parse_dsum_cases tt_sum parse_tt_cases parse_u32 k)
 
-noextract let validate_t (k: kt) : Tot (LPS.validator (parse_t k)) =
+let validate_t (k: kt) : Tot (LPS.validator (parse_t k)) =
   lemma_synth_kt_inj ();
   PPC.validate_synth
     (PPC.validate_compose_context synth_kt_inv (refine_with_tag key_of_tt)
