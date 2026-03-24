@@ -16,6 +16,10 @@ if [ -n "$CYGWIN_ROOT" ]; then
     cygsetup_args="$cygsetup_args --root $CYGWIN_ROOT"
 fi
 
+if [ -n "$CYGWIN_MIRROR" ]; then
+    cygsetup_args="$cygsetup_args --only-site --site $CYGWIN_MIRROR"
+fi
+
 # Find Cygwin's setup utility, or download it from the internet.
 # Success: writes the path to Cygwin's setup in $cygsetup
 # Failure: aborts.
