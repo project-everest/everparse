@@ -88,13 +88,16 @@ jobs:
           submodules: true
 
       - name: Set-up OCaml
-        uses: ocaml/setup-ocaml@v3.4.8
+        uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: 4.14.2
         # This will install Cygwin as well
 
       - name: Install Cygwin packages
-        shell: C:\cygwin\bin\bash.exe --login '{0}'
+        shell: C:\.opam\.cygwin\root\bin\bash.exe --login '{0}'
+        env:
+          CYGWIN_ROOT: C:\.opam\.cygwin\root
+          CYGWIN_MIRROR: https://mirrors.kernel.org/sourceware/cygwin/
         run: >-
           "$GITHUB_WORKSPACE"/src/package/windows/install-cygwin-packages.sh
 
@@ -103,12 +106,12 @@ jobs:
           name: package-src
 
       - name: Expand F* source package
-        shell: C:\cygwin\bin\bash.exe --login '{0}'
+        shell: C:\.opam\.cygwin\root\bin\bash.exe --login '{0}'
         run: >-
           cd "$GITHUB_WORKSPACE" && tar xzf fstar-src.tar.gz && mv fstar opt/FStar
 
       - name: Build package
-        shell: C:\cygwin\bin\bash.exe --login '{0}'
+        shell: C:\.opam\.cygwin\root\bin\bash.exe --login '{0}'
         run: >-
           cd $GITHUB_WORKSPACE && eval $(opam env) && env V=1 MAKE=make make -f package.Makefile nuget-noversion -kj$(nproc)
 
