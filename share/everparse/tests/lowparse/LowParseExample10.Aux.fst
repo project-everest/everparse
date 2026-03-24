@@ -1,27 +1,28 @@
 module LowParseExample10.Aux
 
-(* Spec + ifthenelse definition for Example10, as a regular F* module.
-   Ported from tests/lowparse/LowParseExample10.fst + .fsti *)
-
 include LowParse.Spec.Combinators
-include LowParse.Spec.Bytes
 include LowParse.Spec.Int
 include LowParse.Spec.IfThenElse
 
 module U8 = FStar.UInt8
 module U16 = FStar.UInt16
 module U32 = FStar.UInt32
-module BY = LowParse.Bytes32
 
-type msg_type = BY.lbytes 3
+(* Use ((U8.t & U8.t) & U8.t) instead of flbytes 3 *)
 
-let msg_type_HelloRetryRequest' : BY.bytes = BY.bytes_of_hex "abcdef"
+inline_for_extraction
+let msg_type = (U8.t & U8.t) & U8.t
 
-let msg_type_HelloRetryRequest : msg_type =
-  assume (BY.length msg_type_HelloRetryRequest' == 3);
-  msg_type_HelloRetryRequest'
+inline_for_extraction
+let msg_type_HelloRetryRequest : msg_type = ((0xABuy, 0xCDuy), 0xEFuy)
 
-type msg_type_other = (msg_type: msg_type { msg_type <> msg_type_HelloRetryRequest } )
+inline_for_extraction
+let msg_type_eq (x y: msg_type) : Tot bool =
+  let ((a1, b1), c1) = x in
+  let ((a2, b2), c2) = y in
+  a1 = a2 && b1 = b2 && c1 = c2
+
+type msg_type_other = (m: msg_type { msg_type_eq m msg_type_HelloRetryRequest == false })
 
 noeq
 type t_other = {
@@ -36,7 +37,7 @@ type t =
 
 inline_for_extraction
 let t_tag_cond (x: msg_type) : Tot bool =
-  x = msg_type_HelloRetryRequest
+  msg_type_eq x msg_type_HelloRetryRequest
 
 inline_for_extraction
 let t_payload (b: bool) : Tot Type =
@@ -52,12 +53,15 @@ let t_synth (x: msg_type) (y: t_payload (t_tag_cond x)) : Tot t =
   then HelloRetryRequest y
   else Other ({ msg_type = x; contents = y })
 
+let parse_msg_type : parser _ msg_type =
+  parse_u8 `nondep_then` parse_u8 `nondep_then` parse_u8
+
 inline_for_extraction
 noextract
-let parse_t_param = {
+let parse_t_param : parse_ifthenelse_param = {
   parse_ifthenelse_tag_kind = _;
   parse_ifthenelse_tag_t = _;
-  parse_ifthenelse_tag_parser = parse_flbytes 3;
+  parse_ifthenelse_tag_parser = parse_msg_type;
   parse_ifthenelse_tag_cond = t_tag_cond;
   parse_ifthenelse_payload_t = t_payload;
   parse_ifthenelse_payload_parser = parse_t_payload;
@@ -67,24 +71,3 @@ let parse_t_param = {
 }
 
 let parse_t : parser _ t = parse_ifthenelse parse_t_param
-
-inline_for_extraction
-let serialize_t_payload (b: bool) : Tot (serializer (dsnd (parse_t_param.parse_ifthenelse_payload_parser b))) =
-  if b then serialize_u32 else serialize_u16
-
-inline_for_extraction
-let t_synth_recip (x: t) : GTot (t: msg_type & (t_payload (t_tag_cond t))) =
-  match x with
-  | HelloRetryRequest y -> (| msg_type_HelloRetryRequest, y |)
-  | Other m -> (| m.msg_type, m.contents |)
-
-inline_for_extraction
-noextract
-let serialize_t_param : serialize_ifthenelse_param parse_t_param = {
-  serialize_ifthenelse_tag_serializer = serialize_flbytes 3;
-  serialize_ifthenelse_payload_serializer = serialize_t_payload;
-  serialize_ifthenelse_synth_recip = t_synth_recip;
-  serialize_ifthenelse_synth_inverse = (fun x -> ());
-}
-
-let serialize_t : serializer parse_t = serialize_ifthenelse serialize_t_param
