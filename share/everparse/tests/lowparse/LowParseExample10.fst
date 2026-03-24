@@ -111,6 +111,80 @@ fn access_payload
 
 #pop-options
 
+(* Separate accessors for HelloRetryRequest and Other payloads,
+   using peek_trade_gen to get the payload sub-slice *)
+
+let vmatch_HelloRetryRequest (x: U32.t) (v: t) : slprop =
+  pure (v == HelloRetryRequest x)
+
+let vmatch_other (x: U16.t) (v: t) : slprop =
+  pure (Other? v /\ x == (match v with Other m -> m.contents | _ -> x))
+
+#push-options "--z3rlimit 32"
+
+inline_for_extraction
+fn access_HelloRetryRequest
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+  requires PPB.pts_to_parsed parse_t input #pm v ** pure (HelloRetryRequest? v)
+  returns res: U32.t
+  ensures vmatch_HelloRetryRequest res v **
+    Trade.trade (vmatch_HelloRetryRequest res v) (PPB.pts_to_parsed parse_t input #pm v)
+{
+  PPB.pts_to_parsed_elim input;
+  with w . assert (pts_to input #pm w);
+  parse_ifthenelse_eq parse_t_param w;
+  nondep_then_eq (nondep_then parse_u8 parse_u8) parse_u8 w;
+  nondep_then_eq parse_u8 parse_u8 w;
+  parser_kind_prop_equiv parse_u8_kind parse_u8;
+  let off1 = jump_msg_type input 0sz;
+  pts_to_len input;
+  parser_kind_prop_equiv parse_u32_kind parse_u32;
+  let res = PPB.read_parsed_from_validator_success leaf_read_u32 input off1 (len input);
+  PPB.pts_to_parsed_intro_injective parse_t input v;
+  Trade.trans (PPB.pts_to_parsed parse_t input #pm v) (pts_to input #pm w) (PPB.pts_to_parsed parse_t input #pm v);
+  Trade.elim (PPB.pts_to_parsed parse_t input #pm v) (PPB.pts_to_parsed parse_t input #pm v);
+  fold (vmatch_HelloRetryRequest res v);
+  intro (Trade.trade (vmatch_HelloRetryRequest res v) (PPB.pts_to_parsed parse_t input #pm v))
+    #(PPB.pts_to_parsed parse_t input #pm v) fn _ {
+    unfold (vmatch_HelloRetryRequest res v)
+  };
+  res
+}
+
+inline_for_extraction
+fn access_other
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+  requires PPB.pts_to_parsed parse_t input #pm v ** pure (Other? v)
+  returns res: U16.t
+  ensures vmatch_other res v **
+    Trade.trade (vmatch_other res v) (PPB.pts_to_parsed parse_t input #pm v)
+{
+  PPB.pts_to_parsed_elim input;
+  with w . assert (pts_to input #pm w);
+  parse_ifthenelse_eq parse_t_param w;
+  nondep_then_eq (nondep_then parse_u8 parse_u8) parse_u8 w;
+  nondep_then_eq parse_u8 parse_u8 w;
+  parser_kind_prop_equiv parse_u8_kind parse_u8;
+  let off1 = jump_msg_type input 0sz;
+  pts_to_len input;
+  let res = PPB.read_parsed_from_validator_success leaf_read_u16 input off1 (len input);
+  PPB.pts_to_parsed_intro_injective parse_t input v;
+  Trade.trans (PPB.pts_to_parsed parse_t input #pm v) (pts_to input #pm w) (PPB.pts_to_parsed parse_t input #pm v);
+  Trade.elim (PPB.pts_to_parsed parse_t input #pm v) (PPB.pts_to_parsed parse_t input #pm v);
+  fold (vmatch_other res v);
+  intro (Trade.trade (vmatch_other res v) (PPB.pts_to_parsed parse_t input #pm v))
+    #(PPB.pts_to_parsed parse_t input #pm v) fn _ {
+    unfold (vmatch_other res v)
+  };
+  res
+}
+
+#pop-options
+
 fn main ()
   requires emp
   returns r: I32.t
