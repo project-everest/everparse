@@ -301,6 +301,8 @@ jobs:
         # This will install Cygwin as well
       - name: Install Cygwin packages
         shell: C:\.opam\.cygwin\root\bin\bash.exe --login '{0}'
+        env:
+          CYGWIN_ROOT: C:\.opam\.cygwin\root
         run: >-
           "$GITHUB_WORKSPACE"/src/package/windows/install-cygwin-packages.sh
       - uses: actions/download-artifact@v4

@@ -314,6 +314,8 @@ jobs:
 
       - name: Install Cygwin packages
         shell: C:\.opam\.cygwin\root\bin\bash.exe --login '{0}'
+        env:
+          CYGWIN_ROOT: C:\.opam\.cygwin\root
         run: >-
           "$GITHUB_WORKSPACE"/src/package/windows/install-cygwin-packages.sh
 
