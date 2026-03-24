@@ -30,42 +30,13 @@ let leaf_read_u8 : PPB.leaf_reader parse_u8 =
 (* leaf_reader for msg_type = parse_u8 `nondep_then` parse_u8 `nondep_then` parse_u8
    Read the three bytes sequentially using peek_trade_gen *)
 
-#push-options "--z3rlimit 32"
-
-inline_for_extraction
-fn leaf_read_msg_type_fn
-  (input: S.slice byte)
-  (#pm: perm)
-  (#v: Ghost.erased msg_type)
-  requires PPB.pts_to_parsed parse_msg_type input #pm v
-  returns res: msg_type
-  ensures PPB.pts_to_parsed parse_msg_type input #pm v ** pure (res == Ghost.reveal v)
-{
-  PPB.pts_to_parsed_elim input;
-  with w . assert (S.pts_to input #pm w);
-  nondep_then_eq (nondep_then parse_u8 parse_u8) parse_u8 w;
-  nondep_then_eq parse_u8 parse_u8 w;
-  parser_kind_prop_equiv parse_u8_kind parse_u8;
-  let mut poff = 0sz;
-  let _ = LPI.validate_u8 input poff;
-  let off1 = !poff;
-  let a = PPB.read_parsed_from_validator_success leaf_read_u8 input 0sz off1;
-  let _ = LPI.validate_u8 input poff;
-  let off2 = !poff;
-  let b = PPB.read_parsed_from_validator_success leaf_read_u8 input off1 off2;
-  let _ = LPI.validate_u8 input poff;
-  let off3 = !poff;
-  let c = PPB.read_parsed_from_validator_success leaf_read_u8 input off2 off3;
-  PPB.pts_to_parsed_intro_injective parse_msg_type input v;
-  Trade.trans (PPB.pts_to_parsed parse_msg_type input #pm v) (S.pts_to input #pm w) (PPB.pts_to_parsed parse_msg_type input #pm v);
-  Trade.elim (PPB.pts_to_parsed parse_msg_type input #pm v) (PPB.pts_to_parsed parse_msg_type input #pm v);
-  ((a, b), c)
-}
-
 inline_for_extraction noextract
-let leaf_read_msg_type : PPB.leaf_reader parse_msg_type = leaf_read_msg_type_fn
-
-#pop-options
+let leaf_read_msg_type : PPB.leaf_reader parse_msg_type =
+  PPC.leaf_read_nondep_then
+    (PPC.leaf_read_nondep_then leaf_read_u8 LPI.jump_u8 leaf_read_u8 ())
+    (LPC.jump_nondep_then LPI.jump_u8 LPI.jump_u8)
+    leaf_read_u8
+    ()
 
 (* Pulse validator *)
 

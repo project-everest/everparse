@@ -535,6 +535,102 @@ fn validate_filter_and_then
 
 (* validate_synth: validate a parser composed with a synthesis function *)
 
+(* split_nondep_then: split a pts_to_parsed for nondep_then into two sub-slices *)
+
+let split_nondep_then_post
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind) (#t2: Type0) (p2: parser k2 t2)
+  (input: slice byte) (pm: perm) (v: Ghost.erased (t1 & t2))
+  (res: (slice byte & slice byte))
+: slprop
+= PPB.pts_to_parsed p1 (fst res) #(pm /. 2.0R) (fst v) **
+  PPB.pts_to_parsed p2 (snd res) #(pm /. 2.0R) (snd v) **
+  Trade.trade
+    (PPB.pts_to_parsed p1 (fst res) #(pm /. 2.0R) (fst v) **
+     PPB.pts_to_parsed p2 (snd res) #(pm /. 2.0R) (snd v))
+    (PPB.pts_to_parsed (nondep_then p1 p2) input #pm v)
+
+inline_for_extraction
+fn split_nondep_then
+  (#t1 #t2: Type0)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 t2)
+  (j1: LPS.jumper p1)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (t1 & t2))
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  requires PPB.pts_to_parsed (nondep_then p1 p2) input #pm v
+  returns res: (slice byte & slice byte)
+  ensures split_nondep_then_post p1 p2 input pm v res
+{
+  PPB.pts_to_parsed_elim input;
+  with w . assert (S.pts_to input #pm w);
+  nondep_then_eq #k1 #t1 p1 #k2 #t2 p2 w;
+  parser_kind_prop_equiv k1 p1;
+  let off1 = j1 input 0sz;
+  let input1, input2 = split_trade input off1;
+  with wb1 . assert (S.pts_to input1 #pm wb1);
+  with wb2 . assert (S.pts_to input2 #pm wb2);
+  Trade.trans (S.pts_to input1 #pm wb1 ** S.pts_to input2 #pm wb2) (S.pts_to input #pm w) (PPB.pts_to_parsed (nondep_then p1 p2) input #pm v);
+  parse_strong_prefix p1 w wb1;
+  let gv1 = Ghost.hide (fst (Ghost.reveal v));
+  let gv2 = Ghost.hide (snd (Ghost.reveal v));
+  PPB.pts_to_parsed_intro p1 input1 gv1;
+  PPB.pts_to_parsed_intro p2 input2 gv2;
+  Trade.prod (PPB.pts_to_parsed p1 input1 #(pm /. 2.0R) gv1) (S.pts_to input1 #pm wb1) (PPB.pts_to_parsed p2 input2 #(pm /. 2.0R) gv2) (S.pts_to input2 #pm wb2);
+  Trade.trans (PPB.pts_to_parsed p1 input1 #(pm /. 2.0R) gv1 ** PPB.pts_to_parsed p2 input2 #(pm /. 2.0R) gv2) (S.pts_to input1 #pm wb1 ** S.pts_to input2 #pm wb2) (PPB.pts_to_parsed (nondep_then p1 p2) input #pm v);
+  fold (split_nondep_then_post p1 p2 input pm v (input1, input2));
+  (input1, input2)
+}
+
+(* leaf_read_nondep_then: read a non-dependent pair using split *)
+
+inline_for_extraction
+fn leaf_read_nondep_then
+  (#t1 #t2: Type0)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 t2)
+  (r1: PPB.leaf_reader p1)
+  (j1: LPS.jumper p1)
+  (r2: PPB.leaf_reader p2)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+: PPB.leaf_reader #(t1 & t2) #(and_then_kind k1 k2) (nondep_then p1 p2)
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (t1 & t2))
+{
+  PPB.pts_to_parsed_elim input;
+  with w . assert (S.pts_to input #pm w);
+  nondep_then_eq #k1 #t1 p1 #k2 #t2 p2 w;
+  parser_kind_prop_equiv k1 p1;
+  let off1 = j1 input 0sz;
+  let input1, input2 = split_trade input off1;
+  with wb1 . assert (S.pts_to input1 #pm wb1);
+  with wb2 . assert (S.pts_to input2 #pm wb2);
+  Trade.trans (S.pts_to input1 #pm wb1 ** S.pts_to input2 #pm wb2) (S.pts_to input #pm w) (PPB.pts_to_parsed (nondep_then p1 p2) input #pm v);
+  parse_strong_prefix p1 w wb1;
+  let gv1 = Ghost.hide (fst (Ghost.reveal v));
+  let gv2 = Ghost.hide (snd (Ghost.reveal v));
+  PPB.pts_to_parsed_intro p1 input1 gv1;
+  PPB.pts_to_parsed_intro p2 input2 gv2;
+  let a = r1 input1;
+  let b = r2 input2;
+  Trade.prod (PPB.pts_to_parsed p1 input1 #(pm /. 2.0R) gv1) (S.pts_to input1 #pm wb1) (PPB.pts_to_parsed p2 input2 #(pm /. 2.0R) gv2) (S.pts_to input2 #pm wb2);
+  Trade.elim
+    (PPB.pts_to_parsed p1 input1 #(pm /. 2.0R) gv1 ** PPB.pts_to_parsed p2 input2 #(pm /. 2.0R) gv2)
+    (S.pts_to input1 #pm wb1 ** S.pts_to input2 #pm wb2);
+  Trade.elim
+    (S.pts_to input1 #pm wb1 ** S.pts_to input2 #pm wb2)
+    (PPB.pts_to_parsed (nondep_then p1 p2) input #pm v);
+  (a, b)
+}
+
 (* validate_nondep_then: validate two independent parsers in sequence *)
 
 inline_for_extraction
