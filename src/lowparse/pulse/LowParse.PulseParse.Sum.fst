@@ -318,6 +318,42 @@ let validate_dsum_cases_dispatch
 : Tot (validate_dsum_cases_t t f g (maybe_enum_key_of_repr (dsum_enum t) tg))
 = destr (fun _ -> eq_trivial) (validate_dsum_cases_if t f g) (fun _ _ -> ()) (fun _ _ _ _ -> ()) (validate_dsum_cases' t f f32 g32) tg
 
+inline_for_extraction
+let validate_dsum_cases'_destr
+  (s: dsum)
+  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
+  (f' : (x: dsum_known_key s) -> Tot (B.validator (dsnd (f x))))
+  (#k: parser_kind)
+  (#g: parser k (dsum_type_of_unknown_tag s))
+  (g' : B.validator g)
+  (destr: dep_enum_destr (dsum_enum s) (fun k -> validate_dsum_cases_t s f g (Known k)))
+  (x: dsum_key s)
+: Tot (validate_dsum_cases_t s f g x)
+= match x with
+  | Known k ->
+    destr
+      _
+      (fun k -> validate_dsum_cases_if s f g (Known k))
+      (fun _ _ -> ())
+      (fun _ _ _ _ -> ())
+      (fun k -> validate_dsum_cases' s f f' g' (Known k))
+      k
+  | Unknown r -> validate_dsum_cases' s f f' g' (Unknown r)
+
+inline_for_extraction
+let validate_dsum_cases
+  (s: dsum)
+  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
+  (f' : (x: dsum_known_key s) -> Tot (B.validator (dsnd (f x))))
+  (#k: parser_kind)
+  (#g: parser k (dsum_type_of_unknown_tag s))
+  (g' : B.validator g)
+  (destr: dep_enum_destr (dsum_enum s) (fun k -> validate_dsum_cases_t s f g (Known k)))
+  (x: dsum_key s)
+: Tot (B.validator (parse_dsum_cases s f g x))
+= Classical.forall_intro (parse_dsum_cases_eq' s f g x);
+  B.validate_ext (validate_dsum_cases'_destr s f f' g' destr x) (parse_dsum_cases s f g x)
+
 #push-options "--z3rlimit 64"
 
 inline_for_extraction
@@ -655,6 +691,42 @@ let jump_dsum_cases_dispatch
   (tg: dsum_repr_type t)
 : Tot (jump_dsum_cases_t t f g (maybe_enum_key_of_repr (dsum_enum t) tg))
 = destr (fun _ -> eq_trivial) (jump_dsum_cases_if t f g) (fun _ _ -> ()) (fun _ _ _ _ -> ()) (jump_dsum_cases' t f f32 g32) tg
+
+inline_for_extraction
+let jump_dsum_cases'_destr
+  (s: dsum)
+  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
+  (f' : (x: dsum_known_key s) -> Tot (B.jumper (dsnd (f x))))
+  (#k: parser_kind)
+  (#g: parser k (dsum_type_of_unknown_tag s))
+  (g' : B.jumper g)
+  (destr: dep_enum_destr (dsum_enum s) (fun k -> jump_dsum_cases_t s f g (Known k)))
+  (x: dsum_key s)
+: Tot (jump_dsum_cases_t s f g x)
+= match x with
+  | Known k ->
+    destr
+      _
+      (fun k -> jump_dsum_cases_if s f g (Known k))
+      (fun _ _ -> ())
+      (fun _ _ _ _ -> ())
+      (fun k -> jump_dsum_cases' s f f' g' (Known k))
+      k
+  | Unknown r -> jump_dsum_cases' s f f' g' (Unknown r)
+
+inline_for_extraction
+let jump_dsum_cases
+  (s: dsum)
+  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
+  (f' : (x: dsum_known_key s) -> Tot (B.jumper (dsnd (f x))))
+  (#k: parser_kind)
+  (#g: parser k (dsum_type_of_unknown_tag s))
+  (g' : B.jumper g)
+  (destr: dep_enum_destr (dsum_enum s) (fun k -> jump_dsum_cases_t s f g (Known k)))
+  (x: dsum_key s)
+: Tot (B.jumper (parse_dsum_cases s f g x))
+= Classical.forall_intro (parse_dsum_cases_eq' s f g x);
+  B.jump_ext (jump_dsum_cases'_destr s f f' g' destr x) (parse_dsum_cases s f g x)
 
 #push-options "--z3rlimit 64"
 
