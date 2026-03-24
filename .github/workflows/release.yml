@@ -307,7 +307,7 @@ jobs:
       - run: git config --global core.autocrlf input
 
       - name: Set-up OCaml
-        uses: ocaml/setup-ocaml@v3
+        uses: ocaml/setup-ocaml@v3.4.8
         with:
           ocaml-compiler: 4.14.2
         # This will install Cygwin as well
