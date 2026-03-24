@@ -62,6 +62,55 @@ let jump_t : LPS.jumper parse_t =
     (fun b -> if b then LPI.jump_u32 else LPI.jump_u16)
     ()
 
+(* leaf_readers for payload types *)
+
+inline_for_extraction noextract
+let leaf_read_u16 : PPB.leaf_reader parse_u16 =
+  PPB.leaf_reader_of_serialized (LPI.read_u16' ())
+
+inline_for_extraction noextract
+let leaf_read_u32 : PPB.leaf_reader parse_u32 =
+  PPB.leaf_reader_of_serialized (LPI.read_u32' ())
+
+(* Accessor: read the tag and payload from a validated ifthenelse.
+   After validation, use peek_trade_gen to get a sub-slice, read
+   the tag to determine which branch, then jump + read payload. *)
+
+#push-options "--z3rlimit 32"
+
+fn access_payload
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (offset: SZ.t)
+  (off: SZ.t)
+  (_: squash (LPS.validator_success parse_t offset v off))
+  requires pts_to input #pm v
+  returns res: t
+  ensures pts_to input #pm v
+{
+  let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
+  parse_ifthenelse_eq parse_t_param sinput;
+  nondep_then_eq (nondep_then parse_u8 parse_u8) parse_u8 sinput;
+  nondep_then_eq parse_u8 parse_u8 sinput;
+  parser_kind_prop_equiv parse_u8_kind parse_u8;
+  let tag_off = SZ.add offset 3sz;
+  let tag_val = PPB.read_parsed_from_validator_success leaf_read_msg_type input offset tag_off;
+  let b = t_tag_cond tag_val;
+  Seq.lemma_eq_elim
+    (Seq.slice sinput 3 (Seq.length sinput))
+    (Seq.slice v (SZ.v tag_off) (Seq.length v));
+  if b {
+    let payload = PPB.read_parsed_from_validator_success leaf_read_u32 input tag_off off;
+    HelloRetryRequest payload
+  } else {
+    let payload = PPB.read_parsed_from_validator_success leaf_read_u16 input tag_off off;
+    Other ({ msg_type = tag_val; contents = payload })
+  }
+}
+
+#pop-options
+
 fn main ()
   requires emp
   returns r: I32.t
