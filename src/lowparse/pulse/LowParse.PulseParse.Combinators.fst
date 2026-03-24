@@ -12,6 +12,7 @@ module S = Pulse.Lib.Slice
 module LPS = LowParse.Pulse.Base
 module LPC = LowParse.Pulse.Combinators
 module PPB = LowParse.PulseParse.Base
+include LowParse.CLens
 
 (* ret / empty *)
 
@@ -989,4 +990,112 @@ fn read_and_zero_copy_parse_dtuple2
     (vmatch res v);
   Trade.trans (vmatch res v) _ _;
   res
+}
+
+(* accessor combinators *)
+
+let clens_synth_inv
+  (#t1 #t2: Type)
+  (f: (t1 -> GTot t2) { synth_injective f })
+  (g: (t2 -> GTot t1) { synth_inverse f g })
+: Tot (clens t2 t1)
+= {
+  clens_cond = (fun _ -> True);
+  clens_get = g;
+}
+
+inline_for_extraction
+fn accessor_id (#k: parser_kind) (#t: Type0) (p: parser k t)
+: PPB.accessor p p (clens_id t)
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+{
+  Trade.refl (PPB.pts_to_parsed p input #pm v);
+  input
+}
+
+inline_for_extraction
+fn accessor_compose
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1)
+  (#k2: parser_kind) (#t2: Type0) (#p2: parser k2 t2)
+  (#k3: parser_kind) (#t3: Type0) (#p3: parser k3 t3)
+  (#cl12: clens t1 t2)
+  (#cl23: clens t2 t3)
+  (a12: PPB.accessor p1 p2 cl12)
+  (a23: PPB.accessor p2 p3 cl23)
+  (sq: squash (clens_compose_strong_pre cl12 cl23))
+: PPB.accessor p1 p3 (clens_compose_strong cl12 cl23)
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t1)
+{
+  let mid = a12 input;
+  with v2 pm2 . assert (PPB.pts_to_parsed p2 mid #pm2 v2);
+  let result = a23 mid;
+  with v3 pm3 . assert (PPB.pts_to_parsed p3 result #pm3 v3);
+  Trade.trans
+    (PPB.pts_to_parsed p3 result #pm3 v3)
+    (PPB.pts_to_parsed p2 mid #pm2 v2)
+    (PPB.pts_to_parsed p1 input #pm v);
+  result
+}
+
+inline_for_extraction
+fn accessor_fst
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1)
+  (#k2: parser_kind) (#t2: Type0) (#p2: parser k2 t2)
+  (j1: LPS.jumper p1)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+: PPB.accessor (nondep_then p1 p2) p1 (clens_fst t1 t2)
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (t1 & t2))
+{
+  let res = split_nondep_then j1 input sq;
+  unfold (split_nondep_then_post p1 p2 input pm v res);
+  Trade.elim_hyp_r
+    (PPB.pts_to_parsed p1 (fst res) #(pm /. 2.0R) (fst v))
+    (PPB.pts_to_parsed p2 (snd res) #(pm /. 2.0R) (snd v))
+    (PPB.pts_to_parsed (nondep_then p1 p2) input #pm v);
+  fst res
+}
+
+inline_for_extraction
+fn accessor_snd
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1)
+  (#k2: parser_kind) (#t2: Type0) (#p2: parser k2 t2)
+  (j1: LPS.jumper p1)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+: PPB.accessor (nondep_then p1 p2) p2 (clens_snd t1 t2)
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (t1 & t2))
+{
+  let res = split_nondep_then j1 input sq;
+  unfold (split_nondep_then_post p1 p2 input pm v res);
+  Trade.elim_hyp_l
+    (PPB.pts_to_parsed p1 (fst res) #(pm /. 2.0R) (fst v))
+    (PPB.pts_to_parsed p2 (snd res) #(pm /. 2.0R) (snd v))
+    (PPB.pts_to_parsed (nondep_then p1 p2) input #pm v);
+  snd res
+}
+
+inline_for_extraction
+fn accessor_synth
+  (#k: parser_kind) (#t1 #t2: Type0) (#p: parser k t1)
+  (f: (t1 -> GTot t2) { synth_injective f })
+  (g: (t2 -> GTot t1) { synth_inverse f g })
+: PPB.accessor (parse_synth p f) p (clens_synth_inv f g)
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t2)
+{
+  pts_to_parsed_synth_l2r_trade p f g input;
+  input
 }

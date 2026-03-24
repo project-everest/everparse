@@ -708,3 +708,23 @@ fn zero_copy_parse_ifthenelse
     rfalse () input
   }
 }
+
+include LowParse.CLens
+
+inline_for_extraction
+let accessor
+  (#k1: parser_kind) (#t1: Type0) (p1: parser k1 t1)
+  (#k2: parser_kind) (#t2: Type0) (p2: parser k2 t2)
+  (cl: clens t1 t2)
+: Tot Type
+= (input: slice byte) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased t1) ->
+  stt (slice byte)
+    (pts_to_parsed p1 input #pm v ** pure (cl.clens_cond v))
+    (fun result -> exists* v2 pm' .
+      pts_to_parsed p2 result #pm' v2 **
+      pure (cl.clens_cond v /\ v2 == cl.clens_get v) **
+      Trade.trade
+        (pts_to_parsed p2 result #pm' v2)
+        (pts_to_parsed p1 input #pm v))

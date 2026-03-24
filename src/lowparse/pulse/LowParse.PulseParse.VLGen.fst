@@ -72,6 +72,8 @@ let validate_vlgen
     (validate_bounded_vlgen vmin vmax vk rk s v sq)
     (synth_vlgen vmin vmax s)
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction
 fn validate_vlgen_weak
   (vmin: der_length_t)
@@ -106,6 +108,8 @@ fn validate_vlgen_weak
     false
   }
 }
+
+#pop-options
 
 (* ========== VLGen jumpers ========== *)
 

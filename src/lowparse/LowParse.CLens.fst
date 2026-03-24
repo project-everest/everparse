@@ -2,7 +2,7 @@ module LowParse.CLens
 
 noeq
 type clens (t1: Type) (t2: Type) = {
-  clens_cond: t1 -> GTot Type0;
+  clens_cond: t1 -> GTot prop;
   clens_get: (x1: t1) -> Ghost t2 (requires (clens_cond x1)) (ensures (fun _ -> True));
 (*  
   clens_put: (x1: t1) -> t2 -> Ghost t1 (requires (clens_cond x1)) (ensures (fun x1' -> clens_cond x1'));
@@ -15,6 +15,16 @@ type clens (t1: Type) (t2: Type) = {
 let clens_id (t: Type) : Tot (clens t t) = {
   clens_cond = (fun _ -> True);
   clens_get = (fun x -> x);
+}
+
+let clens_fst (t1: Type) (t2: Type) : Tot (clens (t1 & t2) t1) = {
+  clens_cond = (fun _ -> True);
+  clens_get = fst;
+}
+
+let clens_snd (t1: Type) (t2: Type) : Tot (clens (t1 & t2) t2) = {
+  clens_cond = (fun _ -> True);
+  clens_get = snd;
 }
 
 let clens_eq (#t: Type) (#t': Type) (cl1: clens t t') (cl2: clens t t') : GTot Type0 =
@@ -163,9 +173,9 @@ let clens_compose_cond
   (#t1: Type)
   (#t2: Type)
   (l12: clens t1 t2)
-  (clens_cond2: t2 -> GTot Type0)
+  (clens_cond2: t2 -> GTot prop)
   (x1: t1)
-: GTot Type0
+: GTot prop
 = l12.clens_cond x1 /\
   clens_cond2 (l12.clens_get x1)
 
