@@ -25,7 +25,7 @@ endif
 
 # Change these if you want to use your own clones
 FStar_repo=https://github.com/FStarLang/FStar
-karamel_repo=https://github.com/FStarLang/karamel
+karamel_repo=https://github.com/tahina-pro/karamel
 pulse_repo=https://github.com/FStarLang/pulse
 
 # This rule is necessary for the package and release CI rules to pull
