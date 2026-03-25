@@ -5,6 +5,8 @@ on:
     - fstar2
     - _**
   pull_request:
+    branches-ignore:
+    - fstar2
   workflow_dispatch:
 
 jobs:
