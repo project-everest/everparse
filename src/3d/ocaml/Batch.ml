@@ -391,6 +391,9 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
                               "-minimal" ::
                                 "-add-include" :: "\"EverParse.h\"" ::
                                   "-fextern-c" ::
+                                    (if Options.get_hoist_locals ()
+                                     then ["-fhoist-locals"; "-fmerge"; "prefix"]
+                                     else []) @
                                     external_types_lib_args @
                                     external_api_lib_args @
                                     external_types_no_prefix_args @
