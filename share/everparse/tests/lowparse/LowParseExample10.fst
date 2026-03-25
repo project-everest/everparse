@@ -20,6 +20,8 @@ module U8 = FStar.UInt8
 module U16 = FStar.UInt16
 module U32 = FStar.UInt32
 module I32 = FStar.Int32
+module Cast = FStar.Int.Cast
+module A = Pulse.Lib.Array
 
 (* leaf_reader for parse_u8 *)
 
@@ -141,11 +143,11 @@ fn access_HelloRetryRequest
   (input: S.slice byte)
   (#pm: perm)
   (#v: Ghost.erased t)
-  requires PPB.pts_to_parsed parse_t input #pm v ** pure (HelloRetryRequest? v)
+  requires PPB.pts_to_parsed parse_t input #pm v ** pure (clens_HelloRetryRequest.clens_cond v)
   returns result: S.slice byte
   ensures exists* v2 pm' .
     PPB.pts_to_parsed parse_u32 result #pm' v2 **
-    pure (HelloRetryRequest? (Ghost.reveal v) /\ v2 == clens_HelloRetryRequest.clens_get v) **
+    pure (clens_HelloRetryRequest.clens_cond v /\ v2 == clens_HelloRetryRequest.clens_get v) **
     Trade.trade (PPB.pts_to_parsed parse_u32 result #pm' v2) (PPB.pts_to_parsed parse_t input #pm v)
 {
   PPB.pts_to_parsed_elim input;
@@ -167,11 +169,11 @@ fn access_other
   (input: S.slice byte)
   (#pm: perm)
   (#v: Ghost.erased t)
-  requires PPB.pts_to_parsed parse_t input #pm v ** pure (Other? v)
+  requires PPB.pts_to_parsed parse_t input #pm v ** pure (clens_other.clens_cond v)
   returns result: S.slice byte
   ensures exists* v2 pm' .
     PPB.pts_to_parsed parse_u16 result #pm' v2 **
-    pure (Other? (Ghost.reveal v) /\ v2 == clens_other.clens_get v) **
+    pure (clens_other.clens_cond v /\ v2 == clens_other.clens_get v) **
     Trade.trade (PPB.pts_to_parsed parse_u16 result #pm' v2) (PPB.pts_to_parsed parse_t input #pm v)
 {
   PPB.pts_to_parsed_elim input;
@@ -189,8 +191,79 @@ fn access_other
 
 #pop-options
 
+(* Test function: validate, determine branch, and use the appropriate accessor *)
+
+#push-options "--z3rlimit 64"
+
+fn dummy
+  (input: S.slice byte)
+  (which: U32.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  requires S.pts_to input #pm v
+  returns res: U32.t
+  ensures S.pts_to input #pm v
+{
+  let mut poffset = 0sz;
+  let is_valid = validate_t input poffset;
+  if is_valid {
+    let off = !poffset;
+    let sinput = Ghost.hide (Seq.slice v (SZ.v 0sz) (Seq.length v));
+    parse_ifthenelse_eq parse_t_param sinput;
+    nondep_then_eq (nondep_then parse_u8 parse_u8) parse_u8 sinput;
+    nondep_then_eq parse_u8 parse_u8 sinput;
+    parser_kind_prop_equiv parse_u8_kind parse_u8;
+    let tag_val = PPB.read_parsed_from_validator_success leaf_read_msg_type input 0sz 3sz;
+    let b = t_tag_cond tag_val;
+    let input' = PPB.peek_trade_gen parse_t input 0sz off;
+    with v1 . assert (PPB.pts_to_parsed parse_t input' #(pm /. 2.0R) v1);
+    if b {
+      let sub = access_HelloRetryRequest input';
+      with v2 pm2 . assert (PPB.pts_to_parsed parse_u32 sub #pm2 v2);
+      let x = leaf_read_u32 sub;
+      Trade.elim (PPB.pts_to_parsed parse_u32 sub #pm2 v2) (PPB.pts_to_parsed parse_t input' #(pm /. 2.0R) v1);
+      Trade.elim (PPB.pts_to_parsed parse_t input' #(pm /. 2.0R) v1) (S.pts_to input #pm v);
+      x
+    } else {
+      let sub = access_other input';
+      with v2 pm2 . assert (PPB.pts_to_parsed parse_u16 sub #pm2 v2);
+      let x = leaf_read_u16 sub;
+      Trade.elim (PPB.pts_to_parsed parse_u16 sub #pm2 v2) (PPB.pts_to_parsed parse_t input' #(pm /. 2.0R) v1);
+      Trade.elim (PPB.pts_to_parsed parse_t input' #(pm /. 2.0R) v1) (S.pts_to input #pm v);
+      Cast.uint16_to_uint32 x
+    }
+  } else {
+    0ul
+  }
+}
+
+#pop-options
+
+
+fn test ()
+  requires emp
+  ensures emp
+{
+  let mut arr = [| 0uy ; 8sz |];
+  let input = S.from_array arr 8sz;
+  input.(0sz) <- 0xABuy;
+  input.(1sz) <- 0xCDuy;
+  input.(2sz) <- 0xEFuy;
+  input.(3sz) <- 0x55uy;
+  input.(4sz) <- 0xAAuy;
+  input.(5sz) <- 0x34uy;
+  input.(6sz) <- 0x45uy;
+  input.(7sz) <- 0x00uy;
+  let res = dummy input 42ul;
+  S.to_array input;
+  ()
+}
+
 fn main ()
   requires emp
   returns r: I32.t
   ensures emp
-{ 0l }
+{
+  test ();
+  0l
+}

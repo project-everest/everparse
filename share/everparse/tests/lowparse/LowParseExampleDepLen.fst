@@ -162,6 +162,23 @@ let unit_test_struct_serializer : serializer unit_test_struct_parser =
     unit_test_synth_struct_recip
     ()
 
+(* Accessor for header field using PulseParse accessor type with clens.
+   The Low* version used accessor_fst to access the header from the
+   deplen structure. The Pulse version would define:
+
+     include LowParse.CLens
+
+     let clens_header : clens unit_test_struct_type unit_test_header_type = {
+       clens_cond = (fun _ -> True);
+       clens_get = (fun x -> (x.len, x.foo));
+     }
+
+     let access_header : PPB.accessor unit_test_struct_parser
+                                      unit_test_header_parser clens_header = ...
+
+   However, this requires bounded_int32 leaf_readers and a Pulse
+   validator for parse_deplen, which are not yet available. *)
+
 fn main ()
   requires emp
   returns r: I32.t
