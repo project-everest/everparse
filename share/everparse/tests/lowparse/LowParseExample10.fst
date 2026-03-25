@@ -113,14 +113,17 @@ fn access_payload
 
 #pop-options
 
-(* Separate accessors for HelloRetryRequest and Other payloads,
-   using peek_trade_gen to get the payload sub-slice *)
+(* synth_recip for parse_t_param (no serializer needed) *)
 
-let vmatch_HelloRetryRequest (x: U32.t) (v: t) : slprop =
-  pure (v == HelloRetryRequest x)
+let synth_recip_t : PPITE.ifthenelse_synth_recip_t parse_t_param =
+  fun (x: t) ->
+    match x with
+    | HelloRetryRequest y -> (| msg_type_HelloRetryRequest, y |)
+    | Other m -> (| m.msg_type, m.contents |)
 
-let vmatch_other (x: U16.t) (v: t) : slprop =
-  pure (Other? v /\ x == (match v with Other m -> m.contents | _ -> x))
+let synth_inverse_t (x: t) : Lemma
+  (let (| tg, y |) = synth_recip_t x in t_synth tg y == x)
+= ()
 
 (* clens definitions for the accessor type *)
 
@@ -136,60 +139,19 @@ let clens_other : clens t U16.t = {
   clens_get = (fun (x: t) -> (match x with Other m -> m.contents) <: Ghost U16.t (requires (Other? x)) (ensures (fun _ -> True)));
 }
 
-#push-options "--z3rlimit 32"
+(* Accessors using accessor_ifthenelse_payload combinator + accessor_ext *)
 
 inline_for_extraction
-fn access_HelloRetryRequest
-  (input: S.slice byte)
-  (#pm: perm)
-  (#v: Ghost.erased t)
-  requires PPB.pts_to_parsed parse_t input #pm v ** pure (clens_HelloRetryRequest.clens_cond v)
-  returns result: S.slice byte
-  ensures exists* v2 pm' .
-    PPB.pts_to_parsed parse_u32 result #pm' v2 **
-    pure (clens_HelloRetryRequest.clens_cond v /\ v2 == clens_HelloRetryRequest.clens_get v) **
-    Trade.trade (PPB.pts_to_parsed parse_u32 result #pm' v2) (PPB.pts_to_parsed parse_t input #pm v)
-{
-  PPB.pts_to_parsed_elim input;
-  with w . assert (pts_to input #pm w);
-  parse_ifthenelse_eq parse_t_param w;
-  nondep_then_eq (nondep_then parse_u8 parse_u8) parse_u8 w;
-  nondep_then_eq parse_u8 parse_u8 w;
-  parser_kind_prop_equiv parse_u8_kind parse_u8;
-  let off1 = jump_msg_type input 0sz;
-  pts_to_len input;
-  parser_kind_prop_equiv parse_u32_kind parse_u32;
-  let result = PPB.peek_trade_gen parse_u32 input off1 (len input);
-  Trade.trans _ (pts_to input #pm w) (PPB.pts_to_parsed parse_t input #pm v);
-  result
-}
+let access_HelloRetryRequest : PPB.accessor parse_t parse_u32 clens_HelloRetryRequest =
+  PPC.accessor_ext
+    (PPITE.accessor_ifthenelse_payload parse_t_param synth_recip_t synth_inverse_t jump_msg_type true ())
+    clens_HelloRetryRequest ()
 
 inline_for_extraction
-fn access_other
-  (input: S.slice byte)
-  (#pm: perm)
-  (#v: Ghost.erased t)
-  requires PPB.pts_to_parsed parse_t input #pm v ** pure (clens_other.clens_cond v)
-  returns result: S.slice byte
-  ensures exists* v2 pm' .
-    PPB.pts_to_parsed parse_u16 result #pm' v2 **
-    pure (clens_other.clens_cond v /\ v2 == clens_other.clens_get v) **
-    Trade.trade (PPB.pts_to_parsed parse_u16 result #pm' v2) (PPB.pts_to_parsed parse_t input #pm v)
-{
-  PPB.pts_to_parsed_elim input;
-  with w . assert (pts_to input #pm w);
-  parse_ifthenelse_eq parse_t_param w;
-  nondep_then_eq (nondep_then parse_u8 parse_u8) parse_u8 w;
-  nondep_then_eq parse_u8 parse_u8 w;
-  parser_kind_prop_equiv parse_u8_kind parse_u8;
-  let off1 = jump_msg_type input 0sz;
-  pts_to_len input;
-  let result = PPB.peek_trade_gen parse_u16 input off1 (len input);
-  Trade.trans _ (pts_to input #pm w) (PPB.pts_to_parsed parse_t input #pm v);
-  result
-}
-
-#pop-options
+let access_other : PPB.accessor parse_t parse_u16 clens_other =
+  PPC.accessor_ext
+    (PPITE.accessor_ifthenelse_payload parse_t_param synth_recip_t synth_inverse_t jump_msg_type false ())
+    clens_other ()
 
 (* Test function: validate, determine branch, and use the appropriate accessor *)
 
