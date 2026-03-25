@@ -90,6 +90,7 @@ fn impl_zero_copy_array
   (#p: _)
   (#v: _)
 {
+  bring_cbor_map_defined_alt ();
   let ar = cbor_array_iterator_start c;
   // BEGIN FIXME: change the type of l1 in the signature of cbor_array_iterator_start
   with pl (l1: list cbor) . assert (cbor_array_iterator_match pl ar l1);

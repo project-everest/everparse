@@ -332,7 +332,7 @@ let impl_check_equiv_list_with_bound_t
 
 #pop-options
 
-#push-options "--z3rlimit 256"
+#push-options "--z3rlimit 128"
 
 inline_for_extraction
 fn impl_check_equiv_list
@@ -1094,7 +1094,7 @@ ensures pure
   ()
 }
 
-#push-options "--z3rlimit 128 --z3cliopt smt.arith.nl=false --z3cliopt smt.qi.eager_threshold=10 --fuel 4 --ifuel 8 --split_queries always"
+#push-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --z3cliopt smt.qi.eager_threshold=10 --fuel 2 --ifuel 4 --split_queries always"
 
 inline_for_extraction
 fn impl_check_equiv_map_hd_body
@@ -1478,7 +1478,7 @@ let check_map_depth_map_true
 = raw_data_item_size_eq a;
   list_of_pair_list_sum raw_data_item_size pairs
 
-#push-options "--z3rlimit 256 --fuel 4 --ext 'context_pruning:off'"
+#push-options "--z3rlimit 128 --fuel 2"
 
 fn rec impl_check_map_depth_aux
   (bound: SZ.t)

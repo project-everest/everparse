@@ -54,7 +54,7 @@ let map_group_footprint_equiv
     map_constraint_equiv f1 f2
   )
   (ensures map_group_footprint g f2)
-= ()
+= bring_cbor_map_defined_alt ()
 
 let map_constraint_included
   (f1 f2: map_constraint)
@@ -70,7 +70,7 @@ let map_group_footprint_implies
     map_constraint_included f1 f2
   )
   (ensures map_group_footprint g f2)
-= ()
+= bring_cbor_map_defined_alt ()
 
 #restart-solver
 let map_group_footprint_elim
@@ -204,7 +204,7 @@ let map_group_footprint_concat
     map_group_footprint (map_group_concat g1 g2) (map_constraint_choice f1 f2)
   ))
   [SMTPat (map_group_footprint g1 f1); SMTPat (map_group_footprint g2 f2); SMTPat (map_group_concat g1 g2)]
-= ()
+= bring_cbor_map_defined_alt ()
 
 #restart-solver
 let map_group_footprint_choice
@@ -219,7 +219,7 @@ let map_group_footprint_choice
     map_group_footprint (map_group_choice g1 g2) (map_constraint_choice f1 f2)
   ))
   [SMTPat (map_group_footprint g1 f1); SMTPat (map_group_footprint g2 f2); SMTPat (map_group_choice g1 g2)]
-= ()
+= bring_cbor_map_defined_alt ()
 
 #restart-solver
 let map_group_footprint_zero_or_one
@@ -232,7 +232,7 @@ let map_group_footprint_zero_or_one
   (ensures (
     map_group_footprint (map_group_zero_or_one g1) f1
   ))
-= ()
+= bring_cbor_map_defined_alt ()
 
 #restart-solver
 let map_group_footprint_consumes_all
@@ -350,7 +350,7 @@ let map_group_footprint_zero_or_more_match_item
 : Lemma
   (map_group_footprint (map_group_zero_or_more (map_group_match_item false key value)) (matches_map_group_entry key value))
   [SMTPat (map_group_zero_or_more (map_group_match_item false key value))]
-= ()
+= bring_cbor_map_defined_alt ()
 
 let map_group_footprint_match_item_cut
   (key value: typ)
@@ -370,7 +370,7 @@ let map_group_footprint_cut
 : Lemma
   (ensures (map_group_footprint (map_group_cut k) (matches_map_group_entry k any)))
   [SMTPat (map_group_cut k)]
-= ()
+= bring_cbor_map_defined_alt ()
 
 let cbor_map_included (c' c : cbor_map) : Tot prop =
   (forall x . Some? (cbor_map_get c' x) ==> cbor_map_get c' x == cbor_map_get c x)
@@ -2276,7 +2276,7 @@ let map_group_footprint_filtered_table
   (except: map_constraint)
 : Lemma
   (map_group_footprint (map_group_filtered_table key value except) (Util.andp (matches_map_group_entry key value) (Util.notp except)))
-= ()
+= bring_cbor_map_defined_alt ()
 
 let map_group_filtered_table_ext
   (key value: typ)

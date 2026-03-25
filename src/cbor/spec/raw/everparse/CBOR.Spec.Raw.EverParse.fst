@@ -708,7 +708,7 @@ let synth_inverse_list_of_pair_list
   [SMTPat (list_of_pair_list t nb_pairs)]
 = Classical.forall_intro (list_of_pair_list_of_list #t nb_pairs)
 
-#push-options "--z3rlimit 256"
+#push-options "--z3rlimit 64"
 #restart-solver
 
 let rec parse_pair_list_as_list
@@ -844,7 +844,7 @@ let tot_parse_nlist_parse_nlist'
   (ensures (tot_parse_nlist n p b == parse_nlist n #k p b))
 = tot_parse_nlist_parse_nlist n p b
 
-#push-options "--z3rlimit 1024 --ifuel 8 --split_queries always"
+#push-options "--z3rlimit 256 --ifuel 2 --split_queries always"
 
 #restart-solver
 let parse_raw_data_item_eq
@@ -1459,7 +1459,7 @@ let rec list_for_all_holds_on_pair_list_of_pair_list
   | [] -> ()
   | _ :: q -> list_for_all_holds_on_pair_list_of_pair_list pred q
 
-#push-options "--z3rlimit 256"
+#push-options "--z3rlimit 64"
 
 #restart-solver
 let holds_on_raw_data_item_eq_recursive
@@ -1937,7 +1937,7 @@ let bytes_lex_compare_refl
 
 #pop-options
 
-#push-options "--z3rlimit 256 --split_queries always"
+#push-options "--z3rlimit 128 --split_queries always"
 
 let serialized_lex_compare_simple_value
   (x1 x2: simple_value)
@@ -2302,7 +2302,7 @@ let lex_order_int64_correct
 
 #pop-options
 
-#push-options "--z3rlimit 256"
+#push-options "--z3rlimit 128"
 #restart-solver
 
 let serialized_lex_compare_string
