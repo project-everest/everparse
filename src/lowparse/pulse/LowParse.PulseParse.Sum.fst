@@ -1044,7 +1044,46 @@ let clens_dsum_payload
    These follow the exact same pattern as accessor_sum_tag and accessor_clens_sum_payload above. *)
 
 
-(* DSum accessors: clens definitions are available above.
-   The accessor fns are blocked by F*'s (x <: data_t) coercion
-   in parse_tagged_union_eq which loses the tag_of_data refinement.
-   A parse_dsum_tag_of_data lemma in LowParse.Spec.Sum would fix this. *)
+(* DSum tag accessor using parse_dsum_tag_of_data lemma *)
+
+#push-options "--z3rlimit 64"
+
+inline_for_extraction
+fn accessor_dsum_tag
+  (t: dsum u#0 u#0)
+  (#kt: parser_kind)
+  (#p: parser kt (dsum_repr_type t))
+  (j: B.jumper p)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (#k': parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
+: PPB.accessor (parse_dsum t p f g) (parse_maybe_enum_key p (dsum_enum t)) (clens_dsum_tag t)
+=
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (dsum_type t))
+{
+  PPB.pts_to_parsed_elim input;
+  with bytes . assert (S.pts_to input #pm bytes);
+  parse_dsum_eq' t p f g bytes;
+  parse_dsum_eq_ t p f g bytes;
+  parse_dsum_tag_of_data t p f g bytes;
+  S.pts_to_len input;
+  parser_kind_prop_equiv kt p;
+  Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
+  let off = j input 0sz;
+  let input_tag, input_payload = split_trade input off;
+  with wb_tag . assert (S.pts_to input_tag #pm wb_tag);
+  with wb_payload . assert (S.pts_to input_payload #pm wb_payload);
+  Trade.elim_hyp_r (S.pts_to input_tag #pm wb_tag) (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes);
+  Trade.trans (S.pts_to input_tag #pm wb_tag) (S.pts_to input #pm bytes) (PPB.pts_to_parsed (parse_dsum t p f g) input #pm v);
+  parse_maybe_enum_key_eq p (dsum_enum t) bytes;
+  parse_maybe_enum_key_eq p (dsum_enum t) wb_tag;
+  parse_strong_prefix p bytes wb_tag;
+  PPB.pts_to_parsed_intro (parse_maybe_enum_key p (dsum_enum t)) input_tag (dsum_tag_of_data t v);
+  Trade.trans (PPB.pts_to_parsed (parse_maybe_enum_key p (dsum_enum t)) input_tag #(pm /. 2.0R) (dsum_tag_of_data t v)) (S.pts_to input_tag #pm wb_tag) (PPB.pts_to_parsed (parse_dsum t p f g) input #pm v);
+  input_tag
+}
+
+#pop-options
