@@ -191,7 +191,7 @@ fn zero_copy_parse_fldata
 
 inline_for_extraction
 fn accessor_fldata
-  (#k: parser_kind) (#t: Type0) (p: parser k t)
+  (#k: Ghost.erased parser_kind) (#t: Type0) (p: parser k t)
   (n: nat)
 : PPB.accessor (parse_fldata p n) p (clens_id t)
 =
@@ -258,7 +258,7 @@ fn pts_to_parsed_fldata_strong_payload_trade
 
 inline_for_extraction
 fn accessor_fldata_strong
-  (#k: parser_kind) (#t: Type0) (#p: parser k t)
+  (#k: Ghost.erased parser_kind) (#t: Type0) (#p: parser k t)
   (s: serializer p)
   (n: nat)
 : PPB.accessor (parse_fldata_strong s n) p (clens_fldata_strong s n)

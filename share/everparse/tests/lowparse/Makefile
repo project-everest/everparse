@@ -5,6 +5,7 @@ LOWPARSE_PULSE_HOME ?= $(EVERPARSE_SRC_PATH)/lowparse/pulse
 
 INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/lowparse $(LOWPARSE_PULSE_HOME)
 ALREADY_CACHED := *,-LowParseTestLib,-LowParseExample,
+OTHERFLAGS += --warn_error +272
 
 OUTPUT_DIRECTORY := _output
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend

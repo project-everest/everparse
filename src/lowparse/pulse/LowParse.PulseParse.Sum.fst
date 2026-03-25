@@ -944,7 +944,7 @@ let clens_sum_payload
 inline_for_extraction
 fn accessor_sum_tag
   (t: sum u#0 u#0)
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#p: parser kt (sum_repr_type t))
   (j: B.jumper p)
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
@@ -980,7 +980,7 @@ fn accessor_sum_tag
 inline_for_extraction
 fn accessor_clens_sum_payload
   (t: sum u#0 u#0)
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#p: parser kt (sum_repr_type t))
   (j: B.jumper p)
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
@@ -1051,11 +1051,11 @@ let clens_dsum_payload
 inline_for_extraction
 fn accessor_dsum_tag
   (t: dsum u#0 u#0)
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#p: parser kt (dsum_repr_type t))
   (j: B.jumper p)
   (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
-  (#k': parser_kind)
+  (#k': Ghost.erased parser_kind)
   (g: parser k' (dsum_type_of_unknown_tag t))
   (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
 : PPB.accessor (parse_dsum t p f g) (parse_maybe_enum_key p (dsum_enum t)) (clens_dsum_tag t)
@@ -1091,11 +1091,11 @@ fn accessor_dsum_tag
 inline_for_extraction
 fn accessor_clens_dsum_payload
   (t: dsum u#0 u#0)
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#p: parser kt (dsum_repr_type t))
   (j: B.jumper p)
   (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
-  (#k': parser_kind)
+  (#k': Ghost.erased parser_kind)
   (g: parser k' (dsum_type_of_unknown_tag t))
   (k: dsum_key t)
   (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
@@ -1134,11 +1134,11 @@ fn accessor_clens_dsum_payload
 inline_for_extraction
 let accessor_clens_dsum_payload'
   (t: dsum u#0 u#0)
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#p: parser kt (dsum_repr_type t))
   (j: B.jumper p)
   (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
-  (#k': parser_kind)
+  (#k': Ghost.erased parser_kind)
   (g: parser k' (dsum_type_of_unknown_tag t))
   (k: dsum_key t)
   (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
@@ -1158,11 +1158,11 @@ let clens_dsum_unknown_payload
 inline_for_extraction
 fn accessor_clens_dsum_unknown_payload
   (t: dsum u#0 u#0)
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#p: parser kt (dsum_repr_type t))
   (j: B.jumper p)
   (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
-  (#k': parser_kind)
+  (#k': Ghost.erased parser_kind)
   (g: parser k' (dsum_type_of_unknown_tag t))
   (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
 : PPB.accessor (parse_dsum t p f g) g (clens_dsum_unknown_payload t)
@@ -1202,11 +1202,11 @@ fn accessor_clens_dsum_unknown_payload
 inline_for_extraction
 let accessor_clens_dsum_unknown_payload'
   (t: dsum u#0 u#0)
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#p: parser kt (dsum_repr_type t))
   (j: B.jumper p)
   (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
-  (#k': parser_kind)
+  (#k': Ghost.erased parser_kind)
   (g: parser k' (dsum_type_of_unknown_tag t))
   (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
 : PPB.accessor (parse_dsum t p f g) g (clens_dsum_unknown_payload t)
@@ -1227,7 +1227,7 @@ inline_for_extraction
 let accessor_clens_dsum_cases_known_payload
   (t: dsum)
   (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
-  (#ku: parser_kind)
+  (#ku: Ghost.erased parser_kind)
   (g: parser ku (dsum_type_of_unknown_tag t))
   (k: dsum_known_key t)
 : PPB.accessor (parse_dsum_cases' t f g (Known k)) (dsnd (f k)) (clens_dsum_cases_payload t (Known k))
@@ -1246,7 +1246,7 @@ inline_for_extraction
 let accessor_clens_dsum_cases_unknown_payload
   (t: dsum)
   (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
-  (#ku: parser_kind)
+  (#ku: Ghost.erased parser_kind)
   (g: parser ku (dsum_type_of_unknown_tag t))
   (k: dsum_unknown_key t)
 : PPB.accessor (parse_dsum_cases' t f g (Unknown k)) g (clens_dsum_cases_payload t (Unknown k))
@@ -1266,7 +1266,7 @@ let accessor_clens_dsum_cases_unknown_payload
 inline_for_extraction
 let accessor_clens_sum_payload'
   (t: sum u#0 u#0)
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#p: parser kt (sum_repr_type t))
   (j: B.jumper p)
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))

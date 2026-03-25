@@ -118,8 +118,8 @@ let clens_ifthenelse_payload
 
 inline_for_extraction
 fn accessor_ifthenelse_tag
-  (#kp: parser_kind)
-  (#kt: parser_kind)
+  (#kp: Ghost.erased parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#tag_t: Type0)
   (#data_t: Type0)
   (pt: parser kt tag_t)
@@ -162,9 +162,9 @@ fn accessor_ifthenelse_tag
 
 inline_for_extraction
 fn accessor_ifthenelse_payload'
-  (#kp: parser_kind)
-  (#kt: parser_kind)
-  (#kpl: parser_kind)
+  (#kp: Ghost.erased parser_kind)
+  (#kt: Ghost.erased parser_kind)
+  (#kpl: Ghost.erased parser_kind)
   (#tag_t: Type0)
   (#data_t: Type0)
   (#payload_t: Type0)

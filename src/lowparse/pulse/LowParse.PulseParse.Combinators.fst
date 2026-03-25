@@ -1005,7 +1005,7 @@ let clens_synth_inv
 }
 
 inline_for_extraction
-fn accessor_id (#k: parser_kind) (#t: Type0) (p: parser k t)
+fn accessor_id (#k: Ghost.erased parser_kind) (#t: Type0) (p: parser k t)
 : PPB.accessor p p (clens_id t)
 =
   (input: slice byte)
@@ -1018,9 +1018,9 @@ fn accessor_id (#k: parser_kind) (#t: Type0) (p: parser k t)
 
 inline_for_extraction
 fn accessor_compose
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1)
-  (#k2: parser_kind) (#t2: Type0) (#p2: parser k2 t2)
-  (#k3: parser_kind) (#t3: Type0) (#p3: parser k3 t3)
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind) (#t2: Type0) (#p2: parser k2 t2)
+  (#k3: Ghost.erased parser_kind) (#t3: Type0) (#p3: parser k3 t3)
   (#cl12: clens t1 t2)
   (#cl23: clens t2 t3)
   (a12: PPB.accessor p1 p2 cl12)
@@ -1045,8 +1045,8 @@ fn accessor_compose
 
 inline_for_extraction
 fn accessor_fst
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1)
-  (#k2: parser_kind) (#t2: Type0) (#p2: parser k2 t2)
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind) (#t2: Type0) (#p2: parser k2 t2)
   (j1: LPS.jumper p1)
   (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
 : PPB.accessor (nondep_then p1 p2) p1 (clens_fst t1 t2)
@@ -1066,8 +1066,8 @@ fn accessor_fst
 
 inline_for_extraction
 fn accessor_snd
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1)
-  (#k2: parser_kind) (#t2: Type0) (#p2: parser k2 t2)
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind) (#t2: Type0) (#p2: parser k2 t2)
   (j1: LPS.jumper p1)
   (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
 : PPB.accessor (nondep_then p1 p2) p2 (clens_snd t1 t2)
@@ -1087,7 +1087,7 @@ fn accessor_snd
 
 inline_for_extraction
 fn accessor_synth
-  (#k: parser_kind) (#t1 #t2: Type0) (#p: parser k t1)
+  (#k: Ghost.erased parser_kind) (#t1 #t2: Type0) (#p: parser k t1)
   (f: (t1 -> GTot t2) { synth_injective f })
   (g: (t2 -> GTot t1) { synth_inverse f g })
 : PPB.accessor (parse_synth p f) p (clens_synth_inv f g)
@@ -1102,7 +1102,7 @@ fn accessor_synth
 
 inline_for_extraction
 let accessor_synth_inv
-  (#k: parser_kind) (#t1 #t2: Type0) (#p: parser k t1)
+  (#k: Ghost.erased parser_kind) (#t1 #t2: Type0) (#p: parser k t1)
   (f: (t1 -> GTot t2) { synth_injective f })
   (g: (t2 -> GTot t1) { synth_inverse f g })
 : PPB.accessor (parse_synth p f) p (clens_synth_inv f g)
@@ -1110,8 +1110,8 @@ let accessor_synth_inv
 
 inline_for_extraction
 fn accessor_ext
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1)
-  (#k2: parser_kind) (#t2: Type0) (#p2: parser k2 t2)
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind) (#t2: Type0) (#p2: parser k2 t2)
   (#cl: clens t1 t2)
   (a: PPB.accessor p1 p2 cl)
   (cl': clens t1 t2)
@@ -1129,9 +1129,9 @@ fn accessor_ext
 
 inline_for_extraction
 let accessor_compose_strong
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1)
-  (#k2: parser_kind) (#t2: Type0) (#p2: parser k2 t2)
-  (#k3: parser_kind) (#t3: Type0) (#p3: parser k3 t3)
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind) (#t2: Type0) (#p2: parser k2 t2)
+  (#k3: Ghost.erased parser_kind) (#t3: Type0) (#p3: parser k3 t3)
   (#cl12: clens t1 t2)
   (#cl23: clens t2 t3)
   (a12: PPB.accessor p1 p2 cl12)
@@ -1142,9 +1142,9 @@ let accessor_compose_strong
 
 inline_for_extraction
 let accessor_fst_then
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1)
-  (#k2: parser_kind) (#t2: Type0) (p2: parser k2 t2)
-  (#k': parser_kind) (#t': Type0) (#p': parser k' t')
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind) (#t2: Type0) (p2: parser k2 t2)
+  (#k': Ghost.erased parser_kind) (#t': Type0) (#p': parser k' t')
   (#cl: clens t1 t')
   (a: PPB.accessor p1 p' cl)
   (j1: LPS.jumper p1)
@@ -1155,9 +1155,9 @@ let accessor_fst_then
 
 inline_for_extraction
 let accessor_then_fst
-  (#k0: parser_kind) (#t0: Type0) (#p0: parser k0 t0)
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1)
-  (#k2: parser_kind) (#t2: Type0) (#p2: parser k2 t2)
+  (#k0: Ghost.erased parser_kind) (#t0: Type0) (#p0: parser k0 t0)
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind) (#t2: Type0) (#p2: parser k2 t2)
   (#cl: clens t0 (t1 & t2))
   (a: PPB.accessor p0 (nondep_then p1 p2) cl)
   (j1: LPS.jumper p1)
@@ -1168,9 +1168,9 @@ let accessor_then_fst
 
 inline_for_extraction
 let accessor_then_snd
-  (#k0: parser_kind) (#t0: Type0) (#p0: parser k0 t0)
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1)
-  (#k2: parser_kind) (#t2: Type0) (#p2: parser k2 t2)
+  (#k0: Ghost.erased parser_kind) (#t0: Type0) (#p0: parser k0 t0)
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind) (#t2: Type0) (#p2: parser k2 t2)
   (#cl: clens t0 (t1 & t2))
   (a: PPB.accessor p0 (nondep_then p1 p2) cl)
   (j1: LPS.jumper p1)
@@ -1206,12 +1206,12 @@ let clens_tagged_union_payload
 
 inline_for_extraction
 fn accessor_tagged_union_tag
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#tag_t: Type0)
   (pt: parser kt tag_t)
   (#data_t: Type0)
   (tag_of_data: (data_t -> GTot tag_t))
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
   (j: LPS.jumper pt)
   (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
@@ -1241,13 +1241,13 @@ fn accessor_tagged_union_tag
 
 inline_for_extraction
 fn accessor_tagged_union_payload
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#tag_t: Type0)
   (#pt: parser kt tag_t)
   (jt: LPS.jumper pt)
   (#data_t: Type0)
   (tag_of_data: (data_t -> GTot tag_t))
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
   (t: tag_t)
   (sq: squash (kt.parser_kind_subkind == Some ParserStrong))

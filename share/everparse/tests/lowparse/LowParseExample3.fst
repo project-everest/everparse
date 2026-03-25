@@ -31,7 +31,7 @@ let synth_t_recip (x: t) : ((U16.t & U32.t) & U16.t) = ((x.a, x.b), x.c)
 
 let synth_t_injective () : Lemma (synth_injective synth_t) = ()
 
-let parse_t_base : parser _ ((U16.t & U32.t) & U16.t) =
+unfold let parse_t_base : parser _ ((U16.t & U32.t) & U16.t) =
   parse_u16 `nondep_then` parse_u32 `nondep_then` parse_u16
 
 let parse_t : parser _ t =
@@ -76,100 +76,33 @@ let clens_c : clens t U16.t = {
   clens_get = (fun x -> x.c);
 }
 
-(* Accessors using PPB.accessor with clens — explicit fn definitions
-   for clean extraction. Each accessor: eliminates pts_to_parsed to
-   raw bytes, jumps to the field offset, extracts sub-slice with
-   peek_trade_gen, and chains trades back to the original parse. *)
+(* Accessors using combinator composition — mirrors Low* pattern:
+   accessor_synth_inv (unwrap synth) → accessor_fst/snd (navigate pairs) → accessor_ext (relabel clens) *)
 
-#push-options "--z3rlimit 32"
+let access_a : PPB.accessor parse_t parse_u16 clens_a =
+  PPC.accessor_ext
+    (PPC.accessor_then_fst
+      (PPC.accessor_then_fst
+        (PPC.accessor_synth_inv synth_t synth_t_recip)
+        (LPC.jump_nondep_then LPI.jump_u16 LPI.jump_u32) () ())
+      LPI.jump_u16 () ())
+    clens_a ()
 
-inline_for_extraction
-fn access_a
-  (input: S.slice byte)
-  (#pm: perm)
-  (#v: Ghost.erased t)
-  requires PPB.pts_to_parsed parse_t input #pm v
-  returns result: S.slice byte
-  ensures exists* v2 pm' .
-    PPB.pts_to_parsed parse_u16 result #pm' v2 **
-    pure (v2 == (Ghost.reveal v).a) **
-    Trade.trade (PPB.pts_to_parsed parse_u16 result #pm' v2) (PPB.pts_to_parsed parse_t input #pm v)
-{
-  synth_t_injective ();
-  PPB.pts_to_parsed_elim input;
-  with w . assert (pts_to input #pm w);
-  parse_synth_eq parse_t_base synth_t w;
-  nondep_then_eq (nondep_then parse_u16 parse_u32) parse_u16 w;
-  nondep_then_eq parse_u16 parse_u32 w;
-  parser_kind_prop_equiv parse_u16_kind parse_u16;
-  Seq.lemma_eq_elim (Seq.slice w 0 (Seq.length w)) w;
-  pts_to_len input;
-  let off = LPI.jump_u16 input 0sz;
-  let result = PPB.peek_trade_gen parse_u16 input 0sz off;
-  Trade.trans _ (pts_to input #pm w) (PPB.pts_to_parsed parse_t input #pm v);
-  result
-}
+let access_b : PPB.accessor parse_t parse_u32 clens_b =
+  PPC.accessor_ext
+    (PPC.accessor_then_snd
+      (PPC.accessor_then_fst
+        (PPC.accessor_synth_inv synth_t synth_t_recip)
+        (LPC.jump_nondep_then LPI.jump_u16 LPI.jump_u32) () ())
+      LPI.jump_u16 () ())
+    clens_b ()
 
-inline_for_extraction
-fn access_b
-  (input: S.slice byte)
-  (#pm: perm)
-  (#v: Ghost.erased t)
-  requires PPB.pts_to_parsed parse_t input #pm v
-  returns result: S.slice byte
-  ensures exists* v2 pm' .
-    PPB.pts_to_parsed parse_u32 result #pm' v2 **
-    pure (v2 == (Ghost.reveal v).b) **
-    Trade.trade (PPB.pts_to_parsed parse_u32 result #pm' v2) (PPB.pts_to_parsed parse_t input #pm v)
-{
-  synth_t_injective ();
-  PPB.pts_to_parsed_elim input;
-  with w . assert (pts_to input #pm w);
-  parse_synth_eq parse_t_base synth_t w;
-  nondep_then_eq (nondep_then parse_u16 parse_u32) parse_u16 w;
-  nondep_then_eq parse_u16 parse_u32 w;
-  parser_kind_prop_equiv parse_u16_kind parse_u16;
-  parser_kind_prop_equiv parse_u32_kind parse_u32;
-  Seq.lemma_eq_elim (Seq.slice w 0 (Seq.length w)) w;
-  pts_to_len input;
-  let off1 = LPI.jump_u16 input 0sz;
-  let off2 = LPI.jump_u32 input off1;
-  let result = PPB.peek_trade_gen parse_u32 input off1 off2;
-  Trade.trans _ (pts_to input #pm w) (PPB.pts_to_parsed parse_t input #pm v);
-  result
-}
-
-inline_for_extraction
-fn access_c
-  (input: S.slice byte)
-  (#pm: perm)
-  (#v: Ghost.erased t)
-  requires PPB.pts_to_parsed parse_t input #pm v
-  returns result: S.slice byte
-  ensures exists* v2 pm' .
-    PPB.pts_to_parsed parse_u16 result #pm' v2 **
-    pure (v2 == (Ghost.reveal v).c) **
-    Trade.trade (PPB.pts_to_parsed parse_u16 result #pm' v2) (PPB.pts_to_parsed parse_t input #pm v)
-{
-  synth_t_injective ();
-  PPB.pts_to_parsed_elim input;
-  with w . assert (pts_to input #pm w);
-  parse_synth_eq parse_t_base synth_t w;
-  nondep_then_eq (nondep_then parse_u16 parse_u32) parse_u16 w;
-  nondep_then_eq parse_u16 parse_u32 w;
-  parser_kind_prop_equiv parse_u16_kind parse_u16;
-  parser_kind_prop_equiv parse_u32_kind parse_u32;
-  Seq.lemma_eq_elim (Seq.slice w 0 (Seq.length w)) w;
-  pts_to_len input;
-  let off1 = LPI.jump_u16 input 0sz;
-  let off2 = LPI.jump_u32 input off1;
-  let off3 = LPI.jump_u16 input off2;
-  let result = PPB.peek_trade_gen parse_u16 input off2 off3;
-  Trade.trans _ (pts_to input #pm w) (PPB.pts_to_parsed parse_t input #pm v);
-  result
-}
-
-#pop-options
+let access_c : PPB.accessor parse_t parse_u16 clens_c =
+  PPC.accessor_ext
+    (PPC.accessor_then_snd
+      (PPC.accessor_synth_inv synth_t synth_t_recip)
+      (LPC.jump_nondep_then LPI.jump_u16 LPI.jump_u32) () ())
+    clens_c ()
 
 (* Test function: validate parse_t, then use accessors *)
 
