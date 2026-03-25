@@ -2,7 +2,6 @@ name: Build everparse package (Linux)
 on:
   push:
     branches-ignore:
-    - fstar2
     - _**
   pull_request:
   workflow_dispatch:
