@@ -1086,4 +1086,219 @@ fn accessor_dsum_tag
   input_tag
 }
 
+(* DSum payload accessor: accesses parse_dsum_type_of_tag' from parse_dsum *)
+
+inline_for_extraction
+fn accessor_clens_dsum_payload
+  (t: dsum u#0 u#0)
+  (#kt: parser_kind)
+  (#p: parser kt (dsum_repr_type t))
+  (j: B.jumper p)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (#k': parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (k: dsum_key t)
+  (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
+: PPB.accessor (parse_dsum t p f g) (parse_dsum_type_of_tag' t f g k) (clens_dsum_payload t k)
+=
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (dsum_type t))
+{
+  PPB.pts_to_parsed_elim input;
+  with bytes . assert (S.pts_to input #pm bytes);
+  parse_dsum_eq3 t p f g bytes;
+  S.pts_to_len input;
+  parser_kind_prop_equiv kt p;
+  Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
+  synth_dsum_case_injective t k;
+  synth_dsum_case_inverse t k;
+  let off = j input 0sz;
+  let payload_bytes = Ghost.hide (Seq.slice bytes (SZ.v off) (Seq.length bytes));
+  parse_synth_eq (parse_dsum_type_of_tag' t f g k) (synth_dsum_case t k) payload_bytes;
+  let gx = Ghost.hide (fst (Some?.v (parse (parse_dsum_type_of_tag' t f g k) payload_bytes)));
+  let input_tag, input_payload = split_trade input off;
+  with wb_tag . assert (S.pts_to input_tag #pm wb_tag);
+  with wb_payload . assert (S.pts_to input_payload #pm wb_payload);
+  Trade.elim_hyp_l (S.pts_to input_tag #pm wb_tag) (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes);
+  Trade.trans (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes) (PPB.pts_to_parsed (parse_dsum t p f g) input #pm v);
+  Seq.lemma_eq_elim wb_payload (Ghost.reveal payload_bytes);
+  PPB.pts_to_parsed_intro (parse_dsum_type_of_tag' t f g k) input_payload gx;
+  Trade.trans (PPB.pts_to_parsed (parse_dsum_type_of_tag' t f g k) input_payload #(pm /. 2.0R) gx) (S.pts_to input_payload #pm wb_payload) (PPB.pts_to_parsed (parse_dsum t p f g) input #pm v);
+  DSum?.synth_case_recip_synth_case t k (Ghost.reveal gx);
+  input_payload
+}
+
+(* accessor_clens_dsum_payload': alias for accessor_clens_dsum_payload *)
+
+inline_for_extraction
+let accessor_clens_dsum_payload'
+  (t: dsum u#0 u#0)
+  (#kt: parser_kind)
+  (#p: parser kt (dsum_repr_type t))
+  (j: B.jumper p)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (#k': parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (k: dsum_key t)
+  (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
+: PPB.accessor (parse_dsum t p f g) (parse_dsum_type_of_tag' t f g k) (clens_dsum_payload t k)
+= accessor_clens_dsum_payload t j f g k sq
+
+(* DSum unknown payload accessor: accesses g from parse_dsum *)
+
+let clens_dsum_unknown_payload
+  (s: dsum)
+: Tot (clens (dsum_type s) (dsum_type_of_unknown_tag s))
+= {
+  clens_cond = (fun (x: dsum_type s) -> Unknown? (dsum_tag_of_data s x));
+  clens_get = (fun (x: dsum_type s) -> synth_dsum_case_recip s (dsum_tag_of_data s x) x <: Ghost (dsum_type_of_unknown_tag s) (requires (Unknown? (dsum_tag_of_data s x))) (ensures (fun _ -> True)));
+}
+
+inline_for_extraction
+fn accessor_clens_dsum_unknown_payload
+  (t: dsum u#0 u#0)
+  (#kt: parser_kind)
+  (#p: parser kt (dsum_repr_type t))
+  (j: B.jumper p)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (#k': parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
+: PPB.accessor (parse_dsum t p f g) g (clens_dsum_unknown_payload t)
+=
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (dsum_type t))
+{
+  PPB.pts_to_parsed_elim input;
+  with bytes . assert (S.pts_to input #pm bytes);
+  parse_dsum_eq3 t p f g bytes;
+  S.pts_to_len input;
+  parser_kind_prop_equiv kt p;
+  Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
+  let k = Ghost.hide (dsum_tag_of_data t v);
+  synth_dsum_case_injective t k;
+  synth_dsum_case_inverse t k;
+  let off = j input 0sz;
+  let payload_bytes = Ghost.hide (Seq.slice bytes (SZ.v off) (Seq.length bytes));
+  synth_injective_synth_inverse_synth_inverse_recip (synth_dsum_case t k) (synth_dsum_case_recip t k) ();
+  parse_synth_eq (parse_dsum_type_of_tag' t f g k) (synth_dsum_case t k) payload_bytes;
+  let gx : Ghost.erased (dsum_type_of_tag t k) = Ghost.hide (fst (Some?.v (parse (parse_dsum_type_of_tag' t f g k) payload_bytes)));
+  let input_tag, input_payload = split_trade input off;
+  with wb_tag . assert (S.pts_to input_tag #pm wb_tag);
+  with wb_payload . assert (S.pts_to input_payload #pm wb_payload);
+  Trade.elim_hyp_l (S.pts_to input_tag #pm wb_tag) (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes);
+  Trade.trans (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes) (PPB.pts_to_parsed (parse_dsum t p f g) input #pm v);
+  Seq.lemma_eq_elim wb_payload (Ghost.reveal payload_bytes);
+  DSum?.synth_case_recip_synth_case t k (Ghost.reveal gx);
+  PPB.pts_to_parsed_intro g input_payload (Ghost.reveal gx);
+  Trade.trans (PPB.pts_to_parsed g input_payload #(pm /. 2.0R) (Ghost.reveal gx)) (S.pts_to input_payload #pm wb_payload) (PPB.pts_to_parsed (parse_dsum t p f g) input #pm v);
+  input_payload
+}
+
+(* accessor_clens_dsum_unknown_payload': alias *)
+
+inline_for_extraction
+let accessor_clens_dsum_unknown_payload'
+  (t: dsum u#0 u#0)
+  (#kt: parser_kind)
+  (#p: parser kt (dsum_repr_type t))
+  (j: B.jumper p)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (#k': parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
+: PPB.accessor (parse_dsum t p f g) g (clens_dsum_unknown_payload t)
+= accessor_clens_dsum_unknown_payload t j f g sq
+
+(* DSum cases payload accessors (synth-based) *)
+
+let clens_dsum_cases_payload
+  (s: dsum)
+  (k: dsum_key s)
+: Tot (clens (dsum_cases s k) (dsum_type_of_tag s k))
+= {
+  clens_cond = (fun (x: dsum_cases s k) -> True);
+  clens_get = (fun (x: dsum_cases s k) -> synth_dsum_case_recip s k x);
+}
+
+inline_for_extraction
+let accessor_clens_dsum_cases_known_payload
+  (t: dsum)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (#ku: parser_kind)
+  (g: parser ku (dsum_type_of_unknown_tag t))
+  (k: dsum_known_key t)
+: PPB.accessor (parse_dsum_cases' t f g (Known k)) (dsnd (f k)) (clens_dsum_cases_payload t (Known k))
+= [@inline_let]
+  let _ =
+    synth_dsum_case_injective t (Known k);
+    synth_dsum_case_inverse t (Known k);
+    synth_injective_synth_inverse_synth_inverse_recip (synth_dsum_case t (Known k)) (synth_dsum_case_recip t (Known k)) ()
+  in
+  accessor_ext
+    (accessor_synth (synth_dsum_case t (Known k)) (synth_dsum_case_recip t (Known k)))
+    (clens_dsum_cases_payload t (Known k))
+    ()
+
+inline_for_extraction
+let accessor_clens_dsum_cases_unknown_payload
+  (t: dsum)
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (#ku: parser_kind)
+  (g: parser ku (dsum_type_of_unknown_tag t))
+  (k: dsum_unknown_key t)
+: PPB.accessor (parse_dsum_cases' t f g (Unknown k)) g (clens_dsum_cases_payload t (Unknown k))
+= [@inline_let]
+  let _ =
+    synth_dsum_case_injective t (Unknown k);
+    synth_dsum_case_inverse t (Unknown k);
+    synth_injective_synth_inverse_synth_inverse_recip (synth_dsum_case t (Unknown k)) (synth_dsum_case_recip t (Unknown k)) ()
+  in
+  accessor_ext
+    (accessor_synth (synth_dsum_case t (Unknown k)) (synth_dsum_case_recip t (Unknown k)))
+    (clens_dsum_cases_payload t (Unknown k))
+    ()
+
+(* Sum payload variant and cases payload *)
+
+inline_for_extraction
+let accessor_clens_sum_payload'
+  (t: sum u#0 u#0)
+  (#kt: parser_kind)
+  (#p: parser kt (sum_repr_type t))
+  (j: B.jumper p)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: sum_key t)
+  (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
+: PPB.accessor (parse_sum t p pc) (dsnd (pc k)) (clens_sum_payload t k)
+= accessor_clens_sum_payload t j pc k sq
+
+let clens_sum_cases_payload
+  (s: sum)
+  (k: sum_key s)
+: Tot (clens (sum_cases s k) (sum_type_of_tag s k))
+= {
+  clens_cond = (fun (x: sum_cases s k) -> True);
+  clens_get = (fun (x: sum_cases s k) -> synth_sum_case_recip s k x);
+}
+
+inline_for_extraction
+let accessor_clens_sum_cases_payload
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: sum_key t)
+: PPB.accessor (parse_sum_cases' t pc k) (dsnd (pc k)) (clens_sum_cases_payload t k)
+= [@inline_let]
+  let _ =
+    synth_sum_case_injective t k;
+    synth_sum_case_inverse t k;
+    synth_injective_synth_inverse_synth_inverse_recip (synth_sum_case t k) (synth_sum_case_recip t k) ()
+  in
+  accessor_ext
+    (accessor_synth (synth_sum_case t k) (synth_sum_case_recip t k))
+    (clens_sum_cases_payload t k)
+    ()
+
 #pop-options

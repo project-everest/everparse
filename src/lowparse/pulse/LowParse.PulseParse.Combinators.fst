@@ -1178,3 +1178,102 @@ let accessor_then_snd
   (sq2: squash (clens_compose_strong_pre cl (clens_snd t1 t2)))
 : PPB.accessor p0 p2 (clens_compose_strong cl (clens_snd t1 t2))
 = accessor_compose a (accessor_snd j1 sq1) sq2
+
+(* ========== Tagged union accessor combinators ========== *)
+
+let clens_tagged_union_tag
+  (#tag_t: Type)
+  (#data_t: Type)
+  (tag_of_data: (data_t -> GTot tag_t))
+: Tot (clens data_t tag_t)
+= {
+  clens_cond = (fun _ -> True);
+  clens_get = tag_of_data;
+}
+
+let clens_tagged_union_payload
+  (#tag_t: Type)
+  (#data_t: Type)
+  (tag_of_data: (data_t -> GTot tag_t))
+  (t: tag_t)
+: Tot (clens data_t (refine_with_tag tag_of_data t))
+= {
+  clens_cond = (fun d -> tag_of_data d == t);
+  clens_get = (fun (d: data_t) -> (d <: refine_with_tag tag_of_data t));
+}
+
+#push-options "--z3rlimit 64"
+
+inline_for_extraction
+fn accessor_tagged_union_tag
+  (#kt: parser_kind)
+  (#tag_t: Type0)
+  (pt: parser kt tag_t)
+  (#data_t: Type0)
+  (tag_of_data: (data_t -> GTot tag_t))
+  (#k: parser_kind)
+  (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
+  (j: LPS.jumper pt)
+  (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
+: PPB.accessor (parse_tagged_union pt tag_of_data p) pt (clens_tagged_union_tag tag_of_data)
+=
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased data_t)
+{
+  PPB.pts_to_parsed_elim input;
+  with bytes . assert (S.pts_to input #pm bytes);
+  parse_tagged_union_eq pt tag_of_data p bytes;
+  S.pts_to_len input;
+  parser_kind_prop_equiv kt pt;
+  Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
+  let off = j input 0sz;
+  let input_tag, input_payload = split_trade input off;
+  with wb_tag . assert (S.pts_to input_tag #pm wb_tag);
+  with wb_payload . assert (S.pts_to input_payload #pm wb_payload);
+  Trade.elim_hyp_r (S.pts_to input_tag #pm wb_tag) (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes);
+  Trade.trans (S.pts_to input_tag #pm wb_tag) (S.pts_to input #pm bytes) (PPB.pts_to_parsed (parse_tagged_union pt tag_of_data p) input #pm v);
+  parse_strong_prefix pt bytes wb_tag;
+  PPB.pts_to_parsed_intro pt input_tag (tag_of_data v);
+  Trade.trans (PPB.pts_to_parsed pt input_tag #(pm /. 2.0R) (tag_of_data v)) (S.pts_to input_tag #pm wb_tag) (PPB.pts_to_parsed (parse_tagged_union pt tag_of_data p) input #pm v);
+  input_tag
+}
+
+inline_for_extraction
+fn accessor_tagged_union_payload
+  (#kt: parser_kind)
+  (#tag_t: Type0)
+  (#pt: parser kt tag_t)
+  (jt: LPS.jumper pt)
+  (#data_t: Type0)
+  (tag_of_data: (data_t -> GTot tag_t))
+  (#k: parser_kind)
+  (p: (t: tag_t) -> Tot (parser k (refine_with_tag tag_of_data t)))
+  (t: tag_t)
+  (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
+: PPB.accessor (parse_tagged_union pt tag_of_data p) (p t) (clens_tagged_union_payload tag_of_data t)
+=
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased data_t)
+{
+  PPB.pts_to_parsed_elim input;
+  with bytes . assert (S.pts_to input #pm bytes);
+  parse_tagged_union_eq pt tag_of_data p bytes;
+  S.pts_to_len input;
+  parser_kind_prop_equiv kt pt;
+  Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
+  let off = jt input 0sz;
+  let payload_bytes = Ghost.hide (Seq.slice bytes (SZ.v off) (Seq.length bytes));
+  let input_tag, input_payload = split_trade input off;
+  with wb_tag . assert (S.pts_to input_tag #pm wb_tag);
+  with wb_payload . assert (S.pts_to input_payload #pm wb_payload);
+  Trade.elim_hyp_l (S.pts_to input_tag #pm wb_tag) (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes);
+  Trade.trans (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes) (PPB.pts_to_parsed (parse_tagged_union pt tag_of_data p) input #pm v);
+  Seq.lemma_eq_elim wb_payload (Ghost.reveal payload_bytes);
+  PPB.pts_to_parsed_intro (p t) input_payload (Ghost.reveal v);
+  Trade.trans (PPB.pts_to_parsed (p t) input_payload #(pm /. 2.0R) (Ghost.reveal v)) (S.pts_to input_payload #pm wb_payload) (PPB.pts_to_parsed (parse_tagged_union pt tag_of_data p) input #pm v);
+  input_payload
+}
+
+#pop-options

@@ -110,14 +110,109 @@ let clens_ifthenelse_payload
 
 #push-options "--z3rlimit 128"
 
-(* IfThenElse accessor implementations:
-   accessor_ifthenelse_tag : accessor (parse_ifthenelse p) p.parse_ifthenelse_tag_parser (clens_ifthenelse_tag s)
-   accessor_ifthenelse_payload : accessor (parse_ifthenelse p) (dsnd (p.parse_ifthenelse_payload_parser b)) (clens_ifthenelse_payload s b)
-   
-   These follow the same split_trade + pts_to_parsed_intro pattern as accessor_sum_tag/payload.
-   However, Pulse's type checker currently reports "Cannot check relation with uvars" when
-   instantiating the accessor type with parse_ifthenelse. This appears to be a limitation of
-   Pulse's uvar solver with computed parser kinds. The clens definitions and implementation
-   pattern are ready for when this limitation is resolved. *)
+(* IfThenElse accessor implementations.
+   We abstract parser kinds and types to avoid Pulse's uvar solver limitation
+   with computed parser kinds (parse_ifthenelse_kind). The tag accessor uses
+   a generic tag_of_data function; the payload accessor uses generic parsers.
+   Callers instantiate with the concrete IfThenElse parsers and proofs. *)
+
+inline_for_extraction
+fn accessor_ifthenelse_tag
+  (#kp: parser_kind)
+  (#kt: parser_kind)
+  (#tag_t: Type0)
+  (#data_t: Type0)
+  (pt: parser kt tag_t)
+  (pp: parser kp data_t)
+  (tag_of_data: (data_t -> GTot tag_t))
+  (j: LPS.jumper pt)
+  (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
+  (parse_tag_eq: (input: bytes) -> Lemma
+    (requires (Some? (parse pp input)))
+    (ensures (Some? (parse pt input) /\ tag_of_data (fst (Some?.v (parse pp input))) == fst (Some?.v (parse pt input)))))
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased data_t)
+  requires PPB.pts_to_parsed pp input #pm v
+  returns result: S.slice byte
+  ensures exists* v2 pm' .
+    PPB.pts_to_parsed pt result #pm' v2 **
+    pure (v2 == tag_of_data v) **
+    Trade.trade
+      (PPB.pts_to_parsed pt result #pm' v2)
+      (PPB.pts_to_parsed pp input #pm v)
+{
+  PPB.pts_to_parsed_elim input;
+  with bytes . assert (S.pts_to input #pm bytes);
+  parse_tag_eq bytes;
+  S.pts_to_len input;
+  parser_kind_prop_equiv kt pt;
+  Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
+  let off = j input 0sz;
+  let input_tag, input_payload = split_trade input off;
+  with wb_tag . assert (S.pts_to input_tag #pm wb_tag);
+  with wb_payload . assert (S.pts_to input_payload #pm wb_payload);
+  Trade.elim_hyp_r (S.pts_to input_tag #pm wb_tag) (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes);
+  Trade.trans (S.pts_to input_tag #pm wb_tag) (S.pts_to input #pm bytes) (PPB.pts_to_parsed pp input #pm v);
+  parse_strong_prefix pt bytes wb_tag;
+  PPB.pts_to_parsed_intro pt input_tag (tag_of_data v);
+  Trade.trans (PPB.pts_to_parsed pt input_tag #(pm /. 2.0R) (tag_of_data v)) (S.pts_to input_tag #pm wb_tag) (PPB.pts_to_parsed pp input #pm v);
+  input_tag
+}
+
+inline_for_extraction
+fn accessor_ifthenelse_payload'
+  (#kp: parser_kind)
+  (#kt: parser_kind)
+  (#kpl: parser_kind)
+  (#tag_t: Type0)
+  (#data_t: Type0)
+  (#payload_t: Type0)
+  (pt: parser kt tag_t)
+  (pp: parser kp data_t)
+  (ppl: parser kpl payload_t)
+  (payload_of_data: (data_t -> GTot payload_t))
+  (j: LPS.jumper pt)
+  (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
+  (parse_payload_eq: (input: bytes) -> Lemma
+    (requires (Some? (parse pp input)))
+    (ensures (match parse pt input with
+    | None -> False
+    | Some (_, consumed) ->
+      let input' = Seq.slice input consumed (Seq.length input) in
+      Some? (parse ppl input') /\
+      payload_of_data (fst (Some?.v (parse pp input))) == fst (Some?.v (parse ppl input')) /\
+      consumed + snd (Some?.v (parse ppl input')) == snd (Some?.v (parse pp input)))))
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased data_t)
+  requires PPB.pts_to_parsed pp input #pm v
+  returns result: S.slice byte
+  ensures exists* v2 pm' .
+    PPB.pts_to_parsed ppl result #pm' v2 **
+    pure (v2 == payload_of_data v) **
+    Trade.trade
+      (PPB.pts_to_parsed ppl result #pm' v2)
+      (PPB.pts_to_parsed pp input #pm v)
+{
+  PPB.pts_to_parsed_elim input;
+  with bytes . assert (S.pts_to input #pm bytes);
+  parse_payload_eq bytes;
+  S.pts_to_len input;
+  parser_kind_prop_equiv kt pt;
+  Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
+  let off = j input 0sz;
+  let payload_bytes = Ghost.hide (Seq.slice bytes (SZ.v off) (Seq.length bytes));
+  let gx = Ghost.hide (fst (Some?.v (parse ppl payload_bytes)));
+  let input_tag, input_payload = split_trade input off;
+  with wb_tag . assert (S.pts_to input_tag #pm wb_tag);
+  with wb_payload . assert (S.pts_to input_payload #pm wb_payload);
+  Trade.elim_hyp_l (S.pts_to input_tag #pm wb_tag) (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes);
+  Trade.trans (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes) (PPB.pts_to_parsed pp input #pm v);
+  Seq.lemma_eq_elim wb_payload (Ghost.reveal payload_bytes);
+  PPB.pts_to_parsed_intro ppl input_payload gx;
+  Trade.trans (PPB.pts_to_parsed ppl input_payload #(pm /. 2.0R) gx) (S.pts_to input_payload #pm wb_payload) (PPB.pts_to_parsed pp input #pm v);
+  input_payload
+}
 
 #pop-options
