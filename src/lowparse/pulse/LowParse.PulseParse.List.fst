@@ -20,7 +20,7 @@ let parse_consume (#k: parser_kind) (#t: Type) (p: parser k t) (b: bytes)
 
 inline_for_extraction
 fn validate_list
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (v: LPS.validator p)

@@ -59,7 +59,7 @@ let validate_bitsum'
   (#t: eqtype)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (v: LPS.validator p)
   (r: PPB.leaf_reader p)
@@ -301,7 +301,7 @@ let rec mk_validate_bitsum_cases_t'
 
 inline_for_extraction
 fn validate_bitsum
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#tot: pos)
   (#t: eqtype)
   (#cl: uint_t tot t)

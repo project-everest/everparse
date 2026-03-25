@@ -16,7 +16,7 @@ include LowParse.CLens
 
 inline_for_extraction
 fn validate_fldata
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (v: LPS.validator p)
@@ -78,7 +78,7 @@ let validate_fldata_consumes_all
 
 inline_for_extraction
 fn validate_fldata_strong
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (s: serializer p)
@@ -97,7 +97,7 @@ fn validate_fldata_strong
 
 inline_for_extraction
 fn jump_fldata
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (p: parser k t)
   (sz: SZ.t)
@@ -115,7 +115,7 @@ fn jump_fldata
 
 inline_for_extraction
 fn jump_fldata_strong
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (s: serializer p)
@@ -192,7 +192,7 @@ fn zero_copy_parse_fldata
 inline_for_extraction
 fn accessor_fldata
   (#k: Ghost.erased parser_kind) (#t: Type0) (p: parser k t)
-  (n: nat)
+  (n: Ghost.erased nat)
 : PPB.accessor (parse_fldata p n) p (clens_id t)
 =
   (input: slice byte)
@@ -260,7 +260,7 @@ inline_for_extraction
 fn accessor_fldata_strong
   (#k: Ghost.erased parser_kind) (#t: Type0) (#p: parser k t)
   (s: serializer p)
-  (n: nat)
+  (n: Ghost.erased nat)
 : PPB.accessor (parse_fldata_strong s n) p (clens_fldata_strong s n)
 =
   (input: slice byte)

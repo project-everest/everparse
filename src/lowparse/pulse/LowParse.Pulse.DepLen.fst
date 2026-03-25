@@ -18,16 +18,16 @@ module U32 = FStar.UInt32
 
 inline_for_extraction
 fn validate_deplen
-  (min: nat)
-  (max: nat { min <= max /\ max < 4294967296 })
-  (#hk: parser_kind)
+  (min: Ghost.erased nat)
+  (max: Ghost.erased nat { min <= max /\ max < 4294967296 })
+  (#hk: Ghost.erased parser_kind)
   (#ht: Type0)
   (#hp: parser hk ht)
   (#hs: serializer hp)
   (hv: LPS.validator hp)
   (hr: LPS.leaf_reader hs)
   (dlf: ht -> Tot (bounded_int32 min max))
-  (#pk: parser_kind)
+  (#pk: Ghost.erased parser_kind)
   (#pt: Type0)
   (#pp: parser pk pt)
   (ps: serializer pp)

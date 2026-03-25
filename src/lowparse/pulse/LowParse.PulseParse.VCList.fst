@@ -278,10 +278,12 @@ let parse_consume (#k: parser_kind) (#t: Type) (p: parser k t) (b: bytes)
   | Some (_, consumed) -> Some consumed
   | None -> None
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction
 fn validate_nlist
   (n: SZ.t)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (v: LPS.validator p)
@@ -336,17 +338,19 @@ fn validate_nlist
   }
 }
 
+#pop-options
+
 #push-options "--z3rlimit 32"
 
 inline_for_extraction
 fn validate_vclist
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max } )
-  (#lk: parser_kind)
+  (#lk: Ghost.erased parser_kind)
   (#lp: parser lk U32.t)
   (lv: LPS.validator lp)
   (lr: PPB.leaf_reader lp)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (w: LPS.validator p)
@@ -389,11 +393,11 @@ inline_for_extraction
 fn jump_vclist
   (min: U32.t)
   (max: U32.t { U32.v min <= U32.v max } )
-  (#lk: parser_kind)
+  (#lk: Ghost.erased parser_kind)
   (#lp: parser lk U32.t)
   (lj: LPS.jumper lp)
   (lr: PPB.leaf_reader lp)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (j: LPS.jumper p)

@@ -160,7 +160,7 @@ module PPB = LowParse.PulseParse.Base
 inline_for_extraction
 fn validate_sum_aux
   (t: sum u#0 u#0)
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#p: parser kt (sum_repr_type t))
   (v: B.validator p)
   (p32: leaf_reader p)
@@ -232,7 +232,7 @@ let validate_sum_aux_payload
 inline_for_extraction
 let validate_sum
   (t: sum)
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#p: parser kt (sum_repr_type t))
   (v: B.validator p)
   (p32: leaf_reader p)
@@ -258,7 +258,7 @@ inline_for_extraction
 fn validate_dsum_cases_if'
   (s: dsum u#0 u#0)
   (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (g: parser k (dsum_type_of_unknown_tag s))
   (x: dsum_key s)
   (cond: bool)
@@ -283,7 +283,7 @@ inline_for_extraction
 let validate_dsum_cases_if
   (s: dsum u#0 u#0)
   (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (g: parser k (dsum_type_of_unknown_tag s))
   (x: dsum_key s)
 : Tot (if_combinator (validate_dsum_cases_t s f g x) eq_trivial)
@@ -294,7 +294,7 @@ let validate_dsum_cases'
   (s: dsum)
   (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
   (f': (x: dsum_known_key s) -> Tot (B.validator (dsnd (f x))))
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#g: parser k (dsum_type_of_unknown_tag s))
   (g': B.validator g)
   (x: dsum_key s)
@@ -310,7 +310,7 @@ let validate_dsum_cases_dispatch
   (t: dsum)
   (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
   (f32: (x: dsum_known_key t) -> Tot (B.validator (dsnd (f x))))
-  (#k': parser_kind)
+  (#k': Ghost.erased parser_kind)
   (#g: parser k' (dsum_type_of_unknown_tag t))
   (g32: B.validator g)
   (destr: dep_maybe_enum_destr_t (dsum_enum t) (validate_dsum_cases_t t f g))
@@ -323,7 +323,7 @@ let validate_dsum_cases'_destr
   (s: dsum)
   (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
   (f' : (x: dsum_known_key s) -> Tot (B.validator (dsnd (f x))))
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#g: parser k (dsum_type_of_unknown_tag s))
   (g' : B.validator g)
   (destr: dep_enum_destr (dsum_enum s) (fun k -> validate_dsum_cases_t s f g (Known k)))
@@ -345,7 +345,7 @@ let validate_dsum_cases
   (s: dsum)
   (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
   (f' : (x: dsum_known_key s) -> Tot (B.validator (dsnd (f x))))
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#g: parser k (dsum_type_of_unknown_tag s))
   (g' : B.validator g)
   (destr: dep_enum_destr (dsum_enum s) (fun k -> validate_dsum_cases_t s f g (Known k)))
@@ -359,7 +359,7 @@ fn validate_dsum_cases_fn
   (s: dsum)
   (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
   (f': (x: dsum_known_key s) -> Tot (B.validator (dsnd (f x))))
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#g: parser k (dsum_type_of_unknown_tag s))
   (g': B.validator g)
   (destr: dep_maybe_enum_destr_t (dsum_enum s) (validate_dsum_cases_t s f g))
@@ -381,14 +381,14 @@ fn validate_dsum_cases_fn
 
 inline_for_extraction
 fn validate_dsum
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (t: dsum u#0 u#0)
   (#p: parser kt (dsum_repr_type t))
   (v: B.validator p)
   (p32: leaf_reader p)
   (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
   (f32: (x: dsum_known_key t) -> Tot (B.validator (dsnd (f x))))
-  (#k': parser_kind)
+  (#k': Ghost.erased parser_kind)
   (#g: parser k' (dsum_type_of_unknown_tag t))
   (g32: B.validator g)
   (destr: dep_maybe_enum_destr_t (dsum_enum t) (validate_dsum_cases_t t f g))
@@ -571,7 +571,7 @@ let jump_sum_aux_payload_if
 inline_for_extraction
 fn jump_sum_aux
   (t: sum u#0 u#0)
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#p: parser kt (sum_repr_type t))
   (j: B.jumper p)
   (p32: leaf_reader p)
@@ -630,7 +630,7 @@ let jump_sum_aux_payload
 inline_for_extraction
 let jump_sum
   (t: sum)
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#p: parser kt (sum_repr_type t))
   (j: B.jumper p)
   (p32: leaf_reader p)
@@ -656,7 +656,7 @@ inline_for_extraction
 fn jump_dsum_cases_if'
   (s: dsum u#0 u#0)
   (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (g: parser k (dsum_type_of_unknown_tag s))
   (x: dsum_key s)
   (cond: bool)
@@ -680,7 +680,7 @@ inline_for_extraction
 let jump_dsum_cases_if
   (s: dsum u#0 u#0)
   (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (g: parser k (dsum_type_of_unknown_tag s))
   (x: dsum_key s)
 : Tot (if_combinator (jump_dsum_cases_t s f g x) eq_trivial)
@@ -691,7 +691,7 @@ let jump_dsum_cases'
   (s: dsum)
   (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
   (f': (x: dsum_known_key s) -> Tot (B.jumper (dsnd (f x))))
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#g: parser k (dsum_type_of_unknown_tag s))
   (g': B.jumper g)
   (x: dsum_key s)
@@ -707,7 +707,7 @@ let jump_dsum_cases_dispatch
   (t: dsum)
   (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
   (f32: (x: dsum_known_key t) -> Tot (B.jumper (dsnd (f x))))
-  (#k': parser_kind)
+  (#k': Ghost.erased parser_kind)
   (#g: parser k' (dsum_type_of_unknown_tag t))
   (g32: B.jumper g)
   (destr: dep_maybe_enum_destr_t (dsum_enum t) (jump_dsum_cases_t t f g))
@@ -720,7 +720,7 @@ let jump_dsum_cases'_destr
   (s: dsum)
   (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
   (f' : (x: dsum_known_key s) -> Tot (B.jumper (dsnd (f x))))
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#g: parser k (dsum_type_of_unknown_tag s))
   (g' : B.jumper g)
   (destr: dep_enum_destr (dsum_enum s) (fun k -> jump_dsum_cases_t s f g (Known k)))
@@ -742,7 +742,7 @@ let jump_dsum_cases
   (s: dsum)
   (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
   (f' : (x: dsum_known_key s) -> Tot (B.jumper (dsnd (f x))))
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#g: parser k (dsum_type_of_unknown_tag s))
   (g' : B.jumper g)
   (destr: dep_enum_destr (dsum_enum s) (fun k -> jump_dsum_cases_t s f g (Known k)))
@@ -756,7 +756,7 @@ fn jump_dsum_cases_fn
   (s: dsum)
   (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
   (f': (x: dsum_known_key s) -> Tot (B.jumper (dsnd (f x))))
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#g: parser k (dsum_type_of_unknown_tag s))
   (g': B.jumper g)
   (destr: dep_maybe_enum_destr_t (dsum_enum s) (jump_dsum_cases_t s f g))
@@ -777,14 +777,14 @@ fn jump_dsum_cases_fn
 
 inline_for_extraction
 fn jump_dsum
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (t: dsum u#0 u#0)
   (#p: parser kt (dsum_repr_type t))
   (j: B.jumper p)
   (p32: leaf_reader p)
   (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
   (f32: (x: dsum_known_key t) -> Tot (B.jumper (dsnd (f x))))
-  (#k': parser_kind)
+  (#k': Ghost.erased parser_kind)
   (#g: parser k' (dsum_type_of_unknown_tag t))
   (g32: B.jumper g)
   (destr: dep_maybe_enum_destr_t (dsum_enum t) (jump_dsum_cases_t t f g))
@@ -817,7 +817,7 @@ fn jump_dsum
 inline_for_extraction
 fn read_sum_tag
   (t: sum u#0 u#0)
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#p: parser kt (sum_repr_type t))
   (j: B.jumper p)
   (p32: leaf_reader p)
@@ -866,7 +866,7 @@ inline_for_extraction
 fn zero_copy_parse_sum_payload
   (#tl: Type)
   (t: sum u#0 u#0)
-  (#kt: parser_kind)
+  (#kt: Ghost.erased parser_kind)
   (#p: parser kt (sum_repr_type t))
   (j: B.jumper p)
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))

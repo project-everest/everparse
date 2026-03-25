@@ -194,8 +194,8 @@ fn jump_bcvli
 
 inline_for_extraction
 fn jump_bounded_bcvli
-  (min: nat)
-  (max: nat { min <= max })
+  (min: Ghost.erased nat)
+  (max: Ghost.erased nat { min <= max })
   (r1: PPB.leaf_reader (parse_bounded_integer_le 1))
 : LPS.jumper (parse_bounded_bcvli min max)
 =

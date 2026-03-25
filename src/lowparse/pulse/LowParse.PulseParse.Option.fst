@@ -14,7 +14,7 @@ module LPS = LowParse.Pulse.Base
 
 inline_for_extraction
 fn validate_option
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
   (v: LPS.validator p)

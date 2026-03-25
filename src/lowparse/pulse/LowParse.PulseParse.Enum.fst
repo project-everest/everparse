@@ -18,7 +18,7 @@ let is_known
 inline_for_extraction
 let validate_enum_key
   (#key #repr: eqtype)
-  (#k: parser_kind) (#p: parser k repr) (v: B.validator p) (p32: leaf_reader p)
+  (#k: Ghost.erased parser_kind) (#p: parser k repr) (v: B.validator p) (p32: leaf_reader p)
   (e: enum key repr)
   (destr: maybe_enum_destr_t bool e)
   (_: squash (k.parser_kind_subkind == Some ParserStrong))
@@ -33,7 +33,7 @@ let validate_enum_key
 [@Norm]
 let mk_validate_enum_key
   (#key #repr: eqtype)
-  (#k: parser_kind) (#p: parser k repr) (v: B.validator p) (p32: leaf_reader p)
+  (#k: Ghost.erased parser_kind) (#p: parser k repr) (v: B.validator p) (p32: leaf_reader p)
   (e: enum key repr)
   (_: squash (k.parser_kind_subkind == Some ParserStrong))
 : Tot (B.validator (parse_enum_key p e))
@@ -42,7 +42,7 @@ let mk_validate_enum_key
 inline_for_extraction
 let validate_maybe_enum_key
   (#key #repr: eqtype)
-  (#k: parser_kind) (#p: parser k repr) (v: B.validator p)
+  (#k: Ghost.erased parser_kind) (#p: parser k repr) (v: B.validator p)
   (e: enum key repr)
 : Tot (B.validator (parse_maybe_enum_key p e))
 = B.validate_synth
@@ -52,7 +52,7 @@ let validate_maybe_enum_key
 inline_for_extraction
 let jump_enum_key
   (#key #repr: eqtype)
-  (#k: parser_kind) (#p: parser k repr) (j: B.jumper p)
+  (#k: Ghost.erased parser_kind) (#p: parser k repr) (j: B.jumper p)
   (e: enum key repr)
 : Tot (B.jumper (parse_enum_key p e))
 = B.jump_synth
@@ -62,7 +62,7 @@ let jump_enum_key
 inline_for_extraction
 let jump_maybe_enum_key
   (#key #repr: eqtype)
-  (#k: parser_kind) (#p: parser k repr) (j: B.jumper p)
+  (#k: Ghost.erased parser_kind) (#p: parser k repr) (j: B.jumper p)
   (e: enum key repr)
 : Tot (B.jumper (parse_maybe_enum_key p e))
 = B.jump_synth j (maybe_enum_key_of_repr e)

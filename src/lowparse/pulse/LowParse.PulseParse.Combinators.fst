@@ -493,14 +493,14 @@ fn validate_filter_ret
 
 inline_for_extraction
 fn validate_filter_and_then
-  (#k1: parser_kind)
+  (#k1: Ghost.erased parser_kind)
   (#t1: Type0)
   (#p1: parser k1 t1)
   (v1: LPS.validator p1)
   (r1: PPB.leaf_reader p1)
   (f: (t1 -> GTot bool))
   (f': (x: t1) -> (y: bool { y == f x }))
-  (#k2: parser_kind)
+  (#k2: Ghost.erased parser_kind)
   (#t2: Type0)
   (#p2: ((x: t1 { f x == true }) -> parser k2 t2))
   (v2: ((x: t1 { f x == true }) -> LPS.validator (p2 x)))
