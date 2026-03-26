@@ -423,3 +423,89 @@ fn jump_vclist
 }
 
 #pop-options
+
+(* nlist_nth: access the i-th element of an nlist *)
+
+ghost fn trade_trans_nounify
+  (a1 a2 a2' a3: slprop)
+requires
+  trade a1 a2 ** trade a2' a3 ** pure (a2 == a2')
+ensures
+  trade a1 a3
+{
+  rewrite each a2' as a2;
+  Trade.trans a1 a2 a3
+}
+
+let nlist_nth_inv
+  (#t: Type0)
+  (n0: Ghost.erased nat)
+  (v0: list t)
+  (i0: SZ.t)
+  (i: SZ.t)
+  (n: nat)
+  (v: list t)
+: Tot prop
+= SZ.v i0 < n0 /\
+  SZ.v i <= SZ.v i0 /\
+  n == n0 - SZ.v i /\
+  List.Tot.length v0 == Ghost.reveal n0 /\
+  List.Tot.length v == n /\
+  List.Tot.index v0 (SZ.v i0) == List.Tot.index v (SZ.v i0 - SZ.v i)
+
+inline_for_extraction
+fn nlist_nth
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (j: LPS.jumper p)
+  (n0: Ghost.erased nat)
+  (input: slice byte)
+  (#pm: perm)
+  (#v0: Ghost.erased (nlist n0 t))
+  (i0: SZ.t { SZ.v i0 < n0 })
+requires
+  PPB.pts_to_parsed (parse_nlist n0 p) input #pm v0
+returns input' : slice byte
+ensures exists* v' pm' .
+  PPB.pts_to_parsed p input' #pm' v' **
+  trade (PPB.pts_to_parsed p input' #pm' v') (PPB.pts_to_parsed (parse_nlist n0 p) input #pm v0) **
+  pure (v' == List.Tot.index v0 (SZ.v i0))
+{
+  Trade.refl (PPB.pts_to_parsed (parse_nlist n0 p) input #pm v0);
+  let mut pi = 0sz;
+  let mut pres = input;
+  while (
+    let i = !pi;
+    (SZ.lt i i0)
+  ) invariant exists* i res (n: nat) (v: nlist n t) pm' . (
+    R.pts_to pi i ** R.pts_to pres res **
+    PPB.pts_to_parsed (parse_nlist n p) res #pm' v **
+    trade (PPB.pts_to_parsed (parse_nlist n p) res #pm' v) (PPB.pts_to_parsed (parse_nlist n0 p) input #pm v0) **
+    pure (
+      nlist_nth_inv #t n0 v0 i0 i n v
+    )
+  ) {
+    with 'res. assert R.pts_to pres 'res;
+    let res = !pres;
+    rewrite each 'res as res;
+    let i = !pi;
+    with v pm' . assert (PPB.pts_to_parsed (parse_nlist (n0 - SZ.v i) p) res #pm' v);
+    let res2 = nlist_tl sq j (n0 - SZ.v i) res;
+    pi := (SZ.add i 1sz);
+    pres := res2;
+    with v' pm'' . assert (PPB.pts_to_parsed (parse_nlist (n0 - SZ.v i - 1) p) res2 #pm'' v');
+    trade_trans_nounify _ _ _
+      (PPB.pts_to_parsed (parse_nlist n0 p) input #pm v0);
+  };
+  with 'res. assert R.pts_to pres 'res;
+  let res = !pres;
+  rewrite each 'res as res;
+  let i = !pi;
+  with v pm' . assert (PPB.pts_to_parsed (parse_nlist (n0 - SZ.v i) p) res #pm' v);
+  let res2 = nlist_hd sq j (n0 - SZ.v i0) res;
+  trade_trans_nounify
+    _ _ _ (PPB.pts_to_parsed (parse_nlist n0 p) input #pm v0);
+  res2
+}
