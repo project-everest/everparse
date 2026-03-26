@@ -332,7 +332,7 @@ let impl_check_equiv_list_with_bound_t
 
 #pop-options
 
-#push-options "--z3rlimit 128"
+#push-options "--z3rlimit 256"
 
 inline_for_extraction
 fn impl_check_equiv_list
@@ -467,6 +467,7 @@ fn impl_check_equiv_list
             pts_to_serialized_nlist_append serialize_raw_data_item tl1' _ _;
             Trade.trans_hyp_r _ _ _ (pts_to_serialized (serialize_nlist (SZ.v n) serialize_raw_data_item) l1' #p1 gl1');
             pts_to_serialized_length _ tl1';
+            LowParse.Spec.VCList.parse_nlist_kind_low (remaining_data_items_header h1 + (SZ.v n - 1)) parse_raw_data_item_kind;
             assert (pure (remaining_data_items_header h1 + (SZ.v n - 1) <= SZ.v (S.len tl1')));
             let n' : SZ.t = SZ.add (impl_remaining_data_items_header (S.len tl1') h1) (SZ.sub n 1sz);
             pts_to_serialized_nlist_ext
