@@ -467,6 +467,7 @@ fn impl_check_equiv_list
             pts_to_serialized_nlist_append serialize_raw_data_item tl1' _ _;
             Trade.trans_hyp_r _ _ _ (pts_to_serialized (serialize_nlist (SZ.v n) serialize_raw_data_item) l1' #p1 gl1');
             pts_to_serialized_length _ tl1';
+            LowParse.Spec.VCList.parse_nlist_kind_low (remaining_data_items_header h1 + (SZ.v n - 1)) parse_raw_data_item_kind;
             assert (pure (remaining_data_items_header h1 + (SZ.v n - 1) <= SZ.v (S.len tl1')));
             let n' : SZ.t = SZ.add (impl_remaining_data_items_header (S.len tl1') h1) (SZ.sub n 1sz);
             pts_to_serialized_nlist_ext
@@ -1094,7 +1095,7 @@ ensures pure
   ()
 }
 
-#push-options "--z3rlimit 128 --z3cliopt smt.arith.nl=false --z3cliopt smt.qi.eager_threshold=10 --fuel 4 --ifuel 8 --split_queries always"
+#push-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --z3cliopt smt.qi.eager_threshold=10 --fuel 2 --ifuel 4 --split_queries always"
 
 inline_for_extraction
 fn impl_check_equiv_map_hd_body
@@ -1478,7 +1479,7 @@ let check_map_depth_map_true
 = raw_data_item_size_eq a;
   list_of_pair_list_sum raw_data_item_size pairs
 
-#push-options "--z3rlimit 256 --fuel 4 --ext 'context_pruning:off'"
+#push-options "--z3rlimit 128 --fuel 2"
 
 fn rec impl_check_map_depth_aux
   (bound: SZ.t)
