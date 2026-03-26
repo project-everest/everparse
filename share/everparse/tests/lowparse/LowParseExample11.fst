@@ -85,44 +85,17 @@ let leaf_read_u32 : PPB.leaf_reader parse_u32 =
   PPB.leaf_reader_of_serialized (LPI.read_u32' ())
 
 (* read_6th: read the 6th element of a validated vclist.
-   Uses accessor combinators to decompose the vclist:
-   parse_t ≡ parse_synth (parse_dtuple2 tag_parser nlist_parser) dsnd
-   Then accessor_synth to unwrap, accessor_snd to get the nlist,
-   accessor_parser_ext to unwrap weaken,
-   and accessor_nlist_nth to access the 6th element. *)
+   Uses accessor_vclist_payload to get the nlist payload,
+   then accessor_nlist_nth to access element 6, then leaf_read_bcvli. *)
 
 module PPVCL = LowParse.PulseParse.VCList
-module PPC = LowParse.PulseParse.Combinators
-include LowParse.CLens
-
-(* Jumper for the tag parser *)
-inline_for_extraction noextract
-let jump_tag : LPS.jumper (parse_vclist_dtuple2_tag_parser 10 1000 parse_bcvli) =
-  fits_u64_squash ();
-  LPC.jump_synth
-    (LPC.jump_filter (PPBCVLI.jump_bcvli r_ble1) (bounded_count_prop 10 1000))
-    (synth_bounded_count 10 1000)
-
-let parse_t_dtuple2 =
-  parse_dtuple2
-    (parse_vclist_dtuple2_tag_parser 10 1000 parse_bcvli)
-    (parse_vclist_dtuple2_payload_parser 10 1000 parse_bcvli)
-
-let synth_t_dtuple2_injective ()
-: Lemma (synth_injective (parse_vclist_dtuple2_synth 10 1000 #U32.t))
-= ()
-
-let synth_t_dtuple2_recip
-  (x: vlarray U32.t 10 1000)
-: GTot (dtuple2 (bounded_count 10 1000) (fun (n: bounded_count 10 1000) -> nlist (U32.v n) U32.t))
-= (| U32.uint_to_t (L.length x), x |)
-
-let synth_t_dtuple2_inverse ()
-: Lemma (synth_inverse (parse_vclist_dtuple2_synth 10 1000 #U32.t) synth_t_dtuple2_recip)
-= ()
 
 let parse_t_ext_sq : squash (LPS.pts_to_serialized_ext_trade_gen_precond parse_t
-  (parse_synth parse_t_dtuple2 (parse_vclist_dtuple2_synth 10 1000 #U32.t))) =
+  (parse_synth
+    (parse_dtuple2
+      (parse_vclist_dtuple2_tag_parser 10 1000 parse_bcvli)
+      (parse_vclist_dtuple2_payload_parser 10 1000 parse_bcvli))
+    (parse_vclist_dtuple2_synth 10 1000 #U32.t))) =
   Classical.forall_intro (parse_vclist_dtuple2_eq 10 1000 parse_bcvli #_ #_ parse_bcvli)
 
 #push-options "--z3rlimit 128 --fuel 2 --ifuel 2"
@@ -142,49 +115,40 @@ fn read_6th
   let input' = PPB.peek_trade_gen parse_t input offset off;
   with v0 pm0 . assert (PPB.pts_to_parsed parse_t input' #pm0 v0);
 
-  (* Step 1: accessor_parser_ext from parse_t to parse_synth parse_t_dtuple2 synth *)
-  let s1 = PPB.accessor_parser_ext
-    parse_t
-    (parse_synth parse_t_dtuple2 (parse_vclist_dtuple2_synth 10 1000 #U32.t))
-    parse_t_ext_sq
+  (* accessor_vclist_payload: get the nlist payload *)
+  let gn : Ghost.erased nat = Ghost.hide (L.length v0);
+  assert (pure ((PPVCL.clens_vclist_payload 10 1000 #U32.t gn).clens_cond v0));
+  rewrite (PPB.pts_to_parsed parse_t input' #pm0 v0)
+    as (PPB.pts_to_parsed (parse_vclist 10 1000 parse_bcvli parse_bcvli) input' #pm0 v0);
+  let nlist_slice = PPVCL.accessor_vclist_payload
+    (Ghost.hide 10) (Ghost.hide 1000)
+    (PPBCVLI.jump_bcvli r_ble1)
+    gn
+    ()
     input';
-  with v1 pm1 . assert (PPB.pts_to_parsed (parse_synth parse_t_dtuple2 (parse_vclist_dtuple2_synth 10 1000)) s1 #pm1 v1);
+  with vn pmn . assert (PPB.pts_to_parsed (parse_nlist gn parse_bcvli) nlist_slice #pmn vn);
+  with vn_trade . assert (Trade.trade
+    (PPB.pts_to_parsed (parse_nlist gn parse_bcvli) nlist_slice #pmn vn)
+    (PPB.pts_to_parsed (parse_vclist 10 1000 parse_bcvli parse_bcvli) input' #pm0 vn_trade));
+  rewrite
+    (Trade.trade
+      (PPB.pts_to_parsed (parse_nlist gn parse_bcvli) nlist_slice #pmn vn)
+      (PPB.pts_to_parsed (parse_vclist 10 1000 parse_bcvli parse_bcvli) input' #pm0 vn_trade))
+    as
+    (Trade.trade
+      (PPB.pts_to_parsed (parse_nlist gn parse_bcvli) nlist_slice #pmn vn)
+      (PPB.pts_to_parsed parse_t input' #pm0 v0));
   Trade.trans _ (PPB.pts_to_parsed parse_t input' #pm0 v0) (S.pts_to input #pm v);
 
-  (* Step 2: accessor_synth to unwrap and get the dtuple2 *)
-  synth_t_dtuple2_injective ();
-  synth_t_dtuple2_inverse ();
-  let s2 = PPC.accessor_synth
-    (parse_vclist_dtuple2_synth 10 1000 #U32.t)
-    synth_t_dtuple2_recip
-    s1;
-  with v2 pm2 . assert (PPB.pts_to_parsed parse_t_dtuple2 s2 #pm2 v2);
-  Trade.trans _ (PPB.pts_to_parsed (parse_synth parse_t_dtuple2 (parse_vclist_dtuple2_synth 10 1000)) s1 #pm1 v1) (S.pts_to input #pm v);
+  (* accessor_nlist_nth: get the 6th element *)
+  let i6 : (i0: SZ.t { SZ.v i0 < gn }) = SZ.uint_to_t 6;
+  let elem_slice = PPVCL.accessor_nlist_nth () (PPBCVLI.jump_bcvli r_ble1) gn i6 nlist_slice;
+  with ve pme . assert (PPB.pts_to_parsed parse_bcvli elem_slice #pme ve);
+  Trade.trans _ (PPB.pts_to_parsed (parse_nlist gn parse_bcvli) nlist_slice #pmn vn) (S.pts_to input #pm v);
 
-  (* Step 3: accessor_dtuple2_snd to get the nlist payload *)
-  let gn : Ghost.erased (bounded_count 10 1000) = Ghost.hide (dfst v2);
-  let s3 = PPC.accessor_dtuple2_snd jump_tag (parse_vclist_dtuple2_payload_parser 10 1000 parse_bcvli) gn () s2;
-  Trade.trans _ (PPB.pts_to_parsed parse_t_dtuple2 s2 #pm2 v2) (S.pts_to input #pm v);
-
-  (* Step 4: reinterpret as parse_nlist via pts_to_parsed_ext_trade_gen *)
-  let gn_nat : Ghost.erased nat = Ghost.hide (U32.v (Ghost.reveal gn));
-  with v3 pm3 . assert (PPB.pts_to_parsed (parse_vclist_dtuple2_payload_parser 10 1000 parse_bcvli (Ghost.reveal gn)) s3 #pm3 v3);
-  PPB.pts_to_parsed_ext_trade_gen (parse_nlist gn_nat parse_bcvli) s3;
-  with v4 . assert (PPB.pts_to_parsed (parse_nlist gn_nat parse_bcvli) s3 #pm3 v4);
-  Trade.trans
-    (PPB.pts_to_parsed (parse_nlist gn_nat parse_bcvli) s3 #pm3 v4)
-    (PPB.pts_to_parsed (parse_vclist_dtuple2_payload_parser 10 1000 parse_bcvli (Ghost.reveal gn)) s3 #pm3 v3)
-    (S.pts_to input #pm v);
-
-  (* Step 5: accessor_nlist_nth to get the 6th element *)
-  let i6 : (i0: SZ.t { SZ.v i0 < gn_nat }) = SZ.uint_to_t 6;
-  let s5 = PPVCL.accessor_nlist_nth () (PPBCVLI.jump_bcvli r_ble1) gn_nat i6 s3;
-  with v5 pm5 . assert (PPB.pts_to_parsed parse_bcvli s5 #pm5 v5);
-  Trade.trans _ (PPB.pts_to_parsed (parse_nlist gn_nat parse_bcvli) s3 #pm3 v4) (S.pts_to input #pm v);
-
-  (* Step 6: Read the element *)
-  let res = leaf_read_bcvli s5;
-  Trade.elim (PPB.pts_to_parsed parse_bcvli s5 #pm5 v5) (S.pts_to input #pm v);
+  (* Read the element *)
+  let res = leaf_read_bcvli elem_slice;
+  Trade.elim (PPB.pts_to_parsed parse_bcvli elem_slice #pme ve) (S.pts_to input #pm v);
   res
 }
 
