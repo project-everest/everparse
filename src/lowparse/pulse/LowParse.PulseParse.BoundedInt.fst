@@ -470,3 +470,98 @@ fn validate_bounded_int32_le
 }
 
 #pop-options
+
+(* Leaf readers for parse_bounded_integer_le *)
+
+module U8 = FStar.UInt8
+module Cast = FStar.Int.Cast
+module Trade = Pulse.Lib.Trade.Util
+
+#push-options "--z3rlimit 32"
+
+inline_for_extraction
+fn leaf_read_bounded_integer_le_1
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (bounded_integer 1))
+requires
+  PPB.pts_to_parsed (parse_bounded_integer_le 1) input #pm v
+returns res: bounded_integer 1
+ensures
+  PPB.pts_to_parsed (parse_bounded_integer_le 1) input #pm v **
+  pure (res == Ghost.reveal v)
+{
+  PPB.pts_to_parsed_elim input;
+  with w . assert (S.pts_to input #pm w);
+  parser_kind_prop_equiv (parse_bounded_integer_kind 1) (parse_bounded_integer_le 1);
+  S.pts_to_len input;
+  parse_bounded_integer_le_eq 1 w;
+  Seq.lemma_eq_elim (Seq.slice w 0 1) w;
+  LowParse.Spec.Int32le.le_to_n_1_eq w;
+  let b0 = input.(0sz);
+  let res = Cast.uint8_to_uint32 b0;
+  Trade.elim _ _;
+  res
+}
+
+inline_for_extraction
+fn leaf_read_bounded_integer_le_2
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (bounded_integer 2))
+requires
+  PPB.pts_to_parsed (parse_bounded_integer_le 2) input #pm v
+returns res: bounded_integer 2
+ensures
+  PPB.pts_to_parsed (parse_bounded_integer_le 2) input #pm v **
+  pure (res == Ghost.reveal v)
+{
+  PPB.pts_to_parsed_elim input;
+  with w . assert (S.pts_to input #pm w);
+  parser_kind_prop_equiv (parse_bounded_integer_kind 2) (parse_bounded_integer_le 2);
+  S.pts_to_len input;
+  parse_bounded_integer_le_eq 2 w;
+  Seq.lemma_eq_elim (Seq.slice w 0 2) w;
+  LowParse.Spec.Int32le.le_to_n_2_eq w;
+  let b0 = input.(0sz);
+  let b1 = input.(1sz);
+  let v0 = Cast.uint8_to_uint32 b0;
+  let v1 = Cast.uint8_to_uint32 b1;
+  let res = U32.add v0 (U32.mul 256ul v1);
+  Trade.elim _ _;
+  res
+}
+
+inline_for_extraction
+fn leaf_read_bounded_integer_le_4
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (bounded_integer 4))
+requires
+  PPB.pts_to_parsed (parse_bounded_integer_le 4) input #pm v
+returns res: bounded_integer 4
+ensures
+  PPB.pts_to_parsed (parse_bounded_integer_le 4) input #pm v **
+  pure (res == Ghost.reveal v)
+{
+  PPB.pts_to_parsed_elim input;
+  with w . assert (S.pts_to input #pm w);
+  parser_kind_prop_equiv (parse_bounded_integer_kind 4) (parse_bounded_integer_le 4);
+  S.pts_to_len input;
+  parse_bounded_integer_le_eq 4 w;
+  Seq.lemma_eq_elim (Seq.slice w 0 4) w;
+  LowParse.Spec.Int32le.le_to_n_4_eq w;
+  let b0 = input.(0sz);
+  let b1 = input.(1sz);
+  let b2 = input.(2sz);
+  let b3 = input.(3sz);
+  let v0 = Cast.uint8_to_uint32 b0;
+  let v1 = Cast.uint8_to_uint32 b1;
+  let v2 = Cast.uint8_to_uint32 b2;
+  let v3 = Cast.uint8_to_uint32 b3;
+  let res = U32.add v0 (U32.mul 256ul (U32.add v1 (U32.mul 256ul (U32.add v2 (U32.mul 256ul v3)))));
+  Trade.elim _ _;
+  res
+}
+
+#pop-options

@@ -142,6 +142,8 @@ i
 = bounded_integer_of_le_injective i;
   make_total_constant_size_parser i (bounded_integer i) (bounded_integer_of_le i)
 
+let parse_bounded_integer_le_eq i input = ()
+
 inline_for_extraction
 let synth_u16_le
   (x: bounded_integer 2)

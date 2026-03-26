@@ -75,6 +75,17 @@ val parse_bounded_integer_le
   (i: integer_size)
 : Tot (parser (parse_bounded_integer_kind i) (bounded_integer i))
 
+val parse_bounded_integer_le_eq
+  (i: integer_size)
+  (input: bytes)
+: Lemma
+  (parse (parse_bounded_integer_le i) input == (
+    if Seq.length input < i then None
+    else
+      let _ = E.lemma_le_to_n_is_bounded (Seq.slice input 0 i) in
+      let _ = FStar.Math.Lemmas.pow2_le_compat 32 (8 `FStar.Mul.op_Star` i) in
+      Some (U32.uint_to_t (E.le_to_n (Seq.slice input 0 i)), i)))
+
 val parse_u16_le : parser parse_u16_kind U16.t
 
 val parse_u32_le : parser parse_u32_kind U32.t
