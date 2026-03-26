@@ -509,3 +509,34 @@ ensures exists* v' pm' .
     _ _ _ (PPB.pts_to_parsed (parse_nlist n0 p) input #pm v0);
   res2
 }
+
+(* accessor_nlist_nth: accessor for the i-th element of an nlist *)
+
+include LowParse.CLens
+
+let clens_nlist_nth (#t: Type) (n: nat) (i: nat { i < n })
+: Tot (clens (nlist n t) t)
+= {
+  clens_cond = (fun _ -> True);
+  clens_get = (fun (v: nlist n t) -> List.Tot.index v i);
+}
+
+inline_for_extraction
+fn accessor_nlist_nth
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (j: LPS.jumper p)
+  (n0: Ghost.erased nat)
+  (i0: SZ.t { SZ.v i0 < n0 })
+: PPB.accessor (parse_nlist n0 p) p (clens_nlist_nth n0 (SZ.v i0))
+=
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v0: Ghost.erased (nlist n0 t))
+{
+  let res = nlist_nth sq j n0 input i0;
+  with v' pm' . assert (PPB.pts_to_parsed p res #pm' v');
+  res
+}
