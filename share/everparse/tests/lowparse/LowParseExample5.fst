@@ -108,48 +108,60 @@ inline_for_extraction
 let leaf_read_u32 : PPB.leaf_reader parse_u32 =
   PPB.leaf_reader_of_serialized (LPI.read_u32' ())
 
-(* vmatch predicates *)
+(* Accessors using combinator composition — mirrors Example3 pattern *)
 
-let vmatch_left (x: U16.t) (v: t) : slprop = pure (x == v.inner.left)
-let vmatch_right (x: U16.t) (v: t) : slprop = pure (x == v.inner.right)
-let vmatch_last (x: U32.t) (v: t) : slprop = pure (x == v.last)
+include LowParse.CLens
+module Cast = FStar.Int.Cast
 
-(* Accessors via zero_copy_parse composition *)
+let clens_left : clens t U16.t = {
+  clens_cond = (fun _ -> True);
+  clens_get = (fun x -> x.inner.left);
+}
 
+let clens_right : clens t U16.t = {
+  clens_cond = (fun _ -> True);
+  clens_get = (fun x -> x.inner.right);
+}
+
+let clens_last : clens t U32.t = {
+  clens_cond = (fun _ -> True);
+  clens_get = (fun x -> x.last);
+}
+
+(* access_left: synth_inv(t) → fst(inner, U32) → synth_inv(inner) → fst(U16, U16) *)
 inline_for_extraction
-let access_left : PPB.zero_copy_parse vmatch_left parse_t
-= synth_t_injective ();
-  synth_inner_injective ();
-  PPC.zero_copy_parse_synth
-    (PPC.zero_copy_parse_fst #_ #inner #U32.t parse_u32
-      jump_inner
-      (PPC.zero_copy_parse_synth
-        (PPC.zero_copy_parse_fst #_ #U16.t #U16.t parse_u16 LPI.jump_u16
-          (PPB.zero_copy_parse_read leaf_read_u16) ())
-        synth_inner synth_inner_recip) ())
-    synth_t synth_t_recip
+let access_left : PPB.accessor parse_t parse_u16 clens_left =
+  PPC.accessor_ext
+    (PPC.accessor_then_fst
+      (PPC.accessor_compose_strong
+        (PPC.accessor_then_fst
+          (PPC.accessor_synth_inv synth_t synth_t_recip)
+          jump_inner () ())
+        (PPC.accessor_synth_inv synth_inner synth_inner_recip) ())
+      LPI.jump_u16 () ())
+    clens_left ()
 
+(* access_right: synth_inv(t) → fst(inner, U32) → synth_inv(inner) → snd(U16, U16) *)
 inline_for_extraction
-let access_right : PPB.zero_copy_parse vmatch_right parse_t
-= synth_t_injective ();
-  synth_inner_injective ();
-  PPC.zero_copy_parse_synth
-    (PPC.zero_copy_parse_fst #_ #inner #U32.t parse_u32
-      jump_inner
-      (PPC.zero_copy_parse_synth
-        (PPC.zero_copy_parse_snd #_ #U16.t #U16.t LPI.jump_u16
-          (PPB.zero_copy_parse_read leaf_read_u16) ())
-        synth_inner synth_inner_recip) ())
-    synth_t synth_t_recip
+let access_right : PPB.accessor parse_t parse_u16 clens_right =
+  PPC.accessor_ext
+    (PPC.accessor_then_snd
+      (PPC.accessor_compose_strong
+        (PPC.accessor_then_fst
+          (PPC.accessor_synth_inv synth_t synth_t_recip)
+          jump_inner () ())
+        (PPC.accessor_synth_inv synth_inner synth_inner_recip) ())
+      LPI.jump_u16 () ())
+    clens_right ()
 
+(* access_last: synth_inv(t) → snd(inner, U32) *)
 inline_for_extraction
-let access_last : PPB.zero_copy_parse vmatch_last parse_t
-= synth_t_injective ();
-  PPC.zero_copy_parse_synth
-    (PPC.zero_copy_parse_snd #_ #inner #U32.t
-      jump_inner
-      (PPB.zero_copy_parse_read leaf_read_u32) ())
-    synth_t synth_t_recip
+let access_last : PPB.accessor parse_t parse_u32 clens_last =
+  PPC.accessor_ext
+    (PPC.accessor_then_snd
+      (PPC.accessor_synth_inv synth_t synth_t_recip)
+      jump_inner () ())
+    clens_last ()
 
 (* Test function *)
 
@@ -169,24 +181,28 @@ fn dummy
   if is_valid {
     let off = !poffset;
     let input' = PPB.peek_trade_gen parse_t input 0sz off;
+    with v0 pm0 . assert (PPB.pts_to_parsed parse_t input' #pm0 v0);
     if (U32.eq which 42ul) {
-      let x = access_left input';
-      with v' pm' . assert (Trade.trade (vmatch_left x v') (PPB.pts_to_parsed parse_t input' #pm' v'));
-      Trade.elim (vmatch_left x v') (PPB.pts_to_parsed parse_t input' #pm' v');
-      Trade.elim (PPB.pts_to_parsed parse_t input' #pm' v') (S.pts_to input #pm v);
-      FStar.Int.Cast.uint16_to_uint32 x
+      let sub = access_left input';
+      with v2 pm2 . assert (PPB.pts_to_parsed parse_u16 sub #pm2 v2);
+      let x = leaf_read_u16 sub;
+      Trade.elim (PPB.pts_to_parsed parse_u16 sub #pm2 v2) (PPB.pts_to_parsed parse_t input' #pm0 v0);
+      Trade.elim (PPB.pts_to_parsed parse_t input' #pm0 v0) (S.pts_to input #pm v);
+      Cast.uint16_to_uint32 x
     } else if (U32.eq which 1729ul) {
-      let x = access_last input';
-      with v' pm' . assert (Trade.trade (vmatch_last x v') (PPB.pts_to_parsed parse_t input' #pm' v'));
-      Trade.elim (vmatch_last x v') (PPB.pts_to_parsed parse_t input' #pm' v');
-      Trade.elim (PPB.pts_to_parsed parse_t input' #pm' v') (S.pts_to input #pm v);
+      let sub = access_last input';
+      with v2 pm2 . assert (PPB.pts_to_parsed parse_u32 sub #pm2 v2);
+      let x = leaf_read_u32 sub;
+      Trade.elim (PPB.pts_to_parsed parse_u32 sub #pm2 v2) (PPB.pts_to_parsed parse_t input' #pm0 v0);
+      Trade.elim (PPB.pts_to_parsed parse_t input' #pm0 v0) (S.pts_to input #pm v);
       x
     } else {
-      let x = access_right input';
-      with v' pm' . assert (Trade.trade (vmatch_right x v') (PPB.pts_to_parsed parse_t input' #pm' v'));
-      Trade.elim (vmatch_right x v') (PPB.pts_to_parsed parse_t input' #pm' v');
-      Trade.elim (PPB.pts_to_parsed parse_t input' #pm' v') (S.pts_to input #pm v);
-      FStar.Int.Cast.uint16_to_uint32 x
+      let sub = access_right input';
+      with v2 pm2 . assert (PPB.pts_to_parsed parse_u16 sub #pm2 v2);
+      let x = leaf_read_u16 sub;
+      Trade.elim (PPB.pts_to_parsed parse_u16 sub #pm2 v2) (PPB.pts_to_parsed parse_t input' #pm0 v0);
+      Trade.elim (PPB.pts_to_parsed parse_t input' #pm0 v0) (S.pts_to input #pm v);
+      Cast.uint16_to_uint32 x
     }
   } else {
     0ul
