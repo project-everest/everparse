@@ -728,3 +728,31 @@ let accessor
       Trade.trade
         (pts_to_parsed p2 result #pm' v2)
         (pts_to_parsed p1 input #pm v))
+
+(* accessor_parser_ext: accessor between two parsers of different kinds
+   but same value type and same parse behavior *)
+
+let clens_parser_ext
+  (#t1 #t2: Type)
+  (sq: squash (t1 == t2))
+: Tot (clens t1 t2)
+= {
+  clens_cond = (fun _ -> True);
+  clens_get = (fun (x: t1) -> (x <: t2));
+}
+
+inline_for_extraction
+fn accessor_parser_ext
+  (#k1: parser_kind) (#t1: Type0) (p1: parser k1 t1)
+  (#k2: parser_kind) (#t2: Type0) (p2: parser k2 t2)
+  (sq: squash (LPS.pts_to_serialized_ext_trade_gen_precond p1 p2))
+: accessor p1 p2 (clens_parser_ext ())
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t1)
+{
+  pts_to_parsed_ext_trade_gen p2 input;
+  with v2 . assert (pts_to_parsed p2 input #pm v2);
+  input
+}
