@@ -162,22 +162,107 @@ let unit_test_struct_serializer : serializer unit_test_struct_parser =
     unit_test_synth_struct_recip
     ()
 
-(* Accessor for header field using PulseParse accessor type with clens.
-   The Low* version used accessor_fst to access the header from the
-   deplen structure. The Pulse version would define:
+(* Pulse validators, jumper, and deplen_func_calc *)
 
-     include LowParse.CLens
+open FStar.Tactics.V2
+open Pulse.Lib.Pervasives open Pulse.Lib.Slice.Util open Pulse.Lib.Trade
+open Pulse.Lib.Slice
 
-     let clens_header : clens unit_test_struct_type unit_test_header_type = {
-       clens_cond = (fun _ -> True);
-       clens_get = (fun x -> (x.len, x.foo));
-     }
+module SZ = FStar.SizeT
+module S = Pulse.Lib.Slice
+module LPS = LowParse.Pulse.Base
+module LPI = LowParse.Pulse.Int
+module LPC = LowParse.Pulse.Combinators
+module PPB = LowParse.PulseParse.Base
+module PPC = LowParse.PulseParse.Combinators
+module PPBI = LowParse.PulseParse.BoundedInt
+module PPBY = LowParse.PulseParse.Bytes
+module PPDL = LowParse.PulseParse.DepLen
+module Trade = Pulse.Lib.Trade.Util
+module Cast = FStar.Int.Cast
 
-     let access_header : PPB.accessor unit_test_struct_parser
-                                      unit_test_header_parser clens_header = ...
+let fits_u64_squash (_: unit) : Lemma (FStar.SizeT.fits_u64) = assume (FStar.SizeT.fits_u64)
 
-   However, this requires bounded_int32 leaf_readers and a Pulse
-   validator for parse_deplen, which are not yet available. *)
+inline_for_extraction noextract
+let leaf_read_bi1 : PPB.leaf_reader (parse_bounded_integer 1) =
+  fits_u64_squash ();
+  PPBI.leaf_read_bounded_integer_1 ()
+
+(* leaf_reader for parse_bounded_int32: read via parse_bounded_integer + bounds check.
+   The value is the same U32.t, just refined. *)
+#push-options "--z3rlimit 32"
+
+inline_for_extraction
+fn leaf_read_bounded_int32_0_100
+  (input: S.slice byte) (#pm: perm) (#v: Ghost.erased (bounded_int32 0 100))
+  requires PPB.pts_to_parsed (parse_bounded_int32 0 100) input #pm v
+  returns res: bounded_int32 0 100
+  ensures PPB.pts_to_parsed (parse_bounded_int32 0 100) input #pm v ** pure (res == Ghost.reveal v)
+{
+  PPB.pts_to_parsed_elim input;
+  with w . assert (S.pts_to input #pm w);
+  parse_bounded_int32_eq 0 100 w;
+  parser_kind_prop_equiv (parse_bounded_integer_kind 1) (parse_bounded_integer 1);
+  S.pts_to_len input;
+  let b0 = input.(0sz);
+  FStar.Endianness.reveal_be_to_n (Seq.slice w 0 1);
+  FStar.Endianness.reveal_be_to_n (Seq.slice (Seq.slice w 0 1) 0 0);
+  Seq.lemma_index_slice w 0 1 0;
+  parse_bounded_integer_spec 1 w;
+  let res = Cast.uint8_to_uint32 b0;
+  (* Restore: pts_to input #pm w → pts_to_parsed parse_bounded_int32 *)
+  Trade.elim (S.pts_to input #pm w) (PPB.pts_to_parsed (parse_bounded_int32 0 100) input #pm v);
+  res
+}
+#pop-options
+
+inline_for_extraction noextract
+let leaf_read_bi2 : PPB.leaf_reader (parse_bounded_integer 2) =
+  fits_u64_squash ();
+  PPBI.leaf_read_bounded_integer_2 ()
+
+inline_for_extraction noextract
+let leaf_read_bi3 : PPB.leaf_reader (parse_bounded_integer 3) =
+  fits_u64_squash ();
+  PPBI.leaf_read_bounded_integer_3 ()
+
+inline_for_extraction noextract
+let leaf_read_bi4 : PPB.leaf_reader (parse_bounded_integer 4) =
+  fits_u64_squash ();
+  PPBI.leaf_read_bounded_integer_4 ()
+
+inline_for_extraction
+let unit_test_header_validator : LPS.validator unit_test_header_parser =
+  PPC.validate_nondep_then
+    (PPBI.validate_bounded_int32 0ul 100ul leaf_read_bi1 leaf_read_bi2 leaf_read_bi3 leaf_read_bi4)
+    (PPBI.validate_bounded_int32 0ul 100ul leaf_read_bi1 leaf_read_bi2 leaf_read_bi3 leaf_read_bi4)
+
+inline_for_extraction noextract
+let jump_bi32 : LPS.jumper (parse_bounded_int32 0 100) =
+  PPBI.jump_bounded_int32_1 0ul 100ul
+
+inline_for_extraction noextract
+let leaf_read_header : PPB.leaf_reader unit_test_header_parser =
+  PPC.leaf_read_nondep_then
+    leaf_read_bounded_int32_0_100
+    jump_bi32
+    leaf_read_bounded_int32_0_100
+    ()
+
+inline_for_extraction
+let unit_test_data_validator : LPS.validator unit_test_data_parser =
+  fits_u64_squash ();
+  PPDL.validate_deplen unit_test_min unit_test_max
+    unit_test_header_validator
+    leaf_read_header
+    unit_test_deplen_func
+    unit_test_payload_serializer
+    (PPBY.validate_all_bytes ())
+    ()
+
+inline_for_extraction
+let unit_test_struct_validator : LPS.validator unit_test_struct_parser =
+  LPC.validate_synth unit_test_data_validator unit_test_synth_struct
 
 fn main ()
   requires emp
