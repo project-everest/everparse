@@ -1277,3 +1277,56 @@ fn accessor_tagged_union_payload
 }
 
 #pop-options
+
+(* ========== dtuple2 accessor combinators ========== *)
+
+let clens_dtuple2_snd
+  (#t1: Type)
+  (#t2: t1 -> Type)
+  (x1: t1)
+: Tot (clens (dtuple2 t1 t2) (t2 x1))
+= {
+  clens_cond = (fun (d: dtuple2 t1 t2) -> dfst d == x1);
+  clens_get = (fun (d: dtuple2 t1 t2) ->
+    (dsnd d <: Ghost (t2 x1) (requires (dfst d == x1)) (ensures fun _ -> True)));
+}
+
+#push-options "--z3rlimit 64"
+
+inline_for_extraction
+fn accessor_dtuple2_snd
+  (#k1: Ghost.erased parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (j1: LPS.jumper p1)
+  (#k2: Ghost.erased parser_kind)
+  (#t2: (t1 -> Tot Type0))
+  (p2: (x: t1) -> Tot (parser k2 (t2 x)))
+  (x1: Ghost.erased t1)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+: PPB.accessor (parse_dtuple2 p1 p2) (p2 (Ghost.reveal x1)) (clens_dtuple2_snd (Ghost.reveal x1))
+=
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (dtuple2 t1 t2))
+{
+  PPB.pts_to_parsed_elim input;
+  with bytes . assert (S.pts_to input #pm bytes);
+  parse_dtuple2_eq p1 p2 bytes;
+  S.pts_to_len input;
+  parser_kind_prop_equiv k1 p1;
+  Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
+  let off = j1 input 0sz;
+  let payload_bytes = Ghost.hide (Seq.slice bytes (SZ.v off) (Seq.length bytes));
+  let input_tag, input_payload = split_trade input off;
+  with wb_tag . assert (S.pts_to input_tag #pm wb_tag);
+  with wb_payload . assert (S.pts_to input_payload #pm wb_payload);
+  Trade.elim_hyp_l (S.pts_to input_tag #pm wb_tag) (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes);
+  Trade.trans (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes) (PPB.pts_to_parsed (parse_dtuple2 p1 p2) input #pm v);
+  Seq.lemma_eq_elim wb_payload (Ghost.reveal payload_bytes);
+  PPB.pts_to_parsed_intro (p2 (Ghost.reveal x1)) input_payload (dsnd v);
+  Trade.trans (PPB.pts_to_parsed (p2 (Ghost.reveal x1)) input_payload #(pm /. 2.0R) (dsnd v)) (S.pts_to input_payload #pm wb_payload) (PPB.pts_to_parsed (parse_dtuple2 p1 p2) input #pm v);
+  input_payload
+}
+
+#pop-options
