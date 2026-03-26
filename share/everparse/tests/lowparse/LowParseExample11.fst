@@ -161,26 +161,26 @@ fn read_6th
   with v2 pm2 . assert (PPB.pts_to_parsed parse_t_dtuple2 s2 #pm2 v2);
   Trade.trans _ (PPB.pts_to_parsed (parse_synth parse_t_dtuple2 (parse_vclist_dtuple2_synth 10 1000)) s1 #pm1 v1) (S.pts_to input #pm v);
 
-  (* Step 3: accessor_snd to get the nlist payload *)
-  let s3 = PPC.accessor_snd jump_tag () s2;
+  (* Step 3: accessor_dtuple2_snd to get the nlist payload *)
+  let gn : Ghost.erased (bounded_count 10 1000) = Ghost.hide (dfst v2);
+  let s3 = PPC.accessor_dtuple2_snd jump_tag (parse_vclist_dtuple2_payload_parser 10 1000 parse_bcvli) gn () s2;
   Trade.trans _ (PPB.pts_to_parsed parse_t_dtuple2 s2 #pm2 v2) (S.pts_to input #pm v);
 
-  (* Step 4: accessor_parser_ext from weakened nlist to parse_nlist *)
-  let gn : Ghost.erased nat = Ghost.hide (U32.v (dfst v2));
-  with v3 pm3 . assert (PPB.pts_to_parsed (parse_vclist_dtuple2_payload_parser 10 1000 parse_bcvli (dfst v2)) s3 #pm3 v3);
-  let s4 = PPB.accessor_parser_ext
-    (parse_vclist_dtuple2_payload_parser 10 1000 parse_bcvli (dfst v2))
-    (parse_nlist gn parse_bcvli)
-    ()
-    s3;
-  with v4 pm4 . assert (PPB.pts_to_parsed (parse_nlist gn parse_bcvli) s4 #pm4 v4);
-  Trade.trans _ (PPB.pts_to_parsed (parse_vclist_dtuple2_payload_parser 10 1000 parse_bcvli (dfst v2)) s3 #pm3 v3) (S.pts_to input #pm v);
+  (* Step 4: reinterpret as parse_nlist via pts_to_parsed_ext_trade_gen *)
+  let gn_nat : Ghost.erased nat = Ghost.hide (U32.v (Ghost.reveal gn));
+  with v3 pm3 . assert (PPB.pts_to_parsed (parse_vclist_dtuple2_payload_parser 10 1000 parse_bcvli (Ghost.reveal gn)) s3 #pm3 v3);
+  PPB.pts_to_parsed_ext_trade_gen (parse_nlist gn_nat parse_bcvli) s3;
+  with v4 . assert (PPB.pts_to_parsed (parse_nlist gn_nat parse_bcvli) s3 #pm3 v4);
+  Trade.trans
+    (PPB.pts_to_parsed (parse_nlist gn_nat parse_bcvli) s3 #pm3 v4)
+    (PPB.pts_to_parsed (parse_vclist_dtuple2_payload_parser 10 1000 parse_bcvli (Ghost.reveal gn)) s3 #pm3 v3)
+    (S.pts_to input #pm v);
 
   (* Step 5: accessor_nlist_nth to get the 6th element *)
-  let i6 : (i0: SZ.t { SZ.v i0 < gn }) = SZ.uint_to_t 6;
-  let s5 = PPVCL.accessor_nlist_nth () (PPBCVLI.jump_bcvli r_ble1) gn i6 s4;
+  let i6 : (i0: SZ.t { SZ.v i0 < gn_nat }) = SZ.uint_to_t 6;
+  let s5 = PPVCL.accessor_nlist_nth () (PPBCVLI.jump_bcvli r_ble1) gn_nat i6 s3;
   with v5 pm5 . assert (PPB.pts_to_parsed parse_bcvli s5 #pm5 v5);
-  Trade.trans _ (PPB.pts_to_parsed (parse_nlist gn parse_bcvli) s4 #pm4 v4) (S.pts_to input #pm v);
+  Trade.trans _ (PPB.pts_to_parsed (parse_nlist gn_nat parse_bcvli) s3 #pm3 v4) (S.pts_to input #pm v);
 
   (* Step 6: Read the element *)
   let res = leaf_read_bcvli s5;
