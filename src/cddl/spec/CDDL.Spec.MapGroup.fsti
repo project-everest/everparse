@@ -203,7 +203,7 @@ let map_group_footprint_concat
   (ensures (
     map_group_footprint (map_group_concat g1 g2) (map_constraint_choice f1 f2)
   ))
-  [SMTPat (map_group_footprint g1 f1); SMTPat (map_group_footprint g2 f2); SMTPat (map_group_concat g1 g2)]
+  [SMTPat (map_group_footprint (map_group_concat g1 g2) (map_constraint_choice f1 f2))]
 = bring_cbor_map_defined_alt ()
 
 #restart-solver
@@ -218,7 +218,7 @@ let map_group_footprint_choice
   (ensures (
     map_group_footprint (map_group_choice g1 g2) (map_constraint_choice f1 f2)
   ))
-  [SMTPat (map_group_footprint g1 f1); SMTPat (map_group_footprint g2 f2); SMTPat (map_group_choice g1 g2)]
+  [SMTPat (map_group_footprint (map_group_choice g1 g2) (map_constraint_choice f1 f2))]
 = bring_cbor_map_defined_alt ()
 
 #restart-solver
