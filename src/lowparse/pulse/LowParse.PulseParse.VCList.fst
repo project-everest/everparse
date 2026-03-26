@@ -540,3 +540,140 @@ fn accessor_nlist_nth
   with v' pm' . assert (PPB.pts_to_parsed p res #pm' v');
   res
 }
+
+(* accessor_vclist_payload: accessor from vclist to nlist *)
+
+module L = FStar.List.Tot
+module LPC = LowParse.Pulse.Combinators
+
+let clens_vclist_payload
+  (min: nat)
+  (max: nat { min <= max })
+  (#t: Type)
+  (n: Ghost.erased nat)
+: Tot (clens (vlarray t min max) (nlist (Ghost.reveal n) t))
+= {
+  clens_cond = (fun (l: vlarray t min max) -> L.length l == Ghost.reveal n);
+  clens_get = (fun (l: vlarray t min max) ->
+    (l <: Ghost (nlist (Ghost.reveal n) t) (requires (L.length l == Ghost.reveal n)) (ensures fun _ -> True)));
+}
+
+let synth_vclist_dtuple2_injective
+  (min: nat)
+  (max: nat { min <= max })
+  (#t: Type)
+: Lemma (synth_injective (parse_vclist_dtuple2_synth min max #t))
+= ()
+
+let synth_vclist_dtuple2_recip
+  (min: nat)
+  (max: nat { min <= max /\ max < 4294967296 })
+  (#t: Type)
+  (x: vlarray t min max)
+: GTot (dtuple2 (bounded_count min max) (fun (n: bounded_count min max) -> nlist (U32.v n) t))
+= (| U32.uint_to_t (L.length x), x |)
+
+let synth_vclist_dtuple2_inverse
+  (min: nat)
+  (max: nat { min <= max /\ max < 4294967296 })
+  (#t: Type)
+: Lemma (synth_inverse (parse_vclist_dtuple2_synth min max #t) (synth_vclist_dtuple2_recip min max #t))
+= ()
+
+inline_for_extraction
+let mk_jump_vclist_tag
+  (min: Ghost.erased nat)
+  (max: Ghost.erased nat { min <= max })
+  (#lk: Ghost.erased parser_kind)
+  (#lp: parser lk U32.t)
+  (lj: LPS.jumper lp)
+: LPS.jumper (parse_vclist_dtuple2_tag_parser min max lp)
+= LPC.jump_synth (LPC.jump_filter lj (bounded_count_prop min max)) (synth_bounded_count min max)
+
+#push-options "--z3rlimit 128 --fuel 2 --ifuel 2"
+
+inline_for_extraction
+fn accessor_vclist_payload
+  (min: Ghost.erased nat)
+  (max: Ghost.erased nat { min <= max /\ max < 4294967296 })
+  (#lk: Ghost.erased parser_kind)
+  (#lp: parser lk U32.t)
+  (lj: LPS.jumper lp)
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (n: Ghost.erased nat)
+  (sq: squash (lk.parser_kind_subkind == Some ParserStrong /\
+    LPS.pts_to_serialized_ext_trade_gen_precond
+      (parse_vclist min max lp p)
+      (parse_synth
+        (parse_dtuple2
+          (parse_vclist_dtuple2_tag_parser min max lp)
+          (parse_vclist_dtuple2_payload_parser min max p))
+        (parse_vclist_dtuple2_synth min max #t))))
+: PPB.accessor
+    (parse_vclist min max lp p)
+    (parse_nlist (Ghost.reveal n) p)
+    (clens_vclist_payload min max n)
+=
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (vlarray t min max))
+{
+  (* Step 1: ghost reinterpret as parse_synth parse_dtuple2 synth *)
+  PPB.pts_to_parsed_ext_trade_gen
+    (parse_synth
+      (parse_dtuple2
+        (parse_vclist_dtuple2_tag_parser min max lp)
+        (parse_vclist_dtuple2_payload_parser min max p))
+      (parse_vclist_dtuple2_synth min max #t))
+    input;
+  with v1 . assert (PPB.pts_to_parsed
+    (parse_synth
+      (parse_dtuple2
+        (parse_vclist_dtuple2_tag_parser min max lp)
+        (parse_vclist_dtuple2_payload_parser min max p))
+      (parse_vclist_dtuple2_synth min max #t))
+    input #pm v1);
+
+  (* Step 2: ghost unwrap synth *)
+  synth_vclist_dtuple2_injective min max #t;
+  synth_vclist_dtuple2_inverse min max #t;
+  PPC.pts_to_parsed_synth_l2r_trade
+    (parse_dtuple2
+      (parse_vclist_dtuple2_tag_parser min max lp)
+      (parse_vclist_dtuple2_payload_parser min max p))
+    (parse_vclist_dtuple2_synth min max #t)
+    (synth_vclist_dtuple2_recip min max #t)
+    input;
+  with v2 . assert (PPB.pts_to_parsed
+    (parse_dtuple2
+      (parse_vclist_dtuple2_tag_parser min max lp)
+      (parse_vclist_dtuple2_payload_parser min max p))
+    input #pm v2);
+  Trade.trans _ _ (PPB.pts_to_parsed (parse_vclist min max lp p) input #pm v);
+
+  (* Step 3: accessor_dtuple2_snd — jump past the tag *)
+  let gbc : Ghost.erased (bounded_count min max) = Ghost.hide (dfst v2);
+  let s3 = PPC.accessor_dtuple2_snd
+    (mk_jump_vclist_tag min max lj)
+    (parse_vclist_dtuple2_payload_parser min max p)
+    gbc
+    ()
+    input;
+  Trade.trans _ _ (PPB.pts_to_parsed (parse_vclist min max lp p) input #pm v);
+
+  (* Step 4: ghost reinterpret weakened nlist as parse_nlist *)
+  with v3 pm3 . assert (PPB.pts_to_parsed
+    (parse_vclist_dtuple2_payload_parser min max p (Ghost.reveal gbc))
+    s3 #pm3 v3);
+  PPB.pts_to_parsed_ext_trade_gen (parse_nlist n p) s3;
+  with v4 . assert (PPB.pts_to_parsed (parse_nlist n p) s3 #pm3 v4);
+  Trade.trans
+    (PPB.pts_to_parsed (parse_nlist n p) s3 #pm3 v4)
+    (PPB.pts_to_parsed (parse_vclist_dtuple2_payload_parser min max p (Ghost.reveal gbc)) s3 #pm3 v3)
+    (PPB.pts_to_parsed (parse_vclist min max lp p) input #pm v);
+  s3
+}
+
+#pop-options
