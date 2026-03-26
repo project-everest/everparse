@@ -252,7 +252,10 @@ fn jump_der_length_payload32
     let len = U8.sub x 128uy;
     parser_kind_prop_equiv parse_u8_kind parse_u8;
     parser_kind_prop_equiv (parse_bounded_integer_kind (U8.v len)) (parse_bounded_integer (U8.v len));
-    SZ.add offset (SZ.uint_to_t (U8.v len))
+    if (U8.eq len 1uy) { SZ.add offset 1sz }
+    else if (U8.eq len 2uy) { SZ.add offset 2sz }
+    else if (U8.eq len 3uy) { SZ.add offset 3sz }
+    else { SZ.add offset 4sz }
   }
 }
 
@@ -279,6 +282,65 @@ fn jump_bounded_der_length32
     (Seq.slice sinput (SZ.v off1 - SZ.v offset) (Seq.length sinput))
     (Seq.slice v (SZ.v off1) (Seq.length v));
   jump_der_length_payload32 x input off1
+}
+
+#pop-options
+
+(* leaf_reader for parse_bounded_der_length32 *)
+
+module LPI = LowParse.Pulse.Int
+module PPBI = LowParse.PulseParse.BoundedInt
+
+#push-options "--z3rlimit 64"
+
+inline_for_extraction
+fn leaf_read_bounded_der_length32
+  (vmin: der_length_t)
+  (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 })
+  (r_u8: PPB.leaf_reader parse_u8)
+  (r_bi: (i: integer_size) -> Tot (PPB.leaf_reader (parse_bounded_integer i)))
+: PPB.leaf_reader (parse_bounded_der_length32 vmin vmax)
+=
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (bounded_int32 vmin vmax))
+{
+  PPB.pts_to_parsed_elim input;
+  with w . assert (S.pts_to input #pm w);
+  parse_bounded_der_length32_unfold vmin vmax w;
+  parser_kind_prop_equiv parse_u8_kind parse_u8;
+  S.pts_to_len input;
+  let x = PPB.read_parsed_from_validator_success r_u8 input 0sz 1sz;
+  Seq.lemma_eq_elim (Seq.slice w 1 (Seq.length w)) (Seq.slice w 1 (Seq.length w));
+  parse_der_length_payload32_unfold x (Seq.slice w 1 (Seq.length w));
+  assert_norm (pow2 8 == 256);
+  assert_norm (pow2 16 == 65536);
+  assert_norm (pow2 24 == 16777216);
+  assert_norm (pow2 32 == 4294967296);
+  if (U8.lt x 128uy) {
+    Trade.elim _ _;
+    Cast.uint8_to_uint32 x
+  } else if (U8.eq x 129uy) {
+    parser_kind_prop_equiv parse_u8_kind parse_u8;
+    let y = PPB.read_parsed_from_validator_success r_u8 input 1sz 2sz;
+    Trade.elim _ _;
+    Cast.uint8_to_uint32 y
+  } else if (U8.eq x 130uy) {
+    parser_kind_prop_equiv (parse_bounded_integer_kind 2) (parse_bounded_integer 2);
+    let y = PPB.read_parsed_from_validator_success (r_bi 2) input 1sz 3sz;
+    Trade.elim _ _;
+    y
+  } else if (U8.eq x 131uy) {
+    parser_kind_prop_equiv (parse_bounded_integer_kind 3) (parse_bounded_integer 3);
+    let y = PPB.read_parsed_from_validator_success (r_bi 3) input 1sz 4sz;
+    Trade.elim _ _;
+    y
+  } else {
+    parser_kind_prop_equiv (parse_bounded_integer_kind 4) (parse_bounded_integer 4);
+    let y = PPB.read_parsed_from_validator_success (r_bi 4) input 1sz 5sz;
+    Trade.elim _ _;
+    y
+  }
 }
 
 #pop-options

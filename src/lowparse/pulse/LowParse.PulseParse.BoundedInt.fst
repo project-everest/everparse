@@ -565,3 +565,134 @@ ensures
 }
 
 #pop-options
+
+(* leaf_reader for parse_bounded_integer (big-endian) *)
+
+#push-options "--z3rlimit 32"
+
+inline_for_extraction
+fn leaf_read_bounded_integer_1
+  (_: squash FStar.SizeT.fits_u64)
+: PPB.leaf_reader (parse_bounded_integer 1)
+=
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (bounded_integer 1))
+{
+  PPB.pts_to_parsed_elim input;
+  with w . assert (S.pts_to input #pm w);
+  parse_bounded_integer_spec 1 w;
+  S.pts_to_len input;
+  let b0 = input.(0sz);
+  FStar.Endianness.reveal_be_to_n (Seq.slice w 0 1);
+  FStar.Endianness.reveal_be_to_n (Seq.slice (Seq.slice w 0 1) 0 0);
+  Seq.lemma_index_slice w 0 1 0;
+  let res = Cast.uint8_to_uint32 b0;
+  Trade.elim _ _;
+  res
+}
+
+inline_for_extraction
+fn leaf_read_bounded_integer_2
+  (_: squash FStar.SizeT.fits_u64)
+: PPB.leaf_reader (parse_bounded_integer 2)
+=
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (bounded_integer 2))
+{
+  PPB.pts_to_parsed_elim input;
+  with w . assert (S.pts_to input #pm w);
+  parse_bounded_integer_spec 2 w;
+  S.pts_to_len input;
+  let b0 = input.(0sz);
+  let b1 = input.(1sz);
+  FStar.Endianness.reveal_be_to_n (Seq.slice w 0 2);
+  FStar.Endianness.reveal_be_to_n (Seq.slice (Seq.slice w 0 2) 0 1);
+  FStar.Endianness.reveal_be_to_n (Seq.slice (Seq.slice w 0 2) 0 0);
+  Seq.lemma_index_slice w 0 2 1;
+  Seq.lemma_index_slice w 0 2 0;
+  Seq.lemma_index_slice (Seq.slice w 0 2) 0 1 0;
+  let v0 = Cast.uint8_to_uint32 b0;
+  let v1 = Cast.uint8_to_uint32 b1;
+  let res = U32.add (U32.mul 256ul v0) v1;
+  Trade.elim _ _;
+  res
+}
+
+inline_for_extraction
+fn leaf_read_bounded_integer_3
+  (_: squash FStar.SizeT.fits_u64)
+: PPB.leaf_reader (parse_bounded_integer 3)
+=
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (bounded_integer 3))
+{
+  PPB.pts_to_parsed_elim input;
+  with w . assert (S.pts_to input #pm w);
+  parse_bounded_integer_spec 3 w;
+  S.pts_to_len input;
+  let b0 = input.(0sz);
+  let b1 = input.(1sz);
+  let b2 = input.(2sz);
+  FStar.Endianness.reveal_be_to_n (Seq.slice w 0 3);
+  FStar.Endianness.reveal_be_to_n (Seq.slice (Seq.slice w 0 3) 0 2);
+  FStar.Endianness.reveal_be_to_n (Seq.slice (Seq.slice w 0 3) 0 1);
+  FStar.Endianness.reveal_be_to_n (Seq.slice (Seq.slice w 0 3) 0 0);
+  Seq.lemma_index_slice w 0 3 2;
+  Seq.lemma_index_slice w 0 3 1;
+  Seq.lemma_index_slice w 0 3 0;
+  Seq.lemma_index_slice (Seq.slice w 0 3) 0 2 1;
+  Seq.lemma_index_slice (Seq.slice w 0 3) 0 2 0;
+  Seq.lemma_index_slice (Seq.slice w 0 3) 0 1 0;
+  let v0 = Cast.uint8_to_uint32 b0;
+  let v1 = Cast.uint8_to_uint32 b1;
+  let v2 = Cast.uint8_to_uint32 b2;
+  let res = U32.add (U32.mul 256ul (U32.add (U32.mul 256ul v0) v1)) v2;
+  Trade.elim _ _;
+  res
+}
+
+inline_for_extraction
+fn leaf_read_bounded_integer_4
+  (_: squash FStar.SizeT.fits_u64)
+: PPB.leaf_reader (parse_bounded_integer 4)
+=
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (bounded_integer 4))
+{
+  PPB.pts_to_parsed_elim input;
+  with w . assert (S.pts_to input #pm w);
+  parse_bounded_integer_spec 4 w;
+  S.pts_to_len input;
+  let b0 = input.(0sz);
+  let b1 = input.(1sz);
+  let b2 = input.(2sz);
+  let b3 = input.(3sz);
+  FStar.Endianness.reveal_be_to_n (Seq.slice w 0 4);
+  FStar.Endianness.reveal_be_to_n (Seq.slice (Seq.slice w 0 4) 0 3);
+  FStar.Endianness.reveal_be_to_n (Seq.slice (Seq.slice w 0 4) 0 2);
+  FStar.Endianness.reveal_be_to_n (Seq.slice (Seq.slice w 0 4) 0 1);
+  FStar.Endianness.reveal_be_to_n (Seq.slice (Seq.slice w 0 4) 0 0);
+  Seq.lemma_index_slice w 0 4 3;
+  Seq.lemma_index_slice w 0 4 2;
+  Seq.lemma_index_slice w 0 4 1;
+  Seq.lemma_index_slice w 0 4 0;
+  Seq.lemma_index_slice (Seq.slice w 0 4) 0 3 2;
+  Seq.lemma_index_slice (Seq.slice w 0 4) 0 3 1;
+  Seq.lemma_index_slice (Seq.slice w 0 4) 0 3 0;
+  Seq.lemma_index_slice (Seq.slice w 0 4) 0 2 1;
+  Seq.lemma_index_slice (Seq.slice w 0 4) 0 2 0;
+  Seq.lemma_index_slice (Seq.slice w 0 4) 0 1 0;
+  let v0 = Cast.uint8_to_uint32 b0;
+  let v1 = Cast.uint8_to_uint32 b1;
+  let v2 = Cast.uint8_to_uint32 b2;
+  let v3 = Cast.uint8_to_uint32 b3;
+  let res = U32.add (U32.mul 256ul (U32.add (U32.mul 256ul (U32.add (U32.mul 256ul v0) v1)) v2)) v3;
+  Trade.elim _ _;
+  res
+}
+
+#pop-options
