@@ -51,6 +51,7 @@ let erased: unit SM.t ref = ref SM.empty
 let w = fprintf
 let wh x = if !emit_high then fprintf x else ifprintf x
 let wl x = if !emit_low then fprintf x else ifprintf x
+let wp x = if !emit_pulse then fprintf x else ifprintf x
 let ws has_lserializer x = if has_lserializer then w x else wh x
 
 let write_autogen o =
@@ -643,6 +644,15 @@ let write_api o i ?param:(p=None) has_lserializer is_private (md: parser_kind_me
       wl i "val %s_jumper%s: LL.jumper %s\n\n" n parg pparse
     else
       wl i "let %s_jumper%s: LL.jumper %s = LL.jump_constant_size %s %dul ()\n\n" n parg pparse pparse bmin;
+    (* Pulse validators and jumpers *)
+    if need_validator md bmin bmax then
+      wp i "val %s_validator%s: LPS.validator %s\n\n" n parg pparse
+    else
+      wp i "let %s_validator%s: LPS.validator %s = LPS.validate_total_constant_size %s %dsz\n\n" n parg pparse pparse bmin;
+    if need_jumper bmin bmax then
+      wp i "val %s_jumper%s: LPS.jumper %s\n\n" n parg pparse
+    else
+      wp i "let %s_jumper%s: LPS.jumper %s = LPS.jump_constant_size %s %dsz\n\n" n parg pparse pparse bmin;
     ()
    end
      
@@ -3030,6 +3040,8 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   w i "module BY = FStar.Bytes\n";
   wl i "module HS = FStar.HyperStack\n";
   wl i "module HST = FStar.HyperStack.ST\n";
+  wp i "module LPS = LowParse.Pulse.Base\n";
+  wp i "module PPB = LowParse.PulseParse.Base\n";
   (List.iter (w i "%s\n") (List.rev fsti));
   w i "\n";
 
@@ -3052,6 +3064,11 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   w o "module BY = FStar.Bytes\n";
   wl o "module HS = FStar.HyperStack\n";
   wl o "module HST = FStar.HyperStack.ST\n";
+  wp o "module LPS = LowParse.Pulse.Base\n";
+  wp o "module LPC = LowParse.Pulse.Combinators\n";
+  wp o "module LPPI = LowParse.Pulse.Int\n";
+  wp o "module PPB = LowParse.PulseParse.Base\n";
+  wp o "module PPC = LowParse.PulseParse.Combinators\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
 

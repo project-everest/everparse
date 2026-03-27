@@ -119,9 +119,16 @@ let _ = Arg.parse [
   ("-high", Arg.Unit (fun () -> emit_low := false),
     " Generate functional implementation only");
 
+
+  ("-pulse", Arg.Unit (fun () -> emit_pulse := true; emit_low := false),
+    " Generate Pulse/PulseParse implementation (incompatible with -low)");
   ("-eq", Arg.Unit (fun () -> emit_eq := true),
     " Generate equality functions for simple types");
 
 ] (fun s -> (ifile := s :: !ifile)) (sprintf "QuackyDucky %s\n%s"
 	ver "Generates verified parsers and their specification from RFC");
+	if !emit_pulse && not !emit_high then begin
+		eprintf "Error: -pulse and -low are incompatible\n";
+		exit 1
+	end;
 	List.iter rfc_load !ifile
