@@ -63,7 +63,7 @@ krml/%.krml:
 	@touch $@
 
 $(DEPEND_FILE): $(QD_FILES) Makefile
-	$(FSTAR) --dep full $(QD_FILES) Test.fst --output_deps_to $@
+	$(FSTAR) --dep full $(QD_FILES) ../Test.fst --output_deps_to $@
 
 depend: $(DEPEND_FILE)
 
