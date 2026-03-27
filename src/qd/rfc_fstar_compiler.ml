@@ -2385,6 +2385,9 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       wl o "inline_for_extraction let %s'_validator : LL.validator %s'_parser =\n" n n;
       wl o "  LL.validate_fldata_strong (LL.serialize_list _ %s) (LL.validate_list %s ()) %d %dul\n\n" (scombinator_name ty) (validator_name ty) k k;
       wl o "let %s_validator = %s_eq (); LP.coerce (LL.validator %s_parser) %s'_validator\n\n" n n n n;
+      wp o "inline_for_extraction let %s'_validator : LPS.validator %s'_parser =\n" n n;
+      wp o "  PPFD.validate_fldata_strong (LP.serialize_list _ %s) (PPLS.validate_list %s ()) %dsz\n\n" (scombinator_name ty) (pulse_validator_name ty) k;
+      wp o "let %s_validator = %s_eq (); LP.coerce (LPS.validator %s_parser) %s'_validator\n\n" n n n n;
       (* jumper not needed unless private, we are constant size *)
       if is_private then
        begin
@@ -3190,6 +3193,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp o "module PPVD = LowParse.PulseParse.VLData\n";
   wp o "module PPLS = LowParse.PulseParse.List\n";
   wp o "module PPAR = LowParse.PulseParse.Array\n";
+  wp o "module PPFD = LowParse.PulseParse.FLData\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
 
@@ -3206,7 +3210,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
     else w i "open %s\n" dep) depl);
   w i "\n";
 
-	w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection' --z3rlimit 16 --z3cliopt smt.arith.nl=false --max_fuel 2 --max_ifuel 2\"\n\n";
+	w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection -Pulse -PulseCore' --z3rlimit 16 --z3cliopt smt.arith.nl=false --max_fuel 2 --max_ifuel 2\"\n\n";
   wp o "assume val fits_u64_squash : squash FStar.SizeT.fits_u64\n\n";
 
   try let _ =

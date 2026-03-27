@@ -1,4 +1,42 @@
 opaque t1<0..255>;
 t1 t2<0..255>;
 opaque t3[2];
+t3 t4[8];
 t3 t5<0..255>;
+
+struct {
+  t3 simplify;
+} t10;
+
+struct {
+  uint8 u;
+  t1 z<0..255>;
+} t11;
+
+struct {
+  uint8 u;
+  t1 z[18];
+} t12;
+
+struct {
+  uint8 u;
+  opaque x<0..255>;
+  uint16 y;
+} t13;
+
+struct {
+  uint8 u;
+  opaque x[18];
+  uint16 y;
+} t14;
+
+struct {
+  uint8 x8;
+  uint16 x16;
+  uint32 x32;
+  uint64 x64;
+  uint64 y64;
+  uint32 y32;
+  uint16 y16;
+  uint8 y8;
+} t37;
