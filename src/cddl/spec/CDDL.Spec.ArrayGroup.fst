@@ -313,8 +313,6 @@ let array_group_concat_unique_strong_zero_or_more_right
   ))
 = ()
 
-#push-options "--z3rlimit 16"
-
 let array_group_concat_unique_strong'_zero_or_more_left
   #b (a1 a2: array_group b)
 : Lemma
@@ -371,8 +369,6 @@ let array_group_concat_unique_strong'_zero_or_more_left
     end
   in
   Classical.forall_intro_2 prf
-
-#pop-options
 
 let array_group_concat_unique_strong_zero_or_more_left
   #b (a1 a2: array_group b)
