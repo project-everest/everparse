@@ -2835,7 +2835,7 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
   (* synthetizer injectivity and inversion lemmas *)
   let nfields = List.length fields in
   if nfields > 4 then
-    w o "#push-options \"--z3rlimit 256 --max_fuel %d --max_ifuel %d\"\n" (nfields * 2) (nfields * 2);
+    w o "#push-options \"--max_ifuel %d\"\n" (nfields * 2);
   w o "let synth_%s_recip_inverse () : Lemma (LP.synth_inverse synth_%s_recip synth_%s) = ()\n\n" n n n;
   if nfields > 4 then
     w o "#pop-options\n\n";
@@ -3261,7 +3261,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
     else w i "open %s\n" dep) depl);
   w i "\n";
 
-  let rlimit = if !emit_pulse then 128 else 16 in
+  let rlimit = 16 in
 	w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection -Pulse -PulseCore' --z3rlimit %d --z3cliopt smt.arith.nl=false --max_fuel 2 --max_ifuel 2\"\n\n" rlimit;
   wp o "assume val fits_u64_squash : squash FStar.SizeT.fits_u64\n\n";
 
