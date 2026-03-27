@@ -1,4 +1,4 @@
 opaque t1<0..255>;
 t1 t2<0..255>;
-
-/* Everything below is commented out for Pulse testing */
+opaque t3[2];
+t3 t5<0..255>;

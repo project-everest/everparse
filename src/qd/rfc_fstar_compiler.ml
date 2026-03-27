@@ -2543,10 +2543,19 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         wl o "let %s_validator =\n" n;
         wl o " LL.validate_vlarray %d %d %s %s %d %d () %dul\n\n" low high (scombinator_name ty) (validator_name ty) li.min_count li.max_count li.len_len
       end;
+      if need_validator then begin
+        wp o "let %s_validator =\n" n;
+        wp o " PPAR.validate_vlarray %d %d %s %s %d %d () (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" low high (scombinator_name ty) (pulse_validator_name ty) li.min_count li.max_count (log256 high)
+      end;
       if need_jumper then begin
         let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
         wl o "let %s_jumper%s =\n" n jumper_annot;
         wl o " LL.jump_vlarray %d %d %s %d %d () %dul\n\n" low high (scombinator_name ty) li.min_count li.max_count li.len_len
+      end;
+      if need_jumper then begin
+        let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
+        wp o "let %s_jumper%s =\n" n jumper_annot;
+        wp o " PPAR.jump_vlarray %d %d %s %d %d () (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" low high (scombinator_name ty) li.min_count li.max_count high (log256 high)
       end;
       (* finalizer *)
       wl i "inline_for_extraction val finalize_%s (#rrel: _) (#rel: _) (sl: LL.slice rrel rel) (pos pos' : U32.t) : HST.Stack unit\n" n;
@@ -3180,6 +3189,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp o "module PPBY = LowParse.PulseParse.Bytes\n";
   wp o "module PPVD = LowParse.PulseParse.VLData\n";
   wp o "module PPLS = LowParse.PulseParse.List\n";
+  wp o "module PPAR = LowParse.PulseParse.Array\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
 
