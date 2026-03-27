@@ -66,3 +66,52 @@ let jump_maybe_enum_key
   (e: enum key repr)
 : Tot (B.jumper (parse_maybe_enum_key p e))
 = B.jump_synth j (maybe_enum_key_of_repr e)
+
+(* PulseParse leaf_readers for enum keys *)
+
+inline_for_extraction
+let read_maybe_enum_key
+  (#key #repr: eqtype)
+  (#k: Ghost.erased parser_kind) (#p: parser k repr)
+  (r: leaf_reader p)
+  (e: enum key repr)
+: Tot (leaf_reader (parse_maybe_enum_key p e))
+= leaf_reader_of_reader
+    (read_synth' (reader_of_leaf_reader r)
+      (maybe_enum_key_of_repr e)
+      (repr_of_maybe_enum_key e))
+
+[@Norm]
+let mk_read_maybe_enum_key
+  (#key #repr: eqtype)
+  (#k: Ghost.erased parser_kind) (#p: parser k repr)
+  (r: leaf_reader p)
+  (e: enum key repr)
+: Tot (leaf_reader (parse_maybe_enum_key p e))
+= read_maybe_enum_key r e
+
+inline_for_extraction
+let read_enum_key
+  (#key #repr: eqtype)
+  (#k: Ghost.erased parser_kind) (#p: parser k repr)
+  (r: leaf_reader p)
+  (e: enum key repr)
+  (_: squash (k.parser_kind_subkind == Some ParserStrong))
+: Tot (leaf_reader (parse_enum_key p e))
+= serialize_enum_key_synth_inverse e;
+  leaf_reader_of_reader
+    (read_synth
+      (read_filter (reader_of_leaf_reader r) (parse_enum_key_cond e))
+      (parse_enum_key_synth e)
+      (serialize_enum_key_synth_recip e)
+      (fun (x: parse_filter_refine (parse_enum_key_cond e)) -> read_synth_cont_init (enum_key_of_repr e x)))
+
+[@Norm]
+let mk_read_enum_key
+  (#key #repr: eqtype)
+  (#k: Ghost.erased parser_kind) (#p: parser k repr)
+  (r: leaf_reader p)
+  (e: enum key repr)
+  (_: squash (k.parser_kind_subkind == Some ParserStrong))
+: Tot (leaf_reader (parse_enum_key p e))
+= read_enum_key r e ()
