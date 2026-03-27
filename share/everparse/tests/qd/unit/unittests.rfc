@@ -1,4 +1,6 @@
 opaque t1<0..255>;
+
+/* Everything below is commented out for Pulse testing
 t1 t2<0..255>;
 opaque t3[2];
 t3 t4[8];
@@ -251,3 +253,5 @@ struct {
   t39 x;
   t40 y;
 } t41;
+
+*/

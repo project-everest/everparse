@@ -24,7 +24,7 @@ CHECKED_EXT=.checked$(LAX_EXT)
 
 FSTAR_OPTIONS += --odir krml --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_modules \
 		--already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse \
-		--include $(LOWPARSE_HOME) --include $(KRML_HOME)/krmllib --include $(KRML_HOME)/krmllib/obj --include .. --cmi \
+		--include $(LOWPARSE_HOME) --include $(LOWPARSE_HOME)/pulse --include $(PULSE_HOME)/lib/pulse --include $(KRML_HOME)/krmllib --include $(KRML_HOME)/krmllib/obj --include .. --cmi \
 		--ext 'optimize_let_vc=false'
 
 FSTAR = $(FSTAR_EXE) $(FSTAR_OPTIONS)
@@ -63,7 +63,7 @@ krml/%.krml:
 	@touch $@
 
 $(DEPEND_FILE): $(QD_FILES) Makefile
-	$(FSTAR) --dep full $(QD_FILES) ../Test.fst --output_deps_to $@
+	$(FSTAR) --dep full $(QD_FILES) ../Test.fst --output_deps_to $@ --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,+Pulse.Lib.Pervasives,+Pulse.Lib.Slice'
 
 depend: $(DEPEND_FILE)
 
