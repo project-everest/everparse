@@ -1232,7 +1232,24 @@ let spec_map_group_footprint_choice_or_concat
     spec_map_group_footprint env (MGConcat g1 g2) == (Ghost.hide ((spec_map_group_footprint env g1) `Spec.map_constraint_choice` (spec_map_group_footprint env g2)))
   )
 
-#push-options "--z3rlimit 64 --ifuel 8 --fuel 2 --split_queries always --query_stats"
+#push-options "--z3rlimit 128 --ifuel 8 --fuel 2 --split_queries always --query_stats"
+
+let map_constraint_included_mcor
+  (env: sem_env)
+  (s1 s2: Spec.map_constraint)
+  (te1 te2: map_constraint)
+: Lemma
+  (requires
+    bounded_map_constraint env.se_bound te1 /\
+    bounded_map_constraint env.se_bound te2 /\
+    Spec.map_constraint_included s1 (map_constraint_sem env te1) /\
+    Spec.map_constraint_included s2 (map_constraint_sem env te2)
+  )
+  (ensures
+    bounded_map_constraint env.se_bound (MCOr te1 te2) /\
+    Spec.map_constraint_included (Spec.map_constraint_choice s1 s2) (map_constraint_sem env (MCOr te1 te2))
+  )
+= ()
 
 #restart-solver
 let rec map_group_footprint'
@@ -1276,6 +1293,7 @@ let rec map_group_footprint'
         let s1 = (spec_map_group_footprint env.e_sem_env g1) in
         let s2 = (spec_map_group_footprint env.e_sem_env g2) in
         let te' = MCOr te1 te2 in
+        map_constraint_included_mcor env.e_sem_env s1 s2 te1 te2;
         map_group_footprint'_postcond_intro_success env.e_sem_env g te' (Spec.map_constraint_choice s1 s2);
         (| RSuccess (te'),  () |)
       | res -> (| ROutOfFuel, map_group_footprint'_postcond_intro_out_of_fuel env.e_sem_env g (ROutOfFuel) () () |)

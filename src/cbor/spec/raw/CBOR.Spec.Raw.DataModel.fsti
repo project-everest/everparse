@@ -136,10 +136,13 @@ let cbor_map_defined_alt
   (k: cbor order compare) (f: cbor_map order compare)
 : Lemma
   (cbor_map_defined k f <==> (exists v . cbor_map_mem (k, v) f))
-  [SMTPat (cbor_map_defined k f)]
 = match cbor_map_get f k with
   | None -> ()
   | Some _ -> ()
+
+let bring_cbor_map_defined_alt #order #compare ()
+: Lemma (forall (k: cbor order compare) (f: cbor_map order compare) . {:pattern (cbor_map_defined k f)} (cbor_map_defined k f <==> (exists v . cbor_map_mem (k, v) f)))
+= Classical.forall_intro_2 (cbor_map_defined_alt #order #compare)
 
 let cbor_map_union_assoc #order #compare (m1 m2 m3: cbor_map order compare) : Lemma
   (cbor_map_union (cbor_map_union m1 m2) m3 == cbor_map_union m1 (cbor_map_union m2 m3))
@@ -334,6 +337,7 @@ let cbor_map_sub
     )
 = let phi (kv: (cbor order compare & cbor order compare)) : Tot bool = not (cbor_map_mem kv m2) in
   let m3 = cbor_map_filter phi m1 in
+  bring_cbor_map_defined_alt #order #compare ();
   assert (cbor_map_disjoint m2 m3);
   cbor_map_disjoint_mem_union' m2 m3 ();
   cbor_map_equiv (cbor_map_union m2 m3) m1;

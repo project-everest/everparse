@@ -174,6 +174,7 @@ let map_group_concat_footprint_disjoint
   let m12 = cbor_map_union m1 m2 in
   let m' = cbor_map_sub m m12 in
   assert (cbor_map_disjoint_from_footprint m' source_fp1);
+  assert (cbor_map_disjoint_from_footprint m' source_fp2);
   cbor_map_union_assoc m1 m2 m';
   map_group_footprint_elim source1 source_fp1 m1 (cbor_map_union m2 m');
   let MapGroupDet cm1 rm1 = apply_map_group_det source1 m1 in
@@ -183,7 +184,6 @@ let map_group_concat_footprint_disjoint
   assert (cbor_map_union rm1 (cbor_map_union m2 m') == cbor_map_union m2 (cbor_map_union rm1 m'));
   assert (cbor_map_disjoint_from_footprint m1 source_fp2);
   assert (cbor_map_disjoint_from_footprint rm1 source_fp2);
-  assert (cbor_map_disjoint_from_footprint m' source_fp2);
   map_group_footprint_elim source2 source_fp2 m2 (cbor_map_union rm1 m');
   let MapGroupDet cm2 rm2 = apply_map_group_det source2 m2 in
   assert (apply_map_group_det (map_group_concat source1 source2) m == MapGroupDet (cbor_map_union cm1 cm2) (cbor_map_union rm1 (cbor_map_union rm2 m')));

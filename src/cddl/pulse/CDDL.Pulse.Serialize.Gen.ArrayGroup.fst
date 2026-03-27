@@ -99,7 +99,7 @@ let list_append_nil_r_pat
 
 (* Parse list lemmas *)
 
-#push-options "--z3rlimit_factor 32 --fuel 2 --ifuel 1"
+#push-options "--z3rlimit_factor 32 --fuel 2 --ifuel 1 --split_queries always"
 
 let rec cbor_parse_list_split
   (p: cbor_parser)

@@ -708,7 +708,7 @@ let synth_inverse_list_of_pair_list
   [SMTPat (list_of_pair_list t nb_pairs)]
 = Classical.forall_intro (list_of_pair_list_of_list #t nb_pairs)
 
-#push-options "--z3rlimit 256"
+#push-options "--z3rlimit 64"
 #restart-solver
 
 let rec parse_pair_list_as_list
@@ -844,7 +844,7 @@ let tot_parse_nlist_parse_nlist'
   (ensures (tot_parse_nlist n p b == parse_nlist n #k p b))
 = tot_parse_nlist_parse_nlist n p b
 
-#push-options "--z3rlimit 1024 --ifuel 8 --split_queries always"
+#push-options "--z3rlimit 256 --ifuel 2 --split_queries always"
 
 #restart-solver
 let parse_raw_data_item_eq
@@ -1459,7 +1459,7 @@ let rec list_for_all_holds_on_pair_list_of_pair_list
   | [] -> ()
   | _ :: q -> list_for_all_holds_on_pair_list_of_pair_list pred q
 
-#push-options "--z3rlimit 256"
+#push-options "--z3rlimit 64"
 
 #restart-solver
 let holds_on_raw_data_item_eq_recursive
@@ -2246,10 +2246,10 @@ let lex_compare_header_intro
   then lex_compare_with_header_correct ty x1 ty x2
   else begin
     let h1 = raw_uint64_as_argument ty x1 in
-//    serialize_dtuple2_eq serialize_initial_byte serialize_long_argument h1;
+    serialize_dtuple2_eq serialize_initial_byte serialize_long_argument h1;
     let (| b1, l1 |) = h1 in
     let h2 = raw_uint64_as_argument ty x2 in
-//    serialize_dtuple2_eq serialize_initial_byte serialize_long_argument h2;
+    serialize_dtuple2_eq serialize_initial_byte serialize_long_argument h2;
     let (| b2, l2 |) = h2 in
     serialize_initial_byte_compare b1 b2;
     bytes_lex_compare_serialize_strong_prefix serialize_initial_byte b1 b2 (bare_serialize (serialize_long_argument b1) l1) (bare_serialize (serialize_long_argument b2) l2)
@@ -2302,7 +2302,7 @@ let lex_order_int64_correct
 
 #pop-options
 
-#push-options "--z3rlimit 256"
+#push-options "--z3rlimit 128"
 #restart-solver
 
 let serialized_lex_compare_string
@@ -2468,7 +2468,7 @@ let rec lex_compare_ext
 
 #pop-options
 
-#push-options "--z3rlimit 64 --split_queries always"
+#push-options "--z3rlimit 128 --split_queries always"
 
 let serialized_lex_compare_array_aux
   (len1: raw_uint64)

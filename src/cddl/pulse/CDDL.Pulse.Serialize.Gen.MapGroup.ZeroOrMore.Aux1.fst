@@ -20,7 +20,7 @@ let map_of_list_serializable_disjoint
     (sp.mg_serializable m1 /\ sp.mg_serializable m2) ==>
     (Map.disjoint m1 m2 <==> cbor_map_disjoint (sp.mg_serializer m1) (sp.mg_serializer m2))
   ))
-= ()
+= bring_cbor_map_defined_alt ()
 
 #restart-solver
 let map_of_list_is_append_serializable_intro_serializable

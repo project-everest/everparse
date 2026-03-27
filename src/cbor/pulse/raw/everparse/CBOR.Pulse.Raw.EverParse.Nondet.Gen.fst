@@ -1094,7 +1094,7 @@ ensures pure
   ()
 }
 
-#push-options "--z3rlimit 128 --z3cliopt smt.arith.nl=false --z3cliopt smt.qi.eager_threshold=10 --fuel 4 --ifuel 8 --split_queries always"
+#push-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --z3cliopt smt.qi.eager_threshold=10 --fuel 2 --ifuel 4 --split_queries always"
 
 inline_for_extraction
 fn impl_check_equiv_map_hd_body
@@ -1460,7 +1460,25 @@ ensures
 
 module GR = Pulse.Lib.GhostReference
 
-#push-options "--z3rlimit 256 --fuel 4 --ext 'context_pruning:off'"
+let check_map_depth_map_true
+  (bound: nat)
+  (a: raw_data_item)
+  (q: list raw_data_item)
+  (pairs: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    Map? a /\
+    (match a with Map _ v -> v == pairs | _ -> False) /\
+    bound > 0 /\
+    check_map_depth (bound - 1) (CBOR.Spec.Util.list_of_pair_list pairs) == true
+  ))
+  (ensures (
+    check_map_depth bound (a :: q) == check_map_depth bound q
+  ))
+= raw_data_item_size_eq a;
+  list_of_pair_list_sum raw_data_item_size pairs
+
+#push-options "--z3rlimit 128 --fuel 2"
 
 fn rec impl_check_map_depth_aux
   (bound: SZ.t)
@@ -1574,6 +1592,7 @@ ensures exists* l' gn' (gl': nlist gn' raw_data_item) .
         let res = impl_check_map_depth_aux (SZ.sub bound 1sz) pl (SZ.add npairs npairs) ll' l2';
         Trade.trans _ _ (pts_to_serialized (serialize_nlist gn0 serialize_raw_data_item) l0 #pm gl0);
         if res {
+          check_map_depth_map_true (SZ.v bound) (List.Tot.hd ll) (List.Tot.tl ll) (Map?.v (List.Tot.hd ll));
           GR.op_Colon_Equals pl1 (List.Tot.tl ll);
           pn := n';
           ()
