@@ -2399,14 +2399,14 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       if need_validator then
         wl o "let %s_validator = LL.validate_bounded_vlbytes %d %d\n\n" n low high;
       if need_validator then
-        wp o "let %s_validator = PPBY.validate_bounded_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d ()) ()\n\n" n low high (log256 high);
+        wp o "let %s_validator = PPBY.validate_bounded_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" n low high (log256 high);
       if need_jumper then begin
         let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
         wl o "let %s_jumper%s = LL.jump_bounded_vlbytes %d %d\n\n" n jumper_annot low high
       end;
       if need_jumper then begin
         let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
-        wp o "let %s_jumper%s = PPBY.jump_bounded_vlbytes %d %d\n\n" n jumper_annot low high
+        wp o "let %s_jumper%s = PPBY.jump_bounded_vlbytes %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" n jumper_annot low high high (log256 high)
       end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes %d %d x\n\n" n low high;
@@ -2458,14 +2458,14 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       if need_validator then
         wl o "let %s_validator = LL.validate_bounded_vlbytes' %d %d %d\n\n" n low high repr;
       if need_validator then
-        wp o "let %s_validator = PPBY.validate_bounded_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d ()) ()\n\n" n low high repr repr;
+        wp o "let %s_validator = PPBY.validate_bounded_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" n low high repr repr;
       if need_jumper then begin
         let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
         wl o "let %s_jumper%s = LL.jump_bounded_vlbytes' %d %d %d\n\n" n jumper_annot low high repr
       end;
       if need_jumper then begin
         let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
-        wp o "let %s_jumper%s = PPBY.jump_bounded_vlbytes' %d %d %d\n\n" n jumper_annot low high repr
+        wp o "let %s_jumper%s = PPBY.jump_bounded_vlbytes' %d %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer %d) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" n jumper_annot low high repr repr repr
       end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n repr n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes' %d %d %d x\n\n" n low high repr;
@@ -3162,6 +3162,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   w i "\n";
 
 	w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection' --z3rlimit 16 --z3cliopt smt.arith.nl=false --max_fuel 2 --max_ifuel 2\"\n\n";
+  wp o "assume val fits_u64_squash : squash FStar.SizeT.fits_u64\n\n";
 
   try let _ =
     match p with
