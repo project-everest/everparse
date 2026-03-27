@@ -2171,12 +2171,32 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
           wl o "  LL.validate_bounded_vldata_strong %d %d %s %s ()\n\n" 0 smax (scombinator_name ty) (validator_name ty);
           wl o "let %s_validator = LL.validate_synth %s'_validator synth_%s ()\n\n" n n n
         );
+        if need_validator then (
+          wp o "inline_for_extraction let %s'_validator : LPS.validator %s'_parser =\n" n n;
+          wp o "  PPVD.validate_bounded_vldata_strong %d %d %s %s (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" 0 smax (scombinator_name ty) (pulse_validator_name ty) (log256 smax);
+          wp o "let %s_validator = LPC.validate_synth %s'_validator synth_%s\n\n" n n n
+        );
         if need_jumper then (
           wl o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
           wl o "  LL.jump_bounded_vldata_strong %d %d %s ()\n\n" 0 smax (scombinator_name ty);
           let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
           wl o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n
         );
+        if need_jumper then (
+          wp o "inline_for_extraction let %s'_jumper : LPS.jumper %s'_parser =\n" n n;
+          wp o "  PPVD.jump_bounded_vldata_strong %d %d %s (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" 0 smax (scombinator_name ty) smax (log256 smax);
+          let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
+          wp o "let %s_jumper%s = LPC.jump_synth %s'_jumper synth_%s\n\n" n jumper_annot n n
+        );
+        (* Pulse: accessor *)
+        wp i "val %s_accessor : PPB.accessor %s_parser %s (PPVD.clens_bounded_vldata_strong %d %d %s)\n\n" n n (pcombinator_name ty) 0 smax (scombinator_name ty);
+        wp o "let %s_accessor =\n" n;
+        wp o "  [@inline_let] let _ = synth_%s_injective () in\n" n;
+        wp o "  PPC.accessor_ext\n" ;
+        wp o "    (PPC.accessor_compose_strong\n";
+        wp o "      (PPC.accessor_synth_inv synth_%s synth_%s_recip)\n" n n;
+        wp o "      (PPVD.accessor_bounded_vldata_strong_payload %d %d %s (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash) ())\n" 0 smax (scombinator_name ty) (log256 smax);
+        wp o "    (PPVD.clens_bounded_vldata_strong %d %d %s) ()\n\n" 0 smax (scombinator_name ty);
         (* finalizer *)
         if ty = "Empty" || ty = "Fail" then failwith "vldata empty/fail should have been in the 'bounds OK' case";
         wl i "val %s_finalize (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) (pos'  : U32.t) : HST.Stack unit\n"  n;
@@ -2615,11 +2635,22 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         wl o "  LL.validate_bounded_vldata_strong %d %d (LP.serialize_list _ %s) (LL.validate_list %s ()) ()\n\n" min max (scombinator_name ty) (validator_name ty);
         wl o "let %s_validator = LL.validate_synth %s'_validator synth_%s ()\n\n" n n n
       end;
+      if need_validator then begin
+        wp o "inline_for_extraction let %s'_validator : LPS.validator %s'_parser =\n" n n;
+        wp o "  PPVD.validate_bounded_vldata_strong %d %d (LP.serialize_list _ %s) (PPLS.validate_list %s ()) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" min max (scombinator_name ty) (pulse_validator_name ty) (log256 max);
+        wp o "let %s_validator = LPC.validate_synth %s'_validator synth_%s\n\n" n n n
+      end;
       if need_jumper then begin
         wl o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
         wl o "  LL.jump_bounded_vldata_strong %d %d (LP.serialize_list _ %s) ()\n\n" min max (scombinator_name ty);
         let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
         wl o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n
+      end;
+      if need_jumper then begin
+        wp o "inline_for_extraction let %s'_jumper : LPS.jumper %s'_parser =\n" n n;
+        wp o "  PPVD.jump_bounded_vldata_strong %d %d (LP.serialize_list _ %s) (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" min max (scombinator_name ty) max (log256 max);
+        let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
+        wp o "let %s_jumper%s = LPC.jump_synth %s'_jumper synth_%s\n\n" n jumper_annot n n
       end;
       (* finalizer *)
       wl i "val finalize_%s (#rrel: _) (#rel: _) (sl: LL.slice rrel rel) (pos pos' : U32.t) : HST.Stack unit\n" n;
@@ -3115,6 +3146,8 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wl i "module HST = FStar.HyperStack.ST\n";
   wp i "module LPS = LowParse.Pulse.Base\n";
   wp i "module PPB = LowParse.PulseParse.Base\n";
+  wp i "module PPC = LowParse.PulseParse.Combinators\n";
+  wp i "module PPVD = LowParse.PulseParse.VLData\n";
   (List.iter (w i "%s\n") (List.rev fsti));
   w i "\n";
 
@@ -3145,6 +3178,8 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp o "module PPE = LowParse.PulseParse.Enum\n";
   wp o "module PPBI = LowParse.PulseParse.BoundedInt\n";
   wp o "module PPBY = LowParse.PulseParse.Bytes\n";
+  wp o "module PPVD = LowParse.PulseParse.VLData\n";
+  wp o "module PPLS = LowParse.PulseParse.List\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
 
