@@ -944,6 +944,7 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
     () (* validator not needed for open enums with constant-size repr *)
   else
    begin
+    wp o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\n";
     wp o "inline_for_extraction let validate_%s%s_key : LPS.validator parse_%s%s_key =\n" maybe n maybe n;
     wp o "    PPE.mk_validate_enum_key %s_repr_validator %s_repr_reader %s_enum ()\n\n" n n n;
     wp o "let %s_validator =\n" n;
@@ -1344,6 +1345,17 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
     wl o "  | _ -> LL.validate_false ()\n\n"
    end;
 
+  if need_validator then
+   begin
+    wp o "inline_for_extraction noextract let validate_%s_cases (x:%s)\n" n ktype;
+    wp o "  : LPS.validator (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
+    List.iter (fun (case, ty) ->
+      let cn = String.capitalize_ascii case in
+      wp o "  | %s -> [@inline_let] let u : LPS.validator (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (pulse_validator_name ty)
+    ) cl;
+    wp o "  | _ -> PPC.validate_false ()\n\n"
+   end;
+
   if need_jumper then
    begin
     wl o "inline_for_extraction noextract let jump_%s_cases (x:%s)\n" n ktype;
@@ -1353,6 +1365,17 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
       wl o "  | %s -> [@inline_let] let u : LL.jumper (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (jumper_name ty)
     ) cl;
     wl o "  | _ -> LL.jump_false\n\n"
+   end;
+
+  if need_jumper then
+   begin
+    wp o "inline_for_extraction noextract let jump_%s_cases (x:%s)\n" n ktype;
+    wp o "  : LPS.jumper (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
+    List.iter (fun (case, ty) ->
+      let cn = String.capitalize_ascii case in
+      wp o "  | %s -> [@inline_let] let u : LPS.jumper (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (pulse_jumper_name ty)
+    ) cl;
+    wp o "  | _ -> (LPS.jump_constant_size LP.parse_false 0sz)\n\n"
    end;
 
   if li.has_lserializer then begin
@@ -1482,6 +1505,17 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
         wl o "  LL.validate_dsum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (validator_name dt));
      end;
 
+    if need_validator then
+     begin
+      let annot = if is_private then " : LPS.validator "^(pcombinator_name n) else "" in
+      wp o "let %s_validator%s =\n%s" n annot same_kind;
+      (match def with
+      | None ->
+        wp o "  PPS.validate_sum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ())) ()\n\n" n tn tn n n;
+      | Some dt ->
+        wp o "  PPS.validate_dsum %s_sum %s_repr_validator %s_repr_reader parse_%s_cases validate_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ())) ()\n\n" n tn tn n n (pulse_validator_name dt));
+     end;
+
     if need_jumper then
      begin
       let annot = if is_private then " : LL.jumper "^(pcombinator_name n) else "" in
@@ -1491,6 +1525,17 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
         wl o "  LL.jump_sum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n;
       | Some dt ->
         wl o "  LL.jump_dsum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n tn tn n n (jumper_name dt))
+     end;
+
+    if need_jumper then
+     begin
+      let annot = if is_private then " : LPS.jumper "^(pcombinator_name n) else "" in
+      wp o "let %s_jumper%s =\n%s" n annot same_kind;
+      (match def with
+      | None ->
+        wp o "  PPS.jump_sum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ())) ()\n\n" n tn tn n n;
+      | Some dt ->
+        wp o "  PPS.jump_dsum %s_sum %s_repr_jumper %s_repr_reader parse_%s_cases jump_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ())) ()\n\n" n tn tn n n (pulse_jumper_name dt))
      end;
 
     if li.has_lserializer then begin
@@ -3193,6 +3238,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp o "module PPB = LowParse.PulseParse.Base\n";
   wp o "module PPC = LowParse.PulseParse.Combinators\n";
   wp o "module PPE = LowParse.PulseParse.Enum\n";
+  wp o "module PPS = LowParse.PulseParse.Sum\n";
   wp o "module PPBI = LowParse.PulseParse.BoundedInt\n";
   wp o "module PPBY = LowParse.PulseParse.Bytes\n";
   wp o "module PPVD = LowParse.PulseParse.VLData\n";
