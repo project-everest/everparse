@@ -2788,7 +2788,12 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
   write_api o i li.has_lserializer is_private li.meta n li.min_len li.max_len;
 
   (* synthetizer injectivity and inversion lemmas *)
+  let nfields = List.length fields in
+  if nfields > 4 then
+    w o "#push-options \"--z3rlimit 256 --max_fuel %d --max_ifuel %d\"\n" (nfields * 2) (nfields * 2);
   w o "let synth_%s_recip_inverse () : Lemma (LP.synth_inverse synth_%s_recip synth_%s) = ()\n\n" n n n;
+  if nfields > 4 then
+    w o "#pop-options\n\n";
   w o "let synth_%s_injective () : Lemma (LP.synth_injective synth_%s) =\n" n n;
   w o "  LP.synth_inverse_synth_injective synth_%s_recip synth_%s;\n" n n;
   w o "  synth_%s_recip_inverse ()\n\n" n;
@@ -3210,7 +3215,8 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
     else w i "open %s\n" dep) depl);
   w i "\n";
 
-	w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection -Pulse -PulseCore' --z3rlimit 16 --z3cliopt smt.arith.nl=false --max_fuel 2 --max_ifuel 2\"\n\n";
+  let rlimit = if !emit_pulse then 128 else 16 in
+	w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection -Pulse -PulseCore' --z3rlimit %d --z3cliopt smt.arith.nl=false --max_fuel 2 --max_ifuel 2\"\n\n" rlimit;
   wp o "assume val fits_u64_squash : squash FStar.SizeT.fits_u64\n\n";
 
   try let _ =
