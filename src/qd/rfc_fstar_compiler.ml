@@ -2804,6 +2804,16 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
     wl o "  LL.validate_synth %s'_validator synth_%s ()\n\n" n n
    end;
 
+  (* Pulse: validator *)
+  if need_validator li.meta li.min_len li.max_len then
+   begin
+    let validator = combinator pulse_validator_name "PPC.validate_nondep_then" in
+    wp o "inline_for_extraction let %s'_validator : LPS.validator %s'_parser = %s\n\n" n n validator;
+    wp o "let %s_validator =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+    wp o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
+    wp o "  LPC.validate_synth %s'_validator synth_%s\n\n" n n
+   end;
+
   (* jumper *)
   if need_jumper li.min_len li.max_len then
    begin
@@ -2812,6 +2822,16 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
     wl o "let %s_jumper =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
     wl o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
     wl o "  LL.jump_synth %s'_jumper synth_%s ()\n\n" n n
+   end;
+
+  (* Pulse: jumper *)
+  if need_jumper li.min_len li.max_len then
+   begin
+    let jumper = combinator pulse_jumper_name "LPC.jump_nondep_then" in
+    wp o "inline_for_extraction let %s'_jumper : LPS.jumper %s'_parser = %s\n\n" n n jumper;
+    wp o "let %s_jumper =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+    wp o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
+    wp o "  LPC.jump_synth %s'_jumper synth_%s\n\n" n n
    end;
 
   (* lserialize *)
