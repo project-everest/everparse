@@ -9,7 +9,7 @@ module EqTest = CDDL.Spec.EqTest
 
 open CDDL.Spec.MapGroup
 
-#push-options "--z3rlimit 256 --fuel 1 --ifuel 1 --z3seed 42"
+#push-options "--z3rlimit 256 --fuel 1 --ifuel 1 --z3seed 42 --z3refresh --split_queries always"
 
 let invariant_insert_success
   #pe #minl #maxl p key tkey sp1 value tvalue inj sp2 except em out vout size count m v0 v min max vout_old gk gv min_old max_old em_old size_old count_old m_old l
