@@ -2398,9 +2398,15 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       wh o "let %s_size32 = LSZ.size32_bounded_vlbytes %d %d\n\n" n low high;
       if need_validator then
         wl o "let %s_validator = LL.validate_bounded_vlbytes %d %d\n\n" n low high;
+      if need_validator then
+        wp o "let %s_validator = PPBY.validate_bounded_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d ()) ()\n\n" n low high (log256 high);
       if need_jumper then begin
         let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
         wl o "let %s_jumper%s = LL.jump_bounded_vlbytes %d %d\n\n" n jumper_annot low high
+      end;
+      if need_jumper then begin
+        let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
+        wp o "let %s_jumper%s = PPBY.jump_bounded_vlbytes %d %d\n\n" n jumper_annot low high
       end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes %d %d x\n\n" n low high;
@@ -2451,9 +2457,15 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       wh o "let %s_size32 = LSZ.size32_bounded_vlbytes' %d %d %d\n\n" n low high repr;
       if need_validator then
         wl o "let %s_validator = LL.validate_bounded_vlbytes' %d %d %d\n\n" n low high repr;
+      if need_validator then
+        wp o "let %s_validator = PPBY.validate_bounded_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d ()) ()\n\n" n low high repr repr;
       if need_jumper then begin
         let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
         wl o "let %s_jumper%s = LL.jump_bounded_vlbytes' %d %d %d\n\n" n jumper_annot low high repr
+      end;
+      if need_jumper then begin
+        let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
+        wp o "let %s_jumper%s = PPBY.jump_bounded_vlbytes' %d %d %d\n\n" n jumper_annot low high repr
       end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n repr n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes' %d %d %d x\n\n" n low high repr;
@@ -3131,6 +3143,8 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp o "module PPB = LowParse.PulseParse.Base\n";
   wp o "module PPC = LowParse.PulseParse.Combinators\n";
   wp o "module PPE = LowParse.PulseParse.Enum\n";
+  wp o "module PPBI = LowParse.PulseParse.BoundedInt\n";
+  wp o "module PPBY = LowParse.PulseParse.Bytes\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
 
