@@ -435,6 +435,32 @@ let leaf_writer_name = function
   | "bitcoin_varint" -> "LL.write_bcvli"
   | _ -> failwith "leaf_writer_name: should only be called for enum repr"
 
+(* Pulse/PulseParse name functions *)
+
+let pulse_validator_name = function
+  | "opaque" | "uint8" -> "LPPI.validate_u8"
+  | "uint16" -> "LPPI.validate_u16"
+  | "uint32" -> "LPPI.validate_u32"
+  | "uint64" -> "LPPI.validate_u64"
+  | "Empty" -> "(LPS.validate_ret ())"
+  | t -> String.uncapitalize_ascii t^"_validator"
+
+let pulse_jumper_name = function
+  | "opaque" | "uint8" -> "LPPI.jump_u8"
+  | "uint16" -> "LPPI.jump_u16"
+  | "uint32" -> "LPPI.jump_u32"
+  | "uint64" -> "LPPI.jump_u64"
+  | "Empty" -> "LPS.jump_empty"
+  | t -> String.uncapitalize_ascii t^"_jumper"
+
+let pulse_leaf_reader_name = function
+  | "opaque" | "uint8" -> "(PPB.leaf_reader_of_serialized (LPPI.read_u8' ()))"
+  | "uint16" -> "(PPB.leaf_reader_of_serialized (LPPI.read_u16' ()))"
+  | "uint32" -> "(PPB.leaf_reader_of_serialized (LPPI.read_u32' ()))"
+  | "uint64" -> "(PPB.leaf_reader_of_serialized (LPPI.read_u64' ()))"
+  | "Empty" -> "(PPB.leaf_reader_of_serialized (LPS.read_empty ()))"
+  | t -> sprintf "%s_reader" (String.uncapitalize_ascii t)
+
 let assume_some = function
   | None -> failwith "assume_some"
   | Some x -> x
@@ -777,6 +803,9 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
   wl o "inline_for_extraction noextract let %s_repr_jumper = %s\n\n" n (jumper_name repr_t);
   wl o "inline_for_extraction noextract let %s_repr_reader = %s\n\n" n (leaf_reader_name repr_t);
   wl o "inline_for_extraction noextract let %s_repr_writer = %s\n\n" n (leaf_writer_name repr_t);
+  wp o "inline_for_extraction noextract let %s_repr_validator = %s\n\n" n (pulse_validator_name repr_t);
+  wp o "inline_for_extraction noextract let %s_repr_jumper = %s\n\n" n (pulse_jumper_name repr_t);
+  wp o "inline_for_extraction noextract let %s_repr_reader = %s\n\n" n (pulse_leaf_reader_name repr_t);
 
   write_api o i true is_private (if is_open then MetadataTotal else MetadataDefault) n blen blen;
 
@@ -909,6 +938,18 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
   wl o "  LL.write_synth write_%s%s_key synth_%s synth_%s_inv (fun x -> synth_%s_inv x) ()\n\n" maybe n n n n;
   wl i "val %s_lserializer: LL.serializer32 %s_serializer\n\n" n n;
   wl o "let %s_lserializer = LL.serializer32_of_leaf_writer_strong_constant_size %s_writer %dul ()\n\n" n n blen;
+
+  (* Pulse: validator *)
+  if is_open then
+    () (* validator not needed for open enums with constant-size repr *)
+  else
+   begin
+    wp o "inline_for_extraction let validate_%s%s_key : LPS.validator parse_%s%s_key =\n" maybe n maybe n;
+    wp o "    PPE.mk_validate_enum_key %s_repr_validator %s_repr_reader %s_enum ()\n\n" n n n;
+    wp o "let %s_validator =\n" n;
+    wp o "  lemma_synth_%s_inj ();\n" n;
+    wp o "  LPC.validate_synth validate_%s%s_key synth_%s\n\n" maybe n n
+   end;
 
   (* bytesize lemma *)
   wl i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d) [SMTPat (%s_bytesize x)]\n\n" n n n blen n;
@@ -3069,6 +3110,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp o "module LPPI = LowParse.Pulse.Int\n";
   wp o "module PPB = LowParse.PulseParse.Base\n";
   wp o "module PPC = LowParse.PulseParse.Combinators\n";
+  wp o "module PPE = LowParse.PulseParse.Enum\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
 
