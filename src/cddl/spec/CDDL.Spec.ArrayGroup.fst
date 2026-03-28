@@ -313,8 +313,7 @@ let array_group_concat_unique_strong_zero_or_more_right
   ))
 = ()
 
-#push-options "--z3rlimit 16"
-
+#push-options "--split_queries always"
 let array_group_concat_unique_strong'_zero_or_more_left
   #b (a1 a2: array_group b)
 : Lemma
@@ -372,11 +371,10 @@ let array_group_concat_unique_strong'_zero_or_more_left
   in
   Classical.forall_intro_2 prf
 
-#pop-options
-
 let array_group_concat_unique_strong_zero_or_more_left
   #b (a1 a2: array_group b)
 = array_group_concat_unique_strong'_zero_or_more_left a1 a2
+#pop-options
 
 let array_group_concat_unique_weak_intro
   #b (a1 a3: array_group b)

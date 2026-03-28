@@ -7,7 +7,7 @@ module U64 = FStar.UInt64
 module Util = CBOR.Spec.Util
 module U8 = FStar.UInt8
 
-#push-options "--z3rlimit 4096 --query_stats --split_queries always --fuel 4 --ifuel 8 --z3refresh --z3seed 42 --z3cliopt 'smt.qi.eager_threshold=30'"
+#push-options "--z3rlimit 4096 --query_stats --split_queries always --fuel 4 --ifuel 8 --z3refresh --z3seed 42"
 
 let array_group_disjoint
   (typ_disjoint: typ_disjoint_t)
@@ -35,6 +35,7 @@ let array_group_disjoint
     else array_group_disjoint e  close1 close2 a1r a2
   | (_, close1, (GDef n, a1r)), (a2, close2, _)
   | (a2, close2, _), (_, close1, (GDef n, a1r)) ->
+    assert (name_mem n e.e_sem_env.se_bound);
     let en = match e.e_sem_env.se_bound n with
     | Some NGroup -> (e.e_env n)
     | Some NType -> GElem false (TElem EAny) (e.e_env n)
