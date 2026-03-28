@@ -6,6 +6,10 @@ t3 t5<0..255>;
 
 enum { a, b, (255) } tag;
 
+/*
+abstract t0 = "FStar.UInt16.t" < 2..3 >
+*/
+
 struct {
   tag t;
   select(t) {
@@ -74,26 +78,146 @@ struct {
 } t14;
 
 struct {
-  tag t;
+  t1 start;
+  tag2 t;
   select(t) {
-    case a: t3;
-    case b: t4;
+    case x: uint16;
+    case y: uint32;
+    case w: Empty;
+    default: Fail;
   } body;
-  tag t2;
-  select(t2) {
+} t15;
+
+struct {
+  uint16 len;
+  tag t;
+  select(t)
+  {
     case a: Empty;
     case b: T13;
   } x;
-} t15;
+} t16;
 
 struct {
   tag t;
   uint16 len;
-  select(t) {
+  select(t)
+  {
     case a: Empty;
     case b: T13;
   } x[len];
 } t17;
+
+struct {
+  tag t;
+  uint8 len;
+  select(t)
+  {
+    case a: Fail;
+    case b: T13;
+  } x[len];
+} t18;
+
+struct {
+  /*@implicit*/ tag t;
+  select(t)
+  {
+    case a: Fail;
+    case b: T13;
+  } x;
+} t19;
+
+struct {
+  /*@implicit*/ tag2 t;
+  select(t)
+  {
+    case x: Fail;
+    case y: t4;
+    default: uint16;
+  } x;
+} t20;
+
+/*
+ Types constructed from implicit sums will
+ cause QD to stage the parsing using vlbytes
+*/
+struct {
+  uint16 len;
+  t20 x[len];
+} t21;
+
+struct {
+  tag t;
+  uint24 len;
+  select(t)
+  {
+    case a: t19;
+    case b: t20;
+  } body[len];
+} t22;
+
+struct {
+  uint8 len;
+  t18 data[len];
+} t23;
+
+struct {
+  bitcoin_varint x;
+  uint16_le y{12..32 : bitcoin_varint};
+} t24;
+
+struct {
+  asn1_len len;
+  t24 payload[len];
+  uint16 blen;
+  opaque bpayload[blen];
+} t25;
+
+struct {
+  asn1_len8 len;
+  t25 payload[len];
+} t26;
+
+/*
+struct {
+  opaque tag[3];
+  (if tag = "000000" uint32 else t3) value;
+} t27;
+*/
+
+struct {} t28;
+
+struct {
+  bitcoin_varint len;
+  t13 payload[len];
+} t29;
+
+struct {
+  bitcoin_varint len;
+  t14 payload[len];
+} t30;
+
+t13 t31<12..131072 : bitcoin_varint>;
+
+t14 t32<12..131072 : bitcoin_varint>;
+
+t13 t33<100000..131072 : bitcoin_varint>;
+
+t14 t34<100000..131072 : bitcoin_varint>;
+
+opaque t35<12..131072 : bitcoin_varint>;
+
+opaque t36<100000..131072 : bitcoin_varint>;
+
+enum /*@little_endian*/ { a, b, (255) } tagle;
+
+struct {
+  tagle t;
+  select(t) {
+   case a: t3;
+   case b: t4;
+  } body;
+} t6le;
 
 struct {
   uint8 x8;
@@ -109,38 +233,14 @@ struct {
 struct {
   tag t;
   select(t) {
-    case a: Empty;
-    case b: T13;
-  } x;
-} t18;
-
-struct {
-  tag2 t;
-  select(t) {
-    case x: t3;
-    case y: t4;
-    case w: Empty;
-    default: t2;
-  } x;
-} t19;
-
-struct {
-  tag2 t;
-  select(t) {
-    case x: Fail;
-    case y: t4;
-    default: uint16;
-  } x;
-} t20;
-
-struct {
-  uint16 len;
-  t20 x[len];
-} t21;
+   case a: t37;
+   case b: uint64;
+  } body;
+} t38;
 
 struct {
   t37 x;
-  t18 y;
+  t38 y;
 } t39;
 
 struct {
@@ -155,86 +255,3 @@ struct {
   t39 x;
   t40 y;
 } t41;
-
-struct {
-  uint16 len;
-  tag t;
-  select(t) {
-    case a: Empty;
-    case b: T13;
-  } x;
-} t16;
-
-struct {
-  tag t;
-  select(t) {
-   case a: t37;
-   case b: uint64;
-  } body;
-} t38;
-
-struct {} t28;
-
-struct {
-  uint8 len;
-  t18 data[len];
-} t23;
-
-enum /*@little_endian*/ { a, b, (255) } tagle;
-
-struct {
-  tagle t;
-  select(t) {
-   case a: t3;
-   case b: t4;
-  } body;
-} t6le;
-
-struct {
-  tag t;
-  uint24 len;
-  select(t) {
-    case a: t1;
-    case b: t3;
-  } body[len];
-} t22;
-
-struct {
-  asn1_len len;
-  t18 payload[len];
-  uint16 blen;
-  opaque bpayload[blen];
-} t25;
-
-struct {
-  asn1_len8 len;
-  t1 data[len];
-} t26;
-
-struct {
-  asn1_len len;
-  t1 data[len];
-} t29;
-
-struct {
-  asn1_len len;
-  t14 data[len];
-} t30;
-
-struct {
-  bitcoin_varint x;
-  uint16_le y{12..32 : bitcoin_varint};
-} t24;
-
-
-t13 t31<12..131072 : bitcoin_varint>;
-
-t14 t32<12..131072 : bitcoin_varint>;
-
-t13 t33<100000..131072 : bitcoin_varint>;
-
-t14 t34<100000..131072 : bitcoin_varint>;
-
-opaque t35<12..131072 : bitcoin_varint>;
-
-opaque t36<100000..131072 : bitcoin_varint>;
