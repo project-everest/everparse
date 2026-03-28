@@ -1448,8 +1448,12 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
       wh o "let %s_size32 k =\n  LSZ.size32_sum_cases %s_sum serialize_%s_cases size32_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
       if need_validator then
         wl o "let %s_validator k =\n  LL.validate_sum_cases %s_sum parse_%s_cases validate_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
+      if need_validator then
+        wp o "let %s_validator k =\n  PPS.validate_sum_cases %s_sum parse_%s_cases validate_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
       if need_jumper then
         wl o "let %s_jumper k =\n  LL.jump_sum_cases %s_sum parse_%s_cases jump_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
+      if need_jumper then
+        wp o "let %s_jumper k =\n  PPS.jump_sum_cases %s_sum parse_%s_cases jump_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
     | Some def -> (* Horible synth boilerplate to deal with refine_with_tag *)
       w o "let _ : squash (%s_parser_kind == LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases (LP.get_parser_kind %s)) =\n" n n n (pcombinator_name def);
       w o "  _ by (FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ())\n\n";
@@ -1473,9 +1477,17 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
         wl o "noextract inline_for_extraction let %s_validator' = LL.validate_dsum_cases %s_sum parse_%s_cases validate_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n (validator_name def);
         wl o "let %s_validator k = LL.validate_synth (LL.validate_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_validator' k) (synth_%s k) ()\n\n" n tn n n n n
       );
+      if need_validator then (
+        wp o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nnoextract inline_for_extraction let %s_validator' = PPS.validate_dsum_cases %s_sum parse_%s_cases validate_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n (pulse_validator_name def);
+        wp o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nlet %s_validator k = LPC.validate_synth (PPC.validate_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_validator' k) (synth_%s k)\n\n" n tn n n n n
+      );
       if need_jumper then (
         wl o "noextract inline_for_extraction let %s_jumper' = LL.jump_dsum_cases %s_sum parse_%s_cases jump_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n (jumper_name def);
         wl o "let %s_jumper k = LL.jump_synth (LL.jump_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_jumper' k) (synth_%s k) ()\n\n" n tn n n n n
+      );
+      if need_jumper then (
+        wp o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nnoextract inline_for_extraction let %s_jumper' = PPS.jump_dsum_cases %s_sum parse_%s_cases jump_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n (pulse_jumper_name def);
+        wp o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\nlet %s_jumper k = LPC.jump_synth (PPC.jump_compose_context synth_%s_inv (LP.refine_with_tag key_of_%s) %s_parser' %s_jumper' k) (synth_%s k)\n\n" n tn n n n n
       )
   ) else (* tag is not erased *)
    begin
