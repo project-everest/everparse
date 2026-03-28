@@ -31,6 +31,9 @@ ifeq (,$(filter clean clean-buffer clean-extern,$(MAKECMDGOALS)))
 include .depend
 endif
 
+# Support both relative and absolute paths from fstar --dep full
+_EP := $(if $(filter /%,$(firstword $(ALL_CHECKED_FILES)) $(firstword $(ALL_KRML_FILES))),$(CURDIR)/,)
+
 buffer: EverParse.rsp
 	+$(MAKE) -C buffer
 
@@ -41,7 +44,7 @@ extract: EverParse.rsp
 
 verify: $(ALL_CHECKED_FILES)
 
-FILTERED_KRML_FILES=$(filter-out ResultOps.krml Actions.krml,$(ALL_KRML_FILES))
+FILTERED_KRML_FILES=$(filter-out $(_EP)ResultOps.krml $(_EP)Actions.krml,$(ALL_KRML_FILES))
 
 EverParse.rsp: $(FILTERED_KRML_FILES)
 	for f in $^ ; do echo $$f ; done > $@.tmp

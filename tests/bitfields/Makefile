@@ -12,6 +12,9 @@ krml/%.krml:
 
 -include .depend
 
+# Support both relative and absolute paths from fstar --dep full
+_EP := $(if $(filter /%,$(firstword $(ALL_CHECKED_FILES)) $(firstword $(ALL_KRML_FILES))),$(CURDIR)/,)
+
 .qd_files: $(QD_FILES)
 	+$(MAKE) -f Makefile.qd_files
 
@@ -25,7 +28,7 @@ depend: .depend
 verify: $(patsubst %,cache/%.checked,$(QD_FILES))
 	echo $*
 
-ALL_KRML_FILES := $(filter-out krml/prims.krml,$(ALL_KRML_FILES))
+ALL_KRML_FILES := $(filter-out $(_EP)krml/prims.krml,$(ALL_KRML_FILES))
 
 extract: $(ALL_KRML_FILES) # from .depend
 	mkdir -p out

@@ -16,13 +16,13 @@ clean_rules += clean-pulse
 
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 
-tot: $(filter LowParse.Tot.%,$(ALL_CHECKED_FILES))
+tot: $(filter $(_EP)LowParse.Tot.%,$(ALL_CHECKED_FILES))
 
-spec: $(filter LowParse.Spec.%,$(ALL_CHECKED_FILES))
+spec: $(filter $(_EP)LowParse.Spec.%,$(ALL_CHECKED_FILES))
 
-slow: $(filter LowParse.SLow.%,$(ALL_CHECKED_FILES))
+slow: $(filter $(_EP)LowParse.SLow.%,$(ALL_CHECKED_FILES))
 
-low: $(filter LowParse.Low.%,$(ALL_CHECKED_FILES))
+low: $(filter $(_EP)LowParse.Low.%,$(ALL_CHECKED_FILES))
 
 .PHONY: tot spec slow low
 

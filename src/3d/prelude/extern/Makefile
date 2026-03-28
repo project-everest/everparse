@@ -13,7 +13,7 @@ INCLUDE_PATHS += ..
 include $(EVERPARSE_SRC_PATH)/everparse.Makefile
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 
-FILTERED_KRML_FILES=$(filter-out ResultOps.krml Actions.krml,$(ALL_KRML_FILES))
+FILTERED_KRML_FILES=$(filter-out $(_EP)ResultOps.krml $(_EP)Actions.krml,$(ALL_KRML_FILES))
 
 extract: extract-extern extract-static
 

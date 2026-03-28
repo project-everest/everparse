@@ -94,6 +94,11 @@ ifeq (,$(filter $(clean_rules) $(other_clean_rules),$(MAKECMDGOALS)))
 include $(FSTAR_DEP_FILE)
 endif
 
+# Support both relative and absolute paths from fstar --dep full.
+# If paths are absolute, _EP is set to $(CURDIR)/ so that filter
+# patterns like $(_EP)src/lowparse/% match both relative and absolute.
+_EP := $(if $(filter /%,$(firstword $(ALL_CHECKED_FILES)) $(firstword $(ALL_KRML_FILES))),$(CURDIR)/,)
+
 $(ALL_CHECKED_FILES): %.checked:
 	$(call msg, "CHECK", $(basename $(notdir $@)))
 	$(Q)$(RUNLIM) $(FSTAR) $(SIL) $(COMPAT_INDEXED_EFFECTS) $(if $(filter 1,$(ADMIT)),--admit_smt_queries true,) $<

@@ -51,21 +51,21 @@ $(FSTAR_DEP_FILE): $(NEED_FSTAR) $(NEED_KRML)
 $(ALL_CHECKED_FILES): %.checked: $(NEED_FSTAR) $(NEED_Z3) $(NEED_KRML)
 
 ifeq (1,$(ADMIT_LOWPARSE))
-$(filter src/lowparse/%,$(ALL_CHECKED_FILES)): ADMIT := 1
+$(filter $(_EP)src/lowparse/%,$(ALL_CHECKED_FILES)): ADMIT := 1
 endif
 
 ifeq (1,$(ADMIT_CBOR_CDDL))
-$(filter src/cbor/% src/cddl/%,$(ALL_CHECKED_FILES)): ADMIT := 1
+$(filter $(_EP)src/cbor/% $(_EP)src/cddl/%,$(ALL_CHECKED_FILES)): ADMIT := 1
 endif
 
-LOWPARSE_FILES := $(filter-out src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
-LOWPARSE_LOW_FILTER := src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.% src/lowparse/LowParse.Repr.% src/lowparse/LowParse.Slice.% src/lowparse/LowParse.TestLib.%
+LOWPARSE_FILES := $(filter-out $(_EP)src/lowparse/pulse/%,$(filter $(_EP)src/lowparse/%,$(ALL_CHECKED_FILES)))
+LOWPARSE_LOW_FILTER := $(_EP)src/lowparse/LowParse.SLow.% $(_EP)src/lowparse/LowParse.Low.% $(_EP)src/lowparse/LowParse.Repr.% $(_EP)src/lowparse/LowParse.Slice.% $(_EP)src/lowparse/LowParse.TestLib.%
 # TODO: re-enable once Low* is gone
 # lowparse: $(LOWPARSE_FILES)
 lowparse: $(filter-out $(LOWPARSE_LOW_FILTER),$(LOWPARSE_FILES))
 
 ifeq (,$(NO_PULSE))
-lowparse: $(filter src/lowparse/pulse/%,$(ALL_CHECKED_FILES))
+lowparse: $(filter $(_EP)src/lowparse/pulse/%,$(ALL_CHECKED_FILES))
 endif
 
 # lowparse needed because of .fst behind .fsti for extraction
@@ -84,7 +84,7 @@ endif
 3d: 3d-prelude 3d-exe
 
 # filter-out comes from NOT_INCLUDED in src/ASN1/Makefile
-asn1: $(filter-out $(addprefix src/ASN1/,$(addsuffix .checked,ASN1.Tmp.fst ASN1.Test.Interpreter.fst ASN1.Low.% ASN1Test.fst ASN1.bak%)),$(filter src/ASN1/%,$(ALL_CHECKED_FILES)))
+asn1: $(filter-out $(addprefix $(_EP)src/ASN1/,$(addsuffix .checked,ASN1.Tmp.fst ASN1.Test.Interpreter.fst ASN1.Low.% ASN1Test.fst ASN1.bak%)),$(filter $(_EP)src/ASN1/%,$(ALL_CHECKED_FILES)))
 
 quackyducky: qd-exe lowparse
 
@@ -143,10 +143,10 @@ submodules:
 
 .PHONY: submodules
 
-cbor-interface: $(filter-out src/cbor/spec/raw/%,$(filter src/cbor/spec/%,$(ALL_CHECKED_FILES)))
+cbor-interface: $(filter-out $(_EP)src/cbor/spec/raw/%,$(filter $(_EP)src/cbor/spec/%,$(ALL_CHECKED_FILES)))
 
 ifeq (,$(NO_PULSE))
-cbor-interface: $(filter-out src/cbor/pulse/raw/%,$(filter src/cbor/pulse/%,$(ALL_CHECKED_FILES)))
+cbor-interface: $(filter-out $(_EP)src/cbor/pulse/raw/%,$(filter $(_EP)src/cbor/pulse/%,$(ALL_CHECKED_FILES)))
 endif
 
 .PHONY: cbor-interface
@@ -169,17 +169,17 @@ endif
 
 .PHONY: cbor-det-common-vertest
 
-cbor-verify: $(filter src/cbor/spec/%,$(ALL_CHECKED_FILES))
+cbor-verify: $(filter $(_EP)src/cbor/spec/%,$(ALL_CHECKED_FILES))
 
 ifeq (,$(NO_PULSE))
-cbor-verify: $(filter src/cbor/pulse/%,$(ALL_CHECKED_FILES))
+cbor-verify: $(filter $(_EP)src/cbor/pulse/%,$(ALL_CHECKED_FILES))
 endif
 
 .PHONY: cbor-verify
 
 # lowparse needed for extraction because of .fst files behind .fsti
 ifeq (,$(NO_PULSE))
-cbor-extract-pre: cbor-verify $(filter-out $(LOWPARSE_LOW_FILTER),$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+cbor-extract-pre: cbor-verify $(filter-out $(LOWPARSE_LOW_FILTER),$(filter $(_EP)src/lowparse/%,$(ALL_CHECKED_FILES)))
 
 .PHONY: cbor-extract-pre
 
@@ -216,13 +216,13 @@ cbor-test-extracted: cbor-test-unverified cbor-test-verified
 
 cbor-test: cbor-test-extracted cbor-test-snapshot
 
-cddl-spec: $(filter src/cddl/spec/%,$(ALL_CHECKED_FILES))
+cddl-spec: $(filter $(_EP)src/cddl/spec/%,$(ALL_CHECKED_FILES))
 
 ifeq (,$(NO_PULSE))
-cddl-pulse: cddl-spec $(filter src/cddl/pulse/%,$(ALL_CHECKED_FILES))
+cddl-pulse: cddl-spec $(filter $(_EP)src/cddl/pulse/%,$(ALL_CHECKED_FILES))
 
 # cbor-extract-pre needed because Rust extraction extracts CBOR and COSE altogether
-cddl-tool: cddl-pulse $(filter src/cddl/tool/%,$(ALL_CHECKED_FILES)) cbor-extract-pre
+cddl-tool: cddl-pulse $(filter $(_EP)src/cddl/tool/%,$(ALL_CHECKED_FILES)) cbor-extract-pre
 	+$(MAKE) -C src/cddl/tool
 else
 cddl-tool:

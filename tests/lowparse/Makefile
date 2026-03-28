@@ -41,7 +41,7 @@ EXAMPLES=Example Example2 Example3 Example5 Example6 Example7 Example8 Example9 
 NOEXTRACT_EXAMPLES=ExamplePair
 ROOT_FILES=$(addprefix LowParse, $(addsuffix .fst, $(EXAMPLES)))
 
-EXCLUDE_KRML_FILES=$(FSTAR_OUT_DIR)/prims.krml
+EXCLUDE_KRML_FILES=$(_EP)$(FSTAR_OUT_DIR)/prims.krml
 
 EXAMPLE_DEPEND_FILES=$(addsuffix .depend,$(EXAMPLES))
 
@@ -64,6 +64,9 @@ clean:
 ifeq (,$(filter clean,$(MAKECMDGOALS)))
 include .depend
 endif
+
+# Support both relative and absolute paths from fstar --dep full
+_EP := $(if $(filter /%,$(firstword $(ALL_CHECKED_FILES)) $(firstword $(ALL_KRML_FILES))),$(CURDIR)/,)
 
 verify-all: $(ALL_CHECKED_FILES)
 
