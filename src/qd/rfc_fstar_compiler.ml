@@ -251,6 +251,28 @@ let validator_length_header_name = make_combinator_length_header_name "LL.valida
 let jumper_length_header_name = make_combinator_length_header_name "LL.jump" false
 let reader_length_header_name = make_combinator_length_header_name "LL.read" false
 
+(* Pulse length header helpers *)
+let pulse_validator_length_header_name x min max = match x with
+  | "asn1_len8" | "asn1_len" ->
+    sprintf "(PPDER.validate_bounded_der_length32 %dul %dul (LPPI.read_u8' ()) (fun i -> if i = 1 then PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer 1) (PPBI.leaf_read_bounded_integer_1 fits_u64_squash) else if i = 2 then PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer 2) (PPBI.leaf_read_bounded_integer_2 fits_u64_squash) else if i = 3 then PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer 3) (PPBI.leaf_read_bounded_integer_3 fits_u64_squash) else PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer 4) (PPBI.leaf_read_bounded_integer_4 fits_u64_squash)))" min max
+  | "bitcoin_varint" ->
+    sprintf "(PPBCVLI.validate_bounded_bcvli %dul %dul (PPBI.leaf_read_bounded_integer_le_1 fits_u64_squash) (PPBI.leaf_read_bounded_integer_le_2 fits_u64_squash) (PPBI.leaf_read_bounded_integer_le_4 fits_u64_squash))" min max
+  | _ -> failwith (sprintf "pulse_validator_length_header_name: %s not found" x)
+
+let pulse_reader_length_header_name x min max = match x with
+  | "asn1_len8" | "asn1_len" ->
+    sprintf "(PPDER.leaf_read_bounded_der_length32 %d %d (PPB.leaf_reader_of_serialized (LPPI.read_u8' ())) (fun i -> if i = 1 then PPBI.leaf_read_bounded_integer_1 fits_u64_squash else if i = 2 then PPBI.leaf_read_bounded_integer_2 fits_u64_squash else if i = 3 then PPBI.leaf_read_bounded_integer_3 fits_u64_squash else PPBI.leaf_read_bounded_integer_4 fits_u64_squash))" min max
+  | "bitcoin_varint" ->
+    sprintf "(PPBCVLI.leaf_read_bcvli (PPBI.leaf_read_bounded_integer_le_1 fits_u64_squash) (PPBI.leaf_read_bounded_integer_le_2 fits_u64_squash) (PPBI.leaf_read_bounded_integer_le_4 fits_u64_squash))"
+  | _ -> failwith (sprintf "pulse_reader_length_header_name: %s not found" x)
+
+let pulse_jumper_length_header_name x min max = match x with
+  | "asn1_len8" | "asn1_len" ->
+    sprintf "(PPDER.jump_bounded_der_length32 %d %d (PPB.leaf_reader_of_serialized (LPPI.read_u8' ())))" min max
+  | "bitcoin_varint" ->
+    sprintf "(PPBCVLI.jump_bounded_bcvli %d %d (PPBI.leaf_read_bounded_integer_le_1 fits_u64_squash))" min max
+  | _ -> failwith (sprintf "pulse_jumper_length_header_name: %s not found" x)
+
 let pcombinator_name = function
   | "opaque" | "uint8" -> "LPI.parse_u8"
   | "uint16" -> "LPI.parse_u16"
@@ -440,8 +462,12 @@ let leaf_writer_name = function
 let pulse_validator_name = function
   | "opaque" | "uint8" -> "LPPI.validate_u8"
   | "uint16" -> "LPPI.validate_u16"
+  | "uint16_le" -> "PPBI.validate_u16_le"
+  | "uint24" -> "(PPBI.validate_bounded_integer 3)"
   | "uint32" -> "LPPI.validate_u32"
+  | "uint32_le" -> "PPBI.validate_u32_le"
   | "uint64" -> "LPPI.validate_u64"
+  | "bitcoin_varint" -> "(PPBCVLI.validate_bcvli (PPBI.leaf_read_bounded_integer_le_1 fits_u64_squash) (PPBI.leaf_read_bounded_integer_le_2 fits_u64_squash) (PPBI.leaf_read_bounded_integer_le_4 fits_u64_squash))"
   | "Empty" -> "(LPS.validate_total_constant_size LP.parse_empty 0sz)"
   | "Fail" -> "(PPC.validate_false ())"
   | t -> String.uncapitalize_ascii t^"_validator"
@@ -449,8 +475,12 @@ let pulse_validator_name = function
 let pulse_jumper_name = function
   | "opaque" | "uint8" -> "LPPI.jump_u8"
   | "uint16" -> "LPPI.jump_u16"
+  | "uint16_le" -> "PPBI.jump_u16_le"
+  | "uint24" -> "(LPS.jump_constant_size (LP.parse_bounded_integer 3) 3sz)"
   | "uint32" -> "LPPI.jump_u32"
+  | "uint32_le" -> "PPBI.jump_u32_le"
   | "uint64" -> "LPPI.jump_u64"
+  | "bitcoin_varint" -> "(PPBCVLI.jump_bcvli (PPBI.leaf_read_bounded_integer_le_1 fits_u64_squash))"
   | "Empty" -> "(LPS.jump_constant_size LP.parse_empty 0sz)"
   | "Fail" -> "(LPS.jump_constant_size LP.parse_false 0sz)"
   | t -> String.uncapitalize_ascii t^"_jumper"
@@ -1859,10 +1889,19 @@ and compile_vldata o i is_private n ty li elem_li lenty smin smax =
       wl o "let %s_validator =\n" n;
       wl o "  LL.validate_vlgen %d %dul %d %dul %s %s %s %s\n\n" smin smin smax smax (validator_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty) (validator_name ty);
     );
+    if need_validator then (
+      wp o "let %s_validator =\n" n;
+      wp o "  PPVG.validate_vlgen %d %d %s %s %s %s fits_u64_squash\n\n" smin smax (pulse_validator_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty) (pulse_validator_name ty);
+    );
     if need_jumper then (
       let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
       wl o "let %s_jumper%s =\n\n" n jumper_annot;
       wl o "  LL.jump_vlgen %d %d %s %s %s\n\n" smin smax (jumper_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty)
+    );
+    if need_jumper then (
+      let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
+      wp o "let %s_jumper%s =\n" n jumper_annot;
+      wp o "  PPVG.jump_vlgen %d %d %s %s %s fits_u64_squash\n\n" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty)
     );
     (* accessor *)
     if ty <> "Empty" && ty <> "Fail" then begin
@@ -1910,11 +1949,22 @@ and compile_vldata o i is_private n ty li elem_li lenty smin smax =
       wl o "  LL.validate_bounded_vlgen %d %dul %d %dul %s %s %s %s\n\n" smin smin smax smax (validator_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty) (validator_name ty);
       wl o "let %s_validator = LL.validate_synth %s'_validator synth_%s ()\n\n" n n n
     );
+    if need_validator then (
+      wp o "inline_for_extraction let %s'_validator : LPS.validator %s'_parser =\n" n n;
+      wp o "  PPVG.validate_bounded_vlgen %d %d %s %s %s %s fits_u64_squash\n\n" smin smax (pulse_validator_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty) (pulse_validator_name ty);
+      wp o "let %s_validator = LPC.validate_synth %s'_validator synth_%s\n\n" n n n
+    );
     if need_jumper then (
       wl o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
       wl o "  LL.jump_bounded_vlgen %d %d %s %s %s\n\n" smin smax (jumper_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty);
       let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
       wl o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n
+    );
+    if need_jumper then (
+      wp o "inline_for_extraction let %s'_jumper : LPS.jumper %s'_parser =\n" n n;
+      wp o "  PPVG.jump_bounded_vlgen %d %d %s %s %s fits_u64_squash\n\n" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty);
+      let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
+      wp o "let %s_jumper%s = LPC.jump_synth %s'_jumper synth_%s\n\n" n jumper_annot n n
     );
     (* TODO: intro lemmas *)
     (* accessor *)
@@ -1984,11 +2034,22 @@ and compile_vllist o i is_private n ty li elem_li lenty smin smax =
     wl o "  LL.validate_bounded_vlgen %d %dul %d %dul %s %s (LP.serialize_list _ %s) (LL.validate_list %s ())\n\n" smin smin smax smax (validator_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty) (validator_name ty);
     wl o "let %s_validator = LL.validate_synth %s'_validator synth_%s ()\n\n" n n n
   );
+  if need_validator then (
+    wp o "inline_for_extraction let %s'_validator : LPS.validator %s'_parser =\n" n n;
+    wp o "  PPVG.validate_bounded_vlgen %d %d %s %s (LP.serialize_list _ %s) (PPLS.validate_list %s ()) fits_u64_squash\n\n" smin smax (pulse_validator_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty) (pulse_validator_name ty);
+    wp o "let %s_validator = LPC.validate_synth %s'_validator synth_%s\n\n" n n n
+  );
   if need_jumper then (
     wl o "inline_for_extraction let %s'_jumper : LL.jumper %s'_parser =\n" n n;
     wl o "  LL.jump_bounded_vlgen %d %d %s %s (LP.serialize_list _ %s)\n\n" smin smax (jumper_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax) (scombinator_name ty);
     let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
     wl o "let %s_jumper%s = LL.jump_synth %s'_jumper synth_%s ()\n\n" n jumper_annot n n
+  );
+  if need_jumper then (
+    wp o "inline_for_extraction let %s'_jumper : LPS.jumper %s'_parser =\n" n n;
+    wp o "  PPVG.jump_bounded_vlgen %d %d %s %s (LP.serialize_list _ %s) fits_u64_squash\n\n" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty);
+    let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
+    wp o "let %s_jumper%s = LPC.jump_synth %s'_jumper synth_%s\n\n" n jumper_annot n n
   );
   (* TODO: intro lemmas *)
   (* TODO: accessor *)
@@ -2008,9 +2069,15 @@ and compile_vlbytes o i is_private n li lenty smin smax =
   wh o "let %s_size32 = LSZ.size32_bounded_vlgenbytes %d %d %s\n\n" n smin smax (size32_length_header_name lenty smin smax);
   if need_validator then
     wl o "let %s_validator = LL.validate_bounded_vlgenbytes %d %dul %d %dul %s %s\n\n" n smin smin smax smax (validator_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax);
+  if need_validator then
+    wp o "let %s_validator = PPBY.validate_bounded_vlgenbytes %d %d %s %s fits_u64_squash\n\n" n smin smax (pulse_validator_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax);
   if need_jumper then begin
       let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
       wl o "let %s_jumper%s = LL.jump_bounded_vlgenbytes %d %d %s %s\n\n" n jumper_annot smin smax (jumper_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax)
+    end;
+  if need_jumper then begin
+      let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
+      wp o "let %s_jumper%s = PPBY.jump_bounded_vlgenbytes %d %d %s %s fits_u64_squash\n\n" n jumper_annot smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax)
     end
   
 and compile_typedef tch o i tn fn (ty:type_t) vec def al =
@@ -3262,6 +3329,9 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp o "module PPS = LowParse.PulseParse.Sum\n";
   wp o "module PPBI = LowParse.PulseParse.BoundedInt\n";
   wp o "module PPBY = LowParse.PulseParse.Bytes\n";
+  wp o "module PPBCVLI = LowParse.PulseParse.BCVLI\n";
+  wp o "module PPVG = LowParse.PulseParse.VLGen\n";
+  wp o "module PPDER = LowParse.Pulse.DER\n";
   wp o "module PPVD = LowParse.PulseParse.VLData\n";
   wp o "module PPLS = LowParse.PulseParse.List\n";
   wp o "module PPAR = LowParse.PulseParse.Array\n";

@@ -179,3 +179,44 @@ struct {
   uint8 len;
   t18 data[len];
 } t23;
+
+enum /*@little_endian*/ { a, b, (255) } tagle;
+
+struct {
+  tagle t;
+  select(t) {
+   case a: t3;
+   case b: t4;
+  } body;
+} t6le;
+
+struct {
+  tag t;
+  uint24 len;
+  select(t) {
+    case a: t1;
+    case b: t3;
+  } body[len];
+} t22;
+
+struct {
+  asn1_len len;
+  t18 payload[len];
+  uint16 blen;
+  opaque bpayload[blen];
+} t25;
+
+struct {
+  asn1_len8 len;
+  t1 data[len];
+} t26;
+
+struct {
+  asn1_len len;
+  t1 data[len];
+} t29;
+
+struct {
+  asn1_len len;
+  t14 data[len];
+} t30;
