@@ -105,3 +105,53 @@ struct {
   uint16 y16;
   uint8 y8;
 } t37;
+
+struct {
+  tag t;
+  select(t) {
+    case a: Empty;
+    case b: T13;
+  } x;
+} t18;
+
+struct {
+  tag2 t;
+  select(t) {
+    case x: t3;
+    case y: t4;
+    case w: Empty;
+    default: t2;
+  } x;
+} t19;
+
+struct {
+  tag2 t;
+  select(t) {
+    case x: Fail;
+    case y: t4;
+    default: uint16;
+  } x;
+} t20;
+
+struct {
+  uint16 len;
+  t20 x[len];
+} t21;
+
+struct {
+  t37 x;
+  t18 y;
+} t39;
+
+struct {
+  tag2 t;
+  select(t) {
+   case w: t37;
+   default: uint64;
+  } body;
+} t40;
+
+struct {
+  t39 x;
+  t40 y;
+} t41;
