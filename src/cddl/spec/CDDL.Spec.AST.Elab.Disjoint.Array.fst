@@ -35,7 +35,6 @@ let array_group_disjoint
     else array_group_disjoint e  close1 close2 a1r a2
   | (_, close1, (GDef n, a1r)), (a2, close2, _)
   | (a2, close2, _), (_, close1, (GDef n, a1r)) ->
-    assert (name_mem n e.e_sem_env.se_bound);
     let en = match e.e_sem_env.se_bound n with
     | Some NGroup -> (e.e_env n)
     | Some NType -> GElem false (TElem EAny) (e.e_env n)

@@ -1937,7 +1937,7 @@ let bytes_lex_compare_refl
 
 #pop-options
 
-#push-options "--z3rlimit 256 --split_queries always"
+#push-options "--z3rlimit 128 --split_queries always"
 
 let serialized_lex_compare_simple_value
   (x1 x2: simple_value)
