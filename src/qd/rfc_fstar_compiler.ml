@@ -442,7 +442,8 @@ let pulse_validator_name = function
   | "uint16" -> "LPPI.validate_u16"
   | "uint32" -> "LPPI.validate_u32"
   | "uint64" -> "LPPI.validate_u64"
-  | "Empty" -> "(LPS.validate_ret ())"
+  | "Empty" -> "(LPS.validate_total_constant_size LP.parse_empty 0sz)"
+  | "Fail" -> "(PPC.validate_false ())"
   | t -> String.uncapitalize_ascii t^"_validator"
 
 let pulse_jumper_name = function
@@ -450,7 +451,8 @@ let pulse_jumper_name = function
   | "uint16" -> "LPPI.jump_u16"
   | "uint32" -> "LPPI.jump_u32"
   | "uint64" -> "LPPI.jump_u64"
-  | "Empty" -> "LPS.jump_empty"
+  | "Empty" -> "(LPS.jump_constant_size LP.parse_empty 0sz)"
+  | "Fail" -> "(LPS.jump_constant_size LP.parse_false 0sz)"
   | t -> String.uncapitalize_ascii t^"_jumper"
 
 let pulse_leaf_reader_name = function
@@ -2130,11 +2132,26 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
           wl o "let %s_validator =\n" n;
           wl o "  LL.validate_bounded_vldata %d %d %s ()\n\n" 0 smax (validator_name ty);
         );
+        if need_validator then (
+          wp o "let %s_validator =\n" n;
+          wp o "  PPVD.validate_bounded_vldata %d %d %s (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" 0 smax (pulse_validator_name ty) (log256 smax);
+        );
         if need_jumper then (
           let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
           wl o "let %s_jumper%s =\n\n" n jumper_annot;
           wl o "  LL.jump_bounded_vldata %d %d %s ()\n\n" 0 smax (pcombinator_name ty)
         );
+        if need_jumper then (
+          let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
+          wp o "let %s_jumper%s =\n" n jumper_annot;
+          wp o "  PPVD.jump_bounded_vldata %d %d %s (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" 0 smax (pcombinator_name ty) smax (log256 smax)
+        );
+        (* Pulse accessor *)
+        if ty <> "Empty" && ty <> "Fail" then
+         begin
+          wp i "val %s_accessor : PPB.accessor %s_parser %s (PPVD.clens_id %s)\n\n" n n (pcombinator_name ty) (compile_type ty);
+          wp o "let %s_accessor = PPVD.accessor_bounded_vldata_payload %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" n 0 smax (log256 smax);
+         end;
         (* accessor *)
         if ty <> "Empty" && ty <> "Fail" then
          begin

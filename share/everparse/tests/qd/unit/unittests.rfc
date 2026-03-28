@@ -77,3 +77,9 @@ struct {
     default: t2;
   } body;
 } t7;
+
+struct {
+  t1 a;
+  uint16 l;
+  t5 b[l];
+} t9;
