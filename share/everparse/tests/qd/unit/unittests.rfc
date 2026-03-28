@@ -14,6 +14,20 @@ struct {
   } body;
 } t6;
 
+enum /*@open*/ {
+x, y, z, t, v, w, (255)
+} tag2;
+
+struct {
+  tag2 t;
+  select(t) {
+    case x: t3;
+    case y: t4;
+    case w: Empty;
+    default: t2;
+  } body;
+} t7;
+
 struct {
   t4 x;
   t5 y;
@@ -26,6 +40,12 @@ struct {
   uint16 x6;
   uint32 x7;
 } t8;
+
+struct {
+  t1 a;
+  uint16 l;
+  t5 b[l];
+} t9;
 
 struct {
   t3 simplify;
@@ -54,6 +74,28 @@ struct {
 } t14;
 
 struct {
+  tag t;
+  select(t) {
+    case a: t3;
+    case b: t4;
+  } body;
+  tag t2;
+  select(t2) {
+    case a: Empty;
+    case b: T13;
+  } x;
+} t15;
+
+struct {
+  tag t;
+  uint16 len;
+  select(t) {
+    case a: Empty;
+    case b: T13;
+  } x[len];
+} t17;
+
+struct {
   uint8 x8;
   uint16 x16;
   uint32 x32;
@@ -63,23 +105,3 @@ struct {
   uint16 y16;
   uint8 y8;
 } t37;
-
-enum /*@open*/ {
-x, y, z, t, v, w, (255)
-} tag2;
-
-struct {
-  tag2 t;
-  select(t) {
-    case x: t3;
-    case y: t4;
-    case w: Empty;
-    default: t2;
-  } body;
-} t7;
-
-struct {
-  t1 a;
-  uint16 l;
-  t5 b[l];
-} t9;
