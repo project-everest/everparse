@@ -155,3 +155,22 @@ struct {
   t39 x;
   t40 y;
 } t41;
+
+struct {
+  uint16 len;
+  tag t;
+  select(t) {
+    case a: Empty;
+    case b: T13;
+  } x;
+} t16;
+
+struct {
+  tag t;
+  select(t) {
+   case a: t37;
+   case b: uint64;
+  } body;
+} t38;
+
+struct {} t28;
