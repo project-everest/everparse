@@ -174,3 +174,8 @@ struct {
 } t38;
 
 struct {} t28;
+
+struct {
+  uint8 len;
+  t18 data[len];
+} t23;

@@ -2251,14 +2251,18 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
           wp o "let %s_jumper%s = LPC.jump_synth %s'_jumper synth_%s\n\n" n jumper_annot n n
         );
         (* Pulse: accessor *)
-        wp i "val %s_accessor : PPB.accessor %s_parser %s (PPVD.clens_bounded_vldata_strong %d %d %s)\n\n" n n (pcombinator_name ty) 0 smax (scombinator_name ty);
+        (* Pulse: accessor *)
+        wp i "noextract let %s_clens : LowParse.CLens.clens %s %s = {\n" n n (compile_type ty);
+        wp i "  LowParse.CLens.clens_cond = (fun _ -> True);\n";
+        wp i "  LowParse.CLens.clens_get = (fun (x: %s) -> (x <: %s));\n" n (compile_type ty);
+        wp i "}\n\n";
+        wp i "val %s_accessor : PPB.accessor %s_parser %s %s_clens\n\n" n n (pcombinator_name ty) n;
         wp o "let %s_accessor =\n" n;
-        wp o "  [@inline_let] let _ = synth_%s_injective () in\n" n;
-        wp o "  PPC.accessor_ext\n" ;
-        wp o "    (PPC.accessor_compose_strong\n";
-        wp o "      (PPC.accessor_synth_inv synth_%s synth_%s_recip)\n" n n;
+        wp o "  PPC.accessor_ext\n";
+        wp o "    (PPC.accessor_compose\n";
+        wp o "      (PPC.accessor_synth synth_%s synth_%s_recip)\n" n n;
         wp o "      (PPVD.accessor_bounded_vldata_strong_payload %d %d %s (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash) ())\n" 0 smax (scombinator_name ty) (log256 smax);
-        wp o "    (PPVD.clens_bounded_vldata_strong %d %d %s) ()\n\n" 0 smax (scombinator_name ty);
+        wp o "    %s_clens ()\n\n" n;
         (* finalizer *)
         if ty = "Empty" || ty = "Fail" then failwith "vldata empty/fail should have been in the 'bounds OK' case";
         wl i "val %s_finalize (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) (pos'  : U32.t) : HST.Stack unit\n"  n;
