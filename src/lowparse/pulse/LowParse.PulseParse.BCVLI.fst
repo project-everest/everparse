@@ -12,6 +12,7 @@ module Trade = Pulse.Lib.Trade.Util
 module S = Pulse.Lib.Slice
 module LPS = LowParse.Pulse.Base
 module PPB = LowParse.PulseParse.Base
+module PPC = LowParse.PulseParse.Combinators
 module U32 = FStar.UInt32
 
 #push-options "--z3rlimit 32 --z3cliopt smt.arith.nl=false --max_fuel 0"
@@ -229,6 +230,51 @@ fn leaf_read_bcvli
 {
   PPB.pts_to_parsed_elim input;
   with w . assert (S.pts_to input #pm w);
+  parse_bcvli_eq w;
+  parser_kind_prop_equiv (parse_bounded_integer_kind 1) (parse_bounded_integer_le 1);
+  S.pts_to_len input;
+  let x = PPB.read_parsed_from_validator_success r1 input 0sz 1sz;
+  Seq.lemma_eq_elim
+    (Seq.slice w 1 (Seq.length w))
+    (Seq.slice w 1 (Seq.length w));
+  if (U32.lt x 253ul) {
+    Trade.elim _ _;
+    x
+  } else if (U32.eq x 253ul) {
+    parser_kind_prop_equiv (parse_bounded_integer_kind 2) (parse_bounded_integer_le 2);
+    let y = PPB.read_parsed_from_validator_success r2 input 1sz 3sz;
+    Trade.elim _ _;
+    y
+  } else {
+    parser_kind_prop_equiv (parse_bounded_integer_kind 4) (parse_bounded_integer_le 4);
+    let y = PPB.read_parsed_from_validator_success r4 input 1sz 5sz;
+    Trade.elim _ _;
+    y
+  }
+}
+
+#pop-options
+
+(* leaf_reader for parse_bounded_bcvli *)
+
+#push-options "--z3rlimit 32 --z3cliopt smt.arith.nl=false --max_fuel 0"
+
+inline_for_extraction
+fn leaf_read_bounded_bcvli
+  (min: nat)
+  (max: nat { min <= max })
+  (r1: PPB.leaf_reader (parse_bounded_integer_le 1))
+  (r2: PPB.leaf_reader (parse_bounded_integer_le 2))
+  (r4: PPB.leaf_reader (parse_bounded_integer_le 4))
+: PPB.leaf_reader (parse_bounded_bcvli min max)
+=
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (bounded_int32 min max))
+{
+  PPB.pts_to_parsed_elim input;
+  with w . assert (S.pts_to input #pm w);
+  parse_bounded_bcvli_eq min max w;
   parse_bcvli_eq w;
   parser_kind_prop_equiv (parse_bounded_integer_kind 1) (parse_bounded_integer_le 1);
   S.pts_to_len input;

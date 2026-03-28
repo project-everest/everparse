@@ -256,21 +256,21 @@ let pulse_validator_length_header_name x min max = match x with
   | "asn1_len8" | "asn1_len" ->
     sprintf "(PPDER.validate_bounded_der_length32 %dul %dul (LPPI.read_u8' ()) (fun i -> if i = 1 then PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer 1) (PPBI.leaf_read_bounded_integer_1 fits_u64_squash) else if i = 2 then PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer 2) (PPBI.leaf_read_bounded_integer_2 fits_u64_squash) else if i = 3 then PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer 3) (PPBI.leaf_read_bounded_integer_3 fits_u64_squash) else PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer 4) (PPBI.leaf_read_bounded_integer_4 fits_u64_squash)))" min max
   | "bitcoin_varint" ->
-    sprintf "(PPBCVLI.validate_bounded_bcvli %dul %dul (PPBI.leaf_read_bounded_integer_le_1 fits_u64_squash) (PPBI.leaf_read_bounded_integer_le_2 fits_u64_squash) (PPBI.leaf_read_bounded_integer_le_4 fits_u64_squash))" min max
+    sprintf "(PPBCVLI.validate_bounded_bcvli %dul %dul PPBI.leaf_read_bounded_integer_le_1 PPBI.leaf_read_bounded_integer_le_2 PPBI.leaf_read_bounded_integer_le_4)" min max
   | _ -> failwith (sprintf "pulse_validator_length_header_name: %s not found" x)
 
 let pulse_reader_length_header_name x min max = match x with
   | "asn1_len8" | "asn1_len" ->
     sprintf "(PPDER.leaf_read_bounded_der_length32 %d %d (PPB.leaf_reader_of_serialized (LPPI.read_u8' ())) (fun i -> if i = 1 then PPBI.leaf_read_bounded_integer_1 fits_u64_squash else if i = 2 then PPBI.leaf_read_bounded_integer_2 fits_u64_squash else if i = 3 then PPBI.leaf_read_bounded_integer_3 fits_u64_squash else PPBI.leaf_read_bounded_integer_4 fits_u64_squash))" min max
   | "bitcoin_varint" ->
-    sprintf "(PPBCVLI.leaf_read_bcvli (PPBI.leaf_read_bounded_integer_le_1 fits_u64_squash) (PPBI.leaf_read_bounded_integer_le_2 fits_u64_squash) (PPBI.leaf_read_bounded_integer_le_4 fits_u64_squash))"
+    sprintf "(PPBCVLI.leaf_read_bounded_bcvli %d %d PPBI.leaf_read_bounded_integer_le_1 PPBI.leaf_read_bounded_integer_le_2 PPBI.leaf_read_bounded_integer_le_4)" min max
   | _ -> failwith (sprintf "pulse_reader_length_header_name: %s not found" x)
 
 let pulse_jumper_length_header_name x min max = match x with
   | "asn1_len8" | "asn1_len" ->
     sprintf "(PPDER.jump_bounded_der_length32 %d %d (PPB.leaf_reader_of_serialized (LPPI.read_u8' ())))" min max
   | "bitcoin_varint" ->
-    sprintf "(PPBCVLI.jump_bounded_bcvli %d %d (PPBI.leaf_read_bounded_integer_le_1 fits_u64_squash))" min max
+    sprintf "(PPBCVLI.jump_bounded_bcvli %d %d PPBI.leaf_read_bounded_integer_le_1)" min max
   | _ -> failwith (sprintf "pulse_jumper_length_header_name: %s not found" x)
 
 let pcombinator_name = function
@@ -467,7 +467,7 @@ let pulse_validator_name = function
   | "uint32" -> "LPPI.validate_u32"
   | "uint32_le" -> "PPBI.validate_u32_le"
   | "uint64" -> "LPPI.validate_u64"
-  | "bitcoin_varint" -> "(PPBCVLI.validate_bcvli (PPBI.leaf_read_bounded_integer_le_1 fits_u64_squash) (PPBI.leaf_read_bounded_integer_le_2 fits_u64_squash) (PPBI.leaf_read_bounded_integer_le_4 fits_u64_squash))"
+  | "bitcoin_varint" -> "(PPBCVLI.validate_bcvli PPBI.leaf_read_bounded_integer_le_1 PPBI.leaf_read_bounded_integer_le_2 PPBI.leaf_read_bounded_integer_le_4)"
   | "Empty" -> "(LPS.validate_total_constant_size LP.parse_empty 0sz)"
   | "Fail" -> "(PPC.validate_false ())"
   | t -> String.uncapitalize_ascii t^"_validator"
@@ -480,7 +480,7 @@ let pulse_jumper_name = function
   | "uint32" -> "LPPI.jump_u32"
   | "uint32_le" -> "PPBI.jump_u32_le"
   | "uint64" -> "LPPI.jump_u64"
-  | "bitcoin_varint" -> "(PPBCVLI.jump_bcvli (PPBI.leaf_read_bounded_integer_le_1 fits_u64_squash))"
+  | "bitcoin_varint" -> "(PPBCVLI.jump_bcvli PPBI.leaf_read_bounded_integer_le_1)"
   | "Empty" -> "(LPS.jump_constant_size LP.parse_empty 0sz)"
   | "Fail" -> "(LPS.jump_constant_size LP.parse_false 0sz)"
   | t -> String.uncapitalize_ascii t^"_jumper"
@@ -490,6 +490,7 @@ let pulse_leaf_reader_name = function
   | "uint16" -> "(PPB.leaf_reader_of_serialized (LPPI.read_u16' ()))"
   | "uint32" -> "(PPB.leaf_reader_of_serialized (LPPI.read_u32' ()))"
   | "uint64" -> "(PPB.leaf_reader_of_serialized (LPPI.read_u64' ()))"
+  | "bitcoin_varint" -> "(PPBCVLI.leaf_read_bcvli PPBI.leaf_read_bounded_integer_le_1 PPBI.leaf_read_bounded_integer_le_2 PPBI.leaf_read_bounded_integer_le_4)"
   | "Empty" -> "(PPB.leaf_reader_of_serialized (LPS.read_empty ()))"
   | t -> sprintf "%s_reader" (String.uncapitalize_ascii t)
 
@@ -2160,9 +2161,13 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       wh o "let %s_size32 =\n  [@inline_let] let _ = assert_norm (LS.serialize32_vclist_precond %d %d (LP.get_parser_kind %s) (LP.get_parser_kind %s)) in\n" n low high (pcombinator_name repr_t) (pcombinator_name ty);
       wh o "  LSZ.size32_vclist %d %d %s %s\n\n" low high (size32_name repr_t) (size32_name ty);
       wl o "let %s_validator = LL.validate_vclist %dul %dul %s %s %s\n\n" n low high (validator_name repr_t) (leaf_reader_name repr_t) (validator_name ty);
+      wp o "let %s_validator = PPVCL.validate_vclist %dul %dul %s %s %s fits_u64_squash\n\n" n low high (pulse_validator_name repr_t) (pulse_leaf_reader_name repr_t) (pulse_validator_name ty);
       let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
       wl o "let %s_jumper%s =\n" n jumper_annot;
       wl o "  LL.jump_vclist %d %d %s %s %s\n\n" low high (jumper_name repr_t) (leaf_reader_name repr_t) (jumper_name ty);
+      let jumper_annot_p = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
+      wp o "let %s_jumper%s =\n" n jumper_annot_p;
+      wp o "  PPVCL.jump_vclist %dul %dul %s %s %s fits_u64_squash\n\n" low high (pulse_jumper_name repr_t) (pulse_leaf_reader_name repr_t) (pulse_jumper_name ty);
       (* finalizer, count, i-th accessor TODO *)
       ()
 
@@ -3331,6 +3336,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp o "module PPBY = LowParse.PulseParse.Bytes\n";
   wp o "module PPBCVLI = LowParse.PulseParse.BCVLI\n";
   wp o "module PPVG = LowParse.PulseParse.VLGen\n";
+  wp o "module PPVCL = LowParse.PulseParse.VCList\n";
   wp o "module PPDER = LowParse.Pulse.DER\n";
   wp o "module PPVD = LowParse.PulseParse.VLData\n";
   wp o "module PPLS = LowParse.PulseParse.List\n";

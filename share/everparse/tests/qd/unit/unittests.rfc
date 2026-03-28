@@ -220,3 +220,21 @@ struct {
   asn1_len len;
   t14 data[len];
 } t30;
+
+struct {
+  bitcoin_varint x;
+  uint16_le y{12..32 : bitcoin_varint};
+} t24;
+
+
+t13 t31<12..131072 : bitcoin_varint>;
+
+t14 t32<12..131072 : bitcoin_varint>;
+
+t13 t33<100000..131072 : bitcoin_varint>;
+
+t14 t34<100000..131072 : bitcoin_varint>;
+
+opaque t35<12..131072 : bitcoin_varint>;
+
+opaque t36<100000..131072 : bitcoin_varint>;
