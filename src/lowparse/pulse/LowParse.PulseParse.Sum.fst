@@ -848,6 +848,75 @@ fn read_sum_tag
 
 #pop-options
 
+(* ========== read_sum: leaf_reader for sum types ========== *)
+
+let read_sum_cases_t
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: sum_key t)
+: Tot Type
+= PPB.leaf_reader (parse_sum_cases' t pc k)
+
+inline_for_extraction
+fn read_sum_cases_t_if'
+  (t: sum u#0 u#0)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: sum_key t)
+  (cond: bool)
+  (ift: (cond_true cond -> Tot (read_sum_cases_t t pc k)))
+  (iff: (cond_false cond -> Tot (read_sum_cases_t t pc k)))
+: (read_sum_cases_t t pc k)
+=
+  (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  if cond {
+    ift () input
+  } else {
+    iff () input
+  }
+}
+
+inline_for_extraction
+let read_sum_cases_t_if
+  (t: sum u#0 u#0)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: sum_key t)
+: Tot (if_combinator (read_sum_cases_t t pc k) eq_trivial)
+= read_sum_cases_t_if' t pc k
+
+inline_for_extraction
+let read_sum_cases'
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (pc32: ((x: sum_key t) -> Tot (PPB.leaf_reader (dsnd (pc x)))))
+  (k: sum_key t)
+: Tot (read_sum_cases_t t pc k)
+= [@inline_let]
+  let _ = synth_sum_case_injective t k in
+  [@inline_let]
+  let _ = synth_sum_case_inverse t k in
+  PPB.leaf_reader_of_reader
+    (read_synth' (PPB.reader_of_leaf_reader (pc32 k)) (synth_sum_case t k) (synth_sum_case_recip t k))
+
+inline_for_extraction
+let read_sum_cases
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (pc32: ((x: sum_key t) -> Tot (PPB.leaf_reader (dsnd (pc x)))))
+  (destr: dep_enum_destr (sum_enum t) (read_sum_cases_t t pc))
+  (k: sum_key t)
+: Tot (read_sum_cases_t t pc k)
+= destr
+    _
+    (read_sum_cases_t_if t pc)
+    (fun _ _ -> ())
+    (fun _ _ _ _ -> ())
+    (read_sum_cases' t pc pc32)
+    k
+
+
 (* ========== Zero-copy parse: sum payload for a known tag ========== *)
 
 let vmatch_sum_payload
