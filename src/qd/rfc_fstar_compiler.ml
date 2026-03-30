@@ -1667,6 +1667,10 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
       wl i "  LL.clens_cond = (fun _ -> True);\n";
       wl i "  LL.clens_get = (fun (x: %s) -> tag_of_%s x);\n" n n;
       wl i "}\n\n";
+      wp i "noextract let %s_clens_tag : LowParse.CLens.clens %s %s = {\n" n n tn;
+      wp i "  LowParse.CLens.clens_cond = (fun _ -> True);\n";
+      wp i "  LowParse.CLens.clens_get = (fun (x: %s) -> tag_of_%s x);\n" n n;
+      wp i "}\n\n";
       wl i "val %s_gaccessor_tag : LL.gaccessor %s_parser %s %s_clens_tag\n\n" n n (pcombinator_name tn) n;
       wl i "val %s_accessor_tag : LL.accessor %s_gaccessor_tag\n\n" n n;
       let print_tag_accessor g =
@@ -1690,6 +1694,27 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
       in
       print_tag_accessor "g";
       print_tag_accessor "";
+
+      (* Pulse: tag accessor *)
+      begin
+        let sum_tag_acc = match def with
+          | None -> sprintf "PPS.accessor_sum_tag %s_sum %s_repr_jumper parse_%s_cases ()" n tn n
+          | Some dt -> sprintf "PPS.accessor_dsum_tag %s_sum %s_repr_jumper parse_%s_cases %s ()" n tn n (pcombinator_name dt)
+        in
+        wp i "val %s_accessor_tag : PPB.accessor %s_parser %s %s_clens_tag\n\n" n n (pcombinator_name tn) n;
+        wp o "let %s_accessor_tag : PPB.accessor %s_parser %s %s_clens_tag =\n" n n (pcombinator_name tn) n;
+        wp o "%s" same_kind;
+        wp o "  lemma_synth_%s_inj ();\n" tn;
+        wp o "  lemma_synth_%s_inv ();\n" tn;
+        wp o "  PPC.accessor_ext\n";
+        wp o "    (PPC.accessor_compose\n";
+        wp o "      (%s)\n" sum_tag_acc;
+        wp o "      (PPC.accessor_synth_fwd synth_%s synth_%s_inv)\n" tn tn;
+        wp o "      ()\n";
+        wp o "    )\n";
+        wp o "    %s_clens_tag\n" n;
+        wp o "    ()\n\n";
+      end;
 
     (* bytesize *)
     begin match def with
@@ -1743,6 +1768,10 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
                wl i "  LL.clens_cond = (fun (x: %s) -> tag_of_%s x == %s);\n" n n (String.capitalize_ascii case);
                wl i "  LL.clens_get = (fun (x: %s) -> (match x with %s_%s y -> y) <: (Ghost %s (requires (tag_of_%s x == %s)) (ensures (fun y -> True))));\n" n cprefix case ty0 n (String.capitalize_ascii case);
                wl i "}\n\n";
+               wp i "noextract let %s_clens_%s : LowParse.CLens.clens %s %s = {\n" n case n ty0;
+               wp i "  LowParse.CLens.clens_cond = (fun (x: %s) -> tag_of_%s x == %s);\n" n n (String.capitalize_ascii case);
+               wp i "  LowParse.CLens.clens_get = (fun (x: %s) -> (match x with %s_%s y -> y) <: (Ghost %s (requires (tag_of_%s x == %s)) (ensures (fun y -> True))));\n" n cprefix case ty0 n (String.capitalize_ascii case);
+               wp i "}\n\n";
                wl i "val %s_gaccessor_%s : LL.gaccessor %s_parser %s %s_clens_%s\n\n" n case n (pcombinator_name ty) n case;
                wl o "noextract let %s_clens'_%s : LL.clens %s %s = LL.clens_%ssum_payload %s_sum " n case n ty0 d n;
                if d = "" then
@@ -1780,6 +1809,22 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
                write_accessor "g";
                wl i "val %s_accessor_%s : LL.accessor %s_gaccessor_%s\n\n" n case n case;
                write_accessor "";
+               (* Pulse: payload accessor *)
+               begin
+                 wp i "val %s_accessor_%s : PPB.accessor %s_parser %s %s_clens_%s\n\n" n case n (pcombinator_name ty) n case;
+                 wp o "let %s_accessor_%s : PPB.accessor %s_parser %s %s_clens_%s =\n" n case n (pcombinator_name ty) n case;
+                 (match d with
+                 | "" ->
+                   wp o "  PPC.accessor_ext\n";
+                   wp o "    (PPS.accessor_clens_sum_payload %s_sum %s_repr_jumper parse_%s_cases (%s_as_enum_key %s) ())\n" n tn n tn (String.capitalize_ascii case);
+                   wp o "    %s_clens_%s\n" n case;
+                   wp o "    ()\n\n"
+                 | _ ->
+                   wp o "  PPC.accessor_ext\n";
+                   wp o "    (PPS.accessor_clens_dsum_payload %s_sum %s_repr_jumper parse_%s_cases %s (LowParse.Spec.Enum.Known (known_%s_as_enum_key %s)) ())\n" n tn n unknown_parser tn (String.capitalize_ascii case);
+                   wp o "    %s_clens_%s\n" n case;
+                   wp o "    ()\n\n");
+               end;
                ()
              end
          )
@@ -1792,6 +1837,10 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
           wl i "  LL.clens_cond = (fun (x: %s) -> %s_Unknown_%s? x);\n" n cprefix tn;
           wl i "  LL.clens_get = (fun (x: %s) -> (match x with %s_Unknown_%s _ y -> y) <: (Ghost %s (requires (%s_Unknown_%s? x)) (ensures (fun y -> True))));\n" n cprefix tn dt0 cprefix tn;
           wl i "}\n\n";
+          wp i "noextract let %s_clens_Unknown : LowParse.CLens.clens %s %s = {\n" n n dt0;
+          wp i "  LowParse.CLens.clens_cond = (fun (x: %s) -> %s_Unknown_%s? x);\n" n cprefix tn;
+          wp i "  LowParse.CLens.clens_get = (fun (x: %s) -> (match x with %s_Unknown_%s _ y -> y) <: (Ghost %s (requires (%s_Unknown_%s? x)) (ensures (fun y -> True))));\n" n cprefix tn dt0 cprefix tn;
+          wp i "}\n\n";
           wl o "let %s_clens_eq_Unknown : squash (LL.clens_eq (LL.clens_dsum_unknown_payload %s_sum) %s_clens_Unknown) =\n" n n n;
           wl o "    (_ by (LL.sum_accessor_ext (`%s)))\n\n" n;
           let write_accessor g parser_or_jumper =
@@ -1810,7 +1859,16 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
           wl i "val %s_gaccessor_Unknown : LL.gaccessor %s_parser %s %s_clens_Unknown\n\n" n n (pcombinator_name dt) n;
           write_accessor "g" "parser";
           wl i "val %s_accessor_Unknown : LL.accessor %s_gaccessor_Unknown\n\n" n n;
-          write_accessor "" "jumper"
+          write_accessor "" "jumper";
+          (* Pulse: Unknown accessor *)
+          begin
+            wp i "val %s_accessor_Unknown : PPB.accessor %s_parser %s %s_clens_Unknown\n\n" n n (pcombinator_name dt) n;
+            wp o "let %s_accessor_Unknown : PPB.accessor %s_parser %s %s_clens_Unknown =\n" n n (pcombinator_name dt) n;
+            wp o "  PPC.accessor_ext\n";
+            wp o "    (PPS.accessor_clens_dsum_unknown_payload %s_sum %s_repr_jumper parse_%s_cases %s ())\n" n tn n (pcombinator_name dt);
+            wp o "    %s_clens_Unknown\n" n;
+            wp o "    ()\n\n";
+          end
        | _ -> ()
     end;
     (* finalizers *)

@@ -1017,6 +1017,16 @@ let clens_synth_inv
   clens_get = g;
 }
 
+let clens_synth_fwd
+  (#t1 #t2: Type)
+  (f: (t1 -> GTot t2))
+  (g: (t2 -> GTot t1))
+: Tot (clens t1 t2)
+= {
+  clens_cond = (fun _ -> True);
+  clens_get = f;
+}
+
 inline_for_extraction
 fn accessor_id (#k: Ghost.erased parser_kind) (#t: Type0) (p: parser k t)
 : PPB.accessor p p (clens_id t)
@@ -1120,6 +1130,21 @@ let accessor_synth_inv
   (g: (t2 -> GTot t1) { synth_inverse f g })
 : PPB.accessor (parse_synth p f) p (clens_synth_inv f g)
 = accessor_synth f g
+
+inline_for_extraction
+fn accessor_synth_fwd
+  (#k: Ghost.erased parser_kind) (#t1 #t2: Type0) (#p: parser k t1)
+  (f: (t1 -> GTot t2) { synth_injective f })
+  (g: (t2 -> GTot t1) { synth_inverse f g })
+: PPB.accessor p (parse_synth p f) (clens_synth_fwd f g)
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t1)
+{
+  pts_to_parsed_synth_trade p f g input;
+  input
+}
 
 inline_for_extraction
 fn accessor_ext
