@@ -985,6 +985,25 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
     wp o "  LPC.validate_synth validate_%s%s_key synth_%s\n\n" maybe n n
    end;
 
+  (* Pulse: reader *)
+  begin
+    wp o "[@@ (LT.postprocess_with LT.pp_norm_tac)]\n";
+    if is_open then
+      begin
+        wp o "inline_for_extraction let read_maybe_%s_key : PPB.leaf_reader parse_maybe_%s_key =\n" n n;
+        wp o "    PPE.mk_read_maybe_enum_key %s_repr_reader %s_enum\n\n" n n;
+      end
+    else
+      begin
+        wp o "inline_for_extraction let read_%s_key : PPB.leaf_reader parse_%s_key =\n" n n;
+        wp o "  PPE.mk_read_enum_key %s_repr_reader %s_enum ()\n\n" n n;
+      end
+  end;
+  wp i "val %s_reader: PPB.leaf_reader %s_parser\n\n" n n;
+  wp o "let %s_reader =\n" n;
+  wp o " lemma_synth_%s_inj ();\n" n;
+  wp o " PPB.leaf_reader_of_reader (PPC.read_synth' (PPB.reader_of_leaf_reader read_%s%s_key) synth_%s synth_%s_inv)\n\n" maybe n n n;
+
   (* bytesize lemma *)
   wl i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d) [SMTPat (%s_bytesize x)]\n\n" n n n blen n;
   wl o "let %s_bytesize_eqn x = %s_bytesize_eq x; assert (FStar.Seq.length (LP.serialize %s_serializer x) <= %d); assert (%d <= FStar.Seq.length (LP.serialize %s_serializer x))\n\n" n n n blen blen n;
@@ -3061,6 +3080,23 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
       wl o "let %s_reader =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
       wl o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
       wl o "  LL.read_synth _ synth_%s (fun x -> synth_%s x) %s'_reader ()\n\n" n n n;
+
+      (* Pulse: struct reader *)
+      let rec mk_pulse_reader = function
+        | TLeaf (_, ty) -> (pulse_jumper_name ty, pulse_leaf_reader_name ty)
+        | TNode (_, tl, tr) ->
+           let (jl, rl) = mk_pulse_reader tl in
+           let (jr, rr) = mk_pulse_reader tr in
+           let j = sprintf "(LPC.jump_nondep_then %s %s)" jl jr in
+           let r = sprintf "(PPC.leaf_read_nondep_then %s %s %s ())" rl jl rr in
+           (j, r)
+      in
+      let (_, pulse_reader) = mk_pulse_reader tfields in
+      wp i "val %s_reader : PPB.leaf_reader %s_parser\n\n" n n;
+      wp o "inline_for_extraction let %s'_reader : PPB.leaf_reader %s'_parser = %s\n\n" n n pulse_reader;
+      wp o "let %s_reader =\n  synth_%s_injective ();\n" n n;
+      wp o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
+      wp o "  PPB.leaf_reader_of_reader (PPC.read_synth' (PPB.reader_of_leaf_reader %s'_reader) synth_%s synth_%s_recip)\n\n" n n n;
 
       let serializer32 = combinator lscombinator_name "LL.serialize32_nondep_then" in
       wl i "val %s_lserializer : LL.serializer32 %s_serializer\n\n" n n;
