@@ -3218,6 +3218,37 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
       )
       fields;
 
+    (* Pulse: accessors for fields *)
+    let rec pulse_jumper_of_tree = function
+       | TLeaf (_, ty) -> pulse_jumper_name ty
+       | TNode (_, left, right) ->
+          sprintf "(LPC.jump_nondep_then %s %s)" (pulse_jumper_of_tree left) (pulse_jumper_of_tree right)
+    in
+    let rec pulse_accessors (output: string) (path: string) = function
+       | TLeaf (fn, ty) ->
+          let output' = sprintf "%sinline_for_extraction noextract let accessor'_%s_%s : PPB.accessor %s'_parser %s _ = %s\n\n" output n fn n (pcombinator_name ty) path in
+          output'
+       | TNode (_, left, right) ->
+          let left_jumper = pulse_jumper_of_tree left in
+          let output1 = pulse_accessors output (sprintf "(PPC.accessor_then_fst %s %s () ())" path left_jumper) left in
+          let output2 = pulse_accessors output1 (sprintf "(PPC.accessor_then_snd %s %s () ())" path left_jumper) right in
+          output2
+    in
+    let pulse_acc = pulse_accessors "" (sprintf "(PPC.accessor_id %s'_parser)" n) tfields in
+    wp o "%s" pulse_acc;
+    wp o "noextract let clens_%s_%s' : LowParse.CLens.clens %s %s' = synth_%s_recip_inverse (); synth_%s_recip_injective (); { LowParse.CLens.clens_cond = (fun _ -> True); LowParse.CLens.clens_get = synth_%s_recip }\n\n" n n n n n n n;
+    wp o "inline_for_extraction noextract let accessor_%s_%s' : PPB.accessor %s_parser %s'_parser clens_%s_%s' = synth_%s_inverse (); synth_%s_injective (); synth_%s_recip_inverse (); PPC.accessor_synth_inv synth_%s synth_%s_recip\n\n" n n n n n n n n n n n;
+    List.iter
+      (fun (fn, ty) ->
+        wp i "noextract let clens_%s_%s : LowParse.CLens.clens %s %s = {\n" n fn n (compile_type ty);
+        wp i "  LowParse.CLens.clens_cond = (fun _ -> True);\n";
+        wp i "  LowParse.CLens.clens_get = (fun x -> x.%s);\n" fn;
+        wp i "}\n\n";
+        wp i "val accessor_%s_%s : PPB.accessor %s_parser %s clens_%s_%s\n\n" n fn n (pcombinator_name ty) n fn;
+        wp o "let accessor_%s_%s = PPC.accessor_ext (PPC.accessor_compose accessor_%s_%s' accessor'_%s_%s ()) clens_%s_%s ()\n\n" n fn n n n fn n fn
+      )
+      fields;
+
   (* valid intro lemma *)
   let rec valid ((count, (precond_l, precond_r, postcond), body) as accu) = function
     | TLeaf (fn, ty) ->
