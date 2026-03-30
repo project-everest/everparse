@@ -1549,11 +1549,11 @@ fn read_dsum_payload'
   match x {
     Known kk -> {
       let raw = f32 kk input;
-      synth_dsum_case t x raw
+      synth_dsum_case t (Known kk) raw
     }
-    Unknown _ -> {
+    Unknown x' -> {
       let raw = g32 input;
-      synth_dsum_case t x raw
+      synth_dsum_case t (Unknown x') raw
     }
   }
 }
@@ -1599,8 +1599,7 @@ fn read_dsum
   let payload = accessor_clens_dsum_payload t j (Ghost.reveal f) g k () input;
   synth_dsum_case_injective t k;
   synth_dsum_case_inverse t k;
-  let reader = validate_dsum_cases_dispatch_reader t f f32 g32 destr k;
-  let res = reader payload;
+  let res = validate_dsum_cases_dispatch_reader t f f32 g32 destr k payload;
   Trade.elim _ _;
   res
 }
