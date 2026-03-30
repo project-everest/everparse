@@ -105,10 +105,11 @@ lowparse-bitfields-test: lowparse
 	+$(MAKE) -C tests/bitfields
 
 ifeq (,$(NO_PULSE))
-lowparse-pulse-test:
-else
 lowparse-pulse-test: lowparse
-	+$(MAKE) -C tests/pulse
+	+$(MAKE) -C share/everparse/tests/lowparse
+#	+$(MAKE) -C tests/pulse # TODO: move it into `share/everparse/tests/lowparse` and re-enable it
+else
+lowparse-pulse-test:
 endif
 
 .PHONY: lowparse-pulse-test
