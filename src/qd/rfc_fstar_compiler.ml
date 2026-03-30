@@ -1959,6 +1959,8 @@ and compile_vldata o i is_private n ty li elem_li lenty smin smax =
       wl o "let %s_gaccessor = LL.gaccessor_vlgen_payload %d %d %s %s\n\n" n smin smax (pcombinator_length_header_name lenty smin smax) (scombinator_name ty);
       wl i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
       wl o "let %s_accessor = LL.accessor_vlgen_payload %d %d %s %s\n\n" n smin smax (jumper_length_header_name lenty smin smax) (scombinator_name ty);
+      wp i "val %s_accessor : PPB.accessor %s_parser %s (LowParse.CLens.clens_id %s)\n\n" n n (pcombinator_name ty) (compile_type ty);
+      wp o "let %s_accessor = PPVG.accessor_vlgen_payload %d %d %s %s %s fits_u64_squash\n\n" n smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty);
       ()
     end;
     (* TODO: intro lemmas *)
