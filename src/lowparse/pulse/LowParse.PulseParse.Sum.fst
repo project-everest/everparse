@@ -1087,6 +1087,34 @@ fn accessor_clens_sum_payload
 
 #pop-options
 
+(* ========== read_sum: leaf_reader for sum types ========== *)
+
+inline_for_extraction
+fn read_sum
+  (#kt: Ghost.erased parser_kind)
+  (t: sum u#0 u#0)
+  (#p: parser kt (sum_repr_type t))
+  (p32: PPB.leaf_reader p)
+  (j: B.jumper p)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (pc32: ((x: sum_key t) -> Tot (PPB.leaf_reader (dsnd (pc x)))))
+  (destr: dep_enum_destr (sum_enum t) (read_sum_cases_t t pc))
+  (_: squash (kt.parser_kind_subkind == Some ParserStrong))
+: PPB.leaf_reader (parse_sum t p pc)
+=
+  (input: S.slice byte)
+  (#pm: _)
+  (#v: _)
+{
+  let k = read_sum_tag t j p32 pc () input;
+  let payload = accessor_clens_sum_payload t j pc k () input;
+  synth_sum_case_injective t k;
+  synth_sum_case_inverse t k;
+  let raw = pc32 k payload;
+  Trade.elim _ _;
+  synth_sum_case t k raw
+}
+
 (* ========== DSum clens definitions ========== *)
 
 let clens_dsum_tag
