@@ -39,6 +39,7 @@ KRML = $(KRML_HOME)/krml \
 	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
 	 -tmpdir out -I .. \
 	 -bundle 'LowParse.\*' \
+	 $(KRML_OPTS) \
 	 $(HEADERS) \
 	 -warn-error '@2-26'
 

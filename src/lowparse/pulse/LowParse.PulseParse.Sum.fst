@@ -1089,6 +1089,85 @@ fn accessor_clens_sum_payload
 
 (* ========== read_sum: leaf_reader for sum types ========== *)
 
+// read_sum_payload_t: the destructor dispatches to a function that reads AND synths
+// It takes a payload slice and returns sum_type t
+let read_sum_payload_t
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: sum_key t)
+: Tot Type
+= (input: S.slice byte) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (sum_type_of_tag t k)) ->
+  stt (sum_type t)
+    (PPB.pts_to_parsed (dsnd (pc k)) input #pm v)
+    (fun res -> PPB.pts_to_parsed (dsnd (pc k)) input #pm v ** pure (res == synth_sum_case t k (Ghost.reveal v)))
+
+inline_for_extraction
+fn read_sum_payload_if'
+  (t: sum u#0 u#0)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: sum_key t)
+  (cond: bool)
+  (ift: (cond_true cond -> Tot (read_sum_payload_t t pc k)))
+  (iff: (cond_false cond -> Tot (read_sum_payload_t t pc k)))
+: (read_sum_payload_t t pc k)
+=
+  (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  if cond {
+    ift () input
+  } else {
+    iff () input
+  }
+}
+
+inline_for_extraction
+let read_sum_payload_if
+  (t: sum u#0 u#0)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: sum_key t)
+: Tot (if_combinator (read_sum_payload_t t pc k) eq_trivial)
+= read_sum_payload_if' t pc k
+
+// read_sum_payload': per-key reader that reads raw value and applies synth_sum_case
+inline_for_extraction
+fn read_sum_payload'
+  (t: sum u#0 u#0)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (pc32: ((x: sum_key t) -> Tot (PPB.leaf_reader (dsnd (pc x)))))
+  (k: sum_key t)
+: read_sum_payload_t t pc k
+= (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  synth_sum_case_injective t k;
+  let raw = pc32 k input;
+  synth_sum_case t k raw
+}
+
+// read_sum_payload_dispatch: dispatches via destructor to read + synth
+inline_for_extraction
+let read_sum_payload_dispatch
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (pc32: ((x: sum_key t) -> Tot (PPB.leaf_reader (dsnd (pc x)))))
+  (destr: dep_enum_destr (sum_enum t) (read_sum_payload_t t pc))
+  (k: sum_key t)
+: Tot (read_sum_payload_t t pc k)
+= destr
+    _
+    (read_sum_payload_if t pc)
+    (fun _ _ -> ())
+    (fun _ _ _ _ -> ())
+    (read_sum_payload' t pc pc32)
+    k
+
+#push-options "--z3rlimit 32"
+
 inline_for_extraction
 fn read_sum
   (#kt: Ghost.erased parser_kind)
@@ -1098,7 +1177,7 @@ fn read_sum
   (j: B.jumper p)
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (pc32: ((x: sum_key t) -> Tot (PPB.leaf_reader (dsnd (pc x)))))
-  (destr: dep_enum_destr (sum_enum t) (read_sum_cases_t t pc))
+  (destr: dep_enum_destr (sum_enum t) (read_sum_payload_t t pc))
   (_: squash (kt.parser_kind_subkind == Some ParserStrong))
 : PPB.leaf_reader (parse_sum t p pc)
 =
@@ -1110,10 +1189,12 @@ fn read_sum
   let payload = accessor_clens_sum_payload t j pc k () input;
   synth_sum_case_injective t k;
   synth_sum_case_inverse t k;
-  let raw = pc32 k payload;
+  let res = read_sum_payload_dispatch t pc pc32 destr k payload;
   Trade.elim _ _;
-  synth_sum_case t k raw
+  res
 }
+
+#pop-options
 
 (* ========== DSum clens definitions ========== *)
 
@@ -1402,6 +1483,96 @@ let accessor_clens_sum_cases_payload
 
 (* ========== read_dsum: leaf_reader for dsum types ========== *)
 
+// read_dsum_payload_t: type for dep_maybe_enum_destr_t dispatching both Known and Unknown
+let read_dsum_payload_t
+  (t: dsum)
+  (f: Ghost.erased ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
+  (#k': parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (x: dsum_key t)
+: Tot Type
+= (input: S.slice byte) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (dsum_type_of_tag t x)) ->
+  stt (dsum_type t)
+    (PPB.pts_to_parsed (parse_dsum_type_of_tag' t (Ghost.reveal f) g x) input #pm v)
+    (fun res -> PPB.pts_to_parsed (parse_dsum_type_of_tag' t (Ghost.reveal f) g x) input #pm v ** pure (res == synth_dsum_case t x (Ghost.reveal v)))
+
+inline_for_extraction
+fn read_dsum_payload_if'
+  (t: dsum u#0 u#0)
+  (f: Ghost.erased ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
+  (#k': Ghost.erased parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (x: dsum_key t)
+  (cond: bool)
+  (ift: (cond_true cond -> Tot (read_dsum_payload_t t f g x)))
+  (iff: (cond_false cond -> Tot (read_dsum_payload_t t f g x)))
+: (read_dsum_payload_t t f g x)
+=
+  (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  if cond {
+    ift () input
+  } else {
+    iff () input
+  }
+}
+
+inline_for_extraction
+let read_dsum_payload_if
+  (t: dsum u#0 u#0)
+  (f: Ghost.erased ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
+  (#k': Ghost.erased parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (x: dsum_key t)
+: Tot (if_combinator (read_dsum_payload_t t f g x) eq_trivial)
+= read_dsum_payload_if' t f g x
+
+inline_for_extraction
+fn read_dsum_payload'
+  (t: dsum u#0 u#0)
+  (f: Ghost.erased ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
+  (f32: (x: dsum_known_key t) -> Tot (PPB.leaf_reader (dsnd (Ghost.reveal f x))))
+  (#k': Ghost.erased parser_kind)
+  (#g: parser k' (dsum_type_of_unknown_tag t))
+  (g32: PPB.leaf_reader g)
+  (x: dsum_key t)
+: read_dsum_payload_t t f g x
+= (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  synth_dsum_case_injective t x;
+  match x {
+    Known kk -> {
+      let raw = f32 kk input;
+      synth_dsum_case t x raw
+    }
+    Unknown _ -> {
+      let raw = g32 input;
+      synth_dsum_case t x raw
+    }
+  }
+}
+
+inline_for_extraction
+let validate_dsum_cases_dispatch_reader
+  (t: dsum)
+  (f: Ghost.erased ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
+  (f32: (x: dsum_known_key t) -> Tot (PPB.leaf_reader (dsnd (Ghost.reveal f x))))
+  (#k': Ghost.erased parser_kind)
+  (#g: parser k' (dsum_type_of_unknown_tag t))
+  (g32: PPB.leaf_reader g)
+  (destr: dep_maybe_enum_destr_t (dsum_enum t) (read_dsum_payload_t t f g))
+  (k: dsum_key t)
+: Tot (read_dsum_payload_t t f g k)
+= destr (fun _ -> eq_trivial) (read_dsum_payload_if t f g) (fun _ _ -> ()) (fun _ _ _ _ -> ()) (read_dsum_payload' t f f32 g32) (repr_of_maybe_enum_key (dsum_enum t) k)
+
+#push-options "--z3rlimit 64"
+
 inline_for_extraction
 fn read_dsum
   (#kt: Ghost.erased parser_kind)
@@ -1414,6 +1585,7 @@ fn read_dsum
   (#k': Ghost.erased parser_kind)
   (#g: parser k' (dsum_type_of_unknown_tag t))
   (g32: PPB.leaf_reader g)
+  (destr: dep_maybe_enum_destr_t (dsum_enum t) (read_dsum_payload_t t f g))
   (_: squash (kt.parser_kind_subkind == Some ParserStrong))
 : PPB.leaf_reader (parse_dsum t p (Ghost.reveal f) g)
 =
@@ -1427,16 +1599,10 @@ fn read_dsum
   let payload = accessor_clens_dsum_payload t j (Ghost.reveal f) g k () input;
   synth_dsum_case_injective t k;
   synth_dsum_case_inverse t k;
-  match k {
-    Known kk -> {
-      let raw = f32 kk payload;
-      Trade.elim _ _;
-      synth_dsum_case t k raw
-    }
-    Unknown _ -> {
-      let raw = g32 payload;
-      Trade.elim _ _;
-      synth_dsum_case t k raw
-    }
-  }
+  let reader = validate_dsum_cases_dispatch_reader t f f32 g32 destr k;
+  let res = reader payload;
+  Trade.elim _ _;
+  res
 }
+
+#pop-options

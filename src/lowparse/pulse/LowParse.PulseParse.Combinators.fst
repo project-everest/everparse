@@ -445,6 +445,18 @@ fn validate_false ()
   false
 }
 
+inline_for_extraction
+fn read_false ()
+: PPB.leaf_reader #_ #parse_false_kind parse_false
+=
+  (input: slice byte)
+  (#pm: _)
+  (#v: Ghost.erased (squash False))
+{
+  let _ = Ghost.reveal v;
+  false_elim ()
+}
+
 (* validate_strengthen: strengthen the parser kind *)
 
 inline_for_extraction

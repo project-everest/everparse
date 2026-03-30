@@ -491,7 +491,8 @@ let pulse_leaf_reader_name = function
   | "uint32" -> "(PPB.leaf_reader_of_serialized (LPPI.read_u32' ()))"
   | "uint64" -> "(PPB.leaf_reader_of_serialized (LPPI.read_u64' ()))"
   | "bitcoin_varint" -> "(PPBCVLI.leaf_read_bcvli PPBI.leaf_read_bounded_integer_le_1 PPBI.leaf_read_bounded_integer_le_2 PPBI.leaf_read_bounded_integer_le_4)"
-  | "Empty" -> "(PPB.leaf_reader_of_serialized (LPS.read_empty ()))"
+  | "Empty" -> "PPC.leaf_read_empty"
+  | "Fail" -> "(PPC.read_false ())"
   | t -> sprintf "%s_reader" (String.uncapitalize_ascii t)
 
 let assume_some = function
@@ -1439,6 +1440,14 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
         ) cl;
       wl o "  | _ -> LL.read_false\n\n";
 
+      wp o "inline_for_extraction noextract let read_%s_cases (x:%s)\n" n ktype;
+      wp o "  : PPB.leaf_reader (dsnd (parse_%s_cases x)) =\n  match x with\n" n;
+      List.iter (fun (case, ty) ->
+          let cn = String.capitalize_ascii case in
+          wp o "  | %s -> [@inline_let] let u : PPB.leaf_reader (dsnd (parse_%s_cases %s)) = %s in u\n" cn n cn (pulse_leaf_reader_name ty)
+        ) cl;
+      wp o "  | _ -> PPC.read_false ()\n\n";
+
       wl o "inline_for_extraction noextract let lserialize_%s_cases (x:%s)\n" n ktype;
       wl o "  : LL.serializer32 (serialize_%s_cases x) =\n  match x with\n" n;
       List.iter (fun (case, ty) ->
@@ -1612,6 +1621,15 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
          | Some dt ->
             wl o "  LL.read_dsum %s_sum read_maybe_%s_key %s_repr_jumper\n" n tn tn;
             wl o "  parse_%s_cases read_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n n (leaf_reader_name dt));
+
+        (* Pulse: sum/dsum reader *)
+        wp i "val %s_reader : PPB.leaf_reader %s\n\n" n (pcombinator_name n);
+        wp o "let %s_reader =\n%s" n same_kind;
+        (match def with
+         | None ->
+            wp o "  PPS.read_sum %s_sum %s_repr_reader %s_repr_jumper parse_%s_cases read_%s_cases (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n tn tn n n;
+         | Some dt ->
+            wp o "  PPS.read_dsum %s_sum read_maybe_%s_key %s_repr_jumper parse_%s_cases read_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ())) ()\n\n" n tn tn n n (pulse_leaf_reader_name dt));
 
         let annot = if is_private then " : LL.serializer32 "^(scombinator_name n) else "" in
         wl i "val %s_lserializer: LL.serializer32 %s\n\n" n (scombinator_name n);
