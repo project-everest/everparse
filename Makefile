@@ -115,8 +115,17 @@ endif
 
 lowparse-test: lowparse-unit-test lowparse-bitfields-test lowparse-pulse-test
 
-quackyducky-test: quackyducky
+quackyducky-lowstar-test: quackyducky
 	+$(MAKE) -C tests
+
+.PHONY: quackyducky-lowstar-test
+
+quackyducky-pulse-test: quackyducky
+	+$(MAKE) -C share/everparse/tests/qd
+
+.PHONY: quackyducky-pulse-test
+
+quackyducky-test: quackyducky-lowstar-test quackyducky-pulse-test
 
 test: all lowparse-test quackyducky-test asn1-test cbor-test cddl-test
 
