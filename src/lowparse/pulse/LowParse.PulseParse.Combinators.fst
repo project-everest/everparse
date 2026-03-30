@@ -674,6 +674,7 @@ let validate_compose_context
 : Tot (LPS.validator (p (f k)))
 = v (f k)
 
+inline_for_extraction
 let jump_compose_context
   (#pk: parser_kind)
   (#kt1 #kt2: Type0)

@@ -40,7 +40,7 @@ KRML = $(KRML_HOME)/krml \
 	 -tmpdir out -I .. \
 	 -bundle 'LowParse.\*' \
 	 $(HEADERS) \
-	 -warn-error '@2'
+	 -warn-error '@2-26'
 
 QD_FILES = $(wildcard *.fst *.fsti)
 

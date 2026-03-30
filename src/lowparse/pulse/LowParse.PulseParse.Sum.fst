@@ -247,17 +247,17 @@ let validate_sum
 
 let validate_dsum_cases_t
   (s: dsum)
-  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
+  (f: Ghost.erased ((x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x))))
   (#k: parser_kind)
   (g: parser k (dsum_type_of_unknown_tag s))
   (x: dsum_key s)
 : Tot Type
-= B.validator (parse_dsum_cases' s f g x)
+= B.validator (parse_dsum_cases' s (Ghost.reveal f) g x)
 
 inline_for_extraction
 fn validate_dsum_cases_if'
   (s: dsum u#0 u#0)
-  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
+  (f: Ghost.erased ((x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x))))
   (#k: Ghost.erased parser_kind)
   (g: parser k (dsum_type_of_unknown_tag s))
   (x: dsum_key s)
@@ -282,7 +282,7 @@ fn validate_dsum_cases_if'
 inline_for_extraction
 let validate_dsum_cases_if
   (s: dsum u#0 u#0)
-  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
+  (f: Ghost.erased ((x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x))))
   (#k: Ghost.erased parser_kind)
   (g: parser k (dsum_type_of_unknown_tag s))
   (x: dsum_key s)
@@ -292,8 +292,8 @@ let validate_dsum_cases_if
 inline_for_extraction
 let validate_dsum_cases'
   (s: dsum)
-  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
-  (f': (x: dsum_known_key s) -> Tot (B.validator (dsnd (f x))))
+  (f: Ghost.erased ((x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x))))
+  (f': (x: dsum_known_key s) -> Tot (B.validator (dsnd (Ghost.reveal f x))))
   (#k: Ghost.erased parser_kind)
   (#g: parser k (dsum_type_of_unknown_tag s))
   (g': B.validator g)
@@ -308,8 +308,8 @@ let validate_dsum_cases'
 inline_for_extraction
 let validate_dsum_cases_dispatch
   (t: dsum)
-  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
-  (f32: (x: dsum_known_key t) -> Tot (B.validator (dsnd (f x))))
+  (f: Ghost.erased ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
+  (f32: (x: dsum_known_key t) -> Tot (B.validator (dsnd (Ghost.reveal f x))))
   (#k': Ghost.erased parser_kind)
   (#g: parser k' (dsum_type_of_unknown_tag t))
   (g32: B.validator g)
@@ -321,8 +321,8 @@ let validate_dsum_cases_dispatch
 inline_for_extraction
 let validate_dsum_cases'_destr
   (s: dsum)
-  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
-  (f' : (x: dsum_known_key s) -> Tot (B.validator (dsnd (f x))))
+  (f: Ghost.erased ((x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x))))
+  (f' : (x: dsum_known_key s) -> Tot (B.validator (dsnd (Ghost.reveal f x))))
   (#k: Ghost.erased parser_kind)
   (#g: parser k (dsum_type_of_unknown_tag s))
   (g' : B.validator g)
@@ -343,28 +343,28 @@ let validate_dsum_cases'_destr
 inline_for_extraction
 let validate_dsum_cases
   (s: dsum)
-  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
-  (f' : (x: dsum_known_key s) -> Tot (B.validator (dsnd (f x))))
+  (f: Ghost.erased ((x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x))))
+  (f' : (x: dsum_known_key s) -> Tot (B.validator (dsnd (Ghost.reveal f x))))
   (#k: Ghost.erased parser_kind)
   (#g: parser k (dsum_type_of_unknown_tag s))
   (g' : B.validator g)
   (destr: dep_enum_destr (dsum_enum s) (fun k -> validate_dsum_cases_t s f g (Known k)))
   (x: dsum_key s)
-: Tot (B.validator (parse_dsum_cases s f g x))
-= Classical.forall_intro (parse_dsum_cases_eq' s f g x);
-  B.validate_ext (validate_dsum_cases'_destr s f f' g' destr x) (parse_dsum_cases s f g x)
+: Tot (B.validator (parse_dsum_cases s (Ghost.reveal f) g x))
+= Classical.forall_intro (parse_dsum_cases_eq' s (Ghost.reveal f) g x);
+  B.validate_ext (validate_dsum_cases'_destr s f f' g' destr x) (parse_dsum_cases s (Ghost.reveal f) g x)
 
 inline_for_extraction
 fn validate_dsum_cases_fn
   (s: dsum)
-  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
-  (f': (x: dsum_known_key s) -> Tot (B.validator (dsnd (f x))))
+  (f: Ghost.erased ((x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x))))
+  (f': (x: dsum_known_key s) -> Tot (B.validator (dsnd (Ghost.reveal f x))))
   (#k: Ghost.erased parser_kind)
   (#g: parser k (dsum_type_of_unknown_tag s))
   (g': B.validator g)
-  (destr: dep_maybe_enum_destr_t (dsum_enum s) (validate_dsum_cases_t s f g))
+  (destr: dep_maybe_enum_destr_t (dsum_enum s) (validate_dsum_cases_t s (Ghost.reveal f) g))
   (x: dsum_key s)
-: B.validator (parse_dsum_cases s f g x)
+: B.validator (parse_dsum_cases s (Ghost.reveal f) g x)
 =
   (input: S.slice byte)
   (poffset: ref SZ.t)
@@ -373,8 +373,8 @@ fn validate_dsum_cases_fn
   (#v: Ghost.erased bytes)
 {
   let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
-  parse_dsum_cases_eq' s f g x sinput;
-  validate_dsum_cases_dispatch s f f' g' destr (repr_of_maybe_enum_key (dsum_enum s) x) input poffset
+  parse_dsum_cases_eq' s (Ghost.reveal f) g x sinput;
+  validate_dsum_cases_dispatch s (Ghost.reveal f) f' g' destr (repr_of_maybe_enum_key (dsum_enum s) x) input poffset
 }
 
 #push-options "--z3rlimit 64"
@@ -645,17 +645,17 @@ let jump_sum
 
 let jump_dsum_cases_t
   (s: dsum)
-  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
+  (f: Ghost.erased ((x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x))))
   (#k: parser_kind)
   (g: parser k (dsum_type_of_unknown_tag s))
   (x: dsum_key s)
 : Tot Type
-= B.jumper (parse_dsum_cases' s f g x)
+= B.jumper (parse_dsum_cases' s (Ghost.reveal f) g x)
 
 inline_for_extraction
 fn jump_dsum_cases_if'
   (s: dsum u#0 u#0)
-  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
+  (f: Ghost.erased ((x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x))))
   (#k: Ghost.erased parser_kind)
   (g: parser k (dsum_type_of_unknown_tag s))
   (x: dsum_key s)
@@ -679,7 +679,7 @@ fn jump_dsum_cases_if'
 inline_for_extraction
 let jump_dsum_cases_if
   (s: dsum u#0 u#0)
-  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
+  (f: Ghost.erased ((x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x))))
   (#k: Ghost.erased parser_kind)
   (g: parser k (dsum_type_of_unknown_tag s))
   (x: dsum_key s)
@@ -689,8 +689,8 @@ let jump_dsum_cases_if
 inline_for_extraction
 let jump_dsum_cases'
   (s: dsum)
-  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
-  (f': (x: dsum_known_key s) -> Tot (B.jumper (dsnd (f x))))
+  (f: Ghost.erased ((x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x))))
+  (f': (x: dsum_known_key s) -> Tot (B.jumper (dsnd (Ghost.reveal f x))))
   (#k: Ghost.erased parser_kind)
   (#g: parser k (dsum_type_of_unknown_tag s))
   (g': B.jumper g)
@@ -705,8 +705,8 @@ let jump_dsum_cases'
 inline_for_extraction
 let jump_dsum_cases_dispatch
   (t: dsum)
-  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
-  (f32: (x: dsum_known_key t) -> Tot (B.jumper (dsnd (f x))))
+  (f: Ghost.erased ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
+  (f32: (x: dsum_known_key t) -> Tot (B.jumper (dsnd (Ghost.reveal f x))))
   (#k': Ghost.erased parser_kind)
   (#g: parser k' (dsum_type_of_unknown_tag t))
   (g32: B.jumper g)
@@ -718,8 +718,8 @@ let jump_dsum_cases_dispatch
 inline_for_extraction
 let jump_dsum_cases'_destr
   (s: dsum)
-  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
-  (f' : (x: dsum_known_key s) -> Tot (B.jumper (dsnd (f x))))
+  (f: Ghost.erased ((x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x))))
+  (f' : (x: dsum_known_key s) -> Tot (B.jumper (dsnd (Ghost.reveal f x))))
   (#k: Ghost.erased parser_kind)
   (#g: parser k (dsum_type_of_unknown_tag s))
   (g' : B.jumper g)
@@ -740,28 +740,28 @@ let jump_dsum_cases'_destr
 inline_for_extraction
 let jump_dsum_cases
   (s: dsum)
-  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
-  (f' : (x: dsum_known_key s) -> Tot (B.jumper (dsnd (f x))))
+  (f: Ghost.erased ((x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x))))
+  (f' : (x: dsum_known_key s) -> Tot (B.jumper (dsnd (Ghost.reveal f x))))
   (#k: Ghost.erased parser_kind)
   (#g: parser k (dsum_type_of_unknown_tag s))
   (g' : B.jumper g)
   (destr: dep_enum_destr (dsum_enum s) (fun k -> jump_dsum_cases_t s f g (Known k)))
   (x: dsum_key s)
-: Tot (B.jumper (parse_dsum_cases s f g x))
-= Classical.forall_intro (parse_dsum_cases_eq' s f g x);
-  B.jump_ext (jump_dsum_cases'_destr s f f' g' destr x) (parse_dsum_cases s f g x)
+: Tot (B.jumper (parse_dsum_cases s (Ghost.reveal f) g x))
+= Classical.forall_intro (parse_dsum_cases_eq' s (Ghost.reveal f) g x);
+  B.jump_ext (jump_dsum_cases'_destr s f f' g' destr x) (parse_dsum_cases s (Ghost.reveal f) g x)
 
 inline_for_extraction
 fn jump_dsum_cases_fn
   (s: dsum)
-  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
-  (f': (x: dsum_known_key s) -> Tot (B.jumper (dsnd (f x))))
+  (f: Ghost.erased ((x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x))))
+  (f': (x: dsum_known_key s) -> Tot (B.jumper (dsnd (Ghost.reveal f x))))
   (#k: Ghost.erased parser_kind)
   (#g: parser k (dsum_type_of_unknown_tag s))
   (g': B.jumper g)
   (destr: dep_maybe_enum_destr_t (dsum_enum s) (jump_dsum_cases_t s f g))
   (x: dsum_key s)
-: B.jumper (parse_dsum_cases s f g x)
+: B.jumper (parse_dsum_cases s (Ghost.reveal f) g x)
 =
   (input: S.slice byte)
   (offset: SZ.t)
@@ -769,7 +769,7 @@ fn jump_dsum_cases_fn
   (#v: Ghost.erased bytes)
 {
   let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
-  parse_dsum_cases_eq' s f g x sinput;
+  parse_dsum_cases_eq' s (Ghost.reveal f) g x sinput;
   jump_dsum_cases_dispatch s f f' g' destr (repr_of_maybe_enum_key (dsum_enum s) x) input offset
 }
 

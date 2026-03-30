@@ -131,4 +131,5 @@ let _ = Arg.parse [
 		eprintf "Error: -pulse and -low are incompatible\n";
 		exit 1
 	end;
+	if !emit_pulse then emit_high := false;
 	List.iter rfc_load !ifile
