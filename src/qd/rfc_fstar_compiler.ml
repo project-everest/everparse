@@ -495,6 +495,15 @@ let pulse_leaf_reader_name = function
   | "Fail" -> "(PPC.read_false ())"
   | t -> sprintf "%s_reader" (String.uncapitalize_ascii t)
 
+let pulse_leaf_writer_name = function
+  | "opaque" | "uint8" -> "(LPPI.l2r_leaf_write_u8 ())"
+  | "uint16" -> "(LPPI.l2r_leaf_write_u16 ())"
+  | "uint32" -> "(LPPI.l2r_leaf_write_u32 ())"
+  | "uint64" -> "(LPPI.l2r_leaf_write_u64 ())"
+  | "Empty" -> "LPC.l2r_leaf_write_empty"
+  | "Fail" -> "(LPC.l2r_leaf_write_false ())"
+  | t -> sprintf "%s_writer" (String.uncapitalize_ascii t)
+
 let assume_some = function
   | None -> failwith "assume_some"
   | Some x -> x
@@ -839,7 +848,8 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
   wl o "inline_for_extraction noextract let %s_repr_writer = %s\n\n" n (leaf_writer_name repr_t);
   wp o "inline_for_extraction noextract let %s_repr_validator = %s\n\n" n (pulse_validator_name repr_t);
   wp o "inline_for_extraction noextract let %s_repr_jumper = %s\n\n" n (pulse_jumper_name repr_t);
-  wp o "inline_for_extraction noextract let %s_repr_reader = %s\n\n" n (pulse_leaf_reader_name repr_t);
+    wp o "inline_for_extraction noextract let %s_repr_reader = %s\n\n" n (pulse_leaf_reader_name repr_t);
+  wp o "inline_for_extraction noextract let %s_repr_writer = %s\n\n" n (pulse_leaf_writer_name repr_t);
 
   write_api o i true is_private (if is_open then MetadataTotal else MetadataDefault) n blen blen;
 
@@ -1004,6 +1014,14 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
   wp o "let %s_reader =\n" n;
   wp o " lemma_synth_%s_inj ();\n" n;
   wp o " PPB.leaf_reader_of_reader (PPC.read_synth' (PPB.reader_of_leaf_reader read_%s%s_key) synth_%s synth_%s_inv)\n\n" maybe n n n;
+
+  (* Pulse: writer *)
+  wp o "inline_for_extraction let write_%s%s_key : LPS.l2r_leaf_writer (serialize_%s%s_key) =\n" maybe n maybe n;
+  wp o "  LPC.l2r_leaf_write_%senum_key %s_repr_writer %s_enum (_ by (LP.enum_repr_of_key_tac %s_enum))\n\n" maybe n n n;
+  wp i "val %s_writer: LPS.l2r_leaf_writer %s_serializer\n\n" n n;
+  wp o "let %s_writer =\n" n;
+  wp o "  [@inline_let] let _ = lemma_synth_%s_inj (); lemma_synth_%s_inv () in\n" n n;
+  wp o "  LPC.l2r_leaf_write_synth write_%s%s_key synth_%s synth_%s_inv (fun x -> synth_%s_inv x)\n\n" maybe n n n n;
 
   (* bytesize lemma *)
   wl i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d) [SMTPat (%s_bytesize x)]\n\n" n n n blen n;
@@ -1455,6 +1473,14 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
           wl o "  | %s -> [@inline_let] let u : LL.serializer32 (serialize_%s_cases %s) = %s in u\n" cn n cn (lscombinator_name ty)
         ) cl;
       wl o "  | _ -> LL.serialize32_false\n\n";
+
+      wp o "inline_for_extraction noextract let write_%s_cases (x:%s)\n" n ktype;
+      wp o "  : LPS.l2r_leaf_writer (serialize_%s_cases x) =\n  match x with\n" n;
+      List.iter (fun (case, ty) ->
+          let cn = String.capitalize_ascii case in
+          wp o "  | %s -> [@inline_let] let u : LPS.l2r_leaf_writer (serialize_%s_cases %s) = %s in u\n" cn n cn (pulse_leaf_writer_name ty)
+        ) cl;
+      wp o "  | _ -> LPS.l2r_leaf_writer_zero_size _ ()\n\n";
   end;
 
   if is_implicit then (
@@ -1630,6 +1656,15 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
             wp o "  PPS.read_sum %s_sum %s_repr_reader %s_repr_jumper parse_%s_cases read_%s_cases (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n tn tn n n;
          | Some dt ->
             wp o "  PPS.read_dsum %s_sum read_maybe_%s_key %s_repr_jumper parse_%s_cases read_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ())) ()\n\n" n tn tn n n (pulse_leaf_reader_name dt));
+
+        (* Pulse: sum/dsum writer *)
+        wp i "val %s_writer : LPS.l2r_leaf_writer %s_serializer\n\n" n n;
+        wp o "let %s_writer =\n%s" n same_kind;
+        (match def with
+         | None ->
+            wp o "  LPPS.l2r_leaf_write_sum %s_sum %s_repr_serializer write_%s_key serialize_%s_cases write_%s_cases (_ by (LP.dep_enum_destr_tac ()))\n\n" n tn tn n n;
+         | Some dt ->
+            wp o "  LPPS.l2r_leaf_write_dsum %s_sum %s_repr_serializer write_maybe_%s_key parse_%s_cases serialize_%s_cases write_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n tn tn n n n (pulse_leaf_writer_name dt));
 
         let annot = if is_private then " : LL.serializer32 "^(scombinator_name n) else "" in
         wl i "val %s_lserializer: LL.serializer32 %s\n\n" n (scombinator_name n);
@@ -2096,6 +2131,20 @@ and compile_vldata o i is_private n ty li elem_li lenty smin smax =
     write_accessor "g" (pcombinator_length_header_name lenty smin smax);
     wl i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
     write_accessor "" (jumper_length_header_name lenty smin smax);
+    (* Pulse: accessor *)
+    wp i "noextract let %s_clens : LowParse.CLens.clens %s %s = {\n" n n (compile_type ty);
+    wp i "  LowParse.CLens.clens_cond = (fun _ -> True);\n";
+    wp i "  LowParse.CLens.clens_get = (fun (x: %s) -> (x <: %s));\n" n (compile_type ty);
+    wp i "}\n\n";
+    wp i "val %s_accessor : PPB.accessor %s_parser %s %s_clens\n\n" n n (pcombinator_name ty) n;
+    wp o "let %s_accessor : PPB.accessor %s_parser %s %s_clens =\n" n n (pcombinator_name ty) n;
+    wp o "  PPC.accessor_ext\n";
+    wp o "    (PPC.accessor_compose\n";
+    wp o "      (PPC.accessor_synth_inv synth_%s synth_%s_recip)\n" n n;
+    wp o "      (PPVG.accessor_bounded_vlgen_payload %d %d %s %s %s fits_u64_squash)\n" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty);
+    wp o "      ())\n";
+    wp o "    %s_clens\n" n;
+    wp o "    ()\n\n";
     ()
    end;
   (* TODO: lemma about bytesize *)
@@ -2239,6 +2288,18 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
           wl o "let %s_reader = %s\n\n" n (leaf_reader_name ty);
           wl i "val %s_lserializer : LL.serializer32 %s\n\n" n (scombinator_name n);
           wl o "let %s_lserializer = %s\n\n" n (lscombinator_name ty)
+      end;
+      (* Pulse: validator, jumper, reader for type aliases *)
+      (if need_validator then
+        wp o "let %s_validator = %s\n\n" n (pulse_validator_name ty));
+      (if need_jumper then
+         let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
+         wp o "let %s_jumper%s = %s\n\n" n jumper_annot (pulse_jumper_name ty));
+      if li.has_lserializer then begin
+        wp i "val %s_reader : PPB.leaf_reader %s_parser\n\n" n n;
+        wp o "let %s_reader = %s\n\n" n (pulse_leaf_reader_name ty);
+        wp i "val %s_writer : LPS.l2r_leaf_writer %s_serializer\n\n" n n;
+        wp o "let %s_writer = %s\n\n" n (pulse_leaf_writer_name ty)
       end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %s) [SMTPat (%s_bytesize x)]\n\n" n n n (bytesize_call ty "x") n;
       w o "let %s_bytesize_eqn x = %s\n\n" n (bytesize_eq_call ty "x");
@@ -3176,6 +3237,23 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
       wp o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
       wp o "  PPB.leaf_reader_of_reader (PPC.read_synth' (PPB.reader_of_leaf_reader %s'_reader) synth_%s synth_%s_recip)\n\n" n n n;
 
+      (* Pulse: struct writer *)
+      if li.has_lserializer then begin
+        let rec mk_pulse_writer = function
+          | TLeaf (_, ty) -> pulse_leaf_writer_name ty
+          | TNode (_, tl, tr) ->
+             let wl = mk_pulse_writer tl in
+             let wr = mk_pulse_writer tr in
+             sprintf "(LPC.l2r_leaf_write_nondep_then %s %s ())" wl wr
+        in
+        let pulse_writer = mk_pulse_writer tfields in
+        wp i "val %s_writer : LPS.l2r_leaf_writer %s_serializer\n\n" n n;
+        wp o "inline_for_extraction let %s'_writer : LPS.l2r_leaf_writer %s'_serializer = %s\n\n" n n pulse_writer;
+        wp o "let %s_writer =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+        wp o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
+        wp o "  LPC.l2r_leaf_write_synth %s'_writer synth_%s synth_%s_recip (fun x -> synth_%s_recip x)\n\n" n n n n;
+      end;
+
       let serializer32 = combinator lscombinator_name "LL.serialize32_nondep_then" in
       wl i "val %s_lserializer : LL.serializer32 %s_serializer\n\n" n n;
       wl o "inline_for_extraction let %s'_lserializer : LL.serializer32 %s'_serializer = %s\n\n" n n serializer32;
@@ -3499,6 +3577,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp o "module PPLS = LowParse.PulseParse.List\n";
   wp o "module PPAR = LowParse.PulseParse.Array\n";
   wp o "module PPFD = LowParse.PulseParse.FLData\n";
+  wp o "module LPPS = LowParse.Pulse.Sum\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
 
