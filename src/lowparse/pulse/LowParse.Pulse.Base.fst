@@ -1036,7 +1036,6 @@ fn ref_pts_to_lens
   x
 }
 
-inline_for_extraction
 noextract
 let l2r_leaf_writer_postcond
   (#t: Type)
@@ -1056,6 +1055,7 @@ let l2r_leaf_writer_postcond
   Seq.slice v' 0 (SZ.v offset) == Seq.slice v 0 (SZ.v offset) /\
   Seq.slice v' (SZ.v offset) (SZ.v res) == bs
 
+inline_for_extraction
 let l2r_leaf_writer
   (#t: Type)
   (#k: parser_kind)

@@ -165,7 +165,6 @@ let parse_serialize_strong_prefix
   parse_strong_prefix #k p sv (sv `Seq.append` suff)
 
 inline_for_extraction
-inline_for_extraction
 fn validate_synth
   (#t #t': Type)
   (#k: Ghost.erased parser_kind)
@@ -183,7 +182,6 @@ fn validate_synth
   w input poffset #offset #pm #v
 }
 
-inline_for_extraction
 inline_for_extraction
 fn jump_synth
   (#t #t': Type0)
