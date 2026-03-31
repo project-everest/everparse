@@ -2539,6 +2539,50 @@ let leaf_compute_remaining_size_synth'
 : leaf_compute_remaining_size #t2 #k1 #(parse_synth p1 f2) (serialize_synth p1 f2 s1 f1 ())
 = leaf_compute_remaining_size_synth w f2 f1 (mk_synth f1)
 
+#push-options "--z3rlimit 128"
+
+inline_for_extraction
+fn l2r_leaf_write_nondep_then
+  (#t1 #t2: Type0)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1) (#s1: serializer p1) (w1: l2r_leaf_writer u#0 s1)
+  (#k2: Ghost.erased parser_kind) (#p2: parser k2 t2) (#s2: serializer p2) (w2: l2r_leaf_writer u#0 s2)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+: l2r_leaf_writer u#0 #(t1 & t2) #(and_then_kind k1 k2) #(nondep_then p1 p2) (serialize_nondep_then s1 s2)
+=
+  (x: (t1 & t2))
+  (out: slice byte)
+  (offset: SZ.t)
+  (#v: Ghost.erased bytes)
+{
+  let (x1, x2) = x;
+  serialize_nondep_then_eq s1 s2 x;
+  Seq.lemma_len_append (bare_serialize s1 x1) (bare_serialize s2 x2);
+  let off1 = w1 x1 out offset;
+  with v1 . assert (pts_to out v1);
+  let off2 = w2 x2 out off1;
+  with v2 . assert (pts_to out v2);
+  // Prove v2[offset..off2] == serialize s1 x1 @ serialize s2 x2
+  // From w2: v2[0..off1] == v1[0..off1] and v2[off1..off2] == serialize s2 x2
+  // From w1: v1[offset..off1] == serialize s1 x1
+  assert (pure (Seq.slice v2 0 (SZ.v off1) == Seq.slice v1 0 (SZ.v off1)));
+  assert (pure (Seq.slice v1 (SZ.v offset) (SZ.v off1) == bare_serialize s1 x1));
+  assert (pure (Seq.slice v2 (SZ.v off1) (SZ.v off2) == bare_serialize s2 x2));
+  Seq.slice_slice v2 0 (SZ.v off1) (SZ.v offset) (SZ.v off1);
+  assert (pure (Seq.slice v2 (SZ.v offset) (SZ.v off1) == bare_serialize s1 x1));
+  Seq.lemma_split (Seq.slice v2 (SZ.v offset) (SZ.v off2)) (SZ.v off1 - SZ.v offset);
+  Seq.slice_slice v2 (SZ.v offset) (SZ.v off2) 0 (SZ.v off1 - SZ.v offset);
+  Seq.slice_slice v2 (SZ.v offset) (SZ.v off2) (SZ.v off1 - SZ.v offset) (SZ.v off2 - SZ.v offset);
+  assert (pure (Seq.slice v2 (SZ.v offset) (SZ.v off2) `Seq.equal` Seq.append (bare_serialize s1 x1) (bare_serialize s2 x2)));
+  Seq.lemma_eq_intro (Seq.slice v2 (SZ.v offset) (SZ.v off2)) (Seq.append (bare_serialize s1 x1) (bare_serialize s2 x2));
+  assert (pure (Seq.slice v2 (SZ.v offset) (SZ.v off2) == bare_serialize (serialize_nondep_then s1 s2) x));
+  assert (pure (SZ.v off2 - SZ.v offset == Seq.length (bare_serialize (serialize_nondep_then s1 s2) x)));
+  Seq.slice_slice v2 0 (SZ.v off1) 0 (SZ.v offset);
+  Seq.slice_slice v1 0 (SZ.v off1) 0 (SZ.v offset);
+  off2
+}
+
+#pop-options
+
 let vmatch_synth
   (#tl: Type)
   (#th1 #th2: Type)
