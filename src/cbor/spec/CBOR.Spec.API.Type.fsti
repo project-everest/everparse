@@ -139,10 +139,13 @@ let cbor_map_defined_alt
   (k: cbor) (f: cbor_map)
 : Lemma
   (cbor_map_defined k f <==> (exists v . cbor_map_mem (k, v) f))
-  [SMTPat (cbor_map_defined k f)]
 = match cbor_map_get f k with
   | None -> ()
   | Some _ -> ()
+
+let bring_cbor_map_defined_alt ()
+: Lemma (forall (k: cbor) (f: cbor_map) . {:pattern (cbor_map_defined k f)} (cbor_map_defined k f <==> (exists v . cbor_map_mem (k, v) f)))
+= Classical.forall_intro_2 cbor_map_defined_alt
 
 let cbor_map_union_assoc (m1 m2 m3: cbor_map) : Lemma
   (cbor_map_union (cbor_map_union m1 m2) m3 == cbor_map_union m1 (cbor_map_union m2 m3))
@@ -324,6 +327,7 @@ let cbor_map_sub
     )
 = let phi (kv: (cbor & cbor)) : Tot bool = not (cbor_map_mem kv m2) in
   let m3 = cbor_map_filter phi m1 in
+  bring_cbor_map_defined_alt ();
   assert (cbor_map_disjoint m2 m3);
   cbor_map_disjoint_mem_union' m2 m3 ();
   cbor_map_equiv (cbor_map_union m2 m3) m1;
@@ -501,12 +505,14 @@ let cbor_map_ind_bounded
   = match l2 with
     | [] ->
       List.Tot.append_l_nil l1;
+      bring_cbor_map_defined_alt ();
       assert (cbor_map_equal m1 m')
     | a :: q ->
       List.Tot.append_assoc l1 [a] q;
       List.Tot.append_memP_forall l1 l2;
       List.Tot.append_memP_forall l1 [a];
       List.Tot.no_repeats_p_append l1 l2;
+      bring_cbor_map_defined_alt ();
       ps m1 a;
       aux (List.Tot.append l1 [a]) q (cbor_map_union m1 (cbor_map_singleton a (Some?.v (cbor_map_get m' a))))
   in

@@ -103,7 +103,7 @@ int main()
     };
 
     /* Validate it, make sure it parses back. */
-    FStar_Pervasives_Native_option___BenchArray_arr___Pulse_Lib_Slice_slice_uint8_t_
+    FStar_Pervasives_Native_option___BenchArray_arr___Pulse_Lib_Slice_slice__uint8_t_
       m_opt = TIME(BenchArray_validate_and_parse_arr(slice), &f);
     assert (m_opt.tag == FStar_Pervasives_Native_Some);
     // printf("Original len %zu\n", Encoded.len);
