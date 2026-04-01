@@ -8,8 +8,7 @@ all: extracted/Makefile Test.fst
 extracted/Makefile: $(QD_EXE) unittests.rfc bitcoin.rfc extracted.Makefile
 	mkdir -p extracted
 	rm -f extracted/*.fst extracted/*.fsti
-	$(QD_EXE) -odir extracted -pulse unittests.rfc
-#	$(QD_EXE) -low -odir extracted bitcoin.rfc
+	$(QD_EXE) -odir extracted -pulse unittests.rfc bitcoin.rfc
 	rm -f $@
 	cp extracted.Makefile $@
 	touch $@
