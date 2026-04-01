@@ -24,7 +24,7 @@ module U32 = FStar.UInt32
 ghost
 fn pts_to_parsed_nlist_1_intro
   (#t: Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p: parser k t)
   (input: slice byte)
   (#pm: perm)
@@ -60,7 +60,7 @@ fn pts_to_parsed_nlist_1_intro
 ghost
 fn pts_to_parsed_nlist_1_elim
   (#t: Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p: parser k t)
   (input: slice byte)
   (#pm: perm)
@@ -127,7 +127,7 @@ fn pts_to_parsed_nlist_ext
 
 let nlist_hd_tl_post'
   (#t: Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p: parser k t)
   (sq: squash (k.parser_kind_subkind == Some ParserStrong))
   (n: pos)
@@ -145,7 +145,7 @@ let nlist_hd_tl_post'
 
 let nlist_hd_tl_post
   (#t: Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p: parser k t)
   (sq: squash (k.parser_kind_subkind == Some ParserStrong))
   (n: pos)
@@ -272,7 +272,7 @@ ensures exists* v' .
 
 (* Validator combinators *)
 
-let parse_consume (#k: parser_kind) (#t: Type) (p: parser k t) (b: bytes)
+let parse_consume (#k: Ghost.erased parser_kind) (#t: Type) (p: parser k t) (b: bytes)
 : GTot (option nat)
 = match parse p b with
   | Some (_, consumed) -> Some consumed

@@ -25,7 +25,8 @@ CHECKED_EXT=.checked$(LAX_EXT)
 FSTAR_OPTIONS += --odir krml --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_modules \
 		--already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse \
 		--include $(LOWPARSE_HOME) --include $(LOWPARSE_HOME)/pulse --include $(PULSE_HOME)/lib/pulse --include $(KRML_HOME)/krmllib --include $(KRML_HOME)/krmllib/obj --include .. --cmi --ext context_pruning \
-		--ext 'optimize_let_vc=false'
+		--ext 'optimize_let_vc=false' \
+		--warn_error '+272'
 
 FSTAR = $(FSTAR_EXE) $(FSTAR_OPTIONS)
 

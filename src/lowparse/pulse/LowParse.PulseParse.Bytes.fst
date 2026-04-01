@@ -97,7 +97,7 @@ inline_for_extraction
 let validate_bounded_vlgenbytes
   (vmin: der_length_t)
   (vmax: der_length_t { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 })
-  (#sk: parser_kind)
+  (#sk: Ghost.erased parser_kind)
   (#pk: parser sk (bounded_int32 vmin vmax))
   (vk: LPS.validator pk)
   (rk: PPB.leaf_reader pk)
@@ -133,7 +133,7 @@ inline_for_extraction
 let jump_bounded_vlgenbytes
   (vmin: der_length_t)
   (vmax: der_length_t { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 })
-  (#sk: parser_kind)
+  (#sk: Ghost.erased parser_kind)
   (#pk: parser sk (bounded_int32 vmin vmax))
   (jk: LPS.jumper pk)
   (rk: PPB.leaf_reader pk)

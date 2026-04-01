@@ -49,7 +49,7 @@ let read_empty : PPB.reader parse_empty = PPB.reader_of_leaf_reader leaf_read_em
 ghost
 fn pts_to_parsed_synth_intro
   (#t #t': Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p: parser k t)
   (f: (t -> GTot t') { k.parser_kind_injective ==> synth_injective f })
   (f': (t' -> GTot t) { synth_inverse f f' })
@@ -68,7 +68,7 @@ fn pts_to_parsed_synth_intro
 ghost
 fn pts_to_parsed_synth_elim
   (#t #t': Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p: parser k t)
   (f: (t -> GTot t') { synth_injective f })
   (f': (t' -> GTot t) { synth_inverse f f' })
@@ -87,7 +87,7 @@ fn pts_to_parsed_synth_elim
 ghost
 fn pts_to_parsed_synth_trade
   (#t #t': Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p: parser k t)
   (f: (t -> GTot t') { synth_injective f })
   (f': (t' -> GTot t) { synth_inverse f f' })
@@ -114,7 +114,7 @@ fn pts_to_parsed_synth_trade
 ghost
 fn pts_to_parsed_synth_l2r
   (#t #t': Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p: parser k t)
   (f: (t -> GTot t') { synth_injective f })
   (f': (t' -> GTot t) { synth_inverse f f' })
@@ -136,7 +136,7 @@ fn pts_to_parsed_synth_l2r
 ghost
 fn pts_to_parsed_synth_r2l
   (#t #t': Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p: parser k t)
   (f: (t -> GTot t') { synth_injective f })
   (f': (t' -> GTot t) { synth_inverse f f' })
@@ -155,7 +155,7 @@ fn pts_to_parsed_synth_r2l
 ghost
 fn pts_to_parsed_synth_l2r_trade
   (#t #t': Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p: parser k t)
   (f: (t -> GTot t') { synth_injective f })
   (f': (t' -> GTot t) { synth_inverse f f' })
@@ -184,7 +184,7 @@ fn pts_to_parsed_synth_l2r_trade
 ghost
 fn pts_to_parsed_filter_intro
   (#t: Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p: parser k t)
   (f: (t -> GTot bool))
   (input: slice byte)
@@ -203,7 +203,7 @@ fn pts_to_parsed_filter_intro
 ghost
 fn pts_to_parsed_filter_elim
   (#t: Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p: parser k t)
   (f: (t -> GTot bool))
   (input: slice byte)
@@ -221,7 +221,7 @@ fn pts_to_parsed_filter_elim
 ghost
 fn pts_to_parsed_filter_elim_trade
   (#t: Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (p: parser k t)
   (f: (t -> GTot bool))
   (input: slice byte)
@@ -474,7 +474,7 @@ let validate_strengthen
 
 inline_for_extraction
 let validate_lift_parser
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (p: unit -> GTot (parser k t))
   (v: LPS.validator #t #k (p ()))
