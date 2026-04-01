@@ -454,7 +454,7 @@ fn read_false ()
   (#v: Ghost.erased (squash False))
 {
   let _ = Ghost.reveal v;
-  false_elim ()
+  ()
 }
 
 (* validate_strengthen: strengthen the parser kind *)

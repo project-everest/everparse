@@ -2899,10 +2899,14 @@ fn zero_copy_parse_filter_recip
   res
 }
 
-#push-options "--z3rlimit 1024"
-
-
 inline_for_extraction
-let l2r_leaf_write_false (_: unit)
+fn l2r_leaf_write_false (_: unit)
 : l2r_leaf_writer u#0 serialize_false
-= fun (x: False) _ _ -> false_elim ()
+=
+  (x: squash False)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  0sz // dummy
+}
