@@ -263,18 +263,44 @@ let l2r_leaf_write_dsum_cases_t_if
 = l2r_leaf_write_dsum_cases_t_if'
 
 inline_for_extraction
-let l2r_leaf_write_dsum_cases
+let l2r_leaf_write_dsum_cases_known
+  (t: dsum) (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (sf: (x: dsum_known_key t) -> Tot (serializer (dsnd (f x))))
+  (sf32: (x: dsum_known_key t) -> Tot (LPB.l2r_leaf_writer u#0 (sf x)))
+  (#k': Ghost.erased parser_kind) (#g: parser k' (dsum_type_of_unknown_tag t)) (#sg: serializer g)
+  (sg32: LPB.l2r_leaf_writer u#0 sg)
+  (destr: dep_enum_destr _ (l2r_leaf_write_dsum_cases_t t f sf g sg))
+  (k: dsum_known_key t)
+: (LPB.l2r_leaf_writer u#0 (serialize_dsum_cases t f sf g sg (Known k)))
+= destr _ (l2r_leaf_write_dsum_cases_t_if t f sf g sg) (fun _ _ -> ()) (fun _ _ _ _ -> ())
+      (fun k -> l2r_leaf_write_dsum_cases_aux t f sf sf32 sg32 (Known k)) k
+
+inline_for_extraction
+fn l2r_leaf_write_dsum_cases
   (t: dsum) (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
   (sf: (x: dsum_known_key t) -> Tot (serializer (dsnd (f x))))
   (sf32: (x: dsum_known_key t) -> Tot (LPB.l2r_leaf_writer u#0 (sf x)))
   (#k': Ghost.erased parser_kind) (#g: parser k' (dsum_type_of_unknown_tag t)) (#sg: serializer g)
   (sg32: LPB.l2r_leaf_writer u#0 sg)
   (destr: dep_enum_destr _ (l2r_leaf_write_dsum_cases_t t f sf g sg)) (tg: dsum_key t)
-: Tot (LPB.l2r_leaf_writer u#0 (serialize_dsum_cases t f sf g sg tg))
-= match tg with
-  | Known k -> destr _ (l2r_leaf_write_dsum_cases_t_if t f sf g sg) (fun _ _ -> ()) (fun _ _ _ _ -> ())
-      (fun k -> l2r_leaf_write_dsum_cases_aux t f sf sf32 sg32 (Known k)) k
-  | Unknown r -> l2r_leaf_write_dsum_cases_aux t f sf sf32 sg32 (Unknown r)
+: (LPB.l2r_leaf_writer u#0 (serialize_dsum_cases t f sf g sg tg))
+=
+    (x: _)
+    (out: slice byte)
+    (offset: SZ.t)
+    (#v: _)
+{
+  match tg {
+    norewrite
+    Known k -> {
+      l2r_leaf_write_dsum_cases_known t f sf sf32 sg32 destr k x out offset
+    }
+    norewrite
+    Unknown r -> {
+      l2r_leaf_write_dsum_cases_aux t f sf sf32 sg32 (Unknown r) x out offset
+    }
+  }
+}
 
 #push-options "--z3rlimit 128"
 
