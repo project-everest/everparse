@@ -1,4 +1,5 @@
 module LowParse.Pulse.Sum
+include LowParse.Pulse.Sum.Aux
 #lang-pulse
 open Pulse.Lib.Pervasives
 open Pulse.Lib.Slice
@@ -100,7 +101,7 @@ fn l2r_leaf_write_sum
   (#pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (sc: ((x: sum_key t) -> Tot (serializer (dsnd (pc x)))))
   (sc32: ((x: sum_key t) -> Tot (LPB.l2r_leaf_writer u#0 (sc x))))
-  (destr: dep_enum_destr (sum_enum t) (LPC.l2r_leaf_write_sum_cases_t t sc))
+  (destr: dep_enum_destr (sum_enum t) (l2r_leaf_write_sum_cases_t t sc))
 : LPB.l2r_leaf_writer u#0 #(sum_type t) #(parse_sum_kind kt t pc) #(parse_sum t p pc) (serialize_sum t s sc)
 = (x: sum_type t) (out: slice byte) (offset: SZ.t) (#v: Ghost.erased bytes)
 {
@@ -109,7 +110,7 @@ fn l2r_leaf_write_sum
   let off1 = w_tag tg out offset;
   with v1 . assert (pts_to out v1);
   l2r_leaf_write_sum_pre_case_lemma t s sc x offset v off1 v1 ();
-  let w_case = LPC.l2r_leaf_write_sum_cases t sc sc32 destr tg;
+  let w_case = l2r_leaf_write_sum_cases t sc sc32 destr tg;
   let off2 = w_case x out off1;
   with v2 . assert (pts_to out v2);
   l2r_leaf_write_sum_postcond_lemma t s sc x offset v off1 v1 off2 v2 ();
@@ -230,15 +231,36 @@ let l2r_leaf_write_dsum_cases_t
 = LPB.l2r_leaf_writer u#0 (serialize_dsum_cases t f sf g sg (Known k))
 
 inline_for_extraction
-let l2r_leaf_write_dsum_cases_t_if
-  (t: dsum) (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+fn l2r_leaf_write_dsum_cases_t_if'
+  (t: dsum u#0 u#0) (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
   (sf: (x: dsum_known_key t) -> Tot (serializer (dsnd (f x))))
   (#k': Ghost.erased parser_kind) (g: parser k' (dsum_type_of_unknown_tag t)) (sg: serializer g)
   (k: dsum_known_key t)
-: Tot (if_combinator _ (fun (x y: l2r_leaf_write_dsum_cases_t t f sf g sg k) -> True))
-= fun cond (sv_true: (cond_true cond -> Tot (l2r_leaf_write_dsum_cases_t t f sf g sg k)))
-    (sv_false: (cond_false cond -> Tot (l2r_leaf_write_dsum_cases_t t f sf g sg k))) ->
-  if cond then sv_true () else sv_false ()
+  (cond: bool)
+  (sv_true: (cond_true cond -> Tot (l2r_leaf_write_dsum_cases_t t f sf g sg k)))
+  (sv_false: (cond_false cond -> Tot (l2r_leaf_write_dsum_cases_t t f sf g sg k)))
+: l2r_leaf_write_dsum_cases_t t f sf g sg k
+=
+    (x: t)
+    (out: slice byte)
+    (offset: SZ.t)
+    (#v: _)
+{
+  if cond {
+    sv_true () x out offset
+  } else {
+    sv_false () x out offset
+  }
+}
+
+inline_for_extraction
+let l2r_leaf_write_dsum_cases_t_if
+: (t: dsum) -> (f: ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))) ->
+  (sf: ((x: dsum_known_key t) -> Tot (serializer (dsnd (f x))))) ->
+  (#k': Ghost.erased parser_kind) -> (g: parser k' (dsum_type_of_unknown_tag t)) -> (sg: serializer g) ->
+  (k: dsum_known_key t) ->
+  Tot (if_combinator _ (fun (x y: l2r_leaf_write_dsum_cases_t t f sf g sg k) -> True))
+= l2r_leaf_write_dsum_cases_t_if'
 
 inline_for_extraction
 let l2r_leaf_write_dsum_cases

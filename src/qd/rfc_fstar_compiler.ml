@@ -1017,7 +1017,7 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
 
   (* Pulse: writer *)
   wp o "inline_for_extraction let write_%s%s_key : LPS.l2r_leaf_writer (serialize_%s%s_key) =\n" maybe n maybe n;
-  wp o "  LPC.l2r_leaf_write_%senum_key %s_repr_writer %s_enum (_ by (LP.enum_repr_of_key_tac %s_enum))\n\n" maybe n n n;
+  wp o "  LPPS.l2r_leaf_write_%senum_key %s_repr_writer %s_enum (_ by (LP.enum_repr_of_key_tac %s_enum))\n\n" maybe n n n;
   wp i "val %s_writer: LPS.l2r_leaf_writer %s_serializer\n\n" n n;
   wp o "let %s_writer =\n" n;
   wp o "  [@inline_let] let _ = lemma_synth_%s_inj (); lemma_synth_%s_inv () in\n" n n;
