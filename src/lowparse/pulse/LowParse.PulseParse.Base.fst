@@ -711,6 +711,15 @@ fn zero_copy_parse_ifthenelse
 
 include LowParse.CLens
 
+let accessor_postcond
+  (#t1: Type0)
+  (#t2: Type0)
+  (cl: clens t1 t2)
+  (v: t1)
+  (v2: t2)
+: Tot prop
+= cl.clens_cond v /\ v2 == cl.clens_get v
+
 inline_for_extraction
 let accessor
   (#k1: parser_kind) (#t1: Type0) (p1: parser k1 t1)
@@ -724,7 +733,7 @@ let accessor
     (pts_to_parsed p1 input #pm v ** pure (cl.clens_cond v))
     (fun result -> exists* v2 pm' .
       pts_to_parsed p2 result #pm' v2 **
-      pure (cl.clens_cond v /\ v2 == cl.clens_get v) **
+      pure (accessor_postcond cl v v2) **
       Trade.trade
         (pts_to_parsed p2 result #pm' v2)
         (pts_to_parsed p1 input #pm v))
