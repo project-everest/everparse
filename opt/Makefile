@@ -38,7 +38,7 @@ FStar:
 ifeq ($(OS),Windows_NT)
 	$(error "Cannot build F* from the repository on Windows. Please download and extract a F* source package.")
 endif
-	git clone $(FStar_repo) $@
+	git clone --recurse-submodules $(FStar_repo) $@
 
 karamel: %:
 	git clone $($@_repo) $@
