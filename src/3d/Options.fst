@@ -369,7 +369,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "emit_smt_encoding" (OptBool emit_smt_encoding) "Emit an SMT encoding of parser specifications" [];
     CmdOption "fstar" (OptStringOption "executable" always_valid fstar_exe) "The F* command to run. Default: 'fstar.exe'" [];
     CmdOption "hoist_locals" (OptBool hoist_locals) "Hoist local variable declarations to the top of each C function (--batch only)" ["batch"];
-    CmdOption "init_locals" (OptStringOption "c23|c99|c89" valid_init_locals init_locals) "Initialize all local variable declarations with zero values (--batch only)" ["batch"];
+    CmdOption "init_locals" (OptStringOption "c23|c99|c89" valid_init_locals init_locals) "Initialize all local variable declarations with zero values" [];
     CmdOption "input_stream" (OptStringOption "buffer|extern|static" valid_input_stream_binding input_stream_binding) "Input stream binding (default buffer)" [];
     CmdOption "input_stream_include" (OptStringOption ".h file" always_valid input_stream_include) "Include file defining the EverParseInputStreamBase type (only for --input_stream extern or static)" [];
     CmdOption "no_copy_everparse_h" (OptBool no_copy_everparse_h) "Do not Copy EverParse.h (--batch only)" [];
