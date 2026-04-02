@@ -1907,9 +1907,9 @@ let rec check_field (env:env) (f:field)
  *)
 let elaborate_bit_fields env (fields:list field)
   : ML (out:list field { List.length out == List.length fields })
-  = let bf_index : ref int = ST.alloc 0 in
-    let get_bf_index () = !bf_index in
-    let next_bf_index () = bf_index := !bf_index + 1 in
+  = let bf_index : ref int = alloc 0 in
+    let get_bf_index () : ML _ = !bf_index in
+    let next_bf_index () : ML _ = bf_index := !bf_index + 1 in
     let new_bit_field (sf:atomic_field') bw r : ML (atomic_field & option (int & typ & int & int)) =
         let index = get_bf_index () in
         let size = size_of_integral_typ env sf.field_type r in
@@ -1964,7 +1964,7 @@ let elaborate_bit_fields env (fields:list field)
 
          | AtomicField af ->
            let sf = af.v in
-           let check_new_bf bf =
+           let check_new_bf bf : ML _ =
              if bf.v.bitfield_from <> 0
              then error ("Bitfield must start at position 0")
                         bf.range

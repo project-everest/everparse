@@ -78,10 +78,9 @@ let add_parser_kind_is_constant_size (genv:global_env) (id:A.ident) (is_constant
 
 /// gensym (top-level effect, safe to ignore)
 #push-options "--warn_error -272"
-let gen_ident : option string -> St ident =
-  let open FStar.ST in
+let gen_ident : option string -> ML ident =
   let ctr : ref int = alloc 0 in
-  let next base_name_opt =
+  let next base_name_opt : ML _ =
     let v = !ctr in
     ctr := v + 1;
     let id =
