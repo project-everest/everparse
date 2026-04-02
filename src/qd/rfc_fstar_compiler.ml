@@ -261,7 +261,7 @@ let pulse_validator_length_header_name x min max = match x with
 
 let pulse_reader_length_header_name x min max = match x with
   | "asn1_len8" | "asn1_len" ->
-    sprintf "(PPDER.leaf_read_bounded_der_length32 %d %d (PPB.leaf_reader_of_serialized (LPPI.read_u8' ())) (fun i -> if i = 1 then PPBI.leaf_read_bounded_integer_1 fits_u64_squash else if i = 2 then PPBI.leaf_read_bounded_integer_2 fits_u64_squash else if i = 3 then PPBI.leaf_read_bounded_integer_3 fits_u64_squash else PPBI.leaf_read_bounded_integer_4 fits_u64_squash))" min max
+    sprintf "(PPDER.leaf_read_bounded_der_length32 %d %d (PPB.leaf_reader_of_serialized (LPPI.read_u8' ())) (PPBI.leaf_read_bounded_integer fits_u64_squash))" min max
   | "bitcoin_varint" ->
     sprintf "(PPBCVLI.leaf_read_bounded_bcvli %d %d PPBI.leaf_read_bounded_integer_le_1 PPBI.leaf_read_bounded_integer_le_2 PPBI.leaf_read_bounded_integer_le_4)" min max
   | _ -> failwith (sprintf "pulse_reader_length_header_name: %s not found" x)
@@ -2137,14 +2137,10 @@ and compile_vldata o i is_private n ty li elem_li lenty smin smax =
     wp i "  LowParse.CLens.clens_get = (fun (x: %s) -> (x <: %s));\n" n (compile_type ty);
     wp i "}\n\n";
     wp i "val %s_accessor : PPB.accessor %s_parser %s %s_clens\n\n" n n (pcombinator_name ty) n;
-    wp o "let %s_accessor : PPB.accessor %s_parser %s %s_clens =\n" n n (pcombinator_name ty) n;
-    wp o "  PPC.accessor_ext\n";
-    wp o "    (PPC.accessor_compose\n";
-    wp o "      (PPC.accessor_synth_inv synth_%s synth_%s_recip)\n" n n;
-    wp o "      (PPVG.accessor_bounded_vlgen_payload %d %d %s %s %s fits_u64_squash)\n" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty);
-    wp o "      ())\n";
-    wp o "    %s_clens\n" n;
-    wp o "    ()\n\n";
+    wp o "inline_for_extraction noextract let %s_vlgen_acc = PPVG.accessor_bounded_vlgen_payload %d %d %s %s %s fits_u64_squash\n\n" n smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty);
+    wp o "inline_for_extraction noextract let %s_synth_acc : PPB.accessor %s_parser %s'_parser _ = PPC.accessor_synth_inv synth_%s synth_%s_recip\n\n" n n n n n;
+    wp o "inline_for_extraction noextract let %s_composed_acc = PPC.accessor_compose %s_synth_acc %s_vlgen_acc ()\n\n" n n n;
+    wp o "let %s_accessor : PPB.accessor %s_parser %s %s_clens = PPC.accessor_ext %s_composed_acc %s_clens ()\n\n" n n (pcombinator_name ty) n n n;
     ()
    end;
   (* TODO: lemma about bytesize *)

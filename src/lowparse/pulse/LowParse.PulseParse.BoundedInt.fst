@@ -696,3 +696,13 @@ fn leaf_read_bounded_integer_4
 }
 
 #pop-options
+
+inline_for_extraction
+let leaf_read_bounded_integer
+  (sq: squash FStar.SizeT.fits_u64)
+  (i: integer_size)
+: Tot (PPB.leaf_reader (parse_bounded_integer i))
+= if i = 1 then leaf_read_bounded_integer_1 sq
+  else if i = 2 then leaf_read_bounded_integer_2 sq
+  else if i = 3 then leaf_read_bounded_integer_3 sq
+  else leaf_read_bounded_integer_4 sq
