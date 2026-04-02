@@ -1,5 +1,6 @@
 module LowParse.CLens
 
+[@@erasable]
 noeq
 type clens (t1: Type) (t2: Type) = {
   clens_cond: t1 -> GTot prop;
