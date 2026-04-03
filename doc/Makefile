@@ -52,7 +52,7 @@ help: .venv
 html: Makefile .venv
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-ifeq ($(EVERPARSE_NO_DIFF),) # Set this variable to disable diffs
+ifeq ($(EVERPARSE_CHECK_DIFF),1) # Set this variable to enable diffs
 3d: $(3D_DIFF)
 else
 3d: 3d-do-tests
