@@ -1,1 +1,1 @@
-FStar_hash := origin/fstar2
+FStar_hash := origin/master
