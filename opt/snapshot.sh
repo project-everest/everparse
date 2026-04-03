@@ -2,7 +2,7 @@
 set -e
 unset CDPATH
 cd "$( dirname "${BASH_SOURCE[0]}" )"
-projects="FStar karamel"
+projects="FStar"
 for f in $projects
 do
     pushd $f
