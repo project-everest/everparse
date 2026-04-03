@@ -112,18 +112,28 @@ lowparse-bitfields-test: lowparse
 #	+$(MAKE) -C tests/bitfields
 
 ifeq (,$(NO_PULSE))
-lowparse-pulse-test:
-else
 lowparse-pulse-test: lowparse
-	+$(MAKE) -C tests/pulse
+	+$(MAKE) -C share/everparse/tests/lowparse
+#	+$(MAKE) -C tests/pulse # TODO: move it into `share/everparse/tests/lowparse` and re-enable it
+else
+lowparse-pulse-test:
 endif
 
 .PHONY: lowparse-pulse-test
 
 lowparse-test: lowparse-unit-test lowparse-bitfields-test lowparse-pulse-test
 
-quackyducky-test: quackyducky
+quackyducky-lowstar-test: quackyducky
 #	+$(MAKE) -C tests
+
+.PHONY: quackyducky-lowstar-test
+
+quackyducky-pulse-test: quackyducky
+	+$(MAKE) -C share/everparse/tests/qd
+
+.PHONY: quackyducky-pulse-test
+
+quackyducky-test: quackyducky-lowstar-test quackyducky-pulse-test
 
 test: all lowparse-test quackyducky-test asn1-test cbor-test cddl-test
 

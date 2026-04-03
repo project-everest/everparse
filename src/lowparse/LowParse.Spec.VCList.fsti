@@ -1026,3 +1026,48 @@ let serialize_vclist
 : Tot (serializer (parse_vclist min max lp p))
 = [@inline_let] let _ = bare_serialize_vclist_correct min max ls s in
   bare_serialize_vclist min max ls s
+
+(* Extensional equality between parse_vclist and a dtuple2-based formulation *)
+
+let parse_vclist_dtuple2_tag_parser
+  (min: nat)
+  (max: nat { min <= max })
+  (#lk: parser_kind)
+  (lp: parser lk U32.t)
+: Tot (parser (parse_filter_kind lk) (bounded_count min max))
+= (lp `parse_filter` bounded_count_prop min max) `parse_synth` synth_bounded_count min max
+
+let parse_vclist_dtuple2_payload_parser
+  (min: nat)
+  (max: nat { min <= max })
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (n: bounded_count min max)
+: Tot (parser (parse_vclist_payload_kind min max k) (nlist (U32.v n) t))
+= weaken (parse_vclist_payload_kind min max k) (parse_nlist (U32.v n) p)
+
+let parse_vclist_dtuple2_synth
+  (min: nat)
+  (max: nat { min <= max })
+  (#t: Type)
+  (x: dtuple2 (bounded_count min max) (fun (n: bounded_count min max) -> nlist (U32.v n) t))
+: Tot (vlarray t min max)
+= dsnd x
+
+val parse_vclist_dtuple2_eq
+  (min: nat)
+  (max: nat { min <= max })
+  (#lk: parser_kind)
+  (lp: parser lk U32.t)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (input: bytes)
+: Lemma
+  (parse (parse_vclist min max lp p) input ==
+   parse (parse_synth
+     (parse_dtuple2
+       (parse_vclist_dtuple2_tag_parser min max lp)
+       (parse_vclist_dtuple2_payload_parser min max p))
+     (parse_vclist_dtuple2_synth min max #t)) input)

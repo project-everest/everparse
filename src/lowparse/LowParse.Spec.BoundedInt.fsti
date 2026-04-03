@@ -75,6 +75,17 @@ val parse_bounded_integer_le
   (i: integer_size)
 : Tot (parser (parse_bounded_integer_kind i) (bounded_integer i))
 
+val parse_bounded_integer_le_eq
+  (i: integer_size)
+  (input: bytes)
+: Lemma
+  (parse (parse_bounded_integer_le i) input == (
+    if Seq.length input < i then None
+    else
+      let _ = E.lemma_le_to_n_is_bounded (Seq.slice input 0 i) in
+      let _ = FStar.Math.Lemmas.pow2_le_compat 32 (8 `FStar.Mul.op_Star` i) in
+      Some (U32.uint_to_t (E.le_to_n (Seq.slice input 0 i)), i)))
+
 val parse_u16_le : parser parse_u16_kind U16.t
 
 val parse_u32_le : parser parse_u32_kind U32.t
@@ -199,6 +210,21 @@ val parse_bounded_int32
   (max: nat { 0 < max /\ min <= max /\ max < 4294967296 })
 : Tot (parser (parse_bounded_int32_kind max) (bounded_int32 min max))
 
+val parse_bounded_int32_eq
+  (min: nat)
+  (max: nat { 0 < max /\ min <= max /\ max < 4294967296 })
+  (input: bytes)
+: Lemma
+  (let sz = log256' max in
+   parse (parse_bounded_int32 min max) input == (
+     match parse (parse_bounded_integer sz) input with
+     | None -> None
+     | Some (x, consumed) ->
+       if in_bounds min max x
+       then Some (x, consumed)
+       else None
+   ))
+
 val serialize_bounded_int32
   (min: nat)
   (max: nat { 0 < max /\ min <= max /\ max < 4294967296 })
@@ -208,6 +234,21 @@ val parse_bounded_int32_le
   (min: nat)
   (max: nat { 0 < max /\ min <= max /\ max < 4294967296 })
 : Tot (parser (parse_bounded_int32_kind max) (bounded_int32 min max))
+
+val parse_bounded_int32_le_eq
+  (min: nat)
+  (max: nat { 0 < max /\ min <= max /\ max < 4294967296 })
+  (input: bytes)
+: Lemma
+  (let sz = log256' max in
+   parse (parse_bounded_int32_le min max) input == (
+     match parse (parse_bounded_integer_le sz) input with
+     | None -> None
+     | Some (x, consumed) ->
+       if in_bounds min max x
+       then Some (x, consumed)
+       else None
+   ))
 
 val serialize_bounded_int32_le
   (min: nat)
@@ -230,6 +271,20 @@ val parse_bounded_int32_le_fixed_size
   (min: nat)
   (max: nat { min <= max })
 : Tot (parser parse_bounded_int32_fixed_size_kind (bounded_int32 min max))
+
+val parse_bounded_int32_le_fixed_size_eq
+  (min: nat)
+  (max: nat { min <= max })
+  (input: bytes)
+: Lemma
+  (parse (parse_bounded_int32_le_fixed_size min max) input == (
+     match parse parse_u32_le input with
+     | None -> None
+     | Some (x, consumed) ->
+       if in_bounds min max x
+       then Some (x, consumed)
+       else None
+   ))
 
 val serialize_bounded_int32_le_fixed_size
   (min: nat)
