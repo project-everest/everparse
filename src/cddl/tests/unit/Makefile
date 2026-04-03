@@ -90,6 +90,7 @@ $(OUTPUT_DIRECTORY)/%.c: $(OUTPUT_DIRECTORY)/%.krml $(addprefix $(OUTPUT_DIRECTO
 	$(KRML) -fnoshort-enums \
 	 -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]' \
 	 -bundle '$*=*' \
+	 -skip-makefiles \
 	 -add-include '"CBORDetAbstract.h"' \
 	 -no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type \
 	 -no-prefix CBOR.Spec.Constants -skip-compilation $^ \

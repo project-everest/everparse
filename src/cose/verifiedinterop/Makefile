@@ -48,6 +48,7 @@ extract-krml: $(ALL_KRML_FILES)
 extract: extract-krml
 	$(KRML) -faggressive-inlining -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*[rename=fstar]' \
 		-bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]' \
+		-skip-makefiles \
 		-add-include '"CBORDetAbstract.h"' \
 		-bundle 'COSE.EverCrypt=Abort,EverCrypt.Ed25519' \
 		-bundle 'COSE.Format=*' \
