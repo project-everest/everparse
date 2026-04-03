@@ -527,7 +527,7 @@ let array_group_concat_unique_weak_zero_or_more_right
   (ensures (
     array_group_concat_unique_weak a1 (array_group_zero_or_more a2)
   ))
-= ()
+= Classical.forall_intro (array_group_zero_or_more_eq a2)
 
 #push-options "--z3rlimit 32"
 #restart-solver

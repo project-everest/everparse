@@ -139,7 +139,9 @@ let rec cbor_parse_list_split
       assert (n1 - 1 + n2 == n1 + n2 - 1);
       match cbor_parse_list p n2 (Seq.slice s' pos1' (Seq.length s')) with
       | None -> ()
-      | Some (l2, pos2) -> ()
+      | Some (l2, pos2) ->
+        assert (cbor_parse_list p (n1 - 1 + n2) s' == Some (List.Tot.append l1' l2, pos1' + pos2));
+        assert (nx + (pos1' + pos2) == (nx + pos1') + pos2)
 
 let rec cbor_parse_list_max_length
   (#p: cbor_parser)
@@ -1165,8 +1167,16 @@ let impl_serialize_array_group_valid_zero_or_more_item
     let max_l1 = Some?.v (cbor_array_max_length lmax (ps.ag_serializer l1)) in
     assert (max_all == max_l1 + max_xcl2);
     norm_spec [delta_only [`%impl_serialize_array_group_valid; `%impl_serialize_array_group_requires]; iota; zeta] (impl_serialize_array_group_valid lmax l ps (List.Tot.append l1 (x :: l2)) len);
+    assert (len >= max_all);
+    assert (max_all >= max_xcl2);
     assert (len >= max_x);
-    assert (FStar.UInt.fits (List.Tot.length (List.Tot.append l (ps.ag_serializer l1)) + List.Tot.length (ps1.ag_serializer x)) 64);
+    ag_spec_zero_or_more_serializer_append ps1 l1 (x :: l2);
+    let lhs_len = List.Tot.length (List.Tot.append l (ps.ag_serializer l1)) + List.Tot.length (ps1.ag_serializer x) in
+    let rhs_len = List.Tot.length l + List.Tot.length (ps.ag_serializer (List.Tot.append l1 (x :: l2))) in
+    assert (lhs_len <= rhs_len);
+    assert (FStar.UInt.fits rhs_len 64);
+    assert (lhs_len >= 0);
+    assert (FStar.UInt.fits lhs_len 64);
     norm_spec [delta_only [`%impl_serialize_array_group_valid; `%impl_serialize_array_group_requires]; iota; zeta] (impl_serialize_array_group_valid lmax (List.Tot.append l (ps.ag_serializer l1)) ps1 x len);
     ()
   end

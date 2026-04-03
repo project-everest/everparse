@@ -1069,7 +1069,7 @@ let map_group_filtered_table_except_ext
         (Util.notp (Util.andp (Spec.matches_map_group_entry key value) (Util.notp except1)))
         (Util.notp (Util.andp (Spec.matches_map_group_entry key value) (Util.notp except2)))
 
-#push-options "--z3rlimit 64 --ifuel 6 --fuel 4 --split_queries always"
+#push-options "--z3rlimit 64 --ifuel 6 --fuel 4 --split_queries always --z3refresh"
 
 #restart-solver
 

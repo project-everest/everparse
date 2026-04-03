@@ -1,7 +1,7 @@
 module Options
 open HashingOptions
 open FStar.All
-open FStar.ST
+
 module U8 = FStar.UInt8
 module OS = OS
 open Utils
@@ -513,8 +513,8 @@ let get_skip_o_rules _ =
 let get_json () =
   !json
 
-let get_input_stream_binding _ =
-  let get_include () =
+let get_input_stream_binding () : ML input_stream_binding_t =
+  let get_include () : ML string =
     match !input_stream_include with
     | None -> ""
     | Some s -> s

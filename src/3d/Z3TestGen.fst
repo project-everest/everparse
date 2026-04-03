@@ -7,6 +7,11 @@ module A = Ast
 module T = Target
 module I = InterpreterTarget
 
+let guido (x:int) : ML nat =
+  if x < 1
+  then failwith "read_witness: impossible: less than 1 layer";
+  x
+
 let mk_state:
   (input_size: string) ->
   (choice_index: string) ->
@@ -1319,6 +1324,7 @@ let read_witness (use_ptr: bool) (z3: Z3.z3) : ML (Seq.seq (Seq.seq int) & optio
   let nb_layers = Lisp.read_bare_int_from z3.from_z3 in
   if nb_layers < 1
   then failwith "read_witness: impossible: less than 1 layer";
+  assert (nb_layers >= 1);
   let rec aux (accu: Seq.seq (Seq.seq int)) (remaining: nat) : ML (Seq.seq (Seq.seq int)) =
     if remaining = 0
     then accu

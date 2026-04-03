@@ -1,10 +1,10 @@
 module Main
+
 open FStar.IO
 open FStar.All
 open Ast
 open ParserDriver
 module T = Target
-open FStar.ST
 #push-options "--z3rlimit_factor 2"
 
 let open_write_file (s:string) : ML FStar.IO.fd_write =

@@ -361,7 +361,7 @@ let has_extern_probe g m = List.Tot.mem m g.modules_with_extern_probe
 
 
 #push-options "--warn_error -272"
-let parsed_config : ref (option (Config.config & string)) = ST.alloc None
+let parsed_config : ref (option (Config.config & string)) = alloc None
 #pop-options
 
 let parse_config () =
