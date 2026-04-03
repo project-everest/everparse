@@ -2728,7 +2728,6 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
     else None in
 
   let prime = if is_implicit then "'" else "" in
-  w o "friend %s\n\n" (module_name tagt);
   (* Under -pulse, the executable representation is the Vec-based copyful lowtype
      ([<n>_low]/[<n>_lowtype] with [<n>_vmatch]/[<n>_conv]); the high-level sum
      type [<n>] and its [tag_of_<n>] discriminator are only referenced from
@@ -5379,6 +5378,16 @@ and normalize_select sn (fl:struct_field_t list)
     failwith (sprintf "Field %s contains an invalid select in struct %s" seln sn)
   | h :: t -> normalize_select sn t (h::acc) acc' acc''
 
+(* Extract friend module names from struct fields (select tag types) *)
+and extract_friends (fl: struct_field_t list) : string list =
+  match fl with
+  | [] -> []
+  | (_, TypeSimple(tagt), tagn, VectorNone, None)
+    :: (_, TypeSelect (tagn', _, _), _, VectorNone, None)
+    :: r when tagn = tagn' ->
+    (module_name tagt) :: extract_friends r
+  | _ :: r -> extract_friends r
+
 (* Global type Substitution, this is use for staging sums on implicit tags *)
 and subst_of (x:typ) = try SM.find x !subst with _ -> x
 and apply_subst_t (t:type_t) =
@@ -5466,6 +5475,11 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
 
   (* .fst *)
   w o "module %s\n\n" mn;
+  (match p with
+   | Struct(_, fl, _) ->
+     let friends = extract_friends fl in
+     if friends <> [] then (List.iter (fun f -> w o "friend %s\n" f) friends; w o "\n")
+   | _ -> ());
   write_autogen o;
   if needs_fstar_bytes then w o "open %s\n" !bytes;
   w o "module U8 = FStar.UInt8\n";
