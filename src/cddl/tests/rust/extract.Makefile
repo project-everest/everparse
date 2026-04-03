@@ -19,7 +19,7 @@ include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 #KRML_OPTS += -warn-error @4@6
 
-KRML=$(KRML_HOME)/krml -fstar $(FSTAR_EXE) $(KRML_OPTS)
+KRML=$(KRML_EXE) -fstar $(FSTAR_EXE) $(KRML_OPTS)
 
 extract: $(ALL_KRML_FILES)
 	$(KRML) -backend rust -fno-box -fkeep-tuples -fcontained-type cbor_raw_iterator -warn-error @1..27 -skip-linking -bundle 'CDDLTest.Test=[rename=CDDLExtractionTest]' -bundle 'CBOR.Pulse.API.Det.Rust=[rename=CBORDetVer]' -bundle 'CBOR.Spec.Constants+CBOR.Pulse.Raw.Type+CBOR.Pulse.API.Det.Type=\*[rename=CBORDetVerAux]' -tmpdir $(OUTPUT_DIRECTORY) -skip-compilation $^

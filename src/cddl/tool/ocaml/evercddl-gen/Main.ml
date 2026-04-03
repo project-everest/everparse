@@ -116,7 +116,7 @@ let fstar_exe =
        then fstar_exe
        else "fstar.exe" (* rely on PATH *)
 
-let krml_home =
+let krml_home () =
   try
     Sys.getenv "KRML_HOME"
   with
@@ -128,9 +128,12 @@ let krml_home =
        (* assume a binary package *)
        everparse_home
 
-let _ = Unix.putenv "KRML_HOME" krml_home
-
 let krml_exe =
+  try
+    Sys.getenv "KRML_EXE"
+  with
+  | Not_found ->
+  let krml_home = krml_home () in
   let krml = "krml" ^ (if Sys.cygwin then ".exe" else "") in
   let res1 = Filename.concat krml_home krml in
   if Sys.file_exists res1
@@ -160,7 +163,6 @@ let everparse_src_cddl = Filename.concat everparse_src "cddl"
 let everparse_src_cddl_spec = Filename.concat everparse_src_cddl "spec"
 let everparse_src_cddl_pulse = Filename.concat everparse_src_cddl "pulse"
 let everparse_src_cddl_tool = Filename.concat everparse_src_cddl "tool"
-let krml_home_krmllib = Filename.concat krml_home "krmllib"
 let everparse_home_lib = Filename.concat everparse_home "lib"
 let everparse_home_lib_evercddl = Filename.concat everparse_home_lib "evercddl"
 
@@ -172,8 +174,6 @@ let include_options =
       everparse_src_cddl_spec;
       everparse_src_cddl_pulse;
       everparse_src_cddl_tool;
-      krml_home_krmllib;
-      Filename.concat krml_home_krmllib "obj";
       Filename.concat everparse_home_lib_evercddl "lib";
       Filename.concat everparse_home_lib_evercddl "plugin";
     ]
