@@ -388,9 +388,7 @@ variables:
   
 * If you want to use your own Karamel, first set
   `EVERPARSE_USE_KRML_EXE=1`, then set `KRML_EXE` to the full path
-  of the Karamel executable. This will automatically set
-  `EVERPARSE_USE_FSTAR_HOME=1`, since the Karamel library must be
-  compiled with the same F\* as EverParse.
+  of the Karamel executable.
 
 As a shortcut, setting `EVERPARSE_USE_MY_DEPS=1` has the same effect
 as setting all of those environment variables to 1.
