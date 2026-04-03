@@ -1188,7 +1188,6 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
     else None in
 
   let prime = if is_implicit then "'" else "" in
-  w o "friend %s\n\n" (module_name tagt);
   if !types_from = "" then begin
   w (type_channel tch i) "type %s%s =\n" n prime;
   List.iter (fun (case, ty) -> w (type_channel tch i) "  | %s_%s of %s\n" cprefix case (compile_type ty)) cl;
@@ -3484,6 +3483,16 @@ and normalize_select sn (fl:struct_field_t list)
     failwith (sprintf "Field %s contains an invalid select in struct %s" seln sn)
   | h :: t -> normalize_select sn t (h::acc) acc' acc''
 
+(* Extract friend module names from struct fields (select tag types) *)
+and extract_friends (fl: struct_field_t list) : string list =
+  match fl with
+  | [] -> []
+  | (_, TypeSimple(tagt), tagn, VectorNone, None)
+    :: (_, TypeSelect (tagn', _, _), _, VectorNone, None)
+    :: r when tagn = tagn' ->
+    (module_name tagt) :: extract_friends r
+  | _ :: r -> extract_friends r
+
 (* Global type Substitution, this is use for staging sums on implicit tags *)
 and subst_of (x:typ) = try SM.find x !subst with _ -> x
 and apply_subst_t (t:type_t) =
@@ -3509,6 +3518,11 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   let n = if tn = "" then tname true p else tn^"_"^(tname false p) in
   let mn = module_name n in
   let (fst, fsti) = !headers in
+
+  (* Rewrite symbolic vldata before emitting headers, so extract_friends sees normalized fields *)
+  let p = match p with
+    | Struct(al, fl, nn) -> Struct(al, normalize_symboliclen tch n fl, nn)
+    | p -> p in
 
   (* .fsti *)
   w i "module %s\n\n" mn;
@@ -3539,6 +3553,11 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
 
   (* .fst *)
   w o "module %s\n\n" mn;
+  (match p with
+   | Struct(_, fl, _) ->
+     let friends = extract_friends fl in
+     if friends <> [] then (List.iter (fun f -> w o "friend %s\n" f) friends; w o "\n")
+   | _ -> ());
   write_autogen o;
   w o "open %s\n" !bytes;
   w o "module U8 = FStar.UInt8\n";
@@ -3576,11 +3595,6 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp o "module LPPS = LowParse.Pulse.Sum\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
-
-  (* Rewrite synbolic vldata before computing length *)
-  let p = match p with
-    | Struct(al, fl, nn) -> Struct(al, normalize_symboliclen tch n fl, nn)
-    | p -> p in
 
   let depl = getdep (tn = "") p in
   let depl = List.filter (fun x -> not (basic_type x)) depl in
