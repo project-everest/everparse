@@ -34,6 +34,7 @@ type elem = U32.t
 type t = (l: list elem { let ln = L.length l in 10 <= ln /\ ln <= 1000 })
 
 inline_for_extraction
+noextract
 let parse_t_kind : parser_kind = strong_parser_kind 11 5005 None
 
 let parse_t' = parse_vclist 10 1000 parse_bcvli parse_bcvli
