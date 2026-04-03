@@ -1,5 +1,6 @@
 module Test
 
+(*
 open FStar.HyperStack.ST
 open FStar.HyperStack.IO
 open C
@@ -8,7 +9,6 @@ open FStar.Bytes
 module LB = LowStar.Buffer
 module LPL = LowParse.Low.Base
 
-(*
 val discard: bool -> ST unit
   (requires (fun _ -> True))
   (ensures (fun h0 _ h1 -> h0 == h1))
@@ -129,16 +129,10 @@ let main
 *)
 
 let main
-  (argc: Int32.t)
-  (argv: LowStar.Buffer.buffer C.String.t)
-: ST C.exit_code
-    (requires (fun h ->
-      LowStar.Buffer.live h argv /\
-      Int32.v argc == LowStar.Buffer.length argv
-    ))
-    (ensures (fun _ _ _ -> True))
+  ()
+: Tot Int32.t
 =
-    C.EXIT_SUCCESS
+    0l
 
 
 (*
