@@ -263,3 +263,18 @@ let bare_serialize_vclist_correct
   Classical.forall_intro prf
 
 #pop-options
+
+let parse_vclist_dtuple2_eq min max lp p input =
+  parse_vclist_eq min max lp p input;
+  parse_synth_eq
+    (parse_dtuple2
+      (parse_vclist_dtuple2_tag_parser min max lp)
+      (parse_vclist_dtuple2_payload_parser min max p))
+    (parse_vclist_dtuple2_synth min max #_)
+    input;
+  parse_dtuple2_eq
+    (parse_vclist_dtuple2_tag_parser min max lp)
+    (parse_vclist_dtuple2_payload_parser min max p)
+    input;
+  parse_synth_eq (lp `parse_filter` bounded_count_prop min max) (synth_bounded_count min max) input;
+  parse_filter_eq lp (bounded_count_prop min max) input

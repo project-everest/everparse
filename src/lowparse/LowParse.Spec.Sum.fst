@@ -893,6 +893,24 @@ let parse_dsum_eq
       parse_synth_eq (weaken (weaken_parse_dsum_cases_kind t f k') g) (synth_dsum_case t k) input_k
     end
 
+let parse_dsum_tag_of_data
+  (#kt: parser_kind)
+  (t: dsum)
+  (p: parser kt (dsum_repr_type t))
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (#k': parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (input: bytes)
+: Lemma
+  (ensures (
+    match parse (parse_dsum t p f g) input with
+    | None -> True
+    | Some (v, _) ->
+      Some? (parse (parse_maybe_enum_key p (dsum_enum t)) input) /\
+      dsum_tag_of_data t v == fst (Some?.v (parse (parse_maybe_enum_key p (dsum_enum t)) input))
+  ))
+= parse_tagged_union_eq (parse_maybe_enum_key p (dsum_enum t)) (dsum_tag_of_data t) (parse_dsum_cases t f g) input
+
 let parse_dsum_eq3
   (#kt: parser_kind)
   (t: dsum)
@@ -1312,3 +1330,4 @@ let serialize_dsum_upd_bw_chain
   assert (tlen + j' == Seq.length sx' - i' - Seq.length s');
   assert (seq_upd_bw_seq sx' i' s' == seq_upd_seq sx' (tlen + j') s');
   ()
+
