@@ -24,13 +24,6 @@ endif
 NEED_KRML :=
 ifneq (1,$(EVERPARSE_USE_KRML_HOME))
 export KRML_HOME := $(EVERPARSE_OPT_PATH)/FStar/karamel
-
-# Needed by LowParse (Pulse) tests
-export KRML_LIBDIR := $(KRML_HOME)/krmllib
-export KRML_INCLUDEDIR := $(KRML_HOME)/include
-export KRML_MISCDIR := $(KRML_HOME)/misc
-export KRML_EXE := $(KRML_HOME)/krml
-
 NEED_KRML := $(EVERPARSE_OPT_PATH)/karamel.done
 else
 export EVERPARSE_USE_FSTAR_EXE:=1
@@ -139,8 +132,6 @@ $(EVERPARSE_OPT_PATH)/z3: $(EVERPARSE_OPT_PATH)/FStar/Makefile
 $(EVERPARSE_OPT_PATH)/karamel.done: $(EVERPARSE_OPT_PATH)/FStar/karamel/Makefile $(NEED_FSTAR) $(NEED_OPAM)
 	rm -f $@
 	+$(with_opam) env OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $(EVERPARSE_OPT_PATH)/FStar/karamel minimal
-	# Needed by LowParse (Pulse) tests
-	+$(MAKE) -C $(KRML_LIBDIR)/dist/generic -f Makefile.basic
 	touch $@
 
 env:
