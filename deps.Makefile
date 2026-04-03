@@ -18,19 +18,19 @@ EVERPARSE_Z3_VERSION ?= 4.13.3
 ifeq (1,$(EVERPARSE_USE_MY_DEPS))
 export EVERPARSE_USE_OPAMROOT:=1
 export EVERPARSE_USE_FSTAR_EXE:=1
-export EVERPARSE_USE_KRML_HOME:=1
+export EVERPARSE_USE_KRML_EXE:=1
 export EVERPARSE_USE_PULSE_HOME:=1
 endif
 
 NEED_KRML :=
-ifneq (1,$(EVERPARSE_USE_KRML_HOME))
-export KRML_HOME := $(EVERPARSE_OPT_PATH)/karamel
+ifneq (1,$(EVERPARSE_USE_KRML_EXE))
+export KRML_EXE := $(EVERPARSE_OPT_PATH)/FStar/karamel/out/bin/krml
 NEED_KRML := $(EVERPARSE_OPT_PATH)/karamel.done
 else
 export EVERPARSE_USE_FSTAR_EXE:=1
-ifeq (,$(KRML_HOME))
+ifeq (,$(KRML_EXE))
 # TODO: fix Karamel to not require KRML_HOME set
-$(error "Inconsistent setup: EVERPARSE_USE_KRML_HOME set but KRML_HOME not set")
+$(error "Inconsistent setup: EVERPARSE_USE_KRML_EXE set but KRML_EXE not set")
 endif
 endif
 
@@ -158,10 +158,10 @@ $(EVERPARSE_OPT_PATH)/pulse.done: $(EVERPARSE_OPT_PATH)/pulse/Makefile $(NEED_FS
 env:
 	@echo export EVERPARSE_USE_OPAMROOT=$(EVERPARSE_USE_OPAMROOT)
 	@echo export EVERPARSE_USE_FSTAR_EXE=$(EVERPARSE_USE_FSTAR_EXE)
-	@echo export EVERPARSE_USE_KRML_HOME=$(EVERPARSE_USE_KRML_HOME)
+	@echo export EVERPARSE_USE_KRML_EXE=$(EVERPARSE_USE_KRML_EXE)
 	@echo export EVERPARSE_USE_PULSE_HOME=$(EVERPARSE_USE_PULSE_HOME)
 	@echo export FSTAR_EXE=$(FSTAR_EXE)
-	@echo export KRML_HOME=$(KRML_HOME)
+	@echo export KRML_EXE=$(KRML_EXE)
 ifeq (,$(NO_PULSE))
 	@echo export PULSE_HOME=$(PULSE_HOME)
 endif
