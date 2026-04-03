@@ -7,7 +7,7 @@ module U64 = FStar.UInt64
 module Util = CBOR.Spec.Util
 module U8 = FStar.UInt8
 
-#push-options "--z3rlimit 4096 --query_stats --split_queries always --fuel 4 --ifuel 8 --z3refresh --z3seed 42"
+#push-options "--z3rlimit 4096 --query_stats --split_queries always --fuel 4 --ifuel 8 --z3refresh"
 
 let array_group_disjoint
   (typ_disjoint: typ_disjoint_t)
