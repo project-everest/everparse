@@ -6,8 +6,6 @@ on:
         description: 'Create a pull request (if unchecked, push directly to branch)'
         type: boolean
         default: true
-  schedule:
-    - cron: "0 22 * * 0,3"
 
 defaults:
   run:
