@@ -45,7 +45,7 @@ opam:
 	touch $@
 
 FStar/Makefile: FStar hashes.Makefile
-	if test -d $</.git && ! test -e hashes.lock ; then cd $< && git remote set-url origin $($<_repo) && git fetch && git checkout $($<_hash) ; fi
+	if test -d $</.git && ! test -e hashes.lock ; then cd $< && git remote set-url origin $($<_repo) && i=3 && until git fetch && sleep 1 && git checkout $($<_hash) && sleep 1 || test $$i -eq 0 ; do i=$$(($$i - 1)) ; done && test $$i -ne 0 ; fi
 	touch -c $@
 	test -f $@
 
