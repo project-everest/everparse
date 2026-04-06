@@ -20,13 +20,18 @@ ValidateInt(
   uint64_t StartPosition
 )
 {
+  BOOLEAN hasBytes0;
+  uint64_t positionAfterInt;
+  BOOLEAN hasBytes;
+  uint64_t positionAfterInt0;
   #if ARCH64
   {
+    KRML_MAYBE_UNUSED_VAR(positionAfterInt0);
+    KRML_MAYBE_UNUSED_VAR(hasBytes);
     /* Validating field x */
     /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-    BOOLEAN hasBytes = 8ULL <= (InputLen - StartPosition);
-    uint64_t positionAfterInt;
-    if (hasBytes)
+    hasBytes0 = 8ULL <= (InputLen - StartPosition);
+    if (hasBytes0)
     {
       positionAfterInt = StartPosition + 8ULL;
     }
@@ -51,32 +56,33 @@ ValidateInt(
   }
   #else
   {
+    KRML_MAYBE_UNUSED_VAR(positionAfterInt);
+    KRML_MAYBE_UNUSED_VAR(hasBytes0);
     /* Validating field x */
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    BOOLEAN hasBytes = 4ULL <= (InputLen - StartPosition);
-    uint64_t positionAfterInt;
+    hasBytes = 4ULL <= (InputLen - StartPosition);
     if (hasBytes)
     {
-      positionAfterInt = StartPosition + 4ULL;
+      positionAfterInt0 = StartPosition + 4ULL;
     }
     else
     {
-      positionAfterInt =
+      positionAfterInt0 =
         EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
           StartPosition);
     }
-    if (EverParseIsSuccess(positionAfterInt))
+    if (EverParseIsSuccess(positionAfterInt0))
     {
-      return positionAfterInt;
+      return positionAfterInt0;
     }
     ErrorHandlerFn("_INT",
       "x",
-      EverParseErrorReasonOfResult(positionAfterInt),
-      EverParseGetValidatorErrorKind(positionAfterInt),
+      EverParseErrorReasonOfResult(positionAfterInt0),
+      EverParseGetValidatorErrorKind(positionAfterInt0),
       Ctxt,
       Input,
       StartPosition);
-    return positionAfterInt;
+    return positionAfterInt0;
   }
   #endif
 }
@@ -103,6 +109,7 @@ PointArch3264ValidatePoint(
   uint64_t
   positionAfterPoint = ValidateInt(Ctxt, ErrorHandlerFn, Input, InputLength, StartPosition);
   uint64_t positionAfterx;
+  uint64_t positionAfterPoint0;
   if (EverParseIsSuccess(positionAfterPoint))
   {
     positionAfterx = positionAfterPoint;
@@ -123,7 +130,6 @@ PointArch3264ValidatePoint(
     return positionAfterx;
   }
   /* Validating field y */
-  uint64_t
   positionAfterPoint0 = ValidateInt(Ctxt, ErrorHandlerFn, Input, InputLength, positionAfterx);
   if (EverParseIsSuccess(positionAfterPoint0))
   {

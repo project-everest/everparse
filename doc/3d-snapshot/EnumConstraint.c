@@ -23,6 +23,15 @@ EnumConstraintValidateEnumConstraint(
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   BOOLEAN hasBytes0 = 4ULL <= (InputLength - StartPosition);
   uint64_t positionAftercol;
+  uint64_t positionAfterEnumConstraint;
+  uint32_t col;
+  BOOLEAN colConstraintIsOk;
+  uint64_t positionAftercol1;
+  BOOLEAN hasBytes;
+  uint64_t positionAfterx_refinement;
+  uint64_t positionAfterEnumConstraint0;
+  uint32_t x_refinement;
+  BOOLEAN x_refinementConstraintIsOk;
   if (hasBytes0)
   {
     positionAftercol = StartPosition + 4ULL;
@@ -33,18 +42,16 @@ EnumConstraintValidateEnumConstraint(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  uint64_t positionAfterEnumConstraint;
   if (EverParseIsError(positionAftercol))
   {
     positionAfterEnumConstraint = positionAftercol;
   }
   else
   {
-    uint32_t col = Load32Le(Input + (uint32_t)StartPosition);
-    BOOLEAN
+    col = Load32Le(Input + (uint32_t)StartPosition);
     colConstraintIsOk =
       col == ENUMCONSTRAINT_RED || col == ENUMCONSTRAINT_GREEN || col == ENUMCONSTRAINT_BLUE;
-    uint64_t positionAftercol1 = EverParseCheckConstraintOk(colConstraintIsOk, positionAftercol);
+    positionAftercol1 = EverParseCheckConstraintOk(colConstraintIsOk, positionAftercol);
     if (EverParseIsError(positionAftercol1))
     {
       positionAfterEnumConstraint = positionAftercol1;
@@ -53,8 +60,7 @@ EnumConstraintValidateEnumConstraint(
     {
       /* Validating field x */
       /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-      BOOLEAN hasBytes = 4ULL <= (InputLength - positionAftercol1);
-      uint64_t positionAfterx_refinement;
+      hasBytes = 4ULL <= (InputLength - positionAftercol1);
       if (hasBytes)
       {
         positionAfterx_refinement = positionAftercol1 + 4ULL;
@@ -65,7 +71,6 @@ EnumConstraintValidateEnumConstraint(
           EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
             positionAftercol1);
       }
-      uint64_t positionAfterEnumConstraint0;
       if (EverParseIsError(positionAfterx_refinement))
       {
         positionAfterEnumConstraint0 = positionAfterx_refinement;
@@ -73,9 +78,8 @@ EnumConstraintValidateEnumConstraint(
       else
       {
         /* reading field_value */
-        uint32_t x_refinement = Load32Le(Input + (uint32_t)positionAftercol1);
+        x_refinement = Load32Le(Input + (uint32_t)positionAftercol1);
         /* start: checking constraint */
-        BOOLEAN
         x_refinementConstraintIsOk = x_refinement == (uint32_t)0U || col == ENUMCONSTRAINT_GREEN;
         /* end: checking constraint */
         positionAfterEnumConstraint0 =

@@ -23,6 +23,7 @@ Triangle2ValidateTriangle(
   /* Validating field corners */
   BOOLEAN hasBytes = (uint64_t)12U <= (InputLength - StartPosition);
   uint64_t res;
+  uint64_t positionAfterTriangle;
   if (hasBytes)
   {
     res = StartPosition + (uint64_t)12U;
@@ -31,7 +32,7 @@ Triangle2ValidateTriangle(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  uint64_t positionAfterTriangle = res;
+  positionAfterTriangle = res;
   if (EverParseIsSuccess(positionAfterTriangle))
   {
     return positionAfterTriangle;

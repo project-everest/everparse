@@ -20,10 +20,11 @@ HelloWorldValidatePoint(
   uint64_t StartPosition
 )
 {
+  BOOLEAN hasBytes;
   KRML_MAYBE_UNUSED_VAR(Ctxt);
   KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
   KRML_MAYBE_UNUSED_VAR(Input);
-  BOOLEAN hasBytes = 4ULL <= (InputLength - StartPosition);
+  hasBytes = 4ULL <= (InputLength - StartPosition);
   if (hasBytes)
   {
     return StartPosition + 4ULL;

@@ -24,6 +24,15 @@ GetFieldPtrValidateT(
   /* Validating field f1 */
   BOOLEAN hasBytes0 = (uint64_t)10U <= (InputLength - StartPosition);
   uint64_t res0;
+  uint64_t positionAfterT;
+  uint64_t positionAfterf1;
+  BOOLEAN hasBytes;
+  uint64_t res;
+  uint64_t positionAfterT0;
+  uint64_t positionAfterf2;
+  uint64_t positionAfterT1;
+  uint8_t *hd;
+  BOOLEAN actionSuccessF2;
   if (hasBytes0)
   {
     res0 = StartPosition + (uint64_t)10U;
@@ -32,8 +41,7 @@ GetFieldPtrValidateT(
   {
     res0 = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  uint64_t positionAfterT = res0;
-  uint64_t positionAfterf1;
+  positionAfterT = res0;
   if (EverParseIsSuccess(positionAfterT))
   {
     positionAfterf1 = positionAfterT;
@@ -54,8 +62,7 @@ GetFieldPtrValidateT(
     return positionAfterf1;
   }
   /* Validating field f2 */
-  BOOLEAN hasBytes = (uint64_t)20U <= (InputLength - positionAfterf1);
-  uint64_t res;
+  hasBytes = (uint64_t)20U <= (InputLength - positionAfterf1);
   if (hasBytes)
   {
     res = positionAfterf1 + (uint64_t)20U;
@@ -64,8 +71,7 @@ GetFieldPtrValidateT(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, positionAfterf1);
   }
-  uint64_t positionAfterT0 = res;
-  uint64_t positionAfterf2;
+  positionAfterT0 = res;
   if (EverParseIsSuccess(positionAfterT0))
   {
     positionAfterf2 = positionAfterT0;
@@ -81,12 +87,11 @@ GetFieldPtrValidateT(
       positionAfterf1);
     positionAfterf2 = positionAfterT0;
   }
-  uint64_t positionAfterT1;
   if (EverParseIsSuccess(positionAfterf2))
   {
-    uint8_t *hd = Input + (uint32_t)positionAfterf1;
+    hd = Input + (uint32_t)positionAfterf1;
     *Out = hd;
-    BOOLEAN actionSuccessF2 = TRUE;
+    actionSuccessF2 = TRUE;
     KRML_MAYBE_UNUSED_VAR(actionSuccessF2);
     positionAfterT1 = positionAfterf2;
   }
@@ -130,6 +135,15 @@ GetFieldPtrValidateTact(
   /* Validating field f1 */
   BOOLEAN hasBytes0 = (uint64_t)10U <= (InputLength - StartPosition);
   uint64_t res0;
+  uint64_t positionAfterTact;
+  uint64_t positionAfterf1;
+  BOOLEAN hasBytes;
+  uint64_t res;
+  uint64_t positionAfterTact0;
+  uint64_t positionAfterf2;
+  uint64_t positionAfterTact1;
+  uint8_t *hd;
+  BOOLEAN actionSuccessF2;
   if (hasBytes0)
   {
     res0 = StartPosition + (uint64_t)10U;
@@ -138,8 +152,7 @@ GetFieldPtrValidateTact(
   {
     res0 = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  uint64_t positionAfterTact = res0;
-  uint64_t positionAfterf1;
+  positionAfterTact = res0;
   if (EverParseIsSuccess(positionAfterTact))
   {
     positionAfterf1 = positionAfterTact;
@@ -160,8 +173,7 @@ GetFieldPtrValidateTact(
     return positionAfterf1;
   }
   /* Validating field f2 */
-  BOOLEAN hasBytes = (uint64_t)20U <= (InputLength - positionAfterf1);
-  uint64_t res;
+  hasBytes = (uint64_t)20U <= (InputLength - positionAfterf1);
   if (hasBytes)
   {
     res = positionAfterf1 + (uint64_t)20U;
@@ -170,8 +182,7 @@ GetFieldPtrValidateTact(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, positionAfterf1);
   }
-  uint64_t positionAfterTact0 = res;
-  uint64_t positionAfterf2;
+  positionAfterTact0 = res;
   if (EverParseIsSuccess(positionAfterTact0))
   {
     positionAfterf2 = positionAfterTact0;
@@ -187,12 +198,11 @@ GetFieldPtrValidateTact(
       positionAfterf1);
     positionAfterf2 = positionAfterTact0;
   }
-  uint64_t positionAfterTact1;
   if (EverParseIsSuccess(positionAfterf2))
   {
-    uint8_t *hd = Input + (uint32_t)positionAfterf1;
+    hd = Input + (uint32_t)positionAfterf1;
     *Out = hd;
-    BOOLEAN actionSuccessF2 = TRUE;
+    actionSuccessF2 = TRUE;
     KRML_MAYBE_UNUSED_VAR(actionSuccessF2);
     positionAfterTact1 = positionAfterf2;
   }

@@ -23,6 +23,13 @@ OrderedPairValidateOrderedPair(
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   BOOLEAN hasBytes0 = 4ULL <= (InputLength - StartPosition);
   uint64_t positionAfterOrderedPair;
+  uint64_t positionAfterlesser;
+  uint32_t lesser;
+  BOOLEAN hasBytes;
+  uint64_t positionAftergreater_refinement;
+  uint64_t positionAfterOrderedPair0;
+  uint32_t greater_refinement;
+  BOOLEAN greater_refinementConstraintIsOk;
   if (hasBytes0)
   {
     positionAfterOrderedPair = StartPosition + 4ULL;
@@ -33,7 +40,6 @@ OrderedPairValidateOrderedPair(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  uint64_t positionAfterlesser;
   if (EverParseIsSuccess(positionAfterOrderedPair))
   {
     positionAfterlesser = positionAfterOrderedPair;
@@ -53,11 +59,10 @@ OrderedPairValidateOrderedPair(
   {
     return positionAfterlesser;
   }
-  uint32_t lesser = Load32Le(Input + (uint32_t)StartPosition);
+  lesser = Load32Le(Input + (uint32_t)StartPosition);
   /* Validating field greater */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = 4ULL <= (InputLength - positionAfterlesser);
-  uint64_t positionAftergreater_refinement;
+  hasBytes = 4ULL <= (InputLength - positionAfterlesser);
   if (hasBytes)
   {
     positionAftergreater_refinement = positionAfterlesser + 4ULL;
@@ -68,7 +73,6 @@ OrderedPairValidateOrderedPair(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         positionAfterlesser);
   }
-  uint64_t positionAfterOrderedPair0;
   if (EverParseIsError(positionAftergreater_refinement))
   {
     positionAfterOrderedPair0 = positionAftergreater_refinement;
@@ -76,9 +80,9 @@ OrderedPairValidateOrderedPair(
   else
   {
     /* reading field_value */
-    uint32_t greater_refinement = Load32Le(Input + (uint32_t)positionAfterlesser);
+    greater_refinement = Load32Le(Input + (uint32_t)positionAfterlesser);
     /* start: checking constraint */
-    BOOLEAN greater_refinementConstraintIsOk = lesser <= greater_refinement;
+    greater_refinementConstraintIsOk = lesser <= greater_refinement;
     /* end: checking constraint */
     positionAfterOrderedPair0 =
       EverParseCheckConstraintOk(greater_refinementConstraintIsOk,

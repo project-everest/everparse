@@ -20,10 +20,11 @@ DerivedValidateTriple(
   uint64_t StartPosition
 )
 {
+  BOOLEAN hasBytes;
   KRML_MAYBE_UNUSED_VAR(Ctxt);
   KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
   KRML_MAYBE_UNUSED_VAR(Input);
-  BOOLEAN hasBytes = 12ULL <= (InputLength - StartPosition);
+  hasBytes = 12ULL <= (InputLength - StartPosition);
   if (hasBytes)
   {
     return StartPosition + 12ULL;
@@ -49,10 +50,11 @@ DerivedValidateQuad(
   uint64_t StartPosition
 )
 {
+  BOOLEAN hasBytes;
   KRML_MAYBE_UNUSED_VAR(Ctxt);
   KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
   KRML_MAYBE_UNUSED_VAR(Input);
-  BOOLEAN hasBytes = 16ULL <= (InputLength - StartPosition);
+  hasBytes = 16ULL <= (InputLength - StartPosition);
   if (hasBytes)
   {
     return StartPosition + 16ULL;

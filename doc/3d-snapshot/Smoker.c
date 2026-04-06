@@ -23,6 +23,13 @@ SmokerValidateSmoker(
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
   BOOLEAN hasBytes0 = 4ULL <= (InputLength - StartPosition);
   uint64_t positionAfterage;
+  uint64_t positionAfterSmoker;
+  uint32_t age;
+  BOOLEAN ageConstraintIsOk;
+  uint64_t positionAfterage1;
+  BOOLEAN hasBytes;
+  uint64_t positionAfterSmoker0;
+  uint64_t res;
   if (hasBytes0)
   {
     positionAfterage = StartPosition + 4ULL;
@@ -33,16 +40,15 @@ SmokerValidateSmoker(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
-  uint64_t positionAfterSmoker;
   if (EverParseIsError(positionAfterage))
   {
     positionAfterSmoker = positionAfterage;
   }
   else
   {
-    uint32_t age = Load32Le(Input + (uint32_t)StartPosition);
-    BOOLEAN ageConstraintIsOk = age >= (uint32_t)21U;
-    uint64_t positionAfterage1 = EverParseCheckConstraintOk(ageConstraintIsOk, positionAfterage);
+    age = Load32Le(Input + (uint32_t)StartPosition);
+    ageConstraintIsOk = age >= (uint32_t)21U;
+    positionAfterage1 = EverParseCheckConstraintOk(ageConstraintIsOk, positionAfterage);
     if (EverParseIsError(positionAfterage1))
     {
       positionAfterSmoker = positionAfterage1;
@@ -51,8 +57,7 @@ SmokerValidateSmoker(
     {
       /* Validating field cigarettesConsumed */
       /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-      BOOLEAN hasBytes = 1ULL <= (InputLength - positionAfterage1);
-      uint64_t positionAfterSmoker0;
+      hasBytes = 1ULL <= (InputLength - positionAfterage1);
       if (hasBytes)
       {
         positionAfterSmoker0 = positionAfterage1 + 1ULL;
@@ -63,7 +68,6 @@ SmokerValidateSmoker(
           EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
             positionAfterage1);
       }
-      uint64_t res;
       if (EverParseIsSuccess(positionAfterSmoker0))
       {
         res = positionAfterSmoker0;

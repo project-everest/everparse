@@ -23,14 +23,24 @@ BoundedSumWhereValidateBoundedSum(
 {
   uint64_t positionAfterPrecondition = StartPosition;
   uint64_t positionAfterBoundedSum;
+  BOOLEAN preconditionConstraintIsOk;
+  uint64_t positionAfterPrecondition1;
+  BOOLEAN hasBytes0;
+  uint64_t positionAfterBoundedSum0;
+  uint64_t positionAfterleft;
+  uint32_t left;
+  BOOLEAN hasBytes;
+  uint64_t positionAfterright_refinement;
+  uint64_t positionAfterBoundedSum1;
+  uint32_t right_refinement;
+  BOOLEAN right_refinementConstraintIsOk;
   if (EverParseIsError(positionAfterPrecondition))
   {
     positionAfterBoundedSum = positionAfterPrecondition;
   }
   else
   {
-    BOOLEAN preconditionConstraintIsOk = Bound <= (uint32_t)1729U;
-    uint64_t
+    preconditionConstraintIsOk = Bound <= (uint32_t)1729U;
     positionAfterPrecondition1 =
       EverParseCheckConstraintOk(preconditionConstraintIsOk,
         positionAfterPrecondition);
@@ -41,8 +51,7 @@ BoundedSumWhereValidateBoundedSum(
     else
     {
       /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-      BOOLEAN hasBytes0 = 4ULL <= (InputLength - positionAfterPrecondition1);
-      uint64_t positionAfterBoundedSum0;
+      hasBytes0 = 4ULL <= (InputLength - positionAfterPrecondition1);
       if (hasBytes0)
       {
         positionAfterBoundedSum0 = positionAfterPrecondition1 + 4ULL;
@@ -53,7 +62,6 @@ BoundedSumWhereValidateBoundedSum(
           EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
             positionAfterPrecondition1);
       }
-      uint64_t positionAfterleft;
       if (EverParseIsSuccess(positionAfterBoundedSum0))
       {
         positionAfterleft = positionAfterBoundedSum0;
@@ -75,11 +83,10 @@ BoundedSumWhereValidateBoundedSum(
       }
       else
       {
-        uint32_t left = Load32Le(Input + (uint32_t)positionAfterPrecondition1);
+        left = Load32Le(Input + (uint32_t)positionAfterPrecondition1);
         /* Validating field right */
         /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-        BOOLEAN hasBytes = 4ULL <= (InputLength - positionAfterleft);
-        uint64_t positionAfterright_refinement;
+        hasBytes = 4ULL <= (InputLength - positionAfterleft);
         if (hasBytes)
         {
           positionAfterright_refinement = positionAfterleft + 4ULL;
@@ -90,7 +97,6 @@ BoundedSumWhereValidateBoundedSum(
             EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
               positionAfterleft);
         }
-        uint64_t positionAfterBoundedSum1;
         if (EverParseIsError(positionAfterright_refinement))
         {
           positionAfterBoundedSum1 = positionAfterright_refinement;
@@ -98,9 +104,8 @@ BoundedSumWhereValidateBoundedSum(
         else
         {
           /* reading field_value */
-          uint32_t right_refinement = Load32Le(Input + (uint32_t)positionAfterleft);
+          right_refinement = Load32Le(Input + (uint32_t)positionAfterleft);
           /* start: checking constraint */
-          BOOLEAN
           right_refinementConstraintIsOk = left <= Bound && right_refinement <= (Bound - left);
           /* end: checking constraint */
           positionAfterBoundedSum1 =

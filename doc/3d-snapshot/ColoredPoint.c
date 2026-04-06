@@ -20,10 +20,11 @@ ColoredPointValidateColoredPoint1(
   uint64_t StartPosition
 )
 {
+  BOOLEAN hasBytes;
   KRML_MAYBE_UNUSED_VAR(Ctxt);
   KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
   KRML_MAYBE_UNUSED_VAR(Input);
-  BOOLEAN hasBytes = 5ULL <= (InputLength - StartPosition);
+  hasBytes = 5ULL <= (InputLength - StartPosition);
   if (hasBytes)
   {
     return StartPosition + 5ULL;
@@ -49,10 +50,11 @@ ColoredPointValidateColoredPoint2(
   uint64_t StartPosition
 )
 {
+  BOOLEAN hasBytes;
   KRML_MAYBE_UNUSED_VAR(Ctxt);
   KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
   KRML_MAYBE_UNUSED_VAR(Input);
-  BOOLEAN hasBytes = 5ULL <= (InputLength - StartPosition);
+  hasBytes = 5ULL <= (InputLength - StartPosition);
   if (hasBytes)
   {
     return StartPosition + 5ULL;
