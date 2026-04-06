@@ -473,8 +473,10 @@ let get_no_everparse_h () =
 let get_hoist_locals () =
   !hoist_locals
 
-let get_init_locals () =
-  !init_locals
+let get_init_locals () : ML (option string) =
+  match !init_locals with
+  | Some s -> Some (s <: string)
+  | None -> None
 
 let get_check_hashes () =
   if !batch then match !check_hashes with
