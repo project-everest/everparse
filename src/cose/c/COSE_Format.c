@@ -1193,7 +1193,7 @@ COSE_Format_serialize_tstr(
 )
 {
   Pulse_Lib_Slice_slice__uint8_t c_ = tstr_left(c);
-  if (Pulse_Lib_Slice_len__uint8_t(c_) <= (size_t)18446744073709551615ULL)
+  if (Pulse_Lib_Slice_len__uint8_t(c_) <= 18446744073709551615ULL)
   {
     size_t alen = Pulse_Lib_Slice_len__uint8_t(c_);
     if
@@ -1362,7 +1362,7 @@ COSE_Format_serialize_bstr(
 )
 {
   Pulse_Lib_Slice_slice__uint8_t c_ = bstr_left(c);
-  if (Pulse_Lib_Slice_len__uint8_t(c_) <= (size_t)18446744073709551615ULL)
+  if (Pulse_Lib_Slice_len__uint8_t(c_) <= 18446744073709551615ULL)
   {
     uint8_t *a = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(c_);
     cbor_det_t pres = dummy_cbor_det_t();
@@ -12934,7 +12934,7 @@ COSE_Format_serialize_empty_or_serialized_map(
   if (scrut0.tag == COSE_Format_Inl)
   {
     size_t sz = COSE_Format_serialize_header_map(scrut0.case_Inl, out);
-    if (sz == (size_t)0U || sz > (size_t)18446744073709551615ULL)
+    if (sz == (size_t)0U || sz > 18446744073709551615ULL)
       return (size_t)0U;
     else
     {
@@ -12950,9 +12950,9 @@ COSE_Format_serialize_empty_or_serialized_map(
   {
     Pulse_Lib_Slice_slice__uint8_t c2 = scrut0.case_Inr;
     size_t len = Pulse_Lib_Slice_len__uint8_t(c2);
-    if ((size_t)0ULL <= len && len <= (size_t)0ULL)
+    if (0ULL <= len && len <= 0ULL)
       if (2U == CBOR_MAJOR_TYPE_BYTE_STRING)
-        if (Pulse_Lib_Slice_len__uint8_t(c2) <= (size_t)18446744073709551615ULL)
+        if (Pulse_Lib_Slice_len__uint8_t(c2) <= 18446744073709551615ULL)
         {
           uint8_t *a = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(c2);
           cbor_det_t pres = dummy_cbor_det_t();
@@ -12989,7 +12989,7 @@ COSE_Format_serialize_empty_or_serialized_map(
         }
         else
           return (size_t)0U;
-      else if (Pulse_Lib_Slice_len__uint8_t(c2) <= (size_t)18446744073709551615ULL)
+      else if (Pulse_Lib_Slice_len__uint8_t(c2) <= 18446744073709551615ULL)
       {
         size_t alen = Pulse_Lib_Slice_len__uint8_t(c2);
         if
@@ -13151,7 +13151,7 @@ bool COSE_Format_validate_sig_structure(cbor_det_t c)
         uint64_t len = cbor_det_get_string_length(c1);
         Pulse_Lib_Slice_slice__uint8_t
         s = arrayptr_to_slice_intro__uint8_t(cbor_det_get_string(c1), (size_t)len);
-        if (Pulse_Lib_Slice_len__uint8_t(s) != (size_t)9ULL)
+        if (Pulse_Lib_Slice_len__uint8_t(s) != 9ULL)
           ite = false;
         else if (op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
           if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
@@ -13203,7 +13203,7 @@ bool COSE_Format_validate_sig_structure(cbor_det_t c)
         uint64_t len = cbor_det_get_string_length(c1);
         Pulse_Lib_Slice_slice__uint8_t
         s = arrayptr_to_slice_intro__uint8_t(cbor_det_get_string(c1), (size_t)len);
-        if (Pulse_Lib_Slice_len__uint8_t(s) != (size_t)10ULL)
+        if (Pulse_Lib_Slice_len__uint8_t(s) != 10ULL)
           ite0 = false;
         else if (op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
           if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
@@ -13383,7 +13383,7 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
       uint64_t len = cbor_det_get_string_length(c1);
       Pulse_Lib_Slice_slice__uint8_t
       s = arrayptr_to_slice_intro__uint8_t(cbor_det_get_string(c1), (size_t)len);
-      if (Pulse_Lib_Slice_len__uint8_t(s) != (size_t)9ULL)
+      if (Pulse_Lib_Slice_len__uint8_t(s) != 9ULL)
         ite = false;
       else if (op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
         if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
@@ -13435,7 +13435,7 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
       uint64_t len = cbor_det_get_string_length(c1);
       Pulse_Lib_Slice_slice__uint8_t
       s = arrayptr_to_slice_intro__uint8_t(cbor_det_get_string(c1), (size_t)len);
-      if (Pulse_Lib_Slice_len__uint8_t(s) != (size_t)10ULL)
+      if (Pulse_Lib_Slice_len__uint8_t(s) != 10ULL)
         ite0 = false;
       else if (op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
         if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
@@ -13498,7 +13498,7 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
     uint64_t len = cbor_det_get_string_length(x);
     Pulse_Lib_Slice_slice__uint8_t
     s = arrayptr_to_slice_intro__uint8_t(cbor_det_get_string(x), (size_t)len);
-    if (Pulse_Lib_Slice_len__uint8_t(s) != (size_t)9ULL)
+    if (Pulse_Lib_Slice_len__uint8_t(s) != 9ULL)
       ite1 = false;
     else if (op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
       if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
