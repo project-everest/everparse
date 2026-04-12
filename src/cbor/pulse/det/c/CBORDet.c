@@ -9,7 +9,7 @@ static uint8_t get_bitfield_gen8(uint8_t x, uint32_t lo, uint32_t hi)
 
 static uint8_t set_bitfield_gen8(uint8_t x, uint32_t lo, uint32_t hi, uint8_t v)
 {
-  return ((uint32_t)x & (uint32_t)~(255U >> (8U - (hi - lo)) << lo)) | (uint32_t)v << lo;
+  return ((uint32_t)x & (~(255U >> (8U - (hi - lo)) << lo) & 0xFFU)) | (uint32_t)v << lo;
 }
 
 #define ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS (24U)
@@ -229,7 +229,7 @@ static bool impl_correct(Pulse_Lib_Slice_slice__uint8_t s)
 static CBOR_Spec_Raw_Base_raw_uint64 mk_raw_uint64(uint64_t x)
 {
   uint8_t ite;
-  if (x <= (uint64_t)MAX_SIMPLE_VALUE_ADDITIONAL_INFO)
+  if (x <= MAX_SIMPLE_VALUE_ADDITIONAL_INFO)
     ite = 0U;
   else if (x < 256ULL)
     ite = 1U;
@@ -1284,7 +1284,7 @@ static size_t cbor_validate(Pulse_Lib_Slice_slice__uint8_t input)
 
 static bool impl_raw_uint64_optimal(CBOR_Spec_Raw_Base_raw_uint64 x)
 {
-  if (x.value <= (uint64_t)MAX_SIMPLE_VALUE_ADDITIONAL_INFO == (x.size == 0U))
+  if (x.value <= MAX_SIMPLE_VALUE_ADDITIONAL_INFO == (x.size == 0U))
     if (x.size <= 1U)
       return true;
     else if (x.size == 2U)
@@ -1794,7 +1794,7 @@ static cbor_raw cbor_serialized_array_item(cbor_serialized c, uint64_t i)
 {
   size_t pi = (size_t)0U;
   Pulse_Lib_Slice_slice__uint8_t pres = c.cbor_serialized_payload;
-  while (pi < (size_t)i)
+  while (pi < i)
   {
     Pulse_Lib_Slice_slice__uint8_t res = pres;
     size_t i1 = pi;
@@ -2790,7 +2790,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
       size_t pres = res1;
       size_t pi = (size_t)0U;
       size_t i0 = pi;
-      bool cond = i0 < (size_t)argument_as_uint64(xh1.fst, xh1.snd);
+      bool cond = i0 < argument_as_uint64(xh1.fst, xh1.snd);
       while (cond)
       {
         size_t i = pi;
@@ -2804,7 +2804,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
         pi = i_;
         pres = res;
         size_t i0 = pi;
-        cond = i0 < (size_t)argument_as_uint64(xh1.fst, xh1.snd);
+        cond = i0 < argument_as_uint64(xh1.fst, xh1.snd);
       }
       return pres;
     }
@@ -2860,7 +2860,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
       size_t pres = res1;
       size_t pi = (size_t)0U;
       size_t i0 = pi;
-      bool cond = i0 < (size_t)argument_as_uint64(xh1.fst, xh1.snd);
+      bool cond = i0 < argument_as_uint64(xh1.fst, xh1.snd);
       while (cond)
       {
         size_t i = pi;
@@ -2875,7 +2875,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
         pi = i_;
         pres = res;
         size_t i0 = pi;
-        cond = i0 < (size_t)argument_as_uint64(xh1.fst, xh1.snd);
+        cond = i0 < argument_as_uint64(xh1.fst, xh1.snd);
       }
       return pres;
     }
@@ -3004,7 +3004,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
         size_t pi = (size_t)0U;
         bool res = pres;
         size_t i0 = pi;
-        bool cond = res && i0 < (size_t)argument_as_uint64(xh1.fst, xh1.snd);
+        bool cond = res && i0 < argument_as_uint64(xh1.fst, xh1.snd);
         while (cond)
         {
           size_t i0 = pi;
@@ -3019,7 +3019,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
             pres = false;
           bool res = pres;
           size_t i = pi;
-          cond = res && i < (size_t)argument_as_uint64(xh1.fst, xh1.snd);
+          cond = res && i < argument_as_uint64(xh1.fst, xh1.snd);
         }
         return pres;
       }
@@ -3082,7 +3082,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
         size_t pi = (size_t)0U;
         bool res = pres;
         size_t i0 = pi;
-        bool cond = res && i0 < (size_t)argument_as_uint64(xh1.fst, xh1.snd);
+        bool cond = res && i0 < argument_as_uint64(xh1.fst, xh1.snd);
         while (cond)
         {
           size_t i0 = pi;
@@ -3098,7 +3098,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
             pres = false;
           bool res = pres;
           size_t i = pi;
-          cond = res && i < (size_t)argument_as_uint64(xh1.fst, xh1.snd);
+          cond = res && i < argument_as_uint64(xh1.fst, xh1.snd);
         }
         return pres;
       }
@@ -4808,7 +4808,7 @@ cbor_raw cbor_det_mk_map_from_array(cbor_map_entry *a, uint64_t len)
   s = from_array__CBOR_Pulse_Raw_Type_cbor_map_entry(a, (size_t)len);
   cbor_raw dest = dummy_cbor_det_t();
   bool ite;
-  if (len__CBOR_Pulse_Raw_Type_cbor_map_entry(s) > (size_t)18446744073709551615ULL)
+  if (len__CBOR_Pulse_Raw_Type_cbor_map_entry(s) > 18446744073709551615ULL)
     ite = false;
   else if (cbor_raw_sort(s))
   {
@@ -4836,7 +4836,7 @@ bool cbor_det_mk_map_from_array_safe(cbor_map_entry *a, uint64_t len, cbor_raw *
 {
   Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
   s = from_array__CBOR_Pulse_Raw_Type_cbor_map_entry(a, (size_t)len);
-  if (len__CBOR_Pulse_Raw_Type_cbor_map_entry(s) > (size_t)18446744073709551615ULL)
+  if (len__CBOR_Pulse_Raw_Type_cbor_map_entry(s) > 18446744073709551615ULL)
     return false;
   else if (cbor_raw_sort(s))
   {
