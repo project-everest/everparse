@@ -32,6 +32,10 @@ FSTAR = $(FSTAR_EXE) $(FSTAR_OPTIONS)
 
 HEADERS = $(addprefix -add-include ,'"krml/internal/compat.h"')
 
+ifeq ($(OS),Darwin)
+KRML_OPTS += -ccopt -Wno-tautological-constant-out-of-range-compare
+endif
+
 # -Wno-tautological-overlap-compare because of T32
 KRML = $(KRML_HOME)/krml \
 	 -fstar $(FSTAR_EXE) \
