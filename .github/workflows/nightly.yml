@@ -57,7 +57,7 @@ jobs:
           make ADMIT=1 3d-doc-snapshot -kj$(nproc)
       - name: Stage in new snapshots
         run: |
-          git add doc/3d-snapshot src/cbor/pulse/det/c src/cbor/pulse/nondet/c src/cbor/pulse/det/rust src/cose/c src/cose/rust &&
+          git add doc/3d-snapshot src/cbor/pulse/det/c src/cbor/pulse/nondet/c src/cbor/pulse/det/rust src/cbor/pulse/nondet/rust src/cose/c src/cose/rust &&
           if ! git diff --staged --exit-code ; then git commit -m "3D doc, CBOR, COSE snapshot" ; fi &&
           git diff --exit-code
       - name: Push new branch
