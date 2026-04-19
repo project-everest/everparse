@@ -46,6 +46,7 @@ let map_of_list_is_append_serializable_intro_serializable
 = ()
 
 #restart-solver
+#push-options "--z3rlimit 1024 --split_queries no --z3seed 1"
 let map_of_list_is_append_serializable_intro
   (#key #value: Type)
   (#tkey: typ)
@@ -93,6 +94,7 @@ let map_of_list_is_append_serializable_intro
     cbor_map_mem_disjoint (sp.mg_serializer m1) (sp.mg_serializer m2);
     cbor_map_mem_ext (sp.mg_serializer m) (sp.mg_serializer m1 `cbor_map_union` sp.mg_serializer m2)
   end
+#pop-options
 
 #pop-options
 
