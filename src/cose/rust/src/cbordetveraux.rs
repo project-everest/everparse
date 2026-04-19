@@ -615,7 +615,7 @@ fn validate_header(input: &[u8], poffset: &mut [usize]) -> bool
                 { x.additional_info <= additional_info_long_argument_8_bits }
                 else
                 { true };
-            ite && x.additional_info < additional_info_unassigned_min
+            if ite { x.additional_info < additional_info_unassigned_min } else { false }
         }
         else
         { false };
