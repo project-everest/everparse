@@ -25,6 +25,17 @@ fn set_bitfield_gen8(x: u8, lo: u32, hi: u32, v: u8) -> u8
 
 #[derive(PartialEq, Clone, Copy)] pub struct raw_uint64 { pub size: u8, pub value: u64 }
 
+pub(crate) fn mk_raw_uint64(x: u64) -> raw_uint64
+{
+    let size: u8 =
+        if x <= max_simple_value_additional_info as u64
+        { 0u8 }
+        else if x < 256u64
+        { 1u8 }
+        else if x < 65536u64 { 2u8 } else if x < 4294967296u64 { 3u8 } else { 4u8 };
+    raw_uint64 { size, value: x }
+}
+
 const additional_info_long_argument_8_bits: u8 = 24u8;
 
 const additional_info_unassigned_min: u8 = 28u8;
@@ -158,16 +169,9 @@ fn get_header_major_type(h: header) -> u8
     b.major_type
 }
 
-pub(crate) fn mk_raw_uint64(x: u64) -> raw_uint64
-{
-    let size: u8 =
-        if x <= max_simple_value_additional_info as u64
-        { 0u8 }
-        else if x < 256u64
-        { 1u8 }
-        else if x < 65536u64 { 2u8 } else if x < 4294967296u64 { 3u8 } else { 4u8 };
-    raw_uint64 { size, value: x }
-}
+pub(crate) const simple_value_false: u8 = 20u8;
+
+pub(crate) const simple_value_true: u8 = 21u8;
 
 fn impl_uint8_compare(x1: u8, x2: u8) -> i16
 { if x1 < x2 { -1i16 } else if x1 > x2 { 1i16 } else { 0i16 } }
@@ -369,10 +373,6 @@ fn cbor_match_compare_serialized_array(c1: cbor_serialized, c2: cbor_serialized)
 
 fn cbor_match_compare_serialized_map(c1: cbor_serialized, c2: cbor_serialized) -> i16
 { lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload) }
-
-pub(crate) const simple_value_false: u8 = 20u8;
-
-pub(crate) const simple_value_true: u8 = 21u8;
 
 pub(crate) fn impl_correct(s: &[u8]) -> bool
 {
@@ -615,7 +615,7 @@ fn validate_header(input: &[u8], poffset: &mut [usize]) -> bool
                 { x.additional_info <= additional_info_long_argument_8_bits }
                 else
                 { true };
-            ite && x.additional_info < additional_info_unassigned_min
+            if ite { x.additional_info < additional_info_unassigned_min } else { false }
         }
         else
         { false };
