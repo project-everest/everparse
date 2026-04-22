@@ -894,9 +894,38 @@ let cddl_map_iterator_is_empty_t
     (map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch vmatch2)
     (rel_map_iterator vmatch vmatch2 cbor_map_iterator_match impl_elt1 impl_elt2)
 
-#restart-solver
+let map_of_list_cons_not_equal_empty
+  (#key #value: Type0)
+  (key_eq: EqTest.eq_test key)
+  (k: key)
+  (v: value)
+  (m: Map.t key (list value))
+: Lemma
+  (map_of_list_cons key_eq k v m =!= Map.empty key (list value))
+= assert (Some? (Map.get (map_of_list_cons key_eq k v m) k));
+  Map.ext (map_of_list_cons key_eq k v m) (Map.empty key (list value))
 
-let rec rel_map_iterator_cond_is_empty
+let map_of_list_pair_nil_is_empty
+  (#key #value: Type0)
+  (key_eq: EqTest.eq_test key)
+  (l: list (key & value))
+: Lemma
+  (requires Nil? l)
+  (ensures map_of_list_pair key_eq l == Map.empty key (list value))
+= ()
+
+let rec map_of_list_pair_cons_not_empty
+  (#key #value: Type0)
+  (key_eq: EqTest.eq_test key)
+  (l: list (key & value))
+: Lemma
+  (requires Cons? l)
+  (ensures map_of_list_pair key_eq l =!= Map.empty key (list value))
+= let (k, v) :: q = l in
+  map_of_list_pair_cons key_eq k v q;
+  map_of_list_cons_not_equal_empty key_eq k v (map_of_list_pair key_eq q)
+
+let rel_map_iterator_cond_is_empty
   (#ty #ty2: Type0) (#vmatch: perm -> ty -> cbor -> slprop)
   (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (#cbor_map_iterator_t: Type0)
@@ -913,25 +942,16 @@ let rec rel_map_iterator_cond_is_empty
   (ensures (
     s `Map.equal` Map.empty (dfst spec1) (list (dfst spec2)) <==> Nil? (parse_table_entries i.sp1.parser i.tex i.ps2 l)
   ))
-  (decreases l)
-= match l with
-  | [] ->
-    assert_norm (parse_table_entries i.sp1.parser i.tex i.ps2 [] == []);
-    assert_norm (map_of_list_pair i.eq1 [] == Map.empty (dfst spec1) (list (dfst spec2)))
-  | (k, v) :: q ->
-    rel_map_iterator_cond_is_empty i (map_of_list_pair i.eq1 (parse_table_entries i.sp1.parser i.tex i.ps2 q)) q;
-    let rq = parse_table_entries i.sp1.parser i.tex i.ps2 q in
-    assert_norm (parse_table_entries i.sp1.parser i.tex i.ps2 ((k, v) :: q) == (
-      if Ghost.reveal i.t1 k && not (Ghost.reveal i.tex (k, v)) && Ghost.reveal i.t2 v
-      then (i.sp1.parser k, Ghost.reveal i.ps2 v) :: rq
-      else rq
-    ));
-    if Ghost.reveal i.t1 k && not (Ghost.reveal i.tex (k, v)) && Ghost.reveal i.t2 v
-    then begin
-      map_of_list_pair_cons i.eq1 (i.sp1.parser k) (Ghost.reveal i.ps2 v) rq;
-      ()
-    end
-    else ()
+= let l' = parse_table_entries i.sp1.parser i.tex i.ps2 l in
+  if Nil? l'
+  then begin
+    map_of_list_pair_nil_is_empty i.eq1 l';
+    Map.ext s (Map.empty (dfst spec1) (list (dfst spec2)))
+  end
+  else begin
+    map_of_list_pair_cons_not_empty i.eq1 l';
+    Map.ext s (Map.empty (dfst spec1) (list (dfst spec2)))
+  end
 
 inline_for_extraction
 fn cddl_map_iterator_is_empty
