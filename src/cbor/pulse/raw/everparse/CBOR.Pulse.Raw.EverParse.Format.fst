@@ -836,7 +836,7 @@ let impl_remaining_data_items_header
   else
     0sz
 
-#push-options "--z3rlimit 20"
+#push-options "--z3rlimit 64"
 
 fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
   jump_recursive_step_count #parse_raw_data_item_param serialize_raw_data_item_param
@@ -940,7 +940,7 @@ fn get_header_and_contents
   outc
 }
 
-#push-options "--z3rlimit 20"
+#push-options "--z3rlimit 64"
 
 ghost
 fn get_string_payload
@@ -1107,7 +1107,7 @@ fn get_array_payload
   get_array_payload' input v
 }
 
-#push-options "--z3rlimit 20"
+#push-options "--z3rlimit 64"
 ghost
 fn get_map_payload'
   (input: S.slice byte)

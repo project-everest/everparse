@@ -332,7 +332,7 @@ let impl_check_equiv_list_with_bound_t
 
 #pop-options
 
-#push-options "--z3rlimit 128"
+#push-options "--z3rlimit 256"
 
 inline_for_extraction
 fn impl_check_equiv_list
@@ -467,6 +467,7 @@ fn impl_check_equiv_list
             pts_to_serialized_nlist_append serialize_raw_data_item tl1' _ _;
             Trade.trans_hyp_r _ _ _ (pts_to_serialized (serialize_nlist (SZ.v n) serialize_raw_data_item) l1' #p1 gl1');
             pts_to_serialized_length _ tl1';
+            LowParse.Spec.VCList.parse_nlist_kind_low (remaining_data_items_header h1 + (SZ.v n - 1)) parse_raw_data_item_kind;
             assert (pure (remaining_data_items_header h1 + (SZ.v n - 1) <= SZ.v (S.len tl1')));
             let n' : SZ.t = SZ.add (impl_remaining_data_items_header (S.len tl1') h1) (SZ.sub n 1sz);
             pts_to_serialized_nlist_ext
@@ -1094,7 +1095,7 @@ ensures pure
   ()
 }
 
-#push-options "--z3rlimit 128 --z3cliopt smt.arith.nl=false --z3cliopt smt.qi.eager_threshold=10 --fuel 4 --ifuel 8 --split_queries always"
+#push-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --z3cliopt smt.qi.eager_threshold=10 --fuel 2 --ifuel 4 --split_queries always"
 
 inline_for_extraction
 fn impl_check_equiv_map_hd_body
@@ -1460,7 +1461,25 @@ ensures
 
 module GR = Pulse.Lib.GhostReference
 
-#push-options "--z3rlimit 256 --fuel 4 --ext 'context_pruning:off'"
+let check_map_depth_map_true
+  (bound: nat)
+  (a: raw_data_item)
+  (q: list raw_data_item)
+  (pairs: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    Map? a /\
+    (match a with Map _ v -> v == pairs | _ -> False) /\
+    bound > 0 /\
+    check_map_depth (bound - 1) (CBOR.Spec.Util.list_of_pair_list pairs) == true
+  ))
+  (ensures (
+    check_map_depth bound (a :: q) == check_map_depth bound q
+  ))
+= raw_data_item_size_eq a;
+  list_of_pair_list_sum raw_data_item_size pairs
+
+#push-options "--z3rlimit 128 --fuel 2"
 
 fn rec impl_check_map_depth_aux
   (bound: SZ.t)
@@ -1574,6 +1593,7 @@ ensures exists* l' gn' (gl': nlist gn' raw_data_item) .
         let res = impl_check_map_depth_aux (SZ.sub bound 1sz) pl (SZ.add npairs npairs) ll' l2';
         Trade.trans _ _ (pts_to_serialized (serialize_nlist gn0 serialize_raw_data_item) l0 #pm gl0);
         if res {
+          check_map_depth_map_true (SZ.v bound) (List.Tot.hd ll) (List.Tot.tl ll) (Map?.v (List.Tot.hd ll));
           GR.op_Colon_Equals pl1 (List.Tot.tl ll);
           pn := n';
           ()

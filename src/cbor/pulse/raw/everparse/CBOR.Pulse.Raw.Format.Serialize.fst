@@ -1625,6 +1625,8 @@ ensures
   };
 }
 
+#push-options "--z3rlimit 64"
+
 inline_for_extraction
 fn ser_payload_tagged_not_tagged_lens
   (xh1: header)
@@ -1660,6 +1662,8 @@ fn ser_payload_tagged_not_tagged_lens
   rewrite each (Tagged?.v xh0) as v;
   res
 }
+
+#pop-options
 
 #push-options "--z3rlimit 32"
 

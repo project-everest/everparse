@@ -77,7 +77,8 @@ let cbor_map_singleton_inj
   (requires (cbor_map_singleton k1 v1 == cbor_map_singleton k2 v2))
   (ensures (k1 == k2 /\ v1 == v2))
   [SMTPat (cbor_map_singleton k1 v1); SMTPat (cbor_map_singleton k2 v2)]
-= assert (forall x . cbor_map_mem x (cbor_map_singleton k1 v1) ==> x == (k1, v1));
+= bring_cbor_map_defined_alt ();
+  assert (forall x . cbor_map_mem x (cbor_map_singleton k1 v1) ==> x == (k1, v1));
   assert (forall x . cbor_map_mem x (cbor_map_singleton k2 v2) ==> x == (k2, v2))
 
 unfold
