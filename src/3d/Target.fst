@@ -941,10 +941,6 @@ let print_c_entry
    in
    let default_error_handler =
      let frame_decl =
-       if hoist then
-         Printf.sprintf "EVERPARSE_ERROR_FRAME *frame%s;\n\t\
-                          frame = (EVERPARSE_ERROR_FRAME*)context;" scalar_zero
-       else
          "EVERPARSE_ERROR_FRAME *frame = (EVERPARSE_ERROR_FRAME*)context;"
      in
      Printf.sprintf
