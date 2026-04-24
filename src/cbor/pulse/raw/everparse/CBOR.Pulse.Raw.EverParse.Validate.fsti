@@ -1,4 +1,4 @@
-module CBOR.Pulse.Raw.EverParse.Format
+module CBOR.Pulse.Raw.EverParse.Validate
 open CBOR.Spec.Raw.EverParse
 open Pulse.Lib.Slice open Pulse.Lib.Pervasives open Pulse.Lib.Trade
 open LowParse.Pulse.Combinators

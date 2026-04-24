@@ -1,4 +1,4 @@
-module CBOR.Pulse.Raw.EverParse.Format
+module CBOR.Pulse.Raw.EverParse.Validate
 #lang-pulse
 open LowParse.Pulse.Int
 open LowParse.Pulse.BitSum
