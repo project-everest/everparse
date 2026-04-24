@@ -2,13 +2,11 @@ EVERPARSE_HOME ?= $(realpath ../../../../../..)
 EVERPARSE_SRC_PATH ?= $(EVERPARSE_HOME)/src
 
 LOWPARSE_HOME ?= $(EVERPARSE_SRC_PATH)/lowparse
-KRML_HOME ?= $(EVERPARSE_HOME)/opt/karamel
 
 include $(EVERPARSE_SRC_PATH)/fstar.Makefile
 
 export FSTAR_EXE
 export LOWPARSE_HOME
-export KRML_HOME
 
 ifdef NO_QD_VERIFY
 LAX_EXT=.lax
@@ -37,7 +35,7 @@ KRML_OPTS += -ccopt -Wno-tautological-constant-out-of-range-compare
 endif
 
 # -Wno-tautological-overlap-compare because of T32
-KRML = $(KRML_HOME)/krml \
+KRML = $(KRML_EXE) \
 	 -fstar $(FSTAR_EXE) \
 	 -ccopt "-O3" -ccopt "-ffast-math" \
 	 -ccopt "-Wno-tautological-overlap-compare" \

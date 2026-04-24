@@ -18,25 +18,17 @@ EVERPARSE_Z3_VERSION ?= 4.13.3
 ifeq (1,$(EVERPARSE_USE_MY_DEPS))
 export EVERPARSE_USE_OPAMROOT:=1
 export EVERPARSE_USE_FSTAR_EXE:=1
-export EVERPARSE_USE_KRML_HOME:=1
+export EVERPARSE_USE_KRML_EXE:=1
 endif
 
 NEED_KRML :=
-ifneq (1,$(EVERPARSE_USE_KRML_HOME))
-export KRML_HOME := $(EVERPARSE_OPT_PATH)/FStar/karamel
-
-# Needed by LowParse (Pulse) tests
-export KRML_LIBDIR := $(KRML_HOME)/krmllib
-export KRML_INCLUDEDIR := $(KRML_HOME)/include
-export KRML_MISCDIR := $(KRML_HOME)/misc
-export KRML_EXE := $(KRML_HOME)/krml
-
+ifneq (1,$(EVERPARSE_USE_KRML_EXE))
+export KRML_EXE := $(EVERPARSE_OPT_PATH)/FStar/karamel/out/bin/krml
 NEED_KRML := $(EVERPARSE_OPT_PATH)/karamel.done
 else
-export EVERPARSE_USE_FSTAR_EXE:=1
-ifeq (,$(KRML_HOME))
+ifeq (,$(KRML_EXE))
 # TODO: fix Karamel to not require KRML_HOME set
-$(error "Inconsistent setup: EVERPARSE_USE_KRML_HOME set but KRML_HOME not set")
+$(error "Inconsistent setup: EVERPARSE_USE_KRML_EXE set but KRML_EXE not set")
 endif
 endif
 
@@ -96,6 +88,8 @@ export PATH := $(z3_dir):$(PATH)
 $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh:
 	+$(MAKE) -C $(EVERPARSE_OPT_PATH) opam
 
+clean_rules += clean-krmllib
+
 ifeq (,$(filter clean distclean $(clean_rules),$(MAKECMDGOALS)))
 opam-env.Makefile: $(NEED_OPAM_DIR)
 	rm -rf $@.tmp
@@ -139,17 +133,20 @@ $(EVERPARSE_OPT_PATH)/z3: $(EVERPARSE_OPT_PATH)/FStar/Makefile
 $(EVERPARSE_OPT_PATH)/karamel.done: $(EVERPARSE_OPT_PATH)/FStar/karamel/Makefile $(NEED_FSTAR) $(NEED_OPAM)
 	rm -f $@
 	+$(with_opam) env OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $(EVERPARSE_OPT_PATH)/FStar/karamel minimal
+	touch $@
+
+krmllib.done: $(NEED_KRML)
 	# Needed by LowParse (Pulse) tests
-	+$(MAKE) -C $(KRML_LIBDIR)/dist/generic -f Makefile.basic
+	+export KRML_LIBPATH="$$($(KRML_EXE) -locate-krmllib)" && $(MAKE) -C "$$KRML_LIBPATH"/dist/generic -f Makefile.basic
 	touch $@
 
 env:
 	@echo export EVERPARSE_USE_OPAMROOT=$(EVERPARSE_USE_OPAMROOT)
 	@echo export EVERPARSE_USE_FSTAR_EXE=$(EVERPARSE_USE_FSTAR_EXE)
-	@echo export EVERPARSE_USE_KRML_HOME=$(EVERPARSE_USE_KRML_HOME)
+	@echo export EVERPARSE_USE_KRML_EXE=$(EVERPARSE_USE_KRML_EXE)
 	@echo export FSTAR_EXE=$(FSTAR_EXE)
 	@echo export DICE_HOME=$(DICE_HOME)
-	@echo export KRML_HOME=$(KRML_HOME)
+	@echo export KRML_EXE=$(KRML_EXE)
 ifeq ($(OS),Windows_NT)
 	@echo export EVERPARSE_HOME=$(shell cygpath -u $(CURDIR))
 else
@@ -162,9 +159,17 @@ endif
 
 deps: $(NEED_OPAM) $(NEED_FSTAR) $(NEED_Z3) $(NEED_KRML)
 
+deps: krmllib.done
+
 .PHONY: deps
 
-distclean: clean
+clean-krmllib:
+	rm -f krmllib.done
+	# +$(MAKE) -C "$$($(KRML_EXE) -locate-krmllib)"/dist/generic -f Makefile.basic clean || true # This works, but I am not sure we should clean up anything outside of the EverParse tree. In the opt/ case, krmllib is in opt/FStar, which `distclean` will remove altogether.
+
+.PHONY: clean-krmllib
+
+distclean: clean clean-krmllib
 	rm -rf opam-env.Makefile
 	+$(MAKE) -C opt clean
 

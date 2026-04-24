@@ -1,7 +1,6 @@
 all: verify compile
 
 EVERPARSE_HOME ?= ../..
-KRML_HOME ?= $(EVERPARSE_HOME)/../karamel
 
 LOWPARSE_HOME=$(EVERPARSE_HOME)/src/lowparse
 
@@ -55,7 +54,7 @@ krml.rsp: $(ALL_KRML_FILES)
 	mv $@.tmp $@
 
 Test.c: krml.rsp
-	$(KRML_HOME)/krml -fstar $(FSTAR_EXE) \
+	$(KRML_EXE) -fstar $(FSTAR_EXE) \
 	  -bundle 'ASN1Test=ASN1Test.\*,Prims,FStar.\*,C.\*,C,LowStar.\*,LowParse.\*' \
 	  -no-prefix ASN1Test \
 	  -skip-makefiles \

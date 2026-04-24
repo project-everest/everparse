@@ -22,7 +22,7 @@ ifeq ($(OS),Darwin)
 KRML_OPTS += -ccopt -Wno-tautological-constant-out-of-range-compare
 endif
 
-KRML=$(KRML_HOME)/krml -fstar $(FSTAR_EXE) $(KRML_OPTS)
+KRML=$(KRML_EXE) -fstar $(FSTAR_EXE) $(KRML_OPTS)
 
 EXAMPLES=Example3 ExampleConstInt32le Example2 Example5 Example7 Example8 Example9 Example10 Example11 Example12 ExampleDepLen
 
