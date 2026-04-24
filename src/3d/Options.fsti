@@ -32,6 +32,8 @@ val get_no_everparse_h : unit -> ML bool
 
 val get_hoist_locals : unit -> ML bool
 
+val get_goto_for_early_return : unit -> ML bool
+
 val get_init_locals : unit -> ML (option string)
 
 val get_check_hashes : unit -> ML (option check_hashes_t)

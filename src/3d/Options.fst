@@ -36,6 +36,7 @@ let input_file : ref (list string) = alloc []
 let json : ref bool = alloc false
 let no_copy_everparse_h : ref bool = alloc false
 let hoist_locals : ref bool = alloc false
+let goto_for_early_return : ref bool = alloc false
 let valid_init_locals : string -> Tot bool = function
 | "c23"
 | "c99"
@@ -368,6 +369,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "emit_output_types_defs" (OptBool emit_output_types_defs) "Emit definitions of output types in a .h file" [];
     CmdOption "emit_smt_encoding" (OptBool emit_smt_encoding) "Emit an SMT encoding of parser specifications" [];
     CmdOption "fstar" (OptStringOption "executable" always_valid fstar_exe) "The F* command to run. Default: 'fstar.exe'" [];
+    CmdOption "goto_for_early_return" (OptBool goto_for_early_return) "Use goto for early return in generated C code (--batch only)" ["batch"];
     CmdOption "hoist_locals" (OptBool hoist_locals) "Hoist local variable declarations to the top of each C function (--batch only)" ["batch"];
     CmdOption "init_locals" (OptStringOption "c23|c99|c89" valid_init_locals init_locals) "Initialize all local variable declarations with zero values" [];
     CmdOption "input_stream" (OptStringOption "buffer|extern|static" valid_input_stream_binding input_stream_binding) "Input stream binding (default buffer)" [];
@@ -472,6 +474,9 @@ let get_no_everparse_h () =
 
 let get_hoist_locals () =
   !hoist_locals
+
+let get_goto_for_early_return () =
+  !goto_for_early_return
 
 let get_init_locals () : ML (option string) =
   match !init_locals with
