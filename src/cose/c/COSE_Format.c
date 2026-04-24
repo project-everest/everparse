@@ -32,14 +32,14 @@ static bool uu___is_MGOK(impl_map_group_result projectee)
 bool COSE_Format_validate_bool(cbor_det_t c)
 {
   bool ite;
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
-    ite = cbor_det_read_simple_value(c) == CDDL_SIMPLE_VALUE_FALSE;
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_SIMPLE_VALUE)
+    ite = (uint32_t)cbor_det_read_simple_value(c) == (uint32_t)CDDL_SIMPLE_VALUE_FALSE;
   else
     ite = false;
   if (ite)
     return true;
-  else if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
-    return cbor_det_read_simple_value(c) == CDDL_SIMPLE_VALUE_TRUE;
+  else if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_SIMPLE_VALUE)
+    return (uint32_t)cbor_det_read_simple_value(c) == (uint32_t)CDDL_SIMPLE_VALUE_TRUE;
   else
     return false;
 }
@@ -65,7 +65,8 @@ Parser for evercddl_bool
 */
 bool COSE_Format_parse_bool(cbor_det_t c)
 {
-  return evercddl_bool_right(cbor_det_read_simple_value(c) == SIMPLE_VALUE_TRUE);
+  return
+    evercddl_bool_right((uint32_t)cbor_det_read_simple_value(c) == (uint32_t)SIMPLE_VALUE_TRUE);
 }
 
 size_t Pulse_Lib_Slice_len__uint8_t(Pulse_Lib_Slice_slice__uint8_t s)
@@ -93,8 +94,8 @@ size_t COSE_Format_serialize_bool(bool c, Pulse_Lib_Slice_slice__uint8_t out)
   if (evercddl_bool_left(c))
     if
     (
-      SIMPLE_VALUE_TRUE <= MAX_SIMPLE_VALUE_ADDITIONAL_INFO ||
-        MIN_SIMPLE_VALUE_LONG_ARGUMENT <= SIMPLE_VALUE_TRUE
+      (uint32_t)SIMPLE_VALUE_TRUE <= (uint32_t)MAX_SIMPLE_VALUE_ADDITIONAL_INFO ||
+        (uint32_t)MIN_SIMPLE_VALUE_LONG_ARGUMENT <= (uint32_t)SIMPLE_VALUE_TRUE
     )
     {
       cbor_det_t x = cbor_det_mk_simple_value(SIMPLE_VALUE_TRUE);
@@ -127,8 +128,8 @@ size_t COSE_Format_serialize_bool(bool c, Pulse_Lib_Slice_slice__uint8_t out)
       return (size_t)0U;
   else if
   (
-    SIMPLE_VALUE_FALSE <= MAX_SIMPLE_VALUE_ADDITIONAL_INFO ||
-      MIN_SIMPLE_VALUE_LONG_ARGUMENT <= SIMPLE_VALUE_FALSE
+    (uint32_t)SIMPLE_VALUE_FALSE <= (uint32_t)MAX_SIMPLE_VALUE_ADDITIONAL_INFO ||
+      (uint32_t)MIN_SIMPLE_VALUE_LONG_ARGUMENT <= (uint32_t)SIMPLE_VALUE_FALSE
   )
   {
     cbor_det_t x = cbor_det_mk_simple_value(SIMPLE_VALUE_FALSE);
@@ -511,8 +512,8 @@ COSE_Format_validate_and_parse_any(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_undefined(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
-    return cbor_det_read_simple_value(c) == 23U;
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_SIMPLE_VALUE)
+    return (uint32_t)cbor_det_read_simple_value(c) == 23U;
   else
     return false;
 }
@@ -644,8 +645,8 @@ COSE_Format_validate_and_parse_undefined(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_nil(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
-    return cbor_det_read_simple_value(c) == 22U;
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_SIMPLE_VALUE)
+    return (uint32_t)cbor_det_read_simple_value(c) == 22U;
   else
     return false;
 }
@@ -884,8 +885,8 @@ COSE_Format_validate_and_parse_null(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_true(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
-    return cbor_det_read_simple_value(c) == 21U;
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_SIMPLE_VALUE)
+    return (uint32_t)cbor_det_read_simple_value(c) == 21U;
   else
     return false;
 }
@@ -1017,8 +1018,8 @@ COSE_Format_validate_and_parse_true(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_false(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
-    return cbor_det_read_simple_value(c) == 20U;
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_SIMPLE_VALUE)
+    return (uint32_t)cbor_det_read_simple_value(c) == 20U;
   else
     return false;
 }
@@ -1150,7 +1151,7 @@ COSE_Format_validate_and_parse_false(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_tstr(cbor_det_t c)
 {
-  return cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TEXT_STRING;
+  return (uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING;
 }
 
 bool COSE_Format_uu___is_Mktstr0(Pulse_Lib_Slice_slice__uint8_t projectee)
@@ -1205,7 +1206,7 @@ COSE_Format_serialize_tstr(
       uint8_t *a = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(c_);
       cbor_det_t pres = dummy_cbor_det_t();
       bool ite;
-      if (CBOR_MAJOR_TYPE_TEXT_STRING == CBOR_MAJOR_TYPE_BYTE_STRING)
+      if ((uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING == (uint32_t)CBOR_MAJOR_TYPE_BYTE_STRING)
         ite =
           cbor_det_mk_byte_string_from_arrayptr(a,
             (uint64_t)Pulse_Lib_Slice_len__uint8_t(c_),
@@ -1324,7 +1325,7 @@ COSE_Format_validate_and_parse_tstr(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_bstr(cbor_det_t c)
 {
-  return cbor_det_major_type(c) == CBOR_MAJOR_TYPE_BYTE_STRING;
+  return (uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_BYTE_STRING;
 }
 
 bool COSE_Format_uu___is_Mkbstr0(Pulse_Lib_Slice_slice__uint8_t projectee)
@@ -1694,7 +1695,7 @@ COSE_Format_validate_and_parse_text(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_nint(cbor_det_t c)
 {
-  return cbor_det_major_type(c) == CBOR_MAJOR_TYPE_NEG_INT64;
+  return (uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_NEG_INT64;
 }
 
 bool COSE_Format_uu___is_Mknint0(uint64_t projectee)
@@ -1826,7 +1827,7 @@ COSE_Format_validate_and_parse_nint(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_uint(cbor_det_t c)
 {
-  return cbor_det_major_type(c) == CBOR_MAJOR_TYPE_UINT64;
+  return (uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_UINT64;
 }
 
 bool COSE_Format_uu___is_Mkevercddl_uint0(uint64_t projectee)
@@ -2146,7 +2147,7 @@ COSE_Format_validate_and_parse_int(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_cborany(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_TAGGED)
     if (55799ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_any(cbor_det_get_tagged_payload(c));
     else
@@ -2276,7 +2277,7 @@ COSE_Format_validate_and_parse_cborany(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_mimemessage(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_TAGGED)
     if (36ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_tstr(cbor_det_get_tagged_payload(c));
     else
@@ -2410,7 +2411,7 @@ COSE_Format_validate_and_parse_mimemessage(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_regexp(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_TAGGED)
     if (35ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_tstr(cbor_det_get_tagged_payload(c));
     else
@@ -2544,7 +2545,7 @@ COSE_Format_validate_and_parse_regexp(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_b64legacy(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_TAGGED)
     if (34ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_tstr(cbor_det_get_tagged_payload(c));
     else
@@ -2678,7 +2679,7 @@ COSE_Format_validate_and_parse_b64legacy(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_b64url(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_TAGGED)
     if (33ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_tstr(cbor_det_get_tagged_payload(c));
     else
@@ -2812,7 +2813,7 @@ COSE_Format_validate_and_parse_b64url(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_uri(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_TAGGED)
     if (32ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_tstr(cbor_det_get_tagged_payload(c));
     else
@@ -2943,7 +2944,7 @@ COSE_Format_validate_and_parse_uri(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_encodedcbor(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_TAGGED)
     if (24ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_bstr(cbor_det_get_tagged_payload(c));
     else
@@ -3077,7 +3078,7 @@ COSE_Format_validate_and_parse_encodedcbor(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_eb16(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_TAGGED)
     if (23ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_any(cbor_det_get_tagged_payload(c));
     else
@@ -3207,7 +3208,7 @@ COSE_Format_validate_and_parse_eb16(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_eb64legacy(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_TAGGED)
     if (22ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_any(cbor_det_get_tagged_payload(c));
     else
@@ -3337,7 +3338,7 @@ COSE_Format_validate_and_parse_eb64legacy(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_eb64url(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_TAGGED)
     if (21ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_any(cbor_det_get_tagged_payload(c));
     else
@@ -3576,7 +3577,7 @@ COSE_Format_validate_and_parse_number(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_tdate(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_TAGGED)
     if (0ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_tstr(cbor_det_get_tagged_payload(c));
     else
@@ -4171,7 +4172,7 @@ bool COSE_Format_aux_env29_map_constraint_2(cbor_det_map_entry_t x)
 {
   cbor_det_t k0 = cbor_det_map_entry_key(x);
   bool ite0;
-  if (cbor_det_major_type(k0) == CBOR_MAJOR_TYPE_UINT64)
+  if ((uint32_t)cbor_det_major_type(k0) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
     ite0 = cbor_det_read_uint64(k0) == 1ULL;
   else
     ite0 = false;
@@ -4190,7 +4191,7 @@ bool COSE_Format_aux_env29_map_constraint_2(cbor_det_map_entry_t x)
   {
     cbor_det_t k = cbor_det_map_entry_key(x);
     bool ite;
-    if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
+    if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
       ite = cbor_det_read_uint64(k) == 2ULL;
     else
       ite = false;
@@ -4206,7 +4207,7 @@ bool COSE_Format_aux_env29_map_constraint_2(cbor_det_map_entry_t x)
   {
     cbor_det_t k = cbor_det_map_entry_key(x);
     bool ite;
-    if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
+    if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
       ite = cbor_det_read_uint64(k) == 3ULL;
     else
       ite = false;
@@ -4228,14 +4229,14 @@ bool COSE_Format_aux_env29_map_constraint_2(cbor_det_map_entry_t x)
   {
     cbor_det_t k = cbor_det_map_entry_key(x);
     bool ite0;
-    if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
+    if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
       ite0 = cbor_det_read_uint64(k) == 4ULL;
     else
       ite0 = false;
     if (ite0)
     {
       cbor_det_t v1 = cbor_det_map_entry_value(x);
-      if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+      if ((uint32_t)cbor_det_major_type(v1) == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
       {
         cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
         bool ite0;
@@ -4294,7 +4295,7 @@ bool COSE_Format_aux_env29_map_constraint_2(cbor_det_map_entry_t x)
   {
     cbor_det_t k = cbor_det_map_entry_key(x);
     bool ite;
-    if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
+    if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
       ite = cbor_det_read_uint64(k) == 5ULL;
     else
       ite = false;
@@ -4314,7 +4315,7 @@ option__CBOR_Pulse_API_Det_Type_cbor_det_t;
 
 bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_MAP)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_MAP)
   {
     uint64_t remaining = cbor_det_get_map_length(c);
     cbor_det_t c10 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_UINT64, 1ULL);
@@ -4542,7 +4543,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
           {
             cbor_det_t cv = scrut.v;
             bool ite1;
-            if (cbor_det_major_type(cv) == CBOR_MAJOR_TYPE_ARRAY)
+            if ((uint32_t)cbor_det_major_type(cv) == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
             {
               cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(cv);
               bool ite0;
@@ -4741,7 +4742,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
             {
               cbor_det_t k0 = cbor_det_map_entry_key(chd);
               bool ite0;
-              if (cbor_det_major_type(k0) == CBOR_MAJOR_TYPE_UINT64)
+              if ((uint32_t)cbor_det_major_type(k0) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
                 ite0 = cbor_det_read_uint64(k0) == 1ULL;
               else
                 ite0 = false;
@@ -4760,7 +4761,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
               {
                 cbor_det_t k = cbor_det_map_entry_key(chd);
                 bool ite;
-                if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
+                if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
                   ite = cbor_det_read_uint64(k) == 2ULL;
                 else
                   ite = false;
@@ -4776,7 +4777,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
               {
                 cbor_det_t k = cbor_det_map_entry_key(chd);
                 bool ite;
-                if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
+                if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
                   ite = cbor_det_read_uint64(k) == 3ULL;
                 else
                   ite = false;
@@ -4798,14 +4799,14 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
               {
                 cbor_det_t k = cbor_det_map_entry_key(chd);
                 bool ite0;
-                if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
+                if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
                   ite0 = cbor_det_read_uint64(k) == 4ULL;
                 else
                   ite0 = false;
                 if (ite0)
                 {
                   cbor_det_t v1 = cbor_det_map_entry_value(chd);
-                  if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                  if ((uint32_t)cbor_det_major_type(v1) == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
                   {
                     cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
                     bool ite0;
@@ -4865,7 +4866,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
               {
                 cbor_det_t k = cbor_det_map_entry_key(chd);
                 bool ite;
-                if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
+                if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
                   ite = cbor_det_read_uint64(k) == 5ULL;
                 else
                   ite = false;
@@ -5224,7 +5225,7 @@ COSE_Format_cose_key_generic COSE_Format_parse_cose_key_generic(cbor_det_t c)
   {
     cbor_det_t cv = scrut3.v;
     bool ite0;
-    if (cbor_det_major_type(cv) == CBOR_MAJOR_TYPE_ARRAY)
+    if ((uint32_t)cbor_det_major_type(cv) == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
     {
       cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(cv);
       bool ite1;
@@ -6737,7 +6738,7 @@ COSE_Format_aux_env30_serialize_1(
 
 bool COSE_Format_validate_cose_keyset(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_ARRAY)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
   {
     cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(c);
     bool ite0;
@@ -7099,7 +7100,7 @@ bool COSE_Format_aux_env31_map_constraint_1(cbor_det_map_entry_t x)
 {
   cbor_det_t k0 = cbor_det_map_entry_key(x);
   bool ite0;
-  if (cbor_det_major_type(k0) == CBOR_MAJOR_TYPE_UINT64)
+  if ((uint32_t)cbor_det_major_type(k0) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
     ite0 = cbor_det_read_uint64(k0) == 1ULL;
   else
     ite0 = false;
@@ -7118,7 +7119,7 @@ bool COSE_Format_aux_env31_map_constraint_1(cbor_det_map_entry_t x)
   {
     cbor_det_t k = cbor_det_map_entry_key(x);
     bool ite;
-    if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_NEG_INT64)
+    if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_NEG_INT64)
       ite = cbor_det_read_uint64(k) == 0ULL;
     else
       ite = false;
@@ -7137,7 +7138,7 @@ bool COSE_Format_aux_env31_map_constraint_1(cbor_det_map_entry_t x)
   {
     cbor_det_t k = cbor_det_map_entry_key(x);
     bool ite;
-    if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_NEG_INT64)
+    if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_NEG_INT64)
       ite = cbor_det_read_uint64(k) == 1ULL;
     else
       ite = false;
@@ -7155,7 +7156,7 @@ bool COSE_Format_aux_env31_map_constraint_1(cbor_det_map_entry_t x)
   {
     cbor_det_t k = cbor_det_map_entry_key(x);
     bool ite;
-    if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_NEG_INT64)
+    if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_NEG_INT64)
       ite = cbor_det_read_uint64(k) == 3ULL;
     else
       ite = false;
@@ -7171,7 +7172,7 @@ bool COSE_Format_aux_env31_map_constraint_1(cbor_det_map_entry_t x)
 
 bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_MAP)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_MAP)
   {
     uint64_t remaining = cbor_det_get_map_length(c);
     cbor_det_t c10 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_UINT64, 1ULL);
@@ -7194,7 +7195,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
     {
       cbor_det_t cv = scrut0.v;
       bool ite;
-      if (cbor_det_major_type(cv) == CBOR_MAJOR_TYPE_UINT64)
+      if ((uint32_t)cbor_det_major_type(cv) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
         ite = cbor_det_read_uint64(cv) == 1ULL;
       else
         ite = false;
@@ -7442,7 +7443,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
             {
               cbor_det_t k0 = cbor_det_map_entry_key(chd);
               bool ite0;
-              if (cbor_det_major_type(k0) == CBOR_MAJOR_TYPE_UINT64)
+              if ((uint32_t)cbor_det_major_type(k0) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
                 ite0 = cbor_det_read_uint64(k0) == 1ULL;
               else
                 ite0 = false;
@@ -7461,7 +7462,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
               {
                 cbor_det_t k = cbor_det_map_entry_key(chd);
                 bool ite;
-                if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_NEG_INT64)
+                if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_NEG_INT64)
                   ite = cbor_det_read_uint64(k) == 0ULL;
                 else
                   ite = false;
@@ -7480,7 +7481,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
               {
                 cbor_det_t k = cbor_det_map_entry_key(chd);
                 bool ite;
-                if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_NEG_INT64)
+                if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_NEG_INT64)
                   ite = cbor_det_read_uint64(k) == 1ULL;
                 else
                   ite = false;
@@ -7499,7 +7500,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
               {
                 cbor_det_t k = cbor_det_map_entry_key(chd);
                 bool ite;
-                if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_NEG_INT64)
+                if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_NEG_INT64)
                   ite = cbor_det_read_uint64(k) == 3ULL;
                 else
                   ite = false;
@@ -8939,7 +8940,7 @@ bool COSE_Format_aux_env34_map_constraint_2(cbor_det_map_entry_t x)
 {
   cbor_det_t k0 = cbor_det_map_entry_key(x);
   bool ite0;
-  if (cbor_det_major_type(k0) == CBOR_MAJOR_TYPE_UINT64)
+  if ((uint32_t)cbor_det_major_type(k0) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
     ite0 = cbor_det_read_uint64(k0) == 1ULL;
   else
     ite0 = false;
@@ -8961,14 +8962,14 @@ bool COSE_Format_aux_env34_map_constraint_2(cbor_det_map_entry_t x)
   {
     cbor_det_t k = cbor_det_map_entry_key(x);
     bool ite0;
-    if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
+    if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
       ite0 = cbor_det_read_uint64(k) == 2ULL;
     else
       ite0 = false;
     if (ite0)
     {
       cbor_det_t v1 = cbor_det_map_entry_value(x);
-      if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+      if ((uint32_t)cbor_det_major_type(v1) == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
       {
         cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
         bool ite0;
@@ -9016,7 +9017,7 @@ bool COSE_Format_aux_env34_map_constraint_2(cbor_det_map_entry_t x)
   {
     cbor_det_t k = cbor_det_map_entry_key(x);
     bool ite;
-    if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
+    if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
       ite = cbor_det_read_uint64(k) == 3ULL;
     else
       ite = false;
@@ -9038,7 +9039,7 @@ bool COSE_Format_aux_env34_map_constraint_2(cbor_det_map_entry_t x)
   {
     cbor_det_t k = cbor_det_map_entry_key(x);
     bool ite;
-    if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
+    if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
       ite = cbor_det_read_uint64(k) == 4ULL;
     else
       ite = false;
@@ -9054,7 +9055,7 @@ bool COSE_Format_aux_env34_map_constraint_2(cbor_det_map_entry_t x)
   {
     cbor_det_t k = cbor_det_map_entry_key(x);
     bool ite;
-    if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
+    if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
       ite = cbor_det_read_uint64(k) == 5ULL;
     else
       ite = false;
@@ -9072,7 +9073,7 @@ bool COSE_Format_aux_env34_map_constraint_2(cbor_det_map_entry_t x)
   {
     cbor_det_t k = cbor_det_map_entry_key(x);
     bool ite;
-    if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
+    if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
       ite = cbor_det_read_uint64(k) == 6ULL;
     else
       ite = false;
@@ -9088,7 +9089,7 @@ bool COSE_Format_aux_env34_map_constraint_2(cbor_det_map_entry_t x)
 
 bool COSE_Format_validate_header_map(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_MAP)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_MAP)
   {
     uint64_t remaining = cbor_det_get_map_length(c);
     uint64_t i00 = remaining;
@@ -9180,7 +9181,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
           {
             cbor_det_t cv = scrut.v;
             bool ite1;
-            if (cbor_det_major_type(cv) == CBOR_MAJOR_TYPE_ARRAY)
+            if ((uint32_t)cbor_det_major_type(cv) == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
             {
               cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(cv);
               bool ite0;
@@ -9894,7 +9895,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
             {
               cbor_det_t k0 = cbor_det_map_entry_key(chd);
               bool ite0;
-              if (cbor_det_major_type(k0) == CBOR_MAJOR_TYPE_UINT64)
+              if ((uint32_t)cbor_det_major_type(k0) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
                 ite0 = cbor_det_read_uint64(k0) == 1ULL;
               else
                 ite0 = false;
@@ -9916,14 +9917,14 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
               {
                 cbor_det_t k = cbor_det_map_entry_key(chd);
                 bool ite0;
-                if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
+                if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
                   ite0 = cbor_det_read_uint64(k) == 2ULL;
                 else
                   ite0 = false;
                 if (ite0)
                 {
                   cbor_det_t v1 = cbor_det_map_entry_value(chd);
-                  if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                  if ((uint32_t)cbor_det_major_type(v1) == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
                   {
                     cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
                     bool ite0;
@@ -9972,7 +9973,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
               {
                 cbor_det_t k = cbor_det_map_entry_key(chd);
                 bool ite;
-                if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
+                if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
                   ite = cbor_det_read_uint64(k) == 3ULL;
                 else
                   ite = false;
@@ -9994,7 +9995,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
               {
                 cbor_det_t k = cbor_det_map_entry_key(chd);
                 bool ite;
-                if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
+                if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
                   ite = cbor_det_read_uint64(k) == 4ULL;
                 else
                   ite = false;
@@ -10010,7 +10011,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
               {
                 cbor_det_t k = cbor_det_map_entry_key(chd);
                 bool ite;
-                if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
+                if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
                   ite = cbor_det_read_uint64(k) == 5ULL;
                 else
                   ite = false;
@@ -10029,7 +10030,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
               {
                 cbor_det_t k = cbor_det_map_entry_key(chd);
                 bool ite;
-                if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
+                if ((uint32_t)cbor_det_major_type(k) == (uint32_t)CBOR_MAJOR_TYPE_UINT64)
                   ite = cbor_det_read_uint64(k) == 6ULL;
                 else
                   ite = false;
@@ -10292,7 +10293,7 @@ COSE_Format_header_map COSE_Format_parse_header_map(cbor_det_t c)
   {
     cbor_det_t cv = scrut1.v;
     bool ite0;
-    if (cbor_det_major_type(cv) == CBOR_MAJOR_TYPE_ARRAY)
+    if ((uint32_t)cbor_det_major_type(cv) == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
     {
       cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(cv);
       bool ite1;
@@ -12643,7 +12644,7 @@ COSE_Format_next_iterate_array_aux_env34_type_1(
 bool COSE_Format_validate_empty_or_serialized_map(cbor_det_t c)
 {
   bool ite;
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_BYTE_STRING)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_BYTE_STRING)
   {
     uint64_t len0 = cbor_det_get_string_length(c);
     Pulse_Lib_Slice_slice__uint8_t
@@ -12696,7 +12697,7 @@ bool COSE_Format_validate_empty_or_serialized_map(cbor_det_t c)
     ite = false;
   if (ite)
     return true;
-  else if (cbor_det_major_type(c) == 2U)
+  else if ((uint32_t)cbor_det_major_type(c) == 2U)
   {
     uint64_t len = cbor_det_get_string_length(c);
     size_t
@@ -12810,7 +12811,7 @@ Parser for empty_or_serialized_map
 COSE_Format_empty_or_serialized_map COSE_Format_parse_empty_or_serialized_map(cbor_det_t c)
 {
   bool ite0;
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_BYTE_STRING)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_BYTE_STRING)
   {
     uint64_t len0 = cbor_det_get_string_length(c);
     Pulse_Lib_Slice_slice__uint8_t
@@ -12951,7 +12952,7 @@ COSE_Format_serialize_empty_or_serialized_map(
     Pulse_Lib_Slice_slice__uint8_t c2 = scrut0.case_Inr;
     size_t len = Pulse_Lib_Slice_len__uint8_t(c2);
     if ((size_t)0ULL <= len && len <= (size_t)0ULL)
-      if (2U == CBOR_MAJOR_TYPE_BYTE_STRING)
+      if (2U == (uint32_t)CBOR_MAJOR_TYPE_BYTE_STRING)
         if (Pulse_Lib_Slice_len__uint8_t(c2) <= (size_t)18446744073709551615ULL)
         {
           uint8_t *a = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(c2);
@@ -13001,7 +13002,7 @@ COSE_Format_serialize_empty_or_serialized_map(
           uint8_t *a = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(c2);
           cbor_det_t pres = dummy_cbor_det_t();
           bool ite;
-          if (CBOR_MAJOR_TYPE_TEXT_STRING == CBOR_MAJOR_TYPE_BYTE_STRING)
+          if ((uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING == (uint32_t)CBOR_MAJOR_TYPE_BYTE_STRING)
             ite =
               cbor_det_mk_byte_string_from_arrayptr(a,
                 (uint64_t)Pulse_Lib_Slice_len__uint8_t(c2),
@@ -13136,7 +13137,7 @@ static uint8_t op_Array_Access__uint8_t(Pulse_Lib_Slice_slice__uint8_t a, size_t
 
 bool COSE_Format_validate_sig_structure(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_ARRAY)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
   {
     cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(c);
     bool ite0;
@@ -13146,30 +13147,30 @@ bool COSE_Format_validate_sig_structure(cbor_det_t c)
     {
       cbor_det_t c1 = cbor_det_array_iterator_next(&pi);
       bool ite;
-      if (cbor_det_major_type(c1) == CBOR_MAJOR_TYPE_TEXT_STRING)
+      if ((uint32_t)cbor_det_major_type(c1) == (uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING)
       {
         uint64_t len = cbor_det_get_string_length(c1);
         Pulse_Lib_Slice_slice__uint8_t
         s = arrayptr_to_slice_intro__uint8_t(cbor_det_get_string(c1), (size_t)len);
         if (Pulse_Lib_Slice_len__uint8_t(s) != (size_t)9ULL)
           ite = false;
-        else if (op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
-          if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
-            if (op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
-              if (op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
+        else if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
+          if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
+            if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
+              if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
               {
                 size_t i_4 = (size_t)5U;
-                if (op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
+                if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
                 {
                   size_t i_5 = i_4 + (size_t)1U;
-                  if (op_Array_Access__uint8_t(s, i_4) == 116U)
+                  if ((uint32_t)op_Array_Access__uint8_t(s, i_4) == 116U)
                   {
                     size_t i_6 = i_5 + (size_t)1U;
-                    if (op_Array_Access__uint8_t(s, i_5) == 117U)
+                    if ((uint32_t)op_Array_Access__uint8_t(s, i_5) == 117U)
                     {
                       size_t i_7 = i_6 + (size_t)1U;
-                      if (op_Array_Access__uint8_t(s, i_6) == 114U)
-                        if (op_Array_Access__uint8_t(s, i_7) == 101U)
+                      if ((uint32_t)op_Array_Access__uint8_t(s, i_6) == 114U)
+                        if ((uint32_t)op_Array_Access__uint8_t(s, i_7) == 101U)
                           ite = true;
                         else
                           ite = false;
@@ -13198,33 +13199,33 @@ bool COSE_Format_validate_sig_structure(cbor_det_t c)
         ite = false;
       if (ite)
         ite0 = true;
-      else if (cbor_det_major_type(c1) == CBOR_MAJOR_TYPE_TEXT_STRING)
+      else if ((uint32_t)cbor_det_major_type(c1) == (uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING)
       {
         uint64_t len = cbor_det_get_string_length(c1);
         Pulse_Lib_Slice_slice__uint8_t
         s = arrayptr_to_slice_intro__uint8_t(cbor_det_get_string(c1), (size_t)len);
         if (Pulse_Lib_Slice_len__uint8_t(s) != (size_t)10ULL)
           ite0 = false;
-        else if (op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
-          if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
-            if (op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
-              if (op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
+        else if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
+          if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
+            if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
+              if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
               {
                 size_t i_4 = (size_t)5U;
-                if (op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
+                if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
                 {
                   size_t i_5 = i_4 + (size_t)1U;
-                  if (op_Array_Access__uint8_t(s, i_4) == 116U)
+                  if ((uint32_t)op_Array_Access__uint8_t(s, i_4) == 116U)
                   {
                     size_t i_6 = i_5 + (size_t)1U;
-                    if (op_Array_Access__uint8_t(s, i_5) == 117U)
+                    if ((uint32_t)op_Array_Access__uint8_t(s, i_5) == 117U)
                     {
                       size_t i_7 = i_6 + (size_t)1U;
-                      if (op_Array_Access__uint8_t(s, i_6) == 114U)
+                      if ((uint32_t)op_Array_Access__uint8_t(s, i_6) == 114U)
                       {
                         size_t i_8 = i_7 + (size_t)1U;
-                        if (op_Array_Access__uint8_t(s, i_7) == 101U)
-                          if (op_Array_Access__uint8_t(s, i_8) == 49U)
+                        if ((uint32_t)op_Array_Access__uint8_t(s, i_7) == 101U)
+                          if ((uint32_t)op_Array_Access__uint8_t(s, i_8) == 49U)
                             ite0 = true;
                           else
                             ite0 = false;
@@ -13378,30 +13379,30 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
   {
     cbor_det_t c1 = cbor_det_array_iterator_next(&pc);
     bool ite;
-    if (cbor_det_major_type(c1) == CBOR_MAJOR_TYPE_TEXT_STRING)
+    if ((uint32_t)cbor_det_major_type(c1) == (uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING)
     {
       uint64_t len = cbor_det_get_string_length(c1);
       Pulse_Lib_Slice_slice__uint8_t
       s = arrayptr_to_slice_intro__uint8_t(cbor_det_get_string(c1), (size_t)len);
       if (Pulse_Lib_Slice_len__uint8_t(s) != (size_t)9ULL)
         ite = false;
-      else if (op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
-        if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
-          if (op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
-            if (op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
+      else if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
+        if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
+          if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
+            if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
             {
               size_t i_4 = (size_t)5U;
-              if (op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
+              if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
               {
                 size_t i_5 = i_4 + (size_t)1U;
-                if (op_Array_Access__uint8_t(s, i_4) == 116U)
+                if ((uint32_t)op_Array_Access__uint8_t(s, i_4) == 116U)
                 {
                   size_t i_6 = i_5 + (size_t)1U;
-                  if (op_Array_Access__uint8_t(s, i_5) == 117U)
+                  if ((uint32_t)op_Array_Access__uint8_t(s, i_5) == 117U)
                   {
                     size_t i_7 = i_6 + (size_t)1U;
-                    if (op_Array_Access__uint8_t(s, i_6) == 114U)
-                      if (op_Array_Access__uint8_t(s, i_7) == 101U)
+                    if ((uint32_t)op_Array_Access__uint8_t(s, i_6) == 114U)
+                      if ((uint32_t)op_Array_Access__uint8_t(s, i_7) == 101U)
                         ite = true;
                       else
                         ite = false;
@@ -13430,33 +13431,33 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
       ite = false;
     if (ite)
       ite0 = true;
-    else if (cbor_det_major_type(c1) == CBOR_MAJOR_TYPE_TEXT_STRING)
+    else if ((uint32_t)cbor_det_major_type(c1) == (uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING)
     {
       uint64_t len = cbor_det_get_string_length(c1);
       Pulse_Lib_Slice_slice__uint8_t
       s = arrayptr_to_slice_intro__uint8_t(cbor_det_get_string(c1), (size_t)len);
       if (Pulse_Lib_Slice_len__uint8_t(s) != (size_t)10ULL)
         ite0 = false;
-      else if (op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
-        if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
-          if (op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
-            if (op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
+      else if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
+        if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
+          if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
+            if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
             {
               size_t i_4 = (size_t)5U;
-              if (op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
+              if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
               {
                 size_t i_5 = i_4 + (size_t)1U;
-                if (op_Array_Access__uint8_t(s, i_4) == 116U)
+                if ((uint32_t)op_Array_Access__uint8_t(s, i_4) == 116U)
                 {
                   size_t i_6 = i_5 + (size_t)1U;
-                  if (op_Array_Access__uint8_t(s, i_5) == 117U)
+                  if ((uint32_t)op_Array_Access__uint8_t(s, i_5) == 117U)
                   {
                     size_t i_7 = i_6 + (size_t)1U;
-                    if (op_Array_Access__uint8_t(s, i_6) == 114U)
+                    if ((uint32_t)op_Array_Access__uint8_t(s, i_6) == 114U)
                     {
                       size_t i_8 = i_7 + (size_t)1U;
-                      if (op_Array_Access__uint8_t(s, i_7) == 101U)
-                        if (op_Array_Access__uint8_t(s, i_8) == 49U)
+                      if ((uint32_t)op_Array_Access__uint8_t(s, i_7) == 101U)
+                        if ((uint32_t)op_Array_Access__uint8_t(s, i_8) == 49U)
                           ite0 = true;
                         else
                           ite0 = false;
@@ -13493,30 +13494,30 @@ COSE_Format_sig_structure COSE_Format_parse_sig_structure(cbor_det_t c)
   buf0 = cbor_det_array_iterator_truncate(ar, rlen0 - cbor_det_array_iterator_length(c1));
   cbor_det_t x = cbor_det_array_iterator_next(&buf0);
   bool ite1;
-  if (cbor_det_major_type(x) == CBOR_MAJOR_TYPE_TEXT_STRING)
+  if ((uint32_t)cbor_det_major_type(x) == (uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING)
   {
     uint64_t len = cbor_det_get_string_length(x);
     Pulse_Lib_Slice_slice__uint8_t
     s = arrayptr_to_slice_intro__uint8_t(cbor_det_get_string(x), (size_t)len);
     if (Pulse_Lib_Slice_len__uint8_t(s) != (size_t)9ULL)
       ite1 = false;
-    else if (op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
-      if (op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
-        if (op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
-          if (op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
+    else if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)0U) == 83U)
+      if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)1U) == 105U)
+        if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)2U) == 103U)
+          if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)3U) == 110U)
           {
             size_t i_4 = (size_t)5U;
-            if (op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
+            if ((uint32_t)op_Array_Access__uint8_t(s, (size_t)4U) == 97U)
             {
               size_t i_5 = i_4 + (size_t)1U;
-              if (op_Array_Access__uint8_t(s, i_4) == 116U)
+              if ((uint32_t)op_Array_Access__uint8_t(s, i_4) == 116U)
               {
                 size_t i_6 = i_5 + (size_t)1U;
-                if (op_Array_Access__uint8_t(s, i_5) == 117U)
+                if ((uint32_t)op_Array_Access__uint8_t(s, i_5) == 117U)
                 {
                   size_t i_7 = i_6 + (size_t)1U;
-                  if (op_Array_Access__uint8_t(s, i_6) == 114U)
-                    if (op_Array_Access__uint8_t(s, i_7) == 101U)
+                  if ((uint32_t)op_Array_Access__uint8_t(s, i_6) == 114U)
+                    if ((uint32_t)op_Array_Access__uint8_t(s, i_7) == 101U)
                       ite1 = true;
                     else
                       ite1 = false;
@@ -13719,7 +13720,7 @@ COSE_Format_serialize_sig_structure(
           uint8_t *a1 = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(s);
           cbor_det_t pres = dummy_cbor_det_t();
           bool ite;
-          if (CBOR_MAJOR_TYPE_TEXT_STRING == CBOR_MAJOR_TYPE_BYTE_STRING)
+          if ((uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING == (uint32_t)CBOR_MAJOR_TYPE_BYTE_STRING)
             ite =
               cbor_det_mk_byte_string_from_arrayptr(a1,
                 (uint64_t)Pulse_Lib_Slice_len__uint8_t(s),
@@ -13776,7 +13777,7 @@ COSE_Format_serialize_sig_structure(
           uint8_t *a1 = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(s);
           cbor_det_t pres = dummy_cbor_det_t();
           bool ite;
-          if (CBOR_MAJOR_TYPE_TEXT_STRING == CBOR_MAJOR_TYPE_BYTE_STRING)
+          if ((uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING == (uint32_t)CBOR_MAJOR_TYPE_BYTE_STRING)
             ite =
               cbor_det_mk_byte_string_from_arrayptr(a1,
                 (uint64_t)Pulse_Lib_Slice_len__uint8_t(s),
@@ -14061,7 +14062,7 @@ COSE_Format_validate_and_parse_sig_structure(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_cose_sign1(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_ARRAY)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
   {
     cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(c);
     bool ite0;
@@ -14441,7 +14442,7 @@ COSE_Format_validate_and_parse_cose_sign1(Pulse_Lib_Slice_slice__uint8_t s)
 
 bool COSE_Format_validate_cose_sign1_tagged(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_TAGGED)
     if (18ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_cose_sign1(cbor_det_get_tagged_payload(c));
     else
@@ -14575,7 +14576,7 @@ COSE_Format_validate_and_parse_cose_sign1_tagged(Pulse_Lib_Slice_slice__uint8_t 
 
 bool COSE_Format_validate_cose_signature(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_ARRAY)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
   {
     cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(c);
     bool ite0;
@@ -14925,7 +14926,7 @@ COSE_Format_aux_env41_serialize_1(
 
 bool COSE_Format_validate_cose_sign(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_ARRAY)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
   {
     cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(c);
     bool ite0;
@@ -14961,7 +14962,7 @@ bool COSE_Format_validate_cose_sign(cbor_det_t c)
         else
         {
           cbor_det_t c1 = cbor_det_array_iterator_next(&pi);
-          if (cbor_det_major_type(c1) == CBOR_MAJOR_TYPE_ARRAY)
+          if ((uint32_t)cbor_det_major_type(c1) == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
           {
             cbor_det_array_iterator_t pi1 = cbor_det_array_iterator_start(c1);
             bool ite0;
@@ -15500,7 +15501,7 @@ COSE_Format_next_iterate_array_aux_env41_type_1(
 
 bool COSE_Format_validate_cose_sign_tagged(cbor_det_t c)
 {
-  if (cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TAGGED)
+  if ((uint32_t)cbor_det_major_type(c) == (uint32_t)CBOR_MAJOR_TYPE_TAGGED)
     if (98ULL == cbor_det_get_tagged_tag(c))
       return COSE_Format_validate_cose_sign(cbor_det_get_tagged_payload(c));
     else

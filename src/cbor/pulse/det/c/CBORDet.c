@@ -9,7 +9,7 @@ static uint8_t get_bitfield_gen8(uint8_t x, uint32_t lo, uint32_t hi)
 
 static uint8_t set_bitfield_gen8(uint8_t x, uint32_t lo, uint32_t hi, uint8_t v)
 {
-  return ((uint32_t)x & (uint32_t)~(255U >> (8U - (hi - lo)) << lo)) | (uint32_t)v << lo;
+  return ((uint32_t)x & (~(255U >> (8U - (hi - lo)) << lo) & 0xFFU)) | (uint32_t)v << lo;
 }
 
 #define ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS (24U)
@@ -83,7 +83,7 @@ static uint64_t argument_as_uint64(initial_byte_t b, long_argument x)
 
 static header raw_uint64_as_argument(uint8_t t, CBOR_Spec_Raw_Base_raw_uint64 x)
 {
-  if (x.size == 0U)
+  if ((uint32_t)x.size == 0U)
     return
       (
         (header){
@@ -91,7 +91,7 @@ static header raw_uint64_as_argument(uint8_t t, CBOR_Spec_Raw_Base_raw_uint64 x)
           .snd = { .tag = LongArgumentOther }
         }
       );
-  else if (x.size == 1U)
+  else if ((uint32_t)x.size == 1U)
     return
       (
         (header){
@@ -99,7 +99,7 @@ static header raw_uint64_as_argument(uint8_t t, CBOR_Spec_Raw_Base_raw_uint64 x)
           .snd = { .tag = LongArgumentU8, { .case_LongArgumentU8 = (uint8_t)x.value } }
         }
       );
-  else if (x.size == 2U)
+  else if ((uint32_t)x.size == 2U)
     return
       (
         (header){
@@ -107,7 +107,7 @@ static header raw_uint64_as_argument(uint8_t t, CBOR_Spec_Raw_Base_raw_uint64 x)
           .snd = { .tag = LongArgumentU16, { .case_LongArgumentU16 = (uint16_t)x.value } }
         }
       );
-  else if (x.size == 3U)
+  else if ((uint32_t)x.size == 3U)
     return
       (
         (header){
@@ -127,7 +127,7 @@ static header raw_uint64_as_argument(uint8_t t, CBOR_Spec_Raw_Base_raw_uint64 x)
 
 static header simple_value_as_argument(uint8_t x)
 {
-  if (x <= MAX_SIMPLE_VALUE_ADDITIONAL_INFO)
+  if ((uint32_t)x <= (uint32_t)MAX_SIMPLE_VALUE_ADDITIONAL_INFO)
     return
       (
         (header){
@@ -173,7 +173,7 @@ static bool impl_correct(Pulse_Lib_Slice_slice__uint8_t s)
     size_t i = pi;
     uint8_t byte1 = op_Array_Access__uint8_t(s, i);
     size_t i1 = i + (size_t)1U;
-    if (byte1 <= 0x7FU)
+    if ((uint32_t)byte1 <= 0x7FU)
       pi = i1;
     else if (i1 == len)
       pres = false;
@@ -181,7 +181,11 @@ static bool impl_correct(Pulse_Lib_Slice_slice__uint8_t s)
     {
       uint8_t byte2 = op_Array_Access__uint8_t(s, i1);
       size_t i2 = i1 + (size_t)1U;
-      if (0xC2U <= byte1 && byte1 <= 0xDFU && 0x80U <= byte2 && byte2 <= 0xBFU)
+      if
+      (
+        0xC2U <= (uint32_t)byte1 && (uint32_t)byte1 <= 0xDFU &&
+          0x80U <= (uint32_t)byte2 && (uint32_t)byte2 <= 0xBFU
+      )
         pi = i2;
       else if (i2 == len)
         pres = false;
@@ -189,19 +193,23 @@ static bool impl_correct(Pulse_Lib_Slice_slice__uint8_t s)
       {
         uint8_t byte3 = op_Array_Access__uint8_t(s, i2);
         size_t i3 = i2 + (size_t)1U;
-        if (!(0x80U <= byte3 && byte3 <= 0xBFU))
+        if (!(0x80U <= (uint32_t)byte3 && (uint32_t)byte3 <= 0xBFU))
           pres = false;
-        else if (byte1 == 0xE0U)
-          if (0xA0U <= byte2 && byte2 <= 0xBFU)
+        else if ((uint32_t)byte1 == 0xE0U)
+          if (0xA0U <= (uint32_t)byte2 && (uint32_t)byte2 <= 0xBFU)
             pi = i3;
           else
             pres = false;
-        else if (byte1 == 0xEDU)
-          if (0x80U <= byte2 && byte2 <= 0x9FU)
+        else if ((uint32_t)byte1 == 0xEDU)
+          if (0x80U <= (uint32_t)byte2 && (uint32_t)byte2 <= 0x9FU)
             pi = i3;
           else
             pres = false;
-        else if (0xE1U <= byte1 && byte1 <= 0xEFU && 0x80U <= byte2 && byte2 <= 0xBFU)
+        else if
+        (
+          0xE1U <= (uint32_t)byte1 && (uint32_t)byte1 <= 0xEFU &&
+            0x80U <= (uint32_t)byte2 && (uint32_t)byte2 <= 0xBFU
+        )
           pi = i3;
         else if (i3 == len)
           pres = false;
@@ -209,13 +217,17 @@ static bool impl_correct(Pulse_Lib_Slice_slice__uint8_t s)
         {
           uint8_t byte4 = op_Array_Access__uint8_t(s, i3);
           size_t i4 = i3 + (size_t)1U;
-          if (!(0x80U <= byte4 && byte4 <= 0xBFU))
+          if (!(0x80U <= (uint32_t)byte4 && (uint32_t)byte4 <= 0xBFU))
             pres = false;
-          else if (byte1 == 0xF0U && 0x90U <= byte2 && byte2 <= 0xBFU)
+          else if ((uint32_t)byte1 == 0xF0U && 0x90U <= (uint32_t)byte2 && (uint32_t)byte2 <= 0xBFU)
             pi = i4;
-          else if (0xF1U <= byte1 && byte1 <= 0xF3U && 0x80U <= byte2 && byte2 <= 0xBFU)
+          else if
+          (
+            0xF1U <= (uint32_t)byte1 && (uint32_t)byte1 <= 0xF3U &&
+              0x80U <= (uint32_t)byte2 && (uint32_t)byte2 <= 0xBFU
+          )
             pi = i4;
-          else if (byte1 == 0xF4U && 0x80U <= byte2 && byte2 <= 0x8FU)
+          else if ((uint32_t)byte1 == 0xF4U && 0x80U <= (uint32_t)byte2 && (uint32_t)byte2 <= 0x8FU)
             pi = i4;
           else
             pres = false;
@@ -402,9 +414,9 @@ static cbor_map_entry cbor_mk_map_entry(cbor_raw xk, cbor_raw xv)
 
 static int16_t impl_uint8_compare(uint8_t x1, uint8_t x2)
 {
-  if (x1 < x2)
+  if ((uint32_t)x1 < (uint32_t)x2)
     return (int16_t)-1;
-  else if (x1 > x2)
+  else if ((uint32_t)x1 > (uint32_t)x2)
     return (int16_t)1;
   else
     return (int16_t)0;
@@ -500,8 +512,8 @@ static header read_header(Pulse_Lib_Slice_slice__uint8_t input)
   Pulse_Lib_Slice_slice__uint8_t input2 = scrut1.snd;
   initial_byte_t x1 = read_initial_byte_t(scrut1.fst);
   long_argument ite;
-  if (x1.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
-    if (x1.major_type == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
+  if ((uint32_t)x1.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
+    if ((uint32_t)x1.major_type == (uint32_t)CBOR_MAJOR_TYPE_SIMPLE_VALUE)
       ite =
         (
           (long_argument){
@@ -517,7 +529,7 @@ static header read_header(Pulse_Lib_Slice_slice__uint8_t input)
             { .case_LongArgumentU8 = op_Array_Access__uint8_t(input2, (size_t)0U) }
           }
         );
-  else if (x1.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS)
+  else if ((uint32_t)x1.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS)
   {
     uint8_t last = op_Array_Access__uint8_t(input2, (size_t)1U);
     ite =
@@ -531,7 +543,7 @@ static header read_header(Pulse_Lib_Slice_slice__uint8_t input)
         }
       );
   }
-  else if (x1.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_32_BITS)
+  else if ((uint32_t)x1.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_32_BITS)
   {
     uint8_t last = op_Array_Access__uint8_t(input2, (size_t)3U);
     uint8_t last1 = op_Array_Access__uint8_t(input2, (size_t)3U - (size_t)1U);
@@ -550,7 +562,7 @@ static header read_header(Pulse_Lib_Slice_slice__uint8_t input)
         }
       );
   }
-  else if (x1.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_64_BITS)
+  else if ((uint32_t)x1.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_64_BITS)
   {
     uint8_t last = op_Array_Access__uint8_t(input2, (size_t)7U);
     uint8_t last1 = op_Array_Access__uint8_t(input2, (size_t)7U - (size_t)1U);
@@ -629,11 +641,11 @@ static bool validate_header(Pulse_Lib_Slice_slice__uint8_t input, size_t *poffse
           }
         ).fst);
     bool ite;
-    if (x.major_type == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
-      ite = x.additional_info <= ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS;
+    if ((uint32_t)x.major_type == (uint32_t)CBOR_MAJOR_TYPE_SIMPLE_VALUE)
+      ite = (uint32_t)x.additional_info <= (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS;
     else
       ite = true;
-    ite1 = ite && x.additional_info < ADDITIONAL_INFO_UNASSIGNED_MIN;
+    ite1 = ite && (uint32_t)x.additional_info < (uint32_t)ADDITIONAL_INFO_UNASSIGNED_MIN;
   }
   else
     ite1 = false;
@@ -661,8 +673,8 @@ static bool validate_header(Pulse_Lib_Slice_slice__uint8_t input, size_t *poffse
             .snd = scrut2.snd
           }
         ).fst);
-    if (x.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
-      if (x.major_type == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
+    if ((uint32_t)x.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
+      if ((uint32_t)x.major_type == (uint32_t)CBOR_MAJOR_TYPE_SIMPLE_VALUE)
       {
         size_t offset2 = *poffset;
         size_t offset3 = *poffset;
@@ -691,8 +703,8 @@ static bool validate_header(Pulse_Lib_Slice_slice__uint8_t input, size_t *poffse
           __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           scrut1 = { .fst = scrut0.fst, .snd = scrut0.snd };
           return
-            MIN_SIMPLE_VALUE_LONG_ARGUMENT <=
-              op_Array_Access__uint8_t((
+            (uint32_t)MIN_SIMPLE_VALUE_LONG_ARGUMENT <=
+              (uint32_t)op_Array_Access__uint8_t((
                   (__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){
                     .fst = scrut1.fst,
                     .snd = scrut1.snd
@@ -714,7 +726,7 @@ static bool validate_header(Pulse_Lib_Slice_slice__uint8_t input, size_t *poffse
           return true;
         }
       }
-    else if (x.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS)
+    else if ((uint32_t)x.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS)
     {
       size_t offset2 = *poffset;
       if (len__uint8_t(input) - offset2 < (size_t)2U)
@@ -725,7 +737,7 @@ static bool validate_header(Pulse_Lib_Slice_slice__uint8_t input, size_t *poffse
         return true;
       }
     }
-    else if (x.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_32_BITS)
+    else if ((uint32_t)x.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_32_BITS)
     {
       size_t offset2 = *poffset;
       if (len__uint8_t(input) - offset2 < (size_t)4U)
@@ -736,7 +748,7 @@ static bool validate_header(Pulse_Lib_Slice_slice__uint8_t input, size_t *poffse
         return true;
       }
     }
-    else if (x.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_64_BITS)
+    else if ((uint32_t)x.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_64_BITS)
     {
       size_t offset2 = *poffset;
       if (len__uint8_t(input) - offset2 < (size_t)8U)
@@ -778,13 +790,13 @@ static size_t jump_header(Pulse_Lib_Slice_slice__uint8_t input, size_t offset)
           .snd = scrut1.snd
         }
       ).fst);
-  if (x.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
+  if ((uint32_t)x.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
     return off1 + (size_t)1U;
-  else if (x.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS)
+  else if ((uint32_t)x.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS)
     return off1 + (size_t)2U;
-  else if (x.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_32_BITS)
+  else if ((uint32_t)x.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_32_BITS)
     return off1 + (size_t)4U;
-  else if (x.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_64_BITS)
+  else if ((uint32_t)x.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_64_BITS)
     return off1 + (size_t)8U;
   else
     return off1;
@@ -810,12 +822,12 @@ validate_recursive_step_count_leaf(
         }
       ).fst);
   uint8_t typ = get_header_major_type(h);
-  if (typ == CBOR_MAJOR_TYPE_ARRAY)
+  if ((uint32_t)typ == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
   {
     *prem = (size_t)argument_as_uint64(h.fst, h.snd);
     return false;
   }
-  else if (typ == CBOR_MAJOR_TYPE_MAP)
+  else if ((uint32_t)typ == (uint32_t)CBOR_MAJOR_TYPE_MAP)
   {
     size_t arg = (size_t)argument_as_uint64(h.fst, h.snd);
     if (arg > bound)
@@ -828,7 +840,7 @@ validate_recursive_step_count_leaf(
       return false;
     }
   }
-  else if (typ == CBOR_MAJOR_TYPE_TAGGED)
+  else if ((uint32_t)typ == (uint32_t)CBOR_MAJOR_TYPE_TAGGED)
   {
     *prem = (size_t)1U;
     return false;
@@ -843,14 +855,14 @@ validate_recursive_step_count_leaf(
 static size_t impl_remaining_data_items_header(header h)
 {
   uint8_t typ = get_header_major_type(h);
-  if (typ == CBOR_MAJOR_TYPE_ARRAY)
+  if ((uint32_t)typ == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
     return (size_t)argument_as_uint64(h.fst, h.snd);
-  else if (typ == CBOR_MAJOR_TYPE_MAP)
+  else if ((uint32_t)typ == (uint32_t)CBOR_MAJOR_TYPE_MAP)
   {
     size_t arg = (size_t)argument_as_uint64(h.fst, h.snd);
     return arg + arg;
   }
-  else if (typ == CBOR_MAJOR_TYPE_TAGGED)
+  else if ((uint32_t)typ == (uint32_t)CBOR_MAJOR_TYPE_TAGGED)
     return (size_t)1U;
   else
     return (size_t)0U;
@@ -911,7 +923,10 @@ static bool validate_raw_data_item(Pulse_Lib_Slice_slice__uint8_t input, size_t 
             ).fst);
         initial_byte_t b = x.fst;
         if
-        (b.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
+        (
+          (uint32_t)b.major_type == (uint32_t)CBOR_MAJOR_TYPE_BYTE_STRING ||
+            (uint32_t)b.major_type == (uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING
+        )
         {
           size_t n1 = (size_t)argument_as_uint64(x.fst, x.snd);
           size_t offset2 = *poffset;
@@ -948,7 +963,7 @@ static bool validate_raw_data_item(Pulse_Lib_Slice_slice__uint8_t input, size_t 
                   .snd = scrut1.snd
                 }
               ).fst;
-            if (get_header_major_type(x) == CBOR_MAJOR_TYPE_BYTE_STRING)
+            if ((uint32_t)get_header_major_type(x) == (uint32_t)CBOR_MAJOR_TYPE_BYTE_STRING)
               ite0 = true;
             else
               ite0 = impl_correct(x1);
@@ -1031,7 +1046,11 @@ static size_t jump_raw_data_item(Pulse_Lib_Slice_slice__uint8_t input, size_t of
         ).fst);
     initial_byte_t b = x.fst;
     size_t off1;
-    if (b.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
+    if
+    (
+      (uint32_t)b.major_type == (uint32_t)CBOR_MAJOR_TYPE_BYTE_STRING ||
+        (uint32_t)b.major_type == (uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING
+    )
       off1 = off10 + (size_t)argument_as_uint64(x.fst, x.snd);
     else
       off1 = off10;
@@ -1084,7 +1103,11 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
   Pulse_Lib_Slice_slice__uint8_t pc = outc;
   header h = ph;
   uint8_t typ = h.fst.major_type;
-  if (typ == CBOR_MAJOR_TYPE_UINT64 || typ == CBOR_MAJOR_TYPE_NEG_INT64)
+  if
+  (
+    (uint32_t)typ == (uint32_t)CBOR_MAJOR_TYPE_UINT64 ||
+      (uint32_t)typ == (uint32_t)CBOR_MAJOR_TYPE_NEG_INT64
+  )
   {
     initial_byte_t b = h.fst;
     long_argument l = h.snd;
@@ -1117,7 +1140,11 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
         }
       );
   }
-  else if (typ == CBOR_MAJOR_TYPE_TEXT_STRING || typ == CBOR_MAJOR_TYPE_BYTE_STRING)
+  else if
+  (
+    (uint32_t)typ == (uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING ||
+      (uint32_t)typ == (uint32_t)CBOR_MAJOR_TYPE_BYTE_STRING
+  )
   {
     initial_byte_t b = h.fst;
     long_argument l = h.snd;
@@ -1153,7 +1180,7 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
         }
       );
   }
-  else if (typ == CBOR_MAJOR_TYPE_TAGGED)
+  else if ((uint32_t)typ == (uint32_t)CBOR_MAJOR_TYPE_TAGGED)
   {
     initial_byte_t b = h.fst;
     long_argument l = h.snd;
@@ -1188,7 +1215,7 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
         }
       );
   }
-  else if (typ == CBOR_MAJOR_TYPE_ARRAY)
+  else if ((uint32_t)typ == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
   {
     initial_byte_t b = h.fst;
     long_argument l = h.snd;
@@ -1223,7 +1250,7 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
         }
       );
   }
-  else if (typ == CBOR_MAJOR_TYPE_MAP)
+  else if ((uint32_t)typ == (uint32_t)CBOR_MAJOR_TYPE_MAP)
   {
     initial_byte_t b = h.fst;
     long_argument l = h.snd;
@@ -1284,12 +1311,12 @@ static size_t cbor_validate(Pulse_Lib_Slice_slice__uint8_t input)
 
 static bool impl_raw_uint64_optimal(CBOR_Spec_Raw_Base_raw_uint64 x)
 {
-  if (x.value <= (uint64_t)MAX_SIMPLE_VALUE_ADDITIONAL_INFO == (x.size == 0U))
-    if (x.size <= 1U)
+  if (x.value <= (uint64_t)MAX_SIMPLE_VALUE_ADDITIONAL_INFO == ((uint32_t)x.size == 0U))
+    if ((uint32_t)x.size <= 1U)
       return true;
-    else if (x.size == 2U)
+    else if ((uint32_t)x.size == 2U)
       return 256ULL <= x.value;
-    else if (x.size == 3U)
+    else if ((uint32_t)x.size == 3U)
       return 65536ULL <= x.value;
     else
       return 4294967296ULL <= x.value;
@@ -1313,7 +1340,7 @@ static bool cbor_raw_ints_optimal(Pulse_Lib_Slice_slice__uint8_t a)
           .snd = scrut2.snd
         }
       ).fst);
-  if (get_header_major_type(h) == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
+  if ((uint32_t)get_header_major_type(h) == (uint32_t)CBOR_MAJOR_TYPE_SIMPLE_VALUE)
     return true;
   else
   {
@@ -1377,7 +1404,7 @@ static bool cbor_raw_sorted(Pulse_Lib_Slice_slice__uint8_t a)
   scrut3 = { .fst = scrut2.fst, .snd = scrut2.snd };
   Pulse_Lib_Slice_slice__uint8_t input2 = scrut3.snd;
   header h = read_header(scrut3.fst);
-  if (get_header_major_type(h) == CBOR_MAJOR_TYPE_MAP)
+  if ((uint32_t)get_header_major_type(h) == (uint32_t)CBOR_MAJOR_TYPE_MAP)
   {
     uint64_t nbpairs = argument_as_uint64(h.fst, h.snd);
     if (nbpairs < 2ULL)
@@ -1387,7 +1414,10 @@ static bool cbor_raw_sorted(Pulse_Lib_Slice_slice__uint8_t a)
       initial_byte_t b = h.fst;
       size_t ite;
       if
-      (b.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
+      (
+        (uint32_t)b.major_type == (uint32_t)CBOR_MAJOR_TYPE_BYTE_STRING ||
+          (uint32_t)b.major_type == (uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING
+      )
         ite = (size_t)argument_as_uint64(h.fst, h.snd);
       else
         ite = (size_t)0U;
@@ -1548,7 +1578,10 @@ static size_t cbor_validate_det_(Pulse_Lib_Slice_slice__uint8_t input)
         initial_byte_t b = x.fst;
         size_t ite;
         if
-        (b.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
+        (
+          (uint32_t)b.major_type == (uint32_t)CBOR_MAJOR_TYPE_BYTE_STRING ||
+            (uint32_t)b.major_type == (uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING
+        )
           ite = off1 + (size_t)argument_as_uint64(x.fst, x.snd);
         else
           ite = off1;
@@ -1607,8 +1640,8 @@ static size_t cbor_validate_det_(Pulse_Lib_Slice_slice__uint8_t input)
           size_t ite;
           if
           (
-            b.major_type == CBOR_MAJOR_TYPE_BYTE_STRING ||
-              b.major_type == CBOR_MAJOR_TYPE_TEXT_STRING
+            (uint32_t)b.major_type == (uint32_t)CBOR_MAJOR_TYPE_BYTE_STRING ||
+              (uint32_t)b.major_type == (uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING
           )
             ite = off1 + (size_t)argument_as_uint64(x.fst, x.snd);
           else
@@ -2337,8 +2370,8 @@ static size_t write_header(header x, Pulse_Lib_Slice_slice__uint8_t out, size_t 
   size_t res1 = pos_;
   long_argument
   x2_ = dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(x);
-  if (xh1.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
-    if (xh1.major_type == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
+  if ((uint32_t)xh1.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
+    if ((uint32_t)xh1.major_type == (uint32_t)CBOR_MAJOR_TYPE_SIMPLE_VALUE)
     {
       size_t pos_ = res1 + (size_t)1U;
       uint8_t ite;
@@ -2360,7 +2393,7 @@ static size_t write_header(header x, Pulse_Lib_Slice_slice__uint8_t out, size_t 
       op_Array_Assignment__uint8_t(out, pos_ - (size_t)1U, ite);
       return pos_;
     }
-  else if (xh1.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS)
+  else if ((uint32_t)xh1.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS)
   {
     size_t pos_ = res1 + (size_t)2U;
     uint16_t ite0;
@@ -2379,7 +2412,7 @@ static size_t write_header(header x, Pulse_Lib_Slice_slice__uint8_t out, size_t 
     op_Array_Assignment__uint8_t(out, pos_1, lo);
     return pos_;
   }
-  else if (xh1.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_32_BITS)
+  else if ((uint32_t)xh1.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_32_BITS)
   {
     size_t pos_ = res1 + (size_t)4U;
     uint32_t ite0;
@@ -2406,7 +2439,7 @@ static size_t write_header(header x, Pulse_Lib_Slice_slice__uint8_t out, size_t 
     op_Array_Assignment__uint8_t(out, pos_1, lo);
     return pos_;
   }
-  else if (xh1.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_64_BITS)
+  else if ((uint32_t)xh1.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_64_BITS)
   {
     size_t pos_ = res1 + (size_t)8U;
     uint64_t ite0;
@@ -2469,7 +2502,7 @@ static bool size_header(header x, size_t *out)
   if (ite)
   {
     dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(x);
-    if (xh1.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
+    if ((uint32_t)xh1.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
     {
       size_t capacity = *out;
       if (capacity < (size_t)1U)
@@ -2480,7 +2513,7 @@ static bool size_header(header x, size_t *out)
         return true;
       }
     }
-    else if (xh1.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS)
+    else if ((uint32_t)xh1.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS)
     {
       size_t capacity = *out;
       if (capacity < (size_t)2U)
@@ -2491,7 +2524,7 @@ static bool size_header(header x, size_t *out)
         return true;
       }
     }
-    else if (xh1.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_32_BITS)
+    else if ((uint32_t)xh1.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_32_BITS)
     {
       size_t capacity = *out;
       if (capacity < (size_t)4U)
@@ -2502,7 +2535,7 @@ static bool size_header(header x, size_t *out)
         return true;
       }
     }
-    else if (xh1.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_64_BITS)
+    else if ((uint32_t)xh1.additional_info == (uint32_t)ADDITIONAL_INFO_LONG_ARGUMENT_64_BITS)
     {
       size_t capacity = *out;
       if (capacity < (size_t)8U)
@@ -2739,7 +2772,11 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
   header xh1 = cbor_raw_with_perm_get_header(x_);
   size_t res1 = write_header(xh1, out, offset);
   initial_byte_t b = xh1.fst;
-  if (b.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
+  if
+  (
+    (uint32_t)b.major_type == (uint32_t)CBOR_MAJOR_TYPE_BYTE_STRING ||
+      (uint32_t)b.major_type == (uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING
+  )
   {
     cbor_raw scrut = x_;
     Pulse_Lib_Slice_slice__uint8_t x2_;
@@ -2753,7 +2790,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
     copy__uint8_t(split__uint8_t(split__uint8_t(out, res1).snd, length).fst, x2_);
     return res1 + length;
   }
-  else if (xh1.fst.major_type == CBOR_MAJOR_TYPE_ARRAY)
+  else if ((uint32_t)xh1.fst.major_type == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
   {
     bool ite;
     if (x_.tag == CBOR_Case_Array)
@@ -2823,7 +2860,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
       return res1 + length;
     }
   }
-  else if (xh1.fst.major_type == CBOR_MAJOR_TYPE_MAP)
+  else if ((uint32_t)xh1.fst.major_type == (uint32_t)CBOR_MAJOR_TYPE_MAP)
   {
     bool ite;
     if (x_.tag == CBOR_Case_Map)
@@ -2894,7 +2931,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
       return res1 + length;
     }
   }
-  else if (xh1.fst.major_type == CBOR_MAJOR_TYPE_TAGGED)
+  else if ((uint32_t)xh1.fst.major_type == (uint32_t)CBOR_MAJOR_TYPE_TAGGED)
   {
     bool ite0;
     if (x_.tag == CBOR_Case_Tagged)
@@ -2946,7 +2983,11 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
   if (size_header(xh1, out))
   {
     initial_byte_t b = xh1.fst;
-    if (b.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
+    if
+    (
+      (uint32_t)b.major_type == (uint32_t)CBOR_MAJOR_TYPE_BYTE_STRING ||
+        (uint32_t)b.major_type == (uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING
+    )
     {
       cbor_raw scrut = x_;
       Pulse_Lib_Slice_slice__uint8_t ite;
@@ -2966,7 +3007,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
         return true;
       }
     }
-    else if (xh1.fst.major_type == CBOR_MAJOR_TYPE_ARRAY)
+    else if ((uint32_t)xh1.fst.major_type == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
     {
       bool ite0;
       if (x_.tag == CBOR_Case_Array)
@@ -3044,7 +3085,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
         }
       }
     }
-    else if (xh1.fst.major_type == CBOR_MAJOR_TYPE_MAP)
+    else if ((uint32_t)xh1.fst.major_type == (uint32_t)CBOR_MAJOR_TYPE_MAP)
     {
       bool ite0;
       if (x_.tag == CBOR_Case_Map)
@@ -3123,7 +3164,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
         }
       }
     }
-    else if (xh1.fst.major_type == CBOR_MAJOR_TYPE_TAGGED)
+    else if ((uint32_t)xh1.fst.major_type == (uint32_t)CBOR_MAJOR_TYPE_TAGGED)
     {
       bool ite0;
       if (x_.tag == CBOR_Case_Tagged)
@@ -3536,7 +3577,11 @@ int16_t CBOR_Pulse_Raw_Compare_impl_cbor_compare(cbor_raw x1, cbor_raw x2)
   uint8_t ty1 = impl_major_type(x1);
   int16_t c = impl_uint8_compare(ty1, impl_major_type(x2));
   if (c == (int16_t)0)
-    if (ty1 == CBOR_MAJOR_TYPE_UINT64 || ty1 == CBOR_MAJOR_TYPE_NEG_INT64)
+    if
+    (
+      (uint32_t)ty1 == (uint32_t)CBOR_MAJOR_TYPE_UINT64 ||
+        (uint32_t)ty1 == (uint32_t)CBOR_MAJOR_TYPE_NEG_INT64
+    )
     {
       CBOR_Spec_Raw_Base_raw_uint64 i1;
       if (x1.tag == CBOR_Case_Int)
@@ -3562,7 +3607,11 @@ int16_t CBOR_Pulse_Raw_Compare_impl_cbor_compare(cbor_raw x1, cbor_raw x2)
             "unreachable (pattern matches are exhaustive in F*)");
       return impl_raw_uint64_compare(i1, ite);
     }
-    else if (ty1 == CBOR_MAJOR_TYPE_BYTE_STRING || ty1 == CBOR_MAJOR_TYPE_TEXT_STRING)
+    else if
+    (
+      (uint32_t)ty1 == (uint32_t)CBOR_MAJOR_TYPE_BYTE_STRING ||
+        (uint32_t)ty1 == (uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING
+    )
     {
       CBOR_Spec_Raw_Base_raw_uint64 i1;
       if (x1.tag == CBOR_Case_String)
@@ -3618,7 +3667,7 @@ int16_t CBOR_Pulse_Raw_Compare_impl_cbor_compare(cbor_raw x1, cbor_raw x2)
       else
         return c1;
     }
-    else if (ty1 == CBOR_MAJOR_TYPE_TAGGED)
+    else if ((uint32_t)ty1 == (uint32_t)CBOR_MAJOR_TYPE_TAGGED)
     {
       CBOR_Spec_Raw_Base_raw_uint64 tag1;
       if (x1.tag == CBOR_Case_Tagged)
@@ -3659,7 +3708,7 @@ int16_t CBOR_Pulse_Raw_Compare_impl_cbor_compare(cbor_raw x1, cbor_raw x2)
       else
         return c1;
     }
-    else if (ty1 == CBOR_MAJOR_TYPE_ARRAY)
+    else if ((uint32_t)ty1 == (uint32_t)CBOR_MAJOR_TYPE_ARRAY)
     {
       CBOR_Spec_Raw_Base_raw_uint64 len1;
       if (x1.tag == CBOR_Case_Array)
@@ -3837,7 +3886,7 @@ int16_t CBOR_Pulse_Raw_Compare_impl_cbor_compare(cbor_raw x1, cbor_raw x2)
       else
         return c1;
     }
-    else if (ty1 == CBOR_MAJOR_TYPE_MAP)
+    else if ((uint32_t)ty1 == (uint32_t)CBOR_MAJOR_TYPE_MAP)
     {
       CBOR_Spec_Raw_Base_raw_uint64 len1;
       if (x1.tag == CBOR_Case_Map)
@@ -4723,7 +4772,7 @@ bool cbor_det_mk_byte_string_from_arrayptr(uint8_t *a, uint64_t len, cbor_raw *d
   {
     Pulse_Lib_Slice_slice__uint8_t s = arrayptr_to_slice_intro__uint8_t(a, (size_t)len);
     bool ite;
-    if (CBOR_MAJOR_TYPE_BYTE_STRING == CBOR_MAJOR_TYPE_TEXT_STRING)
+    if ((uint32_t)CBOR_MAJOR_TYPE_BYTE_STRING == (uint32_t)CBOR_MAJOR_TYPE_TEXT_STRING)
       ite = impl_correct(s);
     else
       ite = true;
