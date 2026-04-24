@@ -2157,7 +2157,7 @@ let seq_length_append_slice_left
 
 module Swap = Pulse.Lib.Swap.Slice
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 128"
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let sz_zero : SZ.t = 0sz
