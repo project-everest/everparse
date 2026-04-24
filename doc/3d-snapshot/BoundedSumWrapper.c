@@ -27,8 +27,9 @@ void DefaultErrorHandler(
 
 BOOLEAN BoundedSumCheckBoundedSum(uint32_t bound, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
+	uint64_t result;
 	frame.filled = FALSE;
-	uint64_t result = BoundedSumValidateBoundedSum(bound,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	result = BoundedSumValidateBoundedSum(bound,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 	if (EverParseIsError(result))
 	{
 		if (frame.filled)
@@ -42,8 +43,9 @@ BOOLEAN BoundedSumCheckBoundedSum(uint32_t bound, uint8_t *base, uint32_t len) {
 
 BOOLEAN BoundedSumCheckMySum(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
+	uint64_t result;
 	frame.filled = FALSE;
-	uint64_t result = BoundedSumValidateMySum( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	result = BoundedSumValidateMySum( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 	if (EverParseIsError(result))
 	{
 		if (frame.filled)

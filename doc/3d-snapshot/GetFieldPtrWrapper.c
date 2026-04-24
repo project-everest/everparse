@@ -27,8 +27,9 @@ void DefaultErrorHandler(
 
 BOOLEAN GetFieldPtrCheckT(uint8_t** out, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
+	uint64_t result;
 	frame.filled = FALSE;
-	uint64_t result = GetFieldPtrValidateT(out,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	result = GetFieldPtrValidateT(out,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 	if (EverParseIsError(result))
 	{
 		if (frame.filled)
@@ -42,8 +43,9 @@ BOOLEAN GetFieldPtrCheckT(uint8_t** out, uint8_t *base, uint32_t len) {
 
 BOOLEAN GetFieldPtrCheckTact(uint8_t** out, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
+	uint64_t result;
 	frame.filled = FALSE;
-	uint64_t result = GetFieldPtrValidateTact(out,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	result = GetFieldPtrValidateTact(out,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 	if (EverParseIsError(result))
 	{
 		if (frame.filled)

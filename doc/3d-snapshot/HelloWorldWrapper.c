@@ -27,8 +27,9 @@ void DefaultErrorHandler(
 
 BOOLEAN HelloWorldCheckPoint(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
+	uint64_t result;
 	frame.filled = FALSE;
-	uint64_t result = HelloWorldValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	result = HelloWorldValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 	if (EverParseIsError(result))
 	{
 		if (frame.filled)

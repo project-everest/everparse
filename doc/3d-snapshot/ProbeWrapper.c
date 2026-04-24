@@ -28,8 +28,9 @@ void DefaultErrorHandler(
 
 BOOLEAN ProbeCheckS(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
+	uint64_t result;
 	frame.filled = FALSE;
-	uint64_t result = ProbeValidateS(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	result = ProbeValidateS(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 	if (EverParseIsError(result))
 	{
 		if (frame.filled)
@@ -43,8 +44,9 @@ BOOLEAN ProbeCheckS(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 
 BOOLEAN ProbeCheckU(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
+	uint64_t result;
 	frame.filled = FALSE;
-	uint64_t result = ProbeValidateU(destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	result = ProbeValidateU(destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 	if (EverParseIsError(result))
 	{
 		if (frame.filled)
@@ -58,8 +60,9 @@ BOOLEAN ProbeCheckU(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT
 
 BOOLEAN ProbeCheckV(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
+	uint64_t result;
 	frame.filled = FALSE;
-	uint64_t result = ProbeValidateV(destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	result = ProbeValidateV(destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 	if (EverParseIsError(result))
 	{
 		if (frame.filled)
@@ -73,8 +76,9 @@ BOOLEAN ProbeCheckV(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT
 
 BOOLEAN ProbeCheckIndirect(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
+	uint64_t result;
 	frame.filled = FALSE;
-	uint64_t result = ProbeValidateIndirect( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	result = ProbeValidateIndirect( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 	if (EverParseIsError(result))
 	{
 		if (frame.filled)
@@ -87,6 +91,7 @@ BOOLEAN ProbeCheckIndirect(uint8_t *base, uint32_t len) {
 }
 
 uint32_t ProbeProbeAndCopyCheckIndirect(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
+	uint8_t *base;
 	if(providedSize < 9U)
 	{
 		// Not enough space for probe
@@ -102,7 +107,7 @@ uint32_t ProbeProbeAndCopyCheckIndirect(EVERPARSE_COPY_BUFFER_T probeDest, uint6
 		// Probe failed
 		return EVERPARSE_PROBE_FAILURE_PROBE;
 	}
-	uint8_t * base = EverParseStreamOf(probeDest);
+	base = EverParseStreamOf(probeDest);
 	if (!ProbeCheckIndirect( base, 9U))
 	{
 		return EVERPARSE_PROBE_FAILURE_VALIDATION;
@@ -112,8 +117,9 @@ uint32_t ProbeProbeAndCopyCheckIndirect(EVERPARSE_COPY_BUFFER_T probeDest, uint6
 
 BOOLEAN ProbeCheckI(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
+	uint64_t result;
 	frame.filled = FALSE;
-	uint64_t result = ProbeValidateI(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	result = ProbeValidateI(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 	if (EverParseIsError(result))
 	{
 		if (frame.filled)
@@ -127,8 +133,9 @@ BOOLEAN ProbeCheckI(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 
 BOOLEAN ProbeCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
+	uint64_t result;
 	frame.filled = FALSE;
-	uint64_t result = ProbeValidateMultiProbe(destT1, destT2,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	result = ProbeValidateMultiProbe(destT1, destT2,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 	if (EverParseIsError(result))
 	{
 		if (frame.filled)
@@ -141,6 +148,7 @@ BOOLEAN ProbeCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFF
 }
 
 uint32_t ProbeProbeAndCopyCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2, EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
+	uint8_t *base;
 	if(providedSize < 25U)
 	{
 		// Not enough space for probe
@@ -156,7 +164,7 @@ uint32_t ProbeProbeAndCopyCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPA
 		// Probe failed
 		return EVERPARSE_PROBE_FAILURE_PROBE;
 	}
-	uint8_t * base = EverParseStreamOf(probeDest);
+	base = EverParseStreamOf(probeDest);
 	if (!ProbeCheckMultiProbe(destT1, destT2,  base, 25U))
 	{
 		return EVERPARSE_PROBE_FAILURE_VALIDATION;
@@ -165,6 +173,7 @@ uint32_t ProbeProbeAndCopyCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPA
 }
 
 uint32_t ProbeProbeAndCopyAltCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2, EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
+	uint8_t *base;
 	if(providedSize < 25U)
 	{
 		// Not enough space for probe
@@ -180,7 +189,7 @@ uint32_t ProbeProbeAndCopyAltCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVE
 		// Probe failed
 		return EVERPARSE_PROBE_FAILURE_PROBE;
 	}
-	uint8_t * base = EverParseStreamOf(probeDest);
+	base = EverParseStreamOf(probeDest);
 	if (!ProbeCheckMultiProbe(destT1, destT2,  base, 25U))
 	{
 		return EVERPARSE_PROBE_FAILURE_VALIDATION;
@@ -190,8 +199,9 @@ uint32_t ProbeProbeAndCopyAltCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVE
 
 BOOLEAN ProbeCheckMaybeT(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
+	uint64_t result;
 	frame.filled = FALSE;
-	uint64_t result = ProbeValidateMaybeT(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	result = ProbeValidateMaybeT(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 	if (EverParseIsError(result))
 	{
 		if (frame.filled)
@@ -205,8 +215,9 @@ BOOLEAN ProbeCheckMaybeT(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t l
 
 BOOLEAN ProbeCheckCoercePtr(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
+	uint64_t result;
 	frame.filled = FALSE;
-	uint64_t result = ProbeValidateCoercePtr(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	result = ProbeValidateCoercePtr(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 	if (EverParseIsError(result))
 	{
 		if (frame.filled)
