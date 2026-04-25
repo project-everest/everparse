@@ -435,7 +435,7 @@ let synth_case_recip_synth_case_post
   (synth_case: ((x: enum_key e) -> (y: type_of_tag x) -> Tot (refine_with_tag tag_of_data x)))
   (synth_case_recip: ((k: enum_key e) -> (x: refine_with_tag tag_of_data k) -> Tot (type_of_tag k)))
   (x: key)
-: GTot Type0
+: GTot prop
 = 
   list_mem x (list_map fst e) ==> (
     forall (y: type_of_tag x) . {:pattern (synth_case_recip' e tag_of_data type_of_tag synth_case_recip (synth_case x y))}
@@ -1028,7 +1028,7 @@ let synth_dsum_case_recip_synth_case_known_post
   (synth_case: ((x: maybe_enum_key e) -> (y: dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag x) -> Tot (refine_with_tag tag_of_data x)))
   (synth_case_recip: ((k: maybe_enum_key e) -> (refine_with_tag tag_of_data k) -> Tot (dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag k)))
   (x: key)
-: GTot Type0
+: GTot prop
 = 
   list_mem x (list_map fst e) ==> (
     forall (y: type_of_known_tag x) . {:pattern (synth_case_recip (Known x) (synth_case (Known x) y))}
@@ -1045,7 +1045,7 @@ let synth_dsum_case_recip_synth_case_unknown_post
   (synth_case: ((x: maybe_enum_key e) -> (y: dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag x) -> Tot (refine_with_tag tag_of_data x)))
   (synth_case_recip: ((k: maybe_enum_key e) -> (refine_with_tag tag_of_data k) -> Tot (dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag k)))
   (x: repr)
-: GTot Type0
+: GTot prop
 = 
   list_mem x (list_map snd e) == false ==> (
     forall (y: type_of_unknown_tag) . {:pattern (synth_case_recip (Unknown x) (synth_case (Unknown x) y))}

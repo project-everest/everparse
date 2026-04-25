@@ -1,5 +1,4 @@
 module LowParse.Spec.BitVector
-open FStar.Mul
 
 module BV = FStar.BitVector
 module U8 = FStar.UInt8

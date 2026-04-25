@@ -2,7 +2,6 @@ module LowParse.Spec.BoundedInt
 include LowParse.Spec.Base
 include LowParse.Spec.Int // for parse_u16_kind
 
-open FStar.Mul
 
 module Seq = FStar.Seq
 module U8  = FStar.UInt8
@@ -20,7 +19,7 @@ val integer_size_values (i: integer_size) : Lemma
 let bounded_integer_prop
   (i: integer_size)
   (u: U32.t)
-: GTot Type0
+: GTot prop
 = U32.v u < (match i with 1 -> 256 | 2 -> 65536 | 3 -> 16777216 | 4 -> 4294967296)
 
 val bounded_integer_prop_equiv
@@ -68,7 +67,7 @@ val serialize_bounded_integer_spec
   (sz: integer_size)
   (x: bounded_integer sz)
 : Lemma
-  (let (bx : nat {bx < pow2 (8 `FStar.Mul.op_Star` sz)}) = U32.v x in
+  (let (bx : nat {bx < pow2 (8 `op_Star` sz)}) = U32.v x in
     serialize (serialize_bounded_integer sz) x == E.n_to_be sz bx)
 
 val parse_bounded_integer_le
@@ -83,7 +82,7 @@ val parse_bounded_integer_le_eq
     if Seq.length input < i then None
     else
       let _ = E.lemma_le_to_n_is_bounded (Seq.slice input 0 i) in
-      let _ = FStar.Math.Lemmas.pow2_le_compat 32 (8 `FStar.Mul.op_Star` i) in
+      let _ = FStar.Math.Lemmas.pow2_le_compat 32 (8 `op_Star` i) in
       Some (U32.uint_to_t (E.le_to_n (Seq.slice input 0 i)), i)))
 
 val parse_u16_le : parser parse_u16_kind U16.t
@@ -104,8 +103,8 @@ let log256'
 : Pure integer_size
   (requires (n > 0 /\ n < 4294967296))
   (ensures (fun l ->
-    pow2 (FStar.Mul.op_Star 8 (l - 1)) <= n /\
-    n < pow2 (FStar.Mul.op_Star 8 l)
+    pow2 (op_Star 8 (l - 1)) <= n /\
+    n < pow2 (op_Star 8 l)
   ))
 = [@inline_let]
   let _ = assert_norm (pow2 32 == 4294967296) in
@@ -116,61 +115,61 @@ let log256'
   [@inline_let]
   let z1 = 256 in
   [@inline_let]
-  let _ = assert_norm (z1 == Prims.op_Multiply 256 z0) in
+  let _ = assert_norm (z1 == op_Star 256 z0) in
   [@inline_let]
   let l = 1 in
   [@inline_let]
-  let _ = assert_norm (pow2 (Prims.op_Multiply 8 l) == z1) in
+  let _ = assert_norm (pow2 (op_Star 8 l) == z1) in
   [@inline_let]
-  let _ = assert_norm (pow2 (Prims.op_Multiply 8 (l - 1)) == z0) in
+  let _ = assert_norm (pow2 (op_Star 8 (l - 1)) == z0) in
   if n < z1
   then begin
     [@inline_let]
-    let _ = assert (pow2 (Prims.op_Multiply 8 (l - 1)) <= n) in
+    let _ = assert (pow2 (op_Star 8 (l - 1)) <= n) in
     [@inline_let]
-    let _ = assert (n < pow2 (Prims.op_Multiply 8 l)) in
+    let _ = assert (n < pow2 (op_Star 8 l)) in
     l
   end else begin
     [@inline_let]
     let z2 = 65536 in
     [@inline_let]
-    let _ = assert_norm (z2 == Prims.op_Multiply 256 z1) in
+    let _ = assert_norm (z2 == op_Star 256 z1) in
     [@inline_let]
     let l = 2 in
     [@inline_let]
-    let _ = assert_norm (pow2 (Prims.op_Multiply 8 l) == z2) in
+    let _ = assert_norm (pow2 (op_Star 8 l) == z2) in
     if n < z2
     then begin
       [@inline_let]
-      let _ = assert (pow2 (Prims.op_Multiply 8 (l - 1)) <= n) in
+      let _ = assert (pow2 (op_Star 8 (l - 1)) <= n) in
       [@inline_let]
-      let _ = assert (n < pow2 (Prims.op_Multiply 8 l)) in
+      let _ = assert (n < pow2 (op_Star 8 l)) in
       l
     end else begin
       [@inline_let]
       let z3 = 16777216 in
       [@inline_let]
-      let _ = assert_norm (z3 == Prims.op_Multiply 256 z2) in
+      let _ = assert_norm (z3 == op_Star 256 z2) in
       [@inline_let]
       let l = 3 in
       [@inline_let]
-      let _ = assert_norm (pow2 (Prims.op_Multiply 8 l) == z3) in
+      let _ = assert_norm (pow2 (op_Star 8 l) == z3) in
       if n < z3
       then begin
         [@inline_let]
-	let _ = assert (pow2 (Prims.op_Multiply 8 (l - 1)) <= n) in
+	let _ = assert (pow2 (op_Star 8 (l - 1)) <= n) in
         [@inline_let]
-	let _ = assert (n < pow2 (Prims.op_Multiply 8 l)) in
+	let _ = assert (n < pow2 (op_Star 8 l)) in
         l    
       end else begin
         [@inline_let]
         let l = 4 in
         [@inline_let]
-        let _ = assert_norm (pow2 (Prims.op_Multiply 8 l) == Prims.op_Multiply 256 z3) in
+        let _ = assert_norm (pow2 (op_Star 8 l) == op_Star 256 z3) in
         [@inline_let]
-	let _ = assert (pow2 (Prims.op_Multiply 8 (l - 1)) <= n) in
+	let _ = assert (pow2 (op_Star 8 (l - 1)) <= n) in
         [@inline_let]
-	let _ = assert (n < pow2 (Prims.op_Multiply 8 l)) in
+	let _ = assert (n < pow2 (op_Star 8 l)) in
         l
       end
     end

@@ -70,6 +70,7 @@ let impl_zero_copy_map_group
         )
 
 module Util = CBOR.Spec.Util
+
 #push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 8 --query_stats --split_queries always"
 #restart-solver
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -645,7 +646,7 @@ let mk_map_iterator_eq_postcond
     res.tex == tex /\
     res.t2 == t2 /\
     res.ser2 == ser2 /\
-    res.ps2 == ps2 /\
+    res.ps2 === ps2 /\
     True
 
 let mk_map_iterator_eq
@@ -678,7 +679,10 @@ let mk_map_iterator_eq
     mk_map_iterator_eq_postcond cddl_map_iterator_contents pm sp1 eq1 tex ps2 res
   ))
   [SMTPat (mk_map_iterator cddl_map_iterator_contents pm sp1 eq1 cddl_map_iterator_impl_validate1 cddl_map_iterator_impl_parse1 cddl_map_iterator_impl_validate_ex cddl_map_iterator_impl_validate2 cddl_map_iterator_impl_parse2)]
-= ()
+= assert_norm (
+    let res = mk_map_iterator cddl_map_iterator_contents pm sp1 eq1 cddl_map_iterator_impl_validate1 cddl_map_iterator_impl_parse1 cddl_map_iterator_impl_validate_ex cddl_map_iterator_impl_validate2 cddl_map_iterator_impl_parse2 in
+    mk_map_iterator_eq_postcond cddl_map_iterator_contents pm sp1 eq1 tex ps2 res
+  )
 
 module Map = CDDL.Spec.Map
 
@@ -723,7 +727,7 @@ let rec parse_table_entries_memP_key
   (decreases l)
 = match l with
   | (k', v') :: q ->
-    if t1 k' && not (tex (k', v')) && t2 v' && FStar.StrongExcludedMiddle.strong_excluded_middle (sp1.parser k' == k)
+    if t1 k' && not (tex (k', v')) && t2 v' && FStar.IndefiniteDescription.strong_excluded_middle (sp1.parser k' == k)
     then ()
     else parse_table_entries_memP_key sp1 tex ps2 q k
 
@@ -1310,6 +1314,7 @@ let map_of_list_pair_parse_table_entries_correct
   Classical.forall_intro prf
 
 // FIXME: WHY WHY WHY is it SO tedious to prove this:
+#push-options "--z3rlimit 64"
 let impl_zero_copy_map_zero_or_more_aux
   (#ty #ty2: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -1360,10 +1365,12 @@ let impl_zero_copy_map_zero_or_more_aux
   assert (except == i.tex);
   assert (i.t2 == value);
   assert (Ghost.reveal i.ser2 == coerce_eq (_ by (FStar.Tactics.norm [delta_only [`%dfst; `%Mkdtuple2?._1; `%Iterator.mk_spec;]; iota; primops]; FStar.Tactics.trefl ())) sp2.serializable);
+  assert (i.ps2 === Ghost.hide sp2.parser);
   assert (sp2.parser == coerce_eq () (Ghost.reveal i.ps2));
   assert (parse_table_entries sp1.parser except sp2.parser li == parse_table_entries i.sp1.parser i.tex i.ps2 li);
   assert (s == map_of_list_pair key_eq (parse_table_entries sp1.parser except sp2.parser li));
   ()
+#pop-options
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_map_zero_or_more'

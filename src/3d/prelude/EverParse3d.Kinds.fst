@@ -79,7 +79,6 @@ noextract
 let kind_nlist_default
 : parser_kind false WeakKindStrongPrefix
 = let open LP in
-  let open FStar.Mul in
   {
     parser_kind_low = 0;
     parser_kind_high = None;
@@ -93,7 +92,6 @@ noextract
 let kind_nlist #b #w kelt nopt
   : parser_kind false WeakKindStrongPrefix
   = let open LP in
-    let open FStar.Mul in
     match nopt with
     | None -> kind_nlist_default
     | Some byte_size -> 

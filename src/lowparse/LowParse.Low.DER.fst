@@ -2,7 +2,6 @@ module LowParse.Low.DER
 include LowParse.Spec.DER
 include LowParse.Low.Int // for parse_u8
 include LowParse.Low.BoundedInt // for bounded_integer
-open FStar.Mul
 
 module U8 = FStar.UInt8
 module U32 = FStar.UInt32

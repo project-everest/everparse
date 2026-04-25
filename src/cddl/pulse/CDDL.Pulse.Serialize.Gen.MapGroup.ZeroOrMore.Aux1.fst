@@ -126,7 +126,7 @@ let map_of_list_is_append_cons
   )
 = ()
 
-#push-options "--z3rlimit 128 --split_queries always"
+#push-options "--z3rlimit 1024 --split_queries always"
 
 #restart-solver
 let map_of_list_is_append_serializable_elim

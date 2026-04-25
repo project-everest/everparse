@@ -48,7 +48,6 @@ fn be_to_n_0
 }
 
 open FStar.Math.Lemmas
-open FStar.Mul
 
 inline_for_extraction
 noextract

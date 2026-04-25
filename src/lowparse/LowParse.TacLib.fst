@@ -27,7 +27,7 @@ let solve_vc ()
 
 [@@ noextract_to "krml"]
 let app_head_tail (t: term) :
-    Tac (term * list argv)
+    Tac (term & list argv)
 = collect_app t
 
 [@@ noextract_to "krml"]

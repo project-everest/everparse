@@ -2600,7 +2600,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
 
     (* Fixed length list *)
     | VectorFixed k when elem_li.min_len = elem_li.max_len ->
-      w i "unfold let %s_pred (l:list %s) (n:nat) : GTot Type0 = L.length l == n\n" n (compile_type ty);
+      w i "unfold let %s_pred (l:list %s) (n:nat) : GTot prop = L.length l == n\n" n (compile_type ty);
       w i "type %s = l:list %s{%s_pred l %d}\n\n" n (compile_type ty) n li.min_count;
       write_api o i false is_private li.meta n li.min_len li.max_len;
       w o "type %s' = LP.array %s %d\n\n" n (compile_type ty) li.min_count;

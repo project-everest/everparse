@@ -1048,7 +1048,7 @@ let make_tdn (i:A.ident) (attrs:list A.attribute) =
     typedef_attributes = attrs
   }
 
-let env_t = list (A.ident * T.typ)
+let env_t = list (A.ident & T.typ)
 
 let check_in_global_env (env:global_env) (i:A.ident) =
   let _ = B.lookup_expr_name (B.mk_env env.benv) i in ()
@@ -1248,7 +1248,7 @@ let hoist_field (genv:global_env) (env:env_t) (tdn:T.typedef_name) (f:T.field)
       d@[td], f
 
 let hoist_refinements (genv:global_env) (tdn:T.typedef_name) (fields:list T.field)
-  : ML (list T.decl * list T.field)
+  : ML (list T.decl & list T.field)
   = let hoist_one_field edf (f:T.field)
         : ML _ =
         let open T in

@@ -74,7 +74,7 @@ let le_to_n_2_eq
   (b : bytes { Seq.length b == 2 } )
 : Lemma (le_to_n b == 
     U8.v (Seq.index b 0) + 
-    256 `FStar.Mul.op_Star` (U8.v (Seq.index b 1)))
+    256 `op_Star` (U8.v (Seq.index b 1)))
 = assert_norm (pow2 8 == 256);
   reveal_le_to_n b;
   le_to_n_1_eq (Seq.tail b)
@@ -83,8 +83,8 @@ let le_to_n_3_eq
   (b : bytes { Seq.length b == 3 } )
 : Lemma (le_to_n b == 
     U8.v (Seq.index b 0) + 
-    256 `FStar.Mul.op_Star` (U8.v (Seq.index b 1) + 
-    256 `FStar.Mul.op_Star` (U8.v (Seq.index b 2))))
+    256 `op_Star` (U8.v (Seq.index b 1) + 
+    256 `op_Star` (U8.v (Seq.index b 2))))
 = assert_norm (pow2 8 == 256);
   reveal_le_to_n b;
   le_to_n_2_eq (Seq.tail b)
@@ -93,9 +93,9 @@ let le_to_n_4_eq
   (b : bytes { Seq.length b == 4 } )
 : Lemma (le_to_n b == 
     U8.v (Seq.index b 0) + 
-    256 `FStar.Mul.op_Star` (U8.v (Seq.index b 1) + 
-    256 `FStar.Mul.op_Star` (U8.v (Seq.index b 2) + 
-    256 `FStar.Mul.op_Star` (U8.v (Seq.index b 3)))))
+    256 `op_Star` (U8.v (Seq.index b 1) + 
+    256 `op_Star` (U8.v (Seq.index b 2) + 
+    256 `op_Star` (U8.v (Seq.index b 3)))))
 = assert_norm (pow2 8 == 256);
   reveal_le_to_n b;
   le_to_n_3_eq (Seq.tail b)
@@ -105,9 +105,9 @@ let decode_int32le_eq
 : Lemma
   (U32.v (decode_int32le b) ==
     U8.v (Seq.index b 0) + 
-    256 `FStar.Mul.op_Star` (U8.v (Seq.index b 1) + 
-    256 `FStar.Mul.op_Star` (U8.v (Seq.index b 2) + 
-    256 `FStar.Mul.op_Star` (U8.v (Seq.index b 3)))))
+    256 `op_Star` (U8.v (Seq.index b 1) + 
+    256 `op_Star` (U8.v (Seq.index b 2) + 
+    256 `op_Star` (U8.v (Seq.index b 3)))))
 = lemma_le_to_n_is_bounded b;
   assert (U32.v (decode_int32le b) == le_to_n b);
   le_to_n_4_eq b

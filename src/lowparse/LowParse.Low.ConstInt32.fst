@@ -89,9 +89,9 @@ let compose_int32le
   (b3: nat { 0 <= b3 /\ b3 < 256 } )
 : Tot (v: nat { 0 <= v /\ v < 4294967296 } ) 
 = b0 
-  + 256 `FStar.Mul.op_Star` (b1
-  + 256 `FStar.Mul.op_Star` (b2
-  + 256 `FStar.Mul.op_Star` b3))
+  + 256 `op_Star` (b1
+  + 256 `op_Star` (b2
+  + 256 `op_Star` b3))
 
 #push-options "--z3rlimit 16"
 

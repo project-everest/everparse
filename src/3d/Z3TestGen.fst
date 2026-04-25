@@ -1,7 +1,6 @@
 module Z3TestGen
 module Printf = FStar.Printf
 open FStar.All
-open FStar.Mul
 
 module A = Ast
 module T = Target
@@ -2084,7 +2083,7 @@ typedef struct {
   uint64_t cur;
 } copy_buffer_t;
 
-uint8_t * EverParseStreamOf(EVERPARSE_COPY_BUFFER_T x) {
+uint8_t & EverParseStreamOf(EVERPARSE_COPY_BUFFER_T x) {
   copy_buffer_t *state = ((copy_buffer_t * ) x);
   return state->layers[state->cur].buf;
 }
@@ -2098,7 +2097,7 @@ uint64_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T x) {
 let test_ptr_probe_functions = "
 typedef witness_layer_t copy_buffer_t;
 
-uint8_t * EverParseStreamOf(EVERPARSE_COPY_BUFFER_T x) {
+uint8_t & EverParseStreamOf(EVERPARSE_COPY_BUFFER_T x) {
   copy_buffer_t *state = ((copy_buffer_t * ) x);
   return state->buf;
 }

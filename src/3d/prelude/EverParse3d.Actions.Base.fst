@@ -1278,7 +1278,7 @@ let validate_nlist_constant_size_mod_ko
        let sq' = Seq.slice sq 0 (U32.v n) in
        LowParse.Spec.List.list_length_constant_size_parser_correct p sq' ;
        let Some (l, _) = LP.parse (parse_nlist n n_is_const p) sq in
-       assert (U32.v n == FStar.List.Tot.length l `Prims.op_Multiply` k.LP.parser_kind_low) ;
+       assert (U32.v n == FStar.List.Tot.length l `op_Star` k.LP.parser_kind_low) ;
        FStar.Math.Lemmas.cancel_mul_mod (FStar.List.Tot.length l) k.LP.parser_kind_low ;
        assert (U32.v n % k.LP.parser_kind_low == 0)
      in

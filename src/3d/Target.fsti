@@ -59,7 +59,7 @@ type expr' =
   | Constant   : c:A.constant -> expr'
   | Identifier : i:A.ident -> expr'
   | App        : hd:op -> args:list expr -> expr'
-  | Record     : type_name:A.ident -> list (A.ident * expr) -> expr'
+  | Record     : type_name:A.ident -> list (A.ident & expr) -> expr'
 
 and expr = expr' & A.range
 
@@ -84,7 +84,7 @@ let rec as_constant n =
   )
   | App (Mul _) [ n; m ] -> (
     match as_constant n, as_constant m with
-    | Some (A.Int sw i), Some (A.Int _ j) -> Some (A.Int sw (i `op_Multiply` j))
+    | Some (A.Int sw i), Some (A.Int _ j) -> Some (A.Int sw (i `op_Star` j))
     | _ -> None
   )
   | _ -> None
@@ -340,9 +340,9 @@ type type_decl = {
   decl_is_enum : bool
 }
 
-let definition = A.ident * list param * typ * expr
+let definition = A.ident & list param & typ & expr
 
-let assumption = A.ident * typ
+let assumption = A.ident & typ
 
 type decl_attributes = {
   is_hoisted: bool;
@@ -402,7 +402,7 @@ type decl' =
   | Extern_fn : A.ident -> typ -> list param -> pure:bool -> decl'
   | Extern_probe : A.ident -> probe_qualifier -> decl'
 
-type decl = decl' * decl_attributes
+type decl = decl' & decl_attributes
 
 type decls = list decl
 val has_output_types (ds:list decl) : bool

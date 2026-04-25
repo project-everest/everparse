@@ -8,7 +8,7 @@ module U32 = FStar.UInt32
 let serializer32_sum_gen_precond
   (kt: parser_kind)
   (k: parser_kind)
-: GTot Type0
+: GTot prop
 = kt.parser_kind_subkind == Some ParserStrong /\
   Some? kt.parser_kind_high /\
   Some? k.parser_kind_high /\ (
@@ -19,9 +19,9 @@ let serializer32_sum_gen_precond
 
 inline_for_extraction
 let parse32_sum_t (t: sum) : Tot Type =
-  bytes32 -> Tot (option (sum_type t * U32.t))
+  bytes32 -> Tot (option (sum_type t & U32.t))
 
-let parse32_sum_eq (t: sum) : Tot (parse32_sum_t t -> parse32_sum_t t -> GTot Type0) =
+let parse32_sum_eq (t: sum) : Tot (parse32_sum_t t -> parse32_sum_t t -> GTot prop) =
   feq _ _ (eq2 #_)
 
 inline_for_extraction
@@ -60,7 +60,7 @@ let parse32_sum_aux
 = fun input ->
   parse_sum_eq' t p pc (B32.reveal input);
   [@inline_let]
-  let res : option (sum_type t * U32.t) =
+  let res : option (sum_type t & U32.t) =
     //NS: hoist nested match
     //we do not expect the case analysis to
     //on `p32 input` to reduce; hoist it for more efficient
@@ -82,7 +82,7 @@ let parse32_sum_aux
         | Some (x, consumed_x) ->
           Some ((x <: sum_type t), consumed_k `U32.add` consumed_x)
   in
-  (res <: (res: option (sum_type t * U32.t) { parser32_correct (parse_sum t p pc) input res } ))
+  (res <: (res: option (sum_type t & U32.t) { parser32_correct (parse_sum t p pc) input res } ))
 #pop-options
 
 inline_for_extraction
@@ -98,7 +98,7 @@ let parse32_sum_cases_t_eq
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (k: sum_key t)
   (x y : parse32_sum_cases_t t pc k)
-: GTot Type0
+: GTot prop
 = True
 
 inline_for_extraction
@@ -149,13 +149,13 @@ let parse32_sum'
   (p32: parser32 (parse_enum_key p (sum_enum t)))
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (pc32: ((x: sum_key t) -> Tot (parser32 (dsnd (pc x)))))
-  (destr: enum_destr_t (option (sum_type t * U32.t)) (sum_enum t))
+  (destr: enum_destr_t (option (sum_type t & U32.t)) (sum_enum t))
   (input: B32.bytes)
-: Pure (option (sum_type t * U32.t))
+: Pure (option (sum_type t & U32.t))
   (requires True)
   (ensures (fun res -> res == parse32_sum_aux t p p32 pc pc32 input))
 = [@inline_let]
-  let res : option (sum_type t * U32.t) =
+  let res : option (sum_type t & U32.t) =
     //NS: hoist nested match
     let pi = p32 input in
     match pi with
@@ -163,7 +163,7 @@ let parse32_sum'
     | Some (k, consumed_k) ->
         let input_k = B32.b32slice input consumed_k (B32.len input) in
         destr
-          (eq2 #(option (sum_type t * U32.t))) (default_if _)
+          (eq2 #(option (sum_type t & U32.t))) (default_if _)
           (fun _ -> ()) (fun _ _ _ -> ())
           (fun k ->
             //NS: hoist nested match
@@ -186,10 +186,10 @@ let parse32_sum
   (p32: parser32 (parse_enum_key p (sum_enum t)))
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (pc32: ((x: sum_key t) -> Tot (parser32 (dsnd (pc x)))))
-  (destr: enum_destr_t (option (sum_type t * U32.t)) (sum_enum t))
+  (destr: enum_destr_t (option (sum_type t & U32.t)) (sum_enum t))
 : Tot (parser32 (parse_sum t p pc))
 = fun input ->
-  (parse32_sum' t p p32 pc pc32 destr input <: (res: option (sum_type t * U32.t) { parser32_correct (parse_sum t p pc) input res } ))
+  (parse32_sum' t p p32 pc pc32 destr input <: (res: option (sum_type t & U32.t) { parser32_correct (parse_sum t p pc) input res } ))
 
 inline_for_extraction
 let parse32_sum2
@@ -199,7 +199,7 @@ let parse32_sum2
   (p32: parser32 p)
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (pc32: ((x: sum_key t) -> Tot (parser32 (dsnd (pc x)))))
-  (destr: enum_destr_t (option (sum_type t * U32.t)) (sum_enum t))
+  (destr: enum_destr_t (option (sum_type t & U32.t)) (sum_enum t))
   (f: maybe_enum_key_of_repr'_t (sum_enum t))
 : Tot (parser32 (parse_sum t p pc))
 = parse32_sum t p (parse32_enum_key p32 (sum_enum t) f) pc pc32 destr
@@ -219,7 +219,7 @@ let serialize32_sum_cases_t_eq
   (sc: ((x: sum_key t) -> Tot (serializer (dsnd (pc x)))))
   (k: sum_key t)
   (x y: serialize32_sum_cases_t t sc k)
-: GTot Type0
+: GTot prop
 = True
 
 inline_for_extraction
@@ -306,7 +306,7 @@ module T = FStar.Tactics
 let serialize32_sum_destr_eq
   (t: sum)
   (k: sum_key t)
-: Tot (serialize32_sum_destr_codom t k -> serialize32_sum_destr_codom t k -> GTot Type0)
+: Tot (serialize32_sum_destr_codom t k -> serialize32_sum_destr_codom t k -> GTot prop)
 = _ by (T.apply (`feq); T.apply (`eq2))
 
 let serialize32_sum_destr_trans
@@ -396,7 +396,7 @@ let size32_sum_cases_t_eq
   (sc: ((x: sum_key t) -> Tot (serializer (dsnd (pc x)))))
   (k: sum_key t)
   (x y: size32_sum_cases_t t sc k)
-: GTot Type0
+: GTot prop
 = True
 
 inline_for_extraction
@@ -462,7 +462,7 @@ let size32_sum_destr_codom
 let size32_sum_destr_eq
   (t: sum)
   (k: sum_key t)
-: Tot (size32_sum_destr_codom t k -> size32_sum_destr_codom t k -> GTot Type0)
+: Tot (size32_sum_destr_codom t k -> size32_sum_destr_codom t k -> GTot prop)
 = _ by (T.apply (`feq); T.apply (`eq2))
 
 let size32_sum_destr_trans
@@ -482,7 +482,7 @@ let size32_sum_destr_if
 let size32_sum_gen_precond
   (kt: parser_kind)
   (k: parser_kind)
-: GTot Type0
+: GTot prop
 = kt.parser_kind_subkind == Some ParserStrong /\
   Some? kt.parser_kind_high /\
   Some? k.parser_kind_high /\ (
@@ -608,7 +608,7 @@ let parse32_dsum_cases_t_eq
   (g: parser k' (dsum_type_of_unknown_tag t))
   (k: dsum_known_key t)
   (x y : parse32_dsum_cases_t t f g k)
-: GTot Type0
+: GTot prop
 = True
 
 inline_for_extraction
@@ -662,7 +662,7 @@ let parse32_dsum_aux
 : GTot (parser32 (parse_dsum t p f g))
 = fun input ->
   parse_dsum_eq' t p f g (B32.reveal input);
-  let res : option (dsum_type t * U32.t) =
+  let res : option (dsum_type t & U32.t) =
     //NS: hoist nested match
     let pi = p32 input in 
     match pi with
@@ -679,7 +679,7 @@ let parse32_dsum_aux
           Some ((x <: dsum_type t), consumed_k `U32.add` consumed_x)
       end
   in
-  (res <: (res: option (dsum_type t * U32.t) { parser32_correct (parse_dsum t p f g) input res } ))
+  (res <: (res: option (dsum_type t & U32.t) { parser32_correct (parse_dsum t p f g) input res } ))
 
 inline_for_extraction
 let parse32_dsum'
@@ -692,19 +692,19 @@ let parse32_dsum'
   (#k': parser_kind)
   (#g: parser k' (dsum_type_of_unknown_tag t))
   (g32: parser32 g)
-  (destr: maybe_enum_destr_t (option (dsum_type t * U32.t)) (dsum_enum t))
+  (destr: maybe_enum_destr_t (option (dsum_type t & U32.t)) (dsum_enum t))
   (input: B32.bytes)
-: Pure (option (dsum_type t * U32.t))
+: Pure (option (dsum_type t & U32.t))
   (requires True)
   (ensures (fun res -> res == parse32_dsum_aux t p32 f f32 g32 input))
 = //NS: hoist nested match
   let pi = p32 input in
   match pi with
-  | None -> None #(dsum_type t * U32.t)
+  | None -> None #(dsum_type t & U32.t)
   | Some (k', consumed_k) ->
     let input_k = B32.b32slice input consumed_k (B32.len input) in
     [@inline_let]
-    let f (k: maybe_enum_key (dsum_enum t)) : Tot (option (dsum_type t * U32.t)) =
+    let f (k: maybe_enum_key (dsum_enum t)) : Tot (option (dsum_type t & U32.t)) =
       //NS: hoist nested match
       let pcases4 = parse32_dsum_cases' t f f32 g g32 k input_k in
       match pcases4 with
@@ -726,10 +726,10 @@ let parse32_dsum
   (#k': parser_kind)
   (#g: parser k' (dsum_type_of_unknown_tag t))
   (g32: parser32 g)
-  (destr: maybe_enum_destr_t (option (dsum_type t * U32.t)) (dsum_enum t))
+  (destr: maybe_enum_destr_t (option (dsum_type t & U32.t)) (dsum_enum t))
 : Tot (parser32 (parse_dsum t p f g))
 = fun input ->
-  (parse32_dsum' t p32 f f32 g32 destr input <: (res: option (dsum_type t * U32.t) { parser32_correct (parse_dsum t p f g) input res } ))
+  (parse32_dsum' t p32 f f32 g32 destr input <: (res: option (dsum_type t & U32.t) { parser32_correct (parse_dsum t p f g) input res } ))
 
 inline_for_extraction
 let serialize32_dsum_type_of_tag
@@ -786,7 +786,7 @@ let serialize32_dsum_cases_t_eq
   (sg: serializer g)
   (k: dsum_known_key t)
   (x y: serialize32_dsum_cases_t t f sf g sg k)
-: GTot Type0
+: GTot prop
 = True
 
 inline_for_extraction
@@ -841,7 +841,7 @@ let serialize32_dsum_known_destr_codom
 let serialize32_dsum_known_destr_eq
   (t: dsum)
   (k: dsum_known_key t)
-: Tot (serialize32_dsum_known_destr_codom t k -> serialize32_dsum_known_destr_codom t k -> GTot Type0)
+: Tot (serialize32_dsum_known_destr_codom t k -> serialize32_dsum_known_destr_codom t k -> GTot prop)
 = _ by (T.apply (`feq); T.apply (`eq2))
 
 let serialize32_dsum_known_destr_eq_trans
@@ -956,7 +956,7 @@ let size32_dsum_cases_t_eq
   (sg: serializer g)
   (k: dsum_known_key t)
   (x y: size32_dsum_cases_t t f sf g sg k)
-: GTot Type0
+: GTot prop
 = True
 
 inline_for_extraction
@@ -1011,7 +1011,7 @@ let size32_dsum_known_destr_codom
 let size32_dsum_known_destr_eq
   (t: dsum)
   (k: dsum_known_key t)
-: Tot (size32_dsum_known_destr_codom t k -> size32_dsum_known_destr_codom t k -> GTot Type0)
+: Tot (size32_dsum_known_destr_codom t k -> size32_dsum_known_destr_codom t k -> GTot prop)
 = _ by (T.apply (`feq); T.apply (`eq2))
 
 let size32_dsum_known_destr_eq_trans

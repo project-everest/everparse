@@ -93,8 +93,8 @@ let list_rev_inv
   (#t: Type)
   (l: list t)
   (b: bool)
-  (x: list t * list t)
-: GTot Type0
+  (x: list t & list t)
+: GTot prop
 = let (rem, acc) = x in
   L.rev l == L.rev_acc rem acc /\
   (b == false ==> rem == [])
@@ -126,8 +126,8 @@ let parse_list_tailrec_inv
   (p32: parser32 p)
   (input: bytes32)
   (b: bool)
-  (x: option (bytes32 * list t))
-: GTot Type0
+  (x: option (bytes32 & list t))
+: GTot prop
 = match x with
   | Some (input', accu') ->
     parse_list_tailrec' p32 input [] == parse_list_tailrec' p32 input' accu' /\
@@ -137,7 +137,7 @@ let parse_list_tailrec_inv
 
 let parse_list_tailrec_measure
   (#t: Type)
-  (x: option (bytes32 * list t))
+  (x: option (bytes32 & list t))
 : GTot nat
 = match x with
   | None -> 0
@@ -150,14 +150,14 @@ let parse_list_tailrec_body
   (#p: parser k t)
   (p32: parser32 p)
   (input: bytes32)
-: (x: option (bytes32 * list t)) ->
-  Pure (bool * option (bytes32 * list t))
+: (x: option (bytes32 & list t)) ->
+  Pure (bool & option (bytes32 & list t))
   (requires (parse_list_tailrec_inv p32 input true x))
   (ensures (fun (continue, y) ->
     parse_list_tailrec_inv p32 input continue y /\
     (if continue then parse_list_tailrec_measure y < parse_list_tailrec_measure x else True)
   ))
-= fun (x: option (bytes32 * list t)) ->
+= fun (x: option (bytes32 & list t)) ->
   let (Some (input', accu')) = x in
   let len = B32.len input' in
   if len = 0ul
@@ -205,7 +205,7 @@ let parse32_list
     | None -> None
     | Some res ->
       Some (res, B32.len input)
-  ) <: (res: option (list t * U32.t) { parser32_correct (parse_list p) input res } ))
+  ) <: (res: option (list t & U32.t) { parser32_correct (parse_list p) input res } ))
 
 let rec partial_serialize32_list'
   (#t: Type)
@@ -276,8 +276,8 @@ let partial_serialize32_list'_inv
   (s32: partial_serializer32 s)
   (input: list t)
   (continue: bool)
-  (x: bytes32 * list t)
-: GTot Type0
+  (x: bytes32 & list t)
+: GTot prop
 = serialize_list_precond k /\
   Seq.length (serialize (serialize_list p s) input) < 4294967296 /\ (
     let (accu, input') = x in
@@ -291,7 +291,7 @@ let partial_serialize32_list'_inv
 
 let partial_serialize32_list'_measure
   (#t: Type)
-  (x: bytes32 * list t)
+  (x: bytes32 & list t)
 : GTot nat
 = L.length (snd x)
 
@@ -303,14 +303,14 @@ let partial_serialize32_list'_body
   (s: serializer p)
   (s32: partial_serializer32 s)
   (input: list t)
-: (x: (bytes32 * list t)) ->
-  Pure (bool * (bytes32 * list t))
+: (x: (bytes32 & list t)) ->
+  Pure (bool & (bytes32 & list t))
   (requires (partial_serialize32_list'_inv p s s32 input true x))
   (ensures (fun (continue, y) ->
     partial_serialize32_list'_inv p s s32 input continue y /\
     (continue == true ==> partial_serialize32_list'_measure y < partial_serialize32_list'_measure x)
   ))
-= fun (x: bytes32 * list t) ->
+= fun (x: bytes32 & list t) ->
   let (accu, input') = x in
   match input' with
   | [] -> (false, x)
@@ -375,8 +375,8 @@ let size32_list_inv
   })
   (input: list t)
   (continue: bool)
-  (accu: (U32.t * list t))
-: GTot Type0
+  (accu: (U32.t & list t))
+: GTot prop
 = let (len, rem) = accu in
   let sz = Seq.length (serialize (serialize_list p s) input) in
   if continue
@@ -388,7 +388,7 @@ let size32_list_inv
 
 let size32_list_measure
   (#t: Type)
-  (accu: (U32.t * list t))
+  (accu: (U32.t & list t))
 : GTot nat
 = let (_, rem) = accu in
   L.length rem
@@ -404,8 +404,8 @@ let size32_list_body
     serialize_list_precond k
   })
   (input: list t)
-: (x: (U32.t * list t)) ->
-  Pure (bool * (U32.t * list t))
+: (x: (U32.t & list t)) ->
+  Pure (bool & (U32.t & list t))
   (requires (size32_list_inv s32 u input true x))
   (ensures (fun (continue, y) ->
     size32_list_inv s32 u input continue y /\

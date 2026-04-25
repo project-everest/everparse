@@ -52,7 +52,7 @@ let parse_nlist_recursive_bound_correct
   | None -> ()
   | Some (_, consumed) ->
     parser_kind_prop_equiv (L.parse_nlist_kind n (parse_recursive_kind p.parse_header_kind)) (L.tot_parse_nlist n (parse_recursive p));
-    let open FStar.Mul in
+
     assert (consumed >= (L.parse_nlist_kind n (parse_recursive_kind p.parse_header_kind)).parser_kind_low);
     assert (consumed >= n * p.parse_header_kind.parser_kind_low);
     FStar.Math.Lemmas.lemma_mult_le_right n 1 p.parse_header_kind.parser_kind_low

@@ -64,7 +64,7 @@ let parse32_enum_key_gen
       | _ -> None
       end
     | _ -> None
-  ) <: (res: option (enum_key e * U32.t) { parser32_correct (parse_enum_key p e) input res } )))
+  ) <: (res: option (enum_key e & U32.t) { parser32_correct (parse_enum_key p e) input res } )))
 
 inline_for_extraction
 let parse32_enum_key

@@ -678,7 +678,7 @@ let rec split_interval
       then begin match extract_int_value e t' with
       | Some ti ->
         let i = eval_int_value ti in
-        if i < 0 then None else Some (0, pow2 (let open FStar.Mul in 8 * i) - 1)
+        if i < 0 then None else Some (0, pow2 (8 * i) - 1)
       | _ -> None
       end
       else begin match extract_range_value e t' with

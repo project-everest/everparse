@@ -12,7 +12,7 @@ let parse_vldata_payload_size
   (sz: integer_size)
 : Pure nat
   (requires True)
-  (ensures (fun y -> y == pow2 (FStar.Mul.op_Star 8 sz) - 1 ))
+  (ensures (fun y -> y == pow2 (op_Star 8 sz) - 1 ))
 = match sz with
   | 1 -> 255
   | 2 -> 65535
@@ -421,7 +421,7 @@ let parse_bounded_vldata_strong_pred
   (#p: parser k t)
   (s: serializer p)
   (x: t)
-: GTot Type0
+: GTot prop
 = let reslen = Seq.length (s x) in
   min <= reslen /\ reslen <= max
 
@@ -606,8 +606,8 @@ let serialize_bounded_vldata_strong_correct
   let nlen = Seq.length sp in
   assert (min <= nlen /\ nlen <= max);
   let len = U32.uint_to_t nlen in
-  M.pow2_le_compat (FStar.Mul.op_Star 8 sz)  (FStar.Mul.op_Star 8 (log256' max));
-  assert (U32.v len < pow2 (FStar.Mul.op_Star 8 sz));
+  M.pow2_le_compat (op_Star 8 sz)  (op_Star 8 (log256' max));
+  assert (U32.v len < pow2 (op_Star 8 sz));
   let (len: bounded_integer sz) = len in
   let slen = serialize (serialize_bounded_integer sz) len in
   assert (Seq.length slen == sz);

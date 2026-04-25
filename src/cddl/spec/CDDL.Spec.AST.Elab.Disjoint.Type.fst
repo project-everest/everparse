@@ -79,7 +79,7 @@ let typ_disjoint
         let j = eval_int_value v in
         if j < 0
         then RSuccess ()
-        else let vv = (let open FStar.Mul in 8 * j) in
+        else let vv = (8 * j) in
         if vv < 64
         then begin
           FStar.Math.Lemmas.pow2_lt_compat 64 vv;

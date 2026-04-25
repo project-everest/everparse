@@ -26,7 +26,7 @@ let parse32_fldata
 	  Some (v, consumed)
 	end else None
       | None -> None
-  ) <: (res: option (t * U32.t) { parser32_correct (parse_fldata p sz) input res } )))
+  ) <: (res: option (t & U32.t) { parser32_correct (parse_fldata p sz) input res } )))
 
 inline_for_extraction
 let parse32_fldata_strong
@@ -48,7 +48,7 @@ let parse32_fldata_strong
       Some ((v <: parse_fldata_strong_t s sz), consumed)
     | None -> None
     )   
-    <: (res: option (parse_fldata_strong_t s sz * U32.t) { parser32_correct (parse_fldata_strong s sz) input res } )))
+    <: (res: option (parse_fldata_strong_t s sz & U32.t) { parser32_correct (parse_fldata_strong s sz) input res } )))
 
 inline_for_extraction
 let serialize32_fldata_strong

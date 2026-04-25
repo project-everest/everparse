@@ -8,7 +8,7 @@ module U8 = FStar.UInt8
 let parse_der_length_payload32_bare
   (x: U8.t { der_length_payload_size_of_tag x <= 4 } )
   (input: bytes)
-: Pure (option ((refine_with_tag tag_of_der_length32 x) * consumed_length input))
+: Pure (option ((refine_with_tag tag_of_der_length32 x) & consumed_length input))
     (requires True)
     (ensures (fun y ->
       y == parse (parse_der_length_payload32 x) input
@@ -34,7 +34,7 @@ let parse_der_length_payload32_bare
       match res with
       | None -> None
       | Some (z, consumed) ->
-        if U32.v z >= pow2 (8 `op_Multiply` (len - 1))
+        if U32.v z >= pow2 (8 `op_Star` (len - 1))
         then Some ((z <: refine_with_tag tag_of_der_length32 x), consumed)
         else None
 

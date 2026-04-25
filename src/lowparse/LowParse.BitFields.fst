@@ -2,7 +2,6 @@ module LowParse.BitFields
 module U = FStar.UInt
 module M = LowParse.Math
 
-open FStar.Mul
 
 inline_for_extraction
 let bitfield_mask (tot: pos) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) : Tot (U.uint_t tot) =

@@ -9,7 +9,7 @@ inline_for_extraction
 let parse32_option (#k: parser_kind) (#t: Type) (#p: parser k t) (p32: parser32 p) : Tot (parser32 (parse_option p)) =
   fun input -> ((match p32 input with
   | Some (x, consumed) -> Some (Some x, consumed)
-  | _ -> Some (None, 0ul)) <: (y: option (option t * U32.t) { parser32_correct (parse_option p) input y } ))
+  | _ -> Some (None, 0ul)) <: (y: option (option t & U32.t) { parser32_correct (parse_option p) input y } ))
 
 inline_for_extraction
 let serialize32_option (#k: parser_kind) (#t: Type) (#p: parser k t) (#s: serializer p) (s32: serializer32 s) (u: squash (k.parser_kind_low > 0)) : Tot (serializer32 (serialize_option s u)) =

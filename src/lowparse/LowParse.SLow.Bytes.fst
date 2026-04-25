@@ -47,7 +47,7 @@ let parse32_all_bytes
   : parser32 parse_all_bytes
 = fun (input: B32.bytes) ->
     let res = Some (input, B32.len input) in
-    (res <: (res: option (bytes32 * U32.t) { parser32_correct parse_all_bytes input res } ))
+    (res <: (res: option (bytes32 & U32.t) { parser32_correct parse_all_bytes input res } ))
 
 inline_for_extraction
 let serialize32_all_bytes

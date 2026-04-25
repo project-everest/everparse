@@ -70,7 +70,7 @@ val parse_dep_pair (#nz1:_) (#k1:parser_kind nz1 WeakKindStrongPrefix) (#t1: Typ
 inline_for_extraction noextract
 val parse_pair (#nz1:_) (#k1:parser_kind nz1 WeakKindStrongPrefix) (#t1:_) (p1:parser k1 t1)
                (#nz2:_) (#wk2: _) (#k2:parser_kind nz2 wk2) (#t2:_) (p2:parser k2 t2)
-  : Tot (parser (and_then_kind k1 k2) (t1 * t2))
+  : Tot (parser (and_then_kind k1 k2) (t1 & t2))
 
 /// Parser: filter
 let refine t (f:t -> bool) = x:t{f x}
@@ -287,8 +287,8 @@ let u8_sub (r:range) (x y:UInt8.t)
 unfold noextract
 let u8_mul (r:range) (x y:UInt8.t)
   : Pure UInt8.t
-      (requires labeled r "Cannot verify u8 multiplication" (UInt.size (UInt8.v x `Prims.op_Multiply` UInt8.v y) UInt8.n))
-      (ensures fun z -> UInt8.v z == UInt8.v x `Prims.op_Multiply` UInt8.v y)
+      (requires labeled r "Cannot verify u8 multiplication" (UInt.size (UInt8.v x `op_Star` UInt8.v y) UInt8.n))
+      (ensures fun z -> UInt8.v z == UInt8.v x `op_Star` UInt8.v y)
   = UInt8.mul x y
 
 unfold noextract
@@ -373,8 +373,8 @@ let u16_sub (r:range) (x y:UInt16.t)
 unfold noextract
 let u16_mul (r:range) (x y:UInt16.t)
   : Pure UInt16.t
-      (requires labeled r "Cannot verify u16 multiplication" (UInt.size (UInt16.v x `Prims.op_Multiply` UInt16.v y) UInt16.n))
-      (ensures fun z -> UInt16.v z == UInt16.v x `Prims.op_Multiply` UInt16.v y)
+      (requires labeled r "Cannot verify u16 multiplication" (UInt.size (UInt16.v x `op_Star` UInt16.v y) UInt16.n))
+      (ensures fun z -> UInt16.v z == UInt16.v x `op_Star` UInt16.v y)
   = UInt16.mul x y
 
 unfold noextract
@@ -460,8 +460,8 @@ let u32_sub (r:range) (x y:UInt32.t)
 unfold noextract
 let u32_mul (r:range) (x y:UInt32.t)
   : Pure UInt32.t
-      (requires labeled r "Cannot verify u32 multiplication" (UInt.size (UInt32.v x `Prims.op_Multiply` UInt32.v y) UInt32.n))
-      (ensures fun z -> UInt32.v z == UInt32.v x `Prims.op_Multiply` UInt32.v y)
+      (requires labeled r "Cannot verify u32 multiplication" (UInt.size (UInt32.v x `op_Star` UInt32.v y) UInt32.n))
+      (ensures fun z -> UInt32.v z == UInt32.v x `op_Star` UInt32.v y)
   = UInt32.mul x y
 
 unfold noextract
@@ -546,8 +546,8 @@ let u64_sub (r:range) (x y:UInt64.t)
 unfold noextract
 let u64_mul (r:range) (x y:UInt64.t)
   : Pure UInt64.t
-      (requires labeled r "Cannot verify u64 multiplication" (UInt.size (UInt64.v x `Prims.op_Multiply` UInt64.v y) UInt64.n))
-      (ensures fun z -> UInt64.v z == UInt64.v x `Prims.op_Multiply` UInt64.v y)
+      (requires labeled r "Cannot verify u64 multiplication" (UInt.size (UInt64.v x `op_Star` UInt64.v y) UInt64.n))
+      (ensures fun z -> UInt64.v z == UInt64.v x `op_Star` UInt64.v y)
   = UInt64.mul x y
 
 unfold noextract
@@ -680,11 +680,11 @@ let cast_mul_fits_8_16 (x y :U8.t)
   : Lemma (
            FStar.UInt.fits
              ((U16.v (C.uint8_to_uint16 x))
-               `op_Multiply`
+               `op_Star`
               (U16.v (C.uint8_to_uint16 y)))
               16)
            [SMTPat ((U16.v (C.uint8_to_uint16 x))
-                      `op_Multiply`
+                      `op_Star`
                    (U16.v (C.uint8_to_uint16 y)))]
   = let n = U16.v (C.uint8_to_uint16 x) in
     let m = U16.v (C.uint8_to_uint16 y) in
@@ -694,11 +694,11 @@ let cast_mul_fits_16_32 (x y :U16.t)
   : Lemma (
            FStar.UInt.fits
              ((U32.v (C.uint16_to_uint32 x))
-               `op_Multiply`
+               `op_Star`
               (U32.v (C.uint16_to_uint32 y)))
               32)
            [SMTPat ((U32.v (C.uint16_to_uint32 x))
-                      `op_Multiply`
+                      `op_Star`
                    (U32.v (C.uint16_to_uint32 y)))]
   = let n = U32.v (C.uint16_to_uint32 x) in
     let m = U32.v (C.uint16_to_uint32 y) in
@@ -708,11 +708,11 @@ let cast_mul_fits_32_64 (x y :U32.t)
   : Lemma (
            FStar.UInt.fits
              ((U64.v (C.uint32_to_uint64 x))
-               `op_Multiply`
+               `op_Star`
               (U64.v (C.uint32_to_uint64 y)))
               64)
            [SMTPat ((U64.v (C.uint32_to_uint64 x))
-                      `op_Multiply`
+                      `op_Star`
                       (U64.v (C.uint32_to_uint64 y)))]
   = let n = U64.v (C.uint32_to_uint64 x) in
     let m = U64.v (C.uint32_to_uint64 y) in

@@ -64,7 +64,7 @@ let l2r_leaf_write_sum_cases_t_eq
   (sc: ((x: sum_key t) -> Tot (serializer (dsnd (pc x)))))
   (k: sum_key t)
   (x y: l2r_leaf_write_sum_cases_t t sc k)
-: GTot Type0
+: GTot prop
 = True
 
 inline_for_extraction

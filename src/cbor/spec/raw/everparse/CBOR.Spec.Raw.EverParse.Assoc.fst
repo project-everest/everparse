@@ -44,7 +44,7 @@ let rec list_ghost_assoc
 = match m with
   | [] -> None
   | (k', v') :: m' ->
-    if FStar.StrongExcludedMiddle.strong_excluded_middle (k == k')
+    if FStar.IndefiniteDescription.strong_excluded_middle (k == k')
     then Some v'
     else list_ghost_assoc k m'
 
@@ -170,7 +170,7 @@ let rec map_entry_order_assoc_ext
     key_order_total k1 k2;
     ext k1;
     ext k2;
-    if FStar.StrongExcludedMiddle.strong_excluded_middle (k1 == k2)
+    if FStar.IndefiniteDescription.strong_excluded_middle (k1 == k2)
     then begin
       map_entry_order_assoc_tail_none key_order key_order_irrefl key_order_trans k1 v1 m1';
       map_entry_order_assoc_tail_none key_order key_order_irrefl key_order_trans k2 v2 m2';
@@ -218,12 +218,12 @@ let rec map_entry_insert_some
   (k': key)
 : Lemma
   (requires (insert (map_entry_weak_compare w value) (k, v) a == Some a'))
-  (ensures (list_ghost_assoc k' a' == (if FStar.StrongExcludedMiddle.strong_excluded_middle (k == k') then Some v else list_ghost_assoc k' a)))
+  (ensures (list_ghost_assoc k' a' == (if FStar.IndefiniteDescription.strong_excluded_middle (k == k') then Some v else list_ghost_assoc k' a)))
   (decreases a)
 = match a with
   | [] -> ()
   | (k1, _) :: a1 ->
-    if w k k1 > 0 && not (FStar.StrongExcludedMiddle.strong_excluded_middle (k1 == k'))
+    if w k k1 > 0 && not (FStar.IndefiniteDescription.strong_excluded_middle (k1 == k'))
     then
       let Some a1' = insert (map_entry_weak_compare w value) (k, v) a1 in
       map_entry_insert_some w k v a1 a1' k'

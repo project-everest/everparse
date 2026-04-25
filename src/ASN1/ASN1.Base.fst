@@ -142,7 +142,7 @@ type asn1_decorator : Type =
 let id_dec = Set.set asn1_id_t & asn1_decorator
 let id_decs = list id_dec
 
-let rec asn1_sequence_k_wf' (li : id_decs) (s : Set.set asn1_id_t) : Type =
+let rec asn1_sequence_k_wf' (li : id_decs) (s : Set.set asn1_id_t) : prop =
   match li with
   | [] -> True
   | hd :: tl ->
@@ -152,7 +152,7 @@ let rec asn1_sequence_k_wf' (li : id_decs) (s : Set.set asn1_id_t) : Type =
     | PLAIN -> asn1_sequence_k_wf tl
     | _ -> asn1_sequence_k_wf' tl (Set.union s s'))
 
-and asn1_sequence_k_wf (li : id_decs) : Type =
+and asn1_sequence_k_wf (li : id_decs) : prop =
   match li with
   | [] -> True
   | hd :: tl ->
@@ -163,10 +163,10 @@ and asn1_sequence_k_wf (li : id_decs) : Type =
 
 let my_as_set l = Set.as_set l
 
-let proj2_of_3 (#a #b : Type) (#c : a -> b -> Type) (x : dtuple3 a (fun _ -> b) c) : a * b = 
+let proj2_of_3 (#a #b : Type) (#c : a -> b -> Type) (x : dtuple3 a (fun _ -> b) c) : a & b = 
   let (| xa, xb, _ |) = x in (xa, xb)
 
-let rec asn1_any_prefix_k_wf' (ks : Set.set asn1_id_t) (li : id_decs) (s : Set.set asn1_id_t) : Type =
+let rec asn1_any_prefix_k_wf' (ks : Set.set asn1_id_t) (li : id_decs) (s : Set.set asn1_id_t) : prop =
   match li with
   | [] -> Set.disjoint s ks
   | hd :: tl ->
@@ -176,7 +176,7 @@ let rec asn1_any_prefix_k_wf' (ks : Set.set asn1_id_t) (li : id_decs) (s : Set.s
     | PLAIN -> asn1_any_prefix_k_wf ks tl
     | OPTION | DEFAULT -> asn1_any_prefix_k_wf' ks tl (Set.union s s'))
 
-and asn1_any_prefix_k_wf (ks : Set.set asn1_id_t) (li : id_decs) : Type =
+and asn1_any_prefix_k_wf (ks : Set.set asn1_id_t) (li : id_decs) : prop =
   match li with
   | [] -> True
   | hd :: tl ->
@@ -199,7 +199,7 @@ type asn1_content_k : Type =
              prefix:asn1_gen_items_l id_decs_prefix ->
              id : asn1_id_t ->
              key_k : asn1_terminal_k ->
-             supported : list (asn1_terminal_t key_k * asn1_gen_items_lk) -> 
+             supported : list (asn1_terminal_t key_k & asn1_gen_items_lk) -> 
              fallback : option asn1_gen_items_lk ->
              pf_wf : squash (asn1_any_prefix_k_wf (Set.singleton id) id_decs_prefix) ->
              pf_sup : squash (List.noRepeats (List.map fst supported)) -> 
@@ -280,7 +280,7 @@ let rec assoc_slt (#xT: eqtype) (#yT : Type) (l : list (xT & yT)) (x : xT) :
 = match l with
   | (a, b) :: t -> if x = a then () else (assoc_slt t x)
 
-let idlookup_t_postcond (#key : eqtype) (id : key) (lc : list (key & Type)) (t : Type) : GTot Type0
+let idlookup_t_postcond (#key : eqtype) (id : key) (lc : list (key & Type)) (t : Type) : GTot prop
 = (t << lc \/ t == False)
 
 let idlookup_t (#key : eqtype) (id : key) (lc : list (key & Type)) :
@@ -298,7 +298,7 @@ let idlookup_t (#key : eqtype) (id : key) (lc : list (key & Type)) :
     let _ = List.assoc_memP_none id lc in
     False 
 
-let idlookup_with_fallback_t_postcond (#key : eqtype) (id : key) (lc : list (key & Type)) (fb : Type) (t : Type) : GTot Type0
+let idlookup_with_fallback_t_postcond (#key : eqtype) (id : key) (lc : list (key & Type)) (fb : Type) (t : Type) : GTot prop
 = (t << lc \/ t == fb)
 
 let idlookup_with_fallback_t (#key : eqtype) (id : key) (lc : list (key & Type)) (fb : Type) :
@@ -342,7 +342,7 @@ let rec asn1_content_t (k : asn1_content_k) : Tot Type (decreases k) =
       | Some fb -> make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) ls) (asn1_sequence_t_core (dsnd fb))) in
     asn1_sequence_any_t_core prefix suffix_t
 
-and asn1_any_t_core (t : eqtype) (ls : list (t * asn1_gen_items_lk)) : Tot (list (t & Type)) (decreases ls) =
+and asn1_any_t_core (t : eqtype) (ls : list (t & asn1_gen_items_lk)) : Tot (list (t & Type)) (decreases ls) =
   match ls with
   | [] -> [] 
   | h :: tl -> 
@@ -414,7 +414,7 @@ let rec asn1_sequence_t_core_equiv' (items:list asn1_gen_item_k)
     | hd::tl -> asn1_sequence_t_core_equiv' tl
 
 
-let rec asn1_any_t (t : eqtype) (ls : list (t * asn1_gen_items_k)) : Tot (list (t & Type)) (decreases ls) =
+let rec asn1_any_t (t : eqtype) (ls : list (t & asn1_gen_items_k)) : Tot (list (t & Type)) (decreases ls) =
   match ls with
   | [] -> [] 
   | h :: tl -> 

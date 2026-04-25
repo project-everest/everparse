@@ -6,7 +6,6 @@ module E = LowParse.Endianness
 module B = LowParse.Bytes32
 module U32 = FStar.UInt32
 
-open FStar.Mul
 
 inline_for_extraction
 noextract

@@ -3,7 +3,7 @@ module LowParse.Bytes
 module Seq = FStar.Seq
 module U8 = FStar.UInt8
 
-let bytes_equal (b1 b2: bytes) : GTot Type0 =
+let bytes_equal (b1 b2: bytes) : GTot prop =
   Seq.length b1 == Seq.length b2 /\
   (forall (i: nat { i < Seq.length b1 } ) . {:pattern (Seq.index b1 i); (Seq.index b2 i) } U8.v (Seq.index b1 i) == U8.v (Seq.index b2 i))
 

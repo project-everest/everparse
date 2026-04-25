@@ -5,7 +5,6 @@ module U8 = FStar.UInt8
 module E = LowParse.Endianness
 module Seq = FStar.Seq
 
-open FStar.Mul
 
 inline_for_extraction
 noextract

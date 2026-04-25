@@ -144,7 +144,7 @@ and dasn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_c
       in
       make_asn1_sequence_any_parser itemtwins suffix_p_twin) 
 
-and dasn1_ls_as_parser (t : eqtype) (ls : list (t * asn1_gen_items_lk)) : Tot (lp : list (t & (gen_parser asn1_weak_parser_kind)) {asn1_any_t_core t ls == extract_types lp}) (decreases ls) =
+and dasn1_ls_as_parser (t : eqtype) (ls : list (t & asn1_gen_items_lk)) : Tot (lp : list (t & (gen_parser asn1_weak_parser_kind)) {asn1_any_t_core t ls == extract_types lp}) (decreases ls) =
   match ls with
   | [] -> [] 
   | h :: tl -> 
@@ -259,7 +259,7 @@ and asn1_content_as_parser (k : asn1_content_k) : Tot (asn1_weak_parser (asn1_co
       in
       make_asn1_sequence_any_parser itemtwins suffix_p_twin) 
 
-and asn1_ls_as_parser (t : eqtype) (ls : list (t * asn1_gen_items_lk)) : Tot (lp : list (t & (gen_parser asn1_weak_parser_kind)) {asn1_any_t_core t ls == extract_types lp}) (decreases ls) =
+and asn1_ls_as_parser (t : eqtype) (ls : list (t & asn1_gen_items_lk)) : Tot (lp : list (t & (gen_parser asn1_weak_parser_kind)) {asn1_any_t_core t ls == extract_types lp}) (decreases ls) =
   match ls with
   | [] -> [] 
   | h :: tl -> 

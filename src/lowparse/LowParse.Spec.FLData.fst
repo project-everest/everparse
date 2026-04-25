@@ -116,7 +116,7 @@ let parse_fldata_strong_pred
   (s: serializer p)
   (sz: nat)
   (x: t)
-: GTot Type0
+: GTot prop
 = Seq.length (serialize s x) == sz
 
 let parse_fldata_strong_t

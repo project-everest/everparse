@@ -60,7 +60,7 @@ let serialize_t_spec : serializer parse_t_spec =
     synth_t_recip
     ()
 
-let t'_l_serializable (x: list t) : GTot Type0 =
+let t'_l_serializable (x: list t) : GTot prop =
   parse_bounded_vldata_strong_pred 0 255 (serialize_list _ serialize_t_spec) x
 
 inline_for_extraction

@@ -50,14 +50,14 @@ let mk_retagged (id : asn1_id_t) (#s) (x : asn1_k s {is_ILC x})
 let op_Star_Hat (name : string) (#t) (x : t)
 = x
 
-let op_Hat_Star (name : string) (#s) (x : asn1_k s {is_ILC x}) : (asn1_id_t * asn1_content_k)
+let op_Hat_Star (name : string) (#s) (x : asn1_k s {is_ILC x}) : (asn1_id_t & asn1_content_k)
 = match x with
   | ASN1_ILC id c -> (id, c)
 
 noextract
 let choice_tac () = T.norm [iota;zeta;delta;primops]; T.trefl () 
 
-let asn1_choice (ls : list (asn1_id_t * asn1_content_k)) (pf : squash (List.noRepeats (List.map fst ls) ))
+let asn1_choice (ls : list (asn1_id_t & asn1_content_k)) (pf : squash (List.noRepeats (List.map fst ls) ))
 = ASN1_CHOICE_ILC ls pf
 
 // for sequences
@@ -190,21 +190,21 @@ let asn1_any = ASN1_ANY_ILC
 let asn1_any_oid_prefix
   (prefix : list asn1_gen_item_k)
   (name : string)
-  (supported : list (asn1_oid_t * asn1_gen_items_lk)) 
+  (supported : list (asn1_oid_t & asn1_gen_items_lk)) 
   (pf_wf : squash (asn1_any_prefix_k_wf (Set.singleton oid_id) (List.map proj2_of_3 prefix)))
   (pf_sup : squash (List.noRepeats (List.map fst supported)))
 = ASN1_ILC sequence_id (ASN1_ANY_DEFINED_BY _ (list_as_l prefix) oid_id ASN1_OID supported None pf_wf pf_sup)
 
 let asn1_any_oid
   (name : string)
-  (supported : list (asn1_oid_t * asn1_gen_items_lk)) 
+  (supported : list (asn1_oid_t & asn1_gen_items_lk)) 
   (pf_wf : squash (asn1_any_prefix_k_wf (Set.singleton oid_id) (List.map proj2_of_3 [])))
   (pf_sup : squash (List.noRepeats (List.map fst supported)))
 = ASN1_ILC sequence_id (ASN1_ANY_DEFINED_BY _ (list_as_l []) oid_id ASN1_OID supported None pf_wf pf_sup)
 
 let asn1_any_oid_with_fallback
   (name : string)
-  (supported : list (asn1_oid_t * asn1_gen_items_lk)) 
+  (supported : list (asn1_oid_t & asn1_gen_items_lk)) 
   (fallback : asn1_gen_items_lk)
   (pf_wf : squash (asn1_any_prefix_k_wf (Set.singleton oid_id) (List.map proj2_of_3 [])))
   (pf_sup : squash (List.noRepeats (List.map fst supported)))

@@ -58,10 +58,10 @@ noeq
 type automata_data_param (cp : automata_control_param) = {
   ret_t : eqtype;
   partial_t : eqtype;
-  pre_t : cp.control_t -> partial_t -> Type0;
+  pre_t : cp.control_t -> partial_t -> prop;
   post_t : (s : cp.control_t) -> 
            (data : partial_t {pre_t s data}) ->
-           ret_t -> Type0;
+           ret_t -> prop;
   update_term : (s : cp.control_t) ->
                 (data : partial_t {pre_t s data}) ->
                 (ch : cp.ch_t {cp.fail_check s ch = false /\ cp.termination_check s ch = true}) ->
@@ -110,8 +110,8 @@ type automata_bare_parser_param (cp : automata_control_param) = {
 
 let id_cast
   (t : eqtype)
-  (p1 : t -> Type0)
-  (p2 : t -> Type0)
+  (p1 : t -> prop)
+  (p2 : t -> prop)
   (lem : (x : t -> (Lemma (requires p1 x) (ensures p2 x))))
   (x : t {p1 x})
 : (x' : t {p2 x'})
@@ -125,7 +125,7 @@ let rec automata_bare_parser'
   (s : cp.control_t)
   (data : dp.partial_t {dp.pre_t s data})
   (b : bytes)
-: Tot (option ((ret : dp.ret_t {dp.post_t s data ret}) * (consumed_length b)))
+: Tot (option ((ret : dp.ret_t {dp.post_t s data ret}) & (consumed_length b)))
   (decreases (Seq.length b))
 = match (bp.ch_t_bare_parser b) with
   | None -> None
@@ -200,11 +200,11 @@ type automata_parser_param (cp : automata_control_param) (dp : automata_data_par
 let and_then_cases_injective_dep_precond
   (#t:Type)
   (#t': Type)
-  (gt : t -> t' -> Type0)
+  (gt : t -> t' -> prop)
   (p': ((x : t) -> Tot (bare_parser (y : t' {gt x y}))))
   (x1 x2: t)
   (b1 b2: bytes)
-: GTot Type0
+: GTot prop
 = Some? (parse (p' x1) b1) /\
   Some? (parse (p' x2) b2) /\ (
     let (Some (v1, _)) = parse (p' x1) b1 in
@@ -215,9 +215,9 @@ let and_then_cases_injective_dep_precond
 let and_then_cases_injective_dep
   (#t : Type)
   (#t' : Type)
-  (gt : t -> t' -> Type0)
+  (gt : t -> t' -> prop)
   (p': ((m : t) -> Tot (bare_parser (x : t' {gt m x}))))
-: GTot Type0
+: GTot prop
 = forall (x1 x2: t) (b1 b2: bytes) . {:pattern (parse (p' x1) b1); (parse (p' x2) b2)}
   and_then_cases_injective_dep_precond gt p' x1 x2 b1 b2 ==>
   x1 == x2
@@ -225,7 +225,7 @@ let and_then_cases_injective_dep
 let and_then_cases_injective_dep_intro
   (#t : Type)
   (#t': Type)
-  (gt : t -> t' -> Type0)
+  (gt : t -> t' -> prop)
   (p': ((x : t) -> Tot (bare_parser (y : t' {gt x y}))))
   (lem: (
     (x1: t) -> 

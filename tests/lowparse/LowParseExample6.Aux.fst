@@ -25,7 +25,7 @@ let u8 : eqtype = U8.t
 inline_for_extraction
 let case_enum : LP.enum cases u8 =
   [@inline_let]
-  let e : list (cases * U8.t) = [
+  let e : list (cases & U8.t) = [
     Case_A, 18uy;
     Case_B, 42uy;
     Case_V2, 71uy;
@@ -50,7 +50,7 @@ let case_B = (x: U16.t { U16.v x > 0 } )
 
 noeq
 type t =
-  | A of (U8.t * U8.t)
+  | A of (U8.t & U8.t)
   | B of case_B
   | C : LP.unknown_enum_repr case_enum -> U16.t -> t
   | V2 of U16.t
@@ -93,7 +93,7 @@ let type_of_known_case
   (x: cases)
 : Tot Type0
 = match x with
-  | Case_A -> U8.t * U8.t
+  | Case_A -> U8.t & U8.t
   | Case_B -> case_B
   | Case_V2 -> U16.t
   | Case_V3 -> U16.t
@@ -486,7 +486,7 @@ let cases_of_t_A (x: t) : Lemma
 = ()
 
 inline_for_extraction
-let synth_case_A_inv (z: LP.dsum_cases t_sum (LP.Known Case_A)) : Tot (z: (U8.t * U8.t)) =
+let synth_case_A_inv (z: LP.dsum_cases t_sum (LP.Known Case_A)) : Tot (z: (U8.t & U8.t)) =
   [@inline_let]
   let z' : t = z in
   let _ = cases_of_t_A z' in

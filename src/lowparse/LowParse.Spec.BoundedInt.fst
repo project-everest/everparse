@@ -32,7 +32,7 @@ let decode_bounded_integer
   (b: bytes { Seq.length b == i } )
 : GTot (bounded_integer i)
 = E.lemma_be_to_n_is_bounded b;
-  M.pow2_le_compat 32 (8 `FStar.Mul.op_Star` i);
+  M.pow2_le_compat 32 (8 `op_Star` i);
   U32.uint_to_t (E.be_to_n b)
 
 let decode_bounded_integer_injective'
@@ -65,7 +65,7 @@ let parse_bounded_integer
 
 let parse_bounded_integer_spec i input =
   parser_kind_prop_equiv (parse_bounded_integer_kind i) (parse_bounded_integer i);
-  M.pow2_le_compat 32 (8 `FStar.Mul.op_Star` i);
+  M.pow2_le_compat 32 (8 `op_Star` i);
   match parse (parse_bounded_integer i) input with
   | None -> ()
   | Some (y, consumed) ->
@@ -110,7 +110,7 @@ let bounded_integer_of_le
   (b: bytes { Seq.length b == i } )
 : GTot (bounded_integer i)
 = E.lemma_le_to_n_is_bounded b;
-  M.pow2_le_compat 32 (8 `FStar.Mul.op_Star` i);
+  M.pow2_le_compat 32 (8 `op_Star` i);
   U32.uint_to_t (E.le_to_n b)
 
 let bounded_integer_of_le_injective'

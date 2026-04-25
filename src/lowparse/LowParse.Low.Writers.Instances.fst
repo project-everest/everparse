@@ -335,12 +335,12 @@ let serialize32_bounded_integer_ct
   E.slice_n_to_be_bitfield 4 (U32.v after) (U32.v i) 4;
   Seq.lemma_split (Seq.slice (B.as_seq h' b) (U32.v pos) (U32.v pos + 4)) (U32.v i);
   Seq.lemma_split (Seq.slice (B.as_seq h b) (U32.v pos) (U32.v pos + 4)) (U32.v i);
-  BF.get_bitfield_set_bitfield_other #32 (U32.v before) (8 `op_Multiply` (4 - U32.v i)) 32 (U32.v x) 0 (8 `op_Multiply` (4 - U32.v i));
+  BF.get_bitfield_set_bitfield_other #32 (U32.v before) (8 `op_Star` (4 - U32.v i)) 32 (U32.v x) 0 (8 `op_Star` (4 - U32.v i));
   Seq.lemma_split (Seq.slice (B.as_seq h' b) (U32.v pos + U32.v i) (B.length b)) (4 - U32.v i);
   Seq.lemma_split (Seq.slice (B.as_seq h b) (U32.v pos + U32.v i) (B.length b)) (4 - U32.v i);
   B.modifies_loc_buffer_from_to_intro b pos (pos `U32.add` i) B.loc_none h h';
   E.slice_n_to_be_bitfield 4 (U32.v after) 0 (U32.v i);
-  BF.get_bitfield_set_bitfield_same #32 (U32.v before) (8 `op_Multiply` (4 - U32.v i)) 32 (U32.v x);
+  BF.get_bitfield_set_bitfield_same #32 (U32.v before) (8 `op_Star` (4 - U32.v i)) 32 (U32.v x);
   serialize_bounded_integer_spec (U32.v i) x 
 
 #pop-options

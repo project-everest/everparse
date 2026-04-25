@@ -3,7 +3,6 @@ module Specialize
   This module implements a pass over the source AST,
   elaborating the `specialize` declaration
 *)
-open FStar.Mul
 open FStar.List.Tot
 open Ast
 open FStar.All

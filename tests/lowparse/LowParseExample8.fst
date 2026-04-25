@@ -14,7 +14,7 @@ let u8 : eqtype = U8.t
 inline_for_extraction
 let k_enum : LP.enum k_t u8 =
   [@inline_let]
-  let e : list (k_t * U8.t) = [
+  let e : list (k_t & U8.t) = [
     Ka, 18uy;
     Kb, 42uy;
   ]

@@ -34,7 +34,7 @@ let typ_included
           let j = eval_int_value ti in
           if j < 0
           then RSuccess ()
-          else let i : nat = (let open FStar.Mul in 8 * j) in
+          else let i : nat = (8 * j) in
           if i >= 64
           then begin
             FStar.Math.Lemmas.pow2_le_compat i 64;

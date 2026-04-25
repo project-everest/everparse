@@ -14,7 +14,7 @@ let compl
   (v: t)
   (pos' : U32.t)
   (x: Seq.seq byte)
-: GTot Type0
+: GTot prop
 = U32.v pos >= 4 /\
   Seq.length x >= 4 /\ (
   let len = frozen_until x in
