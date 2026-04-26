@@ -633,10 +633,7 @@ static bool validate_header(Pulse_Lib_Slice_slice__uint8_t input, size_t *poffse
       ite = x.additional_info <= ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS;
     else
       ite = true;
-    if (ite)
-      ite1 = x.additional_info < ADDITIONAL_INFO_UNASSIGNED_MIN;
-    else
-      ite1 = false;
+    ite1 = ite && x.additional_info < ADDITIONAL_INFO_UNASSIGNED_MIN;
   }
   else
     ite1 = false;

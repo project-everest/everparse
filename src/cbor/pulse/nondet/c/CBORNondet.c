@@ -680,10 +680,7 @@ CBOR_Pulse_Raw_EverParse_Format_validate_header(
       ite = x.additional_info <= CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS;
     else
       ite = true;
-    if (ite)
-      ite1 = x.additional_info < CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_UNASSIGNED_MIN;
-    else
-      ite1 = false;
+    ite1 = ite && x.additional_info < CBOR_SPEC_RAW_EVERPARSE_ADDITIONAL_INFO_UNASSIGNED_MIN;
   }
   else
     ite1 = false;
