@@ -1031,7 +1031,7 @@ let rec array_group_concat_unique_strong
 
 #pop-options
 
-#push-options "--z3rlimit 256 --split_queries always --query_stats --fuel 4 --ifuel 8"
+#push-options "--z3rlimit 16 --split_queries always --query_stats --fuel 2 --ifuel 2"
 
 #restart-solver
 let rec array_group_concat_unique_weak
@@ -1068,10 +1068,12 @@ let rec array_group_concat_unique_weak
     if not (RSuccess? res3)
     then res3
     else begin
+      assert (array_group_sem env.e_sem_env (GConcat g1r g2) == Spec.array_group_concat (array_group_sem env.e_sem_env g1r) (array_group_sem env.e_sem_env g2));
       Spec.array_group_concat_unique_weak_choice_left
         (array_group_sem env.e_sem_env g1l)
         (array_group_sem env.e_sem_env g1r)
         (array_group_sem env.e_sem_env g2);
+      assert (Spec.array_group_concat_unique_weak (Spec.array_group_choice (array_group_sem env.e_sem_env g1l) (array_group_sem env.e_sem_env g1r)) (array_group_sem env.e_sem_env g2));
       RSuccess ()
     end
   | _ ->
@@ -1088,6 +1090,7 @@ let rec array_group_concat_unique_weak
           (array_group_sem env.e_sem_env g1)
           (array_group_sem env.e_sem_env g2l)
           (array_group_sem env.e_sem_env g2r);
+        assert (Spec.array_group_concat_unique_weak (array_group_sem env.e_sem_env g1) (Spec.array_group_choice (array_group_sem env.e_sem_env g2l) (array_group_sem env.e_sem_env g2r)));
         RSuccess ()
       end
     | _ ->
@@ -1101,6 +1104,10 @@ let rec array_group_concat_unique_weak
         if not (RSuccess? res2)
         then res2
         else begin
+          assert (array_group_sem env.e_sem_env g1 == Spec.array_group_concat (array_group_sem env.e_sem_env g1l) (array_group_sem env.e_sem_env g1r));
+          assert (Spec.array_group_concat_unique_weak (array_group_sem env.e_sem_env g1l) (array_group_sem env.e_sem_env g1r));
+          assert (array_group_sem env.e_sem_env (GConcat g1r g2) == Spec.array_group_concat (array_group_sem env.e_sem_env g1r) (array_group_sem env.e_sem_env g2));
+          assert (Spec.array_group_concat_unique_weak (array_group_sem env.e_sem_env g1l) (Spec.array_group_concat (array_group_sem env.e_sem_env g1r) (array_group_sem env.e_sem_env g2)));
           Spec.array_group_concat_unique_weak_concat_left
             (array_group_sem env.e_sem_env g1l)
             (array_group_sem env.e_sem_env g1r)
@@ -1130,11 +1137,13 @@ let rec array_group_concat_unique_weak
         else begin
           match g' with
           | GZeroOrMore _ ->
+            assert (array_group_sem env.e_sem_env g' == Spec.array_group_zero_or_more (array_group_sem env.e_sem_env g));
             Spec.array_group_concat_unique_weak_zero_or_more_left
               (array_group_sem env.e_sem_env g)
               (array_group_sem env.e_sem_env g2);
             RSuccess ()
           | GOneOrMore _ ->
+            assert (array_group_sem env.e_sem_env g' == Spec.array_group_one_or_more (array_group_sem env.e_sem_env g));
             Spec.array_group_concat_unique_weak_one_or_more_left
               (array_group_sem env.e_sem_env g)
               (array_group_sem env.e_sem_env g2);
@@ -1151,6 +1160,7 @@ let rec array_group_concat_unique_weak
           Spec.array_group_concat_unique_weak_zero_or_one_left
             (array_group_sem env.e_sem_env g)
             (array_group_sem env.e_sem_env g2);
+          assert (Spec.array_group_concat_unique_weak (Spec.array_group_zero_or_one (array_group_sem env.e_sem_env g)) (array_group_sem env.e_sem_env g2));
           RSuccess ()
         end
       end
