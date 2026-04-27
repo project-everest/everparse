@@ -1031,7 +1031,7 @@ let rec array_group_concat_unique_strong
 
 #pop-options
 
-#push-options "--z3rlimit 128 --split_queries always --query_stats --fuel 4 --ifuel 8"
+#push-options "--z3rlimit 256 --split_queries always --query_stats --fuel 4 --ifuel 8"
 
 #restart-solver
 let rec array_group_concat_unique_weak
