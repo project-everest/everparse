@@ -11,9 +11,9 @@ module SZ = FStar.SizeT
 noeq
 type base_iterator ([@@@strictly_positive] t: Type) =
 | Empty
-| Singleton of ref t
-| Slice of S.slice t
-| Serialized: (count: SZ.t) -> (payload: S.slice U8.t) -> base_iterator t
+| Singleton: (sp: perm) -> (sr: ref t) -> base_iterator t
+| Slice: (sp: perm) -> (ss: S.slice t) -> base_iterator t
+| Serialized: (sp: perm) -> (count: SZ.t) -> (payload: S.slice U8.t) -> base_iterator t
 
 noeq
 type iterator ([@@@strictly_positive] t: Type) =
@@ -21,6 +21,7 @@ type iterator ([@@@strictly_positive] t: Type) =
 | Append:
   (count: SZ.t) ->
   (before: base_iterator t) ->
+  (ap: perm) ->
   (after: ref (iterator t)) ->
   iterator t
 
@@ -37,15 +38,15 @@ let base_iterator_match
 : Tot slprop
 = match i with
   | Empty -> pure (Nil? l)
-  | Singleton s -> exists* x y .
-    pts_to s x **
+  | Singleton sp s -> exists* x y .
+    pts_to s #sp x **
     vmatch x y **
     pure (l == [y])
-  | Slice s -> exists* l' .
-    pts_to s l' **
+  | Slice sp s -> exists* l' .
+    pts_to s #sp l' **
     SM.seq_list_match l' l vmatch
-  | Serialized count pl -> exists* l' .
-    pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) pl l' **
+  | Serialized sp count pl -> exists* l' .
+    pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) pl #sp l' **
     pure ((l' <: list u) == l)
 
 let rec iterator_match
@@ -59,10 +60,10 @@ let rec iterator_match
 : Tot slprop
 = match i with
   | Base i -> base_iterator_match vmatch p i l
-  | Append count before after ->
+  | Append count before ap after ->
     exists* i1 i2 l2 .
       base_iterator_match vmatch p before i1 **
-      pts_to after i2 **
+      pts_to after #ap i2 **
       iterator_match vmatch p i2 l2 **
       pure (
         SZ.v count <= List.Tot.length i1 + List.Tot.length l2 /\
@@ -96,27 +97,27 @@ ensures base_iterator_match vmatch p i l ** pure (SZ.v res == List.Tot.length l)
            as (base_iterator_match vmatch p i l);
       0sz
     }
-    Singleton s -> {
-      unfold (base_iterator_match vmatch p (Singleton s) l);
-      fold (base_iterator_match vmatch p (Singleton s) l);
-      rewrite (base_iterator_match vmatch p (Singleton s) l)
+    Singleton sp s -> {
+      unfold (base_iterator_match vmatch p (Singleton sp s) l);
+      fold (base_iterator_match vmatch p (Singleton sp s) l);
+      rewrite (base_iterator_match vmatch p (Singleton sp s) l)
            as (base_iterator_match vmatch p i l);
       1sz
     }
-    Slice sl -> {
-      unfold (base_iterator_match vmatch p (Slice sl) l);
+    Slice sp sl -> {
+      unfold (base_iterator_match vmatch p (Slice sp sl) l);
       SM.seq_list_match_length vmatch _ l;
       S.pts_to_len sl;
       let res = S.len sl;
-      fold (base_iterator_match vmatch p (Slice sl) l);
-      rewrite (base_iterator_match vmatch p (Slice sl) l)
+      fold (base_iterator_match vmatch p (Slice sp sl) l);
+      rewrite (base_iterator_match vmatch p (Slice sp sl) l)
            as (base_iterator_match vmatch p i l);
       res
     }
-    Serialized count pl -> {
-      unfold (base_iterator_match vmatch p (Serialized count pl) l);
-      fold (base_iterator_match vmatch p (Serialized count pl) l);
-      rewrite (base_iterator_match vmatch p (Serialized count pl) l)
+    Serialized sp count pl -> {
+      unfold (base_iterator_match vmatch p (Serialized sp count pl) l);
+      fold (base_iterator_match vmatch p (Serialized sp count pl) l);
+      rewrite (base_iterator_match vmatch p (Serialized sp count pl) l)
            as (base_iterator_match vmatch p i l);
       count
     }
@@ -144,11 +145,11 @@ ensures iterator_match vmatch p i l ** pure (SZ.v res == List.Tot.length l)
            as (iterator_match vmatch p i l);
       res
     }
-    Append count before after -> {
-      unfold (iterator_match vmatch p (Append count before after) l);
+    Append count before ap after -> {
+      unfold (iterator_match vmatch p (Append count before ap after) l);
       with _i1 _i2 _l2 . assert (
         base_iterator_match vmatch p before _i1 **
-        pts_to after _i2 **
+        pts_to after #ap _i2 **
         iterator_match vmatch p _i2 _l2 **
         pure (
           SZ.v count <= List.Tot.length _i1 + List.Tot.length _l2 /\
@@ -157,8 +158,8 @@ ensures iterator_match vmatch p i l ** pure (SZ.v res == List.Tot.length l)
       );
       List.Tot.append_length _i1 _l2;
       lemma_splitAt_fst_length (SZ.v count) (List.Tot.append _i1 _l2);
-      fold (iterator_match vmatch p (Append count before after) l);
-      rewrite (iterator_match vmatch p (Append count before after) l)
+      fold (iterator_match vmatch p (Append count before ap after) l);
+      rewrite (iterator_match vmatch p (Append count before ap after) l)
            as (iterator_match vmatch p i l);
       count
     }
