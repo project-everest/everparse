@@ -874,7 +874,8 @@ returns res: iterator t
 ensures exists* pm_out .
   iterator_match vmatch p pm_out res (fst (List.Tot.splitAt (SZ.v len) l)) **
   (iterator_match vmatch p pm_out res (fst (List.Tot.splitAt (SZ.v len) l)) @==>
-   iterator_match vmatch p pm i l)
+   iterator_match vmatch p pm i l) **
+  pure (iterator_depth res <= iterator_depth i)
 {
   match i {
     Base bi -> {
@@ -1097,12 +1098,12 @@ requires
   R.pts_to pi i **
   base_iterator_match vmatch p pm i l
 returns res: t
-ensures exists* (i': base_iterator t) (pm_match: perm) (pm_v: perm) .
+ensures exists* (i': base_iterator t) (pm_v: perm) .
   R.pts_to pi i' **
-  base_iterator_match vmatch p pm_match i' (List.Tot.tl l) **
+  base_iterator_match vmatch p pm i' (List.Tot.tl l) **
   vmatch pm_v res (List.Tot.hd l) **
   Trade.trade
-    (base_iterator_match vmatch p pm_match i' (List.Tot.tl l) **
+    (base_iterator_match vmatch p pm i' (List.Tot.tl l) **
      vmatch pm_v res (List.Tot.hd l))
     (base_iterator_match vmatch p pm i l)
 {
@@ -1251,33 +1252,33 @@ ensures exists* (i': base_iterator t) (pm_match: perm) (pm_v: perm) .
                 (pts_to_parsed p hd_sl #((pm *. sp) /. 2.0R) (List.Tot.hd l) **
                  pts_to_parsed_strong_prefix (parse_nlist (SZ.v count - 1) p) tl_sl #((pm *. sp) /. 2.0R) (List.Tot.tl l))
                 (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #(pm *. sp) l));
-      // Write pi to point to tail
+      // Write pi to point to tail with halved sp
       R.forget_init pi;
-      pi := Serialized sp (SZ.sub count 1sz) tl_sl;
-      // Fold tail match at pm /. 2.0R so that (pm /. 2.0R) *. sp == (pm *. sp) /. 2.0R
-      fold (base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp (SZ.sub count 1sz) tl_sl) (List.Tot.tl l));
+      pi := Serialized (sp /. 2.0R) (SZ.sub count 1sz) tl_sl;
+      // Fold tail match at pm so that pm *. (sp /. 2.0R) == (pm *. sp) /. 2.0R
+      fold (base_iterator_match vmatch p pm (Serialized (sp /. 2.0R) (SZ.sub count 1sz) tl_sl) (List.Tot.tl l));
       // Build trade for tail: unfold tail match to recover strong_prefix
-      intro (base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp (SZ.sub count 1sz) tl_sl) (List.Tot.tl l) @==>
+      intro (base_iterator_match vmatch p pm (Serialized (sp /. 2.0R) (SZ.sub count 1sz) tl_sl) (List.Tot.tl l) @==>
              pts_to_parsed_strong_prefix (parse_nlist (SZ.v count - 1) p) tl_sl #((pm *. sp) /. 2.0R) (List.Tot.tl l))
         #emp
         fn _ {
-          unfold (base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp (SZ.sub count 1sz) tl_sl) (List.Tot.tl l));
+          unfold (base_iterator_match vmatch p pm (Serialized (sp /. 2.0R) (SZ.sub count 1sz) tl_sl) (List.Tot.tl l));
           with tl' . assert (
-            pts_to_parsed_strong_prefix (parse_nlist (SZ.v (SZ.sub count 1sz)) p) tl_sl #((pm /. 2.0R) *. sp) tl'
+            pts_to_parsed_strong_prefix (parse_nlist (SZ.v (SZ.sub count 1sz)) p) tl_sl #(pm *. (sp /. 2.0R)) tl'
           );
-          rewrite (pts_to_parsed_strong_prefix (parse_nlist (SZ.v (SZ.sub count 1sz)) p) tl_sl #((pm /. 2.0R) *. sp) tl')
+          rewrite (pts_to_parsed_strong_prefix (parse_nlist (SZ.v (SZ.sub count 1sz)) p) tl_sl #(pm *. (sp /. 2.0R)) tl')
                as (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count - 1) p) tl_sl #((pm *. sp) /. 2.0R) (List.Tot.tl l))
         };
       // Combine head trade (vmatch -> pts_to_parsed) and tail trade into product
       Trade.prod
         (vmatch pm_v res (List.Tot.hd l))
         (pts_to_parsed p hd_sl #((pm *. sp) /. 2.0R) (List.Tot.hd l))
-        (base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp (SZ.sub count 1sz) tl_sl) (List.Tot.tl l))
+        (base_iterator_match vmatch p pm (Serialized (sp /. 2.0R) (SZ.sub count 1sz) tl_sl) (List.Tot.tl l))
         (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count - 1) p) tl_sl #((pm *. sp) /. 2.0R) (List.Tot.tl l));
       // Chain with nlist_hd_tl_strong_prefix trade
       Trade.trans
         (vmatch pm_v res (List.Tot.hd l) **
-         base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp (SZ.sub count 1sz) tl_sl) (List.Tot.tl l))
+         base_iterator_match vmatch p pm (Serialized (sp /. 2.0R) (SZ.sub count 1sz) tl_sl) (List.Tot.tl l))
         (pts_to_parsed p hd_sl #((pm *. sp) /. 2.0R) (List.Tot.hd l) **
          pts_to_parsed_strong_prefix (parse_nlist (SZ.v count - 1) p) tl_sl #((pm *. sp) /. 2.0R) (List.Tot.tl l))
         (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #(pm *. sp) l);
@@ -1290,24 +1291,370 @@ ensures exists* (i': base_iterator t) (pm_match: perm) (pm_v: perm) .
         };
       Trade.trans
         (vmatch pm_v res (List.Tot.hd l) **
-         base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp (SZ.sub count 1sz) tl_sl) (List.Tot.tl l))
+         base_iterator_match vmatch p pm (Serialized (sp /. 2.0R) (SZ.sub count 1sz) tl_sl) (List.Tot.tl l))
         (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #(pm *. sp) l)
         (base_iterator_match vmatch p pm (Serialized sp count payload) l);
       // Swap hypothesis order: vmatch ** base_iterator_match -> base_iterator_match ** vmatch
       Trade.comm_l
         (vmatch pm_v res (List.Tot.hd l))
-        (base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp (SZ.sub count 1sz) tl_sl) (List.Tot.tl l))
+        (base_iterator_match vmatch p pm (Serialized (sp /. 2.0R) (SZ.sub count 1sz) tl_sl) (List.Tot.tl l))
         (base_iterator_match vmatch p pm (Serialized sp count payload) l);
       // Rewrite conclusion from (Serialized sp count payload) back to i
       rewrite (Trade.trade
-                (base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp (SZ.sub count 1sz) tl_sl) (List.Tot.tl l) **
+                (base_iterator_match vmatch p pm (Serialized (sp /. 2.0R) (SZ.sub count 1sz) tl_sl) (List.Tot.tl l) **
                  vmatch pm_v res (List.Tot.hd l))
                 (base_iterator_match vmatch p pm (Serialized sp count payload) l))
            as (Trade.trade
-                (base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp (SZ.sub count 1sz) tl_sl) (List.Tot.tl l) **
+                (base_iterator_match vmatch p pm (Serialized (sp /. 2.0R) (SZ.sub count 1sz) tl_sl) (List.Tot.tl l) **
                  vmatch pm_v res (List.Tot.hd l))
                 (base_iterator_match vmatch p pm i l));
       res
+    }
+  }
+}
+
+#pop-options
+
+// Helper: splitAt with positive n gives Cons result and splits into hd/tl
+let rec lemma_splitAt_cons (#a: Type) (n: pos) (l: list a)
+  : Lemma
+    (requires n <= List.Tot.length l /\ Cons? l)
+    (ensures (
+      Cons? (fst (List.Tot.splitAt n l)) /\
+      List.Tot.hd (fst (List.Tot.splitAt n l)) == List.Tot.hd l /\
+      List.Tot.tl (fst (List.Tot.splitAt n l)) == fst (List.Tot.splitAt (n - 1) (List.Tot.tl l))
+    ))
+  = ()
+
+// Helper: Cons? prefix implies positive count
+let lemma_Cons_splitAt_pos (#a: Type) (n: nat) (l: list a)
+  : Lemma
+    (requires n <= List.Tot.length l /\ Cons? (fst (List.Tot.splitAt n l)))
+    (ensures n > 0)
+  = ()
+
+// Determinism of pts_to_parsed_strong_prefix: same slice at same perm implies same value
+#push-options "--z3rlimit 20"
+let pts_to_parsed_strong_prefix'
+  (#k: parser_kind) (#t: Type0) (p: parser k t)
+  (input: S.slice byte) (#pm: perm) (v: t) : slprop
+  = pts_to_parsed_strong_prefix p input #pm v
+
+let s_pts_to (#t: Type) (s: S.slice t) (#p: perm) (v: Seq.seq t) : slprop
+  = S.pts_to s #p v
+
+ghost fn pts_to_parsed_strong_prefix_det
+  (#k: parser_kind) (#t: Type0) (p: parser k t)
+  (input: S.slice byte)
+  (#pm: perm) (#v1: Ghost.erased t) (#v2: Ghost.erased t)
+requires
+  pts_to_parsed_strong_prefix p input #pm v1 **
+  pts_to_parsed_strong_prefix' p input #pm v2
+ensures
+  pts_to_parsed_strong_prefix p input #pm v1 **
+  pts_to_parsed_strong_prefix' p input #pm v2 **
+  pure (v1 == v2)
+{
+  unfold (pts_to_parsed_strong_prefix p input #pm v1);
+  with w1 . assert (S.pts_to input #pm w1);
+  rewrite (S.pts_to input #pm w1) as (s_pts_to input #pm w1);
+  rewrite (pts_to_parsed_strong_prefix' p input #pm v2)
+       as (pts_to_parsed_strong_prefix p input #pm v2);
+  unfold (pts_to_parsed_strong_prefix p input #pm v2);
+  with w2 . assert (S.pts_to input #pm w2);
+  rewrite (s_pts_to input #pm w1) as (S.pts_to input #pm w1);
+  S.gather input;
+  S.share input;
+  fold (pts_to_parsed_strong_prefix p input #pm v1);
+  fold (pts_to_parsed_strong_prefix p input #pm v2);
+  rewrite (pts_to_parsed_strong_prefix p input #pm v2)
+       as (pts_to_parsed_strong_prefix' p input #pm v2);
+}
+#pop-options
+
+#push-options "--z3rlimit 80"
+
+fn rec iterator_next
+  (#t: Type0)
+  (#u: Type0)
+  (vmatch: perm -> t -> u -> slprop)
+  (vmatch_share: share_t vmatch)
+  (vmatch_gather: gather_t vmatch)
+  (#k: parser_kind)
+  (p: parser k u)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (j: LPS.jumper p)
+  (rd: (pv: perm) -> zero_copy_parse (vmatch pv) p)
+  (pm: perm)
+  (pi: R.ref (iterator t))
+  (#i: Ghost.erased (iterator t))
+  (#l: Ghost.erased (list u) { Cons? l })
+requires
+  R.pts_to pi i **
+  iterator_match vmatch p pm i l
+returns res: t
+ensures exists* (i': iterator t) (pm_match: perm) (pm_v: perm) .
+  R.pts_to pi i' **
+  iterator_match vmatch p pm_match i' (List.Tot.tl l) **
+  vmatch pm_v res (List.Tot.hd l) **
+  Trade.trade
+    (iterator_match vmatch p pm_match i' (List.Tot.tl l) **
+     vmatch pm_v res (List.Tot.hd l))
+    (iterator_match vmatch p pm i l)
+decreases (iterator_depth i)
+{
+  let iv = !pi;
+  match iv {
+    Base bi -> {
+      rewrite (iterator_match vmatch p pm i l)
+           as (iterator_match vmatch p pm (Base bi) l);
+      unfold (iterator_match vmatch p pm (Base bi) l);
+      let mut pb = bi;
+      let res = base_iterator_next vmatch p sq j rd pm pb;
+      with bi_new pm_bi pm_v . assert (
+        R.pts_to pb bi_new **
+        base_iterator_match vmatch p pm_bi bi_new (List.Tot.tl l) **
+        vmatch pm_v res (List.Tot.hd l) **
+        Trade.trade
+          (base_iterator_match vmatch p pm_bi bi_new (List.Tot.tl l) **
+           vmatch pm_v res (List.Tot.hd l))
+          (base_iterator_match vmatch p pm bi l)
+      );
+      let bi_val = !pb;
+      R.forget_init pi;
+      pi := Base bi_val;
+      fold (iterator_match vmatch p pm_bi (Base #t bi_val) (List.Tot.tl l));
+      intro (iterator_match vmatch p pm_bi (Base #t bi_val) (List.Tot.tl l) **
+             vmatch pm_v res (List.Tot.hd l) @==>
+             iterator_match vmatch p pm (Base #t bi) l)
+        #(Trade.trade
+            (base_iterator_match vmatch p pm_bi bi_val (List.Tot.tl l) **
+             vmatch pm_v res (List.Tot.hd l))
+            (base_iterator_match vmatch p pm bi l))
+        fn _ {
+          unfold (iterator_match vmatch p pm_bi (Base #t bi_val) (List.Tot.tl l));
+          Trade.elim
+            (base_iterator_match vmatch p pm_bi bi_val (List.Tot.tl l) **
+             vmatch pm_v res (List.Tot.hd l))
+            (base_iterator_match vmatch p pm bi l);
+          fold (iterator_match vmatch p pm (Base #t bi) l);
+        };
+      rewrite (iterator_match vmatch p pm_bi (Base #t bi_val) (List.Tot.tl l) **
+               vmatch pm_v res (List.Tot.hd l) @==>
+               iterator_match vmatch p pm (Base #t bi) l)
+           as (iterator_match vmatch p pm_bi (Base #t bi_val) (List.Tot.tl l) **
+               vmatch pm_v res (List.Tot.hd l) @==>
+               iterator_match vmatch p pm i l);
+      res
+    }
+    Append depth count before ap after -> {
+      rewrite (iterator_match vmatch p pm i l)
+           as (iterator_match vmatch p pm (Append depth count before ap after) l);
+      unfold (iterator_match vmatch p pm (Append depth count before ap after) l);
+      with i1 i2 l2 . assert (
+        base_iterator_match vmatch p pm before i1 **
+        pts_to after #(pm *. ap) i2 **
+        iterator_match vmatch p pm i2 l2 **
+        pure (
+          SZ.v count <= List.Tot.length i1 + List.Tot.length l2 /\
+          l == fst (List.Tot.splitAt (SZ.v count) (List.Tot.append i1 l2)) /\
+          iterator_depth i2 < Ghost.reveal depth
+        )
+      );
+      let before_len = base_iterator_length vmatch p pm before;
+      if (before_len = 0sz) {
+        // === EMPTY BEFORE CASE ===
+        List.Tot.append_length i1 l2;
+        lemma_Cons_splitAt_pos (SZ.v count) (List.Tot.append i1 l2);
+        // Read concrete i2 value from reference
+        let i2_val = R.op_Bang after;
+        rewrite (iterator_match vmatch p pm i2 l2)
+             as (iterator_match vmatch p pm i2_val l2);
+        let i_trunc = iterator_truncate vmatch vmatch_share vmatch_gather p pm i2_val #l2 count;
+        with pm_trunc . assert (
+          iterator_match vmatch p pm_trunc i_trunc (fst (List.Tot.splitAt (SZ.v count) l2))
+        );
+        rewrite (iterator_match vmatch p pm_trunc i_trunc (fst (List.Tot.splitAt (SZ.v count) l2)))
+             as (iterator_match vmatch p pm_trunc i_trunc l);
+        rewrite (iterator_match vmatch p pm_trunc i_trunc (fst (List.Tot.splitAt (SZ.v count) l2)) @==>
+                 iterator_match vmatch p pm i2_val l2)
+             as (iterator_match vmatch p pm_trunc i_trunc l @==>
+                 iterator_match vmatch p pm i2_val l2);
+        let mut local = i_trunc;
+        let res = iterator_next vmatch vmatch_share vmatch_gather p sq j rd pm_trunc local;
+        with i_next pm_next pm_v . assert (
+          R.pts_to local i_next **
+          iterator_match vmatch p pm_next i_next (List.Tot.tl l) **
+          vmatch pm_v res (List.Tot.hd l) **
+          Trade.trade
+            (iterator_match vmatch p pm_next i_next (List.Tot.tl l) **
+             vmatch pm_v res (List.Tot.hd l))
+            (iterator_match vmatch p pm_trunc i_trunc l)
+        );
+        let i_next_val = !local;
+        R.forget_init pi;
+        pi := i_next_val;
+        // Chain: (pm_next, i_next, tl l) -> (pm_trunc, i_trunc, l) -> (pm, i2_val, l2)
+        Trade.trans
+          (iterator_match vmatch p pm_next i_next (List.Tot.tl l) **
+           vmatch pm_v res (List.Tot.hd l))
+          (iterator_match vmatch p pm_trunc i_trunc l)
+          (iterator_match vmatch p pm i2_val l2);
+        // Rewrite trade conclusion from i2_val to i2
+        rewrite (iterator_match vmatch p pm_next i_next (List.Tot.tl l) **
+                 vmatch pm_v res (List.Tot.hd l) @==>
+                 iterator_match vmatch p pm i2_val l2)
+             as (iterator_match vmatch p pm_next i_next (List.Tot.tl l) **
+                 vmatch pm_v res (List.Tot.hd l) @==>
+                 iterator_match vmatch p pm i2 l2);
+        // Build: (pm, i2, l2) -> iterator_match pm (Append ...) l
+        intro (iterator_match vmatch p pm i2 l2 @==>
+               iterator_match vmatch p pm (Append depth count before ap after) l)
+          #(base_iterator_match vmatch p pm before i1 **
+            pts_to after #(pm *. ap) i2 **
+            pure (
+              SZ.v count <= List.Tot.length i1 + List.Tot.length l2 /\
+              Ghost.reveal l == fst (List.Tot.splitAt (SZ.v count) (List.Tot.append i1 l2)) /\
+              iterator_depth i2 < Ghost.reveal depth
+            ))
+          fn _ {
+            fold (iterator_match vmatch p pm (Append depth count before ap after) l);
+          };
+        Trade.trans
+          (iterator_match vmatch p pm_next i_next (List.Tot.tl l) **
+           vmatch pm_v res (List.Tot.hd l))
+          (iterator_match vmatch p pm i2 l2)
+          (iterator_match vmatch p pm (Append depth count before ap after) l);
+        rewrite (iterator_match vmatch p pm_next i_next (List.Tot.tl l) **
+                 vmatch pm_v res (List.Tot.hd l) @==>
+                 iterator_match vmatch p pm (Append depth count before ap after) l)
+             as (iterator_match vmatch p pm_next i_next (List.Tot.tl l) **
+                 vmatch pm_v res (List.Tot.hd l) @==>
+                 iterator_match vmatch p pm i l);
+        res
+      } else {
+        // === NON-EMPTY BEFORE CASE ===
+        let mut pb = before;
+        let res = base_iterator_next vmatch p sq j rd pm pb;
+        with bi_new pm_v . assert (
+          R.pts_to pb bi_new **
+          base_iterator_match vmatch p pm bi_new (List.Tot.tl i1) **
+          vmatch pm_v res (List.Tot.hd i1) **
+          Trade.trade
+            (base_iterator_match vmatch p pm bi_new (List.Tot.tl i1) **
+             vmatch pm_v res (List.Tot.hd i1))
+            (base_iterator_match vmatch p pm before i1)
+        );
+        // hd i1 == hd l
+        List.Tot.append_length i1 l2;
+        assert (pure (Cons? (fst (List.Tot.splitAt (SZ.v count) (List.Tot.append i1 l2)))));
+        lemma_Cons_splitAt_pos (SZ.v count) (List.Tot.append i1 l2);
+        assert (pure (Cons? (List.Tot.append i1 l2)));
+        lemma_splitAt_cons (SZ.v count) (List.Tot.append i1 l2);
+        rewrite (vmatch pm_v res (List.Tot.hd i1))
+             as (vmatch pm_v res (List.Tot.hd l));
+        rewrite (Trade.trade
+                  (base_iterator_match vmatch p pm bi_new (List.Tot.tl i1) **
+                   vmatch pm_v res (List.Tot.hd i1))
+                  (base_iterator_match vmatch p pm before i1))
+             as (Trade.trade
+                  (base_iterator_match vmatch p pm bi_new (List.Tot.tl i1) **
+                   vmatch pm_v res (List.Tot.hd l))
+                  (base_iterator_match vmatch p pm before i1));
+        let bi_new_val = !pb;
+        R.forget_init pi;
+        pi := Append depth (SZ.sub count 1sz) bi_new_val ap after;
+        lemma_splitAt_fst_length (SZ.v count) (List.Tot.append i1 l2);
+        // Share everything to fold at pm/2 and stash the other halves
+        // Share base_iterator_match: pm -> pm/2 x2
+        base_iterator_match_share vmatch vmatch_share p bi_new;
+        rewrite (base_iterator_match vmatch p (pm /. 2.0R) bi_new (List.Tot.tl i1))
+             as (base_iterator_match vmatch p (pm /. 2.0R) bi_new_val (List.Tot.tl i1));
+        // Share pts_to after: pm*ap -> (pm*ap)/2 x2
+        R.share after;
+        // Share iterator_match: pm -> pm/2 x2
+        iterator_match_share vmatch vmatch_share p i2;
+        // Fold new Append at pm/2
+        fold (iterator_match vmatch p (pm /. 2.0R) (Append #t depth (SZ.sub count 1sz) bi_new_val ap after) (List.Tot.tl l));
+        // Trade: unfold at pm/2, gather with stashed pm/2 halves, use Tb, fold original
+        intro (iterator_match vmatch p (pm /. 2.0R) (Append #t depth (SZ.sub count 1sz) bi_new_val ap after) (List.Tot.tl l) **
+               vmatch pm_v res (List.Tot.hd l) @==>
+               iterator_match vmatch p pm (Append #t depth count before ap after) l)
+          #(Trade.trade
+              (base_iterator_match vmatch p pm bi_new (List.Tot.tl i1) **
+               vmatch pm_v res (List.Tot.hd l))
+              (base_iterator_match vmatch p pm before i1) **
+            base_iterator_match vmatch p (pm /. 2.0R) bi_new (List.Tot.tl i1) **
+            pts_to after #((pm *. ap) /. 2.0R) i2 **
+            iterator_match vmatch p (pm /. 2.0R) i2 l2 **
+            pure (
+              SZ.v count <= List.Tot.length i1 + List.Tot.length l2 /\
+              Ghost.reveal l == fst (List.Tot.splitAt (SZ.v count) (List.Tot.append i1 l2)) /\
+              iterator_depth i2 < Ghost.reveal depth
+            ))
+          fn _ {
+            // Rewrite stashed base_iterator_match to primed alias before unfold
+            rewrite (base_iterator_match vmatch p (pm /. 2.0R) bi_new (List.Tot.tl i1))
+                 as (base_iterator_match' vmatch p (pm /. 2.0R) bi_new (List.Tot.tl i1));
+            unfold (iterator_match vmatch p (pm /. 2.0R) (Append #t depth (SZ.sub count 1sz) bi_new_val ap after) (List.Tot.tl l));
+            with i1_new i2_new l2_new . assert (
+              base_iterator_match vmatch p (pm /. 2.0R) bi_new_val i1_new **
+              pts_to after #((pm /. 2.0R) *. ap) i2_new **
+              iterator_match vmatch p (pm /. 2.0R) i2_new l2_new
+            );
+            // Gather base_iterator_match: (pm/2 + pm/2) = pm
+            rewrite (base_iterator_match vmatch p (pm /. 2.0R) bi_new_val i1_new)
+                 as (base_iterator_match vmatch p (pm /. 2.0R) bi_new i1_new);
+            let i1p : list u = i1_new;
+            let i1bp : list u = List.Tot.tl i1;
+            rewrite (base_iterator_match vmatch p (pm /. 2.0R) bi_new i1_new)
+                 as (base_iterator_match vmatch p (pm /. 2.0R) bi_new i1p);
+            rewrite (base_iterator_match' vmatch p (pm /. 2.0R) bi_new (List.Tot.tl i1))
+                 as (base_iterator_match vmatch p (pm /. 2.0R) bi_new i1bp);
+            base_iterator_match_gather vmatch vmatch_gather p bi_new
+              #(pm /. 2.0R) #i1p #(pm /. 2.0R) #i1bp;
+            // Now: base_iterator_match (pm/2 + pm/2) bi_new i1p, pure (i1p == i1bp)
+            // i1_new == tl i1
+            rewrite (base_iterator_match vmatch p (pm /. 2.0R +. pm /. 2.0R) bi_new i1p)
+                 as (base_iterator_match vmatch p pm bi_new (List.Tot.tl i1));
+            // Gather pts_to after
+            R.gather after;
+            rewrite (pts_to after #((pm /. 2.0R) *. ap +. (pm *. ap) /. 2.0R) i2_new)
+                 as (pts_to after #(pm *. ap) i2);
+            // Gather iterator_match
+            let l2p : list u = l2_new;
+            rewrite (iterator_match vmatch p (pm /. 2.0R) i2_new l2_new)
+                 as (iterator_match vmatch p (pm /. 2.0R) i2_new l2p);
+            rewrite (iterator_match vmatch p (pm /. 2.0R) i2_new l2p)
+                 as (iterator_match vmatch p (pm /. 2.0R) i2 l2p);
+            let l2bp : list u = l2;
+            rewrite (iterator_match vmatch p (pm /. 2.0R) i2 l2)
+                 as (iterator_match vmatch p (pm /. 2.0R) i2 l2bp);
+            rewrite (iterator_match vmatch p (pm /. 2.0R) i2 l2bp)
+                 as (iterator_match' vmatch p (pm /. 2.0R) i2 l2bp);
+            rewrite (iterator_match vmatch p (pm /. 2.0R) i2 l2p)
+                 as (iterator_match vmatch p (pm /. 2.0R) i2 l2p);
+            iterator_match_gather vmatch vmatch_gather p i2
+              (pm /. 2.0R) #l2p (pm /. 2.0R) #l2bp;
+            rewrite (iterator_match vmatch p (pm /. 2.0R +. pm /. 2.0R) i2 l2p)
+                 as (iterator_match vmatch p pm i2 l2);
+            // Now use Tb
+            Trade.elim
+              (base_iterator_match vmatch p pm bi_new (List.Tot.tl i1) **
+               vmatch pm_v res (List.Tot.hd l))
+              (base_iterator_match vmatch p pm before i1);
+            List.Tot.append_length i1 l2;
+            lemma_splitAt_fst_length (SZ.v count) (List.Tot.append i1 l2);
+            fold (iterator_match vmatch p pm (Append #t depth count before ap after) l);
+          };
+        rewrite (iterator_match vmatch p (pm /. 2.0R) (Append #t depth (SZ.sub count 1sz) bi_new_val ap after) (List.Tot.tl l) **
+                 vmatch pm_v res (List.Tot.hd l) @==>
+                 iterator_match vmatch p pm (Append #t depth count before ap after) l)
+             as (iterator_match vmatch p (pm /. 2.0R) (Append #t depth (SZ.sub count 1sz) bi_new_val ap after) (List.Tot.tl l) **
+                 vmatch pm_v res (List.Tot.hd l) @==>
+                 iterator_match vmatch p pm i l);
+        res
+      }
     }
   }
 }
