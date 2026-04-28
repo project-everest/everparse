@@ -164,3 +164,19 @@ ensures iterator_match vmatch p i l ** pure (SZ.v res == List.Tot.length l)
     }
   }
 }
+
+fn iterator_is_empty
+  (#t: Type0)
+  (#u: Type0)
+  (vmatch: t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (i: iterator t)
+  (#l: Ghost.erased (list u))
+requires iterator_match vmatch p i l
+returns res: bool
+ensures iterator_match vmatch p i l ** pure (res == Nil? l)
+{
+  let len = iterator_length vmatch p i;
+  (len = 0sz)
+}
