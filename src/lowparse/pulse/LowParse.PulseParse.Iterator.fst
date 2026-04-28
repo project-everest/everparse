@@ -4,7 +4,7 @@ include LowParse.PulseParse.Base
 include LowParse.PulseParse.VCList
 open Pulse.Lib.Pervasives
 
-module S = Pulse.Lib.Slice
+module S = Pulse.Lib.Slice.Util
 module U8 = FStar.UInt8
 module SZ = FStar.SizeT
 
@@ -45,7 +45,7 @@ let base_iterator_match
     pts_to s l' **
     SM.seq_list_match l' l vmatch
   | Serialized count pl -> exists* l' .
-    pts_to_parsed (parse_nlist (SZ.v count) p) pl l' **
+    pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) pl l' **
     pure ((l' <: list u) == l)
 
 let rec iterator_match
