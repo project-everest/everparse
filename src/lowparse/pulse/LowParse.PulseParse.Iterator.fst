@@ -1660,3 +1660,168 @@ decreases (iterator_depth i)
 }
 
 #pop-options
+
+// Helper: splitAt at full length is identity
+let rec lemma_splitAt_length (#a: Type) (l: list a) : Lemma
+  (ensures (fst (List.Tot.splitAt (List.Tot.length l) l) == l))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | _ :: tl -> lemma_splitAt_length tl
+
+#push-options "--z3rlimit 80"
+
+// Insert an element before the current iterator position.
+// Result iterator matches (v :: l) at pm/2.
+// Trade restores original iterator_match, spare ref, and Singleton resources.
+fn iterator_insert_before
+  (#t: Type0)
+  (#u: Type0)
+  (vmatch: perm -> t -> u -> slprop)
+  (vmatch_share: share_t vmatch)
+  (vmatch_gather: gather_t vmatch)
+  (#k: parser_kind)
+  (p: parser k u)
+  (pm: perm)
+  (pi: R.ref (iterator t))
+  (#i: Ghost.erased (iterator t))
+  (#l: Ghost.erased (list u))
+  (spare: R.ref (iterator t))
+  (#i_spare: Ghost.erased (iterator t))
+  (elem_ref: R.ref t)
+  (#elem: Ghost.erased t)
+  (pm_v: perm)
+  (#v: Ghost.erased u)
+requires
+  R.pts_to pi i **
+  iterator_match vmatch p pm i l **
+  R.pts_to spare i_spare **
+  R.pts_to elem_ref elem **
+  vmatch pm_v elem v
+returns _: unit
+ensures exists* (i': iterator t) .
+  R.pts_to pi i' **
+  iterator_match vmatch p (pm /. 2.0R) i' (Ghost.reveal v :: Ghost.reveal l) **
+  Trade.trade
+    (iterator_match vmatch p (pm /. 2.0R) i' (Ghost.reveal v :: Ghost.reveal l))
+    (iterator_match vmatch p pm i l **
+     R.pts_to spare (Ghost.reveal i) **
+     base_iterator_match vmatch p pm (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) [Ghost.reveal v])
+{
+  let i_val = !pi;
+
+  // Compute count for the Append
+  let len = iterator_length vmatch p pm i_val;
+  assume_ (pure (SizeT.fits (SZ.v len + 1)));
+  let count = SZ.add len 1sz;
+
+  let depth : Ghost.erased nat = Ghost.hide (1 + iterator_depth i_val);
+
+  // Write current iterator to spare (for Append's after)
+  R.forget_init spare;
+  spare := i_val;
+
+  // Rewrite elem_ref and vmatch permissions for Singleton fold
+  rewrite (R.pts_to elem_ref (Ghost.reveal elem))
+       as (R.pts_to elem_ref #(pm *. (1.0R /. pm)) (Ghost.reveal elem));
+  rewrite (vmatch pm_v (Ghost.reveal elem) (Ghost.reveal v))
+       as (vmatch (pm *. (pm_v /. pm)) (Ghost.reveal elem) (Ghost.reveal v));
+
+  // Fold base_iterator_match for the Singleton
+  fold (base_iterator_match vmatch p pm (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) [Ghost.reveal v]);
+
+  // Rewrite pts_to spare permission: 1.0R = pm *. (1.0R /. pm)
+  rewrite (R.pts_to spare i_val)
+       as (R.pts_to spare #(pm *. (1.0R /. pm)) i_val);
+
+  // Prove splitAt constraint for the Append fold
+  lemma_splitAt_length (Ghost.reveal v :: Ghost.reveal l);
+
+  // Share everything for the trade pattern (pm -> pm/2 x2)
+  base_iterator_match_share vmatch vmatch_share p (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref);
+
+  R.share spare;
+  rewrite (R.pts_to spare #((pm *. (1.0R /. pm)) /. 2.0R) i_val)
+       as (R.pts_to spare #((pm /. 2.0R) *. (1.0R /. pm)) i_val);
+
+  iterator_match_share vmatch vmatch_share p i_val;
+
+  // Fold Append at pm/2
+  fold (iterator_match vmatch p (pm /. 2.0R)
+    (Append #t depth count (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) (1.0R /. pm) spare)
+    (Ghost.reveal v :: Ghost.reveal l));
+
+  // Write pi
+  R.forget_init pi;
+  pi := Append depth count (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) (1.0R /. pm) spare;
+
+  // Build trade: unfold at pm/2, gather with stashed pm/2 halves, produce output
+  intro (iterator_match vmatch p (pm /. 2.0R)
+           (Append #t depth count (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) (1.0R /. pm) spare)
+           (Ghost.reveal v :: Ghost.reveal l) @==>
+         iterator_match vmatch p pm i l **
+         R.pts_to spare (Ghost.reveal i) **
+         base_iterator_match vmatch p pm (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) [Ghost.reveal v])
+    #(base_iterator_match vmatch p (pm /. 2.0R) (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) [Ghost.reveal v] **
+      R.pts_to spare #((pm *. (1.0R /. pm)) /. 2.0R) i_val **
+      iterator_match vmatch p (pm /. 2.0R) i_val (Ghost.reveal l) **
+      pure (
+        SZ.v count <= 1 + List.Tot.length (Ghost.reveal l) /\
+        i_val == Ghost.reveal i
+      ))
+    fn _ {
+      // Rewrite stashed resources to primed aliases BEFORE unfold
+      rewrite (base_iterator_match vmatch p (pm /. 2.0R) (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) [Ghost.reveal v])
+           as (base_iterator_match' vmatch p (pm /. 2.0R) (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) [Ghost.reveal v]);
+
+      // Unfold Append at pm/2
+      unfold (iterator_match vmatch p (pm /. 2.0R)
+        (Append #t depth count (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) (1.0R /. pm) spare)
+        (Ghost.reveal v :: Ghost.reveal l));
+      with i1 i2 l2 . assert (
+        base_iterator_match vmatch p (pm /. 2.0R) (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) i1 **
+        R.pts_to spare #((pm /. 2.0R) *. (1.0R /. pm)) i2 **
+        iterator_match vmatch p (pm /. 2.0R) i2 l2
+      );
+
+      // Gather base_iterator_match: (pm/2 + pm/2) = pm
+      let i1p : list u = i1;
+      rewrite (base_iterator_match vmatch p (pm /. 2.0R) (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) i1)
+           as (base_iterator_match vmatch p (pm /. 2.0R) (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) i1p);
+      let i1stash : list u = [Ghost.reveal v];
+      rewrite (base_iterator_match' vmatch p (pm /. 2.0R) (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) [Ghost.reveal v])
+           as (base_iterator_match vmatch p (pm /. 2.0R) (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) i1stash);
+      base_iterator_match_gather vmatch vmatch_gather p (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref)
+        #(pm /. 2.0R) #i1p #(pm /. 2.0R) #i1stash;
+      rewrite (base_iterator_match vmatch p (pm /. 2.0R +. pm /. 2.0R) (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) i1p)
+           as (base_iterator_match vmatch p pm (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) [Ghost.reveal v]);
+
+      // Gather R.pts_to spare: proves i2 == i_val
+      R.gather spare;
+      rewrite (R.pts_to spare #((pm /. 2.0R) *. (1.0R /. pm) +. (pm *. (1.0R /. pm)) /. 2.0R) i2)
+           as (R.pts_to spare #(pm *. (1.0R /. pm)) i2);
+      rewrite (R.pts_to spare #(pm *. (1.0R /. pm)) i2)
+           as (R.pts_to spare i2);
+      rewrite (R.pts_to spare i2)
+           as (R.pts_to spare (Ghost.reveal i));
+
+      // Gather iterator_match: proves l2 == Ghost.reveal l
+      let l2p : list u = l2;
+      rewrite (iterator_match vmatch p (pm /. 2.0R) i2 l2)
+           as (iterator_match vmatch p (pm /. 2.0R) i2 l2p);
+      rewrite (iterator_match vmatch p (pm /. 2.0R) i2 l2p)
+           as (iterator_match vmatch p (pm /. 2.0R) i_val l2p);
+      let l_stash : list u = Ghost.reveal l;
+      rewrite (iterator_match vmatch p (pm /. 2.0R) i_val (Ghost.reveal l))
+           as (iterator_match vmatch p (pm /. 2.0R) i_val l_stash);
+      rewrite (iterator_match vmatch p (pm /. 2.0R) i_val l_stash)
+           as (iterator_match' vmatch p (pm /. 2.0R) i_val l_stash);
+      iterator_match_gather vmatch vmatch_gather p i_val
+        (pm /. 2.0R) #l2p (pm /. 2.0R) #l_stash;
+      rewrite (iterator_match vmatch p (pm /. 2.0R +. pm /. 2.0R) i_val l2p)
+           as (iterator_match vmatch p pm i l);
+    };
+  ()
+}
+
+#pop-options
