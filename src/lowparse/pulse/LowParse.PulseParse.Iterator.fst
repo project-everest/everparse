@@ -8,6 +8,39 @@ module S = Pulse.Lib.Slice.Util
 module U8 = FStar.UInt8
 module SZ = FStar.SizeT
 
+inline_for_extraction
+let share_t
+  (#t1 #t2: Type)
+  (vmatch: perm -> t1 -> t2 -> slprop)
+=
+  (x1: t1) ->
+  (#p: perm) ->
+  (#x2: t2) ->
+  stt_ghost unit emp_inames
+  (vmatch p x1 x2)
+  (fun _ ->
+    let open FStar.Real in
+    vmatch (p /. 2.0R) x1 x2 ** vmatch (p /. 2.0R) x1 x2
+  )
+
+inline_for_extraction
+let gather_t
+  (#t1 #t2: Type)
+  (vmatch: perm -> t1 -> t2 -> slprop)
+=
+  (x1: t1) ->
+  (#p: perm) ->
+  (#x2: t2) ->
+  (#p': perm) ->
+  (#x2': t2) ->
+  stt_ghost unit emp_inames
+  (vmatch p x1 x2 ** vmatch p' x1 x2')
+  (fun _ ->
+    let open FStar.Real in
+    vmatch (p +. p') x1 x2 **
+    pure (x2 == x2')
+  )
+
 noeq
 type base_iterator ([@@@strictly_positive] t: Type) =
 | Empty
