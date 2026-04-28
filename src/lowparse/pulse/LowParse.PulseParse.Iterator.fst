@@ -10,6 +10,7 @@ module U8 = FStar.UInt8
 module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
 module B = Pulse.Lib.Box
+module LPS = LowParse.Pulse.Base
 open Pulse.Lib.Trade
 
 inline_for_extraction
@@ -997,4 +998,318 @@ ensures exists* pm_out .
     }
   }
 }
+#pop-options
+
+// Helper: split a pts_to_parsed_strong_prefix of an nlist into head (pts_to_parsed) and tail (pts_to_parsed_strong_prefix)
+#push-options "--z3rlimit 40"
+
+fn nlist_hd_tl_strong_prefix
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (j: LPS.jumper p)
+  (n: Ghost.erased pos)
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (nlist n t))
+requires
+  pts_to_parsed_strong_prefix (parse_nlist n p) input #pm v
+returns res : (S.slice byte & S.slice byte)
+ensures (
+  let (hd_sl, tl_sl) = res in
+  pts_to_parsed p hd_sl #(pm /. 2.0R) (List.Tot.hd v) **
+  pts_to_parsed_strong_prefix (parse_nlist (n - 1) p) tl_sl #(pm /. 2.0R) (List.Tot.tl v) **
+  Trade.trade
+    (pts_to_parsed p hd_sl #(pm /. 2.0R) (List.Tot.hd v) **
+     pts_to_parsed_strong_prefix (parse_nlist (n - 1) p) tl_sl #(pm /. 2.0R) (List.Tot.tl v))
+    (pts_to_parsed_strong_prefix (parse_nlist n p) input #pm v)
+)
+{
+  // 1. Unfold strong_prefix to raw bytes
+  unfold (pts_to_parsed_strong_prefix (parse_nlist n p) input #pm v);
+  with w . assert (S.pts_to input #pm w);
+  // 2. Establish parse facts
+  parse_nlist_eq (Ghost.reveal n) p w;
+  parser_kind_prop_equiv k p;
+  // 3. Jump to find first element boundary
+  let off = j input 0sz;
+  // 4. Split with trade
+  let hd_sl, tl_sl = S.split_trade input off;
+  with w1 . assert (S.pts_to hd_sl #pm w1);
+  with w2 . assert (S.pts_to tl_sl #pm w2);
+  // 5. Head parse fact
+  parse_strong_prefix p w w1;
+  let vh = Ghost.hide (List.Tot.hd (Ghost.reveal v));
+  let vt : Ghost.erased (nlist (n - 1) t) = Ghost.hide (List.Tot.tl (Ghost.reveal v));
+  // 6. pts_to_parsed_intro for head (gives #(pm/2))
+  pts_to_parsed_intro p hd_sl vh;
+  // 7. pts_to_parsed_strong_prefix_intro for tail (gives #(pm/2))
+  parse_nlist_kind_subkind (Ghost.reveal n - 1) k;
+  pts_to_parsed_strong_prefix_intro (parse_nlist (n - 1) p) tl_sl vt;
+  // 8. Trade chain: (parsed hd ** strong_prefix tl) -> (pts_to hd ** pts_to tl) -> (pts_to input) -> (strong_prefix nlist)
+  Trade.prod
+    (pts_to_parsed p hd_sl #(pm /. 2.0R) vh)
+    (S.pts_to hd_sl #pm w1)
+    (pts_to_parsed_strong_prefix (parse_nlist (n - 1) p) tl_sl #(pm /. 2.0R) vt)
+    (S.pts_to tl_sl #pm w2);
+  Trade.trans
+    (pts_to_parsed p hd_sl #(pm /. 2.0R) vh **
+     pts_to_parsed_strong_prefix (parse_nlist (n - 1) p) tl_sl #(pm /. 2.0R) vt)
+    (S.pts_to hd_sl #pm w1 ** S.pts_to tl_sl #pm w2)
+    (S.pts_to input #pm w);
+  // Chain with fold trade: (S.pts_to input) -> (strong_prefix nlist)
+  intro (S.pts_to input #pm w @==>
+         pts_to_parsed_strong_prefix (parse_nlist n p) input #pm v)
+    #emp
+    fn _ {
+      fold (pts_to_parsed_strong_prefix (parse_nlist n p) input #pm v)
+    };
+  Trade.trans
+    (pts_to_parsed p hd_sl #(pm /. 2.0R) vh **
+     pts_to_parsed_strong_prefix (parse_nlist (n - 1) p) tl_sl #(pm /. 2.0R) vt)
+    (S.pts_to input #pm w)
+    (pts_to_parsed_strong_prefix (parse_nlist n p) input #pm v);
+  rewrite each vh as (List.Tot.hd (Ghost.reveal v));
+  rewrite each vt as (List.Tot.tl (Ghost.reveal v));
+  (hd_sl, tl_sl)
+}
+
+#pop-options
+
+// base_iterator_next: advance a base_iterator on a nonempty list
+#push-options "--z3rlimit 60"
+
+fn base_iterator_next
+  (#t: Type0)
+  (#u: Type0)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (j: LPS.jumper p)
+  (rd: (pv: perm) -> zero_copy_parse (vmatch pv) p)
+  (pm: perm)
+  (pi: R.ref (base_iterator t))
+  (#i: Ghost.erased (base_iterator t))
+  (#l: Ghost.erased (list u) { Cons? l })
+requires
+  R.pts_to pi i **
+  base_iterator_match vmatch p pm i l
+returns res: t
+ensures exists* (i': base_iterator t) (pm_match: perm) (pm_v: perm) .
+  R.pts_to pi i' **
+  base_iterator_match vmatch p pm_match i' (List.Tot.tl l) **
+  vmatch pm_v res (List.Tot.hd l) **
+  Trade.trade
+    (base_iterator_match vmatch p pm_match i' (List.Tot.tl l) **
+     vmatch pm_v res (List.Tot.hd l))
+    (base_iterator_match vmatch p pm i l)
+{
+  let iv = !pi;
+  match iv {
+    Empty -> {
+      // Contradiction: Empty means Nil? l, but we have Cons? l
+      rewrite (base_iterator_match vmatch p pm i l)
+           as (base_iterator_match vmatch p pm (Empty #t) l);
+      unfold (base_iterator_match vmatch p pm (Empty #t) l);
+      unreachable ()
+    }
+    Singleton sp sv sr -> {
+      rewrite (base_iterator_match vmatch p pm i l)
+           as (base_iterator_match vmatch p pm (Singleton sp sv sr) l);
+      unfold (base_iterator_match vmatch p pm (Singleton sp sv sr) l);
+      with x y . assert (
+        R.pts_to sr #(pm *. sp) x **
+        vmatch (pm *. sv) x y **
+        pure (l == [y])
+      );
+      // Read the element
+      let res = !sr;
+      // Rewrite vmatch with hd l
+      rewrite (vmatch (pm *. sv) res y) as (vmatch (pm *. sv) res (List.Tot.hd l));
+      // Write pi to Empty
+      R.forget_init pi;
+      pi := Empty;
+      // The tail is [], fold Empty match
+      fold (base_iterator_match vmatch p pm (Empty #t) (List.Tot.tl l));
+      // Trade: stash the ref permission, restore Singleton match
+      intro (base_iterator_match vmatch p pm (Empty #t) (List.Tot.tl l) **
+             vmatch (pm *. sv) res (List.Tot.hd l) @==>
+             base_iterator_match vmatch p pm (Singleton sp sv sr) l)
+        #(R.pts_to sr #(pm *. sp) res)
+        fn _ {
+          unfold (base_iterator_match vmatch p pm (Empty #t) (List.Tot.tl l));
+          rewrite (vmatch (pm *. sv) res (List.Tot.hd l)) as (vmatch (pm *. sv) res y);
+          fold (base_iterator_match vmatch p pm (Singleton sp sv sr) l)
+        };
+      rewrite (base_iterator_match vmatch p pm (Empty #t) (List.Tot.tl l) **
+               vmatch (pm *. sv) res (List.Tot.hd l) @==>
+               base_iterator_match vmatch p pm (Singleton sp sv sr) l)
+           as (base_iterator_match vmatch p pm (Empty #t) (List.Tot.tl l) **
+               vmatch (pm *. sv) res (List.Tot.hd l) @==>
+               base_iterator_match vmatch p pm i l);
+      res
+    }
+    Slice sp sv ss -> {
+      rewrite (base_iterator_match vmatch p pm i l)
+           as (base_iterator_match vmatch p pm (Slice sp sv ss) l);
+      unfold (base_iterator_match vmatch p pm (Slice sp sv ss) l);
+      with l' . assert (
+        S.pts_to ss #(pm *. sp) l' **
+        SM.seq_list_match l' l (vmatch (pm *. sv))
+      );
+      // l is Cons, so length l' > 0
+      SM.seq_list_match_length (vmatch (pm *. sv)) l' l;
+      SM.seq_list_match_cons_elim l' l (vmatch (pm *. sv));
+      // Read the first element from the slice
+      let res = S.op_Array_Access ss 0sz;
+      // Split the slice at index 1
+      let pair = S.split ss 1sz;
+      let s1 = fst pair;
+      let s2 = snd pair;
+      let v1 = Ghost.hide (Seq.slice l' 0 1);
+      let v2 = Ghost.hide (Seq.slice l' 1 (Seq.length l'));
+      rewrite (S.pts_to (fst pair) #(pm *. sp) (Seq.slice l' 0 1))
+           as (S.pts_to s1 #(pm *. sp) v1);
+      rewrite (S.pts_to (snd pair) #(pm *. sp) (Seq.slice l' 1 (Seq.length l')))
+           as (S.pts_to s2 #(pm *. sp) v2);
+      rewrite (S.is_split ss (fst pair) (snd pair))
+           as (S.is_split ss s1 s2);
+      // Rewrite seq_list_match to use v2
+      assert (pure (Seq.equal (Seq.tail l') (Ghost.reveal v2)));
+      rewrite (SM.seq_list_match (Seq.tail l') (List.Tot.tl l) (vmatch (pm *. sv)))
+           as (SM.seq_list_match v2 (List.Tot.tl l) (vmatch (pm *. sv)));
+      // Also rewrite vmatch head
+      rewrite (vmatch (pm *. sv) (Seq.head l') (List.Tot.hd l))
+           as (vmatch (pm *. sv) res (List.Tot.hd l));
+      // Write pi to point to tail slice
+      R.forget_init pi;
+      pi := Slice sp sv s2;
+      // Fold tail match
+      fold (base_iterator_match vmatch p pm (Slice sp sv s2) (List.Tot.tl l));
+      // Trade: stash s1 pts_to and is_split, restore original Slice match
+      intro (base_iterator_match vmatch p pm (Slice sp sv s2) (List.Tot.tl l) **
+             vmatch (pm *. sv) res (List.Tot.hd l) @==>
+             base_iterator_match vmatch p pm (Slice sp sv ss) l)
+        #(S.pts_to s1 #(pm *. sp) v1 ** S.is_split ss s1 s2)
+        fn _ {
+          // Unfold the tail base_iterator_match
+          unfold (base_iterator_match vmatch p pm (Slice sp sv s2) (List.Tot.tl l));
+          with l2' . assert (
+            S.pts_to s2 #(pm *. sp) l2' **
+            SM.seq_list_match l2' (List.Tot.tl l) (vmatch (pm *. sv))
+          );
+          // Reassemble seq_list_match
+          SM.seq_list_match_cons_intro res (List.Tot.hd l) l2' (List.Tot.tl l) (vmatch (pm *. sv));
+          // Join the slices
+          S.join s1 s2 ss;
+          // After join: S.pts_to ss #(pm*sp) (Seq.append v1 l2')
+          // seq_list_match uses (Seq.cons res l2')
+          // Prove they are equal and rewrite
+          assert (pure (Seq.equal (Seq.append v1 l2') (Seq.cons res l2')));
+          rewrite (SM.seq_list_match (Seq.cons res l2') l (vmatch (pm *. sv)))
+               as (SM.seq_list_match (Seq.append v1 l2') l (vmatch (pm *. sv)));
+          // Fold the original Slice match
+          fold (base_iterator_match vmatch p pm (Slice sp sv ss) l)
+        };
+      rewrite (base_iterator_match vmatch p pm (Slice sp sv s2) (List.Tot.tl l) **
+               vmatch (pm *. sv) res (List.Tot.hd l) @==>
+               base_iterator_match vmatch p pm (Slice sp sv ss) l)
+           as (base_iterator_match vmatch p pm (Slice sp sv s2) (List.Tot.tl l) **
+               vmatch (pm *. sv) res (List.Tot.hd l) @==>
+               base_iterator_match vmatch p pm i l);
+      res
+    }
+    Serialized sp count payload -> {
+      rewrite (base_iterator_match vmatch p pm i l)
+           as (base_iterator_match vmatch p pm (Serialized sp count payload) l);
+      unfold (base_iterator_match vmatch p pm (Serialized sp count payload) l);
+      with l' . assert (
+        pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #(pm *. sp) l' **
+        pure ((l' <: list u) == l)
+      );
+      // Split into head and tail
+      let n : Ghost.erased pos = Ghost.hide (SZ.v count);
+      rewrite (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #(pm *. sp) l')
+           as (pts_to_parsed_strong_prefix (parse_nlist n p) payload #(pm *. sp) l');
+      let hd_sl, tl_sl = nlist_hd_tl_strong_prefix sq j n payload;
+      // Call reader on head slice; parse perm is (pm*sp)/2
+      let pm_v = (pm *. sp) /. 2.0R;
+      let res = rd pm_v hd_sl;
+      // Rewrite l' to l in vmatch and trade
+      rewrite (vmatch pm_v res (List.Tot.hd l'))
+           as (vmatch pm_v res (List.Tot.hd l));
+      rewrite (Trade.trade (vmatch pm_v res (List.Tot.hd l')) (pts_to_parsed p hd_sl #((pm *. sp) /. 2.0R) (List.Tot.hd l')))
+           as (Trade.trade (vmatch pm_v res (List.Tot.hd l)) (pts_to_parsed p hd_sl #((pm *. sp) /. 2.0R) (List.Tot.hd l)));
+      // Rewrite nlist_hd_tl trade from n back to SZ.v count
+      rewrite (Trade.trade
+                (pts_to_parsed p hd_sl #((pm *. sp) /. 2.0R) (List.Tot.hd l') **
+                 pts_to_parsed_strong_prefix (parse_nlist (n - 1) p) tl_sl #((pm *. sp) /. 2.0R) (List.Tot.tl l'))
+                (pts_to_parsed_strong_prefix (parse_nlist n p) payload #(pm *. sp) l'))
+           as (Trade.trade
+                (pts_to_parsed p hd_sl #((pm *. sp) /. 2.0R) (List.Tot.hd l) **
+                 pts_to_parsed_strong_prefix (parse_nlist (SZ.v count - 1) p) tl_sl #((pm *. sp) /. 2.0R) (List.Tot.tl l))
+                (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #(pm *. sp) l));
+      // Write pi to point to tail
+      R.forget_init pi;
+      pi := Serialized sp (SZ.sub count 1sz) tl_sl;
+      // Fold tail match at pm /. 2.0R so that (pm /. 2.0R) *. sp == (pm *. sp) /. 2.0R
+      fold (base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp (SZ.sub count 1sz) tl_sl) (List.Tot.tl l));
+      // Build trade for tail: unfold tail match to recover strong_prefix
+      intro (base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp (SZ.sub count 1sz) tl_sl) (List.Tot.tl l) @==>
+             pts_to_parsed_strong_prefix (parse_nlist (SZ.v count - 1) p) tl_sl #((pm *. sp) /. 2.0R) (List.Tot.tl l))
+        #emp
+        fn _ {
+          unfold (base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp (SZ.sub count 1sz) tl_sl) (List.Tot.tl l));
+          with tl' . assert (
+            pts_to_parsed_strong_prefix (parse_nlist (SZ.v (SZ.sub count 1sz)) p) tl_sl #((pm /. 2.0R) *. sp) tl'
+          );
+          rewrite (pts_to_parsed_strong_prefix (parse_nlist (SZ.v (SZ.sub count 1sz)) p) tl_sl #((pm /. 2.0R) *. sp) tl')
+               as (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count - 1) p) tl_sl #((pm *. sp) /. 2.0R) (List.Tot.tl l))
+        };
+      // Combine head trade (vmatch -> pts_to_parsed) and tail trade into product
+      Trade.prod
+        (vmatch pm_v res (List.Tot.hd l))
+        (pts_to_parsed p hd_sl #((pm *. sp) /. 2.0R) (List.Tot.hd l))
+        (base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp (SZ.sub count 1sz) tl_sl) (List.Tot.tl l))
+        (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count - 1) p) tl_sl #((pm *. sp) /. 2.0R) (List.Tot.tl l));
+      // Chain with nlist_hd_tl_strong_prefix trade
+      Trade.trans
+        (vmatch pm_v res (List.Tot.hd l) **
+         base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp (SZ.sub count 1sz) tl_sl) (List.Tot.tl l))
+        (pts_to_parsed p hd_sl #((pm *. sp) /. 2.0R) (List.Tot.hd l) **
+         pts_to_parsed_strong_prefix (parse_nlist (SZ.v count - 1) p) tl_sl #((pm *. sp) /. 2.0R) (List.Tot.tl l))
+        (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #(pm *. sp) l);
+      // Chain with fold trade
+      intro (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #(pm *. sp) l @==>
+             base_iterator_match vmatch p pm (Serialized sp count payload) l)
+        #emp
+        fn _ {
+          fold (base_iterator_match vmatch p pm (Serialized sp count payload) l)
+        };
+      Trade.trans
+        (vmatch pm_v res (List.Tot.hd l) **
+         base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp (SZ.sub count 1sz) tl_sl) (List.Tot.tl l))
+        (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #(pm *. sp) l)
+        (base_iterator_match vmatch p pm (Serialized sp count payload) l);
+      // Swap hypothesis order: vmatch ** base_iterator_match -> base_iterator_match ** vmatch
+      Trade.comm_l
+        (vmatch pm_v res (List.Tot.hd l))
+        (base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp (SZ.sub count 1sz) tl_sl) (List.Tot.tl l))
+        (base_iterator_match vmatch p pm (Serialized sp count payload) l);
+      // Rewrite conclusion from (Serialized sp count payload) back to i
+      rewrite (Trade.trade
+                (base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp (SZ.sub count 1sz) tl_sl) (List.Tot.tl l) **
+                 vmatch pm_v res (List.Tot.hd l))
+                (base_iterator_match vmatch p pm (Serialized sp count payload) l))
+           as (Trade.trade
+                (base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp (SZ.sub count 1sz) tl_sl) (List.Tot.tl l) **
+                 vmatch pm_v res (List.Tot.hd l))
+                (base_iterator_match vmatch p pm i l));
+      res
+    }
+  }
+}
+
 #pop-options
