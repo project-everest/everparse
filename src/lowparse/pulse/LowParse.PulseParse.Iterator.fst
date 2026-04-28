@@ -44,8 +44,8 @@ let gather_t
 noeq
 type base_iterator ([@@@strictly_positive] t: Type) =
 | Empty
-| Singleton: (sp: perm) -> (sr: ref t) -> base_iterator t
-| Slice: (sp: perm) -> (ss: S.slice t) -> base_iterator t
+| Singleton: (sp: perm) -> (sv: perm) -> (sr: ref t) -> base_iterator t
+| Slice: (sp: perm) -> (sv: perm) -> (ss: S.slice t) -> base_iterator t
 | Serialized: (sp: perm) -> (count: SZ.t) -> (payload: S.slice U8.t) -> base_iterator t
 
 noeq
@@ -63,7 +63,7 @@ module SM = Pulse.Lib.SeqMatch
 let base_iterator_match
   (#t: Type)
   (#u: Type)
-  (vmatch: t -> u -> slprop)
+  (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
   (p: parser k u)
   (i: base_iterator t)
@@ -71,13 +71,13 @@ let base_iterator_match
 : Tot slprop
 = match i with
   | Empty -> pure (Nil? l)
-  | Singleton sp s -> exists* x y .
+  | Singleton sp sv s -> exists* x y .
     pts_to s #sp x **
-    vmatch x y **
+    vmatch sv x y **
     pure (l == [y])
-  | Slice sp s -> exists* l' .
+  | Slice sp sv s -> exists* l' .
     pts_to s #sp l' **
-    SM.seq_list_match l' l vmatch
+    SM.seq_list_match l' l (vmatch sv)
   | Serialized sp count pl -> exists* l' .
     pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) pl #sp l' **
     pure ((l' <: list u) == l)
@@ -85,7 +85,7 @@ let base_iterator_match
 let rec iterator_match
   (#t: Type)
   (#u: Type)
-  (vmatch: t -> u -> slprop)
+  (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
   (p: parser k u)
   (i: iterator t)
@@ -113,7 +113,7 @@ let rec lemma_splitAt_fst_length (#a: Type) (n: nat) (l: list a)
 fn base_iterator_length
   (#t: Type0)
   (#u: Type0)
-  (vmatch: t -> u -> slprop)
+  (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
   (p: parser k u)
   (i: base_iterator t)
@@ -130,20 +130,20 @@ ensures base_iterator_match vmatch p i l ** pure (SZ.v res == List.Tot.length l)
            as (base_iterator_match vmatch p i l);
       0sz
     }
-    Singleton sp s -> {
-      unfold (base_iterator_match vmatch p (Singleton sp s) l);
-      fold (base_iterator_match vmatch p (Singleton sp s) l);
-      rewrite (base_iterator_match vmatch p (Singleton sp s) l)
+    Singleton sp sv s -> {
+      unfold (base_iterator_match vmatch p (Singleton sp sv s) l);
+      fold (base_iterator_match vmatch p (Singleton sp sv s) l);
+      rewrite (base_iterator_match vmatch p (Singleton sp sv s) l)
            as (base_iterator_match vmatch p i l);
       1sz
     }
-    Slice sp sl -> {
-      unfold (base_iterator_match vmatch p (Slice sp sl) l);
-      SM.seq_list_match_length vmatch _ l;
+    Slice sp sv sl -> {
+      unfold (base_iterator_match vmatch p (Slice sp sv sl) l);
+      SM.seq_list_match_length (vmatch sv) _ l;
       S.pts_to_len sl;
       let res = S.len sl;
-      fold (base_iterator_match vmatch p (Slice sp sl) l);
-      rewrite (base_iterator_match vmatch p (Slice sp sl) l)
+      fold (base_iterator_match vmatch p (Slice sp sv sl) l);
+      rewrite (base_iterator_match vmatch p (Slice sp sv sl) l)
            as (base_iterator_match vmatch p i l);
       res
     }
@@ -160,7 +160,7 @@ ensures base_iterator_match vmatch p i l ** pure (SZ.v res == List.Tot.length l)
 fn iterator_length
   (#t: Type0)
   (#u: Type0)
-  (vmatch: t -> u -> slprop)
+  (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
   (p: parser k u)
   (i: iterator t)
@@ -202,7 +202,7 @@ ensures iterator_match vmatch p i l ** pure (SZ.v res == List.Tot.length l)
 fn iterator_is_empty
   (#t: Type0)
   (#u: Type0)
-  (vmatch: t -> u -> slprop)
+  (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
   (p: parser k u)
   (i: iterator t)
