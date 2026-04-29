@@ -2740,3 +2740,415 @@ ensures (
 }
 
 #pop-options
+
+// Helper lemma: splitAt at full length returns the whole list
+let rec lemma_splitAt_full (#a: Type) (n: nat) (l: list a) : Lemma
+  (requires n == List.Tot.length l)
+  (ensures fst (List.Tot.splitAt n l) == l /\ snd (List.Tot.splitAt n l) == [])
+  (decreases l)
+= match l with
+  | [] -> ()
+  | _ :: tl -> lemma_splitAt_full (n - 1) tl
+
+// Helper lemma: append prefix with v::suffix has length = length l + 1
+let lemma_insert_length (#a: Type) (kk: nat) (l: list a) (v: a) : Lemma
+  (requires kk <= List.Tot.length l)
+  (ensures (
+    lemma_list_prefix_length kk l;
+    lemma_list_suffix_length kk l;
+    List.Tot.length (List.Tot.append (list_prefix kk l) (v :: list_suffix kk l)) == List.Tot.length l + 1))
+= lemma_list_prefix_length kk l;
+  lemma_list_suffix_length kk l;
+  List.Tot.append_length (list_prefix kk l) (v :: list_suffix kk l)
+
+// Helper lemma: splitAt at n on (prefix ++ (v :: suffix)) where n == |l| + 1
+// gives back the full list
+let lemma_insert_splitAt (#a: Type) (kk: nat) (l: list a) (v: a) (n: nat) : Lemma
+  (requires kk <= List.Tot.length l /\ n == List.Tot.length l + 1)
+  (ensures (
+    lemma_insert_length kk l v;
+    let result = List.Tot.append (list_prefix kk l) (v :: list_suffix kk l) in
+    fst (List.Tot.splitAt n result) == result))
+= lemma_insert_length kk l v;
+  let result = List.Tot.append (list_prefix kk l) (v :: list_suffix kk l) in
+  lemma_splitAt_full n result
+
+#push-options "--z3rlimit 800 --fuel 2 --ifuel 1"
+
+fn iterator_insert_sorted_full
+  (#t: Type0)
+  (#u: Type0)
+  (vmatch: perm -> t -> u -> slprop)
+  (vmatch_share: share_t vmatch)
+  (vmatch_gather: gather_t vmatch)
+  (#k: parser_kind)
+  (p: parser k u)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (j: LPS.jumper p)
+  (rd: (pv: perm) -> zero_copy_parse (vmatch pv) p)
+  (lt_ord: (u -> u -> bool))
+  (lt_impl: lt_impl_t vmatch lt_ord)
+  (pm: perm)
+  (sp: perm)
+  (count: SZ.t)
+  (payload: S.slice byte)
+  (pi: R.ref (iterator t))
+  (#l: Ghost.erased (list u))
+  (spare1: R.ref (iterator t))
+  (#i_spare1: Ghost.erased (iterator t))
+  (spare2: R.ref (iterator t))
+  (#i_spare2: Ghost.erased (iterator t))
+  (elem_ref: R.ref t)
+  (#elem: Ghost.erased t)
+  (pm_v: perm)
+  (#v: Ghost.erased u)
+requires
+  R.pts_to pi (Base #t (Serialized sp count payload)) **
+  iterator_match vmatch p pm (Base #t (Serialized sp count payload)) l **
+  R.pts_to spare1 i_spare1 **
+  R.pts_to spare2 i_spare2 **
+  R.pts_to elem_ref elem **
+  vmatch pm_v elem v **
+  pure (List.Tot.sorted lt_ord (Ghost.reveal l))
+returns res: bool
+ensures
+  (if res then (
+    let kk_v = Some?.v (sorted_insert_pos lt_ord (Ghost.reveal v) (Ghost.reveal l)) in
+    let result_list = List.Tot.append (list_prefix kk_v (Ghost.reveal l))
+      (Ghost.reveal v :: list_suffix kk_v (Ghost.reveal l)) in
+    exists* (i': iterator t) (s1: iterator t) (s2: iterator t) .
+      R.pts_to pi i' **
+      iterator_match vmatch p (pm /. 2.0R) i' result_list **
+      Trade.trade
+        (iterator_match vmatch p (pm /. 2.0R) i' result_list)
+        (iterator_match vmatch p pm (Base #t (Serialized sp count payload)) l **
+         R.pts_to spare1 s1 **
+         R.pts_to spare2 s2 **
+         R.pts_to elem_ref elem **
+         vmatch pm_v elem v) **
+      pure (Some? (sorted_insert_pos lt_ord (Ghost.reveal v) (Ghost.reveal l)) /\
+            List.Tot.sorted lt_ord result_list))
+  else (
+    R.pts_to pi (Base #t (Serialized sp count payload)) **
+    iterator_match vmatch p pm (Base #t (Serialized sp count payload)) l **
+    R.pts_to spare1 i_spare1 **
+    R.pts_to spare2 i_spare2 **
+    R.pts_to elem_ref elem **
+    vmatch pm_v elem v **
+    pure (sorted_insert_pos lt_ord (Ghost.reveal v) (Ghost.reveal l) == None)))
+{
+  // Step 1: count_insert_pos to find insertion position
+  let kk_opt = count_insert_pos vmatch vmatch_share vmatch_gather p sq j rd
+    lt_ord lt_impl pm pi elem_ref pm_v;
+  match kk_opt {
+    None -> {
+      // Duplicate found
+      false
+    }
+    Some kk -> {
+      // Step 2: Unfold iterator to get base_iterator_match for Serialized
+      unfold (iterator_match vmatch p pm (Base #t (Serialized sp count payload)) l);
+
+      // Step 2b: Extract length fact from base_iterator_match
+      // Serialized case has pts_to_parsed_strong_prefix which implies length l == count
+      unfold (base_iterator_match vmatch p pm (Serialized sp count payload) l);
+      with l' . assert (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #(pm *. sp) l');
+      unfold (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #(pm *. sp) l');
+      with w . assert (S.pts_to payload #(pm *. sp) w);
+      lemma_parse_nlist_length p (SZ.v count) w;
+      assert (pure (List.Tot.length (Ghost.reveal l) == SZ.v count));
+      fold (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #(pm *. sp) l');
+      fold (base_iterator_match vmatch p pm (Serialized sp count payload) l);
+
+      // Step 3: Split the Serialized at position kk
+      let prefix_sl, suffix_sl = serialized_split_at vmatch p sq j pm sp count payload kk;
+
+      // prefix_bi at pm/2, suffix_bi at pm/2, split_trade
+      // NOTE: We do NOT let-bind base_iterators or iterators for use in fold/unfold.
+      // Pulse cannot reduce match on let-bound variables.
+
+      // Step 4: Fold suffix as Base iterator at pm/2
+      fold (iterator_match vmatch p (pm /. 2.0R)
+        (Base #t (Serialized (sp /. 2.0R) (SZ.sub count kk) suffix_sl))
+        (list_suffix (SZ.v kk) l));
+
+      // Step 5: Write suffix_iter to spare1 and share
+      let suffix_iter : iterator t = Base #t (Serialized (sp /. 2.0R) (SZ.sub count kk) suffix_sl);
+      R.forget_init spare1;
+      spare1 := suffix_iter;
+      R.share spare1;
+      // Now have: R.pts_to spare1 #0.5R suffix_iter (x2)
+
+      // Step 6: Build Singleton for the element
+      // Share elem_ref and vmatch: keep 0.5R/pm_v/2 for trade body, use 0.5R/pm_v/2 for Singleton
+      R.share elem_ref;
+      vmatch_share (Ghost.reveal elem) #pm_v #(Ghost.reveal v);
+      // R.pts_to elem_ref #0.5R (Ghost.reveal elem) (x2)
+      // vmatch (pm_v /. 2.0R) (Ghost.reveal elem) (Ghost.reveal v) (x2)
+
+      rewrite (R.pts_to elem_ref #(1.0R /. 2.0R) (Ghost.reveal elem))
+           as (R.pts_to elem_ref #((pm /. 2.0R) *. (1.0R /. pm)) (Ghost.reveal elem));
+      rewrite (vmatch (pm_v /. 2.0R) (Ghost.reveal elem) (Ghost.reveal v))
+           as (vmatch ((pm /. 2.0R) *. (pm_v /. pm)) (Ghost.reveal elem) (Ghost.reveal v));
+      fold (base_iterator_match vmatch p (pm /. 2.0R) (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) [Ghost.reveal v]);
+
+      // Step 7: Fold inner Append: Singleton + suffix
+      assume_ (pure (SZ.fits (SZ.v count - SZ.v kk + 1)));
+      let count_inner = SZ.add (SZ.sub count kk) 1sz;
+      let depth_inner : Ghost.erased nat = Ghost.hide 1;
+
+      // spare1: fold uses 0.5R, with ap_inner = 1.0R /. pm
+      // (pm/2) * (1/pm) = 1/(2) = 0.5R
+      rewrite (R.pts_to spare1 #(1.0R /. 2.0R) suffix_iter)
+           as (R.pts_to spare1 #((pm /. 2.0R) *. (1.0R /. pm)) suffix_iter);
+
+      // Rewrite iterator_match to use suffix_iter
+      rewrite (iterator_match vmatch p (pm /. 2.0R)
+        (Base #t (Serialized (sp /. 2.0R) (SZ.sub count kk) suffix_sl))
+        (list_suffix (SZ.v kk) l))
+           as (iterator_match vmatch p (pm /. 2.0R) suffix_iter (list_suffix (SZ.v kk) l));
+
+      lemma_splitAt_length (Ghost.reveal v :: list_suffix (SZ.v kk) (Ghost.reveal l));
+      lemma_list_suffix_length (SZ.v kk) (Ghost.reveal l);
+
+      fold (iterator_match vmatch p (pm /. 2.0R)
+        (Append #t depth_inner count_inner (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) (1.0R /. pm) spare1)
+        (Ghost.reveal v :: list_suffix (SZ.v kk) (Ghost.reveal l)));
+
+      let inner_iter : iterator t = Append depth_inner count_inner (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) (1.0R /. pm) spare1;
+
+      // Step 8: Write inner_iter to spare2 and share
+      R.forget_init spare2;
+      spare2 := inner_iter;
+      R.share spare2;
+      // Now have: R.pts_to spare2 #0.5R inner_iter (x2)
+
+      // spare2: fold uses 0.5R, with ap_outer = 1.0R /. pm
+      rewrite (R.pts_to spare2 #(1.0R /. 2.0R) inner_iter)
+           as (R.pts_to spare2 #((pm /. 2.0R) *. (1.0R /. pm)) inner_iter);
+
+      // Rewrite iterator_match to use inner_iter
+      rewrite (iterator_match vmatch p (pm /. 2.0R)
+        (Append #t depth_inner count_inner (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) (1.0R /. pm) spare1)
+        (Ghost.reveal v :: list_suffix (SZ.v kk) (Ghost.reveal l)))
+           as (iterator_match vmatch p (pm /. 2.0R) inner_iter (Ghost.reveal v :: list_suffix (SZ.v kk) (Ghost.reveal l)));
+
+      // Step 9: Fold outer Append: prefix + inner
+      assume_ (pure (SZ.fits (SZ.v count + 1)));
+      let count_total = SZ.add count 1sz;
+      let depth_outer : Ghost.erased nat = Ghost.hide 2;
+
+      lemma_sorted_insert_pos_bound lt_ord (Ghost.reveal v) (Ghost.reveal l);
+      lemma_insert_splitAt (SZ.v kk) (Ghost.reveal l) (Ghost.reveal v) (SZ.v count + 1);
+      lemma_list_prefix_length (SZ.v kk) (Ghost.reveal l);
+      lemma_list_suffix_length (SZ.v kk) (Ghost.reveal l);
+
+      let result_list : Ghost.erased (list u) = Ghost.hide (
+        List.Tot.append (list_prefix (SZ.v kk) (Ghost.reveal l))
+          (Ghost.reveal v :: list_suffix (SZ.v kk) (Ghost.reveal l)));
+
+      fold (iterator_match vmatch p (pm /. 2.0R)
+        (Append #t depth_outer count_total (Serialized (sp /. 2.0R) kk prefix_sl) (1.0R /. pm) spare2)
+        (Ghost.reveal result_list));
+
+      let outer_iter : iterator t = Append depth_outer count_total (Serialized (sp /. 2.0R) kk prefix_sl) (1.0R /. pm) spare2;
+
+      // Rewrite to use outer_iter let-binding
+      rewrite (iterator_match vmatch p (pm /. 2.0R)
+        (Append #t depth_outer count_total (Serialized (sp /. 2.0R) kk prefix_sl) (1.0R /. pm) spare2)
+        (Ghost.reveal result_list))
+           as (iterator_match vmatch p (pm /. 2.0R) outer_iter (Ghost.reveal result_list));
+
+      // Step 10: Write outer_iter to pi
+      R.forget_init pi;
+      pi := outer_iter;
+
+      // Step 11: Build the grand trade
+      // Retained: spare1@0.5R, spare2@0.5R, elem_ref@0.5R, vmatch@pm_v/2, split_trade
+      intro
+        (Trade.trade
+          (iterator_match vmatch p (pm /. 2.0R) outer_iter (Ghost.reveal result_list))
+          (iterator_match vmatch p pm (Base #t (Serialized sp count payload)) l **
+           R.pts_to spare1 suffix_iter **
+           R.pts_to spare2 inner_iter **
+           R.pts_to elem_ref elem **
+           vmatch pm_v elem v))
+        #(R.pts_to spare1 #(1.0R /. 2.0R) suffix_iter **
+          R.pts_to spare2 #(1.0R /. 2.0R) inner_iter **
+          R.pts_to elem_ref #(1.0R /. 2.0R) (Ghost.reveal elem) **
+          vmatch (pm_v /. 2.0R) (Ghost.reveal elem) (Ghost.reveal v) **
+          Trade.trade
+            (base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) kk prefix_sl) (list_prefix (SZ.v kk) l) **
+             base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) (SZ.sub count kk) suffix_sl) (list_suffix (SZ.v kk) l))
+            (base_iterator_match vmatch p pm (Serialized sp count payload) l))
+        fn _ {
+          // Rewrite outer_iter back to constructor for unfold
+          rewrite (iterator_match vmatch p (pm /. 2.0R) outer_iter (Ghost.reveal result_list))
+               as (iterator_match vmatch p (pm /. 2.0R)
+                 (Append #t depth_outer count_total (Serialized (sp /. 2.0R) kk prefix_sl) (1.0R /. pm) spare2)
+                 (Ghost.reveal result_list));
+          // Unfold outer Append
+          unfold (iterator_match vmatch p (pm /. 2.0R)
+            (Append #t depth_outer count_total (Serialized (sp /. 2.0R) kk prefix_sl) (1.0R /. pm) spare2)
+            (Ghost.reveal result_list));
+          with _i1 _i2 _l2 . assert (
+            base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) kk prefix_sl) _i1 **
+            R.pts_to spare2 #((pm /. 2.0R) *. (1.0R /. pm)) _i2 **
+            iterator_match vmatch p (pm /. 2.0R) _i2 _l2
+          );
+
+          // Gather spare2: retained 0.5R + unfold 0.5R → 1.0R, proves _i2 == inner_iter
+          rewrite (R.pts_to spare2 #((pm /. 2.0R) *. (1.0R /. pm)) _i2)
+               as (R.pts_to spare2 #(1.0R /. 2.0R) _i2);
+          R.gather spare2;
+          // R.pts_to spare2 #1.0R _i2, with _i2 == inner_iter (from gather postcondition)
+          rewrite (R.pts_to spare2 _i2)
+               as (R.pts_to spare2 inner_iter);
+
+          // Rewrite inner: _i2 → inner_iter
+          rewrite (iterator_match vmatch p (pm /. 2.0R) _i2 _l2)
+               as (iterator_match vmatch p (pm /. 2.0R) inner_iter _l2);
+
+          // Unfold inner Append
+          rewrite (iterator_match vmatch p (pm /. 2.0R) inner_iter _l2)
+               as (iterator_match vmatch p (pm /. 2.0R)
+                 (Append #t depth_inner count_inner (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) (1.0R /. pm) spare1)
+                 _l2);
+          unfold (iterator_match vmatch p (pm /. 2.0R)
+            (Append #t depth_inner count_inner (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) (1.0R /. pm) spare1)
+            _l2);
+          with _j1 _j2 _m2 . assert (
+            base_iterator_match vmatch p (pm /. 2.0R) (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) _j1 **
+            R.pts_to spare1 #((pm /. 2.0R) *. (1.0R /. pm)) _j2 **
+            iterator_match vmatch p (pm /. 2.0R) _j2 _m2
+          );
+
+          // Gather spare1: retained 0.5R + unfold 0.5R → 1.0R, proves _j2 == suffix_iter
+          rewrite (R.pts_to spare1 #((pm /. 2.0R) *. (1.0R /. pm)) _j2)
+               as (R.pts_to spare1 #(1.0R /. 2.0R) _j2);
+          R.gather spare1;
+          rewrite (R.pts_to spare1 _j2)
+               as (R.pts_to spare1 suffix_iter);
+
+          // Unfold Singleton EARLY to get _j1 == [_y] (length 1)
+          unfold (base_iterator_match vmatch p (pm /. 2.0R) (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) _j1);
+          with _x _y . assert (
+            R.pts_to elem_ref #((pm /. 2.0R) *. (1.0R /. pm)) _x **
+            vmatch ((pm /. 2.0R) *. (pm_v /. pm)) _x _y
+          );
+          // pure (_j1 == [_y]) consumed as hypothesis; SMT knows length _j1 == 1
+
+          // Rewrite suffix: _j2 → suffix_iter
+          rewrite (iterator_match vmatch p (pm /. 2.0R) _j2 _m2)
+               as (iterator_match vmatch p (pm /. 2.0R) suffix_iter _m2);
+
+          // Unfold suffix iterator (Base)
+          rewrite (iterator_match vmatch p (pm /. 2.0R) suffix_iter _m2)
+               as (iterator_match vmatch p (pm /. 2.0R)
+                 (Base #t (Serialized (sp /. 2.0R) (SZ.sub count kk) suffix_sl))
+                 _m2);
+          unfold (iterator_match vmatch p (pm /. 2.0R)
+            (Base #t (Serialized (sp /. 2.0R) (SZ.sub count kk) suffix_sl))
+            _m2);
+
+          // Extract length fact from suffix Serialized: unfold, get refinement, fold back
+          unfold (base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) (SZ.sub count kk) suffix_sl) _m2);
+          with l_suf . assert (
+            pts_to_parsed_strong_prefix (parse_nlist (SZ.v (SZ.sub count kk)) p) suffix_sl #((pm /. 2.0R) *. (sp /. 2.0R)) l_suf
+          );
+          // l_suf == _m2, length l_suf == SZ.v (SZ.sub count kk)
+          fold (base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) (SZ.sub count kk) suffix_sl) _m2);
+
+          // Extract length fact from prefix Serialized similarly
+          unfold (base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) kk prefix_sl) _i1);
+          with l_pre . assert (
+            pts_to_parsed_strong_prefix (parse_nlist (SZ.v kk) p) prefix_sl #((pm /. 2.0R) *. (sp /. 2.0R)) l_pre
+          );
+          // l_pre == _i1, length l_pre == SZ.v kk
+          fold (base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) kk prefix_sl) _i1);
+
+          // Establish key equalities via explicit lemma calls
+          // Inner: _l2 == _j1 ++ _m2 (via splitAt at full length)
+          List.Tot.append_length _j1 _m2;
+          lemma_splitAt_full (SZ.v count_inner) (List.Tot.append _j1 _m2);
+
+          // Outer: result_list == _i1 ++ _l2 (via splitAt at full length)
+          List.Tot.append_length _i1 _l2;
+          lemma_splitAt_full (SZ.v count_total) (List.Tot.append _i1 _l2);
+
+          // Decompose via append injectivity:
+          // _i1 ++ _l2 == list_prefix kk l ++ (v :: list_suffix kk l)
+          // length _i1 == length (list_prefix kk l) == kk
+          // => _i1 == list_prefix kk l, _l2 == v :: list_suffix kk l
+          // => _m2 == list_suffix kk l (from _l2 == _j1 ++ _m2 == _y :: _m2)
+          lemma_list_prefix_length (SZ.v kk) (Ghost.reveal l);
+          FStar.List.Tot.Properties.append_length_inv_head _i1 _l2
+            (list_prefix (SZ.v kk) (Ghost.reveal l))
+            (Ghost.reveal v :: list_suffix (SZ.v kk) (Ghost.reveal l));
+
+          // Rewrite existentials to known values
+          rewrite (base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) (SZ.sub count kk) suffix_sl) _m2)
+               as (base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) (SZ.sub count kk) suffix_sl) (list_suffix (SZ.v kk) l));
+
+          rewrite (base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) kk prefix_sl) _i1)
+               as (base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) kk prefix_sl) (list_prefix (SZ.v kk) l));
+
+          // Elim split trade: prefix + suffix → original
+          Trade.elim
+            (base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) kk prefix_sl) (list_prefix (SZ.v kk) l) **
+             base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) (SZ.sub count kk) suffix_sl) (list_suffix (SZ.v kk) l))
+            (base_iterator_match vmatch p pm (Serialized sp count payload) l);
+
+          // Fold back as iterator
+          fold (iterator_match vmatch p pm (Base #t (Serialized sp count payload)) l);
+
+          // Recover elem_ref via gather: retained 0.5R + Singleton's 0.5R → 1.0R
+          rewrite (R.pts_to elem_ref #((pm /. 2.0R) *. (1.0R /. pm)) _x)
+               as (R.pts_to elem_ref #(1.0R /. 2.0R) _x);
+          R.gather elem_ref;
+          // R.pts_to elem_ref #1.0R _x, with _x == Ghost.reveal elem (from gather)
+          rewrite (R.pts_to elem_ref _x) as (R.pts_to elem_ref elem);
+
+          // Recover vmatch via gather: retained pm_v/2 + Singleton's pm_v/2 → pm_v
+          rewrite (vmatch ((pm /. 2.0R) *. (pm_v /. pm)) _x _y)
+               as (vmatch (pm_v /. 2.0R) _x _y);
+          rewrite (vmatch (pm_v /. 2.0R) _x _y)
+               as (vmatch (pm_v /. 2.0R) (Ghost.reveal elem) _y);
+          vmatch_gather (Ghost.reveal elem) #(pm_v /. 2.0R) #_y #(pm_v /. 2.0R) #(Ghost.reveal v);
+          rewrite (vmatch (pm_v /. 2.0R +. pm_v /. 2.0R) (Ghost.reveal elem) _y)
+               as (vmatch pm_v elem v);
+        };
+
+      // Step 12: Prove sortedness
+      lemma_sorted_insert_sorted lt_ord (Ghost.reveal v) (Ghost.reveal l);
+
+      // Step 13: Rewrite result_list to match ensures expression (Pulse needs exact match)
+      rewrite (iterator_match vmatch p (pm /. 2.0R) outer_iter (Ghost.reveal result_list))
+           as (iterator_match vmatch p (pm /. 2.0R) outer_iter
+             (List.Tot.append
+               (list_prefix (Some?.v (sorted_insert_pos lt_ord (Ghost.reveal v) (Ghost.reveal l))) (Ghost.reveal l))
+               (Ghost.reveal v :: list_suffix (Some?.v (sorted_insert_pos lt_ord (Ghost.reveal v) (Ghost.reveal l))) (Ghost.reveal l))));
+      rewrite (Trade.trade
+          (iterator_match vmatch p (pm /. 2.0R) outer_iter (Ghost.reveal result_list))
+          (iterator_match vmatch p pm (Base #t (Serialized sp count payload)) l **
+           R.pts_to spare1 suffix_iter **
+           R.pts_to spare2 inner_iter **
+           R.pts_to elem_ref elem **
+           vmatch pm_v elem v))
+           as (Trade.trade
+          (iterator_match vmatch p (pm /. 2.0R) outer_iter
+             (List.Tot.append
+               (list_prefix (Some?.v (sorted_insert_pos lt_ord (Ghost.reveal v) (Ghost.reveal l))) (Ghost.reveal l))
+               (Ghost.reveal v :: list_suffix (Some?.v (sorted_insert_pos lt_ord (Ghost.reveal v) (Ghost.reveal l))) (Ghost.reveal l))))
+          (iterator_match vmatch p pm (Base #t (Serialized sp count payload)) l **
+           R.pts_to spare1 suffix_iter **
+           R.pts_to spare2 inner_iter **
+           R.pts_to elem_ref elem **
+           vmatch pm_v elem v));
+
+      true
+    }
+  }
+}
+
+#pop-options
