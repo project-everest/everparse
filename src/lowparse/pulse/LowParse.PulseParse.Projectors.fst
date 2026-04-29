@@ -1,5 +1,6 @@
 module LowParse.PulseParse.Projectors
 include LowParse.PulseParse.Combinators
+include LowParse.PulseParse.Base
 #lang-pulse
 open Pulse.Lib.Pervasives
 
@@ -244,4 +245,44 @@ ensures vmatch_with_perm_guard guard vmatch pm x x'
     let _f : squash False = false_elim ();
     rewrite (pure False) as (vmatch_with_perm_guard guard vmatch pm x x')
   }
+}
+
+ghost fn vmatch_with_perm_guard_share
+  (#guard_t: Type0)
+  (guard: guard_t)
+  (#t #t': Type0)
+  (vmatch: (perm -> t -> (x': t' { x' << guard }) -> slprop))
+  (vmatch_share: share_t vmatch)
+  (x1: t)
+  (#p: perm)
+  (#x2: t')
+requires vmatch_with_perm_guard guard vmatch p x1 x2
+ensures vmatch_with_perm_guard guard vmatch (p /. 2.0R) x1 x2 ** vmatch_with_perm_guard guard vmatch (p /. 2.0R) x1 x2
+{
+  let pf = vmatch_with_perm_guard_unfold guard vmatch p x1 x2;
+  vmatch_share x1 #p #x2;
+  vmatch_with_perm_guard_fold guard vmatch (p /. 2.0R) x1 x2 pf;
+  vmatch_with_perm_guard_fold guard vmatch (p /. 2.0R) x1 x2 pf
+}
+
+ghost fn vmatch_with_perm_guard_gather
+  (#guard_t: Type0)
+  (guard: guard_t)
+  (#t #t': Type0)
+  (vmatch: (perm -> t -> (x': t' { x' << guard }) -> slprop))
+  (vmatch_gather: gather_t vmatch)
+  (x1: t)
+  (#p: perm)
+  (#x2: t')
+  (#p': perm)
+  (#x2': t')
+requires vmatch_with_perm_guard guard vmatch p x1 x2 ** vmatch_with_perm_guard guard vmatch p' x1 x2'
+ensures vmatch_with_perm_guard guard vmatch (p +. p') x1 x2 ** pure (x2 == x2')
+{
+  let pf = vmatch_with_perm_guard_unfold guard vmatch p x1 x2;
+  let pf' = vmatch_with_perm_guard_unfold guard vmatch p' x1 x2';
+  vmatch_gather x1 #p #x2 #p' #x2';
+  let eq_pf = Pulse.Lib.Core.elim_pure_explicit (x2 == x2');
+  vmatch_with_perm_guard_fold guard vmatch (p +. p') x1 x2 pf;
+  Pulse.Lib.Core.intro_pure (x2 == x2') eq_pf
 }
