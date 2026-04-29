@@ -513,8 +513,29 @@ ensures cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c **
         rewrite (cbor_raw_match_content p pp (pm /. 2.0R) xh (| b, la |) (CBOR_Case_String v) c)
              as (cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c);
       }
-      _ -> {
-        admit ()
+      CBOR_Case_Invalid -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) CBOR_Case_Invalid c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Int x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Int x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Simple x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Simple x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Tagged x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Array x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Array x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Map x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Map x) c) as (pure False);
+        unreachable ()
       }
     }
   } else if (b.major_type = cbor_major_type_array) {
@@ -577,8 +598,29 @@ ensures cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c **
         rewrite (cbor_raw_match_content p pp (pm /. 2.0R) xh (| b, la |) (CBOR_Case_Array v) c)
              as (cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c);
       }
-      _ -> {
-        admit ()
+      CBOR_Case_Invalid -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) CBOR_Case_Invalid c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Int x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Int x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Simple x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Simple x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_String x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_String x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Tagged x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Map x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Map x) c) as (pure False);
+        unreachable ()
       }
     }
   } else if (b.major_type = cbor_major_type_map) {
@@ -658,8 +700,29 @@ ensures cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c **
         rewrite (cbor_raw_match_content p pp (pm /. 2.0R) xh (| b, la |) (CBOR_Case_Map v) c)
              as (cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c);
       }
-      _ -> {
-        admit ()
+      CBOR_Case_Invalid -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) CBOR_Case_Invalid c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Int x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Int x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Simple x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Simple x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_String x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_String x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Tagged x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Array x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Array x) c) as (pure False);
+        unreachable ()
       }
     }
   } else if (b.major_type = cbor_major_type_tagged) {
@@ -705,8 +768,29 @@ ensures cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c **
         rewrite (cbor_raw_match_content p pp (pm /. 2.0R) xh (| b, la |) (CBOR_Case_Tagged v) c)
              as (cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c);
       }
-      _ -> {
-        admit ()
+      CBOR_Case_Invalid -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) CBOR_Case_Invalid c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Int x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Int x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Simple x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Simple x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_String x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_String x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Array x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Array x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Map x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Map x) c) as (pure False);
+        unreachable ()
       }
     }
   } else {
@@ -766,8 +850,29 @@ ensures cbor_raw_match_content p pp (pm +. pm') xh h xl c **
         rewrite (cbor_raw_match_content p pp (pm +. pm') xh (| b, la |) (CBOR_Case_String v) c)
              as (cbor_raw_match_content p pp (pm +. pm') xh h xl c);
       }
-      _ -> {
-        admit ()
+      CBOR_Case_Invalid -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) CBOR_Case_Invalid c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Int x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Int x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Simple x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Simple x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Tagged x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Array x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Array x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Map x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Map x) c) as (pure False);
+        unreachable ()
       }
     }
   } else if (b.major_type = cbor_major_type_array) {
@@ -833,8 +938,29 @@ ensures cbor_raw_match_content p pp (pm +. pm') xh h xl c **
         rewrite (cbor_raw_match_content p pp (pm +. pm') xh (| b, la |) (CBOR_Case_Array v) c)
              as (cbor_raw_match_content p pp (pm +. pm') xh h xl c);
       }
-      _ -> {
-        admit ()
+      CBOR_Case_Invalid -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) CBOR_Case_Invalid c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Int x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Int x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Simple x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Simple x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_String x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_String x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Tagged x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Map x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Map x) c) as (pure False);
+        unreachable ()
       }
     }
   } else if (b.major_type = cbor_major_type_map) {
@@ -925,8 +1051,29 @@ ensures cbor_raw_match_content p pp (pm +. pm') xh h xl c **
         rewrite (cbor_raw_match_content p pp (pm +. pm') xh (| b, la |) (CBOR_Case_Map v) c)
              as (cbor_raw_match_content p pp (pm +. pm') xh h xl c);
       }
-      _ -> {
-        admit ()
+      CBOR_Case_Invalid -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) CBOR_Case_Invalid c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Int x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Int x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Simple x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Simple x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_String x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_String x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Tagged x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Array x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Array x) c) as (pure False);
+        unreachable ()
       }
     }
   } else if (b.major_type = cbor_major_type_tagged) {
@@ -975,8 +1122,29 @@ ensures cbor_raw_match_content p pp (pm +. pm') xh h xl c **
         rewrite (cbor_raw_match_content p pp (pm +. pm') xh (| b, la |) (CBOR_Case_Tagged v) c)
              as (cbor_raw_match_content p pp (pm +. pm') xh h xl c);
       }
-      _ -> {
-        admit ()
+      CBOR_Case_Invalid -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) CBOR_Case_Invalid c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Int x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Int x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Simple x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Simple x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_String x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_String x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Array x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Array x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Map x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Map x) c) as (pure False);
+        unreachable ()
       }
     }
   } else {
