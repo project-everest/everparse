@@ -81,13 +81,12 @@ fn cbor_raw_read_content
   (p: perm -> cbor_raw -> raw_data_item -> slprop)
   (pp: parser parse_raw_data_item_kind raw_data_item)
   (pm: perm)
-  (xh: Ghost.erased raw_data_item)
   (f64: squash SZ.fits_u64)
   (h: header)
 : PPB.zero_copy_parse_strong_prefix #cbor_raw #(content h)
     (vmatch_dep_pair_with_proj_content
       cbor_raw_match_header cbor_raw_id_proj
-      (cbor_raw_match_content p pp pm xh) h)
+      (cbor_raw_match_content p pp pm) h)
     #parse_content_kind
     (parse_content pp h)
 = (input: S.slice byte)
@@ -131,17 +130,17 @@ fn cbor_raw_read_content
     });
     // Establish the match content: S.pts_to input1 #(pm *. (pms/pm)) c
     rewrite (S.pts_to input1 #pms wb1)
-      as (cbor_raw_match_content p pp pm xh h res (Ghost.reveal v));
+      as (cbor_raw_match_content p pp pm h res (Ghost.reveal v));
     fold (cbor_raw_match_header res h);
     fold (vmatch_dep_pair_with_proj_content
       cbor_raw_match_header cbor_raw_id_proj
-      (cbor_raw_match_content p pp pm xh) h res (Ghost.reveal v));
+      (cbor_raw_match_content p pp pm) h res (Ghost.reveal v));
     // Trade back
     intro
       (Trade.trade
         (vmatch_dep_pair_with_proj_content
           cbor_raw_match_header cbor_raw_id_proj
-          (cbor_raw_match_content p pp pm xh) h res (Ghost.reveal v))
+          (cbor_raw_match_content p pp pm) h res (Ghost.reveal v))
         (PPB.pts_to_parsed_strong_prefix (parse_content pp h) input #pms v))
       #(Trade.trade
           (S.pts_to input1 #pms wb1)
@@ -149,10 +148,10 @@ fn cbor_raw_read_content
       fn _ {
         unfold (vmatch_dep_pair_with_proj_content
           cbor_raw_match_header cbor_raw_id_proj
-          (cbor_raw_match_content p pp pm xh) h res (Ghost.reveal v));
+          (cbor_raw_match_content p pp pm) h res (Ghost.reveal v));
         unfold (cbor_raw_match_header res h);
         drop_ (pure (cbor_raw_get_header res == Some h));
-        rewrite (cbor_raw_match_content p pp pm xh h res (Ghost.reveal v))
+        rewrite (cbor_raw_match_content p pp pm h res (Ghost.reveal v))
           as (S.pts_to input1 #pms wb1);
         Trade.elim
           (S.pts_to input1 #pms wb1)
@@ -187,16 +186,16 @@ fn cbor_raw_read_content
     rewrite (I.iterator_match
       (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
       pp (pm *. 1.0R) (I.Base (I.Serialized (pms /. pm) n input)) (Ghost.reveal vl))
-      as (cbor_raw_match_content p pp pm xh h res (Ghost.reveal v));
+      as (cbor_raw_match_content p pp pm h res (Ghost.reveal v));
     fold (cbor_raw_match_header res h);
     fold (vmatch_dep_pair_with_proj_content
       cbor_raw_match_header cbor_raw_id_proj
-      (cbor_raw_match_content p pp pm xh) h res (Ghost.reveal v));
+      (cbor_raw_match_content p pp pm) h res (Ghost.reveal v));
     intro
       (Trade.trade
         (vmatch_dep_pair_with_proj_content
           cbor_raw_match_header cbor_raw_id_proj
-          (cbor_raw_match_content p pp pm xh) h res (Ghost.reveal v))
+          (cbor_raw_match_content p pp pm) h res (Ghost.reveal v))
         (PPB.pts_to_parsed_strong_prefix (parse_content pp h) input #pms v))
       #(Trade.trade
           (PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n) pp) input #pms v)
@@ -204,10 +203,10 @@ fn cbor_raw_read_content
       fn _ {
         unfold (vmatch_dep_pair_with_proj_content
           cbor_raw_match_header cbor_raw_id_proj
-          (cbor_raw_match_content p pp pm xh) h res (Ghost.reveal v));
+          (cbor_raw_match_content p pp pm) h res (Ghost.reveal v));
         unfold (cbor_raw_match_header res h);
         drop_ (pure (cbor_raw_get_header res == Some h));
-        rewrite (cbor_raw_match_content p pp pm xh h res (Ghost.reveal v))
+        rewrite (cbor_raw_match_content p pp pm h res (Ghost.reveal v))
           as (I.iterator_match
             (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
             pp (pm *. 1.0R) (I.Base (I.Serialized (pms /. pm) n input)) (Ghost.reveal vl));
@@ -254,16 +253,16 @@ fn cbor_raw_read_content
       (fun (pm': perm) (elem: cbor_map_entry cbor_raw) (x: (raw_data_item & raw_data_item)) ->
         cbor_map_entry_match p pm' elem x)
       (nondep_then pp pp) (pm *. 1.0R) (I.Base (I.Serialized (pms /. pm) n input)) (Ghost.reveal vl))
-      as (cbor_raw_match_content p pp pm xh h res (Ghost.reveal v));
+      as (cbor_raw_match_content p pp pm h res (Ghost.reveal v));
     fold (cbor_raw_match_header res h);
     fold (vmatch_dep_pair_with_proj_content
       cbor_raw_match_header cbor_raw_id_proj
-      (cbor_raw_match_content p pp pm xh) h res (Ghost.reveal v));
+      (cbor_raw_match_content p pp pm) h res (Ghost.reveal v));
     intro
       (Trade.trade
         (vmatch_dep_pair_with_proj_content
           cbor_raw_match_header cbor_raw_id_proj
-          (cbor_raw_match_content p pp pm xh) h res (Ghost.reveal v))
+          (cbor_raw_match_content p pp pm) h res (Ghost.reveal v))
         (PPB.pts_to_parsed_strong_prefix (parse_content pp h) input #pms v))
       #(Trade.trade
           (PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n) (nondep_then pp pp)) input #pms v)
@@ -271,10 +270,10 @@ fn cbor_raw_read_content
       fn _ {
         unfold (vmatch_dep_pair_with_proj_content
           cbor_raw_match_header cbor_raw_id_proj
-          (cbor_raw_match_content p pp pm xh) h res (Ghost.reveal v));
+          (cbor_raw_match_content p pp pm) h res (Ghost.reveal v));
         unfold (cbor_raw_match_header res h);
         drop_ (pure (cbor_raw_get_header res == Some h));
-        rewrite (cbor_raw_match_content p pp pm xh h res (Ghost.reveal v))
+        rewrite (cbor_raw_match_content p pp pm h res (Ghost.reveal v))
           as (I.iterator_match
             (fun (pm': perm) (elem: cbor_map_entry cbor_raw) (x: (raw_data_item & raw_data_item)) ->
               cbor_map_entry_match p pm' elem x)
@@ -308,24 +307,24 @@ fn cbor_raw_read_content
       cbor_tagged_serialized_slice_perm = pms /. pm;
     });
     // Need to show: vmatch_dep_pair_with_proj_content ... h res v
-    //   = cbor_raw_match_header res h ** cbor_raw_match_content p pp pm xh h res v
+    //   = cbor_raw_match_header res h ** cbor_raw_match_content p pp pm h res v
     // cbor_raw_match_content ... = pts_to_parsed_strong_prefix pp input #(pm *. (pms /. pm)) v
     //   = pts_to_parsed_strong_prefix pp input #pms v  (by arithmetic: pm * (pms/pm) = pms)
     // cbor_raw_match_header res h = pure (cbor_raw_get_header res == Some h)
     rewrite (PPB.pts_to_parsed_strong_prefix pp input #pms v)
       as (PPB.pts_to_parsed_strong_prefix pp input #(pm *. (pms /. pm)) (Ghost.reveal v));
     rewrite (PPB.pts_to_parsed_strong_prefix pp input #(pm *. (pms /. pm)) (Ghost.reveal v))
-      as (cbor_raw_match_content p pp pm xh h res (Ghost.reveal v));
+      as (cbor_raw_match_content p pp pm h res (Ghost.reveal v));
     fold (cbor_raw_match_header res h);
     fold (vmatch_dep_pair_with_proj_content
       cbor_raw_match_header cbor_raw_id_proj
-      (cbor_raw_match_content p pp pm xh) h res (Ghost.reveal v));
+      (cbor_raw_match_content p pp pm) h res (Ghost.reveal v));
     // Now set up the trade back
     intro
       (Trade.trade
         (vmatch_dep_pair_with_proj_content
           cbor_raw_match_header cbor_raw_id_proj
-          (cbor_raw_match_content p pp pm xh) h res (Ghost.reveal v))
+          (cbor_raw_match_content p pp pm) h res (Ghost.reveal v))
         (PPB.pts_to_parsed_strong_prefix (parse_content pp h) input #pms v))
       #(Trade.trade
           (PPB.pts_to_parsed_strong_prefix pp input #pms v)
@@ -333,10 +332,10 @@ fn cbor_raw_read_content
       fn _ {
         unfold (vmatch_dep_pair_with_proj_content
           cbor_raw_match_header cbor_raw_id_proj
-          (cbor_raw_match_content p pp pm xh) h res (Ghost.reveal v));
+          (cbor_raw_match_content p pp pm) h res (Ghost.reveal v));
         unfold (cbor_raw_match_header res h);
         drop_ (pure (cbor_raw_get_header res == Some h));
-        rewrite (cbor_raw_match_content p pp pm xh h res (Ghost.reveal v))
+        rewrite (cbor_raw_match_content p pp pm h res (Ghost.reveal v))
           as (PPB.pts_to_parsed_strong_prefix pp input #(pm *. (pms /. pm)) (Ghost.reveal v));
         rewrite (PPB.pts_to_parsed_strong_prefix pp input #(pm *. (pms /. pm)) (Ghost.reveal v))
           as (PPB.pts_to_parsed_strong_prefix pp input #pms v);
@@ -351,17 +350,17 @@ fn cbor_raw_read_content
     let res : cbor_raw =
       cbor_raw_read_other b la;
     // cbor_raw_match_content is emp in this branch
-    rewrite emp as (cbor_raw_match_content p pp pm xh h res (Ghost.reveal v));
+    rewrite emp as (cbor_raw_match_content p pp pm h res (Ghost.reveal v));
     fold (cbor_raw_match_header res h);
     fold (vmatch_dep_pair_with_proj_content
       cbor_raw_match_header cbor_raw_id_proj
-      (cbor_raw_match_content p pp pm xh) h res (Ghost.reveal v));
+      (cbor_raw_match_content p pp pm) h res (Ghost.reveal v));
     // Trade: from vmatch back to pts_to_parsed_strong_prefix
     intro
       (Trade.trade
         (vmatch_dep_pair_with_proj_content
           cbor_raw_match_header cbor_raw_id_proj
-          (cbor_raw_match_content p pp pm xh) h res (Ghost.reveal v))
+          (cbor_raw_match_content p pp pm) h res (Ghost.reveal v))
         (PPB.pts_to_parsed_strong_prefix (parse_content pp h) input #pms v))
       #(PPB.pts_to_parsed_strong_prefix parse_empty input #pms v **
         Trade.trade
@@ -370,10 +369,10 @@ fn cbor_raw_read_content
       fn _ {
         unfold (vmatch_dep_pair_with_proj_content
           cbor_raw_match_header cbor_raw_id_proj
-          (cbor_raw_match_content p pp pm xh) h res (Ghost.reveal v));
+          (cbor_raw_match_content p pp pm) h res (Ghost.reveal v));
         unfold (cbor_raw_match_header res h);
         drop_ (pure (cbor_raw_get_header res == Some h));
-        rewrite (cbor_raw_match_content p pp pm xh h res (Ghost.reveal v)) as emp;
+        rewrite (cbor_raw_match_content p pp pm h res (Ghost.reveal v)) as emp;
         Trade.elim
           (PPB.pts_to_parsed_strong_prefix parse_empty input #pms v)
           (PPB.pts_to_parsed_strong_prefix (parse_content pp h) input #pms v)
@@ -385,10 +384,6 @@ fn cbor_raw_read_content
 #pop-options
 
 #push-options "--z3rlimit 64 --fuel 1 --ifuel 1"
-
-// Since cbor_raw_match_content doesn't use xh in its body,
-// we fix it to a dummy value for the combinator chain
-let dummy_raw_data_item : raw_data_item = Simple 0uy
 
 module V = CBOR.Pulse.Raw.EverParse.Validate
 
@@ -406,11 +401,11 @@ let cbor_raw_read_aux
     (read_and_zero_copy_parse_strong_prefix_dtuple2_with_proj
       cbor_raw_match_header
       cbor_raw_id_proj
-      (cbor_raw_match_content p pp pm dummy_raw_data_item)
+      (cbor_raw_match_content p pp pm)
       (V.jump_header ())
       (PPB.leaf_reader_of_serialized (V.read_header ()))
       ()
-      (fun h -> cbor_raw_read_content p pp pm dummy_raw_data_item f64 h))
+      (fun h -> cbor_raw_read_content p pp pm f64 h))
     synth_raw_data_item
     synth_raw_data_item_recip
     ()
