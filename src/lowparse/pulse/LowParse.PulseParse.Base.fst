@@ -765,3 +765,148 @@ fn accessor_parser_ext
   with v2 . assert (pts_to_parsed p2 input #pm v2);
   input
 }
+
+(* zero_copy_parse_strong_prefix: like zero_copy_parse but with pts_to_parsed_strong_prefix precondition *)
+
+inline_for_extraction
+let zero_copy_parse_strong_prefix
+  (#t' #t: Type0)
+  (vmatch: t' -> t -> slprop)
+  (#k: parser_kind)
+  (p: parser k t)
+=
+  (input: slice byte) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased t) ->
+  stt t'
+    (pts_to_parsed_strong_prefix p input #pm v)
+    (fun res ->
+      vmatch res v **
+      Trade.trade
+        (vmatch res v)
+        (pts_to_parsed_strong_prefix p input #pm v)
+    )
+
+ghost fn pts_to_parsed_strong_prefix_elim
+  (#k: parser_kind) (#t: Type0) (#p: parser k t)
+  (#pm: perm)
+  (#v: t)
+  (input: slice byte)
+requires
+  pts_to_parsed_strong_prefix p input #pm v
+ensures exists* w .
+  S.pts_to input #pm w **
+  Trade.trade
+    (S.pts_to input #pm w)
+    (pts_to_parsed_strong_prefix p input #pm v) **
+  pure (pts_to_parsed_strong_prefix_prop p w v)
+{
+  unfold (pts_to_parsed_strong_prefix p input #pm v);
+  with w . assert (S.pts_to input #pm w);
+  intro
+    (Trade.trade
+      (S.pts_to input #pm w)
+      (pts_to_parsed_strong_prefix p input #pm v)
+    )
+    #emp
+    fn _ {
+      fold (pts_to_parsed_strong_prefix p input #pm v)
+    };
+}
+
+ghost fn pts_to_parsed_strong_prefix_ext
+  (#t: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t)
+  (#k2: parser_kind)
+  (p2: parser k2 t)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: t)
+  requires pts_to_parsed_strong_prefix p1 input #pm v ** pure (
+    k2.parser_kind_subkind == Some ParserStrong /\
+    (forall x . parse p1 x == parse p2 x)
+  )
+  ensures pts_to_parsed_strong_prefix p2 input #pm v
+{
+  unfold (pts_to_parsed_strong_prefix p1 input #pm v);
+  fold (pts_to_parsed_strong_prefix p2 input #pm v)
+}
+
+ghost fn pts_to_parsed_strong_prefix_ext_trade
+  (#t: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t)
+  (#k2: parser_kind)
+  (p2: parser k2 t)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: t)
+  requires pts_to_parsed_strong_prefix p1 input #pm v ** pure (
+    k1.parser_kind_subkind == Some ParserStrong /\
+    k2.parser_kind_subkind == Some ParserStrong /\
+    (forall x . parse p1 x == parse p2 x)
+  )
+  ensures pts_to_parsed_strong_prefix p2 input #pm v **
+    Trade.trade
+      (pts_to_parsed_strong_prefix p2 input #pm v)
+      (pts_to_parsed_strong_prefix p1 input #pm v)
+{
+    pts_to_parsed_strong_prefix_ext p2 input;
+    intro
+      (Trade.trade
+        (pts_to_parsed_strong_prefix p2 input #pm v)
+        (pts_to_parsed_strong_prefix p1 input #pm v)
+      )
+      #emp
+      fn _ {
+        pts_to_parsed_strong_prefix_ext p1 input
+      }
+}
+
+inline_for_extraction
+fn zero_copy_parse_strong_prefix_ext
+  (#t1'  #t: Type0)
+  (#vmatch1: t1' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (r: zero_copy_parse_strong_prefix vmatch1 p)
+  (#k': Ghost.erased parser_kind)
+  (p': parser k' t {
+    k'.parser_kind_subkind == Some ParserStrong /\
+    k.parser_kind_subkind == Some ParserStrong /\
+    (forall b . parse p b == parse p' b)
+  })
+: zero_copy_parse_strong_prefix #_ #_ vmatch1 #_ p'
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  pts_to_parsed_strong_prefix_ext_trade p input;
+  let res = r input;
+  Trade.trans (vmatch1 res v) _ _;
+  res
+}
+
+inline_for_extraction
+fn zero_copy_parse_strong_prefix_ifthenelse
+  (#t1'  #t: Type0)
+  (#vmatch1: t1' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (cond: bool)
+  (rtrue: squash (cond == true) -> zero_copy_parse_strong_prefix vmatch1 p)
+  (rfalse: squash (cond == false) -> zero_copy_parse_strong_prefix vmatch1 p)
+: zero_copy_parse_strong_prefix #_ #_ vmatch1 #_ p
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  if (cond) {
+    rtrue () input
+  } else {
+    rfalse () input
+  }
+}
