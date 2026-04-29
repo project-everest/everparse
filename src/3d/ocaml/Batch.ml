@@ -397,6 +397,12 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
                                     (if Options.get_goto_for_early_return ()
                                      then ["-goto_for_early_return"]
                                      else []) @
+                                    (if Options.get_blank_lines ()
+                                     then ["-fblank-lines"]
+                                     else []) @
+                                    (if Options.get_line_comments ()
+                                     then ["-fline-comments"]
+                                     else []) @
                                     (let init_locals_value = match Options.get_init_locals () with
                                      | Some v -> v
                                      | None -> "no"
