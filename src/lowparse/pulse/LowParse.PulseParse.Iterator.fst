@@ -2126,7 +2126,8 @@ requires
   iterator_match vmatch p pm i l **
   R.pts_to elem_ref elem **
   vmatch pm_v elem v **
-  pure (List.Tot.sorted lt_ord (Ghost.reveal l))
+  pure (List.Tot.sorted lt_ord (Ghost.reveal l) /\
+        SZ.fits (List.Tot.length (Ghost.reveal l) + 1))
 returns res: option SZ.t
 ensures
   R.pts_to pi i **
@@ -2209,7 +2210,8 @@ decreases (List.Tot.length (Ghost.reveal l))
         match res {
           None -> { None #SZ.t }
           Some k_tail -> {
-            assume_ (pure (SZ.fits (SZ.v k_tail + 1)));
+            // k_tail <= length (tl l) = length l - 1
+            // so k_tail + 1 <= length l <= length l + 1, and SZ.fits (length l + 1) holds
             Some (SZ.add k_tail 1sz)
           }
         }
@@ -2809,7 +2811,8 @@ requires
   R.pts_to spare2 i_spare2 **
   R.pts_to elem_ref elem **
   vmatch pm_v elem v **
-  pure (List.Tot.sorted lt_ord (Ghost.reveal l))
+  pure (List.Tot.sorted lt_ord (Ghost.reveal l) /\
+        SZ.fits (List.Tot.length (Ghost.reveal l) + 1))
 returns res: bool
 ensures
   (if res then (
@@ -2893,7 +2896,7 @@ ensures
       fold (base_iterator_match vmatch p (pm /. 2.0R) (Singleton (1.0R /. pm) (pm_v /. pm) elem_ref) [Ghost.reveal v]);
 
       // Step 7: Fold inner Append: Singleton + suffix
-      assume_ (pure (SZ.fits (SZ.v count - SZ.v kk + 1)));
+      // count - kk + 1 <= count + 1 == length l + 1, so SZ.fits holds
       let count_inner = SZ.add (SZ.sub count kk) 1sz;
       let depth_inner : Ghost.erased nat = Ghost.hide 1;
 
@@ -2934,7 +2937,7 @@ ensures
            as (iterator_match vmatch p (pm /. 2.0R) inner_iter (Ghost.reveal v :: list_suffix (SZ.v kk) (Ghost.reveal l)));
 
       // Step 9: Fold outer Append: prefix + inner
-      assume_ (pure (SZ.fits (SZ.v count + 1)));
+      // count + 1 == length l + 1, so SZ.fits holds from precondition
       let count_total = SZ.add count 1sz;
       let depth_outer : Ghost.erased nat = Ghost.hide 2;
 
