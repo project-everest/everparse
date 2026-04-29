@@ -393,7 +393,7 @@ let dummy_raw_data_item : raw_data_item = Simple 0uy
 module V = CBOR.Pulse.Raw.EverParse.Validate
 
 inline_for_extraction
-fn cbor_raw_read_aux
+let cbor_raw_read_aux
   (p: perm -> cbor_raw -> raw_data_item -> slprop)
   (pp: parser parse_raw_data_item_kind raw_data_item)
   (pm: perm)
@@ -402,33 +402,17 @@ fn cbor_raw_read_aux
     (cbor_raw_match_aux p pp pm)
     #parse_raw_data_item_kind
     (parse_raw_data_item_aux pp)
-= (input: S.slice byte)
-  (#pms: perm)
-  (#v: Ghost.erased raw_data_item)
-{
-  let inner : PPB.zero_copy_parse_strong_prefix #cbor_raw #(dtuple2 header content)
-    (vmatch_dep_pair_with_proj cbor_raw_match_header cbor_raw_id_proj
-      (cbor_raw_match_content p pp pm dummy_raw_data_item))
-    #(and_then_kind parse_header_kind parse_content_kind)
-    (parse_dtuple2 parse_header (parse_content pp))
-  = read_and_zero_copy_parse_strong_prefix_dtuple2_with_proj
+= zero_copy_parse_strong_prefix_synth
+    (read_and_zero_copy_parse_strong_prefix_dtuple2_with_proj
       cbor_raw_match_header
       cbor_raw_id_proj
       (cbor_raw_match_content p pp pm dummy_raw_data_item)
       (V.jump_header ())
       (PPB.leaf_reader_of_serialized (V.read_header ()))
       ()
-      (fun h -> cbor_raw_read_content p pp pm dummy_raw_data_item f64 h);
-  let w : PPB.zero_copy_parse_strong_prefix #cbor_raw #raw_data_item
-    (cbor_raw_match_aux p pp pm)
-    #parse_raw_data_item_kind
-    (parse_raw_data_item_aux pp)
-  = zero_copy_parse_strong_prefix_synth
-      inner
-      synth_raw_data_item
-      synth_raw_data_item_recip
-      ();
-  w input
-}
+      (fun h -> cbor_raw_read_content p pp pm dummy_raw_data_item f64 h))
+    synth_raw_data_item
+    synth_raw_data_item_recip
+    ()
 
 #pop-options
