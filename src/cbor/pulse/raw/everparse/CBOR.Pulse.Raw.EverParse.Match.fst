@@ -1,5 +1,5 @@
 module CBOR.Pulse.Raw.EverParse.Match
-
+#lang-pulse
 include CBOR.Pulse.Raw.EverParse.Type
 open CBOR.Spec.Raw.EverParse
 open CBOR.Spec.Raw.Base
@@ -192,3 +192,270 @@ let cbor_raw_match_aux
       (cbor_raw_match_content p pp pm xh))
     synth_raw_data_item_recip
     xl xh
+
+(* ======== Share/Gather ======== *)
+
+ghost fn cbor_map_entry_match_share
+  (p: perm -> cbor_raw -> raw_data_item -> slprop)
+  (p_share: I.share_t p)
+  (entry: cbor_map_entry cbor_raw)
+  (#pm: perm)
+  (#pair: Ghost.erased (raw_data_item & raw_data_item))
+requires cbor_map_entry_match p pm entry pair
+ensures cbor_map_entry_match p (pm /. 2.0R) entry pair **
+        cbor_map_entry_match p (pm /. 2.0R) entry pair
+{
+  unfold (cbor_map_entry_match p pm entry pair);
+  unfold (vmatch_pair_with_proj (p pm) cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (p pm) cbor_map_entry_value_proj) entry pair);
+  unfold (vmatch_with_pair_proj (p pm) cbor_map_entry_value_proj entry (snd pair));
+  p_share entry.cbor_map_entry_key;
+  p_share entry.cbor_map_entry_value;
+  fold (vmatch_with_pair_proj (p (pm /. 2.0R)) cbor_map_entry_value_proj entry (snd pair));
+  fold (vmatch_pair_with_proj (p (pm /. 2.0R)) cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (p (pm /. 2.0R)) cbor_map_entry_value_proj) entry pair);
+  fold (cbor_map_entry_match p (pm /. 2.0R) entry pair);
+  fold (vmatch_with_pair_proj (p (pm /. 2.0R)) cbor_map_entry_value_proj entry (snd pair));
+  fold (vmatch_pair_with_proj (p (pm /. 2.0R)) cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (p (pm /. 2.0R)) cbor_map_entry_value_proj) entry pair);
+  fold (cbor_map_entry_match p (pm /. 2.0R) entry pair);
+}
+
+ghost fn cbor_map_entry_match_gather
+  (p: perm -> cbor_raw -> raw_data_item -> slprop)
+  (p_gather: I.gather_t p)
+  (entry: cbor_map_entry cbor_raw)
+  (#pm: perm)
+  (#pair: Ghost.erased (raw_data_item & raw_data_item))
+  (#pm': perm)
+  (#pair': Ghost.erased (raw_data_item & raw_data_item))
+requires cbor_map_entry_match p pm entry pair **
+         cbor_map_entry_match p pm' entry pair'
+ensures cbor_map_entry_match p (pm +. pm') entry pair **
+        pure (pair == pair')
+{
+  unfold (cbor_map_entry_match p pm entry pair);
+  unfold (vmatch_pair_with_proj (p pm) cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (p pm) cbor_map_entry_value_proj) entry pair);
+  unfold (vmatch_with_pair_proj (p pm) cbor_map_entry_value_proj entry (snd pair));
+  unfold (cbor_map_entry_match p pm' entry pair');
+  unfold (vmatch_pair_with_proj (p pm') cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (p pm') cbor_map_entry_value_proj) entry pair');
+  unfold (vmatch_with_pair_proj (p pm') cbor_map_entry_value_proj entry (snd pair'));
+  rewrite (p pm (cbor_map_entry_key_proj.pair_proj_get entry) (fst pair))
+       as (p pm entry.cbor_map_entry_key (fst pair));
+  rewrite (p pm' (cbor_map_entry_key_proj.pair_proj_get entry) (fst pair'))
+       as (p pm' entry.cbor_map_entry_key (fst pair'));
+  rewrite (p pm (cbor_map_entry_value_proj.pair_proj_get entry) (snd pair))
+       as (p pm entry.cbor_map_entry_value (snd pair));
+  rewrite (p pm' (cbor_map_entry_value_proj.pair_proj_get entry) (snd pair'))
+       as (p pm' entry.cbor_map_entry_value (snd pair'));
+  p_gather entry.cbor_map_entry_key #pm #(Ghost.reveal (Ghost.hide (fst pair))) #pm' #(Ghost.reveal (Ghost.hide (fst pair')));
+  p_gather entry.cbor_map_entry_value #pm #(Ghost.reveal (Ghost.hide (snd pair))) #pm' #(Ghost.reveal (Ghost.hide (snd pair')));
+  rewrite (p (pm +. pm') entry.cbor_map_entry_key (fst pair))
+       as (p (pm +. pm') (cbor_map_entry_key_proj.pair_proj_get entry) (fst pair));
+  rewrite (p (pm +. pm') entry.cbor_map_entry_value (snd pair))
+       as (p (pm +. pm') (cbor_map_entry_value_proj.pair_proj_get entry) (snd pair));
+  fold (vmatch_with_pair_proj (p (pm +. pm')) cbor_map_entry_value_proj entry (snd pair));
+  fold (vmatch_pair_with_proj (p (pm +. pm')) cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (p (pm +. pm')) cbor_map_entry_value_proj) entry pair);
+  fold (cbor_map_entry_match p (pm +. pm') entry pair);
+}
+
+ghost fn cbor_raw_match_content_share
+  (p: perm -> cbor_raw -> raw_data_item -> slprop)
+  (p_share: I.share_t p)
+  (#kp: parser_kind)
+  (pp: parser kp raw_data_item)
+  (xh: raw_data_item)
+  (h: header)
+  (xl: cbor_raw)
+  (pm: perm)
+  (c: content h)
+requires cbor_raw_match_content p pp pm xh h xl c
+ensures cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c **
+        cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c
+{
+  admit ()
+}
+
+ghost fn cbor_raw_match_content_gather
+  (p: perm -> cbor_raw -> raw_data_item -> slprop)
+  (p_gather: I.gather_t p)
+  (#kp: parser_kind)
+  (pp: parser kp raw_data_item)
+  (xh: raw_data_item)
+  (h: header)
+  (xl: cbor_raw)
+  (pm: perm)
+  (c: content h)
+  (pm': perm)
+  (c': content h)
+requires cbor_raw_match_content p pp pm xh h xl c **
+         cbor_raw_match_content p pp pm' xh h xl c'
+ensures cbor_raw_match_content p pp (pm +. pm') xh h xl c **
+        pure (c == c')
+{
+  admit ()
+}
+
+ghost fn cbor_raw_match_aux_share
+  (p: perm -> cbor_raw -> raw_data_item -> slprop)
+  (p_share: I.share_t p)
+  (#kp: parser_kind)
+  (pp: parser kp raw_data_item)
+  (xl: cbor_raw)
+  (#pm: perm)
+  (#xh: Ghost.erased raw_data_item)
+requires cbor_raw_match_aux p pp pm xl xh
+ensures cbor_raw_match_aux p pp (pm /. 2.0R) xl xh **
+        cbor_raw_match_aux p pp (pm /. 2.0R) xl xh
+{
+  unfold (cbor_raw_match_aux p pp pm xl xh);
+  unfold (vmatch_synth
+    (vmatch_dep_pair_with_proj
+       cbor_raw_match_header
+       cbor_raw_id_proj
+       (cbor_raw_match_content p pp pm (Ghost.reveal xh)))
+    synth_raw_data_item_recip
+    xl (Ghost.reveal xh));
+  unfold (vmatch_dep_pair_with_proj
+    cbor_raw_match_header
+    cbor_raw_id_proj
+    (cbor_raw_match_content p pp pm (Ghost.reveal xh))
+    xl
+    (synth_raw_data_item_recip (Ghost.reveal xh)));
+  unfold (cbor_raw_match_header
+    (cbor_raw_id_proj.pair_proj_get xl)
+    (dfst (synth_raw_data_item_recip (Ghost.reveal xh))));
+  rewrite
+    (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get xl) ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))))
+    as
+    (pure (cbor_raw_get_header xl ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))));
+  let the_prop = cbor_raw_get_header xl ==
+    Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)));
+  let sq = elim_pure_explicit the_prop;
+  cbor_raw_match_content_share p p_share pp
+    (Ghost.reveal xh)
+    (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
+    xl pm
+    (dsnd (synth_raw_data_item_recip (Ghost.reveal xh)));
+  intro_pure the_prop sq;
+  intro_pure the_prop sq;
+  rewrite (pure the_prop)
+    as
+    (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get xl) ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))));
+  fold (cbor_raw_match_header
+    (cbor_raw_id_proj.pair_proj_get xl)
+    (dfst (synth_raw_data_item_recip (Ghost.reveal xh))));
+  fold (vmatch_dep_pair_with_proj
+    cbor_raw_match_header
+    cbor_raw_id_proj
+    (cbor_raw_match_content p pp (pm /. 2.0R) (Ghost.reveal xh))
+    xl
+    (synth_raw_data_item_recip (Ghost.reveal xh)));
+  fold (vmatch_synth
+    (vmatch_dep_pair_with_proj
+       cbor_raw_match_header
+       cbor_raw_id_proj
+       (cbor_raw_match_content p pp (pm /. 2.0R) (Ghost.reveal xh)))
+    synth_raw_data_item_recip
+    xl (Ghost.reveal xh));
+  fold (cbor_raw_match_aux p pp (pm /. 2.0R) xl (Ghost.reveal xh));
+  rewrite (pure the_prop)
+    as
+    (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get xl) ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))));
+  fold (cbor_raw_match_header
+    (cbor_raw_id_proj.pair_proj_get xl)
+    (dfst (synth_raw_data_item_recip (Ghost.reveal xh))));
+  fold (vmatch_dep_pair_with_proj
+    cbor_raw_match_header
+    cbor_raw_id_proj
+    (cbor_raw_match_content p pp (pm /. 2.0R) (Ghost.reveal xh))
+    xl
+    (synth_raw_data_item_recip (Ghost.reveal xh)));
+  fold (vmatch_synth
+    (vmatch_dep_pair_with_proj
+       cbor_raw_match_header
+       cbor_raw_id_proj
+       (cbor_raw_match_content p pp (pm /. 2.0R) (Ghost.reveal xh)))
+    synth_raw_data_item_recip
+    xl (Ghost.reveal xh));
+  fold (cbor_raw_match_aux p pp (pm /. 2.0R) xl (Ghost.reveal xh));
+}
+
+ghost fn cbor_raw_match_aux_gather
+  (p: perm -> cbor_raw -> raw_data_item -> slprop)
+  (p_gather: I.gather_t p)
+  (#kp: parser_kind)
+  (pp: parser kp raw_data_item)
+  (xl: cbor_raw)
+  (#pm: perm)
+  (#xh: Ghost.erased raw_data_item)
+  (#pm': perm)
+  (#xh': Ghost.erased raw_data_item)
+requires cbor_raw_match_aux p pp pm xl xh **
+         cbor_raw_match_aux p pp pm' xl xh'
+ensures cbor_raw_match_aux p pp (pm +. pm') xl xh **
+        pure (xh == xh')
+{
+  unfold (cbor_raw_match_aux p pp pm xl xh);
+  unfold (vmatch_synth
+    (vmatch_dep_pair_with_proj
+       cbor_raw_match_header
+       cbor_raw_id_proj
+       (cbor_raw_match_content p pp pm (Ghost.reveal xh)))
+    synth_raw_data_item_recip
+    xl (Ghost.reveal xh));
+  unfold (vmatch_dep_pair_with_proj
+    cbor_raw_match_header
+    cbor_raw_id_proj
+    (cbor_raw_match_content p pp pm (Ghost.reveal xh))
+    xl
+    (synth_raw_data_item_recip (Ghost.reveal xh)));
+  unfold (cbor_raw_match_header
+    (cbor_raw_id_proj.pair_proj_get xl)
+    (dfst (synth_raw_data_item_recip (Ghost.reveal xh))));
+  unfold (cbor_raw_match_aux p pp pm' xl xh');
+  unfold (vmatch_synth
+    (vmatch_dep_pair_with_proj
+       cbor_raw_match_header
+       cbor_raw_id_proj
+       (cbor_raw_match_content p pp pm' (Ghost.reveal xh')))
+    synth_raw_data_item_recip
+    xl (Ghost.reveal xh'));
+  unfold (vmatch_dep_pair_with_proj
+    cbor_raw_match_header
+    cbor_raw_id_proj
+    (cbor_raw_match_content p pp pm' (Ghost.reveal xh'))
+    xl
+    (synth_raw_data_item_recip (Ghost.reveal xh')));
+  unfold (cbor_raw_match_header
+    (cbor_raw_id_proj.pair_proj_get xl)
+    (dfst (synth_raw_data_item_recip (Ghost.reveal xh'))));
+  rewrite
+    (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get xl) ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))))
+    as
+    (pure (cbor_raw_get_header xl ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))));
+  rewrite
+    (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get xl) ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh')))))
+    as
+    (pure (cbor_raw_get_header xl ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh')))));
+  let the_prop1 = cbor_raw_get_header xl ==
+    Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)));
+  let the_prop2 = cbor_raw_get_header xl ==
+    Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh')));
+  let sq1 = elim_pure_explicit the_prop1;
+  let sq2 = elim_pure_explicit the_prop2;
+  // From both pure facts, the headers are equal, so synth_raw_data_item_recip xh == ... xh',
+  // and by injectivity of synth_raw_data_item_recip + synth_raw_data_item, xh == xh'
+  admit ()
+}
