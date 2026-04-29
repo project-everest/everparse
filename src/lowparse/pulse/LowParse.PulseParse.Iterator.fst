@@ -130,7 +130,17 @@ let rec lemma_splitAt_fst_length (#a: Type) (n: nat) (l: list a)
     (decreases n)
   = if n = 0 then () else lemma_splitAt_fst_length (n - 1) (List.Tot.tl l)
 
-fn base_iterator_length
+let base_iterator_length
+  (#t: Type)
+  (i: base_iterator t)
+: Tot SZ.t
+= match i with
+  | Empty -> 0sz
+  | Singleton _ _ _ -> 1sz
+  | Slice _ _ sl -> S.len sl
+  | Serialized _ count _ -> count
+
+ghost fn base_iterator_length_correct
   (#t: Type0)
   (#u: Type0)
   (vmatch: perm -> t -> u -> slprop)
@@ -140,8 +150,7 @@ fn base_iterator_length
   (i: base_iterator t)
   (#l: Ghost.erased (list u))
 requires base_iterator_match vmatch p pm i l
-returns res: SZ.t
-ensures base_iterator_match vmatch p pm i l ** pure (SZ.v res == List.Tot.length l)
+ensures base_iterator_match vmatch p pm i l ** pure (SZ.v (base_iterator_length i) == List.Tot.length l)
 {
   match i {
     Empty -> {
@@ -149,36 +158,39 @@ ensures base_iterator_match vmatch p pm i l ** pure (SZ.v res == List.Tot.length
       fold (base_iterator_match vmatch p pm (Empty #t) l);
       rewrite (base_iterator_match vmatch p pm (Empty #t) l)
            as (base_iterator_match vmatch p pm i l);
-      0sz
     }
     Singleton sp sv s -> {
       unfold (base_iterator_match vmatch p pm (Singleton sp sv s) l);
       fold (base_iterator_match vmatch p pm (Singleton sp sv s) l);
       rewrite (base_iterator_match vmatch p pm (Singleton sp sv s) l)
            as (base_iterator_match vmatch p pm i l);
-      1sz
     }
     Slice sp sv sl -> {
       unfold (base_iterator_match vmatch p pm (Slice sp sv sl) l);
       SM.seq_list_match_length (vmatch (pm *. sv)) _ l;
       S.pts_to_len sl;
-      let res = S.len sl;
       fold (base_iterator_match vmatch p pm (Slice sp sv sl) l);
       rewrite (base_iterator_match vmatch p pm (Slice sp sv sl) l)
            as (base_iterator_match vmatch p pm i l);
-      res
     }
     Serialized sp count pl -> {
       unfold (base_iterator_match vmatch p pm (Serialized sp count pl) l);
       fold (base_iterator_match vmatch p pm (Serialized sp count pl) l);
       rewrite (base_iterator_match vmatch p pm (Serialized sp count pl) l)
            as (base_iterator_match vmatch p pm i l);
-      count
     }
   }
 }
 
-fn iterator_length
+let iterator_length
+  (#t: Type)
+  (i: iterator t)
+: Tot SZ.t
+= match i with
+  | Base bi -> base_iterator_length bi
+  | Append _ count _ _ _ -> count
+
+ghost fn iterator_length_correct
   (#t: Type0)
   (#u: Type0)
   (vmatch: perm -> t -> u -> slprop)
@@ -188,17 +200,15 @@ fn iterator_length
   (i: iterator t)
   (#l: Ghost.erased (list u))
 requires iterator_match vmatch p pm i l
-returns res: SZ.t
-ensures iterator_match vmatch p pm i l ** pure (SZ.v res == List.Tot.length l)
+ensures iterator_match vmatch p pm i l ** pure (SZ.v (iterator_length i) == List.Tot.length l)
 {
   match i {
     Base bi -> {
       unfold (iterator_match vmatch p pm (Base bi) l);
-      let res = base_iterator_length vmatch p pm bi;
+      base_iterator_length_correct vmatch p pm bi;
       fold (iterator_match vmatch p pm (Base bi) l);
       rewrite (iterator_match vmatch p pm (Base bi) l)
            as (iterator_match vmatch p pm i l);
-      res
     }
     Append depth count before ap after -> {
       unfold (iterator_match vmatch p pm (Append depth count before ap after) l);
@@ -217,7 +227,6 @@ ensures iterator_match vmatch p pm i l ** pure (SZ.v res == List.Tot.length l)
       fold (iterator_match vmatch p pm (Append depth count before ap after) l);
       rewrite (iterator_match vmatch p pm (Append depth count before ap after) l)
            as (iterator_match vmatch p pm i l);
-      count
     }
   }
 }
@@ -235,7 +244,8 @@ requires iterator_match vmatch p pm i l
 returns res: bool
 ensures iterator_match vmatch p pm i l ** pure (res == Nil? l)
 {
-  let len = iterator_length vmatch p pm i;
+  iterator_length_correct vmatch p pm i;
+  let len = iterator_length i;
   (len = 0sz)
 }
 
@@ -1463,7 +1473,8 @@ decreases (iterator_depth i)
           iterator_depth i2 < Ghost.reveal depth
         )
       );
-      let before_len = base_iterator_length vmatch p pm before;
+      base_iterator_length_correct vmatch p pm before;
+      let before_len = base_iterator_length before;
       if (before_len = 0sz) {
         // === EMPTY BEFORE CASE ===
         List.Tot.append_length i1 l2;
@@ -1714,7 +1725,8 @@ ensures exists* (i': iterator t) .
   let i_val = !pi;
 
   // Compute count for the Append
-  let len = iterator_length vmatch p pm i_val;
+  iterator_length_correct vmatch p pm i_val;
+  let len = iterator_length i_val;
   let count = SZ.add len 1sz;
 
   let depth : Ghost.erased nat = Ghost.hide (1 + iterator_depth i_val);
