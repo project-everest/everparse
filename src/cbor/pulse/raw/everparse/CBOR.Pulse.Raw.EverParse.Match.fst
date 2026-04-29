@@ -88,12 +88,13 @@ let cbor_raw_match_header (xl: cbor_raw) (h: header) : Tot slprop =
    nondep_then (p `nondep_then` p) in parse_content for maps. Uses
    vmatch_pair_with_proj from the Projectors module. *)
 let cbor_map_entry_match
-  (p: cbor_raw -> raw_data_item -> slprop)
+  (p: perm -> cbor_raw -> raw_data_item -> slprop)
+  (pm: perm)
   (entry: cbor_map_entry cbor_raw)
   (pair: (raw_data_item & raw_data_item))
 : Tot slprop
-= vmatch_pair_with_proj p cbor_map_entry_key_proj
-    (vmatch_with_pair_proj p cbor_map_entry_value_proj)
+= vmatch_pair_with_proj (p pm) cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (p pm) cbor_map_entry_value_proj)
     entry pair
 
 (* ======== Content relation ======== *)
@@ -107,9 +108,10 @@ let cbor_map_entry_match
    - other:  weaken _ parse_empty                               →  emp
 *)
 let cbor_raw_match_content
-  (p: cbor_raw -> raw_data_item -> slprop)
+  (p: perm -> cbor_raw -> raw_data_item -> slprop)
   (#kp: parser_kind)
   (pp: parser kp raw_data_item)
+  (pm: perm)
   (xh: raw_data_item)
   (h: header)
   (xl: cbor_raw)
@@ -120,16 +122,16 @@ let cbor_raw_match_content
   then
     (match xl with
     | CBOR_Case_String v ->
-      S.pts_to v.cbor_string_ptr #v.cbor_string_perm c
+      S.pts_to v.cbor_string_ptr #(pm *. v.cbor_string_perm) c
     | _ -> pure False)
   else if b.major_type = cbor_major_type_array
   then
     (match xl with
     | CBOR_Case_Array v ->
       I.iterator_match
-        (fun (_pm: perm) (elem: cbor_raw) (x: raw_data_item) -> p elem x)
+        (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
         pp
-        1.0R
+        (pm *. v.cbor_array_slice_perm)
         v.cbor_array_ptr
         c
     | _ -> pure False)
@@ -138,11 +140,11 @@ let cbor_raw_match_content
     (match xl with
     | CBOR_Case_Map v ->
       I.iterator_match
-        (fun (_pm: perm) (elem: cbor_map_entry cbor_raw)
+        (fun (pm': perm) (elem: cbor_map_entry cbor_raw)
              (x: (raw_data_item & raw_data_item)) ->
-          cbor_map_entry_match p elem x)
+          cbor_map_entry_match p pm' elem x)
         (nondep_then pp pp)
-        1.0R
+        (pm *. v.cbor_map_slice_perm)
         v.cbor_map_ptr
         c
     | _ -> pure False)
@@ -151,8 +153,9 @@ let cbor_raw_match_content
     (match xl with
     | CBOR_Case_Tagged v ->
       vmatch_ref_wf xh
-        (fun (vl: cbor_raw) (vh: raw_data_item { vh << xh }) -> p vl vh)
-        ({ v = v.cbor_tagged_ptr; p = v.cbor_tagged_ref_perm })
+        (fun (vl: cbor_raw) (vh: raw_data_item { vh << xh }) ->
+          p (pm *. v.cbor_tagged_payload_perm) vl vh)
+        ({ v = v.cbor_tagged_ptr; p = pm *. v.cbor_tagged_ref_perm })
         c
     | _ -> pure False)
   else
@@ -175,9 +178,10 @@ let cbor_raw_match_content
    parse_raw_data_item_aux.
 *)
 let cbor_raw_match_aux
-  (p: cbor_raw -> raw_data_item -> slprop)
+  (p: perm -> cbor_raw -> raw_data_item -> slprop)
   (#kp: parser_kind)
   (pp: parser kp raw_data_item)
+  (pm: perm)
   (xl: cbor_raw)
   (xh: raw_data_item)
 : Tot slprop
@@ -185,6 +189,6 @@ let cbor_raw_match_aux
     (vmatch_dep_pair_with_proj
       cbor_raw_match_header
       cbor_raw_id_proj
-      (cbor_raw_match_content p pp xh))
+      (cbor_raw_match_content p pp pm xh))
     synth_raw_data_item_recip
     xl xh

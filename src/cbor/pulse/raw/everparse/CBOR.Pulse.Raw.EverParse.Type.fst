@@ -35,7 +35,7 @@ type cbor_tagged ([@@@strictly_positive] cbor_raw: Type0) = {
   cbor_tagged_tag: raw_uint64;
   cbor_tagged_ptr: ref cbor_raw;
   cbor_tagged_ref_perm: perm;
-//  cbor_tagged_payload_perm: perm;
+  cbor_tagged_payload_perm: perm;
 }
 
 noeq
