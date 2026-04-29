@@ -8,6 +8,7 @@ module SZ = FStar.SizeT
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 module I = LowParse.PulseParse.Iterator
+module S = Pulse.Lib.Slice
 
 // not reusing raw_uint64, for packing purposes
 noeq
@@ -36,6 +37,13 @@ type cbor_tagged ([@@@strictly_positive] cbor_raw: Type0) = {
   cbor_tagged_ptr: ref cbor_raw;
   cbor_tagged_ref_perm: perm;
   cbor_tagged_payload_perm: perm;
+}
+
+noeq
+type cbor_tagged_serialized = {
+  cbor_tagged_serialized_tag: raw_uint64;
+  cbor_tagged_serialized_ptr: S.slice U8.t;
+  cbor_tagged_serialized_slice_perm: perm;
 }
 
 noeq
@@ -73,5 +81,6 @@ type cbor_raw =
 | CBOR_Case_Simple: v: simple_value -> cbor_raw
 | CBOR_Case_String: v: cbor_string -> cbor_raw
 | CBOR_Case_Tagged: v: cbor_tagged cbor_raw -> cbor_raw
+| CBOR_Case_Tagged_Serialized: v: cbor_tagged_serialized -> cbor_raw
 | CBOR_Case_Array: v: cbor_array cbor_raw -> cbor_raw
 | CBOR_Case_Map: v: cbor_map cbor_raw -> cbor_raw
