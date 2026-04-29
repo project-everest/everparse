@@ -1439,3 +1439,10 @@ ensures cbor_raw_match_aux pp p (pm +. pm') xl xh **
      dsnd (synth_raw_data_item_recip (Ghost.reveal xh')));
   intro_pure (Ghost.reveal xh == Ghost.reveal xh') ();
 }
+
+let cbor_raw_match :
+  (pm: perm) ->
+  (xl: cbor_raw) ->
+  (xh: raw_data_item) ->
+  Tot slprop
+= vmatch_with_perm_rec (cbor_raw_match_aux parse_raw_data_item)
