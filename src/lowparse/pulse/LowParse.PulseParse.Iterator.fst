@@ -9,7 +9,6 @@ module R = Pulse.Lib.Reference
 module U8 = FStar.UInt8
 module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
-module B = Pulse.Lib.Box
 module LPS = LowParse.Pulse.Base
 open Pulse.Lib.Trade
 
