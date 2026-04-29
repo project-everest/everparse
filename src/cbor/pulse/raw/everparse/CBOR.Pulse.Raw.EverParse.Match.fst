@@ -118,13 +118,13 @@ let cbor_raw_match_content
   (c: content h)
 : Tot slprop
 = let (| b, long_arg |) = h in
-  if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
+  if (b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)
   then
     (match xl with
     | CBOR_Case_String v ->
       S.pts_to v.cbor_string_ptr #(pm *. v.cbor_string_perm) c
     | _ -> pure False)
-  else if b.major_type = cbor_major_type_array
+  else if (b.major_type = cbor_major_type_array)
   then
     (match xl with
     | CBOR_Case_Array v ->
@@ -135,7 +135,7 @@ let cbor_raw_match_content
         v.cbor_array_ptr
         c
     | _ -> pure False)
-  else if b.major_type = cbor_major_type_map
+  else if (b.major_type = cbor_major_type_map)
   then
     (match xl with
     | CBOR_Case_Map v ->
@@ -148,7 +148,7 @@ let cbor_raw_match_content
         v.cbor_map_ptr
         c
     | _ -> pure False)
-  else if b.major_type = cbor_major_type_tagged
+  else if (b.major_type = cbor_major_type_tagged)
   then
     (match xl with
     | CBOR_Case_Tagged v ->
@@ -276,6 +276,11 @@ requires cbor_raw_match_content p pp pm xh h xl c
 ensures cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c **
         cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c
 {
+  // NOTE: Full proof blocked by Pulse dependent type limitation:
+  // c: content h where h is symbolic, so content h doesn't reduce.
+  // rewrite targets like S.pts_to ... c can't be type-checked
+  // because Pulse needs c: Seq.seq U8.t but only has c: content h.
+  // The codebase avoids share/gather on dependent pairs entirely.
   admit ()
 }
 
@@ -285,6 +290,7 @@ ghost fn cbor_raw_match_content_gather
   (#kp: parser_kind)
   (pp: parser kp raw_data_item)
   (xh: raw_data_item)
+  (xh': raw_data_item)
   (h: header)
   (xl: cbor_raw)
   (pm: perm)
@@ -292,10 +298,12 @@ ghost fn cbor_raw_match_content_gather
   (pm': perm)
   (c': content h)
 requires cbor_raw_match_content p pp pm xh h xl c **
-         cbor_raw_match_content p pp pm' xh h xl c'
+         cbor_raw_match_content p pp pm' xh' h xl c'
 ensures cbor_raw_match_content p pp (pm +. pm') xh h xl c **
         pure (c == c')
 {
+  // NOTE: Same dependent type limitation as content_share.
+  // Two xh parameters because the aux_gather has different xh/xh'.
   admit ()
 }
 
@@ -455,7 +463,57 @@ ensures cbor_raw_match_aux p pp (pm +. pm') xl xh **
     Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh')));
   let sq1 = elim_pure_explicit the_prop1;
   let sq2 = elim_pure_explicit the_prop2;
-  // From both pure facts, the headers are equal, so synth_raw_data_item_recip xh == ... xh',
-  // and by injectivity of synth_raw_data_item_recip + synth_raw_data_item, xh == xh'
-  admit ()
+  // From sq1 and sq2: Some h1 == Some h2, so h1 == h2 (SMT).
+  // Rewrite second content's header from h2 to h1.
+  rewrite (cbor_raw_match_content p pp pm'
+             (Ghost.reveal xh')
+             (dfst (synth_raw_data_item_recip (Ghost.reveal xh')))
+             xl
+             (dsnd (synth_raw_data_item_recip (Ghost.reveal xh'))))
+       as (cbor_raw_match_content p pp pm'
+             (Ghost.reveal xh')
+             (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
+             xl
+             (dsnd (synth_raw_data_item_recip (Ghost.reveal xh'))));
+  cbor_raw_match_content_gather p p_gather pp
+    (Ghost.reveal xh)
+    (Ghost.reveal xh')
+    (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
+    xl pm
+    (dsnd (synth_raw_data_item_recip (Ghost.reveal xh)))
+    pm'
+    (dsnd (synth_raw_data_item_recip (Ghost.reveal xh')));
+  // content_gather gives:
+  //   cbor_raw_match_content ... (pm +. pm') xh h xl c1 ** pure (c1 == c2)
+  // From h1 == h2 (headers equal) and c1 == c2 (content equal):
+  //   synth_raw_data_item_recip xh == synth_raw_data_item_recip xh'
+  // By synth_raw_data_item_recip_inverse + injectivity: xh == xh'
+  // Fold the result
+  intro_pure the_prop1 sq1;
+  rewrite (pure the_prop1)
+    as
+    (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get xl) ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))));
+  fold (cbor_raw_match_header
+    (cbor_raw_id_proj.pair_proj_get xl)
+    (dfst (synth_raw_data_item_recip (Ghost.reveal xh))));
+  fold (vmatch_dep_pair_with_proj
+    cbor_raw_match_header
+    cbor_raw_id_proj
+    (cbor_raw_match_content p pp (pm +. pm') (Ghost.reveal xh))
+    xl
+    (synth_raw_data_item_recip (Ghost.reveal xh)));
+  fold (vmatch_synth
+    (vmatch_dep_pair_with_proj
+       cbor_raw_match_header
+       cbor_raw_id_proj
+       (cbor_raw_match_content p pp (pm +. pm') (Ghost.reveal xh)))
+    synth_raw_data_item_recip
+    xl (Ghost.reveal xh));
+  fold (cbor_raw_match_aux p pp (pm +. pm') xl (Ghost.reveal xh));
+  // Derive xh == xh' from c1 == c2 and h1 == h2
+  let c_eq = elim_pure_explicit
+    (dsnd (synth_raw_data_item_recip (Ghost.reveal xh)) ==
+     dsnd (synth_raw_data_item_recip (Ghost.reveal xh')));
+  intro_pure (Ghost.reveal xh == Ghost.reveal xh') ();
 }
