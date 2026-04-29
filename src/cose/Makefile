@@ -54,7 +54,7 @@ test-extract-rust: extract-krml-rust
 .venv:
 	rm -rf $@ $@.tmp
 	python3 -m venv $@.tmp
-	$@.tmp/bin/python3 -m pip install pycose
+	$@.tmp/bin/python3 -m pip install pycose 'cbor2<6'
 	mv $@.tmp $@
 
 .PHONY: test-interop
