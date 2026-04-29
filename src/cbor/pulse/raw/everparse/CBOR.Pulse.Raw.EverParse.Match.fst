@@ -14,6 +14,7 @@ module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 module S = Pulse.Lib.Slice
 module R = Pulse.Lib.Reference
+module I = LowParse.PulseParse.Iterator
 
 (* ======== Projectors ======== *)
 
@@ -66,11 +67,11 @@ let cbor_raw_get_header (xl: cbor_raw) : GTot (option header) =
   | CBOR_Case_Array v ->
     Some (raw_uint64_as_argument cbor_major_type_array
       ({ size = v.cbor_array_length_size;
-         value = U64.uint_to_t (SZ.v (S.len v.cbor_array_ptr)) }))
+         value = U64.uint_to_t (SZ.v (I.iterator_length v.cbor_array_ptr)) }))
   | CBOR_Case_Map v ->
     Some (raw_uint64_as_argument cbor_major_type_map
       ({ size = v.cbor_map_length_size;
-         value = U64.uint_to_t (SZ.v (S.len v.cbor_map_ptr)) }))
+         value = U64.uint_to_t (SZ.v (I.iterator_length v.cbor_map_ptr)) }))
   | CBOR_Case_Tagged v ->
     Some (raw_uint64_as_argument cbor_major_type_tagged v.cbor_tagged_tag)
   | CBOR_Case_Invalid -> None
@@ -100,13 +101,15 @@ let cbor_map_entry_match
 (* Content relation following the structure of parse_content p h.
    Cases mirror the branches of parse_content:
    - string: weaken _ (parse_filter (parse_lseq_bytes n) ...)  →  pts_to on string slice
-   - array:  weaken _ (parse_nlist n p)                        →  nlist_match_slice_wf
-   - map:    weaken _ (parse_nlist n (p `nondep_then` p))      →  nlist_match_slice_wf with pair proj
+   - array:  weaken _ (parse_nlist n p)                        →  iterator_match
+   - map:    weaken _ (parse_nlist n (p `nondep_then` p))      →  iterator_match with map entry match
    - tagged: weaken _ p                                        →  vmatch_ref_wf
    - other:  weaken _ parse_empty                               →  emp
 *)
 let cbor_raw_match_content
   (p: cbor_raw -> raw_data_item -> slprop)
+  (#kp: parser_kind)
+  (pp: parser kp raw_data_item)
   (xh: raw_data_item)
   (h: header)
   (xl: cbor_raw)
@@ -121,25 +124,27 @@ let cbor_raw_match_content
     | _ -> pure False)
   else if b.major_type = cbor_major_type_array
   then
-    let n = U64.v (argument_as_uint64 b long_arg) in
     (match xl with
     | CBOR_Case_Array v ->
-      nlist_match_slice_wf n
-        ({ v = v.cbor_array_ptr; p = v.cbor_array_slice_perm })
+      I.iterator_match
+        (fun (_pm: perm) (elem: cbor_raw) (x: raw_data_item) -> p elem x)
+        pp
+        1.0R
+        v.cbor_array_ptr
         c
-        (fun (elem: cbor_raw) (x: raw_data_item { x << c }) -> p elem x)
     | _ -> pure False)
   else if b.major_type = cbor_major_type_map
   then
-    let n = U64.v (argument_as_uint64 b long_arg) in
     (match xl with
     | CBOR_Case_Map v ->
-      nlist_match_slice_wf n
-        ({ v = v.cbor_map_ptr; p = v.cbor_map_slice_perm })
-        c
-        (fun (elem: cbor_map_entry cbor_raw)
-             (x: (raw_data_item & raw_data_item) { x << c }) ->
+      I.iterator_match
+        (fun (_pm: perm) (elem: cbor_map_entry cbor_raw)
+             (x: (raw_data_item & raw_data_item)) ->
           cbor_map_entry_match p elem x)
+        (nondep_then pp pp)
+        1.0R
+        v.cbor_map_ptr
+        c
     | _ -> pure False)
   else if b.major_type = cbor_major_type_tagged
   then
@@ -164,11 +169,15 @@ let cbor_raw_match_content
    - vmatch_dep_pair_with_proj for parse_dtuple2 (using the identity projector)
    - per-case content relations as above
 
-   The parameter p accounts for the recursive relation, mirroring the
-   parser parameter p in parse_raw_data_item_aux.
+   The parameter p accounts for the recursive relation, and pp is the
+   corresponding recursive parser (needed by iterator_match for the
+   Serialized case), mirroring the parser parameter p in
+   parse_raw_data_item_aux.
 *)
 let cbor_raw_match_aux
   (p: cbor_raw -> raw_data_item -> slprop)
+  (#kp: parser_kind)
+  (pp: parser kp raw_data_item)
   (xl: cbor_raw)
   (xh: raw_data_item)
 : Tot slprop
@@ -176,6 +185,6 @@ let cbor_raw_match_aux
     (vmatch_dep_pair_with_proj
       cbor_raw_match_header
       cbor_raw_id_proj
-      (cbor_raw_match_content p xh))
+      (cbor_raw_match_content p pp xh))
     synth_raw_data_item_recip
     xl xh
