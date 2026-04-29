@@ -1343,6 +1343,9 @@ let pts_to_parsed_strong_prefix'
 let s_pts_to (#t: Type) (s: S.slice t) (#p: perm) (v: Seq.seq t) : slprop
   = S.pts_to s #p v
 
+let s_pts_to_explicit (#t: Type) (s: S.slice t) (p: perm) (v: Seq.seq t) : slprop
+  = S.pts_to s #p v
+
 ghost fn pts_to_parsed_strong_prefix_det
   (#k: parser_kind) (#t: Type0) (p: parser k t)
   (input: S.slice byte)
@@ -2018,6 +2021,722 @@ decreases (List.Tot.length (Ghost.reveal l))
       }
     }
   }
+}
+
+#pop-options
+
+// =====================================================================
+// Full-list sorted insertion: insert v into sorted l, returning
+// an iterator over the full sorted result take k l ++ (v :: drop k l).
+// =====================================================================
+
+// Pure function: compute the insertion position in a sorted list.
+// Returns None for duplicates, Some k for the insertion position.
+let rec sorted_insert_pos (#t: Type) (lt_ord: t -> t -> bool) (v: t) (l: list t) : option nat =
+  match l with
+  | [] -> Some 0
+  | hd :: tl ->
+    if lt_ord v hd then Some 0
+    else if lt_ord hd v then
+      match sorted_insert_pos lt_ord v tl with
+      | None -> None
+      | Some k -> Some (k + 1)
+    else None
+
+// Lemma: sorted_insert_pos returns a valid position
+let rec lemma_sorted_insert_pos_bound (#t: Type) (lt_ord: t -> t -> bool) (v: t) (l: list t)
+  : Lemma
+    (ensures (match sorted_insert_pos lt_ord v l with
+              | None -> True
+              | Some k -> k <= List.Tot.length l))
+    (decreases l)
+= match l with
+  | [] -> ()
+  | hd :: tl ->
+    if lt_ord v hd then ()
+    else if lt_ord hd v then
+      (match sorted_insert_pos lt_ord v tl with
+       | None -> ()
+       | Some _ -> lemma_sorted_insert_pos_bound lt_ord v tl)
+    else ()
+
+// Lemma: inserting at the sorted_insert_pos position preserves sortedness
+let rec lemma_sorted_insert_sorted (#t: Type) (lt_ord: t -> t -> bool) (v: t) (l: list t)
+  : Lemma
+    (requires List.Tot.sorted lt_ord l /\ Some? (sorted_insert_pos lt_ord v l))
+    (ensures (
+      let Some k = sorted_insert_pos lt_ord v l in
+      k <= List.Tot.length l /\
+      List.Tot.sorted lt_ord
+        (List.Tot.append (fst (List.Tot.splitAt k l)) (v :: snd (List.Tot.splitAt k l)))))
+    (decreases l)
+= match l with
+  | [] -> ()
+  | hd :: tl ->
+    if lt_ord v hd then ()
+    else if lt_ord hd v then begin
+      lemma_sorted_insert_sorted lt_ord v tl;
+      let Some k_tl = sorted_insert_pos lt_ord v tl in
+      lemma_sorted_insert_pos_bound lt_ord v tl;
+      lemma_splitAt_append k_tl tl
+    end
+    else ()
+
+// Lemma: parse_nlist_eq consequence for jumping
+let lemma_parse_nlist_jump_step
+  (#k: parser_kind) (#t: Type) (p: parser k t) (n: pos) (w: bytes)
+  : Lemma
+    (requires Some? (parse (parse_nlist n p) w) /\ k.parser_kind_subkind == Some ParserStrong)
+    (ensures (
+      parse_nlist_eq n p w;
+      Some? (parse p w) /\ (
+      let Some (_, consumed_hd) = parse p w in
+      consumed_hd <= Seq.length w /\
+      Some? (parse (parse_nlist (n - 1) p) (Seq.slice w consumed_hd (Seq.length w))))))
+= parse_nlist_eq n p w;
+  parser_kind_prop_equiv k p
+
+#push-options "--z3rlimit 120"
+
+// count_insert_pos: scan the iterator using iterator_next, find the insertion
+// position for v (or detect duplicate), and fully restore the iterator.
+fn rec count_insert_pos
+  (#t: Type0)
+  (#u: Type0)
+  (vmatch: perm -> t -> u -> slprop)
+  (vmatch_share: share_t vmatch)
+  (vmatch_gather: gather_t vmatch)
+  (#k: parser_kind)
+  (p: parser k u)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (j: LPS.jumper p)
+  (rd: (pv: perm) -> zero_copy_parse (vmatch pv) p)
+  (lt_ord: (u -> u -> bool))
+  (lt_impl: lt_impl_t vmatch lt_ord)
+  (pm: perm)
+  (pi: R.ref (iterator t))
+  (#i: Ghost.erased (iterator t))
+  (#l: Ghost.erased (list u))
+  (elem_ref: R.ref t)
+  (#elem: Ghost.erased t)
+  (pm_v: perm)
+  (#v: Ghost.erased u)
+requires
+  R.pts_to pi i **
+  iterator_match vmatch p pm i l **
+  R.pts_to elem_ref elem **
+  vmatch pm_v elem v **
+  pure (List.Tot.sorted lt_ord (Ghost.reveal l))
+returns res: option SZ.t
+ensures
+  R.pts_to pi i **
+  iterator_match vmatch p pm i l **
+  R.pts_to elem_ref elem **
+  vmatch pm_v elem v **
+  pure (
+    match res with
+    | None -> sorted_insert_pos lt_ord (Ghost.reveal v) (Ghost.reveal l) == None
+    | Some k -> sorted_insert_pos lt_ord (Ghost.reveal v) (Ghost.reveal l) == Some (SZ.v k) /\
+                SZ.v k <= List.Tot.length (Ghost.reveal l)
+  )
+decreases (List.Tot.length (Ghost.reveal l))
+{
+  let saved_i = !pi;
+  rewrite (iterator_match vmatch p pm i l)
+       as (iterator_match vmatch p pm saved_i l);
+
+  let is_empty = iterator_is_empty vmatch p pm saved_i;
+  if is_empty {
+    // Empty list: insert at position 0
+    rewrite (iterator_match vmatch p pm saved_i l)
+         as (iterator_match vmatch p pm i l);
+    Some 0sz
+  } else {
+    // Get head element
+    rewrite (iterator_match vmatch p pm saved_i l)
+         as (iterator_match vmatch p pm i l);
+    let head = iterator_next vmatch vmatch_share vmatch_gather p sq j rd pm pi;
+
+    with i_next pm_next pm_v_next . assert (
+      R.pts_to pi i_next **
+      iterator_match vmatch p pm_next i_next (List.Tot.tl l) **
+      vmatch pm_v_next head (List.Tot.hd l) **
+      Trade.trade
+        (iterator_match vmatch p pm_next i_next (List.Tot.tl l) **
+         vmatch pm_v_next head (List.Tot.hd l))
+        (iterator_match vmatch p pm i l)
+    );
+
+    // Read elem_ref to get concrete value for comparison
+    let elem_val = !elem_ref;
+
+    // Compare: is v < head?
+    let b_lt = lt_impl elem_val head;
+    // Compare: is head < v?
+    let b_gt = lt_impl head elem_val;
+
+    if b_lt {
+      // v < head: insert at position 0
+      // Elim advance trade to restore original iterator
+      Trade.elim
+        (iterator_match vmatch p pm_next i_next (List.Tot.tl l) **
+         vmatch pm_v_next head (List.Tot.hd l))
+        (iterator_match vmatch p pm i l);
+
+      // Restore pi
+      R.forget_init pi;
+      pi := saved_i;
+      rewrite (R.pts_to pi saved_i) as (R.pts_to pi (Ghost.reveal i));
+
+      Some 0sz
+    } else {
+      if b_gt {
+        // head < v: recurse on tail
+        let res = count_insert_pos vmatch vmatch_share vmatch_gather p sq j rd
+          lt_ord lt_impl pm_next pi elem_ref pm_v;
+
+        // Elim advance trade to restore original iterator
+        Trade.elim
+          (iterator_match vmatch p pm_next i_next (List.Tot.tl l) **
+           vmatch pm_v_next head (List.Tot.hd l))
+          (iterator_match vmatch p pm i l);
+
+        // Restore pi
+        R.forget_init pi;
+        pi := saved_i;
+        rewrite (R.pts_to pi saved_i) as (R.pts_to pi (Ghost.reveal i));
+
+        match res {
+          None -> { None #SZ.t }
+          Some k_tail -> {
+            assume_ (pure (SZ.fits (SZ.v k_tail + 1)));
+            Some (SZ.add k_tail 1sz)
+          }
+        }
+      } else {
+        // Neither v < head nor head < v: duplicate
+        Trade.elim
+          (iterator_match vmatch p pm_next i_next (List.Tot.tl l) **
+           vmatch pm_v_next head (List.Tot.hd l))
+          (iterator_match vmatch p pm i l);
+
+        // Restore pi
+        R.forget_init pi;
+        pi := saved_i;
+        rewrite (R.pts_to pi saved_i) as (R.pts_to pi (Ghost.reveal i));
+
+        None #SZ.t
+      }
+    }
+  }
+}
+
+#pop-options
+
+#push-options "--z3rlimit 80"
+
+// Suffix value lemma: after jumping k elements, the suffix parses as drop k l
+let rec lemma_parse_nlist_suffix
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (n: nat)
+  (kk: nat)
+  (w: bytes)
+: Lemma
+  (requires
+    kk <= n /\
+    k.parser_kind_subkind == Some ParserStrong /\
+    Some? (parse (parse_nlist n p) w)
+  )
+  (ensures (
+    lemma_parse_nlist_prefix p n kk w;
+    let Some (l, consumed) = parse (parse_nlist n p) w in
+    let Some (_, consumed_prefix) = parse (parse_nlist kk p) w in
+    consumed_prefix <= Seq.length w /\
+    (let suffix = Seq.slice w consumed_prefix (Seq.length w) in
+    Some? (parse (parse_nlist (n - kk) p) suffix) /\
+    (let Some (l_suffix, consumed_suffix) = parse (parse_nlist (n - kk) p) suffix in
+     l_suffix == snd (List.Tot.splitAt kk l) /\
+     consumed == consumed_prefix + consumed_suffix))
+  ))
+  (decreases kk)
+= parse_nlist_kind_subkind n k;
+  lemma_parse_nlist_prefix p n kk w;
+  if kk = 0 then begin
+    parse_nlist_eq 0 p w
+  end else begin
+    parse_nlist_eq n p w;
+    parse_nlist_eq kk p w;
+    parser_kind_prop_equiv k p;
+    match parse p w with
+    | Some (_, consumed_hd) ->
+      parse_nlist_kind_subkind (n - 1) k;
+      let w' = Seq.slice w consumed_hd (Seq.length w) in
+      lemma_parse_nlist_suffix p (n - 1) (kk - 1) w';
+      // IH gives us: parse_nlist (kk-1) on w' has consumed_prefix' bytes,
+      // and suffix at consumed_prefix' in w' parses as drop (kk-1) of tail l
+      // We know: consumed_prefix in w = consumed_hd + consumed_prefix' in w'
+      // And: Seq.slice w consumed_prefix ... = Seq.slice w' consumed_prefix' ...
+      let Some (l_full, consumed_full) = parse (parse_nlist n p) w in
+      let Some (l_tail, consumed_tail) = parse (parse_nlist (n - 1) p) w' in
+      let Some (_, consumed_prefix_tail) = parse (parse_nlist (kk - 1) p) w' in
+      let Some (_, consumed_prefix) = parse (parse_nlist kk p) w in
+      assert (consumed_prefix == consumed_hd + consumed_prefix_tail);
+      assert (Seq.equal
+        (Seq.slice w consumed_prefix (Seq.length w))
+        (Seq.slice w' consumed_prefix_tail (Seq.length w')))
+    | _ -> ()
+  end
+
+// Prefix consumed bytes lemma: the prefix parse consumed bytes equal the jump offset
+let lemma_parse_nlist_prefix_consumed
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (n: nat)
+  (kk: nat)
+  (w: bytes)
+: Lemma
+  (requires
+    kk <= n /\
+    k.parser_kind_subkind == Some ParserStrong /\
+    Some? (parse (parse_nlist n p) w)
+  )
+  (ensures (
+    lemma_parse_nlist_prefix p n kk w;
+    let Some (_, consumed_prefix) = parse (parse_nlist kk p) w in
+    let Some (l, _) = parse (parse_nlist n p) w in
+    consumed_prefix <= Seq.length w /\
+    fst (List.Tot.splitAt kk l) == (let Some (v, _) = parse (parse_nlist kk p) w in v)
+  ))
+= lemma_parse_nlist_prefix p n kk w;
+  parse_nlist_kind_subkind n k;
+  parser_kind_prop_equiv (parse_nlist_kind kk k) (parse_nlist kk p)
+
+#pop-options
+
+// Extending an nlist parse by one more element: if nlist m parses w consuming consumed_m bytes,
+// and one more element parses at offset consumed_m, then nlist (m+1) parses w consuming consumed_m + c_elem.
+#push-options "--z3rlimit 80 --fuel 2 --ifuel 1"
+
+let rec lemma_parse_nlist_append_consumed
+  (#k: parser_kind) (#t: Type) (p: parser k t) (m: nat) (w: bytes) (consumed_m: nat)
+: Lemma
+  (requires
+    k.parser_kind_subkind == Some ParserStrong /\
+    Some? (parse (parse_nlist m p) w) /\
+    consumed_m <= Seq.length w /\
+    consumed_m == snd (Some?.v (parse (parse_nlist m p) w)) /\
+    Some? (parse p (Seq.slice w consumed_m (Seq.length w)))
+  )
+  (ensures (
+    let c_elem = snd (Some?.v (parse p (Seq.slice w consumed_m (Seq.length w)))) in
+    Some? (parse (parse_nlist (m + 1) p) w) /\
+    snd (Some?.v (parse (parse_nlist (m + 1) p) w)) == consumed_m + c_elem
+  ))
+  (decreases m)
+= parse_nlist_kind_subkind m k;
+  parser_kind_prop_equiv (parse_nlist_kind m k) (parse_nlist m p);
+  parser_kind_prop_equiv k p;
+  if m = 0 then begin
+    parse_nlist_eq 0 p w;
+    parse_nlist_eq 1 p w;
+    let Some (_, c1) = parse p w in
+    parse_nlist_eq 0 p (Seq.slice w c1 (Seq.length w))
+  end else begin
+    parse_nlist_eq m p w;
+    parse_nlist_eq (m + 1) p w;
+    let Some (_, c1) = parse p w in
+    let w' = Seq.slice w c1 (Seq.length w) in
+    parse_nlist_kind_subkind (m - 1) k;
+    parser_kind_prop_equiv (parse_nlist_kind (m - 1) k) (parse_nlist (m - 1) p);
+    let Some (_, consumed_m1) = parse (parse_nlist (m - 1) p) w' in
+    lemma_parse_nlist_append_consumed p (m - 1) w' consumed_m1
+  end
+
+#pop-options
+
+// Jump n elements forward in a serialized payload, returning the byte offset
+// after n elements. Payload is a slice with S.pts_to, and we need parse facts.
+#push-options "--z3rlimit 200"
+
+// Helper: if nlist n parses at offset off in w, then jumper_pre' holds for element at off
+let lemma_nlist_jumper_pre
+  (#k: parser_kind) (#t: Type) (p: parser k t) (n: pos) (off: SZ.t) (w: bytes)
+  : Lemma
+    (requires
+      n > 0 /\
+      SZ.v off <= Seq.length w /\
+      Some? (parse (parse_nlist n p) (Seq.slice w (SZ.v off) (Seq.length w))) /\
+      k.parser_kind_subkind == Some ParserStrong)
+    (ensures
+      LPS.jumper_pre' p off w)
+= parse_nlist_eq n p (Seq.slice w (SZ.v off) (Seq.length w));
+  parser_kind_prop_equiv k p
+
+// Helper: validator_success gives the next parse position for nlist
+let lemma_nlist_jump_advance
+  (#k: parser_kind) (#t: Type) (p: parser k t) (n: pos) (off: SZ.t) (off_next: SZ.t) (w: bytes)
+  : Lemma
+    (requires
+      SZ.v off <= Seq.length w /\
+      Some? (parse (parse_nlist n p) (Seq.slice w (SZ.v off) (Seq.length w))) /\
+      k.parser_kind_subkind == Some ParserStrong /\
+      LPS.validator_success p off w off_next)
+    (ensures (
+      SZ.v off_next <= Seq.length w /\
+      Some? (parse (parse_nlist (n - 1) p) (Seq.slice w (SZ.v off_next) (Seq.length w)))))
+= parse_nlist_eq n p (Seq.slice w (SZ.v off) (Seq.length w));
+  parser_kind_prop_equiv k p;
+  let w' = Seq.slice w (SZ.v off) (Seq.length w) in
+  match parse p w' with
+  | Some (_, consumed) ->
+    assert (SZ.v off + consumed == SZ.v off_next);
+    let w_tail = Seq.slice w' consumed (Seq.length w') in
+    assert (Seq.equal w_tail (Seq.slice w (SZ.v off_next) (Seq.length w)))
+  | None -> ()
+
+// Predicate for consumed bytes in nlist parse (avoids ill-typed elaboration in Pulse invariants)
+let nlist_consumed_eq
+  (#k: parser_kind) (#t: Type) (p: parser k t)
+  (kk: nat) (w: bytes) (consumed: nat)
+: prop
+= Some? (parse (parse_nlist kk p) w) /\
+  snd (Some?.v (parse (parse_nlist kk p) w)) <= Seq.length w /\
+  snd (Some?.v (parse (parse_nlist kk p) w)) == consumed
+
+fn jump_n
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (j: LPS.jumper p)
+  (pm: perm)
+  (payload: S.slice byte)
+  (w: Ghost.erased (Seq.seq byte))
+  (n: SZ.t)
+  (kk: SZ.t)
+  (off: SZ.t)
+requires
+  s_pts_to_explicit payload pm w **
+  pure (
+    SZ.v kk <= SZ.v n /\
+    SZ.v off <= Seq.length w /\
+    Some? (parse (parse_nlist (SZ.v n) p) (Seq.slice (Ghost.reveal w) (SZ.v off) (Seq.length (Ghost.reveal w)))) /\
+    k.parser_kind_subkind == Some ParserStrong
+  )
+returns res: SZ.t
+ensures
+  s_pts_to_explicit payload pm w **
+  pure (
+    SZ.v kk <= SZ.v n /\
+    SZ.v off <= Seq.length (Ghost.reveal w) /\
+    SZ.v res <= Seq.length (Ghost.reveal w) /\
+    SZ.v off <= SZ.v res /\
+    Some? (parse (parse_nlist (SZ.v n - SZ.v kk) p) (Seq.slice (Ghost.reveal w) (SZ.v res) (Seq.length (Ghost.reveal w)))) /\
+    nlist_consumed_eq p (SZ.v kk) (Seq.slice (Ghost.reveal w) (SZ.v off) (Seq.length (Ghost.reveal w))) (SZ.v res - SZ.v off)
+  )
+{
+  let mut cur_off = off;
+  let mut cur_n = n;
+  let mut cur_kk = kk;
+  let w_off : Ghost.erased bytes = Ghost.hide (Seq.slice (Ghost.reveal w) (SZ.v off) (Seq.length (Ghost.reveal w)));
+  parse_nlist_eq 0 p (Ghost.reveal w_off);
+  unfold (s_pts_to_explicit payload pm w);
+  while (
+    let kk_val = !cur_kk;
+    (kk_val <> 0sz)
+  ) invariant exists* off_v n_v kk_v .
+      R.pts_to cur_off off_v **
+      R.pts_to cur_n n_v **
+      R.pts_to cur_kk kk_v **
+      S.pts_to payload #pm (Ghost.reveal w) **
+      pure (
+        SZ.v kk_v <= SZ.v n_v /\
+        SZ.v kk_v <= SZ.v kk /\
+        SZ.v off <= SZ.v off_v /\
+        SZ.v off_v <= Seq.length w /\
+        Some? (parse (parse_nlist (SZ.v n_v) p) (Seq.slice (Ghost.reveal w) (SZ.v off_v) (Seq.length (Ghost.reveal w)))) /\
+        SZ.v n_v - SZ.v kk_v == SZ.v n - SZ.v kk /\
+        k.parser_kind_subkind == Some ParserStrong /\
+        nlist_consumed_eq p (SZ.v kk - SZ.v kk_v) (Ghost.reveal w_off) (SZ.v off_v - SZ.v off)
+      )
+  {
+    let off_v = !cur_off;
+    let n_v = !cur_n;
+    let kk_v = !cur_kk;
+    lemma_nlist_jumper_pre p (SZ.v n_v) off_v (Ghost.reveal w);
+    let off_next = j payload off_v;
+    lemma_nlist_jump_advance p (SZ.v n_v) off_v off_next (Ghost.reveal w);
+    // Extend consumed tracking: nlist (kk - kk_v) parsed w_off with consumed (off_v - off),
+    // jumper parsed one element at off_v with consumed (off_next - off_v),
+    // so nlist (kk - kk_v + 1) parses w_off with consumed (off_next - off).
+    lemma_parse_nlist_append_consumed p (SZ.v kk - SZ.v kk_v) (Ghost.reveal w_off) (SZ.v off_v - SZ.v off);
+    cur_off := off_next;
+    cur_n := SZ.sub n_v 1sz;
+    cur_kk := SZ.sub kk_v 1sz;
+  };
+  fold (s_pts_to_explicit payload pm w);
+  !cur_off
+}
+
+#pop-options
+
+#push-options "--z3rlimit 160 --fuel 2 --ifuel 1"
+
+let lemma_parse_nlist_length
+  (#k: parser_kind) (#t: Type) (p: parser k t) (n: nat) (w: bytes)
+: Lemma
+  (requires Some? (parse (parse_nlist n p) w))
+  (ensures List.Tot.length (fst (Some?.v (parse (parse_nlist n p) w))) == n)
+= ()
+
+let list_prefix (#a: Type) (n: nat) (l: list a) : list a =
+  fst (List.Tot.splitAt n l)
+
+let list_suffix (#a: Type) (n: nat) (l: list a) : list a =
+  snd (List.Tot.splitAt n l)
+
+let lemma_list_prefix_length (#a: Type) (n: nat) (l: list a)
+: Lemma
+  (requires n <= List.Tot.length l)
+  (ensures List.Tot.length (list_prefix n l) == n)
+= lemma_splitAt_fst_length n l
+
+let rec lemma_list_suffix_length (#a: Type) (n: nat) (l: list a)
+: Lemma
+  (requires n <= List.Tot.length l)
+  (ensures List.Tot.length (list_suffix n l) == List.Tot.length l - n)
+  (decreases n)
+= if n = 0 then () else lemma_list_suffix_length (n - 1) (List.Tot.tl l)
+
+let lemma_splitAt_list_prefix_suffix (#a: Type) (n: nat) (l: list a)
+: Lemma
+  (fst (List.Tot.splitAt n l) == list_prefix n l /\
+   snd (List.Tot.splitAt n l) == list_suffix n l)
+= ()
+
+// Ghost helper: fold strong_prefix for a sub-slice (allows passing nlist-typed value)
+ghost fn serialized_split_at_fold_prefix
+  (#u: Type0)
+  (#k: parser_kind)
+  (p: parser k u)
+  (n: nat)
+  (input: S.slice byte)
+  (pm: perm)
+  (#w: bytes)
+  (#l: nlist n u)
+requires
+  S.pts_to input #pm w **
+  pure (pts_to_parsed_strong_prefix_prop (parse_nlist n p) w l)
+ensures
+  pts_to_parsed_strong_prefix (parse_nlist n p) input #(pm /. 2.0R) l **
+  Trade.trade
+    (pts_to_parsed_strong_prefix (parse_nlist n p) input #(pm /. 2.0R) l)
+    (S.pts_to input #pm w)
+{
+  pts_to_parsed_strong_prefix_intro (parse_nlist n p) input l;
+}
+
+#pop-options
+
+// Helper lemma: connects prefix parsed value to list_prefix
+#push-options "--z3rlimit 80 --fuel 2 --ifuel 1"
+let lemma_serialized_split_prefix
+  (#k: parser_kind) (#u: Type) (p: parser k u)
+  (n: nat) (kk: nat) (w: bytes) (w1: bytes) (l: list u) (consumed: nat)
+: Lemma
+  (requires
+    kk <= n /\
+    k.parser_kind_subkind == Some ParserStrong /\
+    Some? (parse (parse_nlist n p) w) /\
+    fst (Some?.v (parse (parse_nlist n p) w)) == l /\
+    Some? (parse (parse_nlist kk p) w) /\
+    snd (Some?.v (parse (parse_nlist kk p) w)) == consumed /\
+    consumed <= Seq.length w1 /\
+    Seq.slice w 0 consumed == Seq.slice w1 0 consumed
+  )
+  (ensures
+    Some? (parse (parse_nlist kk p) w1) /\
+    (fst (Some?.v (parse (parse_nlist kk p) w1)) <: list u) == list_prefix kk l
+  )
+= lemma_parse_nlist_prefix_consumed p n kk w;
+  parse_nlist_kind_subkind kk k;
+  parser_kind_prop_equiv (parse_nlist_kind kk k) (parse_nlist kk p);
+  parse_strong_prefix (parse_nlist kk p) w w1
+
+let lemma_serialized_split_suffix
+  (#k: parser_kind) (#u: Type) (p: parser k u)
+  (n: nat) (kk: nat) (w: bytes) (w2: bytes) (l: list u) (consumed: nat)
+: Lemma
+  (requires
+    kk <= n /\
+    k.parser_kind_subkind == Some ParserStrong /\
+    Some? (parse (parse_nlist n p) w) /\
+    fst (Some?.v (parse (parse_nlist n p) w)) == l /\
+    Some? (parse (parse_nlist kk p) w) /\
+    snd (Some?.v (parse (parse_nlist kk p) w)) == consumed /\
+    consumed <= Seq.length w /\
+    w2 == Seq.slice w consumed (Seq.length w)
+  )
+  (ensures
+    Some? (parse (parse_nlist (n - kk) p) w2) /\
+    (fst (Some?.v (parse (parse_nlist (n - kk) p) w2)) <: list u) == list_suffix kk l
+  )
+= lemma_parse_nlist_prefix_consumed p n kk w;
+  lemma_parse_nlist_suffix p n kk w
+#pop-options
+
+#push-options "--z3rlimit 400 --fuel 2 --ifuel 1"
+
+// Split a Serialized base_iterator at position kk into prefix and suffix base_iterators.
+fn serialized_split_at
+  (#t: Type0)
+  (#u: Type0)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (j: LPS.jumper p)
+  (pm: perm)
+  (sp: perm)
+  (count: SZ.t)
+  (payload: S.slice byte)
+  (kk: SZ.t { SZ.v kk <= SZ.v count })
+  (#l: Ghost.erased (list u))
+requires
+  base_iterator_match vmatch p pm (Serialized sp count payload) l
+returns res: (S.slice byte & S.slice byte)
+ensures (
+  let (prefix_sl, suffix_sl) = res in
+  base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) kk prefix_sl) (list_prefix (SZ.v kk) l) **
+  base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) (SZ.sub count kk) suffix_sl) (list_suffix (SZ.v kk) l) **
+  Trade.trade
+    (base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) kk prefix_sl) (list_prefix (SZ.v kk) l) **
+     base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) (SZ.sub count kk) suffix_sl) (list_suffix (SZ.v kk) l))
+    (base_iterator_match vmatch p pm (Serialized sp count payload) l)
+)
+{
+  // 1. Share base_iterator_match manually for Serialized case
+  unfold (base_iterator_match vmatch p pm (Serialized sp count payload) l);
+  with l' . assert (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #(pm *. sp) l');
+  pts_to_parsed_strong_prefix_share (parse_nlist (SZ.v count) p) payload #(pm *. sp) #l';
+  rewrite (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #((pm *. sp) /. 2.0R) l')
+       as (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #((pm /. 2.0R) *. sp) l');
+  rewrite (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #((pm *. sp) /. 2.0R) l')
+       as (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #((pm /. 2.0R) *. sp) l');
+  fold (base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp count payload) l);
+  fold (base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp count payload) l);
+
+  // 2. Unfold copy 1 → get pts_to_parsed_strong_prefix → unfold → raw S.pts_to
+  unfold (base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp count payload) l);
+  with l' . assert (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #((pm /. 2.0R) *. sp) l');
+  unfold (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #((pm /. 2.0R) *. sp) l');
+  with w . assert (S.pts_to payload #((pm /. 2.0R) *. sp) w);
+  rewrite (S.pts_to payload #((pm /. 2.0R) *. sp) w)
+       as (S.pts_to payload #((pm *. sp) /. 2.0R) w);
+
+  // Establish length of l' from parse properties
+  lemma_parse_nlist_length p (SZ.v count) w;
+
+  // 3. Jump to find byte offset of position kk
+  fold (s_pts_to_explicit payload ((pm *. sp) /. 2.0R) w);
+  let pos_k = jump_n sq j ((pm *. sp) /. 2.0R) payload w count kk 0sz;
+  unfold (s_pts_to_explicit payload ((pm *. sp) /. 2.0R) w);
+
+  // 4. Split S.pts_to at pos_k → prefix + suffix slices + trade
+  let prefix_sl, suffix_sl = S.split_trade payload pos_k;
+  with w1 . assert (S.pts_to prefix_sl #((pm *. sp) /. 2.0R) w1);
+  with w2 . assert (S.pts_to suffix_sl #((pm *. sp) /. 2.0R) w2);
+
+  // 5. Prove the parse facts for prefix and suffix
+  lemma_parse_nlist_prefix p (SZ.v count) (SZ.v kk) w;
+  lemma_parse_nlist_suffix p (SZ.v count) (SZ.v kk) w;
+  lemma_parse_nlist_prefix_consumed p (SZ.v count) (SZ.v kk) w;
+  parse_nlist_kind_subkind (SZ.v kk) k;
+  parse_nlist_kind_subkind (SZ.v count - SZ.v kk) k;
+  parser_kind_prop_equiv (parse_nlist_kind (SZ.v kk) k) (parse_nlist (SZ.v kk) p);
+  Seq.lemma_eq_intro (Seq.slice (Ghost.reveal w) 0 (Seq.length (Ghost.reveal w))) (Ghost.reveal w);
+  parse_strong_prefix (parse_nlist (SZ.v kk) p) (Ghost.reveal w) (Ghost.reveal w1);
+
+  // 6. Compute ghost prefix/suffix values from w1 and w2
+  let prefix_parsed : Ghost.erased (nlist (SZ.v kk) u) =
+    Ghost.hide (fst (Some?.v (parse (parse_nlist (SZ.v kk) p) (Ghost.reveal w1))));
+  let suffix_parsed : Ghost.erased (nlist (SZ.v count - SZ.v kk) u) =
+    Ghost.hide (fst (Some?.v (parse (parse_nlist (SZ.v count - SZ.v kk) p) (Ghost.reveal w2))));
+
+  // 7. Intro strong_prefix for prefix and suffix → halves permission
+  pts_to_parsed_strong_prefix_intro (parse_nlist (SZ.v kk) p) prefix_sl prefix_parsed;
+  pts_to_parsed_strong_prefix_intro (parse_nlist (SZ.v count - SZ.v kk) p) suffix_sl suffix_parsed;
+
+  // 8. Fold as base_iterator_match for prefix and suffix
+  // Permission: ((pm*sp)/2)/2 = (pm*sp)/4 = (pm/2)*(sp/2)
+  fold (base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) kk prefix_sl) (list_prefix (SZ.v kk) l));
+  fold (base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) (SZ.sub count kk) suffix_sl) (list_suffix (SZ.v kk) l));
+
+  // 9. Build trade: (prefix_match ** suffix_match) ~~> base_iterator_match at pm
+  // Retained: copy 2 of base_iterator_match at pm/2, plus intro trades and split trade
+  intro
+    (Trade.trade
+      (base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) kk prefix_sl) (list_prefix (SZ.v kk) l) **
+       base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) (SZ.sub count kk) suffix_sl) (list_suffix (SZ.v kk) l))
+      (base_iterator_match vmatch p pm (Serialized sp count payload) l)
+    )
+    #(base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp count payload) l **
+      Trade.trade
+        (pts_to_parsed_strong_prefix (parse_nlist (SZ.v kk) p) prefix_sl #(((pm *. sp) /. 2.0R) /. 2.0R)
+          prefix_parsed)
+        (S.pts_to prefix_sl #((pm *. sp) /. 2.0R) w1) **
+      Trade.trade
+        (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count - SZ.v kk) p) suffix_sl #(((pm *. sp) /. 2.0R) /. 2.0R)
+          suffix_parsed)
+        (S.pts_to suffix_sl #((pm *. sp) /. 2.0R) w2) **
+      Trade.trade
+        (S.pts_to prefix_sl #((pm *. sp) /. 2.0R) w1 ** S.pts_to suffix_sl #((pm *. sp) /. 2.0R) w2)
+        (S.pts_to payload #((pm *. sp) /. 2.0R) w)
+    )
+    fn _ {
+      // Unfold trigger sub-iterators → strong_prefix at (pm/2)*(sp/2)
+      unfold (base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) kk prefix_sl) (list_prefix (SZ.v kk) l));
+      unfold (base_iterator_match vmatch p (pm /. 2.0R) (Serialized (sp /. 2.0R) (SZ.sub count kk) suffix_sl) (list_suffix (SZ.v kk) l));
+      with l'_pre . assert (pts_to_parsed_strong_prefix (parse_nlist (SZ.v kk) p) prefix_sl #((pm /. 2.0R) *. (sp /. 2.0R)) l'_pre);
+      rewrite (pts_to_parsed_strong_prefix (parse_nlist (SZ.v kk) p) prefix_sl #((pm /. 2.0R) *. (sp /. 2.0R)) l'_pre)
+           as (pts_to_parsed_strong_prefix (parse_nlist (SZ.v kk) p) prefix_sl #(((pm *. sp) /. 2.0R) /. 2.0R) prefix_parsed);
+      with l'_suf . assert (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count - SZ.v kk) p) suffix_sl #((pm /. 2.0R) *. (sp /. 2.0R)) l'_suf);
+      rewrite (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count - SZ.v kk) p) suffix_sl #((pm /. 2.0R) *. (sp /. 2.0R)) l'_suf)
+           as (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count - SZ.v kk) p) suffix_sl #(((pm *. sp) /. 2.0R) /. 2.0R) suffix_parsed);
+
+      // Elim intro trades to recover S.pts_to for prefix and suffix slices
+      Trade.elim
+        (pts_to_parsed_strong_prefix (parse_nlist (SZ.v kk) p) prefix_sl #(((pm *. sp) /. 2.0R) /. 2.0R)
+          prefix_parsed)
+        (S.pts_to prefix_sl #((pm *. sp) /. 2.0R) w1);
+      Trade.elim
+        (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count - SZ.v kk) p) suffix_sl #(((pm *. sp) /. 2.0R) /. 2.0R)
+          suffix_parsed)
+        (S.pts_to suffix_sl #((pm *. sp) /. 2.0R) w2);
+
+      // Elim split trade to recover S.pts_to for payload (copy 1 at half perm)
+      Trade.elim
+        (S.pts_to prefix_sl #((pm *. sp) /. 2.0R) w1 ** S.pts_to suffix_sl #((pm *. sp) /. 2.0R) w2)
+        (S.pts_to payload #((pm *. sp) /. 2.0R) w);
+
+      // Unfold retained copy 2 to get S.pts_to + parse fact
+      unfold (base_iterator_match vmatch p (pm /. 2.0R) (Serialized sp count payload) l);
+      with l2 . assert (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #((pm /. 2.0R) *. sp) l2);
+      unfold (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #((pm /. 2.0R) *. sp) l2);
+
+      // Gather the two halves
+      S.gather payload;
+      rewrite (S.pts_to payload #((pm *. sp) /. 2.0R +. (pm /. 2.0R) *. sp) w) as (S.pts_to payload #(pm *. sp) w);
+
+      // Refold using l (the parameter), like base_iterator_truncate does
+      fold (pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) payload #(pm *. sp) l);
+      fold (base_iterator_match vmatch p pm (Serialized sp count payload) l);
+    };
+
+  (prefix_sl, suffix_sl)
 }
 
 #pop-options
