@@ -169,3 +169,28 @@ fn read_and_zero_copy_parse_strong_prefix_dtuple2_with_proj
 }
 
 #pop-options
+
+let vmatch_with_perm_guard
+  (#guard_t: Type)
+  (guard: guard_t)
+  (#t #t': Type)
+  (vmatch: (perm -> t -> (x': t' { x' << guard }) -> slprop))
+  (pm: perm)
+  (x: t)
+  (x': t')
+: Tot slprop
+= if FStar.StrongExcludedMiddle.strong_excluded_middle (x' << guard)
+  then vmatch pm x x'
+  else pure False
+
+let rec vmatch_with_perm_rec
+  (#t #t': Type)
+  (vmatch_body: (perm -> t -> t' -> slprop) -> (perm -> t -> t' -> slprop))
+  (pm: perm)
+  (x: t)
+  (x': t')
+: Tot slprop
+  (decreases x')
+= vmatch_body
+    (vmatch_with_perm_guard x' (vmatch_with_perm_rec vmatch_body))
+    pm x x'
