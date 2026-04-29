@@ -7,6 +7,7 @@ open LowParse.Pulse.Base
 open LowParse.Pulse.VCList
 open LowParse.Pulse.Combinators
 open LowParse.PulseParse.Projectors
+open LowParse.PulseParse.Base
 open Pulse.Lib.Pervasives
 
 module SZ = FStar.SizeT
@@ -74,6 +75,8 @@ let cbor_raw_get_header (xl: cbor_raw) : GTot (option header) =
          value = U64.uint_to_t (SZ.v (I.iterator_length v.cbor_map_ptr)) }))
   | CBOR_Case_Tagged v ->
     Some (raw_uint64_as_argument cbor_major_type_tagged v.cbor_tagged_tag)
+  | CBOR_Case_Tagged_Serialized v ->
+    Some (raw_uint64_as_argument cbor_major_type_tagged v.cbor_tagged_serialized_tag)
   | CBOR_Case_Invalid -> None
 
 (* Header relation: pure match between the concrete cbor_raw fields and
@@ -177,6 +180,8 @@ let cbor_raw_match_content
     (match xl with
     | CBOR_Case_Tagged v ->
       cbor_tagged_content_slprop p pm v (content_as_raw_data_item b long_arg c)
+    | CBOR_Case_Tagged_Serialized v ->
+      pts_to_parsed_strong_prefix pp v.cbor_tagged_serialized_ptr #(pm *. v.cbor_tagged_serialized_slice_perm) (content_as_raw_data_item b long_arg c)
     | _ -> pure False)
   else
     emp
@@ -346,6 +351,22 @@ let cbor_raw_match_content_eq_tagged
     (requires b.major_type = cbor_major_type_tagged)
     (ensures cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged v) c ==
              cbor_tagged_content_slprop p pm v (content_as_raw_data_item b la c))
+= ()
+
+let cbor_raw_match_content_eq_tagged_serialized
+  (p: perm -> cbor_raw -> raw_data_item -> slprop)
+  (#kp: parser_kind)
+  (pp: parser kp raw_data_item)
+  (pm: perm)
+  (xh: raw_data_item)
+  (b: initial_byte)
+  (la: long_argument b)
+  (v: cbor_tagged_serialized)
+  (c: content (| b, la |))
+  : Lemma
+    (requires b.major_type = cbor_major_type_tagged)
+    (ensures cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged_Serialized v) c ==
+             pts_to_parsed_strong_prefix pp v.cbor_tagged_serialized_ptr #(pm *. v.cbor_tagged_serialized_slice_perm) (content_as_raw_data_item b la c))
 = ()
 
 let cbor_raw_match_content_eq_other
@@ -529,6 +550,10 @@ ensures cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c **
         rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged x) c) as (pure False);
         unreachable ()
       }
+      CBOR_Case_Tagged_Serialized x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged_Serialized x) c) as (pure False);
+        unreachable ()
+      }
       CBOR_Case_Array x -> {
         rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Array x) c) as (pure False);
         unreachable ()
@@ -616,6 +641,10 @@ ensures cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c **
       }
       CBOR_Case_Tagged x -> {
         rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Tagged_Serialized x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged_Serialized x) c) as (pure False);
         unreachable ()
       }
       CBOR_Case_Map x -> {
@@ -720,6 +749,10 @@ ensures cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c **
         rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged x) c) as (pure False);
         unreachable ()
       }
+      CBOR_Case_Tagged_Serialized x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged_Serialized x) c) as (pure False);
+        unreachable ()
+      }
       CBOR_Case_Array x -> {
         rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Array x) c) as (pure False);
         unreachable ()
@@ -766,6 +799,25 @@ ensures cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c **
         rewrite (cbor_raw_match_content p pp (pm /. 2.0R) xh (| b, la |) (CBOR_Case_Tagged v) c)
              as (cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c);
         rewrite (cbor_raw_match_content p pp (pm /. 2.0R) xh (| b, la |) (CBOR_Case_Tagged v) c)
+             as (cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c);
+      }
+      CBOR_Case_Tagged_Serialized v -> {
+        cbor_raw_match_content_eq_tagged_serialized p pp pm xh b la v c;
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged_Serialized v) c)
+             as (pts_to_parsed_strong_prefix pp v.cbor_tagged_serialized_ptr #(pm *. v.cbor_tagged_serialized_slice_perm) (content_as_raw_data_item b la c));
+        I.pts_to_parsed_strong_prefix_share pp v.cbor_tagged_serialized_ptr;
+        rewrite (pts_to_parsed_strong_prefix pp v.cbor_tagged_serialized_ptr #((pm *. v.cbor_tagged_serialized_slice_perm) /. 2.0R) (content_as_raw_data_item b la c))
+             as (pts_to_parsed_strong_prefix pp v.cbor_tagged_serialized_ptr #((pm /. 2.0R) *. v.cbor_tagged_serialized_slice_perm) (content_as_raw_data_item b la c));
+        rewrite (pts_to_parsed_strong_prefix pp v.cbor_tagged_serialized_ptr #((pm *. v.cbor_tagged_serialized_slice_perm) /. 2.0R) (content_as_raw_data_item b la c))
+             as (pts_to_parsed_strong_prefix pp v.cbor_tagged_serialized_ptr #((pm /. 2.0R) *. v.cbor_tagged_serialized_slice_perm) (content_as_raw_data_item b la c));
+        cbor_raw_match_content_eq_tagged_serialized p pp (pm /. 2.0R) xh b la v c;
+        rewrite (pts_to_parsed_strong_prefix pp v.cbor_tagged_serialized_ptr #((pm /. 2.0R) *. v.cbor_tagged_serialized_slice_perm) (content_as_raw_data_item b la c))
+             as (cbor_raw_match_content p pp (pm /. 2.0R) xh (| b, la |) (CBOR_Case_Tagged_Serialized v) c);
+        rewrite (pts_to_parsed_strong_prefix pp v.cbor_tagged_serialized_ptr #((pm /. 2.0R) *. v.cbor_tagged_serialized_slice_perm) (content_as_raw_data_item b la c))
+             as (cbor_raw_match_content p pp (pm /. 2.0R) xh (| b, la |) (CBOR_Case_Tagged_Serialized v) c);
+        rewrite (cbor_raw_match_content p pp (pm /. 2.0R) xh (| b, la |) (CBOR_Case_Tagged_Serialized v) c)
+             as (cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c);
+        rewrite (cbor_raw_match_content p pp (pm /. 2.0R) xh (| b, la |) (CBOR_Case_Tagged_Serialized v) c)
              as (cbor_raw_match_content p pp (pm /. 2.0R) xh h xl c);
       }
       CBOR_Case_Invalid -> {
@@ -866,6 +918,10 @@ ensures cbor_raw_match_content p pp (pm +. pm') xh h xl c **
         rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged x) c) as (pure False);
         unreachable ()
       }
+      CBOR_Case_Tagged_Serialized x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged_Serialized x) c) as (pure False);
+        unreachable ()
+      }
       CBOR_Case_Array x -> {
         rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Array x) c) as (pure False);
         unreachable ()
@@ -956,6 +1012,10 @@ ensures cbor_raw_match_content p pp (pm +. pm') xh h xl c **
       }
       CBOR_Case_Tagged x -> {
         rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged x) c) as (pure False);
+        unreachable ()
+      }
+      CBOR_Case_Tagged_Serialized x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged_Serialized x) c) as (pure False);
         unreachable ()
       }
       CBOR_Case_Map x -> {
@@ -1071,6 +1131,10 @@ ensures cbor_raw_match_content p pp (pm +. pm') xh h xl c **
         rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged x) c) as (pure False);
         unreachable ()
       }
+      CBOR_Case_Tagged_Serialized x -> {
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged_Serialized x) c) as (pure False);
+        unreachable ()
+      }
       CBOR_Case_Array x -> {
         rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Array x) c) as (pure False);
         unreachable ()
@@ -1120,6 +1184,24 @@ ensures cbor_raw_match_content p pp (pm +. pm') xh h xl c **
         rewrite (cbor_tagged_content_slprop p (pm +. pm') v (content_as_raw_data_item b la c))
              as (cbor_raw_match_content p pp (pm +. pm') xh (| b, la |) (CBOR_Case_Tagged v) c);
         rewrite (cbor_raw_match_content p pp (pm +. pm') xh (| b, la |) (CBOR_Case_Tagged v) c)
+             as (cbor_raw_match_content p pp (pm +. pm') xh h xl c);
+      }
+      CBOR_Case_Tagged_Serialized v -> {
+        cbor_raw_match_content_eq_tagged_serialized p pp pm xh b la v c;
+        rewrite (cbor_raw_match_content p pp pm xh (| b, la |) (CBOR_Case_Tagged_Serialized v) c)
+             as (pts_to_parsed_strong_prefix pp v.cbor_tagged_serialized_ptr #(pm *. v.cbor_tagged_serialized_slice_perm) (content_as_raw_data_item b la c));
+        cbor_raw_match_content_eq_tagged_serialized p pp pm' xh' b la v c';
+        rewrite (cbor_raw_match_content p pp pm' xh' (| b, la |) (CBOR_Case_Tagged_Serialized v) c')
+             as (pts_to_parsed_strong_prefix pp v.cbor_tagged_serialized_ptr #(pm' *. v.cbor_tagged_serialized_slice_perm) (content_as_raw_data_item b la c'));
+        I.pts_to_parsed_strong_prefix_gather pp v.cbor_tagged_serialized_ptr
+          #(pm *. v.cbor_tagged_serialized_slice_perm) #(content_as_raw_data_item b la c)
+          #(pm' *. v.cbor_tagged_serialized_slice_perm) #(content_as_raw_data_item b la c');
+        rewrite (pts_to_parsed_strong_prefix pp v.cbor_tagged_serialized_ptr #(pm *. v.cbor_tagged_serialized_slice_perm +. pm' *. v.cbor_tagged_serialized_slice_perm) (content_as_raw_data_item b la c))
+             as (pts_to_parsed_strong_prefix pp v.cbor_tagged_serialized_ptr #((pm +. pm') *. v.cbor_tagged_serialized_slice_perm) (content_as_raw_data_item b la c));
+        cbor_raw_match_content_eq_tagged_serialized p pp (pm +. pm') xh b la v c;
+        rewrite (pts_to_parsed_strong_prefix pp v.cbor_tagged_serialized_ptr #((pm +. pm') *. v.cbor_tagged_serialized_slice_perm) (content_as_raw_data_item b la c))
+             as (cbor_raw_match_content p pp (pm +. pm') xh (| b, la |) (CBOR_Case_Tagged_Serialized v) c);
+        rewrite (cbor_raw_match_content p pp (pm +. pm') xh (| b, la |) (CBOR_Case_Tagged_Serialized v) c)
              as (cbor_raw_match_content p pp (pm +. pm') xh h xl c);
       }
       CBOR_Case_Invalid -> {
