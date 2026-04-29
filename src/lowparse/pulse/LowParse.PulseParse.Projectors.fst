@@ -194,3 +194,28 @@ let rec vmatch_with_perm_rec
 = vmatch_body
     (vmatch_with_perm_guard x' (vmatch_with_perm_rec vmatch_body))
     pm x x'
+
+ghost fn vmatch_with_perm_guard_unfold
+  (#guard_t: Type0)
+  (guard: guard_t)
+  (#t #t': Type0)
+  (vmatch: (perm -> t -> (x': t' { x' << guard }) -> slprop))
+  (pm: perm)
+  (x: t)
+  (x': t')
+requires vmatch_with_perm_guard guard vmatch pm x x'
+returns res: squash (x' << guard)
+ensures vmatch pm x x'
+{
+  let test = FStar.StrongExcludedMiddle.strong_excluded_middle (x' << guard);
+  if (test) {
+     let res: squash (x' << guard) = ();
+     rewrite (vmatch_with_perm_guard guard vmatch pm x x') as (vmatch pm x x');
+     res
+  } else {
+     rewrite (vmatch_with_perm_guard guard vmatch pm x x') as pure False;
+     let res: squash (x' << guard) = false_elim ();
+     rewrite pure False as vmatch pm x x';
+     res
+  }
+}
