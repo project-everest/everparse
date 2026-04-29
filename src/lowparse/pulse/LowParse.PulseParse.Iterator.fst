@@ -12,38 +12,9 @@ module Trade = Pulse.Lib.Trade.Util
 module LPS = LowParse.Pulse.Base
 open Pulse.Lib.Trade
 
-inline_for_extraction
-let share_t
-  (#t1 #t2: Type)
-  (vmatch: perm -> t1 -> t2 -> slprop)
-=
-  (x1: t1) ->
-  (#p: perm) ->
-  (#x2: t2) ->
-  stt_ghost unit emp_inames
-  (vmatch p x1 x2)
-  (fun _ ->
-    let open FStar.Real in
-    vmatch (p /. 2.0R) x1 x2 ** vmatch (p /. 2.0R) x1 x2
-  )
+let share_t = LowParse.PulseParse.Base.share_t
 
-inline_for_extraction
-let gather_t
-  (#t1 #t2: Type)
-  (vmatch: perm -> t1 -> t2 -> slprop)
-=
-  (x1: t1) ->
-  (#p: perm) ->
-  (#x2: t2) ->
-  (#p': perm) ->
-  (#x2': t2) ->
-  stt_ghost unit emp_inames
-  (vmatch p x1 x2 ** vmatch p' x1 x2')
-  (fun _ ->
-    let open FStar.Real in
-    vmatch (p +. p') x1 x2 **
-    pure (x2 == x2')
-  )
+let gather_t = LowParse.PulseParse.Base.gather_t
 
 noeq
 type base_iterator ([@@@strictly_positive] t: Type) =
