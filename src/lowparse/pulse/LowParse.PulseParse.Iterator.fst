@@ -1700,7 +1700,8 @@ requires
   iterator_match vmatch p pm i l **
   R.pts_to spare i_spare **
   R.pts_to elem_ref elem **
-  vmatch pm_v elem v
+  vmatch pm_v elem v **
+  pure (SZ.fits (List.Tot.length (Ghost.reveal l) + 1))
 returns _: unit
 ensures exists* (i': iterator t) .
   R.pts_to pi i' **
@@ -1715,7 +1716,6 @@ ensures exists* (i': iterator t) .
 
   // Compute count for the Append
   let len = iterator_length vmatch p pm i_val;
-  assume_ (pure (SizeT.fits (SZ.v len + 1)));
   let count = SZ.add len 1sz;
 
   let depth : Ghost.erased nat = Ghost.hide (1 + iterator_depth i_val);
@@ -1869,7 +1869,8 @@ requires
   R.pts_to spare i_spare **
   R.pts_to elem_ref elem **
   vmatch pm_v elem v **
-  pure (List.Tot.sorted lt_ord (Ghost.reveal l))
+  pure (List.Tot.sorted lt_ord (Ghost.reveal l) /\
+        SZ.fits (List.Tot.length (Ghost.reveal l) + 1))
 returns res: bool
 ensures
   (if res then
