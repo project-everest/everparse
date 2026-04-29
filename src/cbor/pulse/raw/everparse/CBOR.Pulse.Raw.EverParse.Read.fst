@@ -394,7 +394,7 @@ let cbor_raw_read_aux
   (pm: perm)
   (f64: squash SZ.fits_u64)
 : PPB.zero_copy_parse_strong_prefix #cbor_raw #raw_data_item
-    (cbor_raw_match_aux p pp pm)
+    (cbor_raw_match_aux pp p pm)
     #parse_raw_data_item_kind
     (parse_raw_data_item_aux pp)
 = zero_copy_parse_strong_prefix_synth

@@ -401,9 +401,9 @@ let cbor_raw_match_content_eq_other
    parse_raw_data_item_aux.
 *)
 let cbor_raw_match_aux
-  (p: perm -> cbor_raw -> raw_data_item -> slprop)
   (#kp: parser_kind)
   (pp: parser kp raw_data_item)
+  (p: perm -> cbor_raw -> raw_data_item -> slprop)
   (pm: perm)
   (xl: cbor_raw)
   (xh: raw_data_item)
@@ -1242,11 +1242,11 @@ ghost fn cbor_raw_match_aux_share
   (xl: cbor_raw)
   (#pm: perm)
   (#xh: Ghost.erased raw_data_item)
-requires cbor_raw_match_aux p pp pm xl xh
-ensures cbor_raw_match_aux p pp (pm /. 2.0R) xl xh **
-        cbor_raw_match_aux p pp (pm /. 2.0R) xl xh
+requires cbor_raw_match_aux pp p pm xl xh
+ensures cbor_raw_match_aux pp p (pm /. 2.0R) xl xh **
+        cbor_raw_match_aux pp p (pm /. 2.0R) xl xh
 {
-  unfold (cbor_raw_match_aux p pp pm xl xh);
+  unfold (cbor_raw_match_aux pp p pm xl xh);
   unfold (vmatch_synth
     (vmatch_dep_pair_with_proj
        cbor_raw_match_header
@@ -1298,7 +1298,7 @@ ensures cbor_raw_match_aux p pp (pm /. 2.0R) xl xh **
        (cbor_raw_match_content p pp (pm /. 2.0R)))
     synth_raw_data_item_recip
     xl (Ghost.reveal xh));
-  fold (cbor_raw_match_aux p pp (pm /. 2.0R) xl (Ghost.reveal xh));
+  fold (cbor_raw_match_aux pp p (pm /. 2.0R) xl (Ghost.reveal xh));
   rewrite (pure the_prop)
     as
     (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get xl) ==
@@ -1319,7 +1319,7 @@ ensures cbor_raw_match_aux p pp (pm /. 2.0R) xl xh **
        (cbor_raw_match_content p pp (pm /. 2.0R)))
     synth_raw_data_item_recip
     xl (Ghost.reveal xh));
-  fold (cbor_raw_match_aux p pp (pm /. 2.0R) xl (Ghost.reveal xh));
+  fold (cbor_raw_match_aux pp p (pm /. 2.0R) xl (Ghost.reveal xh));
 }
 
 ghost fn cbor_raw_match_aux_gather
@@ -1332,12 +1332,12 @@ ghost fn cbor_raw_match_aux_gather
   (#xh: Ghost.erased raw_data_item)
   (#pm': perm)
   (#xh': Ghost.erased raw_data_item)
-requires cbor_raw_match_aux p pp pm xl xh **
-         cbor_raw_match_aux p pp pm' xl xh'
-ensures cbor_raw_match_aux p pp (pm +. pm') xl xh **
+requires cbor_raw_match_aux pp p pm xl xh **
+         cbor_raw_match_aux pp p pm' xl xh'
+ensures cbor_raw_match_aux pp p (pm +. pm') xl xh **
         pure (xh == xh')
 {
-  unfold (cbor_raw_match_aux p pp pm xl xh);
+  unfold (cbor_raw_match_aux pp p pm xl xh);
   unfold (vmatch_synth
     (vmatch_dep_pair_with_proj
        cbor_raw_match_header
@@ -1354,7 +1354,7 @@ ensures cbor_raw_match_aux p pp (pm +. pm') xl xh **
   unfold (cbor_raw_match_header
     (cbor_raw_id_proj.pair_proj_get xl)
     (dfst (synth_raw_data_item_recip (Ghost.reveal xh))));
-  unfold (cbor_raw_match_aux p pp pm' xl xh');
+  unfold (cbor_raw_match_aux pp p pm' xl xh');
   unfold (vmatch_synth
     (vmatch_dep_pair_with_proj
        cbor_raw_match_header
@@ -1432,7 +1432,7 @@ ensures cbor_raw_match_aux p pp (pm +. pm') xl xh **
        (cbor_raw_match_content p pp (pm +. pm')))
     synth_raw_data_item_recip
     xl (Ghost.reveal xh));
-  fold (cbor_raw_match_aux p pp (pm +. pm') xl (Ghost.reveal xh));
+  fold (cbor_raw_match_aux pp p (pm +. pm') xl (Ghost.reveal xh));
   // Derive xh == xh' from c1 == c2 and h1 == h2
   let c_eq = elim_pure_explicit
     (dsnd (synth_raw_data_item_recip (Ghost.reveal xh)) ==
