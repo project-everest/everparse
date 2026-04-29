@@ -219,3 +219,29 @@ ensures vmatch pm x x'
      res
   }
 }
+
+ghost fn vmatch_with_perm_guard_fold
+  (#guard_t: Type0)
+  (guard: guard_t)
+  (#t #t': Type0)
+  (vmatch: (perm -> t -> (x': t' { x' << guard }) -> slprop))
+  (pm: perm)
+  (x: t)
+  (x': t')
+  (_pf: squash (x' << guard))
+requires vmatch pm x x'
+ensures vmatch_with_perm_guard guard vmatch pm x x'
+{
+  let test = FStar.StrongExcludedMiddle.strong_excluded_middle (x' << guard);
+  if (test) {
+    rewrite (vmatch pm x x') as
+      (if FStar.StrongExcludedMiddle.strong_excluded_middle (x' << guard)
+       then vmatch pm x x'
+       else pure False);
+    fold (vmatch_with_perm_guard guard vmatch pm x x')
+  } else {
+    rewrite (vmatch pm x x') as pure False;
+    let _f : squash False = false_elim ();
+    rewrite (pure False) as (vmatch_with_perm_guard guard vmatch pm x x')
+  }
+}
