@@ -601,12 +601,65 @@ ensures
   }
 }
 
+ghost
+fn rec seq_list_match_gather_memP
+  (#t #t': Type0)
+  (c: Seq.seq t)
+  (v1: list t')
+  (v2: list t')
+  (item_match1: (t -> (v': t' { v' << v1 }) -> slprop))
+  (item_match2: (t -> (v': t' { v' << v2 }) -> slprop))
+  (item_match3: (t -> (v': t' { v' << v1 }) -> slprop))
+  (prf: (
+    (c': t) ->
+    (v1': t' { v1' << v1 }) ->
+    (v2': t' { v2' << v2 /\ List.Tot.memP v2' v2 }) ->
+    stt_ghost unit emp_inames
+      (item_match1 c' v1' ** item_match2 c' v2')
+      (fun _ -> item_match3 c' v1' ** pure ((v1' <: t') == (v2' <: t')))
+  ))
+requires
+    (SM.seq_list_match c v1 item_match1 ** SM.seq_list_match c v2 item_match2)
+ensures
+    (SM.seq_list_match c v1 item_match3 ** pure (v1 == v2))
+  decreases v1
+{
+  if Nil? v1 {
+    SM.seq_list_match_nil_elim c v1 item_match1;
+    SM.seq_list_match_nil_elim c v2 item_match2;
+    SM.seq_list_match_nil_intro c v1 item_match3;
+  } else {
+    SM.list_cons_precedes (List.Tot.hd v1) (List.Tot.tl v1);
+    let _ : squash (List.Tot.tl v1 << v1) = ();
+    SM.seq_list_match_cons_elim c v1 item_match1;
+    SM.seq_list_match_cons_elim c v2 item_match2;
+    SM.list_cons_precedes (List.Tot.hd v2) (List.Tot.tl v2);
+    let _ : squash (List.Tot.tl v2 << v2) = ();
+    prf (Seq.head c) (List.Tot.hd v1) (List.Tot.hd v2);
+    ghost fn prf'
+      (c': t)
+      (v1': t' { v1' << List.Tot.tl v1 })
+      (v2': t' { v2' << List.Tot.tl v2 /\ List.Tot.memP v2' (List.Tot.tl v2) })
+    requires
+      item_match1 c' v1' ** item_match2 c' v2'
+    ensures
+      item_match3 c' v1' ** pure ((v1' <: t') == (v2' <: t'))
+    {
+      prf c' v1' v2'
+    };
+    seq_list_match_gather_memP (Seq.tail c) (List.Tot.tl v1) (List.Tot.tl v2) item_match1 item_match2 item_match3 prf';
+    Seq.cons_head_tail c;
+    SM.seq_list_match_cons_intro (Seq.head c) (List.Tot.hd v1) (Seq.tail c) (List.Tot.tl v1) item_match3;
+    rewrite (SM.seq_list_match (Seq.cons (Seq.head c) (Seq.tail c)) (List.Tot.hd v1 :: List.Tot.tl v1) item_match3)
+         as (SM.seq_list_match c v1 item_match3);
+    ()
+  }
+}
+
 ```pulse
 ghost
 fn base_iterator_match_n_singleton_gather_bound_pos_inner
   (#t: Type0) (#u: Type0)
-  (#bound_t: Type0)
-  (bound: bound_t)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
   (p: parser k u)
@@ -616,11 +669,10 @@ fn base_iterator_match_n_singleton_gather_bound_pos_inner
   (l: list u)
   (l': list u)
   (vmatch_gather: (
-    (x1: t) -> (pm0: perm) -> (x2: u) -> (pm0': perm) -> (x2': u { x2' << bound }) ->
+    (x1: t) -> (pm0: perm) -> (x2: u) -> (pm0': perm) -> (x2': u { List.Tot.memP x2' l' }) ->
     stt_ghost unit emp_inames (vmatch pm0 x1 x2 ** vmatch pm0' x1 x2') (fun _ -> vmatch (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
   ))
   (_: squash (n <> 0))
-  (_: squash (l' << bound))
 requires base_iterator_match_n vmatch p n pm (Singleton sp sv s) l **
          base_iterator_match_n vmatch p n pm' (Singleton sp sv s) l'
 ensures base_iterator_match_n vmatch p n (pm +. pm') (Singleton sp sv s) l ** pure (l == l')
@@ -640,8 +692,6 @@ ensures base_iterator_match_n vmatch p n (pm +. pm') (Singleton sp sv s) l ** pu
 
 let base_iterator_match_n_singleton_gather_bound
   (#t: Type) (#u: Type)
-  (#bound_t: Type)
-  (bound: bound_t)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
   (p: parser k u)
@@ -651,10 +701,9 @@ let base_iterator_match_n_singleton_gather_bound
   (l: list u)
   (l': list u)
   (vmatch_gather: (
-    (x1: t) -> (#pm0: perm) -> (#x2: u) -> (#pm0': perm) -> (x2': u { x2' << bound }) ->
+    (x1: t) -> (#pm0: perm) -> (#x2: u) -> (#pm0': perm) -> (x2': u { List.Tot.memP x2' l' }) ->
     stt_ghost unit emp_inames (vmatch pm0 x1 x2 ** vmatch pm0' x1 x2') (fun _ -> vmatch (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
   ))
-  (_: squash (l' << bound))
 : stt_ghost unit emp_inames
     (base_iterator_match_n vmatch p n pm (Singleton sp sv s) l **
      base_iterator_match_n vmatch p n pm' (Singleton sp sv s) l')
@@ -675,15 +724,13 @@ let base_iterator_match_n_singleton_gather_bound
       (replace_second_pure (Nil? l) (Nil? l') (l == l') ())
   end
   else
-    base_iterator_match_n_singleton_gather_bound_pos_inner #t #u #bound_t bound vmatch #k p n pm pm' sp sv s l l' (fun x1 pm0 x2 pm0' x2' -> vmatch_gather x1 #pm0 #x2 #pm0' x2') () ()
+    base_iterator_match_n_singleton_gather_bound_pos_inner #t #u vmatch #k p n pm pm' sp sv s l l' (fun x1 pm0 x2 pm0' x2' -> vmatch_gather x1 #pm0 #x2 #pm0' x2') ()
 
 ```pulse
 ghost
 fn base_iterator_match_n_gather_bound
   (#t: Type0)
   (#u: Type0)
-  (#bound_t: Type0)
-  (bound: bound_t)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
   (p: parser k u)
@@ -694,10 +741,9 @@ fn base_iterator_match_n_gather_bound
   (l: list u)
   (l': list u)
   (vmatch_gather: (
-    (x1: t) -> (#pm0: perm) -> (#x2: u) -> (#pm0': perm) -> (x2': u { x2' << bound }) ->
+    (x1: t) -> (#pm0: perm) -> (#x2: u) -> (#pm0': perm) -> (x2': u { List.Tot.memP x2' l' }) ->
     stt_ghost unit emp_inames (vmatch pm0 x1 x2 ** vmatch pm0' x1 x2') (fun _ -> vmatch (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
   ))
-  (_: squash (l' << bound))
 requires
   base_iterator_match_n vmatch p n pm i l **
   base_iterator_match_n vmatch p n pm' i l'
@@ -713,7 +759,7 @@ ensures
       rewrite each (Empty #t) as i;
     }
     Singleton sp sv s -> {
-      base_iterator_match_n_singleton_gather_bound #t #u #bound_t bound vmatch p n pm pm' sp sv s l l' vmatch_gather ();
+      base_iterator_match_n_singleton_gather_bound #t #u vmatch p n pm pm' sp sv s l l' vmatch_gather;
       rewrite each (Singleton #t sp sv s) as i;
     }
     Slice sp sv s -> {
@@ -728,14 +774,14 @@ ensures
       ghost fn gather_prf
         (c': t)
         (v1': u { v1' << l })
-        (v2': u { v2' << l' })
+        (v2': u { v2' << l' /\ List.Tot.memP v2' l' })
       requires vmatch (pm *. sv) c' v1' ** vmatch (pm' *. sv) c' v2'
       ensures vmatch ((pm +. pm') *. sv) c' v1' ** pure ((v1' <: u) == (v2' <: u))
       {
         vmatch_gather c' #(pm *. sv) #v1' #(pm' *. sv) v2';
         rewrite (vmatch (pm *. sv +. pm' *. sv) c' v1') as (vmatch ((pm +. pm') *. sv) c' v1');
       };
-      seq_list_match_gather l1 l l' (vmatch (pm *. sv)) (vmatch (pm' *. sv)) (vmatch ((pm +. pm') *. sv)) gather_prf;
+      seq_list_match_gather_memP l1 l l' (vmatch (pm *. sv)) (vmatch (pm' *. sv)) (vmatch ((pm +. pm') *. sv)) gather_prf;
       fold (base_iterator_match_n vmatch p n (pm +. pm') (Slice #t sp sv s) l);
       rewrite each (Slice #t sp sv s) as i;
     }
@@ -780,15 +826,11 @@ let base_iterator_match_n_gather
     (fun _ ->
       base_iterator_match_n vmatch p n (pm +. pm') i l **
       pure (l == l'))
-= SM.list_cons_precedes l' ([] #(list u));
-  base_iterator_match_n_gather_bound #t #u #(list (list u)) [l'] vmatch #k p n pm pm' i l l'
+= base_iterator_match_n_gather_bound #t #u vmatch #k p n pm pm' i l l'
     (fun x1 #pm0 #x2 #pm0' x2' -> vmatch_gather x1 #pm0 #x2 #pm0' #x2')
-    ()
 
 let base_iterator_match_gather_bound
   (#t: Type) (#u: Type)
-  (#bound_t: Type)
-  (bound: bound_t)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
   (p: parser k u)
@@ -798,17 +840,16 @@ let base_iterator_match_gather_bound
   (l: list u)
   (l': list u)
   (vmatch_gather: (
-    (x1: t) -> (#pm0: perm) -> (#x2: u) -> (#pm0': perm) -> (x2': u { x2' << bound }) ->
+    (x1: t) -> (#pm0: perm) -> (#x2: u) -> (#pm0': perm) -> (x2': u { List.Tot.memP x2' l' }) ->
     stt_ghost unit emp_inames (vmatch pm0 x1 x2 ** vmatch pm0' x1 x2') (fun _ -> vmatch (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
   ))
-  (_: squash (l' << bound))
 : stt_ghost unit emp_inames
     (base_iterator_match vmatch p pm i l **
      base_iterator_match vmatch p pm' i l')
     (fun _ ->
       base_iterator_match vmatch p (pm +. pm') i l **
       pure (l == l'))
-= base_iterator_match_n_gather_bound #t #u #bound_t bound vmatch #k p (SZ.v (base_iterator_length i)) pm pm' i l l' vmatch_gather ()
+= base_iterator_match_n_gather_bound #t #u vmatch #k p (SZ.v (base_iterator_length i)) pm pm' i l l' vmatch_gather
 
 let base_iterator_match_gather
   (#t: Type) (#u: Type)
@@ -827,7 +868,4 @@ let base_iterator_match_gather
     (fun _ ->
       base_iterator_match vmatch p (pm +. pm') i l **
       pure (l == l'))
-= SM.list_cons_precedes l' ([] #(list u));
-  base_iterator_match_gather_bound #t #u #(list (list u)) [l'] vmatch #k p pm pm' i l l'
-    (fun x1 #pm0 #x2 #pm0' x2' -> vmatch_gather x1 #pm0 #x2 #pm0' #x2')
-    ()
+= base_iterator_match_n_gather #t #u vmatch #k p (SZ.v (base_iterator_length i)) pm pm' i l l' vmatch_gather
