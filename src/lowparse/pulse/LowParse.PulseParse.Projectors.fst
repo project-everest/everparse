@@ -286,3 +286,14 @@ ensures vmatch_with_perm_guard guard vmatch (p +. p') x1 x2 ** pure (x2 == x2')
   vmatch_with_perm_guard_fold guard vmatch (p +. p') x1 x2 pf;
   Pulse.Lib.Core.intro_pure (x2 == x2') eq_pf
 }
+
+#push-options "--fuel 1 --ifuel 0"
+let vmatch_with_perm_rec_eq
+  (#t #t': Type)
+  (vmatch_body: (perm -> t -> t' -> slprop) -> (perm -> t -> t' -> slprop))
+  (pm: perm)
+  (x: t)
+  (x': t')
+: Lemma (vmatch_with_perm_rec vmatch_body pm x x' == vmatch_body (vmatch_with_perm_guard x' (vmatch_with_perm_rec vmatch_body)) pm x x')
+= assert_norm (vmatch_with_perm_rec vmatch_body pm x x' == vmatch_body (vmatch_with_perm_guard x' (vmatch_with_perm_rec vmatch_body)) pm x x')
+#pop-options
