@@ -84,7 +84,7 @@ let rec iterator_match
       pts_to after #(pm *. ap) i2 **
       iterator_match vmatch p pm i2 l2 **
       pure (
-        SZ.v cb <= List.Tot.length i1 /\
+        SZ.v cb == List.Tot.length i1 /\
         SZ.v ca <= List.Tot.length l2 /\
         l == List.Tot.append (fst (List.Tot.splitAt (SZ.v cb) i1)) (fst (List.Tot.splitAt (SZ.v ca) l2)) /\
         iterator_depth i2 < Ghost.reveal depth
@@ -190,7 +190,7 @@ ensures iterator_match vmatch p pm i l ** pure (SZ.v (iterator_length i) == List
         pts_to after #(pm *. ap) _i2 **
         iterator_match vmatch p pm _i2 _l2 **
         pure (
-          SZ.v cb <= List.Tot.length _i1 /\
+          SZ.v cb == List.Tot.length _i1 /\
           SZ.v ca <= List.Tot.length _l2 /\
           Ghost.reveal l == List.Tot.append (fst (List.Tot.splitAt (SZ.v cb) _i1)) (fst (List.Tot.splitAt (SZ.v ca) _l2)) /\
           iterator_depth _i2 < Ghost.reveal depth
@@ -521,7 +521,7 @@ decreases (iterator_depth i)
         pts_to after #(pm *. ap) i2 **
         iterator_match vmatch p pm i2 l2 **
         pure (
-          SZ.v cb <= List.Tot.length i1 /\
+          SZ.v cb == List.Tot.length i1 /\
           SZ.v ca <= List.Tot.length l2 /\
           Ghost.reveal l == List.Tot.append (fst (List.Tot.splitAt (SZ.v cb) i1)) (fst (List.Tot.splitAt (SZ.v ca) l2)) /\
           iterator_depth i2 < Ghost.reveal depth
@@ -582,7 +582,7 @@ decreases (iterator_depth i)
         pts_to after #(pm *. ap) i2 **
         iterator_match vmatch p pm i2 l2 **
         pure (
-          SZ.v cb <= List.Tot.length i1 /\
+          SZ.v cb == List.Tot.length i1 /\
           SZ.v ca <= List.Tot.length l2 /\
           Ghost.reveal l == List.Tot.append (fst (List.Tot.splitAt (SZ.v cb) i1)) (fst (List.Tot.splitAt (SZ.v ca) l2)) /\
           iterator_depth i2 < Ghost.reveal depth
@@ -593,7 +593,7 @@ decreases (iterator_depth i)
         pts_to after #(pm' *. ap) i2' **
         iterator_match vmatch p pm' i2' l2' **
         pure (
-          SZ.v cb <= List.Tot.length i1' /\
+          SZ.v cb == List.Tot.length i1' /\
           SZ.v ca <= List.Tot.length l2' /\
           Ghost.reveal l' == List.Tot.append (fst (List.Tot.splitAt (SZ.v cb) i1')) (fst (List.Tot.splitAt (SZ.v ca) l2')) /\
           iterator_depth i2' < Ghost.reveal depth
@@ -706,7 +706,7 @@ decreases (iterator_depth i)
         pts_to after #(pm *. ap) i2 **
         iterator_match vmatch1 p pm i2 l2 **
         pure (
-          SZ.v cb <= List.Tot.length i1 /\
+          SZ.v cb == List.Tot.length i1 /\
           SZ.v ca <= List.Tot.length l2 /\
           Ghost.reveal l == List.Tot.append (fst (List.Tot.splitAt (SZ.v cb) i1)) (fst (List.Tot.splitAt (SZ.v ca) l2)) /\
           iterator_depth i2 < Ghost.reveal depth
@@ -1068,7 +1068,7 @@ ensures exists* pm_out .
           pts_to after #(pm *. ap) i2 **
           iterator_match vmatch p pm i2 l2 **
           pure (
-            SZ.v cb <= List.Tot.length i1 /\
+            SZ.v cb == List.Tot.length i1 /\
             SZ.v ca <= List.Tot.length l2 /\
             Ghost.reveal l == List.Tot.append (fst (List.Tot.splitAt (SZ.v cb) i1)) (fst (List.Tot.splitAt (SZ.v ca) l2)) /\
             iterator_depth i2 < Ghost.reveal depth
@@ -1100,7 +1100,7 @@ ensures exists* pm_out .
             (base_iterator_match vmatch p pm_out res (fst (List.Tot.splitAt (SZ.v len) i1)) @==>
              base_iterator_match vmatch p pm before i1) **
             pure (
-              SZ.v cb <= List.Tot.length i1 /\
+              SZ.v cb == List.Tot.length i1 /\
               SZ.v ca <= List.Tot.length l2 /\
               Ghost.reveal l == List.Tot.append (fst (List.Tot.splitAt (SZ.v cb) i1)) (fst (List.Tot.splitAt (SZ.v ca) l2)) /\
               iterator_depth i2 < Ghost.reveal depth
@@ -1133,7 +1133,7 @@ ensures exists* pm_out .
           pts_to after #((pm /. 2.0R) *. ap) i2 **
           iterator_match vmatch p (pm /. 2.0R) i2 l2 **
           pure (
-            SZ.v cb <= List.Tot.length i1 /\
+            SZ.v cb == List.Tot.length i1 /\
             SZ.v ca <= List.Tot.length l2 /\
             Ghost.reveal l == List.Tot.append (fst (List.Tot.splitAt (SZ.v cb) i1)) (fst (List.Tot.splitAt (SZ.v ca) l2)) /\
             iterator_depth i2 < Ghost.reveal depth
@@ -1678,7 +1678,7 @@ decreases (iterator_depth i)
         pts_to after #(pm *. ap) i2 **
         iterator_match vmatch p pm i2 l2 **
         pure (
-          SZ.v cb <= List.Tot.length i1 /\
+          SZ.v cb == List.Tot.length i1 /\
           SZ.v ca <= List.Tot.length l2 /\
           l == List.Tot.append (fst (List.Tot.splitAt (SZ.v cb) i1)) (fst (List.Tot.splitAt (SZ.v ca) l2)) /\
           iterator_depth i2 < Ghost.reveal depth
@@ -1734,7 +1734,7 @@ decreases (iterator_depth i)
           #(base_iterator_match vmatch p pm before i1 **
             pts_to after #(pm *. ap) i2 **
             pure (
-              SZ.v cb <= List.Tot.length i1 /\
+              SZ.v cb == List.Tot.length i1 /\
               SZ.v ca <= List.Tot.length l2 /\
               Ghost.reveal l == List.Tot.append (fst (List.Tot.splitAt (SZ.v cb) i1)) (fst (List.Tot.splitAt (SZ.v ca) l2)) /\
               iterator_depth i2 < Ghost.reveal depth
@@ -1807,7 +1807,7 @@ decreases (iterator_depth i)
             pts_to after #((pm *. ap) /. 2.0R) i2 **
             iterator_match vmatch p (pm /. 2.0R) i2 l2 **
             pure (
-              SZ.v cb <= List.Tot.length i1 /\
+              SZ.v cb == List.Tot.length i1 /\
               SZ.v ca <= List.Tot.length l2 /\
               Ghost.reveal l == List.Tot.append (fst (List.Tot.splitAt (SZ.v cb) i1)) (fst (List.Tot.splitAt (SZ.v ca) l2)) /\
               iterator_depth i2 < Ghost.reveal depth
