@@ -74,7 +74,7 @@ BOOLEAN ProbeCheckV(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT
 	return TRUE;
 }
 
-BOOLEAN ProbeCheckIndirect(uint8_t *base, uint32_t len) {
+static BOOLEAN ProbeCheckIndirect(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	uint64_t result;
 	frame.filled = FALSE;
@@ -131,7 +131,7 @@ BOOLEAN ProbeCheckI(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 	return TRUE;
 }
 
-BOOLEAN ProbeCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2, uint8_t *base, uint32_t len) {
+static BOOLEAN ProbeCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	uint64_t result;
 	frame.filled = FALSE;
@@ -227,4 +227,184 @@ BOOLEAN ProbeCheckCoercePtr(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_
 		return FALSE;
 	}
 	return TRUE;
+}
+
+static BOOLEAN ProbeCheckProbeOnly(uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t result;
+	frame.filled = FALSE;
+	result = ProbeValidateProbeOnly( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(result))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	return TRUE;
+}
+
+uint32_t ProbeProbeAndCopyCheckProbeOnly(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
+	uint8_t *base;
+	if(providedSize < 8U)
+	{
+		// Not enough space for probe
+		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
+	}
+	if(!ProbeInit("ProbeCheckProbeOnly", 8U, probeDest))
+	{
+		// ProbeInit failed
+		return EVERPARSE_PROBE_FAILURE_INIT;
+	}
+	if (!ProbeAndCopy(8U, 0, 0, probeAddr, probeDest))
+	{
+		// Probe failed
+		return EVERPARSE_PROBE_FAILURE_PROBE;
+	}
+	base = EverParseStreamOf(probeDest);
+	if (!ProbeCheckProbeOnly( base, 8U))
+	{
+		return EVERPARSE_PROBE_FAILURE_VALIDATION;
+	}
+	return EVERPARSE_SUCCESS;
+}
+
+BOOLEAN ProbeCheckBothEntrypoints(uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t result;
+	frame.filled = FALSE;
+	result = ProbeValidateBothEntrypoints( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(result))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	return TRUE;
+}
+
+uint32_t ProbeProbeAndCopyCheckBothEntrypoints(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
+	uint8_t *base;
+	if(providedSize < 8U)
+	{
+		// Not enough space for probe
+		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
+	}
+	if(!ProbeInit("ProbeCheckBothEntrypoints", 8U, probeDest))
+	{
+		// ProbeInit failed
+		return EVERPARSE_PROBE_FAILURE_INIT;
+	}
+	if (!ProbeAndCopy(8U, 0, 0, probeAddr, probeDest))
+	{
+		// Probe failed
+		return EVERPARSE_PROBE_FAILURE_PROBE;
+	}
+	base = EverParseStreamOf(probeDest);
+	if (!ProbeCheckBothEntrypoints( base, 8U))
+	{
+		return EVERPARSE_PROBE_FAILURE_VALIDATION;
+	}
+	return EVERPARSE_SUCCESS;
+}
+
+BOOLEAN ValidateMyData(uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t result;
+	frame.filled = FALSE;
+	result = ProbeValidateNamedPlainEp( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(result))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	return TRUE;
+}
+
+static BOOLEAN ProbeCheckNamedProbeEp(uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t result;
+	frame.filled = FALSE;
+	result = ProbeValidateNamedProbeEp( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(result))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	return TRUE;
+}
+
+uint32_t ProbeMyData(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
+	uint8_t *base;
+	if(providedSize < 8U)
+	{
+		// Not enough space for probe
+		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
+	}
+	if(!ProbeInit("ProbeCheckNamedProbeEp", 8U, probeDest))
+	{
+		// ProbeInit failed
+		return EVERPARSE_PROBE_FAILURE_INIT;
+	}
+	if (!ProbeAndCopy(8U, 0, 0, probeAddr, probeDest))
+	{
+		// Probe failed
+		return EVERPARSE_PROBE_FAILURE_PROBE;
+	}
+	base = EverParseStreamOf(probeDest);
+	if (!ProbeCheckNamedProbeEp( base, 8U))
+	{
+		return EVERPARSE_PROBE_FAILURE_VALIDATION;
+	}
+	return EVERPARSE_SUCCESS;
+}
+
+BOOLEAN CheckAll(uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t result;
+	frame.filled = FALSE;
+	result = ProbeValidateNamedBothEp( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(result))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	return TRUE;
+}
+
+uint32_t ProbeAll(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
+	uint8_t *base;
+	if(providedSize < 8U)
+	{
+		// Not enough space for probe
+		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
+	}
+	if(!ProbeInit("CheckAll", 8U, probeDest))
+	{
+		// ProbeInit failed
+		return EVERPARSE_PROBE_FAILURE_INIT;
+	}
+	if (!ProbeAndCopy(8U, 0, 0, probeAddr, probeDest))
+	{
+		// Probe failed
+		return EVERPARSE_PROBE_FAILURE_PROBE;
+	}
+	base = EverParseStreamOf(probeDest);
+	if (!CheckAll( base, 8U))
+	{
+		return EVERPARSE_PROBE_FAILURE_VALIDATION;
+	}
+	return EVERPARSE_SUCCESS;
 }
