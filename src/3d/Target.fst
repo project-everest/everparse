@@ -737,6 +737,8 @@ let print_definition (mname:string) (d:decl { Definition? (fst d)} ) : ML string
       td_params = params;
       td_entrypoint_probes = [];
       td_entrypoint = false;
+      td_entrypoint_plain = false;
+      td_entrypoint_plain_name = None;
       td_noextract = false;
     } in
     Printf.sprintf "%slet %s : %s = %s\n\n"
@@ -1151,17 +1153,18 @@ let print_c_entry
     (* Main wrapper *)
     let pparams = print_params params in
     let pargs = print_arguments params in
-    let signature =
+    let mk_main_signature (name: string) =
       if is_input_stream_buffer 
       then Printf.sprintf
             "BOOLEAN %s(%suint8_t *base, uint32_t len)"
-             wrapper_name
+             name
              pparams
       else Printf.sprintf
             "uint64_t %s(%sEVERPARSE_INPUT_STREAM_BASE base)"
-             wrapper_name
+             name
              pparams
     in
+    let signature = mk_main_signature wrapper_name in
     let validator_name = validator_name modul d.decl_name.td_name.A.v.A.name in
     let body = 
       if is_input_stream_buffer
@@ -1169,28 +1172,54 @@ let print_c_entry
       else wrapped_call_stream validator_name pargs
     in
     (* Probe wrapper *)
-    let probe_wrapper_signature probe : ML _ =
+    let probe_wrapper_signature (probe: probe_entrypoint) : ML _ =
       if not is_input_stream_buffer
       then ( //fail gracefully with an error message
         Ast.error "Top-level probe wrappers only for input stream buffer"
           probe.probe_ep_fn.range
       );
       let return_type = "uint32_t" in
-      let probe_fn = probe_fn_to_c probe.probe_ep_fn in
-      let probe_wrapper_name = probe_wrapper_name modul probe_fn d.decl_name.td_name.A.v.A.name in
+      let public_name =
+        match probe.probe_ep_name with
+        | Some n -> A.ident_name n
+        | None ->
+          let probe_fn = probe_fn_to_c probe.probe_ep_fn in
+          probe_wrapper_name modul probe_fn d.decl_name.td_name.A.v.A.name
+      in
       Printf.sprintf
             "%s %s(%sEVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize)"
              return_type
-             probe_wrapper_name
+             public_name
              pparams
+    in
+    (* Collecting everything together *)
+    let has_probes = Cons? d.decl_name.td_entrypoint_probes in
+    let effective_main_name =
+      if d.decl_name.td_entrypoint_plain then
+        match d.decl_name.td_entrypoint_plain_name with
+        | Some n -> A.ident_name n
+        | None -> wrapper_name
+      else wrapper_name
     in
     let probe_wrapper (probe: probe_entrypoint) : ML _ =
       constr_wrapper
         (probe_wrapper_signature probe)
-        (wrapped_call_probe_buffer wrapper_name pargs probe)
+        (wrapped_call_probe_buffer effective_main_name pargs probe)
     in
-    (* Collecting everything together *)
-    constr_wrapper signature body :: List.map probe_wrapper d.decl_name.td_entrypoint_probes
+    let main_wrapper =
+      if d.decl_name.td_entrypoint_plain then
+        (* Plain entrypoint declared: expose in header with custom name if provided *)
+        let public_signature = mk_main_signature effective_main_name in
+        constr_wrapper public_signature body
+      else if has_probes then
+        (* Only probe entrypoints: main wrapper is internal (static), not in header *)
+        let static_signature = "static " ^ signature in
+        ("", impl static_signature body)
+      else
+        (* Should not happen since we only get here if td_entrypoint is true *)
+        constr_wrapper signature body
+    in
+    main_wrapper :: List.map probe_wrapper d.decl_name.td_entrypoint_probes
   in
 
   let signatures_output_typ_deps =
@@ -1250,7 +1279,7 @@ let print_c_entry
        #endif\n"
       error_code_macros
       external_defs_includes
-      (signatures |> String.concat "\n\n")
+      (signatures |> List.filter (fun s -> s <> "") |> String.concat "\n\n")
   in
   let input_stream_include = HashingOptions.input_stream_include input_stream_binding in
   let header =

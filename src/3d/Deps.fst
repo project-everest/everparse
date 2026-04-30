@@ -206,7 +206,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | _ -> [] in
 
   let deps_of_attribute (a:attribute) : ML (list string) = match a with
-    | Entrypoint (Some p) -> maybe_dep p.probe_ep_fn `List.Tot.append` deps_of_expr p.probe_ep_length
+    | Entrypoint _ (Some p) -> maybe_dep p.probe_ep_fn `List.Tot.append` deps_of_expr p.probe_ep_length
     | _ -> []
   in
 
