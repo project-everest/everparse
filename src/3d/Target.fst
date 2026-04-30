@@ -1092,7 +1092,7 @@ let print_c_entry
            len
      in
      if hoist then
-       (if goto_return then "uint32_t result = EVERPARSE_PROBE_FAILURE_UNIMPLEMENTED;\n\t" else "")
+       (if goto_return then "uint32_t result = EVERPARSE_PROBE_FAILURE_INIT;\n\t" else "")
        ^ Printf.sprintf "uint8_t *base%s;\n\t" scalar_zero
        ^ probe_prefix probe wrappedName ^ "\n\t"
        ^ (if goto_return then
@@ -1121,7 +1121,7 @@ let print_c_entry
               len
               tail)
      else
-       (if goto_return then "uint32_t result = EVERPARSE_PROBE_FAILURE_UNIMPLEMENTED;\n\t" else "")
+       (if goto_return then "uint32_t result = EVERPARSE_PROBE_FAILURE_INIT;\n\t" else "")
        ^ (if goto_return then
             Printf.sprintf 
               "%s\n\t\
