@@ -27,11 +27,11 @@ void DefaultErrorHandler(
 }
 
 BOOLEAN GotoReturnCheckPoint(uint8_t *base, uint32_t len) {
-	BOOLEAN result__ = FALSE;
+	BOOLEAN result = FALSE;
 	EVERPARSE_ERROR_FRAME frame;
 	frame.filled = FALSE;
-	uint64_t result = GotoReturnValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
-	if (EverParseIsError(result))
+	uint64_t ep_status = GotoReturnValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(ep_status))
 	{
 		if (frame.filled)
 		{
@@ -39,17 +39,17 @@ BOOLEAN GotoReturnCheckPoint(uint8_t *base, uint32_t len) {
 		}
 		goto exit;
 	}
-	result__ = TRUE;
+	result = TRUE;
 exit:
-	return result__;
+	return result;
 }
 
 static BOOLEAN GotoReturnCheckTagged(uint64_t bound, uint8_t *base, uint32_t len) {
-	BOOLEAN result__ = FALSE;
+	BOOLEAN result = FALSE;
 	EVERPARSE_ERROR_FRAME frame;
 	frame.filled = FALSE;
-	uint64_t result = GotoReturnValidateTagged(bound,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
-	if (EverParseIsError(result))
+	uint64_t ep_status = GotoReturnValidateTagged(bound,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(ep_status))
 	{
 		if (frame.filled)
 		{
@@ -57,38 +57,38 @@ static BOOLEAN GotoReturnCheckTagged(uint64_t bound, uint8_t *base, uint32_t len
 		}
 		goto exit;
 	}
-	result__ = TRUE;
+	result = TRUE;
 exit:
-	return result__;
+	return result;
 }
 
 uint32_t GotoReturnProbeInPlaceCheckTagged(uint64_t bound, EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
-	uint32_t result__ = EVERPARSE_PROBE_FAILURE_UNIMPLEMENTED;
+	uint32_t result = EVERPARSE_PROBE_FAILURE_UNIMPLEMENTED;
 	if(providedSize < 42U)
 	{
 		// Not enough space for probe
-		result__ = EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
+		result = EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
 		goto exit;
 	}
 	if(!ProbeInit("GotoReturnCheckTagged", 42U, probeDest))
 	{
 		// ProbeInit failed
-		result__ = EVERPARSE_PROBE_FAILURE_INIT;
+		result = EVERPARSE_PROBE_FAILURE_INIT;
 		goto exit;
 	}
 	if (!ProbeInPlace(42U, 0, 0, probeAddr, probeDest))
 	{
 		// Probe failed
-		result__ = EVERPARSE_PROBE_FAILURE_PROBE;
+		result = EVERPARSE_PROBE_FAILURE_PROBE;
 		goto exit;
 	}
 	uint8_t *base = EverParseStreamOf(probeDest);
 	if (!GotoReturnCheckTagged(bound,  base, 42U))
 	{
-		result__ = EVERPARSE_PROBE_FAILURE_VALIDATION;
+		result = EVERPARSE_PROBE_FAILURE_VALIDATION;
 		goto exit;
 	}
-	result__ = EVERPARSE_SUCCESS;
+	result = EVERPARSE_SUCCESS;
 exit:
-	return result__;
+	return result;
 }

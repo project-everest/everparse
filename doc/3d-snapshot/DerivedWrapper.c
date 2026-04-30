@@ -27,10 +27,10 @@ void DefaultErrorHandler(
 
 BOOLEAN DerivedCheckTriple(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t result;
+	uint64_t ep_status;
 	frame.filled = FALSE;
-	result = DerivedValidateTriple( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
-	if (EverParseIsError(result))
+	ep_status = DerivedValidateTriple( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(ep_status))
 	{
 		if (frame.filled)
 		{
@@ -43,10 +43,10 @@ BOOLEAN DerivedCheckTriple(uint8_t *base, uint32_t len) {
 
 BOOLEAN DerivedCheckQuad(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t result;
+	uint64_t ep_status;
 	frame.filled = FALSE;
-	result = DerivedValidateQuad( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
-	if (EverParseIsError(result))
+	ep_status = DerivedValidateQuad( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(ep_status))
 	{
 		if (frame.filled)
 		{
