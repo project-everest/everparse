@@ -612,6 +612,110 @@ decreases (iterator_depth i)
   }
 }
 
+ghost fn base_iterator_match_weaken
+  (#t: Type0)
+  (#u: Type0)
+  (vmatch1 vmatch2: perm -> t -> u -> slprop)
+  (vmatch_change: (x: t) -> (pm': perm) -> (y: u) ->
+    stt_ghost unit emp_inames (vmatch1 pm' x y) (fun _ -> vmatch2 pm' x y))
+  (#k: parser_kind)
+  (p: parser k u)
+  (i: base_iterator t)
+  (#pm: perm)
+  (#l: Ghost.erased (list u))
+requires base_iterator_match vmatch1 p pm i l
+ensures base_iterator_match vmatch2 p pm i l
+{
+  match i {
+    Empty -> {
+      unfold (base_iterator_match vmatch1 p pm (Empty #t) l);
+      fold (base_iterator_match vmatch2 p pm (Empty #t) l);
+      rewrite (base_iterator_match vmatch2 p pm (Empty #t) l)
+           as (base_iterator_match vmatch2 p pm i l);
+    }
+    Singleton sp sv s -> {
+      unfold (base_iterator_match vmatch1 p pm (Singleton sp sv s) l);
+      with x y . assert (
+        pts_to s #(pm *. sp) x **
+        vmatch1 (pm *. sv) x y **
+        pure (Ghost.reveal l == [y])
+      );
+      vmatch_change x (pm *. sv) y;
+      fold (base_iterator_match vmatch2 p pm (Singleton sp sv s) l);
+      rewrite (base_iterator_match vmatch2 p pm (Singleton sp sv s) l)
+           as (base_iterator_match vmatch2 p pm i l);
+    }
+    Slice sp sv sl -> {
+      unfold (base_iterator_match vmatch1 p pm (Slice sp sv sl) l);
+      with l' . assert (
+        pts_to sl #(pm *. sp) l' **
+        SM.seq_list_match l' l (vmatch1 (pm *. sv))
+      );
+      SM.seq_list_match_weaken l' l (vmatch1 (pm *. sv)) (vmatch2 (pm *. sv))
+        (fun (c': t) (v': u { v' << Ghost.reveal l }) -> vmatch_change c' (pm *. sv) v');
+      fold (base_iterator_match vmatch2 p pm (Slice sp sv sl) l);
+      rewrite (base_iterator_match vmatch2 p pm (Slice sp sv sl) l)
+           as (base_iterator_match vmatch2 p pm i l);
+    }
+    Serialized sp count pl -> {
+      unfold (base_iterator_match vmatch1 p pm (Serialized sp count pl) l);
+      with l' . assert (
+        pts_to_parsed_strong_prefix (parse_nlist (SZ.v count) p) pl #(pm *. sp) l'
+      );
+      fold (base_iterator_match vmatch2 p pm (Serialized sp count pl) l);
+      rewrite (base_iterator_match vmatch2 p pm (Serialized sp count pl) l)
+           as (base_iterator_match vmatch2 p pm i l);
+    }
+  }
+}
+
+ghost fn rec iterator_match_weaken
+  (#t: Type0)
+  (#u: Type0)
+  (vmatch1 vmatch2: perm -> t -> u -> slprop)
+  (vmatch_change: (x: t) -> (pm': perm) -> (y: u) ->
+    stt_ghost unit emp_inames (vmatch1 pm' x y) (fun _ -> vmatch2 pm' x y))
+  (#k: parser_kind)
+  (p: parser k u)
+  (i: iterator t)
+  (#pm: perm)
+  (#l: Ghost.erased (list u))
+requires iterator_match vmatch1 p pm i l
+ensures iterator_match vmatch2 p pm i l
+decreases (iterator_depth i)
+{
+  match i {
+    Base bi -> {
+      unfold (iterator_match vmatch1 p pm (Base bi) l);
+      base_iterator_match_weaken vmatch1 vmatch2 vmatch_change p bi;
+      fold (iterator_match vmatch2 p pm (Base bi) l);
+      rewrite (iterator_match vmatch2 p pm (Base bi) l)
+           as (iterator_match vmatch2 p pm i l);
+    }
+    Append depth count before ap after -> {
+      unfold (iterator_match vmatch1 p pm (Append depth count before ap after) l);
+      with i1 i2 l2 . assert (
+        base_iterator_match vmatch1 p pm before i1 **
+        pts_to after #(pm *. ap) i2 **
+        iterator_match vmatch1 p pm i2 l2 **
+        pure (
+          SZ.v count <= List.Tot.length i1 + List.Tot.length l2 /\
+          Ghost.reveal l == fst (List.Tot.splitAt (SZ.v count) (List.Tot.append i1 l2)) /\
+          iterator_depth i2 < Ghost.reveal depth
+        )
+      );
+      base_iterator_match_weaken vmatch1 vmatch2 vmatch_change p before;
+      let l2p : list u = l2;
+      rewrite (iterator_match vmatch1 p pm i2 l2) as (iterator_match vmatch1 p pm i2 l2p);
+      iterator_match_weaken vmatch1 vmatch2 vmatch_change p i2 #pm #l2p;
+      rewrite (iterator_match vmatch2 p pm i2 l2p) as (iterator_match vmatch2 p pm i2 l2);
+      fold (iterator_match vmatch2 p pm (Append depth count before ap after) l);
+      rewrite (iterator_match vmatch2 p pm (Append depth count before ap after) l)
+           as (iterator_match vmatch2 p pm i l);
+    }
+  }
+}
+
 let rec lemma_splitAt_append (#a: Type) (n: nat) (l: list a) : Lemma
   (requires n <= List.Tot.length l)
   (ensures (let (l1, l2) = List.Tot.splitAt n l in
