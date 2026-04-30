@@ -1132,3 +1132,133 @@ let iterator_match_gather
       iterator_match vmatch p (pm +. pm') i l **
       pure (l == l'))
 = iterator_match_n_gather #t #u vmatch #k p (SZ.v (iterator_length i)) pm pm' i l l' vmatch_gather
+
+```pulse
+ghost
+fn base_iterator_match_n_length
+  (#t: Type0)
+  (#u: Type0)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (n: nat)
+  (pm: perm)
+  (i: base_iterator t)
+  (l: list u)
+requires
+  base_iterator_match_n vmatch p n pm i l
+ensures
+  base_iterator_match_n vmatch p n pm i l **
+  pure (List.Tot.length l == n)
+{
+  match i {
+    Empty -> {
+      unfold (base_iterator_match_n vmatch p n pm (Empty #t) l);
+      fold (base_iterator_match_n vmatch p n pm (Empty #t) l);
+      rewrite each (Empty #t) as i;
+    }
+    Singleton sp sv s -> {
+      if (n = 0) {
+        base_iterator_match_n_singleton_unfold_0 vmatch p n pm sp sv s l ();
+        base_iterator_match_n_singleton_fold_0 vmatch p n pm sp sv s l ();
+        rewrite each (Singleton #t sp sv s) as i;
+      } else {
+        base_iterator_match_n_singleton_unfold_pos vmatch p n pm sp sv s l ();
+        base_iterator_match_n_singleton_fold_pos vmatch p n pm sp sv s l ();
+        rewrite each (Singleton #t sp sv s) as i;
+      }
+    }
+    Slice sp sv s -> {
+      unfold (base_iterator_match_n vmatch p n pm (Slice #t sp sv s) l);
+      with l' l1 . assert (pts_to s #(pm *. sp) l' ** SM.seq_list_match l1 l (vmatch (pm *. sv)));
+      SM.seq_list_match_length (vmatch (pm *. sv)) l1 l;
+      fold (base_iterator_match_n vmatch p n pm (Slice #t sp sv s) l);
+      rewrite each (Slice #t sp sv s) as i;
+    }
+    Serialized sp count pl -> {
+      unfold (base_iterator_match_n vmatch p n pm (Serialized #t sp count pl) l);
+      fold (base_iterator_match_n vmatch p n pm (Serialized #t sp count pl) l);
+      rewrite each (Serialized #t sp count pl) as i;
+    }
+  }
+}
+```
+
+let base_iterator_match_length
+  (#t: Type) (#u: Type)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (pm: perm)
+  (i: base_iterator t)
+  (l: list u)
+: stt_ghost unit emp_inames
+    (base_iterator_match vmatch p pm i l)
+    (fun _ ->
+      base_iterator_match vmatch p pm i l **
+      pure (List.Tot.length l == SZ.v (base_iterator_length i)))
+= base_iterator_match_n_length vmatch p (SZ.v (base_iterator_length i)) pm i l
+
+```pulse
+ghost
+fn rec iterator_match_n_length
+  (#t: Type0)
+  (#u: Type0)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (n: nat)
+  (pm: perm)
+  (i: iterator t)
+  (l: list u)
+requires
+  iterator_match_n vmatch p n pm i l
+ensures
+  iterator_match_n vmatch p n pm i l **
+  pure (List.Tot.length l == n)
+decreases (iterator_depth i)
+{
+  match i {
+    Base bi -> {
+      unfold (iterator_match_n vmatch p n pm (Base bi) l);
+      base_iterator_match_n_length vmatch p n pm bi l;
+      fold (iterator_match_n vmatch p n pm (Base bi) l);
+      rewrite each (Base bi) as i;
+    }
+    Append depth cb ca before ap after -> {
+      unfold (iterator_match_n vmatch p n pm (Append depth cb ca before ap after) l);
+      with i1 n' i2 l2 . assert (
+        base_iterator_match vmatch p pm before i1 **
+        pts_to after #(pm *. ap) i2 **
+        iterator_match_n vmatch p n' pm i2 l2 **
+        pure (
+          SZ.v cb == List.Tot.length i1 /\
+          n' <= SZ.v ca /\
+          List.Tot.length l2 == n' /\
+          n == SZ.v cb + n' /\
+          l == List.Tot.append i1 l2 /\
+          iterator_depth i2 < Ghost.reveal depth
+        )
+      );
+      List.Tot.Properties.append_length i1 l2;
+      fold (iterator_match_n vmatch p n pm (Append depth cb ca before ap after) l);
+      rewrite each (Append depth cb ca before ap after) as i;
+    }
+  }
+}
+```
+
+let iterator_match_length
+  (#t: Type) (#u: Type)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (pm: perm)
+  (i: iterator t)
+  (l: list u)
+: stt_ghost unit emp_inames
+    (iterator_match vmatch p pm i l)
+    (fun _ ->
+      iterator_match vmatch p pm i l **
+      pure (List.Tot.length l == SZ.v (iterator_length i)))
+= iterator_match_n_length vmatch p (SZ.v (iterator_length i)) pm i l
