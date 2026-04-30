@@ -1446,3 +1446,11 @@ let cbor_raw_match :
   (xh: raw_data_item) ->
   Tot slprop
 = vmatch_with_perm_rec (cbor_raw_match_aux parse_raw_data_item)
+
+let cbor_raw_match_eq
+  (pm: perm)
+  (xl: cbor_raw)
+  (xh: raw_data_item)
+: Lemma (cbor_raw_match pm xl xh == cbor_raw_match_aux parse_raw_data_item (vmatch_with_perm_guard xh cbor_raw_match) pm xl xh)
+= assert_norm (cbor_raw_match == vmatch_with_perm_rec (cbor_raw_match_aux parse_raw_data_item));
+  vmatch_with_perm_rec_eq (cbor_raw_match_aux parse_raw_data_item) pm xl xh
