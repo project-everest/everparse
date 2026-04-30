@@ -1060,94 +1060,90 @@ ensures exists* pm_out .
       Base #t res
     }
     Append depth cb ca before ap after -> {
-      // Share to get two copies at pm/2
-      iterator_match_share vmatch vmatch_share p (Append depth cb ca before ap after) #pm #l;
-      rewrite (iterator_match vmatch p (pm /. 2.0R) (Append depth cb ca before ap after) l **
-               iterator_match vmatch p (pm /. 2.0R) (Append depth cb ca before ap after) l)
-           as (iterator_match vmatch p (pm /. 2.0R) (Append depth cb ca before ap after) l **
-               iterator_match vmatch p (pm /. 2.0R) (Append depth cb ca before ap after) l);
-      // Unfold one copy
-      unfold (iterator_match vmatch p (pm /. 2.0R) (Append depth cb ca before ap after) l);
-      with i1 i2 l2 . assert (
-        base_iterator_match vmatch p (pm /. 2.0R) before i1 **
-        pts_to after #((pm /. 2.0R) *. ap) i2 **
-        iterator_match vmatch p (pm /. 2.0R) i2 l2 **
-        pure (
-          SZ.v cb <= List.Tot.length i1 /\
-          SZ.v ca <= List.Tot.length l2 /\
-          Ghost.reveal l == List.Tot.append (fst (List.Tot.splitAt (SZ.v cb) i1)) (fst (List.Tot.splitAt (SZ.v ca) l2)) /\
-          iterator_depth i2 < Ghost.reveal depth
-        )
-      );
-      // Establish length facts and per-side truncation
-      lemma_splitAt_fst_length (SZ.v cb) i1;
-      lemma_splitAt_fst_length (SZ.v ca) l2;
-      List.Tot.append_length (fst (List.Tot.splitAt (SZ.v cb) i1)) (fst (List.Tot.splitAt (SZ.v ca) l2));
-      lemma_splitAt_per_side_truncate (SZ.v cb) (SZ.v ca) (SZ.v len) i1 l2;
-      // Branch on which side gets truncated
       if (SZ.lte len cb) {
-        // cb' = len, ca' = 0sz
-        let cb' = len;
-        let ca' = 0sz;
-        // Fold as Append with cb' and ca'
-        fold (iterator_match vmatch p (pm /. 2.0R) (Append depth cb' ca' before ap after) (fst (List.Tot.splitAt (SZ.v len) l)));
-        rewrite (iterator_match vmatch p (pm /. 2.0R) (Append #t depth cb' ca' before ap after) (fst (List.Tot.splitAt (SZ.v len) (Ghost.reveal l))))
-             as (iterator_match vmatch p (pm /. 2.0R) (Append #t depth cb' ca' before ap after) (fst (List.Tot.splitAt (SZ.v len) l)));
-        // Trade: stash the other copy
-        intro (iterator_match vmatch p (pm /. 2.0R) (Append depth cb' ca' before ap after) (fst (List.Tot.splitAt (SZ.v len) l)) @==>
+        // Truncate within 'before' — return Base (base_iterator_truncate ...)
+        unfold (iterator_match vmatch p pm (Append depth cb ca before ap after) l);
+        with i1 i2 l2 . assert (
+          base_iterator_match vmatch p pm before i1 **
+          pts_to after #(pm *. ap) i2 **
+          iterator_match vmatch p pm i2 l2 **
+          pure (
+            SZ.v cb <= List.Tot.length i1 /\
+            SZ.v ca <= List.Tot.length l2 /\
+            Ghost.reveal l == List.Tot.append (fst (List.Tot.splitAt (SZ.v cb) i1)) (fst (List.Tot.splitAt (SZ.v ca) l2)) /\
+            iterator_depth i2 < Ghost.reveal depth
+          )
+        );
+        // Establish that SZ.v len <= List.Tot.length i1
+        lemma_splitAt_fst_length (SZ.v cb) i1;
+        lemma_splitAt_fst_length (SZ.v ca) l2;
+        List.Tot.append_length (fst (List.Tot.splitAt (SZ.v cb) i1)) (fst (List.Tot.splitAt (SZ.v ca) l2));
+        // Prove fst (splitAt len l) == fst (splitAt len i1)
+        lemma_splitAt_append_left (SZ.v len) (fst (List.Tot.splitAt (SZ.v cb) i1)) (fst (List.Tot.splitAt (SZ.v ca) l2));
+        lemma_splitAt_prefix (SZ.v len) (SZ.v cb) i1;
+        List.Tot.append_l_nil (fst (List.Tot.splitAt (SZ.v len) i1));
+        // Truncate before
+        let res = base_iterator_truncate vmatch vmatch_share vmatch_gather p pm before #i1 len;
+        with pm_out . assert (
+          base_iterator_match vmatch p pm_out res (fst (List.Tot.splitAt (SZ.v len) i1)) **
+          (base_iterator_match vmatch p pm_out res (fst (List.Tot.splitAt (SZ.v len) i1)) @==>
+           base_iterator_match vmatch p pm before i1)
+        );
+        rewrite (base_iterator_match vmatch p pm_out res (fst (List.Tot.splitAt (SZ.v len) i1)))
+             as (base_iterator_match vmatch p pm_out res (fst (List.Tot.splitAt (SZ.v len) l)));
+        fold (iterator_match vmatch p pm_out (Base #t res) (fst (List.Tot.splitAt (SZ.v len) l)));
+        // Build trade: Base res @==> original Append
+        intro (iterator_match vmatch p pm_out (Base #t res) (fst (List.Tot.splitAt (SZ.v len) l)) @==>
                iterator_match vmatch p pm (Append depth cb ca before ap after) l)
-          #(iterator_match vmatch p (pm /. 2.0R) (Append depth cb ca before ap after) l)
+          #(pts_to after #(pm *. ap) i2 **
+            iterator_match vmatch p pm i2 l2 **
+            (base_iterator_match vmatch p pm_out res (fst (List.Tot.splitAt (SZ.v len) i1)) @==>
+             base_iterator_match vmatch p pm before i1) **
+            pure (
+              SZ.v cb <= List.Tot.length i1 /\
+              SZ.v ca <= List.Tot.length l2 /\
+              Ghost.reveal l == List.Tot.append (fst (List.Tot.splitAt (SZ.v cb) i1)) (fst (List.Tot.splitAt (SZ.v ca) l2)) /\
+              iterator_depth i2 < Ghost.reveal depth
+            ))
           fn _ {
-            // Unfold the truncated match
-            unfold (iterator_match vmatch p (pm /. 2.0R) (Append depth cb' ca' before ap after) (fst (List.Tot.splitAt (SZ.v len) l)));
-            with i1' i2' l2' . assert (
-              base_iterator_match vmatch p (pm /. 2.0R) before i1' **
-              pts_to after #((pm /. 2.0R) *. ap) i2' **
-              iterator_match vmatch p (pm /. 2.0R) i2' l2'
-            );
-            rewrite (iterator_match vmatch p (pm /. 2.0R) i2' l2')
-                 as (iterator_match' vmatch p (pm /. 2.0R) i2' l2');
-            rewrite (base_iterator_match vmatch p (pm /. 2.0R) before i1')
-                 as (base_iterator_match' vmatch p (pm /. 2.0R) before i1');
-            unfold (iterator_match vmatch p (pm /. 2.0R) (Append depth cb ca before ap after) l);
-            with i1b i2b l2b . assert (
-              base_iterator_match vmatch p (pm /. 2.0R) before i1b **
-              pts_to after #((pm /. 2.0R) *. ap) i2b **
-              iterator_match vmatch p (pm /. 2.0R) i2b l2b
-            );
-            rewrite (iterator_match' vmatch p (pm /. 2.0R) i2' l2')
-                 as (iterator_match vmatch p (pm /. 2.0R) i2' l2');
-            rewrite (base_iterator_match' vmatch p (pm /. 2.0R) before i1')
-                 as (base_iterator_match vmatch p (pm /. 2.0R) before i1');
-            base_iterator_match_gather vmatch vmatch_gather p before
-              #(pm /. 2.0R) #i1' #(pm /. 2.0R);
-            rewrite (base_iterator_match vmatch p ((pm /. 2.0R) +. (pm /. 2.0R)) before i1')
-                 as (base_iterator_match vmatch p pm before i1');
-            R.gather after #i2';
-            rewrite (pts_to after #((pm /. 2.0R) *. ap +. (pm /. 2.0R) *. ap) i2')
-                 as (pts_to after #(pm *. ap) i2');
-            rewrite (iterator_match vmatch p (pm /. 2.0R) i2b l2b)
-                 as (iterator_match vmatch p (pm /. 2.0R) i2' l2b);
-            let l2p : list u = l2';
-            rewrite (iterator_match vmatch p (pm /. 2.0R) i2' l2')
-                 as (iterator_match vmatch p (pm /. 2.0R) i2' l2p);
-            let l2bp : list u = l2b;
-            rewrite (iterator_match vmatch p (pm /. 2.0R) i2' l2b)
-                 as (iterator_match vmatch p (pm /. 2.0R) i2' l2bp);
-            rewrite (iterator_match vmatch p (pm /. 2.0R) i2' l2bp)
-                 as (iterator_match' vmatch p (pm /. 2.0R) i2' l2bp);
-            iterator_match_gather vmatch vmatch_gather p i2'
-              (pm /. 2.0R) #l2p (pm /. 2.0R) #l2bp;
-            rewrite (iterator_match vmatch p ((pm /. 2.0R) +. (pm /. 2.0R)) i2' l2p)
-                 as (iterator_match vmatch p pm i2' l2');
+            unfold (iterator_match vmatch p pm_out (Base #t res) (fst (List.Tot.splitAt (SZ.v len) l)));
+            rewrite (base_iterator_match vmatch p pm_out res (fst (List.Tot.splitAt (SZ.v len) l)))
+                 as (base_iterator_match vmatch p pm_out res (fst (List.Tot.splitAt (SZ.v len) i1)));
+            Trade.elim
+              (base_iterator_match vmatch p pm_out res (fst (List.Tot.splitAt (SZ.v len) i1)))
+              (base_iterator_match vmatch p pm before i1);
             fold (iterator_match vmatch p pm (Append depth cb ca before ap after) l);
           };
-        rewrite (iterator_match vmatch p (pm /. 2.0R) (Append depth cb' ca' before ap after) (fst (List.Tot.splitAt (SZ.v len) l)) @==>
+        rewrite (iterator_match vmatch p pm_out (Base #t res) (fst (List.Tot.splitAt (SZ.v len) l)) @==>
                  iterator_match vmatch p pm (Append depth cb ca before ap after) l)
-             as (iterator_match vmatch p (pm /. 2.0R) (Append depth cb' ca' before ap after) (fst (List.Tot.splitAt (SZ.v len) l)) @==>
+             as (iterator_match vmatch p pm_out (Base #t res) (fst (List.Tot.splitAt (SZ.v len) l)) @==>
                  iterator_match vmatch p pm i l);
-        Append depth cb' ca' before ap after
+        Base #t res
       } else {
+        // Share to get two copies at pm/2
+        iterator_match_share vmatch vmatch_share p (Append depth cb ca before ap after) #pm #l;
+        rewrite (iterator_match vmatch p (pm /. 2.0R) (Append depth cb ca before ap after) l **
+                 iterator_match vmatch p (pm /. 2.0R) (Append depth cb ca before ap after) l)
+             as (iterator_match vmatch p (pm /. 2.0R) (Append depth cb ca before ap after) l **
+                 iterator_match vmatch p (pm /. 2.0R) (Append depth cb ca before ap after) l);
+        // Unfold one copy
+        unfold (iterator_match vmatch p (pm /. 2.0R) (Append depth cb ca before ap after) l);
+        with i1 i2 l2 . assert (
+          base_iterator_match vmatch p (pm /. 2.0R) before i1 **
+          pts_to after #((pm /. 2.0R) *. ap) i2 **
+          iterator_match vmatch p (pm /. 2.0R) i2 l2 **
+          pure (
+            SZ.v cb <= List.Tot.length i1 /\
+            SZ.v ca <= List.Tot.length l2 /\
+            Ghost.reveal l == List.Tot.append (fst (List.Tot.splitAt (SZ.v cb) i1)) (fst (List.Tot.splitAt (SZ.v ca) l2)) /\
+            iterator_depth i2 < Ghost.reveal depth
+          )
+        );
+        // Establish length facts and per-side truncation
+        lemma_splitAt_fst_length (SZ.v cb) i1;
+        lemma_splitAt_fst_length (SZ.v ca) l2;
+        List.Tot.append_length (fst (List.Tot.splitAt (SZ.v cb) i1)) (fst (List.Tot.splitAt (SZ.v ca) l2));
+        lemma_splitAt_per_side_truncate (SZ.v cb) (SZ.v ca) (SZ.v len) i1 l2;
         // cb' = cb, ca' = len - cb
         let ca' = SZ.sub len cb;
         // Fold as Append with cb and ca'
