@@ -869,3 +869,19 @@ let base_iterator_match_gather
       base_iterator_match vmatch p (pm +. pm') i l **
       pure (l == l'))
 = base_iterator_match_n_gather #t #u vmatch #k p (SZ.v (base_iterator_length i)) pm pm' i l l' vmatch_gather
+
+let base_iterator_match_share
+  (#t: Type) (#u: Type)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (pm: perm)
+  (i: base_iterator t)
+  (l: list u)
+  (vmatch_share: share_t vmatch)
+: stt_ghost unit emp_inames
+    (base_iterator_match vmatch p pm i l)
+    (fun _ ->
+      base_iterator_match vmatch p (pm /. 2.0R) i l **
+      base_iterator_match vmatch p (pm /. 2.0R) i l)
+= base_iterator_match_n_share #t #u vmatch #k p (SZ.v (base_iterator_length i)) pm i l vmatch_share
