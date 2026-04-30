@@ -929,6 +929,7 @@ let print_c_entry
                   (ds:list decl)
     : ML (string & string)
     =  let hoist = Options.get_hoist_locals () in
+   let goto_return = Options.get_goto_for_early_return () in
    let init = Options.get_init_locals () in
    let struct_zero =
      match init with
@@ -972,34 +973,52 @@ let print_c_entry
    let input_stream_binding = Options.get_input_stream_binding () in
    let is_input_stream_buffer = HashingOptions.InputStreamBuffer? input_stream_binding in
    let wrapped_call_buffer name params =
-     let tail = Printf.sprintf
-       "if (EverParseIsError(result))\n\t\
-        {\n\t\t\
-          if (frame.filled)\n\t\t\
-          {\n\t\t\t\
-            %sEverParseError(frame.typename_s, frame.fieldname, frame.reason);\n\t\t\
-          }\n\t\t\
-          return FALSE;\n\t\
-        }\n\t\
-        return TRUE;"
-        modul
+     let tail =
+       if goto_return then
+         Printf.sprintf
+           "if (EverParseIsError(ep_status))\n\t\
+            {\n\t\t\
+              if (frame.filled)\n\t\t\
+              {\n\t\t\t\
+                %sEverParseError(frame.typename_s, frame.fieldname, frame.reason);\n\t\t\
+              }\n\t\t\
+              goto exit;\n\t\
+            }\n\t\
+            result = TRUE;\n\
+            exit:\n\t\
+            return result;"
+           modul
+       else
+         Printf.sprintf
+           "if (EverParseIsError(ep_status))\n\t\
+            {\n\t\t\
+              if (frame.filled)\n\t\t\
+              {\n\t\t\t\
+                %sEverParseError(frame.typename_s, frame.fieldname, frame.reason);\n\t\t\
+              }\n\t\t\
+              return FALSE;\n\t\
+            }\n\t\
+            return TRUE;"
+           modul
      in
      if hoist then
-       Printf.sprintf "EVERPARSE_ERROR_FRAME frame%s;\n\t" struct_zero
+       (if goto_return then "BOOLEAN result = FALSE;\n\t" else "")
+       ^ Printf.sprintf "EVERPARSE_ERROR_FRAME frame%s;\n\t" struct_zero
        ^ (if is_input_stream_buffer then ""
           else Printf.sprintf "EVERPARSE_INPUT_BUFFER input%s;\n\t" struct_zero)
-       ^ Printf.sprintf "uint64_t result%s;\n\t" scalar_zero
+       ^ Printf.sprintf "uint64_t ep_status%s;\n\t" scalar_zero
        ^ "frame.filled = FALSE;\n\t"
        ^ (if is_input_stream_buffer then ""
           else "input = EverParseMakeInputBuffer(base);\n\t")
-       ^ Printf.sprintf "result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);\n\t" name params
+       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);\n\t" name params
        ^ tail
      else
-       Printf.sprintf
+       (if goto_return then "BOOLEAN result = FALSE;\n\t" else "")
+       ^ Printf.sprintf
         "EVERPARSE_ERROR_FRAME frame%s;\n\t\
         frame.filled = FALSE;\n\t\
         %s\
-        uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);\n\t\
+        uint64_t ep_status = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);\n\t\
         %s"
         struct_zero
         (if is_input_stream_buffer then ""
@@ -1010,66 +1029,132 @@ let print_c_entry
    in
    let probe_prefix probe wrappedName : ML string =
     let len = expr_to_c probe.probe_ep_length in
-    Printf.sprintf 
-   "if(providedSize < %s)\n\t\
-    {\n\t\t\
-      // Not enough space for probe\n\t\t\
-      return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;\n\t\
-    }\n\t\
-    if(!%s(\"%s\", %s, probeDest))\n\t\
-    {\n\t\t\
-      // ProbeInit failed\n\t\t\
-      return EVERPARSE_PROBE_FAILURE_INIT;\n\t\
-    }"
-    len
-    (probe_fn_to_c probe.probe_ep_init)
-    wrappedName
-    len
+    if goto_return then
+      Printf.sprintf 
+     "if(providedSize < %s)\n\t\
+      {\n\t\t\
+        // Not enough space for probe\n\t\t\
+        result = EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;\n\t\t\
+        goto exit;\n\t\
+      }\n\t\
+      if(!%s(\"%s\", %s, probeDest))\n\t\
+      {\n\t\t\
+        // ProbeInit failed\n\t\t\
+        result = EVERPARSE_PROBE_FAILURE_INIT;\n\t\t\
+        goto exit;\n\t\
+      }"
+      len
+      (probe_fn_to_c probe.probe_ep_init)
+      wrappedName
+      len
+    else
+      Printf.sprintf 
+     "if(providedSize < %s)\n\t\
+      {\n\t\t\
+        // Not enough space for probe\n\t\t\
+        return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;\n\t\
+      }\n\t\
+      if(!%s(\"%s\", %s, probeDest))\n\t\
+      {\n\t\t\
+        // ProbeInit failed\n\t\t\
+        return EVERPARSE_PROBE_FAILURE_INIT;\n\t\
+      }"
+      len
+      (probe_fn_to_c probe.probe_ep_init)
+      wrappedName
+      len
    in  
    let wrapped_call_probe_buffer wrappedName params (probe: probe_entrypoint) : ML string =
      let len = expr_to_c probe.probe_ep_length in
-     let tail = Printf.sprintf
-       "if (!%s(%s base, %s))\n\t\
-        {\n\t\t\
-          return EVERPARSE_PROBE_FAILURE_VALIDATION;\n\t\
-        }\n\t\
-        return EVERPARSE_SUCCESS;"
-        wrappedName
-        params
-        len
+     let tail =
+       if goto_return then
+         Printf.sprintf
+           "if (!%s(%s base, %s))\n\t\
+            {\n\t\t\
+              result = EVERPARSE_PROBE_FAILURE_VALIDATION;\n\t\t\
+              goto exit;\n\t\
+            }\n\t\
+            result = EVERPARSE_SUCCESS;\n\
+            exit:\n\t\
+            return result;"
+           wrappedName
+           params
+           len
+       else
+         Printf.sprintf
+           "if (!%s(%s base, %s))\n\t\
+            {\n\t\t\
+              return EVERPARSE_PROBE_FAILURE_VALIDATION;\n\t\
+            }\n\t\
+            return EVERPARSE_SUCCESS;"
+           wrappedName
+           params
+           len
      in
      if hoist then
-       Printf.sprintf "uint8_t *base%s;\n\t" scalar_zero
+       (if goto_return then "uint32_t result = EVERPARSE_PROBE_FAILURE_UNIMPLEMENTED;\n\t" else "")
+       ^ Printf.sprintf "uint8_t *base%s;\n\t" scalar_zero
        ^ probe_prefix probe wrappedName ^ "\n\t"
-       ^ Printf.sprintf
-         "if (!%s(%s, 0, 0, probeAddr, probeDest))\n\t\
-          {\n\t\t\
-            // Probe failed\n\t\t\
-            return EVERPARSE_PROBE_FAILURE_PROBE;\n\t\
-          }\n\t\
-          base = EverParseStreamOf(probeDest);\n\t\
-          %s"
-         (probe_fn_to_c probe.probe_ep_fn)
-         len
-         tail
+       ^ (if goto_return then
+            Printf.sprintf
+              "if (!%s(%s, 0, 0, probeAddr, probeDest))\n\t\
+               {\n\t\t\
+                 // Probe failed\n\t\t\
+                 result = EVERPARSE_PROBE_FAILURE_PROBE;\n\t\t\
+                 goto exit;\n\t\
+               }\n\t\
+               base = EverParseStreamOf(probeDest);\n\t\
+               %s"
+              (probe_fn_to_c probe.probe_ep_fn)
+              len
+              tail
+          else
+            Printf.sprintf
+              "if (!%s(%s, 0, 0, probeAddr, probeDest))\n\t\
+               {\n\t\t\
+                 // Probe failed\n\t\t\
+                 return EVERPARSE_PROBE_FAILURE_PROBE;\n\t\
+               }\n\t\
+               base = EverParseStreamOf(probeDest);\n\t\
+               %s"
+              (probe_fn_to_c probe.probe_ep_fn)
+              len
+              tail)
      else
-       Printf.sprintf 
-         "%s\n\t\
-          if (!%s(%s, 0, 0, probeAddr, probeDest))\n\t\
-          {\n\t\t\
-            // Probe failed\n\t\t\
-            return EVERPARSE_PROBE_FAILURE_PROBE;\n\t\
-          }\n\t\
-          uint8_t *base = EverParseStreamOf(probeDest);\n\t\
-          %s"
-         (probe_prefix probe wrappedName)
-         (probe_fn_to_c probe.probe_ep_fn)
-         len
-         tail
+       (if goto_return then "uint32_t result = EVERPARSE_PROBE_FAILURE_UNIMPLEMENTED;\n\t" else "")
+       ^ (if goto_return then
+            Printf.sprintf 
+              "%s\n\t\
+               if (!%s(%s, 0, 0, probeAddr, probeDest))\n\t\
+               {\n\t\t\
+                 // Probe failed\n\t\t\
+                 result = EVERPARSE_PROBE_FAILURE_PROBE;\n\t\t\
+                 goto exit;\n\t\
+               }\n\t\
+               uint8_t *base = EverParseStreamOf(probeDest);\n\t\
+               %s"
+              (probe_prefix probe wrappedName)
+              (probe_fn_to_c probe.probe_ep_fn)
+              len
+              tail
+          else
+            Printf.sprintf 
+              "%s\n\t\
+               if (!%s(%s, 0, 0, probeAddr, probeDest))\n\t\
+               {\n\t\t\
+                 // Probe failed\n\t\t\
+                 return EVERPARSE_PROBE_FAILURE_PROBE;\n\t\
+               }\n\t\
+               uint8_t *base = EverParseStreamOf(probeDest);\n\t\
+               %s"
+              (probe_prefix probe wrappedName)
+              (probe_fn_to_c probe.probe_ep_fn)
+              len
+              tail)
    in
    let wrapped_call_stream name params =
      let tail =
-       "if (EverParseIsError(result))\n\t\
+       "if (EverParseIsError(ep_status))\n\t\
         {\n\t\t\
             EverParseHandleError(_extra, parsedSize, frame.typename_s, frame.fieldname, frame.reason, frame.error_code);\n\t\t\
         }\n\t\
@@ -1079,7 +1164,7 @@ let print_c_entry
      if hoist then
        Printf.sprintf "EVERPARSE_ERROR_FRAME frame%s;\n\t" struct_zero
        ^ Printf.sprintf "EVERPARSE_INPUT_BUFFER input%s;\n\t" struct_zero
-       ^ Printf.sprintf "uint64_t result%s;\n\t" scalar_zero
+       ^ Printf.sprintf "uint64_t ep_status%s;\n\t" scalar_zero
        ^ Printf.sprintf "uint64_t parsedSize%s;\n\t" scalar_zero
        ^ "frame.filled = FALSE;\n\t\
           frame.typename_s = \"UNKNOWN\";\n\t\
@@ -1087,8 +1172,8 @@ let print_c_entry
           frame.reason = \"UNKNOWN\";\n\t\
           frame.error_code = 0uL;\n\t"
        ^ "input = EverParseMakeInputBuffer(base);\n\t"
-       ^ Printf.sprintf "result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input, 0);\n\t" name params
-       ^ "parsedSize = EverParseGetValidatorErrorPos(result);\n\t"
+       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input, 0);\n\t" name params
+       ^ "parsedSize = EverParseGetValidatorErrorPos(ep_status);\n\t"
        ^ tail
      else
        Printf.sprintf
@@ -1100,8 +1185,8 @@ let print_c_entry
                 .error_code = 0uL\n\
               };\n\
         EVERPARSE_INPUT_BUFFER input = EverParseMakeInputBuffer(base);\n\t\
-        uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input, 0);\n\t\
-        uint64_t parsedSize = EverParseGetValidatorErrorPos(result);\n\
+        uint64_t ep_status = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input, 0);\n\t\
+        uint64_t parsedSize = EverParseGetValidatorErrorPos(ep_status);\n\
         %s"
         name
         params

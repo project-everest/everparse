@@ -27,10 +27,10 @@ void DefaultErrorHandler(
 
 BOOLEAN PointArch3264CheckPoint(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t result;
+	uint64_t ep_status;
 	frame.filled = FALSE;
-	result = PointArch3264ValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
-	if (EverParseIsError(result))
+	ep_status = PointArch3264ValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(ep_status))
 	{
 		if (frame.filled)
 		{

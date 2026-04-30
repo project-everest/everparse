@@ -27,10 +27,10 @@ void DefaultErrorHandler(
 
 BOOLEAN SpecializeDep1CheckEntry(BOOLEAN ___Requestor32, uint16_t ___Len, EVERPARSE_COPY_BUFFER_T ___Output, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t result;
+	uint64_t ep_status;
 	frame.filled = FALSE;
-	result = SpecializeDep1ValidateEntry(___Requestor32, ___Len, ___Output,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
-	if (EverParseIsError(result))
+	ep_status = SpecializeDep1ValidateEntry(___Requestor32, ___Len, ___Output,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(ep_status))
 	{
 		if (frame.filled)
 		{
