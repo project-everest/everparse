@@ -601,80 +601,6 @@ ensures
   }
 }
 
-ghost
-fn base_iterator_match_n_gather
-  (#t: Type0)
-  (#u: Type0)
-  (vmatch: perm -> t -> u -> slprop)
-  (#k: parser_kind)
-  (p: parser k u)
-  (n: nat)
-  (pm: perm)
-  (pm': perm)
-  (i: base_iterator t)
-  (l: list u)
-  (l': list u)
-  (vmatch_gather: gather_t vmatch)
-requires
-  base_iterator_match_n vmatch p n pm i l **
-  base_iterator_match_n vmatch p n pm' i l'
-ensures
-  base_iterator_match_n vmatch p n (pm +. pm') i l **
-  pure (l == l')
-{
-  match i {
-    Empty -> {
-      unfold (base_iterator_match_n vmatch p n pm (Empty #t) l);
-      unfold (base_iterator_match_n vmatch p n pm' (Empty #t) l');
-      fold (base_iterator_match_n vmatch p n (pm +. pm') (Empty #t) l);
-      rewrite each (Empty #t) as i;
-    }
-    Singleton sp sv s -> {
-      base_iterator_match_n_singleton_gather vmatch p n pm pm' sp sv s l l' vmatch_gather;
-      rewrite each (Singleton #t sp sv s) as i;
-    }
-    Slice sp sv s -> {
-      unfold (base_iterator_match_n vmatch p n pm (Slice #t sp sv s) l);
-      unfold (base_iterator_match_n vmatch p n pm' (Slice #t sp sv s) l');
-      with la l1 . assert (pts_to s #(pm *. sp) la ** SM.seq_list_match l1 l (vmatch (pm *. sv)));
-      with la' l1' . assert (pts_to s #(pm' *. sp) la' ** SM.seq_list_match l1' l' (vmatch (pm' *. sv)));
-      S.gather s;
-      rewrite (pts_to s #(pm *. sp +. pm' *. sp) la) as (pts_to s #((pm +. pm') *. sp) la);
-      rewrite each la' as la;
-      rewrite each l1' as l1;
-      ghost fn gather_prf
-        (c': t)
-        (v1': u { v1' << l })
-        (v2': u { v2' << l' })
-      requires vmatch (pm *. sv) c' v1' ** vmatch (pm' *. sv) c' v2'
-      ensures vmatch ((pm +. pm') *. sv) c' v1' ** pure ((v1' <: u) == (v2' <: u))
-      {
-        vmatch_gather c' #(pm *. sv) #v1' #(pm' *. sv) #v2';
-        rewrite (vmatch (pm *. sv +. pm' *. sv) c' v1') as (vmatch ((pm +. pm') *. sv) c' v1');
-      };
-      seq_list_match_gather l1 l l' (vmatch (pm *. sv)) (vmatch (pm' *. sv)) (vmatch ((pm +. pm') *. sv)) gather_prf;
-      fold (base_iterator_match_n vmatch p n (pm +. pm') (Slice #t sp sv s) l);
-      rewrite each (Slice #t sp sv s) as i;
-    }
-    Serialized sp count pl -> {
-      unfold (base_iterator_match_n vmatch p n pm (Serialized #t sp count pl) l);
-      unfold (base_iterator_match_n vmatch p n pm' (Serialized #t sp count pl) l');
-      with lv . assert (pts_to_parsed_strong_prefix (parse_nlist n p) pl #(pm *. sp) lv);
-      with lv' . assert (pts_to_parsed_strong_prefix (parse_nlist n p) pl #(pm' *. sp) lv');
-      unfold (pts_to_parsed_strong_prefix (parse_nlist n p) pl #(pm *. sp) lv);
-      unfold (pts_to_parsed_strong_prefix (parse_nlist n p) pl #(pm' *. sp) lv');
-      with v1 . assert (S.pts_to pl #(pm *. sp) v1);
-      with v2 . assert (S.pts_to pl #(pm' *. sp) v2);
-      S.gather pl;
-      rewrite (S.pts_to pl #(pm *. sp +. pm' *. sp) v1) as (S.pts_to pl #((pm +. pm') *. sp) v1);
-      rewrite each v2 as v1;
-      fold (pts_to_parsed_strong_prefix (parse_nlist n p) pl #((pm +. pm') *. sp) lv);
-      fold (base_iterator_match_n vmatch p n (pm +. pm') (Serialized #t sp count pl) l);
-      rewrite each (Serialized #t sp count pl) as i;
-    }
-  }
-}
-
 ```pulse
 ghost
 fn base_iterator_match_n_singleton_gather_bound_pos_inner
@@ -835,3 +761,26 @@ ensures
 
 #pop-options
 #pop-options
+
+let base_iterator_match_n_gather
+  (#t: Type) (#u: Type)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (n: nat)
+  (pm: perm)
+  (pm': perm)
+  (i: base_iterator t)
+  (l: list u)
+  (l': list u)
+  (vmatch_gather: gather_t vmatch)
+: stt_ghost unit emp_inames
+    (base_iterator_match_n vmatch p n pm i l **
+     base_iterator_match_n vmatch p n pm' i l')
+    (fun _ ->
+      base_iterator_match_n vmatch p n (pm +. pm') i l **
+      pure (l == l'))
+= SM.list_cons_precedes l' ([] #(list u));
+  base_iterator_match_n_gather_bound #t #u #(list (list u)) [l'] vmatch #k p n pm pm' i l l'
+    (fun x1 #pm0 #x2 #pm0' x2' -> vmatch_gather x1 #pm0 #x2 #pm0' #x2')
+    ()
