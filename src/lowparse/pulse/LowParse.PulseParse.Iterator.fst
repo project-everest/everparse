@@ -784,3 +784,50 @@ let base_iterator_match_n_gather
   base_iterator_match_n_gather_bound #t #u #(list (list u)) [l'] vmatch #k p n pm pm' i l l'
     (fun x1 #pm0 #x2 #pm0' x2' -> vmatch_gather x1 #pm0 #x2 #pm0' #x2')
     ()
+
+let base_iterator_match_gather_bound
+  (#t: Type) (#u: Type)
+  (#bound_t: Type)
+  (bound: bound_t)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (pm: perm)
+  (pm': perm)
+  (i: base_iterator t)
+  (l: list u)
+  (l': list u)
+  (vmatch_gather: (
+    (x1: t) -> (#pm0: perm) -> (#x2: u) -> (#pm0': perm) -> (x2': u { x2' << bound }) ->
+    stt_ghost unit emp_inames (vmatch pm0 x1 x2 ** vmatch pm0' x1 x2') (fun _ -> vmatch (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
+  ))
+  (_: squash (l' << bound))
+: stt_ghost unit emp_inames
+    (base_iterator_match vmatch p pm i l **
+     base_iterator_match vmatch p pm' i l')
+    (fun _ ->
+      base_iterator_match vmatch p (pm +. pm') i l **
+      pure (l == l'))
+= base_iterator_match_n_gather_bound #t #u #bound_t bound vmatch #k p (SZ.v (base_iterator_length i)) pm pm' i l l' vmatch_gather ()
+
+let base_iterator_match_gather
+  (#t: Type) (#u: Type)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (pm: perm)
+  (pm': perm)
+  (i: base_iterator t)
+  (l: list u)
+  (l': list u)
+  (vmatch_gather: gather_t vmatch)
+: stt_ghost unit emp_inames
+    (base_iterator_match vmatch p pm i l **
+     base_iterator_match vmatch p pm' i l')
+    (fun _ ->
+      base_iterator_match vmatch p (pm +. pm') i l **
+      pure (l == l'))
+= SM.list_cons_precedes l' ([] #(list u));
+  base_iterator_match_gather_bound #t #u #(list (list u)) [l'] vmatch #k p pm pm' i l l'
+    (fun x1 #pm0 #x2 #pm0' x2' -> vmatch_gather x1 #pm0 #x2 #pm0' #x2')
+    ()
