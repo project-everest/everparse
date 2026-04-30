@@ -41,3 +41,22 @@ typedef struct _primaryAndCopy(EVERPARSE_COPY_BUFFER_T dest) {
   UINT64 bound;
   secondary(bound) *payload probe ProbeAndCopy (length = 4, destination = dest);
 } primaryAndCopy;
+
+entrypoint(ValidateMyStruct)
+typedef struct _namedPlain {
+  UINT16 x;
+  UINT16 y { y >= x };
+} namedPlain;
+
+entrypoint(ProbeMyStruct) probe ProbeInPlace (length = PROBE_LENGTH)
+typedef struct _namedProbe {
+  UINT16 x;
+  UINT16 y { y >= x };
+} namedProbe;
+
+entrypoint(CheckBoth)
+entrypoint(ProbeBoth) probe ProbeInPlace (length = 42)
+typedef struct _namedBoth {
+  UINT16 x;
+  UINT16 y { y >= x };
+} namedBoth;

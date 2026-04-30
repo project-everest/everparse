@@ -225,10 +225,10 @@ let check_probe_size_range (e: expr) : ML unit =
 
 let simplify_attribute (env: T.env_t) (attr: attribute) : ML attribute =
   match attr with
-  | Entrypoint (Some p) ->
+  | Entrypoint ep_name (Some p) ->
     let e' = simplify_expr env p.probe_ep_length in
     check_probe_size_range e';
-    Entrypoint (Some ({
+    Entrypoint ep_name (Some ({
       p with
         probe_ep_length = e';
     }))
