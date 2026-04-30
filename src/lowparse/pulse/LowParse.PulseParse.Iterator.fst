@@ -675,5 +675,163 @@ ensures
   }
 }
 
+```pulse
+ghost
+fn base_iterator_match_n_singleton_gather_bound_pos_inner
+  (#t: Type0) (#u: Type0)
+  (#bound_t: Type0)
+  (bound: bound_t)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (n: nat)
+  (pm pm': perm)
+  (sp: perm) (sv: perm) (s: ref t)
+  (l: list u)
+  (l': list u)
+  (vmatch_gather: (
+    (x1: t) -> (pm0: perm) -> (x2: u) -> (pm0': perm) -> (x2': u { x2' << bound }) ->
+    stt_ghost unit emp_inames (vmatch pm0 x1 x2 ** vmatch pm0' x1 x2') (fun _ -> vmatch (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
+  ))
+  (_: squash (n <> 0))
+  (_: squash (l' << bound))
+requires base_iterator_match_n vmatch p n pm (Singleton sp sv s) l **
+         base_iterator_match_n vmatch p n pm' (Singleton sp sv s) l'
+ensures base_iterator_match_n vmatch p n (pm +. pm') (Singleton sp sv s) l ** pure (l == l')
+{
+  base_iterator_match_n_singleton_unfold_pos vmatch p n pm sp sv s l ();
+  base_iterator_match_n_singleton_unfold_pos vmatch p n pm' sp sv s l' ();
+  with x1 y1. assert (pts_to s #(pm *. sp) x1 ** vmatch (pm *. sv) x1 y1 ** pure (l == [y1] /\ n == 1));
+  with x2 y2. assert (pts_to s #(pm' *. sp) x2 ** vmatch (pm' *. sv) x2 y2 ** pure (l' == [y2] /\ n == 1));
+  R.gather s;
+  rewrite (R.pts_to s #(pm *. sp +. pm' *. sp) x1) as (R.pts_to s #((pm +. pm') *. sp) x1);
+  rewrite each x2 as x1;
+  vmatch_gather x1 (pm *. sv) y1 (pm' *. sv) y2;
+  rewrite (vmatch (pm *. sv +. pm' *. sv) x1 y1) as (vmatch ((pm +. pm') *. sv) x1 y1);
+  base_iterator_match_n_singleton_fold_pos vmatch p n (pm +. pm') sp sv s l ()
+}
+```
+
+let base_iterator_match_n_singleton_gather_bound
+  (#t: Type) (#u: Type)
+  (#bound_t: Type)
+  (bound: bound_t)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (n: nat)
+  (pm pm': perm)
+  (sp: perm) (sv: perm) (s: ref t)
+  (l: list u)
+  (l': list u)
+  (vmatch_gather: (
+    (x1: t) -> (#pm0: perm) -> (#x2: u) -> (#pm0': perm) -> (x2': u { x2' << bound }) ->
+    stt_ghost unit emp_inames (vmatch pm0 x1 x2 ** vmatch pm0' x1 x2') (fun _ -> vmatch (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
+  ))
+  (_: squash (l' << bound))
+: stt_ghost unit emp_inames
+    (base_iterator_match_n vmatch p n pm (Singleton sp sv s) l **
+     base_iterator_match_n vmatch p n pm' (Singleton sp sv s) l')
+    (fun _ -> base_iterator_match_n vmatch p n (pm +. pm') (Singleton sp sv s) l **
+              pure (l == l'))
+= if n = 0
+  then begin
+    base_iterator_match_n_singleton_0 vmatch p pm sp sv s l;
+    base_iterator_match_n_singleton_0 vmatch p pm' sp sv s l';
+    base_iterator_match_n_singleton_0 vmatch p (pm +. pm') sp sv s l;
+    Pulse.Lib.Core.sub_ghost
+      (base_iterator_match_n vmatch p n pm (Singleton sp sv s) l **
+       base_iterator_match_n vmatch p n pm' (Singleton sp sv s) l')
+      (fun _ -> base_iterator_match_n vmatch p n (pm +. pm') (Singleton sp sv s) l **
+                pure (l == l'))
+      (Pulse.Lib.Core.slprop_equiv_ext' _ _ ())
+      (Pulse.Lib.Core.intro_slprop_post_equiv _ _ (fun _ -> Pulse.Lib.Core.slprop_equiv_ext' _ _ ()))
+      (replace_second_pure (Nil? l) (Nil? l') (l == l') ())
+  end
+  else
+    base_iterator_match_n_singleton_gather_bound_pos_inner #t #u #bound_t bound vmatch #k p n pm pm' sp sv s l l' (fun x1 pm0 x2 pm0' x2' -> vmatch_gather x1 #pm0 #x2 #pm0' x2') () ()
+
+```pulse
+ghost
+fn base_iterator_match_n_gather_bound
+  (#t: Type0)
+  (#u: Type0)
+  (#bound_t: Type0)
+  (bound: bound_t)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (n: nat)
+  (pm: perm)
+  (pm': perm)
+  (i: base_iterator t)
+  (l: list u)
+  (l': list u)
+  (vmatch_gather: (
+    (x1: t) -> (#pm0: perm) -> (#x2: u) -> (#pm0': perm) -> (x2': u { x2' << bound }) ->
+    stt_ghost unit emp_inames (vmatch pm0 x1 x2 ** vmatch pm0' x1 x2') (fun _ -> vmatch (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
+  ))
+  (_: squash (l' << bound))
+requires
+  base_iterator_match_n vmatch p n pm i l **
+  base_iterator_match_n vmatch p n pm' i l'
+ensures
+  base_iterator_match_n vmatch p n (pm +. pm') i l **
+  pure (l == l')
+{
+  match i {
+    Empty -> {
+      unfold (base_iterator_match_n vmatch p n pm (Empty #t) l);
+      unfold (base_iterator_match_n vmatch p n pm' (Empty #t) l');
+      fold (base_iterator_match_n vmatch p n (pm +. pm') (Empty #t) l);
+      rewrite each (Empty #t) as i;
+    }
+    Singleton sp sv s -> {
+      base_iterator_match_n_singleton_gather_bound #t #u #bound_t bound vmatch p n pm pm' sp sv s l l' vmatch_gather ();
+      rewrite each (Singleton #t sp sv s) as i;
+    }
+    Slice sp sv s -> {
+      unfold (base_iterator_match_n vmatch p n pm (Slice #t sp sv s) l);
+      unfold (base_iterator_match_n vmatch p n pm' (Slice #t sp sv s) l');
+      with la l1 . assert (pts_to s #(pm *. sp) la ** SM.seq_list_match l1 l (vmatch (pm *. sv)));
+      with la' l1' . assert (pts_to s #(pm' *. sp) la' ** SM.seq_list_match l1' l' (vmatch (pm' *. sv)));
+      S.gather s;
+      rewrite (pts_to s #(pm *. sp +. pm' *. sp) la) as (pts_to s #((pm +. pm') *. sp) la);
+      rewrite each la' as la;
+      rewrite each l1' as l1;
+      ghost fn gather_prf
+        (c': t)
+        (v1': u { v1' << l })
+        (v2': u { v2' << l' })
+      requires vmatch (pm *. sv) c' v1' ** vmatch (pm' *. sv) c' v2'
+      ensures vmatch ((pm +. pm') *. sv) c' v1' ** pure ((v1' <: u) == (v2' <: u))
+      {
+        vmatch_gather c' #(pm *. sv) #v1' #(pm' *. sv) v2';
+        rewrite (vmatch (pm *. sv +. pm' *. sv) c' v1') as (vmatch ((pm +. pm') *. sv) c' v1');
+      };
+      seq_list_match_gather l1 l l' (vmatch (pm *. sv)) (vmatch (pm' *. sv)) (vmatch ((pm +. pm') *. sv)) gather_prf;
+      fold (base_iterator_match_n vmatch p n (pm +. pm') (Slice #t sp sv s) l);
+      rewrite each (Slice #t sp sv s) as i;
+    }
+    Serialized sp count pl -> {
+      unfold (base_iterator_match_n vmatch p n pm (Serialized #t sp count pl) l);
+      unfold (base_iterator_match_n vmatch p n pm' (Serialized #t sp count pl) l');
+      with lv . assert (pts_to_parsed_strong_prefix (parse_nlist n p) pl #(pm *. sp) lv);
+      with lv' . assert (pts_to_parsed_strong_prefix (parse_nlist n p) pl #(pm' *. sp) lv');
+      unfold (pts_to_parsed_strong_prefix (parse_nlist n p) pl #(pm *. sp) lv);
+      unfold (pts_to_parsed_strong_prefix (parse_nlist n p) pl #(pm' *. sp) lv');
+      with v1 . assert (S.pts_to pl #(pm *. sp) v1);
+      with v2 . assert (S.pts_to pl #(pm' *. sp) v2);
+      S.gather pl;
+      rewrite (S.pts_to pl #(pm *. sp +. pm' *. sp) v1) as (S.pts_to pl #((pm +. pm') *. sp) v1);
+      rewrite each v2 as v1;
+      fold (pts_to_parsed_strong_prefix (parse_nlist n p) pl #((pm +. pm') *. sp) lv);
+      fold (base_iterator_match_n vmatch p n (pm +. pm') (Serialized #t sp count pl) l);
+      rewrite each (Serialized #t sp count pl) as i;
+    }
+  }
+}
+```
+
 #pop-options
 #pop-options
