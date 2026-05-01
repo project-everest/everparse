@@ -1326,6 +1326,266 @@ let splitAt_full (#a: Type) (l: list a)
   (ensures fst (List.Tot.splitAt (List.Tot.length l) l) == l)
 = FStar.List.Pure.Properties.splitAt_length_total l
 
+#push-options "--z3rlimit 80"
+
+```pulse
+ghost
+fn base_iterator_match_n_truncate
+  (#t: Type0) (#u: Type0)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (n: nat) (n': nat)
+  (pm: perm)
+  (i: base_iterator t)
+  (l: list u)
+  (vmatch_share: share_t vmatch)
+  (vmatch_gather: gather_t vmatch)
+requires
+  base_iterator_match_n vmatch p n pm i l **
+  pure (n' <= n)
+ensures
+  base_iterator_match_n vmatch p n' (pm /. 2.0R) i (fst (List.Tot.splitAt n' l)) **
+  trade (base_iterator_match_n vmatch p n' (pm /. 2.0R) i (fst (List.Tot.splitAt n' l)))
+        (base_iterator_match_n vmatch p n pm i l)
+{
+  base_iterator_match_n_share vmatch p n pm i l vmatch_share;
+  // Now have: base_iterator_match_n vmatch p n (pm /. 2.0R) i l ** base_iterator_match_n vmatch p n (pm /. 2.0R) i l
+  match i {
+    Empty -> {
+      // n = 0, n' = 0, l = [], l' = []
+      unfold (base_iterator_match_n vmatch p n (pm /. 2.0R) (Empty #t) l);
+      fold (base_iterator_match_n vmatch p n' (pm /. 2.0R) (Empty #t) (fst (List.Tot.splitAt n' l)));
+      intro (base_iterator_match_n vmatch p n' (pm /. 2.0R) (Empty #t) (fst (List.Tot.splitAt n' l)) @==>
+             base_iterator_match_n vmatch p n pm (Empty #t) l)
+        #(base_iterator_match_n vmatch p n (pm /. 2.0R) (Empty #t) l)
+        fn _ {
+          unfold (base_iterator_match_n vmatch p n' (pm /. 2.0R) (Empty #t) (fst (List.Tot.splitAt n' l)));
+          drop_ (pure (Nil? (fst (List.Tot.splitAt n' l)) /\ n' == 0));
+          fold (base_iterator_match_n vmatch p n (pm /. 2.0R) (Empty #t) l);
+          base_iterator_match_n_gather vmatch p n (pm /. 2.0R) (pm /. 2.0R) (Empty #t) l l vmatch_gather;
+          drop_ (pure (l == l));
+          rewrite (base_iterator_match_n vmatch p n (pm /. 2.0R +. pm /. 2.0R) (Empty #t) l)
+            as (base_iterator_match_n vmatch p n pm (Empty #t) l);
+        };
+      rewrite each (Empty #t) as i;
+    }
+    Singleton sp sv s -> {
+      if (n' = n) {
+        // n' = n, so l' = l (splitAt n l == (l, []) when n >= length l)
+        // Return one half directly
+        base_iterator_match_n_length vmatch p n (pm /. 2.0R) (Singleton #t sp sv s) l;
+        FStar.List.Pure.Properties.splitAt_length_total l;
+        rewrite (base_iterator_match_n vmatch p n (pm /. 2.0R) (Singleton #t sp sv s) l)
+          as (base_iterator_match_n vmatch p n' (pm /. 2.0R) (Singleton #t sp sv s) (fst (List.Tot.splitAt n' l)));
+        intro (base_iterator_match_n vmatch p n' (pm /. 2.0R) (Singleton #t sp sv s) (fst (List.Tot.splitAt n' l)) @==>
+               base_iterator_match_n vmatch p n pm (Singleton #t sp sv s) l)
+          #(base_iterator_match_n vmatch p n (pm /. 2.0R) (Singleton #t sp sv s) l **
+            pure (List.Tot.length l == n))
+          fn _ {
+            FStar.List.Pure.Properties.splitAt_length_total l;
+            rewrite (base_iterator_match_n vmatch p n' (pm /. 2.0R) (Singleton #t sp sv s) (fst (List.Tot.splitAt n' l)))
+              as (base_iterator_match_n vmatch p n (pm /. 2.0R) (Singleton #t sp sv s) l);
+            drop_ (pure (List.Tot.length l == n));
+            base_iterator_match_n_gather vmatch p n (pm /. 2.0R) (pm /. 2.0R) (Singleton #t sp sv s) l l vmatch_gather;
+            drop_ (pure (l == l));
+            rewrite (base_iterator_match_n vmatch p n (pm /. 2.0R +. pm /. 2.0R) (Singleton #t sp sv s) l)
+              as (base_iterator_match_n vmatch p n pm (Singleton #t sp sv s) l);
+          };
+        rewrite each (Singleton #t sp sv s) as i;
+      } else {
+        // n' < n for a Singleton. Since n' <= n and n' != n: n > 0
+        // Unfold one copy to learn n == 1
+        base_iterator_match_n_singleton_unfold_pos vmatch p n (pm /. 2.0R) sp sv s l ();
+        with x y. assert (pts_to s #((pm /. 2.0R) *. sp) x ** vmatch ((pm /. 2.0R) *. sv) x y **
+                          pure (l == [y] /\ n == 1));
+        dup_pure (l == [y] /\ n == 1);
+        // Fold back one copy to restore the match_n
+        base_iterator_match_n_singleton_fold_pos vmatch p n (pm /. 2.0R) sp sv s l ();
+        // From pure (l == [y] /\ n == 1) + n' <= n + n' != n => n' == 0
+        // fst(splitAt 0 l) == [] (splitAt_0 SMTPat). Nil? [] is true.
+        replace_second_pure (n' <= n) (l == [y] /\ n == 1) (Nil? (fst (List.Tot.splitAt n' l))) ();
+        drop_ (pure (n' <= n));
+        // Use fold_0 helper which avoids if-reduction and takes squash (n' == 0)
+        base_iterator_match_n_singleton_fold_0 vmatch p n' (pm /. 2.0R) sp sv s (fst (List.Tot.splitAt n' l)) ();
+        intro (base_iterator_match_n vmatch p n' (pm /. 2.0R) (Singleton #t sp sv s) (fst (List.Tot.splitAt n' l)) @==>
+               base_iterator_match_n vmatch p n pm (Singleton #t sp sv s) l)
+          #(base_iterator_match_n vmatch p n (pm /. 2.0R) (Singleton #t sp sv s) l **
+            base_iterator_match_n vmatch p n (pm /. 2.0R) (Singleton #t sp sv s) l)
+          fn _ {
+            drop_ (base_iterator_match_n vmatch p n' (pm /. 2.0R) (Singleton #t sp sv s) (fst (List.Tot.splitAt n' l)));
+            base_iterator_match_n_gather vmatch p n (pm /. 2.0R) (pm /. 2.0R) (Singleton #t sp sv s) l l vmatch_gather;
+            drop_ (pure (l == l));
+            rewrite (base_iterator_match_n vmatch p n (pm /. 2.0R +. pm /. 2.0R) (Singleton #t sp sv s) l)
+              as (base_iterator_match_n vmatch p n pm (Singleton #t sp sv s) l);
+          };
+        rewrite each (Singleton #t sp sv s) as i;
+      }
+    }
+    Slice sp sv s -> {
+      // Gather the two shared copies back to full perm
+      base_iterator_match_n_gather vmatch p n (pm /. 2.0R) (pm /. 2.0R) (Slice #t sp sv s) l l vmatch_gather;
+      drop_ (pure (l == l));
+      rewrite (base_iterator_match_n vmatch p n (pm /. 2.0R +. pm /. 2.0R) (Slice #t sp sv s) l)
+        as (base_iterator_match_n vmatch p n pm (Slice #t sp sv s) l);
+      // Now unfold at full perm
+      unfold (base_iterator_match_n vmatch p n pm (Slice #t sp sv s) l);
+      with sl sl1 . assert (pts_to s #(pm *. sp) sl ** SM.seq_list_match sl1 l (vmatch (pm *. sv)));
+      // Share pts_to
+      S.share s;
+      rewrite (pts_to s #((pm *. sp) /. 2.0R) sl) as (pts_to s #((pm /. 2.0R) *. sp) sl);
+      rewrite (pts_to s #((pm *. sp) /. 2.0R) sl) as (pts_to s #((pm /. 2.0R) *. sp) sl);
+      // Share seq_list_match
+      ghost fn share_prf
+        (c': t)
+        (v': u { v' << l })
+      requires vmatch (pm *. sv) c' v'
+      ensures vmatch ((pm /. 2.0R) *. sv) c' v' ** vmatch ((pm /. 2.0R) *. sv) c' v'
+      {
+        vmatch_share c' #(pm *. sv) #v';
+        rewrite (vmatch ((pm *. sv) /. 2.0R) c' v') as (vmatch ((pm /. 2.0R) *. sv) c' v');
+        rewrite (vmatch ((pm *. sv) /. 2.0R) c' v') as (vmatch ((pm /. 2.0R) *. sv) c' v');
+      };
+      seq_list_match_share sl1 l (vmatch (pm *. sv)) (vmatch ((pm /. 2.0R) *. sv)) share_prf;
+      // Now have two copies of seq_list_match sl1 l (vmatch ((pm/2)*sv))
+      // Split one copy into prefix + suffix
+      SM.seq_list_match_length (vmatch ((pm /. 2.0R) *. sv)) sl1 l;
+      drop_ (pure (Seq.length (reveal sl1) == List.Tot.length l));
+      let prefix_seq : Ghost.erased (Seq.seq t) = Seq.slice sl 0 n';
+      let suffix_seq : Ghost.erased (Seq.seq t) = Seq.slice sl n' n;
+      let prefix_l : Ghost.erased (list u) = fst (List.Tot.splitAt n' l);
+      let suffix_l : Ghost.erased (list u) = snd (List.Tot.splitAt n' l);
+      FStar.List.Pure.Properties.splitAt_length n' l;
+      FStar.List.Pure.Properties.lemma_splitAt_append n' l;
+      Seq.lemma_eq_intro (reveal sl1) (Seq.append (reveal prefix_seq) (reveal suffix_seq));
+      rewrite (SM.seq_list_match sl1 l (vmatch ((pm /. 2.0R) *. sv)))
+        as (SM.seq_list_match (Seq.append (reveal prefix_seq) (reveal suffix_seq)) (List.Tot.append (reveal prefix_l) (reveal suffix_l)) (vmatch ((pm /. 2.0R) *. sv)));
+      assert (pure (Seq.length (reveal prefix_seq) == List.Tot.length (reveal prefix_l) \/
+                   Seq.length (reveal suffix_seq) == List.Tot.length (reveal suffix_l)));
+      SMU.seq_list_match_append_elim_trade (vmatch ((pm /. 2.0R) *. sv)) (reveal prefix_seq) (reveal prefix_l) (reveal suffix_seq) (reveal suffix_l);
+      drop_ (pure (Seq.length (reveal prefix_seq) == List.Tot.length (reveal prefix_l) /\
+                   Seq.length (reveal suffix_seq) == List.Tot.length (reveal suffix_l)));
+      // Rewrite prefix to match fold expectations
+      rewrite (SM.seq_list_match (reveal prefix_seq) (reveal prefix_l) (vmatch ((pm /. 2.0R) *. sv)))
+        as (SM.seq_list_match (Seq.slice (reveal sl) 0 n') (fst (List.Tot.splitAt n' l)) (vmatch ((pm /. 2.0R) *. sv)));
+      // Assert the outer pure facts for capture in the trade
+      assert (pure (n <= Seq.length (reveal sl) /\ reveal sl1 == Seq.slice (reveal sl) 0 n));
+      // Fold the result
+      fold (base_iterator_match_n vmatch p n' (pm /. 2.0R) (Slice #t sp sv s) (fst (List.Tot.splitAt n' l)));
+      // Build trade. Captured: pts_to half-2 (explicit sl), copy B of seq_list_match, suffix, append-trade, pure facts
+      intro (base_iterator_match_n vmatch p n' (pm /. 2.0R) (Slice #t sp sv s) (fst (List.Tot.splitAt n' l)) @==>
+             base_iterator_match_n vmatch p n pm (Slice #t sp sv s) l)
+        #(pts_to s #((pm /. 2.0R) *. sp) sl **
+          SM.seq_list_match sl1 l (vmatch ((pm /. 2.0R) *. sv)) **
+          SM.seq_list_match (reveal suffix_seq) (reveal suffix_l) (vmatch ((pm /. 2.0R) *. sv)) **
+          trade (SM.seq_list_match (reveal prefix_seq) (reveal prefix_l) (vmatch ((pm /. 2.0R) *. sv)) **
+                 SM.seq_list_match (reveal suffix_seq) (reveal suffix_l) (vmatch ((pm /. 2.0R) *. sv)))
+                (SM.seq_list_match (Seq.append (reveal prefix_seq) (reveal suffix_seq)) (List.Tot.append (reveal prefix_l) (reveal suffix_l)) (vmatch ((pm /. 2.0R) *. sv))) **
+          pure (n <= Seq.length (reveal sl) /\ reveal sl1 == Seq.slice (reveal sl) 0 n))
+        fn _ {
+          // Unfold trigger
+          unfold (base_iterator_match_n vmatch p n' (pm /. 2.0R) (Slice #t sp sv s) (fst (List.Tot.splitAt n' l)));
+          with sl1_2 . assert (SM.seq_list_match sl1_2 (fst (List.Tot.splitAt n' l)) (vmatch ((pm /. 2.0R) *. sv)));
+          // Gather the two pts_to s (trigger + captured) to prove sl2 == sl
+          S.gather s;
+          with sl2 . assert (pts_to s #((pm /. 2.0R) *. sp +. (pm /. 2.0R) *. sp) sl2);
+          rewrite (pts_to s #((pm /. 2.0R) *. sp +. (pm /. 2.0R) *. sp) sl2)
+            as (pts_to s #(pm *. sp) sl2);
+          // Now SMT knows sl2 == sl from the pure (sl2 == sl) in context
+          // Rewrite trigger prefix to match the captured trade
+          rewrite (SM.seq_list_match sl1_2 (fst (List.Tot.splitAt n' l)) (vmatch ((pm /. 2.0R) *. sv)))
+            as (SM.seq_list_match (reveal prefix_seq) (reveal prefix_l) (vmatch ((pm /. 2.0R) *. sv)));
+          drop_ (pure (reveal sl2 == reveal sl));
+          // Elim the append trade to reassemble
+          elim_trade
+            (SM.seq_list_match (reveal prefix_seq) (reveal prefix_l) (vmatch ((pm /. 2.0R) *. sv)) **
+             SM.seq_list_match (reveal suffix_seq) (reveal suffix_l) (vmatch ((pm /. 2.0R) *. sv)))
+            (SM.seq_list_match (Seq.append (reveal prefix_seq) (reveal suffix_seq)) (List.Tot.append (reveal prefix_l) (reveal suffix_l)) (vmatch ((pm /. 2.0R) *. sv)));
+          // Rewrite the reassembled seq_list_match back to sl1 / l form
+          Seq.lemma_eq_intro (Seq.append (reveal prefix_seq) (reveal suffix_seq)) (reveal sl1);
+          FStar.List.Pure.Properties.lemma_splitAt_append n' l;
+          rewrite (SM.seq_list_match (Seq.append (reveal prefix_seq) (reveal suffix_seq)) (List.Tot.append (reveal prefix_l) (reveal suffix_l)) (vmatch ((pm /. 2.0R) *. sv)))
+            as (SM.seq_list_match sl1 l (vmatch ((pm /. 2.0R) *. sv)));
+          // Gather the two seq_list_match copies to get full perm
+          ghost fn gather_prf
+            (c': t)
+            (v1': u { v1' << l })
+            (v2': u { v2' << l /\ List.Tot.memP v2' l })
+          requires vmatch ((pm /. 2.0R) *. sv) c' v1' ** vmatch ((pm /. 2.0R) *. sv) c' v2'
+          ensures vmatch (pm *. sv) c' v1' ** pure ((v1' <: u) == (v2' <: u))
+          {
+            vmatch_gather c' #((pm /. 2.0R) *. sv) #v1' #((pm /. 2.0R) *. sv) #v2';
+            rewrite (vmatch ((pm /. 2.0R) *. sv +. (pm /. 2.0R) *. sv) c' v1') as (vmatch (pm *. sv) c' v1');
+          };
+          seq_list_match_gather_memP sl1 l l (vmatch ((pm /. 2.0R) *. sv)) (vmatch ((pm /. 2.0R) *. sv)) (vmatch (pm *. sv)) gather_prf;
+          drop_ (pure (l == l));
+          drop_ (pure (n <= Seq.length (reveal sl) /\ reveal sl1 == Seq.slice (reveal sl) 0 n));
+          // Fold at full perm
+          rewrite (pts_to s #(pm *. sp) sl2) as (pts_to s #(pm *. sp) sl);
+          fold (base_iterator_match_n vmatch p n pm (Slice #t sp sv s) l);
+        };
+      rewrite each (Slice #t sp sv s) as i;
+    }
+    Serialized sp count pl -> {
+      // Gather the two shared copies back to full perm
+      base_iterator_match_n_gather vmatch p n (pm /. 2.0R) (pm /. 2.0R) (Serialized #t sp count pl) l l vmatch_gather;
+      drop_ (pure (l == l));
+      rewrite (base_iterator_match_n vmatch p n (pm /. 2.0R +. pm /. 2.0R) (Serialized #t sp count pl) l)
+        as (base_iterator_match_n vmatch p n pm (Serialized #t sp count pl) l);
+      // Now unfold at full perm
+      unfold (base_iterator_match_n vmatch p n pm (Serialized #t sp count pl) l);
+      with lv. assert (pts_to_parsed_strong_prefix (parse_nlist n p) pl #(pm *. sp) lv);
+      unfold (pts_to_parsed_strong_prefix (parse_nlist n p) pl #(pm *. sp) lv);
+      with v'. assert (S.pts_to pl #(pm *. sp) v');
+      // We have pts_to_parsed_strong_prefix_prop (parse_nlist n p) v' lv, lv == l, n <= SZ.v count
+      pts_to_parsed_strong_prefix_nlist_truncate p n n' (reveal v') l;
+      // Now we know pts_to_parsed_strong_prefix_prop (parse_nlist n' p) v' (fst (splitAt n' l))
+      S.share pl;
+      with v'1. assert (S.pts_to pl #((pm *. sp) /. 2.0R) v'1);
+      rewrite (S.pts_to pl #((pm *. sp) /. 2.0R) v'1) as (S.pts_to pl #((pm /. 2.0R) *. sp) v'1);
+      rewrite (S.pts_to pl #((pm *. sp) /. 2.0R) v') as (S.pts_to pl #((pm /. 2.0R) *. sp) v');
+      fold (pts_to_parsed_strong_prefix (parse_nlist n' p) pl #((pm /. 2.0R) *. sp) (fst (List.Tot.splitAt n' l)));
+      fold (base_iterator_match_n vmatch p n' (pm /. 2.0R) (Serialized #t sp count pl) (fst (List.Tot.splitAt n' l)));
+      intro (base_iterator_match_n vmatch p n' (pm /. 2.0R) (Serialized #t sp count pl) (fst (List.Tot.splitAt n' l)) @==>
+             base_iterator_match_n vmatch p n pm (Serialized #t sp count pl) l)
+        #(S.pts_to pl #((pm /. 2.0R) *. sp) v' **
+          pure (pts_to_parsed_strong_prefix_prop (parse_nlist n p) (reveal v') l /\
+                n <= SZ.v count))
+        fn _ {
+          unfold (base_iterator_match_n vmatch p n' (pm /. 2.0R) (Serialized #t sp count pl) (fst (List.Tot.splitAt n' l)));
+          with lv2. assert (pts_to_parsed_strong_prefix (parse_nlist n' p) pl #((pm /. 2.0R) *. sp) lv2);
+          unfold (pts_to_parsed_strong_prefix (parse_nlist n' p) pl #((pm /. 2.0R) *. sp) lv2);
+          // Now we have two S.pts_to pl at (pm/2)*sp — gather them directly
+          S.gather pl;
+          with v'2. assert (S.pts_to pl #((pm /. 2.0R) *. sp +. (pm /. 2.0R) *. sp) v'2);
+          rewrite (S.pts_to pl #((pm /. 2.0R) *. sp +. (pm /. 2.0R) *. sp) v'2)
+            as (S.pts_to pl #(pm *. sp) v'2);
+          rewrite (S.pts_to pl #(pm *. sp) v'2) as (S.pts_to pl #(pm *. sp) v');
+          fold (pts_to_parsed_strong_prefix (parse_nlist n p) pl #(pm *. sp) l);
+          fold (base_iterator_match_n vmatch p n pm (Serialized #t sp count pl) l);
+        };
+      rewrite each (Serialized #t sp count pl) as i;
+    }
+  }
+}
+```
+
+#pop-options
+
+#restart-solver
+
+```pulse
+ghost
+fn pts_to_perm_rewrite
+  (#elt: Type0) (s: S.slice elt) (pm sp: perm) (v: Ghost.erased (Seq.seq elt))
+requires
+  S.pts_to s #((pm *. sp) /. 2.0R) v
+ensures
+  S.pts_to s #(pm *. (sp /. 2.0R)) v
+{
+  rewrite (S.pts_to s #((pm *. sp) /. 2.0R) v) as (S.pts_to s #(pm *. (sp /. 2.0R)) v);
+}
+```
+
 ```pulse
 fn base_iterator_truncate_n
   (#t: Type0) (#u: Type0)
@@ -1536,9 +1796,8 @@ ensures
       
       // Share the slice: one half for the returned iterator, one for the trade
       S.share pl;
-      // Rebind one copy after share to help Pulse resolve the rewrite
-      with v'1. assert (S.pts_to pl #((pm *. sp) /. 2.0R) v'1);
-      rewrite (S.pts_to pl #((pm *. sp) /. 2.0R) v'1) as (S.pts_to pl #(pm *. (sp /. 2.0R)) v'1);
+      // Use helper to rewrite one half's permission (avoids ambiguity with two identical resources)
+      pts_to_perm_rewrite pl pm sp v';
       
       // Fold the returned iterator using the half-perm copy
       // The returned iterator uses sp/2 as sub-permission
@@ -1557,14 +1816,11 @@ ensures
           with lv2. assert (pts_to_parsed_strong_prefix (parse_nlist (SZ.v len) p) pl #(pm *. (sp /. 2.0R)) lv2);
           unfold (pts_to_parsed_strong_prefix (parse_nlist (SZ.v len) p) pl #(pm *. (sp /. 2.0R)) lv2);
           with v'2. assert (S.pts_to pl #(pm *. (sp /. 2.0R)) v'2);
-          // Rewrite permission for gather
-          rewrite (S.pts_to pl #(pm *. (sp /. 2.0R)) v'2) as (S.pts_to pl #((pm *. sp) /. 2.0R) v'2);
-          // Gather: combines two halves and proves v'2 == v'
+          // Gather directly: trigger half at pm*(sp/2) + captured half at (pm*sp)/2
+          // These are syntactically different perms, so gather resolves unambiguously
           S.gather pl;
-          // Now have: S.pts_to pl #((pm*.sp)/2 +. (pm*.sp)/2) v'2 ** pure (v'2 == v')
-          rewrite (S.pts_to pl #((pm *. sp) /. 2.0R +. (pm *. sp) /. 2.0R) v'2)
+          rewrite (S.pts_to pl #(pm *. (sp /. 2.0R) +. (pm *. sp) /. 2.0R) v'2)
             as (S.pts_to pl #(pm *. sp) v'2);
-          // With v'2 == v', we can use the stored ptpsp_prop for n
           // Fold back the original match
           fold (pts_to_parsed_strong_prefix (parse_nlist (Ghost.reveal n) p) pl #(pm *. sp) (reveal l));
           fold (base_iterator_match_n vmatch p (Ghost.reveal n) pm (Serialized #t sp count pl) (reveal l));
