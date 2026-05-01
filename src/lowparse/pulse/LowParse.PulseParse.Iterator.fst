@@ -115,16 +115,17 @@ let rec iterator_match_n
 = match i with
   | Base i -> base_iterator_match_n vmatch p n pm i l
   | Append depth cb ca before ap after ->
-    exists* i1 n' i2 l2 .
-      base_iterator_match_n vmatch p (SZ.v cb) pm before i1 **
+    exists* i1 n1 n' i2 l2 .
+      base_iterator_match_n vmatch p n1 pm before i1 **
       pts_to after #(pm *. ap) i2 **
       iterator_match_n vmatch p n' pm i2 l2 **
       pure (
-        SZ.v cb <= SZ.v (base_iterator_length before) /\
+      	n1 <= SZ.v cb /\
+        SZ.v cb == SZ.v (base_iterator_length before) /\
 	n' <= SZ.v ca /\
-	(SZ.v cb < SZ.v (base_iterator_length before) ==> n' == 0) /\
+	(n1 < SZ.v cb ==> n' == 0) /\
 	List.Tot.length l2 == n' /\
-	n == SZ.v cb + n' /\
+	n == n1 + n' /\
         l == List.Tot.append i1 l2 /\
         iterator_depth i2 < Ghost.reveal depth
       )
