@@ -2359,3 +2359,38 @@ ensures
 ```
 
 #pop-options
+
+```pulse
+fn iterator_truncate
+  (#t: Type0) (#u: Type0)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (pm: perm)
+  (i: iterator t)
+  (l: Ghost.erased (list u))
+  (len: SZ.t)
+  (vmatch_share: share_t vmatch)
+  (vmatch_gather: gather_t vmatch)
+requires
+  iterator_match vmatch p pm i l **
+  pure (SZ.v len <= SZ.v (iterator_length i))
+returns i': iterator t
+ensures
+  iterator_match vmatch p (pm /. 2.0R) i' (fst (List.Tot.splitAt (SZ.v len) l)) **
+  trade (iterator_match vmatch p (pm /. 2.0R) i' (fst (List.Tot.splitAt (SZ.v len) l)))
+        (iterator_match vmatch p pm i l) **
+  pure (iterator_length i' == len)
+{
+  unfold (iterator_match vmatch p pm i l);
+  let n : Ghost.erased nat = SZ.v (iterator_length i);
+  rewrite (iterator_match_n vmatch p (SZ.v (iterator_length i)) pm i l)
+    as (iterator_match_n vmatch p (Ghost.reveal n) pm i l);
+  let i' = iterator_truncate_n vmatch p n pm i l len vmatch_share vmatch_gather;
+  rewrite
+    (trade (iterator_match vmatch p (pm /. 2.0R) i' (fst (List.Tot.splitAt (SZ.v len) l)))
+           (iterator_match_n vmatch p (Ghost.reveal n) pm i l))
+    as (trade (iterator_match vmatch p (pm /. 2.0R) i' (fst (List.Tot.splitAt (SZ.v len) l)))
+              (iterator_match vmatch p pm i l));
+  i'
+}
+```
