@@ -920,26 +920,28 @@ decreases (iterator_depth i)
     Append depth cb ca before ap after -> {
       unfold (iterator_match_n vmatch p n pm (Append depth cb ca before ap after) l);
       with i1 n' i2 l2 . assert (
-        base_iterator_match vmatch p pm before i1 **
+        base_iterator_match_n vmatch p (SZ.v cb) pm before i1 **
         pts_to after #(pm *. ap) i2 **
         iterator_match_n vmatch p n' pm i2 l2 **
         pure (
-          SZ.v cb == List.Tot.length i1 /\
+          SZ.v cb <= SZ.v (base_iterator_length before) /\
           n' <= SZ.v ca /\
+          (SZ.v cb < SZ.v (base_iterator_length before) ==> n' == 0) /\
           List.Tot.length l2 == n' /\
           n == SZ.v cb + n' /\
           l == List.Tot.append i1 l2 /\
           iterator_depth i2 < Ghost.reveal depth
         )
       );
-      base_iterator_match_share vmatch p pm before i1 vmatch_share;
+      base_iterator_match_n_share vmatch p (SZ.v cb) pm before i1 vmatch_share;
       R.share after;
       rewrite (R.pts_to after #((pm *. ap) /. 2.0R) i2) as (R.pts_to after #((pm /. 2.0R) *. ap) i2);
       rewrite (R.pts_to after #((pm *. ap) /. 2.0R) i2) as (R.pts_to after #((pm /. 2.0R) *. ap) i2);
       iterator_match_n_share vmatch p n' pm i2 l2 vmatch_share;
       dup_pure (
-        SZ.v cb == List.Tot.length i1 /\
+        SZ.v cb <= SZ.v (base_iterator_length before) /\
         n' <= SZ.v ca /\
+        (SZ.v cb < SZ.v (base_iterator_length before) ==> n' == 0) /\
         List.Tot.length l2 == n' /\
         n == SZ.v cb + n' /\
         l == List.Tot.append i1 l2 /\
@@ -991,12 +993,13 @@ decreases (iterator_depth i)
       unfold (iterator_match_n vmatch p n pm (Append depth cb ca before ap after) l);
       unfold (iterator_match_n vmatch p n pm' (Append depth cb ca before ap after) l');
       with i1 n1 i2 l2 . assert (
-        base_iterator_match vmatch p pm before i1 **
+        base_iterator_match_n vmatch p (SZ.v cb) pm before i1 **
         pts_to after #(pm *. ap) i2 **
         iterator_match_n vmatch p n1 pm i2 l2 **
         pure (
-          SZ.v cb == List.Tot.length i1 /\
+          SZ.v cb <= SZ.v (base_iterator_length before) /\
           n1 <= SZ.v ca /\
+          (SZ.v cb < SZ.v (base_iterator_length before) ==> n1 == 0) /\
           List.Tot.length l2 == n1 /\
           n == SZ.v cb + n1 /\
           l == List.Tot.append i1 l2 /\
@@ -1004,19 +1007,20 @@ decreases (iterator_depth i)
         )
       );
       with i1' n1' i2' l2' . assert (
-        base_iterator_match vmatch p pm' before i1' **
+        base_iterator_match_n vmatch p (SZ.v cb) pm' before i1' **
         pts_to after #(pm' *. ap) i2' **
         iterator_match_n vmatch p n1' pm' i2' l2' **
         pure (
-          SZ.v cb == List.Tot.length i1' /\
+          SZ.v cb <= SZ.v (base_iterator_length before) /\
           n1' <= SZ.v ca /\
+          (SZ.v cb < SZ.v (base_iterator_length before) ==> n1' == 0) /\
           List.Tot.length l2' == n1' /\
           n == SZ.v cb + n1' /\
           l' == List.Tot.append i1' l2' /\
           iterator_depth i2' < Ghost.reveal depth
         )
       );
-      // Gather the base_iterator_match for 'before'
+      // Gather the base_iterator_match_n for 'before'
       ghost fn before_gather_fn
         (x1: t) (#pm0: perm) (#x2: u) (#pm0': perm) (x2': u { List.Tot.memP x2' i1' })
       requires vmatch pm0 x1 x2 ** vmatch pm0' x1 x2'
@@ -1025,7 +1029,7 @@ decreases (iterator_depth i)
         FStar.List.Tot.Properties.append_memP i1' l2' x2';
         vmatch_gather x1 #pm0 #x2 #pm0' x2'
       };
-      base_iterator_match_gather_bound vmatch p pm pm' before i1 i1' before_gather_fn;
+      base_iterator_match_n_gather_bound vmatch p (SZ.v cb) pm pm' before i1 i1' before_gather_fn;
       // Gather R.pts_to for 'after'
       R.gather after;
       rewrite (R.pts_to after #(pm *. ap +. pm' *. ap) i2) as (R.pts_to after #((pm +. pm') *. ap) i2);
@@ -1229,18 +1233,20 @@ decreases (iterator_depth i)
     Append depth cb ca before ap after -> {
       unfold (iterator_match_n vmatch p n pm (Append depth cb ca before ap after) l);
       with i1 n' i2 l2 . assert (
-        base_iterator_match vmatch p pm before i1 **
+        base_iterator_match_n vmatch p (SZ.v cb) pm before i1 **
         pts_to after #(pm *. ap) i2 **
         iterator_match_n vmatch p n' pm i2 l2 **
         pure (
-          SZ.v cb == List.Tot.length i1 /\
+          SZ.v cb <= SZ.v (base_iterator_length before) /\
           n' <= SZ.v ca /\
+          (SZ.v cb < SZ.v (base_iterator_length before) ==> n' == 0) /\
           List.Tot.length l2 == n' /\
           n == SZ.v cb + n' /\
           l == List.Tot.append i1 l2 /\
           iterator_depth i2 < Ghost.reveal depth
         )
       );
+      base_iterator_match_n_length vmatch p (SZ.v cb) pm before i1;
       List.Tot.Properties.append_length i1 l2;
       fold (iterator_match_n vmatch p n pm (Append depth cb ca before ap after) l);
       rewrite each (Append depth cb ca before ap after) as i;
