@@ -63,7 +63,7 @@ exit:
 }
 
 uint32_t GotoReturnProbeInPlaceCheckTagged(uint64_t bound, EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
-	uint32_t result = EVERPARSE_PROBE_FAILURE_UNIMPLEMENTED;
+	uint32_t result = EVERPARSE_PROBE_FAILURE_INIT;
 	if(providedSize < 42U)
 	{
 		// Not enough space for probe
