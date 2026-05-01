@@ -1656,6 +1656,18 @@ let append_cancel_left (#a: Type) (l0: list a) (l1 l2: list a)
     (ensures l1 == l2)
 = FStar.List.Tot.Properties.append_injective l0 l0 l1 l2
 
+let rec splitAt_append_left (#a: Type) (n: nat) (l1 l2: list a)
+  : Lemma
+    (requires n <= List.Tot.length l1)
+    (ensures (
+      fst (List.Tot.splitAt n (List.Tot.append l1 l2)) == fst (List.Tot.splitAt n l1) /\
+      snd (List.Tot.splitAt n (List.Tot.append l1 l2)) == List.Tot.append (snd (List.Tot.splitAt n l1)) l2
+    ))
+    (decreases n)
+= if n = 0 then ()
+  else match l1 with
+    | _ :: tl -> splitAt_append_left (n - 1) tl l2
+
 ```pulse
 ghost
 fn base_iterator_match_n_gather_eq
@@ -1677,6 +1689,8 @@ ensures
 }
 ```
 
+let min_nat (a b: nat) : nat = if a <= b then a else b
+
 ```pulse
 ghost
 fn rec iterator_match_n_truncate
@@ -1691,7 +1705,7 @@ fn rec iterator_match_n_truncate
   (vmatch_gather: gather_t vmatch)
 requires
   iterator_match_n vmatch p n pm i l **
-  pure (n' <= n /\ (Append? i ==> n' >= SZ.v (Append?.cb i) /\ iterator_depth i <= 1))
+  pure (n' <= n)
 ensures
   iterator_match_n vmatch p n' (pm /. 2.0R) i (fst (List.Tot.splitAt n' l)) **
   trade (iterator_match_n vmatch p n' (pm /. 2.0R) i (fst (List.Tot.splitAt n' l)))
@@ -1731,75 +1745,91 @@ decreases (iterator_depth i)
           iterator_depth i2 < Ghost.reveal depth
         )
       );
-      // n' >= SZ.v cb, so n1_orig == SZ.v cb (from pures + precondition)
-      rewrite each n1_orig as (SZ.v cb);
-      // n_after' = n' - SZ.v cb <= n_after
-      let n_after' : Ghost.erased nat = n' - SZ.v cb;
-      // Share base
-      base_iterator_match_n_share vmatch p (SZ.v cb) pm before i1 vmatch_share;
+      // Compute split point: base keeps min(n', n1_orig), after keeps the rest
+      let n1' : Ghost.erased nat = min_nat n' (Ghost.reveal n1_orig);
+      let n_after' : Ghost.erased nat = n' - Ghost.reveal n1';
+      // Get length of base list before truncation (needed for splitAt reasoning)
+      base_iterator_match_n_length vmatch p (Ghost.reveal n1_orig) pm before i1;
+      // Truncate base from n1_orig to n1'
+      base_iterator_match_n_truncate vmatch p (Ghost.reveal n1_orig) (Ghost.reveal n1') pm before i1 vmatch_share vmatch_gather;
       // Share R.pts_to
       R.share after;
       rewrite (R.pts_to after #((pm *. ap) /. 2.0R) i2) as (R.pts_to after #((pm /. 2.0R) *. ap) i2);
       rewrite (R.pts_to after #((pm *. ap) /. 2.0R) i2) as (R.pts_to after #((pm /. 2.0R) *. ap) i2);
-      // Establish that i2 is Base (from depth constraint)
-      iterator_match_n_base_or_false vmatch p n_after pm i2 l2;
-      drop_ (pure (Base? i2));
-      // Recursively truncate the after part
+      // Recursively truncate after part
       iterator_match_n_truncate vmatch p n_after (reveal n_after') pm i2 l2 vmatch_share vmatch_gather;
       // Establish splitAt facts
-      base_iterator_match_n_length vmatch p (SZ.v cb) (pm /. 2.0R) before i1;
-      FStar.List.Pure.Properties.splitAt_assoc (SZ.v cb) (reveal n_after') l;
-      FStar.List.Pure.Properties.lemma_append_splitAt i1 l2;
-      FStar.List.Pure.Properties.splitAt_length (reveal n_after') l2;
+      splitAt_append_left (Ghost.reveal n1') i1 l2;
+      FStar.List.Pure.Properties.splitAt_assoc (Ghost.reveal n1') (Ghost.reveal n_after') l;
+      FStar.List.Pure.Properties.splitAt_length (Ghost.reveal n_after') l2;
+      FStar.List.Pure.Properties.splitAt_length_total i1;
       // Fold the result
       fold (iterator_match_n vmatch p n' (pm /. 2.0R) (Append depth cb ca before ap after) (fst (List.Tot.splitAt n' l)));
       // Introduce explicit splitAt fact for the trade body
       Pulse.Lib.Core.intro_pure
-        (fst (List.Tot.splitAt n' l) == List.Tot.append (reveal i1) (fst (List.Tot.splitAt (reveal n_after') l2)))
+        (fst (List.Tot.splitAt n' l) == List.Tot.append (fst (List.Tot.splitAt (Ghost.reveal n1') i1)) (fst (List.Tot.splitAt (Ghost.reveal n_after') l2)))
         ();
-      // Build trade
+      // Build trade (capture both base trade and after trade)
       intro (iterator_match_n vmatch p n' (pm /. 2.0R) (Append depth cb ca before ap after) (fst (List.Tot.splitAt n' l)) @==>
              iterator_match_n vmatch p n pm (Append depth cb ca before ap after) l)
-        #(base_iterator_match_n vmatch p (SZ.v cb) (pm /. 2.0R) before i1 **
+        #(trade (base_iterator_match_n vmatch p (reveal n1') (pm /. 2.0R) before (fst (List.Tot.splitAt (reveal n1') i1)))
+                (base_iterator_match_n vmatch p n1_orig pm before i1) **
           R.pts_to after #((pm /. 2.0R) *. ap) i2 **
           trade (iterator_match_n vmatch p (reveal n_after') (pm /. 2.0R) i2 (fst (List.Tot.splitAt (reveal n_after') l2)))
                 (iterator_match_n vmatch p n_after pm i2 l2) **
           pure (
-            SZ.v cb <= SZ.v cb /\
+            n1_orig <= SZ.v cb /\
             SZ.v cb == SZ.v (base_iterator_length before) /\
             n_after <= SZ.v ca /\
-            (SZ.v cb < SZ.v cb ==> n_after == 0) /\
+            (n1_orig < SZ.v cb ==> n_after == 0) /\
             List.Tot.length l2 == n_after /\
-            n == SZ.v cb + n_after /\
+            n == n1_orig + n_after /\
             l == List.Tot.append i1 l2 /\
             iterator_depth i2 < Ghost.reveal depth /\
-            List.Tot.length i1 == SZ.v cb
+            List.Tot.length i1 == n1_orig
           ) **
-          pure (fst (List.Tot.splitAt n' l) == List.Tot.append (reveal i1) (fst (List.Tot.splitAt (reveal n_after') l2))))
+          pure (fst (List.Tot.splitAt n' l) == List.Tot.append (fst (List.Tot.splitAt (reveal n1') i1)) (fst (List.Tot.splitAt (reveal n_after') l2))))
         fn _ {
           unfold (iterator_match_n vmatch p n' (pm /. 2.0R) (Append depth cb ca before ap after) (fst (List.Tot.splitAt n' l)));
-          // Gather R.pts_to (resolves ref ambiguity — works because ref is deterministic)
-          R.gather after;
-          // Bind the unique iterator_match_n (only one at pm /. 2.0R in context)
-          with n_after_tr i2_u l2_u . assert (
-            iterator_match_n vmatch p n_after_tr (pm /. 2.0R) i2_u l2_u
+          with i1_u n1'_u n_after'_u i2_u l2_u . assert (
+            base_iterator_match_n vmatch p n1'_u (pm /. 2.0R) before i1_u **
+            pts_to after #((pm /. 2.0R) *. ap) i2_u **
+            iterator_match_n vmatch p n_after'_u (pm /. 2.0R) i2_u l2_u **
+            pure (
+              n1'_u <= SZ.v cb /\
+              SZ.v cb == SZ.v (base_iterator_length before) /\
+              n_after'_u <= SZ.v ca /\
+              (n1'_u < SZ.v cb ==> n_after'_u == 0) /\
+              List.Tot.length l2_u == n_after'_u /\
+              n' == n1'_u + n_after'_u /\
+              fst (List.Tot.splitAt n' l) == List.Tot.append i1_u l2_u /\
+              iterator_depth i2_u < Ghost.reveal depth
+            )
           );
-          // Clean up ref equality pure
+          // Get length of unfolded base list (for append_injective)
+          base_iterator_match_n_length vmatch p n1'_u (pm /. 2.0R) before i1_u;
+          FStar.List.Pure.Properties.splitAt_length (reveal n1') i1;
+          // Gather R.pts_to
+          R.gather after;
           drop_ (pure (reveal i2 == reveal i2_u));
           rewrite (R.pts_to after #((pm /. 2.0R) *. ap +. (pm /. 2.0R) *. ap) i2)
             as (R.pts_to after #(pm *. ap) i2);
-          // Gather base using _gather_eq (handles different n indices via SMT)
-          base_iterator_match_n_gather_eq vmatch p (SZ.v cb) _ (pm /. 2.0R) (pm /. 2.0R) before i1 _ vmatch_gather;
-          rewrite (base_iterator_match_n vmatch p (SZ.v cb) (pm /. 2.0R +. pm /. 2.0R) before i1)
-            as (base_iterator_match_n vmatch p (SZ.v cb) pm before i1);
-          // Rewrite l2_u to match captured trade antecedent
-          append_cancel_left i1 l2_u (fst (List.Tot.splitAt (reveal n_after') l2));
+          // Prove list equalities via append_injective
+          FStar.List.Tot.Properties.append_injective i1_u (fst (List.Tot.splitAt (reveal n1') i1)) l2_u (fst (List.Tot.splitAt (reveal n_after') l2));
+          // Rewrite base index and list, then elim base trade
+          rewrite each n1'_u as (reveal n1');
+          rewrite each i1_u as (fst (List.Tot.splitAt (reveal n1') i1));
+          elim_trade
+            (base_iterator_match_n vmatch p (reveal n1') (pm /. 2.0R) before (fst (List.Tot.splitAt (reveal n1') i1)))
+            (base_iterator_match_n vmatch p n1_orig pm before i1);
+          // Rewrite after list, index, iterator, then elim after trade
           rewrite each l2_u as (fst (List.Tot.splitAt (reveal n_after') l2));
-          rewrite each n_after_tr as (Ghost.reveal n_after');
+          rewrite each n_after'_u as (reveal n_after');
           rewrite each i2_u as i2;
-          // Elim recursive trade directly
-          elim_trade _ _;
-          // Fold back
+          elim_trade
+            (iterator_match_n vmatch p (reveal n_after') (pm /. 2.0R) i2 (fst (List.Tot.splitAt (reveal n_after') l2)))
+            (iterator_match_n vmatch p n_after pm i2 l2);
+          // Fold original
           fold (iterator_match_n vmatch p n pm (Append depth cb ca before ap after) l);
         };
       rewrite each (Append depth cb ca before ap after) as i;
