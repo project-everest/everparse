@@ -10,6 +10,7 @@ module U8 = FStar.UInt8
 module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
 module LPS = LowParse.Pulse.Base
+module LPV = LowParse.Pulse.VCList
 module B = Pulse.Lib.Box
 open Pulse.Lib.Trade
 
@@ -1940,6 +1941,712 @@ decreases (iterator_depth i)
           fold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
         };
       rewrite each (Append #t depth cb ca ob bp before oa ap after) as i;
+    }
+  }
+}
+```
+
+#pop-options
+
+// Helper: length of an nlist is its count
+let nlist_list_length
+  (#t: Type) (n: nat) (l: nlist n t)
+: Lemma (List.Tot.length l == n)
+= ()
+
+// Helper: derive List.Tot.length from pts_to_parsed_strong_prefix_prop on parse_nlist.
+// Note: l must already have nlist type (from pts_to_parsed_strong_prefix context).
+// This is just a convenience wrapper.
+let pts_to_parsed_strong_prefix_prop_nlist_length
+  (#k: parser_kind) (#t: Type0)
+  (p: parser k t) (n: nat) (v: Seq.seq byte) (l: nlist n t)
+: Lemma
+  (ensures List.Tot.length l == n)
+= ()
+
+// Lemma: narrowing a nlist parse via truncation.
+// Takes nlist directly to avoid subtyping issues in Pulse.
+let pts_to_parsed_strong_prefix_nlist_narrow
+  (#k: parser_kind) (#t: Type)
+  (p: parser k t)
+  (off n off' n': nat)
+  (v': Seq.seq byte)
+  (l_all: nlist (off + n) t)
+: Lemma
+  (requires (
+    off <= off' /\ off' + n' <= off + n /\
+    pts_to_parsed_strong_prefix_prop (parse_nlist (off + n) p) v' l_all
+  ))
+  (ensures (
+    List.Tot.length (fst (List.Tot.splitAt (off' + n') l_all)) == off' + n' /\
+    pts_to_parsed_strong_prefix_prop (parse_nlist (off' + n') p) v' (fst (List.Tot.splitAt (off' + n') l_all))
+  ))
+= pts_to_parsed_strong_prefix_nlist_truncate p (off + n) (off' + n') v' l_all
+
+// Lemma: connecting the narrow list from Serialized to list_narrow.
+// Takes nlist directly to avoid subtyping issues in Pulse.
+let serialized_narrow_list_eq
+  (#t: Type)
+  (off_n: nat)
+  (l_all: nlist off_n t)
+  (off n off' n': nat)
+: Lemma
+  (requires (
+    off + n == off_n /\
+    off <= off' /\ off' + n' <= off + n
+  ))
+  (ensures (
+    let l = snd (List.Tot.splitAt off l_all) in
+    let l_all' = fst (List.Tot.splitAt (off' + n') l_all) in
+    list_narrow l (off' - off) n' == snd (List.Tot.splitAt off' l_all')
+  ))
+= FStar.List.Tot.Base.lemma_splitAt_snd_length off l_all;
+  splitAt_narrow l_all off off' n'
+
+// Ghost helper: unfolds pts_to_parsed_strong_prefix and returns raw components.
+```pulse
+ghost fn pts_to_parsed_strong_prefix_unfold
+  (#k: parser_kind) (#t: Type0)
+  (p: parser k t)
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+requires
+  pts_to_parsed_strong_prefix p input #pm v
+ensures exists* (w: Seq.seq byte) .
+  S.pts_to input #pm w **
+  pure (pts_to_parsed_strong_prefix_prop p w (reveal v))
+{
+  unfold (pts_to_parsed_strong_prefix p input #pm v);
+}
+```
+
+// Ghost helper: from raw S.pts_to + pure, folds into base_iterator_match for Serialized narrow.
+// Works in ghost context where nlist subtyping can be resolved.
+```pulse
+ghost fn serialized_fold_narrow
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (off_n: nat) (off'_n': nat)
+  (sp: perm) (new_count: SZ.t)
+  (input: S.slice byte)
+  (pm: perm)
+  (#w: Ghost.erased (Seq.seq byte))
+  (l_all: Ghost.erased (list u))
+  (l: Ghost.erased (list u))
+  (off: nat) (n: nat)
+requires
+  S.pts_to input #(pm *. sp) w **
+  pure (off + n == off_n /\
+        off_n <= SZ.v new_count /\
+        List.Tot.length (reveal l_all) == off_n /\
+        reveal l == snd (List.Tot.splitAt off (reveal l_all)) /\
+        off'_n' <= off_n /\
+        SZ.v new_count >= off'_n' /\
+        pts_to_parsed_strong_prefix_prop (parse_nlist off_n p) (reveal w) (reveal l_all))
+ensures
+  base_iterator_match_n vmatch p 0 off'_n' pm (Serialized #t sp new_count input)
+    (fst (List.Tot.splitAt off'_n' (reveal l_all)))
+{
+  pts_to_parsed_strong_prefix_nlist_truncate p off_n off'_n' (reveal w) (reveal l_all);
+  fold (pts_to_parsed_strong_prefix (parse_nlist off'_n' p) input #(pm *. sp) (fst (List.Tot.splitAt off'_n' (reveal l_all))));
+  fold (base_iterator_match_n vmatch p 0 off'_n' pm (Serialized #t sp new_count input) (fst (List.Tot.splitAt off'_n' (reveal l_all))));
+}
+```
+
+// Ghost helper: folds pts_to_parsed_strong_prefix from S.pts_to + pure, resolving nlist subtyping.
+```pulse
+ghost fn pts_to_parsed_strong_prefix_fold
+  (#k: parser_kind) (#t: Type0)
+  (p: parser k t)
+  (input: S.slice byte)
+  (#pm: perm)
+  (#w: Ghost.erased (Seq.seq byte))
+  (v: Ghost.erased t)
+requires
+  S.pts_to input #pm w **
+  pure (pts_to_parsed_strong_prefix_prop p (reveal w) (reveal v))
+ensures
+  pts_to_parsed_strong_prefix p input #pm v
+{
+  fold (pts_to_parsed_strong_prefix p input #pm v);
+}
+```
+
+// Lemma: given a full parse of off+n elements, a validator_success at position off' giving byte
+// position pos, the suffix after pos parses as n' elements equal to list_narrow l (off'-off) n'.
+#push-options "--z3rlimit 200"
+let serialized_narrow_suffix_parses
+  (#k: parser_kind) (#t: Type)
+  (p: parser k t)
+  (off n off' n': nat)
+  (v': Seq.seq byte)
+  (l_all: nlist (off + n) t)
+  (l: list t)
+  (l_narrow: list t)
+  (pos: nat)
+: Lemma
+  (requires (
+    off <= off' /\ off' + n' <= off + n /\
+    l == snd (List.Tot.splitAt off l_all) /\
+    l_narrow == list_narrow l (off' - off) n' /\
+    pts_to_parsed_strong_prefix_prop (parse_nlist (off + n) p) v' l_all /\
+    pos <= Seq.length v' /\
+    (match parse (parse_nlist off' p) (Seq.slice v' 0 (Seq.length v')) with
+     | Some (_, consumed) -> consumed == pos
+     | None -> False)
+  ))
+  (ensures (
+    List.Tot.length l_narrow == n' /\
+    pts_to_parsed_strong_prefix_prop (parse_nlist n' p) (Seq.slice v' pos (Seq.length v')) l_narrow
+  ))
+= // Establish lengths
+  FStar.List.Tot.Base.lemma_splitAt_snd_length off l_all;
+  list_narrow_length l (off' - off) n';
+  // Normalize Seq.slice v' 0 len == v'
+  Seq.lemma_eq_intro (Seq.slice v' 0 (Seq.length v')) v';
+  // Truncate parse to first off'+n' elements
+  pts_to_parsed_strong_prefix_nlist_truncate p (off + n) (off' + n') v' l_all;
+  let l_all' = fst (List.Tot.splitAt (off' + n') (l_all <: list t)) in
+  assert (pts_to_parsed_strong_prefix_prop (parse_nlist (off' + n') p) v' l_all');
+  // Decompose into off' + n' via parse_nlist_sum
+  parse_nlist_sum p off' n' v';
+  match parse (parse_nlist off' p) v' with
+  | Some (l1, consumed1) ->
+    assert (consumed1 == pos);
+    let v_suff = Seq.slice v' pos (Seq.length v') in
+    begin match parse (parse_nlist n' p) v_suff with
+    | Some (l2, consumed2) ->
+      // l1 @ l2 == l_all'
+      List.Tot.Properties.append_length l1 l2;
+      FStar.List.Pure.Properties.lemma_append_splitAt l1 l2;
+      assert (snd (List.Tot.splitAt off' (l1 `List.Tot.append` l2)) == l2);
+      // Connect list_narrow to l2
+      serialized_narrow_list_eq (off + n) l_all off n off' n';
+      assert (list_narrow l (off' - off) n' == snd (List.Tot.splitAt off' l_all'));
+      assert (l2 == l_narrow);
+      ()
+    | None ->
+      // Contradiction: parse_nlist (off'+n') succeeds so both sub-parses succeed
+      assert False
+    end
+  | None ->
+    // Contradiction: validator_success implies parse (parse_nlist off') succeeds
+    assert False
+#pop-options
+
+#push-options "--z3rlimit 200"
+
+// Ghost helper: fold the narrow result for Serialized case from suffix bytes.
+// Takes the suffix S.pts_to + all facts from context, does all nlist reasoning internally.
+```pulse
+ghost fn serialized_narrow_fold_suffix
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (off n off' n': nat)
+  (sp: perm) (new_count: SZ.t)
+  (pl_suffix: S.slice byte)
+  (pm: perm)
+  (#v_suff: Ghost.erased (Seq.seq byte))
+  (v': Ghost.erased (Seq.seq byte))
+  (l_all: Ghost.erased (nlist (off + n) u))
+  (l: Ghost.erased (list u))
+  (l_narrow: Ghost.erased (list u))
+  (pos: SZ.t)
+  (sq_ctx: squash (reveal l == snd (List.Tot.splitAt off (reveal l_all))))
+  (sq_bounds: squash (off <= off' /\ off' + n' <= off + n /\ SZ.v new_count == n'))
+  (sq_pos: squash (SZ.v pos <= Seq.length (reveal v') /\
+                   reveal v_suff == Seq.slice (reveal v') (SZ.v pos) (Seq.length (reveal v'))))
+  (sq_narrow: squash (reveal l_narrow == list_narrow (reveal l) (off' - off) n'))
+  (sq_prop: squash (pts_to_parsed_strong_prefix_prop (parse_nlist (off + n) p) (reveal v') (reveal l_all)))
+  (sq_validator: squash (LPS.validator_success (parse_nlist off' p) 0sz (reveal v') pos == true))
+requires
+  S.pts_to pl_suffix #(pm *. sp) v_suff
+ensures
+  base_iterator_match_n vmatch p 0 n' pm (Serialized #t sp new_count pl_suffix) (reveal l_narrow)
+{
+  nlist_list_length (off + n) (reveal l_all);
+  Seq.lemma_eq_intro (Seq.slice (reveal v') 0 (Seq.length (reveal v'))) (reveal v');
+  serialized_narrow_suffix_parses p off n off' n' (reveal v') (reveal l_all) (reveal l) (reveal l_narrow) (SZ.v pos);
+  S.pts_to_len pl_suffix;
+  rewrite (S.pts_to pl_suffix #(pm *. sp) v_suff)
+    as (S.pts_to pl_suffix #(pm *. sp) (Seq.slice (reveal v') (SZ.v pos) (Seq.length (reveal v'))));
+  fold (pts_to_parsed_strong_prefix (parse_nlist n' p) pl_suffix #(pm *. sp) (reveal l_narrow));
+  fold (base_iterator_match_n vmatch p 0 n' pm (Serialized #t sp new_count pl_suffix) (reveal l_narrow));
+}
+```
+
+#pop-options
+
+// Trade body ghost fn for the Serialized case of base_iterator_narrow_n.
+// Uses S.gather to recover byte identity after fold/unfold (S.share/S.gather pattern).
+// The narrow match uses sp/.2, keeping one half in the frame for gather.
+#push-options "--z3rlimit 400"
+
+```pulse
+ghost fn serialized_narrow_trade_body
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (off n: Ghost.erased nat) (n': SZ.t)
+  (sp: perm) (count: SZ.t)
+  (pm: perm)
+  (pl pl_prefix pl_suffix: S.slice byte)
+  (v': Ghost.erased (Seq.seq byte))
+  (l_all: Ghost.erased (nlist (off + n) u))
+  (l l_narrow: Ghost.erased (list u))
+  (pos: SZ.t)
+  (sq_ctx: squash (reveal l == snd (List.Tot.splitAt off (reveal l_all))))
+  (sq_count: squash (off + n <= SZ.v count))
+  (sq_prop: squash (pts_to_parsed_strong_prefix_prop (parse_nlist (off + n) p) (reveal v') (reveal l_all)))
+  (sq_pos_bound: squash (SZ.v pos <= Seq.length (reveal v')))
+requires
+  base_iterator_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow) **
+  S.pts_to pl_suffix #((pm *. sp) /. 2.0R) (Seq.slice (reveal v') (SZ.v pos) (Seq.length (reveal v'))) **
+  S.is_split pl pl_prefix pl_suffix **
+  S.pts_to pl_prefix #(pm *. sp) (Seq.slice (reveal v') 0 (SZ.v pos))
+ensures
+  base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l)
+{
+  // Unfold the narrow match to reach S.pts_to pl_suffix at half perm
+  unfold (base_iterator_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow));
+  rewrite (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length (Serialized #t (sp /. 2.0R) n' pl_suffix))) pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow))
+    as (base_iterator_match_n vmatch p 0 (SZ.v n') pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow));
+  unfold (base_iterator_match_n vmatch p 0 (SZ.v n') pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow));
+  with l_na. assert (pts_to_parsed_strong_prefix (parse_nlist (0 + SZ.v n') p) pl_suffix #(pm *. (sp /. 2.0R)) l_na);
+  unfold (pts_to_parsed_strong_prefix (parse_nlist (0 + SZ.v n') p) pl_suffix #(pm *. (sp /. 2.0R)) l_na);
+  // Rewrite frame's half perm to match: (pm*.sp)/.2 = pm*(sp/.2)
+  rewrite (S.pts_to pl_suffix #((pm *. sp) /. 2.0R) (Seq.slice (reveal v') (SZ.v pos) (Seq.length (reveal v'))))
+    as (S.pts_to pl_suffix #(pm *. (sp /. 2.0R)) (Seq.slice (reveal v') (SZ.v pos) (Seq.length (reveal v'))));
+  // Gather two halves — proves byte identity via pure(s0 == s1)
+  S.gather pl_suffix;
+  with v_g. assert (S.pts_to pl_suffix #(pm *. (sp /. 2.0R) +. pm *. (sp /. 2.0R)) v_g);
+  rewrite (S.pts_to pl_suffix #(pm *. (sp /. 2.0R) +. pm *. (sp /. 2.0R)) v_g)
+    as (S.pts_to pl_suffix #(pm *. sp) v_g);
+  // Join prefix and suffix back to full slice
+  S.join pl_prefix pl_suffix pl;
+  // v_g == Seq.slice v' pos len (from gather); v_pref == Seq.slice v' 0 pos (from split)
+  // Seq.lemma_split: v' == Seq.append (Seq.slice v' 0 pos) (Seq.slice v' pos len)
+  nlist_list_length (off + n) (reveal l_all);
+  Seq.lemma_split (reveal v') (SZ.v pos);
+  rewrite (S.pts_to pl #(pm *. sp) (Seq.append (Seq.slice (reveal v') 0 (SZ.v pos)) (reveal v_g)))
+    as (S.pts_to pl #(pm *. sp) (reveal v'));
+  // Fold back the original
+  fold (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #(pm *. sp) (reveal l_all));
+  fold (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l));
+}
+```
+
+#pop-options
+
+// Ghost fn that builds the trade for the Serialized case of base_iterator_narrow_n.
+// Wraps `intro ... fn _ { serialized_narrow_trade_body ... }` in a ghost context
+// to avoid the deep_compress error that occurs when `intro`'s closure is inside
+// a concrete function with many captured variables.
+#push-options "--z3rlimit 400"
+
+```pulse
+ghost fn serialized_narrow_build_trade
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (off n: Ghost.erased nat) (n': SZ.t)
+  (sp: perm) (count: SZ.t) (pm: perm)
+  (pl pl_prefix pl_suffix: S.slice byte)
+  (v': Ghost.erased (Seq.seq byte))
+  (l_all: Ghost.erased (nlist (off + n) u))
+  (l l_narrow: Ghost.erased (list u))
+  (pos: SZ.t)
+  (sq_ctx: squash (reveal l == snd (List.Tot.splitAt off (reveal l_all))))
+  (sq_count: squash (off + n <= SZ.v count))
+  (sq_prop: squash (pts_to_parsed_strong_prefix_prop (parse_nlist (off + n) p) (reveal v') (reveal l_all)))
+  (sq_pos_bound: squash (SZ.v pos <= Seq.length (reveal v')))
+requires
+  base_iterator_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow) **
+  S.pts_to pl_suffix #((pm *. sp) /. 2.0R) (Seq.slice (reveal v') (SZ.v pos) (Seq.length (reveal v'))) **
+  S.is_split pl pl_prefix pl_suffix **
+  S.pts_to pl_prefix #(pm *. sp) (Seq.slice (reveal v') 0 (SZ.v pos))
+ensures
+  base_iterator_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow) **
+  trade (base_iterator_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow))
+       (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l))
+{
+  intro (base_iterator_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow) @==>
+         base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l))
+    #(S.pts_to pl_suffix #((pm *. sp) /. 2.0R) (Seq.slice (reveal v') (SZ.v pos) (Seq.length (reveal v'))) **
+      S.is_split pl pl_prefix pl_suffix **
+      S.pts_to pl_prefix #(pm *. sp) (Seq.slice (reveal v') 0 (SZ.v pos)))
+    fn _ {
+      serialized_narrow_trade_body vmatch p off n n' sp count pm pl pl_prefix pl_suffix v' l_all l l_narrow pos
+        () () () ();
+    };
+}
+```
+
+#pop-options
+
+let validator_success_pos_bound
+  (#k: parser_kind) (#t: Type)
+  (p: parser k t)
+  (v: bytes) (pos: SZ.t)
+: Lemma
+  (requires LPS.validator_success p 0sz v pos)
+  (ensures SZ.v pos <= Seq.length v)
+= Seq.lemma_eq_intro (Seq.slice v 0 (Seq.length v)) v
+
+// Named predicate bundling the pure facts from Serialized unfold.
+// Uses concrete types so `fold` with explicit `reveal` matches unfold's auto-coercion.
+let serialized_unfold_pure_ctx
+  (#k: parser_kind) (#t: Type)
+  (p: parser k t)
+  (off_val n_val: nat)
+  (count: SZ.t)
+  (v': Seq.seq byte)
+  (l_all: nlist (off_val + n_val) t)
+  (l: list t)
+: Tot slprop
+= pure (l == snd (List.Tot.splitAt off_val l_all) /\ off_val + n_val <= SZ.v count) **
+  pure (pts_to_parsed_strong_prefix_prop (parse_nlist (off_val + n_val) p) v' l_all)
+
+// Ghost fn: given post-jump/split state + pures bundled in serialized_unfold_pure_ctx,
+// share suffix, fold narrow match, build trade.
+// The named predicate is frame-matched from calling context (not proved by SMT).
+#push-options "--z3rlimit 400 --ext no:context_pruning"
+
+```pulse
+ghost fn serialized_narrow_after_jump
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (off n: Ghost.erased nat) (off'_elem n'_elem: nat) (n': SZ.t)
+  (sp: perm) (count: SZ.t) (pm: perm)
+  (pl pl_prefix pl_suffix: S.slice byte)
+  (v': Ghost.erased (Seq.seq byte))
+  (l_all: Ghost.erased (nlist (off + n) u))
+  (l l_narrow: Ghost.erased (list u))
+  (pos: SZ.t)
+  (sq_bounds: squash (off <= off'_elem /\ off'_elem + n'_elem <= off + n /\ SZ.v n' == n'_elem))
+  (sq_narrow: squash (reveal l_narrow == list_narrow (reveal l) (off'_elem - off) n'_elem))
+  (sq_pos_bound: squash (SZ.v pos <= Seq.length (reveal v')))
+  (sq_vs: squash (LPS.validator_success (parse_nlist off'_elem p) 0sz (reveal v') pos))
+requires
+  S.pts_to pl_prefix #(pm *. sp) (Seq.slice (reveal v') 0 (SZ.v pos)) **
+  S.pts_to pl_suffix #(pm *. sp) (Seq.slice (reveal v') (SZ.v pos) (Seq.length (reveal v'))) **
+  S.is_split pl pl_prefix pl_suffix **
+  serialized_unfold_pure_ctx p off n count v' l_all l
+ensures
+  base_iterator_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow) **
+  trade (base_iterator_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow))
+       (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l))
+{
+  // Unfold named predicate to recover pures
+  unfold (serialized_unfold_pure_ctx p off n count v' l_all l);
+  // Drop pures — facts are in VC
+  drop_ (pure (reveal l == snd (List.Tot.splitAt (Ghost.reveal off) (reveal l_all)) /\ Ghost.reveal off + Ghost.reveal n <= SZ.v count));
+  drop_ (pure (pts_to_parsed_strong_prefix_prop (parse_nlist (Ghost.reveal off + Ghost.reveal n) p) (reveal v') (reveal l_all)));
+  // Prepare facts via pure lemmas
+  nlist_list_length (Ghost.reveal off + Ghost.reveal n) (reveal l_all);
+  Seq.lemma_eq_intro (Seq.slice (reveal v') 0 (Seq.length (reveal v'))) (reveal v');
+  serialized_narrow_suffix_parses p (Ghost.reveal off) (Ghost.reveal n) off'_elem n'_elem (reveal v') (reveal l_all) (reveal l) (reveal l_narrow) (SZ.v pos);
+  // Share pl_suffix
+  S.share pl_suffix;
+  rewrite (S.pts_to pl_suffix #((pm *. sp) /. 2.0R) (Seq.slice (reveal v') (SZ.v pos) (Seq.length (reveal v'))))
+    as (S.pts_to pl_suffix #(pm *. (sp /. 2.0R)) (Seq.slice (reveal v') (SZ.v pos) (Seq.length (reveal v'))));
+  // Fold narrow match
+  intro_pure (pts_to_parsed_strong_prefix_prop (parse_nlist n'_elem p) (Seq.slice (reveal v') (SZ.v pos) (Seq.length (reveal v'))) (reveal l_narrow)) ();
+  fold (pts_to_parsed_strong_prefix (parse_nlist n'_elem p) pl_suffix #(pm *. (sp /. 2.0R)) (reveal l_narrow));
+  intro_pure (reveal l_narrow == snd (List.Tot.splitAt 0 (reveal l_narrow)) /\ 0 + n'_elem <= SZ.v n') ();
+  fold (base_iterator_match_n vmatch p 0 n'_elem pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow));
+  rewrite (base_iterator_match_n vmatch p 0 n'_elem pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow))
+    as (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length (Serialized #t (sp /. 2.0R) n' pl_suffix))) pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow));
+  fold (base_iterator_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow));
+  // Build trade
+  serialized_narrow_build_trade vmatch p
+    off n n'
+    sp count pm pl pl_prefix pl_suffix v' l_all l l_narrow pos
+    () () () ();
+}
+```
+
+#pop-options
+
+#push-options "--z3rlimit 2000 --ext no:context_pruning"
+
+// Concrete fn for the Serialized case of base_iterator_narrow_n.
+// Inlines all ghost fn logic — pures from unfold are SMT hypotheses for fold.
+```pulse
+fn base_iterator_narrow_n_serialized
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (j: LPS.jumper p)
+  (off: Ghost.erased nat) (n: Ghost.erased nat)
+  (pm: perm)
+  (sp: perm) (count: SZ.t) (pl: S.slice byte)
+  (l: Ghost.erased (list u))
+  (off': SZ.t) (n': SZ.t)
+  (l_narrow: Ghost.erased (list u))
+  (sq_bounds: squash (Ghost.reveal off <= SZ.v off' /\ SZ.v off' + SZ.v n' <= Ghost.reveal off + Ghost.reveal n))
+  (sq_narrow: squash (reveal l_narrow == list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n')))
+requires
+  base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) l
+returns i': base_iterator t
+ensures
+  base_iterator_match vmatch p pm i' (reveal l_narrow) **
+  trade (base_iterator_match vmatch p pm i' (reveal l_narrow))
+       (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l)) **
+  pure (base_iterator_length i' == n')
+{
+  // Step 1: Unfold base_iterator_match_n and pts_to_parsed_strong_prefix
+  unfold (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) l);
+  with l_all. assert (pts_to_parsed_strong_prefix (parse_nlist (Ghost.reveal off + Ghost.reveal n) p) pl #(pm *. sp) l_all);
+  unfold (pts_to_parsed_strong_prefix (parse_nlist (Ghost.reveal off + Ghost.reveal n) p) pl #(pm *. sp) l_all);
+  with v'. assert (S.pts_to pl #(pm *. sp) v');
+
+  // Step 2: Fold named predicate IMMEDIATELY (VC is simple here, fold proves pures easily)
+  fold (serialized_unfold_pure_ctx p off n count v' l_all l);
+
+  // Step 3: Jump
+  S.pts_to_len pl;
+  parse_nlist_sum p (SZ.v off') (Ghost.reveal off + Ghost.reveal n - SZ.v off') (reveal v');
+  intro_pure (LPS.jumper_pre' (parse_nlist (SZ.v off') p) 0sz v') ();
+  let pos = LPV.jump_nlist j off' pl 0sz;
+
+  // Step 4: Split
+  let pl_p = S.split pl pos;
+  match pl_p {
+    pl_prefix, pl_suffix -> {
+
+  // Step 5: Call ghost fn — named predicate is frame-matched
+  drop_ (pure (Seq.length v' == SZ.v (S.len pl)));
+  validator_success_pos_bound (parse_nlist (SZ.v off') p) (reveal v') pos;
+
+  serialized_narrow_after_jump vmatch p
+    off n (SZ.v off') (SZ.v n') n'
+    sp count pm pl pl_prefix pl_suffix v' l_all l l_narrow pos
+    () () () ();
+
+  intro_pure (base_iterator_length (Serialized #t (sp /. 2.0R) n' pl_suffix) == n') ();
+  let i' = Serialized #t (sp /. 2.0R) n' pl_suffix;
+  rewrite each (Serialized #t (sp /. 2.0R) n' pl_suffix) as i';
+  i'
+  }}
+}
+```
+
+```pulse
+fn base_iterator_narrow_n
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (j: LPS.jumper p)
+  (off: Ghost.erased nat) (n: Ghost.erased nat)
+  (pm: perm) (i: base_iterator t) (l: Ghost.erased (list u))
+  (off': SZ.t) (n': SZ.t)
+requires
+  base_iterator_match_n vmatch p off n pm i l **
+  pure (Ghost.reveal off <= SZ.v off' /\ SZ.v off' + SZ.v n' <= Ghost.reveal off + Ghost.reveal n)
+returns i': base_iterator t
+ensures
+  base_iterator_match vmatch p pm i' (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n')) **
+  trade (base_iterator_match vmatch p pm i' (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n')))
+       (base_iterator_match_n vmatch p off n pm i l) **
+  pure (base_iterator_length i' == n')
+{
+  let l_narrow : Ghost.erased (list u) = list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n');
+  match i {
+    Empty -> {
+      unfold (base_iterator_match_n vmatch p off n pm (Empty #t) l);
+      fold (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length (Empty #t))) pm (Empty #t) (reveal l_narrow));
+      fold (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow));
+      Trade.refl (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow));
+      rewrite
+        (trade (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow))
+               (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow)))
+        as (trade (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow))
+                  (base_iterator_match_n vmatch p off n pm i l));
+      let i' = Empty #t;
+      rewrite each (Empty #t) as i';
+      rewrite each (reveal l_narrow) as (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n'));
+      i'
+    }
+    Singleton sp sv s -> {
+      if (n' = 0sz) {
+        fold (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length (Empty #t))) pm (Empty #t) (reveal l_narrow));
+        fold (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow));
+        intro (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow) @==>
+               base_iterator_match_n vmatch p off n pm (Singleton #t sp sv s) (reveal l))
+          #(base_iterator_match_n vmatch p off n pm (Singleton #t sp sv s) (reveal l))
+          fn _ {
+            unfold (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow));
+            unfold (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length (Empty #t))) pm (Empty #t) (reveal l_narrow));
+            drop_ (pure (Nil? (reveal l_narrow) /\ SZ.v (base_iterator_length (Empty #t)) == 0 /\ 0 == 0));
+          };
+        rewrite
+          (trade (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow))
+                 (base_iterator_match_n vmatch p off n pm (Singleton #t sp sv s) (reveal l)))
+          as (trade (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow))
+                    (base_iterator_match_n vmatch p off n pm i l));
+        let i' = Empty #t;
+        rewrite each (Empty #t) as i';
+        rewrite each (reveal l_narrow) as (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n'));
+        i'
+      } else {
+        base_iterator_match_n_singleton_unfold_pos vmatch p (Ghost.reveal off) (Ghost.reveal n) pm sp sv s l ();
+        with x y. assert (pts_to s #(pm *. sp) x ** vmatch (pm *. sv) x y ** pure (l == [y] /\ Ghost.reveal off == 0 /\ Ghost.reveal n == 1));
+        base_iterator_match_n_singleton_fold_pos vmatch p (Ghost.reveal off) (Ghost.reveal n) pm sp sv s l ();
+        rewrite (base_iterator_match_n vmatch p off n pm (Singleton #t sp sv s) l)
+          as (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length (Singleton #t sp sv s))) pm (Singleton #t sp sv s) l);
+        fold (base_iterator_match vmatch p pm (Singleton #t sp sv s) l);
+        assert (pure (reveal l == [y]));
+        FStar.List.Pure.Properties.splitAt_length_total (reveal l);
+        assert (pure (reveal l_narrow == reveal l));
+        Trade.rewrite_with_trade
+          (base_iterator_match vmatch p pm (Singleton #t sp sv s) (reveal l))
+          (base_iterator_match vmatch p pm (Singleton #t sp sv s) (reveal l_narrow));
+        rewrite
+          (trade (base_iterator_match vmatch p pm (Singleton #t sp sv s) (reveal l_narrow))
+                 (base_iterator_match vmatch p pm (Singleton #t sp sv s) (reveal l)))
+          as (trade (base_iterator_match vmatch p pm (Singleton #t sp sv s) (reveal l_narrow))
+                    (base_iterator_match_n vmatch p off n pm i l));
+        let i' = Singleton sp sv s;
+        rewrite each (Singleton #t sp sv s) as i';
+        rewrite each (reveal l_narrow) as (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n'));
+        i'
+      }
+    }
+    Slice sp sv s -> {
+      unfold (base_iterator_match_n vmatch p off n pm (Slice #t sp sv s) l);
+      with l' sl1. assert (pts_to s #(pm *. sp) l' ** SM.seq_list_match sl1 l (vmatch (pm *. sv)));
+      S.pts_to_len s;
+      SM.seq_list_match_length (vmatch (pm *. sv)) sl1 (reveal l);
+      // Split at off' to get prefix [0..off') and rest [off'..)
+      let s_pr = S.split s off';
+      match s_pr {
+        s_prefix, s_rest -> {
+      with v_prefix. assert (pts_to s_prefix #(pm *. sp) v_prefix);
+      with v_rest. assert (pts_to s_rest #(pm *. sp) v_rest);
+      S.pts_to_len s_prefix;
+      S.pts_to_len s_rest;
+      // Split rest at n' to get middle [off'..off'+n') and suffix [off'+n'..)
+      let s_ms = S.split s_rest n';
+      match s_ms {
+        s_middle, s_suffix -> {
+      with v_middle. assert (pts_to s_middle #(pm *. sp) v_middle);
+      with v_suffix. assert (pts_to s_suffix #(pm *. sp) v_suffix);
+      S.pts_to_len s_middle;
+      S.pts_to_len s_suffix;
+      // Split the seq_list_match
+      let skip : Ghost.erased nat = SZ.v off' - Ghost.reveal off;
+      let prefix_seq : Ghost.erased (Seq.seq t) = Seq.slice sl1 0 (reveal skip);
+      let middle_seq : Ghost.erased (Seq.seq t) = Seq.slice sl1 (reveal skip) (reveal skip + SZ.v n');
+      let suffix_seq : Ghost.erased (Seq.seq t) = Seq.slice sl1 (reveal skip + SZ.v n') (Seq.length sl1);
+      let prefix_l : Ghost.erased (list u) = fst (List.Tot.splitAt (reveal skip) (reveal l));
+      let rest_l : Ghost.erased (list u) = snd (List.Tot.splitAt (reveal skip) (reveal l));
+      let middle_l : Ghost.erased (list u) = fst (List.Tot.splitAt (SZ.v n') (reveal rest_l));
+      let suffix_l : Ghost.erased (list u) = snd (List.Tot.splitAt (SZ.v n') (reveal rest_l));
+      assert (pure (reveal middle_l == reveal l_narrow));
+      // Split seq_list_match into prefix ++ rest
+      FStar.List.Pure.Properties.lemma_splitAt_append (reveal skip) (reveal l);
+      Seq.lemma_split sl1 (reveal skip);
+      assert (pure (Seq.equal sl1 (Seq.append (reveal prefix_seq) (Seq.append (reveal middle_seq) (reveal suffix_seq)))));
+      rewrite (SM.seq_list_match sl1 l (vmatch (pm *. sv)))
+        as (SM.seq_list_match (Seq.append (reveal prefix_seq) (Seq.append (reveal middle_seq) (reveal suffix_seq)))
+                              (List.Tot.append (reveal prefix_l) (reveal rest_l)) (vmatch (pm *. sv)));
+      assert (pure (Seq.length (reveal prefix_seq) == List.Tot.length (reveal prefix_l)));
+      SMU.seq_list_match_append_elim_trade (vmatch (pm *. sv)) (reveal prefix_seq) (reveal prefix_l) (Seq.append (reveal middle_seq) (reveal suffix_seq)) (reveal rest_l);
+      drop_ (trade (SM.seq_list_match (reveal prefix_seq) (reveal prefix_l) (vmatch (pm *. sv)) **
+                     SM.seq_list_match (Seq.append (reveal middle_seq) (reveal suffix_seq)) (reveal rest_l) (vmatch (pm *. sv)))
+                   (SM.seq_list_match (Seq.append (reveal prefix_seq) (Seq.append (reveal middle_seq) (reveal suffix_seq)))
+                              (List.Tot.append (reveal prefix_l) (reveal rest_l)) (vmatch (pm *. sv))));
+      // Split rest into middle ++ suffix
+      FStar.List.Pure.Properties.lemma_splitAt_append (SZ.v n') (reveal rest_l);
+      FStar.List.Pure.Properties.splitAt_length (SZ.v n') (reveal rest_l);
+      assert (pure (Seq.length (reveal middle_seq) == List.Tot.length (reveal middle_l)));
+      rewrite (SM.seq_list_match (Seq.append (reveal middle_seq) (reveal suffix_seq)) (reveal rest_l) (vmatch (pm *. sv)))
+        as (SM.seq_list_match (Seq.append (reveal middle_seq) (reveal suffix_seq))
+                              (List.Tot.append (reveal middle_l) (reveal suffix_l)) (vmatch (pm *. sv)));
+      SMU.seq_list_match_append_elim_trade (vmatch (pm *. sv)) (reveal middle_seq) (reveal middle_l) (reveal suffix_seq) (reveal suffix_l);
+      drop_ (trade (SM.seq_list_match (reveal middle_seq) (reveal middle_l) (vmatch (pm *. sv)) **
+                     SM.seq_list_match (reveal suffix_seq) (reveal suffix_l) (vmatch (pm *. sv)))
+                   (SM.seq_list_match (Seq.append (reveal middle_seq) (reveal suffix_seq))
+                              (List.Tot.append (reveal middle_l) (reveal suffix_l)) (vmatch (pm *. sv))));
+      // Fold base_iterator_match for s_middle
+      Seq.lemma_eq_intro (reveal middle_seq) (reveal v_middle);
+      Seq.lemma_eq_intro (reveal middle_seq) (Seq.slice (reveal v_middle) 0 (SZ.v n'));
+      rewrite (SM.seq_list_match (reveal middle_seq) (reveal middle_l) (vmatch (pm *. sv)))
+        as (SM.seq_list_match (Seq.slice (reveal v_middle) 0 (SZ.v (S.len s_middle))) (reveal l_narrow) (vmatch (pm *. sv)));
+      fold (base_iterator_match_n vmatch p 0 (SZ.v (S.len s_middle)) pm (Slice #t sp sv s_middle) (reveal l_narrow));
+      fold (base_iterator_match vmatch p pm (Slice #t sp sv s_middle) (reveal l_narrow));
+
+      // Build the trade
+      intro (base_iterator_match vmatch p pm (Slice #t sp sv s_middle) (reveal l_narrow) @==>
+             base_iterator_match_n vmatch p off n pm (Slice #t sp sv s) (reveal l))
+        #(S.is_split s s_prefix s_rest **
+          S.is_split s_rest s_middle s_suffix **
+          pts_to s_prefix #(pm *. sp) v_prefix **
+          pts_to s_suffix #(pm *. sp) v_suffix **
+          SM.seq_list_match (reveal prefix_seq) (reveal prefix_l) (vmatch (pm *. sv)) **
+          SM.seq_list_match (reveal suffix_seq) (reveal suffix_l) (vmatch (pm *. sv)) **
+          pure (Seq.equal sl1 (Seq.append (reveal prefix_seq) (Seq.append (reveal middle_seq) (reveal suffix_seq))) /\
+                reveal l == List.Tot.append (reveal prefix_l) (reveal rest_l) /\
+                reveal rest_l == List.Tot.append (reveal middle_l) (reveal suffix_l) /\
+                List.Tot.length (reveal prefix_l) == reveal skip /\
+                List.Tot.length (reveal middle_l) == SZ.v n' /\
+                Seq.length (reveal prefix_seq) == reveal skip /\
+                Seq.length (reveal middle_seq) == SZ.v n' /\
+                Ghost.reveal off + Ghost.reveal n <= Seq.length (reveal l') /\
+                reveal sl1 == Seq.slice (reveal l') (Ghost.reveal off) (Ghost.reveal off + Ghost.reveal n) /\
+                SZ.v (S.len s_prefix) == SZ.v off' /\
+                Seq.length (reveal v_prefix) == SZ.v off' /\
+                Seq.length (reveal v_suffix) == Seq.length (reveal l') - SZ.v off' - SZ.v n'))
+        fn _ {
+          unfold (base_iterator_match vmatch p pm (Slice #t sp sv s_middle) (reveal l_narrow));
+          unfold (base_iterator_match_n vmatch p 0 (SZ.v (S.len s_middle)) pm (Slice #t sp sv s_middle) (reveal l_narrow));
+          with l'2 sl1_2. assert (pts_to s_middle #(pm *. sp) l'2 ** SM.seq_list_match sl1_2 (reveal l_narrow) (vmatch (pm *. sv)));
+          S.pts_to_len s_middle;
+          SM.seq_list_match_length (vmatch (pm *. sv)) sl1_2 (reveal l_narrow);
+          Seq.lemma_eq_intro sl1_2 (reveal l'2);
+          // Recombine: middle ++ suffix
+          SMU.seq_list_match_append_intro_trade (vmatch (pm *. sv)) sl1_2 (reveal middle_l) (reveal suffix_seq) (reveal suffix_l);
+          drop_ (trade (SM.seq_list_match (Seq.append sl1_2 (reveal suffix_seq)) (List.Tot.append (reveal middle_l) (reveal suffix_l)) (vmatch (pm *. sv)))
+                       (SM.seq_list_match sl1_2 (reveal middle_l) (vmatch (pm *. sv)) ** SM.seq_list_match (reveal suffix_seq) (reveal suffix_l) (vmatch (pm *. sv))));
+          rewrite (SM.seq_list_match (Seq.append sl1_2 (reveal suffix_seq)) (List.Tot.append (reveal middle_l) (reveal suffix_l)) (vmatch (pm *. sv)))
+            as (SM.seq_list_match (Seq.append sl1_2 (reveal suffix_seq)) (reveal rest_l) (vmatch (pm *. sv)));
+          // prefix ++ rest
+          SMU.seq_list_match_append_intro_trade (vmatch (pm *. sv)) (reveal prefix_seq) (reveal prefix_l) (Seq.append sl1_2 (reveal suffix_seq)) (reveal rest_l);
+          drop_ (trade (SM.seq_list_match (Seq.append (reveal prefix_seq) (Seq.append sl1_2 (reveal suffix_seq))) (List.Tot.append (reveal prefix_l) (reveal rest_l)) (vmatch (pm *. sv)))
+                       (SM.seq_list_match (reveal prefix_seq) (reveal prefix_l) (vmatch (pm *. sv)) ** SM.seq_list_match (Seq.append sl1_2 (reveal suffix_seq)) (reveal rest_l) (vmatch (pm *. sv))));
+          // Join s_middle + s_suffix -> s_rest
+          S.join s_middle s_suffix s_rest;
+          // Join s_prefix + s_rest -> s
+          S.join s_prefix s_rest s;
+          Seq.lemma_eq_intro (Seq.append (reveal prefix_seq) (Seq.append sl1_2 (reveal suffix_seq)))
+                             (Seq.slice (Seq.append (reveal v_prefix) (Seq.append (reveal l'2) (reveal v_suffix))) (Ghost.reveal off) (Ghost.reveal off + Ghost.reveal n));
+          rewrite (SM.seq_list_match (Seq.append (reveal prefix_seq) (Seq.append sl1_2 (reveal suffix_seq))) (List.Tot.append (reveal prefix_l) (reveal rest_l)) (vmatch (pm *. sv)))
+            as (SM.seq_list_match (Seq.slice (Seq.append (reveal v_prefix) (Seq.append (reveal l'2) (reveal v_suffix))) (Ghost.reveal off) (Ghost.reveal off + Ghost.reveal n))
+                                  (reveal l) (vmatch (pm *. sv)));
+          drop_ (pure (0 + SZ.v (S.len s_middle) <= Seq.length (reveal l'2) /\ sl1_2 == Seq.slice (reveal l'2) 0 (SZ.v (S.len s_middle))));
+          drop_ (pure (Seq.length (reveal l'2) == SZ.v (S.len s_middle)));
+          fold (base_iterator_match_n vmatch p (Ghost.reveal off) (Ghost.reveal n) pm (Slice #t sp sv s) (reveal l));
+        };
+
+      rewrite
+        (trade (base_iterator_match vmatch p pm (Slice #t sp sv s_middle) (reveal l_narrow))
+               (base_iterator_match_n vmatch p off n pm (Slice #t sp sv s) (reveal l)))
+        as (trade (base_iterator_match vmatch p pm (Slice #t sp sv s_middle) (reveal l_narrow))
+                  (base_iterator_match_n vmatch p off n pm i l));
+      let i' = Slice #t sp sv s_middle;
+      rewrite each (Slice #t sp sv s_middle) as i';
+      rewrite each (reveal l_narrow) as (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n'));
+      i'
+      }}
+      }}
+    }
+    Serialized sp count pl -> {
+      let i' = base_iterator_narrow_n_serialized vmatch p j off n pm sp count pl l off' n' l_narrow () ();
+      rewrite
+        (trade (base_iterator_match vmatch p pm i' (reveal l_narrow))
+               (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l)))
+        as (trade (base_iterator_match vmatch p pm i' (reveal l_narrow))
+                  (base_iterator_match_n vmatch p off n pm i l));
+      rewrite each (reveal l_narrow) as (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n'));
+      i'
     }
   }
 }
