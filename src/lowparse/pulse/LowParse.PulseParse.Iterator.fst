@@ -11,7 +11,6 @@ module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
 module LPS = LowParse.Pulse.Base
 module LPV = LowParse.Pulse.VCList
-module B = Pulse.Lib.Box
 open Pulse.Lib.Trade
 
 let share_t = LowParse.PulseParse.Base.share_t
