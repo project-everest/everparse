@@ -395,11 +395,11 @@ fn lex_compare_bytes(s1: &[u8], s2: &[u8]) -> i16
     let mut pi2: [usize; 1] = [0usize; 1usize];
     let n1: usize = sp1.len();
     let n2: usize = sp2.len();
-    let ite: i16 =
-        if 0usize < n1
-        { if 0usize < n2 { 0i16 } else { 1i16 } }
-        else if 0usize < n2 { -1i16 } else { 0i16 };
-    let mut pres: [i16; 1] = [ite; 1usize];
+    let mut pres: [i16; 1] =
+        [if 0usize < n1
+            { if 0usize < n2 { 0i16 } else { 1i16 } }
+            else if 0usize < n2 { -1i16 } else { 0i16 };
+            1usize];
     let res: i16 = (&pres)[0];
     let i1: usize = (&pi1)[0];
     let mut cond: bool = res == 0i16 && i1 < n1;
@@ -597,12 +597,11 @@ fn validate_header(input: &[u8], poffset: &mut [usize]) -> bool
                     input2
                 };
             let x: initial_byte_t = read_initial_byte_t(input·);
-            let ite: bool =
-                if x.major_type == cbor_major_type_simple_value
-                { x.additional_info <= additional_info_long_argument_8_bits }
-                else
-                { true };
-            ite && x.additional_info < additional_info_unassigned_min
+            (x.major_type != cbor_major_type_simple_value
+            ||
+            x.additional_info <= additional_info_long_argument_8_bits)
+            &&
+            x.additional_info < additional_info_unassigned_min
         }
         else
         { false };
@@ -1322,16 +1321,13 @@ fn cbor_validate(input: &[u8]) -> usize
 
 fn impl_raw_uint64_optimal(x: raw_uint64) -> bool
 {
-    if (x.value <= max_simple_value_additional_info as u64) == (x.size == 0u8)
-    {
-        if x.size <= 1u8
-        { true }
-        else if x.size == 2u8
-        { 256u64 <= x.value }
-        else if x.size == 3u8 { 65536u64 <= x.value } else { 4294967296u64 <= x.value }
-    }
-    else
-    { false }
+    (x.value <= max_simple_value_additional_info as u64) == (x.size == 0u8)
+    &&
+    (x.size <= 1u8
+    ||
+    if x.size == 2u8
+    { 256u64 <= x.value }
+    else if x.size == 3u8 { 65536u64 <= x.value } else { 4294967296u64 <= x.value })
 }
 
 fn cbor_raw_ints_optimal(a: &[u8]) -> bool

@@ -82,13 +82,14 @@ pub fn cbor_nondet_mk_string <'a>(ty: cbor_nondet_string_kind, s: &'a [u8]) ->
             if ty == cbor_nondet_string_kind::TextString { cbor_impl_utf8_correct(s) } else { true };
         if correct
         {
-            let ite: u8 =
-                if ty == cbor_nondet_string_kind::ByteString
-                { crate::cbornondetveraux::cbor_major_type_byte_string }
-                else
-                { crate::cbornondetveraux::cbor_major_type_text_string };
             let res: crate::cbornondetveraux::cbor_raw =
-                crate::cbornondetveraux::cbor_nondet_mk_string(ite, s);
+                crate::cbornondetveraux::cbor_nondet_mk_string(
+                    if ty == cbor_nondet_string_kind::ByteString
+                    { crate::cbornondetveraux::cbor_major_type_byte_string }
+                    else
+                    { crate::cbornondetveraux::cbor_major_type_text_string },
+                    s
+                );
             crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: res }
         }
         else
