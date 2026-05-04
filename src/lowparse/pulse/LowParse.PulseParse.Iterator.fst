@@ -1059,6 +1059,29 @@ let iterator_match_n_gather
 = iterator_match_n_gather_bound #t #u vmatch #k p off n pm pm' i l l'
     (fun x1 #pm0 #x2 #pm0' x2' -> vmatch_gather x1 #pm0 #x2 #pm0' #x2')
 
+// Version with i, l, l' implicit — for calling inside closures where values are lambda-wrapped
+let iterator_match_n_gather_implicit
+  (#t: Type) (#u: Type)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (off: nat)
+  (n: nat)
+  (pm: perm)
+  (pm': perm)
+  (#i: iterator t)
+  (#l: list u)
+  (#l': list u)
+  (vmatch_gather: gather_t vmatch)
+: stt_ghost unit emp_inames
+    (iterator_match_n vmatch p off n pm i l **
+     iterator_match_n vmatch p off n pm' i l')
+    (fun _ ->
+      iterator_match_n vmatch p off n (pm +. pm') i l **
+      pure (l == l'))
+= iterator_match_n_gather_bound #t #u vmatch #k p off n pm pm' i l l'
+    (fun x1 #pm0 #x2 #pm0' x2' -> vmatch_gather x1 #pm0 #x2 #pm0' #x2')
+
 let iterator_match_share
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
@@ -2937,6 +2960,524 @@ ensures
       rewrite each (Append #t depth cb ca ob bp before oa ap after) as i;
       rewrite each (reveal l_narrow) as (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n'));
       i'
+    }
+  }
+}
+```
+
+#pop-options
+
+// Helper lemma: hd/tl distribute over append when first list is nonempty
+let hd_append_l (#a: Type) (l1 l2: list a)
+: Lemma (requires Cons? l1)
+  (ensures Cons? (l1 @ l2) /\ List.Tot.hd (l1 @ l2) == List.Tot.hd l1 /\
+           List.Tot.tl (l1 @ l2) == List.Tot.tl l1 @ l2)
+= ()
+
+// Helper: length > 0 implies Cons
+let length_pos_cons (#a: Type) (l: list a)
+: Lemma (requires List.Tot.length l > 0)
+  (ensures Cons? l)
+= ()
+
+// Safe predecessor for nat
+let nat_pred (n: nat) : nat = if n > 0 then n - 1 else 0
+
+// Postcondition for iterator_next_n
+// None: the match is returned unchanged (Serialized case)
+// Some x: vmatch on x with head, shifted match on tail at pm/2, trade back to full pm
+let iterator_next_n_post
+  (#t: Type) (#u: Type)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (off n: nat) (pm: perm) (i: iterator t) (l: list u)
+  (res: option t)
+: Tot slprop
+= match res with
+  | None -> iterator_match_n vmatch p off n pm i l
+  | Some x -> exists* pm_v hd_val tl_val .
+      vmatch pm_v x hd_val **
+      iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) i tl_val **
+      trade
+        (vmatch pm_v x hd_val **
+         iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) i tl_val)
+        (iterator_match_n vmatch p off n pm i l) **
+      pure (n > 0 /\ l == hd_val :: tl_val)
+
+
+#push-options "--z3rlimit 80 --fuel 1 --ifuel 1"
+
+```pulse
+fn rec iterator_next_n
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (off: nat) (n: nat { n > 0 })
+  (pm: perm) (i: iterator t) (l: Ghost.erased (list u))
+  (vmatch_share: share_t vmatch)
+  (vmatch_gather: gather_t vmatch)
+requires
+  iterator_match_n vmatch p off n pm i (Ghost.reveal l)
+returns res: option t
+ensures
+  iterator_next_n_post vmatch p off n pm i (Ghost.reveal l) res
+decreases (iterator_depth i)
+{
+  match i {
+    Base bi -> {
+      unfold (iterator_match_n vmatch p off n pm (Base bi) (Ghost.reveal l));
+      match bi {
+        Empty -> {
+          unfold (base_iterator_match_n vmatch p off n pm (Empty #t) (Ghost.reveal l));
+          unreachable ()
+        }
+        Singleton sp sv s -> {
+          base_iterator_match_n_singleton_unfold_pos vmatch p off n pm sp sv s (Ghost.reveal l) ();
+          with x y. assert (pts_to s #(pm *. sp) x ** vmatch (pm *. sv) x y **
+            pure (Ghost.reveal l == [y] /\ off == 0 /\ n == 1));
+          let x_val = R.read s;
+          // Fold 0-case at pm/2 (needs only pure, not pts_to)
+          fold (base_iterator_match_n vmatch p 1 0 (pm /. 2.0R) (Singleton #t sp sv s) (List.Tot.tl (Ghost.reveal l)));
+          fold (iterator_match_n vmatch p 1 0 (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
+          rewrite (iterator_match_n vmatch p 1 0 (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)))
+            as (iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
+          rewrite each x as x_val;
+          rewrite (vmatch (pm *. sv) x_val y)
+            as (vmatch (pm *. sv) x_val (List.Tot.hd (Ghost.reveal l)));
+          intro (vmatch (pm *. sv) x_val (List.Tot.hd (Ghost.reveal l)) **
+                 iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l))
+                 @==>
+                 iterator_match_n vmatch p off n pm (Base (Singleton #t sp sv s)) (Ghost.reveal l))
+            #(pts_to s #(pm *. sp) x_val **
+              pure (Ghost.reveal l == [y] /\ off == 0 /\ n == 1))
+            fn _ {
+              rewrite (iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)))
+                as (iterator_match_n vmatch p 1 0 (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
+              unfold (iterator_match_n vmatch p 1 0 (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
+              unfold (base_iterator_match_n vmatch p 1 0 (pm /. 2.0R) (Singleton #t sp sv s) (List.Tot.tl (Ghost.reveal l)));
+              drop_ (pure (Nil? (List.Tot.tl (Ghost.reveal l)) /\ 1 <= 1));
+              rewrite (vmatch (pm *. sv) x_val (List.Tot.hd (Ghost.reveal l)))
+                as (vmatch (pm *. sv) x_val y);
+              base_iterator_match_n_singleton_fold_pos vmatch p off n pm sp sv s (Ghost.reveal l) ();
+              fold (iterator_match_n vmatch p off n pm (Base (Singleton #t sp sv s)) (Ghost.reveal l));
+            };
+          fold (iterator_next_n_post vmatch p off n pm (Base (Singleton #t sp sv s)) (Ghost.reveal l) (Some x_val));
+          rewrite each (Base (Singleton #t sp sv s)) as i;
+          Some x_val
+        }
+        Slice sp sv s -> {
+          unfold (base_iterator_match_n vmatch p off n pm (Slice #t sp sv s) (Ghost.reveal l));
+          fold (base_iterator_match_n vmatch p off n pm (Slice #t sp sv s) (Ghost.reveal l));
+          fold (iterator_match_n vmatch p off n pm (Base (Slice #t sp sv s)) (Ghost.reveal l));
+          fold (iterator_next_n_post vmatch p off n pm (Base (Slice #t sp sv s)) (Ghost.reveal l) (None #t));
+          rewrite each (Base (Slice #t sp sv s)) as i;
+          None #t
+        }
+        Serialized sp count pl -> {
+          // Just fold everything back unchanged (returning None)
+          unfold (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) (Ghost.reveal l));
+          fold (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) (Ghost.reveal l));
+          fold (iterator_match_n vmatch p off n pm (Base (Serialized #t sp count pl)) (Ghost.reveal l));
+          fold (iterator_next_n_post vmatch p off n pm (Base (Serialized #t sp count pl)) (Ghost.reveal l) (None #t));
+          rewrite each (Base (Serialized #t sp count pl)) as i;
+          None #t
+        }
+      }
+    }
+    Append depth cb ca ob bp before oa ap after -> {
+      unfold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l));
+      // Compute which side has elements first (pure computation)
+      let n_b = append_n_before off n (SZ.v cb);
+      if (n_b > 0) {
+        // Element is in the before part - read and rewrite inside this branch
+        let ib = R.read before;
+        with i_x l_x . rewrite
+          (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_x l_x)
+          as (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib l_x);
+        with l_before . assert (
+          iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib l_before
+        );
+        let res = iterator_next_n vmatch p
+          (append_off_before off (SZ.v ob) (SZ.v cb))
+          (append_n_before off n (SZ.v cb))
+          pm ib l_before
+          vmatch_share vmatch_gather;
+        unfold (iterator_next_n_post vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib (Ghost.reveal l_before) res);
+        match res {
+          None -> {
+            // Self-call returned None: l_before is unchanged, fold back Append
+            // Rewrite back: ib -> ghost existential for fold
+            rewrite (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib (Ghost.reveal l_before))
+              as (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm (Ghost.reveal (Ghost.hide ib)) (Ghost.reveal l_before));
+            fold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l));
+            fold (iterator_next_n_post vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l) (None #t));
+            rewrite each (Append #t depth cb ca ob bp before oa ap after) as i;
+            None #t
+          }
+          Some x -> {
+            // Inner call returned Some x with before iterator
+            // Context has: vmatch pm_v x hd_val ** iterator_match_n ... (pm/.2) ib tl_val **
+            //   trade_inner ** pure_inner (from inner post)
+            // Plus from outer unfold: pts_to before/after, iterator_match_n after, pure
+
+            // Capture the existentials from the inner Some postcondition
+            with pm_v hd_val tl_val . assert (
+              vmatch pm_v x hd_val **
+              iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val **
+              trade
+                (vmatch pm_v x hd_val **
+                 iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val)
+                (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib (Ghost.reveal l_before)) **
+              pure (append_n_before off n (SZ.v cb) > 0 /\ Ghost.reveal l_before == hd_val :: tl_val)
+            );
+
+            // Capture the after iterator from the outer unfold existentials
+            with i_after l_after . assert (
+              pts_to after #(pm *. ap) i_after **
+              iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l_after
+            );
+
+            // Share pts_to before
+            R.share before;
+            rewrite (R.pts_to before #((pm *. bp) /. 2.0R) (Ghost.hide ib)) as (R.pts_to before #((pm /. 2.0R) *. bp) (Ghost.hide ib));
+            rewrite (R.pts_to before #((pm *. bp) /. 2.0R) (Ghost.hide ib)) as (R.pts_to before #((pm /. 2.0R) *. bp) (Ghost.hide ib));
+            // Share pts_to after
+            R.share after;
+            rewrite (R.pts_to after #((pm *. ap) /. 2.0R) i_after) as (R.pts_to after #((pm /. 2.0R) *. ap) i_after);
+            rewrite (R.pts_to after #((pm *. ap) /. 2.0R) i_after) as (R.pts_to after #((pm /. 2.0R) *. ap) i_after);
+            // Share iterator_match_n on after
+            iterator_match_n_share vmatch p
+              (append_off_after off (SZ.v oa) (SZ.v cb))
+              (append_n_after off n (SZ.v cb))
+              pm i_after l_after vmatch_share;
+
+            // Rewrite before tail iterator for fold
+            rewrite (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val)
+              as (iterator_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib tl_val);
+            rewrite (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm /. 2.0R) i_after l_after)
+              as (iterator_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) i_after l_after);
+
+            // Fold the outer tail Append at pm/.2
+            rewrite (R.pts_to before #((pm /. 2.0R) *. bp) (Ghost.hide ib)) as (R.pts_to before #((pm /. 2.0R) *. bp) (Ghost.reveal (Ghost.hide ib)));
+            rewrite (R.pts_to after #((pm /. 2.0R) *. ap) i_after) as (R.pts_to after #((pm /. 2.0R) *. ap) (Ghost.reveal i_after));
+            fold (iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (tl_val @ l_after));
+
+            // Build the trade (extra includes one half of after for gathering in body)
+            intro (vmatch pm_v x hd_val **
+                   iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (tl_val @ l_after)
+                   @==>
+                   iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l))
+              #(trade
+                  (vmatch pm_v x hd_val **
+                   iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val)
+                  (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib (Ghost.reveal l_before)) **
+                R.pts_to before #((pm /. 2.0R) *. bp) (Ghost.hide ib) **
+                R.pts_to after #((pm /. 2.0R) *. ap) i_after **
+                iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm /. 2.0R) i_after l_after **
+                pure (append_n_before off n (SZ.v cb) > 0 /\ Ghost.reveal l_before == hd_val :: tl_val) **
+                pure (
+                  off + n <= SZ.v cb + SZ.v ca /\
+                  SZ.v ob + SZ.v cb <= SZ.v (iterator_length (Ghost.reveal (Ghost.hide ib))) /\
+                  SZ.v oa + SZ.v ca <= SZ.v (iterator_length (Ghost.reveal i_after)) /\
+                  List.Tot.length (Ghost.reveal l_before) == append_n_before off n (SZ.v cb) /\
+                  List.Tot.length l_after == append_n_after off n (SZ.v cb) /\
+                  Ghost.reveal l == List.Tot.append (Ghost.reveal l_before) l_after /\
+                  iterator_depth (Ghost.reveal (Ghost.hide ib)) < Ghost.reveal depth /\
+                  iterator_depth (Ghost.reveal i_after) < Ghost.reveal depth
+                ))
+              fn _ {
+                // Trade body: receives hyp + extra, must produce the conclusion
+                // 1. Unfold the Append tail to get parts at pm/.2
+                unfold (iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (tl_val @ l_after));
+                with ib_uf ia_uf l_b_uf l_a_uf . assert (
+                  R.pts_to before #((pm /. 2.0R) *. bp) ib_uf **
+                  iterator_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib_uf l_b_uf **
+                  R.pts_to after #((pm /. 2.0R) *. ap) ia_uf **
+                  iterator_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia_uf l_a_uf **
+                  pure (
+                    (off + 1) + nat_pred n <= SZ.v cb + SZ.v ca /\
+                    SZ.v ob + SZ.v cb <= SZ.v (iterator_length ib_uf) /\
+                    SZ.v oa + SZ.v ca <= SZ.v (iterator_length ia_uf) /\
+                    List.Tot.length l_b_uf == append_n_before (off + 1) (nat_pred n) (SZ.v cb) /\
+                    List.Tot.length l_a_uf == append_n_after (off + 1) (nat_pred n) (SZ.v cb) /\
+                    tl_val @ l_after == List.Tot.append l_b_uf l_a_uf /\
+                    iterator_depth ib_uf < Ghost.reveal depth /\
+                    iterator_depth ia_uf < Ghost.reveal depth
+                  )
+                );
+
+                // 2. Gather pts_to before
+                rewrite (R.pts_to before #((pm /. 2.0R) *. bp) (Ghost.hide ib)) as (R.pts_to before #((pm *. bp) /. 2.0R) (Ghost.hide ib));
+                rewrite (R.pts_to before #((pm /. 2.0R) *. bp) ib_uf) as (R.pts_to before #((pm *. bp) /. 2.0R) ib_uf);
+                R.gather before;
+
+                // 3. Gather pts_to after
+                rewrite (R.pts_to after #((pm /. 2.0R) *. ap) i_after) as (R.pts_to after #((pm *. ap) /. 2.0R) i_after);
+                rewrite (R.pts_to after #((pm /. 2.0R) *. ap) ia_uf) as (R.pts_to after #((pm *. ap) /. 2.0R) ia_uf);
+                R.gather after;
+
+                // 4. Establish list equalities for rewriting
+                List.Tot.Properties.append_length_inv_head tl_val l_after l_b_uf l_a_uf;
+
+                // 5. Rewrite before-tail to match inner trade using slprop_rw (SMT-powered)
+                slprop_rw
+                  (iterator_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib_uf l_b_uf)
+                  (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val)
+                  (Pulse.Lib.Core.slprop_equiv_ext'
+                    (iterator_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib_uf l_b_uf)
+                    (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val)
+                    ());
+                elim_trade
+                  (vmatch pm_v x hd_val **
+                   iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val)
+                  (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib (Ghost.reveal l_before));
+
+                // 6. Gather iterator_match_n on after using implicit version (avoids lambda-wrap bug)
+                slprop_rw
+                  (iterator_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia_uf l_a_uf)
+                  (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm /. 2.0R) i_after l_after)
+                  (Pulse.Lib.Core.slprop_equiv_ext'
+                    (iterator_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia_uf l_a_uf)
+                    (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm /. 2.0R) i_after l_after)
+                    ());
+                iterator_match_n_gather_implicit vmatch p
+                  (append_off_after off (SZ.v oa) (SZ.v cb))
+                  (append_n_after off n (SZ.v cb))
+                  (pm /. 2.0R) (pm /. 2.0R) vmatch_gather;
+
+                // 7. Drop pures
+                drop_ (pure (Ghost.hide ib == ib_uf));
+                drop_ (pure (i_after == ia_uf));
+                drop_ (pure (l_after == l_after));
+                drop_ (pure (append_n_before off n (SZ.v cb) > 0 /\ Ghost.reveal l_before == hd_val :: tl_val));
+                drop_ (pure (
+                  (off + 1) + nat_pred n <= SZ.v cb + SZ.v ca /\
+                  SZ.v ob + SZ.v cb <= SZ.v (iterator_length ib_uf) /\
+                  SZ.v oa + SZ.v ca <= SZ.v (iterator_length ia_uf) /\
+                  List.Tot.length l_b_uf == append_n_before (off + 1) (nat_pred n) (SZ.v cb) /\
+                  List.Tot.length l_a_uf == append_n_after (off + 1) (nat_pred n) (SZ.v cb) /\
+                  tl_val @ l_after == List.Tot.append l_b_uf l_a_uf /\
+                  iterator_depth ib_uf < Ghost.reveal depth /\
+                  iterator_depth ia_uf < Ghost.reveal depth
+                ));
+
+                // 8. Rewrite permissions
+                rewrite (R.pts_to before #((pm *. bp) /. 2.0R +. (pm *. bp) /. 2.0R) (Ghost.hide ib))
+                  as (R.pts_to before #(pm *. bp) (Ghost.hide ib));
+                rewrite (R.pts_to after #((pm *. ap) /. 2.0R +. (pm *. ap) /. 2.0R) i_after)
+                  as (R.pts_to after #(pm *. ap) i_after);
+                slprop_rw
+                  (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm /. 2.0R +. pm /. 2.0R) i_after l_after)
+                  (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l_after)
+                  (Pulse.Lib.Core.slprop_equiv_ext'
+                    (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm /. 2.0R +. pm /. 2.0R) i_after l_after)
+                    (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l_after)
+                    ());
+
+                // 9. Fold back iterator_match_n for Append
+                rewrite (R.pts_to after #(pm *. ap) i_after) as (R.pts_to after #(pm *. ap) (Ghost.reveal i_after));
+                fold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l));
+              };
+
+            // Fold the postcondition
+            fold (iterator_next_n_post vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l) (Some x));
+            rewrite each (Append #t depth cb ca ob bp before oa ap after) as i;
+            Some x
+          }
+        }
+      } else {
+        // Element is in the after part
+        let ia = R.read after;
+        with i_a l_a . rewrite
+          (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_a l_a)
+          as (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia l_a);
+        with l_after . assert (
+          iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia l_after
+        );
+        let res = iterator_next_n vmatch p
+          (append_off_after off (SZ.v oa) (SZ.v cb))
+          (append_n_after off n (SZ.v cb))
+          pm ia l_after
+          vmatch_share vmatch_gather;
+        unfold (iterator_next_n_post vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia (Ghost.reveal l_after) res);
+        match res {
+          None -> {
+            rewrite (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia (Ghost.reveal l_after))
+              as (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm (Ghost.reveal (Ghost.hide ia)) (Ghost.reveal l_after));
+            fold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l));
+            fold (iterator_next_n_post vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l) (None #t));
+            rewrite each (Append #t depth cb ca ob bp before oa ap after) as i;
+            None #t
+          }
+          Some x -> {
+            // Inner call returned Some x with after iterator
+            with pm_v hd_val tl_val . assert (
+              vmatch pm_v x hd_val **
+              iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val **
+              trade
+                (vmatch pm_v x hd_val **
+                 iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val)
+                (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia (Ghost.reveal l_after)) **
+              pure (append_n_after off n (SZ.v cb) > 0 /\ Ghost.reveal l_after == hd_val :: tl_val)
+            );
+
+            // Capture the before iterator from the outer unfold existentials
+            // In the else branch, n_b == 0, so before has 0 elements
+            let ib = R.read before;
+            with i_b l_b . rewrite
+              (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_b l_b)
+              as (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib l_b);
+            with l_before . assert (
+              iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib l_before
+            );
+
+            // Share pts_to before
+            R.share before;
+            rewrite (R.pts_to before #((pm *. bp) /. 2.0R) (Ghost.hide ib)) as (R.pts_to before #((pm /. 2.0R) *. bp) (Ghost.hide ib));
+            rewrite (R.pts_to before #((pm *. bp) /. 2.0R) (Ghost.hide ib)) as (R.pts_to before #((pm /. 2.0R) *. bp) (Ghost.hide ib));
+            // Share pts_to after
+            R.share after;
+            rewrite (R.pts_to after #((pm *. ap) /. 2.0R) (Ghost.hide ia)) as (R.pts_to after #((pm /. 2.0R) *. ap) (Ghost.hide ia));
+            rewrite (R.pts_to after #((pm *. ap) /. 2.0R) (Ghost.hide ia)) as (R.pts_to after #((pm /. 2.0R) *. ap) (Ghost.hide ia));
+            // Share iterator_match_n on before
+            iterator_match_n_share vmatch p
+              (append_off_before off (SZ.v ob) (SZ.v cb))
+              (append_n_before off n (SZ.v cb))
+              pm ib l_before vmatch_share;
+
+            // Rewrite after tail offsets to match the outer Append offsets
+            rewrite (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val)
+              as (iterator_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia tl_val);
+            rewrite (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm /. 2.0R) ib l_before)
+              as (iterator_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib l_before);
+
+            // Fold the outer tail Append at pm/.2
+            rewrite (R.pts_to before #((pm /. 2.0R) *. bp) (Ghost.hide ib)) as (R.pts_to before #((pm /. 2.0R) *. bp) (Ghost.reveal (Ghost.hide ib)));
+            rewrite (R.pts_to after #((pm /. 2.0R) *. ap) (Ghost.hide ia)) as (R.pts_to after #((pm /. 2.0R) *. ap) (Ghost.reveal (Ghost.hide ia)));
+            fold (iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (l_before @ tl_val));
+
+            // Build the trade
+            intro (vmatch pm_v x hd_val **
+                   iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (l_before @ tl_val)
+                   @==>
+                   iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l))
+              #(trade
+                  (vmatch pm_v x hd_val **
+                   iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val)
+                  (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia (Ghost.reveal l_after)) **
+                R.pts_to before #((pm /. 2.0R) *. bp) (Ghost.hide ib) **
+                R.pts_to after #((pm /. 2.0R) *. ap) (Ghost.hide ia) **
+                iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm /. 2.0R) ib l_before **
+                pure (append_n_after off n (SZ.v cb) > 0 /\ Ghost.reveal l_after == hd_val :: tl_val) **
+                pure (
+                  off + n <= SZ.v cb + SZ.v ca /\
+                  SZ.v ob + SZ.v cb <= SZ.v (iterator_length (Ghost.reveal (Ghost.hide ib))) /\
+                  SZ.v oa + SZ.v ca <= SZ.v (iterator_length (Ghost.reveal (Ghost.hide ia))) /\
+                  List.Tot.length l_before == append_n_before off n (SZ.v cb) /\
+                  List.Tot.length (Ghost.reveal l_after) == append_n_after off n (SZ.v cb) /\
+                  Ghost.reveal l == List.Tot.append l_before (Ghost.reveal l_after) /\
+                  iterator_depth (Ghost.reveal (Ghost.hide ib)) < Ghost.reveal depth /\
+                  iterator_depth (Ghost.reveal (Ghost.hide ia)) < Ghost.reveal depth
+                ))
+              fn _ {
+                // Trade body: receives hyp + extra, must produce the conclusion
+                // 1. Unfold the Append tail to get parts at pm/.2
+                unfold (iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (l_before @ tl_val));
+                with ib_uf ia_uf l_b_uf l_a_uf . assert (
+                  R.pts_to before #((pm /. 2.0R) *. bp) ib_uf **
+                  iterator_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib_uf l_b_uf **
+                  R.pts_to after #((pm /. 2.0R) *. ap) ia_uf **
+                  iterator_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia_uf l_a_uf **
+                  pure (
+                    (off + 1) + nat_pred n <= SZ.v cb + SZ.v ca /\
+                    SZ.v ob + SZ.v cb <= SZ.v (iterator_length ib_uf) /\
+                    SZ.v oa + SZ.v ca <= SZ.v (iterator_length ia_uf) /\
+                    List.Tot.length l_b_uf == append_n_before (off + 1) (nat_pred n) (SZ.v cb) /\
+                    List.Tot.length l_a_uf == append_n_after (off + 1) (nat_pred n) (SZ.v cb) /\
+                    l_before @ tl_val == List.Tot.append l_b_uf l_a_uf /\
+                    iterator_depth ib_uf < Ghost.reveal depth /\
+                    iterator_depth ia_uf < Ghost.reveal depth
+                  )
+                );
+
+                // 2. Gather pts_to before
+                rewrite (R.pts_to before #((pm /. 2.0R) *. bp) (Ghost.hide ib)) as (R.pts_to before #((pm *. bp) /. 2.0R) (Ghost.hide ib));
+                rewrite (R.pts_to before #((pm /. 2.0R) *. bp) ib_uf) as (R.pts_to before #((pm *. bp) /. 2.0R) ib_uf);
+                R.gather before;
+
+                // 3. Gather pts_to after
+                rewrite (R.pts_to after #((pm /. 2.0R) *. ap) (Ghost.hide ia)) as (R.pts_to after #((pm *. ap) /. 2.0R) (Ghost.hide ia));
+                rewrite (R.pts_to after #((pm /. 2.0R) *. ap) ia_uf) as (R.pts_to after #((pm *. ap) /. 2.0R) ia_uf);
+                R.gather after;
+
+                // 4. Establish list equalities for rewriting
+                List.Tot.Properties.append_length_inv_head l_before tl_val l_b_uf l_a_uf;
+
+                // 5. Rewrite after-tail to match inner trade using slprop_rw (SMT-powered)
+                slprop_rw
+                  (iterator_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia_uf l_a_uf)
+                  (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val)
+                  (Pulse.Lib.Core.slprop_equiv_ext'
+                    (iterator_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia_uf l_a_uf)
+                    (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val)
+                    ());
+                elim_trade
+                  (vmatch pm_v x hd_val **
+                   iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val)
+                  (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia (Ghost.reveal l_after));
+
+                // 6. Gather iterator_match_n on before using implicit version (avoids lambda-wrap bug)
+                slprop_rw
+                  (iterator_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib_uf l_b_uf)
+                  (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm /. 2.0R) ib l_before)
+                  (Pulse.Lib.Core.slprop_equiv_ext'
+                    (iterator_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib_uf l_b_uf)
+                    (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm /. 2.0R) ib l_before)
+                    ());
+                iterator_match_n_gather_implicit vmatch p
+                  (append_off_before off (SZ.v ob) (SZ.v cb))
+                  (append_n_before off n (SZ.v cb))
+                  (pm /. 2.0R) (pm /. 2.0R) vmatch_gather;
+
+                // 7. Drop pures
+                drop_ (pure (Ghost.hide ib == ib_uf));
+                drop_ (pure (Ghost.hide ia == ia_uf));
+                drop_ (pure (l_before == l_before));
+                drop_ (pure (append_n_after off n (SZ.v cb) > 0 /\ Ghost.reveal l_after == hd_val :: tl_val));
+                drop_ (pure (
+                  (off + 1) + nat_pred n <= SZ.v cb + SZ.v ca /\
+                  SZ.v ob + SZ.v cb <= SZ.v (iterator_length ib_uf) /\
+                  SZ.v oa + SZ.v ca <= SZ.v (iterator_length ia_uf) /\
+                  List.Tot.length l_b_uf == append_n_before (off + 1) (nat_pred n) (SZ.v cb) /\
+                  List.Tot.length l_a_uf == append_n_after (off + 1) (nat_pred n) (SZ.v cb) /\
+                  l_before @ tl_val == List.Tot.append l_b_uf l_a_uf /\
+                  iterator_depth ib_uf < Ghost.reveal depth /\
+                  iterator_depth ia_uf < Ghost.reveal depth
+                ));
+
+                // 8. Rewrite permissions
+                rewrite (R.pts_to before #((pm *. bp) /. 2.0R +. (pm *. bp) /. 2.0R) (Ghost.hide ib))
+                  as (R.pts_to before #(pm *. bp) (Ghost.hide ib));
+                rewrite (R.pts_to after #((pm *. ap) /. 2.0R +. (pm *. ap) /. 2.0R) (Ghost.hide ia))
+                  as (R.pts_to after #(pm *. ap) (Ghost.hide ia));
+                slprop_rw
+                  (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm /. 2.0R +. pm /. 2.0R) ib l_before)
+                  (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib l_before)
+                  (Pulse.Lib.Core.slprop_equiv_ext'
+                    (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm /. 2.0R +. pm /. 2.0R) ib l_before)
+                    (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib l_before)
+                    ());
+
+                // 9. Fold back iterator_match_n for Append
+                fold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l));
+              };
+
+            // Fold the postcondition
+            fold (iterator_next_n_post vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l) (Some x));
+            rewrite each (Append #t depth cb ca ob bp before oa ap after) as i;
+            Some x
+          }
+        }
+      }
     }
   }
 }
