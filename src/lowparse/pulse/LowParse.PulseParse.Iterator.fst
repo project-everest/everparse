@@ -3869,10 +3869,10 @@ let iterator_next_post
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind) (p: parser k u)
-  (pm: perm) (r: R.ref (iterator t)) (l: list u)
+  (pm: perm) (r: R.ref (iterator t)) (i_orig: iterator t) (l: list u)
   (res: t)
 : Tot slprop
-= exists* pm_v hd_val tl_val i' i_orig .
+= exists* pm_v hd_val tl_val i' .
     vmatch pm_v res hd_val **
     R.pts_to r i' **
     iterator_match vmatch p (pm /. 4.0R) i' tl_val **
@@ -3888,20 +3888,19 @@ let iterator_next_post
 fn iterator_next
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind) (p: parser k u)
-  (pm: perm) (r: R.ref (iterator t)) (l: Ghost.erased (list u))
+  (pm: perm) (r: R.ref (iterator t)) (i_orig: Ghost.erased (iterator t)) (l: Ghost.erased (list u))
   (vmatch_share: share_t vmatch)
   (vmatch_gather: gather_t vmatch)
   (j: LPS.jumper p)
   (zcp: zero_copy_parse_strong_prefix (vmatch 1.0R) p)
 requires
-  exists* i . R.pts_to r i ** iterator_match vmatch p pm i (Ghost.reveal l) ** pure (Cons? (Ghost.reveal l))
+  R.pts_to r (Ghost.reveal i_orig) ** iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l) ** pure (Cons? (Ghost.reveal l))
 returns res: t
 ensures
-  iterator_next_post vmatch p pm r (Ghost.reveal l) res
+  iterator_next_post vmatch p pm r (Ghost.reveal i_orig) (Ghost.reveal l) res
 {
   let i = R.read r;
-  with i0. assert (iterator_match vmatch p pm i0 (Ghost.reveal l));
-  rewrite (iterator_match vmatch p pm i0 (Ghost.reveal l))
+  rewrite (iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l))
     as (iterator_match vmatch p pm i (Ghost.reveal l));
   let n_sz = iterator_length i;
   if (SZ.eq n_sz 0sz) {
@@ -3962,7 +3961,7 @@ ensures
       rewrite (iterator_match_n vmatch p 0 (SZ.v n_sz) pm i (Ghost.reveal l))
         as (iterator_match vmatch p pm i (Ghost.reveal l));
     };
-  fold (iterator_next_post vmatch p pm r (Ghost.reveal l) x);
+  fold (iterator_next_post vmatch p pm r (Ghost.reveal i_orig) (Ghost.reveal l) x);
   x
   }
 }
