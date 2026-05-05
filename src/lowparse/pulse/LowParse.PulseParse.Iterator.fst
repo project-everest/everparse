@@ -3161,23 +3161,23 @@ let parse_nlist_splitAt_hd_full_squash
   (ensures fun _ -> True)
 = parse_nlist_splitAt_hd_full_lemma p off n m bytes l_all l v_prefix v_suffix hd_val
 
-// Postcondition for iterator_next
+// Postcondition for iterator_next_n
 // Always returns an element matching the head, shifted match on tail at pm/2, trade back
-let iterator_next_post
+let iterator_next_n_post
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind) (p: parser k u)
-  (off n: nat) (pm: perm) (i: iterator t) (l: list u)
+  (off: Ghost.erased nat) (n: Ghost.erased nat) (pm: perm) (i: iterator t) (l: list u)
   (res: t)
 : Tot slprop
 = exists* pm_v hd_val tl_val .
     vmatch pm_v res hd_val **
-    iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) i tl_val **
+    iterator_match_n vmatch p (Ghost.reveal off + 1) (nat_pred (Ghost.reveal n)) (pm /. 2.0R) i tl_val **
     trade
       (vmatch pm_v res hd_val **
-       iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) i tl_val)
-      (iterator_match_n vmatch p off n pm i l) **
-    pure (n > 0 /\ l == hd_val :: tl_val)
+       iterator_match_n vmatch p (Ghost.reveal off + 1) (nat_pred (Ghost.reveal n)) (pm /. 2.0R) i tl_val)
+      (iterator_match_n vmatch p (Ghost.reveal off) (Ghost.reveal n) pm i l) **
+    pure (Ghost.reveal n > 0 /\ l == hd_val :: tl_val)
 
 
 // Ghost fn: trade body for iterator_next Serialized case.
@@ -3253,21 +3253,21 @@ ensures
 #push-options "--z3rlimit 8000 --fuel 2 --ifuel 1 --ext no:context_pruning"
 
 ```pulse
-fn rec iterator_next
+fn rec iterator_next_n
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind) (p: parser k u)
-  (off: nat) (n: nat { n > 0 })
-  (off_sz: SZ.t { SZ.v off_sz == off }) (n_sz: SZ.t { SZ.v n_sz == n })
+  (off: Ghost.erased nat) (n: Ghost.erased nat { Ghost.reveal n > 0 })
+  (off_sz: SZ.t { SZ.v off_sz == Ghost.reveal off }) (n_sz: SZ.t { SZ.v n_sz == Ghost.reveal n })
   (pm: perm) (i: iterator t) (l: Ghost.erased (list u))
   (vmatch_share: share_t vmatch)
   (vmatch_gather: gather_t vmatch)
   (j: LPS.jumper p)
-  (zcp: zero_copy_parse_strong_prefix (fun (x: t) (v: u) -> vmatch 1.0R x v) p)
+  (zcp: zero_copy_parse_strong_prefix (vmatch 1.0R) p)
 requires
   iterator_match_n vmatch p off n pm i (Ghost.reveal l)
 returns res: t
 ensures
-  iterator_next_post vmatch p off n pm i (Ghost.reveal l) res
+  iterator_next_n_post vmatch p off n pm i (Ghost.reveal l) res
 decreases (iterator_depth i)
 {
   match i {
@@ -3308,7 +3308,7 @@ decreases (iterator_depth i)
               base_iterator_match_n_singleton_fold_pos vmatch p off n pm sp sv s (Ghost.reveal l) ();
               fold (iterator_match_n vmatch p off n pm (Base (Singleton #t sp sv s)) (Ghost.reveal l));
             };
-          fold (iterator_next_post vmatch p off n pm (Base (Singleton #t sp sv s)) (Ghost.reveal l) x_val);
+          fold (iterator_next_n_post vmatch p off n pm (Base (Singleton #t sp sv s)) (Ghost.reveal l) x_val);
           rewrite each (Base (Singleton #t sp sv s)) as i;
           x_val
         }
@@ -3418,7 +3418,7 @@ decreases (iterator_depth i)
               fold (base_iterator_match_n vmatch p off n pm (Slice #t sp sv s) (Ghost.reveal l));
               fold (iterator_match_n vmatch p off n pm (Base (Slice #t sp sv s)) (Ghost.reveal l));
             };
-          fold (iterator_next_post vmatch p off n pm (Base (Slice #t sp sv s)) (Ghost.reveal l) x_val);
+          fold (iterator_next_n_post vmatch p off n pm (Base (Slice #t sp sv s)) (Ghost.reveal l) x_val);
           rewrite each (Base (Slice #t sp sv s)) as i;
           x_val
         }
@@ -3480,7 +3480,7 @@ decreases (iterator_depth i)
                 pl pl_prefix pl_suffix v' l x_val pos
                 () () () ();
             };
-          fold (iterator_next_post vmatch p off n pm (Base (Serialized #t sp count pl)) (Ghost.reveal l) x_val);
+          fold (iterator_next_n_post vmatch p off n pm (Base (Serialized #t sp count pl)) (Ghost.reveal l) x_val);
           rewrite each (Base (Serialized #t sp count pl)) as i;
           x_val
           }}
@@ -3489,9 +3489,10 @@ decreases (iterator_depth i)
     }
     Append depth cb ca ob bp before oa ap after -> {
       unfold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l));
-      // Compute which side has elements first (pure computation)
-      let n_b = append_n_before off n (SZ.v cb);
-      if (n_b > 0) {
+      // Compute which side has elements first (concrete computation on SZ.t)
+      let child_n_sz = append_n_before_sz off_sz n_sz cb;
+      let child_off_sz = append_off_before_sz off_sz ob cb;
+      if (SZ.gt child_n_sz 0sz) {
         // Element is in the before part
         let ib = R.read before;
         with i_x l_x . rewrite
@@ -3500,15 +3501,13 @@ decreases (iterator_depth i)
         with l_before . assert (
           iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib l_before
         );
-        let child_off_sz = append_off_before_sz off_sz ob cb;
-        let child_n_sz = append_n_before_sz off_sz n_sz cb;
-        let x = iterator_next vmatch p
+        let x = iterator_next_n vmatch p
           (append_off_before off (SZ.v ob) (SZ.v cb))
           (append_n_before off n (SZ.v cb))
           child_off_sz child_n_sz
           pm ib l_before
           vmatch_share vmatch_gather j zcp;
-        unfold (iterator_next_post vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib (Ghost.reveal l_before) x);
+        unfold (iterator_next_n_post vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib (Ghost.reveal l_before) x);
 
         // Capture the existentials from the inner postcondition
         with pm_v hd_val tl_val . assert (
@@ -3670,7 +3669,7 @@ decreases (iterator_depth i)
           };
 
         // Fold the postcondition
-        fold (iterator_next_post vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l) x);
+        fold (iterator_next_n_post vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l) x);
         rewrite each (Append #t depth cb ca ob bp before oa ap after) as i;
         x
       } else {
@@ -3684,13 +3683,13 @@ decreases (iterator_depth i)
         );
         let child_off_sz_a = append_off_after_sz off_sz oa ca cb;
         let child_n_sz_a = append_n_after_sz off_sz n_sz cb;
-        let x = iterator_next vmatch p
+        let x = iterator_next_n vmatch p
           (append_off_after off (SZ.v oa) (SZ.v cb))
           (append_n_after off n (SZ.v cb))
           child_off_sz_a child_n_sz_a
           pm ia l_after
           vmatch_share vmatch_gather j zcp;
-        unfold (iterator_next_post vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia (Ghost.reveal l_after) x);
+        unfold (iterator_next_n_post vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia (Ghost.reveal l_after) x);
 
         // Inner call returned x with after iterator
         with pm_v hd_val tl_val . assert (
@@ -3854,11 +3853,117 @@ decreases (iterator_depth i)
           };
 
         // Fold the postcondition
-        fold (iterator_next_post vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l) x);
+        fold (iterator_next_n_post vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l) x);
         rewrite each (Append #t depth cb ca ob bp before oa ap after) as i;
         x
       }
     }
+  }
+}
+```
+
+#pop-options
+
+// Postcondition for iterator_next wrapper
+let iterator_next_post
+  (#t: Type) (#u: Type)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (pm: perm) (r: R.ref (iterator t)) (l: list u)
+  (res: t)
+: Tot slprop
+= exists* pm_v hd_val tl_val i' i_orig .
+    vmatch pm_v res hd_val **
+    R.pts_to r i' **
+    iterator_match vmatch p (pm /. 4.0R) i' tl_val **
+    trade
+      (vmatch pm_v res hd_val **
+       iterator_match vmatch p (pm /. 4.0R) i' tl_val)
+      (iterator_match vmatch p pm i_orig l) **
+    pure (Cons? l /\ hd_val == List.Tot.hd l /\ tl_val == List.Tot.tl l)
+
+#push-options "--z3rlimit 8000 --fuel 2 --ifuel 1 --ext no:context_pruning"
+
+```pulse
+fn iterator_next
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (pm: perm) (r: R.ref (iterator t)) (l: Ghost.erased (list u))
+  (vmatch_share: share_t vmatch)
+  (vmatch_gather: gather_t vmatch)
+  (j: LPS.jumper p)
+  (zcp: zero_copy_parse_strong_prefix (vmatch 1.0R) p)
+requires
+  exists* i . R.pts_to r i ** iterator_match vmatch p pm i (Ghost.reveal l) ** pure (Cons? (Ghost.reveal l))
+returns res: t
+ensures
+  iterator_next_post vmatch p pm r (Ghost.reveal l) res
+{
+  let i = R.read r;
+  with i0. assert (iterator_match vmatch p pm i0 (Ghost.reveal l));
+  rewrite (iterator_match vmatch p pm i0 (Ghost.reveal l))
+    as (iterator_match vmatch p pm i (Ghost.reveal l));
+  let n_sz = iterator_length i;
+  if (SZ.eq n_sz 0sz) {
+    // Impossible: Cons? l but iterator has length 0
+    rewrite (iterator_match vmatch p pm i (Ghost.reveal l))
+      as (iterator_match_n vmatch p 0 0 pm i (Ghost.reveal l));
+    iterator_match_n_length vmatch p 0 0 pm i (Ghost.reveal l);
+    unreachable ()
+  } else {
+  rewrite (iterator_match vmatch p pm i (Ghost.reveal l))
+    as (iterator_match_n vmatch p 0 (SZ.v n_sz) pm i (Ghost.reveal l));
+  let x = iterator_next_n vmatch p 0 (SZ.v n_sz) 0sz n_sz pm i l
+    vmatch_share vmatch_gather j zcp;
+  unfold (iterator_next_n_post vmatch p 0 (SZ.v n_sz) pm i (Ghost.reveal l) x);
+  with pm_v hd_val tl_val . assert (
+    vmatch pm_v x hd_val **
+    iterator_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val **
+    trade
+      (vmatch pm_v x hd_val **
+       iterator_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val)
+      (iterator_match_n vmatch p 0 (SZ.v n_sz) pm i (Ghost.reveal l)) **
+    pure (SZ.v n_sz > 0 /\ Ghost.reveal l == hd_val :: tl_val)
+  );
+  // Narrow the tail to get iterator_match on a new iterator
+  let n_sz' = SZ.sub n_sz 1sz;
+  iterator_match_n_length vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i (Ghost.reveal tl_val);
+  assert (pure (1 <= SZ.v 1sz /\ SZ.v 1sz + SZ.v n_sz' <= 1 + nat_pred (SZ.v n_sz)));
+  let i' = iterator_narrow_n vmatch p j 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val 1sz n_sz'
+    vmatch_share vmatch_gather;
+  // list_narrow tl_val 0 (nat_pred (SZ.v n_sz)) == tl_val since length tl_val == nat_pred n
+  FStar.List.Pure.Properties.splitAt_length_total (Ghost.reveal tl_val);
+  rewrite (iterator_match vmatch p ((pm /. 2.0R) /. 2.0R) i' (list_narrow tl_val (SZ.v 1sz - 1) (SZ.v n_sz')))
+    as (iterator_match vmatch p (pm /. 4.0R) i' (Ghost.reveal tl_val));
+  rewrite (trade (iterator_match vmatch p ((pm /. 2.0R) /. 2.0R) i' (list_narrow tl_val (SZ.v 1sz - 1) (SZ.v n_sz')))
+                 (iterator_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val))
+    as (trade (iterator_match vmatch p (pm /. 4.0R) i' (Ghost.reveal tl_val))
+             (iterator_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val));
+  // Write i' to ref
+  R.write r i';
+  // Build composite trade (does not involve R.pts_to r)
+  intro_trade
+    (vmatch pm_v x hd_val **
+     iterator_match vmatch p (pm /. 4.0R) i' (Ghost.reveal tl_val))
+    (iterator_match vmatch p pm i (Ghost.reveal l))
+    (trade (iterator_match vmatch p (pm /. 4.0R) i' (Ghost.reveal tl_val))
+           (iterator_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val) **
+     trade (vmatch pm_v x hd_val **
+            iterator_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val)
+           (iterator_match_n vmatch p 0 (SZ.v n_sz) pm i (Ghost.reveal l)))
+    fn _ {
+      elim_trade
+        (iterator_match vmatch p (pm /. 4.0R) i' (Ghost.reveal tl_val))
+        (iterator_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val);
+      elim_trade
+        (vmatch pm_v x hd_val **
+         iterator_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val)
+        (iterator_match_n vmatch p 0 (SZ.v n_sz) pm i (Ghost.reveal l));
+      rewrite (iterator_match_n vmatch p 0 (SZ.v n_sz) pm i (Ghost.reveal l))
+        as (iterator_match vmatch p pm i (Ghost.reveal l));
+    };
+  fold (iterator_next_post vmatch p pm r (Ghost.reveal l) x);
+  x
   }
 }
 ```
