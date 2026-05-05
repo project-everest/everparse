@@ -3161,7 +3161,466 @@ let parse_nlist_splitAt_hd_full_squash
   (ensures fun _ -> True)
 = parse_nlist_splitAt_hd_full_lemma p off n m bytes l_all l v_prefix v_suffix hd_val
 
-// Postcondition for iterator_next_n
+// Lemma: fst(splitAt n (l1 ++ l2)) == fst(splitAt n l1) when n <= length l1
+let rec lemma_splitAt_fst_append (#a: Type) (n: nat) (l1 l2: list a)
+  : Lemma (requires n <= List.Tot.length l1)
+          (ensures fst (List.Tot.splitAt n (l1 @ l2)) == fst (List.Tot.splitAt n l1))
+          (decreases n)
+= match n with
+  | 0 -> ()
+  | _ -> match l1 with
+    | _ :: l1' -> lemma_splitAt_fst_append (n - 1) l1' l2
+
+// Lemma: list_narrow l 0 n ++ list_narrow l n (len - n) == l when n <= len = length l
+let list_narrow_split (#a: Type) (l: list a) (n: nat)
+  : Lemma (requires n <= List.Tot.length l)
+          (ensures List.Tot.append (list_narrow l 0 n) (list_narrow l n (List.Tot.length l - n)) == l)
+= // list_narrow l 0 n = fst (splitAt n (snd (splitAt 0 l))) = fst (splitAt n l) = l1
+  // list_narrow l n (len-n) = fst (splitAt (len-n) (snd (splitAt n l))) = fst (splitAt (len-n) l2) = l2
+  let (l1, l2) = List.Tot.splitAt n l in
+  FStar.List.Pure.Properties.splitAt_length n l;
+  // length l1 == n, length l2 == length l - n
+  FStar.List.Tot.Base.lemma_splitAt_snd_length n l;
+  // splitAt (length l2) l2 == (l2, [])
+  FStar.List.Pure.Properties.splitAt_length_total l2;
+  // l == l1 @ l2
+  FStar.List.Pure.Properties.lemma_splitAt l l1 l2 n
+
+// Extract the first non-empty base_iterator from an iterator,
+// returning it with base_iterator_match and a trade back.
+#push-options "--z3rlimit 4000 --fuel 2 --ifuel 1"
+
+```pulse
+fn rec iterator_extract_first_base
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (j: LPS.jumper p)
+  (off: Ghost.erased nat) (n: Ghost.erased nat { Ghost.reveal n > 0 })
+  (off_sz: SZ.t { SZ.v off_sz == Ghost.reveal off })
+  (n_sz: SZ.t { SZ.v n_sz == Ghost.reveal n })
+  (pm: perm) (i: iterator t) (l: Ghost.erased (list u))
+requires
+  iterator_match_n vmatch p off n pm i l
+returns res: (base_iterator t & SZ.t)
+ensures (
+  let (bi', len) = res in
+  base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)) **
+  trade (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)))
+       (iterator_match_n vmatch p off n pm i l) **
+  pure (SZ.v len == SZ.v (base_iterator_length bi') /\ SZ.v len > 0 /\ SZ.v len <= Ghost.reveal n)
+)
+decreases (iterator_depth i)
+{
+  match i {
+    Base bi -> {
+      unfold (iterator_match_n vmatch p off n pm (Base bi) l);
+      let bi' = base_iterator_narrow_n vmatch p j off n pm bi l off_sz n_sz;
+      // bi' has base_iterator_match pm bi' (list_narrow l (off_sz - off) n_sz) + trade back
+      // off_sz - off == 0, n_sz == n, so list_narrow l 0 n
+      rewrite (base_iterator_match vmatch p pm bi' (list_narrow l (SZ.v off_sz - Ghost.reveal off) (SZ.v n_sz)))
+        as (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v (base_iterator_length bi'))));
+      rewrite (trade (base_iterator_match vmatch p pm bi' (list_narrow l (SZ.v off_sz - Ghost.reveal off) (SZ.v n_sz)))
+                    (base_iterator_match_n vmatch p off n pm bi l))
+        as (trade (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v (base_iterator_length bi'))))
+                  (base_iterator_match_n vmatch p off n pm bi l));
+      intro (base_iterator_match_n vmatch p off n pm bi l @==>
+             iterator_match_n vmatch p off n pm (Base bi) l)
+        fn _ {
+          fold (iterator_match_n vmatch p off n pm (Base bi) l);
+        };
+      Trade.trans
+        (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v (base_iterator_length bi'))))
+        (base_iterator_match_n vmatch p off n pm bi l)
+        (iterator_match_n vmatch p off n pm (Base bi) l);
+      rewrite each (Base bi) as i;
+      let len = base_iterator_length bi';
+      rewrite (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v (base_iterator_length bi'))))
+        as (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)));
+      rewrite (trade (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v (base_iterator_length bi'))))
+                    (iterator_match_n vmatch p off n pm i l))
+        as (trade (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)))
+                  (iterator_match_n vmatch p off n pm i l));
+      (bi', len)
+    }
+    Append depth cb ca ob bp before oa ap after -> {
+      unfold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+      let child_n_before = append_n_before_sz off_sz n_sz cb;
+      let off_b : Ghost.erased nat = append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb);
+      let n_b : Ghost.erased nat = append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb);
+      let off_a : Ghost.erased nat = append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb);
+      let n_a : Ghost.erased nat = append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb);
+      if (SZ.gt child_n_before 0sz) {
+        // First base is on the before side
+        let child_off_sz = append_off_before_sz off_sz ob cb;
+        let ib = R.read before;
+        with i_x l_x . rewrite
+          (iterator_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_x l_x)
+          as (iterator_match_n vmatch p off_b n_b pm ib l_x);
+        with l_before . assert (
+          iterator_match_n vmatch p off_b n_b pm ib l_before
+        );
+        let res = iterator_extract_first_base vmatch p j
+          off_b n_b
+          child_off_sz child_n_before
+          pm ib l_before;
+        let bi' = fst res;
+        let len = snd res;
+        // Explicitly assert the postcondition components to make them available
+        rewrite (
+          (let (bi'', len'') = res in
+           base_iterator_match vmatch p pm bi'' (list_narrow l_before 0 (SZ.v len'')) **
+           trade (base_iterator_match vmatch p pm bi'' (list_narrow l_before 0 (SZ.v len'')))
+                (iterator_match_n vmatch p off_b n_b pm ib l_before) **
+           pure (SZ.v len'' == SZ.v (base_iterator_length bi'') /\ SZ.v len'' > 0 /\ SZ.v len'' <= Ghost.reveal n_b)))
+          as (base_iterator_match vmatch p pm bi' (list_narrow l_before 0 (SZ.v len)) **
+              trade (base_iterator_match vmatch p pm bi' (list_narrow l_before 0 (SZ.v len)))
+                   (iterator_match_n vmatch p off_b n_b pm ib l_before) **
+              pure (SZ.v len == SZ.v (base_iterator_length bi') /\ SZ.v len > 0 /\ SZ.v len <= Ghost.reveal n_b));
+        // Capture remaining context for the trade
+        with i_after l_after . assert (
+          pts_to after #(pm *. ap) i_after **
+          iterator_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_after l_after
+        );
+        rewrite (iterator_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_after l_after)
+          as (iterator_match_n vmatch p off_a n_a pm i_after l_after);
+        // Build trade from before match to full Append match
+        intro (iterator_match_n vmatch p off_b n_b pm ib (Ghost.reveal l_before) @==>
+               iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l)
+          #(pts_to before #(pm *. bp) ib **
+            pts_to after #(pm *. ap) i_after **
+            iterator_match_n vmatch p off_a n_a pm i_after l_after **
+            pure (Ghost.reveal off + Ghost.reveal n <= SZ.v cb + SZ.v ca /\
+                  SZ.v ob + SZ.v cb <= SZ.v (iterator_length ib) /\
+                  SZ.v oa + SZ.v ca <= SZ.v (iterator_length i_after) /\
+                  List.Tot.length (Ghost.reveal l_before) == Ghost.reveal n_b /\
+                  List.Tot.length (Ghost.reveal l_after) == Ghost.reveal n_a /\
+                  Ghost.reveal l == List.Tot.append (Ghost.reveal l_before) (Ghost.reveal l_after) /\
+                  iterator_depth ib < Ghost.reveal depth /\
+                  iterator_depth i_after < Ghost.reveal depth))
+          fn _ {
+            rewrite (iterator_match_n vmatch p off_b n_b pm ib (Ghost.reveal l_before))
+              as (iterator_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm ib l_before);
+            rewrite (iterator_match_n vmatch p off_a n_a pm i_after l_after)
+              as (iterator_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_after l_after);
+            fold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+          };
+        // Compose with the inner trade from extract
+        Trade.trans
+          (base_iterator_match vmatch p pm bi' (list_narrow l_before 0 (SZ.v len)))
+          (iterator_match_n vmatch p off_b n_b pm ib (Ghost.reveal l_before))
+          (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+        // Rewrite: list_narrow l_before 0 len == list_narrow l 0 len
+        lemma_splitAt_fst_append (SZ.v len) (Ghost.reveal l_before) (Ghost.reveal l_after);
+        rewrite (base_iterator_match vmatch p pm bi' (list_narrow l_before 0 (SZ.v len)))
+          as (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)));
+        rewrite (trade (base_iterator_match vmatch p pm bi' (list_narrow l_before 0 (SZ.v len)))
+                      (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l))
+          as (trade (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)))
+                    (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l));
+        rewrite each (Append #t depth cb ca ob bp before oa ap after) as i;
+        (bi', len)
+      } else {
+        // All elements on the after side (n_b == 0)
+        let child_off_sz = append_off_after_sz off_sz oa ca cb;
+        let child_n_sz = append_n_after_sz off_sz n_sz cb;
+        let ia = R.read after;
+        with i_y l_y . rewrite
+          (iterator_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_y l_y)
+          as (iterator_match_n vmatch p off_a n_a pm ia l_y);
+        with l_aft . assert (
+          iterator_match_n vmatch p off_a n_a pm ia l_aft
+        );
+        let res = iterator_extract_first_base vmatch p j
+          off_a n_a
+          child_off_sz child_n_sz
+          pm ia l_aft;
+        let bi' = fst res;
+        let len = snd res;
+        rewrite (
+          (let (bi'', len'') = res in
+           base_iterator_match vmatch p pm bi'' (list_narrow l_aft 0 (SZ.v len'')) **
+           trade (base_iterator_match vmatch p pm bi'' (list_narrow l_aft 0 (SZ.v len'')))
+                (iterator_match_n vmatch p off_a n_a pm ia l_aft) **
+           pure (SZ.v len'' == SZ.v (base_iterator_length bi'') /\ SZ.v len'' > 0 /\ SZ.v len'' <= Ghost.reveal n_a)))
+          as (base_iterator_match vmatch p pm bi' (list_narrow l_aft 0 (SZ.v len)) **
+              trade (base_iterator_match vmatch p pm bi' (list_narrow l_aft 0 (SZ.v len)))
+                   (iterator_match_n vmatch p off_a n_a pm ia l_aft) **
+              pure (SZ.v len == SZ.v (base_iterator_length bi') /\ SZ.v len > 0 /\ SZ.v len <= Ghost.reveal n_a));
+        // Capture remaining before context for the trade
+        with i_before l_bef . assert (
+          pts_to before #(pm *. bp) i_before **
+          iterator_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_before l_bef
+        );
+        rewrite (iterator_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_before l_bef)
+          as (iterator_match_n vmatch p off_b n_b pm i_before l_bef);
+        // Build trade: after match → full Append match
+        intro (iterator_match_n vmatch p off_a n_a pm ia (Ghost.reveal l_aft) @==>
+               iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l)
+          #(pts_to before #(pm *. bp) i_before **
+            iterator_match_n vmatch p off_b n_b pm i_before l_bef **
+            pts_to after #(pm *. ap) ia **
+            pure (Ghost.reveal off + Ghost.reveal n <= SZ.v cb + SZ.v ca /\
+                  SZ.v ob + SZ.v cb <= SZ.v (iterator_length i_before) /\
+                  SZ.v oa + SZ.v ca <= SZ.v (iterator_length ia) /\
+                  List.Tot.length (Ghost.reveal l_bef) == Ghost.reveal n_b /\
+                  List.Tot.length (Ghost.reveal l_aft) == Ghost.reveal n_a /\
+                  Ghost.reveal l == List.Tot.append (Ghost.reveal l_bef) (Ghost.reveal l_aft) /\
+                  iterator_depth i_before < Ghost.reveal depth /\
+                  iterator_depth ia < Ghost.reveal depth))
+          fn _ {
+            rewrite (iterator_match_n vmatch p off_a n_a pm ia (Ghost.reveal l_aft))
+              as (iterator_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm ia l_aft);
+            rewrite (iterator_match_n vmatch p off_b n_b pm i_before l_bef)
+              as (iterator_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_before l_bef);
+            fold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+          };
+        // Compose: bi' match → after match → full Append match
+        Trade.trans
+          (base_iterator_match vmatch p pm bi' (list_narrow l_aft 0 (SZ.v len)))
+          (iterator_match_n vmatch p off_a n_a pm ia (Ghost.reveal l_aft))
+          (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+        // Rewrite: l_bef = [] so l = l_aft, list_narrow l_aft 0 len == list_narrow l 0 len
+        List.Tot.Properties.append_l_nil (Ghost.reveal l_aft);
+        rewrite (base_iterator_match vmatch p pm bi' (list_narrow l_aft 0 (SZ.v len)))
+          as (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)));
+        rewrite (trade (base_iterator_match vmatch p pm bi' (list_narrow l_aft 0 (SZ.v len)))
+                      (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l))
+          as (trade (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)))
+                    (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l));
+        rewrite each (Append #t depth cb ca ob bp before oa ap after) as i;
+        (bi', len)
+      }
+    }
+  }
+}
+```
+
+#pop-options
+
+// Restructure an iterator: flatten Append trees so the first non-empty
+// base_iterator is in r1 (as Base b), and the narrowed remainder is in r2.
+// Base case: unchanged. Empty Append: Base Empty. Non-empty Append:
+// Append r1 r2 with r1 = Base(first_base), r2 = narrow(rest).
+#push-options "--z3rlimit 4000 --fuel 2 --ifuel 1"
+
+```pulse
+fn iterator_restructure
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (j: LPS.jumper p)
+  (pm: perm) (i: iterator t) (l: Ghost.erased (list u))
+  (r1 r2: R.ref (iterator t))
+  (#v1 #v2: Ghost.erased (iterator t))
+  (vmatch_share: share_t vmatch) (vmatch_gather: gather_t vmatch)
+requires
+  iterator_match vmatch p pm i l **
+  R.pts_to r1 v1 **
+  R.pts_to r2 v2
+returns i': iterator t
+ensures exists* pm'.
+  iterator_match vmatch p pm' i' l **
+  trade (iterator_match vmatch p pm' i' l)
+       (iterator_match vmatch p pm i l **
+        (exists* v. R.pts_to r1 v) **
+        (exists* v. R.pts_to r2 v))
+{
+  let total_sz = iterator_length i;
+  unfold (iterator_match vmatch p pm i l);
+  rewrite (iterator_match_n vmatch p 0 (SZ.v (iterator_length i)) pm i l)
+    as (iterator_match_n vmatch p 0 (SZ.v total_sz) pm i l);
+  if (SZ.eq total_sz 0sz) {
+    // Empty iterator: return Base Empty
+    rewrite (iterator_match_n vmatch p 0 (SZ.v total_sz) pm i l)
+      as (iterator_match_n vmatch p 0 0 pm i l);
+    iterator_match_n_length vmatch p 0 0 pm i l;
+    // Build iterator_match for Base Empty matching []
+    assert (pure (Nil? (Ghost.reveal l)));
+    fold (base_iterator_match_n vmatch p 0 0 pm (Empty #t) (Ghost.reveal l));
+    fold (iterator_match_n vmatch p 0 0 pm (Base (Empty #t)) (Ghost.reveal l));
+    rewrite (iterator_match_n vmatch p 0 0 pm (Base (Empty #t)) (Ghost.reveal l))
+      as (iterator_match vmatch p pm (Base (Empty #t)) (Ghost.reveal l));
+    // Trade: Base Empty match → original match + r1 + r2
+    intro (iterator_match vmatch p pm (Base (Empty #t)) (Ghost.reveal l) @==>
+           (iterator_match vmatch p pm i l **
+            (exists* v. R.pts_to r1 v) **
+            (exists* v. R.pts_to r2 v)))
+      #(iterator_match_n vmatch p 0 0 pm i l **
+        R.pts_to r1 v1 **
+        R.pts_to r2 v2)
+      fn _ {
+        drop_ (iterator_match vmatch p pm (Base (Empty #t)) (Ghost.reveal l));
+        rewrite (iterator_match_n vmatch p 0 0 pm i l)
+          as (iterator_match_n vmatch p 0 (SZ.v (iterator_length i)) pm i l);
+        fold (iterator_match vmatch p pm i l);
+        introduce exists* v . R.pts_to r1 v with v1;
+        introduce exists* v . R.pts_to r2 v with v2;
+      };
+    (Base (Empty #t))
+  } else {
+    // Non-empty: extract first base, narrow remainder, construct Append
+    // Step 1: Share the match → two copies at pm/2
+    iterator_match_n_length vmatch p 0 (SZ.v total_sz) pm i l;
+    iterator_match_n_share vmatch p 0 (SZ.v total_sz) pm i l vmatch_share;
+    // Step 2: Extract first base from copy 1
+    let res = iterator_extract_first_base vmatch p j
+      0 (SZ.v total_sz)
+      0sz total_sz
+      (pm /. 2.0R) i l;
+    let bi' = fst res;
+    let len_sz = snd res;
+    rewrite (
+      (let (bi'', len'') = res in
+       base_iterator_match vmatch p (pm /. 2.0R) bi'' (list_narrow l 0 (SZ.v len'')) **
+       trade (base_iterator_match vmatch p (pm /. 2.0R) bi'' (list_narrow l 0 (SZ.v len'')))
+            (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l) **
+       pure (SZ.v len'' == SZ.v (base_iterator_length bi'') /\ SZ.v len'' > 0 /\ SZ.v len'' <= SZ.v total_sz)))
+      as (base_iterator_match vmatch p (pm /. 2.0R) bi' (list_narrow l 0 (SZ.v len_sz)) **
+          trade (base_iterator_match vmatch p (pm /. 2.0R) bi' (list_narrow l 0 (SZ.v len_sz)))
+               (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l) **
+          pure (SZ.v len_sz == SZ.v (base_iterator_length bi') /\ SZ.v len_sz > 0 /\ SZ.v len_sz <= SZ.v total_sz));
+    // Step 3: Share base match → two copies at pm/4
+    let l_head : Ghost.erased (list u) = list_narrow l 0 (SZ.v len_sz);
+    rewrite (base_iterator_match vmatch p (pm /. 2.0R) bi' (list_narrow l 0 (SZ.v len_sz)))
+      as (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 2.0R) bi' (Ghost.reveal l_head));
+    rewrite (trade (base_iterator_match vmatch p (pm /. 2.0R) bi' (list_narrow l 0 (SZ.v len_sz)))
+                   (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l))
+      as (trade (base_iterator_match vmatch p (pm /. 2.0R) bi' (Ghost.reveal l_head))
+                (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l));
+    base_iterator_match_n_share vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 2.0R) bi' (Ghost.reveal l_head) vmatch_share;
+    rewrite (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 2.0R /. 2.0R) bi' (Ghost.reveal l_head))
+      as (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 4.0R) bi' (Ghost.reveal l_head));
+    rewrite (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 2.0R /. 2.0R) bi' (Ghost.reveal l_head))
+      as (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 4.0R) bi' (Ghost.reveal l_head));
+    // Step 4: Narrow copy 2 to skip first len elements
+    let rest_sz = SZ.sub total_sz len_sz;
+    let i_tail = iterator_narrow_n vmatch p j
+      0 (SZ.v total_sz)
+      (pm /. 2.0R) i l
+      len_sz rest_sz
+      vmatch_share vmatch_gather;
+    let l_tail : Ghost.erased (list u) = list_narrow l (SZ.v len_sz) (SZ.v rest_sz);
+    rewrite (iterator_match vmatch p ((pm /. 2.0R) /. 2.0R) i_tail (list_narrow l (SZ.v len_sz - 0) (SZ.v rest_sz)))
+      as (iterator_match vmatch p (pm /. 4.0R) i_tail (Ghost.reveal l_tail));
+    rewrite (trade (iterator_match vmatch p ((pm /. 2.0R) /. 2.0R) i_tail (list_narrow l (SZ.v len_sz - 0) (SZ.v rest_sz)))
+                   (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l))
+      as (trade (iterator_match vmatch p (pm /. 4.0R) i_tail (Ghost.reveal l_tail))
+               (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l));
+    // Step 5: Write r1 := Base bi', r2 := i_tail, then share refs
+    let _ = R.replace r1 (Base bi');
+    let _ = R.replace r2 i_tail;
+    R.share r1;
+    R.share r2;
+    // Step 6: Fold the new Append
+    fold (iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 4.0R) (Base bi') (Ghost.reveal l_head));
+    rewrite (iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 4.0R) (Base bi') (Ghost.reveal l_head))
+      as (iterator_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) (Base bi') (Ghost.reveal l_head));
+    unfold (iterator_match vmatch p (pm /. 4.0R) i_tail (Ghost.reveal l_tail));
+    rewrite (iterator_match_n vmatch p 0 (SZ.v (iterator_length i_tail)) (pm /. 4.0R) i_tail (Ghost.reveal l_tail))
+      as (iterator_match_n vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) i_tail (Ghost.reveal l_tail));
+    rewrite (R.pts_to r1 #(1.0R /. 2.0R) (Base bi'))
+      as (R.pts_to r1 #((pm /. 4.0R) *. (2.0R /. pm)) (Base bi'));
+    rewrite (R.pts_to r2 #(1.0R /. 2.0R) i_tail)
+      as (R.pts_to r2 #((pm /. 4.0R) *. (2.0R /. pm)) i_tail);
+    let new_depth : Ghost.erased nat = 1 + iterator_depth i_tail;
+    iterator_match_n_length vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) (Base bi') (Ghost.reveal l_head);
+    iterator_match_n_length vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) i_tail (Ghost.reveal l_tail);
+    list_narrow_split (Ghost.reveal l) (SZ.v len_sz);
+    // Rewrite to match the append_* expressions needed by fold
+    rewrite (iterator_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) (Base bi') (Ghost.reveal l_head))
+      as (iterator_match_n vmatch p (append_off_before 0 (SZ.v 0sz) (SZ.v len_sz))
+                                     (append_n_before 0 (SZ.v total_sz) (SZ.v len_sz))
+                                     (pm /. 4.0R) (Base bi') (Ghost.reveal l_head));
+    rewrite (iterator_match_n vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) i_tail (Ghost.reveal l_tail))
+      as (iterator_match_n vmatch p (append_off_after 0 (SZ.v 0sz) (SZ.v len_sz))
+                                     (append_n_after 0 (SZ.v total_sz) (SZ.v len_sz))
+                                     (pm /. 4.0R) i_tail (Ghost.reveal l_tail));
+    fold (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 4.0R)
+      (Append #t new_depth len_sz rest_sz 0sz (2.0R /. pm) r1 0sz (2.0R /. pm) r2) (Ghost.reveal l));
+    let i' = Append #t new_depth len_sz rest_sz 0sz (2.0R /. pm) r1 0sz (2.0R /. pm) r2;
+    rewrite (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 4.0R)
+              (Append #t new_depth len_sz rest_sz 0sz (2.0R /. pm) r1 0sz (2.0R /. pm) r2) (Ghost.reveal l))
+      as (iterator_match vmatch p (pm /. 4.0R) i' (Ghost.reveal l));
+    // Step 7: Build the trade
+    intro (iterator_match vmatch p (pm /. 4.0R) i' (Ghost.reveal l) @==>
+           (iterator_match vmatch p pm i l **
+            (exists* v. R.pts_to r1 v) **
+            (exists* v. R.pts_to r2 v)))
+      #(R.pts_to r1 #(1.0R /. 2.0R) (Base bi') **
+        R.pts_to r2 #(1.0R /. 2.0R) i_tail **
+        base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 4.0R) bi' (Ghost.reveal l_head) **
+        trade (base_iterator_match vmatch p (pm /. 2.0R) bi' (Ghost.reveal l_head))
+             (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l) **
+        trade (iterator_match vmatch p (pm /. 4.0R) i_tail (Ghost.reveal l_tail))
+             (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l))
+      fn _ {
+        // Unfold the Append
+        rewrite (iterator_match vmatch p (pm /. 4.0R) i' (Ghost.reveal l))
+          as (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 4.0R)
+              (Append #t new_depth len_sz rest_sz 0sz (2.0R /. pm) r1 0sz (2.0R /. pm) r2) (Ghost.reveal l));
+        unfold (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 4.0R)
+              (Append #t new_depth len_sz rest_sz 0sz (2.0R /. pm) r1 0sz (2.0R /. pm) r2) (Ghost.reveal l));
+        with ib ia lb la . assert (
+          R.pts_to r1 #((pm /. 4.0R) *. (2.0R /. pm)) ib **
+          iterator_match_n vmatch p (append_off_before 0 (SZ.v 0sz) (SZ.v len_sz)) (append_n_before 0 (SZ.v total_sz) (SZ.v len_sz)) (pm /. 4.0R) ib lb **
+          R.pts_to r2 #((pm /. 4.0R) *. (2.0R /. pm)) ia **
+          iterator_match_n vmatch p (append_off_after 0 (SZ.v 0sz) (SZ.v len_sz)) (append_n_after 0 (SZ.v total_sz) (SZ.v len_sz)) (pm /. 4.0R) ia la
+        );
+        rewrite (iterator_match_n vmatch p (append_off_before 0 (SZ.v 0sz) (SZ.v len_sz)) (append_n_before 0 (SZ.v total_sz) (SZ.v len_sz)) (pm /. 4.0R) ib lb)
+          as (iterator_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) ib lb);
+        rewrite (iterator_match_n vmatch p (append_off_after 0 (SZ.v 0sz) (SZ.v len_sz)) (append_n_after 0 (SZ.v total_sz) (SZ.v len_sz)) (pm /. 4.0R) ia la)
+          as (iterator_match_n vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) ia la);
+        // Rewrite ref permissions to 0.5R
+        rewrite (R.pts_to r1 #((pm /. 4.0R) *. (2.0R /. pm)) ib) as (R.pts_to r1 #(1.0R /. 2.0R) ib);
+        rewrite (R.pts_to r2 #((pm /. 4.0R) *. (2.0R /. pm)) ia) as (R.pts_to r2 #(1.0R /. 2.0R) ia);
+        // Gather refs to full perm — gives ib == Base bi', ia == i_tail
+        R.gather r1;
+        R.gather r2;
+        // Now we know ib == Base bi' and ia == i_tail
+        rewrite (iterator_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) ib lb)
+          as (iterator_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) (Base bi') lb);
+        rewrite (iterator_match_n vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) ia la)
+          as (iterator_match_n vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) i_tail la);
+        // Unfold Base bi' match → base_iterator_match_n
+        unfold (iterator_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) (Base bi') lb);
+        // Rewrite len_sz to base_iterator_length bi'
+        rewrite (base_iterator_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) bi' lb)
+          as (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 4.0R) bi' lb);
+        // Gather before-side base match with spare → pm/2
+        base_iterator_match_n_gather vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 4.0R) (pm /. 4.0R) bi' lb (Ghost.reveal l_head) vmatch_gather;
+        rewrite (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) ((pm /. 4.0R) +. (pm /. 4.0R)) bi' lb)
+          as (base_iterator_match vmatch p (pm /. 2.0R) bi' (Ghost.reveal l_head));
+        // Elim extract trade: base match (pm/2) → iterator match copy 1
+        Trade.elim
+          (base_iterator_match vmatch p (pm /. 2.0R) bi' (Ghost.reveal l_head))
+          (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l);
+        // Rewrite after-side to iterator_match for narrow's trade
+        // la == l_tail because l == lb ++ la with |lb| == |l_head|, l == l_head ++ l_tail
+        list_narrow_split (Ghost.reveal l) (SZ.v len_sz);
+        List.Tot.Properties.append_length_inv_head (Ghost.reveal lb) la (Ghost.reveal l_head) (Ghost.reveal l_tail);
+        rewrite (iterator_match_n vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) i_tail la)
+          as (iterator_match_n vmatch p 0 (SZ.v (iterator_length i_tail)) (pm /. 4.0R) i_tail (Ghost.reveal l_tail));
+        fold (iterator_match vmatch p (pm /. 4.0R) i_tail (Ghost.reveal l_tail));
+        // Elim narrow trade: i_tail match (pm/4) → iterator match copy 2
+        Trade.elim
+          (iterator_match vmatch p (pm /. 4.0R) i_tail (Ghost.reveal l_tail))
+          (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l);
+        // Gather two copies → full match
+        iterator_match_n_gather vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) (pm /. 2.0R) i l l vmatch_gather;
+        rewrite (iterator_match_n vmatch p 0 (SZ.v total_sz) ((pm /. 2.0R) +. (pm /. 2.0R)) i l)
+          as (iterator_match_n vmatch p 0 (SZ.v (iterator_length i)) ((pm /. 2.0R) +. (pm /. 2.0R)) i l);
+        fold (iterator_match vmatch p ((pm /. 2.0R) +. (pm /. 2.0R)) i l);
+        rewrite (iterator_match vmatch p ((pm /. 2.0R) +. (pm /. 2.0R)) i l)
+          as (iterator_match vmatch p pm i l);
+        // Expose refs for return
+        introduce exists* v . R.pts_to r1 v with ib;
+        introduce exists* v . R.pts_to r2 v with ia;
+      };
+    i'
+  }
+}
+```
+
+#pop-options
 // Always returns an element matching the head, shifted match on tail at pm/2, trade back
 let iterator_next_n_post
   (#t: Type) (#u: Type)
