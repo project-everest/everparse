@@ -71,25 +71,31 @@ uint32_t GotoReturnProbeInPlaceCheckTagged(uint64_t bound, EVERPARSE_COPY_BUFFER
 
 	if(providedSize < 42U)
 	{
+
 		//
 		// Not enough space for probe
 		//
+
 		result = EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
 		goto exit;
 	}
 	if(!ProbeInit("GotoReturnCheckTagged", 42U, probeDest))
 	{
+
 		//
 		// ProbeInit failed
 		//
+
 		result = EVERPARSE_PROBE_FAILURE_INIT;
 		goto exit;
 	}
 	if (!ProbeInPlace(42U, 0, 0, probeAddr, probeDest))
 	{
+
 		//
 		// Probe failed
 		//
+
 		result = EVERPARSE_PROBE_FAILURE_PROBE;
 		goto exit;
 	}
