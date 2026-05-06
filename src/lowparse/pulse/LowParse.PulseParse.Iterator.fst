@@ -4427,3 +4427,26 @@ ensures
 ```
 
 #pop-options
+
+noeq
+type iterator ([@@@strictly_positive] t: Type) = {
+  before: base_mixed_list t;
+  after: mixed_list t
+}
+
+let iterator_match
+  (#t: Type)
+  (#u: Type)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (pm: perm)
+  (i: iterator t)
+  (l: list u)
+: Tot slprop
+= exists* l1 l2 .
+      base_mixed_list_match vmatch p pm i.before l1 **
+      mixed_list_match vmatch p pm i.after l2 **
+      pure (
+        l == List.Tot.append l1 l2
+      )
