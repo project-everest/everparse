@@ -984,7 +984,7 @@ let print_c_entry
               }\n\t\t\
               goto exit;\n\t\
             }\n\t\
-            result = TRUE;\n\
+            result = TRUE;\n\n\
             exit:\n\t\
             return result;"
            modul
@@ -1074,7 +1074,7 @@ let print_c_entry
               result = EVERPARSE_PROBE_FAILURE_VALIDATION;\n\t\t\
               goto exit;\n\t\
             }\n\t\
-            result = EVERPARSE_SUCCESS;\n\
+            result = EVERPARSE_SUCCESS;\n\n\
             exit:\n\t\
             return result;"
            wrappedName

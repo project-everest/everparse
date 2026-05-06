@@ -40,6 +40,7 @@ BOOLEAN GotoReturnCheckPoint(uint8_t *base, uint32_t len) {
 		goto exit;
 	}
 	result = TRUE;
+
 exit:
 	return result;
 }
@@ -58,6 +59,7 @@ static BOOLEAN GotoReturnCheckTagged(uint64_t bound, uint8_t *base, uint32_t len
 		goto exit;
 	}
 	result = TRUE;
+
 exit:
 	return result;
 }
@@ -89,6 +91,7 @@ uint32_t GotoReturnProbeInPlaceCheckTagged(uint64_t bound, EVERPARSE_COPY_BUFFER
 		goto exit;
 	}
 	result = EVERPARSE_SUCCESS;
+
 exit:
 	return result;
 }
