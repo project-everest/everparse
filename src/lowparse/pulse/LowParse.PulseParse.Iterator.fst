@@ -18,35 +18,35 @@ let share_t = LowParse.PulseParse.Base.share_t
 let gather_t = LowParse.PulseParse.Base.gather_t
 
 noeq
-type base_iterator ([@@@strictly_positive] t: Type) =
+type base_mixed_list ([@@@strictly_positive] t: Type) =
 | Empty
-| Singleton: (sp: perm) -> (sv: perm) -> (sr: ref t) -> base_iterator t
-| Slice: (sp: perm) -> (sv: perm) -> (ss: S.slice t) -> base_iterator t
-| Serialized: (sp: perm) -> (count: SZ.t) -> (payload: S.slice U8.t) -> base_iterator t
+| Singleton: (sp: perm) -> (sv: perm) -> (sr: ref t) -> base_mixed_list t
+| Slice: (sp: perm) -> (sv: perm) -> (ss: S.slice t) -> base_mixed_list t
+| Serialized: (sp: perm) -> (count: SZ.t) -> (payload: S.slice U8.t) -> base_mixed_list t
 
 noeq
-type iterator ([@@@strictly_positive] t: Type) =
-| Base of base_iterator t
+type mixed_list ([@@@strictly_positive] t: Type) =
+| Base of base_mixed_list t
 | Append:
   (depth: Ghost.erased nat) ->
   (cb: SZ.t) ->
   (ca: SZ.t { SZ.fits (SZ.v cb + SZ.v ca) }) ->
   (ob: SZ.t) ->
   (bp: perm) ->
-  (before: ref (iterator t)) ->
+  (before: ref (mixed_list t)) ->
   (oa: SZ.t) ->
   (ap: perm) ->
-  (after: ref (iterator t)) ->
-  iterator t
+  (after: ref (mixed_list t)) ->
+  mixed_list t
 
-let iterator_depth (#t: Type) (i: iterator t) : GTot nat =
+let mixed_list_depth (#t: Type) (i: mixed_list t) : GTot nat =
   match i with
   | Base _ -> 0
   | Append depth _ _ _ _ _ _ _ _ -> Ghost.reveal depth
 
-let base_iterator_length
+let base_mixed_list_length
   (#t: Type)
-  (i: base_iterator t)
+  (i: base_mixed_list t)
 : Tot SZ.t
 = match i with
   | Empty -> 0sz
@@ -54,12 +54,12 @@ let base_iterator_length
   | Slice _ _ sl -> S.len sl
   | Serialized _ count _ -> count
 
-let iterator_length
+let mixed_list_length
   (#t: Type)
-  (i: iterator t)
+  (i: mixed_list t)
 : Tot SZ.t
 = match i with
-  | Base bi -> base_iterator_length bi
+  | Base bi -> base_mixed_list_length bi
   | Append _ cb ca _ _ _ _ _ _ -> SZ.add cb ca
 
 module SM = Pulse.Lib.SeqMatch
@@ -77,7 +77,7 @@ let append_off_before (off ob cb: nat) : nat =
 let append_off_after (off oa cb: nat) : nat =
   oa + (if off >= cb then off - cb else 0)
 
-let base_iterator_match_n
+let base_mixed_list_match_n
   (#t: Type)
   (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
@@ -86,7 +86,7 @@ let base_iterator_match_n
   (off: nat)
   (n: nat)
   (pm: perm)
-  (i: base_iterator t)
+  (i: base_mixed_list t)
   (l: list u)
 : Tot slprop
 = match i with
@@ -106,19 +106,19 @@ let base_iterator_match_n
     pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #(pm *. sp) l_all **
     pure (l == snd (List.Tot.splitAt off l_all) /\ off + n <= SZ.v count)
 
-let base_iterator_match
+let base_mixed_list_match
   (#t: Type)
   (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
   (p: parser k u)
   (pm: perm)
-  (i: base_iterator t)
+  (i: base_mixed_list t)
   (l: list u)
 : Tot slprop
-= base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length i)) pm i l
+= base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length i)) pm i l
 
-let rec iterator_match_n
+let rec mixed_list_match_n
   (#t: Type)
   (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
@@ -127,12 +127,12 @@ let rec iterator_match_n
   (off: nat)
   (n: nat)
   (pm: perm)
-  (i: iterator t)
+  (i: mixed_list t)
   (l: list u)
 : Tot slprop
-  (decreases (iterator_depth i))
+  (decreases (mixed_list_depth i))
 = match i with
-  | Base i -> base_iterator_match_n vmatch p off n pm i l
+  | Base i -> base_mixed_list_match_n vmatch p off n pm i l
   | Append depth cb ca ob bp before oa ap after ->
     let n1 = append_n_before off n (SZ.v cb) in
     let n' = append_n_after off n (SZ.v cb) in
@@ -140,31 +140,31 @@ let rec iterator_match_n
     let off_a = append_off_after off (SZ.v oa) (SZ.v cb) in
     exists* i_before i_after l1 l2 .
       pts_to before #(pm *. bp) i_before **
-      iterator_match_n vmatch p off_b n1 pm i_before l1 **
+      mixed_list_match_n vmatch p off_b n1 pm i_before l1 **
       pts_to after #(pm *. ap) i_after **
-      iterator_match_n vmatch p off_a n' pm i_after l2 **
+      mixed_list_match_n vmatch p off_a n' pm i_after l2 **
       pure (
         off + n <= SZ.v cb + SZ.v ca /\
-        SZ.v ob + SZ.v cb <= SZ.v (iterator_length i_before) /\
-        SZ.v oa + SZ.v ca <= SZ.v (iterator_length i_after) /\
+        SZ.v ob + SZ.v cb <= SZ.v (mixed_list_length i_before) /\
+        SZ.v oa + SZ.v ca <= SZ.v (mixed_list_length i_after) /\
         List.Tot.length l1 == n1 /\
         List.Tot.length l2 == n' /\
         l == List.Tot.append l1 l2 /\
-        iterator_depth i_before < Ghost.reveal depth /\
-        iterator_depth i_after < Ghost.reveal depth
+        mixed_list_depth i_before < Ghost.reveal depth /\
+        mixed_list_depth i_after < Ghost.reveal depth
       )
 
-let iterator_match
+let mixed_list_match
   (#t: Type)
   (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
   (p: parser k u)
   (pm: perm)
-  (i: iterator t)
+  (i: mixed_list t)
   (l: list u)
 : Tot slprop
-= iterator_match_n vmatch p 0 (SZ.v (iterator_length i)) pm i l
+= mixed_list_match_n vmatch p 0 (SZ.v (mixed_list_length i)) pm i l
 
 open FStar.Real
 
@@ -173,7 +173,7 @@ let slprop_rw : (p:slprop -> q:slprop -> slprop_equiv p q -> stt_ghost unit emp_
 
 // Singleton lemmas adapted for offset parameter
 
-let base_iterator_match_n_singleton_0
+let base_mixed_list_match_n_singleton_0
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
@@ -182,10 +182,10 @@ let base_iterator_match_n_singleton_0
   (pm: perm)
   (sp: perm) (sv: perm) (s: ref t)
   (l: list u)
-: Lemma (base_iterator_match_n vmatch p off 0 pm (Singleton sp sv s) l == pure (Nil? l /\ off <= 1))
+: Lemma (base_mixed_list_match_n vmatch p off 0 pm (Singleton sp sv s) l == pure (Nil? l /\ off <= 1))
 = ()
 
-let base_iterator_match_n_singleton_unfold_0
+let base_mixed_list_match_n_singleton_unfold_0
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
@@ -197,17 +197,17 @@ let base_iterator_match_n_singleton_unfold_0
   (l: list u)
   (_: squash (n == 0))
 : stt_ghost unit emp_inames
-    (base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l)
+    (base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l)
     (fun _ -> pure (Nil? l /\ off <= 1))
 = slprop_rw
-    (base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l)
+    (base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l)
     (pure (Nil? l /\ off <= 1))
     (Pulse.Lib.Core.slprop_equiv_ext'
-       (base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l)
+       (base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l)
        (pure (Nil? l /\ off <= 1))
        ())
 
-let base_iterator_match_n_singleton_fold_0
+let base_mixed_list_match_n_singleton_fold_0
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
@@ -220,19 +220,19 @@ let base_iterator_match_n_singleton_fold_0
   (_: squash (n == 0))
 : stt_ghost unit emp_inames
     (pure (Nil? l /\ off <= 1))
-    (fun _ -> base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l)
+    (fun _ -> base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l)
 = slprop_rw
     (pure (Nil? l /\ off <= 1))
-    (base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l)
+    (base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l)
     (Pulse.Lib.Core.slprop_equiv_sym
-       (base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l)
+       (base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l)
        (pure (Nil? l /\ off <= 1))
        (Pulse.Lib.Core.slprop_equiv_ext'
-          (base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l)
+          (base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l)
           (pure (Nil? l /\ off <= 1))
           ()))
 
-let base_iterator_match_n_singleton_pos
+let base_mixed_list_match_n_singleton_pos
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
@@ -244,14 +244,14 @@ let base_iterator_match_n_singleton_pos
   (l: list u)
   (_: squash (n <> 0))
 : Lemma
-    (ensures base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l ==
+    (ensures base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l ==
              (exists* x y .
                 pts_to s #(pm *. sp) x **
                 vmatch (pm *. sv) x y **
                 pure (l == [y] /\ off == 0 /\ n == 1)))
-= norm_spec [delta_only [`%base_iterator_match_n]; iota; zeta] (base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l)
+= norm_spec [delta_only [`%base_mixed_list_match_n]; iota; zeta] (base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l)
 
-let base_iterator_match_n_singleton_unfold_pos
+let base_mixed_list_match_n_singleton_unfold_pos
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
@@ -263,18 +263,18 @@ let base_iterator_match_n_singleton_unfold_pos
   (l: list u)
   (_: squash (n <> 0))
 : stt_ghost unit emp_inames
-    (base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l)
+    (base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l)
     (fun _ -> exists* x y. pts_to s #(pm *. sp) x ** vmatch (pm *. sv) x y ** pure (l == [y] /\ off == 0 /\ n == 1))
-= base_iterator_match_n_singleton_pos vmatch p off n pm sp sv s l ();
+= base_mixed_list_match_n_singleton_pos vmatch p off n pm sp sv s l ();
   slprop_rw
-    (base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l)
+    (base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l)
     (exists* x y. pts_to s #(pm *. sp) x ** vmatch (pm *. sv) x y ** pure (l == [y] /\ off == 0 /\ n == 1))
     (Pulse.Lib.Core.slprop_equiv_ext'
-       (base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l)
+       (base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l)
        (exists* x y. pts_to s #(pm *. sp) x ** vmatch (pm *. sv) x y ** pure (l == [y] /\ off == 0 /\ n == 1))
        ())
 
-let base_iterator_match_n_singleton_fold_pos
+let base_mixed_list_match_n_singleton_fold_pos
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
@@ -287,16 +287,16 @@ let base_iterator_match_n_singleton_fold_pos
   (_: squash (n <> 0))
 : stt_ghost unit emp_inames
     (exists* x y. pts_to s #(pm *. sp) x ** vmatch (pm *. sv) x y ** pure (l == [y] /\ off == 0 /\ n == 1))
-    (fun _ -> base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l)
-= base_iterator_match_n_singleton_pos vmatch p off n pm sp sv s l ();
+    (fun _ -> base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l)
+= base_mixed_list_match_n_singleton_pos vmatch p off n pm sp sv s l ();
   slprop_rw
     (exists* x y. pts_to s #(pm *. sp) x ** vmatch (pm *. sv) x y ** pure (l == [y] /\ off == 0 /\ n == 1))
-    (base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l)
+    (base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l)
     (Pulse.Lib.Core.slprop_equiv_sym
-       (base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l)
+       (base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l)
        (exists* x y. pts_to s #(pm *. sp) x ** vmatch (pm *. sv) x y ** pure (l == [y] /\ off == 0 /\ n == 1))
        (Pulse.Lib.Core.slprop_equiv_ext'
-          (base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l)
+          (base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l)
           (exists* x y. pts_to s #(pm *. sp) x ** vmatch (pm *. sv) x y ** pure (l == [y] /\ off == 0 /\ n == 1))
           ()))
 
@@ -330,7 +330,7 @@ ensures pure p ** pure r
 
 ```pulse
 ghost
-fn base_iterator_match_n_singleton_share_pos_inner
+fn base_mixed_list_match_n_singleton_share_pos_inner
   (#t: Type0) (#u: Type0)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
@@ -345,11 +345,11 @@ fn base_iterator_match_n_singleton_share_pos_inner
     stt_ghost unit emp_inames (vmatch pm0 x1 x2) (fun _ -> vmatch (pm0 /. 2.0R) x1 x2 ** vmatch (pm0 /. 2.0R) x1 x2)
   ))
   (_: squash (n <> 0))
-requires base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l
-ensures base_iterator_match_n vmatch p off n (pm /. 2.0R) (Singleton sp sv s) l **
-        base_iterator_match_n vmatch p off n (pm /. 2.0R) (Singleton sp sv s) l
+requires base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l
+ensures base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Singleton sp sv s) l **
+        base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Singleton sp sv s) l
 {
-  base_iterator_match_n_singleton_unfold_pos vmatch p off n pm sp sv s l ();
+  base_mixed_list_match_n_singleton_unfold_pos vmatch p off n pm sp sv s l ();
   with x y. assert (pts_to s #(pm *. sp) x ** vmatch (pm *. sv) x y ** pure (l == [y] /\ off == 0 /\ n == 1));
   R.share s;
   rewrite (R.pts_to s #(pm *. sp /. 2.0R) x) as (R.pts_to s #(pm /. 2.0R *. sp) x);
@@ -357,12 +357,12 @@ ensures base_iterator_match_n vmatch p off n (pm /. 2.0R) (Singleton sp sv s) l 
   vmatch_share x (pm *. sv) y;
   rewrite (vmatch (pm *. sv /. 2.0R) x y) as (vmatch (pm /. 2.0R *. sv) x y);
   rewrite (vmatch (pm *. sv /. 2.0R) x y) as (vmatch (pm /. 2.0R *. sv) x y);
-  base_iterator_match_n_singleton_fold_pos vmatch p off n (pm /. 2.0R) sp sv s l ();
-  base_iterator_match_n_singleton_fold_pos vmatch p off n (pm /. 2.0R) sp sv s l ()
+  base_mixed_list_match_n_singleton_fold_pos vmatch p off n (pm /. 2.0R) sp sv s l ();
+  base_mixed_list_match_n_singleton_fold_pos vmatch p off n (pm /. 2.0R) sp sv s l ()
 }
 ```
 
-let base_iterator_match_n_singleton_share
+let base_mixed_list_match_n_singleton_share
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
@@ -374,27 +374,27 @@ let base_iterator_match_n_singleton_share
   (l: list u)
   (vmatch_share: share_t vmatch)
 : stt_ghost unit emp_inames
-    (base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l)
-    (fun _ -> base_iterator_match_n vmatch p off n (pm /. 2.0R) (Singleton sp sv s) l **
-              base_iterator_match_n vmatch p off n (pm /. 2.0R) (Singleton sp sv s) l)
+    (base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l)
+    (fun _ -> base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Singleton sp sv s) l **
+              base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Singleton sp sv s) l)
 = if n = 0
   then begin
-    base_iterator_match_n_singleton_0 vmatch p off pm sp sv s l;
-    base_iterator_match_n_singleton_0 vmatch p off (pm /. 2.0R) sp sv s l;
+    base_mixed_list_match_n_singleton_0 vmatch p off pm sp sv s l;
+    base_mixed_list_match_n_singleton_0 vmatch p off (pm /. 2.0R) sp sv s l;
     Pulse.Lib.Core.sub_ghost
-      (base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l)
-      (fun _ -> base_iterator_match_n vmatch p off n (pm /. 2.0R) (Singleton sp sv s) l **
-                base_iterator_match_n vmatch p off n (pm /. 2.0R) (Singleton sp sv s) l)
+      (base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l)
+      (fun _ -> base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Singleton sp sv s) l **
+                base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Singleton sp sv s) l)
       (Pulse.Lib.Core.slprop_equiv_ext' _ _ ())
       (Pulse.Lib.Core.intro_slprop_post_equiv _ _ (fun _ -> Pulse.Lib.Core.slprop_equiv_ext' _ _ ()))
       (dup_pure (Nil? l /\ off <= 1))
   end
   else
-    base_iterator_match_n_singleton_share_pos_inner #t #u vmatch #k p off n pm sp sv s l (fun x1 pm0 x2 -> vmatch_share x1 #pm0 #x2) ()
+    base_mixed_list_match_n_singleton_share_pos_inner #t #u vmatch #k p off n pm sp sv s l (fun x1 pm0 x2 -> vmatch_share x1 #pm0 #x2) ()
 
 ```pulse
 ghost
-fn base_iterator_match_n_singleton_gather_pos_inner
+fn base_mixed_list_match_n_singleton_gather_pos_inner
   (#t: Type0) (#u: Type0)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
@@ -409,12 +409,12 @@ fn base_iterator_match_n_singleton_gather_pos_inner
     stt_ghost unit emp_inames (vmatch pm0 x1 x2 ** vmatch pm0' x1 x2') (fun _ -> vmatch (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
   ))
   (_: squash (n <> 0))
-requires base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l **
-         base_iterator_match_n vmatch p off n pm' (Singleton sp sv s) l'
-ensures base_iterator_match_n vmatch p off n (pm +. pm') (Singleton sp sv s) l ** pure (l == l')
+requires base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l **
+         base_mixed_list_match_n vmatch p off n pm' (Singleton sp sv s) l'
+ensures base_mixed_list_match_n vmatch p off n (pm +. pm') (Singleton sp sv s) l ** pure (l == l')
 {
-  base_iterator_match_n_singleton_unfold_pos vmatch p off n pm sp sv s l ();
-  base_iterator_match_n_singleton_unfold_pos vmatch p off n pm' sp sv s l' ();
+  base_mixed_list_match_n_singleton_unfold_pos vmatch p off n pm sp sv s l ();
+  base_mixed_list_match_n_singleton_unfold_pos vmatch p off n pm' sp sv s l' ();
   with x1 y1. assert (pts_to s #(pm *. sp) x1 ** vmatch (pm *. sv) x1 y1 ** pure (l == [y1] /\ off == 0 /\ n == 1));
   with x2 y2. assert (pts_to s #(pm' *. sp) x2 ** vmatch (pm' *. sv) x2 y2 ** pure (l' == [y2] /\ off == 0 /\ n == 1));
   R.gather s;
@@ -422,11 +422,11 @@ ensures base_iterator_match_n vmatch p off n (pm +. pm') (Singleton sp sv s) l *
   rewrite each x2 as x1;
   vmatch_gather x1 (pm *. sv) y1 (pm' *. sv) y2;
   rewrite (vmatch (pm *. sv +. pm' *. sv) x1 y1) as (vmatch ((pm +. pm') *. sv) x1 y1);
-  base_iterator_match_n_singleton_fold_pos vmatch p off n (pm +. pm') sp sv s l ()
+  base_mixed_list_match_n_singleton_fold_pos vmatch p off n (pm +. pm') sp sv s l ()
 }
 ```
 
-let base_iterator_match_n_singleton_gather
+let base_mixed_list_match_n_singleton_gather
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
@@ -438,26 +438,26 @@ let base_iterator_match_n_singleton_gather
   (l l': list u)
   (vmatch_gather: gather_t vmatch)
 : stt_ghost unit emp_inames
-    (base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l **
-     base_iterator_match_n vmatch p off n pm' (Singleton sp sv s) l')
-    (fun _ -> base_iterator_match_n vmatch p off n (pm +. pm') (Singleton sp sv s) l **
+    (base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l **
+     base_mixed_list_match_n vmatch p off n pm' (Singleton sp sv s) l')
+    (fun _ -> base_mixed_list_match_n vmatch p off n (pm +. pm') (Singleton sp sv s) l **
               pure (l == l'))
 = if n = 0
   then begin
-    base_iterator_match_n_singleton_0 vmatch p off pm sp sv s l;
-    base_iterator_match_n_singleton_0 vmatch p off pm' sp sv s l';
-    base_iterator_match_n_singleton_0 vmatch p off (pm +. pm') sp sv s l;
+    base_mixed_list_match_n_singleton_0 vmatch p off pm sp sv s l;
+    base_mixed_list_match_n_singleton_0 vmatch p off pm' sp sv s l';
+    base_mixed_list_match_n_singleton_0 vmatch p off (pm +. pm') sp sv s l;
     Pulse.Lib.Core.sub_ghost
-      (base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l **
-       base_iterator_match_n vmatch p off n pm' (Singleton sp sv s) l')
-      (fun _ -> base_iterator_match_n vmatch p off n (pm +. pm') (Singleton sp sv s) l **
+      (base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l **
+       base_mixed_list_match_n vmatch p off n pm' (Singleton sp sv s) l')
+      (fun _ -> base_mixed_list_match_n vmatch p off n (pm +. pm') (Singleton sp sv s) l **
                 pure (l == l'))
       (Pulse.Lib.Core.slprop_equiv_ext' _ _ ())
       (Pulse.Lib.Core.intro_slprop_post_equiv _ _ (fun _ -> Pulse.Lib.Core.slprop_equiv_ext' _ _ ()))
       (replace_second_pure (Nil? l /\ off <= 1) (Nil? l' /\ off <= 1) (l == l') ())
   end
   else
-    base_iterator_match_n_singleton_gather_pos_inner #t #u vmatch #k p off n pm pm' sp sv s l l' (fun x1 pm0 x2 pm0' x2' -> vmatch_gather x1 #pm0 #x2 #pm0' #x2') ()
+    base_mixed_list_match_n_singleton_gather_pos_inner #t #u vmatch #k p off n pm pm' sp sv s l l' (fun x1 pm0 x2 pm0' x2' -> vmatch_gather x1 #pm0 #x2 #pm0' #x2') ()
 
 ghost
 fn rec seq_list_match_share
@@ -573,7 +573,7 @@ ensures
 
 ```pulse
 ghost
-fn base_iterator_match_n_share
+fn base_mixed_list_match_n_share
   (#t: Type0)
   (#u: Type0)
   (vmatch: perm -> t -> u -> slprop)
@@ -582,28 +582,28 @@ fn base_iterator_match_n_share
   (off: nat)
   (n: nat)
   (pm: perm)
-  (i: base_iterator t)
+  (i: base_mixed_list t)
   (l: list u)
   (vmatch_share: share_t vmatch)
 requires
-  base_iterator_match_n vmatch p off n pm i l
+  base_mixed_list_match_n vmatch p off n pm i l
 ensures
-  base_iterator_match_n vmatch p off n (pm /. 2.0R) i l **
-  base_iterator_match_n vmatch p off n (pm /. 2.0R) i l
+  base_mixed_list_match_n vmatch p off n (pm /. 2.0R) i l **
+  base_mixed_list_match_n vmatch p off n (pm /. 2.0R) i l
 {
   match i {
     Empty -> {
-      unfold (base_iterator_match_n vmatch p off n pm (Empty #t) l);
-      fold (base_iterator_match_n vmatch p off n (pm /. 2.0R) (Empty #t) l);
-      fold (base_iterator_match_n vmatch p off n (pm /. 2.0R) (Empty #t) l);
+      unfold (base_mixed_list_match_n vmatch p off n pm (Empty #t) l);
+      fold (base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Empty #t) l);
+      fold (base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Empty #t) l);
       rewrite each (Empty #t) as i;
     }
     Singleton sp sv s -> {
-      base_iterator_match_n_singleton_share vmatch p off n pm sp sv s l vmatch_share;
+      base_mixed_list_match_n_singleton_share vmatch p off n pm sp sv s l vmatch_share;
       rewrite each (Singleton #t sp sv s) as i;
     }
     Slice sp sv s -> {
-      unfold (base_iterator_match_n vmatch p off n pm (Slice #t sp sv s) l);
+      unfold (base_mixed_list_match_n vmatch p off n pm (Slice #t sp sv s) l);
       with l' l1 . assert (pts_to s #(pm *. sp) l' ** SM.seq_list_match l1 l (vmatch (pm *. sv)));
       S.share s;
       rewrite (pts_to s #((pm *. sp) /. 2.0R) l') as (pts_to s #((pm /. 2.0R) *. sp) l');
@@ -619,12 +619,12 @@ ensures
         rewrite (vmatch ((pm *. sv) /. 2.0R) c' v') as (vmatch ((pm /. 2.0R) *. sv) c' v');
       };
       seq_list_match_share l1 l (vmatch (pm *. sv)) (vmatch ((pm /. 2.0R) *. sv)) share_prf;
-      fold (base_iterator_match_n vmatch p off n (pm /. 2.0R) (Slice #t sp sv s) l);
-      fold (base_iterator_match_n vmatch p off n (pm /. 2.0R) (Slice #t sp sv s) l);
+      fold (base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Slice #t sp sv s) l);
+      fold (base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Slice #t sp sv s) l);
       rewrite each (Slice #t sp sv s) as i;
     }
     Serialized sp count pl -> {
-      unfold (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) l);
+      unfold (base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) l);
       with l' . assert (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #(pm *. sp) l');
       unfold (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #(pm *. sp) l');
       with v' . assert (S.pts_to pl #(pm *. sp) v');
@@ -633,8 +633,8 @@ ensures
       rewrite (S.pts_to pl #((pm *. sp) /. 2.0R) v') as (S.pts_to pl #((pm /. 2.0R) *. sp) v');
       fold (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #((pm /. 2.0R) *. sp) l');
       fold (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #((pm /. 2.0R) *. sp) l');
-      fold (base_iterator_match_n vmatch p off n (pm /. 2.0R) (Serialized #t sp count pl) l);
-      fold (base_iterator_match_n vmatch p off n (pm /. 2.0R) (Serialized #t sp count pl) l);
+      fold (base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Serialized #t sp count pl) l);
+      fold (base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Serialized #t sp count pl) l);
       rewrite each (Serialized #t sp count pl) as i;
     }
   }
@@ -645,7 +645,7 @@ ensures
 
 ```pulse
 ghost
-fn base_iterator_match_n_singleton_gather_bound_pos_inner
+fn base_mixed_list_match_n_singleton_gather_bound_pos_inner
   (#t: Type0) (#u: Type0)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
@@ -661,12 +661,12 @@ fn base_iterator_match_n_singleton_gather_bound_pos_inner
     stt_ghost unit emp_inames (vmatch pm0 x1 x2 ** vmatch pm0' x1 x2') (fun _ -> vmatch (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
   ))
   (_: squash (n <> 0))
-requires base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l **
-         base_iterator_match_n vmatch p off n pm' (Singleton sp sv s) l'
-ensures base_iterator_match_n vmatch p off n (pm +. pm') (Singleton sp sv s) l ** pure (l == l')
+requires base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l **
+         base_mixed_list_match_n vmatch p off n pm' (Singleton sp sv s) l'
+ensures base_mixed_list_match_n vmatch p off n (pm +. pm') (Singleton sp sv s) l ** pure (l == l')
 {
-  base_iterator_match_n_singleton_unfold_pos vmatch p off n pm sp sv s l ();
-  base_iterator_match_n_singleton_unfold_pos vmatch p off n pm' sp sv s l' ();
+  base_mixed_list_match_n_singleton_unfold_pos vmatch p off n pm sp sv s l ();
+  base_mixed_list_match_n_singleton_unfold_pos vmatch p off n pm' sp sv s l' ();
   with x1 y1. assert (pts_to s #(pm *. sp) x1 ** vmatch (pm *. sv) x1 y1 ** pure (l == [y1] /\ off == 0 /\ n == 1));
   with x2 y2. assert (pts_to s #(pm' *. sp) x2 ** vmatch (pm' *. sv) x2 y2 ** pure (l' == [y2] /\ off == 0 /\ n == 1));
   R.gather s;
@@ -674,11 +674,11 @@ ensures base_iterator_match_n vmatch p off n (pm +. pm') (Singleton sp sv s) l *
   rewrite each x2 as x1;
   vmatch_gather x1 (pm *. sv) y1 (pm' *. sv) y2;
   rewrite (vmatch (pm *. sv +. pm' *. sv) x1 y1) as (vmatch ((pm +. pm') *. sv) x1 y1);
-  base_iterator_match_n_singleton_fold_pos vmatch p off n (pm +. pm') sp sv s l ()
+  base_mixed_list_match_n_singleton_fold_pos vmatch p off n (pm +. pm') sp sv s l ()
 }
 ```
 
-let base_iterator_match_n_singleton_gather_bound
+let base_mixed_list_match_n_singleton_gather_bound
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
@@ -694,32 +694,32 @@ let base_iterator_match_n_singleton_gather_bound
     stt_ghost unit emp_inames (vmatch pm0 x1 x2 ** vmatch pm0' x1 x2') (fun _ -> vmatch (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
   ))
 : stt_ghost unit emp_inames
-    (base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l **
-     base_iterator_match_n vmatch p off n pm' (Singleton sp sv s) l')
-    (fun _ -> base_iterator_match_n vmatch p off n (pm +. pm') (Singleton sp sv s) l **
+    (base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l **
+     base_mixed_list_match_n vmatch p off n pm' (Singleton sp sv s) l')
+    (fun _ -> base_mixed_list_match_n vmatch p off n (pm +. pm') (Singleton sp sv s) l **
               pure (l == l'))
 = if n = 0
   then begin
-    base_iterator_match_n_singleton_0 vmatch p off pm sp sv s l;
-    base_iterator_match_n_singleton_0 vmatch p off pm' sp sv s l';
-    base_iterator_match_n_singleton_0 vmatch p off (pm +. pm') sp sv s l;
+    base_mixed_list_match_n_singleton_0 vmatch p off pm sp sv s l;
+    base_mixed_list_match_n_singleton_0 vmatch p off pm' sp sv s l';
+    base_mixed_list_match_n_singleton_0 vmatch p off (pm +. pm') sp sv s l;
     Pulse.Lib.Core.sub_ghost
-      (base_iterator_match_n vmatch p off n pm (Singleton sp sv s) l **
-       base_iterator_match_n vmatch p off n pm' (Singleton sp sv s) l')
-      (fun _ -> base_iterator_match_n vmatch p off n (pm +. pm') (Singleton sp sv s) l **
+      (base_mixed_list_match_n vmatch p off n pm (Singleton sp sv s) l **
+       base_mixed_list_match_n vmatch p off n pm' (Singleton sp sv s) l')
+      (fun _ -> base_mixed_list_match_n vmatch p off n (pm +. pm') (Singleton sp sv s) l **
                 pure (l == l'))
       (Pulse.Lib.Core.slprop_equiv_ext' _ _ ())
       (Pulse.Lib.Core.intro_slprop_post_equiv _ _ (fun _ -> Pulse.Lib.Core.slprop_equiv_ext' _ _ ()))
       (replace_second_pure (Nil? l /\ off <= 1) (Nil? l' /\ off <= 1) (l == l') ())
   end
   else
-    base_iterator_match_n_singleton_gather_bound_pos_inner #t #u vmatch #k p off n pm pm' sp sv s l l' (fun x1 pm0 x2 pm0' x2' -> vmatch_gather x1 #pm0 #x2 #pm0' x2') ()
+    base_mixed_list_match_n_singleton_gather_bound_pos_inner #t #u vmatch #k p off n pm pm' sp sv s l l' (fun x1 pm0 x2 pm0' x2' -> vmatch_gather x1 #pm0 #x2 #pm0' x2') ()
 
 #push-options "--z3rlimit 20"
 
 ```pulse
 ghost
-fn base_iterator_match_n_gather_bound
+fn base_mixed_list_match_n_gather_bound
   (#t: Type0)
   (#u: Type0)
   (vmatch: perm -> t -> u -> slprop)
@@ -729,7 +729,7 @@ fn base_iterator_match_n_gather_bound
   (n: nat)
   (pm: perm)
   (pm': perm)
-  (i: base_iterator t)
+  (i: base_mixed_list t)
   (l: list u)
   (l': list u)
   (vmatch_gather: (
@@ -737,26 +737,26 @@ fn base_iterator_match_n_gather_bound
     stt_ghost unit emp_inames (vmatch pm0 x1 x2 ** vmatch pm0' x1 x2') (fun _ -> vmatch (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
   ))
 requires
-  base_iterator_match_n vmatch p off n pm i l **
-  base_iterator_match_n vmatch p off n pm' i l'
+  base_mixed_list_match_n vmatch p off n pm i l **
+  base_mixed_list_match_n vmatch p off n pm' i l'
 ensures
-  base_iterator_match_n vmatch p off n (pm +. pm') i l **
+  base_mixed_list_match_n vmatch p off n (pm +. pm') i l **
   pure (l == l')
 {
   match i {
     Empty -> {
-      unfold (base_iterator_match_n vmatch p off n pm (Empty #t) l);
-      unfold (base_iterator_match_n vmatch p off n pm' (Empty #t) l');
-      fold (base_iterator_match_n vmatch p off n (pm +. pm') (Empty #t) l);
+      unfold (base_mixed_list_match_n vmatch p off n pm (Empty #t) l);
+      unfold (base_mixed_list_match_n vmatch p off n pm' (Empty #t) l');
+      fold (base_mixed_list_match_n vmatch p off n (pm +. pm') (Empty #t) l);
       rewrite each (Empty #t) as i;
     }
     Singleton sp sv s -> {
-      base_iterator_match_n_singleton_gather_bound #t #u vmatch p off n pm pm' sp sv s l l' vmatch_gather;
+      base_mixed_list_match_n_singleton_gather_bound #t #u vmatch p off n pm pm' sp sv s l l' vmatch_gather;
       rewrite each (Singleton #t sp sv s) as i;
     }
     Slice sp sv s -> {
-      unfold (base_iterator_match_n vmatch p off n pm (Slice #t sp sv s) l);
-      unfold (base_iterator_match_n vmatch p off n pm' (Slice #t sp sv s) l');
+      unfold (base_mixed_list_match_n vmatch p off n pm (Slice #t sp sv s) l);
+      unfold (base_mixed_list_match_n vmatch p off n pm' (Slice #t sp sv s) l');
       with la l1 . assert (pts_to s #(pm *. sp) la ** SM.seq_list_match l1 l (vmatch (pm *. sv)));
       with la' l1' . assert (pts_to s #(pm' *. sp) la' ** SM.seq_list_match l1' l' (vmatch (pm' *. sv)));
       S.gather s;
@@ -774,12 +774,12 @@ ensures
         rewrite (vmatch (pm *. sv +. pm' *. sv) c' v1') as (vmatch ((pm +. pm') *. sv) c' v1');
       };
       seq_list_match_gather_memP l1 l l' (vmatch (pm *. sv)) (vmatch (pm' *. sv)) (vmatch ((pm +. pm') *. sv)) gather_prf;
-      fold (base_iterator_match_n vmatch p off n (pm +. pm') (Slice #t sp sv s) l);
+      fold (base_mixed_list_match_n vmatch p off n (pm +. pm') (Slice #t sp sv s) l);
       rewrite each (Slice #t sp sv s) as i;
     }
     Serialized sp count pl -> {
-      unfold (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) l);
-      unfold (base_iterator_match_n vmatch p off n pm' (Serialized #t sp count pl) l');
+      unfold (base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) l);
+      unfold (base_mixed_list_match_n vmatch p off n pm' (Serialized #t sp count pl) l');
       with lv . assert (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #(pm *. sp) lv);
       with lv' . assert (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #(pm' *. sp) lv');
       unfold (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #(pm *. sp) lv);
@@ -790,7 +790,7 @@ ensures
       rewrite (S.pts_to pl #(pm *. sp +. pm' *. sp) v1) as (S.pts_to pl #((pm +. pm') *. sp) v1);
       rewrite each v2 as v1;
       fold (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #((pm +. pm') *. sp) lv);
-      fold (base_iterator_match_n vmatch p off n (pm +. pm') (Serialized #t sp count pl) l);
+      fold (base_mixed_list_match_n vmatch p off n (pm +. pm') (Serialized #t sp count pl) l);
       rewrite each (Serialized #t sp count pl) as i;
     }
   }
@@ -799,7 +799,7 @@ ensures
 
 #pop-options
 
-let base_iterator_match_n_gather
+let base_mixed_list_match_n_gather
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
@@ -808,24 +808,24 @@ let base_iterator_match_n_gather
   (n: nat)
   (pm: perm)
   (pm': perm)
-  (i: base_iterator t)
+  (i: base_mixed_list t)
   (l: list u)
   (l': list u)
   (vmatch_gather: gather_t vmatch)
 : stt_ghost unit emp_inames
-    (base_iterator_match_n vmatch p off n pm i l **
-     base_iterator_match_n vmatch p off n pm' i l')
+    (base_mixed_list_match_n vmatch p off n pm i l **
+     base_mixed_list_match_n vmatch p off n pm' i l')
     (fun _ ->
-      base_iterator_match_n vmatch p off n (pm +. pm') i l **
+      base_mixed_list_match_n vmatch p off n (pm +. pm') i l **
       pure (l == l'))
-= base_iterator_match_n_gather_bound #t #u vmatch #k p off n pm pm' i l l'
+= base_mixed_list_match_n_gather_bound #t #u vmatch #k p off n pm pm' i l l'
     (fun x1 #pm0 #x2 #pm0' x2' -> vmatch_gather x1 #pm0 #x2 #pm0' #x2')
 
 #push-options "--z3rlimit 20"
 
 ```pulse
 ghost
-fn rec iterator_match_n_share
+fn rec mixed_list_match_n_share
   (#t: Type0)
   (#u: Type0)
   (vmatch: perm -> t -> u -> slprop)
@@ -834,62 +834,62 @@ fn rec iterator_match_n_share
   (off: nat)
   (n: nat)
   (pm: perm)
-  (i: iterator t)
+  (i: mixed_list t)
   (l: list u)
   (vmatch_share: share_t vmatch)
 requires
-  iterator_match_n vmatch p off n pm i l
+  mixed_list_match_n vmatch p off n pm i l
 ensures
-  iterator_match_n vmatch p off n (pm /. 2.0R) i l **
-  iterator_match_n vmatch p off n (pm /. 2.0R) i l
-decreases (iterator_depth i)
+  mixed_list_match_n vmatch p off n (pm /. 2.0R) i l **
+  mixed_list_match_n vmatch p off n (pm /. 2.0R) i l
+decreases (mixed_list_depth i)
 {
   match i {
     Base bi -> {
-      unfold (iterator_match_n vmatch p off n pm (Base bi) l);
-      base_iterator_match_n_share vmatch p off n pm bi l vmatch_share;
-      fold (iterator_match_n vmatch p off n (pm /. 2.0R) (Base bi) l);
-      fold (iterator_match_n vmatch p off n (pm /. 2.0R) (Base bi) l);
+      unfold (mixed_list_match_n vmatch p off n pm (Base bi) l);
+      base_mixed_list_match_n_share vmatch p off n pm bi l vmatch_share;
+      fold (mixed_list_match_n vmatch p off n (pm /. 2.0R) (Base bi) l);
+      fold (mixed_list_match_n vmatch p off n (pm /. 2.0R) (Base bi) l);
       rewrite each (Base bi) as i;
     }
     Append depth cb ca ob bp before oa ap after -> {
-      unfold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+      unfold (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
       with i_before i_after l1 l2 . assert (
         pts_to before #(pm *. bp) i_before **
-        iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1 **
+        mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1 **
         pts_to after #(pm *. ap) i_after **
-        iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2 **
+        mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2 **
         pure (
           off + n <= SZ.v cb + SZ.v ca /\
-          SZ.v ob + SZ.v cb <= SZ.v (iterator_length i_before) /\
-          SZ.v oa + SZ.v ca <= SZ.v (iterator_length i_after) /\
+          SZ.v ob + SZ.v cb <= SZ.v (mixed_list_length i_before) /\
+          SZ.v oa + SZ.v ca <= SZ.v (mixed_list_length i_after) /\
           List.Tot.length l1 == append_n_before off n (SZ.v cb) /\
           List.Tot.length l2 == append_n_after off n (SZ.v cb) /\
           l == List.Tot.append l1 l2 /\
-          iterator_depth i_before < Ghost.reveal depth /\
-          iterator_depth i_after < Ghost.reveal depth
+          mixed_list_depth i_before < Ghost.reveal depth /\
+          mixed_list_depth i_after < Ghost.reveal depth
         )
       );
       R.share before;
       rewrite (R.pts_to before #((pm *. bp) /. 2.0R) i_before) as (R.pts_to before #((pm /. 2.0R) *. bp) i_before);
       rewrite (R.pts_to before #((pm *. bp) /. 2.0R) i_before) as (R.pts_to before #((pm /. 2.0R) *. bp) i_before);
-      iterator_match_n_share vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1 vmatch_share;
+      mixed_list_match_n_share vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1 vmatch_share;
       R.share after;
       rewrite (R.pts_to after #((pm *. ap) /. 2.0R) i_after) as (R.pts_to after #((pm /. 2.0R) *. ap) i_after);
       rewrite (R.pts_to after #((pm *. ap) /. 2.0R) i_after) as (R.pts_to after #((pm /. 2.0R) *. ap) i_after);
-      iterator_match_n_share vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2 vmatch_share;
+      mixed_list_match_n_share vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2 vmatch_share;
       dup_pure (
         off + n <= SZ.v cb + SZ.v ca /\
-        SZ.v ob + SZ.v cb <= SZ.v (iterator_length i_before) /\
-        SZ.v oa + SZ.v ca <= SZ.v (iterator_length i_after) /\
+        SZ.v ob + SZ.v cb <= SZ.v (mixed_list_length i_before) /\
+        SZ.v oa + SZ.v ca <= SZ.v (mixed_list_length i_after) /\
         List.Tot.length l1 == append_n_before off n (SZ.v cb) /\
         List.Tot.length l2 == append_n_after off n (SZ.v cb) /\
         l == List.Tot.append l1 l2 /\
-        iterator_depth i_before < Ghost.reveal depth /\
-        iterator_depth i_after < Ghost.reveal depth
+        mixed_list_depth i_before < Ghost.reveal depth /\
+        mixed_list_depth i_after < Ghost.reveal depth
       );
-      fold (iterator_match_n vmatch p off n (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) l);
-      fold (iterator_match_n vmatch p off n (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) l);
+      fold (mixed_list_match_n vmatch p off n (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) l);
+      fold (mixed_list_match_n vmatch p off n (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) l);
       rewrite each (Append #t depth cb ca ob bp before oa ap after) as i;
     }
   }
@@ -898,7 +898,7 @@ decreases (iterator_depth i)
 
 ```pulse
 ghost
-fn rec iterator_match_n_gather_bound
+fn rec mixed_list_match_n_gather_bound
   (#t: Type0)
   (#u: Type0)
   (vmatch: perm -> t -> u -> slprop)
@@ -908,7 +908,7 @@ fn rec iterator_match_n_gather_bound
   (n: nat)
   (pm: perm)
   (pm': perm)
-  (i: iterator t)
+  (i: mixed_list t)
   (l: list u)
   (l': list u)
   (vmatch_gather: (
@@ -916,70 +916,70 @@ fn rec iterator_match_n_gather_bound
     stt_ghost unit emp_inames (vmatch pm0 x1 x2 ** vmatch pm0' x1 x2') (fun _ -> vmatch (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
   ))
 requires
-  iterator_match_n vmatch p off n pm i l **
-  iterator_match_n vmatch p off n pm' i l'
+  mixed_list_match_n vmatch p off n pm i l **
+  mixed_list_match_n vmatch p off n pm' i l'
 ensures
-  iterator_match_n vmatch p off n (pm +. pm') i l **
+  mixed_list_match_n vmatch p off n (pm +. pm') i l **
   pure (l == l')
-decreases (iterator_depth i)
+decreases (mixed_list_depth i)
 {
   match i {
     Base bi -> {
-      unfold (iterator_match_n vmatch p off n pm (Base bi) l);
-      unfold (iterator_match_n vmatch p off n pm' (Base bi) l');
-      base_iterator_match_n_gather_bound vmatch p off n pm pm' bi l l' vmatch_gather;
-      fold (iterator_match_n vmatch p off n (pm +. pm') (Base bi) l);
+      unfold (mixed_list_match_n vmatch p off n pm (Base bi) l);
+      unfold (mixed_list_match_n vmatch p off n pm' (Base bi) l');
+      base_mixed_list_match_n_gather_bound vmatch p off n pm pm' bi l l' vmatch_gather;
+      fold (mixed_list_match_n vmatch p off n (pm +. pm') (Base bi) l);
       rewrite each (Base bi) as i;
     }
     Append depth cb ca ob bp before oa ap after -> {
-      unfold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
-      unfold (iterator_match_n vmatch p off n pm' (Append #t depth cb ca ob bp before oa ap after) l');
+      unfold (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+      unfold (mixed_list_match_n vmatch p off n pm' (Append #t depth cb ca ob bp before oa ap after) l');
       with i_before1 i_after1 l1 l2 . assert (
         pts_to before #(pm *. bp) i_before1 **
-        iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before1 l1 **
+        mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before1 l1 **
         pts_to after #(pm *. ap) i_after1 **
-        iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after1 l2 **
+        mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after1 l2 **
         pure (
           off + n <= SZ.v cb + SZ.v ca /\
-          SZ.v ob + SZ.v cb <= SZ.v (iterator_length i_before1) /\
-          SZ.v oa + SZ.v ca <= SZ.v (iterator_length i_after1) /\
+          SZ.v ob + SZ.v cb <= SZ.v (mixed_list_length i_before1) /\
+          SZ.v oa + SZ.v ca <= SZ.v (mixed_list_length i_after1) /\
           List.Tot.length l1 == append_n_before off n (SZ.v cb) /\
           List.Tot.length l2 == append_n_after off n (SZ.v cb) /\
           l == List.Tot.append l1 l2 /\
-          iterator_depth i_before1 < Ghost.reveal depth /\
-          iterator_depth i_after1 < Ghost.reveal depth
+          mixed_list_depth i_before1 < Ghost.reveal depth /\
+          mixed_list_depth i_after1 < Ghost.reveal depth
         )
       );
       with i_before2 i_after2 l1' l2' . assert (
         pts_to before #(pm' *. bp) i_before2 **
-        iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm' i_before2 l1' **
+        mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm' i_before2 l1' **
         pts_to after #(pm' *. ap) i_after2 **
-        iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm' i_after2 l2' **
+        mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm' i_after2 l2' **
         pure (
           off + n <= SZ.v cb + SZ.v ca /\
-          SZ.v ob + SZ.v cb <= SZ.v (iterator_length i_before2) /\
-          SZ.v oa + SZ.v ca <= SZ.v (iterator_length i_after2) /\
+          SZ.v ob + SZ.v cb <= SZ.v (mixed_list_length i_before2) /\
+          SZ.v oa + SZ.v ca <= SZ.v (mixed_list_length i_after2) /\
           List.Tot.length l1' == append_n_before off n (SZ.v cb) /\
           List.Tot.length l2' == append_n_after off n (SZ.v cb) /\
           l' == List.Tot.append l1' l2' /\
-          iterator_depth i_before2 < Ghost.reveal depth /\
-          iterator_depth i_after2 < Ghost.reveal depth
+          mixed_list_depth i_before2 < Ghost.reveal depth /\
+          mixed_list_depth i_after2 < Ghost.reveal depth
         )
       );
       // Gather the ref 'before'
       R.gather before;
       rewrite (R.pts_to before #(pm *. bp +. pm' *. bp) i_before1) as (R.pts_to before #((pm +. pm') *. bp) i_before1);
       rewrite each i_before2 as i_before1;
-      // Align the pm' iterator_match_n for before
-      with ib_x l1x . assert (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm' ib_x l1x);
+      // Align the pm' mixed_list_match_n for before
+      with ib_x l1x . assert (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm' ib_x l1x);
       slprop_rw
-        (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before1 l1)
-        (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib_x l1)
+        (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before1 l1)
+        (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib_x l1)
         (Pulse.Lib.Core.slprop_equiv_ext'
-          (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before1 l1)
-          (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib_x l1)
+          (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before1 l1)
+          (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib_x l1)
           ());
-      // Gather the recursive iterator_match_n for i_before
+      // Gather the recursive mixed_list_match_n for i_before
       ghost fn before_gather_fn
         (x1: t) (#pm0: perm) (#x2: u) (#pm0': perm) (x2': u { List.Tot.memP x2' l1x })
       requires vmatch pm0 x1 x2 ** vmatch pm0' x1 x2'
@@ -988,21 +988,21 @@ decreases (iterator_depth i)
         FStar.List.Tot.Properties.append_memP l1x l2' x2';
         vmatch_gather x1 #pm0 #x2 #pm0' x2'
       };
-      iterator_match_n_gather_bound vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm pm' ib_x l1 l1x before_gather_fn;
+      mixed_list_match_n_gather_bound vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm pm' ib_x l1 l1x before_gather_fn;
       // Gather the ref 'after'
       R.gather after;
       rewrite (R.pts_to after #(pm *. ap +. pm' *. ap) i_after1) as (R.pts_to after #((pm +. pm') *. ap) i_after1);
       rewrite each i_after2 as i_after1;
-      // Align the pm' iterator_match_n for after
-      with ia_x l2x . assert (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm' ia_x l2x);
+      // Align the pm' mixed_list_match_n for after
+      with ia_x l2x . assert (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm' ia_x l2x);
       slprop_rw
-        (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after1 l2)
-        (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia_x l2)
+        (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after1 l2)
+        (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia_x l2)
         (Pulse.Lib.Core.slprop_equiv_ext'
-          (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after1 l2)
-          (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia_x l2)
+          (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after1 l2)
+          (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia_x l2)
           ());
-      // Gather the recursive iterator_match_n for i_after
+      // Gather the recursive mixed_list_match_n for i_after
       ghost fn after_gather_fn
         (x1: t) (#pm0: perm) (#x2: u) (#pm0': perm) (x2': u { List.Tot.memP x2' l2x })
       requires vmatch pm0 x1 x2 ** vmatch pm0' x1 x2'
@@ -1011,24 +1011,24 @@ decreases (iterator_depth i)
         FStar.List.Tot.Properties.append_memP l1 l2x x2';
         vmatch_gather x1 #pm0 #x2 #pm0' x2'
       };
-      iterator_match_n_gather_bound vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm pm' ia_x l2 l2x after_gather_fn;
-      // Now we have iterator_match_n ... (pm +. pm') ib_x l1 and ... (pm +. pm') ia_x l2
+      mixed_list_match_n_gather_bound vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm pm' ia_x l2 l2x after_gather_fn;
+      // Now we have mixed_list_match_n ... (pm +. pm') ib_x l1 and ... (pm +. pm') ia_x l2
       // Rewrite back for fold
       slprop_rw
-        (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm +. pm') ib_x l1)
-        (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm +. pm') i_before1 l1)
+        (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm +. pm') ib_x l1)
+        (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm +. pm') i_before1 l1)
         (Pulse.Lib.Core.slprop_equiv_ext'
-          (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm +. pm') ib_x l1)
-          (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm +. pm') i_before1 l1)
+          (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm +. pm') ib_x l1)
+          (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm +. pm') i_before1 l1)
           ());
       slprop_rw
-        (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm +. pm') ia_x l2)
-        (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm +. pm') i_after1 l2)
+        (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm +. pm') ia_x l2)
+        (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm +. pm') i_after1 l2)
         (Pulse.Lib.Core.slprop_equiv_ext'
-          (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm +. pm') ia_x l2)
-          (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm +. pm') i_after1 l2)
+          (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm +. pm') ia_x l2)
+          (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm +. pm') i_after1 l2)
           ());
-      fold (iterator_match_n vmatch p off n (pm +. pm') (Append #t depth cb ca ob bp before oa ap after) l);
+      fold (mixed_list_match_n vmatch p off n (pm +. pm') (Append #t depth cb ca ob bp before oa ap after) l);
       rewrite each (Append #t depth cb ca ob bp before oa ap after) as i;
     }
   }
@@ -1037,7 +1037,7 @@ decreases (iterator_depth i)
 
 #pop-options
 
-let iterator_match_n_gather
+let mixed_list_match_n_gather
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
@@ -1046,21 +1046,21 @@ let iterator_match_n_gather
   (n: nat)
   (pm: perm)
   (pm': perm)
-  (i: iterator t)
+  (i: mixed_list t)
   (l: list u)
   (l': list u)
   (vmatch_gather: gather_t vmatch)
 : stt_ghost unit emp_inames
-    (iterator_match_n vmatch p off n pm i l **
-     iterator_match_n vmatch p off n pm' i l')
+    (mixed_list_match_n vmatch p off n pm i l **
+     mixed_list_match_n vmatch p off n pm' i l')
     (fun _ ->
-      iterator_match_n vmatch p off n (pm +. pm') i l **
+      mixed_list_match_n vmatch p off n (pm +. pm') i l **
       pure (l == l'))
-= iterator_match_n_gather_bound #t #u vmatch #k p off n pm pm' i l l'
+= mixed_list_match_n_gather_bound #t #u vmatch #k p off n pm pm' i l l'
     (fun x1 #pm0 #x2 #pm0' x2' -> vmatch_gather x1 #pm0 #x2 #pm0' #x2')
 
 // Version with i, l, l' implicit — for calling inside closures where values are lambda-wrapped
-let iterator_match_n_gather_implicit
+let mixed_list_match_n_gather_implicit
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
@@ -1069,43 +1069,43 @@ let iterator_match_n_gather_implicit
   (n: nat)
   (pm: perm)
   (pm': perm)
-  (#i: iterator t)
+  (#i: mixed_list t)
   (#l: list u)
   (#l': list u)
   (vmatch_gather: gather_t vmatch)
 : stt_ghost unit emp_inames
-    (iterator_match_n vmatch p off n pm i l **
-     iterator_match_n vmatch p off n pm' i l')
+    (mixed_list_match_n vmatch p off n pm i l **
+     mixed_list_match_n vmatch p off n pm' i l')
     (fun _ ->
-      iterator_match_n vmatch p off n (pm +. pm') i l **
+      mixed_list_match_n vmatch p off n (pm +. pm') i l **
       pure (l == l'))
-= iterator_match_n_gather_bound #t #u vmatch #k p off n pm pm' i l l'
+= mixed_list_match_n_gather_bound #t #u vmatch #k p off n pm pm' i l l'
     (fun x1 #pm0 #x2 #pm0' x2' -> vmatch_gather x1 #pm0 #x2 #pm0' #x2')
 
-let iterator_match_share
+let mixed_list_match_share
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
   (p: parser k u)
   (pm: perm)
-  (i: iterator t)
+  (i: mixed_list t)
   (l: list u)
   (vmatch_share: share_t vmatch)
 : stt_ghost unit emp_inames
-    (iterator_match vmatch p pm i l)
+    (mixed_list_match vmatch p pm i l)
     (fun _ ->
-      iterator_match vmatch p (pm /. 2.0R) i l **
-      iterator_match vmatch p (pm /. 2.0R) i l)
-= iterator_match_n_share #t #u vmatch #k p 0 (SZ.v (iterator_length i)) pm i l vmatch_share
+      mixed_list_match vmatch p (pm /. 2.0R) i l **
+      mixed_list_match vmatch p (pm /. 2.0R) i l)
+= mixed_list_match_n_share #t #u vmatch #k p 0 (SZ.v (mixed_list_length i)) pm i l vmatch_share
 
-let iterator_match_gather_bound
+let mixed_list_match_gather_bound
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
   (p: parser k u)
   (pm: perm)
   (pm': perm)
-  (i: iterator t)
+  (i: mixed_list t)
   (l: list u)
   (l': list u)
   (vmatch_gather: (
@@ -1113,35 +1113,35 @@ let iterator_match_gather_bound
     stt_ghost unit emp_inames (vmatch pm0 x1 x2 ** vmatch pm0' x1 x2') (fun _ -> vmatch (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
   ))
 : stt_ghost unit emp_inames
-    (iterator_match vmatch p pm i l **
-     iterator_match vmatch p pm' i l')
+    (mixed_list_match vmatch p pm i l **
+     mixed_list_match vmatch p pm' i l')
     (fun _ ->
-      iterator_match vmatch p (pm +. pm') i l **
+      mixed_list_match vmatch p (pm +. pm') i l **
       pure (l == l'))
-= iterator_match_n_gather_bound #t #u vmatch #k p 0 (SZ.v (iterator_length i)) pm pm' i l l' vmatch_gather
+= mixed_list_match_n_gather_bound #t #u vmatch #k p 0 (SZ.v (mixed_list_length i)) pm pm' i l l' vmatch_gather
 
-let iterator_match_gather
+let mixed_list_match_gather
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
   (p: parser k u)
   (pm: perm)
   (pm': perm)
-  (i: iterator t)
+  (i: mixed_list t)
   (l: list u)
   (l': list u)
   (vmatch_gather: gather_t vmatch)
 : stt_ghost unit emp_inames
-    (iterator_match vmatch p pm i l **
-     iterator_match vmatch p pm' i l')
+    (mixed_list_match vmatch p pm i l **
+     mixed_list_match vmatch p pm' i l')
     (fun _ ->
-      iterator_match vmatch p (pm +. pm') i l **
+      mixed_list_match vmatch p (pm +. pm') i l **
       pure (l == l'))
-= iterator_match_n_gather #t #u vmatch #k p 0 (SZ.v (iterator_length i)) pm pm' i l l' vmatch_gather
+= mixed_list_match_n_gather #t #u vmatch #k p 0 (SZ.v (mixed_list_length i)) pm pm' i l l' vmatch_gather
 
 ```pulse
 ghost
-fn base_iterator_match_n_length
+fn base_mixed_list_match_n_length
   (#t: Type0)
   (#u: Type0)
   (vmatch: perm -> t -> u -> slprop)
@@ -1150,40 +1150,40 @@ fn base_iterator_match_n_length
   (off: nat)
   (n: nat)
   (pm: perm)
-  (i: base_iterator t)
+  (i: base_mixed_list t)
   (l: list u)
 requires
-  base_iterator_match_n vmatch p off n pm i l
+  base_mixed_list_match_n vmatch p off n pm i l
 ensures
-  base_iterator_match_n vmatch p off n pm i l **
+  base_mixed_list_match_n vmatch p off n pm i l **
   pure (List.Tot.length l == n)
 {
   match i {
     Empty -> {
-      unfold (base_iterator_match_n vmatch p off n pm (Empty #t) l);
-      fold (base_iterator_match_n vmatch p off n pm (Empty #t) l);
+      unfold (base_mixed_list_match_n vmatch p off n pm (Empty #t) l);
+      fold (base_mixed_list_match_n vmatch p off n pm (Empty #t) l);
       rewrite each (Empty #t) as i;
     }
     Singleton sp sv s -> {
       if (n = 0) {
-        base_iterator_match_n_singleton_unfold_0 vmatch p off n pm sp sv s l ();
-        base_iterator_match_n_singleton_fold_0 vmatch p off n pm sp sv s l ();
+        base_mixed_list_match_n_singleton_unfold_0 vmatch p off n pm sp sv s l ();
+        base_mixed_list_match_n_singleton_fold_0 vmatch p off n pm sp sv s l ();
         rewrite each (Singleton #t sp sv s) as i;
       } else {
-        base_iterator_match_n_singleton_unfold_pos vmatch p off n pm sp sv s l ();
-        base_iterator_match_n_singleton_fold_pos vmatch p off n pm sp sv s l ();
+        base_mixed_list_match_n_singleton_unfold_pos vmatch p off n pm sp sv s l ();
+        base_mixed_list_match_n_singleton_fold_pos vmatch p off n pm sp sv s l ();
         rewrite each (Singleton #t sp sv s) as i;
       }
     }
     Slice sp sv s -> {
-      unfold (base_iterator_match_n vmatch p off n pm (Slice #t sp sv s) l);
+      unfold (base_mixed_list_match_n vmatch p off n pm (Slice #t sp sv s) l);
       with l' l1 . assert (pts_to s #(pm *. sp) l' ** SM.seq_list_match l1 l (vmatch (pm *. sv)));
       SM.seq_list_match_length (vmatch (pm *. sv)) l1 l;
-      fold (base_iterator_match_n vmatch p off n pm (Slice #t sp sv s) l);
+      fold (base_mixed_list_match_n vmatch p off n pm (Slice #t sp sv s) l);
       rewrite each (Slice #t sp sv s) as i;
     }
     Serialized sp count pl -> {
-      unfold (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) l);
+      unfold (base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) l);
       with l_all . assert (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #(pm *. sp) l_all);
       // l == snd (splitAt off l_all) and List.Tot.length l_all == off + n
       // so List.Tot.length l == n
@@ -1191,7 +1191,7 @@ ensures
       with v' . assert (S.pts_to pl #(pm *. sp) v');
       List.Tot.Base.lemma_splitAt_snd_length off l_all;
       fold (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #(pm *. sp) l_all);
-      fold (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) l);
+      fold (base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) l);
       rewrite each (Serialized #t sp count pl) as i;
     }
   }
@@ -1200,7 +1200,7 @@ ensures
 
 ```pulse
 ghost
-fn rec iterator_match_n_length
+fn rec mixed_list_match_n_length
   (#t: Type0)
   (#u: Type0)
   (vmatch: perm -> t -> u -> slprop)
@@ -1209,102 +1209,102 @@ fn rec iterator_match_n_length
   (off: nat)
   (n: nat)
   (pm: perm)
-  (i: iterator t)
+  (i: mixed_list t)
   (l: list u)
 requires
-  iterator_match_n vmatch p off n pm i l
+  mixed_list_match_n vmatch p off n pm i l
 ensures
-  iterator_match_n vmatch p off n pm i l **
+  mixed_list_match_n vmatch p off n pm i l **
   pure (List.Tot.length l == n)
-decreases (iterator_depth i)
+decreases (mixed_list_depth i)
 {
   match i {
     Base bi -> {
-      unfold (iterator_match_n vmatch p off n pm (Base bi) l);
-      base_iterator_match_n_length vmatch p off n pm bi l;
-      fold (iterator_match_n vmatch p off n pm (Base bi) l);
+      unfold (mixed_list_match_n vmatch p off n pm (Base bi) l);
+      base_mixed_list_match_n_length vmatch p off n pm bi l;
+      fold (mixed_list_match_n vmatch p off n pm (Base bi) l);
       rewrite each (Base bi) as i;
     }
     Append depth cb ca ob bp before oa ap after -> {
-      unfold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+      unfold (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
       with i_before i_after l1 l2 . assert (
         pts_to before #(pm *. bp) i_before **
-        iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1 **
+        mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1 **
         pts_to after #(pm *. ap) i_after **
-        iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2 **
+        mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2 **
         pure (
           off + n <= SZ.v cb + SZ.v ca /\
-          SZ.v ob + SZ.v cb <= SZ.v (iterator_length i_before) /\
-          SZ.v oa + SZ.v ca <= SZ.v (iterator_length i_after) /\
+          SZ.v ob + SZ.v cb <= SZ.v (mixed_list_length i_before) /\
+          SZ.v oa + SZ.v ca <= SZ.v (mixed_list_length i_after) /\
           List.Tot.length l1 == append_n_before off n (SZ.v cb) /\
           List.Tot.length l2 == append_n_after off n (SZ.v cb) /\
           l == List.Tot.append l1 l2 /\
-          iterator_depth i_before < Ghost.reveal depth /\
-          iterator_depth i_after < Ghost.reveal depth
+          mixed_list_depth i_before < Ghost.reveal depth /\
+          mixed_list_depth i_after < Ghost.reveal depth
         )
       );
       List.Tot.Properties.append_length l1 l2;
-      fold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+      fold (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
       rewrite each (Append #t depth cb ca ob bp before oa ap after) as i;
     }
   }
 }
 ```
 
-let base_iterator_match_length
+let base_mixed_list_match_length
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
   (p: parser k u)
   (pm: perm)
-  (i: base_iterator t)
+  (i: base_mixed_list t)
   (l: list u)
 : stt_ghost unit emp_inames
-    (base_iterator_match vmatch p pm i l)
+    (base_mixed_list_match vmatch p pm i l)
     (fun _ ->
-      base_iterator_match vmatch p pm i l **
-      pure (List.Tot.length l == SZ.v (base_iterator_length i)))
-= base_iterator_match_n_length vmatch p 0 (SZ.v (base_iterator_length i)) pm i l
+      base_mixed_list_match vmatch p pm i l **
+      pure (List.Tot.length l == SZ.v (base_mixed_list_length i)))
+= base_mixed_list_match_n_length vmatch p 0 (SZ.v (base_mixed_list_length i)) pm i l
 
-let iterator_match_length
+let mixed_list_match_length
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
   (p: parser k u)
   (pm: perm)
-  (i: iterator t)
+  (i: mixed_list t)
   (l: list u)
 : stt_ghost unit emp_inames
-    (iterator_match vmatch p pm i l)
+    (mixed_list_match vmatch p pm i l)
     (fun _ ->
-      iterator_match vmatch p pm i l **
-      pure (List.Tot.length l == SZ.v (iterator_length i)))
-= iterator_match_n_length vmatch p 0 (SZ.v (iterator_length i)) pm i l
+      mixed_list_match vmatch p pm i l **
+      pure (List.Tot.length l == SZ.v (mixed_list_length i)))
+= mixed_list_match_n_length vmatch p 0 (SZ.v (mixed_list_length i)) pm i l
 
-let base_iterator_match_share
+let base_mixed_list_match_share
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
   (p: parser k u)
   (pm: perm)
-  (i: base_iterator t)
+  (i: base_mixed_list t)
   (l: list u)
   (vmatch_share: share_t vmatch)
 : stt_ghost unit emp_inames
-    (base_iterator_match vmatch p pm i l)
+    (base_mixed_list_match vmatch p pm i l)
     (fun _ ->
-      base_iterator_match vmatch p (pm /. 2.0R) i l **
-      base_iterator_match vmatch p (pm /. 2.0R) i l)
-= base_iterator_match_n_share #t #u vmatch #k p 0 (SZ.v (base_iterator_length i)) pm i l vmatch_share
+      base_mixed_list_match vmatch p (pm /. 2.0R) i l **
+      base_mixed_list_match vmatch p (pm /. 2.0R) i l)
+= base_mixed_list_match_n_share #t #u vmatch #k p 0 (SZ.v (base_mixed_list_length i)) pm i l vmatch_share
 
-let base_iterator_match_gather_bound
+let base_mixed_list_match_gather_bound
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
   (p: parser k u)
   (pm: perm)
   (pm': perm)
-  (i: base_iterator t)
+  (i: base_mixed_list t)
   (l: list u)
   (l': list u)
   (vmatch_gather: (
@@ -1312,31 +1312,31 @@ let base_iterator_match_gather_bound
     stt_ghost unit emp_inames (vmatch pm0 x1 x2 ** vmatch pm0' x1 x2') (fun _ -> vmatch (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
   ))
 : stt_ghost unit emp_inames
-    (base_iterator_match vmatch p pm i l **
-     base_iterator_match vmatch p pm' i l')
+    (base_mixed_list_match vmatch p pm i l **
+     base_mixed_list_match vmatch p pm' i l')
     (fun _ ->
-      base_iterator_match vmatch p (pm +. pm') i l **
+      base_mixed_list_match vmatch p (pm +. pm') i l **
       pure (l == l'))
-= base_iterator_match_n_gather_bound #t #u vmatch #k p 0 (SZ.v (base_iterator_length i)) pm pm' i l l' vmatch_gather
+= base_mixed_list_match_n_gather_bound #t #u vmatch #k p 0 (SZ.v (base_mixed_list_length i)) pm pm' i l l' vmatch_gather
 
-let base_iterator_match_gather
+let base_mixed_list_match_gather
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind)
   (p: parser k u)
   (pm: perm)
   (pm': perm)
-  (i: base_iterator t)
+  (i: base_mixed_list t)
   (l: list u)
   (l': list u)
   (vmatch_gather: gather_t vmatch)
 : stt_ghost unit emp_inames
-    (base_iterator_match vmatch p pm i l **
-     base_iterator_match vmatch p pm' i l')
+    (base_mixed_list_match vmatch p pm i l **
+     base_mixed_list_match vmatch p pm' i l')
     (fun _ ->
-      base_iterator_match vmatch p (pm +. pm') i l **
+      base_mixed_list_match vmatch p (pm +. pm') i l **
       pure (l == l'))
-= base_iterator_match_n_gather #t #u vmatch #k p 0 (SZ.v (base_iterator_length i)) pm pm' i l l' vmatch_gather
+= base_mixed_list_match_n_gather #t #u vmatch #k p 0 (SZ.v (base_mixed_list_length i)) pm pm' i l l' vmatch_gather
 
 ```pulse
 ghost
@@ -1441,65 +1441,65 @@ let list_narrow_length (#a: Type) (l: list a) (skip take: int)
 
 ```pulse
 ghost
-fn base_iterator_match_n_narrow
+fn base_mixed_list_match_n_narrow
   (#t: Type0) (#u: Type0)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind) (p: parser k u)
   (off n off' n': nat)
   (pm: perm)
-  (i: base_iterator t)
+  (i: base_mixed_list t)
   (l: list u)
   (vmatch_share: share_t vmatch)
   (vmatch_gather: gather_t vmatch)
 requires
-  base_iterator_match_n vmatch p off n pm i l **
+  base_mixed_list_match_n vmatch p off n pm i l **
   pure (off <= off' /\ off' + n' <= off + n)
 ensures
-  base_iterator_match_n vmatch p off' n' (pm /. 2.0R) i (list_narrow l (off' - off) n') **
-  trade (base_iterator_match_n vmatch p off' n' (pm /. 2.0R) i (list_narrow l (off' - off) n'))
-        (base_iterator_match_n vmatch p off n pm i l)
+  base_mixed_list_match_n vmatch p off' n' (pm /. 2.0R) i (list_narrow l (off' - off) n') **
+  trade (base_mixed_list_match_n vmatch p off' n' (pm /. 2.0R) i (list_narrow l (off' - off) n'))
+        (base_mixed_list_match_n vmatch p off n pm i l)
 {
-  base_iterator_match_n_share vmatch p off n pm i l vmatch_share;
+  base_mixed_list_match_n_share vmatch p off n pm i l vmatch_share;
   match i {
     Empty -> {
       // n = 0, off = 0, so off' = 0, n' = 0
-      unfold (base_iterator_match_n vmatch p off n (pm /. 2.0R) (Empty #t) l);
-      fold (base_iterator_match_n vmatch p off' n' (pm /. 2.0R) (Empty #t) (list_narrow l (off' - off) n'));
-      intro (base_iterator_match_n vmatch p off' n' (pm /. 2.0R) (Empty #t) (list_narrow l (off' - off) n') @==>
-             base_iterator_match_n vmatch p off n pm (Empty #t) l)
-        #(base_iterator_match_n vmatch p off n (pm /. 2.0R) (Empty #t) l)
+      unfold (base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Empty #t) l);
+      fold (base_mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Empty #t) (list_narrow l (off' - off) n'));
+      intro (base_mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Empty #t) (list_narrow l (off' - off) n') @==>
+             base_mixed_list_match_n vmatch p off n pm (Empty #t) l)
+        #(base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Empty #t) l)
         fn _ {
-          unfold (base_iterator_match_n vmatch p off' n' (pm /. 2.0R) (Empty #t) (list_narrow l (off' - off) n'));
+          unfold (base_mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Empty #t) (list_narrow l (off' - off) n'));
           drop_ (pure (Nil? (list_narrow l (off' - off) n') /\ n' == 0 /\ off' == 0));
-          fold (base_iterator_match_n vmatch p off n (pm /. 2.0R) (Empty #t) l);
-          base_iterator_match_n_gather vmatch p off n (pm /. 2.0R) (pm /. 2.0R) (Empty #t) l l vmatch_gather;
+          fold (base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Empty #t) l);
+          base_mixed_list_match_n_gather vmatch p off n (pm /. 2.0R) (pm /. 2.0R) (Empty #t) l l vmatch_gather;
           drop_ (pure (l == l));
-          rewrite (base_iterator_match_n vmatch p off n (pm /. 2.0R +. pm /. 2.0R) (Empty #t) l)
-            as (base_iterator_match_n vmatch p off n pm (Empty #t) l);
+          rewrite (base_mixed_list_match_n vmatch p off n (pm /. 2.0R +. pm /. 2.0R) (Empty #t) l)
+            as (base_mixed_list_match_n vmatch p off n pm (Empty #t) l);
         };
       rewrite each (Empty #t) as i;
     }
     Singleton sp sv s -> {
       if (off' = off && n' = n) {
         // No change in window — just return one copy
-        base_iterator_match_n_length vmatch p off n (pm /. 2.0R) (Singleton #t sp sv s) l;
+        base_mixed_list_match_n_length vmatch p off n (pm /. 2.0R) (Singleton #t sp sv s) l;
         FStar.List.Pure.Properties.splitAt_length_total l;
         assert (pure (list_narrow l (off' - off) n' == l));
-        rewrite (base_iterator_match_n vmatch p off n (pm /. 2.0R) (Singleton #t sp sv s) l)
-          as (base_iterator_match_n vmatch p off' n' (pm /. 2.0R) (Singleton #t sp sv s) (list_narrow l (off' - off) n'));
-        intro (base_iterator_match_n vmatch p off' n' (pm /. 2.0R) (Singleton #t sp sv s) (list_narrow l (off' - off) n') @==>
-               base_iterator_match_n vmatch p off n pm (Singleton #t sp sv s) l)
-          #(base_iterator_match_n vmatch p off n (pm /. 2.0R) (Singleton #t sp sv s) l **
+        rewrite (base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Singleton #t sp sv s) l)
+          as (base_mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Singleton #t sp sv s) (list_narrow l (off' - off) n'));
+        intro (base_mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Singleton #t sp sv s) (list_narrow l (off' - off) n') @==>
+               base_mixed_list_match_n vmatch p off n pm (Singleton #t sp sv s) l)
+          #(base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Singleton #t sp sv s) l **
             pure (List.Tot.length l == n))
           fn _ {
             FStar.List.Pure.Properties.splitAt_length_total l;
-            rewrite (base_iterator_match_n vmatch p off' n' (pm /. 2.0R) (Singleton #t sp sv s) (list_narrow l (off' - off) n'))
-              as (base_iterator_match_n vmatch p off n (pm /. 2.0R) (Singleton #t sp sv s) l);
+            rewrite (base_mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Singleton #t sp sv s) (list_narrow l (off' - off) n'))
+              as (base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Singleton #t sp sv s) l);
             drop_ (pure (List.Tot.length l == n));
-            base_iterator_match_n_gather vmatch p off n (pm /. 2.0R) (pm /. 2.0R) (Singleton #t sp sv s) l l vmatch_gather;
+            base_mixed_list_match_n_gather vmatch p off n (pm /. 2.0R) (pm /. 2.0R) (Singleton #t sp sv s) l l vmatch_gather;
             drop_ (pure (l == l));
-            rewrite (base_iterator_match_n vmatch p off n (pm /. 2.0R +. pm /. 2.0R) (Singleton #t sp sv s) l)
-              as (base_iterator_match_n vmatch p off n pm (Singleton #t sp sv s) l);
+            rewrite (base_mixed_list_match_n vmatch p off n (pm /. 2.0R +. pm /. 2.0R) (Singleton #t sp sv s) l)
+              as (base_mixed_list_match_n vmatch p off n pm (Singleton #t sp sv s) l);
           };
         rewrite each (Singleton #t sp sv s) as i;
       } else {
@@ -1507,37 +1507,37 @@ ensures
         // If n=0: n'=0, off'=off=0 — handled by first branch (off'=off, n'=n).
         // So n=1, off=0. And (off',n') != (0,1), with off'<=0+1=1 and off'+n'<=1.
         // So n' = 0 (and off' = 0 or 1).
-        base_iterator_match_n_singleton_unfold_pos vmatch p off n (pm /. 2.0R) sp sv s l ();
+        base_mixed_list_match_n_singleton_unfold_pos vmatch p off n (pm /. 2.0R) sp sv s l ();
         with x y. assert (pts_to s #((pm /. 2.0R) *. sp) x ** vmatch ((pm /. 2.0R) *. sv) x y **
                           pure (l == [y] /\ off == 0 /\ n == 1));
         dup_pure (l == [y] /\ off == 0 /\ n == 1);
-        base_iterator_match_n_singleton_fold_pos vmatch p off n (pm /. 2.0R) sp sv s l ();
+        base_mixed_list_match_n_singleton_fold_pos vmatch p off n (pm /. 2.0R) sp sv s l ();
         // n' must be 0
         replace_second_pure (off <= off' /\ off' + n' <= off + n) (l == [y] /\ off == 0 /\ n == 1) (Nil? (list_narrow l (off' - off) n') /\ n' == 0 /\ off' <= 1) ();
         drop_ (pure (off <= off' /\ off' + n' <= off + n));
-        base_iterator_match_n_singleton_fold_0 vmatch p off' n' (pm /. 2.0R) sp sv s (list_narrow l (off' - off) n') ();
-        intro (base_iterator_match_n vmatch p off' n' (pm /. 2.0R) (Singleton #t sp sv s) (list_narrow l (off' - off) n') @==>
-               base_iterator_match_n vmatch p off n pm (Singleton #t sp sv s) l)
-          #(base_iterator_match_n vmatch p off n (pm /. 2.0R) (Singleton #t sp sv s) l **
-            base_iterator_match_n vmatch p off n (pm /. 2.0R) (Singleton #t sp sv s) l)
+        base_mixed_list_match_n_singleton_fold_0 vmatch p off' n' (pm /. 2.0R) sp sv s (list_narrow l (off' - off) n') ();
+        intro (base_mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Singleton #t sp sv s) (list_narrow l (off' - off) n') @==>
+               base_mixed_list_match_n vmatch p off n pm (Singleton #t sp sv s) l)
+          #(base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Singleton #t sp sv s) l **
+            base_mixed_list_match_n vmatch p off n (pm /. 2.0R) (Singleton #t sp sv s) l)
           fn _ {
-            drop_ (base_iterator_match_n vmatch p off' n' (pm /. 2.0R) (Singleton #t sp sv s) (list_narrow l (off' - off) n'));
-            base_iterator_match_n_gather vmatch p off n (pm /. 2.0R) (pm /. 2.0R) (Singleton #t sp sv s) l l vmatch_gather;
+            drop_ (base_mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Singleton #t sp sv s) (list_narrow l (off' - off) n'));
+            base_mixed_list_match_n_gather vmatch p off n (pm /. 2.0R) (pm /. 2.0R) (Singleton #t sp sv s) l l vmatch_gather;
             drop_ (pure (l == l));
-            rewrite (base_iterator_match_n vmatch p off n (pm /. 2.0R +. pm /. 2.0R) (Singleton #t sp sv s) l)
-              as (base_iterator_match_n vmatch p off n pm (Singleton #t sp sv s) l);
+            rewrite (base_mixed_list_match_n vmatch p off n (pm /. 2.0R +. pm /. 2.0R) (Singleton #t sp sv s) l)
+              as (base_mixed_list_match_n vmatch p off n pm (Singleton #t sp sv s) l);
           };
         rewrite each (Singleton #t sp sv s) as i;
       }
     }
     Slice sp sv s -> {
       // Gather two shared copies back to full perm
-      base_iterator_match_n_gather vmatch p off n (pm /. 2.0R) (pm /. 2.0R) (Slice #t sp sv s) l l vmatch_gather;
+      base_mixed_list_match_n_gather vmatch p off n (pm /. 2.0R) (pm /. 2.0R) (Slice #t sp sv s) l l vmatch_gather;
       drop_ (pure (l == l));
-      rewrite (base_iterator_match_n vmatch p off n (pm /. 2.0R +. pm /. 2.0R) (Slice #t sp sv s) l)
-        as (base_iterator_match_n vmatch p off n pm (Slice #t sp sv s) l);
+      rewrite (base_mixed_list_match_n vmatch p off n (pm /. 2.0R +. pm /. 2.0R) (Slice #t sp sv s) l)
+        as (base_mixed_list_match_n vmatch p off n pm (Slice #t sp sv s) l);
       // Unfold at full perm
-      unfold (base_iterator_match_n vmatch p off n pm (Slice #t sp sv s) l);
+      unfold (base_mixed_list_match_n vmatch p off n pm (Slice #t sp sv s) l);
       with sl sl1 . assert (pts_to s #(pm *. sp) sl ** SM.seq_list_match sl1 l (vmatch (pm *. sv)));
       // Share pts_to
       S.share s;
@@ -1592,10 +1592,10 @@ ensures
         as (SM.seq_list_match (Seq.slice (reveal sl) off' (off' + n')) (list_narrow l (off' - off) n') (vmatch ((pm /. 2.0R) *. sv)));
       // Fold narrow view
       assert (pure (off' + n' <= Seq.length (reveal sl)));
-      fold (base_iterator_match_n vmatch p off' n' (pm /. 2.0R) (Slice #t sp sv s) (list_narrow l (off' - off) n'));
+      fold (base_mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Slice #t sp sv s) (list_narrow l (off' - off) n'));
       // Build trade
-      intro (base_iterator_match_n vmatch p off' n' (pm /. 2.0R) (Slice #t sp sv s) (list_narrow l (off' - off) n') @==>
-             base_iterator_match_n vmatch p off n pm (Slice #t sp sv s) l)
+      intro (base_mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Slice #t sp sv s) (list_narrow l (off' - off) n') @==>
+             base_mixed_list_match_n vmatch p off n pm (Slice #t sp sv s) l)
         #(pts_to s #((pm /. 2.0R) *. sp) sl **
           SM.seq_list_match sl1 l (vmatch ((pm /. 2.0R) *. sv)) **
           SM.seq_list_match (reveal prefix_seq) (reveal prefix_l) (vmatch ((pm /. 2.0R) *. sv)) **
@@ -1609,7 +1609,7 @@ ensures
           pure (off + n <= Seq.length (reveal sl) /\ reveal sl1 == Seq.slice (reveal sl) off (off + n)))
         fn _ {
           // Unfold trigger
-          unfold (base_iterator_match_n vmatch p off' n' (pm /. 2.0R) (Slice #t sp sv s) (list_narrow l (off' - off) n'));
+          unfold (base_mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Slice #t sp sv s) (list_narrow l (off' - off) n'));
           with sl1_2 . assert (SM.seq_list_match sl1_2 (list_narrow l (off' - off) n') (vmatch ((pm /. 2.0R) *. sv)));
           // Gather pts_to
           S.gather s;
@@ -1656,18 +1656,18 @@ ensures
           drop_ (pure (off + n <= Seq.length (reveal sl) /\ reveal sl1 == Seq.slice (reveal sl) off (off + n)));
           // Fold at full perm
           rewrite (pts_to s #(pm *. sp) sl2) as (pts_to s #(pm *. sp) sl);
-          fold (base_iterator_match_n vmatch p off n pm (Slice #t sp sv s) l);
+          fold (base_mixed_list_match_n vmatch p off n pm (Slice #t sp sv s) l);
         };
       rewrite each (Slice #t sp sv s) as i;
     }
     Serialized sp count pl -> {
       // Gather two shared copies back to full perm
-      base_iterator_match_n_gather vmatch p off n (pm /. 2.0R) (pm /. 2.0R) (Serialized #t sp count pl) l l vmatch_gather;
+      base_mixed_list_match_n_gather vmatch p off n (pm /. 2.0R) (pm /. 2.0R) (Serialized #t sp count pl) l l vmatch_gather;
       drop_ (pure (l == l));
-      rewrite (base_iterator_match_n vmatch p off n (pm /. 2.0R +. pm /. 2.0R) (Serialized #t sp count pl) l)
-        as (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) l);
+      rewrite (base_mixed_list_match_n vmatch p off n (pm /. 2.0R +. pm /. 2.0R) (Serialized #t sp count pl) l)
+        as (base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) l);
       // Unfold at full perm
-      unfold (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) l);
+      unfold (base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) l);
       with l_all. assert (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #(pm *. sp) l_all);
       unfold (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #(pm *. sp) l_all);
       with v'. assert (S.pts_to pl #(pm *. sp) v');
@@ -1684,17 +1684,17 @@ ensures
       // narrow list: snd(splitAt off' l_all') = fst(splitAt n' (snd(splitAt (off'-off) l)))
       fold (pts_to_parsed_strong_prefix (parse_nlist (off' + n') p) pl #((pm /. 2.0R) *. sp) (reveal l_all'));
       assert (pure (snd (List.Tot.splitAt off' (reveal l_all')) == list_narrow l (off' - off) n'));
-      fold (base_iterator_match_n vmatch p off' n' (pm /. 2.0R) (Serialized #t sp count pl) (snd (List.Tot.splitAt off' (reveal l_all'))));
-      rewrite (base_iterator_match_n vmatch p off' n' (pm /. 2.0R) (Serialized #t sp count pl) (snd (List.Tot.splitAt off' (reveal l_all'))))
-        as (base_iterator_match_n vmatch p off' n' (pm /. 2.0R) (Serialized #t sp count pl) (list_narrow l (off' - off) n'));
+      fold (base_mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Serialized #t sp count pl) (snd (List.Tot.splitAt off' (reveal l_all'))));
+      rewrite (base_mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Serialized #t sp count pl) (snd (List.Tot.splitAt off' (reveal l_all'))))
+        as (base_mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Serialized #t sp count pl) (list_narrow l (off' - off) n'));
       // Build trade
-      intro (base_iterator_match_n vmatch p off' n' (pm /. 2.0R) (Serialized #t sp count pl) (list_narrow l (off' - off) n') @==>
-             base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) l)
+      intro (base_mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Serialized #t sp count pl) (list_narrow l (off' - off) n') @==>
+             base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) l)
         #(S.pts_to pl #((pm /. 2.0R) *. sp) v' **
           pure (pts_to_parsed_strong_prefix_prop (parse_nlist (off + n) p) (reveal v') l_all /\
                 l == snd (List.Tot.splitAt off l_all) /\ off + n <= SZ.v count))
         fn _ {
-          unfold (base_iterator_match_n vmatch p off' n' (pm /. 2.0R) (Serialized #t sp count pl) (list_narrow l (off' - off) n'));
+          unfold (base_mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Serialized #t sp count pl) (list_narrow l (off' - off) n'));
           with lv2. assert (pts_to_parsed_strong_prefix (parse_nlist (off' + n') p) pl #((pm /. 2.0R) *. sp) lv2);
           unfold (pts_to_parsed_strong_prefix (parse_nlist (off' + n') p) pl #((pm /. 2.0R) *. sp) lv2);
           S.gather pl;
@@ -1703,7 +1703,7 @@ ensures
             as (S.pts_to pl #(pm *. sp) v'2);
           rewrite (S.pts_to pl #(pm *. sp) v'2) as (S.pts_to pl #(pm *. sp) v');
           fold (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #(pm *. sp) l_all);
-          fold (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) l);
+          fold (base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) l);
         };
       rewrite each (Serialized #t sp count pl) as i;
     }
@@ -1798,48 +1798,48 @@ let list_narrow_append_connect
 
 ```pulse
 ghost
-fn rec iterator_match_n_narrow
+fn rec mixed_list_match_n_narrow
   (#t: Type0) (#u: Type0)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind) (p: parser k u)
   (off n off' n': nat)
   (pm: perm)
-  (i: iterator t)
+  (i: mixed_list t)
   (l: list u)
   (vmatch_share: share_t vmatch)
   (vmatch_gather: gather_t vmatch)
 requires
-  iterator_match_n vmatch p off n pm i l **
+  mixed_list_match_n vmatch p off n pm i l **
   pure (off <= off' /\ off' + n' <= off + n)
 ensures
-  iterator_match_n vmatch p off' n' (pm /. 2.0R) i (list_narrow l (off' - off) n') **
-  trade (iterator_match_n vmatch p off' n' (pm /. 2.0R) i (list_narrow l (off' - off) n'))
-        (iterator_match_n vmatch p off n pm i l)
-decreases (iterator_depth i)
+  mixed_list_match_n vmatch p off' n' (pm /. 2.0R) i (list_narrow l (off' - off) n') **
+  trade (mixed_list_match_n vmatch p off' n' (pm /. 2.0R) i (list_narrow l (off' - off) n'))
+        (mixed_list_match_n vmatch p off n pm i l)
+decreases (mixed_list_depth i)
 {
   match i {
     Base bi -> {
-      unfold (iterator_match_n vmatch p off n pm (Base bi) l);
-      base_iterator_match_n_narrow vmatch p off n off' n' pm bi l vmatch_share vmatch_gather;
-      fold (iterator_match_n vmatch p off' n' (pm /. 2.0R) (Base bi) (list_narrow l (off' - off) n'));
-      intro (iterator_match_n vmatch p off' n' (pm /. 2.0R) (Base bi) (list_narrow l (off' - off) n') @==>
-             iterator_match_n vmatch p off n pm (Base bi) l)
-        #(trade (base_iterator_match_n vmatch p off' n' (pm /. 2.0R) bi (list_narrow l (off' - off) n'))
-                (base_iterator_match_n vmatch p off n pm bi l))
+      unfold (mixed_list_match_n vmatch p off n pm (Base bi) l);
+      base_mixed_list_match_n_narrow vmatch p off n off' n' pm bi l vmatch_share vmatch_gather;
+      fold (mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Base bi) (list_narrow l (off' - off) n'));
+      intro (mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Base bi) (list_narrow l (off' - off) n') @==>
+             mixed_list_match_n vmatch p off n pm (Base bi) l)
+        #(trade (base_mixed_list_match_n vmatch p off' n' (pm /. 2.0R) bi (list_narrow l (off' - off) n'))
+                (base_mixed_list_match_n vmatch p off n pm bi l))
         fn _ {
-          unfold (iterator_match_n vmatch p off' n' (pm /. 2.0R) (Base bi) (list_narrow l (off' - off) n'));
+          unfold (mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Base bi) (list_narrow l (off' - off) n'));
           elim_trade _ _;
-          fold (iterator_match_n vmatch p off n pm (Base bi) l);
+          fold (mixed_list_match_n vmatch p off n pm (Base bi) l);
         };
       rewrite each (Base bi) as i;
     }
     Append depth cb ca ob bp before oa ap after -> {
-      unfold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+      unfold (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
       with i_before i_after l1 l2 . assert (
         pts_to before #(pm *. bp) i_before **
-        iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1 **
+        mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1 **
         pts_to after #(pm *. ap) i_after **
-        iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2
+        mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2
       );
       // Compute child narrow parameters
       let off_b = append_off_before off (SZ.v ob) (SZ.v cb);
@@ -1851,71 +1851,71 @@ decreases (iterator_depth i)
       let off_a' = append_off_after off' (SZ.v oa) (SZ.v cb);
       let na' = append_n_after off' n' (SZ.v cb);
       // Rewrite context to use let-bound names
-      rewrite (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1)
-        as (iterator_match_n vmatch p off_b n1 pm i_before l1);
-      rewrite (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2)
-        as (iterator_match_n vmatch p off_a na pm i_after l2);
+      rewrite (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1)
+        as (mixed_list_match_n vmatch p off_b n1 pm i_before l1);
+      rewrite (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2)
+        as (mixed_list_match_n vmatch p off_a na pm i_after l2);
       // Prove narrow preconditions for children
       append_narrow_before_ineq off n off' n' (SZ.v cb);
       append_narrow_after_ineq off n off' n' (SZ.v cb);
       // Recursively narrow before child
-      iterator_match_n_narrow vmatch p off_b n1 off_b' n1' pm i_before l1 vmatch_share vmatch_gather;
+      mixed_list_match_n_narrow vmatch p off_b n1 off_b' n1' pm i_before l1 vmatch_share vmatch_gather;
       // Share R.pts_to before
       R.share before;
       rewrite (R.pts_to before #((pm *. bp) /. 2.0R) i_before) as (R.pts_to before #((pm /. 2.0R) *. bp) i_before);
       rewrite (R.pts_to before #((pm *. bp) /. 2.0R) i_before) as (R.pts_to before #((pm /. 2.0R) *. bp) i_before);
       // Recursively narrow after child
-      iterator_match_n_narrow vmatch p off_a na off_a' na' pm i_after l2 vmatch_share vmatch_gather;
+      mixed_list_match_n_narrow vmatch p off_a na off_a' na' pm i_after l2 vmatch_share vmatch_gather;
       // Share R.pts_to after
       R.share after;
       rewrite (R.pts_to after #((pm *. ap) /. 2.0R) i_after) as (R.pts_to after #((pm /. 2.0R) *. ap) i_after);
       rewrite (R.pts_to after #((pm *. ap) /. 2.0R) i_after) as (R.pts_to after #((pm /. 2.0R) *. ap) i_after);
       // Rewrite narrow results from let-bound names back to append_* forms for fold
-      rewrite (iterator_match_n vmatch p off_b' n1' (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
-        as (iterator_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'));
-      rewrite (iterator_match_n vmatch p off_a' na' (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
-        as (iterator_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'));
+      rewrite (mixed_list_match_n vmatch p off_b' n1' (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
+        as (mixed_list_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'));
+      rewrite (mixed_list_match_n vmatch p off_a' na' (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
+        as (mixed_list_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'));
       // Also rewrite the trades
-      rewrite (trade (iterator_match_n vmatch p off_b' n1' (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
-                     (iterator_match_n vmatch p off_b n1 pm i_before l1))
-        as (trade (iterator_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
-                  (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1));
-      rewrite (trade (iterator_match_n vmatch p off_a' na' (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
-                     (iterator_match_n vmatch p off_a na pm i_after l2))
-        as (trade (iterator_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
-                  (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2));
+      rewrite (trade (mixed_list_match_n vmatch p off_b' n1' (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
+                     (mixed_list_match_n vmatch p off_b n1 pm i_before l1))
+        as (trade (mixed_list_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
+                  (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1));
+      rewrite (trade (mixed_list_match_n vmatch p off_a' na' (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
+                     (mixed_list_match_n vmatch p off_a na pm i_after l2))
+        as (trade (mixed_list_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
+                  (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2));
       // Establish list narrow relationship (pure facts from unfold are in SMT context)
       list_narrow_append_connect off n off' n' (SZ.v cb) (SZ.v ob) (SZ.v oa) l1 l2;
       list_narrow_length l1 (off_b' - off_b) n1';
       list_narrow_length l2 (off_a' - off_a) na';
       // Fold narrow view
-      fold (iterator_match_n vmatch p off' n' (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (list_narrow l (off' - off) n'));
+      fold (mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (list_narrow l (off' - off) n'));
       // Build trade
-      intro (iterator_match_n vmatch p off' n' (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (list_narrow l (off' - off) n') @==>
-             iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l)
-        #(trade (iterator_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
-                (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1) **
+      intro (mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (list_narrow l (off' - off) n') @==>
+             mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l)
+        #(trade (mixed_list_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
+                (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1) **
           R.pts_to before #((pm /. 2.0R) *. bp) i_before **
-          trade (iterator_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
-                (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2) **
+          trade (mixed_list_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
+                (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2) **
           R.pts_to after #((pm /. 2.0R) *. ap) i_after **
           pure (
             off + n <= SZ.v cb + SZ.v ca /\
-            SZ.v ob + SZ.v cb <= SZ.v (iterator_length i_before) /\
-            SZ.v oa + SZ.v ca <= SZ.v (iterator_length i_after) /\
+            SZ.v ob + SZ.v cb <= SZ.v (mixed_list_length i_before) /\
+            SZ.v oa + SZ.v ca <= SZ.v (mixed_list_length i_after) /\
             List.Tot.length l1 == n1 /\
             List.Tot.length l2 == na /\
             l == List.Tot.append l1 l2 /\
-            iterator_depth i_before < Ghost.reveal depth /\
-            iterator_depth i_after < Ghost.reveal depth
+            mixed_list_depth i_before < Ghost.reveal depth /\
+            mixed_list_depth i_after < Ghost.reveal depth
           ))
         fn _ {
-          unfold (iterator_match_n vmatch p off' n' (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (list_narrow l (off' - off) n'));
+          unfold (mixed_list_match_n vmatch p off' n' (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (list_narrow l (off' - off) n'));
           with ib_u ia_u l1_u l2_u . assert (
             pts_to before #((pm /. 2.0R) *. bp) ib_u **
-            iterator_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) ib_u l1_u **
+            mixed_list_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) ib_u l1_u **
             pts_to after #((pm /. 2.0R) *. ap) ia_u **
-            iterator_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) ia_u l2_u
+            mixed_list_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) ia_u l2_u
           );
           // Gather R.pts_to before
           R.gather before;
@@ -1927,40 +1927,40 @@ decreases (iterator_depth i)
           drop_ (pure (reveal i_after == reveal ia_u));
           rewrite (R.pts_to after #((pm /. 2.0R) *. ap +. (pm /. 2.0R) *. ap) i_after)
             as (R.pts_to after #(pm *. ap) i_after);
-          // Rewrite before child lists/iterators to match trades
-          iterator_match_n_length vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) ib_u l1_u;
+          // Rewrite before child lists/mixed_lists to match trades
+          mixed_list_match_n_length vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) ib_u l1_u;
           list_narrow_length l1 (off_b' - off_b) n1';
-          iterator_match_n_length vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) ia_u l2_u;
+          mixed_list_match_n_length vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) ia_u l2_u;
           list_narrow_length l2 (off_a' - off_a) na';
           List.Tot.Properties.append_injective l1_u (list_narrow l1 (off_b' - off_b) n1')
             l2_u (list_narrow l2 (off_a' - off_a) na');
-          with ib_x . assert (iterator_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) ib_x l1_u);
+          with ib_x . assert (mixed_list_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) ib_x l1_u);
           slprop_rw
-            (iterator_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) ib_x l1_u)
-            (iterator_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
+            (mixed_list_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) ib_x l1_u)
+            (mixed_list_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
             (Pulse.Lib.Core.slprop_equiv_ext'
-              (iterator_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) ib_x l1_u)
-              (iterator_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
+              (mixed_list_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) ib_x l1_u)
+              (mixed_list_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
               ());
           // Elim before trade
           elim_trade
-            (iterator_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
-            (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1);
+            (mixed_list_match_n vmatch p (append_off_before off' (SZ.v ob) (SZ.v cb)) (append_n_before off' n' (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
+            (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1);
           // Rewrite after child
-          with ia_x . assert (iterator_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) ia_x l2_u);
+          with ia_x . assert (mixed_list_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) ia_x l2_u);
           slprop_rw
-            (iterator_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) ia_x l2_u)
-            (iterator_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
+            (mixed_list_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) ia_x l2_u)
+            (mixed_list_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
             (Pulse.Lib.Core.slprop_equiv_ext'
-              (iterator_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) ia_x l2_u)
-              (iterator_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
+              (mixed_list_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) ia_x l2_u)
+              (mixed_list_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
               ());
           // Elim after trade
           elim_trade
-            (iterator_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
-            (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2);
+            (mixed_list_match_n vmatch p (append_off_after off' (SZ.v oa) (SZ.v cb)) (append_n_after off' n' (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
+            (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2);
           // Fold original
-          fold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+          fold (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
         };
       rewrite each (Append #t depth cb ca ob bp before oa ap after) as i;
     }
@@ -2043,7 +2043,7 @@ ensures exists* (w: Seq.seq byte) .
 }
 ```
 
-// Ghost helper: from raw S.pts_to + pure, folds into base_iterator_match for Serialized narrow.
+// Ghost helper: from raw S.pts_to + pure, folds into base_mixed_list_match for Serialized narrow.
 // Works in ghost context where nlist subtyping can be resolved.
 ```pulse
 ghost fn serialized_fold_narrow
@@ -2067,12 +2067,12 @@ requires
         SZ.v new_count >= off'_n' /\
         pts_to_parsed_strong_prefix_prop (parse_nlist off_n p) (reveal w) (reveal l_all))
 ensures
-  base_iterator_match_n vmatch p 0 off'_n' pm (Serialized #t sp new_count input)
+  base_mixed_list_match_n vmatch p 0 off'_n' pm (Serialized #t sp new_count input)
     (fst (List.Tot.splitAt off'_n' (reveal l_all)))
 {
   pts_to_parsed_strong_prefix_nlist_truncate p off_n off'_n' (reveal w) (reveal l_all);
   fold (pts_to_parsed_strong_prefix (parse_nlist off'_n' p) input #(pm *. sp) (fst (List.Tot.splitAt off'_n' (reveal l_all))));
-  fold (base_iterator_match_n vmatch p 0 off'_n' pm (Serialized #t sp new_count input) (fst (List.Tot.splitAt off'_n' (reveal l_all))));
+  fold (base_mixed_list_match_n vmatch p 0 off'_n' pm (Serialized #t sp new_count input) (fst (List.Tot.splitAt off'_n' (reveal l_all))));
 }
 ```
 
@@ -2185,7 +2185,7 @@ ghost fn serialized_narrow_fold_suffix
 requires
   S.pts_to pl_suffix #(pm *. sp) v_suff
 ensures
-  base_iterator_match_n vmatch p 0 n' pm (Serialized #t sp new_count pl_suffix) (reveal l_narrow)
+  base_mixed_list_match_n vmatch p 0 n' pm (Serialized #t sp new_count pl_suffix) (reveal l_narrow)
 {
   nlist_list_length (off + n) (reveal l_all);
   Seq.lemma_eq_intro (Seq.slice (reveal v') 0 (Seq.length (reveal v'))) (reveal v');
@@ -2194,13 +2194,13 @@ ensures
   rewrite (S.pts_to pl_suffix #(pm *. sp) v_suff)
     as (S.pts_to pl_suffix #(pm *. sp) (Seq.slice (reveal v') (SZ.v pos) (Seq.length (reveal v'))));
   fold (pts_to_parsed_strong_prefix (parse_nlist n' p) pl_suffix #(pm *. sp) (reveal l_narrow));
-  fold (base_iterator_match_n vmatch p 0 n' pm (Serialized #t sp new_count pl_suffix) (reveal l_narrow));
+  fold (base_mixed_list_match_n vmatch p 0 n' pm (Serialized #t sp new_count pl_suffix) (reveal l_narrow));
 }
 ```
 
 #pop-options
 
-// Trade body ghost fn for the Serialized case of base_iterator_narrow_n.
+// Trade body ghost fn for the Serialized case of base_mixed_list_narrow_n.
 // Uses S.gather to recover byte identity after fold/unfold (S.share/S.gather pattern).
 // The narrow match uses sp/.2, keeping one half in the frame for gather.
 #push-options "--z3rlimit 400"
@@ -2222,18 +2222,18 @@ ghost fn serialized_narrow_trade_body
   (sq_prop: squash (pts_to_parsed_strong_prefix_prop (parse_nlist (off + n) p) (reveal v') (reveal l_all)))
   (sq_pos_bound: squash (SZ.v pos <= Seq.length (reveal v')))
 requires
-  base_iterator_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow) **
+  base_mixed_list_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow) **
   S.pts_to pl_suffix #((pm *. sp) /. 2.0R) (Seq.slice (reveal v') (SZ.v pos) (Seq.length (reveal v'))) **
   S.is_split pl pl_prefix pl_suffix **
   S.pts_to pl_prefix #(pm *. sp) (Seq.slice (reveal v') 0 (SZ.v pos))
 ensures
-  base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l)
+  base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l)
 {
   // Unfold the narrow match to reach S.pts_to pl_suffix at half perm
-  unfold (base_iterator_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow));
-  rewrite (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length (Serialized #t (sp /. 2.0R) n' pl_suffix))) pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow))
-    as (base_iterator_match_n vmatch p 0 (SZ.v n') pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow));
-  unfold (base_iterator_match_n vmatch p 0 (SZ.v n') pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow));
+  unfold (base_mixed_list_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow));
+  rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length (Serialized #t (sp /. 2.0R) n' pl_suffix))) pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow))
+    as (base_mixed_list_match_n vmatch p 0 (SZ.v n') pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow));
+  unfold (base_mixed_list_match_n vmatch p 0 (SZ.v n') pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow));
   with l_na. assert (pts_to_parsed_strong_prefix (parse_nlist (0 + SZ.v n') p) pl_suffix #(pm *. (sp /. 2.0R)) l_na);
   unfold (pts_to_parsed_strong_prefix (parse_nlist (0 + SZ.v n') p) pl_suffix #(pm *. (sp /. 2.0R)) l_na);
   // Rewrite frame's half perm to match: (pm*.sp)/.2 = pm*(sp/.2)
@@ -2254,13 +2254,13 @@ ensures
     as (S.pts_to pl #(pm *. sp) (reveal v'));
   // Fold back the original
   fold (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #(pm *. sp) (reveal l_all));
-  fold (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l));
+  fold (base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l));
 }
 ```
 
 #pop-options
 
-// Ghost fn that builds the trade for the Serialized case of base_iterator_narrow_n.
+// Ghost fn that builds the trade for the Serialized case of base_mixed_list_narrow_n.
 // Wraps `intro ... fn _ { serialized_narrow_trade_body ... }` in a ghost context
 // to avoid the deep_compress error that occurs when `intro`'s closure is inside
 // a concrete function with many captured variables.
@@ -2282,17 +2282,17 @@ ghost fn serialized_narrow_build_trade
   (sq_prop: squash (pts_to_parsed_strong_prefix_prop (parse_nlist (off + n) p) (reveal v') (reveal l_all)))
   (sq_pos_bound: squash (SZ.v pos <= Seq.length (reveal v')))
 requires
-  base_iterator_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow) **
+  base_mixed_list_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow) **
   S.pts_to pl_suffix #((pm *. sp) /. 2.0R) (Seq.slice (reveal v') (SZ.v pos) (Seq.length (reveal v'))) **
   S.is_split pl pl_prefix pl_suffix **
   S.pts_to pl_prefix #(pm *. sp) (Seq.slice (reveal v') 0 (SZ.v pos))
 ensures
-  base_iterator_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow) **
-  trade (base_iterator_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow))
-       (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l))
+  base_mixed_list_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow) **
+  trade (base_mixed_list_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow))
+       (base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l))
 {
-  intro (base_iterator_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow) @==>
-         base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l))
+  intro (base_mixed_list_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow) @==>
+         base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l))
     #(S.pts_to pl_suffix #((pm *. sp) /. 2.0R) (Seq.slice (reveal v') (SZ.v pos) (Seq.length (reveal v'))) **
       S.is_split pl pl_prefix pl_suffix **
       S.pts_to pl_prefix #(pm *. sp) (Seq.slice (reveal v') 0 (SZ.v pos)))
@@ -2354,9 +2354,9 @@ requires
   S.is_split pl pl_prefix pl_suffix **
   serialized_unfold_pure_ctx p off n count v' l_all l
 ensures
-  base_iterator_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow) **
-  trade (base_iterator_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow))
-       (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l))
+  base_mixed_list_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow) **
+  trade (base_mixed_list_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow))
+       (base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l))
 {
   // Unfold named predicate to recover pures
   unfold (serialized_unfold_pure_ctx p off n count v' l_all l);
@@ -2375,10 +2375,10 @@ ensures
   intro_pure (pts_to_parsed_strong_prefix_prop (parse_nlist n'_elem p) (Seq.slice (reveal v') (SZ.v pos) (Seq.length (reveal v'))) (reveal l_narrow)) ();
   fold (pts_to_parsed_strong_prefix (parse_nlist n'_elem p) pl_suffix #(pm *. (sp /. 2.0R)) (reveal l_narrow));
   intro_pure (reveal l_narrow == snd (List.Tot.splitAt 0 (reveal l_narrow)) /\ 0 + n'_elem <= SZ.v n') ();
-  fold (base_iterator_match_n vmatch p 0 n'_elem pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow));
-  rewrite (base_iterator_match_n vmatch p 0 n'_elem pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow))
-    as (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length (Serialized #t (sp /. 2.0R) n' pl_suffix))) pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow));
-  fold (base_iterator_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow));
+  fold (base_mixed_list_match_n vmatch p 0 n'_elem pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow));
+  rewrite (base_mixed_list_match_n vmatch p 0 n'_elem pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow))
+    as (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length (Serialized #t (sp /. 2.0R) n' pl_suffix))) pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow));
+  fold (base_mixed_list_match vmatch p pm (Serialized #t (sp /. 2.0R) n' pl_suffix) (reveal l_narrow));
   // Build trade
   serialized_narrow_build_trade vmatch p
     off n n'
@@ -2391,10 +2391,10 @@ ensures
 
 #push-options "--z3rlimit 2000 --ext no:context_pruning"
 
-// Concrete fn for the Serialized case of base_iterator_narrow_n.
+// Concrete fn for the Serialized case of base_mixed_list_narrow_n.
 // Inlines all ghost fn logic — pures from unfold are SMT hypotheses for fold.
 ```pulse
-fn base_iterator_narrow_n_serialized
+fn base_mixed_list_narrow_n_serialized
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind) (p: parser k u)
   (j: LPS.jumper p)
@@ -2407,16 +2407,16 @@ fn base_iterator_narrow_n_serialized
   (sq_bounds: squash (Ghost.reveal off <= SZ.v off' /\ SZ.v off' + SZ.v n' <= Ghost.reveal off + Ghost.reveal n))
   (sq_narrow: squash (reveal l_narrow == list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n')))
 requires
-  base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) l
-returns i': base_iterator t
+  base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) l
+returns i': base_mixed_list t
 ensures
-  base_iterator_match vmatch p pm i' (reveal l_narrow) **
-  trade (base_iterator_match vmatch p pm i' (reveal l_narrow))
-       (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l)) **
-  pure (base_iterator_length i' == n')
+  base_mixed_list_match vmatch p pm i' (reveal l_narrow) **
+  trade (base_mixed_list_match vmatch p pm i' (reveal l_narrow))
+       (base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l)) **
+  pure (base_mixed_list_length i' == n')
 {
-  // Step 1: Unfold base_iterator_match_n and pts_to_parsed_strong_prefix
-  unfold (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) l);
+  // Step 1: Unfold base_mixed_list_match_n and pts_to_parsed_strong_prefix
+  unfold (base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) l);
   with l_all. assert (pts_to_parsed_strong_prefix (parse_nlist (Ghost.reveal off + Ghost.reveal n) p) pl #(pm *. sp) l_all);
   unfold (pts_to_parsed_strong_prefix (parse_nlist (Ghost.reveal off + Ghost.reveal n) p) pl #(pm *. sp) l_all);
   with v'. assert (S.pts_to pl #(pm *. sp) v');
@@ -2444,7 +2444,7 @@ ensures
     sp count pm pl pl_prefix pl_suffix v' l_all l l_narrow pos
     () () () ();
 
-  intro_pure (base_iterator_length (Serialized #t (sp /. 2.0R) n' pl_suffix) == n') ();
+  intro_pure (base_mixed_list_length (Serialized #t (sp /. 2.0R) n' pl_suffix) == n') ();
   let i' = Serialized #t (sp /. 2.0R) n' pl_suffix;
   rewrite each (Serialized #t (sp /. 2.0R) n' pl_suffix) as i';
   i'
@@ -2453,35 +2453,35 @@ ensures
 ```
 
 ```pulse
-fn base_iterator_narrow_n
+fn base_mixed_list_narrow_n
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind) (p: parser k u)
   (j: LPS.jumper p)
   (off: Ghost.erased nat) (n: Ghost.erased nat)
-  (pm: perm) (i: base_iterator t) (l: Ghost.erased (list u))
+  (pm: perm) (i: base_mixed_list t) (l: Ghost.erased (list u))
   (off': SZ.t) (n': SZ.t)
 requires
-  base_iterator_match_n vmatch p off n pm i l **
+  base_mixed_list_match_n vmatch p off n pm i l **
   pure (Ghost.reveal off <= SZ.v off' /\ SZ.v off' + SZ.v n' <= Ghost.reveal off + Ghost.reveal n)
-returns i': base_iterator t
+returns i': base_mixed_list t
 ensures
-  base_iterator_match vmatch p pm i' (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n')) **
-  trade (base_iterator_match vmatch p pm i' (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n')))
-       (base_iterator_match_n vmatch p off n pm i l) **
-  pure (base_iterator_length i' == n')
+  base_mixed_list_match vmatch p pm i' (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n')) **
+  trade (base_mixed_list_match vmatch p pm i' (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n')))
+       (base_mixed_list_match_n vmatch p off n pm i l) **
+  pure (base_mixed_list_length i' == n')
 {
   let l_narrow : Ghost.erased (list u) = list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n');
   match i {
     Empty -> {
-      unfold (base_iterator_match_n vmatch p off n pm (Empty #t) l);
-      fold (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length (Empty #t))) pm (Empty #t) (reveal l_narrow));
-      fold (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow));
-      Trade.refl (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow));
+      unfold (base_mixed_list_match_n vmatch p off n pm (Empty #t) l);
+      fold (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length (Empty #t))) pm (Empty #t) (reveal l_narrow));
+      fold (base_mixed_list_match vmatch p pm (Empty #t) (reveal l_narrow));
+      Trade.refl (base_mixed_list_match vmatch p pm (Empty #t) (reveal l_narrow));
       rewrite
-        (trade (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow))
-               (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow)))
-        as (trade (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow))
-                  (base_iterator_match_n vmatch p off n pm i l));
+        (trade (base_mixed_list_match vmatch p pm (Empty #t) (reveal l_narrow))
+               (base_mixed_list_match vmatch p pm (Empty #t) (reveal l_narrow)))
+        as (trade (base_mixed_list_match vmatch p pm (Empty #t) (reveal l_narrow))
+                  (base_mixed_list_match_n vmatch p off n pm i l));
       let i' = Empty #t;
       rewrite each (Empty #t) as i';
       rewrite each (reveal l_narrow) as (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n'));
@@ -2489,43 +2489,43 @@ ensures
     }
     Singleton sp sv s -> {
       if (n' = 0sz) {
-        fold (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length (Empty #t))) pm (Empty #t) (reveal l_narrow));
-        fold (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow));
-        intro (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow) @==>
-               base_iterator_match_n vmatch p off n pm (Singleton #t sp sv s) (reveal l))
-          #(base_iterator_match_n vmatch p off n pm (Singleton #t sp sv s) (reveal l))
+        fold (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length (Empty #t))) pm (Empty #t) (reveal l_narrow));
+        fold (base_mixed_list_match vmatch p pm (Empty #t) (reveal l_narrow));
+        intro (base_mixed_list_match vmatch p pm (Empty #t) (reveal l_narrow) @==>
+               base_mixed_list_match_n vmatch p off n pm (Singleton #t sp sv s) (reveal l))
+          #(base_mixed_list_match_n vmatch p off n pm (Singleton #t sp sv s) (reveal l))
           fn _ {
-            unfold (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow));
-            unfold (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length (Empty #t))) pm (Empty #t) (reveal l_narrow));
-            drop_ (pure (Nil? (reveal l_narrow) /\ SZ.v (base_iterator_length (Empty #t)) == 0 /\ 0 == 0));
+            unfold (base_mixed_list_match vmatch p pm (Empty #t) (reveal l_narrow));
+            unfold (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length (Empty #t))) pm (Empty #t) (reveal l_narrow));
+            drop_ (pure (Nil? (reveal l_narrow) /\ SZ.v (base_mixed_list_length (Empty #t)) == 0 /\ 0 == 0));
           };
         rewrite
-          (trade (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow))
-                 (base_iterator_match_n vmatch p off n pm (Singleton #t sp sv s) (reveal l)))
-          as (trade (base_iterator_match vmatch p pm (Empty #t) (reveal l_narrow))
-                    (base_iterator_match_n vmatch p off n pm i l));
+          (trade (base_mixed_list_match vmatch p pm (Empty #t) (reveal l_narrow))
+                 (base_mixed_list_match_n vmatch p off n pm (Singleton #t sp sv s) (reveal l)))
+          as (trade (base_mixed_list_match vmatch p pm (Empty #t) (reveal l_narrow))
+                    (base_mixed_list_match_n vmatch p off n pm i l));
         let i' = Empty #t;
         rewrite each (Empty #t) as i';
         rewrite each (reveal l_narrow) as (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n'));
         i'
       } else {
-        base_iterator_match_n_singleton_unfold_pos vmatch p (Ghost.reveal off) (Ghost.reveal n) pm sp sv s l ();
+        base_mixed_list_match_n_singleton_unfold_pos vmatch p (Ghost.reveal off) (Ghost.reveal n) pm sp sv s l ();
         with x y. assert (pts_to s #(pm *. sp) x ** vmatch (pm *. sv) x y ** pure (l == [y] /\ Ghost.reveal off == 0 /\ Ghost.reveal n == 1));
-        base_iterator_match_n_singleton_fold_pos vmatch p (Ghost.reveal off) (Ghost.reveal n) pm sp sv s l ();
-        rewrite (base_iterator_match_n vmatch p off n pm (Singleton #t sp sv s) l)
-          as (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length (Singleton #t sp sv s))) pm (Singleton #t sp sv s) l);
-        fold (base_iterator_match vmatch p pm (Singleton #t sp sv s) l);
+        base_mixed_list_match_n_singleton_fold_pos vmatch p (Ghost.reveal off) (Ghost.reveal n) pm sp sv s l ();
+        rewrite (base_mixed_list_match_n vmatch p off n pm (Singleton #t sp sv s) l)
+          as (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length (Singleton #t sp sv s))) pm (Singleton #t sp sv s) l);
+        fold (base_mixed_list_match vmatch p pm (Singleton #t sp sv s) l);
         assert (pure (reveal l == [y]));
         FStar.List.Pure.Properties.splitAt_length_total (reveal l);
         assert (pure (reveal l_narrow == reveal l));
         Trade.rewrite_with_trade
-          (base_iterator_match vmatch p pm (Singleton #t sp sv s) (reveal l))
-          (base_iterator_match vmatch p pm (Singleton #t sp sv s) (reveal l_narrow));
+          (base_mixed_list_match vmatch p pm (Singleton #t sp sv s) (reveal l))
+          (base_mixed_list_match vmatch p pm (Singleton #t sp sv s) (reveal l_narrow));
         rewrite
-          (trade (base_iterator_match vmatch p pm (Singleton #t sp sv s) (reveal l_narrow))
-                 (base_iterator_match vmatch p pm (Singleton #t sp sv s) (reveal l)))
-          as (trade (base_iterator_match vmatch p pm (Singleton #t sp sv s) (reveal l_narrow))
-                    (base_iterator_match_n vmatch p off n pm i l));
+          (trade (base_mixed_list_match vmatch p pm (Singleton #t sp sv s) (reveal l_narrow))
+                 (base_mixed_list_match vmatch p pm (Singleton #t sp sv s) (reveal l)))
+          as (trade (base_mixed_list_match vmatch p pm (Singleton #t sp sv s) (reveal l_narrow))
+                    (base_mixed_list_match_n vmatch p off n pm i l));
         let i' = Singleton sp sv s;
         rewrite each (Singleton #t sp sv s) as i';
         rewrite each (reveal l_narrow) as (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n'));
@@ -2533,7 +2533,7 @@ ensures
       }
     }
     Slice sp sv s -> {
-      unfold (base_iterator_match_n vmatch p off n pm (Slice #t sp sv s) l);
+      unfold (base_mixed_list_match_n vmatch p off n pm (Slice #t sp sv s) l);
       with l' sl1. assert (pts_to s #(pm *. sp) l' ** SM.seq_list_match sl1 l (vmatch (pm *. sv)));
       S.pts_to_len s;
       SM.seq_list_match_length (vmatch (pm *. sv)) sl1 (reveal l);
@@ -2588,17 +2588,17 @@ ensures
                      SM.seq_list_match (reveal suffix_seq) (reveal suffix_l) (vmatch (pm *. sv)))
                    (SM.seq_list_match (Seq.append (reveal middle_seq) (reveal suffix_seq))
                               (List.Tot.append (reveal middle_l) (reveal suffix_l)) (vmatch (pm *. sv))));
-      // Fold base_iterator_match for s_middle
+      // Fold base_mixed_list_match for s_middle
       Seq.lemma_eq_intro (reveal middle_seq) (reveal v_middle);
       Seq.lemma_eq_intro (reveal middle_seq) (Seq.slice (reveal v_middle) 0 (SZ.v n'));
       rewrite (SM.seq_list_match (reveal middle_seq) (reveal middle_l) (vmatch (pm *. sv)))
         as (SM.seq_list_match (Seq.slice (reveal v_middle) 0 (SZ.v (S.len s_middle))) (reveal l_narrow) (vmatch (pm *. sv)));
-      fold (base_iterator_match_n vmatch p 0 (SZ.v (S.len s_middle)) pm (Slice #t sp sv s_middle) (reveal l_narrow));
-      fold (base_iterator_match vmatch p pm (Slice #t sp sv s_middle) (reveal l_narrow));
+      fold (base_mixed_list_match_n vmatch p 0 (SZ.v (S.len s_middle)) pm (Slice #t sp sv s_middle) (reveal l_narrow));
+      fold (base_mixed_list_match vmatch p pm (Slice #t sp sv s_middle) (reveal l_narrow));
 
       // Build the trade
-      intro (base_iterator_match vmatch p pm (Slice #t sp sv s_middle) (reveal l_narrow) @==>
-             base_iterator_match_n vmatch p off n pm (Slice #t sp sv s) (reveal l))
+      intro (base_mixed_list_match vmatch p pm (Slice #t sp sv s_middle) (reveal l_narrow) @==>
+             base_mixed_list_match_n vmatch p off n pm (Slice #t sp sv s) (reveal l))
         #(S.is_split s s_prefix s_rest **
           S.is_split s_rest s_middle s_suffix **
           pts_to s_prefix #(pm *. sp) v_prefix **
@@ -2618,8 +2618,8 @@ ensures
                 Seq.length (reveal v_prefix) == SZ.v off' /\
                 Seq.length (reveal v_suffix) == Seq.length (reveal l') - SZ.v off' - SZ.v n'))
         fn _ {
-          unfold (base_iterator_match vmatch p pm (Slice #t sp sv s_middle) (reveal l_narrow));
-          unfold (base_iterator_match_n vmatch p 0 (SZ.v (S.len s_middle)) pm (Slice #t sp sv s_middle) (reveal l_narrow));
+          unfold (base_mixed_list_match vmatch p pm (Slice #t sp sv s_middle) (reveal l_narrow));
+          unfold (base_mixed_list_match_n vmatch p 0 (SZ.v (S.len s_middle)) pm (Slice #t sp sv s_middle) (reveal l_narrow));
           with l'2 sl1_2. assert (pts_to s_middle #(pm *. sp) l'2 ** SM.seq_list_match sl1_2 (reveal l_narrow) (vmatch (pm *. sv)));
           S.pts_to_len s_middle;
           SM.seq_list_match_length (vmatch (pm *. sv)) sl1_2 (reveal l_narrow);
@@ -2645,14 +2645,14 @@ ensures
                                   (reveal l) (vmatch (pm *. sv)));
           drop_ (pure (0 + SZ.v (S.len s_middle) <= Seq.length (reveal l'2) /\ sl1_2 == Seq.slice (reveal l'2) 0 (SZ.v (S.len s_middle))));
           drop_ (pure (Seq.length (reveal l'2) == SZ.v (S.len s_middle)));
-          fold (base_iterator_match_n vmatch p (Ghost.reveal off) (Ghost.reveal n) pm (Slice #t sp sv s) (reveal l));
+          fold (base_mixed_list_match_n vmatch p (Ghost.reveal off) (Ghost.reveal n) pm (Slice #t sp sv s) (reveal l));
         };
 
       rewrite
-        (trade (base_iterator_match vmatch p pm (Slice #t sp sv s_middle) (reveal l_narrow))
-               (base_iterator_match_n vmatch p off n pm (Slice #t sp sv s) (reveal l)))
-        as (trade (base_iterator_match vmatch p pm (Slice #t sp sv s_middle) (reveal l_narrow))
-                  (base_iterator_match_n vmatch p off n pm i l));
+        (trade (base_mixed_list_match vmatch p pm (Slice #t sp sv s_middle) (reveal l_narrow))
+               (base_mixed_list_match_n vmatch p off n pm (Slice #t sp sv s) (reveal l)))
+        as (trade (base_mixed_list_match vmatch p pm (Slice #t sp sv s_middle) (reveal l_narrow))
+                  (base_mixed_list_match_n vmatch p off n pm i l));
       let i' = Slice #t sp sv s_middle;
       rewrite each (Slice #t sp sv s_middle) as i';
       rewrite each (reveal l_narrow) as (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n'));
@@ -2661,12 +2661,12 @@ ensures
       }}
     }
     Serialized sp count pl -> {
-      let i' = base_iterator_narrow_n_serialized vmatch p j off n pm sp count pl l off' n' l_narrow () ();
+      let i' = base_mixed_list_narrow_n_serialized vmatch p j off n pm sp count pl l off' n' l_narrow () ();
       rewrite
-        (trade (base_iterator_match vmatch p pm i' (reveal l_narrow))
-               (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l)))
-        as (trade (base_iterator_match vmatch p pm i' (reveal l_narrow))
-                  (base_iterator_match_n vmatch p off n pm i l));
+        (trade (base_mixed_list_match vmatch p pm i' (reveal l_narrow))
+               (base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l)))
+        as (trade (base_mixed_list_match vmatch p pm i' (reveal l_narrow))
+                  (base_mixed_list_match_n vmatch p off n pm i l));
       rewrite each (reveal l_narrow) as (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n'));
       i'
     }
@@ -2676,9 +2676,9 @@ ensures
 
 #pop-options
 
-// iterator_narrow_n: concrete narrowing for iterators.
-// Returns at pm /. 2.0R because Append children are narrowed via iterator_match_n_narrow (which halves pm).
-// Base case calls base_iterator_narrow_n (full pm) then shares.
+// mixed_list_narrow_n: concrete narrowing for mixed_lists.
+// Returns at pm /. 2.0R because Append children are narrowed via mixed_list_match_n_narrow (which halves pm).
+// Base case calls base_mixed_list_narrow_n (full pm) then shares.
 
 // Helper: append_n_before + append_n_after = n
 let append_n_sum (off n cb: nat)
@@ -2728,72 +2728,72 @@ let append_off_after_sz (off oa ca cb: SZ.t)
 #push-options "--z3rlimit 80 --fuel 1 --ifuel 1"
 
 ```pulse
-fn iterator_narrow_n
+fn mixed_list_narrow_n
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind) (p: parser k u)
   (j: LPS.jumper p)
   (off: Ghost.erased nat) (n: Ghost.erased nat)
-  (pm: perm) (i: iterator t) (l: Ghost.erased (list u))
+  (pm: perm) (i: mixed_list t) (l: Ghost.erased (list u))
   (off': SZ.t) (n': SZ.t)
   (vmatch_share: share_t vmatch) (vmatch_gather: gather_t vmatch)
 requires
-  iterator_match_n vmatch p off n pm i l **
+  mixed_list_match_n vmatch p off n pm i l **
   pure (Ghost.reveal off <= SZ.v off' /\ SZ.v off' + SZ.v n' <= Ghost.reveal off + Ghost.reveal n)
-returns i': iterator t
+returns i': mixed_list t
 ensures
-  iterator_match vmatch p (pm /. 2.0R) i' (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n')) **
-  trade (iterator_match vmatch p (pm /. 2.0R) i' (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n')))
-       (iterator_match_n vmatch p off n pm i l) **
-  pure (iterator_length i' == n')
+  mixed_list_match vmatch p (pm /. 2.0R) i' (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n')) **
+  trade (mixed_list_match vmatch p (pm /. 2.0R) i' (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n')))
+       (mixed_list_match_n vmatch p off n pm i l) **
+  pure (mixed_list_length i' == n')
 {
   let l_narrow : Ghost.erased (list u) = list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n');
   match i {
     Base bi -> {
-      // Unfold iterator_match_n to get base_iterator_match_n
-      unfold (iterator_match_n vmatch p off n pm (Base bi) l);
-      // Call base_iterator_narrow_n to get a new base_iterator at full pm
-      let bi' = base_iterator_narrow_n vmatch p j off n pm bi l off' n';
-      // bi' has: base_iterator_match pm bi' (list_narrow ...) + trade + pure(base_iterator_length bi' == n')
+      // Unfold mixed_list_match_n to get base_mixed_list_match_n
+      unfold (mixed_list_match_n vmatch p off n pm (Base bi) l);
+      // Call base_mixed_list_narrow_n to get a new base_mixed_list at full pm
+      let bi' = base_mixed_list_narrow_n vmatch p j off n pm bi l off' n';
+      // bi' has: base_mixed_list_match pm bi' (list_narrow ...) + trade + pure(base_mixed_list_length bi' == n')
       // Rewrite to use l_narrow
-      rewrite (base_iterator_match vmatch p pm bi' (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n')))
-        as (base_iterator_match vmatch p pm bi' (reveal l_narrow));
-      rewrite (trade (base_iterator_match vmatch p pm bi' (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n')))
-                     (base_iterator_match_n vmatch p off n pm bi l))
-        as (trade (base_iterator_match vmatch p pm bi' (reveal l_narrow))
-                  (base_iterator_match_n vmatch p off n pm bi l));
-      // Share base_iterator_match to get two copies at pm/2
-      rewrite (base_iterator_match vmatch p pm bi' (reveal l_narrow))
-        as (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) pm bi' (reveal l_narrow));
-      base_iterator_match_n_share vmatch p 0 (SZ.v (base_iterator_length bi')) pm bi' (reveal l_narrow) vmatch_share;
-      // Now have two copies of base_iterator_match_n 0 len (pm/2) bi' l_narrow
-      // Fold one into iterator_match
-      fold (iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 2.0R) (Base bi') (reveal l_narrow));
-      rewrite (iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 2.0R) (Base bi') (reveal l_narrow))
-        as (iterator_match vmatch p (pm /. 2.0R) (Base bi') (reveal l_narrow));
-      // Build trade: iterator_match (pm/2) (Base bi') l_narrow @==> iterator_match_n off n pm i l
-      intro (iterator_match vmatch p (pm /. 2.0R) (Base bi') (reveal l_narrow) @==>
-             iterator_match_n vmatch p off n pm (Base bi) l)
-        #(base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 2.0R) bi' (reveal l_narrow) **
-          trade (base_iterator_match vmatch p pm bi' (reveal l_narrow))
-               (base_iterator_match_n vmatch p off n pm bi l))
+      rewrite (base_mixed_list_match vmatch p pm bi' (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n')))
+        as (base_mixed_list_match vmatch p pm bi' (reveal l_narrow));
+      rewrite (trade (base_mixed_list_match vmatch p pm bi' (list_narrow l (SZ.v off' - Ghost.reveal off) (SZ.v n')))
+                     (base_mixed_list_match_n vmatch p off n pm bi l))
+        as (trade (base_mixed_list_match vmatch p pm bi' (reveal l_narrow))
+                  (base_mixed_list_match_n vmatch p off n pm bi l));
+      // Share base_mixed_list_match to get two copies at pm/2
+      rewrite (base_mixed_list_match vmatch p pm bi' (reveal l_narrow))
+        as (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi')) pm bi' (reveal l_narrow));
+      base_mixed_list_match_n_share vmatch p 0 (SZ.v (base_mixed_list_length bi')) pm bi' (reveal l_narrow) vmatch_share;
+      // Now have two copies of base_mixed_list_match_n 0 len (pm/2) bi' l_narrow
+      // Fold one into mixed_list_match
+      fold (mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi')) (pm /. 2.0R) (Base bi') (reveal l_narrow));
+      rewrite (mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi')) (pm /. 2.0R) (Base bi') (reveal l_narrow))
+        as (mixed_list_match vmatch p (pm /. 2.0R) (Base bi') (reveal l_narrow));
+      // Build trade: mixed_list_match (pm/2) (Base bi') l_narrow @==> mixed_list_match_n off n pm i l
+      intro (mixed_list_match vmatch p (pm /. 2.0R) (Base bi') (reveal l_narrow) @==>
+             mixed_list_match_n vmatch p off n pm (Base bi) l)
+        #(base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi')) (pm /. 2.0R) bi' (reveal l_narrow) **
+          trade (base_mixed_list_match vmatch p pm bi' (reveal l_narrow))
+               (base_mixed_list_match_n vmatch p off n pm bi l))
         fn _ {
-          // Unfold iterator_match
-          rewrite (iterator_match vmatch p (pm /. 2.0R) (Base bi') (reveal l_narrow))
-            as (iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 2.0R) (Base bi') (reveal l_narrow));
-          unfold (iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 2.0R) (Base bi') (reveal l_narrow));
+          // Unfold mixed_list_match
+          rewrite (mixed_list_match vmatch p (pm /. 2.0R) (Base bi') (reveal l_narrow))
+            as (mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi')) (pm /. 2.0R) (Base bi') (reveal l_narrow));
+          unfold (mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi')) (pm /. 2.0R) (Base bi') (reveal l_narrow));
           // Gather to get full pm
-          base_iterator_match_n_gather vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 2.0R) (pm /. 2.0R) bi' (reveal l_narrow) (reveal l_narrow) vmatch_gather;
+          base_mixed_list_match_n_gather vmatch p 0 (SZ.v (base_mixed_list_length bi')) (pm /. 2.0R) (pm /. 2.0R) bi' (reveal l_narrow) (reveal l_narrow) vmatch_gather;
           drop_ (pure (reveal l_narrow == reveal l_narrow));
-          rewrite (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 2.0R +. pm /. 2.0R) bi' (reveal l_narrow))
-            as (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) pm bi' (reveal l_narrow));
-          // Fold back to base_iterator_match
-          rewrite (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) pm bi' (reveal l_narrow))
-            as (base_iterator_match vmatch p pm bi' (reveal l_narrow));
+          rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi')) (pm /. 2.0R +. pm /. 2.0R) bi' (reveal l_narrow))
+            as (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi')) pm bi' (reveal l_narrow));
+          // Fold back to base_mixed_list_match
+          rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi')) pm bi' (reveal l_narrow))
+            as (base_mixed_list_match vmatch p pm bi' (reveal l_narrow));
           // Elim trade to get original
           elim_trade
-            (base_iterator_match vmatch p pm bi' (reveal l_narrow))
-            (base_iterator_match_n vmatch p off n pm bi l);
-          fold (iterator_match_n vmatch p off n pm (Base bi) l);
+            (base_mixed_list_match vmatch p pm bi' (reveal l_narrow))
+            (base_mixed_list_match_n vmatch p off n pm bi l);
+          fold (mixed_list_match_n vmatch p off n pm (Base bi) l);
         };
       rewrite each (Base bi) as i;
       let i' = Base bi';
@@ -2802,13 +2802,13 @@ ensures
       i'
     }
     Append depth cb ca ob bp before oa ap after -> {
-      // Unfold iterator_match_n
-      unfold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+      // Unfold mixed_list_match_n
+      unfold (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
       with i_before i_after l1 l2 . assert (
         pts_to before #(pm *. bp) i_before **
-        iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1 **
+        mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1 **
         pts_to after #(pm *. ap) i_after **
-        iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2
+        mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2
       );
       // Bind child narrow parameters (ghost since off/n are ghost)
       let off_b : Ghost.erased nat = append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb);
@@ -2820,21 +2820,21 @@ ensures
       let off_a' : Ghost.erased nat = append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb);
       let na' : Ghost.erased nat = append_n_after (SZ.v off') (SZ.v n') (SZ.v cb);
       // Rewrite to let-bound names
-      rewrite (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1)
-        as (iterator_match_n vmatch p off_b n1 pm i_before l1);
-      rewrite (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2)
-        as (iterator_match_n vmatch p off_a na pm i_after l2);
+      rewrite (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1)
+        as (mixed_list_match_n vmatch p off_b n1 pm i_before l1);
+      rewrite (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2)
+        as (mixed_list_match_n vmatch p off_a na pm i_after l2);
       // Prove narrow preconditions
       append_narrow_before_ineq (Ghost.reveal off) (Ghost.reveal n) (SZ.v off') (SZ.v n') (SZ.v cb);
       append_narrow_after_ineq (Ghost.reveal off) (Ghost.reveal n) (SZ.v off') (SZ.v n') (SZ.v cb);
       // Narrow before child (halves pm)
-      iterator_match_n_narrow vmatch p off_b n1 off_b' n1' pm i_before l1 vmatch_share vmatch_gather;
+      mixed_list_match_n_narrow vmatch p off_b n1 off_b' n1' pm i_before l1 vmatch_share vmatch_gather;
       // Share R.pts_to before
       R.share before;
       rewrite (R.pts_to before #((pm *. bp) /. 2.0R) i_before) as (R.pts_to before #((pm /. 2.0R) *. bp) i_before);
       rewrite (R.pts_to before #((pm *. bp) /. 2.0R) i_before) as (R.pts_to before #((pm /. 2.0R) *. bp) i_before);
       // Narrow after child (halves pm)
-      iterator_match_n_narrow vmatch p off_a na off_a' na' pm i_after l2 vmatch_share vmatch_gather;
+      mixed_list_match_n_narrow vmatch p off_a na off_a' na' pm i_after l2 vmatch_share vmatch_gather;
       // Share R.pts_to after
       R.share after;
       rewrite (R.pts_to after #((pm *. ap) /. 2.0R) i_after) as (R.pts_to after #((pm /. 2.0R) *. ap) i_after);
@@ -2846,63 +2846,63 @@ ensures
       let ob'_sz : SZ.t = append_off_before_sz off' ob cb;
       let oa'_sz : SZ.t = append_off_after_sz off' oa ca cb;
       // Rewrite narrow results to use new offsets/counts
-      rewrite (iterator_match_n vmatch p off_b' n1' (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
-        as (iterator_match_n vmatch p (append_off_before 0 (SZ.v ob'_sz) (SZ.v cb'_sz)) (append_n_before 0 (SZ.v n') (SZ.v cb'_sz)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'));
-      rewrite (iterator_match_n vmatch p off_a' na' (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
-        as (iterator_match_n vmatch p (append_off_after 0 (SZ.v oa'_sz) (SZ.v cb'_sz)) (append_n_after 0 (SZ.v n') (SZ.v cb'_sz)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'));
+      rewrite (mixed_list_match_n vmatch p off_b' n1' (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
+        as (mixed_list_match_n vmatch p (append_off_before 0 (SZ.v ob'_sz) (SZ.v cb'_sz)) (append_n_before 0 (SZ.v n') (SZ.v cb'_sz)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'));
+      rewrite (mixed_list_match_n vmatch p off_a' na' (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
+        as (mixed_list_match_n vmatch p (append_off_after 0 (SZ.v oa'_sz) (SZ.v cb'_sz)) (append_n_after 0 (SZ.v n') (SZ.v cb'_sz)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'));
       // Establish list relationship
       list_narrow_append_connect (Ghost.reveal off) (Ghost.reveal n) (SZ.v off') (SZ.v n') (SZ.v cb) (SZ.v ob) (SZ.v oa) l1 l2;
       list_narrow_length l1 (off_b' - off_b) n1';
       list_narrow_length l2 (off_a' - off_a) na';
-      // Fold iterator_match_n for the new Append at pm/2
-      fold (iterator_match_n vmatch p 0 (SZ.v n') (pm /. 2.0R)
+      // Fold mixed_list_match_n for the new Append at pm/2
+      fold (mixed_list_match_n vmatch p 0 (SZ.v n') (pm /. 2.0R)
         (Append #t depth cb'_sz ca'_sz ob'_sz bp before oa'_sz ap after)
         (list_narrow l1 (off_b' - off_b) n1' @ list_narrow l2 (off_a' - off_a) na'));
       // Rewrite list_narrow of append to match l_narrow
-      rewrite (iterator_match_n vmatch p 0 (SZ.v n') (pm /. 2.0R)
+      rewrite (mixed_list_match_n vmatch p 0 (SZ.v n') (pm /. 2.0R)
         (Append #t depth cb'_sz ca'_sz ob'_sz bp before oa'_sz ap after)
         (list_narrow l1 (off_b' - off_b) n1' @ list_narrow l2 (off_a' - off_a) na'))
-        as (iterator_match vmatch p (pm /. 2.0R)
+        as (mixed_list_match vmatch p (pm /. 2.0R)
           (Append #t depth cb'_sz ca'_sz ob'_sz bp before oa'_sz ap after)
           (reveal l_narrow));
       // Also rewrite trades back to append_* forms
-      rewrite (trade (iterator_match_n vmatch p off_b' n1' (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
-                     (iterator_match_n vmatch p off_b n1 pm i_before l1))
-        as (trade (iterator_match_n vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
-                  (iterator_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_before l1));
-      rewrite (trade (iterator_match_n vmatch p off_a' na' (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
-                     (iterator_match_n vmatch p off_a na pm i_after l2))
-        as (trade (iterator_match_n vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
-                  (iterator_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_after l2));
+      rewrite (trade (mixed_list_match_n vmatch p off_b' n1' (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
+                     (mixed_list_match_n vmatch p off_b n1 pm i_before l1))
+        as (trade (mixed_list_match_n vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
+                  (mixed_list_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_before l1));
+      rewrite (trade (mixed_list_match_n vmatch p off_a' na' (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
+                     (mixed_list_match_n vmatch p off_a na pm i_after l2))
+        as (trade (mixed_list_match_n vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
+                  (mixed_list_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_after l2));
       // Build trade
-      intro (iterator_match vmatch p (pm /. 2.0R) (Append #t depth cb'_sz ca'_sz ob'_sz bp before oa'_sz ap after) (reveal l_narrow) @==>
-             iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l)
-        #(trade (iterator_match_n vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
-                (iterator_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_before l1) **
+      intro (mixed_list_match vmatch p (pm /. 2.0R) (Append #t depth cb'_sz ca'_sz ob'_sz bp before oa'_sz ap after) (reveal l_narrow) @==>
+             mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l)
+        #(trade (mixed_list_match_n vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
+                (mixed_list_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_before l1) **
           R.pts_to before #((pm /. 2.0R) *. bp) i_before **
-          trade (iterator_match_n vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
-                (iterator_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_after l2) **
+          trade (mixed_list_match_n vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
+                (mixed_list_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_after l2) **
           R.pts_to after #((pm /. 2.0R) *. ap) i_after **
           pure (
             Ghost.reveal off + Ghost.reveal n <= SZ.v cb + SZ.v ca /\
-            SZ.v ob + SZ.v cb <= SZ.v (iterator_length i_before) /\
-            SZ.v oa + SZ.v ca <= SZ.v (iterator_length i_after) /\
+            SZ.v ob + SZ.v cb <= SZ.v (mixed_list_length i_before) /\
+            SZ.v oa + SZ.v ca <= SZ.v (mixed_list_length i_after) /\
             List.Tot.length l1 == n1 /\
             List.Tot.length l2 == na /\
             l == List.Tot.append l1 l2 /\
-            iterator_depth i_before < Ghost.reveal depth /\
-            iterator_depth i_after < Ghost.reveal depth
+            mixed_list_depth i_before < Ghost.reveal depth /\
+            mixed_list_depth i_after < Ghost.reveal depth
           ))
         fn _ {
-          // Unfold iterator_match for the new Append
-          rewrite (iterator_match vmatch p (pm /. 2.0R) (Append #t depth cb'_sz ca'_sz ob'_sz bp before oa'_sz ap after) (reveal l_narrow))
-            as (iterator_match_n vmatch p 0 (SZ.v n') (pm /. 2.0R) (Append #t depth cb'_sz ca'_sz ob'_sz bp before oa'_sz ap after) (reveal l_narrow));
-          unfold (iterator_match_n vmatch p 0 (SZ.v n') (pm /. 2.0R) (Append #t depth cb'_sz ca'_sz ob'_sz bp before oa'_sz ap after) (reveal l_narrow));
+          // Unfold mixed_list_match for the new Append
+          rewrite (mixed_list_match vmatch p (pm /. 2.0R) (Append #t depth cb'_sz ca'_sz ob'_sz bp before oa'_sz ap after) (reveal l_narrow))
+            as (mixed_list_match_n vmatch p 0 (SZ.v n') (pm /. 2.0R) (Append #t depth cb'_sz ca'_sz ob'_sz bp before oa'_sz ap after) (reveal l_narrow));
+          unfold (mixed_list_match_n vmatch p 0 (SZ.v n') (pm /. 2.0R) (Append #t depth cb'_sz ca'_sz ob'_sz bp before oa'_sz ap after) (reveal l_narrow));
           with ib_u ia_u l1_u l2_u . assert (
             pts_to before #((pm /. 2.0R) *. bp) ib_u **
-            iterator_match_n vmatch p (append_off_before 0 (SZ.v ob'_sz) (SZ.v cb'_sz)) (append_n_before 0 (SZ.v n') (SZ.v cb'_sz)) (pm /. 2.0R) ib_u l1_u **
+            mixed_list_match_n vmatch p (append_off_before 0 (SZ.v ob'_sz) (SZ.v cb'_sz)) (append_n_before 0 (SZ.v n') (SZ.v cb'_sz)) (pm /. 2.0R) ib_u l1_u **
             pts_to after #((pm /. 2.0R) *. ap) ia_u **
-            iterator_match_n vmatch p (append_off_after 0 (SZ.v oa'_sz) (SZ.v cb'_sz)) (append_n_after 0 (SZ.v n') (SZ.v cb'_sz)) (pm /. 2.0R) ia_u l2_u
+            mixed_list_match_n vmatch p (append_off_after 0 (SZ.v oa'_sz) (SZ.v cb'_sz)) (append_n_after 0 (SZ.v n') (SZ.v cb'_sz)) (pm /. 2.0R) ia_u l2_u
           );
           // Gather R.pts_to before
           R.gather before;
@@ -2914,46 +2914,46 @@ ensures
           drop_ (pure (reveal i_after == reveal ia_u));
           rewrite (R.pts_to after #((pm /. 2.0R) *. ap +. (pm /. 2.0R) *. ap) i_after)
             as (R.pts_to after #(pm *. ap) i_after);
-          // Rewrite child iterator_match_n to use original offset names
-          rewrite (iterator_match_n vmatch p (append_off_before 0 (SZ.v ob'_sz) (SZ.v cb'_sz)) (append_n_before 0 (SZ.v n') (SZ.v cb'_sz)) (pm /. 2.0R) ib_u l1_u)
-            as (iterator_match_n vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ib_u l1_u);
+          // Rewrite child mixed_list_match_n to use original offset names
+          rewrite (mixed_list_match_n vmatch p (append_off_before 0 (SZ.v ob'_sz) (SZ.v cb'_sz)) (append_n_before 0 (SZ.v n') (SZ.v cb'_sz)) (pm /. 2.0R) ib_u l1_u)
+            as (mixed_list_match_n vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ib_u l1_u);
           // Use length + append_injective to identify ib_u = i_before, l1_u = list_narrow l1 ...
-          iterator_match_n_length vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ib_u l1_u;
-          rewrite (iterator_match_n vmatch p (append_off_after 0 (SZ.v oa'_sz) (SZ.v cb'_sz)) (append_n_after 0 (SZ.v n') (SZ.v cb'_sz)) (pm /. 2.0R) ia_u l2_u)
-            as (iterator_match_n vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ia_u l2_u);
-          iterator_match_n_length vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ia_u l2_u;
+          mixed_list_match_n_length vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ib_u l1_u;
+          rewrite (mixed_list_match_n vmatch p (append_off_after 0 (SZ.v oa'_sz) (SZ.v cb'_sz)) (append_n_after 0 (SZ.v n') (SZ.v cb'_sz)) (pm /. 2.0R) ia_u l2_u)
+            as (mixed_list_match_n vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ia_u l2_u);
+          mixed_list_match_n_length vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ia_u l2_u;
           list_narrow_length l1 (off_b' - off_b) n1';
           list_narrow_length l2 (off_a' - off_a) na';
           List.Tot.Properties.append_injective l1_u (list_narrow l1 (off_b' - off_b) n1')
             l2_u (list_narrow l2 (off_a' - off_a) na');
           // Rewrite to match trade domains
-          with ib_x . assert (iterator_match_n vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ib_x l1_u);
+          with ib_x . assert (mixed_list_match_n vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ib_x l1_u);
           slprop_rw
-            (iterator_match_n vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ib_x l1_u)
-            (iterator_match_n vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
+            (mixed_list_match_n vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ib_x l1_u)
+            (mixed_list_match_n vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
             (Pulse.Lib.Core.slprop_equiv_ext'
-              (iterator_match_n vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ib_x l1_u)
-              (iterator_match_n vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
+              (mixed_list_match_n vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ib_x l1_u)
+              (mixed_list_match_n vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
               ());
           // Elim before trade
           elim_trade
-            (iterator_match_n vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
-            (iterator_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_before l1);
+            (mixed_list_match_n vmatch p (append_off_before (SZ.v off') (SZ.v ob) (SZ.v cb)) (append_n_before (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_before (list_narrow l1 (off_b' - off_b) n1'))
+            (mixed_list_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_before l1);
           // Rewrite after child
-          with ia_x . assert (iterator_match_n vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ia_x l2_u);
+          with ia_x . assert (mixed_list_match_n vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ia_x l2_u);
           slprop_rw
-            (iterator_match_n vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ia_x l2_u)
-            (iterator_match_n vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
+            (mixed_list_match_n vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ia_x l2_u)
+            (mixed_list_match_n vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
             (Pulse.Lib.Core.slprop_equiv_ext'
-              (iterator_match_n vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ia_x l2_u)
-              (iterator_match_n vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
+              (mixed_list_match_n vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) ia_x l2_u)
+              (mixed_list_match_n vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
               ());
           // Elim after trade
           elim_trade
-            (iterator_match_n vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
-            (iterator_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_after l2);
+            (mixed_list_match_n vmatch p (append_off_after (SZ.v off') (SZ.v oa) (SZ.v cb)) (append_n_after (SZ.v off') (SZ.v n') (SZ.v cb)) (pm /. 2.0R) i_after (list_narrow l2 (off_a' - off_a) na'))
+            (mixed_list_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_after l2);
           // Fold original
-          fold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+          fold (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
         };
       let i' = Append #t depth cb'_sz ca'_sz ob'_sz bp before oa'_sz ap after;
       rewrite each (Append #t depth cb'_sz ca'_sz ob'_sz bp before oa'_sz ap after) as i';
@@ -3186,64 +3186,64 @@ let list_narrow_split (#a: Type) (l: list a) (n: nat)
   // l == l1 @ l2
   FStar.List.Pure.Properties.lemma_splitAt l l1 l2 n
 
-// Extract the first non-empty base_iterator from an iterator,
-// returning it with base_iterator_match and a trade back.
+// Extract the first non-empty base_mixed_list from an mixed_list,
+// returning it with base_mixed_list_match and a trade back.
 #push-options "--z3rlimit 4000 --fuel 2 --ifuel 1"
 
 ```pulse
-fn rec iterator_extract_first_base
+fn rec mixed_list_extract_first_base
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind) (p: parser k u)
   (j: LPS.jumper p)
   (off: Ghost.erased nat) (n: Ghost.erased nat { Ghost.reveal n > 0 })
   (off_sz: SZ.t { SZ.v off_sz == Ghost.reveal off })
   (n_sz: SZ.t { SZ.v n_sz == Ghost.reveal n })
-  (pm: perm) (i: iterator t) (l: Ghost.erased (list u))
+  (pm: perm) (i: mixed_list t) (l: Ghost.erased (list u))
 requires
-  iterator_match_n vmatch p off n pm i l
-returns res: (base_iterator t & SZ.t)
+  mixed_list_match_n vmatch p off n pm i l
+returns res: (base_mixed_list t & SZ.t)
 ensures (
   let (bi', len) = res in
-  base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)) **
-  trade (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)))
-       (iterator_match_n vmatch p off n pm i l) **
-  pure (SZ.v len == SZ.v (base_iterator_length bi') /\ SZ.v len > 0 /\ SZ.v len <= Ghost.reveal n)
+  base_mixed_list_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)) **
+  trade (base_mixed_list_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)))
+       (mixed_list_match_n vmatch p off n pm i l) **
+  pure (SZ.v len == SZ.v (base_mixed_list_length bi') /\ SZ.v len > 0 /\ SZ.v len <= Ghost.reveal n)
 )
-decreases (iterator_depth i)
+decreases (mixed_list_depth i)
 {
   match i {
     Base bi -> {
-      unfold (iterator_match_n vmatch p off n pm (Base bi) l);
-      let bi' = base_iterator_narrow_n vmatch p j off n pm bi l off_sz n_sz;
-      // bi' has base_iterator_match pm bi' (list_narrow l (off_sz - off) n_sz) + trade back
+      unfold (mixed_list_match_n vmatch p off n pm (Base bi) l);
+      let bi' = base_mixed_list_narrow_n vmatch p j off n pm bi l off_sz n_sz;
+      // bi' has base_mixed_list_match pm bi' (list_narrow l (off_sz - off) n_sz) + trade back
       // off_sz - off == 0, n_sz == n, so list_narrow l 0 n
-      rewrite (base_iterator_match vmatch p pm bi' (list_narrow l (SZ.v off_sz - Ghost.reveal off) (SZ.v n_sz)))
-        as (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v (base_iterator_length bi'))));
-      rewrite (trade (base_iterator_match vmatch p pm bi' (list_narrow l (SZ.v off_sz - Ghost.reveal off) (SZ.v n_sz)))
-                    (base_iterator_match_n vmatch p off n pm bi l))
-        as (trade (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v (base_iterator_length bi'))))
-                  (base_iterator_match_n vmatch p off n pm bi l));
-      intro (base_iterator_match_n vmatch p off n pm bi l @==>
-             iterator_match_n vmatch p off n pm (Base bi) l)
+      rewrite (base_mixed_list_match vmatch p pm bi' (list_narrow l (SZ.v off_sz - Ghost.reveal off) (SZ.v n_sz)))
+        as (base_mixed_list_match vmatch p pm bi' (list_narrow l 0 (SZ.v (base_mixed_list_length bi'))));
+      rewrite (trade (base_mixed_list_match vmatch p pm bi' (list_narrow l (SZ.v off_sz - Ghost.reveal off) (SZ.v n_sz)))
+                    (base_mixed_list_match_n vmatch p off n pm bi l))
+        as (trade (base_mixed_list_match vmatch p pm bi' (list_narrow l 0 (SZ.v (base_mixed_list_length bi'))))
+                  (base_mixed_list_match_n vmatch p off n pm bi l));
+      intro (base_mixed_list_match_n vmatch p off n pm bi l @==>
+             mixed_list_match_n vmatch p off n pm (Base bi) l)
         fn _ {
-          fold (iterator_match_n vmatch p off n pm (Base bi) l);
+          fold (mixed_list_match_n vmatch p off n pm (Base bi) l);
         };
       Trade.trans
-        (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v (base_iterator_length bi'))))
-        (base_iterator_match_n vmatch p off n pm bi l)
-        (iterator_match_n vmatch p off n pm (Base bi) l);
+        (base_mixed_list_match vmatch p pm bi' (list_narrow l 0 (SZ.v (base_mixed_list_length bi'))))
+        (base_mixed_list_match_n vmatch p off n pm bi l)
+        (mixed_list_match_n vmatch p off n pm (Base bi) l);
       rewrite each (Base bi) as i;
-      let len = base_iterator_length bi';
-      rewrite (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v (base_iterator_length bi'))))
-        as (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)));
-      rewrite (trade (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v (base_iterator_length bi'))))
-                    (iterator_match_n vmatch p off n pm i l))
-        as (trade (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)))
-                  (iterator_match_n vmatch p off n pm i l));
+      let len = base_mixed_list_length bi';
+      rewrite (base_mixed_list_match vmatch p pm bi' (list_narrow l 0 (SZ.v (base_mixed_list_length bi'))))
+        as (base_mixed_list_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)));
+      rewrite (trade (base_mixed_list_match vmatch p pm bi' (list_narrow l 0 (SZ.v (base_mixed_list_length bi'))))
+                    (mixed_list_match_n vmatch p off n pm i l))
+        as (trade (base_mixed_list_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)))
+                  (mixed_list_match_n vmatch p off n pm i l));
       (bi', len)
     }
     Append depth cb ca ob bp before oa ap after -> {
-      unfold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+      unfold (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
       let child_n_before = append_n_before_sz off_sz n_sz cb;
       let off_b : Ghost.erased nat = append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb);
       let n_b : Ghost.erased nat = append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb);
@@ -3254,12 +3254,12 @@ decreases (iterator_depth i)
         let child_off_sz = append_off_before_sz off_sz ob cb;
         let ib = R.read before;
         with i_x l_x . rewrite
-          (iterator_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_x l_x)
-          as (iterator_match_n vmatch p off_b n_b pm ib l_x);
+          (mixed_list_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_x l_x)
+          as (mixed_list_match_n vmatch p off_b n_b pm ib l_x);
         with l_before . assert (
-          iterator_match_n vmatch p off_b n_b pm ib l_before
+          mixed_list_match_n vmatch p off_b n_b pm ib l_before
         );
-        let res = iterator_extract_first_base vmatch p j
+        let res = mixed_list_extract_first_base vmatch p j
           off_b n_b
           child_off_sz child_n_before
           pm ib l_before;
@@ -3268,55 +3268,55 @@ decreases (iterator_depth i)
         // Explicitly assert the postcondition components to make them available
         rewrite (
           (let (bi'', len'') = res in
-           base_iterator_match vmatch p pm bi'' (list_narrow l_before 0 (SZ.v len'')) **
-           trade (base_iterator_match vmatch p pm bi'' (list_narrow l_before 0 (SZ.v len'')))
-                (iterator_match_n vmatch p off_b n_b pm ib l_before) **
-           pure (SZ.v len'' == SZ.v (base_iterator_length bi'') /\ SZ.v len'' > 0 /\ SZ.v len'' <= Ghost.reveal n_b)))
-          as (base_iterator_match vmatch p pm bi' (list_narrow l_before 0 (SZ.v len)) **
-              trade (base_iterator_match vmatch p pm bi' (list_narrow l_before 0 (SZ.v len)))
-                   (iterator_match_n vmatch p off_b n_b pm ib l_before) **
-              pure (SZ.v len == SZ.v (base_iterator_length bi') /\ SZ.v len > 0 /\ SZ.v len <= Ghost.reveal n_b));
+           base_mixed_list_match vmatch p pm bi'' (list_narrow l_before 0 (SZ.v len'')) **
+           trade (base_mixed_list_match vmatch p pm bi'' (list_narrow l_before 0 (SZ.v len'')))
+                (mixed_list_match_n vmatch p off_b n_b pm ib l_before) **
+           pure (SZ.v len'' == SZ.v (base_mixed_list_length bi'') /\ SZ.v len'' > 0 /\ SZ.v len'' <= Ghost.reveal n_b)))
+          as (base_mixed_list_match vmatch p pm bi' (list_narrow l_before 0 (SZ.v len)) **
+              trade (base_mixed_list_match vmatch p pm bi' (list_narrow l_before 0 (SZ.v len)))
+                   (mixed_list_match_n vmatch p off_b n_b pm ib l_before) **
+              pure (SZ.v len == SZ.v (base_mixed_list_length bi') /\ SZ.v len > 0 /\ SZ.v len <= Ghost.reveal n_b));
         // Capture remaining context for the trade
         with i_after l_after . assert (
           pts_to after #(pm *. ap) i_after **
-          iterator_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_after l_after
+          mixed_list_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_after l_after
         );
-        rewrite (iterator_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_after l_after)
-          as (iterator_match_n vmatch p off_a n_a pm i_after l_after);
+        rewrite (mixed_list_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_after l_after)
+          as (mixed_list_match_n vmatch p off_a n_a pm i_after l_after);
         // Build trade from before match to full Append match
-        intro (iterator_match_n vmatch p off_b n_b pm ib (Ghost.reveal l_before) @==>
-               iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l)
+        intro (mixed_list_match_n vmatch p off_b n_b pm ib (Ghost.reveal l_before) @==>
+               mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l)
           #(pts_to before #(pm *. bp) ib **
             pts_to after #(pm *. ap) i_after **
-            iterator_match_n vmatch p off_a n_a pm i_after l_after **
+            mixed_list_match_n vmatch p off_a n_a pm i_after l_after **
             pure (Ghost.reveal off + Ghost.reveal n <= SZ.v cb + SZ.v ca /\
-                  SZ.v ob + SZ.v cb <= SZ.v (iterator_length ib) /\
-                  SZ.v oa + SZ.v ca <= SZ.v (iterator_length i_after) /\
+                  SZ.v ob + SZ.v cb <= SZ.v (mixed_list_length ib) /\
+                  SZ.v oa + SZ.v ca <= SZ.v (mixed_list_length i_after) /\
                   List.Tot.length (Ghost.reveal l_before) == Ghost.reveal n_b /\
                   List.Tot.length (Ghost.reveal l_after) == Ghost.reveal n_a /\
                   Ghost.reveal l == List.Tot.append (Ghost.reveal l_before) (Ghost.reveal l_after) /\
-                  iterator_depth ib < Ghost.reveal depth /\
-                  iterator_depth i_after < Ghost.reveal depth))
+                  mixed_list_depth ib < Ghost.reveal depth /\
+                  mixed_list_depth i_after < Ghost.reveal depth))
           fn _ {
-            rewrite (iterator_match_n vmatch p off_b n_b pm ib (Ghost.reveal l_before))
-              as (iterator_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm ib l_before);
-            rewrite (iterator_match_n vmatch p off_a n_a pm i_after l_after)
-              as (iterator_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_after l_after);
-            fold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+            rewrite (mixed_list_match_n vmatch p off_b n_b pm ib (Ghost.reveal l_before))
+              as (mixed_list_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm ib l_before);
+            rewrite (mixed_list_match_n vmatch p off_a n_a pm i_after l_after)
+              as (mixed_list_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_after l_after);
+            fold (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
           };
         // Compose with the inner trade from extract
         Trade.trans
-          (base_iterator_match vmatch p pm bi' (list_narrow l_before 0 (SZ.v len)))
-          (iterator_match_n vmatch p off_b n_b pm ib (Ghost.reveal l_before))
-          (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+          (base_mixed_list_match vmatch p pm bi' (list_narrow l_before 0 (SZ.v len)))
+          (mixed_list_match_n vmatch p off_b n_b pm ib (Ghost.reveal l_before))
+          (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
         // Rewrite: list_narrow l_before 0 len == list_narrow l 0 len
         lemma_splitAt_fst_append (SZ.v len) (Ghost.reveal l_before) (Ghost.reveal l_after);
-        rewrite (base_iterator_match vmatch p pm bi' (list_narrow l_before 0 (SZ.v len)))
-          as (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)));
-        rewrite (trade (base_iterator_match vmatch p pm bi' (list_narrow l_before 0 (SZ.v len)))
-                      (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l))
-          as (trade (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)))
-                    (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l));
+        rewrite (base_mixed_list_match vmatch p pm bi' (list_narrow l_before 0 (SZ.v len)))
+          as (base_mixed_list_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)));
+        rewrite (trade (base_mixed_list_match vmatch p pm bi' (list_narrow l_before 0 (SZ.v len)))
+                      (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l))
+          as (trade (base_mixed_list_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)))
+                    (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l));
         rewrite each (Append #t depth cb ca ob bp before oa ap after) as i;
         (bi', len)
       } else {
@@ -3325,12 +3325,12 @@ decreases (iterator_depth i)
         let child_n_sz = append_n_after_sz off_sz n_sz cb;
         let ia = R.read after;
         with i_y l_y . rewrite
-          (iterator_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_y l_y)
-          as (iterator_match_n vmatch p off_a n_a pm ia l_y);
+          (mixed_list_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_y l_y)
+          as (mixed_list_match_n vmatch p off_a n_a pm ia l_y);
         with l_aft . assert (
-          iterator_match_n vmatch p off_a n_a pm ia l_aft
+          mixed_list_match_n vmatch p off_a n_a pm ia l_aft
         );
-        let res = iterator_extract_first_base vmatch p j
+        let res = mixed_list_extract_first_base vmatch p j
           off_a n_a
           child_off_sz child_n_sz
           pm ia l_aft;
@@ -3338,55 +3338,55 @@ decreases (iterator_depth i)
         let len = snd res;
         rewrite (
           (let (bi'', len'') = res in
-           base_iterator_match vmatch p pm bi'' (list_narrow l_aft 0 (SZ.v len'')) **
-           trade (base_iterator_match vmatch p pm bi'' (list_narrow l_aft 0 (SZ.v len'')))
-                (iterator_match_n vmatch p off_a n_a pm ia l_aft) **
-           pure (SZ.v len'' == SZ.v (base_iterator_length bi'') /\ SZ.v len'' > 0 /\ SZ.v len'' <= Ghost.reveal n_a)))
-          as (base_iterator_match vmatch p pm bi' (list_narrow l_aft 0 (SZ.v len)) **
-              trade (base_iterator_match vmatch p pm bi' (list_narrow l_aft 0 (SZ.v len)))
-                   (iterator_match_n vmatch p off_a n_a pm ia l_aft) **
-              pure (SZ.v len == SZ.v (base_iterator_length bi') /\ SZ.v len > 0 /\ SZ.v len <= Ghost.reveal n_a));
+           base_mixed_list_match vmatch p pm bi'' (list_narrow l_aft 0 (SZ.v len'')) **
+           trade (base_mixed_list_match vmatch p pm bi'' (list_narrow l_aft 0 (SZ.v len'')))
+                (mixed_list_match_n vmatch p off_a n_a pm ia l_aft) **
+           pure (SZ.v len'' == SZ.v (base_mixed_list_length bi'') /\ SZ.v len'' > 0 /\ SZ.v len'' <= Ghost.reveal n_a)))
+          as (base_mixed_list_match vmatch p pm bi' (list_narrow l_aft 0 (SZ.v len)) **
+              trade (base_mixed_list_match vmatch p pm bi' (list_narrow l_aft 0 (SZ.v len)))
+                   (mixed_list_match_n vmatch p off_a n_a pm ia l_aft) **
+              pure (SZ.v len == SZ.v (base_mixed_list_length bi') /\ SZ.v len > 0 /\ SZ.v len <= Ghost.reveal n_a));
         // Capture remaining before context for the trade
         with i_before l_bef . assert (
           pts_to before #(pm *. bp) i_before **
-          iterator_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_before l_bef
+          mixed_list_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_before l_bef
         );
-        rewrite (iterator_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_before l_bef)
-          as (iterator_match_n vmatch p off_b n_b pm i_before l_bef);
+        rewrite (mixed_list_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_before l_bef)
+          as (mixed_list_match_n vmatch p off_b n_b pm i_before l_bef);
         // Build trade: after match → full Append match
-        intro (iterator_match_n vmatch p off_a n_a pm ia (Ghost.reveal l_aft) @==>
-               iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l)
+        intro (mixed_list_match_n vmatch p off_a n_a pm ia (Ghost.reveal l_aft) @==>
+               mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l)
           #(pts_to before #(pm *. bp) i_before **
-            iterator_match_n vmatch p off_b n_b pm i_before l_bef **
+            mixed_list_match_n vmatch p off_b n_b pm i_before l_bef **
             pts_to after #(pm *. ap) ia **
             pure (Ghost.reveal off + Ghost.reveal n <= SZ.v cb + SZ.v ca /\
-                  SZ.v ob + SZ.v cb <= SZ.v (iterator_length i_before) /\
-                  SZ.v oa + SZ.v ca <= SZ.v (iterator_length ia) /\
+                  SZ.v ob + SZ.v cb <= SZ.v (mixed_list_length i_before) /\
+                  SZ.v oa + SZ.v ca <= SZ.v (mixed_list_length ia) /\
                   List.Tot.length (Ghost.reveal l_bef) == Ghost.reveal n_b /\
                   List.Tot.length (Ghost.reveal l_aft) == Ghost.reveal n_a /\
                   Ghost.reveal l == List.Tot.append (Ghost.reveal l_bef) (Ghost.reveal l_aft) /\
-                  iterator_depth i_before < Ghost.reveal depth /\
-                  iterator_depth ia < Ghost.reveal depth))
+                  mixed_list_depth i_before < Ghost.reveal depth /\
+                  mixed_list_depth ia < Ghost.reveal depth))
           fn _ {
-            rewrite (iterator_match_n vmatch p off_a n_a pm ia (Ghost.reveal l_aft))
-              as (iterator_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm ia l_aft);
-            rewrite (iterator_match_n vmatch p off_b n_b pm i_before l_bef)
-              as (iterator_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_before l_bef);
-            fold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+            rewrite (mixed_list_match_n vmatch p off_a n_a pm ia (Ghost.reveal l_aft))
+              as (mixed_list_match_n vmatch p (append_off_after (Ghost.reveal off) (SZ.v oa) (SZ.v cb)) (append_n_after (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm ia l_aft);
+            rewrite (mixed_list_match_n vmatch p off_b n_b pm i_before l_bef)
+              as (mixed_list_match_n vmatch p (append_off_before (Ghost.reveal off) (SZ.v ob) (SZ.v cb)) (append_n_before (Ghost.reveal off) (Ghost.reveal n) (SZ.v cb)) pm i_before l_bef);
+            fold (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
           };
         // Compose: bi' match → after match → full Append match
         Trade.trans
-          (base_iterator_match vmatch p pm bi' (list_narrow l_aft 0 (SZ.v len)))
-          (iterator_match_n vmatch p off_a n_a pm ia (Ghost.reveal l_aft))
-          (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+          (base_mixed_list_match vmatch p pm bi' (list_narrow l_aft 0 (SZ.v len)))
+          (mixed_list_match_n vmatch p off_a n_a pm ia (Ghost.reveal l_aft))
+          (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
         // Rewrite: l_bef = [] so l = l_aft, list_narrow l_aft 0 len == list_narrow l 0 len
         List.Tot.Properties.append_l_nil (Ghost.reveal l_aft);
-        rewrite (base_iterator_match vmatch p pm bi' (list_narrow l_aft 0 (SZ.v len)))
-          as (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)));
-        rewrite (trade (base_iterator_match vmatch p pm bi' (list_narrow l_aft 0 (SZ.v len)))
-                      (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l))
-          as (trade (base_iterator_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)))
-                    (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l));
+        rewrite (base_mixed_list_match vmatch p pm bi' (list_narrow l_aft 0 (SZ.v len)))
+          as (base_mixed_list_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)));
+        rewrite (trade (base_mixed_list_match vmatch p pm bi' (list_narrow l_aft 0 (SZ.v len)))
+                      (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l))
+          as (trade (base_mixed_list_match vmatch p pm bi' (list_narrow l 0 (SZ.v len)))
+                    (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) l));
         rewrite each (Append #t depth cb ca ob bp before oa ap after) as i;
         (bi', len)
       }
@@ -3397,61 +3397,61 @@ decreases (iterator_depth i)
 
 #pop-options
 
-// Restructure an iterator: flatten Append trees so the first non-empty
-// base_iterator is in r1 (as Base b), and the narrowed remainder is in r2.
+// Restructure an mixed_list: flatten Append trees so the first non-empty
+// base_mixed_list is in r1 (as Base b), and the narrowed remainder is in r2.
 // Base case: unchanged. Empty Append: Base Empty. Non-empty Append:
 // Append r1 r2 with r1 = Base(first_base), r2 = narrow(rest).
 #push-options "--z3rlimit 4000 --fuel 2 --ifuel 1"
 
 ```pulse
-fn iterator_restructure
+fn mixed_list_restructure
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind) (p: parser k u)
   (j: LPS.jumper p)
-  (pm: perm) (i: iterator t) (l: Ghost.erased (list u))
-  (r1 r2: R.ref (iterator t))
-  (#v1 #v2: Ghost.erased (iterator t))
+  (pm: perm) (i: mixed_list t) (l: Ghost.erased (list u))
+  (r1 r2: R.ref (mixed_list t))
+  (#v1 #v2: Ghost.erased (mixed_list t))
   (vmatch_share: share_t vmatch) (vmatch_gather: gather_t vmatch)
 requires
-  iterator_match vmatch p pm i l **
+  mixed_list_match vmatch p pm i l **
   R.pts_to r1 v1 **
   R.pts_to r2 v2
-returns i': iterator t
+returns i': mixed_list t
 ensures exists* pm'.
-  iterator_match vmatch p pm' i' l **
-  trade (iterator_match vmatch p pm' i' l)
-       (iterator_match vmatch p pm i l **
+  mixed_list_match vmatch p pm' i' l **
+  trade (mixed_list_match vmatch p pm' i' l)
+       (mixed_list_match vmatch p pm i l **
         (exists* v. R.pts_to r1 v) **
         (exists* v. R.pts_to r2 v))
 {
-  let total_sz = iterator_length i;
-  unfold (iterator_match vmatch p pm i l);
-  rewrite (iterator_match_n vmatch p 0 (SZ.v (iterator_length i)) pm i l)
-    as (iterator_match_n vmatch p 0 (SZ.v total_sz) pm i l);
+  let total_sz = mixed_list_length i;
+  unfold (mixed_list_match vmatch p pm i l);
+  rewrite (mixed_list_match_n vmatch p 0 (SZ.v (mixed_list_length i)) pm i l)
+    as (mixed_list_match_n vmatch p 0 (SZ.v total_sz) pm i l);
   if (SZ.eq total_sz 0sz) {
-    // Empty iterator: return Base Empty
-    rewrite (iterator_match_n vmatch p 0 (SZ.v total_sz) pm i l)
-      as (iterator_match_n vmatch p 0 0 pm i l);
-    iterator_match_n_length vmatch p 0 0 pm i l;
-    // Build iterator_match for Base Empty matching []
+    // Empty mixed_list: return Base Empty
+    rewrite (mixed_list_match_n vmatch p 0 (SZ.v total_sz) pm i l)
+      as (mixed_list_match_n vmatch p 0 0 pm i l);
+    mixed_list_match_n_length vmatch p 0 0 pm i l;
+    // Build mixed_list_match for Base Empty matching []
     assert (pure (Nil? (Ghost.reveal l)));
-    fold (base_iterator_match_n vmatch p 0 0 pm (Empty #t) (Ghost.reveal l));
-    fold (iterator_match_n vmatch p 0 0 pm (Base (Empty #t)) (Ghost.reveal l));
-    rewrite (iterator_match_n vmatch p 0 0 pm (Base (Empty #t)) (Ghost.reveal l))
-      as (iterator_match vmatch p pm (Base (Empty #t)) (Ghost.reveal l));
+    fold (base_mixed_list_match_n vmatch p 0 0 pm (Empty #t) (Ghost.reveal l));
+    fold (mixed_list_match_n vmatch p 0 0 pm (Base (Empty #t)) (Ghost.reveal l));
+    rewrite (mixed_list_match_n vmatch p 0 0 pm (Base (Empty #t)) (Ghost.reveal l))
+      as (mixed_list_match vmatch p pm (Base (Empty #t)) (Ghost.reveal l));
     // Trade: Base Empty match → original match + r1 + r2
-    intro (iterator_match vmatch p pm (Base (Empty #t)) (Ghost.reveal l) @==>
-           (iterator_match vmatch p pm i l **
+    intro (mixed_list_match vmatch p pm (Base (Empty #t)) (Ghost.reveal l) @==>
+           (mixed_list_match vmatch p pm i l **
             (exists* v. R.pts_to r1 v) **
             (exists* v. R.pts_to r2 v)))
-      #(iterator_match_n vmatch p 0 0 pm i l **
+      #(mixed_list_match_n vmatch p 0 0 pm i l **
         R.pts_to r1 v1 **
         R.pts_to r2 v2)
       fn _ {
-        drop_ (iterator_match vmatch p pm (Base (Empty #t)) (Ghost.reveal l));
-        rewrite (iterator_match_n vmatch p 0 0 pm i l)
-          as (iterator_match_n vmatch p 0 (SZ.v (iterator_length i)) pm i l);
-        fold (iterator_match vmatch p pm i l);
+        drop_ (mixed_list_match vmatch p pm (Base (Empty #t)) (Ghost.reveal l));
+        rewrite (mixed_list_match_n vmatch p 0 0 pm i l)
+          as (mixed_list_match_n vmatch p 0 (SZ.v (mixed_list_length i)) pm i l);
+        fold (mixed_list_match vmatch p pm i l);
         introduce exists* v . R.pts_to r1 v with v1;
         introduce exists* v . R.pts_to r2 v with v2;
       };
@@ -3459,10 +3459,10 @@ ensures exists* pm'.
   } else {
     // Non-empty: extract first base, narrow remainder, construct Append
     // Step 1: Share the match → two copies at pm/2
-    iterator_match_n_length vmatch p 0 (SZ.v total_sz) pm i l;
-    iterator_match_n_share vmatch p 0 (SZ.v total_sz) pm i l vmatch_share;
+    mixed_list_match_n_length vmatch p 0 (SZ.v total_sz) pm i l;
+    mixed_list_match_n_share vmatch p 0 (SZ.v total_sz) pm i l vmatch_share;
     // Step 2: Extract first base from copy 1
-    let res = iterator_extract_first_base vmatch p j
+    let res = mixed_list_extract_first_base vmatch p j
       0 (SZ.v total_sz)
       0sz total_sz
       (pm /. 2.0R) i l;
@@ -3470,105 +3470,105 @@ ensures exists* pm'.
     let len_sz = snd res;
     rewrite (
       (let (bi'', len'') = res in
-       base_iterator_match vmatch p (pm /. 2.0R) bi'' (list_narrow l 0 (SZ.v len'')) **
-       trade (base_iterator_match vmatch p (pm /. 2.0R) bi'' (list_narrow l 0 (SZ.v len'')))
-            (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l) **
-       pure (SZ.v len'' == SZ.v (base_iterator_length bi'') /\ SZ.v len'' > 0 /\ SZ.v len'' <= SZ.v total_sz)))
-      as (base_iterator_match vmatch p (pm /. 2.0R) bi' (list_narrow l 0 (SZ.v len_sz)) **
-          trade (base_iterator_match vmatch p (pm /. 2.0R) bi' (list_narrow l 0 (SZ.v len_sz)))
-               (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l) **
-          pure (SZ.v len_sz == SZ.v (base_iterator_length bi') /\ SZ.v len_sz > 0 /\ SZ.v len_sz <= SZ.v total_sz));
+       base_mixed_list_match vmatch p (pm /. 2.0R) bi'' (list_narrow l 0 (SZ.v len'')) **
+       trade (base_mixed_list_match vmatch p (pm /. 2.0R) bi'' (list_narrow l 0 (SZ.v len'')))
+            (mixed_list_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l) **
+       pure (SZ.v len'' == SZ.v (base_mixed_list_length bi'') /\ SZ.v len'' > 0 /\ SZ.v len'' <= SZ.v total_sz)))
+      as (base_mixed_list_match vmatch p (pm /. 2.0R) bi' (list_narrow l 0 (SZ.v len_sz)) **
+          trade (base_mixed_list_match vmatch p (pm /. 2.0R) bi' (list_narrow l 0 (SZ.v len_sz)))
+               (mixed_list_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l) **
+          pure (SZ.v len_sz == SZ.v (base_mixed_list_length bi') /\ SZ.v len_sz > 0 /\ SZ.v len_sz <= SZ.v total_sz));
     // Step 3: Share base match → two copies at pm/4
     let l_head : Ghost.erased (list u) = list_narrow l 0 (SZ.v len_sz);
-    rewrite (base_iterator_match vmatch p (pm /. 2.0R) bi' (list_narrow l 0 (SZ.v len_sz)))
-      as (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 2.0R) bi' (Ghost.reveal l_head));
-    rewrite (trade (base_iterator_match vmatch p (pm /. 2.0R) bi' (list_narrow l 0 (SZ.v len_sz)))
-                   (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l))
-      as (trade (base_iterator_match vmatch p (pm /. 2.0R) bi' (Ghost.reveal l_head))
-                (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l));
-    base_iterator_match_n_share vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 2.0R) bi' (Ghost.reveal l_head) vmatch_share;
-    rewrite (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 2.0R /. 2.0R) bi' (Ghost.reveal l_head))
-      as (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 4.0R) bi' (Ghost.reveal l_head));
-    rewrite (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 2.0R /. 2.0R) bi' (Ghost.reveal l_head))
-      as (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 4.0R) bi' (Ghost.reveal l_head));
+    rewrite (base_mixed_list_match vmatch p (pm /. 2.0R) bi' (list_narrow l 0 (SZ.v len_sz)))
+      as (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi')) (pm /. 2.0R) bi' (Ghost.reveal l_head));
+    rewrite (trade (base_mixed_list_match vmatch p (pm /. 2.0R) bi' (list_narrow l 0 (SZ.v len_sz)))
+                   (mixed_list_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l))
+      as (trade (base_mixed_list_match vmatch p (pm /. 2.0R) bi' (Ghost.reveal l_head))
+                (mixed_list_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l));
+    base_mixed_list_match_n_share vmatch p 0 (SZ.v (base_mixed_list_length bi')) (pm /. 2.0R) bi' (Ghost.reveal l_head) vmatch_share;
+    rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi')) (pm /. 2.0R /. 2.0R) bi' (Ghost.reveal l_head))
+      as (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi')) (pm /. 4.0R) bi' (Ghost.reveal l_head));
+    rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi')) (pm /. 2.0R /. 2.0R) bi' (Ghost.reveal l_head))
+      as (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi')) (pm /. 4.0R) bi' (Ghost.reveal l_head));
     // Step 4: Narrow copy 2 to skip first len elements
     let rest_sz = SZ.sub total_sz len_sz;
-    let i_tail = iterator_narrow_n vmatch p j
+    let i_tail = mixed_list_narrow_n vmatch p j
       0 (SZ.v total_sz)
       (pm /. 2.0R) i l
       len_sz rest_sz
       vmatch_share vmatch_gather;
     let l_tail : Ghost.erased (list u) = list_narrow l (SZ.v len_sz) (SZ.v rest_sz);
-    rewrite (iterator_match vmatch p ((pm /. 2.0R) /. 2.0R) i_tail (list_narrow l (SZ.v len_sz - 0) (SZ.v rest_sz)))
-      as (iterator_match vmatch p (pm /. 4.0R) i_tail (Ghost.reveal l_tail));
-    rewrite (trade (iterator_match vmatch p ((pm /. 2.0R) /. 2.0R) i_tail (list_narrow l (SZ.v len_sz - 0) (SZ.v rest_sz)))
-                   (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l))
-      as (trade (iterator_match vmatch p (pm /. 4.0R) i_tail (Ghost.reveal l_tail))
-               (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l));
+    rewrite (mixed_list_match vmatch p ((pm /. 2.0R) /. 2.0R) i_tail (list_narrow l (SZ.v len_sz - 0) (SZ.v rest_sz)))
+      as (mixed_list_match vmatch p (pm /. 4.0R) i_tail (Ghost.reveal l_tail));
+    rewrite (trade (mixed_list_match vmatch p ((pm /. 2.0R) /. 2.0R) i_tail (list_narrow l (SZ.v len_sz - 0) (SZ.v rest_sz)))
+                   (mixed_list_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l))
+      as (trade (mixed_list_match vmatch p (pm /. 4.0R) i_tail (Ghost.reveal l_tail))
+               (mixed_list_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l));
     // Step 5: Write r1 := Base bi', r2 := i_tail, then share refs
     let _ = R.replace r1 (Base bi');
     let _ = R.replace r2 i_tail;
     R.share r1;
     R.share r2;
     // Step 6: Fold the new Append
-    fold (iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 4.0R) (Base bi') (Ghost.reveal l_head));
-    rewrite (iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 4.0R) (Base bi') (Ghost.reveal l_head))
-      as (iterator_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) (Base bi') (Ghost.reveal l_head));
-    unfold (iterator_match vmatch p (pm /. 4.0R) i_tail (Ghost.reveal l_tail));
-    rewrite (iterator_match_n vmatch p 0 (SZ.v (iterator_length i_tail)) (pm /. 4.0R) i_tail (Ghost.reveal l_tail))
-      as (iterator_match_n vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) i_tail (Ghost.reveal l_tail));
+    fold (mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi')) (pm /. 4.0R) (Base bi') (Ghost.reveal l_head));
+    rewrite (mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi')) (pm /. 4.0R) (Base bi') (Ghost.reveal l_head))
+      as (mixed_list_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) (Base bi') (Ghost.reveal l_head));
+    unfold (mixed_list_match vmatch p (pm /. 4.0R) i_tail (Ghost.reveal l_tail));
+    rewrite (mixed_list_match_n vmatch p 0 (SZ.v (mixed_list_length i_tail)) (pm /. 4.0R) i_tail (Ghost.reveal l_tail))
+      as (mixed_list_match_n vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) i_tail (Ghost.reveal l_tail));
     rewrite (R.pts_to r1 #(1.0R /. 2.0R) (Base bi'))
       as (R.pts_to r1 #((pm /. 4.0R) *. (2.0R /. pm)) (Base bi'));
     rewrite (R.pts_to r2 #(1.0R /. 2.0R) i_tail)
       as (R.pts_to r2 #((pm /. 4.0R) *. (2.0R /. pm)) i_tail);
-    let new_depth : Ghost.erased nat = 1 + iterator_depth i_tail;
-    iterator_match_n_length vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) (Base bi') (Ghost.reveal l_head);
-    iterator_match_n_length vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) i_tail (Ghost.reveal l_tail);
+    let new_depth : Ghost.erased nat = 1 + mixed_list_depth i_tail;
+    mixed_list_match_n_length vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) (Base bi') (Ghost.reveal l_head);
+    mixed_list_match_n_length vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) i_tail (Ghost.reveal l_tail);
     list_narrow_split (Ghost.reveal l) (SZ.v len_sz);
     // Rewrite to match the append_* expressions needed by fold
-    rewrite (iterator_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) (Base bi') (Ghost.reveal l_head))
-      as (iterator_match_n vmatch p (append_off_before 0 (SZ.v 0sz) (SZ.v len_sz))
+    rewrite (mixed_list_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) (Base bi') (Ghost.reveal l_head))
+      as (mixed_list_match_n vmatch p (append_off_before 0 (SZ.v 0sz) (SZ.v len_sz))
                                      (append_n_before 0 (SZ.v total_sz) (SZ.v len_sz))
                                      (pm /. 4.0R) (Base bi') (Ghost.reveal l_head));
-    rewrite (iterator_match_n vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) i_tail (Ghost.reveal l_tail))
-      as (iterator_match_n vmatch p (append_off_after 0 (SZ.v 0sz) (SZ.v len_sz))
+    rewrite (mixed_list_match_n vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) i_tail (Ghost.reveal l_tail))
+      as (mixed_list_match_n vmatch p (append_off_after 0 (SZ.v 0sz) (SZ.v len_sz))
                                      (append_n_after 0 (SZ.v total_sz) (SZ.v len_sz))
                                      (pm /. 4.0R) i_tail (Ghost.reveal l_tail));
-    fold (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 4.0R)
+    fold (mixed_list_match_n vmatch p 0 (SZ.v total_sz) (pm /. 4.0R)
       (Append #t new_depth len_sz rest_sz 0sz (2.0R /. pm) r1 0sz (2.0R /. pm) r2) (Ghost.reveal l));
     let i' = Append #t new_depth len_sz rest_sz 0sz (2.0R /. pm) r1 0sz (2.0R /. pm) r2;
-    rewrite (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 4.0R)
+    rewrite (mixed_list_match_n vmatch p 0 (SZ.v total_sz) (pm /. 4.0R)
               (Append #t new_depth len_sz rest_sz 0sz (2.0R /. pm) r1 0sz (2.0R /. pm) r2) (Ghost.reveal l))
-      as (iterator_match vmatch p (pm /. 4.0R) i' (Ghost.reveal l));
+      as (mixed_list_match vmatch p (pm /. 4.0R) i' (Ghost.reveal l));
     // Step 7: Build the trade
-    intro (iterator_match vmatch p (pm /. 4.0R) i' (Ghost.reveal l) @==>
-           (iterator_match vmatch p pm i l **
+    intro (mixed_list_match vmatch p (pm /. 4.0R) i' (Ghost.reveal l) @==>
+           (mixed_list_match vmatch p pm i l **
             (exists* v. R.pts_to r1 v) **
             (exists* v. R.pts_to r2 v)))
       #(R.pts_to r1 #(1.0R /. 2.0R) (Base bi') **
         R.pts_to r2 #(1.0R /. 2.0R) i_tail **
-        base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 4.0R) bi' (Ghost.reveal l_head) **
-        trade (base_iterator_match vmatch p (pm /. 2.0R) bi' (Ghost.reveal l_head))
-             (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l) **
-        trade (iterator_match vmatch p (pm /. 4.0R) i_tail (Ghost.reveal l_tail))
-             (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l))
+        base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi')) (pm /. 4.0R) bi' (Ghost.reveal l_head) **
+        trade (base_mixed_list_match vmatch p (pm /. 2.0R) bi' (Ghost.reveal l_head))
+             (mixed_list_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l) **
+        trade (mixed_list_match vmatch p (pm /. 4.0R) i_tail (Ghost.reveal l_tail))
+             (mixed_list_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l))
       fn _ {
         // Unfold the Append
-        rewrite (iterator_match vmatch p (pm /. 4.0R) i' (Ghost.reveal l))
-          as (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 4.0R)
+        rewrite (mixed_list_match vmatch p (pm /. 4.0R) i' (Ghost.reveal l))
+          as (mixed_list_match_n vmatch p 0 (SZ.v total_sz) (pm /. 4.0R)
               (Append #t new_depth len_sz rest_sz 0sz (2.0R /. pm) r1 0sz (2.0R /. pm) r2) (Ghost.reveal l));
-        unfold (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 4.0R)
+        unfold (mixed_list_match_n vmatch p 0 (SZ.v total_sz) (pm /. 4.0R)
               (Append #t new_depth len_sz rest_sz 0sz (2.0R /. pm) r1 0sz (2.0R /. pm) r2) (Ghost.reveal l));
         with ib ia lb la . assert (
           R.pts_to r1 #((pm /. 4.0R) *. (2.0R /. pm)) ib **
-          iterator_match_n vmatch p (append_off_before 0 (SZ.v 0sz) (SZ.v len_sz)) (append_n_before 0 (SZ.v total_sz) (SZ.v len_sz)) (pm /. 4.0R) ib lb **
+          mixed_list_match_n vmatch p (append_off_before 0 (SZ.v 0sz) (SZ.v len_sz)) (append_n_before 0 (SZ.v total_sz) (SZ.v len_sz)) (pm /. 4.0R) ib lb **
           R.pts_to r2 #((pm /. 4.0R) *. (2.0R /. pm)) ia **
-          iterator_match_n vmatch p (append_off_after 0 (SZ.v 0sz) (SZ.v len_sz)) (append_n_after 0 (SZ.v total_sz) (SZ.v len_sz)) (pm /. 4.0R) ia la
+          mixed_list_match_n vmatch p (append_off_after 0 (SZ.v 0sz) (SZ.v len_sz)) (append_n_after 0 (SZ.v total_sz) (SZ.v len_sz)) (pm /. 4.0R) ia la
         );
-        rewrite (iterator_match_n vmatch p (append_off_before 0 (SZ.v 0sz) (SZ.v len_sz)) (append_n_before 0 (SZ.v total_sz) (SZ.v len_sz)) (pm /. 4.0R) ib lb)
-          as (iterator_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) ib lb);
-        rewrite (iterator_match_n vmatch p (append_off_after 0 (SZ.v 0sz) (SZ.v len_sz)) (append_n_after 0 (SZ.v total_sz) (SZ.v len_sz)) (pm /. 4.0R) ia la)
-          as (iterator_match_n vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) ia la);
+        rewrite (mixed_list_match_n vmatch p (append_off_before 0 (SZ.v 0sz) (SZ.v len_sz)) (append_n_before 0 (SZ.v total_sz) (SZ.v len_sz)) (pm /. 4.0R) ib lb)
+          as (mixed_list_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) ib lb);
+        rewrite (mixed_list_match_n vmatch p (append_off_after 0 (SZ.v 0sz) (SZ.v len_sz)) (append_n_after 0 (SZ.v total_sz) (SZ.v len_sz)) (pm /. 4.0R) ia la)
+          as (mixed_list_match_n vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) ia la);
         // Rewrite ref permissions to 0.5R
         rewrite (R.pts_to r1 #((pm /. 4.0R) *. (2.0R /. pm)) ib) as (R.pts_to r1 #(1.0R /. 2.0R) ib);
         rewrite (R.pts_to r2 #((pm /. 4.0R) *. (2.0R /. pm)) ia) as (R.pts_to r2 #(1.0R /. 2.0R) ia);
@@ -3576,41 +3576,41 @@ ensures exists* pm'.
         R.gather r1;
         R.gather r2;
         // Now we know ib == Base bi' and ia == i_tail
-        rewrite (iterator_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) ib lb)
-          as (iterator_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) (Base bi') lb);
-        rewrite (iterator_match_n vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) ia la)
-          as (iterator_match_n vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) i_tail la);
-        // Unfold Base bi' match → base_iterator_match_n
-        unfold (iterator_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) (Base bi') lb);
-        // Rewrite len_sz to base_iterator_length bi'
-        rewrite (base_iterator_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) bi' lb)
-          as (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 4.0R) bi' lb);
+        rewrite (mixed_list_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) ib lb)
+          as (mixed_list_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) (Base bi') lb);
+        rewrite (mixed_list_match_n vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) ia la)
+          as (mixed_list_match_n vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) i_tail la);
+        // Unfold Base bi' match → base_mixed_list_match_n
+        unfold (mixed_list_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) (Base bi') lb);
+        // Rewrite len_sz to base_mixed_list_length bi'
+        rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v len_sz) (pm /. 4.0R) bi' lb)
+          as (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi')) (pm /. 4.0R) bi' lb);
         // Gather before-side base match with spare → pm/2
-        base_iterator_match_n_gather vmatch p 0 (SZ.v (base_iterator_length bi')) (pm /. 4.0R) (pm /. 4.0R) bi' lb (Ghost.reveal l_head) vmatch_gather;
-        rewrite (base_iterator_match_n vmatch p 0 (SZ.v (base_iterator_length bi')) ((pm /. 4.0R) +. (pm /. 4.0R)) bi' lb)
-          as (base_iterator_match vmatch p (pm /. 2.0R) bi' (Ghost.reveal l_head));
-        // Elim extract trade: base match (pm/2) → iterator match copy 1
+        base_mixed_list_match_n_gather vmatch p 0 (SZ.v (base_mixed_list_length bi')) (pm /. 4.0R) (pm /. 4.0R) bi' lb (Ghost.reveal l_head) vmatch_gather;
+        rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi')) ((pm /. 4.0R) +. (pm /. 4.0R)) bi' lb)
+          as (base_mixed_list_match vmatch p (pm /. 2.0R) bi' (Ghost.reveal l_head));
+        // Elim extract trade: base match (pm/2) → mixed_list match copy 1
         Trade.elim
-          (base_iterator_match vmatch p (pm /. 2.0R) bi' (Ghost.reveal l_head))
-          (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l);
-        // Rewrite after-side to iterator_match for narrow's trade
+          (base_mixed_list_match vmatch p (pm /. 2.0R) bi' (Ghost.reveal l_head))
+          (mixed_list_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l);
+        // Rewrite after-side to mixed_list_match for narrow's trade
         // la == l_tail because l == lb ++ la with |lb| == |l_head|, l == l_head ++ l_tail
         list_narrow_split (Ghost.reveal l) (SZ.v len_sz);
         List.Tot.Properties.append_length_inv_head (Ghost.reveal lb) la (Ghost.reveal l_head) (Ghost.reveal l_tail);
-        rewrite (iterator_match_n vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) i_tail la)
-          as (iterator_match_n vmatch p 0 (SZ.v (iterator_length i_tail)) (pm /. 4.0R) i_tail (Ghost.reveal l_tail));
-        fold (iterator_match vmatch p (pm /. 4.0R) i_tail (Ghost.reveal l_tail));
-        // Elim narrow trade: i_tail match (pm/4) → iterator match copy 2
+        rewrite (mixed_list_match_n vmatch p 0 (SZ.v rest_sz) (pm /. 4.0R) i_tail la)
+          as (mixed_list_match_n vmatch p 0 (SZ.v (mixed_list_length i_tail)) (pm /. 4.0R) i_tail (Ghost.reveal l_tail));
+        fold (mixed_list_match vmatch p (pm /. 4.0R) i_tail (Ghost.reveal l_tail));
+        // Elim narrow trade: i_tail match (pm/4) → mixed_list match copy 2
         Trade.elim
-          (iterator_match vmatch p (pm /. 4.0R) i_tail (Ghost.reveal l_tail))
-          (iterator_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l);
+          (mixed_list_match vmatch p (pm /. 4.0R) i_tail (Ghost.reveal l_tail))
+          (mixed_list_match_n vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) i l);
         // Gather two copies → full match
-        iterator_match_n_gather vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) (pm /. 2.0R) i l l vmatch_gather;
-        rewrite (iterator_match_n vmatch p 0 (SZ.v total_sz) ((pm /. 2.0R) +. (pm /. 2.0R)) i l)
-          as (iterator_match_n vmatch p 0 (SZ.v (iterator_length i)) ((pm /. 2.0R) +. (pm /. 2.0R)) i l);
-        fold (iterator_match vmatch p ((pm /. 2.0R) +. (pm /. 2.0R)) i l);
-        rewrite (iterator_match vmatch p ((pm /. 2.0R) +. (pm /. 2.0R)) i l)
-          as (iterator_match vmatch p pm i l);
+        mixed_list_match_n_gather vmatch p 0 (SZ.v total_sz) (pm /. 2.0R) (pm /. 2.0R) i l l vmatch_gather;
+        rewrite (mixed_list_match_n vmatch p 0 (SZ.v total_sz) ((pm /. 2.0R) +. (pm /. 2.0R)) i l)
+          as (mixed_list_match_n vmatch p 0 (SZ.v (mixed_list_length i)) ((pm /. 2.0R) +. (pm /. 2.0R)) i l);
+        fold (mixed_list_match vmatch p ((pm /. 2.0R) +. (pm /. 2.0R)) i l);
+        rewrite (mixed_list_match vmatch p ((pm /. 2.0R) +. (pm /. 2.0R)) i l)
+          as (mixed_list_match vmatch p pm i l);
         // Expose refs for return
         introduce exists* v . R.pts_to r1 v with ib;
         introduce exists* v . R.pts_to r2 v with ia;
@@ -3622,25 +3622,25 @@ ensures exists* pm'.
 
 #pop-options
 // Always returns an element matching the head, shifted match on tail at pm/2, trade back
-let iterator_next_n_post
+let mixed_list_next_n_post
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind) (p: parser k u)
-  (off: Ghost.erased nat) (n: Ghost.erased nat) (pm: perm) (i: iterator t) (l: list u)
+  (off: Ghost.erased nat) (n: Ghost.erased nat) (pm: perm) (i: mixed_list t) (l: list u)
   (res: t)
 : Tot slprop
 = exists* pm_v hd_val tl_val .
     vmatch pm_v res hd_val **
-    iterator_match_n vmatch p (Ghost.reveal off + 1) (nat_pred (Ghost.reveal n)) (pm /. 2.0R) i tl_val **
+    mixed_list_match_n vmatch p (Ghost.reveal off + 1) (nat_pred (Ghost.reveal n)) (pm /. 2.0R) i tl_val **
     trade
       (vmatch pm_v res hd_val **
-       iterator_match_n vmatch p (Ghost.reveal off + 1) (nat_pred (Ghost.reveal n)) (pm /. 2.0R) i tl_val)
-      (iterator_match_n vmatch p (Ghost.reveal off) (Ghost.reveal n) pm i l) **
+       mixed_list_match_n vmatch p (Ghost.reveal off + 1) (nat_pred (Ghost.reveal n)) (pm /. 2.0R) i tl_val)
+      (mixed_list_match_n vmatch p (Ghost.reveal off) (Ghost.reveal n) pm i l) **
     pure (Ghost.reveal n > 0 /\ l == hd_val :: tl_val)
 
 
-// Ghost fn: trade body for iterator_next Serialized case.
-// Recovers the original iterator_match_n from the split head/tail.
+// Ghost fn: trade body for mixed_list_next Serialized case.
+// Recovers the original mixed_list_match_n from the split head/tail.
 #push-options "--z3rlimit 4000 --fuel 2 --ifuel 1 --ext no:context_pruning"
 
 ```pulse
@@ -3660,17 +3660,17 @@ ghost fn serialized_next_trade_body
   (sq_strong: squash (k.parser_kind_subkind == Some ParserStrong))
 requires
   vmatch 1.0R x_val (List.Tot.hd (reveal l)) **
-  iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Serialized #t sp count pl)) (List.Tot.tl (reveal l)) **
+  mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Serialized #t sp count pl)) (List.Tot.tl (reveal l)) **
   trade (vmatch 1.0R x_val (List.Tot.hd (reveal l)))
        (pts_to_parsed_strong_prefix p pl_suffix #((pm *. sp) /. 2.0R) (List.Tot.hd (reveal l))) **
   S.pts_to pl_prefix #((pm *. sp) /. 2.0R) (Seq.slice (reveal v') 0 (SZ.v pos)) **
   S.is_split pl pl_prefix pl_suffix
 ensures
-  iterator_match_n vmatch p off n pm (Base (Serialized #t sp count pl)) (reveal l)
+  mixed_list_match_n vmatch p off n pm (Base (Serialized #t sp count pl)) (reveal l)
 {
-  // Step 1: Unfold tail iterator to reach S.pts_to pl at half perm
-  unfold (iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Serialized #t sp count pl)) (List.Tot.tl (reveal l)));
-  unfold (base_iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Serialized #t sp count pl) (List.Tot.tl (reveal l)));
+  // Step 1: Unfold tail mixed_list to reach S.pts_to pl at half perm
+  unfold (mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Serialized #t sp count pl)) (List.Tot.tl (reveal l)));
+  unfold (base_mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Serialized #t sp count pl) (List.Tot.tl (reveal l)));
   with l_all'. assert (pts_to_parsed_strong_prefix (parse_nlist ((off + 1) + nat_pred n) p) pl #((pm /. 2.0R) *. sp) l_all');
   rewrite (pts_to_parsed_strong_prefix (parse_nlist ((off + 1) + nat_pred n) p) pl #((pm /. 2.0R) *. sp) l_all')
     as (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #((pm *. sp) /. 2.0R) l_all');
@@ -3702,8 +3702,8 @@ ensures
   rewrite (S.pts_to pl #(pm *. sp) v_g)
     as (S.pts_to pl #(pm *. sp) (reveal v_tail));
   fold (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #(pm *. sp) l_all');
-  fold (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l));
-  fold (iterator_match_n vmatch p off n pm (Base (Serialized #t sp count pl)) (reveal l));
+  fold (base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) (reveal l));
+  fold (mixed_list_match_n vmatch p off n pm (Base (Serialized #t sp count pl)) (reveal l));
 }
 ```
 
@@ -3712,68 +3712,68 @@ ensures
 #push-options "--z3rlimit 8000 --fuel 2 --ifuel 1 --ext no:context_pruning"
 
 ```pulse
-fn rec iterator_next_n
+fn rec mixed_list_next_n
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind) (p: parser k u)
   (off: Ghost.erased nat) (n: Ghost.erased nat { Ghost.reveal n > 0 })
   (off_sz: SZ.t { SZ.v off_sz == Ghost.reveal off }) (n_sz: SZ.t { SZ.v n_sz == Ghost.reveal n })
-  (pm: perm) (i: iterator t) (l: Ghost.erased (list u))
+  (pm: perm) (i: mixed_list t) (l: Ghost.erased (list u))
   (vmatch_share: share_t vmatch)
   (vmatch_gather: gather_t vmatch)
   (j: LPS.jumper p)
   (zcp: zero_copy_parse_strong_prefix (vmatch 1.0R) p)
 requires
-  iterator_match_n vmatch p off n pm i (Ghost.reveal l)
+  mixed_list_match_n vmatch p off n pm i (Ghost.reveal l)
 returns res: t
 ensures
-  iterator_next_n_post vmatch p off n pm i (Ghost.reveal l) res
-decreases (iterator_depth i)
+  mixed_list_next_n_post vmatch p off n pm i (Ghost.reveal l) res
+decreases (mixed_list_depth i)
 {
   match i {
     Base bi -> {
-      unfold (iterator_match_n vmatch p off n pm (Base bi) (Ghost.reveal l));
+      unfold (mixed_list_match_n vmatch p off n pm (Base bi) (Ghost.reveal l));
       match bi {
         Empty -> {
-          unfold (base_iterator_match_n vmatch p off n pm (Empty #t) (Ghost.reveal l));
+          unfold (base_mixed_list_match_n vmatch p off n pm (Empty #t) (Ghost.reveal l));
           unreachable ()
         }
         Singleton sp sv s -> {
-          base_iterator_match_n_singleton_unfold_pos vmatch p off n pm sp sv s (Ghost.reveal l) ();
+          base_mixed_list_match_n_singleton_unfold_pos vmatch p off n pm sp sv s (Ghost.reveal l) ();
           with x y. assert (pts_to s #(pm *. sp) x ** vmatch (pm *. sv) x y **
             pure (Ghost.reveal l == [y] /\ off == 0 /\ n == 1));
           let x_val = R.read s;
           // Fold 0-case at pm/2 (needs only pure, not pts_to)
-          fold (base_iterator_match_n vmatch p 1 0 (pm /. 2.0R) (Singleton #t sp sv s) (List.Tot.tl (Ghost.reveal l)));
-          fold (iterator_match_n vmatch p 1 0 (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
-          rewrite (iterator_match_n vmatch p 1 0 (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)))
-            as (iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
+          fold (base_mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Singleton #t sp sv s) (List.Tot.tl (Ghost.reveal l)));
+          fold (mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
+          rewrite (mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)))
+            as (mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
           rewrite each x as x_val;
           rewrite (vmatch (pm *. sv) x_val y)
             as (vmatch (pm *. sv) x_val (List.Tot.hd (Ghost.reveal l)));
           intro (vmatch (pm *. sv) x_val (List.Tot.hd (Ghost.reveal l)) **
-                 iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l))
+                 mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l))
                  @==>
-                 iterator_match_n vmatch p off n pm (Base (Singleton #t sp sv s)) (Ghost.reveal l))
+                 mixed_list_match_n vmatch p off n pm (Base (Singleton #t sp sv s)) (Ghost.reveal l))
             #(pts_to s #(pm *. sp) x_val **
               pure (Ghost.reveal l == [y] /\ off == 0 /\ n == 1))
             fn _ {
-              rewrite (iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)))
-                as (iterator_match_n vmatch p 1 0 (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
-              unfold (iterator_match_n vmatch p 1 0 (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
-              unfold (base_iterator_match_n vmatch p 1 0 (pm /. 2.0R) (Singleton #t sp sv s) (List.Tot.tl (Ghost.reveal l)));
+              rewrite (mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)))
+                as (mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
+              unfold (mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
+              unfold (base_mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Singleton #t sp sv s) (List.Tot.tl (Ghost.reveal l)));
               drop_ (pure (Nil? (List.Tot.tl (Ghost.reveal l)) /\ 1 <= 1));
               rewrite (vmatch (pm *. sv) x_val (List.Tot.hd (Ghost.reveal l)))
                 as (vmatch (pm *. sv) x_val y);
-              base_iterator_match_n_singleton_fold_pos vmatch p off n pm sp sv s (Ghost.reveal l) ();
-              fold (iterator_match_n vmatch p off n pm (Base (Singleton #t sp sv s)) (Ghost.reveal l));
+              base_mixed_list_match_n_singleton_fold_pos vmatch p off n pm sp sv s (Ghost.reveal l) ();
+              fold (mixed_list_match_n vmatch p off n pm (Base (Singleton #t sp sv s)) (Ghost.reveal l));
             };
-          fold (iterator_next_n_post vmatch p off n pm (Base (Singleton #t sp sv s)) (Ghost.reveal l) x_val);
+          fold (mixed_list_next_n_post vmatch p off n pm (Base (Singleton #t sp sv s)) (Ghost.reveal l) x_val);
           rewrite each (Base (Singleton #t sp sv s)) as i;
           x_val
         }
         Slice sp sv s -> {
           // Read element from slice at position off
-          unfold (base_iterator_match_n vmatch p off n pm (Slice #t sp sv s) (Ghost.reveal l));
+          unfold (base_mixed_list_match_n vmatch p off n pm (Slice #t sp sv s) (Ghost.reveal l));
           with l' sl1. assert (S.pts_to s #(pm *. sp) l' ** SM.seq_list_match sl1 (Ghost.reveal l) (vmatch (pm *. sv)));
           S.pts_to_len s;
           SM.seq_list_match_length (vmatch (pm *. sv)) sl1 (Ghost.reveal l);
@@ -3800,19 +3800,19 @@ decreases (iterator_depth i)
             (vmatch (pm *. sv))
             (vmatch ((pm /. 2.0R) *. sv))
             share_prf;
-          // Fold tail into base_iterator_match_n at pm/2
+          // Fold tail into base_mixed_list_match_n at pm/2
           Seq.lemma_index_slice l' off (off + n) 0;
           assert (pure (Seq.head sl1 == Seq.index l' off));
-          fold (base_iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Slice #t sp sv s) (List.Tot.tl (Ghost.reveal l)));
-          fold (iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Slice #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
+          fold (base_mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Slice #t sp sv s) (List.Tot.tl (Ghost.reveal l)));
+          fold (mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Slice #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
           // Rewrite head vmatch
           rewrite (vmatch (pm *. sv) (Seq.head sl1) (List.Tot.hd (Ghost.reveal l)))
             as (vmatch (pm *. sv) x_val (List.Tot.hd (Ghost.reveal l)));
           // Build trade
           intro (vmatch (pm *. sv) x_val (List.Tot.hd (Ghost.reveal l)) **
-                 iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Slice #t sp sv s)) (List.Tot.tl (Ghost.reveal l))
+                 mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Slice #t sp sv s)) (List.Tot.tl (Ghost.reveal l))
                  @==>
-                 iterator_match_n vmatch p off n pm (Base (Slice #t sp sv s)) (Ghost.reveal l))
+                 mixed_list_match_n vmatch p off n pm (Base (Slice #t sp sv s)) (Ghost.reveal l))
             #(trade
                 (vmatch (pm *. sv) (Seq.head sl1) (List.Tot.hd (Ghost.reveal l)) **
                  SM.seq_list_match (Seq.tail sl1) (List.Tot.tl (Ghost.reveal l)) (vmatch (pm *. sv)))
@@ -3828,9 +3828,9 @@ decreases (iterator_depth i)
               // Also disambiguate the frame's seq_list_match
               rewrite (SM.seq_list_match (Seq.tail sl1) (List.Tot.tl (Ghost.reveal l)) (vmatch ((pm /. 2.0R) *. sv)))
                 as (SM.seq_list_match (Seq.tail sl1) (List.Tot.tl (Ghost.reveal l)) (vmatch ((pm *. sv) /. 2.0R)));
-              // Now unfold the exchange condition's iterator_match_n
-              unfold (iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Slice #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
-              unfold (base_iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Slice #t sp sv s) (List.Tot.tl (Ghost.reveal l)));
+              // Now unfold the exchange condition's mixed_list_match_n
+              unfold (mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Slice #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
+              unfold (base_mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Slice #t sp sv s) (List.Tot.tl (Ghost.reveal l)));
               // The unfold produces: S.pts_to s #((pm/.2)*.sp) l'2 ** seq_list_match sl1_2 (tl l) (vmatch ((pm/.2)*.sv)) ** pure(...)
               with l'2 sl1_2. assert (
                 S.pts_to s #((pm /. 2.0R) *. sp) l'2 **
@@ -3874,16 +3874,16 @@ decreases (iterator_depth i)
                 (SM.seq_list_match sl1 (Ghost.reveal l) (vmatch (pm *. sv)));
               // Fold
               rewrite (S.pts_to s #((pm *. sp) /. 2.0R +. (pm *. sp) /. 2.0R) l') as (S.pts_to s #(pm *. sp) l');
-              fold (base_iterator_match_n vmatch p off n pm (Slice #t sp sv s) (Ghost.reveal l));
-              fold (iterator_match_n vmatch p off n pm (Base (Slice #t sp sv s)) (Ghost.reveal l));
+              fold (base_mixed_list_match_n vmatch p off n pm (Slice #t sp sv s) (Ghost.reveal l));
+              fold (mixed_list_match_n vmatch p off n pm (Base (Slice #t sp sv s)) (Ghost.reveal l));
             };
-          fold (iterator_next_n_post vmatch p off n pm (Base (Slice #t sp sv s)) (Ghost.reveal l) x_val);
+          fold (mixed_list_next_n_post vmatch p off n pm (Base (Slice #t sp sv s)) (Ghost.reveal l) x_val);
           rewrite each (Base (Slice #t sp sv s)) as i;
           x_val
         }
         Serialized sp count pl -> {
           // Parse element from serialized bytes at position off
-          unfold (base_iterator_match_n vmatch p off n pm (Serialized #t sp count pl) (Ghost.reveal l));
+          unfold (base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) (Ghost.reveal l));
           with l_all. assert (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #(pm *. sp) l_all);
           // Unfold pts_to_parsed_strong_prefix
           unfold (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #(pm *. sp) l_all);
@@ -3913,21 +3913,21 @@ decreases (iterator_depth i)
             as (S.pts_to pl_suffix #((pm *. sp) /. 2.0R) (reveal v_suffix));
           fold (pts_to_parsed_strong_prefix p pl_suffix #((pm *. sp) /. 2.0R) (List.Tot.hd (Ghost.reveal l)));
           let x_val = zcp pl_suffix #((pm *. sp) /. 2.0R) #(Ghost.hide (List.Tot.hd (Ghost.reveal l)));
-          // SECOND: fold the other half into tail iterator_match_n
+          // SECOND: fold the other half into tail mixed_list_match_n
           fold (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #((pm *. sp) /. 2.0R) l_all);
           rewrite (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #((pm *. sp) /. 2.0R) l_all)
             as (pts_to_parsed_strong_prefix (parse_nlist ((off + 1) + nat_pred n) p) pl #((pm /. 2.0R) *. sp) l_all);
           List.Tot.Base.lemma_splitAt_snd_length off l_all;
           lemma_splitAt_tl_snd off l_all;
           assert (pure (List.Tot.tl (Ghost.reveal l) == snd (List.Tot.splitAt (off + 1) l_all) /\ (off + 1) + nat_pred n <= SZ.v count));
-          fold (base_iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Serialized #t sp count pl) (List.Tot.tl (Ghost.reveal l)));
-          fold (iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Serialized #t sp count pl)) (List.Tot.tl (Ghost.reveal l)));
+          fold (base_mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Serialized #t sp count pl) (List.Tot.tl (Ghost.reveal l)));
+          fold (mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Serialized #t sp count pl)) (List.Tot.tl (Ghost.reveal l)));
           // Build the trade
           validator_success_pos_bound (parse_nlist off p) (reveal v') pos;
           intro_trade
             (vmatch 1.0R x_val (List.Tot.hd (Ghost.reveal l)) **
-             iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Serialized #t sp count pl)) (List.Tot.tl (Ghost.reveal l)))
-            (iterator_match_n vmatch p off n pm (Base (Serialized #t sp count pl)) (Ghost.reveal l))
+             mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Serialized #t sp count pl)) (List.Tot.tl (Ghost.reveal l)))
+            (mixed_list_match_n vmatch p off n pm (Base (Serialized #t sp count pl)) (Ghost.reveal l))
             (trade (vmatch 1.0R x_val (List.Tot.hd (Ghost.reveal l)))
                   (pts_to_parsed_strong_prefix p pl_suffix #((pm *. sp) /. 2.0R) (List.Tot.hd (Ghost.reveal l))) **
              S.pts_to pl_prefix #((pm *. sp) /. 2.0R) v_prefix **
@@ -3939,7 +3939,7 @@ decreases (iterator_depth i)
                 pl pl_prefix pl_suffix v' l x_val pos
                 () () () ();
             };
-          fold (iterator_next_n_post vmatch p off n pm (Base (Serialized #t sp count pl)) (Ghost.reveal l) x_val);
+          fold (mixed_list_next_n_post vmatch p off n pm (Base (Serialized #t sp count pl)) (Ghost.reveal l) x_val);
           rewrite each (Base (Serialized #t sp count pl)) as i;
           x_val
           }}
@@ -3947,7 +3947,7 @@ decreases (iterator_depth i)
       }
     }
     Append depth cb ca ob bp before oa ap after -> {
-      unfold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l));
+      unfold (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l));
       // Compute which side has elements first (concrete computation on SZ.t)
       let child_n_sz = append_n_before_sz off_sz n_sz cb;
       let child_off_sz = append_off_before_sz off_sz ob cb;
@@ -3955,34 +3955,34 @@ decreases (iterator_depth i)
         // Element is in the before part
         let ib = R.read before;
         with i_x l_x . rewrite
-          (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_x l_x)
-          as (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib l_x);
+          (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_x l_x)
+          as (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib l_x);
         with l_before . assert (
-          iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib l_before
+          mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib l_before
         );
-        let x = iterator_next_n vmatch p
+        let x = mixed_list_next_n vmatch p
           (append_off_before off (SZ.v ob) (SZ.v cb))
           (append_n_before off n (SZ.v cb))
           child_off_sz child_n_sz
           pm ib l_before
           vmatch_share vmatch_gather j zcp;
-        unfold (iterator_next_n_post vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib (Ghost.reveal l_before) x);
+        unfold (mixed_list_next_n_post vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib (Ghost.reveal l_before) x);
 
         // Capture the existentials from the inner postcondition
         with pm_v hd_val tl_val . assert (
           vmatch pm_v x hd_val **
-          iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val **
+          mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val **
           trade
             (vmatch pm_v x hd_val **
-             iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val)
-            (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib (Ghost.reveal l_before)) **
+             mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val)
+            (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib (Ghost.reveal l_before)) **
           pure (append_n_before off n (SZ.v cb) > 0 /\ Ghost.reveal l_before == hd_val :: tl_val)
         );
 
-        // Capture the after iterator from the outer unfold existentials
+        // Capture the after mixed_list from the outer unfold existentials
         with i_after l_after . assert (
           pts_to after #(pm *. ap) i_after **
-          iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l_after
+          mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l_after
         );
 
         // Share pts_to before
@@ -3993,64 +3993,64 @@ decreases (iterator_depth i)
         R.share after;
         rewrite (R.pts_to after #((pm *. ap) /. 2.0R) i_after) as (R.pts_to after #((pm /. 2.0R) *. ap) i_after);
         rewrite (R.pts_to after #((pm *. ap) /. 2.0R) i_after) as (R.pts_to after #((pm /. 2.0R) *. ap) i_after);
-        // Share iterator_match_n on after
-        iterator_match_n_share vmatch p
+        // Share mixed_list_match_n on after
+        mixed_list_match_n_share vmatch p
           (append_off_after off (SZ.v oa) (SZ.v cb))
           (append_n_after off n (SZ.v cb))
           pm i_after l_after vmatch_share;
 
-        // Rewrite before tail iterator for fold
-        rewrite (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val)
-          as (iterator_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib tl_val);
-        rewrite (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm /. 2.0R) i_after l_after)
-          as (iterator_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) i_after l_after);
+        // Rewrite before tail mixed_list for fold
+        rewrite (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val)
+          as (mixed_list_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib tl_val);
+        rewrite (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm /. 2.0R) i_after l_after)
+          as (mixed_list_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) i_after l_after);
 
         // Fold the outer tail Append at pm/.2
         rewrite (R.pts_to before #((pm /. 2.0R) *. bp) (Ghost.hide ib)) as (R.pts_to before #((pm /. 2.0R) *. bp) (Ghost.reveal (Ghost.hide ib)));
         rewrite (R.pts_to after #((pm /. 2.0R) *. ap) i_after) as (R.pts_to after #((pm /. 2.0R) *. ap) (Ghost.reveal i_after));
-        fold (iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (tl_val @ l_after));
+        fold (mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (tl_val @ l_after));
 
         // Build the trade
         intro (vmatch pm_v x hd_val **
-               iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (tl_val @ l_after)
+               mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (tl_val @ l_after)
                @==>
-               iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l))
+               mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l))
           #(trade
               (vmatch pm_v x hd_val **
-               iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val)
-              (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib (Ghost.reveal l_before)) **
+               mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val)
+              (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib (Ghost.reveal l_before)) **
             R.pts_to before #((pm /. 2.0R) *. bp) (Ghost.hide ib) **
             R.pts_to after #((pm /. 2.0R) *. ap) i_after **
-            iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm /. 2.0R) i_after l_after **
+            mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm /. 2.0R) i_after l_after **
             pure (append_n_before off n (SZ.v cb) > 0 /\ Ghost.reveal l_before == hd_val :: tl_val) **
             pure (
               off + n <= SZ.v cb + SZ.v ca /\
-              SZ.v ob + SZ.v cb <= SZ.v (iterator_length (Ghost.reveal (Ghost.hide ib))) /\
-              SZ.v oa + SZ.v ca <= SZ.v (iterator_length (Ghost.reveal i_after)) /\
+              SZ.v ob + SZ.v cb <= SZ.v (mixed_list_length (Ghost.reveal (Ghost.hide ib))) /\
+              SZ.v oa + SZ.v ca <= SZ.v (mixed_list_length (Ghost.reveal i_after)) /\
               List.Tot.length (Ghost.reveal l_before) == append_n_before off n (SZ.v cb) /\
               List.Tot.length l_after == append_n_after off n (SZ.v cb) /\
               Ghost.reveal l == List.Tot.append (Ghost.reveal l_before) l_after /\
-              iterator_depth (Ghost.reveal (Ghost.hide ib)) < Ghost.reveal depth /\
-              iterator_depth (Ghost.reveal i_after) < Ghost.reveal depth
+              mixed_list_depth (Ghost.reveal (Ghost.hide ib)) < Ghost.reveal depth /\
+              mixed_list_depth (Ghost.reveal i_after) < Ghost.reveal depth
             ))
           fn _ {
             // Trade body: receives hyp + extra, must produce the conclusion
             // 1. Unfold the Append tail to get parts at pm/.2
-            unfold (iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (tl_val @ l_after));
+            unfold (mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (tl_val @ l_after));
             with ib_uf ia_uf l_b_uf l_a_uf . assert (
               R.pts_to before #((pm /. 2.0R) *. bp) ib_uf **
-              iterator_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib_uf l_b_uf **
+              mixed_list_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib_uf l_b_uf **
               R.pts_to after #((pm /. 2.0R) *. ap) ia_uf **
-              iterator_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia_uf l_a_uf **
+              mixed_list_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia_uf l_a_uf **
               pure (
                 (off + 1) + nat_pred n <= SZ.v cb + SZ.v ca /\
-                SZ.v ob + SZ.v cb <= SZ.v (iterator_length ib_uf) /\
-                SZ.v oa + SZ.v ca <= SZ.v (iterator_length ia_uf) /\
+                SZ.v ob + SZ.v cb <= SZ.v (mixed_list_length ib_uf) /\
+                SZ.v oa + SZ.v ca <= SZ.v (mixed_list_length ia_uf) /\
                 List.Tot.length l_b_uf == append_n_before (off + 1) (nat_pred n) (SZ.v cb) /\
                 List.Tot.length l_a_uf == append_n_after (off + 1) (nat_pred n) (SZ.v cb) /\
                 tl_val @ l_after == List.Tot.append l_b_uf l_a_uf /\
-                iterator_depth ib_uf < Ghost.reveal depth /\
-                iterator_depth ia_uf < Ghost.reveal depth
+                mixed_list_depth ib_uf < Ghost.reveal depth /\
+                mixed_list_depth ia_uf < Ghost.reveal depth
               )
             );
 
@@ -4069,26 +4069,26 @@ decreases (iterator_depth i)
 
             // 5. Rewrite before-tail to match inner trade using slprop_rw (SMT-powered)
             slprop_rw
-              (iterator_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib_uf l_b_uf)
-              (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val)
+              (mixed_list_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib_uf l_b_uf)
+              (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val)
               (Pulse.Lib.Core.slprop_equiv_ext'
-                (iterator_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib_uf l_b_uf)
-                (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val)
+                (mixed_list_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib_uf l_b_uf)
+                (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val)
                 ());
             elim_trade
               (vmatch pm_v x hd_val **
-               iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val)
-              (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib (Ghost.reveal l_before));
+               mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb) + 1) (nat_pred (append_n_before off n (SZ.v cb))) (pm /. 2.0R) ib tl_val)
+              (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib (Ghost.reveal l_before));
 
-            // 6. Gather iterator_match_n on after using implicit version (avoids lambda-wrap bug)
+            // 6. Gather mixed_list_match_n on after using implicit version (avoids lambda-wrap bug)
             slprop_rw
-              (iterator_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia_uf l_a_uf)
-              (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm /. 2.0R) i_after l_after)
+              (mixed_list_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia_uf l_a_uf)
+              (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm /. 2.0R) i_after l_after)
               (Pulse.Lib.Core.slprop_equiv_ext'
-                (iterator_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia_uf l_a_uf)
-                (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm /. 2.0R) i_after l_after)
+                (mixed_list_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia_uf l_a_uf)
+                (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm /. 2.0R) i_after l_after)
                 ());
-            iterator_match_n_gather_implicit vmatch p
+            mixed_list_match_n_gather_implicit vmatch p
               (append_off_after off (SZ.v oa) (SZ.v cb))
               (append_n_after off n (SZ.v cb))
               (pm /. 2.0R) (pm /. 2.0R) vmatch_gather;
@@ -4100,13 +4100,13 @@ decreases (iterator_depth i)
             drop_ (pure (append_n_before off n (SZ.v cb) > 0 /\ Ghost.reveal l_before == hd_val :: tl_val));
             drop_ (pure (
               (off + 1) + nat_pred n <= SZ.v cb + SZ.v ca /\
-              SZ.v ob + SZ.v cb <= SZ.v (iterator_length ib_uf) /\
-              SZ.v oa + SZ.v ca <= SZ.v (iterator_length ia_uf) /\
+              SZ.v ob + SZ.v cb <= SZ.v (mixed_list_length ib_uf) /\
+              SZ.v oa + SZ.v ca <= SZ.v (mixed_list_length ia_uf) /\
               List.Tot.length l_b_uf == append_n_before (off + 1) (nat_pred n) (SZ.v cb) /\
               List.Tot.length l_a_uf == append_n_after (off + 1) (nat_pred n) (SZ.v cb) /\
               tl_val @ l_after == List.Tot.append l_b_uf l_a_uf /\
-              iterator_depth ib_uf < Ghost.reveal depth /\
-              iterator_depth ia_uf < Ghost.reveal depth
+              mixed_list_depth ib_uf < Ghost.reveal depth /\
+              mixed_list_depth ia_uf < Ghost.reveal depth
             ));
 
             // 8. Rewrite permissions
@@ -4115,59 +4115,59 @@ decreases (iterator_depth i)
             rewrite (R.pts_to after #((pm *. ap) /. 2.0R +. (pm *. ap) /. 2.0R) i_after)
               as (R.pts_to after #(pm *. ap) i_after);
             slprop_rw
-              (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm /. 2.0R +. pm /. 2.0R) i_after l_after)
-              (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l_after)
+              (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm /. 2.0R +. pm /. 2.0R) i_after l_after)
+              (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l_after)
               (Pulse.Lib.Core.slprop_equiv_ext'
-                (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm /. 2.0R +. pm /. 2.0R) i_after l_after)
-                (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l_after)
+                (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) (pm /. 2.0R +. pm /. 2.0R) i_after l_after)
+                (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l_after)
                 ());
 
-            // 9. Fold back iterator_match_n for Append
+            // 9. Fold back mixed_list_match_n for Append
             rewrite (R.pts_to after #(pm *. ap) i_after) as (R.pts_to after #(pm *. ap) (Ghost.reveal i_after));
-            fold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l));
+            fold (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l));
           };
 
         // Fold the postcondition
-        fold (iterator_next_n_post vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l) x);
+        fold (mixed_list_next_n_post vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l) x);
         rewrite each (Append #t depth cb ca ob bp before oa ap after) as i;
         x
       } else {
         // Element is in the after part
         let ia = R.read after;
         with i_a l_a . rewrite
-          (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_a l_a)
-          as (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia l_a);
+          (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_a l_a)
+          as (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia l_a);
         with l_after . assert (
-          iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia l_after
+          mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia l_after
         );
         let child_off_sz_a = append_off_after_sz off_sz oa ca cb;
         let child_n_sz_a = append_n_after_sz off_sz n_sz cb;
-        let x = iterator_next_n vmatch p
+        let x = mixed_list_next_n vmatch p
           (append_off_after off (SZ.v oa) (SZ.v cb))
           (append_n_after off n (SZ.v cb))
           child_off_sz_a child_n_sz_a
           pm ia l_after
           vmatch_share vmatch_gather j zcp;
-        unfold (iterator_next_n_post vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia (Ghost.reveal l_after) x);
+        unfold (mixed_list_next_n_post vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia (Ghost.reveal l_after) x);
 
-        // Inner call returned x with after iterator
+        // Inner call returned x with after mixed_list
         with pm_v hd_val tl_val . assert (
           vmatch pm_v x hd_val **
-          iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val **
+          mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val **
           trade
             (vmatch pm_v x hd_val **
-             iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val)
-            (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia (Ghost.reveal l_after)) **
+             mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val)
+            (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia (Ghost.reveal l_after)) **
           pure (append_n_after off n (SZ.v cb) > 0 /\ Ghost.reveal l_after == hd_val :: tl_val)
         );
 
-        // Capture the before iterator from the outer unfold existentials
+        // Capture the before mixed_list from the outer unfold existentials
         let ib = R.read before;
         with i_b l_b . rewrite
-          (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_b l_b)
-          as (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib l_b);
+          (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_b l_b)
+          as (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib l_b);
         with l_before . assert (
-          iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib l_before
+          mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib l_before
         );
 
         // Share pts_to before
@@ -4178,64 +4178,64 @@ decreases (iterator_depth i)
         R.share after;
         rewrite (R.pts_to after #((pm *. ap) /. 2.0R) (Ghost.hide ia)) as (R.pts_to after #((pm /. 2.0R) *. ap) (Ghost.hide ia));
         rewrite (R.pts_to after #((pm *. ap) /. 2.0R) (Ghost.hide ia)) as (R.pts_to after #((pm /. 2.0R) *. ap) (Ghost.hide ia));
-        // Share iterator_match_n on before
-        iterator_match_n_share vmatch p
+        // Share mixed_list_match_n on before
+        mixed_list_match_n_share vmatch p
           (append_off_before off (SZ.v ob) (SZ.v cb))
           (append_n_before off n (SZ.v cb))
           pm ib l_before vmatch_share;
 
         // Rewrite after tail offsets to match the outer Append offsets
-        rewrite (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val)
-          as (iterator_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia tl_val);
-        rewrite (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm /. 2.0R) ib l_before)
-          as (iterator_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib l_before);
+        rewrite (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val)
+          as (mixed_list_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia tl_val);
+        rewrite (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm /. 2.0R) ib l_before)
+          as (mixed_list_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib l_before);
 
         // Fold the outer tail Append at pm/.2
         rewrite (R.pts_to before #((pm /. 2.0R) *. bp) (Ghost.hide ib)) as (R.pts_to before #((pm /. 2.0R) *. bp) (Ghost.reveal (Ghost.hide ib)));
         rewrite (R.pts_to after #((pm /. 2.0R) *. ap) (Ghost.hide ia)) as (R.pts_to after #((pm /. 2.0R) *. ap) (Ghost.reveal (Ghost.hide ia)));
-        fold (iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (l_before @ tl_val));
+        fold (mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (l_before @ tl_val));
 
         // Build the trade
         intro (vmatch pm_v x hd_val **
-               iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (l_before @ tl_val)
+               mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (l_before @ tl_val)
                @==>
-               iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l))
+               mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l))
           #(trade
               (vmatch pm_v x hd_val **
-               iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val)
-              (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia (Ghost.reveal l_after)) **
+               mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val)
+              (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia (Ghost.reveal l_after)) **
             R.pts_to before #((pm /. 2.0R) *. bp) (Ghost.hide ib) **
             R.pts_to after #((pm /. 2.0R) *. ap) (Ghost.hide ia) **
-            iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm /. 2.0R) ib l_before **
+            mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm /. 2.0R) ib l_before **
             pure (append_n_after off n (SZ.v cb) > 0 /\ Ghost.reveal l_after == hd_val :: tl_val) **
             pure (
               off + n <= SZ.v cb + SZ.v ca /\
-              SZ.v ob + SZ.v cb <= SZ.v (iterator_length (Ghost.reveal (Ghost.hide ib))) /\
-              SZ.v oa + SZ.v ca <= SZ.v (iterator_length (Ghost.reveal (Ghost.hide ia))) /\
+              SZ.v ob + SZ.v cb <= SZ.v (mixed_list_length (Ghost.reveal (Ghost.hide ib))) /\
+              SZ.v oa + SZ.v ca <= SZ.v (mixed_list_length (Ghost.reveal (Ghost.hide ia))) /\
               List.Tot.length l_before == append_n_before off n (SZ.v cb) /\
               List.Tot.length (Ghost.reveal l_after) == append_n_after off n (SZ.v cb) /\
               Ghost.reveal l == List.Tot.append l_before (Ghost.reveal l_after) /\
-              iterator_depth (Ghost.reveal (Ghost.hide ib)) < Ghost.reveal depth /\
-              iterator_depth (Ghost.reveal (Ghost.hide ia)) < Ghost.reveal depth
+              mixed_list_depth (Ghost.reveal (Ghost.hide ib)) < Ghost.reveal depth /\
+              mixed_list_depth (Ghost.reveal (Ghost.hide ia)) < Ghost.reveal depth
             ))
           fn _ {
             // Trade body: receives hyp + extra, must produce the conclusion
             // 1. Unfold the Append tail to get parts at pm/.2
-            unfold (iterator_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (l_before @ tl_val));
+            unfold (mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Append #t depth cb ca ob bp before oa ap after) (l_before @ tl_val));
             with ib_uf ia_uf l_b_uf l_a_uf . assert (
               R.pts_to before #((pm /. 2.0R) *. bp) ib_uf **
-              iterator_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib_uf l_b_uf **
+              mixed_list_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib_uf l_b_uf **
               R.pts_to after #((pm /. 2.0R) *. ap) ia_uf **
-              iterator_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia_uf l_a_uf **
+              mixed_list_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia_uf l_a_uf **
               pure (
                 (off + 1) + nat_pred n <= SZ.v cb + SZ.v ca /\
-                SZ.v ob + SZ.v cb <= SZ.v (iterator_length ib_uf) /\
-                SZ.v oa + SZ.v ca <= SZ.v (iterator_length ia_uf) /\
+                SZ.v ob + SZ.v cb <= SZ.v (mixed_list_length ib_uf) /\
+                SZ.v oa + SZ.v ca <= SZ.v (mixed_list_length ia_uf) /\
                 List.Tot.length l_b_uf == append_n_before (off + 1) (nat_pred n) (SZ.v cb) /\
                 List.Tot.length l_a_uf == append_n_after (off + 1) (nat_pred n) (SZ.v cb) /\
                 l_before @ tl_val == List.Tot.append l_b_uf l_a_uf /\
-                iterator_depth ib_uf < Ghost.reveal depth /\
-                iterator_depth ia_uf < Ghost.reveal depth
+                mixed_list_depth ib_uf < Ghost.reveal depth /\
+                mixed_list_depth ia_uf < Ghost.reveal depth
               )
             );
 
@@ -4254,26 +4254,26 @@ decreases (iterator_depth i)
 
             // 5. Rewrite after-tail to match inner trade using slprop_rw (SMT-powered)
             slprop_rw
-              (iterator_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia_uf l_a_uf)
-              (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val)
+              (mixed_list_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia_uf l_a_uf)
+              (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val)
               (Pulse.Lib.Core.slprop_equiv_ext'
-                (iterator_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia_uf l_a_uf)
-                (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val)
+                (mixed_list_match_n vmatch p (append_off_after (off + 1) (SZ.v oa) (SZ.v cb)) (append_n_after (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ia_uf l_a_uf)
+                (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val)
                 ());
             elim_trade
               (vmatch pm_v x hd_val **
-               iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val)
-              (iterator_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia (Ghost.reveal l_after));
+               mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb) + 1) (nat_pred (append_n_after off n (SZ.v cb))) (pm /. 2.0R) ia tl_val)
+              (mixed_list_match_n vmatch p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm ia (Ghost.reveal l_after));
 
-            // 6. Gather iterator_match_n on before using implicit version (avoids lambda-wrap bug)
+            // 6. Gather mixed_list_match_n on before using implicit version (avoids lambda-wrap bug)
             slprop_rw
-              (iterator_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib_uf l_b_uf)
-              (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm /. 2.0R) ib l_before)
+              (mixed_list_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib_uf l_b_uf)
+              (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm /. 2.0R) ib l_before)
               (Pulse.Lib.Core.slprop_equiv_ext'
-                (iterator_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib_uf l_b_uf)
-                (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm /. 2.0R) ib l_before)
+                (mixed_list_match_n vmatch p (append_off_before (off + 1) (SZ.v ob) (SZ.v cb)) (append_n_before (off + 1) (nat_pred n) (SZ.v cb)) (pm /. 2.0R) ib_uf l_b_uf)
+                (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm /. 2.0R) ib l_before)
                 ());
-            iterator_match_n_gather_implicit vmatch p
+            mixed_list_match_n_gather_implicit vmatch p
               (append_off_before off (SZ.v ob) (SZ.v cb))
               (append_n_before off n (SZ.v cb))
               (pm /. 2.0R) (pm /. 2.0R) vmatch_gather;
@@ -4285,13 +4285,13 @@ decreases (iterator_depth i)
             drop_ (pure (append_n_after off n (SZ.v cb) > 0 /\ Ghost.reveal l_after == hd_val :: tl_val));
             drop_ (pure (
               (off + 1) + nat_pred n <= SZ.v cb + SZ.v ca /\
-              SZ.v ob + SZ.v cb <= SZ.v (iterator_length ib_uf) /\
-              SZ.v oa + SZ.v ca <= SZ.v (iterator_length ia_uf) /\
+              SZ.v ob + SZ.v cb <= SZ.v (mixed_list_length ib_uf) /\
+              SZ.v oa + SZ.v ca <= SZ.v (mixed_list_length ia_uf) /\
               List.Tot.length l_b_uf == append_n_before (off + 1) (nat_pred n) (SZ.v cb) /\
               List.Tot.length l_a_uf == append_n_after (off + 1) (nat_pred n) (SZ.v cb) /\
               l_before @ tl_val == List.Tot.append l_b_uf l_a_uf /\
-              iterator_depth ib_uf < Ghost.reveal depth /\
-              iterator_depth ia_uf < Ghost.reveal depth
+              mixed_list_depth ib_uf < Ghost.reveal depth /\
+              mixed_list_depth ia_uf < Ghost.reveal depth
             ));
 
             // 8. Rewrite permissions
@@ -4300,19 +4300,19 @@ decreases (iterator_depth i)
             rewrite (R.pts_to after #((pm *. ap) /. 2.0R +. (pm *. ap) /. 2.0R) (Ghost.hide ia))
               as (R.pts_to after #(pm *. ap) (Ghost.hide ia));
             slprop_rw
-              (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm /. 2.0R +. pm /. 2.0R) ib l_before)
-              (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib l_before)
+              (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm /. 2.0R +. pm /. 2.0R) ib l_before)
+              (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib l_before)
               (Pulse.Lib.Core.slprop_equiv_ext'
-                (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm /. 2.0R +. pm /. 2.0R) ib l_before)
-                (iterator_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib l_before)
+                (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) (pm /. 2.0R +. pm /. 2.0R) ib l_before)
+                (mixed_list_match_n vmatch p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm ib l_before)
                 ());
 
-            // 9. Fold back iterator_match_n for Append
-            fold (iterator_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l));
+            // 9. Fold back mixed_list_match_n for Append
+            fold (mixed_list_match_n vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l));
           };
 
         // Fold the postcondition
-        fold (iterator_next_n_post vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l) x);
+        fold (mixed_list_next_n_post vmatch p off n pm (Append #t depth cb ca ob bp before oa ap after) (Ghost.reveal l) x);
         rewrite each (Append #t depth cb ca ob bp before oa ap after) as i;
         x
       }
@@ -4323,104 +4323,104 @@ decreases (iterator_depth i)
 
 #pop-options
 
-// Postcondition for iterator_next wrapper
-let iterator_next_post
+// Postcondition for mixed_list_next wrapper
+let mixed_list_next_post
   (#t: Type) (#u: Type)
   (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind) (p: parser k u)
-  (pm: perm) (r: R.ref (iterator t)) (i_orig: iterator t) (l: list u)
+  (pm: perm) (r: R.ref (mixed_list t)) (i_orig: mixed_list t) (l: list u)
   (res: t)
 : Tot slprop
 = exists* pm_v hd_val tl_val i' .
     vmatch pm_v res hd_val **
     R.pts_to r i' **
-    iterator_match vmatch p (pm /. 4.0R) i' tl_val **
+    mixed_list_match vmatch p (pm /. 4.0R) i' tl_val **
     trade
       (vmatch pm_v res hd_val **
-       iterator_match vmatch p (pm /. 4.0R) i' tl_val)
-      (iterator_match vmatch p pm i_orig l) **
+       mixed_list_match vmatch p (pm /. 4.0R) i' tl_val)
+      (mixed_list_match vmatch p pm i_orig l) **
     pure (Cons? l /\ hd_val == List.Tot.hd l /\ tl_val == List.Tot.tl l)
 
 #push-options "--z3rlimit 8000 --fuel 2 --ifuel 1 --ext no:context_pruning"
 
 ```pulse
-fn iterator_next
+fn mixed_list_next
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
   (#k: parser_kind) (p: parser k u)
-  (pm: perm) (r: R.ref (iterator t)) (i_orig: Ghost.erased (iterator t)) (l: Ghost.erased (list u))
+  (pm: perm) (r: R.ref (mixed_list t)) (i_orig: Ghost.erased (mixed_list t)) (l: Ghost.erased (list u))
   (vmatch_share: share_t vmatch)
   (vmatch_gather: gather_t vmatch)
   (j: LPS.jumper p)
   (zcp: zero_copy_parse_strong_prefix (vmatch 1.0R) p)
 requires
-  R.pts_to r (Ghost.reveal i_orig) ** iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l) ** pure (Cons? (Ghost.reveal l))
+  R.pts_to r (Ghost.reveal i_orig) ** mixed_list_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l) ** pure (Cons? (Ghost.reveal l))
 returns res: t
 ensures
-  iterator_next_post vmatch p pm r (Ghost.reveal i_orig) (Ghost.reveal l) res
+  mixed_list_next_post vmatch p pm r (Ghost.reveal i_orig) (Ghost.reveal l) res
 {
   let i = R.read r;
-  rewrite (iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l))
-    as (iterator_match vmatch p pm i (Ghost.reveal l));
-  let n_sz = iterator_length i;
+  rewrite (mixed_list_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l))
+    as (mixed_list_match vmatch p pm i (Ghost.reveal l));
+  let n_sz = mixed_list_length i;
   if (SZ.eq n_sz 0sz) {
-    // Impossible: Cons? l but iterator has length 0
-    rewrite (iterator_match vmatch p pm i (Ghost.reveal l))
-      as (iterator_match_n vmatch p 0 0 pm i (Ghost.reveal l));
-    iterator_match_n_length vmatch p 0 0 pm i (Ghost.reveal l);
+    // Impossible: Cons? l but mixed_list has length 0
+    rewrite (mixed_list_match vmatch p pm i (Ghost.reveal l))
+      as (mixed_list_match_n vmatch p 0 0 pm i (Ghost.reveal l));
+    mixed_list_match_n_length vmatch p 0 0 pm i (Ghost.reveal l);
     unreachable ()
   } else {
-  rewrite (iterator_match vmatch p pm i (Ghost.reveal l))
-    as (iterator_match_n vmatch p 0 (SZ.v n_sz) pm i (Ghost.reveal l));
-  let x = iterator_next_n vmatch p 0 (SZ.v n_sz) 0sz n_sz pm i l
+  rewrite (mixed_list_match vmatch p pm i (Ghost.reveal l))
+    as (mixed_list_match_n vmatch p 0 (SZ.v n_sz) pm i (Ghost.reveal l));
+  let x = mixed_list_next_n vmatch p 0 (SZ.v n_sz) 0sz n_sz pm i l
     vmatch_share vmatch_gather j zcp;
-  unfold (iterator_next_n_post vmatch p 0 (SZ.v n_sz) pm i (Ghost.reveal l) x);
+  unfold (mixed_list_next_n_post vmatch p 0 (SZ.v n_sz) pm i (Ghost.reveal l) x);
   with pm_v hd_val tl_val . assert (
     vmatch pm_v x hd_val **
-    iterator_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val **
+    mixed_list_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val **
     trade
       (vmatch pm_v x hd_val **
-       iterator_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val)
-      (iterator_match_n vmatch p 0 (SZ.v n_sz) pm i (Ghost.reveal l)) **
+       mixed_list_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val)
+      (mixed_list_match_n vmatch p 0 (SZ.v n_sz) pm i (Ghost.reveal l)) **
     pure (SZ.v n_sz > 0 /\ Ghost.reveal l == hd_val :: tl_val)
   );
-  // Narrow the tail to get iterator_match on a new iterator
+  // Narrow the tail to get mixed_list_match on a new mixed_list
   let n_sz' = SZ.sub n_sz 1sz;
-  iterator_match_n_length vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i (Ghost.reveal tl_val);
+  mixed_list_match_n_length vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i (Ghost.reveal tl_val);
   assert (pure (1 <= SZ.v 1sz /\ SZ.v 1sz + SZ.v n_sz' <= 1 + nat_pred (SZ.v n_sz)));
-  let i' = iterator_narrow_n vmatch p j 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val 1sz n_sz'
+  let i' = mixed_list_narrow_n vmatch p j 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val 1sz n_sz'
     vmatch_share vmatch_gather;
   // list_narrow tl_val 0 (nat_pred (SZ.v n_sz)) == tl_val since length tl_val == nat_pred n
   FStar.List.Pure.Properties.splitAt_length_total (Ghost.reveal tl_val);
-  rewrite (iterator_match vmatch p ((pm /. 2.0R) /. 2.0R) i' (list_narrow tl_val (SZ.v 1sz - 1) (SZ.v n_sz')))
-    as (iterator_match vmatch p (pm /. 4.0R) i' (Ghost.reveal tl_val));
-  rewrite (trade (iterator_match vmatch p ((pm /. 2.0R) /. 2.0R) i' (list_narrow tl_val (SZ.v 1sz - 1) (SZ.v n_sz')))
-                 (iterator_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val))
-    as (trade (iterator_match vmatch p (pm /. 4.0R) i' (Ghost.reveal tl_val))
-             (iterator_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val));
+  rewrite (mixed_list_match vmatch p ((pm /. 2.0R) /. 2.0R) i' (list_narrow tl_val (SZ.v 1sz - 1) (SZ.v n_sz')))
+    as (mixed_list_match vmatch p (pm /. 4.0R) i' (Ghost.reveal tl_val));
+  rewrite (trade (mixed_list_match vmatch p ((pm /. 2.0R) /. 2.0R) i' (list_narrow tl_val (SZ.v 1sz - 1) (SZ.v n_sz')))
+                 (mixed_list_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val))
+    as (trade (mixed_list_match vmatch p (pm /. 4.0R) i' (Ghost.reveal tl_val))
+             (mixed_list_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val));
   // Write i' to ref
   R.write r i';
   // Build composite trade (does not involve R.pts_to r)
   intro_trade
     (vmatch pm_v x hd_val **
-     iterator_match vmatch p (pm /. 4.0R) i' (Ghost.reveal tl_val))
-    (iterator_match vmatch p pm i (Ghost.reveal l))
-    (trade (iterator_match vmatch p (pm /. 4.0R) i' (Ghost.reveal tl_val))
-           (iterator_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val) **
+     mixed_list_match vmatch p (pm /. 4.0R) i' (Ghost.reveal tl_val))
+    (mixed_list_match vmatch p pm i (Ghost.reveal l))
+    (trade (mixed_list_match vmatch p (pm /. 4.0R) i' (Ghost.reveal tl_val))
+           (mixed_list_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val) **
      trade (vmatch pm_v x hd_val **
-            iterator_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val)
-           (iterator_match_n vmatch p 0 (SZ.v n_sz) pm i (Ghost.reveal l)))
+            mixed_list_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val)
+           (mixed_list_match_n vmatch p 0 (SZ.v n_sz) pm i (Ghost.reveal l)))
     fn _ {
       elim_trade
-        (iterator_match vmatch p (pm /. 4.0R) i' (Ghost.reveal tl_val))
-        (iterator_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val);
+        (mixed_list_match vmatch p (pm /. 4.0R) i' (Ghost.reveal tl_val))
+        (mixed_list_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val);
       elim_trade
         (vmatch pm_v x hd_val **
-         iterator_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val)
-        (iterator_match_n vmatch p 0 (SZ.v n_sz) pm i (Ghost.reveal l));
-      rewrite (iterator_match_n vmatch p 0 (SZ.v n_sz) pm i (Ghost.reveal l))
-        as (iterator_match vmatch p pm i (Ghost.reveal l));
+         mixed_list_match_n vmatch p 1 (nat_pred (SZ.v n_sz)) (pm /. 2.0R) i tl_val)
+        (mixed_list_match_n vmatch p 0 (SZ.v n_sz) pm i (Ghost.reveal l));
+      rewrite (mixed_list_match_n vmatch p 0 (SZ.v n_sz) pm i (Ghost.reveal l))
+        as (mixed_list_match vmatch p pm i (Ghost.reveal l));
     };
-  fold (iterator_next_post vmatch p pm r (Ghost.reveal i_orig) (Ghost.reveal l) x);
+  fold (mixed_list_next_post vmatch p pm r (Ghost.reveal i_orig) (Ghost.reveal l) x);
   x
   }
 }
