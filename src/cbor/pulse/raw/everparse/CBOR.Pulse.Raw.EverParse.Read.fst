@@ -174,15 +174,23 @@ fn cbor_raw_read_content
     let vl : Ghost.erased (list raw_data_item) = Ghost.hide (content_as_list_raw b la (Ghost.reveal v));
     rewrite (PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n) pp) input #pms v)
       as (PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n) pp) input #(pm *. (pms /. pm)) (Ghost.reveal vl));
-    intro_pure ((Ghost.reveal vl <: list raw_data_item) == Ghost.reveal vl) ();
-    fold (I.base_mixed_list_match
+    intro_pure (Ghost.reveal vl == snd (List.Tot.splitAt 0 (Ghost.reveal vl)) /\ 0 + SZ.v n <= SZ.v n) ();
+    fold (I.base_mixed_list_match_n
       (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
-      pp pm (I.Serialized (pms /. pm) n input) (Ghost.reveal vl));
-    fold (I.mixed_list_match
+      pp 0 (SZ.v n) pm (I.Serialized (pms /. pm) n input) (Ghost.reveal vl));
+    fold (I.mixed_list_match_n
       (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
-      pp (pm *. 1.0R)
+      pp 0 (SZ.v n) (pm *. 1.0R)
       (I.Base (I.Serialized (pms /. pm) n input))
       (Ghost.reveal vl));
+    rewrite (I.mixed_list_match_n
+      (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
+      pp 0 (SZ.v n) (pm *. 1.0R)
+      (I.Base (I.Serialized (pms /. pm) n input))
+      (Ghost.reveal vl))
+      as (I.mixed_list_match
+      (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
+      pp (pm *. 1.0R) (I.Base (I.Serialized (pms /. pm) n input)) (Ghost.reveal vl));
     rewrite (I.mixed_list_match
       (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
       pp (pm *. 1.0R) (I.Base (I.Serialized (pms /. pm) n input)) (Ghost.reveal vl))
@@ -210,15 +218,21 @@ fn cbor_raw_read_content
           as (I.mixed_list_match
             (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
             pp (pm *. 1.0R) (I.Base (I.Serialized (pms /. pm) n input)) (Ghost.reveal vl));
-        unfold (I.mixed_list_match
+        rewrite (I.mixed_list_match
           (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
-          pp (pm *. 1.0R) (I.Base (I.Serialized (pms /. pm) n input)) (Ghost.reveal vl));
-        unfold (I.base_mixed_list_match
+          pp (pm *. 1.0R) (I.Base (I.Serialized (pms /. pm) n input)) (Ghost.reveal vl))
+          as (I.mixed_list_match_n
           (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
-          pp pm (I.Serialized (pms /. pm) n input) (Ghost.reveal vl));
-        with l' . assert (PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n) pp) input #(pm *. (pms /. pm)) l');
-        drop_ (pure ((l' <: list raw_data_item) == Ghost.reveal vl));
-        rewrite (PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n) pp) input #(pm *. (pms /. pm)) l')
+          pp 0 (SZ.v n) (pm *. 1.0R) (I.Base (I.Serialized (pms /. pm) n input)) (Ghost.reveal vl));
+        unfold (I.mixed_list_match_n
+          (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
+          pp 0 (SZ.v n) (pm *. 1.0R) (I.Base (I.Serialized (pms /. pm) n input)) (Ghost.reveal vl));
+        unfold (I.base_mixed_list_match_n
+          (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
+          pp 0 (SZ.v n) pm (I.Serialized (pms /. pm) n input) (Ghost.reveal vl));
+        with l' . assert (PPB.pts_to_parsed_strong_prefix (parse_nlist (0 + SZ.v n) pp) input #(pm *. (pms /. pm)) l');
+        drop_ (pure (Ghost.reveal vl == snd (List.Tot.splitAt 0 l') /\ 0 + SZ.v n <= SZ.v n));
+        rewrite (PPB.pts_to_parsed_strong_prefix (parse_nlist (0 + SZ.v n) pp) input #(pm *. (pms /. pm)) l')
           as (PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n) pp) input #pms v);
         Trade.elim
           (PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n) pp) input #pms v)
@@ -238,17 +252,27 @@ fn cbor_raw_read_content
     let vl : Ghost.erased (list (raw_data_item & raw_data_item)) = Ghost.hide (content_as_list_pair b la (Ghost.reveal v));
     rewrite (PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n) (nondep_then pp pp)) input #pms v)
       as (PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n) (nondep_then pp pp)) input #(pm *. (pms /. pm)) (Ghost.reveal vl));
-    intro_pure ((Ghost.reveal vl <: list (raw_data_item & raw_data_item)) == Ghost.reveal vl) ();
-    fold (I.base_mixed_list_match
+    intro_pure (Ghost.reveal vl == snd (List.Tot.splitAt 0 (Ghost.reveal vl)) /\ 0 + SZ.v n <= SZ.v n) ();
+    fold (I.base_mixed_list_match_n
       (fun (pm': perm) (elem: cbor_map_entry cbor_raw) (x: (raw_data_item & raw_data_item)) ->
         cbor_map_entry_match p pm' elem x)
-      (nondep_then pp pp) pm (I.Serialized (pms /. pm) n input) (Ghost.reveal vl));
-    fold (I.mixed_list_match
+      (nondep_then pp pp) 0 (SZ.v n) pm (I.Serialized (pms /. pm) n input) (Ghost.reveal vl));
+    fold (I.mixed_list_match_n
       (fun (pm': perm) (elem: cbor_map_entry cbor_raw) (x: (raw_data_item & raw_data_item)) ->
         cbor_map_entry_match p pm' elem x)
-      (nondep_then pp pp) (pm *. 1.0R)
+      (nondep_then pp pp) 0 (SZ.v n) (pm *. 1.0R)
       (I.Base (I.Serialized (pms /. pm) n input))
       (Ghost.reveal vl));
+    rewrite (I.mixed_list_match_n
+      (fun (pm': perm) (elem: cbor_map_entry cbor_raw) (x: (raw_data_item & raw_data_item)) ->
+        cbor_map_entry_match p pm' elem x)
+      (nondep_then pp pp) 0 (SZ.v n) (pm *. 1.0R)
+      (I.Base (I.Serialized (pms /. pm) n input))
+      (Ghost.reveal vl))
+      as (I.mixed_list_match
+      (fun (pm': perm) (elem: cbor_map_entry cbor_raw) (x: (raw_data_item & raw_data_item)) ->
+        cbor_map_entry_match p pm' elem x)
+      (nondep_then pp pp) (pm *. 1.0R) (I.Base (I.Serialized (pms /. pm) n input)) (Ghost.reveal vl));
     rewrite (I.mixed_list_match
       (fun (pm': perm) (elem: cbor_map_entry cbor_raw) (x: (raw_data_item & raw_data_item)) ->
         cbor_map_entry_match p pm' elem x)
@@ -278,17 +302,25 @@ fn cbor_raw_read_content
             (fun (pm': perm) (elem: cbor_map_entry cbor_raw) (x: (raw_data_item & raw_data_item)) ->
               cbor_map_entry_match p pm' elem x)
             (nondep_then pp pp) (pm *. 1.0R) (I.Base (I.Serialized (pms /. pm) n input)) (Ghost.reveal vl));
-        unfold (I.mixed_list_match
+        rewrite (I.mixed_list_match
           (fun (pm': perm) (elem: cbor_map_entry cbor_raw) (x: (raw_data_item & raw_data_item)) ->
             cbor_map_entry_match p pm' elem x)
-          (nondep_then pp pp) (pm *. 1.0R) (I.Base (I.Serialized (pms /. pm) n input)) (Ghost.reveal vl));
-        unfold (I.base_mixed_list_match
+          (nondep_then pp pp) (pm *. 1.0R) (I.Base (I.Serialized (pms /. pm) n input)) (Ghost.reveal vl))
+          as (I.mixed_list_match_n
           (fun (pm': perm) (elem: cbor_map_entry cbor_raw) (x: (raw_data_item & raw_data_item)) ->
             cbor_map_entry_match p pm' elem x)
-          (nondep_then pp pp) pm (I.Serialized (pms /. pm) n input) (Ghost.reveal vl));
-        with l' . assert (PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n) (nondep_then pp pp)) input #(pm *. (pms /. pm)) l');
-        drop_ (pure ((l' <: list (raw_data_item & raw_data_item)) == Ghost.reveal vl));
-        rewrite (PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n) (nondep_then pp pp)) input #(pm *. (pms /. pm)) l')
+          (nondep_then pp pp) 0 (SZ.v n) (pm *. 1.0R) (I.Base (I.Serialized (pms /. pm) n input)) (Ghost.reveal vl));
+        unfold (I.mixed_list_match_n
+          (fun (pm': perm) (elem: cbor_map_entry cbor_raw) (x: (raw_data_item & raw_data_item)) ->
+            cbor_map_entry_match p pm' elem x)
+          (nondep_then pp pp) 0 (SZ.v n) (pm *. 1.0R) (I.Base (I.Serialized (pms /. pm) n input)) (Ghost.reveal vl));
+        unfold (I.base_mixed_list_match_n
+          (fun (pm': perm) (elem: cbor_map_entry cbor_raw) (x: (raw_data_item & raw_data_item)) ->
+            cbor_map_entry_match p pm' elem x)
+          (nondep_then pp pp) 0 (SZ.v n) pm (I.Serialized (pms /. pm) n input) (Ghost.reveal vl));
+        with l' . assert (PPB.pts_to_parsed_strong_prefix (parse_nlist (0 + SZ.v n) (nondep_then pp pp)) input #(pm *. (pms /. pm)) l');
+        drop_ (pure (Ghost.reveal vl == snd (List.Tot.splitAt 0 l') /\ 0 + SZ.v n <= SZ.v n));
+        rewrite (PPB.pts_to_parsed_strong_prefix (parse_nlist (0 + SZ.v n) (nondep_then pp pp)) input #(pm *. (pms /. pm)) l')
           as (PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n) (nondep_then pp pp)) input #pms v);
         Trade.elim
           (PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n) (nondep_then pp pp)) input #pms v)

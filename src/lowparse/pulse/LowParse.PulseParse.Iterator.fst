@@ -1642,6 +1642,30 @@ ensures
 }
 ```
 
+```pulse
+ghost
+fn pts_to_parsed_strong_prefix_gather
+  (#k: parser_kind) (#t: Type0) (p: parser k t)
+  (input: S.slice byte)
+  (#pm: perm) (#v: t)
+  (#pm': perm) (#v': t)
+requires
+  pts_to_parsed_strong_prefix p input #pm v **
+  pts_to_parsed_strong_prefix p input #pm' v'
+ensures
+  pts_to_parsed_strong_prefix p input #(pm +. pm') v **
+  pure (v == v')
+{
+  unfold (pts_to_parsed_strong_prefix p input #pm v);
+  unfold (pts_to_parsed_strong_prefix p input #pm' v');
+  with w1 . assert (S.pts_to input #pm w1);
+  with w2 . assert (S.pts_to input #pm' w2);
+  S.gather input;
+  rewrite each w2 as w1;
+  fold (pts_to_parsed_strong_prefix p input #(pm +. pm') v);
+}
+```
+
 module SMU = Pulse.Lib.SeqMatch.Util
 
 let pts_to_parsed_strong_prefix_nlist_truncate
