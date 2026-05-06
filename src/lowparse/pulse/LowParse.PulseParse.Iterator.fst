@@ -4596,6 +4596,244 @@ decreases (mixed_list_depth i)
 
 #pop-options
 
+#push-options "--z3rlimit 8000 --fuel 2 --ifuel 1 --ext no:context_pruning"
+
+```pulse
+fn base_mixed_list_next_n
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (off: Ghost.erased nat) (n: Ghost.erased nat { Ghost.reveal n > 0 })
+  (off_sz: SZ.t { SZ.v off_sz == Ghost.reveal off }) (n_sz: SZ.t { SZ.v n_sz == Ghost.reveal n })
+  (pm: perm) (bi: base_mixed_list t) (l: Ghost.erased (list u))
+  (vmatch_share: share_t vmatch)
+  (vmatch_gather: gather_t vmatch)
+  (j: LPS.jumper p)
+  (zcp: zero_copy_parse_strong_prefix (vmatch 1.0R) p)
+requires
+  base_mixed_list_match_n vmatch p off n pm bi (Ghost.reveal l)
+returns res: t
+ensures
+  mixed_list_next_n_post vmatch p off n pm (Base bi) (Ghost.reveal l) res
+{
+  match bi {
+    Empty -> {
+      unfold (base_mixed_list_match_n vmatch p off n pm (Empty #t) (Ghost.reveal l));
+      unreachable ()
+    }
+    Singleton sp sv s -> {
+      base_mixed_list_match_n_singleton_unfold_pos vmatch p off n pm sp sv s (Ghost.reveal l) ();
+      with x y. assert (pts_to s #(pm *. sp) x ** vmatch (pm *. sv) x y **
+        pure (Ghost.reveal l == [y] /\ off == 0 /\ n == 1));
+      let x_val = R.read s;
+      // Fold 0-case at pm/2 (needs only pure, not pts_to)
+      fold (base_mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Singleton #t sp sv s) (List.Tot.tl (Ghost.reveal l)));
+      fold (mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
+      rewrite (mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)))
+        as (mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
+      rewrite each x as x_val;
+      rewrite (vmatch (pm *. sv) x_val y)
+        as (vmatch (pm *. sv) x_val (List.Tot.hd (Ghost.reveal l)));
+      intro (vmatch (pm *. sv) x_val (List.Tot.hd (Ghost.reveal l)) **
+             mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l))
+             @==>
+             mixed_list_match_n vmatch p off n pm (Base (Singleton #t sp sv s)) (Ghost.reveal l))
+        #(pts_to s #(pm *. sp) x_val **
+          pure (Ghost.reveal l == [y] /\ off == 0 /\ n == 1))
+        fn _ {
+          rewrite (mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)))
+            as (mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
+          unfold (mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Base (Singleton #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
+          unfold (base_mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Singleton #t sp sv s) (List.Tot.tl (Ghost.reveal l)));
+          drop_ (pure (Nil? (List.Tot.tl (Ghost.reveal l)) /\ 1 <= 1));
+          rewrite (vmatch (pm *. sv) x_val (List.Tot.hd (Ghost.reveal l)))
+            as (vmatch (pm *. sv) x_val y);
+          base_mixed_list_match_n_singleton_fold_pos vmatch p off n pm sp sv s (Ghost.reveal l) ();
+          fold (mixed_list_match_n vmatch p off n pm (Base (Singleton #t sp sv s)) (Ghost.reveal l));
+        };
+      fold (mixed_list_next_n_post vmatch p off n pm (Base (Singleton #t sp sv s)) (Ghost.reveal l) x_val);
+      rewrite each (Singleton #t sp sv s) as bi;
+      x_val
+    }
+    Slice sp sv s -> {
+      // Read element from slice at position off
+      unfold (base_mixed_list_match_n vmatch p off n pm (Slice #t sp sv s) (Ghost.reveal l));
+      with l' sl1. assert (S.pts_to s #(pm *. sp) l' ** SM.seq_list_match sl1 (Ghost.reveal l) (vmatch (pm *. sv)));
+      S.pts_to_len s;
+      SM.seq_list_match_length (vmatch (pm *. sv)) sl1 (Ghost.reveal l);
+      // sl1 == Seq.slice l' off (off+n), read at position off
+      let x_val = S.op_Array_Access s off_sz;
+      // Split head from seq_list_match
+      SMU.seq_list_match_cons_elim_trade sl1 (Ghost.reveal l) (vmatch (pm *. sv));
+      // Share pts_to s
+      S.share s;
+      rewrite (S.pts_to s #((pm *. sp) /. 2.0R) l') as (S.pts_to s #((pm /. 2.0R) *. sp) l');
+      rewrite (S.pts_to s #((pm *. sp) /. 2.0R) l') as (S.pts_to s #((pm /. 2.0R) *. sp) l');
+      // Share tail seq_list_match
+      ghost fn share_prf
+        (c': t)
+        (v': u { v' << List.Tot.tl (Ghost.reveal l) })
+      requires vmatch (pm *. sv) c' v'
+      ensures vmatch ((pm /. 2.0R) *. sv) c' v' ** vmatch ((pm /. 2.0R) *. sv) c' v'
+      {
+        vmatch_share c' #(pm *. sv) #v';
+        rewrite (vmatch ((pm *. sv) /. 2.0R) c' v') as (vmatch ((pm /. 2.0R) *. sv) c' v');
+        rewrite (vmatch ((pm *. sv) /. 2.0R) c' v') as (vmatch ((pm /. 2.0R) *. sv) c' v');
+      };
+      seq_list_match_share (Seq.tail sl1) (List.Tot.tl (Ghost.reveal l))
+        (vmatch (pm *. sv))
+        (vmatch ((pm /. 2.0R) *. sv))
+        share_prf;
+      // Fold tail into base_mixed_list_match_n at pm/2
+      Seq.lemma_index_slice l' off (off + n) 0;
+      assert (pure (Seq.head sl1 == Seq.index l' off));
+      fold (base_mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Slice #t sp sv s) (List.Tot.tl (Ghost.reveal l)));
+      fold (mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Slice #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
+      // Rewrite head vmatch
+      rewrite (vmatch (pm *. sv) (Seq.head sl1) (List.Tot.hd (Ghost.reveal l)))
+        as (vmatch (pm *. sv) x_val (List.Tot.hd (Ghost.reveal l)));
+      // Build trade
+      intro (vmatch (pm *. sv) x_val (List.Tot.hd (Ghost.reveal l)) **
+             mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Slice #t sp sv s)) (List.Tot.tl (Ghost.reveal l))
+             @==>
+             mixed_list_match_n vmatch p off n pm (Base (Slice #t sp sv s)) (Ghost.reveal l))
+        #(trade
+            (vmatch (pm *. sv) (Seq.head sl1) (List.Tot.hd (Ghost.reveal l)) **
+             SM.seq_list_match (Seq.tail sl1) (List.Tot.tl (Ghost.reveal l)) (vmatch (pm *. sv)))
+            (SM.seq_list_match sl1 (Ghost.reveal l) (vmatch (pm *. sv))) **
+          S.pts_to s #((pm /. 2.0R) *. sp) l' **
+          SM.seq_list_match (Seq.tail sl1) (List.Tot.tl (Ghost.reveal l)) (vmatch ((pm /. 2.0R) *. sv)) **
+          pure (off + n <= Seq.length l' /\ sl1 == Seq.slice l' off (off + n)) **
+          pure (Seq.head sl1 == Seq.index l' off))
+        fn _ {
+          // Trade body: unfold tail, gather, elim inner trade, fold original
+          // First, disambiguate the frame's pts_to by rewriting its perm
+          rewrite (S.pts_to s #((pm /. 2.0R) *. sp) l') as (S.pts_to s #((pm *. sp) /. 2.0R) l');
+          // Also disambiguate the frame's seq_list_match
+          rewrite (SM.seq_list_match (Seq.tail sl1) (List.Tot.tl (Ghost.reveal l)) (vmatch ((pm /. 2.0R) *. sv)))
+            as (SM.seq_list_match (Seq.tail sl1) (List.Tot.tl (Ghost.reveal l)) (vmatch ((pm *. sv) /. 2.0R)));
+          // Now unfold the exchange condition's mixed_list_match_n
+          unfold (mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Slice #t sp sv s)) (List.Tot.tl (Ghost.reveal l)));
+          unfold (base_mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Slice #t sp sv s) (List.Tot.tl (Ghost.reveal l)));
+          // The unfold produces: S.pts_to s #((pm/.2)*.sp) l'2 ** seq_list_match sl1_2 (tl l) (vmatch ((pm/.2)*.sv)) ** pure(...)
+          with l'2 sl1_2. assert (
+            S.pts_to s #((pm /. 2.0R) *. sp) l'2 **
+            SM.seq_list_match sl1_2 (List.Tot.tl (Ghost.reveal l)) (vmatch ((pm /. 2.0R) *. sv))
+          );
+          // Gather pts_to
+          rewrite (S.pts_to s #((pm /. 2.0R) *. sp) l'2) as (S.pts_to s #((pm *. sp) /. 2.0R) l'2);
+          S.gather s;
+          // Gather tail seq_list_match
+          rewrite (SM.seq_list_match (Seq.tail sl1) (List.Tot.tl (Ghost.reveal l)) (vmatch ((pm /. 2.0R) *. sv)))
+            as (SM.seq_list_match (Seq.tail sl1) (List.Tot.tl (Ghost.reveal l)) (vmatch ((pm *. sv) /. 2.0R)));
+          rewrite (SM.seq_list_match sl1_2 (List.Tot.tl (Ghost.reveal l)) (vmatch ((pm /. 2.0R) *. sv)))
+            as (SM.seq_list_match sl1_2 (List.Tot.tl (Ghost.reveal l)) (vmatch ((pm *. sv) /. 2.0R)));
+          rewrite (SM.seq_list_match sl1_2 (List.Tot.tl (Ghost.reveal l)) (vmatch ((pm *. sv) /. 2.0R)))
+            as (SM.seq_list_match (Seq.tail sl1) (List.Tot.tl (Ghost.reveal l)) (vmatch ((pm *. sv) /. 2.0R)));
+          ghost fn gather_prf
+            (c': t) (v1': u { v1' << List.Tot.tl (Ghost.reveal l) }) (v2': u { v2' << List.Tot.tl (Ghost.reveal l) /\ List.Tot.memP v2' (List.Tot.tl (Ghost.reveal l)) })
+          requires vmatch ((pm *. sv) /. 2.0R) c' v1' ** vmatch ((pm *. sv) /. 2.0R) c' v2'
+          ensures vmatch (pm *. sv) c' v1' ** pure ((v1' <: u) == (v2' <: u))
+          {
+            vmatch_gather c' #((pm *. sv) /. 2.0R) #v1' #((pm *. sv) /. 2.0R) #v2';
+            rewrite (vmatch ((pm *. sv) /. 2.0R +. (pm *. sv) /. 2.0R) c' v1') as (vmatch (pm *. sv) c' v1');
+          };
+          seq_list_match_gather_memP (Seq.tail sl1) (List.Tot.tl (Ghost.reveal l)) (List.Tot.tl (Ghost.reveal l))
+            (vmatch ((pm *. sv) /. 2.0R))
+            (vmatch ((pm *. sv) /. 2.0R))
+            (vmatch (pm *. sv))
+            gather_prf;
+          drop_ (pure (List.Tot.tl (Ghost.reveal l) == List.Tot.tl (Ghost.reveal l)));
+          drop_ (pure (l' == l'2));
+          drop_ (pure ((off + 1) + nat_pred n <= Seq.length l'2 /\ sl1_2 == Seq.slice l'2 (off + 1) (off + 1 + nat_pred n)));
+          drop_ (pure (off + n <= Seq.length l' /\ sl1 == Seq.slice l' off (off + n)));
+          drop_ (pure (Seq.head sl1 == Seq.index l' off));
+          // Rewrite head vmatch back
+          rewrite (vmatch (pm *. sv) x_val (List.Tot.hd (Ghost.reveal l)))
+            as (vmatch (pm *. sv) (Seq.head sl1) (List.Tot.hd (Ghost.reveal l)));
+          // Elim inner trade
+          elim_trade
+            (vmatch (pm *. sv) (Seq.head sl1) (List.Tot.hd (Ghost.reveal l)) **
+             SM.seq_list_match (Seq.tail sl1) (List.Tot.tl (Ghost.reveal l)) (vmatch (pm *. sv)))
+            (SM.seq_list_match sl1 (Ghost.reveal l) (vmatch (pm *. sv)));
+          // Fold
+          rewrite (S.pts_to s #((pm *. sp) /. 2.0R +. (pm *. sp) /. 2.0R) l') as (S.pts_to s #(pm *. sp) l');
+          fold (base_mixed_list_match_n vmatch p off n pm (Slice #t sp sv s) (Ghost.reveal l));
+          fold (mixed_list_match_n vmatch p off n pm (Base (Slice #t sp sv s)) (Ghost.reveal l));
+        };
+      fold (mixed_list_next_n_post vmatch p off n pm (Base (Slice #t sp sv s)) (Ghost.reveal l) x_val);
+      rewrite each (Slice #t sp sv s) as bi;
+      x_val
+    }
+    Serialized sp count pl -> {
+      // Parse element from serialized bytes at position off
+      unfold (base_mixed_list_match_n vmatch p off n pm (Serialized #t sp count pl) (Ghost.reveal l));
+      with l_all. assert (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #(pm *. sp) l_all);
+      // Unfold pts_to_parsed_strong_prefix
+      unfold (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #(pm *. sp) l_all);
+      with v'. assert (S.pts_to pl #(pm *. sp) v');
+      // Share S.pts_to
+      S.share pl;
+      // FIRST: use one half to jump to position off and parse head
+      S.pts_to_len pl;
+      parse_nlist_sum p off n (reveal v');
+      intro_pure (LPS.jumper_pre' (parse_nlist off p) 0sz v') ();
+      let pos = LPV.jump_nlist j off_sz pl 0sz;
+      let pl_p = S.split pl pos;
+      match pl_p {
+        pl_prefix, pl_suffix -> {
+      with v_prefix. assert (S.pts_to pl_prefix #((pm *. sp) /. 2.0R) v_prefix);
+      with v_suffix. assert (S.pts_to pl_suffix #((pm *. sp) /. 2.0R) v_suffix);
+      S.pts_to_len pl_suffix;
+      // Establish length l == n so Ghost.reveal l : nlist n u
+      List.Tot.Base.lemma_splitAt_snd_length off l_all;
+      // Establish strong prefix prop for suffix
+      pts_to_parsed_strong_prefix_prop_nlist_suffix p off n (reveal v') l_all (Ghost.reveal l) pos;
+      // Assert the strong prefix prop on the suffix
+      assert (pure (pts_to_parsed_strong_prefix_prop (parse_nlist n p) (reveal v_suffix) (Ghost.reveal l)));
+      pts_to_parsed_strong_prefix_nlist_hd p n (reveal v_suffix) (Ghost.reveal l);
+      // Fold into pts_to_parsed_strong_prefix p and call zcp
+      rewrite (S.pts_to pl_suffix #((pm *. sp) /. 2.0R) v_suffix)
+        as (S.pts_to pl_suffix #((pm *. sp) /. 2.0R) (reveal v_suffix));
+      fold (pts_to_parsed_strong_prefix p pl_suffix #((pm *. sp) /. 2.0R) (List.Tot.hd (Ghost.reveal l)));
+      let x_val = zcp pl_suffix #((pm *. sp) /. 2.0R) #(Ghost.hide (List.Tot.hd (Ghost.reveal l)));
+      // SECOND: fold the other half into tail mixed_list_match_n
+      fold (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #((pm *. sp) /. 2.0R) l_all);
+      rewrite (pts_to_parsed_strong_prefix (parse_nlist (off + n) p) pl #((pm *. sp) /. 2.0R) l_all)
+        as (pts_to_parsed_strong_prefix (parse_nlist ((off + 1) + nat_pred n) p) pl #((pm /. 2.0R) *. sp) l_all);
+      List.Tot.Base.lemma_splitAt_snd_length off l_all;
+      lemma_splitAt_tl_snd off l_all;
+      assert (pure (List.Tot.tl (Ghost.reveal l) == snd (List.Tot.splitAt (off + 1) l_all) /\ (off + 1) + nat_pred n <= SZ.v count));
+      fold (base_mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Serialized #t sp count pl) (List.Tot.tl (Ghost.reveal l)));
+      fold (mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Serialized #t sp count pl)) (List.Tot.tl (Ghost.reveal l)));
+      // Build the trade
+      validator_success_pos_bound (parse_nlist off p) (reveal v') pos;
+      intro_trade
+        (vmatch 1.0R x_val (List.Tot.hd (Ghost.reveal l)) **
+         mixed_list_match_n vmatch p (off + 1) (nat_pred n) (pm /. 2.0R) (Base (Serialized #t sp count pl)) (List.Tot.tl (Ghost.reveal l)))
+        (mixed_list_match_n vmatch p off n pm (Base (Serialized #t sp count pl)) (Ghost.reveal l))
+        (trade (vmatch 1.0R x_val (List.Tot.hd (Ghost.reveal l)))
+              (pts_to_parsed_strong_prefix p pl_suffix #((pm *. sp) /. 2.0R) (List.Tot.hd (Ghost.reveal l))) **
+         S.pts_to pl_prefix #((pm *. sp) /. 2.0R) v_prefix **
+         S.is_split pl pl_prefix pl_suffix)
+        fn _ {
+          rewrite (S.pts_to pl_prefix #((pm *. sp) /. 2.0R) v_prefix)
+            as (S.pts_to pl_prefix #((pm *. sp) /. 2.0R) (Seq.slice (reveal v') 0 (SZ.v pos)));
+          serialized_next_trade_body vmatch p off n sp count pm
+            pl pl_prefix pl_suffix v' l x_val pos
+            () () () ();
+        };
+      fold (mixed_list_next_n_post vmatch p off n pm (Base (Serialized #t sp count pl)) (Ghost.reveal l) x_val);
+      rewrite each (Serialized #t sp count pl) as bi;
+      x_val
+      }}
+    }
+  }
+}
+```
+
+#pop-options
+
+
 // Postcondition for mixed_list_next wrapper
 let mixed_list_next_post
   (#t: Type) (#u: Type)
@@ -4947,14 +5185,12 @@ ensures
     mixed_list_match_length vmatch p pm i.after (Ghost.reveal l2);
     unreachable ()
   } else {
-  // Fold into mixed_list_match_n for next_n call
+  // Call base_mixed_list_next_n (non-recursive)
   rewrite (base_mixed_list_match vmatch p pm i.before l1)
     as (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length i.before)) pm i.before l1);
   rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length i.before)) pm i.before l1)
     as (base_mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm i.before l1);
-  fold (mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm (Base i.before) l1);
-  // Call mixed_list_next_n
-  let x = mixed_list_next_n vmatch p 0 (SZ.v len_sz) 0sz len_sz pm (Base i.before) l1
+  let x = base_mixed_list_next_n vmatch p 0 (SZ.v len_sz) 0sz len_sz pm i.before l1
     vmatch_share vmatch_gather j zcp;
   unfold (mixed_list_next_n_post vmatch p 0 (SZ.v len_sz) pm (Base i.before) (Ghost.reveal l1) x);
   with pm_v hd_val tl_val . assert (
