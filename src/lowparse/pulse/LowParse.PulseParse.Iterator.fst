@@ -1139,6 +1139,288 @@ let mixed_list_match_gather
       pure (l == l'))
 = mixed_list_match_n_gather #t #u vmatch #k p 0 (SZ.v (mixed_list_length i)) pm pm' i l l' vmatch_gather
 
+// Monotonicity (weaken) for match predicates:
+// Given a ghost fn turning vmatch1 into vmatch2 for all y in l,
+// transform the match predicate from vmatch1 to vmatch2.
+
+```pulse
+ghost
+fn rec seq_list_match_weaken_memP
+  (#t #t': Type0)
+  (c: Seq.seq t)
+  (v: list t')
+  (item_match1: (t -> (v': t' { v' << v }) -> slprop))
+  (item_match2: (t -> (v': t' { v' << v }) -> slprop))
+  (prf: (
+    (c': t) ->
+    (v': t' { v' << v /\ List.Tot.memP v' v }) ->
+    stt_ghost unit emp_inames
+      (item_match1 c' v')
+      (fun _ -> item_match2 c' v')
+  ))
+requires
+    (SM.seq_list_match c v item_match1)
+ensures
+    (SM.seq_list_match c v item_match2)
+  decreases v
+{
+  if Nil? v {
+    SM.seq_list_match_nil_elim c v item_match1;
+    SM.seq_list_match_nil_intro c v item_match2;
+  } else {
+    SM.list_cons_precedes (List.Tot.hd v) (List.Tot.tl v);
+    let _ : squash (List.Tot.tl v << v) = ();
+    SM.seq_list_match_cons_elim c v item_match1;
+    prf (Seq.head c) (List.Tot.hd v);
+    ghost fn prf'
+      (c': t)
+      (v': t' { v' << List.Tot.tl v /\ List.Tot.memP v' (List.Tot.tl v) })
+    requires
+      item_match1 c' v'
+    ensures
+      item_match2 c' v'
+    {
+      prf c' v'
+    };
+    seq_list_match_weaken_memP (Seq.tail c) (List.Tot.tl v) item_match1 item_match2 prf';
+    Seq.cons_head_tail c;
+    SM.seq_list_match_cons_intro (Seq.head c) (List.Tot.hd v) (Seq.tail c) (List.Tot.tl v) item_match2;
+    rewrite (SM.seq_list_match (Seq.cons (Seq.head c) (Seq.tail c)) (List.Tot.hd v :: List.Tot.tl v) item_match2)
+         as (SM.seq_list_match c v item_match2);
+  }
+}
+```
+
+```pulse
+ghost
+fn base_mixed_list_match_n_weaken_singleton_pos
+  (#t: Type0)
+  (#u: Type0)
+  (vmatch1 vmatch2: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (off: nat)
+  (n: nat)
+  (pm: perm)
+  (sp: perm) (sv: perm) (s: ref t)
+  (l: list u)
+  (prf: (
+    (x: t) -> (pm0: perm) -> (y: u { List.Tot.memP y l }) ->
+    stt_ghost unit emp_inames
+      (vmatch1 pm0 x y)
+      (fun _ -> vmatch2 pm0 x y)
+  ))
+  (_: squash (n <> 0))
+requires
+    (base_mixed_list_match_n vmatch1 p off n pm (Singleton sp sv s) l)
+ensures
+    (base_mixed_list_match_n vmatch2 p off n pm (Singleton sp sv s) l)
+{
+  base_mixed_list_match_n_singleton_unfold_pos vmatch1 p off n pm sp sv s l ();
+  with x y . assert (pts_to s #(pm *. sp) x ** vmatch1 (pm *. sv) x y ** pure (l == [y] /\ off == 0 /\ n == 1));
+  drop_ (pure (l == [y] /\ off == 0 /\ n == 1));
+  prf x (pm *. sv) y;
+  Pulse.Lib.Core.intro_pure (l == [y] /\ off == 0 /\ n == 1) ();
+  base_mixed_list_match_n_singleton_fold_pos vmatch2 p off n pm sp sv s l ()
+}
+```
+
+let base_mixed_list_match_n_weaken_singleton
+  (#t: Type0)
+  (#u: Type0)
+  (vmatch1 vmatch2: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (off: nat)
+  (n: nat)
+  (pm: perm)
+  (sp: perm) (sv: perm) (s: ref t)
+  (l: list u)
+  (prf: (
+    (x: t) -> (pm0: perm) -> (y: u { List.Tot.memP y l }) ->
+    stt_ghost unit emp_inames
+      (vmatch1 pm0 x y)
+      (fun _ -> vmatch2 pm0 x y)
+  ))
+: stt_ghost unit emp_inames
+    (base_mixed_list_match_n vmatch1 p off n pm (Singleton sp sv s) l)
+    (fun _ -> base_mixed_list_match_n vmatch2 p off n pm (Singleton sp sv s) l)
+= if n = 0
+  then begin
+    base_mixed_list_match_n_singleton_0 vmatch1 p off pm sp sv s l;
+    base_mixed_list_match_n_singleton_0 vmatch2 p off pm sp sv s l;
+    slprop_rw
+      (base_mixed_list_match_n vmatch1 p off n pm (Singleton sp sv s) l)
+      (base_mixed_list_match_n vmatch2 p off n pm (Singleton sp sv s) l)
+      (Pulse.Lib.Core.slprop_equiv_ext' _ _ ())
+  end
+  else
+    base_mixed_list_match_n_weaken_singleton_pos vmatch1 vmatch2 p off n pm sp sv s l prf ()
+
+```pulse
+ghost
+fn base_mixed_list_match_n_weaken
+  (#t: Type0)
+  (#u: Type0)
+  (vmatch1 vmatch2: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (off: nat)
+  (n: nat)
+  (pm: perm)
+  (i: base_mixed_list t)
+  (l: list u)
+  (prf: (
+    (x: t) -> (pm0: perm) -> (y: u { List.Tot.memP y l }) ->
+    stt_ghost unit emp_inames
+      (vmatch1 pm0 x y)
+      (fun _ -> vmatch2 pm0 x y)
+  ))
+requires
+    (base_mixed_list_match_n vmatch1 p off n pm i l)
+ensures
+    (base_mixed_list_match_n vmatch2 p off n pm i l)
+{
+  match i {
+    Empty -> {
+      unfold (base_mixed_list_match_n vmatch1 p off n pm (Empty #t) l);
+      fold (base_mixed_list_match_n vmatch2 p off n pm (Empty #t) l);
+      rewrite each (Empty #t) as i;
+    }
+    Singleton sp sv s -> {
+      base_mixed_list_match_n_weaken_singleton vmatch1 vmatch2 p off n pm sp sv s l prf;
+      rewrite each (Singleton #t sp sv s) as i;
+    }
+    Slice sp sv s -> {
+      unfold (base_mixed_list_match_n vmatch1 p off n pm (Slice #t sp sv s) l);
+      with l' l1 . assert (pts_to s #(pm *. sp) l' ** SM.seq_list_match l1 l (vmatch1 (pm *. sv)));
+      ghost fn prf'
+        (c': t)
+        (v': u { v' << l /\ List.Tot.memP v' l })
+      requires vmatch1 (pm *. sv) c' v'
+      ensures vmatch2 (pm *. sv) c' v'
+      {
+        prf c' (pm *. sv) v'
+      };
+      seq_list_match_weaken_memP l1 l (vmatch1 (pm *. sv)) (vmatch2 (pm *. sv)) prf';
+      fold (base_mixed_list_match_n vmatch2 p off n pm (Slice #t sp sv s) l);
+      rewrite each (Slice #t sp sv s) as i;
+    }
+    Serialized sp count pl -> {
+      unfold (base_mixed_list_match_n vmatch1 p off n pm (Serialized #t sp count pl) l);
+      fold (base_mixed_list_match_n vmatch2 p off n pm (Serialized #t sp count pl) l);
+      rewrite each (Serialized #t sp count pl) as i;
+    }
+  }
+}
+```
+
+let base_mixed_list_match_weaken
+  (#t: Type0) (#u: Type0)
+  (vmatch1 vmatch2: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (pm: perm)
+  (i: base_mixed_list t)
+  (l: list u)
+  (prf: (
+    (x: t) -> (pm0: perm) -> (y: u { List.Tot.memP y l }) ->
+    stt_ghost unit emp_inames
+      (vmatch1 pm0 x y)
+      (fun _ -> vmatch2 pm0 x y)
+  ))
+: stt_ghost unit emp_inames
+    (base_mixed_list_match vmatch1 p pm i l)
+    (fun _ -> base_mixed_list_match vmatch2 p pm i l)
+= base_mixed_list_match_n_weaken vmatch1 vmatch2 p 0 (SZ.v (base_mixed_list_length i)) pm i l prf
+
+#push-options "--z3rlimit 40"
+
+```pulse
+ghost
+fn rec mixed_list_match_n_weaken
+  (#t: Type0)
+  (#u: Type0)
+  (vmatch1 vmatch2: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (off: nat)
+  (n: nat)
+  (pm: perm)
+  (i: mixed_list t)
+  (l: list u)
+  (prf: (
+    (x: t) -> (pm0: perm) -> (y: u { List.Tot.memP y l }) ->
+    stt_ghost unit emp_inames
+      (vmatch1 pm0 x y)
+      (fun _ -> vmatch2 pm0 x y)
+  ))
+requires
+    (mixed_list_match_n vmatch1 p off n pm i l)
+ensures
+    (mixed_list_match_n vmatch2 p off n pm i l)
+decreases (mixed_list_depth i)
+{
+  match i {
+    Base bi -> {
+      unfold (mixed_list_match_n vmatch1 p off n pm (Base #t bi) l);
+      base_mixed_list_match_n_weaken vmatch1 vmatch2 p off n pm bi l prf;
+      fold (mixed_list_match_n vmatch2 p off n pm (Base #t bi) l);
+      rewrite each (Base #t bi) as i;
+    }
+    Append depth cb ca ob bp before oa ap after -> {
+      unfold (mixed_list_match_n vmatch1 p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+      with i_before i_after l1 l2 . assert (
+        pts_to before #(pm *. bp) i_before **
+        mixed_list_match_n vmatch1 p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1 **
+        pts_to after #(pm *. ap) i_after **
+        mixed_list_match_n vmatch1 p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2
+      );
+      List.Tot.Properties.append_memP_forall l1 l2;
+      ghost fn prf1
+        (x: t) (pm0: perm) (y: u { List.Tot.memP y l1 })
+      requires vmatch1 pm0 x y
+      ensures vmatch2 pm0 x y
+      {
+        prf x pm0 y
+      };
+      ghost fn prf2
+        (x: t) (pm0: perm) (y: u { List.Tot.memP y l2 })
+      requires vmatch1 pm0 x y
+      ensures vmatch2 pm0 x y
+      {
+        prf x pm0 y
+      };
+      mixed_list_match_n_weaken vmatch1 vmatch2 p (append_off_before off (SZ.v ob) (SZ.v cb)) (append_n_before off n (SZ.v cb)) pm i_before l1 prf1;
+      mixed_list_match_n_weaken vmatch1 vmatch2 p (append_off_after off (SZ.v oa) (SZ.v cb)) (append_n_after off n (SZ.v cb)) pm i_after l2 prf2;
+      fold (mixed_list_match_n vmatch2 p off n pm (Append #t depth cb ca ob bp before oa ap after) l);
+      rewrite each (Append #t depth cb ca ob bp before oa ap after) as i;
+    }
+  }
+}
+```
+
+#pop-options
+
+let mixed_list_match_weaken
+  (#t: Type0) (#u: Type0)
+  (vmatch1 vmatch2: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (pm: perm)
+  (i: mixed_list t)
+  (l: list u)
+  (prf: (
+    (x: t) -> (pm0: perm) -> (y: u { List.Tot.memP y l }) ->
+    stt_ghost unit emp_inames
+      (vmatch1 pm0 x y)
+      (fun _ -> vmatch2 pm0 x y)
+  ))
+: stt_ghost unit emp_inames
+    (mixed_list_match vmatch1 p pm i l)
+    (fun _ -> mixed_list_match vmatch2 p pm i l)
+= mixed_list_match_n_weaken vmatch1 vmatch2 p 0 (SZ.v (mixed_list_length i)) pm i l prf
+
 ```pulse
 ghost
 fn base_mixed_list_match_n_length
