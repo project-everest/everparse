@@ -49,7 +49,7 @@ type cbor_tagged_serialized = {
 noeq
 type cbor_array ([@@@strictly_positive] cbor_raw: Type0) = {
   cbor_array_length_size: integer_size;
-  cbor_array_ptr: (ar: I.iterator cbor_raw { let len = SZ.v (I.iterator_length ar) in
+  cbor_array_ptr: (ar: I.mixed_list cbor_raw { let len = SZ.v (I.mixed_list_length ar) in
     FStar.UInt.fits len 64 /\
     raw_uint64_size_prop cbor_array_length_size (U64.uint_to_t len)
   });
@@ -66,7 +66,7 @@ type cbor_map_entry ([@@@strictly_positive] cbor_raw: Type0) = {
 noeq
 type cbor_map ([@@@strictly_positive] cbor_raw: Type0) = {
   cbor_map_length_size: integer_size;
-  cbor_map_ptr: (ar: I.iterator (cbor_map_entry cbor_raw) { let len = SZ.v (I.iterator_length ar) in
+  cbor_map_ptr: (ar: I.mixed_list (cbor_map_entry cbor_raw) { let len = SZ.v (I.mixed_list_length ar) in
     FStar.UInt.fits len 64 /\
     raw_uint64_size_prop cbor_map_length_size (U64.uint_to_t len)
   });
