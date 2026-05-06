@@ -31,6 +31,7 @@ BOOLEAN GotoReturnCheckPoint(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	frame.filled = FALSE;
 	uint64_t ep_status = GotoReturnValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
 	if (EverParseIsError(ep_status))
 	{
 		if (frame.filled)
@@ -50,6 +51,7 @@ static BOOLEAN GotoReturnCheckTagged(uint64_t bound, uint8_t *base, uint32_t len
 	EVERPARSE_ERROR_FRAME frame;
 	frame.filled = FALSE;
 	uint64_t ep_status = GotoReturnValidateTagged(bound,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
 	if (EverParseIsError(ep_status))
 	{
 		if (frame.filled)
@@ -66,6 +68,7 @@ exit:
 
 uint32_t GotoReturnProbeInPlaceCheckTagged(uint64_t bound, EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
 	uint32_t result = EVERPARSE_PROBE_FAILURE_INIT;
+
 	if(providedSize < 42U)
 	{
 		// Not enough space for probe

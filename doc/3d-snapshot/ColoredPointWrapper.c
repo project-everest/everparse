@@ -28,8 +28,10 @@ void DefaultErrorHandler(
 BOOLEAN ColoredPointCheckColoredPoint1(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	uint64_t ep_status;
+
 	frame.filled = FALSE;
 	ep_status = ColoredPointValidateColoredPoint1( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
 	if (EverParseIsError(ep_status))
 	{
 		if (frame.filled)
@@ -44,8 +46,10 @@ BOOLEAN ColoredPointCheckColoredPoint1(uint8_t *base, uint32_t len) {
 BOOLEAN ColoredPointCheckColoredPoint2(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	uint64_t ep_status;
+
 	frame.filled = FALSE;
 	ep_status = ColoredPointValidateColoredPoint2( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
 	if (EverParseIsError(ep_status))
 	{
 		if (frame.filled)

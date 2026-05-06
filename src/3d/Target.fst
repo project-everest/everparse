@@ -1006,11 +1006,11 @@ let print_c_entry
        ^ Printf.sprintf "EVERPARSE_ERROR_FRAME frame%s;\n\t" struct_zero
        ^ (if is_input_stream_buffer then ""
           else Printf.sprintf "EVERPARSE_INPUT_BUFFER input%s;\n\t" struct_zero)
-       ^ Printf.sprintf "uint64_t ep_status%s;\n\t" scalar_zero
+       ^ Printf.sprintf "uint64_t ep_status%s;\n\n\t" scalar_zero
        ^ "frame.filled = FALSE;\n\t"
        ^ (if is_input_stream_buffer then ""
           else "input = EverParseMakeInputBuffer(base);\n\t")
-       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);\n\t" name params
+       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);\n\n\t" name params
        ^ tail
      else
        (if goto_return then "BOOLEAN result = FALSE;\n\t" else "")
@@ -1018,7 +1018,7 @@ let print_c_entry
         "EVERPARSE_ERROR_FRAME frame%s;\n\t\
         frame.filled = FALSE;\n\t\
         %s\
-        uint64_t ep_status = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);\n\t\
+        uint64_t ep_status = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);\n\n\t\
         %s"
         struct_zero
         (if is_input_stream_buffer then ""
@@ -1093,7 +1093,7 @@ let print_c_entry
      in
      if hoist then
        (if goto_return then "uint32_t result = EVERPARSE_PROBE_FAILURE_INIT;\n\t" else "")
-       ^ Printf.sprintf "uint8_t *base%s;\n\t" scalar_zero
+       ^ Printf.sprintf "uint8_t *base%s;\n\n\t" scalar_zero
        ^ probe_prefix probe wrappedName ^ "\n\t"
        ^ (if goto_return then
             Printf.sprintf
@@ -1121,7 +1121,7 @@ let print_c_entry
               len
               tail)
      else
-       (if goto_return then "uint32_t result = EVERPARSE_PROBE_FAILURE_INIT;\n\t" else "")
+       (if goto_return then "uint32_t result = EVERPARSE_PROBE_FAILURE_INIT;\n\n\t" else "")
        ^ (if goto_return then
             Printf.sprintf 
               "%s\n\t\
@@ -1165,7 +1165,7 @@ let print_c_entry
        Printf.sprintf "EVERPARSE_ERROR_FRAME frame%s;\n\t" struct_zero
        ^ Printf.sprintf "EVERPARSE_INPUT_BUFFER input%s;\n\t" struct_zero
        ^ Printf.sprintf "uint64_t ep_status%s;\n\t" scalar_zero
-       ^ Printf.sprintf "uint64_t parsedSize%s;\n\t" scalar_zero
+       ^ Printf.sprintf "uint64_t parsedSize%s;\n\n\t" scalar_zero
        ^ "frame.filled = FALSE;\n\t\
           frame.typename_s = \"UNKNOWN\";\n\t\
           frame.fieldname = \"UNKNOWN\";\n\t\
@@ -1173,7 +1173,7 @@ let print_c_entry
           frame.error_code = 0uL;\n\t"
        ^ "input = EverParseMakeInputBuffer(base);\n\t"
        ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input, 0);\n\t" name params
-       ^ "parsedSize = EverParseGetValidatorErrorPos(ep_status);\n\t"
+       ^ "parsedSize = EverParseGetValidatorErrorPos(ep_status);\n\n\t"
        ^ tail
      else
        Printf.sprintf
@@ -1186,7 +1186,7 @@ let print_c_entry
               };\n\
         EVERPARSE_INPUT_BUFFER input = EverParseMakeInputBuffer(base);\n\t\
         uint64_t ep_status = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input, 0);\n\t\
-        uint64_t parsedSize = EverParseGetValidatorErrorPos(ep_status);\n\
+        uint64_t parsedSize = EverParseGetValidatorErrorPos(ep_status);\n\n\t\
         %s"
         name
         params
