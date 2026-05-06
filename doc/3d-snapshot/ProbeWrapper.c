@@ -103,17 +103,23 @@ uint32_t ProbeProbeAndCopyCheckIndirect(EVERPARSE_COPY_BUFFER_T probeDest, uint6
 
 	if(providedSize < 9U)
 	{
+		//
 		// Not enough space for probe
+		//
 		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
 	}
 	if(!ProbeInit("ProbeCheckIndirect", 9U, probeDest))
 	{
+		//
 		// ProbeInit failed
+		//
 		return EVERPARSE_PROBE_FAILURE_INIT;
 	}
 	if (!ProbeAndCopy(9U, 0, 0, probeAddr, probeDest))
 	{
+		//
 		// Probe failed
+		//
 		return EVERPARSE_PROBE_FAILURE_PROBE;
 	}
 	base = EverParseStreamOf(probeDest);
@@ -165,17 +171,23 @@ uint32_t ProbeProbeAndCopyCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPA
 
 	if(providedSize < 25U)
 	{
+		//
 		// Not enough space for probe
+		//
 		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
 	}
 	if(!ProbeInit("ProbeCheckMultiProbe", 25U, probeDest))
 	{
+		//
 		// ProbeInit failed
+		//
 		return EVERPARSE_PROBE_FAILURE_INIT;
 	}
 	if (!ProbeAndCopy(25U, 0, 0, probeAddr, probeDest))
 	{
+		//
 		// Probe failed
+		//
 		return EVERPARSE_PROBE_FAILURE_PROBE;
 	}
 	base = EverParseStreamOf(probeDest);
@@ -191,17 +203,23 @@ uint32_t ProbeProbeAndCopyAltCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVE
 
 	if(providedSize < 25U)
 	{
+		//
 		// Not enough space for probe
+		//
 		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
 	}
 	if(!ProbeInit("ProbeCheckMultiProbe", 25U, probeDest))
 	{
+		//
 		// ProbeInit failed
+		//
 		return EVERPARSE_PROBE_FAILURE_INIT;
 	}
 	if (!ProbeAndCopyAlt(25U, 0, 0, probeAddr, probeDest))
 	{
+		//
 		// Probe failed
+		//
 		return EVERPARSE_PROBE_FAILURE_PROBE;
 	}
 	base = EverParseStreamOf(probeDest);
@@ -271,17 +289,23 @@ uint32_t ProbeProbeAndCopyCheckProbeOnly(EVERPARSE_COPY_BUFFER_T probeDest, uint
 
 	if(providedSize < 8U)
 	{
+		//
 		// Not enough space for probe
+		//
 		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
 	}
 	if(!ProbeInit("ProbeCheckProbeOnly", 8U, probeDest))
 	{
+		//
 		// ProbeInit failed
+		//
 		return EVERPARSE_PROBE_FAILURE_INIT;
 	}
 	if (!ProbeAndCopy(8U, 0, 0, probeAddr, probeDest))
 	{
+		//
 		// Probe failed
+		//
 		return EVERPARSE_PROBE_FAILURE_PROBE;
 	}
 	base = EverParseStreamOf(probeDest);
@@ -315,17 +339,23 @@ uint32_t ProbeProbeAndCopyCheckBothEntrypoints(EVERPARSE_COPY_BUFFER_T probeDest
 
 	if(providedSize < 8U)
 	{
+		//
 		// Not enough space for probe
+		//
 		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
 	}
 	if(!ProbeInit("ProbeCheckBothEntrypoints", 8U, probeDest))
 	{
+		//
 		// ProbeInit failed
+		//
 		return EVERPARSE_PROBE_FAILURE_INIT;
 	}
 	if (!ProbeAndCopy(8U, 0, 0, probeAddr, probeDest))
 	{
+		//
 		// Probe failed
+		//
 		return EVERPARSE_PROBE_FAILURE_PROBE;
 	}
 	base = EverParseStreamOf(probeDest);
@@ -377,17 +407,23 @@ uint32_t ProbeMyData(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint
 
 	if(providedSize < 8U)
 	{
+		//
 		// Not enough space for probe
+		//
 		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
 	}
 	if(!ProbeInit("ProbeCheckNamedProbeEp", 8U, probeDest))
 	{
+		//
 		// ProbeInit failed
+		//
 		return EVERPARSE_PROBE_FAILURE_INIT;
 	}
 	if (!ProbeAndCopy(8U, 0, 0, probeAddr, probeDest))
 	{
+		//
 		// Probe failed
+		//
 		return EVERPARSE_PROBE_FAILURE_PROBE;
 	}
 	base = EverParseStreamOf(probeDest);
@@ -421,17 +457,23 @@ uint32_t ProbeAll(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_
 
 	if(providedSize < 8U)
 	{
+		//
 		// Not enough space for probe
+		//
 		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
 	}
 	if(!ProbeInit("CheckAll", 8U, probeDest))
 	{
+		//
 		// ProbeInit failed
+		//
 		return EVERPARSE_PROBE_FAILURE_INIT;
 	}
 	if (!ProbeAndCopy(8U, 0, 0, probeAddr, probeDest))
 	{
+		//
 		// Probe failed
+		//
 		return EVERPARSE_PROBE_FAILURE_PROBE;
 	}
 	base = EverParseStreamOf(probeDest);

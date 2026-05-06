@@ -1033,13 +1033,13 @@ let print_c_entry
       Printf.sprintf 
      "if(providedSize < %s)\n\t\
       {\n\t\t\
-        // Not enough space for probe\n\t\t\
+        //\n\t\t// Not enough space for probe\n\t\t//\n\t\t\
         result = EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;\n\t\t\
         goto exit;\n\t\
       }\n\t\
       if(!%s(\"%s\", %s, probeDest))\n\t\
       {\n\t\t\
-        // ProbeInit failed\n\t\t\
+        //\n\t\t// ProbeInit failed\n\t\t//\n\t\t\
         result = EVERPARSE_PROBE_FAILURE_INIT;\n\t\t\
         goto exit;\n\t\
       }"
@@ -1051,12 +1051,12 @@ let print_c_entry
       Printf.sprintf 
      "if(providedSize < %s)\n\t\
       {\n\t\t\
-        // Not enough space for probe\n\t\t\
+        //\n\t\t// Not enough space for probe\n\t\t//\n\t\t\
         return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;\n\t\
       }\n\t\
       if(!%s(\"%s\", %s, probeDest))\n\t\
       {\n\t\t\
-        // ProbeInit failed\n\t\t\
+        //\n\t\t// ProbeInit failed\n\t\t//\n\t\t\
         return EVERPARSE_PROBE_FAILURE_INIT;\n\t\
       }"
       len
@@ -1099,7 +1099,7 @@ let print_c_entry
             Printf.sprintf
               "if (!%s(%s, 0, 0, probeAddr, probeDest))\n\t\
                {\n\t\t\
-                 // Probe failed\n\t\t\
+                 //\n\t\t// Probe failed\n\t\t//\n\t\t\
                  result = EVERPARSE_PROBE_FAILURE_PROBE;\n\t\t\
                  goto exit;\n\t\
                }\n\t\
@@ -1112,7 +1112,7 @@ let print_c_entry
             Printf.sprintf
               "if (!%s(%s, 0, 0, probeAddr, probeDest))\n\t\
                {\n\t\t\
-                 // Probe failed\n\t\t\
+                 //\n\t\t// Probe failed\n\t\t//\n\t\t\
                  return EVERPARSE_PROBE_FAILURE_PROBE;\n\t\
                }\n\t\
                base = EverParseStreamOf(probeDest);\n\t\
@@ -1127,7 +1127,7 @@ let print_c_entry
               "%s\n\t\
                if (!%s(%s, 0, 0, probeAddr, probeDest))\n\t\
                {\n\t\t\
-                 // Probe failed\n\t\t\
+                 //\n\t\t// Probe failed\n\t\t//\n\t\t\
                  result = EVERPARSE_PROBE_FAILURE_PROBE;\n\t\t\
                  goto exit;\n\t\
                }\n\t\
@@ -1142,7 +1142,7 @@ let print_c_entry
               "%s\n\t\
                if (!%s(%s, 0, 0, probeAddr, probeDest))\n\t\
                {\n\t\t\
-                 // Probe failed\n\t\t\
+                 //\n\t\t// Probe failed\n\t\t//\n\t\t\
                  return EVERPARSE_PROBE_FAILURE_PROBE;\n\t\
                }\n\t\
                uint8_t *base = EverParseStreamOf(probeDest);\n\t\
