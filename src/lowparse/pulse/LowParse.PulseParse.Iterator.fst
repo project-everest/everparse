@@ -5342,12 +5342,6 @@ ensures
 // ===== mixed_list_insert_sorted =====
 
 // Sorted predicate for a list with respect to a strict total order
-let rec sorted_with (#u: Type) (lt_spec: u -> u -> bool) (l: list u) : Tot bool (decreases l) =
-  match l with
-  | [] -> true
-  | [_] -> true
-  | x :: tl -> lt_spec x (List.Tot.hd tl) && sorted_with lt_spec tl
-
 // Comparison function type: compares two elements, preserving vmatch.
 // Returns 0sz if v1 < v2, 1sz if v1 == v2, 2sz if v2 < v1.
 inline_for_extraction
@@ -5371,44 +5365,44 @@ let cmp_t
         SZ.v r <= 2
       ))
 
-// Lemma: sorted_with is preserved for suffixes
-let sorted_with_suffix (#u: Type) (lt_spec: u -> u -> bool) (l: list u)
-  : Lemma (requires Cons? l /\ sorted_with lt_spec l)
-          (ensures sorted_with lt_spec (List.Tot.tl l))
+// Lemma: List.Tot.Properties.sorted is preserved for suffixes
+let sorted_suffix (#u: Type) (lt_spec: u -> u -> bool) (l: list u)
+  : Lemma (requires Cons? l /\ List.Tot.Properties.sorted lt_spec l)
+          (ensures List.Tot.Properties.sorted lt_spec (List.Tot.tl l))
 = match l with
   | [_] -> ()
-  | _ :: tl -> ()
+  | _ :: _ -> ()
 
 // Lemma: in a sorted list, lt l[i] l[i+1] for valid i
-let rec sorted_with_adjacent (#u: Type) (lt_spec: u -> u -> bool) (l: list u) (i: nat)
-  : Lemma (requires sorted_with lt_spec l /\ i + 1 < List.Tot.length l)
+let rec sorted_adjacent (#u: Type) (lt_spec: u -> u -> bool) (l: list u) (i: nat)
+  : Lemma (requires List.Tot.Properties.sorted lt_spec l /\ i + 1 < List.Tot.length l)
           (ensures lt_spec (List.Tot.index l i) (List.Tot.index l (i + 1)) == true)
           (decreases i)
 = match l with
   | _ :: tl ->
     if i = 0 then ()
-    else sorted_with_adjacent lt_spec tl (i - 1)
+    else sorted_adjacent lt_spec tl (i - 1)
 
 // Lemma: sorted insertion preserves sortedness
 #push-options "--fuel 2 --ifuel 1 --z3rlimit 40"
 let rec sorted_insert_lemma (#u: Type) (lt_spec: u -> u -> bool) (l: list u) (y: u) (k: nat)
   : Lemma
     (requires
-      sorted_with lt_spec l /\
+      List.Tot.Properties.sorted lt_spec l /\
       k <= List.Tot.length l /\
       (forall (i: nat). i < k ==> i < List.Tot.length l /\ lt_spec (List.Tot.index l i) y == true) /\
       (k == List.Tot.length l \/ (k < List.Tot.length l /\ lt_spec y (List.Tot.index l k) == true)) /\
       (forall (a b c: u). lt_spec a b == true /\ lt_spec b c == true ==> lt_spec a c == true))
     (ensures (
       let (l1, l2) = List.Tot.splitAt k l in
-      sorted_with lt_spec (List.Tot.append l1 (y :: l2)) == true))
+      List.Tot.Properties.sorted lt_spec (List.Tot.append l1 (y :: l2)) == true))
     (decreases k)
 = if k = 0 then ()
   else
     match l with
     | [] -> ()
     | x :: tl ->
-      assert (sorted_with lt_spec tl);
+      assert (List.Tot.Properties.sorted lt_spec tl);
       assert (k - 1 <= List.Tot.length tl);
       let aux (i: nat) : Lemma (requires i < k - 1) (ensures i < List.Tot.length tl /\ lt_spec (List.Tot.index tl i) y == true)
         = assert (List.Tot.index tl i == List.Tot.index l (i + 1));
@@ -5457,7 +5451,7 @@ let mixed_list_insert_sorted_post
         (exists (k_pos: nat).
           k_pos <= List.Tot.length (Ghost.reveal l) /\
           l_result == List.Tot.append (list_narrow (Ghost.reveal l) 0 k_pos) (Ghost.reveal y :: list_narrow (Ghost.reveal l) k_pos (List.Tot.length (Ghost.reveal l) - k_pos))) /\
-        sorted_with lt_spec l_result == true
+        List.Tot.Properties.sorted lt_spec l_result == true
       )
   else
     mixed_list_match vmatch p pm ml (Ghost.reveal l) **
@@ -5512,7 +5506,7 @@ requires
   (exists* v1 v2 v3 v4 vy.
     R.pts_to r1 v1 ** R.pts_to r2 v2 ** R.pts_to r3 v3 ** R.pts_to r4 v4 ** R.pts_to ry vy) **
   pure (
-    sorted_with (Ghost.reveal lt_spec) (Ghost.reveal l) == true /\
+    List.Tot.Properties.sorted (Ghost.reveal lt_spec) (Ghost.reveal l) == true /\
     SZ.fits (List.Tot.length (Ghost.reveal l) + 1) /\
     (forall (a b c: u). Ghost.reveal lt_spec a b == true /\ Ghost.reveal lt_spec b c == true ==> Ghost.reveal lt_spec a c == true) /\
     (forall (a: u). Ghost.reveal lt_spec a a == false)
@@ -5731,7 +5725,7 @@ ensures
     let l_before : Ghost.erased (list u) = list_narrow (Ghost.reveal l) 0 (SZ.v k_val);
     let l_after : Ghost.erased (list u) = list_narrow (Ghost.reveal l) (SZ.v k_val) (SZ.v rest_sz);
     let l_result : Ghost.erased (list u) = List.Tot.append (Ghost.reveal l_before) (Ghost.reveal y :: Ghost.reveal l_after);
-    // Establish sorted_with on result
+    // Establish List.Tot.Properties.sorted on result
     assert (pure (
       SZ.v k_val <= List.Tot.length (Ghost.reveal l) /\
       (SZ.v k_val == List.Tot.length (Ghost.reveal l) \/
@@ -5982,7 +5976,7 @@ ensures
       (exists (k_pos: nat).
         k_pos <= List.Tot.length (Ghost.reveal l) /\
         Ghost.reveal l_result == List.Tot.append (list_narrow (Ghost.reveal l) 0 k_pos) (Ghost.reveal y :: list_narrow (Ghost.reveal l) k_pos (List.Tot.length (Ghost.reveal l) - k_pos))) /\
-      sorted_with (Ghost.reveal lt_spec) (Ghost.reveal l_result) == true
+      List.Tot.Properties.sorted (Ghost.reveal lt_spec) (Ghost.reveal l_result) == true
     ) ();
     // Fold postcondition explicitly (Pulse can't auto-unfold the let definition)
     fold (mixed_list_insert_sorted_post vmatch p (Ghost.reveal lt_spec) pm pm_y ml l y_elem y r1 r2 r3 r4 ry true);
