@@ -4721,7 +4721,8 @@ let iterator_match
       base_mixed_list_match vmatch p pm i.before l1 **
       mixed_list_match vmatch p pm i.after l2 **
       pure (
-        l == List.Tot.append l1 l2
+        l == List.Tot.append l1 l2 /\
+        (base_mixed_list_length i.before == 0sz ==> mixed_list_length i.after == 0sz)
       )
 
 
