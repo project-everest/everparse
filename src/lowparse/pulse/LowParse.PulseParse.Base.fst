@@ -315,6 +315,41 @@ ensures
     };
 }
 
+// Weaken pts_to_parsed to pts_to_parsed_strong_prefix at half perm, with a trade back.
+// The trade body gathers the two halves to recover the original bytes and refolds pts_to_parsed.
+ghost fn pts_to_parsed_weaken_strong_prefix
+  (#k: parser_kind) (#t: Type0) (p: parser k t)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+requires
+  pts_to_parsed p input #pm v **
+  pure (k.parser_kind_subkind == Some ParserStrong)
+ensures
+  pts_to_parsed_strong_prefix p input #(pm /. 2.0R) v **
+  Trade.trade
+    (pts_to_parsed_strong_prefix p input #(pm /. 2.0R) v)
+    (pts_to_parsed p input #pm v)
+{
+  unfold (pts_to_parsed p input #pm v);
+  with w. assert (S.pts_to input #pm w);
+  // pts_to_parsed_prop implies pts_to_parsed_strong_prefix_prop (when ParserStrong)
+  assert (pure (pts_to_parsed_strong_prefix_prop p w v));
+  S.share input;
+  fold (pts_to_parsed_strong_prefix p input #(pm /. 2.0R) v);
+  intro
+    (Trade.trade
+      (pts_to_parsed_strong_prefix p input #(pm /. 2.0R) v)
+      (pts_to_parsed p input #pm v)
+    )
+    #(S.pts_to input #(pm /. 2.0R) w ** pure (pts_to_parsed_prop p w v))
+    fn _ {
+      unfold (pts_to_parsed_strong_prefix p input #(pm /. 2.0R) v);
+      S.gather input;
+      fold (pts_to_parsed p input #pm v);
+    };
+}
+
 module R = Pulse.Lib.Reference
 
 inline_for_extraction
@@ -786,6 +821,29 @@ let zero_copy_parse_strong_prefix
         (vmatch res v)
         (pts_to_parsed_strong_prefix p input #pm v)
     )
+
+inline_for_extraction
+fn zero_copy_parse_of_strong_prefix
+  (#t' #t: Type0)
+  (#vmatch: t' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (r: zero_copy_parse_strong_prefix vmatch p)
+  (_: squash ((Ghost.reveal k).parser_kind_subkind == Some ParserStrong))
+: zero_copy_parse vmatch p
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  pts_to_parsed_weaken_strong_prefix p input;
+  let res = r input #(pm /. 2.0R) #v;
+  Trade.trans
+    (vmatch res v)
+    (pts_to_parsed_strong_prefix p input #(pm /. 2.0R) v)
+    (pts_to_parsed p input #pm v);
+  res
+}
 
 ghost fn pts_to_parsed_strong_prefix_elim
   (#k: parser_kind) (#t: Type0) (#p: parser k t)

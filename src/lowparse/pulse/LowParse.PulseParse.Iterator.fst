@@ -4893,178 +4893,62 @@ fn iterator_next
   (j: LPS.jumper p)
   (pm: perm) (r: R.ref (iterator t)) (i_orig: Ghost.erased (iterator t)) (l: Ghost.erased (list u))
   (vmatch_share: share_t vmatch) (vmatch_gather: gather_t vmatch)
-  (zcp: zero_copy_parse_strong_prefix (vmatch 1.0R) p)
+  (zcp: zero_copy_parse (vmatch 1.0R) p)
 requires
   R.pts_to r (Ghost.reveal i_orig) ** iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l) ** pure (Cons? (Ghost.reveal l))
 returns res: t
 ensures
   iterator_next_post vmatch p pm r (Ghost.reveal i_orig) (Ghost.reveal l) res
 {
-  let i = R.read r;
-  rewrite (iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l))
-    as (iterator_match vmatch p pm i (Ghost.reveal l));
-  unfold (iterator_match vmatch p pm i (Ghost.reveal l));
-  with l1 l2 . assert (
-    base_mixed_list_match vmatch p pm i.before l1 **
-    mixed_list_match vmatch p pm i.after l2 **
-    pure (Ghost.reveal l == List.Tot.append l1 l2 /\
-          (base_mixed_list_length i.before == 0sz ==> mixed_list_length i.after == 0sz))
-  );
-  let len_sz = base_mixed_list_length i.before;
-  // Prove len_sz > 0: if len==0 then after==0, so l==[], contradiction
-  base_mixed_list_match_length vmatch p pm i.before (Ghost.reveal l1);
-  if (SZ.eq len_sz 0sz) {
-    mixed_list_match_length vmatch p pm i.after (Ghost.reveal l2);
-    unreachable ()
-  } else {
-  // Call base_mixed_list_next_n (non-recursive)
-  rewrite (base_mixed_list_match vmatch p pm i.before l1)
-    as (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length i.before)) pm i.before l1);
-  rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length i.before)) pm i.before l1)
-    as (base_mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm i.before l1);
-  let x = base_mixed_list_next_n vmatch p 0 (SZ.v len_sz) 0sz len_sz pm i.before l1
-    vmatch_share vmatch_gather j zcp;
-  unfold (mixed_list_next_n_post vmatch p 0 (SZ.v len_sz) pm (Base i.before) (Ghost.reveal l1) x);
-  with pm_v hd_val tl_val . assert (
-    vmatch pm_v x hd_val **
-    mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base i.before) tl_val **
+  let eos_res = iterator_next_eos vmatch p j pm r i_orig l vmatch_share vmatch_gather;
+  unfold (iterator_next_eos_post vmatch p pm r (Ghost.reveal i_orig) (Ghost.reveal l) eos_res);
+  with pm_v hd_val tl_l it' pm' . assert (
+    elt_or_serialized_match vmatch p pm_v eos_res hd_val **
+    R.pts_to r it' **
+    iterator_match vmatch p pm' it' tl_l **
     trade
-      (vmatch pm_v x hd_val **
-       mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base i.before) tl_val)
-      (mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm (Base i.before) l1) **
-    pure (SZ.v len_sz > 0 /\ Ghost.reveal l1 == hd_val :: tl_val)
+      (elt_or_serialized_match vmatch p pm_v eos_res hd_val **
+       iterator_match vmatch p pm' it' tl_l)
+      (iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l)) **
+    pure (Ghost.reveal l == hd_val :: tl_l)
   );
-  if (SZ.eq len_sz 1sz) {
-    // Case len == 1: tail is l2, call iterator_start on i.after
-    rewrite (mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base i.before) tl_val)
-      as (mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Base i.before) tl_val);
-    // tl l == tl_val ++ l2 == [] ++ l2 == l2
-    mixed_list_match_n_length vmatch p 1 0 (pm /. 2.0R) (Base i.before) (Ghost.reveal tl_val);
-    List.Tot.Properties.append_l_nil (Ghost.reveal l2);
-    let it_new = iterator_start vmatch p j pm i.after l2 vmatch_share vmatch_gather;
-    with pm_after . assert (
-      iterator_match vmatch p pm_after it_new l2 **
-      trade (iterator_match vmatch p pm_after it_new l2)
-           (mixed_list_match vmatch p pm i.after l2)
-    );
-    R.write r it_new;
-    // Build composite trade
-    // l == (hd_val :: tl_val) ++ l2 == hd_val :: (tl_val ++ l2) == hd_val :: l2 (since tl_val == [])
-    intro_trade
-      (vmatch pm_v x hd_val **
-       iterator_match vmatch p pm_after it_new (Ghost.reveal l2))
-      (iterator_match vmatch p pm i (Ghost.reveal l))
-      (mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Base i.before) tl_val **
-       trade (iterator_match vmatch p pm_after it_new l2)
-            (mixed_list_match vmatch p pm i.after l2) **
-       trade (vmatch pm_v x hd_val **
-              mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base i.before) tl_val)
-             (mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm (Base i.before) l1))
-      fn _ {
-        rewrite (iterator_match vmatch p pm_after it_new (Ghost.reveal l2))
-          as (iterator_match vmatch p pm_after it_new l2);
-        elim_trade
-          (iterator_match vmatch p pm_after it_new l2)
-          (mixed_list_match vmatch p pm i.after l2);
-        rewrite (mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Base i.before) tl_val)
-          as (mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base i.before) tl_val);
-        elim_trade
+  match eos_res {
+    EElement x -> {
+      rewrite (elt_or_serialized_match vmatch p pm_v (EElement x) hd_val)
+        as (vmatch pm_v x hd_val);
+      rewrite (trade
+        (elt_or_serialized_match vmatch p pm_v (EElement x) hd_val **
+         iterator_match vmatch p pm' it' tl_l)
+        (iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l)))
+        as (trade
           (vmatch pm_v x hd_val **
-           mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base i.before) tl_val)
-          (mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm (Base i.before) l1);
-        unfold (mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm (Base i.before) l1);
-        rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm i.before l1)
-          as (base_mixed_list_match vmatch p pm i.before l1);
-        fold (iterator_match vmatch p pm i (Ghost.reveal l));
-      };
-    rewrite (trade (vmatch pm_v x hd_val ** iterator_match vmatch p pm_after it_new (Ghost.reveal l2))
-                   (iterator_match vmatch p pm i (Ghost.reveal l)))
-      as (trade (vmatch pm_v x hd_val ** iterator_match vmatch p pm_after it_new (Ghost.reveal l2))
-                (iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l)));
-    fold (iterator_next_post vmatch p pm r (Ghost.reveal i_orig) (Ghost.reveal l) x);
-    x
-  } else {
-    // Case len > 1: narrow the tail base, share after
-    // Get length fact before consuming the resource
-    mixed_list_match_n_length vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base i.before) (Ghost.reveal tl_val);
-    unfold (mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base i.before) tl_val);
-    let n_tail_sz = SZ.sub len_sz 1sz;
-    rewrite (base_mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) i.before tl_val)
-      as (base_mixed_list_match_n vmatch p 1 (SZ.v n_tail_sz) (pm /. 2.0R) i.before tl_val);
-    let bi_tail = base_mixed_list_narrow_n vmatch p j 1 (SZ.v n_tail_sz) (pm /. 2.0R) i.before tl_val 1sz n_tail_sz;
-    // list_narrow tl_val (1-1) n_tail = list_narrow tl_val 0 (len-1) = tl_val
-    FStar.List.Pure.Properties.splitAt_length_total (Ghost.reveal tl_val);
-    rewrite (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail (list_narrow tl_val (SZ.v 1sz - 1) (SZ.v n_tail_sz)))
-      as (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail (Ghost.reveal tl_val));
-    rewrite (trade (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail (list_narrow tl_val (SZ.v 1sz - 1) (SZ.v n_tail_sz)))
-                   (base_mixed_list_match_n vmatch p 1 (SZ.v n_tail_sz) (pm /. 2.0R) i.before tl_val))
-      as (trade (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail (Ghost.reveal tl_val))
-               (base_mixed_list_match_n vmatch p 1 (SZ.v n_tail_sz) (pm /. 2.0R) i.before tl_val));
-    // Share after
-    mixed_list_match_share vmatch p pm i.after (Ghost.reveal l2) vmatch_share;
-    // Form new iterator at pm/2
-    let it_new : iterator t = { before = bi_tail; after = i.after };
-    rewrite (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail (Ghost.reveal tl_val))
-      as (base_mixed_list_match vmatch p (pm /. 2.0R) it_new.before (Ghost.reveal tl_val));
-    rewrite (mixed_list_match vmatch p (pm /. 2.0R) i.after l2)
-      as (mixed_list_match vmatch p (pm /. 2.0R) it_new.after (Ghost.reveal l2));
-    // tl l == tl_val ++ l2
-    let tl_l : Ghost.erased (list u) = Ghost.hide (Ghost.reveal tl_val @ Ghost.reveal l2);
-    List.Tot.Properties.append_cons_l (Ghost.reveal hd_val) (Ghost.reveal tl_val) (Ghost.reveal l2);
-    fold (iterator_match vmatch p (pm /. 2.0R) it_new (Ghost.reveal tl_l));
-    R.write r it_new;
-    // Build composite trade
-    intro_trade
-      (vmatch pm_v x hd_val **
-       iterator_match vmatch p (pm /. 2.0R) it_new (Ghost.reveal tl_l))
-      (iterator_match vmatch p pm i (Ghost.reveal l))
-      (mixed_list_match vmatch p (pm /. 2.0R) i.after l2 **
-       trade (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail (Ghost.reveal tl_val))
-            (base_mixed_list_match_n vmatch p 1 (SZ.v n_tail_sz) (pm /. 2.0R) i.before tl_val) **
-       trade (vmatch pm_v x hd_val **
-              mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base i.before) tl_val)
-             (mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm (Base i.before) l1))
-      fn _ {
-        unfold (iterator_match vmatch p (pm /. 2.0R) it_new (Ghost.reveal tl_l));
-        with l1' l2' . assert (
-          base_mixed_list_match vmatch p (pm /. 2.0R) it_new.before l1' **
-          mixed_list_match vmatch p (pm /. 2.0R) it_new.after l2'
-        );
-        base_mixed_list_match_length vmatch p (pm /. 2.0R) it_new.before (Ghost.reveal l1');
-        mixed_list_match_length vmatch p (pm /. 2.0R) it_new.after (Ghost.reveal l2');
-        List.Tot.Properties.append_length_inv_head (Ghost.reveal l1') (Ghost.reveal l2') (Ghost.reveal tl_val) (Ghost.reveal l2);
-        rewrite (base_mixed_list_match vmatch p (pm /. 2.0R) it_new.before l1')
-          as (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail (Ghost.reveal tl_val));
-        rewrite (mixed_list_match vmatch p (pm /. 2.0R) it_new.after l2')
-          as (mixed_list_match vmatch p (pm /. 2.0R) i.after l2);
-        // Gather after: spare (pm/2) + from iterator (pm/2) → pm
-        mixed_list_match_gather vmatch p (pm /. 2.0R) (pm /. 2.0R) i.after (Ghost.reveal l2) (Ghost.reveal l2) vmatch_gather;
-        rewrite (mixed_list_match vmatch p ((pm /. 2.0R) +. (pm /. 2.0R)) i.after l2)
-          as (mixed_list_match vmatch p pm i.after l2);
-        // Recover base_mixed_list_match_n via narrow trade
-        elim_trade
-          (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail (Ghost.reveal tl_val))
-          (base_mixed_list_match_n vmatch p 1 (SZ.v n_tail_sz) (pm /. 2.0R) i.before tl_val);
-        rewrite (base_mixed_list_match_n vmatch p 1 (SZ.v n_tail_sz) (pm /. 2.0R) i.before tl_val)
-          as (base_mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) i.before tl_val);
-        fold (mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base i.before) tl_val);
-        // Recover original via next_n trade
-        elim_trade
-          (vmatch pm_v x hd_val **
-           mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base i.before) tl_val)
-          (mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm (Base i.before) l1);
-        unfold (mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm (Base i.before) l1);
-        rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm i.before l1)
-          as (base_mixed_list_match vmatch p pm i.before l1);
-        fold (iterator_match vmatch p pm i (Ghost.reveal l));
-      };
-    rewrite (trade (vmatch pm_v x hd_val ** iterator_match vmatch p (pm /. 2.0R) it_new (Ghost.reveal tl_l))
-                   (iterator_match vmatch p pm i (Ghost.reveal l)))
-      as (trade (vmatch pm_v x hd_val ** iterator_match vmatch p (pm /. 2.0R) it_new (Ghost.reveal tl_l))
-                (iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l)));
-    fold (iterator_next_post vmatch p pm r (Ghost.reveal i_orig) (Ghost.reveal l) x);
-    x
-  }
+           iterator_match vmatch p pm' it' tl_l)
+          (iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l)));
+      fold (iterator_next_post vmatch p pm r (Ghost.reveal i_orig) (Ghost.reveal l) x);
+      x
+    }
+    ESerialized pl -> {
+      rewrite (elt_or_serialized_match vmatch p pm_v (ESerialized pl) hd_val)
+        as (pts_to_parsed p pl #pm_v hd_val);
+      let x = zcp pl #pm_v #hd_val;
+      // Rewrite the eos trade to use pts_to_parsed
+      rewrite (trade
+        (elt_or_serialized_match vmatch p pm_v (ESerialized pl) hd_val **
+         iterator_match vmatch p pm' it' tl_l)
+        (iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l)))
+        as (trade
+          (pts_to_parsed p pl #pm_v hd_val **
+           iterator_match vmatch p pm' it' tl_l)
+          (iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l)));
+      // Compose trades: vmatch ==> pts_to_parsed ==> (with iterator_match) ==> iterator_match_orig
+      Trade.trans_hyp_l
+        (vmatch 1.0R x hd_val)
+        (pts_to_parsed p pl #pm_v hd_val)
+        (iterator_match vmatch p pm' it' tl_l)
+        (iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l));
+      fold (iterator_next_post vmatch p pm r (Ghost.reveal i_orig) (Ghost.reveal l) x);
+      x
+    }
   }
 }
 ```
