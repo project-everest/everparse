@@ -2404,3 +2404,68 @@ let cbor_raw_match_eq
 : Lemma (cbor_raw_match pm xl xh == cbor_raw_match_aux parse_raw_data_item (vmatch_with_perm_guard xh cbor_raw_match) pm xl xh)
 = assert_norm (cbor_raw_match == vmatch_with_perm_rec (cbor_raw_match_aux parse_raw_data_item));
   vmatch_with_perm_rec_eq (cbor_raw_match_aux parse_raw_data_item) pm xl xh
+
+ghost fn perm_guard_unfold_weaken
+  (xh: raw_data_item)
+  (x1: cbor_raw)
+  (pm0: perm)
+  (x2: raw_data_item { x2 << xh })
+requires vmatch_with_perm_guard xh cbor_raw_match pm0 x1 x2
+ensures cbor_raw_match pm0 x1 x2
+{
+  let _ = vmatch_with_perm_guard_unfold xh cbor_raw_match pm0 x1 x2;
+  ()
+}
+
+ghost fn perm_guard_fold_weaken
+  (xh: raw_data_item)
+  (x1: cbor_raw)
+  (pm0: perm)
+  (x2: raw_data_item { x2 << xh })
+requires cbor_raw_match pm0 x1 x2
+ensures vmatch_with_perm_guard xh cbor_raw_match pm0 x1 x2
+{
+  vmatch_with_perm_guard_fold xh cbor_raw_match pm0 x1 x2 ();
+}
+
+#push-options "--z3rlimit 512 --fuel 2 --ifuel 2"
+
+ghost fn cbor_raw_match_unfold_aux
+  (xl: cbor_raw)
+  (#pm: perm)
+  (#xh: Ghost.erased raw_data_item)
+requires cbor_raw_match pm xl xh
+ensures cbor_raw_match_aux parse_raw_data_item cbor_raw_match pm xl xh
+{
+  cbor_raw_match_eq pm xl (Ghost.reveal xh);
+  rewrite (cbor_raw_match pm xl (Ghost.reveal xh))
+       as (cbor_raw_match_aux parse_raw_data_item (vmatch_with_perm_guard (Ghost.reveal xh) cbor_raw_match) pm xl (Ghost.reveal xh));
+  cbor_raw_match_aux_weaken
+    (vmatch_with_perm_guard (Ghost.reveal xh) cbor_raw_match)
+    cbor_raw_match
+    parse_raw_data_item
+    xl
+    (fun (x1: cbor_raw) (pm0: perm) (x2: raw_data_item { x2 << Ghost.reveal xh }) ->
+      perm_guard_unfold_weaken (Ghost.reveal xh) x1 pm0 x2);
+}
+
+ghost fn cbor_raw_match_fold_aux
+  (xl: cbor_raw)
+  (#pm: perm)
+  (#xh: Ghost.erased raw_data_item)
+requires cbor_raw_match_aux parse_raw_data_item cbor_raw_match pm xl xh
+ensures cbor_raw_match pm xl xh
+{
+  cbor_raw_match_aux_weaken
+    cbor_raw_match
+    (vmatch_with_perm_guard (Ghost.reveal xh) cbor_raw_match)
+    parse_raw_data_item
+    xl
+    (fun (x1: cbor_raw) (pm0: perm) (x2: raw_data_item { x2 << Ghost.reveal xh }) ->
+      perm_guard_fold_weaken (Ghost.reveal xh) x1 pm0 x2);
+  cbor_raw_match_eq pm xl (Ghost.reveal xh);
+  rewrite (cbor_raw_match_aux parse_raw_data_item (vmatch_with_perm_guard (Ghost.reveal xh) cbor_raw_match) pm xl (Ghost.reveal xh))
+       as (cbor_raw_match pm xl (Ghost.reveal xh));
+}
+
+#pop-options
