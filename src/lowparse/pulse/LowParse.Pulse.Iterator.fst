@@ -615,3 +615,400 @@ fn l2r_write_mixed_list
 ```
 
 #pop-options
+
+// =============================================
+// compute_remaining_size for mixed_list_match
+// =============================================
+
+// Helper: compute_remaining_size for base_mixed_list (Serialized case)
+// Just jumps to find the byte length and subtracts from remaining.
+#push-options "--z3rlimit 200 --fuel 1 --ifuel 1"
+
+```pulse
+fn compute_remaining_size_base_serialized
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (#p: parser k u)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (j: LPS.jumper p)
+  (pm: perm)
+  (sp: perm)
+  (count: SZ.t)
+  (pl: S.slice U8.t)
+  (len: SZ.t)
+  (l: Ghost.erased (nlist (SZ.v len) u))
+  (out: R.ref SZ.t)
+  (#v: Ghost.erased SZ.t)
+requires
+  base_mixed_list_match_n vmatch p 0 (SZ.v len) pm (Serialized #t sp count pl) l **
+  R.pts_to out v
+returns res: bool
+ensures exists* v' .
+  base_mixed_list_match_n vmatch p 0 (SZ.v len) pm (Serialized #t sp count pl) l **
+  R.pts_to out v' **
+  pure (
+    let bs = Seq.length (bare_serialize (serialize_nlist (SZ.v len) s) l) in
+    (res == true <==> bs <= SZ.v v) /\
+    (res == true ==> bs + SZ.v v' == SZ.v v)
+  )
+{
+  unfold (base_mixed_list_match_n vmatch p 0 (SZ.v len) pm (Serialized #t sp count pl) l);
+  with l_all . assert (pts_to_parsed_strong_prefix (parse_nlist (0 + SZ.v len) p) pl #(pm *. sp) l_all);
+  rewrite (pts_to_parsed_strong_prefix (parse_nlist (0 + SZ.v len) p) pl #(pm *. sp) l_all)
+    as (pts_to_parsed_strong_prefix (parse_nlist (SZ.v len) p) pl #(pm *. sp) l_all);
+  pts_to_parsed_strong_prefix_elim pl;
+  with w . assert (S.pts_to pl #(pm *. sp) w);
+  S.pts_to_len pl;
+  intro_pure (LPS.jumper_pre' (parse_nlist (SZ.v len) p) 0sz w) ();
+  let byte_len = LPV.jump_nlist j len pl 0sz;
+  serializer_correct_implies_complete (parse_nlist (SZ.v len) p) (bare_serialize (serialize_nlist (SZ.v len) s));
+  validator_success_pos_bound (parse_nlist (SZ.v len) p) w byte_len;
+  drop_ (pure (LPS.validator_success (parse_nlist (SZ.v len) p) 0sz w byte_len));
+  elim_trade (S.pts_to pl #(pm *. sp) w) (pts_to_parsed_strong_prefix (parse_nlist (SZ.v len) p) pl #(pm *. sp) l_all);
+  rewrite (pts_to_parsed_strong_prefix (parse_nlist (SZ.v len) p) pl #(pm *. sp) l_all)
+    as (pts_to_parsed_strong_prefix (parse_nlist (0 + SZ.v len) p) pl #(pm *. sp) l_all);
+  fold (base_mixed_list_match_n vmatch p 0 (SZ.v len) pm (Serialized #t sp count pl) l);
+  let remaining = !out;
+  if (SZ.lte byte_len remaining) {
+    out := SZ.sub remaining byte_len;
+    true
+  } else {
+    false
+  }
+}
+```
+
+#pop-options
+
+// Helper: compute_remaining_size for base_mixed_list (Slice case)
+// Iterates through elements calling per-element compute_remaining_size.
+#push-options "--z3rlimit 800 --fuel 2 --ifuel 2"
+
+```pulse
+fn compute_remaining_size_base_slice
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (#p: parser k u)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (cr: (pm': perm) -> LPS.compute_remaining_size (vmatch pm') s)
+  (pm: perm)
+  (sp: perm)
+  (sv: perm)
+  (ss: S.slice t)
+  (len: SZ.t)
+  (l: Ghost.erased (nlist (SZ.v len) u))
+  (out: R.ref SZ.t)
+  (#v: Ghost.erased SZ.t)
+requires
+  base_mixed_list_match_n vmatch p 0 (SZ.v len) pm (Slice #t sp sv ss) l **
+  R.pts_to out v
+returns res: bool
+ensures exists* v' .
+  base_mixed_list_match_n vmatch p 0 (SZ.v len) pm (Slice #t sp sv ss) l **
+  R.pts_to out v' **
+  pure (
+    let bs = Seq.length (bare_serialize (serialize_nlist (SZ.v len) s) l) in
+    (res == true <==> bs <= SZ.v v) /\
+    (res == true ==> bs + SZ.v v' == SZ.v v)
+  )
+{
+  unfold (base_mixed_list_match_n vmatch p 0 (SZ.v len) pm (Slice #t sp sv ss) l);
+  with l' l1 . assert (
+    S.pts_to ss #(pm *. sp) l' **
+    SM.seq_list_match l1 l (vmatch (pm *. sv))
+  );
+  SM.seq_list_match_length (vmatch (pm *. sv)) l1 l;
+  let mut pres = true;
+  let mut pi = 0sz;
+  Trade.refl (SM.seq_list_match l1 (Ghost.reveal l) (vmatch (pm *. sv)));
+  while (
+    let res = !pres;
+    let i = !pi;
+    (res && (SZ.lt i len))
+  ) invariant exists* res_v i_v (c2: Seq.seq t) (l_rem: list u) v1 . (
+    R.pts_to pres res_v **
+    R.pts_to pi i_v **
+    S.pts_to ss #(pm *. sp) l' **
+    SM.seq_list_match c2 l_rem (vmatch (pm *. sv)) **
+    R.pts_to out v1 **
+    trade
+      (SM.seq_list_match c2 l_rem (vmatch (pm *. sv)))
+      (SM.seq_list_match l1 (Ghost.reveal l) (vmatch (pm *. sv))) **
+    pure (
+      SZ.v i_v <= SZ.v len /\
+      Seq.length l' >= SZ.v len /\
+      Seq.equal c2 (Seq.slice l' (SZ.v i_v) (SZ.v len)) /\
+      List.Tot.length l_rem == SZ.v len - SZ.v i_v /\
+      (res_v == false ==> SZ.v v < Seq.length (bare_serialize (serialize_nlist (SZ.v len) s) (Ghost.reveal l))) /\
+      (res_v == true ==> (
+        SZ.v v - Seq.length (bare_serialize (serialize_nlist (SZ.v len) s) (Ghost.reveal l)) == SZ.v v1 - Seq.length (bare_serialize (serialize_nlist (SZ.v len - SZ.v i_v) s) l_rem)
+      ))
+    )
+  ) {
+    let i = !pi;
+    SM.seq_list_match_length (vmatch (pm *. sv)) _ _;
+    with c2 l_rem . assert (SM.seq_list_match c2 l_rem (vmatch (pm *. sv)));
+    SM.seq_list_match_cons_elim_trade c2 l_rem (vmatch (pm *. sv));
+    let e = S.op_Array_Access ss i;
+    with ve l_rem'.
+      assert (vmatch (pm *. sv) (Seq.head c2) ve ** SM.seq_list_match (Seq.tail c2) l_rem' (vmatch (pm *. sv)));
+    let ni' : Ghost.erased nat = Ghost.hide (SZ.v len - SZ.v i - 1);
+    serialize_nlist_cons' (ni') s ve l_rem';
+    Trade.rewrite_with_trade
+      (vmatch (pm *. sv) (Seq.head c2) ve)
+      (vmatch (pm *. sv) e ve);
+    let res = cr (pm *. sv) e out;
+    Trade.elim (vmatch (pm *. sv) e ve) (vmatch (pm *. sv) (Seq.head c2) ve);
+    if (res) {
+      let i' = SZ.add i 1sz;
+      pi := i';
+      Trade.elim_hyp_l _ _ _;
+      Trade.trans _ _ (SM.seq_list_match l1 (Ghost.reveal l) (vmatch (pm *. sv)));
+      Seq.lemma_tail_slice l' (SZ.v i) (SZ.v len);
+    } else {
+      Trade.elim _ (SM.seq_list_match c2 l_rem (vmatch (pm *. sv)));
+      pres := false;
+    }
+  };
+  Trade.elim _ _;
+  fold (base_mixed_list_match_n vmatch p 0 (SZ.v len) pm (Slice #t sp sv ss) l);
+  !pres
+}
+```
+
+#pop-options
+
+// Helper: compute_remaining_size for base_mixed_list (Singleton case)
+#push-options "--z3rlimit 200 --fuel 1 --ifuel 1"
+
+```pulse
+fn compute_remaining_size_base_singleton
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (#p: parser k u)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (cr: (pm': perm) -> LPS.compute_remaining_size (vmatch pm') s)
+  (pm: perm)
+  (sp: perm)
+  (sv: perm)
+  (sr: ref t)
+  (l: Ghost.erased (nlist 1 u))
+  (out: R.ref SZ.t)
+  (#v: Ghost.erased SZ.t)
+requires
+  base_mixed_list_match_n vmatch p 0 1 pm (Singleton #t sp sv sr) l **
+  R.pts_to out v
+returns res: bool
+ensures exists* v' .
+  base_mixed_list_match_n vmatch p 0 1 pm (Singleton #t sp sv sr) l **
+  R.pts_to out v' **
+  pure (
+    let bs = Seq.length (bare_serialize (serialize_nlist 1 s) l) in
+    (res == true <==> bs <= SZ.v v) /\
+    (res == true ==> bs + SZ.v v' == SZ.v v)
+  )
+{
+  unfold (base_mixed_list_match_n vmatch p 0 1 pm (Singleton #t sp sv sr) l);
+  with x y . assert (R.pts_to sr #(pm *. sp) x ** vmatch (pm *. sv) x y);
+  serialize_nlist_singleton s y;
+  let xv = R.op_Bang sr;
+  let res = cr (pm *. sv) xv out;
+  fold (base_mixed_list_match_n vmatch p 0 1 pm (Singleton #t sp sv sr) l);
+  res
+}
+```
+
+#pop-options
+
+// Main compute_remaining_size for mixed_list_match
+#push-options "--z3rlimit 32000 --fuel 2 --ifuel 2"
+
+```pulse
+fn compute_remaining_size_mixed_list
+  (#t: Type0) (#u: Type0)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (#p: parser k u)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (cr: (pm': perm) -> LPS.compute_remaining_size (vmatch pm') s)
+  (j: LPS.jumper p)
+  (vmatch_share: share_t vmatch) (vmatch_gather: gather_t vmatch)
+  (pm: perm)
+  (n: SZ.t)
+: LPS.compute_remaining_size #_ #(nlist (SZ.v n) u) (mixed_list_match_for_l2r vmatch p pm (SZ.v n)) (serialize_nlist (SZ.v n) s)
+= (i: mixed_list t)
+  (#l: Ghost.erased (nlist (SZ.v n) u))
+  (out: R.ref SZ.t)
+  (#v: Ghost.erased SZ.t)
+{
+  unfold (mixed_list_match_for_l2r vmatch p pm (SZ.v n) i l);
+  if (SZ.eq n 0sz) {
+    serialize_nlist_nil p s;
+    mixed_list_match_length vmatch p pm i l;
+    fold (mixed_list_match_for_l2r vmatch p pm (SZ.v n) i l);
+    true
+  } else {
+    let mut p_node = i;
+    let mut p_remaining = n;
+    let mut p_result = true;
+    mixed_list_match_length vmatch p pm i l;
+    rewrite (mixed_list_match vmatch p pm i (Ghost.reveal l))
+      as (mixed_list_match_n vmatch p 0 (SZ.v n) pm i (Ghost.reveal l));
+    Trade.rewrite_with_trade
+      (mixed_list_match_n vmatch p 0 (SZ.v n) pm i (Ghost.reveal l))
+      (mixed_list_match vmatch p pm i (Ghost.reveal l));
+    serialize_nlist_nil p s;
+    while (
+      let res = !p_result;
+      let rem = !p_remaining;
+      (res && SZ.gt rem 0sz)
+    ) invariant exists* cur_node cur_rem cur_pm l_rem v1 res_v . (
+      R.pts_to p_node cur_node **
+      R.pts_to p_remaining cur_rem **
+      R.pts_to p_result res_v **
+      R.pts_to out v1 **
+      mixed_list_match vmatch p cur_pm cur_node l_rem **
+      trade
+        (mixed_list_match vmatch p cur_pm cur_node l_rem)
+        (mixed_list_match_n vmatch p 0 (SZ.v n) pm i (Ghost.reveal l)) **
+      pure (
+        SZ.v cur_rem <= SZ.v n /\
+        List.Tot.length l_rem == SZ.v cur_rem /\
+        mixed_list_length cur_node == cur_rem /\
+        (res_v == false ==> SZ.v v < Seq.length (bare_serialize (serialize_nlist (SZ.v n) s) (Ghost.reveal l))) /\
+        (res_v == true ==> (
+          SZ.v v - Seq.length (bare_serialize (serialize_nlist (SZ.v n) s) (Ghost.reveal l)) == SZ.v v1 - Seq.length (bare_serialize (serialize_nlist (SZ.v cur_rem) s) l_rem)
+        ))
+      )
+    )
+    {
+      let cur = !p_node;
+      let cur_rem = !p_remaining;
+      with cur_pm l_rem . assert (mixed_list_match vmatch p cur_pm cur l_rem);
+      rewrite (mixed_list_match vmatch p cur_pm cur l_rem)
+        as (mixed_list_match_n vmatch p 0 (SZ.v (mixed_list_length cur)) cur_pm cur l_rem);
+      rewrite (mixed_list_match_n vmatch p 0 (SZ.v (mixed_list_length cur)) cur_pm cur l_rem)
+        as (mixed_list_match_n vmatch p 0 (SZ.v cur_rem) cur_pm cur l_rem);
+      let res = mixed_list_extract_first_base_loop vmatch p j 0 (SZ.v cur_rem) 0sz cur_rem cur_pm cur l_rem;
+      let bi = fst res;
+      let chunk_len = snd res;
+      rewrite (
+        (let (bi', len') = res in
+         base_mixed_list_match vmatch p cur_pm bi' (list_narrow l_rem 0 (SZ.v len')) **
+         trade (base_mixed_list_match vmatch p cur_pm bi' (list_narrow l_rem 0 (SZ.v len')))
+              (mixed_list_match_n vmatch p 0 (SZ.v cur_rem) cur_pm cur l_rem) **
+         pure (SZ.v len' == SZ.v (base_mixed_list_length bi') /\ SZ.v len' > 0 /\ SZ.v len' <= SZ.v cur_rem)))
+        as (base_mixed_list_match vmatch p cur_pm bi (list_narrow l_rem 0 (SZ.v chunk_len)) **
+            trade (base_mixed_list_match vmatch p cur_pm bi (list_narrow l_rem 0 (SZ.v chunk_len)))
+                 (mixed_list_match_n vmatch p 0 (SZ.v cur_rem) cur_pm cur l_rem) **
+            pure (SZ.v chunk_len == SZ.v (base_mixed_list_length bi) /\ SZ.v chunk_len > 0 /\ SZ.v chunk_len <= SZ.v cur_rem));
+      rewrite (base_mixed_list_match vmatch p cur_pm bi (list_narrow l_rem 0 (SZ.v chunk_len)))
+        as (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi)) cur_pm bi (list_narrow l_rem 0 (SZ.v chunk_len)));
+      rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi)) cur_pm bi (list_narrow l_rem 0 (SZ.v chunk_len)))
+        as (base_mixed_list_match_n vmatch p 0 (SZ.v chunk_len) cur_pm bi (list_narrow l_rem 0 (SZ.v chunk_len)));
+      list_narrow_length l_rem 0 (SZ.v chunk_len);
+      list_narrow_length l_rem (SZ.v chunk_len) (SZ.v cur_rem - SZ.v chunk_len);
+      list_narrow_split l_rem (SZ.v chunk_len);
+      serialize_nlist_append s (SZ.v chunk_len) (list_narrow l_rem 0 (SZ.v chunk_len)) (SZ.v cur_rem - SZ.v chunk_len) (list_narrow l_rem (SZ.v chunk_len) (SZ.v cur_rem - SZ.v chunk_len));
+      match bi {
+        Serialized sp_bi count_bi pl_bi -> {
+          let chunk_res = compute_remaining_size_base_serialized vmatch s j cur_pm sp_bi count_bi pl_bi chunk_len (list_narrow l_rem 0 (SZ.v chunk_len)) out;
+          rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v chunk_len) cur_pm (Serialized #t sp_bi count_bi pl_bi) (list_narrow l_rem 0 (SZ.v chunk_len)))
+            as (base_mixed_list_match vmatch p cur_pm (Serialized #t sp_bi count_bi pl_bi) (list_narrow l_rem 0 (SZ.v chunk_len)));
+          elim_trade
+            (base_mixed_list_match vmatch p cur_pm (Serialized #t sp_bi count_bi pl_bi) (list_narrow l_rem 0 (SZ.v chunk_len)))
+            (mixed_list_match_n vmatch p 0 (SZ.v cur_rem) cur_pm cur l_rem);
+          let new_rem = SZ.sub cur_rem chunk_len;
+          let new_node = mixed_list_narrow_n vmatch p j 0 (SZ.v cur_rem) cur_pm cur l_rem chunk_len new_rem vmatch_share vmatch_gather;
+          rewrite (mixed_list_match vmatch p (cur_pm /. 2.0R) new_node (list_narrow l_rem (SZ.v chunk_len - 0) (SZ.v new_rem)))
+            as (mixed_list_match vmatch p (cur_pm /. 2.0R) new_node (list_narrow l_rem (SZ.v chunk_len) (SZ.v new_rem)));
+          rewrite (trade (mixed_list_match vmatch p (cur_pm /. 2.0R) new_node (list_narrow l_rem (SZ.v chunk_len - 0) (SZ.v new_rem))) (mixed_list_match_n vmatch p 0 (SZ.v cur_rem) cur_pm cur l_rem))
+            as (trade (mixed_list_match vmatch p (cur_pm /. 2.0R) new_node (list_narrow l_rem (SZ.v chunk_len) (SZ.v new_rem))) (mixed_list_match vmatch p cur_pm cur l_rem));
+          Trade.trans
+            (mixed_list_match vmatch p (cur_pm /. 2.0R) new_node (list_narrow l_rem (SZ.v chunk_len) (SZ.v new_rem)))
+            (mixed_list_match vmatch p cur_pm cur l_rem)
+            (mixed_list_match_n vmatch p 0 (SZ.v n) pm i (Ghost.reveal l));
+          if chunk_res {
+            list_narrow_length l_rem (SZ.v chunk_len) (SZ.v new_rem);
+            serialize_nlist_append s (SZ.v chunk_len) (list_narrow l_rem 0 (SZ.v chunk_len)) (SZ.v new_rem) (list_narrow l_rem (SZ.v chunk_len) (SZ.v new_rem));
+            p_node := new_node;
+            p_remaining := new_rem;
+          } else {
+            p_node := new_node;
+            p_remaining := new_rem;
+            p_result := false;
+          }
+        }
+        Slice sp_bi sv_bi ss_bi -> {
+          let chunk_res = compute_remaining_size_base_slice vmatch s cr cur_pm sp_bi sv_bi ss_bi chunk_len (list_narrow l_rem 0 (SZ.v chunk_len)) out;
+          rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v chunk_len) cur_pm (Slice #t sp_bi sv_bi ss_bi) (list_narrow l_rem 0 (SZ.v chunk_len)))
+            as (base_mixed_list_match vmatch p cur_pm (Slice #t sp_bi sv_bi ss_bi) (list_narrow l_rem 0 (SZ.v chunk_len)));
+          elim_trade
+            (base_mixed_list_match vmatch p cur_pm (Slice #t sp_bi sv_bi ss_bi) (list_narrow l_rem 0 (SZ.v chunk_len)))
+            (mixed_list_match_n vmatch p 0 (SZ.v cur_rem) cur_pm cur l_rem);
+          let new_rem = SZ.sub cur_rem chunk_len;
+          let new_node = mixed_list_narrow_n vmatch p j 0 (SZ.v cur_rem) cur_pm cur l_rem chunk_len new_rem vmatch_share vmatch_gather;
+          rewrite (mixed_list_match vmatch p (cur_pm /. 2.0R) new_node (list_narrow l_rem (SZ.v chunk_len - 0) (SZ.v new_rem)))
+            as (mixed_list_match vmatch p (cur_pm /. 2.0R) new_node (list_narrow l_rem (SZ.v chunk_len) (SZ.v new_rem)));
+          rewrite (trade (mixed_list_match vmatch p (cur_pm /. 2.0R) new_node (list_narrow l_rem (SZ.v chunk_len - 0) (SZ.v new_rem))) (mixed_list_match_n vmatch p 0 (SZ.v cur_rem) cur_pm cur l_rem))
+            as (trade (mixed_list_match vmatch p (cur_pm /. 2.0R) new_node (list_narrow l_rem (SZ.v chunk_len) (SZ.v new_rem))) (mixed_list_match vmatch p cur_pm cur l_rem));
+          Trade.trans
+            (mixed_list_match vmatch p (cur_pm /. 2.0R) new_node (list_narrow l_rem (SZ.v chunk_len) (SZ.v new_rem)))
+            (mixed_list_match vmatch p cur_pm cur l_rem)
+            (mixed_list_match_n vmatch p 0 (SZ.v n) pm i (Ghost.reveal l));
+          if chunk_res {
+            list_narrow_length l_rem (SZ.v chunk_len) (SZ.v new_rem);
+            serialize_nlist_append s (SZ.v chunk_len) (list_narrow l_rem 0 (SZ.v chunk_len)) (SZ.v new_rem) (list_narrow l_rem (SZ.v chunk_len) (SZ.v new_rem));
+            p_node := new_node;
+            p_remaining := new_rem;
+          } else {
+            p_node := new_node;
+            p_remaining := new_rem;
+            p_result := false;
+          }
+        }
+        Singleton sp_bi sv_bi sr_bi -> {
+          rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v chunk_len) cur_pm (Singleton #t sp_bi sv_bi sr_bi) (list_narrow l_rem 0 (SZ.v chunk_len)))
+            as (base_mixed_list_match_n vmatch p 0 1 cur_pm (Singleton #t sp_bi sv_bi sr_bi) (list_narrow l_rem 0 (SZ.v chunk_len)));
+          let chunk_res = compute_remaining_size_base_singleton vmatch s cr cur_pm sp_bi sv_bi sr_bi (list_narrow l_rem 0 (SZ.v chunk_len)) out;
+          rewrite (base_mixed_list_match_n vmatch p 0 1 cur_pm (Singleton #t sp_bi sv_bi sr_bi) (list_narrow l_rem 0 (SZ.v chunk_len)))
+            as (base_mixed_list_match vmatch p cur_pm (Singleton #t sp_bi sv_bi sr_bi) (list_narrow l_rem 0 (SZ.v chunk_len)));
+          elim_trade
+            (base_mixed_list_match vmatch p cur_pm (Singleton #t sp_bi sv_bi sr_bi) (list_narrow l_rem 0 (SZ.v chunk_len)))
+            (mixed_list_match_n vmatch p 0 (SZ.v cur_rem) cur_pm cur l_rem);
+          let new_rem = SZ.sub cur_rem chunk_len;
+          let new_node = mixed_list_narrow_n vmatch p j 0 (SZ.v cur_rem) cur_pm cur l_rem chunk_len new_rem vmatch_share vmatch_gather;
+          rewrite (mixed_list_match vmatch p (cur_pm /. 2.0R) new_node (list_narrow l_rem (SZ.v chunk_len - 0) (SZ.v new_rem)))
+            as (mixed_list_match vmatch p (cur_pm /. 2.0R) new_node (list_narrow l_rem (SZ.v chunk_len) (SZ.v new_rem)));
+          rewrite (trade (mixed_list_match vmatch p (cur_pm /. 2.0R) new_node (list_narrow l_rem (SZ.v chunk_len - 0) (SZ.v new_rem))) (mixed_list_match_n vmatch p 0 (SZ.v cur_rem) cur_pm cur l_rem))
+            as (trade (mixed_list_match vmatch p (cur_pm /. 2.0R) new_node (list_narrow l_rem (SZ.v chunk_len) (SZ.v new_rem))) (mixed_list_match vmatch p cur_pm cur l_rem));
+          Trade.trans
+            (mixed_list_match vmatch p (cur_pm /. 2.0R) new_node (list_narrow l_rem (SZ.v chunk_len) (SZ.v new_rem)))
+            (mixed_list_match vmatch p cur_pm cur l_rem)
+            (mixed_list_match_n vmatch p 0 (SZ.v n) pm i (Ghost.reveal l));
+          if chunk_res {
+            list_narrow_length l_rem (SZ.v chunk_len) (SZ.v new_rem);
+            serialize_nlist_append s (SZ.v chunk_len) (list_narrow l_rem 0 (SZ.v chunk_len)) (SZ.v new_rem) (list_narrow l_rem (SZ.v chunk_len) (SZ.v new_rem));
+            p_node := new_node;
+            p_remaining := new_rem;
+          } else {
+            p_node := new_node;
+            p_remaining := new_rem;
+            p_result := false;
+          }
+        }
+        Empty -> {
+          unreachable ()
+        }
+      }
+    };
+    with cur_pm l_rem . assert (mixed_list_match vmatch p cur_pm _ l_rem);
+    elim_trade
+      (mixed_list_match vmatch p cur_pm _ l_rem)
+      (mixed_list_match_n vmatch p 0 (SZ.v n) pm i (Ghost.reveal l));
+    rewrite (mixed_list_match_n vmatch p 0 (SZ.v n) pm i (Ghost.reveal l))
+      as (mixed_list_match vmatch p pm i (Ghost.reveal l));
+    fold (mixed_list_match_for_l2r vmatch p pm (SZ.v n) i l);
+    !p_result
+  }
+}
+```
+
+#pop-options
