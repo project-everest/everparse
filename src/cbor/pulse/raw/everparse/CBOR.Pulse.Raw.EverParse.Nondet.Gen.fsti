@@ -2,7 +2,7 @@ module CBOR.Pulse.Raw.EverParse.Nondet.Gen
 include CBOR.Spec.Raw.Nondet
 open CBOR.Spec.Util
 open CBOR.Spec.Raw.EverParse
-include CBOR.Pulse.Raw.EverParse.Format
+include CBOR.Pulse.Raw.EverParse.Validate
 open LowParse.Spec.VCList
 open LowParse.Pulse.VCList
 open Pulse.Lib.Pervasives

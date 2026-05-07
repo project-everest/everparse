@@ -1,7 +1,7 @@
 module CBOR.Pulse.Raw.Format.Nondet.Validate
 #lang-pulse
 friend CBOR.Spec.Raw.Format
-module EP = CBOR.Pulse.Raw.EverParse.Format
+module EP = CBOR.Pulse.Raw.EverParse.Validate
 module EPND = CBOR.Pulse.Raw.EverParse.Nondet.Basic
 
 fn cbor_validate_nondet
