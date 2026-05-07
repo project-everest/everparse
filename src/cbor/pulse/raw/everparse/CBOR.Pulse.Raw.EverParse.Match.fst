@@ -2469,3 +2469,40 @@ ensures cbor_raw_match pm xl xh
 }
 
 #pop-options
+
+#push-options "--z3rlimit 512 --fuel 2 --ifuel 2"
+
+```pulse
+ghost
+fn rec cbor_raw_match_gather
+  (xl: cbor_raw)
+  (#pm: perm)
+  (#xh: Ghost.erased raw_data_item)
+  (#pm': perm)
+  (#xh': Ghost.erased raw_data_item)
+requires cbor_raw_match pm xl xh **
+         cbor_raw_match pm' xl xh'
+ensures cbor_raw_match (pm +. pm') xl xh **
+        pure (xh == xh')
+decreases (Ghost.reveal xh')
+{
+  cbor_raw_match_unfold_aux xl #pm #xh;
+  cbor_raw_match_unfold_aux xl #pm' #xh';
+  ghost fn p_gather_rec
+    (x1: cbor_raw) (#pm0: perm) (#x2: raw_data_item) (#pm0': perm) (x2': raw_data_item { x2' << Ghost.reveal xh' })
+  requires cbor_raw_match pm0 x1 x2 ** cbor_raw_match pm0' x1 x2'
+  ensures cbor_raw_match (pm0 +. pm0') x1 x2 ** pure (x2 == x2')
+  {
+    cbor_raw_match_gather x1 #pm0 #x2 #pm0' #x2'
+  };
+  cbor_raw_match_aux_gather
+    cbor_raw_match
+    parse_raw_data_item
+    xl
+    #pm #xh #pm' #xh'
+    p_gather_rec;
+  cbor_raw_match_fold_aux xl #(pm +. pm') #xh;
+}
+```
+
+#pop-options
