@@ -443,3 +443,57 @@ let cbor_raw_read_aux
     ()
 
 #pop-options
+
+#push-options "--z3rlimit 128 --fuel 1 --ifuel 1"
+
+```pulse
+fn cbor_raw_read
+  (pm: perm)
+  (f64: squash SZ.fits_u64)
+: PPB.zero_copy_parse_strong_prefix #cbor_raw #raw_data_item
+    (cbor_raw_match pm)
+    #parse_raw_data_item_kind
+    parse_raw_data_item
+= (input: S.slice byte)
+  (#pms: perm)
+  (#v: Ghost.erased raw_data_item)
+{
+  // Prove parser equivalence
+  Classical.forall_intro parse_raw_data_item_eq;
+  intro_pure (
+    parse_raw_data_item_kind.parser_kind_subkind == Some ParserStrong /\
+    parse_raw_data_item_kind.parser_kind_subkind == Some ParserStrong /\
+    (forall x . parse parse_raw_data_item x == parse (parse_raw_data_item_aux parse_raw_data_item) x)
+  ) ();
+  // Convert parse_raw_data_item to parse_raw_data_item_aux parse_raw_data_item
+  PPB.pts_to_parsed_strong_prefix_ext_trade
+    (parse_raw_data_item_aux parse_raw_data_item) input;
+  // Call the generic reader
+  let res = cbor_raw_read_aux cbor_raw_match parse_raw_data_item pm f64
+    input;
+  // Compose with the ext trade
+  Trade.trans
+    (cbor_raw_match_aux parse_raw_data_item cbor_raw_match pm res v)
+    (PPB.pts_to_parsed_strong_prefix (parse_raw_data_item_aux parse_raw_data_item) input #pms v)
+    (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pms v);
+  // Fold cbor_raw_match_aux into cbor_raw_match
+  cbor_raw_match_fold_aux res;
+  // Set up trade: cbor_raw_match pm res v -> pts_to_parsed_strong_prefix parse_raw_data_item
+  intro
+    (Trade.trade
+      (cbor_raw_match pm res v)
+      (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pms v))
+    #(Trade.trade
+        (cbor_raw_match_aux parse_raw_data_item cbor_raw_match pm res v)
+        (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pms v))
+    fn _ {
+      cbor_raw_match_unfold_aux res;
+      Trade.elim
+        (cbor_raw_match_aux parse_raw_data_item cbor_raw_match pm res v)
+        (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pms v)
+    };
+  res
+}
+```
+
+#pop-options
