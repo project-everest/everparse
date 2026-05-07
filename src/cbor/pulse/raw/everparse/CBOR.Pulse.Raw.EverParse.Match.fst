@@ -17,6 +17,13 @@ module S = Pulse.Lib.Slice
 module R = Pulse.Lib.Reference
 module I = LowParse.PulseParse.Iterator
 
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 64"
+let synth_raw_data_item_recip_content_precedes
+  (x: raw_data_item)
+: Lemma (dsnd (synth_raw_data_item_recip x) << synth_raw_data_item_recip x)
+= ()
+#pop-options
+
 (* ======== Projectors ======== *)
 
 (* Identity projector on cbor_raw, used for the outer dependent pair
@@ -446,12 +453,21 @@ ensures cbor_map_entry_match p (pm /. 2.0R) entry pair **
 
 ghost fn cbor_map_entry_match_gather
   (p: perm -> cbor_raw -> raw_data_item -> slprop)
-  (p_gather: I.gather_t p)
   (entry: cbor_map_entry cbor_raw)
   (#pm: perm)
   (#pair: (raw_data_item & raw_data_item))
   (#pm': perm)
   (#pair': (raw_data_item & raw_data_item))
+  (p_gather: (
+    (x1: cbor_raw) ->
+    (#pm0: perm) ->
+    (#x2: raw_data_item) ->
+    (#pm0': perm) ->
+    (x2': raw_data_item { x2' << pair' }) ->
+    stt_ghost unit emp_inames
+      (p pm0 x1 x2 ** p pm0' x1 x2')
+      (fun _ -> p (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
+  ))
 requires cbor_map_entry_match p pm entry pair **
          cbor_map_entry_match p pm' entry pair'
 ensures cbor_map_entry_match p (pm +. pm') entry pair **
@@ -473,8 +489,8 @@ ensures cbor_map_entry_match p (pm +. pm') entry pair **
        as (p pm entry.cbor_map_entry_value (snd pair));
   rewrite (p pm' (cbor_map_entry_value_proj.pair_proj_get entry) (snd pair'))
        as (p pm' entry.cbor_map_entry_value (snd pair'));
-  p_gather entry.cbor_map_entry_key #pm #(Ghost.reveal (Ghost.hide (fst pair))) #pm' #(Ghost.reveal (Ghost.hide (fst pair')));
-  p_gather entry.cbor_map_entry_value #pm #(Ghost.reveal (Ghost.hide (snd pair))) #pm' #(Ghost.reveal (Ghost.hide (snd pair')));
+  p_gather entry.cbor_map_entry_key #pm #(Ghost.reveal (Ghost.hide (fst pair))) #pm' (fst pair');
+  p_gather entry.cbor_map_entry_value #pm #(Ghost.reveal (Ghost.hide (snd pair))) #pm' (snd pair');
   rewrite (p (pm +. pm') entry.cbor_map_entry_key (fst pair))
        as (p (pm +. pm') (cbor_map_entry_key_proj.pair_proj_get entry) (fst pair));
   rewrite (p (pm +. pm') entry.cbor_map_entry_value (snd pair))
@@ -855,9 +871,59 @@ ensures cbor_raw_match_content p pp (pm /. 2.0R) h xl c **
   }
 }
 
+inline_for_extraction
+let p_gather_from_memP
+  (#bound_t: Type0)
+  (#bound: bound_t)
+  (p: perm -> cbor_raw -> raw_data_item -> slprop)
+  (l: list raw_data_item)
+  (sq_l: squash (l << bound))
+  (p_gather: (
+    (x1: cbor_raw) ->
+    (#pm0: perm) ->
+    (#x2: raw_data_item) ->
+    (#pm0': perm) ->
+    (x2': raw_data_item { x2' << bound }) ->
+    stt_ghost unit emp_inames
+      (p pm0 x1 x2 ** p pm0' x1 x2')
+      (fun _ -> p (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
+  ))
+  (x1: cbor_raw) (#pm0: perm) (#x2: raw_data_item) (#pm0': perm) (x2': raw_data_item { List.Tot.memP x2' l })
+: stt_ghost unit emp_inames
+    (p pm0 x1 x2 ** p pm0' x1 x2')
+    (fun _ -> p (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
+= List.Tot.Properties.memP_precedes x2' l;
+  p_gather x1 #pm0 #x2 #pm0' x2'
+
+inline_for_extraction
+let p_gather_pair_from_memP
+  (#bound_t: Type0)
+  (#bound: bound_t)
+  (p: perm -> cbor_raw -> raw_data_item -> slprop)
+  (l: list (raw_data_item & raw_data_item))
+  (sq_l: squash (l << bound))
+  (p_gather: (
+    (x1: cbor_raw) ->
+    (#pm0: perm) ->
+    (#x2: raw_data_item) ->
+    (#pm0': perm) ->
+    (x2': raw_data_item { x2' << bound }) ->
+    stt_ghost unit emp_inames
+      (p pm0 x1 x2 ** p pm0' x1 x2')
+      (fun _ -> p (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
+  ))
+  (x1: cbor_map_entry cbor_raw) (#pm0: perm) (#x2: (raw_data_item & raw_data_item))
+  (#pm0': perm) (x2': (raw_data_item & raw_data_item) { List.Tot.memP x2' l })
+: stt_ghost unit emp_inames
+    (cbor_map_entry_match p pm0 x1 x2 ** cbor_map_entry_match p pm0' x1 x2')
+    (fun _ -> cbor_map_entry_match p (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
+= List.Tot.Properties.memP_precedes x2' l;
+  cbor_map_entry_match_gather p x1 #pm0 #x2 #pm0' #x2'
+    (fun (y1: cbor_raw) (#pm1: perm) (#y2: raw_data_item) (#pm1': perm) (y2': raw_data_item { y2' << x2' }) ->
+      p_gather y1 #pm1 #y2 #pm1' y2')
+
 ghost fn cbor_raw_match_content_gather
   (p: perm -> cbor_raw -> raw_data_item -> slprop)
-  (p_gather: I.gather_t p)
   (#kp: parser_kind)
   (pp: parser kp raw_data_item)
   (h: header)
@@ -865,12 +931,26 @@ ghost fn cbor_raw_match_content_gather
   (pm: perm)
   (c: content h)
   (pm': perm)
+  (#bound_t: Type0)
+  (#bound: bound_t)
   (c': content h)
+  (p_gather: (
+    (x1: cbor_raw) ->
+    (#pm0: perm) ->
+    (#x2: raw_data_item) ->
+    (#pm0': perm) ->
+    (x2': raw_data_item { x2' << bound }) ->
+    stt_ghost unit emp_inames
+      (p pm0 x1 x2 ** p pm0' x1 x2')
+      (fun _ -> p (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
+  ))
 requires cbor_raw_match_content p pp pm h xl c **
-         cbor_raw_match_content p pp pm' h xl c'
+         cbor_raw_match_content p pp pm' h xl c' **
+         pure (c' << bound)
 ensures cbor_raw_match_content p pp (pm +. pm') h xl c **
         pure (c == c')
 {
+  let _sq_bound = elim_pure_explicit (c' << bound);
   let b = dfst h;
   let la = dsnd h;
   header_eta h;
@@ -952,7 +1032,7 @@ ensures cbor_raw_match_content p pp (pm +. pm') h xl c **
              as (I.mixed_list_match
                    (fun (pm'': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm'' elem x)
                    pp (pm' *. v.cbor_array_slice_perm) v.cbor_array_ptr c'l);
-        I.mixed_list_match_gather
+        I.mixed_list_match_gather_bound
           (fun (pm'': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm'' elem x)
           pp
           (pm *. v.cbor_array_slice_perm)
@@ -960,8 +1040,7 @@ ensures cbor_raw_match_content p pp (pm +. pm') h xl c **
           v.cbor_array_ptr
           cl
           c'l
-          (fun (x1: cbor_raw) (#pm'': perm) (#x2: raw_data_item) (#pm3: perm) (#x3: raw_data_item) ->
-            p_gather x1 #pm'' #x2 #pm3 #x3);
+          (p_gather_from_memP #bound_t #bound p c'l () p_gather);
         rewrite (I.mixed_list_match
                    (fun (pm'': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm'' elem x)
                    pp
@@ -1050,7 +1129,7 @@ ensures cbor_raw_match_content p pp (pm +. pm') h xl c **
                         (x: (raw_data_item & raw_data_item)) ->
                      cbor_map_entry_match p pm'' elem x)
                    (nondep_then pp pp) (pm' *. v.cbor_map_slice_perm) v.cbor_map_ptr c'l);
-        I.mixed_list_match_gather
+        I.mixed_list_match_gather_bound
           (fun (pm'': perm) (elem: cbor_map_entry cbor_raw)
                (x: (raw_data_item & raw_data_item)) ->
             cbor_map_entry_match p pm'' elem x)
@@ -1060,9 +1139,7 @@ ensures cbor_raw_match_content p pp (pm +. pm') h xl c **
           v.cbor_map_ptr
           cl
           c'l
-          (fun (x1: cbor_map_entry cbor_raw) (#pm'': perm) (#x2: (raw_data_item & raw_data_item))
-               (#pm3: perm) (#x3: (raw_data_item & raw_data_item)) ->
-            cbor_map_entry_match_gather p p_gather x1 #pm'' #x2 #pm3 #x3);
+          (p_gather_pair_from_memP #bound_t #bound p c'l () p_gather);
         rewrite (I.mixed_list_match
                    (fun (pm'': perm) (elem: cbor_map_entry cbor_raw)
                         (x: (raw_data_item & raw_data_item)) ->
@@ -1149,7 +1226,7 @@ ensures cbor_raw_match_content p pp (pm +. pm') h xl c **
              as (p (pm' *. v.cbor_tagged_payload_perm) vl (content_as_raw_data_item b la c'));
         p_gather vl
           #(pm *. v.cbor_tagged_payload_perm) #(content_as_raw_data_item b la c)
-          #(pm' *. v.cbor_tagged_payload_perm) #(content_as_raw_data_item b la c');
+          #(pm' *. v.cbor_tagged_payload_perm) (content_as_raw_data_item b la c');
         // p_gather gives us content_as_raw_data_item b la c == content_as_raw_data_item b la c'
         rewrite (p (pm *. v.cbor_tagged_payload_perm +. pm' *. v.cbor_tagged_payload_perm) vl (content_as_raw_data_item b la c))
              as (p ((pm +. pm') *. v.cbor_tagged_payload_perm) vl (content_as_raw_data_item b la c));
@@ -1387,12 +1464,17 @@ ensures cbor_raw_match_aux pp p (pm +. pm') xl xh **
              (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
              xl
              (dsnd (synth_raw_data_item_recip (Ghost.reveal xh'))));
-  cbor_raw_match_content_gather p p_gather pp
+  synth_raw_data_item_recip_content_precedes (Ghost.reveal xh');
+  intro_pure (dsnd (synth_raw_data_item_recip (Ghost.reveal xh')) << synth_raw_data_item_recip (Ghost.reveal xh')) ();
+  cbor_raw_match_content_gather p pp
     (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
     xl pm
     (dsnd (synth_raw_data_item_recip (Ghost.reveal xh)))
     pm'
-    (dsnd (synth_raw_data_item_recip (Ghost.reveal xh')));
+    #raw_data_item' #(synth_raw_data_item_recip (Ghost.reveal xh'))
+    (dsnd (synth_raw_data_item_recip (Ghost.reveal xh')))
+    (fun (x1: cbor_raw) (#pm0: perm) (#x2: raw_data_item) (#pm0': perm) (x2': raw_data_item { x2' << synth_raw_data_item_recip (Ghost.reveal xh') }) ->
+      p_gather x1 #pm0 #x2 #pm0' #x2');
   // content_gather gives:
   //   cbor_raw_match_content ... (pm +. pm') xh h xl c1 ** pure (c1 == c2)
   // From h1 == h2 (headers equal) and c1 == c2 (content equal):
