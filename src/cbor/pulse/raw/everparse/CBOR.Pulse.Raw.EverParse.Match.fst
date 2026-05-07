@@ -1407,7 +1407,6 @@ ensures cbor_raw_match_aux pp p (pm /. 2.0R) xl xh **
 
 ghost fn cbor_raw_match_aux_gather
   (p: perm -> cbor_raw -> raw_data_item -> slprop)
-  (p_gather: I.gather_t p)
   (#kp: parser_kind)
   (pp: parser kp raw_data_item)
   (xl: cbor_raw)
@@ -1415,6 +1414,16 @@ ghost fn cbor_raw_match_aux_gather
   (#xh: Ghost.erased raw_data_item)
   (#pm': perm)
   (#xh': Ghost.erased raw_data_item)
+  (p_gather: (
+    (x1: cbor_raw) ->
+    (#pm0: perm) ->
+    (#x2: raw_data_item) ->
+    (#pm0': perm) ->
+    (x2': raw_data_item { x2' << Ghost.reveal xh' }) ->
+    stt_ghost unit emp_inames
+      (p pm0 x1 x2 ** p pm0' x1 x2')
+      (fun _ -> p (pm0 +. pm0') x1 x2 ** pure (x2 == x2'))
+  ))
 requires cbor_raw_match_aux pp p pm xl xh **
          cbor_raw_match_aux pp p pm' xl xh'
 ensures cbor_raw_match_aux pp p (pm +. pm') xl xh **
@@ -1492,7 +1501,7 @@ ensures cbor_raw_match_aux pp p (pm +. pm') xl xh **
     #raw_data_item #(Ghost.reveal xh')
     (dsnd (synth_raw_data_item_recip (Ghost.reveal xh')))
     (fun (x1: cbor_raw) (#pm0: perm) (#x2: raw_data_item) (#pm0': perm) (x2': raw_data_item { x2' << Ghost.reveal xh' }) ->
-      p_gather x1 #pm0 #x2 #pm0' #x2');
+      p_gather x1 #pm0 #x2 #pm0' x2');
   // content_gather gives:
   //   cbor_raw_match_content ... (pm +. pm') xh h xl c1 ** pure (c1 == c2)
   // From h1 == h2 (headers equal) and c1 == c2 (content equal):
