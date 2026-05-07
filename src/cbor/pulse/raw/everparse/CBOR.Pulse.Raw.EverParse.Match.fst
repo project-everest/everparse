@@ -2506,3 +2506,48 @@ decreases (Ghost.reveal xh')
 ```
 
 #pop-options
+
+#push-options "--z3rlimit 512 --fuel 2 --ifuel 2"
+
+```pulse
+ghost
+fn rec cbor_raw_match_share
+  (xl: cbor_raw)
+  (#pm: perm)
+  (#xh: Ghost.erased raw_data_item)
+requires cbor_raw_match pm xl xh
+ensures cbor_raw_match (pm /. 2.0R) xl xh ** cbor_raw_match (pm /. 2.0R) xl xh
+decreases (Ghost.reveal xh)
+{
+  cbor_raw_match_eq pm xl (Ghost.reveal xh);
+  rewrite (cbor_raw_match pm xl (Ghost.reveal xh))
+       as (cbor_raw_match_aux parse_raw_data_item (vmatch_with_perm_guard (Ghost.reveal xh) cbor_raw_match) pm xl (Ghost.reveal xh));
+  ghost fn p_share_rec
+    (x1: cbor_raw) (#p0: perm) (#x2: raw_data_item { x2 << Ghost.reveal xh })
+  requires cbor_raw_match p0 x1 x2
+  ensures cbor_raw_match (p0 /. 2.0R) x1 x2 ** cbor_raw_match (p0 /. 2.0R) x1 x2
+  {
+    cbor_raw_match_share x1 #p0 #x2
+  };
+  ghost fn guarded_share
+    (x1: cbor_raw) (#p0: perm) (#x2: raw_data_item)
+  requires vmatch_with_perm_guard (Ghost.reveal xh) cbor_raw_match p0 x1 x2
+  ensures vmatch_with_perm_guard (Ghost.reveal xh) cbor_raw_match (p0 /. 2.0R) x1 x2 **
+          vmatch_with_perm_guard (Ghost.reveal xh) cbor_raw_match (p0 /. 2.0R) x1 x2
+  {
+    vmatch_with_perm_guard_share (Ghost.reveal xh) cbor_raw_match p_share_rec x1 #p0 #x2
+  };
+  cbor_raw_match_aux_share
+    (vmatch_with_perm_guard (Ghost.reveal xh) cbor_raw_match)
+    guarded_share
+    parse_raw_data_item
+    xl;
+  cbor_raw_match_eq (pm /. 2.0R) xl (Ghost.reveal xh);
+  rewrite (cbor_raw_match_aux parse_raw_data_item (vmatch_with_perm_guard (Ghost.reveal xh) cbor_raw_match) (pm /. 2.0R) xl (Ghost.reveal xh))
+       as (cbor_raw_match (pm /. 2.0R) xl (Ghost.reveal xh));
+  rewrite (cbor_raw_match_aux parse_raw_data_item (vmatch_with_perm_guard (Ghost.reveal xh) cbor_raw_match) (pm /. 2.0R) xl (Ghost.reveal xh))
+       as (cbor_raw_match (pm /. 2.0R) xl (Ghost.reveal xh));
+}
+```
+
+#pop-options
