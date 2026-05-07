@@ -17,11 +17,29 @@ module S = Pulse.Lib.Slice
 module R = Pulse.Lib.Reference
 module I = LowParse.PulseParse.Iterator
 
+let content_uses_p_gather (h: header) : bool =
+  let (| b, _ |) = h in
+  b.major_type = cbor_major_type_array ||
+  b.major_type = cbor_major_type_map ||
+  b.major_type = cbor_major_type_tagged
+
 #push-options "--fuel 1 --ifuel 1 --z3rlimit 64"
 let synth_raw_data_item_recip_content_precedes
   (x: raw_data_item)
-: Lemma (dsnd (synth_raw_data_item_recip x) << synth_raw_data_item_recip x)
-= ()
+: Lemma
+    (requires content_uses_p_gather (dfst (synth_raw_data_item_recip x)))
+    (ensures dsnd (synth_raw_data_item_recip x) << x)
+= let r = synth_raw_data_item_recip x in
+  match x with
+  | Array len v ->
+    assert (r == (| raw_uint64_as_argument cbor_major_type_array len, v |));
+    assert (dsnd r == v)
+  | Map len v ->
+    assert (r == (| raw_uint64_as_argument cbor_major_type_map len, v |));
+    assert (dsnd r == v)
+  | Tagged tag v ->
+    assert (r == (| raw_uint64_as_argument cbor_major_type_tagged tag, v |));
+    assert (dsnd r == v)
 #pop-options
 
 (* ======== Projectors ======== *)
@@ -946,11 +964,11 @@ ghost fn cbor_raw_match_content_gather
   ))
 requires cbor_raw_match_content p pp pm h xl c **
          cbor_raw_match_content p pp pm' h xl c' **
-         pure (c' << bound)
+         pure (content_uses_p_gather h ==> c' << bound)
 ensures cbor_raw_match_content p pp (pm +. pm') h xl c **
         pure (c == c')
 {
-  let _sq_bound = elim_pure_explicit (c' << bound);
+  let _sq_bound = elim_pure_explicit (content_uses_p_gather h ==> c' << bound);
   let b = dfst h;
   let la = dsnd h;
   header_eta h;
@@ -1464,16 +1482,16 @@ ensures cbor_raw_match_aux pp p (pm +. pm') xl xh **
              (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
              xl
              (dsnd (synth_raw_data_item_recip (Ghost.reveal xh'))));
-  synth_raw_data_item_recip_content_precedes (Ghost.reveal xh');
-  intro_pure (dsnd (synth_raw_data_item_recip (Ghost.reveal xh')) << synth_raw_data_item_recip (Ghost.reveal xh')) ();
+  Classical.move_requires synth_raw_data_item_recip_content_precedes (Ghost.reveal xh');
+  intro_pure (content_uses_p_gather (dfst (synth_raw_data_item_recip (Ghost.reveal xh))) ==> dsnd (synth_raw_data_item_recip (Ghost.reveal xh')) << Ghost.reveal xh') ();
   cbor_raw_match_content_gather p pp
     (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
     xl pm
     (dsnd (synth_raw_data_item_recip (Ghost.reveal xh)))
     pm'
-    #raw_data_item' #(synth_raw_data_item_recip (Ghost.reveal xh'))
+    #raw_data_item #(Ghost.reveal xh')
     (dsnd (synth_raw_data_item_recip (Ghost.reveal xh')))
-    (fun (x1: cbor_raw) (#pm0: perm) (#x2: raw_data_item) (#pm0': perm) (x2': raw_data_item { x2' << synth_raw_data_item_recip (Ghost.reveal xh') }) ->
+    (fun (x1: cbor_raw) (#pm0: perm) (#x2: raw_data_item) (#pm0': perm) (x2': raw_data_item { x2' << Ghost.reveal xh' }) ->
       p_gather x1 #pm0 #x2 #pm0' #x2');
   // content_gather gives:
   //   cbor_raw_match_content ... (pm +. pm') xh h xl c1 ** pure (c1 == c2)
