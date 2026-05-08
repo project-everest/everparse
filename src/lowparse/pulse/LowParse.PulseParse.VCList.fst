@@ -677,3 +677,205 @@ fn accessor_vclist_payload
 }
 
 #pop-options
+
+(* nlist_hd_tl for pts_to_parsed_strong_prefix: split a strong-prefix parsed nlist into head and tail sub-slices.
+   Same permission halving behavior as nlist_hd_tl. *)
+
+let nlist_hd_tl_strong_prefix_post'
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (p: parser k t)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (n: pos)
+  (input: slice byte)
+  (pm: perm)
+  (v: (nlist n t))
+  (hd tl: slice byte)
+: slprop
+= PPB.pts_to_parsed_strong_prefix p hd #(pm /. 2.0R) (List.Tot.hd v) **
+  PPB.pts_to_parsed_strong_prefix (parse_nlist (n - 1) p) tl #(pm /. 2.0R) (List.Tot.tl v) **
+  Trade.trade
+    (PPB.pts_to_parsed_strong_prefix p hd #(pm /. 2.0R) (List.Tot.hd v) **
+      PPB.pts_to_parsed_strong_prefix (parse_nlist (n - 1) p) tl #(pm /. 2.0R) (List.Tot.tl v))
+    (PPB.pts_to_parsed_strong_prefix (parse_nlist n p) input #pm v)
+
+let nlist_hd_tl_strong_prefix_post
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (p: parser k t)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (n: pos)
+  (input: slice byte)
+  (pm: perm)
+  (v: (nlist n t))
+  (hd_tl: (slice byte & slice byte))
+: slprop
+= nlist_hd_tl_strong_prefix_post' p sq n input pm v (fst hd_tl) (snd hd_tl)
+
+inline_for_extraction
+fn nlist_hd_tl_strong_prefix
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (j: LPS.jumper p)
+  (n: Ghost.erased pos)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (nlist n t))
+requires
+  PPB.pts_to_parsed_strong_prefix (parse_nlist n p) input #pm v
+returns res : (slice byte & slice byte)
+ensures
+  nlist_hd_tl_strong_prefix_post p sq n input pm v res
+{
+  // Step 1: elim strong prefix to raw pts_to + trade back
+  PPB.pts_to_parsed_strong_prefix_elim input;
+  with w . assert (pts_to input #pm w);
+  // Step 2: parse decomposition
+  parse_nlist_eq (Ghost.reveal n) p w;
+  parser_kind_prop_equiv k p;
+  // Step 3: jump to find head boundary
+  let off = j input 0sz;
+  // Step 4: split at head boundary
+  let input1, input2 = split_trade input off;
+  with w1 . assert (pts_to input1 #pm w1);
+  with w2 . assert (pts_to input2 #pm w2);
+  // Step 5: establish strong prefix props
+  parse_strong_prefix p w w1;
+  parse_nlist_kind_subkind (Ghost.reveal n - 1) k;
+  // Step 6: intro strong prefix for head and tail
+  let vh = Ghost.hide (List.Tot.hd (Ghost.reveal v));
+  let vt : Ghost.erased (nlist (n - 1) t) = Ghost.hide (List.Tot.tl (Ghost.reveal v));
+  PPB.pts_to_parsed_strong_prefix_intro p input1 vh;
+  PPB.pts_to_parsed_strong_prefix_intro (parse_nlist (n - 1) p) input2 vt;
+  // Step 7: compose trades
+  Trade.prod
+    (PPB.pts_to_parsed_strong_prefix p input1 #(pm /. 2.0R) vh)
+    (pts_to input1 #pm w1)
+    (PPB.pts_to_parsed_strong_prefix (parse_nlist (n - 1) p) input2 #(pm /. 2.0R) vt)
+    (pts_to input2 #pm w2);
+  Trade.trans
+    (PPB.pts_to_parsed_strong_prefix p input1 #(pm /. 2.0R) vh ** PPB.pts_to_parsed_strong_prefix (parse_nlist (n - 1) p) input2 #(pm /. 2.0R) vt)
+    (pts_to input1 #pm w1 ** pts_to input2 #pm w2)
+    (pts_to input #pm w);
+  Trade.trans
+    (PPB.pts_to_parsed_strong_prefix p input1 #(pm /. 2.0R) vh ** PPB.pts_to_parsed_strong_prefix (parse_nlist (n - 1) p) input2 #(pm /. 2.0R) vt)
+    (pts_to input #pm w)
+    (PPB.pts_to_parsed_strong_prefix (parse_nlist n p) input #pm v);
+  // Step 8: rewrite and fold
+  rewrite each vh as (List.Tot.hd (Ghost.reveal v));
+  rewrite each vt as (List.Tot.tl (Ghost.reveal v));
+  fold (nlist_hd_tl_strong_prefix_post' p sq n input pm v input1 input2);
+  fold (nlist_hd_tl_strong_prefix_post p sq n input pm v (input1, input2));
+  (input1, input2)
+}
+
+(* nlist_hd_strong_prefix: get head element sub-slice from strong-prefix nlist *)
+
+inline_for_extraction
+fn nlist_hd_strong_prefix
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (j: LPS.jumper p)
+  (n: Ghost.erased pos)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (nlist n t))
+requires
+  PPB.pts_to_parsed_strong_prefix (parse_nlist n p) input #pm v
+returns input' : slice byte
+ensures exists* v' .
+  PPB.pts_to_parsed_strong_prefix p input' #(pm /. 2.0R) v' **
+  trade (PPB.pts_to_parsed_strong_prefix p input' #(pm /. 2.0R) v') (PPB.pts_to_parsed_strong_prefix (parse_nlist n p) input #pm v) **
+  pure (
+    Cons? v /\
+    v' == List.Tot.hd v
+  )
+{
+  let (hd, tl) = nlist_hd_tl_strong_prefix sq j n input;
+  unfold (nlist_hd_tl_strong_prefix_post p sq n input pm v (hd, tl));
+  unfold (nlist_hd_tl_strong_prefix_post' p sq n input pm v hd tl);
+  Trade.elim_hyp_r _ _ _;
+  hd
+}
+
+(* nlist_tl_strong_prefix: get tail sub-slice from strong-prefix nlist *)
+
+inline_for_extraction
+fn nlist_tl_strong_prefix
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (j: LPS.jumper p)
+  (n: Ghost.erased pos)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (nlist n t))
+requires
+  PPB.pts_to_parsed_strong_prefix (parse_nlist n p) input #pm v
+returns input' : slice byte
+ensures exists* v' .
+  PPB.pts_to_parsed_strong_prefix (parse_nlist (n - 1) p) input' #(pm /. 2.0R) v' **
+  trade (PPB.pts_to_parsed_strong_prefix (parse_nlist (n - 1) p) input' #(pm /. 2.0R) v') (PPB.pts_to_parsed_strong_prefix (parse_nlist n p) input #pm v) **
+  pure (
+    Cons? v /\
+    v' == List.Tot.tl v
+  )
+{
+  let (hd, tl) = nlist_hd_tl_strong_prefix sq j n input;
+  unfold (nlist_hd_tl_strong_prefix_post p sq n input pm v (hd, tl));
+  unfold (nlist_hd_tl_strong_prefix_post' p sq n input pm v hd tl);
+  Trade.elim_hyp_l _ _ _;
+  tl
+}
+
+(* nlist_cons_as_nondep_then_strong_prefix: rewrite pts_to_parsed_strong_prefix (parse_nlist n p)
+   as pts_to_parsed_strong_prefix (nondep_then p (parse_nlist (n - 1) p)) *)
+
+ghost
+fn nlist_cons_as_nondep_then_strong_prefix
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (n: Ghost.erased pos)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (nlist n t))
+requires
+  PPB.pts_to_parsed_strong_prefix (parse_nlist n p) input #pm v
+ensures exists* v' .
+  PPB.pts_to_parsed_strong_prefix (nondep_then p (parse_nlist (n - 1) p)) input #pm v' **
+  Trade.trade
+    (PPB.pts_to_parsed_strong_prefix (nondep_then p (parse_nlist (n - 1) p)) input #pm v')
+    (PPB.pts_to_parsed_strong_prefix (parse_nlist n p) input #pm v) **
+  pure (
+    v' == (List.Tot.hd v, List.Tot.tl v)
+  )
+{
+  unfold (PPB.pts_to_parsed_strong_prefix (parse_nlist n p) input #pm v);
+  with w . assert (S.pts_to input #pm w);
+  parse_nlist_eq (Ghost.reveal n) p w;
+  nondep_then_eq #k #t p #(parse_nlist_kind (Ghost.reveal n - 1) k) #(nlist (Ghost.reveal n - 1) t) (parse_nlist (Ghost.reveal n - 1) p) w;
+  parse_nlist_kind_subkind (Ghost.reveal n - 1) k;
+  let v' : Ghost.erased (t & nlist (Ghost.reveal n - 1) t) = Ghost.hide (List.Tot.hd (Ghost.reveal v), List.Tot.tl (Ghost.reveal v));
+  fold (PPB.pts_to_parsed_strong_prefix (nondep_then p (parse_nlist (Ghost.reveal n - 1) p)) input #pm v');
+  intro
+    (Trade.trade
+      (PPB.pts_to_parsed_strong_prefix (nondep_then p (parse_nlist (Ghost.reveal n - 1) p)) input #pm v')
+      (PPB.pts_to_parsed_strong_prefix (parse_nlist n p) input #pm v)
+    )
+    #emp
+    fn _ {
+      unfold (PPB.pts_to_parsed_strong_prefix (nondep_then p (parse_nlist (Ghost.reveal n - 1) p)) input #pm v');
+      with w2 . assert (S.pts_to input #pm w2);
+      parse_nlist_eq (Ghost.reveal n) p w2;
+      nondep_then_eq #k #t p #(parse_nlist_kind (Ghost.reveal n - 1) k) #(nlist (Ghost.reveal n - 1) t) (parse_nlist (Ghost.reveal n - 1) p) w2;
+      parse_nlist_kind_subkind (Ghost.reveal n - 1) k;
+      fold (PPB.pts_to_parsed_strong_prefix (parse_nlist n p) input #pm v)
+    };
+}
