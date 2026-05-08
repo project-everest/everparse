@@ -1837,3 +1837,287 @@ fn split_nondep_then_strong_prefix''
     (PPB.pts_to_parsed_strong_prefix p0 input #pm v);
   (left, right)
 }
+
+(* ========== split_dtuple2 for pts_to_parsed_strong_prefix ========== *)
+
+let split_dtuple2_strong_prefix_post
+  (#t1: Type0)
+  (#t2: t1 -> Type0)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind) (#p2: (x: t1) -> parser k2 (t2 x))
+  (input: slice byte) (pm: perm) (v: Ghost.erased (dtuple2 t1 t2))
+  (res: (slice byte & slice byte))
+: slprop
+= let (left, right) = res in
+  PPB.pts_to_parsed p1 left #(pm /. 2.0R) (dfst v) **
+  PPB.pts_to_parsed_strong_prefix (p2 (dfst v)) right #(pm /. 2.0R) (dsnd v) **
+  Trade.trade
+    (PPB.pts_to_parsed p1 left #(pm /. 2.0R) (dfst v) **
+     PPB.pts_to_parsed_strong_prefix (p2 (dfst v)) right #(pm /. 2.0R) (dsnd v))
+    (PPB.pts_to_parsed_strong_prefix (parse_dtuple2 p1 p2) input #pm v)
+
+inline_for_extraction
+fn split_dtuple2_strong_prefix
+  (#t1: Type0)
+  (#t2: t1 -> Type0)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: (x: t1) -> parser k2 (t2 x))
+  (j1: LPS.jumper p1)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (dtuple2 t1 t2))
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong /\ k2.parser_kind_subkind == Some ParserStrong))
+  requires PPB.pts_to_parsed_strong_prefix (parse_dtuple2 p1 p2) input #pm v
+  returns res: (slice byte & slice byte)
+  ensures split_dtuple2_strong_prefix_post #t1 #t2 #k1 #p1 #k2 #p2 input pm v res
+{
+  PPB.pts_to_parsed_strong_prefix_elim input;
+  with w . assert (S.pts_to input #pm w);
+  parse_dtuple2_eq p1 p2 w;
+  parser_kind_prop_equiv k1 p1;
+  let off1 = j1 input 0sz;
+  let input1, input2 = split_trade input off1;
+  with wb1 . assert (S.pts_to input1 #pm wb1);
+  with wb2 . assert (S.pts_to input2 #pm wb2);
+  Trade.trans (S.pts_to input1 #pm wb1 ** S.pts_to input2 #pm wb2) (S.pts_to input #pm w) (PPB.pts_to_parsed_strong_prefix (parse_dtuple2 p1 p2) input #pm v);
+  parse_strong_prefix p1 w wb1;
+  PPB.pts_to_parsed_intro p1 input1 (dfst v);
+  PPB.pts_to_parsed_strong_prefix_intro (p2 (dfst v)) input2 (dsnd v);
+  Trade.prod (PPB.pts_to_parsed p1 input1 #(pm /. 2.0R) (dfst v)) (S.pts_to input1 #pm wb1) (PPB.pts_to_parsed_strong_prefix (p2 (dfst v)) input2 #(pm /. 2.0R) (dsnd v)) (S.pts_to input2 #pm wb2);
+  Trade.trans (PPB.pts_to_parsed p1 input1 #(pm /. 2.0R) (dfst v) ** PPB.pts_to_parsed_strong_prefix (p2 (dfst v)) input2 #(pm /. 2.0R) (dsnd v)) (S.pts_to input1 #pm wb1 ** S.pts_to input2 #pm wb2) (PPB.pts_to_parsed_strong_prefix (parse_dtuple2 p1 p2) input #pm v);
+  fold (split_dtuple2_strong_prefix_post #t1 #t2 #k1 #p1 #k2 #p2 input pm v (input1, input2));
+  (input1, input2)
+}
+
+(* ========== dtuple2_as_nondep_then for pts_to_parsed_strong_prefix ========== *)
+
+ghost
+fn pts_to_parsed_strong_prefix_dtuple2_as_nondep_then
+  (#t1: Type0) (#t2: t1 -> Type0)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind) (#p2: (x: t1) -> parser k2 (t2 x))
+  (input: slice byte) (#pm: perm) (#v: Ghost.erased (dtuple2 t1 t2))
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong /\ k2.parser_kind_subkind == Some ParserStrong))
+requires PPB.pts_to_parsed_strong_prefix (parse_dtuple2 p1 p2) input #pm v
+ensures exists* v' .
+  PPB.pts_to_parsed_strong_prefix (nondep_then p1 (p2 (dfst v))) input #pm v' **
+  Trade.trade
+    (PPB.pts_to_parsed_strong_prefix (nondep_then p1 (p2 (dfst v))) input #pm v')
+    (PPB.pts_to_parsed_strong_prefix (parse_dtuple2 p1 p2) input #pm v) **
+  pure (fst v' == dfst v /\ snd v' == dsnd v)
+{
+  unfold (PPB.pts_to_parsed_strong_prefix (parse_dtuple2 p1 p2) input #pm v);
+  with w . assert (S.pts_to input #pm w);
+  parse_dtuple2_eq p1 p2 w;
+  parser_kind_prop_equiv k1 p1;
+  nondep_then_eq p1 (p2 (dfst v)) w;
+  let v' : Ghost.erased (t1 & t2 (dfst v)) = Ghost.hide (dfst (Ghost.reveal v), dsnd (Ghost.reveal v));
+  fold (PPB.pts_to_parsed_strong_prefix (nondep_then p1 (p2 (dfst v))) input #pm v');
+  intro
+    (Trade.trade
+      (PPB.pts_to_parsed_strong_prefix (nondep_then p1 (p2 (dfst v))) input #pm v')
+      (PPB.pts_to_parsed_strong_prefix (parse_dtuple2 p1 p2) input #pm v)
+    )
+    #emp
+    fn _ {
+      unfold (PPB.pts_to_parsed_strong_prefix (nondep_then p1 (p2 (dfst v))) input #pm v');
+      with w2 . assert (S.pts_to input #pm w2);
+      nondep_then_eq p1 (p2 (dfst v)) w2;
+      parser_kind_prop_equiv k1 p1;
+      parse_dtuple2_eq p1 p2 w2;
+      fold (PPB.pts_to_parsed_strong_prefix (parse_dtuple2 p1 p2) input #pm v)
+    };
+}
+
+(* ========== nondep_then_assoc_r2l for pts_to_parsed_strong_prefix ========== *)
+
+ghost
+fn pts_to_parsed_strong_prefix_nondep_then_assoc_r2l
+  (#t1: Type0) (#t2: Type0) (#t3: Type0)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind) (#p2: parser k2 t2)
+  (#k3: Ghost.erased parser_kind) (#p3: parser k3 t3)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (t1 & (t2 & t3)))
+  (sq: squash (
+    k1.parser_kind_subkind == Some ParserStrong /\
+    k2.parser_kind_subkind == Some ParserStrong /\
+    k3.parser_kind_subkind == Some ParserStrong
+  ))
+requires
+  PPB.pts_to_parsed_strong_prefix (nondep_then p1 (nondep_then p2 p3)) input #pm v
+ensures exists* v' .
+  PPB.pts_to_parsed_strong_prefix (nondep_then (nondep_then p1 p2) p3) input #pm v' **
+  Trade.trade
+    (PPB.pts_to_parsed_strong_prefix (nondep_then (nondep_then p1 p2) p3) input #pm v')
+    (PPB.pts_to_parsed_strong_prefix (nondep_then p1 (nondep_then p2 p3)) input #pm v) **
+  pure (v' == ((fst v, fst (snd v)), snd (snd v)))
+{
+  unfold (PPB.pts_to_parsed_strong_prefix (nondep_then p1 (nondep_then p2 p3)) input #pm v);
+  with w . assert (S.pts_to input #pm w);
+  nondep_then_assoc_r2l_parse_eq p1 p2 p3 w;
+  let v' : Ghost.erased ((t1 & t2) & t3) = Ghost.hide ((fst (Ghost.reveal v), fst (snd (Ghost.reveal v))), snd (snd (Ghost.reveal v)));
+  fold (PPB.pts_to_parsed_strong_prefix (nondep_then (nondep_then p1 p2) p3) input #pm v');
+  intro
+    (Trade.trade
+      (PPB.pts_to_parsed_strong_prefix (nondep_then (nondep_then p1 p2) p3) input #pm v')
+      (PPB.pts_to_parsed_strong_prefix (nondep_then p1 (nondep_then p2 p3)) input #pm v)
+    )
+    #emp
+    fn _ {
+      unfold (PPB.pts_to_parsed_strong_prefix (nondep_then (nondep_then p1 p2) p3) input #pm v');
+      with w2 . assert (S.pts_to input #pm w2);
+      nondep_then_assoc_l2r_parse_eq p1 p2 p3 w2;
+      fold (PPB.pts_to_parsed_strong_prefix (nondep_then p1 (nondep_then p2 p3)) input #pm v)
+    };
+}
+
+(* ========== ext_nondep_then_left for pts_to_parsed_strong_prefix ========== *)
+
+ghost
+fn pts_to_parsed_strong_prefix_ext_nondep_then_left
+  (#t1 #t2 #t3: Type0)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind) (#p2: parser k2 t2)
+  (#k3: Ghost.erased parser_kind) (#p3: parser k3 t3)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (t1 & t3))
+  (sq: squash (
+    k1.parser_kind_subkind == Some ParserStrong /\
+    k2.parser_kind_subkind == Some ParserStrong /\
+    k3.parser_kind_subkind == Some ParserStrong /\
+    t1 == t2 /\
+    (forall x . parse p1 x == parse p2 x)
+  ))
+requires PPB.pts_to_parsed_strong_prefix (nondep_then p1 p3) input #pm v
+ensures exists* v' .
+  PPB.pts_to_parsed_strong_prefix (nondep_then p2 p3) input #pm v' **
+  Trade.trade
+    (PPB.pts_to_parsed_strong_prefix (nondep_then p2 p3) input #pm v')
+    (PPB.pts_to_parsed_strong_prefix (nondep_then p1 p3) input #pm v) **
+  pure (t1 == t2 /\ v == v')
+{
+  unfold (PPB.pts_to_parsed_strong_prefix (nondep_then p1 p3) input #pm v);
+  with w . assert (S.pts_to input #pm w);
+  nondep_then_eq p1 p3 w;
+  nondep_then_eq p2 p3 w;
+  fold (PPB.pts_to_parsed_strong_prefix (nondep_then p2 p3) input #pm v);
+  intro
+    (Trade.trade
+      (PPB.pts_to_parsed_strong_prefix (nondep_then p2 p3) input #pm v)
+      (PPB.pts_to_parsed_strong_prefix (nondep_then p1 p3) input #pm v)
+    )
+    #emp
+    fn _ {
+      unfold (PPB.pts_to_parsed_strong_prefix (nondep_then p2 p3) input #pm v);
+      with w2 . assert (S.pts_to input #pm w2);
+      nondep_then_eq p2 p3 w2;
+      nondep_then_eq p1 p3 w2;
+      fold (PPB.pts_to_parsed_strong_prefix (nondep_then p1 p3) input #pm v)
+    };
+}
+
+(* ========== ext_nondep_then_right for pts_to_parsed_strong_prefix ========== *)
+
+ghost
+fn pts_to_parsed_strong_prefix_ext_nondep_then_right
+  (#t1 #t2 #t3: Type0)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind) (#p2: parser k2 t2)
+  (#k3: Ghost.erased parser_kind) (#p3: parser k3 t3)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (t1 & t2))
+  (sq: squash (
+    k1.parser_kind_subkind == Some ParserStrong /\
+    k2.parser_kind_subkind == Some ParserStrong /\
+    k3.parser_kind_subkind == Some ParserStrong /\
+    t2 == t3 /\
+    (forall x . parse p2 x == parse p3 x)
+  ))
+requires PPB.pts_to_parsed_strong_prefix (nondep_then p1 p2) input #pm v
+ensures exists* v' .
+  PPB.pts_to_parsed_strong_prefix (nondep_then p1 p3) input #pm v' **
+  Trade.trade
+    (PPB.pts_to_parsed_strong_prefix (nondep_then p1 p3) input #pm v')
+    (PPB.pts_to_parsed_strong_prefix (nondep_then p1 p2) input #pm v) **
+  pure (t2 == t3 /\ v == v')
+{
+  unfold (PPB.pts_to_parsed_strong_prefix (nondep_then p1 p2) input #pm v);
+  with w . assert (S.pts_to input #pm w);
+  nondep_then_eq p1 p2 w;
+  parser_kind_prop_equiv k1 p1;
+  nondep_then_eq p1 p3 w;
+  fold (PPB.pts_to_parsed_strong_prefix (nondep_then p1 p3) input #pm v);
+  intro
+    (Trade.trade
+      (PPB.pts_to_parsed_strong_prefix (nondep_then p1 p3) input #pm v)
+      (PPB.pts_to_parsed_strong_prefix (nondep_then p1 p2) input #pm v)
+    )
+    #emp
+    fn _ {
+      unfold (PPB.pts_to_parsed_strong_prefix (nondep_then p1 p3) input #pm v);
+      with w2 . assert (S.pts_to input #pm w2);
+      nondep_then_eq p1 p3 w2;
+      parser_kind_prop_equiv k1 p1;
+      nondep_then_eq p1 p2 w2;
+      fold (PPB.pts_to_parsed_strong_prefix (nondep_then p1 p2) input #pm v)
+    };
+}
+
+(* ========== dtuple2_nondep_then_assoc_l2r for pts_to_parsed_strong_prefix ========== *)
+
+ghost
+fn pts_to_parsed_strong_prefix_dtuple2_nondep_then_assoc_l2r
+  (#t1: Type0) (#t2: t1 -> Type0) (#t3: Type0)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind) (#p2: ((x: t1) -> parser k2 (t2 x)))
+  (#k3: Ghost.erased parser_kind) (#p3: parser k3 t3)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (dtuple2 t1 t2 & t3))
+  (sq: squash (
+    k1.parser_kind_subkind == Some ParserStrong /\
+    k2.parser_kind_subkind == Some ParserStrong /\
+    k3.parser_kind_subkind == Some ParserStrong
+  ))
+requires PPB.pts_to_parsed_strong_prefix (nondep_then (parse_dtuple2 p1 p2) p3) input #pm v
+ensures exists* v' .
+  PPB.pts_to_parsed_strong_prefix (nondep_then p1 (nondep_then (p2 (dfst (fst v))) p3)) input #pm v' **
+  Trade.trade
+    (PPB.pts_to_parsed_strong_prefix (nondep_then p1 (nondep_then (p2 (dfst (fst v))) p3)) input #pm v')
+    (PPB.pts_to_parsed_strong_prefix (nondep_then (parse_dtuple2 p1 p2) p3) input #pm v) **
+  pure (fst v' == dfst (fst v) /\ fst (snd v') == dsnd (fst v) /\ snd (snd v') == snd v)
+{
+  unfold (PPB.pts_to_parsed_strong_prefix (nondep_then (parse_dtuple2 p1 p2) p3) input #pm v);
+  with w . assert (S.pts_to input #pm w);
+  nondep_then_eq (parse_dtuple2 p1 p2) p3 w;
+  parse_dtuple2_eq p1 p2 w;
+  parser_kind_prop_equiv k1 p1;
+  parser_kind_prop_equiv k2 (p2 (dfst (fst (Ghost.reveal v))));
+  nondep_then_eq p1 (nondep_then (p2 (dfst (fst (Ghost.reveal v)))) p3) w;
+  nondep_then_eq (p2 (dfst (fst (Ghost.reveal v)))) p3 (Seq.slice w (snd (Some?.v (parse p1 w))) (Seq.length w));
+  let v' : Ghost.erased (t1 & (t2 (dfst (fst (Ghost.reveal v))) & t3)) = Ghost.hide (dfst (fst (Ghost.reveal v)), (dsnd (fst (Ghost.reveal v)), snd (Ghost.reveal v)));
+  fold (PPB.pts_to_parsed_strong_prefix (nondep_then p1 (nondep_then (p2 (dfst (fst (Ghost.reveal v)))) p3)) input #pm v');
+  intro
+    (Trade.trade
+      (PPB.pts_to_parsed_strong_prefix (nondep_then p1 (nondep_then (p2 (dfst (fst (Ghost.reveal v)))) p3)) input #pm v')
+      (PPB.pts_to_parsed_strong_prefix (nondep_then (parse_dtuple2 p1 p2) p3) input #pm v)
+    )
+    #emp
+    fn _ {
+      unfold (PPB.pts_to_parsed_strong_prefix (nondep_then p1 (nondep_then (p2 (dfst (fst (Ghost.reveal v)))) p3)) input #pm v');
+      with w2 . assert (S.pts_to input #pm w2);
+      nondep_then_eq p1 (nondep_then (p2 (dfst (fst (Ghost.reveal v)))) p3) w2;
+      parser_kind_prop_equiv k1 p1;
+      nondep_then_eq (p2 (dfst (fst (Ghost.reveal v)))) p3 (Seq.slice w2 (snd (Some?.v (parse p1 w2))) (Seq.length w2));
+      parser_kind_prop_equiv k2 (p2 (dfst (fst (Ghost.reveal v))));
+      nondep_then_eq (parse_dtuple2 p1 p2) p3 w2;
+      parse_dtuple2_eq p1 p2 w2;
+      fold (PPB.pts_to_parsed_strong_prefix (nondep_then (parse_dtuple2 p1 p2) p3) input #pm v)
+    };
+}

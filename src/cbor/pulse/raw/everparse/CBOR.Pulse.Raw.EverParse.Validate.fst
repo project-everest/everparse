@@ -4,6 +4,9 @@ open LowParse.Pulse.Int
 open LowParse.Pulse.BitSum
 open LowParse.Pulse.SeqBytes
 
+module PPB = LowParse.PulseParse.Base
+module PPC = LowParse.PulseParse.Combinators
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let read_initial_byte_t' : reader serialize_initial_byte_t =
@@ -940,6 +943,45 @@ fn get_header_and_contents
   outc
 }
 
+fn get_header_and_contents_strong_prefix
+  (input: S.slice byte)
+  (outh: R.ref header)
+  (#pm: perm)
+  (#v: Ghost.erased raw_data_item)
+  norewrite
+  requires exists* h . PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pm v ** pts_to outh h
+  returns outc: S.slice byte
+  ensures exists* h c .
+    pts_to outh h **
+    PPB.pts_to_parsed_strong_prefix (parse_content parse_raw_data_item h) outc #(pm /. 2.0R) c **
+    trade (PPB.pts_to_parsed_strong_prefix (parse_content parse_raw_data_item h) outc #(pm /. 2.0R) c) (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pm v) **
+    pure (synth_raw_data_item_recip v == (| h, c |))
+{
+  Classical.forall_intro parse_raw_data_item_eq;
+  PPC.pts_to_parsed_strong_prefix_ext_trade
+    #raw_data_item
+    #parse_raw_data_item_kind #parse_raw_data_item
+    #parse_raw_data_item_kind #(parse_raw_data_item_aux parse_raw_data_item)
+    input
+    ();
+  PPC.pts_to_parsed_strong_prefix_synth_l2r
+    (parse_dtuple2 parse_header (parse_content parse_raw_data_item))
+    synth_raw_data_item
+    synth_raw_data_item_recip
+    input;
+  LowParse.Pulse.VCList.trade_trans_nounify _ _ _ (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pm v);
+  with v' . assert (PPB.pts_to_parsed_strong_prefix (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) input #pm v');
+  let (left, right) = PPC.split_dtuple2_strong_prefix (jump_header ()) input ();
+  unfold (PPC.split_dtuple2_strong_prefix_post #header #content #parse_header_kind #parse_header #parse_content_kind #(parse_content parse_raw_data_item) input pm v' (left, right));
+  Trade.trans _ _ (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pm v);
+  let h = PPB.leaf_reader_of_serialized (read_header ()) left;
+  Trade.elim_hyp_l _ _ _;
+  outh := h;
+  rewrite each dfst (synth_raw_data_item_recip
+                      v) as h;
+  right
+}
+
 #push-options "--z3rlimit 64"
 
 ghost
@@ -1226,6 +1268,197 @@ fn get_map_payload
 {
   get_map_payload' input v
 }
+
+(* Strong prefix variants of payload accessors *)
+
+ghost
+fn get_tagged_payload_strong_prefix
+  (input: S.slice byte)
+  (v: Ghost.erased raw_data_item)
+  (#pm: perm)
+  (#h: Ghost.erased header)
+  (#c: Ghost.erased (content h)) 
+  requires PPB.pts_to_parsed_strong_prefix (parse_content parse_raw_data_item h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |) /\ Tagged? v)
+  ensures exists* v' .
+    PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pm v' **
+    trade (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pm v') (PPB.pts_to_parsed_strong_prefix (parse_content parse_raw_data_item h) input #pm c) **
+    pure (Tagged? v /\ v' == Tagged?.v v)
+{
+  PPC.pts_to_parsed_strong_prefix_ext_trade_gen
+    #(content (reveal #header h))
+    #raw_data_item
+    #parse_content_kind #(parse_content parse_raw_data_item (reveal #header h))
+    #parse_raw_data_item_kind #parse_raw_data_item
+    input
+    ();
+  rewrite
+  trade #emp_inames
+      (PPB.pts_to_parsed_strong_prefix #parse_raw_data_item_kind
+          #(content (reveal #header h))
+          parse_raw_data_item
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (PPB.pts_to_parsed_strong_prefix #parse_content_kind
+          #(content (reveal #header h))
+          (parse_content parse_raw_data_item (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+    as
+    trade #emp_inames
+      (PPB.pts_to_parsed_strong_prefix #parse_raw_data_item_kind
+          #raw_data_item
+          parse_raw_data_item
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (PPB.pts_to_parsed_strong_prefix #parse_content_kind
+          #(content (reveal #header h))
+          (parse_content parse_raw_data_item (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      ;
+  ()
+}
+
+#push-options "--z3rlimit 64"
+
+ghost
+fn get_array_payload_strong_prefix
+  (input: S.slice byte)
+  (v: Ghost.erased raw_data_item {Array? v })
+  (#pm: perm)
+  (#h: Ghost.erased header)
+  (#c: Ghost.erased (content h))
+  requires PPB.pts_to_parsed_strong_prefix (parse_content parse_raw_data_item h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |))
+  ensures exists* v' .
+    PPB.pts_to_parsed_strong_prefix (L.parse_nlist (U64.v (Array?.len v).value) parse_raw_data_item) input #pm v' **
+    trade (PPB.pts_to_parsed_strong_prefix (L.parse_nlist (U64.v (Array?.len v).value) parse_raw_data_item) input #pm v') (PPB.pts_to_parsed_strong_prefix (parse_content parse_raw_data_item h) input #pm c) **
+    pure (v' == Array?.v v)
+{
+  PPC.pts_to_parsed_strong_prefix_ext_trade_gen
+    #(content (reveal #header h))
+    #(L.nlist (U64.v (Array?.len (reveal #raw_data_item v)).value) raw_data_item)
+    #parse_content_kind #(parse_content parse_raw_data_item (reveal #header h))
+    #(L.parse_nlist_kind (U64.v (Array?.len (reveal #raw_data_item v)).value) parse_raw_data_item_kind) #(L.parse_nlist (U64.v (Array?.len (reveal #raw_data_item v)).value) parse_raw_data_item)
+    input
+    ();
+  rewrite
+    trade #emp_inames
+      (PPB.pts_to_parsed_strong_prefix #(L.parse_nlist_kind (U64.v (Array?.len (reveal #raw_data_item v))
+                    .value)
+              parse_raw_data_item_kind)
+          #(content (reveal #header h))
+          (L.parse_nlist (U64.v (Array?.len (reveal #raw_data_item v)).value)
+              #parse_raw_data_item_kind
+              #raw_data_item
+              parse_raw_data_item)
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (PPB.pts_to_parsed_strong_prefix #parse_content_kind
+          #(content (reveal #header h))
+          (parse_content parse_raw_data_item (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+   as
+    trade #emp_inames
+      (PPB.pts_to_parsed_strong_prefix #(L.parse_nlist_kind (U64.v (Array?.len (reveal #raw_data_item v))
+                    .value)
+              parse_raw_data_item_kind)
+          #(L.nlist (U64.v (Array?.len (reveal #raw_data_item v)).value) raw_data_item)
+          (L.parse_nlist (U64.v (Array?.len (reveal #raw_data_item v)).value)
+              #parse_raw_data_item_kind
+              #raw_data_item
+              parse_raw_data_item)
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (PPB.pts_to_parsed_strong_prefix #parse_content_kind
+          #(content (reveal #header h))
+          (parse_content parse_raw_data_item (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c));
+  ()
+}
+
+ghost
+fn get_map_payload_strong_prefix
+  (input: S.slice byte)
+  (v: Ghost.erased raw_data_item {Map? v })
+  (#pm: perm)
+  (#h: Ghost.erased header)
+  (#c: Ghost.erased (content h))
+  requires PPB.pts_to_parsed_strong_prefix (parse_content parse_raw_data_item h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |))
+  ensures exists* v' .
+    PPB.pts_to_parsed_strong_prefix (L.parse_nlist (U64.v (Map?.len v).value) (nondep_then parse_raw_data_item parse_raw_data_item)) input #pm v' **
+    trade (PPB.pts_to_parsed_strong_prefix (L.parse_nlist (U64.v (Map?.len v).value) (nondep_then parse_raw_data_item parse_raw_data_item)) input #pm v') (PPB.pts_to_parsed_strong_prefix (parse_content parse_raw_data_item h) input #pm c) **
+    pure (v' == Map?.v v)
+{
+  PPC.pts_to_parsed_strong_prefix_ext_trade_gen
+    #(content (reveal #header h))
+    #(L.nlist (U64.v (Map?.len (reveal #raw_data_item v)).value) (raw_data_item & raw_data_item))
+    #parse_content_kind #(parse_content parse_raw_data_item (reveal #header h))
+    #(L.parse_nlist_kind (U64.v (Map?.len (reveal #raw_data_item v)).value) (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)) #(L.parse_nlist (U64.v (Map?.len (reveal #raw_data_item v)).value) (nondep_then parse_raw_data_item parse_raw_data_item))
+    input
+    ();
+  rewrite
+  trade #emp_inames
+      (PPB.pts_to_parsed_strong_prefix #(L.parse_nlist_kind (U64.v (Map?.len (reveal #raw_data_item v))
+                    .value)
+              (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind))
+          #(content (reveal #header h))
+          (L.parse_nlist (U64.v (Map?.len (reveal #raw_data_item v)).value)
+              #(and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)
+              #(raw_data_item & raw_data_item)
+              (nondep_then #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item
+                  #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (PPB.pts_to_parsed_strong_prefix #parse_content_kind
+          #(content (reveal #header h))
+          (parse_content parse_raw_data_item (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+   as trade #emp_inames
+      (PPB.pts_to_parsed_strong_prefix #(L.parse_nlist_kind (U64.v (Map?.len (reveal #raw_data_item v))
+                    .value)
+              (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind))
+          #(L.nlist (U64.v (Map?.len (reveal #raw_data_item v)).value)
+              (raw_data_item & raw_data_item))
+          (L.parse_nlist (U64.v (Map?.len (reveal #raw_data_item v)).value)
+              #(and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)
+              #(raw_data_item & raw_data_item)
+              (nondep_then #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item
+                  #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (PPB.pts_to_parsed_strong_prefix #parse_content_kind
+          #(content (reveal #header h))
+          (parse_content parse_raw_data_item (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+    ;
+  ()
+}
+
+#pop-options
 
 #push-options "--z3rlimit 64"
 #restart-solver
