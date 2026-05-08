@@ -872,6 +872,49 @@ ensures exists* w .
     };
 }
 
+// Given pts_to_parsed_strong_prefix, use a jumper to find the exact consumed length,
+// split the slice, and return a sub-slice with pts_to_serialized and a trade back.
+fn pts_to_parsed_strong_prefix_to_serialized_trade
+  (#k: Ghost.erased parser_kind) (#t: Type0) (#p: parser k t)
+  (s: serializer p) (j: LPS.jumper p)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+requires
+  pts_to_parsed_strong_prefix p input #pm v
+returns exact: slice byte
+ensures
+  LPS.pts_to_serialized s exact #pm v **
+  Trade.trade
+    (LPS.pts_to_serialized s exact #pm v)
+    (pts_to_parsed_strong_prefix p input #pm v)
+{
+  // Step 1: Elim strong_prefix to raw bytes
+  pts_to_parsed_strong_prefix_elim input;
+  with w . assert (S.pts_to input #pm w);
+  // Step 2: Use jumper to find total consumed length
+  S.pts_to_len input;
+  let off = j input 0sz;
+  // Step 3: Split at off to get exact-size sub-slice
+  let exact, rest = split_trade input off;
+  with w_exact . assert (S.pts_to exact #pm w_exact);
+  with w_rest . assert (S.pts_to rest #pm w_rest);
+  // Step 4: Consume rest from the trade
+  Trade.elim_hyp_r (S.pts_to exact #pm w_exact) (S.pts_to rest #pm w_rest) (S.pts_to input #pm w);
+  // Step 5: Chain: exact → input → strong_prefix
+  Trade.trans (S.pts_to exact #pm w_exact) (S.pts_to input #pm w)
+    (pts_to_parsed_strong_prefix p input #pm v);
+  // Step 6: Prove w_exact == bare_serialize s v
+  parse_injective p w (bare_serialize s v);
+  // Step 7: Fold as pts_to_serialized
+  LPS.pts_to_serialized_intro_trade s exact v;
+  Trade.trans
+    (LPS.pts_to_serialized s exact #pm v)
+    (S.pts_to exact #pm w_exact)
+    (pts_to_parsed_strong_prefix p input #pm v);
+  exact
+}
+
 ghost fn pts_to_parsed_strong_prefix_ext
   (#t: Type0)
   (#k1: parser_kind)

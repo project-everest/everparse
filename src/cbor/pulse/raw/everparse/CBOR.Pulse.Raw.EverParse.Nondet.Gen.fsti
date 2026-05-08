@@ -10,6 +10,7 @@ open Pulse.Lib.Pervasives
 module S = Pulse.Lib.Slice.Util
 module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
+module PPB = LowParse.PulseParse.Base
 
 inline_for_extraction
 let impl_fun_with_invariant_t
@@ -21,9 +22,9 @@ let impl_fun_with_invariant_t
   (#p1: perm) ->
   (#gl1: Ghost.erased (raw_data_item)) ->
   stt t
-    (inv ** pts_to_serialized (serialize_raw_data_item) l1 #p1 gl1)
+    (inv ** PPB.pts_to_parsed parse_raw_data_item l1 #p1 gl1)
     (fun res ->
-      inv ** pts_to_serialized (serialize_raw_data_item) l1 #p1 gl1 **
+      inv ** PPB.pts_to_parsed parse_raw_data_item l1 #p1 gl1 **
       pure (
         res == f gl1
       )
@@ -39,7 +40,7 @@ let impl_equiv_t
   (#gl1: Ghost.erased (raw_data_item)) ->
   impl_fun_with_invariant_t
     (equiv gl1)
-    (pts_to_serialized (serialize_raw_data_item) l1 #p1 gl1)
+    (PPB.pts_to_parsed parse_raw_data_item l1 #p1 gl1)
 
 let option_sz_v (x: option SZ.t) : GTot (option nat) =
   match x with
@@ -51,26 +52,26 @@ let impl_equiv_hd_t
   (#t: Type)
   (equiv: (x1: raw_data_item) -> (x2: raw_data_item) -> t)
 =
-  (n1: Ghost.erased nat) ->
+  (n1: SZ.t) ->
   (l1: S.slice byte) ->
-  (n2: Ghost.erased nat) ->
+  (n2: SZ.t) ->
   (l2: S.slice byte) ->
   (#p1: perm) ->
-  (#gl1: Ghost.erased (nlist n1 raw_data_item)) ->
+  (#gl1: Ghost.erased (nlist (SZ.v n1) raw_data_item)) ->
   (#p2: perm) ->
-  (#gl2: Ghost.erased (nlist n2 raw_data_item)) ->
+  (#gl2: Ghost.erased (nlist (SZ.v n2) raw_data_item)) ->
   stt t
-    (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
-      pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2 **
+    (PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n1) parse_raw_data_item) l1 #p1 gl1 **
+      PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n2) parse_raw_data_item) l2 #p2 gl2 **
       pure (
-        n1 > 0 /\ n2 > 0
+        SZ.v n1 > 0 /\ SZ.v n2 > 0
       )
     )
     (fun res ->
-pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
-      pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2 **
+PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n1) parse_raw_data_item) l1 #p1 gl1 **
+      PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n2) parse_raw_data_item) l2 #p2 gl2 **
       pure (
-        n1 > 0 /\ n2 > 0 /\
+        SZ.v n1 > 0 /\ SZ.v n2 > 0 /\
         res == equiv (List.Tot.hd gl1) (List.Tot.hd gl2)
       )
     )
@@ -89,12 +90,12 @@ val impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow
   (#gl2: Ghost.erased (nlist (SZ.v nl2) (raw_data_item & raw_data_item)))
 : stt (option bool)
 (requires
-  pts_to_serialized (serialize_nlist (SZ.v nl1) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l1 #pl1 gl1 **
-  pts_to_serialized (serialize_nlist (SZ.v nl2) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l2 #pl2 gl2
+  PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v nl1) (nondep_then parse_raw_data_item parse_raw_data_item)) l1 #pl1 gl1 **
+  PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v nl2) (nondep_then parse_raw_data_item parse_raw_data_item)) l2 #pl2 gl2
 )
 (ensures fun res ->
-  pts_to_serialized (serialize_nlist (SZ.v nl1) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l1 #pl1 gl1 **
-  pts_to_serialized (serialize_nlist (SZ.v nl2) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) l2 #pl2 gl2 **
+  PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v nl1) (nondep_then parse_raw_data_item parse_raw_data_item)) l1 #pl1 gl1 **
+  PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v nl2) (nondep_then parse_raw_data_item parse_raw_data_item)) l2 #pl2 gl2 **
   pure (
     res == list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv gl1) gl2
   )
@@ -127,12 +128,12 @@ let impl_check_equiv_list_t
   (#p2: perm) ->
   (#gl2: Ghost.erased (nlist (SZ.v n2) raw_data_item)) ->
   stt (option bool)
-    (pts_to_serialized (serialize_nlist (SZ.v n1) serialize_raw_data_item) l1 #p1 gl1 **
-      pts_to_serialized (serialize_nlist (SZ.v n2) serialize_raw_data_item) l2 #p2 gl2
+    (PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n1) parse_raw_data_item) l1 #p1 gl1 **
+      PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n2) parse_raw_data_item) l2 #p2 gl2
     )
     (fun res ->
-      pts_to_serialized (serialize_nlist (SZ.v n1) serialize_raw_data_item) l1 #p1 gl1 **
-      pts_to_serialized (serialize_nlist (SZ.v n2) serialize_raw_data_item) l2 #p2 gl2 **
+      PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n1) parse_raw_data_item) l1 #p1 gl1 **
+      PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n2) parse_raw_data_item) l2 #p2 gl2 **
       pure (
         res == check_equiv_list gl1 gl2 equiv
       )
@@ -160,10 +161,10 @@ val impl_check_map_depth
   (#gl0: Ghost.erased (nlist (SZ.v n0) raw_data_item))
 : stt bool
 (requires
-  pts_to_serialized (serialize_nlist (SZ.v n0) serialize_raw_data_item) l0 #pm gl0
+  PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n0) parse_raw_data_item) l0 #pm gl0
 )
 (ensures fun res ->
-  pts_to_serialized (serialize_nlist (SZ.v n0) serialize_raw_data_item) l0 #pm gl0 **
+  PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n0) parse_raw_data_item) l0 #pm gl0 **
   pure (
     res == check_map_depth (SZ.v bound) gl0
   )
