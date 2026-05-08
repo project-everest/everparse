@@ -1,6 +1,7 @@
 #include "ColoredPointWrapper.h"
 #include "EverParse.h"
 #include "ColoredPoint.h"
+
 void ColoredPointEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static

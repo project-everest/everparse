@@ -1,6 +1,7 @@
 #include "SmokerWrapper.h"
 #include "EverParse.h"
 #include "Smoker.h"
+
 void SmokerEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static

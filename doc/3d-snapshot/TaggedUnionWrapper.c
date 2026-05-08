@@ -1,6 +1,7 @@
 #include "TaggedUnionWrapper.h"
 #include "EverParse.h"
 #include "TaggedUnion.h"
+
 void TaggedUnionEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static

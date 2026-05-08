@@ -1,6 +1,7 @@
 #include "GetFieldPtrWrapper.h"
 #include "EverParse.h"
 #include "GetFieldPtr.h"
+
 void GetFieldPtrEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static

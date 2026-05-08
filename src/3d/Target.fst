@@ -1408,7 +1408,7 @@ let print_c_entry
       "#include \"%sWrapper.h\"\n\
        #include \"EverParse.h\"\n\
        #include \"%s.h\"\n\
-       %s\
+       %s\n\
        %s\n\n\
        %s\n\n\
        %s\n"

@@ -1,6 +1,7 @@
 #include "EnumConstraintWrapper.h"
 #include "EverParse.h"
 #include "EnumConstraint.h"
+
 void EnumConstraintEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static

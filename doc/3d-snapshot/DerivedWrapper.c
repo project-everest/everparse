@@ -1,6 +1,7 @@
 #include "DerivedWrapper.h"
 #include "EverParse.h"
 #include "Derived.h"
+
 void DerivedEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static

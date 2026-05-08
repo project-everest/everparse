@@ -1,6 +1,7 @@
 #include "BFWrapper.h"
 #include "EverParse.h"
 #include "BF.h"
+
 void BFEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static
