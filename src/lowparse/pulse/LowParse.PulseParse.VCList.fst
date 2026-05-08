@@ -879,3 +879,225 @@ ensures exists* v' .
       fold (PPB.pts_to_parsed_strong_prefix (parse_nlist n p) input #pm v)
     };
 }
+
+(* pts_to_parsed_strong_prefix_nlist_ext: rewrite nlist with equivalent element parser *)
+
+ghost
+fn pts_to_parsed_strong_prefix_nlist_ext
+  (#k1: Ghost.erased parser_kind)
+  (#t1: Type0)
+  (#p1: parser k1 t1)
+  (n1: Ghost.erased nat)
+  (input: slice byte)
+  (#k2: Ghost.erased parser_kind)
+  (#t2: Type0)
+  (#p2: parser k2 t2)
+  (n2: Ghost.erased nat)
+  (#pm: perm)
+  (#v1: Ghost.erased (nlist n1 t1))
+  (sq: squash (
+    k1.parser_kind_subkind == Some ParserStrong /\
+    k2.parser_kind_subkind == Some ParserStrong /\
+    t1 == t2 /\
+    n1 == n2 /\
+    (forall b . parse p1 b == parse p2 b)
+  ))
+requires
+  PPB.pts_to_parsed_strong_prefix (parse_nlist n1 p1) input #pm v1
+ensures exists* v2 .
+  PPB.pts_to_parsed_strong_prefix (parse_nlist n2 p2) input #pm v2 **
+  Trade.trade
+    (PPB.pts_to_parsed_strong_prefix (parse_nlist n2 p2) input #pm v2)
+    (PPB.pts_to_parsed_strong_prefix (parse_nlist n1 p1) input #pm v1) **
+  pure (
+    t1 == t2 /\
+    n1 == n2 /\
+    (v1 <: list t1) == v2
+  )
+{
+  parse_nlist_ext_forall (Ghost.reveal n1) p1 p2;
+  parse_nlist_kind_subkind (Ghost.reveal n1) k1;
+  parse_nlist_kind_subkind (Ghost.reveal n2) k2;
+  unfold (PPB.pts_to_parsed_strong_prefix (parse_nlist n1 p1) input #pm v1);
+  with w . assert (S.pts_to input #pm w);
+  rewrite each t1 as t2;
+  rewrite each (Ghost.reveal n1) as (Ghost.reveal n2);
+  fold (PPB.pts_to_parsed_strong_prefix (parse_nlist n2 p2) input #pm (coerce_eq () (Ghost.reveal v1)));
+  intro
+    (Trade.trade
+      (PPB.pts_to_parsed_strong_prefix (parse_nlist n2 p2) input #pm (coerce_eq () (Ghost.reveal v1)))
+      (PPB.pts_to_parsed_strong_prefix (parse_nlist n1 p1) input #pm v1)
+    )
+    #emp
+    fn _ {
+      unfold (PPB.pts_to_parsed_strong_prefix (parse_nlist n2 p2) input #pm (coerce_eq () (Ghost.reveal v1)));
+      rewrite each t2 as t1;
+      rewrite each (Ghost.reveal n2) as (Ghost.reveal n1);
+      fold (PPB.pts_to_parsed_strong_prefix (parse_nlist n1 p1) input #pm v1)
+    };
+}
+
+(* parse_nlist_append_strong_prefix: if nondep_then (parse_nlist n1 p) (parse_nlist n2 p) parses w
+   to (l1, l2), then parse_nlist (n1+n2) p also parses w to (append l1 l2) *)
+
+let parse_nlist_append_strong_prefix
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (n1: nat) (l1: nlist n1 t)
+  (n2: nat) (l2: nlist n2 t)
+  (w: bytes)
+: Lemma
+  (requires
+    k.parser_kind_subkind == Some ParserStrong /\
+    (match parse (nondep_then (parse_nlist n1 p) (parse_nlist n2 p)) w with
+     | None -> False
+     | Some ((l1', l2'), _) -> l1' == l1 /\ l2' == l2)
+  )
+  (ensures (
+    List.Tot.append_length l1 l2;
+    match parse (parse_nlist (n1 + n2) p) w with
+    | None -> False
+    | Some (l, _) -> l == List.Tot.append l1 l2
+  ))
+= List.Tot.append_length l1 l2;
+  LPV.serialize_nlist_append s n1 l1 n2 l2;
+  nondep_then_eq (parse_nlist n1 p) (parse_nlist n2 p) w;
+  parse_nlist_kind_subkind n1 k;
+  parse_nlist_kind_subkind n2 k;
+  parse_nlist_kind_subkind (n1 + n2) k;
+  parser_kind_prop_equiv (parse_nlist_kind n1 k) (parse_nlist n1 p);
+  parser_kind_prop_equiv (parse_nlist_kind n2 k) (parse_nlist n2 p);
+  let Some (_, consumed1) = parse (parse_nlist n1 p) w in
+  let w2 = Seq.slice w consumed1 (Seq.length w) in
+  let Some (_, consumed2) = parse (parse_nlist n2 p) w2 in
+  parsed_data_is_serialize (serialize_nlist n1 s) w;
+  parsed_data_is_serialize (serialize_nlist n2 s) w2;
+  let ser_l1 = serialize (serialize_nlist n1 s) l1 in
+  let ser_l2 = serialize (serialize_nlist n2 s) l2 in
+  // parsed_data_is_serialize gives: ser_l1 ++ w[consumed1..] `Seq.equal` w
+  // and: ser_l2 ++ w2[consumed2..] `Seq.equal` w2
+  // From the first: Seq.length ser_l1 + (Seq.length w - consumed1) == Seq.length w
+  // hence Seq.length ser_l1 == consumed1
+  Seq.lemma_split w consumed1;
+  Seq.lemma_split w2 consumed2;
+  assert (Seq.length ser_l1 == consumed1);
+  assert (Seq.length ser_l2 == consumed2);
+  serialize_nondep_then_eq (serialize_nlist n1 s) (serialize_nlist n2 s) (l1, l2);
+  let ser_combined = serialize (serialize_nlist (n1 + n2) s) (List.Tot.append l1 l2) in
+  assert (ser_combined `Seq.equal` Seq.append ser_l1 ser_l2);
+  // Show w starts with ser_combined
+  // From parsed_data_is_serialize: (ser_l1 ++ w[consumed1..]) `Seq.equal` w
+  // and: (ser_l2 ++ w2[consumed2..]) `Seq.equal` w2
+  // So w == ser_l1 ++ w2 == ser_l1 ++ ser_l2 ++ rest
+  assert (Seq.length ser_combined == consumed1 + consumed2);
+  assert (consumed1 + consumed2 <= Seq.length w);
+  Seq.lemma_eq_intro (Seq.slice w 0 (consumed1 + consumed2)) ser_combined;
+  parser_kind_prop_equiv (parse_nlist_kind (n1 + n2) k) (parse_nlist (n1 + n2) p);
+  parse_serialize (serialize_nlist (n1 + n2) s) (List.Tot.append l1 l2);
+  parse_strong_prefix (parse_nlist (n1 + n2) p) ser_combined w
+
+(* parse_nlist_split_strong_prefix: reverse of append - from parse_nlist (n1+n2) to nondep_then *)
+
+#push-options "--z3rlimit 32"
+let parse_nlist_split_strong_prefix
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (n1: nat) (l1: nlist n1 t)
+  (n2: nat) (l2: nlist n2 t)
+  (w: bytes)
+: Lemma
+  (requires (
+    List.Tot.append_length l1 l2;
+    k.parser_kind_subkind == Some ParserStrong /\
+    (match parse (parse_nlist (n1 + n2) p) w with
+     | None -> False
+     | Some (l, _) -> l == List.Tot.append l1 l2)
+  ))
+  (ensures (
+    match parse (nondep_then (parse_nlist n1 p) (parse_nlist n2 p)) w with
+    | None -> False
+    | Some ((l1', l2'), _) -> l1' == l1 /\ l2' == l2
+  ))
+= List.Tot.append_length l1 l2;
+  LPV.serialize_nlist_append s n1 l1 n2 l2;
+  parse_nlist_kind_subkind n1 k;
+  parse_nlist_kind_subkind n2 k;
+  parse_nlist_kind_subkind (n1 + n2) k;
+  parser_kind_prop_equiv (parse_nlist_kind (n1 + n2) k) (parse_nlist (n1 + n2) p);
+  parsed_data_is_serialize (serialize_nlist (n1 + n2) s) w;
+  let ser_l1 = serialize (serialize_nlist n1 s) l1 in
+  let ser_l2 = serialize (serialize_nlist n2 s) l2 in
+  serialize_nondep_then_eq (serialize_nlist n1 s) (serialize_nlist n2 s) (l1, l2);
+  let ser_combined = serialize (serialize_nlist (n1 + n2) s) (List.Tot.append l1 l2) in
+  assert (ser_combined `Seq.equal` Seq.append ser_l1 ser_l2);
+  let consumed1 = Seq.length ser_l1 in
+  let consumed2 = Seq.length ser_l2 in
+  assert (consumed1 + consumed2 <= Seq.length w);
+  Seq.lemma_eq_intro (Seq.slice w 0 consumed1) ser_l1;
+  parser_kind_prop_equiv (parse_nlist_kind n1 k) (parse_nlist n1 p);
+  parse_serialize (serialize_nlist n1 s) l1;
+  parse_strong_prefix (parse_nlist n1 p) ser_l1 w;
+  let w2 = Seq.slice w consumed1 (Seq.length w) in
+  assert (consumed2 <= Seq.length w2);
+  Seq.lemma_eq_intro (Seq.slice w2 0 consumed2) ser_l2;
+  parser_kind_prop_equiv (parse_nlist_kind n2 k) (parse_nlist n2 p);
+  parse_serialize (serialize_nlist n2 s) l2;
+  parse_strong_prefix (parse_nlist n2 p) ser_l2 w2;
+  nondep_then_eq (parse_nlist n1 p) (parse_nlist n2 p) w
+#pop-options
+
+(* pts_to_parsed_strong_prefix_nlist_append: rewrite nondep_then (nlist n1) (nlist n2) -> nlist (n1+n2) *)
+
+ghost
+fn pts_to_parsed_strong_prefix_nlist_append
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (input: slice byte)
+  (n1: Ghost.erased nat)
+  (n2: Ghost.erased nat)
+  (#pm: perm)
+  (#v: Ghost.erased (nlist n1 t & nlist n2 t))
+requires
+  PPB.pts_to_parsed_strong_prefix (nondep_then (parse_nlist n1 p) (parse_nlist n2 p)) input #pm v
+ensures exists* v' .
+  PPB.pts_to_parsed_strong_prefix (parse_nlist (n1 + n2) p) input #pm v' **
+  Trade.trade
+    (PPB.pts_to_parsed_strong_prefix (parse_nlist (n1 + n2) p) input #pm v')
+    (PPB.pts_to_parsed_strong_prefix (nondep_then (parse_nlist n1 p) (parse_nlist n2 p)) input #pm v) **
+  pure (
+    List.Tot.append (fst v) (snd v) == v'
+  )
+{
+  unfold (PPB.pts_to_parsed_strong_prefix (nondep_then (parse_nlist n1 p) (parse_nlist n2 p)) input #pm v);
+  with w . assert (S.pts_to input #pm w);
+  nondep_then_eq (parse_nlist (Ghost.reveal n1) p) (parse_nlist (Ghost.reveal n2) p) w;
+  parse_nlist_kind_subkind (Ghost.reveal n1) k;
+  parse_nlist_kind_subkind (Ghost.reveal n2) k;
+  parse_nlist_append_strong_prefix p s (Ghost.reveal n1) (fst (Ghost.reveal v)) (Ghost.reveal n2) (snd (Ghost.reveal v)) w;
+  List.Tot.append_length (fst (Ghost.reveal v)) (snd (Ghost.reveal v));
+  let v' : Ghost.erased (nlist (Ghost.reveal n1 + Ghost.reveal n2) t) = Ghost.hide (List.Tot.append (fst (Ghost.reveal v)) (snd (Ghost.reveal v)));
+  parse_nlist_kind_subkind (Ghost.reveal n1 + Ghost.reveal n2) k;
+  fold (PPB.pts_to_parsed_strong_prefix (parse_nlist (n1 + n2) p) input #pm v');
+  intro
+    (Trade.trade
+      (PPB.pts_to_parsed_strong_prefix (parse_nlist (n1 + n2) p) input #pm v')
+      (PPB.pts_to_parsed_strong_prefix (nondep_then (parse_nlist n1 p) (parse_nlist n2 p)) input #pm v)
+    )
+    #emp
+    fn _ {
+      unfold (PPB.pts_to_parsed_strong_prefix (parse_nlist (n1 + n2) p) input #pm v');
+      with w2 . assert (S.pts_to input #pm w2);
+      parse_nlist_kind_subkind (Ghost.reveal n1) k;
+      parse_nlist_kind_subkind (Ghost.reveal n2) k;
+      parse_nlist_kind_subkind (Ghost.reveal n1 + Ghost.reveal n2) k;
+      List.Tot.append_length (fst (Ghost.reveal v)) (snd (Ghost.reveal v));
+      parse_nlist_split_strong_prefix p s (Ghost.reveal n1) (fst (Ghost.reveal v)) (Ghost.reveal n2) (snd (Ghost.reveal v)) w2;
+      fold (PPB.pts_to_parsed_strong_prefix (nondep_then (parse_nlist n1 p) (parse_nlist n2 p)) input #pm v)
+    };
+}
