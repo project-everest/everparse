@@ -1463,6 +1463,92 @@ fn get_map_payload_strong_prefix
 #push-options "--z3rlimit 64"
 #restart-solver
 
+ghost fn pts_to_parsed_strong_prefix_nlist_raw_data_item_head_header
+  (a: slice byte)
+  (n: pos)
+  (#pm: perm)
+  (#va: Ghost.erased (LowParse.Spec.VCList.nlist n raw_data_item))
+requires
+  PPB.pts_to_parsed_strong_prefix (LowParse.Spec.VCList.parse_nlist n (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param))) a #pm va
+ensures exists* (l: leaf) (h: header) v' .
+  PPB.pts_to_parsed_strong_prefix
+    (LowParse.Spec.Combinators.nondep_then
+      parse_header
+      (LowParse.Spec.Combinators.nondep_then
+        (parse_leaf_content h)
+        (LowParse.Pulse.Recursive.parse_nlist_recursive_cons_payload parse_raw_data_item_param n l)
+      )
+    )
+    a #pm v' **
+  Trade.trade
+    (PPB.pts_to_parsed_strong_prefix
+      (LowParse.Spec.Combinators.nondep_then
+        parse_header
+        (LowParse.Spec.Combinators.nondep_then
+          (parse_leaf_content h)
+          (LowParse.Pulse.Recursive.parse_nlist_recursive_cons_payload parse_raw_data_item_param n l)
+        )
+      )
+      a #pm v'
+    )
+    (PPB.pts_to_parsed_strong_prefix (LowParse.Spec.VCList.parse_nlist n (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param))) a #pm va) **
+  pure (
+    h == get_raw_data_item_header (List.Tot.hd va) /\
+    l == dfst (synth_raw_data_item_from_alt_recip (List.Tot.hd va)) /\
+    fst v' == h /\
+    dfst l == h /\
+    fst (snd v') == dsnd l /\
+    (fst (snd (snd v')) <: list raw_data_item) == (dsnd (synth_raw_data_item_from_alt_recip (List.Tot.hd va)) <: list raw_data_item) /\
+    (snd (snd (snd v')) <: list raw_data_item) == List.Tot.tl va
+  )
+{
+  PPC.pts_to_parsed_strong_prefix_ext_trade
+    #_ #_ #(LowParse.Spec.VCList.parse_nlist n (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param)))
+    #_ #(LowParse.Pulse.Recursive.parse_nlist_recursive_cons parse_raw_data_item_param n)
+    a ();
+  PPC.pts_to_parsed_strong_prefix_ext_trade_gen
+    #_ #_
+    #_ #(LowParse.Pulse.Recursive.parse_nlist_recursive_cons parse_raw_data_item_param n)
+    #_ #(LowParse.Spec.Combinators.parse_synth
+        (LowParse.Spec.Combinators.parse_dtuple2 (parser_of_tot_parser parse_raw_data_item_param.parse_header) (LowParse.Pulse.Recursive.parse_nlist_recursive_cons_payload parse_raw_data_item_param n))
+        (LowParse.Pulse.Recursive.synth_nlist_recursive_cons parse_raw_data_item_param n)
+    )
+    a ();
+  Trade.trans _ _ (PPB.pts_to_parsed_strong_prefix (LowParse.Spec.VCList.parse_nlist n (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param))) a #pm va);
+  PPC.pts_to_parsed_strong_prefix_synth_l2r
+    (LowParse.Spec.Combinators.parse_dtuple2 (parser_of_tot_parser parse_raw_data_item_param.parse_header) (LowParse.Pulse.Recursive.parse_nlist_recursive_cons_payload parse_raw_data_item_param n))
+    (LowParse.Pulse.Recursive.synth_nlist_recursive_cons parse_raw_data_item_param n)
+    (LowParse.Pulse.Recursive.synth_nlist_recursive_cons_recip serialize_raw_data_item_param n)
+    a;
+  Trade.trans _ _ (PPB.pts_to_parsed_strong_prefix (LowParse.Spec.VCList.parse_nlist n (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param))) a #pm va);
+  with v . assert (PPB.pts_to_parsed_strong_prefix (LowParse.Spec.Combinators.parse_dtuple2 (parser_of_tot_parser parse_raw_data_item_param.parse_header) (LowParse.Pulse.Recursive.parse_nlist_recursive_cons_payload parse_raw_data_item_param n)) a #pm v);
+  PPC.pts_to_parsed_strong_prefix_dtuple2_as_nondep_then
+    #_ #_
+    #_ #(parser_of_tot_parser parse_raw_data_item_param.parse_header)
+    #_ #(LowParse.Pulse.Recursive.parse_nlist_recursive_cons_payload parse_raw_data_item_param n)
+    a ();
+  Trade.trans _ _ (PPB.pts_to_parsed_strong_prefix (LowParse.Spec.VCList.parse_nlist n (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param))) a #pm va);
+  PPC.pts_to_parsed_strong_prefix_ext_nondep_then_left
+    #_ #_ #_
+    #_ #(parser_of_tot_parser parse_raw_data_item_param.parse_header)
+    #_ #(LowParse.Spec.Combinators.parse_dtuple2 parse_header parse_leaf_content)
+    #_ #(LowParse.Pulse.Recursive.parse_nlist_recursive_cons_payload parse_raw_data_item_param n (dfst v))
+    a ();
+  Trade.trans _ _ (PPB.pts_to_parsed_strong_prefix (LowParse.Spec.VCList.parse_nlist n (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param))) a #pm va);
+  PPC.pts_to_parsed_strong_prefix_dtuple2_nondep_then_assoc_l2r
+    #_ #_ #_
+    #_ #parse_header
+    #_ #parse_leaf_content
+    #_ #(LowParse.Pulse.Recursive.parse_nlist_recursive_cons_payload parse_raw_data_item_param n (dfst v))
+    a ();
+  Trade.trans _ _ (PPB.pts_to_parsed_strong_prefix (LowParse.Spec.VCList.parse_nlist n (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param))) a #pm va);
+}
+
+#pop-options
+
+#push-options "--z3rlimit 64"
+#restart-solver
+
 ghost fn pts_to_serialized_nlist_raw_data_item_head_header_ (_: unit) : pts_to_serialized_nlist_raw_data_item_head_header_t
 =
   (a: slice byte)
@@ -1615,4 +1701,18 @@ fn impl_holds_on_raw_data_item
   ensures pts_to_serialized serialize_raw_data_item input #pm v ** pure (res == holds_on_raw_data_item p v)
 {
   LowParse.Pulse.Recursive.impl_pred_recursive serialize_raw_data_item_param (jump_leaf ()) (jump_recursive_step_count_leaf f64) (holds_on_raw_data_item_pred p) impl_p input
+}
+
+fn impl_holds_on_raw_data_item_strong_prefix
+  (f64: squash SZ.fits_u64)
+  (p: Ghost.erased (raw_data_item -> bool))
+  (impl_p: LowParse.Pulse.Recursive.impl_pred_strong_prefix_t serialize_raw_data_item_param p)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased raw_data_item)
+  requires PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pm v
+  returns res: bool
+  ensures PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pm v ** pure (res == holds_on_raw_data_item p v)
+{
+  LowParse.Pulse.Recursive.impl_pred_recursive_strong_prefix serialize_raw_data_item_param (jump_leaf ()) (jump_recursive_step_count_leaf f64) (holds_on_raw_data_item_pred p) impl_p input
 }

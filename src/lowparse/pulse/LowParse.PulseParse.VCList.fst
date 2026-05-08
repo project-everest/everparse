@@ -93,6 +93,85 @@ fn pts_to_parsed_nlist_1_elim
     };
 }
 
+(* pts_to_parsed_strong_prefix for nlist 1: convert between pts_to_parsed_strong_prefix p and pts_to_parsed_strong_prefix (parse_nlist 1 p) *)
+
+ghost
+fn pts_to_parsed_strong_prefix_nlist_1_intro
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (p: parser k t)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: t)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  requires PPB.pts_to_parsed_strong_prefix p input #pm v
+  ensures exists* v' .
+    PPB.pts_to_parsed_strong_prefix (parse_nlist 1 p) input #pm v' **
+    trade (PPB.pts_to_parsed_strong_prefix (parse_nlist 1 p) input #pm v')
+      (PPB.pts_to_parsed_strong_prefix p input #pm v) **
+    pure ((v' <: list t) == [v])
+{
+  unfold (PPB.pts_to_parsed_strong_prefix p input #pm v);
+  with w . assert (S.pts_to input #pm w);
+  parse_nlist_eq 1 p w;
+  parse_synth_eq p LPV.synth_nlist_1 w;
+  parse_nlist_kind_subkind 1 k;
+  let v' : Ghost.erased (nlist 1 t) = Ghost.hide [v];
+  fold (PPB.pts_to_parsed_strong_prefix (parse_nlist 1 p) input #pm v');
+  intro
+    (Trade.trade
+      (PPB.pts_to_parsed_strong_prefix (parse_nlist 1 p) input #pm v')
+      (PPB.pts_to_parsed_strong_prefix p input #pm v)
+    )
+    #emp
+    fn _ {
+      unfold (PPB.pts_to_parsed_strong_prefix (parse_nlist 1 p) input #pm v');
+      with w' . assert (S.pts_to input #pm w');
+      parse_nlist_eq 1 p w';
+      parse_synth_eq p LPV.synth_nlist_1 w';
+      fold (PPB.pts_to_parsed_strong_prefix p input #pm v)
+    };
+}
+
+ghost
+fn pts_to_parsed_strong_prefix_nlist_1_elim
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (p: parser k t)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: nlist 1 t)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  requires PPB.pts_to_parsed_strong_prefix (parse_nlist 1 p) input #pm v
+  ensures exists* v' .
+    PPB.pts_to_parsed_strong_prefix p input #pm v' **
+    trade (PPB.pts_to_parsed_strong_prefix p input #pm v')
+      (PPB.pts_to_parsed_strong_prefix (parse_nlist 1 p) input #pm v) **
+    pure (v == [v'])
+{
+  unfold (PPB.pts_to_parsed_strong_prefix (parse_nlist 1 p) input #pm v);
+  with w . assert (S.pts_to input #pm w);
+  parse_nlist_eq 1 p w;
+  parse_synth_eq p LPV.synth_nlist_1 w;
+  parse_nlist_kind_subkind 1 k;
+  let v' = Ghost.hide (List.Tot.hd v);
+  fold (PPB.pts_to_parsed_strong_prefix p input #pm v');
+  intro
+    (Trade.trade
+      (PPB.pts_to_parsed_strong_prefix p input #pm v')
+      (PPB.pts_to_parsed_strong_prefix (parse_nlist 1 p) input #pm v)
+    )
+    #emp
+    fn _ {
+      unfold (PPB.pts_to_parsed_strong_prefix p input #pm v');
+      with w' . assert (S.pts_to input #pm w');
+      parse_nlist_eq 1 p w';
+      parse_synth_eq p LPV.synth_nlist_1 w';
+      parse_nlist_kind_subkind 1 k;
+      fold (PPB.pts_to_parsed_strong_prefix (parse_nlist 1 p) input #pm v)
+    };
+}
+
 (* pts_to_parsed ext for nlist: convert between equivalent nlist parsers *)
 
 let pts_to_parsed_nlist_ext_aux
