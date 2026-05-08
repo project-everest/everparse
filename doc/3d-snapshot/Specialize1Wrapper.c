@@ -1,6 +1,7 @@
 #include "Specialize1Wrapper.h"
 #include "EverParse.h"
 #include "Specialize1.h"
+
 void Specialize1EverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static

@@ -1,6 +1,7 @@
 #include "TriangleWrapper.h"
 #include "EverParse.h"
 #include "Triangle.h"
+
 void TriangleEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static

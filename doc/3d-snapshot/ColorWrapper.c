@@ -1,6 +1,7 @@
 #include "ColorWrapper.h"
 #include "EverParse.h"
 #include "Color.h"
+
 void ColorEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static

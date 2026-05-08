@@ -2,6 +2,7 @@
 #include "EverParse.h"
 #include "GotoReturn.h"
 #include "GotoReturn_ExternalAPI.h"
+
 void GotoReturnEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static

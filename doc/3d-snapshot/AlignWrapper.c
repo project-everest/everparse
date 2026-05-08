@@ -1,6 +1,7 @@
 #include "AlignWrapper.h"
 #include "EverParse.h"
 #include "Align.h"
+
 void AlignEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static
