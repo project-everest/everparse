@@ -1092,14 +1092,14 @@ requires
   cbor_raw_match_content cbor_raw_match parse_raw_data_item pm h (CBOR_Case_Array v) c
 ensures exists* (pm': perm) (l: list raw_data_item).
   I.mixed_list_match
-    (fun (pm0: perm) (elem: cbor_raw) (vi: raw_data_item) -> cbor_raw_match pm0 elem vi)
+    cbor_raw_match
     parse_raw_data_item
     pm'
     v.cbor_array_ptr
     l **
   trade
     (I.mixed_list_match
-      (fun (pm0: perm) (elem: cbor_raw) (vi: raw_data_item) -> cbor_raw_match pm0 elem vi)
+      cbor_raw_match
       parse_raw_data_item
       pm'
       v.cbor_array_ptr
@@ -1119,7 +1119,7 @@ ensures exists* (pm': perm) (l: list raw_data_item).
     (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm (| b, la |) (CBOR_Case_Array v) c)
     as
     (I.mixed_list_match
-      (fun (pm0: perm) (elem: cbor_raw) (vi: raw_data_item) -> cbor_raw_match pm0 elem vi)
+      cbor_raw_match
       parse_raw_data_item
       (pm *. v.cbor_array_slice_perm)
       v.cbor_array_ptr
@@ -1127,7 +1127,7 @@ ensures exists* (pm': perm) (l: list raw_data_item).
   intro
     (trade
       (I.mixed_list_match
-        (fun (pm0: perm) (elem: cbor_raw) (vi: raw_data_item) -> cbor_raw_match pm0 elem vi)
+        cbor_raw_match
         parse_raw_data_item
         (pm *. v.cbor_array_slice_perm)
         v.cbor_array_ptr
@@ -1139,7 +1139,7 @@ ensures exists* (pm': perm) (l: list raw_data_item).
       header_eta h;
       rewrite
         (I.mixed_list_match
-          (fun (pm0: perm) (elem: cbor_raw) (vi: raw_data_item) -> cbor_raw_match pm0 elem vi)
+          cbor_raw_match
           parse_raw_data_item
           (pm *. v.cbor_array_slice_perm)
           v.cbor_array_ptr
@@ -1236,14 +1236,14 @@ requires cbor_raw_match pm x y
 returns res: I.mixed_list cbor_raw
 ensures exists* (pm': perm) (l: Ghost.erased (list raw_data_item)).
   I.mixed_list_match
-    (fun (pm0: perm) (elem: cbor_raw) (v: raw_data_item) -> cbor_raw_match pm0 elem v)
+    cbor_raw_match
     parse_raw_data_item
     pm'
     res
     l **
   Trade.trade
     (I.mixed_list_match
-      (fun (pm0: perm) (elem: cbor_raw) (v: raw_data_item) -> cbor_raw_match pm0 elem v)
+      cbor_raw_match
       parse_raw_data_item
       pm'
       res
@@ -1331,14 +1331,14 @@ ensures exists* (pm': perm) (l: Ghost.erased (list raw_data_item)).
 
       // Bind the existentials from the helper
       with _pm' _l . assert (I.mixed_list_match
-        (fun (pm0: perm) (elem: cbor_raw) (vi: raw_data_item) -> cbor_raw_match pm0 elem vi)
+        cbor_raw_match
         parse_raw_data_item
         _pm'
         v.cbor_array_ptr
         _l);
       with _pm'' _l' . assert (trade
         (I.mixed_list_match
-          (fun (pm0: perm) (elem: cbor_raw) (vi: raw_data_item) -> cbor_raw_match pm0 elem vi)
+          cbor_raw_match
           parse_raw_data_item
           _pm''
           v.cbor_array_ptr
@@ -1350,7 +1350,7 @@ ensures exists* (pm': perm) (l: Ghost.erased (list raw_data_item)).
       rewrite
         (trade
           (I.mixed_list_match
-            (fun (pm0: perm) (elem: cbor_raw) (vi: raw_data_item) -> cbor_raw_match pm0 elem vi)
+            cbor_raw_match
             parse_raw_data_item
             _pm''
             v.cbor_array_ptr
@@ -1362,7 +1362,7 @@ ensures exists* (pm': perm) (l: Ghost.erased (list raw_data_item)).
         as
         (trade
           (I.mixed_list_match
-            (fun (pm0: perm) (elem: cbor_raw) (vi: raw_data_item) -> cbor_raw_match pm0 elem vi)
+            cbor_raw_match
             parse_raw_data_item
             _pm'
             v.cbor_array_ptr
@@ -1375,7 +1375,7 @@ ensures exists* (pm': perm) (l: Ghost.erased (list raw_data_item)).
       // Compose the two trades
       Trade.trans
         (I.mixed_list_match
-          (fun (pm0: perm) (elem: cbor_raw) (vi: raw_data_item) -> cbor_raw_match pm0 elem vi)
+          cbor_raw_match
           parse_raw_data_item
           _pm'
           v.cbor_array_ptr
@@ -1389,7 +1389,7 @@ ensures exists* (pm': perm) (l: Ghost.erased (list raw_data_item)).
       rewrite
         (trade
           (I.mixed_list_match
-            (fun (pm0: perm) (elem: cbor_raw) (vi: raw_data_item) -> cbor_raw_match pm0 elem vi)
+            cbor_raw_match
             parse_raw_data_item
             _pm'
             v.cbor_array_ptr
@@ -1398,7 +1398,7 @@ ensures exists* (pm': perm) (l: Ghost.erased (list raw_data_item)).
         as
         (trade
           (I.mixed_list_match
-            (fun (pm0: perm) (elem: cbor_raw) (vi: raw_data_item) -> cbor_raw_match pm0 elem vi)
+            cbor_raw_match
             parse_raw_data_item
             _pm'
             v.cbor_array_ptr

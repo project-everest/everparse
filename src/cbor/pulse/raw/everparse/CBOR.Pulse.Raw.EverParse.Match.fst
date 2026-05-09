@@ -180,7 +180,7 @@ let cbor_raw_match_content
     (match xl with
     | CBOR_Case_Array v ->
       I.mixed_list_match
-        (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
+        p
         pp
         (pm *. v.cbor_array_slice_perm)
         v.cbor_array_ptr
@@ -329,7 +329,7 @@ let cbor_raw_match_content_eq_array
     (requires b.major_type = cbor_major_type_array)
     (ensures cbor_raw_match_content p pp pm (| b, la |) (CBOR_Case_Array v) c ==
              I.mixed_list_match
-               (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
+               p
                pp
                (pm *. v.cbor_array_slice_perm)
                v.cbor_array_ptr
@@ -595,52 +595,52 @@ ensures cbor_raw_match_content p pp (pm /. 2.0R) h xl c **
         cbor_raw_match_content_eq_array p pp pm b la v c;
         rewrite (cbor_raw_match_content p pp pm (| b, la |) (CBOR_Case_Array v) c)
              as (I.mixed_list_match
-                   (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
+                   p
                    pp
                    (pm *. v.cbor_array_slice_perm)
                    v.cbor_array_ptr
                    (content_as_list_raw b la c));
         I.mixed_list_match_share
-          (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
+          p
           pp
           (pm *. v.cbor_array_slice_perm)
           v.cbor_array_ptr
           (content_as_list_raw b la c)
           (fun (x1: cbor_raw) (#pm': perm) (#x2: raw_data_item) -> p_share x1 #pm' #x2);
         rewrite (I.mixed_list_match
-                   (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
+                   p
                    pp
                    ((pm *. v.cbor_array_slice_perm) /. 2.0R)
                    v.cbor_array_ptr
                    (content_as_list_raw b la c))
              as (I.mixed_list_match
-                   (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
+                   p
                    pp
                    ((pm /. 2.0R) *. v.cbor_array_slice_perm)
                    v.cbor_array_ptr
                    (content_as_list_raw b la c));
         rewrite (I.mixed_list_match
-                   (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
+                   p
                    pp
                    ((pm *. v.cbor_array_slice_perm) /. 2.0R)
                    v.cbor_array_ptr
                    (content_as_list_raw b la c))
              as (I.mixed_list_match
-                   (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
+                   p
                    pp
                    ((pm /. 2.0R) *. v.cbor_array_slice_perm)
                    v.cbor_array_ptr
                    (content_as_list_raw b la c));
         cbor_raw_match_content_eq_array p pp (pm /. 2.0R) b la v c;
         rewrite (I.mixed_list_match
-                   (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
+                   p
                    pp
                    ((pm /. 2.0R) *. v.cbor_array_slice_perm)
                    v.cbor_array_ptr
                    (content_as_list_raw b la c))
              as (cbor_raw_match_content p pp (pm /. 2.0R) (| b, la |) (CBOR_Case_Array v) c);
         rewrite (I.mixed_list_match
-                   (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm' elem x)
+                   p
                    pp
                    ((pm /. 2.0R) *. v.cbor_array_slice_perm)
                    v.cbor_array_ptr
@@ -1029,29 +1029,29 @@ ensures cbor_raw_match_content p pp (pm +. pm') h xl c **
         cbor_raw_match_content_eq_array p pp pm b la v c;
         rewrite (cbor_raw_match_content p pp pm (| b, la |) (CBOR_Case_Array v) c)
              as (I.mixed_list_match
-                   (fun (pm'': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm'' elem x)
+                   p
                    pp (pm *. v.cbor_array_slice_perm) v.cbor_array_ptr (content_as_list_raw b la c));
         cbor_raw_match_content_eq_array p pp pm' b la v c';
         rewrite (cbor_raw_match_content p pp pm' (| b, la |) (CBOR_Case_Array v) c')
              as (I.mixed_list_match
-                   (fun (pm'': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm'' elem x)
+                   p
                    pp (pm' *. v.cbor_array_slice_perm) v.cbor_array_ptr (content_as_list_raw b la c'));
         let cl = content_as_list_raw b la c;
         rewrite (I.mixed_list_match
-                   (fun (pm'': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm'' elem x)
+                   p
                    pp (pm *. v.cbor_array_slice_perm) v.cbor_array_ptr (content_as_list_raw b la c))
              as (I.mixed_list_match
-                   (fun (pm'': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm'' elem x)
+                   p
                    pp (pm *. v.cbor_array_slice_perm) v.cbor_array_ptr cl);
         let c'l = content_as_list_raw b la c';
         rewrite (I.mixed_list_match
-                   (fun (pm'': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm'' elem x)
+                   p
                    pp (pm' *. v.cbor_array_slice_perm) v.cbor_array_ptr (content_as_list_raw b la c'))
              as (I.mixed_list_match
-                   (fun (pm'': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm'' elem x)
+                   p
                    pp (pm' *. v.cbor_array_slice_perm) v.cbor_array_ptr c'l);
         I.mixed_list_match_gather_bound
-          (fun (pm'': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm'' elem x)
+          p
           pp
           (pm *. v.cbor_array_slice_perm)
           (pm' *. v.cbor_array_slice_perm)
@@ -1060,20 +1060,20 @@ ensures cbor_raw_match_content p pp (pm +. pm') h xl c **
           c'l
           (p_gather_from_memP #bound_t #bound p c'l () p_gather);
         rewrite (I.mixed_list_match
-                   (fun (pm'': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm'' elem x)
+                   p
                    pp
                    (pm *. v.cbor_array_slice_perm +. pm' *. v.cbor_array_slice_perm)
                    v.cbor_array_ptr
                    cl)
              as (I.mixed_list_match
-                   (fun (pm'': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm'' elem x)
+                   p
                    pp
                    ((pm +. pm') *. v.cbor_array_slice_perm)
                    v.cbor_array_ptr
                    (content_as_list_raw b la c));
         cbor_raw_match_content_eq_array p pp (pm +. pm') b la v c;
         rewrite (I.mixed_list_match
-                   (fun (pm'': perm) (elem: cbor_raw) (x: raw_data_item) -> p pm'' elem x)
+                   p
                    pp ((pm +. pm') *. v.cbor_array_slice_perm) v.cbor_array_ptr (content_as_list_raw b la c))
              as (cbor_raw_match_content p pp (pm +. pm') (| b, la |) (CBOR_Case_Array v) c);
         rewrite (cbor_raw_match_content p pp (pm +. pm') (| b, la |) (CBOR_Case_Array v) c)
@@ -1640,14 +1640,14 @@ ensures cbor_raw_match_content p2 pp pm h xl c
         cbor_raw_match_content_eq_array p1 pp pm b la v c;
         rewrite (cbor_raw_match_content p1 pp pm (| b, la |) (CBOR_Case_Array v) c)
              as (I.mixed_list_match
-                   (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p1 pm' elem x)
+                   p1
                    pp
                    (pm *. v.cbor_array_slice_perm)
                    v.cbor_array_ptr
                    (content_as_list_raw b la c));
         I.mixed_list_match_weaken
-          (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p1 pm' elem x)
-          (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p2 pm' elem x)
+          p1
+          p2
           pp
           (pm *. v.cbor_array_slice_perm)
           v.cbor_array_ptr
@@ -1655,7 +1655,7 @@ ensures cbor_raw_match_content p2 pp pm h xl c
           (fun (x1: cbor_raw) (pm': perm) (x2: raw_data_item) -> p_change x1 pm' x2);
         cbor_raw_match_content_eq_array p2 pp pm b la v c;
         rewrite (I.mixed_list_match
-                   (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p2 pm' elem x)
+                   p2
                    pp
                    (pm *. v.cbor_array_slice_perm)
                    v.cbor_array_ptr
@@ -2063,47 +2063,47 @@ ensures cbor_raw_match_content p2 pp pm h xl c
         cbor_raw_match_content_eq_array p1 pp pm b la v c;
         rewrite (cbor_raw_match_content p1 pp pm (| b, la |) (CBOR_Case_Array v) c)
              as (I.mixed_list_match
-                   (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p1 pm' elem x)
+                   p1
                    pp
                    (pm *. v.cbor_array_slice_perm)
                    v.cbor_array_ptr
                    (content_as_list_raw b la c));
         let cl = content_as_list_raw b la c;
         rewrite (I.mixed_list_match
-                   (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p1 pm' elem x)
+                   p1
                    pp
                    (pm *. v.cbor_array_slice_perm)
                    v.cbor_array_ptr
                    (content_as_list_raw b la c))
              as (I.mixed_list_match
-                   (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p1 pm' elem x)
+                   p1
                    pp
                    (pm *. v.cbor_array_slice_perm)
                    v.cbor_array_ptr
                    cl);
         I.mixed_list_match_weaken
-          (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p1 pm' elem x)
-          (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p2 pm' elem x)
+          p1
+          p2
           pp
           (pm *. v.cbor_array_slice_perm)
           v.cbor_array_ptr
           cl
           (p_weaken_from_memP #bound_t #bound p1 p2 cl () p_weaken);
         rewrite (I.mixed_list_match
-                   (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p2 pm' elem x)
+                   p2
                    pp
                    (pm *. v.cbor_array_slice_perm)
                    v.cbor_array_ptr
                    cl)
              as (I.mixed_list_match
-                   (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p2 pm' elem x)
+                   p2
                    pp
                    (pm *. v.cbor_array_slice_perm)
                    v.cbor_array_ptr
                    (content_as_list_raw b la c));
         cbor_raw_match_content_eq_array p2 pp pm b la v c;
         rewrite (I.mixed_list_match
-                   (fun (pm': perm) (elem: cbor_raw) (x: raw_data_item) -> p2 pm' elem x)
+                   p2
                    pp
                    (pm *. v.cbor_array_slice_perm)
                    v.cbor_array_ptr
