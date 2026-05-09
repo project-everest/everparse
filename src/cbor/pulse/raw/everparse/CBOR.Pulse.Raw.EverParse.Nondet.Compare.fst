@@ -539,6 +539,426 @@ ensures cbor_raw_match (p +. p') x1 x2 ** pure (x2 == x2')
 let cbor_raw_match_share_t : I.share_t cbor_raw_match = cbor_raw_match_share_wrapper
 let cbor_raw_match_gather_t : I.gather_t cbor_raw_match = cbor_raw_match_gather_wrapper
 
+// Map entry vmatch: the vmatch used for map entries in mixed_list_match
+let cbor_map_entry_vmatch
+  (pm: perm)
+  (elem: cbor_map_entry cbor_raw)
+  (v: (raw_data_item & raw_data_item))
+: Tot slprop
+= cbor_map_entry_match cbor_raw_match pm elem v
+
+// Share wrapper for map entry vmatch
+```pulse
+ghost
+fn cbor_map_entry_vmatch_share_wrapper
+  (entry: cbor_map_entry cbor_raw) (#pm: perm) (#pair: (raw_data_item & raw_data_item))
+requires cbor_map_entry_vmatch pm entry pair
+ensures cbor_map_entry_vmatch (pm /. 2.0R) entry pair ** cbor_map_entry_vmatch (pm /. 2.0R) entry pair
+{
+  unfold (cbor_map_entry_vmatch pm entry pair);
+  cbor_map_entry_match_share cbor_raw_match cbor_raw_match_share_t entry;
+  fold (cbor_map_entry_vmatch (pm /. 2.0R) entry pair);
+  fold (cbor_map_entry_vmatch (pm /. 2.0R) entry pair);
+}
+```
+
+// Gather wrapper for map entry vmatch
+```pulse
+ghost
+fn cbor_map_entry_vmatch_gather_wrapper
+  (entry: cbor_map_entry cbor_raw)
+  (#pm: perm) (#pair: (raw_data_item & raw_data_item))
+  (#pm': perm) (#pair': (raw_data_item & raw_data_item))
+requires cbor_map_entry_vmatch pm entry pair ** cbor_map_entry_vmatch pm' entry pair'
+ensures cbor_map_entry_vmatch (pm +. pm') entry pair ** pure (pair == pair')
+{
+  unfold (cbor_map_entry_vmatch pm entry pair);
+  unfold (cbor_map_entry_vmatch pm' entry pair');
+  unfold (cbor_map_entry_match cbor_raw_match pm entry pair);
+  unfold (vmatch_pair_with_proj (cbor_raw_match pm) cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (cbor_raw_match pm) cbor_map_entry_value_proj) entry pair);
+  unfold (vmatch_with_pair_proj (cbor_raw_match pm) cbor_map_entry_value_proj entry (snd pair));
+  unfold (cbor_map_entry_match cbor_raw_match pm' entry pair');
+  unfold (vmatch_pair_with_proj (cbor_raw_match pm') cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (cbor_raw_match pm') cbor_map_entry_value_proj) entry pair');
+  unfold (vmatch_with_pair_proj (cbor_raw_match pm') cbor_map_entry_value_proj entry (snd pair'));
+  rewrite (cbor_raw_match pm (cbor_map_entry_key_proj.pair_proj_get entry) (fst pair))
+       as (cbor_raw_match pm entry.cbor_map_entry_key (fst pair));
+  rewrite (cbor_raw_match pm' (cbor_map_entry_key_proj.pair_proj_get entry) (fst pair'))
+       as (cbor_raw_match pm' entry.cbor_map_entry_key (fst pair'));
+  rewrite (cbor_raw_match pm (cbor_map_entry_value_proj.pair_proj_get entry) (snd pair))
+       as (cbor_raw_match pm entry.cbor_map_entry_value (snd pair));
+  rewrite (cbor_raw_match pm' (cbor_map_entry_value_proj.pair_proj_get entry) (snd pair'))
+       as (cbor_raw_match pm' entry.cbor_map_entry_value (snd pair'));
+  cbor_raw_match_gather entry.cbor_map_entry_key #pm #(fst pair) #pm' #(fst pair');
+  cbor_raw_match_gather entry.cbor_map_entry_value #pm #(snd pair) #pm' #(snd pair');
+  rewrite (cbor_raw_match (pm +. pm') entry.cbor_map_entry_key (fst pair))
+       as (cbor_raw_match (pm +. pm') (cbor_map_entry_key_proj.pair_proj_get entry) (fst pair));
+  rewrite (cbor_raw_match (pm +. pm') entry.cbor_map_entry_value (snd pair))
+       as (cbor_raw_match (pm +. pm') (cbor_map_entry_value_proj.pair_proj_get entry) (snd pair));
+  fold (vmatch_with_pair_proj (cbor_raw_match (pm +. pm')) cbor_map_entry_value_proj entry (snd pair));
+  fold (vmatch_pair_with_proj (cbor_raw_match (pm +. pm')) cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (cbor_raw_match (pm +. pm')) cbor_map_entry_value_proj) entry pair);
+  fold (cbor_map_entry_match cbor_raw_match (pm +. pm') entry pair);
+  fold (cbor_map_entry_vmatch (pm +. pm') entry pair);
+}
+```
+
+let cbor_map_entry_vmatch_share : I.share_t cbor_map_entry_vmatch = cbor_map_entry_vmatch_share_wrapper
+let cbor_map_entry_vmatch_gather : I.gather_t cbor_map_entry_vmatch = cbor_map_entry_vmatch_gather_wrapper
+
+// zero_copy_parse for map entries: read two cbor_raw values from a serialized pair
+inline_for_extraction
+```pulse
+fn cbor_map_entry_zero_copy_parse
+  (f64: squash SZ.fits_u64)
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (raw_data_item & raw_data_item))
+requires PPB.pts_to_parsed (nondep_then parse_raw_data_item parse_raw_data_item) input #pm v
+returns res: cbor_map_entry cbor_raw
+ensures cbor_map_entry_vmatch 1.0R res v **
+        Trade.trade (cbor_map_entry_vmatch 1.0R res v)
+                    (PPB.pts_to_parsed (nondep_then parse_raw_data_item parse_raw_data_item) input #pm v)
+{
+  // Use the nondep_then zero_copy_parse to get a pair of cbor_raw values
+  let j = jump_raw_data_item f64;
+  let zcp1 = PPB.zero_copy_parse_of_strong_prefix (cbor_raw_read 1.0R f64) ();
+  let pair = LowParse.PulseParse.Combinators.zero_copy_parse_nondep_then j zcp1 () zcp1 input;
+  let entry : cbor_map_entry cbor_raw = { cbor_map_entry_key = fst pair; cbor_map_entry_value = snd pair };
+  // vmatch_pair (cbor_raw_match 1.0R) (cbor_raw_match 1.0R) pair v
+  //   = cbor_raw_match 1.0R (fst pair) (fst v) ** cbor_raw_match 1.0R (snd pair) (snd v)
+  // cbor_map_entry_vmatch 1.0R entry v
+  //   = cbor_map_entry_match cbor_raw_match 1.0R entry v
+  //   = cbor_raw_match 1.0R entry.key (fst v) ** cbor_raw_match 1.0R entry.value (snd v)
+  // These are definitionally equal since entry.key = fst pair, entry.value = snd pair
+  rewrite (vmatch_pair (cbor_raw_match 1.0R) (cbor_raw_match 1.0R) pair (Ghost.reveal v))
+       as (cbor_map_entry_vmatch 1.0R entry v);
+  rewrite (Trade.trade (vmatch_pair (cbor_raw_match 1.0R) (cbor_raw_match 1.0R) pair (Ghost.reveal v))
+                       (PPB.pts_to_parsed (nondep_then parse_raw_data_item parse_raw_data_item) input #pm v))
+       as (Trade.trade (cbor_map_entry_vmatch 1.0R entry v)
+                       (PPB.pts_to_parsed (nondep_then parse_raw_data_item parse_raw_data_item) input #pm v));
+  entry
+}
+```
+
+// Helper: unfold cbor_map_entry_vmatch to expose key and value cbor_raw_match
+```pulse
+ghost
+fn unfold_map_entry_vmatch
+  (pm: perm)
+  (entry: cbor_map_entry cbor_raw)
+  (pair: (raw_data_item & raw_data_item))
+requires cbor_map_entry_vmatch pm entry pair
+ensures cbor_raw_match pm entry.cbor_map_entry_key (fst pair) **
+        cbor_raw_match pm entry.cbor_map_entry_value (snd pair)
+{
+  unfold (cbor_map_entry_vmatch pm entry pair);
+  unfold (cbor_map_entry_match cbor_raw_match pm entry pair);
+  unfold (vmatch_pair_with_proj (cbor_raw_match pm) cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (cbor_raw_match pm) cbor_map_entry_value_proj) entry pair);
+  unfold (vmatch_with_pair_proj (cbor_raw_match pm) cbor_map_entry_value_proj entry (snd pair));
+  rewrite (cbor_raw_match pm (cbor_map_entry_key_proj.pair_proj_get entry) (fst pair))
+       as (cbor_raw_match pm entry.cbor_map_entry_key (fst pair));
+  rewrite (cbor_raw_match pm (cbor_map_entry_value_proj.pair_proj_get entry) (snd pair))
+       as (cbor_raw_match pm entry.cbor_map_entry_value (snd pair));
+}
+```
+
+// Helper: fold cbor_raw_match for key and value back into cbor_map_entry_vmatch
+```pulse
+ghost
+fn fold_map_entry_vmatch
+  (pm: perm)
+  (entry: cbor_map_entry cbor_raw)
+  (pair: (raw_data_item & raw_data_item))
+requires cbor_raw_match pm entry.cbor_map_entry_key (fst pair) **
+         cbor_raw_match pm entry.cbor_map_entry_value (snd pair)
+ensures cbor_map_entry_vmatch pm entry pair
+{
+  rewrite (cbor_raw_match pm entry.cbor_map_entry_key (fst pair))
+       as (cbor_raw_match pm (cbor_map_entry_key_proj.pair_proj_get entry) (fst pair));
+  rewrite (cbor_raw_match pm entry.cbor_map_entry_value (snd pair))
+       as (cbor_raw_match pm (cbor_map_entry_value_proj.pair_proj_get entry) (snd pair));
+  fold (vmatch_with_pair_proj (cbor_raw_match pm) cbor_map_entry_value_proj entry (snd pair));
+  fold (vmatch_pair_with_proj (cbor_raw_match pm) cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (cbor_raw_match pm) cbor_map_entry_value_proj) entry pair);
+  fold (cbor_map_entry_match cbor_raw_match pm entry pair);
+  fold (cbor_map_entry_vmatch pm entry pair);
+}
+```
+
+// Generic comparison function type parameterized by spec equiv
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let compare_cbor_raw_fn_t
+  (equiv: raw_data_item -> raw_data_item -> option bool)
+=
+  (x1: cbor_raw) ->
+  (x2: cbor_raw) ->
+  (#pm1: perm) ->
+  (#v1: Ghost.erased raw_data_item) ->
+  (#pm2: perm) ->
+  (#v2: Ghost.erased raw_data_item) ->
+  stt (option bool)
+    (cbor_raw_match pm1 x1 v1 **
+     cbor_raw_match pm2 x2 v2)
+    (fun res ->
+      cbor_raw_match pm1 x1 v1 **
+      cbor_raw_match pm2 x2 v2 **
+      pure (res == equiv v1 v2))
+
+// Map setoid_assoc_eq: search map_entries for an entry matching xr by key, then compare values
+#push-options "--z3rlimit 512 --fuel 4 --ifuel 4 --split_queries always"
+
+inline_for_extraction
+```pulse
+fn compare_cbor_raw_setoid_assoc_eq
+  (#equiv: Ghost.erased (raw_data_item -> raw_data_item -> option bool))
+  (compare_impl: compare_cbor_raw_fn_t equiv)
+  (f64: squash SZ.fits_u64)
+  (map_ml: I.mixed_list (cbor_map_entry cbor_raw))
+  (#pm_map: perm)
+  (#map_entries: Ghost.erased (list (raw_data_item & raw_data_item)))
+  (xr: cbor_map_entry cbor_raw)
+  (#pm_xr: perm)
+  (#xr_pair: Ghost.erased (raw_data_item & raw_data_item))
+requires
+  I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm_map map_ml map_entries **
+  cbor_map_entry_vmatch pm_xr xr xr_pair
+returns res: option bool
+ensures
+  I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm_map map_ml map_entries **
+  cbor_map_entry_vmatch pm_xr xr xr_pair **
+  pure (res == setoid_assoc_eq_with_overflow equiv equiv map_entries xr_pair)
+{
+  let j = jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64);
+  let zcp = cbor_map_entry_zero_copy_parse f64;
+  let len = I.mixed_list_length map_ml;
+  // Establish length invariant
+  I.mixed_list_match_length cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm_map map_ml (Ghost.reveal map_entries);
+  // Start iterator on map_entries
+  let it_init = I.iterator_start cbor_map_entry_vmatch
+    (nondep_then parse_raw_data_item parse_raw_data_item) j pm_map map_ml map_entries
+    cbor_map_entry_vmatch_share cbor_map_entry_vmatch_gather;
+  // Set up loop state: r_done = None means "keep searching", Some r means "done with result r"
+  let mut r_it = it_init;
+  let mut r_done : option (option bool) = None #(option bool);
+  let mut r_cnt = 0sz;
+  // While loop: iterate through map_entries searching for matching key
+  while (
+    let done = !r_done;
+    let cnt = !r_cnt;
+    (None? done && SZ.lt cnt len)
+  ) invariant exists* it_c done_c cnt_c rem pm_c .
+    R.pts_to r_it it_c **
+    R.pts_to r_done done_c **
+    R.pts_to r_cnt cnt_c **
+    I.iterator_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm_c it_c rem **
+    Trade.trade
+      (I.iterator_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm_c it_c rem)
+      (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+        pm_map map_ml map_entries) **
+    cbor_map_entry_vmatch pm_xr xr xr_pair **
+    pure (
+      SZ.v cnt_c <= SZ.v len /\
+      List.Tot.length rem == SZ.v len - SZ.v cnt_c /\
+      setoid_assoc_eq_with_overflow equiv equiv map_entries xr_pair ==
+        (match done_c with
+         | Some r -> r
+         | None -> setoid_assoc_eq_with_overflow equiv equiv rem xr_pair)
+    )
+  {
+    // Get next entry from iterator
+    let e = I.iterator_next cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+      j _ r_it _ _ cbor_map_entry_vmatch_share cbor_map_entry_vmatch_gather zcp;
+    unfold (I.iterator_next_post cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) _ r_it _ _ e);
+    with pmv hdv tl itn pmn . assert (
+      cbor_map_entry_vmatch pmv e hdv **
+      R.pts_to r_it itn **
+      I.iterator_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pmn itn tl
+    );
+    Trade.trans _ _
+      (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+        pm_map map_ml map_entries);
+    // Unfold both entries to access keys and values
+    unfold_map_entry_vmatch pmv e (Ghost.reveal hdv);
+    unfold_map_entry_vmatch pm_xr xr (Ghost.reveal xr_pair);
+    // Compare keys
+    let key_res = compare_impl xr.cbor_map_entry_key e.cbor_map_entry_key;
+    match key_res {
+      None -> {
+        // Overflow: result is None
+        fold_map_entry_vmatch pmv e (Ghost.reveal hdv);
+        fold_map_entry_vmatch pm_xr xr (Ghost.reveal xr_pair);
+        Trade.elim_hyp_l _ _
+          (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+            pm_map map_ml map_entries);
+        r_done := Some (None #bool);
+        let c = !r_cnt;
+        r_cnt := SZ.add c 1sz;
+      }
+      Some key_match -> {
+        if key_match {
+          // Keys match: compare values
+          let val_res = compare_impl xr.cbor_map_entry_value e.cbor_map_entry_value;
+          fold_map_entry_vmatch pmv e (Ghost.reveal hdv);
+          fold_map_entry_vmatch pm_xr xr (Ghost.reveal xr_pair);
+          Trade.elim_hyp_l _ _
+            (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+              pm_map map_ml map_entries);
+          r_done := Some val_res;
+          let c = !r_cnt;
+          r_cnt := SZ.add c 1sz;
+        } else {
+          // Keys don't match: continue searching
+          fold_map_entry_vmatch pmv e (Ghost.reveal hdv);
+          fold_map_entry_vmatch pm_xr xr (Ghost.reveal xr_pair);
+          Trade.elim_hyp_l _ _
+            (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+              pm_map map_ml map_entries);
+          let c = !r_cnt;
+          r_cnt := SZ.add c 1sz;
+        }
+      }
+    }
+  };
+  // After loop: trade back to restore mixed_list_match
+  Trade.elim _ (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm_map map_ml map_entries);
+  let done = !r_done;
+  match done {
+    Some r -> { r }
+    None -> { Some false }
+  }
+}
+```
+
+#pop-options
+
+// list_for_all_with_overflow: iterate outer_entries, for each entry call setoid_assoc_eq on inner map
+#push-options "--z3rlimit 512 --fuel 4 --ifuel 4 --split_queries always"
+
+inline_for_extraction
+```pulse
+fn compare_cbor_raw_list_for_all
+  (#equiv: Ghost.erased (raw_data_item -> raw_data_item -> option bool))
+  (compare_impl: compare_cbor_raw_fn_t equiv)
+  (f64: squash SZ.fits_u64)
+  (inner_ml: I.mixed_list (cbor_map_entry cbor_raw))
+  (#pm_inner: perm)
+  (#inner_entries: Ghost.erased (list (raw_data_item & raw_data_item)))
+  (outer_ml: I.mixed_list (cbor_map_entry cbor_raw))
+  (#pm_outer: perm)
+  (#outer_entries: Ghost.erased (list (raw_data_item & raw_data_item)))
+requires
+  I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm_inner inner_ml inner_entries **
+  I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm_outer outer_ml outer_entries
+returns res: option bool
+ensures
+  I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm_inner inner_ml inner_entries **
+  I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm_outer outer_ml outer_entries **
+  pure (res == list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv inner_entries) outer_entries)
+{
+  let j = jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64);
+  let zcp = cbor_map_entry_zero_copy_parse f64;
+  let len = I.mixed_list_length outer_ml;
+  // Establish length invariant
+  I.mixed_list_match_length cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm_outer outer_ml (Ghost.reveal outer_entries);
+  // Start iterator on outer_entries
+  let it_init = I.iterator_start cbor_map_entry_vmatch
+    (nondep_then parse_raw_data_item parse_raw_data_item) j pm_outer outer_ml outer_entries
+    cbor_map_entry_vmatch_share cbor_map_entry_vmatch_gather;
+  let mut r_it = it_init;
+  let mut r_done : option (option bool) = None #(option bool);
+  let mut r_cnt = 0sz;
+  while (
+    let done = !r_done;
+    let cnt = !r_cnt;
+    (None? done && SZ.lt cnt len)
+  ) invariant exists* it_c done_c cnt_c rem pm_c .
+    R.pts_to r_it it_c **
+    R.pts_to r_done done_c **
+    R.pts_to r_cnt cnt_c **
+    I.iterator_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm_c it_c rem **
+    Trade.trade
+      (I.iterator_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm_c it_c rem)
+      (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+        pm_outer outer_ml outer_entries) **
+    I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm_inner inner_ml inner_entries **
+    pure (
+      SZ.v cnt_c <= SZ.v len /\
+      List.Tot.length rem == SZ.v len - SZ.v cnt_c /\
+      list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv inner_entries) outer_entries ==
+        (match done_c with
+         | Some r -> r
+         | None -> list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv inner_entries) rem)
+    )
+  {
+    // Get next entry from iterator
+    let e = I.iterator_next cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+      j _ r_it _ _ cbor_map_entry_vmatch_share cbor_map_entry_vmatch_gather zcp;
+    unfold (I.iterator_next_post cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) _ r_it _ _ e);
+    with pmv hdv tl itn pmn . assert (
+      cbor_map_entry_vmatch pmv e hdv **
+      R.pts_to r_it itn **
+      I.iterator_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pmn itn tl
+    );
+    Trade.trans _ _
+      (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+        pm_outer outer_ml outer_entries);
+    // Call setoid_assoc_eq on this entry against the inner map
+    let entry_res = compare_cbor_raw_setoid_assoc_eq compare_impl f64 inner_ml e;
+    match entry_res {
+      Some b -> {
+        if b {
+          // Some true: this entry matched, continue searching
+          Trade.elim_hyp_l _ _
+            (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+              pm_outer outer_ml outer_entries);
+          let c = !r_cnt;
+          r_cnt := SZ.add c 1sz;
+        } else {
+          // Some false: entry not found, stop
+          Trade.elim_hyp_l _ _
+            (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+              pm_outer outer_ml outer_entries);
+          r_done := Some (Some false);
+          let c = !r_cnt;
+          r_cnt := SZ.add c 1sz;
+        }
+      }
+      None -> {
+        // Overflow: stop
+        Trade.elim_hyp_l _ _
+          (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+            pm_outer outer_ml outer_entries);
+        r_done := Some (None #bool);
+        let c = !r_cnt;
+        r_cnt := SZ.add c 1sz;
+      }
+    }
+  };
+  // After loop: trade back to restore outer mixed_list_match
+  Trade.elim _ (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm_outer outer_ml outer_entries);
+  let done = !r_done;
+  match done {
+    Some r -> { r }
+    None -> { Some true }
+  }
+}
+```
+
+#pop-options
+
 #push-options "--z3rlimit 512 --fuel 4 --ifuel 4 --split_queries always"
 
 // Array pairwise comparison helper
