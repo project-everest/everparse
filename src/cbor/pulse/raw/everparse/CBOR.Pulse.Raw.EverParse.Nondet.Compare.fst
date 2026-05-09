@@ -507,6 +507,120 @@ let compare_cbor_raw_t
       cbor_raw_match pm2 x2 v2 **
       pure (res == check_equiv data_model map_bound v1 v2))
 
+// === Helpers for map_bound decrement ===
+
+let option_nat_decrement_safe (mb: option nat) : option nat =
+  match mb with
+  | None -> None
+  | Some 0 -> Some 0 // dummy, never used (Map case returns None for overflow)
+  | Some n -> Some (n - 1)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let option_sz_decrement_safe (mb: option SZ.t) : option SZ.t =
+  match mb with
+  | None -> None
+  | Some n -> if n = 0sz then Some 0sz else Some (SZ.sub n 1sz)
+
+let option_sz_decrement_safe_v (mb: option SZ.t)
+: Lemma (NG.option_sz_v (option_sz_decrement_safe mb) == option_nat_decrement_safe (NG.option_sz_v mb))
+= ()
+
+let option_nat_decrement_safe_spec (mb: option nat)
+: Lemma
+  (requires mb <> Some 0)
+  (ensures option_nat_decrement_safe mb == (match mb with None -> None | Some x -> Some (x - 1)))
+= ()
+
+// === Extensionality lemmas for check_equiv vs check_equiv_aux ===
+
+let check_equiv_check_equiv_aux_eq
+  (dm: (raw_data_item -> raw_data_item -> bool))
+  (mb: option nat)
+  (bound: nat)
+  (x1 x2: raw_data_item)
+: Lemma
+  (requires raw_data_item_size x1 + raw_data_item_size x2 <= bound)
+  (ensures check_equiv dm mb x1 x2 == check_equiv_aux bound (check_equiv_map dm mb) x1 x2)
+= ()
+
+// Extensionality for setoid_assoc_eq_with_overflow: when all keys/values in ll and xr have sizes
+// fitting within bound, check_equiv and check_equiv_aux agree
+let rec setoid_assoc_eq_with_overflow_check_equiv_ext
+  (dm: (raw_data_item -> raw_data_item -> bool))
+  (mb: option nat)
+  (bound: nat)
+  (ll: list (raw_data_item & raw_data_item))
+  (xr: (raw_data_item & raw_data_item))
+: Lemma
+  (requires
+    list_sum (pair_sum raw_data_item_size raw_data_item_size) ll +
+    pair_sum raw_data_item_size raw_data_item_size xr <= bound)
+  (ensures
+    setoid_assoc_eq_with_overflow (check_equiv dm mb) (check_equiv dm mb) ll xr ==
+    setoid_assoc_eq_with_overflow (check_equiv_aux bound (check_equiv_map dm mb)) (check_equiv_aux bound (check_equiv_map dm mb)) ll xr)
+  (decreases ll)
+= match ll with
+  | [] -> ()
+  | (kl, vl) :: ll' ->
+    check_equiv_check_equiv_aux_eq dm mb bound (fst xr) kl;
+    match check_equiv dm mb (fst xr) kl with
+    | None -> ()
+    | Some false ->
+      setoid_assoc_eq_with_overflow_check_equiv_ext dm mb bound ll' xr
+    | Some true ->
+      check_equiv_check_equiv_aux_eq dm mb bound (snd xr) vl
+
+// When two functions agree pointwise on list elements, list_for_all_with_overflow agrees
+let rec list_for_all_with_overflow_ext
+  (#t: Type)
+  (f g: t -> option bool)
+  (l: list t)
+: Lemma
+  (requires forall x . List.Tot.memP x l ==> f x == g x)
+  (ensures list_for_all_with_overflow f l == list_for_all_with_overflow g l)
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q ->
+    assert (f a == g a);
+    match f a with
+    | Some true -> list_for_all_with_overflow_ext f g q
+    | _ -> ()
+
+// Combined bridge: list_for_all_with_overflow o setoid_assoc_eq_with_overflow
+// with check_equiv dm mb agrees with check_equiv_aux bound (check_equiv_map dm mb)
+let check_equiv_map_list_for_all_ext
+  (dm: (raw_data_item -> raw_data_item -> bool))
+  (mb: option nat)
+  (bound: nat)
+  (inner outer: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires
+    list_sum (pair_sum raw_data_item_size raw_data_item_size) inner +
+    list_sum (pair_sum raw_data_item_size raw_data_item_size) outer <= bound)
+  (ensures
+    list_for_all_with_overflow
+      (setoid_assoc_eq_with_overflow (check_equiv dm mb) (check_equiv dm mb) inner)
+      outer
+    ==
+    list_for_all_with_overflow
+      (setoid_assoc_eq_with_overflow (check_equiv_aux bound (check_equiv_map dm mb)) (check_equiv_aux bound (check_equiv_map dm mb)) inner)
+      outer)
+= let ext_assoc (xr: (raw_data_item & raw_data_item)) : Lemma
+    (requires List.Tot.memP xr outer)
+    (ensures
+      setoid_assoc_eq_with_overflow (check_equiv dm mb) (check_equiv dm mb) inner xr ==
+      setoid_assoc_eq_with_overflow (check_equiv_aux bound (check_equiv_map dm mb)) (check_equiv_aux bound (check_equiv_map dm mb)) inner xr)
+  = list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) outer xr;
+    setoid_assoc_eq_with_overflow_check_equiv_ext dm mb bound inner xr
+  in
+  Classical.forall_intro (Classical.move_requires ext_assoc);
+  list_for_all_with_overflow_ext
+    (setoid_assoc_eq_with_overflow (check_equiv dm mb) (check_equiv dm mb) inner)
+    (setoid_assoc_eq_with_overflow (check_equiv_aux bound (check_equiv_map dm mb)) (check_equiv_aux bound (check_equiv_map dm mb)) inner)
+    outer
+
 // === Body of the recursive comparison function ===
 
 module I16 = FStar.Int16
@@ -1100,6 +1214,7 @@ fn compare_cbor_raw_body
   (f64: squash SZ.fits_u64)
   (map_bound: option SZ.t)
   (compare_rec: compare_cbor_raw_t data_model (NG.option_sz_v map_bound))
+  (compare_rec_map: compare_cbor_raw_t data_model (option_nat_decrement_safe (NG.option_sz_v map_bound)))
   (x1: cbor_raw)
   (x2: cbor_raw)
   (#pm1: perm)
@@ -1193,11 +1308,202 @@ ensures
         compare_cbor_raw_array_case f64 map_bound compare_rec x1 x2 len1 ()
       }
     } else {
-      // Map/Map: delegate to Gen
-      assume (pure False);
-      unreachable ()
+      // Map/Map: bidirectional setoid_assoc_eq check
+      check_equiv_map_map_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2) () ();
+      match map_bound {
+        Some mb_v -> {
+          if (mb_v = 0sz) {
+            // Overflow: map_bound = Some 0
+            None #bool
+          } else {
+        option_nat_decrement_safe_spec (NG.option_sz_v map_bound);
+        // Get both maps
+        let map_ml1 = cbor_raw_get_map pm1 x1 ();
+        with pm1_m map1_entries . assert (
+          I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match cbor_raw_match pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries **
+          Trade.trade
+            (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match cbor_raw_match pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries)
+            (cbor_raw_match pm1 x1 v1)
+        );
+        rewrite
+          (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match cbor_raw_match pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries)
+          as (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries);
+        rewrite
+          (Trade.trade
+            (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match cbor_raw_match pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries)
+            (cbor_raw_match pm1 x1 v1))
+          as (Trade.trade
+            (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries)
+            (cbor_raw_match pm1 x1 v1));
+        let map_ml2 = cbor_raw_get_map pm2 x2 ();
+        with pm2_m map2_entries . assert (
+          I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match cbor_raw_match pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries **
+          Trade.trade
+            (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match cbor_raw_match pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries)
+            (cbor_raw_match pm2 x2 v2)
+        );
+        rewrite
+          (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match cbor_raw_match pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries)
+          as (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries);
+        rewrite
+          (Trade.trade
+            (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match cbor_raw_match pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries)
+            (cbor_raw_match pm2 x2 v2))
+          as (Trade.trade
+            (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries)
+            (cbor_raw_match pm2 x2 v2));
+        // Forward check: v1 entries searched against v2
+        let fwd = compare_cbor_raw_list_for_all #(check_equiv data_model (option_nat_decrement_safe (NG.option_sz_v map_bound))) compare_rec_map f64
+          map_ml2 map_ml1;
+        // Extensionality: relate check_equiv dm mb' to check_equiv_aux bound (check_equiv_map dm mb')
+        check_equiv_map_list_for_all_ext data_model (option_nat_decrement_safe (NG.option_sz_v map_bound))
+          (list_sum (pair_sum raw_data_item_size raw_data_item_size) (Map?.v (Ghost.reveal v1)) + list_sum (pair_sum raw_data_item_size raw_data_item_size) (Map?.v (Ghost.reveal v2)))
+          (Ghost.reveal map2_entries) (Ghost.reveal map1_entries);
+        match fwd {
+          Some fwd_b -> {
+            if fwd_b {
+              // Forward passed: backward check (v2 entries searched against v1)
+              let bwd = compare_cbor_raw_list_for_all #(check_equiv data_model (option_nat_decrement_safe (NG.option_sz_v map_bound))) compare_rec_map f64
+                map_ml1 map_ml2;
+              check_equiv_map_list_for_all_ext data_model (option_nat_decrement_safe (NG.option_sz_v map_bound))
+                (list_sum (pair_sum raw_data_item_size raw_data_item_size) (Map?.v (Ghost.reveal v1)) + list_sum (pair_sum raw_data_item_size raw_data_item_size) (Map?.v (Ghost.reveal v2)))
+                (Ghost.reveal map1_entries) (Ghost.reveal map2_entries);
+              Trade.elim _ (cbor_raw_match pm1 x1 v1);
+              Trade.elim _ (cbor_raw_match pm2 x2 v2);
+              // The forward check returned Some true, and bwd is the backward check result.
+              // We need to show bwd == check_equiv dm mb v1 v2.
+              // check_equiv dm mb v1 v2 == check_equiv_map dm mb v1 v2 (from check_equiv_map_map_eq)
+              // check_equiv_map unfolds to: match fwd_spec with Some true -> bwd_spec | r -> r
+              // where fwd_spec == fwd (by ext lemma) and bwd_spec == bwd (by ext lemma)
+              // Since fwd == Some true, result == bwd_spec == bwd
+              check_equiv_map_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2);
+              bwd
+          } else {
+            Trade.elim _ (cbor_raw_match pm1 x1 v1);
+            Trade.elim _ (cbor_raw_match pm2 x2 v2);
+            check_equiv_map_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2);
+            Some false
+          }
+        }
+        None -> {
+          Trade.elim _ (cbor_raw_match pm1 x1 v1);
+          Trade.elim _ (cbor_raw_match pm2 x2 v2);
+          check_equiv_map_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2);
+          None #bool
+        }
+      }
+      }
+    }
+    None -> {
+      // No bound: proceed with map comparison
+      option_nat_decrement_safe_spec (NG.option_sz_v map_bound);
+      // Get both maps
+      let map_ml1 = cbor_raw_get_map pm1 x1 ();
+      with pm1_m map1_entries . assert (
+        I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match cbor_raw_match pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries **
+        Trade.trade
+          (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match cbor_raw_match pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries)
+          (cbor_raw_match pm1 x1 v1)
+      );
+      rewrite
+        (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match cbor_raw_match pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries)
+        as (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries);
+      rewrite
+        (Trade.trade
+          (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match cbor_raw_match pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries)
+          (cbor_raw_match pm1 x1 v1))
+        as (Trade.trade
+          (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries)
+          (cbor_raw_match pm1 x1 v1));
+      let map_ml2 = cbor_raw_get_map pm2 x2 ();
+      with pm2_m map2_entries . assert (
+        I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match cbor_raw_match pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries **
+        Trade.trade
+          (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match cbor_raw_match pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries)
+          (cbor_raw_match pm2 x2 v2)
+      );
+      rewrite
+        (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match cbor_raw_match pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries)
+        as (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries);
+      rewrite
+        (Trade.trade
+          (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match cbor_raw_match pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries)
+          (cbor_raw_match pm2 x2 v2))
+        as (Trade.trade
+          (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries)
+          (cbor_raw_match pm2 x2 v2));
+      // Forward check: v1 entries searched against v2
+      let fwd = compare_cbor_raw_list_for_all #(check_equiv data_model (option_nat_decrement_safe (NG.option_sz_v map_bound))) compare_rec_map f64
+        map_ml2 map_ml1;
+      check_equiv_map_list_for_all_ext data_model (option_nat_decrement_safe (NG.option_sz_v map_bound))
+        (list_sum (pair_sum raw_data_item_size raw_data_item_size) (Map?.v (Ghost.reveal v1)) + list_sum (pair_sum raw_data_item_size raw_data_item_size) (Map?.v (Ghost.reveal v2)))
+        (Ghost.reveal map2_entries) (Ghost.reveal map1_entries);
+      match fwd {
+        Some fwd_b -> {
+          if fwd_b {
+            let bwd = compare_cbor_raw_list_for_all #(check_equiv data_model (option_nat_decrement_safe (NG.option_sz_v map_bound))) compare_rec_map f64
+              map_ml1 map_ml2;
+            check_equiv_map_list_for_all_ext data_model (option_nat_decrement_safe (NG.option_sz_v map_bound))
+              (list_sum (pair_sum raw_data_item_size raw_data_item_size) (Map?.v (Ghost.reveal v1)) + list_sum (pair_sum raw_data_item_size raw_data_item_size) (Map?.v (Ghost.reveal v2)))
+              (Ghost.reveal map1_entries) (Ghost.reveal map2_entries);
+            Trade.elim _ (cbor_raw_match pm1 x1 v1);
+            Trade.elim _ (cbor_raw_match pm2 x2 v2);
+            check_equiv_map_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2);
+            bwd
+          } else {
+            Trade.elim _ (cbor_raw_match pm1 x1 v1);
+            Trade.elim _ (cbor_raw_match pm2 x2 v2);
+            check_equiv_map_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2);
+            Some false
+          }
+        }
+        None -> {
+          Trade.elim _ (cbor_raw_match pm1 x1 v1);
+          Trade.elim _ (cbor_raw_match pm2 x2 v2);
+          check_equiv_map_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2);
+          None #bool
+        }
+      }
     }
   }
+  }
+  }
 }
+
+#pop-options
+
+// === Recursive comparison function tying the knot ===
+
+#push-options "--z3rlimit 32 --fuel 1 --ifuel 1"
+
+```pulse
+fn rec compare_cbor_raw
+  (#data_model: Ghost.erased (raw_data_item -> raw_data_item -> bool))
+  (impl_dm: impl_data_model_t data_model)
+  (f64: squash SZ.fits_u64)
+  (map_bound: option SZ.t)
+  (x1: cbor_raw)
+  (x2: cbor_raw)
+  (#pm1: perm)
+  (#v1: Ghost.erased raw_data_item)
+  (#pm2: perm)
+  (#v2: Ghost.erased raw_data_item)
+requires
+  cbor_raw_match pm1 x1 v1 **
+  cbor_raw_match pm2 x2 v2
+returns res: option bool
+ensures
+  cbor_raw_match pm1 x1 v1 **
+  cbor_raw_match pm2 x2 v2 **
+  pure (res == check_equiv data_model (NG.option_sz_v map_bound) v1 v2)
+{
+  let mb_dec = option_sz_decrement_safe map_bound;
+  option_sz_decrement_safe_v map_bound;
+  compare_cbor_raw_body impl_dm f64 map_bound
+    (compare_cbor_raw impl_dm f64 map_bound)
+    (compare_cbor_raw impl_dm f64 mb_dec)
+    x1 x2
+}
+```
 
 #pop-options
