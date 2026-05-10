@@ -1473,7 +1473,7 @@ static bool cbor_raw_sorted(Pulse_Lib_Slice_slice__uint8_t a)
               }
             ).snd;
           pkey = key2;
-          ppairs = ppairs - 1ULL;
+          ppairs--;
           ptail = tail_;
         }
         else

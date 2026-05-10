@@ -4292,7 +4292,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
         ite = COSE_Format_validate_int(cv);
       if (ite)
       {
-        remaining = remaining - 1ULL;
+        remaining--;
         ite0 = MGOK;
       }
       else
@@ -4328,7 +4328,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
           else if (scrut.tag == FStar_Pervasives_Native_Some)
             if (COSE_Format_validate_bstr(scrut.v))
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite = MGOK;
             }
             else
@@ -4412,7 +4412,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
               ite = COSE_Format_validate_int(cv);
             if (ite)
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite0 = MGOK;
             }
             else
@@ -4542,7 +4542,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
               ite1 = false;
             if (ite1)
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite0 = MGOK;
             }
             else
@@ -4620,7 +4620,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
           else if (scrut.tag == FStar_Pervasives_Native_Some)
             if (COSE_Format_validate_bstr(scrut.v))
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite = MGOK;
             }
             else
@@ -4828,7 +4828,7 @@ bool COSE_Format_validate_cose_key_generic(cbor_det_t c)
             else
               ite1 = false;
             if (!!ite1)
-              remaining = remaining - 1ULL;
+              remaining--;
           }
           sw = MGOK;
           break;
@@ -7137,7 +7137,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
         ite = false;
       if (ite)
       {
-        remaining = remaining - 1ULL;
+        remaining--;
         ite0 = MGOK;
       }
       else
@@ -7178,7 +7178,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
               ite = COSE_Format_validate_tstr(cv);
             if (ite)
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               sw0 = MGOK;
             }
             else
@@ -7232,7 +7232,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
           else if (scrut.tag == FStar_Pervasives_Native_Some)
             if (COSE_Format_validate_bstr(scrut.v))
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite = MGOK;
             }
             else
@@ -7309,7 +7309,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
           else if (scrut.tag == FStar_Pervasives_Native_Some)
             if (COSE_Format_validate_bstr(scrut.v))
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite = MGOK;
             }
             else
@@ -7453,7 +7453,7 @@ bool COSE_Format_validate_cose_key_okp(cbor_det_t c)
             else
               ite1 = false;
             if (!!ite1)
-              remaining = remaining - 1ULL;
+              remaining--;
           }
           sw = MGOK;
           break;
@@ -9055,7 +9055,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
         ite = COSE_Format_validate_tstr(cv);
       if (ite)
       {
-        remaining = remaining - 1ULL;
+        remaining--;
         ite0 = MGOK;
       }
       else
@@ -9156,7 +9156,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
               ite1 = false;
             if (ite1)
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite0 = MGOK;
             }
             else
@@ -9241,7 +9241,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
               ite = COSE_Format_validate_int(cv);
             if (ite)
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite0 = MGOK;
             }
             else
@@ -9319,7 +9319,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
           else if (scrut.tag == FStar_Pervasives_Native_Some)
             if (COSE_Format_validate_bstr(scrut.v))
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite = MGOK;
             }
             else
@@ -9396,7 +9396,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
           else if (scrut0.tag == FStar_Pervasives_Native_Some)
             if (COSE_Format_validate_bstr(scrut0.v))
             {
-              remaining = remaining - 1ULL;
+              remaining--;
               ite0 = MGOK;
             }
             else
@@ -9435,7 +9435,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                 else if (scrut.tag == FStar_Pervasives_Native_Some)
                   if (COSE_Format_validate_everparsenomatch(scrut.v))
                   {
-                    remaining = remaining - 1ULL;
+                    remaining--;
                     ite = MGOK;
                   }
                   else
@@ -9521,7 +9521,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                 else if (scrut0.tag == FStar_Pervasives_Native_Some)
                   if (COSE_Format_validate_bstr(scrut0.v))
                   {
-                    remaining = remaining - 1ULL;
+                    remaining--;
                     ite0 = MGOK;
                   }
                   else
@@ -9560,7 +9560,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                       else if (scrut.tag == FStar_Pervasives_Native_Some)
                         if (COSE_Format_validate_everparsenomatch(scrut.v))
                         {
-                          remaining = remaining - 1ULL;
+                          remaining--;
                           ite = MGOK;
                         }
                         else
@@ -9648,7 +9648,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                       else if (scrut0.tag == FStar_Pervasives_Native_Some)
                         if (COSE_Format_validate_everparsenomatch(scrut0.v))
                         {
-                          remaining = remaining - 1ULL;
+                          remaining--;
                           ite0 = MGOK;
                         }
                         else
@@ -9713,7 +9713,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             else if (scrut.tag == FStar_Pervasives_Native_Some)
                               if (COSE_Format_validate_everparsenomatch(scrut.v))
                               {
-                                remaining = remaining - 1ULL;
+                                remaining--;
                                 ite = MGOK;
                               }
                               else
@@ -9983,7 +9983,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
             else
               ite1 = false;
             if (!!ite1)
-              remaining = remaining - 1ULL;
+              remaining--;
           }
           sw = MGOK;
           break;

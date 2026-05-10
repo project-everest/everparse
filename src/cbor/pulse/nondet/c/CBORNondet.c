@@ -6429,7 +6429,7 @@ cbor_nondet_map_get_multiple(
               }
             ));
           if (!dest_entry.found)
-            pi = pi - (size_t)1U;
+            pi--;
         }
         size_t j0 = pj;
         size_t i = pi;
