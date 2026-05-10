@@ -23,6 +23,8 @@ module I = LowParse.PulseParse.Iterator
 module LPIter = LowParse.Pulse.Iterator
 module PPB = LowParse.PulseParse.Base
 module Trade = Pulse.Lib.Trade.Util
+open LowParse.Spec.VCList
+open CBOR.Pulse.Raw.EverParse.Validate
 
 (* ================================================================ *)
 (* Part 1: Header writers — pure LowParse combinators, no match dep *)
@@ -802,6 +804,7 @@ let size_payload_array_elem
 
 inline_for_extraction
 fn ser_payload_tagged_lens
+  (f64: squash SZ.fits_u64)
   (xh1: header)
   (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_tagged))
 : vmatch_lens #_ #_ #_
@@ -815,7 +818,7 @@ fn ser_payload_tagged_lens
     (cbor_raw_match_with_perm xl xh0)
     (cbor_raw_match xl.p xl.v xh0);
   Trade.trans (cbor_raw_match xl.p xl.v xh0) (cbor_raw_match_with_perm xl xh0) _;
-  let sq64 : squash SZ.fits_u64 = assume (SZ.fits_u64);
+  let sq64 : squash SZ.fits_u64 = f64;
   let payload = cbor_raw_get_tagged_payload xl.p xl.v sq64 ();
   with pm' payload_xh . assert (cbor_raw_match pm' payload payload_xh);
   Trade.trans (cbor_raw_match pm' payload payload_xh) (cbor_raw_match xl.p xl.v xh0) _;
@@ -834,26 +837,28 @@ fn ser_payload_tagged_lens
 
 inline_for_extraction
 let ser_payload_tagged
+  (f64: squash SZ.fits_u64)
   (f: l2r_writer (cbor_raw_match_with_perm) serialize_raw_data_item)
   (xh1: header)
   (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_tagged))
 : l2r_writer (match_cbor_payload xh1) (serialize_content xh1)
 = l2r_writer_ext_gen
     (l2r_writer_lens
-      (ser_payload_tagged_lens xh1 sq)
+      (ser_payload_tagged_lens f64 xh1 sq)
       f
     )
     _
 
 inline_for_extraction
 let size_payload_tagged
+  (f64: squash SZ.fits_u64)
   (f: compute_remaining_size (cbor_raw_match_with_perm) serialize_raw_data_item)
   (xh1: header)
   (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_tagged))
 : compute_remaining_size (match_cbor_payload xh1) (serialize_content xh1)
 = compute_remaining_size_ext_gen
     (compute_remaining_size_lens
-      (ser_payload_tagged_lens xh1 sq)
+      (ser_payload_tagged_lens f64 xh1 sq)
       f
     )
     _
@@ -862,9 +867,141 @@ let size_payload_tagged
 
 (* --- Array payload --- *)
 
-(* For arrays, we use a lens to extract the mixed_list, then l2r_write_mixed_list.
-   However, since mixed_list_match carries a variable permission, we write
-   ser_payload_array as a direct fn. *)
+(* share/gather wrappers for cbor_raw_match, needed for l2r_write_mixed_list *)
+ghost
+fn cbor_raw_match_share_wrapper
+  (x1: cbor_raw) (#p: perm) (#x2: raw_data_item)
+requires cbor_raw_match p x1 x2
+ensures cbor_raw_match (p /. 2.0R) x1 x2 ** cbor_raw_match (p /. 2.0R) x1 x2
+{
+  cbor_raw_match_share x1
+}
+
+ghost
+fn cbor_raw_match_gather_wrapper
+  (x1: cbor_raw) (#p: perm) (#x2: raw_data_item) (#p': perm) (#x2': raw_data_item)
+requires cbor_raw_match p x1 x2 ** cbor_raw_match p' x1 x2'
+ensures cbor_raw_match (p +. p') x1 x2 ** pure (x2 == x2')
+{
+  cbor_raw_match_gather x1 #p #x2 #p' #x2'
+}
+
+let cbor_raw_match_share_t : I.share_t cbor_raw_match = cbor_raw_match_share_wrapper
+let cbor_raw_match_gather_t : I.gather_t cbor_raw_match = cbor_raw_match_gather_wrapper
+
+(* Array: bridge from match_cbor_payload to mixed_list_match_for_l2r,
+   then use l2r_write_mixed_list. Written as a direct fn because
+   the permission in mixed_list_match depends on the runtime value xl. *)
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+inline_for_extraction
+fn ser_payload_array_impl
+  (f64: squash SZ.fits_u64)
+  (f: l2r_writer (cbor_raw_match_with_perm) serialize_raw_data_item)
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_array))
+  (xl: with_perm cbor_raw)
+  (#xh: Ghost.erased (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+    (get_header_long_argument xh1)))) raw_data_item))
+  (out: S.slice byte)
+  (offset: SZ.t)
+  (#v: Ghost.erased bytes)
+requires
+  pts_to out v **
+  vmatch_ext
+    (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+      (get_header_long_argument xh1)))) raw_data_item)
+    (match_cbor_payload xh1) xl xh **
+  pure (l2r_writer_for_pre
+    (serialize_nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+      (get_header_long_argument xh1)))) serialize_raw_data_item) xh offset v)
+returns res: SZ.t
+ensures
+  exists* v'.
+  pts_to out v' **
+  vmatch_ext
+    (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+      (get_header_long_argument xh1)))) raw_data_item)
+    (match_cbor_payload xh1) xl xh **
+  pure (l2r_writer_for_post
+    (serialize_nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+      (get_header_long_argument xh1)))) serialize_raw_data_item) xh offset v res v')
+{
+  // Step 1: Unfold vmatch_ext
+  let xh2 = vmatch_ext_elim_trade
+    (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) raw_data_item)
+    (match_cbor_payload xh1) xl xh;
+  // Now: match_cbor_payload xh1 xl xh2 ** trade (match_cbor_payload xh1 xl xh2) (vmatch_ext ...)
+  // Step 2: Unfold match_cbor_payload to cbor_raw_match_with_perm
+  let xh0 = match_cbor_payload_elim_trade xh1 xl xh2;
+  // cbor_raw_match_with_perm xl xh0 ** trade ... (match_cbor_payload xh1 xl xh2)
+  Trade.trans
+    (cbor_raw_match_with_perm xl xh0)
+    (match_cbor_payload xh1 xl xh2)
+    (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) raw_data_item)
+      (match_cbor_payload xh1) xl xh);
+  // Rewrite to cbor_raw_match xl.p xl.v xh0
+  Trade.rewrite_with_trade
+    (cbor_raw_match_with_perm xl xh0)
+    (cbor_raw_match xl.p xl.v xh0);
+  Trade.trans
+    (cbor_raw_match xl.p xl.v xh0)
+    (cbor_raw_match_with_perm xl xh0)
+    (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) raw_data_item)
+      (match_cbor_payload xh1) xl xh);
+  // Step 3: Call cbor_raw_get_array
+  let arr = cbor_raw_get_array xl.p xl.v #xh0 () ;
+  with pm' l . assert (
+    I.mixed_list_match cbor_raw_match parse_raw_data_item pm' arr l
+  );
+  Trade.trans
+    (I.mixed_list_match cbor_raw_match parse_raw_data_item pm' arr l)
+    (cbor_raw_match xl.p xl.v xh0)
+    (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) raw_data_item)
+      (match_cbor_payload xh1) xl xh);
+  // Rewrite mixed_list_match to mixed_list_match_for_l2r for l2r_write_mixed_list
+  let n = SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1));
+  rewrite (I.mixed_list_match cbor_raw_match parse_raw_data_item pm' arr l)
+       as (LPIter.mixed_list_match_for_l2r cbor_raw_match parse_raw_data_item pm' (SZ.v n) arr l);
+  // Build trade from mixed_list_match_for_l2r to vmatch_ext
+  intro
+    (Trade.trade
+      (LPIter.mixed_list_match_for_l2r cbor_raw_match parse_raw_data_item pm' (SZ.v n) arr l)
+      (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) raw_data_item)
+        (match_cbor_payload xh1) xl xh))
+  #(Trade.trade
+      (I.mixed_list_match cbor_raw_match parse_raw_data_item pm' arr l)
+      (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) raw_data_item)
+        (match_cbor_payload xh1) xl xh))
+  fn _ {
+    rewrite (LPIter.mixed_list_match_for_l2r cbor_raw_match parse_raw_data_item pm' (SZ.v n) arr l)
+         as (I.mixed_list_match cbor_raw_match parse_raw_data_item pm' arr l);
+    Trade.elim
+      (I.mixed_list_match cbor_raw_match parse_raw_data_item pm' arr l)
+      (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) raw_data_item)
+        (match_cbor_payload xh1) xl xh);
+  };
+  // Step 4: Write using l2r_write_mixed_list
+  let w = LPIter.l2r_write_mixed_list
+    cbor_raw_match
+    serialize_raw_data_item
+    (fun pm'' -> l2r_writer_lens (cbor_raw_match_with_perm_lens pm'') f)
+    (jump_raw_data_item f64)
+    cbor_raw_match_share_t cbor_raw_match_gather_t
+    pm' n;
+  let res = w arr out offset;
+  // Step 5: Fold back
+  Trade.elim
+    (LPIter.mixed_list_match_for_l2r cbor_raw_match parse_raw_data_item pm' (SZ.v n) arr l)
+    (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) raw_data_item)
+      (match_cbor_payload xh1) xl xh);
+  res
+}
+
+#pop-options
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 
 inline_for_extraction
 let ser_payload_array
@@ -873,7 +1010,112 @@ let ser_payload_array
   (xh1: header)
   (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_array))
 : l2r_writer (match_cbor_payload xh1) (serialize_content xh1)
-= admit ()
+= l2r_writer_ext_gen
+    (ser_payload_array_impl f64 f xh1 sq)
+    (serialize_content xh1)
+
+#pop-options
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+inline_for_extraction
+fn size_payload_array_impl
+  (f64: squash SZ.fits_u64)
+  (f: compute_remaining_size (cbor_raw_match_with_perm) serialize_raw_data_item)
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_array))
+  (xl: with_perm cbor_raw)
+  (#xh: Ghost.erased (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+    (get_header_long_argument xh1)))) raw_data_item))
+  (out: R.ref SZ.t)
+  (#v: Ghost.erased SZ.t)
+requires
+  R.pts_to out v **
+  vmatch_ext
+    (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+      (get_header_long_argument xh1)))) raw_data_item)
+    (match_cbor_payload xh1) xl xh
+returns res: bool
+ensures
+  exists* v'.
+  R.pts_to out v' **
+  vmatch_ext
+    (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+      (get_header_long_argument xh1)))) raw_data_item)
+    (match_cbor_payload xh1) xl xh **
+  pure (
+    let bs = Seq.length (bare_serialize
+      (serialize_nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+        (get_header_long_argument xh1)))) serialize_raw_data_item) xh) in
+    (res == true <==> bs <= SZ.v v) /\
+    (res == true ==> bs + SZ.v v' == SZ.v v)
+  )
+{
+  // Same pattern as ser_payload_array_impl
+  let xh2 = vmatch_ext_elim_trade
+    (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) raw_data_item)
+    (match_cbor_payload xh1) xl xh;
+  let xh0 = match_cbor_payload_elim_trade xh1 xl xh2;
+  Trade.trans
+    (cbor_raw_match_with_perm xl xh0)
+    (match_cbor_payload xh1 xl xh2)
+    (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) raw_data_item)
+      (match_cbor_payload xh1) xl xh);
+  Trade.rewrite_with_trade
+    (cbor_raw_match_with_perm xl xh0)
+    (cbor_raw_match xl.p xl.v xh0);
+  Trade.trans
+    (cbor_raw_match xl.p xl.v xh0)
+    (cbor_raw_match_with_perm xl xh0)
+    (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) raw_data_item)
+      (match_cbor_payload xh1) xl xh);
+  let arr = cbor_raw_get_array xl.p xl.v #xh0 () ;
+  with pm' l . assert (
+    I.mixed_list_match cbor_raw_match parse_raw_data_item pm' arr l
+  );
+  Trade.trans
+    (I.mixed_list_match cbor_raw_match parse_raw_data_item pm' arr l)
+    (cbor_raw_match xl.p xl.v xh0)
+    (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) raw_data_item)
+      (match_cbor_payload xh1) xl xh);
+  let n = SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1));
+  rewrite (I.mixed_list_match cbor_raw_match parse_raw_data_item pm' arr l)
+       as (LPIter.mixed_list_match_for_l2r cbor_raw_match parse_raw_data_item pm' (SZ.v n) arr l);
+  intro
+    (Trade.trade
+      (LPIter.mixed_list_match_for_l2r cbor_raw_match parse_raw_data_item pm' (SZ.v n) arr l)
+      (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) raw_data_item)
+        (match_cbor_payload xh1) xl xh))
+  #(Trade.trade
+      (I.mixed_list_match cbor_raw_match parse_raw_data_item pm' arr l)
+      (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) raw_data_item)
+        (match_cbor_payload xh1) xl xh))
+  fn _ {
+    rewrite (LPIter.mixed_list_match_for_l2r cbor_raw_match parse_raw_data_item pm' (SZ.v n) arr l)
+         as (I.mixed_list_match cbor_raw_match parse_raw_data_item pm' arr l);
+    Trade.elim
+      (I.mixed_list_match cbor_raw_match parse_raw_data_item pm' arr l)
+      (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) raw_data_item)
+        (match_cbor_payload xh1) xl xh);
+  };
+  let cr = LPIter.compute_remaining_size_mixed_list
+    cbor_raw_match
+    serialize_raw_data_item
+    (fun pm'' -> compute_remaining_size_lens (cbor_raw_match_with_perm_lens pm'') f)
+    (jump_raw_data_item f64)
+    cbor_raw_match_share_t cbor_raw_match_gather_t
+    pm' n;
+  let res = cr arr out;
+  Trade.elim
+    (LPIter.mixed_list_match_for_l2r cbor_raw_match parse_raw_data_item pm' (SZ.v n) arr l)
+    (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) raw_data_item)
+      (match_cbor_payload xh1) xl xh);
+  res
+}
+
+#pop-options
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 
 inline_for_extraction
 let size_payload_array
@@ -882,9 +1124,329 @@ let size_payload_array
   (xh1: header)
   (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_array))
 : compute_remaining_size (match_cbor_payload xh1) (serialize_content xh1)
-= admit ()
+= compute_remaining_size_ext_gen
+    (size_payload_array_impl f64 f xh1 sq)
+    (serialize_content xh1)
+
+#pop-options
 
 (* --- Map payload --- *)
+
+(* Map entry vmatch: cbor_map_entry_match cbor_raw_match *)
+let cbor_map_entry_vmatch
+  (pm: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item))
+: Tot slprop
+= cbor_map_entry_match cbor_raw_match pm elem v
+
+(* Share/gather wrappers for cbor_map_entry_vmatch *)
+ghost
+fn cbor_map_entry_vmatch_share_wrapper
+  (entry: cbor_map_entry cbor_raw) (#pm: perm) (#pair: (raw_data_item & raw_data_item))
+requires cbor_map_entry_vmatch pm entry pair
+ensures cbor_map_entry_vmatch (pm /. 2.0R) entry pair ** cbor_map_entry_vmatch (pm /. 2.0R) entry pair
+{
+  unfold (cbor_map_entry_vmatch pm entry pair);
+  cbor_map_entry_match_share cbor_raw_match cbor_raw_match_share_wrapper entry;
+  fold (cbor_map_entry_vmatch (pm /. 2.0R) entry pair);
+  fold (cbor_map_entry_vmatch (pm /. 2.0R) entry pair);
+}
+
+ghost
+fn cbor_map_entry_vmatch_gather_wrapper
+  (entry: cbor_map_entry cbor_raw)
+  (#pm: perm) (#pair: (raw_data_item & raw_data_item))
+  (#pm': perm) (#pair': (raw_data_item & raw_data_item))
+requires cbor_map_entry_vmatch pm entry pair ** cbor_map_entry_vmatch pm' entry pair'
+ensures cbor_map_entry_vmatch (pm +. pm') entry pair ** pure (pair == pair')
+{
+  unfold (cbor_map_entry_vmatch pm entry pair);
+  unfold (cbor_map_entry_vmatch pm' entry pair');
+  unfold (cbor_map_entry_match cbor_raw_match pm entry pair);
+  unfold (vmatch_pair_with_proj (cbor_raw_match pm) cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (cbor_raw_match pm) cbor_map_entry_value_proj) entry pair);
+  unfold (vmatch_with_pair_proj (cbor_raw_match pm) cbor_map_entry_value_proj entry (snd pair));
+  unfold (cbor_map_entry_match cbor_raw_match pm' entry pair');
+  unfold (vmatch_pair_with_proj (cbor_raw_match pm') cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (cbor_raw_match pm') cbor_map_entry_value_proj) entry pair');
+  unfold (vmatch_with_pair_proj (cbor_raw_match pm') cbor_map_entry_value_proj entry (snd pair'));
+  rewrite (cbor_raw_match pm (cbor_map_entry_key_proj.pair_proj_get entry) (fst pair))
+       as (cbor_raw_match pm entry.cbor_map_entry_key (fst pair));
+  rewrite (cbor_raw_match pm' (cbor_map_entry_key_proj.pair_proj_get entry) (fst pair'))
+       as (cbor_raw_match pm' entry.cbor_map_entry_key (fst pair'));
+  rewrite (cbor_raw_match pm (cbor_map_entry_value_proj.pair_proj_get entry) (snd pair))
+       as (cbor_raw_match pm entry.cbor_map_entry_value (snd pair));
+  rewrite (cbor_raw_match pm' (cbor_map_entry_value_proj.pair_proj_get entry) (snd pair'))
+       as (cbor_raw_match pm' entry.cbor_map_entry_value (snd pair'));
+  cbor_raw_match_gather entry.cbor_map_entry_key #pm #(fst pair) #pm' #(fst pair');
+  cbor_raw_match_gather entry.cbor_map_entry_value #pm #(snd pair) #pm' #(snd pair');
+  rewrite (cbor_raw_match (pm +. pm') entry.cbor_map_entry_key (fst pair))
+       as (cbor_raw_match (pm +. pm') (cbor_map_entry_key_proj.pair_proj_get entry) (fst pair));
+  rewrite (cbor_raw_match (pm +. pm') entry.cbor_map_entry_value (snd pair))
+       as (cbor_raw_match (pm +. pm') (cbor_map_entry_value_proj.pair_proj_get entry) (snd pair));
+  fold (vmatch_with_pair_proj (cbor_raw_match (pm +. pm')) cbor_map_entry_value_proj entry (snd pair));
+  fold (vmatch_pair_with_proj (cbor_raw_match (pm +. pm')) cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (cbor_raw_match (pm +. pm')) cbor_map_entry_value_proj) entry pair);
+  fold (cbor_map_entry_match cbor_raw_match (pm +. pm') entry pair);
+  fold (cbor_map_entry_vmatch (pm +. pm') entry pair);
+}
+
+let cbor_map_entry_vmatch_share_t : I.share_t cbor_map_entry_vmatch = cbor_map_entry_vmatch_share_wrapper
+let cbor_map_entry_vmatch_gather_t : I.gather_t cbor_map_entry_vmatch = cbor_map_entry_vmatch_gather_wrapper
+
+(* Map entry lens: extract key/value as with_perm cbor_raw from map entry *)
+inline_for_extraction
+fn cbor_map_entry_key_lens
+  (pm': perm)
+  (entry: cbor_map_entry cbor_raw)
+  (pair: Ghost.erased (raw_data_item & raw_data_item))
+requires cbor_map_entry_vmatch pm' entry pair
+returns res: with_perm cbor_raw
+ensures cbor_raw_match_with_perm res (fst pair) **
+        Trade.trade (cbor_raw_match_with_perm res (fst pair)) (cbor_map_entry_vmatch pm' entry pair)
+{
+  unfold (cbor_map_entry_vmatch pm' entry pair);
+  unfold (cbor_map_entry_match cbor_raw_match pm' entry pair);
+  unfold (vmatch_pair_with_proj (cbor_raw_match pm') cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (cbor_raw_match pm') cbor_map_entry_value_proj) entry pair);
+  rewrite (cbor_raw_match pm' (cbor_map_entry_key_proj.pair_proj_get entry) (fst pair))
+       as (cbor_raw_match pm' entry.cbor_map_entry_key (fst pair));
+  let res : with_perm cbor_raw = { v = entry.cbor_map_entry_key; p = pm' };
+  rewrite (cbor_raw_match pm' entry.cbor_map_entry_key (fst pair))
+       as (cbor_raw_match_with_perm res (fst pair));
+  intro
+    (Trade.trade (cbor_raw_match_with_perm res (fst pair)) (cbor_map_entry_vmatch pm' entry pair))
+  #(vmatch_with_pair_proj (cbor_raw_match pm') cbor_map_entry_value_proj entry (snd pair))
+  fn _ {
+    rewrite (cbor_raw_match_with_perm res (fst pair))
+         as (cbor_raw_match pm' entry.cbor_map_entry_key (fst pair));
+    rewrite (cbor_raw_match pm' entry.cbor_map_entry_key (fst pair))
+         as (cbor_raw_match pm' (cbor_map_entry_key_proj.pair_proj_get entry) (fst pair));
+    fold (vmatch_pair_with_proj (cbor_raw_match pm') cbor_map_entry_key_proj
+      (vmatch_with_pair_proj (cbor_raw_match pm') cbor_map_entry_value_proj) entry pair);
+    fold (cbor_map_entry_match cbor_raw_match pm' entry pair);
+    fold (cbor_map_entry_vmatch pm' entry pair);
+  };
+  res
+}
+
+inline_for_extraction
+fn cbor_map_entry_value_lens
+  (pm': perm)
+  (entry: cbor_map_entry cbor_raw)
+  (pair: Ghost.erased (raw_data_item & raw_data_item))
+requires cbor_map_entry_vmatch pm' entry pair
+returns res: with_perm cbor_raw
+ensures cbor_raw_match_with_perm res (snd pair) **
+        Trade.trade (cbor_raw_match_with_perm res (snd pair)) (cbor_map_entry_vmatch pm' entry pair)
+{
+  unfold (cbor_map_entry_vmatch pm' entry pair);
+  unfold (cbor_map_entry_match cbor_raw_match pm' entry pair);
+  unfold (vmatch_pair_with_proj (cbor_raw_match pm') cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (cbor_raw_match pm') cbor_map_entry_value_proj) entry pair);
+  unfold (vmatch_with_pair_proj (cbor_raw_match pm') cbor_map_entry_value_proj entry (snd pair));
+  rewrite (cbor_raw_match pm' (cbor_map_entry_value_proj.pair_proj_get entry) (snd pair))
+       as (cbor_raw_match pm' entry.cbor_map_entry_value (snd pair));
+  let res : with_perm cbor_raw = { v = entry.cbor_map_entry_value; p = pm' };
+  rewrite (cbor_raw_match pm' entry.cbor_map_entry_value (snd pair))
+       as (cbor_raw_match_with_perm res (snd pair));
+  intro
+    (Trade.trade (cbor_raw_match_with_perm res (snd pair)) (cbor_map_entry_vmatch pm' entry pair))
+  #(cbor_raw_match pm' (cbor_map_entry_key_proj.pair_proj_get entry) (fst pair))
+  fn _ {
+    rewrite (cbor_raw_match_with_perm res (snd pair))
+         as (cbor_raw_match pm' entry.cbor_map_entry_value (snd pair));
+    rewrite (cbor_raw_match pm' entry.cbor_map_entry_value (snd pair))
+         as (cbor_raw_match pm' (cbor_map_entry_value_proj.pair_proj_get entry) (snd pair));
+    fold (vmatch_with_pair_proj (cbor_raw_match pm') cbor_map_entry_value_proj entry (snd pair));
+    fold (vmatch_pair_with_proj (cbor_raw_match pm') cbor_map_entry_key_proj
+      (vmatch_with_pair_proj (cbor_raw_match pm') cbor_map_entry_value_proj) entry pair);
+    fold (cbor_map_entry_match cbor_raw_match pm' entry pair);
+    fold (cbor_map_entry_vmatch pm' entry pair);
+  };
+  res
+}
+
+(* Map entry writer: write key and value using l2r_write_nondep_then *)
+inline_for_extraction
+let ser_map_entry
+  (f: l2r_writer cbor_raw_match_with_perm serialize_raw_data_item)
+  (pm': perm)
+: l2r_writer (cbor_map_entry_vmatch pm') (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
+= l2r_write_nondep_then
+    f () f
+    (cbor_map_entry_vmatch pm')
+    (cbor_map_entry_key_lens pm')
+    (cbor_map_entry_value_lens pm')
+
+inline_for_extraction
+let size_map_entry
+  (f: compute_remaining_size cbor_raw_match_with_perm serialize_raw_data_item)
+  (pm': perm)
+: compute_remaining_size (cbor_map_entry_vmatch pm') (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
+= compute_remaining_size_nondep_then
+    f () f
+    (cbor_map_entry_vmatch pm')
+    (cbor_map_entry_key_lens pm')
+    (cbor_map_entry_value_lens pm')
+
+(* Map payload impl: same pattern as array but with map entry vmatch *)
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+inline_for_extraction
+fn ser_payload_map_impl
+  (f64: squash SZ.fits_u64)
+  (f: l2r_writer (cbor_raw_match_with_perm) serialize_raw_data_item)
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_map))
+  (xl: with_perm cbor_raw)
+  (#xh: Ghost.erased (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+    (get_header_long_argument xh1)))) (raw_data_item & raw_data_item)))
+  (out: S.slice byte)
+  (offset: SZ.t)
+  (#v: Ghost.erased bytes)
+requires
+  pts_to out v **
+  vmatch_ext
+    (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+      (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+    (match_cbor_payload xh1) xl xh **
+  pure (l2r_writer_for_pre
+    (serialize_nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+      (get_header_long_argument xh1)))) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) xh offset v)
+returns res: SZ.t
+ensures
+  exists* v'.
+  pts_to out v' **
+  vmatch_ext
+    (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+      (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+    (match_cbor_payload xh1) xl xh **
+  pure (l2r_writer_for_post
+    (serialize_nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+      (get_header_long_argument xh1)))) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) xh offset v res v')
+{
+  let xh2 = vmatch_ext_elim_trade
+    (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+    (match_cbor_payload xh1) xl xh;
+  let xh0 = match_cbor_payload_elim_trade xh1 xl xh2;
+  Trade.trans
+    (cbor_raw_match_with_perm xl xh0)
+    (match_cbor_payload xh1 xl xh2)
+    (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+      (match_cbor_payload xh1) xl xh);
+  Trade.rewrite_with_trade
+    (cbor_raw_match_with_perm xl xh0)
+    (cbor_raw_match xl.p xl.v xh0);
+  Trade.trans
+    (cbor_raw_match xl.p xl.v xh0)
+    (cbor_raw_match_with_perm xl xh0)
+    (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+      (match_cbor_payload xh1) xl xh);
+  let arr = cbor_raw_get_map xl.p xl.v #xh0 () ;
+  with pm' l . assert (
+    I.mixed_list_match
+      (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) ->
+        cbor_map_entry_match cbor_raw_match pm0 elem v)
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' arr l
+  );
+  // Rewrite eta-expanded lambda to cbor_map_entry_vmatch
+  rewrite (I.mixed_list_match
+      (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) ->
+        cbor_map_entry_match cbor_raw_match pm0 elem v)
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' arr l)
+    as (I.mixed_list_match
+      cbor_map_entry_vmatch
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' arr l);
+  // Build a new trade from cbor_map_entry_vmatch form to cbor_raw_match
+  // by intro'ing a trade that rewrites back to eta-expanded form and elims the old trade
+  intro
+    (Trade.trade
+      (I.mixed_list_match
+        cbor_map_entry_vmatch
+        (nondep_then parse_raw_data_item parse_raw_data_item)
+        pm' arr l)
+      (cbor_raw_match xl.p xl.v xh0))
+  #(Trade.trade
+      (I.mixed_list_match
+        (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) ->
+          cbor_map_entry_match cbor_raw_match pm0 elem v)
+        (nondep_then parse_raw_data_item parse_raw_data_item)
+        pm' arr l)
+      (cbor_raw_match xl.p xl.v xh0))
+  fn _ {
+    rewrite (I.mixed_list_match
+      cbor_map_entry_vmatch
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' arr l)
+    as (I.mixed_list_match
+      (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) ->
+        cbor_map_entry_match cbor_raw_match pm0 elem v)
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' arr l);
+    Trade.elim
+      (I.mixed_list_match
+        (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) ->
+          cbor_map_entry_match cbor_raw_match pm0 elem v)
+        (nondep_then parse_raw_data_item parse_raw_data_item)
+        pm' arr l)
+      (cbor_raw_match xl.p xl.v xh0);
+  };
+  Trade.trans
+    (I.mixed_list_match
+      cbor_map_entry_vmatch
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' arr l)
+    (cbor_raw_match xl.p xl.v xh0)
+    (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+      (match_cbor_payload xh1) xl xh);
+  let n = SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1));
+  rewrite (I.mixed_list_match
+      cbor_map_entry_vmatch
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' arr l)
+    as (LPIter.mixed_list_match_for_l2r
+      cbor_map_entry_vmatch
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' (SZ.v n) arr l);
+  intro
+    (Trade.trade
+      (LPIter.mixed_list_match_for_l2r cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm' (SZ.v n) arr l)
+      (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+        (match_cbor_payload xh1) xl xh))
+  #(Trade.trade
+      (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm' arr l)
+      (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+        (match_cbor_payload xh1) xl xh))
+  fn _ {
+    rewrite (LPIter.mixed_list_match_for_l2r cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm' (SZ.v n) arr l)
+         as (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm' arr l);
+    Trade.elim
+      (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm' arr l)
+      (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+        (match_cbor_payload xh1) xl xh);
+  };
+  let j = jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64);
+  let w = LPIter.l2r_write_mixed_list
+    cbor_map_entry_vmatch
+    (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
+    (fun pm'' -> ser_map_entry f pm'')
+    j
+    cbor_map_entry_vmatch_share_t cbor_map_entry_vmatch_gather_t
+    pm' n;
+  let res = w arr out offset;
+  Trade.elim
+    (LPIter.mixed_list_match_for_l2r cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm' (SZ.v n) arr l)
+    (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+      (match_cbor_payload xh1) xl xh);
+  res
+}
+
+#pop-options
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 
 inline_for_extraction
 let ser_payload_map
@@ -893,7 +1455,166 @@ let ser_payload_map
   (xh1: header)
   (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_map))
 : l2r_writer (match_cbor_payload xh1) (serialize_content xh1)
-= admit ()
+= l2r_writer_ext_gen
+    (ser_payload_map_impl f64 f xh1 sq)
+    (serialize_content xh1)
+
+#pop-options
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+inline_for_extraction
+fn size_payload_map_impl
+  (f64: squash SZ.fits_u64)
+  (f: compute_remaining_size (cbor_raw_match_with_perm) serialize_raw_data_item)
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_map))
+  (xl: with_perm cbor_raw)
+  (#xh: Ghost.erased (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+    (get_header_long_argument xh1)))) (raw_data_item & raw_data_item)))
+  (out: R.ref SZ.t)
+  (#v: Ghost.erased SZ.t)
+requires
+  R.pts_to out v **
+  vmatch_ext
+    (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+      (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+    (match_cbor_payload xh1) xl xh
+returns res: bool
+ensures
+  exists* v'.
+  R.pts_to out v' **
+  vmatch_ext
+    (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+      (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+    (match_cbor_payload xh1) xl xh **
+  pure (
+    let bs = Seq.length (bare_serialize
+      (serialize_nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+        (get_header_long_argument xh1)))) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) xh) in
+    (res == true <==> bs <= SZ.v v) /\
+    (res == true ==> bs + SZ.v v' == SZ.v v)
+  )
+{
+  let xh2 = vmatch_ext_elim_trade
+    (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+    (match_cbor_payload xh1) xl xh;
+  let xh0 = match_cbor_payload_elim_trade xh1 xl xh2;
+  Trade.trans
+    (cbor_raw_match_with_perm xl xh0)
+    (match_cbor_payload xh1 xl xh2)
+    (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+      (match_cbor_payload xh1) xl xh);
+  Trade.rewrite_with_trade
+    (cbor_raw_match_with_perm xl xh0)
+    (cbor_raw_match xl.p xl.v xh0);
+  Trade.trans
+    (cbor_raw_match xl.p xl.v xh0)
+    (cbor_raw_match_with_perm xl xh0)
+    (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+      (match_cbor_payload xh1) xl xh);
+  let arr = cbor_raw_get_map xl.p xl.v #xh0 () ;
+  with pm' l . assert (
+    I.mixed_list_match
+      (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) ->
+        cbor_map_entry_match cbor_raw_match pm0 elem v)
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' arr l
+  );
+  rewrite (I.mixed_list_match
+      (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) ->
+        cbor_map_entry_match cbor_raw_match pm0 elem v)
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' arr l)
+    as (I.mixed_list_match
+      cbor_map_entry_vmatch
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' arr l);
+  intro
+    (Trade.trade
+      (I.mixed_list_match
+        cbor_map_entry_vmatch
+        (nondep_then parse_raw_data_item parse_raw_data_item)
+        pm' arr l)
+      (cbor_raw_match xl.p xl.v xh0))
+  #(Trade.trade
+      (I.mixed_list_match
+        (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) ->
+          cbor_map_entry_match cbor_raw_match pm0 elem v)
+        (nondep_then parse_raw_data_item parse_raw_data_item)
+        pm' arr l)
+      (cbor_raw_match xl.p xl.v xh0))
+  fn _ {
+    rewrite (I.mixed_list_match
+      cbor_map_entry_vmatch
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' arr l)
+    as (I.mixed_list_match
+      (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) ->
+        cbor_map_entry_match cbor_raw_match pm0 elem v)
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' arr l);
+    Trade.elim
+      (I.mixed_list_match
+        (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) ->
+          cbor_map_entry_match cbor_raw_match pm0 elem v)
+        (nondep_then parse_raw_data_item parse_raw_data_item)
+        pm' arr l)
+      (cbor_raw_match xl.p xl.v xh0);
+  };
+  Trade.trans
+    (I.mixed_list_match
+      cbor_map_entry_vmatch
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' arr l)
+    (cbor_raw_match xl.p xl.v xh0)
+    (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+      (match_cbor_payload xh1) xl xh);
+  let n = SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1));
+  rewrite (I.mixed_list_match
+      cbor_map_entry_vmatch
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' arr l)
+    as (LPIter.mixed_list_match_for_l2r
+      cbor_map_entry_vmatch
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' (SZ.v n) arr l);
+  intro
+    (Trade.trade
+      (LPIter.mixed_list_match_for_l2r cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm' (SZ.v n) arr l)
+      (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+        (match_cbor_payload xh1) xl xh))
+  #(Trade.trade
+      (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm' arr l)
+      (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+        (match_cbor_payload xh1) xl xh))
+  fn _ {
+    rewrite (LPIter.mixed_list_match_for_l2r cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm' (SZ.v n) arr l)
+         as (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm' arr l);
+    Trade.elim
+      (I.mixed_list_match cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm' arr l)
+      (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+        (match_cbor_payload xh1) xl xh);
+  };
+  let j = jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64);
+  let cr = LPIter.compute_remaining_size_mixed_list
+    cbor_map_entry_vmatch
+    (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
+    (fun pm'' -> size_map_entry f pm'')
+    j
+    cbor_map_entry_vmatch_share_t cbor_map_entry_vmatch_gather_t
+    pm' n;
+  let res = cr arr out;
+  Trade.elim
+    (LPIter.mixed_list_match_for_l2r cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm' (SZ.v n) arr l)
+    (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
+      (match_cbor_payload xh1) xl xh);
+  res
+}
+
+#pop-options
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 
 inline_for_extraction
 let size_payload_map
@@ -902,7 +1623,11 @@ let size_payload_map
   (xh1: header)
   (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_map))
 : compute_remaining_size (match_cbor_payload xh1) (serialize_content xh1)
-= admit ()
+= compute_remaining_size_ext_gen
+    (size_payload_map_impl f64 f xh1 sq)
+    (serialize_content xh1)
+
+#pop-options
 
 (* --- Payload dispatch --- *)
 
@@ -918,7 +1643,7 @@ cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)))
 : l2r_writer (match_cbor_payload xh1) (serialize_content xh1)
 = l2r_writer_ifthenelse _ _
     (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_tagged)
-    (ser_payload_tagged f xh1)
+    (ser_payload_tagged f64 f xh1)
     (ser_payload_scalar xh1 () () ())
 
 inline_for_extraction
@@ -933,7 +1658,7 @@ cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)))
 : compute_remaining_size (match_cbor_payload xh1) (serialize_content xh1)
 = compute_remaining_size_ifthenelse _ _
     (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_tagged)
-    (size_payload_tagged f xh1)
+    (size_payload_tagged f64 f xh1)
     (size_payload_scalar xh1 () () ())
 
 inline_for_extraction
@@ -1156,6 +1881,7 @@ let ser (f64: squash SZ.fits_u64) (p: perm) : l2r_writer (cbor_raw_match p) seri
     (ser_fold (ser' f64))
 
 fn cbor_serialize
+  (f64: squash SZ.fits_u64)
   (x: cbor_raw)
   (output: S.slice U8.t)
   (#y: Ghost.erased raw_data_item)
@@ -1170,9 +1896,8 @@ ensures exists* v . cbor_raw_match pm x y ** pts_to output v ** pure (
       (exists v' . v `Seq.equal` (s `Seq.append` v'))
     )
 {
-  let sq : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   S.pts_to_len output;
-  let res = ser sq _ x output 0sz;
+  let res = ser f64 _ x output 0sz;
   with v . assert (pts_to output v);
   Seq.lemma_split v (SZ.v res);
   res
@@ -1285,6 +2010,7 @@ let cbor_size_post
   (SZ.v res > 0 ==> SZ.v res == s)
 
 fn cbor_size
+  (f64: squash SZ.fits_u64)
   (x: cbor_raw)
   (bound: SZ.t)
   (#y: Ghost.erased raw_data_item)
@@ -1297,9 +2023,8 @@ ensures cbor_raw_match pm x y ** pure (
     )
 {
   serialize_length serialize_raw_data_item y;
-  let sq : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   let mut output = bound;
-  let res = siz sq pm x output;
+  let res = siz f64 pm x output;
   if (res) {
     let rem = !output;
     SZ.sub bound rem;
