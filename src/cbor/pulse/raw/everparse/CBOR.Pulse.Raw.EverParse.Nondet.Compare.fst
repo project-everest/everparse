@@ -36,11 +36,11 @@ let cbor_raw_match_fields_prop (x: cbor_raw) (y: raw_data_item) : prop =
     v.cbor_int_type == m /\ v.cbor_int_value == rv.value /\ v.cbor_int_size == rv.size
   | CBOR_Case_Simple sv, Simple sv' -> sv == sv'
   | CBOR_Case_String v, String m len _ ->
-    v.cbor_string_type == m /\ SZ.v (S.len v.cbor_string_ptr) == U64.v len.value
+    v.cbor_string_type == m /\ v.cbor_string_size == len.size /\ SZ.v (S.len v.cbor_string_ptr) == U64.v len.value
   | CBOR_Case_Array v, Array len _ ->
-    SZ.v (I.mixed_list_length v.cbor_array_ptr) == U64.v len.value
+    v.cbor_array_length_size == len.size /\ SZ.v (I.mixed_list_length v.cbor_array_ptr) == U64.v len.value
   | CBOR_Case_Map v, Map len _ ->
-    SZ.v (I.mixed_list_length v.cbor_map_ptr) == U64.v len.value
+    v.cbor_map_length_size == len.size /\ SZ.v (I.mixed_list_length v.cbor_map_ptr) == U64.v len.value
   | CBOR_Case_Tagged v, Tagged tag _ -> v.cbor_tagged_tag == tag
   | CBOR_Case_Tagged_Serialized v, Tagged tag _ -> v.cbor_tagged_serialized_tag == tag
   | _, _ -> False
