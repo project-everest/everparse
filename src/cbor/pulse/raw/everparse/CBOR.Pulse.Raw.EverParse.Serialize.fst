@@ -792,33 +792,23 @@ let size_payload_array_elem
 
 (* --- Tagged payload --- *)
 
-(* The tagged case has two variants:
-   CBOR_Case_Tagged → recursive write using f
-   CBOR_Case_Tagged_Serialized → copy from pts_to_parsed_strong_prefix *)
+(* Since cbor_raw_get_tagged_payload handles both CBOR_Case_Tagged and
+   CBOR_Case_Tagged_Serialized, we use a single lens for all tagged cases
+   that extracts the payload as cbor_raw_match_with_perm, then recurse. *)
 
-inline_for_extraction
-let cbor_with_perm_case_tagged
-  (c: with_perm cbor_raw)
-: Tot bool
-= match c.v with
-  | CBOR_Case_Tagged _ -> true
-  | _ -> false
-
-(* Tagged-variant lens: from match_cbor_payload to cbor_raw_match_with_perm (for recursive write) *)
+(* Tagged payload lens: from match_cbor_payload to cbor_raw_match_with_perm *)
 
 #push-options "--z3rlimit 64"
 
 inline_for_extraction
-fn ser_payload_tagged_tagged_lens
+fn ser_payload_tagged_lens
   (xh1: header)
   (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_tagged))
 : vmatch_lens #_ #_ #_
-  (vmatch_with_cond (vmatch_ext raw_data_item (match_cbor_payload xh1)) cbor_with_perm_case_tagged)
+  (vmatch_ext raw_data_item (match_cbor_payload xh1))
   cbor_raw_match_with_perm
 = (xl: _) (z: _) {
-  vmatch_with_cond_elim_trade (vmatch_ext raw_data_item (match_cbor_payload xh1)) cbor_with_perm_case_tagged xl z;
   let xh2 = vmatch_ext_elim_trade raw_data_item (match_cbor_payload xh1) xl z;
-  Trade.trans (match_cbor_payload xh1 xl xh2) _ _;
   let xh0 = match_cbor_payload_elim_trade xh1 xl xh2;
   Trade.trans (cbor_raw_match_with_perm xl xh0) _ _;
   Trade.rewrite_with_trade
@@ -840,32 +830,6 @@ fn ser_payload_tagged_tagged_lens
 
 #pop-options
 
-(* Tagged_Serialized-variant lens: from match_cbor_payload to pts_to_serialized_with_perm (for copy) *)
-
-#push-options "--z3rlimit 64"
-
-inline_for_extraction
-fn ser_payload_tagged_not_tagged_lens
-  (xh1: header)
-  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_tagged))
-: vmatch_lens #_ #_ #_
-  (vmatch_with_cond (vmatch_ext raw_data_item (match_cbor_payload xh1)) (pnot cbor_with_perm_case_tagged))
-  (pts_to_serialized_with_perm serialize_raw_data_item)
-= (xl: _) (z: _) {
-  vmatch_with_cond_elim_trade (vmatch_ext raw_data_item (match_cbor_payload xh1)) (pnot cbor_with_perm_case_tagged) xl z;
-  let xh2 = vmatch_ext_elim_trade raw_data_item (match_cbor_payload xh1) xl z;
-  Trade.trans (match_cbor_payload xh1 xl xh2) _ _;
-  let xh0 = match_cbor_payload_elim_trade xh1 xl xh2;
-  Trade.trans (cbor_raw_match_with_perm xl xh0) _ _;
-  Trade.rewrite_with_trade
-    (cbor_raw_match_with_perm xl xh0)
-    (cbor_raw_match xl.p xl.v xh0);
-  Trade.trans (cbor_raw_match xl.p xl.v xh0) (cbor_raw_match_with_perm xl xh0) _;
-  admit ()
-}
-
-#pop-options
-
 #push-options "--z3rlimit 32 --fuel 2 --ifuel 2"
 
 inline_for_extraction
@@ -875,17 +839,9 @@ let ser_payload_tagged
   (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_tagged))
 : l2r_writer (match_cbor_payload xh1) (serialize_content xh1)
 = l2r_writer_ext_gen
-    (l2r_writer_ifthenelse_low
-      _ _
-      cbor_with_perm_case_tagged
-      (l2r_writer_lens
-        (ser_payload_tagged_tagged_lens xh1 sq)
-        f
-      )
-      (l2r_writer_lens
-        (ser_payload_tagged_not_tagged_lens xh1 sq)
-        (l2r_write_copy serialize_raw_data_item)
-      )
+    (l2r_writer_lens
+      (ser_payload_tagged_lens xh1 sq)
+      f
     )
     _
 
@@ -896,17 +852,9 @@ let size_payload_tagged
   (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_tagged))
 : compute_remaining_size (match_cbor_payload xh1) (serialize_content xh1)
 = compute_remaining_size_ext_gen
-    (compute_remaining_size_ifthenelse_low
-      _ _
-      cbor_with_perm_case_tagged
-      (compute_remaining_size_lens
-        (ser_payload_tagged_tagged_lens xh1 sq)
-        f
-      )
-      (compute_remaining_size_lens
-        (ser_payload_tagged_not_tagged_lens xh1 sq)
-        (compute_remaining_size_copy serialize_raw_data_item)
-      )
+    (compute_remaining_size_lens
+      (ser_payload_tagged_lens xh1 sq)
+      f
     )
     _
 
