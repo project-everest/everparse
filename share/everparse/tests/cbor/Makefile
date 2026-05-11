@@ -12,11 +12,9 @@
 # The snapshot directory must contain the corresponding header(s) and
 # pre-built object file (CBORNondet.o or CBORDet.o, plus its dependencies).
 
-THIS_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
-
 # Default snapshot locations: the in-tree C extractions.
-EVERCBOR_NONDET_PATH ?= $(realpath $(THIS_DIR)/../../../../src/cbor/pulse/nondet/c)
-EVERCBOR_DET_PATH    ?= $(realpath $(THIS_DIR)/../../../../src/cbor/pulse/det/c)
+EVERCBOR_NONDET_PATH ?= $(realpath $(CURDIR)/../../../../src/cbor/pulse/nondet/c)
+EVERCBOR_DET_PATH    ?= $(realpath $(CURDIR)/../../../../src/cbor/pulse/det/c)
 
 # Number of iterations for benchmarking. Override on the command line to make
 # timing measurements more reliable, e.g. BENCH_ITERATIONS=1000.
@@ -34,7 +32,7 @@ DET_OBJS    = $(EVERCBOR_DET_PATH)/CBORDet.o \
               $(EVERCBOR_DET_PATH)/CBORDetAbstract.o \
               $(EVERCBOR_DET_PATH)/CBORDetSizeCheck.o
 
-SRC = $(THIS_DIR)cbor_tests.c
+SRC = $(CURDIR)/cbor_tests.c
 
 NONDET_BIN = cbor_tests_nondet.exe
 DET_BIN    = cbor_tests_det.exe
