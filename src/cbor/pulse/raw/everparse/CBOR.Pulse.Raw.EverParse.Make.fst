@@ -417,3 +417,293 @@ ensures
 }
 
 #pop-options
+
+(* ================================================================ *)
+(* mk_array                                                          *)
+(* ================================================================ *)
+
+#push-options "--z3rlimit 128 --fuel 2 --ifuel 2"
+
+ghost
+fn cbor_raw_match_fold_from_content_array
+  (pm: perm)
+  (xl: cbor_raw)
+  (xh: raw_data_item)
+  (sq: squash (
+    cbor_raw_get_header xl == Some (dfst (synth_raw_data_item_recip xh)) /\
+    (let (| b, _ |) = dfst (synth_raw_data_item_recip xh) in
+     b.major_type = cbor_major_type_array)
+  ))
+requires cbor_raw_match_content cbor_raw_match parse_raw_data_item pm
+    (dfst (synth_raw_data_item_recip xh)) xl (dsnd (synth_raw_data_item_recip xh))
+ensures cbor_raw_match pm xl xh
+{
+  fold (cbor_raw_match_header (cbor_raw_id_proj.pair_proj_get xl) (dfst (synth_raw_data_item_recip xh)));
+  fold (vmatch_dep_pair_with_proj
+    cbor_raw_match_header
+    cbor_raw_id_proj
+    (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm)
+    xl
+    (synth_raw_data_item_recip xh));
+  fold (vmatch_synth
+    (vmatch_dep_pair_with_proj
+       cbor_raw_match_header
+       cbor_raw_id_proj
+       (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm))
+    synth_raw_data_item_recip
+    xl xh);
+  fold (cbor_raw_match_aux parse_raw_data_item cbor_raw_match pm xl xh);
+  cbor_raw_match_fold_aux xl;
+}
+
+#pop-options
+
+#push-options "--z3rlimit 256 --fuel 2 --ifuel 2"
+
+fn cbor_mk_array
+  (f64: squash SZ.fits_u64)
+  (len_size: integer_size)
+  (ml: I.mixed_list cbor_raw)
+  (#pm: perm)
+  (#l: Ghost.erased (list raw_data_item))
+requires
+  I.mixed_list_match cbor_raw_match parse_raw_data_item pm ml l **
+  pure (
+    let len = SZ.v (I.mixed_list_length ml) in
+    FStar.UInt.fits len 64 /\
+    raw_uint64_size_prop len_size (U64.uint_to_t len) /\
+    List.Tot.length l == len
+  )
+returns res: cbor_raw
+ensures exists* xh .
+  cbor_raw_match 1.0R res xh **
+  Trade.trade
+    (cbor_raw_match 1.0R res xh)
+    (I.mixed_list_match cbor_raw_match parse_raw_data_item pm ml l)
+{
+  let the_prop =
+    (let len = SZ.v (I.mixed_list_length ml) in
+     FStar.UInt.fits len 64 /\
+     raw_uint64_size_prop len_size (U64.uint_to_t len) /\
+     List.Tot.length l == len);
+  let sq = elim_pure_explicit the_prop;
+  let len_sz = I.mixed_list_length ml;
+  let len64 = SZ.sizet_to_uint64 len_sz;
+  let ru : raw_uint64 = { size = len_size; value = len64 };
+  let v : cbor_array cbor_raw = {
+    cbor_array_length_size = len_size;
+    cbor_array_ptr = ml;
+    cbor_array_slice_perm = pm;
+  };
+  let res = CBOR_Case_Array v;
+  let xh : Ghost.erased raw_data_item = Array ru l;
+  cbor_raw_match_content_eq_array cbor_raw_match parse_raw_data_item 1.0R
+    (dfst (dfst (synth_raw_data_item_recip xh)))
+    (dsnd (dfst (synth_raw_data_item_recip xh)))
+    v
+    (dsnd (synth_raw_data_item_recip xh));
+  rewrite
+    (I.mixed_list_match cbor_raw_match parse_raw_data_item pm ml l)
+    as
+    (cbor_raw_match_content cbor_raw_match parse_raw_data_item 1.0R
+       (dfst (synth_raw_data_item_recip xh)) res (dsnd (synth_raw_data_item_recip xh)));
+  cbor_raw_match_fold_from_content_array 1.0R res xh ();
+  // Trade: unfold cbor_raw_match back to mixed_list_match
+  Trade.intro_trade
+    (cbor_raw_match 1.0R res xh)
+    (I.mixed_list_match cbor_raw_match parse_raw_data_item pm ml l)
+    emp
+    fn _ {
+      rewrite (cbor_raw_match 1.0R res (Ghost.reveal xh))
+        as (cbor_raw_match 1.0R (CBOR_Case_Array v) (Ghost.reveal xh));
+      let x : cbor_raw = CBOR_Case_Array v;
+      rewrite (cbor_raw_match 1.0R (CBOR_Case_Array v) (Ghost.reveal xh))
+        as (cbor_raw_match 1.0R x (Ghost.reveal xh));
+      cbor_raw_match_unfold_aux x;
+      unfold (cbor_raw_match_aux parse_raw_data_item cbor_raw_match 1.0R x (Ghost.reveal xh));
+      unfold (vmatch_synth
+        (vmatch_dep_pair_with_proj
+           cbor_raw_match_header
+           cbor_raw_id_proj
+           (cbor_raw_match_content cbor_raw_match parse_raw_data_item 1.0R))
+        synth_raw_data_item_recip
+        x (Ghost.reveal xh));
+      unfold (vmatch_dep_pair_with_proj
+        cbor_raw_match_header
+        cbor_raw_id_proj
+        (cbor_raw_match_content cbor_raw_match parse_raw_data_item 1.0R)
+        x
+        (synth_raw_data_item_recip (Ghost.reveal xh)));
+      unfold (cbor_raw_match_header
+        (cbor_raw_id_proj.pair_proj_get x)
+        (dfst (synth_raw_data_item_recip (Ghost.reveal xh))));
+      drop_ (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get x) ==
+             Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))));
+      cbor_raw_match_content_eq_array cbor_raw_match parse_raw_data_item 1.0R
+        (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal xh))))
+        (dsnd (dfst (synth_raw_data_item_recip (Ghost.reveal xh))))
+        v
+        (dsnd (synth_raw_data_item_recip (Ghost.reveal xh)));
+      rewrite
+        (cbor_raw_match_content cbor_raw_match parse_raw_data_item 1.0R
+          (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
+          x
+          (dsnd (synth_raw_data_item_recip (Ghost.reveal xh))))
+        as
+        (I.mixed_list_match cbor_raw_match parse_raw_data_item pm ml l);
+    };
+  res
+}
+
+#pop-options
+
+(* ================================================================ *)
+(* mk_map                                                            *)
+(* ================================================================ *)
+
+
+#push-options "--z3rlimit 256 --fuel 2 --ifuel 2"
+
+ghost
+fn cbor_raw_match_fold_from_content_map
+  (pm: perm)
+  (xl: cbor_raw)
+  (xh: raw_data_item)
+  (sq: squash (
+    cbor_raw_get_header xl == Some (dfst (synth_raw_data_item_recip xh)) /\
+    (let (| b, _ |) = dfst (synth_raw_data_item_recip xh) in
+     b.major_type = cbor_major_type_map)
+  ))
+requires cbor_raw_match_content cbor_raw_match parse_raw_data_item pm
+    (dfst (synth_raw_data_item_recip xh)) xl (dsnd (synth_raw_data_item_recip xh))
+ensures cbor_raw_match pm xl xh
+{
+  fold (cbor_raw_match_header (cbor_raw_id_proj.pair_proj_get xl) (dfst (synth_raw_data_item_recip xh)));
+  fold (vmatch_dep_pair_with_proj
+    cbor_raw_match_header
+    cbor_raw_id_proj
+    (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm)
+    xl
+    (synth_raw_data_item_recip xh));
+  fold (vmatch_synth
+    (vmatch_dep_pair_with_proj
+       cbor_raw_match_header
+       cbor_raw_id_proj
+       (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm))
+    synth_raw_data_item_recip
+    xl xh);
+  fold (cbor_raw_match_aux parse_raw_data_item cbor_raw_match pm xl xh);
+  cbor_raw_match_fold_aux xl;
+}
+
+fn cbor_mk_map
+  (f64: squash SZ.fits_u64)
+  (len_size: integer_size)
+  (ml: I.mixed_list (cbor_map_entry cbor_raw))
+  (#pm: perm)
+  (#l: Ghost.erased (list (raw_data_item & raw_data_item)))
+requires
+  I.mixed_list_match
+    (fun (pm': perm) (elem: cbor_map_entry cbor_raw) (x: (raw_data_item & raw_data_item)) ->
+      cbor_map_entry_match cbor_raw_match pm' elem x)
+    (nondep_then parse_raw_data_item parse_raw_data_item) pm ml l **
+  pure (
+    let len = SZ.v (I.mixed_list_length ml) in
+    FStar.UInt.fits len 64 /\
+    raw_uint64_size_prop len_size (U64.uint_to_t len) /\
+    List.Tot.length l == len
+  )
+returns res: cbor_raw
+ensures exists* xh .
+  cbor_raw_match 1.0R res xh **
+  Trade.trade
+    (cbor_raw_match 1.0R res xh)
+    (I.mixed_list_match
+      (fun (pm': perm) (elem: cbor_map_entry cbor_raw) (x: (raw_data_item & raw_data_item)) ->
+        cbor_map_entry_match cbor_raw_match pm' elem x)
+      (nondep_then parse_raw_data_item parse_raw_data_item) pm ml l)
+{
+  let the_prop =
+    (let len = SZ.v (I.mixed_list_length ml) in
+     FStar.UInt.fits len 64 /\
+     raw_uint64_size_prop len_size (U64.uint_to_t len) /\
+     List.Tot.length l == len);
+  let sq = elim_pure_explicit the_prop;
+  let len_sz = I.mixed_list_length ml;
+  let len64 = SZ.sizet_to_uint64 len_sz;
+  let ru : raw_uint64 = { size = len_size; value = len64 };
+  let v : cbor_map cbor_raw = {
+    cbor_map_length_size = len_size;
+    cbor_map_ptr = ml;
+    cbor_map_slice_perm = pm;
+  };
+  let res = CBOR_Case_Map v;
+  let xh : Ghost.erased raw_data_item = Map ru l;
+  cbor_raw_match_content_eq_map cbor_raw_match parse_raw_data_item 1.0R
+    (dfst (dfst (synth_raw_data_item_recip xh)))
+    (dsnd (dfst (synth_raw_data_item_recip xh)))
+    v
+    (dsnd (synth_raw_data_item_recip xh));
+  rewrite
+    (I.mixed_list_match
+      (fun (pm': perm) (elem: cbor_map_entry cbor_raw) (x: (raw_data_item & raw_data_item)) ->
+        cbor_map_entry_match cbor_raw_match pm' elem x)
+      (nondep_then parse_raw_data_item parse_raw_data_item) pm ml l)
+    as
+    (cbor_raw_match_content cbor_raw_match parse_raw_data_item 1.0R
+       (dfst (synth_raw_data_item_recip xh)) res (dsnd (synth_raw_data_item_recip xh)));
+  cbor_raw_match_fold_from_content_map 1.0R res xh ();
+  // Trade: unfold cbor_raw_match back to mixed_list_match
+  Trade.intro_trade
+    (cbor_raw_match 1.0R res xh)
+    (I.mixed_list_match
+      (fun (pm': perm) (elem: cbor_map_entry cbor_raw) (x: (raw_data_item & raw_data_item)) ->
+        cbor_map_entry_match cbor_raw_match pm' elem x)
+      (nondep_then parse_raw_data_item parse_raw_data_item) pm ml l)
+    emp
+    fn _ {
+      rewrite (cbor_raw_match 1.0R res (Ghost.reveal xh))
+        as (cbor_raw_match 1.0R (CBOR_Case_Map v) (Ghost.reveal xh));
+      let x : cbor_raw = CBOR_Case_Map v;
+      rewrite (cbor_raw_match 1.0R (CBOR_Case_Map v) (Ghost.reveal xh))
+        as (cbor_raw_match 1.0R x (Ghost.reveal xh));
+      cbor_raw_match_unfold_aux x;
+      unfold (cbor_raw_match_aux parse_raw_data_item cbor_raw_match 1.0R x (Ghost.reveal xh));
+      unfold (vmatch_synth
+        (vmatch_dep_pair_with_proj
+           cbor_raw_match_header
+           cbor_raw_id_proj
+           (cbor_raw_match_content cbor_raw_match parse_raw_data_item 1.0R))
+        synth_raw_data_item_recip
+        x (Ghost.reveal xh));
+      unfold (vmatch_dep_pair_with_proj
+        cbor_raw_match_header
+        cbor_raw_id_proj
+        (cbor_raw_match_content cbor_raw_match parse_raw_data_item 1.0R)
+        x
+        (synth_raw_data_item_recip (Ghost.reveal xh)));
+      unfold (cbor_raw_match_header
+        (cbor_raw_id_proj.pair_proj_get x)
+        (dfst (synth_raw_data_item_recip (Ghost.reveal xh))));
+      drop_ (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get x) ==
+             Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))));
+      cbor_raw_match_content_eq_map cbor_raw_match parse_raw_data_item 1.0R
+        (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal xh))))
+        (dsnd (dfst (synth_raw_data_item_recip (Ghost.reveal xh))))
+        v
+        (dsnd (synth_raw_data_item_recip (Ghost.reveal xh)));
+      rewrite
+        (cbor_raw_match_content cbor_raw_match parse_raw_data_item 1.0R
+          (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
+          x
+          (dsnd (synth_raw_data_item_recip (Ghost.reveal xh))))
+        as
+        (I.mixed_list_match
+          (fun (pm': perm) (elem: cbor_map_entry cbor_raw) (x: (raw_data_item & raw_data_item)) ->
+            cbor_map_entry_match cbor_raw_match pm' elem x)
+          (nondep_then parse_raw_data_item parse_raw_data_item) pm ml l);
+    };
+  res
+}
+
+#pop-options
