@@ -958,3 +958,27 @@ fn cbor_det_array_iterator_start (_: unit) : array_iterator_start_t cbor_det_mat
 }
 
 #pop-options
+
+(* ======== cbor_det_validate (item 1) — ports legacy validator ======== *)
+
+module DetValidate = CBOR.Pulse.Raw.EverParse.Det.Validate
+
+let cbor_det_validate_post_intro
+  (v: Seq.seq U8.t)
+  (res: SZ.t)
+: Lemma
+  (requires (DetValidate.cbor_validate_det_post v res))
+  (ensures (cbor_det_validate_post v res))
+= Classical.forall_intro (Classical.move_requires SpecRaw.mk_det_raw_cbor_mk_cbor);
+  assert (forall (v1: SpecRawBase.raw_data_item) . (CBOR.Spec.Raw.Optimal.raw_data_item_ints_optimal v1 /\ CBOR.Spec.Raw.Optimal.raw_data_item_sorted SpecF.deterministically_encoded_cbor_map_key_order v1) ==> SpecF.serialize_cbor v1 == Spec.cbor_det_serialize (SpecRaw.mk_cbor v1))
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_validate (_: unit) : cbor_det_validate_t
+= (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  let res = DetValidate.cbor_validate_det input;
+  cbor_det_validate_post_intro v res;
+  res
+}

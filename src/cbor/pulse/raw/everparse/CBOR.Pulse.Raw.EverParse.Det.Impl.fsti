@@ -76,6 +76,11 @@ val cbor_det_array_iterator_start (_: unit) : array_iterator_start_t cbor_det_ma
 (* TODO: cbor_det_array_iterator_length: requires propagating fits_u64 invariant
    through cbor_det_array_iterator_match, deferred to keep no-assume policy. *)
 
+
+(* ======== Validation (rescued from legacy) ======== *)
+
+val cbor_det_validate (_: unit) : cbor_det_validate_t
+
 (*
    ======== TODO (deferred to a follow-up session) ========
 
