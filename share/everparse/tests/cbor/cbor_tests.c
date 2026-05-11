@@ -700,113 +700,155 @@ static int test_map_deeply_nested_canonical(void) {
   return run_valid_match(bytes, sizeof(bytes), values[MAP_DEPTH]);
 }
 
-/* Map whose keys are themselves *pairs* (2-element arrays) of deeply
- * nested maps, where the nesting lives on the *key* side at every
- * level, not the value side. We define
+/* "Deeply nested map" (DNM) parameterized by depth d and a non-negative
+ * leaf base x. Recursive definition with TWO entries at every level,
+ * with the recursion living on the *key* side of both entries:
  *
- *   DNM(0, leaf) = uint(leaf)
- *   DNM(d, leaf) = { DNM(d-1, leaf) : 0 }   <- recursion on the key
+ *   DNM(0, x) = uint(x)
+ *   DNM(d, x) = { DNM(d-1, 2x) : 0,
+ *                 DNM(d-1, 2x+1) : 1 }
  *
- * The outer map has two entries:
- *   key1 = [ DNM(d, 0), DNM(d, 0) ]   value1 = 0
- *   key2 = [ DNM(d, 0), DNM(d, 1) ]   value2 = 1
+ * Both keys at each map level are themselves nested maps; only the
+ * value parts (0 and 1) are constants. The leaves of DNM(d, x) span
+ * the integer range [x * 2^d, (x+1) * 2^d). For depth 3 and x in
+ * {0, 1} this covers 0..15. The canonical (length-then-lex) key
+ * ordering is preserved at every level by construction: at any node,
+ * the "left" key DNM(d-1, 2x) has strictly smaller leaves than the
+ * "right" key DNM(d-1, 2x+1), so its canonical encoding is byte-wise
+ * shorter-or-equal and lex-smaller.
  *
- * `key1 < key2` in the canonical (length-then-lex) key ordering, since
- * both pairs have the same length and they first differ where key1 has
- * a `0x00` leaf and key2 has a `0x01` leaf.
+ * Two such DNMs are then assembled into 2-element-array "pairs" that
+ * serve as the two outer-map keys.
+ *
+ * Depth is kept moderate because the non-deterministic equality test
+ * is O(c^d) for some c > 1 on this binary-tree structure.
  */
-#define MAP_KEY_DEPTH 5
-#define DNM_BYTES   (2 * MAP_KEY_DEPTH + 1)
-#define PAIR_BYTES  (1 + 2 * DNM_BYTES)
-#define OUTER_BYTES (1 + 2 * (PAIR_BYTES + 1))
+#define MAP_KEY_DEPTH 3
 
-/* Build the bytes of DNM(MAP_KEY_DEPTH, leaf) into `bytes` at offset
-   `off`; return the offset after the written bytes. */
-static size_t emit_dnm(uint8_t *bytes, size_t off, uint8_t leaf) {
-  for (int i = 0; i < MAP_KEY_DEPTH; i++) bytes[off++] = 0xa1;
-  bytes[off++] = leaf;
-  for (int i = 0; i < MAP_KEY_DEPTH; i++) bytes[off++] = 0x00;
+/* Canonical CBOR uint encoder, sufficient for v < 2^16. */
+static size_t emit_canonical_uint(uint8_t *bytes, size_t off, uint64_t v) {
+  if (v < 24) {
+    bytes[off++] = (uint8_t)v;
+  } else if (v < 256) {
+    bytes[off++] = 0x18;
+    bytes[off++] = (uint8_t)v;
+  } else {
+    bytes[off++] = 0x19;
+    bytes[off++] = (uint8_t)(v >> 8);
+    bytes[off++] = (uint8_t)v;
+  }
   return off;
 }
 
-/* Build a CBOR DNM(MAP_KEY_DEPTH, leaf) using the API. The internal
-   per-level cbor_t and cbor_entry_t structures must live as long as the
-   returned cbor_t, so the caller passes in storage for them. */
-static bool build_dnm(uint8_t leaf,
-                      cbor_t levels[MAP_KEY_DEPTH + 1],
-                      cbor_entry_t entries[MAP_KEY_DEPTH][1],
-                      cbor_t *out) {
-  levels[0] = cbor_v_mk_uint64(leaf);
-  for (int i = 1; i <= MAP_KEY_DEPTH; i++) {
-    cbor_t v = cbor_v_mk_uint64(0);
-    entries[i - 1][0] = cbor_v_mk_map_entry(levels[i - 1], v);
-    if (!cbor_v_mk_map(entries[i - 1], 1, &levels[i])) return false;
+/* Emit DNM(depth, leaf_base) into `bytes` at offset `off`. */
+static size_t emit_dnm(uint8_t *bytes, size_t off,
+                       int depth, uint64_t leaf_base) {
+  if (depth == 0)
+    return emit_canonical_uint(bytes, off, leaf_base);
+  bytes[off++] = 0xa2; /* map of 2 entries */
+  off = emit_dnm(bytes, off, depth - 1, 2 * leaf_base);
+  off = emit_canonical_uint(bytes, off, 0);
+  off = emit_dnm(bytes, off, depth - 1, 2 * leaf_base + 1);
+  off = emit_canonical_uint(bytes, off, 1);
+  return off;
+}
+
+/* Storage pools for the DNM CBOR objects. The constructed CBOR maps
+ * keep slices into these arrays alive, so they must persist as long as
+ * the resulting objects are used. The pools are reset (overwritten) at
+ * the start of each test iteration. */
+#define DNM_POOL_SIZE 256
+static cbor_t       dnm_node_pool [DNM_POOL_SIZE];
+static cbor_entry_t dnm_entry_pool[DNM_POOL_SIZE];
+static int dnm_node_used;
+static int dnm_entry_used;
+
+static void dnm_pool_reset(void) {
+  dnm_node_used  = 0;
+  dnm_entry_used = 0;
+}
+
+static bool build_dnm(int depth, uint64_t leaf_base, cbor_t *out) {
+  if (dnm_node_used >= DNM_POOL_SIZE) return false;
+  cbor_t *slot = &dnm_node_pool[dnm_node_used++];
+  if (depth == 0) {
+    *slot = cbor_v_mk_uint64(leaf_base);
+    *out = *slot;
+    return true;
   }
-  *out = levels[MAP_KEY_DEPTH];
+  cbor_t k1, k2;
+  if (!build_dnm(depth - 1, 2 * leaf_base,     &k1)) return false;
+  if (!build_dnm(depth - 1, 2 * leaf_base + 1, &k2)) return false;
+  if (dnm_entry_used + 2 > DNM_POOL_SIZE) return false;
+  cbor_entry_t *entries = &dnm_entry_pool[dnm_entry_used];
+  dnm_entry_used += 2;
+  entries[0] = cbor_v_mk_map_entry(k1, cbor_v_mk_uint64(0));
+  entries[1] = cbor_v_mk_map_entry(k2, cbor_v_mk_uint64(1));
+  if (!cbor_v_mk_map(entries, 2, slot)) return false;
+  *out = *slot;
   return true;
 }
 
 static int test_map_with_nested_map_keys_canonical(void) {
-  static uint8_t bytes[OUTER_BYTES];
-  static int initialized = 0;
+  /* Outer map with two entries; each key is a 2-element array of DNMs.
+   *   key1 = [DNM(d,0), DNM(d,0)]   value 0
+   *   key2 = [DNM(d,0), DNM(d,1)]   value 1
+   * key1 < key2 lex-wise since both pairs match in their first element
+   * and DNM(d,0) < DNM(d,1) (the latter has strictly larger leaves).
+   */
+  static uint8_t bytes[1024];
+  static size_t  bytes_len;
+  static int     initialized = 0;
   if (!initialized) {
     size_t off = 0;
-    bytes[off++] = 0xa2; /* outer map of 2 entries */
+    bytes[off++] = 0xa2;                      /* outer 2-entry map */
 
-    /* entry 1: pair = [DNM(0), DNM(0)], value = 0 */
-    bytes[off++] = 0x82; /* array of 2 */
-    off = emit_dnm(bytes, off, 0x00);
-    off = emit_dnm(bytes, off, 0x00);
-    bytes[off++] = 0x00;
+    /* Entry 1: pair1 = [DNM(d, 0), DNM(d, 0)], value 0 */
+    bytes[off++] = 0x82;                      /* 2-element array */
+    off = emit_dnm(bytes, off, MAP_KEY_DEPTH, 0);
+    off = emit_dnm(bytes, off, MAP_KEY_DEPTH, 0);
+    off = emit_canonical_uint(bytes, off, 0);
 
-    /* entry 2: pair = [DNM(0), DNM(1)], value = 1 */
+    /* Entry 2: pair2 = [DNM(d, 0), DNM(d, 1)], value 1 */
     bytes[off++] = 0x82;
-    off = emit_dnm(bytes, off, 0x00);
-    off = emit_dnm(bytes, off, 0x01);
-    bytes[off++] = 0x01;
+    off = emit_dnm(bytes, off, MAP_KEY_DEPTH, 0);
+    off = emit_dnm(bytes, off, MAP_KEY_DEPTH, 1);
+    off = emit_canonical_uint(bytes, off, 1);
 
-    if (off != OUTER_BYTES) return 1;
+    bytes_len = off;
     initialized = 1;
   }
 
-  /* Build two distinct DNMs (one with leaf 0, one with leaf 1). */
-  cbor_t a_levels[MAP_KEY_DEPTH + 1];
-  cbor_entry_t a_entries[MAP_KEY_DEPTH][1];
-  cbor_t dnm_a;
-  if (!build_dnm(0, a_levels, a_entries, &dnm_a)) TFAIL("build dnm_a");
+  /* Build the same value through the API. */
+  dnm_pool_reset();
+  cbor_t dnm_a, dnm_b;
+  if (!build_dnm(MAP_KEY_DEPTH, 0, &dnm_a)) TFAIL("build dnm_a");
+  if (!build_dnm(MAP_KEY_DEPTH, 1, &dnm_b)) TFAIL("build dnm_b");
 
-  cbor_t b_levels[MAP_KEY_DEPTH + 1];
-  cbor_entry_t b_entries[MAP_KEY_DEPTH][1];
-  cbor_t dnm_b;
-  if (!build_dnm(1, b_levels, b_entries, &dnm_b)) TFAIL("build dnm_b");
+  static cbor_t pair1_items[2];
+  static cbor_t pair2_items[2];
+  pair1_items[0] = dnm_a; pair1_items[1] = dnm_a;
+  pair2_items[0] = dnm_a; pair2_items[1] = dnm_b;
 
-  /* Two pairs (2-element arrays). pair1 = [a, a]; pair2 = [a, b]. */
-  cbor_t pair1_items[2] = { dnm_a, dnm_a };
-  cbor_t pair1;
+  cbor_t pair1, pair2;
   if (!cbor_v_mk_array(pair1_items, 2, &pair1)) TFAIL("mk pair1");
-
-  cbor_t pair2_items[2] = { dnm_a, dnm_b };
-  cbor_t pair2;
   if (!cbor_v_mk_array(pair2_items, 2, &pair2)) TFAIL("mk pair2");
 
-  /* Outer map. mk_map will sort entries into canonical order
-     internally (which here is already pair1 then pair2). */
-  cbor_entry_t outer_entries[2] = {
-    cbor_v_mk_map_entry(pair1, cbor_v_mk_uint64(0)),
-    cbor_v_mk_map_entry(pair2, cbor_v_mk_uint64(1))
-  };
+  static cbor_entry_t outer_entries[2];
+  outer_entries[0] = cbor_v_mk_map_entry(pair1, cbor_v_mk_uint64(0));
+  outer_entries[1] = cbor_v_mk_map_entry(pair2, cbor_v_mk_uint64(1));
   cbor_t expected;
   if (!cbor_v_mk_map(outer_entries, 2, &expected)) TFAIL("mk outer map");
 
-  /* Accessor checks: lookup by each composite key. */
+  /* Accessor checks on each composite key. */
   cbor_t got;
-  if (!cbor_v_map_get(expected, pair1, &got)) TFAIL("map_get(pair1)");
   uint64_t v;
+  if (!cbor_v_map_get(expected, pair1, &got)) TFAIL("map_get(pair1)");
   if (!cbor_v_read_uint64(got, &v) || v != 0) TFAIL("pair1 value");
   if (!cbor_v_map_get(expected, pair2, &got)) TFAIL("map_get(pair2)");
   if (!cbor_v_read_uint64(got, &v) || v != 1) TFAIL("pair2 value");
 
-  return run_valid_match(bytes, OUTER_BYTES, expected);
+  return run_valid_match(bytes, bytes_len, expected);
 }
 
 /* Invalid: map with two equal keys (same canonical encoding). */
