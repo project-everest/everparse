@@ -524,6 +524,157 @@ ensures exists* (pm': perm) (v: Seq.seq U8.t).
 
 #pop-options
 
+(* ======== String unfold helper for constructors ======== *)
+
+(* Ghost fn that unfolds cbor_raw_match for a known CBOR_Case_String value
+   to S.pts_to on the string slice, with a trade back to cbor_raw_match.
+   Used by cbor_mk_string to build the reverse trade. *)
+
+#push-options "--z3rlimit 512 --fuel 2 --ifuel 2"
+
+```pulse
+ghost fn cbor_raw_match_string_elim
+  (str: cbor_string)
+  (#pm: perm)
+  (#xh: Ghost.erased raw_data_item)
+requires cbor_raw_match pm (CBOR_Case_String str) xh
+ensures exists* v .
+  S.pts_to str.cbor_string_ptr #(pm *. str.cbor_string_perm) v **
+  trade
+    (S.pts_to str.cbor_string_ptr #(pm *. str.cbor_string_perm) v)
+    (cbor_raw_match pm (CBOR_Case_String str) xh)
+{
+  let x : cbor_raw = CBOR_Case_String str;
+  rewrite (cbor_raw_match pm (CBOR_Case_String str) xh)
+    as (cbor_raw_match pm x xh);
+
+  cbor_raw_match_cases pm x;
+  cbor_raw_match_cases_prop_string_elim x (Ghost.reveal xh) () ();
+
+  cbor_raw_match_unfold_aux x;
+  unfold (cbor_raw_match_aux parse_raw_data_item cbor_raw_match pm x (Ghost.reveal xh));
+  unfold (vmatch_synth
+    (vmatch_dep_pair_with_proj
+       cbor_raw_match_header
+       cbor_raw_id_proj
+       (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm))
+    synth_raw_data_item_recip
+    x (Ghost.reveal xh));
+  unfold (vmatch_dep_pair_with_proj
+    cbor_raw_match_header
+    cbor_raw_id_proj
+    (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm)
+    x
+    (synth_raw_data_item_recip (Ghost.reveal xh)));
+  unfold (cbor_raw_match_header
+    (cbor_raw_id_proj.pair_proj_get x)
+    (dfst (synth_raw_data_item_recip (Ghost.reveal xh))));
+  rewrite
+    (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get x) ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))))
+    as
+    (pure (cbor_raw_get_header x ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))));
+
+  rewrite
+    (pure (cbor_raw_get_header x ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))))
+    as
+    (pure (cbor_raw_get_header (CBOR_Case_String str) ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))));
+
+  synth_string_major_type (Ghost.reveal xh) ();
+  content_string_value (Ghost.reveal xh) ();
+
+  rewrite
+    (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm
+      (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
+      x
+      (dsnd (synth_raw_data_item_recip (Ghost.reveal xh))))
+    as
+    (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm
+      (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
+      (CBOR_Case_String str)
+      (dsnd (synth_raw_data_item_recip (Ghost.reveal xh))));
+
+  cbor_raw_get_string_content pm
+    (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
+    str
+    (dsnd (synth_raw_data_item_recip (Ghost.reveal xh)))
+    ();
+
+  // Set up trade from content to cbor_raw_match
+  intro
+    (trade
+      (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm
+        (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
+        (CBOR_Case_String str)
+        (dsnd (synth_raw_data_item_recip (Ghost.reveal xh))))
+      (cbor_raw_match pm (CBOR_Case_String str) xh))
+    #(pure (cbor_raw_get_header (CBOR_Case_String str) ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))))
+    fn _ {
+      rewrite
+        (pure (cbor_raw_get_header (CBOR_Case_String str) ==
+               Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))))
+        as
+        (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get (CBOR_Case_String str)) ==
+               Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))));
+      fold (cbor_raw_match_header
+        (cbor_raw_id_proj.pair_proj_get (CBOR_Case_String str))
+        (dfst (synth_raw_data_item_recip (Ghost.reveal xh))));
+      fold (vmatch_dep_pair_with_proj
+        cbor_raw_match_header
+        cbor_raw_id_proj
+        (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm)
+        (CBOR_Case_String str)
+        (synth_raw_data_item_recip (Ghost.reveal xh)));
+      fold (vmatch_synth
+        (vmatch_dep_pair_with_proj
+           cbor_raw_match_header
+           cbor_raw_id_proj
+           (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm))
+        synth_raw_data_item_recip
+        (CBOR_Case_String str) (Ghost.reveal xh));
+      fold (cbor_raw_match_aux parse_raw_data_item cbor_raw_match pm
+        (CBOR_Case_String str) (Ghost.reveal xh));
+      cbor_raw_match_fold_aux (CBOR_Case_String str);
+    };
+
+  // Bind the existentials
+  with _pm' _vs . assert (S.pts_to str.cbor_string_ptr #_pm' _vs);
+  with _pm'' _vs' . assert (trade (S.pts_to str.cbor_string_ptr #_pm'' _vs')
+    (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm
+      (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
+      (CBOR_Case_String str)
+      (dsnd (synth_raw_data_item_recip (Ghost.reveal xh)))));
+  rewrite
+    (trade (S.pts_to str.cbor_string_ptr #_pm'' _vs')
+      (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm
+        (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
+        (CBOR_Case_String str)
+        (dsnd (synth_raw_data_item_recip (Ghost.reveal xh)))))
+    as
+    (trade (S.pts_to str.cbor_string_ptr #_pm' _vs)
+      (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm
+        (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
+        (CBOR_Case_String str)
+        (dsnd (synth_raw_data_item_recip (Ghost.reveal xh)))));
+
+  // Compose the two trades
+  Trade.trans
+    (S.pts_to str.cbor_string_ptr #_pm' _vs)
+    (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm
+      (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
+      (CBOR_Case_String str)
+      (dsnd (synth_raw_data_item_recip (Ghost.reveal xh))))
+    (cbor_raw_match pm (CBOR_Case_String str) xh);
+}
+```
+
+#pop-options
+
+
 (* ======== Tagged accessor ======== *)
 
 #push-options "--z3rlimit 256 --fuel 2 --ifuel 2"

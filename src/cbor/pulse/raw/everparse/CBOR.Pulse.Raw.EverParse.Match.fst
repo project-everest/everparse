@@ -2470,6 +2470,124 @@ ensures cbor_raw_match pm xl xh
 
 #pop-options
 
+(* ======== Content direct rewrite (no trade) ======== *)
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+```pulse
+ghost fn cbor_raw_match_content_unfold_string
+  (pm: perm) (h: header) (str: cbor_string)
+  (c: content h)
+  (_: squash (
+    let b = dfst h in
+    (b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string) == true
+  ))
+requires
+  cbor_raw_match_content cbor_raw_match parse_raw_data_item pm h (CBOR_Case_String str) c
+ensures exists* v .
+  S.pts_to str.cbor_string_ptr #(pm *. str.cbor_string_perm) v
+{
+  let b = dfst h;
+  let la = dsnd h;
+  header_eta h;
+  cbor_raw_match_content_eq_string cbor_raw_match parse_raw_data_item pm b la str c;
+  rewrite
+    (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm h (CBOR_Case_String str) c)
+    as
+    (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm (| b, la |) (CBOR_Case_String str) c);
+  rewrite
+    (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm (| b, la |) (CBOR_Case_String str) c)
+    as
+    (S.pts_to str.cbor_string_ptr #(pm *. str.cbor_string_perm) (content_as_seq_u8 b la c));
+}
+```
+
+```pulse
+ghost fn cbor_raw_match_content_fold_string
+  (pm: perm) (h: header) (str: cbor_string)
+  (c: content h)
+  (_: squash (
+    let b = dfst h in
+    (b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string) == true
+  ))
+requires
+  S.pts_to str.cbor_string_ptr #(pm *. str.cbor_string_perm) (content_as_seq_u8 (dfst h) (dsnd h) c)
+ensures
+  cbor_raw_match_content cbor_raw_match parse_raw_data_item pm h (CBOR_Case_String str) c
+{
+  let b = dfst h;
+  let la = dsnd h;
+  header_eta h;
+  cbor_raw_match_content_eq_string cbor_raw_match parse_raw_data_item pm b la str c;
+  rewrite
+    (S.pts_to str.cbor_string_ptr #(pm *. str.cbor_string_perm) (content_as_seq_u8 b la c))
+    as
+    (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm (| b, la |) (CBOR_Case_String str) c);
+  rewrite
+    (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm (| b, la |) (CBOR_Case_String str) c)
+    as
+    (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm h (CBOR_Case_String str) c);
+}
+```
+
+```pulse
+ghost fn cbor_raw_match_string_unfold_no_trade
+  (str: cbor_string)
+  (#pm: perm)
+  (#xh: Ghost.erased raw_data_item)
+requires cbor_raw_match pm (CBOR_Case_String str) xh
+ensures exists* v .
+  S.pts_to str.cbor_string_ptr #(pm *. str.cbor_string_perm) v
+{
+  let x : cbor_raw = CBOR_Case_String str;
+  rewrite (cbor_raw_match pm (CBOR_Case_String str) xh)
+    as (cbor_raw_match pm x xh);
+  cbor_raw_match_unfold_aux x;
+  unfold (cbor_raw_match_aux parse_raw_data_item cbor_raw_match pm x (Ghost.reveal xh));
+  unfold (vmatch_synth
+    (vmatch_dep_pair_with_proj
+       cbor_raw_match_header
+       cbor_raw_id_proj
+       (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm))
+    synth_raw_data_item_recip
+    x (Ghost.reveal xh));
+  unfold (vmatch_dep_pair_with_proj
+    cbor_raw_match_header
+    cbor_raw_id_proj
+    (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm)
+    x
+    (synth_raw_data_item_recip (Ghost.reveal xh)));
+  unfold (cbor_raw_match_header
+    (cbor_raw_id_proj.pair_proj_get x)
+    (dfst (synth_raw_data_item_recip (Ghost.reveal xh))));
+  rewrite
+    (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get x) ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))))
+    as
+    (pure (cbor_raw_get_header x ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))));
+  rewrite
+    (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm
+      (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
+      x
+      (dsnd (synth_raw_data_item_recip (Ghost.reveal xh))))
+    as
+    (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm
+      (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
+      (CBOR_Case_String str)
+      (dsnd (synth_raw_data_item_recip (Ghost.reveal xh))));
+  cbor_raw_match_content_unfold_string pm
+    (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
+    str
+    (dsnd (synth_raw_data_item_recip (Ghost.reveal xh)))
+    ();
+  drop_ (pure (cbor_raw_get_header x ==
+    Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))));
+}
+```
+
+#pop-options
+
 #push-options "--z3rlimit 512 --fuel 2 --ifuel 2"
 
 ```pulse
