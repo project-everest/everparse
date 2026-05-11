@@ -18,6 +18,7 @@ module U8 = FStar.UInt8
 module SU = Pulse.Lib.Slice.Util
 module AP = Pulse.Lib.ArrayPtr
 
+module SpecRawBase = CBOR.Spec.Raw.Base
 module SpecRaw = CBOR.Spec.Raw
 module RawType = CBOR.Pulse.Raw.EverParse.Type
 module RawMatch = CBOR.Pulse.Raw.EverParse.Match
@@ -314,13 +315,252 @@ fn cbor_det_impl_utf8_correct_from_array (_: unit) : det_impl_utf8_correct_from_
   res
 }
 
-(* TODO: remaining functions need additional infrastructure:
-   - read_simple_value, read_uint64, get_string_length, get_tagged_tag,
-     get_array_length, get_map_length: need header extraction helpers
-   - elim_simple, elim_int64: need match elimination helpers
-   - validate, parse: need cbor_validate_det, cbor_raw_parse_det
-   - mk_tagged, mk_string, mk_array, mk_map: need Make module wrappers
-   - iterators: need iterator bridge infrastructure
-   - map_get: needs comparison + iterator infrastructure
-   - serialize_*_to_array: need Serialize module wrappers
-*)
+(* ======== Field readers ======== *)
+
+module ReadFields = CBOR.Pulse.Raw.EverParse.ReadFields
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_read_simple_value (_: unit) : read_simple_value_t u#0 #_ cbor_det_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_det_match p x v);
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor v);
+  let res = ReadFields.cbor_raw_read_simple_value p x;
+  fold (cbor_det_match p x v);
+  res
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_read_uint64 (_: unit) : read_uint64_t u#0 #_ cbor_det_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_det_match p x v);
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor v);
+  let res = ReadFields.cbor_raw_read_int64_value p x;
+  fold (cbor_det_match p x v);
+  res
+}
+
+#push-options "--z3rlimit 128 --fuel 2 --ifuel 2"
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_get_string_length (_: unit) : get_string_length_t u#0 #_ cbor_det_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_det_match p x v);
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor v);
+  let s = Access.cbor_raw_get_string p x ();
+  with pm' vs . assert (Pulse.Lib.Slice.pts_to s #pm' vs);
+  Pulse.Lib.Slice.pts_to_len s;
+  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  let len_sz = Pulse.Lib.Slice.len s;
+  let res = SZ.sizet_to_uint64 len_sz;
+  // We know vs == String?.v (mk_det_raw_cbor v)
+  // and mk_cbor_eq tells us mk_cbor (mk_det_raw_cbor v) == v
+  // so for CString ty content, mk_det_raw_cbor v = String ty _ content
+  // hence vs == content and Seq.length vs == Seq.length content
+  Trade.elim _ (RawMatch.cbor_raw_match p x (SpecRaw.mk_det_raw_cbor v));
+  fold (cbor_det_match p x v);
+  res
+}
+
+#pop-options
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_get_tagged_tag (_: unit) : get_tagged_tag_t u#0 #_ cbor_det_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_det_match p x v);
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor v);
+  let res = ReadFields.cbor_raw_read_tagged_tag p x;
+  fold (cbor_det_match p x v);
+  res
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_get_array_length (_: unit) : get_array_length_t u#0 #_ cbor_det_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_det_match p x v);
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor v);
+  let res = ReadFields.cbor_raw_read_array_length p x;
+  fold (cbor_det_match p x v);
+  res
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_get_map_length (_: unit) : get_map_length_t u#0 #_ cbor_det_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_det_match p x v);
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor v);
+  let res = ReadFields.cbor_raw_read_map_length p x;
+  fold (cbor_det_match p x v);
+  res
+}
+
+(* ======== Elim functions ======== *)
+
+ghost
+fn cbor_det_elim_simple (_: unit) : elim_simple_t u#0 #_ cbor_det_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_det_match p x v);
+  Access.cbor_raw_match_cases p x;
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor v);
+  drop_ (RawMatch.cbor_raw_match p x (SpecRaw.mk_det_raw_cbor v));
+  drop_ (pure (Access.cbor_raw_match_cases_prop x (SpecRaw.mk_det_raw_cbor v)))
+}
+
+ghost
+fn cbor_det_elim_int64 (_: unit) : elim_int64_t u#0 #_ cbor_det_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_det_match p x v);
+  Access.cbor_raw_match_cases p x;
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor v);
+  drop_ (RawMatch.cbor_raw_match p x (SpecRaw.mk_det_raw_cbor v));
+  drop_ (pure (Access.cbor_raw_match_cases_prop x (SpecRaw.mk_det_raw_cbor v)))
+}
+
+(* ======== Reset perm ======== *)
+
+module ResetPerm = CBOR.Pulse.Raw.EverParse.ResetPerm
+
+ghost
+fn cbor_det_reset_perm (_: unit) : reset_perm_t u#0 u#0 #_ #_ cbor_det_match
+= (x: _)
+  (#pm: _)
+  (#v: _)
+  (q: _)
+{
+  unfold (cbor_det_match pm x v);
+  let x' = ResetPerm.cbor_raw_reset_perm pm x q;
+  fold (cbor_det_match q x' v);
+  Trade.intro_trade
+    (cbor_det_match q x' v)
+    (cbor_det_match pm x v)
+    (Pulse.Lib.Trade.trade (RawMatch.cbor_raw_match q x' (SpecRaw.mk_det_raw_cbor v))
+           (RawMatch.cbor_raw_match pm x (SpecRaw.mk_det_raw_cbor v)))
+    fn _ {
+      unfold (cbor_det_match q x' v);
+      Trade.elim
+        (RawMatch.cbor_raw_match q x' (SpecRaw.mk_det_raw_cbor v))
+        (RawMatch.cbor_raw_match pm x (SpecRaw.mk_det_raw_cbor v));
+      fold (cbor_det_match pm x v)
+    };
+  x'
+}
+
+(* ======== Constructors ======== *)
+
+#push-options "--z3rlimit 128 --fuel 2 --ifuel 2"
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_mk_tagged (_: unit) : mk_tagged_t u#0 #_ cbor_det_match
+= (tag: _)
+  (r: _)
+  (#pr: _)
+  (#v: _)
+  (#pv: _)
+  (#v': _)
+{
+  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  let tag64 = SpecRaw.mk_raw_uint64 tag;
+  let w' : Ghost.erased SpecRaw.raw_data_item = SpecRaw.mk_det_raw_cbor v';
+  Trade.rewrite_with_trade
+    (cbor_det_match pv v v')
+    (RawMatch.cbor_raw_match pv v (Ghost.reveal w'));
+  let res = RawMake.cbor_mk_tagged tag r;
+  with r' . assert (RawMatch.cbor_raw_match 1.0R res r');
+  Trade.trans_concl_r _ _ (RawMatch.cbor_raw_match pv v (Ghost.reveal w')) _;
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CTagged tag v')));
+  SpecRaw.valid_eq SpecRaw.basic_data_model (SpecRaw.Tagged tag64 (Ghost.reveal w'));
+  SpecRaw.mk_cbor_eq (SpecRaw.Tagged tag64 (Ghost.reveal w'));
+  SpecRaw.mk_cbor_equiv (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CTagged tag v'))) (SpecRaw.Tagged tag64 (Ghost.reveal w'));
+  SpecRaw.raw_equiv_sorted_optimal
+    SpecF.deterministically_encoded_cbor_map_key_order
+    (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CTagged tag v')))
+    (SpecRaw.Tagged tag64 (Ghost.reveal w'));
+  // Now we have r' == Tagged tag64 w' == mk_det_raw_cbor (pack (CTagged tag v'))
+  // Rewrite r' everywhere (match + trade) before folding
+  rewrite each r' as
+    (SpecRaw.mk_det_raw_cbor (CBOR.Spec.API.Type.pack (CBOR.Spec.API.Type.CTagged tag v')));
+  rewrite each (Ghost.reveal w') as (SpecRaw.mk_det_raw_cbor v');
+  fold (cbor_det_match 1.0R res (Spec.pack (Spec.CTagged tag v')));
+  // Trade now has cbor_raw_match 1.0R res (mk_det_raw_cbor (pack (CTagged tag v')))
+  // which is cbor_det_match 1.0R res (pack (CTagged tag v'))
+  // Also need to fold the trade postcondition
+  Trade.intro_trade
+    (cbor_det_match 1.0R res (Spec.pack (Spec.CTagged tag v')))
+    (R.pts_to r #pr v ** cbor_det_match pv v v')
+    (Pulse.Lib.Trade.trade
+      (RawMatch.cbor_raw_match 1.0R res (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CTagged tag v'))))
+      (R.pts_to r #pr v ** RawMatch.cbor_raw_match pv v (SpecRaw.mk_det_raw_cbor v')))
+    fn _ {
+      unfold (cbor_det_match 1.0R res (Spec.pack (Spec.CTagged tag v')));
+      Trade.elim _ (R.pts_to r #pr v ** RawMatch.cbor_raw_match pv v (SpecRaw.mk_det_raw_cbor v'));
+      fold (cbor_det_match pv v v')
+    };
+  res
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_mk_string (_: unit) : mk_string_t u#0 #_ cbor_det_match
+= (ty: _)
+  (s: _)
+  (#p: _)
+  (#v: _)
+{
+  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  Pulse.Lib.Slice.pts_to_len s;
+  let len64 = SpecRaw.mk_raw_uint64 (SZ.sizet_to_uint64 (Pulse.Lib.Slice.len s));
+  let res = RawMake.cbor_mk_string f64 ty s;
+  with r . assert (RawMatch.cbor_raw_match 1.0R res r);
+  // cbor_mk_string gives us all the pure postcondition facts
+  let _p = elim_pure_explicit (
+    CBOR.Spec.Raw.Optimal.raw_data_item_ints_optimal r /\
+    CBOR.Spec.Raw.Sort.raw_data_item_sorted CBOR.Spec.Raw.Format.deterministically_encoded_cbor_map_key_order r /\
+    SpecRaw.valid_raw_data_item r /\
+    SpecRaw.mk_det_raw_cbor (SpecRaw.mk_cbor r) == Ghost.reveal r /\
+    SpecRaw.String? r /\
+    SpecRaw.String?.typ r == ty /\
+    (SpecRaw.String?.v r <: Seq.seq FStar.UInt8.t) == Ghost.reveal v
+  );
+  // With String? r, valid r, and mk_cbor_eq: mk_cbor r == pack (CString ty v)
+  SpecRaw.mk_cbor_eq (Ghost.reveal r);
+  // Rewrite r as mk_det_raw_cbor (mk_cbor r) and fold into cbor_det_match
+  rewrite each r as (SpecRaw.mk_det_raw_cbor (SpecRaw.mk_cbor r));
+  fold (cbor_det_match 1.0R res (SpecRaw.mk_cbor r));
+  rewrite each (SpecRaw.mk_cbor r) as (Spec.pack (Spec.CString ty v));
+  // Create the trade
+  Trade.intro_trade
+    (cbor_det_match 1.0R res (Spec.pack (Spec.CString ty v)))
+    (Pulse.Lib.Slice.pts_to s #p v)
+    (Pulse.Lib.Trade.trade
+      (RawMatch.cbor_raw_match 1.0R res (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CString ty v))))
+      (Pulse.Lib.Slice.pts_to s #p v))
+    fn _ {
+      unfold (cbor_det_match 1.0R res (Spec.pack (Spec.CString ty v)));
+      Trade.elim _ (Pulse.Lib.Slice.pts_to s #p v)
+    };
+  res
+}
+
+#pop-options

@@ -157,7 +157,16 @@ ensures exists* xh .
   cbor_raw_match 1.0R res xh **
   Trade.trade
     (cbor_raw_match 1.0R res xh)
-    (S.pts_to s #p v)
+    (S.pts_to s #p v) **
+  pure (
+    raw_data_item_ints_optimal xh /\
+    CBOR.Spec.Raw.Sort.raw_data_item_sorted CBOR.Spec.Raw.Format.deterministically_encoded_cbor_map_key_order xh /\
+    valid_raw_data_item xh /\
+    CBOR.Spec.Raw.mk_det_raw_cbor (CBOR.Spec.Raw.mk_cbor xh) == Ghost.reveal xh /\
+    String? xh /\
+    String?.typ xh == ty /\
+    (String?.v xh <: Seq.seq U8.t) == Ghost.reveal v
+  )
 {
   S.pts_to_len s;
   let the_prop =
@@ -203,6 +212,9 @@ ensures exists* xh .
       rewrite (S.pts_to s #_perm _val)
         as (S.pts_to s #p v);
     };
+  // xh = String ty (mk_raw_uint64 len64) v — prove postcondition pures
+  CBOR.Spec.Raw.Valid.valid_eq basic_data_model (Ghost.reveal xh);
+  CBOR.Spec.Raw.mk_det_raw_cbor_mk_cbor (Ghost.reveal xh);
   res
 }
 
