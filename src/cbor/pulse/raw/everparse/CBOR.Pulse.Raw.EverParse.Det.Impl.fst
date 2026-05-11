@@ -26,9 +26,11 @@ module Access = CBOR.Pulse.Raw.EverParse.Access
 module RawMake = CBOR.Pulse.Raw.EverParse.Make
 module RawSerialize = CBOR.Pulse.Raw.EverParse.Serialize
 module Compare = CBOR.Pulse.Raw.EverParse.Det.Compare
+module ResetPerm = CBOR.Pulse.Raw.EverParse.ResetPerm
 module SpecF = CBOR.Spec.Raw.Format
 module I = LowParse.PulseParse.Iterator
 module R = Pulse.Lib.Reference
+module Proj = LowParse.PulseParse.Projectors
 
 (* ======== Core definition ======== *)
 
@@ -564,3 +566,358 @@ fn cbor_det_mk_string (_: unit) : mk_string_t u#0 #_ cbor_det_match
 }
 
 #pop-options
+
+(* ======== Map entries ======== *)
+
+[@@pulse_unfold]
+let cbor_det_map_entry_match
+  (pm: perm)
+  (entry: CBOR.Pulse.API.Det.Type.cbor_det_map_entry_t)
+  (pair: Spec.cbor & Spec.cbor)
+: Tot slprop
+= RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm entry
+    (SpecRaw.mk_det_raw_cbor (fst pair), SpecRaw.mk_det_raw_cbor (snd pair))
+
+(* ---- map entry share/gather ---- *)
+
+ghost
+fn cbor_det_map_entry_share (_: unit) : share_t u#0 u#0 #_ #_ cbor_det_map_entry_match
+= (e: _)
+  (#p: _)
+  (#v2: _)
+{
+  unfold (cbor_det_map_entry_match p e v2);
+  ghost
+  fn p_share_local (x1: RawType.cbor_raw) (#pm0: perm) (#x2: SpecRawBase.raw_data_item)
+  requires RawMatch.cbor_raw_match pm0 x1 x2
+  ensures RawMatch.cbor_raw_match (pm0 /. 2.0R) x1 x2 ** RawMatch.cbor_raw_match (pm0 /. 2.0R) x1 x2
+  {
+    RawMatch.cbor_raw_match_share x1 #pm0 #x2
+  };
+  RawMatch.cbor_map_entry_match_share RawMatch.cbor_raw_match
+    p_share_local
+    e;
+  fold (cbor_det_map_entry_match (p /. 2.0R) e v2);
+  fold (cbor_det_map_entry_match (p /. 2.0R) e v2);
+}
+
+ghost
+fn cbor_det_map_entry_gather (_: unit) : gather_t u#0 u#0 #_ #_ cbor_det_map_entry_match
+= (e: _)
+  (#p: _)
+  (#v2: _)
+  (#p': _)
+  (#v2': _)
+{
+  unfold (cbor_det_map_entry_match p e v2);
+  unfold (cbor_det_map_entry_match p' e v2');
+  ghost
+  fn p_gather_local
+    (x1: RawType.cbor_raw)
+    (#pm0: perm)
+    (#x2: SpecRawBase.raw_data_item)
+    (#pm0': perm)
+    (x2': SpecRawBase.raw_data_item { x2' << (SpecRaw.mk_det_raw_cbor (fst v2'), SpecRaw.mk_det_raw_cbor (snd v2')) })
+  requires RawMatch.cbor_raw_match pm0 x1 x2 ** RawMatch.cbor_raw_match pm0' x1 x2'
+  ensures RawMatch.cbor_raw_match (pm0 +. pm0') x1 x2 ** pure (x2 == x2')
+  {
+    RawMatch.cbor_raw_match_gather x1 #pm0 #x2 #pm0' #x2'
+  };
+  RawMatch.cbor_map_entry_match_gather RawMatch.cbor_raw_match e
+    #p
+    #(SpecRaw.mk_det_raw_cbor (fst v2), SpecRaw.mk_det_raw_cbor (snd v2))
+    #p'
+    #(SpecRaw.mk_det_raw_cbor (fst v2'), SpecRaw.mk_det_raw_cbor (snd v2'))
+    p_gather_local;
+  SpecRaw.mk_det_raw_cbor_inj (fst v2) (fst v2');
+  SpecRaw.mk_det_raw_cbor_inj (snd v2) (snd v2');
+  fold (cbor_det_map_entry_match (p +. p') e v2);
+}
+
+(* ======== Map entry key/value ======== *)
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_map_entry_key (_: unit) : map_entry_key_t u#0 u#0 #_ #_ cbor_det_map_entry_match cbor_det_match
+= (e: _)
+  (#p: _)
+  (#v2: _)
+{
+  unfold (cbor_det_map_entry_match p e v2);
+  unfold (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p e
+    (SpecRaw.mk_det_raw_cbor (fst v2), SpecRaw.mk_det_raw_cbor (snd v2)));
+  unfold (Proj.vmatch_pair_with_proj (RawMatch.cbor_raw_match p) RawMatch.cbor_map_entry_key_proj
+    (Proj.vmatch_with_pair_proj (RawMatch.cbor_raw_match p) RawMatch.cbor_map_entry_value_proj)
+    e (SpecRaw.mk_det_raw_cbor (fst v2), SpecRaw.mk_det_raw_cbor (snd v2)));
+  unfold (Proj.vmatch_with_pair_proj (RawMatch.cbor_raw_match p) RawMatch.cbor_map_entry_value_proj
+    e (SpecRaw.mk_det_raw_cbor (snd v2)));
+  rewrite (RawMatch.cbor_raw_match p (RawMatch.cbor_map_entry_key_proj.Proj.pair_proj_get e) (SpecRaw.mk_det_raw_cbor (fst v2)))
+       as (RawMatch.cbor_raw_match p e.RawType.cbor_map_entry_key (SpecRaw.mk_det_raw_cbor (fst v2)));
+  rewrite (RawMatch.cbor_raw_match p (RawMatch.cbor_map_entry_value_proj.Proj.pair_proj_get e) (SpecRaw.mk_det_raw_cbor (snd v2)))
+       as (RawMatch.cbor_raw_match p e.RawType.cbor_map_entry_value (SpecRaw.mk_det_raw_cbor (snd v2)));
+  fold (cbor_det_match p e.RawType.cbor_map_entry_key (fst v2));
+  Trade.intro_trade
+    (cbor_det_match p e.RawType.cbor_map_entry_key (fst v2))
+    (cbor_det_map_entry_match p e v2)
+    (RawMatch.cbor_raw_match p e.RawType.cbor_map_entry_value (SpecRaw.mk_det_raw_cbor (snd v2)))
+    fn _ {
+      unfold (cbor_det_match p e.RawType.cbor_map_entry_key (fst v2));
+      rewrite (RawMatch.cbor_raw_match p e.RawType.cbor_map_entry_key (SpecRaw.mk_det_raw_cbor (fst v2)))
+           as (RawMatch.cbor_raw_match p (RawMatch.cbor_map_entry_key_proj.Proj.pair_proj_get e) (SpecRaw.mk_det_raw_cbor (fst v2)));
+      rewrite (RawMatch.cbor_raw_match p e.RawType.cbor_map_entry_value (SpecRaw.mk_det_raw_cbor (snd v2)))
+           as (RawMatch.cbor_raw_match p (RawMatch.cbor_map_entry_value_proj.Proj.pair_proj_get e) (SpecRaw.mk_det_raw_cbor (snd v2)));
+      fold (Proj.vmatch_with_pair_proj (RawMatch.cbor_raw_match p) RawMatch.cbor_map_entry_value_proj
+        e (SpecRaw.mk_det_raw_cbor (snd v2)));
+      fold (Proj.vmatch_pair_with_proj (RawMatch.cbor_raw_match p) RawMatch.cbor_map_entry_key_proj
+        (Proj.vmatch_with_pair_proj (RawMatch.cbor_raw_match p) RawMatch.cbor_map_entry_value_proj)
+        e (SpecRaw.mk_det_raw_cbor (fst v2), SpecRaw.mk_det_raw_cbor (snd v2)));
+      fold (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p e
+        (SpecRaw.mk_det_raw_cbor (fst v2), SpecRaw.mk_det_raw_cbor (snd v2)));
+      fold (cbor_det_map_entry_match p e v2);
+    };
+  e.RawType.cbor_map_entry_key
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_map_entry_value (_: unit) : map_entry_value_t u#0 u#0 #_ #_ cbor_det_map_entry_match cbor_det_match
+= (e: _)
+  (#p: _)
+  (#v2: _)
+{
+  unfold (cbor_det_map_entry_match p e v2);
+  unfold (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p e
+    (SpecRaw.mk_det_raw_cbor (fst v2), SpecRaw.mk_det_raw_cbor (snd v2)));
+  unfold (Proj.vmatch_pair_with_proj (RawMatch.cbor_raw_match p) RawMatch.cbor_map_entry_key_proj
+    (Proj.vmatch_with_pair_proj (RawMatch.cbor_raw_match p) RawMatch.cbor_map_entry_value_proj)
+    e (SpecRaw.mk_det_raw_cbor (fst v2), SpecRaw.mk_det_raw_cbor (snd v2)));
+  unfold (Proj.vmatch_with_pair_proj (RawMatch.cbor_raw_match p) RawMatch.cbor_map_entry_value_proj
+    e (SpecRaw.mk_det_raw_cbor (snd v2)));
+  rewrite (RawMatch.cbor_raw_match p (RawMatch.cbor_map_entry_key_proj.Proj.pair_proj_get e) (SpecRaw.mk_det_raw_cbor (fst v2)))
+       as (RawMatch.cbor_raw_match p e.RawType.cbor_map_entry_key (SpecRaw.mk_det_raw_cbor (fst v2)));
+  rewrite (RawMatch.cbor_raw_match p (RawMatch.cbor_map_entry_value_proj.Proj.pair_proj_get e) (SpecRaw.mk_det_raw_cbor (snd v2)))
+       as (RawMatch.cbor_raw_match p e.RawType.cbor_map_entry_value (SpecRaw.mk_det_raw_cbor (snd v2)));
+  fold (cbor_det_match p e.RawType.cbor_map_entry_value (snd v2));
+  Trade.intro_trade
+    (cbor_det_match p e.RawType.cbor_map_entry_value (snd v2))
+    (cbor_det_map_entry_match p e v2)
+    (RawMatch.cbor_raw_match p e.RawType.cbor_map_entry_key (SpecRaw.mk_det_raw_cbor (fst v2)))
+    fn _ {
+      unfold (cbor_det_match p e.RawType.cbor_map_entry_value (snd v2));
+      rewrite (RawMatch.cbor_raw_match p e.RawType.cbor_map_entry_key (SpecRaw.mk_det_raw_cbor (fst v2)))
+           as (RawMatch.cbor_raw_match p (RawMatch.cbor_map_entry_key_proj.Proj.pair_proj_get e) (SpecRaw.mk_det_raw_cbor (fst v2)));
+      rewrite (RawMatch.cbor_raw_match p e.RawType.cbor_map_entry_value (SpecRaw.mk_det_raw_cbor (snd v2)))
+           as (RawMatch.cbor_raw_match p (RawMatch.cbor_map_entry_value_proj.Proj.pair_proj_get e) (SpecRaw.mk_det_raw_cbor (snd v2)));
+      fold (Proj.vmatch_with_pair_proj (RawMatch.cbor_raw_match p) RawMatch.cbor_map_entry_value_proj
+        e (SpecRaw.mk_det_raw_cbor (snd v2)));
+      fold (Proj.vmatch_pair_with_proj (RawMatch.cbor_raw_match p) RawMatch.cbor_map_entry_key_proj
+        (Proj.vmatch_with_pair_proj (RawMatch.cbor_raw_match p) RawMatch.cbor_map_entry_value_proj)
+        e (SpecRaw.mk_det_raw_cbor (fst v2), SpecRaw.mk_det_raw_cbor (snd v2)));
+      fold (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p e
+        (SpecRaw.mk_det_raw_cbor (fst v2), SpecRaw.mk_det_raw_cbor (snd v2)));
+      fold (cbor_det_map_entry_match p e v2);
+    };
+  e.RawType.cbor_map_entry_value
+}
+
+#pop-options
+
+(* ======== mk_map_entry ======== *)
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_mk_map_entry (_: unit) : mk_map_entry_t u#0 u#0 #_ #_ cbor_det_match cbor_det_map_entry_match
+= (xk: _) (xv: _) (#pk: _) (#vk: _) (#pv: _) (#vv: _)
+{
+  unfold (cbor_det_match pk xk vk);
+  let xk' = ResetPerm.cbor_raw_reset_perm pk xk 1.0R;
+  // T1 : RawMatch pk xk (det vk) <== RawMatch 1.0R xk' (det vk)
+  unfold (cbor_det_match pv xv vv);
+  let xv' = ResetPerm.cbor_raw_reset_perm pv xv 1.0R;
+  // T2 : RawMatch pv xv (det vv) <== RawMatch 1.0R xv' (det vv)
+  let res = RawMake.cbor_mk_map_entry xk' xv'
+    #1.0R
+    #(SpecRaw.mk_det_raw_cbor vk)
+    #(SpecRaw.mk_det_raw_cbor vv);
+  // T3 : cbor_map_entry_match RawMatch 1.0R res (det vk, det vv) ==>
+  //      (RawMatch 1.0R xk' (det vk) ** RawMatch 1.0R xv' (det vv))
+  // Replace right half (xv' -> xv at perm pv) using T2 via trans_concl_r
+  Trade.trans_concl_r _ _ _ (RawMatch.cbor_raw_match pv xv (SpecRaw.mk_det_raw_cbor vv));
+  // Replace left half (xk' -> xk at perm pk) using T1 via trans_concl_l
+  Trade.trans_concl_l _ _ (RawMatch.cbor_raw_match pk xk (SpecRaw.mk_det_raw_cbor vk)) _;
+  fold (cbor_det_map_entry_match 1.0R res (Ghost.reveal vk, Ghost.reveal vv));
+  // Wrap the right-hand side of the trade with cbor_det_match folds
+  Trade.intro_trade
+    (cbor_det_map_entry_match 1.0R res (Ghost.reveal vk, Ghost.reveal vv))
+    (cbor_det_match pk xk vk ** cbor_det_match pv xv vv)
+    (Pulse.Lib.Trade.trade
+      (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match 1.0R res
+        (SpecRaw.mk_det_raw_cbor vk, SpecRaw.mk_det_raw_cbor vv))
+      (RawMatch.cbor_raw_match pk xk (SpecRaw.mk_det_raw_cbor vk) **
+       RawMatch.cbor_raw_match pv xv (SpecRaw.mk_det_raw_cbor vv)))
+    fn _ {
+      unfold (cbor_det_map_entry_match 1.0R res (Ghost.reveal vk, Ghost.reveal vv));
+      Trade.elim
+        (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match 1.0R res
+          (SpecRaw.mk_det_raw_cbor vk, SpecRaw.mk_det_raw_cbor vv))
+        (RawMatch.cbor_raw_match pk xk (SpecRaw.mk_det_raw_cbor vk) **
+         RawMatch.cbor_raw_match pv xv (SpecRaw.mk_det_raw_cbor vv));
+      fold (cbor_det_match pk xk vk);
+      fold (cbor_det_match pv xv vv);
+    };
+  res
+}
+
+#pop-options
+
+(* ======== Array iterator ======== *)
+
+module SpecRawEverParse = CBOR.Spec.Raw.EverParse
+module Validate = CBOR.Pulse.Raw.EverParse.Validate
+
+let mk_det_raw_cbor_tot (c: Spec.cbor) : Tot SpecRawBase.raw_data_item
+= SpecRaw.mk_det_raw_cbor c
+
+let det_raw_list (l: list Spec.cbor) : Tot (list SpecRawBase.raw_data_item)
+= List.Tot.map mk_det_raw_cbor_tot l
+
+[@@pulse_unfold]
+let cbor_det_array_iterator_match
+  (pm: perm)
+  (it: CBOR.Pulse.API.Det.Type.cbor_det_array_iterator_t)
+  (l: list Spec.cbor)
+: Tot slprop
+= I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm it
+    (det_raw_list l)
+
+ghost
+fn cbor_raw_match_share_aux (x1: RawType.cbor_raw) (#pm0: perm) (#x2: SpecRawBase.raw_data_item)
+  requires RawMatch.cbor_raw_match pm0 x1 x2
+  ensures RawMatch.cbor_raw_match (pm0 /. 2.0R) x1 x2 ** RawMatch.cbor_raw_match (pm0 /. 2.0R) x1 x2
+{
+  RawMatch.cbor_raw_match_share x1 #pm0 #x2
+}
+
+ghost
+fn cbor_raw_match_gather_aux
+    (x1: RawType.cbor_raw)
+    (#pm0: perm)
+    (#x2: SpecRawBase.raw_data_item)
+    (#pm0': perm)
+    (#x2': SpecRawBase.raw_data_item)
+  requires RawMatch.cbor_raw_match pm0 x1 x2 ** RawMatch.cbor_raw_match pm0' x1 x2'
+  ensures RawMatch.cbor_raw_match (pm0 +. pm0') x1 x2 ** pure (x2 == x2')
+{
+  RawMatch.cbor_raw_match_gather x1 #pm0 #x2 #pm0' #x2'
+}
+
+let rec mk_det_raw_cbor_inj_map (l1 l2: list Spec.cbor)
+: Lemma
+    (requires det_raw_list l1 == det_raw_list l2)
+    (ensures l1 == l2)
+    (decreases l1)
+= match l1, l2 with
+  | [], [] -> ()
+  | x1 :: t1, x2 :: t2 ->
+    SpecRaw.mk_det_raw_cbor_inj x1 x2;
+    mk_det_raw_cbor_inj_map t1 t2
+
+let length_map_eq (#t1 #t2: Type) (f: t1 -> t2) (l: list t1)
+  : Lemma (List.Tot.length (List.Tot.map f l) == List.Tot.length l)
+          [SMTPat (List.Tot.length (List.Tot.map f l))]
+= FStar.List.Tot.Properties.map_lemma f l;
+  ()
+
+let length_det_raw_list (l: list Spec.cbor)
+  : Lemma (List.Tot.length (det_raw_list l) == List.Tot.length l)
+          [SMTPat (List.Tot.length (det_raw_list l))]
+= ()
+
+ghost
+fn cbor_det_array_iterator_share (_: unit) : share_t cbor_det_array_iterator_match
+= (it: _) (#pm: _) (#l: _)
+{
+  let lr = Ghost.hide (det_raw_list l);
+  unfold (cbor_det_array_iterator_match pm it l);
+  rewrite (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm it
+    (det_raw_list l))
+    as (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm it
+    (Ghost.reveal lr));
+  unfold (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm it
+    (Ghost.reveal lr));
+  with l1 l2 . assert (
+    I.base_mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm it.LowParse.PulseParse.Iterator.before l1 **
+    I.mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm it.LowParse.PulseParse.Iterator.after l2);
+  I.base_mixed_list_match_share RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm it.LowParse.PulseParse.Iterator.before l1 cbor_raw_match_share_aux;
+  I.mixed_list_match_share RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm it.LowParse.PulseParse.Iterator.after l2 cbor_raw_match_share_aux;
+  fold (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item (pm /. 2.0R) it
+    (Ghost.reveal lr));
+  fold (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item (pm /. 2.0R) it
+    (Ghost.reveal lr));
+  rewrite (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item (pm /. 2.0R) it
+    (Ghost.reveal lr))
+    as (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item (pm /. 2.0R) it
+    (det_raw_list l));
+  rewrite (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item (pm /. 2.0R) it
+    (Ghost.reveal lr))
+    as (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item (pm /. 2.0R) it
+    (det_raw_list l));
+  fold (cbor_det_array_iterator_match (pm /. 2.0R) it l);
+  fold (cbor_det_array_iterator_match (pm /. 2.0R) it l);
+}
+
+ghost
+fn cbor_det_array_iterator_gather (_: unit) : gather_t cbor_det_array_iterator_match
+= (it: _) (#pm: _) (#l: _) (#pm': _) (#l': _)
+{
+  let lr  = Ghost.hide (det_raw_list l);
+  let lr' = Ghost.hide (det_raw_list l');
+  unfold (cbor_det_array_iterator_match pm it l);
+  unfold (cbor_det_array_iterator_match pm' it l');
+  rewrite (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm it (det_raw_list l))
+       as (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm it (Ghost.reveal lr));
+  rewrite (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm' it (det_raw_list l'))
+       as (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm' it (Ghost.reveal lr'));
+  unfold (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm it (Ghost.reveal lr));
+  unfold (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm' it (Ghost.reveal lr'));
+  with l1 l2 . assert (
+    I.base_mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm it.LowParse.PulseParse.Iterator.before l1 **
+    I.mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm it.LowParse.PulseParse.Iterator.after l2);
+  with l1' l2' . assert (
+    I.base_mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm' it.LowParse.PulseParse.Iterator.before l1' **
+    I.mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm' it.LowParse.PulseParse.Iterator.after l2');
+  I.base_mixed_list_match_gather RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm pm' it.LowParse.PulseParse.Iterator.before l1 l1' cbor_raw_match_gather_aux;
+  I.mixed_list_match_gather RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm pm' it.LowParse.PulseParse.Iterator.after l2 l2' cbor_raw_match_gather_aux;
+  List.Tot.append_injective l1 l1' l2 l2';
+  fold (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item (pm +. pm') it (Ghost.reveal lr));
+  rewrite (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item (pm +. pm') it (Ghost.reveal lr))
+       as (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item (pm +. pm') it (det_raw_list l));
+  mk_det_raw_cbor_inj_map l l';
+  fold (cbor_det_array_iterator_match (pm +. pm') it l);
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_array_iterator_is_empty (_: unit) : array_iterator_is_empty_t cbor_det_array_iterator_match
+= (x: _) (#p: _) (#y: _)
+{
+  let lr = Ghost.hide (det_raw_list y);
+  unfold (cbor_det_array_iterator_match p x y);
+  rewrite (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x (det_raw_list y))
+       as (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x (Ghost.reveal lr));
+  unfold (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x (Ghost.reveal lr));
+  with l1 l2 . assert (
+    I.base_mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x.LowParse.PulseParse.Iterator.before l1 **
+    I.mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x.LowParse.PulseParse.Iterator.after l2);
+  I.base_mixed_list_match_length RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x.LowParse.PulseParse.Iterator.before l1;
+  I.mixed_list_match_length RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x.LowParse.PulseParse.Iterator.after l2;
+  let len_before = I.base_mixed_list_length x.LowParse.PulseParse.Iterator.before;
+  let res = (len_before = 0sz);
+  fold (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x (Ghost.reveal lr));
+  rewrite (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x (Ghost.reveal lr))
+       as (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x (det_raw_list y));
+  fold (cbor_det_array_iterator_match p x y);
+  res
+}
+
+
