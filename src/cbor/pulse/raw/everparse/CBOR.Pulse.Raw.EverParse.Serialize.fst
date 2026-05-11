@@ -2000,15 +2000,6 @@ let siz (f64: squash SZ.fits_u64) (p: perm) : compute_remaining_size (cbor_raw_m
     (cbor_raw_match_with_perm_lens p)
     (size_fold (siz' f64))
 
-let cbor_size_post
-  (bound: SZ.t)
-  (y: raw_data_item)
-  (res: SZ.t)
-: Tot prop
-= let s = Seq.length (serialize_cbor y) in
-  (SZ.v res == 0 <==> s > SZ.v bound) /\
-  (SZ.v res > 0 ==> SZ.v res == s)
-
 fn cbor_size
   (f64: squash SZ.fits_u64)
   (x: cbor_raw)
