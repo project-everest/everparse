@@ -370,6 +370,8 @@ ensures
    For the full API (mk_map_entry_t with arbitrary pk, pv and result at 1.0R),
    a perm-reset mechanism is needed, which is implemented at the API layer. *)
 
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
 fn cbor_mk_map_entry
   (xk: cbor_raw)
   (xv: cbor_raw)
