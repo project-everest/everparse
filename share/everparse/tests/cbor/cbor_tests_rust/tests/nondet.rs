@@ -546,3 +546,277 @@ macro_rules! utf8_test_invalid {
     };
 }
 include!("utf8_data/nondet.rs");
+
+// ============================================================
+//   New tests for branch coverage
+// ============================================================
+
+// ----- Major type 0 -----
+int_canonical!(uint_uint8_max_canonical, UInt64, 0xff);
+int_canonical!(uint_256_canonical, UInt64, 256);
+int_canonical!(uint_uint16_max_canonical, UInt64, 0xffff);
+int_canonical!(uint_65536_canonical, UInt64, 65536);
+int_canonical!(uint_uint32_max_canonical, UInt64, 0xffffffff);
+int_canonical!(uint_uint64_max_minus_one_canonical, UInt64, 0xfffffffffffffffe);
+int_canonical!(uint_uint64_max_canonical, UInt64, u64::MAX);
+int_nondet!(uint_24_two_byte_nondet, UInt64, 24);
+int_nondet!(uint_24_four_byte_nondet, UInt64, 24);
+int_nondet!(uint_24_eight_byte_nondet, UInt64, 24);
+int_nondet!(uint_uint8_max_two_byte_nondet, UInt64, 0xff);
+int_nondet!(uint_uint16_max_four_byte_nondet, UInt64, 0xffff);
+
+// ----- Major type 1 -----
+int_canonical!(neg_minus_256_canonical, NegInt64, 0xff);
+int_canonical!(neg_minus_257_canonical, NegInt64, 0x100);
+int_canonical!(neg_minus_65536_canonical, NegInt64, 0xffff);
+int_canonical!(neg_minus_65537_canonical, NegInt64, 0x10000);
+int_canonical!(neg_minus_2pow32_canonical, NegInt64, 0xffffffff);
+int_canonical!(neg_minus_2pow32_minus_one_canonical, NegInt64, 0x100000000);
+int_canonical!(neg_min_canonical, NegInt64, u64::MAX);
+int_nondet!(neg_minus_one_two_byte_nondet, NegInt64, 0);
+
+// ----- Major type 2 -----
+fn bytes_seq(n: usize) -> Vec<u8> { (0..n).map(|i| (i & 0xff) as u8).collect() }
+fn make_static_bytes(n: usize) -> &'static [u8] { Box::leak(bytes_seq(n).into_boxed_slice()) }
+#[test]
+fn bstr_23_canonical() {
+    let stem = "bstr_23_canonical";
+    let payload = make_static_bytes(23);
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let expected = cbor_nondet_mk_byte_string(payload).unwrap();
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+#[test]
+fn bstr_24_canonical() {
+    let stem = "bstr_24_canonical";
+    let payload = make_static_bytes(24);
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let expected = cbor_nondet_mk_byte_string(payload).unwrap();
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+#[test]
+fn bstr_255_canonical() {
+    let stem = "bstr_255_canonical";
+    let payload = make_static_bytes(255);
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let expected = cbor_nondet_mk_byte_string(payload).unwrap();
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+#[test]
+fn bstr_256_canonical() {
+    let stem = "bstr_256_canonical";
+    let payload = make_static_bytes(256);
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let expected = cbor_nondet_mk_byte_string(payload).unwrap();
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+bstr_nondet!(bstr_short_two_byte_nondet, &[0xde, 0xad, 0xbe, 0xef]);
+bstr_nondet!(bstr_short_eight_byte_nondet, &[0xde, 0xad, 0xbe, 0xef]);
+invalid_test!(bstr_oversized_invalid);
+
+// ----- Major type 3 -----
+fn a_str(n: usize) -> &'static str { Box::leak("a".repeat(n).into_boxed_str()) }
+text_canonical!(tstr_23_canonical, a_str(23));
+text_canonical!(tstr_24_canonical, a_str(24));
+text_canonical!(tstr_255_canonical, a_str(255));
+text_canonical!(tstr_256_canonical, a_str(256));
+text_nondet!(tstr_a_eight_byte_nondet, "a");
+invalid_test!(tstr_oversized_invalid);
+
+// ----- Major type 4 -----
+#[test]
+fn arr_23_canonical() {
+    let stem = "arr_23_canonical";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let items: Vec<CborNondet<'static>> =
+        (0u64..23).map(|i| cbor_nondet_mk_int64(UInt64, i)).collect();
+    let expected = cbor_nondet_mk_array(&items).unwrap();
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+#[test]
+fn arr_24_canonical() {
+    let stem = "arr_24_canonical";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let items: Vec<CborNondet<'static>> =
+        (0u64..24).map(|i| cbor_nondet_mk_int64(UInt64, i)).collect();
+    let expected = cbor_nondet_mk_array(&items).unwrap();
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+#[test]
+fn arr_three_one_byte_nondet() {
+    let stem = "arr_three_one_byte_nondet";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let items = [cbor_nondet_mk_int64(UInt64,1), cbor_nondet_mk_int64(UInt64,2), cbor_nondet_mk_int64(UInt64,3)];
+    let expected = cbor_nondet_mk_array(&items).unwrap();
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+#[test]
+fn arr_three_two_byte_nondet() {
+    let stem = "arr_three_two_byte_nondet";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let items = [cbor_nondet_mk_int64(UInt64,1), cbor_nondet_mk_int64(UInt64,2), cbor_nondet_mk_int64(UInt64,3)];
+    let expected = cbor_nondet_mk_array(&items).unwrap();
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+#[test]
+fn arr_empty_eight_byte_nondet() {
+    let stem = "arr_empty_eight_byte_nondet";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let expected = cbor_nondet_mk_array(&[]).unwrap();
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+
+// ----- Major type 5 -----
+#[test]
+fn map_two_one_byte_nondet() {
+    let stem = "map_two_one_byte_nondet";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let mut entries = [
+        cbor_nondet_mk_map_entry(cbor_nondet_mk_int64(UInt64,1), cbor_nondet_mk_int64(UInt64,1)),
+        cbor_nondet_mk_map_entry(cbor_nondet_mk_int64(UInt64,2), cbor_nondet_mk_int64(UInt64,2)),
+    ];
+    let expected = cbor_nondet_mk_map(&mut entries).unwrap();
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+
+#[test]
+fn map_mixed_key_types_canonical() {
+    let stem = "map_mixed_key_types_canonical";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let mut entries = [
+        cbor_nondet_mk_map_entry(cbor_nondet_mk_int64(UInt64,1), cbor_nondet_mk_int64(UInt64,0)),
+        cbor_nondet_mk_map_entry(cbor_nondet_mk_text_string("a").unwrap(), cbor_nondet_mk_int64(UInt64,1)),
+    ];
+    let expected = cbor_nondet_mk_map(&mut entries).unwrap();
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+
+// ----- Major type 6 -----
+macro_rules! tag_uint0_canonical {
+    ($name:ident, $tag:expr) => {
+        #[test]
+        fn $name() {
+            let stem = stringify!($name);
+            let input = read_in(stem);
+            let parsed = parse_one(stem, &input);
+            let payload = cbor_nondet_mk_int64(UInt64, 0);
+            let expected = cbor_nondet_mk_tagged($tag, &payload);
+            assert!(cbor_nondet_equal(parsed, expected));
+            check_serialize_and_roundtrip(stem, expected, parsed);
+        }
+    };
+}
+tag_uint0_canonical!(tag_short_canonical, 6);
+tag_uint0_canonical!(tag_short_last_canonical, 19);
+tag_uint0_canonical!(tag_one_byte_first_canonical, 99);
+tag_uint0_canonical!(tag_one_byte_last_canonical, 200);
+tag_uint0_canonical!(tag_two_byte_first_canonical, 257);
+tag_uint0_canonical!(tag_two_byte_last_canonical, 65535);
+tag_uint0_canonical!(tag_four_byte_first_canonical, 65536);
+tag_uint0_canonical!(tag_four_byte_last_canonical, 0xffffffff);
+tag_uint0_canonical!(tag_eight_byte_first_canonical, 1u64 << 32);
+tag_uint0_canonical!(tag_max_canonical, u64::MAX);
+
+#[test]
+fn tag_nested_canonical() {
+    let stem = "tag_nested_canonical";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let leaf: &'static CborNondet<'static> = Box::leak(Box::new(cbor_nondet_mk_int64(UInt64, 1)));
+    let mid: &'static CborNondet<'static> = Box::leak(Box::new(cbor_nondet_mk_tagged(5678, leaf)));
+    let expected = cbor_nondet_mk_tagged(1234, mid);
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+
+#[test]
+fn tag_array_payload_canonical() {
+    let stem = "tag_array_payload_canonical";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let items = leak_arr([cbor_nondet_mk_int64(UInt64,1), cbor_nondet_mk_int64(UInt64,2), cbor_nondet_mk_int64(UInt64,3)]);
+    let arr: &'static CborNondet<'static> = Box::leak(Box::new(cbor_nondet_mk_array(items).unwrap()));
+    let expected = cbor_nondet_mk_tagged(99, arr);
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+
+#[test]
+fn tag_inner_nondet() {
+    let stem = "tag_inner_nondet";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let inner = cbor_nondet_mk_int64(UInt64, 24);
+    let expected = cbor_nondet_mk_tagged(1000, &inner);
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+
+// ----- Major type 7 -----
+simple_canonical!(simple_zero_canonical, 0);
+simple_canonical!(simple_19_canonical, 19);
+simple_canonical!(simple_32_canonical, 32);
+simple_canonical!(simple_99_canonical, 99);
+simple_canonical!(simple_254_canonical, 254);
+simple_canonical!(simple_255_canonical, 255);
+invalid_test!(simple_25_invalid);
+invalid_test!(simple_26_invalid);
+invalid_test!(simple_27_invalid);
+invalid_test!(simple_28_invalid);
+invalid_test!(simple_29_invalid);
+invalid_test!(simple_30_invalid);
+invalid_test!(simple_31_invalid);
+
+// ----- Cross-cutting -----
+invalid_test!(empty_buffer_invalid);
+invalid_test!(trunc_19_invalid);
+invalid_test!(trunc_1a_invalid);
+invalid_test!(trunc_1b_invalid);
+
+#[test]
+fn trailing_bytes_canonical() {
+    let stem = "trailing_bytes_canonical";
+    let input = read_in(stem);
+    let (cbor, rem) = cbor_nondet_parse(None, false, &input)
+        .unwrap_or_else(|| panic!("[{API}/{stem}] parse failed"));
+    assert!(!rem.is_empty(),
+        "[{API}/{stem}] trailing bytes were unexpectedly consumed");
+    let expected = cbor_nondet_mk_int64(UInt64, 0);
+    assert!(cbor_nondet_equal(cbor, expected));
+}
+
+invalid_test!(break_stop_alone_invalid);
+invalid_test!(indef_bstr_invalid);
+invalid_test!(indef_tstr_invalid);
+invalid_test!(indef_arr_zero_invalid);
+invalid_test!(indef_arr_multi_invalid);
+invalid_test!(indef_map_invalid);
+invalid_test!(reserved_uint_1c_invalid);
+invalid_test!(reserved_uint_1d_invalid);
+invalid_test!(reserved_uint_1e_invalid);
+invalid_test!(reserved_negint_3c_invalid);
+invalid_test!(reserved_arr_9c_invalid);
+invalid_test!(reserved_map_bc_invalid);
+invalid_test!(reserved_tag_dc_invalid);

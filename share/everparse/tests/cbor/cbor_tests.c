@@ -1793,6 +1793,690 @@ static int test_invalid_indefinite(void) {
 }
 
 /* ============================================================
+ *   Additional tests added to maximize branch coverage of
+ *   src/cbor/pulse/{det,nondet}/c/CBOR{Det,Nondet}.c
+ *
+ *   Each test below targets a distinct edge case or branch that
+ *   was not previously exercised by the existing suite. See the
+ *   per-test comments for the specific branch targeted.
+ * ============================================================ */
+
+/* ---- Helper: trailing-byte run.
+ *   Validate must succeed but consume strictly fewer than `len` bytes
+ *   (i.e. detect that the buffer has well-formed CBOR followed by garbage).
+ *   Then the prefix must parse to `expected`.
+ */
+static int run_valid_trailing(uint8_t *bytes, size_t len, size_t expected_prefix,
+                              cbor_t expected) {
+  if (maybe_write_input(bytes, len)) return 1;
+  size_t vsize = cbor_v_validate(bytes, len);
+  if (vsize == 0) TFAIL("validation rejected the prefix");
+  if (vsize != expected_prefix)
+    TFAIL("validation consumed %zu bytes, expected prefix %zu",
+          vsize, expected_prefix);
+  if (vsize >= len)
+    TFAIL("validation consumed %zu of %zu (no trailing detected)",
+          vsize, len);
+  cbor_t parsed = cbor_v_parse(bytes, vsize);
+  if (!cbor_v_equal(parsed, expected))
+    TFAIL("trailing-byte parse not equal to expected");
+  return 0;
+}
+
+/* ---------- Major type 0: integer boundaries (canonical) ---------- */
+
+static int test_uint_uint8_max_canonical(void) {
+  /* 0xff = 255: largest value in 1-byte argument form. */
+  uint8_t bytes[] = { 0x18, 0xff };
+  return run_valid_match(bytes, sizeof(bytes), cbor_v_mk_uint64(0xff));
+}
+
+static int test_uint_256_canonical(void) {
+  /* 256: smallest value requiring 2-byte argument form. */
+  uint8_t bytes[] = { 0x19, 0x01, 0x00 };
+  return run_valid_match(bytes, sizeof(bytes), cbor_v_mk_uint64(256));
+}
+
+static int test_uint_uint16_max_canonical(void) {
+  /* 0xffff = 65535: largest value in 2-byte argument form. */
+  uint8_t bytes[] = { 0x19, 0xff, 0xff };
+  return run_valid_match(bytes, sizeof(bytes), cbor_v_mk_uint64(0xffff));
+}
+
+static int test_uint_65536_canonical(void) {
+  /* 65536: smallest value requiring 4-byte argument form. */
+  uint8_t bytes[] = { 0x1a, 0x00, 0x01, 0x00, 0x00 };
+  return run_valid_match(bytes, sizeof(bytes), cbor_v_mk_uint64(65536));
+}
+
+static int test_uint_uint32_max_canonical(void) {
+  /* 0xffffffff: largest value in 4-byte argument form. */
+  uint8_t bytes[] = { 0x1a, 0xff, 0xff, 0xff, 0xff };
+  return run_valid_match(bytes, sizeof(bytes), cbor_v_mk_uint64(0xffffffffULL));
+}
+
+static int test_uint_uint64_max_minus_one_canonical(void) {
+  /* 2^64 - 2 — exercises 8-byte path one below max. */
+  uint8_t bytes[] = { 0x1b, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe };
+  return run_valid_match(bytes, sizeof(bytes), cbor_v_mk_uint64(0xfffffffffffffffeULL));
+}
+
+static int test_uint_uint64_max_canonical(void) {
+  /* 2^64 - 1: maximum unsigned 64-bit value. */
+  uint8_t bytes[] = { 0x1b, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+  return run_valid_match(bytes, sizeof(bytes), cbor_v_mk_uint64(0xffffffffffffffffULL));
+}
+
+/* ---------- Major type 0: non-canonical encodings ---------- */
+
+static int test_uint_24_two_byte_nondet(void) {
+  /* Value 24 forced into 2-byte form. Det rejects (canonical = 0x18 0x18). */
+  uint8_t bytes[] = { 0x19, 0x00, 0x18 };
+#if IS_DETERMINISTIC
+  return run_invalid(bytes, sizeof(bytes));
+#else
+  return run_valid_no_match(bytes, sizeof(bytes), cbor_v_mk_uint64(24));
+#endif
+}
+
+static int test_uint_24_four_byte_nondet(void) {
+  uint8_t bytes[] = { 0x1a, 0x00, 0x00, 0x00, 0x18 };
+#if IS_DETERMINISTIC
+  return run_invalid(bytes, sizeof(bytes));
+#else
+  return run_valid_no_match(bytes, sizeof(bytes), cbor_v_mk_uint64(24));
+#endif
+}
+
+static int test_uint_24_eight_byte_nondet(void) {
+  uint8_t bytes[] = { 0x1b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18 };
+#if IS_DETERMINISTIC
+  return run_invalid(bytes, sizeof(bytes));
+#else
+  return run_valid_no_match(bytes, sizeof(bytes), cbor_v_mk_uint64(24));
+#endif
+}
+
+static int test_uint_uint8_max_two_byte_nondet(void) {
+  /* 0xff in 2-byte form: leading-zero argument that fits in 1 byte. */
+  uint8_t bytes[] = { 0x19, 0x00, 0xff };
+#if IS_DETERMINISTIC
+  return run_invalid(bytes, sizeof(bytes));
+#else
+  return run_valid_no_match(bytes, sizeof(bytes), cbor_v_mk_uint64(0xff));
+#endif
+}
+
+static int test_uint_uint16_max_four_byte_nondet(void) {
+  /* 0xffff in 4-byte form. */
+  uint8_t bytes[] = { 0x1a, 0x00, 0x00, 0xff, 0xff };
+#if IS_DETERMINISTIC
+  return run_invalid(bytes, sizeof(bytes));
+#else
+  return run_valid_no_match(bytes, sizeof(bytes), cbor_v_mk_uint64(0xffff));
+#endif
+}
+
+/* ---------- Major type 1: negative integer boundaries ---------- */
+
+static int test_neg_minus_256_canonical(void) {
+  /* -256 = -1 - 0xff: last value in 1-byte arg form. */
+  uint8_t bytes[] = { 0x38, 0xff };
+  return run_valid_match(bytes, sizeof(bytes), cbor_v_mk_neg_int64(0xff));
+}
+
+static int test_neg_minus_257_canonical(void) {
+  /* -257 = -1 - 0x100: first value requiring 2-byte arg. */
+  uint8_t bytes[] = { 0x39, 0x01, 0x00 };
+  return run_valid_match(bytes, sizeof(bytes), cbor_v_mk_neg_int64(0x100));
+}
+
+static int test_neg_minus_65536_canonical(void) {
+  /* -65536: last in 2-byte arg form. */
+  uint8_t bytes[] = { 0x39, 0xff, 0xff };
+  return run_valid_match(bytes, sizeof(bytes), cbor_v_mk_neg_int64(0xffff));
+}
+
+static int test_neg_minus_65537_canonical(void) {
+  /* -65537: first in 4-byte arg form. */
+  uint8_t bytes[] = { 0x3a, 0x00, 0x01, 0x00, 0x00 };
+  return run_valid_match(bytes, sizeof(bytes), cbor_v_mk_neg_int64(0x10000));
+}
+
+static int test_neg_minus_2pow32_canonical(void) {
+  /* -2^32 = -1 - 0xffffffff: last in 4-byte arg form. */
+  uint8_t bytes[] = { 0x3a, 0xff, 0xff, 0xff, 0xff };
+  return run_valid_match(bytes, sizeof(bytes), cbor_v_mk_neg_int64(0xffffffffULL));
+}
+
+static int test_neg_minus_2pow32_minus_one_canonical(void) {
+  /* -2^32 - 1: first in 8-byte arg form. */
+  uint8_t bytes[] = { 0x3b, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00 };
+  return run_valid_match(bytes, sizeof(bytes), cbor_v_mk_neg_int64(0x100000000ULL));
+}
+
+static int test_neg_min_canonical(void) {
+  /* -2^64 = -1 - (2^64 - 1): the smallest representable value. */
+  uint8_t bytes[] = { 0x3b, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+  return run_valid_match(bytes, sizeof(bytes),
+                         cbor_v_mk_neg_int64(0xffffffffffffffffULL));
+}
+
+static int test_neg_minus_one_two_byte_nondet(void) {
+  /* -1 in 2-byte form. */
+  uint8_t bytes[] = { 0x39, 0x00, 0x00 };
+#if IS_DETERMINISTIC
+  return run_invalid(bytes, sizeof(bytes));
+#else
+  return run_valid_no_match(bytes, sizeof(bytes), cbor_v_mk_neg_int64(0));
+#endif
+}
+
+/* ---------- Major type 2: byte-string length boundaries ---------- */
+
+/* Small static buffers used for the length-boundary tests below. */
+static uint8_t g_buf256[256];
+static uint8_t g_input_buf[512];
+static int g_buf256_initialized = 0;
+
+static void init_buf256(void) {
+  if (!g_buf256_initialized) {
+    for (int i = 0; i < 256; i++) g_buf256[i] = (uint8_t)i;
+    g_buf256_initialized = 1;
+  }
+}
+
+static int test_bstr_23_canonical(void) {
+  /* Length 23: last in short additional-info form (header 0x57). */
+  init_buf256();
+  g_input_buf[0] = 0x57;
+  memcpy(g_input_buf + 1, g_buf256, 23);
+  cbor_t expected;
+  if (!cbor_v_mk_byte_string(g_buf256, 23, &expected)) TFAIL("mk bstr 23");
+  return run_valid_match(g_input_buf, 24, expected);
+}
+
+static int test_bstr_24_canonical(void) {
+  /* Length 24: first requiring 1-byte argument (header 0x58 0x18). */
+  init_buf256();
+  g_input_buf[0] = 0x58;
+  g_input_buf[1] = 0x18;
+  memcpy(g_input_buf + 2, g_buf256, 24);
+  cbor_t expected;
+  if (!cbor_v_mk_byte_string(g_buf256, 24, &expected)) TFAIL("mk bstr 24");
+  return run_valid_match(g_input_buf, 26, expected);
+}
+
+static int test_bstr_255_canonical(void) {
+  /* Length 255: last in 1-byte arg form (header 0x58 0xff). */
+  init_buf256();
+  g_input_buf[0] = 0x58;
+  g_input_buf[1] = 0xff;
+  memcpy(g_input_buf + 2, g_buf256, 255);
+  cbor_t expected;
+  if (!cbor_v_mk_byte_string(g_buf256, 255, &expected)) TFAIL("mk bstr 255");
+  return run_valid_match(g_input_buf, 257, expected);
+}
+
+static int test_bstr_256_canonical(void) {
+  /* Length 256: first requiring 2-byte arg form (header 0x59 0x01 0x00). */
+  init_buf256();
+  g_input_buf[0] = 0x59;
+  g_input_buf[1] = 0x01;
+  g_input_buf[2] = 0x00;
+  memcpy(g_input_buf + 3, g_buf256, 256);
+  cbor_t expected;
+  if (!cbor_v_mk_byte_string(g_buf256, 256, &expected)) TFAIL("mk bstr 256");
+  return run_valid_match(g_input_buf, 259, expected);
+}
+
+static int test_bstr_short_two_byte_nondet(void) {
+  /* 4-byte bstr with length encoded in 2 bytes. Det rejects. */
+  uint8_t bytes[] = { 0x59, 0x00, 0x04, 0xde, 0xad, 0xbe, 0xef };
+#if IS_DETERMINISTIC
+  return run_invalid(bytes, sizeof(bytes));
+#else
+  static uint8_t payload[] = { 0xde, 0xad, 0xbe, 0xef };
+  cbor_t expected;
+  if (!cbor_v_mk_byte_string(payload, 4, &expected)) TFAIL("mk bstr");
+  return run_valid_no_match(bytes, sizeof(bytes), expected);
+#endif
+}
+
+static int test_bstr_short_eight_byte_nondet(void) {
+  /* 4-byte bstr with length encoded in 8 bytes. */
+  uint8_t bytes[] = { 0x5b, 0,0,0,0,0,0,0,4, 0xde, 0xad, 0xbe, 0xef };
+#if IS_DETERMINISTIC
+  return run_invalid(bytes, sizeof(bytes));
+#else
+  static uint8_t payload[] = { 0xde, 0xad, 0xbe, 0xef };
+  cbor_t expected;
+  if (!cbor_v_mk_byte_string(payload, 4, &expected)) TFAIL("mk bstr");
+  return run_valid_no_match(bytes, sizeof(bytes), expected);
+#endif
+}
+
+static int test_bstr_oversized_invalid(void) {
+  /* Header claims 0xffff bytes follow but only 2 do. Validate must reject. */
+  uint8_t bytes[] = { 0x59, 0xff, 0xff, 0x00, 0x01 };
+  return run_invalid(bytes, sizeof(bytes));
+}
+
+/* ---------- Major type 3: text-string length boundaries ----------
+ * Use 'a' (0x61) bytes throughout so the contents are valid UTF-8. */
+
+static uint8_t g_atext[256];
+static int     g_atext_init = 0;
+static void init_atext(void) {
+  if (!g_atext_init) { memset(g_atext, 'a', sizeof(g_atext)); g_atext_init = 1; }
+}
+
+static int test_tstr_23_canonical(void) {
+  init_atext();
+  g_input_buf[0] = 0x77;
+  memcpy(g_input_buf + 1, g_atext, 23);
+  cbor_t expected;
+  if (!cbor_v_mk_text_string(g_atext, 23, &expected)) TFAIL("mk tstr 23");
+  return run_valid_match(g_input_buf, 24, expected);
+}
+
+static int test_tstr_24_canonical(void) {
+  init_atext();
+  g_input_buf[0] = 0x78;
+  g_input_buf[1] = 0x18;
+  memcpy(g_input_buf + 2, g_atext, 24);
+  cbor_t expected;
+  if (!cbor_v_mk_text_string(g_atext, 24, &expected)) TFAIL("mk tstr 24");
+  return run_valid_match(g_input_buf, 26, expected);
+}
+
+static int test_tstr_255_canonical(void) {
+  init_atext();
+  g_input_buf[0] = 0x78;
+  g_input_buf[1] = 0xff;
+  memcpy(g_input_buf + 2, g_atext, 255);
+  cbor_t expected;
+  if (!cbor_v_mk_text_string(g_atext, 255, &expected)) TFAIL("mk tstr 255");
+  return run_valid_match(g_input_buf, 257, expected);
+}
+
+static int test_tstr_256_canonical(void) {
+  init_atext();
+  g_input_buf[0] = 0x79;
+  g_input_buf[1] = 0x01;
+  g_input_buf[2] = 0x00;
+  memcpy(g_input_buf + 3, g_atext, 256);
+  cbor_t expected;
+  if (!cbor_v_mk_text_string(g_atext, 256, &expected)) TFAIL("mk tstr 256");
+  return run_valid_match(g_input_buf, 259, expected);
+}
+
+static int test_tstr_a_eight_byte_nondet(void) {
+  /* 1-char tstr in 8-byte length form. */
+  uint8_t bytes[] = { 0x7b, 0,0,0,0,0,0,0,1, 'a' };
+#if IS_DETERMINISTIC
+  return run_invalid(bytes, sizeof(bytes));
+#else
+  static uint8_t payload[] = { 'a' };
+  cbor_t expected;
+  if (!cbor_v_mk_text_string(payload, 1, &expected)) TFAIL("mk tstr");
+  return run_valid_no_match(bytes, sizeof(bytes), expected);
+#endif
+}
+
+static int test_tstr_oversized_invalid(void) {
+  /* Header claims 0xffff bytes but only 2 follow. */
+  uint8_t bytes[] = { 0x79, 0xff, 0xff, 'a', 'b' };
+  return run_invalid(bytes, sizeof(bytes));
+}
+
+/* ---------- Major type 4: array length boundaries ---------- */
+
+static int test_arr_23_canonical(void) {
+  /* Length 23: last in short additional-info form (header 0x97). */
+  uint8_t bytes[24];
+  bytes[0] = 0x97;
+  for (int i = 0; i < 23; i++) bytes[i + 1] = (uint8_t)i; /* values 0..22 */
+  cbor_t items[23];
+  for (int i = 0; i < 23; i++) items[i] = cbor_v_mk_uint64((uint64_t)i);
+  cbor_t expected;
+  if (!cbor_v_mk_array(items, 23, &expected)) TFAIL("mk arr");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+static int test_arr_24_canonical(void) {
+  /* Length 24: first requiring 1-byte arg form (header 0x98 0x18). */
+  uint8_t bytes[26];
+  bytes[0] = 0x98;
+  bytes[1] = 0x18;
+  for (int i = 0; i < 23; i++) bytes[i + 2] = (uint8_t)i;
+  /* Item 23 is value 23 = 0x17 (still 1 byte). */
+  bytes[25] = 0x17;
+  cbor_t items[24];
+  for (int i = 0; i < 24; i++) items[i] = cbor_v_mk_uint64((uint64_t)i);
+  cbor_t expected;
+  if (!cbor_v_mk_array(items, 24, &expected)) TFAIL("mk arr");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+static int test_arr_three_one_byte_nondet(void) {
+  /* [1,2,3] but with array length encoded in 1-byte form. */
+  uint8_t bytes[] = { 0x98, 0x03, 0x01, 0x02, 0x03 };
+#if IS_DETERMINISTIC
+  return run_invalid(bytes, sizeof(bytes));
+#else
+  cbor_t items[3] = { cbor_v_mk_uint64(1), cbor_v_mk_uint64(2), cbor_v_mk_uint64(3) };
+  cbor_t expected;
+  if (!cbor_v_mk_array(items, 3, &expected)) TFAIL("mk arr");
+  return run_valid_no_match(bytes, sizeof(bytes), expected);
+#endif
+}
+
+static int test_arr_three_two_byte_nondet(void) {
+  uint8_t bytes[] = { 0x99, 0x00, 0x03, 0x01, 0x02, 0x03 };
+#if IS_DETERMINISTIC
+  return run_invalid(bytes, sizeof(bytes));
+#else
+  cbor_t items[3] = { cbor_v_mk_uint64(1), cbor_v_mk_uint64(2), cbor_v_mk_uint64(3) };
+  cbor_t expected;
+  if (!cbor_v_mk_array(items, 3, &expected)) TFAIL("mk arr");
+  return run_valid_no_match(bytes, sizeof(bytes), expected);
+#endif
+}
+
+static int test_arr_empty_eight_byte_nondet(void) {
+  uint8_t bytes[] = { 0x9b, 0,0,0,0,0,0,0,0 };
+#if IS_DETERMINISTIC
+  return run_invalid(bytes, sizeof(bytes));
+#else
+  cbor_t items[1] = { cbor_v_mk_uint64(0) };
+  cbor_t expected;
+  if (!cbor_v_mk_array(items, 0, &expected)) TFAIL("mk arr");
+  return run_valid_no_match(bytes, sizeof(bytes), expected);
+#endif
+}
+
+/* ---------- Major type 5: map ---------- */
+
+static int test_map_two_one_byte_nondet(void) {
+  /* {1: 1, 2: 2} with map length encoded in 1-byte form. */
+  uint8_t bytes[] = { 0xb8, 0x02, 0x01, 0x01, 0x02, 0x02 };
+#if IS_DETERMINISTIC
+  return run_invalid(bytes, sizeof(bytes));
+#else
+  cbor_entry_t entries[2] = {
+    cbor_v_mk_map_entry(cbor_v_mk_uint64(1), cbor_v_mk_uint64(1)),
+    cbor_v_mk_map_entry(cbor_v_mk_uint64(2), cbor_v_mk_uint64(2)),
+  };
+  cbor_t expected;
+  if (!cbor_v_mk_map(entries, 2, &expected)) TFAIL("mk map");
+  return run_valid_no_match(bytes, sizeof(bytes), expected);
+#endif
+}
+
+/* {1: 0, "a": 1} — mixed key types, canonical order: int < tstr by length. */
+static int test_map_mixed_key_types_canonical(void) {
+  uint8_t bytes[] = { 0xa2, 0x01, 0x00, 0x61, 'a', 0x01 };
+  static uint8_t a[] = { 'a' };
+  cbor_t k_a;
+  if (!cbor_v_mk_text_string(a, 1, &k_a)) TFAIL("mk tstr");
+  cbor_entry_t entries[2] = {
+    cbor_v_mk_map_entry(cbor_v_mk_uint64(1), cbor_v_mk_uint64(0)),
+    cbor_v_mk_map_entry(k_a, cbor_v_mk_uint64(1)),
+  };
+  cbor_t expected;
+  if (!cbor_v_mk_map(entries, 2, &expected)) TFAIL("mk map");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+/* ---------- Major type 6: tagged ---------- */
+
+/* Helper macro: tag+uint(0) round-trip. Tag values chosen to avoid
+   semantic decoders in cbor2 (no tag in {0..5, 21..24, 28..30, 32..37,
+   55799} is used). */
+#define MK_TAG_TEST(name, tag_val, header_bytes...)                          \
+  static int test_##name(void) {                                             \
+    uint8_t bytes[] = { header_bytes, 0x00 };                                \
+    cbor_t payload = cbor_v_mk_uint64(0);                                    \
+    cbor_t expected;                                                         \
+    if (!cbor_v_mk_tagged((uint64_t)(tag_val), &payload, &expected))         \
+      TFAIL("mk tagged");                                                    \
+    return run_valid_match(bytes, sizeof(bytes), expected);                  \
+  }
+
+MK_TAG_TEST(tag_short_canonical,            6,            0xc6)
+MK_TAG_TEST(tag_short_last_canonical,       19,           0xd3)
+MK_TAG_TEST(tag_one_byte_first_canonical,   99,           0xd8, 0x63)
+MK_TAG_TEST(tag_one_byte_last_canonical,    200,          0xd8, 0xc8)
+MK_TAG_TEST(tag_two_byte_first_canonical,   257,          0xd9, 0x01, 0x01)
+MK_TAG_TEST(tag_two_byte_last_canonical,    65535,        0xd9, 0xff, 0xff)
+MK_TAG_TEST(tag_four_byte_first_canonical,  65536ULL,     0xda, 0x00, 0x01, 0x00, 0x00)
+MK_TAG_TEST(tag_four_byte_last_canonical,   0xffffffffULL, 0xda, 0xff, 0xff, 0xff, 0xff)
+MK_TAG_TEST(tag_eight_byte_first_canonical, 0x100000000ULL, 0xdb, 0,0,0,1,0,0,0,0)
+MK_TAG_TEST(tag_max_canonical,              0xffffffffffffffffULL, 0xdb, 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff)
+
+/* Nested tagged: tag 1234 wrapping tag 5678 wrapping uint 1.
+ * 0xd9 0x04 0xd2 (tag 1234)
+ * 0xd9 0x16 0x2e (tag 5678)
+ * 0x01           (uint 1) */
+static int test_tag_nested_canonical(void) {
+  uint8_t bytes[] = { 0xd9, 0x04, 0xd2,  0xd9, 0x16, 0x2e,  0x01 };
+  cbor_t inner = cbor_v_mk_uint64(1);
+  cbor_t mid;
+  if (!cbor_v_mk_tagged(5678, &inner, &mid)) TFAIL("mk inner tag");
+  cbor_t expected;
+  if (!cbor_v_mk_tagged(1234, &mid, &expected)) TFAIL("mk outer tag");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+/* Tag 99 wrapping array [1, 2, 3]. (Tag 99 chosen to avoid cbor2's
+   auto-decoders for tags 0-37, 100, 1004, 55799.) */
+static int test_tag_array_payload_canonical(void) {
+  uint8_t bytes[] = { 0xd8, 0x63,  0x83, 0x01, 0x02, 0x03 };
+  cbor_t items[3] = { cbor_v_mk_uint64(1), cbor_v_mk_uint64(2), cbor_v_mk_uint64(3) };
+  cbor_t arr;
+  if (!cbor_v_mk_array(items, 3, &arr)) TFAIL("mk arr");
+  cbor_t expected;
+  if (!cbor_v_mk_tagged(99, &arr, &expected)) TFAIL("mk tag");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+/* Canonical tag wrapping non-canonical inner uint (24 in 2-byte form).
+   Det rejects (inner not canonical); nondet accepts. */
+static int test_tag_inner_nondet(void) {
+  uint8_t bytes[] = { 0xd9, 0x03, 0xe8,  0x19, 0x00, 0x18 };
+#if IS_DETERMINISTIC
+  return run_invalid(bytes, sizeof(bytes));
+#else
+  cbor_t inner = cbor_v_mk_uint64(24);
+  cbor_t expected;
+  if (!cbor_v_mk_tagged(1000, &inner, &expected)) TFAIL("mk tagged");
+  return run_valid_no_match(bytes, sizeof(bytes), expected);
+#endif
+}
+
+/* ---------- Major type 7: simple value boundaries ---------- */
+
+static int test_simple_zero_canonical(void) {
+  /* Simple value 0: smallest, short-form (0xe0). */
+  uint8_t bytes[] = { 0xe0 };
+  cbor_t expected;
+  if (!cbor_v_mk_simple_value(0, &expected)) TFAIL("mk simple 0");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+static int test_simple_19_canonical(void) {
+  /* Simple value 19: last short-form value before the assigned
+     special values 20 (false), 21 (true), 22 (null), 23 (undefined). */
+  uint8_t bytes[] = { 0xf3 };
+  cbor_t expected;
+  if (!cbor_v_mk_simple_value(19, &expected)) TFAIL("mk simple 19");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+static int test_simple_32_canonical(void) {
+  /* Simple value 32: smallest value requiring 1-byte arg form. */
+  uint8_t bytes[] = { 0xf8, 0x20 };
+  cbor_t expected;
+  if (!cbor_v_mk_simple_value(32, &expected)) TFAIL("mk simple 32");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+static int test_simple_99_canonical(void) {
+  uint8_t bytes[] = { 0xf8, 0x63 };
+  cbor_t expected;
+  if (!cbor_v_mk_simple_value(99, &expected)) TFAIL("mk simple 99");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+static int test_simple_254_canonical(void) {
+  uint8_t bytes[] = { 0xf8, 0xfe };
+  cbor_t expected;
+  if (!cbor_v_mk_simple_value(254, &expected)) TFAIL("mk simple 254");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+static int test_simple_255_canonical(void) {
+  /* Largest simple value. Distinct from the bare 0xff break-stop code
+     (which is invalid outside indefinite-length contexts). */
+  uint8_t bytes[] = { 0xf8, 0xff };
+  cbor_t expected;
+  if (!cbor_v_mk_simple_value(255, &expected)) TFAIL("mk simple 255");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+/* Simple-value 1-byte forms with arguments < 32 are forbidden (RFC 8949
+   §3.3): they would alias the short-form encodings 0xe0..0xf7 (or in the
+   case of 24-31 conflict with the float headers/break stop). */
+static int test_simple_25_invalid(void) {
+  uint8_t bytes[] = { 0xf8, 0x19 };
+  return run_invalid(bytes, sizeof(bytes));
+}
+static int test_simple_26_invalid(void) {
+  uint8_t bytes[] = { 0xf8, 0x1a };
+  return run_invalid(bytes, sizeof(bytes));
+}
+static int test_simple_27_invalid(void) {
+  uint8_t bytes[] = { 0xf8, 0x1b };
+  return run_invalid(bytes, sizeof(bytes));
+}
+static int test_simple_28_invalid(void) {
+  uint8_t bytes[] = { 0xf8, 0x1c };
+  return run_invalid(bytes, sizeof(bytes));
+}
+static int test_simple_29_invalid(void) {
+  uint8_t bytes[] = { 0xf8, 0x1d };
+  return run_invalid(bytes, sizeof(bytes));
+}
+static int test_simple_30_invalid(void) {
+  uint8_t bytes[] = { 0xf8, 0x1e };
+  return run_invalid(bytes, sizeof(bytes));
+}
+static int test_simple_31_invalid(void) {
+  uint8_t bytes[] = { 0xf8, 0x1f };
+  return run_invalid(bytes, sizeof(bytes));
+}
+
+/* ---------- Cross-cutting / structural ---------- */
+
+static int test_empty_buffer_invalid(void) {
+  /* Validate must reject an empty buffer. */
+  uint8_t dummy[1] = { 0x00 };
+  return run_invalid(dummy, 0);
+}
+
+static int test_trunc_19_invalid(void) {
+  /* 0x19 expects a 2-byte argument. Only 1 byte present. */
+  uint8_t bytes[] = { 0x19, 0x00 };
+  return run_invalid(bytes, sizeof(bytes));
+}
+
+static int test_trunc_1a_invalid(void) {
+  /* 0x1a expects a 4-byte argument. Only 3 bytes present. */
+  uint8_t bytes[] = { 0x1a, 0x00, 0x00, 0x00 };
+  return run_invalid(bytes, sizeof(bytes));
+}
+
+static int test_trunc_1b_invalid(void) {
+  /* 0x1b expects an 8-byte argument. Only 7 bytes present. */
+  uint8_t bytes[] = { 0x1b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+  return run_invalid(bytes, sizeof(bytes));
+}
+
+/* Trailing-byte test: well-formed uint(0) followed by an extra 0xff.
+   Validate must succeed (returning the prefix length 1) but the extra
+   byte must NOT be consumed. */
+static int test_trailing_bytes_canonical(void) {
+  uint8_t bytes[] = { 0x00, 0xff };
+  cbor_t expected = cbor_v_mk_uint64(0);
+  return run_valid_trailing(bytes, sizeof(bytes), 1, expected);
+}
+
+static int test_break_stop_alone_invalid(void) {
+  /* Bare 0xff (break stop code) outside an indefinite-length context. */
+  uint8_t bytes[] = { 0xff };
+  return run_invalid(bytes, sizeof(bytes));
+}
+
+/* All indefinite-length encodings are unsupported by EverCBOR. */
+static int test_indef_bstr_invalid(void) {
+  /* Indefinite bstr containing one 0-length bstr chunk. */
+  uint8_t bytes[] = { 0x5f, 0x40, 0xff };
+  return run_invalid(bytes, sizeof(bytes));
+}
+static int test_indef_tstr_invalid(void) {
+  uint8_t bytes[] = { 0x7f, 0x60, 0xff };
+  return run_invalid(bytes, sizeof(bytes));
+}
+static int test_indef_arr_zero_invalid(void) {
+  /* Empty indefinite array. */
+  uint8_t bytes[] = { 0x9f, 0xff };
+  return run_invalid(bytes, sizeof(bytes));
+}
+static int test_indef_arr_multi_invalid(void) {
+  /* Multi-element indefinite array. */
+  uint8_t bytes[] = { 0x9f, 0x01, 0x02, 0x03, 0xff };
+  return run_invalid(bytes, sizeof(bytes));
+}
+static int test_indef_map_invalid(void) {
+  /* Indefinite-length map. */
+  uint8_t bytes[] = { 0xbf, 0x01, 0x02, 0xff };
+  return run_invalid(bytes, sizeof(bytes));
+}
+
+/* Reserved additional-info values 0x1c, 0x1d, 0x1e are forbidden in
+   every major type that uses an integer argument (0, 1, 4, 5, 6) and
+   in major type 7. */
+static int test_reserved_uint_1c_invalid(void) {
+  uint8_t bytes[] = { 0x1c };  /* major 0, info 28 */
+  return run_invalid(bytes, sizeof(bytes));
+}
+static int test_reserved_uint_1d_invalid(void) {
+  uint8_t bytes[] = { 0x1d };
+  return run_invalid(bytes, sizeof(bytes));
+}
+static int test_reserved_uint_1e_invalid(void) {
+  uint8_t bytes[] = { 0x1e };
+  return run_invalid(bytes, sizeof(bytes));
+}
+static int test_reserved_negint_3c_invalid(void) {
+  uint8_t bytes[] = { 0x3c };
+  return run_invalid(bytes, sizeof(bytes));
+}
+static int test_reserved_arr_9c_invalid(void) {
+  uint8_t bytes[] = { 0x9c };
+  return run_invalid(bytes, sizeof(bytes));
+}
+static int test_reserved_map_bc_invalid(void) {
+  uint8_t bytes[] = { 0xbc };
+  return run_invalid(bytes, sizeof(bytes));
+}
+static int test_reserved_tag_dc_invalid(void) {
+  uint8_t bytes[] = { 0xdc };
+  return run_invalid(bytes, sizeof(bytes));
+}
+
+/* ============================================================
  *   Test registry & driver
  * ============================================================ */
 
@@ -1893,6 +2577,101 @@ static const test_entry_t TESTS[] = {
   { "arr_int_boundaries_canonical", test_arr_int_boundaries_canonical },
   { "arr_empties_canonical",        test_arr_empties_canonical },
   { "map_qcbor_complex_nondet",     test_map_qcbor_complex_nondet },
+
+  /* ---------- New tests for branch coverage ---------- */
+  /* Major type 0: integer boundaries */
+  { "uint_uint8_max_canonical",            test_uint_uint8_max_canonical },
+  { "uint_256_canonical",                  test_uint_256_canonical },
+  { "uint_uint16_max_canonical",           test_uint_uint16_max_canonical },
+  { "uint_65536_canonical",                test_uint_65536_canonical },
+  { "uint_uint32_max_canonical",           test_uint_uint32_max_canonical },
+  { "uint_uint64_max_minus_one_canonical", test_uint_uint64_max_minus_one_canonical },
+  { "uint_uint64_max_canonical",           test_uint_uint64_max_canonical },
+  { "uint_24_two_byte_nondet",             test_uint_24_two_byte_nondet },
+  { "uint_24_four_byte_nondet",            test_uint_24_four_byte_nondet },
+  { "uint_24_eight_byte_nondet",           test_uint_24_eight_byte_nondet },
+  { "uint_uint8_max_two_byte_nondet",      test_uint_uint8_max_two_byte_nondet },
+  { "uint_uint16_max_four_byte_nondet",    test_uint_uint16_max_four_byte_nondet },
+  /* Major type 1: negint boundaries */
+  { "neg_minus_256_canonical",             test_neg_minus_256_canonical },
+  { "neg_minus_257_canonical",             test_neg_minus_257_canonical },
+  { "neg_minus_65536_canonical",           test_neg_minus_65536_canonical },
+  { "neg_minus_65537_canonical",           test_neg_minus_65537_canonical },
+  { "neg_minus_2pow32_canonical",          test_neg_minus_2pow32_canonical },
+  { "neg_minus_2pow32_minus_one_canonical",test_neg_minus_2pow32_minus_one_canonical },
+  { "neg_min_canonical",                   test_neg_min_canonical },
+  { "neg_minus_one_two_byte_nondet",       test_neg_minus_one_two_byte_nondet },
+  /* Major type 2 */
+  { "bstr_23_canonical",                   test_bstr_23_canonical },
+  { "bstr_24_canonical",                   test_bstr_24_canonical },
+  { "bstr_255_canonical",                  test_bstr_255_canonical },
+  { "bstr_256_canonical",                  test_bstr_256_canonical },
+  { "bstr_short_two_byte_nondet",          test_bstr_short_two_byte_nondet },
+  { "bstr_short_eight_byte_nondet",        test_bstr_short_eight_byte_nondet },
+  { "bstr_oversized_invalid",              test_bstr_oversized_invalid },
+  /* Major type 3 */
+  { "tstr_23_canonical",                   test_tstr_23_canonical },
+  { "tstr_24_canonical",                   test_tstr_24_canonical },
+  { "tstr_255_canonical",                  test_tstr_255_canonical },
+  { "tstr_256_canonical",                  test_tstr_256_canonical },
+  { "tstr_a_eight_byte_nondet",            test_tstr_a_eight_byte_nondet },
+  { "tstr_oversized_invalid",              test_tstr_oversized_invalid },
+  /* Major type 4 */
+  { "arr_23_canonical",                    test_arr_23_canonical },
+  { "arr_24_canonical",                    test_arr_24_canonical },
+  { "arr_three_one_byte_nondet",           test_arr_three_one_byte_nondet },
+  { "arr_three_two_byte_nondet",           test_arr_three_two_byte_nondet },
+  { "arr_empty_eight_byte_nondet",         test_arr_empty_eight_byte_nondet },
+  /* Major type 5 */
+  { "map_two_one_byte_nondet",             test_map_two_one_byte_nondet },
+  { "map_mixed_key_types_canonical",       test_map_mixed_key_types_canonical },
+  /* Major type 6 */
+  { "tag_short_canonical",                 test_tag_short_canonical },
+  { "tag_short_last_canonical",            test_tag_short_last_canonical },
+  { "tag_one_byte_first_canonical",        test_tag_one_byte_first_canonical },
+  { "tag_one_byte_last_canonical",         test_tag_one_byte_last_canonical },
+  { "tag_two_byte_first_canonical",        test_tag_two_byte_first_canonical },
+  { "tag_two_byte_last_canonical",         test_tag_two_byte_last_canonical },
+  { "tag_four_byte_first_canonical",       test_tag_four_byte_first_canonical },
+  { "tag_four_byte_last_canonical",        test_tag_four_byte_last_canonical },
+  { "tag_eight_byte_first_canonical",      test_tag_eight_byte_first_canonical },
+  { "tag_max_canonical",                   test_tag_max_canonical },
+  { "tag_nested_canonical",                test_tag_nested_canonical },
+  { "tag_array_payload_canonical",         test_tag_array_payload_canonical },
+  { "tag_inner_nondet",                    test_tag_inner_nondet },
+  /* Major type 7: simple values */
+  { "simple_zero_canonical",               test_simple_zero_canonical },
+  { "simple_19_canonical",                 test_simple_19_canonical },
+  { "simple_32_canonical",                 test_simple_32_canonical },
+  { "simple_99_canonical",                 test_simple_99_canonical },
+  { "simple_254_canonical",                test_simple_254_canonical },
+  { "simple_255_canonical",                test_simple_255_canonical },
+  { "simple_25_invalid",                   test_simple_25_invalid },
+  { "simple_26_invalid",                   test_simple_26_invalid },
+  { "simple_27_invalid",                   test_simple_27_invalid },
+  { "simple_28_invalid",                   test_simple_28_invalid },
+  { "simple_29_invalid",                   test_simple_29_invalid },
+  { "simple_30_invalid",                   test_simple_30_invalid },
+  { "simple_31_invalid",                   test_simple_31_invalid },
+  /* Cross-cutting / structural */
+  { "empty_buffer_invalid",                test_empty_buffer_invalid },
+  { "trunc_19_invalid",                    test_trunc_19_invalid },
+  { "trunc_1a_invalid",                    test_trunc_1a_invalid },
+  { "trunc_1b_invalid",                    test_trunc_1b_invalid },
+  { "trailing_bytes_canonical",            test_trailing_bytes_canonical },
+  { "break_stop_alone_invalid",            test_break_stop_alone_invalid },
+  { "indef_bstr_invalid",                  test_indef_bstr_invalid },
+  { "indef_tstr_invalid",                  test_indef_tstr_invalid },
+  { "indef_arr_zero_invalid",              test_indef_arr_zero_invalid },
+  { "indef_arr_multi_invalid",             test_indef_arr_multi_invalid },
+  { "indef_map_invalid",                   test_indef_map_invalid },
+  { "reserved_uint_1c_invalid",            test_reserved_uint_1c_invalid },
+  { "reserved_uint_1d_invalid",            test_reserved_uint_1d_invalid },
+  { "reserved_uint_1e_invalid",            test_reserved_uint_1e_invalid },
+  { "reserved_negint_3c_invalid",          test_reserved_negint_3c_invalid },
+  { "reserved_arr_9c_invalid",             test_reserved_arr_9c_invalid },
+  { "reserved_map_bc_invalid",             test_reserved_map_bc_invalid },
+  { "reserved_tag_dc_invalid",             test_reserved_tag_dc_invalid },
 };
 
 #define N_TESTS ((int)(sizeof(TESTS) / sizeof(TESTS[0])))
