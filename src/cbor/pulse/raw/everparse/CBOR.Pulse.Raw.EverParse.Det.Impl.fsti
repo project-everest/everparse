@@ -81,6 +81,8 @@ val cbor_det_array_iterator_start (_: unit) : array_iterator_start_t cbor_det_ma
 
 val cbor_det_validate (_: unit) : cbor_det_validate_t
 
+val cbor_det_parse_valid (_: unit) : cbor_det_parse_valid_t cbor_det_match
+
 (*
    ======== TODO (deferred to a follow-up session) ========
 

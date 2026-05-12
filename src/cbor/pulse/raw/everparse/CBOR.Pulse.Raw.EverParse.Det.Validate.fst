@@ -548,3 +548,78 @@ fn cbor_validate_det
 }
 
 #pop-options
+
+(* ============================================================
+   cbor_parse_valid: given input that is exactly the serialization
+   of some det cbor, build a cbor_raw at perm 1.0R + trade back.
+   Uses cbor_raw_read from CBOR.Pulse.Raw.EverParse.Read.
+   ============================================================ *)
+
+module Read = CBOR.Pulse.Raw.EverParse.Read
+module RawMatch = CBOR.Pulse.Raw.EverParse.Match
+module PPB = LowParse.PulseParse.Base
+
+let cbor_parse_valid_lemma
+  (v: Seq.seq FStar.UInt8.t)
+: Lemma
+  (requires
+    exists v1 . v == serialize_cbor v1 /\ Seq.length v == Seq.length (serialize_cbor v1))
+  (ensures (
+    match parse parse_raw_data_item v with
+    | None -> False
+    | Some (v', consumed) -> consumed == Seq.length v /\ v == serialize_cbor v'
+  ))
+= match parse parse_raw_data_item v with
+  | None ->
+    parse_fail_no_serialize v;
+    Seq.append_empty_r v;
+    assert (~ (exists v1 v2 . v == serialize_cbor v1 `Seq.append` v2))
+  | Some (v', consumed) ->
+    parsed_data_is_serialize #parse_raw_data_item_kind #raw_data_item #parse_raw_data_item serialize_raw_data_item v;
+    let prf
+      (v1: raw_data_item)
+    : Lemma
+      (requires (v == serialize_cbor v1))
+      (ensures (v1 == v'))
+    = parsed_data_is_serialize #parse_raw_data_item_kind #raw_data_item #parse_raw_data_item serialize_raw_data_item v;
+      Seq.append_empty_r (serialize_cbor v1);
+      Seq.append_empty_r (serialize_cbor v');
+      serialize_strong_prefix serialize_raw_data_item v1 v' Seq.empty Seq.empty
+    in
+    Classical.forall_intro (Classical.move_requires prf)
+
+#push-options "--z3rlimit 32"
+
+fn cbor_parse_valid
+  (input: slice FStar.UInt8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq FStar.UInt8.t))
+  requires pts_to input #pm v ** pure (
+      exists v1 . Ghost.reveal v == serialize_cbor v1 /\ SZ.v (Pulse.Lib.Slice.len input) == Seq.length (serialize_cbor v1)
+    )
+  returns res: RawMatch.cbor_raw
+  ensures
+    (exists* v' .
+      RawMatch.cbor_raw_match 1.0R res v' **
+      Trade.trade (RawMatch.cbor_raw_match 1.0R res v') (pts_to input #pm v) ** pure (
+        Ghost.reveal v == serialize_cbor v'
+    ))
+{
+  let f64 : squash SZ.fits_u64 = assume SZ.fits_u64;
+  Pulse.Lib.Slice.pts_to_len input;
+  cbor_parse_valid_lemma v;
+  // Use peek_trade_gen with offset 0 and length = full input length
+  let len = Pulse.Lib.Slice.len input;
+  let input1 = peek_trade_gen serialize_raw_data_item input 0sz len;
+  with v' . assert (pts_to_serialized serialize_raw_data_item input1 #pm v');
+  // Convert pts_to_serialized to pts_to_parsed
+  PPB.pts_to_serialized_parsed input1;
+  Trade.trans _ _ (pts_to input #pm v);
+  // Apply cbor_raw_read via zero_copy_parse_of_strong_prefix
+  let zcp = PPB.zero_copy_parse_of_strong_prefix (Read.cbor_raw_read 1.0R f64) ();
+  let res = zcp input1 #pm #v';
+  Trade.trans _ _ (pts_to input #pm v);
+  res
+}
+
+#pop-options

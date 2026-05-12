@@ -982,3 +982,34 @@ fn cbor_det_validate (_: unit) : cbor_det_validate_t
   cbor_det_validate_post_intro v res;
   res
 }
+
+(* ======== cbor_det_parse_valid (item 2) ======== *)
+
+let cbor_det_parse_aux_local
+  (v: Seq.seq U8.t)
+  (len: nat)
+  (v1': SpecRawBase.raw_data_item {
+    len <= Seq.length v /\
+    Seq.slice v 0 len == SpecF.serialize_cbor v1'
+  })
+  (v1: Spec.cbor)
+  (v2: Seq.seq U8.t)
+: Lemma
+  (v == Spec.cbor_det_serialize v1 `Seq.append` v2 ==> v1' == SpecRaw.mk_det_raw_cbor v1)
+= Seq.lemma_split v len;
+  Classical.move_requires (SpecF.serialize_cbor_inj (SpecRaw.mk_det_raw_cbor v1) v1' v2) (Seq.slice v len (Seq.length v))
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_parse_valid (_: unit) : cbor_det_parse_valid_t u#0 #_ cbor_det_match
+= (input: _) (#pm: _) (#v: _)
+{
+  let len = Pulse.Lib.Slice.len input;
+  Pulse.Lib.Slice.pts_to_len input;
+  Classical.forall_intro cbor_det_parse_aux1;
+  let res = DetValidate.cbor_parse_valid input;
+  with v1' . assert (RawMatch.cbor_raw_match 1.0R res v1');
+  Classical.forall_intro_2 (cbor_det_parse_aux_local v (SZ.v len) v1');
+  rewrite each v1' as (SpecRaw.mk_det_raw_cbor (SpecRaw.mk_cbor v1'));
+  fold (cbor_det_match 1.0R res (SpecRaw.mk_cbor v1'));
+  res
+}

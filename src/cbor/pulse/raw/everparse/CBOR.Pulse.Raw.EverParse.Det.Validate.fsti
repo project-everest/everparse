@@ -26,3 +26,21 @@ val cbor_validate_det
 : stt SZ.t
   (requires pts_to input #pm v)
   (ensures fun res -> pts_to input #pm v ** pure (cbor_validate_det_post v res))
+
+module RawMatch = CBOR.Pulse.Raw.EverParse.Match
+module Trade = Pulse.Lib.Trade.Util
+
+val cbor_parse_valid
+  (input: slice FStar.UInt8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq FStar.UInt8.t))
+: stt RawMatch.cbor_raw
+  (requires pts_to input #pm v ** pure (
+      exists v1 . Ghost.reveal v == serialize_cbor v1 /\ SZ.v (Pulse.Lib.Slice.len input) == Seq.length (serialize_cbor v1)
+    ))
+  (ensures fun res ->
+    (exists* v' .
+      RawMatch.cbor_raw_match 1.0R res v' **
+      Trade.trade (RawMatch.cbor_raw_match 1.0R res v') (pts_to input #pm v) ** pure (
+        Ghost.reveal v == serialize_cbor v'
+    )))
