@@ -15,6 +15,9 @@
 #include <inttypes.h>
 #include <assert.h>
 #include <time.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #if defined(EVERCBOR_DET) && defined(EVERCBOR_NONDET)
 #  error "Define exactly one of EVERCBOR_DET or EVERCBOR_NONDET"
@@ -258,12 +261,73 @@ static bool cbor_v_get_tagged(cbor_t c, cbor_t *payload, uint64_t *tag) {
     return 1;                                                                \
   } while (0)
 
+/* ---------- File-writing infrastructure ----------
+ *
+ * Each test writes its input bytes to <out_dir>/<api>_<name>.input.cbor.
+ * Each valid test also writes the bytes it serialized through the API to
+ *   <out_dir>/<api>_<name>.serialized.cbor
+ *
+ * Writes happen only on the FIRST call to each test (the "warmup" pass);
+ * subsequent timed iterations skip them. This keeps the timing loop free
+ * of disk I/O while still emitting one copy of each artefact.
+ */
+
+static const char *g_out_dir       = "out";
+static const char *g_current_test  = "(unset)";
+static int         g_write_files   = 0;
+
+static int ensure_out_dir(void) {
+  if (mkdir(g_out_dir, 0755) != 0 && errno != EEXIST) {
+    fprintf(stderr, "FATAL: cannot create output dir '%s': %s\n",
+            g_out_dir, strerror(errno));
+    return 1;
+  }
+  return 0;
+}
+
+static int write_artefact(const char *suffix, uint8_t *bytes, size_t len) {
+  char path[1024];
+  int n = snprintf(path, sizeof(path), "%s/%s_%s.%s.cbor",
+                   g_out_dir, API_NAME, g_current_test, suffix);
+  if (n < 0 || (size_t)n >= sizeof(path)) {
+    fprintf(stderr, "FATAL: artefact path too long for test '%s'\n",
+            g_current_test);
+    return 1;
+  }
+  FILE *f = fopen(path, "wb");
+  if (!f) {
+    fprintf(stderr, "FATAL: cannot open '%s' for write: %s\n",
+            path, strerror(errno));
+    return 1;
+  }
+  size_t w = fwrite(bytes, 1, len, f);
+  fclose(f);
+  if (w != len) {
+    fprintf(stderr, "FATAL: short write to '%s' (%zu/%zu)\n", path, w, len);
+    return 1;
+  }
+  return 0;
+}
+
+static int maybe_write_input(uint8_t *bytes, size_t len) {
+  if (!g_write_files) return 0;
+  return write_artefact("input", bytes, len);
+}
+
+static int maybe_write_serialized(uint8_t *bytes, size_t len) {
+  if (!g_write_files) return 0;
+  return write_artefact("serialized", bytes, len);
+}
+
 /* For valid encodings: validate, parse, compare with `expected`,
  * serialize `expected`, validate+parse the output, compare again.
  * If `match_bytes`, also assert the serialized output equals `bytes`.
  */
 static int do_run_valid(uint8_t *bytes, size_t len, cbor_t expected,
                         bool match_bytes) {
+  /* Persist input bytes to disk for cross-language test consumers. */
+  if (maybe_write_input(bytes, len)) return 1;
+
   /* (b) Validate. */
   size_t vsize = cbor_v_validate(bytes, len);
   if (vsize == 0) TFAIL("validation rejected a valid encoding");
@@ -280,6 +344,7 @@ static int do_run_valid(uint8_t *bytes, size_t len, cbor_t expected,
   static uint8_t out[SER_BUF_SIZE];
   size_t outlen = cbor_v_serialize(expected, out, SER_BUF_SIZE);
   if (outlen == 0) TFAIL("serialization failed");
+  if (maybe_write_serialized(out, outlen)) return 1;
 
   /* (f) Round-trip: validate and parse the serialized output. */
   size_t vsize2 = cbor_v_validate(out, outlen);
@@ -313,6 +378,7 @@ static int run_valid_match(uint8_t *bytes, size_t len, cbor_t expected) {
 
 /* For invalid encodings (validation must reject). */
 static int run_invalid(uint8_t *bytes, size_t len) {
+  if (maybe_write_input(bytes, len)) return 1;
   size_t vsize = cbor_v_validate(bytes, len);
   if (vsize != 0)
     TFAIL("validation accepted an invalid encoding (vsize=%zu)", vsize);
@@ -875,30 +941,37 @@ static int test_map_dup_key_diff_encoding_invalid(void) {
 
 /* ---------- Major type 6: tagged ---------- */
 
+/* Tag value 1000 (= 0x3e8) is intentionally chosen because it has no
+   semantic decoder in the popular CBOR libraries (e.g. Python cbor2),
+   so the value round-trips as a generic tagged item rather than being
+   automatically converted to e.g. a datetime. Canonical encoding uses
+   the 2-byte argument form (0xd9 0x03 0xe8); the *_nondet variant
+   below uses the longer 4-byte argument form. */
 static int test_tag_canonical(void) {
-  uint8_t bytes[] = { 0xc1, 0x00 }; /* tag 1, payload uint 0 */
+  uint8_t bytes[] = { 0xd9, 0x03, 0xe8, 0x00 }; /* tag 1000, payload uint 0 */
   cbor_t payload = cbor_v_mk_uint64(0);
   cbor_t expected;
-  if (!cbor_v_mk_tagged(1, &payload, &expected)) TFAIL("mk tagged");
+  if (!cbor_v_mk_tagged(1000, &payload, &expected)) TFAIL("mk tagged");
   if (cbor_v_major_type(expected) != CBOR_MAJOR_TYPE_TAGGED) TFAIL("major");
   cbor_t got_payload;
   uint64_t got_tag;
   if (!cbor_v_get_tagged(expected, &got_payload, &got_tag))
     TFAIL("get tagged");
-  if (got_tag != 1) TFAIL("tag value");
+  if (got_tag != 1000) TFAIL("tag value");
   uint64_t pv;
   if (!cbor_v_read_uint64(got_payload, &pv) || pv != 0) TFAIL("payload");
   return run_valid_match(bytes, sizeof(bytes), expected);
 }
 
 static int test_tag_nondet(void) {
-  uint8_t bytes[] = { 0xd8, 0x01, 0x00 }; /* tag 1 with 1-byte arg */
+  /* Tag 1000 with the (non-canonical) 4-byte argument form. */
+  uint8_t bytes[] = { 0xda, 0x00, 0x00, 0x03, 0xe8, 0x00 };
 #if IS_DETERMINISTIC
   return run_invalid(bytes, sizeof(bytes));
 #else
   cbor_t payload = cbor_v_mk_uint64(0);
   cbor_t expected;
-  if (!cbor_v_mk_tagged(1, &payload, &expected)) TFAIL("mk tagged");
+  if (!cbor_v_mk_tagged(1000, &payload, &expected)) TFAIL("mk tagged");
   return run_valid_no_match(bytes, sizeof(bytes), expected);
 #endif
 }
@@ -1044,15 +1117,34 @@ static const test_entry_t TESTS[] = {
 #define N_TESTS ((int)(sizeof(TESTS) / sizeof(TESTS[0])))
 
 int main(void) {
-  printf("EverCBOR test suite [%s] : %d tests, %d iterations each\n",
-         API_NAME, N_TESTS, (int)BENCH_ITERATIONS);
+  /* Output directory may be overridden through the environment so that the
+   * Makefile/Python harness can choose where to find the artefacts. */
+  const char *env_out = getenv("CBOR_TEST_OUT_DIR");
+  if (env_out && *env_out) g_out_dir = env_out;
+  if (ensure_out_dir() != 0) return 2;
+
+  printf("EverCBOR test suite [%s] : %d tests, %d iterations each\n"
+         "Writing artefacts under '%s/'\n",
+         API_NAME, N_TESTS, (int)BENCH_ITERATIONS, g_out_dir);
 
   int passed = 0, failed = 0;
   double total_seconds = 0.0;
   for (int i = 0; i < N_TESTS; i++) {
     printf("[%s] %-36s ", API_NAME, TESTS[i].name);
     fflush(stdout);
-    int rc = 0;
+    g_current_test = TESTS[i].name;
+
+    /* Warmup pass: run the test once with file-writing enabled so each
+     * artefact is materialised exactly once before the timed loop. */
+    g_write_files = 1;
+    int rc = TESTS[i].fn();
+    g_write_files = 0;
+    if (rc != 0) {
+      printf("FAIL (during artefact warmup)\n");
+      failed++;
+      continue;
+    }
+
     clock_t start = clock();
     for (int it = 0; it < BENCH_ITERATIONS; it++) {
       rc = TESTS[i].fn();

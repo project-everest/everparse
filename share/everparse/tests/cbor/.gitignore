@@ -1,3 +1,5 @@
 cbor_tests_nondet.exe
 cbor_tests_det.exe
 *.o
+out/
+.venv/

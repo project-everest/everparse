@@ -41,7 +41,7 @@ cbor-nondet-rust-test: cbor
 .PHONY: cbor-nondet-rust-test
 
 cbor-shared-c-test: cbor
-	+$(MAKE) -C share/everparse/tests/cbor
+	+$(MAKE) -C share/everparse/tests/cbor run-c
 
 .PHONY: cbor-shared-c-test
 
