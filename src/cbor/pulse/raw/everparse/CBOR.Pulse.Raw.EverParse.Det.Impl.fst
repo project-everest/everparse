@@ -1278,5 +1278,47 @@ fn cbor_det_serialize_tag (_: unit) : cbor_det_serialize_tag_t
   res
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_serialize_string (_: unit) : cbor_det_serialize_string_t
+= (ty: _) (off: U64.t) (out: _) (#v: _)
+{
+  let off' = SpecRaw.mk_raw_uint64 off;
+  let l = Ghost.hide (Seq.slice v 0 (U64.v off));
+  // The bridge: Spec.cbor_det_serialize (pack (CString ty l)) ==
+  //             SpecF.serialize_cbor (String ty off' l)
+  // Established by these spec lemmas below.
+  Spec.cbor_det_serialize_string_length_gt ty (Ghost.reveal l);
+  SpecRaw.mk_det_raw_cbor_mk_cbor (SpecRawBase.String ty off' (Ghost.reveal l));
+  SpecRaw.mk_cbor_eq (SpecRawBase.String ty off' (Ghost.reveal l));
+  SpecRaw.valid_eq SpecRaw.basic_data_model (SpecRawBase.String ty off' (Ghost.reveal l));
+  assert (pure (Spec.cbor_det_serialize (Spec.pack (Spec.CString ty (Ghost.reveal l)))
+              == SpecF.serialize_cbor (SpecRawBase.String ty off' (Ghost.reveal l))));
+  let res = DetSer.cbor_serialize_string () ty off' out;
+  res
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_serialize_array (_: unit) : cbor_det_serialize_array_t
+= (len: U64.t) (out: _) (l: _) (off: _)
+{
+  let len' = SpecRaw.mk_raw_uint64 len;
+  let l' = Ghost.hide (Aux.det_raw_list l);
+  // l' = List.Tot.map mk_det_raw_cbor l (via Aux.det_raw_list_eq SMTPat)
+  // and cbor_det_serialize_list l = serialize_cbor_list (List.Tot.map mk_det_raw_cbor l)
+  assert (pure (Spec.cbor_det_serialize_list l == SpecF.serialize_cbor_list (Ghost.reveal l')));
+  // Bridge for the array's serialize equation
+  Spec.cbor_det_serialize_array_length_gt_list l;
+  Aux.list_map_mk_cbor_mk_det_raw_cbor l;
+  Aux.list_map_mk_det_raw_cbor_correct l;
+  let x : Ghost.erased SpecRawBase.raw_data_item = Ghost.hide (SpecRawBase.Array len' (Ghost.reveal l'));
+  CBOR.Spec.Raw.Optimal.raw_data_item_sorted_optimal_valid SpecF.deterministically_encoded_cbor_map_key_order (Ghost.reveal x);
+  SpecRaw.mk_cbor_eq (Ghost.reveal x);
+  SpecRaw.mk_det_raw_cbor_mk_cbor (Ghost.reveal x);
+  assert (pure (Spec.cbor_det_serialize (Spec.pack (Spec.CArray l))
+              == SpecF.serialize_cbor (SpecRawBase.Array len' (Ghost.reveal l'))));
+  let res = DetSer.cbor_serialize_array len' out l' off;
+  res
+}
+
 #pop-options
 

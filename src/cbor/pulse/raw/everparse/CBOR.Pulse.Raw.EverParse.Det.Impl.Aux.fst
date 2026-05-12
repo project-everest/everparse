@@ -42,6 +42,13 @@ let rec mk_det_raw_cbor_inj_map (l1 l2: list Spec.cbor)
     SpecRaw.mk_det_raw_cbor_inj x1 x2;
     mk_det_raw_cbor_inj_map t1 t2
 
+let rec det_raw_list_eq (l: list Spec.cbor)
+: Lemma (det_raw_list l == List.Tot.map SpecRaw.mk_det_raw_cbor l)
+        [SMTPat (det_raw_list l)]
+= match l with
+  | [] -> ()
+  | _ :: q -> det_raw_list_eq q
+
 let length_det_raw_list (l: list Spec.cbor)
   : Lemma (List.Tot.length (det_raw_list l) == List.Tot.length l)
           [SMTPat (List.Tot.length (det_raw_list l))]

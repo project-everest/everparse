@@ -26,6 +26,10 @@ val mk_det_raw_cbor_inj_map (l1 l2: list Spec.cbor)
     (requires det_raw_list l1 == det_raw_list l2)
     (ensures l1 == l2)
 
+val det_raw_list_eq (l: list Spec.cbor)
+: Lemma (det_raw_list l == List.Tot.map SpecRaw.mk_det_raw_cbor l)
+        [SMTPat (det_raw_list l)]
+
 val length_det_raw_list (l: list Spec.cbor)
   : Lemma (List.Tot.length (det_raw_list l) == List.Tot.length l)
           [SMTPat (List.Tot.length (det_raw_list l))]
