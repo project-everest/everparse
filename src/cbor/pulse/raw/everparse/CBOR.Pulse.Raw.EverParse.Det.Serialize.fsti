@@ -147,3 +147,18 @@ val cbor_serialize_map
     pts_to out v **
     pure (cbor_serialize_map_postcond len l res v)
   )
+
+(* TODO: cbor_raw_map_insert: in-place insert a key/value pair into the
+   canonical sorted entry list of an already-serialized map. Legacy version
+   in raw/old/CBOR.Pulse.Raw.Insert.fst (about 370 lines) needs to be ported
+   to the new EverParse stack. The required pieces are:
+
+     - cbor_jump_append wrapping Validate.jump_raw_data_item
+     - serialize_cbor_map_cons_equiv lemma (uses serialize_cbor_nonempty)
+     - the cbor_raw_map_insert_inv invariant
+     - the main cbor_raw_map_insert while-loop driver
+       using S.split, S.join, Pulse.Lib.Swap.Slice.slice_swap', and
+       CBytes.lex_compare_bytes.
+
+   Once landed, the API-level cbor_det_serialize_map_insert wrapper in
+   Det.Impl is around 5 lines. *)
