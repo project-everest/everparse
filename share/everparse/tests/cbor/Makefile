@@ -8,6 +8,12 @@
 # by the C binaries against the cbor2 library, exercising cross-language
 # conformance.
 #
+# Finally, a Rust integration-test crate (cbor_tests_rust/) re-validates
+# the same artefacts through the Rust extractions of the EverCBOR det and
+# nondet APIs, confirming that the Rust implementations behave identically
+# to the C ones (parse acceptance/rejection match, and for valid encodings
+# the Rust serializer produces the same bytes the C serializer wrote).
+#
 # Override the snapshot locations on the command line if needed:
 #
 #   make EVERCBOR_NONDET_PATH=/path/to/nondet/c \
@@ -58,7 +64,7 @@ PY_SRC        = $(CURDIR)/cbor_tests.py
 # decoder flags). 6.0.x is the first family with that codebase.
 CBOR2_REQ    ?= cbor2>=6.0,<7
 
-.PHONY: all build run run-nondet run-det run-python clean
+.PHONY: all build run run-nondet run-det run-python run-rust clean
 .PHONY: build-nondet build-det venv
 
 all: run
@@ -78,11 +84,10 @@ $(DET_BIN): $(SRC) $(DET_OBJS)
 	    -I $(EVERCBOR_DET_PATH) \
 	    -o $@ $(SRC) $(DET_OBJS)
 
-run: run-c run-python
+run: run-c run-python run-rust
 
 # Composite C-only run target. Useful if you want only the EverCBOR side
-# without the Python harness; the unverified-test pipeline calls the
-# default 'run' target, which includes both C and Python.
+# without the Python or Rust cross-language harnesses.
 run-c: run-nondet run-det
 .PHONY: run-c
 
@@ -108,6 +113,14 @@ venv: $(VENV_PYTHON)
 run-python: run-nondet run-det $(VENV_PYTHON) $(PY_SRC)
 	$(VENV_PYTHON) $(PY_SRC) --out-dir $(OUT_DIR) --iterations $(PYTHON_ITERATIONS)
 
+# Run the Rust conformance suite against the C-emitted artefacts. Depends
+# on the C runs so that the artefacts exist on disk first.
+RUST_DIR = $(CURDIR)/cbor_tests_rust
+CARGO   ?= cargo
+run-rust: run-nondet run-det
+	cd $(RUST_DIR) && CBOR_TEST_OUT_DIR=$(OUT_DIR) $(CARGO) test --release
+
 clean:
 	rm -f $(NONDET_BIN) $(DET_BIN)
 	rm -rf $(OUT_DIR) $(VENV_DIR)
+	rm -rf $(RUST_DIR)/target $(RUST_DIR)/Cargo.lock

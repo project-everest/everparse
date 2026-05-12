@@ -3,3 +3,5 @@ cbor_tests_det.exe
 *.o
 out/
 .venv/
+cbor_tests_rust/target/
+cbor_tests_rust/Cargo.lock
