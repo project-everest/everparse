@@ -60,6 +60,15 @@ let rec det_raw_list_inverse (l: list SpecRawBase.raw_data_item)
     SpecRaw.mk_det_raw_cbor_mk_cbor x;
     det_raw_list_inverse q
 
+let det_raw_list_take_eq (l: list Spec.cbor) (n: nat)
+: Lemma
+    (det_raw_list (fst (List.Tot.splitAt n l)) ==
+     LowParse.PulseParse.Iterator.list_narrow (det_raw_list l) 0 n)
+= CBOR.Spec.Util.list_map_splitAt mk_det_raw_cbor_tot l n;
+  // list_narrow lr 0 n == fst (splitAt n (snd (splitAt 0 lr)))
+  //                     == fst (splitAt n lr)  (since splitAt 0 lr == ([], lr))
+  assert (List.Tot.splitAt 0 (det_raw_list l) == ([], det_raw_list l))
+
 (* Lemma: when y is a det cbor that unpacks to CArray l, then mk_det_raw_cbor y is Array _ (det_raw_list l) *)
 let mk_det_raw_cbor_array_eq (y: Spec.cbor) (l: list Spec.cbor)
 : Lemma

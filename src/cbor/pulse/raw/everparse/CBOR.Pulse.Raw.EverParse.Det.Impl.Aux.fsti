@@ -37,6 +37,11 @@ val det_raw_list_inverse (l: list SpecRawBase.raw_data_item)
       List.Tot.for_all (Optimal.raw_data_item_sorted Format.deterministically_encoded_cbor_map_key_order) l)
     (ensures det_raw_list (List.Tot.map SpecRaw.mk_cbor l) == l)
 
+val det_raw_list_take_eq (l: list Spec.cbor) (n: nat)
+: Lemma
+    (det_raw_list (fst (List.Tot.splitAt n l)) ==
+     LowParse.PulseParse.Iterator.list_narrow (det_raw_list l) 0 n)
+
 val mk_det_raw_cbor_array_eq (y: Spec.cbor) (l: list Spec.cbor)
 : Lemma
     (requires

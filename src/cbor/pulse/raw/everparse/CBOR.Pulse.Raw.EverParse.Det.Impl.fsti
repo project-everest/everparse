@@ -139,8 +139,6 @@ val cbor_det_array_iterator_is_empty (_: unit) : array_iterator_is_empty_t cbor_
 val cbor_det_array_iterator_start (_: unit) : array_iterator_start_t cbor_det_match cbor_det_array_iterator_match
 val cbor_det_array_iterator_length (_: unit) : array_iterator_length_t cbor_det_array_iterator_match
 val cbor_det_array_iterator_next (_: unit) : array_iterator_next_t cbor_det_match cbor_det_array_iterator_match
-(* TODO: cbor_det_array_iterator_truncate: requires a generic iterator_truncate
-   primitive in LowParse.PulseParse.Iterator (not yet implemented).  *)
 
 
 (* ======== Validation (rescued from legacy) ======== *)
@@ -148,6 +146,9 @@ val cbor_det_array_iterator_next (_: unit) : array_iterator_next_t cbor_det_matc
 val cbor_det_validate (_: unit) : cbor_det_validate_t
 
 val cbor_det_parse_valid (_: unit) : cbor_det_parse_valid_t cbor_det_match
+
+val cbor_det_array_iterator_truncate (_: unit) : array_iterator_truncate_t cbor_det_array_iterator_match
+
 
 (* Item 3 (fragment serialisers): the four raw-side primitives
    `cbor_serialize_{tag,string,array,map}` are landed in
