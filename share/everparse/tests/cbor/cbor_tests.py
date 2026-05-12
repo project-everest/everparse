@@ -70,6 +70,13 @@ def _supports_loads_kwarg(name: str) -> bool:
 HAS_ALLOW_INDEFINITE = _supports_loads_kwarg("allow_indefinite")
 HAS_ALLOW_DUP_KEYS = _supports_loads_kwarg("allow_duplicate_keys")
 HAS_IMMUTABLE = _supports_loads_kwarg("immutable")
+HAS_MAX_DEPTH = _supports_loads_kwarg("max_depth")
+
+# The recursion-budget tests build CBOR objects nested ~2200 levels deep.
+# Python's default recursion limit is 1000 and cbor2's default max_depth is
+# 400; both need to be raised to accommodate the very deep arrays.
+_DEEP_LIMIT = 4096
+sys.setrecursionlimit(max(sys.getrecursionlimit(), _DEEP_LIMIT))
 
 
 def strict_loads(data: bytes) -> Any:
@@ -81,6 +88,8 @@ def strict_loads(data: bytes) -> Any:
         kwargs["allow_indefinite"] = False
     if HAS_ALLOW_DUP_KEYS:
         kwargs["allow_duplicate_keys"] = False
+    if HAS_MAX_DEPTH:
+        kwargs["max_depth"] = _DEEP_LIMIT
     return cbor2.loads(data, **kwargs)
 
 
@@ -159,8 +168,56 @@ def _expected_map_nested_keys() -> Any:
 #              malformed inputs).
 
 class T(dict):
-    """Convenience: T(valid=..., expected=lambda: ..., canonical=...)."""
+    """Convenience: T(valid=..., expected=lambda: ..., canonical=..., kind=...).
+
+    `kind` is one of:
+      * "cbor"  (default) — input file is a CBOR encoding; standard
+        validate/parse/equality flow.
+      * "utf8_invalid_payload" — input file holds raw bytes that the C
+        side rejected as invalid UTF-8 in mk_text_string. The Python
+        equivalent asserts that bytes.decode('utf-8') raises
+        UnicodeDecodeError. `valid` is implicitly False for this kind.
+    """
     pass
+
+
+def _qcbor_complex_value() -> Any:
+    return FrozenDict({
+        "first integer": 42,
+        "an array of two strings": ("string1", "string2"),
+        "map in a map": FrozenDict({
+            "bytes 1":     b"\x78\x78\x78\x78",
+            "bytes 2":     b"\x79\x79\x79\x79",
+            "another int": 98,
+            "text 2":      "lies, damn lies and statistics",
+        }),
+    })
+
+
+def _arr_int_boundaries_value() -> Any:
+    ints = (
+        -9223372036854775808,
+        -4294967297, -4294967296, -4294967295, -4294967294,
+        -2147483648, -2147483647,
+        -65538, -65537, -65536, -65535, -65534,
+        -257, -256, -255, -254,
+        -25, -24, -23, -1,
+        0, 0, 1, 22, 23, 24, 25, 26,
+        254, 255, 256, 257,
+        65534, 65535, 65536, 65537, 65538,
+        2147483647, 2147483647, 2147483648, 2147483649,
+        4294967294, 4294967295, 4294967296, 4294967297,
+        9223372036854775807,
+        0xFFFFFFFFFFFFFFFF,  # last entry, the only > int64
+    )
+    return ints
+
+
+def _arr_empties_value() -> Any:
+    return (0, (), ((), (0,), FrozenDict({}),
+                    FrozenDict({1: FrozenDict({}),
+                                2: FrozenDict({}),
+                                3: ()})))
 
 
 TESTS: dict[str, T] = {
@@ -229,7 +286,123 @@ TESTS: dict[str, T] = {
     "invalid_arr_short":           T(valid=False),
     "invalid_map_short":           T(valid=False),
     "invalid_indefinite":          T(valid=False),
+
+    # ---- Imported from cbor-test-unverified gentest ----
+    "uint_one_canonical":          T(valid=True,  canonical=True,  expected=lambda: 1),
+    "uint_ten_canonical":          T(valid=True,  canonical=True,  expected=lambda: 10),
+    "uint_24_canonical":           T(valid=True,  canonical=True,  expected=lambda: 24),
+    "uint_25_canonical":           T(valid=True,  canonical=True,  expected=lambda: 25),
+    "uint_trillion_canonical":     T(valid=True,  canonical=True,  expected=lambda: 10**12),
+    "neg_two_byte_canonical":      T(valid=True,  canonical=True,  expected=lambda: -1000),
+    "tstr_a_canonical":            T(valid=True,  canonical=True,  expected=lambda: "a"),
+    "tstr_ietf_canonical":         T(valid=True,  canonical=True,  expected=lambda: "IETF"),
+    "tstr_escapes_canonical":      T(valid=True,  canonical=True,  expected=lambda: "\"\\"),
+    "tstr_u_umlaut_canonical":     T(valid=True,  canonical=True,  expected=lambda: "\u00fc"),
+    "tstr_water_canonical":        T(valid=True,  canonical=True,  expected=lambda: "\u6c34"),
+    "tstr_drachma_canonical":      T(valid=True,  canonical=True,  expected=lambda: "\U00010151"),
+    "arr_nested_canonical":        T(valid=True,  canonical=True,  expected=lambda: (1, (2, 3), (4, 5))),
+    "arr_25_canonical":            T(valid=True,  canonical=True,
+                                     expected=lambda: tuple(range(1, 26))),
+    "map_mixed_canonical":         T(valid=True,  canonical=True,
+                                     expected=lambda: FrozenDict({"a": 1, "b": (2, 3)})),
+    "arr_with_map_canonical":      T(valid=True,  canonical=True,
+                                     expected=lambda: ("a", FrozenDict({"b": "c"}))),
+    "map_five_canonical":          T(valid=True,  canonical=True,
+                                     expected=lambda: FrozenDict({"a": "A", "b": "B",
+                                                                   "c": "C", "d": "D",
+                                                                   "e": "E"})),
+
+    # ---- Recursion-budget tests ----
+    "arr_2200_deep_canonical":             T(valid=True,  canonical=True,
+                                              expected=lambda: _arr_deep(2200, 1)),
+    "arr_2200_deep_truncated_invalid":     T(valid=False),
+
+    # ---- qcbortests ports ----
+    "arr_int_boundaries_canonical":        T(valid=True,  canonical=True,
+                                              expected=_arr_int_boundaries_value),
+    "arr_empties_canonical":               T(valid=True,  canonical=True,
+                                              expected=_arr_empties_value),
+    "map_qcbor_complex_nondet":            T(valid=True,  canonical=False,
+                                              expected=_qcbor_complex_value),
 }
+
+
+# ---- UTF-8 tests (auto-populated below from the same table the C side uses) ----
+#
+# Format: (suffix, kind), where kind is one of:
+#   "valid"   — the CBOR-encoded text-string is in the file and decodes to
+#               the expected unicode string (= bytes.decode('utf-8')).
+#   "invalid" — the file holds the raw byte sequence that the C side
+#               rejected; bytes.decode('utf-8') must raise.
+_UTF8_TESTS: tuple[tuple[str, str, bytes], ...] = (
+    # 1-byte forms
+    ("t05_0",            "valid",   bytes([0x00])),
+    ("t29_4",            "invalid", bytes([0x80, 0x20])),
+    ("t29_5",            "invalid", bytes([0x20, 0x80, 0x20])),
+    ("t29_6",            "invalid", bytes([0x81, 0x20])),
+    ("t29_7",            "invalid", bytes([0xc1, 0x20])),
+    ("t29_8",            "invalid", bytes([0xf5, 0x20])),
+    ("t29_9",            "invalid", bytes([0xff, 0x20])),
+    ("t29_1",            "invalid", bytes([0x20, 0x80])),
+    ("t29_2",            "invalid", bytes([0x20, 0x21, 0x21, 0x23, 0xfe, 0x20])),
+    ("t29_3",            "invalid", bytes([0x20, 0x21, 0x21, 0x23, 0x24, 0xfe])),
+    # 2-byte UTF-8
+    ("t30_1",            "invalid", bytes([0xc2, 0x7f])),
+    ("t30_2",            "invalid", bytes([0xc2, 0xc0])),
+    ("t30_3",            "invalid", bytes([0xc2, 0xff])),
+    ("t30_5",            "invalid", bytes([0xdf, 0x7f])),
+    ("t30_6",            "invalid", bytes([0xdf, 0xc0])),
+    ("t30_7",            "invalid", bytes([0xdf, 0xff])),
+    ("t30_0",            "invalid", bytes([0xc2, 0x00])),
+    ("t30_4",            "invalid", bytes([0xdf, 0x00])),
+    # 3-byte UTF-8
+    ("t31_0",            "invalid", bytes([0xe0, 0x80, 0x00])),
+    ("t31_1",            "invalid", bytes([0xe0, 0x80, 0x7f])),
+    ("t31_2",            "invalid", bytes([0xe0, 0x80, 0xc0])),
+    ("t31_3",            "invalid", bytes([0xe0, 0x80, 0xff])),
+    ("t32_0",            "invalid", bytes([0xed, 0x80, 0x00])),
+    ("t32_1",            "invalid", bytes([0xed, 0x80, 0x7f])),
+    ("t32_2",            "invalid", bytes([0xed, 0x80, 0xc0])),
+    ("t32_3",            "invalid", bytes([0xed, 0x80, 0xff])),
+    # 4-byte UTF-8
+    ("t33_0",            "invalid", bytes([0xf0, 0x90, 0x80, 0x00])),
+    ("t33_1",            "invalid", bytes([0xf0, 0x90, 0x80, 0x7f])),
+    ("t33_2",            "invalid", bytes([0xf0, 0x90, 0x80, 0xc0])),
+    ("t33_3",            "invalid", bytes([0xf0, 0x90, 0x80, 0xff])),
+    ("t34_0",            "invalid", bytes([0xf1, 0x80, 0x80, 0x00])),
+    ("t34_1",            "invalid", bytes([0xf1, 0x80, 0x80, 0x7f])),
+    ("t34_2",            "invalid", bytes([0xf1, 0x80, 0x80, 0xc0])),
+    ("t34_3",            "invalid", bytes([0xf1, 0x80, 0x80, 0xff])),
+    ("t35_0",            "invalid", bytes([0xf4, 0x80, 0x80, 0x00])),
+    ("t35_1",            "invalid", bytes([0xf4, 0x80, 0x80, 0x7f])),
+    ("t35_2",            "invalid", bytes([0xf4, 0x80, 0x80, 0xc0])),
+    ("t35_3",            "invalid", bytes([0xf4, 0x80, 0x80, 0xff])),
+    # Overlong and partials
+    ("t37_0_overlong",   "invalid", bytes([0xc0, 0x80])),
+    ("t37_1_overlong",   "invalid", bytes([0xe0, 0x80, 0x80])),
+    ("t37_2_overlong",   "invalid", bytes([0xf0, 0x80, 0x80, 0x80])),
+    ("t37_3_overlong",   "invalid", bytes([0x20, 0x00, 0x20, 0xff])),
+    ("t37_4_partial",    "valid",   bytes([0x20, 0x00])),
+    ("t37_2_1_partial",  "valid",   bytes([0x20, 0x00, 0x35])),
+    ("t9_1",             "invalid", bytes([0xc2, 0x41, 0x42])),
+    # Non-character / replacement-character runs
+    ("t36_9",            "valid",   bytes([0xef, 0xbf, 0xbf, 0x3d, 0xef, 0xbf, 0xbf, 0x2e])),
+    ("t36_9_1",          "valid",   bytes([0xef, 0xbf, 0xbe, 0x3d, 0xef, 0xbf, 0xbe, 0x2e])),
+    ("t36_10", "invalid", bytes([0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0x3d, 0xe0, 0x80, 0xaf, 0x2e])),
+    ("t36_8",  "invalid", bytes([0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0x3d, 0xed, 0xa0, 0x80, 0x2e])),
+    ("t36_7",  "invalid", bytes([0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0x3d, 0xf7, 0xbf, 0xbf, 0xbf, 0x2e])),
+)
+
+for _suffix, _validity, _payload in _UTF8_TESTS:
+    _name = f"utf8_{_suffix}"
+    if _validity == "valid":
+        # The C side wrapped the payload into a CBOR text-string in the
+        # input file; the expected Python value is that UTF-8 text.
+        TESTS[_name] = T(valid=True, canonical=True,
+                          expected=lambda p=_payload: p.decode("utf-8"))
+    else:
+        # Input file holds the raw payload bytes; assert UTF-8 decode raises.
+        TESTS[_name] = T(valid=False, kind="utf8_invalid_payload")
 
 
 # ----------------------------------------------------------------------------
@@ -247,6 +420,19 @@ def _run_one(input_bytes: bytes, serialized_bytes: bytes | None,
     Raises AssertionError on failure, or TestSkipped if the test cannot be
     meaningfully evaluated by the installed cbor2 version.
     """
+    kind = spec.get("kind", "cbor")
+
+    if kind == "utf8_invalid_payload":
+        # Input file holds raw UTF-8-invalid payload bytes that the C side
+        # rejected at mk_text_string time. The Python equivalent is that
+        # str.decode() raises.
+        try:
+            input_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            return
+        raise AssertionError("UTF-8 decode of supposedly invalid payload "
+                             "succeeded")
+
     if not spec["valid"]:
         # Special-case: cbor2 cannot reject duplicate map keys without the
         # allow_duplicate_keys=False flag, which only landed post-6.0.1.

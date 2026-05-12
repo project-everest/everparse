@@ -1012,6 +1012,605 @@ static int test_simple_24_invalid(void) {
    25 in major 7 means half-precision float (unsupported). So instead we
    exercise an invalid simple value <0x20 in 1-byte form here. */
 
+/* ============================================================
+ *   Tests ported from cbor-test-unverified
+ * ============================================================
+ *
+ * The following tests are imported from the older C test suites used
+ * elsewhere in the repository:
+ *
+ *   - src/cbor/pulse/det/c/test/CBORDetTest.c
+ *   - src/cbor/pulse/nondet/c/test/CBORNondetTest.c
+ *   - src/cbor/pulse/nondet/c/test/qcbortests.c
+ *   - src/cbor/pulse/{det,nondet}/c/test/main.c (large_array_test)
+ *
+ * Tests already covered above (e.g., uint 0, uint 100, small text
+ * strings, empty maps/arrays) are not duplicated. Only genuinely new
+ * cases are introduced here. Each one is added as a stand-alone test
+ * so it gets its own per-test artefact files and benchmark line.
+ */
+
+/* ---------- Extra integer tests from gentest ---------- */
+
+static int test_uint_one_canonical(void) {
+  uint8_t bytes[] = { 0x01 };
+  cbor_t expected = cbor_v_mk_uint64(1);
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+static int test_uint_ten_canonical(void) {
+  uint8_t bytes[] = { 0x0a };
+  cbor_t expected = cbor_v_mk_uint64(10);
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+static int test_uint_24_canonical(void) {
+  uint8_t bytes[] = { 0x18, 0x18 };
+  cbor_t expected = cbor_v_mk_uint64(24);
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+static int test_uint_25_canonical(void) {
+  uint8_t bytes[] = { 0x18, 0x19 };
+  cbor_t expected = cbor_v_mk_uint64(25);
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+static int test_uint_trillion_canonical(void) {
+  /* 1_000_000_000_000 = 0xE8D4A51000 — 8-byte argument form. */
+  uint8_t bytes[] = { 0x1b, 0x00, 0x00, 0x00, 0xe8, 0xd4, 0xa5, 0x10, 0x00 };
+  cbor_t expected = cbor_v_mk_uint64(1000000000000ULL);
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+static int test_neg_two_byte_canonical(void) {
+  uint8_t bytes[] = { 0x39, 0x03, 0xe7 }; /* -1000 */
+  cbor_t expected = cbor_v_mk_neg_int64(999);
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+/* ---------- Extra text-string tests from gentest ---------- */
+
+static int test_tstr_a_canonical(void) {
+  uint8_t bytes[] = { 0x61, 'a' };
+  static uint8_t payload[] = { 'a' };
+  cbor_t expected;
+  if (!cbor_v_mk_text_string(payload, sizeof(payload), &expected))
+    TFAIL("mk text string");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+static int test_tstr_ietf_canonical(void) {
+  uint8_t bytes[] = { 0x64, 'I', 'E', 'T', 'F' };
+  static uint8_t payload[] = { 'I', 'E', 'T', 'F' };
+  cbor_t expected;
+  if (!cbor_v_mk_text_string(payload, sizeof(payload), &expected))
+    TFAIL("mk text string");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+static int test_tstr_escapes_canonical(void) {
+  /* The two characters '"' and '\\'. */
+  uint8_t bytes[] = { 0x62, 0x22, 0x5c };
+  static uint8_t payload[] = { 0x22, 0x5c };
+  cbor_t expected;
+  if (!cbor_v_mk_text_string(payload, sizeof(payload), &expected))
+    TFAIL("mk text string");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+static int test_tstr_u_umlaut_canonical(void) {
+  /* "ü" = U+00FC, UTF-8 = C3 BC. */
+  uint8_t bytes[] = { 0x62, 0xc3, 0xbc };
+  static uint8_t payload[] = { 0xc3, 0xbc };
+  cbor_t expected;
+  if (!cbor_v_mk_text_string(payload, sizeof(payload), &expected))
+    TFAIL("mk text string");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+static int test_tstr_water_canonical(void) {
+  /* "水" = U+6C34, UTF-8 = E6 B0 B4. */
+  uint8_t bytes[] = { 0x63, 0xe6, 0xb0, 0xb4 };
+  static uint8_t payload[] = { 0xe6, 0xb0, 0xb4 };
+  cbor_t expected;
+  if (!cbor_v_mk_text_string(payload, sizeof(payload), &expected))
+    TFAIL("mk text string");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+static int test_tstr_drachma_canonical(void) {
+  /* "𐅑" = U+10151, UTF-8 = F0 90 85 91. */
+  uint8_t bytes[] = { 0x64, 0xf0, 0x90, 0x85, 0x91 };
+  static uint8_t payload[] = { 0xf0, 0x90, 0x85, 0x91 };
+  cbor_t expected;
+  if (!cbor_v_mk_text_string(payload, sizeof(payload), &expected))
+    TFAIL("mk text string");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+/* ---------- Extra array tests from gentest ---------- */
+
+static int test_arr_nested_canonical(void) {
+  /* [1, [2, 3], [4, 5]] */
+  uint8_t bytes[] = {
+    0x83,
+    0x01,
+    0x82, 0x02, 0x03,
+    0x82, 0x04, 0x05
+  };
+  cbor_t inner1_items[2] = { cbor_v_mk_uint64(2), cbor_v_mk_uint64(3) };
+  cbor_t inner2_items[2] = { cbor_v_mk_uint64(4), cbor_v_mk_uint64(5) };
+  cbor_t inner1, inner2;
+  if (!cbor_v_mk_array(inner1_items, 2, &inner1)) TFAIL("mk inner1");
+  if (!cbor_v_mk_array(inner2_items, 2, &inner2)) TFAIL("mk inner2");
+  cbor_t outer_items[3] = { cbor_v_mk_uint64(1), inner1, inner2 };
+  cbor_t expected;
+  if (!cbor_v_mk_array(outer_items, 3, &expected)) TFAIL("mk outer");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+static int test_arr_25_canonical(void) {
+  /* [1, 2, ..., 25] — exercises the threshold at 24 items where the
+     array length argument switches from 1-byte additional info to a
+     1-byte argument. Encoded header is 0x98 0x19 (= 25). Items 1..23
+     are 1-byte (0x01..0x17); items 24 and 25 each take 2 bytes
+     (0x18 0x18, 0x18 0x19). Total: 2 + 23 + 2 + 2 = 29 bytes. */
+  static uint8_t bytes[29];
+  size_t off = 0;
+  bytes[off++] = 0x98;
+  bytes[off++] = 0x19;
+  for (int i = 1; i <= 23; i++) bytes[off++] = (uint8_t)i;
+  bytes[off++] = 0x18; bytes[off++] = 0x18;
+  bytes[off++] = 0x18; bytes[off++] = 0x19;
+  if (off != sizeof(bytes)) TFAIL("buffer size");
+
+  cbor_t items[25];
+  for (int i = 0; i < 25; i++) items[i] = cbor_v_mk_uint64(i + 1);
+  cbor_t expected;
+  if (!cbor_v_mk_array(items, 25, &expected)) TFAIL("mk array");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+/* ---------- Extra map/array tests from gentest ---------- */
+
+/* {"a": 1, "b": [2, 3]} — heterogeneous canonical map. */
+static int test_map_mixed_canonical(void) {
+  uint8_t bytes[] = {
+    0xa2,
+    0x61, 'a', 0x01,
+    0x61, 'b', 0x82, 0x02, 0x03
+  };
+  static uint8_t a[] = { 'a' };
+  static uint8_t b[] = { 'b' };
+  cbor_t k_a, k_b;
+  if (!cbor_v_mk_text_string(a, 1, &k_a)) TFAIL("mk k_a");
+  if (!cbor_v_mk_text_string(b, 1, &k_b)) TFAIL("mk k_b");
+  cbor_t arr_items[2] = { cbor_v_mk_uint64(2), cbor_v_mk_uint64(3) };
+  cbor_t arr;
+  if (!cbor_v_mk_array(arr_items, 2, &arr)) TFAIL("mk arr");
+  cbor_entry_t entries[2] = {
+    cbor_v_mk_map_entry(k_a, cbor_v_mk_uint64(1)),
+    cbor_v_mk_map_entry(k_b, arr)
+  };
+  cbor_t expected;
+  if (!cbor_v_mk_map(entries, 2, &expected)) TFAIL("mk map");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+/* ["a", {"b": "c"}] */
+static int test_arr_with_map_canonical(void) {
+  uint8_t bytes[] = {
+    0x82,
+    0x61, 'a',
+    0xa1, 0x61, 'b', 0x61, 'c'
+  };
+  static uint8_t a[] = { 'a' };
+  static uint8_t b[] = { 'b' };
+  static uint8_t c[] = { 'c' };
+  cbor_t s_a, s_b, s_c;
+  if (!cbor_v_mk_text_string(a, 1, &s_a)) TFAIL("mk s_a");
+  if (!cbor_v_mk_text_string(b, 1, &s_b)) TFAIL("mk s_b");
+  if (!cbor_v_mk_text_string(c, 1, &s_c)) TFAIL("mk s_c");
+  cbor_entry_t inner_entries[1] = { cbor_v_mk_map_entry(s_b, s_c) };
+  cbor_t inner_map;
+  if (!cbor_v_mk_map(inner_entries, 1, &inner_map)) TFAIL("mk inner");
+  cbor_t outer_items[2] = { s_a, inner_map };
+  cbor_t expected;
+  if (!cbor_v_mk_array(outer_items, 2, &expected)) TFAIL("mk outer");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+/* {"a":"A","b":"B","c":"C","d":"D","e":"E"} — 5-entry text-string map.
+   Keys are already in canonical (lex) order. */
+static int test_map_five_canonical(void) {
+  uint8_t bytes[] = {
+    0xa5,
+    0x61, 'a', 0x61, 'A',
+    0x61, 'b', 0x61, 'B',
+    0x61, 'c', 0x61, 'C',
+    0x61, 'd', 0x61, 'D',
+    0x61, 'e', 0x61, 'E'
+  };
+  static uint8_t lower[5] = { 'a', 'b', 'c', 'd', 'e' };
+  static uint8_t upper[5] = { 'A', 'B', 'C', 'D', 'E' };
+  cbor_entry_t entries[5];
+  for (int i = 0; i < 5; i++) {
+    cbor_t k, v;
+    if (!cbor_v_mk_text_string(&lower[i], 1, &k)) TFAIL("mk k");
+    if (!cbor_v_mk_text_string(&upper[i], 1, &v)) TFAIL("mk v");
+    entries[i] = cbor_v_mk_map_entry(k, v);
+  }
+  cbor_t expected;
+  if (!cbor_v_mk_map(entries, 5, &expected)) TFAIL("mk map");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+/* ---------- UTF-8 tests (table-driven) ----------
+ *
+ * Ported from the 214 UTF-8 sub-tests of the original CBORDetTest.c /
+ * CBORNondetTest.c suites. Each row says "construct a CBOR text string
+ * from this byte sequence" and either expects construction to succeed
+ * (then asserts a full validate / parse / equal round-trip), or
+ * expects construction to be rejected because the bytes are not
+ * well-formed UTF-8.
+ *
+ * Each row is wrapped into its own test function (so each gets its own
+ * artefact file and benchmark line) by the X-macro UTF8_TESTS below.
+ */
+
+typedef struct {
+  const uint8_t *bytes;
+  size_t         len;
+} utf8_input_t;
+
+static int utf8_run_valid(const uint8_t *bytes, size_t len) {
+  /* Construct a CBOR text string. */
+  cbor_t expected;
+  if (!cbor_v_mk_text_string((uint8_t *)bytes, len, &expected))
+    TFAIL("text-string construction failed (expected success)");
+
+  /* Build the canonical input bytes for this string. */
+  uint8_t input[64];
+  size_t off = 0;
+  if (len <= 23) {
+    input[off++] = (uint8_t)(0x60 | len);
+  } else if (len <= 0xff) {
+    input[off++] = 0x78;
+    input[off++] = (uint8_t)len;
+  } else {
+    TFAIL("UTF-8 test payload too large");
+  }
+  if (off + len > sizeof(input)) TFAIL("input buffer overflow");
+  memcpy(input + off, bytes, len);
+  size_t total = off + len;
+  return run_valid_match(input, total, expected);
+}
+
+static int utf8_run_invalid(const uint8_t *bytes, size_t len) {
+  /* Construction must be rejected. We also persist the byte sequence to
+     disk so cross-language consumers can verify their own validators. */
+  cbor_t dummy;
+  if (cbor_v_mk_text_string((uint8_t *)bytes, len, &dummy))
+    TFAIL("text-string construction succeeded (expected failure)");
+  if (maybe_write_input((uint8_t *)bytes, len)) return 1;
+  return 0;
+}
+
+/* The X-macro: each entry is
+     X(name_suffix, expected_validity, byte_literal...).
+   `name_suffix` is appended to "utf8_" to form the test name.
+   `expected_validity` is one of `valid` or `invalid`.
+   The remaining variadic arguments are spliced into a uint8_t array
+   initializer; this avoids commas-inside-braces being interpreted as
+   extra macro arguments by the preprocessor.
+
+   The byte sequences below are the union of the UTF-8 sub-tests
+   originally living in CBORDetTest.c and CBORNondetTest.c, deduplicated
+   and renamed to be unique. The numbering convention follows the
+   original tests' "UTF-8 Test N.M" labels for traceability. */
+
+#define UTF8_TESTS                                                            \
+  /* 1-byte forms */                                                          \
+  X(t05_0,    valid,   0x00)                                                  \
+  X(t29_4,    invalid, 0x80, 0x20)                                            \
+  X(t29_5,    invalid, 0x20, 0x80, 0x20)                                      \
+  X(t29_6,    invalid, 0x81, 0x20)                                            \
+  X(t29_7,    invalid, 0xc1, 0x20)                                            \
+  X(t29_8,    invalid, 0xf5, 0x20)                                            \
+  X(t29_9,    invalid, 0xff, 0x20)                                            \
+  X(t29_1,    invalid, 0x20, 0x80)                                            \
+  X(t29_2,    invalid, 0x20, 0x21, 0x21, 0x23, 0xfe, 0x20)                    \
+  X(t29_3,    invalid, 0x20, 0x21, 0x21, 0x23, 0x24, 0xfe)                    \
+  /* 2-byte UTF-8: c2 .. df + 80..bf */                                       \
+  X(t30_1,    invalid, 0xc2, 0x7f)                                            \
+  X(t30_2,    invalid, 0xc2, 0xc0)                                            \
+  X(t30_3,    invalid, 0xc2, 0xff)                                            \
+  X(t30_5,    invalid, 0xdf, 0x7f)                                            \
+  X(t30_6,    invalid, 0xdf, 0xc0)                                            \
+  X(t30_7,    invalid, 0xdf, 0xff)                                            \
+  X(t30_0,    invalid, 0xc2, 0x00)                                            \
+  X(t30_4,    invalid, 0xdf, 0x00)                                            \
+  /* 3-byte UTF-8: e0 a0..bf 80..bf and ed 80..9f 80..bf */                   \
+  X(t31_0,    invalid, 0xe0, 0x80, 0x00)                                      \
+  X(t31_1,    invalid, 0xe0, 0x80, 0x7f)                                      \
+  X(t31_2,    invalid, 0xe0, 0x80, 0xc0)                                      \
+  X(t31_3,    invalid, 0xe0, 0x80, 0xff)                                      \
+  X(t32_0,    invalid, 0xed, 0x80, 0x00)                                      \
+  X(t32_1,    invalid, 0xed, 0x80, 0x7f)                                      \
+  X(t32_2,    invalid, 0xed, 0x80, 0xc0)                                      \
+  X(t32_3,    invalid, 0xed, 0x80, 0xff)                                      \
+  /* 4-byte UTF-8: f0..f4 followed by 3 continuation bytes */                 \
+  X(t33_0,    invalid, 0xf0, 0x90, 0x80, 0x00)                                \
+  X(t33_1,    invalid, 0xf0, 0x90, 0x80, 0x7f)                                \
+  X(t33_2,    invalid, 0xf0, 0x90, 0x80, 0xc0)                                \
+  X(t33_3,    invalid, 0xf0, 0x90, 0x80, 0xff)                                \
+  X(t34_0,    invalid, 0xf1, 0x80, 0x80, 0x00)                                \
+  X(t34_1,    invalid, 0xf1, 0x80, 0x80, 0x7f)                                \
+  X(t34_2,    invalid, 0xf1, 0x80, 0x80, 0xc0)                                \
+  X(t34_3,    invalid, 0xf1, 0x80, 0x80, 0xff)                                \
+  X(t35_0,    invalid, 0xf4, 0x80, 0x80, 0x00)                                \
+  X(t35_1,    invalid, 0xf4, 0x80, 0x80, 0x7f)                                \
+  X(t35_2,    invalid, 0xf4, 0x80, 0x80, 0xc0)                                \
+  X(t35_3,    invalid, 0xf4, 0x80, 0x80, 0xff)                                \
+  /* Overlong encodings */                                                    \
+  X(t37_0_overlong,  invalid, 0xc0, 0x80)                                     \
+  X(t37_1_overlong,  invalid, 0xe0, 0x80, 0x80)                               \
+  X(t37_2_overlong,  invalid, 0xf0, 0x80, 0x80, 0x80)                         \
+  X(t37_3_overlong,  invalid, 0x20, 0x00, 0x20, 0xff)                         \
+  X(t37_4_partial,   valid,   0x20, 0x00)                                     \
+  X(t37_2_1_partial, valid,   0x20, 0x00, 0x35)                               \
+  /* Continuation-byte transition tests */                                    \
+  X(t9_1,            invalid, 0xc2, 0x41, 0x42)                               \
+  /* Non-character / replacement-character tests (valid UTF-8) */             \
+  X(t36_9,           valid,   0xef, 0xbf, 0xbf, 0x3d, 0xef, 0xbf, 0xbf, 0x2e) \
+  X(t36_9_1,         valid,   0xef, 0xbf, 0xbe, 0x3d, 0xef, 0xbf, 0xbe, 0x2e) \
+  /* Tests where the original embedded multiple invalid runs */               \
+  X(t36_10,          invalid, 0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0x3d, 0xe0, 0x80, 0xaf, 0x2e) \
+  X(t36_8,           invalid, 0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0x3d, 0xed, 0xa0, 0x80, 0x2e) \
+  X(t36_7,           invalid, 0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0x3d, 0xf7, 0xbf, 0xbf, 0xbf, 0x2e)
+
+/* Materialise one test function per row. */
+#define X(suffix, validity, ...)                                              \
+  static int test_utf8_##suffix(void) {                                       \
+    static const uint8_t b[] = { __VA_ARGS__ };                               \
+    return utf8_run_##validity(b, sizeof(b));                                 \
+  }
+UTF8_TESTS
+#undef X
+
+/* ---------- Large-array recursion-budget tests (from main.c) ----------
+ *
+ * Build a CBOR array of depth LARGE_ARR_DEPTH whose only leaf is the
+ * uint 1, encoded as bytes 0x81 0x81 ... 0x81 0x01. The original
+ * `large_array_test()` validates the well-formed buffer (must succeed)
+ * and a truncated copy missing the leaf (must fail).
+ */
+#define LARGE_ARR_DEPTH 2200
+
+static int test_arr_2200_deep_canonical(void) {
+  static uint8_t bytes[LARGE_ARR_DEPTH + 1];
+  static int initialized = 0;
+  if (!initialized) {
+    for (int i = 0; i < LARGE_ARR_DEPTH; i++) bytes[i] = 0x81;
+    bytes[LARGE_ARR_DEPTH] = 0x01;
+    initialized = 1;
+  }
+  /* Build the matching CBOR object through the API: leaf 1, then wrap
+     LARGE_ARR_DEPTH times in singleton arrays. We can't put 2201
+     cbor_t values on the stack, so use a heap allocation for this one
+     test. */
+  cbor_t *levels = (cbor_t *)malloc(sizeof(cbor_t) * (LARGE_ARR_DEPTH + 1));
+  if (!levels) TFAIL("malloc");
+  levels[0] = cbor_v_mk_uint64(1);
+  for (int i = 1; i <= LARGE_ARR_DEPTH; i++) {
+    if (!cbor_v_mk_array(&levels[i - 1], 1, &levels[i])) {
+      free(levels);
+      TFAIL("mk array level");
+    }
+  }
+  cbor_t expected = levels[LARGE_ARR_DEPTH];
+  int rc = run_valid_match(bytes, sizeof(bytes), expected);
+  free(levels);
+  return rc;
+}
+
+static int test_arr_2200_deep_truncated_invalid(void) {
+  /* Same byte buffer as above but missing the 0x01 leaf — pure stream
+     of LARGE_ARR_DEPTH 0x81 bytes describing a never-terminated tower
+     of singleton arrays. */
+  static uint8_t bytes[LARGE_ARR_DEPTH];
+  static int initialized = 0;
+  if (!initialized) {
+    for (int i = 0; i < LARGE_ARR_DEPTH; i++) bytes[i] = 0x81;
+    initialized = 1;
+  }
+  return run_invalid(bytes, sizeof(bytes));
+}
+
+/* ---------- qcbortests ports ----------
+ *
+ * Ported from src/cbor/pulse/nondet/c/test/qcbortests.c. These tests
+ * originate from Laurence Lundblade's QCBOR test suite.
+ */
+
+/* IntegerValuesParseTestInternal: a 47-element array of integers
+ * spanning the int64/uint64 boundaries, including INT64_MIN, all
+ * powers of 2^k - 1 / 2^k / 2^k + 1 around k=8/16/32/63, and the
+ * top of UINT64. The reference encoding is canonical. */
+static int test_arr_int_boundaries_canonical(void) {
+  static const int64_t IntegerValues[] = {
+    -9223372036854775807LL - 1,
+    -4294967297LL, -4294967296LL, -4294967295LL, -4294967294LL,
+    -2147483648LL, -2147483647LL,
+    -65538, -65537, -65536, -65535, -65534,
+    -257, -256, -255, -254,
+    -25, -24, -23, -1,
+    0, 0, 1, 22, 23, 24, 25, 26,
+    254, 255, 256, 257,
+    65534, 65535, 65536, 65537, 65538,
+    2147483647, 2147483647, 2147483648LL, 2147483649LL,
+    4294967294LL, 4294967295LL, 4294967296LL, 4294967297LL,
+    9223372036854775807LL
+  };
+  static const uint8_t bytes[] = {
+    0x98, 0x2f, 0x3b, 0x7f, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0x3b, 0x00, 0x00, 0x00, 0x01,
+    0x00, 0x00, 0x00, 0x00, 0x3a, 0xff, 0xff, 0xff,
+    0xff, 0x3a, 0xff, 0xff, 0xff, 0xfe, 0x3a, 0xff,
+    0xff, 0xff, 0xfd, 0x3a, 0x7f, 0xff, 0xff, 0xff,
+    0x3a, 0x7f, 0xff, 0xff, 0xfe, 0x3a, 0x00, 0x01,
+    0x00, 0x01, 0x3a, 0x00, 0x01, 0x00, 0x00, 0x39,
+    0xff, 0xff, 0x39, 0xff, 0xfe, 0x39, 0xff, 0xfd,
+    0x39, 0x01, 0x00, 0x38, 0xff, 0x38, 0xfe, 0x38,
+    0xfd, 0x38, 0x18, 0x37, 0x36, 0x20, 0x00, 0x00,
+    0x01, 0x16, 0x17, 0x18, 0x18, 0x18, 0x19, 0x18,
+    0x1a, 0x18, 0xfe, 0x18, 0xff, 0x19, 0x01, 0x00,
+    0x19, 0x01, 0x01, 0x19, 0xff, 0xfe, 0x19, 0xff,
+    0xff, 0x1a, 0x00, 0x01, 0x00, 0x00, 0x1a, 0x00,
+    0x01, 0x00, 0x01, 0x1a, 0x00, 0x01, 0x00, 0x02,
+    0x1a, 0x7f, 0xff, 0xff, 0xff, 0x1a, 0x7f, 0xff,
+    0xff, 0xff, 0x1a, 0x80, 0x00, 0x00, 0x00, 0x1a,
+    0x80, 0x00, 0x00, 0x01, 0x1a, 0xff, 0xff, 0xff,
+    0xfe, 0x1a, 0xff, 0xff, 0xff, 0xff, 0x1b, 0x00,
+    0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x1b,
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+    0x1b, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0x1b, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff
+  };
+  enum { N = sizeof(IntegerValues) / sizeof(IntegerValues[0]) };
+  cbor_t items[N + 1];
+  for (size_t i = 0; i < N; i++) {
+    int64_t v = IntegerValues[i];
+    items[i] = (v < 0) ? cbor_v_mk_neg_int64((uint64_t)(-1 - v))
+                       : cbor_v_mk_uint64((uint64_t)v);
+  }
+  /* Tail entry: 2^64 - 1, the maximum unsigned 64-bit value. */
+  items[N] = cbor_v_mk_uint64(0xffffffffffffffffULL);
+  cbor_t expected;
+  if (!cbor_v_mk_array(items, N + 1, &expected)) TFAIL("mk array");
+  return run_valid_match((uint8_t *)bytes, sizeof(bytes), expected);
+}
+
+/* CheckEmpties: [0, [], [[], [0], {}, {1: {}, 2: {}, 3: []}]] */
+static int test_arr_empties_canonical(void) {
+  static uint8_t bytes[] = {
+    0x83, 0x00, 0x80, 0x84, 0x80, 0x81, 0x00, 0xa0,
+    0xa3, 0x01, 0xa0, 0x02, 0xa0, 0x03, 0x80
+  };
+  cbor_t z[3];
+  z[0] = cbor_v_mk_uint64(0);
+
+  cbor_t empty_arr_buf[1] = { cbor_v_mk_uint64(0) }; /* unused */
+  if (!cbor_v_mk_array(empty_arr_buf, 0, &z[1])) TFAIL("mk z[1]");
+
+  cbor_t y[4];
+  if (!cbor_v_mk_array(empty_arr_buf, 0, &y[0])) TFAIL("mk y[0]");
+  cbor_t leaf_arr[1] = { cbor_v_mk_uint64(0) };
+  if (!cbor_v_mk_array(leaf_arr, 1, &y[1])) TFAIL("mk y[1]");
+  cbor_entry_t empty_map_buf[1] = {
+    cbor_v_mk_map_entry(cbor_v_mk_uint64(0), cbor_v_mk_uint64(0))
+  };
+  if (!cbor_v_mk_map(empty_map_buf, 0, &y[2])) TFAIL("mk y[2]");
+
+  cbor_entry_t inner[3];
+  cbor_t inner_v0, inner_v1, inner_v2;
+  if (!cbor_v_mk_map(empty_map_buf, 0, &inner_v0)) TFAIL("mk inner_v0");
+  if (!cbor_v_mk_map(empty_map_buf, 0, &inner_v1)) TFAIL("mk inner_v1");
+  if (!cbor_v_mk_array(empty_arr_buf, 0, &inner_v2)) TFAIL("mk inner_v2");
+  inner[0] = cbor_v_mk_map_entry(cbor_v_mk_uint64(1), inner_v0);
+  inner[1] = cbor_v_mk_map_entry(cbor_v_mk_uint64(2), inner_v1);
+  inner[2] = cbor_v_mk_map_entry(cbor_v_mk_uint64(3), inner_v2);
+  if (!cbor_v_mk_map(inner, 3, &y[3])) TFAIL("mk y[3]");
+
+  if (!cbor_v_mk_array(y, 4, &z[2])) TFAIL("mk z[2]");
+
+  cbor_t expected;
+  if (!cbor_v_mk_array(z, 3, &expected)) TFAIL("mk outer");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+/* ValidMapEncoded: a complex 3-entry top-level map containing strings,
+ * an array of strings, and an inner 4-entry map. The text-string keys
+ * are NOT in canonical (length-then-lex) order in the reference
+ * encoding, so this is a non-deterministic-encoding-only test:
+ * det must reject it; nondet must accept it.
+ */
+static int test_map_qcbor_complex_nondet(void) {
+  static uint8_t bytes[] = {
+    0xa3, 0x6d, 0x66, 0x69, 0x72, 0x73, 0x74, 0x20,
+    0x69, 0x6e, 0x74, 0x65, 0x67, 0x65, 0x72, 0x18,
+    0x2a, 0x77, 0x61, 0x6e, 0x20, 0x61, 0x72, 0x72,
+    0x61, 0x79, 0x20, 0x6f, 0x66, 0x20, 0x74, 0x77,
+    0x6f, 0x20, 0x73, 0x74, 0x72, 0x69, 0x6e, 0x67,
+    0x73, 0x82, 0x67, 0x73, 0x74, 0x72, 0x69, 0x6e,
+    0x67, 0x31, 0x67, 0x73, 0x74, 0x72, 0x69, 0x6e,
+    0x67, 0x32, 0x6c, 0x6d, 0x61, 0x70, 0x20, 0x69,
+    0x6e, 0x20, 0x61, 0x20, 0x6d, 0x61, 0x70, 0xa4,
+    0x67, 0x62, 0x79, 0x74, 0x65, 0x73, 0x20, 0x31,
+    0x44, 0x78, 0x78, 0x78, 0x78, 0x67, 0x62, 0x79,
+    0x74, 0x65, 0x73, 0x20, 0x32, 0x44, 0x79, 0x79,
+    0x79, 0x79, 0x6b, 0x61, 0x6e, 0x6f, 0x74, 0x68,
+    0x65, 0x72, 0x20, 0x69, 0x6e, 0x74, 0x18, 0x62,
+    0x66, 0x74, 0x65, 0x78, 0x74, 0x20, 0x32, 0x78,
+    0x1e, 0x6c, 0x69, 0x65, 0x73, 0x2c, 0x20, 0x64,
+    0x61, 0x6d, 0x6e, 0x20, 0x6c, 0x69, 0x65, 0x73,
+    0x20, 0x61, 0x6e, 0x64, 0x20, 0x73, 0x74, 0x61,
+    0x74, 0x69, 0x73, 0x74, 0x69, 0x63, 0x73
+  };
+#if IS_DETERMINISTIC
+  return run_invalid(bytes, sizeof(bytes));
+#else
+  /* Helper: text-string from a string literal. */
+  #define TS(name, str) \
+    static uint8_t name##_b[] = str; \
+    cbor_t name; \
+    if (!cbor_v_mk_text_string(name##_b, sizeof(name##_b) - 1, &name)) \
+      TFAIL("mk " #name)
+
+  TS(k_first, "first integer");
+  TS(k_arr,   "an array of two strings");
+  TS(k_inner, "map in a map");
+  TS(s1, "string1");
+  TS(s2, "string2");
+  TS(k_b1, "bytes 1");
+  TS(k_b2, "bytes 2");
+  TS(k_anint, "another int");
+  TS(k_text2, "text 2");
+  TS(v_text2, "lies, damn lies and statistics");
+  #undef TS
+
+  static uint8_t bytes1[] = { 0x78, 0x78, 0x78, 0x78 };
+  static uint8_t bytes2[] = { 0x79, 0x79, 0x79, 0x79 };
+  cbor_t v_b1, v_b2;
+  if (!cbor_v_mk_byte_string(bytes1, sizeof(bytes1), &v_b1)) TFAIL("mk b1");
+  if (!cbor_v_mk_byte_string(bytes2, sizeof(bytes2), &v_b2)) TFAIL("mk b2");
+
+  cbor_entry_t inner_entries[4] = {
+    cbor_v_mk_map_entry(k_b1, v_b1),
+    cbor_v_mk_map_entry(k_b2, v_b2),
+    cbor_v_mk_map_entry(k_anint, cbor_v_mk_uint64(98)),
+    cbor_v_mk_map_entry(k_text2, v_text2)
+  };
+  cbor_t inner_map;
+  if (!cbor_v_mk_map(inner_entries, 4, &inner_map)) TFAIL("mk inner map");
+
+  cbor_t arr_items[2] = { s1, s2 };
+  cbor_t arr;
+  if (!cbor_v_mk_array(arr_items, 2, &arr)) TFAIL("mk arr");
+
+  cbor_entry_t outer_entries[3] = {
+    cbor_v_mk_map_entry(k_first, cbor_v_mk_uint64(42)),
+    cbor_v_mk_map_entry(k_arr,   arr),
+    cbor_v_mk_map_entry(k_inner, inner_map)
+  };
+  cbor_t expected;
+  if (!cbor_v_mk_map(outer_entries, 3, &expected)) TFAIL("mk outer map");
+  return run_valid_no_match(bytes, sizeof(bytes), expected);
+#endif
+}
+
 /* ---------- General invalid encodings ---------- */
 
 static int test_invalid_truncated(void) {
@@ -1112,6 +1711,40 @@ static const test_entry_t TESTS[] = {
   { "invalid_arr_short",            test_invalid_arr_short },
   { "invalid_map_short",            test_invalid_map_short },
   { "invalid_indefinite",           test_invalid_indefinite },
+
+  /* ---------- Imported from cbor-test-unverified gentest ---------- */
+  { "uint_one_canonical",           test_uint_one_canonical },
+  { "uint_ten_canonical",           test_uint_ten_canonical },
+  { "uint_24_canonical",            test_uint_24_canonical },
+  { "uint_25_canonical",            test_uint_25_canonical },
+  { "uint_trillion_canonical",      test_uint_trillion_canonical },
+  { "neg_two_byte_canonical",       test_neg_two_byte_canonical },
+  { "tstr_a_canonical",             test_tstr_a_canonical },
+  { "tstr_ietf_canonical",          test_tstr_ietf_canonical },
+  { "tstr_escapes_canonical",       test_tstr_escapes_canonical },
+  { "tstr_u_umlaut_canonical",      test_tstr_u_umlaut_canonical },
+  { "tstr_water_canonical",         test_tstr_water_canonical },
+  { "tstr_drachma_canonical",       test_tstr_drachma_canonical },
+  { "arr_nested_canonical",         test_arr_nested_canonical },
+  { "arr_25_canonical",             test_arr_25_canonical },
+  { "map_mixed_canonical",          test_map_mixed_canonical },
+  { "arr_with_map_canonical",       test_arr_with_map_canonical },
+  { "map_five_canonical",           test_map_five_canonical },
+
+  /* ---------- UTF-8 (table-driven) ---------- */
+#define X(suffix, validity, ...) \
+  { "utf8_" #suffix,                test_utf8_##suffix },
+  UTF8_TESTS
+#undef X
+
+  /* ---------- Recursion-budget tests ---------- */
+  { "arr_2200_deep_canonical",      test_arr_2200_deep_canonical },
+  { "arr_2200_deep_truncated_invalid", test_arr_2200_deep_truncated_invalid },
+
+  /* ---------- qcbortests ports ---------- */
+  { "arr_int_boundaries_canonical", test_arr_int_boundaries_canonical },
+  { "arr_empties_canonical",        test_arr_empties_canonical },
+  { "map_qcbor_complex_nondet",     test_map_qcbor_complex_nondet },
 };
 
 #define N_TESTS ((int)(sizeof(TESTS) / sizeof(TESTS[0])))
