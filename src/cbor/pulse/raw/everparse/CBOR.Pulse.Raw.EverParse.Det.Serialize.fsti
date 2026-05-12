@@ -88,19 +88,26 @@ let cbor_serialize_string_t =
     pure (cbor_serialize_string_postcond ty off v res v')
   )
 
-val cbor_serialize_map_precond
+let cbor_serialize_map_precond
   (len: raw_uint64)
   (l: list (raw_data_item & raw_data_item))
   (off: SZ.t)
   (v: Seq.seq U8.t)
 : Tot prop
+= SZ.v off <= Seq.length v /\
+  Seq.slice v 0 (SZ.v off) == serialize_cbor_map l /\
+  List.Tot.length l == U64.v len.value
 
-val cbor_serialize_map_postcond
+let cbor_serialize_map_postcond
   (len: raw_uint64)
   (l: list (raw_data_item & raw_data_item))
   (res: SZ.t)
   (v: Seq.seq U8.t)
 : Tot prop
+= List.Tot.length l == U64.v len.value /\
+  SZ.v res <= Seq.length v /\
+  (res == 0sz <==> Seq.length (serialize_cbor (Map len l)) > Seq.length v) /\
+  (SZ.v res > 0 ==> Seq.slice v 0 (SZ.v res) `Seq.equal` serialize_cbor (Map len l))
 
 (* Operations *)
 

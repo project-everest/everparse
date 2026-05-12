@@ -152,79 +152,47 @@ val cbor_det_array_iterator_truncate (_: unit) : array_iterator_truncate_t cbor_
 val cbor_det_serialize_tag (_: unit) : cbor_det_serialize_tag_t
 val cbor_det_serialize_string (_: unit) : cbor_det_serialize_string_t
 val cbor_det_serialize_array (_: unit) : cbor_det_serialize_array_t
+val cbor_det_serialize_map (_: unit) : cbor_det_serialize_map_t
 
 
-(* Item 3 (fragment serialisers): the four raw-side primitives
-   `cbor_serialize_{tag,string,array,map}` are landed in
-   `CBOR.Pulse.Raw.EverParse.Det.Serialize` (after exposing
-   `write_header`/`size_header` from Raw.EverParse.Serialize.fsti).
-   The thin API-level wrappers in this module that lift the raw
-   postconditions to use `Spec.cbor_det_*` are deferred: bridging
-   `Spec.cbor_det_serialize_tag tag == SpecF.serialize_cbor_tag (mk_raw_uint64 tag)`
-   across module boundaries even with `friend CBOR.Spec.API.Format`,
-   `[SMTPat]`, and `assert_norm` does not propagate through Pulse's
-   postcondition check in this F*/Pulse version. Callers can use
-   `CBOR.Pulse.Raw.EverParse.Det.Serialize.*` directly. *)
+(* ====================================================================
+   Status of original task spec items, as of latest commits in this branch
+   ====================================================================
 
-(*
-   ======== TODO (deferred to a follow-up session) ========
+   ✓ DONE (verified clean, zero admits, only project-wide assume SZ.fits_u64):
 
-   The following items from the original task spec are NOT yet implemented in
-   this module. They were deferred either because they require porting >300
-   lines of legacy proof machinery (sort/dedup, fragment serializers, det
-   validation) or because they need additional EverParse-side primitives that
-   have not been ported from the legacy `raw/everparse/old/` modules.
+     1.  cbor_det_validate          via Det.Validate (rescued from legacy)
+     2.  cbor_det_parse_valid       via Read.cbor_raw_read + zero-copy adapter
+     3.  4 raw fragment serializers in Det.Serialize
+         + 4 of 5 API-level wrappers here:
+             cbor_det_serialize_tag, _string, _array, _map.
+         (cbor_det_serialize_map_insert is the one fragment NOT done; see below.)
+     4.  cbor_det_map_entry_match + share + gather
+     5.  cbor_det_mk_map_entry
+     8.  Array iterator FULL: match / share / gather / is_empty / start /
+         length / next / truncate.
+     11. cbor_det_map_entry_key, _value.
 
-   1.  cbor_det_validate            : cbor_det_validate_t
-       Needs the EverParse-side `impl_pred_t` instances for
-       `raw_data_item_ints_optimal_elem` and
-       `raw_data_item_sorted_elem deterministically_encoded_cbor_map_key_order`
-       (the legacy `cbor_raw_ints_optimal` / `cbor_raw_sorted` from
-       `raw/everparse/old/CBOR.Pulse.Raw.Format.Parse.fst` lines 268-470).
-       Currently neither is exposed from the new EverParse stack.
+   TODO:
 
-   2.  cbor_det_parse_valid         : cbor_det_parse_valid_t cbor_det_match
-       Wraps a parser similar to legacy `Parse.cbor_parse`. Needs (1) and
-       a `cbor_read` analog at the EverParse layer (constructs a
-       `CBOR_Case_*` with `Base (Serialized ...)` payload from a slice).
+     3 (rest). cbor_det_serialize_map_insert
+        Needs an EverParse-side `cbor_raw_map_insert` primitive that is
+        currently only in raw/old/CBOR.Pulse.Raw.Insert.fst (~213 lines).
+        Once that's factored over to the new EverParse.Det.Serialize stack,
+        the API wrapper here is ~5 lines (mk_det_raw_cbor_map_raw_snoc lemma
+        + forward).
 
-   3.  cbor_det_serialize_tag, cbor_det_serialize_string,
-       cbor_det_serialize_array, cbor_det_serialize_map_insert,
-       cbor_det_serialize_map     — fragment serializers.
-       Needs new exposed serializers (`cbor_serialize_tag`,
-       `cbor_serialize_string`, `cbor_serialize_array`, `cbor_serialize_map`,
-       `cbor_raw_map_insert`) factored out of the new `Raw.EverParse.Serialize`
-       (currently only top-level `cbor_serialize` and `cbor_size` are exposed).
+     6.  cbor_det_mk_array(_from_array): wrap Make.cbor_mk_array plus
+         seq_list_match ↔ mixed_list_match bridge.
 
-   6.  cbor_det_mk_array            : mk_array_t cbor_det_match
-       Needs a slice -> mixed_list adapter on top of Make.cbor_mk_array, plus
-       a seq_list_match <-> mixed_list_match bridge for cbor_det_match.
+     7.  cbor_det_mk_map_gen: ~300 lines of sort+dedup using
+         Pulse.Lib.Sort.Merge.Slice + 4 spec-level lemmas (heavy).
 
-   7.  cbor_det_mk_map_gen          : mk_map_gen_t cbor_det_match cbor_det_map_entry_match
-       Heavy port (~300 lines) of legacy sort + dedup logic from
-       `raw/old/CBOR.Pulse.API.Det.Common.fst` lines 668-971; uses
-       `Pulse.Lib.Sort.Merge.Slice` plus 4 spec-level lemmas.
+     9.  cbor_det_get_array_item: random access into an array iterator.
 
-   8 (partial). Array iterator: `_match`, `_share`, `_gather`, `_is_empty`
-       are LANDED. Still TODO:
-        * `_length` (needs SZ.fits proof for `len_before + len_after`,
-           which requires propagating fits_u64 invariant through
-           `cbor_det_array_iterator_match`)
-        * `_start`  (`cbor_raw_get_array` + `iterator_start`; blocked on
-           `mk_det_raw_cbor_array_eq` lemma — the obvious port from
-           `CBOR.Spec.API.Format.cbor_det_serialize_array_length_gt_list`'s
-           internal proof regressed `cbor_det_mk_int64`'s rewrite, likely
-           via SMT-context interaction with `assert_norm` of
-           `raw_data_item_ints_optimal == holds_on_raw_data_item …`)
-        * `_next`   (`iterator_next`; needs the same bridge)
-        * `_truncate`
+     10. Full map iterator (match/start/is_empty/length/next/truncate/share/
+         gather): mirror of array iterator + a Spec.Raw bridge for
+         map_iterator_start_post (cbor_map_get ↔ List.Tot.assoc).
 
-   9.  cbor_det_get_array_item      : get_array_item_t cbor_det_match
-       Iterator-based (or direct nlist random-access) lookup. Depends on (8).
-
-   10. Map iterator                 : symmetric to (8). Same blockers.
-
-   12. cbor_det_map_get             : map_get_by_ref_t cbor_det_match
-       Linear search using `cbor_det_equal` over the map iterator.
-       Depends on (10).
+     12. cbor_det_map_get: linear scan over map iterator (small once 10 lands).
 *)

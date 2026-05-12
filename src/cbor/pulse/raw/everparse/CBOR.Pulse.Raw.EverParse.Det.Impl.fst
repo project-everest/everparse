@@ -1320,5 +1320,25 @@ fn cbor_det_serialize_array (_: unit) : cbor_det_serialize_array_t
   res
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_serialize_map (_: unit) : cbor_det_serialize_map_t
+= (len: U64.t) (out: _) (l: _) (off: _)
+{
+  let len' = SpecRaw.mk_raw_uint64 len;
+  let l' = Ghost.hide (SpecRaw.mk_det_raw_cbor_map_raw l);
+  // The precondition's length on l matches len'.value through cbor_map_length
+  assert (pure (List.Tot.length (Ghost.reveal l') == U64.v len'.value));
+  // Equation: cbor_det_serialize_map l == serialize_cbor_map l' (by friend)
+  assert (pure (Spec.cbor_det_serialize_map l == SpecF.serialize_cbor_map (Ghost.reveal l')));
+  Spec.cbor_det_serialize_map_length_gt_list l;
+  // Bridge: mk_det_raw_cbor (pack (CMap l)) == Map len' l' via mk_cbor_eq_map
+  let x : Ghost.erased Spec.cbor = Ghost.hide (Spec.pack (Spec.CMap l));
+  SpecRaw.mk_cbor_eq_map (Ghost.reveal x);
+  assert (pure (Spec.cbor_det_serialize (Spec.pack (Spec.CMap l))
+              == SpecF.serialize_cbor (SpecRawBase.Map len' (Ghost.reveal l'))));
+  let res = DetSer.cbor_serialize_map len' out l' off;
+  res
+}
+
 #pop-options
 
