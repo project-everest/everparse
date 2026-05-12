@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.EverParse.Det.Impl
+#lang-pulse
 
 open Pulse.Lib.Pervasives
 open CBOR.Pulse.API.Base
@@ -31,8 +32,71 @@ val cbor_det_major_type (_: unit) : get_major_type_t cbor_det_match
 
 val cbor_det_get_tagged_payload (_: unit) : get_tagged_payload_t cbor_det_match
 
+(* String reader returning an arrayptr *)
+inline_for_extraction noextract [@@noextract_to "krml"]
+let det_get_string_t =
+  (x: cbor_det_t) ->
+  (#p: perm) ->
+  (#y: Ghost.erased Spec.cbor) ->
+  stt (AP.ptr U8.t)
+    (cbor_det_match p x y ** pure (Spec.CString? (Spec.unpack y)))
+    (fun res -> exists* p' v' .
+      pts_to res #p' v' **
+      Trade.trade
+        (pts_to res #p' v')
+        (cbor_det_match p x y) **
+      pure (get_string_post y v')
+    )
+
+val cbor_det_get_string (_: unit) : det_get_string_t
+
 val cbor_det_mk_simple_value (_: unit) : mk_simple_t cbor_det_match
 val cbor_det_mk_int64 (_: unit) : mk_int64_t cbor_det_match
+
+(* Top-level serializer (arrayptr-based) *)
+fn cbor_det_serialize
+  (c: cbor_det_t)
+  (output: AP.ptr U8.t)
+  (output_len: SZ.t)
+  (#y: Ghost.erased Spec.cbor)
+  (#pm: perm)
+  requires
+    (exists* va . cbor_det_match pm c y ** pts_to output va ** pure (SZ.v output_len == Seq.length va /\ Seq.length (Spec.cbor_det_serialize y) <= SZ.v output_len))
+  returns res: SZ.t
+  ensures
+    (exists* vb . cbor_det_match pm c y ** pts_to output vb ** pure (
+        SZ.v output_len == Seq.length vb /\
+        cbor_det_serialize_fits_postcond y res vb
+      ))
+
+fn cbor_det_serialize_safe
+  (c: cbor_det_t)
+  (output: AP.ptr U8.t)
+  (output_len: SZ.t)
+  (#y: Ghost.erased Spec.cbor)
+  (#v: Ghost.erased (Seq.seq U8.t))
+  (#pm: perm)
+  requires
+    (cbor_det_match pm c y ** pts_to output v ** pure (SZ.v output_len == Seq.length v /\ Seq.length (Spec.cbor_det_serialize y) <= SZ.v output_len))
+  returns res: SZ.t
+  ensures
+    (exists* v' . cbor_det_match pm c y ** pts_to output v' ** pure (
+        SZ.v output_len == Seq.length v' /\
+        cbor_det_serialize_postcond_c y v v' res
+      ))
+
+(* UTF8 validator over a raw arrayptr *)
+inline_for_extraction noextract [@@noextract_to "krml"]
+let det_impl_utf8_correct_from_array_t =
+  (s: AP.ptr U8.t) ->
+  (len: SZ.t) ->
+  (#p: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  stt bool
+    (pts_to s #p v ** pure (SZ.v len == Seq.length v))
+    (fun res -> pts_to s #p v ** pure (res == CBOR.Spec.API.UTF8.correct v))
+
+val cbor_det_impl_utf8_correct_from_array (_: unit) : det_impl_utf8_correct_from_array_t
 
 (* Field readers *)
 val cbor_det_read_simple_value (_: unit) : read_simple_value_t cbor_det_match

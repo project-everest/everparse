@@ -38,32 +38,7 @@ module Proj = LowParse.PulseParse.Projectors
 let cbor_det_match p c v =
   RawMatch.cbor_raw_match p c (SpecRaw.mk_det_raw_cbor v)
 
-(* Local type aliases for types that reference our cbor_det_match *)
-
-inline_for_extraction noextract [@@noextract_to "krml"]
-let det_get_string_t =
-  (x: cbor_det_t) ->
-  (#p: perm) ->
-  (#y: Ghost.erased Spec.cbor) ->
-  stt (AP.ptr U8.t)
-    (cbor_det_match p x y ** pure (Spec.CString? (Spec.unpack y)))
-    (fun res -> exists* p' v' .
-      pts_to res #p' v' **
-      Trade.trade
-        (pts_to res #p' v')
-        (cbor_det_match p x y) **
-      pure (get_string_post y v')
-    )
-
-inline_for_extraction noextract [@@noextract_to "krml"]
-let det_impl_utf8_correct_from_array_t =
-  (s: AP.ptr U8.t) ->
-  (len: SZ.t) ->
-  (#p: perm) ->
-  (#v: Ghost.erased (Seq.seq U8.t)) ->
-  stt bool
-    (pts_to s #p v ** pure (SZ.v len == Seq.length v))
-    (fun res -> pts_to s #p v ** pure (res == CBOR.Spec.API.UTF8.correct v))
+(* Local type aliases for types that reference our cbor_det_match — exposed in fsti *)
 
 (* ======== Share / Gather ======== *)
 
