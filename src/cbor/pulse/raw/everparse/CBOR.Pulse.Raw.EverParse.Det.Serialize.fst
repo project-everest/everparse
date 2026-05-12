@@ -20,23 +20,8 @@ module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 
 (* ============================================================
-   Postconditions over raw_data_item (legacy-internal shapes;
-   kept here as the "raw" API of fragment serializers).
+   Postconditions over raw_data_item — bodies live in fsti
    ============================================================ *)
-
-noextract [@@noextract_to "krml"]
-let cbor_serialize_tag_postcond
-  (tag: raw_uint64)
-  (output: S.slice U8.t)
-  (res: SZ.t)
-  (v': Seq.seq U8.t)
-: Tot prop
-= let s = serialize_cbor_tag tag in
-  let len = Seq.length s in
-  SZ.v (S.len output) == Seq.length v' /\
-  SZ.v res <= Seq.length v' /\
-  (res == 0sz <==> len > Seq.length v') /\
-  (len <= Seq.length v' ==> Seq.slice v' 0 (SZ.v res) == s)
 
 let cbor_serialize_array_precond
   (len: raw_uint64)

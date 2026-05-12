@@ -149,6 +149,8 @@ val cbor_det_parse_valid (_: unit) : cbor_det_parse_valid_t cbor_det_match
 
 val cbor_det_array_iterator_truncate (_: unit) : array_iterator_truncate_t cbor_det_array_iterator_match
 
+val cbor_det_serialize_tag (_: unit) : cbor_det_serialize_tag_t
+
 
 (* Item 3 (fragment serialisers): the four raw-side primitives
    `cbor_serialize_{tag,string,array,map}` are landed in

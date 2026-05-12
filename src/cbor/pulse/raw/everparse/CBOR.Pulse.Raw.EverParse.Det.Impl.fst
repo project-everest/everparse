@@ -1259,4 +1259,24 @@ fn cbor_det_array_iterator_truncate (_: unit) : array_iterator_truncate_t cbor_d
 
 #pop-options
 
+(* ======== API-level fragment-serializer wrappers (item 3 lift) ======== *)
+
+module DetSer = CBOR.Pulse.Raw.EverParse.Det.Serialize
+module RV = CBOR.Spec.Raw.Optimal
+
+#push-options "--z3rlimit 32 --ext no:context_pruning"
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_serialize_tag (_: unit) : cbor_det_serialize_tag_t
+= (tag: U64.t) (output: _)
+{
+  let tag' = SpecRaw.mk_raw_uint64 tag;
+  // Establish the equation Spec.cbor_det_serialize_tag tag == SpecF.serialize_cbor_tag tag'
+  // (made visible by friend CBOR.Spec.API.Format).
+  assert (pure (Spec.cbor_det_serialize_tag tag == SpecF.serialize_cbor_tag tag'));
+  let res = DetSer.cbor_serialize_tag tag' output;
+  res
+}
+
+#pop-options
 
