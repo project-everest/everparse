@@ -1013,3 +1013,4 @@ fn cbor_det_parse_valid (_: unit) : cbor_det_parse_valid_t u#0 #_ cbor_det_match
   fold (cbor_det_match 1.0R res (SpecRaw.mk_cbor v1'));
   res
 }
+

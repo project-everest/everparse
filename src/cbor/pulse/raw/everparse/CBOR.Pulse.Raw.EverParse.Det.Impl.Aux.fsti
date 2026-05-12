@@ -8,6 +8,19 @@ val mk_det_raw_cbor_tot (c: Spec.cbor) : Tot SpecRawBase.raw_data_item
 
 val det_raw_list (l: list Spec.cbor) : Tot (list SpecRawBase.raw_data_item)
 
+module Optimal = CBOR.Spec.Raw.Optimal
+module Format = CBOR.Spec.Raw.Format
+
+val list_map_mk_det_raw_cbor_correct (l: list Spec.cbor)
+: Lemma (ensures (
+    let l' = det_raw_list l in
+    List.Tot.for_all Optimal.raw_data_item_ints_optimal l' /\
+    List.Tot.for_all (Optimal.raw_data_item_sorted Format.deterministically_encoded_cbor_map_key_order) l'
+  ))
+
+val list_map_mk_cbor_mk_det_raw_cbor (l: list Spec.cbor)
+: Lemma (ensures (List.Tot.map SpecRaw.mk_cbor (det_raw_list l) == l))
+
 val mk_det_raw_cbor_inj_map (l1 l2: list Spec.cbor)
 : Lemma
     (requires det_raw_list l1 == det_raw_list l2)

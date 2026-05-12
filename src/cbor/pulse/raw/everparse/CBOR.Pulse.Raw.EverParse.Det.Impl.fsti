@@ -83,6 +83,18 @@ val cbor_det_validate (_: unit) : cbor_det_validate_t
 
 val cbor_det_parse_valid (_: unit) : cbor_det_parse_valid_t cbor_det_match
 
+(* Item 3 (fragment serializers): the four raw-side primitives
+   `cbor_serialize_{tag,string,array,map}` are landed in
+   `CBOR.Pulse.Raw.EverParse.Det.Serialize`. The thin API-level
+   wrappers that lift their postconditions to use `Spec.cbor_det_*`
+   are a follow-up: the lift requires unfolding `Spec.cbor_det_serialize_tag`
+   etc. across module boundaries even with `friend CBOR.Spec.API.Format`,
+   which interacts poorly with Pulse's postcondition checking. The
+   workaround would be to define a postcond_intro lemma per fragment
+   (legacy precedent in raw/old/Det.Common.fst lines 277-407), but
+   carries the same SMT-context risk we saw with the array-iterator
+   bridge lemma. Deferred. *)
+
 (*
    ======== TODO (deferred to a follow-up session) ========
 
