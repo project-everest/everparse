@@ -3,11 +3,20 @@ module CBOR.Pulse.Raw.EverParse.Serialize
 open Pulse.Lib.Pervasives
 open CBOR.Spec.Raw.Base
 open CBOR.Spec.Raw.Format
+open CBOR.Spec.Raw.EverParse
 open CBOR.Pulse.Raw.EverParse.Match
 open CBOR.Pulse.Raw.EverParse.Type
+open LowParse.Pulse.Base
 module SZ = FStar.SizeT
 module S = Pulse.Lib.Slice
 module U8 = FStar.UInt8
+
+(* Header writer / sizer: needed by clients that build CBOR fragments
+   (e.g. fragment serializers for tag, array, string, map_insert, map). *)
+
+val write_header : l2r_leaf_writer serialize_header
+
+val size_header : leaf_compute_remaining_size serialize_header
 
 val cbor_serialize
   (f64: squash SZ.fits_u64)
