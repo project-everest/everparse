@@ -151,14 +151,27 @@ val cbor_serialize_map
 (* TODO: cbor_raw_map_insert: in-place insert a key/value pair into the
    canonical sorted entry list of an already-serialized map. Legacy version
    in raw/old/CBOR.Pulse.Raw.Insert.fst (about 370 lines) needs to be ported
-   to the new EverParse stack. The required pieces are:
+   to the new EverParse stack.
 
-     - cbor_jump_append wrapping Validate.jump_raw_data_item
-     - serialize_cbor_map_cons_equiv lemma (uses serialize_cbor_nonempty)
-     - the cbor_raw_map_insert_inv invariant
-     - the main cbor_raw_map_insert while-loop driver
-       using S.split, S.join, Pulse.Lib.Swap.Slice.slice_swap', and
-       CBytes.lex_compare_bytes.
+   Status of port attempt:
 
-   Once landed, the API-level cbor_det_serialize_map_insert wrapper in
-   Det.Impl is around 5 lines. *)
+   ✓ All structural pieces are buildable in isolation:
+       - cbor_jump_append wrapping Validate.jump_raw_data_item via
+         LowParse.Spec.Base.parse_strong_prefix and serialize_parse_cbor.
+       - serialize_cbor_map_cons_equiv lemma.
+       - cbor_raw_map_insert_inv invariant + _equiv lemma between the two
+         variant shapes (slice-by-slice vs concat).
+
+   ✗ The main while-loop driver compiles but the loop invariant
+     re-establishment after the c<0 branch fails to discharge in any
+     reasonable rlimit/fuel combination tried (192 default, 256 fuel 2,
+     1024 fuel 4 — all timed out or asserted failed). Suspect the
+     `cbor_map_insert (kv :: l) y` recursion lemma needs an explicit
+     spec-level lemma (e.g. map_insert_cons or similar) to bridge the
+     transition l2 = kv :: l2' ⇒ cbor_map_insert l2 = cbor_map_insert l2'
+     prepended with kv. The legacy works at rlimit 192 with default fuel,
+     suggesting either an EverParse-side spec change since the legacy was
+     written, or some configuration difference in the new build setup.
+
+   Once the invariant discharges, the API-level cbor_det_serialize_map_insert
+   wrapper in Det.Impl is around 5 lines. *)
