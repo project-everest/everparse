@@ -80,8 +80,9 @@ $(DET_BIN): $(SRC) $(DET_OBJS)
 
 run: run-c run-python
 
-# C-only run target. Used by nofstar.Makefile's cbor-shared-c-test so that
-# the unverified-test pipeline doesn't gain a Python/network dependency.
+# Composite C-only run target. Useful if you want only the EverCBOR side
+# without the Python harness; the unverified-test pipeline calls the
+# default 'run' target, which includes both C and Python.
 run-c: run-nondet run-det
 .PHONY: run-c
 

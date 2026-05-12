@@ -40,12 +40,12 @@ cbor-nondet-rust-test: cbor
 
 .PHONY: cbor-nondet-rust-test
 
-cbor-shared-c-test: cbor
-	+$(MAKE) -C share/everparse/tests/cbor run-c
+cbor-shared-test: cbor
+	+$(MAKE) -C share/everparse/tests/cbor run
 
-.PHONY: cbor-shared-c-test
+.PHONY: cbor-shared-test
 
-cbor-test-unverified: cbor-det-c-test cbor-det-rust-test cbor-nondet-c-test cbor-nondet-rust-test cbor-shared-c-test
+cbor-test-unverified: cbor-det-c-test cbor-det-rust-test cbor-nondet-c-test cbor-nondet-rust-test cbor-shared-test
 
 .PHONY: cbor-test-unverified
 
