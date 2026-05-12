@@ -30,6 +30,13 @@ val length_det_raw_list (l: list Spec.cbor)
   : Lemma (List.Tot.length (det_raw_list l) == List.Tot.length l)
           [SMTPat (List.Tot.length (det_raw_list l))]
 
+val det_raw_list_inverse (l: list SpecRawBase.raw_data_item)
+: Lemma
+    (requires
+      List.Tot.for_all Optimal.raw_data_item_ints_optimal l /\
+      List.Tot.for_all (Optimal.raw_data_item_sorted Format.deterministically_encoded_cbor_map_key_order) l)
+    (ensures det_raw_list (List.Tot.map SpecRaw.mk_cbor l) == l)
+
 val mk_det_raw_cbor_array_eq (y: Spec.cbor) (l: list Spec.cbor)
 : Lemma
     (requires

@@ -73,8 +73,10 @@ val cbor_det_array_iterator_share (_: unit) : share_t cbor_det_array_iterator_ma
 val cbor_det_array_iterator_gather (_: unit) : gather_t cbor_det_array_iterator_match
 val cbor_det_array_iterator_is_empty (_: unit) : array_iterator_is_empty_t cbor_det_array_iterator_match
 val cbor_det_array_iterator_start (_: unit) : array_iterator_start_t cbor_det_match cbor_det_array_iterator_match
-(* TODO: cbor_det_array_iterator_length: requires propagating fits_u64 invariant
-   through cbor_det_array_iterator_match, deferred to keep no-assume policy. *)
+val cbor_det_array_iterator_length (_: unit) : array_iterator_length_t cbor_det_array_iterator_match
+val cbor_det_array_iterator_next (_: unit) : array_iterator_next_t cbor_det_match cbor_det_array_iterator_match
+(* TODO: cbor_det_array_iterator_truncate: requires a generic iterator_truncate
+   primitive in LowParse.PulseParse.Iterator (not yet implemented).  *)
 
 
 (* ======== Validation (rescued from legacy) ======== *)

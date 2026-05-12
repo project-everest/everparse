@@ -784,7 +784,8 @@ let cbor_det_array_iterator_match
   (l: list Spec.cbor)
 : Tot slprop
 = I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm it
-    (Aux.det_raw_list l)
+    (Aux.det_raw_list l) **
+  pure (FStar.UInt.fits (List.Tot.length l) U64.n)
 
 ghost
 fn cbor_raw_match_share_aux (x1: RawType.cbor_raw) (#pm0: perm) (#x2: SpecRawBase.raw_data_item)
@@ -955,6 +956,122 @@ fn cbor_det_array_iterator_start (_: unit) : array_iterator_start_t cbor_det_mat
     };
   fold (cbor_det_array_iterator_match pm'' it l_ghost);
   it
+}
+
+#pop-options
+
+(* ======== iterator_length, iterator_next (item 8 cont.) ======== *)
+
+#push-options "--z3rlimit 64"
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_array_iterator_length (_: unit) : array_iterator_length_t cbor_det_array_iterator_match
+= (x: _) (#p: _) (#y: _)
+{
+  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  let lr = Ghost.hide (Aux.det_raw_list y);
+  unfold (cbor_det_array_iterator_match p x y);
+  rewrite (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x (Aux.det_raw_list y))
+       as (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x (Ghost.reveal lr));
+  unfold (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x (Ghost.reveal lr));
+  with l1 l2 . assert (
+    I.base_mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x.LowParse.PulseParse.Iterator.before l1 **
+    I.mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x.LowParse.PulseParse.Iterator.after l2);
+  I.base_mixed_list_match_length RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x.LowParse.PulseParse.Iterator.before l1;
+  I.mixed_list_match_length RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x.LowParse.PulseParse.Iterator.after l2;
+  Aux.length_det_raw_list y;
+  let len_before = I.base_mixed_list_length x.LowParse.PulseParse.Iterator.before;
+  let len_after = I.mixed_list_length x.LowParse.PulseParse.Iterator.after;
+  List.Tot.append_length l1 l2;
+  SZ.fits_u64_implies_fits (SZ.v len_before + SZ.v len_after);
+  let len_total = SZ.add len_before len_after;
+  let res = SZ.sizet_to_uint64 len_total;
+  fold (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x (Ghost.reveal lr));
+  rewrite (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x (Ghost.reveal lr))
+       as (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item p x (Aux.det_raw_list y));
+  fold (cbor_det_array_iterator_match p x y);
+  res
+}
+
+#pop-options
+
+#push-options "--z3rlimit 256 --fuel 2 --ifuel 1 --ext no:context_pruning"
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_array_iterator_next (_: unit) : array_iterator_next_t cbor_det_match cbor_det_array_iterator_match
+= (x: _) (#y: _) (#py: _) (#z: _)
+{
+  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  let lr = Ghost.hide (Aux.det_raw_list z);
+  unfold (cbor_det_array_iterator_match py y z);
+  rewrite (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item py y (Aux.det_raw_list z))
+       as (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item py y (Ghost.reveal lr));
+  Aux.length_det_raw_list z;
+  assert (pure (List.Tot.length (Ghost.reveal lr) == List.Tot.length z));
+  assert (pure (Cons? (Ghost.reveal lr)));
+  let zcp = LowParse.PulseParse.Base.zero_copy_parse_of_strong_prefix
+    (CBOR.Pulse.Raw.EverParse.Read.cbor_raw_read 1.0R f64) ();
+  let res = I.iterator_next
+    RawMatch.cbor_raw_match
+    SpecRawEverParse.parse_raw_data_item
+    (Validate.jump_raw_data_item f64)
+    py x y lr
+    cbor_raw_match_share_aux
+    cbor_raw_match_gather_aux
+    zcp;
+  unfold (I.iterator_next_post RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item py x (Ghost.reveal y) (Ghost.reveal lr) res);
+  with pm_v hd_val tl_l it' pm' . assert (
+    RawMatch.cbor_raw_match pm_v res hd_val **
+    R.pts_to x it' **
+    I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm' it' tl_l **
+    Trade.trade
+      (RawMatch.cbor_raw_match pm_v res hd_val **
+       I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm' it' tl_l)
+      (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item py (Ghost.reveal y) (Ghost.reveal lr))
+  );
+  Aux.list_map_mk_cbor_mk_det_raw_cbor z;
+  Aux.list_map_mk_det_raw_cbor_correct z;
+  // z == map mk_cbor lr; lr == hd_val :: tl_l
+  // so z == mk_cbor hd_val :: map mk_cbor tl_l
+  let v_hd : Ghost.erased Spec.cbor = Ghost.hide (SpecRaw.mk_cbor hd_val);
+  let v_tl : Ghost.erased (list Spec.cbor) = Ghost.hide (List.Tot.map SpecRaw.mk_cbor tl_l);
+  // hd_val and tl_l are in det_raw_list z, so each satisfies the optimal/sorted preds
+  // (from list_map_mk_det_raw_cbor_correct on the for_all of cons).
+  // hence mk_det_raw_cbor (mk_cbor hd_val) == hd_val.
+  SpecRaw.mk_det_raw_cbor_mk_cbor hd_val;
+  // For the tail: det_raw_list (map mk_cbor tl_l) == tl_l
+  Aux.det_raw_list_inverse tl_l;
+  // Show List.Tot.length tl_l < pow2 64 (since z < pow2 64 and tl_l shorter)
+  Aux.length_det_raw_list v_tl;
+  rewrite (RawMatch.cbor_raw_match pm_v res hd_val)
+       as (cbor_det_match pm_v res v_hd);
+  rewrite (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm' it' tl_l)
+       as (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm' it' (Aux.det_raw_list v_tl));
+  fold (cbor_det_array_iterator_match pm' it' v_tl);
+  // Build the final trade by manual intro_trade. The "extra" we carry is
+  // the existing iterator_next trade.
+  Trade.intro_trade
+    (cbor_det_match pm_v res v_hd ** cbor_det_array_iterator_match pm' it' v_tl)
+    (cbor_det_array_iterator_match py y z)
+    (Trade.trade
+      (RawMatch.cbor_raw_match pm_v res hd_val **
+       I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm' it' tl_l)
+      (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item py (Ghost.reveal y) (Ghost.reveal lr)))
+    fn _ {
+      unfold (cbor_det_array_iterator_match pm' it' v_tl);
+      rewrite (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm' it' (Aux.det_raw_list v_tl))
+           as (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm' it' tl_l);
+      rewrite (cbor_det_match pm_v res v_hd)
+           as (RawMatch.cbor_raw_match pm_v res hd_val);
+      Trade.elim
+        (RawMatch.cbor_raw_match pm_v res hd_val **
+         I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm' it' tl_l)
+        (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item py (Ghost.reveal y) (Ghost.reveal lr));
+      rewrite (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item py (Ghost.reveal y) (Ghost.reveal lr))
+           as (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item py y (Aux.det_raw_list z));
+      fold (cbor_det_array_iterator_match py y z);
+    };
+  res
 }
 
 #pop-options

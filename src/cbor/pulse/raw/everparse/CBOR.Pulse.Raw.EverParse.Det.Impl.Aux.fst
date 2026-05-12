@@ -47,6 +47,19 @@ let length_det_raw_list (l: list Spec.cbor)
           [SMTPat (List.Tot.length (det_raw_list l))]
 = ()
 
+let rec det_raw_list_inverse (l: list SpecRawBase.raw_data_item)
+: Lemma
+    (requires
+      List.Tot.for_all Optimal.raw_data_item_ints_optimal l /\
+      List.Tot.for_all (Optimal.raw_data_item_sorted Format.deterministically_encoded_cbor_map_key_order) l)
+    (ensures det_raw_list (List.Tot.map SpecRaw.mk_cbor l) == l)
+    (decreases l)
+= match l with
+  | [] -> ()
+  | x :: q ->
+    SpecRaw.mk_det_raw_cbor_mk_cbor x;
+    det_raw_list_inverse q
+
 (* Lemma: when y is a det cbor that unpacks to CArray l, then mk_det_raw_cbor y is Array _ (det_raw_list l) *)
 let mk_det_raw_cbor_array_eq (y: Spec.cbor) (l: list Spec.cbor)
 : Lemma
