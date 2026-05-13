@@ -54,3 +54,28 @@ val mk_det_raw_cbor_array_eq (y: Spec.cbor) (l: list Spec.cbor)
     (ensures
        SpecRawBase.Array? (SpecRaw.mk_det_raw_cbor y) /\
        (SpecRawBase.Array?.v (SpecRaw.mk_det_raw_cbor y) <: list SpecRawBase.raw_data_item) == det_raw_list l)
+
+(* ====================================================================
+   Map-entry analogues of det_raw_list. Used as the underlying
+   spec list for the (still-pending) cbor_det_map_iterator_match. *)
+
+val det_raw_map_entries
+  (l: list (Spec.cbor & Spec.cbor))
+: Tot (list (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item))
+
+val mk_det_raw_cbor_inj_map_entries (l1 l2: list (Spec.cbor & Spec.cbor))
+: Lemma
+    (requires det_raw_map_entries l1 == det_raw_map_entries l2)
+    (ensures l1 == l2)
+
+val det_raw_map_entries_eq
+  (l: list (Spec.cbor & Spec.cbor))
+: Lemma
+    (det_raw_map_entries l == List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry l)
+    [SMTPat (det_raw_map_entries l)]
+
+val length_det_raw_map_entries
+  (l: list (Spec.cbor & Spec.cbor))
+: Lemma
+    (List.Tot.length (det_raw_map_entries l) == List.Tot.length l)
+    [SMTPat (List.Tot.length (det_raw_map_entries l))]

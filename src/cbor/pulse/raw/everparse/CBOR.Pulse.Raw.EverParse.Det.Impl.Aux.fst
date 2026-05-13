@@ -97,3 +97,40 @@ let mk_det_raw_cbor_array_eq (y: Spec.cbor) (l: list Spec.cbor)
   assert (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CArray l)) == x)
 
 #pop-options
+
+(* ====================================================================
+   Map-entry helpers (foundation for cbor_det_map_iterator_match). *)
+
+let det_raw_map_entries
+  (l: list (Spec.cbor & Spec.cbor))
+: Tot (list (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item))
+= List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry l
+
+let rec mk_det_raw_cbor_inj_map_entries
+  (l1 l2: list (Spec.cbor & Spec.cbor))
+: Lemma
+    (requires det_raw_map_entries l1 == det_raw_map_entries l2)
+    (ensures l1 == l2)
+    (decreases l1)
+= match l1, l2 with
+  | [], [] -> ()
+  | (k1, v1) :: t1, (k2, v2) :: t2 ->
+    SpecRaw.mk_det_raw_cbor_inj k1 k2;
+    SpecRaw.mk_det_raw_cbor_inj v1 v2;
+    mk_det_raw_cbor_inj_map_entries t1 t2
+
+let det_raw_map_entries_eq
+  (l: list (Spec.cbor & Spec.cbor))
+: Lemma
+    (det_raw_map_entries l == List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry l)
+    [SMTPat (det_raw_map_entries l)]
+= ()
+
+let rec length_det_raw_map_entries
+  (l: list (Spec.cbor & Spec.cbor))
+: Lemma
+    (List.Tot.length (det_raw_map_entries l) == List.Tot.length l)
+    [SMTPat (List.Tot.length (det_raw_map_entries l))]
+= match l with
+  | [] -> ()
+  | _ :: q -> length_det_raw_map_entries q

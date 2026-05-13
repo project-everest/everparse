@@ -155,6 +155,13 @@ val cbor_det_serialize_array (_: unit) : cbor_det_serialize_array_t
 val cbor_det_serialize_map (_: unit) : cbor_det_serialize_map_t
 val cbor_det_serialize_map_insert (_: unit) : cbor_det_serialize_map_insert_t
 
+(* Foundation for the (still-pending) map iterator family — see
+   Det.Impl.fst comment below the definition for details. *)
+val cbor_det_map_iterator_match : perm -> CBOR.Pulse.API.Det.Type.cbor_det_map_iterator_t -> list (Spec.cbor & Spec.cbor) -> slprop
+val cbor_det_map_iterator_share (_: unit) : share_t cbor_det_map_iterator_match
+val cbor_det_map_iterator_is_empty (_: unit) : map_iterator_is_empty_t cbor_det_map_iterator_match
+val cbor_det_map_iterator_gather (_: unit) : gather_t cbor_det_map_iterator_match
+
 
 (* ====================================================================
    Status of original task spec items, as of latest commits in this branch

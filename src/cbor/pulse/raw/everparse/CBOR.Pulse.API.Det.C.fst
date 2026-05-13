@@ -236,22 +236,19 @@ let cbor_det_get_map_length = Impl.cbor_det_get_map_length
 (* TODO: full map iterator family — item 10. The array iterator analogue
    from Det.Impl can be mirrored once Access.cbor_raw_get_map is wired in
    here. Marked admits as TODO for now. *)
-let cbor_det_map_iterator_match = admit ()
+let cbor_det_map_iterator_match = Impl.cbor_det_map_iterator_match
 
 let cbor_det_map_iterator_start () : map_iterator_start_t cbor_det_match cbor_det_map_iterator_match
   = admit ()
 
-let cbor_det_map_iterator_is_empty () : map_iterator_is_empty_t cbor_det_map_iterator_match
-  = admit ()
+let cbor_det_map_iterator_is_empty = Impl.cbor_det_map_iterator_is_empty
 
 let cbor_det_map_iterator_next () : map_iterator_next_t cbor_det_map_entry_match cbor_det_map_iterator_match
   = admit ()
 
-let cbor_det_map_iterator_share () : share_t cbor_det_map_iterator_match
-  = admit ()
+let cbor_det_map_iterator_share = Impl.cbor_det_map_iterator_share
 
-let cbor_det_map_iterator_gather () : gather_t cbor_det_map_iterator_match
-  = admit ()
+let cbor_det_map_iterator_gather = Impl.cbor_det_map_iterator_gather
 
 let cbor_det_map_entry_key = Impl.cbor_det_map_entry_key
 let cbor_det_map_entry_value = Impl.cbor_det_map_entry_value
