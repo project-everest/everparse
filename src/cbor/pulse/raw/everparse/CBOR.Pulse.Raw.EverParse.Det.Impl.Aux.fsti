@@ -112,3 +112,20 @@ val mk_det_raw_cbor_map_entry_mk_cbor_map_entry (x: SpecRawBase.raw_data_item & 
       CBOR.Spec.Util.holds_on_pair Optimal.raw_data_item_ints_optimal x /\
       CBOR.Spec.Util.holds_on_pair (Optimal.raw_data_item_sorted Format.deterministically_encoded_cbor_map_key_order) x)
     (ensures (SpecRaw.mk_det_raw_cbor_map_entry (SpecRaw.mk_cbor_map_entry x) == x))
+
+(* For map_iterator_start: bridges abstract cbor_map to a concrete
+   list (cbor & cbor) plus the map_iterator_start_post obligations. *)
+
+val mk_det_raw_cbor_map_eq (y: Spec.cbor) (l: list (Spec.cbor & Spec.cbor))
+: Lemma
+    (requires
+      Spec.CMap? (Spec.unpack y) /\
+      FStar.UInt.fits (List.Tot.length l) 64 /\
+      l == List.Tot.map SpecRaw.mk_cbor_map_entry (SpecRaw.mk_det_raw_cbor_map_raw (Spec.CMap?.c (Spec.unpack y))))
+    (ensures (
+       SpecRawBase.Map? (SpecRaw.mk_det_raw_cbor y) /\
+       (SpecRawBase.Map?.v (SpecRaw.mk_det_raw_cbor y) <: list (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)) == det_raw_map_entries l /\
+       List.Tot.length l == Spec.cbor_map_length (Spec.CMap?.c (Spec.unpack y)) /\
+       List.Tot.no_repeats_p (List.Tot.map fst l) /\
+       (forall (k: Spec.cbor) . Spec.cbor_map_get (Spec.CMap?.c (Spec.unpack y)) k == List.Tot.assoc k l)
+    ))

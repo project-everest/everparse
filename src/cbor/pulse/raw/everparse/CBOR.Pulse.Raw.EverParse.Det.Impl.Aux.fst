@@ -185,3 +185,72 @@ let mk_det_raw_cbor_map_entry_mk_cbor_map_entry (x: SpecRawBase.raw_data_item & 
     (ensures (SpecRaw.mk_det_raw_cbor_map_entry (SpecRaw.mk_cbor_map_entry x) == x))
 = SpecRaw.mk_det_raw_cbor_mk_cbor (fst x);
   SpecRaw.mk_det_raw_cbor_mk_cbor (snd x)
+
+#push-options "--fuel 2 --ifuel 2 --z3rlimit 64"
+
+module SpecRawValid = CBOR.Spec.Raw.Valid
+
+let valid_pair_of_sorted_optimal
+  (kv: SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)
+: Lemma
+    (requires
+      CBOR.Spec.Util.holds_on_pair (Optimal.raw_data_item_sorted Format.deterministically_encoded_cbor_map_key_order) kv /\
+      CBOR.Spec.Util.holds_on_pair Optimal.raw_data_item_ints_optimal kv)
+    (ensures
+      SpecRawValid.valid_raw_data_item (fst kv) /\
+      SpecRawValid.valid_raw_data_item (snd kv))
+= Optimal.raw_data_item_sorted_optimal_valid Format.deterministically_encoded_cbor_map_key_order (fst kv);
+  Optimal.raw_data_item_sorted_optimal_valid Format.deterministically_encoded_cbor_map_key_order (snd kv)
+
+let rec for_all_valid_fst_of_mk_det_raw
+  (l: list (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item))
+: Lemma
+    (requires
+      List.Tot.for_all
+        (CBOR.Spec.Util.holds_on_pair (Optimal.raw_data_item_sorted Format.deterministically_encoded_cbor_map_key_order)) l /\
+      List.Tot.for_all
+        (CBOR.Spec.Util.holds_on_pair Optimal.raw_data_item_ints_optimal) l)
+    (ensures
+      List.Tot.for_all SpecRawValid.valid_raw_data_item (List.Tot.map fst l) /\
+      List.Tot.for_all SpecRawValid.valid_raw_data_item (List.Tot.map snd l))
+    (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q ->
+    valid_pair_of_sorted_optimal a;
+    for_all_valid_fst_of_mk_det_raw q
+
+let mk_det_raw_cbor_map_eq (y: Spec.cbor) (l: list (Spec.cbor & Spec.cbor))
+: Lemma
+    (requires
+      Spec.CMap? (Spec.unpack y) /\
+      FStar.UInt.fits (List.Tot.length l) 64 /\
+      l == List.Tot.map SpecRaw.mk_cbor_map_entry (SpecRaw.mk_det_raw_cbor_map_raw (Spec.CMap?.c (Spec.unpack y))))
+    (ensures (
+       SpecRawBase.Map? (SpecRaw.mk_det_raw_cbor y) /\
+       (SpecRawBase.Map?.v (SpecRaw.mk_det_raw_cbor y) <: list (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)) == det_raw_map_entries l /\
+       List.Tot.length l == Spec.cbor_map_length (Spec.CMap?.c (Spec.unpack y)) /\
+       List.Tot.no_repeats_p (List.Tot.map fst l) /\
+       (forall (k: Spec.cbor) . Spec.cbor_map_get (Spec.CMap?.c (Spec.unpack y)) k == List.Tot.assoc k l)
+    ))
+= let m : Spec.cbor_map = Spec.CMap?.c (Spec.unpack y) in
+  let raw_l = SpecRaw.mk_det_raw_cbor_map_raw m in
+  // 1. mk_det_raw_cbor y == Map _ raw_l
+  SpecRaw.mk_cbor_eq_map y;
+  // 2. det_raw_map_entries l == raw_l (inverse round-trip)
+  det_raw_map_entries_inverse raw_l;
+  // 3. no_repeats: raw_l is sorted, so no_repeats; lift to l
+  CBOR.Spec.Raw.Map.list_sorted_map_entry_order_no_repeats Format.deterministically_encoded_cbor_map_key_order raw_l;
+  SpecRaw.no_repeats_map_fst_mk_det_raw_cbor_map_entry l;
+  // 4. validity for_all on raw_l projections
+  for_all_valid_fst_of_mk_det_raw raw_l;
+  // 5. mk_cbor_match_map raw_l m via mk_cbor_eq
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor y);
+  // 6. assoc: cbor_map_get m k == List.Tot.assoc k l
+  let prf (k: Spec.cbor) : Lemma
+    (Spec.cbor_map_get m k == List.Tot.assoc k l)
+  = SpecRaw.list_assoc_map_mk_cbor_map_entry m raw_l () k
+  in
+  Classical.forall_intro prf
+
+#pop-options

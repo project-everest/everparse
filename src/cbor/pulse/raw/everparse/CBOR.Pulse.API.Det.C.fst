@@ -238,8 +238,7 @@ let cbor_det_get_map_length = Impl.cbor_det_get_map_length
    here. Marked admits as TODO for now. *)
 let cbor_det_map_iterator_match = Impl.cbor_det_map_iterator_match
 
-let cbor_det_map_iterator_start () : map_iterator_start_t cbor_det_match cbor_det_map_iterator_match
-  = admit ()
+let cbor_det_map_iterator_start = Impl.cbor_det_map_iterator_start
 
 let cbor_det_map_iterator_is_empty = Impl.cbor_det_map_iterator_is_empty
 

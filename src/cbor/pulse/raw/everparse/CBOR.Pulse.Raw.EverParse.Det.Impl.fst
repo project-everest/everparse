@@ -1799,4 +1799,100 @@ fn cbor_det_map_iterator_next (_: unit) : map_iterator_next_t cbor_det_map_entry
 
 #pop-options
 
+(* ---- map iterator start ---- *)
+
+#push-options "--z3rlimit 128 --fuel 2 --ifuel 2 --ext no:context_pruning"
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_map_iterator_start (_: unit) : map_iterator_start_t cbor_det_match cbor_det_map_iterator_match
+= (x: _) (#p: _) (#y: _)
+{
+  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  unfold (cbor_det_match p x y);
+  let m_ghost : Ghost.erased Spec.cbor_map = Ghost.hide (Spec.CMap?.c (Spec.unpack y));
+  let l_ghost : Ghost.erased (list (Spec.cbor & Spec.cbor)) =
+    Ghost.hide (List.Tot.map SpecRaw.mk_cbor_map_entry
+                  (SpecRaw.mk_det_raw_cbor_map_raw (Ghost.reveal m_ghost)));
+  Aux.mk_det_raw_cbor_map_eq y (Ghost.reveal l_ghost);
+  let ml = Access.cbor_raw_get_map p x ();
+  with pm' lr . assert (
+    I.mixed_list_match
+      (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
+      (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+      pm' ml lr **
+    Pulse.Lib.Trade.trade
+      (I.mixed_list_match
+        (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
+        (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+        pm' ml lr)
+      (RawMatch.cbor_raw_match p x (SpecRaw.mk_det_raw_cbor y)));
+  rewrite (I.mixed_list_match
+      (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
+      (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+      pm' ml lr)
+    as (I.mixed_list_match
+      (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
+      (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+      pm' ml (Aux.det_raw_map_entries l_ghost));
+  rewrite (Pulse.Lib.Trade.trade
+      (I.mixed_list_match
+        (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
+        (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+        pm' ml lr)
+      (RawMatch.cbor_raw_match p x (SpecRaw.mk_det_raw_cbor y)))
+    as (Pulse.Lib.Trade.trade
+      (I.mixed_list_match
+        (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
+        (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+        pm' ml (Aux.det_raw_map_entries l_ghost))
+      (RawMatch.cbor_raw_match p x (SpecRaw.mk_det_raw_cbor y)));
+  let it = I.iterator_start
+    (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
+    (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+    (LowParse.Pulse.Combinators.jump_nondep_then (Validate.jump_raw_data_item f64) (Validate.jump_raw_data_item f64))
+    pm'
+    ml
+    (Aux.det_raw_map_entries l_ghost)
+    cbor_map_entry_match_share_aux
+    cbor_map_entry_match_gather_aux;
+  with pm'' . assert (
+    I.iterator_match
+      (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
+      (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+      pm'' it (Aux.det_raw_map_entries l_ghost) **
+    Pulse.Lib.Trade.trade
+      (I.iterator_match
+        (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
+        (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+        pm'' it (Aux.det_raw_map_entries l_ghost))
+      (I.mixed_list_match
+        (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
+        (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+        pm' ml (Aux.det_raw_map_entries l_ghost)));
+  Trade.trans _ _ (RawMatch.cbor_raw_match p x (SpecRaw.mk_det_raw_cbor y));
+  Trade.intro_trade
+    (cbor_det_map_iterator_match pm'' it l_ghost)
+    (cbor_det_match p x y)
+    (Pulse.Lib.Trade.trade
+      (I.iterator_match
+        (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
+        (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+        pm'' it (Aux.det_raw_map_entries l_ghost))
+      (RawMatch.cbor_raw_match p x (SpecRaw.mk_det_raw_cbor y)))
+    fn _ {
+      unfold (cbor_det_map_iterator_match pm'' it l_ghost);
+      Trade.elim
+        (I.iterator_match
+          (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
+          (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+          pm'' it (Aux.det_raw_map_entries l_ghost))
+        (RawMatch.cbor_raw_match p x (SpecRaw.mk_det_raw_cbor y));
+      fold (cbor_det_match p x y);
+    };
+  fold (cbor_det_map_iterator_match pm'' it l_ghost);
+  it
+}
+
+#pop-options
+
 
