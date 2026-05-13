@@ -161,6 +161,7 @@ val cbor_det_map_iterator_match : perm -> CBOR.Pulse.API.Det.Type.cbor_det_map_i
 val cbor_det_map_iterator_share (_: unit) : share_t cbor_det_map_iterator_match
 val cbor_det_map_iterator_is_empty (_: unit) : map_iterator_is_empty_t cbor_det_map_iterator_match
 val cbor_det_map_iterator_gather (_: unit) : gather_t cbor_det_map_iterator_match
+val cbor_det_map_iterator_next (_: unit) : map_iterator_next_t cbor_det_map_entry_match cbor_det_map_iterator_match
 
 
 (* ====================================================================

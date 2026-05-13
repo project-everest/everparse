@@ -134,3 +134,54 @@ let rec length_det_raw_map_entries
 = match l with
   | [] -> ()
   | _ :: q -> length_det_raw_map_entries q
+
+(* Inverse / soundness lemmas for cbor_det_map_iterator_next. *)
+
+let rec list_map_mk_cbor_mk_det_raw_cbor_map_entry (l: list (Spec.cbor & Spec.cbor))
+: Lemma (ensures (List.Tot.map SpecRaw.mk_cbor_map_entry (det_raw_map_entries l) == l))
+= match l with
+  | [] -> ()
+  | (k, v) :: q ->
+    list_map_mk_cbor_mk_det_raw_cbor [k];
+    list_map_mk_cbor_mk_det_raw_cbor [v];
+    list_map_mk_cbor_mk_det_raw_cbor_map_entry q
+
+let rec list_map_mk_det_raw_cbor_correct_map_entries (l: list (Spec.cbor & Spec.cbor))
+: Lemma (ensures (
+    let l' = det_raw_map_entries l in
+    List.Tot.for_all
+      (CBOR.Spec.Util.holds_on_pair Optimal.raw_data_item_ints_optimal) l' /\
+    List.Tot.for_all
+      (CBOR.Spec.Util.holds_on_pair (Optimal.raw_data_item_sorted Format.deterministically_encoded_cbor_map_key_order)) l'
+  ))
+= match l with
+  | [] -> ()
+  | (k, v) :: q ->
+    list_map_mk_det_raw_cbor_correct [k];
+    list_map_mk_det_raw_cbor_correct [v];
+    list_map_mk_det_raw_cbor_correct_map_entries q
+
+let rec det_raw_map_entries_inverse (l: list (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item))
+: Lemma
+    (requires
+      List.Tot.for_all
+        (CBOR.Spec.Util.holds_on_pair Optimal.raw_data_item_ints_optimal) l /\
+      List.Tot.for_all
+        (CBOR.Spec.Util.holds_on_pair (Optimal.raw_data_item_sorted Format.deterministically_encoded_cbor_map_key_order)) l)
+    (ensures det_raw_map_entries (List.Tot.map SpecRaw.mk_cbor_map_entry l) == l)
+    (decreases l)
+= match l with
+  | [] -> ()
+  | (k, v) :: q ->
+    SpecRaw.mk_det_raw_cbor_mk_cbor k;
+    SpecRaw.mk_det_raw_cbor_mk_cbor v;
+    det_raw_map_entries_inverse q
+
+let mk_det_raw_cbor_map_entry_mk_cbor_map_entry (x: SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)
+: Lemma
+    (requires
+      CBOR.Spec.Util.holds_on_pair Optimal.raw_data_item_ints_optimal x /\
+      CBOR.Spec.Util.holds_on_pair (Optimal.raw_data_item_sorted Format.deterministically_encoded_cbor_map_key_order) x)
+    (ensures (SpecRaw.mk_det_raw_cbor_map_entry (SpecRaw.mk_cbor_map_entry x) == x))
+= SpecRaw.mk_det_raw_cbor_mk_cbor (fst x);
+  SpecRaw.mk_det_raw_cbor_mk_cbor (snd x)

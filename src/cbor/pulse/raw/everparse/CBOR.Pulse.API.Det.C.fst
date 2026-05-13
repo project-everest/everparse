@@ -243,8 +243,7 @@ let cbor_det_map_iterator_start () : map_iterator_start_t cbor_det_match cbor_de
 
 let cbor_det_map_iterator_is_empty = Impl.cbor_det_map_iterator_is_empty
 
-let cbor_det_map_iterator_next () : map_iterator_next_t cbor_det_map_entry_match cbor_det_map_iterator_match
-  = admit ()
+let cbor_det_map_iterator_next = Impl.cbor_det_map_iterator_next
 
 let cbor_det_map_iterator_share = Impl.cbor_det_map_iterator_share
 
