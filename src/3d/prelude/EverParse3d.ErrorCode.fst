@@ -20,7 +20,7 @@ let validator_max_length : (u: U64.t { 4 <= U64.v u /\ U64.v u == pow2 pos_width
 
 let is_error (positionOrError: U64.t) : Tot bool = positionOrError `U64.gt` validator_max_length
 
-let is_success (positionOrError: U64.t) : Tot bool = positionOrError `U64.lte` validator_max_length
+let is_success (positionOrError: U64.t) : Tot bool = validator_max_length `U64.gte` positionOrError
 
 inline_for_extraction
 noextract
