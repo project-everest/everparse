@@ -40,7 +40,12 @@ cbor-nondet-rust-test: cbor
 
 .PHONY: cbor-nondet-rust-test
 
-cbor-test-unverified: cbor-det-c-test cbor-det-rust-test cbor-nondet-c-test cbor-nondet-rust-test
+cbor-shared-test: cbor
+	+$(MAKE) -C share/everparse/tests/cbor run
+
+.PHONY: cbor-shared-test
+
+cbor-test-unverified: cbor-det-c-test cbor-det-rust-test cbor-nondet-c-test cbor-nondet-rust-test cbor-shared-test
 
 .PHONY: cbor-test-unverified
 
@@ -55,6 +60,7 @@ test-nofstar: all-nofstar cbor-test-unverified cose-extracted-test
 
 clean-cbor:
 	+$(MAKE) -C src/cbor clean
+	+$(MAKE) -C share/everparse/tests/cbor clean
 
 .PHONY: clean-cbor
 
