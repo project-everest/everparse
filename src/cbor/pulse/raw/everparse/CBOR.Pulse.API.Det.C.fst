@@ -177,17 +177,80 @@ let cbor_det_map_entry_match = Impl.cbor_det_map_entry_match
 
 let cbor_det_mk_map_entry = Impl.cbor_det_mk_map_entry
 
-(* TODO: cbor_det_mk_map_from_array and cbor_det_mk_map_from_array_safe
-   need item 7 (mk_map_gen — sort+dedup over a slice) which is not yet
-   ported to the EverParse stack. Once Impl.cbor_det_mk_map_gen is provided,
-   the wrappers below become one-liners (mk_map_from_array, etc.).
-   For now they are admitted as TODO. *)
+let cbor_det_mk_map_from_array : mk_map_from_array_t cbor_det_match cbor_det_map_entry_match =
+  mk_map_from_array (mk_map_from_ref (CBOR.Pulse.API.Det.Type.dummy_cbor_det_t ()) (Impl.cbor_det_mk_map_gen ()))
 
-let cbor_det_mk_map_from_array : mk_map_from_array_t cbor_det_match cbor_det_map_entry_match
-  = admit ()
+ghost fn map_gen_post_to_array
+  (#t1 #t2: Type0)
+  (vmatch1: perm -> t1 -> Spec.cbor -> slprop)
+  (vmatch2: perm -> t2 -> (Spec.cbor & Spec.cbor) -> slprop)
+  (a: A.array t2)
+  (s: S.slice t2)
+  (va: (Seq.seq t2))
+  (pv: perm)
+  (vv: (list (Spec.cbor & Spec.cbor)))
+  (vdest0: t1)
+  (bres: bool)
+  (res: option t1)
+  (vdest: t1)
+requires
+  mk_map_gen_post vmatch1 vmatch2 s va pv vv res **
+  S.is_from_array a s **
+  pure (mk_map_gen_by_ref_postcond vdest0 res vdest bres)
+ensures
+  mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest bres
+{
+  match res {
+    None -> {
+      unfold (mk_map_gen_post vmatch1 vmatch2 s va pv vv None);
+      S.to_array s;
+      fold (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest false);
+      rewrite (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest false)
+        as (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest bres);
+    }
+    Some vres -> {
+      unfold (mk_map_gen_post vmatch1 vmatch2 s va pv vv (Some vres));
+      with w va' . assert (Trade.trade (vmatch1 1.0R vres w) (pts_to s va' ** PM.seq_list_match va vv (vmatch2 pv)));
+      intro
+        (Trade.trade
+          (S.pts_to s va')
+          (A.pts_to a va')
+        )
+        #(S.is_from_array a s)
+        fn _
+      {
+        S.to_array s;
+      };
+      Trade.trans_concl_l _ _ _ _;
+      rewrite each vres as vdest;
+      fold (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest true);
+      rewrite (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest true)
+        as (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest bres);
+    }
+  }
+}
 
-let cbor_det_mk_map_from_array_safe () : mk_map_from_array_safe_t cbor_det_match cbor_det_map_entry_match
-  = admit ()
+fn cbor_det_mk_map_from_array_safe () :
+  mk_map_from_array_safe_t #_ #_ cbor_det_match cbor_det_map_entry_match
+=
+  (a: _)
+  (len: _)
+  (dest: _)
+  (#va: _)
+  (#pv: _)
+  (#vv: _)
+{
+  with vdest0 . assert (pts_to dest vdest0);
+  let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
+  let s = S.from_array a (SZ.uint64_to_sizet len);
+  S.pts_to_len s;
+  PM.seq_list_match_length (cbor_det_map_entry_match pv) va vv;
+  let bres = Impl.cbor_det_mk_map_gen () s dest;
+  with res . assert (mk_map_gen_post cbor_det_match cbor_det_map_entry_match s va pv vv res);
+  with vdest . assert (pts_to dest vdest);
+  map_gen_post_to_array _ _ a s va pv vv vdest0 bres res vdest;
+  bres
+}
 
 (* ======== Destructors ======== *)
 
@@ -224,10 +287,103 @@ let cbor_det_array_iterator_truncate = Impl.cbor_det_array_iterator_truncate
 let cbor_det_array_iterator_share = Impl.cbor_det_array_iterator_share
 let cbor_det_array_iterator_gather = Impl.cbor_det_array_iterator_gather
 
-(* TODO: cbor_det_get_array_item — item 9 (random access into array iterator).
-   Could be implemented by iterating up to the index, but no helper exists yet. *)
-let cbor_det_get_array_item () : get_array_item_t cbor_det_match
-  = admit ()
+module R = Pulse.Lib.Reference
+
+let rec list_index_cons (#a: Type) (hd: a) (tl: list a) (n: nat)
+: Lemma
+    (requires n < List.Tot.length tl)
+    (ensures
+      List.Tot.index (hd :: tl) (n + 1) == List.Tot.index tl n /\
+      List.Tot.length (hd :: tl) == 1 + List.Tot.length tl
+    )
+= ()
+
+#restart-solver
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_get_array_item (_: unit) : get_array_item_t cbor_det_match
+= (x: cbor_det_t)
+  (i: U64.t)
+  (#p: perm)
+  (#y: Ghost.erased Spec.cbor)
+{
+  let orig_list : Ghost.erased (list Spec.cbor) = Ghost.hide (Spec.CArray?.v (Spec.unpack y));
+  let it = cbor_det_array_iterator_start () x;
+  with p_it l_it . assert (cbor_det_array_iterator_match p_it it l_it);
+  let mut pit = it;
+  let mut pj = 0uL;
+  let cont0 = U64.lt 0uL i;
+  let mut pcont = cont0;
+  while (
+    !pcont
+  )
+  invariant exists* j_val cont iter suffix piter .
+    R.pts_to pj j_val **
+    R.pts_to pcont cont **
+    R.pts_to pit iter **
+    cbor_det_array_iterator_match piter iter suffix **
+    Trade.trade (cbor_det_array_iterator_match piter iter suffix) (cbor_det_match p x y) **
+    pure (
+      U64.v j_val <= U64.v i /\
+      List.Tot.length suffix + U64.v j_val == List.Tot.length (Ghost.reveal orig_list) /\
+      U64.v i - U64.v j_val < List.Tot.length suffix /\
+      List.Tot.index suffix (U64.v i - U64.v j_val) == List.Tot.index (Ghost.reveal orig_list) (U64.v i) /\
+      cont == (U64.v j_val < U64.v i)
+    )
+  {
+    with gj gcont gi gsuffix gpiter .
+      assert (
+        R.pts_to pj gj **
+        R.pts_to pcont gcont **
+        R.pts_to pit gi **
+        cbor_det_array_iterator_match gpiter gi gsuffix **
+        Trade.trade (cbor_det_array_iterator_match gpiter gi gsuffix) (cbor_det_match p x y)
+      );
+    let elem = cbor_det_array_iterator_next () pit;
+    with p_elem p_iter' v_elem iter' z_tl .
+      assert (
+        cbor_det_match p_elem elem v_elem **
+        R.pts_to pit iter' **
+        cbor_det_array_iterator_match p_iter' iter' z_tl **
+        Trade.trade
+          (cbor_det_match p_elem elem v_elem ** cbor_det_array_iterator_match p_iter' iter' z_tl)
+          (cbor_det_array_iterator_match gpiter gi gsuffix) **
+        pure (Ghost.reveal gsuffix == v_elem :: z_tl)
+      );
+    Trade.elim_hyp_l
+      (cbor_det_match p_elem elem v_elem)
+      (cbor_det_array_iterator_match p_iter' iter' z_tl)
+      (cbor_det_array_iterator_match gpiter gi gsuffix);
+    Trade.trans
+      (cbor_det_array_iterator_match p_iter' iter' z_tl)
+      (cbor_det_array_iterator_match gpiter gi gsuffix)
+      (cbor_det_match p x y);
+    let j_val = !pj;
+    pj := U64.add j_val 1uL;
+    let new_cont = U64.lt (U64.add j_val 1uL) i;
+    pcont := new_cont;
+    ()
+  };
+  // Now j_val == i, suffix starts at element i
+  let res = cbor_det_array_iterator_next () pit;
+  with p_res p_iter_final v_res iter_final z_final .
+    assert (
+      cbor_det_match p_res res v_res **
+      R.pts_to pit iter_final **
+      cbor_det_array_iterator_match p_iter_final iter_final z_final **
+      Trade.trade
+        (cbor_det_match p_res res v_res ** cbor_det_array_iterator_match p_iter_final iter_final z_final)
+        _
+    );
+  Trade.elim_hyp_r
+    (cbor_det_match p_res res v_res)
+    (cbor_det_array_iterator_match p_iter_final iter_final z_final)
+    _;
+  Trade.trans
+    (cbor_det_match p_res res v_res)
+    _
+    (cbor_det_match p x y);
+  res
+}
 
 let cbor_det_get_map_length = Impl.cbor_det_get_map_length
 
@@ -251,9 +407,165 @@ let cbor_det_map_entry_value = Impl.cbor_det_map_entry_value
 let cbor_det_map_entry_share = Impl.cbor_det_map_entry_share
 let cbor_det_map_entry_gather = Impl.cbor_det_map_entry_gather
 
-(* TODO: cbor_det_map_get — item 12 (linear scan over map iterator). *)
-let cbor_det_map_get () : map_get_by_ref_t cbor_det_match
-  = admit ()
+(* ======== map_get helpers ======== *)
+
+let cbor_det_mg_inv_none
+  (px: perm) (x: cbor_det_t) (vx: Spec.cbor) (vk: Spec.cbor)
+  (m: Spec.cbor_map) (i: cbor_det_map_iterator_t) (cont: bool)
+: Tot slprop
+= exists* p_i l .
+    cbor_det_map_iterator_match p_i i l **
+    Trade.trade
+      (cbor_det_map_iterator_match p_i i l)
+      (cbor_det_match px x vx) **
+    pure (
+      Spec.cbor_map_get m vk == (if cont then List.Tot.assoc vk l else None) /\
+      (cont ==> Cons? l)
+    )
+
+let cbor_det_mg_inv_some
+  (px: perm) (x: cbor_det_t) (vx: Spec.cbor) (vk: Spec.cbor)
+  (m: Spec.cbor_map) (x': cbor_det_t)
+: Tot slprop
+= exists* p' vx' .
+    cbor_det_match p' x' vx' **
+    Trade.trade
+      (cbor_det_match p' x' vx')
+      (cbor_det_match px x vx) **
+    pure (Spec.cbor_map_get m vk == Some vx')
+
+let cbor_det_mg_inv
+  (cont: bool) (px: perm) (x: cbor_det_t) (vx: Spec.cbor) (vk: Spec.cbor)
+  (m: Spec.cbor_map) (i: cbor_det_map_iterator_t) (res: option cbor_det_t)
+: Tot slprop
+= match res with
+  | None -> cbor_det_mg_inv_none px x vx vk m i cont
+  | Some x' -> cbor_det_mg_inv_some px x vx vk m x'
+
+ghost
+fn cbor_det_mg_inv_false_elim
+  (#gb: bool)
+  (px: perm) (x: cbor_det_t) (vx: Spec.cbor) (vk: Spec.cbor)
+  (m: Spec.cbor_map) (i: cbor_det_map_iterator_t)
+  (res: option cbor_det_t)
+requires
+  cbor_det_mg_inv gb px x vx vk m i res **
+  pure (gb == false /\ Spec.CMap? (Spec.unpack vx) /\ m == Spec.CMap?.c (Spec.unpack vx))
+ensures
+  map_get_post cbor_det_match x px vx vk res **
+  pure (Spec.CMap? (Spec.unpack vx) /\ (Some? (Spec.cbor_map_get (Spec.CMap?.c (Spec.unpack vx)) vk) == Some? res))
+{
+  rewrite each gb as false;
+  match res {
+    None -> {
+      unfold (cbor_det_mg_inv false px x vx vk m i None);
+      unfold (cbor_det_mg_inv_none px x vx vk m i false);
+      Trade.elim _ _;
+      fold (map_get_post_none cbor_det_match x px vx vk);
+      fold (map_get_post cbor_det_match x px vx vk None);
+      rewrite (map_get_post cbor_det_match x px vx vk None)
+        as (map_get_post cbor_det_match x px vx vk res);
+    }
+    Some x' -> {
+      unfold (cbor_det_mg_inv false px x vx vk m i (Some x'));
+      unfold (cbor_det_mg_inv_some px x vx vk m x');
+      fold (map_get_post_some cbor_det_match x px vx vk x');
+      fold (map_get_post cbor_det_match x px vx vk (Some x'));
+      rewrite (map_get_post cbor_det_match x px vx vk (Some x'))
+        as (map_get_post cbor_det_match x px vx vk res);
+    }
+  }
+}
+
+#restart-solver
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_map_get (_: unit) : map_get_by_ref_t cbor_det_match
+= (x: cbor_det_t)
+  (k: cbor_det_t)
+  (dest: R.ref cbor_det_t)
+  (#px: perm)
+  (#vx: Ghost.erased Spec.cbor)
+  (#pk: perm)
+  (#vk: Ghost.erased Spec.cbor)
+  (#vdest0: Ghost.erased cbor_det_t)
+{
+  let m : Ghost.erased Spec.cbor_map = Ghost.hide (Spec.CMap?.c (Spec.unpack vx));
+  let it = cbor_det_map_iterator_start () x;
+  with p_it l_it . assert (cbor_det_map_iterator_match p_it it l_it);
+  let mut pit = it;
+  let mut pres = None #cbor_det_t;
+  let is_empty = cbor_det_map_iterator_is_empty () it;
+  let cont0 = not is_empty;
+  let mut pcont = cont0;
+  fold (cbor_det_mg_inv_none px x vx vk m it cont0);
+  fold (cbor_det_mg_inv cont0 px x vx vk m it None);
+  while (
+    !pcont
+  )
+  invariant exists* i_val cont res_val .
+    R.pts_to pit i_val **
+    R.pts_to pcont cont **
+    R.pts_to pres res_val **
+    cbor_det_match pk k vk **
+    R.pts_to dest vdest0 **
+    cbor_det_mg_inv cont px x vx vk m i_val res_val **
+    pure (cont == true ==> None? res_val)
+  {
+    with gi gcont gres . assert (cbor_det_mg_inv gcont px x vx vk m gi gres);
+    rewrite (cbor_det_mg_inv gcont px x vx vk m gi gres)
+      as (cbor_det_mg_inv gcont px x vx vk m gi None);
+    unfold (cbor_det_mg_inv gcont px x vx vk m gi None);
+    unfold (cbor_det_mg_inv_none px x vx vk m gi gcont);
+    let entry = cbor_det_map_iterator_next () pit;
+    Trade.trans _ _ (cbor_det_match px x vx);
+    with pentry ventry . assert (cbor_det_map_entry_match pentry entry ventry);
+    let key = cbor_det_map_entry_key () entry;
+    with pk_key . assert (cbor_det_match pk_key key (fst ventry));
+    let eq = cbor_det_equal () key k;
+    Trade.elim (cbor_det_match pk_key key (fst ventry)) (cbor_det_map_entry_match pentry entry ventry);
+    with p_iter' iter' z_tl . assert (cbor_det_map_iterator_match p_iter' iter' z_tl);
+    if eq {
+      Trade.elim_hyp_r
+        (cbor_det_map_entry_match pentry entry ventry)
+        (cbor_det_map_iterator_match p_iter' iter' z_tl)
+        (cbor_det_match px x vx);
+      let value = cbor_det_map_entry_value () entry;
+      Trade.trans _ _ (cbor_det_match px x vx);
+      pres := Some value;
+      pcont := false;
+      fold (cbor_det_mg_inv_some px x vx vk m value);
+      fold (cbor_det_mg_inv false px x vx vk m iter' (Some value))
+    } else {
+      Trade.elim_hyp_l
+        (cbor_det_map_entry_match pentry entry ventry)
+        (cbor_det_map_iterator_match p_iter' iter' z_tl)
+        (cbor_det_match px x vx);
+      let i' = !pit;
+      Trade.rewrite_with_trade
+        (cbor_det_map_iterator_match p_iter' iter' z_tl)
+        (cbor_det_map_iterator_match p_iter' i' z_tl);
+      Trade.trans _ _ (cbor_det_match px x vx);
+      let is_empty' = cbor_det_map_iterator_is_empty () i';
+      let cont' = not is_empty';
+      pcont := cont';
+      fold (cbor_det_mg_inv_none px x vx vk m i' cont');
+      assert (R.pts_to pres None);
+      fold (cbor_det_mg_inv cont' px x vx vk m i' None)
+    }
+  };
+  with gi gcont gres . assert (cbor_det_mg_inv gcont px x vx vk m gi gres);
+  cbor_det_mg_inv_false_elim px x vx vk m gi gres;
+  let res = !pres;
+  match res {
+    None -> {
+      false
+    }
+    Some vres -> {
+      dest := vres;
+      true
+    }
+  }
+}
 
 (* ======== Serializer wrappers (slice → ArrayPtr) ======== *)
 

@@ -166,6 +166,7 @@ val cbor_det_map_iterator_start (_: unit) : map_iterator_start_t cbor_det_match 
 
 val cbor_det_mk_array (_: unit) : mk_array_t cbor_det_match
 
+val cbor_det_mk_map_gen (_: unit) : mk_map_gen_by_ref_t cbor_det_match cbor_det_map_entry_match
 
 (* ====================================================================
    Status of original task spec items, as of latest commits in this branch

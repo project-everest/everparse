@@ -625,6 +625,22 @@ ensures cbor_raw_match pm xl xh
   cbor_raw_match_fold_aux xl;
 }
 
+let cbor_mk_map_xh
+  (len_size: integer_size)
+  (mlen: SZ.t)
+  (l: list (raw_data_item & raw_data_item))
+: GTot raw_data_item
+= let len64 : U64.t = SZ.sizet_to_uint64 mlen in
+  if FStar.StrongExcludedMiddle.strong_excluded_middle
+       (FStar.UInt.fits (SZ.v mlen) 64 /\
+        List.Tot.length l == SZ.v mlen /\
+        raw_uint64_size_prop len_size len64)
+  then
+    let ru : raw_uint64 = { size = len_size; value = len64 } in
+    Map ru l
+  else
+    Simple 0uy
+
 fn cbor_mk_map
   (f64: squash SZ.fits_u64)
   (len_size: integer_size)
@@ -650,7 +666,8 @@ ensures exists* xh .
     (I.mixed_list_match
       (fun (pm': perm) (elem: cbor_map_entry cbor_raw) (x: (raw_data_item & raw_data_item)) ->
         cbor_map_entry_match cbor_raw_match pm' elem x)
-      (nondep_then parse_raw_data_item parse_raw_data_item) pm ml l)
+      (nondep_then parse_raw_data_item parse_raw_data_item) pm ml l) **
+  pure (xh == cbor_mk_map_xh len_size (I.mixed_list_length ml) l)
 {
   let the_prop =
     (let len = SZ.v (I.mixed_list_length ml) in

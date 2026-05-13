@@ -2150,3 +2150,487 @@ fn cbor_det_mk_array (_: unit) : mk_array_t cbor_det_match
 }
 
 #pop-options
+
+(* ======== cbor_det_mk_map_gen ========
+
+   Construct a map CBOR value from a slice of cbor_det_map_entry_t.
+
+   Strategy:
+   1. Bridge seq_list_match cbor_det_map_entry_match → cbor_map_entry_match cbor_raw_match
+   2. Sort the raw entries using merge sort
+   3. On success: construct map, bridge back cbor_raw_match → cbor_det_match
+   4. On failure: bridge back to cbor_det_map_entry_match
+   ======== *)
+
+(* -- 2a. Forward bridge: det map entry → raw map entry (with trade) -- *)
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+ghost
+fn rec seq_list_cbor_det_map_entry_match_to_raw
+  (p: perm)
+  (c: Seq.seq (RawType.cbor_map_entry RawType.cbor_raw))
+  (v: list (Spec.cbor & Spec.cbor))
+  requires PM.seq_list_match c v (cbor_det_map_entry_match p)
+  ensures
+    PM.seq_list_match c (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry v)
+      (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p) **
+    Trade.trade
+      (PM.seq_list_match c (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry v)
+        (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p))
+      (PM.seq_list_match c v (cbor_det_map_entry_match p))
+  decreases v
+{
+  PM.seq_list_match_length (cbor_det_map_entry_match p) c v;
+  if (Nil? v) {
+    PM.seq_list_match_nil_elim c v (cbor_det_map_entry_match p);
+    PM.seq_list_match_nil_intro c (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry v)
+      (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p);
+    Trade.intro_trade
+      (PM.seq_list_match c (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry v)
+        (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p))
+      (PM.seq_list_match c v (cbor_det_map_entry_match p))
+      emp
+      fn _ {
+        PM.seq_list_match_nil_elim c (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry v)
+          (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p);
+        PM.seq_list_match_nil_intro c v (cbor_det_map_entry_match p);
+      };
+  } else {
+    PMU.seq_list_match_cons_elim_trade c v (cbor_det_map_entry_match p);
+    Trade.rewrite_with_trade
+      (cbor_det_map_entry_match p (Seq.head c) (List.Tot.hd v))
+      (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p (Seq.head c) (SpecRaw.mk_det_raw_cbor_map_entry (List.Tot.hd v)));
+    Trade.trans_hyp_l _ _ _ (PM.seq_list_match c v (cbor_det_map_entry_match p));
+    seq_list_cbor_det_map_entry_match_to_raw p (Seq.tail c) (List.Tot.tl v);
+    Trade.trans_hyp_r _ _ _ (PM.seq_list_match c v (cbor_det_map_entry_match p));
+    PMU.seq_list_match_cons_intro_trade (Seq.head c)
+      (SpecRaw.mk_det_raw_cbor_map_entry (List.Tot.hd v))
+      (Seq.tail c) (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry (List.Tot.tl v))
+      (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p);
+    Trade.trans _ _ (PM.seq_list_match c v (cbor_det_map_entry_match p));
+    rewrite each Seq.cons (Seq.head c) (Seq.tail c) as c;
+    rewrite each (SpecRaw.mk_det_raw_cbor_map_entry (List.Tot.Base.hd v) ::
+            List.Tot.Base.map SpecRaw.mk_det_raw_cbor_map_entry
+              (List.Tot.Base.tl v)) as (
+            List.Tot.Base.map SpecRaw.mk_det_raw_cbor_map_entry
+              (v));
+    ();
+  }
+}
+
+#pop-options
+
+(* -- 2b. Reverse bridge: raw map entry → det map entry -- *)
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+ghost
+fn rec seq_list_cbor_raw_map_entry_match_to_det
+  (p: perm)
+  (c: Seq.seq (RawType.cbor_map_entry RawType.cbor_raw))
+  (v: list (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item))
+  requires
+    PM.seq_list_match c v (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p) **
+    pure (
+      List.Tot.for_all (CBOR.Spec.Util.holds_on_pair (SpecRaw.holds_on_raw_data_item (SpecRaw.raw_data_item_ints_optimal_elem))) v /\
+      List.Tot.for_all (CBOR.Spec.Util.holds_on_pair (SpecRaw.holds_on_raw_data_item (SpecRaw.raw_data_item_sorted_elem SpecF.deterministically_encoded_cbor_map_key_order))) v
+    )
+  ensures
+    PM.seq_list_match c (List.Tot.map SpecRaw.mk_cbor_map_entry v) (cbor_det_map_entry_match p) **
+    Trade.trade
+      (PM.seq_list_match c (List.Tot.map SpecRaw.mk_cbor_map_entry v) (cbor_det_map_entry_match p))
+      (PM.seq_list_match c v (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p))
+  decreases v
+{
+  PM.seq_list_match_length (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p) c v;
+  if (Nil? v) {
+    PM.seq_list_match_nil_elim c v (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p);
+    PM.seq_list_match_nil_intro c (List.Tot.map SpecRaw.mk_cbor_map_entry v) (cbor_det_map_entry_match p);
+    Trade.intro_trade
+      (PM.seq_list_match c (List.Tot.map SpecRaw.mk_cbor_map_entry v) (cbor_det_map_entry_match p))
+      (PM.seq_list_match c v (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p))
+      emp
+      fn _ {
+        PM.seq_list_match_nil_elim c (List.Tot.map SpecRaw.mk_cbor_map_entry v) (cbor_det_map_entry_match p);
+        PM.seq_list_match_nil_intro c v (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p);
+      };
+  } else {
+    PMU.seq_list_match_cons_elim_trade c v (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p);
+    SpecRaw.mk_det_raw_cbor_mk_cbor (fst (List.Tot.hd v));
+    SpecRaw.mk_det_raw_cbor_mk_cbor (snd (List.Tot.hd v));
+    Trade.rewrite_with_trade
+      (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p (Seq.head c) (List.Tot.hd v))
+      (cbor_det_map_entry_match p (Seq.head c) (SpecRaw.mk_cbor_map_entry (List.Tot.hd v)));
+    Trade.trans_hyp_l _ _ _ (PM.seq_list_match c v (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p));
+    seq_list_cbor_raw_map_entry_match_to_det p (Seq.tail c) (List.Tot.tl v);
+    Trade.trans_hyp_r _ _ _ (PM.seq_list_match c v (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p));
+    PMU.seq_list_match_cons_intro_trade (Seq.head c)
+      (SpecRaw.mk_cbor_map_entry (List.Tot.hd v))
+      (Seq.tail c) (List.Tot.map SpecRaw.mk_cbor_map_entry (List.Tot.tl v))
+      (cbor_det_map_entry_match p);
+    Trade.trans _ _ (PM.seq_list_match c v (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p));
+    rewrite each Seq.cons (Seq.head c) (Seq.tail c) as c;
+    rewrite each (SpecRaw.mk_cbor_map_entry (List.Tot.Base.hd v) ::
+            List.Tot.Base.map SpecRaw.mk_cbor_map_entry (List.Tot.Base.tl v)) as (
+            List.Tot.Base.map SpecRaw.mk_cbor_map_entry (v));
+    ();
+  }
+}
+
+#pop-options
+
+(* -- 2c. Comparison function for map entry sorting -- *)
+
+#push-options "--z3rlimit 64 --fuel 1 --ifuel 1"
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_map_entry_compare_impl
+  (p: perm)
+: Pulse.Lib.Sort.Base.impl_compare_t
+    (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p)
+    SpecF.cbor_map_entry_raw_compare
+= (x1: _)
+  (x2: _)
+  (#y1: _)
+  (#y2: _)
+{
+  unfold (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p x1 y1);
+  unfold (Proj.vmatch_pair_with_proj (RawMatch.cbor_raw_match p)
+    RawMatch.cbor_map_entry_key_proj
+    (Proj.vmatch_with_pair_proj (RawMatch.cbor_raw_match p) RawMatch.cbor_map_entry_value_proj) x1 y1);
+  unfold (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p x2 y2);
+  unfold (Proj.vmatch_pair_with_proj (RawMatch.cbor_raw_match p)
+    RawMatch.cbor_map_entry_key_proj
+    (Proj.vmatch_with_pair_proj (RawMatch.cbor_raw_match p) RawMatch.cbor_map_entry_value_proj) x2 y2);
+  let res = Compare.impl_cbor_compare (assume (SZ.fits_u64)) x1.cbor_map_entry_key x2.cbor_map_entry_key;
+  fold (Proj.vmatch_pair_with_proj (RawMatch.cbor_raw_match p)
+    RawMatch.cbor_map_entry_key_proj
+    (Proj.vmatch_with_pair_proj (RawMatch.cbor_raw_match p) RawMatch.cbor_map_entry_value_proj) x1 y1);
+  fold (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p x1 y1);
+  fold (Proj.vmatch_pair_with_proj (RawMatch.cbor_raw_match p)
+    RawMatch.cbor_map_entry_key_proj
+    (Proj.vmatch_with_pair_proj (RawMatch.cbor_raw_match p) RawMatch.cbor_map_entry_value_proj) x2 y2);
+  fold (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p x2 y2);
+  res
+}
+
+#pop-options
+
+(* -- 2d. Sort wrapper -- *)
+
+fn rec cbor_raw_sort_aux
+  (p: perm)
+  (a: S.slice (RawType.cbor_map_entry RawType.cbor_raw))
+  (#c: Ghost.erased (Seq.seq (RawType.cbor_map_entry RawType.cbor_raw)))
+  (#l: Ghost.erased (list (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)))
+requires
+  pts_to a c **
+  PM.seq_list_match c l (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p)
+returns res: bool
+ensures
+  Pulse.Lib.Sort.Merge.Slice.sort_aux_post
+    (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p)
+    SpecF.cbor_map_entry_raw_compare a c l res
+{
+  Pulse.Lib.Sort.Merge.Slice.sort_aux
+    (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p)
+    SpecF.cbor_map_entry_raw_compare
+    (cbor_map_entry_compare_impl p)
+    (cbor_raw_sort_aux p)
+    a
+}
+
+let cbor_raw_sort
+  (p: perm)
+: Pulse.Lib.Sort.Merge.Slice.sort_t
+    (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match p)
+    SpecF.cbor_map_entry_raw_compare
+= Pulse.Lib.Sort.Merge.Slice.sort _ _ (cbor_raw_sort_aux p)
+
+(* -- Helper lemmas for the failure branch -- *)
+
+let list_no_repeats_map_fst_intro_mk_det_raw_cbor1
+  (vv: list (Spec.cbor & Spec.cbor))
+  (l1 l2: list (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item))
+  (x1 x2: (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item))
+: Lemma
+  (requires (
+    let vv1 = List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry vv in
+    vv1 == List.Tot.append l1 l2 /\
+    List.Tot.memP x1 l1 /\ List.Tot.memP x2 l2 /\
+    SpecF.cbor_map_entry_raw_compare x1 x2 == 0
+  ))
+  (ensures (
+    ~ (List.Tot.no_repeats_p (List.Tot.map fst vv))
+  ))
+= let k1 = fst x1 in
+  let k2 = fst x2 in
+  assert (SpecF.cbor_compare k1 k2 == 0);
+  SpecF.cbor_compare_equal k1 k2;
+  assert (fst x1 == fst x2);
+  List.Tot.map_append fst l1 l2;
+  List.Tot.no_repeats_p_append (List.Tot.map fst l1) (List.Tot.map fst l2);
+  CBOR.Spec.Util.list_memP_map_forall fst l1;
+  CBOR.Spec.Util.list_memP_map_forall fst l2;
+  SpecRaw.no_repeats_map_fst_mk_det_raw_cbor_map_entry vv
+
+let list_no_repeats_map_fst_intro_mk_det_raw_cbor2
+  (vv: list (Spec.cbor & Spec.cbor))
+  (l1 l2: list (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item))
+  (x1 x2: (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item))
+: Lemma
+  (ensures (
+    let vv1 = List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry vv in
+    (vv1 == List.Tot.append l1 l2 /\ List.Tot.memP x1 l1 /\ List.Tot.memP x2 l2 /\
+      SpecF.cbor_map_entry_raw_compare x1 x2 == 0
+    ) ==>
+    ~ (List.Tot.no_repeats_p (List.Tot.map fst vv))
+  ))
+= Classical.move_requires (list_no_repeats_map_fst_intro_mk_det_raw_cbor1 vv l1 l2 x1) x2
+
+let list_no_repeats_map_fst_intro_mk_det_raw_cbor
+  (vv: list (Spec.cbor & Spec.cbor))
+: Lemma
+  (requires (
+    let vv1 = List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry vv in
+    exists l1 l2 x1 x2 .
+    vv1 == List.Tot.append l1 l2 /\ List.Tot.memP x1 l1 /\ List.Tot.memP x2 l2 /\
+      SpecF.cbor_map_entry_raw_compare x1 x2 == 0
+  ))
+  (ensures (
+    ~ (List.Tot.no_repeats_p (List.Tot.map fst vv))
+  ))
+= Classical.forall_intro_4 (list_no_repeats_map_fst_intro_mk_det_raw_cbor2 vv)
+
+(* -- Helper: fits_mod -- *)
+
+let fits_mod (x: nat) (n: pos) : Lemma
+  (requires x <= pow2 n - 1)
+  (ensures FStar.UInt.fits x n)
+= ()
+
+(* -- 2e. Main function -- *)
+
+#restart-solver
+
+#push-options "--z3rlimit 256 --fuel 2 --ifuel 2 --ext no:context_pruning"
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_mk_map_gen (_: unit) : mk_map_gen_by_ref_t cbor_det_match cbor_det_map_entry_match
+= (a: _)
+  (dest: _)
+  (#va: _)
+  (#pv: _)
+  (#vv: _)
+  (#vdest0: _)
+{
+  S.pts_to_len a;
+  PM.seq_list_match_length (cbor_det_map_entry_match pv) va vv;
+  let _ : squash SZ.fits_u64 = assume (SZ.fits_u64);
+  if (SZ.gt (S.len a) (SZ.uint64_to_sizet 18446744073709551615uL)) {
+    Trade.refl (PM.seq_list_match va vv (cbor_det_map_entry_match pv));
+    fold (mk_map_gen_post cbor_det_match cbor_det_map_entry_match a va pv vv None);
+    false
+  } else {
+    let vv1 = Ghost.hide (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry vv);
+    Pulse.Lib.Sort.Merge.Spec.spec_sort_correct
+      (SpecRaw.map_entry_order SpecF.deterministically_encoded_cbor_map_key_order _)
+      SpecF.cbor_map_entry_raw_compare vv1;
+    SpecRaw.no_repeats_map_fst_mk_det_raw_cbor_map_entry vv;
+    seq_list_cbor_det_map_entry_match_to_raw pv va vv;
+    let correct : bool = cbor_raw_sort pv a;
+    Trade.trans _ _ (PM.seq_list_match va vv (cbor_det_map_entry_match pv));
+    with va' vv' . assert (
+      pts_to a va' **
+      PM.seq_list_match va' vv' (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pv));
+    S.pts_to_len a;
+    PM.seq_list_match_length (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pv) va' vv';
+    CBOR.Spec.Util.list_memP_map_forall fst vv';
+    if (correct) {
+      CBOR.Spec.Raw.Map.list_sorted_map_entry_order_no_repeats
+        SpecF.deterministically_encoded_cbor_map_key_order vv';
+      CBOR.Spec.Util.list_memP_map_forall fst vv1;
+      CBOR.Spec.Util.list_no_repeats_memP_equiv_length_no_repeats
+        (List.Tot.map fst vv') (List.Tot.map fst vv1);
+      SpecRaw.cbor_map_sort_correct
+        SpecF.deterministically_encoded_cbor_map_key_order SpecF.cbor_compare vv1;
+      fits_mod (SZ.v (S.len a)) U64.n;
+      // Build mixed_list from sorted entries
+      S.share a;
+      let sp = 1.0R /. 2.0R;
+      let bml : I.base_mixed_list (RawType.cbor_map_entry RawType.cbor_raw) = I.Slice sp pv a;
+      let ml : I.mixed_list (RawType.cbor_map_entry RawType.cbor_raw) = I.Base bml;
+      rewrite (S.pts_to a #sp va')
+           as (S.pts_to a #(1.0R *. sp) va');
+      rewrite (PM.seq_list_match va' vv'
+                (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pv))
+           as (PM.seq_list_match va' vv'
+                (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match (1.0R *. pv)));
+      assert (pure (I.base_mixed_list_length (I.Slice #(RawType.cbor_map_entry RawType.cbor_raw) sp pv a) == S.len a));
+      fold (I.base_mixed_list_match_n
+        (fun (pm': perm) (elem: RawType.cbor_map_entry RawType.cbor_raw) (x: (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)) ->
+          RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm' elem x)
+        (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+        0 (SZ.v (S.len a)) 1.0R
+        (I.Slice #(RawType.cbor_map_entry RawType.cbor_raw) sp pv a) vv');
+      rewrite (I.base_mixed_list_match_n
+        (fun (pm': perm) (elem: RawType.cbor_map_entry RawType.cbor_raw) (x: (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)) ->
+          RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm' elem x)
+        (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+        0 (SZ.v (S.len a)) 1.0R
+        (I.Slice #(RawType.cbor_map_entry RawType.cbor_raw) sp pv a) vv')
+           as (I.base_mixed_list_match_n
+        (fun (pm': perm) (elem: RawType.cbor_map_entry RawType.cbor_raw) (x: (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)) ->
+          RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm' elem x)
+        (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+        0 (SZ.v (I.base_mixed_list_length bml)) 1.0R bml vv');
+      fold (I.mixed_list_match_n
+        (fun (pm': perm) (elem: RawType.cbor_map_entry RawType.cbor_raw) (x: (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)) ->
+          RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm' elem x)
+        (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+        0 (SZ.v (I.base_mixed_list_length bml)) 1.0R (I.Base #(RawType.cbor_map_entry RawType.cbor_raw) bml) vv');
+      rewrite (I.mixed_list_match_n
+        (fun (pm': perm) (elem: RawType.cbor_map_entry RawType.cbor_raw) (x: (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)) ->
+          RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm' elem x)
+        (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+        0 (SZ.v (I.base_mixed_list_length bml)) 1.0R (I.Base #(RawType.cbor_map_entry RawType.cbor_raw) bml) vv')
+           as (I.mixed_list_match_n
+        (fun (pm': perm) (elem: RawType.cbor_map_entry RawType.cbor_raw) (x: (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)) ->
+          RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm' elem x)
+        (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+        0 (SZ.v (I.mixed_list_length ml)) 1.0R ml vv');
+      fold (I.mixed_list_match
+        (fun (pm': perm) (elem: RawType.cbor_map_entry RawType.cbor_raw) (x: (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)) ->
+          RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm' elem x)
+        (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item) 1.0R ml vv');
+      let len_sz = S.len a;
+      let len64 = SZ.sizet_to_uint64 len_sz;
+      let raw_len = SpecRaw.mk_raw_uint64 len64;
+      let f64 : squash SZ.fits_u64 = assume (SZ.fits_u64);
+      let res = RawMake.cbor_mk_map f64 raw_len.size ml;
+      with xh . assert (RawMatch.cbor_raw_match 1.0R res xh);
+      // Establish vv' == cbor_map_sort ... vv1 via list_sorted_ext_eq
+      Pulse.Lib.Sort.Merge.Spec.spec_sort_correct
+        (SpecRaw.map_entry_order SpecF.deterministically_encoded_cbor_map_key_order _)
+        SpecF.cbor_map_entry_raw_compare
+        vv1;
+      SpecF.cbor_map_entry_raw_compare_succeeds vv1;
+      CBOR.Spec.Util.list_sorted_ext_eq
+        (SpecRaw.map_entry_order SpecF.deterministically_encoded_cbor_map_key_order _)
+        vv'
+        (SpecRaw.cbor_map_sort SpecF.deterministically_encoded_cbor_map_key_order vv1);
+      // Construct ghost map value
+      let v_ghost : Ghost.erased Spec.cbor =
+        Ghost.hide (SpecRaw.mk_det_raw_cbor_map vv len64);
+      Spec.pack_unpack v_ghost;
+      // Key assertions for Z3
+      assert (pure (I.base_mixed_list_length bml == S.len a));
+      assert (pure (I.mixed_list_length ml == S.len a));
+      assert (pure (SZ.v (I.mixed_list_length ml) == List.Tot.length vv'));
+      assert (pure (raw_len == SpecRaw.mk_raw_uint64 len64));
+      assert (pure (xh == SpecRaw.mk_det_raw_cbor v_ghost));
+      rewrite each xh as (SpecRaw.mk_det_raw_cbor v_ghost);
+      fold (cbor_det_match 1.0R res v_ghost);
+      // Build the inverse trade
+      Trade.intro_trade
+        (cbor_det_match 1.0R res v_ghost)
+        (S.pts_to a va' ** PM.seq_list_match va vv (cbor_det_map_entry_match pv))
+        (S.pts_to a #sp va' **
+         Trade.trade
+           (RawMatch.cbor_raw_match 1.0R res (SpecRaw.mk_det_raw_cbor v_ghost))
+           (I.mixed_list_match
+             (fun (pm': perm) (elem: RawType.cbor_map_entry RawType.cbor_raw) (x: (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)) ->
+               RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm' elem x)
+             (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item) 1.0R ml vv') **
+         Trade.trade
+           (PM.seq_list_match va' vv' (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pv))
+           (PM.seq_list_match va vv (cbor_det_map_entry_match pv)))
+        fn _ {
+          unfold (cbor_det_match 1.0R res v_ghost);
+          Trade.elim
+            (RawMatch.cbor_raw_match 1.0R res (SpecRaw.mk_det_raw_cbor v_ghost))
+            (I.mixed_list_match
+              (fun (pm': perm) (elem: RawType.cbor_map_entry RawType.cbor_raw) (x: (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)) ->
+                RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm' elem x)
+              (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item) 1.0R ml vv');
+          // Unfold mixed_list_match chain
+          unfold (I.mixed_list_match
+            (fun (pm': perm) (elem: RawType.cbor_map_entry RawType.cbor_raw) (x: (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)) ->
+              RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm' elem x)
+            (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item) 1.0R ml vv');
+          rewrite (I.mixed_list_match_n
+            (fun (pm': perm) (elem: RawType.cbor_map_entry RawType.cbor_raw) (x: (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)) ->
+              RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm' elem x)
+            (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+            0 (SZ.v (I.mixed_list_length ml)) 1.0R ml vv')
+               as (I.mixed_list_match_n
+            (fun (pm': perm) (elem: RawType.cbor_map_entry RawType.cbor_raw) (x: (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)) ->
+              RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm' elem x)
+            (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+            0 (SZ.v (I.base_mixed_list_length bml)) 1.0R (I.Base #(RawType.cbor_map_entry RawType.cbor_raw) bml) vv');
+          unfold (I.mixed_list_match_n
+            (fun (pm': perm) (elem: RawType.cbor_map_entry RawType.cbor_raw) (x: (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)) ->
+              RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm' elem x)
+            (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+            0 (SZ.v (I.base_mixed_list_length bml)) 1.0R (I.Base #(RawType.cbor_map_entry RawType.cbor_raw) bml) vv');
+          rewrite (I.base_mixed_list_match_n
+            (fun (pm': perm) (elem: RawType.cbor_map_entry RawType.cbor_raw) (x: (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)) ->
+              RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm' elem x)
+            (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+            0 (SZ.v (I.base_mixed_list_length bml)) 1.0R bml vv')
+               as (I.base_mixed_list_match_n
+            (fun (pm': perm) (elem: RawType.cbor_map_entry RawType.cbor_raw) (x: (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)) ->
+              RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm' elem x)
+            (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+            0 (SZ.v (S.len a)) 1.0R (I.Slice #(RawType.cbor_map_entry RawType.cbor_raw) sp pv a) vv');
+          unfold (I.base_mixed_list_match_n
+            (fun (pm': perm) (elem: RawType.cbor_map_entry RawType.cbor_raw) (x: (SpecRawBase.raw_data_item & SpecRawBase.raw_data_item)) ->
+              RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm' elem x)
+            (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+            0 (SZ.v (S.len a)) 1.0R (I.Slice #(RawType.cbor_map_entry RawType.cbor_raw) sp pv a) vv');
+          // Gather array permission
+          S.gather a;
+          with l' l1 . assert (
+            S.pts_to a #(sp +. sp) l' **
+            PM.seq_list_match l1 vv' (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match (1.0R *. pv)));
+          rewrite each l' as va';
+          rewrite each l1 as va';
+          rewrite (S.pts_to a #(sp +. sp) va') as (S.pts_to a va');
+          rewrite (PM.seq_list_match va' vv' (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match (1.0R *. pv)))
+               as (PM.seq_list_match va' vv' (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pv));
+          // Elim the bridge/sort trade to recover original entries
+          Trade.elim
+            (PM.seq_list_match va' vv' (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pv))
+            (PM.seq_list_match va vv (cbor_det_map_entry_match pv));
+        };
+      // Rewrite v_ghost for mk_map_gen_post (Some res)
+      rewrite each v_ghost as (Spec.pack (Spec.CMap (Spec.CMap?.c (Spec.unpack v_ghost))));
+      fold (mk_map_gen_post cbor_det_match cbor_det_map_entry_match a va pv vv (Some res));
+      dest := res;
+      true
+    } else {
+      CBOR.Spec.Util.list_memP_map_forall SpecRaw.mk_det_raw_cbor_map_entry vv;
+      List.Tot.for_all_mem
+        (CBOR.Spec.Util.holds_on_pair
+          (SpecRaw.holds_on_raw_data_item (SpecRaw.raw_data_item_ints_optimal_elem))) vv';
+      List.Tot.for_all_mem
+        (CBOR.Spec.Util.holds_on_pair
+          (SpecRaw.holds_on_raw_data_item (SpecRaw.raw_data_item_sorted_elem SpecF.deterministically_encoded_cbor_map_key_order))) vv';
+      CBOR.Spec.Util.list_memP_map_forall SpecRaw.mk_cbor_map_entry vv';
+      list_no_repeats_map_fst_intro_mk_det_raw_cbor vv;
+      seq_list_cbor_raw_map_entry_match_to_det pv va' vv';
+      Trade.trans _ _ (PM.seq_list_match va vv (cbor_det_map_entry_match pv));
+      let vv2 = Ghost.hide (List.Tot.map SpecRaw.mk_cbor_map_entry vv');
+      assert (pure (forall x . List.Tot.memP x vv2 <==> List.Tot.memP x vv));
+      assert (pure (List.Tot.length vv2 == List.Tot.length vv));
+      assert (pure (~ (List.Tot.no_repeats_p (List.Tot.map fst vv))));
+      assert (pure (List.Tot.length vv <= pow2 64 - 1));
+      assert (pure (mk_map_gen_none_postcond va vv va' vv2));
+      fold (mk_map_gen_post cbor_det_match cbor_det_map_entry_match a va pv vv None);
+      false
+    }
+  }
+}
+
+#pop-options
