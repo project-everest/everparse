@@ -31,6 +31,7 @@ module SpecF = CBOR.Spec.Raw.Format
 module I = LowParse.PulseParse.Iterator
 module R = Pulse.Lib.Reference
 module Proj = LowParse.PulseParse.Projectors
+module PMU = Pulse.Lib.SeqMatch.Util
 
 (* ======== Core definition ======== *)
 
@@ -1895,4 +1896,66 @@ fn cbor_det_map_iterator_start (_: unit) : map_iterator_start_t cbor_det_match c
 
 #pop-options
 
+(* ======== Helper for cbor_det_mk_array (and friends) ========
+
+   Bridges seq_list_match in the cbor_det_match form to its
+   cbor_raw_match form on the det_raw_list of the spec list.
+
+   Used by the (still-pending) cbor_det_mk_array implementation, which
+   needs to construct a Slice mixed_list from the input slice and call
+   Make.cbor_mk_array.
+   ======== *)
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+ghost
+fn rec seq_list_cbor_det_match_to_raw_trade
+  (p: perm)
+  (c: Seq.seq RawType.cbor_raw)
+  (v: list Spec.cbor)
+  requires PM.seq_list_match c v (cbor_det_match p)
+  ensures
+    PM.seq_list_match c (Aux.det_raw_list v) (RawMatch.cbor_raw_match p) **
+    Trade.trade
+      (PM.seq_list_match c (Aux.det_raw_list v) (RawMatch.cbor_raw_match p))
+      (PM.seq_list_match c v (cbor_det_match p))
+  decreases v
+{
+  PM.seq_list_match_length (cbor_det_match p) c v;
+  if (Nil? v) {
+    PM.seq_list_match_nil_elim c v (cbor_det_match p);
+    Aux.det_raw_list_eq v;
+    PM.seq_list_match_nil_intro c (Aux.det_raw_list v) (RawMatch.cbor_raw_match p);
+    Trade.intro_trade
+      (PM.seq_list_match c (Aux.det_raw_list v) (RawMatch.cbor_raw_match p))
+      (PM.seq_list_match c v (cbor_det_match p))
+      emp
+      fn _ {
+        PM.seq_list_match_nil_elim c (Aux.det_raw_list v) (RawMatch.cbor_raw_match p);
+        PM.seq_list_match_nil_intro c v (cbor_det_match p);
+      };
+  } else {
+    PMU.seq_list_match_cons_elim_trade c v (cbor_det_match p);
+    Trade.rewrite_with_trade
+      (cbor_det_match p (Seq.head c) (List.Tot.hd v))
+      (RawMatch.cbor_raw_match p (Seq.head c) (SpecRaw.mk_det_raw_cbor (List.Tot.hd v)));
+    Trade.trans_hyp_l _ _ _ (PM.seq_list_match c v (cbor_det_match p));
+    seq_list_cbor_det_match_to_raw_trade p (Seq.tail c) (List.Tot.tl v);
+    Trade.trans_hyp_r _ _ _ (PM.seq_list_match c v (cbor_det_match p));
+    PMU.seq_list_match_cons_intro_trade
+      (Seq.head c) (SpecRaw.mk_det_raw_cbor (List.Tot.hd v))
+      (Seq.tail c) (Aux.det_raw_list (List.Tot.tl v))
+      (RawMatch.cbor_raw_match p);
+    Trade.trans _ _ (PM.seq_list_match c v (cbor_det_match p));
+    rewrite each Seq.cons (Seq.head c) (Seq.tail c) as c;
+    Aux.det_raw_list_eq v;
+    Aux.det_raw_list_eq (List.Tot.tl v);
+    rewrite each (SpecRaw.mk_det_raw_cbor (List.Tot.hd v) ::
+                  Aux.det_raw_list (List.Tot.tl v))
+      as Aux.det_raw_list v;
+    ();
+  }
+}
+
+#pop-options
 
