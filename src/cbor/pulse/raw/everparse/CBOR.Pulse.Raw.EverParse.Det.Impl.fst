@@ -1342,3 +1342,67 @@ fn cbor_det_serialize_map (_: unit) : cbor_det_serialize_map_t
 
 #pop-options
 
+(* ======== cbor_det_serialize_map_insert ======== *)
+
+module Insert = CBOR.Pulse.Raw.EverParse.Insert
+
+#push-options "--z3rlimit 64 --ext no:context_pruning"
+
+let cbor_det_serialize_map_insert_pre_elim
+  (m: Spec.cbor_map)
+  (off2: SZ.t)
+  (key: Spec.cbor)
+  (off3: SZ.t)
+  (value: Spec.cbor)
+  (v: Seq.seq U8.t)
+: Lemma
+  (requires (cbor_det_serialize_map_insert_pre m off2 key off3 value v))
+  (ensures (
+    Insert.cbor_raw_map_insert_out_inv 0sz
+      (SpecRaw.mk_det_raw_cbor_map_raw m) off2
+      (SpecRaw.mk_det_raw_cbor key) off3
+      (SpecRaw.mk_det_raw_cbor value) v
+  ))
+= Insert.cbor_raw_map_insert_out_inv_intro 0sz
+    (SpecRaw.mk_det_raw_cbor_map_raw m) off2
+    (SpecRaw.mk_det_raw_cbor key) off3
+    (SpecRaw.mk_det_raw_cbor value) v
+
+let cbor_det_serialize_map_insert_post_intro
+  (m: Spec.cbor_map)
+  (key: Spec.cbor)
+  (value: Spec.cbor)
+  (res: bool)
+  (v: Seq.seq U8.t)
+: Lemma
+  (requires (
+    Insert.cbor_raw_map_insert_post
+      (SpecRaw.mk_det_raw_cbor_map_raw m)
+      (SpecRaw.mk_det_raw_cbor key)
+      (SpecRaw.mk_det_raw_cbor value) res v
+  ))
+  (ensures (cbor_det_serialize_map_insert_post m key value res v))
+=
+  Insert.cbor_raw_map_insert_post_elim
+    (SpecRaw.mk_det_raw_cbor_map_raw m)
+    (SpecRaw.mk_det_raw_cbor key)
+    (SpecRaw.mk_det_raw_cbor value) res v;
+  SpecRaw.mk_det_raw_cbor_map_raw_snoc m key value
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_serialize_map_insert (_: unit) : cbor_det_serialize_map_insert_t
+= (out: _) (m: _) (off2: _) (key: _) (off3: _) (value: _)
+{
+  with v . assert (pts_to out v);
+  let m' = Ghost.hide (SpecRaw.mk_det_raw_cbor_map_raw m);
+  let key' = Ghost.hide (SpecRaw.mk_det_raw_cbor key);
+  let value' = Ghost.hide (SpecRaw.mk_det_raw_cbor value);
+  cbor_det_serialize_map_insert_pre_elim m off2 key off3 value v;
+  let res = Insert.cbor_raw_map_insert out m' off2 key' off3 value';
+  with v' . assert (pts_to out v');
+  cbor_det_serialize_map_insert_post_intro m key value res v';
+  res
+}
+
+#pop-options
+

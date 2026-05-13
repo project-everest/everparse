@@ -153,6 +153,7 @@ val cbor_det_serialize_tag (_: unit) : cbor_det_serialize_tag_t
 val cbor_det_serialize_string (_: unit) : cbor_det_serialize_string_t
 val cbor_det_serialize_array (_: unit) : cbor_det_serialize_array_t
 val cbor_det_serialize_map (_: unit) : cbor_det_serialize_map_t
+val cbor_det_serialize_map_insert (_: unit) : cbor_det_serialize_map_insert_t
 
 
 (* ====================================================================
@@ -163,10 +164,9 @@ val cbor_det_serialize_map (_: unit) : cbor_det_serialize_map_t
 
      1.  cbor_det_validate          via Det.Validate (rescued from legacy)
      2.  cbor_det_parse_valid       via Read.cbor_raw_read + zero-copy adapter
-     3.  4 raw fragment serializers in Det.Serialize
-         + 4 of 5 API-level wrappers here:
-             cbor_det_serialize_tag, _string, _array, _map.
-         (cbor_det_serialize_map_insert is the one fragment NOT done; see below.)
+     3.  5 raw fragment serializers in Det.Serialize
+         + 5 of 5 API-level wrappers here:
+             cbor_det_serialize_tag, _string, _array, _map, _map_insert.
      4.  cbor_det_map_entry_match + share + gather
      5.  cbor_det_mk_map_entry
      8.  Array iterator FULL: match / share / gather / is_empty / start /
@@ -174,13 +174,6 @@ val cbor_det_serialize_map (_: unit) : cbor_det_serialize_map_t
      11. cbor_det_map_entry_key, _value.
 
    TODO:
-
-     3 (rest). cbor_det_serialize_map_insert
-        Needs an EverParse-side `cbor_raw_map_insert` primitive that is
-        currently only in raw/old/CBOR.Pulse.Raw.Insert.fst (~213 lines).
-        Once that's factored over to the new EverParse.Det.Serialize stack,
-        the API wrapper here is ~5 lines (mk_det_raw_cbor_map_raw_snoc lemma
-        + forward).
 
      6.  cbor_det_mk_array(_from_array): wrap Make.cbor_mk_array plus
          seq_list_match ↔ mixed_list_match bridge.

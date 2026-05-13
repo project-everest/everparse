@@ -148,57 +148,9 @@ val cbor_serialize_map
     pure (cbor_serialize_map_postcond len l res v)
   )
 
-(* TODO: cbor_raw_map_insert: in-place insert a key/value pair into the
-   canonical sorted entry list of an already-serialized map. Legacy version
-   in raw/old/CBOR.Pulse.Raw.Insert.fst (~370 lines) needs to be ported
-   to the new EverParse stack.
-
-   Status of port investigation (multiple sessions):
-
-   ✓ All structural pieces compile (cbor_jump_append wrapping
-     Validate.jump_raw_data_item via parse_strong_prefix; the inv,
-     inv_not_success, _equiv lemmas; the while-loop body shape).
-
-   ✓ Identified the missing spec equation lemma:
-       let cbor_map_insert_cons_lt
-         (kv': raw_data_item & raw_data_item)
-         (q: list (raw_data_item & raw_data_item))
-         (kv: raw_data_item & raw_data_item)
-       : Lemma (ensures (
-           CBOR.Spec.Raw.Map.map_entry_compare cbor_compare kv' kv < 0 ==>
-             cbor_map_insert (kv' :: q) kv ==
-               (match cbor_map_insert q kv with
-                | None -> None
-                | Some l' -> Some (kv' :: l'))))
-       = ()
-     This + a list cons-decomposition lemma
-       let list_cons_hd_tl (#a:Type) (l:list a)
-       : Lemma (requires (Cons? l))
-               (ensures (l == List.Tot.hd l :: List.Tot.tl l))
-       = ()
-     are needed because the loop destructures l2 via Ghost.hide on
-     List.Tot.hd / List.Tot.tl, and SMT does not auto-reduce
-     map_insert (kv' :: q) kv without explicit syntactic cons.
-
-   ✗ Even with the two lemmas in place, the loop invariant re-establishment
-     after the c<0 branch hits z3rlimit ceilings: each verification query for
-     this branch takes 130s+ and is killed at default rlimit 192. The proof
-     state at this point carries ~10 facts about slice splits/joins
-     (is_split predicates from S.split), the cbor_raw_map_insert_inv
-     unfolding (which is a 5-clause conjunction including a 4-arm match),
-     plus several Seq.append associativity/length facts. This causes Z3 to
-     time out before reaching the core spec-equation proof.
-
-   The remaining work to land this is purely **proof engineering**:
-   factor the c<0 branch into a separate Pulse fn with its own pre/post,
-   so the loop body's proof state is small. Estimate: 1-2 hour task.
-
-   Once the cbor_raw_map_insert function lands in this module, the
-   API-level cbor_det_serialize_map_insert wrapper in Det.Impl is ~5 lines:
-       cbor_serialize_map_nil ();   // for the empty-list edge case
-       SpecRaw.mk_det_raw_cbor_map_raw_snoc m key value;
-       cbor_raw_map_insert
-         out
-         (SpecRaw.mk_det_raw_cbor_map_raw m)
-         off2 (SpecRaw.mk_det_raw_cbor key)
-         off3 (SpecRaw.mk_det_raw_cbor value) *)
+(* cbor_raw_map_insert: in-place insert a key/value pair into the
+   canonical sorted entry list of an already-serialized map.
+   Now provided by `CBOR.Pulse.Raw.EverParse.Insert.cbor_raw_map_insert`
+   (separate module). The API-level wrapper
+   `cbor_det_serialize_map_insert` lives in
+   `CBOR.Pulse.Raw.EverParse.Det.Impl`. *)
