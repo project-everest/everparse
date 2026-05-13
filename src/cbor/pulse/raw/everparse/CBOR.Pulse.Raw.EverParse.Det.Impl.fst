@@ -1959,3 +1959,194 @@ fn rec seq_list_cbor_det_match_to_raw_trade
 
 #pop-options
 
+
+(* Forward inplace version (no trade) of the seq_list bridge for cbor_det_match. *)
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+ghost
+fn rec seq_list_cbor_det_match_to_raw_inplace
+  (p: perm)
+  (c: Seq.seq RawType.cbor_raw)
+  (v: list Spec.cbor)
+  requires PM.seq_list_match c v (cbor_det_match p)
+  ensures PM.seq_list_match c (Aux.det_raw_list v) (RawMatch.cbor_raw_match p)
+  decreases v
+{
+  Aux.det_raw_list_eq v;
+  PM.seq_list_match_length (cbor_det_match p) c v;
+  if (Nil? v) {
+    PM.seq_list_match_nil_elim c v (cbor_det_match p);
+    PM.seq_list_match_nil_intro c (Aux.det_raw_list v) (RawMatch.cbor_raw_match p);
+  } else {
+    Aux.det_raw_list_eq (List.Tot.tl v);
+    PM.seq_list_match_cons_elim c v (cbor_det_match p);
+    rewrite (cbor_det_match p (Seq.head c) (List.Tot.hd v))
+         as (RawMatch.cbor_raw_match p (Seq.head c) (SpecRaw.mk_det_raw_cbor (List.Tot.hd v)));
+    seq_list_cbor_det_match_to_raw_inplace p (Seq.tail c) (List.Tot.tl v);
+    PM.seq_list_match_cons_intro
+      (Seq.head c) (SpecRaw.mk_det_raw_cbor (List.Tot.hd v))
+      (Seq.tail c) (Aux.det_raw_list (List.Tot.tl v))
+      (RawMatch.cbor_raw_match p);
+    rewrite each Seq.cons (Seq.head c) (Seq.tail c) as c;
+    rewrite (PM.seq_list_match c
+              (SpecRaw.mk_det_raw_cbor (List.Tot.hd v) :: Aux.det_raw_list (List.Tot.tl v))
+              (RawMatch.cbor_raw_match p))
+         as (PM.seq_list_match c (Aux.det_raw_list v) (RawMatch.cbor_raw_match p));
+  }
+}
+
+#pop-options
+
+(* Inverse direction of the seq_list bridge.
+   Used inline (not as a trade) to avoid a Pulse lambda-equivalence issue
+   with seq_list_match's refined item_match argument. *)
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+ghost
+fn rec seq_list_cbor_raw_match_to_det
+  (p: perm)
+  (c: Seq.seq RawType.cbor_raw)
+  (v: list Spec.cbor)
+  requires PM.seq_list_match c (Aux.det_raw_list v) (RawMatch.cbor_raw_match p)
+  ensures PM.seq_list_match c v (cbor_det_match p)
+  decreases v
+{
+  Aux.det_raw_list_eq v;
+  PM.seq_list_match_length (RawMatch.cbor_raw_match p) c (Aux.det_raw_list v);
+  if (Nil? v) {
+    PM.seq_list_match_nil_elim c (Aux.det_raw_list v) (RawMatch.cbor_raw_match p);
+    PM.seq_list_match_nil_intro c v (cbor_det_match p);
+  } else {
+    Aux.det_raw_list_eq (List.Tot.tl v);
+    rewrite (PM.seq_list_match c (Aux.det_raw_list v) (RawMatch.cbor_raw_match p))
+         as (PM.seq_list_match c (SpecRaw.mk_det_raw_cbor (List.Tot.hd v) ::
+                                   Aux.det_raw_list (List.Tot.tl v))
+                              (RawMatch.cbor_raw_match p));
+    PM.seq_list_match_cons_elim c
+      (SpecRaw.mk_det_raw_cbor (List.Tot.hd v) :: Aux.det_raw_list (List.Tot.tl v))
+      (RawMatch.cbor_raw_match p);
+    rewrite (RawMatch.cbor_raw_match p (Seq.head c) (SpecRaw.mk_det_raw_cbor (List.Tot.hd v)))
+         as (cbor_det_match p (Seq.head c) (List.Tot.hd v));
+    seq_list_cbor_raw_match_to_det p (Seq.tail c) (List.Tot.tl v);
+    PM.seq_list_match_cons_intro (Seq.head c) (List.Tot.hd v)
+      (Seq.tail c) (List.Tot.tl v) (cbor_det_match p);
+    rewrite each Seq.cons (Seq.head c) (Seq.tail c) as c;
+    rewrite (PM.seq_list_match c (List.Tot.hd v :: List.Tot.tl v) (cbor_det_match p))
+         as (PM.seq_list_match c v (cbor_det_match p));
+  }
+}
+
+#pop-options
+
+(* ======== cbor_det_mk_array ========
+
+   Construct an array CBOR value from a slice of cbor_det_t.
+
+   Strategy:
+   1. Convert seq_list_match cbor_det_match → cbor_raw_match (forward inline)
+   2. Share pts_to a, fold half into a Slice mixed_list
+   3. Call Make.cbor_mk_array
+   4. Bridge cbor_raw_match (Array len det_raw_list) → cbor_det_match (pack (CArray vv))
+   5. Build inverse trade using:
+      - cbor_mk_array's trade (back to mixed_list_match)
+      - saved pts_to a #(pa/2) va (gather to recover witness)
+      - INLINE seq_list_cbor_raw_match_to_det (no trade — avoids lambda issue)
+   ======== *)
+
+#push-options "--z3rlimit 256 --fuel 2 --ifuel 2 --ext no:context_pruning"
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_mk_array (_: unit) : mk_array_t cbor_det_match
+= (a: _) (#pa: _) (#va: _) (#pv: _) (#vv: _)
+{
+  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  S.pts_to_len a;
+  PM.seq_list_match_length (cbor_det_match pv) va vv;
+  Aux.length_det_raw_list vv;
+  // 1. Forward: convert seq_list_match cbor_det_match → cbor_raw_match (inline, no trade)
+  seq_list_cbor_det_match_to_raw_inplace pv va vv;
+  let l_raw : Ghost.erased (list SpecRawBase.raw_data_item) = Ghost.hide (Aux.det_raw_list vv);
+  // 2. Share pts_to a
+  S.share a;
+  let sp = pa /. 2.0R;
+  // 3. Build Slice mixed_list using sp = pa/2, sv = pv, outer pm = 1.0R
+  let bml : I.base_mixed_list RawType.cbor_raw = I.Slice sp pv a;
+  let ml : I.mixed_list RawType.cbor_raw = I.Base bml;
+  rewrite (S.pts_to a #sp va)
+       as (S.pts_to a #(1.0R *. sp) va);
+  rewrite (PM.seq_list_match va l_raw (RawMatch.cbor_raw_match pv))
+       as (PM.seq_list_match va l_raw (RawMatch.cbor_raw_match (1.0R *. pv)));
+  assert (pure (I.base_mixed_list_length (I.Slice #(RawType.cbor_raw) sp pv a) == S.len a));
+  fold (I.base_mixed_list_match_n RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item 0 (SZ.v (S.len a)) 1.0R (I.Slice #(RawType.cbor_raw) sp pv a) l_raw);
+  rewrite (I.base_mixed_list_match_n RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item 0 (SZ.v (S.len a)) 1.0R (I.Slice #(RawType.cbor_raw) sp pv a) l_raw)
+       as (I.base_mixed_list_match_n RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item 0 (SZ.v (I.base_mixed_list_length bml)) 1.0R bml l_raw);
+  fold (I.mixed_list_match_n RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item 0 (SZ.v (I.base_mixed_list_length bml)) 1.0R (I.Base #(RawType.cbor_raw) bml) l_raw);
+  rewrite (I.mixed_list_match_n RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item 0 (SZ.v (I.base_mixed_list_length bml)) 1.0R (I.Base #(RawType.cbor_raw) bml) l_raw)
+       as (I.mixed_list_match_n RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item 0 (SZ.v (I.mixed_list_length ml)) 1.0R ml l_raw);
+  fold (I.mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item 1.0R ml l_raw);
+  // 4. Compute length and call cbor_mk_array
+  let len_sz = S.len a;
+  let len64 = SZ.sizet_to_uint64 len_sz;
+  let ru = SpecRaw.mk_raw_uint64 len64;
+  let res = RawMake.cbor_mk_array f64 ru.size ml;
+  // 5. Bridge cbor_raw_match res xh → cbor_det_match res (pack (CArray vv))
+  with xh . assert (RawMatch.cbor_raw_match 1.0R res xh);
+  let v_ghost : Ghost.erased Spec.cbor = Ghost.hide (Spec.pack (Spec.CArray vv));
+  Spec.unpack_pack (Spec.CArray vv);
+  Aux.mk_det_raw_cbor_array_eq v_ghost vv;
+  assert (pure (I.base_mixed_list_length bml == S.len a));
+  assert (pure (I.mixed_list_length ml == S.len a));
+  assert (pure (SZ.v (I.mixed_list_length ml) == List.Tot.length vv));
+  assert (pure (U64.v (SZ.sizet_to_uint64 (I.mixed_list_length ml)) == List.Tot.length vv));
+  assert (pure (SZ.sizet_to_uint64 (I.mixed_list_length ml) == U64.uint_to_t (List.Tot.length vv)));
+  assert (pure (xh ==
+    SpecRawBase.Array
+      ({ size = ru.size; value = SZ.sizet_to_uint64 (I.mixed_list_length ml) } <: SpecRawBase.raw_uint64)
+      l_raw));
+  assert (pure (ru == SpecRaw.mk_raw_uint64 (U64.uint_to_t (List.Tot.length vv))));
+  assert (pure (xh == SpecRawBase.Array ru l_raw));
+  assert (pure (xh == SpecRaw.mk_det_raw_cbor v_ghost));
+  rewrite each xh as (SpecRaw.mk_det_raw_cbor v_ghost);
+  fold (cbor_det_match 1.0R res v_ghost);
+  // 6. Build the inverse trade. Only ONE trade in the extra (cbor_mk_array's),
+  //    plus the saved pts_to a #sp va. Use the inline helper for seq_list bridge.
+  Trade.intro_trade
+    (cbor_det_match 1.0R res v_ghost)
+    (S.pts_to a #pa va ** PM.seq_list_match va vv (cbor_det_match pv))
+    (S.pts_to a #sp va **
+     Trade.trade
+       (RawMatch.cbor_raw_match 1.0R res (SpecRaw.mk_det_raw_cbor v_ghost))
+       (I.mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item 1.0R ml l_raw))
+    fn _ {
+      unfold (cbor_det_match 1.0R res v_ghost);
+      Trade.elim
+        (RawMatch.cbor_raw_match 1.0R res (SpecRaw.mk_det_raw_cbor v_ghost))
+        (I.mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item 1.0R ml l_raw);
+      // Unfold mixed_list_match → mixed_list_match_n → Base → base_mixed_list_match_n → Slice
+      unfold (I.mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item 1.0R ml l_raw);
+      rewrite (I.mixed_list_match_n RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item 0 (SZ.v (I.mixed_list_length ml)) 1.0R ml l_raw)
+           as (I.mixed_list_match_n RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item 0 (SZ.v (I.base_mixed_list_length bml)) 1.0R (I.Base #(RawType.cbor_raw) bml) l_raw);
+      unfold (I.mixed_list_match_n RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item 0 (SZ.v (I.base_mixed_list_length bml)) 1.0R (I.Base #(RawType.cbor_raw) bml) l_raw);
+      rewrite (I.base_mixed_list_match_n RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item 0 (SZ.v (I.base_mixed_list_length bml)) 1.0R bml l_raw)
+           as (I.base_mixed_list_match_n RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item 0 (SZ.v (S.len a)) 1.0R (I.Slice #(RawType.cbor_raw) sp pv a) l_raw);
+      unfold (I.base_mixed_list_match_n RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item 0 (SZ.v (S.len a)) 1.0R (I.Slice #(RawType.cbor_raw) sp pv a) l_raw);
+      // Recover the witness via gather, then bridge seq_list inline
+      S.gather a;
+      with l' l1 . assert (
+        S.pts_to a #(sp +. sp) l' **
+        PM.seq_list_match l1 l_raw (RawMatch.cbor_raw_match (1.0R *. pv)));
+      rewrite each l' as va;
+      rewrite each l1 as va;
+      rewrite (S.pts_to a #(sp +. sp) va) as (S.pts_to a #pa va);
+      rewrite (PM.seq_list_match va l_raw (RawMatch.cbor_raw_match (1.0R *. pv)))
+           as (PM.seq_list_match va l_raw (RawMatch.cbor_raw_match pv));
+      // Inline the seq_list bridge — avoids the lambda equivalence issue
+      seq_list_cbor_raw_match_to_det pv va vv;
+    };
+  rewrite each v_ghost as (Spec.pack (Spec.CArray vv));
+  res
+}
+
+#pop-options

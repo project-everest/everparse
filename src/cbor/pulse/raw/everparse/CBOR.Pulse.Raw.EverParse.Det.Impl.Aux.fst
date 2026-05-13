@@ -84,7 +84,9 @@ let mk_det_raw_cbor_array_eq (y: Spec.cbor) (l: list Spec.cbor)
       Spec.unpack y == Spec.CArray l)
     (ensures
        SpecRawBase.Array? (SpecRaw.mk_det_raw_cbor y) /\
-       (SpecRawBase.Array?.v (SpecRaw.mk_det_raw_cbor y) <: list SpecRawBase.raw_data_item) == det_raw_list l)
+       (SpecRawBase.Array?.v (SpecRaw.mk_det_raw_cbor y) <: list SpecRawBase.raw_data_item) == det_raw_list l /\
+       SpecRawBase.Array?.len (SpecRaw.mk_det_raw_cbor y) ==
+         Optimal.mk_raw_uint64 (FStar.UInt64.uint_to_t (List.Tot.length l)))
 = Spec.pack_unpack y;
   let len = Optimal.mk_raw_uint64 (FStar.UInt64.uint_to_t (List.Tot.length l)) in
   let l' = det_raw_list l in

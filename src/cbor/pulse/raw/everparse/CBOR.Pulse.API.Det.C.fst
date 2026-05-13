@@ -169,10 +169,8 @@ let cbor_det_mk_byte_string_from_arrayptr (_: unit) =
 let cbor_det_mk_text_string_from_arrayptr (_: unit) =
   mk_string_from_arrayptr (Impl.cbor_det_mk_string ()) cbor_major_type_text_string
 
-(* `cbor_det_mk_array_from_array`: needs `Impl.cbor_det_mk_array`, which is not yet
-   exposed. Admitted as TODO for now. *)
 let cbor_det_mk_array_from_array () : mk_array_from_array_t cbor_det_match
-  = admit ()
+  = mk_array_from_array (Impl.cbor_det_mk_array ())
 
 [@@pulse_unfold]
 let cbor_det_map_entry_match = Impl.cbor_det_map_entry_match

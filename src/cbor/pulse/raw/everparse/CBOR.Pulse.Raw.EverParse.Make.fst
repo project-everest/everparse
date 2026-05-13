@@ -470,6 +470,22 @@ ensures cbor_raw_match pm xl xh
 
 #pop-options
 
+let cbor_mk_array_xh
+  (len_size: integer_size)
+  (mlen: SZ.t)
+  (l: list raw_data_item)
+: GTot raw_data_item
+= let len64 : U64.t = SZ.sizet_to_uint64 mlen in
+  if FStar.StrongExcludedMiddle.strong_excluded_middle
+       (FStar.UInt.fits (SZ.v mlen) 64 /\
+        List.Tot.length l == SZ.v mlen /\
+        raw_uint64_size_prop len_size len64)
+  then
+    let ru : raw_uint64 = { size = len_size; value = len64 } in
+    Array ru l
+  else
+    Simple 0uy
+
 #push-options "--z3rlimit 256 --fuel 2 --ifuel 2"
 
 fn cbor_mk_array
@@ -491,7 +507,8 @@ ensures exists* xh .
   cbor_raw_match 1.0R res xh **
   Trade.trade
     (cbor_raw_match 1.0R res xh)
-    (I.mixed_list_match cbor_raw_match parse_raw_data_item pm ml l)
+    (I.mixed_list_match cbor_raw_match parse_raw_data_item pm ml l) **
+  pure (xh == cbor_mk_array_xh len_size (I.mixed_list_length ml) l)
 {
   let the_prop =
     (let len = SZ.v (I.mixed_list_length ml) in
