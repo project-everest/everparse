@@ -380,7 +380,7 @@ let synth_raw_data_item_recip_synth_raw_data_item
 #push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 
 inline_for_extraction
-let cbor_raw_get_header_pure (xl: cbor_raw) : Tot (option header) =
+let cbor_raw_get_header_pure (f64: squash SZ.fits_u64) (xl: cbor_raw) : Tot (option header) =
   match xl with
   | CBOR_Case_Int v ->
     Some (raw_uint64_as_argument v.cbor_int_type
@@ -390,22 +390,38 @@ let cbor_raw_get_header_pure (xl: cbor_raw) : Tot (option header) =
   | CBOR_Case_String v ->
     Some (raw_uint64_as_argument v.cbor_string_type
       ({ size = v.cbor_string_size;
-         value = U64.uint_to_t (SZ.v (S.len v.cbor_string_ptr)) }))
+         value = SZ.sizet_to_uint64 (S.len v.cbor_string_ptr) }))
   | CBOR_Case_Array v ->
     Some (raw_uint64_as_argument cbor_major_type_array
       ({ size = v.cbor_array_length_size;
-         value = U64.uint_to_t (SZ.v (I.mixed_list_length v.cbor_array_ptr)) }))
+         value = SZ.sizet_to_uint64 (I.mixed_list_length v.cbor_array_ptr) }))
   | CBOR_Case_Map v ->
     Some (raw_uint64_as_argument cbor_major_type_map
       ({ size = v.cbor_map_length_size;
-         value = U64.uint_to_t (SZ.v (I.mixed_list_length v.cbor_map_ptr)) }))
+         value = SZ.sizet_to_uint64 (I.mixed_list_length v.cbor_map_ptr) }))
   | CBOR_Case_Tagged v ->
     Some (raw_uint64_as_argument cbor_major_type_tagged v.cbor_tagged_tag)
   | CBOR_Case_Tagged_Serialized v ->
     Some (raw_uint64_as_argument cbor_major_type_tagged v.cbor_tagged_serialized_tag)
   | CBOR_Case_Invalid -> None
 
+let cbor_raw_get_header_pure_correct (f64: squash SZ.fits_u64) (xl: cbor_raw) : Lemma
+  (cbor_raw_get_header_pure f64 xl == cbor_raw_get_header xl)
+=
+  match xl with
+  | CBOR_Case_String v ->
+    let n = S.len v.cbor_string_ptr in
+    assert (U64.v (SZ.sizet_to_uint64 n) == U64.v (U64.uint_to_t (SZ.v n)))
+  | CBOR_Case_Array v ->
+    let n = I.mixed_list_length v.cbor_array_ptr in
+    assert (U64.v (SZ.sizet_to_uint64 n) == U64.v (U64.uint_to_t (SZ.v n)))
+  | CBOR_Case_Map v ->
+    let n = I.mixed_list_length v.cbor_map_ptr in
+    assert (U64.v (SZ.sizet_to_uint64 n) == U64.v (U64.uint_to_t (SZ.v n)))
+  | _ -> ()
+
 fn cbor_raw_get_header_impl
+  (f64: squash SZ.fits_u64)
   (pm: perm)
   (xl: cbor_raw)
   (xh: erased raw_data_item)
@@ -443,7 +459,8 @@ ensures
   let the_prop = cbor_raw_get_header xl ==
     Some (dfst (synth_raw_data_item_recip (Ghost.reveal xh)));
   let sq = elim_pure_explicit the_prop;
-  let Some res = cbor_raw_get_header_pure xl;
+  cbor_raw_get_header_pure_correct f64 xl;
+  let Some res = cbor_raw_get_header_pure f64 xl;
   intro_pure the_prop sq;
   rewrite (pure the_prop)
     as
@@ -473,6 +490,7 @@ ensures
 #pop-options
 
 fn cbor_raw_with_perm_get_header
+  (f64: squash SZ.fits_u64)
   (xl: with_perm cbor_raw)
   (xh: erased raw_data_item)
 requires
@@ -483,13 +501,14 @@ ensures
           pure (res == get_raw_data_item_header xh)
 {
   unfold (cbor_raw_match_with_perm xl xh);
-  let res = cbor_raw_get_header_impl xl.p xl.v xh;
+  let res = cbor_raw_get_header_impl f64 xl.p xl.v xh;
   fold (cbor_raw_match_with_perm xl xh);
   res
 }
 
 inline_for_extraction
 fn cbor_raw_get_header'
+  (f64: squash SZ.fits_u64)
   (xl: with_perm cbor_raw)
   (xh: erased (dtuple2 header content))
 requires
@@ -501,7 +520,7 @@ ensures
 {
   synth_raw_data_item_recip_synth_raw_data_item xh;
   unfold (LP.vmatch_synth (cbor_raw_match_with_perm) synth_raw_data_item xl (reveal xh));
-  let res = cbor_raw_with_perm_get_header xl _;
+  let res = cbor_raw_with_perm_get_header f64 xl _;
   fold (LP.vmatch_synth (cbor_raw_match_with_perm) synth_raw_data_item xl (reveal xh));
   res
 }
@@ -1749,7 +1768,7 @@ let ser_body
       synth_raw_data_item_recip
       (l2r_write_dtuple2_recip_explicit_header
         write_header
-        (cbor_raw_get_header')
+        (cbor_raw_get_header' f64)
         ()
         (ser_payload f64 f)
       )
@@ -1768,7 +1787,7 @@ let size_body
       synth_raw_data_item_recip
       (compute_remaining_size_dtuple2_recip_explicit_header
         size_header
-        (cbor_raw_get_header')
+        (cbor_raw_get_header' f64)
         ()
         (size_payload f64 f)
       )
