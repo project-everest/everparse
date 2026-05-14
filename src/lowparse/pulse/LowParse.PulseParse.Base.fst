@@ -874,6 +874,7 @@ ensures exists* w .
 
 // Given pts_to_parsed_strong_prefix, use a jumper to find the exact consumed length,
 // split the slice, and return a sub-slice with pts_to_serialized and a trade back.
+inline_for_extraction
 fn pts_to_parsed_strong_prefix_to_serialized_trade
   (#k: Ghost.erased parser_kind) (#t: Type0) (#p: parser k t)
   (s: serializer p) (j: LPS.jumper p)

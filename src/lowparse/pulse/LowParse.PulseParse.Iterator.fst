@@ -2711,6 +2711,7 @@ ensures
 
 // Concrete fn for the Serialized case of base_mixed_list_narrow_n.
 // Inlines all ghost fn logic — pures from unfold are SMT hypotheses for fold.
+inline_for_extraction
 ```pulse
 fn base_mixed_list_narrow_n_serialized
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
@@ -2770,6 +2771,7 @@ ensures
 }
 ```
 
+inline_for_extraction
 ```pulse
 fn base_mixed_list_narrow_n
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
@@ -3045,6 +3047,7 @@ let append_off_after_sz (off oa ca cb: SZ.t)
 
 #push-options "--z3rlimit 80 --fuel 1 --ifuel 1"
 
+inline_for_extraction
 ```pulse
 fn mixed_list_narrow_n
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
@@ -3509,6 +3512,7 @@ let list_narrow_split (#a: Type) (l: list a) (n: nat)
 // Descends the Append tree following a single path until a Base node is found.
 #push-options "--z3rlimit 4000 --fuel 2 --ifuel 1"
 
+inline_for_extraction
 ```pulse
 fn mixed_list_extract_first_base_loop
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
@@ -3856,6 +3860,7 @@ ensures
 
 #push-options "--z3rlimit 8000 --fuel 2 --ifuel 1 --ext no:context_pruning"
 
+inline_for_extraction
 ```pulse
 fn base_mixed_list_next_n
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
@@ -4118,6 +4123,7 @@ let iterator_match
 
 #push-options "--z3rlimit 4000 --fuel 2 --ifuel 1"
 
+inline_for_extraction
 ```pulse
 fn iterator_start
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
@@ -4437,6 +4443,7 @@ ensures
 
 #push-options "--z3rlimit 8000 --fuel 2 --ifuel 1 --ext no:context_pruning"
 
+inline_for_extraction
 ```pulse
 fn base_mixed_list_next_n_eos
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
@@ -4689,6 +4696,7 @@ ensures
 
 #push-options "--z3rlimit 8000 --fuel 2 --ifuel 1 --ext no:context_pruning"
 
+inline_for_extraction
 ```pulse
 fn iterator_next_eos
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
@@ -4886,6 +4894,7 @@ let iterator_next_post
 
 #push-options "--z3rlimit 8000 --fuel 2 --ifuel 1 --ext no:context_pruning"
 
+inline_for_extraction
 ```pulse
 fn iterator_next
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)

@@ -50,6 +50,7 @@ let mixed_list_match_for_l2r
 // This copies the serialized bytes from the payload slice to the output.
 #push-options "--z3rlimit 200 --fuel 1 --ifuel 1"
 
+inline_for_extraction
 ```pulse
 fn l2r_write_base_serialized
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
@@ -137,6 +138,7 @@ ensures exists* v' .
 // Iterates through elements in the slice and calls the element writer.
 #push-options "--z3rlimit 800 --fuel 2 --ifuel 2"
 
+inline_for_extraction
 ```pulse
 fn l2r_write_base_slice
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
@@ -278,6 +280,7 @@ ensures exists* v' .
 // Helper: write the contents of a base_mixed_list (Singleton case)
 #push-options "--z3rlimit 200 --fuel 1 --ifuel 1"
 
+inline_for_extraction
 ```pulse
 fn l2r_write_base_singleton
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
@@ -330,6 +333,7 @@ ensures exists* v' .
 // 3. Narrows to the remaining portion (via mixed_list_narrow_n)
 #push-options "--z3rlimit 32000 --fuel 2 --ifuel 2"
 
+inline_for_extraction
 ```pulse
 fn l2r_write_mixed_list
   (#t: Type0) (#u: Type0)
@@ -624,6 +628,7 @@ fn l2r_write_mixed_list
 // Just jumps to find the byte length and subtracts from remaining.
 #push-options "--z3rlimit 200 --fuel 1 --ifuel 1"
 
+inline_for_extraction
 ```pulse
 fn compute_remaining_size_base_serialized
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
@@ -683,6 +688,7 @@ ensures exists* v' .
 // Iterates through elements calling per-element compute_remaining_size.
 #push-options "--z3rlimit 800 --fuel 2 --ifuel 2"
 
+inline_for_extraction
 ```pulse
 fn compute_remaining_size_base_slice
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
@@ -779,6 +785,7 @@ ensures exists* v' .
 // Helper: compute_remaining_size for base_mixed_list (Singleton case)
 #push-options "--z3rlimit 200 --fuel 1 --ifuel 1"
 
+inline_for_extraction
 ```pulse
 fn compute_remaining_size_base_singleton
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
@@ -820,6 +827,7 @@ ensures exists* v' .
 // Main compute_remaining_size for mixed_list_match
 #push-options "--z3rlimit 32000 --fuel 2 --ifuel 2"
 
+inline_for_extraction
 ```pulse
 fn compute_remaining_size_mixed_list
   (#t: Type0) (#u: Type0)

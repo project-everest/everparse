@@ -161,6 +161,7 @@ let list_narrow_index_hd (#a: Type) (l: list a) (k: nat)
 
 #push-options "--z3rlimit 8000 --fuel 2 --ifuel 1 --ext no:context_pruning"
 
+inline_for_extraction
 ```pulse
 fn mixed_list_insert_sorted_find
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
@@ -534,6 +535,7 @@ ensures
 
 #push-options "--z3rlimit 16000 --fuel 2 --ifuel 1 --ext no:context_pruning --z3refresh --split_queries always"
 
+inline_for_extraction
 ```pulse
 fn mixed_list_insert_sorted
   (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
