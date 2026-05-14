@@ -2,19 +2,12 @@
 
 #include "PointArch_32_64.h"
 
+#include "EverParse.h"
+
 static inline uint64_t
 ValidateInt(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLen,
   uint64_t StartPosition
@@ -30,7 +23,7 @@ ValidateInt(
     KRML_MAYBE_UNUSED_VAR(hasBytes);
     /* Validating field x */
     /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-    hasBytes0 = 8ULL <= (InputLen - StartPosition);
+    hasBytes0 = (InputLen - StartPosition) >= 8ULL;
     if (hasBytes0)
     {
       positionAfterInt = StartPosition + 8ULL;
@@ -60,7 +53,7 @@ ValidateInt(
     KRML_MAYBE_UNUSED_VAR(hasBytes0);
     /* Validating field x */
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    hasBytes = 4ULL <= (InputLen - StartPosition);
+    hasBytes = (InputLen - StartPosition) >= 4ULL;
     if (hasBytes)
     {
       positionAfterInt0 = StartPosition + 4ULL;
@@ -90,16 +83,7 @@ ValidateInt(
 uint64_t
 PointArch3264ValidatePoint(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition

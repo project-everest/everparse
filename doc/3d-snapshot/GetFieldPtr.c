@@ -2,27 +2,20 @@
 
 #include "GetFieldPtr.h"
 
+#include "EverParse.h"
+
 uint64_t
 GetFieldPtrValidateT(
   uint8_t **Out,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Validating field f1 */
-  BOOLEAN hasBytes0 = (uint64_t)10U <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= (uint64_t)10U;
   uint64_t res0;
   uint64_t positionAfterT;
   uint64_t positionAfterf1;
@@ -62,7 +55,7 @@ GetFieldPtrValidateT(
     return positionAfterf1;
   }
   /* Validating field f2 */
-  hasBytes = (uint64_t)20U <= (InputLength - positionAfterf1);
+  hasBytes = (InputLength - positionAfterf1) >= (uint64_t)20U;
   if (hasBytes)
   {
     res = positionAfterf1 + (uint64_t)20U;
@@ -117,23 +110,14 @@ uint64_t
 GetFieldPtrValidateTact(
   uint8_t **Out,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Validating field f1 */
-  BOOLEAN hasBytes0 = (uint64_t)10U <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= (uint64_t)10U;
   uint64_t res0;
   uint64_t positionAfterTact;
   uint64_t positionAfterf1;
@@ -173,7 +157,7 @@ GetFieldPtrValidateTact(
     return positionAfterf1;
   }
   /* Validating field f2 */
-  hasBytes = (uint64_t)20U <= (InputLength - positionAfterf1);
+  hasBytes = (InputLength - positionAfterf1) >= (uint64_t)20U;
   if (hasBytes)
   {
     res = positionAfterf1 + (uint64_t)20U;

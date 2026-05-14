@@ -2,26 +2,19 @@
 
 #include "BF.h"
 
+#include "EverParse.h"
+
 static inline uint64_t
 ValidateBf2bis(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  BOOLEAN hasBytes0 = 2ULL <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 2ULL;
   uint64_t positionAfterBf2bis;
   uint64_t positionAfterBitfield0;
   uint16_t r0;
@@ -68,7 +61,7 @@ ValidateBf2bis(
   r0 = Load16Le(Input + (uint32_t)StartPosition);
   bitfield0 = (uint16_t)(uint32_t)r0;
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  hasBytes1 = 2ULL <= (InputLength - positionAfterBitfield0);
+  hasBytes1 = (InputLength - positionAfterBitfield0) >= 2ULL;
   if (hasBytes1)
   {
     positionAfterBitfield1 = positionAfterBitfield0 + 2ULL;
@@ -101,7 +94,7 @@ ValidateBf2bis(
     {
       /* Validating field z */
       /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-      hasBytes = 1ULL <= (InputLength - positionAfterBitfield11);
+      hasBytes = (InputLength - positionAfterBitfield11) >= 1ULL;
       if (hasBytes)
       {
         positionAfterBf2bis1 = positionAfterBitfield11 + 1ULL;
@@ -147,23 +140,14 @@ ValidateBf2bis(
 static inline uint64_t
 ValidateBf3(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Checking that we have enough space for a UINT16BE, i.e., 2 bytes */
-  BOOLEAN hasBytes0 = 2ULL <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 2ULL;
   uint64_t positionAfterBf3;
   uint64_t positionAfterBitfield0;
   uint16_t bitfield0;
@@ -207,7 +191,7 @@ ValidateBf3(
   }
   bitfield0 = Load16Be(Input + (uint32_t)StartPosition);
   /* Checking that we have enough space for a UINT16BE, i.e., 2 bytes */
-  hasBytes1 = 2ULL <= (InputLength - positionAfterBitfield0);
+  hasBytes1 = (InputLength - positionAfterBitfield0) >= 2ULL;
   if (hasBytes1)
   {
     positionAfterBitfield1 = positionAfterBitfield0 + 2ULL;
@@ -239,7 +223,7 @@ ValidateBf3(
     {
       /* Validating field z */
       /* Checking that we have enough space for a UINT8BE, i.e., 1 byte */
-      hasBytes = 1ULL <= (InputLength - positionAfterBitfield11);
+      hasBytes = (InputLength - positionAfterBitfield11) >= 1ULL;
       if (hasBytes)
       {
         positionAfterBf31 = positionAfterBitfield11 + 1ULL;
@@ -285,16 +269,7 @@ ValidateBf3(
 uint64_t
 BfValidateDummy(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition

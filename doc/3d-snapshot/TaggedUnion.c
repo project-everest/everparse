@@ -2,20 +2,13 @@
 
 #include "TaggedUnion.h"
 
+#include "EverParse.h"
+
 static inline uint64_t
 ValidateIntPayload(
   uint32_t Size,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLen,
   uint64_t StartPosition
@@ -32,7 +25,7 @@ ValidateIntPayload(
   {
     /* Validating field value8 */
     /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-    hasBytes0 = 1ULL <= (InputLen - StartPosition);
+    hasBytes0 = (InputLen - StartPosition) >= 1ULL;
     if (hasBytes0)
     {
       positionAfterIntPayload = StartPosition + 1ULL;
@@ -60,7 +53,7 @@ ValidateIntPayload(
   {
     /* Validating field value16 */
     /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-    hasBytes1 = 2ULL <= (InputLen - StartPosition);
+    hasBytes1 = (InputLen - StartPosition) >= 2ULL;
     if (hasBytes1)
     {
       positionAfterIntPayload0 = StartPosition + 2ULL;
@@ -88,7 +81,7 @@ ValidateIntPayload(
   {
     /* Validating field value32 */
     /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-    hasBytes = 4ULL <= (InputLen - StartPosition);
+    hasBytes = (InputLen - StartPosition) >= 4ULL;
     if (hasBytes)
     {
       positionAfterIntPayload1 = StartPosition + 4ULL;
@@ -132,23 +125,14 @@ ValidateIntPayload(
 uint64_t
 TaggedUnionValidateInteger(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = 4ULL <= (InputLength - StartPosition);
+  BOOLEAN hasBytes = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterInteger;
   uint64_t positionAftersize;
   uint32_t size;

@@ -3,28 +3,20 @@
 #include "Probe.h"
 
 #include "Probe_ExternalAPI.h"
+#include "EverParse.h"
 
 static inline uint64_t
 ValidateT(
   uint32_t Bound,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  BOOLEAN hasBytes0 = 2ULL <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 2ULL;
   uint64_t positionAfterx;
   uint64_t positionAfterT;
   uint16_t r0;
@@ -65,7 +57,7 @@ ValidateT(
     {
       /* Validating field y */
       /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-      hasBytes = 2ULL <= (InputLength - positionAfterx1);
+      hasBytes = (InputLength - positionAfterx1) >= 2ULL;
       if (hasBytes)
       {
         positionAftery_refinement = positionAfterx1 + 2ULL;
@@ -127,23 +119,14 @@ uint64_t
 ProbeValidateS(
   EVERPARSE_COPY_BUFFER_T Dest,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  BOOLEAN hasBytes0 = 1ULL <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 1ULL;
   uint64_t positionAfterS;
   uint64_t positionAfterbound;
   uint8_t bound;
@@ -195,7 +178,7 @@ ProbeValidateS(
   }
   bound = Input[(uint32_t)StartPosition];
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = 8ULL <= (InputLength - positionAfterbound);
+  hasBytes = (InputLength - positionAfterbound) >= 8ULL;
   if (hasBytes)
   {
     positionAftertpointer = positionAfterbound + 8ULL;
@@ -300,16 +283,7 @@ ProbeValidateU(
   EVERPARSE_COPY_BUFFER_T DestS,
   EVERPARSE_COPY_BUFFER_T DestT,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
@@ -317,7 +291,7 @@ ProbeValidateU(
 {
   /* Validating field tag */
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  BOOLEAN hasBytes0 = 1ULL <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 1ULL;
   uint64_t positionAfterU;
   uint64_t res;
   uint64_t positionAftertag;
@@ -369,7 +343,7 @@ ProbeValidateU(
     return positionAftertag;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = 8ULL <= (InputLength - positionAftertag);
+  hasBytes = (InputLength - positionAftertag) >= 8ULL;
   if (hasBytes)
   {
     positionAfterspointer = positionAftertag + 8ULL;
@@ -474,23 +448,14 @@ ProbeValidateV(
   EVERPARSE_COPY_BUFFER_T DestS,
   EVERPARSE_COPY_BUFFER_T DestT,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  BOOLEAN hasBytes0 = 1ULL <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 1ULL;
   uint64_t positionAfterV;
   uint64_t positionAftertag;
   uint8_t tag;
@@ -578,7 +543,7 @@ ProbeValidateV(
   }
   tag = Input[(uint32_t)StartPosition];
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes1 = 8ULL <= (InputLength - positionAftertag);
+  hasBytes1 = (InputLength - positionAftertag) >= 8ULL;
   if (hasBytes1)
   {
     positionAftersptr0 = positionAftertag + 8ULL;
@@ -684,7 +649,7 @@ ProbeValidateV(
     return positionAftersptr;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes2 = 8ULL <= (InputLength - positionAftersptr);
+  hasBytes2 = (InputLength - positionAftersptr) >= 8ULL;
   if (hasBytes2)
   {
     positionAftertptr0 = positionAftersptr + 8ULL;
@@ -790,7 +755,7 @@ ProbeValidateV(
     return positionAftertptr;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = 8ULL <= (InputLength - positionAftertptr);
+  hasBytes = (InputLength - positionAftertptr) >= 8ULL;
   if (hasBytes)
   {
     positionAftert2ptr = positionAftertptr + 8ULL;
@@ -893,16 +858,7 @@ ProbeValidateV(
 uint64_t
 ProbeValidateIndirect(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
@@ -912,7 +868,7 @@ ProbeValidateIndirect(
   KRML_MAYBE_UNUSED_VAR(Ctxt);
   KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
   KRML_MAYBE_UNUSED_VAR(Input);
-  hasBytes = 9ULL <= (InputLength - StartPosition);
+  hasBytes = (InputLength - StartPosition) >= 9ULL;
   if (hasBytes)
   {
     return StartPosition + 9ULL;
@@ -922,7 +878,7 @@ ProbeValidateIndirect(
 
 static inline uint64_t ValidateTt(uint64_t InputLength, uint64_t StartPosition)
 {
-  BOOLEAN hasBytes = 9ULL <= (InputLength - StartPosition);
+  BOOLEAN hasBytes = (InputLength - StartPosition) >= 9ULL;
   if (hasBytes)
   {
     return StartPosition + 9ULL;
@@ -934,23 +890,14 @@ uint64_t
 ProbeValidateI(
   EVERPARSE_COPY_BUFFER_T Dest,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  BOOLEAN hasBytes = 8ULL <= (InputLength - StartPosition);
+  BOOLEAN hasBytes = (InputLength - StartPosition) >= 8ULL;
   uint64_t positionAfterttptr;
   uint64_t positionAfterI;
   uint64_t ttptr;
@@ -1068,16 +1015,7 @@ ProbeValidateMultiProbe(
   EVERPARSE_COPY_BUFFER_T DestT1,
   EVERPARSE_COPY_BUFFER_T DestT2,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
@@ -1085,7 +1023,7 @@ ProbeValidateMultiProbe(
 {
   /* Validating field fst */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = 4ULL <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterMultiProbe;
   uint64_t res0;
   uint64_t positionAfterfst;
@@ -1164,7 +1102,7 @@ ProbeValidateMultiProbe(
   }
   /* Validating field snd */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes1 = 4ULL <= (InputLength - positionAfterfst);
+  hasBytes1 = (InputLength - positionAfterfst) >= 4ULL;
   if (hasBytes1)
   {
     positionAfterMultiProbe0 = positionAfterfst + 4ULL;
@@ -1197,7 +1135,7 @@ ProbeValidateMultiProbe(
   }
   /* Validating field tag */
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  hasBytes2 = 1ULL <= (InputLength - positionAftersnd);
+  hasBytes2 = (InputLength - positionAftersnd) >= 1ULL;
   if (hasBytes2)
   {
     positionAfterMultiProbe1 = positionAftersnd + 1ULL;
@@ -1229,7 +1167,7 @@ ProbeValidateMultiProbe(
     return positionAftertag;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes3 = 8ULL <= (InputLength - positionAftertag);
+  hasBytes3 = (InputLength - positionAftertag) >= 8ULL;
   if (hasBytes3)
   {
     positionAftertptr10 = positionAftertag + 8ULL;
@@ -1335,7 +1273,7 @@ ProbeValidateMultiProbe(
     return positionAftertptr1;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = 8ULL <= (InputLength - positionAftertptr1);
+  hasBytes = (InputLength - positionAftertptr1) >= 8ULL;
   if (hasBytes)
   {
     positionAftertptr2 = positionAftertptr1 + 8ULL;
@@ -1439,23 +1377,14 @@ uint64_t
 ProbeValidateMaybeT(
   EVERPARSE_COPY_BUFFER_T Dest,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = 4ULL <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterMaybeT;
   uint64_t positionAfterBound;
   uint32_t bound;
@@ -1507,7 +1436,7 @@ ProbeValidateMaybeT(
   }
   bound = Load32Le(Input + (uint32_t)StartPosition);
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = 8ULL <= (InputLength - positionAfterBound);
+  hasBytes = (InputLength - positionAfterBound) >= 8ULL;
   if (hasBytes)
   {
     positionAfterptr = positionAfterBound + 8ULL;
@@ -1618,23 +1547,14 @@ uint64_t
 ProbeValidateCoercePtr(
   EVERPARSE_COPY_BUFFER_T Dest,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = 4ULL <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAfterCoercePtr;
   uint64_t positionAfterBound;
   uint32_t bound;
@@ -1686,7 +1606,7 @@ ProbeValidateCoercePtr(
   }
   bound = Load32Le(Input + (uint32_t)StartPosition);
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes = 4ULL <= (InputLength - positionAfterBound);
+  hasBytes = (InputLength - positionAfterBound) >= 4ULL;
   if (hasBytes)
   {
     positionAfterptr = positionAfterBound + 4ULL;
@@ -1789,16 +1709,7 @@ ProbeValidateCoercePtr(
 uint64_t
 ProbeValidateProbeOnly(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
@@ -1808,7 +1719,7 @@ ProbeValidateProbeOnly(
   KRML_MAYBE_UNUSED_VAR(Ctxt);
   KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
   KRML_MAYBE_UNUSED_VAR(Input);
-  hasBytes = 8ULL <= (InputLength - StartPosition);
+  hasBytes = (InputLength - StartPosition) >= 8ULL;
   if (hasBytes)
   {
     return StartPosition + 8ULL;
@@ -1819,16 +1730,7 @@ ProbeValidateProbeOnly(
 uint64_t
 ProbeValidateBothEntrypoints(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
@@ -1838,7 +1740,7 @@ ProbeValidateBothEntrypoints(
   KRML_MAYBE_UNUSED_VAR(Ctxt);
   KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
   KRML_MAYBE_UNUSED_VAR(Input);
-  hasBytes = 8ULL <= (InputLength - StartPosition);
+  hasBytes = (InputLength - StartPosition) >= 8ULL;
   if (hasBytes)
   {
     return StartPosition + 8ULL;
@@ -1849,16 +1751,7 @@ ProbeValidateBothEntrypoints(
 uint64_t
 ProbeValidateNamedPlainEp(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
@@ -1868,7 +1761,7 @@ ProbeValidateNamedPlainEp(
   KRML_MAYBE_UNUSED_VAR(Ctxt);
   KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
   KRML_MAYBE_UNUSED_VAR(Input);
-  hasBytes = 8ULL <= (InputLength - StartPosition);
+  hasBytes = (InputLength - StartPosition) >= 8ULL;
   if (hasBytes)
   {
     return StartPosition + 8ULL;
@@ -1879,16 +1772,7 @@ ProbeValidateNamedPlainEp(
 uint64_t
 ProbeValidateNamedProbeEp(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
@@ -1898,7 +1782,7 @@ ProbeValidateNamedProbeEp(
   KRML_MAYBE_UNUSED_VAR(Ctxt);
   KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
   KRML_MAYBE_UNUSED_VAR(Input);
-  hasBytes = 8ULL <= (InputLength - StartPosition);
+  hasBytes = (InputLength - StartPosition) >= 8ULL;
   if (hasBytes)
   {
     return StartPosition + 8ULL;
@@ -1909,16 +1793,7 @@ ProbeValidateNamedProbeEp(
 uint64_t
 ProbeValidateNamedBothEp(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
@@ -1928,7 +1803,7 @@ ProbeValidateNamedBothEp(
   KRML_MAYBE_UNUSED_VAR(Ctxt);
   KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
   KRML_MAYBE_UNUSED_VAR(Input);
-  hasBytes = 8ULL <= (InputLength - StartPosition);
+  hasBytes = (InputLength - StartPosition) >= 8ULL;
   if (hasBytes)
   {
     return StartPosition + 8ULL;

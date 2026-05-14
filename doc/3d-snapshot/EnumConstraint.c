@@ -2,26 +2,19 @@
 
 #include "EnumConstraint.h"
 
+#include "EverParse.h"
+
 uint64_t
 EnumConstraintValidateEnumConstraint(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = 4ULL <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
   uint64_t positionAftercol;
   uint64_t positionAfterEnumConstraint;
   uint32_t col;
@@ -60,7 +53,7 @@ EnumConstraintValidateEnumConstraint(
     {
       /* Validating field x */
       /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-      hasBytes = 4ULL <= (InputLength - positionAftercol1);
+      hasBytes = (InputLength - positionAftercol1) >= 4ULL;
       if (hasBytes)
       {
         positionAfterx_refinement = positionAftercol1 + 4ULL;

@@ -3,21 +3,13 @@
 #include "SpecializeDep1.h"
 
 #include "SpecializeDep1_ExternalAPI.h"
+#include "EverParse.h"
 
 static inline uint64_t
 ValidateUnion(
   uint8_t Tag,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLen,
   uint64_t StartPosition
@@ -33,7 +25,7 @@ ValidateUnion(
   {
     /* Validating field case0 */
     /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-    hasBytes0 = 1ULL <= (InputLen - StartPosition);
+    hasBytes0 = (InputLen - StartPosition) >= 1ULL;
     if (hasBytes0)
     {
       positionAfterUnion = StartPosition + 1ULL;
@@ -61,7 +53,7 @@ ValidateUnion(
   {
     /* Validating field case1 */
     /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-    hasBytes1 = 2ULL <= (InputLen - StartPosition);
+    hasBytes1 = (InputLen - StartPosition) >= 2ULL;
     if (hasBytes1)
     {
       positionAfterUnion0 = StartPosition + 2ULL;
@@ -87,7 +79,7 @@ ValidateUnion(
   }
   /* Validating field other */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes = 4ULL <= (InputLen - StartPosition);
+  hasBytes = (InputLen - StartPosition) >= 4ULL;
   if (hasBytes)
   {
     positionAfterUnion1 = StartPosition + 4ULL;
@@ -140,16 +132,7 @@ Specialized32ProbeUnion(
   EVERPARSE_STRING Tn,
   EVERPARSE_STRING Fn,
   uint8_t *Ctxt,
-  void
-  (*Err)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER Err,
   uint64_t *ReadOffset,
   uint64_t *WriteOffset,
   BOOLEAN *Failed,
@@ -200,23 +183,14 @@ static inline uint64_t
 ValidateTlv(
   uint16_t Len,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  BOOLEAN hasBytes0 = 1ULL <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 1ULL;
   uint64_t positionAfterTlv;
   uint64_t positionAftertag;
   uint8_t tag;
@@ -267,7 +241,7 @@ ValidateTlv(
   }
   tag = Input[(uint32_t)StartPosition];
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes = 4ULL <= (InputLength - positionAftertag);
+  hasBytes = (InputLength - positionAftertag) >= 4ULL;
   if (hasBytes)
   {
     positionAfterlength = positionAftertag + 4ULL;
@@ -294,7 +268,7 @@ ValidateTlv(
     else
     {
       /* Validating field payload */
-      hasEnoughBytes = (uint64_t)(uint32_t)Len <= (InputLength - positionAfterlength1);
+      hasEnoughBytes = (InputLength - positionAfterlength1) >= (uint64_t)(uint32_t)Len;
       if (!hasEnoughBytes)
       {
         positionAfterTlv1 =
@@ -309,7 +283,7 @@ ValidateTlv(
         while (TRUE)
         {
           position = result;
-          if (!(1ULL <= (truncatedInputLength - position)))
+          if (!((truncatedInputLength - position) >= 1ULL))
           {
             ite = TRUE;
           }
@@ -386,16 +360,7 @@ Specialized32ProbeTlv(
   EVERPARSE_STRING Fn,
   EVERPARSE_STRING Det,
   uint8_t *Ctxt,
-  void
-  (*Err)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER Err,
   uint64_t *ReadOffset,
   uint64_t *WriteOffset,
   BOOLEAN *Failed,
@@ -504,16 +469,7 @@ ValidateWrapper(
     EVERPARSE_STRING x2,
     EVERPARSE_STRING x3,
     uint8_t *x4,
-    void
-    (*x5)(
-      EVERPARSE_STRING x0,
-      EVERPARSE_STRING x1,
-      EVERPARSE_STRING x2,
-      uint64_t x3,
-      uint8_t *x4,
-      uint8_t *x5,
-      uint64_t x6
-    ),
+    EVERPARSE_ERROR_HANDLER x5,
     uint64_t *x6,
     uint64_t *x7,
     BOOLEAN *x8,
@@ -524,16 +480,7 @@ ValidateWrapper(
   uint16_t Len,
   EVERPARSE_COPY_BUFFER_T Output,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
@@ -574,7 +521,7 @@ ValidateWrapper(
     else
     {
       /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-      hasBytes = 8ULL <= (InputLength - positionAfterPrecondition1);
+      hasBytes = (InputLength - positionAfterPrecondition1) >= 8ULL;
       if (hasBytes)
       {
         positionAftertlv = positionAfterPrecondition1 + 8ULL;
@@ -696,16 +643,7 @@ ValidateSpecializedWrapper32(
   uint16_t Len,
   EVERPARSE_COPY_BUFFER_T Output,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
@@ -746,7 +684,7 @@ ValidateSpecializedWrapper32(
     else
     {
       /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-      hasBytes = 4ULL <= (InputLength - positionAfterPrecondition1);
+      hasBytes = (InputLength - positionAfterPrecondition1) >= 4ULL;
       if (hasBytes)
       {
         positionAftertlv = positionAfterPrecondition1 + 4ULL;
@@ -875,16 +813,7 @@ EntryProbeWrapper0Tlv(
   EVERPARSE_STRING Fn,
   EVERPARSE_STRING Det,
   uint8_t *Ctxt,
-  void
-  (*Err)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER Err,
   uint64_t *ReadOffset,
   uint64_t *WriteOffset,
   BOOLEAN *Failed,
@@ -925,16 +854,7 @@ SpecializeDep1ValidateEntry(
   uint16_t Len,
   EVERPARSE_COPY_BUFFER_T Output,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLen,
   uint64_t StartPosition
