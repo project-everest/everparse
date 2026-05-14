@@ -250,6 +250,77 @@ static bool cbor_v_get_tagged(cbor_t c, cbor_t *payload, uint64_t *tag) {
 #endif
 }
 
+/* ---------- Iterator wrappers (det/nondet uniform surface) ----------
+ *
+ * Det returns iterator and elements by value; nondet uses bool +
+ * out-parameters. The wrappers paper over the difference.
+ */
+
+typedef cbor_array_iterator cbor_v_arr_iter_t;
+typedef cbor_map_iterator   cbor_v_map_iter_t;
+
+static bool cbor_v_arr_iter_start(cbor_t c, cbor_v_arr_iter_t *out) {
+#ifdef EVERCBOR_DET
+  *out = cbor_det_array_iterator_start(c);
+  return true;
+#else
+  return cbor_nondet_array_iterator_start(c, out);
+#endif
+}
+
+static bool cbor_v_arr_iter_is_empty(cbor_v_arr_iter_t i) {
+#ifdef EVERCBOR_DET
+  return cbor_det_array_iterator_is_empty(i);
+#else
+  return cbor_nondet_array_iterator_is_empty(i);
+#endif
+}
+
+static uint64_t cbor_v_arr_iter_length(cbor_v_arr_iter_t i) {
+#ifdef EVERCBOR_DET
+  return cbor_det_array_iterator_length(i);
+#else
+  return cbor_nondet_array_iterator_length(i);
+#endif
+}
+
+static bool cbor_v_arr_iter_next(cbor_v_arr_iter_t *i, cbor_t *out) {
+#ifdef EVERCBOR_DET
+  *out = cbor_det_array_iterator_next(i);
+  return true;
+#else
+  return cbor_nondet_array_iterator_next(i, out);
+#endif
+}
+
+static bool cbor_v_map_iter_start(cbor_t c, cbor_v_map_iter_t *out) {
+#ifdef EVERCBOR_DET
+  *out = cbor_det_map_iterator_start(c);
+  return true;
+#else
+  return cbor_nondet_map_iterator_start(c, out);
+#endif
+}
+
+static bool cbor_v_map_iter_is_empty(cbor_v_map_iter_t i) {
+#ifdef EVERCBOR_DET
+  return cbor_det_map_iterator_is_empty(i);
+#else
+  return cbor_nondet_map_iterator_is_empty(i);
+#endif
+}
+
+static bool cbor_v_map_iter_next(cbor_v_map_iter_t *i, cbor_t *k, cbor_t *v) {
+#ifdef EVERCBOR_DET
+  cbor_entry_t e = cbor_det_map_iterator_next(i);
+  *k = cbor_det_map_entry_key(e);
+  *v = cbor_det_map_entry_value(e);
+  return true;
+#else
+  return cbor_nondet_map_iterator_next(i, k, v);
+#endif
+}
+
 /* ============================================================
  *   Common test helpers
  * ============================================================ */
@@ -382,6 +453,108 @@ static int run_invalid(uint8_t *bytes, size_t len) {
   size_t vsize = cbor_v_validate(bytes, len);
   if (vsize != 0)
     TFAIL("validation accepted an invalid encoding (vsize=%zu)", vsize);
+  return 0;
+}
+
+/* ---------- Iterator-walk check ----------
+ *
+ * Walks `parsed` via the iterator API and `expected` via the random-access
+ * accessor API in lock-step. At each node:
+ *   - major types must match;
+ *   - scalars compare byte-for-byte;
+ *   - arrays match length AND yield the same children, in order, from the
+ *     iterator (compared against `get_array_item(expected, i)`);
+ *   - maps match length AND each (key, value) yielded by the iterator must
+ *     be findable in `expected` via `map_get`, with matching values;
+ *   - tags match tag number and (recursively) payload.
+ *
+ * Returns true iff the two values are structurally equal AND the parsed
+ * value's iterator API produced consistent results all the way down.
+ */
+static bool walk_iter_check(cbor_t parsed, cbor_t expected) {
+  uint8_t mt = cbor_v_major_type(parsed);
+  if (mt != cbor_v_major_type(expected)) return false;
+  switch (mt) {
+    case CBOR_MAJOR_TYPE_UINT64:
+    case CBOR_MAJOR_TYPE_NEG_INT64: {
+      uint64_t a, b;
+      if (!cbor_v_read_uint64(parsed, &a))   return false;
+      if (!cbor_v_read_uint64(expected, &b)) return false;
+      return a == b;
+    }
+    case CBOR_MAJOR_TYPE_BYTE_STRING:
+    case CBOR_MAJOR_TYPE_TEXT_STRING: {
+      uint8_t *pa, *pb;
+      uint64_t la, lb;
+      if (!cbor_v_get_string(parsed,   &pa, &la)) return false;
+      if (!cbor_v_get_string(expected, &pb, &lb)) return false;
+      if (la != lb) return false;
+      return la == 0 || memcmp(pa, pb, (size_t)la) == 0;
+    }
+    case CBOR_MAJOR_TYPE_ARRAY: {
+      uint64_t lp, le;
+      if (!cbor_v_get_array_length(parsed,   &lp)) return false;
+      if (!cbor_v_get_array_length(expected, &le)) return false;
+      if (lp != le) return false;
+      cbor_v_arr_iter_t it;
+      if (!cbor_v_arr_iter_start(parsed, &it)) return false;
+      if (cbor_v_arr_iter_length(it) != lp) return false;
+      for (uint64_t i = 0; i < lp; i++) {
+        if (cbor_v_arr_iter_is_empty(it)) return false;
+        cbor_t item;
+        if (!cbor_v_arr_iter_next(&it, &item)) return false;
+        cbor_t e_item;
+        if (!cbor_v_get_array_item(expected, i, &e_item)) return false;
+        if (!walk_iter_check(item, e_item)) return false;
+      }
+      if (!cbor_v_arr_iter_is_empty(it)) return false;
+      return true;
+    }
+    case CBOR_MAJOR_TYPE_MAP: {
+      uint64_t lp, le;
+      if (!cbor_v_get_map_length(parsed,   &lp)) return false;
+      if (!cbor_v_get_map_length(expected, &le)) return false;
+      if (lp != le) return false;
+      cbor_v_map_iter_t it;
+      if (!cbor_v_map_iter_start(parsed, &it)) return false;
+      for (uint64_t i = 0; i < lp; i++) {
+        if (cbor_v_map_iter_is_empty(it)) return false;
+        cbor_t k, v;
+        if (!cbor_v_map_iter_next(&it, &k, &v)) return false;
+        cbor_t e_v;
+        if (!cbor_v_map_get(expected, k, &e_v)) return false;
+        if (!walk_iter_check(v, e_v)) return false;
+      }
+      if (!cbor_v_map_iter_is_empty(it)) return false;
+      return true;
+    }
+    case CBOR_MAJOR_TYPE_TAGGED: {
+      cbor_t pp, pe;
+      uint64_t tp, te;
+      if (!cbor_v_get_tagged(parsed,   &pp, &tp)) return false;
+      if (!cbor_v_get_tagged(expected, &pe, &te)) return false;
+      if (tp != te) return false;
+      return walk_iter_check(pp, pe);
+    }
+    case CBOR_MAJOR_TYPE_SIMPLE_VALUE: {
+      uint8_t a, b;
+      if (!cbor_v_read_simple_value(parsed,   &a)) return false;
+      if (!cbor_v_read_simple_value(expected, &b)) return false;
+      return a == b;
+    }
+    default:
+      return false;
+  }
+}
+
+/* Runs the standard valid-encoding pipeline AND additionally walks the
+ * parsed value via the iterator API, asserting structural equality with
+ * `expected`. */
+static int run_iter_walk(uint8_t *bytes, size_t len, cbor_t expected) {
+  if (do_run_valid(bytes, len, expected, IS_DETERMINISTIC)) return 1;
+  cbor_t parsed = cbor_v_parse(bytes, len);
+  if (!walk_iter_check(parsed, expected))
+    TFAIL("walk_iter_check failed");
   return 0;
 }
 
@@ -2477,6 +2650,254 @@ static int test_reserved_tag_dc_invalid(void) {
 }
 
 /* ============================================================
+ *   Iterator-walk variants.
+ *
+ *   Each `test_*_iter_canonical` test:
+ *     - builds the same `expected` value used by the corresponding
+ *       non-`_iter_` test;
+ *     - feeds the same input bytes through `run_iter_walk`, which
+ *       performs the normal validate/parse/serialize round-trip and
+ *       additionally walks the parsed value through the iterator API,
+ *       asserting structural equality against `expected`.
+ *   The fixtures are picked to cover wide arrays, deeply-nested arrays,
+ *   wide maps, deeply-nested maps, maps with composite keys, tagged
+ *   values, and mixed empty containers.
+ * ============================================================ */
+
+/* New fixture: wide AND deep. Array of 4 arrays of 3 uints. Exercises
+ * both array iteration (twice) and uint reads at the leaves. */
+static int test_arr_wide_deep_canonical(void) {
+  uint8_t bytes[] = {
+    0x84,
+    0x83, 0x01, 0x02, 0x03,
+    0x83, 0x04, 0x05, 0x06,
+    0x83, 0x07, 0x08, 0x09,
+    0x83, 0x0a, 0x0b, 0x0c
+  };
+  cbor_t inner_items[4][3];
+  cbor_t inners[4];
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 3; j++)
+      inner_items[i][j] = cbor_v_mk_uint64((uint64_t)(3 * i + j + 1));
+    if (!cbor_v_mk_array(inner_items[i], 3, &inners[i]))
+      TFAIL("mk inner %d", i);
+  }
+  cbor_t expected;
+  if (!cbor_v_mk_array(inners, 4, &expected)) TFAIL("mk outer");
+  return run_valid_match(bytes, sizeof(bytes), expected);
+}
+
+static int test_arr_25_iter_canonical(void) {
+  static uint8_t bytes[29];
+  size_t off = 0;
+  bytes[off++] = 0x98;
+  bytes[off++] = 0x19;
+  for (int i = 1; i <= 23; i++) bytes[off++] = (uint8_t)i;
+  bytes[off++] = 0x18; bytes[off++] = 0x18;
+  bytes[off++] = 0x18; bytes[off++] = 0x19;
+  if (off != sizeof(bytes)) TFAIL("buffer size");
+  cbor_t items[25];
+  for (int i = 0; i < 25; i++) items[i] = cbor_v_mk_uint64(i + 1);
+  cbor_t expected;
+  if (!cbor_v_mk_array(items, 25, &expected)) TFAIL("mk array");
+  return run_iter_walk(bytes, sizeof(bytes), expected);
+}
+
+static int test_arr_nested_iter_canonical(void) {
+  uint8_t bytes[] = {
+    0x83,
+    0x01,
+    0x82, 0x02, 0x03,
+    0x82, 0x04, 0x05
+  };
+  cbor_t inner1_items[2] = { cbor_v_mk_uint64(2), cbor_v_mk_uint64(3) };
+  cbor_t inner2_items[2] = { cbor_v_mk_uint64(4), cbor_v_mk_uint64(5) };
+  cbor_t inner1, inner2;
+  if (!cbor_v_mk_array(inner1_items, 2, &inner1)) TFAIL("mk inner1");
+  if (!cbor_v_mk_array(inner2_items, 2, &inner2)) TFAIL("mk inner2");
+  cbor_t outer_items[3] = { cbor_v_mk_uint64(1), inner1, inner2 };
+  cbor_t expected;
+  if (!cbor_v_mk_array(outer_items, 3, &expected)) TFAIL("mk outer");
+  return run_iter_walk(bytes, sizeof(bytes), expected);
+}
+
+static int test_arr_deeply_nested_iter_canonical(void) {
+  static uint8_t bytes[ARR_DEPTH + 1];
+  static int initialized = 0;
+  if (!initialized) {
+    for (int i = 0; i < ARR_DEPTH; i++) bytes[i] = 0x81;
+    bytes[ARR_DEPTH] = 0x01;
+    initialized = 1;
+  }
+  cbor_t levels[ARR_DEPTH + 1];
+  levels[0] = cbor_v_mk_uint64(1);
+  for (int i = 1; i <= ARR_DEPTH; i++) {
+    if (!cbor_v_mk_array(&levels[i - 1], 1, &levels[i])) TFAIL("mk array");
+  }
+  return run_iter_walk(bytes, sizeof(bytes), levels[ARR_DEPTH]);
+}
+
+static int test_arr_empties_iter_canonical(void) {
+  static uint8_t bytes[] = {
+    0x83, 0x00, 0x80, 0x84, 0x80, 0x81, 0x00, 0xa0,
+    0xa3, 0x01, 0xa0, 0x02, 0xa0, 0x03, 0x80
+  };
+  cbor_t z[3];
+  z[0] = cbor_v_mk_uint64(0);
+
+  cbor_t empty_arr_buf[1] = { cbor_v_mk_uint64(0) };
+  if (!cbor_v_mk_array(empty_arr_buf, 0, &z[1])) TFAIL("mk z[1]");
+
+  cbor_t y[4];
+  if (!cbor_v_mk_array(empty_arr_buf, 0, &y[0])) TFAIL("mk y[0]");
+  cbor_t leaf_arr[1] = { cbor_v_mk_uint64(0) };
+  if (!cbor_v_mk_array(leaf_arr, 1, &y[1])) TFAIL("mk y[1]");
+  cbor_entry_t empty_map_buf[1] = {
+    cbor_v_mk_map_entry(cbor_v_mk_uint64(0), cbor_v_mk_uint64(0))
+  };
+  if (!cbor_v_mk_map(empty_map_buf, 0, &y[2])) TFAIL("mk y[2]");
+
+  cbor_entry_t inner[3];
+  cbor_t inner_v0, inner_v1, inner_v2;
+  if (!cbor_v_mk_map(empty_map_buf, 0, &inner_v0)) TFAIL("mk inner_v0");
+  if (!cbor_v_mk_map(empty_map_buf, 0, &inner_v1)) TFAIL("mk inner_v1");
+  if (!cbor_v_mk_array(empty_arr_buf, 0, &inner_v2)) TFAIL("mk inner_v2");
+  inner[0] = cbor_v_mk_map_entry(cbor_v_mk_uint64(1), inner_v0);
+  inner[1] = cbor_v_mk_map_entry(cbor_v_mk_uint64(2), inner_v1);
+  inner[2] = cbor_v_mk_map_entry(cbor_v_mk_uint64(3), inner_v2);
+  if (!cbor_v_mk_map(inner, 3, &y[3])) TFAIL("mk y[3]");
+
+  if (!cbor_v_mk_array(y, 4, &z[2])) TFAIL("mk z[2]");
+  cbor_t expected;
+  if (!cbor_v_mk_array(z, 3, &expected)) TFAIL("mk outer");
+  return run_iter_walk(bytes, sizeof(bytes), expected);
+}
+
+static int test_map_five_iter_canonical(void) {
+  uint8_t bytes[] = {
+    0xa5,
+    0x61, 'a', 0x61, 'A',
+    0x61, 'b', 0x61, 'B',
+    0x61, 'c', 0x61, 'C',
+    0x61, 'd', 0x61, 'D',
+    0x61, 'e', 0x61, 'E'
+  };
+  static uint8_t lower[5] = { 'a', 'b', 'c', 'd', 'e' };
+  static uint8_t upper[5] = { 'A', 'B', 'C', 'D', 'E' };
+  cbor_entry_t entries[5];
+  for (int i = 0; i < 5; i++) {
+    cbor_t k, v;
+    if (!cbor_v_mk_text_string(&lower[i], 1, &k)) TFAIL("mk k");
+    if (!cbor_v_mk_text_string(&upper[i], 1, &v)) TFAIL("mk v");
+    entries[i] = cbor_v_mk_map_entry(k, v);
+  }
+  cbor_t expected;
+  if (!cbor_v_mk_map(entries, 5, &expected)) TFAIL("mk map");
+  return run_iter_walk(bytes, sizeof(bytes), expected);
+}
+
+static int test_map_deeply_nested_iter_canonical(void) {
+  static uint8_t bytes[2 * MAP_DEPTH + 1];
+  static int initialized = 0;
+  if (!initialized) {
+    for (int i = 0; i < MAP_DEPTH; i++) {
+      bytes[2 * i]     = 0xa1;
+      bytes[2 * i + 1] = 0x00;
+    }
+    bytes[2 * MAP_DEPTH] = 0x00;
+    initialized = 1;
+  }
+  cbor_t values[MAP_DEPTH + 1];
+  cbor_entry_t entries[MAP_DEPTH][1];
+  values[0] = cbor_v_mk_uint64(0);
+  for (int i = 1; i <= MAP_DEPTH; i++) {
+    cbor_t k = cbor_v_mk_uint64(0);
+    entries[i - 1][0] = cbor_v_mk_map_entry(k, values[i - 1]);
+    if (!cbor_v_mk_map(entries[i - 1], 1, &values[i])) TFAIL("mk map level");
+  }
+  return run_iter_walk(bytes, sizeof(bytes), values[MAP_DEPTH]);
+}
+
+static int test_map_nested_keys_iter_canonical(void) {
+  static uint8_t bytes[1024];
+  static size_t  bytes_len;
+  static int     initialized = 0;
+  if (!initialized) {
+    size_t off = 0;
+    bytes[off++] = 0xa2;
+    bytes[off++] = 0x82;
+    off = emit_dnm(bytes, off, MAP_KEY_DEPTH, 0);
+    off = emit_dnm(bytes, off, MAP_KEY_DEPTH, 0);
+    off = emit_canonical_uint(bytes, off, 0);
+    bytes[off++] = 0x82;
+    off = emit_dnm(bytes, off, MAP_KEY_DEPTH, 0);
+    off = emit_dnm(bytes, off, MAP_KEY_DEPTH, 1);
+    off = emit_canonical_uint(bytes, off, 1);
+    bytes_len = off;
+    initialized = 1;
+  }
+  dnm_pool_reset();
+  cbor_t dnm_a, dnm_b;
+  if (!build_dnm(MAP_KEY_DEPTH, 0, &dnm_a)) TFAIL("build dnm_a");
+  if (!build_dnm(MAP_KEY_DEPTH, 1, &dnm_b)) TFAIL("build dnm_b");
+  static cbor_t pair1_items[2];
+  static cbor_t pair2_items[2];
+  pair1_items[0] = dnm_a; pair1_items[1] = dnm_a;
+  pair2_items[0] = dnm_a; pair2_items[1] = dnm_b;
+  cbor_t pair1, pair2;
+  if (!cbor_v_mk_array(pair1_items, 2, &pair1)) TFAIL("mk pair1");
+  if (!cbor_v_mk_array(pair2_items, 2, &pair2)) TFAIL("mk pair2");
+  static cbor_entry_t outer_entries[2];
+  outer_entries[0] = cbor_v_mk_map_entry(pair1, cbor_v_mk_uint64(0));
+  outer_entries[1] = cbor_v_mk_map_entry(pair2, cbor_v_mk_uint64(1));
+  cbor_t expected;
+  if (!cbor_v_mk_map(outer_entries, 2, &expected)) TFAIL("mk outer map");
+  return run_iter_walk(bytes, bytes_len, expected);
+}
+
+static int test_tag_nested_iter_canonical(void) {
+  uint8_t bytes[] = { 0xd9, 0x04, 0xd2,  0xd9, 0x16, 0x2e,  0x01 };
+  cbor_t inner = cbor_v_mk_uint64(1);
+  cbor_t mid;
+  if (!cbor_v_mk_tagged(5678, &inner, &mid)) TFAIL("mk inner tag");
+  cbor_t expected;
+  if (!cbor_v_mk_tagged(1234, &mid, &expected)) TFAIL("mk outer tag");
+  return run_iter_walk(bytes, sizeof(bytes), expected);
+}
+
+static int test_tag_array_payload_iter_canonical(void) {
+  uint8_t bytes[] = { 0xd8, 0x63,  0x83, 0x01, 0x02, 0x03 };
+  cbor_t items[3] = { cbor_v_mk_uint64(1), cbor_v_mk_uint64(2),
+                      cbor_v_mk_uint64(3) };
+  cbor_t arr;
+  if (!cbor_v_mk_array(items, 3, &arr)) TFAIL("mk arr");
+  cbor_t expected;
+  if (!cbor_v_mk_tagged(99, &arr, &expected)) TFAIL("mk tag");
+  return run_iter_walk(bytes, sizeof(bytes), expected);
+}
+
+static int test_arr_wide_deep_iter_canonical(void) {
+  uint8_t bytes[] = {
+    0x84,
+    0x83, 0x01, 0x02, 0x03,
+    0x83, 0x04, 0x05, 0x06,
+    0x83, 0x07, 0x08, 0x09,
+    0x83, 0x0a, 0x0b, 0x0c
+  };
+  cbor_t inner_items[4][3];
+  cbor_t inners[4];
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 3; j++)
+      inner_items[i][j] = cbor_v_mk_uint64((uint64_t)(3 * i + j + 1));
+    if (!cbor_v_mk_array(inner_items[i], 3, &inners[i]))
+      TFAIL("mk inner %d", i);
+  }
+  cbor_t expected;
+  if (!cbor_v_mk_array(inners, 4, &expected)) TFAIL("mk outer");
+  return run_iter_walk(bytes, sizeof(bytes), expected);
+}
+
+/* ============================================================
  *   Test registry & driver
  * ============================================================ */
 
@@ -2672,6 +3093,19 @@ static const test_entry_t TESTS[] = {
   { "reserved_arr_9c_invalid",             test_reserved_arr_9c_invalid },
   { "reserved_map_bc_invalid",             test_reserved_map_bc_invalid },
   { "reserved_tag_dc_invalid",             test_reserved_tag_dc_invalid },
+
+  /* ---------- Iterator-walk variants ---------- */
+  { "arr_wide_deep_canonical",             test_arr_wide_deep_canonical },
+  { "arr_25_iter_canonical",               test_arr_25_iter_canonical },
+  { "arr_nested_iter_canonical",           test_arr_nested_iter_canonical },
+  { "arr_deeply_nested_iter_canonical",    test_arr_deeply_nested_iter_canonical },
+  { "arr_empties_iter_canonical",          test_arr_empties_iter_canonical },
+  { "map_five_iter_canonical",             test_map_five_iter_canonical },
+  { "map_deeply_nested_iter_canonical",    test_map_deeply_nested_iter_canonical },
+  { "map_nested_keys_iter_canonical",      test_map_nested_keys_iter_canonical },
+  { "tag_nested_iter_canonical",           test_tag_nested_iter_canonical },
+  { "tag_array_payload_iter_canonical",    test_tag_array_payload_iter_canonical },
+  { "arr_wide_deep_iter_canonical",        test_arr_wide_deep_iter_canonical },
 };
 
 #define N_TESTS ((int)(sizeof(TESTS) / sizeof(TESTS[0])))
