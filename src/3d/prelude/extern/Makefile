@@ -31,7 +31,7 @@ KRML_EXTERN = $(KRML_HOME)/krml \
 	  -skip-compilation \
 	  -skip-makefiles \
 	  -bundle 'Prims,C.\*,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
-	  -bundle 'EverParse3d.Prelude.StaticHeader+EverParse3d.ErrorCode+EverParse3d.InputStream.Extern.Base+EverParse3d.InputStream.Extern.Type+EverParse3d.CopyBuffer=LowParse.\*,EverParse3d.\*[rename=EverParse,rename-prefix]' \
+	  -bundle 'EverParse3d.Prelude.StaticHeader+EverParse3d.ErrorCode+EverParse3d.InputStream.Extern.Base+EverParse3d.InputStream.Extern.Type+EverParse3d.CopyBuffer+EverParse3d.Actions.Common=LowParse.\*,EverParse3d.\*[rename=EverParse,rename-prefix]' \
 	  -warn-error -9@4 \
 	  -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft \
 	  -header ../../noheader.txt \
