@@ -403,67 +403,62 @@ fn impl_data_model_to_equiv_hd
   res
 }
 
-// === Gen-level pipeline: recursive check_equiv_map_hd ===
+// === Local instance of impl_data_model_t for basic_data_model ===
+// basic_data_model is always false, so this is just a constant false.
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_nondet_impl_basic_local
+  (x1 x2: cbor_raw)
+  (#pm1: perm) (#v1: Ghost.erased raw_data_item)
+  (#pm2: perm) (#v2: Ghost.erased raw_data_item)
+requires
+  cbor_raw_match pm1 x1 v1 **
+  cbor_raw_match pm2 x2 v2
+returns res: bool
+ensures
+  cbor_raw_match pm1 x1 v1 **
+  cbor_raw_match pm2 x2 v2 **
+  pure (res == basic_data_model v1 v2)
+{
+  false
+}
 
-// FIXME: fold definition of impl_check_equiv_map_hd_t
+// === Gen-level pipeline: non-recursive check_equiv_map_hd (ih is the recursive callback) ===
+
 inline_for_extraction
-fn rec impl_check_equiv_map_hd_compare
+let impl_check_equiv_map_hd_compare
   (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
   (impl_dm: impl_data_model_t data_model)
   (f64: squash SZ.fits_u64)
-  (map_bound: option SZ.t)
-  (n1: SZ.t)
-  (l1: S.slice byte)
-  (n2: SZ.t)
-  (l2: S.slice byte)
-  (#p1: perm)
-  (#gl1: Ghost.erased (nlist (SZ.v n1) raw_data_item))
-  (#p2: perm)
-  (#gl2: Ghost.erased (nlist (SZ.v n2) raw_data_item))
-  requires
-    (PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n1) parse_raw_data_item) l1 #p1 gl1 **
-      PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n2) parse_raw_data_item) l2 #p2 gl2 **
-      pure (
-        SZ.v n1 > 0 /\ SZ.v n2 > 0
-      )
-    )
-  returns res: option bool
-  ensures
-    (
-PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n1) parse_raw_data_item) l1 #p1 gl1 **
-      PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n2) parse_raw_data_item) l2 #p2 gl2 **
-      pure (
-        SZ.v n1 > 0 /\ SZ.v n2 > 0 /\
-        res == (check_equiv_map data_model (NG.option_sz_v map_bound)) (List.Tot.hd gl1) (List.Tot.hd gl2)
-      )
-    )
-{
-  NG.impl_check_equiv_map_hd_body (impl_data_model_to_equiv_hd impl_dm f64) (impl_check_equiv_map_hd_compare impl_dm f64) map_bound n1 l1 n2 l2
-}
+  (ih: NG.impl_check_equiv_map_hd_t data_model)
+: NG.impl_check_equiv_map_hd_t data_model
+= NG.impl_check_equiv_map_hd_body (impl_data_model_to_equiv_hd impl_dm f64) ih
 
 inline_for_extraction
 let impl_check_equiv_list_compare
   (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
   (impl_dm: impl_data_model_t data_model)
   (f64: squash SZ.fits_u64)
+  (ih: NG.impl_check_equiv_map_hd_t data_model)
   (map_bound: option SZ.t)
 : NG.impl_check_equiv_list_t (check_equiv_map data_model (NG.option_sz_v map_bound))
-= NG.impl_check_equiv_list_map (impl_check_equiv_map_hd_compare impl_dm f64) map_bound
+= NG.impl_check_equiv_list_map (impl_check_equiv_map_hd_compare impl_dm f64 ih) map_bound
 
 inline_for_extraction
 let impl_check_equiv_compare
   (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
   (impl_dm: impl_data_model_t data_model)
   (f64: squash SZ.fits_u64)
+  (ih: NG.impl_check_equiv_map_hd_t data_model)
   (map_bound: option SZ.t)
 : NG.impl_equiv_t #_ (check_equiv data_model (NG.option_sz_v map_bound))
-= NG.impl_check_equiv map_bound (impl_check_equiv_list_compare impl_dm f64 map_bound)
+= NG.impl_check_equiv map_bound (impl_check_equiv_list_compare impl_dm f64 ih map_bound)
 
 inline_for_extraction
 fn impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow_compare
   (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
   (impl_dm: impl_data_model_t data_model)
   (f64: squash SZ.fits_u64)
+  (ih: NG.impl_check_equiv_map_hd_t data_model)
   (nl1: SZ.t)
   (l1: S.slice byte)
   (nl2: SZ.t)
@@ -483,7 +478,38 @@ ensures
     res == list_for_all_with_overflow (setoid_assoc_eq_with_overflow (check_equiv data_model None) (check_equiv data_model None) gl1) gl2
   )
 {
-  NG.impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow (impl_check_equiv_compare impl_dm f64 None) nl1 l1 nl2 l2
+  NG.impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow (impl_check_equiv_compare impl_dm f64 ih None) nl1 l1 nl2 l2
+}
+
+// === Specialized recursive instance: check_equiv_map_hd for basic_data_model ===
+
+fn rec impl_check_equiv_map_hd_basic
+  (f64: squash SZ.fits_u64)
+  (map_bound: option SZ.t)
+  (n1: SZ.t)
+  (l1: S.slice byte)
+  (n2: SZ.t)
+  (l2: S.slice byte)
+  (#p1: perm)
+  (#gl1: Ghost.erased (nlist (SZ.v n1) raw_data_item))
+  (#p2: perm)
+  (#gl2: Ghost.erased (nlist (SZ.v n2) raw_data_item))
+requires
+  PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n1) parse_raw_data_item) l1 #p1 gl1 **
+  PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n2) parse_raw_data_item) l2 #p2 gl2 **
+  pure (
+    SZ.v n1 > 0 /\ SZ.v n2 > 0
+  )
+returns res: option bool
+ensures
+  PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n1) parse_raw_data_item) l1 #p1 gl1 **
+  PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n2) parse_raw_data_item) l2 #p2 gl2 **
+  pure (
+    SZ.v n1 > 0 /\ SZ.v n2 > 0 /\
+    res == (check_equiv_map basic_data_model (NG.option_sz_v map_bound)) (List.Tot.hd gl1) (List.Tot.hd gl2)
+  )
+{
+  impl_check_equiv_map_hd_compare cbor_nondet_impl_basic_local f64 (impl_check_equiv_map_hd_basic f64) map_bound n1 l1 n2 l2
 }
 
 // === Type for the recursive comparison function ===
@@ -1209,7 +1235,7 @@ ensures
 }
 
 inline_for_extraction
-fn compare_cbor_raw_body
+fn compare_cbor_raw
   (#data_model: Ghost.erased (raw_data_item -> raw_data_item -> bool))
   (impl_dm: impl_data_model_t data_model)
   (f64: squash SZ.fits_u64)
@@ -1473,15 +1499,12 @@ ensures
 
 #pop-options
 
-// === Recursive comparison function tying the knot ===
+// === Recursive comparison function tying the knot for basic_data_model ===
 
 #push-options "--z3rlimit 32 --fuel 1 --ifuel 1"
 
-inline_for_extraction
 ```pulse
-fn rec compare_cbor_raw
-  (#data_model: Ghost.erased (raw_data_item -> raw_data_item -> bool))
-  (impl_dm: impl_data_model_t data_model)
+fn rec compare_cbor_raw_basic
   (f64: squash SZ.fits_u64)
   (map_bound: option SZ.t)
   (x1: cbor_raw)
@@ -1497,13 +1520,13 @@ returns res: option bool
 ensures
   cbor_raw_match pm1 x1 v1 **
   cbor_raw_match pm2 x2 v2 **
-  pure (res == check_equiv data_model (NG.option_sz_v map_bound) v1 v2)
+  pure (res == check_equiv basic_data_model (NG.option_sz_v map_bound) v1 v2)
 {
   let mb_dec = option_sz_decrement_safe map_bound;
   option_sz_decrement_safe_v map_bound;
-  compare_cbor_raw_body impl_dm f64 map_bound
-    (compare_cbor_raw impl_dm f64 map_bound)
-    (compare_cbor_raw impl_dm f64 mb_dec)
+  compare_cbor_raw cbor_nondet_impl_basic_local f64 map_bound
+    (compare_cbor_raw_basic f64 map_bound)
+    (compare_cbor_raw_basic f64 mb_dec)
     x1 x2
 }
 ```

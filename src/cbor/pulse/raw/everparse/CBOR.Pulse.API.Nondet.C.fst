@@ -1733,27 +1733,6 @@ let cbor_nondet_map_entry_gather () = cbor_nondet_map_entry_gather_priv ()
 #push-options "--z3rlimit 64"
 
 #restart-solver
-inline_for_extraction noextract [@@noextract_to "krml"]
-fn cbor_nondet_impl_basic
-  (x1: RawType.cbor_raw)
-  (x2: RawType.cbor_raw)
-  (#pm1: perm)
-  (#v1: Ghost.erased SpecRawBase.raw_data_item)
-  (#pm2: perm)
-  (#v2: Ghost.erased SpecRawBase.raw_data_item)
-requires
-  RawMatch.cbor_raw_match pm1 x1 v1 **
-  RawMatch.cbor_raw_match pm2 x2 v2
-returns res: bool
-ensures
-  RawMatch.cbor_raw_match pm1 x1 v1 **
-  RawMatch.cbor_raw_match pm2 x2 v2 **
-  pure (res == SpecRaw.basic_data_model v1 v2)
-{
-  false
-}
-
-#restart-solver
 fn cbor_nondet_equal
   (x1: cbor_nondet_t)
   (#p1: perm)
@@ -1773,7 +1752,7 @@ ensures
   let f64 : squash SZ.fits_u64 = assume SZ.fits_u64;
   let v1' = cbor_nondet_match_elim x1;
   let v2' = cbor_nondet_match_elim x2;
-  let res = NondetCompare.compare_cbor_raw #(Ghost.hide SpecRaw.basic_data_model) cbor_nondet_impl_basic f64 None x1 x2;
+  let res = NondetCompare.compare_cbor_raw_basic f64 None x1 x2;
   Trade.elim _ (cbor_nondet_match p1 x1 v1);
   Trade.elim _ (cbor_nondet_match p2 x2 v2);
   // res == check_equiv basic_data_model None v1' v2'
@@ -2343,7 +2322,7 @@ ensures
   pure (res == SpecRaw.raw_equiv v1 v2)
 {
   let f64 : squash SZ.fits_u64 = assume SZ.fits_u64;
-  let res = NondetCompare.compare_cbor_raw #(Ghost.hide SpecRaw.basic_data_model) cbor_nondet_impl_basic f64 None x1 x2;
+  let res = NondetCompare.compare_cbor_raw_basic f64 None x1 x2;
   CBOR.Spec.Raw.Nondet.check_equiv_correct SpecRaw.basic_data_model None v1 v2;
   match res {
     Some b -> { b }
