@@ -406,6 +406,7 @@ fn impl_data_model_to_equiv_hd
 // === Gen-level pipeline: recursive check_equiv_map_hd ===
 
 // FIXME: fold definition of impl_check_equiv_map_hd_t
+inline_for_extraction
 fn rec impl_check_equiv_map_hd_compare
   (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
   (impl_dm: impl_data_model_t data_model)
@@ -1476,6 +1477,7 @@ ensures
 
 #push-options "--z3rlimit 32 --fuel 1 --ifuel 1"
 
+inline_for_extraction
 ```pulse
 fn rec compare_cbor_raw
   (#data_model: Ghost.erased (raw_data_item -> raw_data_item -> bool))

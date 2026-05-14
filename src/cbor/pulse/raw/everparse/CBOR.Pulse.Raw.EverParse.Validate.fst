@@ -1703,6 +1703,7 @@ fn impl_holds_on_raw_data_item
   LowParse.Pulse.Recursive.impl_pred_recursive serialize_raw_data_item_param (jump_leaf ()) (jump_recursive_step_count_leaf f64) (holds_on_raw_data_item_pred p) impl_p input
 }
 
+inline_for_extraction
 fn impl_holds_on_raw_data_item_strong_prefix
   (f64: squash SZ.fits_u64)
   (p: Ghost.erased (raw_data_item -> bool))
