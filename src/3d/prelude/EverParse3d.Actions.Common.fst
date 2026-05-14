@@ -30,7 +30,6 @@ let app_ctxt_error_pre (ctxt:app_ctxt) (l:loc) (h:HS.mem) =
   B.live h ctxt /\
   AppCtxt.loc_of ctxt `loc_disjoint` l
 
-inline_for_extraction
 let error_handler = 
     typename:string ->
     fieldname:string ->
