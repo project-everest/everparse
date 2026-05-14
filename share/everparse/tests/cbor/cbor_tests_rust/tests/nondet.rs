@@ -154,6 +154,60 @@ macro_rules! invalid_test {
     };
 }
 
+/// Walks `parsed` via the nondet iterator API (`CborNondetArray`/
+/// `CborNondetMap` IntoIterator impls) and walks `expected` via the
+/// random-access accessors. Recurses through containers and tags.
+/// Returns true iff structurally equal AND the iterator yields the right
+/// shape at every level.
+///
+/// Note: nondet map iteration order is arbitrary (the iterator yields
+/// entries in the parser's internal canonical order, which may differ
+/// from the input bytes for non-canonical encodings). The check matches
+/// each iterator-yielded key against `expected` via `cbor_nondet_map_get`,
+/// so order does not affect the outcome.
+fn walk_iter_check<'a>(parsed: CborNondet<'a>, expected: CborNondet<'a>) -> bool {
+    match (cbor_nondet_destruct(parsed), cbor_nondet_destruct(expected)) {
+        (Int64 { kind: kp, value: vp }, Int64 { kind: ke, value: ve }) => {
+            kp == ke && vp == ve
+        }
+        (ByteString { payload: pp }, ByteString { payload: pe }) => pp == pe,
+        (TextString { payload: pp }, TextString { payload: pe }) => pp == pe,
+        (SimpleValue { _0: a }, SimpleValue { _0: b }) => a == b,
+        (Tagged { tag: tp, payload: pp }, Tagged { tag: te, payload: pe }) => {
+            tp == te && walk_iter_check(pp, pe)
+        }
+        (Array { _0: ap }, Array { _0: ae }) => {
+            let lp = cbor_nondet_get_array_length(ap);
+            let le = cbor_nondet_get_array_length(ae);
+            if lp != le { return false; }
+            let mut count = 0u64;
+            for item in ap.into_iter() {
+                let Some(e_item) = cbor_nondet_get_array_item(ae, count) else {
+                    return false;
+                };
+                if !walk_iter_check(item, e_item) { return false; }
+                count += 1;
+            }
+            count == lp
+        }
+        (Map { _0: mp }, Map { _0: me }) => {
+            let lp = cbor_nondet_get_map_length(mp);
+            let le = cbor_nondet_get_map_length(me);
+            if lp != le { return false; }
+            let mut count = 0u64;
+            for entry in mp.into_iter() {
+                let k = cbor_nondet_map_entry_key(entry);
+                let v = cbor_nondet_map_entry_value(entry);
+                let Some(e_v) = cbor_nondet_map_get(me, k) else { return false; };
+                if !walk_iter_check(v, e_v) { return false; }
+                count += 1;
+            }
+            count == lp
+        }
+        _ => false,
+    }
+}
+
 // ===== Tests (same names as det) =====
 int_canonical!(uint_zero_canonical, UInt64, 0);
 int_canonical!(uint_one_canonical, UInt64, 1);
@@ -854,3 +908,247 @@ invalid_test!(reserved_negint_3c_invalid);
 invalid_test!(reserved_arr_9c_invalid);
 invalid_test!(reserved_map_bc_invalid);
 invalid_test!(reserved_tag_dc_invalid);
+
+// ===== Iterator-walk variants =====
+//
+// Mirror of det.rs's `_iter_canonical` block. Each test reads the C-emitted
+// input bytes for the fixture, parses them, builds the expected value
+// independently, and invokes `walk_iter_check(parsed, expected)` to exercise
+// the nondet iterator API at every level of nesting (in addition to the
+// regular equality + round-trip checks).
+
+#[test]
+fn arr_wide_deep_canonical() {
+    let stem = "arr_wide_deep_canonical";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let inners: [[CborNondet<'static>; 3]; 4] = [
+        [cbor_nondet_mk_int64(UInt64, 1), cbor_nondet_mk_int64(UInt64, 2),
+         cbor_nondet_mk_int64(UInt64, 3)],
+        [cbor_nondet_mk_int64(UInt64, 4), cbor_nondet_mk_int64(UInt64, 5),
+         cbor_nondet_mk_int64(UInt64, 6)],
+        [cbor_nondet_mk_int64(UInt64, 7), cbor_nondet_mk_int64(UInt64, 8),
+         cbor_nondet_mk_int64(UInt64, 9)],
+        [cbor_nondet_mk_int64(UInt64, 10), cbor_nondet_mk_int64(UInt64, 11),
+         cbor_nondet_mk_int64(UInt64, 12)],
+    ];
+    let i0 = cbor_nondet_mk_array(&inners[0]).unwrap();
+    let i1 = cbor_nondet_mk_array(&inners[1]).unwrap();
+    let i2 = cbor_nondet_mk_array(&inners[2]).unwrap();
+    let i3 = cbor_nondet_mk_array(&inners[3]).unwrap();
+    let outer_items = [i0, i1, i2, i3];
+    let expected = cbor_nondet_mk_array(&outer_items).unwrap();
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+
+#[test]
+fn arr_25_iter_canonical() {
+    let stem = "arr_25_iter_canonical";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let items: Vec<CborNondet<'static>> =
+        (1u64..=25).map(|i| cbor_nondet_mk_int64(UInt64, i)).collect();
+    let expected = cbor_nondet_mk_array(&items).unwrap();
+    assert!(walk_iter_check(parsed, expected),
+            "[{API}/{stem}] walk_iter_check failed");
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+
+#[test]
+fn arr_nested_iter_canonical() {
+    let stem = "arr_nested_iter_canonical";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let inner1_items = [cbor_nondet_mk_int64(UInt64, 2), cbor_nondet_mk_int64(UInt64, 3)];
+    let inner1 = cbor_nondet_mk_array(&inner1_items).unwrap();
+    let inner2_items = [cbor_nondet_mk_int64(UInt64, 4), cbor_nondet_mk_int64(UInt64, 5)];
+    let inner2 = cbor_nondet_mk_array(&inner2_items).unwrap();
+    let outer_items = [cbor_nondet_mk_int64(UInt64, 1), inner1, inner2];
+    let expected = cbor_nondet_mk_array(&outer_items).unwrap();
+    assert!(walk_iter_check(parsed, expected),
+            "[{API}/{stem}] walk_iter_check failed");
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+
+#[test]
+fn arr_deeply_nested_iter_canonical() {
+    let stem = "arr_deeply_nested_iter_canonical";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let current = cbor_nondet_mk_int64(UInt64, 1);
+    arr_wrap!(current,
+        () () () () () () () () () ()
+        () () () () () () () () () ()
+        () () () () () () () () () ()
+    );
+    assert!(walk_iter_check(parsed, current),
+            "[{API}/{stem}] walk_iter_check failed");
+    assert!(cbor_nondet_equal(parsed, current));
+    check_serialize_and_roundtrip(stem, current, parsed);
+}
+
+#[test]
+fn arr_empties_iter_canonical() {
+    let stem = "arr_empties_iter_canonical";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+
+    let mut empty1: [CborNondetMapEntry<'_>; 0] = [];
+    let mut empty2: [CborNondetMapEntry<'_>; 0] = [];
+    let mut empty3: [CborNondetMapEntry<'_>; 0] = [];
+    let inner_map_v0 = cbor_nondet_mk_map(&mut empty1).unwrap();
+    let inner_map_v1 = cbor_nondet_mk_map(&mut empty2).unwrap();
+    let inner_arr_v3 = cbor_nondet_mk_array(&[]).unwrap();
+    let mut inner_entries = [
+        cbor_nondet_mk_map_entry(cbor_nondet_mk_int64(UInt64, 1), inner_map_v0),
+        cbor_nondet_mk_map_entry(cbor_nondet_mk_int64(UInt64, 2), inner_map_v1),
+        cbor_nondet_mk_map_entry(cbor_nondet_mk_int64(UInt64, 3), inner_arr_v3),
+    ];
+    let inner_map = cbor_nondet_mk_map(&mut inner_entries).unwrap();
+    let leaf_arr_items = [cbor_nondet_mk_int64(UInt64, 0)];
+    let leaf_arr = cbor_nondet_mk_array(&leaf_arr_items).unwrap();
+    let outer_inner_items = [
+        cbor_nondet_mk_array(&[]).unwrap(), leaf_arr,
+        cbor_nondet_mk_map(&mut empty3).unwrap(), inner_map,
+    ];
+    let outer_inner = cbor_nondet_mk_array(&outer_inner_items).unwrap();
+    let outer_items = [cbor_nondet_mk_int64(UInt64, 0),
+                       cbor_nondet_mk_array(&[]).unwrap(), outer_inner];
+    let expected = cbor_nondet_mk_array(&outer_items).unwrap();
+    assert!(walk_iter_check(parsed, expected),
+            "[{API}/{stem}] walk_iter_check failed");
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+
+#[test]
+fn map_five_iter_canonical() {
+    let stem = "map_five_iter_canonical";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let mut entries = [
+        cbor_nondet_mk_map_entry(cbor_nondet_mk_text_string("a").unwrap(),
+                                 cbor_nondet_mk_text_string("A").unwrap()),
+        cbor_nondet_mk_map_entry(cbor_nondet_mk_text_string("b").unwrap(),
+                                 cbor_nondet_mk_text_string("B").unwrap()),
+        cbor_nondet_mk_map_entry(cbor_nondet_mk_text_string("c").unwrap(),
+                                 cbor_nondet_mk_text_string("C").unwrap()),
+        cbor_nondet_mk_map_entry(cbor_nondet_mk_text_string("d").unwrap(),
+                                 cbor_nondet_mk_text_string("D").unwrap()),
+        cbor_nondet_mk_map_entry(cbor_nondet_mk_text_string("e").unwrap(),
+                                 cbor_nondet_mk_text_string("E").unwrap()),
+    ];
+    let expected = cbor_nondet_mk_map(&mut entries).unwrap();
+    assert!(walk_iter_check(parsed, expected),
+            "[{API}/{stem}] walk_iter_check failed");
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+
+#[test]
+fn map_deeply_nested_iter_canonical() {
+    let stem = "map_deeply_nested_iter_canonical";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let current = cbor_nondet_mk_int64(UInt64, 0);
+    map_wrap!(current, () () () () () () () () () ());
+    assert!(walk_iter_check(parsed, current),
+            "[{API}/{stem}] walk_iter_check failed");
+    assert!(cbor_nondet_equal(parsed, current));
+    check_serialize_and_roundtrip(stem, current, parsed);
+}
+
+#[test]
+fn map_nested_keys_iter_canonical() {
+    const DEPTH: usize = 3;
+    let stem = "map_nested_keys_iter_canonical";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    fn dnm(d: usize, x: u64) -> CborNondet<'static> {
+        if d == 0 { return cbor_nondet_mk_int64(UInt64, x); }
+        let left = dnm(d - 1, 2 * x);
+        let right = dnm(d - 1, 2 * x + 1);
+        let entries = leak_entries([
+            cbor_nondet_mk_map_entry(left, cbor_nondet_mk_int64(UInt64, 0)),
+            cbor_nondet_mk_map_entry(right, cbor_nondet_mk_int64(UInt64, 1)),
+        ]);
+        cbor_nondet_mk_map(entries).unwrap()
+    }
+    let dnm0 = dnm(DEPTH, 0);
+    let dnm1 = dnm(DEPTH, 1);
+    let pair1_items = [dnm0, dnm0];
+    let pair1 = cbor_nondet_mk_array(&pair1_items).unwrap();
+    let pair2_items = [dnm0, dnm1];
+    let pair2 = cbor_nondet_mk_array(&pair2_items).unwrap();
+    let mut outer = [
+        cbor_nondet_mk_map_entry(pair1, cbor_nondet_mk_int64(UInt64, 0)),
+        cbor_nondet_mk_map_entry(pair2, cbor_nondet_mk_int64(UInt64, 1)),
+    ];
+    let expected = cbor_nondet_mk_map(&mut outer).unwrap();
+    assert!(walk_iter_check(parsed, expected),
+            "[{API}/{stem}] walk_iter_check failed");
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+
+#[test]
+fn tag_nested_iter_canonical() {
+    let stem = "tag_nested_iter_canonical";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let leaf = cbor_nondet_mk_int64(UInt64, 1);
+    let mid = cbor_nondet_mk_tagged(5678, &leaf);
+    let expected = cbor_nondet_mk_tagged(1234, &mid);
+    assert!(walk_iter_check(parsed, expected),
+            "[{API}/{stem}] walk_iter_check failed");
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+
+#[test]
+fn tag_array_payload_iter_canonical() {
+    let stem = "tag_array_payload_iter_canonical";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let items = [
+        cbor_nondet_mk_int64(UInt64, 1),
+        cbor_nondet_mk_int64(UInt64, 2),
+        cbor_nondet_mk_int64(UInt64, 3),
+    ];
+    let arr = cbor_nondet_mk_array(&items).unwrap();
+    let expected = cbor_nondet_mk_tagged(99, &arr);
+    assert!(walk_iter_check(parsed, expected),
+            "[{API}/{stem}] walk_iter_check failed");
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
+
+#[test]
+fn arr_wide_deep_iter_canonical() {
+    let stem = "arr_wide_deep_iter_canonical";
+    let input = read_in(stem);
+    let parsed = parse_one(stem, &input);
+    let inners: [[CborNondet<'static>; 3]; 4] = [
+        [cbor_nondet_mk_int64(UInt64, 1), cbor_nondet_mk_int64(UInt64, 2),
+         cbor_nondet_mk_int64(UInt64, 3)],
+        [cbor_nondet_mk_int64(UInt64, 4), cbor_nondet_mk_int64(UInt64, 5),
+         cbor_nondet_mk_int64(UInt64, 6)],
+        [cbor_nondet_mk_int64(UInt64, 7), cbor_nondet_mk_int64(UInt64, 8),
+         cbor_nondet_mk_int64(UInt64, 9)],
+        [cbor_nondet_mk_int64(UInt64, 10), cbor_nondet_mk_int64(UInt64, 11),
+         cbor_nondet_mk_int64(UInt64, 12)],
+    ];
+    let i0 = cbor_nondet_mk_array(&inners[0]).unwrap();
+    let i1 = cbor_nondet_mk_array(&inners[1]).unwrap();
+    let i2 = cbor_nondet_mk_array(&inners[2]).unwrap();
+    let i3 = cbor_nondet_mk_array(&inners[3]).unwrap();
+    let outer_items = [i0, i1, i2, i3];
+    let expected = cbor_nondet_mk_array(&outer_items).unwrap();
+    assert!(walk_iter_check(parsed, expected),
+            "[{API}/{stem}] walk_iter_check failed");
+    assert!(cbor_nondet_equal(parsed, expected));
+    check_serialize_and_roundtrip(stem, expected, parsed);
+}
