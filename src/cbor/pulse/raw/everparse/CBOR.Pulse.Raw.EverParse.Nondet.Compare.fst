@@ -763,9 +763,8 @@ ensures cbor_map_entry_vmatch 1.0R res v **
                     (PPB.pts_to_parsed (nondep_then parse_raw_data_item parse_raw_data_item) input #pm v)
 {
   // Use the nondep_then zero_copy_parse to get a pair of cbor_raw values
-  let j = jump_raw_data_item f64;
   let zcp1 = PPB.zero_copy_parse_of_strong_prefix (cbor_raw_read 1.0R f64) ();
-  let pair = LowParse.PulseParse.Combinators.zero_copy_parse_nondep_then j zcp1 () zcp1 input;
+  let pair = LowParse.PulseParse.Combinators.zero_copy_parse_nondep_then (jump_raw_data_item f64) zcp1 () zcp1 input;
   let entry : cbor_map_entry cbor_raw = { cbor_map_entry_key = fst pair; cbor_map_entry_value = snd pair };
   // vmatch_pair (cbor_raw_match 1.0R) (cbor_raw_match 1.0R) pair v
   //   = cbor_raw_match 1.0R (fst pair) (fst v) ** cbor_raw_match 1.0R (snd pair) (snd v)
@@ -875,14 +874,13 @@ ensures
   cbor_map_entry_vmatch pm_xr xr xr_pair **
   pure (res == setoid_assoc_eq_with_overflow equiv equiv map_entries xr_pair)
 {
-  let j = jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64);
   let zcp = cbor_map_entry_zero_copy_parse f64;
   let len = I.mixed_list_length map_ml;
   // Establish length invariant
   I.mixed_list_match_length cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm_map map_ml (Ghost.reveal map_entries);
   // Start iterator on map_entries
   let it_init = I.iterator_start cbor_map_entry_vmatch
-    (nondep_then parse_raw_data_item parse_raw_data_item) j pm_map map_ml map_entries
+    (nondep_then parse_raw_data_item parse_raw_data_item) (jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64)) pm_map map_ml map_entries
     cbor_map_entry_vmatch_share cbor_map_entry_vmatch_gather;
   // Set up loop state: r_done = None means "keep searching", Some r means "done with result r"
   let mut r_it = it_init;
@@ -914,7 +912,7 @@ ensures
   {
     // Get next entry from iterator
     let e = I.iterator_next cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
-      j _ r_it _ _ cbor_map_entry_vmatch_share cbor_map_entry_vmatch_gather zcp;
+      (jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64)) _ r_it _ _ cbor_map_entry_vmatch_share cbor_map_entry_vmatch_gather zcp;
     unfold (I.iterator_next_post cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) _ r_it _ _ e);
     with pmv hdv tl itn pmn . assert (
       cbor_map_entry_vmatch pmv e hdv **
@@ -1007,14 +1005,13 @@ ensures
     pm_outer outer_ml outer_entries **
   pure (res == list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv inner_entries) outer_entries)
 {
-  let j = jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64);
   let zcp = cbor_map_entry_zero_copy_parse f64;
   let len = I.mixed_list_length outer_ml;
   // Establish length invariant
   I.mixed_list_match_length cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm_outer outer_ml (Ghost.reveal outer_entries);
   // Start iterator on outer_entries
   let it_init = I.iterator_start cbor_map_entry_vmatch
-    (nondep_then parse_raw_data_item parse_raw_data_item) j pm_outer outer_ml outer_entries
+    (nondep_then parse_raw_data_item parse_raw_data_item) (jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64)) pm_outer outer_ml outer_entries
     cbor_map_entry_vmatch_share cbor_map_entry_vmatch_gather;
   let mut r_it = it_init;
   let mut r_done : option (option bool) = None #(option bool);
@@ -1045,7 +1042,7 @@ ensures
   {
     // Get next entry from iterator
     let e = I.iterator_next cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item)
-      j _ r_it _ _ cbor_map_entry_vmatch_share cbor_map_entry_vmatch_gather zcp;
+      (jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64)) _ r_it _ _ cbor_map_entry_vmatch_share cbor_map_entry_vmatch_gather zcp;
     unfold (I.iterator_next_post cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) _ r_it _ _ e);
     with pmv hdv tl itn pmn . assert (
       cbor_map_entry_vmatch pmv e hdv **
@@ -1137,7 +1134,6 @@ ensures
   cbor_raw_match pm2 x2 v2 **
   pure (res == check_equiv data_model (NG.option_sz_v map_bound) v1 v2)
 {
-  let j = jump_raw_data_item f64;
   let zcp = PPB.zero_copy_parse_of_strong_prefix (cbor_raw_read 1.0R f64) ();
   // Get arrays
   let ar_ml1 = cbor_raw_get_array pm1 x1 ();
@@ -1153,10 +1149,10 @@ ensures
           (cbor_raw_match pm2 x2 v2)
   );
   // Start iterators - use the eta-expanded form for vmatch consistency
-  let it1_init = I.iterator_start cbor_raw_match parse_raw_data_item j pm1_a ar_ml1 ar1
+  let it1_init = I.iterator_start cbor_raw_match parse_raw_data_item (jump_raw_data_item f64) pm1_a ar_ml1 ar1
     cbor_raw_match_share_t cbor_raw_match_gather_t;
   Trade.trans _ _ (cbor_raw_match pm1 x1 v1);
-  let it2_init = I.iterator_start cbor_raw_match parse_raw_data_item j pm2_a ar_ml2 ar2
+  let it2_init = I.iterator_start cbor_raw_match parse_raw_data_item (jump_raw_data_item f64) pm2_a ar_ml2 ar2
     cbor_raw_match_share_t cbor_raw_match_gather_t;
   Trade.trans _ _ (cbor_raw_match pm2 x2 v2);
   // Set up loop state
@@ -1192,7 +1188,7 @@ ensures
     )
   {
     // Get next elements from iterator 1
-    let e1 = I.iterator_next cbor_raw_match parse_raw_data_item j _ r_it1 _ _ cbor_raw_match_share_t cbor_raw_match_gather_t zcp;
+    let e1 = I.iterator_next cbor_raw_match parse_raw_data_item (jump_raw_data_item f64) _ r_it1 _ _ cbor_raw_match_share_t cbor_raw_match_gather_t zcp;
     unfold (I.iterator_next_post cbor_raw_match parse_raw_data_item _ r_it1 _ _ e1);
     with pmv1 hdv1 tl1 it1n pm1n . assert (
       cbor_raw_match pmv1 e1 hdv1 **
@@ -1202,7 +1198,7 @@ ensures
     // The pure fact rem1 == hdv1 :: tl1 comes from iterator_next_post
     Trade.trans _ _ (cbor_raw_match pm1 x1 v1);
     // Get next elements from iterator 2
-    let e2 = I.iterator_next cbor_raw_match parse_raw_data_item j _ r_it2 _ _ cbor_raw_match_share_t cbor_raw_match_gather_t zcp;
+    let e2 = I.iterator_next cbor_raw_match parse_raw_data_item (jump_raw_data_item f64) _ r_it2 _ _ cbor_raw_match_share_t cbor_raw_match_gather_t zcp;
     unfold (I.iterator_next_post cbor_raw_match parse_raw_data_item _ r_it2 _ _ e2);
     with pmv2 hdv2 tl2 it2n pm2n . assert (
       cbor_raw_match pmv2 e2 hdv2 **

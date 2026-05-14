@@ -1428,12 +1428,11 @@ ensures
       (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
         (match_cbor_payload xh1) xl xh);
   };
-  let j = jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64);
   let w = LPIter.l2r_write_mixed_list
     cbor_map_entry_vmatch
     (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
     (fun pm'' -> ser_map_entry f pm'')
-    j
+    (jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64))
     cbor_map_entry_vmatch_share_t cbor_map_entry_vmatch_gather_t
     pm' n;
   let res = w arr out offset;
@@ -1596,12 +1595,11 @@ ensures
       (vmatch_ext (nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))) (raw_data_item & raw_data_item))
         (match_cbor_payload xh1) xl xh);
   };
-  let j = jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64);
   let cr = LPIter.compute_remaining_size_mixed_list
     cbor_map_entry_vmatch
     (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
     (fun pm'' -> size_map_entry f pm'')
-    j
+    (jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64))
     cbor_map_entry_vmatch_share_t cbor_map_entry_vmatch_gather_t
     pm' n;
   let res = cr arr out;
