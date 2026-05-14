@@ -41,6 +41,29 @@ fn leak_entries<const N: usize>(entries: [CborNondetMapEntry<'static>; N]) -> &'
     Box::leak(Box::new(entries)) as &mut [_]
 }
 
+/// Nondet counterpart of `det.rs::arr_wrap!` — see that file for the
+/// rationale. Each `()` token unrolls into a stack-local `let items = [..]`
+/// keeping the per-level borrow alive without `Box::leak`.
+macro_rules! arr_wrap {
+    ($current:ident,) => {};
+    ($current:ident, () $($rest:tt)*) => {
+        let items = [$current];
+        let $current = cbor_nondet_mk_array(&items).unwrap();
+        arr_wrap!($current, $($rest)*);
+    };
+}
+
+/// Nondet counterpart of `det.rs::map_wrap!`.
+macro_rules! map_wrap {
+    ($current:ident,) => {};
+    ($current:ident, () $($rest:tt)*) => {
+        let entry = cbor_nondet_mk_map_entry(cbor_nondet_mk_int64(UInt64, 0), $current);
+        let mut entries = [entry];
+        let $current = cbor_nondet_mk_map(&mut entries).unwrap();
+        map_wrap!($current, $($rest)*);
+    };
+}
+
 // ===== Macros =====
 macro_rules! int_canonical {
     ($name:ident, $kind:ident, $value:expr) => {
@@ -241,12 +264,16 @@ fn arr_empty_nondet() {
 
 #[test]
 fn arr_deeply_nested_canonical() {
-    const DEPTH: usize = 30;
+    // DEPTH = 30 (must match cbor_tests.c); see arr_wrap! definition.
     let stem = "arr_deeply_nested_canonical";
     let input = read_in(stem);
     let parsed = parse_one(stem, &input);
-    let mut current: CborNondet<'static> = cbor_nondet_mk_int64(UInt64, 1);
-    for _ in 0..DEPTH { current = cbor_nondet_mk_array(leak_arr([current])).unwrap(); }
+    let current = cbor_nondet_mk_int64(UInt64, 1);
+    arr_wrap!(current,
+        () () () () () () () () () ()
+        () () () () () () () () () ()
+        () () () () () () () () () ()
+    );
     assert!(cbor_nondet_equal(parsed, current));
     check_serialize_and_roundtrip(stem, current, parsed);
 }
@@ -270,7 +297,8 @@ fn map_empty_canonical() {
     let stem = "map_empty_canonical";
     let input = read_in(stem);
     let parsed = parse_one(stem, &input);
-    let expected = cbor_nondet_mk_map(leak_entries::<0>([])).unwrap();
+    let mut entries: [CborNondetMapEntry<'_>; 0] = [];
+    let expected = cbor_nondet_mk_map(&mut entries).unwrap();
     assert!(cbor_nondet_equal(parsed, expected));
     check_serialize_and_roundtrip(stem, expected, parsed);
 }
@@ -357,15 +385,12 @@ fn map_five_canonical() {
 
 #[test]
 fn map_deeply_nested_canonical() {
-    const DEPTH: usize = 10;
+    // DEPTH = 10 (must match cbor_tests.c); see map_wrap! definition.
     let stem = "map_deeply_nested_canonical";
     let input = read_in(stem);
     let parsed = parse_one(stem, &input);
-    let mut current: CborNondet<'static> = cbor_nondet_mk_int64(UInt64, 0);
-    for _ in 0..DEPTH {
-        let entry = cbor_nondet_mk_map_entry(cbor_nondet_mk_int64(UInt64,0), current);
-        current = cbor_nondet_mk_map(leak_entries([entry])).unwrap();
-    }
+    let current = cbor_nondet_mk_int64(UInt64, 0);
+    map_wrap!(current, () () () () () () () () () ());
     assert!(cbor_nondet_equal(parsed, current));
     check_serialize_and_roundtrip(stem, current, parsed);
 }
@@ -388,8 +413,10 @@ fn map_nested_keys_canonical() {
     }
     let dnm0 = dnm(DEPTH, 0);
     let dnm1 = dnm(DEPTH, 1);
-    let pair1 = cbor_nondet_mk_array(leak_arr([dnm0, dnm0])).unwrap();
-    let pair2 = cbor_nondet_mk_array(leak_arr([dnm0, dnm1])).unwrap();
+    let pair1_items = [dnm0, dnm0];
+    let pair1 = cbor_nondet_mk_array(&pair1_items).unwrap();
+    let pair2_items = [dnm0, dnm1];
+    let pair2 = cbor_nondet_mk_array(&pair2_items).unwrap();
     let mut outer = [
         cbor_nondet_mk_map_entry(pair1, cbor_nondet_mk_int64(UInt64,0)),
         cbor_nondet_mk_map_entry(pair2, cbor_nondet_mk_int64(UInt64,1)),
@@ -491,8 +518,11 @@ fn arr_empties_canonical() {
     let stem = "arr_empties_canonical";
     let input = read_in(stem);
     let parsed = parse_one(stem, &input);
-    let inner_map_v0 = cbor_nondet_mk_map(leak_entries::<0>([])).unwrap();
-    let inner_map_v1 = cbor_nondet_mk_map(leak_entries::<0>([])).unwrap();
+    let mut empty1: [CborNondetMapEntry<'_>; 0] = [];
+    let mut empty2: [CborNondetMapEntry<'_>; 0] = [];
+    let mut empty3: [CborNondetMapEntry<'_>; 0] = [];
+    let inner_map_v0 = cbor_nondet_mk_map(&mut empty1).unwrap();
+    let inner_map_v1 = cbor_nondet_mk_map(&mut empty2).unwrap();
     let inner_arr_v3 = cbor_nondet_mk_array(&[]).unwrap();
     let mut inner_entries = [
         cbor_nondet_mk_map_entry(cbor_nondet_mk_int64(UInt64,1), inner_map_v0),
@@ -504,7 +534,7 @@ fn arr_empties_canonical() {
     let leaf_arr = cbor_nondet_mk_array(&leaf_arr_items).unwrap();
     let outer_inner_items = [
         cbor_nondet_mk_array(&[]).unwrap(), leaf_arr,
-        cbor_nondet_mk_map(leak_entries::<0>([])).unwrap(), inner_map,
+        cbor_nondet_mk_map(&mut empty3).unwrap(), inner_map,
     ];
     let outer_inner = cbor_nondet_mk_array(&outer_inner_items).unwrap();
     let outer_items = [cbor_nondet_mk_int64(UInt64,0), cbor_nondet_mk_array(&[]).unwrap(), outer_inner];
@@ -744,9 +774,9 @@ fn tag_nested_canonical() {
     let stem = "tag_nested_canonical";
     let input = read_in(stem);
     let parsed = parse_one(stem, &input);
-    let leaf: &'static CborNondet<'static> = Box::leak(Box::new(cbor_nondet_mk_int64(UInt64, 1)));
-    let mid: &'static CborNondet<'static> = Box::leak(Box::new(cbor_nondet_mk_tagged(5678, leaf)));
-    let expected = cbor_nondet_mk_tagged(1234, mid);
+    let leaf = cbor_nondet_mk_int64(UInt64, 1);
+    let mid = cbor_nondet_mk_tagged(5678, &leaf);
+    let expected = cbor_nondet_mk_tagged(1234, &mid);
     assert!(cbor_nondet_equal(parsed, expected));
     check_serialize_and_roundtrip(stem, expected, parsed);
 }
@@ -756,9 +786,13 @@ fn tag_array_payload_canonical() {
     let stem = "tag_array_payload_canonical";
     let input = read_in(stem);
     let parsed = parse_one(stem, &input);
-    let items = leak_arr([cbor_nondet_mk_int64(UInt64,1), cbor_nondet_mk_int64(UInt64,2), cbor_nondet_mk_int64(UInt64,3)]);
-    let arr: &'static CborNondet<'static> = Box::leak(Box::new(cbor_nondet_mk_array(items).unwrap()));
-    let expected = cbor_nondet_mk_tagged(99, arr);
+    let items = [
+        cbor_nondet_mk_int64(UInt64, 1),
+        cbor_nondet_mk_int64(UInt64, 2),
+        cbor_nondet_mk_int64(UInt64, 3),
+    ];
+    let arr = cbor_nondet_mk_array(&items).unwrap();
+    let expected = cbor_nondet_mk_tagged(99, &arr);
     assert!(cbor_nondet_equal(parsed, expected));
     check_serialize_and_roundtrip(stem, expected, parsed);
 }
