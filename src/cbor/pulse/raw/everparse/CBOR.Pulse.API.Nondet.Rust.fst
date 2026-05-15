@@ -74,7 +74,7 @@ let cbor_nondet_match_with_size = ImplND.cbor_nondet_match_with_size
 
 let cbor_nondet_match_with_size_intro () = ImplND.cbor_nondet_match_with_size_intro ()
 
-let cbor_nondet_size () = ImplND.cbor_nondet_size ()
+let cbor_nondet_size () x bound #p #x' #v = ImplND.cbor_nondet_size () x bound #p #x' #v
 
 fn cbor_nondet_serialize
   (_: unit)
@@ -483,9 +483,9 @@ let cbor_nondet_array_iterator_share = ImplND.cbor_nondet_array_iterator_share (
 
 let cbor_nondet_array_iterator_gather = ImplND.cbor_nondet_array_iterator_gather ()
 
-let cbor_nondet_array_iterator_length = ImplND.cbor_nondet_array_iterator_length ()
+let cbor_nondet_array_iterator_length x #p #y = ImplND.cbor_nondet_array_iterator_length () x #p #y
 
-let cbor_nondet_array_iterator_truncate = ImplND.cbor_nondet_array_iterator_truncate ()
+let cbor_nondet_array_iterator_truncate x len #p #y = ImplND.cbor_nondet_array_iterator_truncate () x len #p #y
 
 (* ======== cbor_nondet_get_array_item ======== *)
 

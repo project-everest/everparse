@@ -280,7 +280,6 @@ fn cbor_nondet_match_with_size_intro (_: unit) : ghost_get_size_t #_ cbor_nondet
     }
 }
 
-inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_nondet_size (_: unit) : get_size_t #_ cbor_nondet_match_with_size
 = (x: _)
   (bound: _)
@@ -347,7 +346,6 @@ let cbor_nondet_serialize () : cbor_nondet_serialize_to_arrayptr_t #cbor_nondet_
 
 (* ============ Destructors ============ *)
 
-inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_nondet_major_type (_: unit) : get_major_type_t u#0 #_ cbor_nondet_match
 = (x: _)
   (#p: _)
@@ -693,7 +691,6 @@ fn cbor_nondet_array_iterator_start_unsafe (_: unit) : array_iterator_start_t u#
 let cbor_nondet_array_iterator_start () : array_iterator_start_safe_t #_ #_ cbor_nondet_match cbor_nondet_array_iterator_match
 = array_iterator_start_safe (cbor_nondet_major_type ()) (cbor_nondet_array_iterator_start_unsafe ())
 
-inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_nondet_array_iterator_is_empty (_: unit) : array_iterator_is_empty_t u#0 #_ cbor_nondet_array_iterator_match
 = (x: _)
   (#p: _)
@@ -716,7 +713,6 @@ fn cbor_nondet_array_iterator_is_empty (_: unit) : array_iterator_is_empty_t u#0
   res
 }
 
-inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_nondet_array_iterator_length (_: unit) : array_iterator_length_t u#0 #_ cbor_nondet_array_iterator_match
 = (x: _)
   (#p: _)
@@ -821,7 +817,6 @@ let cbor_nondet_array_iterator_next () : array_iterator_next_safe_t #_ #_ cbor_n
 
 #push-options "--z3rlimit 256 --fuel 2 --ifuel 2 --ext no:context_pruning"
 
-inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_nondet_array_iterator_truncate (_: unit) : array_iterator_truncate_t u#0 #_ cbor_nondet_array_iterator_match
 = (x: _)
   (len: _)
@@ -1386,7 +1381,6 @@ fn cbor_nondet_map_iterator_start_unsafe (_: unit) : map_iterator_start_t u#0 u#
 let cbor_nondet_map_iterator_start () : map_iterator_start_safe_t #_ #_ cbor_nondet_match cbor_nondet_map_iterator_match
 = map_iterator_start_safe (cbor_nondet_major_type ()) (cbor_nondet_map_iterator_start_unsafe ())
 
-inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_nondet_map_iterator_is_empty (_: unit) : map_iterator_is_empty_t u#0 #_ cbor_nondet_map_iterator_match
 = (x: _)
   (#p: _)
@@ -1492,7 +1486,6 @@ ensures
     }
 }
 
-inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_nondet_map_entry_key (_: unit) : map_entry_key_t u#0 u#0 #_ #_ cbor_nondet_map_entry_match cbor_nondet_match
 = (x2: _)
   (#p: _)
@@ -1509,7 +1502,6 @@ fn cbor_nondet_map_entry_key (_: unit) : map_entry_key_t u#0 u#0 #_ #_ cbor_nond
   x2.RawType.cbor_map_entry_key
 }
 
-inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_nondet_map_entry_value (_: unit) : map_entry_value_t u#0 u#0 #_ #_ cbor_nondet_map_entry_match cbor_nondet_match
 = (x2: _)
   (#p: _)
@@ -1989,7 +1981,6 @@ let cbor_nondet_mk_simple_value () : mk_simple_safe_t #_ cbor_nondet_match
 #push-options "--z3rlimit 64 --fuel 2 --ifuel 1"
 #restart-solver
 
-inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_nondet_mk_uint64 (_: unit) : mk_int64_gen_t u#0 #_ cbor_nondet_match cbor_major_type_uint64
 = (v: _)
 {
@@ -2000,7 +1991,6 @@ fn cbor_nondet_mk_uint64 (_: unit) : mk_int64_gen_t u#0 #_ cbor_nondet_match cbo
   res
 }
 
-inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_nondet_mk_neg_int64 (_: unit) : mk_int64_gen_t u#0 #_ cbor_nondet_match cbor_major_type_neg_int64
 = (v: _)
 {
