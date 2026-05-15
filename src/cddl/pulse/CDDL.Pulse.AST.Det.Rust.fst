@@ -22,7 +22,7 @@ let cbor_det_impl : cbor_impl cbor_det_match cbor_det_map_entry_match cbor_det_a
   cbor_array_iterator_init = cbor_det_array_iterator_start' ();
   cbor_array_iterator_is_done = cbor_det_array_iterator_is_empty;
   cbor_array_iterator_length = cbor_det_array_iterator_length;
-  cbor_array_iterator_next = cbor_det_array_iterator_next;
+  cbor_array_iterator_next = cbor_det_array_iterator_next' ();
   cbor_array_iterator_truncate = cbor_det_array_iterator_truncate;
   cbor_array_iterator_share = cbor_det_array_iterator_share;
   cbor_array_iterator_gather = cbor_det_array_iterator_gather;
@@ -35,7 +35,7 @@ let cbor_det_impl : cbor_impl cbor_det_match cbor_det_map_entry_match cbor_det_a
   cbor_mk_string = cbor_det_mk_string0 ();
   cbor_map_iterator_init = cbor_det_map_iterator_start' ();
   cbor_map_iterator_is_empty = cbor_det_map_iterator_is_empty;
-  cbor_map_iterator_next = cbor_det_map_iterator_next;
+  cbor_map_iterator_next = cbor_det_map_iterator_next' ();
   cbor_map_iterator_share = cbor_det_map_iterator_share;
   cbor_map_iterator_gather = cbor_det_map_iterator_gather;
   cbor_mk_map_entry = cbor_det_mk_map_entry;
