@@ -130,7 +130,7 @@ fn cbor_det_serialize_safe
   (#pm: perm)
 norewrite
 requires
-    (cbor_det_match pm x y ** pts_to output v ** pure (SZ.v output_len == Seq.length v /\ Seq.length (Spec.cbor_det_serialize y) <= SZ.v output_len))
+    (cbor_det_match pm x y ** pts_to output v ** pure (SZ.v output_len == Seq.length v))
 returns res: SZ.t
 ensures
     (exists* v' . cbor_det_match pm x y ** pts_to output v' ** pure (

@@ -83,7 +83,7 @@ val cbor_det_serialize_safe
   (#v: Ghost.erased (Seq.seq U8.t))
   (#pm: perm)
 : stt SZ.t
-    (cbor_det_match pm x y ** pts_to output v ** pure (SZ.v output_len == Seq.length v /\ Seq.length (Spec.cbor_det_serialize y) <= SZ.v output_len))
+    (cbor_det_match pm x y ** pts_to output v ** pure (SZ.v output_len == Seq.length v))
     (fun res -> exists* v' . cbor_det_match pm x y ** pts_to output v' ** pure (
       SZ.v output_len == Seq.length v' /\
       cbor_det_serialize_postcond_c y v v' res

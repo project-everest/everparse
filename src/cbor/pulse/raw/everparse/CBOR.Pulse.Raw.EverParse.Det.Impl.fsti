@@ -77,7 +77,7 @@ fn cbor_det_serialize_safe_arrayptr
   (#v: Ghost.erased (Seq.seq U8.t))
   (#pm: perm)
   requires
-    (cbor_det_match pm c y ** pts_to output v ** pure (SZ.v output_len == Seq.length v /\ Seq.length (Spec.cbor_det_serialize y) <= SZ.v output_len))
+    (cbor_det_match pm c y ** pts_to output v ** pure (SZ.v output_len == Seq.length v))
   returns res: SZ.t
   ensures
     (exists* v' . cbor_det_match pm c y ** pts_to output v' ** pure (

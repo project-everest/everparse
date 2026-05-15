@@ -243,7 +243,7 @@ fn cbor_det_serialize_safe_arrayptr
   (#v: Ghost.erased (Seq.seq U8.t))
   (#pm: perm)
 requires
-    (cbor_det_match pm x y ** pts_to output v ** pure (SZ.v output_len == Seq.length v /\ Seq.length (Spec.cbor_det_serialize y) <= SZ.v output_len))
+    (cbor_det_match pm x y ** pts_to output v ** pure (SZ.v output_len == Seq.length v))
 returns res: SZ.t
 ensures
     (exists* v' . cbor_det_match pm x y ** pts_to output v' ** pure (
@@ -255,28 +255,36 @@ ensures
   assert (pure (Spec.cbor_det_serialize y == SpecF.serialize_cbor (SpecRaw.mk_det_raw_cbor y)));
   let s = S.arrayptr_to_slice_intro output output_len;
   S.pts_to_len s;
-  // Get the serialized size
+  // Defensive runtime check: cbor_size returns 0 if the serialized object
+  // does not fit in output_len bytes (even though the F* precondition
+  // says it does, callers from C may pass a buffer that is too small).
   let sz = RawSerialize.cbor_size (assume (SZ.fits_u64)) x output_len;
-  // sz > 0 because serialize fits within output_len (from precondition)
-  // Split the slice at sz: first sz bytes for serialize, rest untouched
-  let pair = S.split s sz;
-  S.pts_to_len (fst pair);
-  // Serialize to first part only — tail is untouched
-  let res = RawSerialize.cbor_serialize (assume (SZ.fits_u64)) x (fst pair);
-  // After serialize: fst pair has new content v_new
-  S.pts_to_len (fst pair);
-  with v_new . assert (S.pts_to (fst pair) v_new);
-  // v_new == Spec.cbor_det_serialize y (from length + prefix constraint)
-  Seq.lemma_eq_elim v_new (SpecF.serialize_cbor (SpecRaw.mk_det_raw_cbor y));
-  // Join back into s
-  S.join (fst pair) (snd pair) s;
-  // Help the solver with Seq.slice equalities for the postcondition
-  Seq.append_slices (Spec.cbor_det_serialize y) (Seq.slice v (SZ.v sz) (Seq.length v));
-  assert (pure (SZ.v res <> 0));
-  S.pts_to_len s;
-  S.arrayptr_to_slice_elim s;
-  fold (cbor_det_match pm x y);
-  res
+  if (sz = 0sz) {
+    S.pts_to_len s;
+    S.arrayptr_to_slice_elim s;
+    fold (cbor_det_match pm x y);
+    0sz
+  } else {
+    // Split the slice at sz: first sz bytes for serialize, rest untouched
+    let pair = S.split s sz;
+    S.pts_to_len (fst pair);
+    // Serialize to first part only — tail is untouched
+    let res = RawSerialize.cbor_serialize (assume (SZ.fits_u64)) x (fst pair);
+    // After serialize: fst pair has new content v_new
+    S.pts_to_len (fst pair);
+    with v_new . assert (S.pts_to (fst pair) v_new);
+    // v_new == Spec.cbor_det_serialize y (from length + prefix constraint)
+    Seq.lemma_eq_elim v_new (SpecF.serialize_cbor (SpecRaw.mk_det_raw_cbor y));
+    // Join back into s
+    S.join (fst pair) (snd pair) s;
+    // Help the solver with Seq.slice equalities for the postcondition
+    Seq.append_slices (Spec.cbor_det_serialize y) (Seq.slice v (SZ.v sz) (Seq.length v));
+    assert (pure (SZ.v res <> 0));
+    S.pts_to_len s;
+    S.arrayptr_to_slice_elim s;
+    fold (cbor_det_match pm x y);
+    res
+  }
 }
 
 (* ======== UTF8 ======== *)
