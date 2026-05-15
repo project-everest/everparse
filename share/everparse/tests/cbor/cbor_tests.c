@@ -41,7 +41,11 @@
 #endif
 
 typedef cbor_raw cbor_t;
-typedef cbor_map_entry cbor_entry_t;
+#ifdef EVERCBOR_DET
+typedef cbor_det_map_entry_t cbor_entry_t;
+#else
+typedef cbor_nondet_map_entry_t cbor_entry_t;
+#endif
 
 /* ============================================================
  *   API wrappers: uniform surface over det / nondet.
@@ -256,8 +260,13 @@ static bool cbor_v_get_tagged(cbor_t c, cbor_t *payload, uint64_t *tag) {
  * out-parameters. The wrappers paper over the difference.
  */
 
-typedef cbor_array_iterator cbor_v_arr_iter_t;
-typedef cbor_map_iterator   cbor_v_map_iter_t;
+#ifdef EVERCBOR_DET
+typedef cbor_det_array_iterator_t cbor_v_arr_iter_t;
+typedef cbor_det_map_iterator_t   cbor_v_map_iter_t;
+#else
+typedef cbor_nondet_array_iterator_t cbor_v_arr_iter_t;
+typedef cbor_nondet_map_iterator_t   cbor_v_map_iter_t;
+#endif
 
 static bool cbor_v_arr_iter_start(cbor_t c, cbor_v_arr_iter_t *out) {
 #ifdef EVERCBOR_DET
