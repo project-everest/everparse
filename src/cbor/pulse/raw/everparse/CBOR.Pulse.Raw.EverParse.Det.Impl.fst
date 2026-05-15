@@ -421,7 +421,7 @@ fn cbor_det_elim_int64 (_: unit) : elim_int64_t u#0 #_ cbor_det_match
 
 module ResetPerm = CBOR.Pulse.Raw.EverParse.ResetPerm
 
-ghost
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_reset_perm (_: unit) : reset_perm_t u#0 u#0 #_ #_ cbor_det_match
 = (x: _)
   (#pm: _)
@@ -1117,7 +1117,7 @@ fn cbor_det_array_iterator_truncate (_: unit) : array_iterator_truncate_t cbor_d
 {
   let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   let lr = Ghost.hide (Aux.det_raw_list z);
-  let n = U64.v len;
+  let n : Ghost.erased nat = Ghost.hide (U64.v len);
   let len_sz = SZ.uint64_to_sizet len;
   unfold (cbor_det_array_iterator_match py x z);
   rewrite (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item py x (Aux.det_raw_list z))
@@ -1179,16 +1179,16 @@ fn cbor_det_array_iterator_truncate (_: unit) : array_iterator_truncate_t cbor_d
   // take n (l1 ++ l2) == l1_narrow ++ l2_narrow
   List.Tot.append_length l1 l2;
   // Use list_narrow_append: list_narrow (l1@l2) 0 n == list_narrow l1 0 (min n cb) @ list_narrow l2 0 (n - min n cb)
-  LowParse.PulseParse.Iterator.list_narrow_append l1 l2 0 n;
+  LowParse.PulseParse.Iterator.list_narrow_append l1 l2 0 (Ghost.reveal n);
   // Pure proof via splitAt-of-append properties
   assert (pure (
-    LowParse.PulseParse.Iterator.list_narrow (Ghost.reveal lr) 0 n ==
+    LowParse.PulseParse.Iterator.list_narrow (Ghost.reveal lr) 0 (Ghost.reveal n) ==
     List.Tot.append (Ghost.reveal l1_narrow) (Ghost.reveal l2_narrow)));
   // Convert l_narrow into the spec form
-  Aux.det_raw_list_take_eq z n;
-  let z_take : Ghost.erased (list Spec.cbor) = Ghost.hide (fst (List.Tot.splitAt n z));
+  Aux.det_raw_list_take_eq z (Ghost.reveal n);
+  let z_take : Ghost.erased (list Spec.cbor) = Ghost.hide (fst (List.Tot.splitAt (Ghost.reveal n) z));
   // det_raw_list z_take == list_narrow lr 0 n
-  assert (pure (Aux.det_raw_list z_take == LowParse.PulseParse.Iterator.list_narrow (Ghost.reveal lr) 0 n));
+  assert (pure (Aux.det_raw_list z_take == LowParse.PulseParse.Iterator.list_narrow (Ghost.reveal lr) 0 (Ghost.reveal n)));
   // Rewrite the matches (l1_narrow ghost was already substituted by rewrite each above)
   rewrite (I.base_mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item (py /. 2.0R) bi' (Ghost.reveal l1_narrow))
        as (I.base_mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item (py /. 2.0R) it'.LowParse.PulseParse.Iterator.before (Ghost.reveal l1_narrow));

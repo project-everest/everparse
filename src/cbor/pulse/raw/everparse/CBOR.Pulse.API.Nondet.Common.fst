@@ -1,4 +1,4 @@
-module CBOR.Pulse.API.Nondet.C
+module CBOR.Pulse.API.Nondet.Common
 #lang-pulse
 friend CBOR.Pulse.API.Nondet.Type
 friend CBOR.Spec.API.Format
@@ -820,7 +820,7 @@ fn cbor_nondet_array_iterator_truncate (_: unit) : array_iterator_truncate_t u#0
 {
   let f64 : squash SZ.fits_u64 = assume SZ.fits_u64;
   let lr = cbor_nondet_array_iterator_match_elim x;
-  let n = U64.v len;
+  let n : Ghost.erased nat = Ghost.hide (U64.v len);
   let len_sz = SZ.uint64_to_sizet len;
   unfold (I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item py x lr);
   with l1 l2 . assert (
@@ -877,16 +877,16 @@ fn cbor_nondet_array_iterator_truncate (_: unit) : array_iterator_truncate_t u#0
        as (I.base_mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item (py /. 4.0R) bi' (Ghost.reveal l1_narrow));
   let it' : LowParse.PulseParse.Iterator.iterator RawType.cbor_raw = { before = bi'; after = after' };
   List.Tot.append_length l1 l2;
-  LowParse.PulseParse.Iterator.list_narrow_append l1 l2 0 n;
+  LowParse.PulseParse.Iterator.list_narrow_append l1 l2 0 (Ghost.reveal n);
   let lr_narrow : Ghost.erased (list SpecRawBase.raw_data_item) = Ghost.hide (List.Tot.append (Ghost.reveal l1_narrow) (Ghost.reveal l2_narrow));
   assert (pure (
-    LowParse.PulseParse.Iterator.list_narrow (Ghost.reveal lr) 0 n ==
+    LowParse.PulseParse.Iterator.list_narrow (Ghost.reveal lr) 0 (Ghost.reveal n) ==
     Ghost.reveal lr_narrow));
-  CBOR.Spec.Util.list_map_splitAt SpecRaw.mk_cbor lr n;
-  CBOR.Spec.Util.list_for_all_splitAt SpecRaw.valid_raw_data_item lr n;
+  CBOR.Spec.Util.list_map_splitAt SpecRaw.mk_cbor lr (Ghost.reveal n);
+  CBOR.Spec.Util.list_for_all_splitAt SpecRaw.valid_raw_data_item lr (Ghost.reveal n);
   assert (pure (
-    LowParse.PulseParse.Iterator.list_narrow (Ghost.reveal lr) 0 n ==
-    fst (List.Tot.splitAt n (Ghost.reveal lr))));
+    LowParse.PulseParse.Iterator.list_narrow (Ghost.reveal lr) 0 (Ghost.reveal n) ==
+    fst (List.Tot.splitAt (Ghost.reveal n) (Ghost.reveal lr))));
   rewrite (I.base_mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item (py /. 4.0R) bi' (Ghost.reveal l1_narrow))
        as (I.base_mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item (py /. 4.0R) it'.LowParse.PulseParse.Iterator.before (Ghost.reveal l1_narrow));
   rewrite (I.mixed_list_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item (py /. 4.0R) after' (Ghost.reveal l2_narrow))

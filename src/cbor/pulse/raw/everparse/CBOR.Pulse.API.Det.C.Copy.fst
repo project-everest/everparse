@@ -13,6 +13,7 @@ open Pulse.Lib.Pervasives
 module Spec = CBOR.Spec.API.Format
 module Impl = CBOR.Pulse.Raw.EverParse.Det.Impl
 module A = Pulse.Lib.Array
+module V = Pulse.Lib.Vec
 module S = Pulse.Lib.Slice
 module SU = Pulse.Lib.Slice.Util
 module AP = Pulse.Lib.ArrayPtr
@@ -25,7 +26,7 @@ module U64 = FStar.UInt64
 
 noeq type cbor_det_freeable_t' = {
   cbor: cbor_det_t;
-  arr: A.array U8.t;
+  buf: V.vec U8.t;
   len: SZ.t;
 }
 
@@ -33,8 +34,8 @@ let cbor_det_freeable_t = cbor_det_freeable_t'
 
 let freeable (r: cbor_det_freeable_t) : slprop =
   exists* (vbytes: Seq.seq U8.t).
-    A.pts_to r.arr vbytes **
-    pure (A.is_full_array r.arr /\ Seq.length vbytes == SZ.v r.len)
+    V.pts_to r.buf vbytes **
+    pure (V.is_full_vec r.buf /\ Seq.length vbytes == SZ.v r.len)
 
 let cbor_get_from_freeable r = r.cbor
 
@@ -87,8 +88,9 @@ fn cbor_copy_impl
   if (size = 0sz) {
     panic #unit ()
   };
-  let arr = A.alloc 0uy size;
-  let sl = S.from_array arr size;
+  let buf = V.alloc 0uy size;
+  V.to_array_pts_to buf;
+  let sl = S.from_array (V.vec_to_array buf) size;
   S.pts_to_len sl;
   let ap = S.slice_to_arrayptr_intro sl;
   Impl.cbor_det_serialize c ap size;
@@ -112,7 +114,7 @@ fn cbor_copy_impl
     (cbor_det_match 1.0R res_cbor v)
     (cbor_det_match 1.0R res_cbor v')
     (S.pts_to sl v1);
-  let r = { cbor = res_cbor; arr; len = size };
+  let r = { cbor = res_cbor; buf; len = size };
   rewrite (cbor_det_match 1.0R res_cbor v)
        as (cbor_det_match 1.0R (cbor_get_from_freeable r) v);
   rewrite (Trade.trade
@@ -121,10 +123,11 @@ fn cbor_copy_impl
        as (Trade.trade
             (cbor_det_match 1.0R (cbor_get_from_freeable r) v)
             (S.pts_to sl v1));
-  rewrite (S.is_from_array arr sl)
-       as (S.is_from_array r.arr sl);
+  rewrite (S.is_from_array (V.vec_to_array buf) sl)
+       as (S.is_from_array (V.vec_to_array r.buf) sl);
   (* Build the outer trade: cbor_det_match → freeable r,
-     composing the parse_valid trade, S.to_array, and folding freeable. *)
+     composing the parse_valid trade, S.to_array, V.to_vec_pts_to,
+     and folding freeable. *)
   intro
     (Trade.trade
       (cbor_det_match 1.0R (cbor_get_from_freeable r) v)
@@ -132,11 +135,12 @@ fn cbor_copy_impl
     #(Trade.trade
         (cbor_det_match 1.0R (cbor_get_from_freeable r) v)
         (S.pts_to sl v1) **
-      S.is_from_array r.arr sl)
+      S.is_from_array (V.vec_to_array r.buf) sl)
     fn _
   {
     Trade.elim _ _;
     S.to_array sl;
+    V.to_vec_pts_to r.buf;
     fold (freeable r)
   };
   r
@@ -159,7 +163,7 @@ fn cbor_free' (x: cbor_det_freeable_t)
   ensures emp
 {
   unfold (freeable x);
-  A.free x.arr;
+  V.free x.buf;
 }
 
 fn cbor_free (_: unit)

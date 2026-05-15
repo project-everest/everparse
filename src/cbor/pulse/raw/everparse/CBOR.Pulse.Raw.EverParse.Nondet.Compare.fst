@@ -131,8 +131,7 @@ ensures cbor_raw_match pm x y ** pure (cbor_raw_match_fields_prop x y)
 let option_and (x y: option bool) : option bool =
   match x with
   | None -> None
-  | Some false -> Some false
-  | Some true -> y
+  | Some b -> if b then y else Some false
 
 let option_and_assoc (x y z: option bool)
 : Lemma (option_and x (option_and y z) == option_and (option_and x y) z)

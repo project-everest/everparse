@@ -93,7 +93,7 @@ let cbor_raw_int_raw_uint64_eq
 
 let cbor_raw_string_len (x: cbor_raw) : raw_uint64 =
   match x with
-  | CBOR_Case_String v -> { size = v.cbor_string_size; value = U64.uint_to_t (SZ.v (S.len v.cbor_string_ptr)) }
+  | CBOR_Case_String v -> { size = v.cbor_string_size; value = SZ.sizet_to_uint64 (S.len v.cbor_string_ptr) }
   | _ -> { size = 0uy; value = 0UL }
 
 let cbor_raw_string_len_eq
@@ -101,7 +101,10 @@ let cbor_raw_string_len_eq
   (_: squash (NC.cbor_raw_match_fields_prop x v))
   (_: squash (String? v))
 : Lemma (cbor_raw_string_len x == String?.len v)
-= ()
+= match x with
+  | CBOR_Case_String vx ->
+    FStar.Math.Lemmas.small_mod (SZ.v (S.len vx.cbor_string_ptr)) (pow2 64)
+  | _ -> ()
 
 let cbor_raw_tag_raw_uint64 (x: cbor_raw) : raw_uint64 =
   match x with
@@ -118,7 +121,7 @@ let cbor_raw_tag_raw_uint64_eq
 
 let cbor_raw_array_raw_uint64 (x: cbor_raw) : raw_uint64 =
   match x with
-  | CBOR_Case_Array v -> { size = v.cbor_array_length_size; value = U64.uint_to_t (SZ.v (I.mixed_list_length v.cbor_array_ptr)) }
+  | CBOR_Case_Array v -> { size = v.cbor_array_length_size; value = SZ.sizet_to_uint64 (I.mixed_list_length v.cbor_array_ptr) }
   | _ -> { size = 0uy; value = 0UL }
 
 let cbor_raw_array_raw_uint64_eq
@@ -126,11 +129,14 @@ let cbor_raw_array_raw_uint64_eq
   (_: squash (NC.cbor_raw_match_fields_prop x v))
   (_: squash (Array? v))
 : Lemma (cbor_raw_array_raw_uint64 x == Array?.len v)
-= ()
+= match x with
+  | CBOR_Case_Array vx ->
+    FStar.Math.Lemmas.small_mod (SZ.v (I.mixed_list_length vx.cbor_array_ptr)) (pow2 64)
+  | _ -> ()
 
 let cbor_raw_map_raw_uint64 (x: cbor_raw) : raw_uint64 =
   match x with
-  | CBOR_Case_Map v -> { size = v.cbor_map_length_size; value = U64.uint_to_t (SZ.v (I.mixed_list_length v.cbor_map_ptr)) }
+  | CBOR_Case_Map v -> { size = v.cbor_map_length_size; value = SZ.sizet_to_uint64 (I.mixed_list_length v.cbor_map_ptr) }
   | _ -> { size = 0uy; value = 0UL }
 
 let cbor_raw_map_raw_uint64_eq
@@ -138,7 +144,10 @@ let cbor_raw_map_raw_uint64_eq
   (_: squash (NC.cbor_raw_match_fields_prop x v))
   (_: squash (Map? v))
 : Lemma (cbor_raw_map_raw_uint64 x == Map?.len v)
-= ()
+= match x with
+  | CBOR_Case_Map vx ->
+    FStar.Math.Lemmas.small_mod (SZ.v (I.mixed_list_length vx.cbor_map_ptr)) (pow2 64)
+  | _ -> ()
 
 // === Array pairwise comparison ===
 

@@ -1,4 +1,4 @@
-module CBOR.Pulse.API.Nondet.C
+module CBOR.Pulse.API.Nondet.Common
 include CBOR.Pulse.API.Nondet.Type
 open CBOR.Spec.Constants
 open CBOR.Pulse.API.Base

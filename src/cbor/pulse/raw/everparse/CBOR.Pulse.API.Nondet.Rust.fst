@@ -2,19 +2,21 @@ module CBOR.Pulse.API.Nondet.Rust
 #lang-pulse
 
 friend CBOR.Pulse.API.Nondet.Type
-friend CBOR.Pulse.API.Nondet.C
+friend CBOR.Pulse.API.Nondet.Common
 
 (* Implementation of CBOR.Pulse.API.Nondet.Rust.fsti using
-   CBOR.Pulse.API.Nondet.C (which is itself built on top of the
+   CBOR.Pulse.API.Nondet.Common (which is itself built on top of the
    EverParse-based stack). *)
 
-module ImplND = CBOR.Pulse.API.Nondet.C
+module ImplND = CBOR.Pulse.API.Nondet.Common
 module RawType = CBOR.Pulse.Raw.EverParse.Type
 module SU = Pulse.Lib.Slice.Util
 module R = Pulse.Lib.Reference
 module PM = Pulse.Lib.SeqMatch
 module AP = Pulse.Lib.ArrayPtr
 module UTF8 = CBOR.Pulse.API.UTF8
+
+module C = C // necessary to pull C.krml into extraction, otherwise Karamel fails with "`C._zero_for_deref`: impossible", believing that it is a non-function external symbol, which Karamel extraction to Rust does not support
 
 open CBOR.Spec.Constants
 open CBOR.Pulse.API.Base
@@ -226,10 +228,8 @@ ensures
 
 (* ======== mk_map ======== *)
 
-let dummy_cbor_nondet : cbornondet = RawType.CBOR_Case_Invalid
-
 let cbor_nondet_mk_map (_: unit) : Base.mk_map_gen_t u#0 #_ #_ cbor_nondet_match cbor_nondet_map_entry_match
-= Base.mk_map_gen dummy_cbor_nondet (ImplND.cbor_nondet_mk_map_gen ())
+= Base.mk_map_gen (RawType.CBOR_Case_Invalid <: cbornondet) (ImplND.cbor_nondet_mk_map_gen ())
 
 (* ======== Destructors ======== *)
 
@@ -804,4 +804,4 @@ ensures
 
 (* ======== dummy ======== *)
 
-let dummy_cbor_nondet_t () = dummy_cbor_nondet
+let dummy_cbor_nondet_t () = RawType.CBOR_Case_Invalid

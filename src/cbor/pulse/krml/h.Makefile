@@ -21,7 +21,7 @@ include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 $(NONDET_C_DIRECTORY)/CBORNondetBase.h: $(filter-out %CBOR_Pulse_API_Det_Rust.krml %CBOR_Pulse_API_Det_C.krml,$(ALL_KRML_FILES))
 	mkdir -p $(dir $@)
-	$(KRML_HOME)/krml $(KRML_OPTS) -faggressive-inlining -fnoshort-names -warn-error @1..27 -skip-linking -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Nondet.Type+CBOR.Pulse.API.Nondet.C=\*[rename=CBORNondetBase]' -no-prefix CBOR.Pulse.API.Nondet.C -no-prefix CBOR.Pulse.API.Nondet.Type -no-prefix CBOR.Spec.Constants -no-prefix CBOR.Pulse.API.Nondet.Type -tmpdir $(NONDET_C_DIRECTORY) -header header.txt -skip-makefiles -skip-compilation $^
+	$(KRML_HOME)/krml $(KRML_OPTS) -faggressive-inlining -fnoshort-names -warn-error @1..27 -skip-linking -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Nondet.Type+CBOR.Pulse.API.Nondet.Common=\*[rename=CBORNondetBase]' -no-prefix CBOR.Pulse.API.Nondet.Common -no-prefix CBOR.Pulse.API.Nondet.Type -no-prefix CBOR.Spec.Constants -no-prefix CBOR.Pulse.API.Nondet.Type -tmpdir $(NONDET_C_DIRECTORY) -header header.txt -skip-makefiles -skip-compilation $^
 	test ! -e $(basename $@).c
 
 $(DET_C_DIRECTORY)/CBORDetBase.h: $(filter-out %CBOR_Pulse_API_Det_Rust.krml,$(ALL_KRML_FILES))
