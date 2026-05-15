@@ -358,21 +358,9 @@ impl <'a> Iterator for CborDetArrayIterator <'a> {
 	if crate::cbordetver::cbor_det_array_iterator_is_empty(self.iter) {
 	    None
 	} else {
-	    // SAFETY: the Karamel-generated signature of `cbor_det_array_iterator_next`
-	    // ties the slice's borrow lifetime to the iterator's `'a` parameter,
-	    // forcing the (invariant) mutable slice borrow to outlive `'a`. The
-	    // function only reads/updates the slice in place during its execution,
-	    // and the returned `cbor_raw` actually borrows from the underlying CBOR
-	    // buffer (lifetime `'a`), not from `self.iter`'s temporary borrow. We
-	    // unsafely extend the slice borrow's lifetime to `'a` to satisfy the
-	    // compiler.
-	    let s: &'a mut [crate::cbordetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>] = unsafe {
-		core::mem::transmute::<
-		    &mut [crate::cbordetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>],
-		    &'a mut [crate::cbordetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>]
-		>(std::slice::from_mut(& mut self.iter))
-	    };
-	    Some (crate::cbordetver::cbor_det_array_iterator_next(s))
+	    let (elt, it) = crate::cbordetver::cbor_det_array_iterator_next(self.iter);
+	    self.iter = it;
+	    Some (elt)
 	}
     }
 }
@@ -418,15 +406,9 @@ impl <'a> Iterator for CborDetMapIterator <'a> {
 	if crate::cbordetver::cbor_det_map_iterator_is_empty(self.iter) {
 	    None
 	} else {
-	    // SAFETY: see CborDetArrayIterator::next; same reasoning applies for
-	    // map entries.
-	    let s: &'a mut [crate::cbordetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>] = unsafe {
-		core::mem::transmute::<
-		    &mut [crate::cbordetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>],
-		    &'a mut [crate::cbordetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>]
-		>(std::slice::from_mut(& mut self.iter))
-	    };
-	    Some (crate::cbordetver::cbor_det_map_iterator_next(s))
+	    let (elt, it) = crate::cbordetver::cbor_det_map_iterator_next(self.iter);
+	    self.iter = it;
+	    Some (elt)
 	}
     }
 }

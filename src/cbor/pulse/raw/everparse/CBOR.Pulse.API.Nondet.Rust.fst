@@ -477,7 +477,7 @@ ensures
 
 let cbor_nondet_array_iterator_is_empty x #p #y = ImplND.cbor_nondet_array_iterator_is_empty () x #p #y
 
-let cbor_nondet_array_iterator_next x #y #py #z = ImplND.cbor_nondet_array_iterator_next_unsafe () x #y #py #z
+let cbor_nondet_array_iterator_next = Base.array_iterator_next_by_value (ImplND.cbor_nondet_array_iterator_next_unsafe ())
 
 let cbor_nondet_array_iterator_share = ImplND.cbor_nondet_array_iterator_share ()
 
@@ -589,7 +589,7 @@ ensures
 
 let cbor_nondet_map_iterator_is_empty x #p #y = ImplND.cbor_nondet_map_iterator_is_empty () x #p #y
 
-let cbor_nondet_map_iterator_next x #y #py #z = ImplND.cbor_nondet_map_iterator_next_unsafe () x #y #py #z
+let cbor_nondet_map_iterator_next = Base.map_iterator_next_by_value (ImplND.cbor_nondet_map_iterator_next_unsafe ())
 
 let cbor_nondet_map_iterator_share = ImplND.cbor_nondet_map_iterator_share ()
 

@@ -359,14 +359,9 @@ impl <'a> Iterator for CborNondetArrayIterator <'a> {
 	if crate::cbornondetver::cbor_nondet_array_iterator_is_empty(self.iter) {
 	    None
 	} else {
-	    // SAFETY: see CborDetArrayIterator::next.
-	    let s: &'a mut [crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>] = unsafe {
-		core::mem::transmute::<
-		    &mut [crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>],
-		    &'a mut [crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>]
-		>(std::slice::from_mut(& mut self.iter))
-	    };
-	    Some (crate::cbornondetver::cbor_nondet_array_iterator_next(s))
+	    let (elt, it) = crate::cbornondetver::cbor_nondet_array_iterator_next(self.iter);
+	    self.iter = it;
+	    Some (elt)
 	}
     }
 }
@@ -412,14 +407,9 @@ impl <'a> Iterator for CborNondetMapIterator <'a> {
 	if crate::cbornondetver::cbor_nondet_map_iterator_is_empty(self.iter) {
 	    None
 	} else {
-	    // SAFETY: see CborDetArrayIterator::next.
-	    let s: &'a mut [crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>] = unsafe {
-		core::mem::transmute::<
-		    &mut [crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>],
-		    &'a mut [crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>]
-		>(std::slice::from_mut(& mut self.iter))
-	    };
-	    Some (crate::cbornondetver::cbor_nondet_map_iterator_next(s))
+	    let (elt, it) = crate::cbornondetver::cbor_nondet_map_iterator_next(self.iter);
+	    self.iter = it;
+	    Some (elt)
 	}
     }
 }

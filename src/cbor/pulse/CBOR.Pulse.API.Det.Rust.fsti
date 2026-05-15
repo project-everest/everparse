@@ -298,7 +298,7 @@ val cbor_det_array_iterator_start
 
 val cbor_det_array_iterator_is_empty  : Base.array_iterator_is_empty_t cbor_det_array_iterator_match
 
-val cbor_det_array_iterator_next : Base.array_iterator_next_t cbor_det_match cbor_det_array_iterator_match
+val cbor_det_array_iterator_next : Base.array_iterator_next_by_value_t cbor_det_match cbor_det_array_iterator_match
 
 val cbor_det_array_iterator_share : Base.share_t cbor_det_array_iterator_match
 
@@ -380,7 +380,7 @@ val cbor_det_map_iterator_start
 
 val cbor_det_map_iterator_is_empty : Base.map_iterator_is_empty_t cbor_det_map_iterator_match
 
-val cbor_det_map_iterator_next : Base.map_iterator_next_t cbor_det_map_entry_match cbor_det_map_iterator_match
+val cbor_det_map_iterator_next : Base.map_iterator_next_by_value_t cbor_det_map_entry_match cbor_det_map_iterator_match
 
 val cbor_det_map_iterator_share : Base.share_t cbor_det_map_iterator_match
 

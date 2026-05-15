@@ -1288,6 +1288,50 @@ fn array_iterator_next_safe
   }
 }
 
+(* By-value variant of [array_iterator_next_t]: takes the iterator
+   state by value (instead of through an [R.ref]) and returns the new
+   iterator state alongside the next element. This is meant for
+   Karamel-Rust extraction, where a [&'a mut [t']] argument with the
+   same lifetime [`'a`] used inside [t'] would be over-constrained. C
+   keeps using [array_iterator_next_t]. *)
+inline_for_extraction
+let array_iterator_next_by_value_t
+  (#t #t': Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (iter: perm -> t' -> list cbor -> slprop)
+= (x: t') ->
+  (#py: perm) ->
+  (#z: Ghost.erased (list cbor)) ->
+  stt (t & t')
+    (iter py x z ** pure (Cons? z))
+    (fun res -> exists* p' py' v' z' .
+      vmatch p' (fst res) v' **
+      iter py' (snd res) z' **
+      Trade.trade
+        (vmatch p' (fst res) v' ** iter py' (snd res) z')
+        (iter py x z) **
+      pure (Ghost.reveal z == v' :: z')
+    )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn array_iterator_next_by_value
+  (#t #t': Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (#iter: perm -> t' -> list cbor -> slprop)
+  (g: array_iterator_next_t vmatch iter)
+: array_iterator_next_by_value_t #_ #_ vmatch iter
+=
+  (x: _)
+  (#py: _)
+  (#z: _)
+{
+  let mut r = x;
+  let elt = g r;
+  let x' = !r;
+  (elt, x')
+}
+
 inline_for_extraction
 let array_iterator_truncate_t
   (#t': Type)
@@ -1815,6 +1859,46 @@ fn map_iterator_next_safe
       true
     }
   }
+}
+
+(* By-value variant of [map_iterator_next_t]: see comment on
+   [array_iterator_next_by_value_t]. *)
+inline_for_extraction
+let map_iterator_next_by_value_t
+  (#t #t': Type)
+  (vmatch2: perm -> t -> cbor & cbor -> slprop)
+  (iter: perm -> t' -> list (cbor & cbor) -> slprop)
+= (x: t') ->
+  (#py: perm) ->
+  (#z: Ghost.erased (list (cbor & cbor))) ->
+  stt (t & t')
+    (iter py x z ** pure (Cons? z))
+    (fun res -> exists* py' p' v' z' .
+      vmatch2 p' (fst res) v' **
+      iter py' (snd res) z' **
+      Trade.trade
+        (vmatch2 p' (fst res) v' ** iter py' (snd res) z')
+        (iter py x z) **
+      pure (Ghost.reveal z == v' :: z')
+    )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn map_iterator_next_by_value
+  (#t #t': Type0)
+  (#vmatch2: perm -> t -> cbor & cbor -> slprop)
+  (#iter: perm -> t' -> list (cbor & cbor) -> slprop)
+  (g: map_iterator_next_t vmatch2 iter)
+: map_iterator_next_by_value_t #_ #_ vmatch2 iter
+=
+  (x: _)
+  (#py: _)
+  (#z: _)
+{
+  let mut r = x;
+  let elt = g r;
+  let x' = !r;
+  (elt, x')
 }
 
 inline_for_extraction

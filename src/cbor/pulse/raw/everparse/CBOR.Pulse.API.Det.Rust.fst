@@ -465,7 +465,7 @@ ensures
 
 let cbor_det_array_iterator_is_empty x #p #y = Impl.cbor_det_array_iterator_is_empty () x #p #y
 
-let cbor_det_array_iterator_next x #y #py #z = Impl.cbor_det_array_iterator_next () x #y #py #z
+let cbor_det_array_iterator_next = Base.array_iterator_next_by_value (Impl.cbor_det_array_iterator_next ())
 
 let cbor_det_array_iterator_share = Impl.cbor_det_array_iterator_share ()
 
@@ -668,7 +668,7 @@ ensures
 
 let cbor_det_map_iterator_is_empty x #p #y = Impl.cbor_det_map_iterator_is_empty () x #p #y
 
-let cbor_det_map_iterator_next x #y #py #z = Impl.cbor_det_map_iterator_next () x #y #py #z
+let cbor_det_map_iterator_next = Base.map_iterator_next_by_value (Impl.cbor_det_map_iterator_next ())
 
 let cbor_det_map_iterator_share = Impl.cbor_det_map_iterator_share ()
 
