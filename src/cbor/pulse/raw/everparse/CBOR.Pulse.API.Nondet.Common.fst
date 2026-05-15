@@ -20,7 +20,6 @@ module U64 = FStar.UInt64
 module U8 = FStar.UInt8
 module I64 = FStar.Int64
 module SU = Pulse.Lib.Slice.Util
-module AP = Pulse.Lib.ArrayPtr
 module R = Pulse.Lib.Reference
 
 module SpecRawBase = CBOR.Spec.Raw.Base
@@ -244,9 +243,6 @@ fn cbor_nondet_parse_valid (_: unit) : cbor_nondet_parse_valid_t #cbor_nondet_t 
   res
 }
 
-let cbor_nondet_parse () : cbor_nondet_parse_from_arrayptr_t #cbor_nondet_t cbor_nondet_match
-= cbor_nondet_parse_from_arrayptr (cbor_nondet_validate ()) (cbor_nondet_parse_valid ())
-
 (* ============ Match with size / size / serialize ============ *)
 
 let cbor_nondet_match_with_size
@@ -331,9 +327,6 @@ fn cbor_nondet_serialize_inner (_: unit) : cbor_nondet_serialize_t #cbor_nondet_
     Some res
   }
 }
-
-let cbor_nondet_serialize () : cbor_nondet_serialize_to_arrayptr_t #cbor_nondet_t cbor_nondet_match_with_size
-= cbor_nondet_serialize_to_arrayptr (cbor_nondet_serialize_inner ())
 
 (* ============ Destructors ============ *)
 
@@ -451,20 +444,6 @@ fn cbor_nondet_get_string_unsafe (_: unit) : get_string_t u#0 #_ cbor_nondet_mat
   Trade.trans _ (RawMatch.cbor_raw_match p x v') (cbor_nondet_match p x v);
   s
 }
-
-inline_for_extraction noextract [@@noextract_to "krml"]
-let cbor_nondet_get_string_as_arrayptr_unsafe () : get_string_as_arrayptr_t u#0 #_ cbor_nondet_match
-= get_string_as_arrayptr (cbor_nondet_get_string_unsafe ())
-
-let cbor_nondet_get_string () : get_string_as_arrayptr_safe_t u#0 #_ cbor_nondet_match
-= get_string_as_arrayptr_safe (cbor_nondet_major_type ())
-    (cbor_nondet_get_string_length ()) (cbor_nondet_get_string_as_arrayptr_unsafe ())
-
-let cbor_nondet_get_byte_string () : get_string_as_arrayptr_safe_gen_t u#0 (Some cbor_major_type_byte_string) #_ cbor_nondet_match
-= get_string_as_arrayptr_safe_gen (cbor_nondet_major_type ()) (cbor_nondet_get_string ()) cbor_major_type_byte_string
-
-let cbor_nondet_get_text_string () : get_string_as_arrayptr_safe_gen_t u#0 (Some cbor_major_type_text_string) #_ cbor_nondet_match
-= get_string_as_arrayptr_safe_gen (cbor_nondet_major_type ()) (cbor_nondet_get_string ()) cbor_major_type_text_string
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_nondet_get_tagged_tag (_: unit) : get_tagged_tag_t u#0 #_ cbor_nondet_match
@@ -2042,13 +2021,6 @@ fn cbor_nondet_mk_string (_: unit) : mk_string_t u#0 #_ cbor_nondet_match
 
 #pop-options
 
-let cbor_nondet_mk_byte_string () : mk_string_from_arrayptr_t #_ cbor_nondet_match cbor_major_type_byte_string
-  = mk_string_from_arrayptr (cbor_nondet_mk_string ()) cbor_major_type_byte_string
-
-let cbor_nondet_mk_text_string () : mk_string_from_arrayptr_t #_ cbor_nondet_match cbor_major_type_text_string
-  = mk_string_from_arrayptr (cbor_nondet_mk_string ()) cbor_major_type_text_string
-
-
 (* ============ Tagged constructor ============ *)
 
 #push-options "--z3rlimit 128 --fuel 2 --ifuel 2"
@@ -2252,9 +2224,6 @@ fn cbor_nondet_mk_array_inner (_: unit) : mk_array_t cbor_nondet_match
 }
 
 #pop-options
-
-let cbor_nondet_mk_array () : mk_array_from_arrayptr_t #_ cbor_nondet_match
-  = mk_array_from_arrayptr (cbor_nondet_mk_array_inner ())
 
 (* ============ Map entry constructor ============ *)
 
@@ -2806,11 +2775,6 @@ fn cbor_nondet_mk_map_gen (_: unit)
 
 #pop-options
 
-let cbor_nondet_mk_map ()
-: mk_map_from_arrayptr_safe_t #cbor_nondet_t #cbor_nondet_map_entry_t cbor_nondet_match cbor_nondet_map_entry_match
-= cbor_mk_map_from_arrayptr_safe (cbor_nondet_mk_map_gen ())
-
-
 (* ============ Helpers for map_get_multiple ============ *)
 
 noextract [@@noextract_to "krml"]
@@ -3319,8 +3283,4 @@ fn cbor_nondet_map_get_multiple_inner (_: unit) : cbor_map_get_multiple_t #_ cbo
 }
 
 #pop-options
-
-let cbor_nondet_map_get_multiple ()
-: cbor_map_get_multiple_as_arrayptr_t #_ cbor_nondet_match cbor_nondet_map_get_multiple_entry_t
-= cbor_map_get_multiple_as_arrayptr cbor_nondet_map_get_multiple_entry_t (cbor_nondet_major_type ()) (cbor_nondet_map_get_multiple_inner ())
 
