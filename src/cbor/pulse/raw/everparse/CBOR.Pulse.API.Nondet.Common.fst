@@ -311,26 +311,16 @@ fn cbor_nondet_serialize_inner (_: unit) : cbor_nondet_serialize_t #cbor_nondet_
     fold (cbor_nondet_match_with_size size pm x y);
     None #SZ.t
   } else {
-    // Split output at len; serialize into prefix only.  We round-trip the
-    // prefix through arrayptr (slice_to_arrayptr_intro / arrayptr_to_slice_intro)
-    // so that Karamel infers the slice as `&mut [u8]` for Rust extraction; a
-    // direct call to RawSerialize.cbor_serialize on `(fst pair)` would otherwise
-    // produce a `&[u8]` vs `&mut [u8]` type mismatch in the generated Rust.
-    let pair = S.split output len;
-    S.pts_to_len (fst pair);
-    let a = S.slice_to_arrayptr_intro (fst pair);
-    let s' = S.arrayptr_to_slice_intro a len;
-    S.pts_to_len s';
-    let res = RawSerialize.cbor_serialize (assume SZ.fits_u64) x s';
-    S.pts_to_len s';
-    S.arrayptr_to_slice_elim s';
-    S.slice_to_arrayptr_elim a;
-    S.pts_to_len (fst pair);
-    with v_new . assert (S.pts_to (fst pair) v_new);
+    // Split output at len; serialize into prefix only.
+    let out, rem = S.split output len;
+    S.pts_to_len out;
+    let res = RawSerialize.cbor_serialize (assume SZ.fits_u64) x out;
+    S.pts_to_len out;
+    with v_new . assert (S.pts_to out v_new);
     // v_new == SpecF.serialize_cbor w (from length + prefix constraint)
     Seq.lemma_eq_elim v_new (SpecF.serialize_cbor w);
     // Join back
-    S.join (fst pair) (snd pair) output;
+    S.join out rem output;
     with v' . assert (pts_to output v');
     S.pts_to_len output;
     SpecF.serialize_parse_cbor w;
@@ -713,6 +703,7 @@ fn cbor_nondet_array_iterator_is_empty (_: unit) : array_iterator_is_empty_t u#0
   res
 }
 
+#push-options "--z3rlimit 64"
 fn cbor_nondet_array_iterator_length (_: unit) : array_iterator_length_t u#0 #_ cbor_nondet_array_iterator_match
 = (x: _)
   (#p: _)
@@ -738,6 +729,7 @@ fn cbor_nondet_array_iterator_length (_: unit) : array_iterator_length_t u#0 #_ 
   Trade.elim _ (cbor_nondet_array_iterator_match p x v);
   res
 }
+#pop-options
 
 #push-options "--z3rlimit 256 --fuel 2 --ifuel 1 --ext no:context_pruning"
 

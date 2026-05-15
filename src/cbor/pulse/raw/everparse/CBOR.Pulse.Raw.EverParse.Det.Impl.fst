@@ -175,6 +175,21 @@ fn cbor_det_get_string (_: unit) : det_get_string_t
   res
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_get_string_slice (_: unit) : get_string_t cbor_det_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  Trade.rewrite_with_trade
+    (cbor_det_match p x v)
+    (RawMatch.cbor_raw_match p x (SpecRaw.mk_det_raw_cbor v));
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor v);
+  let s = Access.cbor_raw_get_string p x ();
+  Trade.trans _ (RawMatch.cbor_raw_match p x (SpecRaw.mk_det_raw_cbor v)) (cbor_det_match p x v);
+  s
+}
+
 (* ======== Constructors ======== *)
 
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -285,6 +300,28 @@ ensures
     fold (cbor_det_match pm x y);
     res
   }
+}
+
+fn cbor_det_serialize_slice
+  (x: cbor_det_t)
+  (output: S.slice U8.t)
+  (#y: Ghost.erased Spec.cbor)
+  (#pm: perm)
+requires
+    (exists* v . cbor_det_match pm x y ** S.pts_to output v ** pure (Seq.length (Spec.cbor_det_serialize y) <= SZ.v (S.len output)))
+returns res: SZ.t
+ensures
+    (exists* v . cbor_det_match pm x y ** S.pts_to output v ** pure (
+      cbor_det_serialize_fits_postcond y res v
+    ))
+{
+  unfold (cbor_det_match pm x y);
+  assert (pure (Spec.cbor_det_serialize y == SpecF.serialize_cbor (SpecRaw.mk_det_raw_cbor y)));
+  S.pts_to_len output;
+  let res = RawSerialize.cbor_serialize (assume (SZ.fits_u64)) x output;
+  S.pts_to_len output;
+  fold (cbor_det_match pm x y);
+  res
 }
 
 (* ======== UTF8 ======== *)

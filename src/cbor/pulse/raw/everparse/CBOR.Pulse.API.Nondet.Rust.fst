@@ -13,7 +13,6 @@ module RawType = CBOR.Pulse.Raw.EverParse.Type
 module SU = Pulse.Lib.Slice.Util
 module R = Pulse.Lib.Reference
 module PM = Pulse.Lib.SeqMatch
-module AP = Pulse.Lib.ArrayPtr
 module UTF8 = CBOR.Pulse.API.UTF8
 
 module C = C // necessary to pull C.krml into extraction, otherwise Karamel fails with "`C._zero_for_deref`: impossible", believing that it is a non-function external symbol, which Karamel extraction to Rust does not support

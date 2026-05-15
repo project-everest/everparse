@@ -8,7 +8,6 @@ module Impl = CBOR.Pulse.Raw.EverParse.Det.Impl
 module SU = Pulse.Lib.Slice.Util
 module R = Pulse.Lib.Reference
 module PM = Pulse.Lib.SeqMatch
-module AP = Pulse.Lib.ArrayPtr
 module UTF8 = CBOR.Pulse.API.UTF8
 
 open CBOR.Spec.Constants
@@ -66,14 +65,12 @@ fn cbor_det_serialize
   if (SZ.gt size 0sz) {
     let out, rem = S.split output size;
     S.pts_to_len out;
-    let a = S.slice_to_arrayptr_intro out;
-    Impl.cbor_det_serialize_arrayptr x a size;
-    with vb . assert (pts_to a vb);
-    S.slice_to_arrayptr_elim a;
-    with v1 . assert (pts_to out v1);
+    Impl.cbor_det_serialize_slice x out;
+    S.pts_to_len out;
+    with v1 . assert (S.pts_to out v1);
     assert (pure (Seq.equal v1 (Spec.cbor_det_serialize y)));
     S.join out rem output;
-    with v' . assert (pts_to output v');
+    with v' . assert (S.pts_to output v');
     Seq.lemma_split v' (SZ.v size);
     assert (pure (Seq.equal (Seq.slice v' 0 (SZ.v size)) (Spec.cbor_det_serialize y)));
     assert (pure (Seq.equal (Seq.slice v' (SZ.v size) (Seq.length v)) (Seq.slice v (SZ.v size) (Seq.length v))));
@@ -282,25 +279,20 @@ ensures exists* p' .
   }
   else if (ty = cbor_major_type_byte_string || ty = cbor_major_type_text_string) {
     let k = (if ty = cbor_major_type_byte_string then ByteString else TextString);
-    let slen = Impl.cbor_det_get_string_length () c;
-    let _ : squash SZ.fits_u64 = assume (SZ.fits_u64);
-    let ptr = Impl.cbor_det_get_string () c;
-    with p_ptr v_ptr . assert (pts_to ptr #p_ptr v_ptr);
-    let sl = SU.arrayptr_to_slice_intro_trade ptr (SZ.uint64_to_sizet slen);
-    with v_sl . assert (pts_to sl #p_ptr v_sl);
-    Trade.trans (pts_to sl #p_ptr v_sl) (pts_to ptr #p_ptr v_ptr) (cbor_det_match p c v);
-    fold (cbor_det_string_match ty p_ptr sl v);
-    rewrite (cbor_det_string_match ty p_ptr sl v) as (cbor_det_view_match p_ptr (String k sl) v);
+    let sl = Impl.cbor_det_get_string_slice () c;
+    with p_sl v_sl . assert (S.pts_to sl #p_sl v_sl);
+    fold (cbor_det_string_match ty p_sl sl v);
+    rewrite (cbor_det_string_match ty p_sl sl v) as (cbor_det_view_match p_sl (String k sl) v);
     intro
       (Trade.trade
-        (cbor_det_view_match p_ptr (String k sl) v)
-        (pts_to sl #p_ptr v_sl)
+        (cbor_det_view_match p_sl (String k sl) v)
+        (S.pts_to sl #p_sl v_sl)
       )
       #emp
       fn _
     {
-      unfold (cbor_det_view_match p_ptr (String k sl) v);
-      with ty' . unfold (cbor_det_string_match ty' p_ptr sl v);
+      unfold (cbor_det_view_match p_sl (String k sl) v);
+      with ty' . unfold (cbor_det_string_match ty' p_sl sl v);
     };
     Trade.trans _ _ (cbor_det_match p c v);
     String k sl

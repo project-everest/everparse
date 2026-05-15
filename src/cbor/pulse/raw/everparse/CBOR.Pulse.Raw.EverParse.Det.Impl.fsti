@@ -7,6 +7,7 @@ open CBOR.Pulse.API.Det.Type
 
 module Spec = CBOR.Spec.API.Format
 module AP = Pulse.Lib.ArrayPtr
+module S = Pulse.Lib.Slice
 module SZ = FStar.SizeT
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
@@ -50,6 +51,9 @@ let det_get_string_t =
 
 val cbor_det_get_string (_: unit) : det_get_string_t
 
+(* String reader returning a slice — for Rust extraction *)
+val cbor_det_get_string_slice (_: unit) : get_string_t cbor_det_match
+
 val cbor_det_mk_simple_value (_: unit) : mk_simple_t cbor_det_match
 val cbor_det_mk_int64 (_: unit) : mk_int64_t cbor_det_match
 
@@ -83,6 +87,20 @@ fn cbor_det_serialize_safe_arrayptr
     (exists* v' . cbor_det_match pm c y ** pts_to output v' ** pure (
         SZ.v output_len == Seq.length v' /\
         cbor_det_serialize_postcond_c y v v' res
+      ))
+
+(* Top-level serializer (slice-based) — for Rust extraction *)
+fn cbor_det_serialize_slice
+  (c: cbor_det_t)
+  (output: S.slice U8.t)
+  (#y: Ghost.erased Spec.cbor)
+  (#pm: perm)
+  requires
+    (exists* va . cbor_det_match pm c y ** S.pts_to output va ** pure (Seq.length (Spec.cbor_det_serialize y) <= SZ.v (S.len output)))
+  returns res: SZ.t
+  ensures
+    (exists* vb . cbor_det_match pm c y ** S.pts_to output vb ** pure (
+        cbor_det_serialize_fits_postcond y res vb
       ))
 
 (* UTF8 validator over a raw arrayptr *)
