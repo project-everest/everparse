@@ -299,7 +299,6 @@ let rec list_index_cons (#a: Type) (hd: a) (tl: list a) (n: nat)
 = ()
 
 #restart-solver
-inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_get_array_item (_: unit) : get_array_item_t cbor_det_match
 = (x: cbor_det_t)
   (i: U64.t)
@@ -478,7 +477,6 @@ ensures
 }
 
 #restart-solver
-inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_map_get (_: unit) : map_get_by_ref_t cbor_det_match
 = (x: cbor_det_t)
   (k: cbor_det_t)
