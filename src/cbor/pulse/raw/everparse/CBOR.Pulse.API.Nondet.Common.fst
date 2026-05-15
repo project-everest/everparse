@@ -312,10 +312,20 @@ fn cbor_nondet_serialize_inner (_: unit) : cbor_nondet_serialize_t #cbor_nondet_
     fold (cbor_nondet_match_with_size size pm x y);
     None #SZ.t
   } else {
-    // Split output at len; serialize into prefix only
+    // Split output at len; serialize into prefix only.  We round-trip the
+    // prefix through arrayptr (slice_to_arrayptr_intro / arrayptr_to_slice_intro)
+    // so that Karamel infers the slice as `&mut [u8]` for Rust extraction; a
+    // direct call to RawSerialize.cbor_serialize on `(fst pair)` would otherwise
+    // produce a `&[u8]` vs `&mut [u8]` type mismatch in the generated Rust.
     let pair = S.split output len;
     S.pts_to_len (fst pair);
-    let res = RawSerialize.cbor_serialize (assume SZ.fits_u64) x (fst pair);
+    let a = S.slice_to_arrayptr_intro (fst pair);
+    let s' = S.arrayptr_to_slice_intro a len;
+    S.pts_to_len s';
+    let res = RawSerialize.cbor_serialize (assume SZ.fits_u64) x s';
+    S.pts_to_len s';
+    S.arrayptr_to_slice_elim s';
+    S.slice_to_arrayptr_elim a;
     S.pts_to_len (fst pair);
     with v_new . assert (S.pts_to (fst pair) v_new);
     // v_new == SpecF.serialize_cbor w (from length + prefix constraint)

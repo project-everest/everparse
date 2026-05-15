@@ -11,6 +11,8 @@ mod lowstar {
 
 mod cbornondetveraux;
 
+mod pulse;
+
 pub mod cbornondetver;
 
 pub mod cbornondet;

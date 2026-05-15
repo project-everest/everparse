@@ -41,10 +41,10 @@ pub fn cbor_det_parse <'a>(input: &'a [u8]) ->
     Option<(CborDet<'a>, &'a [u8])>
 {
     match crate::cbordetver::cbor_det_parse(input) {
-	crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None => {
+	crate::cbordetver::option__·CBOR_Pulse_Raw_EverParse_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None => {
 	    return None;
 	}
-	crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some {v} => {
+	crate::cbordetver::option__·CBOR_Pulse_Raw_EverParse_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some {v} => {
 	    let (object, rem) = v;
 	    return Some((object, rem));
 	}
@@ -105,10 +105,10 @@ pub fn cbor_det_serialize <'a>(x: CborDet <'a>, output: &'a mut [u8]) ->
 pub fn cbor_det_mk_simple_value <'a>(v: u8) -> Option<CborDet<'a>>
 {
     match crate::cbordetver::cbor_det_mk_simple_value(v) {
-	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::None => {
 	    return None;
 	}
-	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Some {v} => {
 	    return Some(v);
 	}
     }
@@ -152,10 +152,10 @@ pub fn cbor_det_mk_text_string <'a>(s: &'a str) ->
     let ty· : crate::cbordetver::cbor_det_string_kind =
 	crate::cbordetver::cbor_det_string_kind::TextString;
     match crate::cbordetver::cbor_det_mk_string(ty·, s.as_bytes()) {
-	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v } => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Some { v } => {
 	    Some(v)
 	}
     }
@@ -171,10 +171,10 @@ pub fn cbor_det_mk_byte_string <'a>(s: &'a [u8]) ->
     let ty· : crate::cbordetver::cbor_det_string_kind =
 	crate::cbordetver::cbor_det_string_kind::ByteString;
     match crate::cbordetver::cbor_det_mk_string(ty·, s) {
-	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v } => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Some { v } => {
 	    Some(v)
 	}
     }
@@ -203,10 +203,10 @@ pub fn cbor_det_mk_array <'a>(a: &'a [CborDet <'a>]) ->
     Option<CborDet<'a>>
 {
     match crate::cbordetver::cbor_det_mk_array(a) {
-	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Some {v} => {
 	    Some(v)
 	}
     }
@@ -217,7 +217,7 @@ pub fn cbor_det_mk_array <'a>(a: &'a [CborDet <'a>]) ->
  * arrays of map entry elements as input arguments.
  */
 /// The type of key-value map entries.
-pub type CborDetMapEntry <'a> = crate::cbordetveraux::cbor_map_entry <'a>;
+pub type CborDetMapEntry <'a> = crate::cbordetveraux::cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>;
 
 /// Constructs a map entry from a key `xk` and a value `xv`.
 pub fn cbor_det_mk_map_entry <'a>(
@@ -245,10 +245,10 @@ pub fn cbor_det_mk_map <'a>(a: &'a mut [CborDetMapEntry <'a>]) ->
     Option<CborDet<'a>>
 {
     match crate::cbordetver::cbor_det_mk_map(a) {
-	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Some {v} => {
 	    Some(v)
 	}
     }
@@ -350,7 +350,7 @@ pub fn cbor_det_get_array_length <'a>(x: CborDetArray <'a>) -> u64
 /// The type of iterators over Deterministic CBOR arrays. It is made
 /// abstract since it is meant to be used with an implementation of
 /// the `Iterator` trait only.
-pub struct CborDetArrayIterator <'a> { iter: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a> }
+pub struct CborDetArrayIterator <'a> { iter: crate::cbordetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a> }
 
 impl <'a> Iterator for CborDetArrayIterator <'a> {
     type Item = CborDet <'a>;
@@ -358,7 +358,21 @@ impl <'a> Iterator for CborDetArrayIterator <'a> {
 	if crate::cbordetver::cbor_det_array_iterator_is_empty(self.iter) {
 	    None
 	} else {
-	    Some (crate::cbordetver::cbor_det_array_iterator_next(std::slice::from_mut(& mut self.iter)))
+	    // SAFETY: the Karamel-generated signature of `cbor_det_array_iterator_next`
+	    // ties the slice's borrow lifetime to the iterator's `'a` parameter,
+	    // forcing the (invariant) mutable slice borrow to outlive `'a`. The
+	    // function only reads/updates the slice in place during its execution,
+	    // and the returned `cbor_raw` actually borrows from the underlying CBOR
+	    // buffer (lifetime `'a`), not from `self.iter`'s temporary borrow. We
+	    // unsafely extend the slice borrow's lifetime to `'a` to satisfy the
+	    // compiler.
+	    let s: &'a mut [crate::cbordetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>] = unsafe {
+		core::mem::transmute::<
+		    &mut [crate::cbordetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>],
+		    &'a mut [crate::cbordetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>]
+		>(std::slice::from_mut(& mut self.iter))
+	    };
+	    Some (crate::cbordetver::cbor_det_array_iterator_next(s))
 	}
     }
 }
@@ -378,10 +392,10 @@ pub fn cbor_det_get_array_item <'a>(x: CborDetArray <'a>, i: u64) ->
     Option<CborDet<'a>>
 {
     match crate::cbordetver::cbor_det_get_array_item(x.array, i) {
-	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Some {v} => {
 	    Some(v)
 	}
     }
@@ -396,7 +410,7 @@ pub fn cbor_det_get_map_length <'a>(x: CborDetMap <'a>) -> u64
 /// The type of iterators over Deterministic CBOR maps. It is made
 /// abstract since it is meant to be used with an implementation of
 /// the `Iterator` trait only.
-pub struct CborDetMapIterator <'a> { iter: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a> }
+pub struct CborDetMapIterator <'a> { iter: crate::cbordetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a> }
 
 impl <'a> Iterator for CborDetMapIterator <'a> {
     type Item = CborDetMapEntry <'a>;
@@ -404,7 +418,15 @@ impl <'a> Iterator for CborDetMapIterator <'a> {
 	if crate::cbordetver::cbor_det_map_iterator_is_empty(self.iter) {
 	    None
 	} else {
-	    Some (crate::cbordetver::cbor_det_map_iterator_next(std::slice::from_mut(& mut self.iter)))
+	    // SAFETY: see CborDetArrayIterator::next; same reasoning applies for
+	    // map entries.
+	    let s: &'a mut [crate::cbordetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>] = unsafe {
+		core::mem::transmute::<
+		    &mut [crate::cbordetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>],
+		    &'a mut [crate::cbordetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>]
+		>(std::slice::from_mut(& mut self.iter))
+	    };
+	    Some (crate::cbordetver::cbor_det_map_iterator_next(s))
 	}
     }
 }
@@ -439,10 +461,10 @@ pub fn cbor_det_map_get <'a>(
     Option<CborDet<'a>>
 {
     match crate::cbordetver::cbor_det_map_get(x.map, k) {
-	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Some {v} => {
 	    Some(v)
 	}
     }
