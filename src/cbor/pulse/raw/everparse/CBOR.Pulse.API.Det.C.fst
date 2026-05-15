@@ -9,6 +9,7 @@ module CBOR.Pulse.API.Det.C
    ArrayPtr but Det.Impl works on Slice. *)
 
 module Impl = CBOR.Pulse.Raw.EverParse.Det.Impl
+module S = Pulse.Lib.Slice
 module SU = Pulse.Lib.Slice.Util
 
 (* ======== Match relation and basic ops ======== *)
