@@ -67,7 +67,7 @@ fn cbor_det_serialize
     let out, rem = S.split output size;
     S.pts_to_len out;
     let a = S.slice_to_arrayptr_intro out;
-    Impl.cbor_det_serialize x a size;
+    Impl.cbor_det_serialize_arrayptr x a size;
     with vb . assert (pts_to a vb);
     S.slice_to_arrayptr_elim a;
     with v1 . assert (pts_to out v1);

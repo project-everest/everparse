@@ -117,7 +117,7 @@ ensures
       cbor_det_serialize_fits_postcond y res v
     ))
 {
-  Impl.cbor_det_serialize x output output_len
+  Impl.cbor_det_serialize_arrayptr x output output_len
 }
 
 #restart-solver
@@ -138,7 +138,7 @@ ensures
       cbor_det_serialize_postcond_c y v v' res
     ))
 {
-  Impl.cbor_det_serialize_safe x output output_len
+  Impl.cbor_det_serialize_safe_arrayptr x output output_len
 }
 
 (* ======== UTF8 ======== *)

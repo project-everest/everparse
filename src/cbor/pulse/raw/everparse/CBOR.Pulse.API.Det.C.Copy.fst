@@ -93,7 +93,7 @@ fn cbor_copy_impl
   let sl = S.from_array (V.vec_to_array buf) size;
   S.pts_to_len sl;
   let ap = S.slice_to_arrayptr_intro sl;
-  Impl.cbor_det_serialize c ap size;
+  Impl.cbor_det_serialize_arrayptr c ap size;
   with vb . assert (AP.pts_to ap vb);
   S.slice_to_arrayptr_elim ap;
   with v1 . assert (S.pts_to sl v1);

@@ -54,7 +54,7 @@ val cbor_det_mk_simple_value (_: unit) : mk_simple_t cbor_det_match
 val cbor_det_mk_int64 (_: unit) : mk_int64_t cbor_det_match
 
 (* Top-level serializer (arrayptr-based) *)
-fn cbor_det_serialize
+fn cbor_det_serialize_arrayptr
   (c: cbor_det_t)
   (output: AP.ptr U8.t)
   (output_len: SZ.t)
@@ -69,7 +69,7 @@ fn cbor_det_serialize
         cbor_det_serialize_fits_postcond y res vb
       ))
 
-fn cbor_det_serialize_safe
+fn cbor_det_serialize_safe_arrayptr
   (c: cbor_det_t)
   (output: AP.ptr U8.t)
   (output_len: SZ.t)

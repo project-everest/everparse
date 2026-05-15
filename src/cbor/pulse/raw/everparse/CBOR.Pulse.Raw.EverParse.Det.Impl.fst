@@ -209,7 +209,7 @@ fn cbor_det_mk_int64 (_: unit) : mk_int64_t u#0 #_ cbor_det_match
 
 (* ======== Serialize ======== *)
 
-fn cbor_det_serialize
+fn cbor_det_serialize_arrayptr
   (x: cbor_det_t)
   (output: AP.ptr U8.t)
   (output_len: SZ.t)
@@ -235,7 +235,7 @@ ensures
   res
 }
 
-fn cbor_det_serialize_safe
+fn cbor_det_serialize_safe_arrayptr
   (x: cbor_det_t)
   (output: AP.ptr U8.t)
   (output_len: SZ.t)
