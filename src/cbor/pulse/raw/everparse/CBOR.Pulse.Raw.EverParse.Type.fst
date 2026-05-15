@@ -7,7 +7,7 @@ open Pulse.Lib.Slice
 module SZ = FStar.SizeT
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
-module I = LowParse.PulseParse.Iterator
+module I = LowParse.PulseParse.Iterator.Type
 module S = Pulse.Lib.Slice
 
 // not reusing raw_uint64, for packing purposes

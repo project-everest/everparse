@@ -1,5 +1,6 @@
 module LowParse.Pulse.Iterator
 #lang-pulse
+include LowParse.PulseParse.Iterator.Type
 include LowParse.PulseParse.Iterator
 include LowParse.Pulse.VCList
 open Pulse.Lib.Pervasives

@@ -23,6 +23,7 @@ module R = Pulse.Lib.Reference
 module Trade = Pulse.Lib.Trade.Util
 module PPB = LowParse.PulseParse.Base
 module I = LowParse.PulseParse.Iterator
+module IT = LowParse.PulseParse.Iterator.Type
 module U64 = FStar.UInt64
 module NG = CBOR.Pulse.Raw.EverParse.Nondet.Gen
 module Valid = CBOR.Spec.Raw.Valid
@@ -38,9 +39,9 @@ let cbor_raw_match_fields_prop (x: cbor_raw) (y: raw_data_item) : prop =
   | CBOR_Case_String v, String m len _ ->
     v.cbor_string_type == m /\ v.cbor_string_size == len.size /\ SZ.v (S.len v.cbor_string_ptr) == U64.v len.value
   | CBOR_Case_Array v, Array len _ ->
-    v.cbor_array_length_size == len.size /\ SZ.v (I.mixed_list_length v.cbor_array_ptr) == U64.v len.value
+    v.cbor_array_length_size == len.size /\ SZ.v (IT.mixed_list_length v.cbor_array_ptr) == U64.v len.value
   | CBOR_Case_Map v, Map len _ ->
-    v.cbor_map_length_size == len.size /\ SZ.v (I.mixed_list_length v.cbor_map_ptr) == U64.v len.value
+    v.cbor_map_length_size == len.size /\ SZ.v (IT.mixed_list_length v.cbor_map_ptr) == U64.v len.value
   | CBOR_Case_Tagged v, Tagged tag _ -> v.cbor_tagged_tag == tag
   | CBOR_Case_Tagged_Serialized v, Tagged tag _ -> v.cbor_tagged_serialized_tag == tag
   | _, _ -> False
@@ -856,7 +857,7 @@ fn compare_cbor_raw_setoid_assoc_eq
   (#equiv: Ghost.erased (raw_data_item -> raw_data_item -> option bool))
   (compare_impl: compare_cbor_raw_fn_t equiv)
   (f64: squash SZ.fits_u64)
-  (map_ml: I.mixed_list (cbor_map_entry cbor_raw))
+  (map_ml: IT.mixed_list (cbor_map_entry cbor_raw))
   (#pm_map: perm)
   (#map_entries: Ghost.erased (list (raw_data_item & raw_data_item)))
   (xr: cbor_map_entry cbor_raw)
@@ -874,7 +875,7 @@ ensures
   pure (res == setoid_assoc_eq_with_overflow equiv equiv map_entries xr_pair)
 {
   let zcp = cbor_map_entry_zero_copy_parse f64;
-  let len = I.mixed_list_length map_ml;
+  let len = IT.mixed_list_length map_ml;
   // Establish length invariant
   I.mixed_list_match_length cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm_map map_ml (Ghost.reveal map_entries);
   // Start iterator on map_entries
@@ -985,10 +986,10 @@ fn compare_cbor_raw_list_for_all
   (#equiv: Ghost.erased (raw_data_item -> raw_data_item -> option bool))
   (compare_impl: compare_cbor_raw_fn_t equiv)
   (f64: squash SZ.fits_u64)
-  (inner_ml: I.mixed_list (cbor_map_entry cbor_raw))
+  (inner_ml: IT.mixed_list (cbor_map_entry cbor_raw))
   (#pm_inner: perm)
   (#inner_entries: Ghost.erased (list (raw_data_item & raw_data_item)))
-  (outer_ml: I.mixed_list (cbor_map_entry cbor_raw))
+  (outer_ml: IT.mixed_list (cbor_map_entry cbor_raw))
   (#pm_outer: perm)
   (#outer_entries: Ghost.erased (list (raw_data_item & raw_data_item)))
 requires
@@ -1005,7 +1006,7 @@ ensures
   pure (res == list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv inner_entries) outer_entries)
 {
   let zcp = cbor_map_entry_zero_copy_parse f64;
-  let len = I.mixed_list_length outer_ml;
+  let len = IT.mixed_list_length outer_ml;
   // Establish length invariant
   I.mixed_list_match_length cbor_map_entry_vmatch (nondep_then parse_raw_data_item parse_raw_data_item) pm_outer outer_ml (Ghost.reveal outer_entries);
   // Start iterator on outer_entries
@@ -1110,8 +1111,8 @@ fn compare_cbor_raw_array_case
   (len: SZ.t)
   (_: squash (
     CBOR_Case_Array? x1 /\ CBOR_Case_Array? x2 /\
-    I.mixed_list_length (CBOR_Case_Array?.v x1).cbor_array_ptr == len /\
-    I.mixed_list_length (CBOR_Case_Array?.v x2).cbor_array_ptr == len
+    IT.mixed_list_length (CBOR_Case_Array?.v x1).cbor_array_ptr == len /\
+    IT.mixed_list_length (CBOR_Case_Array?.v x2).cbor_array_ptr == len
   ))
   (#pm1: perm)
   (#v1: Ghost.erased raw_data_item)
@@ -1321,8 +1322,8 @@ ensures
     } else if (mt1 = Spec.cbor_major_type_array) {
       // Array/Array: compare lengths, then delegate element comparison
       check_equiv_array_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2) () ();
-      let len1 = I.mixed_list_length (CBOR_Case_Array?.v x1).cbor_array_ptr;
-      let len2 = I.mixed_list_length (CBOR_Case_Array?.v x2).cbor_array_ptr;
+      let len1 = IT.mixed_list_length (CBOR_Case_Array?.v x1).cbor_array_ptr;
+      let len2 = IT.mixed_list_length (CBOR_Case_Array?.v x2).cbor_array_ptr;
       if (len1 <> len2) {
         Some false
       } else {

@@ -16,6 +16,7 @@ module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
 module PPB = LowParse.PulseParse.Base
 module I = LowParse.PulseParse.Iterator
+module IT = LowParse.PulseParse.Iterator.Type
 
 open CBOR.Pulse.Raw.EverParse.Read
 open LowParse.Pulse.Base
@@ -1384,7 +1385,7 @@ fn cbor_raw_get_array
   (pm: perm) (x: cbor_raw) (#y: Ghost.erased raw_data_item)
   (_: squash (CBOR_Case_Array? x \/ Array? (Ghost.reveal y)))
 requires cbor_raw_match pm x y
-returns res: I.mixed_list cbor_raw
+returns res: IT.mixed_list cbor_raw
 ensures exists* (pm': perm) (l: Ghost.erased (list raw_data_item)).
   I.mixed_list_match
     cbor_raw_match
@@ -1811,7 +1812,7 @@ fn cbor_raw_get_map
   (pm: perm) (x: cbor_raw) (#y: Ghost.erased raw_data_item)
   (_: squash (CBOR_Case_Map? x \/ Map? (Ghost.reveal y)))
 requires cbor_raw_match pm x y
-returns res: I.mixed_list (cbor_map_entry cbor_raw)
+returns res: IT.mixed_list (cbor_map_entry cbor_raw)
 ensures exists* (pm': perm) (l: Ghost.erased (list (raw_data_item & raw_data_item))).
   I.mixed_list_match
     (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) ->

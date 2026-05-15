@@ -16,6 +16,7 @@ module U64 = FStar.UInt64
 module S = Pulse.Lib.Slice
 module R = Pulse.Lib.Reference
 module I = LowParse.PulseParse.Iterator
+module IT = LowParse.PulseParse.Iterator.Type
 
 let content_uses_p_gather (h: header) : bool =
   let (| b, _ |) = h in
@@ -93,11 +94,11 @@ let cbor_raw_get_header (xl: cbor_raw) : GTot (option header) =
   | CBOR_Case_Array v ->
     Some (raw_uint64_as_argument cbor_major_type_array
       ({ size = v.cbor_array_length_size;
-         value = U64.uint_to_t (SZ.v (I.mixed_list_length v.cbor_array_ptr)) }))
+         value = U64.uint_to_t (SZ.v (IT.mixed_list_length v.cbor_array_ptr)) }))
   | CBOR_Case_Map v ->
     Some (raw_uint64_as_argument cbor_major_type_map
       ({ size = v.cbor_map_length_size;
-         value = U64.uint_to_t (SZ.v (I.mixed_list_length v.cbor_map_ptr)) }))
+         value = U64.uint_to_t (SZ.v (IT.mixed_list_length v.cbor_map_ptr)) }))
   | CBOR_Case_Tagged v ->
     Some (raw_uint64_as_argument cbor_major_type_tagged v.cbor_tagged_tag)
   | CBOR_Case_Tagged_Serialized v ->

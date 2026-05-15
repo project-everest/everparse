@@ -20,6 +20,7 @@ module U64 = FStar.UInt64
 module S = Pulse.Lib.Slice
 module R = Pulse.Lib.Reference
 module I = LowParse.PulseParse.Iterator
+module IT = LowParse.PulseParse.Iterator.Type
 module LPIter = LowParse.Pulse.Iterator
 module PPB = LowParse.PulseParse.Base
 module Trade = Pulse.Lib.Trade.Util
@@ -394,11 +395,11 @@ let cbor_raw_get_header_pure (f64: squash SZ.fits_u64) (xl: cbor_raw) : Tot (opt
   | CBOR_Case_Array v ->
     Some (raw_uint64_as_argument cbor_major_type_array
       ({ size = v.cbor_array_length_size;
-         value = SZ.sizet_to_uint64 (I.mixed_list_length v.cbor_array_ptr) }))
+         value = SZ.sizet_to_uint64 (IT.mixed_list_length v.cbor_array_ptr) }))
   | CBOR_Case_Map v ->
     Some (raw_uint64_as_argument cbor_major_type_map
       ({ size = v.cbor_map_length_size;
-         value = SZ.sizet_to_uint64 (I.mixed_list_length v.cbor_map_ptr) }))
+         value = SZ.sizet_to_uint64 (IT.mixed_list_length v.cbor_map_ptr) }))
   | CBOR_Case_Tagged v ->
     Some (raw_uint64_as_argument cbor_major_type_tagged v.cbor_tagged_tag)
   | CBOR_Case_Tagged_Serialized v ->
@@ -413,10 +414,10 @@ let cbor_raw_get_header_pure_correct (f64: squash SZ.fits_u64) (xl: cbor_raw) : 
     let n = S.len v.cbor_string_ptr in
     assert (U64.v (SZ.sizet_to_uint64 n) == U64.v (U64.uint_to_t (SZ.v n)))
   | CBOR_Case_Array v ->
-    let n = I.mixed_list_length v.cbor_array_ptr in
+    let n = IT.mixed_list_length v.cbor_array_ptr in
     assert (U64.v (SZ.sizet_to_uint64 n) == U64.v (U64.uint_to_t (SZ.v n)))
   | CBOR_Case_Map v ->
-    let n = I.mixed_list_length v.cbor_map_ptr in
+    let n = IT.mixed_list_length v.cbor_map_ptr in
     assert (U64.v (SZ.sizet_to_uint64 n) == U64.v (U64.uint_to_t (SZ.v n)))
   | _ -> ()
 

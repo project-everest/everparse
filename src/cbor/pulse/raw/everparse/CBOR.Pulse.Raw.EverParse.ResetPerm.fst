@@ -11,6 +11,7 @@ module Trade = Pulse.Lib.Trade
 module S = Pulse.Lib.Slice
 module R = Pulse.Lib.Reference
 module I = LowParse.PulseParse.Iterator
+module IT = LowParse.PulseParse.Iterator.Type
 open CBOR.Pulse.Raw.EverParse.Type
 open CBOR.Pulse.Raw.EverParse.Match
 

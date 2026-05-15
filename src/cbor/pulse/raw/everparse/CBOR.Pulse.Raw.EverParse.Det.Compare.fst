@@ -24,6 +24,7 @@ module R = Pulse.Lib.Reference
 module Trade = Pulse.Lib.Trade.Util
 module PPB = LowParse.PulseParse.Base
 module I = LowParse.PulseParse.Iterator
+module IT = LowParse.PulseParse.Iterator.Type
 module U64 = FStar.UInt64
 module I16 = FStar.Int16
 module U8 = FStar.UInt8
@@ -121,7 +122,7 @@ let cbor_raw_tag_raw_uint64_eq
 
 let cbor_raw_array_raw_uint64 (x: cbor_raw) : raw_uint64 =
   match x with
-  | CBOR_Case_Array v -> { size = v.cbor_array_length_size; value = SZ.sizet_to_uint64 (I.mixed_list_length v.cbor_array_ptr) }
+  | CBOR_Case_Array v -> { size = v.cbor_array_length_size; value = SZ.sizet_to_uint64 (IT.mixed_list_length v.cbor_array_ptr) }
   | _ -> { size = 0uy; value = 0UL }
 
 let cbor_raw_array_raw_uint64_eq
@@ -131,12 +132,12 @@ let cbor_raw_array_raw_uint64_eq
 : Lemma (cbor_raw_array_raw_uint64 x == Array?.len v)
 = match x with
   | CBOR_Case_Array vx ->
-    FStar.Math.Lemmas.small_mod (SZ.v (I.mixed_list_length vx.cbor_array_ptr)) (pow2 64)
+    FStar.Math.Lemmas.small_mod (SZ.v (IT.mixed_list_length vx.cbor_array_ptr)) (pow2 64)
   | _ -> ()
 
 let cbor_raw_map_raw_uint64 (x: cbor_raw) : raw_uint64 =
   match x with
-  | CBOR_Case_Map v -> { size = v.cbor_map_length_size; value = SZ.sizet_to_uint64 (I.mixed_list_length v.cbor_map_ptr) }
+  | CBOR_Case_Map v -> { size = v.cbor_map_length_size; value = SZ.sizet_to_uint64 (IT.mixed_list_length v.cbor_map_ptr) }
   | _ -> { size = 0uy; value = 0UL }
 
 let cbor_raw_map_raw_uint64_eq
@@ -146,7 +147,7 @@ let cbor_raw_map_raw_uint64_eq
 : Lemma (cbor_raw_map_raw_uint64 x == Map?.len v)
 = match x with
   | CBOR_Case_Map vx ->
-    FStar.Math.Lemmas.small_mod (SZ.v (I.mixed_list_length vx.cbor_map_ptr)) (pow2 64)
+    FStar.Math.Lemmas.small_mod (SZ.v (IT.mixed_list_length vx.cbor_map_ptr)) (pow2 64)
   | _ -> ()
 
 // === Array pairwise comparison ===
@@ -189,8 +190,8 @@ fn compare_cbor_raw_array_case
   (len: SZ.t)
   (_: squash (
     CBOR_Case_Array? x1 /\ CBOR_Case_Array? x2 /\
-    I.mixed_list_length (CBOR_Case_Array?.v x1).cbor_array_ptr == len /\
-    I.mixed_list_length (CBOR_Case_Array?.v x2).cbor_array_ptr == len
+    IT.mixed_list_length (CBOR_Case_Array?.v x1).cbor_array_ptr == len /\
+    IT.mixed_list_length (CBOR_Case_Array?.v x2).cbor_array_ptr == len
   ))
   (#pm1: perm)
   (#v1: Ghost.erased raw_data_item)
@@ -354,8 +355,8 @@ fn compare_cbor_raw_map_case
   (len: SZ.t)
   (_: squash (
     CBOR_Case_Map? x1 /\ CBOR_Case_Map? x2 /\
-    I.mixed_list_length (CBOR_Case_Map?.v x1).cbor_map_ptr == len /\
-    I.mixed_list_length (CBOR_Case_Map?.v x2).cbor_map_ptr == len
+    IT.mixed_list_length (CBOR_Case_Map?.v x1).cbor_map_ptr == len /\
+    IT.mixed_list_length (CBOR_Case_Map?.v x2).cbor_map_ptr == len
   ))
   (#pm1: perm)
   (#v1: Ghost.erased raw_data_item)

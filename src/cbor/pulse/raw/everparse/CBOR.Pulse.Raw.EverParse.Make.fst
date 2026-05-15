@@ -16,6 +16,7 @@ module S = Pulse.Lib.Slice
 module R = Pulse.Lib.Reference
 module Trade = Pulse.Lib.Trade.Util
 module I = LowParse.PulseParse.Iterator
+module IT = LowParse.PulseParse.Iterator.Type
 
 (* ================================================================ *)
 (* Helper: fold cbor_raw_match from cbor_raw_match_content           *)
@@ -470,6 +471,7 @@ ensures cbor_raw_match pm xl xh
 
 #pop-options
 
+#push-options "--z3rlimit 32"
 let cbor_mk_array_xh
   (len_size: integer_size)
   (mlen: SZ.t)
@@ -485,19 +487,20 @@ let cbor_mk_array_xh
     Array ru l
   else
     Simple 0uy
+#pop-options
 
 #push-options "--z3rlimit 256 --fuel 2 --ifuel 2"
 
 fn cbor_mk_array
   (f64: squash SZ.fits_u64)
   (len_size: integer_size)
-  (ml: I.mixed_list cbor_raw)
+  (ml: IT.mixed_list cbor_raw)
   (#pm: perm)
   (#l: Ghost.erased (list raw_data_item))
 requires
   I.mixed_list_match cbor_raw_match parse_raw_data_item pm ml l **
   pure (
-    let len = SZ.v (I.mixed_list_length ml) in
+    let len = SZ.v (IT.mixed_list_length ml) in
     FStar.UInt.fits len 64 /\
     raw_uint64_size_prop len_size (U64.uint_to_t len) /\
     List.Tot.length l == len
@@ -508,15 +511,15 @@ ensures exists* xh .
   Trade.trade
     (cbor_raw_match 1.0R res xh)
     (I.mixed_list_match cbor_raw_match parse_raw_data_item pm ml l) **
-  pure (xh == cbor_mk_array_xh len_size (I.mixed_list_length ml) l)
+  pure (xh == cbor_mk_array_xh len_size (IT.mixed_list_length ml) l)
 {
   let the_prop =
-    (let len = SZ.v (I.mixed_list_length ml) in
+    (let len = SZ.v (IT.mixed_list_length ml) in
      FStar.UInt.fits len 64 /\
      raw_uint64_size_prop len_size (U64.uint_to_t len) /\
      List.Tot.length l == len);
   let sq = elim_pure_explicit the_prop;
-  let len_sz = I.mixed_list_length ml;
+  let len_sz = IT.mixed_list_length ml;
   let len64 = SZ.sizet_to_uint64 len_sz;
   let ru : raw_uint64 = { size = len_size; value = len64 };
   let v : cbor_array cbor_raw = {
@@ -644,7 +647,7 @@ let cbor_mk_map_xh
 fn cbor_mk_map
   (f64: squash SZ.fits_u64)
   (len_size: integer_size)
-  (ml: I.mixed_list (cbor_map_entry cbor_raw))
+  (ml: IT.mixed_list (cbor_map_entry cbor_raw))
   (#pm: perm)
   (#l: Ghost.erased (list (raw_data_item & raw_data_item)))
 requires
@@ -653,7 +656,7 @@ requires
       cbor_map_entry_match cbor_raw_match pm' elem x)
     (nondep_then parse_raw_data_item parse_raw_data_item) pm ml l **
   pure (
-    let len = SZ.v (I.mixed_list_length ml) in
+    let len = SZ.v (IT.mixed_list_length ml) in
     FStar.UInt.fits len 64 /\
     raw_uint64_size_prop len_size (U64.uint_to_t len) /\
     List.Tot.length l == len
@@ -667,15 +670,15 @@ ensures exists* xh .
       (fun (pm': perm) (elem: cbor_map_entry cbor_raw) (x: (raw_data_item & raw_data_item)) ->
         cbor_map_entry_match cbor_raw_match pm' elem x)
       (nondep_then parse_raw_data_item parse_raw_data_item) pm ml l) **
-  pure (xh == cbor_mk_map_xh len_size (I.mixed_list_length ml) l)
+  pure (xh == cbor_mk_map_xh len_size (IT.mixed_list_length ml) l)
 {
   let the_prop =
-    (let len = SZ.v (I.mixed_list_length ml) in
+    (let len = SZ.v (IT.mixed_list_length ml) in
      FStar.UInt.fits len 64 /\
      raw_uint64_size_prop len_size (U64.uint_to_t len) /\
      List.Tot.length l == len);
   let sq = elim_pure_explicit the_prop;
-  let len_sz = I.mixed_list_length ml;
+  let len_sz = IT.mixed_list_length ml;
   let len64 = SZ.sizet_to_uint64 len_sz;
   let ru : raw_uint64 = { size = len_size; value = len64 };
   let v : cbor_map cbor_raw = {

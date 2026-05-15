@@ -1,6 +1,6 @@
 module CBOR.Pulse.API.Nondet.Type
 module Raw = CBOR.Pulse.Raw.EverParse.Type
-module I = LowParse.PulseParse.Iterator
+module I = LowParse.PulseParse.Iterator.Type
 
 let cbor_nondet_t = Raw.cbor_raw
 

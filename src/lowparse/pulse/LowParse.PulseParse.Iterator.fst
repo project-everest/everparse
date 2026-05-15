@@ -2,6 +2,7 @@ module LowParse.PulseParse.Iterator
 #lang-pulse
 include LowParse.PulseParse.Base
 include LowParse.PulseParse.VCList
+open LowParse.PulseParse.Iterator.Type
 open Pulse.Lib.Pervasives
 
 module S = Pulse.Lib.Slice.Util
@@ -17,50 +18,10 @@ let share_t = LowParse.PulseParse.Base.share_t
 
 let gather_t = LowParse.PulseParse.Base.gather_t
 
-noeq
-type base_mixed_list ([@@@strictly_positive] t: Type) =
-| Empty
-| Singleton: (sp: perm) -> (sv: perm) -> (sr: ref t) -> base_mixed_list t
-| Slice: (sp: perm) -> (sv: perm) -> (ss: S.slice t) -> base_mixed_list t
-| Serialized: (sp: perm) -> (count: SZ.t) -> (payload: S.slice U8.t) -> base_mixed_list t
-
-noeq
-type mixed_list ([@@@strictly_positive] t: Type) =
-| Base of base_mixed_list t
-| Append:
-  (depth: Ghost.erased nat) ->
-  (cb: SZ.t) ->
-  (ca: SZ.t { SZ.fits (SZ.v cb + SZ.v ca) }) ->
-  (ob: SZ.t) ->
-  (bp: perm) ->
-  (before: ref (mixed_list t)) ->
-  (oa: SZ.t) ->
-  (ap: perm) ->
-  (after: ref (mixed_list t)) ->
-  mixed_list t
-
 let mixed_list_depth (#t: Type) (i: mixed_list t) : GTot nat =
   match i with
   | Base _ -> 0
   | Append depth _ _ _ _ _ _ _ _ -> Ghost.reveal depth
-
-let base_mixed_list_length
-  (#t: Type)
-  (i: base_mixed_list t)
-: Tot SZ.t
-= match i with
-  | Empty -> 0sz
-  | Singleton _ _ _ -> 1sz
-  | Slice _ _ sl -> S.len sl
-  | Serialized _ count _ -> count
-
-let mixed_list_length
-  (#t: Type)
-  (i: mixed_list t)
-: Tot SZ.t
-= match i with
-  | Base bi -> base_mixed_list_length bi
-  | Append _ cb ca _ _ _ _ _ _ -> SZ.add cb ca
 
 module SM = Pulse.Lib.SeqMatch
 
@@ -4095,12 +4056,6 @@ ensures
 ```
 
 #pop-options
-
-noeq
-type iterator ([@@@strictly_positive] t: Type) = {
-  before: base_mixed_list t;
-  after: mixed_list t
-}
 
 let iterator_match
   (#t: Type)

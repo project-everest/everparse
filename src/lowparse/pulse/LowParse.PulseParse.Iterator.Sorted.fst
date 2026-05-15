@@ -3,6 +3,7 @@ module LowParse.PulseParse.Iterator.Sorted
 
 open Pulse.Lib.Pervasives
 open Pulse.Lib.Trade
+open LowParse.PulseParse.Iterator.Type
 open LowParse.PulseParse.Iterator
 
 module S = Pulse.Lib.Slice.Util

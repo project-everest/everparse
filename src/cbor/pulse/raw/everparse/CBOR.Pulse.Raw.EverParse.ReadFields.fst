@@ -16,6 +16,7 @@ module R = Pulse.Lib.Reference
 module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
 module I = LowParse.PulseParse.Iterator
+module IT = LowParse.PulseParse.Iterator.Type
 module Access = CBOR.Pulse.Raw.EverParse.Access
 
 (* ======== Field-level value prop ======== *)
@@ -30,9 +31,9 @@ let cbor_raw_match_fields_prop (x: cbor_raw) (y: raw_data_item) : prop =
   | CBOR_Case_String v, String ty vi sv ->
     v.cbor_string_type == ty
   | CBOR_Case_Array v, Array vi sub ->
-    U64.v (U64.uint_to_t (SZ.v (I.mixed_list_length v.cbor_array_ptr))) == List.Tot.length sub
+    U64.v (U64.uint_to_t (SZ.v (IT.mixed_list_length v.cbor_array_ptr))) == List.Tot.length sub
   | CBOR_Case_Map v, Map vi sub ->
-    U64.v (U64.uint_to_t (SZ.v (I.mixed_list_length v.cbor_map_ptr))) == List.Tot.length sub
+    U64.v (U64.uint_to_t (SZ.v (IT.mixed_list_length v.cbor_map_ptr))) == List.Tot.length sub
   | CBOR_Case_Tagged v, Tagged vi sub ->
     v.cbor_tagged_tag.value == vi.value
   | CBOR_Case_Tagged_Serialized v, Tagged vi sub ->
@@ -213,7 +214,7 @@ ensures cbor_raw_match pm x y ** pure (tagged_tag_value_of (Ghost.reveal y) == S
 
 let cbor_raw_array_length (x: cbor_raw) : Tot (option U64.t) =
   match x with
-  | CBOR_Case_Array v -> Some (SZ.sizet_to_uint64 (I.mixed_list_length v.cbor_array_ptr))
+  | CBOR_Case_Array v -> Some (SZ.sizet_to_uint64 (IT.mixed_list_length v.cbor_array_ptr))
   | _ -> None
 
 let array_length_of (y: raw_data_item) : Tot (option nat) =
@@ -238,7 +239,7 @@ ensures cbor_raw_match pm x y ** pure (array_length_of (Ghost.reveal y) == Some 
 
 let cbor_raw_map_length (x: cbor_raw) : Tot (option U64.t) =
   match x with
-  | CBOR_Case_Map v -> Some (SZ.sizet_to_uint64 (I.mixed_list_length v.cbor_map_ptr))
+  | CBOR_Case_Map v -> Some (SZ.sizet_to_uint64 (IT.mixed_list_length v.cbor_map_ptr))
   | _ -> None
 
 let map_length_of (y: raw_data_item) : Tot (option nat) =
