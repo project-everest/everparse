@@ -166,3 +166,48 @@ fn cbor_raw_match_fuel_gather_t
 {
   cbor_raw_match_fuel_gather n xl #pm #(Ghost.hide xh) #pm' #(Ghost.hide xh')
 }
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+ghost
+fn rec cbor_raw_match_fuel_weaken
+  (n: nat)
+  (n': nat { n' >= n })
+  (xl: cbor_raw)
+  (#pm: perm)
+  (#xh: Ghost.erased raw_data_item)
+requires cbor_raw_match_fuel n pm xl xh
+ensures cbor_raw_match_fuel n' pm xl xh
+decreases n
+{
+  if (n = 0) {
+    cbor_raw_match_fuel_eq_zero pm xl (Ghost.reveal xh);
+    rewrite (cbor_raw_match_fuel n pm xl (Ghost.reveal xh))
+         as (pure False);
+    unreachable ()
+  } else {
+    let m : nat = n - 1;
+    let m' : nat = n' - 1;
+    cbor_raw_match_fuel_eq_succ n pm xl (Ghost.reveal xh);
+    rewrite (cbor_raw_match_fuel n pm xl (Ghost.reveal xh))
+         as (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel m) pm xl (Ghost.reveal xh));
+    ghost fn weaken_rec
+      (x1: cbor_raw) (pm0: perm) (x2: raw_data_item { x2 << Ghost.reveal xh })
+    requires cbor_raw_match_fuel m pm0 x1 x2
+    ensures cbor_raw_match_fuel m' pm0 x1 x2
+    {
+      cbor_raw_match_fuel_weaken m m' x1 #pm0 #(Ghost.hide x2)
+    };
+    cbor_raw_match_aux_weaken
+      (cbor_raw_match_fuel m)
+      (cbor_raw_match_fuel m')
+      parse_raw_data_item
+      xl
+      weaken_rec;
+    cbor_raw_match_fuel_eq_succ n' pm xl (Ghost.reveal xh);
+    rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel m') pm xl (Ghost.reveal xh))
+         as (cbor_raw_match_fuel n' pm xl (Ghost.reveal xh));
+  }
+}
+
+#pop-options
