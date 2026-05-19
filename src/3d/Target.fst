@@ -942,7 +942,11 @@ let print_c_entry
      | Some _ -> " = 0"
      | None -> ""
    in
+   let use_error_handler_macro = Options.get_use_error_handler_macro () in
    let default_error_handler =
+     if use_error_handler_macro
+     then ""
+     else
      let frame_decl =
          "EVERPARSE_ERROR_FRAME *frame = (EVERPARSE_ERROR_FRAME*)context;"
      in
@@ -969,6 +973,9 @@ let print_c_entry
              );\n\
            }"
           frame_decl
+   in
+   let error_handler_arg =
+     if use_error_handler_macro then "" else " &DefaultErrorHandler,"
    in
    let input_stream_binding = Options.get_input_stream_binding () in
    let is_input_stream_buffer = HashingOptions.InputStreamBuffer? input_stream_binding in
@@ -1010,7 +1017,7 @@ let print_c_entry
        ^ "frame.filled = FALSE;\n\t"
        ^ (if is_input_stream_buffer then ""
           else "input = EverParseMakeInputBuffer(base);\n\t")
-       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);\n\n\t" name params
+       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s base, len, 0);\n\n\t" name params error_handler_arg
        ^ tail
      else
        (if goto_return then "BOOLEAN result = FALSE;\n\t" else "")
@@ -1018,13 +1025,14 @@ let print_c_entry
         "EVERPARSE_ERROR_FRAME frame%s;\n\t\
         frame.filled = FALSE;\n\t\
         %s\
-        uint64_t ep_status = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);\n\n\t\
+        uint64_t ep_status = %s(%s (uint8_t*)&frame,%s base, len, 0);\n\n\t\
         %s"
         struct_zero
         (if is_input_stream_buffer then ""
           else "EVERPARSE_INPUT_BUFFER input = EverParseMakeInputBuffer(base);\n\t")
          name
          params
+         error_handler_arg
          tail
    in
    let probe_prefix probe wrappedName : ML string =
@@ -1172,7 +1180,7 @@ let print_c_entry
           frame.reason = \"UNKNOWN\";\n\t\
           frame.error_code = 0uL;\n\t"
        ^ "input = EverParseMakeInputBuffer(base);\n\t"
-       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input, 0);\n\t" name params
+       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s input, 0);\n\t" name params error_handler_arg
        ^ "parsedSize = EverParseGetValidatorErrorPos(ep_status);\n\n\t"
        ^ tail
      else
@@ -1185,11 +1193,12 @@ let print_c_entry
                 .error_code = 0uL\n\
               };\n\
         EVERPARSE_INPUT_BUFFER input = EverParseMakeInputBuffer(base);\n\t\
-        uint64_t ep_status = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input, 0);\n\t\
+        uint64_t ep_status = %s(%s (uint8_t*)&frame,%s input, 0);\n\t\
         uint64_t parsedSize = EverParseGetValidatorErrorPos(ep_status);\n\n\t\
         %s"
         name
         params
+        error_handler_arg
         tail
    in
    let mk_param (name: string) (typ: string) : Tot param =
