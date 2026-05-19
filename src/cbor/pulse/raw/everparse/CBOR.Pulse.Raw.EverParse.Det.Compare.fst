@@ -760,6 +760,55 @@ ensures
 
 #pop-options
 
+// Compare two cbor data items each represented as pts_to_parsed_strong_prefix
+// slices (only a prefix is the data item; rest is arbitrary). We use the jumper
+// to find the exact extent of each data item, byte-compare exact subslices,
+// and re-fold strong_prefix at the end.
+//
+// Used for the ESerialized case of a CBOR_Case_Tagged_Serialized payload, where
+// the tagged-serialized struct stores a pts_to_parsed_strong_prefix slice.
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+inline_for_extraction
+fn byte_compare_pts_to_parsed_strong_prefix_data_item
+  (f64: squash SZ.fits_u64)
+  (s1 s2: S.slice byte)
+  (#p1: perm) (#v1: Ghost.erased raw_data_item)
+  (#p2: perm) (#v2: Ghost.erased raw_data_item)
+requires
+  PPB.pts_to_parsed_strong_prefix parse_raw_data_item s1 #p1 v1 **
+  PPB.pts_to_parsed_strong_prefix parse_raw_data_item s2 #p2 v2
+returns res: I16.t
+ensures
+  PPB.pts_to_parsed_strong_prefix parse_raw_data_item s1 #p1 v1 **
+  PPB.pts_to_parsed_strong_prefix parse_raw_data_item s2 #p2 v2 **
+  pure (same_sign (I16.v res) (cbor_compare v1 v2))
+{
+  // Step 1: extract exact-extent slices via jumper, with trades back to strong_prefix
+  let ex1 = PPB.pts_to_parsed_strong_prefix_to_serialized_trade
+              serialize_raw_data_item (jump_raw_data_item f64) s1;
+  let ex2 = PPB.pts_to_parsed_strong_prefix_to_serialized_trade
+              serialize_raw_data_item (jump_raw_data_item f64) s2;
+  // Step 2: byte-compare via the same pattern as the parsed variant
+  cbor_compare_correct (Ghost.reveal v1) (Ghost.reveal v2);
+  SCE.serialize_cbor_eq_bare_serialize (Ghost.reveal v1);
+  SCE.serialize_cbor_eq_bare_serialize (Ghost.reveal v2);
+  unfold (LPS.pts_to_serialized serialize_raw_data_item ex1 #p1 (Ghost.reveal v1));
+  unfold (LPS.pts_to_serialized serialize_raw_data_item ex2 #p2 (Ghost.reveal v2));
+  let res = lex_compare_bytes ex1 ex2;
+  fold (LPS.pts_to_serialized serialize_raw_data_item ex1 #p1 (Ghost.reveal v1));
+  fold (LPS.pts_to_serialized serialize_raw_data_item ex2 #p2 (Ghost.reveal v2));
+  // Step 3: eliminate trades back to strong_prefix
+  Trade.elim (LPS.pts_to_serialized serialize_raw_data_item ex1 #p1 (Ghost.reveal v1))
+             (PPB.pts_to_parsed_strong_prefix parse_raw_data_item s1 #p1 v1);
+  Trade.elim (LPS.pts_to_serialized serialize_raw_data_item ex2 #p2 (Ghost.reveal v2))
+             (PPB.pts_to_parsed_strong_prefix parse_raw_data_item s2 #p2 v2);
+  res
+}
+
+#pop-options
+
 // === Final recursive entry point (placeholder during fuel refactor;
 //     will be rewritten to wrap impl_cbor_compare_fuel) ===
 
