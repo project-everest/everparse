@@ -958,6 +958,276 @@ let cbor_map_entry_vmatch_fuel_gather_t (n: nat) : I.gather_t (cbor_map_entry_vm
 
 #pop-options
 
+// === Phase D: fuel-aware array compare via iterator_next_eos ===
+
+#push-options "--z3rlimit 256 --fuel 2 --ifuel 2 --split_queries always"
+
+inline_for_extraction
+fn compare_cbor_raw_fuel_array_case
+  (f64: squash SZ.fits_u64)
+  (n: nat { n >= 1 })
+  (ih: compare_cbor_raw_fuel_t (n - 1))
+  (x1: cbor_raw)
+  (x2: cbor_raw)
+  (len: SZ.t)
+  (_: squash (
+    CBOR_Case_Array? x1 /\ CBOR_Case_Array? x2 /\
+    IT.mixed_list_length (CBOR_Case_Array?.v x1).cbor_array_ptr == len /\
+    IT.mixed_list_length (CBOR_Case_Array?.v x2).cbor_array_ptr == len
+  ))
+  (#pm1: perm)
+  (#v1: Ghost.erased raw_data_item)
+  (#pm2: perm)
+  (#v2: Ghost.erased raw_data_item)
+requires
+  cbor_raw_match_fuel n pm1 x1 v1 **
+  cbor_raw_match_fuel n pm2 x2 v2 **
+  pure (
+    Array? (Ghost.reveal v1) /\ Array? (Ghost.reveal v2) /\
+    List.Tot.length (array_v (Ghost.reveal v1)) == SZ.v len /\
+    List.Tot.length (array_v (Ghost.reveal v2)) == SZ.v len
+  )
+returns res: I16.t
+ensures
+  cbor_raw_match_fuel n pm1 x1 v1 **
+  cbor_raw_match_fuel n pm2 x2 v2 **
+  pure (same_sign (I16.v res) (cbor_compare_array_total (array_v (Ghost.reveal v1)) (array_v (Ghost.reveal v2))))
+{
+
+  // Unfold cbor_raw_match_fuel n on both sides to cbor_raw_match_aux
+  cbor_raw_match_fuel_eq_succ n pm1 x1 v1;
+  cbor_raw_match_fuel_eq_succ n pm2 x2 v2;
+  rewrite (cbor_raw_match_fuel n pm1 x1 v1)
+       as (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1);
+  rewrite (cbor_raw_match_fuel n pm2 x2 v2)
+       as (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2);
+
+  // --- Side 1: get array, build trade chain ending at cbor_raw_match_fuel n ---
+  let ar_ml1 = cbor_raw_get_array_aux (cbor_raw_match_fuel (n - 1)) pm1 x1 ();
+  with pm1_a ar1 . assert (
+    I.mixed_list_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pm1_a ar_ml1 ar1 **
+    trade (I.mixed_list_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pm1_a ar_ml1 ar1)
+          (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+  );
+  // Build trade: cbor_raw_match_aux → cbor_raw_match_fuel n
+  intro
+    (trade
+      (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+      (cbor_raw_match_fuel n pm1 x1 v1))
+    #emp
+    fn _ {
+      cbor_raw_match_fuel_eq_succ n pm1 x1 v1;
+      rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+           as (cbor_raw_match_fuel n pm1 x1 v1)
+    };
+  Trade.trans
+    (I.mixed_list_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pm1_a ar_ml1 ar1)
+    (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+    (cbor_raw_match_fuel n pm1 x1 v1);
+
+  // --- Side 2: same as side 1 ---
+  let ar_ml2 = cbor_raw_get_array_aux (cbor_raw_match_fuel (n - 1)) pm2 x2 ();
+  with pm2_a ar2 . assert (
+    I.mixed_list_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pm2_a ar_ml2 ar2 **
+    trade (I.mixed_list_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pm2_a ar_ml2 ar2)
+          (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+  );
+  intro
+    (trade
+      (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+      (cbor_raw_match_fuel n pm2 x2 v2))
+    #emp
+    fn _ {
+      cbor_raw_match_fuel_eq_succ n pm2 x2 v2;
+      rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+           as (cbor_raw_match_fuel n pm2 x2 v2)
+    };
+  Trade.trans
+    (I.mixed_list_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pm2_a ar_ml2 ar2)
+    (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+    (cbor_raw_match_fuel n pm2 x2 v2);
+
+  // Start iterators
+  let it1_init = I.iterator_start
+    (cbor_raw_match_fuel (n - 1))
+    parse_raw_data_item (jump_raw_data_item f64)
+    pm1_a ar_ml1 ar1
+    (cbor_raw_match_fuel_share_t (n - 1))
+    (cbor_raw_match_fuel_gather_t (n - 1));
+  Trade.trans _ _ (cbor_raw_match_fuel n pm1 x1 v1);
+  let it2_init = I.iterator_start
+    (cbor_raw_match_fuel (n - 1))
+    parse_raw_data_item (jump_raw_data_item f64)
+    pm2_a ar_ml2 ar2
+    (cbor_raw_match_fuel_share_t (n - 1))
+    (cbor_raw_match_fuel_gather_t (n - 1));
+  Trade.trans _ _ (cbor_raw_match_fuel n pm2 x2 v2);
+
+  let mut r_it1 = it1_init;
+  let mut r_it2 = it2_init;
+  let mut r_acc : I16.t = 0s;
+  let mut r_cnt = 0sz;
+
+  while (
+    let acc = !r_acc;
+    let cnt = !r_cnt;
+    (SZ.lt cnt len && acc = 0s)
+  ) invariant exists* it1c it2c (acc_c: I16.t) cnt_c rem1 rem2 pm1c pm2c .
+    R.pts_to r_it1 it1c **
+    R.pts_to r_it2 it2c **
+    R.pts_to r_acc acc_c **
+    R.pts_to r_cnt cnt_c **
+    I.iterator_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pm1c it1c rem1 **
+    I.iterator_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pm2c it2c rem2 **
+    trade (I.iterator_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pm1c it1c rem1)
+          (cbor_raw_match_fuel n pm1 x1 v1) **
+    trade (I.iterator_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pm2c it2c rem2)
+          (cbor_raw_match_fuel n pm2 x2 v2) **
+    pure (
+      SZ.v cnt_c <= SZ.v len /\
+      List.Tot.length rem1 == SZ.v len - SZ.v cnt_c /\
+      List.Tot.length rem2 == SZ.v len - SZ.v cnt_c /\
+      Ghost.reveal ar1 == array_v (Ghost.reveal v1) /\
+      Ghost.reveal ar2 == array_v (Ghost.reveal v2) /\
+      (I16.v acc_c == 0 ==>
+        cbor_compare_array_total (Ghost.reveal ar1) (Ghost.reveal ar2) ==
+        cbor_compare_array_total rem1 rem2) /\
+      (I16.v acc_c <> 0 ==>
+        same_sign (I16.v acc_c) (cbor_compare_array_total (Ghost.reveal ar1) (Ghost.reveal ar2)))
+    )
+  {
+    let e1 = I.iterator_next_eos
+      (cbor_raw_match_fuel (n - 1))
+      parse_raw_data_item
+      (jump_raw_data_item f64)
+      _ r_it1 _ _
+      (cbor_raw_match_fuel_share_t (n - 1))
+      (cbor_raw_match_fuel_gather_t (n - 1));
+    unfold (I.iterator_next_eos_post (cbor_raw_match_fuel (n - 1)) parse_raw_data_item _ r_it1 _ _ e1);
+    with pmv1 hdv1 tl1 it1n pm1n . assert (
+      I.elt_or_serialized_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pmv1 e1 hdv1 **
+      R.pts_to r_it1 it1n **
+      I.iterator_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pm1n it1n tl1
+    );
+    Trade.trans _ _ (cbor_raw_match_fuel n pm1 x1 v1);
+
+    let e2 = I.iterator_next_eos
+      (cbor_raw_match_fuel (n - 1))
+      parse_raw_data_item
+      (jump_raw_data_item f64)
+      _ r_it2 _ _
+      (cbor_raw_match_fuel_share_t (n - 1))
+      (cbor_raw_match_fuel_gather_t (n - 1));
+    unfold (I.iterator_next_eos_post (cbor_raw_match_fuel (n - 1)) parse_raw_data_item _ r_it2 _ _ e2);
+    with pmv2 hdv2 tl2 it2n pm2n . assert (
+      I.elt_or_serialized_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pmv2 e2 hdv2 **
+      R.pts_to r_it2 it2n **
+      I.iterator_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pm2n it2n tl2
+    );
+    Trade.trans _ _ (cbor_raw_match_fuel n pm2 x2 v2);
+
+    // 4-way dispatch via nested match (tail position; updates r_acc/r_cnt inside each branch)
+    let old_cnt = !r_cnt;
+    match e1 {
+      EElement xx1 -> {
+        rewrite (I.elt_or_serialized_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pmv1 (EElement xx1) hdv1)
+             as (cbor_raw_match_fuel (n - 1) pmv1 xx1 hdv1);
+        match e2 {
+          EElement xx2 -> {
+            rewrite (I.elt_or_serialized_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pmv2 (EElement xx2) hdv2)
+                 as (cbor_raw_match_fuel (n - 1) pmv2 xx2 hdv2);
+            let r2 = ih xx1 xx2 #pmv1 #hdv1 #pmv2 #hdv2;
+            rewrite (cbor_raw_match_fuel (n - 1) pmv2 xx2 hdv2)
+                 as (I.elt_or_serialized_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pmv2 (EElement xx2) hdv2);
+            rewrite (cbor_raw_match_fuel (n - 1) pmv1 xx1 hdv1)
+                 as (I.elt_or_serialized_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pmv1 (EElement xx1) hdv1);
+            Trade.elim_hyp_l _ _ (cbor_raw_match_fuel n pm1 x1 v1);
+            Trade.elim_hyp_l _ _ (cbor_raw_match_fuel n pm2 x2 v2);
+            r_acc := r2;
+            r_cnt := SZ.add old_cnt 1sz;
+          }
+          ESerialized s2 -> {
+            rewrite (I.elt_or_serialized_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pmv2 (ESerialized s2) hdv2)
+                 as (PPB.pts_to_parsed parse_raw_data_item s2 #pmv2 hdv2);
+            cbor_raw_match_fuel_implies_pos (n - 1) xx1 #pmv1 #hdv1;
+            // Convert pts_to_parsed → strong_prefix at pmv2/2 + trade-back
+            PPB.pts_to_parsed_weaken_strong_prefix parse_raw_data_item s2;
+            // Read the cbor_raw from the strong_prefix slice
+            let reader = cbor_raw_read_fuel (n - 1) (pmv2 /. 2.0R) f64;
+            let xx2 = reader s2 #(pmv2 /. 2.0R) #hdv2;
+            // Compose trades: cbor_raw_match_fuel (n - 1) (pmv2/2) → strong_prefix #(pmv2/2) → pts_to_parsed #pmv2
+            Trade.trans
+              (cbor_raw_match_fuel (n - 1) (pmv2 /. 2.0R) xx2 hdv2)
+              (PPB.pts_to_parsed_strong_prefix parse_raw_data_item s2 #(pmv2 /. 2.0R) hdv2)
+              (PPB.pts_to_parsed parse_raw_data_item s2 #pmv2 hdv2);
+            let r2 = ih xx1 xx2 #pmv1 #hdv1 #(pmv2 /. 2.0R) #hdv2;
+            Trade.elim
+              (cbor_raw_match_fuel (n - 1) (pmv2 /. 2.0R) xx2 hdv2)
+              (PPB.pts_to_parsed parse_raw_data_item s2 #pmv2 hdv2);
+            rewrite (PPB.pts_to_parsed parse_raw_data_item s2 #pmv2 hdv2)
+                 as (I.elt_or_serialized_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pmv2 (ESerialized s2) hdv2);
+            rewrite (cbor_raw_match_fuel (n - 1) pmv1 xx1 hdv1)
+                 as (I.elt_or_serialized_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pmv1 (EElement xx1) hdv1);
+            Trade.elim_hyp_l _ _ (cbor_raw_match_fuel n pm1 x1 v1);
+            Trade.elim_hyp_l _ _ (cbor_raw_match_fuel n pm2 x2 v2);
+            r_acc := r2;
+            r_cnt := SZ.add old_cnt 1sz;
+          }
+        }
+      }
+      ESerialized s1 -> {
+        rewrite (I.elt_or_serialized_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pmv1 (ESerialized s1) hdv1)
+             as (PPB.pts_to_parsed parse_raw_data_item s1 #pmv1 hdv1);
+        match e2 {
+          EElement xx2 -> {
+            rewrite (I.elt_or_serialized_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pmv2 (EElement xx2) hdv2)
+                 as (cbor_raw_match_fuel (n - 1) pmv2 xx2 hdv2);
+            cbor_raw_match_fuel_implies_pos (n - 1) xx2 #pmv2 #hdv2;
+            PPB.pts_to_parsed_weaken_strong_prefix parse_raw_data_item s1;
+            let reader = cbor_raw_read_fuel (n - 1) (pmv1 /. 2.0R) f64;
+            let xx1 = reader s1 #(pmv1 /. 2.0R) #hdv1;
+            Trade.trans
+              (cbor_raw_match_fuel (n - 1) (pmv1 /. 2.0R) xx1 hdv1)
+              (PPB.pts_to_parsed_strong_prefix parse_raw_data_item s1 #(pmv1 /. 2.0R) hdv1)
+              (PPB.pts_to_parsed parse_raw_data_item s1 #pmv1 hdv1);
+            let r2 = ih xx1 xx2 #(pmv1 /. 2.0R) #hdv1 #pmv2 #hdv2;
+            Trade.elim
+              (cbor_raw_match_fuel (n - 1) (pmv1 /. 2.0R) xx1 hdv1)
+              (PPB.pts_to_parsed parse_raw_data_item s1 #pmv1 hdv1);
+            rewrite (cbor_raw_match_fuel (n - 1) pmv2 xx2 hdv2)
+                 as (I.elt_or_serialized_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pmv2 (EElement xx2) hdv2);
+            rewrite (PPB.pts_to_parsed parse_raw_data_item s1 #pmv1 hdv1)
+                 as (I.elt_or_serialized_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pmv1 (ESerialized s1) hdv1);
+            Trade.elim_hyp_l _ _ (cbor_raw_match_fuel n pm1 x1 v1);
+            Trade.elim_hyp_l _ _ (cbor_raw_match_fuel n pm2 x2 v2);
+            r_acc := r2;
+            r_cnt := SZ.add old_cnt 1sz;
+          }
+          ESerialized s2 -> {
+            rewrite (I.elt_or_serialized_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pmv2 (ESerialized s2) hdv2)
+                 as (PPB.pts_to_parsed parse_raw_data_item s2 #pmv2 hdv2);
+            let r2 = byte_compare_pts_to_parsed_data_item s1 s2;
+            rewrite (PPB.pts_to_parsed parse_raw_data_item s2 #pmv2 hdv2)
+                 as (I.elt_or_serialized_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pmv2 (ESerialized s2) hdv2);
+            rewrite (PPB.pts_to_parsed parse_raw_data_item s1 #pmv1 hdv1)
+                 as (I.elt_or_serialized_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pmv1 (ESerialized s1) hdv1);
+            Trade.elim_hyp_l _ _ (cbor_raw_match_fuel n pm1 x1 v1);
+            Trade.elim_hyp_l _ _ (cbor_raw_match_fuel n pm2 x2 v2);
+            r_acc := r2;
+            r_cnt := SZ.add old_cnt 1sz;
+          }
+        }
+      }
+    }
+  };
+  // After loop: trade back to cbor_raw_match_fuel n
+  Trade.elim _ (cbor_raw_match_fuel n pm1 x1 v1);
+  Trade.elim _ (cbor_raw_match_fuel n pm2 x2 v2);
+  !r_acc
+}
+
+#pop-options
+
 // === Final recursive entry point (placeholder during fuel refactor;
 //     will be rewritten to wrap impl_cbor_compare_fuel) ===
 
