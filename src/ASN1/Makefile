@@ -1,53 +1,30 @@
 all: verify compile
 
-EVERPARSE_HOME ?= ../..
+EVERPARSE_SRC_PATH = $(realpath ..)
 
-LOWPARSE_HOME=$(EVERPARSE_HOME)/src/lowparse
+LOWPARSE_HOME = $(EVERPARSE_SRC_PATH)/lowparse
 
-INCLUDE_PATH = $(LOWPARSE_HOME)
+INCLUDE_PATHS += $(LOWPARSE_HOME)
 
-FSTAR_OPTIONS = --cache_checked_modules --ext optimize_let_vc \
-		--already_cached *,-ASN1Test,-ASN1 \
-	        --odir ocaml/extracted \
-		$(addprefix --include ,$(INCLUDE_PATH)) \
-		$(OTHERFLAGS)
+ALREADY_CACHED := *,-ASN1Test,-ASN1,
 
+OUTPUT_DIRECTORY := ocaml/extracted
 
-FSTAR_EXE ?= fstar.exe
+FSTAR_DEP_OPTIONS := --extract '* -Prims -FStar -LowParse.Low -ASN1Test -ASN1.Low'
 
-FSTAR = $(FSTAR_EXE) $(FSTAR_OPTIONS)
+NOT_INCLUDED = ASN1.Tmp.fst ASN1.Test.Interpreter.fst $(wildcard ASN1.Low.*) ASN1Test.fst $(wildcard ASN1.bak*)
 
-NOT_INCLUDED=ASN1.Tmp.fst ASN1.Test.Interpreter.fst $(wildcard ASN1.Low.*) ASN1Test.fst $(wildcard ASN1.bak*)
+FSTAR_FILES := $(filter-out $(NOT_INCLUDED),$(wildcard *.fst *.fsti))
 
-ALL_SOURCE_FILES = $(filter-out $(NOT_INCLUDED), $(wildcard *.fst *.fsti))
+clean_rules += ocaml.clean evaluation.clean clean-files
 
-.depend: $(ALL_SOURCE_FILES) Makefile
-	$(FSTAR) --dep full --extract '* -Prims -FStar -LowParse.Low -ASN1Test -ASN1.Low' $(ALL_SOURCE_FILES) --output_deps_to $@
+include $(EVERPARSE_SRC_PATH)/common.Makefile
 
-depend: .depend
-
-ifeq (,$(filter clean,$(MAKECMDGOALS)))
--include .depend
-endif
-
-$(ALL_CHECKED_FILES): %.checked:
-	$(FSTAR) $<
-	@touch -c $@
-
-verify: $(ALL_CHECKED_FILES)
-	echo $*
+FSTAR_OPTIONS += --ext optimize_let_vc
 
 extract: $(ALL_ML_FILES)
 
-%.fst-in %.fsti-in:
-	@echo $(FSTAR_OPTIONS)
-
-ocaml/extracted/%.ml:
-	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen OCaml --extract_module $(basename $(notdir $(subst .checked,,$<)))
-
-ocaml/%.krml:
-	$(FSTAR) --codegen krml $(notdir $(basename $<)) --extract_module $(notdir $(basename $(basename $<))) --warn_error '@241'
-	touch $@
+.PHONY: extract
 
 krml.rsp: $(ALL_KRML_FILES)
 	for f in $^ ; do echo $$f ; done > $@.tmp
@@ -61,9 +38,6 @@ Test.c: krml.rsp
 	  -skip-compilation \
 	  -o $@ \
 	  @$^
-
-# test: ASN1Test.c # test.exe
-#	cat $^
 
 compile: evaluation/ASN1_Parser.exe
 
@@ -79,7 +53,7 @@ eval: compile
 	$(MAKE) -C evaluation
 
 clean-files:
-	-rm -rf *.checked *.krml .depend *.c *.h *.o test.exe krml.rsp *.tmp compile_flags.txt
+	-rm -rf *.c *.h *.o test.exe krml.rsp *.tmp compile_flags.txt
 
 .PHONY: clean-files
 
@@ -88,6 +62,4 @@ clean-files:
 
 .PHONY: %.clean
 
-clean: ocaml.clean evaluation.clean clean-files
-
-.PHONY: all verify clean depend compile test eval
+.PHONY: all compile test eval
