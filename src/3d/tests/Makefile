@@ -42,7 +42,7 @@ OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules \
 	 tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs \
 	 probe iter z3-testgen-test exttype z3-testgen-probe-test specialize_test specialize_test2 \
-	 specialize_tagged_union_array
+	 specialize_tagged_union_array use_error_handler_macro
 
 .PHONY: exttype
 
@@ -93,6 +93,10 @@ specialize_test2:
 
 .PHONY: specialize_tagged_union_array
 specialize_tagged_union_array:
+	+$(MAKE) -C $@
+
+.PHONY: use_error_handler_macro
+use_error_handler_macro:
 	+$(MAKE) -C $@
 
 batch-test-negative: $(addsuffix .negtest,$(wildcard FAIL*.3d))
@@ -167,6 +171,6 @@ clean-files:
 
 .PHONY: clean-files
 
-clean: clean-files specialize_test.clean specialize_test2.clean probe.clean extern.clean exttype.clean funptr.clean ifdefs.clean iter/coarse.clean iter/fine.clean modules.clean output_types.clean static.clean tcpip.clean specialize_tagged_union_array.clean
+clean: clean-files specialize_test.clean specialize_test2.clean probe.clean extern.clean exttype.clean funptr.clean ifdefs.clean iter/coarse.clean iter/fine.clean modules.clean output_types.clean static.clean tcpip.clean specialize_tagged_union_array.clean use_error_handler_macro.clean
 
 .PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules tcpip extern %.interpret batch-interpret-test static funptr ifdefs
