@@ -809,6 +809,71 @@ ensures
 
 #pop-options
 
+// Pair-level byte-compare for the ESerialized case of a map iterator.
+// Each side is a pts_to_parsed_strong_prefix slice of (nondep_then p p),
+// where p = parse_raw_data_item. The slice content is bare_serialize s key
+// `Seq.append` bare_serialize s value followed by arbitrary suffix.
+//
+// Postcondition is expressed via the spec-level per-pair compare:
+//   if cbor_compare k1 k2 = 0 then cbor_compare v1 v2 else cbor_compare k1 k2
+
+unfold
+let cbor_compare_pair (kv1 kv2: raw_data_item & raw_data_item) : Tot int =
+  let c = cbor_compare (fst kv1) (fst kv2) in
+  if c = 0 then cbor_compare (snd kv1) (snd kv2) else c
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+inline_for_extraction
+fn byte_compare_pts_to_parsed_pair_data_item
+  (f64: squash SZ.fits_u64)
+  (s1 s2: S.slice byte)
+  (#p1: perm) (#kv1: Ghost.erased (raw_data_item & raw_data_item))
+  (#p2: perm) (#kv2: Ghost.erased (raw_data_item & raw_data_item))
+requires
+  PPB.pts_to_parsed_strong_prefix
+    (nondep_then parse_raw_data_item parse_raw_data_item)
+    s1 #p1 kv1 **
+  PPB.pts_to_parsed_strong_prefix
+    (nondep_then parse_raw_data_item parse_raw_data_item)
+    s2 #p2 kv2
+returns res: I16.t
+ensures
+  PPB.pts_to_parsed_strong_prefix
+    (nondep_then parse_raw_data_item parse_raw_data_item)
+    s1 #p1 kv1 **
+  PPB.pts_to_parsed_strong_prefix
+    (nondep_then parse_raw_data_item parse_raw_data_item)
+    s2 #p2 kv2 **
+  pure (same_sign (I16.v res) (cbor_compare_pair kv1 kv2))
+{
+  // Step 1: extract exact-extent slices via the pair jumper, with trades back to strong_prefix
+  let pair_ser = serialize_nondep_then serialize_raw_data_item serialize_raw_data_item;
+  let pair_jmp = jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64);
+  let ex1 = PPB.pts_to_parsed_strong_prefix_to_serialized_trade pair_ser pair_jmp s1;
+  let ex2 = PPB.pts_to_parsed_strong_prefix_to_serialized_trade pair_ser pair_jmp s2;
+  // Step 2: one pure lemma proves the byte-compare ↔ cbor_compare_pair equation.
+  SCE.pair_byte_compare_eq_cbor_compare_pair (Ghost.reveal kv1) (Ghost.reveal kv2);
+  // Step 3: unfold pts_to_serialized to raw S.pts_to and byte-compare
+  unfold (LPS.pts_to_serialized pair_ser ex1 #p1 (Ghost.reveal kv1));
+  unfold (LPS.pts_to_serialized pair_ser ex2 #p2 (Ghost.reveal kv2));
+  let res = lex_compare_bytes ex1 ex2;
+  fold (LPS.pts_to_serialized pair_ser ex1 #p1 (Ghost.reveal kv1));
+  fold (LPS.pts_to_serialized pair_ser ex2 #p2 (Ghost.reveal kv2));
+  // Step 4: eliminate trades back to strong_prefix
+  Trade.elim (LPS.pts_to_serialized pair_ser ex1 #p1 (Ghost.reveal kv1))
+             (PPB.pts_to_parsed_strong_prefix
+                (nondep_then parse_raw_data_item parse_raw_data_item)
+                s1 #p1 kv1);
+  Trade.elim (LPS.pts_to_serialized pair_ser ex2 #p2 (Ghost.reveal kv2))
+             (PPB.pts_to_parsed_strong_prefix
+                (nondep_then parse_raw_data_item parse_raw_data_item)
+                s2 #p2 kv2);
+  res
+}
+
+#pop-options
+
 // === Final recursive entry point (placeholder during fuel refactor;
 //     will be rewritten to wrap impl_cbor_compare_fuel) ===
 
