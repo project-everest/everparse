@@ -874,6 +874,90 @@ ensures
 
 #pop-options
 
+// === Phase C: map-entry vmatch / share / gather (fuel-aware) ===
+
+// Map entry vmatch at fuel n: cbor_map_entry_match with cbor_raw_match_fuel n
+// as the child relation.
+let cbor_map_entry_vmatch_fuel
+  (n: nat)
+  (pm: perm)
+  (elem: cbor_map_entry cbor_raw)
+  (v: (raw_data_item & raw_data_item))
+: Tot slprop
+= cbor_map_entry_match (cbor_raw_match_fuel n) pm elem v
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+ghost
+fn cbor_map_entry_vmatch_fuel_share_wrapper
+  (n: nat)
+  (entry: cbor_map_entry cbor_raw)
+  (#pm: perm)
+  (#pair: (raw_data_item & raw_data_item))
+requires cbor_map_entry_vmatch_fuel n pm entry pair
+ensures cbor_map_entry_vmatch_fuel n (pm /. 2.0R) entry pair **
+        cbor_map_entry_vmatch_fuel n (pm /. 2.0R) entry pair
+{
+  unfold (cbor_map_entry_vmatch_fuel n pm entry pair);
+  cbor_map_entry_match_share (cbor_raw_match_fuel n) (cbor_raw_match_fuel_share_t n) entry;
+  fold (cbor_map_entry_vmatch_fuel n (pm /. 2.0R) entry pair);
+  fold (cbor_map_entry_vmatch_fuel n (pm /. 2.0R) entry pair);
+}
+
+ghost
+fn cbor_map_entry_vmatch_fuel_gather_wrapper
+  (n: nat)
+  (entry: cbor_map_entry cbor_raw)
+  (#pm: perm) (#pair: (raw_data_item & raw_data_item))
+  (#pm': perm) (#pair': (raw_data_item & raw_data_item))
+requires cbor_map_entry_vmatch_fuel n pm entry pair **
+         cbor_map_entry_vmatch_fuel n pm' entry pair'
+ensures cbor_map_entry_vmatch_fuel n (pm +. pm') entry pair **
+        pure (pair == pair')
+{
+  // Mirror NC.cbor_map_entry_vmatch_gather_wrapper: unfold everything by hand,
+  // call cbor_raw_match_fuel_gather on key/value, then fold back.
+  unfold (cbor_map_entry_vmatch_fuel n pm entry pair);
+  unfold (cbor_map_entry_vmatch_fuel n pm' entry pair');
+  unfold (cbor_map_entry_match (cbor_raw_match_fuel n) pm entry pair);
+  unfold (vmatch_pair_with_proj (cbor_raw_match_fuel n pm) cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (cbor_raw_match_fuel n pm) cbor_map_entry_value_proj) entry pair);
+  unfold (vmatch_with_pair_proj (cbor_raw_match_fuel n pm) cbor_map_entry_value_proj entry (snd pair));
+  unfold (cbor_map_entry_match (cbor_raw_match_fuel n) pm' entry pair');
+  unfold (vmatch_pair_with_proj (cbor_raw_match_fuel n pm') cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (cbor_raw_match_fuel n pm') cbor_map_entry_value_proj) entry pair');
+  unfold (vmatch_with_pair_proj (cbor_raw_match_fuel n pm') cbor_map_entry_value_proj entry (snd pair'));
+  rewrite (cbor_raw_match_fuel n pm (cbor_map_entry_key_proj.pair_proj_get entry) (fst pair))
+       as (cbor_raw_match_fuel n pm entry.cbor_map_entry_key (fst pair));
+  rewrite (cbor_raw_match_fuel n pm' (cbor_map_entry_key_proj.pair_proj_get entry) (fst pair'))
+       as (cbor_raw_match_fuel n pm' entry.cbor_map_entry_key (fst pair'));
+  rewrite (cbor_raw_match_fuel n pm (cbor_map_entry_value_proj.pair_proj_get entry) (snd pair))
+       as (cbor_raw_match_fuel n pm entry.cbor_map_entry_value (snd pair));
+  rewrite (cbor_raw_match_fuel n pm' (cbor_map_entry_value_proj.pair_proj_get entry) (snd pair'))
+       as (cbor_raw_match_fuel n pm' entry.cbor_map_entry_value (snd pair'));
+  cbor_raw_match_fuel_gather n entry.cbor_map_entry_key
+    #pm #(Ghost.hide (fst pair)) #pm' #(Ghost.hide (fst pair'));
+  cbor_raw_match_fuel_gather n entry.cbor_map_entry_value
+    #pm #(Ghost.hide (snd pair)) #pm' #(Ghost.hide (snd pair'));
+  rewrite (cbor_raw_match_fuel n (pm +. pm') entry.cbor_map_entry_key (fst pair))
+       as (cbor_raw_match_fuel n (pm +. pm') (cbor_map_entry_key_proj.pair_proj_get entry) (fst pair));
+  rewrite (cbor_raw_match_fuel n (pm +. pm') entry.cbor_map_entry_value (snd pair))
+       as (cbor_raw_match_fuel n (pm +. pm') (cbor_map_entry_value_proj.pair_proj_get entry) (snd pair));
+  fold (vmatch_with_pair_proj (cbor_raw_match_fuel n (pm +. pm')) cbor_map_entry_value_proj entry (snd pair));
+  fold (vmatch_pair_with_proj (cbor_raw_match_fuel n (pm +. pm')) cbor_map_entry_key_proj
+    (vmatch_with_pair_proj (cbor_raw_match_fuel n (pm +. pm')) cbor_map_entry_value_proj) entry pair);
+  fold (cbor_map_entry_match (cbor_raw_match_fuel n) (pm +. pm') entry pair);
+  fold (cbor_map_entry_vmatch_fuel n (pm +. pm') entry pair);
+}
+
+let cbor_map_entry_vmatch_fuel_share_t (n: nat) : I.share_t (cbor_map_entry_vmatch_fuel n) =
+  cbor_map_entry_vmatch_fuel_share_wrapper n
+
+let cbor_map_entry_vmatch_fuel_gather_t (n: nat) : I.gather_t (cbor_map_entry_vmatch_fuel n) =
+  cbor_map_entry_vmatch_fuel_gather_wrapper n
+
+#pop-options
+
 // === Final recursive entry point (placeholder during fuel refactor;
 //     will be rewritten to wrap impl_cbor_compare_fuel) ===
 
