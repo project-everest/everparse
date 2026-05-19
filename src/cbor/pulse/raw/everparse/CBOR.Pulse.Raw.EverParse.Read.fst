@@ -556,36 +556,36 @@ fn cbor_raw_read_fuel_1
 
 ```pulse
 fn cbor_raw_read_fuel
-  (n: nat { n >= 1 })
+  (n: Ghost.erased nat { Ghost.reveal n >= 1 })
   (pm: perm)
   (f64: squash SZ.fits_u64)
 : PPB.zero_copy_parse_strong_prefix #cbor_raw #raw_data_item
-    (cbor_raw_match_fuel n pm)
+    (cbor_raw_match_fuel (Ghost.reveal n) pm)
     #parse_raw_data_item_kind
     parse_raw_data_item
 = (input: S.slice byte)
   (#pms: perm)
   (#v: Ghost.erased raw_data_item)
 {
-  let res = cbor_raw_read_match_aux (cbor_raw_match_fuel (n - 1)) pm f64
+  let res = cbor_raw_read_match_aux (cbor_raw_match_fuel (Ghost.reveal n - 1)) pm f64
     input;
   // Identify cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) with cbor_raw_match_fuel n
-  cbor_raw_match_fuel_eq_succ n pm res (Ghost.reveal v);
-  rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm res (Ghost.reveal v))
-       as (cbor_raw_match_fuel n pm res (Ghost.reveal v));
+  cbor_raw_match_fuel_eq_succ (Ghost.reveal n) pm res (Ghost.reveal v);
+  rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (Ghost.reveal n - 1)) pm res (Ghost.reveal v))
+       as (cbor_raw_match_fuel (Ghost.reveal n) pm res (Ghost.reveal v));
   intro
     (Trade.trade
-      (cbor_raw_match_fuel n pm res v)
+      (cbor_raw_match_fuel (Ghost.reveal n) pm res v)
       (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pms v))
     #(Trade.trade
-        (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm res v)
+        (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (Ghost.reveal n - 1)) pm res v)
         (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pms v))
     fn _ {
-      cbor_raw_match_fuel_eq_succ n pm res (Ghost.reveal v);
-      rewrite (cbor_raw_match_fuel n pm res (Ghost.reveal v))
-           as (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm res (Ghost.reveal v));
+      cbor_raw_match_fuel_eq_succ (Ghost.reveal n) pm res (Ghost.reveal v);
+      rewrite (cbor_raw_match_fuel (Ghost.reveal n) pm res (Ghost.reveal v))
+           as (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (Ghost.reveal n - 1)) pm res (Ghost.reveal v));
       Trade.elim
-        (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm res v)
+        (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (Ghost.reveal n - 1)) pm res v)
         (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pms v)
     };
   res
