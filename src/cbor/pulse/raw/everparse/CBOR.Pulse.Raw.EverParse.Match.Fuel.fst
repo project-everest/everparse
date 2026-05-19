@@ -147,6 +147,25 @@ decreases n
 #pop-options
 
 ghost
+fn cbor_raw_match_fuel_implies_pos
+  (n: nat)
+  (xl: cbor_raw)
+  (#pm: perm)
+  (#xh: Ghost.erased raw_data_item)
+requires cbor_raw_match_fuel n pm xl xh
+ensures cbor_raw_match_fuel n pm xl xh ** pure (n >= 1)
+{
+  if (n = 0) {
+    cbor_raw_match_fuel_eq_zero pm xl (Ghost.reveal xh);
+    rewrite (cbor_raw_match_fuel n pm xl (Ghost.reveal xh))
+         as (pure False);
+    unreachable ()
+  } else {
+    ()
+  }
+}
+
+ghost
 fn cbor_raw_match_fuel_share_t
   (n: nat)
 : share_t (cbor_raw_match_fuel n)
