@@ -1,4 +1,4 @@
-all: build
+all: extract
 
 EVERPARSE_SRC_PATH = $(realpath ../..)
 INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/pulse
@@ -15,6 +15,9 @@ extract: $(ALL_ML_FILES)
 
 .PHONY: all extract
 
-build: $(ALL_ML_FILES)
+extract: $(OUTPUT_DIRECTORY)/Z3Version.ml
 
-.PHONY: build
+$(OUTPUT_DIRECTORY)/Z3Version.ml:
+	rm -f $@ $@.tmp
+	echo 'let z3_version = "$(EVERPARSE_Z3_VERSION)"' > $@.tmp
+	mv $@.tmp $@

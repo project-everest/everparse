@@ -140,7 +140,7 @@ let krml_exe =
   then res1
   else Filename.concat (Filename.concat krml_home "bin") krml
 
-let z3_version = "4.13.3"
+let z3_version = Z3Version.z3_version
 
 let z3_executable_option =
   let test = run_cmd ~silent:true fstar_exe ["--locate_z3"; z3_version] in
