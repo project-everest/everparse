@@ -1,12 +1,9 @@
+all: depend verify test
+
 EVERPARSE_HOME ?= $(realpath ../../../../../..)
 EVERPARSE_SRC_PATH ?= $(EVERPARSE_HOME)/src
 
 LOWPARSE_HOME ?= $(EVERPARSE_SRC_PATH)/lowparse
-
-include $(EVERPARSE_SRC_PATH)/fstar.Makefile
-
-export FSTAR_EXE
-export LOWPARSE_HOME
 
 ifdef NO_QD_VERIFY
 LAX_EXT=.lax
@@ -16,17 +13,21 @@ LAX_EXT=
 LAX_OPT=
 endif
 
-DEPEND_FILE=.depend$(LAX_EXT)
-CACHE_DIR=cache$(LAX_EXT)
-CHECKED_EXT=.checked$(LAX_EXT)
+INCLUDE_PATHS += $(LOWPARSE_HOME) $(LOWPARSE_HOME)/pulse ..
+ALREADY_CACHED := C,Spec.Loops,LowParse,
+CACHE_DIRECTORY := cache$(LAX_EXT)
+OUTPUT_DIRECTORY := krml
+FSTAR_DEP_FILE := .depend$(LAX_EXT)
+FSTAR_FILES := $(wildcard *.fst *.fsti) ../Test.fst
+FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,+Pulse.Lib.Pervasives,+Pulse.Lib.Slice'
 
-FSTAR_OPTIONS += --odir krml --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_modules \
-		--already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse \
-		--include $(LOWPARSE_HOME) --include $(LOWPARSE_HOME)/pulse --include .. --ext context_pruning \
-		--ext 'optimize_let_vc=false' \
-		--warn_error '@272'
+clean_rules += clean-local
 
-FSTAR = $(FSTAR_EXE) $(FSTAR_OPTIONS)
+include $(EVERPARSE_SRC_PATH)/common.Makefile
+
+FSTAR_OPTIONS += $(LAX_OPT) --ext 'optimize_let_vc=false' --warn_error @272
+
+export LOWPARSE_HOME
 
 HEADERS = $(addprefix -add-include ,'"krml/internal/compat.h"')
 
@@ -46,40 +47,6 @@ KRML = $(KRML_EXE) \
 	 $(HEADERS) \
 	 -warn-error '@2-26'
 
-QD_FILES = $(wildcard *.fst *.fsti)
-
-all: depend verify test
-
-# Don't re-verify standard library
-$(CACHE_DIR)/FStar.%$(CHECKED_EXT) \
-$(CACHE_DIR)/LowStar.%$(CHECKED_EXT) \
-$(CACHE_DIR)/C.%$(CHECKED_EXT) \
-$(CACHE_DIR)/LowParse.%$(CHECKED_EXT):
-	$(FSTAR) --admit_smt_queries true $<
-	@touch $@
-
-$(CACHE_DIR)/%$(CHECKED_EXT):
-	$(FSTAR) $(OTHERFLAGS) $<
-	@touch $@
-
-krml/%.krml:
-	$(FSTAR) --codegen krml $(patsubst %$(CHECKED_EXT),%,$(notdir $<)) --extract_module $(basename $(patsubst %$(CHECKED_EXT),%,$(notdir $<))) --warn_error '@241'
-	@touch $@
-
-$(DEPEND_FILE): $(QD_FILES) Makefile
-	$(FSTAR) --dep full $(QD_FILES) ../Test.fst --output_deps_to $@ --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,+Pulse.Lib.Pervasives,+Pulse.Lib.Slice'
-
-depend: $(DEPEND_FILE)
-
--include $(DEPEND_FILE)
-
-ifdef NO_QD_VERIFY
-verify:
-else
-verify: $(patsubst %,$(CACHE_DIR)/%$(CHECKED_EXT),$(QD_FILES))
-	echo $*
-endif
-
 ALL_KRML_FILES := $(filter-out krml/prims.krml,$(ALL_KRML_FILES))
 
 extract: $(ALL_KRML_FILES) # from .depend
@@ -93,10 +60,9 @@ test.exe: $(ALL_KRML_FILES) krml/Test.krml
 test: test.exe
 	./test.exe
 
-%.fst-in %.fsti-in:
-	@echo $(FSTAR_OPTIONS)
+depend: $(FSTAR_DEP_FILE)
 
-clean:
-	-rm -rf cache cache.lax .depend .depend.lax out krml
+clean-local:
+	-rm -rf out cache cache.lax .depend .depend.lax krml
 
-.PHONY: all depend verify extract clean build test
+.PHONY: all depend extract test clean-local
