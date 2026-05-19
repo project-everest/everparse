@@ -4,6 +4,7 @@ include CBOR.Pulse.Raw.EverParse.Type
 open CBOR.Spec.Raw.EverParse
 open CBOR.Spec.Raw.Base
 open CBOR.Pulse.Raw.EverParse.Match
+open CBOR.Pulse.Raw.EverParse.Match.Fuel
 open LowParse.Pulse.Base
 open LowParse.Pulse.VCList
 open LowParse.Pulse.Combinators
@@ -448,11 +449,12 @@ let cbor_raw_read_aux
 #push-options "--z3rlimit 128 --fuel 1 --ifuel 1"
 
 ```pulse
-fn cbor_raw_read
+fn cbor_raw_read_match_aux
+  (r: perm -> cbor_raw -> raw_data_item -> slprop)
   (pm: perm)
   (f64: squash SZ.fits_u64)
 : PPB.zero_copy_parse_strong_prefix #cbor_raw #raw_data_item
-    (cbor_raw_match pm)
+    (cbor_raw_match_aux parse_raw_data_item r pm)
     #parse_raw_data_item_kind
     parse_raw_data_item
 = (input: S.slice byte)
@@ -469,14 +471,32 @@ fn cbor_raw_read
   // Convert parse_raw_data_item to parse_raw_data_item_aux parse_raw_data_item
   PPB.pts_to_parsed_strong_prefix_ext_trade
     (parse_raw_data_item_aux parse_raw_data_item) input;
-  // Call the generic reader
-  let res = cbor_raw_read_aux cbor_raw_match parse_raw_data_item pm f64
+  // Call the generic reader (in r)
+  let res = cbor_raw_read_aux r parse_raw_data_item pm f64
     input;
   // Compose with the ext trade
   Trade.trans
-    (cbor_raw_match_aux parse_raw_data_item cbor_raw_match pm res v)
+    (cbor_raw_match_aux parse_raw_data_item r pm res v)
     (PPB.pts_to_parsed_strong_prefix (parse_raw_data_item_aux parse_raw_data_item) input #pms v)
     (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pms v);
+  res
+}
+```
+
+```pulse
+fn cbor_raw_read
+  (pm: perm)
+  (f64: squash SZ.fits_u64)
+: PPB.zero_copy_parse_strong_prefix #cbor_raw #raw_data_item
+    (cbor_raw_match pm)
+    #parse_raw_data_item_kind
+    parse_raw_data_item
+= (input: S.slice byte)
+  (#pms: perm)
+  (#v: Ghost.erased raw_data_item)
+{
+  let res = cbor_raw_read_match_aux cbor_raw_match pm f64
+    input;
   // Fold cbor_raw_match_aux into cbor_raw_match
   cbor_raw_match_fold_aux res;
   // Set up trade: cbor_raw_match pm res v -> pts_to_parsed_strong_prefix parse_raw_data_item
@@ -491,6 +511,43 @@ fn cbor_raw_read
       cbor_raw_match_unfold_aux res;
       Trade.elim
         (cbor_raw_match_aux parse_raw_data_item cbor_raw_match pm res v)
+        (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pms v)
+    };
+  res
+}
+```
+
+```pulse
+fn cbor_raw_read_fuel_1
+  (pm: perm)
+  (f64: squash SZ.fits_u64)
+: PPB.zero_copy_parse_strong_prefix #cbor_raw #raw_data_item
+    (cbor_raw_match_fuel 1 pm)
+    #parse_raw_data_item_kind
+    parse_raw_data_item
+= (input: S.slice byte)
+  (#pms: perm)
+  (#v: Ghost.erased raw_data_item)
+{
+  let res = cbor_raw_read_match_aux (cbor_raw_match_fuel 0) pm f64
+    input;
+  // Identify cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel 0) with cbor_raw_match_fuel 1
+  cbor_raw_match_fuel_eq_succ 1 pm res (Ghost.reveal v);
+  rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel 0) pm res (Ghost.reveal v))
+       as (cbor_raw_match_fuel 1 pm res (Ghost.reveal v));
+  intro
+    (Trade.trade
+      (cbor_raw_match_fuel 1 pm res v)
+      (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pms v))
+    #(Trade.trade
+        (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel 0) pm res v)
+        (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pms v))
+    fn _ {
+      cbor_raw_match_fuel_eq_succ 1 pm res (Ghost.reveal v);
+      rewrite (cbor_raw_match_fuel 1 pm res (Ghost.reveal v))
+           as (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel 0) pm res (Ghost.reveal v));
+      Trade.elim
+        (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel 0) pm res v)
         (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pms v)
     };
   res
