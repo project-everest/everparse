@@ -1283,6 +1283,378 @@ ensures exists* (pm': perm) (payload: Ghost.erased raw_data_item).
 }
 ```
 
+(* ======== Tagged payload accessor with no reader: returns elt_or_serialized ======== *)
+
+let tagged_payload_eos_match
+  (r: perm -> cbor_raw -> raw_data_item -> slprop)
+  (pm: perm)
+  (res: I.elt_or_serialized cbor_raw)
+  (payload: raw_data_item)
+: Tot slprop
+= match res with
+  | I.EElement x -> r pm x payload
+  | I.ESerialized pl -> PPB.pts_to_parsed_strong_prefix parse_raw_data_item pl #pm payload
+
+#push-options "--z3rlimit 1024 --fuel 2 --ifuel 2"
+
+```pulse
+fn cbor_raw_get_tagged_payload_aux_eos
+  (r: perm -> cbor_raw -> raw_data_item -> slprop)
+  (pm: perm)
+  (x: cbor_raw) (#y: Ghost.erased raw_data_item)
+  (_: squash (CBOR_Case_Tagged? x \/ CBOR_Case_Tagged_Serialized? x \/ Tagged? (Ghost.reveal y)))
+requires cbor_raw_match_aux parse_raw_data_item r pm x y
+returns res: I.elt_or_serialized cbor_raw
+ensures exists* (pm': perm) (payload: Ghost.erased raw_data_item).
+  tagged_payload_eos_match r pm' res payload **
+  Trade.trade (tagged_payload_eos_match r pm' res payload) (cbor_raw_match_aux parse_raw_data_item r pm x y) **
+  pure (Tagged? (Ghost.reveal y) /\
+        Ghost.reveal payload == Tagged?.v (Ghost.reveal y))
+{
+  cbor_raw_match_aux_cases r pm x;
+  cbor_raw_match_cases_prop_tagged_elim x (Ghost.reveal y) () ();
+
+  // Unfold cbor_raw_match_aux to content level
+  unfold (cbor_raw_match_aux parse_raw_data_item r pm x (Ghost.reveal y));
+  unfold (vmatch_synth
+    (vmatch_dep_pair_with_proj
+       cbor_raw_match_header
+       cbor_raw_id_proj
+       (cbor_raw_match_content r parse_raw_data_item pm))
+    synth_raw_data_item_recip
+    x (Ghost.reveal y));
+  unfold (vmatch_dep_pair_with_proj
+    cbor_raw_match_header
+    cbor_raw_id_proj
+    (cbor_raw_match_content r parse_raw_data_item pm)
+    x
+    (synth_raw_data_item_recip (Ghost.reveal y)));
+  unfold (cbor_raw_match_header
+    (cbor_raw_id_proj.pair_proj_get x)
+    (dfst (synth_raw_data_item_recip (Ghost.reveal y))));
+  rewrite
+    (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get x) ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))))
+    as
+    (pure (cbor_raw_get_header x ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))));
+
+  synth_tagged_major_type (Ghost.reveal y) ();
+  content_tagged_payload (Ghost.reveal y) ();
+
+  match x {
+    CBOR_Case_Tagged v -> {
+      cbor_raw_get_tagged_content_tagged r pm
+        (dfst (synth_raw_data_item_recip (Ghost.reveal y)))
+        v
+        (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))
+        ();
+
+      with vl . assert (R.pts_to v.cbor_tagged_ptr #(pm *. v.cbor_tagged_ref_perm) vl);
+      let res = R.read v.cbor_tagged_ptr;
+
+      // Set up trade from content to cbor_raw_match_aux
+      intro
+        (trade
+          (cbor_raw_match_content r parse_raw_data_item pm
+            (dfst (synth_raw_data_item_recip (Ghost.reveal y)))
+            (CBOR_Case_Tagged v)
+            (dsnd (synth_raw_data_item_recip (Ghost.reveal y))))
+          (cbor_raw_match_aux parse_raw_data_item r pm (CBOR_Case_Tagged v) y))
+        #(pure (cbor_raw_get_header (CBOR_Case_Tagged v) ==
+               Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))))
+        fn _ {
+          rewrite
+            (pure (cbor_raw_get_header (CBOR_Case_Tagged v) ==
+                   Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))))
+            as
+            (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get (CBOR_Case_Tagged v)) ==
+                   Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))));
+          fold (cbor_raw_match_header
+            (cbor_raw_id_proj.pair_proj_get (CBOR_Case_Tagged v))
+            (dfst (synth_raw_data_item_recip (Ghost.reveal y))));
+          fold (vmatch_dep_pair_with_proj
+            cbor_raw_match_header
+            cbor_raw_id_proj
+            (cbor_raw_match_content r parse_raw_data_item pm)
+            (CBOR_Case_Tagged v)
+            (synth_raw_data_item_recip (Ghost.reveal y)));
+          fold (vmatch_synth
+            (vmatch_dep_pair_with_proj
+               cbor_raw_match_header
+               cbor_raw_id_proj
+               (cbor_raw_match_content r parse_raw_data_item pm))
+            synth_raw_data_item_recip
+            (CBOR_Case_Tagged v) (Ghost.reveal y));
+          fold (cbor_raw_match_aux parse_raw_data_item r pm
+            (CBOR_Case_Tagged v) (Ghost.reveal y));
+        };
+
+      // Compose: (R.pts_to ** r) → content → cbor_raw_match_aux
+      Trade.trans
+        (R.pts_to v.cbor_tagged_ptr #(pm *. v.cbor_tagged_ref_perm) vl **
+         r (pm *. v.cbor_tagged_payload_perm) vl
+           (content_as_raw_data_item
+             (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+             (dsnd (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+             (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))))
+        (cbor_raw_match_content r parse_raw_data_item pm
+          (dfst (synth_raw_data_item_recip (Ghost.reveal y)))
+          (CBOR_Case_Tagged v)
+          (dsnd (synth_raw_data_item_recip (Ghost.reveal y))))
+        (cbor_raw_match_aux parse_raw_data_item r pm (CBOR_Case_Tagged v) y);
+
+      // Split off r from the pair, absorbing R.pts_to into the trade
+      intro
+        (trade
+          (r (pm *. v.cbor_tagged_payload_perm) res
+            (content_as_raw_data_item
+              (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+              (dsnd (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+              (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))))
+          (cbor_raw_match_aux parse_raw_data_item r pm (CBOR_Case_Tagged v) y))
+        #(R.pts_to v.cbor_tagged_ptr #(pm *. v.cbor_tagged_ref_perm) res **
+          trade
+            (R.pts_to v.cbor_tagged_ptr #(pm *. v.cbor_tagged_ref_perm) vl **
+             r (pm *. v.cbor_tagged_payload_perm) vl
+               (content_as_raw_data_item
+                 (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+                 (dsnd (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+                 (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))))
+            (cbor_raw_match_aux parse_raw_data_item r pm (CBOR_Case_Tagged v) y))
+        fn _ {
+          rewrite
+            (R.pts_to v.cbor_tagged_ptr #(pm *. v.cbor_tagged_ref_perm) res)
+            as
+            (R.pts_to v.cbor_tagged_ptr #(pm *. v.cbor_tagged_ref_perm) vl);
+          Trade.elim
+            (R.pts_to v.cbor_tagged_ptr #(pm *. v.cbor_tagged_ref_perm) vl **
+             r (pm *. v.cbor_tagged_payload_perm) vl
+               (content_as_raw_data_item
+                 (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+                 (dsnd (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+                 (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))))
+            (cbor_raw_match_aux parse_raw_data_item r pm (CBOR_Case_Tagged v) y)
+        };
+
+      rewrite
+        (trade
+          (r (pm *. v.cbor_tagged_payload_perm) res
+            (content_as_raw_data_item
+              (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+              (dsnd (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+              (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))))
+          (cbor_raw_match_aux parse_raw_data_item r pm (CBOR_Case_Tagged v) y))
+        as
+        (trade
+          (r (pm *. v.cbor_tagged_payload_perm) res
+            (Tagged?.v (Ghost.reveal y)))
+          (cbor_raw_match_aux parse_raw_data_item r pm x y));
+
+      rewrite
+        (r (pm *. v.cbor_tagged_payload_perm) res
+          (content_as_raw_data_item
+            (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+            (dsnd (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+            (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))))
+        as
+        (r (pm *. v.cbor_tagged_payload_perm) res
+          (Tagged?.v (Ghost.reveal y)));
+
+      // Wrap into EElement
+      let result : I.elt_or_serialized cbor_raw = I.EElement res;
+      rewrite (r (pm *. v.cbor_tagged_payload_perm) res
+                  (Tagged?.v (Ghost.reveal y)))
+        as (tagged_payload_eos_match r (pm *. v.cbor_tagged_payload_perm) result
+              (Tagged?.v (Ghost.reveal y)));
+      rewrite (trade
+                (r (pm *. v.cbor_tagged_payload_perm) res
+                  (Tagged?.v (Ghost.reveal y)))
+                (cbor_raw_match_aux parse_raw_data_item r pm x y))
+        as (trade
+              (tagged_payload_eos_match r (pm *. v.cbor_tagged_payload_perm) result
+                (Tagged?.v (Ghost.reveal y)))
+              (cbor_raw_match_aux parse_raw_data_item r pm x y));
+      result
+    }
+    CBOR_Case_Tagged_Serialized ts -> {
+      cbor_raw_match_content_eq_tagged_serialized r parse_raw_data_item pm
+        (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+        (dsnd (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+        ts
+        (dsnd (synth_raw_data_item_recip (Ghost.reveal y)));
+      header_eta (dfst (synth_raw_data_item_recip (Ghost.reveal y)));
+      rewrite
+        (cbor_raw_match_content r parse_raw_data_item pm
+          (dfst (synth_raw_data_item_recip (Ghost.reveal y)))
+          (CBOR_Case_Tagged_Serialized ts)
+          (dsnd (synth_raw_data_item_recip (Ghost.reveal y))))
+        as
+        (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+          #(pm *. ts.cbor_tagged_serialized_slice_perm)
+          (content_as_raw_data_item
+            (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+            (dsnd (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+            (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))));
+
+      // Set up trade: pts_to_parsed_strong_prefix → content → cbor_raw_match_aux
+      intro
+        (trade
+          (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+            #(pm *. ts.cbor_tagged_serialized_slice_perm)
+            (content_as_raw_data_item
+              (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+              (dsnd (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+              (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))))
+          (cbor_raw_match_aux parse_raw_data_item r pm (CBOR_Case_Tagged_Serialized ts) y))
+        #(pure (cbor_raw_get_header (CBOR_Case_Tagged_Serialized ts) ==
+               Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))))
+        fn _ {
+          cbor_raw_match_content_eq_tagged_serialized r parse_raw_data_item pm
+            (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+            (dsnd (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+            ts
+            (dsnd (synth_raw_data_item_recip (Ghost.reveal y)));
+          header_eta (dfst (synth_raw_data_item_recip (Ghost.reveal y)));
+          rewrite
+            (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+              #(pm *. ts.cbor_tagged_serialized_slice_perm)
+              (content_as_raw_data_item
+                (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+                (dsnd (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+                (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))))
+            as
+            (cbor_raw_match_content r parse_raw_data_item pm
+              (dfst (synth_raw_data_item_recip (Ghost.reveal y)))
+              (CBOR_Case_Tagged_Serialized ts)
+              (dsnd (synth_raw_data_item_recip (Ghost.reveal y))));
+          rewrite
+            (pure (cbor_raw_get_header (CBOR_Case_Tagged_Serialized ts) ==
+                   Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))))
+            as
+            (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get (CBOR_Case_Tagged_Serialized ts)) ==
+                   Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))));
+          fold (cbor_raw_match_header
+            (cbor_raw_id_proj.pair_proj_get (CBOR_Case_Tagged_Serialized ts))
+            (dfst (synth_raw_data_item_recip (Ghost.reveal y))));
+          fold (vmatch_dep_pair_with_proj
+            cbor_raw_match_header
+            cbor_raw_id_proj
+            (cbor_raw_match_content r parse_raw_data_item pm)
+            (CBOR_Case_Tagged_Serialized ts)
+            (synth_raw_data_item_recip (Ghost.reveal y)));
+          fold (vmatch_synth
+            (vmatch_dep_pair_with_proj
+               cbor_raw_match_header
+               cbor_raw_id_proj
+               (cbor_raw_match_content r parse_raw_data_item pm))
+            synth_raw_data_item_recip
+            (CBOR_Case_Tagged_Serialized ts) (Ghost.reveal y));
+          fold (cbor_raw_match_aux parse_raw_data_item r pm
+            (CBOR_Case_Tagged_Serialized ts) (Ghost.reveal y));
+        };
+
+      // Strengthen: aux for CBOR_Case_Tagged_Serialized ts → aux for x y
+      rewrite
+        (trade
+          (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+            #(pm *. ts.cbor_tagged_serialized_slice_perm)
+            (content_as_raw_data_item
+              (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+              (dsnd (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+              (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))))
+          (cbor_raw_match_aux parse_raw_data_item r pm (CBOR_Case_Tagged_Serialized ts) y))
+        as
+        (trade
+          (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+            #(pm *. ts.cbor_tagged_serialized_slice_perm)
+            (Tagged?.v (Ghost.reveal y)))
+          (cbor_raw_match_aux parse_raw_data_item r pm x y));
+
+      rewrite
+        (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+          #(pm *. ts.cbor_tagged_serialized_slice_perm)
+          (content_as_raw_data_item
+            (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+            (dsnd (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
+            (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))))
+        as
+        (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+          #(pm *. ts.cbor_tagged_serialized_slice_perm)
+          (Tagged?.v (Ghost.reveal y)));
+
+      // Wrap into ESerialized
+      let result : I.elt_or_serialized cbor_raw = I.ESerialized ts.cbor_tagged_serialized_ptr;
+      rewrite (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+                #(pm *. ts.cbor_tagged_serialized_slice_perm)
+                (Tagged?.v (Ghost.reveal y)))
+        as (tagged_payload_eos_match r (pm *. ts.cbor_tagged_serialized_slice_perm) result
+              (Tagged?.v (Ghost.reveal y)));
+      rewrite (trade
+                (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+                  #(pm *. ts.cbor_tagged_serialized_slice_perm)
+                  (Tagged?.v (Ghost.reveal y)))
+                (cbor_raw_match_aux parse_raw_data_item r pm x y))
+        as (trade
+              (tagged_payload_eos_match r (pm *. ts.cbor_tagged_serialized_slice_perm) result
+                (Tagged?.v (Ghost.reveal y)))
+              (cbor_raw_match_aux parse_raw_data_item r pm x y));
+      result
+    }
+    CBOR_Case_Invalid -> {
+      cbor_raw_get_tagged_content_false r pm
+        (dfst (synth_raw_data_item_recip (Ghost.reveal y)))
+        CBOR_Case_Invalid
+        (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))
+        ();
+      unreachable ()
+    }
+    CBOR_Case_Int i -> {
+      cbor_raw_get_tagged_content_false r pm
+        (dfst (synth_raw_data_item_recip (Ghost.reveal y)))
+        (CBOR_Case_Int i)
+        (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))
+        ();
+      unreachable ()
+    }
+    CBOR_Case_Simple sv -> {
+      cbor_raw_get_tagged_content_false r pm
+        (dfst (synth_raw_data_item_recip (Ghost.reveal y)))
+        (CBOR_Case_Simple sv)
+        (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))
+        ();
+      unreachable ()
+    }
+    CBOR_Case_String s -> {
+      cbor_raw_get_tagged_content_false r pm
+        (dfst (synth_raw_data_item_recip (Ghost.reveal y)))
+        (CBOR_Case_String s)
+        (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))
+        ();
+      unreachable ()
+    }
+    CBOR_Case_Array a -> {
+      cbor_raw_get_tagged_content_false r pm
+        (dfst (synth_raw_data_item_recip (Ghost.reveal y)))
+        (CBOR_Case_Array a)
+        (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))
+        ();
+      unreachable ()
+    }
+    CBOR_Case_Map m -> {
+      cbor_raw_get_tagged_content_false r pm
+        (dfst (synth_raw_data_item_recip (Ghost.reveal y)))
+        (CBOR_Case_Map m)
+        (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))
+        ();
+      unreachable ()
+    }
+  }
+}
+```
+
+#pop-options
+
 #pop-options
 
 (* ======== Array accessor ======== *)

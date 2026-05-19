@@ -5,6 +5,7 @@ open CBOR.Spec.Raw.EverParse
 include CBOR.Pulse.Raw.EverParse.Validate
 open CBOR.Pulse.Raw.EverParse.Type
 open CBOR.Pulse.Raw.EverParse.Match
+open CBOR.Pulse.Raw.EverParse.Match.Fuel
 open CBOR.Pulse.Raw.EverParse.Access
 open CBOR.Pulse.Raw.EverParse.Read
 open CBOR.Pulse.Raw.Compare.Base
@@ -30,6 +31,8 @@ module I16 = FStar.Int16
 module U8 = FStar.UInt8
 module Spec = CBOR.Spec.Raw.Base
 module NC = CBOR.Pulse.Raw.EverParse.Nondet.Compare
+module LPS = LowParse.Pulse.Base
+module SCE = CBOR.Pulse.Raw.EverParse.SerializeCborEq
 
 // === Type for compare function ===
 
@@ -608,7 +611,11 @@ fn cbor_compare_body
 
 // === Recursive entry point ===
 
-fn rec impl_cbor_compare
+// === Old non-fuel recursive entry point: still defined so existing helpers above
+// remain reachable. The exported impl_cbor_compare further below delegates to the
+// fuel-aware version (impl_cbor_compare_fuel). ===
+
+fn rec impl_cbor_compare_norec
   (f64: squash SZ.fits_u64)
   (x1: cbor_raw)
   (x2: cbor_raw)
@@ -625,5 +632,153 @@ ensures
   cbor_raw_match pm2 x2 v2 **
   pure (same_sign (I16.v res) (cbor_compare v1 v2))
 {
-  cbor_compare_body f64 (impl_cbor_compare f64) x1 x2
+  cbor_compare_body f64 (impl_cbor_compare_norec f64) x1 x2
+}
+
+// === Fuel-aware compare type ===
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let compare_cbor_raw_fuel_t (n: nat) =
+  (x1: cbor_raw) ->
+  (x2: cbor_raw) ->
+  (#pm1: perm) ->
+  (#v1: Ghost.erased raw_data_item) ->
+  (#pm2: perm) ->
+  (#v2: Ghost.erased raw_data_item) ->
+  stt I16.t
+    (cbor_raw_match_fuel n pm1 x1 v1 **
+     cbor_raw_match_fuel n pm2 x2 v2)
+    (fun res ->
+      cbor_raw_match_fuel n pm1 x1 v1 **
+      cbor_raw_match_fuel n pm2 x2 v2 **
+      pure (same_sign (I16.v res) (cbor_compare v1 v2)))
+
+// === Aux fields helper (parameterized by r) ===
+// Analogous to NC.cbor_raw_match_fields, but operates on cbor_raw_match_aux for
+// arbitrary r (used with r = cbor_raw_match_fuel (n-1)).
+
+#push-options "--z3rlimit 256 --fuel 2 --ifuel 2"
+
+ghost fn cbor_raw_match_aux_fields
+  (r: perm -> cbor_raw -> raw_data_item -> slprop)
+  (pm: perm) (x: cbor_raw) (#y: Ghost.erased raw_data_item)
+requires cbor_raw_match_aux parse_raw_data_item r pm x y
+ensures cbor_raw_match_aux parse_raw_data_item r pm x y ** pure (NC.cbor_raw_match_fields_prop x y)
+{
+  unfold (cbor_raw_match_aux parse_raw_data_item r pm x (Ghost.reveal y));
+  unfold (vmatch_synth
+    (vmatch_dep_pair_with_proj
+       cbor_raw_match_header
+       cbor_raw_id_proj
+       (cbor_raw_match_content r parse_raw_data_item pm))
+    synth_raw_data_item_recip
+    x (Ghost.reveal y));
+  unfold (vmatch_dep_pair_with_proj
+    cbor_raw_match_header
+    cbor_raw_id_proj
+    (cbor_raw_match_content r parse_raw_data_item pm)
+    x
+    (synth_raw_data_item_recip (Ghost.reveal y)));
+  unfold (cbor_raw_match_header
+    (cbor_raw_id_proj.pair_proj_get x)
+    (dfst (synth_raw_data_item_recip (Ghost.reveal y))));
+  rewrite
+    (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get x) ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))))
+    as
+    (pure (cbor_raw_get_header x ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))));
+  let the_prop = cbor_raw_get_header x ==
+    Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)));
+  let sq = elim_pure_explicit the_prop;
+  NC.cbor_raw_match_fields_prop_of_header x (Ghost.reveal y)
+    (dfst (synth_raw_data_item_recip (Ghost.reveal y))) sq ();
+  intro_pure the_prop sq;
+  rewrite
+    (pure (cbor_raw_get_header x ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))))
+    as
+    (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get x) ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))));
+  fold (cbor_raw_match_header
+    (cbor_raw_id_proj.pair_proj_get x)
+    (dfst (synth_raw_data_item_recip (Ghost.reveal y))));
+  fold (vmatch_dep_pair_with_proj
+    cbor_raw_match_header
+    cbor_raw_id_proj
+    (cbor_raw_match_content r parse_raw_data_item pm)
+    x
+    (synth_raw_data_item_recip (Ghost.reveal y)));
+  fold (vmatch_synth
+    (vmatch_dep_pair_with_proj
+       cbor_raw_match_header
+       cbor_raw_id_proj
+       (cbor_raw_match_content r parse_raw_data_item pm))
+    synth_raw_data_item_recip
+    x (Ghost.reveal y));
+  fold (cbor_raw_match_aux parse_raw_data_item r pm x (Ghost.reveal y));
+}
+
+#pop-options
+
+// === Byte-compare helpers ===
+
+#push-options "--z3rlimit 32 --fuel 2 --ifuel 2"
+
+// Compare two cbor data items represented as pts_to_parsed slices (full parse).
+// Used for the ESerialized case of an array iterator at fuel n-1.
+fn byte_compare_pts_to_parsed_data_item
+  (s1 s2: S.slice byte)
+  (#p1: perm) (#v1: Ghost.erased raw_data_item)
+  (#p2: perm) (#v2: Ghost.erased raw_data_item)
+requires
+  PPB.pts_to_parsed parse_raw_data_item s1 #p1 v1 **
+  PPB.pts_to_parsed parse_raw_data_item s2 #p2 v2
+returns res: I16.t
+ensures
+  PPB.pts_to_parsed parse_raw_data_item s1 #p1 v1 **
+  PPB.pts_to_parsed parse_raw_data_item s2 #p2 v2 **
+  pure (same_sign (I16.v res) (cbor_compare v1 v2))
+{
+  cbor_compare_correct (Ghost.reveal v1) (Ghost.reveal v2);
+  SCE.serialize_cbor_eq_bare_serialize (Ghost.reveal v1);
+  SCE.serialize_cbor_eq_bare_serialize (Ghost.reveal v2);
+  PPB.pts_to_parsed_serialized serialize_raw_data_item s1;
+  PPB.pts_to_parsed_serialized serialize_raw_data_item s2;
+  unfold (LPS.pts_to_serialized serialize_raw_data_item s1 #p1 (Ghost.reveal v1));
+  unfold (LPS.pts_to_serialized serialize_raw_data_item s2 #p2 (Ghost.reveal v2));
+  let res = lex_compare_bytes s1 s2;
+  fold (LPS.pts_to_serialized serialize_raw_data_item s1 #p1 (Ghost.reveal v1));
+  fold (LPS.pts_to_serialized serialize_raw_data_item s2 #p2 (Ghost.reveal v2));
+  Trade.elim (LPS.pts_to_serialized serialize_raw_data_item s1 #p1 (Ghost.reveal v1))
+             (PPB.pts_to_parsed parse_raw_data_item s1 #p1 v1);
+  Trade.elim (LPS.pts_to_serialized serialize_raw_data_item s2 #p2 (Ghost.reveal v2))
+             (PPB.pts_to_parsed parse_raw_data_item s2 #p2 v2);
+  res
+}
+
+#pop-options
+
+// === Final recursive entry point (placeholder during fuel refactor;
+//     will be rewritten to wrap impl_cbor_compare_fuel) ===
+
+fn impl_cbor_compare
+  (f64: squash SZ.fits_u64)
+  (x1: cbor_raw)
+  (x2: cbor_raw)
+  (#pm1: perm)
+  (#v1: Ghost.erased raw_data_item)
+  (#pm2: perm)
+  (#v2: Ghost.erased raw_data_item)
+requires
+  cbor_raw_match pm1 x1 v1 **
+  cbor_raw_match pm2 x2 v2
+returns res: I16.t
+ensures
+  cbor_raw_match pm1 x1 v1 **
+  cbor_raw_match pm2 x2 v2 **
+  pure (same_sign (I16.v res) (cbor_compare v1 v2))
+{
+  impl_cbor_compare_norec f64 x1 x2
 }
