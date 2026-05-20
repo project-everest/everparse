@@ -649,6 +649,7 @@ jobs:
 
   push-release:
     runs-on: ubuntu-latest
+    if: ${{ !cancelled() && !failure() }}
     needs: push-tag
     steps:
       - name: Set up git
@@ -756,6 +757,7 @@ jobs:
 
   delete-release:
     runs-on: ubuntu-latest
+    if: ${{ !cancelled() && !failure() }}
     needs: push-release
     steps:
     - uses: geekyeggo/delete-artifact@v5
