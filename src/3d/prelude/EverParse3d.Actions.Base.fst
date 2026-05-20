@@ -401,7 +401,7 @@ let validate_with_error_handler
     else (
          (if use_error_handler
           then begin
-            let eh : error_handler = error_handler_fn in
+            [@inline_let] let eh : error_handler = error_handler_fn in
             eh typename fieldname (LPE.error_reason_of_result pos1) (LPE.get_validator_error_kind pos1) ctxt input pos0
           end
           else error_handler_macro typename fieldname (LPE.error_reason_of_result pos1) (LPE.get_validator_error_kind pos1) ctxt input pos0);
@@ -2016,9 +2016,9 @@ let probe_then_validate
         true
       )
       else (
-        let eh : error_handler =
+        [@inline_let] let eh : error_handler =
           if use_error_handler then begin
-            let eh1 : error_handler = error_handler_fn in
+            [@inline_let] let eh1 : error_handler = error_handler_fn in
             eh1
           end else error_handler_macro
         in
@@ -2033,7 +2033,7 @@ let probe_then_validate
         else (
           (if use_error_handler
            then begin
-             let eh2 : error_handler = error_handler_fn in
+             [@inline_let] let eh2 : error_handler = error_handler_fn in
              eh2 typename fieldname
                LPE.(error_reason_of_result validator_error_probe_failed)
                LPE.(get_validator_error_kind validator_error_probe_failed)
