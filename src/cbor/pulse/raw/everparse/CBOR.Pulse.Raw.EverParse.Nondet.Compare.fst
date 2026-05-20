@@ -2526,6 +2526,176 @@ ensures
 
 #pop-options
 
+// === Phase 6: fuel-aware recursive comparison tying the knot at fuel n ===
+//
+// Mirrors Det.Compare's impl_cbor_compare_fuel: a Pulse `fn rec` on fuel n that
+// recurses with fuel n - 1 via two inline `fn` closures (one for the standard
+// recursion at the current map_bound, one for the map-side recursion at the
+// decremented map_bound). The closures package the recursive call so we can pass
+// them as values of type compare_cbor_raw_fuel_t to compare_cbor_raw_fuel.
+// Inside the closure for the map-decremented recursion, the closure's post talks
+// about NG.option_sz_v mb_dec while compare_cbor_raw_fuel expects
+// option_nat_decrement_safe (NG.option_sz_v map_bound). We bridge those via the
+// pure lemma option_sz_decrement_safe_v, invoked in the outer body so SMT can
+// reconcile the closure type at the use site.
+
+#push-options "--z3rlimit 256 --fuel 2 --ifuel 2"
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn rec compare_cbor_raw_basic_fuel
+  (f64: squash SZ.fits_u64)
+  (map_bound: option SZ.t)
+  (n: Ghost.erased nat)
+  (x1: cbor_raw)
+  (x2: cbor_raw)
+  (#pm1: perm)
+  (#v1: Ghost.erased raw_data_item)
+  (#pm2: perm)
+  (#v2: Ghost.erased raw_data_item)
+requires
+  cbor_raw_match_fuel (Ghost.reveal n) pm1 x1 v1 **
+  cbor_raw_match_fuel (Ghost.reveal n) pm2 x2 v2 **
+  pure (raw_data_item_size v1 <= Ghost.reveal n /\
+        raw_data_item_size v2 <= Ghost.reveal n)
+returns res: option bool
+ensures
+  cbor_raw_match_fuel (Ghost.reveal n) pm1 x1 v1 **
+  cbor_raw_match_fuel (Ghost.reveal n) pm2 x2 v2 **
+  pure (res == check_equiv basic_data_model (NG.option_sz_v map_bound) v1 v2)
+decreases (Ghost.reveal n)
+{
+  cbor_raw_match_fuel_implies_pos (Ghost.reveal n) x1 #pm1 #v1;
+  let m : Ghost.erased nat = Ghost.hide (Ghost.reveal n - 1);
+  let mb_dec = option_sz_decrement_safe map_bound;
+  option_sz_decrement_safe_v map_bound;
+
+  // ih_rec: callback at fuel m, same map_bound. Type matches
+  // compare_cbor_raw_fuel_t basic_data_model (NG.option_sz_v map_bound) m.
+  fn ih_rec
+    (y1: cbor_raw)
+    (y2: cbor_raw)
+    (#qm1: perm)
+    (#w1: Ghost.erased raw_data_item)
+    (#qm2: perm)
+    (#w2: Ghost.erased raw_data_item)
+  requires
+    cbor_raw_match_fuel (Ghost.reveal m) qm1 y1 w1 **
+    cbor_raw_match_fuel (Ghost.reveal m) qm2 y2 w2 **
+    pure (raw_data_item_size w1 <= Ghost.reveal m /\
+          raw_data_item_size w2 <= Ghost.reveal m)
+  returns res2: option bool
+  ensures
+    cbor_raw_match_fuel (Ghost.reveal m) qm1 y1 w1 **
+    cbor_raw_match_fuel (Ghost.reveal m) qm2 y2 w2 **
+    pure (res2 == check_equiv basic_data_model (NG.option_sz_v map_bound) w1 w2)
+  {
+    compare_cbor_raw_basic_fuel f64 map_bound m y1 y2 #qm1 #w1 #qm2 #w2
+  };
+
+  // ih_rec_map: callback at fuel m, decremented map_bound. Its post talks about
+  // NG.option_sz_v mb_dec; the lemma above lets SMT bridge this to
+  // option_nat_decrement_safe (NG.option_sz_v map_bound), which is what
+  // compare_cbor_raw_fuel's compare_rec_map parameter expects.
+  fn ih_rec_map
+    (y1: cbor_raw)
+    (y2: cbor_raw)
+    (#qm1: perm)
+    (#w1: Ghost.erased raw_data_item)
+    (#qm2: perm)
+    (#w2: Ghost.erased raw_data_item)
+  requires
+    cbor_raw_match_fuel (Ghost.reveal m) qm1 y1 w1 **
+    cbor_raw_match_fuel (Ghost.reveal m) qm2 y2 w2 **
+    pure (raw_data_item_size w1 <= Ghost.reveal m /\
+          raw_data_item_size w2 <= Ghost.reveal m)
+  returns res2: option bool
+  ensures
+    cbor_raw_match_fuel (Ghost.reveal m) qm1 y1 w1 **
+    cbor_raw_match_fuel (Ghost.reveal m) qm2 y2 w2 **
+    pure (res2 == check_equiv basic_data_model (NG.option_sz_v mb_dec) w1 w2)
+  {
+    compare_cbor_raw_basic_fuel f64 mb_dec m y1 y2 #qm1 #w1 #qm2 #w2
+  };
+
+  // impl_dm_basic_fuel: fuel-aware data_model for basic_data_model, which is
+  // the constant-false relation. Just returns false.
+  fn impl_dm_basic_fuel
+    (y1: cbor_raw)
+    (y2: cbor_raw)
+    (#qm1: perm)
+    (#w1: Ghost.erased raw_data_item)
+    (#qm2: perm)
+    (#w2: Ghost.erased raw_data_item)
+  requires
+    cbor_raw_match_fuel (Ghost.reveal n) qm1 y1 w1 **
+    cbor_raw_match_fuel (Ghost.reveal n) qm2 y2 w2
+  returns res2: bool
+  ensures
+    cbor_raw_match_fuel (Ghost.reveal n) qm1 y1 w1 **
+    cbor_raw_match_fuel (Ghost.reveal n) qm2 y2 w2 **
+    pure (res2 == basic_data_model w1 w2)
+  {
+    false
+  };
+
+  compare_cbor_raw_fuel #basic_data_model n impl_dm_basic_fuel f64 map_bound
+    ih_rec ih_rec_map x1 x2 #pm1 #v1 #pm2 #v2
+}
+```
+
+#pop-options
+
+// === Phase 7: non-fuel wrapper using cbor_raw_match_to_fuel ===
+//
+// Bridges cbor_raw_match back into the fuel-aware world by computing a fuel
+// level n large enough to (a) re-establish cbor_raw_match_fuel for both inputs
+// via cbor_raw_match_fuel_weaken, and (b) satisfy the size precondition of
+// compare_cbor_raw_basic_fuel. We pick n as the max over both per-input fuels
+// (from cbor_raw_match_to_fuel) and both input sizes (so the size precondition
+// is discharged by the definition of nat_max).
+
+#push-options "--z3rlimit 32 --fuel 2 --ifuel 2"
+
+inline_for_extraction
+```pulse
+fn compare_cbor_raw_basic_new
+  (f64: squash SZ.fits_u64)
+  (map_bound: option SZ.t)
+  (x1: cbor_raw)
+  (x2: cbor_raw)
+  (#pm1: perm)
+  (#v1: Ghost.erased raw_data_item)
+  (#pm2: perm)
+  (#v2: Ghost.erased raw_data_item)
+requires
+  cbor_raw_match pm1 x1 v1 **
+  cbor_raw_match pm2 x2 v2
+returns res: option bool
+ensures
+  cbor_raw_match pm1 x1 v1 **
+  cbor_raw_match pm2 x2 v2 **
+  pure (res == check_equiv basic_data_model (NG.option_sz_v map_bound) v1 v2)
+{
+  let n1 = cbor_raw_match_to_fuel x1 #pm1 #v1;
+  let n2 = cbor_raw_match_to_fuel x2 #pm2 #v2;
+  let n : Ghost.erased nat = Ghost.hide (
+    nat_max
+      (nat_max (Ghost.reveal n1) (Ghost.reveal n2))
+      (nat_max (raw_data_item_size v1) (raw_data_item_size v2))
+  );
+  cbor_raw_match_fuel_weaken (Ghost.reveal n1) (Ghost.reveal n) x1 #pm1 #v1;
+  cbor_raw_match_fuel_weaken (Ghost.reveal n2) (Ghost.reveal n) x2 #pm2 #v2;
+  let res = compare_cbor_raw_basic_fuel f64 map_bound n x1 x2 #pm1 #v1 #pm2 #v2;
+  cbor_raw_match_of_fuel (Ghost.reveal n) x1 #pm1 #v1;
+  cbor_raw_match_of_fuel (Ghost.reveal n) x2 #pm2 #v2;
+  res
+}
+```
+
+#pop-options
+
 // === Recursive comparison function tying the knot for basic_data_model ===
 
 #push-options "--z3rlimit 32 --fuel 1 --ifuel 1"
