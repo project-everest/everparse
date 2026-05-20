@@ -6,6 +6,8 @@ open CBOR.Spec.Raw.EverParse
 include CBOR.Pulse.Raw.EverParse.Validate
 open CBOR.Pulse.Raw.EverParse.Type
 open CBOR.Pulse.Raw.EverParse.Match
+open CBOR.Pulse.Raw.EverParse.Match.Fuel
+open CBOR.Pulse.Raw.EverParse.MapEntry.Fuel
 open CBOR.Pulse.Raw.EverParse.Access
 open CBOR.Pulse.Raw.EverParse.Read
 open LowParse.Spec.VCList
@@ -602,6 +604,28 @@ let compare_cbor_raw_t
       cbor_raw_match pm2 x2 v2 **
       pure (res == check_equiv data_model map_bound v1 v2))
 
+// Fuel-aware variant of compare_cbor_raw_t: operates on cbor_raw_match_fuel n.
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let compare_cbor_raw_fuel_t
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (map_bound: option nat)
+  (n: Ghost.erased nat)
+=
+  (x1: cbor_raw) ->
+  (x2: cbor_raw) ->
+  (#pm1: perm) ->
+  (#v1: Ghost.erased raw_data_item) ->
+  (#pm2: perm) ->
+  (#v2: Ghost.erased raw_data_item) ->
+  stt (option bool)
+    (cbor_raw_match_fuel (Ghost.reveal n) pm1 x1 v1 **
+     cbor_raw_match_fuel (Ghost.reveal n) pm2 x2 v2)
+    (fun res ->
+      cbor_raw_match_fuel (Ghost.reveal n) pm1 x1 v1 **
+      cbor_raw_match_fuel (Ghost.reveal n) pm2 x2 v2 **
+      pure (res == check_equiv data_model map_bound v1 v2))
+
 // === Helpers for map_bound decrement ===
 
 let option_nat_decrement_safe (mb: option nat) : option nat =
@@ -914,6 +938,27 @@ let compare_cbor_raw_fn_t
     (fun res ->
       cbor_raw_match pm1 x1 v1 **
       cbor_raw_match pm2 x2 v2 **
+      pure (res == equiv v1 v2))
+
+// Fuel-aware variant of compare_cbor_raw_fn_t: operates on cbor_raw_match_fuel n.
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let compare_cbor_raw_fn_fuel_t
+  (n: Ghost.erased nat)
+  (equiv: raw_data_item -> raw_data_item -> option bool)
+=
+  (x1: cbor_raw) ->
+  (x2: cbor_raw) ->
+  (#pm1: perm) ->
+  (#v1: Ghost.erased raw_data_item) ->
+  (#pm2: perm) ->
+  (#v2: Ghost.erased raw_data_item) ->
+  stt (option bool)
+    (cbor_raw_match_fuel (Ghost.reveal n) pm1 x1 v1 **
+     cbor_raw_match_fuel (Ghost.reveal n) pm2 x2 v2)
+    (fun res ->
+      cbor_raw_match_fuel (Ghost.reveal n) pm1 x1 v1 **
+      cbor_raw_match_fuel (Ghost.reveal n) pm2 x2 v2 **
       pure (res == equiv v1 v2))
 
 // Map setoid_assoc_eq: search map_entries for an entry matching xr by key, then compare values
