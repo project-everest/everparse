@@ -7,6 +7,10 @@ on:
         default: _release
         type: string
         required: true
+      version:
+        description: 'Version number (leave empty to auto-compute as vYYYY.MM.DD)'
+        type: string
+        default: ''
       only_build_3d:
         description: Only build 3D
         type: boolean
@@ -128,7 +132,11 @@ jobs:
         run: |
           cd "$GITHUB_WORKSPACE"
           if ! [[ -e version.txt ]] ; then
-            date '+v%Y.%m.%d' > version.txt
+            if [[ -n "${{ inputs.version }}" ]] ; then
+              echo "${{ inputs.version }}" > version.txt
+            else
+              date '+v%Y.%m.%d' > version.txt
+            fi
             git add version.txt
             git commit -m 'Set version number'
           fi
