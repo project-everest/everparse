@@ -605,6 +605,7 @@ let compare_cbor_raw_t
       pure (res == check_equiv data_model map_bound v1 v2))
 
 // Fuel-aware variant of compare_cbor_raw_t: operates on cbor_raw_match_fuel n.
+// Requires raw_data_item_size of inputs to fit within n.
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let compare_cbor_raw_fuel_t
@@ -620,7 +621,9 @@ let compare_cbor_raw_fuel_t
   (#v2: Ghost.erased raw_data_item) ->
   stt (option bool)
     (cbor_raw_match_fuel (Ghost.reveal n) pm1 x1 v1 **
-     cbor_raw_match_fuel (Ghost.reveal n) pm2 x2 v2)
+     cbor_raw_match_fuel (Ghost.reveal n) pm2 x2 v2 **
+     pure (raw_data_item_size v1 <= Ghost.reveal n /\
+           raw_data_item_size v2 <= Ghost.reveal n))
     (fun res ->
       cbor_raw_match_fuel (Ghost.reveal n) pm1 x1 v1 **
       cbor_raw_match_fuel (Ghost.reveal n) pm2 x2 v2 **
@@ -941,6 +944,7 @@ let compare_cbor_raw_fn_t
       pure (res == equiv v1 v2))
 
 // Fuel-aware variant of compare_cbor_raw_fn_t: operates on cbor_raw_match_fuel n.
+// Requires raw_data_item_size of inputs to fit within n.
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let compare_cbor_raw_fn_fuel_t
@@ -955,11 +959,36 @@ let compare_cbor_raw_fn_fuel_t
   (#v2: Ghost.erased raw_data_item) ->
   stt (option bool)
     (cbor_raw_match_fuel (Ghost.reveal n) pm1 x1 v1 **
-     cbor_raw_match_fuel (Ghost.reveal n) pm2 x2 v2)
+     cbor_raw_match_fuel (Ghost.reveal n) pm2 x2 v2 **
+     pure (raw_data_item_size v1 <= Ghost.reveal n /\
+           raw_data_item_size v2 <= Ghost.reveal n))
     (fun res ->
       cbor_raw_match_fuel (Ghost.reveal n) pm1 x1 v1 **
       cbor_raw_match_fuel (Ghost.reveal n) pm2 x2 v2 **
       pure (res == equiv v1 v2))
+
+// Fuel-aware variant of impl_data_model_t: operates on cbor_raw_match_fuel n.
+// Used by compare_cbor_raw_fuel so that the data_model callback can run on
+// the fuel-indexed match without needing a fuel-to-non-fuel bridge.
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let impl_data_model_fuel_t
+  (n: Ghost.erased nat)
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+=
+  (x1: cbor_raw) ->
+  (x2: cbor_raw) ->
+  (#pm1: perm) ->
+  (#v1: Ghost.erased raw_data_item) ->
+  (#pm2: perm) ->
+  (#v2: Ghost.erased raw_data_item) ->
+  stt bool
+    (cbor_raw_match_fuel (Ghost.reveal n) pm1 x1 v1 **
+     cbor_raw_match_fuel (Ghost.reveal n) pm2 x2 v2)
+    (fun res ->
+      cbor_raw_match_fuel (Ghost.reveal n) pm1 x1 v1 **
+      cbor_raw_match_fuel (Ghost.reveal n) pm2 x2 v2 **
+      pure (res == data_model v1 v2))
 
 // Map setoid_assoc_eq: search map_entries for an entry matching xr by key, then compare values
 #push-options "--z3rlimit 512 --fuel 4 --ifuel 4 --split_queries always"
@@ -1091,6 +1120,8 @@ ensures
 #pop-options
 
 // Fuel-aware variant of compare_cbor_raw_setoid_assoc_eq: operates on cbor_raw_match_fuel n.
+// Requires that map_entries' total pair size and xr_pair's component sizes all fit in n,
+// so that calls to compare_impl (which has a size precondition) typecheck.
 #push-options "--z3rlimit 512 --fuel 4 --ifuel 4 --split_queries always"
 
 inline_for_extraction
@@ -1109,7 +1140,12 @@ fn compare_cbor_raw_setoid_assoc_eq_fuel
 requires
   I.mixed_list_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
     pm_map map_ml map_entries **
-  cbor_map_entry_vmatch_fuel n pm_xr xr xr_pair
+  cbor_map_entry_vmatch_fuel n pm_xr xr xr_pair **
+  pure (
+    list_sum (pair_sum raw_data_item_size raw_data_item_size) map_entries <= Ghost.reveal n /\
+    raw_data_item_size (fst (Ghost.reveal xr_pair)) <= Ghost.reveal n /\
+    raw_data_item_size (snd (Ghost.reveal xr_pair)) <= Ghost.reveal n
+  )
 returns res: option bool
 ensures
   I.mixed_list_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
@@ -1147,6 +1183,8 @@ ensures
     pure (
       SZ.v cnt_c <= SZ.v len /\
       List.Tot.length rem == SZ.v len - SZ.v cnt_c /\
+      list_sum (pair_sum raw_data_item_size raw_data_item_size) rem <=
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) map_entries /\
       setoid_assoc_eq_with_overflow equiv equiv map_entries xr_pair ==
         (match done_c with
          | Some r -> r
@@ -1342,6 +1380,8 @@ ensures
 #pop-options
 
 // Fuel-aware variant of compare_cbor_raw_list_for_all: operates on cbor_raw_match_fuel n.
+// Requires that both inner_entries' and outer_entries' total pair sizes fit in n,
+// so the inner setoid_assoc_eq_fuel call typechecks for each popped outer entry.
 #push-options "--z3rlimit 512 --fuel 4 --ifuel 4 --split_queries always"
 
 inline_for_extraction
@@ -1361,7 +1401,11 @@ requires
   I.mixed_list_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
     pm_inner inner_ml inner_entries **
   I.mixed_list_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
-    pm_outer outer_ml outer_entries
+    pm_outer outer_ml outer_entries **
+  pure (
+    list_sum (pair_sum raw_data_item_size raw_data_item_size) inner_entries <= Ghost.reveal n /\
+    list_sum (pair_sum raw_data_item_size raw_data_item_size) outer_entries <= Ghost.reveal n
+  )
 returns res: option bool
 ensures
   I.mixed_list_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
@@ -1399,6 +1443,8 @@ ensures
     pure (
       SZ.v cnt_c <= SZ.v len /\
       List.Tot.length rem == SZ.v len - SZ.v cnt_c /\
+      list_sum (pair_sum raw_data_item_size raw_data_item_size) rem <=
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) outer_entries /\
       list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv inner_entries) outer_entries ==
         (match done_c with
          | Some r -> r
@@ -1418,7 +1464,9 @@ ensures
     Trade.trans _ _
       (I.mixed_list_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
         pm_outer outer_ml outer_entries);
-    // Call setoid_assoc_eq_fuel on this entry against the inner map
+    // Call setoid_assoc_eq_fuel on this entry against the inner map.
+    // Size preconditions follow from iterator_next_post's pure fact rem == hdv :: tl and the
+    // invariant list_sum (pair) rem <= list_sum (pair) outer_entries <= n.
     let entry_res = compare_cbor_raw_setoid_assoc_eq_fuel n compare_impl f64 inner_ml e;
     match entry_res {
       Some b -> {
@@ -1598,13 +1646,12 @@ ensures
 
 // Fuel-aware variant of compare_cbor_raw_array_case.
 //
-// NOTE on the additional precondition `(SZ.v len == 0 \/ Ghost.reveal n >= 2)`:
-//   The natural zcp = PPB.zero_copy_parse_of_strong_prefix (cbor_raw_read_fuel (n - 1) ...)
-//   requires `n - 1 >= 1` to typecheck. Since `cbor_raw_match_fuel 1 pm x (Array (cons _ _))`
-//   is in fact satisfiable when the underlying mixed_list contains Serialized base entries
-//   (Serialized doesn't use vmatch — see base_mixed_list_match_n in
-//   LowParse.PulseParse.Iterator), the predicate `n=1, len>0` cannot be ruled out from the
-//   match alone. We therefore push the `n >= 2 when len > 0` requirement onto the caller.
+// Uses Strategy A: instead of an n>=2 squash for non-empty arrays, we propagate a
+// raw_data_item_size v1/v2 <= n precondition through the type. For non-empty arrays
+// `Array _ (cons _ _)`, raw_data_item_size_eq gives size = 2 + list_sum size ar1 >= 3,
+// so n >= 3 and hence n - 1 >= 2 suffices for cbor_raw_read_fuel. The loop invariant
+// also tracks list_sum size rem1/rem2 <= list_sum size ar1/ar2 so that each popped
+// element hdv has size hdv <= n - 2 <= n - 1 for the compare_rec call.
 inline_for_extraction
 fn compare_cbor_raw_array_case_fuel
   (#data_model: Ghost.erased (raw_data_item -> raw_data_item -> bool))
@@ -1618,8 +1665,7 @@ fn compare_cbor_raw_array_case_fuel
   (_: squash (
     CBOR_Case_Array? x1 /\ CBOR_Case_Array? x2 /\
     IT.mixed_list_length (CBOR_Case_Array?.v x1).cbor_array_ptr == len /\
-    IT.mixed_list_length (CBOR_Case_Array?.v x2).cbor_array_ptr == len /\
-    (SZ.v len == 0 \/ Ghost.reveal n >= 2)
+    IT.mixed_list_length (CBOR_Case_Array?.v x2).cbor_array_ptr == len
   ))
   (#pm1: perm)
   (#v1: Ghost.erased raw_data_item)
@@ -1632,6 +1678,8 @@ requires
     Array? (Ghost.reveal v1) /\ Array? (Ghost.reveal v2) /\
     List.Tot.length (Array?.v (Ghost.reveal v1)) == SZ.v len /\
     List.Tot.length (Array?.v (Ghost.reveal v2)) == SZ.v len /\
+    raw_data_item_size v1 <= Ghost.reveal n /\
+    raw_data_item_size v2 <= Ghost.reveal n /\
     check_equiv data_model (NG.option_sz_v map_bound) v1 v2 ==
       check_equiv_list (Array?.v (Ghost.reveal v1)) (Array?.v (Ghost.reveal v2)) (check_equiv_map data_model (NG.option_sz_v map_bound))
   )
@@ -1647,7 +1695,10 @@ ensures
     // and length (Array?.v v1) == 0 ⟹ Array?.v v1 == [], same for v2.
     Some true
   } else {
-    // len > 0, so by the squash precondition, n >= 2, hence n - 1 >= 1.
+    // len > 0, so by raw_data_item_size_eq and non-empty Array?.v, size v1 >= 3, hence n >= 3,
+    // hence n - 1 >= 2. We invoke raw_data_item_size_eq explicitly to give Z3 the unfolding.
+    raw_data_item_size_eq v1;
+    raw_data_item_size_eq v2;
     let n1 : Ghost.erased nat = Ghost.hide (Ghost.reveal n - 1);
     // Unfold cbor_raw_match_fuel n on both sides to cbor_raw_match_aux
     cbor_raw_match_fuel_eq_succ n pm1 x1 v1;
@@ -1745,6 +1796,8 @@ ensures
         List.Tot.length rem2 == SZ.v len - SZ.v cnt_c /\
         Ghost.reveal ar1 == Array?.v (Ghost.reveal v1) /\
         Ghost.reveal ar2 == Array?.v (Ghost.reveal v2) /\
+        list_sum raw_data_item_size rem1 <= list_sum raw_data_item_size (Ghost.reveal ar1) /\
+        list_sum raw_data_item_size rem2 <= list_sum raw_data_item_size (Ghost.reveal ar2) /\
         list_sum raw_data_item_size rem1 + list_sum raw_data_item_size rem2 <= list_sum raw_data_item_size (Ghost.reveal ar1) + list_sum raw_data_item_size (Ghost.reveal ar2) /\
         check_equiv_list (Ghost.reveal ar1) (Ghost.reveal ar2) (check_equiv_map data_model (NG.option_sz_v map_bound)) ==
           option_and acc_c (check_equiv_list rem1 rem2 (check_equiv_map data_model (NG.option_sz_v map_bound)))
@@ -2050,6 +2103,426 @@ ensures
   }
   }
 }
+
+// === Phase 5: Fuel-aware variant of compare_cbor_raw ===
+//
+// Mirrors the body of compare_cbor_raw (L1843-2104) but operates on cbor_raw_match_fuel n
+// throughout. Uses the same dispatch by major type, with the same per-case lemmas.
+//
+// Strategy A: a raw_data_item_size v <= n precondition propagated through the type
+// guarantees that, in the Tagged/Array/Map cases, n is large enough (n >= 2 for empty
+// Array/Map/Tagged with empty content, n >= 3 for non-empty Array/Map/Tagged with
+// non-empty content). This is enough for the recursive sub-calls at fuel n - 1 to
+// satisfy their own size preconditions (size of any sub-item <= n - 1).
+//
+// impl_dm is taken at the fuel-aware type (impl_data_model_fuel_t n data_model) so
+// the data_model can be invoked directly on the fuel-indexed match.
+inline_for_extraction
+```pulse
+fn compare_cbor_raw_fuel
+  (#data_model: Ghost.erased (raw_data_item -> raw_data_item -> bool))
+  (n: Ghost.erased nat { Ghost.reveal n >= 1 })
+  (impl_dm: impl_data_model_fuel_t n data_model)
+  (f64: squash SZ.fits_u64)
+  (map_bound: option SZ.t)
+  (compare_rec: compare_cbor_raw_fuel_t data_model (NG.option_sz_v map_bound) (Ghost.hide (Ghost.reveal n - 1)))
+  (compare_rec_map: compare_cbor_raw_fuel_t data_model (option_nat_decrement_safe (NG.option_sz_v map_bound)) (Ghost.hide (Ghost.reveal n - 1)))
+  (x1: cbor_raw)
+  (x2: cbor_raw)
+  (#pm1: perm)
+  (#v1: Ghost.erased raw_data_item)
+  (#pm2: perm)
+  (#v2: Ghost.erased raw_data_item)
+requires
+  cbor_raw_match_fuel n pm1 x1 v1 **
+  cbor_raw_match_fuel n pm2 x2 v2 **
+  pure (raw_data_item_size v1 <= Ghost.reveal n /\
+        raw_data_item_size v2 <= Ghost.reveal n)
+returns res: option bool
+ensures
+  cbor_raw_match_fuel n pm1 x1 v1 **
+  cbor_raw_match_fuel n pm2 x2 v2 **
+  pure (res == check_equiv data_model (NG.option_sz_v map_bound) v1 v2)
+{
+  // Step 1: Try data_model first
+  let dm_res = impl_dm x1 x2;
+  if dm_res {
+    check_equiv_dm_true_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2) ();
+    Some true
+  } else {
+    // Step 2: Unfold cbor_raw_match_fuel n on both sides to cbor_raw_match_aux
+    cbor_raw_match_fuel_eq_succ n pm1 x1 v1;
+    cbor_raw_match_fuel_eq_succ n pm2 x2 v2;
+    rewrite (cbor_raw_match_fuel n pm1 x1 v1)
+         as (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1);
+    rewrite (cbor_raw_match_fuel n pm2 x2 v2)
+         as (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2);
+    // Expose raw_data_item_size unfolding for sub-call size preconditions.
+    raw_data_item_size_eq v1;
+    raw_data_item_size_eq v2;
+    // Get cases and fields props on both sides
+    cbor_raw_match_aux_cases (cbor_raw_match_fuel (n - 1)) pm1 x1;
+    cbor_raw_match_aux_cases (cbor_raw_match_fuel (n - 1)) pm2 x2;
+    cbor_raw_match_aux_fields (cbor_raw_match_fuel (n - 1)) pm1 x1;
+    cbor_raw_match_aux_fields (cbor_raw_match_fuel (n - 1)) pm2 x2;
+    let mt1 = cbor_raw_get_major_type_aux (cbor_raw_match_fuel (n - 1)) pm1 x1;
+    let mt2 = cbor_raw_get_major_type_aux (cbor_raw_match_fuel (n - 1)) pm2 x2;
+    if (mt1 <> mt2) {
+      // Different major types: mismatch
+      check_equiv_mismatch_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2) () ();
+      // Refold to cbor_raw_match_fuel n
+      cbor_raw_match_fuel_eq_succ n pm1 x1 v1;
+      cbor_raw_match_fuel_eq_succ n pm2 x2 v2;
+      rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+           as (cbor_raw_match_fuel n pm1 x1 v1);
+      rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+           as (cbor_raw_match_fuel n pm2 x2 v2);
+      Some false
+    } else if (mt1 = Spec.cbor_major_type_simple_value) {
+      // Simple/Simple: compare values via fields_prop
+      let sv1 = CBOR_Case_Simple?.v x1;
+      let sv2 = CBOR_Case_Simple?.v x2;
+      let res = sv1 = sv2;
+      check_equiv_simple_eq data_model (NG.option_sz_v map_bound) sv1 sv2 ();
+      cbor_raw_match_fuel_eq_succ n pm1 x1 v1;
+      cbor_raw_match_fuel_eq_succ n pm2 x2 v2;
+      rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+           as (cbor_raw_match_fuel n pm1 x1 v1);
+      rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+           as (cbor_raw_match_fuel n pm2 x2 v2);
+      Some res
+    } else if (mt1 = Spec.cbor_major_type_uint64 || mt1 = Spec.cbor_major_type_neg_int64) {
+      // Int/Int: compare type + value via fields_prop
+      let vi1 = CBOR_Case_Int?.v x1;
+      let vi2 = CBOR_Case_Int?.v x2;
+      let res = vi1.cbor_int_type = vi2.cbor_int_type && (vi1.cbor_int_value <: U64.t) = (vi2.cbor_int_value <: U64.t);
+      check_equiv_int_eq data_model (NG.option_sz_v map_bound) vi1.cbor_int_type { size = vi1.cbor_int_size; value = vi1.cbor_int_value } vi2.cbor_int_type { size = vi2.cbor_int_size; value = vi2.cbor_int_value } ();
+      cbor_raw_match_fuel_eq_succ n pm1 x1 v1;
+      cbor_raw_match_fuel_eq_succ n pm2 x2 v2;
+      rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+           as (cbor_raw_match_fuel n pm1 x1 v1);
+      rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+           as (cbor_raw_match_fuel n pm2 x2 v2);
+      Some res
+    } else if (mt1 = Spec.cbor_major_type_byte_string || mt1 = Spec.cbor_major_type_text_string) {
+      // String/String: compare type + bytes
+      let vs1 = CBOR_Case_String?.v x1;
+      let vs2 = CBOR_Case_String?.v x2;
+      if (vs1.cbor_string_type <> vs2.cbor_string_type) {
+        check_equiv_string_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2) () ();
+        cbor_raw_match_fuel_eq_succ n pm1 x1 v1;
+        cbor_raw_match_fuel_eq_succ n pm2 x2 v2;
+        rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+             as (cbor_raw_match_fuel n pm1 x1 v1);
+        rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+             as (cbor_raw_match_fuel n pm2 x2 v2);
+        Some false
+      } else {
+        let s1 = cbor_raw_get_string_aux (cbor_raw_match_fuel (n - 1)) pm1 x1 ();
+        let s2 = cbor_raw_get_string_aux (cbor_raw_match_fuel (n - 1)) pm2 x2 ();
+        let cmp = CompareBytes.lex_compare_bytes s1 s2;
+        CBOR.Spec.Raw.Format.bytes_lex_compare_equal (String?.v (Ghost.reveal v1)) (String?.v (Ghost.reveal v2));
+        check_equiv_string_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2) () ();
+        Trade.elim _ (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1);
+        Trade.elim _ (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2);
+        cbor_raw_match_fuel_eq_succ n pm1 x1 v1;
+        cbor_raw_match_fuel_eq_succ n pm2 x2 v2;
+        rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+             as (cbor_raw_match_fuel n pm1 x1 v1);
+        rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+             as (cbor_raw_match_fuel n pm2 x2 v2);
+        let res = cmp = 0s;
+        Some res
+      }
+    } else if (mt1 = Spec.cbor_major_type_tagged) {
+      // Tagged/Tagged: compare tags, recurse on payloads.
+      // From SMTpat raw_data_item_size v1 = 2 + size payload1, so n >= 3 and n - 1 >= 2.
+      check_equiv_tagged_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2) () ();
+      let tag1 = cbor_raw_tag_value x1;
+      let tag2 = cbor_raw_tag_value x2;
+      cbor_raw_tag_value_eq x1 (Ghost.reveal v1) () ();
+      cbor_raw_tag_value_eq x2 (Ghost.reveal v2) () ();
+      if (tag1 <> tag2) {
+        cbor_raw_match_fuel_eq_succ n pm1 x1 v1;
+        cbor_raw_match_fuel_eq_succ n pm2 x2 v2;
+        rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+             as (cbor_raw_match_fuel n pm1 x1 v1);
+        rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+             as (cbor_raw_match_fuel n pm2 x2 v2);
+        Some false
+      } else {
+        let n1 : Ghost.erased nat = Ghost.hide (Ghost.reveal n - 1);
+        // Extract payload via _aux accessor; the reader is at fuel n - 1.
+        let payload1 = cbor_raw_get_tagged_payload_aux (cbor_raw_match_fuel (n - 1)) pm1
+                         (cbor_raw_read_fuel n1 pm1 f64) x1 ();
+        let payload2 = cbor_raw_get_tagged_payload_aux (cbor_raw_match_fuel (n - 1)) pm2
+                         (cbor_raw_read_fuel n1 pm2 f64) x2 ();
+        // Recursive call at fuel n - 1: size of payload = size of v - 2 <= n - 2 <= n - 1
+        let res = compare_rec payload1 payload2;
+        Trade.elim _ (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1);
+        Trade.elim _ (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2);
+        cbor_raw_match_fuel_eq_succ n pm1 x1 v1;
+        cbor_raw_match_fuel_eq_succ n pm2 x2 v2;
+        rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+             as (cbor_raw_match_fuel n pm1 x1 v1);
+        rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+             as (cbor_raw_match_fuel n pm2 x2 v2);
+        res
+      }
+    } else if (mt1 = Spec.cbor_major_type_array) {
+      // Array/Array: compare lengths, then delegate element comparison to Phase 2.
+      check_equiv_array_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2) () ();
+      let len1 = IT.mixed_list_length (CBOR_Case_Array?.v x1).cbor_array_ptr;
+      let len2 = IT.mixed_list_length (CBOR_Case_Array?.v x2).cbor_array_ptr;
+      if (len1 <> len2) {
+        cbor_raw_match_fuel_eq_succ n pm1 x1 v1;
+        cbor_raw_match_fuel_eq_succ n pm2 x2 v2;
+        rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+             as (cbor_raw_match_fuel n pm1 x1 v1);
+        rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+             as (cbor_raw_match_fuel n pm2 x2 v2);
+        Some false
+      } else {
+        // Same length: refold to cbor_raw_match_fuel n, then delegate to Phase 2.
+        cbor_raw_match_fuel_eq_succ n pm1 x1 v1;
+        cbor_raw_match_fuel_eq_succ n pm2 x2 v2;
+        rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+             as (cbor_raw_match_fuel n pm1 x1 v1);
+        rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+             as (cbor_raw_match_fuel n pm2 x2 v2);
+        compare_cbor_raw_array_case_fuel f64 map_bound n compare_rec x1 x2 len1 ()
+      }
+    } else {
+      // Map/Map: bidirectional setoid_assoc_eq check via Phase 4 (twice).
+      check_equiv_map_map_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2) () ();
+      match map_bound {
+        Some mb_v -> {
+          if (mb_v = 0sz) {
+            // Overflow: map_bound = Some 0
+            cbor_raw_match_fuel_eq_succ n pm1 x1 v1;
+            cbor_raw_match_fuel_eq_succ n pm2 x2 v2;
+            rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+                 as (cbor_raw_match_fuel n pm1 x1 v1);
+            rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+                 as (cbor_raw_match_fuel n pm2 x2 v2);
+            None #bool
+          } else {
+            option_nat_decrement_safe_spec (NG.option_sz_v map_bound);
+            // Get both maps at fuel n - 1
+            let map_ml1 = cbor_raw_get_map_aux (cbor_raw_match_fuel (n - 1)) pm1 x1 ();
+            with pm1_m map1_entries . assert (
+              I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match (cbor_raw_match_fuel (n - 1)) pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries **
+              Trade.trade
+                (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match (cbor_raw_match_fuel (n - 1)) pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries)
+                (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+            );
+            // Rewrite to cbor_map_entry_vmatch_fuel (n - 1)
+            rewrite
+              (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match (cbor_raw_match_fuel (n - 1)) pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries)
+              as (I.mixed_list_match (cbor_map_entry_vmatch_fuel (n - 1)) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries);
+            rewrite
+              (Trade.trade
+                (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match (cbor_raw_match_fuel (n - 1)) pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries)
+                (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1))
+              as (Trade.trade
+                (I.mixed_list_match (cbor_map_entry_vmatch_fuel (n - 1)) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries)
+                (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1));
+            // Build trade (cbor_raw_match_aux) (cbor_raw_match_fuel n) closure for side 1
+            intro
+              (trade
+                (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+                (cbor_raw_match_fuel n pm1 x1 v1))
+              #emp
+              fn _ {
+                cbor_raw_match_fuel_eq_succ n pm1 x1 v1;
+                rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+                     as (cbor_raw_match_fuel n pm1 x1 v1)
+              };
+            Trade.trans
+              (I.mixed_list_match (cbor_map_entry_vmatch_fuel (n - 1)) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries)
+              (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+              (cbor_raw_match_fuel n pm1 x1 v1);
+
+            // Same for side 2
+            let map_ml2 = cbor_raw_get_map_aux (cbor_raw_match_fuel (n - 1)) pm2 x2 ();
+            with pm2_m map2_entries . assert (
+              I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match (cbor_raw_match_fuel (n - 1)) pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries **
+              Trade.trade
+                (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match (cbor_raw_match_fuel (n - 1)) pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries)
+                (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+            );
+            rewrite
+              (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match (cbor_raw_match_fuel (n - 1)) pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries)
+              as (I.mixed_list_match (cbor_map_entry_vmatch_fuel (n - 1)) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries);
+            rewrite
+              (Trade.trade
+                (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match (cbor_raw_match_fuel (n - 1)) pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries)
+                (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2))
+              as (Trade.trade
+                (I.mixed_list_match (cbor_map_entry_vmatch_fuel (n - 1)) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries)
+                (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2));
+            intro
+              (trade
+                (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+                (cbor_raw_match_fuel n pm2 x2 v2))
+              #emp
+              fn _ {
+                cbor_raw_match_fuel_eq_succ n pm2 x2 v2;
+                rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+                     as (cbor_raw_match_fuel n pm2 x2 v2)
+              };
+            Trade.trans
+              (I.mixed_list_match (cbor_map_entry_vmatch_fuel (n - 1)) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries)
+              (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+              (cbor_raw_match_fuel n pm2 x2 v2);
+
+            // Forward check: v1 entries searched against v2 (Phase 4 at fuel n - 1).
+            // Inline the fuel argument so it matches the slprop's `(n - 1)` syntactically.
+            let fwd = compare_cbor_raw_list_for_all_fuel (Ghost.hide (Ghost.reveal n - 1))
+                        #(check_equiv data_model (option_nat_decrement_safe (NG.option_sz_v map_bound)))
+                        compare_rec_map f64
+                        map_ml2 map_ml1;
+            check_equiv_map_list_for_all_ext data_model (option_nat_decrement_safe (NG.option_sz_v map_bound))
+              (list_sum (pair_sum raw_data_item_size raw_data_item_size) (Map?.v (Ghost.reveal v1)) + list_sum (pair_sum raw_data_item_size raw_data_item_size) (Map?.v (Ghost.reveal v2)))
+              (Ghost.reveal map2_entries) (Ghost.reveal map1_entries);
+            match fwd {
+              Some fwd_b -> {
+                if fwd_b {
+                  let bwd = compare_cbor_raw_list_for_all_fuel (Ghost.hide (Ghost.reveal n - 1))
+                              #(check_equiv data_model (option_nat_decrement_safe (NG.option_sz_v map_bound)))
+                              compare_rec_map f64
+                              map_ml1 map_ml2;
+                  check_equiv_map_list_for_all_ext data_model (option_nat_decrement_safe (NG.option_sz_v map_bound))
+                    (list_sum (pair_sum raw_data_item_size raw_data_item_size) (Map?.v (Ghost.reveal v1)) + list_sum (pair_sum raw_data_item_size raw_data_item_size) (Map?.v (Ghost.reveal v2)))
+                    (Ghost.reveal map1_entries) (Ghost.reveal map2_entries);
+                  Trade.elim _ (cbor_raw_match_fuel n pm1 x1 v1);
+                  Trade.elim _ (cbor_raw_match_fuel n pm2 x2 v2);
+                  check_equiv_map_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2);
+                  bwd
+                } else {
+                  Trade.elim _ (cbor_raw_match_fuel n pm1 x1 v1);
+                  Trade.elim _ (cbor_raw_match_fuel n pm2 x2 v2);
+                  check_equiv_map_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2);
+                  Some false
+                }
+              }
+              None -> {
+                Trade.elim _ (cbor_raw_match_fuel n pm1 x1 v1);
+                Trade.elim _ (cbor_raw_match_fuel n pm2 x2 v2);
+                check_equiv_map_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2);
+                None #bool
+              }
+            }
+          }
+        }
+        None -> {
+          // No bound: proceed with map comparison
+          option_nat_decrement_safe_spec (NG.option_sz_v map_bound);
+          let map_ml1 = cbor_raw_get_map_aux (cbor_raw_match_fuel (n - 1)) pm1 x1 ();
+          with pm1_m map1_entries . assert (
+            I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match (cbor_raw_match_fuel (n - 1)) pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries **
+            Trade.trade
+              (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match (cbor_raw_match_fuel (n - 1)) pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries)
+              (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+          );
+          rewrite
+            (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match (cbor_raw_match_fuel (n - 1)) pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries)
+            as (I.mixed_list_match (cbor_map_entry_vmatch_fuel (n - 1)) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries);
+          rewrite
+            (Trade.trade
+              (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match (cbor_raw_match_fuel (n - 1)) pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries)
+              (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1))
+            as (Trade.trade
+              (I.mixed_list_match (cbor_map_entry_vmatch_fuel (n - 1)) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries)
+              (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1));
+          intro
+            (trade
+              (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+              (cbor_raw_match_fuel n pm1 x1 v1))
+            #emp
+            fn _ {
+              cbor_raw_match_fuel_eq_succ n pm1 x1 v1;
+              rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+                   as (cbor_raw_match_fuel n pm1 x1 v1)
+            };
+          Trade.trans
+            (I.mixed_list_match (cbor_map_entry_vmatch_fuel (n - 1)) (nondep_then parse_raw_data_item parse_raw_data_item) pm1_m map_ml1 map1_entries)
+            (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm1 x1 v1)
+            (cbor_raw_match_fuel n pm1 x1 v1);
+
+          let map_ml2 = cbor_raw_get_map_aux (cbor_raw_match_fuel (n - 1)) pm2 x2 ();
+          with pm2_m map2_entries . assert (
+            I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match (cbor_raw_match_fuel (n - 1)) pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries **
+            Trade.trade
+              (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match (cbor_raw_match_fuel (n - 1)) pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries)
+              (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+          );
+          rewrite
+            (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match (cbor_raw_match_fuel (n - 1)) pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries)
+            as (I.mixed_list_match (cbor_map_entry_vmatch_fuel (n - 1)) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries);
+          rewrite
+            (Trade.trade
+              (I.mixed_list_match (fun (pm0: perm) (elem: cbor_map_entry cbor_raw) (v: (raw_data_item & raw_data_item)) -> cbor_map_entry_match (cbor_raw_match_fuel (n - 1)) pm0 elem v) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries)
+              (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2))
+            as (Trade.trade
+              (I.mixed_list_match (cbor_map_entry_vmatch_fuel (n - 1)) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries)
+              (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2));
+          intro
+            (trade
+              (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+              (cbor_raw_match_fuel n pm2 x2 v2))
+            #emp
+            fn _ {
+              cbor_raw_match_fuel_eq_succ n pm2 x2 v2;
+              rewrite (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+                   as (cbor_raw_match_fuel n pm2 x2 v2)
+            };
+          Trade.trans
+            (I.mixed_list_match (cbor_map_entry_vmatch_fuel (n - 1)) (nondep_then parse_raw_data_item parse_raw_data_item) pm2_m map_ml2 map2_entries)
+            (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2)
+            (cbor_raw_match_fuel n pm2 x2 v2);
+
+          let fwd = compare_cbor_raw_list_for_all_fuel (Ghost.hide (Ghost.reveal n - 1))
+                      #(check_equiv data_model (option_nat_decrement_safe (NG.option_sz_v map_bound)))
+                      compare_rec_map f64
+                      map_ml2 map_ml1;
+          check_equiv_map_list_for_all_ext data_model (option_nat_decrement_safe (NG.option_sz_v map_bound))
+            (list_sum (pair_sum raw_data_item_size raw_data_item_size) (Map?.v (Ghost.reveal v1)) + list_sum (pair_sum raw_data_item_size raw_data_item_size) (Map?.v (Ghost.reveal v2)))
+            (Ghost.reveal map2_entries) (Ghost.reveal map1_entries);
+          match fwd {
+            Some fwd_b -> {
+              if fwd_b {
+                let bwd = compare_cbor_raw_list_for_all_fuel (Ghost.hide (Ghost.reveal n - 1))
+                            #(check_equiv data_model (option_nat_decrement_safe (NG.option_sz_v map_bound)))
+                            compare_rec_map f64
+                            map_ml1 map_ml2;
+                check_equiv_map_list_for_all_ext data_model (option_nat_decrement_safe (NG.option_sz_v map_bound))
+                  (list_sum (pair_sum raw_data_item_size raw_data_item_size) (Map?.v (Ghost.reveal v1)) + list_sum (pair_sum raw_data_item_size raw_data_item_size) (Map?.v (Ghost.reveal v2)))
+                  (Ghost.reveal map1_entries) (Ghost.reveal map2_entries);
+                Trade.elim _ (cbor_raw_match_fuel n pm1 x1 v1);
+                Trade.elim _ (cbor_raw_match_fuel n pm2 x2 v2);
+                check_equiv_map_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2);
+                bwd
+              } else {
+                Trade.elim _ (cbor_raw_match_fuel n pm1 x1 v1);
+                Trade.elim _ (cbor_raw_match_fuel n pm2 x2 v2);
+                check_equiv_map_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2);
+                Some false
+              }
+            }
+            None -> {
+              Trade.elim _ (cbor_raw_match_fuel n pm1 x1 v1);
+              Trade.elim _ (cbor_raw_match_fuel n pm2 x2 v2);
+              check_equiv_map_eq data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2);
+              None #bool
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
 
 #pop-options
 
