@@ -184,72 +184,8 @@ let compare_cbor_raw_fuel_t (n: Ghost.erased nat) =
       pure (same_sign (I16.v res) (cbor_compare v1 v2)))
 
 // === Aux fields helper (parameterized by r) ===
-// Analogous to NC.cbor_raw_match_fields, but operates on cbor_raw_match_aux for
-// arbitrary r (used with r = cbor_raw_match_fuel (n-1)).
-
-#push-options "--z3rlimit 256 --fuel 2 --ifuel 2"
-
-ghost fn cbor_raw_match_aux_fields
-  (r: perm -> cbor_raw -> raw_data_item -> slprop)
-  (pm: perm) (x: cbor_raw) (#y: Ghost.erased raw_data_item)
-requires cbor_raw_match_aux parse_raw_data_item r pm x y
-ensures cbor_raw_match_aux parse_raw_data_item r pm x y ** pure (NC.cbor_raw_match_fields_prop x y)
-{
-  unfold (cbor_raw_match_aux parse_raw_data_item r pm x (Ghost.reveal y));
-  unfold (vmatch_synth
-    (vmatch_dep_pair_with_proj
-       cbor_raw_match_header
-       cbor_raw_id_proj
-       (cbor_raw_match_content r parse_raw_data_item pm))
-    synth_raw_data_item_recip
-    x (Ghost.reveal y));
-  unfold (vmatch_dep_pair_with_proj
-    cbor_raw_match_header
-    cbor_raw_id_proj
-    (cbor_raw_match_content r parse_raw_data_item pm)
-    x
-    (synth_raw_data_item_recip (Ghost.reveal y)));
-  unfold (cbor_raw_match_header
-    (cbor_raw_id_proj.pair_proj_get x)
-    (dfst (synth_raw_data_item_recip (Ghost.reveal y))));
-  rewrite
-    (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get x) ==
-           Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))))
-    as
-    (pure (cbor_raw_get_header x ==
-           Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))));
-  let the_prop = cbor_raw_get_header x ==
-    Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)));
-  let sq = elim_pure_explicit the_prop;
-  NC.cbor_raw_match_fields_prop_of_header x (Ghost.reveal y)
-    (dfst (synth_raw_data_item_recip (Ghost.reveal y))) sq ();
-  intro_pure the_prop sq;
-  rewrite
-    (pure (cbor_raw_get_header x ==
-           Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))))
-    as
-    (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get x) ==
-           Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))));
-  fold (cbor_raw_match_header
-    (cbor_raw_id_proj.pair_proj_get x)
-    (dfst (synth_raw_data_item_recip (Ghost.reveal y))));
-  fold (vmatch_dep_pair_with_proj
-    cbor_raw_match_header
-    cbor_raw_id_proj
-    (cbor_raw_match_content r parse_raw_data_item pm)
-    x
-    (synth_raw_data_item_recip (Ghost.reveal y)));
-  fold (vmatch_synth
-    (vmatch_dep_pair_with_proj
-       cbor_raw_match_header
-       cbor_raw_id_proj
-       (cbor_raw_match_content r parse_raw_data_item pm))
-    synth_raw_data_item_recip
-    x (Ghost.reveal y));
-  fold (cbor_raw_match_aux parse_raw_data_item r pm x (Ghost.reveal y));
-}
-
-#pop-options
+// Moved into Nondet.Compare alongside cbor_raw_match_fields_prop / _of_header;
+// referenced here via NC.cbor_raw_match_aux_fields.
 
 // === Byte-compare helpers ===
 
@@ -1175,8 +1111,8 @@ fn cbor_compare_body_fuel
   // Derive cases / fields props on both sides
   cbor_raw_match_aux_cases (cbor_raw_match_fuel (n - 1)) pm1 x1;
   cbor_raw_match_aux_cases (cbor_raw_match_fuel (n - 1)) pm2 x2;
-  cbor_raw_match_aux_fields (cbor_raw_match_fuel (n - 1)) pm1 x1;
-  cbor_raw_match_aux_fields (cbor_raw_match_fuel (n - 1)) pm2 x2;
+  NC.cbor_raw_match_aux_fields (cbor_raw_match_fuel (n - 1)) pm1 x1;
+  NC.cbor_raw_match_aux_fields (cbor_raw_match_fuel (n - 1)) pm2 x2;
 
   // Read major types
   let ty1 = cbor_raw_get_major_type_aux (cbor_raw_match_fuel (n - 1)) pm1 x1;

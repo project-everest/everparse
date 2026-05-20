@@ -127,6 +127,74 @@ ensures cbor_raw_match pm x y ** pure (cbor_raw_match_fields_prop x y)
 
 #pop-options
 
+// === Aux fields helper (parameterized by r) ===
+// Analogous to cbor_raw_match_fields, but operates on cbor_raw_match_aux for
+// arbitrary r (used with r = cbor_raw_match_fuel (n-1)).
+
+#push-options "--z3rlimit 256 --fuel 2 --ifuel 2"
+
+ghost fn cbor_raw_match_aux_fields
+  (r: perm -> cbor_raw -> raw_data_item -> slprop)
+  (pm: perm) (x: cbor_raw) (#y: Ghost.erased raw_data_item)
+requires cbor_raw_match_aux parse_raw_data_item r pm x y
+ensures cbor_raw_match_aux parse_raw_data_item r pm x y ** pure (cbor_raw_match_fields_prop x y)
+{
+  unfold (cbor_raw_match_aux parse_raw_data_item r pm x (Ghost.reveal y));
+  unfold (vmatch_synth
+    (vmatch_dep_pair_with_proj
+       cbor_raw_match_header
+       cbor_raw_id_proj
+       (cbor_raw_match_content r parse_raw_data_item pm))
+    synth_raw_data_item_recip
+    x (Ghost.reveal y));
+  unfold (vmatch_dep_pair_with_proj
+    cbor_raw_match_header
+    cbor_raw_id_proj
+    (cbor_raw_match_content r parse_raw_data_item pm)
+    x
+    (synth_raw_data_item_recip (Ghost.reveal y)));
+  unfold (cbor_raw_match_header
+    (cbor_raw_id_proj.pair_proj_get x)
+    (dfst (synth_raw_data_item_recip (Ghost.reveal y))));
+  rewrite
+    (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get x) ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))))
+    as
+    (pure (cbor_raw_get_header x ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))));
+  let the_prop = cbor_raw_get_header x ==
+    Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)));
+  let sq = elim_pure_explicit the_prop;
+  cbor_raw_match_fields_prop_of_header x (Ghost.reveal y)
+    (dfst (synth_raw_data_item_recip (Ghost.reveal y))) sq ();
+  intro_pure the_prop sq;
+  rewrite
+    (pure (cbor_raw_get_header x ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))))
+    as
+    (pure (cbor_raw_get_header (cbor_raw_id_proj.pair_proj_get x) ==
+           Some (dfst (synth_raw_data_item_recip (Ghost.reveal y)))));
+  fold (cbor_raw_match_header
+    (cbor_raw_id_proj.pair_proj_get x)
+    (dfst (synth_raw_data_item_recip (Ghost.reveal y))));
+  fold (vmatch_dep_pair_with_proj
+    cbor_raw_match_header
+    cbor_raw_id_proj
+    (cbor_raw_match_content r parse_raw_data_item pm)
+    x
+    (synth_raw_data_item_recip (Ghost.reveal y)));
+  fold (vmatch_synth
+    (vmatch_dep_pair_with_proj
+       cbor_raw_match_header
+       cbor_raw_id_proj
+       (cbor_raw_match_content r parse_raw_data_item pm))
+    synth_raw_data_item_recip
+    x (Ghost.reveal y));
+  fold (cbor_raw_match_aux parse_raw_data_item r pm x (Ghost.reveal y));
+}
+
+#pop-options
+
 // === check_equiv_list decomposition ===
 
 let option_and (x y: option bool) : option bool =
