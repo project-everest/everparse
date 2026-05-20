@@ -20,18 +20,18 @@ $(EVERPARSE_OUTPUT_DIR):
 
 # Generate the Makefile with --save_hashes
 $(everparse_makefile): $(wildcard src/*.3d) | $(EVERPARSE_OUTPUT_DIR)
-	$(EVERPARSE_CMD) --makefile gmake --save_hashes --skip_o_rules --no_copy_everparse_h --makefile_name $@ src/Test.3d
+	$(EVERPARSE_CMD) --makefile gmake --save_hashes --skip_o_rules --no_copy_everparse_h --makefile_name $@ src/Test.3d src/Test2.3d
 
 ifeq (,$(filter clean,$(MAKECMDGOALS)))
 include $(everparse_makefile)
 endif
 
 # Build all generated files including hash .json files
-build: $(EVERPARSE_ALL_H_FILES) $(EVERPARSE_ALL_C_FILES) $(EVERPARSE_OUTPUT_DIR)/Test.json
+build: $(EVERPARSE_ALL_H_FILES) $(EVERPARSE_ALL_C_FILES) $(EVERPARSE_OUTPUT_DIR)/Test.json $(EVERPARSE_OUTPUT_DIR)/Test2.json
 
 # Verify saved hashes with --check_hashes strong
 check: build
-	$(EVERPARSE_CMD) --odir $(EVERPARSE_OUTPUT_DIR) --check_hashes strong src/Test.3d
+	$(EVERPARSE_CMD) --odir $(EVERPARSE_OUTPUT_DIR) --check_hashes strong src/Test.3d src/Test2.3d
 
 clean:
 	rm -rf $(EVERPARSE_OUTPUT_DIR)
