@@ -528,6 +528,33 @@ let produce_everparse_h_rule
     }
   ] else []
 
+let produce_hash_rule
+  (g: Deps.dep_graph)
+  (file: string)
+: FStar.All.ML rule_t
+=
+  let modul = Options.get_module_name file in
+  let deps =
+    [mk_input_filename file;
+     mk_filename modul "c";
+     mk_filename modul "h"]
+    `List.Tot.append`
+    (if Deps.has_entrypoint g modul
+     then [mk_filename (Printf.sprintf "%sWrapper" modul) "c";
+           mk_filename (Printf.sprintf "%sWrapper" modul) "h"]
+     else [])
+    `List.Tot.append`
+    (if Deps.has_static_assertions g modul
+     then [mk_filename (Printf.sprintf "%sStaticAssertions" modul) "c"]
+     else [])
+  in
+  {
+    ty = EverParse;
+    from = deps;
+    to = mk_filename modul "json";
+    args = Printf.sprintf "--__micro_step save_hashes %s" (mk_input_filename file);
+  }
+
 noeq
 type produce_makefile_res = {
   rules: list rule_t;
@@ -542,6 +569,7 @@ let produce_makefile
   (skip_o_rules: bool)
   (clang_format: bool)
   (copy_clang_format_opt: bool)
+  (save_hashes: bool)
   (files: list string)
 : FStar.All.ML produce_makefile_res
 =
@@ -566,7 +594,8 @@ let produce_makefile
     List.Tot.concatMap (produce_external_api_krml_rule g) all_modules `List.Tot.append`
     List.map (produce_krml_rule g) all_modules `List.Tot.append`
     List.concatMap (produce_h_rules g clang_format) all_files `List.Tot.append`
-    produce_config_fst_file_rule ()
+    produce_config_fst_file_rule () `List.Tot.append`
+    (if save_hashes then List.map (produce_hash_rule g) all_files else [])
   in {
     graph = g;
     rules = rules;
@@ -581,13 +610,14 @@ let write_makefile
   (skip_o_rules: bool)
   (clang_format: bool)
   (copy_clang_format_opt: bool)
+  (save_hashes: bool)
   (files: list string)
 : FStar.All.ML unit
 =
   let makefile_final = Options.get_makefile_name () in
   let makefile_tmp = makefile_final ^ ".tmp" in
   let file = FStar.IO.open_write_file makefile_tmp in
-  let {graph = g; rules; all_files} = produce_makefile mtype everparse_h emit_output_types_defs skip_o_rules clang_format copy_clang_format_opt files in
+  let {graph = g; rules; all_files} = produce_makefile mtype everparse_h emit_output_types_defs skip_o_rules clang_format copy_clang_format_opt save_hashes files in
   FStar.IO.write_string file (String.concat "" (List.Tot.map (print_make_rule mtype everparse_h input_stream_binding) rules));
   let write_all_ext_files (ext_cap: string) (ext: string) : FStar.All.ML unit =
     let ln =
