@@ -1372,8 +1372,12 @@ fn cbor_compare_body_fuel
 // packaged as a non-recursive inline `fn ih` so we can pass a value of type
 // `compare_cbor_raw_fuel_t (Ghost.reveal n - 1)` to `cbor_compare_body_fuel`.
 
-inline_for_extraction
-noextract [@@noextract_to "krml"]
+// NOTE: deliberately NOT `inline_for_extraction` — the body (via the
+// `inline_for_extraction` helper `cbor_compare_body_fuel`) expands to multiple
+// call sites of the inner closure `ih`. If this `fn rec` were also
+// `inline_for_extraction`, each call site would β-reduce to a fresh inlined
+// copy of the entire recursive body, causing exponential blow-up during
+// Pulse --codegen krml extraction.
 fn rec impl_cbor_compare_fuel
   (f64: squash SZ.fits_u64)
   (n: Ghost.erased nat)

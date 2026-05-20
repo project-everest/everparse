@@ -1858,8 +1858,17 @@ ensures
 
 #push-options "--z3rlimit 256 --fuel 2 --ifuel 2"
 
-inline_for_extraction
-noextract [@@noextract_to "krml"]
+// NOTE: deliberately NOT `inline_for_extraction noextract` here, unlike
+// Det.Compare's `impl_cbor_compare_fuel`. The Nondet body unfolds (via the
+// `inline_for_extraction` helpers `compare_cbor_raw_fuel`,
+// `compare_cbor_raw_list_for_all_fuel`, etc.) to ~6 call sites of the two
+// inner closures `ih_rec` and `ih_rec_map`. If this recursive function were
+// `inline_for_extraction`, each of those call sites would β-reduce to a
+// fresh inlined copy of the entire body, then expand again — causing
+// exponential blow-up during Pulse --codegen krml. Det.Compare gets away with
+// `inline_for_extraction` because its body has only one inner closure `ih`,
+// matching the OLD non-fuel `compare_cbor_raw_basic` which was likewise a
+// top-level extracted recursive function.
 ```pulse
 fn rec compare_cbor_raw_basic_fuel
   (f64: squash SZ.fits_u64)
