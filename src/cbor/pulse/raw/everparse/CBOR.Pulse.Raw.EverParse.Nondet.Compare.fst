@@ -1341,6 +1341,128 @@ ensures
 
 #pop-options
 
+// Fuel-aware variant of compare_cbor_raw_list_for_all: operates on cbor_raw_match_fuel n.
+#push-options "--z3rlimit 512 --fuel 4 --ifuel 4 --split_queries always"
+
+inline_for_extraction
+```pulse
+fn compare_cbor_raw_list_for_all_fuel
+  (n: Ghost.erased nat { Ghost.reveal n >= 1 })
+  (#equiv: Ghost.erased (raw_data_item -> raw_data_item -> option bool))
+  (compare_impl: compare_cbor_raw_fn_fuel_t n equiv)
+  (f64: squash SZ.fits_u64)
+  (inner_ml: IT.mixed_list (cbor_map_entry cbor_raw))
+  (#pm_inner: perm)
+  (#inner_entries: Ghost.erased (list (raw_data_item & raw_data_item)))
+  (outer_ml: IT.mixed_list (cbor_map_entry cbor_raw))
+  (#pm_outer: perm)
+  (#outer_entries: Ghost.erased (list (raw_data_item & raw_data_item)))
+requires
+  I.mixed_list_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm_inner inner_ml inner_entries **
+  I.mixed_list_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm_outer outer_ml outer_entries
+returns res: option bool
+ensures
+  I.mixed_list_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm_inner inner_ml inner_entries **
+  I.mixed_list_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm_outer outer_ml outer_entries **
+  pure (res == list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv inner_entries) outer_entries)
+{
+  let zcp = cbor_map_entry_zero_copy_parse_fuel n 1.0R f64;
+  let len = IT.mixed_list_length outer_ml;
+  // Establish length invariant
+  I.mixed_list_match_length (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item) pm_outer outer_ml (Ghost.reveal outer_entries);
+  // Start iterator on outer_entries
+  let it_init = I.iterator_start (cbor_map_entry_vmatch_fuel n)
+    (nondep_then parse_raw_data_item parse_raw_data_item) (jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64)) pm_outer outer_ml outer_entries
+    (cbor_map_entry_vmatch_fuel_share_t n) (cbor_map_entry_vmatch_fuel_gather_t n);
+  let mut r_it = it_init;
+  let mut r_done : option (option bool) = None #(option bool);
+  let mut r_cnt = 0sz;
+  while (
+    let done = !r_done;
+    let cnt = !r_cnt;
+    (None? done && SZ.lt cnt len)
+  ) invariant exists* it_c done_c cnt_c rem pm_c .
+    R.pts_to r_it it_c **
+    R.pts_to r_done done_c **
+    R.pts_to r_cnt cnt_c **
+    I.iterator_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item) pm_c it_c rem **
+    Trade.trade
+      (I.iterator_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item) pm_c it_c rem)
+      (I.mixed_list_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
+        pm_outer outer_ml outer_entries) **
+    I.mixed_list_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm_inner inner_ml inner_entries **
+    pure (
+      SZ.v cnt_c <= SZ.v len /\
+      List.Tot.length rem == SZ.v len - SZ.v cnt_c /\
+      list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv inner_entries) outer_entries ==
+        (match done_c with
+         | Some r -> r
+         | None -> list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv inner_entries) rem)
+    )
+  {
+    // Get next entry from iterator
+    let e = I.iterator_next (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
+      (jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64)) _ r_it _ _
+      (cbor_map_entry_vmatch_fuel_share_t n) (cbor_map_entry_vmatch_fuel_gather_t n) zcp;
+    unfold (I.iterator_next_post (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item) _ r_it _ _ e);
+    with pmv hdv tl itn pmn . assert (
+      cbor_map_entry_vmatch_fuel n pmv e hdv **
+      R.pts_to r_it itn **
+      I.iterator_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item) pmn itn tl
+    );
+    Trade.trans _ _
+      (I.mixed_list_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
+        pm_outer outer_ml outer_entries);
+    // Call setoid_assoc_eq_fuel on this entry against the inner map
+    let entry_res = compare_cbor_raw_setoid_assoc_eq_fuel n compare_impl f64 inner_ml e;
+    match entry_res {
+      Some b -> {
+        if b {
+          // Some true: this entry matched, continue searching
+          Trade.elim_hyp_l _ _
+            (I.mixed_list_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
+              pm_outer outer_ml outer_entries);
+          let c = !r_cnt;
+          r_cnt := SZ.add c 1sz;
+        } else {
+          // Some false: entry not found, stop
+          Trade.elim_hyp_l _ _
+            (I.mixed_list_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
+              pm_outer outer_ml outer_entries);
+          r_done := Some (Some false);
+          let c = !r_cnt;
+          r_cnt := SZ.add c 1sz;
+        }
+      }
+      None -> {
+        // Overflow: stop
+        Trade.elim_hyp_l _ _
+          (I.mixed_list_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
+            pm_outer outer_ml outer_entries);
+        r_done := Some (None #bool);
+        let c = !r_cnt;
+        r_cnt := SZ.add c 1sz;
+      }
+    }
+  };
+  // After loop: trade back to restore outer mixed_list_match
+  Trade.elim _ (I.mixed_list_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm_outer outer_ml outer_entries);
+  let done = !r_done;
+  match done {
+    Some r -> { r }
+    None -> { Some true }
+  }
+}
+```
+
+#pop-options
+
 #push-options "--z3rlimit 512 --fuel 4 --ifuel 4 --split_queries always"
 
 // Array pairwise comparison helper
