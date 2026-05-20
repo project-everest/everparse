@@ -443,7 +443,7 @@ let call_krml files_and_modules_cleanup out_dir krml_args =
         "-bundle" ;
         Printf.sprintf "%s[rename=Lib,rename-prefix]" fstar_krmllib_bundle;
         "-bundle" ;
-        Printf.sprintf "%s[rename=EverParse,rename-prefix]" everparse_only_bundle;
+        Printf.sprintf "EverParse3d.Actions.Common=%s[rename=EverParse,rename-prefix]" everparse_only_bundle;
   ]
   in
   (* the argument list is too long, so we need to go through an argument file *)
