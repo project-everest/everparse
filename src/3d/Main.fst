@@ -713,6 +713,16 @@ let go () : ML unit =
     in
     exit 0
   else
+  if micro_step = Some HashingOptions.MicroStepSaveHashes
+  then
+  (* Special mode: --__micro_step save_hashes *)
+    let out_dir = Options.get_output_dir () in
+    let _ = OS.mkdir out_dir in
+    List.iter (fun file ->
+      Batch.save_hashes_for_module out_dir file (Options.get_module_name file)
+    ) cmd_line_files;
+    exit 0
+  else
   (* for other modes, a nonempty list of files is needed on the command line, so if none are there, then we shall print the help message *)
   let input_stream_binding = Options.get_input_stream_binding () in
   if Nil? cmd_line_files
@@ -740,6 +750,7 @@ let go () : ML unit =
       (Options.get_skip_o_rules ())
       (Options.get_clang_format ())
       (not (Options.get_clang_format_use_custom_config ()))
+      (Options.get_save_hashes ())
       cmd_line_files
   | None ->
   (* Special mode: --__produce_c_from_existing_krml *)

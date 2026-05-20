@@ -777,6 +777,12 @@ let save_hashes
     let json = filename_concat out_dir (Printf.sprintf "%s.json" modul) in
     Hashing.save_hashes file (Some c) json
 
+let save_hashes_for_module
+      (out_dir: string)
+      (file: string)
+      (modul: string)
+  = save_hashes out_dir (file, modul)
+
 (* Copy .clang-format *)
 
 let copy_clang_format out_dir =

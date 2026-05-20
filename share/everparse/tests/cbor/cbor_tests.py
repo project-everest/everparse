@@ -1,0 +1,934 @@
+"""EverCBOR cross-language tests against Intel cbor2.
+
+Reads the artefact files written by the C test binaries (see cbor_tests.c)
+and re-runs the same conformance checks through the cbor2 Python library:
+
+  * For invalid test cases:  cbor2.loads() must raise CBORDecodeError.
+  * For valid test cases:    cbor2.loads() must succeed and the parsed
+                             value must compare equal (via Python ==) to a
+                             value built independently through the cbor2
+                             constructor API.
+  * For canonical test cases: cbor2.dumps(expected, canonical=True) must
+                              equal the input bytes byte-for-byte.
+
+Each test is repeated --iterations times and timed, mirroring the C suite.
+
+Artefacts produced by the C binaries live under <out_dir>/ as
+
+    <api>_<name>.input.cbor        # always (valid + invalid)
+    <api>_<name>.serialized.cbor   # valid tests only
+
+where <api> is "det" or "nondet". This script iterates over both APIs
+and skips files that do not exist (e.g. *_nondet tests under det produce
+no .serialized file because the input is rejected there).
+"""
+
+from __future__ import annotations
+
+import argparse
+import importlib.metadata
+import inspect
+import os
+import sys
+import time
+from pathlib import Path
+from typing import Any, Callable
+
+try:
+    import cbor2
+    from cbor2 import CBORDecodeError, CBORTag, CBORSimpleValue
+except ImportError as exc:  # pragma: no cover
+    sys.stderr.write(f"FATAL: cannot import cbor2: {exc}\n"
+                     f"Install it with: pip install cbor2\n")
+    raise SystemExit(2)
+
+# cbor2 6.x exposes its hashable-mapping type as cbor2.frozendict (lowercase);
+# on Python 3.15+ the language gained a builtin frozendict and cbor2 uses that.
+try:
+    FrozenDict = cbor2.frozendict           # type: ignore[attr-defined]
+except AttributeError:
+    try:
+        FrozenDict = cbor2.FrozenDict       # type: ignore[attr-defined]
+    except AttributeError:
+        FrozenDict = frozenset  # placeholder, will not be reached on supported versions
+        sys.stderr.write("FATAL: cbor2.frozendict / cbor2.FrozenDict not found\n")
+        raise SystemExit(2)
+
+
+# ----------------------------------------------------------------------------
+# Decoder feature detection
+# ----------------------------------------------------------------------------
+
+def _supports_loads_kwarg(name: str) -> bool:
+    try:
+        sig = inspect.signature(cbor2.loads)
+    except (TypeError, ValueError):
+        return False
+    return name in sig.parameters
+
+
+HAS_ALLOW_INDEFINITE = _supports_loads_kwarg("allow_indefinite")
+HAS_ALLOW_DUP_KEYS = _supports_loads_kwarg("allow_duplicate_keys")
+HAS_IMMUTABLE = _supports_loads_kwarg("immutable")
+HAS_MAX_DEPTH = _supports_loads_kwarg("max_depth")
+
+# The recursion-budget tests build CBOR objects nested ~2200 levels deep.
+# Python's default recursion limit is 1000 and cbor2's default max_depth is
+# 400; both need to be raised to accommodate the very deep arrays.
+_DEEP_LIMIT = 4096
+sys.setrecursionlimit(max(sys.getrecursionlimit(), _DEEP_LIMIT))
+
+
+def strict_loads(data: bytes) -> Any:
+    """cbor2.loads with the strictest settings supported by the installed version."""
+    kwargs: dict[str, Any] = {}
+    if HAS_IMMUTABLE:
+        kwargs["immutable"] = True
+    if HAS_ALLOW_INDEFINITE:
+        kwargs["allow_indefinite"] = False
+    if HAS_ALLOW_DUP_KEYS:
+        kwargs["allow_duplicate_keys"] = False
+    if HAS_MAX_DEPTH:
+        kwargs["max_depth"] = _DEEP_LIMIT
+    return cbor2.loads(data, **kwargs)
+
+
+def lenient_loads(data: bytes) -> Any:
+    """cbor2.loads with only `immutable=True` (i.e. accepting indefinite/dup-keys)."""
+    if HAS_IMMUTABLE:
+        return cbor2.loads(data, immutable=True)
+    return cbor2.loads(data)
+
+
+# ----------------------------------------------------------------------------
+# Helpers used by the test factories
+# ----------------------------------------------------------------------------
+
+def _fdict(items) -> Any:
+    """Build a hashable map (used as a key) from an iterable of (k, v) pairs."""
+    return FrozenDict(dict(items))
+
+
+# Deeply nested array depth must match #define ARR_DEPTH 30 in cbor_tests.c.
+ARR_DEPTH = 30
+# Deeply nested map depth must match #define MAP_DEPTH 10 in cbor_tests.c.
+MAP_DEPTH = 10
+# Nested-map-key recursion depth must match #define MAP_KEY_DEPTH 3 in cbor_tests.c.
+MAP_KEY_DEPTH = 3
+
+
+def _arr_deep(d: int, leaf: int) -> Any:
+    out: Any = leaf
+    for _ in range(d):
+        out = (out,)
+    return out
+
+
+def _map_deep(d: int, leaf: int) -> Any:
+    out: Any = leaf
+    for _ in range(d):
+        out = FrozenDict({0: out})
+    return out
+
+
+def _dnm(d: int, x: int) -> Any:
+    """Mirror of build_dnm() in cbor_tests.c: binary recursion on the key side."""
+    if d == 0:
+        return x
+    left = _dnm(d - 1, 2 * x)
+    right = _dnm(d - 1, 2 * x + 1)
+    return _fdict([(left, 0), (right, 1)])
+
+
+def _expected_map_nested_keys() -> Any:
+    a = _dnm(MAP_KEY_DEPTH, 0)
+    b = _dnm(MAP_KEY_DEPTH, 1)
+    pair1 = (a, a)
+    pair2 = (a, b)
+    return FrozenDict({pair1: 0, pair2: 1})
+
+
+# ----------------------------------------------------------------------------
+# Test catalogue
+# ----------------------------------------------------------------------------
+#
+# Each entry is keyed by the test name used in cbor_tests.c. Fields:
+#
+#   valid:     True if cbor2 (in strict mode) must accept the input.
+#   canonical: True if the C-emitted input bytes are canonical (input bytes
+#              must equal cbor2.dumps(expected, canonical=True)).
+#   expected:  zero-arg factory returning the expected Python object. Only
+#              consulted for valid tests.
+#   strict:    True (default) if we use strict_loads(); False if the test
+#              must use lenient_loads() because its semantics depend on a
+#              feature that is only checked under stricter modes (notably
+#              the duplicate-key tests need the strict path to make the
+#              decoder reject; the *_nondet tests need the strict path so
+#              that allow_indefinite=False does not accidentally accept
+#              malformed inputs).
+
+class T(dict):
+    """Convenience: T(valid=..., expected=lambda: ..., canonical=..., kind=...).
+
+    `kind` is one of:
+      * "cbor"  (default) — input file is a CBOR encoding; standard
+        validate/parse/equality flow.
+      * "utf8_invalid_payload" — input file holds raw bytes that the C
+        side rejected as invalid UTF-8 in mk_text_string. The Python
+        equivalent asserts that bytes.decode('utf-8') raises
+        UnicodeDecodeError. `valid` is implicitly False for this kind.
+    """
+    pass
+
+
+def _qcbor_complex_value() -> Any:
+    return FrozenDict({
+        "first integer": 42,
+        "an array of two strings": ("string1", "string2"),
+        "map in a map": FrozenDict({
+            "bytes 1":     b"\x78\x78\x78\x78",
+            "bytes 2":     b"\x79\x79\x79\x79",
+            "another int": 98,
+            "text 2":      "lies, damn lies and statistics",
+        }),
+    })
+
+
+def _arr_int_boundaries_value() -> Any:
+    ints = (
+        -9223372036854775808,
+        -4294967297, -4294967296, -4294967295, -4294967294,
+        -2147483648, -2147483647,
+        -65538, -65537, -65536, -65535, -65534,
+        -257, -256, -255, -254,
+        -25, -24, -23, -1,
+        0, 0, 1, 22, 23, 24, 25, 26,
+        254, 255, 256, 257,
+        65534, 65535, 65536, 65537, 65538,
+        2147483647, 2147483647, 2147483648, 2147483649,
+        4294967294, 4294967295, 4294967296, 4294967297,
+        9223372036854775807,
+        0xFFFFFFFFFFFFFFFF,  # last entry, the only > int64
+    )
+    return ints
+
+
+def _arr_empties_value() -> Any:
+    return (0, (), ((), (0,), FrozenDict({}),
+                    FrozenDict({1: FrozenDict({}),
+                                2: FrozenDict({}),
+                                3: ()})))
+
+
+TESTS: dict[str, T] = {
+    # Major type 0
+    "uint_zero_canonical":         T(valid=True,  canonical=True,  expected=lambda: 0),
+    "uint_small_canonical":        T(valid=True,  canonical=True,  expected=lambda: 23),
+    "uint_one_byte_canonical":     T(valid=True,  canonical=True,  expected=lambda: 100),
+    "uint_two_byte_canonical":     T(valid=True,  canonical=True,  expected=lambda: 1000),
+    "uint_four_byte_canonical":    T(valid=True,  canonical=True,  expected=lambda: 1_000_000),
+    "uint_eight_byte_canonical":   T(valid=True,  canonical=True,  expected=lambda: 1 << 32),
+    "uint_zero_nondet":            T(valid=True,  canonical=False, expected=lambda: 0),
+    "uint_100_nondet":             T(valid=True,  canonical=False, expected=lambda: 100),
+    "uint_zero_long_nondet":       T(valid=True,  canonical=False, expected=lambda: 0),
+
+    # Major type 1
+    "neg_minus_one_canonical":     T(valid=True,  canonical=True,  expected=lambda: -1),
+    "neg_small_canonical":         T(valid=True,  canonical=True,  expected=lambda: -10),
+    "neg_one_byte_canonical":      T(valid=True,  canonical=True,  expected=lambda: -100),
+    "neg_minus_one_nondet":        T(valid=True,  canonical=False, expected=lambda: -1),
+
+    # Major type 2 (byte string)
+    "bstr_empty_canonical":        T(valid=True,  canonical=True,  expected=lambda: b""),
+    "bstr_short_canonical":        T(valid=True,  canonical=True,  expected=lambda: b"\xde\xad\xbe\xef"),
+    "bstr_empty_nondet":           T(valid=True,  canonical=False, expected=lambda: b""),
+
+    # Major type 3 (text string)
+    "tstr_empty_canonical":        T(valid=True,  canonical=True,  expected=lambda: ""),
+    "tstr_hello_canonical":        T(valid=True,  canonical=True,  expected=lambda: "hello"),
+    "tstr_hello_nondet":           T(valid=True,  canonical=False, expected=lambda: "hello"),
+
+    # Major type 4 (array)
+    "arr_empty_canonical":         T(valid=True,  canonical=True,  expected=lambda: ()),
+    "arr_three_canonical":         T(valid=True,  canonical=True,  expected=lambda: (1, 2, 3)),
+    "arr_empty_nondet":            T(valid=True,  canonical=False, expected=lambda: ()),
+    "arr_deeply_nested_canonical": T(valid=True,  canonical=True,  expected=lambda: _arr_deep(ARR_DEPTH, 1)),
+
+    # Major type 5 (map)
+    "map_empty_canonical":         T(valid=True,  canonical=True,  expected=lambda: FrozenDict({})),
+    "map_two_canonical":           T(valid=True,  canonical=True,
+                                     expected=lambda: FrozenDict({1: b"\x01", 2: "ab"})),
+    "map_two_nondet":              T(valid=True,  canonical=False,
+                                     expected=lambda: FrozenDict({1: b"\x01", 2: "ab"})),
+    "map_deeply_nested_canonical": T(valid=True,  canonical=True,
+                                     expected=lambda: _map_deep(MAP_DEPTH, 0)),
+    "map_nested_keys_canonical":   T(valid=True,  canonical=True,
+                                     expected=_expected_map_nested_keys),
+    "map_dup_key_invalid":         T(valid=False),
+    "map_dup_diff_enc_invalid":    T(valid=False),
+
+    # Major type 6 (tagged)
+    "tag_canonical":               T(valid=True,  canonical=True,
+                                     expected=lambda: CBORTag(1000, 0)),
+    "tag_nondet":                  T(valid=True,  canonical=False,
+                                     expected=lambda: CBORTag(1000, 0)),
+
+    # Major type 7 (simple value, no floats)
+    "simple_short_canonical":      T(valid=True,  canonical=True,
+                                     expected=lambda: CBORSimpleValue(16)),
+    "simple_long_canonical":       T(valid=True,  canonical=True,
+                                     expected=lambda: CBORSimpleValue(100)),
+    "simple_24_invalid":           T(valid=False),
+
+    # General invalid encodings
+    "invalid_truncated":           T(valid=False),
+    "invalid_bstr_short":          T(valid=False),
+    "invalid_arr_short":           T(valid=False),
+    "invalid_map_short":           T(valid=False),
+    "invalid_indefinite":          T(valid=False),
+
+    # ---- Imported from cbor-test-unverified gentest ----
+    "uint_one_canonical":          T(valid=True,  canonical=True,  expected=lambda: 1),
+    "uint_ten_canonical":          T(valid=True,  canonical=True,  expected=lambda: 10),
+    "uint_24_canonical":           T(valid=True,  canonical=True,  expected=lambda: 24),
+    "uint_25_canonical":           T(valid=True,  canonical=True,  expected=lambda: 25),
+    "uint_trillion_canonical":     T(valid=True,  canonical=True,  expected=lambda: 10**12),
+    "neg_two_byte_canonical":      T(valid=True,  canonical=True,  expected=lambda: -1000),
+    "tstr_a_canonical":            T(valid=True,  canonical=True,  expected=lambda: "a"),
+    "tstr_ietf_canonical":         T(valid=True,  canonical=True,  expected=lambda: "IETF"),
+    "tstr_escapes_canonical":      T(valid=True,  canonical=True,  expected=lambda: "\"\\"),
+    "tstr_u_umlaut_canonical":     T(valid=True,  canonical=True,  expected=lambda: "\u00fc"),
+    "tstr_water_canonical":        T(valid=True,  canonical=True,  expected=lambda: "\u6c34"),
+    "tstr_drachma_canonical":      T(valid=True,  canonical=True,  expected=lambda: "\U00010151"),
+    "arr_nested_canonical":        T(valid=True,  canonical=True,  expected=lambda: (1, (2, 3), (4, 5))),
+    "arr_25_canonical":            T(valid=True,  canonical=True,
+                                     expected=lambda: tuple(range(1, 26))),
+    "map_mixed_canonical":         T(valid=True,  canonical=True,
+                                     expected=lambda: FrozenDict({"a": 1, "b": (2, 3)})),
+    "arr_with_map_canonical":      T(valid=True,  canonical=True,
+                                     expected=lambda: ("a", FrozenDict({"b": "c"}))),
+    "map_five_canonical":          T(valid=True,  canonical=True,
+                                     expected=lambda: FrozenDict({"a": "A", "b": "B",
+                                                                   "c": "C", "d": "D",
+                                                                   "e": "E"})),
+
+    # ---- Recursion-budget tests ----
+    "arr_2200_deep_canonical":             T(valid=True,  canonical=True,
+                                              expected=lambda: _arr_deep(2200, 1)),
+    "arr_2200_deep_truncated_invalid":     T(valid=False),
+
+    # ---- qcbortests ports ----
+    "arr_int_boundaries_canonical":        T(valid=True,  canonical=True,
+                                              expected=_arr_int_boundaries_value),
+    "arr_empties_canonical":               T(valid=True,  canonical=True,
+                                              expected=_arr_empties_value),
+    "map_qcbor_complex_nondet":            T(valid=True,  canonical=False,
+                                              expected=_qcbor_complex_value),
+
+    # ---- New tests for branch coverage ----
+    # Major type 0 boundaries
+    "uint_uint8_max_canonical":            T(valid=True, canonical=True,  expected=lambda: 0xff),
+    "uint_256_canonical":                  T(valid=True, canonical=True,  expected=lambda: 256),
+    "uint_uint16_max_canonical":           T(valid=True, canonical=True,  expected=lambda: 0xffff),
+    "uint_65536_canonical":                T(valid=True, canonical=True,  expected=lambda: 65536),
+    "uint_uint32_max_canonical":           T(valid=True, canonical=True,  expected=lambda: 0xffffffff),
+    "uint_uint64_max_minus_one_canonical": T(valid=True, canonical=True,  expected=lambda: 0xfffffffffffffffe),
+    "uint_uint64_max_canonical":           T(valid=True, canonical=True,  expected=lambda: 0xffffffffffffffff),
+    "uint_24_two_byte_nondet":             T(valid=True, canonical=False, expected=lambda: 24),
+    "uint_24_four_byte_nondet":            T(valid=True, canonical=False, expected=lambda: 24),
+    "uint_24_eight_byte_nondet":           T(valid=True, canonical=False, expected=lambda: 24),
+    "uint_uint8_max_two_byte_nondet":      T(valid=True, canonical=False, expected=lambda: 0xff),
+    "uint_uint16_max_four_byte_nondet":    T(valid=True, canonical=False, expected=lambda: 0xffff),
+    # Major type 1
+    "neg_minus_256_canonical":             T(valid=True, canonical=True,  expected=lambda: -256),
+    "neg_minus_257_canonical":             T(valid=True, canonical=True,  expected=lambda: -257),
+    "neg_minus_65536_canonical":           T(valid=True, canonical=True,  expected=lambda: -65536),
+    "neg_minus_65537_canonical":           T(valid=True, canonical=True,  expected=lambda: -65537),
+    "neg_minus_2pow32_canonical":          T(valid=True, canonical=True,  expected=lambda: -(1 << 32)),
+    "neg_minus_2pow32_minus_one_canonical":T(valid=True, canonical=True,  expected=lambda: -(1 << 32) - 1),
+    "neg_min_canonical":                   T(valid=True, canonical=True,  expected=lambda: -(1 << 64)),
+    "neg_minus_one_two_byte_nondet":       T(valid=True, canonical=False, expected=lambda: -1),
+    # Major type 2
+    "bstr_23_canonical":                   T(valid=True, canonical=True,  expected=lambda: bytes(range(23))),
+    "bstr_24_canonical":                   T(valid=True, canonical=True,  expected=lambda: bytes(range(24))),
+    "bstr_255_canonical":                  T(valid=True, canonical=True,  expected=lambda: bytes(range(255))),
+    "bstr_256_canonical":                  T(valid=True, canonical=True,  expected=lambda: bytes(range(256))),
+    "bstr_short_two_byte_nondet":          T(valid=True, canonical=False, expected=lambda: b"\xde\xad\xbe\xef"),
+    "bstr_short_eight_byte_nondet":        T(valid=True, canonical=False, expected=lambda: b"\xde\xad\xbe\xef"),
+    "bstr_oversized_invalid":              T(valid=False),
+    # Major type 3
+    "tstr_23_canonical":                   T(valid=True, canonical=True,  expected=lambda: "a" * 23),
+    "tstr_24_canonical":                   T(valid=True, canonical=True,  expected=lambda: "a" * 24),
+    "tstr_255_canonical":                  T(valid=True, canonical=True,  expected=lambda: "a" * 255),
+    "tstr_256_canonical":                  T(valid=True, canonical=True,  expected=lambda: "a" * 256),
+    "tstr_a_eight_byte_nondet":            T(valid=True, canonical=False, expected=lambda: "a"),
+    "tstr_oversized_invalid":              T(valid=False),
+    # Major type 4
+    "arr_23_canonical":                    T(valid=True, canonical=True,  expected=lambda: tuple(range(23))),
+    "arr_24_canonical":                    T(valid=True, canonical=True,  expected=lambda: tuple(range(24))),
+    "arr_three_one_byte_nondet":           T(valid=True, canonical=False, expected=lambda: (1, 2, 3)),
+    "arr_three_two_byte_nondet":           T(valid=True, canonical=False, expected=lambda: (1, 2, 3)),
+    "arr_empty_eight_byte_nondet":         T(valid=True, canonical=False, expected=lambda: ()),
+    # Major type 5
+    "map_two_one_byte_nondet":             T(valid=True, canonical=False, expected=lambda: FrozenDict({1: 1, 2: 2})),
+    "map_mixed_key_types_canonical":       T(valid=True, canonical=True,  expected=lambda: FrozenDict({1: 0, "a": 1})),
+    # Major type 6: tagged
+    "tag_short_canonical":                 T(valid=True, canonical=True,  expected=lambda: CBORTag(6, 0)),
+    "tag_short_last_canonical":            T(valid=True, canonical=True,  expected=lambda: CBORTag(19, 0)),
+    "tag_one_byte_first_canonical":        T(valid=True, canonical=True,  expected=lambda: CBORTag(99, 0)),
+    "tag_one_byte_last_canonical":         T(valid=True, canonical=True,  expected=lambda: CBORTag(200, 0)),
+    "tag_two_byte_first_canonical":        T(valid=True, canonical=True,  expected=lambda: CBORTag(257, 0)),
+    "tag_two_byte_last_canonical":         T(valid=True, canonical=True,  expected=lambda: CBORTag(65535, 0)),
+    "tag_four_byte_first_canonical":       T(valid=True, canonical=True,  expected=lambda: CBORTag(65536, 0)),
+    "tag_four_byte_last_canonical":        T(valid=True, canonical=True,  expected=lambda: CBORTag(0xffffffff, 0)),
+    "tag_eight_byte_first_canonical":      T(valid=True, canonical=True,  expected=lambda: CBORTag(1 << 32, 0)),
+    "tag_max_canonical":                   T(valid=True, canonical=True,  expected=lambda: CBORTag(0xffffffffffffffff, 0)),
+    "tag_nested_canonical":                T(valid=True, canonical=True,  expected=lambda: CBORTag(1234, CBORTag(5678, 1))),
+    "tag_array_payload_canonical":         T(valid=True, canonical=True,  expected=lambda: CBORTag(99, (1, 2, 3))),
+    "tag_inner_nondet":                    T(valid=True, canonical=False, expected=lambda: CBORTag(1000, 24)),
+    # Major type 7: simple value
+    "simple_zero_canonical":               T(valid=True, canonical=True,  expected=lambda: CBORSimpleValue(0)),
+    "simple_19_canonical":                 T(valid=True, canonical=True,  expected=lambda: CBORSimpleValue(19)),
+    "simple_32_canonical":                 T(valid=True, canonical=True,  expected=lambda: CBORSimpleValue(32)),
+    "simple_99_canonical":                 T(valid=True, canonical=True,  expected=lambda: CBORSimpleValue(99)),
+    "simple_254_canonical":                T(valid=True, canonical=True,  expected=lambda: CBORSimpleValue(254)),
+    "simple_255_canonical":                T(valid=True, canonical=True,  expected=lambda: CBORSimpleValue(255)),
+    "simple_25_invalid":                   T(valid=False),
+    "simple_26_invalid":                   T(valid=False),
+    "simple_27_invalid":                   T(valid=False),
+    "simple_28_invalid":                   T(valid=False),
+    "simple_29_invalid":                   T(valid=False),
+    "simple_30_invalid":                   T(valid=False),
+    "simple_31_invalid":                   T(valid=False),
+    # Cross-cutting / structural
+    "empty_buffer_invalid":                T(valid=False),
+    "trunc_19_invalid":                    T(valid=False),
+    "trunc_1a_invalid":                    T(valid=False),
+    "trunc_1b_invalid":                    T(valid=False),
+    "trailing_bytes_canonical":            T(valid=True, canonical=False, expected=lambda: 0,
+                                              # cbor2 silently ignores trailing bytes (no
+                                              # explicit "consumed-all" check), so we mark this
+                                              # canonical=False (skip the byte-equality check)
+                                              # and just verify the parsed value is 0. The C/Rust
+                                              # validators correctly detect and report the
+                                              # trailing byte (this is a real semantic difference
+                                              # vs cbor2 — cbor2's loads() implicitly truncates).
+                                              ),
+    # break_stop_alone_invalid: cbor2 accepts a bare 0xff and returns an internal
+    # "break stop" sentinel object instead of raising. EverCBOR (det+nondet) and
+    # the spec correctly reject. Cross-impl discrepancy — Python harness skips.
+    "indef_bstr_invalid":                  T(valid=False),
+    "indef_tstr_invalid":                  T(valid=False),
+    "indef_arr_zero_invalid":              T(valid=False),
+    "indef_arr_multi_invalid":             T(valid=False),
+    "indef_map_invalid":                   T(valid=False),
+    "reserved_uint_1c_invalid":            T(valid=False),
+    "reserved_uint_1d_invalid":            T(valid=False),
+    "reserved_uint_1e_invalid":            T(valid=False),
+    "reserved_negint_3c_invalid":          T(valid=False),
+    "reserved_arr_9c_invalid":             T(valid=False),
+    "reserved_map_bc_invalid":             T(valid=False),
+    "reserved_tag_dc_invalid":             T(valid=False),
+
+    # ---- Iterator-walk variants ----
+    # The "_iter_canonical" entries share the same expected value as their
+    # non-iter siblings but trigger the kind="iterator" branch in
+    # `_run_one`, which performs an explicit iter()/items() walk against
+    # `expected`. The "arr_wide_deep_canonical" fixture is new (a 4x3 grid
+    # of uints) and is also exercised via the iterator branch.
+    "arr_wide_deep_canonical":             T(valid=True, canonical=True,
+                                              expected=lambda: ((1, 2, 3), (4, 5, 6),
+                                                                (7, 8, 9), (10, 11, 12))),
+    "arr_25_iter_canonical":               T(valid=True, canonical=True, kind="iterator",
+                                              expected=lambda: tuple(range(1, 26))),
+    "arr_nested_iter_canonical":           T(valid=True, canonical=True, kind="iterator",
+                                              expected=lambda: (1, (2, 3), (4, 5))),
+    "arr_deeply_nested_iter_canonical":    T(valid=True, canonical=True, kind="iterator",
+                                              expected=lambda: _arr_deep(ARR_DEPTH, 1)),
+    "arr_empties_iter_canonical":          T(valid=True, canonical=True, kind="iterator",
+                                              expected=_arr_empties_value),
+    "map_five_iter_canonical":             T(valid=True, canonical=True, kind="iterator",
+                                              expected=lambda: FrozenDict({"a": "A", "b": "B",
+                                                                            "c": "C", "d": "D",
+                                                                            "e": "E"})),
+    "map_deeply_nested_iter_canonical":    T(valid=True, canonical=True, kind="iterator",
+                                              expected=lambda: _map_deep(MAP_DEPTH, 0)),
+    "map_nested_keys_iter_canonical":      T(valid=True, canonical=True, kind="iterator",
+                                              expected=_expected_map_nested_keys),
+    "tag_nested_iter_canonical":           T(valid=True, canonical=True, kind="iterator",
+                                              expected=lambda: CBORTag(1234, CBORTag(5678, 1))),
+    "tag_array_payload_iter_canonical":    T(valid=True, canonical=True, kind="iterator",
+                                              expected=lambda: CBORTag(99, (1, 2, 3))),
+    "arr_wide_deep_iter_canonical":        T(valid=True, canonical=True, kind="iterator",
+                                              expected=lambda: ((1, 2, 3), (4, 5, 6),
+                                                                (7, 8, 9), (10, 11, 12))),
+}
+
+
+# ---- UTF-8 tests (auto-populated below from the same table the C side uses) ----
+#
+# Format: (suffix, kind), where kind is one of:
+#   "valid"   — the CBOR-encoded text-string is in the file and decodes to
+#               the expected unicode string (= bytes.decode('utf-8')).
+#   "invalid" — the file holds the raw byte sequence that the C side
+#               rejected; bytes.decode('utf-8') must raise.
+_UTF8_TESTS: tuple[tuple[str, str, bytes], ...] = (
+    ("t37_4", "valid", bytes([0x20, 0x00])),
+    ("t37_3", "invalid", bytes([0x20, 0x00, 0x20, 0xff])),
+    ("t37_2_1", "valid", bytes([0x20, 0x00, 0x35])),
+    ("t37_2", "invalid", bytes([0xf0, 0x80, 0x80, 0x80])),
+    ("t37_1", "invalid", bytes([0xe0, 0x80, 0x80])),
+    ("t37_0", "invalid", bytes([0xc0, 0x80])),
+    ("t35_0", "invalid", bytes([0xf4, 0x80, 0x80, 0x00])),
+    ("t34_0", "invalid", bytes([0xf1, 0x80, 0x80, 0x00])),
+    ("t33_0", "invalid", bytes([0xf0, 0x90, 0x80, 0x00])),
+    ("t32_0", "invalid", bytes([0xed, 0x80, 0x00])),
+    ("t31_0", "invalid", bytes([0xe0, 0x80, 0x00])),
+    ("t30_4", "invalid", bytes([0xdf, 0x00])),
+    ("t30_0", "invalid", bytes([0xc2, 0x00])),
+    ("t5_0", "valid", bytes([0x00])),
+    ("t36_9_1", "valid", bytes([0xef, 0xbf, 0xbe, 0x3d, 0xef, 0xbf, 0xbe, 0x2e])),
+    ("t36_9", "valid", bytes([0xef, 0xbf, 0xbf, 0x3d, 0xef, 0xbf, 0xbf, 0x2e])),
+    ("t36_10", "invalid", bytes([0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0x3d, 0xe0, 0x80, 0xaf, 0x2e])),
+    ("t36_8", "invalid", bytes([0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0x3d, 0xed, 0xa0, 0x80, 0x2e])),
+    ("t36_7", "invalid", bytes([0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0xef, 0xbf, 0xbd, 0x3d, 0xf7, 0xbf, 0xbf, 0xbf, 0x2e])),
+    ("t9_1", "invalid", bytes([0xc2, 0x41, 0x42])),
+    ("t35_3", "invalid", bytes([0xf4, 0x80, 0x80, 0xff])),
+    ("t35_2", "invalid", bytes([0xf4, 0x80, 0x80, 0xc0])),
+    ("t35_1", "invalid", bytes([0xf4, 0x80, 0x80, 0x7f])),
+    ("t34_3", "invalid", bytes([0xf1, 0x80, 0x80, 0xff])),
+    ("t34_2", "invalid", bytes([0xf1, 0x80, 0x80, 0xc0])),
+    ("t34_1", "invalid", bytes([0xf1, 0x80, 0x80, 0x7f])),
+    ("t33_3", "invalid", bytes([0xf0, 0x90, 0x80, 0xff])),
+    ("t33_2", "invalid", bytes([0xf0, 0x90, 0x80, 0xc0])),
+    ("t33_1", "invalid", bytes([0xf0, 0x90, 0x80, 0x7f])),
+    ("t32_3", "invalid", bytes([0xed, 0x80, 0xff])),
+    ("t32_2", "invalid", bytes([0xed, 0x80, 0xc0])),
+    ("t32_1", "invalid", bytes([0xed, 0x80, 0x7f])),
+    ("t31_3", "invalid", bytes([0xe0, 0x80, 0xff])),
+    ("t31_2", "invalid", bytes([0xe0, 0x80, 0xc0])),
+    ("t31_1", "invalid", bytes([0xe0, 0x80, 0x7f])),
+    ("t30_7", "invalid", bytes([0xdf, 0xff])),
+    ("t30_6", "invalid", bytes([0xdf, 0xc0])),
+    ("t30_5", "invalid", bytes([0xdf, 0x7f])),
+    ("t30_3", "invalid", bytes([0xc2, 0xff])),
+    ("t30_2", "invalid", bytes([0xc2, 0xc0])),
+    ("t30_1", "invalid", bytes([0xc2, 0x7f])),
+    ("t29_9", "invalid", bytes([0xff, 0x20])),
+    ("t29_8", "invalid", bytes([0xf5, 0x20])),
+    ("t29_7", "invalid", bytes([0xc1, 0x20])),
+    ("t29_6", "invalid", bytes([0x81, 0x20])),
+    ("t29_5", "invalid", bytes([0x20, 0x80, 0x20])),
+    ("t29_4", "invalid", bytes([0x80, 0x20])),
+    ("t29_3", "invalid", bytes([0x20, 0x21, 0x21, 0x23, 0x24, 0xfe])),
+    ("t29_2", "invalid", bytes([0x20, 0x21, 0x21, 0x23, 0xfe, 0x20])),
+    ("t29_1", "invalid", bytes([0x20, 0x80])),
+    ("t29_0", "invalid", bytes([0x80])),
+    ("t28_15", "valid", bytes([0xf4, 0x8f, 0xbf, 0xbf])),
+    ("t28_14", "valid", bytes([0xf3, 0xbf, 0xbf, 0xbf])),
+    ("t28_13", "valid", bytes([0xf3, 0xaf, 0xbf, 0xbf])),
+    ("t28_12", "valid", bytes([0xf3, 0x9f, 0xbf, 0xbf])),
+    ("t28_11", "valid", bytes([0xf3, 0x8f, 0xbf, 0xbf])),
+    ("t28_10", "valid", bytes([0xf2, 0xbf, 0xbf, 0xbf])),
+    ("t28_9", "valid", bytes([0xf2, 0xaf, 0xbf, 0xbf])),
+    ("t28_8", "valid", bytes([0xf2, 0x9f, 0xbf, 0xbf])),
+    ("t28_7", "valid", bytes([0xf2, 0x8f, 0xbf, 0xbf])),
+    ("t28_6", "valid", bytes([0xf1, 0xbf, 0xbf, 0xbf])),
+    ("t28_5", "valid", bytes([0xf1, 0xaf, 0xbf, 0xbf])),
+    ("t28_4", "valid", bytes([0xf1, 0x9f, 0xbf, 0xbf])),
+    ("t28_3", "valid", bytes([0xf1, 0x8f, 0xbf, 0xbf])),
+    ("t28_2", "valid", bytes([0xf0, 0xbf, 0xbf, 0xbf])),
+    ("t28_1", "valid", bytes([0xf0, 0xaf, 0xbf, 0xbf])),
+    ("t28_0", "valid", bytes([0xf0, 0x9f, 0xbf, 0xbf])),
+    ("t27_15", "valid", bytes([0xf4, 0x8f, 0xbf, 0xbe])),
+    ("t27_14", "valid", bytes([0xf3, 0xbf, 0xbf, 0xbe])),
+    ("t27_13", "valid", bytes([0xf3, 0xaf, 0xbf, 0xbe])),
+    ("t27_12", "valid", bytes([0xf3, 0x9f, 0xbf, 0xbe])),
+    ("t27_11", "valid", bytes([0xf3, 0x8f, 0xbf, 0xbe])),
+    ("t27_10", "valid", bytes([0xf2, 0xbf, 0xbf, 0xbe])),
+    ("t27_9", "valid", bytes([0xf2, 0xaf, 0xbf, 0xbe])),
+    ("t27_8", "valid", bytes([0xf2, 0x9f, 0xbf, 0xbe])),
+    ("t27_7", "valid", bytes([0xf2, 0x8f, 0xbf, 0xbe])),
+    ("t27_6", "valid", bytes([0xf1, 0xbf, 0xbf, 0xbe])),
+    ("t27_5", "valid", bytes([0xf1, 0xaf, 0xbf, 0xbe])),
+    ("t27_4", "valid", bytes([0xf1, 0x9f, 0xbf, 0xbe])),
+    ("t27_3", "valid", bytes([0xf1, 0x8f, 0xbf, 0xbe])),
+    ("t27_2", "valid", bytes([0xf0, 0xbf, 0xbf, 0xbe])),
+    ("t27_1", "valid", bytes([0xf0, 0xaf, 0xbf, 0xbe])),
+    ("t27_0", "valid", bytes([0xf0, 0x9f, 0xbf, 0xbe])),
+    ("t26_17", "valid", bytes([0xef, 0xb7, 0x9f])),
+    ("t26_16", "valid", bytes([0xef, 0xb7, 0x9e])),
+    ("t26_15", "valid", bytes([0xef, 0xb7, 0x9d])),
+    ("t26_14", "valid", bytes([0xef, 0xb7, 0x9c])),
+    ("t26_13", "valid", bytes([0xef, 0xb7, 0x9b])),
+    ("t26_12", "valid", bytes([0xef, 0xb7, 0x9a])),
+    ("t26_11", "valid", bytes([0xef, 0xb7, 0x99])),
+    ("t26_10", "valid", bytes([0xef, 0xb7, 0x98])),
+    ("t26_9", "valid", bytes([0xef, 0xb7, 0x97])),
+    ("t26_8", "valid", bytes([0xef, 0xb7, 0x96])),
+    ("t26_7", "valid", bytes([0xef, 0xb7, 0x95])),
+    ("t26_6", "valid", bytes([0xef, 0xb7, 0x94])),
+    ("t26_5", "valid", bytes([0xef, 0xb7, 0x93])),
+    ("t26_4", "valid", bytes([0xef, 0xb7, 0x92])),
+    ("t26_3", "valid", bytes([0xef, 0xb7, 0x91])),
+    ("t26_2", "valid", bytes([0xef, 0xb7, 0x90])),
+    ("t26_1", "valid", bytes([0xef, 0xbf, 0xbf])),
+    ("t26_0", "valid", bytes([0xef, 0xbf, 0xbe])),
+    ("t25_7", "invalid", bytes([0xed, 0xaf, 0xbf, 0xed, 0xbf, 0xbf])),
+    ("t25_6", "invalid", bytes([0xed, 0xaf, 0xbf, 0xed, 0xb0, 0x80])),
+    ("t25_5", "invalid", bytes([0xed, 0xae, 0x80, 0xed, 0xbf, 0xbf])),
+    ("t25_4", "invalid", bytes([0xed, 0xae, 0x80, 0xed, 0xb0, 0x80])),
+    ("t25_3", "invalid", bytes([0xed, 0xad, 0xbf, 0xed, 0xbf, 0xbf])),
+    ("t25_2", "invalid", bytes([0xed, 0xad, 0xbf, 0xed, 0xb0, 0x80])),
+    ("t25_1", "invalid", bytes([0xed, 0xa0, 0x80, 0xed, 0xbf, 0xbf])),
+    ("t25_0", "invalid", bytes([0xed, 0xa0, 0x80, 0xed, 0xb0, 0x80])),
+    ("t24_7", "invalid", bytes([0xed, 0xbf, 0xbf])),
+    ("t24_6", "invalid", bytes([0xed, 0xbe, 0x80])),
+    ("t24_5", "invalid", bytes([0xed, 0xb0, 0x80])),
+    ("t24_4", "invalid", bytes([0xed, 0xaf, 0xbf])),
+    ("t24_3", "invalid", bytes([0xed, 0xae, 0x80])),
+    ("t24_2", "invalid", bytes([0xed, 0xad, 0xbf])),
+    ("t24_0_2", "invalid", bytes([0x31, 0x32, 0x33, 0xed, 0xa0, 0x80, 0x31])),
+    ("t24_0_1", "invalid", bytes([0xed, 0xa0, 0x80, 0x35])),
+    ("t24_0", "invalid", bytes([0xed, 0xa0, 0x80])),
+    ("t23_3", "invalid", bytes([0xf8, 0x87, 0xbf, 0xbf, 0xbf])),
+    ("t23_2", "invalid", bytes([0xf0, 0x8f, 0xbf, 0xbf])),
+    ("t23_1", "invalid", bytes([0xe0, 0x9f, 0xbf])),
+    ("t23_0", "invalid", bytes([0xc1, 0xbf])),
+    ("t22_6", "invalid", bytes([0xfc, 0x80, 0x80, 0x80, 0x80, 0xaf])),
+    ("t22_5", "invalid", bytes([0xf8, 0x80, 0x80, 0x80, 0xaf])),
+    ("t22_4", "invalid", bytes([0xf0, 0x80, 0x80, 0xaf])),
+    ("t22_3", "invalid", bytes([0xe0, 0x80, 0xaf])),
+    ("t22_2", "invalid", bytes([0xc0, 0xaf])),
+    ("t21_6", "invalid", bytes([0x37, 0x38, 0x39, 0xfe])),
+    ("t21_5", "invalid", bytes([0x37, 0x38, 0xfe])),
+    ("t21_4", "invalid", bytes([0x37, 0xff])),
+    ("t21_3", "invalid", bytes([0xff])),
+    ("t21_2", "invalid", bytes([0xfe])),
+    ("t21_1", "invalid", bytes([0x81])),
+    ("t19_6", "invalid", bytes([0x31, 0x32, 0x33, 0xef, 0x80, 0xf0])),
+    ("t19_5", "invalid", bytes([0x31, 0x32, 0x33, 0xef, 0x80])),
+    ("t19_4", "invalid", bytes([0xfd, 0xbf, 0xbf, 0xbf, 0xbf])),
+    ("t19_3", "invalid", bytes([0xfb, 0xbf, 0xbf, 0xbf])),
+    ("t19_2", "invalid", bytes([0xf7, 0xbf, 0xbf])),
+    ("t19_1", "invalid", bytes([0xef, 0xbf])),
+    ("t19_0", "invalid", bytes([0xdf])),
+    ("t18_4", "invalid", bytes([0xfc, 0x80, 0x80, 0x80, 0x80])),
+    ("t18_3", "invalid", bytes([0xf8, 0x80, 0x80, 0x80])),
+    ("t18_2", "invalid", bytes([0xf0, 0x80, 0x80])),
+    ("t18_1", "invalid", bytes([0xe0, 0x80])),
+    ("t18_0", "invalid", bytes([0xc0])),
+    ("t17_1", "invalid", bytes([0xfd, 0x20])),
+    ("t17_0", "invalid", bytes([0xfc, 0x20])),
+    ("t16_3", "invalid", bytes([0xfb, 0x20])),
+    ("t16_2", "invalid", bytes([0xfa, 0x20])),
+    ("t16_1", "invalid", bytes([0xf9, 0x20])),
+    ("t16_0", "invalid", bytes([0xf8, 0x20])),
+    ("t15_3", "invalid", bytes([0xf6, 0x20, 0xf7, 0x20])),
+    ("t15_2", "invalid", bytes([0xf4, 0x20, 0xf5, 0x20])),
+    ("t15_1", "invalid", bytes([0xf2, 0x20, 0xf3, 0x20])),
+    ("t15_0", "invalid", bytes([0xf0, 0x20, 0xf1, 0x20])),
+    ("t14_5_1", "invalid", bytes([0xe1, 0x80, 0xe2, 0xf0, 0x91, 0x92, 0xf1, 0xbf, 0x41])),
+    ("t14_4_2", "invalid", bytes([0xf4, 0x91, 0x92, 0x93, 0xff, 0x41, 0x80, 0xbf, 0x42])),
+    ("t14_4_1", "invalid", bytes([0xed, 0xa0, 0x80, 0xed, 0xbf, 0xbf, 0xed, 0xaf, 0x41])),
+    ("t14_4_0", "invalid", bytes([0xc0, 0xaf, 0xe0, 0x80, 0xbf, 0xf0, 0x81, 0x82, 0x41])),
+    ("t14_3", "invalid", bytes([0xec, 0x20, 0xed, 0x20, 0xee, 0x20, 0xef, 0x20])),
+    ("t14_2", "invalid", bytes([0xe8, 0x20, 0xe9, 0x20, 0xea, 0x20, 0xeb, 0x20])),
+    ("t14_1", "invalid", bytes([0xe4, 0x20, 0xe5, 0x20, 0xe6, 0x20, 0xe7, 0x20])),
+    ("t14_0", "invalid", bytes([0xe0, 0x20, 0xe1, 0x20, 0xe2, 0x20, 0xe3, 0x20])),
+    ("t13_7", "invalid", bytes([0xdc, 0x20, 0xdd, 0x20, 0xde, 0x20, 0xdf, 0x20])),
+    ("t13_6", "invalid", bytes([0xd8, 0x20, 0xd9, 0x20, 0xda, 0x20, 0xdb, 0x20])),
+    ("t13_5", "invalid", bytes([0xd4, 0x20, 0xd5, 0x20, 0xd6, 0x20, 0xd7, 0x20])),
+    ("t13_4", "invalid", bytes([0xd0, 0x20, 0xd1, 0x20, 0xd2, 0x20, 0xd3, 0x20])),
+    ("t13_3", "invalid", bytes([0xcc, 0x20, 0xcd, 0x20, 0xce, 0x20, 0xcf, 0x20])),
+    ("t13_2", "invalid", bytes([0xc8, 0x20, 0xc9, 0x20, 0xca, 0x20, 0xcb, 0x20])),
+    ("t13_1", "invalid", bytes([0xc4, 0x20, 0xc5, 0x20, 0xc6, 0x20, 0xc7, 0x20])),
+    ("t13_0", "invalid", bytes([0xc0, 0x20, 0xc1, 0x20, 0xc2, 0x20, 0xc3, 0x20])),
+    ("t12_7", "invalid", bytes([0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf])),
+    ("t12_6", "invalid", bytes([0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7])),
+    ("t12_5", "invalid", bytes([0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf])),
+    ("t12_4", "invalid", bytes([0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7])),
+    ("t12_3", "invalid", bytes([0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f])),
+    ("t12_2", "invalid", bytes([0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97])),
+    ("t12_1", "invalid", bytes([0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f])),
+    ("t12_0", "invalid", bytes([0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87])),
+    ("t11_6", "invalid", bytes([0x80, 0xbf, 0x80, 0xbf, 0x80, 0xbf])),
+    ("t11_5", "invalid", bytes([0x80, 0xbf, 0x80, 0xbf, 0x80])),
+    ("t11_4", "invalid", bytes([0x80, 0xbf, 0x80, 0xbf])),
+    ("t11_3", "invalid", bytes([0x80, 0xbf, 0x80])),
+    ("t11_2", "invalid", bytes([0x80, 0xbf])),
+    ("t11_1", "invalid", bytes([0xbf])),
+    ("t6_5", "invalid", bytes([0xf7, 0xbf, 0xbf, 0xbf, 0xbf, 0xbf, 0xbf])),
+    ("t6_4", "invalid", bytes([0xf7, 0xbf, 0xbf, 0xbf, 0xbf, 0xbf])),
+    ("t6_3", "invalid", bytes([0xfc, 0x84, 0x80, 0x80, 0x80, 0x80])),
+    ("t6_2", "invalid", bytes([0xf7, 0xbf, 0xbf, 0xbf, 0xbf])),
+    ("t6_1", "invalid", bytes([0xf8, 0x88, 0x80, 0x80, 0x80])),
+    ("t6_0_1", "invalid", bytes([0xf4, 0x90, 0x80, 0x80])),
+    ("t6_0", "invalid", bytes([0xf7, 0xbf, 0xbf, 0xbf])),
+    ("t22_7", "valid", bytes([0xe0, 0xa0, 0x80])),
+    ("t22_1", "valid", bytes([0x2f])),
+    ("t10_2", "valid", bytes([0xef, 0xbf, 0xbd])),
+    ("t10_1", "valid", bytes([0xee, 0x80, 0x80])),
+    ("t8_1", "valid", bytes([0xdf, 0xbf])),
+    ("t8_0", "valid", bytes([0x7f])),
+    ("t7_3", "valid", bytes([0xc2, 0x82])),
+    ("t7_2", "valid", bytes([0xc2, 0x81])),
+    ("t7_1", "valid", bytes([0xc2, 0x80])),
+    ("t5_3", "valid", bytes([0xf0, 0x90, 0x80, 0x80])),
+    ("t4_0", "valid", bytes([0xf0, 0x9d, 0x92, 0x9c])),
+    ("t3_0", "valid", bytes([0xe2, 0x80, 0x90])),
+    ("t2_1_0", "valid", bytes([0xc2, 0xa9])),
+    ("t1_0_1", "valid", bytes([0x31])),
+)
+for _suffix, _validity, _payload in _UTF8_TESTS:
+    _name = f"utf8_{_suffix}"
+    if _validity == "valid":
+        # The C side wrapped the payload into a CBOR text-string in the
+        # input file; the expected Python value is that UTF-8 text.
+        TESTS[_name] = T(valid=True, canonical=True,
+                          expected=lambda p=_payload: p.decode("utf-8"))
+    else:
+        # Input file holds the raw payload bytes; assert UTF-8 decode raises.
+        TESTS[_name] = T(valid=False, kind="utf8_invalid_payload")
+
+
+# ----------------------------------------------------------------------------
+# Per-test workhorse
+# ----------------------------------------------------------------------------
+
+class TestSkipped(Exception):
+    pass
+
+
+def walk_iter_check_py(parsed: Any, expected: Any) -> None:
+    """Iterator-walk equivalent of the C/Rust ``walk_iter_check`` helper.
+
+    Walks ``parsed`` via Python's natural iterator surface
+    (``iter(tuple_or_list)`` for arrays, ``dict.items()`` for maps,
+    ``CBORTag.value`` for tags) and walks ``expected`` via random access
+    (indexing, key lookup, attribute access). Asserts that the two are
+    structurally equal at every level.
+
+    This mirrors the iterator-API exercise performed by the C and Rust
+    test variants. In Python the natural representation is already the
+    "decoded" value, so this walk is a structural restatement of the
+    ``parsed == expected`` check — but it does exercise iter()/items()
+    explicitly at every level rather than relying on dict/tuple __eq__.
+    """
+    if isinstance(parsed, CBORTag):
+        if not isinstance(expected, CBORTag):
+            raise AssertionError(
+                f"walk_iter_check: expected CBORTag, got {type(expected).__name__}")
+        if parsed.tag != expected.tag:
+            raise AssertionError(
+                f"walk_iter_check: tag {parsed.tag} != {expected.tag}")
+        walk_iter_check_py(parsed.value, expected.value)
+        return
+
+    if isinstance(parsed, (tuple, list)):
+        if not isinstance(expected, (tuple, list)):
+            raise AssertionError(
+                f"walk_iter_check: expected sequence, got {type(expected).__name__}")
+        if len(parsed) != len(expected):
+            raise AssertionError(
+                f"walk_iter_check: array length {len(parsed)} != {len(expected)}")
+        for i, item in enumerate(iter(parsed)):
+            walk_iter_check_py(item, expected[i])
+        return
+
+    if isinstance(parsed, (dict, FrozenDict)):
+        if not isinstance(expected, (dict, FrozenDict)):
+            raise AssertionError(
+                f"walk_iter_check: expected mapping, got {type(expected).__name__}")
+        if len(parsed) != len(expected):
+            raise AssertionError(
+                f"walk_iter_check: map size {len(parsed)} != {len(expected)}")
+        for k, v in parsed.items():
+            if k not in expected:
+                raise AssertionError(
+                    f"walk_iter_check: key {k!r} missing from expected")
+            walk_iter_check_py(v, expected[k])
+        return
+
+    # Leaf scalar: int, str, bytes, CBORSimpleValue, bool, None.
+    if parsed != expected:
+        raise AssertionError(f"walk_iter_check: leaf {parsed!r} != {expected!r}")
+
+
+def _run_one(input_bytes: bytes, serialized_bytes: bytes | None,
+             spec: T, *, allow_dup_keys_supported: bool) -> None:
+    """Run one assertion pass for a single (input_bytes, [serialized_bytes]) pair.
+
+    Raises AssertionError on failure, or TestSkipped if the test cannot be
+    meaningfully evaluated by the installed cbor2 version.
+    """
+    kind = spec.get("kind", "cbor")
+
+    if kind == "utf8_invalid_payload":
+        # Input file holds raw UTF-8-invalid payload bytes that the C side
+        # rejected at mk_text_string time. The Python equivalent is that
+        # str.decode() raises.
+        try:
+            input_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            return
+        raise AssertionError("UTF-8 decode of supposedly invalid payload "
+                             "succeeded")
+
+    if not spec["valid"]:
+        # Special-case: cbor2 cannot reject duplicate map keys without the
+        # allow_duplicate_keys=False flag, which only landed post-6.0.1.
+        if not allow_dup_keys_supported and spec is TESTS["map_dup_key_invalid"]:
+            raise TestSkipped("cbor2 lacks allow_duplicate_keys flag")
+        if not allow_dup_keys_supported and spec is TESTS["map_dup_diff_enc_invalid"]:
+            raise TestSkipped("cbor2 lacks allow_duplicate_keys flag")
+        try:
+            strict_loads(input_bytes)
+        except CBORDecodeError:
+            return
+        raise AssertionError("strict cbor2.loads accepted an invalid encoding")
+
+    expected = spec["expected"]()
+    parsed = strict_loads(input_bytes)
+    if parsed != expected:
+        raise AssertionError(f"parsed={parsed!r} != expected={expected!r}")
+
+    if kind == "iterator":
+        # Walk the parsed value via iter()/items()/CBORTag.value and assert
+        # structural equality against expected. Mirrors the iterator-API
+        # exercise done in the C and Rust test suites.
+        walk_iter_check_py(parsed, expected)
+
+    if spec["canonical"]:
+        # Re-encode canonically and compare with the C-emitted input bytes.
+        re_encoded = cbor2.dumps(expected, canonical=True)
+        if re_encoded != input_bytes:
+            raise AssertionError(
+                f"canonical re-encoding {re_encoded.hex()} != input "
+                f"{input_bytes.hex()}")
+
+    if serialized_bytes is not None:
+        # The C side serialized the constructed object; loading those bytes
+        # must give an equal value too.
+        ser_parsed = strict_loads(serialized_bytes)
+        if ser_parsed != expected:
+            raise AssertionError(
+                f"serialized-file parse {ser_parsed!r} != expected {expected!r}")
+
+
+# ----------------------------------------------------------------------------
+# Driver
+# ----------------------------------------------------------------------------
+
+def discover(out_dir: Path, api: str) -> dict[str, tuple[bytes, bytes | None]]:
+    """Return {test_name: (input_bytes, serialized_bytes_or_None)} for one API."""
+    found: dict[str, tuple[bytes, bytes | None]] = {}
+    prefix = f"{api}_"
+    for input_path in sorted(out_dir.glob(f"{prefix}*.input.cbor")):
+        name = input_path.name[len(prefix):-len(".input.cbor")]
+        ser_path = out_dir / f"{prefix}{name}.serialized.cbor"
+        ser_bytes = ser_path.read_bytes() if ser_path.exists() else None
+        found[name] = (input_path.read_bytes(), ser_bytes)
+    return found
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--out-dir", type=Path, default=Path("out"),
+                        help="directory containing artefacts written by the C tests")
+    parser.add_argument("--iterations", type=int, default=1000,
+                        help="number of timed iterations per test")
+    parser.add_argument("--apis", nargs="+", default=["det", "nondet"],
+                        help="which artefact-producing APIs to consume")
+    args = parser.parse_args()
+
+    try:
+        version = importlib.metadata.version("cbor2")
+    except importlib.metadata.PackageNotFoundError:
+        version = "unknown"
+
+    feature_summary = ", ".join(
+        f"{f}={'yes' if v else 'no'}"
+        for f, v in [("immutable", HAS_IMMUTABLE),
+                     ("allow_indefinite", HAS_ALLOW_INDEFINITE),
+                     ("allow_duplicate_keys", HAS_ALLOW_DUP_KEYS)]
+    )
+    print(f"cbor2 v{version}; decoder features: {feature_summary}")
+    print(f"Reading artefacts from {args.out_dir}")
+    print(f"Iterations per test: {args.iterations}")
+
+    if not args.out_dir.exists():
+        sys.stderr.write(f"FATAL: --out-dir {args.out_dir} does not exist; "
+                         f"run the C test binaries first.\n")
+        return 2
+
+    overall_passed = 0
+    overall_failed = 0
+    overall_skipped = 0
+    overall_seconds = 0.0
+
+    for api in args.apis:
+        artefacts = discover(args.out_dir, api)
+        if not artefacts:
+            print(f"\n[{api}] no artefacts found, skipping")
+            continue
+        print(f"\n[{api}] {len(artefacts)} test(s)")
+
+        api_passed = api_failed = api_skipped = 0
+        api_seconds = 0.0
+
+        for name in sorted(artefacts):
+            input_bytes, ser_bytes = artefacts[name]
+            spec = TESTS.get(name)
+            label = f"[{api}] {name:<36} "
+            print(label, end="", flush=True)
+
+            if spec is None:
+                print("SKIP  (no Python spec)")
+                api_skipped += 1
+                continue
+
+            # Initial untimed run, mainly to detect TestSkipped before timing.
+            try:
+                _run_one(input_bytes, ser_bytes, spec,
+                         allow_dup_keys_supported=HAS_ALLOW_DUP_KEYS)
+            except TestSkipped as why:
+                print(f"SKIP  ({why})")
+                api_skipped += 1
+                continue
+            except AssertionError as why:
+                print(f"FAIL  {why}")
+                api_failed += 1
+                continue
+
+            # Timed loop
+            t0 = time.perf_counter()
+            try:
+                for _ in range(args.iterations):
+                    _run_one(input_bytes, ser_bytes, spec,
+                             allow_dup_keys_supported=HAS_ALLOW_DUP_KEYS)
+            except AssertionError as why:
+                print(f"FAIL  {why}")
+                api_failed += 1
+                continue
+            seconds = time.perf_counter() - t0
+            api_seconds += seconds
+            print(f"PASS  {args.iterations} iters in {seconds:.6f}s "
+                  f"({seconds / args.iterations:.3e} s/iter)")
+            api_passed += 1
+
+        overall_passed += api_passed
+        overall_failed += api_failed
+        overall_skipped += api_skipped
+        overall_seconds += api_seconds
+        print(f"[{api}] Summary: {api_passed} passed, "
+              f"{api_failed} failed, {api_skipped} skipped; "
+              f"total time {api_seconds:.6f}s")
+
+    print(f"\nOverall: {overall_passed} passed, {overall_failed} failed, "
+          f"{overall_skipped} skipped; total {overall_seconds:.6f}s")
+    return 0 if overall_failed == 0 else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

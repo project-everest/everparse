@@ -1,0 +1,42 @@
+[package]
+name = "cbor_tests_rust"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# Cross-language conformance tests for EverCBOR.
+#
+# This crate hosts integration tests that re-exercise the test cases produced
+# by `share/everparse/tests/cbor/cbor_tests.c` against the Rust extractions of
+# the deterministic and non-deterministic EverCBOR APIs. Each test reads the
+# binary artefact files emitted by the C tests, verifies the Rust APIs accept
+# (or reject) them in the same way as the C APIs, and for valid encodings
+# checks that the Rust serializer produces exactly the same bytes the C
+# serializer wrote to disk.
+#
+# The crate has no library code of its own; everything lives in the
+# integration tests under `tests/`.
+
+[lib]
+path = "src/lib.rs"
+
+# Explicitly list integration test targets so the auto-generated UTF-8 data
+# files (under tests/utf8_data/) are not picked up as standalone test targets.
+[[test]]
+name = "det"
+path = "tests/det.rs"
+
+[[test]]
+name = "nondet"
+path = "tests/nondet.rs"
+
+[dependencies]
+cborrs        = { path = "../../../../../src/cbor/pulse/det/rust" }
+cborrs-nondet = { path = "../../../../../src/cbor/pulse/nondet/rust" }
+
+# Match the upstream crate test profile so the deep-recursion array tests
+# (depth 2200) don't blow the default debug stack.
+[profile.test]
+inherits  = "release"
+opt-level = 2
+lto       = "fat"

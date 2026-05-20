@@ -61,6 +61,7 @@ let valid_micro_step (str: string) : Tot bool = match str with
   | "copy_clang_format"
   | "copy_everparse_h"
   | "emit_config"
+  | "save_hashes"
     -> true
   | _ -> false
 let micro_step : ref (option (valid_string valid_micro_step)) = alloc None
@@ -408,7 +409,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "z3_use_ptr" (OptBool use_ptr_for_probe) "use pointers rather than array indices for probes" [];
     CmdOption "z3_witnesses" (OptStringOption "nb" always_valid z3_witnesses) "ask for nb distinct test witnesses per branch case (default 1)" [];
     CmdOption "__arg0" (OptStringOption "executable name" always_valid arg0) "executable name to use for the help message" [];
-    CmdOption "__micro_step" (OptStringOption "verify|extract|copy_clang_format|copy_everparse_h|emit_config" valid_micro_step micro_step) "micro step" [];
+    CmdOption "__micro_step" (OptStringOption "verify|extract|copy_clang_format|copy_everparse_h|emit_config|save_hashes" valid_micro_step micro_step) "micro step" [];
     CmdOption "__produce_c_from_existing_krml" (OptBool produce_c_from_existing_krml) "produce C from .krml files" [];
     CmdOption "__skip_deps" (OptBool skip_deps) "skip dependency analysis, assume all dependencies are specified on the command line" [];
   ];
@@ -525,6 +526,7 @@ let get_micro_step _ =
   | Some "copy_clang_format" -> Some MicroStepCopyClangFormat
   | Some "copy_everparse_h" -> Some MicroStepCopyEverParseH
   | Some "emit_config" -> Some MicroStepEmitConfig
+  | Some "save_hashes" -> Some MicroStepSaveHashes
 
 let get_produce_c_from_existing_krml _ =
   !produce_c_from_existing_krml
