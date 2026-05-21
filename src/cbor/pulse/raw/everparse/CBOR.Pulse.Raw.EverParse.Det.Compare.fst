@@ -539,8 +539,9 @@ ensures
             // Convert pts_to_parsed → strong_prefix at pmv2/2 + trade-back
             PPB.pts_to_parsed_weaken_strong_prefix parse_raw_data_item s2;
             // Read the cbor_raw from the strong_prefix slice
-            let reader = cbor_raw_read_fuel (n - 1) (pmv2 /. 2.0R) f64;
-            let xx2 = reader s2 #(pmv2 /. 2.0R) #hdv2;
+            // (full application: avoid binding a partially-applied function value locally,
+            //  which would survive KaRaMeL extraction and trigger Warning 16)
+            let xx2 = cbor_raw_read_fuel (n - 1) (pmv2 /. 2.0R) f64 s2 #(pmv2 /. 2.0R) #hdv2;
             // Compose trades: cbor_raw_match_fuel (n - 1) (pmv2/2) → strong_prefix #(pmv2/2) → pts_to_parsed #pmv2
             Trade.trans
               (cbor_raw_match_fuel (n - 1) (pmv2 /. 2.0R) xx2 hdv2)
@@ -570,8 +571,8 @@ ensures
                  as (cbor_raw_match_fuel (n - 1) pmv2 xx2 hdv2);
             cbor_raw_match_fuel_implies_pos (n - 1) xx2 #pmv2 #hdv2;
             PPB.pts_to_parsed_weaken_strong_prefix parse_raw_data_item s1;
-            let reader = cbor_raw_read_fuel (n - 1) (pmv1 /. 2.0R) f64;
-            let xx1 = reader s1 #(pmv1 /. 2.0R) #hdv1;
+            // Full application: avoid local binding of partial application.
+            let xx1 = cbor_raw_read_fuel (n - 1) (pmv1 /. 2.0R) f64 s1 #(pmv1 /. 2.0R) #hdv1;
             Trade.trans
               (cbor_raw_match_fuel (n - 1) (pmv1 /. 2.0R) xx1 hdv1)
               (PPB.pts_to_parsed_strong_prefix parse_raw_data_item s1 #(pmv1 /. 2.0R) hdv1)
@@ -1209,8 +1210,8 @@ fn cbor_compare_body_fuel
                 rewrite (tagged_payload_eos_match (cbor_raw_match_fuel (n - 1)) pm2' (ESerialized s2) payload2)
                      as (PPB.pts_to_parsed_strong_prefix parse_raw_data_item s2 #pm2' payload2);
                 cbor_raw_match_fuel_implies_pos (n - 1) xx1 #pm1' #payload1;
-                let reader2 = cbor_raw_read_fuel (n - 1) pm2' f64;
-                let xx2 = reader2 s2 #pm2' #payload2;
+                // Full application: avoid local binding of partial application.
+                let xx2 = cbor_raw_read_fuel (n - 1) pm2' f64 s2 #pm2' #payload2;
                 let r = ih xx1 xx2 #pm1' #payload1 #pm2' #payload2;
                 Trade.elim (cbor_raw_match_fuel (n - 1) pm2' xx2 payload2)
                            (PPB.pts_to_parsed_strong_prefix parse_raw_data_item s2 #pm2' payload2);
@@ -1238,8 +1239,8 @@ fn cbor_compare_body_fuel
                 rewrite (tagged_payload_eos_match (cbor_raw_match_fuel (n - 1)) pm2' (EElement xx2) payload2)
                      as (cbor_raw_match_fuel (n - 1) pm2' xx2 payload2);
                 cbor_raw_match_fuel_implies_pos (n - 1) xx2 #pm2' #payload2;
-                let reader1 = cbor_raw_read_fuel (n - 1) pm1' f64;
-                let xx1 = reader1 s1 #pm1' #payload1;
+                // Full application: avoid local binding of partial application.
+                let xx1 = cbor_raw_read_fuel (n - 1) pm1' f64 s1 #pm1' #payload1;
                 let r = ih xx1 xx2 #pm1' #payload1 #pm2' #payload2;
                 Trade.elim (cbor_raw_match_fuel (n - 1) pm1' xx1 payload1)
                            (PPB.pts_to_parsed_strong_prefix parse_raw_data_item s1 #pm1' payload1);

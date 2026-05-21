@@ -906,6 +906,7 @@ ensures
 
 #push-options "--z3rlimit 1024 --fuel 2 --ifuel 2"
 
+inline_for_extraction
 ```pulse
 fn cbor_raw_get_tagged_payload_aux
   (r: perm -> cbor_raw -> raw_data_item -> slprop)
