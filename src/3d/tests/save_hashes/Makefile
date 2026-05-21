@@ -27,7 +27,7 @@ include $(everparse_makefile)
 endif
 
 # Build all generated files including hash .json files
-build: $(EVERPARSE_ALL_H_FILES) $(EVERPARSE_ALL_C_FILES) $(EVERPARSE_OUTPUT_DIR)/Test.json $(EVERPARSE_OUTPUT_DIR)/Test2.json
+build: $(EVERPARSE_ALL_H_FILES) $(EVERPARSE_ALL_C_FILES) $(EVERPARSE_ALL_JSON_FILES)
 
 # Verify saved hashes with --check_hashes strong
 check: build
