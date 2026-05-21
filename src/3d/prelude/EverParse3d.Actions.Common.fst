@@ -13,11 +13,15 @@ module B = LowStar.Buffer
 module U8 = FStar.UInt8
 module F = FStar.FunctionalExtensionality
 module U64 = FStar.UInt64
+noextract [@@noextract_to "krml"]
 let eloc = (l: FStar.Ghost.erased B.loc { B.address_liveness_insensitive_locs `B.loc_includes` l })
+
+noextract [@@noextract_to "krml"]
 let eloc_none : eloc = B.loc_none
   
 let app_ctxt = AppCtxt.app_ctxt
 
+noextract [@@noextract_to "krml"]
 let app_loc (x:AppCtxt.app_ctxt) (l:eloc) : eloc = 
 
   AppCtxt.loc_of x `loc_union` l
@@ -26,6 +30,7 @@ inline_for_extraction
 noextract
 let input_buffer_t = EverParse3d.InputStream.All.t
 
+noextract [@@noextract_to "krml"]
 let app_ctxt_error_pre (ctxt:app_ctxt) (l:loc) (h:HS.mem) =
   B.live h ctxt /\
   AppCtxt.loc_of ctxt `loc_disjoint` l
