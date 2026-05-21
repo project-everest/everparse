@@ -651,5 +651,9 @@ let write_makefile
   write_all_ext_files "H" "h";
   write_all_ext_files "C" "c";
   write_all_ext_files "O" (oext mtype);
+  if save_hashes then begin
+    let json_files = List.map (fun f -> mk_filename (Options.get_module_name f) "json") all_files in
+    FStar.IO.write_string file (Printf.sprintf "EVERPARSE_ALL_JSON_FILES=%s\n" (String.concat " " (List.Tot.map (mk_rule_operand mtype) json_files)))
+  end;
   FStar.IO.close_write_file file;
   OS.rename makefile_tmp makefile_final
