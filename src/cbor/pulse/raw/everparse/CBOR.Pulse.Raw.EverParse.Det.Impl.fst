@@ -33,6 +33,7 @@ module IT = LowParse.PulseParse.Iterator.Type
 module R = Pulse.Lib.Reference
 module Proj = LowParse.PulseParse.Projectors
 module PMU = Pulse.Lib.SeqMatch.Util
+module ReadMapEntry = CBOR.Pulse.Raw.EverParse.ReadMapEntry
 
 (* ======== Core definition ======== *)
 
@@ -951,7 +952,7 @@ fn cbor_det_array_iterator_start (_: unit) : array_iterator_start_t cbor_det_mat
   let it = I.iterator_start
     RawMatch.cbor_raw_match
     SpecRawEverParse.parse_raw_data_item
-    (Validate.jump_raw_data_item f64)
+    Validate.jump_raw_data_item_eta
     pm'
     ml
     (Aux.det_raw_list l_ghost)
@@ -1031,18 +1032,10 @@ fn cbor_det_array_iterator_next (_: unit) : array_iterator_next_t cbor_det_match
   Aux.length_det_raw_list z;
   assert (pure (List.Tot.length (Ghost.reveal lr) == List.Tot.length z));
   assert (pure (Cons? (Ghost.reveal lr)));
-  let zcp = LowParse.PulseParse.Base.zero_copy_parse_of_strong_prefix
-    (CBOR.Pulse.Raw.EverParse.Read.cbor_raw_read 1.0R f64) ();
-  let res = I.iterator_next
-    RawMatch.cbor_raw_match
-    SpecRawEverParse.parse_raw_data_item
-    (Validate.jump_raw_data_item f64)
-    py x y lr
-    cbor_raw_match_share_aux
-    cbor_raw_match_gather_aux
-    zcp;
-  unfold (I.iterator_next_post RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item py x (Ghost.reveal y) (Ghost.reveal lr) res);
-  with pm_v hd_val tl_l it' pm' . assert (
+  let i_cur = !x;
+  let res, it' = ReadMapEntry.iterator_next_raw_data_item f64 py i_cur lr;
+  x := it';
+  with pm_v hd_val tl_l pm' . assert (
     RawMatch.cbor_raw_match pm_v res hd_val **
     R.pts_to x it' **
     I.iterator_match RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item pm' it' tl_l **
@@ -1183,7 +1176,7 @@ fn cbor_det_array_iterator_truncate (_: unit) : array_iterator_truncate_t cbor_d
        as (I.base_mixed_list_match_n RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item 0 (SZ.v cb_sz) py x.LowParse.PulseParse.Iterator.Type.before l1);
   let bi' = I.base_mixed_list_narrow_n
     RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item
-    (Validate.jump_raw_data_item f64) 0 (SZ.v cb_sz) py x.LowParse.PulseParse.Iterator.Type.before l1
+    Validate.jump_raw_data_item_eta 0 (SZ.v cb_sz) py x.LowParse.PulseParse.Iterator.Type.before l1
     0sz len_before_sz;
   // bi' : base_mixed_list cbor_raw with base_mixed_list_match bi' (list_narrow l1 0 (SZ.v len_before_sz)) at pm
   // plus trade (...) (base_mixed_list_match_n before)
@@ -1196,7 +1189,7 @@ fn cbor_det_array_iterator_truncate (_: unit) : array_iterator_truncate_t cbor_d
        as (I.mixed_list_match_n RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item 0 (SZ.v ca_sz) py x.LowParse.PulseParse.Iterator.Type.after l2);
   let after' = I.mixed_list_narrow_n
     RawMatch.cbor_raw_match SpecRawEverParse.parse_raw_data_item
-    (Validate.jump_raw_data_item f64) 0 (SZ.v ca_sz) py x.LowParse.PulseParse.Iterator.Type.after l2
+    Validate.jump_raw_data_item_eta 0 (SZ.v ca_sz) py x.LowParse.PulseParse.Iterator.Type.after l2
     0sz len_after_sz
     cbor_raw_match_share_aux cbor_raw_match_gather_aux;
   // after' : mixed_list cbor_raw with mixed_list_match after' (list_narrow l2 0 (SZ.v len_after_sz)) at pm/2
@@ -1735,33 +1728,51 @@ fn cbor_det_map_iterator_next (_: unit) : map_iterator_next_t cbor_det_map_entry
       (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
       py y (Aux.det_raw_map_entries z))
     as (I.iterator_match
-      (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
+      (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match)
       (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
       py y (Ghost.reveal lr));
   Aux.length_det_raw_map_entries z;
   assert (pure (Cons? (Ghost.reveal lr)));
-  let zcp = LowParse.PulseParse.Base.zero_copy_parse_of_strong_prefix
-    (ReadMapEntry.cbor_raw_read_map_entry 1.0R f64) ();
-  let res = I.iterator_next
-    (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
-    (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
-    (LowParse.Pulse.Combinators.jump_nondep_then (Validate.jump_raw_data_item f64) (Validate.jump_raw_data_item f64))
-    py x y lr
-    cbor_map_entry_match_share_aux
-    cbor_map_entry_match_gather_aux
-    zcp;
-  unfold (I.iterator_next_post
-    (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
-    (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
-    py x (Ghost.reveal y) (Ghost.reveal lr) res);
-  with pm_v hd_val tl_l it' pm' . assert (
+  let i_cur = !x;
+  let res, it' = ReadMapEntry.iterator_next_map_entry_raw_data_item f64 py i_cur lr;
+  x := it';
+  with pm_v hd_val tl_l pm' . assert (
     RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm_v res hd_val **
     R.pts_to x it' **
     I.iterator_match
-      (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
+      (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match)
       (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
       pm' it' tl_l **
     Trade.trade
+      (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm_v res hd_val **
+       I.iterator_match
+         (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match)
+         (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+         pm' it' tl_l)
+      (I.iterator_match
+         (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match)
+         (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+         py (Ghost.reveal y) (Ghost.reveal lr))
+  );
+  rewrite (I.iterator_match
+      (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match)
+      (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+      pm' it' tl_l)
+    as (I.iterator_match
+      (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
+      (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+      pm' it' tl_l);
+  rewrite (Trade.trade
+      (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm_v res hd_val **
+       I.iterator_match
+         (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match)
+         (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+         pm' it' tl_l)
+      (I.iterator_match
+         (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match)
+         (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
+         py (Ghost.reveal y) (Ghost.reveal lr)))
+    as (Trade.trade
       (RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm_v res hd_val **
        I.iterator_match
          (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
@@ -1770,8 +1781,7 @@ fn cbor_det_map_iterator_next (_: unit) : map_iterator_next_t cbor_det_map_entry
       (I.iterator_match
          (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
          (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
-         py (Ghost.reveal y) (Ghost.reveal lr))
-  );
+         py (Ghost.reveal y) (Ghost.reveal lr)));
   Aux.list_map_mk_cbor_mk_det_raw_cbor_map_entry z;
   Aux.list_map_mk_det_raw_cbor_correct_map_entries z;
   // z == map mk_cbor_map_entry lr; lr == hd_val :: tl_l
@@ -1896,7 +1906,7 @@ fn cbor_det_map_iterator_start (_: unit) : map_iterator_start_t cbor_det_match c
   let it = I.iterator_start
     (fun pm0 e v -> RawMatch.cbor_map_entry_match RawMatch.cbor_raw_match pm0 e v)
     (LowParse.Spec.Combinators.nondep_then SpecRawEverParse.parse_raw_data_item SpecRawEverParse.parse_raw_data_item)
-    (LowParse.Pulse.Combinators.jump_nondep_then (Validate.jump_raw_data_item f64) (Validate.jump_raw_data_item f64))
+    Validate.jump_nondep_then_raw_data_item_eta
     pm'
     ml
     (Aux.det_raw_map_entries l_ghost)

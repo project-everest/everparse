@@ -1007,7 +1007,7 @@ ensures
     cbor_raw_match
     serialize_raw_data_item
     (fun pm'' -> l2r_writer_lens (cbor_raw_match_with_perm_lens pm'') f)
-    (jump_raw_data_item f64)
+    jump_raw_data_item_eta
     cbor_raw_match_share_t cbor_raw_match_gather_t
     pm' n;
   let res = w arr out offset;
@@ -1122,7 +1122,7 @@ ensures
     cbor_raw_match
     serialize_raw_data_item
     (fun pm'' -> compute_remaining_size_lens (cbor_raw_match_with_perm_lens pm'') f)
-    (jump_raw_data_item f64)
+    jump_raw_data_item_eta
     cbor_raw_match_share_t cbor_raw_match_gather_t
     pm' n;
   let res = cr arr out;
@@ -1452,7 +1452,7 @@ ensures
     cbor_map_entry_vmatch
     (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
     (fun pm'' -> ser_map_entry f pm'')
-    (jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64))
+    jump_nondep_then_raw_data_item_eta
     cbor_map_entry_vmatch_share_t cbor_map_entry_vmatch_gather_t
     pm' n;
   let res = w arr out offset;
@@ -1619,7 +1619,7 @@ ensures
     cbor_map_entry_vmatch
     (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
     (fun pm'' -> size_map_entry f pm'')
-    (jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64))
+    jump_nondep_then_raw_data_item_eta
     cbor_map_entry_vmatch_share_t cbor_map_entry_vmatch_gather_t
     pm' n;
   let res = cr arr out;

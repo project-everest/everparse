@@ -261,9 +261,9 @@ ensures
 {
   // Step 1: extract exact-extent slices via jumper, with trades back to strong_prefix
   let ex1 = PPB.pts_to_parsed_strong_prefix_to_serialized_trade
-              serialize_raw_data_item (jump_raw_data_item f64) s1;
+              serialize_raw_data_item jump_raw_data_item_eta s1;
   let ex2 = PPB.pts_to_parsed_strong_prefix_to_serialized_trade
-              serialize_raw_data_item (jump_raw_data_item f64) s2;
+              serialize_raw_data_item jump_raw_data_item_eta s2;
   // Step 2: byte-compare via the same pattern as the parsed variant
   cbor_compare_correct (Ghost.reveal v1) (Ghost.reveal v2);
   SCE.serialize_cbor_eq_bare_serialize (Ghost.reveal v1);
@@ -323,7 +323,7 @@ ensures
 {
   // Step 1: extract exact-extent slices via the pair jumper, with trades back to strong_prefix
   let pair_ser = serialize_nondep_then serialize_raw_data_item serialize_raw_data_item;
-  let pair_jmp = jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64);
+  let pair_jmp = jump_nondep_then jump_raw_data_item_eta jump_raw_data_item_eta;
   let ex1 = PPB.pts_to_parsed_strong_prefix_to_serialized_trade pair_ser pair_jmp s1;
   let ex2 = PPB.pts_to_parsed_strong_prefix_to_serialized_trade pair_ser pair_jmp s2;
   // Step 2: one pure lemma proves the byte-compare ↔ cbor_compare_pair equation.
@@ -445,14 +445,14 @@ ensures
   // Start iterators
   let it1_init = I.iterator_start
     (cbor_raw_match_fuel (n - 1))
-    parse_raw_data_item (jump_raw_data_item f64)
+    parse_raw_data_item jump_raw_data_item_eta
     pm1_a ar_ml1 ar1
     (cbor_raw_match_fuel_share_t (n - 1))
     (cbor_raw_match_fuel_gather_t (n - 1));
   Trade.trans _ _ (cbor_raw_match_fuel n pm1 x1 v1);
   let it2_init = I.iterator_start
     (cbor_raw_match_fuel (n - 1))
-    parse_raw_data_item (jump_raw_data_item f64)
+    parse_raw_data_item jump_raw_data_item_eta
     pm2_a ar_ml2 ar2
     (cbor_raw_match_fuel_share_t (n - 1))
     (cbor_raw_match_fuel_gather_t (n - 1));
@@ -494,7 +494,7 @@ ensures
     let e1 = I.iterator_next_eos
       (cbor_raw_match_fuel (n - 1))
       parse_raw_data_item
-      (jump_raw_data_item f64)
+      jump_raw_data_item_eta
       _ r_it1 _ _
       (cbor_raw_match_fuel_share_t (n - 1))
       (cbor_raw_match_fuel_gather_t (n - 1));
@@ -509,7 +509,7 @@ ensures
     let e2 = I.iterator_next_eos
       (cbor_raw_match_fuel (n - 1))
       parse_raw_data_item
-      (jump_raw_data_item f64)
+      jump_raw_data_item_eta
       _ r_it2 _ _
       (cbor_raw_match_fuel_share_t (n - 1))
       (cbor_raw_match_fuel_gather_t (n - 1));
@@ -842,7 +842,7 @@ ensures
   let it1_init = I.iterator_start
     (cbor_map_entry_vmatch_fuel (n - 1))
     (nondep_then parse_raw_data_item parse_raw_data_item)
-    (jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64))
+    jump_nondep_then_raw_data_item_eta
     pm1_m map_ml1 map1_entries
     (cbor_map_entry_vmatch_fuel_share_t (n - 1))
     (cbor_map_entry_vmatch_fuel_gather_t (n - 1));
@@ -850,7 +850,7 @@ ensures
   let it2_init = I.iterator_start
     (cbor_map_entry_vmatch_fuel (n - 1))
     (nondep_then parse_raw_data_item parse_raw_data_item)
-    (jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64))
+    jump_nondep_then_raw_data_item_eta
     pm2_m map_ml2 map2_entries
     (cbor_map_entry_vmatch_fuel_share_t (n - 1))
     (cbor_map_entry_vmatch_fuel_gather_t (n - 1));
@@ -892,7 +892,7 @@ ensures
     let e1 = I.iterator_next_eos
       (cbor_map_entry_vmatch_fuel (n - 1))
       (nondep_then parse_raw_data_item parse_raw_data_item)
-      (jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64))
+      jump_nondep_then_raw_data_item_eta
       _ r_it1 _ _
       (cbor_map_entry_vmatch_fuel_share_t (n - 1))
       (cbor_map_entry_vmatch_fuel_gather_t (n - 1));
@@ -907,7 +907,7 @@ ensures
     let e2 = I.iterator_next_eos
       (cbor_map_entry_vmatch_fuel (n - 1))
       (nondep_then parse_raw_data_item parse_raw_data_item)
-      (jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64))
+      jump_nondep_then_raw_data_item_eta
       _ r_it2 _ _
       (cbor_map_entry_vmatch_fuel_share_t (n - 1))
       (cbor_map_entry_vmatch_fuel_gather_t (n - 1));

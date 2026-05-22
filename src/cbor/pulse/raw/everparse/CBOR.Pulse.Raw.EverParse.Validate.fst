@@ -1717,3 +1717,38 @@ fn impl_holds_on_raw_data_item_strong_prefix
 {
   LowParse.Pulse.Recursive.impl_pred_recursive_strong_prefix serialize_raw_data_item_param (jump_leaf ()) (jump_recursive_step_count_leaf f64) (holds_on_raw_data_item_pred p) impl_p input
 }
+
+(* Eta-expanded top-level wrappers around [jump_raw_data_item] (and its pair
+   composition via [jump_nondep_then]). These give KaRaMeL fully-applied
+   call-sites at iterator helpers (which now consume jumpers at runtime since
+   they are no longer [inline_for_extraction]). They are written in plain F*,
+   not Pulse, since they merely re-bundle existing computational values. *)
+
+assume val sz_fits_u64 : squash SZ.fits_u64
+
+let jump_raw_data_item_eta
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+: stt SZ.t
+    (pts_to input #pm v ** pure (jumper_pre' parse_raw_data_item offset v))
+    (fun res -> pts_to input #pm v ** pure (validator_success parse_raw_data_item offset v res))
+= jump_raw_data_item sz_fits_u64 input offset #pm #v
+
+let jump_nondep_then_raw_data_item_eta
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+: stt SZ.t
+    (pts_to input #pm v ** pure (jumper_pre' (LowParse.Spec.Combinators.nondep_then parse_raw_data_item parse_raw_data_item) offset v))
+    (fun res -> pts_to input #pm v ** pure (validator_success (LowParse.Spec.Combinators.nondep_then parse_raw_data_item parse_raw_data_item) offset v res))
+=
+  LowParse.Pulse.Combinators.jump_nondep_then
+    #raw_data_item #raw_data_item
+    #parse_raw_data_item_kind #parse_raw_data_item
+    jump_raw_data_item_eta
+    #parse_raw_data_item_kind #parse_raw_data_item
+    jump_raw_data_item_eta
+    input offset #pm #v

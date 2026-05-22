@@ -249,3 +249,14 @@ val impl_holds_on_raw_data_item_strong_prefix
 : stt bool
   (requires LowParse.PulseParse.Base.pts_to_parsed_strong_prefix parse_raw_data_item input #pm v)
   (ensures fun res -> LowParse.PulseParse.Base.pts_to_parsed_strong_prefix parse_raw_data_item input #pm v ** pure (res == holds_on_raw_data_item p v))
+
+(* Eta-expanded top-level wrappers for jumpers passed as function values to
+   non-`inline_for_extraction` iterator helpers, so KaRaMeL sees fully-applied
+   call-sites rather than partial applications. *)
+
+val jump_raw_data_item_eta : jumper #raw_data_item #parse_raw_data_item_kind parse_raw_data_item
+
+val jump_nondep_then_raw_data_item_eta
+: jumper #(raw_data_item & raw_data_item)
+    #(and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)
+    (LowParse.Spec.Combinators.nondep_then parse_raw_data_item parse_raw_data_item)

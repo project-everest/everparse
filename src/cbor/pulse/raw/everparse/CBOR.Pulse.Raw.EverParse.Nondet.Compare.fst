@@ -485,14 +485,14 @@ fn impl_data_model_to_equiv_hd
 {
   // === Side 1: extract head as cbor_raw ===
 
-  let hd1 = nlist_hd_strong_prefix () (jump_raw_data_item f64) (SZ.v n1) l1;
+  let hd1 = nlist_hd_strong_prefix () jump_raw_data_item_eta (SZ.v n1) l1;
   let x1 = cbor_raw_read 1.0R f64 hd1;
   Trade.trans _ _
     (PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n1) parse_raw_data_item) l1 #p1 gl1);
 
   // === Side 2: extract head as cbor_raw ===
 
-  let hd2 = nlist_hd_strong_prefix () (jump_raw_data_item f64) (SZ.v n2) l2;
+  let hd2 = nlist_hd_strong_prefix () jump_raw_data_item_eta (SZ.v n2) l2;
   let x2 = cbor_raw_read 1.0R f64 hd2;
   Trade.trans _ _
     (PPB.pts_to_parsed_strong_prefix (parse_nlist (SZ.v n2) parse_raw_data_item) l2 #p2 gl2);
@@ -875,7 +875,7 @@ ensures cbor_map_entry_vmatch 1.0R res v **
 {
   // Use the nondep_then zero_copy_parse to get a pair of cbor_raw values
   let zcp1 = PPB.zero_copy_parse_of_strong_prefix (cbor_raw_read 1.0R f64) ();
-  let pair = LowParse.PulseParse.Combinators.zero_copy_parse_nondep_then (jump_raw_data_item f64) zcp1 () zcp1 input;
+  let pair = LowParse.PulseParse.Combinators.zero_copy_parse_nondep_then jump_raw_data_item_eta zcp1 () zcp1 input;
   let entry : cbor_map_entry cbor_raw = { cbor_map_entry_key = fst pair; cbor_map_entry_value = snd pair };
   // vmatch_pair (cbor_raw_match 1.0R) (cbor_raw_match 1.0R) pair v
   //   = cbor_raw_match 1.0R (fst pair) (fst v) ** cbor_raw_match 1.0R (snd pair) (snd v)
@@ -1020,13 +1020,12 @@ ensures
   cbor_map_entry_vmatch_fuel n pm_xr xr xr_pair **
   pure (res == setoid_assoc_eq_with_overflow equiv equiv map_entries xr_pair)
 {
-  let zcp = cbor_map_entry_zero_copy_parse_fuel n 1.0R f64;
   let len = IT.mixed_list_length map_ml;
   // Establish length invariant
   I.mixed_list_match_length (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item) pm_map map_ml (Ghost.reveal map_entries);
   // Start iterator on map_entries
   let it_init = I.iterator_start (cbor_map_entry_vmatch_fuel n)
-    (nondep_then parse_raw_data_item parse_raw_data_item) (jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64)) pm_map map_ml map_entries
+    (nondep_then parse_raw_data_item parse_raw_data_item) jump_nondep_then_raw_data_item_eta pm_map map_ml map_entries
     (cbor_map_entry_vmatch_fuel_share_t n) (cbor_map_entry_vmatch_fuel_gather_t n);
   // Set up loop state: r_done = None means "keep searching", Some r means "done with result r"
   let mut r_it = it_init;
@@ -1059,11 +1058,10 @@ ensures
     )
   {
     // Get next entry from iterator
-    let e = I.iterator_next (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
-      (jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64)) _ r_it _ _
-      (cbor_map_entry_vmatch_fuel_share_t n) (cbor_map_entry_vmatch_fuel_gather_t n) zcp;
-    unfold (I.iterator_next_post (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item) _ r_it _ _ e);
-    with pmv hdv tl itn pmn . assert (
+    let it_cur = !r_it;
+    let e, itn = iterator_next_map_entry_raw_data_item_fuel n f64 _ it_cur _;
+    r_it := itn;
+    with pmv hdv tl pmn . assert (
       cbor_map_entry_vmatch_fuel n pmv e hdv **
       R.pts_to r_it itn **
       I.iterator_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item) pmn itn tl
@@ -1161,13 +1159,12 @@ ensures
     pm_outer outer_ml outer_entries **
   pure (res == list_for_all_with_overflow (setoid_assoc_eq_with_overflow equiv equiv inner_entries) outer_entries)
 {
-  let zcp = cbor_map_entry_zero_copy_parse_fuel n 1.0R f64;
   let len = IT.mixed_list_length outer_ml;
   // Establish length invariant
   I.mixed_list_match_length (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item) pm_outer outer_ml (Ghost.reveal outer_entries);
   // Start iterator on outer_entries
   let it_init = I.iterator_start (cbor_map_entry_vmatch_fuel n)
-    (nondep_then parse_raw_data_item parse_raw_data_item) (jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64)) pm_outer outer_ml outer_entries
+    (nondep_then parse_raw_data_item parse_raw_data_item) jump_nondep_then_raw_data_item_eta pm_outer outer_ml outer_entries
     (cbor_map_entry_vmatch_fuel_share_t n) (cbor_map_entry_vmatch_fuel_gather_t n);
   let mut r_it = it_init;
   let mut r_done : option (option bool) = None #(option bool);
@@ -1199,11 +1196,10 @@ ensures
     )
   {
     // Get next entry from iterator
-    let e = I.iterator_next (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item)
-      (jump_nondep_then (jump_raw_data_item f64) (jump_raw_data_item f64)) _ r_it _ _
-      (cbor_map_entry_vmatch_fuel_share_t n) (cbor_map_entry_vmatch_fuel_gather_t n) zcp;
-    unfold (I.iterator_next_post (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item) _ r_it _ _ e);
-    with pmv hdv tl itn pmn . assert (
+    let it_cur = !r_it;
+    let e, itn = iterator_next_map_entry_raw_data_item_fuel n f64 _ it_cur _;
+    r_it := itn;
+    with pmv hdv tl pmn . assert (
       cbor_map_entry_vmatch_fuel n pmv e hdv **
       R.pts_to r_it itn **
       I.iterator_match (cbor_map_entry_vmatch_fuel n) (nondep_then parse_raw_data_item parse_raw_data_item) pmn itn tl
@@ -1324,8 +1320,6 @@ ensures
     rewrite (cbor_raw_match_fuel n pm2 x2 v2)
          as (cbor_raw_match_aux parse_raw_data_item (cbor_raw_match_fuel (n - 1)) pm2 x2 v2);
 
-    let zcp = PPB.zero_copy_parse_of_strong_prefix (cbor_raw_read_fuel n1 1.0R f64) ();
-
     // --- Side 1: get array, build trade chain ending at cbor_raw_match_fuel n ---
     let ar_ml1 = cbor_raw_get_array_aux (cbor_raw_match_fuel (n - 1)) pm1 x1 ();
     with pm1_a ar1 . assert (
@@ -1373,14 +1367,14 @@ ensures
     // Start iterators
     let it1_init = I.iterator_start
       (cbor_raw_match_fuel (n - 1))
-      parse_raw_data_item (jump_raw_data_item f64)
+      parse_raw_data_item jump_raw_data_item_eta
       pm1_a ar_ml1 ar1
       (cbor_raw_match_fuel_share_t (n - 1))
       (cbor_raw_match_fuel_gather_t (n - 1));
     Trade.trans _ _ (cbor_raw_match_fuel n pm1 x1 v1);
     let it2_init = I.iterator_start
       (cbor_raw_match_fuel (n - 1))
-      parse_raw_data_item (jump_raw_data_item f64)
+      parse_raw_data_item jump_raw_data_item_eta
       pm2_a ar_ml2 ar2
       (cbor_raw_match_fuel_share_t (n - 1))
       (cbor_raw_match_fuel_gather_t (n - 1));
@@ -1419,19 +1413,19 @@ ensures
           option_and acc_c (check_equiv_list rem1 rem2 (check_equiv_map data_model (NG.option_sz_v map_bound)))
       )
     {
-      let e1 = I.iterator_next (cbor_raw_match_fuel (n - 1)) parse_raw_data_item (jump_raw_data_item f64) _ r_it1 _ _
-        (cbor_raw_match_fuel_share_t (n - 1)) (cbor_raw_match_fuel_gather_t (n - 1)) zcp;
-      unfold (I.iterator_next_post (cbor_raw_match_fuel (n - 1)) parse_raw_data_item _ r_it1 _ _ e1);
-      with pmv1 hdv1 tl1 it1n pm1n . assert (
+      let it1_cur = !r_it1;
+      let e1, it1n = iterator_next_raw_data_item_fuel (Ghost.hide (Ghost.reveal n - 1)) f64 _ it1_cur _;
+      r_it1 := it1n;
+      with pmv1 hdv1 tl1 pm1n . assert (
         cbor_raw_match_fuel (n - 1) pmv1 e1 hdv1 **
         R.pts_to r_it1 it1n **
         I.iterator_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pm1n it1n tl1
       );
       Trade.trans _ _ (cbor_raw_match_fuel n pm1 x1 v1);
-      let e2 = I.iterator_next (cbor_raw_match_fuel (n - 1)) parse_raw_data_item (jump_raw_data_item f64) _ r_it2 _ _
-        (cbor_raw_match_fuel_share_t (n - 1)) (cbor_raw_match_fuel_gather_t (n - 1)) zcp;
-      unfold (I.iterator_next_post (cbor_raw_match_fuel (n - 1)) parse_raw_data_item _ r_it2 _ _ e2);
-      with pmv2 hdv2 tl2 it2n pm2n . assert (
+      let it2_cur = !r_it2;
+      let e2, it2n = iterator_next_raw_data_item_fuel (Ghost.hide (Ghost.reveal n - 1)) f64 _ it2_cur _;
+      r_it2 := it2n;
+      with pmv2 hdv2 tl2 pm2n . assert (
         cbor_raw_match_fuel (n - 1) pmv2 e2 hdv2 **
         R.pts_to r_it2 it2n **
         I.iterator_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pm2n it2n tl2

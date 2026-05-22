@@ -16,6 +16,8 @@ module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
 module PPB = LowParse.PulseParse.Base
 module I = LowParse.PulseParse.Iterator
+module IT = LowParse.PulseParse.Iterator.Type
+module R = Pulse.Lib.Reference
 
 // Shared infrastructure for fuel-aware map-entry vmatch, lifted out of
 // Det.Compare so that both Det and Nondet comparators can reuse it without
@@ -168,7 +170,7 @@ ensures cbor_map_entry_vmatch_fuel (Ghost.reveal m) pm0 res v **
                     (PPB.pts_to_parsed (nondep_then parse_raw_data_item parse_raw_data_item) input #pm v)
 {
   let zcp1 = PPB.zero_copy_parse_of_strong_prefix (cbor_raw_read_fuel m pm0 f64) ();
-  let pair = LowParse.PulseParse.Combinators.zero_copy_parse_nondep_then (jump_raw_data_item f64) zcp1 () zcp1 input;
+  let pair = LowParse.PulseParse.Combinators.zero_copy_parse_nondep_then jump_raw_data_item_eta zcp1 () zcp1 input;
   let entry : cbor_map_entry cbor_raw = { cbor_map_entry_key = fst pair; cbor_map_entry_value = snd pair };
   rewrite (vmatch_pair (cbor_raw_match_fuel (Ghost.reveal m) pm0) (cbor_raw_match_fuel (Ghost.reveal m) pm0) pair (Ghost.reveal v))
        as (cbor_map_entry_vmatch_fuel (Ghost.reveal m) pm0 entry v);
@@ -178,5 +180,118 @@ ensures cbor_map_entry_vmatch_fuel (Ghost.reveal m) pm0 res v **
                        (PPB.pts_to_parsed (nondep_then parse_raw_data_item parse_raw_data_item) input #pm v));
   entry
 }
+
+#pop-options
+
+(* ====================================================================
+   Non-inline specializations of iterator_next for the two fuel-vmatch
+   + parser combinations used by Nondet.Compare's comparators when
+   advancing iterators of cbor_raw or cbor_map_entry cbor_raw values.
+   The bodies inline iterator_next once, baking in jumper and
+   zero-copy parser. Callers therefore only need to provide pm, r,
+   i_orig, l — no zcp / jumper passed at runtime, which both keeps
+   karamel from emitting partial-application warnings and prevents
+   iterator_next's body from being inlined into a (potentially
+   recursive) comparator, where it would inflate the stack frame.
+==================================================================== *)
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+```pulse
+fn iterator_next_raw_data_item_fuel
+  (n: Ghost.erased nat { Ghost.reveal n >= 1 })
+  (f64: squash SZ.fits_u64)
+  (pm: perm)
+  (x: IT.iterator cbor_raw)
+  (l: Ghost.erased (list raw_data_item))
+requires
+  I.iterator_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm
+    x (Ghost.reveal l) **
+  pure (Cons? (Ghost.reveal l))
+returns res: (cbor_raw & IT.iterator cbor_raw)
+ensures
+  (exists* pm_v hd_val tl_l pm' .
+    cbor_raw_match_fuel (Ghost.reveal n) pm_v (fst res) hd_val **
+    I.iterator_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm'
+      (snd res) tl_l **
+    Trade.trade
+      (cbor_raw_match_fuel (Ghost.reveal n) pm_v (fst res) hd_val **
+       I.iterator_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm'
+         (snd res) tl_l)
+      (I.iterator_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm
+         x (Ghost.reveal l)) **
+    pure (Ghost.reveal l == hd_val :: tl_l))
+{
+  let zcp = PPB.zero_copy_parse_of_strong_prefix (cbor_raw_read_fuel n 1.0R f64) ();
+  let mut r = x;
+  let elt = I.iterator_next
+    (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item
+    jump_raw_data_item_eta
+    pm r _ l
+    (cbor_raw_match_fuel_share_t (Ghost.reveal n))
+    (cbor_raw_match_fuel_gather_t (Ghost.reveal n))
+    zcp;
+  unfold (I.iterator_next_post (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item
+    pm r x (Ghost.reveal l) elt);
+  let x' = !r;
+  (elt, x')
+}
+```
+
+#pop-options
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+```pulse
+fn iterator_next_map_entry_raw_data_item_fuel
+  (n: Ghost.erased nat { Ghost.reveal n >= 1 })
+  (f64: squash SZ.fits_u64)
+  (pm: perm)
+  (x: IT.iterator (cbor_map_entry cbor_raw))
+  (l: Ghost.erased (list (raw_data_item & raw_data_item)))
+requires
+  I.iterator_match
+    (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+    (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm x (Ghost.reveal l) **
+  pure (Cons? (Ghost.reveal l))
+returns res: (cbor_map_entry cbor_raw & IT.iterator (cbor_map_entry cbor_raw))
+ensures
+  (exists* pm_v hd_val tl_l pm' .
+    cbor_map_entry_vmatch_fuel (Ghost.reveal n) pm_v (fst res) hd_val **
+    I.iterator_match
+      (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' (snd res) tl_l **
+    Trade.trade
+      (cbor_map_entry_vmatch_fuel (Ghost.reveal n) pm_v (fst res) hd_val **
+       I.iterator_match
+         (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+         (nondep_then parse_raw_data_item parse_raw_data_item)
+         pm' (snd res) tl_l)
+      (I.iterator_match
+         (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+         (nondep_then parse_raw_data_item parse_raw_data_item)
+         pm x (Ghost.reveal l)) **
+    pure (Ghost.reveal l == hd_val :: tl_l))
+{
+  let zcp = cbor_map_entry_zero_copy_parse_fuel n 1.0R f64;
+  let mut r = x;
+  let elt = I.iterator_next
+    (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+    (nondep_then parse_raw_data_item parse_raw_data_item)
+    jump_nondep_then_raw_data_item_eta
+    pm r _ l
+    (cbor_map_entry_vmatch_fuel_share_t (Ghost.reveal n))
+    (cbor_map_entry_vmatch_fuel_gather_t (Ghost.reveal n))
+    zcp;
+  unfold (I.iterator_next_post
+    (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+    (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm r x (Ghost.reveal l) elt);
+  let x' = !r;
+  (elt, x')
+}
+```
 
 #pop-options
