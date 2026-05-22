@@ -117,8 +117,12 @@ run-python: run-nondet run-det $(VENV_PYTHON) $(PY_SRC)
 # on the C runs so that the artefacts exist on disk first.
 RUST_DIR = $(CURDIR)/cbor_tests_rust
 CARGO   ?= cargo
+# The deep-recursion array tests (depth 2200) require a larger per-thread
+# stack than Rust's default 2 MiB. 8 MiB matches typical Linux defaults and
+# provides ample headroom over the ~3 MiB the test actually needs.
+RUST_TEST_STACK ?= 8388608
 run-rust: run-nondet run-det
-	cd $(RUST_DIR) && CBOR_TEST_OUT_DIR=$(OUT_DIR) $(CARGO) test --release
+	cd $(RUST_DIR) && CBOR_TEST_OUT_DIR=$(OUT_DIR) RUST_MIN_STACK=$(RUST_TEST_STACK) $(CARGO) test --release
 
 clean:
 	rm -f $(NONDET_BIN) $(DET_BIN)
