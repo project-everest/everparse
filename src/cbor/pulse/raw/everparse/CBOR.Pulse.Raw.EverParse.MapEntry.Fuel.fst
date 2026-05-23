@@ -295,3 +295,204 @@ ensures
 ```
 
 #pop-options
+
+(* ====================================================================
+   Non-inline by-value wrappers around iterator_start, specialized to
+   the two fuel-vmatch + parser combinations used by Det.Compare /
+   Nondet.Compare. By NOT being inline_for_extraction, the wrapper
+   absorbs all of iterator_start's working set (mixed_list traversal
+   loop, base-mixed-list narrow, share trades) into its own stack frame
+   rather than expanding the recursive comparator's frame.
+
+   The wrapper takes the mixed_list by value and returns the iterator
+   by value, mirroring the existing iterator_next_*_fuel byval wrappers.
+==================================================================== *)
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+```pulse
+fn iterator_start_raw_data_item_fuel
+  (n: Ghost.erased nat)
+  (pm: perm)
+  (ml: IT.mixed_list cbor_raw)
+  (l: Ghost.erased (list raw_data_item))
+requires
+  I.mixed_list_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm ml l
+returns it: IT.iterator cbor_raw
+ensures
+  (exists* pm'.
+    I.iterator_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm' it l **
+    Trade.trade
+      (I.iterator_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm' it l)
+      (I.mixed_list_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm ml l))
+{
+  let it = I.iterator_start
+    (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item
+    jump_raw_data_item_eta
+    pm ml l
+    (cbor_raw_match_fuel_share_t (Ghost.reveal n))
+    (cbor_raw_match_fuel_gather_t (Ghost.reveal n));
+  it
+}
+```
+
+#pop-options
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+```pulse
+fn iterator_start_map_entry_raw_data_item_fuel
+  (n: Ghost.erased nat)
+  (pm: perm)
+  (ml: IT.mixed_list (cbor_map_entry cbor_raw))
+  (l: Ghost.erased (list (raw_data_item & raw_data_item)))
+requires
+  I.mixed_list_match
+    (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+    (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm ml l
+returns it: IT.iterator (cbor_map_entry cbor_raw)
+ensures
+  (exists* pm'.
+    I.iterator_match
+      (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' it l **
+    Trade.trade
+      (I.iterator_match
+         (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+         (nondep_then parse_raw_data_item parse_raw_data_item)
+         pm' it l)
+      (I.mixed_list_match
+         (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+         (nondep_then parse_raw_data_item parse_raw_data_item)
+         pm ml l))
+{
+  let it = I.iterator_start
+    (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+    (nondep_then parse_raw_data_item parse_raw_data_item)
+    jump_nondep_then_raw_data_item_eta
+    pm ml l
+    (cbor_map_entry_vmatch_fuel_share_t (Ghost.reveal n))
+    (cbor_map_entry_vmatch_fuel_gather_t (Ghost.reveal n));
+  it
+}
+```
+
+#pop-options
+
+(* ====================================================================
+   Non-inline by-value wrappers around iterator_next_eos for the two
+   fuel-vmatch + parser combinations used by Det.Compare's array and
+   map cases. iterator_next_eos is the canonical-comparison advancer
+   (it yields elt_or_serialized so the comparator can byte-compare
+   already-serialized data items without re-parsing them). Wrapping it
+   non-inline pulls all of its working set (the base_mixed_list_next_n_eos
+   loop, the iterator_start for the tail, the share/gather operations)
+   out of the recursive comparator's stack frame.
+
+   The wrappers take the iterator by value and return both the
+   elt_or_serialized result and the advanced iterator by value, just
+   like the iterator_next_*_fuel byval wrappers above.
+==================================================================== *)
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+```pulse
+fn iterator_next_eos_raw_data_item_fuel
+  (n: Ghost.erased nat)
+  (pm: perm)
+  (x: IT.iterator cbor_raw)
+  (l: Ghost.erased (list raw_data_item))
+requires
+  I.iterator_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm
+    x (Ghost.reveal l) **
+  pure (Cons? (Ghost.reveal l))
+returns res: (I.elt_or_serialized cbor_raw & IT.iterator cbor_raw)
+ensures
+  (exists* pm_v hd_val tl_l pm' .
+    I.elt_or_serialized_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm_v (fst res) hd_val **
+    I.iterator_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm'
+      (snd res) tl_l **
+    Trade.trade
+      (I.elt_or_serialized_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm_v (fst res) hd_val **
+       I.iterator_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm'
+         (snd res) tl_l)
+      (I.iterator_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm
+         x (Ghost.reveal l)) **
+    pure (Ghost.reveal l == hd_val :: tl_l))
+{
+  let mut r = x;
+  let elt = I.iterator_next_eos
+    (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item
+    jump_raw_data_item_eta
+    pm r _ l
+    (cbor_raw_match_fuel_share_t (Ghost.reveal n))
+    (cbor_raw_match_fuel_gather_t (Ghost.reveal n));
+  unfold (I.iterator_next_eos_post (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item
+    pm r x (Ghost.reveal l) elt);
+  let x' = !r;
+  (elt, x')
+}
+```
+
+#pop-options
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+```pulse
+fn iterator_next_eos_map_entry_raw_data_item_fuel
+  (n: Ghost.erased nat)
+  (pm: perm)
+  (x: IT.iterator (cbor_map_entry cbor_raw))
+  (l: Ghost.erased (list (raw_data_item & raw_data_item)))
+requires
+  I.iterator_match
+    (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+    (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm x (Ghost.reveal l) **
+  pure (Cons? (Ghost.reveal l))
+returns res: (I.elt_or_serialized (cbor_map_entry cbor_raw) & IT.iterator (cbor_map_entry cbor_raw))
+ensures
+  (exists* pm_v hd_val tl_l pm' .
+    I.elt_or_serialized_match
+      (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm_v (fst res) hd_val **
+    I.iterator_match
+      (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' (snd res) tl_l **
+    Trade.trade
+      (I.elt_or_serialized_match
+         (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+         (nondep_then parse_raw_data_item parse_raw_data_item)
+         pm_v (fst res) hd_val **
+       I.iterator_match
+         (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+         (nondep_then parse_raw_data_item parse_raw_data_item)
+         pm' (snd res) tl_l)
+      (I.iterator_match
+         (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+         (nondep_then parse_raw_data_item parse_raw_data_item)
+         pm x (Ghost.reveal l)) **
+    pure (Ghost.reveal l == hd_val :: tl_l))
+{
+  let mut r = x;
+  let elt = I.iterator_next_eos
+    (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+    (nondep_then parse_raw_data_item parse_raw_data_item)
+    jump_nondep_then_raw_data_item_eta
+    pm r _ l
+    (cbor_map_entry_vmatch_fuel_share_t (Ghost.reveal n))
+    (cbor_map_entry_vmatch_fuel_gather_t (Ghost.reveal n));
+  unfold (I.iterator_next_eos_post
+    (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+    (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm r x (Ghost.reveal l) elt);
+  let x' = !r;
+  (elt, x')
+}
+```
+
+#pop-options
