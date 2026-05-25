@@ -20,7 +20,22 @@ CBOR_Pulse_Raw_EverParse_Serialize_ser_(
 
 bool CBOR_Pulse_Raw_EverParse_Serialize_siz_(cbor_raw x_, size_t *out);
 
-int16_t CBOR_Pulse_Raw_EverParse_Det_Compare_impl_cbor_compare_fuel(cbor_raw x1, cbor_raw x2);
+int16_t
+CBOR_Pulse_Raw_EverParse_Det_Compare_impl_cbor_compare_fuel_tagged(cbor_raw x1, cbor_raw x2);
+
+int16_t
+CBOR_Pulse_Raw_EverParse_Det_Compare_impl_cbor_compare_fuel_array(
+  cbor_raw x1,
+  cbor_raw x2,
+  size_t len
+);
+
+int16_t
+CBOR_Pulse_Raw_EverParse_Det_Compare_impl_cbor_compare_fuel_map(
+  cbor_raw x1,
+  cbor_raw x2,
+  size_t len
+);
 
 bool
 CBOR_Pulse_Raw_EverParse_Det_Impl_cbor_raw_sort_aux(

@@ -39,7 +39,22 @@ CBOR_Pulse_Raw_EverParse_Nondet_Gen_impl_check_map_depth_aux(
 );
 
 FStar_Pervasives_Native_option__bool
-CBOR_Pulse_Raw_EverParse_Nondet_Compare_compare_cbor_raw_basic_fuel(
+CBOR_Pulse_Raw_EverParse_Nondet_Compare_compare_cbor_raw_basic_fuel_tagged(
+  FStar_Pervasives_Native_option__size_t map_bound,
+  cbor_raw x1,
+  cbor_raw x2
+);
+
+FStar_Pervasives_Native_option__bool
+CBOR_Pulse_Raw_EverParse_Nondet_Compare_compare_cbor_raw_basic_fuel_array(
+  FStar_Pervasives_Native_option__size_t map_bound,
+  cbor_raw x1,
+  cbor_raw x2,
+  size_t len
+);
+
+FStar_Pervasives_Native_option__bool
+CBOR_Pulse_Raw_EverParse_Nondet_Compare_compare_cbor_raw_basic_fuel_map(
   FStar_Pervasives_Native_option__size_t map_bound,
   cbor_raw x1,
   cbor_raw x2

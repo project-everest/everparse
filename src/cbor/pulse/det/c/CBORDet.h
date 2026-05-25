@@ -223,13 +223,6 @@ typedef struct cbor_raw_s
 }
 cbor_raw;
 
-typedef struct cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw_s
-{
-  cbor_raw cbor_map_entry_key;
-  cbor_raw cbor_map_entry_value;
-}
-cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw;
-
 typedef struct
 LowParse_PulseParse_Iterator_Type_iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw_s
 {
@@ -248,6 +241,13 @@ LowParse_PulseParse_Iterator_Type_iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_m
   after;
 }
 LowParse_PulseParse_Iterator_Type_iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw;
+
+typedef struct cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw_s
+{
+  cbor_raw cbor_map_entry_key;
+  cbor_raw cbor_map_entry_value;
+}
+cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw;
 
 #define CBOR_MAJOR_TYPE_SIMPLE_VALUE (7U)
 
