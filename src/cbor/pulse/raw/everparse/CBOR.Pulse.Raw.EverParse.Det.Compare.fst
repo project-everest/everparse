@@ -484,10 +484,8 @@ ensures
         same_sign (I16.v acc_c) (cbor_compare_array_total (Ghost.reveal ar1) (Ghost.reveal ar2)))
     )
   {
-    let it1_cur = !r_it1;
-    let e1, it1n_new = iterator_next_eos_raw_data_item_fuel
-      (Ghost.hide (Ghost.reveal n - 1)) _ it1_cur _;
-    r_it1 := it1n_new;
+    let e1 = iterator_next_eos_raw_data_item_fuel_byref
+      (Ghost.hide (Ghost.reveal n - 1)) _ r_it1 _ _;
     with pmv1 hdv1 tl1 it1n pm1n . assert (
       I.elt_or_serialized_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pmv1 e1 hdv1 **
       R.pts_to r_it1 it1n **
@@ -495,10 +493,8 @@ ensures
     );
     Trade.trans _ _ (cbor_raw_match_fuel n pm1 x1 v1);
 
-    let it2_cur = !r_it2;
-    let e2, it2n_new = iterator_next_eos_raw_data_item_fuel
-      (Ghost.hide (Ghost.reveal n - 1)) _ it2_cur _;
-    r_it2 := it2n_new;
+    let e2 = iterator_next_eos_raw_data_item_fuel_byref
+      (Ghost.hide (Ghost.reveal n - 1)) _ r_it2 _ _;
     with pmv2 hdv2 tl2 it2n pm2n . assert (
       I.elt_or_serialized_match (cbor_raw_match_fuel (n - 1)) parse_raw_data_item pmv2 e2 hdv2 **
       R.pts_to r_it2 it2n **
@@ -864,10 +860,8 @@ ensures
         same_sign (I16.v acc_c) (cbor_compare_map_total (Ghost.reveal map1_entries) (Ghost.reveal map2_entries)))
     )
   {
-    let it1_cur = !r_it1;
-    let e1, it1n_new = iterator_next_eos_map_entry_raw_data_item_fuel
-      (Ghost.hide (Ghost.reveal n - 1)) _ it1_cur _;
-    r_it1 := it1n_new;
+    let e1 = iterator_next_eos_map_entry_raw_data_item_fuel_byref
+      (Ghost.hide (Ghost.reveal n - 1)) _ r_it1 _ _;
     with pmv1 hdv1 tl1 it1n pm1n . assert (
       I.elt_or_serialized_match (cbor_map_entry_vmatch_fuel (n - 1)) (nondep_then parse_raw_data_item parse_raw_data_item) pmv1 e1 hdv1 **
       R.pts_to r_it1 it1n **
@@ -875,10 +869,8 @@ ensures
     );
     Trade.trans _ _ (cbor_raw_match_fuel n pm1 x1 v1);
 
-    let it2_cur = !r_it2;
-    let e2, it2n_new = iterator_next_eos_map_entry_raw_data_item_fuel
-      (Ghost.hide (Ghost.reveal n - 1)) _ it2_cur _;
-    r_it2 := it2n_new;
+    let e2 = iterator_next_eos_map_entry_raw_data_item_fuel_byref
+      (Ghost.hide (Ghost.reveal n - 1)) _ r_it2 _ _;
     with pmv2 hdv2 tl2 it2n pm2n . assert (
       I.elt_or_serialized_match (cbor_map_entry_vmatch_fuel (n - 1)) (nondep_then parse_raw_data_item parse_raw_data_item) pmv2 e2 hdv2 **
       R.pts_to r_it2 it2n **

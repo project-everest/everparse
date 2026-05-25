@@ -496,3 +496,116 @@ ensures
 ```
 
 #pop-options
+
+(* ==================================================================
+   By-ref iterator_next_eos wrappers.
+
+   These mirror the byval wrappers above but take the iterator ref
+   directly from the caller and update it in-place, returning only
+   the elt_or_serialized result. This lets the caller avoid binding
+   intermediate it_cur / it_n_new locals and the tuple letpattern
+   that KaRaMeL emits for the (elt_or_serialized, iterator) return
+   value of the byval variant. Used by Det.Compare's recursive
+   array/map case helpers to shrink their per-recursion stack frame.
+   ================================================================== *)
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+```pulse
+fn iterator_next_eos_raw_data_item_fuel_byref
+  (n: Ghost.erased nat)
+  (pm: perm)
+  (r: R.ref (IT.iterator cbor_raw))
+  (x: Ghost.erased (IT.iterator cbor_raw))
+  (l: Ghost.erased (list raw_data_item))
+requires
+  R.pts_to r (Ghost.reveal x) **
+  I.iterator_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm
+    (Ghost.reveal x) (Ghost.reveal l) **
+  pure (Cons? (Ghost.reveal l))
+returns res: I.elt_or_serialized cbor_raw
+ensures
+  (exists* pm_v hd_val tl_l pm' x' .
+    R.pts_to r x' **
+    I.elt_or_serialized_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm_v res hd_val **
+    I.iterator_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm' x' tl_l **
+    Trade.trade
+      (I.elt_or_serialized_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm_v res hd_val **
+       I.iterator_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm' x' tl_l)
+      (I.iterator_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm
+         (Ghost.reveal x) (Ghost.reveal l)) **
+    pure (Ghost.reveal l == hd_val :: tl_l))
+{
+  let elt = I.iterator_next_eos
+    (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item
+    jump_raw_data_item_eta
+    pm r _ l
+    (cbor_raw_match_fuel_share_t (Ghost.reveal n))
+    (cbor_raw_match_fuel_gather_t (Ghost.reveal n));
+  unfold (I.iterator_next_eos_post (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item
+    pm r (Ghost.reveal x) (Ghost.reveal l) elt);
+  elt
+}
+```
+
+#pop-options
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+```pulse
+fn iterator_next_eos_map_entry_raw_data_item_fuel_byref
+  (n: Ghost.erased nat)
+  (pm: perm)
+  (r: R.ref (IT.iterator (cbor_map_entry cbor_raw)))
+  (x: Ghost.erased (IT.iterator (cbor_map_entry cbor_raw)))
+  (l: Ghost.erased (list (raw_data_item & raw_data_item)))
+requires
+  R.pts_to r (Ghost.reveal x) **
+  I.iterator_match
+    (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+    (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm (Ghost.reveal x) (Ghost.reveal l) **
+  pure (Cons? (Ghost.reveal l))
+returns res: I.elt_or_serialized (cbor_map_entry cbor_raw)
+ensures
+  (exists* pm_v hd_val tl_l pm' x' .
+    R.pts_to r x' **
+    I.elt_or_serialized_match
+      (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm_v res hd_val **
+    I.iterator_match
+      (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+      (nondep_then parse_raw_data_item parse_raw_data_item)
+      pm' x' tl_l **
+    Trade.trade
+      (I.elt_or_serialized_match
+         (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+         (nondep_then parse_raw_data_item parse_raw_data_item)
+         pm_v res hd_val **
+       I.iterator_match
+         (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+         (nondep_then parse_raw_data_item parse_raw_data_item)
+         pm' x' tl_l)
+      (I.iterator_match
+         (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+         (nondep_then parse_raw_data_item parse_raw_data_item)
+         pm (Ghost.reveal x) (Ghost.reveal l)) **
+    pure (Ghost.reveal l == hd_val :: tl_l))
+{
+  let elt = I.iterator_next_eos
+    (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+    (nondep_then parse_raw_data_item parse_raw_data_item)
+    jump_nondep_then_raw_data_item_eta
+    pm r _ l
+    (cbor_map_entry_vmatch_fuel_share_t (Ghost.reveal n))
+    (cbor_map_entry_vmatch_fuel_gather_t (Ghost.reveal n));
+  unfold (I.iterator_next_eos_post
+    (cbor_map_entry_vmatch_fuel (Ghost.reveal n))
+    (nondep_then parse_raw_data_item parse_raw_data_item)
+    pm r (Ghost.reveal x) (Ghost.reveal l) elt);
+  elt
+}
+```
+
+#pop-options
