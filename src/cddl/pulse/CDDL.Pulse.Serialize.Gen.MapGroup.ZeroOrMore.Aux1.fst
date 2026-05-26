@@ -126,7 +126,70 @@ let map_of_list_is_append_cons
   )
 = ()
 
-#push-options "--z3rlimit 1024 --split_queries always"
+#push-options "--z3rlimit 64 --split_queries always"
+
+#restart-solver
+let map_of_list_is_append_serializable_disjoint_at
+  (#key #value: Type)
+  (#tkey: typ)
+  (sp1: spec tkey key true)
+  (#tvalue: typ)
+  (#inj: bool)
+  (sp2: spec tvalue value inj)
+  (except: map_constraint { inj \/ map_constraint_value_injective tkey sp2.parser except })
+  (m1: Map.t key (list value))
+  (m2: Map.t key (list value))
+  (m: Map.t key (list value))
+  (k: key)
+: Lemma
+  (requires (
+    map_of_list_is_append m1 m2 m /\
+    map_of_list_maps_to_nonempty m1 /\
+    map_of_list_maps_to_nonempty m2 /\
+    (mg_zero_or_more_match_item sp1 sp2 except).mg_serializable m
+  ))
+  (ensures (~ (Map.defined k m1 /\ Map.defined k m2)))
+= match Map.get m1 k, Map.get m2 k with
+  | Some l1, Some l2 ->
+    List.Tot.append_length l1 l2;
+    let lk = List.Tot.append l1 l2 in
+    let kv : (key & list value) = (k, lk) in
+    assert (Map.get m k == Some lk);
+    assert (Map.mem kv m);
+    let _ = Map.for_all (map_entry_serializable sp1 sp2 except) m in
+    ()
+  | _ -> ()
+
+#restart-solver
+let map_of_list_is_append_serializable_member_at
+  (#key #value: Type)
+  (#tkey: typ)
+  (sp1: spec tkey key true)
+  (#tvalue: typ)
+  (#inj: bool)
+  (sp2: spec tvalue value inj)
+  (except: map_constraint { inj \/ map_constraint_value_injective tkey sp2.parser except })
+  (m1: Map.t key (list value))
+  (m2: Map.t key (list value))
+  (m: Map.t key (list value))
+  (kv: (key & list value))
+: Lemma
+  (requires (
+    map_of_list_is_append m1 m2 m /\
+    Map.disjoint m1 m2 /\
+    (mg_zero_or_more_match_item sp1 sp2 except).mg_serializable m /\
+    (Map.mem kv m1 \/ Map.mem kv m2)
+  ))
+  (ensures (map_entry_serializable sp1 sp2 except kv))
+= let k = fst kv in
+  let v = snd kv in
+  assert (Map.get m k == Some v);
+  assert (Map.mem kv m);
+  let _ = Map.for_all (map_entry_serializable sp1 sp2 except) m in
+  ()
+#pop-options
+
+#push-options "--z3rlimit 64 --split_queries always"
 
 #restart-solver
 let map_of_list_is_append_serializable_elim
@@ -158,12 +221,25 @@ let map_of_list_is_append_serializable_elim
 = let sp = mg_zero_or_more_match_item sp1 sp2 except in
   if sp.mg_serializable m
   then begin
-    assert (
-      sp.mg_serializable m1 /\
-      sp.mg_serializable m2 /\
-      Map.disjoint m1 m2
-    );
-    map_of_list_serializable_disjoint sp1 sp2 except m1 m2
+    let disjoint_aux (k: key) : Lemma (~ (Map.defined k m1 /\ Map.defined k m2)) =
+      map_of_list_is_append_serializable_disjoint_at sp1 sp2 except m1 m2 m k
+    in
+    Classical.forall_intro disjoint_aux;
+    assert (Map.disjoint m1 m2);
+    let member_m1 (kv: (key & list value)) : Lemma (Map.mem kv m1 ==> map_entry_serializable sp1 sp2 except kv) =
+      Classical.move_requires (map_of_list_is_append_serializable_member_at sp1 sp2 except m1 m2 m) kv
+    in
+    Classical.forall_intro member_m1;
+    let _ = Map.for_all (map_entry_serializable sp1 sp2 except) m1 in
+    assert (sp.mg_serializable m1);
+    let member_m2 (kv: (key & list value)) : Lemma (Map.mem kv m2 ==> map_entry_serializable sp1 sp2 except kv) =
+      Classical.move_requires (map_of_list_is_append_serializable_member_at sp1 sp2 except m1 m2 m) kv
+    in
+    Classical.forall_intro member_m2;
+    let _ = Map.for_all (map_entry_serializable sp1 sp2 except) m2 in
+    assert (sp.mg_serializable m2);
+    map_of_list_serializable_disjoint sp1 sp2 except m1 m2;
+    assert (cbor_map_disjoint (sp.mg_serializer m1) (sp.mg_serializer m2))
   end
 
 let map_of_list_is_append_serializable_elim'
