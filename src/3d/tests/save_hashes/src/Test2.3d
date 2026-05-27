@@ -1,0 +1,7 @@
+entrypoint
+typedef struct _Triple
+{
+  UINT32 x;
+  UINT32 y;
+  UINT32 z;
+} Triple;
