@@ -40,24 +40,6 @@ type iterator ([@@@strictly_positive] t: Type) =
 | IBase: (before: base_mixed_list t) -> iterator t
 | IPair: (before: base_mixed_list t) -> (after: mixed_list t) -> iterator t
 
-inline_for_extraction
-let iter_before
-  (#t: Type)
-  (i: iterator t)
-: Tot (base_mixed_list t)
-= match i with
-  | IBase bi -> bi
-  | IPair bi _ -> bi
-
-inline_for_extraction
-let iter_after
-  (#t: Type)
-  (i: iterator t)
-: Tot (mixed_list t)
-= match i with
-  | IBase _ -> Base (Empty #t)
-  | IPair _ ml -> ml
-
 let base_mixed_list_length
   (#t: Type)
   (i: base_mixed_list t)

@@ -97,9 +97,12 @@
 #define __sizeof_cbor_det_map_entry_t (2 * __sizeof_cbor_det_t)
 #define __alignof_cbor_det_map_entry_t (__alignof_cbor_det_t)
 
-/* iterator = struct { base_mixed_list before; mixed_list after; } */
-#define __sizeof_cbor_det_array_iterator_t (__sizeof_base_mixed_list + __sizeof_mixed_list)
+/* iterator = struct { uint8 tag; union { base_mixed_list IBase;
+       struct { base_mixed_list before; mixed_list after; } IPair; }; }
+   The IPair case dominates the union: base_mixed_list + mixed_list.
+   The tag is padded up to alignof(union) before the union itself. */
 #define __alignof_cbor_det_array_iterator_t (__CBORDetSize_MAX(__alignof_base_mixed_list, __alignof_mixed_list))
+#define __sizeof_cbor_det_array_iterator_t (__alignof_cbor_det_array_iterator_t + __sizeof_base_mixed_list + __sizeof_mixed_list)
 
 #define __sizeof_cbor_det_map_iterator_t (__sizeof_cbor_det_array_iterator_t)
 #define __alignof_cbor_det_map_iterator_t (__alignof_cbor_det_array_iterator_t)

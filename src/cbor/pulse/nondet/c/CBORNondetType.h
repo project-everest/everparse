@@ -225,20 +225,45 @@ cbor_raw;
 
 typedef cbor_raw cbor_nondet_t;
 
+#define IBase 0
+#define IPair 1
+
+typedef uint8_t cbor_nondet_array_iterator_t_tags;
+
 typedef struct cbor_nondet_array_iterator_t_s
 {
-  LowParse_PulseParse_Iterator_Type_base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-  before;
-  LowParse_PulseParse_Iterator_Type_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw after;
+  cbor_nondet_array_iterator_t_tags tag;
+  union {
+    LowParse_PulseParse_Iterator_Type_base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    case_IBase;
+    struct
+    {
+      LowParse_PulseParse_Iterator_Type_base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+      before;
+      LowParse_PulseParse_Iterator_Type_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw after;
+    }
+    case_IPair;
+  }
+  ;
 }
 cbor_nondet_array_iterator_t;
 
 typedef struct cbor_nondet_map_iterator_t_s
 {
-  LowParse_PulseParse_Iterator_Type_base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-  before;
-  LowParse_PulseParse_Iterator_Type_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-  after;
+  cbor_nondet_array_iterator_t_tags tag;
+  union {
+    LowParse_PulseParse_Iterator_Type_base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    case_IBase;
+    struct
+    {
+      LowParse_PulseParse_Iterator_Type_base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+      before;
+      LowParse_PulseParse_Iterator_Type_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+      after;
+    }
+    case_IPair;
+  }
+  ;
 }
 cbor_nondet_map_iterator_t;
 

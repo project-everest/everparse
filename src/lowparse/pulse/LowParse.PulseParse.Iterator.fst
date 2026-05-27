@@ -4067,52 +4067,17 @@ let iterator_match
   (i: iterator t)
   (l: list u)
 : Tot slprop
-= exists* l1 l2 .
-    base_mixed_list_match vmatch p pm (iter_before i) l1 **
-    mixed_list_match vmatch p pm (iter_after i) l2 **
-    pure (
-      l == List.Tot.append l1 l2 /\
-      (base_mixed_list_length (iter_before i) == 0sz ==> mixed_list_length (iter_after i) == 0sz)
-    )
-
-
-// Helper ghost: introduce a trivial mixed_list_match for (Base Empty) [].
-```pulse
-ghost
-fn mixed_list_match_base_empty_intro
-  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
-  (#k: parser_kind) (p: parser k u)
-  (pm: perm)
-requires emp
-ensures mixed_list_match vmatch p pm (Base (Empty #t)) []
-{
-  fold (base_mixed_list_match_n vmatch p 0 0 pm (Empty #t) []);
-  fold (mixed_list_match_n vmatch p 0 0 pm (Base (Empty #t)) []);
-  assert (pure (SZ.v (mixed_list_length (Base (Empty #t))) == 0));
-  rewrite (mixed_list_match_n vmatch p 0 0 pm (Base (Empty #t)) [])
-    as (mixed_list_match_n vmatch p 0 (SZ.v (mixed_list_length (Base (Empty #t)))) pm (Base (Empty #t)) []);
-  fold (mixed_list_match vmatch p pm (Base (Empty #t)) []);
-}
-```
-
-// Helper ghost: eliminate a trivial mixed_list_match for (Base Empty) any list.
-```pulse
-ghost
-fn mixed_list_match_base_empty_elim
-  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
-  (#k: parser_kind) (p: parser k u)
-  (pm: perm) (l: list u)
-requires mixed_list_match vmatch p pm (Base (Empty #t)) l
-ensures pure (l == [])
-{
-  unfold (mixed_list_match vmatch p pm (Base (Empty #t)) l);
-  assert (pure (SZ.v (mixed_list_length (Base (Empty #t))) == 0));
-  rewrite (mixed_list_match_n vmatch p 0 (SZ.v (mixed_list_length (Base (Empty #t)))) pm (Base (Empty #t)) l)
-    as (mixed_list_match_n vmatch p 0 0 pm (Base (Empty #t)) l);
-  unfold (mixed_list_match_n vmatch p 0 0 pm (Base (Empty #t)) l);
-  unfold (base_mixed_list_match_n vmatch p 0 0 pm (Empty #t) l);
-}
-```
+= match i with
+  | IBase bi ->
+      base_mixed_list_match vmatch p pm bi l
+  | IPair bi ml ->
+      exists* l1 l2.
+        base_mixed_list_match vmatch p pm bi l1 **
+        mixed_list_match     vmatch p pm ml l2 **
+        pure (
+          l == List.Tot.append l1 l2 /\
+          (base_mixed_list_length bi == 0sz ==> mixed_list_length ml == 0sz)
+        )
 
 
 #push-options "--z3rlimit 4000 --fuel 2 --ifuel 1"
@@ -4147,8 +4112,6 @@ ensures exists* pm'.
     rewrite (base_mixed_list_match_n vmatch p 0 0 pm (Empty #t) (Ghost.reveal l))
       as (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length (Empty #t))) pm (Empty #t) (Ghost.reveal l));
     fold (base_mixed_list_match vmatch p pm (Empty #t) (Ghost.reveal l));
-    mixed_list_match_base_empty_intro vmatch p pm;
-    List.Tot.Properties.append_l_nil (Ghost.reveal l);
     fold (iterator_match vmatch p pm (IBase #t (Empty #t)) (Ghost.reveal l));
     // Trade: iterator_match → mixed_list_match
     intro (iterator_match vmatch p pm (IBase #t (Empty #t)) (Ghost.reveal l) @==>
@@ -4156,16 +4119,7 @@ ensures exists* pm'.
       #(mixed_list_match_n vmatch p 0 0 pm ml l)
       fn _ {
         unfold (iterator_match vmatch p pm (IBase #t (Empty #t)) (Ghost.reveal l));
-        with l1' l2' . assert (
-          base_mixed_list_match vmatch p pm (iter_before (IBase #t (Empty #t))) l1' **
-          mixed_list_match vmatch p pm (iter_after (IBase #t (Empty #t))) l2'
-        );
-        rewrite (base_mixed_list_match vmatch p pm (iter_before (IBase #t (Empty #t))) l1')
-          as (base_mixed_list_match vmatch p pm (Empty #t) l1');
-        rewrite (mixed_list_match vmatch p pm (iter_after (IBase #t (Empty #t))) l2')
-          as (mixed_list_match vmatch p pm (Base (Empty #t)) l2');
-        drop_ (base_mixed_list_match vmatch p pm (Empty #t) l1');
-        mixed_list_match_base_empty_elim vmatch p pm l2';
+        drop_ (base_mixed_list_match vmatch p pm (Empty #t) (Ghost.reveal l));
         rewrite (mixed_list_match_n vmatch p 0 0 pm ml l)
           as (mixed_list_match_n vmatch p 0 (SZ.v (mixed_list_length ml)) pm ml l);
         fold (mixed_list_match vmatch p pm ml l);
@@ -4701,18 +4655,7 @@ ensures
     IBase bi -> {
       rewrite each i as (IBase #t bi);
       unfold (iterator_match vmatch p pm (IBase #t bi) (Ghost.reveal l));
-      with l1_ l2_ . assert (
-        base_mixed_list_match vmatch p pm (iter_before (IBase #t bi)) l1_ **
-        mixed_list_match vmatch p pm (iter_after (IBase #t bi)) l2_
-      );
-      rewrite (base_mixed_list_match vmatch p pm (iter_before (IBase #t bi)) l1_)
-        as (base_mixed_list_match vmatch p pm bi l1_);
-      rewrite (mixed_list_match vmatch p pm (iter_after (IBase #t bi)) l2_)
-        as (mixed_list_match vmatch p pm (Base (Empty #t)) l2_);
-      mixed_list_match_base_empty_elim vmatch p pm l2_;
-      List.Tot.Properties.append_l_nil (Ghost.reveal l1_);
-      rewrite (base_mixed_list_match vmatch p pm bi l1_)
-        as (base_mixed_list_match vmatch p pm bi (Ghost.reveal l));
+      // Now we have just: base_mixed_list_match vmatch p pm bi l
       let len_sz = base_mixed_list_length bi;
       base_mixed_list_match_length vmatch p pm bi (Ghost.reveal l);
       if (SZ.eq len_sz 0sz) {
@@ -4740,13 +4683,11 @@ ensures
         rewrite (mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base bi) tl_val)
           as (mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Base bi) tl_val);
         mixed_list_match_n_length vmatch p 1 0 (pm /. 2.0R) (Base bi) (Ghost.reveal tl_val);
-        // Produce iterator_match for IBase Empty out of thin air (empty l, empty base).
+        // Build iterator_match (IBase Empty) directly = base_mixed_list_match Empty tl_val
         fold (base_mixed_list_match_n vmatch p 0 0 (pm /. 2.0R) (Empty #t) (Ghost.reveal tl_val));
         rewrite (base_mixed_list_match_n vmatch p 0 0 (pm /. 2.0R) (Empty #t) (Ghost.reveal tl_val))
           as (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length (Empty #t))) (pm /. 2.0R) (Empty #t) (Ghost.reveal tl_val));
         fold (base_mixed_list_match vmatch p (pm /. 2.0R) (Empty #t) (Ghost.reveal tl_val));
-        mixed_list_match_base_empty_intro vmatch p (pm /. 2.0R);
-        List.Tot.Properties.append_l_nil (Ghost.reveal tl_val);
         fold (iterator_match vmatch p (pm /. 2.0R) (IBase #t (Empty #t)) (Ghost.reveal tl_val));
         R.write r (IBase #t (Empty #t));
         // Build composite trade
@@ -4761,16 +4702,7 @@ ensures
           fn _ {
             // it_new = IBase (Empty), iterator_match → base_mixed_list_match Empty tl_val
             unfold (iterator_match vmatch p (pm /. 2.0R) (IBase #t (Empty #t)) (Ghost.reveal tl_val));
-            with l1__ l2__ . assert (
-              base_mixed_list_match vmatch p (pm /. 2.0R) (iter_before (IBase #t (Empty #t))) l1__ **
-              mixed_list_match vmatch p (pm /. 2.0R) (iter_after (IBase #t (Empty #t))) l2__
-            );
-            rewrite (base_mixed_list_match vmatch p (pm /. 2.0R) (iter_before (IBase #t (Empty #t))) l1__)
-              as (base_mixed_list_match vmatch p (pm /. 2.0R) (Empty #t) l1__);
-            rewrite (mixed_list_match vmatch p (pm /. 2.0R) (iter_after (IBase #t (Empty #t))) l2__)
-              as (mixed_list_match vmatch p (pm /. 2.0R) (Base (Empty #t)) l2__);
-            drop_ (base_mixed_list_match vmatch p (pm /. 2.0R) (Empty #t) l1__);
-            mixed_list_match_base_empty_elim vmatch p (pm /. 2.0R) l2__;
+            drop_ (base_mixed_list_match vmatch p (pm /. 2.0R) (Empty #t) (Ghost.reveal tl_val));
             rewrite (mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Base bi) tl_val)
               as (mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base bi) tl_val);
             elim_trade
@@ -4780,8 +4712,6 @@ ensures
             unfold (mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm (Base bi) (Ghost.reveal l));
             rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm bi (Ghost.reveal l))
               as (base_mixed_list_match vmatch p pm bi (Ghost.reveal l));
-            mixed_list_match_base_empty_intro vmatch p pm;
-            List.Tot.Properties.append_l_nil (Ghost.reveal l);
             fold (iterator_match vmatch p pm (IBase #t bi) (Ghost.reveal l));
           };
         rewrite (trade (elt_or_serialized_match vmatch p pm_v x hd_val ** iterator_match vmatch p (pm /. 2.0R) (IBase #t (Empty #t)) (Ghost.reveal tl_val))
@@ -4806,8 +4736,6 @@ ensures
           as (trade (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail (Ghost.reveal tl_val))
                    (base_mixed_list_match_n vmatch p 1 (SZ.v n_tail_sz) (pm /. 2.0R) bi tl_val));
         // Form new iterator IBase bi_tail
-        mixed_list_match_base_empty_intro vmatch p (pm /. 2.0R);
-        List.Tot.Properties.append_l_nil (Ghost.reveal tl_val);
         fold (iterator_match vmatch p (pm /. 2.0R) (IBase #t bi_tail) (Ghost.reveal tl_val));
         R.write r (IBase #t bi_tail);
         // Build composite trade
@@ -4823,18 +4751,6 @@ ensures
           fn _ {
             // it_new = IBase bi_tail: iterator_match → base_mixed_list_match bi_tail tl_val
             unfold (iterator_match vmatch p (pm /. 2.0R) (IBase #t bi_tail) (Ghost.reveal tl_val));
-            with l1__ l2__ . assert (
-              base_mixed_list_match vmatch p (pm /. 2.0R) (iter_before (IBase #t bi_tail)) l1__ **
-              mixed_list_match vmatch p (pm /. 2.0R) (iter_after (IBase #t bi_tail)) l2__
-            );
-            rewrite (base_mixed_list_match vmatch p (pm /. 2.0R) (iter_before (IBase #t bi_tail)) l1__)
-              as (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail l1__);
-            rewrite (mixed_list_match vmatch p (pm /. 2.0R) (iter_after (IBase #t bi_tail)) l2__)
-              as (mixed_list_match vmatch p (pm /. 2.0R) (Base (Empty #t)) l2__);
-            mixed_list_match_base_empty_elim vmatch p (pm /. 2.0R) l2__;
-            List.Tot.Properties.append_l_nil (Ghost.reveal l1__);
-            rewrite (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail l1__)
-              as (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail (Ghost.reveal tl_val));
             // Elim narrow trade
             elim_trade
               (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail (Ghost.reveal tl_val))
@@ -4850,8 +4766,6 @@ ensures
             unfold (mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm (Base bi) (Ghost.reveal l));
             rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm bi (Ghost.reveal l))
               as (base_mixed_list_match vmatch p pm bi (Ghost.reveal l));
-            mixed_list_match_base_empty_intro vmatch p pm;
-            List.Tot.Properties.append_l_nil (Ghost.reveal l);
             fold (iterator_match vmatch p pm (IBase #t bi) (Ghost.reveal l));
           };
         rewrite (trade (elt_or_serialized_match vmatch p pm_v x hd_val ** iterator_match vmatch p (pm /. 2.0R) (IBase #t bi_tail) (Ghost.reveal tl_val))
@@ -4867,15 +4781,11 @@ ensures
       rewrite each i as (IPair #t bi ml);
       unfold (iterator_match vmatch p pm (IPair #t bi ml) (Ghost.reveal l));
       with l1 l2 . assert (
-        base_mixed_list_match vmatch p pm (iter_before (IPair #t bi ml)) l1 **
-        mixed_list_match vmatch p pm (iter_after (IPair #t bi ml)) l2 **
+        base_mixed_list_match vmatch p pm bi l1 **
+        mixed_list_match vmatch p pm ml l2 **
         pure (Ghost.reveal l == List.Tot.append l1 l2 /\
               (base_mixed_list_length bi == 0sz ==> mixed_list_length ml == 0sz))
       );
-      rewrite (base_mixed_list_match vmatch p pm (iter_before (IPair #t bi ml)) l1)
-        as (base_mixed_list_match vmatch p pm bi l1);
-      rewrite (mixed_list_match vmatch p pm (iter_after (IPair #t bi ml)) l2)
-        as (mixed_list_match vmatch p pm ml l2);
       let len_sz = base_mixed_list_length bi;
       base_mixed_list_match_length vmatch p pm bi (Ghost.reveal l1);
       if (SZ.eq len_sz 0sz) {

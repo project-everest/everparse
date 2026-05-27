@@ -377,16 +377,10 @@ pub fn cbor_nondet_array_iterator_start <'a>(x: crate::cbornondetveraux::cbor_ra
         crate::cbornondetveraux::mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(ml);
     if total_sz == 0usize
     {
-        crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+        crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
         {
             before:
-            crate::cbornondetveraux::base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
-            after:
-            crate::cbornondetveraux::mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
-            {
-                _0:
-                crate::cbornondetveraux::base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-            }
+            crate::cbornondetveraux::base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
         }
     }
     else
@@ -673,7 +667,7 @@ pub fn cbor_nondet_array_iterator_start <'a>(x: crate::cbornondetveraux::cbor_ra
                   },
                 _ => panic!("Incomplete pattern matching")
             };
-        crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+        crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IPair
         { before: bi·, after: rest }
     }
 }
@@ -743,16 +737,10 @@ pub fn cbor_nondet_get_array_item <'a>(x: crate::cbornondetveraux::cbor_raw <'a>
         let it: crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
             if total_sz == 0usize
             {
-                crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
                 {
                     before:
-                    crate::cbornondetveraux::base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
-                    after:
-                    crate::cbornondetveraux::mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
-                    {
-                        _0:
-                        crate::cbornondetveraux::base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                    }
+                    crate::cbornondetveraux::base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
                 }
             }
             else
@@ -1080,7 +1068,7 @@ pub fn cbor_nondet_get_array_item <'a>(x: crate::cbornondetveraux::cbor_raw <'a>
                           },
                         _ => panic!("Incomplete pattern matching")
                     };
-                crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IPair
                 { before: bi·, after: rest }
             };
         let
@@ -1161,16 +1149,10 @@ pub fn cbor_nondet_map_iterator_start <'a>(x: crate::cbornondetveraux::cbor_raw 
         );
     if total_sz == 0usize
     {
-        crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+        crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
         {
             before:
-            crate::cbornondetveraux::base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
-            after:
-            crate::cbornondetveraux::mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
-            {
-                _0:
-                crate::cbornondetveraux::base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-            }
+            crate::cbornondetveraux::base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
         }
     }
     else
@@ -1508,7 +1490,7 @@ pub fn cbor_nondet_map_iterator_start <'a>(x: crate::cbornondetveraux::cbor_raw 
                   },
                 _ => panic!("Incomplete pattern matching")
             };
-        crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+        crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IPair
         { before: bi·, after: rest }
     }
 }
@@ -1606,16 +1588,10 @@ pub fn cbor_nondet_map_get <'a>(
     =
         if total_sz == 0usize
         {
-            crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+            crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
             {
                 before:
-                crate::cbornondetveraux::base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
-                after:
-                crate::cbornondetveraux::mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
-                {
-                    _0:
-                    crate::cbornondetveraux::base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                }
+                crate::cbornondetveraux::base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
             }
         }
         else
@@ -1958,7 +1934,7 @@ pub fn cbor_nondet_map_get <'a>(
                       },
                     _ => panic!("Incomplete pattern matching")
                 };
-            crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+            crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IPair
             { before: bi·, after: rest }
         };
     let
