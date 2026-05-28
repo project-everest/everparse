@@ -1263,7 +1263,7 @@ int gentest(void) {
     printf("Test 26 out of 29\n");
     printf("Testing: ""{}""\n");
     uint8_t source_bytes[1] = {0xa0};
-    cbor_map_entry source_cbor_map[0];
+    cbor_nondet_map_entry_t source_cbor_map[0];
     cbor_nondet_t source_cbor;;
     if (! cbor_nondet_mk_map(source_cbor_map, 0, &source_cbor))
     {
@@ -1315,7 +1315,7 @@ int gentest(void) {
     printf("Test 27 out of 29\n");
     printf("Testing: ""{\"a\":1,\"b\":[2,3]}""\n");
     uint8_t source_bytes[9] = {0xa2, 0x61, 0x61, 0x01, 0x61, 0x62, 0x82, 0x02, 0x03};
-    cbor_map_entry source_cbor_map[2];
+    cbor_nondet_map_entry_t source_cbor_map[2];
     cbor_nondet_t source_cbor_map_1_key;
     assert (cbor_nondet_mk_text_string((uint8_t *)"b", 1, &source_cbor_map_1_key));
     cbor_nondet_t source_cbor_map_1_value_array[2];
@@ -1325,11 +1325,11 @@ int gentest(void) {
     source_cbor_map_1_value_array[0] = source_cbor_map_1_value_array_0;
     cbor_nondet_t source_cbor_map_1_value;
     assert (cbor_nondet_mk_array(source_cbor_map_1_value_array, 2, &source_cbor_map_1_value));
-    source_cbor_map[1] = (cbor_map_entry) {.cbor_map_entry_key = source_cbor_map_1_key, .cbor_map_entry_value = source_cbor_map_1_value};
+    source_cbor_map[1] = (cbor_nondet_map_entry_t) {.cbor_map_entry_key = source_cbor_map_1_key, .cbor_map_entry_value = source_cbor_map_1_value};
     cbor_nondet_t source_cbor_map_0_key;
     assert (cbor_nondet_mk_text_string((uint8_t *)"a", 1, &source_cbor_map_0_key));
     cbor_nondet_t source_cbor_map_0_value = cbor_nondet_mk_uint64(1);
-    source_cbor_map[0] = (cbor_map_entry) {.cbor_map_entry_key = source_cbor_map_0_key, .cbor_map_entry_value = source_cbor_map_0_value};
+    source_cbor_map[0] = (cbor_nondet_map_entry_t) {.cbor_map_entry_key = source_cbor_map_0_key, .cbor_map_entry_value = source_cbor_map_0_value};
     cbor_nondet_t source_cbor;;
     if (! cbor_nondet_mk_map(source_cbor_map, 2, &source_cbor))
     {
@@ -1382,12 +1382,12 @@ int gentest(void) {
     printf("Testing: ""[\"a\",{\"b\":\"c\"}]""\n");
     uint8_t source_bytes[8] = {0x82, 0x61, 0x61, 0xa1, 0x61, 0x62, 0x61, 0x63};
     cbor_nondet_t source_cbor_array[2];
-    cbor_map_entry source_cbor_array_1_map[1];
+    cbor_nondet_map_entry_t source_cbor_array_1_map[1];
     cbor_nondet_t source_cbor_array_1_map_0_key;
     assert (cbor_nondet_mk_text_string((uint8_t *)"b", 1, &source_cbor_array_1_map_0_key));
     cbor_nondet_t source_cbor_array_1_map_0_value;
     assert (cbor_nondet_mk_text_string((uint8_t *)"c", 1, &source_cbor_array_1_map_0_value));
-    source_cbor_array_1_map[0] = (cbor_map_entry) {.cbor_map_entry_key = source_cbor_array_1_map_0_key, .cbor_map_entry_value = source_cbor_array_1_map_0_value};
+    source_cbor_array_1_map[0] = (cbor_nondet_map_entry_t) {.cbor_map_entry_key = source_cbor_array_1_map_0_key, .cbor_map_entry_value = source_cbor_array_1_map_0_value};
     cbor_nondet_t source_cbor_array_1;;
     if (! cbor_nondet_mk_map(source_cbor_array_1_map, 1, &source_cbor_array_1))
     {
@@ -1445,32 +1445,32 @@ int gentest(void) {
     printf("Test 29 out of 29\n");
     printf("Testing: ""{\"a\":\"A\",\"b\":\"B\",\"c\":\"C\",\"d\":\"D\",\"e\":\"E\"}""\n");
     uint8_t source_bytes[21] = {0xa5, 0x61, 0x61, 0x61, 0x41, 0x61, 0x62, 0x61, 0x42, 0x61, 0x63, 0x61, 0x43, 0x61, 0x64, 0x61, 0x44, 0x61, 0x65, 0x61, 0x45};
-    cbor_map_entry source_cbor_map[5];
+    cbor_nondet_map_entry_t source_cbor_map[5];
     cbor_nondet_t source_cbor_map_4_key;
     assert (cbor_nondet_mk_text_string((uint8_t *)"e", 1, &source_cbor_map_4_key));
     cbor_nondet_t source_cbor_map_4_value;
     assert (cbor_nondet_mk_text_string((uint8_t *)"E", 1, &source_cbor_map_4_value));
-    source_cbor_map[4] = (cbor_map_entry) {.cbor_map_entry_key = source_cbor_map_4_key, .cbor_map_entry_value = source_cbor_map_4_value};
+    source_cbor_map[4] = (cbor_nondet_map_entry_t) {.cbor_map_entry_key = source_cbor_map_4_key, .cbor_map_entry_value = source_cbor_map_4_value};
     cbor_nondet_t source_cbor_map_3_key;
     assert (cbor_nondet_mk_text_string((uint8_t *)"d", 1, &source_cbor_map_3_key));
     cbor_nondet_t source_cbor_map_3_value;
     assert (cbor_nondet_mk_text_string((uint8_t *)"D", 1, &source_cbor_map_3_value));
-    source_cbor_map[3] = (cbor_map_entry) {.cbor_map_entry_key = source_cbor_map_3_key, .cbor_map_entry_value = source_cbor_map_3_value};
+    source_cbor_map[3] = (cbor_nondet_map_entry_t) {.cbor_map_entry_key = source_cbor_map_3_key, .cbor_map_entry_value = source_cbor_map_3_value};
     cbor_nondet_t source_cbor_map_2_key;
     assert (cbor_nondet_mk_text_string((uint8_t *)"c", 1, &source_cbor_map_2_key));
     cbor_nondet_t source_cbor_map_2_value;
     assert (cbor_nondet_mk_text_string((uint8_t *)"C", 1, &source_cbor_map_2_value));
-    source_cbor_map[2] = (cbor_map_entry) {.cbor_map_entry_key = source_cbor_map_2_key, .cbor_map_entry_value = source_cbor_map_2_value};
+    source_cbor_map[2] = (cbor_nondet_map_entry_t) {.cbor_map_entry_key = source_cbor_map_2_key, .cbor_map_entry_value = source_cbor_map_2_value};
     cbor_nondet_t source_cbor_map_1_key;
     assert (cbor_nondet_mk_text_string((uint8_t *)"b", 1, &source_cbor_map_1_key));
     cbor_nondet_t source_cbor_map_1_value;
     assert (cbor_nondet_mk_text_string((uint8_t *)"B", 1, &source_cbor_map_1_value));
-    source_cbor_map[1] = (cbor_map_entry) {.cbor_map_entry_key = source_cbor_map_1_key, .cbor_map_entry_value = source_cbor_map_1_value};
+    source_cbor_map[1] = (cbor_nondet_map_entry_t) {.cbor_map_entry_key = source_cbor_map_1_key, .cbor_map_entry_value = source_cbor_map_1_value};
     cbor_nondet_t source_cbor_map_0_key;
     assert (cbor_nondet_mk_text_string((uint8_t *)"a", 1, &source_cbor_map_0_key));
     cbor_nondet_t source_cbor_map_0_value;
     assert (cbor_nondet_mk_text_string((uint8_t *)"A", 1, &source_cbor_map_0_value));
-    source_cbor_map[0] = (cbor_map_entry) {.cbor_map_entry_key = source_cbor_map_0_key, .cbor_map_entry_value = source_cbor_map_0_value};
+    source_cbor_map[0] = (cbor_nondet_map_entry_t) {.cbor_map_entry_key = source_cbor_map_0_key, .cbor_map_entry_value = source_cbor_map_0_value};
     cbor_nondet_t source_cbor;;
     if (! cbor_nondet_mk_map(source_cbor_map, 5, &source_cbor))
     {

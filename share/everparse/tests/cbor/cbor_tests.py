@@ -429,6 +429,39 @@ TESTS: dict[str, T] = {
     "reserved_arr_9c_invalid":             T(valid=False),
     "reserved_map_bc_invalid":             T(valid=False),
     "reserved_tag_dc_invalid":             T(valid=False),
+
+    # ---- Iterator-walk variants ----
+    # The "_iter_canonical" entries share the same expected value as their
+    # non-iter siblings but trigger the kind="iterator" branch in
+    # `_run_one`, which performs an explicit iter()/items() walk against
+    # `expected`. The "arr_wide_deep_canonical" fixture is new (a 4x3 grid
+    # of uints) and is also exercised via the iterator branch.
+    "arr_wide_deep_canonical":             T(valid=True, canonical=True,
+                                              expected=lambda: ((1, 2, 3), (4, 5, 6),
+                                                                (7, 8, 9), (10, 11, 12))),
+    "arr_25_iter_canonical":               T(valid=True, canonical=True, kind="iterator",
+                                              expected=lambda: tuple(range(1, 26))),
+    "arr_nested_iter_canonical":           T(valid=True, canonical=True, kind="iterator",
+                                              expected=lambda: (1, (2, 3), (4, 5))),
+    "arr_deeply_nested_iter_canonical":    T(valid=True, canonical=True, kind="iterator",
+                                              expected=lambda: _arr_deep(ARR_DEPTH, 1)),
+    "arr_empties_iter_canonical":          T(valid=True, canonical=True, kind="iterator",
+                                              expected=_arr_empties_value),
+    "map_five_iter_canonical":             T(valid=True, canonical=True, kind="iterator",
+                                              expected=lambda: FrozenDict({"a": "A", "b": "B",
+                                                                            "c": "C", "d": "D",
+                                                                            "e": "E"})),
+    "map_deeply_nested_iter_canonical":    T(valid=True, canonical=True, kind="iterator",
+                                              expected=lambda: _map_deep(MAP_DEPTH, 0)),
+    "map_nested_keys_iter_canonical":      T(valid=True, canonical=True, kind="iterator",
+                                              expected=_expected_map_nested_keys),
+    "tag_nested_iter_canonical":           T(valid=True, canonical=True, kind="iterator",
+                                              expected=lambda: CBORTag(1234, CBORTag(5678, 1))),
+    "tag_array_payload_iter_canonical":    T(valid=True, canonical=True, kind="iterator",
+                                              expected=lambda: CBORTag(99, (1, 2, 3))),
+    "arr_wide_deep_iter_canonical":        T(valid=True, canonical=True, kind="iterator",
+                                              expected=lambda: ((1, 2, 3), (4, 5, 6),
+                                                                (7, 8, 9), (10, 11, 12))),
 }
 
 
@@ -667,6 +700,61 @@ class TestSkipped(Exception):
     pass
 
 
+def walk_iter_check_py(parsed: Any, expected: Any) -> None:
+    """Iterator-walk equivalent of the C/Rust ``walk_iter_check`` helper.
+
+    Walks ``parsed`` via Python's natural iterator surface
+    (``iter(tuple_or_list)`` for arrays, ``dict.items()`` for maps,
+    ``CBORTag.value`` for tags) and walks ``expected`` via random access
+    (indexing, key lookup, attribute access). Asserts that the two are
+    structurally equal at every level.
+
+    This mirrors the iterator-API exercise performed by the C and Rust
+    test variants. In Python the natural representation is already the
+    "decoded" value, so this walk is a structural restatement of the
+    ``parsed == expected`` check — but it does exercise iter()/items()
+    explicitly at every level rather than relying on dict/tuple __eq__.
+    """
+    if isinstance(parsed, CBORTag):
+        if not isinstance(expected, CBORTag):
+            raise AssertionError(
+                f"walk_iter_check: expected CBORTag, got {type(expected).__name__}")
+        if parsed.tag != expected.tag:
+            raise AssertionError(
+                f"walk_iter_check: tag {parsed.tag} != {expected.tag}")
+        walk_iter_check_py(parsed.value, expected.value)
+        return
+
+    if isinstance(parsed, (tuple, list)):
+        if not isinstance(expected, (tuple, list)):
+            raise AssertionError(
+                f"walk_iter_check: expected sequence, got {type(expected).__name__}")
+        if len(parsed) != len(expected):
+            raise AssertionError(
+                f"walk_iter_check: array length {len(parsed)} != {len(expected)}")
+        for i, item in enumerate(iter(parsed)):
+            walk_iter_check_py(item, expected[i])
+        return
+
+    if isinstance(parsed, (dict, FrozenDict)):
+        if not isinstance(expected, (dict, FrozenDict)):
+            raise AssertionError(
+                f"walk_iter_check: expected mapping, got {type(expected).__name__}")
+        if len(parsed) != len(expected):
+            raise AssertionError(
+                f"walk_iter_check: map size {len(parsed)} != {len(expected)}")
+        for k, v in parsed.items():
+            if k not in expected:
+                raise AssertionError(
+                    f"walk_iter_check: key {k!r} missing from expected")
+            walk_iter_check_py(v, expected[k])
+        return
+
+    # Leaf scalar: int, str, bytes, CBORSimpleValue, bool, None.
+    if parsed != expected:
+        raise AssertionError(f"walk_iter_check: leaf {parsed!r} != {expected!r}")
+
+
 def _run_one(input_bytes: bytes, serialized_bytes: bytes | None,
              spec: T, *, allow_dup_keys_supported: bool) -> None:
     """Run one assertion pass for a single (input_bytes, [serialized_bytes]) pair.
@@ -704,6 +792,12 @@ def _run_one(input_bytes: bytes, serialized_bytes: bytes | None,
     parsed = strict_loads(input_bytes)
     if parsed != expected:
         raise AssertionError(f"parsed={parsed!r} != expected={expected!r}")
+
+    if kind == "iterator":
+        # Walk the parsed value via iter()/items()/CBORTag.value and assert
+        # structural equality against expected. Mirrors the iterator-API
+        # exercise done in the C and Rust test suites.
+        walk_iter_check_py(parsed, expected)
 
     if spec["canonical"]:
         # Re-encode canonically and compare with the C-emitted input bytes.

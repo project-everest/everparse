@@ -87,3 +87,9 @@ val check_all_hashes
   (out_dir: string)
   (files_and_modules: list (string & string))
 : ML unit
+
+val save_hashes_for_module
+  (out_dir: string)
+  (file: string)
+  (modul: string)
+: ML unit
