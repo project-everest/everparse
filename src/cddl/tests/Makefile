@@ -8,14 +8,16 @@ unit.do:
 
 rust.do:
 
-test: demo.do dpe.do rust.do unit.do
+roundtrip.do:
+
+test: demo.do dpe.do rust.do unit.do roundtrip.do
 
 %.do:
 	+$(MAKE) -C $(basename $@)
 
 .PHONY: all test %.do
 
-clean: demo.clean dpe.clean rust.clean unit.clean
+clean: demo.clean dpe.clean rust.clean unit.clean roundtrip.clean
 
 .PHONY: clean
 
