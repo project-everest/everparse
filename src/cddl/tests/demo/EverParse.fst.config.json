@@ -1,18 +1,13 @@
 {
     "_comment": "This allows to interactively edit the generated CDDLTest.Test.fst file. Make sure to build the plugins before.",
     "fstar_exe": "../../../../fstar.sh",
-    "options": [
-      "--load_cmxs", "evercddl_lib",
-      "--load_cmxs", "evercddl_plugin"
-    ],
+    "options": [],
     "include_dirs": [
       "../../../../src/cbor/spec",
       "../../../../src/cbor/pulse",
       "../../../../src/cddl/pulse",
       "../../../../src/cddl/spec",
       "../../../../src/cddl/tool",
-      "../../../../lib/evercddl/plugin",
-      "../../../../lib/evercddl/lib",
       "_output"
     ]
   }
