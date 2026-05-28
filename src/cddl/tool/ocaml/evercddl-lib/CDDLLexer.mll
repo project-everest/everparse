@@ -3,7 +3,6 @@
 open CDDLParser
 open CDDL_Spec_AST_Base
 open Tokens
-open Fstar_pluginlib
 
 let debug (x: token) =
 (*

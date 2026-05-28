@@ -7,7 +7,6 @@ ALREADY_CACHED := *,
 FSTAR_DEP_OPTIONS := --extract CDDL.Spec.AST.Base,CDDL.Spec.AST.Print,CDDL.Spec.AST.Elab,CDDL.Spec.AST.Driver,CDDL.Tool.Gen,CBOR.Spec.Constants,CDDL.Pulse.AST.Ancillaries
 OUTPUT_DIRECTORY := ocaml/evercddl-lib/extracted
 FSTAR_DEP_FILE := ocaml.depend
-FSTAR_ML_CODEGEN := Plugin
 
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 
