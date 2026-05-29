@@ -18,26 +18,6 @@ FSTAR_EXE ?= fstar.exe
 # the latter to OCAMLPATH for us.
 export OCAMLPATH := $(EVERPARSE_HOME)/lib:$(OCAMLPATH)
 
-FSTAR_OPTIONS := \
-    --z3version 4.13.3 \
-    --warn_error @241 \
-    --cmi \
-    --ext context_pruning \
-    --cache_checked_modules
-
-# Mirrors the include set used by cddl.exe so the extracted F* module
-# (which only references CDDL.Spec.AST.Base) can find every .checked
-# in its transitive closure.
-FSTAR_INCLUDES := \
-    --include $(EVERPARSE_SRC_PATH)/cbor/spec \
-    --include $(EVERPARSE_SRC_PATH)/cbor/pulse \
-    --include $(EVERPARSE_SRC_PATH)/cddl/spec \
-    --include $(EVERPARSE_SRC_PATH)/cddl/pulse \
-    --include $(EVERPARSE_SRC_PATH)/cddl/tool \
-    --include $(KRML_HOME)/krmllib \
-    --include $(KRML_HOME)/krmllib/obj \
-    --include $(PULSE_HOME)/lib/pulse
-
 GEN := ocaml/_build/default/gen_fst/Main.exe
 
 TARGETS := dpe cose_sign cose_encrypt
@@ -63,17 +43,10 @@ $(ODIR)/$1:
 $(ODIR)/$1/$(MNAME_$1).fst: $(GEN) $(CDDLS_$1) | $(ODIR)/$1
 	$(GEN) $(MNAME_$1) $(ODIR)/$1 $(CDDLS_$1)
 
-$(ODIR)/$1/$(MNAME_$1).fst.checked: $(ODIR)/$1/$(MNAME_$1).fst
-	$(FSTAR_EXE) $$< $(FSTAR_OPTIONS) $(FSTAR_INCLUDES) \
-	    --already_cached '*,-$(MNAME_$1)' \
-	    --cache_dir $(ODIR)/$1
-	touch -c $$@
-
-$(ODIR)/$1/$(MNAME_$1).ml: $(ODIR)/$1/$(MNAME_$1).fst.checked
-	$(FSTAR_EXE) $(ODIR)/$1/$(MNAME_$1).fst $(FSTAR_OPTIONS) $(FSTAR_INCLUDES) \
-	    --already_cached '*,' \
-	    --cache_dir $(ODIR)/$1 --odir $(ODIR)/$1 \
-	    --codegen OCaml --extract_module $(MNAME_$1)
+# Delegate F* typechecking and OCaml extraction to extract.Makefile,
+# which uses the standard EverParse common.Makefile.
+$(ODIR)/$1/$(MNAME_$1).ml: $(ODIR)/$1/$(MNAME_$1).fst extract.Makefile
+	+$(MAKE) -f extract.Makefile MNAME=$(MNAME_$1) OUTPUT_DIRECTORY=$(ODIR)/$1
 
 $(ODIR)/$1/check.exe: Check.ml $(ODIR)/$1/$(MNAME_$1).ml
 	cp Check.ml $(ODIR)/$1/Check.ml
