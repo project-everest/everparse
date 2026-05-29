@@ -40,7 +40,7 @@ let test_ascii_string: ascii_string = mk_ascii_string "hello" (_ by (FStar.Tacti
   
   2. as a defensive practice wrt. ill-formed source input. *)
 
-[@@base_attr; PpxDerivingShow; plugin]
+[@@base_attr; PpxDerivingShow]
 type literal =
 | LSimple of int
 | LInt: (v: int) -> literal // I deduce the integer type from the sign
@@ -62,7 +62,7 @@ let cddl_major_type_byte_string : Cbor.major_type_byte_string_or_text_string =
 let cddl_major_type_text_string : Cbor.major_type_byte_string_or_text_string =
   (_ by (FStar.Tactics.exact (FStar.Tactics.norm_term [delta] (`Cbor.cbor_major_type_text_string))))
 
-[@@base_attr; PpxDerivingShow; plugin]
+[@@base_attr; PpxDerivingShow]
 type elem_typ =
 | ELiteral of literal
 | EBool
@@ -79,7 +79,7 @@ type name_env_elem =
 | NType
 | NGroup
 
-[@@base_attr; PpxDerivingShow; plugin]
+[@@base_attr; PpxDerivingShow]
 type group =
 | GDef: string -> group
 | GElem: (cut: bool) -> (key: typ) -> (value: typ) -> group
@@ -104,7 +104,7 @@ and typ =
 | TSize: typ -> typ -> typ
 | TDetCbor: typ -> typ -> typ
 
-[@@plugin; base_attr; PpxDerivingShow]
+[@@base_attr; PpxDerivingShow]
 type decl =
 | DType of typ
 | DGroup of group

@@ -216,8 +216,6 @@ let fstar_options =
       "--warn_error"; "@241";
       "--cmi";
       "--ext"; "context_pruning";
-      "--load_cmxs"; "evercddl_lib";
-      "--load_cmxs"; "evercddl_plugin";
     ] @
       include_options
 
