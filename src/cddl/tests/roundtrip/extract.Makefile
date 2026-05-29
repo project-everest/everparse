@@ -23,18 +23,14 @@ endif
 
 EVERPARSE_SRC_PATH := $(realpath ../../..)
 
-# Mirrors the include set used by cddl.exe so the generated F* module
-# (which only references CDDL.Spec.AST.Base) can find every .checked
-# in its transitive closure.
+# karamel.Makefile adds KRML_HOME/krmllib paths; pulse.Makefile adds
+# PULSE_HOME/lib/pulse and sets OCAMLPATH for pulse extraction.
 INCLUDE_PATHS += \
     $(EVERPARSE_SRC_PATH)/cbor/spec \
     $(EVERPARSE_SRC_PATH)/cbor/pulse \
     $(EVERPARSE_SRC_PATH)/cddl/spec \
     $(EVERPARSE_SRC_PATH)/cddl/pulse \
-    $(EVERPARSE_SRC_PATH)/cddl/tool \
-    $(KRML_HOME)/krmllib \
-    $(KRML_HOME)/krmllib/obj \
-    $(PULSE_HOME)/lib/pulse
+    $(EVERPARSE_SRC_PATH)/cddl/tool
 
 ALREADY_CACHED := *,-$(MNAME),
 FSTAR_DEP_OPTIONS := --extract $(MNAME)
@@ -42,6 +38,8 @@ FSTAR_FILES := $(OUTPUT_DIRECTORY)/$(MNAME).fst
 CACHE_DIRECTORY := $(OUTPUT_DIRECTORY)
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
+include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 extract: $(ALL_ML_FILES)
