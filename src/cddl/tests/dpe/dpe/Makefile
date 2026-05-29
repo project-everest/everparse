@@ -14,8 +14,6 @@ $(EVERPARSE_SRC_PATH)/cbor/spec \
 $(EVERPARSE_SRC_PATH)/cbor/pulse \
 $(EVERPARSE_SRC_PATH)/cddl/pulse \
 $(EVERPARSE_SRC_PATH)/cddl/tool \
-$(EVERPARSE_PATH)/lib/evercddl/lib \
-$(EVERPARSE_PATH)/lib/evercddl/plugin \
 ../util \
 ../_output \
 $(DICE_HOME) \
@@ -27,7 +25,6 @@ include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 
 ALREADY_CACHED := *,-CDDLTest.DPE,-DPESlice,
-FSTAR_OPTIONS += --load_cmxs evercddl_lib --load_cmxs evercddl_plugin
 FSTAR_OPTIONS += --warn_error -342
 FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Pervasives,+Pulse.Lib.Slice,-CDDL.Pulse.Bundle,-CDDL.Pulse.AST.Bundle,-CDDL.Tool'
 

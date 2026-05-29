@@ -37,13 +37,13 @@ let gen_map (gen: Yojson.Safe.t -> string -> c list) (l: (string * Yojson.Safe.t
     let accu' =
       gen_string s key_name @
       gen x value_name @
-      `Instr (elt i ^ " = (cbor_map_entry) {.cbor_map_entry_key = " ^ key_name ^ ", .cbor_map_entry_value = " ^ value_name ^ "}") ::
+      `Instr (elt i ^ " = (cbor_nondet_map_entry_t) {.cbor_map_entry_key = " ^ key_name ^ ", .cbor_map_entry_value = " ^ value_name ^ "}") ::
       accu
     in
     aux accu' (i + 1) q
   in
   let accu' = aux accu 0 l in
-  let accu' = `Instr ("cbor_map_entry " ^ elt len) :: accu' in
+  let accu' = `Instr ("cbor_nondet_map_entry_t " ^ elt len) :: accu' in
   accu'
 
 let gen_array (gen: Yojson.Safe.t -> string -> c list) (l: Yojson.Safe.t list) (name: string) : c list =

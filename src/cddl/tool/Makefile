@@ -16,18 +16,13 @@ ocaml.done: $(ALL_CHECKED_FILES)
 	+$(MAKE) -f $(basename $@).Makefile
 	touch $@
 
-plugin.done: $(ALL_CHECKED_FILES)
-	rm -f $@
-	+$(MAKE) -f $(basename $@).Makefile
-	touch $@
-
 EVERPARSE_CDDL=$(EVERPARSE_SRC_PATH)/../bin/cddl.exe
 
 build: $(EVERPARSE_CDDL)
 
 .PHONY: build
 
-$(EVERPARSE_CDDL): ocaml.done plugin.done $(wildcard ocaml/*/*.ml*)
+$(EVERPARSE_CDDL): ocaml.done $(wildcard ocaml/*/*.ml*)
 	cd ocaml && $(FSTAR_EXE) --ocamlenv dune build
 	cd ocaml && dune install --prefix=$(realpath $(EVERPARSE_SRC_PATH)/..)
 
@@ -55,6 +50,6 @@ clean-ocaml:
 
 clean-done:
 	rm -f *.depend *.depend.rsp *.done
-	rm -rf ocaml/evercddl-lib/extracted ocaml/evercddl-plugin/extracted
+	rm -rf ocaml/evercddl-lib/extracted
 
 .PHONY: clean-done

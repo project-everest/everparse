@@ -40,9 +40,9 @@ int main(void) {
 
   /* Stack-allocate a map object (major type 5) with map entries (cbor0, cbor1) and (cbor2, cbor3) */
   #define my_map_len 2
-  cbor_map_entry my_entry0 = cbor_nondet_mk_map_entry(cbor0, cbor1);
-  cbor_map_entry my_entry1 = cbor_nondet_mk_map_entry(cbor2, cbor3);
-  cbor_map_entry my_map[my_map_len] = { my_entry0, my_entry1 };
+  cbor_nondet_map_entry_t my_entry0 = cbor_nondet_mk_map_entry(cbor0, cbor1);
+  cbor_nondet_map_entry_t my_entry1 = cbor_nondet_mk_map_entry(cbor2, cbor3);
+  cbor_nondet_map_entry_t my_map[my_map_len] = { my_entry0, my_entry1 };
   cbor_nondet_t cbor5;
   assert (cbor_nondet_mk_map(my_map, my_map_len, &cbor5));
 
@@ -50,8 +50,8 @@ int main(void) {
      cbor1) and (cbor0, cbor3) (notice the duplicate keys.) Then,
      cbor_nondet_mk_map will gracefully fail
   */
-  cbor_map_entry my_entry1_fail = cbor_nondet_mk_map_entry(cbor0, cbor3);
-  cbor_map_entry my_map_fail[my_map_len] = { my_entry0, my_entry1_fail };
+  cbor_nondet_map_entry_t my_entry1_fail = cbor_nondet_mk_map_entry(cbor0, cbor3);
+  cbor_nondet_map_entry_t my_map_fail[my_map_len] = { my_entry0, my_entry1_fail };
   cbor_nondet_t cbor5_fail;
   assert (! cbor_nondet_mk_map(my_map_fail, my_map_len, &cbor5_fail));
   

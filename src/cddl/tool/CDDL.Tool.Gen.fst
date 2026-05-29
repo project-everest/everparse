@@ -826,8 +826,9 @@ let empty_ancillaries : ancillaries_t empty_sem_env = {
 let produce_defs0 nbe accu l =
   produce_defs' nbe 0 accu empty_wf_ast_env empty_ancillaries l  
 
-let prelude_fst mname lang filenames = "
+let prelude_fst mname lang filenames source_str = "
 module "^mname^"
+(* Source CDDL file(s): "^filenames^" *)
 open CDDL.Pulse.AST.Bundle
 open CDDL.Tool.Gen
 module Det = CDDL.Pulse.AST.Det."^lang^"
@@ -837,7 +838,7 @@ module Parse = CDDL.Pulse.AST.Parse
 module T = CDDL.Pulse.AST.Tactics
 module SZ = FStar.SizeT
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; "^opaque_to_smt^"] noextract
-let option_source = CDDL.Tool.Plugin.parse ["^filenames^"]
+let option_source : option (list (string & decl)) = Some "^source_str^"
 let option_source_some () : squash (Some? option_source) = _ by (FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ())
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; "^opaque_to_smt^"] noextract
 let source = T.get_option_some option_source (option_source_some ())
@@ -869,10 +870,11 @@ let produce_defs_fst
   mname lang filenames (l: list (string & decl))
 : FStar.All.ML // Dv
   string
-= match CDDL.Spec.AST.Driver.topological_sort l with
+= let source_str = CDDL.Spec.AST.Print.program_to_string l in
+  match CDDL.Spec.AST.Driver.topological_sort l with
   | RFailure fail -> "Error: topological sort failed: "^ fail
   | RSuccess l ->
-    let accu = prelude_fst mname lang filenames in
+    let accu = prelude_fst mname lang filenames source_str in
     match produce_defs0 nbe accu l with
     | RSuccess s -> s
     | RFailure msg -> "Error: " ^ msg

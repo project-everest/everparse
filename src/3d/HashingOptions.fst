@@ -13,6 +13,7 @@ type micro_step_t =
   | MicroStepCopyClangFormat
   | MicroStepCopyEverParseH
   | MicroStepEmitConfig
+  | MicroStepSaveHashes
   
 type makefile_type =
   | MakefileGMake

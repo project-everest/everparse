@@ -1,9 +1,6 @@
 {
     "fstar_exe": "./fstar.sh",
-    "options": [
-      "--load_cmxs", "evercddl_lib",
-      "--load_cmxs", "evercddl_plugin"
-    ],
+    "options": [],
     "include_dirs": [
       "./src/lowparse",
       "./src/lowparse/pulse",
@@ -12,8 +9,6 @@
       "./src/cddl/pulse",
       "./src/cddl/spec",
       "./src/cddl/tool",
-      "./lib/evercddl/plugin",
-      "./lib/evercddl/lib",
       "./src/3d",
       "./src/3d/prelude",
       "./src/ASN1"
