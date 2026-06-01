@@ -21,6 +21,15 @@ module IT = LowParse.PulseParse.Iterator.Type
 open CBOR.Pulse.Raw.EverParse.Read
 open LowParse.Pulse.Base
 
+(* Pure projector for the array payload that avoids the partial projector
+   CBOR_Case_Array?.v at runtime. Using a refined-argument match keeps the
+   auto-generated discriminator uu___is_CBOR_Case_Array out of the extracted
+   Type bundle (CBORNondetType.c). *)
+let cbor_array_ptr_of (x: cbor_raw) : IT.mixed_list cbor_raw =
+  match x with
+  | CBOR_Case_Array a -> a.cbor_array_ptr
+  | _ -> IT.Base IT.Empty
+
 (* Pure prop relating cbor_raw constructors to raw_data_item constructors *)
 let cbor_raw_match_cases_prop (x: cbor_raw) (y: raw_data_item) : prop =
   match x, y with

@@ -139,8 +139,8 @@ ensures
   } else if (mt1 = Spec.cbor_major_type_array) {
     check_equiv_array_eq basic_data_model (NG.option_sz_v map_bound) (Ghost.reveal v1) (Ghost.reveal v2) () ();
     assert (pure (CBOR_Case_Array? x1 /\ CBOR_Case_Array? x2));
-    let len1 = IT.mixed_list_length (CBOR_Case_Array?.v x1).cbor_array_ptr;
-    let len2 = IT.mixed_list_length (CBOR_Case_Array?.v x2).cbor_array_ptr;
+    let len1 = IT.mixed_list_length (cbor_array_ptr_of x1);
+    let len2 = IT.mixed_list_length (cbor_array_ptr_of x2);
     if (len1 <> len2) {
       cbor_raw_match_fuel_eq_succ n pm1 x1 v1;
       cbor_raw_match_fuel_eq_succ n pm2 x2 v2;

@@ -28,15 +28,13 @@ extract-krml: $(ALL_KRML_FILES)
 .PHONY: extract-krml
 
 extract: extract-krml
-	$(KRML) -backend rust -fno-box -fkeep-tuples -fcontained-type cbor_raw_iterator -warn-error @1..27 -skip-linking \
+	$(KRML) -backend rust -fno-box -fkeep-tuples -fcontained-type cbor_raw_iterator -fcontained-type iterator__ -warn-error @1..27 -skip-linking \
 		-bundle 'CommonPulse=[rename=CommonPulse]' \
 		-bundle 'EverCrypt.Ed25519=[rename=Ed25519]' \
 		-bundle 'COSE.Format=[rename=COSEFormat]' \
 		-bundle 'CBOR.Pulse.API.Det.Rust=[rename=CBORDetVer]' \
-		-bundle 'CBOR.Spec.Constants+CBOR.Pulse.Raw.Type+CBOR.Pulse.API.Det.Type=\*[rename=CBORDetVerAux]' \
+		-bundle 'CBOR.Spec.Constants+CBOR.Pulse.Raw.EverParse.Type+CBOR.Pulse.API.Det.Type=\*[rename=CBORDetVerAux]' \
 		-tmpdir $(OUTPUT_DIRECTORY) -skip-compilation $(ALL_KRML_FILES)
-
-#	$(KRML) -bundle COSE.Format=*[rename=COSEFormat] -add-include '"CBORDetAbstract.h"' -no-prefix CBOR.Pulse.API.Det.Rust -no-prefix CBOR.Spec.Constants -skip-compilation $^ -tmpdir $(OUTPUT_DIRECTORY) -backend rust -fno-box -fkeep-tuples -fcontained-type cbor_raw_iterator
 
 .PHONY: extract
 

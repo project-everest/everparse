@@ -211,7 +211,7 @@ ensures
 (* ======== mk_map ======== *)
 
 let cbor_det_mk_map (_: unit) : Base.mk_map_gen_t u#0 #_ #_ cbor_det_match cbor_det_map_entry_match
-= Base.mk_map_gen (CBOR.Pulse.API.Det.Type.dummy_cbor_det_t ()) (Impl.cbor_det_mk_map_gen ())
+= Base.mk_map_gen (CBOR.Pulse.API.Det.Dummy.dummy_cbor_det_t ()) (Impl.cbor_det_mk_map_gen ())
 
 (* ======== Destructors ======== *)
 
@@ -883,4 +883,4 @@ let cbor_det_serialize_map = Impl.cbor_det_serialize_map ()
 
 (* ======== dummy ======== *)
 
-let dummy_cbor_det_t () = CBOR.Pulse.API.Det.Type.dummy_cbor_det_t ()
+let dummy_cbor_det_t () = CBOR.Pulse.API.Det.Dummy.dummy_cbor_det_t ()
