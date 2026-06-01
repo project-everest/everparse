@@ -240,6 +240,55 @@ ensures
 
 #pop-options
 
+(* Flat base_iterator analog of iterator_next_raw_data_item_fuel: walks a
+   base_mixed_list cursor directly (no IBase|IPair envelope). Used by the
+   CBOR_Case_Array fast path when the parsed mixed_list is IT.Base. *)
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+```pulse
+fn base_iterator_next_raw_data_item_fuel
+  (n: Ghost.erased nat { Ghost.reveal n >= 1 })
+  (f64: squash SZ.fits_u64)
+  (pm: perm)
+  (x: IT.base_iterator cbor_raw)
+  (l: Ghost.erased (list raw_data_item))
+requires
+  I.base_iterator_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm
+    x (Ghost.reveal l) **
+  pure (Cons? (Ghost.reveal l))
+returns res: (cbor_raw & IT.base_iterator cbor_raw)
+ensures
+  (exists* pm_v hd_val tl_l pm' .
+    cbor_raw_match_fuel (Ghost.reveal n) pm_v (fst res) hd_val **
+    I.base_iterator_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm'
+      (snd res) tl_l **
+    Trade.trade
+      (cbor_raw_match_fuel (Ghost.reveal n) pm_v (fst res) hd_val **
+       I.base_iterator_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm'
+         (snd res) tl_l)
+      (I.base_iterator_match (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item pm
+         x (Ghost.reveal l)) **
+    pure (Ghost.reveal l == hd_val :: tl_l))
+{
+  let zcp = PPB.zero_copy_parse_of_strong_prefix (cbor_raw_read_fuel n 1.0R f64) ();
+  let mut r = x;
+  let elt = I.base_iterator_next
+    (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item
+    jump_raw_data_item_eta
+    pm r _ l
+    (cbor_raw_match_fuel_share_t (Ghost.reveal n))
+    (cbor_raw_match_fuel_gather_t (Ghost.reveal n))
+    zcp;
+  unfold (I.base_iterator_next_post (cbor_raw_match_fuel (Ghost.reveal n)) parse_raw_data_item
+    pm r x (Ghost.reveal l) elt);
+  let x' = !r;
+  (elt, x')
+}
+```
+
+#pop-options
+
 #push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 
 ```pulse

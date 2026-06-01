@@ -5034,3 +5034,305 @@ ensures
 ```
 
 #pop-options
+
+
+// =====================================================================
+// Option H: base_iterator (= base_mixed_list) — flat iterator API used
+// by parser-produced CBOR_Case_{Array,Map}_Base arms. Walks
+// base_mixed_list directly, no IBase|IPair wrapping.
+// =====================================================================
+
+let base_iterator_match
+  (#t: Type)
+  (#u: Type)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind)
+  (p: parser k u)
+  (pm: perm)
+  (i: base_iterator t)
+  (l: list u)
+: Tot slprop
+= base_mixed_list_match vmatch p pm i l
+
+#push-options "--z3rlimit 200 --fuel 2 --ifuel 1"
+
+inline_for_extraction
+```pulse
+fn base_iterator_start
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (pm: perm) (bml: base_mixed_list t) (l: Ghost.erased (list u))
+requires
+  base_mixed_list_match vmatch p pm bml l
+returns it: base_iterator t
+ensures
+  base_iterator_match vmatch p pm it l **
+  trade (base_iterator_match vmatch p pm it l)
+        (base_mixed_list_match vmatch p pm bml l)
+{
+  // base_iterator t = base_mixed_list t; the start operation is the identity.
+  let it : base_iterator t = bml;
+  rewrite (base_mixed_list_match vmatch p pm bml l)
+    as (base_iterator_match vmatch p pm it l);
+  Trade.refl (base_iterator_match vmatch p pm it l);
+  rewrite (trade (base_iterator_match vmatch p pm it l) (base_iterator_match vmatch p pm it l))
+    as (trade (base_iterator_match vmatch p pm it l) (base_mixed_list_match vmatch p pm bml l));
+  it
+}
+```
+
+#pop-options
+
+let base_iterator_next_eos_post
+  (#t: Type0) (#u: Type0)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (pm: perm) (r: R.ref (base_iterator t)) (i_orig: base_iterator t) (l: list u)
+  (res: elt_or_serialized t)
+: Tot slprop
+= exists* pm_v hd_val tl_l it' pm' .
+    elt_or_serialized_match vmatch p pm_v res hd_val **
+    R.pts_to r it' **
+    base_iterator_match vmatch p pm' it' tl_l **
+    trade
+      (elt_or_serialized_match vmatch p pm_v res hd_val **
+       base_iterator_match vmatch p pm' it' tl_l)
+      (base_iterator_match vmatch p pm i_orig l) **
+    pure (l == hd_val :: tl_l)
+
+#push-options "--z3rlimit 8000 --fuel 2 --ifuel 1 --ext no:context_pruning"
+
+inline_for_extraction
+```pulse
+fn base_iterator_next_eos
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (j: LPS.jumper p)
+  (pm: perm) (r: R.ref (base_iterator t)) (i_orig: Ghost.erased (base_iterator t)) (l: Ghost.erased (list u))
+  (vmatch_share: share_t vmatch) (vmatch_gather: gather_t vmatch)
+requires
+  R.pts_to r (Ghost.reveal i_orig) ** base_iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l) ** pure (Cons? (Ghost.reveal l))
+returns res: elt_or_serialized t
+ensures
+  base_iterator_next_eos_post vmatch p pm r (Ghost.reveal i_orig) (Ghost.reveal l) res
+{
+  let bi = R.read r;
+  rewrite (base_iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l))
+    as (base_iterator_match vmatch p pm bi (Ghost.reveal l));
+  unfold (base_iterator_match vmatch p pm bi (Ghost.reveal l));
+  // Now we have: base_mixed_list_match vmatch p pm bi l
+  let len_sz = base_mixed_list_length bi;
+  base_mixed_list_match_length vmatch p pm bi (Ghost.reveal l);
+  if (SZ.eq len_sz 0sz) {
+    // l == [], contradicting Cons? l
+    unreachable ()
+  } else {
+    rewrite (base_mixed_list_match vmatch p pm bi (Ghost.reveal l))
+      as (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi)) pm bi (Ghost.reveal l));
+    rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length bi)) pm bi (Ghost.reveal l))
+      as (base_mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm bi (Ghost.reveal l));
+    let x = base_mixed_list_next_n_eos vmatch p 0 (SZ.v len_sz) 0sz len_sz pm bi l
+      vmatch_share vmatch_gather j;
+    unfold (mixed_list_next_n_eos_post vmatch p 0 (SZ.v len_sz) pm (Base bi) (Ghost.reveal l) x);
+    with pm_v hd_val tl_val . assert (
+      elt_or_serialized_match vmatch p pm_v x hd_val **
+      mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base bi) tl_val **
+      trade
+        (elt_or_serialized_match vmatch p pm_v x hd_val **
+         mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base bi) tl_val)
+        (mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm (Base bi) (Ghost.reveal l)) **
+      pure (SZ.v len_sz > 0 /\ Ghost.reveal l == hd_val :: tl_val)
+    );
+    if (SZ.eq len_sz 1sz) {
+      // Case len == 1: result iterator is Empty
+      rewrite (mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base bi) tl_val)
+        as (mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Base bi) tl_val);
+      mixed_list_match_n_length vmatch p 1 0 (pm /. 2.0R) (Base bi) (Ghost.reveal tl_val);
+      // Build base_iterator_match for Empty directly
+      fold (base_mixed_list_match_n vmatch p 0 0 (pm /. 2.0R) (Empty #t) (Ghost.reveal tl_val));
+      rewrite (base_mixed_list_match_n vmatch p 0 0 (pm /. 2.0R) (Empty #t) (Ghost.reveal tl_val))
+        as (base_mixed_list_match_n vmatch p 0 (SZ.v (base_mixed_list_length (Empty #t))) (pm /. 2.0R) (Empty #t) (Ghost.reveal tl_val));
+      fold (base_mixed_list_match vmatch p (pm /. 2.0R) (Empty #t) (Ghost.reveal tl_val));
+      rewrite (base_mixed_list_match vmatch p (pm /. 2.0R) (Empty #t) (Ghost.reveal tl_val))
+        as (base_iterator_match vmatch p (pm /. 2.0R) (Empty #t) (Ghost.reveal tl_val));
+      R.write r (Empty #t);
+      // Build composite trade
+      intro_trade
+        (elt_or_serialized_match vmatch p pm_v x hd_val **
+         base_iterator_match vmatch p (pm /. 2.0R) (Empty #t) (Ghost.reveal tl_val))
+        (base_iterator_match vmatch p pm bi (Ghost.reveal l))
+        (mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Base bi) tl_val **
+         trade (elt_or_serialized_match vmatch p pm_v x hd_val **
+                mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base bi) tl_val)
+               (mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm (Base bi) (Ghost.reveal l)))
+        fn _ {
+          // base_iterator_match → base_mixed_list_match Empty tl_val
+          unfold (base_iterator_match vmatch p (pm /. 2.0R) (Empty #t) (Ghost.reveal tl_val));
+          drop_ (base_mixed_list_match vmatch p (pm /. 2.0R) (Empty #t) (Ghost.reveal tl_val));
+          rewrite (mixed_list_match_n vmatch p 1 0 (pm /. 2.0R) (Base bi) tl_val)
+            as (mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base bi) tl_val);
+          elim_trade
+            (elt_or_serialized_match vmatch p pm_v x hd_val **
+             mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base bi) tl_val)
+            (mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm (Base bi) (Ghost.reveal l));
+          unfold (mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm (Base bi) (Ghost.reveal l));
+          rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm bi (Ghost.reveal l))
+            as (base_mixed_list_match vmatch p pm bi (Ghost.reveal l));
+          fold (base_iterator_match vmatch p pm bi (Ghost.reveal l));
+        };
+      rewrite (trade (elt_or_serialized_match vmatch p pm_v x hd_val ** base_iterator_match vmatch p (pm /. 2.0R) (Empty #t) (Ghost.reveal tl_val))
+                     (base_iterator_match vmatch p pm bi (Ghost.reveal l)))
+        as (trade (elt_or_serialized_match vmatch p pm_v x hd_val ** base_iterator_match vmatch p (pm /. 2.0R) (Empty #t) (Ghost.reveal tl_val))
+                  (base_iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l)));
+      fold (base_iterator_next_eos_post vmatch p pm r (Ghost.reveal i_orig) (Ghost.reveal l) x);
+      x
+    } else {
+      // Case len > 1: narrow tail base, result is bi_tail
+      mixed_list_match_n_length vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base bi) (Ghost.reveal tl_val);
+      unfold (mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base bi) tl_val);
+      let n_tail_sz = SZ.sub len_sz 1sz;
+      rewrite (base_mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) bi tl_val)
+        as (base_mixed_list_match_n vmatch p 1 (SZ.v n_tail_sz) (pm /. 2.0R) bi tl_val);
+      let bi_tail = base_mixed_list_narrow_n vmatch p j 1 (SZ.v n_tail_sz) (pm /. 2.0R) bi tl_val 1sz n_tail_sz;
+      FStar.List.Pure.Properties.splitAt_length_total (Ghost.reveal tl_val);
+      rewrite (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail (list_narrow tl_val (SZ.v 1sz - 1) (SZ.v n_tail_sz)))
+        as (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail (Ghost.reveal tl_val));
+      rewrite (trade (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail (list_narrow tl_val (SZ.v 1sz - 1) (SZ.v n_tail_sz)))
+                     (base_mixed_list_match_n vmatch p 1 (SZ.v n_tail_sz) (pm /. 2.0R) bi tl_val))
+        as (trade (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail (Ghost.reveal tl_val))
+                 (base_mixed_list_match_n vmatch p 1 (SZ.v n_tail_sz) (pm /. 2.0R) bi tl_val));
+      // Form new base_iterator bi_tail
+      rewrite (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail (Ghost.reveal tl_val))
+        as (base_iterator_match vmatch p (pm /. 2.0R) bi_tail (Ghost.reveal tl_val));
+      R.write r bi_tail;
+      // Build composite trade
+      intro_trade
+        (elt_or_serialized_match vmatch p pm_v x hd_val **
+         base_iterator_match vmatch p (pm /. 2.0R) bi_tail (Ghost.reveal tl_val))
+        (base_iterator_match vmatch p pm bi (Ghost.reveal l))
+        (trade (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail (Ghost.reveal tl_val))
+              (base_mixed_list_match_n vmatch p 1 (SZ.v n_tail_sz) (pm /. 2.0R) bi tl_val) **
+         trade (elt_or_serialized_match vmatch p pm_v x hd_val **
+                mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base bi) tl_val)
+               (mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm (Base bi) (Ghost.reveal l)))
+        fn _ {
+          // base_iterator_match → base_mixed_list_match bi_tail tl_val
+          unfold (base_iterator_match vmatch p (pm /. 2.0R) bi_tail (Ghost.reveal tl_val));
+          // Elim narrow trade
+          elim_trade
+            (base_mixed_list_match vmatch p (pm /. 2.0R) bi_tail (Ghost.reveal tl_val))
+            (base_mixed_list_match_n vmatch p 1 (SZ.v n_tail_sz) (pm /. 2.0R) bi tl_val);
+          rewrite (base_mixed_list_match_n vmatch p 1 (SZ.v n_tail_sz) (pm /. 2.0R) bi tl_val)
+            as (base_mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) bi tl_val);
+          fold (mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base bi) tl_val);
+          // Recover original via next_n trade
+          elim_trade
+            (elt_or_serialized_match vmatch p pm_v x hd_val **
+             mixed_list_match_n vmatch p 1 (nat_pred (SZ.v len_sz)) (pm /. 2.0R) (Base bi) tl_val)
+            (mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm (Base bi) (Ghost.reveal l));
+          unfold (mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm (Base bi) (Ghost.reveal l));
+          rewrite (base_mixed_list_match_n vmatch p 0 (SZ.v len_sz) pm bi (Ghost.reveal l))
+            as (base_mixed_list_match vmatch p pm bi (Ghost.reveal l));
+          fold (base_iterator_match vmatch p pm bi (Ghost.reveal l));
+        };
+      rewrite (trade (elt_or_serialized_match vmatch p pm_v x hd_val ** base_iterator_match vmatch p (pm /. 2.0R) bi_tail (Ghost.reveal tl_val))
+                     (base_iterator_match vmatch p pm bi (Ghost.reveal l)))
+        as (trade (elt_or_serialized_match vmatch p pm_v x hd_val ** base_iterator_match vmatch p (pm /. 2.0R) bi_tail (Ghost.reveal tl_val))
+                  (base_iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l)));
+      fold (base_iterator_next_eos_post vmatch p pm r (Ghost.reveal i_orig) (Ghost.reveal l) x);
+      x
+    }
+  }
+}
+```
+
+#pop-options
+
+let base_iterator_next_post
+  (#t: Type0) (#u: Type0)
+  (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (pm: perm) (r: R.ref (base_iterator t)) (i_orig: base_iterator t) (l: list u)
+  (res: t)
+: Tot slprop
+= exists* pm_v hd_val tl_l it' pm' .
+    vmatch pm_v res hd_val **
+    R.pts_to r it' **
+    base_iterator_match vmatch p pm' it' tl_l **
+    trade
+      (vmatch pm_v res hd_val **
+       base_iterator_match vmatch p pm' it' tl_l)
+      (base_iterator_match vmatch p pm i_orig l) **
+    pure (l == hd_val :: tl_l)
+
+#push-options "--z3rlimit 8000 --fuel 2 --ifuel 1 --ext no:context_pruning"
+
+inline_for_extraction
+```pulse
+fn base_iterator_next
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (j: LPS.jumper p)
+  (pm: perm) (r: R.ref (base_iterator t)) (i_orig: Ghost.erased (base_iterator t)) (l: Ghost.erased (list u))
+  (vmatch_share: share_t vmatch) (vmatch_gather: gather_t vmatch)
+  (zcp: zero_copy_parse (vmatch 1.0R) p)
+requires
+  R.pts_to r (Ghost.reveal i_orig) ** base_iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l) ** pure (Cons? (Ghost.reveal l))
+returns res: t
+ensures
+  base_iterator_next_post vmatch p pm r (Ghost.reveal i_orig) (Ghost.reveal l) res
+{
+  let eos_res = base_iterator_next_eos vmatch p j pm r i_orig l vmatch_share vmatch_gather;
+  unfold (base_iterator_next_eos_post vmatch p pm r (Ghost.reveal i_orig) (Ghost.reveal l) eos_res);
+  with pm_v hd_val tl_l it' pm' . assert (
+    elt_or_serialized_match vmatch p pm_v eos_res hd_val **
+    R.pts_to r it' **
+    base_iterator_match vmatch p pm' it' tl_l **
+    trade
+      (elt_or_serialized_match vmatch p pm_v eos_res hd_val **
+       base_iterator_match vmatch p pm' it' tl_l)
+      (base_iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l)) **
+    pure (Ghost.reveal l == hd_val :: tl_l)
+  );
+  match eos_res {
+    EElement x -> {
+      rewrite (elt_or_serialized_match vmatch p pm_v (EElement x) hd_val)
+        as (vmatch pm_v x hd_val);
+      rewrite (trade
+        (elt_or_serialized_match vmatch p pm_v (EElement x) hd_val **
+         base_iterator_match vmatch p pm' it' tl_l)
+        (base_iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l)))
+        as (trade
+          (vmatch pm_v x hd_val **
+           base_iterator_match vmatch p pm' it' tl_l)
+          (base_iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l)));
+      fold (base_iterator_next_post vmatch p pm r (Ghost.reveal i_orig) (Ghost.reveal l) x);
+      x
+    }
+    ESerialized pl -> {
+      rewrite (elt_or_serialized_match vmatch p pm_v (ESerialized pl) hd_val)
+        as (pts_to_parsed p pl #pm_v hd_val);
+      let x = zcp pl #pm_v #hd_val;
+      // Rewrite the eos trade to use pts_to_parsed
+      rewrite (trade
+        (elt_or_serialized_match vmatch p pm_v (ESerialized pl) hd_val **
+         base_iterator_match vmatch p pm' it' tl_l)
+        (base_iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l)))
+        as (trade
+          (pts_to_parsed p pl #pm_v hd_val **
+           base_iterator_match vmatch p pm' it' tl_l)
+          (base_iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l)));
+      // Compose trades
+      Trade.trans_hyp_l
+        (vmatch 1.0R x hd_val)
+        (pts_to_parsed p pl #pm_v hd_val)
+        (base_iterator_match vmatch p pm' it' tl_l)
+        (base_iterator_match vmatch p pm (Ghost.reveal i_orig) (Ghost.reveal l));
+      fold (base_iterator_next_post vmatch p pm r (Ghost.reveal i_orig) (Ghost.reveal l) x);
+      x
+    }
+  }
+}
+```
+
+#pop-options

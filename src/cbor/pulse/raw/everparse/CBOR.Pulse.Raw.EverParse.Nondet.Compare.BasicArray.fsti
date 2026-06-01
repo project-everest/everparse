@@ -19,6 +19,37 @@ val compare_cbor_raw_basic_fuel_array_case
   (map_bound: option SZ.t)
   (n: Ghost.erased nat { Ghost.reveal n >= 1 })
   (compare_rec: compare_cbor_raw_fuel_t basic_data_model (NG.option_sz_v map_bound) (Ghost.hide (Ghost.reveal n - 1)))
+  (slow_cont: compare_cbor_raw_array_slow_t basic_data_model (NG.option_sz_v map_bound) n)
+  (x1 x2: cbor_raw)
+  (len: SZ.t)
+  (sq: squash (
+    CBOR_Case_Array? x1 /\ CBOR_Case_Array? x2 /\
+    IT.mixed_list_length (CBOR_Case_Array?.v x1).cbor_array_ptr == len /\
+    IT.mixed_list_length (CBOR_Case_Array?.v x2).cbor_array_ptr == len
+  ))
+  (#pm1: perm) (#v1: Ghost.erased raw_data_item)
+  (#pm2: perm) (#v2: Ghost.erased raw_data_item)
+: stt (option bool)
+    (cbor_raw_match_fuel n pm1 x1 v1 **
+     cbor_raw_match_fuel n pm2 x2 v2 **
+     pure (
+       Array? (Ghost.reveal v1) /\ Array? (Ghost.reveal v2) /\
+       List.Tot.length (Array?.v (Ghost.reveal v1)) == SZ.v len /\
+       List.Tot.length (Array?.v (Ghost.reveal v2)) == SZ.v len /\
+       raw_data_item_size v1 <= Ghost.reveal n /\
+       raw_data_item_size v2 <= Ghost.reveal n
+     ))
+    (fun res ->
+      cbor_raw_match_fuel n pm1 x1 v1 **
+      cbor_raw_match_fuel n pm2 x2 v2 **
+      pure (res == check_equiv_array_total basic_data_model (NG.option_sz_v map_bound) v1 v2))
+
+inline_for_extraction
+val compare_cbor_raw_basic_fuel_array_slow_case
+  (f64: squash SZ.fits_u64)
+  (map_bound: option SZ.t)
+  (n: Ghost.erased nat { Ghost.reveal n >= 1 })
+  (compare_rec: compare_cbor_raw_fuel_t basic_data_model (NG.option_sz_v map_bound) (Ghost.hide (Ghost.reveal n - 1)))
   (x1 x2: cbor_raw)
   (len: SZ.t)
   (sq: squash (

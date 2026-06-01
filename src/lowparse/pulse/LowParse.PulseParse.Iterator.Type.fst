@@ -57,3 +57,16 @@ let mixed_list_length
 = match i with
   | Base bi -> base_mixed_list_length bi
   | Append _ cb ca _ _ _ _ _ _ -> SZ.add cb ca
+
+// Option H: base_iterator is a type alias for base_mixed_list. The associated
+// _start/_next/_next_eos Pulse functions walk base_mixed_list directly,
+// avoiding the IBase|IPair tag dispatch and the larger iterator struct
+// (which has to accommodate the IPair branch). This is the perf path used
+// by the parser-produced CBOR_Case_{Array,Map}_Base arms.
+let base_iterator (t: Type0) : Type0 = base_mixed_list t
+
+let base_iterator_length
+  (#t: Type)
+  (i: base_iterator t)
+: Tot SZ.t
+= base_mixed_list_length i
