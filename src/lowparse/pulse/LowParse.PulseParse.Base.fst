@@ -765,3 +765,31 @@ fn accessor_parser_ext
   with v2 . assert (pts_to_parsed p2 input #pm v2);
   input
 }
+
+inline_for_extraction
+let copyful_parse
+  (#t' #t: Type0)
+  (vmatch: t' -> t -> slprop)
+  (#k: parser_kind)
+  (p: parser k t)
+=
+  (input: slice byte) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased t) ->
+  stt t'
+    (pts_to_parsed p input #pm v)
+    (fun res ->
+      pts_to_parsed p input #pm v **
+      vmatch res v
+    )
+
+inline_for_extraction
+let free_t
+  (#t' #t: Type0)
+  (vmatch: t' -> t -> slprop)
+=
+  (x: t') ->
+  (#v: Ghost.erased t) ->
+  stt unit
+    (vmatch x v)
+    (fun _ -> emp)
