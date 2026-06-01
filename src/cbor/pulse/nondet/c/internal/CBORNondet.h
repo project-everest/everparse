@@ -54,6 +54,14 @@ CBOR_Pulse_Raw_EverParse_Nondet_Compare_compare_cbor_raw_basic_fuel_array(
 );
 
 FStar_Pervasives_Native_option__bool
+CBOR_Pulse_Raw_EverParse_Nondet_Compare_compare_cbor_raw_basic_fuel_array_slow(
+  FStar_Pervasives_Native_option__size_t map_bound,
+  cbor_raw x1,
+  cbor_raw x2,
+  size_t len
+);
+
+FStar_Pervasives_Native_option__bool
 CBOR_Pulse_Raw_EverParse_Nondet_Compare_compare_cbor_raw_basic_fuel_map(
   FStar_Pervasives_Native_option__size_t map_bound,
   cbor_raw x1,
