@@ -793,3 +793,31 @@ let free_t
   stt unit
     (vmatch x v)
     (fun _ -> emp)
+
+inline_for_extraction
+fn copyful_parse_leaf
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (r: leaf_reader p)
+: copyful_parse #_ #_ (LPS.eq_as_slprop t) #_ p
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  let res = r input;
+  fold (LPS.eq_as_slprop t res v);
+  res
+}
+
+inline_for_extraction
+fn free_leaf
+  (#t: Type0)
+: free_t #t #t (LPS.eq_as_slprop t)
+=
+  (x: t)
+  (#v: Ghost.erased _)
+{
+  unfold (LPS.eq_as_slprop t x v);
+}
