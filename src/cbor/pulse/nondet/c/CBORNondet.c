@@ -1370,6 +1370,21 @@ CBOR_Pulse_Raw_EverParse_Read_cbor_raw_read_fuel(Pulse_Lib_Slice_slice__uint8_t 
   return CBOR_Pulse_Raw_EverParse_Read_cbor_raw_read_match_aux(input);
 }
 
+static LowParse_PulseParse_Iterator_Type_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+CBOR_Pulse_Raw_EverParse_Access_cbor_array_ptr_of(cbor_raw x)
+{
+  if (x.tag == CBOR_Case_Array)
+    return x.case_CBOR_Case_Array.cbor_array_ptr;
+  else
+    return
+      (
+        (LowParse_PulseParse_Iterator_Type_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw){
+          .tag = LowParse_PulseParse_Iterator_Type_Base,
+          { .case_Base = { .tag = LowParse_PulseParse_Iterator_Type_Empty } }
+        }
+      );
+}
+
 typedef struct FStar_Pervasives_Native_option__uint8_t_s
 {
   FStar_Pervasives_Native_option__bool_tags tag;
@@ -3611,27 +3626,13 @@ CBOR_Pulse_Raw_EverParse_Nondet_Compare_compare_cbor_raw_basic_fuel(
         x2);
   else if (mt1 == CBOR_MAJOR_TYPE_ARRAY)
   {
-    cbor_array__CBOR_Pulse_Raw_EverParse_Type_cbor_raw ite0;
-    if (x1.tag == CBOR_Case_Array)
-      ite0 = x1.case_CBOR_Case_Array;
-    else
-      ite0 =
-        KRML_EABORT(cbor_array__CBOR_Pulse_Raw_EverParse_Type_cbor_raw,
-          "unreachable (pattern matches are exhaustive in F*)");
     size_t
     len1 =
-      LowParse_PulseParse_Iterator_Type_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(ite0.cbor_array_ptr);
-    cbor_array__CBOR_Pulse_Raw_EverParse_Type_cbor_raw ite;
-    if (x2.tag == CBOR_Case_Array)
-      ite = x2.case_CBOR_Case_Array;
-    else
-      ite =
-        KRML_EABORT(cbor_array__CBOR_Pulse_Raw_EverParse_Type_cbor_raw,
-          "unreachable (pattern matches are exhaustive in F*)");
+      LowParse_PulseParse_Iterator_Type_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(CBOR_Pulse_Raw_EverParse_Access_cbor_array_ptr_of(x1));
     if
     (
       len1 !=
-        LowParse_PulseParse_Iterator_Type_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(ite.cbor_array_ptr)
+        LowParse_PulseParse_Iterator_Type_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(CBOR_Pulse_Raw_EverParse_Access_cbor_array_ptr_of(x2))
     )
       return
         ((FStar_Pervasives_Native_option__bool){ .tag = FStar_Pervasives_Native_Some, .v = false });

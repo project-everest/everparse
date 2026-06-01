@@ -10232,5 +10232,3 @@ iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>;
 pub type cbor_det_map_iterator_t <'a> =
 iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
 <'a>;
-
-pub fn dummy_cbor_det_t <'a>() -> cbor_raw <'a> { cbor_raw::CBOR_Case_Simple { v: 0u8 } }

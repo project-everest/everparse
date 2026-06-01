@@ -1496,6 +1496,19 @@ fn cbor_raw_read_fuel <'a>(input: &'a [u8]) -> cbor_raw <'a>
     res
 }
 
+fn cbor_array_ptr_of <'a>(x: cbor_raw <'a>) ->
+    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    <'a>
+{
+    match x
+    {
+        cbor_raw::CBOR_Case_Array { v: a } => a.cbor_array_ptr,
+        _ =>
+          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
+          { _0: base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty }
+    }
+}
+
 #[derive(PartialEq, Clone, Copy)]
 enum option__uint8_t
 {
@@ -3502,15 +3515,9 @@ fn compare_cbor_raw_basic_fuel(map_bound: option__size_t, x1: cbor_raw, x2: cbor
     else if mt1 == cbor_major_type_array
     {
         let len1: usize =
-            mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                match x1
-                { cbor_raw::CBOR_Case_Array { v } => v, _ => panic!("Incomplete pattern matching") }.cbor_array_ptr
-            );
+            mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(cbor_array_ptr_of(x1));
         let len2: usize =
-            mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                match x2
-                { cbor_raw::CBOR_Case_Array { v } => v, _ => panic!("Incomplete pattern matching") }.cbor_array_ptr
-            );
+            mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(cbor_array_ptr_of(x2));
         if len1 != len2
         { option__bool::Some { v: false } }
         else

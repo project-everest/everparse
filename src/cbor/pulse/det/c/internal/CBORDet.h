@@ -9,6 +9,7 @@ extern "C" {
 
 #include "krmllib.h"
 
+#include "CBORDetType.h"
 #include "../CBORDet.h"
 
 size_t
@@ -42,16 +43,6 @@ CBOR_Pulse_Raw_EverParse_Det_Impl_cbor_raw_sort_aux(
   Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
   a
 );
-
-typedef cbor_raw cbor_det_t;
-
-typedef cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw cbor_det_map_entry_t;
-
-typedef LowParse_PulseParse_Iterator_Type_iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-cbor_det_array_iterator_t;
-
-typedef LowParse_PulseParse_Iterator_Type_iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-cbor_det_map_iterator_t;
 
 typedef cbor_det_freeable_t_ cbor_det_freeable_t;
 

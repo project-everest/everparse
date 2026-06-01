@@ -5,8 +5,7 @@
 
 #include "krmllib.h"
 
-#include "CBORDetAPI.h"
-#include "CBORDetAbstract.h"
+#include "CBORDetType.h"
 
 bool COSE_Format_validate_bool(cbor_det_t c);
 
@@ -19,12 +18,6 @@ Parser for evercddl_bool
 */
 bool COSE_Format_parse_bool(cbor_det_t c);
 
-typedef struct Pulse_Lib_Slice_slice__uint8_t_s
-{
-  uint8_t *elt;
-  size_t len;
-}
-Pulse_Lib_Slice_slice__uint8_t;
 
 typedef enum { FStar_Pervasives_Native_None, FStar_Pervasives_Native_Some }
 FStar_Pervasives_Native_option__size_t_tags;
