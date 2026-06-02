@@ -719,6 +719,24 @@ fn zero_copy_parse_synth
   res
 }
 
+(* copyful_parse combinators *)
+
+inline_for_extraction
+fn copyful_parse_synth
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#tl: Type0) (#vmatch: tl -> t1 -> slprop) (r: PPB.copyful_parse vmatch p1)
+  (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 })
+: PPB.copyful_parse #_ #_ (LPC.vmatch_synth vmatch f1) #_ (parse_synth p1 f2)
+= (input: slice byte)
+  (#pm: _)
+  (#v: _)
+{
+  pts_to_parsed_synth_l2r p1 f2 f1 input;
+  let res = r input;
+  pts_to_parsed_synth_r2l p1 f2 f1 input v;
+  fold (LPC.vmatch_synth vmatch f1 res v);
+  res
+}
+
 inline_for_extraction
 fn zero_copy_parse_filter
   (#t: Type0) (#t1: Type0)
