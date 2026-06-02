@@ -30,6 +30,11 @@ export EVERPARSE_USE_FSTAR_EXE
 export EVERPARSE_USE_KRML_EXE
 export EVERPARSE_USE_OPAMROOT
 
+# DICE_HOME (directory holding the Pulse DICE examples) may be set by
+# config.Makefile (via ./configure --dice-home) and otherwise defaults to
+# the from-source location below. Export it so the cddl DPE tests pick it up.
+export DICE_HOME
+
 include src/z3-version.Makefile
 
 NEED_KRML :=
@@ -47,7 +52,12 @@ endif
 NEED_FSTAR :=
 ifneq (1,$(EVERPARSE_USE_FSTAR_EXE))
 export FSTAR_EXE := $(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe
-export DICE_HOME := $(EVERPARSE_OPT_PATH)/FStar/pulse/share/pulse/examples/dice
+# When building F* from source, the Pulse DICE examples live under opt/.
+# config.Makefile (via --dice-home) may have set DICE_HOME already; only
+# fall back to this default when it has not.
+ifeq (,$(DICE_HOME))
+DICE_HOME := $(EVERPARSE_OPT_PATH)/FStar/pulse/share/pulse/examples/dice
+endif
 NEED_FSTAR := $(EVERPARSE_OPT_PATH)/FStar.done
 z3_exe := $(shell $(FSTAR_EXE) --locate_z3 \$(EVERPARSE_Z3_VERSION) 2>/dev/null)
 ifneq (0,$(.SHELLSTATUS))

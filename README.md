@@ -399,6 +399,12 @@ for the full list of options. The most useful ones are:
 * If you want to use a specific Z3 version, pass `--z3-version=VERSION`
   (default: `4.13.3`.)
 
+* The cddl DPE tests need the Pulse DICE examples. When building F\*
+  from source, `./configure` defaults `DICE_HOME` to
+  `opt/FStar/pulse/share/pulse/examples/dice`. With a F\* binary package
+  the examples are not shipped, so you must point `DICE_HOME` at a
+  checkout of them with `--dice-home=PATH`.
+
 As a shortcut, `./configure --use-my-deps` has the same effect as
 `--use-fstar-exe --use-krml-exe --use-opamroot`.
 
