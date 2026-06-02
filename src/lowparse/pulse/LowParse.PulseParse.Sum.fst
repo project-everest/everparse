@@ -1883,6 +1883,78 @@ fn free_sum_case
   }
 }
 
+(* ========== Copyful parser + free for a sum payload at a known tag (implicit sums) ========== *)
+
+// For implicit sums the tag is supplied externally (not parsed inline): the
+// parser is [parse_sum_cases t pc k] and the high value is [sum_cases t k]
+// (= refine_with_tag, isomorphic to the payload via synth_sum_case). The owned
+// low representation, per-case copyful/free and destructors are exactly those of
+// the closed owned sum; we just lift across the [synth_sum_case] isomorphism.
+
+let vmatch_sum_cases
+  (t: sum)
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
+  (k: sum_key t)
+  (xl: low)
+  (v: sum_cases t k)
+: slprop
+= vmatch_sum_case t low tag_of_low vmatch_cases k xl (synth_sum_case_recip t k v)
+
+#push-options "--z3rlimit 64"
+
+inline_for_extraction
+fn copyful_parse_sum_cases
+  (t: sum u#0 u#0)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
+  (w: (k: sum_key t) -> PPB.copyful_parse (vmatch_sum_case t low tag_of_low vmatch_cases k) (dsnd (pc k)))
+  (destr: dep_enum_destr (sum_enum t) (copyful_parse_sum_payload_t t pc low tag_of_low vmatch_cases))
+  (k: sum_key t)
+: PPB.copyful_parse (vmatch_sum_cases t low tag_of_low vmatch_cases k) (parse_sum_cases t pc k)
+=
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (sum_cases t k))
+{
+  synth_sum_case_injective t k;
+  synth_sum_case_inverse t k;
+  Classical.forall_intro (parse_sum_cases_eq' t pc k);
+  PPB.pts_to_parsed_ext (parse_synth (dsnd (pc k)) (synth_sum_case t k)) input;
+  pts_to_parsed_synth_l2r (dsnd (pc k)) (synth_sum_case t k) (synth_sum_case_recip t k) input;
+  let res = copyful_parse_sum_payload_dispatch t pc low tag_of_low vmatch_cases w destr k input;
+  pts_to_parsed_synth_r2l (dsnd (pc k)) (synth_sum_case t k) (synth_sum_case_recip t k) input (Ghost.reveal v);
+  PPB.pts_to_parsed_ext (parse_sum_cases t pc k) input;
+  fold (vmatch_sum_cases t low tag_of_low vmatch_cases k res v);
+  res
+}
+
+#pop-options
+
+inline_for_extraction
+fn free_sum_cases
+  (t: sum u#0 u#0)
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
+  (f: (k: sum_key t) -> PPB.free_t (vmatch_cases k))
+  (destr: dep_enum_destr (sum_enum t) (free_sum_payload_t t low tag_of_low vmatch_cases))
+  (k: sum_key t)
+: PPB.free_t #low #(sum_cases t k) (vmatch_sum_cases t low tag_of_low vmatch_cases k)
+=
+  (xl: low)
+  (#v: Ghost.erased (sum_cases t k))
+{
+  unfold (vmatch_sum_cases t low tag_of_low vmatch_cases k xl v);
+  unfold (vmatch_sum_case t low tag_of_low vmatch_cases k xl (synth_sum_case_recip t k v));
+  elim_pure_explicit (tag_of_low xl == k);
+  free_sum_payload_dispatch t low tag_of_low vmatch_cases f destr k xl;
+  ()
+}
+
 (* ========== Copyful parser combinators for OPEN sums (dsum / tagged unions with default) ========== *)
 
 // copyful_parse_false: a copyful parser for parse_false (the dead default case

@@ -677,6 +677,59 @@ let emit_copyful_owned_dsum o i n tn cprefix cl dt =
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
   wp o "let free_%s : PPB.free_t %s_vmatch =\n  PPS.free_dsum %s_sum %s_low %s_tag_of_low %s_casevmatch free_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ()))\n\n" n n n n n n n
 
+(* Emit copyful parser (read_<n>) and free (free_<n>) for an IMPLICIT sum: the
+   tag is not stored inline but supplied as a parameter [k], the high type is
+   [<n> k] (= a tag-refinement, defeq to [LP.sum_cases <n>_sum (<tn>_as_enum_key k)]
+   via the generated [<n>_eq_lemma] SMTPat), and the parser is parameterized:
+   [<n>_parser k = LP.parse_sum_cases <n>_sum parse_<n>_cases (<tn>_as_enum_key k)].
+   We reuse the closed owned-sum machinery (inductive [<n>_low], [<n>_tag_of_low],
+   [<n>_casevmatch], per-case copyful/free) but emit a tag-parameterized vmatch,
+   read_<n> and free_<n> built from PPS.{vmatch,copyful_parse,free}_sum_cases.
+   [tn] is the tag enum type name, [cprefix] the constructor prefix, [cl] the
+   (case, field-type) list (auto-completed, default folded in). *)
+let emit_copyful_implicit_sum o i n tn cprefix cl =
+  (* owned low representation (an inductive mirroring the high constructors) *)
+  wp o "noeq type %s_low =\n" n;
+  List.iter (fun (case, ty) -> wp o "  | %s_%s_low of %s\n" cprefix case (copyful_lowtype_name ty)) cl;
+  wp o "\n";
+  (* tag discriminator on the low representation *)
+  wp o "inline_for_extraction\nlet %s_tag_of_low (xl: %s_low) : LP.sum_key %s_sum =\n  match xl with\n" n n n;
+  List.iter (fun (case, ty) -> wp o "  | %s_%s_low _ -> %s_as_enum_key %s\n" cprefix case tn (String.capitalize_ascii case)) cl;
+  wp o "\n";
+  (* per-case vmatch *)
+  wp o "let %s_casevmatch (k: LP.sum_key %s_sum) (xl: %s_low) (vp: LP.sum_type_of_tag %s_sum k) : Pulse.Lib.Core.slprop =\n  match k with\n" n n n n;
+  List.iter (fun (case, ty) ->
+    let cn = String.capitalize_ascii case in
+    wp o "  | %s -> (match xl with | %s_%s_low v -> %s v vp | _ -> Pulse.Lib.Core.pure False)\n" cn cprefix case (copyful_vmatch_name ty)
+  ) cl;
+  wp o "\n";
+  (* exported low type *)
+  wp i "val %s_lowtype : Type0\n\n" n;
+  wp o "let %s_lowtype = %s_low\n\n" n n;
+  (* exported tag-parameterized vmatch *)
+  wp i "val %s_vmatch (k:%s) : %s_lowtype -> %s k -> Pulse.Lib.Core.slprop\n\n" n tn n n;
+  wp o "let %s_vmatch (k:%s) : %s_lowtype -> %s k -> Pulse.Lib.Core.slprop =\n  PPS.vmatch_sum_cases %s_sum %s_low %s_tag_of_low %s_casevmatch (%s_as_enum_key k)\n\n" n tn n n n n n n tn;
+  (* per-case copyful parsers *)
+  wp o "inline_for_extraction\nlet copyful_%s_cases (k: LP.sum_key %s_sum)\n  : PPS.copyful_parse_sum_payload_t %s_sum parse_%s_cases %s_low %s_tag_of_low %s_casevmatch k =\n  match k with\n" n n n n n n n;
+  List.iter (fun (case, ty) ->
+    let cn = String.capitalize_ascii case in
+    wp o "  | %s -> PPS.copyful_parse_sum_case %s_sum %s_low %s_tag_of_low %s_casevmatch %s\n      %s %s_%s_low () ()\n" cn n n n n cn (copyful_read_name ty) cprefix case
+  ) cl;
+  wp o "\n";
+  (* tag-parameterized copyful parser for the sum *)
+  wp i "val read_%s (k:%s) : PPB.copyful_parse (%s_vmatch k) (%s_parser k)\n\n" n tn n n;
+  wp o "let read_%s (k:%s) : PPB.copyful_parse (%s_vmatch k) (%s_parser k) =\n  PPS.copyful_parse_sum_cases %s_sum parse_%s_cases\n    %s_low %s_tag_of_low %s_casevmatch copyful_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n tn n n n n n n n n tn;
+  (* per-case free *)
+  wp o "inline_for_extraction\nlet free_%s_cases (k: LP.sum_key %s_sum)\n  : PPB.free_t (%s_casevmatch k) =\n  match k with\n" n n n;
+  List.iter (fun (case, ty) ->
+    let cn = String.capitalize_ascii case in
+    wp o "  | %s -> PPS.free_sum_case %s_sum %s_low %s_tag_of_low %s_casevmatch %s\n      %s (fun xl -> match xl with | %s_%s_low v -> Some v | _ -> None) ()\n" cn n n n n cn (copyful_free_name ty) cprefix case
+  ) cl;
+  wp o "\n";
+  (* tag-parameterized free for the sum *)
+  wp i "val free_%s (k:%s) : PPB.free_t (%s_vmatch k)\n\n" n tn n;
+  wp o "let free_%s (k:%s) : PPB.free_t (%s_vmatch k) =\n  PPS.free_sum_cases %s_sum %s_low %s_tag_of_low %s_casevmatch free_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n tn n n n n n n tn
+
 let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
   let qname = if tn = "" then n else tn^"@"^n in
   let li = sizeof ty in
@@ -1680,6 +1733,8 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
         wl o "let %s_jumper k =\n  LL.jump_sum_cases %s_sum parse_%s_cases jump_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
       if need_jumper then
         wp o "let %s_jumper k =\n  PPS.jump_sum_cases %s_sum parse_%s_cases jump_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n n n n tn;
+      if !emit_pulse then
+        emit_copyful_implicit_sum o i n tn cprefix cl;
     | Some def -> (* Horible synth boilerplate to deal with refine_with_tag *)
       w o "let _ : squash (%s_parser_kind == LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases (LP.get_parser_kind %s)) =\n" n n n (pcombinator_name def);
       w o "  _ by (FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ())\n\n";
