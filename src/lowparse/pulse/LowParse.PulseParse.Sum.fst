@@ -1630,7 +1630,67 @@ let vmatch_sum
 = pure (tag_of_low xl == sum_tag_of_data t v)
   ** vmatch_cases (sum_tag_of_data t v) xl (synth_sum_case_recip t (sum_tag_of_data t v) v)
 
-// free_sum: dispatch to the per-case free using tag_of_low (a CONCRETE function of xl)
+// free_sum_payload_t: per-key free for the payload of a known tag
+let free_sum_payload_t
+  (t: sum)
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
+  (k: sum_key t)
+: Tot Type
+= PPB.free_t (vmatch_cases k)
+
+inline_for_extraction
+fn free_sum_payload_if'
+  (t: sum u#0 u#0)
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
+  (k: sum_key t)
+  (cond: bool)
+  (ift: (cond_true cond -> Tot (free_sum_payload_t t low tag_of_low vmatch_cases k)))
+  (iff: (cond_false cond -> Tot (free_sum_payload_t t low tag_of_low vmatch_cases k)))
+: (free_sum_payload_t t low tag_of_low vmatch_cases k)
+=
+  (xl: _)
+  (#v: _)
+{
+  if cond {
+    ift () xl
+  } else {
+    iff () xl
+  }
+}
+
+inline_for_extraction
+let free_sum_payload_if
+  (t: sum u#0 u#0)
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
+  (k: sum_key t)
+: Tot (if_combinator (free_sum_payload_t t low tag_of_low vmatch_cases k) eq_trivial)
+= free_sum_payload_if' t low tag_of_low vmatch_cases k
+
+inline_for_extraction
+let free_sum_payload_dispatch
+  (t: sum)
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
+  (f: (k: sum_key t) -> PPB.free_t (vmatch_cases k))
+  (destr: dep_enum_destr (sum_enum t) (free_sum_payload_t t low tag_of_low vmatch_cases))
+  (k: sum_key t)
+: Tot (free_sum_payload_t t low tag_of_low vmatch_cases k)
+= destr
+    _
+    (free_sum_payload_if t low tag_of_low vmatch_cases)
+    (fun _ _ -> ())
+    (fun _ _ _ _ -> ())
+    f
+    k
+
+// free_sum: dispatch to the per-case free via a dep_enum_destr (first-order, extracts to C)
 inline_for_extraction
 fn free_sum
   (t: sum u#0 u#0)
@@ -1638,6 +1698,7 @@ fn free_sum
   (tag_of_low: low -> sum_key t)
   (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
   (f: (k: sum_key t) -> PPB.free_t (vmatch_cases k))
+  (destr: dep_enum_destr (sum_enum t) (free_sum_payload_t t low tag_of_low vmatch_cases))
 : PPB.free_t #low #(sum_type t) (vmatch_sum t low tag_of_low vmatch_cases)
 =
   (xl: low)
@@ -1649,8 +1710,10 @@ fn free_sum
   let k = tag_of_low xl;
   rewrite (vmatch_cases (sum_tag_of_data t v) xl (synth_sum_case_recip t (sum_tag_of_data t v) v))
     as (vmatch_cases k xl (synth_sum_case_recip t (sum_tag_of_data t v) v));
-  f k xl;
+  free_sum_payload_dispatch t low tag_of_low vmatch_cases f destr k xl;
+  ()
 }
+
 
 // copyful_parse_sum_payload_t: per-key copyful parser for the payload of a known tag
 // note: it uses vmatch_sum_case (the variant WITH the pure tag fact)

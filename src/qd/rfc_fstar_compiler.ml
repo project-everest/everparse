@@ -566,6 +566,56 @@ let emit_copyful_bytes o i n combinator =
   wp o "let read_%s = %s\n\n" n combinator;
   wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> PPBY.free_copy_bytes x #(Ghost.hide (Ghost.reveal v <: BY.bytes))\n\n" n n
 
+(* Emit copyful parser (read_<n>) and free (free_<n>) for a closed sum (tagged
+   union) whose payloads are not all leaf-readable: it builds a freshly
+   allocated, freeable "owned" low representation [<n>_low] (an inductive type
+   mirroring the high-level constructors, reusing each field type's own
+   generated lowtype, and existing F* types only for leaves). The vmatch relates
+   it to the high value via PPS.vmatch_sum + a per-case [<n>_casevmatch].
+   [tn] is the tag enum type name, [cprefix] the constructor prefix, [cl] the
+   (case, field-type) list (auto-completed for all enum keys). *)
+let emit_copyful_owned_sum o i n tn cprefix cl =
+  (* owned low representation (an inductive mirroring the high constructors) *)
+  wp o "noeq type %s_low =\n" n;
+  List.iter (fun (case, ty) -> wp o "  | %s_%s_low of %s\n" cprefix case (copyful_lowtype_name ty)) cl;
+  wp o "\n";
+  (* tag discriminator on the low representation *)
+  wp o "inline_for_extraction\nlet %s_tag_of_low (xl: %s_low) : LP.sum_key %s_sum =\n  match xl with\n" n n n;
+  List.iter (fun (case, ty) -> wp o "  | %s_%s_low _ -> %s_as_enum_key %s\n" cprefix case tn (String.capitalize_ascii case)) cl;
+  wp o "\n";
+  (* per-case vmatch *)
+  wp o "let %s_casevmatch (k: LP.sum_key %s_sum) (xl: %s_low) (vp: LP.sum_type_of_tag %s_sum k) : Pulse.Lib.Core.slprop =\n  match k with\n" n n n n;
+  List.iter (fun (case, ty) ->
+    let cn = String.capitalize_ascii case in
+    wp o "  | %s -> (match xl with | %s_%s_low v -> %s v vp | _ -> Pulse.Lib.Core.pure False)\n" cn cprefix case (copyful_vmatch_name ty)
+  ) cl;
+  wp o "\n";
+  (* exported low type and vmatch *)
+  wp i "val %s_lowtype : Type0\n\n" n;
+  wp o "let %s_lowtype = %s_low\n\n" n n;
+  wp i "val %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop\n\n" n n n;
+  wp o "let %s_vmatch = PPS.vmatch_sum %s_sum %s_low %s_tag_of_low %s_casevmatch\n\n" n n n n n;
+  (* per-case copyful parsers *)
+  wp o "inline_for_extraction\nlet copyful_%s_cases (k: LP.sum_key %s_sum)\n  : PPS.copyful_parse_sum_payload_t %s_sum parse_%s_cases %s_low %s_tag_of_low %s_casevmatch k =\n  match k with\n" n n n n n n n;
+  List.iter (fun (case, ty) ->
+    let cn = String.capitalize_ascii case in
+    wp o "  | %s -> PPS.copyful_parse_sum_case %s_sum %s_low %s_tag_of_low %s_casevmatch %s\n      %s %s_%s_low () ()\n" cn n n n n cn (copyful_read_name ty) cprefix case
+  ) cl;
+  wp o "\n";
+  (* copyful parser for the sum *)
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n  PPS.copyful_parse_sum %s_sum %s_repr_reader %s_repr_jumper parse_%s_cases\n    %s_low %s_tag_of_low %s_casevmatch copyful_%s_cases (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n n n n tn tn n n n n n;
+  (* per-case free *)
+  wp o "inline_for_extraction\nlet free_%s_cases (k: LP.sum_key %s_sum)\n  : PPB.free_t (%s_casevmatch k) =\n  match k with\n" n n n;
+  List.iter (fun (case, ty) ->
+    let cn = String.capitalize_ascii case in
+    wp o "  | %s -> PPS.free_sum_case %s_sum %s_low %s_tag_of_low %s_casevmatch %s\n      %s (fun xl -> match xl with | %s_%s_low v -> Some v | _ -> None) ()\n" cn n n n n cn (copyful_free_name ty) cprefix case
+  ) cl;
+  wp o "\n";
+  (* free for the sum *)
+  wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
+  wp o "let free_%s : PPB.free_t %s_vmatch =\n  PPS.free_sum %s_sum %s_low %s_tag_of_low %s_casevmatch free_%s_cases (_ by (LP.dep_enum_destr_tac ()))\n\n" n n n n n n n
+
 let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
   let qname = if tn = "" then n else tn^"@"^n in
   let li = sizeof ty in
@@ -1745,8 +1795,12 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
        = no-op). This works for both closed and open (default) sums. Sums with
        owned byte/list payloads need an owned low representation and are handled
        in a later layer. *)
-    if !emit_pulse && li.has_lserializer then
-      emit_copyful_leaf o i n;
+    if !emit_pulse then begin
+      if li.has_lserializer then
+        emit_copyful_leaf o i n
+      else if def = None then
+        emit_copyful_owned_sum o i n tn cprefix cl
+    end;
 
     (* validity from sum to tag *)
       let maybe = match def with
