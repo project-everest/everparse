@@ -368,32 +368,40 @@ Pulse from your clones with your patches.
 ## Using an existing opam root, F\*, etc.
 
 If you want to use existing dependencies instead of letting EverParse
-locally install them, you can populate the following environment
-variables:
+locally install them, you can run the `./configure` script with the
+appropriate options before building. `./configure` produces
+`config.Makefile`, which is read by the build. Run `./configure --help`
+for the full list of options. The most useful ones are:
 
-* `EVERPARSE_USE_OPAMROOT=1` instructs EverParse to use the current
-  opam installation (the value of `OPAMROOT` if set, otherwise
+* `--use-opamroot` instructs EverParse to use the current opam
+  installation (the value of `OPAMROOT` if set, otherwise
   `$HOME/.opam`) instead of creating a local install
 
-* If you want to use your own F\*, first set
-  `EVERPARSE_USE_FSTAR_EXE=1`, then set `FSTAR_EXE` to the full path
-  of your `fstar.exe` executable (by default, `fstar.exe` via your
-  `PATH`.)
-  
+* If you want to use your own F\*, pass `--fstar-exe=PATH` with the full
+  path of your `fstar.exe` executable (or `--use-fstar-exe` to take
+  `fstar.exe` from your `PATH`.)
+
   NOTE: If you want to use EverCDDL, you cannot use a F\* binary
   package because EverCDDL has a F\* plugin that needs to be compiled
   with the very same OCaml environment as the one used to compile
-  F\*. This is why setting `EVERPARSE_USE_FSTAR_EXE` will automatically set
-  `EVERPARSE_USE_OPAMROOT=1`.
-  
-* If you want to use your own Karamel, first set
-  `EVERPARSE_USE_KRML_EXE=1`, then set `KRML_EXE` to the full path
-  of the Karamel executable.
+  F\*. This is why `--use-fstar-exe` (and `--fstar-exe=PATH`) will
+  automatically imply `--use-opamroot`.
 
-As a shortcut, setting `EVERPARSE_USE_MY_DEPS=1` has the same effect
-as setting all of those environment variables to 1.
+* If you want to use your own Karamel, pass `--krml-exe=PATH` with the
+  full path of the Karamel executable (or `--use-krml-exe` if `KRML_EXE`
+  is set when running `make`.)
+
+* If you want to use a specific Z3 version, pass `--z3-version=VERSION`
+  (default: `4.13.3`.)
+
+As a shortcut, `./configure --use-my-deps` has the same effect as
+`--use-fstar-exe --use-krml-exe --use-opamroot`.
+
+Running `make` without first running `./configure` is equivalent to
+running `./configure` with no argument, i.e. EverParse builds F\*,
+Karamel and Pulse from source.
 
 NOTES: These settings are all ignored when building a binary package.
 
 NOTE: DO NOT use the clones from the opt/ subdirectory with
-`EVERPARSE_USE_*`
+`./configure --use-*`

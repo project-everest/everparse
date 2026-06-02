@@ -598,6 +598,7 @@ jobs:
           ref: ${{ env.updated_sha }}
           sparse-checkout: |
             Dockerfile
+            configure
             deps.Makefile
             opt/Makefile
             opt/hashes.Makefile

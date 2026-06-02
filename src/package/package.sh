@@ -80,10 +80,9 @@ make_everparse() {
     cp0=$(which gcp >/dev/null 2>&1 && echo gcp || echo cp)
     cp="$cp0 --preserve=mode,timestamps"
 
-    ## Clear all variables
-    export EVERPARSE_USE_OPAMROOT=
-    export EVERPARSE_USE_FSTAR_EXE=
-    export EVERPARSE_USE_KRML_HOME=
+    ## Reset dependency configuration to the default (build F*, Karamel and
+    ## opam from source under opt/).
+    ( cd "$EVERPARSE_HOME" && ./configure )
     rm -f "$EVERPARSE_HOME/opam-env.Makefile"
 
     # Rebuild EverParse

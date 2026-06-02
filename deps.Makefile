@@ -13,13 +13,24 @@ export EVERPARSE_OPT_PATH := $(shell cygpath -m $(EVERPARSE_OPT_PATH))
 NO_PULSE := 1
 endif
 
-include src/z3-version.Makefile
-
-ifeq (1,$(EVERPARSE_USE_MY_DEPS))
-export EVERPARSE_USE_OPAMROOT:=1
-export EVERPARSE_USE_FSTAR_EXE:=1
-export EVERPARSE_USE_KRML_EXE:=1
+# config.Makefile records the dependency configuration (whether to build
+# F*, Karamel and opam from source or to use pre-existing ones). It is
+# produced by ./configure (see ./configure --help). The rule below has no
+# prerequisites and invokes ./configure without argument, so that a default
+# config.Makefile is produced on first use.
+ifeq (,$(filter clean distclean $(clean_rules),$(MAKECMDGOALS)))
+config.Makefile:
+	./configure
+include config.Makefile
+else
+-include config.Makefile
 endif
+
+export EVERPARSE_USE_FSTAR_EXE
+export EVERPARSE_USE_KRML_EXE
+export EVERPARSE_USE_OPAMROOT
+
+include src/z3-version.Makefile
 
 NEED_KRML :=
 ifneq (1,$(EVERPARSE_USE_KRML_EXE))
@@ -30,6 +41,7 @@ ifeq (,$(KRML_EXE))
 # TODO: fix Karamel to not require KRML_HOME set
 $(error "Inconsistent setup: EVERPARSE_USE_KRML_EXE set but KRML_EXE not set")
 endif
+export KRML_EXE
 endif
 
 NEED_FSTAR :=
@@ -48,6 +60,7 @@ ifeq (,$(FSTAR_EXE))
 # rely on PATH
 export FSTAR_EXE := fstar.exe
 endif
+export FSTAR_EXE
 endif
 
 NEED_OPAM_DIR :=
@@ -170,7 +183,7 @@ clean-krmllib:
 .PHONY: clean-krmllib
 
 distclean: clean clean-krmllib
-	rm -rf opam-env.Makefile
+	rm -rf opam-env.Makefile config.Makefile
 	+$(MAKE) -C opt clean
 
 clean:

@@ -32,3 +32,4 @@ nuget_package
 .opam.tmp
 krmllib.done
 opam-env.Makefile
+config.Makefile
