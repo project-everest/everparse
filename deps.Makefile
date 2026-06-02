@@ -66,6 +66,11 @@ NEED_OPAM :=
 ifneq (1,$(EVERPARSE_USE_OPAMROOT))
 NEED_OPAM_DIR := $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh
 NEED_OPAM := $(EVERPARSE_OPT_PATH)/opam.done
+else
+# OPAMROOT may be set (e.g. by config.Makefile) to select the opam root;
+# export it so opam-env.sh picks it up. If empty, opam-env.sh falls back
+# to the ambient opam root.
+export OPAMROOT
 endif
 with_opam := eval "$$($(EVERPARSE_OPT_PATH)/opam-env.sh --shell)" &&
 

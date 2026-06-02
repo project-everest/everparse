@@ -45,6 +45,11 @@ Options:
   --use-opamroot         Use the ambient opam switch instead of creating a
                          local opam root under opt/.
 
+  --opamroot=PATH        Use the opam root at PATH instead of creating a local
+                         opam root under opt/. Implies --use-opamroot. If not
+                         given (but --use-opamroot is), the ambient opam root
+                         (as reported by `opam var root`, or $OPAMROOT) is used.
+
   --z3-version=VERSION   Use the given Z3 version (default: 4.13.3).
 
   -h, --help             Print this help message and exit.
@@ -56,6 +61,7 @@ use_krml_exe=
 use_opamroot=
 fstar_exe=
 krml_exe=
+opamroot=
 z3_version=
 
 for arg in "$@"; do
@@ -72,6 +78,8 @@ for arg in "$@"; do
       use_krml_exe=1; krml_exe="${arg#--krml-exe=}" ;;
     --use-opamroot)
       use_opamroot=1 ;;
+    --opamroot=*)
+      use_opamroot=1; opamroot="${arg#--opamroot=}" ;;
     --z3-version=*)
       z3_version="${arg#--z3-version=}" ;;
     -h|--help)
@@ -98,6 +106,9 @@ rm -f "$tmp"
   fi
   if [ -n "$krml_exe" ]; then
     echo "KRML_EXE := $krml_exe"
+  fi
+  if [ -n "$opamroot" ]; then
+    echo "OPAMROOT := $opamroot"
   fi
   if [ -n "$z3_version" ]; then
     echo "EVERPARSE_Z3_VERSION := $z3_version"

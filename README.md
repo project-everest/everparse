@@ -377,6 +377,11 @@ for the full list of options. The most useful ones are:
   installation (the value of `OPAMROOT` if set, otherwise
   `$HOME/.opam`) instead of creating a local install
 
+* `--opamroot=PATH` instructs EverParse to use the opam root at `PATH`
+  (it implies `--use-opamroot`.) This is useful to point EverParse at a
+  dedicated opam root without having to set `OPAMROOT` in the environment
+  every time you run `make`.
+
 * If you want to use your own F\*, pass `--fstar-exe=PATH` with the full
   path of your `fstar.exe` executable (or `--use-fstar-exe` to take
   `fstar.exe` from your `PATH`.)
