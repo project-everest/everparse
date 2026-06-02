@@ -1784,3 +1784,38 @@ fn copyful_parse_sum_case
   fold (vmatch_sum_case t low tag_of_low vmatch_cases k res v);
   res
 }
+
+// free_sum_case: build a per-case free from the field free and an option-valued
+// discriminator `disc` (Some y on this constructor, None otherwise). The squash
+// is discharged by reduction at use site:
+//   vmatch_cases k xl vp == (match disc xl with Some y -> vmatch_field y vp | None -> pure False)
+inline_for_extraction
+fn free_sum_case
+  (t: sum u#0 u#0)
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
+  (k: sum_key t)
+  (#tf: Type0)
+  (#vmatch_field: tf -> sum_type_of_tag t k -> slprop)
+  (free_field: PPB.free_t vmatch_field)
+  (disc: low -> option tf)
+  (sq: squash (forall (xl: low) (vp: sum_type_of_tag t k) .
+        vmatch_cases k xl vp == (match disc xl with | Some y -> vmatch_field y vp | None -> pure False)))
+: PPB.free_t #low #(sum_type_of_tag t k) (vmatch_cases k)
+=
+  (xl: low)
+  (#vp: _)
+{
+  match disc xl {
+    Some y -> {
+      rewrite (vmatch_cases k xl vp) as (vmatch_field y vp);
+      free_field y;
+    }
+    None -> {
+      rewrite (vmatch_cases k xl vp) as (pure False);
+      let _ = elim_pure_explicit False;
+      ()
+    }
+  }
+}
