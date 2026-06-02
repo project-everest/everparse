@@ -12,6 +12,9 @@ module Impl = CBOR.Pulse.Raw.EverParse.Det.Impl
 module S = Pulse.Lib.Slice
 module SU = Pulse.Lib.Slice.Util
 
+friend CBOR.Pulse.API.Det.Type
+module ABDet = CBOR.Pulse.Raw.EverParse.Det.ArrayBuilder
+
 (* ======== Match relation and basic ops ======== *)
 
 [@@pulse_unfold]
@@ -172,6 +175,15 @@ let cbor_det_mk_text_string_from_arrayptr (_: unit) =
 
 let cbor_det_mk_array_from_array () : mk_array_from_array_t cbor_det_match
   = mk_array_from_array (Impl.cbor_det_mk_array ())
+
+[@@pulse_unfold]
+let cbor_det_array_owned = ABDet.cbor_det_array_owned
+
+let cbor_det_array_empty = ABDet.cbor_det_array_empty
+let cbor_det_array_singleton = ABDet.cbor_det_array_singleton
+let cbor_det_array_append = ABDet.cbor_det_array_append
+let cbor_det_array_finalize = ABDet.cbor_det_array_finalize
+let cbor_det_array_owned_length_fits = ABDet.cbor_det_array_owned_length_fits
 
 [@@pulse_unfold]
 let cbor_det_map_entry_match = Impl.cbor_det_map_entry_match

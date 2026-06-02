@@ -14,6 +14,9 @@ module SU = Pulse.Lib.Slice.Util
 module R = Pulse.Lib.Reference
 module PM = Pulse.Lib.SeqMatch
 module UTF8 = CBOR.Pulse.API.UTF8
+module NondetAB = CBOR.Pulse.Raw.EverParse.Nondet.ArrayBuilder
+module IT = LowParse.PulseParse.Iterator.Type
+module L = FStar.List.Tot
 
 module C = C // necessary to pull C.krml into extraction, otherwise Karamel fails with "`C._zero_for_deref`: impossible", believing that it is a non-function external symbol, which Karamel extraction to Rust does not support
 
@@ -513,6 +516,118 @@ ensures
   }
 }
 
+(* ======== Structural array builder ops ======== *)
+
+let cbor_nondet_array_append_cell_t = IT.mixed_list cbornondet
+
+[@@pulse_unfold]
+let cbor_nondet_array_owned (a: cbor_nondet_array) (l: list Spec.cbor) : Tot slprop =
+  NondetAB.cbor_nondet_array_owned a.array l
+
+fn cbor_nondet_array_empty (_: unit)
+requires emp
+returns res: cbor_nondet_array
+ensures cbor_nondet_array_owned res []
+{
+  let inner = NondetAB.cbor_nondet_array_empty ();
+  let res : cbor_nondet_array = { array = inner };
+  rewrite (NondetAB.cbor_nondet_array_owned inner []) as (NondetAB.cbor_nondet_array_owned res.array []);
+  res
+}
+
+fn cbor_nondet_array_singleton
+  (x: cbornondet) (ry: R.ref cbornondet)
+  (#pm: perm) (#v: Ghost.erased Spec.cbor) (#w0: Ghost.erased cbornondet)
+requires cbor_nondet_match pm x v ** R.pts_to ry w0
+returns res: cbor_nondet_array
+ensures
+  cbor_nondet_array_owned res [Ghost.reveal v] **
+  Trade.trade
+    (cbor_nondet_array_owned res [Ghost.reveal v])
+    (cbor_nondet_match pm x v ** (exists* w. R.pts_to ry w))
+{
+  let inner = NondetAB.cbor_nondet_array_singleton x ry;
+  let res : cbor_nondet_array = { array = inner };
+  rewrite
+    (NondetAB.cbor_nondet_array_owned inner [Ghost.reveal v] **
+     Trade.trade
+       (NondetAB.cbor_nondet_array_owned inner [Ghost.reveal v])
+       (cbor_nondet_match pm x v ** (exists* w. R.pts_to ry w)))
+  as
+    (NondetAB.cbor_nondet_array_owned res.array [Ghost.reveal v] **
+     Trade.trade
+       (NondetAB.cbor_nondet_array_owned res.array [Ghost.reveal v])
+       (cbor_nondet_match pm x v ** (exists* w. R.pts_to ry w)));
+  res
+}
+
+fn cbor_nondet_array_append
+  (x1 x2: cbor_nondet_array)
+  (r_before r_after: R.ref cbor_nondet_array_append_cell_t)
+  (#l1 #l2: Ghost.erased (list Spec.cbor))
+  (#vb0 #va0: Ghost.erased cbor_nondet_array_append_cell_t)
+requires
+  cbor_nondet_array_owned x1 l1 ** cbor_nondet_array_owned x2 l2 **
+  R.pts_to r_before vb0 ** R.pts_to r_after va0
+returns res: option cbor_nondet_array
+ensures
+  (match res with
+   | None ->
+     cbor_nondet_array_owned x1 l1 ** cbor_nondet_array_owned x2 l2 **
+     (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va)
+   | Some r ->
+     cbor_nondet_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)) **
+     Trade.trade
+       (cbor_nondet_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)))
+       (cbor_nondet_array_owned x1 l1 ** cbor_nondet_array_owned x2 l2 **
+        (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va)))
+{
+  let res = NondetAB.cbor_nondet_array_append x1.array x2.array r_before r_after;
+  match res {
+    None -> { None #cbor_nondet_array }
+    Some r -> {
+      let resa : cbor_nondet_array = { array = r };
+      rewrite
+        (NondetAB.cbor_nondet_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)) **
+         Trade.trade
+           (NondetAB.cbor_nondet_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)))
+           (NondetAB.cbor_nondet_array_owned x1.array l1 ** NondetAB.cbor_nondet_array_owned x2.array l2 **
+            (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va)))
+      as
+        (NondetAB.cbor_nondet_array_owned resa.array (L.append (Ghost.reveal l1) (Ghost.reveal l2)) **
+         Trade.trade
+           (NondetAB.cbor_nondet_array_owned resa.array (L.append (Ghost.reveal l1) (Ghost.reveal l2)))
+           (NondetAB.cbor_nondet_array_owned x1.array l1 ** NondetAB.cbor_nondet_array_owned x2.array l2 **
+            (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va)));
+      Some #cbor_nondet_array resa
+    }
+  }
+}
+
+ghost
+fn cbor_nondet_array_owned_length_fits
+  (a: cbor_nondet_array) (#l: Ghost.erased (list Spec.cbor))
+requires cbor_nondet_array_owned a l
+ensures cbor_nondet_array_owned a l ** pure (FStar.UInt.fits (L.length (Ghost.reveal l)) U64.n)
+{
+  NondetAB.cbor_nondet_array_owned_length_fits a.array;
+}
+
+fn cbor_nondet_array_to_cbor
+  (a: cbor_nondet_array)
+  (#l: Ghost.erased (l': list Spec.cbor { FStar.UInt.fits (L.length l') U64.n }))
+requires cbor_nondet_array_owned a l
+returns res: cbornondet
+ensures
+  cbor_nondet_match 1.0R res (Spec.pack (Spec.CArray (Ghost.reveal l))) **
+  Trade.trade
+    (cbor_nondet_match 1.0R res (Spec.pack (Spec.CArray (Ghost.reveal l))))
+    (cbor_nondet_array_owned a l)
+{
+  NondetAB.cbor_nondet_array_finalize a.array;
+  a.array
+}
+
 (* ======== Map: length ======== *)
 
 fn cbor_nondet_map_length
@@ -804,3 +919,6 @@ ensures
 (* ======== dummy ======== *)
 
 let dummy_cbor_nondet_t () = RawType.CBOR_Case_Invalid
+
+let dummy_cbor_nondet_array_append_cell () : cbor_nondet_array_append_cell_t =
+  IT.Base IT.Empty

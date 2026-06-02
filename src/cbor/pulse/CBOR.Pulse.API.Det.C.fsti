@@ -15,6 +15,8 @@ module U64 = FStar.UInt64
 module U8 = FStar.UInt8
 
 module AP = Pulse.Lib.ArrayPtr
+module R = Pulse.Lib.Reference
+module L = FStar.List.Tot
 
 val cbor_det_match: perm -> cbor_det_t -> Spec.cbor -> slprop
 
@@ -115,6 +117,75 @@ val cbor_det_mk_array_from_array (_: unit) : mk_array_from_array_t cbor_det_matc
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let cbor_det_mk_array_from_array' = mk_array_from_array' (cbor_det_mk_array_from_array ())
+
+(* Structural array builder operations.
+
+   These build CBOR arrays by O(1) structural composition (no element copy or
+   re-encoding), on top of fully-owned arrays. [cbor_det_array_owned x l] means
+   [x] is a fully-owned (permission 1.0R, canonical length encoding) CBOR array
+   whose elements are [l]. Such arrays can be combined with [cbor_det_array_append]
+   and turned back into a normal CBOR object with [cbor_det_array_finalize].
+
+   No heap allocation: the application provides the (fixed number of) scratch
+   references the operations need. *)
+
+val cbor_det_array_owned (x: cbor_det_t) (l: list Spec.cbor) : slprop
+
+val cbor_det_array_empty (_: unit)
+: stt cbor_det_t
+    emp
+    (fun res -> cbor_det_array_owned res [])
+
+val cbor_det_array_singleton
+  (x: cbor_det_t) (ry: R.ref cbor_det_t)
+  (#pm: perm) (#v: Ghost.erased Spec.cbor) (#w0: Ghost.erased cbor_det_t)
+: stt cbor_det_t
+    (cbor_det_match pm x v ** R.pts_to ry w0)
+    (fun res ->
+      cbor_det_array_owned res [Ghost.reveal v] **
+      Trade.trade
+        (cbor_det_array_owned res [Ghost.reveal v])
+        (cbor_det_match pm x v ** (exists* w. R.pts_to ry w)))
+
+val cbor_det_array_append
+  (x1 x2: cbor_det_t)
+  (r_before r_after: R.ref cbor_det_array_append_cell_t)
+  (#l1 #l2: Ghost.erased (list Spec.cbor))
+  (#vb0 #va0: Ghost.erased cbor_det_array_append_cell_t)
+: stt (option cbor_det_t)
+    (cbor_det_array_owned x1 l1 ** cbor_det_array_owned x2 l2 **
+     R.pts_to r_before vb0 ** R.pts_to r_after va0)
+    (fun res ->
+      match res with
+      | None ->
+        cbor_det_array_owned x1 l1 ** cbor_det_array_owned x2 l2 **
+        (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va)
+      | Some r ->
+        cbor_det_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)) **
+        Trade.trade
+          (cbor_det_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)))
+          (cbor_det_array_owned x1 l1 ** cbor_det_array_owned x2 l2 **
+           (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va)))
+
+val cbor_det_array_finalize
+  (x: cbor_det_t)
+  (#l: Ghost.erased (l': list Spec.cbor { FStar.UInt.fits (L.length l') U64.n }))
+: stt unit
+    (cbor_det_array_owned x l)
+    (fun _ ->
+      cbor_det_match 1.0R x (Spec.pack (Spec.CArray (Ghost.reveal l))) **
+      Trade.trade
+        (cbor_det_match 1.0R x (Spec.pack (Spec.CArray (Ghost.reveal l))))
+        (cbor_det_array_owned x l))
+
+(* The length of an owned array fits in a u64; lets callers discharge the
+   refinement of [cbor_det_array_finalize] after a chain of [cbor_det_array_append]s. *)
+val cbor_det_array_owned_length_fits
+  (x: cbor_det_t) (#l: Ghost.erased (list Spec.cbor))
+: stt_ghost unit emp_inames
+    (cbor_det_array_owned x l)
+    (fun _ -> cbor_det_array_owned x l **
+      pure (FStar.UInt.fits (L.length (Ghost.reveal l)) U64.n))
 
 val cbor_det_map_entry_match: perm -> cbor_det_map_entry_t -> Spec.cbor & Spec.cbor -> slprop
 

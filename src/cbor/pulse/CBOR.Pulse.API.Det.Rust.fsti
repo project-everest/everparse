@@ -8,6 +8,8 @@ module U64 = FStar.UInt64
 module S = Pulse.Lib.Slice
 module SZ = FStar.SizeT
 module Base = CBOR.Pulse.API.Base
+module R = Pulse.Lib.Reference
+module L = FStar.List.Tot
 
 val cbordet: Type0
 
@@ -344,6 +346,81 @@ val cbor_det_get_array_item
       pure (cbor_det_get_array_item_postcond i y res)
     )
 
+(* ======== Structural array builder ops ========
+
+   Build CBOR arrays by O(1) structural composition (no element copy or
+   re-encoding) on top of the [cbor_det_array] values produced by
+   [cbor_det_destruct]. [cbor_det_array_owned a l] is the fully-owned
+   (permission 1.0R, canonical length encoding) ownership state of such a
+   builder array whose elements are [l]; it is distinct from the read-only
+   [cbor_det_array_match] view. No heap allocation: the application provides
+   the (fixed number of) scratch references the operations need. *)
+
+(* Abstract scratch-cell type the application must pre-allocate (as references)
+   to call cbor_det_array_append; use dummy_cbor_det_array_append_cell to
+   initialize the references. *)
+val cbor_det_array_append_cell_t: Type0
+
+noextract [@@noextract_to "krml"]
+val cbor_det_array_owned (a: cbor_det_array) (l: list Spec.cbor) : Tot slprop
+
+val cbor_det_array_empty (_: unit)
+: stt cbor_det_array
+    emp
+    (fun res -> cbor_det_array_owned res [])
+
+val cbor_det_array_singleton
+  (x: cbordet) (ry: R.ref cbordet)
+  (#pm: perm) (#v: Ghost.erased Spec.cbor) (#w0: Ghost.erased cbordet)
+: stt cbor_det_array
+    (cbor_det_match pm x v ** R.pts_to ry w0)
+    (fun res ->
+      cbor_det_array_owned res [Ghost.reveal v] **
+      Trade.trade
+        (cbor_det_array_owned res [Ghost.reveal v])
+        (cbor_det_match pm x v ** (exists* w. R.pts_to ry w)))
+
+val cbor_det_array_append
+  (x1 x2: cbor_det_array)
+  (r_before r_after: R.ref cbor_det_array_append_cell_t)
+  (#l1 #l2: Ghost.erased (list Spec.cbor))
+  (#vb0 #va0: Ghost.erased cbor_det_array_append_cell_t)
+: stt (option cbor_det_array)
+    (cbor_det_array_owned x1 l1 ** cbor_det_array_owned x2 l2 **
+     R.pts_to r_before vb0 ** R.pts_to r_after va0)
+    (fun res ->
+      match res with
+      | None ->
+        cbor_det_array_owned x1 l1 ** cbor_det_array_owned x2 l2 **
+        (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va)
+      | Some r ->
+        cbor_det_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)) **
+        Trade.trade
+          (cbor_det_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)))
+          (cbor_det_array_owned x1 l1 ** cbor_det_array_owned x2 l2 **
+           (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va)))
+
+(* The length of an owned array fits in a u64; lets callers discharge the
+   refinement of [cbor_det_array_to_cbor] after a chain of appends. *)
+val cbor_det_array_owned_length_fits
+  (a: cbor_det_array) (#l: Ghost.erased (list Spec.cbor))
+: stt_ghost unit emp_inames
+    (cbor_det_array_owned a l)
+    (fun _ -> cbor_det_array_owned a l **
+      pure (FStar.UInt.fits (L.length (Ghost.reveal l)) U64.n))
+
+(* Constructor: turn an owned builder array into a normal CBOR object. *)
+val cbor_det_array_to_cbor
+  (a: cbor_det_array)
+  (#l: Ghost.erased (l': list Spec.cbor { FStar.UInt.fits (L.length l') U64.n }))
+: stt cbordet
+    (cbor_det_array_owned a l)
+    (fun res ->
+      cbor_det_match 1.0R res (Spec.pack (Spec.CArray (Ghost.reveal l))) **
+      Trade.trade
+        (cbor_det_match 1.0R res (Spec.pack (Spec.CArray (Ghost.reveal l))))
+        (cbor_det_array_owned a l))
+
 val cbor_det_map_length
   (x: cbor_det_map)
   (#p: perm)
@@ -437,3 +514,5 @@ val cbor_det_serialize_map_insert: Base.cbor_det_serialize_map_insert_t
 val cbor_det_serialize_map: Base.cbor_det_serialize_map_t
 
 val dummy_cbor_det_t (_: unit) : cbordet
+
+val dummy_cbor_det_array_append_cell (_: unit) : cbor_det_array_append_cell_t

@@ -9,6 +9,9 @@ module SU = Pulse.Lib.Slice.Util
 module R = Pulse.Lib.Reference
 module PM = Pulse.Lib.SeqMatch
 module UTF8 = CBOR.Pulse.API.UTF8
+module ABDet = CBOR.Pulse.Raw.EverParse.Det.ArrayBuilder
+module IT = LowParse.PulseParse.Iterator.Type
+module L = FStar.List.Tot
 
 open CBOR.Spec.Constants
 open CBOR.Pulse.API.Base
@@ -585,6 +588,119 @@ ensures
 
 #pop-options
 
+(* ======== Structural array builder ops ======== *)
+
+let cbor_det_array_append_cell_t = IT.mixed_list cbordet
+
+[@@pulse_unfold]
+let cbor_det_array_owned (a: cbor_det_array) (l: list Spec.cbor) : Tot slprop =
+  ABDet.cbor_det_array_owned a.array l
+
+fn cbor_det_array_empty (_: unit)
+requires emp
+returns res: cbor_det_array
+ensures cbor_det_array_owned res []
+{
+  let inner = ABDet.cbor_det_array_empty ();
+  let res : cbor_det_array = { array = inner };
+  rewrite (ABDet.cbor_det_array_owned inner []) as (ABDet.cbor_det_array_owned res.array []);
+  res
+}
+
+fn cbor_det_array_singleton
+  (x: cbordet) (ry: R.ref cbordet)
+  (#pm: perm) (#v: Ghost.erased Spec.cbor) (#w0: Ghost.erased cbordet)
+requires cbor_det_match pm x v ** R.pts_to ry w0
+returns res: cbor_det_array
+ensures
+  cbor_det_array_owned res [Ghost.reveal v] **
+  Trade.trade
+    (cbor_det_array_owned res [Ghost.reveal v])
+    (cbor_det_match pm x v ** (exists* w. R.pts_to ry w))
+{
+  let inner = ABDet.cbor_det_array_singleton x ry;
+  let res : cbor_det_array = { array = inner };
+  rewrite
+    (ABDet.cbor_det_array_owned inner [Ghost.reveal v] **
+     Trade.trade
+       (ABDet.cbor_det_array_owned inner [Ghost.reveal v])
+       (cbor_det_match pm x v ** (exists* w. R.pts_to ry w)))
+  as
+    (ABDet.cbor_det_array_owned res.array [Ghost.reveal v] **
+     Trade.trade
+       (ABDet.cbor_det_array_owned res.array [Ghost.reveal v])
+       (cbor_det_match pm x v ** (exists* w. R.pts_to ry w)));
+  res
+}
+
+fn cbor_det_array_append
+  (x1 x2: cbor_det_array)
+  (r_before r_after: R.ref cbor_det_array_append_cell_t)
+  (#l1 #l2: Ghost.erased (list Spec.cbor))
+  (#vb0 #va0: Ghost.erased cbor_det_array_append_cell_t)
+requires
+  cbor_det_array_owned x1 l1 ** cbor_det_array_owned x2 l2 **
+  R.pts_to r_before vb0 ** R.pts_to r_after va0
+returns res: option cbor_det_array
+ensures
+  (match res with
+   | None ->
+     cbor_det_array_owned x1 l1 ** cbor_det_array_owned x2 l2 **
+     (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va)
+   | Some r ->
+     cbor_det_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)) **
+     Trade.trade
+       (cbor_det_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)))
+       (cbor_det_array_owned x1 l1 ** cbor_det_array_owned x2 l2 **
+        (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va)))
+{
+  let res = ABDet.cbor_det_array_append x1.array x2.array r_before r_after;
+  match res {
+    None -> { None #cbor_det_array }
+    Some r -> {
+      let resa : cbor_det_array = { array = r };
+      rewrite
+        (ABDet.cbor_det_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)) **
+         Trade.trade
+           (ABDet.cbor_det_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)))
+           (ABDet.cbor_det_array_owned x1.array l1 ** ABDet.cbor_det_array_owned x2.array l2 **
+            (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va)))
+      as
+        (ABDet.cbor_det_array_owned resa.array (L.append (Ghost.reveal l1) (Ghost.reveal l2)) **
+         Trade.trade
+           (ABDet.cbor_det_array_owned resa.array (L.append (Ghost.reveal l1) (Ghost.reveal l2)))
+           (ABDet.cbor_det_array_owned x1.array l1 ** ABDet.cbor_det_array_owned x2.array l2 **
+            (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va)));
+      Some #cbor_det_array resa
+    }
+  }
+}
+
+ghost
+fn cbor_det_array_owned_length_fits
+  (a: cbor_det_array) (#l: Ghost.erased (list Spec.cbor))
+requires cbor_det_array_owned a l
+ensures cbor_det_array_owned a l ** pure (FStar.UInt.fits (L.length (Ghost.reveal l)) U64.n)
+{
+  ABDet.cbor_det_array_owned_length_fits a.array;
+}
+
+fn cbor_det_array_to_cbor
+  (a: cbor_det_array)
+  (#l: Ghost.erased (l': list Spec.cbor { FStar.UInt.fits (L.length l') U64.n }))
+requires cbor_det_array_owned a l
+returns res: cbordet
+ensures
+  cbor_det_match 1.0R res (Spec.pack (Spec.CArray (Ghost.reveal l))) **
+  Trade.trade
+    (cbor_det_match 1.0R res (Spec.pack (Spec.CArray (Ghost.reveal l))))
+    (cbor_det_array_owned a l)
+{
+  ABDet.cbor_det_array_finalize a.array;
+  a.array
+}
+
+
 (* ======== Map: length ======== *)
 
 fn cbor_det_map_length
@@ -884,3 +1000,6 @@ let cbor_det_serialize_map = Impl.cbor_det_serialize_map ()
 (* ======== dummy ======== *)
 
 let dummy_cbor_det_t () = CBOR.Pulse.API.Det.Dummy.dummy_cbor_det_t ()
+
+let dummy_cbor_det_array_append_cell () : cbor_det_array_append_cell_t =
+  IT.Base IT.Empty

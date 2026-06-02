@@ -31,6 +31,7 @@ friend CBOR.Pulse.API.Nondet.Type
 friend CBOR.Pulse.API.Nondet.Common
 
 module Common = CBOR.Pulse.API.Nondet.Common
+module NondetAB = CBOR.Pulse.Raw.EverParse.Nondet.ArrayBuilder
 
 (* ======== Match relation and basic ops ======== *)
 
@@ -124,6 +125,16 @@ let cbor_nondet_get_array_item () =
   get_array_item_safe (Common.cbor_nondet_major_type ())
     (Common.cbor_nondet_get_array_length_unsafe ())
     (Common.cbor_nondet_get_array_item_unsafe ())
+
+(* ======== Structural array builder ops ======== *)
+
+[@@pulse_unfold]
+let cbor_nondet_array_owned = NondetAB.cbor_nondet_array_owned
+let cbor_nondet_array_empty = NondetAB.cbor_nondet_array_empty
+let cbor_nondet_array_singleton = NondetAB.cbor_nondet_array_singleton
+let cbor_nondet_array_append = NondetAB.cbor_nondet_array_append
+let cbor_nondet_array_finalize = NondetAB.cbor_nondet_array_finalize
+let cbor_nondet_array_owned_length_fits = NondetAB.cbor_nondet_array_owned_length_fits
 
 let cbor_nondet_get_map_length () x dest #p #y #vdest =
   Common.cbor_nondet_get_map_length () x dest #p #y #vdest

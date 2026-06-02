@@ -15,6 +15,11 @@ friend CBOR.Pulse.API.Det.Type
 
 module Raw = CBOR.Pulse.Raw.EverParse.Type
 module T = CBOR.Pulse.API.Det.Type
+module IT = LowParse.PulseParse.Iterator.Type
 
 inline_for_extraction
 let dummy_cbor_det_t (_: unit) : T.cbor_det_t = Raw.CBOR_Case_Simple 0uy
+
+inline_for_extraction
+let dummy_cbor_det_array_append_cell (_: unit) : T.cbor_det_array_append_cell_t =
+  IT.Base IT.Empty
