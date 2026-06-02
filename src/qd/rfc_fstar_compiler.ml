@@ -508,6 +508,26 @@ let assume_some = function
   | None -> failwith "assume_some"
   | Some x -> x
 
+(* Emit a copyful parser (read_<n>) and free combinator (free_<n>) for a leaf
+   type that has a leaf_reader (e.g. enums). The vmatch is a pure equality. *)
+let emit_copyful_leaf o i n =
+  wp i "let %s_vmatch : %s -> %s -> Pulse.Lib.Core.slprop = LPS.eq_as_slprop %s\n\n" n n n n;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
+  wp o "let read_%s = PPB.copyful_parse_leaf %s_reader\n\n" n n;
+  wp o "let free_%s = PPB.free_leaf\n\n" n
+
+(* Emit a copyful parser (read_<n>) and free combinator (free_<n>) for a
+   byte-array type. The result is a freshly allocated, freeable byte vector
+   related to the high-level value by PPBY.vmatch_copy_bytes. [combinator] is
+   the copyful_parse_* expression producing the vector. *)
+let emit_copyful_bytes o i n combinator =
+  wp i "let %s_vmatch : Pulse.Lib.Vec.vec FStar.UInt8.t -> %s -> Pulse.Lib.Core.slprop = PPBY.vmatch_copy_bytes\n\n" n n;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
+  wp o "let read_%s = %s\n\n" n combinator;
+  wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> PPBY.free_copy_bytes x #(Ghost.hide (Ghost.reveal v <: BY.bytes))\n\n" n n
+
 let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
   let qname = if tn = "" then n else tn^"@"^n in
   let li = sizeof ty in
@@ -1022,6 +1042,9 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
   wp o "let %s_writer =\n" n;
   wp o "  [@inline_let] let _ = lemma_synth_%s_inj (); lemma_synth_%s_inv () in\n" n n;
   wp o "  LPC.l2r_leaf_write_synth write_%s%s_key synth_%s synth_%s_inv (fun x -> synth_%s_inv x)\n\n" maybe n n n n;
+
+  (* Pulse: copyful parser + free *)
+  emit_copyful_leaf o i n;
 
   (* bytesize lemma *)
   wl i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d) [SMTPat (%s_bytesize x)]\n\n" n n n blen n;
@@ -2233,8 +2256,10 @@ and compile_vlbytes o i is_private n li lenty smin smax =
   if need_jumper then begin
       let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
       wp o "let %s_jumper%s = PPBY.jump_bounded_vlgenbytes %d %d %s %s fits_u64_squash\n\n" n jumper_annot smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax)
-    end
-  
+    end;
+  (* Pulse: copyful parser + free *)
+  emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlgenbytes %d %d %s %s fits_u64_squash" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax))
+
 and compile_typedef tch o i tn fn (ty:type_t) vec def al =
   let n = if tn = "" then String.uncapitalize_ascii fn else tn^"_"^fn in
   let qname = if tn = "" then String.uncapitalize_ascii fn else tn^"@"^fn in
@@ -2575,6 +2600,8 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         wl o "let %s_validator = LL.validate_flbytes %d %dul\n\n" n k k;
         wl o "let %s_jumper : LL.jumper %s_parser = LL.jump_flbytes %d %dul\n\n" n n k k
        end;
+      (* Pulse: copyful parser + free *)
+      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_flbytes %d" k);
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n n;
       w o "let %s_bytesize_eqn x = ()\n\n" n;
       (* intro *)
@@ -2735,6 +2762,8 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
         wp o "let %s_jumper%s = PPBY.jump_bounded_vlbytes %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" n jumper_annot low high high (log256 high)
       end;
+      (* Pulse: copyful parser + free *)
+      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash" low high (log256 high));
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes %d %d x\n\n" n low high;
       (* length *)
@@ -2794,6 +2823,8 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
         wp o "let %s_jumper%s = PPBY.jump_bounded_vlbytes' %d %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer %d) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" n jumper_annot low high repr repr repr
       end;
+      (* Pulse: copyful parser + free *)
+      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash" low high repr repr);
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n repr n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes' %d %d %d x\n\n" n low high repr;
       (* length *)
@@ -3533,6 +3564,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp i "module LPS = LowParse.Pulse.Base\n";
   wp i "module PPB = LowParse.PulseParse.Base\n";
   wp i "module PPC = LowParse.PulseParse.Combinators\n";
+  wp i "module PPBY = LowParse.PulseParse.Bytes\n";
   wp i "module PPVD = LowParse.PulseParse.VLData\n";
   (List.iter (w i "%s\n") (List.rev fsti));
   w i "\n";
