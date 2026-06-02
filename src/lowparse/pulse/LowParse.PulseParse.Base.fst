@@ -854,3 +854,22 @@ fn copyful_parse_synth_lhs
   fold (vmatch_synth_lhs vmatch g res2 v);
   res2
 }
+
+inline_for_extraction
+fn free_synth_lhs
+  (#t1' #t: Type0)
+  (#vmatch: t1' -> t -> slprop)
+  (free: free_t vmatch)
+  (#t2': Type0)
+  (g: t2' -> GTot t1')
+  (g': t2' -> t1')
+  (sq: squash (forall (x: t2') . g' x == g x))
+: free_t #t2' #t (vmatch_synth_lhs vmatch g)
+=
+  (x: t2')
+  (#v: Ghost.erased _)
+{
+  unfold (vmatch_synth_lhs vmatch g x v);
+  rewrite (vmatch (g x) v) as (vmatch (g' x) v);
+  free (g' x);
+}
