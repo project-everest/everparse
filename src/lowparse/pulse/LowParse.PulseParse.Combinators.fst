@@ -738,6 +738,65 @@ fn copyful_parse_synth
 }
 
 inline_for_extraction
+fn free_synth
+  (#tl #th1 #th2: Type0)
+  (#vmatch: tl -> th1 -> slprop)
+  (f: PPB.free_t vmatch)
+  (f1: (th2 -> GTot th1))
+: PPB.free_t #_ #th2 (LPC.vmatch_synth vmatch f1)
+= (x: tl)
+  (#v: Ghost.erased th2)
+{
+  unfold (LPC.vmatch_synth vmatch f1 x v);
+  f x;
+}
+
+inline_for_extraction
+fn copyful_parse_pair
+  (#tl1 #tl2 #th1 #th2: Type0)
+  (#vmatch1: tl1 -> th1 -> slprop)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 th1)
+  (#vmatch2: tl2 -> th2 -> slprop)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 th2)
+  (j1: LPS.jumper p1)
+  (w1: PPB.copyful_parse vmatch1 p1)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (w2: PPB.copyful_parse vmatch2 p2)
+: PPB.copyful_parse #_ #(th1 & th2) (LPC.vmatch_pair vmatch1 vmatch2) #(and_then_kind k1 k2) (nondep_then p1 p2)
+= (input: slice byte)
+  (#pm: _)
+  (#v: _)
+{
+  let input1, input2 = split_nondep_then j1 input sq;
+  unfold (split_nondep_then_post p1 p2 input pm v (input1, input2));
+  let res1 = w1 input1;
+  let res2 = w2 input2;
+  Trade.elim
+    (PPB.pts_to_parsed p1 input1 #(pm /. 2.0R) (fst v) ** PPB.pts_to_parsed p2 input2 #(pm /. 2.0R) (snd v))
+    (PPB.pts_to_parsed (nondep_then p1 p2) input #pm v);
+  fold (LPC.vmatch_pair vmatch1 vmatch2 (res1, res2) v);
+  (res1, res2)
+}
+
+inline_for_extraction
+fn free_pair
+  (#tl1 #tl2 #th1 #th2: Type0)
+  (#vmatch1: tl1 -> th1 -> slprop)
+  (#vmatch2: tl2 -> th2 -> slprop)
+  (f1: PPB.free_t vmatch1)
+  (f2: PPB.free_t vmatch2)
+: PPB.free_t #_ #(th1 & th2) (LPC.vmatch_pair vmatch1 vmatch2)
+= (x: (tl1 & tl2))
+  (#v: Ghost.erased (th1 & th2))
+{
+  unfold (LPC.vmatch_pair vmatch1 vmatch2 x v);
+  f1 (fst x);
+  f2 (snd x);
+}
+
+inline_for_extraction
 fn zero_copy_parse_filter
   (#t: Type0) (#t1: Type0)
   (vmatch: t -> t1 -> slprop)
