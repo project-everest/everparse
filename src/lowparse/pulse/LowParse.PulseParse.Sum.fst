@@ -1882,3 +1882,351 @@ fn free_sum_case
     }
   }
 }
+
+(* ========== Copyful parser combinators for OPEN sums (dsum / tagged unions with default) ========== *)
+
+// copyful_parse_false: a copyful parser for parse_false (the dead default case
+// of a dsum's known-key dispatch). Its precondition entails False, so the body
+// is unreachable.
+inline_for_extraction
+fn copyful_parse_false
+  (vmatch: squash False -> squash False -> slprop)
+: PPB.copyful_parse #(squash False) #(squash False) vmatch #parse_false_kind parse_false
+=
+  (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  let _ = Ghost.reveal v;
+  let res : squash False = false_elim ();
+  rewrite (PPB.pts_to_parsed #_ #(squash False) parse_false input #pm v)
+    as (PPB.pts_to_parsed #_ #(squash False) parse_false input #pm v ** vmatch res v);
+  res
+}
+
+let vmatch_dsum_case
+  (t: dsum)
+  (low: Type0)
+  (tag_of_low: low -> dsum_key t)
+  (vmatch_cases: (k: dsum_key t) -> low -> dsum_type_of_tag t k -> slprop)
+  (k: dsum_key t)
+  (xl: low)
+  (vp: dsum_type_of_tag t k)
+: slprop
+= pure (tag_of_low xl == k) ** vmatch_cases k xl vp
+
+let vmatch_dsum
+  (t: dsum)
+  (low: Type0)
+  (tag_of_low: low -> dsum_key t)
+  (vmatch_cases: (k: dsum_key t) -> low -> dsum_type_of_tag t k -> slprop)
+  (xl: low)
+  (v: dsum_type t)
+: slprop
+= pure (tag_of_low xl == dsum_tag_of_data t v)
+  ** vmatch_cases (dsum_tag_of_data t v) xl (synth_dsum_case_recip t (dsum_tag_of_data t v) v)
+
+// copyful_parse_dsum_payload_t: per-key copyful for the payload of a known/unknown tag
+let copyful_parse_dsum_payload_t
+  (t: dsum)
+  (f: ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
+  (#k': parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (low: Type0)
+  (tag_of_low: low -> dsum_key t)
+  (vmatch_cases: (k: dsum_key t) -> low -> dsum_type_of_tag t k -> slprop)
+  (k: dsum_key t)
+: Tot Type
+= (input: S.slice byte) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (dsum_type_of_tag t k)) ->
+  stt low
+    (PPB.pts_to_parsed (parse_dsum_type_of_tag' t f g k) input #pm v)
+    (fun res ->
+      PPB.pts_to_parsed (parse_dsum_type_of_tag' t f g k) input #pm v **
+      vmatch_dsum_case t low tag_of_low vmatch_cases k res v)
+
+#push-options "--z3rlimit 64"
+
+// Dispatch the per-key copyful parser via the first-order maybe-enum
+// destructor (exactly as read_dsum does), so extraction is first-order C
+// (an if-cascade on the tag) rather than a match on an abstract enum_key.
+inline_for_extraction
+fn copyful_parse_dsum_payload_if'
+  (t: dsum u#0 u#0)
+  (f: ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
+  (#k': Ghost.erased parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (low: Type0)
+  (tag_of_low: low -> dsum_key t)
+  (vmatch_cases: (k: dsum_key t) -> low -> dsum_type_of_tag t k -> slprop)
+  (x: dsum_key t)
+  (cond: bool)
+  (ift: (cond_true cond -> Tot (copyful_parse_dsum_payload_t t f g low tag_of_low vmatch_cases x)))
+  (iff: (cond_false cond -> Tot (copyful_parse_dsum_payload_t t f g low tag_of_low vmatch_cases x)))
+: (copyful_parse_dsum_payload_t t f g low tag_of_low vmatch_cases x)
+=
+  (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  if cond {
+    ift () input
+  } else {
+    iff () input
+  }
+}
+
+inline_for_extraction
+let copyful_parse_dsum_payload_if
+  (t: dsum u#0 u#0)
+  (f: ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
+  (#k': Ghost.erased parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (low: Type0)
+  (tag_of_low: low -> dsum_key t)
+  (vmatch_cases: (k: dsum_key t) -> low -> dsum_type_of_tag t k -> slprop)
+  (x: dsum_key t)
+: Tot (if_combinator (copyful_parse_dsum_payload_t t f g low tag_of_low vmatch_cases x) eq_trivial)
+= copyful_parse_dsum_payload_if' t f g low tag_of_low vmatch_cases x
+
+// the destructor leaf: at a concrete key x, dispatch to the per-case copyful w
+inline_for_extraction
+fn copyful_parse_dsum_payload_leaf
+  (t: dsum u#0 u#0)
+  (f: ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
+  (#k': Ghost.erased parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (low: Type0)
+  (tag_of_low: low -> dsum_key t)
+  (vmatch_cases: (k: dsum_key t) -> low -> dsum_type_of_tag t k -> slprop)
+  (w: (k: dsum_key t) -> copyful_parse_dsum_payload_t t f g low tag_of_low vmatch_cases k)
+  (x: dsum_key t)
+: (copyful_parse_dsum_payload_t t f g low tag_of_low vmatch_cases x)
+=
+  (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  w x input
+}
+
+inline_for_extraction
+let copyful_parse_dsum_payload_dispatch
+  (t: dsum)
+  (f: ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
+  (#k': Ghost.erased parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (low: Type0)
+  (tag_of_low: low -> dsum_key t)
+  (vmatch_cases: (k: dsum_key t) -> low -> dsum_type_of_tag t k -> slprop)
+  (w: (k: dsum_key t) -> copyful_parse_dsum_payload_t t f g low tag_of_low vmatch_cases k)
+  (destr: dep_maybe_enum_destr_t (dsum_enum t) (copyful_parse_dsum_payload_t t f g low tag_of_low vmatch_cases))
+  (k: dsum_key t)
+: Tot (copyful_parse_dsum_payload_t t f g low tag_of_low vmatch_cases k)
+= destr
+    (fun _ -> eq_trivial)
+    (copyful_parse_dsum_payload_if t f g low tag_of_low vmatch_cases)
+    (fun _ _ -> ())
+    (fun _ _ _ _ -> ())
+    (copyful_parse_dsum_payload_leaf t f g low tag_of_low vmatch_cases w)
+    (repr_of_maybe_enum_key (dsum_enum t) k)
+
+inline_for_extraction
+fn copyful_parse_dsum
+  (t: dsum u#0 u#0)
+  (#kt: Ghost.erased parser_kind)
+  (#p: parser kt (dsum_repr_type t))
+  (p32: PPB.leaf_reader (parse_maybe_enum_key p (dsum_enum t)))
+  (j: B.jumper p)
+  (f: ((x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x))))
+  (#k': Ghost.erased parser_kind)
+  (#g: parser k' (dsum_type_of_unknown_tag t))
+  (low: Type0)
+  (tag_of_low: low -> dsum_key t)
+  (vmatch_cases: (k: dsum_key t) -> low -> dsum_type_of_tag t k -> slprop)
+  (w: (k: dsum_key t) -> copyful_parse_dsum_payload_t t f g low tag_of_low vmatch_cases k)
+  (destr: dep_maybe_enum_destr_t (dsum_enum t) (copyful_parse_dsum_payload_t t f g low tag_of_low vmatch_cases))
+  (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
+: PPB.copyful_parse (vmatch_dsum t low tag_of_low vmatch_cases) (parse_dsum t p f g)
+=
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (dsum_type t))
+{
+  let tag_slice = accessor_dsum_tag t j (Ghost.hide f) g () input;
+  let k = p32 tag_slice;
+  Trade.elim _ _;
+  let payload = accessor_clens_dsum_payload t j (Ghost.hide f) g k () input;
+  with pm' v2. assert (PPB.pts_to_parsed (parse_dsum_type_of_tag' t f g k) payload #pm' v2);
+  let res = copyful_parse_dsum_payload_dispatch t f g low tag_of_low vmatch_cases w destr k payload;
+  Trade.elim _ _;
+  rewrite (vmatch_dsum_case t low tag_of_low vmatch_cases k res v2)
+    as (vmatch_dsum t low tag_of_low vmatch_cases res v);
+  res
+}
+
+#pop-options
+
+// copyful_parse_dsum_case: build a per-case copyful from the field copyful and the
+// low-type constructor `mk` (which, for the Unknown case, captures the raw repr).
+inline_for_extraction
+fn copyful_parse_dsum_case
+  (t: dsum u#0 u#0)
+  (low: Type0)
+  (tag_of_low: low -> dsum_key t)
+  (vmatch_cases: (k: dsum_key t) -> low -> dsum_type_of_tag t k -> slprop)
+  (k: dsum_key t)
+  (#tf: Type0)
+  (#kf: Ghost.erased parser_kind)
+  (#pf: parser kf (dsum_type_of_tag t k))
+  (#vmatch_field: tf -> dsum_type_of_tag t k -> slprop)
+  (r: PPB.copyful_parse vmatch_field pf)
+  (mk: tf -> low)
+  (sq_tag: squash (forall (x: tf) . tag_of_low (mk x) == k))
+  (sq_vm: squash (forall (x: tf) (vp: dsum_type_of_tag t k) . vmatch_cases k (mk x) vp == vmatch_field x vp))
+: PPB.copyful_parse (vmatch_dsum_case t low tag_of_low vmatch_cases k) pf
+=
+  (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  let lv = r input;
+  let res = mk lv;
+  rewrite (vmatch_field lv v) as (vmatch_cases k res v);
+  fold (vmatch_dsum_case t low tag_of_low vmatch_cases k res v);
+  res
+}
+
+(* free for open sums (dsum) *)
+
+// Dispatch the per-key free via the first-order maybe-enum destructor (as
+// read_dsum does), so that extraction is first-order C.
+let free_dsum_payload_t
+  (t: dsum)
+  (low: Type0)
+  (tag_of_low: low -> dsum_key t)
+  (vmatch_cases: (k: dsum_key t) -> low -> dsum_type_of_tag t k -> slprop)
+  (k: dsum_key t)
+: Tot Type
+= PPB.free_t (vmatch_cases k)
+
+inline_for_extraction
+fn free_dsum_payload_if'
+  (t: dsum u#0 u#0)
+  (low: Type0)
+  (tag_of_low: low -> dsum_key t)
+  (vmatch_cases: (k: dsum_key t) -> low -> dsum_type_of_tag t k -> slprop)
+  (k: dsum_key t)
+  (cond: bool)
+  (ift: (cond_true cond -> Tot (free_dsum_payload_t t low tag_of_low vmatch_cases k)))
+  (iff: (cond_false cond -> Tot (free_dsum_payload_t t low tag_of_low vmatch_cases k)))
+: (free_dsum_payload_t t low tag_of_low vmatch_cases k)
+=
+  (xl: _)
+  (#v: _)
+{
+  if cond {
+    ift () xl
+  } else {
+    iff () xl
+  }
+}
+
+inline_for_extraction
+let free_dsum_payload_if
+  (t: dsum u#0 u#0)
+  (low: Type0)
+  (tag_of_low: low -> dsum_key t)
+  (vmatch_cases: (k: dsum_key t) -> low -> dsum_type_of_tag t k -> slprop)
+  (k: dsum_key t)
+: Tot (if_combinator (free_dsum_payload_t t low tag_of_low vmatch_cases k) eq_trivial)
+= free_dsum_payload_if' t low tag_of_low vmatch_cases k
+
+inline_for_extraction
+fn free_dsum_payload_leaf
+  (t: dsum u#0 u#0)
+  (low: Type0)
+  (tag_of_low: low -> dsum_key t)
+  (vmatch_cases: (k: dsum_key t) -> low -> dsum_type_of_tag t k -> slprop)
+  (f: (k: dsum_key t) -> PPB.free_t (vmatch_cases k))
+  (k: dsum_key t)
+: (free_dsum_payload_t t low tag_of_low vmatch_cases k)
+=
+  (xl: _)
+  (#v: _)
+{
+  f k xl
+}
+
+inline_for_extraction
+let free_dsum_payload_dispatch
+  (t: dsum)
+  (low: Type0)
+  (tag_of_low: low -> dsum_key t)
+  (vmatch_cases: (k: dsum_key t) -> low -> dsum_type_of_tag t k -> slprop)
+  (f: (k: dsum_key t) -> PPB.free_t (vmatch_cases k))
+  (destr: dep_maybe_enum_destr_t (dsum_enum t) (free_dsum_payload_t t low tag_of_low vmatch_cases))
+  (k: dsum_key t)
+: Tot (free_dsum_payload_t t low tag_of_low vmatch_cases k)
+= destr
+    (fun _ -> eq_trivial)
+    (free_dsum_payload_if t low tag_of_low vmatch_cases)
+    (fun _ _ -> ())
+    (fun _ _ _ _ -> ())
+    (free_dsum_payload_leaf t low tag_of_low vmatch_cases f)
+    (repr_of_maybe_enum_key (dsum_enum t) k)
+
+inline_for_extraction
+fn free_dsum
+  (t: dsum u#0 u#0)
+  (low: Type0)
+  (tag_of_low: low -> dsum_key t)
+  (vmatch_cases: (k: dsum_key t) -> low -> dsum_type_of_tag t k -> slprop)
+  (f: (k: dsum_key t) -> PPB.free_t (vmatch_cases k))
+  (destr: dep_maybe_enum_destr_t (dsum_enum t) (free_dsum_payload_t t low tag_of_low vmatch_cases))
+: PPB.free_t #low #(dsum_type t) (vmatch_dsum t low tag_of_low vmatch_cases)
+=
+  (xl: low)
+  (#v: Ghost.erased (dsum_type t))
+{
+  rewrite (vmatch_dsum t low tag_of_low vmatch_cases xl v)
+    as (pure (tag_of_low xl == dsum_tag_of_data t v) ** vmatch_cases (dsum_tag_of_data t v) xl (synth_dsum_case_recip t (dsum_tag_of_data t v) v));
+  elim_pure_explicit (tag_of_low xl == dsum_tag_of_data t v);
+  let k = tag_of_low xl;
+  rewrite (vmatch_cases (dsum_tag_of_data t v) xl (synth_dsum_case_recip t (dsum_tag_of_data t v) v))
+    as (vmatch_cases k xl (synth_dsum_case_recip t (dsum_tag_of_data t v) v));
+  free_dsum_payload_dispatch t low tag_of_low vmatch_cases f destr k xl;
+  ()
+}
+
+inline_for_extraction
+fn free_dsum_case
+  (t: dsum u#0 u#0)
+  (low: Type0)
+  (tag_of_low: low -> dsum_key t)
+  (vmatch_cases: (k: dsum_key t) -> low -> dsum_type_of_tag t k -> slprop)
+  (k: dsum_key t)
+  (#tf: Type0)
+  (#vmatch_field: tf -> dsum_type_of_tag t k -> slprop)
+  (free_field: PPB.free_t vmatch_field)
+  (disc: low -> option tf)
+  (sq: squash (forall (xl: low) (vp: dsum_type_of_tag t k) .
+        vmatch_cases k xl vp == (match disc xl with | Some y -> vmatch_field y vp | None -> pure False)))
+: PPB.free_t #low #(dsum_type_of_tag t k) (vmatch_cases k)
+=
+  (xl: low)
+  (#vp: _)
+{
+  match disc xl {
+    Some y -> {
+      rewrite (vmatch_cases k xl vp) as (vmatch_field y vp);
+      free_field y;
+    }
+    None -> {
+      rewrite (vmatch_cases k xl vp) as (pure False);
+      let _ = elim_pure_explicit False;
+      ()
+    }
+  }
+}
