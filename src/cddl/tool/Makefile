@@ -23,7 +23,7 @@ build: $(EVERPARSE_CDDL)
 .PHONY: build
 
 $(EVERPARSE_CDDL): ocaml.done $(wildcard ocaml/*/*.ml*)
-	cd ocaml && $(FSTAR_EXE) --ocamlenv dune build
+	cd ocaml && dune build
 	cd ocaml && dune install --prefix=$(realpath $(EVERPARSE_SRC_PATH)/..)
 
 .PHONY: all

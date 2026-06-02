@@ -13,11 +13,6 @@ ODIR := _output
 
 FSTAR_EXE ?= fstar.exe
 
-# evercddl.lib (handwritten + extracted) lives under $EVERPARSE_HOME/lib;
-# fstar.lib lives under the F* installation. `fstar.exe --ocamlenv` prepends
-# the latter to OCAMLPATH for us.
-export OCAMLPATH := $(EVERPARSE_HOME)/lib:$(OCAMLPATH)
-
 GEN := ocaml/_build/default/gen_fst/Main.exe
 
 TARGETS := dpe cose_sign cose_encrypt
@@ -31,7 +26,7 @@ CDDLS_cose_sign    := $(EVERPARSE_SRC_PATH)/cose/cose-sign.cddl           $(EVER
 CDDLS_cose_encrypt := $(EVERPARSE_SRC_PATH)/cose/cose-encrypt.cddl        $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl
 
 $(GEN): ocaml/dune-project ocaml/gen_fst/dune ocaml/gen_fst/Main.ml
-	cd ocaml && $(FSTAR_EXE) --ocamlenv dune build gen_fst/Main.exe
+	cd ocaml && dune build gen_fst/Main.exe
 
 # Template instantiated once per target. Each instance writes only into
 # $(ODIR)/$1, so `make -j` over distinct targets has no shared output.
@@ -51,7 +46,7 @@ $(ODIR)/$1/$(MNAME_$1).ml: $(ODIR)/$1/$(MNAME_$1).fst extract.Makefile
 $(ODIR)/$1/check.exe: Check.ml $(ODIR)/$1/$(MNAME_$1).ml
 	cp Check.ml $(ODIR)/$1/Check.ml
 	printf 'let () = Check.run [%s] $(MNAME_$1).ast\n' '$(foreach f,$(CDDLS_$1),"$f"; )' > $(ODIR)/$1/main.ml
-	cd $(ODIR)/$1 && $(FSTAR_EXE) --ocamlenv ocamlfind ocamlopt -package evercddl.lib -linkpkg Check.ml $(MNAME_$1).ml main.ml -o check.exe
+	cd $(ODIR)/$1 && ocamlfind ocamlopt -package evercddl.lib -linkpkg Check.ml $(MNAME_$1).ml main.ml -o check.exe
 
 $1.run: $(ODIR)/$1/check.exe
 	$$<
