@@ -1608,80 +1608,74 @@ fn read_dsum
 
 (* ========== Copyful parser combinators for CLOSED sums (tagged unions) ========== *)
 
+let vmatch_sum_case
+  (t: sum)
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
+  (k: sum_key t)
+  (xl: low)
+  (vp: sum_type_of_tag t k)
+: slprop
+= pure (tag_of_low xl == k) ** vmatch_cases k xl vp
+
 let vmatch_sum
   (t: sum)
-  (tl: sum_key t -> Type0)
-  (vmatch_cases: (k: sum_key t) -> tl k -> sum_type_of_tag t k -> slprop)
-  (xl: (k: sum_key t & tl k))
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
+  (xl: low)
   (v: sum_type t)
 : slprop
-= if sum_tag_of_data t v = dfst xl
-  then vmatch_cases (dfst xl) (dsnd xl) (synth_sum_case_recip t (dfst xl) v)
-  else pure False
+= pure (tag_of_low xl == sum_tag_of_data t v)
+  ** vmatch_cases (sum_tag_of_data t v) xl (synth_sum_case_recip t (sum_tag_of_data t v) v)
 
-// Ghost eliminator: from a `vmatch_sum` slprop recover the per-case vmatch
-// (the tag-mismatch branch is `pure False`, hence contradictory). The high value
-// `v` is taken as a NON-erased implicit so that it is a total parameter inside the
-// body, allowing us to branch on the (otherwise ghost) tag comparison. We expose
-// the recovered payload as an existential to avoid a refinement obligation in the
-// postcondition.
-ghost
-fn elim_vmatch_sum
-  (t: sum u#0 u#0)
-  (tl: sum_key t -> Type0)
-  (vmatch_cases: (k: sum_key t) -> tl k -> sum_type_of_tag t k -> slprop)
-  (xl: (k: sum_key t & tl k))
-  (#v: sum_type t)
-requires (vmatch_sum t tl vmatch_cases xl v)
-ensures exists* (vp: sum_type_of_tag t (dfst xl)). vmatch_cases (dfst xl) (dsnd xl) vp
-{
-  if (sum_tag_of_data t v = dfst xl) {
-    rewrite (vmatch_sum t tl vmatch_cases xl v)
-      as (vmatch_cases (dfst xl) (dsnd xl) (synth_sum_case_recip t (dfst xl) v));
-  } else {
-    rewrite (vmatch_sum t tl vmatch_cases xl v)
-      as (pure False);
-    elim_pure_explicit False;
-    rewrite emp as (exists* (vp: sum_type_of_tag t (dfst xl)). vmatch_cases (dfst xl) (dsnd xl) vp);
-  }
-}
-
+// free_sum: dispatch to the per-case free using tag_of_low (a CONCRETE function of xl)
 inline_for_extraction
 fn free_sum
   (t: sum u#0 u#0)
-  (tl: sum_key t -> Type0)
-  (vmatch_cases: (k: sum_key t) -> tl k -> sum_type_of_tag t k -> slprop)
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
   (f: (k: sum_key t) -> PPB.free_t (vmatch_cases k))
-: PPB.free_t #(k: sum_key t & tl k) #(sum_type t) (vmatch_sum t tl vmatch_cases)
+: PPB.free_t #low #(sum_type t) (vmatch_sum t low tag_of_low vmatch_cases)
 =
-  (xl: (k: sum_key t & tl k))
+  (xl: low)
   (#v: Ghost.erased (sum_type t))
 {
-  elim_vmatch_sum t tl vmatch_cases xl;
-  f (dfst xl) (dsnd xl);
+  rewrite (vmatch_sum t low tag_of_low vmatch_cases xl v)
+    as (pure (tag_of_low xl == sum_tag_of_data t v) ** vmatch_cases (sum_tag_of_data t v) xl (synth_sum_case_recip t (sum_tag_of_data t v) v));
+  elim_pure_explicit (tag_of_low xl == sum_tag_of_data t v);
+  let k = tag_of_low xl;
+  rewrite (vmatch_cases (sum_tag_of_data t v) xl (synth_sum_case_recip t (sum_tag_of_data t v) v))
+    as (vmatch_cases k xl (synth_sum_case_recip t (sum_tag_of_data t v) v));
+  f k xl;
 }
 
 // copyful_parse_sum_payload_t: per-key copyful parser for the payload of a known tag
+// note: it uses vmatch_sum_case (the variant WITH the pure tag fact)
 let copyful_parse_sum_payload_t
   (t: sum)
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
-  (tl: sum_key t -> Type0)
-  (vmatch_cases: (k: sum_key t) -> tl k -> sum_type_of_tag t k -> slprop)
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
   (k: sum_key t)
 : Tot Type
-= PPB.copyful_parse (vmatch_cases k) (dsnd (pc k))
+= PPB.copyful_parse (vmatch_sum_case t low tag_of_low vmatch_cases k) (dsnd (pc k))
 
 inline_for_extraction
 fn copyful_parse_sum_payload_if'
   (t: sum u#0 u#0)
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
-  (tl: sum_key t -> Type0)
-  (vmatch_cases: (k: sum_key t) -> tl k -> sum_type_of_tag t k -> slprop)
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
   (k: sum_key t)
   (cond: bool)
-  (ift: (cond_true cond -> Tot (copyful_parse_sum_payload_t t pc tl vmatch_cases k)))
-  (iff: (cond_false cond -> Tot (copyful_parse_sum_payload_t t pc tl vmatch_cases k)))
-: (copyful_parse_sum_payload_t t pc tl vmatch_cases k)
+  (ift: (cond_true cond -> Tot (copyful_parse_sum_payload_t t pc low tag_of_low vmatch_cases k)))
+  (iff: (cond_false cond -> Tot (copyful_parse_sum_payload_t t pc low tag_of_low vmatch_cases k)))
+: (copyful_parse_sum_payload_t t pc low tag_of_low vmatch_cases k)
 =
   (input: _)
   (#pm: _)
@@ -1698,26 +1692,28 @@ inline_for_extraction
 let copyful_parse_sum_payload_if
   (t: sum u#0 u#0)
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
-  (tl: sum_key t -> Type0)
-  (vmatch_cases: (k: sum_key t) -> tl k -> sum_type_of_tag t k -> slprop)
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
   (k: sum_key t)
-: Tot (if_combinator (copyful_parse_sum_payload_t t pc tl vmatch_cases k) eq_trivial)
-= copyful_parse_sum_payload_if' t pc tl vmatch_cases k
+: Tot (if_combinator (copyful_parse_sum_payload_t t pc low tag_of_low vmatch_cases k) eq_trivial)
+= copyful_parse_sum_payload_if' t pc low tag_of_low vmatch_cases k
 
 // copyful_parse_sum_payload_dispatch: dispatch via destructor to the per-key copyful parser
 inline_for_extraction
 let copyful_parse_sum_payload_dispatch
   (t: sum)
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
-  (tl: sum_key t -> Type0)
-  (vmatch_cases: (k: sum_key t) -> tl k -> sum_type_of_tag t k -> slprop)
-  (w: (k: sum_key t) -> PPB.copyful_parse (vmatch_cases k) (dsnd (pc k)))
-  (destr: dep_enum_destr (sum_enum t) (copyful_parse_sum_payload_t t pc tl vmatch_cases))
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
+  (w: (k: sum_key t) -> PPB.copyful_parse (vmatch_sum_case t low tag_of_low vmatch_cases k) (dsnd (pc k)))
+  (destr: dep_enum_destr (sum_enum t) (copyful_parse_sum_payload_t t pc low tag_of_low vmatch_cases))
   (k: sum_key t)
-: Tot (copyful_parse_sum_payload_t t pc tl vmatch_cases k)
+: Tot (copyful_parse_sum_payload_t t pc low tag_of_low vmatch_cases k)
 = destr
     _
-    (copyful_parse_sum_payload_if t pc tl vmatch_cases)
+    (copyful_parse_sum_payload_if t pc low tag_of_low vmatch_cases)
     (fun _ _ -> ())
     (fun _ _ _ _ -> ())
     w
@@ -1733,12 +1729,13 @@ fn copyful_parse_sum
   (p32: PPB.leaf_reader p)
   (j: B.jumper p)
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
-  (tl: sum_key t -> Type0)
-  (vmatch_cases: (k: sum_key t) -> tl k -> sum_type_of_tag t k -> slprop)
-  (w: (k: sum_key t) -> PPB.copyful_parse (vmatch_cases k) (dsnd (pc k)))
-  (destr: dep_enum_destr (sum_enum t) (copyful_parse_sum_payload_t t pc tl vmatch_cases))
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
+  (w: (k: sum_key t) -> PPB.copyful_parse (vmatch_sum_case t low tag_of_low vmatch_cases k) (dsnd (pc k)))
+  (destr: dep_enum_destr (sum_enum t) (copyful_parse_sum_payload_t t pc low tag_of_low vmatch_cases))
   (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
-: PPB.copyful_parse (vmatch_sum t tl vmatch_cases) (parse_sum t p pc)
+: PPB.copyful_parse (vmatch_sum t low tag_of_low vmatch_cases) (parse_sum t p pc)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -1747,15 +1744,43 @@ fn copyful_parse_sum
   let k = read_sum_tag t j p32 pc () input;
   let payload = accessor_clens_sum_payload t j pc k () input;
   with pm' v2. assert (PPB.pts_to_parsed (dsnd (pc k)) payload #pm' v2);
-  let res_k = copyful_parse_sum_payload_dispatch t pc tl vmatch_cases w destr k payload;
+  let res = copyful_parse_sum_payload_dispatch t pc low tag_of_low vmatch_cases w destr k payload;
   Trade.elim _ _;
-  let xl = ((| k, res_k |) <: (k: sum_key t & tl k));
-  rewrite (vmatch_cases k res_k v2)
-    as (vmatch_cases (dfst xl) (dsnd xl) (synth_sum_case_recip t (dfst xl) v));
-  assert (pure (sum_tag_of_data t v = dfst xl));
-  rewrite (vmatch_cases (dfst xl) (dsnd xl) (synth_sum_case_recip t (dfst xl) v))
-    as (vmatch_sum t tl vmatch_cases xl v);
-  xl
+  rewrite (vmatch_sum_case t low tag_of_low vmatch_cases k res v2)
+    as (vmatch_sum t low tag_of_low vmatch_cases res v);
+  res
 }
 
 #pop-options
+
+// copyful_parse_sum_case: build a per-case copyful parser from the field copyful parser
+// and the low-type constructor `mk`. The two squashes are discharged by reduction at use site:
+//   - tag_of_low (mk x) == k          (the constructor determines the tag)
+//   - vmatch_cases k (mk x) vp == vmatch_field x vp   (vmatch_cases reduces to vmatch_field on this constructor)
+inline_for_extraction
+fn copyful_parse_sum_case
+  (t: sum u#0 u#0)
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
+  (k: sum_key t)
+  (#tf: Type0)
+  (#kf: Ghost.erased parser_kind)
+  (#pf: parser kf (sum_type_of_tag t k))
+  (#vmatch_field: tf -> sum_type_of_tag t k -> slprop)
+  (r: PPB.copyful_parse vmatch_field pf)
+  (mk: tf -> low)
+  (sq_tag: squash (forall (x: tf) . tag_of_low (mk x) == k))
+  (sq_vm: squash (forall (x: tf) (vp: sum_type_of_tag t k) . vmatch_cases k (mk x) vp == vmatch_field x vp))
+: PPB.copyful_parse (vmatch_sum_case t low tag_of_low vmatch_cases k) pf
+=
+  (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  let lv = r input;
+  let res = mk lv;
+  rewrite (vmatch_field lv v) as (vmatch_cases k res v);
+  fold (vmatch_sum_case t low tag_of_low vmatch_cases k res v);
+  res
+}
