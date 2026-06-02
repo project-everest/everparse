@@ -148,7 +148,7 @@ cbor_det_freeable_t_ cbor_copy(cbor_raw c);
 
 void cbor_free(cbor_det_freeable_t_ x);
 
-cbor_raw CBOR_Pulse_API_Det_Dummy_dummy_cbor_det_t(void);
+cbor_raw dummy_cbor_det_t(void);
 
 #if defined(__cplusplus)
 }

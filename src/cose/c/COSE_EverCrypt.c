@@ -100,7 +100,7 @@ K___COSE_Format_evercddl_label_COSE_Format_values COSE_EverCrypt_dummy_map_val(v
             }
           }
         },
-        .snd = CBOR_Pulse_API_Det_Dummy_dummy_cbor_det_t()
+        .snd = dummy_cbor_det_t()
       }
     );
 }

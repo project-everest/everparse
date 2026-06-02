@@ -11611,7 +11611,7 @@ void cbor_free(cbor_det_freeable_t_ x)
   cbor_free_(x);
 }
 
-cbor_raw CBOR_Pulse_API_Det_Dummy_dummy_cbor_det_t(void)
+cbor_raw dummy_cbor_det_t(void)
 {
   return ((cbor_raw){ .tag = CBOR_Case_Simple, { .case_CBOR_Case_Simple = 0U } });
 }

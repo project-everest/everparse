@@ -1203,7 +1203,7 @@ COSE_Format_serialize_tstr(
     )
     {
       uint8_t *a = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(c_);
-      cbor_det_t pres = CBOR_Pulse_API_Det_Dummy_dummy_cbor_det_t();
+      cbor_det_t pres = dummy_cbor_det_t();
       bool ite;
       if (CBOR_MAJOR_TYPE_TEXT_STRING == CBOR_MAJOR_TYPE_BYTE_STRING)
         ite =
@@ -1365,7 +1365,7 @@ COSE_Format_serialize_bstr(
   if (Pulse_Lib_Slice_len__uint8_t(c_) <= (size_t)18446744073709551615ULL)
   {
     uint8_t *a = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(c_);
-    cbor_det_t pres = CBOR_Pulse_API_Det_Dummy_dummy_cbor_det_t();
+    cbor_det_t pres = dummy_cbor_det_t();
     cbor_det_mk_byte_string_from_arrayptr(a, (uint64_t)Pulse_Lib_Slice_len__uint8_t(c_), &pres);
     cbor_det_t x = pres;
     size_t len1 = cbor_det_size(x, Pulse_Lib_Slice_len__uint8_t(out));
@@ -12955,7 +12955,7 @@ COSE_Format_serialize_empty_or_serialized_map(
         if (Pulse_Lib_Slice_len__uint8_t(c2) <= (size_t)18446744073709551615ULL)
         {
           uint8_t *a = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(c2);
-          cbor_det_t pres = CBOR_Pulse_API_Det_Dummy_dummy_cbor_det_t();
+          cbor_det_t pres = dummy_cbor_det_t();
           cbor_det_mk_byte_string_from_arrayptr(a,
             (uint64_t)Pulse_Lib_Slice_len__uint8_t(c2),
             &pres);
@@ -12999,7 +12999,7 @@ COSE_Format_serialize_empty_or_serialized_map(
         )
         {
           uint8_t *a = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(c2);
-          cbor_det_t pres = CBOR_Pulse_API_Det_Dummy_dummy_cbor_det_t();
+          cbor_det_t pres = dummy_cbor_det_t();
           bool ite;
           if (CBOR_MAJOR_TYPE_TEXT_STRING == CBOR_MAJOR_TYPE_BYTE_STRING)
             ite =
@@ -13717,7 +13717,7 @@ COSE_Format_serialize_sig_structure(
           op_Array_Assignment__uint8_t(s, i_6, 114U);
           op_Array_Assignment__uint8_t(s, i_6 + (size_t)1U, 101U);
           uint8_t *a1 = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(s);
-          cbor_det_t pres = CBOR_Pulse_API_Det_Dummy_dummy_cbor_det_t();
+          cbor_det_t pres = dummy_cbor_det_t();
           bool ite;
           if (CBOR_MAJOR_TYPE_TEXT_STRING == CBOR_MAJOR_TYPE_BYTE_STRING)
             ite =
@@ -13774,7 +13774,7 @@ COSE_Format_serialize_sig_structure(
           op_Array_Assignment__uint8_t(s, i_7, 101U);
           op_Array_Assignment__uint8_t(s, i_7 + (size_t)1U, 49U);
           uint8_t *a1 = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(s);
-          cbor_det_t pres = CBOR_Pulse_API_Det_Dummy_dummy_cbor_det_t();
+          cbor_det_t pres = dummy_cbor_det_t();
           bool ite;
           if (CBOR_MAJOR_TYPE_TEXT_STRING == CBOR_MAJOR_TYPE_BYTE_STRING)
             ite =

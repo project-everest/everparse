@@ -118,7 +118,7 @@ cbor_det_serialize_map_insert_to_array(uint8_t *x0, size_t x1, size_t x2, size_t
 
 extern size_t cbor_det_serialize_map_to_array(uint64_t x0, uint8_t *x1, size_t x2, size_t x3);
 
-extern cbor_det_t CBOR_Pulse_API_Det_Dummy_dummy_cbor_det_t(void);
+extern cbor_det_t dummy_cbor_det_t(void);
 
 
 #define CBORDetAPI_H_DEFINED
