@@ -821,3 +821,36 @@ fn free_leaf
 {
   unfold (LPS.eq_as_slprop t x v);
 }
+
+let vmatch_synth_lhs
+  (#t1' #t2' #t: Type0)
+  (vmatch: t1' -> t -> slprop)
+  (g: t2' -> GTot t1')
+  (xl2: t2')
+  (xh: t)
+: slprop
+= vmatch (g xl2) xh
+
+inline_for_extraction
+fn copyful_parse_synth_lhs
+  (#t1' #t: Type0)
+  (#vmatch: t1' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (r: copyful_parse vmatch p)
+  (#t2': Type0)
+  (f: t1' -> t2')
+  (g: t2' -> GTot t1')
+  (sq: squash (forall (x: t1') . g (f x) == x))
+: copyful_parse #_ #_ (vmatch_synth_lhs vmatch g) #_ p
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  let res = r input;
+  let res2 = f res;
+  rewrite (vmatch res v) as (vmatch (g res2) v);
+  fold (vmatch_synth_lhs vmatch g res2 v);
+  res2
+}
