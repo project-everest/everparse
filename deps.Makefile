@@ -54,8 +54,6 @@ ifneq (0,$(.SHELLSTATUS))
 z3_exe :=
 endif
 else
-# F* already exists, so we assume its fstar-lib is already compiled
-export EVERPARSE_USE_OPAMROOT:=1
 ifeq (,$(FSTAR_EXE))
 # rely on PATH
 export FSTAR_EXE := fstar.exe

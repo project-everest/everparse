@@ -32,10 +32,9 @@ Options:
 
   --use-fstar-exe        Use a pre-existing fstar.exe (taken from PATH unless
                          --fstar-exe=PATH is also given) instead of building
-                         F* from source. Implies --use-opamroot.
+                         F* from source.
 
-  --fstar-exe=PATH       Use the fstar.exe at PATH. Implies --use-fstar-exe
-                         (and therefore --use-opamroot).
+  --fstar-exe=PATH       Use the fstar.exe at PATH. Implies --use-fstar-exe.
 
   --use-krml-exe         Use a pre-existing krml executable instead of
                          building Karamel from source. Requires --krml-exe=PATH
@@ -84,12 +83,6 @@ for arg in "$@"; do
       exit 1 ;;
   esac
 done
-
-# Using a pre-existing fstar.exe implies that its fstar-lib is already
-# compiled, so we also use the ambient opam switch rather than a local one.
-if [ -n "$use_fstar_exe" ]; then
-  use_opamroot=1
-fi
 
 out=config.Makefile
 tmp="$out.tmp"

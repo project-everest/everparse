@@ -384,8 +384,8 @@ for the full list of options. The most useful ones are:
   NOTE: If you want to use EverCDDL, you cannot use a F\* binary
   package because EverCDDL has a F\* plugin that needs to be compiled
   with the very same OCaml environment as the one used to compile
-  F\*. This is why `--use-fstar-exe` (and `--fstar-exe=PATH`) will
-  automatically imply `--use-opamroot`.
+  F\*. In that case you should also pass `--use-opamroot` so that the
+  plugin is compiled against your F\*'s opam switch.
 
 * If you want to use your own Karamel, pass `--krml-exe=PATH` with the
   full path of the Karamel executable (or `--use-krml-exe` if `KRML_EXE`
