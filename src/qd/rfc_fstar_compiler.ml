@@ -1738,13 +1738,14 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
             wl o "  LL.serialize32_dsum %s_sum %s_repr_serializer lserialize_maybe_%s_key parse_%s_cases serialize_%s_cases lserialize_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n tn tn n n n (lscombinator_name dt))
     end;
 
-    (* Pulse: copyful parser + free for closed sums (def = None).
+    (* Pulse: copyful parser + free for non-implicit sums.
        For a fully leaf-readable sum (all payloads flat / by-value), the copyful
        parser is the existing leaf reader: it copies the whole value out of the
        input into a fresh, owned, buffer-free value (vmatch = pure equality, free
-       = no-op). Non-leaf-readable sums (with owned byte/list payloads) need an
-       owned low representation and are handled in a later layer. *)
-    if !emit_pulse && def = None && li.has_lserializer then
+       = no-op). This works for both closed and open (default) sums. Sums with
+       owned byte/list payloads need an owned low representation and are handled
+       in a later layer. *)
+    if !emit_pulse && li.has_lserializer then
       emit_copyful_leaf o i n;
 
     (* validity from sum to tag *)
