@@ -13,6 +13,11 @@ ODIR := _output
 
 FSTAR_EXE ?= fstar.exe
 
+# evercddl.lib (built by `make cddl`) is installed under $EVERPARSE_HOME/lib,
+# so make ocamlfind/dune find it. fstar.lib is resolved from the ambient
+# environment (e.g. the opam switch).
+export OCAMLPATH := $(EVERPARSE_HOME)/lib:$(OCAMLPATH)
+
 GEN := ocaml/_build/default/gen_fst/Main.exe
 
 TARGETS := dpe cose_sign cose_encrypt
