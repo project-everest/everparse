@@ -516,6 +516,14 @@ let is_copyful_leaf_type = function
   | "Empty" | "Fail" -> true
   | _ -> false
 
+(* The low-level (LHS) representation type of a field type's copyful vmatch.
+   Leaf types are represented by their high type; user types export a
+   <ty>_lowtype abbreviation. *)
+let copyful_lowtype_name ty =
+  if is_copyful_leaf_type ty
+  then compile_type ty
+  else sprintf "%s_lowtype" (String.uncapitalize_ascii ty)
+
 (* The vmatch slprop for a field type, used to build composite (pair/synth)
    vmatches. Leaf types use a pure equality (eq_as_slprop); user types refer to
    their generated <ty>_vmatch. *)
@@ -539,6 +547,7 @@ let copyful_free_name ty =
 (* Emit a copyful parser (read_<n>) and free combinator (free_<n>) for a leaf
    type that has a leaf_reader (e.g. enums). The vmatch is a pure equality. *)
 let emit_copyful_leaf o i n =
+  wp i "let %s_lowtype = %s\n\n" n n;
   wp i "let %s_vmatch : %s -> %s -> Pulse.Lib.Core.slprop = LPS.eq_as_slprop %s\n\n" n n n n;
   wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
@@ -550,6 +559,7 @@ let emit_copyful_leaf o i n =
    related to the high-level value by PPBY.vmatch_copy_bytes. [combinator] is
    the copyful_parse_* expression producing the vector. *)
 let emit_copyful_bytes o i n combinator =
+  wp i "let %s_lowtype = Pulse.Lib.Vec.vec FStar.UInt8.t\n\n" n;
   wp i "let %s_vmatch : Pulse.Lib.Vec.vec FStar.UInt8.t -> %s -> Pulse.Lib.Core.slprop = PPBY.vmatch_copy_bytes\n\n" n n;
   wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
@@ -1728,6 +1738,15 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
             wl o "  LL.serialize32_dsum %s_sum %s_repr_serializer lserialize_maybe_%s_key parse_%s_cases serialize_%s_cases lserialize_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n tn tn n n n (lscombinator_name dt))
     end;
 
+    (* Pulse: copyful parser + free for closed sums (def = None).
+       For a fully leaf-readable sum (all payloads flat / by-value), the copyful
+       parser is the existing leaf reader: it copies the whole value out of the
+       input into a fresh, owned, buffer-free value (vmatch = pure equality, free
+       = no-op). Non-leaf-readable sums (with owned byte/list payloads) need an
+       owned low representation and are handled in a later layer. *)
+    if !emit_pulse && def = None && li.has_lserializer then
+      emit_copyful_leaf o i n;
+
     (* validity from sum to tag *)
       let maybe = match def with
         | None -> ""
@@ -2351,6 +2370,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         wp o "let %s_writer = %s\n\n" n (pulse_leaf_writer_name ty)
       end;
       (* Pulse: copyful parser + free for type aliases *)
+      wp i "let %s_lowtype = %s\n\n" n (copyful_lowtype_name ty);
       wp i "let %s_vmatch = %s\n\n" n (copyful_vmatch_name ty);
       wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
       wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
@@ -3328,20 +3348,31 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
      copyful parsers, wrapped with copyful_parse_synth to rebuild the record.
      The vmatch refers to synth_%s_recip (a .fst-only definition), so these are
      emitted transparently in the implementation. *)
+  (* Pulse: copyful parser + free. A struct is a pair-tree of its fields'
+     copyful parsers, wrapped with copyful_parse_synth to rebuild the record.
+     The low-level representation (<n>_lowtype) is a pair-tree of the fields'
+     low-level types and is exported transparently; <n>_vmatch/read_<n>/free_<n>
+     are exported abstractly (their definitions mention the .fst-only
+     synth_<n>_recip). *)
   let rec mk_pulse_copyful = function
     | TLeaf (_, ty) ->
-       (pulse_jumper_name ty, copyful_read_name ty, copyful_vmatch_name ty, copyful_free_name ty)
+       (pulse_jumper_name ty, copyful_read_name ty, copyful_vmatch_name ty, copyful_free_name ty, copyful_lowtype_name ty)
     | TNode (_, tl, tr) ->
-       let (jl, rl, vml, fl) = mk_pulse_copyful tl in
-       let (jr, rr, vmr, fr) = mk_pulse_copyful tr in
+       let (jl, rl, vml, fl, ltl) = mk_pulse_copyful tl in
+       let (jr, rr, vmr, fr, ltr) = mk_pulse_copyful tr in
        let j = sprintf "(LPC.jump_nondep_then %s %s)" jl jr in
        let r = sprintf "(PPC.copyful_parse_pair %s %s () %s)" jl rl rr in
        let vm = sprintf "(LPC.vmatch_pair %s %s)" vml vmr in
        let f = sprintf "(PPC.free_pair %s %s)" fl fr in
-       (j, r, vm, f)
+       let lt = sprintf "(%s & %s)" ltl ltr in
+       (j, r, vm, f, lt)
   in
-  let (_, pulse_creader, pulse_cvmatch, pulse_cfree) = mk_pulse_copyful tfields in
-  wp o "let %s_vmatch = LPC.vmatch_synth %s synth_%s_recip\n\n" n pulse_cvmatch n;
+  let (_, pulse_creader, pulse_cvmatch, pulse_cfree, pulse_clowtype) = mk_pulse_copyful tfields in
+  wp i "let %s_lowtype = %s\n\n" n pulse_clowtype;
+  wp i "val %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop\n\n" n n n;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
+  wp o "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop = LPC.vmatch_synth %s synth_%s_recip\n\n" n n n pulse_cvmatch n;
   wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
   wp o "  synth_%s_injective ();\n" n;
   wp o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
