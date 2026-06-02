@@ -508,6 +508,34 @@ let assume_some = function
   | None -> failwith "assume_some"
   | Some x -> x
 
+(* Is [ty] a base/leaf type whose copyful parser is built from a leaf_reader
+   (as opposed to a user-defined type that has its own read_<ty>/free_<ty>)? *)
+let is_copyful_leaf_type = function
+  | "opaque" | "uint8" | "uint16" | "uint16_le" | "uint24" | "uint24_le"
+  | "uint32" | "uint32_le" | "uint64" | "uint64_le" | "bitcoin_varint"
+  | "Empty" | "Fail" -> true
+  | _ -> false
+
+(* The vmatch slprop for a field type, used to build composite (pair/synth)
+   vmatches. Leaf types use a pure equality (eq_as_slprop); user types refer to
+   their generated <ty>_vmatch. *)
+let copyful_vmatch_name ty =
+  if is_copyful_leaf_type ty
+  then sprintf "(LPS.eq_as_slprop %s)" (compile_type ty)
+  else sprintf "%s_vmatch" (String.uncapitalize_ascii ty)
+
+(* The copyful parser (PPB.copyful_parse) for a field type. *)
+let copyful_read_name ty =
+  if is_copyful_leaf_type ty
+  then sprintf "(PPB.copyful_parse_leaf %s)" (pulse_leaf_reader_name ty)
+  else sprintf "read_%s" (String.uncapitalize_ascii ty)
+
+(* The free combinator (PPB.free_t) for a field type. *)
+let copyful_free_name ty =
+  if is_copyful_leaf_type ty
+  then sprintf "(PPB.free_leaf #%s)" (compile_type ty)
+  else sprintf "free_%s" (String.uncapitalize_ascii ty)
+
 (* Emit a copyful parser (read_<n>) and free combinator (free_<n>) for a leaf
    type that has a leaf_reader (e.g. enums). The vmatch is a pure equality. *)
 let emit_copyful_leaf o i n =
@@ -2322,6 +2350,12 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         wp i "val %s_writer : LPS.l2r_leaf_writer %s_serializer\n\n" n n;
         wp o "let %s_writer = %s\n\n" n (pulse_leaf_writer_name ty)
       end;
+      (* Pulse: copyful parser + free for type aliases *)
+      wp i "let %s_vmatch = %s\n\n" n (copyful_vmatch_name ty);
+      wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+      wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
+      wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser = %s\n\n" n n n (copyful_read_name ty);
+      wp o "let free_%s : PPB.free_t %s_vmatch = %s\n\n" n n (copyful_free_name ty);
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %s) [SMTPat (%s_bytesize x)]\n\n" n n n (bytesize_call ty "x") n;
       w o "let %s_bytesize_eqn x = %s\n\n" n (bytesize_eq_call ty "x");
       if ty <> "Empty" && ty <> "Fail"
@@ -3289,6 +3323,30 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
       wl o "  [@inline_let] let _ = assert_norm (%s_parser_kind == %s'_parser_kind) in\n" n n;
       wl o "  LL.serialize32_synth %s'_lserializer synth_%s synth_%s_recip (fun x -> synth_%s_recip x) ()\n\n" n n n n;
   end;
+
+  (* Pulse: copyful parser + free. A struct is a pair-tree of its fields'
+     copyful parsers, wrapped with copyful_parse_synth to rebuild the record.
+     The vmatch refers to synth_%s_recip (a .fst-only definition), so these are
+     emitted transparently in the implementation. *)
+  let rec mk_pulse_copyful = function
+    | TLeaf (_, ty) ->
+       (pulse_jumper_name ty, copyful_read_name ty, copyful_vmatch_name ty, copyful_free_name ty)
+    | TNode (_, tl, tr) ->
+       let (jl, rl, vml, fl) = mk_pulse_copyful tl in
+       let (jr, rr, vmr, fr) = mk_pulse_copyful tr in
+       let j = sprintf "(LPC.jump_nondep_then %s %s)" jl jr in
+       let r = sprintf "(PPC.copyful_parse_pair %s %s () %s)" jl rl rr in
+       let vm = sprintf "(LPC.vmatch_pair %s %s)" vml vmr in
+       let f = sprintf "(PPC.free_pair %s %s)" fl fr in
+       (j, r, vm, f)
+  in
+  let (_, pulse_creader, pulse_cvmatch, pulse_cfree) = mk_pulse_copyful tfields in
+  wp o "let %s_vmatch = LPC.vmatch_synth %s synth_%s_recip\n\n" n pulse_cvmatch n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "  synth_%s_injective ();\n" n;
+  wp o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
+  wp o "  PPC.copyful_parse_synth %s synth_%s synth_%s_recip\n\n" pulse_creader n n;
+  wp o "let free_%s : PPB.free_t %s_vmatch = PPC.free_synth %s synth_%s_recip\n\n" n n pulse_cfree n;
 
   (* bytesize *)
   w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %s) [SMTPat (%s_bytesize x)]\n\n"
