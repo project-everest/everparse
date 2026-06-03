@@ -764,6 +764,42 @@ let emit_copyful_vclist o i n ty low high repr_t =
   wp o "  PPVCL.copyful_parse_vclist %dul %dul %s %s %s %s () fits_u64_squash\n\n" low high (pulse_jumper_name repr_t) (pulse_leaf_reader_name repr_t) (copyful_read_name ty) (pulse_jumper_name ty);
   wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> PPVCL.free_vclist %s x #(Ghost.hide (Ghost.reveal v <: list %s))\n\n" n n (copyful_free_name ty) (compile_type ty)
 
+(* Emit copyful parser (read_<n>) and free (free_<n>) for a byte-length-bounded
+   list [ty<low..high>]: a list of [ty] elements framed by a byte-length prefix
+   ([parse_bounded_vldata_strong] of [serialize_list]), then coerced via
+   [parse_synth synth_<n>] to the refined list type <n>. The low-level
+   representation is the same [PPVCL.vclist_lowtype <elem_lowtype>] used for
+   vclist -- neither the byte-length framing nor the synth coercion changes the
+   high-level value or its copyful representation -- so read/free are assembled
+   as PPC.copyful_parse_synth (PPVD.copyful_parse_bounded_vldata_strong_payload
+   (PPLS.copyful_parse_list ...)) and the dual for free, reusing the element's own
+   copyful parser/free and PPVCL.free_vclist. [min]/[max] are the payload byte
+   bounds (length prefix excluded). The vmatch mentions synth_<n>_recip (a
+   .fst-only definition), so it is exported abstractly. *)
+let emit_copyful_vldata_list o i n ty min max =
+  wp i "let %s_lowtype = PPVCL.vclist_lowtype %s\n\n" n (copyful_lowtype_name ty);
+  wp i "val %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop\n\n" n n n;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
+  wp o "\nlet %s_copyful_synth_injective () : Lemma (LP.synth_injective synth_%s) = ()\n\n" n n;
+  wp o "let %s_copyful_synth_inverse () : Lemma (LP.synth_inverse synth_%s synth_%s_recip) = ()\n\n" n n n;
+  wp o "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop =\n" n n n;
+  wp o "  LPC.vmatch_synth (PPVD.vmatch_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.vmatch_vclist %s)) synth_%s_recip\n\n" min max (scombinator_name ty) (copyful_vmatch_name ty) n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "  %s_copyful_synth_injective ();\n" n;
+  wp o "  %s_copyful_synth_inverse ();\n" n;
+  wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
+  wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
+  wp o "  PPC.copyful_parse_synth\n";
+  wp o "    (PPVD.copyful_parse_bounded_vldata_strong_payload %d %d (LP.serialize_list _ %s)\n" min max (scombinator_name ty);
+  wp o "       (PPLS.copyful_parse_list %s %s ())\n" (copyful_read_name ty) (pulse_jumper_name ty);
+  wp o "       (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash)\n" (log256 max);
+  wp o "    synth_%s synth_%s_recip\n\n" n n;
+  wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
+  wp o "  PPC.free_synth\n";
+  wp o "    (PPVD.free_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.free_vclist %s))\n" min max (scombinator_name ty) (copyful_free_name ty);
+  wp o "    synth_%s_recip\n\n" n
+
 let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
   let qname = if tn = "" then n else tn^"@"^n in
   let li = sizeof ty in
@@ -3298,6 +3334,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       (* lemmas about bytesize *)
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + %s_list_bytesize x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n n;
       w o "let %s_bytesize_eqn x = LP.serialize_synth_eq %s'_parser synth_%s %s'_serializer synth_%s_recip () x" n n n n n;
+      (if !emit_pulse then emit_copyful_vldata_list o i n ty min max);
       ()
 
 and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
