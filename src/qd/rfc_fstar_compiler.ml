@@ -831,6 +831,38 @@ let emit_copyful_vllist o i n ty smin smax lenty =
   wp o "    (PPVD.free_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.free_vclist %s))\n" smin smax (scombinator_name ty) (copyful_free_name ty);
   wp o "    synth_%s_recip\n\n" n
 
+(* Emit copyful parser (read_<n>) and free (free_<n>) for a fixed-BYTE-length
+   container of variable-length elements [t x[k]] (the VectorFixed branch). The
+   payload is a list of [ty] elements occupying exactly [k] bytes
+   (parse_fldata_strong of serialize_list). The low representation is the same
+   [PPVCL.vclist_lowtype <elem_lowtype>] used for vclist/list, and the underlying
+   vmatch is [PPVCL.vmatch_vclist] applied to the element values (the fldata
+   framing changes neither the high value nor its representation). The generated
+   refined type [<n>] and the payload type [parse_fldata_strong_t] (= [<n>']) are
+   only propositionally equal (via [<n>_eq]), so we re-index the
+   FLData-payload copyful parser/free from [<n>'] to [<n>] using the value-level
+   PPB.copyful_parse_ext / PPB.free_ext combinators (which discharge first-order
+   type/parser/vmatch extensionality obligations rather than coercing the
+   dependent copyful_parse/free_t types). *)
+let emit_copyful_vectorfixed_list o i n ty k =
+  wp i "let %s_lowtype = PPVCL.vclist_lowtype %s\n\n" n (copyful_lowtype_name ty);
+  wp i "val %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop\n\n" n n n;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
+  wp o "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop =\n" n n n;
+  wp o "  fun xl xh -> PPVCL.vmatch_vclist %s xl (xh <: list %s)\n\n" (copyful_vmatch_name ty) (compile_type ty);
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "  %s_eq ();\n" n;
+  wp o "  PPB.copyful_parse_ext\n";
+  wp o "    (PPFD.copyful_parse_fldata_strong_payload (LP.serialize_list _ %s) %d\n" (scombinator_name ty) k;
+  wp o "       (PPLS.copyful_parse_list %s %s ()))\n" (copyful_read_name ty) (pulse_jumper_name ty);
+  wp o "    %s_parser %s_vmatch ()\n\n" n n;
+  wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
+  wp o "  %s_eq ();\n" n;
+  wp o "  PPB.free_ext\n";
+  wp o "    (PPFD.free_fldata_strong (LP.serialize_list _ %s) %d (PPVCL.free_vclist %s))\n" (scombinator_name ty) k (copyful_free_name ty);
+  wp o "    %s_vmatch ()\n\n" n
+
 let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
   let qname = if tn = "" then n else tn^"@"^n in
   let li = sizeof ty in
@@ -3057,14 +3089,13 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         wl o "  LL.jump_fldata_strong (LL.serialize_list _ %s) %d %dul\n\n" (scombinator_name ty) k k;
         wl o "let %s_jumper : LL.jumper %s_parser = %s_eq (); LP.coerce (LL.jumper %s_parser) %s'_jumper\n\n" n n n n n
        end;
-      (* NOTE: copyful parser/free for fldata-of-list (a fixed-byte-length
-         container of variable-length elements, e.g. [t x[k]]) is deferred:
-         bridging the generated refined type [<n>] and [parse_fldata_strong_t]
-         (which are only propositionally equal via [<n>_eq]) through the
-         higher-order Pulse [copyful_parse]/[free_t] indices requires
-         heterogeneous type congruence that the SMT solver cannot discharge.
-         The vlgen-framed list (compile_vllist) is fully supported. *)
-      ()
+      (* Copyful parser/free for fldata-of-list (a fixed-byte-length container of
+         variable-length elements, e.g. [t x[k]]): the generated refined type [<n>]
+         and [parse_fldata_strong_t] ([<n>']) are only propositionally equal (via
+         [<n>_eq]), so the FLData-payload copyful parser/free are re-indexed from
+         [<n>'] to [<n>] via the value-level PPB.copyful_parse_ext / PPB.free_ext
+         combinators. *)
+      (if !emit_pulse then emit_copyful_vectorfixed_list o i n ty k)
 
     (* Variable length bytes *)
     | VectorRange (low, high, Some lenty) when has_bounded_length_parsers lenty -> (* TODO: generalize once parse_bounded_integer is refactored into a parser to bounded_int32 in LowParse *)
