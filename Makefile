@@ -10,7 +10,7 @@ package-subset: quackyducky lowparse 3d
 
 .PHONY: package-subset
 
-clean_rules += clean-3d clean-lowparse clean-quackyducky clean-cbor-verify clean-cddl clean-bin clean-cose-test clean-asn1 clean-tests clean-3d-tests clean-doc
+clean_rules += clean-3d clean-lowparse clean-quackyducky clean-cbor-verify clean-cddl clean-bin clean-cose-test clean-asn1 clean-tests clean-3d-tests clean-doc clean-lowparse-pulse-test clean-quackyducky-pulse-test
 other_clean_rules += distclean
 
 include nofstar.Makefile
@@ -303,6 +303,16 @@ clean-lowparse:
 
 clean-quackyducky:
 	+$(MAKE) -C src/qd clean
+
+clean-lowparse-pulse-test:
+	+$(MAKE) -C share/everparse/tests/lowparse clean
+
+.PHONY: clean-lowparse-pulse-test
+
+clean-quackyducky-pulse-test:
+	+$(MAKE) -C share/everparse/tests/qd clean
+
+.PHONY: clean-quackyducky-pulse-test
 
 clean-cbor-verify:
 	+$(MAKE) -C src/cbor clean-verify
