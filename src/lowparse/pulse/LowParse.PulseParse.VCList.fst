@@ -677,3 +677,308 @@ fn accessor_vclist_payload
 }
 
 #pop-options
+
+(* ============================================================================ *)
+(* Copyful parser + free for vclist                                             *)
+(* ============================================================================ *)
+
+module SM = Pulse.Lib.SeqMatch
+module V = Pulse.Lib.Vec
+module Seq = FStar.Seq
+
+unfold let vclist_lowtype (el: Type0) = option (SZ.t & V.vec el)
+
+let vmatch_vclist
+  (#el #eh: Type0)
+  (elem_vmatch: el -> eh -> slprop)
+  (x: option (SZ.t & V.vec el))
+  (l: list eh)
+: slprop
+= match x with
+  | None -> pure (l == [])
+  | Some nv -> exists* (s: Seq.seq el).
+      V.pts_to (snd nv) s ** SM.seq_list_match s l elem_vmatch **
+      pure (V.is_full_vec (snd nv) /\ Seq.length s == L.length l /\ SZ.v (fst nv) == L.length l /\ L.length l > 0)
+
+(* pure helpers *)
+
+let nil_of_length_zero (#a: Type) (l: list a)
+: Lemma (requires L.length l == 0) (ensures l == [])
+= ()
+
+let rec splitAt_index_hd_vc (#a:Type) (i:nat) (l:list a)
+  : Lemma (requires i < L.length l)
+    (ensures (L.lemma_splitAt_snd_length i l; L.hd (snd (L.splitAt i l)) == L.index l i))
+    (decreases i)
+  = if i = 0 then ()
+    else (match l with x :: xs -> splitAt_index_hd_vc (i-1) xs)
+
+let rec splitAt_tl_vc (#a:Type) (i:nat) (l:list a)
+  : Lemma (requires i < L.length l)
+    (ensures (L.lemma_splitAt_snd_length i l; L.tl (snd (L.splitAt i l)) == snd (L.splitAt (i+1) l)))
+    (decreases i)
+  = if i = 0 then ()
+    else (match l with x :: xs -> splitAt_tl_vc (i-1) xs)
+
+(* copyful_parse_nlist: fill a Vec from a parsed nlist of runtime-known positive length *)
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+inline_for_extraction
+fn copyful_parse_nlist
+  (#eh: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k eh)
+  (#el: Type0)
+  (#elem_vmatch: el -> eh -> slprop)
+  (w: PPB.copyful_parse elem_vmatch p)
+  (j: LPS.jumper p)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (gn: Ghost.erased nat)
+  (n: SZ.t { SZ.v n == Ghost.reveal gn /\ Ghost.reveal gn > 0 })
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (nlist (Ghost.reveal gn) eh))
+requires
+  PPB.pts_to_parsed (parse_nlist (Ghost.reveal gn) p) input #pm v
+returns vec: V.vec el
+ensures
+  PPB.pts_to_parsed (parse_nlist (Ghost.reveal gn) p) input #pm v **
+  (exists* (s: Seq.seq el).
+    V.pts_to vec s **
+    SM.seq_list_match s (Ghost.reveal v <: list eh) elem_vmatch **
+    pure (V.is_full_vec vec /\ Seq.length s == Ghost.reveal gn))
+{
+  let fl : Ghost.erased (list eh) = Ghost.hide (Ghost.reveal v <: list eh);
+  let sl : Ghost.erased (Seq.seq eh) = Ghost.hide (Seq.seq_of_list (Ghost.reveal fl));
+  (* seed element 0 *)
+  let (hd0, tl0) = nlist_hd_tl sq j (Ghost.hide (Ghost.reveal gn <: pos)) input;
+  unfold (nlist_hd_tl_post p sq (Ghost.reveal gn) input pm v (hd0, tl0));
+  unfold (nlist_hd_tl_post' p sq (Ghost.reveal gn) input pm v hd0 tl0);
+  let el0 = w hd0;
+  let vec = V.alloc el0 n;
+  V.pts_to_len vec;
+  Seq.lemma_seq_of_list_index (Ghost.reveal fl) 0;
+  rewrite (elem_vmatch el0 (List.Tot.hd (Ghost.reveal v)))
+    as (elem_vmatch el0 (L.index (Ghost.reveal fl) 0));
+  SM.seq_seq_match_singleton_intro elem_vmatch (Seq.create (SZ.v n) el0) (Ghost.reveal sl) 0 el0 (L.index (Ghost.reveal fl) 0);
+  Trade.elim_hyp_l
+    (PPB.pts_to_parsed p hd0 #(pm /. 2.0R) (List.Tot.hd (Ghost.reveal v)))
+    (PPB.pts_to_parsed (parse_nlist (Ghost.reveal gn - 1) p) tl0 #(pm /. 2.0R) (List.Tot.tl (Ghost.reveal v)))
+    (PPB.pts_to_parsed (parse_nlist (Ghost.reveal gn) p) input #pm v);
+  splitAt_tl_vc 0 (Ghost.reveal fl);
+  let mut pi = 1sz;
+  let mut pcur = tl0;
+  while (let i = !pi; SZ.lt i n)
+  invariant exists* i cur pm_cur (m: nat) (rem: nlist m eh) (s1: Seq.seq el).
+    R.pts_to pi i ** R.pts_to pcur cur **
+    PPB.pts_to_parsed (parse_nlist m p) cur #pm_cur rem **
+    Trade.trade
+      (PPB.pts_to_parsed (parse_nlist m p) cur #pm_cur rem)
+      (PPB.pts_to_parsed (parse_nlist (Ghost.reveal gn) p) input #pm v) **
+    V.pts_to vec s1 **
+    SM.seq_seq_match elem_vmatch s1 (Ghost.reveal sl) 0 (SZ.v i) **
+    pure (
+      1 <= SZ.v i /\ SZ.v i <= SZ.v n /\
+      m == Ghost.reveal gn - SZ.v i /\
+      Seq.length s1 == SZ.v n /\
+      (Ghost.reveal rem <: list eh) == snd (L.splitAt (SZ.v i) (Ghost.reveal fl)) /\
+      L.length (Ghost.reveal rem) == m
+    )
+  {
+    let i = !pi;
+    let cur = !pcur;
+    with pm_cur m rem s1.
+      assert (PPB.pts_to_parsed (parse_nlist m p) cur #pm_cur rem **
+              V.pts_to vec s1 **
+              SM.seq_seq_match elem_vmatch s1 (Ghost.reveal sl) 0 (SZ.v i));
+    let (hd, tl) = nlist_hd_tl sq j (Ghost.hide (m <: pos)) cur;
+    unfold (nlist_hd_tl_post p sq m cur pm_cur rem (hd, tl));
+    unfold (nlist_hd_tl_post' p sq m cur pm_cur rem hd tl);
+    let elx = w hd;
+    V.op_Array_Assignment vec i elx;
+    with s1'. assert (V.pts_to vec s1');
+    SM.seq_seq_match_rewrite_seq elem_vmatch s1 s1' (Ghost.reveal sl) (Ghost.reveal sl) 0 (SZ.v i);
+    splitAt_index_hd_vc (SZ.v i) (Ghost.reveal fl);
+    Seq.lemma_seq_of_list_index (Ghost.reveal fl) (SZ.v i);
+    splitAt_tl_vc (SZ.v i) (Ghost.reveal fl);
+    rewrite (elem_vmatch elx (List.Tot.hd (Ghost.reveal rem)))
+      as (elem_vmatch (Seq.index s1' (SZ.v i)) (Seq.index (Ghost.reveal sl) (SZ.v i)));
+    SM.seq_seq_match_enqueue_right elem_vmatch s1' (Ghost.reveal sl) 0 (SZ.v i) (Seq.index s1' (SZ.v i)) (Seq.index (Ghost.reveal sl) (SZ.v i));
+    Trade.elim_hyp_l
+      (PPB.pts_to_parsed p hd #(pm_cur /. 2.0R) (List.Tot.hd (Ghost.reveal rem)))
+      (PPB.pts_to_parsed (parse_nlist (m - 1) p) tl #(pm_cur /. 2.0R) (List.Tot.tl (Ghost.reveal rem)))
+      (PPB.pts_to_parsed (parse_nlist m p) cur #pm_cur rem);
+    Trade.trans
+      (PPB.pts_to_parsed (parse_nlist (m - 1) p) tl #(pm_cur /. 2.0R) (List.Tot.tl (Ghost.reveal rem)))
+      (PPB.pts_to_parsed (parse_nlist m p) cur #pm_cur rem)
+      (PPB.pts_to_parsed (parse_nlist (Ghost.reveal gn) p) input #pm v);
+    pcur := tl;
+    pi := SZ.add i 1sz;
+  };
+  let i = !pi;
+  let cur = !pcur;
+  with pm_cur m rem s_final.
+    assert (PPB.pts_to_parsed (parse_nlist m p) cur #pm_cur rem **
+            V.pts_to vec s_final **
+            SM.seq_seq_match elem_vmatch s_final (Ghost.reveal sl) 0 (SZ.v i));
+  Trade.elim
+    (PPB.pts_to_parsed (parse_nlist m p) cur #pm_cur rem)
+    (PPB.pts_to_parsed (parse_nlist (Ghost.reveal gn) p) input #pm v);
+  SM.seq_seq_match_seq_list_match elem_vmatch s_final (Ghost.reveal fl);
+  vec
+}
+
+#pop-options
+
+let nlist_length_fact (#t: Type) (n: nat) (l: nlist n t)
+: Lemma (L.length (l <: list t) == n)
+= ()
+
+(* Helper to introduce vmatch_vclist on the Some (nonempty) case.
+   The high-level list is taken as an opaque erased parameter so that
+   folding the match-based predicate typechecks (a transparent
+   refinement-typed list term triggers a spurious well-foundedness
+   guard during fold elaboration). *)
+inline_for_extraction
+fn vmatch_vclist_some_intro
+  (#el #eh: Type0)
+  (#elem_vmatch: el -> eh -> slprop)
+  (n: SZ.t)
+  (vec: V.vec el)
+  (#s: Ghost.erased (Seq.seq el))
+  (#l: Ghost.erased (list eh))
+  (l_out: Ghost.erased (list eh))
+requires
+  V.pts_to vec s ** SM.seq_list_match s l elem_vmatch **
+  pure (V.is_full_vec vec /\ Seq.length s == L.length l /\ SZ.v n == L.length l /\
+        L.length l > 0 /\ Ghost.reveal l == Ghost.reveal l_out)
+returns r: vclist_lowtype el
+ensures
+  vmatch_vclist elem_vmatch r (Ghost.reveal l_out) **
+  pure (r == Some (Ghost.reveal n, vec))
+{
+  fold (vmatch_vclist elem_vmatch (Some (n, vec)) (Ghost.reveal l));
+  rewrite (vmatch_vclist elem_vmatch (Some (n, vec)) (Ghost.reveal l))
+    as (vmatch_vclist elem_vmatch (Some (n, vec)) (Ghost.reveal l_out));
+  Some (n, vec)
+}
+
+(* copyful_parse_vclist *)
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+inline_for_extraction
+fn copyful_parse_vclist
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max })
+  (#lk: Ghost.erased parser_kind)
+  (#lp: parser lk U32.t)
+  (lj: LPS.jumper lp)
+  (lr: PPB.leaf_reader lp)
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (#el: Type0)
+  (#elem_vmatch: el -> t -> slprop)
+  (w: PPB.copyful_parse elem_vmatch p)
+  (j: LPS.jumper p)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (u: squash (lk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (vlarray t (U32.v min) (U32.v max)))
+requires
+  PPB.pts_to_parsed (parse_vclist (U32.v min) (U32.v max) lp p) input #pm v
+returns res: vclist_lowtype el
+ensures
+  PPB.pts_to_parsed (parse_vclist (U32.v min) (U32.v max) lp p) input #pm v **
+  vmatch_vclist elem_vmatch res (Ghost.reveal v)
+{
+  (* read the runtime element count from the length prefix *)
+  PPB.pts_to_parsed_elim input;
+  with w_bytes. assert (S.pts_to input #pm w_bytes);
+  pts_to_len input;
+  Seq.lemma_eq_elim (Seq.slice w_bytes 0 (Seq.length w_bytes)) w_bytes;
+  parse_vclist_eq (U32.v min) (U32.v max) lp p w_bytes;
+  let off1 = lj input 0sz;
+  let count = PPB.read_parsed_from_validator_success lr input 0sz off1;
+  SZ.fits_u64_implies_fits_32 ();
+  let n = SZ.uint32_to_sizet count;
+  assert (pure (U32.v count == L.length (Ghost.reveal v)));
+  Trade.elim
+    (S.pts_to input #pm w_bytes)
+    (PPB.pts_to_parsed (parse_vclist (U32.v min) (U32.v max) lp p) input #pm v);
+  if (SZ.gt n 0sz) {
+    (* nonempty: get the nlist payload slice, then fill the Vec *)
+    Classical.forall_intro (parse_vclist_dtuple2_eq (U32.v min) (U32.v max) lp p);
+    let payload = accessor_vclist_payload (U32.v min) (U32.v max) lj #k #t #p (Ghost.hide (U32.v count)) () input;
+    with pm3 v3. assert (PPB.pts_to_parsed (parse_nlist (U32.v count) p) payload #pm3 v3);
+    let vec = copyful_parse_nlist w j sq (Ghost.hide (U32.v count)) n payload;
+    Trade.elim
+      (PPB.pts_to_parsed (parse_nlist (U32.v count) p) payload #pm3 v3)
+      (PPB.pts_to_parsed (parse_vclist (U32.v min) (U32.v max) lp p) input #pm v);
+    nlist_length_fact (U32.v count) v3;
+    let vh : Ghost.erased (list t) = Ghost.hide (Ghost.reveal v <: list t);
+    assert (pure ((v3 <: list t) == Ghost.reveal vh));
+    let res = vmatch_vclist_some_intro n vec vh;
+    rewrite (vmatch_vclist elem_vmatch res (Ghost.reveal vh))
+      as (vmatch_vclist elem_vmatch res (Ghost.reveal v));
+    res
+  } else {
+    (* empty list *)
+    nil_of_length_zero (Ghost.reveal v <: list t);
+    let res : vclist_lowtype el = None #(SZ.t & V.vec el);
+    fold (vmatch_vclist elem_vmatch (None #(SZ.t & V.vec el)) (Ghost.reveal v <: list t));
+    rewrite (vmatch_vclist elem_vmatch (None #(SZ.t & V.vec el)) (Ghost.reveal v <: list t))
+      as (vmatch_vclist elem_vmatch res (Ghost.reveal v));
+    res
+  }
+}
+
+#pop-options
+
+(* free_vclist *)
+
+#push-options "--z3rlimit 32 --fuel 2 --ifuel 2"
+
+inline_for_extraction
+fn free_vclist
+  (#eh #el: Type0)
+  (#elem_vmatch: el -> eh -> slprop)
+  (free_elem: PPB.free_t elem_vmatch)
+: PPB.free_t #(vclist_lowtype el) #(list eh) (vmatch_vclist elem_vmatch)
+=
+  (x: vclist_lowtype el)
+  (#v: Ghost.erased (list eh))
+{
+  match x {
+    None -> {
+      unfold (vmatch_vclist elem_vmatch (None #(SZ.t & V.vec el)) (Ghost.reveal v));
+    }
+    Some y -> {
+      unfold (vmatch_vclist elem_vmatch (Some y) (Ghost.reveal v));
+      let nn = fst y;
+      with s. assert (V.pts_to (snd y) s ** SM.seq_list_match s (Ghost.reveal v) elem_vmatch);
+      V.pts_to_len (snd y);
+      SM.seq_list_match_length elem_vmatch s (Ghost.reveal v);
+      SM.seq_list_match_seq_seq_match elem_vmatch s (Ghost.reveal v);
+      let mut pi = 0sz;
+      while (let i = !pi; SZ.lt i nn)
+      invariant exists* i. R.pts_to pi i ** V.pts_to (snd y) s **
+        SM.seq_seq_match elem_vmatch s (Seq.seq_of_list (Ghost.reveal v)) (SZ.v i) (L.length (Ghost.reveal v)) **
+        pure (SZ.v i <= SZ.v nn /\ Seq.length s == SZ.v nn /\ L.length (Ghost.reveal v) == SZ.v nn)
+      {
+        let i = !pi;
+        SM.seq_seq_match_dequeue_left elem_vmatch s (Seq.seq_of_list (Ghost.reveal v)) (SZ.v i) (L.length (Ghost.reveal v));
+        let elem = V.op_Array_Access (snd y) i;
+        free_elem elem;
+        pi := SZ.add i 1sz;
+      };
+      SM.seq_seq_match_empty_elim elem_vmatch s (Seq.seq_of_list (Ghost.reveal v)) (L.length (Ghost.reveal v));
+      V.free (snd y);
+    }
+  }
+}
+
+#pop-options

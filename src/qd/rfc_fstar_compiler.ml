@@ -748,6 +748,22 @@ let emit_copyful_array o i n ty byte_size elem_count =
   wp o "  PPAR.copyful_parse_array %s %s %s %d %dsz %d %dsz ()\n\n" (scombinator_name ty) (copyful_read_name ty) (pulse_jumper_name ty) byte_size byte_size elem_count elem_count;
   wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> PPAR.free_array %s %dsz x #(Ghost.hide (Ghost.reveal v <: list %s))\n\n" n n (copyful_free_name ty) elem_count (compile_type ty)
 
+(* Emit copyful parser (read_<n>) and free (free_<n>) for a variable-count list
+   [ty<low..high>] prefixed by its element count (parsed with [repr_t]'s leaf
+   reader/jumper). The low-level representation is [PPVCL.vclist_lowtype
+   <elem_lowtype>] = [option (SizeT.t * Pulse.Lib.Vec.vec <elem_lowtype>)] (None
+   for the empty list), related to the high-level list via PPVCL.vmatch_vclist
+   (elementwise reusing the element type's own copyful vmatch). *)
+let emit_copyful_vclist o i n ty low high repr_t =
+  wp i "let %s_lowtype = PPVCL.vclist_lowtype %s\n\n" n (copyful_lowtype_name ty);
+  wp i "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop = PPVCL.vmatch_vclist %s\n\n" n n n (copyful_vmatch_name ty);
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
+  wp o "  PPVCL.copyful_parse_vclist %dul %dul %s %s %s %s () fits_u64_squash\n\n" low high (pulse_jumper_name repr_t) (pulse_leaf_reader_name repr_t) (copyful_read_name ty) (pulse_jumper_name ty);
+  wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> PPVCL.free_vclist %s x #(Ghost.hide (Ghost.reveal v <: list %s))\n\n" n n (copyful_free_name ty) (compile_type ty)
+
 let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
   let qname = if tn = "" then n else tn^"@"^n in
   let li = sizeof ty in
@@ -2604,6 +2620,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       let jumper_annot_p = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
       wp o "let %s_jumper%s =\n" n jumper_annot_p;
       wp o "  PPVCL.jump_vclist %dul %dul %s %s %s fits_u64_squash\n\n" low high (pulse_jumper_name repr_t) (pulse_leaf_reader_name repr_t) (pulse_jumper_name ty);
+      (if !emit_pulse then emit_copyful_vclist o i n ty low high repr_t);
       (* finalizer, count, i-th accessor TODO *)
       ()
 
@@ -3848,6 +3865,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp i "module PPBY = LowParse.PulseParse.Bytes\n";
   wp i "module PPVD = LowParse.PulseParse.VLData\n";
   wp i "module PPAR = LowParse.PulseParse.Array\n";
+  wp i "module PPVCL = LowParse.PulseParse.VCList\n";
   (List.iter (w i "%s\n") (List.rev fsti));
   w i "\n";
 
