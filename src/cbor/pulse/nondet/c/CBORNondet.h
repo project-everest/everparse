@@ -11,6 +11,11 @@ extern "C" {
 
 #include "CBORNondetType.h"
 
+#define FStar_Pervasives_Native_None 0
+#define FStar_Pervasives_Native_Some 1
+
+typedef uint8_t FStar_Pervasives_Native_option__bool_tags;
+
 #define CBOR_MAJOR_TYPE_SIMPLE_VALUE (7U)
 
 #define CBOR_MAJOR_TYPE_UINT64 (0U)
@@ -74,6 +79,27 @@ cbor_nondet_array_iterator_t
 cbor_nondet_array_iterator_truncate(cbor_nondet_array_iterator_t x, uint64_t len);
 
 bool cbor_nondet_get_array_item(cbor_raw x, uint64_t i, cbor_raw *dest);
+
+cbor_raw cbor_nondet_array_empty(void);
+
+cbor_raw cbor_nondet_array_singleton(cbor_raw x, cbor_raw *ry);
+
+typedef struct FStar_Pervasives_Native_option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw_s
+{
+  FStar_Pervasives_Native_option__bool_tags tag;
+  cbor_raw v;
+}
+FStar_Pervasives_Native_option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw;
+
+FStar_Pervasives_Native_option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+cbor_nondet_array_append(
+  cbor_raw x1,
+  cbor_raw x2,
+  LowParse_PulseParse_Iterator_Type_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw *r_before,
+  LowParse_PulseParse_Iterator_Type_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw *r_after
+);
+
+void cbor_nondet_array_finalize(cbor_raw x);
 
 bool cbor_nondet_get_map_length(cbor_raw x, uint64_t *dest);
 

@@ -1027,135 +1027,6 @@ pub(crate) const simple_value_false: u8 = 20u8;
 
 pub(crate) const simple_value_true: u8 = 21u8;
 
-#[derive(PartialEq, Clone, Copy)]
-enum cbor_raw_map_insert_result
-{
-    CFailure,
-    CInProgress,
-    CSuccess
-}
-
-fn uu___is_CInProgress(projectee: cbor_raw_map_insert_result) -> bool
-{ match projectee { cbor_raw_map_insert_result::CInProgress => true, _ => false } }
-
-pub(crate) fn cbor_raw_map_insert(out: &mut [u8], off2: usize, off3: usize) -> bool
-{
-    let mut poff: [usize; 1] = [0usize; 1usize];
-    let mut pres: [cbor_raw_map_insert_result; 1] =
-        [cbor_raw_map_insert_result::CInProgress; 1usize];
-    let res: cbor_raw_map_insert_result = (&pres)[0];
-    let off: usize = (&poff)[0];
-    let mut cond: bool = uu___is_CInProgress(res) && off < off2;
-    while
-    cond
-    {
-        let off0: usize = (&poff)[0];
-        let sp_top: (&mut [u8], &mut [u8]) = out.split_at_mut(off0);
-        {
-            let _out1: &[u8] = sp_top.0;
-            let out2kv: &mut [u8] = sp_top.1;
-            let sp_kv: (&[u8], &[u8]) = out2kv.split_at(off2.wrapping_sub(off0));
-            let out2: &[u8] = sp_kv.0;
-            let outkv: &[u8] = sp_kv.1;
-            let sp_v: (&[u8], &[u8]) = outkv.split_at(off3.wrapping_sub(off2));
-            let outk: &[u8] = sp_v.0;
-            let _outv: &[u8] = sp_v.1;
-            let offk: usize = jump_raw_data_item(out2, 0usize);
-            let sp_k: (&[u8], &[u8]) = out2.split_at(offk);
-            let outk·: &[u8] = sp_k.0;
-            let outvq: &[u8] = sp_k.1;
-            let c: i16 = lex_compare_bytes(outk·, outk);
-            if c < 0i16
-            {
-                let offq: usize = jump_raw_data_item(outvq, 0usize);
-                let off·: usize = off0.wrapping_add(offk.wrapping_add(offq));
-                (&mut poff)[0] = off·
-            }
-            else if c > 0i16
-            {
-                if ! (off2.wrapping_sub(off0) == 0usize || off2.wrapping_sub(off0) == out2kv.len())
-                {
-                    let mut pn: [usize; 1] = [out2kv.len(); 1usize];
-                    let mut pl: [usize; 1] = [off2.wrapping_sub(off0); 1usize];
-                    let __anf0: usize = (&pl)[0];
-                    let mut cond0: bool = __anf0 > 0usize;
-                    while
-                    cond0
-                    {
-                        let n: usize = (&pn)[0];
-                        let l: usize = (&pl)[0];
-                        let l·: usize = n.wrapping_rem(l);
-                        (&mut pn)[0] = l;
-                        (&mut pl)[0] = l·;
-                        let __anf00: usize = (&pl)[0];
-                        cond0 = __anf00 > 0usize
-                    };
-                    let d: usize = (&pn)[0];
-                    let q: usize = out2kv.len().wrapping_div(d);
-                    let mut pi: [usize; 1] = [0usize; 1usize];
-                    let __anf00: usize = (&pi)[0];
-                    let mut cond1: bool = __anf00 < d;
-                    while
-                    cond1
-                    {
-                        let i: usize = (&pi)[0];
-                        let save: u8 = out2kv[i];
-                        let mut pj: [usize; 1] = [0usize; 1usize];
-                        let mut pidx: [usize; 1] = [i; 1usize];
-                        let __anf01: usize = (&pj)[0];
-                        let mut cond2: bool = __anf01 < q.wrapping_sub(1usize);
-                        while
-                        cond2
-                        {
-                            let j: usize = (&pj)[0];
-                            let idx: usize = (&pidx)[0];
-                            let idx·: usize =
-                                if
-                                idx.wrapping_sub(0usize)
-                                >=
-                                out2kv.len().wrapping_sub(off2.wrapping_sub(off0))
-                                {
-                                    idx.wrapping_sub(
-                                        out2kv.len().wrapping_sub(off2.wrapping_sub(off0))
-                                    )
-                                }
-                                else
-                                { idx.wrapping_add(off2.wrapping_sub(off0).wrapping_sub(0usize)) };
-                            let x: u8 = out2kv[idx·];
-                            let j·: usize = j.wrapping_add(1usize);
-                            out2kv[idx] = x;
-                            (&mut pj)[0] = j·;
-                            (&mut pidx)[0] = idx·;
-                            let __anf02: usize = (&pj)[0];
-                            cond2 = __anf02 < q.wrapping_sub(1usize)
-                        };
-                        let idx: usize = (&pidx)[0];
-                        out2kv[idx] = save;
-                        let i·: usize = i.wrapping_add(1usize);
-                        (&mut pi)[0] = i·;
-                        let __anf02: usize = (&pi)[0];
-                        cond1 = __anf02 < d
-                    }
-                };
-                (&mut pres)[0] = cbor_raw_map_insert_result::CSuccess
-            }
-            else
-            { (&mut pres)[0] = cbor_raw_map_insert_result::CFailure }
-        };
-        let res0: cbor_raw_map_insert_result = (&pres)[0];
-        let off1: usize = (&poff)[0];
-        cond = uu___is_CInProgress(res0) && off1 < off2
-    };
-    let res0: cbor_raw_map_insert_result = (&pres)[0];
-    match res0
-    {
-        cbor_raw_map_insert_result::CSuccess => true,
-        cbor_raw_map_insert_result::CFailure => false,
-        cbor_raw_map_insert_result::CInProgress => true,
-        _ => panic!("Precondition of the function most likely violated")
-    }
-}
-
 pub(crate) fn append_n_before_sz(off: usize, n: usize, cb: usize) -> usize
 {
     if off >= cb
@@ -1181,40 +1052,6 @@ pub(crate) fn append_off_after_sz(off: usize, oa: usize, ca: usize, cb: usize) -
     crate::lowstar::ignore::ignore::<usize>(ca);
     let ite: usize = if off >= cb { off.wrapping_sub(cb) } else { 0usize };
     oa.wrapping_add(ite)
-}
-
-fn
-__proj__Mkdtuple2__item___1__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-    pair: header
-) ->
-    initial_byte_t
-{ pair.fst }
-
-fn dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-    t: header
-) ->
-    initial_byte_t
-{
-    __proj__Mkdtuple2__item___1__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-        t
-    )
-}
-
-fn
-__proj__Mkdtuple2__item___2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-    pair: header
-) ->
-    long_argument
-{ pair.snd }
-
-fn dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-    t: header
-) ->
-    long_argument
-{
-    __proj__Mkdtuple2__item___2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-        t
-    )
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -1389,6 +1226,187 @@ pub enum cbor_rawÂ·Â· <'a>
     CBOR_Case_Tagged_Serialized { v: cbor_tagged_serialized <'a> },
     CBOR_Case_Array { v: cbor_array__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a> },
     CBOR_Case_Map { v: cbor_map__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a> }
+}
+
+pub(crate) fn cbor_mk_simple_value <'a>(v: u8) -> cbor_raw <'a>
+{ cbor_raw::CBOR_Case_Simple { v } }
+
+pub(crate) fn cbor_mk_int64 <'a>(ty: u8, v: u64) -> cbor_raw <'a>
+{
+    let i: cbor_int =
+        cbor_int { cbor_int_type: ty, cbor_int_size: (mk_raw_uint64(v)).size, cbor_int_value: v };
+    cbor_raw::CBOR_Case_Int { v: i }
+}
+
+pub(crate) fn cbor_mk_string <'a>(ty: u8, s: &'a [u8]) -> cbor_raw <'a>
+{
+    let len64: u64 = s.len() as u64;
+    let ru: raw_uint64 = mk_raw_uint64(len64);
+    let str: cbor_string =
+        cbor_string { cbor_string_type: ty, cbor_string_size: ru.size, cbor_string_ptr: s };
+    cbor_raw::CBOR_Case_String { v: str }
+}
+
+pub(crate) fn cbor_mk_tagged <'a>(tag: u64, r: &'a [cbor_raw <'a>]) -> cbor_raw <'a>
+{
+    let ru: raw_uint64 = mk_raw_uint64(tag);
+    let tv: cbor_tagged__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+        cbor_tagged__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+        { cbor_tagged_tag: ru, cbor_tagged_ptr: r };
+    cbor_raw::CBOR_Case_Tagged { v: tv }
+}
+
+pub(crate) fn cbor_mk_map_entry <'a>(xk: cbor_raw <'a>, xv: cbor_raw <'a>) ->
+    cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    <'a>
+{
+    cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    { cbor_map_entry_key: xk, cbor_map_entry_value: xv }
+}
+
+pub(crate) fn base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+    i: base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+) ->
+    usize
+{
+    match i
+    {
+        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty => 0usize,
+        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton { .. } => 1usize,
+        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice { ss: sl } => sl.len(),
+        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized { count, .. } => count,
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+pub(crate) fn mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+    i: mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+) ->
+    usize
+{
+    match i
+    {
+        mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base { _0: bi } =>
+          base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(bi),
+        mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append { cb, ca, .. } =>
+          cb.wrapping_add(ca),
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+pub(crate) fn cbor_mk_array <'a>(
+    len_size: u8,
+    ml: mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>
+) ->
+    cbor_raw
+    <'a>
+{
+    let len_sz: usize = mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(ml);
+    crate::lowstar::ignore::ignore::<usize>(len_sz);
+    let v: cbor_array__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+        cbor_array__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+        { cbor_array_length_size: len_size, cbor_array_ptr: ml };
+    cbor_raw::CBOR_Case_Array { v }
+}
+
+pub(crate) fn
+base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+    i:
+    base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+) ->
+    usize
+{
+    match i
+    {
+        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+        => 0usize,
+        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+        { .. }
+        => 1usize,
+        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+        { ss: sl }
+        => sl.len(),
+        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+        { count, .. }
+        => count,
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+pub(crate) fn
+mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+    i:
+    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+) ->
+    usize
+{
+    match i
+    {
+        mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
+        { _0: bi }
+        =>
+          base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+              bi
+          ),
+        mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
+        { cb, ca, .. }
+        => cb.wrapping_add(ca),
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+pub(crate) fn cbor_mk_map <'a>(
+    len_size: u8,
+    ml:
+    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    <'a>
+) ->
+    cbor_raw
+    <'a>
+{
+    let len_sz: usize =
+        mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+            ml
+        );
+    crate::lowstar::ignore::ignore::<usize>(len_sz);
+    let v: cbor_map__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+        cbor_map__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+        { cbor_map_length_size: len_size, cbor_map_ptr: ml };
+    cbor_raw::CBOR_Case_Map { v }
+}
+
+fn
+__proj__Mkdtuple2__item___1__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+    pair: header
+) ->
+    initial_byte_t
+{ pair.fst }
+
+fn dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+    t: header
+) ->
+    initial_byte_t
+{
+    __proj__Mkdtuple2__item___1__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+        t
+    )
+}
+
+fn
+__proj__Mkdtuple2__item___2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+    pair: header
+) ->
+    long_argument
+{ pair.snd }
+
+fn dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+    t: header
+) ->
+    long_argument
+{
+    __proj__Mkdtuple2__item___2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+        t
+    )
 }
 
 fn cbor_raw_read_match_aux <'a>(input: &'a [u8]) -> cbor_raw <'a>
@@ -1771,6 +1789,170 @@ pub(crate) fn cbor_raw_get_map <'a>(x: cbor_raw <'a>) ->
     res
 }
 
+pub(crate) fn minimal_len_size(len: u64) -> u8 { (mk_raw_uint64(len)).size }
+
+pub(crate) fn cbor_array_owned_elim <'a>(x: cbor_raw <'a>) ->
+    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    <'a>
+{
+    match x
+    {
+        cbor_raw::CBOR_Case_Array { v } => v.cbor_array_ptr,
+        cbor_raw::CBOR_Case_Invalid => panic!("Pulse.Lib.Dv.unreachable"),
+        cbor_raw::CBOR_Case_Int { .. } => panic!("Pulse.Lib.Dv.unreachable"),
+        cbor_raw::CBOR_Case_Simple { .. } => panic!("Pulse.Lib.Dv.unreachable"),
+        cbor_raw::CBOR_Case_String { .. } => panic!("Pulse.Lib.Dv.unreachable"),
+        cbor_raw::CBOR_Case_Map { .. } => panic!("Pulse.Lib.Dv.unreachable"),
+        cbor_raw::CBOR_Case_Tagged { .. } => panic!("Pulse.Lib.Dv.unreachable"),
+        cbor_raw::CBOR_Case_Tagged_Serialized { .. } => panic!("Pulse.Lib.Dv.unreachable"),
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+pub(crate) fn cbor_mk_array_full <'a>(
+    len_size: u8,
+    ml: mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>
+) ->
+    cbor_raw
+    <'a>
+{
+    let len_sz: usize = mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(ml);
+    crate::lowstar::ignore::ignore::<usize>(len_sz);
+    let v: cbor_array__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+        cbor_array__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+        { cbor_array_length_size: len_size, cbor_array_ptr: ml };
+    cbor_raw::CBOR_Case_Array { v }
+}
+
+#[derive(PartialEq, Clone, Copy)]
+enum cbor_raw_map_insert_result
+{
+    CFailure,
+    CInProgress,
+    CSuccess
+}
+
+fn uu___is_CInProgress(projectee: cbor_raw_map_insert_result) -> bool
+{ match projectee { cbor_raw_map_insert_result::CInProgress => true, _ => false } }
+
+pub(crate) fn cbor_raw_map_insert(out: &mut [u8], off2: usize, off3: usize) -> bool
+{
+    let mut poff: [usize; 1] = [0usize; 1usize];
+    let mut pres: [cbor_raw_map_insert_result; 1] =
+        [cbor_raw_map_insert_result::CInProgress; 1usize];
+    let res: cbor_raw_map_insert_result = (&pres)[0];
+    let off: usize = (&poff)[0];
+    let mut cond: bool = uu___is_CInProgress(res) && off < off2;
+    while
+    cond
+    {
+        let off0: usize = (&poff)[0];
+        let sp_top: (&mut [u8], &mut [u8]) = out.split_at_mut(off0);
+        {
+            let _out1: &[u8] = sp_top.0;
+            let out2kv: &mut [u8] = sp_top.1;
+            let sp_kv: (&[u8], &[u8]) = out2kv.split_at(off2.wrapping_sub(off0));
+            let out2: &[u8] = sp_kv.0;
+            let outkv: &[u8] = sp_kv.1;
+            let sp_v: (&[u8], &[u8]) = outkv.split_at(off3.wrapping_sub(off2));
+            let outk: &[u8] = sp_v.0;
+            let _outv: &[u8] = sp_v.1;
+            let offk: usize = jump_raw_data_item(out2, 0usize);
+            let sp_k: (&[u8], &[u8]) = out2.split_at(offk);
+            let outk·: &[u8] = sp_k.0;
+            let outvq: &[u8] = sp_k.1;
+            let c: i16 = lex_compare_bytes(outk·, outk);
+            if c < 0i16
+            {
+                let offq: usize = jump_raw_data_item(outvq, 0usize);
+                let off·: usize = off0.wrapping_add(offk.wrapping_add(offq));
+                (&mut poff)[0] = off·
+            }
+            else if c > 0i16
+            {
+                if ! (off2.wrapping_sub(off0) == 0usize || off2.wrapping_sub(off0) == out2kv.len())
+                {
+                    let mut pn: [usize; 1] = [out2kv.len(); 1usize];
+                    let mut pl: [usize; 1] = [off2.wrapping_sub(off0); 1usize];
+                    let __anf0: usize = (&pl)[0];
+                    let mut cond0: bool = __anf0 > 0usize;
+                    while
+                    cond0
+                    {
+                        let n: usize = (&pn)[0];
+                        let l: usize = (&pl)[0];
+                        let l·: usize = n.wrapping_rem(l);
+                        (&mut pn)[0] = l;
+                        (&mut pl)[0] = l·;
+                        let __anf00: usize = (&pl)[0];
+                        cond0 = __anf00 > 0usize
+                    };
+                    let d: usize = (&pn)[0];
+                    let q: usize = out2kv.len().wrapping_div(d);
+                    let mut pi: [usize; 1] = [0usize; 1usize];
+                    let __anf00: usize = (&pi)[0];
+                    let mut cond1: bool = __anf00 < d;
+                    while
+                    cond1
+                    {
+                        let i: usize = (&pi)[0];
+                        let save: u8 = out2kv[i];
+                        let mut pj: [usize; 1] = [0usize; 1usize];
+                        let mut pidx: [usize; 1] = [i; 1usize];
+                        let __anf01: usize = (&pj)[0];
+                        let mut cond2: bool = __anf01 < q.wrapping_sub(1usize);
+                        while
+                        cond2
+                        {
+                            let j: usize = (&pj)[0];
+                            let idx: usize = (&pidx)[0];
+                            let idx·: usize =
+                                if
+                                idx.wrapping_sub(0usize)
+                                >=
+                                out2kv.len().wrapping_sub(off2.wrapping_sub(off0))
+                                {
+                                    idx.wrapping_sub(
+                                        out2kv.len().wrapping_sub(off2.wrapping_sub(off0))
+                                    )
+                                }
+                                else
+                                { idx.wrapping_add(off2.wrapping_sub(off0).wrapping_sub(0usize)) };
+                            let x: u8 = out2kv[idx·];
+                            let j·: usize = j.wrapping_add(1usize);
+                            out2kv[idx] = x;
+                            (&mut pj)[0] = j·;
+                            (&mut pidx)[0] = idx·;
+                            let __anf02: usize = (&pj)[0];
+                            cond2 = __anf02 < q.wrapping_sub(1usize)
+                        };
+                        let idx: usize = (&pidx)[0];
+                        out2kv[idx] = save;
+                        let i·: usize = i.wrapping_add(1usize);
+                        (&mut pi)[0] = i·;
+                        let __anf02: usize = (&pi)[0];
+                        cond1 = __anf02 < d
+                    }
+                };
+                (&mut pres)[0] = cbor_raw_map_insert_result::CSuccess
+            }
+            else
+            { (&mut pres)[0] = cbor_raw_map_insert_result::CFailure }
+        };
+        let res0: cbor_raw_map_insert_result = (&pres)[0];
+        let off1: usize = (&poff)[0];
+        cond = uu___is_CInProgress(res0) && off1 < off2
+    };
+    let res0: cbor_raw_map_insert_result = (&pres)[0];
+    match res0
+    {
+        cbor_raw_map_insert_result::CSuccess => true,
+        cbor_raw_map_insert_result::CFailure => false,
+        cbor_raw_map_insert_result::CInProgress => true,
+        _ => panic!("Precondition of the function most likely violated")
+    }
+}
+
 fn write_header(x: header, out: &mut [u8], offset: usize) -> usize
 {
     let xh1: initial_byte_t =
@@ -1986,82 +2168,6 @@ fn size_header(x: header, out: &mut [usize]) -> bool
     }
     else
     { false }
-}
-
-pub(crate) fn base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-    i: base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-) ->
-    usize
-{
-    match i
-    {
-        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty => 0usize,
-        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton { .. } => 1usize,
-        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice { ss: sl } => sl.len(),
-        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized { count, .. } => count,
-        _ => panic!("Incomplete pattern matching")
-    }
-}
-
-pub(crate) fn mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-    i: mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-) ->
-    usize
-{
-    match i
-    {
-        mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base { _0: bi } =>
-          base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(bi),
-        mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append { cb, ca, .. } =>
-          cb.wrapping_add(ca),
-        _ => panic!("Incomplete pattern matching")
-    }
-}
-
-pub(crate) fn
-base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-    i:
-    base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-) ->
-    usize
-{
-    match i
-    {
-        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-        => 0usize,
-        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-        { .. }
-        => 1usize,
-        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-        { ss: sl }
-        => sl.len(),
-        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-        { count, .. }
-        => count,
-        _ => panic!("Incomplete pattern matching")
-    }
-}
-
-pub(crate) fn
-mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-    i:
-    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-) ->
-    usize
-{
-    match i
-    {
-        mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
-        { _0: bi }
-        =>
-          base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-              bi
-          ),
-        mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
-        { cb, ca, .. }
-        => cb.wrapping_add(ca),
-        _ => panic!("Incomplete pattern matching")
-    }
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -5967,77 +6073,6 @@ pub(crate) fn cbor_raw_read_map_length(x: cbor_raw) -> u64
 {
     let x0: option__uint64_t = cbor_raw_map_length(x);
     match x0 { option__uint64_t::Some { v } => v, _ => panic!("Incomplete pattern matching") }
-}
-
-pub(crate) fn cbor_mk_simple_value <'a>(v: u8) -> cbor_raw <'a>
-{ cbor_raw::CBOR_Case_Simple { v } }
-
-pub(crate) fn cbor_mk_int64 <'a>(ty: u8, v: u64) -> cbor_raw <'a>
-{
-    let i: cbor_int =
-        cbor_int { cbor_int_type: ty, cbor_int_size: (mk_raw_uint64(v)).size, cbor_int_value: v };
-    cbor_raw::CBOR_Case_Int { v: i }
-}
-
-pub(crate) fn cbor_mk_string <'a>(ty: u8, s: &'a [u8]) -> cbor_raw <'a>
-{
-    let len64: u64 = s.len() as u64;
-    let ru: raw_uint64 = mk_raw_uint64(len64);
-    let str: cbor_string =
-        cbor_string { cbor_string_type: ty, cbor_string_size: ru.size, cbor_string_ptr: s };
-    cbor_raw::CBOR_Case_String { v: str }
-}
-
-pub(crate) fn cbor_mk_tagged <'a>(tag: u64, r: &'a [cbor_raw <'a>]) -> cbor_raw <'a>
-{
-    let ru: raw_uint64 = mk_raw_uint64(tag);
-    let tv: cbor_tagged__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-        cbor_tagged__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-        { cbor_tagged_tag: ru, cbor_tagged_ptr: r };
-    cbor_raw::CBOR_Case_Tagged { v: tv }
-}
-
-pub(crate) fn cbor_mk_map_entry <'a>(xk: cbor_raw <'a>, xv: cbor_raw <'a>) ->
-    cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-    <'a>
-{
-    cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-    { cbor_map_entry_key: xk, cbor_map_entry_value: xv }
-}
-
-pub(crate) fn cbor_mk_array <'a>(
-    len_size: u8,
-    ml: mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>
-) ->
-    cbor_raw
-    <'a>
-{
-    let len_sz: usize = mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(ml);
-    crate::lowstar::ignore::ignore::<usize>(len_sz);
-    let v: cbor_array__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-        cbor_array__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-        { cbor_array_length_size: len_size, cbor_array_ptr: ml };
-    cbor_raw::CBOR_Case_Array { v }
-}
-
-pub(crate) fn cbor_mk_map <'a>(
-    len_size: u8,
-    ml:
-    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-    <'a>
-) ->
-    cbor_raw
-    <'a>
-{
-    let len_sz: usize =
-        mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-            ml
-        );
-    crate::lowstar::ignore::ignore::<usize>(len_sz);
-    let v: cbor_map__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-        cbor_map__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-        { cbor_map_length_size: len_size, cbor_map_ptr: ml };
-    cbor_raw::CBOR_Case_Map { v }
 }
 
 fn cbor_raw_read_map_entry <'a>(input: &'a [u8]) ->
@@ -10251,3 +10286,6 @@ iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>;
 pub type cbor_det_map_iterator_t <'a> =
 iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
 <'a>;
+
+pub type cbor_det_array_append_cell_t <'a> =
+mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>;

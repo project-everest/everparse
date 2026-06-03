@@ -11,6 +11,11 @@ extern "C" {
 
 #include "CBORDetType.h"
 
+#define FStar_Pervasives_Native_None 0
+#define FStar_Pervasives_Native_Some 1
+
+typedef uint8_t FStar_Pervasives_Native_option__uint8_t_tags;
+
 #define CBOR_MAJOR_TYPE_SIMPLE_VALUE (7U)
 
 #define CBOR_MAJOR_TYPE_UINT64 (0U)
@@ -56,6 +61,27 @@ bool cbor_det_mk_byte_string_from_arrayptr(uint8_t *a, uint64_t len, cbor_raw *d
 bool cbor_det_mk_text_string_from_arrayptr(uint8_t *a, uint64_t len, cbor_raw *dest);
 
 cbor_raw cbor_det_mk_array_from_array(cbor_raw *a, uint64_t len);
+
+cbor_raw cbor_det_array_empty(void);
+
+cbor_raw cbor_det_array_singleton(cbor_raw x, cbor_raw *ry);
+
+typedef struct FStar_Pervasives_Native_option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw_s
+{
+  FStar_Pervasives_Native_option__uint8_t_tags tag;
+  cbor_raw v;
+}
+FStar_Pervasives_Native_option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw;
+
+FStar_Pervasives_Native_option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+cbor_det_array_append(
+  cbor_raw x1,
+  cbor_raw x2,
+  LowParse_PulseParse_Iterator_Type_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw *r_before,
+  LowParse_PulseParse_Iterator_Type_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw *r_after
+);
+
+void cbor_det_array_finalize(cbor_raw x);
 
 cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
 cbor_det_mk_map_entry(cbor_raw xk, cbor_raw xv);
@@ -149,6 +175,9 @@ cbor_det_freeable_t_ cbor_copy(cbor_raw c);
 void cbor_free(cbor_det_freeable_t_ x);
 
 cbor_raw dummy_cbor_det_t(void);
+
+LowParse_PulseParse_Iterator_Type_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+dummy_cbor_det_array_append_cell(void);
 
 #if defined(__cplusplus)
 }

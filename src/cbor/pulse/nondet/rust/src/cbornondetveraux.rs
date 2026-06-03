@@ -8357,6 +8357,112 @@ fn cbor_raw_reset_perm_tot <'a>(c: cbor_raw <'a>) -> cbor_raw <'a>
 pub(crate) fn cbor_raw_reset_perm <'a>(c: cbor_raw <'a>) -> cbor_raw <'a>
 { cbor_raw_reset_perm_tot(c) }
 
+pub(crate) fn cbor_mk_simple_value <'a>(v: u8) -> cbor_raw <'a>
+{ cbor_raw::CBOR_Case_Simple { v } }
+
+fn cbor_mk_int64 <'a>(ty: u8, v: u64) -> cbor_raw <'a>
+{
+    let i: cbor_int =
+        cbor_int { cbor_int_type: ty, cbor_int_size: (mk_raw_uint64(v)).size, cbor_int_value: v };
+    cbor_raw::CBOR_Case_Int { v: i }
+}
+
+pub(crate) fn cbor_mk_string <'a>(ty: u8, s: &'a [u8]) -> cbor_raw <'a>
+{
+    let len64: u64 = s.len() as u64;
+    let ru: raw_uint64 = mk_raw_uint64(len64);
+    let str: cbor_string =
+        cbor_string { cbor_string_type: ty, cbor_string_size: ru.size, cbor_string_ptr: s };
+    cbor_raw::CBOR_Case_String { v: str }
+}
+
+pub(crate) fn cbor_mk_tagged <'a>(tag: u64, r: &'a [cbor_raw <'a>]) -> cbor_raw <'a>
+{
+    let ru: raw_uint64 = mk_raw_uint64(tag);
+    let tv: cbor_tagged__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+        cbor_tagged__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+        { cbor_tagged_tag: ru, cbor_tagged_ptr: r };
+    cbor_raw::CBOR_Case_Tagged { v: tv }
+}
+
+fn cbor_mk_map_entry <'a>(xk: cbor_raw <'a>, xv: cbor_raw <'a>) ->
+    cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    <'a>
+{
+    cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    { cbor_map_entry_key: xk, cbor_map_entry_value: xv }
+}
+
+pub(crate) fn cbor_mk_array <'a>(
+    len_size: u8,
+    ml: mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>
+) ->
+    cbor_raw
+    <'a>
+{
+    let len_sz: usize = mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(ml);
+    crate::lowstar::ignore::ignore::<usize>(len_sz);
+    let v: cbor_array__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+        cbor_array__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+        { cbor_array_length_size: len_size, cbor_array_ptr: ml };
+    cbor_raw::CBOR_Case_Array { v }
+}
+
+pub(crate) fn cbor_mk_map <'a>(
+    len_size: u8,
+    ml:
+    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    <'a>
+) ->
+    cbor_raw
+    <'a>
+{
+    let len_sz: usize =
+        mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+            ml
+        );
+    crate::lowstar::ignore::ignore::<usize>(len_sz);
+    let v: cbor_map__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+        cbor_map__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+        { cbor_map_length_size: len_size, cbor_map_ptr: ml };
+    cbor_raw::CBOR_Case_Map { v }
+}
+
+pub(crate) fn minimal_len_size(len: u64) -> u8 { (mk_raw_uint64(len)).size }
+
+pub(crate) fn cbor_array_owned_elim <'a>(x: cbor_raw <'a>) ->
+    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    <'a>
+{
+    match x
+    {
+        cbor_raw::CBOR_Case_Array { v } => v.cbor_array_ptr,
+        cbor_raw::CBOR_Case_Invalid => panic!("Pulse.Lib.Dv.unreachable"),
+        cbor_raw::CBOR_Case_Int { .. } => panic!("Pulse.Lib.Dv.unreachable"),
+        cbor_raw::CBOR_Case_Simple { .. } => panic!("Pulse.Lib.Dv.unreachable"),
+        cbor_raw::CBOR_Case_String { .. } => panic!("Pulse.Lib.Dv.unreachable"),
+        cbor_raw::CBOR_Case_Map { .. } => panic!("Pulse.Lib.Dv.unreachable"),
+        cbor_raw::CBOR_Case_Tagged { .. } => panic!("Pulse.Lib.Dv.unreachable"),
+        cbor_raw::CBOR_Case_Tagged_Serialized { .. } => panic!("Pulse.Lib.Dv.unreachable"),
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+pub(crate) fn cbor_mk_array_full <'a>(
+    len_size: u8,
+    ml: mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>
+) ->
+    cbor_raw
+    <'a>
+{
+    let len_sz: usize = mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(ml);
+    crate::lowstar::ignore::ignore::<usize>(len_sz);
+    let v: cbor_array__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+        cbor_array__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+        { cbor_array_length_size: len_size, cbor_array_ptr: ml };
+    cbor_raw::CBOR_Case_Array { v }
+}
+
 fn write_header(x: header, out: &mut [u8], offset: usize) -> usize
 {
     let xh1: initial_byte_t =
@@ -11594,77 +11700,6 @@ pub(crate) fn cbor_raw_read_map_length(x: cbor_raw) -> u64
 {
     let x0: option__uint64_t = cbor_raw_map_length(x);
     match x0 { option__uint64_t::Some { v } => v, _ => panic!("Incomplete pattern matching") }
-}
-
-pub(crate) fn cbor_mk_simple_value <'a>(v: u8) -> cbor_raw <'a>
-{ cbor_raw::CBOR_Case_Simple { v } }
-
-fn cbor_mk_int64 <'a>(ty: u8, v: u64) -> cbor_raw <'a>
-{
-    let i: cbor_int =
-        cbor_int { cbor_int_type: ty, cbor_int_size: (mk_raw_uint64(v)).size, cbor_int_value: v };
-    cbor_raw::CBOR_Case_Int { v: i }
-}
-
-pub(crate) fn cbor_mk_string <'a>(ty: u8, s: &'a [u8]) -> cbor_raw <'a>
-{
-    let len64: u64 = s.len() as u64;
-    let ru: raw_uint64 = mk_raw_uint64(len64);
-    let str: cbor_string =
-        cbor_string { cbor_string_type: ty, cbor_string_size: ru.size, cbor_string_ptr: s };
-    cbor_raw::CBOR_Case_String { v: str }
-}
-
-pub(crate) fn cbor_mk_tagged <'a>(tag: u64, r: &'a [cbor_raw <'a>]) -> cbor_raw <'a>
-{
-    let ru: raw_uint64 = mk_raw_uint64(tag);
-    let tv: cbor_tagged__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-        cbor_tagged__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-        { cbor_tagged_tag: ru, cbor_tagged_ptr: r };
-    cbor_raw::CBOR_Case_Tagged { v: tv }
-}
-
-fn cbor_mk_map_entry <'a>(xk: cbor_raw <'a>, xv: cbor_raw <'a>) ->
-    cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-    <'a>
-{
-    cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-    { cbor_map_entry_key: xk, cbor_map_entry_value: xv }
-}
-
-pub(crate) fn cbor_mk_array <'a>(
-    len_size: u8,
-    ml: mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>
-) ->
-    cbor_raw
-    <'a>
-{
-    let len_sz: usize = mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(ml);
-    crate::lowstar::ignore::ignore::<usize>(len_sz);
-    let v: cbor_array__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-        cbor_array__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-        { cbor_array_length_size: len_size, cbor_array_ptr: ml };
-    cbor_raw::CBOR_Case_Array { v }
-}
-
-pub(crate) fn cbor_mk_map <'a>(
-    len_size: u8,
-    ml:
-    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-    <'a>
-) ->
-    cbor_raw
-    <'a>
-{
-    let len_sz: usize =
-        mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-            ml
-        );
-    crate::lowstar::ignore::ignore::<usize>(len_sz);
-    let v: cbor_map__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-        cbor_map__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-        { cbor_map_length_size: len_size, cbor_map_ptr: ml };
-    cbor_raw::CBOR_Case_Map { v }
 }
 
 fn cbor_raw_read_map_entry <'a>(input: &'a [u8]) ->
@@ -16537,6 +16572,21 @@ pub(crate) fn cbor_nondet_no_setoid_repeats(
     (&pres)[0]
 }
 
+pub(crate) fn mk_array_owned_with_ptr <'a>(
+    len_size: u8,
+    ml: mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>
+) ->
+    cbor_raw
+    <'a>
+{
+    let len_sz: usize = mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(ml);
+    crate::lowstar::ignore::ignore::<usize>(len_sz);
+    let v: cbor_array__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+        cbor_array__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+        { cbor_array_length_size: len_size, cbor_array_ptr: ml };
+    cbor_raw::CBOR_Case_Array { v }
+}
+
 pub const cbor_major_type_simple_value: u8 = 7u8;
 
 pub const cbor_major_type_uint64: u8 = 0u8;
@@ -16592,3 +16642,6 @@ iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse
 
 pub type cbor_nondet_map_entry_t <'a> =
 cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>;
+
+pub type cbor_nondet_array_append_cell_t <'a> =
+mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>;

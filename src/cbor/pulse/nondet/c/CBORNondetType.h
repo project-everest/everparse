@@ -276,6 +276,9 @@ cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw;
 
 typedef cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw cbor_nondet_map_entry_t;
 
+typedef LowParse_PulseParse_Iterator_Type_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+cbor_nondet_array_append_cell_t;
+
 #if defined(__cplusplus)
 }
 #endif

@@ -12,11 +12,6 @@ extern "C" {
 #include "CBORNondetType.h"
 #include "../CBORNondet.h"
 
-#define FStar_Pervasives_Native_None 0
-#define FStar_Pervasives_Native_Some 1
-
-typedef uint8_t FStar_Pervasives_Native_option__bool_tags;
-
 typedef struct FStar_Pervasives_Native_option__bool_s
 {
   FStar_Pervasives_Native_option__bool_tags tag;
