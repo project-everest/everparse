@@ -1,7 +1,7 @@
 FSTAR_EXE ?= fstar.exe
 
 all: $(filter-out %~,$(wildcard *.ml*))
-	dune build
+	$(FSTAR_EXE) --ocamlenv dune build
 
 clean-local:
 	rm -rf _build *~

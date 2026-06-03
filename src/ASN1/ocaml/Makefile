@@ -1,7 +1,7 @@
 FSTAR_EXE ?= fstar.exe
 
 all:
-	dune build
+	$(FSTAR_EXE) --ocamlenv dune build
 
 clean:
 	rm -rf _build extracted
