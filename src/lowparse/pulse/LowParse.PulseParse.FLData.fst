@@ -272,3 +272,67 @@ fn accessor_fldata_strong
 }
 
 #pop-options
+
+(* ============================================================================ *)
+(* Copyful parse + free for strong fixed-length data                            *)
+(* ============================================================================ *)
+
+(* The fixed-length framing occupies the whole slice and changes neither the
+   high-level value nor its copyful representation, so the payload's [vmatch],
+   copyful parser and [free_t] are reused. The high-level type
+   [parse_fldata_strong_t] is a refinement of the payload type [t], so the
+   predicate [vmatch_fldata_strong] reuses the payload [vmatch] composed with the
+   refinement upcast. *)
+
+let vmatch_fldata_strong
+  (#tl #t: Type0)
+  (#k: Ghost.erased parser_kind) (#p: parser k t)
+  (s: serializer p)
+  (sz: nat)
+  (vmatch: tl -> t -> slprop)
+  (xl: tl)
+  (xh: parse_fldata_strong_t s sz)
+: slprop
+= vmatch xl (xh <: t)
+
+#push-options "--z3rlimit 32"
+
+inline_for_extraction
+fn copyful_parse_fldata_strong_payload
+  (#tl #t: Type0) (#vmatch: tl -> t -> slprop)
+  (#k: Ghost.erased parser_kind) (#p: parser k t)
+  (s: serializer p)
+  (sz: nat)
+  (w: PPB.copyful_parse vmatch p)
+: PPB.copyful_parse (vmatch_fldata_strong s sz vmatch) (parse_fldata_strong s sz)
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (parse_fldata_strong_t s sz))
+{
+  pts_to_parsed_fldata_strong_payload_trade s sz input;
+  let res = w input;
+  Trade.elim
+    (PPB.pts_to_parsed p input #pm (Ghost.reveal v <: t))
+    (PPB.pts_to_parsed (parse_fldata_strong s sz) input #pm v);
+  fold (vmatch_fldata_strong s sz vmatch res v);
+  res
+}
+
+inline_for_extraction
+fn free_fldata_strong
+  (#tl #t: Type0) (#vmatch: tl -> t -> slprop)
+  (#k: Ghost.erased parser_kind) (#p: parser k t)
+  (s: serializer p)
+  (sz: nat)
+  (free: PPB.free_t vmatch)
+: PPB.free_t (vmatch_fldata_strong s sz vmatch)
+=
+  (x: tl)
+  (#v: Ghost.erased (parse_fldata_strong_t s sz))
+{
+  unfold (vmatch_fldata_strong s sz vmatch x v);
+  free x #(Ghost.hide (Ghost.reveal v <: t));
+}
+
+#pop-options

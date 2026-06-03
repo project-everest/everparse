@@ -251,3 +251,66 @@ fn accessor_vlgen_payload
 }
 
 #pop-options
+
+(* ============================================================================ *)
+(* Copyful parse for bounded generic-length-prefixed data                       *)
+(* ============================================================================ *)
+
+(* The generic length-prefix framing produces the same refined high-level type
+   [parse_bounded_vldata_strong_t vmin vmax s] as the bounded vldata-strong
+   combinator, so the separation-logic predicate ([PPCV.vmatch_vldata_strong])
+   and destructor ([PPCV.free_vldata_strong]) are reused unchanged; only the
+   copyful parser is specific (it parses the generic length header and splits off
+   the payload). Mirrors [accessor_bounded_vlgen_payload]. *)
+
+#push-options "--z3rlimit 128"
+
+inline_for_extraction
+fn copyful_parse_bounded_vlgen_payload
+  (vmin: Ghost.erased nat)
+  (vmax: Ghost.erased nat { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 })
+  (#sk: Ghost.erased parser_kind)
+  (#pk: parser sk (bounded_int32 vmin vmax))
+  (jk: LPS.jumper pk)
+  (rk: PPB.leaf_reader pk)
+  (#tl #t: Type0) (#vmatch: tl -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (w: PPB.copyful_parse vmatch p)
+  (sq: squash (sk.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+: PPB.copyful_parse (PPCV.vmatch_vldata_strong vmin vmax s vmatch) (parse_bounded_vlgen vmin vmax pk s)
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (parse_bounded_vldata_strong_t vmin vmax s))
+{
+  PPB.pts_to_parsed_elim input;
+  with bytes . assert (S.pts_to input #pm bytes);
+  S.pts_to_len input;
+  SZ.fits_u64_implies_fits_32 ();
+  Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
+  parse_bounded_vlgen_unfold_aux vmin vmax pk s bytes;
+  parser_kind_prop_equiv sk pk;
+  let off1 = jk input 0sz;
+  let len = PPB.read_parsed_from_validator_success rk input 0sz off1;
+  let input_key, input_payload = split_trade input off1;
+  with wb_key . assert (S.pts_to input_key #pm wb_key);
+  with wb_payload . assert (S.pts_to input_payload #pm wb_payload);
+  Trade.elim_hyp_l (S.pts_to input_key #pm wb_key) (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes);
+  Trade.trans (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes) (PPB.pts_to_parsed (parse_bounded_vlgen vmin vmax pk s) input #pm v);
+  parser_kind_prop_equiv (parse_fldata_kind (U32.v len) k) (parse_fldata_strong s (U32.v len));
+  parser_kind_prop_equiv (parse_fldata_kind (U32.v len) k) (parse_fldata p (U32.v len));
+  parser_kind_prop_equiv k p;
+  Seq.lemma_eq_elim wb_payload (Seq.slice wb_payload 0 (Seq.length wb_payload));
+  PPB.pts_to_parsed_intro p input_payload (Ghost.reveal v <: t);
+  Trade.trans (PPB.pts_to_parsed p input_payload #(pm /. 2.0R) (Ghost.reveal v <: t)) (S.pts_to input_payload #pm wb_payload) (PPB.pts_to_parsed (parse_bounded_vlgen vmin vmax pk s) input #pm v);
+  let res = w input_payload;
+  Trade.elim
+    (PPB.pts_to_parsed p input_payload #(pm /. 2.0R) (Ghost.reveal v <: t))
+    (PPB.pts_to_parsed (parse_bounded_vlgen vmin vmax pk s) input #pm v);
+  fold (PPCV.vmatch_vldata_strong vmin vmax s vmatch res v);
+  res
+}
+
+#pop-options
