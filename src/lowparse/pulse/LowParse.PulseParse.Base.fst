@@ -873,3 +873,56 @@ fn free_synth_lhs
   rewrite (vmatch (g x) v) as (vmatch (g' x) v);
   free (g' x);
 }
+
+inline_for_extraction
+fn copyful_parse_ext
+  (#t' #t1: Type0)
+  (#vmatch1: t' -> t1 -> slprop)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t1)
+  (w: copyful_parse vmatch1 p1)
+  (#t2: Type0)
+  (#k2: Ghost.erased parser_kind)
+  (p2: parser k2 t2)
+  (vmatch2: t' -> t2 -> slprop)
+  (sq: squash (
+    LPS.pts_to_serialized_ext_trade_gen_precond p2 p1 /\
+    (forall (x: t') (vb: t2) (va: t1) .
+      LPS.pts_to_serialized_ext_trade_gen_post t2 t1 vb va ==>
+      (vmatch2 x vb == vmatch1 x va))
+  ))
+: copyful_parse #_ #_ vmatch2 #_ p2
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t2)
+{
+  pts_to_parsed_ext_trade_gen p1 input;
+  with v1 . assert (pts_to_parsed p1 input #pm v1);
+  let res = w input;
+  Trade.elim (pts_to_parsed p1 input #pm v1) (pts_to_parsed p2 input #pm v);
+  rewrite (vmatch1 res v1) as (vmatch2 res v);
+  res
+}
+
+inline_for_extraction
+fn free_ext
+  (#t' #t1: Type0)
+  (#vmatch1: t' -> t1 -> slprop)
+  (free1: free_t vmatch1)
+  (#t2: Type0)
+  (vmatch2: t' -> t2 -> slprop)
+  (sq: squash (
+    t1 == t2 /\
+    (forall (x: t') (vb: t2) .
+      vmatch2 x vb == vmatch1 x (coerce t1 vb))
+  ))
+: free_t #t' #t2 vmatch2
+=
+  (x: t')
+  (#v: Ghost.erased t2)
+{
+  let v1 : Ghost.erased t1 = Ghost.hide (coerce t1 (Ghost.reveal v));
+  rewrite (vmatch2 x v) as (vmatch1 x v1);
+  free1 x #v1;
+}
