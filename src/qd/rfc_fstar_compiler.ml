@@ -867,6 +867,36 @@ let emit_copyful_vlgen_payload o i n ty smin smax lenty =
   wp o "    (PPVD.free_vldata_strong %d %d %s %s)\n" smin smax (scombinator_name ty) (copyful_free_name ty);
   wp o "    (LP.synth_vlgen_recip %d %d %s)\n\n" smin smax (scombinator_name ty)
 
+(* Like emit_copyful_vlgen_payload, but for the case where the payload type [ty]
+   may exceed the length bounds, so compile_vldata's else-branch generates a
+   REFINED high type [<n> = x:ty{ smin <= bytesize x <= smax }] together with
+   generated identity coercions [synth_<n>]/[synth_<n>_recip] between [<n>] and
+   the byte-length-refined payload [<n>' = parse_bounded_vldata_strong_t]. The
+   low representation/vmatch is the payload type's own (the framing changes
+   neither the high value nor its representation); we lift the vlgen-payload
+   copyful parser across the generated [synth_<n>]/[synth_<n>_recip] iso. *)
+let emit_copyful_vlgen_payload_refined o i n ty smin smax lenty =
+  wp i "let %s_lowtype = %s\n\n" n (copyful_lowtype_name ty);
+  wp i "val %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop\n\n" n n n;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
+  wp o "\nlet %s_copyful_synth_injective () : Lemma (LP.synth_injective synth_%s) = ()\n\n" n n;
+  wp o "let %s_copyful_synth_inverse () : Lemma (LP.synth_inverse synth_%s synth_%s_recip) = ()\n\n" n n n;
+  wp o "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop =\n" n n n;
+  wp o "  LPC.vmatch_synth (PPVD.vmatch_vldata_strong %d %d %s %s) synth_%s_recip\n\n" smin smax (scombinator_name ty) (copyful_vmatch_name ty) n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "  %s_copyful_synth_injective ();\n" n;
+  wp o "  %s_copyful_synth_inverse ();\n" n;
+  wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
+  wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_length_header_name lenty smin smax);
+  wp o "  PPC.copyful_parse_synth\n";
+  wp o "    (PPVG.copyful_parse_bounded_vlgen_payload %d %d %s %s %s %s ())\n" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty) (copyful_read_name ty);
+  wp o "    synth_%s synth_%s_recip\n\n" n n;
+  wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
+  wp o "  PPC.free_synth\n";
+  wp o "    (PPVD.free_vldata_strong %d %d %s %s)\n" smin smax (scombinator_name ty) (copyful_free_name ty);
+  wp o "    synth_%s_recip\n\n" n
+
 (* Emit copyful parser (read_<n>) and free (free_<n>) for a fixed-BYTE-length
    container of variable-length elements [t x[k]] (the VectorFixed branch). The
    payload is a list of [ty] elements occupying exactly [k] bytes
@@ -2590,6 +2620,7 @@ and compile_vldata o i is_private n ty li elem_li lenty smin smax =
     wp o "inline_for_extraction noextract let %s_synth_acc : PPB.accessor %s_parser %s'_parser _ = PPC.accessor_synth_inv synth_%s synth_%s_recip\n\n" n n n n n;
     wp o "inline_for_extraction noextract let %s_composed_acc = PPC.accessor_compose %s_synth_acc %s_vlgen_acc ()\n\n" n n n;
     wp o "let %s_accessor : PPB.accessor %s_parser %s %s_clens = PPC.accessor_ext %s_composed_acc %s_clens ()\n\n" n n (pcombinator_name ty) n n n;
+    (if !emit_pulse then emit_copyful_vlgen_payload_refined o i n ty smin smax lenty);
     ()
    end;
   (* TODO: lemma about bytesize *)
