@@ -897,6 +897,50 @@ let emit_copyful_vlgen_payload_refined o i n ty smin smax lenty =
   wp o "    (PPVD.free_vldata_strong %d %d %s %s)\n" smin smax (scombinator_name ty) (copyful_free_name ty);
   wp o "    synth_%s_recip\n\n" n
 
+(* Copyful for a length-framed SINGLE payload [t x[len]] where the length [len]
+   is a plain fixed-size integer field (uint8/uint16/uint24), routed to the
+   non-bounded-length-parser branch using [parse_bounded_vldata] (fixed
+   log256-derived header). The generated high type [<n>] is a plain alias of
+   [ty] and [parse_bounded_vldata] returns [ty] directly (no refinement, no
+   synth), so the library [PPVD.copyful_parse_bounded_vldata_payload] produces a
+   copyful parser with the payload's OWN vmatch/free unchanged. We re-export the
+   payload's [<ty>_lowtype]/[<ty>_vmatch] under the [<n>_*] names so the
+   enclosing struct's copyful composition resolves. *)
+let emit_copyful_bounded_vldata_payload o i n ty smax =
+  wp i "let %s_lowtype = %s\n\n" n (copyful_lowtype_name ty);
+  wp i "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop = %s\n\n" n n n (copyful_vmatch_name ty);
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "  PPVD.copyful_parse_bounded_vldata_payload 0 %d %s (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" smax (copyful_read_name ty) (log256 smax);
+  wp o "let free_%s : PPB.free_t %s_vmatch = %s\n\n" n n (copyful_free_name ty)
+
+(* Like emit_copyful_bounded_vldata_payload but for the over-bounds case where a
+   refined high type [<n> = x:ty{ 0 <= bytesize x <= smax }] and generated
+   identity coercions [synth_<n>]/[synth_<n>_recip] are produced over the strong
+   parser [parse_bounded_vldata_strong]. We lift
+   [PPVD.copyful_parse_bounded_vldata_strong_payload] (vmatch=vmatch_vldata_strong,
+   free=free_vldata_strong) across the generated synth iso. *)
+let emit_copyful_bounded_vldata_payload_refined o i n ty smax =
+  wp i "let %s_lowtype = %s\n\n" n (copyful_lowtype_name ty);
+  wp i "val %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop\n\n" n n n;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
+  wp o "\nlet %s_copyful_synth_injective () : Lemma (LP.synth_injective synth_%s) = ()\n\n" n n;
+  wp o "let %s_copyful_synth_inverse () : Lemma (LP.synth_inverse synth_%s synth_%s_recip) = ()\n\n" n n n;
+  wp o "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop =\n" n n n;
+  wp o "  LPC.vmatch_synth (PPVD.vmatch_vldata_strong %d %d %s %s) synth_%s_recip\n\n" 0 smax (scombinator_name ty) (copyful_vmatch_name ty) n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "  %s_copyful_synth_injective ();\n" n;
+  wp o "  %s_copyful_synth_inverse ();\n" n;
+  wp o "  PPC.copyful_parse_synth\n";
+  wp o "    (PPVD.copyful_parse_bounded_vldata_strong_payload %d %d %s %s (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash)\n" 0 smax (scombinator_name ty) (copyful_read_name ty) (log256 smax);
+  wp o "    synth_%s synth_%s_recip\n\n" n n;
+  wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
+  wp o "  PPC.free_synth\n";
+  wp o "    (PPVD.free_vldata_strong %d %d %s %s)\n" 0 smax (scombinator_name ty) (copyful_free_name ty);
+  wp o "    synth_%s_recip\n\n" n
+
 (* Emit copyful parser (read_<n>) and free (free_<n>) for a fixed-BYTE-length
    container of variable-length elements [t x[k]] (the VectorFixed branch). The
    payload is a list of [ty] elements occupying exactly [k] bytes
@@ -2922,6 +2966,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
             wl o "let %s_finalize #_ #_ input pos pos' =\n" n;
             wl o "  LL.finalize_bounded_vldata %d %d %s input pos pos'\n\n" 0 smax (pcombinator_name ty)
         end;
+        (if !emit_pulse then emit_copyful_bounded_vldata_payload o i n ty smax);
         ()
        end
       else
@@ -3043,6 +3088,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         write_accessor "";
         ()
        end;
+      (if !emit_pulse && needs_synth then emit_copyful_bounded_vldata_payload_refined o i n ty smax);
       (* lemma about bytesize *)
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + %s) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len (bytesize_call ty "x") n;
       w o "let %s_bytesize_eqn x =\n" n;
