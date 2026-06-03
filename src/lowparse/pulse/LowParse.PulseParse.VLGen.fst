@@ -278,7 +278,7 @@ fn copyful_parse_bounded_vlgen_payload
   (#p: parser k t)
   (s: serializer p)
   (w: PPB.copyful_parse vmatch p)
-  (sq: squash (sk.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+  (sq: squash (sk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
 : PPB.copyful_parse (PPCV.vmatch_vldata_strong vmin vmax s vmatch) (parse_bounded_vlgen vmin vmax pk s)
 =
   (input: slice byte)

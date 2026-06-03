@@ -800,6 +800,37 @@ let emit_copyful_vldata_list o i n ty min max =
   wp o "    (PPVD.free_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.free_vclist %s))\n" min max (scombinator_name ty) (copyful_free_name ty);
   wp o "    synth_%s_recip\n\n" n
 
+(* Like emit_copyful_vldata_list but for a list framed by a generic length-header
+   parser (parse_bounded_vlgen, used when the [<lo..hi : repr>] vector specifies
+   an explicit length-prefix representation). Same low representation/vmatch/free
+   as the plain vlbytes-framed list; only the framing combinator differs
+   (PPVG.copyful_parse_bounded_vlgen_payload, which still produces
+   PPVD.vmatch_vldata_strong). [lenty] is the length-prefix representation. *)
+let emit_copyful_vllist o i n ty smin smax lenty =
+  wp i "let %s_lowtype = PPVCL.vclist_lowtype %s\n\n" n (copyful_lowtype_name ty);
+  wp i "val %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop\n\n" n n n;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
+  wp o "\nlet %s_copyful_synth_injective () : Lemma (LP.synth_injective synth_%s) = ()\n\n" n n;
+  wp o "let %s_copyful_synth_inverse () : Lemma (LP.synth_inverse synth_%s synth_%s_recip) = ()\n\n" n n n;
+  wp o "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop =\n" n n n;
+  wp o "  LPC.vmatch_synth (PPVD.vmatch_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.vmatch_vclist %s)) synth_%s_recip\n\n" smin smax (scombinator_name ty) (copyful_vmatch_name ty) n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "  %s_copyful_synth_injective ();\n" n;
+  wp o "  %s_copyful_synth_inverse ();\n" n;
+  wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
+  wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_length_header_name lenty smin smax);
+  wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
+  wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
+  wp o "  PPC.copyful_parse_synth\n";
+  wp o "    (PPVG.copyful_parse_bounded_vlgen_payload %d %d %s %s (LP.serialize_list _ %s)\n" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty);
+  wp o "       (PPLS.copyful_parse_list %s %s ()) ())\n" (copyful_read_name ty) (pulse_jumper_name ty);
+  wp o "    synth_%s synth_%s_recip\n\n" n n;
+  wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
+  wp o "  PPC.free_synth\n";
+  wp o "    (PPVD.free_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.free_vclist %s))\n" smin smax (scombinator_name ty) (copyful_free_name ty);
+  wp o "    synth_%s_recip\n\n" n
+
 let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
   let qname = if tn = "" then n else tn^"@"^n in
   let li = sizeof ty in
@@ -2521,6 +2552,7 @@ and compile_vllist o i is_private n ty li elem_li lenty smin smax =
   );
   (* TODO: intro lemmas *)
   (* TODO: accessor *)
+  (if !emit_pulse then emit_copyful_vllist o i n ty smin smax lenty);
   ()
   
 and compile_vlbytes o i is_private n li lenty smin smax =
@@ -3025,6 +3057,13 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         wl o "  LL.jump_fldata_strong (LL.serialize_list _ %s) %d %dul\n\n" (scombinator_name ty) k k;
         wl o "let %s_jumper : LL.jumper %s_parser = %s_eq (); LP.coerce (LL.jumper %s_parser) %s'_jumper\n\n" n n n n n
        end;
+      (* NOTE: copyful parser/free for fldata-of-list (a fixed-byte-length
+         container of variable-length elements, e.g. [t x[k]]) is deferred:
+         bridging the generated refined type [<n>] and [parse_fldata_strong_t]
+         (which are only propositionally equal via [<n>_eq]) through the
+         higher-order Pulse [copyful_parse]/[free_t] indices requires
+         heterogeneous type congruence that the SMT solver cannot discharge.
+         The vlgen-framed list (compile_vllist) is fully supported. *)
       ()
 
     (* Variable length bytes *)
