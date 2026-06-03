@@ -488,3 +488,152 @@ let accessor_bounded_vldata_strong_payload
 = accessor_bounded_vldata_strong_payload' min max (log256' max) s lr u
 
 #pop-options
+
+(* Copyful parse + free for bounded variable-length data.
+
+   The length-prefix framing changes neither the high-level value nor its
+   low-level (copyful) representation, so the payload's own [vmatch], copyful
+   parser and [free_t] are reused unchanged for the non-strong combinators. For
+   the strong combinators, whose high-level type [parse_bounded_vldata_strong_t]
+   is a refinement of the payload type [t], the predicate [vmatch_vldata_strong]
+   reuses the payload [vmatch] composed with the refinement upcast. *)
+
+#push-options "--z3rlimit 64"
+
+inline_for_extraction
+fn copyful_parse_bounded_vldata_payload'
+  (#tl #t: Type0) (#vmatch: tl -> t -> slprop)
+  (#k: Ghost.erased parser_kind) (#p: parser k t)
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (l: nat { l >= log256' max /\ l <= 4 })
+  (w: PPB.copyful_parse vmatch p)
+  (lr: PPB.leaf_reader (parse_bounded_integer l))
+  (u: squash FStar.SizeT.fits_u64)
+: PPB.copyful_parse vmatch (parse_bounded_vldata' min max l p)
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+{
+  PPB.pts_to_parsed_elim input;
+  with bytes . assert (S.pts_to input #pm bytes);
+  S.pts_to_len input;
+  SZ.fits_u64_implies_fits_32 ();
+  let l_sz = SZ.uint32_to_sizet (U32.uint_to_t l);
+  parser_kind_prop_equiv (parse_bounded_integer_kind l) (parse_bounded_integer l);
+  Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
+  parse_bounded_vldata_elim' min max l p bytes v (Seq.length bytes);
+  let len = PPB.read_parsed_from_validator_success lr input 0sz l_sz;
+  let input_prefix, input_payload = split_trade input l_sz;
+  with wb_prefix . assert (S.pts_to input_prefix #pm wb_prefix);
+  with wb_payload . assert (S.pts_to input_payload #pm wb_payload);
+  Trade.elim_hyp_l (S.pts_to input_prefix #pm wb_prefix) (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes);
+  Trade.trans (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes) (PPB.pts_to_parsed (parse_bounded_vldata' min max l p) input #pm v);
+  Seq.lemma_eq_elim wb_payload (Seq.slice bytes (SZ.v l_sz) (SZ.v l_sz + U32.v len));
+  PPB.pts_to_parsed_intro p input_payload v;
+  Trade.trans (PPB.pts_to_parsed p input_payload #(pm /. 2.0R) v) (S.pts_to input_payload #pm wb_payload) (PPB.pts_to_parsed (parse_bounded_vldata' min max l p) input #pm v);
+  let res = w input_payload;
+  Trade.elim (PPB.pts_to_parsed p input_payload #(pm /. 2.0R) v) (PPB.pts_to_parsed (parse_bounded_vldata' min max l p) input #pm v);
+  res
+}
+
+inline_for_extraction
+let copyful_parse_bounded_vldata_payload
+  (#tl #t: Type0) (#vmatch: tl -> t -> slprop)
+  (#k: Ghost.erased parser_kind) (#p: parser k t)
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (w: PPB.copyful_parse vmatch p)
+  (lr: PPB.leaf_reader (parse_bounded_integer (log256' max)))
+  (u: squash FStar.SizeT.fits_u64)
+: PPB.copyful_parse vmatch (parse_bounded_vldata min max p)
+= copyful_parse_bounded_vldata_payload' min max (log256' max) w lr u
+
+(* Separation logic predicate for the strong variant: the low-level
+   representation [xl] relates to the refined high-level value [xh] exactly when
+   it relates (via the payload [vmatch]) to the underlying payload value. *)
+
+let vmatch_vldata_strong
+  (#tl #t: Type0)
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (#k: Ghost.erased parser_kind) (#p: parser k t)
+  (s: serializer p)
+  (vmatch: tl -> t -> slprop)
+  (xl: tl)
+  (xh: parse_bounded_vldata_strong_t min max s)
+: slprop
+= vmatch xl (xh <: t)
+
+inline_for_extraction
+fn copyful_parse_bounded_vldata_strong_payload'
+  (#tl #t: Type0) (#vmatch: tl -> t -> slprop)
+  (#k: Ghost.erased parser_kind) (#p: parser k t)
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (l: nat { l >= log256' max /\ l <= 4 })
+  (s: serializer p)
+  (w: PPB.copyful_parse vmatch p)
+  (lr: PPB.leaf_reader (parse_bounded_integer l))
+  (u: squash FStar.SizeT.fits_u64)
+: PPB.copyful_parse (vmatch_vldata_strong min max s vmatch) (parse_bounded_vldata_strong' min max l s)
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (parse_bounded_vldata_strong_t min max s))
+{
+  PPB.pts_to_parsed_elim input;
+  with bytes . assert (S.pts_to input #pm bytes);
+  S.pts_to_len input;
+  SZ.fits_u64_implies_fits_32 ();
+  let l_sz = SZ.uint32_to_sizet (U32.uint_to_t l);
+  parser_kind_prop_equiv (parse_bounded_integer_kind l) (parse_bounded_integer l);
+  Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
+  parse_bounded_vldata_elim' min max l p bytes (Ghost.reveal v <: t) (Seq.length bytes);
+  let len = PPB.read_parsed_from_validator_success lr input 0sz l_sz;
+  let input_prefix, input_payload = split_trade input l_sz;
+  with wb_prefix . assert (S.pts_to input_prefix #pm wb_prefix);
+  with wb_payload . assert (S.pts_to input_payload #pm wb_payload);
+  Trade.elim_hyp_l (S.pts_to input_prefix #pm wb_prefix) (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes);
+  Trade.trans (S.pts_to input_payload #pm wb_payload) (S.pts_to input #pm bytes) (PPB.pts_to_parsed (parse_bounded_vldata_strong' min max l s) input #pm v);
+  Seq.lemma_eq_elim wb_payload (Seq.slice bytes (SZ.v l_sz) (SZ.v l_sz + U32.v len));
+  PPB.pts_to_parsed_intro p input_payload (Ghost.reveal v <: t);
+  Trade.trans (PPB.pts_to_parsed p input_payload #(pm /. 2.0R) (Ghost.reveal v <: t)) (S.pts_to input_payload #pm wb_payload) (PPB.pts_to_parsed (parse_bounded_vldata_strong' min max l s) input #pm v);
+  let res = w input_payload;
+  Trade.elim (PPB.pts_to_parsed p input_payload #(pm /. 2.0R) (Ghost.reveal v <: t)) (PPB.pts_to_parsed (parse_bounded_vldata_strong' min max l s) input #pm v);
+  fold (vmatch_vldata_strong min max s vmatch res v);
+  res
+}
+
+inline_for_extraction
+let copyful_parse_bounded_vldata_strong_payload
+  (#tl #t: Type0) (#vmatch: tl -> t -> slprop)
+  (#k: Ghost.erased parser_kind) (#p: parser k t)
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (s: serializer p)
+  (w: PPB.copyful_parse vmatch p)
+  (lr: PPB.leaf_reader (parse_bounded_integer (log256' max)))
+  (u: squash FStar.SizeT.fits_u64)
+: PPB.copyful_parse (vmatch_vldata_strong min max s vmatch) (parse_bounded_vldata_strong min max s)
+= copyful_parse_bounded_vldata_strong_payload' min max (log256' max) s w lr u
+
+inline_for_extraction
+fn free_vldata_strong
+  (#tl #t: Type0) (#vmatch: tl -> t -> slprop)
+  (#k: Ghost.erased parser_kind) (#p: parser k t)
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (s: serializer p)
+  (free: PPB.free_t vmatch)
+: PPB.free_t (vmatch_vldata_strong min max s vmatch)
+=
+  (x: tl)
+  (#v: Ghost.erased (parse_bounded_vldata_strong_t min max s))
+{
+  unfold (vmatch_vldata_strong min max s vmatch x v);
+  free x #(Ghost.hide (Ghost.reveal v <: t));
+}
+
+#pop-options
