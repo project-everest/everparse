@@ -488,7 +488,9 @@ let pulse_jumper_name = function
 let pulse_leaf_reader_name = function
   | "opaque" | "uint8" -> "(PPB.leaf_reader_of_serialized (LPPI.read_u8' ()))"
   | "uint16" -> "(PPB.leaf_reader_of_serialized (LPPI.read_u16' ()))"
+  | "uint16_le" -> "PPBILE.read_u16_le"
   | "uint32" -> "(PPB.leaf_reader_of_serialized (LPPI.read_u32' ()))"
+  | "uint32_le" -> "PPBILE.read_u32_le"
   | "uint64" -> "(PPB.leaf_reader_of_serialized (LPPI.read_u64' ()))"
   | "bitcoin_varint" -> "(PPBCVLI.leaf_read_bcvli PPBI.leaf_read_bounded_integer_le_1 PPBI.leaf_read_bounded_integer_le_2 PPBI.leaf_read_bounded_integer_le_4)"
   | "Empty" -> "PPC.leaf_read_empty"
@@ -4040,6 +4042,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp o "module PPE = LowParse.PulseParse.Enum\n";
   wp o "module PPS = LowParse.PulseParse.Sum\n";
   wp o "module PPBI = LowParse.PulseParse.BoundedInt\n";
+  wp o "module PPBILE = LowParse.PulseParse.BoundedIntLE\n";
   wp o "module PPBY = LowParse.PulseParse.Bytes\n";
   wp o "module PPBCVLI = LowParse.PulseParse.BCVLI\n";
   wp o "module PPVG = LowParse.PulseParse.VLGen\n";

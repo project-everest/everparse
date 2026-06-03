@@ -152,6 +152,26 @@ fn pts_to_parsed_synth_r2l
   fold (PPB.pts_to_parsed (parse_synth p f) input #pm v)
 }
 
+inline_for_extraction
+fn leaf_read_synth
+  (#t #t': Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (r: PPB.leaf_reader p)
+  (f: (t -> GTot t') { synth_injective f })
+  (f': (t' -> GTot t) { synth_inverse f f' })
+  (fc: (x: t) -> (y: t' { y == f x }))
+: PPB.leaf_reader #t' #k (parse_synth p f)
+= (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t')
+{
+  pts_to_parsed_synth_l2r p f f' input;
+  let x = r input;
+  pts_to_parsed_synth_r2l p f f' input (Ghost.reveal v);
+  fc x
+}
+
 ghost
 fn pts_to_parsed_synth_l2r_trade
   (#t #t': Type0)
