@@ -646,7 +646,8 @@ ensures
   (match res with
    | None ->
      cbor_det_array_owned x1 l1 ** cbor_det_array_owned x2 l2 **
-     (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va)
+     (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va) **
+     pure (~ (FStar.UInt.fits (L.length (Ghost.reveal l1) + L.length (Ghost.reveal l2)) U64.n))
    | Some r ->
      cbor_det_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)) **
      Trade.trade
@@ -687,14 +688,16 @@ ensures cbor_det_array_owned a l ** pure (FStar.UInt.fits (L.length (Ghost.revea
 
 fn cbor_det_array_to_cbor
   (a: cbor_det_array)
-  (#l: Ghost.erased (l': list Spec.cbor { FStar.UInt.fits (L.length l') U64.n }))
+  (#l: Ghost.erased (list Spec.cbor))
 requires cbor_det_array_owned a l
 returns res: cbordet
 ensures
-  cbor_det_match 1.0R res (Spec.pack (Spec.CArray (Ghost.reveal l))) **
-  Trade.trade
-    (cbor_det_match 1.0R res (Spec.pack (Spec.CArray (Ghost.reveal l))))
-    (cbor_det_array_owned a l)
+  exists* (l': (l'': list Spec.cbor { FStar.UInt.fits (L.length l'') U64.n })).
+    cbor_det_match 1.0R res (Spec.pack (Spec.CArray l')) **
+    Trade.trade
+      (cbor_det_match 1.0R res (Spec.pack (Spec.CArray l')))
+      (cbor_det_array_owned a l) **
+    pure ((l' <: list Spec.cbor) == Ghost.reveal l)
 {
   ABDet.cbor_det_array_finalize a.array;
   a.array

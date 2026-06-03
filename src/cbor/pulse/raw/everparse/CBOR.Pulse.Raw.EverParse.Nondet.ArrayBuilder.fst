@@ -413,7 +413,8 @@ ensures
   (match res with
    | None ->
      cbor_nondet_array_owned x1 l1 ** cbor_nondet_array_owned x2 l2 **
-     (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va)
+    (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va) **
+    pure (~ (FStar.UInt.fits (L.length (Ghost.reveal l1) + L.length (Ghost.reveal l2)) U64.n))
    | Some r ->
      cbor_nondet_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)) **
      Trade.trade
@@ -461,6 +462,9 @@ ensures
       (AB.cbor_array_owned x2 lraw2);
     fold (cbor_nondet_array_owned x1 l1);
     fold (cbor_nondet_array_owned x2 l2);
+    AB.array_append_overflow la64 lb64 (SZ.v len_a) (SZ.v len_b);
+    List.Tot.Properties.map_lemma SpecRaw.mk_cbor lraw1;
+    List.Tot.Properties.map_lemma SpecRaw.mk_cbor lraw2;
     None #cbor_nondet_t
   } else {
     let sum64 = U64.add la64 lb64;
@@ -626,18 +630,21 @@ ensures
 inline_for_extraction
 fn cbor_nondet_array_finalize
   (x: cbor_nondet_t)
-  (#l: Ghost.erased (l': list Spec.cbor { FStar.UInt.fits (L.length l') U64.n }))
+  (#l: Ghost.erased (list Spec.cbor))
 requires
   cbor_nondet_array_owned x l
 returns _: unit
 ensures
-  cbor_nondet_match 1.0R x (Spec.pack (Spec.CArray (Ghost.reveal l))) **
-  Trade.trade
-    (cbor_nondet_match 1.0R x (Spec.pack (Spec.CArray (Ghost.reveal l))))
-    (cbor_nondet_array_owned x l)
+  exists* (l': (l'': list Spec.cbor { FStar.UInt.fits (L.length l'') U64.n })).
+    cbor_nondet_match 1.0R x (Spec.pack (Spec.CArray l')) **
+    Trade.trade
+      (cbor_nondet_match 1.0R x (Spec.pack (Spec.CArray l')))
+      (cbor_nondet_array_owned x l) **
+    pure ((l' <: list Spec.cbor) == Ghost.reveal l)
 {
   unfold (cbor_nondet_array_owned x l);
   with lraw. assert (AB.cbor_array_owned x lraw);
+  AB.cbor_array_owned_length_fits x;
   unfold (AB.cbor_array_owned x lraw);
   with xh. assert (RawMatch.cbor_raw_match 1.0R x xh);
   cbor_raw_match_get_header 1.0R x #xh;
@@ -645,25 +652,27 @@ ensures
   SpecRaw.valid_eq SpecRaw.basic_data_model xh;
   SpecRaw.mk_cbor_eq xh;
   assert (pure (L.length l == L.length lraw));
+  let lw : Ghost.erased (l'': list Spec.cbor { FStar.UInt.fits (L.length l'') U64.n }) =
+    Ghost.hide (Ghost.reveal l);
   assert (pure ((CBOR_Case_Array?.v x).cbor_array_length_size ==
-    (Optimal.mk_raw_uint64 (U64.uint_to_t (L.length l))).size));
-  fold (cbor_nondet_match 1.0R x (Spec.pack (Spec.CArray (Ghost.reveal l))));
+    (Optimal.mk_raw_uint64 (U64.uint_to_t (L.length (Ghost.reveal lw)))).size));
+  fold (cbor_nondet_match 1.0R x (Spec.pack (Spec.CArray (Ghost.reveal lw))));
   Trade.intro_trade
-    (cbor_nondet_match 1.0R x (Spec.pack (Spec.CArray (Ghost.reveal l))))
+    (cbor_nondet_match 1.0R x (Spec.pack (Spec.CArray (Ghost.reveal lw))))
     (cbor_nondet_array_owned x l)
     (pure (CBOR_Case_Array? x /\
            (CBOR_Case_Array?.v x).cbor_array_slice_perm == 1.0R /\
            (CBOR_Case_Array?.v x).cbor_array_length_size ==
-             (Optimal.mk_raw_uint64 (U64.uint_to_t (L.length l))).size))
+             (Optimal.mk_raw_uint64 (U64.uint_to_t (L.length (Ghost.reveal lw)))).size))
     fn _ {
-      unfold (cbor_nondet_match 1.0R x (Spec.pack (Spec.CArray (Ghost.reveal l))));
+      unfold (cbor_nondet_match 1.0R x (Spec.pack (Spec.CArray (Ghost.reveal lw))));
       with v''. assert (RawMatch.cbor_raw_match 1.0R x v'');
       cbor_raw_match_get_header 1.0R x #v'';
-      Spec.unpack_pack (Spec.CArray (Ghost.reveal l));
+      Spec.unpack_pack (Spec.CArray (Ghost.reveal lw));
       SpecRaw.mk_cbor_eq v'';
       SpecRaw.valid_eq SpecRaw.basic_data_model v'';
       array_len_from_header (CBOR_Case_Array?.v x) v'';
-      assert (pure (L.length l == L.length (SpecRawBase.Array?.v v'')));
+      assert (pure (L.length lw == L.length (SpecRawBase.Array?.v v'')));
       assert (pure ((SpecRawBase.Array?.len v'' <: SpecRawBase.raw_uint64) ==
         Optimal.mk_raw_uint64 (U64.uint_to_t (L.length (SpecRawBase.Array?.v v'')))));
       fold (AB.cbor_array_owned x (SpecRawBase.Array?.v v''));

@@ -127,7 +127,8 @@ val cbor_nondet_array_append
       match res with
       | None ->
         cbor_nondet_array_owned x1 l1 ** cbor_nondet_array_owned x2 l2 **
-        (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va)
+        (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va) **
+        pure (~ (FStar.UInt.fits (L.length (Ghost.reveal l1) + L.length (Ghost.reveal l2)) U64.n))
       | Some r ->
         cbor_nondet_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)) **
         Trade.trade
@@ -137,14 +138,16 @@ val cbor_nondet_array_append
 
 val cbor_nondet_array_finalize
   (x: cbor_nondet_t)
-  (#l: Ghost.erased (l': list Spec.cbor { FStar.UInt.fits (L.length l') U64.n }))
+  (#l: Ghost.erased (list Spec.cbor))
 : stt unit
     (cbor_nondet_array_owned x l)
     (fun _ ->
-      cbor_nondet_match 1.0R x (Spec.pack (Spec.CArray (Ghost.reveal l))) **
-      Trade.trade
-        (cbor_nondet_match 1.0R x (Spec.pack (Spec.CArray (Ghost.reveal l))))
-        (cbor_nondet_array_owned x l))
+      exists* (l': (l'': list Spec.cbor { FStar.UInt.fits (L.length l'') U64.n })).
+        cbor_nondet_match 1.0R x (Spec.pack (Spec.CArray l')) **
+        Trade.trade
+          (cbor_nondet_match 1.0R x (Spec.pack (Spec.CArray l')))
+          (cbor_nondet_array_owned x l) **
+        pure ((l' <: list Spec.cbor) == Ghost.reveal l))
 
 (* The length of an owned array fits in a u64; lets callers discharge the
    refinement of [cbor_nondet_array_finalize] after a chain of [cbor_nondet_array_append]s. *)

@@ -445,6 +445,23 @@ ensures
 (* Append of two arrays                                             *)
 (* ================================================================ *)
 
+(* The overflow check [U64.gt la (0xffffffffffffffff - lb)] taken in the
+   failure branch of [cbor_array_append] witnesses that the sum of the two
+   lengths does not fit in a u64. We phrase this over the (possibly truncated)
+   u64 views [la = na % 2^64] and [lb = nb % 2^64] of the underlying nat
+   lengths so that the conclusion holds without assuming the size_t values
+   themselves are below 2^64. *)
+let array_append_overflow (la lb: U64.t) (na nb: nat)
+: Lemma
+    (requires
+      U64.v la > U64.v (U64.sub 0xffffffffffffffffuL lb) /\
+      U64.v la == na % pow2 64 /\
+      U64.v lb == nb % pow2 64)
+    (ensures ~ (FStar.UInt.fits (na + nb) U64.n))
+= FStar.Math.Lemmas.lemma_mod_lt na (pow2 64);
+  FStar.Math.Lemmas.lemma_mod_lt nb (pow2 64);
+  assert_norm (pow2 64 == 0xffffffffffffffff + 1)
+
 #push-options "--z3rlimit 256 --fuel 2 --ifuel 2"
 
 inline_for_extraction
@@ -460,7 +477,8 @@ ensures
   (match res with
    | None ->
      cbor_array_owned x1 l1 ** cbor_array_owned x2 l2 **
-     (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va)
+     (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va) **
+     pure (~ (FStar.UInt.fits (List.Tot.length (Ghost.reveal l1) + List.Tot.length (Ghost.reveal l2)) U64.n))
    | Some r ->
      cbor_array_owned r (List.Tot.append (Ghost.reveal l1) (Ghost.reveal l2)) **
      Trade.trade
@@ -480,6 +498,7 @@ ensures
   let limit = U64.sub 0xffffffffffffffffuL lb64;
   if U64.gt la64 limit {
     // sum would not fit in u64: restore both owned predicates, return None
+    array_append_overflow la64 lb64 (SZ.v len_a) (SZ.v len_b);
     Trade.elim
       (I.mixed_list_match cbor_raw_match parse_raw_data_item 1.0R ml_a (Ghost.reveal l1))
       (cbor_array_owned x1 l1);

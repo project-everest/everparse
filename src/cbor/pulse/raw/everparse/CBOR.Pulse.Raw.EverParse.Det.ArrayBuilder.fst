@@ -123,7 +123,8 @@ ensures
   (match res with
    | None ->
      cbor_det_array_owned x1 l1 ** cbor_det_array_owned x2 l2 **
-     (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va)
+     (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va) **
+     pure (~ (FStar.UInt.fits (L.length (Ghost.reveal l1) + L.length (Ghost.reveal l2)) U64.n))
    | Some r ->
      cbor_det_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)) **
      Trade.trade
@@ -137,6 +138,8 @@ ensures
     #(Aux.det_raw_list l1) #(Aux.det_raw_list l2);
   match res {
     None -> {
+      Aux.length_det_raw_list l1;
+      Aux.length_det_raw_list l2;
       fold (cbor_det_array_owned x1 l1);
       fold (cbor_det_array_owned x2 l2);
       None #cbor_det_t
@@ -183,20 +186,26 @@ ensures
 inline_for_extraction
 fn cbor_det_array_finalize
   (x: cbor_det_t)
-  (#l: Ghost.erased (l': list Spec.cbor { FStar.UInt.fits (L.length l') U64.n }))
+  (#l: Ghost.erased (list Spec.cbor))
 requires
   cbor_det_array_owned x l
 returns _: unit
 ensures
-  cbor_det_match 1.0R x (Spec.pack (Spec.CArray (Ghost.reveal l))) **
-  Trade.trade
-    (cbor_det_match 1.0R x (Spec.pack (Spec.CArray (Ghost.reveal l))))
-    (cbor_det_array_owned x l)
+  exists* (l': (l'': list Spec.cbor { FStar.UInt.fits (L.length l'') U64.n })).
+    cbor_det_match 1.0R x (Spec.pack (Spec.CArray l')) **
+    Trade.trade
+      (cbor_det_match 1.0R x (Spec.pack (Spec.CArray l')))
+      (cbor_det_array_owned x l) **
+    pure ((l' <: list Spec.cbor) == Ghost.reveal l)
 {
-  let y : Ghost.erased Spec.cbor = Ghost.hide (Spec.pack (Spec.CArray (Ghost.reveal l)));
-  Spec.unpack_pack (Spec.CArray (Ghost.reveal l));
-  Aux.mk_det_raw_cbor_array_eq (Ghost.reveal y) (Ghost.reveal l);
   unfold (cbor_det_array_owned x l);
+  AB.cbor_array_owned_length_fits x;
+  Aux.length_det_raw_list l;
+  let lw : Ghost.erased (l'': list Spec.cbor { FStar.UInt.fits (L.length l'') U64.n }) =
+    Ghost.hide (Ghost.reveal l);
+  let y : Ghost.erased Spec.cbor = Ghost.hide (Spec.pack (Spec.CArray (Ghost.reveal lw)));
+  Spec.unpack_pack (Spec.CArray (Ghost.reveal lw));
+  Aux.mk_det_raw_cbor_array_eq (Ghost.reveal y) (Ghost.reveal lw);
   unfold (AB.cbor_array_owned x (Aux.det_raw_list l));
   with xh. assert (RawMatch.cbor_raw_match 1.0R x xh);
   assert (pure (xh == SpecRaw.mk_det_raw_cbor (Ghost.reveal y)));
@@ -215,12 +224,12 @@ ensures
       fold (cbor_det_array_owned x l);
     };
   rewrite (cbor_det_match 1.0R x y)
-    as (cbor_det_match 1.0R x (Spec.pack (Spec.CArray (Ghost.reveal l))));
+    as (cbor_det_match 1.0R x (Spec.pack (Spec.CArray (Ghost.reveal lw))));
   rewrite (Trade.trade
             (cbor_det_match 1.0R x y)
             (cbor_det_array_owned x l))
     as (Trade.trade
-         (cbor_det_match 1.0R x (Spec.pack (Spec.CArray (Ghost.reveal l))))
+         (cbor_det_match 1.0R x (Spec.pack (Spec.CArray (Ghost.reveal lw))))
          (cbor_det_array_owned x l));
 }
 
