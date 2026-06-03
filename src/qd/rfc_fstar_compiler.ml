@@ -863,6 +863,42 @@ let emit_copyful_vectorfixed_list o i n ty k =
   wp o "    (PPFD.free_fldata_strong (LP.serialize_list _ %s) %d (PPVCL.free_vclist %s))\n" (scombinator_name ty) k (copyful_free_name ty);
   wp o "    %s_vmatch ()\n\n" n
 
+(* Emit copyful parser (read_<n>) and free (free_<n>) for an explicit-length
+   array [t x[len]] / count-bounded list of fixed-size elements (the vlarray
+   case: VectorRange with elem_li.min_len = elem_li.max_len). The high type
+   [<n>] is [LP.vlarray ty min_count max_count] and [<n>_parser =
+   LP.parse_vlarray low high elem_ser min_count max_count ()], which unfolds to
+   [parse_bounded_vldata_strong low high (serialize_list _ elem_ser)
+   `parse_synth` vldata_to_vlarray ...]. So this is the same byte-length-framed
+   list as emit_copyful_vldata_list, with the synth pair being the library
+   functions [vldata_to_vlarray] / [vlarray_to_vldata] (count refinement only,
+   identity on the underlying list). The low representation is the shared
+   [PPVCL.vclist_lowtype <elem_lowtype>]. [low]/[high] are the byte-length frame
+   bounds; [mn]/[mx] are the element-count bounds. *)
+let emit_copyful_vlarray o i n ty low high mn mx =
+  wp i "let %s_lowtype = PPVCL.vclist_lowtype %s\n\n" n (copyful_lowtype_name ty);
+  wp i "val %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop\n\n" n n n;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
+  wp o "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop =\n" n n n;
+  wp o "  LPC.vmatch_synth (PPVD.vmatch_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.vmatch_vclist %s))\n" low high (scombinator_name ty) (copyful_vmatch_name ty);
+  wp o "    (LP.vlarray_to_vldata %d %d %s %d %d ())\n\n" low high (scombinator_name ty) mn mx;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "  LP.vldata_to_vlarray_inj %d %d %s %d %d ();\n" low high (scombinator_name ty) mn mx;
+  wp o "  LP.vlarray_to_vldata_to_vlarray %d %d %s %d %d ();\n" low high (scombinator_name ty) mn mx;
+  wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
+  wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
+  wp o "  PPC.copyful_parse_synth\n";
+  wp o "    (PPVD.copyful_parse_bounded_vldata_strong_payload %d %d (LP.serialize_list _ %s)\n" low high (scombinator_name ty);
+  wp o "       (PPLS.copyful_parse_list %s %s ())\n" (copyful_read_name ty) (pulse_jumper_name ty);
+  wp o "       (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash)\n" (log256 high);
+  wp o "    (LP.vldata_to_vlarray %d %d %s %d %d ())\n" low high (scombinator_name ty) mn mx;
+  wp o "    (LP.vlarray_to_vldata %d %d %s %d %d ())\n\n" low high (scombinator_name ty) mn mx;
+  wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
+  wp o "  PPC.free_synth\n";
+  wp o "    (PPVD.free_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.free_vclist %s))\n" low high (scombinator_name ty) (copyful_free_name ty);
+  wp o "    (LP.vlarray_to_vldata %d %d %s %d %d ())\n\n" low high (scombinator_name ty) mn mx
+
 let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
   let qname = if tn = "" then n else tn^"@"^n in
   let li = sizeof ty in
@@ -3308,6 +3344,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       (* lemmas about bytesize *)
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + (L.length x `FStar.Mul.op_Star` %d)) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len elem_li.min_len n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_vlarray %d %d %s %d %d () x\n\n" n low high (scombinator_name ty) li.min_count li.max_count;
+      (if !emit_pulse then emit_copyful_vlarray o i n ty low high li.min_count li.max_count);
       ()
 
     (* Variable length list of variable length elements *)
