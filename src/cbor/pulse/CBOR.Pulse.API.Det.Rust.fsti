@@ -508,6 +508,52 @@ val cbor_det_map_get
       pure (Spec.CMap? (Spec.unpack vx) /\ (Some? (Spec.cbor_map_get (Spec.CMap?.c (Spec.unpack vx)) vk) == Some? res))
     )
 
+(* Structural map-entry insertion (sorted, deterministic): insert the entry
+   (key, value) into the map [x] (a [cbor_det_map] obtained from
+   [cbor_det_destruct]), borrowing [x] at permission [p] and returning the
+   edited map behind a [Trade.trade] back to the originals (no heap
+   allocation; the application provides the scratch references). On [Some m],
+   [m] owns the spec value obtained by unioning the original map with the
+   singleton {vk -> vv}. On [None], the key was already present, or inserting
+   it would overflow a u64 length. *)
+val cbor_det_map_entry_insert_cell_t: Type0
+
+let cbor_det_map_entry_insert_refs
+  (r1 r2 r3 r4: R.ref cbor_det_map_entry_insert_cell_t)
+  (ry: R.ref cbor_det_map_entry)
+: Tot slprop
+= exists* w1 w2 w3 w4 wy. R.pts_to r1 w1 ** R.pts_to r2 w2 ** R.pts_to r3 w3 ** R.pts_to r4 w4 ** R.pts_to ry wy
+
+val cbor_det_map_entry_insert
+  (x: cbor_det_map) (key value: cbordet)
+  (r1 r2 r3 r4: R.ref cbor_det_map_entry_insert_cell_t)
+  (ry: R.ref cbor_det_map_entry)
+  (#p: perm) (#y: Ghost.erased (v: Spec.cbor { Spec.CMap? (Spec.unpack v) }))
+  (#pkv: perm) (#vk #vv: Ghost.erased Spec.cbor)
+: stt (option cbor_det_map)
+    (cbor_det_map_match p x y **
+     cbor_det_match pkv key vk ** cbor_det_match pkv value vv **
+     cbor_det_map_entry_insert_refs r1 r2 r3 r4 ry)
+    (fun res ->
+      match res with
+      | None ->
+        cbor_det_map_match p x y **
+        cbor_det_match pkv key vk ** cbor_det_match pkv value vv **
+        cbor_det_map_entry_insert_refs r1 r2 r3 r4 ry **
+        pure (Spec.cbor_map_defined vk (Spec.CMap?.c (Spec.unpack y)) \/
+              ~ (FStar.UInt.fits (Spec.cbor_map_length (Spec.CMap?.c (Spec.unpack y)) + 1) U64.n))
+      | Some m ->
+        exists* (p_res: perm) (vres: Spec.cbor).
+          cbor_det_map_match p_res m vres **
+          Trade.trade
+            (cbor_det_map_match p_res m vres)
+            (cbor_det_map_match p x y **
+             cbor_det_match pkv key vk ** cbor_det_match pkv value vv **
+             cbor_det_map_entry_insert_refs r1 r2 r3 r4 ry) **
+          pure (Spec.CMap? (Spec.unpack vres) /\
+                (Spec.CMap?.c (Spec.unpack vres) <: Spec.cbor_map) ==
+                  Spec.cbor_map_union (Spec.CMap?.c (Spec.unpack y)) (Spec.cbor_map_singleton vk vv)))
+
 (* NOTE: the following functions have nontrivial hypotheses. They are intended to be used only by the CDDL code generator, or by verified code. *)
 
 val cbor_det_serialize_string: Base.cbor_det_serialize_string_t
@@ -519,3 +565,7 @@ val cbor_det_serialize_map: Base.cbor_det_serialize_map_t
 val dummy_cbor_det_t (_: unit) : cbordet
 
 val dummy_cbor_det_array_append_cell (_: unit) : cbor_det_array_append_cell_t
+
+val dummy_cbor_det_map_entry_insert_cell (_: unit) : cbor_det_map_entry_insert_cell_t
+
+val dummy_cbor_det_map_entry (_: unit) : cbor_det_map_entry

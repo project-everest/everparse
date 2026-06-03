@@ -1,5 +1,6 @@
 module CBOR.Pulse.API.Det.Rust
 #lang-pulse
+friend CBOR.Pulse.API.Det.Type
 
 (* Implementation of CBOR.Pulse.API.Det.Rust.fsti using the new
    EverParse-based stack (CBOR.Pulse.Raw.EverParse.Det.Impl). *)
@@ -10,6 +11,7 @@ module R = Pulse.Lib.Reference
 module PM = Pulse.Lib.SeqMatch
 module UTF8 = CBOR.Pulse.API.UTF8
 module ABDet = CBOR.Pulse.Raw.EverParse.Det.ArrayBuilder
+module MIS = CBOR.Pulse.Raw.EverParse.Det.MapInsertSpec
 module IT = LowParse.PulseParse.Iterator.Type
 module L = FStar.List.Tot
 
@@ -992,6 +994,101 @@ ensures
 
 #pop-options
 
+(* ======== Map: structural entry insert (sorted, Det) ======== *)
+
+(* Abstract scratch-cell type the application must pre-allocate (as four
+   references) to call cbor_det_map_entry_insert; plus one reference of type
+   cbor_det_map_entry. Use dummy_cbor_det_map_entry_insert_cell and
+   dummy_cbor_det_map_entry to initialize them. *)
+let cbor_det_map_entry_insert_cell_t = IT.mixed_list cbor_det_map_entry
+
+#push-options "--z3rlimit 64"
+
+fn cbor_det_map_entry_insert
+  (x: cbor_det_map) (key value: cbordet)
+  (r1 r2 r3 r4: R.ref cbor_det_map_entry_insert_cell_t)
+  (ry: R.ref cbor_det_map_entry)
+  (#p: perm) (#y: Ghost.erased (v: Spec.cbor { Spec.CMap? (Spec.unpack v) }))
+  (#pkv: perm) (#vk #vv: Ghost.erased Spec.cbor)
+requires
+  cbor_det_map_match p x y **
+  cbor_det_match pkv key vk ** cbor_det_match pkv value vv **
+  cbor_det_map_entry_insert_refs r1 r2 r3 r4 ry
+returns res: option cbor_det_map
+ensures (match res with
+  | None ->
+    cbor_det_map_match p x y **
+    cbor_det_match pkv key vk ** cbor_det_match pkv value vv **
+    cbor_det_map_entry_insert_refs r1 r2 r3 r4 ry **
+    pure (Spec.cbor_map_defined vk (Spec.CMap?.c (Spec.unpack y)) \/
+          ~ (FStar.UInt.fits (Spec.cbor_map_length (Spec.CMap?.c (Spec.unpack y)) + 1) U64.n))
+  | Some m ->
+    exists* (p_res: perm) (vres: Spec.cbor).
+      cbor_det_map_match p_res m vres **
+      Trade.trade
+        (cbor_det_map_match p_res m vres)
+        (cbor_det_map_match p x y **
+         cbor_det_match pkv key vk ** cbor_det_match pkv value vv **
+         cbor_det_map_entry_insert_refs r1 r2 r3 r4 ry) **
+      pure (Spec.CMap? (Spec.unpack vres) /\
+            (Spec.CMap?.c (Spec.unpack vres) <: Spec.cbor_map) ==
+              Spec.cbor_map_union (Spec.CMap?.c (Spec.unpack y)) (Spec.cbor_map_singleton vk vv)))
+{
+  let f64 : squash SZ.fits_u64 = assume (SZ.fits_u64);
+  cbor_det_map_match_elim x;
+  unfold (cbor_det_map_entry_insert_refs r1 r2 r3 r4 ry);
+  let res = MIS.cbor_det_map_entry_insert_spec f64 x.map key value r1 r2 r3 r4 ry;
+  match res {
+    None -> {
+      Trade.elim (cbor_det_match p x.map y) (cbor_det_map_match p x y);
+      fold (cbor_det_map_entry_insert_refs r1 r2 r3 r4 ry);
+      None #cbor_det_map
+    }
+    Some m -> {
+      with p_res vres. assert (
+        cbor_det_match p_res m vres **
+        Trade.trade
+          (cbor_det_match p_res m vres)
+          (cbor_det_match p x.map y **
+           cbor_det_match pkv key vk ** cbor_det_match pkv value vv **
+           (exists* w1 w2 w3 w4 wy. R.pts_to r1 w1 ** R.pts_to r2 w2 ** R.pts_to r3 w3 ** R.pts_to r4 w4 ** R.pts_to ry wy))
+      );
+      let res_map : cbor_det_map = { map = m };
+      rewrite (cbor_det_match p_res m vres) as (cbor_det_match p_res res_map.map vres);
+      fold (cbor_det_map_match p_res res_map vres);
+      Trade.intro_trade
+        (cbor_det_map_match p_res res_map vres)
+        (cbor_det_map_match p x y **
+         cbor_det_match pkv key vk ** cbor_det_match pkv value vv **
+         cbor_det_map_entry_insert_refs r1 r2 r3 r4 ry)
+        (Trade.trade
+           (cbor_det_match p_res m vres)
+           (cbor_det_match p x.map y **
+            cbor_det_match pkv key vk ** cbor_det_match pkv value vv **
+            (exists* w1 w2 w3 w4 wy. R.pts_to r1 w1 ** R.pts_to r2 w2 ** R.pts_to r3 w3 ** R.pts_to r4 w4 ** R.pts_to ry wy)) **
+         Trade.trade
+           (cbor_det_match p x.map y)
+           (cbor_det_map_match p x y))
+        fn _ {
+          unfold (cbor_det_map_match p_res res_map vres);
+          rewrite (cbor_det_match p_res res_map.map vres) as (cbor_det_match p_res m vres);
+          Trade.elim
+            (cbor_det_match p_res m vres)
+            (cbor_det_match p x.map y **
+             cbor_det_match pkv key vk ** cbor_det_match pkv value vv **
+             (exists* w1 w2 w3 w4 wy. R.pts_to r1 w1 ** R.pts_to r2 w2 ** R.pts_to r3 w3 ** R.pts_to r4 w4 ** R.pts_to ry wy));
+          Trade.elim
+            (cbor_det_match p x.map y)
+            (cbor_det_map_match p x y);
+          fold (cbor_det_map_entry_insert_refs r1 r2 r3 r4 ry);
+        };
+      Some #cbor_det_map res_map
+    }
+  }
+}
+
+#pop-options
+
 (* ======== Serializer wrappers ======== *)
 
 let cbor_det_serialize_string = Impl.cbor_det_serialize_string ()
@@ -1006,3 +1103,9 @@ let dummy_cbor_det_t () = CBOR.Pulse.API.Det.Dummy.dummy_cbor_det_t ()
 
 let dummy_cbor_det_array_append_cell () : cbor_det_array_append_cell_t =
   IT.Base IT.Empty
+
+let dummy_cbor_det_map_entry_insert_cell () : cbor_det_map_entry_insert_cell_t =
+  IT.Base IT.Empty
+
+let dummy_cbor_det_map_entry () : cbor_det_map_entry =
+  CBOR.Pulse.Raw.EverParse.Type.Mkcbor_map_entry (dummy_cbor_det_t ()) (dummy_cbor_det_t ())
