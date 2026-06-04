@@ -221,7 +221,7 @@ clean-krmllib:
 .PHONY: clean-krmllib
 
 distclean: clean clean-krmllib
-	rm -rf opam-env.Makefile config.Makefile fstarlib.done
+	rm -rf opam-env.Makefile config.Makefile fstarlib.done opt/fstar-bin-package
 	+$(MAKE) -C opt clean
 
 clean:

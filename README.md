@@ -396,6 +396,19 @@ for the full list of options. The most useful ones are:
   full path of the Karamel executable (or `--use-krml-exe` if `KRML_EXE`
   is set when running `make`.)
 
+* As a shortcut to point EverParse at a F\* binary package (from
+  https://github.com/FStarLang/fstar-nightly, which bundles `fstar.exe`,
+  `krml` and the compiled Pulse libraries), pass
+  `--fstar-bin-package=DIR` with the directory where you extracted the
+  package (the one containing `bin/`, `lib/`, `share/`, ...). This is a
+  shortcut for `--fstar-exe=DIR/bin/fstar.exe --krml-exe=DIR/bin/krml`.
+  If you have not extracted the package yet, you can instead pass
+  `--fstar-bin-package-tar=FILE` with the package tarball (e.g.
+  `fstar-Linux-x86_64.tar.gz`); `./configure` extracts it under
+  `opt/fstar-bin-package/` and uses the result. Note that the binary
+  package does not ship the Pulse DICE examples, so for the cddl DPE
+  tests you will most likely also need `--dice-home=PATH` (see below).
+
 * If you want to use a specific Z3 version, pass `--z3-version=VERSION`
   (default: `4.13.3`.)
 

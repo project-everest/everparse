@@ -34,3 +34,4 @@ krmllib.done
 fstarlib.done
 opam-env.Makefile
 config.Makefile
+opt/fstar-bin-package
