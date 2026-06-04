@@ -131,9 +131,10 @@ fn copyful_parse_list
   (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
-  (#el: Type0)
-  (#elem_vmatch: el -> t -> slprop)
-  (w: PPB.copyful_parse elem_vmatch p)
+  (#el #em: Type0)
+  (#elem_vmatch: el -> em -> slprop)
+  (#elem_conv: em -> GTot (option t))
+  (w: PPB.copyful_parse elem_vmatch p elem_conv)
   (j: LPS.jumper p)
   (sq: squash (k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0))
   (input: slice byte)
@@ -144,7 +145,7 @@ requires
 returns res: PPVCL.vclist_lowtype el
 ensures
   PPB.pts_to_parsed (parse_list p) input #pm v **
-  PPVCL.vmatch_vclist elem_vmatch res (Ghost.reveal v)
+  PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) res (Ghost.reveal v)
 {
   parser_kind_prop_equiv k p;
   (* count pass *)
@@ -193,15 +194,15 @@ ensures
       (PPB.pts_to_parsed (PPVCL.parse_nlist (L.length (Ghost.reveal v)) p) input #pm v')
       (PPB.pts_to_parsed (parse_list p) input #pm v);
     PPVCL.nlist_length_fact (L.length (Ghost.reveal v)) v';
-    let res = PPVCL.vmatch_vclist_some_intro n vec v;
+    let res = PPVCL.vmatch_vclist_some_intro #el #t #(PPB.vmatch_conv elem_vmatch elem_conv) n vec v;
     res
   } else {
     (* empty list *)
     PPVCL.nil_of_length_zero (Ghost.reveal v);
     let res : PPVCL.vclist_lowtype el = None #(SZ.t & V.vec el);
-    fold (PPVCL.vmatch_vclist elem_vmatch (None #(SZ.t & V.vec el)) (Ghost.reveal v));
-    rewrite (PPVCL.vmatch_vclist elem_vmatch (None #(SZ.t & V.vec el)) (Ghost.reveal v))
-      as (PPVCL.vmatch_vclist elem_vmatch res (Ghost.reveal v));
+    fold (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (None #(SZ.t & V.vec el)) (Ghost.reveal v));
+    rewrite (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (None #(SZ.t & V.vec el)) (Ghost.reveal v))
+      as (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) res (Ghost.reveal v));
     res
   }
 }

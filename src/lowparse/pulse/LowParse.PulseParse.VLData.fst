@@ -502,15 +502,16 @@ let accessor_bounded_vldata_strong_payload
 
 inline_for_extraction
 fn copyful_parse_bounded_vldata_payload'
-  (#tl #t: Type0) (#vmatch: tl -> t -> slprop)
+  (#tl #tm #t: Type0) (#vmatch: tl -> tm -> slprop)
   (#k: Ghost.erased parser_kind) (#p: parser k t)
+  (#conv: tm -> GTot (option t))
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (l: nat { l >= log256' max /\ l <= 4 })
-  (w: PPB.copyful_parse vmatch p)
+  (w: PPB.copyful_parse vmatch p conv)
   (lr: PPB.leaf_reader (parse_bounded_integer l))
   (u: squash FStar.SizeT.fits_u64)
-: PPB.copyful_parse vmatch (parse_bounded_vldata' min max l p)
+: PPB.copyful_parse vmatch (parse_bounded_vldata' min max l p) conv
 =
   (input: slice byte)
   (#pm: perm)
@@ -540,44 +541,71 @@ fn copyful_parse_bounded_vldata_payload'
 
 inline_for_extraction
 let copyful_parse_bounded_vldata_payload
-  (#tl #t: Type0) (#vmatch: tl -> t -> slprop)
+  (#tl #tm #t: Type0) (#vmatch: tl -> tm -> slprop)
   (#k: Ghost.erased parser_kind) (#p: parser k t)
+  (#conv: tm -> GTot (option t))
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
-  (w: PPB.copyful_parse vmatch p)
+  (w: PPB.copyful_parse vmatch p conv)
   (lr: PPB.leaf_reader (parse_bounded_integer (log256' max)))
   (u: squash FStar.SizeT.fits_u64)
-: PPB.copyful_parse vmatch (parse_bounded_vldata min max p)
+: PPB.copyful_parse vmatch (parse_bounded_vldata min max p) conv
 = copyful_parse_bounded_vldata_payload' min max (log256' max) w lr u
 
 (* Separation logic predicate for the strong variant: the low-level
    representation [xl] relates to the refined high-level value [xh] exactly when
    it relates (via the payload [vmatch]) to the underlying payload value. *)
 
+(* Separation logic predicate for the strong variant: the size refinement on the
+   high-level value is now carried entirely by [vldata_strong_conv], so the
+   predicate is just the payload [vmatch] (right-hand-side type [tm] is the
+   refinement-free payload mid type). *)
+
 let vmatch_vldata_strong
-  (#tl #t: Type0)
+  (#tl #tm: Type0)
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (#k: Ghost.erased parser_kind) (#t: Type0) (#p: parser k t)
+  (s: serializer p)
+  (vmatch: tl -> tm -> slprop)
+  (xl: tl)
+  (xh: tm)
+: slprop
+= vmatch xl xh
+
+(* Partial conversion for the strong variant: the payload mid value [xm] is
+   converted to the payload high value, then accepted as a bounded-vldata-strong
+   value exactly when its serialization fits the size bounds. *)
+
+let vldata_strong_conv
+  (#tm #t: Type0)
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (#k: Ghost.erased parser_kind) (#p: parser k t)
   (s: serializer p)
-  (vmatch: tl -> t -> slprop)
-  (xl: tl)
-  (xh: parse_bounded_vldata_strong_t min max s)
-: slprop
-= vmatch xl (xh <: t)
+  (conv: tm -> GTot (option t))
+  (xm: tm)
+: GTot (option (parse_bounded_vldata_strong_t min max s))
+= match conv xm with
+  | Some x ->
+    if (let sz = Seq.length (serialize s x) in min <= sz && sz <= max)
+    then Some (x <: parse_bounded_vldata_strong_t min max s)
+    else None
+  | None -> None
 
 inline_for_extraction
 fn copyful_parse_bounded_vldata_strong_payload'
-  (#tl #t: Type0) (#vmatch: tl -> t -> slprop)
+  (#tl #tm #t: Type0) (#vmatch: tl -> tm -> slprop)
   (#k: Ghost.erased parser_kind) (#p: parser k t)
+  (#conv: tm -> GTot (option t))
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (l: nat { l >= log256' max /\ l <= 4 })
   (s: serializer p)
-  (w: PPB.copyful_parse vmatch p)
+  (w: PPB.copyful_parse vmatch p conv)
   (lr: PPB.leaf_reader (parse_bounded_integer l))
   (u: squash FStar.SizeT.fits_u64)
-: PPB.copyful_parse (vmatch_vldata_strong min max s vmatch) (parse_bounded_vldata_strong' min max l s)
+: PPB.copyful_parse (vmatch_vldata_strong min max s vmatch) (parse_bounded_vldata_strong' min max l s) (vldata_strong_conv min max s conv)
 =
   (input: slice byte)
   (#pm: perm)
@@ -602,26 +630,30 @@ fn copyful_parse_bounded_vldata_strong_payload'
   Trade.trans (PPB.pts_to_parsed p input_payload #(pm /. 2.0R) (Ghost.reveal v <: t)) (S.pts_to input_payload #pm wb_payload) (PPB.pts_to_parsed (parse_bounded_vldata_strong' min max l s) input #pm v);
   let res = w input_payload;
   Trade.elim (PPB.pts_to_parsed p input_payload #(pm /. 2.0R) (Ghost.reveal v <: t)) (PPB.pts_to_parsed (parse_bounded_vldata_strong' min max l s) input #pm v);
-  fold (vmatch_vldata_strong min max s vmatch res v);
+  PPB.elim_vmatch_conv vmatch conv res (Ghost.reveal v <: t);
+  with vm . assert (vmatch res vm ** pure (conv vm == Some (Ghost.reveal v <: t)));
+  fold (vmatch_vldata_strong min max s vmatch res vm);
+  PPB.intro_vmatch_conv (vmatch_vldata_strong min max s vmatch) (vldata_strong_conv min max s conv) res vm (Ghost.reveal v);
   res
 }
 
 inline_for_extraction
 let copyful_parse_bounded_vldata_strong_payload
-  (#tl #t: Type0) (#vmatch: tl -> t -> slprop)
+  (#tl #tm #t: Type0) (#vmatch: tl -> tm -> slprop)
   (#k: Ghost.erased parser_kind) (#p: parser k t)
+  (#conv: tm -> GTot (option t))
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (s: serializer p)
-  (w: PPB.copyful_parse vmatch p)
+  (w: PPB.copyful_parse vmatch p conv)
   (lr: PPB.leaf_reader (parse_bounded_integer (log256' max)))
   (u: squash FStar.SizeT.fits_u64)
-: PPB.copyful_parse (vmatch_vldata_strong min max s vmatch) (parse_bounded_vldata_strong min max s)
+: PPB.copyful_parse (vmatch_vldata_strong min max s vmatch) (parse_bounded_vldata_strong min max s) (vldata_strong_conv min max s conv)
 = copyful_parse_bounded_vldata_strong_payload' min max (log256' max) s w lr u
 
 inline_for_extraction
 fn free_vldata_strong
-  (#tl #t: Type0) (#vmatch: tl -> t -> slprop)
+  (#tl #tm #t: Type0) (#vmatch: tl -> tm -> slprop)
   (#k: Ghost.erased parser_kind) (#p: parser k t)
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
@@ -630,10 +662,10 @@ fn free_vldata_strong
 : PPB.free_t (vmatch_vldata_strong min max s vmatch)
 =
   (x: tl)
-  (#v: Ghost.erased (parse_bounded_vldata_strong_t min max s))
+  (#v: Ghost.erased tm)
 {
   unfold (vmatch_vldata_strong min max s vmatch x v);
-  free x #(Ghost.hide (Ghost.reveal v <: t));
+  free x #v;
 }
 
 #pop-options

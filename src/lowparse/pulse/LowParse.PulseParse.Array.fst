@@ -179,8 +179,8 @@ fn free_array
 inline_for_extraction
 fn extract_elem
   (#eh: Type0) (#k: parser_kind) (#p: parser k eh)
-  (#el: Type0) (#elem_vmatch: el -> eh -> slprop)
-  (w: PPB.copyful_parse elem_vmatch p)
+  (#el #em: Type0) (#elem_vmatch: el -> em -> slprop) (#elem_conv: em -> GTot (option eh))
+  (w: PPB.copyful_parse elem_vmatch p elem_conv)
   (j: LPS.jumper p)
   (input: slice byte)
   (cur_off_sz: SZ.t)
@@ -195,7 +195,7 @@ fn extract_elem
        parse (parse_list p) rem == Some (Ghost.reveal hd :: Ghost.reveal tl, Seq.length rem)))
   returns res: (el & SZ.t)
   ensures S.pts_to input #pm w_bytes **
-    elem_vmatch (fst res) hd **
+    PPB.vmatch_conv elem_vmatch elem_conv (fst res) hd **
     pure (
       SZ.v cur_off_sz <= SZ.v (snd res) /\ SZ.v (snd res) <= Seq.length w_bytes /\
       (let rem2 = Seq.slice w_bytes (SZ.v (snd res)) (Seq.length w_bytes) in
@@ -254,6 +254,15 @@ let rec splitAt_tl (#a:Type) (i:nat) (l:list a)
   = if i = 0 then ()
     else (match l with x :: xs -> splitAt_tl (i-1) xs)
 
+let array_conv
+  (#eh: Type0)
+  (elem_count: nat)
+  (l: list eh)
+: GTot (option (LowParse.Spec.Array.array eh elem_count))
+= if L.length l = elem_count
+  then Some (l <: LowParse.Spec.Array.array eh elem_count)
+  else None
+
 #push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 
 inline_for_extraction
@@ -262,9 +271,10 @@ fn copyful_parse_array
   (#k: parser_kind)
   (#p: parser k eh)
   (s: serializer p)
-  (#el: Type0)
-  (#elem_vmatch: el -> eh -> slprop)
-  (w: PPB.copyful_parse elem_vmatch p)
+  (#el #em: Type0)
+  (#elem_vmatch: el -> em -> slprop)
+  (#elem_conv: em -> GTot (option eh))
+  (w: PPB.copyful_parse elem_vmatch p elem_conv)
   (j: LPS.jumper p)
   (array_byte_size: nat)
   (array_byte_size_sz: SZ.t)
@@ -284,7 +294,7 @@ requires
 returns res: V.vec el
 ensures
   PPB.pts_to_parsed (parse_array s array_byte_size elem_count) input #pm v **
-  vmatch_array elem_vmatch elem_count_sz res (Ghost.reveal v)
+  PPB.vmatch_conv (vmatch_array (PPB.vmatch_conv elem_vmatch elem_conv) elem_count_sz) (array_conv elem_count) res (Ghost.reveal v)
 {
   let fl : Ghost.erased (list eh) = Ghost.hide (Ghost.reveal v <: list eh);
   // STEP A: convert parse_array down to parse_list, accumulating a back trade
@@ -330,9 +340,9 @@ ensures
   let sl : Ghost.erased (Seq.seq eh) = Ghost.hide (Seq.seq_of_list (Ghost.reveal fl));
   Seq.lemma_seq_of_list_index (Ghost.reveal fl) 0;
   assert (pure (L.hd (Ghost.reveal fl) == L.index (Ghost.reveal fl) 0));
-  rewrite (elem_vmatch (fst r0) (L.hd (Ghost.reveal fl)))
-    as (elem_vmatch el0 (L.index (Ghost.reveal fl) 0));
-  SM.seq_seq_match_singleton_intro elem_vmatch (Seq.create (SZ.v elem_count_sz) el0) (Ghost.reveal sl) 0 el0 (L.index (Ghost.reveal fl) 0);
+  rewrite ((PPB.vmatch_conv elem_vmatch elem_conv) (fst r0) (L.hd (Ghost.reveal fl)))
+    as ((PPB.vmatch_conv elem_vmatch elem_conv) el0 (L.index (Ghost.reveal fl) 0));
+  SM.seq_seq_match_singleton_intro (PPB.vmatch_conv elem_vmatch elem_conv) (Seq.create (SZ.v elem_count_sz) el0) (Ghost.reveal sl) 0 el0 (L.index (Ghost.reveal fl) 0);
   splitAt_tl 0 (Ghost.reveal fl);
   let mut pi = 1sz;
   let mut poff = off1;
@@ -341,7 +351,7 @@ ensures
     R.pts_to pi i ** R.pts_to poff cur_off_sz **
     S.pts_to input #pm w_bytes **
     V.pts_to vec s1 **
-    SM.seq_seq_match elem_vmatch s1 (Ghost.reveal sl) 0 (SZ.v i) **
+    SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) s1 (Ghost.reveal sl) 0 (SZ.v i) **
     pure (
       1 <= SZ.v i /\ SZ.v i <= SZ.v elem_count_sz /\
       Seq.length s1 == SZ.v elem_count_sz /\
@@ -362,27 +372,28 @@ ensures
     let off2 = snd r;
     V.op_Array_Assignment vec i elx;
     with s1'. assert (V.pts_to vec s1');
-    SM.seq_seq_match_rewrite_seq elem_vmatch s1 s1' (Ghost.reveal sl) (Ghost.reveal sl) 0 (SZ.v i);
+    SM.seq_seq_match_rewrite_seq (PPB.vmatch_conv elem_vmatch elem_conv) s1 s1' (Ghost.reveal sl) (Ghost.reveal sl) 0 (SZ.v i);
     splitAt_index_hd (SZ.v i) (Ghost.reveal fl);
     Seq.lemma_seq_of_list_index (Ghost.reveal fl) (SZ.v i);
     splitAt_tl (SZ.v i) (Ghost.reveal fl);
     assert (pure (Seq.index (Ghost.reveal sl) (SZ.v i) == L.hd (snd (L.splitAt (SZ.v i) (Ghost.reveal fl)))));
     assert (pure (Seq.index s1' (SZ.v i) == elx));
-    rewrite (elem_vmatch (fst r) (L.hd (snd (L.splitAt (SZ.v i) (Ghost.reveal fl)))))
-      as (elem_vmatch (Seq.index s1' (SZ.v i)) (Seq.index (Ghost.reveal sl) (SZ.v i)));
-    SM.seq_seq_match_enqueue_right elem_vmatch s1' (Ghost.reveal sl) 0 (SZ.v i) (Seq.index s1' (SZ.v i)) (Seq.index (Ghost.reveal sl) (SZ.v i));
+    rewrite ((PPB.vmatch_conv elem_vmatch elem_conv) (fst r) (L.hd (snd (L.splitAt (SZ.v i) (Ghost.reveal fl)))))
+      as ((PPB.vmatch_conv elem_vmatch elem_conv) (Seq.index s1' (SZ.v i)) (Seq.index (Ghost.reveal sl) (SZ.v i)));
+    SM.seq_seq_match_enqueue_right (PPB.vmatch_conv elem_vmatch elem_conv) s1' (Ghost.reveal sl) 0 (SZ.v i) (Seq.index s1' (SZ.v i)) (Seq.index (Ghost.reveal sl) (SZ.v i));
     poff := off2;
     pi := SZ.add i 1sz;
   };
   let i = !pi;
   with s_final. assert (V.pts_to vec s_final);
-  SM.seq_seq_match_seq_list_match elem_vmatch s_final (Ghost.reveal fl);
+  SM.seq_seq_match_seq_list_match (PPB.vmatch_conv elem_vmatch elem_conv) s_final (Ghost.reveal fl);
   Trade.elim
     (S.pts_to input #pm w_bytes)
     (PPB.pts_to_parsed (parse_array s array_byte_size elem_count) input #pm v);
-  fold (vmatch_array elem_vmatch elem_count_sz vec (Ghost.reveal fl));
-  rewrite (vmatch_array elem_vmatch elem_count_sz vec (Ghost.reveal fl))
-    as (vmatch_array elem_vmatch elem_count_sz vec (Ghost.reveal v));
+  fold (vmatch_array (PPB.vmatch_conv elem_vmatch elem_conv) elem_count_sz vec (Ghost.reveal fl));
+  rewrite (vmatch_array (PPB.vmatch_conv elem_vmatch elem_conv) elem_count_sz vec (Ghost.reveal fl))
+    as (vmatch_array (PPB.vmatch_conv elem_vmatch elem_conv) elem_count_sz vec (Ghost.reveal v <: list eh));
+  PPB.intro_vmatch_conv (vmatch_array (PPB.vmatch_conv elem_vmatch elem_conv) elem_count_sz) (array_conv elem_count) vec (Ghost.reveal v <: list eh) (Ghost.reveal v);
   vec
 }
 

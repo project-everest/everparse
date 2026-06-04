@@ -766,12 +766,55 @@ fn accessor_parser_ext
   input
 }
 
+(* Packed high-level separation logic predicate: the low-level representation
+   [x] relates to the high-level value [v] when there EXISTS a refinement-free
+   "mid" value [vm] such that [x] relates to [vm] via [vmatch] and [vm] converts
+   to [v] via the partial conversion [conv]. All refinements on the high-level
+   value type [t] are captured by [conv] (a partial function), so the [vmatch]
+   right-hand-side type [tm] is free of refinements. *)
+let vmatch_conv
+  (#t' #tm #t: Type0)
+  (vmatch: t' -> tm -> slprop)
+  (conv: tm -> GTot (option t))
+  (x: t')
+  (v: t)
+: slprop
+= exists* (vm: tm) . vmatch x vm ** pure (conv vm == Some v)
+
+ghost
+fn intro_vmatch_conv
+  (#t' #tm #t: Type0)
+  (vmatch: t' -> tm -> slprop)
+  (conv: tm -> GTot (option t))
+  (x: t')
+  (vm: tm)
+  (v: t)
+  requires vmatch x vm ** pure (conv vm == Some v)
+  ensures vmatch_conv vmatch conv x v
+{
+  fold (vmatch_conv vmatch conv x v);
+}
+
+ghost
+fn elim_vmatch_conv
+  (#t' #tm #t: Type0)
+  (vmatch: t' -> tm -> slprop)
+  (conv: tm -> GTot (option t))
+  (x: t')
+  (v: t)
+  requires vmatch_conv vmatch conv x v
+  ensures exists* (vm: tm) . vmatch x vm ** pure (conv vm == Some v)
+{
+  unfold (vmatch_conv vmatch conv x v);
+}
+
 inline_for_extraction
 let copyful_parse
-  (#t' #t: Type0)
-  (vmatch: t' -> t -> slprop)
+  (#t' #tm #t: Type0)
+  (vmatch: t' -> tm -> slprop)
   (#k: parser_kind)
   (p: parser k t)
+  (conv: tm -> GTot (option t))
 =
   (input: slice byte) ->
   (#pm: perm) ->
@@ -780,19 +823,38 @@ let copyful_parse
     (pts_to_parsed p input #pm v)
     (fun res ->
       pts_to_parsed p input #pm v **
-      vmatch res v
+      vmatch_conv vmatch conv res v
     )
 
 inline_for_extraction
 let free_t
-  (#t' #t: Type0)
-  (vmatch: t' -> t -> slprop)
+  (#t' #tm: Type0)
+  (vmatch: t' -> tm -> slprop)
 =
   (x: t') ->
-  (#v: Ghost.erased t) ->
+  (#v: Ghost.erased tm) ->
   stt unit
     (vmatch x v)
     (fun _ -> emp)
+
+(* Lift a [free_t] over a mid [vmatch] to a [free_t] over the packed high-level
+   predicate [vmatch_conv vmatch conv]: eliminate the existential mid witness,
+   then free using the underlying destructor. *)
+inline_for_extraction
+fn free_vmatch_conv
+  (#t' #tm #t: Type0)
+  (vmatch: t' -> tm -> slprop)
+  (conv: tm -> GTot (option t))
+  (free: free_t vmatch)
+: free_t #t' #t (vmatch_conv vmatch conv)
+=
+  (x: t')
+  (#v: Ghost.erased t)
+{
+  elim_vmatch_conv vmatch conv x v;
+  with vm . assert (vmatch x vm ** pure (conv vm == Some (Ghost.reveal v)));
+  free x #vm;
+}
 
 inline_for_extraction
 fn copyful_parse_leaf
@@ -800,7 +862,7 @@ fn copyful_parse_leaf
   (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (r: leaf_reader p)
-: copyful_parse #_ #_ (LPS.eq_as_slprop t) #_ p
+: copyful_parse #_ #_ #_ (LPS.eq_as_slprop t) #_ p (fun (x: t) -> Some x)
 =
   (input: slice byte)
   (#pm: perm)
@@ -808,6 +870,7 @@ fn copyful_parse_leaf
 {
   let res = r input;
   fold (LPS.eq_as_slprop t res v);
+  intro_vmatch_conv (LPS.eq_as_slprop t) (fun (x: t) -> Some x) res (Ghost.reveal v) (Ghost.reveal v);
   res
 }
 
@@ -833,25 +896,29 @@ let vmatch_synth_lhs
 
 inline_for_extraction
 fn copyful_parse_synth_lhs
-  (#t1' #t: Type0)
-  (#vmatch: t1' -> t -> slprop)
+  (#t1' #tm #t: Type0)
+  (#vmatch: t1' -> tm -> slprop)
   (#k: Ghost.erased parser_kind)
   (#p: parser k t)
-  (r: copyful_parse vmatch p)
+  (#conv: tm -> GTot (option t))
+  (r: copyful_parse vmatch p conv)
   (#t2': Type0)
   (f: t1' -> t2')
   (g: t2' -> GTot t1')
   (sq: squash (forall (x: t1') . g (f x) == x))
-: copyful_parse #_ #_ (vmatch_synth_lhs vmatch g) #_ p
+: copyful_parse #_ #_ #_ (vmatch_synth_lhs vmatch g) #_ p conv
 =
   (input: slice byte)
   (#pm: perm)
   (#v: Ghost.erased _)
 {
   let res = r input;
+  elim_vmatch_conv vmatch conv res (Ghost.reveal v);
+  with vm . assert (vmatch res vm ** pure (conv vm == Some (Ghost.reveal v)));
   let res2 = f res;
-  rewrite (vmatch res v) as (vmatch (g res2) v);
-  fold (vmatch_synth_lhs vmatch g res2 v);
+  rewrite (vmatch res vm) as (vmatch (g res2) vm);
+  fold (vmatch_synth_lhs vmatch g res2 vm);
+  intro_vmatch_conv (vmatch_synth_lhs vmatch g) conv res2 vm (Ghost.reveal v);
   res2
 }
 
@@ -876,32 +943,34 @@ fn free_synth_lhs
 
 inline_for_extraction
 fn copyful_parse_ext
-  (#t' #t1: Type0)
-  (#vmatch1: t' -> t1 -> slprop)
+  (#t' #tm #t1: Type0)
+  (#vmatch1: t' -> tm -> slprop)
+  (#conv1: tm -> GTot (option t1))
   (#k1: Ghost.erased parser_kind)
   (#p1: parser k1 t1)
-  (w: copyful_parse vmatch1 p1)
-  (#t2: Type0)
+  (w: copyful_parse vmatch1 p1 conv1)
   (#k2: Ghost.erased parser_kind)
-  (p2: parser k2 t2)
-  (vmatch2: t' -> t2 -> slprop)
+  (p2: parser k2 t1)
+  (vmatch2: t' -> tm -> slprop)
   (sq: squash (
     LPS.pts_to_serialized_ext_trade_gen_precond p2 p1 /\
-    (forall (x: t') (vb: t2) (va: t1) .
-      LPS.pts_to_serialized_ext_trade_gen_post t2 t1 vb va ==>
-      (vmatch2 x vb == vmatch1 x va))
+    (forall (x: t') (vm: tm) .
+      vmatch2 x vm == vmatch1 x vm)
   ))
-: copyful_parse #_ #_ vmatch2 #_ p2
+: copyful_parse #_ #_ #_ vmatch2 #_ p2 conv1
 =
   (input: slice byte)
   (#pm: perm)
-  (#v: Ghost.erased t2)
+  (#v: Ghost.erased t1)
 {
   pts_to_parsed_ext_trade_gen p1 input;
   with v1 . assert (pts_to_parsed p1 input #pm v1);
   let res = w input;
   Trade.elim (pts_to_parsed p1 input #pm v1) (pts_to_parsed p2 input #pm v);
-  rewrite (vmatch1 res v1) as (vmatch2 res v);
+  elim_vmatch_conv vmatch1 conv1 res (Ghost.reveal v1);
+  with vm . assert (vmatch1 res vm ** pure (conv1 vm == Some (Ghost.reveal v1)));
+  rewrite (vmatch1 res vm) as (vmatch2 res vm);
+  intro_vmatch_conv vmatch2 conv1 res vm (Ghost.reveal v);
   res
 }
 

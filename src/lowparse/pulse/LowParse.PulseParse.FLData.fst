@@ -285,26 +285,42 @@ fn accessor_fldata_strong
    refinement upcast. *)
 
 let vmatch_fldata_strong
-  (#tl #t: Type0)
+  (#tl #tm: Type0)
+  (#k: Ghost.erased parser_kind) (#t: Type0) (#p: parser k t)
+  (s: serializer p)
+  (sz: nat)
+  (vmatch: tl -> tm -> slprop)
+  (xl: tl)
+  (xh: tm)
+: slprop
+= vmatch xl xh
+
+let fldata_strong_conv
+  (#tm #t: Type0)
   (#k: Ghost.erased parser_kind) (#p: parser k t)
   (s: serializer p)
   (sz: nat)
-  (vmatch: tl -> t -> slprop)
-  (xl: tl)
-  (xh: parse_fldata_strong_t s sz)
-: slprop
-= vmatch xl (xh <: t)
+  (conv: tm -> GTot (option t))
+  (xm: tm)
+: GTot (option (parse_fldata_strong_t s sz))
+= match conv xm with
+  | Some x ->
+    if Seq.length (serialize s x) = sz
+    then Some (x <: parse_fldata_strong_t s sz)
+    else None
+  | None -> None
 
 #push-options "--z3rlimit 32"
 
 inline_for_extraction
 fn copyful_parse_fldata_strong_payload
-  (#tl #t: Type0) (#vmatch: tl -> t -> slprop)
+  (#tl #tm #t: Type0) (#vmatch: tl -> tm -> slprop)
   (#k: Ghost.erased parser_kind) (#p: parser k t)
+  (#conv: tm -> GTot (option t))
   (s: serializer p)
   (sz: nat)
-  (w: PPB.copyful_parse vmatch p)
-: PPB.copyful_parse (vmatch_fldata_strong s sz vmatch) (parse_fldata_strong s sz)
+  (w: PPB.copyful_parse vmatch p conv)
+: PPB.copyful_parse (vmatch_fldata_strong s sz vmatch) (parse_fldata_strong s sz) (fldata_strong_conv s sz conv)
 =
   (input: slice byte)
   (#pm: perm)
@@ -315,13 +331,16 @@ fn copyful_parse_fldata_strong_payload
   Trade.elim
     (PPB.pts_to_parsed p input #pm (Ghost.reveal v <: t))
     (PPB.pts_to_parsed (parse_fldata_strong s sz) input #pm v);
-  fold (vmatch_fldata_strong s sz vmatch res v);
+  PPB.elim_vmatch_conv vmatch conv res (Ghost.reveal v <: t);
+  with vm . assert (vmatch res vm ** pure (conv vm == Some (Ghost.reveal v <: t)));
+  fold (vmatch_fldata_strong s sz vmatch res vm);
+  PPB.intro_vmatch_conv (vmatch_fldata_strong s sz vmatch) (fldata_strong_conv s sz conv) res vm (Ghost.reveal v);
   res
 }
 
 inline_for_extraction
 fn free_fldata_strong
-  (#tl #t: Type0) (#vmatch: tl -> t -> slprop)
+  (#tl #tm #t: Type0) (#vmatch: tl -> tm -> slprop)
   (#k: Ghost.erased parser_kind) (#p: parser k t)
   (s: serializer p)
   (sz: nat)
@@ -329,10 +348,10 @@ fn free_fldata_strong
 : PPB.free_t (vmatch_fldata_strong s sz vmatch)
 =
   (x: tl)
-  (#v: Ghost.erased (parse_fldata_strong_t s sz))
+  (#v: Ghost.erased tm)
 {
   unfold (vmatch_fldata_strong s sz vmatch x v);
-  free x #(Ghost.hide (Ghost.reveal v <: t));
+  free x #v;
 }
 
 #pop-options

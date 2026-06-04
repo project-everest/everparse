@@ -166,6 +166,30 @@ let vmatch_copy_bytes
 = V.pts_to vc (B32.reveal v) **
   pure (V.is_full_vec vc)
 
+let flbytes_conv
+  (sz: nat { sz < 4294967296 })
+  (b: B32.bytes)
+: GTot (option (B32.lbytes sz))
+= if B32.length b = sz then Some (b <: B32.lbytes sz) else None
+
+let vldata_all_bytes_conv
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (b: B32.bytes)
+: GTot (option (parse_bounded_vldata_strong_t min max #_ #_ #parse_all_bytes serialize_all_bytes))
+= if (let sz = Seq.length (serialize_all_bytes b) in min <= sz && sz <= max)
+  then Some (b <: parse_bounded_vldata_strong_t min max #_ #_ #parse_all_bytes serialize_all_bytes)
+  else None
+
+let vlbytes_conv
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (b: B32.bytes)
+: GTot (option (parse_bounded_vlbytes_t min max))
+= if (min <= B32.length b && B32.length b <= max)
+  then Some (b <: parse_bounded_vlbytes_t min max)
+  else None
+
 inline_for_extraction
 fn free_copy_bytes
   (x: V.vec byte)
@@ -231,7 +255,7 @@ ensures
 inline_for_extraction
 fn copyful_parse_flbytes
   (sz: nat { sz < 4294967296 })
-: PPB.copyful_parse #(V.vec byte) #(B32.lbytes sz) vmatch_copy_bytes (parse_flbytes sz)
+: PPB.copyful_parse #(V.vec byte) #B32.bytes #(B32.lbytes sz) vmatch_copy_bytes (parse_flbytes sz) (flbytes_conv sz)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -243,6 +267,7 @@ fn copyful_parse_flbytes
   Trade.elim (S.pts_to input #pm w) (PPB.pts_to_parsed (parse_flbytes sz) input #pm v);
   rewrite (V.pts_to vc w) as (V.pts_to vc (B32.reveal v));
   fold (vmatch_copy_bytes vc v);
+  PPB.intro_vmatch_conv vmatch_copy_bytes (flbytes_conv sz) vc (Ghost.reveal v <: B32.bytes) (Ghost.reveal v);
   vc
 }
 
@@ -253,7 +278,7 @@ fn copyful_parse_bounded_vldata_strong_payload
   (l: nat { l >= log256' max /\ l <= 4 })
   (lr: PPB.leaf_reader (parse_bounded_integer l))
   (u: squash FStar.SizeT.fits_u64)
-: PPB.copyful_parse #(V.vec byte) #(parse_bounded_vldata_strong_t min max #_ #_ #parse_all_bytes serialize_all_bytes) vmatch_copy_bytes (parse_bounded_vldata_strong' min max l serialize_all_bytes)
+: PPB.copyful_parse #(V.vec byte) #B32.bytes #(parse_bounded_vldata_strong_t min max #_ #_ #parse_all_bytes serialize_all_bytes) vmatch_copy_bytes (parse_bounded_vldata_strong' min max l serialize_all_bytes) (vldata_all_bytes_conv min max)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -266,6 +291,7 @@ fn copyful_parse_bounded_vldata_strong_payload
     (PPB.pts_to_parsed parse_all_bytes result #pm' v2)
     (PPB.pts_to_parsed (parse_bounded_vldata_strong' min max l serialize_all_bytes) input #pm v);
   rewrite (vmatch_copy_bytes vc v2) as (vmatch_copy_bytes vc v);
+  PPB.intro_vmatch_conv vmatch_copy_bytes (vldata_all_bytes_conv min max) vc (Ghost.reveal v <: B32.bytes) (Ghost.reveal v);
   vc
 }
 
@@ -276,7 +302,7 @@ fn copyful_parse_bounded_vlbytes'
   (l: nat { l >= log256' max /\ l <= 4 })
   (lr: PPB.leaf_reader (parse_bounded_integer l))
   (u: squash FStar.SizeT.fits_u64)
-: PPB.copyful_parse #(V.vec byte) #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes (parse_bounded_vlbytes' min max l)
+: PPB.copyful_parse #(V.vec byte) #B32.bytes #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes (parse_bounded_vlbytes' min max l) (vlbytes_conv min max)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -291,7 +317,9 @@ fn copyful_parse_bounded_vlbytes'
   Trade.elim
     (PPB.pts_to_parsed (parse_bounded_vldata_strong' min max l serialize_all_bytes) input #pm (synth_bounded_vlbytes_recip min max v))
     (PPB.pts_to_parsed (parse_bounded_vlbytes' min max l) input #pm v);
-  rewrite (vmatch_copy_bytes vc (synth_bounded_vlbytes_recip min max v)) as (vmatch_copy_bytes vc v);
+  PPB.elim_vmatch_conv vmatch_copy_bytes (vldata_all_bytes_conv min max) vc (synth_bounded_vlbytes_recip min max v);
+  with vm . assert (vmatch_copy_bytes vc vm ** pure (vldata_all_bytes_conv min max vm == Some (synth_bounded_vlbytes_recip min max v)));
+  PPB.intro_vmatch_conv vmatch_copy_bytes (vlbytes_conv min max) vc vm (Ghost.reveal v);
   vc
 }
 
@@ -301,7 +329,7 @@ let copyful_parse_bounded_vlbytes
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (lr: PPB.leaf_reader (parse_bounded_integer (log256' max)))
   (u: squash FStar.SizeT.fits_u64)
-: PPB.copyful_parse #(V.vec byte) #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes (parse_bounded_vlbytes min max)
+: PPB.copyful_parse #(V.vec byte) #B32.bytes #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes (parse_bounded_vlbytes min max) (vlbytes_conv min max)
 = copyful_parse_bounded_vlbytes' min max (log256' max) lr u
 
 #push-options "--z3rlimit 128"
@@ -355,7 +383,7 @@ fn copyful_parse_bounded_vlgen_payload
   (jk: LPS.jumper pk)
   (rk: PPB.leaf_reader pk)
   (sq: squash (sk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
-: PPB.copyful_parse #(V.vec byte) #(parse_bounded_vldata_strong_t vmin vmax #_ #_ #parse_all_bytes serialize_all_bytes) vmatch_copy_bytes (parse_bounded_vlgen vmin vmax pk serialize_all_bytes)
+: PPB.copyful_parse #(V.vec byte) #B32.bytes #(parse_bounded_vldata_strong_t vmin vmax #_ #_ #parse_all_bytes serialize_all_bytes) vmatch_copy_bytes (parse_bounded_vlgen vmin vmax pk serialize_all_bytes) (vldata_all_bytes_conv vmin vmax)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -368,6 +396,7 @@ fn copyful_parse_bounded_vlgen_payload
     (PPB.pts_to_parsed parse_all_bytes result #pm' v2)
     (PPB.pts_to_parsed (parse_bounded_vlgen vmin vmax pk serialize_all_bytes) input #pm v);
   rewrite (vmatch_copy_bytes vc v2) as (vmatch_copy_bytes vc v);
+  PPB.intro_vmatch_conv vmatch_copy_bytes (vldata_all_bytes_conv vmin vmax) vc (Ghost.reveal v <: B32.bytes) (Ghost.reveal v);
   vc
 }
 
@@ -380,7 +409,7 @@ fn copyful_parse_bounded_vlgenbytes
   (jk: LPS.jumper pk)
   (rk: PPB.leaf_reader pk)
   (u: squash (sk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
-: PPB.copyful_parse #(V.vec byte) #(parse_bounded_vlbytes_t vmin vmax) vmatch_copy_bytes (parse_bounded_vlgenbytes vmin vmax pk)
+: PPB.copyful_parse #(V.vec byte) #B32.bytes #(parse_bounded_vlbytes_t vmin vmax) vmatch_copy_bytes (parse_bounded_vlgenbytes vmin vmax pk) (vlbytes_conv vmin vmax)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -395,6 +424,8 @@ fn copyful_parse_bounded_vlgenbytes
   Trade.elim
     (PPB.pts_to_parsed (parse_bounded_vlgen vmin vmax pk serialize_all_bytes) input #pm (synth_bounded_vlbytes_recip vmin vmax v))
     (PPB.pts_to_parsed (parse_bounded_vlgenbytes vmin vmax pk) input #pm v);
-  rewrite (vmatch_copy_bytes vc (synth_bounded_vlbytes_recip vmin vmax v)) as (vmatch_copy_bytes vc v);
+  PPB.elim_vmatch_conv vmatch_copy_bytes (vldata_all_bytes_conv vmin vmax) vc (synth_bounded_vlbytes_recip vmin vmax v);
+  with vm . assert (vmatch_copy_bytes vc vm ** pure (vldata_all_bytes_conv vmin vmax vm == Some (synth_bounded_vlbytes_recip vmin vmax v)));
+  PPB.intro_vmatch_conv vmatch_copy_bytes (vlbytes_conv vmin vmax) vc vm (Ghost.reveal v);
   vc
 }

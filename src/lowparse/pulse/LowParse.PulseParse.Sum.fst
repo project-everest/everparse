@@ -1725,7 +1725,7 @@ let copyful_parse_sum_payload_t
   (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
   (k: sum_key t)
 : Tot Type
-= PPB.copyful_parse (vmatch_sum_case t low tag_of_low vmatch_cases k) (dsnd (pc k))
+= PPB.copyful_parse (vmatch_sum_case t low tag_of_low vmatch_cases k) (dsnd (pc k)) (fun (x: sum_type_of_tag t k) -> Some x)
 
 inline_for_extraction
 fn copyful_parse_sum_payload_if'
@@ -1770,7 +1770,7 @@ let copyful_parse_sum_payload_dispatch
   (low: Type0)
   (tag_of_low: low -> sum_key t)
   (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
-  (w: (k: sum_key t) -> PPB.copyful_parse (vmatch_sum_case t low tag_of_low vmatch_cases k) (dsnd (pc k)))
+  (w: (k: sum_key t) -> PPB.copyful_parse (vmatch_sum_case t low tag_of_low vmatch_cases k) (dsnd (pc k)) (fun (x: sum_type_of_tag t k) -> Some x))
   (destr: dep_enum_destr (sum_enum t) (copyful_parse_sum_payload_t t pc low tag_of_low vmatch_cases))
   (k: sum_key t)
 : Tot (copyful_parse_sum_payload_t t pc low tag_of_low vmatch_cases k)
@@ -1795,10 +1795,10 @@ fn copyful_parse_sum
   (low: Type0)
   (tag_of_low: low -> sum_key t)
   (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
-  (w: (k: sum_key t) -> PPB.copyful_parse (vmatch_sum_case t low tag_of_low vmatch_cases k) (dsnd (pc k)))
+  (w: (k: sum_key t) -> PPB.copyful_parse (vmatch_sum_case t low tag_of_low vmatch_cases k) (dsnd (pc k)) (fun (x: sum_type_of_tag t k) -> Some x))
   (destr: dep_enum_destr (sum_enum t) (copyful_parse_sum_payload_t t pc low tag_of_low vmatch_cases))
   (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
-: PPB.copyful_parse (vmatch_sum t low tag_of_low vmatch_cases) (parse_sum t p pc)
+: PPB.copyful_parse (vmatch_sum t low tag_of_low vmatch_cases) (parse_sum t p pc) (fun (x: sum_type t) -> Some x)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -1809,8 +1809,11 @@ fn copyful_parse_sum
   with pm' v2. assert (PPB.pts_to_parsed (dsnd (pc k)) payload #pm' v2);
   let res = copyful_parse_sum_payload_dispatch t pc low tag_of_low vmatch_cases w destr k payload;
   Trade.elim _ _;
-  rewrite (vmatch_sum_case t low tag_of_low vmatch_cases k res v2)
+  PPB.elim_vmatch_conv (vmatch_sum_case t low tag_of_low vmatch_cases k) (fun (x: sum_type_of_tag t k) -> Some x) res v2;
+  with vm. assert (vmatch_sum_case t low tag_of_low vmatch_cases k res vm ** pure (Some vm == Some (Ghost.reveal v2)));
+  rewrite (vmatch_sum_case t low tag_of_low vmatch_cases k res vm)
     as (vmatch_sum t low tag_of_low vmatch_cases res v);
+  PPB.intro_vmatch_conv (vmatch_sum t low tag_of_low vmatch_cases) (fun (x: sum_type t) -> Some x) res (Ghost.reveal v) (Ghost.reveal v);
   res
 }
 
@@ -1830,12 +1833,14 @@ fn copyful_parse_sum_case
   (#tf: Type0)
   (#kf: Ghost.erased parser_kind)
   (#pf: parser kf (sum_type_of_tag t k))
-  (#vmatch_field: tf -> sum_type_of_tag t k -> slprop)
-  (r: PPB.copyful_parse vmatch_field pf)
+  (#mf: Type0)
+  (#vmatch_field: tf -> mf -> slprop)
+  (#fconv: mf -> GTot (option (sum_type_of_tag t k)))
+  (r: PPB.copyful_parse vmatch_field pf fconv)
   (mk: tf -> low)
   (sq_tag: squash (forall (x: tf) . tag_of_low (mk x) == k))
-  (sq_vm: squash (forall (x: tf) (vp: sum_type_of_tag t k) . vmatch_cases k (mk x) vp == vmatch_field x vp))
-: PPB.copyful_parse (vmatch_sum_case t low tag_of_low vmatch_cases k) pf
+  (sq_vm: squash (forall (x: tf) (vp: sum_type_of_tag t k) . vmatch_cases k (mk x) vp == PPB.vmatch_conv vmatch_field fconv x vp))
+: PPB.copyful_parse (vmatch_sum_case t low tag_of_low vmatch_cases k) pf (fun (x: sum_type_of_tag t k) -> Some x)
 =
   (input: _)
   (#pm: _)
@@ -1843,8 +1848,9 @@ fn copyful_parse_sum_case
 {
   let lv = r input;
   let res = mk lv;
-  rewrite (vmatch_field lv v) as (vmatch_cases k res v);
+  rewrite (PPB.vmatch_conv vmatch_field fconv lv v) as (vmatch_cases k res v);
   fold (vmatch_sum_case t low tag_of_low vmatch_cases k res v);
+  PPB.intro_vmatch_conv (vmatch_sum_case t low tag_of_low vmatch_cases k) (fun (x: sum_type_of_tag t k) -> Some x) res (Ghost.reveal v) (Ghost.reveal v);
   res
 }
 
@@ -1911,10 +1917,10 @@ fn copyful_parse_sum_cases
   (low: Type0)
   (tag_of_low: low -> sum_key t)
   (vmatch_cases: (k: sum_key t) -> low -> sum_type_of_tag t k -> slprop)
-  (w: (k: sum_key t) -> PPB.copyful_parse (vmatch_sum_case t low tag_of_low vmatch_cases k) (dsnd (pc k)))
+  (w: (k: sum_key t) -> PPB.copyful_parse (vmatch_sum_case t low tag_of_low vmatch_cases k) (dsnd (pc k)) (fun (x: sum_type_of_tag t k) -> Some x))
   (destr: dep_enum_destr (sum_enum t) (copyful_parse_sum_payload_t t pc low tag_of_low vmatch_cases))
   (k: sum_key t)
-: PPB.copyful_parse (vmatch_sum_cases t low tag_of_low vmatch_cases k) (parse_sum_cases t pc k)
+: PPB.copyful_parse (vmatch_sum_cases t low tag_of_low vmatch_cases k) (parse_sum_cases t pc k) (fun (x: sum_cases t k) -> Some x)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -1928,7 +1934,12 @@ fn copyful_parse_sum_cases
   let res = copyful_parse_sum_payload_dispatch t pc low tag_of_low vmatch_cases w destr k input;
   pts_to_parsed_synth_r2l (dsnd (pc k)) (synth_sum_case t k) (synth_sum_case_recip t k) input (Ghost.reveal v);
   PPB.pts_to_parsed_ext (parse_sum_cases t pc k) input;
+  PPB.elim_vmatch_conv (vmatch_sum_case t low tag_of_low vmatch_cases k) (fun (x: sum_type_of_tag t k) -> Some x) res (synth_sum_case_recip t k (Ghost.reveal v));
+  with vm. assert (vmatch_sum_case t low tag_of_low vmatch_cases k res vm ** pure (Some vm == Some (synth_sum_case_recip t k (Ghost.reveal v))));
+  rewrite (vmatch_sum_case t low tag_of_low vmatch_cases k res vm)
+    as (vmatch_sum_case t low tag_of_low vmatch_cases k res (synth_sum_case_recip t k (Ghost.reveal v)));
   fold (vmatch_sum_cases t low tag_of_low vmatch_cases k res v);
+  PPB.intro_vmatch_conv (vmatch_sum_cases t low tag_of_low vmatch_cases k) (fun (x: sum_cases t k) -> Some x) res (Ghost.reveal v) (Ghost.reveal v);
   res
 }
 
@@ -1963,7 +1974,7 @@ fn free_sum_cases
 inline_for_extraction
 fn copyful_parse_false
   (vmatch: squash False -> squash False -> slprop)
-: PPB.copyful_parse #(squash False) #(squash False) vmatch #parse_false_kind parse_false
+: PPB.copyful_parse #(squash False) #(squash False) #(squash False) vmatch #parse_false_kind parse_false (fun (x: squash False) -> Some x)
 =
   (input: _)
   (#pm: _)
@@ -1972,7 +1983,7 @@ fn copyful_parse_false
   let _ = Ghost.reveal v;
   let res : squash False = false_elim ();
   rewrite (PPB.pts_to_parsed #_ #(squash False) parse_false input #pm v)
-    as (PPB.pts_to_parsed #_ #(squash False) parse_false input #pm v ** vmatch res v);
+    as (PPB.pts_to_parsed #_ #(squash False) parse_false input #pm v ** PPB.vmatch_conv vmatch (fun (x: squash False) -> Some x) res v);
   res
 }
 
@@ -2016,7 +2027,7 @@ let copyful_parse_dsum_payload_t
     (PPB.pts_to_parsed (parse_dsum_type_of_tag' t f g k) input #pm v)
     (fun res ->
       PPB.pts_to_parsed (parse_dsum_type_of_tag' t f g k) input #pm v **
-      vmatch_dsum_case t low tag_of_low vmatch_cases k res v)
+      PPB.vmatch_conv (vmatch_dsum_case t low tag_of_low vmatch_cases k) (fun (x: dsum_type_of_tag t k) -> Some x) res v)
 
 #push-options "--z3rlimit 64"
 
@@ -2120,7 +2131,7 @@ fn copyful_parse_dsum
   (w: (k: dsum_key t) -> copyful_parse_dsum_payload_t t f g low tag_of_low vmatch_cases k)
   (destr: dep_maybe_enum_destr_t (dsum_enum t) (copyful_parse_dsum_payload_t t f g low tag_of_low vmatch_cases))
   (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
-: PPB.copyful_parse (vmatch_dsum t low tag_of_low vmatch_cases) (parse_dsum t p f g)
+: PPB.copyful_parse (vmatch_dsum t low tag_of_low vmatch_cases) (parse_dsum t p f g) (fun (x: dsum_type t) -> Some x)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -2133,8 +2144,11 @@ fn copyful_parse_dsum
   with pm' v2. assert (PPB.pts_to_parsed (parse_dsum_type_of_tag' t f g k) payload #pm' v2);
   let res = copyful_parse_dsum_payload_dispatch t f g low tag_of_low vmatch_cases w destr k payload;
   Trade.elim _ _;
-  rewrite (vmatch_dsum_case t low tag_of_low vmatch_cases k res v2)
+  PPB.elim_vmatch_conv (vmatch_dsum_case t low tag_of_low vmatch_cases k) (fun (x: dsum_type_of_tag t k) -> Some x) res v2;
+  with vm. assert (vmatch_dsum_case t low tag_of_low vmatch_cases k res vm ** pure (Some vm == Some (Ghost.reveal v2)));
+  rewrite (vmatch_dsum_case t low tag_of_low vmatch_cases k res vm)
     as (vmatch_dsum t low tag_of_low vmatch_cases res v);
+  PPB.intro_vmatch_conv (vmatch_dsum t low tag_of_low vmatch_cases) (fun (x: dsum_type t) -> Some x) res (Ghost.reveal v) (Ghost.reveal v);
   res
 }
 
@@ -2152,12 +2166,14 @@ fn copyful_parse_dsum_case
   (#tf: Type0)
   (#kf: Ghost.erased parser_kind)
   (#pf: parser kf (dsum_type_of_tag t k))
-  (#vmatch_field: tf -> dsum_type_of_tag t k -> slprop)
-  (r: PPB.copyful_parse vmatch_field pf)
+  (#mf: Type0)
+  (#vmatch_field: tf -> mf -> slprop)
+  (#fconv: mf -> GTot (option (dsum_type_of_tag t k)))
+  (r: PPB.copyful_parse vmatch_field pf fconv)
   (mk: tf -> low)
   (sq_tag: squash (forall (x: tf) . tag_of_low (mk x) == k))
-  (sq_vm: squash (forall (x: tf) (vp: dsum_type_of_tag t k) . vmatch_cases k (mk x) vp == vmatch_field x vp))
-: PPB.copyful_parse (vmatch_dsum_case t low tag_of_low vmatch_cases k) pf
+  (sq_vm: squash (forall (x: tf) (vp: dsum_type_of_tag t k) . vmatch_cases k (mk x) vp == PPB.vmatch_conv vmatch_field fconv x vp))
+: PPB.copyful_parse (vmatch_dsum_case t low tag_of_low vmatch_cases k) pf (fun (x: dsum_type_of_tag t k) -> Some x)
 =
   (input: _)
   (#pm: _)
@@ -2165,8 +2181,9 @@ fn copyful_parse_dsum_case
 {
   let lv = r input;
   let res = mk lv;
-  rewrite (vmatch_field lv v) as (vmatch_cases k res v);
+  rewrite (PPB.vmatch_conv vmatch_field fconv lv v) as (vmatch_cases k res v);
   fold (vmatch_dsum_case t low tag_of_low vmatch_cases k res v);
+  PPB.intro_vmatch_conv (vmatch_dsum_case t low tag_of_low vmatch_cases k) (fun (x: dsum_type_of_tag t k) -> Some x) res (Ghost.reveal v) (Ghost.reveal v);
   res
 }
 

@@ -741,11 +741,34 @@ fn zero_copy_parse_synth
 
 (* copyful_parse combinators *)
 
+(* [conv] for [parse_synth p1 f2]: synth is an isomorphism, so the mid type and
+   [vmatch] are UNCHANGED; only the conversion threads through [f2]. *)
+let synth_conv
+  (#tm #t1 #t2: Type0)
+  (conv: tm -> GTot (option t1))
+  (f2: t1 -> GTot t2)
+  (vm: tm)
+: GTot (option t2)
+= match conv vm with
+  | Some x -> Some (f2 x)
+  | None -> None
+
+(* [conv] for [nondep_then p1 p2]: option-monadic product of the child convs. *)
+let pair_conv
+  (#tm1 #tm2 #t1 #t2: Type0)
+  (conv1: tm1 -> GTot (option t1))
+  (conv2: tm2 -> GTot (option t2))
+  (vm: (tm1 & tm2))
+: GTot (option (t1 & t2))
+= match conv1 (fst vm), conv2 (snd vm) with
+  | Some x, Some y -> Some (x, y)
+  | _ -> None
+
 inline_for_extraction
 fn copyful_parse_synth
-  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#tl: Type0) (#vmatch: tl -> t1 -> slprop) (r: PPB.copyful_parse vmatch p1)
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#tl: Type0) (#tm: Type0) (#vmatch: tl -> tm -> slprop) (#conv: tm -> GTot (option t1)) (r: PPB.copyful_parse vmatch p1 conv)
   (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 })
-: PPB.copyful_parse #_ #_ (LPC.vmatch_synth vmatch f1) #_ (parse_synth p1 f2)
+: PPB.copyful_parse #_ #_ #_ vmatch #_ (parse_synth p1 f2) (synth_conv conv f2)
 = (input: slice byte)
   (#pm: _)
   (#v: _)
@@ -753,7 +776,9 @@ fn copyful_parse_synth
   pts_to_parsed_synth_l2r p1 f2 f1 input;
   let res = r input;
   pts_to_parsed_synth_r2l p1 f2 f1 input v;
-  fold (LPC.vmatch_synth vmatch f1 res v);
+  PPB.elim_vmatch_conv vmatch conv res (f1 (Ghost.reveal v));
+  with vm . assert (vmatch res vm ** pure (conv vm == Some (f1 (Ghost.reveal v))));
+  PPB.intro_vmatch_conv vmatch (synth_conv conv f2) res vm (Ghost.reveal v);
   res
 }
 
@@ -773,18 +798,20 @@ fn free_synth
 
 inline_for_extraction
 fn copyful_parse_pair
-  (#tl1 #tl2 #th1 #th2: Type0)
-  (#vmatch1: tl1 -> th1 -> slprop)
+  (#tl1 #tl2 #tm1 #tm2 #th1 #th2: Type0)
+  (#vmatch1: tl1 -> tm1 -> slprop)
+  (#conv1: tm1 -> GTot (option th1))
   (#k1: Ghost.erased parser_kind)
   (#p1: parser k1 th1)
-  (#vmatch2: tl2 -> th2 -> slprop)
+  (#vmatch2: tl2 -> tm2 -> slprop)
+  (#conv2: tm2 -> GTot (option th2))
   (#k2: Ghost.erased parser_kind)
   (#p2: parser k2 th2)
   (j1: LPS.jumper p1)
-  (w1: PPB.copyful_parse vmatch1 p1)
+  (w1: PPB.copyful_parse vmatch1 p1 conv1)
   (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
-  (w2: PPB.copyful_parse vmatch2 p2)
-: PPB.copyful_parse #_ #(th1 & th2) (LPC.vmatch_pair vmatch1 vmatch2) #(and_then_kind k1 k2) (nondep_then p1 p2)
+  (w2: PPB.copyful_parse vmatch2 p2 conv2)
+: PPB.copyful_parse #_ #_ #(th1 & th2) (LPC.vmatch_pair vmatch1 vmatch2) #(and_then_kind k1 k2) (nondep_then p1 p2) (pair_conv conv1 conv2)
 = (input: slice byte)
   (#pm: _)
   (#v: _)
@@ -796,20 +823,26 @@ fn copyful_parse_pair
   Trade.elim
     (PPB.pts_to_parsed p1 input1 #(pm /. 2.0R) (fst v) ** PPB.pts_to_parsed p2 input2 #(pm /. 2.0R) (snd v))
     (PPB.pts_to_parsed (nondep_then p1 p2) input #pm v);
-  fold (LPC.vmatch_pair vmatch1 vmatch2 (res1, res2) v);
+  PPB.elim_vmatch_conv vmatch1 conv1 res1 (fst (Ghost.reveal v));
+  with vm1 . assert (vmatch1 res1 vm1 ** pure (conv1 vm1 == Some (fst (Ghost.reveal v))));
+  PPB.elim_vmatch_conv vmatch2 conv2 res2 (snd (Ghost.reveal v));
+  with vm2 . assert (vmatch2 res2 vm2 ** pure (conv2 vm2 == Some (snd (Ghost.reveal v))));
+  fold (LPC.vmatch_pair vmatch1 vmatch2 (res1, res2) (vm1, vm2));
+  assert (pure (Mktuple2 (fst (Ghost.reveal v)) (snd (Ghost.reveal v)) == Ghost.reveal v));
+  PPB.intro_vmatch_conv (LPC.vmatch_pair vmatch1 vmatch2) (pair_conv conv1 conv2) (res1, res2) (vm1, vm2) (Ghost.reveal v);
   (res1, res2)
 }
 
 inline_for_extraction
 fn free_pair
-  (#tl1 #tl2 #th1 #th2: Type0)
-  (#vmatch1: tl1 -> th1 -> slprop)
-  (#vmatch2: tl2 -> th2 -> slprop)
+  (#tl1 #tl2 #tm1 #tm2: Type0)
+  (#vmatch1: tl1 -> tm1 -> slprop)
+  (#vmatch2: tl2 -> tm2 -> slprop)
   (f1: PPB.free_t vmatch1)
   (f2: PPB.free_t vmatch2)
-: PPB.free_t #_ #(th1 & th2) (LPC.vmatch_pair vmatch1 vmatch2)
+: PPB.free_t #_ #(tm1 & tm2) (LPC.vmatch_pair vmatch1 vmatch2)
 = (x: (tl1 & tl2))
-  (#v: Ghost.erased (th1 & th2))
+  (#v: Ghost.erased (tm1 & tm2))
 {
   unfold (LPC.vmatch_pair vmatch1 vmatch2 x v);
   f1 (fst x);

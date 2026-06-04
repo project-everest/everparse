@@ -273,13 +273,14 @@ fn copyful_parse_bounded_vlgen_payload
   (#pk: parser sk (bounded_int32 vmin vmax))
   (jk: LPS.jumper pk)
   (rk: PPB.leaf_reader pk)
-  (#tl #t: Type0) (#vmatch: tl -> t -> slprop)
+  (#tl #tm #t: Type0) (#vmatch: tl -> tm -> slprop)
   (#k: Ghost.erased parser_kind)
   (#p: parser k t)
+  (#conv: tm -> GTot (option t))
   (s: serializer p)
-  (w: PPB.copyful_parse vmatch p)
+  (w: PPB.copyful_parse vmatch p conv)
   (sq: squash (sk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
-: PPB.copyful_parse (PPCV.vmatch_vldata_strong vmin vmax s vmatch) (parse_bounded_vlgen vmin vmax pk s)
+: PPB.copyful_parse (PPCV.vmatch_vldata_strong vmin vmax s vmatch) (parse_bounded_vlgen vmin vmax pk s) (PPCV.vldata_strong_conv vmin vmax s conv)
 =
   (input: slice byte)
   (#pm: perm)
@@ -309,7 +310,10 @@ fn copyful_parse_bounded_vlgen_payload
   Trade.elim
     (PPB.pts_to_parsed p input_payload #(pm /. 2.0R) (Ghost.reveal v <: t))
     (PPB.pts_to_parsed (parse_bounded_vlgen vmin vmax pk s) input #pm v);
-  fold (PPCV.vmatch_vldata_strong vmin vmax s vmatch res v);
+  PPB.elim_vmatch_conv vmatch conv res (Ghost.reveal v <: t);
+  with vm . assert (vmatch res vm ** pure (conv vm == Some (Ghost.reveal v <: t)));
+  fold (PPCV.vmatch_vldata_strong vmin vmax s vmatch res vm);
+  PPB.intro_vmatch_conv (PPCV.vmatch_vldata_strong vmin vmax s vmatch) (PPCV.vldata_strong_conv vmin vmax s conv) res vm (Ghost.reveal v);
   res
 }
 
