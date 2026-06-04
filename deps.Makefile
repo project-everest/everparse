@@ -59,16 +59,22 @@ ifeq (,$(DICE_HOME))
 DICE_HOME := $(EVERPARSE_OPT_PATH)/FStar/pulse/share/pulse/examples/dice
 endif
 NEED_FSTAR := $(EVERPARSE_OPT_PATH)/FStar.done
-z3_exe := $(shell $(FSTAR_EXE) --locate_z3 \$(EVERPARSE_Z3_VERSION) 2>/dev/null)
-ifneq (0,$(.SHELLSTATUS))
-z3_exe :=
-endif
 else
 ifeq (,$(FSTAR_EXE))
 # rely on PATH
 export FSTAR_EXE := fstar.exe
 endif
 export FSTAR_EXE
+endif
+
+# Locate Z3 through fstar.exe (which knows about the Z3 it was built/shipped
+# with). When building F* from source this fstar.exe does not exist yet, so
+# the probe fails and we fall back to PATH / downloading Z3 below; when using
+# a F* binary package this finds the Z3 bundled in the package, avoiding an
+# unnecessary download (and F* source clone).
+z3_exe := $(shell $(FSTAR_EXE) --locate_z3 $(EVERPARSE_Z3_VERSION) 2>/dev/null)
+ifneq (0,$(.SHELLSTATUS))
+z3_exe :=
 endif
 
 NEED_OPAM_DIR :=
