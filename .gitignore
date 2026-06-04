@@ -31,5 +31,6 @@ nuget_package
 .opam
 .opam.tmp
 krmllib.done
+fstarlib.done
 opam-env.Makefile
 config.Makefile
