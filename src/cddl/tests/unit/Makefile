@@ -55,6 +55,7 @@ FSTAR_FILES := $(ALL_FSTS)
 CBOR_KRML_MODULES += CBOR.Spec.Constants
 CBOR_KRML_MODULES += CBOR.Pulse.API.Det.Type
 CBOR_KRML_MODULES += CBOR.Pulse.API.Det.C
+CBOR_KRML_MODULES += CBOR.Pulse.API.Det.Dummy
 
 CBOR_KRML_MODULES += CDDL.Pulse.Misc
 CBOR_KRML_MODULES += CDDL.Spec.Misc
@@ -87,11 +88,16 @@ CBOR_KRML_FILES = $(patsubst %,%.krml,$(subst .,_,$(CBOR_KRML_MODULES)))
 
 $(OUTPUT_DIRECTORY)/%.c: $(OUTPUT_DIRECTORY)/%.krml $(addprefix $(OUTPUT_DIRECTORY)/,$(CBOR_KRML_FILES))
 	$(KRML) -fnoshort-enums \
-	 -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]' \
+	 -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C+FStar.Pervasives.Native=CBOR.\*[rename=CBORDetAPI]' \
 	 -bundle '$*=*' \
 	 -no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type \
-	 -no-prefix CBOR.Spec.Constants -skip-compilation $^ \
+	 -no-prefix CBOR.Spec.Constants -no-prefix CBOR.Pulse.API.Det.Dummy -add-include '"CBORDetType.h"' -skip-compilation $^ \
 	 -tmpdir $(OUTPUT_DIRECTORY)
+# The CBOR Det types are now concrete (CBORDetType.h). krml re-emits the shared
+# monomorphic instance Pulse_Lib_Slice_slice__uint8_t inside the per-test header,
+# colliding with the identical definition included from CBORDetType.h. Drop the
+# duplicate; the included CBORDetType.h provides the canonical definition.
+	perl -0pi -e 's/typedef struct Pulse_Lib_Slice_slice__uint8_t_s\n\{\n  uint8_t \*elt;\n  size_t len;\n\}\nPulse_Lib_Slice_slice__uint8_t;\n//' $(OUTPUT_DIRECTORY)/$*.h
 
 # $(OUTPUT_DIRECTORY)/test.exe: $(OUTPUT_DIRECTORY)/CDDLExtractionTest.o client.c
 # 	$(CC) $(CFLAGS) -Wall -o $@ $^ $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c/CBORDet.o -I $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c

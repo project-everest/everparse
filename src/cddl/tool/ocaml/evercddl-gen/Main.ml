@@ -337,7 +337,7 @@ let _ =
         "-warn-error"; "@1..27";
 	"-bundle"; (!mname ^ "=[rename=" ^ mname_subst ^ "]");
 	"-bundle"; "CBOR.Pulse.API.Det.Rust=[rename=CBORDetVer]";
-	"-bundle"; "CBOR.Spec.Constants+CBOR.Pulse.Raw.Type+CBOR.Pulse.API.Det.Type=\\*[rename=CBORDetVerAux]";
+	"-bundle"; "CBOR.Spec.Constants+CBOR.Pulse.Raw.EverParse.Type+CBOR.Pulse.API.Det.Type=\\*[rename=CBORDetVerAux]";
         "-tmpdir"; !odir;
         "-skip-compilation";
         krml_file;
@@ -356,7 +356,7 @@ let _ =
         "-no-prefix"; "CBOR.Spec.Constants";
         "-bundle"; "CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\\*[rename=CBORDetAPI]";
 	"-bundle"; (!mname ^ "=\\*");
-	"-add-include"; "\"CBORDetAbstract.h\"";
+	"-add-include"; "\"CBORDetType.h\"";
         "-I"; Filename.concat (Filename.concat everparse_src_cbor_pulse "det") "c";
         "-ccopt"; "-Wno-unused-variable";
         krml_file;
