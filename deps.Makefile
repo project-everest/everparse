@@ -166,6 +166,16 @@ krmllib.done: $(NEED_KRML)
 	+export KRML_LIBPATH="$$($(KRML_EXE) -locate-krmllib)" && $(MAKE) -C "$$KRML_LIBPATH"/dist/generic -f Makefile.basic
 	touch $@
 
+# Install the F* application library (fstar.lib) and its OCaml dependencies
+# into the opam switch used by EverParse. This is needed by every leaf rule
+# that links F*-extracted OCaml against fstar.lib (e.g. the 3d, ASN1 and cddl
+# tools). With a binary F* package, fstar.lib is not available until installed
+# here; with a source build, $(NEED_FSTAR) (FStar.done) rebuilds F* first.
+fstarlib.done: $(NEED_FSTAR)
+	rm -f $@
+	$(with_opam) $(FSTAR_EXE) --install_lib_with_deps
+	touch $@
+
 env:
 	@echo export EVERPARSE_USE_OPAMROOT=$(EVERPARSE_USE_OPAMROOT)
 	@echo export EVERPARSE_USE_FSTAR_EXE=$(EVERPARSE_USE_FSTAR_EXE)
@@ -185,7 +195,7 @@ endif
 
 deps: $(NEED_OPAM) $(NEED_FSTAR) $(NEED_Z3) $(NEED_KRML)
 
-deps: krmllib.done
+deps: krmllib.done fstarlib.done
 
 .PHONY: deps
 
@@ -196,7 +206,7 @@ clean-krmllib:
 .PHONY: clean-krmllib
 
 distclean: clean clean-krmllib
-	rm -rf opam-env.Makefile config.Makefile
+	rm -rf opam-env.Makefile config.Makefile fstarlib.done
 	+$(MAKE) -C opt clean
 
 clean:

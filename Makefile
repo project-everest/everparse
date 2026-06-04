@@ -76,7 +76,7 @@ endif
 
 .PHONY: 3d-prelude
 
-3d-exe: $(NEED_Z3)
+3d-exe: $(NEED_Z3) fstarlib.done
 	+$(MAKE) -C src/3d 3d
 
 .PHONY: 3d-exe
@@ -105,7 +105,7 @@ lowparse-unit-test: lowparse
 
 3d-test: 3d-unit-test 3d-doc-test
 
-asn1-test: asn1
+asn1-test: asn1 fstarlib.done
 	+$(MAKE) -C src/ASN1 test
 
 lowparse-bitfields-test: lowparse
@@ -232,7 +232,7 @@ ifeq (,$(NO_PULSE))
 cddl-pulse: cddl-spec $(filter src/cddl/pulse/%,$(ALL_CHECKED_FILES))
 
 # cbor-extract-pre needed because Rust extraction extracts CBOR and COSE altogether
-cddl-tool: cddl-pulse $(filter src/cddl/tool/%,$(ALL_CHECKED_FILES)) cbor-extract-pre
+cddl-tool: cddl-pulse $(filter src/cddl/tool/%,$(ALL_CHECKED_FILES)) cbor-extract-pre fstarlib.done
 	+$(MAKE) -C src/cddl/tool
 else
 cddl-tool:
@@ -245,7 +245,7 @@ cddl: cbor cbor-interface cddl-spec cddl-tool
 .PHONY: cbor-det-c-test cbor-det-rust-test cbor-test cddl
 
 ifeq (,$(NO_PULSE))
-cddl-unit-tests: cddl
+cddl-unit-tests: cddl fstarlib.done
 	+$(MAKE) -C src/cddl test
 else
 cddl-unit-tests:
