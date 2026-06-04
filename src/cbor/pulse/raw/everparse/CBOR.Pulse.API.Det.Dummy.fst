@@ -23,3 +23,11 @@ let dummy_cbor_det_t (_: unit) : T.cbor_det_t = Raw.CBOR_Case_Simple 0uy
 inline_for_extraction
 let dummy_cbor_det_array_append_cell (_: unit) : T.cbor_det_array_append_cell_t =
   IT.Base IT.Empty
+
+inline_for_extraction
+let dummy_cbor_det_map_entry_insert_cell (_: unit) : T.cbor_det_map_entry_insert_cell_t =
+  IT.Base IT.Empty
+
+inline_for_extraction
+let dummy_cbor_det_map_entry (_: unit) : T.cbor_det_map_entry_t =
+  Raw.Mkcbor_map_entry (dummy_cbor_det_t ()) (dummy_cbor_det_t ())

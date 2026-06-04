@@ -7,3 +7,4 @@ let cbor_det_map_entry_t = Raw.cbor_map_entry Raw.cbor_raw
 let cbor_det_array_iterator_t = I.iterator Raw.cbor_raw
 let cbor_det_map_iterator_t = I.iterator (Raw.cbor_map_entry Raw.cbor_raw)
 let cbor_det_array_append_cell_t = I.mixed_list Raw.cbor_raw
+let cbor_det_map_entry_insert_cell_t = I.mixed_list (Raw.cbor_map_entry Raw.cbor_raw)

@@ -218,3 +218,90 @@ let cbor_nondet_mk_map () =
 let cbor_nondet_map_get_multiple () =
   cbor_map_get_multiple_as_arrayptr cbor_nondet_map_get_multiple_entry_t
     (Common.cbor_nondet_major_type ()) (Common.cbor_nondet_map_get_multiple_inner ())
+
+(* ======== Structural map-entry insertion (prepend, nondeterministic) ======== *)
+
+module Raw = CBOR.Pulse.Raw.EverParse.Type
+module IT = LowParse.PulseParse.Iterator.Type
+module DMISN = CBOR.Pulse.Raw.EverParse.Nondet.MapInsertSpec
+module SZ = FStar.SizeT
+module R = Pulse.Lib.Reference
+module U64 = FStar.UInt64
+module Trade = Pulse.Lib.Trade.Util
+module Spec = CBOR.Spec.API.Format
+
+inline_for_extraction
+let dummy_cbor_nondet_map_entry_insert_cell (_: unit) : cbor_nondet_map_entry_insert_cell_t =
+  IT.Base IT.Empty
+
+inline_for_extraction
+let dummy_cbor_nondet_map_entry (_: unit) : cbor_nondet_map_entry_t =
+  Raw.Mkcbor_map_entry (Raw.CBOR_Case_Simple 0uy) (Raw.CBOR_Case_Simple 0uy)
+
+let cmap_of_major_type_nd (y: Spec.cbor)
+: Lemma
+    (requires (cbor_major_type y == cbor_major_type_map))
+    (ensures (Spec.CMap? (Spec.unpack y)))
+= ()
+
+let not_cmap_of_major_type_nd (y: Spec.cbor)
+: Lemma
+    (requires (~ (cbor_major_type y == cbor_major_type_map)))
+    (ensures (~ (Spec.CMap? (Spec.unpack y))))
+= ()
+
+fn cbor_nondet_map_entry_insert
+  (x key value: cbor_nondet_t)
+  (r1 r2: R.ref cbor_nondet_map_entry_insert_cell_t)
+  (ry: R.ref cbor_nondet_map_entry_t)
+  (#p: perm) (#y: Ghost.erased Spec.cbor)
+  (#pkv: perm) (#vk #vv: Ghost.erased Spec.cbor)
+requires
+    cbor_nondet_match p x y **
+    cbor_nondet_match pkv key vk ** cbor_nondet_match pkv value vv **
+    cbor_nondet_map_entry_insert_refs r1 r2 ry
+returns res: option cbor_nondet_t
+ensures (match res with
+  | None ->
+    cbor_nondet_match p x y **
+    cbor_nondet_match pkv key vk ** cbor_nondet_match pkv value vv **
+    cbor_nondet_map_entry_insert_refs r1 r2 ry **
+    pure (
+      ~ (Spec.CMap? (Spec.unpack y)) \/
+      (Spec.CMap? (Spec.unpack y) /\
+        (Spec.cbor_map_defined vk (Spec.CMap?.c (Spec.unpack y)) \/
+         ~ (FStar.UInt.fits (Spec.cbor_map_length (Spec.CMap?.c (Spec.unpack y)) + 1) U64.n))))
+  | Some m ->
+    exists* (p_res: perm) (vres: Spec.cbor).
+      cbor_nondet_match p_res m vres **
+      Trade.trade
+        (cbor_nondet_match p_res m vres)
+        (cbor_nondet_match p x y **
+         cbor_nondet_match pkv key vk ** cbor_nondet_match pkv value vv **
+         cbor_nondet_map_entry_insert_refs r1 r2 ry) **
+      pure (
+        Spec.CMap? (Spec.unpack y) /\
+        Spec.CMap? (Spec.unpack vres) /\
+        (Spec.CMap?.c (Spec.unpack vres) <: Spec.cbor_map) ==
+          Spec.cbor_map_union (Spec.CMap?.c (Spec.unpack y)) (Spec.cbor_map_singleton vk vv)))
+{
+  let mt = cbor_nondet_major_type () x;
+  if (mt = cbor_major_type_map) {
+    cmap_of_major_type_nd y;
+    let f64 : squash SZ.fits_u64 = assume (SZ.fits_u64);
+    unfold (cbor_nondet_map_entry_insert_refs r1 r2 ry);
+    let res = DMISN.cbor_nondet_map_entry_insert_spec f64 x key value r1 r2 ry;
+    match res {
+      None -> {
+        fold (cbor_nondet_map_entry_insert_refs r1 r2 ry);
+        None #cbor_nondet_t
+      }
+      Some m -> {
+        Some m
+      }
+    }
+  } else {
+    not_cmap_of_major_type_nd y;
+    None #cbor_nondet_t
+  }
+}

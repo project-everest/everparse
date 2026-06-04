@@ -578,6 +578,84 @@ fn cbor_det_map_get (_: unit) : map_get_by_ref_t cbor_det_match
   }
 }
 
+(* ======== Structural map-entry insertion (sorted, deterministic) ======== *)
+
+module DMIS = CBOR.Pulse.Raw.EverParse.Det.MapInsertSpec
+module IT = LowParse.PulseParse.Iterator.Type
+module SZ = FStar.SizeT
+
+open CBOR.Spec.Constants
+open CBOR.Pulse.API.Base
+
+let cmap_of_major_type (y: Spec.cbor)
+: Lemma
+    (requires (cbor_major_type y == cbor_major_type_map))
+    (ensures (Spec.CMap? (Spec.unpack y)))
+= ()
+
+let not_cmap_of_major_type (y: Spec.cbor)
+: Lemma
+    (requires (~ (cbor_major_type y == cbor_major_type_map)))
+    (ensures (~ (Spec.CMap? (Spec.unpack y))))
+= ()
+
+fn cbor_det_map_entry_insert
+  (x key value: cbor_det_t)
+  (r1 r2 r3 r4: R.ref cbor_det_map_entry_insert_cell_t)
+  (ry: R.ref cbor_det_map_entry_t)
+  (#p: perm) (#y: Ghost.erased Spec.cbor)
+  (#pkv: perm) (#vk #vv: Ghost.erased Spec.cbor)
+requires
+    cbor_det_match p x y **
+    cbor_det_match pkv key vk ** cbor_det_match pkv value vv **
+    cbor_det_map_entry_insert_refs r1 r2 r3 r4 ry
+returns res: option cbor_det_t
+ensures (match res with
+  | None ->
+    cbor_det_match p x y **
+    cbor_det_match pkv key vk ** cbor_det_match pkv value vv **
+    cbor_det_map_entry_insert_refs r1 r2 r3 r4 ry **
+    pure (
+      ~ (Spec.CMap? (Spec.unpack y)) \/
+      (Spec.CMap? (Spec.unpack y) /\
+        (Spec.cbor_map_defined vk (Spec.CMap?.c (Spec.unpack y)) \/
+         ~ (FStar.UInt.fits (Spec.cbor_map_length (Spec.CMap?.c (Spec.unpack y)) + 1) U64.n))))
+  | Some m ->
+    exists* (p_res: perm) (vres: Spec.cbor).
+      cbor_det_match p_res m vres **
+      Trade.trade
+        (cbor_det_match p_res m vres)
+        (cbor_det_match p x y **
+         cbor_det_match pkv key vk ** cbor_det_match pkv value vv **
+         cbor_det_map_entry_insert_refs r1 r2 r3 r4 ry) **
+      pure (
+        Spec.CMap? (Spec.unpack y) /\
+        Spec.CMap? (Spec.unpack vres) /\
+        (Spec.CMap?.c (Spec.unpack vres) <: Spec.cbor_map) ==
+          Spec.cbor_map_union (Spec.CMap?.c (Spec.unpack y)) (Spec.cbor_map_singleton vk vv)))
+{
+  let mt = cbor_det_major_type () x;
+  if (mt = cbor_major_type_map) {
+    cmap_of_major_type y;
+    let f64 : squash SZ.fits_u64 = assume (SZ.fits_u64);
+    unfold (cbor_det_map_entry_insert_refs r1 r2 r3 r4 ry);
+    let res = DMIS.cbor_det_map_entry_insert_spec f64 x key value r1 r2 r3 r4 ry;
+    match res {
+      None -> {
+        fold (cbor_det_map_entry_insert_refs r1 r2 r3 r4 ry);
+        None #cbor_det_t
+      }
+      Some m -> {
+        Some m
+      }
+    }
+  } else {
+    not_cmap_of_major_type y;
+    None #cbor_det_t
+  }
+}
+
+
 (* ======== Serializer wrappers (slice → ArrayPtr) ======== *)
 
 fn cbor_det_serialize_tag_to_array (_: unit)
