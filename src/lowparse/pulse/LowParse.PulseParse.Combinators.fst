@@ -796,6 +796,44 @@ fn free_synth
   f x;
 }
 
+(* Safe writer for [parse_synth p1 f2]: synth only relabels the high value, so the
+   serialized bytes are unchanged; delegate to the underlying writer and re-relate
+   the postcondition via [serialize_synth_eq]. *)
+let l2r_safe_writer_postcond_synth_bridge
+  (#k1: parser_kind) (#t1: Type0) (p1: parser k1 t1) (s1: serializer p1)
+  (#t2: Type0) (f2: (t1 -> GTot t2)) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 /\ synth_injective f2 })
+  (#tm: Type0) (conv: tm -> GTot (option t1))
+  (y: tm) (v': Seq.seq byte) (res: SZ.t) (err: bool)
+: Lemma
+    (requires PPB.l2r_safe_writer_postcond conv s1 y v' res err)
+    (ensures PPB.l2r_safe_writer_postcond (synth_conv conv f2) (serialize_synth p1 f2 s1 f1 ()) y v' res err)
+= match conv y with
+  | None -> ()
+  | Some x ->
+    serialize_synth_eq p1 f2 s1 f1 () (f2 x);
+    assert (f2 (f1 (f2 x)) == f2 x);
+    assert (f1 (f2 x) == x)
+
+inline_for_extraction
+fn l2r_safe_writer_synth
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1)
+  (#tl: Type0) (#tm: Type0) (#vmatch: tl -> tm -> slprop) (#conv: tm -> GTot (option t1))
+  (w: PPB.l2r_safe_writer vmatch s1 conv)
+  (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 })
+: PPB.l2r_safe_writer #_ #_ #_ vmatch #_ #(parse_synth p1 f2) (serialize_synth p1 f2 s1 f1 ()) (synth_conv conv f2)
+=
+  (x: tl)
+  (#y: Ghost.erased tm)
+  (out: slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: ref bool)
+{
+  let res = w x out perr;
+  with v' err. assert (S.pts_to out v' ** vmatch x (Ghost.reveal y) ** Pulse.Lib.Reference.pts_to perr err ** pure (PPB.l2r_safe_writer_postcond conv s1 (Ghost.reveal y) v' res err));
+  l2r_safe_writer_postcond_synth_bridge p1 s1 f2 f1 conv (Ghost.reveal y) v' res err;
+  res
+}
+
 inline_for_extraction
 fn copyful_parse_pair
   (#tl1 #tl2 #tm1 #tm2 #th1 #th2: Type0)

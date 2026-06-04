@@ -1137,10 +1137,41 @@ fn l2r_safe_writer_leaf
   }
 }
 
-(* Re-index an [l2r_safe_writer] from an inner mid type [tm1] to an exposed mid type
-   [tm2] (mirrors [free_coerce_mid] on the predicate side and additionally matches
-   the conv pointwise). The same per-type bridge lemmas generated for [read_<n>]
-   are reusable here. *)
+(* Re-index an [l2r_safe_writer] across an extensionally-equal parser/serializer
+   (mirrors [copyful_parse_ext]). The serialized bytes are unchanged because the
+   precondition demands [serialize s2] agrees pointwise with [serialize s1]; the
+   predicate is re-indexed via the pointwise [vmatch2 == vmatch1] equality. *)
+inline_for_extraction
+fn l2r_safe_writer_ext
+  (#t' #tm #t1: Type0)
+  (#vmatch1: t' -> tm -> slprop)
+  (#conv1: tm -> GTot (option t1))
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (#s1: serializer p1)
+  (w: l2r_safe_writer vmatch1 s1 conv1)
+  (#k2: parser_kind)
+  (#p2: parser k2 t1)
+  (s2: serializer p2)
+  (vmatch2: t' -> tm -> slprop)
+  (sq: squash (
+    (forall (x: t') (vm: tm) . vmatch2 x vm == vmatch1 x vm) /\
+    (forall (x: t1) . serialize s2 x == serialize s1 x)
+  ))
+: l2r_safe_writer #_ #_ #_ vmatch2 #_ #p2 s2 conv1
+=
+  (x: t')
+  (#y: Ghost.erased tm)
+  (out: slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: R.ref bool)
+{
+  rewrite (vmatch2 x (Ghost.reveal y)) as (vmatch1 x (Ghost.reveal y));
+  let res = w x out perr;
+  with v' err. assert (S.pts_to out v' ** vmatch1 x (Ghost.reveal y) ** R.pts_to perr err ** pure (l2r_safe_writer_postcond conv1 s1 (Ghost.reveal y) v' res err));
+  rewrite (vmatch1 x (Ghost.reveal y)) as (vmatch2 x (Ghost.reveal y));
+  res
+}
 inline_for_extraction
 fn l2r_safe_writer_coerce_mid
   (#t' #tm1 #t: Type0)
