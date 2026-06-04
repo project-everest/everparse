@@ -12,15 +12,6 @@ extern "C" {
 #include "CBORDetType.h"
 #include "../CBORDet.h"
 
-size_t
-CBOR_Pulse_Raw_EverParse_Serialize_ser_(
-  cbor_raw x_,
-  Pulse_Lib_Slice_slice__uint8_t out,
-  size_t offset
-);
-
-bool CBOR_Pulse_Raw_EverParse_Serialize_siz_(cbor_raw x_, size_t *out);
-
 int16_t
 CBOR_Pulse_Raw_EverParse_Det_Compare_impl_cbor_compare_fuel_tagged(cbor_raw x1, cbor_raw x2);
 
@@ -37,6 +28,15 @@ CBOR_Pulse_Raw_EverParse_Det_Compare_impl_cbor_compare_fuel_map(
   cbor_raw x2,
   size_t len
 );
+
+size_t
+CBOR_Pulse_Raw_EverParse_Serialize_ser_(
+  cbor_raw x_,
+  Pulse_Lib_Slice_slice__uint8_t out,
+  size_t offset
+);
+
+bool CBOR_Pulse_Raw_EverParse_Serialize_siz_(cbor_raw x_, size_t *out);
 
 bool
 CBOR_Pulse_Raw_EverParse_Det_Impl_cbor_raw_sort_aux(

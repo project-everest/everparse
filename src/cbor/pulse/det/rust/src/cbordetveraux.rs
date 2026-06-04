@@ -4460,6 +4460,2445 @@ pub(crate) fn cbor_mk_array_full <'a>(
     cbor_raw::CBOR_Case_Array { v }
 }
 
+pub(crate) fn cbor_mk_map_full <'a>(
+    len_size: u8,
+    ml:
+    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    <'a>
+) ->
+    cbor_raw
+    <'a>
+{
+    let len_sz: usize =
+        mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+            ml
+        );
+    crate::lowstar::ignore::ignore::<usize>(len_sz);
+    let v: cbor_map__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+        cbor_map__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+        { cbor_map_length_size: len_size, cbor_map_ptr: ml };
+    cbor_raw::CBOR_Case_Map { v }
+}
+
+pub(crate) fn cbor_raw_read_map_entry <'a>(input: &'a [u8]) ->
+    cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    <'a>
+{
+    let off1: usize = jump_raw_data_item(input, 0usize);
+    let s·: (&[u8], &[u8]) = input.split_at(off1);
+    let _letpattern: (&[u8], &[u8]) =
+        {
+            let s1: &[u8] = s·.0;
+            let s2: &[u8] = s·.1;
+            (s1,s2)
+        };
+    let split_input: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = _letpattern.0;
+            let input2: &[u8] = _letpattern.1;
+            (input1,input2)
+        };
+    let input1: &[u8] = split_input.0;
+    let input2: &[u8] = split_input.1;
+    let xk: cbor_raw = cbor_raw_read(input1);
+    let xv: cbor_raw = cbor_raw_read(input2);
+    cbor_mk_map_entry(xk, xv)
+}
+
+pub(crate) fn iterator_next_raw_data_item <'a>(
+    x: iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>
+) ->
+    (cbor_raw <'a>, iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>)
+{
+    let mut r: [iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw; 1] = [x; 1usize];
+    let i: iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw = (&r)[0];
+    let eos_res: elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+        match i
+        {
+            iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase { before: bi } =>
+              {
+                  let len_sz: usize =
+                      base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(bi);
+                  if len_sz == 0usize
+                  { panic!("Pulse.Lib.Dv.unreachable") }
+                  else
+                  {
+                      let x1: elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+                          match bi
+                          {
+                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty =>
+                                panic!("Pulse.Lib.Dv.unreachable"),
+                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                              { sr: s }
+                              =>
+                                {
+                                    let x_val: cbor_raw = s[0];
+                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
+                                    { _0: x_val }
+                                },
+                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                              { ss: s }
+                              =>
+                                {
+                                    let x_val: cbor_raw = s[0usize];
+                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
+                                    { _0: x_val }
+                                },
+                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                              { payload: pl, .. }
+                              =>
+                                {
+                                    let mut pn: [usize; 1] = [0usize; 1usize];
+                                    let mut poffset: [usize; 1] = [0usize; 1usize];
+                                    let n: usize = (&pn)[0];
+                                    let mut cond: bool = n > 0usize;
+                                    while
+                                    cond
+                                    {
+                                        let n0: usize = (&pn)[0];
+                                        let offset: usize = (&poffset)[0];
+                                        let offset·: usize = jump_raw_data_item_eta(pl, offset);
+                                        (&mut pn)[0] = n0.wrapping_sub(1usize);
+                                        (&mut poffset)[0] = offset·;
+                                        let n1: usize = (&pn)[0];
+                                        cond = n1 > 0usize
+                                    };
+                                    let pos: usize = (&poffset)[0];
+                                    let pl_p: (&[u8], &[u8]) = pl.split_at(pos);
+                                    let _pl_prefix: &[u8] = pl_p.0;
+                                    let pl_suffix: &[u8] = pl_p.1;
+                                    let consumed_sz: usize =
+                                        jump_raw_data_item_eta(pl_suffix, 0usize);
+                                    let pl_hd_p: (&[u8], &[u8]) = pl_suffix.split_at(consumed_sz);
+                                    let pl_head: &[u8] = pl_hd_p.0;
+                                    let _pl_rest: &[u8] = pl_hd_p.1;
+                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
+                                    { _0: pl_head }
+                                },
+                              _ => panic!("Incomplete pattern matching")
+                          };
+                      if len_sz == 1usize
+                      {
+                          (&mut r)[0] =
+                              iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
+                              {
+                                  before:
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                              };
+                          x1
+                      }
+                      else
+                      {
+                          let n_tail_sz: usize = len_sz.wrapping_sub(1usize);
+                          let bi_tail: base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+                              match bi
+                              {
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty =>
+                                    base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                  { sr: s }
+                                  =>
+                                    if n_tail_sz == 0usize
+                                    {
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                    }
+                                    else
+                                    {
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                        { sr: s }
+                                    },
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                  { ss: s }
+                                  =>
+                                    {
+                                        let s_pr: (&[cbor_raw], &[cbor_raw]) = s.split_at(1usize);
+                                        let _s_prefix: &[cbor_raw] = s_pr.0;
+                                        let s_rest: &[cbor_raw] = s_pr.1;
+                                        let s_ms: (&[cbor_raw], &[cbor_raw]) =
+                                            s_rest.split_at(n_tail_sz);
+                                        let s_middle: &[cbor_raw] = s_ms.0;
+                                        let _s_suffix: &[cbor_raw] = s_ms.1;
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                        { ss: s_middle }
+                                    },
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                  { payload: pl, .. }
+                                  =>
+                                    {
+                                        let mut pn: [usize; 1] = [1usize; 1usize];
+                                        let mut poffset: [usize; 1] = [0usize; 1usize];
+                                        let n: usize = (&pn)[0];
+                                        let mut cond: bool = n > 0usize;
+                                        while
+                                        cond
+                                        {
+                                            let n0: usize = (&pn)[0];
+                                            let offset: usize = (&poffset)[0];
+                                            let offset·: usize =
+                                                jump_raw_data_item_eta(pl, offset);
+                                            (&mut pn)[0] = n0.wrapping_sub(1usize);
+                                            (&mut poffset)[0] = offset·;
+                                            let n1: usize = (&pn)[0];
+                                            cond = n1 > 0usize
+                                        };
+                                        let pos: usize = (&poffset)[0];
+                                        let pl_p: (&[u8], &[u8]) = pl.split_at(pos);
+                                        let _pl_prefix: &[u8] = pl_p.0;
+                                        let pl_suffix: &[u8] = pl_p.1;
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                        { count: n_tail_sz, payload: pl_suffix }
+                                    },
+                                  _ => panic!("Incomplete pattern matching")
+                              };
+                          (&mut r)[0] =
+                              iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
+                              { before: bi_tail };
+                          x1
+                      }
+                  }
+              },
+            iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IPair { before: bi, after: ml } =>
+              {
+                  let len_sz: usize =
+                      base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(bi);
+                  if len_sz == 0usize
+                  { panic!("Pulse.Lib.Dv.unreachable") }
+                  else
+                  {
+                      let x1: elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+                          match bi
+                          {
+                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty =>
+                                panic!("Pulse.Lib.Dv.unreachable"),
+                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                              { sr: s }
+                              =>
+                                {
+                                    let x_val: cbor_raw = s[0];
+                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
+                                    { _0: x_val }
+                                },
+                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                              { ss: s }
+                              =>
+                                {
+                                    let x_val: cbor_raw = s[0usize];
+                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
+                                    { _0: x_val }
+                                },
+                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                              { payload: pl, .. }
+                              =>
+                                {
+                                    let mut pn: [usize; 1] = [0usize; 1usize];
+                                    let mut poffset: [usize; 1] = [0usize; 1usize];
+                                    let n: usize = (&pn)[0];
+                                    let mut cond: bool = n > 0usize;
+                                    while
+                                    cond
+                                    {
+                                        let n0: usize = (&pn)[0];
+                                        let offset: usize = (&poffset)[0];
+                                        let offset·: usize = jump_raw_data_item_eta(pl, offset);
+                                        (&mut pn)[0] = n0.wrapping_sub(1usize);
+                                        (&mut poffset)[0] = offset·;
+                                        let n1: usize = (&pn)[0];
+                                        cond = n1 > 0usize
+                                    };
+                                    let pos: usize = (&poffset)[0];
+                                    let pl_p: (&[u8], &[u8]) = pl.split_at(pos);
+                                    let _pl_prefix: &[u8] = pl_p.0;
+                                    let pl_suffix: &[u8] = pl_p.1;
+                                    let consumed_sz: usize =
+                                        jump_raw_data_item_eta(pl_suffix, 0usize);
+                                    let pl_hd_p: (&[u8], &[u8]) = pl_suffix.split_at(consumed_sz);
+                                    let pl_head: &[u8] = pl_hd_p.0;
+                                    let _pl_rest: &[u8] = pl_hd_p.1;
+                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
+                                    { _0: pl_head }
+                                },
+                              _ => panic!("Incomplete pattern matching")
+                          };
+                      if len_sz == 1usize
+                      {
+                          let total_sz: usize =
+                              mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(ml);
+                          let it_new: iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+                              if total_sz == 0usize
+                              {
+                                  iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
+                                  {
+                                      before:
+                                      base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                  }
+                              }
+                              else
+                              {
+                                  let
+                                  mut
+                                  r_node:
+                                  [mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw; 1]
+                                  =
+                                      [ml; 1usize];
+                                  let mut r_off: [usize; 1] = [0usize; 1usize];
+                                  let mut r_n: [usize; 1] = [total_sz; 1usize];
+                                  let mut pcontinue: [bool; 1] =
+                                      [! uu___is_Base__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(ml);
+                                          1usize];
+                                  while
+                                  (&pcontinue)[0]
+                                  {
+                                      let node: mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+                                          (&r_node)[0];
+                                      let cur_off_v: usize = (&r_off)[0];
+                                      let cur_n_v: usize = (&r_n)[0];
+                                      match node
+                                      {
+                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
+                                          { cb, ca, ob, before, oa, after }
+                                          =>
+                                            {
+                                                let child_n_before: usize =
+                                                    append_n_before_sz(cur_off_v, cur_n_v, cb);
+                                                if child_n_before > 0usize
+                                                {
+                                                    let child_off_sz: usize =
+                                                        append_off_before_sz(cur_off_v, ob, cb);
+                                                    let
+                                                    ib:
+                                                    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                                                    =
+                                                        before[0];
+                                                    (&mut r_node)[0] = ib;
+                                                    (&mut r_off)[0] = child_off_sz;
+                                                    (&mut r_n)[0] = child_n_before;
+                                                    (&mut pcontinue)[0] =
+                                                        !
+                                                        uu___is_Base__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                                                            ib
+                                                        )
+                                                }
+                                                else
+                                                {
+                                                    let child_off_sz: usize =
+                                                        append_off_after_sz(cur_off_v, oa, ca, cb);
+                                                    let child_n_sz: usize =
+                                                        append_n_after_sz(cur_off_v, cur_n_v, cb);
+                                                    let
+                                                    ia:
+                                                    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                                                    =
+                                                        after[0];
+                                                    (&mut r_node)[0] = ia;
+                                                    (&mut r_off)[0] = child_off_sz;
+                                                    (&mut r_n)[0] = child_n_sz;
+                                                    (&mut pcontinue)[0] =
+                                                        !
+                                                        uu___is_Base__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                                                            ia
+                                                        )
+                                                }
+                                            },
+                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
+                                          { .. }
+                                          => (),
+                                          _ => panic!("Incomplete pattern matching")
+                                      }
+                                  };
+                                  let node: mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+                                      (&r_node)[0];
+                                  let cur_off_v: usize = (&r_off)[0];
+                                  let cur_n_v: usize = (&r_n)[0];
+                                  let
+                                  res:
+                                  (base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw, usize)
+                                  =
+                                      match node
+                                      {
+                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
+                                          { _0: bi1 }
+                                          =>
+                                            {
+                                                let
+                                                bi·:
+                                                base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                                                =
+                                                    match bi1
+                                                    {
+                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                                        =>
+                                                          base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
+                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                                        { sr: s }
+                                                        =>
+                                                          if cur_n_v == 0usize
+                                                          {
+                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                                          }
+                                                          else
+                                                          {
+                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                                              { sr: s }
+                                                          },
+                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                                        { ss: s }
+                                                        =>
+                                                          {
+                                                              let s_pr: (&[cbor_raw], &[cbor_raw]) =
+                                                                  s.split_at(cur_off_v);
+                                                              let _s_prefix: &[cbor_raw] = s_pr.0;
+                                                              let s_rest: &[cbor_raw] = s_pr.1;
+                                                              let s_ms: (&[cbor_raw], &[cbor_raw]) =
+                                                                  s_rest.split_at(cur_n_v);
+                                                              let s_middle: &[cbor_raw] = s_ms.0;
+                                                              let _s_suffix: &[cbor_raw] = s_ms.1;
+                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                                              { ss: s_middle }
+                                                          },
+                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                                        { payload: pl, .. }
+                                                        =>
+                                                          {
+                                                              let mut pn: [usize; 1] =
+                                                                  [cur_off_v; 1usize];
+                                                              let mut poffset: [usize; 1] =
+                                                                  [0usize; 1usize];
+                                                              let n: usize = (&pn)[0];
+                                                              let mut cond: bool = n > 0usize;
+                                                              while
+                                                              cond
+                                                              {
+                                                                  let n0: usize = (&pn)[0];
+                                                                  let offset: usize = (&poffset)[0];
+                                                                  let offset·: usize =
+                                                                      jump_raw_data_item_eta(
+                                                                          pl,
+                                                                          offset
+                                                                      );
+                                                                  (&mut pn)[0] =
+                                                                      n0.wrapping_sub(1usize);
+                                                                  (&mut poffset)[0] = offset·;
+                                                                  let n1: usize = (&pn)[0];
+                                                                  cond = n1 > 0usize
+                                                              };
+                                                              let pos: usize = (&poffset)[0];
+                                                              let pl_p: (&[u8], &[u8]) =
+                                                                  pl.split_at(pos);
+                                                              let _pl_prefix: &[u8] = pl_p.0;
+                                                              let pl_suffix: &[u8] = pl_p.1;
+                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                                              { count: cur_n_v, payload: pl_suffix }
+                                                          },
+                                                        _ => panic!("Incomplete pattern matching")
+                                                    };
+                                                let len: usize =
+                                                    base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                                                        bi·
+                                                    );
+                                                (bi·,len)
+                                            },
+                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
+                                          { .. }
+                                          => panic!("Pulse.Lib.Dv.unreachable"),
+                                          _ => panic!("Incomplete pattern matching")
+                                      };
+                                  let
+                                  bi·: base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                                  =
+                                      fst__LowParse_PulseParse_Iterator_Type_base_mixed_list·CBOR_Pulse_Raw_EverParse_Type_cbor_raw_size_t(
+                                          res
+                                      );
+                                  let len_sz1: usize =
+                                      snd__LowParse_PulseParse_Iterator_Type_base_mixed_list·CBOR_Pulse_Raw_EverParse_Type_cbor_raw_size_t(
+                                          res
+                                      );
+                                  let rest_sz: usize = total_sz.wrapping_sub(len_sz1);
+                                  let rest: mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+                                      match ml
+                                      {
+                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
+                                          { _0: bi1 }
+                                          =>
+                                            {
+                                                let
+                                                bi·1:
+                                                base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                                                =
+                                                    match bi1
+                                                    {
+                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                                        =>
+                                                          base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
+                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                                        { sr: s }
+                                                        =>
+                                                          if rest_sz == 0usize
+                                                          {
+                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                                          }
+                                                          else
+                                                          {
+                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                                              { sr: s }
+                                                          },
+                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                                        { ss: s }
+                                                        =>
+                                                          {
+                                                              let s_pr: (&[cbor_raw], &[cbor_raw]) =
+                                                                  s.split_at(len_sz1);
+                                                              let _s_prefix: &[cbor_raw] = s_pr.0;
+                                                              let s_rest: &[cbor_raw] = s_pr.1;
+                                                              let s_ms: (&[cbor_raw], &[cbor_raw]) =
+                                                                  s_rest.split_at(rest_sz);
+                                                              let s_middle: &[cbor_raw] = s_ms.0;
+                                                              let _s_suffix: &[cbor_raw] = s_ms.1;
+                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                                              { ss: s_middle }
+                                                          },
+                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                                        { payload: pl, .. }
+                                                        =>
+                                                          {
+                                                              let mut pn: [usize; 1] =
+                                                                  [len_sz1; 1usize];
+                                                              let mut poffset: [usize; 1] =
+                                                                  [0usize; 1usize];
+                                                              let n: usize = (&pn)[0];
+                                                              let mut cond: bool = n > 0usize;
+                                                              while
+                                                              cond
+                                                              {
+                                                                  let n0: usize = (&pn)[0];
+                                                                  let offset: usize = (&poffset)[0];
+                                                                  let offset·: usize =
+                                                                      jump_raw_data_item_eta(
+                                                                          pl,
+                                                                          offset
+                                                                      );
+                                                                  (&mut pn)[0] =
+                                                                      n0.wrapping_sub(1usize);
+                                                                  (&mut poffset)[0] = offset·;
+                                                                  let n1: usize = (&pn)[0];
+                                                                  cond = n1 > 0usize
+                                                              };
+                                                              let pos: usize = (&poffset)[0];
+                                                              let pl_p: (&[u8], &[u8]) =
+                                                                  pl.split_at(pos);
+                                                              let _pl_prefix: &[u8] = pl_p.0;
+                                                              let pl_suffix: &[u8] = pl_p.1;
+                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                                              { count: rest_sz, payload: pl_suffix }
+                                                          },
+                                                        _ => panic!("Incomplete pattern matching")
+                                                    };
+                                                mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
+                                                { _0: bi·1 }
+                                            },
+                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
+                                          { cb, ca, ob, before, oa, after }
+                                          =>
+                                            {
+                                                let cb·_sz: usize =
+                                                    append_n_before_sz(len_sz1, rest_sz, cb);
+                                                let ca·_sz: usize =
+                                                    append_n_after_sz(len_sz1, rest_sz, cb);
+                                                let ob·_sz: usize =
+                                                    append_off_before_sz(len_sz1, ob, cb);
+                                                let oa·_sz: usize =
+                                                    append_off_after_sz(len_sz1, oa, ca, cb);
+                                                mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
+                                                {
+                                                    cb: cb·_sz,
+                                                    ca: ca·_sz,
+                                                    ob: ob·_sz,
+                                                    before,
+                                                    oa: oa·_sz,
+                                                    after
+                                                }
+                                            },
+                                          _ => panic!("Incomplete pattern matching")
+                                      };
+                                  iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IPair
+                                  { before: bi·, after: rest }
+                              };
+                          (&mut r)[0] = it_new;
+                          x1
+                      }
+                      else
+                      {
+                          let n_tail_sz: usize = len_sz.wrapping_sub(1usize);
+                          let bi_tail: base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+                              match bi
+                              {
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty =>
+                                    base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                  { sr: s }
+                                  =>
+                                    if n_tail_sz == 0usize
+                                    {
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                    }
+                                    else
+                                    {
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                        { sr: s }
+                                    },
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                  { ss: s }
+                                  =>
+                                    {
+                                        let s_pr: (&[cbor_raw], &[cbor_raw]) = s.split_at(1usize);
+                                        let _s_prefix: &[cbor_raw] = s_pr.0;
+                                        let s_rest: &[cbor_raw] = s_pr.1;
+                                        let s_ms: (&[cbor_raw], &[cbor_raw]) =
+                                            s_rest.split_at(n_tail_sz);
+                                        let s_middle: &[cbor_raw] = s_ms.0;
+                                        let _s_suffix: &[cbor_raw] = s_ms.1;
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                        { ss: s_middle }
+                                    },
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                  { payload: pl, .. }
+                                  =>
+                                    {
+                                        let mut pn: [usize; 1] = [1usize; 1usize];
+                                        let mut poffset: [usize; 1] = [0usize; 1usize];
+                                        let n: usize = (&pn)[0];
+                                        let mut cond: bool = n > 0usize;
+                                        while
+                                        cond
+                                        {
+                                            let n0: usize = (&pn)[0];
+                                            let offset: usize = (&poffset)[0];
+                                            let offset·: usize =
+                                                jump_raw_data_item_eta(pl, offset);
+                                            (&mut pn)[0] = n0.wrapping_sub(1usize);
+                                            (&mut poffset)[0] = offset·;
+                                            let n1: usize = (&pn)[0];
+                                            cond = n1 > 0usize
+                                        };
+                                        let pos: usize = (&poffset)[0];
+                                        let pl_p: (&[u8], &[u8]) = pl.split_at(pos);
+                                        let _pl_prefix: &[u8] = pl_p.0;
+                                        let pl_suffix: &[u8] = pl_p.1;
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                        { count: n_tail_sz, payload: pl_suffix }
+                                    },
+                                  _ => panic!("Incomplete pattern matching")
+                              };
+                          (&mut r)[0] =
+                              iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IPair
+                              { before: bi_tail, after: ml };
+                          x1
+                      }
+                  }
+              },
+            _ => panic!("Incomplete pattern matching")
+        };
+    let elt: cbor_raw =
+        match eos_res
+        {
+            elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement { _0: x1 } => x1,
+            elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized { _0: pl } =>
+              cbor_raw_read(pl),
+            _ => panic!("Incomplete pattern matching")
+        };
+    let x·: iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw = (&r)[0];
+    (elt,x·)
+}
+
+pub(crate) fn iterator_next_map_entry_raw_data_item <'a>(
+    x:
+    iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    <'a>
+) ->
+    (cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    <'a>,
+    iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    <'a>)
+{
+    let
+    mut
+    r:
+    [iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw;
+    1]
+    =
+        [x; 1usize];
+    let
+    i:
+    iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    =
+        (&r)[0];
+    let
+    eos_res:
+    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    =
+        match i
+        {
+            iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
+            { before: bi }
+            =>
+              {
+                  let len_sz: usize =
+                      base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                          bi
+                      );
+                  if len_sz == 0usize
+                  { panic!("Pulse.Lib.Dv.unreachable") }
+                  else
+                  {
+                      let
+                      x1:
+                      elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                      =
+                          match bi
+                          {
+                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                              => panic!("Pulse.Lib.Dv.unreachable"),
+                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                              { sr: s }
+                              =>
+                                {
+                                    let
+                                    x_val: cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                                    =
+                                        s[0];
+                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
+                                    { _0: x_val }
+                                },
+                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                              { ss: s }
+                              =>
+                                {
+                                    let
+                                    x_val: cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                                    =
+                                        s[0usize];
+                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
+                                    { _0: x_val }
+                                },
+                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                              { payload: pl, .. }
+                              =>
+                                {
+                                    let mut pn: [usize; 1] = [0usize; 1usize];
+                                    let mut poffset: [usize; 1] = [0usize; 1usize];
+                                    let n: usize = (&pn)[0];
+                                    let mut cond: bool = n > 0usize;
+                                    while
+                                    cond
+                                    {
+                                        let n0: usize = (&pn)[0];
+                                        let offset: usize = (&poffset)[0];
+                                        let offset·: usize =
+                                            jump_nondep_then_raw_data_item_eta(pl, offset);
+                                        (&mut pn)[0] = n0.wrapping_sub(1usize);
+                                        (&mut poffset)[0] = offset·;
+                                        let n1: usize = (&pn)[0];
+                                        cond = n1 > 0usize
+                                    };
+                                    let pos: usize = (&poffset)[0];
+                                    let pl_p: (&[u8], &[u8]) = pl.split_at(pos);
+                                    let _pl_prefix: &[u8] = pl_p.0;
+                                    let pl_suffix: &[u8] = pl_p.1;
+                                    let consumed_sz: usize =
+                                        jump_nondep_then_raw_data_item_eta(pl_suffix, 0usize);
+                                    let pl_hd_p: (&[u8], &[u8]) = pl_suffix.split_at(consumed_sz);
+                                    let pl_head: &[u8] = pl_hd_p.0;
+                                    let _pl_rest: &[u8] = pl_hd_p.1;
+                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
+                                    { _0: pl_head }
+                                },
+                              _ => panic!("Incomplete pattern matching")
+                          };
+                      if len_sz == 1usize
+                      {
+                          (&mut r)[0] =
+                              iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
+                              {
+                                  before:
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                              };
+                          x1
+                      }
+                      else
+                      {
+                          let n_tail_sz: usize = len_sz.wrapping_sub(1usize);
+                          let
+                          bi_tail:
+                          base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                          =
+                              match bi
+                              {
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                  =>
+                                    base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                  { sr: s }
+                                  =>
+                                    if n_tail_sz == 0usize
+                                    {
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                    }
+                                    else
+                                    {
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                        { sr: s }
+                                    },
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                  { ss: s }
+                                  =>
+                                    {
+                                        let
+                                        s_pr:
+                                        (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
+                                        =
+                                            s.split_at(1usize);
+                                        let
+                                        _s_prefix:
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                        =
+                                            s_pr.0;
+                                        let
+                                        s_rest:
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                        =
+                                            s_pr.1;
+                                        let
+                                        s_ms:
+                                        (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
+                                        =
+                                            s_rest.split_at(n_tail_sz);
+                                        let
+                                        s_middle:
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                        =
+                                            s_ms.0;
+                                        let
+                                        _s_suffix:
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                        =
+                                            s_ms.1;
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                        { ss: s_middle }
+                                    },
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                  { payload: pl, .. }
+                                  =>
+                                    {
+                                        let mut pn: [usize; 1] = [1usize; 1usize];
+                                        let mut poffset: [usize; 1] = [0usize; 1usize];
+                                        let n: usize = (&pn)[0];
+                                        let mut cond: bool = n > 0usize;
+                                        while
+                                        cond
+                                        {
+                                            let n0: usize = (&pn)[0];
+                                            let offset: usize = (&poffset)[0];
+                                            let offset·: usize =
+                                                jump_nondep_then_raw_data_item_eta(pl, offset);
+                                            (&mut pn)[0] = n0.wrapping_sub(1usize);
+                                            (&mut poffset)[0] = offset·;
+                                            let n1: usize = (&pn)[0];
+                                            cond = n1 > 0usize
+                                        };
+                                        let pos: usize = (&poffset)[0];
+                                        let pl_p: (&[u8], &[u8]) = pl.split_at(pos);
+                                        let _pl_prefix: &[u8] = pl_p.0;
+                                        let pl_suffix: &[u8] = pl_p.1;
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                        { count: n_tail_sz, payload: pl_suffix }
+                                    },
+                                  _ => panic!("Incomplete pattern matching")
+                              };
+                          (&mut r)[0] =
+                              iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
+                              { before: bi_tail };
+                          x1
+                      }
+                  }
+              },
+            iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IPair
+            { before: bi, after: ml }
+            =>
+              {
+                  let len_sz: usize =
+                      base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                          bi
+                      );
+                  if len_sz == 0usize
+                  { panic!("Pulse.Lib.Dv.unreachable") }
+                  else
+                  {
+                      let
+                      x1:
+                      elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                      =
+                          match bi
+                          {
+                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                              => panic!("Pulse.Lib.Dv.unreachable"),
+                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                              { sr: s }
+                              =>
+                                {
+                                    let
+                                    x_val: cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                                    =
+                                        s[0];
+                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
+                                    { _0: x_val }
+                                },
+                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                              { ss: s }
+                              =>
+                                {
+                                    let
+                                    x_val: cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                                    =
+                                        s[0usize];
+                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
+                                    { _0: x_val }
+                                },
+                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                              { payload: pl, .. }
+                              =>
+                                {
+                                    let mut pn: [usize; 1] = [0usize; 1usize];
+                                    let mut poffset: [usize; 1] = [0usize; 1usize];
+                                    let n: usize = (&pn)[0];
+                                    let mut cond: bool = n > 0usize;
+                                    while
+                                    cond
+                                    {
+                                        let n0: usize = (&pn)[0];
+                                        let offset: usize = (&poffset)[0];
+                                        let offset·: usize =
+                                            jump_nondep_then_raw_data_item_eta(pl, offset);
+                                        (&mut pn)[0] = n0.wrapping_sub(1usize);
+                                        (&mut poffset)[0] = offset·;
+                                        let n1: usize = (&pn)[0];
+                                        cond = n1 > 0usize
+                                    };
+                                    let pos: usize = (&poffset)[0];
+                                    let pl_p: (&[u8], &[u8]) = pl.split_at(pos);
+                                    let _pl_prefix: &[u8] = pl_p.0;
+                                    let pl_suffix: &[u8] = pl_p.1;
+                                    let consumed_sz: usize =
+                                        jump_nondep_then_raw_data_item_eta(pl_suffix, 0usize);
+                                    let pl_hd_p: (&[u8], &[u8]) = pl_suffix.split_at(consumed_sz);
+                                    let pl_head: &[u8] = pl_hd_p.0;
+                                    let _pl_rest: &[u8] = pl_hd_p.1;
+                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
+                                    { _0: pl_head }
+                                },
+                              _ => panic!("Incomplete pattern matching")
+                          };
+                      if len_sz == 1usize
+                      {
+                          let total_sz: usize =
+                              mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                                  ml
+                              );
+                          let
+                          it_new:
+                          iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                          =
+                              if total_sz == 0usize
+                              {
+                                  iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
+                                  {
+                                      before:
+                                      base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                  }
+                              }
+                              else
+                              {
+                                  let
+                                  mut
+                                  r_node:
+                                  [mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw;
+                                  1]
+                                  =
+                                      [ml; 1usize];
+                                  let mut r_off: [usize; 1] = [0usize; 1usize];
+                                  let mut r_n: [usize; 1] = [total_sz; 1usize];
+                                  let mut pcontinue: [bool; 1] =
+                                      [!
+                                          uu___is_Base__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                                              ml
+                                          );
+                                          1usize];
+                                  while
+                                  (&pcontinue)[0]
+                                  {
+                                      let
+                                      node:
+                                      mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                                      =
+                                          (&r_node)[0];
+                                      let cur_off_v: usize = (&r_off)[0];
+                                      let cur_n_v: usize = (&r_n)[0];
+                                      match node
+                                      {
+                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
+                                          { cb, ca, ob, before, oa, after }
+                                          =>
+                                            {
+                                                let child_n_before: usize =
+                                                    append_n_before_sz(cur_off_v, cur_n_v, cb);
+                                                if child_n_before > 0usize
+                                                {
+                                                    let child_off_sz: usize =
+                                                        append_off_before_sz(cur_off_v, ob, cb);
+                                                    let
+                                                    ib:
+                                                    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                                                    =
+                                                        before[0];
+                                                    (&mut r_node)[0] = ib;
+                                                    (&mut r_off)[0] = child_off_sz;
+                                                    (&mut r_n)[0] = child_n_before;
+                                                    (&mut pcontinue)[0] =
+                                                        !
+                                                        uu___is_Base__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                                                            ib
+                                                        )
+                                                }
+                                                else
+                                                {
+                                                    let child_off_sz: usize =
+                                                        append_off_after_sz(cur_off_v, oa, ca, cb);
+                                                    let child_n_sz: usize =
+                                                        append_n_after_sz(cur_off_v, cur_n_v, cb);
+                                                    let
+                                                    ia:
+                                                    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                                                    =
+                                                        after[0];
+                                                    (&mut r_node)[0] = ia;
+                                                    (&mut r_off)[0] = child_off_sz;
+                                                    (&mut r_n)[0] = child_n_sz;
+                                                    (&mut pcontinue)[0] =
+                                                        !
+                                                        uu___is_Base__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                                                            ia
+                                                        )
+                                                }
+                                            },
+                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
+                                          { .. }
+                                          => (),
+                                          _ => panic!("Incomplete pattern matching")
+                                      }
+                                  };
+                                  let
+                                  node:
+                                  mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                                  =
+                                      (&r_node)[0];
+                                  let cur_off_v: usize = (&r_off)[0];
+                                  let cur_n_v: usize = (&r_n)[0];
+                                  let
+                                  res:
+                                  (base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw,
+                                  usize)
+                                  =
+                                      match node
+                                      {
+                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
+                                          { _0: bi1 }
+                                          =>
+                                            {
+                                                let
+                                                bi·:
+                                                base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                                                =
+                                                    match bi1
+                                                    {
+                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                                        =>
+                                                          base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
+                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                                        { sr: s }
+                                                        =>
+                                                          if cur_n_v == 0usize
+                                                          {
+                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                                          }
+                                                          else
+                                                          {
+                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                                              { sr: s }
+                                                          },
+                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                                        { ss: s }
+                                                        =>
+                                                          {
+                                                              let
+                                                              s_pr:
+                                                              (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
+                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
+                                                              =
+                                                                  s.split_at(cur_off_v);
+                                                              let
+                                                              _s_prefix:
+                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                                              =
+                                                                  s_pr.0;
+                                                              let
+                                                              s_rest:
+                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                                              =
+                                                                  s_pr.1;
+                                                              let
+                                                              s_ms:
+                                                              (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
+                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
+                                                              =
+                                                                  s_rest.split_at(cur_n_v);
+                                                              let
+                                                              s_middle:
+                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                                              =
+                                                                  s_ms.0;
+                                                              let
+                                                              _s_suffix:
+                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                                              =
+                                                                  s_ms.1;
+                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                                              { ss: s_middle }
+                                                          },
+                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                                        { payload: pl, .. }
+                                                        =>
+                                                          {
+                                                              let mut pn: [usize; 1] =
+                                                                  [cur_off_v; 1usize];
+                                                              let mut poffset: [usize; 1] =
+                                                                  [0usize; 1usize];
+                                                              let n: usize = (&pn)[0];
+                                                              let mut cond: bool = n > 0usize;
+                                                              while
+                                                              cond
+                                                              {
+                                                                  let n0: usize = (&pn)[0];
+                                                                  let offset: usize = (&poffset)[0];
+                                                                  let offset·: usize =
+                                                                      jump_nondep_then_raw_data_item_eta(
+                                                                          pl,
+                                                                          offset
+                                                                      );
+                                                                  (&mut pn)[0] =
+                                                                      n0.wrapping_sub(1usize);
+                                                                  (&mut poffset)[0] = offset·;
+                                                                  let n1: usize = (&pn)[0];
+                                                                  cond = n1 > 0usize
+                                                              };
+                                                              let pos: usize = (&poffset)[0];
+                                                              let pl_p: (&[u8], &[u8]) =
+                                                                  pl.split_at(pos);
+                                                              let _pl_prefix: &[u8] = pl_p.0;
+                                                              let pl_suffix: &[u8] = pl_p.1;
+                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                                              { count: cur_n_v, payload: pl_suffix }
+                                                          },
+                                                        _ => panic!("Incomplete pattern matching")
+                                                    };
+                                                let len: usize =
+                                                    base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                                                        bi·
+                                                    );
+                                                (bi·,len)
+                                            },
+                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
+                                          { .. }
+                                          => panic!("Pulse.Lib.Dv.unreachable"),
+                                          _ => panic!("Incomplete pattern matching")
+                                      };
+                                  let
+                                  bi·:
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                                  =
+                                      fst__LowParse_PulseParse_Iterator_Type_base_mixed_list·CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw_size_t(
+                                          res
+                                      );
+                                  let len_sz1: usize =
+                                      snd__LowParse_PulseParse_Iterator_Type_base_mixed_list·CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw_size_t(
+                                          res
+                                      );
+                                  let rest_sz: usize = total_sz.wrapping_sub(len_sz1);
+                                  let
+                                  rest:
+                                  mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                                  =
+                                      match ml
+                                      {
+                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
+                                          { _0: bi1 }
+                                          =>
+                                            {
+                                                let
+                                                bi·1:
+                                                base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                                                =
+                                                    match bi1
+                                                    {
+                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                                        =>
+                                                          base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
+                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                                        { sr: s }
+                                                        =>
+                                                          if rest_sz == 0usize
+                                                          {
+                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                                          }
+                                                          else
+                                                          {
+                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                                              { sr: s }
+                                                          },
+                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                                        { ss: s }
+                                                        =>
+                                                          {
+                                                              let
+                                                              s_pr:
+                                                              (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
+                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
+                                                              =
+                                                                  s.split_at(len_sz1);
+                                                              let
+                                                              _s_prefix:
+                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                                              =
+                                                                  s_pr.0;
+                                                              let
+                                                              s_rest:
+                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                                              =
+                                                                  s_pr.1;
+                                                              let
+                                                              s_ms:
+                                                              (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
+                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
+                                                              =
+                                                                  s_rest.split_at(rest_sz);
+                                                              let
+                                                              s_middle:
+                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                                              =
+                                                                  s_ms.0;
+                                                              let
+                                                              _s_suffix:
+                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                                              =
+                                                                  s_ms.1;
+                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                                              { ss: s_middle }
+                                                          },
+                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                                        { payload: pl, .. }
+                                                        =>
+                                                          {
+                                                              let mut pn: [usize; 1] =
+                                                                  [len_sz1; 1usize];
+                                                              let mut poffset: [usize; 1] =
+                                                                  [0usize; 1usize];
+                                                              let n: usize = (&pn)[0];
+                                                              let mut cond: bool = n > 0usize;
+                                                              while
+                                                              cond
+                                                              {
+                                                                  let n0: usize = (&pn)[0];
+                                                                  let offset: usize = (&poffset)[0];
+                                                                  let offset·: usize =
+                                                                      jump_nondep_then_raw_data_item_eta(
+                                                                          pl,
+                                                                          offset
+                                                                      );
+                                                                  (&mut pn)[0] =
+                                                                      n0.wrapping_sub(1usize);
+                                                                  (&mut poffset)[0] = offset·;
+                                                                  let n1: usize = (&pn)[0];
+                                                                  cond = n1 > 0usize
+                                                              };
+                                                              let pos: usize = (&poffset)[0];
+                                                              let pl_p: (&[u8], &[u8]) =
+                                                                  pl.split_at(pos);
+                                                              let _pl_prefix: &[u8] = pl_p.0;
+                                                              let pl_suffix: &[u8] = pl_p.1;
+                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                                              { count: rest_sz, payload: pl_suffix }
+                                                          },
+                                                        _ => panic!("Incomplete pattern matching")
+                                                    };
+                                                mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
+                                                { _0: bi·1 }
+                                            },
+                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
+                                          { cb, ca, ob, before, oa, after }
+                                          =>
+                                            {
+                                                let cb·_sz: usize =
+                                                    append_n_before_sz(len_sz1, rest_sz, cb);
+                                                let ca·_sz: usize =
+                                                    append_n_after_sz(len_sz1, rest_sz, cb);
+                                                let ob·_sz: usize =
+                                                    append_off_before_sz(len_sz1, ob, cb);
+                                                let oa·_sz: usize =
+                                                    append_off_after_sz(len_sz1, oa, ca, cb);
+                                                mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
+                                                {
+                                                    cb: cb·_sz,
+                                                    ca: ca·_sz,
+                                                    ob: ob·_sz,
+                                                    before,
+                                                    oa: oa·_sz,
+                                                    after
+                                                }
+                                            },
+                                          _ => panic!("Incomplete pattern matching")
+                                      };
+                                  iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IPair
+                                  { before: bi·, after: rest }
+                              };
+                          (&mut r)[0] = it_new;
+                          x1
+                      }
+                      else
+                      {
+                          let n_tail_sz: usize = len_sz.wrapping_sub(1usize);
+                          let
+                          bi_tail:
+                          base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                          =
+                              match bi
+                              {
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                  =>
+                                    base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                  { sr: s }
+                                  =>
+                                    if n_tail_sz == 0usize
+                                    {
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                    }
+                                    else
+                                    {
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                        { sr: s }
+                                    },
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                  { ss: s }
+                                  =>
+                                    {
+                                        let
+                                        s_pr:
+                                        (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
+                                        =
+                                            s.split_at(1usize);
+                                        let
+                                        _s_prefix:
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                        =
+                                            s_pr.0;
+                                        let
+                                        s_rest:
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                        =
+                                            s_pr.1;
+                                        let
+                                        s_ms:
+                                        (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
+                                        =
+                                            s_rest.split_at(n_tail_sz);
+                                        let
+                                        s_middle:
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                        =
+                                            s_ms.0;
+                                        let
+                                        _s_suffix:
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                        =
+                                            s_ms.1;
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                        { ss: s_middle }
+                                    },
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                  { payload: pl, .. }
+                                  =>
+                                    {
+                                        let mut pn: [usize; 1] = [1usize; 1usize];
+                                        let mut poffset: [usize; 1] = [0usize; 1usize];
+                                        let n: usize = (&pn)[0];
+                                        let mut cond: bool = n > 0usize;
+                                        while
+                                        cond
+                                        {
+                                            let n0: usize = (&pn)[0];
+                                            let offset: usize = (&poffset)[0];
+                                            let offset·: usize =
+                                                jump_nondep_then_raw_data_item_eta(pl, offset);
+                                            (&mut pn)[0] = n0.wrapping_sub(1usize);
+                                            (&mut poffset)[0] = offset·;
+                                            let n1: usize = (&pn)[0];
+                                            cond = n1 > 0usize
+                                        };
+                                        let pos: usize = (&poffset)[0];
+                                        let pl_p: (&[u8], &[u8]) = pl.split_at(pos);
+                                        let _pl_prefix: &[u8] = pl_p.0;
+                                        let pl_suffix: &[u8] = pl_p.1;
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                        { count: n_tail_sz, payload: pl_suffix }
+                                    },
+                                  _ => panic!("Incomplete pattern matching")
+                              };
+                          (&mut r)[0] =
+                              iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IPair
+                              { before: bi_tail, after: ml };
+                          x1
+                      }
+                  }
+              },
+            _ => panic!("Incomplete pattern matching")
+        };
+    let elt: cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+        match eos_res
+        {
+            elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
+            { _0: x1 }
+            => x1,
+            elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
+            { _0: pl }
+            => cbor_raw_read_map_entry(pl),
+            _ => panic!("Incomplete pattern matching")
+        };
+    let
+    x·:
+    iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    =
+        (&r)[0];
+    (elt,x·)
+}
+
+fn impl_cbor_compare_fuel(x1: cbor_raw, x2: cbor_raw) -> i16
+{
+    let ty1: u8 = cbor_raw_get_major_type_aux(x1);
+    let ty2: u8 = cbor_raw_get_major_type_aux(x2);
+    let c: i16 = impl_uint8_compare(ty1, ty2);
+    if c == 0i16
+    {
+        if ty1 == cbor_major_type_uint64 || ty1 == cbor_major_type_neg_int64
+        {
+            let ru1: raw_uint64 =
+                match x1
+                {
+                    cbor_raw::CBOR_Case_Int { v } =>
+                      raw_uint64 { size: v.cbor_int_size, value: v.cbor_int_value },
+                    _ => raw_uint64 { size: 0u8, value: 0u64 }
+                };
+            let ru2: raw_uint64 =
+                match x2
+                {
+                    cbor_raw::CBOR_Case_Int { v } =>
+                      raw_uint64 { size: v.cbor_int_size, value: v.cbor_int_value },
+                    _ => raw_uint64 { size: 0u8, value: 0u64 }
+                };
+            impl_raw_uint64_compare(ru1, ru2)
+        }
+        else if ty1 == cbor_major_type_byte_string || ty1 == cbor_major_type_text_string
+        {
+            let len1: raw_uint64 =
+                match x1
+                {
+                    cbor_raw::CBOR_Case_String { v } =>
+                      raw_uint64
+                      { size: v.cbor_string_size, value: (v.cbor_string_ptr).len() as u64 },
+                    _ => raw_uint64 { size: 0u8, value: 0u64 }
+                };
+            let len2: raw_uint64 =
+                match x2
+                {
+                    cbor_raw::CBOR_Case_String { v } =>
+                      raw_uint64
+                      { size: v.cbor_string_size, value: (v.cbor_string_ptr).len() as u64 },
+                    _ => raw_uint64 { size: 0u8, value: 0u64 }
+                };
+            let cl: i16 = impl_raw_uint64_compare(len1, len2);
+            if cl == 0i16
+            {
+                let s1: &[u8] = cbor_raw_get_string_aux(x1);
+                let s2: &[u8] = cbor_raw_get_string_aux(x2);
+                lex_compare_bytes(s1, s2)
+            }
+            else
+            { cl }
+        }
+        else if ty1 == cbor_major_type_tagged
+        {
+            let tag1: raw_uint64 =
+                match x1
+                {
+                    cbor_raw::CBOR_Case_Tagged { v } => v.cbor_tagged_tag,
+                    cbor_raw::CBOR_Case_Tagged_Serialized { v } => v.cbor_tagged_serialized_tag,
+                    _ => raw_uint64 { size: 0u8, value: 0u64 }
+                };
+            let tag2: raw_uint64 =
+                match x2
+                {
+                    cbor_raw::CBOR_Case_Tagged { v } => v.cbor_tagged_tag,
+                    cbor_raw::CBOR_Case_Tagged_Serialized { v } => v.cbor_tagged_serialized_tag,
+                    _ => raw_uint64 { size: 0u8, value: 0u64 }
+                };
+            let ct: i16 = impl_raw_uint64_compare(tag1, tag2);
+            if ct == 0i16 { impl_cbor_compare_fuel_tagged(x1, x2) } else { ct }
+        }
+        else if ty1 == cbor_major_type_array
+        {
+            let len1: raw_uint64 =
+                match x1
+                {
+                    cbor_raw::CBOR_Case_Array { v } =>
+                      raw_uint64
+                      {
+                          size: v.cbor_array_length_size,
+                          value:
+                          mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                              v.cbor_array_ptr
+                          )
+                          as
+                          u64
+                      },
+                    _ => raw_uint64 { size: 0u8, value: 0u64 }
+                };
+            let len2: raw_uint64 =
+                match x2
+                {
+                    cbor_raw::CBOR_Case_Array { v } =>
+                      raw_uint64
+                      {
+                          size: v.cbor_array_length_size,
+                          value:
+                          mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                              v.cbor_array_ptr
+                          )
+                          as
+                          u64
+                      },
+                    _ => raw_uint64 { size: 0u8, value: 0u64 }
+                };
+            let cl: i16 = impl_raw_uint64_compare(len1, len2);
+            if cl == 0i16
+            {
+                let len_sz: usize = len1.value as usize;
+                impl_cbor_compare_fuel_array(x1, x2, len_sz)
+            }
+            else
+            { cl }
+        }
+        else if ty1 == cbor_major_type_map
+        {
+            let len1: raw_uint64 =
+                match x1
+                {
+                    cbor_raw::CBOR_Case_Map { v } =>
+                      raw_uint64
+                      {
+                          size: v.cbor_map_length_size,
+                          value:
+                          mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                              v.cbor_map_ptr
+                          )
+                          as
+                          u64
+                      },
+                    _ => raw_uint64 { size: 0u8, value: 0u64 }
+                };
+            let len2: raw_uint64 =
+                match x2
+                {
+                    cbor_raw::CBOR_Case_Map { v } =>
+                      raw_uint64
+                      {
+                          size: v.cbor_map_length_size,
+                          value:
+                          mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                              v.cbor_map_ptr
+                          )
+                          as
+                          u64
+                      },
+                    _ => raw_uint64 { size: 0u8, value: 0u64 }
+                };
+            let cl: i16 = impl_raw_uint64_compare(len1, len2);
+            if cl == 0i16
+            {
+                let len_sz: usize = len1.value as usize;
+                impl_cbor_compare_fuel_map(x1, x2, len_sz)
+            }
+            else
+            { cl }
+        }
+        else
+        {
+            let sv1: u8 =
+                match x1
+                {
+                    cbor_raw::CBOR_Case_Simple { v } => v,
+                    _ => panic!("Incomplete pattern matching")
+                };
+            let sv2: u8 =
+                match x2
+                {
+                    cbor_raw::CBOR_Case_Simple { v } => v,
+                    _ => panic!("Incomplete pattern matching")
+                };
+            impl_uint8_compare(sv1, sv2)
+        }
+    }
+    else
+    { c }
+}
+
+pub(crate) fn impl_cbor_compare_fuel_tagged(x1: cbor_raw, x2: cbor_raw) -> i16
+{
+    let e1: elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+        cbor_raw_get_tagged_payload_aux_eos(x1);
+    let e2: elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+        cbor_raw_get_tagged_payload_aux_eos(x2);
+    match e1
+    {
+        elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement { _0: xx1 } =>
+          match e2
+          {
+              elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement { _0: xx2 } =>
+                impl_cbor_compare_fuel(xx1, xx2),
+              elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized { _0: s2 } =>
+                {
+                    let xx2: cbor_raw = cbor_raw_read_fuel(s2);
+                    impl_cbor_compare_fuel(xx1, xx2)
+                },
+              _ => panic!("Incomplete pattern matching")
+          },
+        elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized { _0: s1 } =>
+          match e2
+          {
+              elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement { _0: xx2 } =>
+                {
+                    let xx1: cbor_raw = cbor_raw_read_fuel(s1);
+                    impl_cbor_compare_fuel(xx1, xx2)
+                },
+              elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized { _0: s2 } =>
+                {
+                    let off: usize = jump_raw_data_item_eta(s1, 0usize);
+                    let s·: (&[u8], &[u8]) = s1.split_at(off);
+                    let _letpattern: (&[u8], &[u8]) =
+                        {
+                            let s11: &[u8] = s·.0;
+                            let s21: &[u8] = s·.1;
+                            (s11,s21)
+                        };
+                    let ex1: &[u8] =
+                        {
+                            let exact: &[u8] = _letpattern.0;
+                            let _rest: &[u8] = _letpattern.1;
+                            exact
+                        };
+                    let off0: usize = jump_raw_data_item_eta(s2, 0usize);
+                    let s·0: (&[u8], &[u8]) = s2.split_at(off0);
+                    let _letpattern0: (&[u8], &[u8]) =
+                        {
+                            let s11: &[u8] = s·0.0;
+                            let s21: &[u8] = s·0.1;
+                            (s11,s21)
+                        };
+                    let ex2: &[u8] =
+                        {
+                            let exact: &[u8] = _letpattern0.0;
+                            let _rest: &[u8] = _letpattern0.1;
+                            exact
+                        };
+                    lex_compare_bytes(ex1, ex2)
+                },
+              _ => panic!("Incomplete pattern matching")
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+pub(crate) fn impl_cbor_compare_fuel_array(x1: cbor_raw, x2: cbor_raw, len: usize) -> i16
+{
+    let ar_ml1: mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw = cbor_raw_get_array_aux(x1);
+    let ar_ml2: mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw = cbor_raw_get_array_aux(x2);
+    let it1_init: iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+        iterator_start_raw_data_item_fuel(ar_ml1);
+    let it2_init: iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+        iterator_start_raw_data_item_fuel(ar_ml2);
+    let mut r_it1: [iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw; 1] = [it1_init; 1usize];
+    let mut r_it2: [iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw; 1] = [it2_init; 1usize];
+    let mut r_acc: [i16; 1] = [0i16; 1usize];
+    let mut r_cnt: [usize; 1] = [0usize; 1usize];
+    let acc: i16 = (&r_acc)[0];
+    let cnt: usize = (&r_cnt)[0];
+    let mut cond: bool = cnt < len && acc == 0i16;
+    while
+    cond
+    {
+        let e1: elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+            iterator_next_eos_raw_data_item_fuel_byref(&mut r_it1);
+        let e2: elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+            iterator_next_eos_raw_data_item_fuel_byref(&mut r_it2);
+        let old_cnt: usize = (&r_cnt)[0];
+        match e1
+        {
+            elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement { _0: xx1 } =>
+              match e2
+              {
+                  elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement { _0: xx2 } =>
+                    {
+                        let r2: i16 = impl_cbor_compare_fuel(xx1, xx2);
+                        (&mut r_acc)[0] = r2;
+                        (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
+                    },
+                  elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
+                  { _0: s2 }
+                  =>
+                    {
+                        let xx2: cbor_raw = cbor_raw_read_fuel(s2);
+                        let r2: i16 = impl_cbor_compare_fuel(xx1, xx2);
+                        (&mut r_acc)[0] = r2;
+                        (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
+                    },
+                  _ => panic!("Incomplete pattern matching")
+              },
+            elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized { _0: s1 } =>
+              match e2
+              {
+                  elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement { _0: xx2 } =>
+                    {
+                        let xx1: cbor_raw = cbor_raw_read_fuel(s1);
+                        let r2: i16 = impl_cbor_compare_fuel(xx1, xx2);
+                        (&mut r_acc)[0] = r2;
+                        (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
+                    },
+                  elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
+                  { _0: s2 }
+                  =>
+                    {
+                        let r2: i16 = byte_compare_pts_to_parsed_data_item(s1, s2);
+                        (&mut r_acc)[0] = r2;
+                        (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
+                    },
+                  _ => panic!("Incomplete pattern matching")
+              },
+            _ => panic!("Incomplete pattern matching")
+        };
+        let acc0: i16 = (&r_acc)[0];
+        let cnt0: usize = (&r_cnt)[0];
+        cond = cnt0 < len && acc0 == 0i16
+    };
+    (&r_acc)[0]
+}
+
+fn fst__CBOR_Pulse_Raw_EverParse_Type_cbor_raw_CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>(
+    x: (cbor_raw <'a>, cbor_raw <'a>)
+) ->
+    cbor_raw
+    <'a>
+{
+    let _1: cbor_raw = x.0;
+    let __2: cbor_raw = x.1;
+    _1
+}
+
+fn snd__CBOR_Pulse_Raw_EverParse_Type_cbor_raw_CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>(
+    x: (cbor_raw <'a>, cbor_raw <'a>)
+) ->
+    cbor_raw
+    <'a>
+{
+    let __1: cbor_raw = x.0;
+    let _2: cbor_raw = x.1;
+    _2
+}
+
+pub(crate) fn impl_cbor_compare_fuel_map(x1: cbor_raw, x2: cbor_raw, len: usize) -> i16
+{
+    let
+    map_ml1:
+    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    =
+        cbor_raw_get_map_aux(x1);
+    let
+    map_ml2:
+    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    =
+        cbor_raw_get_map_aux(x2);
+    let
+    it1_init:
+    iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    =
+        iterator_start_map_entry_raw_data_item_fuel(map_ml1);
+    let
+    it2_init:
+    iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    =
+        iterator_start_map_entry_raw_data_item_fuel(map_ml2);
+    let
+    mut
+    r_it1:
+    [iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw;
+    1]
+    =
+        [it1_init; 1usize];
+    let
+    mut
+    r_it2:
+    [iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw;
+    1]
+    =
+        [it2_init; 1usize];
+    let mut r_acc: [i16; 1] = [0i16; 1usize];
+    let mut r_cnt: [usize; 1] = [0usize; 1usize];
+    let acc: i16 = (&r_acc)[0];
+    let cnt: usize = (&r_cnt)[0];
+    let mut cond: bool = cnt < len && acc == 0i16;
+    while
+    cond
+    {
+        let
+        e1:
+        elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+        =
+            iterator_next_eos_map_entry_raw_data_item_fuel_byref(&mut r_it1);
+        let
+        e2:
+        elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+        =
+            iterator_next_eos_map_entry_raw_data_item_fuel_byref(&mut r_it2);
+        let old_cnt: usize = (&r_cnt)[0];
+        match e1
+        {
+            elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
+            { _0: entry1 }
+            =>
+              match e2
+              {
+                  elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
+                  { _0: entry2 }
+                  =>
+                    {
+                        let ck: i16 =
+                            impl_cbor_compare_fuel(
+                                entry1.cbor_map_entry_key,
+                                entry2.cbor_map_entry_key
+                            );
+                        if ck == 0i16
+                        {
+                            let cv: i16 =
+                                impl_cbor_compare_fuel(
+                                    entry1.cbor_map_entry_value,
+                                    entry2.cbor_map_entry_value
+                                );
+                            (&mut r_acc)[0] = cv;
+                            (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
+                        }
+                        else
+                        {
+                            (&mut r_acc)[0] = ck;
+                            (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
+                        }
+                    },
+                  elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
+                  { _0: s2 }
+                  =>
+                    {
+                        let off1: usize = jump_raw_data_item_eta(s2, 0usize);
+                        let s·: (&[u8], &[u8]) = s2.split_at(off1);
+                        let _letpattern: (&[u8], &[u8]) =
+                            {
+                                let s1: &[u8] = s·.0;
+                                let s21: &[u8] = s·.1;
+                                (s1,s21)
+                            };
+                        let pair: (cbor_raw, cbor_raw) =
+                            {
+                                let input1: &[u8] = _letpattern.0;
+                                let input2: &[u8] = _letpattern.1;
+                                let res1: cbor_raw = cbor_raw_read_fuel(input1);
+                                let res2: cbor_raw = cbor_raw_read_fuel(input2);
+                                (res1,res2)
+                            };
+                        let entry2: cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+                            cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                            {
+                                cbor_map_entry_key:
+                                fst__CBOR_Pulse_Raw_EverParse_Type_cbor_raw_CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                                    pair
+                                ),
+                                cbor_map_entry_value:
+                                snd__CBOR_Pulse_Raw_EverParse_Type_cbor_raw_CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                                    pair
+                                )
+                            };
+                        let ck: i16 =
+                            impl_cbor_compare_fuel(
+                                entry1.cbor_map_entry_key,
+                                entry2.cbor_map_entry_key
+                            );
+                        if ck == 0i16
+                        {
+                            let cv: i16 =
+                                impl_cbor_compare_fuel(
+                                    entry1.cbor_map_entry_value,
+                                    entry2.cbor_map_entry_value
+                                );
+                            (&mut r_acc)[0] = cv;
+                            (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
+                        }
+                        else
+                        {
+                            (&mut r_acc)[0] = ck;
+                            (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
+                        }
+                    },
+                  _ => panic!("Incomplete pattern matching")
+              },
+            elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
+            { _0: s1 }
+            =>
+              match e2
+              {
+                  elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
+                  { _0: entry2 }
+                  =>
+                    {
+                        let off1: usize = jump_raw_data_item_eta(s1, 0usize);
+                        let s·: (&[u8], &[u8]) = s1.split_at(off1);
+                        let _letpattern: (&[u8], &[u8]) =
+                            {
+                                let s11: &[u8] = s·.0;
+                                let s2: &[u8] = s·.1;
+                                (s11,s2)
+                            };
+                        let pair: (cbor_raw, cbor_raw) =
+                            {
+                                let input1: &[u8] = _letpattern.0;
+                                let input2: &[u8] = _letpattern.1;
+                                let res1: cbor_raw = cbor_raw_read_fuel(input1);
+                                let res2: cbor_raw = cbor_raw_read_fuel(input2);
+                                (res1,res2)
+                            };
+                        let entry1: cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
+                            cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                            {
+                                cbor_map_entry_key:
+                                fst__CBOR_Pulse_Raw_EverParse_Type_cbor_raw_CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                                    pair
+                                ),
+                                cbor_map_entry_value:
+                                snd__CBOR_Pulse_Raw_EverParse_Type_cbor_raw_CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                                    pair
+                                )
+                            };
+                        let ck: i16 =
+                            impl_cbor_compare_fuel(
+                                entry1.cbor_map_entry_key,
+                                entry2.cbor_map_entry_key
+                            );
+                        if ck == 0i16
+                        {
+                            let cv: i16 =
+                                impl_cbor_compare_fuel(
+                                    entry1.cbor_map_entry_value,
+                                    entry2.cbor_map_entry_value
+                                );
+                            (&mut r_acc)[0] = cv;
+                            (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
+                        }
+                        else
+                        {
+                            (&mut r_acc)[0] = ck;
+                            (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
+                        }
+                    },
+                  elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
+                  { _0: s2 }
+                  =>
+                    {
+                        let pair_res: i16 = lex_compare_bytes(s1, s2);
+                        (&mut r_acc)[0] = pair_res;
+                        (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
+                    },
+                  _ => panic!("Incomplete pattern matching")
+              },
+            _ => panic!("Incomplete pattern matching")
+        };
+        let acc0: i16 = (&r_acc)[0];
+        let cnt0: usize = (&r_cnt)[0];
+        cond = cnt0 < len && acc0 == 0i16
+    };
+    (&r_acc)[0]
+}
+
+fn impl_cbor_compare_fuel_call(x1: cbor_raw, x2: cbor_raw) -> i16
+{ impl_cbor_compare_fuel(x1, x2) }
+
+pub(crate) fn impl_cbor_compare(x1: cbor_raw, x2: cbor_raw) -> i16
+{ impl_cbor_compare_fuel_call(x1, x2) }
+
+pub(crate) fn cbor_raw_map_key_present(
+    key: cbor_raw,
+    ml:
+    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+) ->
+    bool
+{
+    let total_sz: usize =
+        mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+            ml
+        );
+    let
+    it0:
+    iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+    =
+        if total_sz == 0usize
+        {
+            iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
+            {
+                before:
+                base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+            }
+        }
+        else
+        {
+            let
+            mut
+            r_node:
+            [mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw;
+            1]
+            =
+                [ml; 1usize];
+            let mut r_off: [usize; 1] = [0usize; 1usize];
+            let mut r_n: [usize; 1] = [total_sz; 1usize];
+            let mut pcontinue: [bool; 1] =
+                [!
+                    uu___is_Base__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                        ml
+                    );
+                    1usize];
+            while
+            (&pcontinue)[0]
+            {
+                let
+                node:
+                mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                =
+                    (&r_node)[0];
+                let cur_off_v: usize = (&r_off)[0];
+                let cur_n_v: usize = (&r_n)[0];
+                match node
+                {
+                    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
+                    { cb, ca, ob, before, oa, after }
+                    =>
+                      {
+                          let child_n_before: usize = append_n_before_sz(cur_off_v, cur_n_v, cb);
+                          if child_n_before > 0usize
+                          {
+                              let child_off_sz: usize = append_off_before_sz(cur_off_v, ob, cb);
+                              let
+                              ib:
+                              mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                              =
+                                  before[0];
+                              (&mut r_node)[0] = ib;
+                              (&mut r_off)[0] = child_off_sz;
+                              (&mut r_n)[0] = child_n_before;
+                              (&mut pcontinue)[0] =
+                                  !
+                                  uu___is_Base__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                                      ib
+                                  )
+                          }
+                          else
+                          {
+                              let child_off_sz: usize = append_off_after_sz(cur_off_v, oa, ca, cb);
+                              let child_n_sz: usize = append_n_after_sz(cur_off_v, cur_n_v, cb);
+                              let
+                              ia:
+                              mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                              =
+                                  after[0];
+                              (&mut r_node)[0] = ia;
+                              (&mut r_off)[0] = child_off_sz;
+                              (&mut r_n)[0] = child_n_sz;
+                              (&mut pcontinue)[0] =
+                                  !
+                                  uu___is_Base__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                                      ia
+                                  )
+                          }
+                      },
+                    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
+                    { .. }
+                    => (),
+                    _ => panic!("Incomplete pattern matching")
+                }
+            };
+            let
+            node:
+            mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+            =
+                (&r_node)[0];
+            let cur_off_v: usize = (&r_off)[0];
+            let cur_n_v: usize = (&r_n)[0];
+            let
+            res:
+            (base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw,
+            usize)
+            =
+                match node
+                {
+                    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
+                    { _0: bi }
+                    =>
+                      {
+                          let
+                          bi·:
+                          base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                          =
+                              match bi
+                              {
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                  =>
+                                    base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                  { sr: s }
+                                  =>
+                                    if cur_n_v == 0usize
+                                    {
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                    }
+                                    else
+                                    {
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                        { sr: s }
+                                    },
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                  { ss: s }
+                                  =>
+                                    {
+                                        let
+                                        s_pr:
+                                        (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
+                                        =
+                                            s.split_at(cur_off_v);
+                                        let
+                                        _s_prefix:
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                        =
+                                            s_pr.0;
+                                        let
+                                        s_rest:
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                        =
+                                            s_pr.1;
+                                        let
+                                        s_ms:
+                                        (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
+                                        =
+                                            s_rest.split_at(cur_n_v);
+                                        let
+                                        s_middle:
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                        =
+                                            s_ms.0;
+                                        let
+                                        _s_suffix:
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                        =
+                                            s_ms.1;
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                        { ss: s_middle }
+                                    },
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                  { payload: pl, .. }
+                                  =>
+                                    {
+                                        let mut pn: [usize; 1] = [cur_off_v; 1usize];
+                                        let mut poffset: [usize; 1] = [0usize; 1usize];
+                                        let n: usize = (&pn)[0];
+                                        let mut cond: bool = n > 0usize;
+                                        while
+                                        cond
+                                        {
+                                            let n0: usize = (&pn)[0];
+                                            let offset: usize = (&poffset)[0];
+                                            let offset·: usize =
+                                                jump_nondep_then_raw_data_item_eta(pl, offset);
+                                            (&mut pn)[0] = n0.wrapping_sub(1usize);
+                                            (&mut poffset)[0] = offset·;
+                                            let n1: usize = (&pn)[0];
+                                            cond = n1 > 0usize
+                                        };
+                                        let pos: usize = (&poffset)[0];
+                                        let pl_p: (&[u8], &[u8]) = pl.split_at(pos);
+                                        let _pl_prefix: &[u8] = pl_p.0;
+                                        let pl_suffix: &[u8] = pl_p.1;
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                        { count: cur_n_v, payload: pl_suffix }
+                                    },
+                                  _ => panic!("Incomplete pattern matching")
+                              };
+                          let len: usize =
+                              base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                                  bi·
+                              );
+                          (bi·,len)
+                      },
+                    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
+                    { .. }
+                    => panic!("Pulse.Lib.Dv.unreachable"),
+                    _ => panic!("Incomplete pattern matching")
+                };
+            let
+            bi·:
+            base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+            =
+                fst__LowParse_PulseParse_Iterator_Type_base_mixed_list·CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw_size_t(
+                    res
+                );
+            let len_sz: usize =
+                snd__LowParse_PulseParse_Iterator_Type_base_mixed_list·CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw_size_t(
+                    res
+                );
+            let rest_sz: usize = total_sz.wrapping_sub(len_sz);
+            let
+            rest:
+            mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+            =
+                match ml
+                {
+                    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
+                    { _0: bi }
+                    =>
+                      {
+                          let
+                          bi·1:
+                          base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+                          =
+                              match bi
+                              {
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                  =>
+                                    base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                  { sr: s }
+                                  =>
+                                    if rest_sz == 0usize
+                                    {
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
+                                    }
+                                    else
+                                    {
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
+                                        { sr: s }
+                                    },
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                  { ss: s }
+                                  =>
+                                    {
+                                        let
+                                        s_pr:
+                                        (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
+                                        =
+                                            s.split_at(len_sz);
+                                        let
+                                        _s_prefix:
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                        =
+                                            s_pr.0;
+                                        let
+                                        s_rest:
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                        =
+                                            s_pr.1;
+                                        let
+                                        s_ms:
+                                        (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
+                                        =
+                                            s_rest.split_at(rest_sz);
+                                        let
+                                        s_middle:
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                        =
+                                            s_ms.0;
+                                        let
+                                        _s_suffix:
+                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
+                                        =
+                                            s_ms.1;
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
+                                        { ss: s_middle }
+                                    },
+                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                  { payload: pl, .. }
+                                  =>
+                                    {
+                                        let mut pn: [usize; 1] = [len_sz; 1usize];
+                                        let mut poffset: [usize; 1] = [0usize; 1usize];
+                                        let n: usize = (&pn)[0];
+                                        let mut cond: bool = n > 0usize;
+                                        while
+                                        cond
+                                        {
+                                            let n0: usize = (&pn)[0];
+                                            let offset: usize = (&poffset)[0];
+                                            let offset·: usize =
+                                                jump_nondep_then_raw_data_item_eta(pl, offset);
+                                            (&mut pn)[0] = n0.wrapping_sub(1usize);
+                                            (&mut poffset)[0] = offset·;
+                                            let n1: usize = (&pn)[0];
+                                            cond = n1 > 0usize
+                                        };
+                                        let pos: usize = (&poffset)[0];
+                                        let pl_p: (&[u8], &[u8]) = pl.split_at(pos);
+                                        let _pl_prefix: &[u8] = pl_p.0;
+                                        let pl_suffix: &[u8] = pl_p.1;
+                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
+                                        { count: rest_sz, payload: pl_suffix }
+                                    },
+                                  _ => panic!("Incomplete pattern matching")
+                              };
+                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
+                          { _0: bi·1 }
+                      },
+                    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
+                    { cb, ca, ob, before, oa, after }
+                    =>
+                      {
+                          let cb·_sz: usize = append_n_before_sz(len_sz, rest_sz, cb);
+                          let ca·_sz: usize = append_n_after_sz(len_sz, rest_sz, cb);
+                          let ob·_sz: usize = append_off_before_sz(len_sz, ob, cb);
+                          let oa·_sz: usize = append_off_after_sz(len_sz, oa, ca, cb);
+                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
+                          { cb: cb·_sz, ca: ca·_sz, ob: ob·_sz, before, oa: oa·_sz, after }
+                      },
+                    _ => panic!("Incomplete pattern matching")
+                };
+            iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IPair
+            { before: bi·, after: rest }
+        };
+    let empt0: bool =
+        match it0
+        {
+            iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
+            { before: bi }
+            =>
+              {
+                  let len: usize =
+                      base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                          bi
+                      );
+                  len == 0usize
+              },
+            iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IPair
+            { before: bi, .. }
+            =>
+              {
+                  let len: usize =
+                      base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                          bi
+                      );
+                  len == 0usize
+              },
+            _ => panic!("Incomplete pattern matching")
+        };
+    let
+    mut
+    r_it:
+    [iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw;
+    1]
+    =
+        [it0; 1usize];
+    let mut r_found: [bool; 1] = [false; 1usize];
+    let mut r_cont: [bool; 1] = [! empt0; 1usize];
+    while
+    (&r_cont)[0]
+    {
+        let
+        cur:
+        iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+        =
+            (&r_it)[0];
+        let
+        _letpattern:
+        (cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw,
+        iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw)
+        =
+            iterator_next_map_entry_raw_data_item(cur);
+        let entry: cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw = _letpattern.0;
+        let
+        tail_it:
+        iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+        =
+            _letpattern.1;
+        let ck: i16 = impl_cbor_compare(key, entry.cbor_map_entry_key);
+        if ck == 0i16
+        {
+            (&mut r_found)[0] = true;
+            (&mut r_cont)[0] = false
+        }
+        else
+        {
+            (&mut r_it)[0] = tail_it;
+            let empt: bool =
+                match tail_it
+                {
+                    iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
+                    { before: bi }
+                    =>
+                      {
+                          let len: usize =
+                              base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                                  bi
+                              );
+                          len == 0usize
+                      },
+                    iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IPair
+                    { before: bi, .. }
+                    =>
+                      {
+                          let len: usize =
+                              base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
+                                  bi
+                              );
+                          len == 0usize
+                      },
+                    _ => panic!("Incomplete pattern matching")
+                };
+            (&mut r_cont)[0] = ! empt
+        }
+    };
+    (&r_found)[0]
+}
+
 #[derive(PartialEq, Clone, Copy)]
 enum cbor_raw_map_insert_result
 {
@@ -8067,1984 +10506,6 @@ pub(crate) fn cbor_raw_read_map_length(x: cbor_raw) -> u64
     match x0 { option__uint64_t::Some { v } => v, _ => panic!("Incomplete pattern matching") }
 }
 
-fn cbor_raw_read_map_entry <'a>(input: &'a [u8]) ->
-    cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-    <'a>
-{
-    let off1: usize = jump_raw_data_item(input, 0usize);
-    let s·: (&[u8], &[u8]) = input.split_at(off1);
-    let _letpattern: (&[u8], &[u8]) =
-        {
-            let s1: &[u8] = s·.0;
-            let s2: &[u8] = s·.1;
-            (s1,s2)
-        };
-    let split_input: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = _letpattern.0;
-            let input2: &[u8] = _letpattern.1;
-            (input1,input2)
-        };
-    let input1: &[u8] = split_input.0;
-    let input2: &[u8] = split_input.1;
-    let xk: cbor_raw = cbor_raw_read(input1);
-    let xv: cbor_raw = cbor_raw_read(input2);
-    cbor_mk_map_entry(xk, xv)
-}
-
-pub(crate) fn iterator_next_raw_data_item <'a>(
-    x: iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>
-) ->
-    (cbor_raw <'a>, iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>)
-{
-    let mut r: [iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw; 1] = [x; 1usize];
-    let i: iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw = (&r)[0];
-    let eos_res: elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-        match i
-        {
-            iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase { before: bi } =>
-              {
-                  let len_sz: usize =
-                      base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(bi);
-                  if len_sz == 0usize
-                  { panic!("Pulse.Lib.Dv.unreachable") }
-                  else
-                  {
-                      let x1: elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-                          match bi
-                          {
-                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty =>
-                                panic!("Pulse.Lib.Dv.unreachable"),
-                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                              { sr: s }
-                              =>
-                                {
-                                    let x_val: cbor_raw = s[0];
-                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
-                                    { _0: x_val }
-                                },
-                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                              { ss: s }
-                              =>
-                                {
-                                    let x_val: cbor_raw = s[0usize];
-                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
-                                    { _0: x_val }
-                                },
-                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                              { payload: pl, .. }
-                              =>
-                                {
-                                    let mut pn: [usize; 1] = [0usize; 1usize];
-                                    let mut poffset: [usize; 1] = [0usize; 1usize];
-                                    let n: usize = (&pn)[0];
-                                    let mut cond: bool = n > 0usize;
-                                    while
-                                    cond
-                                    {
-                                        let n0: usize = (&pn)[0];
-                                        let offset: usize = (&poffset)[0];
-                                        let offset·: usize = jump_raw_data_item_eta(pl, offset);
-                                        (&mut pn)[0] = n0.wrapping_sub(1usize);
-                                        (&mut poffset)[0] = offset·;
-                                        let n1: usize = (&pn)[0];
-                                        cond = n1 > 0usize
-                                    };
-                                    let pos: usize = (&poffset)[0];
-                                    let pl_p: (&[u8], &[u8]) = pl.split_at(pos);
-                                    let _pl_prefix: &[u8] = pl_p.0;
-                                    let pl_suffix: &[u8] = pl_p.1;
-                                    let consumed_sz: usize =
-                                        jump_raw_data_item_eta(pl_suffix, 0usize);
-                                    let pl_hd_p: (&[u8], &[u8]) = pl_suffix.split_at(consumed_sz);
-                                    let pl_head: &[u8] = pl_hd_p.0;
-                                    let _pl_rest: &[u8] = pl_hd_p.1;
-                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
-                                    { _0: pl_head }
-                                },
-                              _ => panic!("Incomplete pattern matching")
-                          };
-                      if len_sz == 1usize
-                      {
-                          (&mut r)[0] =
-                              iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
-                              {
-                                  before:
-                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                              };
-                          x1
-                      }
-                      else
-                      {
-                          let n_tail_sz: usize = len_sz.wrapping_sub(1usize);
-                          let bi_tail: base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-                              match bi
-                              {
-                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty =>
-                                    base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
-                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                                  { sr: s }
-                                  =>
-                                    if n_tail_sz == 0usize
-                                    {
-                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                                    }
-                                    else
-                                    {
-                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                                        { sr: s }
-                                    },
-                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                                  { ss: s }
-                                  =>
-                                    {
-                                        let s_pr: (&[cbor_raw], &[cbor_raw]) = s.split_at(1usize);
-                                        let _s_prefix: &[cbor_raw] = s_pr.0;
-                                        let s_rest: &[cbor_raw] = s_pr.1;
-                                        let s_ms: (&[cbor_raw], &[cbor_raw]) =
-                                            s_rest.split_at(n_tail_sz);
-                                        let s_middle: &[cbor_raw] = s_ms.0;
-                                        let _s_suffix: &[cbor_raw] = s_ms.1;
-                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                                        { ss: s_middle }
-                                    },
-                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                                  { payload: pl, .. }
-                                  =>
-                                    {
-                                        let mut pn: [usize; 1] = [1usize; 1usize];
-                                        let mut poffset: [usize; 1] = [0usize; 1usize];
-                                        let n: usize = (&pn)[0];
-                                        let mut cond: bool = n > 0usize;
-                                        while
-                                        cond
-                                        {
-                                            let n0: usize = (&pn)[0];
-                                            let offset: usize = (&poffset)[0];
-                                            let offset·: usize =
-                                                jump_raw_data_item_eta(pl, offset);
-                                            (&mut pn)[0] = n0.wrapping_sub(1usize);
-                                            (&mut poffset)[0] = offset·;
-                                            let n1: usize = (&pn)[0];
-                                            cond = n1 > 0usize
-                                        };
-                                        let pos: usize = (&poffset)[0];
-                                        let pl_p: (&[u8], &[u8]) = pl.split_at(pos);
-                                        let _pl_prefix: &[u8] = pl_p.0;
-                                        let pl_suffix: &[u8] = pl_p.1;
-                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                                        { count: n_tail_sz, payload: pl_suffix }
-                                    },
-                                  _ => panic!("Incomplete pattern matching")
-                              };
-                          (&mut r)[0] =
-                              iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
-                              { before: bi_tail };
-                          x1
-                      }
-                  }
-              },
-            iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IPair { before: bi, after: ml } =>
-              {
-                  let len_sz: usize =
-                      base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(bi);
-                  if len_sz == 0usize
-                  { panic!("Pulse.Lib.Dv.unreachable") }
-                  else
-                  {
-                      let x1: elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-                          match bi
-                          {
-                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty =>
-                                panic!("Pulse.Lib.Dv.unreachable"),
-                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                              { sr: s }
-                              =>
-                                {
-                                    let x_val: cbor_raw = s[0];
-                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
-                                    { _0: x_val }
-                                },
-                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                              { ss: s }
-                              =>
-                                {
-                                    let x_val: cbor_raw = s[0usize];
-                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
-                                    { _0: x_val }
-                                },
-                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                              { payload: pl, .. }
-                              =>
-                                {
-                                    let mut pn: [usize; 1] = [0usize; 1usize];
-                                    let mut poffset: [usize; 1] = [0usize; 1usize];
-                                    let n: usize = (&pn)[0];
-                                    let mut cond: bool = n > 0usize;
-                                    while
-                                    cond
-                                    {
-                                        let n0: usize = (&pn)[0];
-                                        let offset: usize = (&poffset)[0];
-                                        let offset·: usize = jump_raw_data_item_eta(pl, offset);
-                                        (&mut pn)[0] = n0.wrapping_sub(1usize);
-                                        (&mut poffset)[0] = offset·;
-                                        let n1: usize = (&pn)[0];
-                                        cond = n1 > 0usize
-                                    };
-                                    let pos: usize = (&poffset)[0];
-                                    let pl_p: (&[u8], &[u8]) = pl.split_at(pos);
-                                    let _pl_prefix: &[u8] = pl_p.0;
-                                    let pl_suffix: &[u8] = pl_p.1;
-                                    let consumed_sz: usize =
-                                        jump_raw_data_item_eta(pl_suffix, 0usize);
-                                    let pl_hd_p: (&[u8], &[u8]) = pl_suffix.split_at(consumed_sz);
-                                    let pl_head: &[u8] = pl_hd_p.0;
-                                    let _pl_rest: &[u8] = pl_hd_p.1;
-                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
-                                    { _0: pl_head }
-                                },
-                              _ => panic!("Incomplete pattern matching")
-                          };
-                      if len_sz == 1usize
-                      {
-                          let total_sz: usize =
-                              mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(ml);
-                          let it_new: iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-                              if total_sz == 0usize
-                              {
-                                  iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
-                                  {
-                                      before:
-                                      base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                                  }
-                              }
-                              else
-                              {
-                                  let
-                                  mut
-                                  r_node:
-                                  [mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw; 1]
-                                  =
-                                      [ml; 1usize];
-                                  let mut r_off: [usize; 1] = [0usize; 1usize];
-                                  let mut r_n: [usize; 1] = [total_sz; 1usize];
-                                  let mut pcontinue: [bool; 1] =
-                                      [! uu___is_Base__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(ml);
-                                          1usize];
-                                  while
-                                  (&pcontinue)[0]
-                                  {
-                                      let node: mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-                                          (&r_node)[0];
-                                      let cur_off_v: usize = (&r_off)[0];
-                                      let cur_n_v: usize = (&r_n)[0];
-                                      match node
-                                      {
-                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
-                                          { cb, ca, ob, before, oa, after }
-                                          =>
-                                            {
-                                                let child_n_before: usize =
-                                                    append_n_before_sz(cur_off_v, cur_n_v, cb);
-                                                if child_n_before > 0usize
-                                                {
-                                                    let child_off_sz: usize =
-                                                        append_off_before_sz(cur_off_v, ob, cb);
-                                                    let
-                                                    ib:
-                                                    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                                                    =
-                                                        before[0];
-                                                    (&mut r_node)[0] = ib;
-                                                    (&mut r_off)[0] = child_off_sz;
-                                                    (&mut r_n)[0] = child_n_before;
-                                                    (&mut pcontinue)[0] =
-                                                        !
-                                                        uu___is_Base__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                                                            ib
-                                                        )
-                                                }
-                                                else
-                                                {
-                                                    let child_off_sz: usize =
-                                                        append_off_after_sz(cur_off_v, oa, ca, cb);
-                                                    let child_n_sz: usize =
-                                                        append_n_after_sz(cur_off_v, cur_n_v, cb);
-                                                    let
-                                                    ia:
-                                                    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                                                    =
-                                                        after[0];
-                                                    (&mut r_node)[0] = ia;
-                                                    (&mut r_off)[0] = child_off_sz;
-                                                    (&mut r_n)[0] = child_n_sz;
-                                                    (&mut pcontinue)[0] =
-                                                        !
-                                                        uu___is_Base__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                                                            ia
-                                                        )
-                                                }
-                                            },
-                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
-                                          { .. }
-                                          => (),
-                                          _ => panic!("Incomplete pattern matching")
-                                      }
-                                  };
-                                  let node: mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-                                      (&r_node)[0];
-                                  let cur_off_v: usize = (&r_off)[0];
-                                  let cur_n_v: usize = (&r_n)[0];
-                                  let
-                                  res:
-                                  (base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw, usize)
-                                  =
-                                      match node
-                                      {
-                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
-                                          { _0: bi1 }
-                                          =>
-                                            {
-                                                let
-                                                bi·:
-                                                base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                                                =
-                                                    match bi1
-                                                    {
-                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                                                        =>
-                                                          base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
-                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                                                        { sr: s }
-                                                        =>
-                                                          if cur_n_v == 0usize
-                                                          {
-                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                                                          }
-                                                          else
-                                                          {
-                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                                                              { sr: s }
-                                                          },
-                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                                                        { ss: s }
-                                                        =>
-                                                          {
-                                                              let s_pr: (&[cbor_raw], &[cbor_raw]) =
-                                                                  s.split_at(cur_off_v);
-                                                              let _s_prefix: &[cbor_raw] = s_pr.0;
-                                                              let s_rest: &[cbor_raw] = s_pr.1;
-                                                              let s_ms: (&[cbor_raw], &[cbor_raw]) =
-                                                                  s_rest.split_at(cur_n_v);
-                                                              let s_middle: &[cbor_raw] = s_ms.0;
-                                                              let _s_suffix: &[cbor_raw] = s_ms.1;
-                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                                                              { ss: s_middle }
-                                                          },
-                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                                                        { payload: pl, .. }
-                                                        =>
-                                                          {
-                                                              let mut pn: [usize; 1] =
-                                                                  [cur_off_v; 1usize];
-                                                              let mut poffset: [usize; 1] =
-                                                                  [0usize; 1usize];
-                                                              let n: usize = (&pn)[0];
-                                                              let mut cond: bool = n > 0usize;
-                                                              while
-                                                              cond
-                                                              {
-                                                                  let n0: usize = (&pn)[0];
-                                                                  let offset: usize = (&poffset)[0];
-                                                                  let offset·: usize =
-                                                                      jump_raw_data_item_eta(
-                                                                          pl,
-                                                                          offset
-                                                                      );
-                                                                  (&mut pn)[0] =
-                                                                      n0.wrapping_sub(1usize);
-                                                                  (&mut poffset)[0] = offset·;
-                                                                  let n1: usize = (&pn)[0];
-                                                                  cond = n1 > 0usize
-                                                              };
-                                                              let pos: usize = (&poffset)[0];
-                                                              let pl_p: (&[u8], &[u8]) =
-                                                                  pl.split_at(pos);
-                                                              let _pl_prefix: &[u8] = pl_p.0;
-                                                              let pl_suffix: &[u8] = pl_p.1;
-                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                                                              { count: cur_n_v, payload: pl_suffix }
-                                                          },
-                                                        _ => panic!("Incomplete pattern matching")
-                                                    };
-                                                let len: usize =
-                                                    base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                                                        bi·
-                                                    );
-                                                (bi·,len)
-                                            },
-                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
-                                          { .. }
-                                          => panic!("Pulse.Lib.Dv.unreachable"),
-                                          _ => panic!("Incomplete pattern matching")
-                                      };
-                                  let
-                                  bi·: base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                                  =
-                                      fst__LowParse_PulseParse_Iterator_Type_base_mixed_list·CBOR_Pulse_Raw_EverParse_Type_cbor_raw_size_t(
-                                          res
-                                      );
-                                  let len_sz1: usize =
-                                      snd__LowParse_PulseParse_Iterator_Type_base_mixed_list·CBOR_Pulse_Raw_EverParse_Type_cbor_raw_size_t(
-                                          res
-                                      );
-                                  let rest_sz: usize = total_sz.wrapping_sub(len_sz1);
-                                  let rest: mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-                                      match ml
-                                      {
-                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
-                                          { _0: bi1 }
-                                          =>
-                                            {
-                                                let
-                                                bi·1:
-                                                base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                                                =
-                                                    match bi1
-                                                    {
-                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                                                        =>
-                                                          base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
-                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                                                        { sr: s }
-                                                        =>
-                                                          if rest_sz == 0usize
-                                                          {
-                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                                                          }
-                                                          else
-                                                          {
-                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                                                              { sr: s }
-                                                          },
-                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                                                        { ss: s }
-                                                        =>
-                                                          {
-                                                              let s_pr: (&[cbor_raw], &[cbor_raw]) =
-                                                                  s.split_at(len_sz1);
-                                                              let _s_prefix: &[cbor_raw] = s_pr.0;
-                                                              let s_rest: &[cbor_raw] = s_pr.1;
-                                                              let s_ms: (&[cbor_raw], &[cbor_raw]) =
-                                                                  s_rest.split_at(rest_sz);
-                                                              let s_middle: &[cbor_raw] = s_ms.0;
-                                                              let _s_suffix: &[cbor_raw] = s_ms.1;
-                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                                                              { ss: s_middle }
-                                                          },
-                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                                                        { payload: pl, .. }
-                                                        =>
-                                                          {
-                                                              let mut pn: [usize; 1] =
-                                                                  [len_sz1; 1usize];
-                                                              let mut poffset: [usize; 1] =
-                                                                  [0usize; 1usize];
-                                                              let n: usize = (&pn)[0];
-                                                              let mut cond: bool = n > 0usize;
-                                                              while
-                                                              cond
-                                                              {
-                                                                  let n0: usize = (&pn)[0];
-                                                                  let offset: usize = (&poffset)[0];
-                                                                  let offset·: usize =
-                                                                      jump_raw_data_item_eta(
-                                                                          pl,
-                                                                          offset
-                                                                      );
-                                                                  (&mut pn)[0] =
-                                                                      n0.wrapping_sub(1usize);
-                                                                  (&mut poffset)[0] = offset·;
-                                                                  let n1: usize = (&pn)[0];
-                                                                  cond = n1 > 0usize
-                                                              };
-                                                              let pos: usize = (&poffset)[0];
-                                                              let pl_p: (&[u8], &[u8]) =
-                                                                  pl.split_at(pos);
-                                                              let _pl_prefix: &[u8] = pl_p.0;
-                                                              let pl_suffix: &[u8] = pl_p.1;
-                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                                                              { count: rest_sz, payload: pl_suffix }
-                                                          },
-                                                        _ => panic!("Incomplete pattern matching")
-                                                    };
-                                                mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
-                                                { _0: bi·1 }
-                                            },
-                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
-                                          { cb, ca, ob, before, oa, after }
-                                          =>
-                                            {
-                                                let cb·_sz: usize =
-                                                    append_n_before_sz(len_sz1, rest_sz, cb);
-                                                let ca·_sz: usize =
-                                                    append_n_after_sz(len_sz1, rest_sz, cb);
-                                                let ob·_sz: usize =
-                                                    append_off_before_sz(len_sz1, ob, cb);
-                                                let oa·_sz: usize =
-                                                    append_off_after_sz(len_sz1, oa, ca, cb);
-                                                mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
-                                                {
-                                                    cb: cb·_sz,
-                                                    ca: ca·_sz,
-                                                    ob: ob·_sz,
-                                                    before,
-                                                    oa: oa·_sz,
-                                                    after
-                                                }
-                                            },
-                                          _ => panic!("Incomplete pattern matching")
-                                      };
-                                  iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IPair
-                                  { before: bi·, after: rest }
-                              };
-                          (&mut r)[0] = it_new;
-                          x1
-                      }
-                      else
-                      {
-                          let n_tail_sz: usize = len_sz.wrapping_sub(1usize);
-                          let bi_tail: base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-                              match bi
-                              {
-                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty =>
-                                    base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
-                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                                  { sr: s }
-                                  =>
-                                    if n_tail_sz == 0usize
-                                    {
-                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                                    }
-                                    else
-                                    {
-                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                                        { sr: s }
-                                    },
-                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                                  { ss: s }
-                                  =>
-                                    {
-                                        let s_pr: (&[cbor_raw], &[cbor_raw]) = s.split_at(1usize);
-                                        let _s_prefix: &[cbor_raw] = s_pr.0;
-                                        let s_rest: &[cbor_raw] = s_pr.1;
-                                        let s_ms: (&[cbor_raw], &[cbor_raw]) =
-                                            s_rest.split_at(n_tail_sz);
-                                        let s_middle: &[cbor_raw] = s_ms.0;
-                                        let _s_suffix: &[cbor_raw] = s_ms.1;
-                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                                        { ss: s_middle }
-                                    },
-                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                                  { payload: pl, .. }
-                                  =>
-                                    {
-                                        let mut pn: [usize; 1] = [1usize; 1usize];
-                                        let mut poffset: [usize; 1] = [0usize; 1usize];
-                                        let n: usize = (&pn)[0];
-                                        let mut cond: bool = n > 0usize;
-                                        while
-                                        cond
-                                        {
-                                            let n0: usize = (&pn)[0];
-                                            let offset: usize = (&poffset)[0];
-                                            let offset·: usize =
-                                                jump_raw_data_item_eta(pl, offset);
-                                            (&mut pn)[0] = n0.wrapping_sub(1usize);
-                                            (&mut poffset)[0] = offset·;
-                                            let n1: usize = (&pn)[0];
-                                            cond = n1 > 0usize
-                                        };
-                                        let pos: usize = (&poffset)[0];
-                                        let pl_p: (&[u8], &[u8]) = pl.split_at(pos);
-                                        let _pl_prefix: &[u8] = pl_p.0;
-                                        let pl_suffix: &[u8] = pl_p.1;
-                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                                        { count: n_tail_sz, payload: pl_suffix }
-                                    },
-                                  _ => panic!("Incomplete pattern matching")
-                              };
-                          (&mut r)[0] =
-                              iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IPair
-                              { before: bi_tail, after: ml };
-                          x1
-                      }
-                  }
-              },
-            _ => panic!("Incomplete pattern matching")
-        };
-    let elt: cbor_raw =
-        match eos_res
-        {
-            elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement { _0: x1 } => x1,
-            elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized { _0: pl } =>
-              cbor_raw_read(pl),
-            _ => panic!("Incomplete pattern matching")
-        };
-    let x·: iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw = (&r)[0];
-    (elt,x·)
-}
-
-pub(crate) fn iterator_next_map_entry_raw_data_item <'a>(
-    x:
-    iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-    <'a>
-) ->
-    (cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-    <'a>,
-    iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-    <'a>)
-{
-    let
-    mut
-    r:
-    [iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw;
-    1]
-    =
-        [x; 1usize];
-    let
-    i:
-    iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-    =
-        (&r)[0];
-    let
-    eos_res:
-    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-    =
-        match i
-        {
-            iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
-            { before: bi }
-            =>
-              {
-                  let len_sz: usize =
-                      base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                          bi
-                      );
-                  if len_sz == 0usize
-                  { panic!("Pulse.Lib.Dv.unreachable") }
-                  else
-                  {
-                      let
-                      x1:
-                      elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                      =
-                          match bi
-                          {
-                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                              => panic!("Pulse.Lib.Dv.unreachable"),
-                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                              { sr: s }
-                              =>
-                                {
-                                    let
-                                    x_val: cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                                    =
-                                        s[0];
-                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
-                                    { _0: x_val }
-                                },
-                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                              { ss: s }
-                              =>
-                                {
-                                    let
-                                    x_val: cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                                    =
-                                        s[0usize];
-                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
-                                    { _0: x_val }
-                                },
-                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                              { payload: pl, .. }
-                              =>
-                                {
-                                    let mut pn: [usize; 1] = [0usize; 1usize];
-                                    let mut poffset: [usize; 1] = [0usize; 1usize];
-                                    let n: usize = (&pn)[0];
-                                    let mut cond: bool = n > 0usize;
-                                    while
-                                    cond
-                                    {
-                                        let n0: usize = (&pn)[0];
-                                        let offset: usize = (&poffset)[0];
-                                        let offset·: usize =
-                                            jump_nondep_then_raw_data_item_eta(pl, offset);
-                                        (&mut pn)[0] = n0.wrapping_sub(1usize);
-                                        (&mut poffset)[0] = offset·;
-                                        let n1: usize = (&pn)[0];
-                                        cond = n1 > 0usize
-                                    };
-                                    let pos: usize = (&poffset)[0];
-                                    let pl_p: (&[u8], &[u8]) = pl.split_at(pos);
-                                    let _pl_prefix: &[u8] = pl_p.0;
-                                    let pl_suffix: &[u8] = pl_p.1;
-                                    let consumed_sz: usize =
-                                        jump_nondep_then_raw_data_item_eta(pl_suffix, 0usize);
-                                    let pl_hd_p: (&[u8], &[u8]) = pl_suffix.split_at(consumed_sz);
-                                    let pl_head: &[u8] = pl_hd_p.0;
-                                    let _pl_rest: &[u8] = pl_hd_p.1;
-                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
-                                    { _0: pl_head }
-                                },
-                              _ => panic!("Incomplete pattern matching")
-                          };
-                      if len_sz == 1usize
-                      {
-                          (&mut r)[0] =
-                              iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
-                              {
-                                  before:
-                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                              };
-                          x1
-                      }
-                      else
-                      {
-                          let n_tail_sz: usize = len_sz.wrapping_sub(1usize);
-                          let
-                          bi_tail:
-                          base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                          =
-                              match bi
-                              {
-                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                                  =>
-                                    base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
-                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                                  { sr: s }
-                                  =>
-                                    if n_tail_sz == 0usize
-                                    {
-                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                                    }
-                                    else
-                                    {
-                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                                        { sr: s }
-                                    },
-                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                                  { ss: s }
-                                  =>
-                                    {
-                                        let
-                                        s_pr:
-                                        (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
-                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
-                                        =
-                                            s.split_at(1usize);
-                                        let
-                                        _s_prefix:
-                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
-                                        =
-                                            s_pr.0;
-                                        let
-                                        s_rest:
-                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
-                                        =
-                                            s_pr.1;
-                                        let
-                                        s_ms:
-                                        (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
-                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
-                                        =
-                                            s_rest.split_at(n_tail_sz);
-                                        let
-                                        s_middle:
-                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
-                                        =
-                                            s_ms.0;
-                                        let
-                                        _s_suffix:
-                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
-                                        =
-                                            s_ms.1;
-                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                                        { ss: s_middle }
-                                    },
-                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                                  { payload: pl, .. }
-                                  =>
-                                    {
-                                        let mut pn: [usize; 1] = [1usize; 1usize];
-                                        let mut poffset: [usize; 1] = [0usize; 1usize];
-                                        let n: usize = (&pn)[0];
-                                        let mut cond: bool = n > 0usize;
-                                        while
-                                        cond
-                                        {
-                                            let n0: usize = (&pn)[0];
-                                            let offset: usize = (&poffset)[0];
-                                            let offset·: usize =
-                                                jump_nondep_then_raw_data_item_eta(pl, offset);
-                                            (&mut pn)[0] = n0.wrapping_sub(1usize);
-                                            (&mut poffset)[0] = offset·;
-                                            let n1: usize = (&pn)[0];
-                                            cond = n1 > 0usize
-                                        };
-                                        let pos: usize = (&poffset)[0];
-                                        let pl_p: (&[u8], &[u8]) = pl.split_at(pos);
-                                        let _pl_prefix: &[u8] = pl_p.0;
-                                        let pl_suffix: &[u8] = pl_p.1;
-                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                                        { count: n_tail_sz, payload: pl_suffix }
-                                    },
-                                  _ => panic!("Incomplete pattern matching")
-                              };
-                          (&mut r)[0] =
-                              iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
-                              { before: bi_tail };
-                          x1
-                      }
-                  }
-              },
-            iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IPair
-            { before: bi, after: ml }
-            =>
-              {
-                  let len_sz: usize =
-                      base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                          bi
-                      );
-                  if len_sz == 0usize
-                  { panic!("Pulse.Lib.Dv.unreachable") }
-                  else
-                  {
-                      let
-                      x1:
-                      elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                      =
-                          match bi
-                          {
-                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                              => panic!("Pulse.Lib.Dv.unreachable"),
-                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                              { sr: s }
-                              =>
-                                {
-                                    let
-                                    x_val: cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                                    =
-                                        s[0];
-                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
-                                    { _0: x_val }
-                                },
-                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                              { ss: s }
-                              =>
-                                {
-                                    let
-                                    x_val: cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                                    =
-                                        s[0usize];
-                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
-                                    { _0: x_val }
-                                },
-                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                              { payload: pl, .. }
-                              =>
-                                {
-                                    let mut pn: [usize; 1] = [0usize; 1usize];
-                                    let mut poffset: [usize; 1] = [0usize; 1usize];
-                                    let n: usize = (&pn)[0];
-                                    let mut cond: bool = n > 0usize;
-                                    while
-                                    cond
-                                    {
-                                        let n0: usize = (&pn)[0];
-                                        let offset: usize = (&poffset)[0];
-                                        let offset·: usize =
-                                            jump_nondep_then_raw_data_item_eta(pl, offset);
-                                        (&mut pn)[0] = n0.wrapping_sub(1usize);
-                                        (&mut poffset)[0] = offset·;
-                                        let n1: usize = (&pn)[0];
-                                        cond = n1 > 0usize
-                                    };
-                                    let pos: usize = (&poffset)[0];
-                                    let pl_p: (&[u8], &[u8]) = pl.split_at(pos);
-                                    let _pl_prefix: &[u8] = pl_p.0;
-                                    let pl_suffix: &[u8] = pl_p.1;
-                                    let consumed_sz: usize =
-                                        jump_nondep_then_raw_data_item_eta(pl_suffix, 0usize);
-                                    let pl_hd_p: (&[u8], &[u8]) = pl_suffix.split_at(consumed_sz);
-                                    let pl_head: &[u8] = pl_hd_p.0;
-                                    let _pl_rest: &[u8] = pl_hd_p.1;
-                                    elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
-                                    { _0: pl_head }
-                                },
-                              _ => panic!("Incomplete pattern matching")
-                          };
-                      if len_sz == 1usize
-                      {
-                          let total_sz: usize =
-                              mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                                  ml
-                              );
-                          let
-                          it_new:
-                          iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                          =
-                              if total_sz == 0usize
-                              {
-                                  iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IBase
-                                  {
-                                      before:
-                                      base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                                  }
-                              }
-                              else
-                              {
-                                  let
-                                  mut
-                                  r_node:
-                                  [mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw;
-                                  1]
-                                  =
-                                      [ml; 1usize];
-                                  let mut r_off: [usize; 1] = [0usize; 1usize];
-                                  let mut r_n: [usize; 1] = [total_sz; 1usize];
-                                  let mut pcontinue: [bool; 1] =
-                                      [!
-                                          uu___is_Base__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                                              ml
-                                          );
-                                          1usize];
-                                  while
-                                  (&pcontinue)[0]
-                                  {
-                                      let
-                                      node:
-                                      mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                                      =
-                                          (&r_node)[0];
-                                      let cur_off_v: usize = (&r_off)[0];
-                                      let cur_n_v: usize = (&r_n)[0];
-                                      match node
-                                      {
-                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
-                                          { cb, ca, ob, before, oa, after }
-                                          =>
-                                            {
-                                                let child_n_before: usize =
-                                                    append_n_before_sz(cur_off_v, cur_n_v, cb);
-                                                if child_n_before > 0usize
-                                                {
-                                                    let child_off_sz: usize =
-                                                        append_off_before_sz(cur_off_v, ob, cb);
-                                                    let
-                                                    ib:
-                                                    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                                                    =
-                                                        before[0];
-                                                    (&mut r_node)[0] = ib;
-                                                    (&mut r_off)[0] = child_off_sz;
-                                                    (&mut r_n)[0] = child_n_before;
-                                                    (&mut pcontinue)[0] =
-                                                        !
-                                                        uu___is_Base__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                                                            ib
-                                                        )
-                                                }
-                                                else
-                                                {
-                                                    let child_off_sz: usize =
-                                                        append_off_after_sz(cur_off_v, oa, ca, cb);
-                                                    let child_n_sz: usize =
-                                                        append_n_after_sz(cur_off_v, cur_n_v, cb);
-                                                    let
-                                                    ia:
-                                                    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                                                    =
-                                                        after[0];
-                                                    (&mut r_node)[0] = ia;
-                                                    (&mut r_off)[0] = child_off_sz;
-                                                    (&mut r_n)[0] = child_n_sz;
-                                                    (&mut pcontinue)[0] =
-                                                        !
-                                                        uu___is_Base__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                                                            ia
-                                                        )
-                                                }
-                                            },
-                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
-                                          { .. }
-                                          => (),
-                                          _ => panic!("Incomplete pattern matching")
-                                      }
-                                  };
-                                  let
-                                  node:
-                                  mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                                  =
-                                      (&r_node)[0];
-                                  let cur_off_v: usize = (&r_off)[0];
-                                  let cur_n_v: usize = (&r_n)[0];
-                                  let
-                                  res:
-                                  (base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw,
-                                  usize)
-                                  =
-                                      match node
-                                      {
-                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
-                                          { _0: bi1 }
-                                          =>
-                                            {
-                                                let
-                                                bi·:
-                                                base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                                                =
-                                                    match bi1
-                                                    {
-                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                                                        =>
-                                                          base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
-                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                                                        { sr: s }
-                                                        =>
-                                                          if cur_n_v == 0usize
-                                                          {
-                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                                                          }
-                                                          else
-                                                          {
-                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                                                              { sr: s }
-                                                          },
-                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                                                        { ss: s }
-                                                        =>
-                                                          {
-                                                              let
-                                                              s_pr:
-                                                              (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
-                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
-                                                              =
-                                                                  s.split_at(cur_off_v);
-                                                              let
-                                                              _s_prefix:
-                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
-                                                              =
-                                                                  s_pr.0;
-                                                              let
-                                                              s_rest:
-                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
-                                                              =
-                                                                  s_pr.1;
-                                                              let
-                                                              s_ms:
-                                                              (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
-                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
-                                                              =
-                                                                  s_rest.split_at(cur_n_v);
-                                                              let
-                                                              s_middle:
-                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
-                                                              =
-                                                                  s_ms.0;
-                                                              let
-                                                              _s_suffix:
-                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
-                                                              =
-                                                                  s_ms.1;
-                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                                                              { ss: s_middle }
-                                                          },
-                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                                                        { payload: pl, .. }
-                                                        =>
-                                                          {
-                                                              let mut pn: [usize; 1] =
-                                                                  [cur_off_v; 1usize];
-                                                              let mut poffset: [usize; 1] =
-                                                                  [0usize; 1usize];
-                                                              let n: usize = (&pn)[0];
-                                                              let mut cond: bool = n > 0usize;
-                                                              while
-                                                              cond
-                                                              {
-                                                                  let n0: usize = (&pn)[0];
-                                                                  let offset: usize = (&poffset)[0];
-                                                                  let offset·: usize =
-                                                                      jump_nondep_then_raw_data_item_eta(
-                                                                          pl,
-                                                                          offset
-                                                                      );
-                                                                  (&mut pn)[0] =
-                                                                      n0.wrapping_sub(1usize);
-                                                                  (&mut poffset)[0] = offset·;
-                                                                  let n1: usize = (&pn)[0];
-                                                                  cond = n1 > 0usize
-                                                              };
-                                                              let pos: usize = (&poffset)[0];
-                                                              let pl_p: (&[u8], &[u8]) =
-                                                                  pl.split_at(pos);
-                                                              let _pl_prefix: &[u8] = pl_p.0;
-                                                              let pl_suffix: &[u8] = pl_p.1;
-                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                                                              { count: cur_n_v, payload: pl_suffix }
-                                                          },
-                                                        _ => panic!("Incomplete pattern matching")
-                                                    };
-                                                let len: usize =
-                                                    base_mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                                                        bi·
-                                                    );
-                                                (bi·,len)
-                                            },
-                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
-                                          { .. }
-                                          => panic!("Pulse.Lib.Dv.unreachable"),
-                                          _ => panic!("Incomplete pattern matching")
-                                      };
-                                  let
-                                  bi·:
-                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                                  =
-                                      fst__LowParse_PulseParse_Iterator_Type_base_mixed_list·CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw_size_t(
-                                          res
-                                      );
-                                  let len_sz1: usize =
-                                      snd__LowParse_PulseParse_Iterator_Type_base_mixed_list·CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw_size_t(
-                                          res
-                                      );
-                                  let rest_sz: usize = total_sz.wrapping_sub(len_sz1);
-                                  let
-                                  rest:
-                                  mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                                  =
-                                      match ml
-                                      {
-                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
-                                          { _0: bi1 }
-                                          =>
-                                            {
-                                                let
-                                                bi·1:
-                                                base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                                                =
-                                                    match bi1
-                                                    {
-                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                                                        =>
-                                                          base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
-                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                                                        { sr: s }
-                                                        =>
-                                                          if rest_sz == 0usize
-                                                          {
-                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                                                          }
-                                                          else
-                                                          {
-                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                                                              { sr: s }
-                                                          },
-                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                                                        { ss: s }
-                                                        =>
-                                                          {
-                                                              let
-                                                              s_pr:
-                                                              (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
-                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
-                                                              =
-                                                                  s.split_at(len_sz1);
-                                                              let
-                                                              _s_prefix:
-                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
-                                                              =
-                                                                  s_pr.0;
-                                                              let
-                                                              s_rest:
-                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
-                                                              =
-                                                                  s_pr.1;
-                                                              let
-                                                              s_ms:
-                                                              (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
-                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
-                                                              =
-                                                                  s_rest.split_at(rest_sz);
-                                                              let
-                                                              s_middle:
-                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
-                                                              =
-                                                                  s_ms.0;
-                                                              let
-                                                              _s_suffix:
-                                                              &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
-                                                              =
-                                                                  s_ms.1;
-                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                                                              { ss: s_middle }
-                                                          },
-                                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                                                        { payload: pl, .. }
-                                                        =>
-                                                          {
-                                                              let mut pn: [usize; 1] =
-                                                                  [len_sz1; 1usize];
-                                                              let mut poffset: [usize; 1] =
-                                                                  [0usize; 1usize];
-                                                              let n: usize = (&pn)[0];
-                                                              let mut cond: bool = n > 0usize;
-                                                              while
-                                                              cond
-                                                              {
-                                                                  let n0: usize = (&pn)[0];
-                                                                  let offset: usize = (&poffset)[0];
-                                                                  let offset·: usize =
-                                                                      jump_nondep_then_raw_data_item_eta(
-                                                                          pl,
-                                                                          offset
-                                                                      );
-                                                                  (&mut pn)[0] =
-                                                                      n0.wrapping_sub(1usize);
-                                                                  (&mut poffset)[0] = offset·;
-                                                                  let n1: usize = (&pn)[0];
-                                                                  cond = n1 > 0usize
-                                                              };
-                                                              let pos: usize = (&poffset)[0];
-                                                              let pl_p: (&[u8], &[u8]) =
-                                                                  pl.split_at(pos);
-                                                              let _pl_prefix: &[u8] = pl_p.0;
-                                                              let pl_suffix: &[u8] = pl_p.1;
-                                                              base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                                                              { count: rest_sz, payload: pl_suffix }
-                                                          },
-                                                        _ => panic!("Incomplete pattern matching")
-                                                    };
-                                                mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Base
-                                                { _0: bi·1 }
-                                            },
-                                          mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
-                                          { cb, ca, ob, before, oa, after }
-                                          =>
-                                            {
-                                                let cb·_sz: usize =
-                                                    append_n_before_sz(len_sz1, rest_sz, cb);
-                                                let ca·_sz: usize =
-                                                    append_n_after_sz(len_sz1, rest_sz, cb);
-                                                let ob·_sz: usize =
-                                                    append_off_before_sz(len_sz1, ob, cb);
-                                                let oa·_sz: usize =
-                                                    append_off_after_sz(len_sz1, oa, ca, cb);
-                                                mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Append
-                                                {
-                                                    cb: cb·_sz,
-                                                    ca: ca·_sz,
-                                                    ob: ob·_sz,
-                                                    before,
-                                                    oa: oa·_sz,
-                                                    after
-                                                }
-                                            },
-                                          _ => panic!("Incomplete pattern matching")
-                                      };
-                                  iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IPair
-                                  { before: bi·, after: rest }
-                              };
-                          (&mut r)[0] = it_new;
-                          x1
-                      }
-                      else
-                      {
-                          let n_tail_sz: usize = len_sz.wrapping_sub(1usize);
-                          let
-                          bi_tail:
-                          base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                          =
-                              match bi
-                              {
-                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                                  =>
-                                    base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty,
-                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                                  { sr: s }
-                                  =>
-                                    if n_tail_sz == 0usize
-                                    {
-                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Empty
-                                    }
-                                    else
-                                    {
-                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Singleton
-                                        { sr: s }
-                                    },
-                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                                  { ss: s }
-                                  =>
-                                    {
-                                        let
-                                        s_pr:
-                                        (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
-                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
-                                        =
-                                            s.split_at(1usize);
-                                        let
-                                        _s_prefix:
-                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
-                                        =
-                                            s_pr.0;
-                                        let
-                                        s_rest:
-                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
-                                        =
-                                            s_pr.1;
-                                        let
-                                        s_ms:
-                                        (&[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw],
-                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw])
-                                        =
-                                            s_rest.split_at(n_tail_sz);
-                                        let
-                                        s_middle:
-                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
-                                        =
-                                            s_ms.0;
-                                        let
-                                        _s_suffix:
-                                        &[cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw]
-                                        =
-                                            s_ms.1;
-                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Slice
-                                        { ss: s_middle }
-                                    },
-                                  base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                                  { payload: pl, .. }
-                                  =>
-                                    {
-                                        let mut pn: [usize; 1] = [1usize; 1usize];
-                                        let mut poffset: [usize; 1] = [0usize; 1usize];
-                                        let n: usize = (&pn)[0];
-                                        let mut cond: bool = n > 0usize;
-                                        while
-                                        cond
-                                        {
-                                            let n0: usize = (&pn)[0];
-                                            let offset: usize = (&poffset)[0];
-                                            let offset·: usize =
-                                                jump_nondep_then_raw_data_item_eta(pl, offset);
-                                            (&mut pn)[0] = n0.wrapping_sub(1usize);
-                                            (&mut poffset)[0] = offset·;
-                                            let n1: usize = (&pn)[0];
-                                            cond = n1 > 0usize
-                                        };
-                                        let pos: usize = (&poffset)[0];
-                                        let pl_p: (&[u8], &[u8]) = pl.split_at(pos);
-                                        let _pl_prefix: &[u8] = pl_p.0;
-                                        let pl_suffix: &[u8] = pl_p.1;
-                                        base_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Serialized
-                                        { count: n_tail_sz, payload: pl_suffix }
-                                    },
-                                  _ => panic!("Incomplete pattern matching")
-                              };
-                          (&mut r)[0] =
-                              iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::IPair
-                              { before: bi_tail, after: ml };
-                          x1
-                      }
-                  }
-              },
-            _ => panic!("Incomplete pattern matching")
-        };
-    let elt: cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-        match eos_res
-        {
-            elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
-            { _0: x1 }
-            => x1,
-            elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
-            { _0: pl }
-            => cbor_raw_read_map_entry(pl),
-            _ => panic!("Incomplete pattern matching")
-        };
-    let
-    x·:
-    iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-    =
-        (&r)[0];
-    (elt,x·)
-}
-
-fn impl_cbor_compare_fuel(x1: cbor_raw, x2: cbor_raw) -> i16
-{
-    let ty1: u8 = cbor_raw_get_major_type_aux(x1);
-    let ty2: u8 = cbor_raw_get_major_type_aux(x2);
-    let c: i16 = impl_uint8_compare(ty1, ty2);
-    if c == 0i16
-    {
-        if ty1 == cbor_major_type_uint64 || ty1 == cbor_major_type_neg_int64
-        {
-            let ru1: raw_uint64 =
-                match x1
-                {
-                    cbor_raw::CBOR_Case_Int { v } =>
-                      raw_uint64 { size: v.cbor_int_size, value: v.cbor_int_value },
-                    _ => raw_uint64 { size: 0u8, value: 0u64 }
-                };
-            let ru2: raw_uint64 =
-                match x2
-                {
-                    cbor_raw::CBOR_Case_Int { v } =>
-                      raw_uint64 { size: v.cbor_int_size, value: v.cbor_int_value },
-                    _ => raw_uint64 { size: 0u8, value: 0u64 }
-                };
-            impl_raw_uint64_compare(ru1, ru2)
-        }
-        else if ty1 == cbor_major_type_byte_string || ty1 == cbor_major_type_text_string
-        {
-            let len1: raw_uint64 =
-                match x1
-                {
-                    cbor_raw::CBOR_Case_String { v } =>
-                      raw_uint64
-                      { size: v.cbor_string_size, value: (v.cbor_string_ptr).len() as u64 },
-                    _ => raw_uint64 { size: 0u8, value: 0u64 }
-                };
-            let len2: raw_uint64 =
-                match x2
-                {
-                    cbor_raw::CBOR_Case_String { v } =>
-                      raw_uint64
-                      { size: v.cbor_string_size, value: (v.cbor_string_ptr).len() as u64 },
-                    _ => raw_uint64 { size: 0u8, value: 0u64 }
-                };
-            let cl: i16 = impl_raw_uint64_compare(len1, len2);
-            if cl == 0i16
-            {
-                let s1: &[u8] = cbor_raw_get_string_aux(x1);
-                let s2: &[u8] = cbor_raw_get_string_aux(x2);
-                lex_compare_bytes(s1, s2)
-            }
-            else
-            { cl }
-        }
-        else if ty1 == cbor_major_type_tagged
-        {
-            let tag1: raw_uint64 =
-                match x1
-                {
-                    cbor_raw::CBOR_Case_Tagged { v } => v.cbor_tagged_tag,
-                    cbor_raw::CBOR_Case_Tagged_Serialized { v } => v.cbor_tagged_serialized_tag,
-                    _ => raw_uint64 { size: 0u8, value: 0u64 }
-                };
-            let tag2: raw_uint64 =
-                match x2
-                {
-                    cbor_raw::CBOR_Case_Tagged { v } => v.cbor_tagged_tag,
-                    cbor_raw::CBOR_Case_Tagged_Serialized { v } => v.cbor_tagged_serialized_tag,
-                    _ => raw_uint64 { size: 0u8, value: 0u64 }
-                };
-            let ct: i16 = impl_raw_uint64_compare(tag1, tag2);
-            if ct == 0i16 { impl_cbor_compare_fuel_tagged(x1, x2) } else { ct }
-        }
-        else if ty1 == cbor_major_type_array
-        {
-            let len1: raw_uint64 =
-                match x1
-                {
-                    cbor_raw::CBOR_Case_Array { v } =>
-                      raw_uint64
-                      {
-                          size: v.cbor_array_length_size,
-                          value:
-                          mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                              v.cbor_array_ptr
-                          )
-                          as
-                          u64
-                      },
-                    _ => raw_uint64 { size: 0u8, value: 0u64 }
-                };
-            let len2: raw_uint64 =
-                match x2
-                {
-                    cbor_raw::CBOR_Case_Array { v } =>
-                      raw_uint64
-                      {
-                          size: v.cbor_array_length_size,
-                          value:
-                          mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                              v.cbor_array_ptr
-                          )
-                          as
-                          u64
-                      },
-                    _ => raw_uint64 { size: 0u8, value: 0u64 }
-                };
-            let cl: i16 = impl_raw_uint64_compare(len1, len2);
-            if cl == 0i16
-            {
-                let len_sz: usize = len1.value as usize;
-                impl_cbor_compare_fuel_array(x1, x2, len_sz)
-            }
-            else
-            { cl }
-        }
-        else if ty1 == cbor_major_type_map
-        {
-            let len1: raw_uint64 =
-                match x1
-                {
-                    cbor_raw::CBOR_Case_Map { v } =>
-                      raw_uint64
-                      {
-                          size: v.cbor_map_length_size,
-                          value:
-                          mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                              v.cbor_map_ptr
-                          )
-                          as
-                          u64
-                      },
-                    _ => raw_uint64 { size: 0u8, value: 0u64 }
-                };
-            let len2: raw_uint64 =
-                match x2
-                {
-                    cbor_raw::CBOR_Case_Map { v } =>
-                      raw_uint64
-                      {
-                          size: v.cbor_map_length_size,
-                          value:
-                          mixed_list_length__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry·CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                              v.cbor_map_ptr
-                          )
-                          as
-                          u64
-                      },
-                    _ => raw_uint64 { size: 0u8, value: 0u64 }
-                };
-            let cl: i16 = impl_raw_uint64_compare(len1, len2);
-            if cl == 0i16
-            {
-                let len_sz: usize = len1.value as usize;
-                impl_cbor_compare_fuel_map(x1, x2, len_sz)
-            }
-            else
-            { cl }
-        }
-        else
-        {
-            let sv1: u8 =
-                match x1
-                {
-                    cbor_raw::CBOR_Case_Simple { v } => v,
-                    _ => panic!("Incomplete pattern matching")
-                };
-            let sv2: u8 =
-                match x2
-                {
-                    cbor_raw::CBOR_Case_Simple { v } => v,
-                    _ => panic!("Incomplete pattern matching")
-                };
-            impl_uint8_compare(sv1, sv2)
-        }
-    }
-    else
-    { c }
-}
-
-pub(crate) fn impl_cbor_compare_fuel_tagged(x1: cbor_raw, x2: cbor_raw) -> i16
-{
-    let e1: elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-        cbor_raw_get_tagged_payload_aux_eos(x1);
-    let e2: elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-        cbor_raw_get_tagged_payload_aux_eos(x2);
-    match e1
-    {
-        elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement { _0: xx1 } =>
-          match e2
-          {
-              elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement { _0: xx2 } =>
-                impl_cbor_compare_fuel(xx1, xx2),
-              elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized { _0: s2 } =>
-                {
-                    let xx2: cbor_raw = cbor_raw_read_fuel(s2);
-                    impl_cbor_compare_fuel(xx1, xx2)
-                },
-              _ => panic!("Incomplete pattern matching")
-          },
-        elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized { _0: s1 } =>
-          match e2
-          {
-              elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement { _0: xx2 } =>
-                {
-                    let xx1: cbor_raw = cbor_raw_read_fuel(s1);
-                    impl_cbor_compare_fuel(xx1, xx2)
-                },
-              elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized { _0: s2 } =>
-                {
-                    let off: usize = jump_raw_data_item_eta(s1, 0usize);
-                    let s·: (&[u8], &[u8]) = s1.split_at(off);
-                    let _letpattern: (&[u8], &[u8]) =
-                        {
-                            let s11: &[u8] = s·.0;
-                            let s21: &[u8] = s·.1;
-                            (s11,s21)
-                        };
-                    let ex1: &[u8] =
-                        {
-                            let exact: &[u8] = _letpattern.0;
-                            let _rest: &[u8] = _letpattern.1;
-                            exact
-                        };
-                    let off0: usize = jump_raw_data_item_eta(s2, 0usize);
-                    let s·0: (&[u8], &[u8]) = s2.split_at(off0);
-                    let _letpattern0: (&[u8], &[u8]) =
-                        {
-                            let s11: &[u8] = s·0.0;
-                            let s21: &[u8] = s·0.1;
-                            (s11,s21)
-                        };
-                    let ex2: &[u8] =
-                        {
-                            let exact: &[u8] = _letpattern0.0;
-                            let _rest: &[u8] = _letpattern0.1;
-                            exact
-                        };
-                    lex_compare_bytes(ex1, ex2)
-                },
-              _ => panic!("Incomplete pattern matching")
-          },
-        _ => panic!("Incomplete pattern matching")
-    }
-}
-
-pub(crate) fn impl_cbor_compare_fuel_array(x1: cbor_raw, x2: cbor_raw, len: usize) -> i16
-{
-    let ar_ml1: mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw = cbor_raw_get_array_aux(x1);
-    let ar_ml2: mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw = cbor_raw_get_array_aux(x2);
-    let it1_init: iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-        iterator_start_raw_data_item_fuel(ar_ml1);
-    let it2_init: iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-        iterator_start_raw_data_item_fuel(ar_ml2);
-    let mut r_it1: [iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw; 1] = [it1_init; 1usize];
-    let mut r_it2: [iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw; 1] = [it2_init; 1usize];
-    let mut r_acc: [i16; 1] = [0i16; 1usize];
-    let mut r_cnt: [usize; 1] = [0usize; 1usize];
-    let acc: i16 = (&r_acc)[0];
-    let cnt: usize = (&r_cnt)[0];
-    let mut cond: bool = cnt < len && acc == 0i16;
-    while
-    cond
-    {
-        let e1: elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-            iterator_next_eos_raw_data_item_fuel_byref(&mut r_it1);
-        let e2: elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-            iterator_next_eos_raw_data_item_fuel_byref(&mut r_it2);
-        let old_cnt: usize = (&r_cnt)[0];
-        match e1
-        {
-            elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement { _0: xx1 } =>
-              match e2
-              {
-                  elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement { _0: xx2 } =>
-                    {
-                        let r2: i16 = impl_cbor_compare_fuel(xx1, xx2);
-                        (&mut r_acc)[0] = r2;
-                        (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
-                    },
-                  elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
-                  { _0: s2 }
-                  =>
-                    {
-                        let xx2: cbor_raw = cbor_raw_read_fuel(s2);
-                        let r2: i16 = impl_cbor_compare_fuel(xx1, xx2);
-                        (&mut r_acc)[0] = r2;
-                        (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
-                    },
-                  _ => panic!("Incomplete pattern matching")
-              },
-            elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized { _0: s1 } =>
-              match e2
-              {
-                  elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement { _0: xx2 } =>
-                    {
-                        let xx1: cbor_raw = cbor_raw_read_fuel(s1);
-                        let r2: i16 = impl_cbor_compare_fuel(xx1, xx2);
-                        (&mut r_acc)[0] = r2;
-                        (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
-                    },
-                  elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
-                  { _0: s2 }
-                  =>
-                    {
-                        let r2: i16 = byte_compare_pts_to_parsed_data_item(s1, s2);
-                        (&mut r_acc)[0] = r2;
-                        (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
-                    },
-                  _ => panic!("Incomplete pattern matching")
-              },
-            _ => panic!("Incomplete pattern matching")
-        };
-        let acc0: i16 = (&r_acc)[0];
-        let cnt0: usize = (&r_cnt)[0];
-        cond = cnt0 < len && acc0 == 0i16
-    };
-    (&r_acc)[0]
-}
-
-fn fst__CBOR_Pulse_Raw_EverParse_Type_cbor_raw_CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>(
-    x: (cbor_raw <'a>, cbor_raw <'a>)
-) ->
-    cbor_raw
-    <'a>
-{
-    let _1: cbor_raw = x.0;
-    let __2: cbor_raw = x.1;
-    _1
-}
-
-fn snd__CBOR_Pulse_Raw_EverParse_Type_cbor_raw_CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>(
-    x: (cbor_raw <'a>, cbor_raw <'a>)
-) ->
-    cbor_raw
-    <'a>
-{
-    let __1: cbor_raw = x.0;
-    let _2: cbor_raw = x.1;
-    _2
-}
-
-pub(crate) fn impl_cbor_compare_fuel_map(x1: cbor_raw, x2: cbor_raw, len: usize) -> i16
-{
-    let
-    map_ml1:
-    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-    =
-        cbor_raw_get_map_aux(x1);
-    let
-    map_ml2:
-    mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-    =
-        cbor_raw_get_map_aux(x2);
-    let
-    it1_init:
-    iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-    =
-        iterator_start_map_entry_raw_data_item_fuel(map_ml1);
-    let
-    it2_init:
-    iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-    =
-        iterator_start_map_entry_raw_data_item_fuel(map_ml2);
-    let
-    mut
-    r_it1:
-    [iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw;
-    1]
-    =
-        [it1_init; 1usize];
-    let
-    mut
-    r_it2:
-    [iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw;
-    1]
-    =
-        [it2_init; 1usize];
-    let mut r_acc: [i16; 1] = [0i16; 1usize];
-    let mut r_cnt: [usize; 1] = [0usize; 1usize];
-    let acc: i16 = (&r_acc)[0];
-    let cnt: usize = (&r_cnt)[0];
-    let mut cond: bool = cnt < len && acc == 0i16;
-    while
-    cond
-    {
-        let
-        e1:
-        elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-        =
-            iterator_next_eos_map_entry_raw_data_item_fuel_byref(&mut r_it1);
-        let
-        e2:
-        elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-        =
-            iterator_next_eos_map_entry_raw_data_item_fuel_byref(&mut r_it2);
-        let old_cnt: usize = (&r_cnt)[0];
-        match e1
-        {
-            elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
-            { _0: entry1 }
-            =>
-              match e2
-              {
-                  elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
-                  { _0: entry2 }
-                  =>
-                    {
-                        let ck: i16 =
-                            impl_cbor_compare_fuel(
-                                entry1.cbor_map_entry_key,
-                                entry2.cbor_map_entry_key
-                            );
-                        if ck == 0i16
-                        {
-                            let cv: i16 =
-                                impl_cbor_compare_fuel(
-                                    entry1.cbor_map_entry_value,
-                                    entry2.cbor_map_entry_value
-                                );
-                            (&mut r_acc)[0] = cv;
-                            (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
-                        }
-                        else
-                        {
-                            (&mut r_acc)[0] = ck;
-                            (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
-                        }
-                    },
-                  elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
-                  { _0: s2 }
-                  =>
-                    {
-                        let off1: usize = jump_raw_data_item_eta(s2, 0usize);
-                        let s·: (&[u8], &[u8]) = s2.split_at(off1);
-                        let _letpattern: (&[u8], &[u8]) =
-                            {
-                                let s1: &[u8] = s·.0;
-                                let s21: &[u8] = s·.1;
-                                (s1,s21)
-                            };
-                        let pair: (cbor_raw, cbor_raw) =
-                            {
-                                let input1: &[u8] = _letpattern.0;
-                                let input2: &[u8] = _letpattern.1;
-                                let res1: cbor_raw = cbor_raw_read_fuel(input1);
-                                let res2: cbor_raw = cbor_raw_read_fuel(input2);
-                                (res1,res2)
-                            };
-                        let entry2: cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-                            cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                            {
-                                cbor_map_entry_key:
-                                fst__CBOR_Pulse_Raw_EverParse_Type_cbor_raw_CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                                    pair
-                                ),
-                                cbor_map_entry_value:
-                                snd__CBOR_Pulse_Raw_EverParse_Type_cbor_raw_CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                                    pair
-                                )
-                            };
-                        let ck: i16 =
-                            impl_cbor_compare_fuel(
-                                entry1.cbor_map_entry_key,
-                                entry2.cbor_map_entry_key
-                            );
-                        if ck == 0i16
-                        {
-                            let cv: i16 =
-                                impl_cbor_compare_fuel(
-                                    entry1.cbor_map_entry_value,
-                                    entry2.cbor_map_entry_value
-                                );
-                            (&mut r_acc)[0] = cv;
-                            (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
-                        }
-                        else
-                        {
-                            (&mut r_acc)[0] = ck;
-                            (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
-                        }
-                    },
-                  _ => panic!("Incomplete pattern matching")
-              },
-            elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
-            { _0: s1 }
-            =>
-              match e2
-              {
-                  elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::EElement
-                  { _0: entry2 }
-                  =>
-                    {
-                        let off1: usize = jump_raw_data_item_eta(s1, 0usize);
-                        let s·: (&[u8], &[u8]) = s1.split_at(off1);
-                        let _letpattern: (&[u8], &[u8]) =
-                            {
-                                let s11: &[u8] = s·.0;
-                                let s2: &[u8] = s·.1;
-                                (s11,s2)
-                            };
-                        let pair: (cbor_raw, cbor_raw) =
-                            {
-                                let input1: &[u8] = _letpattern.0;
-                                let input2: &[u8] = _letpattern.1;
-                                let res1: cbor_raw = cbor_raw_read_fuel(input1);
-                                let res2: cbor_raw = cbor_raw_read_fuel(input2);
-                                (res1,res2)
-                            };
-                        let entry1: cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw =
-                            cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
-                            {
-                                cbor_map_entry_key:
-                                fst__CBOR_Pulse_Raw_EverParse_Type_cbor_raw_CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                                    pair
-                                ),
-                                cbor_map_entry_value:
-                                snd__CBOR_Pulse_Raw_EverParse_Type_cbor_raw_CBOR_Pulse_Raw_EverParse_Type_cbor_raw(
-                                    pair
-                                )
-                            };
-                        let ck: i16 =
-                            impl_cbor_compare_fuel(
-                                entry1.cbor_map_entry_key,
-                                entry2.cbor_map_entry_key
-                            );
-                        if ck == 0i16
-                        {
-                            let cv: i16 =
-                                impl_cbor_compare_fuel(
-                                    entry1.cbor_map_entry_value,
-                                    entry2.cbor_map_entry_value
-                                );
-                            (&mut r_acc)[0] = cv;
-                            (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
-                        }
-                        else
-                        {
-                            (&mut r_acc)[0] = ck;
-                            (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
-                        }
-                    },
-                  elt_or_serialized__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::ESerialized
-                  { _0: s2 }
-                  =>
-                    {
-                        let pair_res: i16 = lex_compare_bytes(s1, s2);
-                        (&mut r_acc)[0] = pair_res;
-                        (&mut r_cnt)[0] = old_cnt.wrapping_add(1usize)
-                    },
-                  _ => panic!("Incomplete pattern matching")
-              },
-            _ => panic!("Incomplete pattern matching")
-        };
-        let acc0: i16 = (&r_acc)[0];
-        let cnt0: usize = (&r_cnt)[0];
-        cond = cnt0 < len && acc0 == 0i16
-    };
-    (&r_acc)[0]
-}
-
-fn impl_cbor_compare_fuel_call(x1: cbor_raw, x2: cbor_raw) -> i16
-{ impl_cbor_compare_fuel(x1, x2) }
-
-pub(crate) fn impl_cbor_compare(x1: cbor_raw, x2: cbor_raw) -> i16
-{ impl_cbor_compare_fuel_call(x1, x2) }
-
 pub(crate) fn cbor_det_serialize_slice(x: cbor_raw, output: &mut [u8]) -> usize
 { cbor_serialize(x, output) }
 
@@ -10270,3 +10731,7 @@ iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse
 
 pub type cbor_det_array_append_cell_t <'a> =
 mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>;
+
+pub type cbor_det_map_entry_insert_cell_t <'a> =
+mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+<'a>;

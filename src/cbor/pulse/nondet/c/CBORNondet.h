@@ -163,6 +163,23 @@ cbor_nondet_map_get_multiple(
   size_t len
 );
 
+LowParse_PulseParse_Iterator_Type_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+dummy_cbor_nondet_map_entry_insert_cell(void);
+
+cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw dummy_cbor_nondet_map_entry(void);
+
+FStar_Pervasives_Native_option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+cbor_nondet_map_entry_insert(
+  cbor_raw x,
+  cbor_raw key,
+  cbor_raw value,
+  LowParse_PulseParse_Iterator_Type_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+  *r1,
+  LowParse_PulseParse_Iterator_Type_mixed_list__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw
+  *r2,
+  cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw *ry
+);
+
 #if defined(__cplusplus)
 }
 #endif
