@@ -116,6 +116,78 @@ ensures
   ml_res
 }
 
+(* Generalization of [mixed_list_singleton] to an arbitrary target ambient
+   permission [a]. The [Singleton] node permissions are scaled by [1/a] so that
+   after multiplying by the ambient [a] they cancel back to the concrete
+   reference half-permission [1/2] and the element permission [pm_y]. The trade
+   restores exactly the original (ambient-independent) resources. *)
+inline_for_extraction
+fn mixed_list_singleton_gen
+  (#t: Type0) (#u: Type0) (vmatch: perm -> t -> u -> slprop)
+  (#k: parser_kind) (p: parser k u)
+  (a: perm)
+  (pm_y: perm)
+  (y_elem: t) (y: Ghost.erased u)
+  (ry: R.ref t)
+  (vmatch_gather: gather_t vmatch)
+requires
+  vmatch pm_y y_elem (Ghost.reveal y) **
+  (exists* vy. R.pts_to ry vy)
+returns ml_res: mixed_list t
+ensures
+  mixed_list_match vmatch p a ml_res [Ghost.reveal y] **
+  Trade.trade
+    (mixed_list_match vmatch p a ml_res [Ghost.reveal y])
+    (vmatch pm_y y_elem (Ghost.reveal y) ** (exists* vy. R.pts_to ry vy)) **
+  pure (mixed_list_length ml_res == 1sz)
+{
+  with vy0. assert (R.pts_to ry vy0);
+  R.write ry y_elem;
+  R.share ry;
+  let sp_val : Ghost.erased perm = (1.0R /. 2.0R) /. a;
+  let sv_val : Ghost.erased perm = pm_y /. a;
+  let ml_res : mixed_list t = Base (Singleton (Ghost.reveal sp_val) (Ghost.reveal sv_val) ry);
+  perm_mul_div_cancel' a (1.0R /. 2.0R);
+  perm_mul_div_cancel' a pm_y;
+  rewrite (R.pts_to ry #(1.0R /. 2.0R) y_elem)
+    as (pts_to ry #(a *. Ghost.reveal sp_val) y_elem);
+  rewrite (vmatch pm_y y_elem (Ghost.reveal y))
+    as (vmatch (a *. Ghost.reveal sv_val) y_elem (Ghost.reveal y));
+  fold (base_mixed_list_match_n vmatch p 0 1 a (Singleton #t (Ghost.reveal sp_val) (Ghost.reveal sv_val) ry) [Ghost.reveal y]);
+  fold (mixed_list_match_n vmatch p 0 1 a (Base (Singleton (Ghost.reveal sp_val) (Ghost.reveal sv_val) ry)) [Ghost.reveal y]);
+  rewrite (mixed_list_match_n vmatch p 0 1 a (Base (Singleton (Ghost.reveal sp_val) (Ghost.reveal sv_val) ry)) [Ghost.reveal y])
+    as (mixed_list_match_n vmatch p 0 (SZ.v (mixed_list_length ml_res)) a ml_res [Ghost.reveal y]);
+  fold (mixed_list_match vmatch p a ml_res [Ghost.reveal y]);
+  perm_mul_div_cancel' a (1.0R /. 2.0R);
+  perm_mul_div_cancel' a pm_y;
+  Trade.intro_trade
+    (mixed_list_match vmatch p a ml_res [Ghost.reveal y])
+    (vmatch pm_y y_elem (Ghost.reveal y) ** (exists* vy. R.pts_to ry vy))
+    (R.pts_to ry #(1.0R /. 2.0R) y_elem **
+     pure (a *. Ghost.reveal sp_val == 1.0R /. 2.0R /\ a *. Ghost.reveal sv_val == pm_y))
+    fn _ {
+      unfold (mixed_list_match vmatch p a ml_res [Ghost.reveal y]);
+      rewrite (mixed_list_match_n vmatch p 0 (SZ.v (mixed_list_length ml_res)) a ml_res [Ghost.reveal y])
+        as (mixed_list_match_n vmatch p 0 1 a (Base (Singleton (Ghost.reveal sp_val) (Ghost.reveal sv_val) ry)) [Ghost.reveal y]);
+      unfold (mixed_list_match_n vmatch p 0 1 a (Base (Singleton (Ghost.reveal sp_val) (Ghost.reveal sv_val) ry)) [Ghost.reveal y]);
+      unfold (base_mixed_list_match_n vmatch p 0 1 a (Singleton #t (Ghost.reveal sp_val) (Ghost.reveal sv_val) ry) [Ghost.reveal y]);
+      with x_sing y_sing. assert (
+        pts_to ry #(a *. Ghost.reveal sp_val) x_sing **
+        vmatch (a *. Ghost.reveal sv_val) x_sing y_sing
+      );
+      rewrite (pts_to ry #(a *. Ghost.reveal sp_val) x_sing)
+        as (R.pts_to ry #(1.0R /. 2.0R) x_sing);
+      R.gather ry;
+      rewrite (vmatch (a *. Ghost.reveal sv_val) x_sing y_sing)
+        as (vmatch pm_y y_elem (Ghost.reveal y));
+      drop_ (pure (Ghost.reveal y_elem == Ghost.reveal x_sing));
+      rewrite (R.pts_to ry #(1.0R /. 2.0R +. 1.0R /. 2.0R) y_elem)
+        as (R.pts_to ry y_elem);
+      fold (exists* vy. R.pts_to ry vy);
+    };
+  ml_res
+}
+
 (* ================================================================ *)
 (* Append of two mixed_lists                                         *)
 (* ================================================================ *)

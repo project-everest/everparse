@@ -15,6 +15,7 @@ module R = Pulse.Lib.Reference
 module PM = Pulse.Lib.SeqMatch
 module UTF8 = CBOR.Pulse.API.UTF8
 module NondetAB = CBOR.Pulse.Raw.EverParse.Nondet.ArrayBuilder
+module MIS = CBOR.Pulse.Raw.EverParse.Nondet.MapInsertSpec
 module IT = LowParse.PulseParse.Iterator.Type
 module L = FStar.List.Tot
 
@@ -919,9 +920,106 @@ ensures
 
 #pop-options
 
+(* ======== Map: structural entry insert (prepend, Nondet) ======== *)
+
+let cbor_nondet_map_entry_insert_cell_t = IT.mixed_list cbor_nondet_map_entry
+
+#push-options "--z3rlimit 64"
+
+fn cbor_nondet_map_entry_insert
+  (x: cbor_nondet_map) (key value: cbornondet)
+  (r1 r2: R.ref cbor_nondet_map_entry_insert_cell_t)
+  (ry: R.ref cbor_nondet_map_entry)
+  (#p: perm) (#y: Ghost.erased (v: Spec.cbor { Spec.CMap? (Spec.unpack v) }))
+  (#pkv: perm) (#vk #vv: Ghost.erased Spec.cbor)
+requires
+  cbor_nondet_map_match p x y **
+  cbor_nondet_match pkv key vk ** cbor_nondet_match pkv value vv **
+  cbor_nondet_map_entry_insert_refs r1 r2 ry
+returns res: option cbor_nondet_map
+ensures (match res with
+  | None ->
+    cbor_nondet_map_match p x y **
+    cbor_nondet_match pkv key vk ** cbor_nondet_match pkv value vv **
+    cbor_nondet_map_entry_insert_refs r1 r2 ry **
+    pure (Spec.cbor_map_defined vk (Spec.CMap?.c (Spec.unpack y)) \/
+          ~ (FStar.UInt.fits (Spec.cbor_map_length (Spec.CMap?.c (Spec.unpack y)) + 1) U64.n))
+  | Some m ->
+    exists* (p_res: perm) (vres: Spec.cbor).
+      cbor_nondet_map_match p_res m vres **
+      Trade.trade
+        (cbor_nondet_map_match p_res m vres)
+        (cbor_nondet_map_match p x y **
+         cbor_nondet_match pkv key vk ** cbor_nondet_match pkv value vv **
+         cbor_nondet_map_entry_insert_refs r1 r2 ry) **
+      pure (Spec.CMap? (Spec.unpack vres) /\
+            (Spec.CMap?.c (Spec.unpack vres) <: Spec.cbor_map) ==
+              Spec.cbor_map_union (Spec.CMap?.c (Spec.unpack y)) (Spec.cbor_map_singleton vk vv)))
+{
+  let f64 : squash SZ.fits_u64 = assume (SZ.fits_u64);
+  cbor_nondet_map_match_elim x;
+  unfold (cbor_nondet_map_entry_insert_refs r1 r2 ry);
+  let res = MIS.cbor_nondet_map_entry_insert_spec f64 x.map key value r1 r2 ry;
+  match res {
+    None -> {
+      Trade.elim (cbor_nondet_match p x.map y) (cbor_nondet_map_match p x y);
+      fold (cbor_nondet_map_entry_insert_refs r1 r2 ry);
+      None #cbor_nondet_map
+    }
+    Some m -> {
+      with p_res vres. assert (
+        cbor_nondet_match p_res m vres **
+        Trade.trade
+          (cbor_nondet_match p_res m vres)
+          (cbor_nondet_match p x.map y **
+           cbor_nondet_match pkv key vk ** cbor_nondet_match pkv value vv **
+           (exists* w1 w2 wy. R.pts_to r1 w1 ** R.pts_to r2 w2 ** R.pts_to ry wy))
+      );
+      let res_map : cbor_nondet_map = { map = m };
+      rewrite (cbor_nondet_match p_res m vres) as (cbor_nondet_match p_res res_map.map vres);
+      fold (cbor_nondet_map_match p_res res_map vres);
+      Trade.intro_trade
+        (cbor_nondet_map_match p_res res_map vres)
+        (cbor_nondet_map_match p x y **
+         cbor_nondet_match pkv key vk ** cbor_nondet_match pkv value vv **
+         cbor_nondet_map_entry_insert_refs r1 r2 ry)
+        (Trade.trade
+           (cbor_nondet_match p_res m vres)
+           (cbor_nondet_match p x.map y **
+            cbor_nondet_match pkv key vk ** cbor_nondet_match pkv value vv **
+            (exists* w1 w2 wy. R.pts_to r1 w1 ** R.pts_to r2 w2 ** R.pts_to ry wy)) **
+         Trade.trade
+           (cbor_nondet_match p x.map y)
+           (cbor_nondet_map_match p x y))
+        fn _ {
+          unfold (cbor_nondet_map_match p_res res_map vres);
+          rewrite (cbor_nondet_match p_res res_map.map vres) as (cbor_nondet_match p_res m vres);
+          Trade.elim
+            (cbor_nondet_match p_res m vres)
+            (cbor_nondet_match p x.map y **
+             cbor_nondet_match pkv key vk ** cbor_nondet_match pkv value vv **
+             (exists* w1 w2 wy. R.pts_to r1 w1 ** R.pts_to r2 w2 ** R.pts_to ry wy));
+          Trade.elim
+            (cbor_nondet_match p x.map y)
+            (cbor_nondet_map_match p x y);
+          fold (cbor_nondet_map_entry_insert_refs r1 r2 ry);
+        };
+      Some #cbor_nondet_map res_map
+    }
+  }
+}
+
+#pop-options
+
 (* ======== dummy ======== *)
 
 let dummy_cbor_nondet_t () = RawType.CBOR_Case_Invalid
 
 let dummy_cbor_nondet_array_append_cell () : cbor_nondet_array_append_cell_t =
   IT.Base IT.Empty
+
+let dummy_cbor_nondet_map_entry_insert_cell () : cbor_nondet_map_entry_insert_cell_t =
+  IT.Base IT.Empty
+
+let dummy_cbor_nondet_map_entry () : cbor_nondet_map_entry =
+  CBOR.Pulse.Raw.EverParse.Type.Mkcbor_map_entry (dummy_cbor_nondet_t ()) (dummy_cbor_nondet_t ())
