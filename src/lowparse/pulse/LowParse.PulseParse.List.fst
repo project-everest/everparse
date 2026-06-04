@@ -145,7 +145,7 @@ requires
 returns res: PPVCL.vclist_lowtype el
 ensures
   PPB.pts_to_parsed (parse_list p) input #pm v **
-  PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) res (Ghost.reveal v)
+  PPB.vmatch_conv (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv)) (fun (x: list t) -> Some x) res (Ghost.reveal v)
 {
   parser_kind_prop_equiv k p;
   (* count pass *)
@@ -195,6 +195,7 @@ ensures
       (PPB.pts_to_parsed (parse_list p) input #pm v);
     PPVCL.nlist_length_fact (L.length (Ghost.reveal v)) v';
     let res = PPVCL.vmatch_vclist_some_intro #el #t #(PPB.vmatch_conv elem_vmatch elem_conv) n vec v;
+    PPB.intro_vmatch_conv (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv)) (fun (x: list t) -> Some x) res (Ghost.reveal v) (Ghost.reveal v);
     res
   } else {
     (* empty list *)
@@ -203,6 +204,7 @@ ensures
     fold (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (None #(SZ.t & V.vec el)) (Ghost.reveal v));
     rewrite (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (None #(SZ.t & V.vec el)) (Ghost.reveal v))
       as (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) res (Ghost.reveal v));
+    PPB.intro_vmatch_conv (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv)) (fun (x: list t) -> Some x) res (Ghost.reveal v) (Ghost.reveal v);
     res
   }
 }
