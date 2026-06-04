@@ -856,13 +856,19 @@ fn free_vmatch_conv
   free x #vm;
 }
 
+(* A named (non-anonymous) identity conv for leaf types. Using a named top-level
+   symbol (rather than an inline lambda) lets SMT congruence equate the conv used
+   in a sum's casevmatch with the conv implicit inferred from copyful_parse_leaf,
+   which is required to discharge the per-case vmatch-extensionality obligation. *)
+let leaf_conv (t: Type) : t -> GTot (option t) = fun x -> Some x
+
 inline_for_extraction
 fn copyful_parse_leaf
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (r: leaf_reader p)
-: copyful_parse #_ #_ #_ (LPS.eq_as_slprop t) #_ p (fun (x: t) -> Some x)
+: copyful_parse #_ #_ #_ (LPS.eq_as_slprop t) #_ p (leaf_conv t)
 =
   (input: slice byte)
   (#pm: perm)
@@ -870,7 +876,7 @@ fn copyful_parse_leaf
 {
   let res = r input;
   fold (LPS.eq_as_slprop t res v);
-  intro_vmatch_conv (LPS.eq_as_slprop t) (fun (x: t) -> Some x) res (Ghost.reveal v) (Ghost.reveal v);
+  intro_vmatch_conv (LPS.eq_as_slprop t) (leaf_conv t) res (Ghost.reveal v) (Ghost.reveal v);
   res
 }
 

@@ -554,12 +554,30 @@ let copyful_free_name ty =
   then sprintf "(PPB.free_leaf #%s)" (compile_type ty)
   else sprintf "free_%s" (String.uncapitalize_ascii ty)
 
+(* The refinement-free "mid" type used as the RHS of a field type's copyful
+   vmatch. Leaf types use their (refinement-free) high type; user types export a
+   <ty>_mid abbreviation. *)
+let copyful_mid_name ty =
+  if is_copyful_leaf_type ty
+  then compile_type ty
+  else sprintf "%s_mid" (String.uncapitalize_ascii ty)
+
+(* The conv (<ty>_mid -> GTot (option <ty>)) for a field type. Leaf types use the
+   total identity (mid = high), threaded as Some; user types refer to their
+   generated <ty>_conv. *)
+let copyful_conv_name ty =
+  if is_copyful_leaf_type ty
+  then sprintf "(PPB.leaf_conv %s)" (compile_type ty)
+  else sprintf "%s_conv" (String.uncapitalize_ascii ty)
+
 (* Emit a copyful parser (read_<n>) and free combinator (free_<n>) for a leaf
    type that has a leaf_reader (e.g. enums). The vmatch is a pure equality. *)
 let emit_copyful_leaf o i n =
   wp i "let %s_lowtype = %s\n\n" n n;
-  wp i "let %s_vmatch : %s -> %s -> Pulse.Lib.Core.slprop = LPS.eq_as_slprop %s\n\n" n n n n;
-  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "noextract let %s_mid = %s\n\n" n n;
+  wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop = LPS.eq_as_slprop %s\n\n" n n n n;
+  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) = fun x -> FStar.Pervasives.Native.Some x\n\n" n n n;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
   wp o "let read_%s = PPB.copyful_parse_leaf %s_reader\n\n" n n;
   wp o "let free_%s = PPB.free_leaf\n\n" n
@@ -568,10 +586,12 @@ let emit_copyful_leaf o i n =
    byte-array type. The result is a freshly allocated, freeable byte vector
    related to the high-level value by PPBY.vmatch_copy_bytes. [combinator] is
    the copyful_parse_* expression producing the vector. *)
-let emit_copyful_bytes o i n combinator =
+let emit_copyful_bytes o i n combinator conv =
   wp i "let %s_lowtype = Pulse.Lib.Vec.vec FStar.UInt8.t\n\n" n;
-  wp i "let %s_vmatch : Pulse.Lib.Vec.vec FStar.UInt8.t -> %s -> Pulse.Lib.Core.slprop = PPBY.vmatch_copy_bytes\n\n" n n;
-  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "noextract let %s_mid = BY.bytes\n\n" n;
+  wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop = PPBY.vmatch_copy_bytes\n\n" n n n;
+  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) = %s\n\n" n n n conv;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
   wp o "let read_%s = %s\n\n" n combinator;
   wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> PPBY.free_copy_bytes x #(Ghost.hide (Ghost.reveal v <: BY.bytes))\n\n" n n
@@ -601,7 +621,7 @@ let emit_copyful_owned_sum o i n tn cprefix cl =
   wp o "let %s_casevmatch (k: LP.sum_key %s_sum) (xl: %s_low) (vp: LP.sum_type_of_tag %s_sum k) : Pulse.Lib.Core.slprop =\n  match k with\n" n n n n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
-    wp o "  | %s -> (match xl with | %s_%s_low v -> %s v vp | _ -> Pulse.Lib.Core.pure False)\n" cn cprefix case (copyful_vmatch_name ty)
+    wp o "  | %s -> (match xl with | %s_%s_low v -> (PPB.vmatch_conv %s %s) v vp | _ -> Pulse.Lib.Core.pure False)\n" cn cprefix case (copyful_vmatch_name ty) (copyful_conv_name ty)
   ) cl;
   wp o "\n";
   (* exported (transparent) low type *)
@@ -619,7 +639,7 @@ let emit_copyful_owned_sum o i n tn cprefix cl =
      reference to [<n>_sum]/[make_sum']/tactics. *)
   wp i "let %s_vmatch (xl: %s_low) (v: %s) : Pulse.Lib.Core.slprop =\n  Pulse.Lib.Core.op_Star_Star\n    (Pulse.Lib.Core.pure (%s_low_tag xl == %s_high_tag v))\n    (match v with\n" n n n n n;
   List.iter (fun (case, ty) ->
-    wp i "     | %s_%s y -> (match xl with | %s_%s_low vp -> %s vp y | _ -> Pulse.Lib.Core.pure False)\n" cprefix case cprefix case (copyful_vmatch_name ty)
+    wp i "     | %s_%s y -> (match xl with | %s_%s_low vp -> (PPB.vmatch_conv %s %s) vp y | _ -> Pulse.Lib.Core.pure False)\n" cprefix case cprefix case (copyful_vmatch_name ty) (copyful_conv_name ty)
   ) cl;
   wp i "    )\n\n";
   (* impl-side [vmatch_sum] (tactic/make_sum'-based) and its extensional equality
@@ -645,14 +665,16 @@ let emit_copyful_owned_sum o i n tn cprefix cl =
   wp o "\n";
   (* copyful parser for the sum: built at [vmatch_sum], then bridged to the
      transparent interface [vmatch] via [copyful_parse_ext]. *)
-  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
-  wp o "let read_%s_sum : PPB.copyful_parse %s_vmatch_sum %s_parser =\n  PPS.copyful_parse_sum %s_sum %s_repr_reader %s_repr_jumper parse_%s_cases\n    %s_low %s_tag_of_low %s_casevmatch copyful_%s_cases (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n n n n tn tn n n n n n;
-  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n  PPB.copyful_parse_ext read_%s_sum %s_parser %s_vmatch (FStar.Classical.forall_intro_2 %s_vmatch_eq_fwd)\n\n" n n n n n n n;
+  wp i "noextract let %s_mid = %s\n\n" n n;
+  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) = fun x -> FStar.Pervasives.Native.Some x\n\n" n n n;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
+  wp o "let read_%s_sum : PPB.copyful_parse %s_vmatch_sum %s_parser (fun (x: %s) -> FStar.Pervasives.Native.Some x) =\n  PPS.copyful_parse_sum %s_sum %s_repr_reader %s_repr_jumper parse_%s_cases\n    %s_low %s_tag_of_low %s_casevmatch copyful_%s_cases (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n n n n n tn tn n n n n n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n  PPB.copyful_parse_ext read_%s_sum %s_parser %s_vmatch (FStar.Classical.forall_intro_2 %s_vmatch_eq_fwd)\n\n" n n n n n n n n;
   (* per-case free *)
   wp o "inline_for_extraction\nlet free_%s_cases (k: LP.sum_key %s_sum)\n  : PPB.free_t (%s_casevmatch k) =\n  match k with\n" n n n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
-    wp o "  | %s -> PPS.free_sum_case %s_sum %s_low %s_tag_of_low %s_casevmatch %s\n      %s (fun xl -> match xl with | %s_%s_low v -> Some v | _ -> None) ()\n" cn n n n n cn (copyful_free_name ty) cprefix case
+    wp o "  | %s -> PPS.free_sum_case %s_sum %s_low %s_tag_of_low %s_casevmatch %s\n      (PPB.free_vmatch_conv %s %s %s) (fun xl -> match xl with | %s_%s_low v -> Some v | _ -> None) ()\n" cn n n n n cn (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty) cprefix case
   ) cl;
   wp o "\n";
   (* free for the sum: built at [vmatch_sum], then bridged via [free_ext]. *)
@@ -685,10 +707,10 @@ let emit_copyful_owned_dsum o i n tn cprefix cl dt =
   wp o "  | LP.Known kk -> (match kk with\n";
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
-    wp o "    | %s -> (match xl with | %s_%s_low v -> %s v vp | _ -> Pulse.Lib.Core.pure False)\n" cn cprefix case (copyful_vmatch_name ty)
+    wp o "    | %s -> (match xl with | %s_%s_low v -> (PPB.vmatch_conv %s %s) v vp | _ -> Pulse.Lib.Core.pure False)\n" cn cprefix case (copyful_vmatch_name ty) (copyful_conv_name ty)
   ) cl;
   wp o "    )\n";
-  wp o "  | LP.Unknown r -> (match xl with | %s_Unknown_%s_low _ v -> %s v vp | _ -> Pulse.Lib.Core.pure False)\n\n" cprefix tn (copyful_vmatch_name dt);
+  wp o "  | LP.Unknown r -> (match xl with | %s_Unknown_%s_low _ v -> (PPB.vmatch_conv %s %s) v vp | _ -> Pulse.Lib.Core.pure False)\n\n" cprefix tn (copyful_vmatch_name dt) (copyful_conv_name dt);
   (* exported (transparent) low type *)
   wp ii "let %s_lowtype = %s_low\n\n" n n;
   (* interface-side [maybe_enum_key]-typed tag helpers for the transparent vmatch *)
@@ -701,9 +723,9 @@ let emit_copyful_owned_dsum o i n tn cprefix cl dt =
   (* transparent direct vmatch (interface), defined by a textual match. *)
   wp i "let %s_vmatch (xl: %s_low) (v: %s) : Pulse.Lib.Core.slprop =\n  Pulse.Lib.Core.op_Star_Star\n    (Pulse.Lib.Core.pure (%s_low_tag xl == %s_high_tag v))\n    (match v with\n" n n n n n;
   List.iter (fun (case, ty) ->
-    wp i "     | %s_%s y -> (match xl with | %s_%s_low vp -> %s vp y | _ -> Pulse.Lib.Core.pure False)\n" cprefix case cprefix case (copyful_vmatch_name ty)
+    wp i "     | %s_%s y -> (match xl with | %s_%s_low vp -> (PPB.vmatch_conv %s %s) vp y | _ -> Pulse.Lib.Core.pure False)\n" cprefix case cprefix case (copyful_vmatch_name ty) (copyful_conv_name ty)
   ) cl;
-  wp i "     | %s_Unknown_%s rv y -> (match xl with | %s_Unknown_%s_low _ vp -> %s vp y | _ -> Pulse.Lib.Core.pure False)\n" cprefix tn cprefix tn (copyful_vmatch_name dt);
+  wp i "     | %s_Unknown_%s rv y -> (match xl with | %s_Unknown_%s_low _ vp -> (PPB.vmatch_conv %s %s) vp y | _ -> Pulse.Lib.Core.pure False)\n" cprefix tn cprefix tn (copyful_vmatch_name dt) (copyful_conv_name dt);
   wp i "    )\n\n";
   (* impl-side [vmatch_dsum] and its extensional equality to the transparent
      interface vmatch, proved by per-branch norm+trefl. *)
@@ -734,19 +756,21 @@ let emit_copyful_owned_dsum o i n tn cprefix cl dt =
   wp o "  | LP.Unknown r -> PPS.copyful_parse_dsum_case %s_sum %s_low %s_tag_of_low %s_casevmatch (LP.Unknown r)\n      %s (fun lv -> %s_Unknown_%s_low r lv) () ()\n" n n n n (copyful_read_name dt) cprefix tn;
   wp o "#pop-options\n\n";
   (* copyful parser for the dsum: built at [vmatch_dsum], then bridged via ext. *)
-  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
-  wp o "let read_%s_sum : PPB.copyful_parse %s_vmatch_sum %s_parser =\n  PPS.copyful_parse_dsum %s_sum read_maybe_%s_key %s_repr_jumper parse_%s_cases\n    %s_low %s_tag_of_low %s_casevmatch copyful_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ())) ()\n\n" n n n n tn tn n n n n n;
-  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n  PPB.copyful_parse_ext read_%s_sum %s_parser %s_vmatch (FStar.Classical.forall_intro_2 %s_vmatch_eq_fwd)\n\n" n n n n n n n;
+  wp i "noextract let %s_mid = %s\n\n" n n;
+  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) = fun x -> FStar.Pervasives.Native.Some x\n\n" n n n;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
+  wp o "let read_%s_sum : PPB.copyful_parse %s_vmatch_sum %s_parser (fun (x: %s) -> FStar.Pervasives.Native.Some x) =\n  PPS.copyful_parse_dsum %s_sum read_maybe_%s_key %s_repr_jumper parse_%s_cases\n    %s_low %s_tag_of_low %s_casevmatch copyful_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ())) ()\n\n" n n n n n tn tn n n n n n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n  PPB.copyful_parse_ext read_%s_sum %s_parser %s_vmatch (FStar.Classical.forall_intro_2 %s_vmatch_eq_fwd)\n\n" n n n n n n n n;
   (* per-case free (both Known and Unknown) *)
   wp o "#push-options \"--max_fuel 4 --max_ifuel 4 --z3rlimit 100\"\n";
   wp o "inline_for_extraction\nlet free_%s_cases (k: LP.dsum_key %s_sum)\n  : PPB.free_t (%s_casevmatch k) =\n  match k with\n" n n n;
   wp o "  | LP.Known kk -> (match kk with\n";
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
-    wp o "    | %s -> PPS.free_dsum_case %s_sum %s_low %s_tag_of_low %s_casevmatch (LP.Known %s)\n        %s (fun xl -> match xl with | %s_%s_low v -> Some v | _ -> None) ()\n" cn n n n n cn (copyful_free_name ty) cprefix case
+    wp o "    | %s -> PPS.free_dsum_case %s_sum %s_low %s_tag_of_low %s_casevmatch (LP.Known %s)\n        (PPB.free_vmatch_conv %s %s %s) (fun xl -> match xl with | %s_%s_low v -> Some v | _ -> None) ()\n" cn n n n n cn (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty) cprefix case
   ) cl;
   wp o "    )\n";
-  wp o "  | LP.Unknown r -> PPS.free_dsum_case %s_sum %s_low %s_tag_of_low %s_casevmatch (LP.Unknown r)\n      %s (fun xl -> match xl with | %s_Unknown_%s_low _ v -> Some v | _ -> None) ()\n" n n n n (copyful_free_name dt) cprefix tn;
+  wp o "  | LP.Unknown r -> PPS.free_dsum_case %s_sum %s_low %s_tag_of_low %s_casevmatch (LP.Unknown r)\n      (PPB.free_vmatch_conv %s %s %s) (fun xl -> match xl with | %s_Unknown_%s_low _ v -> Some v | _ -> None) ()\n" n n n n (copyful_vmatch_name dt) (copyful_conv_name dt) (copyful_free_name dt) cprefix tn;
   wp o "#pop-options\n\n";
   (* free for the dsum: built at [vmatch_dsum], then bridged via free_ext. *)
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
@@ -778,7 +802,7 @@ let emit_copyful_implicit_sum o i n tn cprefix cl =
   wp o "let %s_casevmatch (k: LP.sum_key %s_sum) (xl: %s_low) (vp: LP.sum_type_of_tag %s_sum k) : Pulse.Lib.Core.slprop =\n  match k with\n" n n n n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
-    wp o "  | %s -> (match xl with | %s_%s_low v -> %s v vp | _ -> Pulse.Lib.Core.pure False)\n" cn cprefix case (copyful_vmatch_name ty)
+    wp o "  | %s -> (match xl with | %s_%s_low v -> (PPB.vmatch_conv %s %s) v vp | _ -> Pulse.Lib.Core.pure False)\n" cn cprefix case (copyful_vmatch_name ty) (copyful_conv_name ty)
   ) cl;
   wp o "\n";
   (* exported (transparent) low type *)
@@ -790,7 +814,7 @@ let emit_copyful_implicit_sum o i n tn cprefix cl =
   (* transparent direct (tag-parameterized) vmatch (interface). *)
   wp i "let %s_vmatch (k:%s) (xl:%s_low) (v:%s k) : Pulse.Lib.Core.slprop =\n  Pulse.Lib.Core.op_Star_Star\n    (Pulse.Lib.Core.pure (%s_low_tag xl == %s_as_enum_key k))\n    (match v with\n" n tn n n n tn;
   List.iter (fun (case, ty) ->
-    wp i "     | %s_%s y -> (match xl with | %s_%s_low vp -> %s vp y | _ -> Pulse.Lib.Core.pure False)\n" cprefix case cprefix case (copyful_vmatch_name ty)
+    wp i "     | %s_%s y -> (match xl with | %s_%s_low vp -> (PPB.vmatch_conv %s %s) vp y | _ -> Pulse.Lib.Core.pure False)\n" cprefix case cprefix case (copyful_vmatch_name ty) (copyful_conv_name ty)
   ) cl;
   wp i "    )\n\n";
   (* impl-side [vmatch_sum_cases] and its extensional equality to the transparent
@@ -825,14 +849,16 @@ let emit_copyful_implicit_sum o i n tn cprefix cl =
   ) cl;
   wp o "\n";
   (* tag-parameterized copyful parser: built at [vmatch_sum_cases], bridged via ext. *)
-  wp i "val read_%s (k:%s) : PPB.copyful_parse (%s_vmatch k) (%s_parser k)\n\n" n tn n n;
-  wp o "let read_%s_sum (k:%s) : PPB.copyful_parse (%s_vmatch_sum k) (%s_parser k) =\n  PPS.copyful_parse_sum_cases %s_sum parse_%s_cases\n    %s_low %s_tag_of_low %s_casevmatch copyful_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n tn n n n n n n n n tn;
-  wp o "let read_%s (k:%s) : PPB.copyful_parse (%s_vmatch k) (%s_parser k) =\n  PPB.copyful_parse_ext (read_%s_sum k) (%s_parser k) (%s_vmatch k) (FStar.Classical.forall_intro_2 (%s_vmatch_eq_fwd k))\n\n" n tn n n n n n n;
+  wp i "noextract let %s_mid (k:%s) = %s k\n\n" n tn n;
+  wp i "noextract let %s_conv (k:%s) : %s_mid k -> GTot (FStar.Pervasives.Native.option (%s k)) = fun x -> FStar.Pervasives.Native.Some x\n\n" n tn n n;
+  wp i "val read_%s (k:%s) : PPB.copyful_parse (%s_vmatch k) (%s_parser k) (%s_conv k)\n\n" n tn n n n;
+  wp o "let read_%s_sum (k:%s) : PPB.copyful_parse (%s_vmatch_sum k) (%s_parser k) (fun (x: %s k) -> FStar.Pervasives.Native.Some x) =\n  PPS.copyful_parse_sum_cases %s_sum parse_%s_cases\n    %s_low %s_tag_of_low %s_casevmatch copyful_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n tn n n n n n n n n n tn;
+  wp o "let read_%s (k:%s) : PPB.copyful_parse (%s_vmatch k) (%s_parser k) (%s_conv k) =\n  PPB.copyful_parse_ext (read_%s_sum k) (%s_parser k) (%s_vmatch k) (FStar.Classical.forall_intro_2 (%s_vmatch_eq_fwd k))\n\n" n tn n n n n n n n;
   (* per-case free *)
   wp o "inline_for_extraction\nlet free_%s_cases (k: LP.sum_key %s_sum)\n  : PPB.free_t (%s_casevmatch k) =\n  match k with\n" n n n;
   List.iter (fun (case, ty) ->
     let cn = String.capitalize_ascii case in
-    wp o "  | %s -> PPS.free_sum_case %s_sum %s_low %s_tag_of_low %s_casevmatch %s\n      %s (fun xl -> match xl with | %s_%s_low v -> Some v | _ -> None) ()\n" cn n n n n cn (copyful_free_name ty) cprefix case
+    wp o "  | %s -> PPS.free_sum_case %s_sum %s_low %s_tag_of_low %s_casevmatch %s\n      (PPB.free_vmatch_conv %s %s %s) (fun xl -> match xl with | %s_%s_low v -> Some v | _ -> None) ()\n" cn n n n n cn (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty) cprefix case
   ) cl;
   wp o "\n";
   (* tag-parameterized free: built at [vmatch_sum_cases], bridged via free_ext. *)
@@ -847,16 +873,18 @@ let emit_copyful_implicit_sum o i n tn cprefix cl =
    element type's own copyful vmatch). *)
 let emit_copyful_array o i n ty byte_size elem_count =
   wp i "let %s_lowtype = Pulse.Lib.Vec.vec %s\n\n" n (copyful_lowtype_name ty);
-  wp i "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop = PPAR.vmatch_array %s %dsz\n\n" n n n (copyful_vmatch_name ty) elem_count;
-  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "noextract let %s_mid = list %s\n\n" n (compile_type ty);
+  wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop = PPAR.vmatch_array (PPB.vmatch_conv %s %s) %dsz\n\n" n n n (copyful_vmatch_name ty) (copyful_conv_name ty) elem_count;
+  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) = PPAR.array_conv %d\n\n" n n n elem_count;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
-  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n" n n n n;
   wp o "  %s_eq ();\n" n;
   wp o "  assert_norm (LP.fldata_array_precond (LP.get_parser_kind %s) %d %d == true);\n" (pcombinator_name ty) byte_size elem_count;
   wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
   wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
   wp o "  PPAR.copyful_parse_array %s %s %s %d %dsz %d %dsz ()\n\n" (scombinator_name ty) (copyful_read_name ty) (pulse_jumper_name ty) byte_size byte_size elem_count elem_count;
-  wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> PPAR.free_array %s %dsz x #(Ghost.hide (Ghost.reveal v <: list %s))\n\n" n n (copyful_free_name ty) elem_count (compile_type ty)
+  wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> PPAR.free_array (PPB.free_vmatch_conv %s %s %s) %dsz x #(Ghost.hide (Ghost.reveal v <: list %s))\n\n" n n (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty) elem_count (compile_type ty)
 
 (* Emit copyful parser (read_<n>) and free (free_<n>) for a variable-count list
    [ty<low..high>] prefixed by its element count (parsed with [repr_t]'s leaf
@@ -866,13 +894,15 @@ let emit_copyful_array o i n ty byte_size elem_count =
    (elementwise reusing the element type's own copyful vmatch). *)
 let emit_copyful_vclist o i n ty low high repr_t =
   wp i "let %s_lowtype = PPVCL.vclist_lowtype %s\n\n" n (copyful_lowtype_name ty);
-  wp i "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop = PPVCL.vmatch_vclist %s\n\n" n n n (copyful_vmatch_name ty);
-  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "noextract let %s_mid = list %s\n\n" n (compile_type ty);
+  wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop = PPVCL.vmatch_vclist (PPB.vmatch_conv %s %s)\n\n" n n n (copyful_vmatch_name ty) (copyful_conv_name ty);
+  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) = PPVCL.vclist_conv (FStar.UInt32.v %dul) (FStar.UInt32.v %dul)\n\n" n n n low high;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
-  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n" n n n n;
   wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
   wp o "  PPVCL.copyful_parse_vclist %dul %dul %s %s %s %s () fits_u64_squash\n\n" low high (pulse_jumper_name repr_t) (pulse_leaf_reader_name repr_t) (copyful_read_name ty) (pulse_jumper_name ty);
-  wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> PPVCL.free_vclist %s x #(Ghost.hide (Ghost.reveal v <: list %s))\n\n" n n (copyful_free_name ty) (compile_type ty)
+  wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> PPVCL.free_vclist (PPB.free_vmatch_conv %s %s %s) x #(Ghost.hide (Ghost.reveal v <: list %s))\n\n" n n (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty) (compile_type ty)
 
 (* Emit copyful parser (read_<n>) and free (free_<n>) for a byte-length-bounded
    list [ty<low..high>]: a list of [ty] elements framed by a byte-length prefix
@@ -888,13 +918,16 @@ let emit_copyful_vclist o i n ty low high repr_t =
    .fst-only definition), so it is exported abstractly. *)
 let emit_copyful_vldata_list o i n ty min max =
   wp i "let %s_lowtype = PPVCL.vclist_lowtype %s\n\n" n (copyful_lowtype_name ty);
-  wp i "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop =\n" n n n;
-  wp i "  LPC.vmatch_synth (PPVD.vmatch_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.vmatch_vclist %s)) (fun (x: %s) -> (x <: LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)))\n\n" min max (scombinator_name ty) (copyful_vmatch_name ty) n min max (scombinator_name ty);
-  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "noextract let %s_mid = list %s\n\n" n (compile_type ty);
+  wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop =\n" n n n;
+  wp i "  PPVD.vmatch_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.vmatch_vclist (PPB.vmatch_conv %s %s))\n\n" min max (scombinator_name ty) (copyful_vmatch_name ty) (copyful_conv_name ty);
+  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) =\n" n n n;
+  wp i "  PPC.synth_conv (PPVD.vldata_strong_conv %d %d (LP.serialize_list _ %s) (fun (x: list %s) -> FStar.Pervasives.Native.Some x)) synth_%s\n\n" min max (scombinator_name ty) (compile_type ty) n;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
   wp o "\nlet %s_copyful_synth_injective () : Lemma (LP.synth_injective synth_%s) = ()\n\n" n n;
   wp o "let %s_copyful_synth_inverse () : Lemma (LP.synth_inverse synth_%s synth_%s_recip) = ()\n\n" n n n;
-  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n" n n n n;
   wp o "  %s_copyful_synth_injective ();\n" n;
   wp o "  %s_copyful_synth_inverse ();\n" n;
   wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
@@ -905,9 +938,7 @@ let emit_copyful_vldata_list o i n ty min max =
   wp o "       (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash)\n" (log256 max);
   wp o "    synth_%s synth_%s_recip\n\n" n n;
   wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
-  wp o "  PPC.free_synth\n";
-  wp o "    (PPVD.free_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.free_vclist %s))\n" min max (scombinator_name ty) (copyful_free_name ty);
-  wp o "    synth_%s_recip\n\n" n
+  wp o "  PPVD.free_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.free_vclist (PPB.free_vmatch_conv %s %s %s))\n\n" min max (scombinator_name ty) (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty)
 
 (* Like emit_copyful_vldata_list but for a list framed by a generic length-header
    parser (parse_bounded_vlgen, used when the [<lo..hi : repr>] vector specifies
@@ -917,13 +948,16 @@ let emit_copyful_vldata_list o i n ty min max =
    PPVD.vmatch_vldata_strong). [lenty] is the length-prefix representation. *)
 let emit_copyful_vllist o i n ty smin smax lenty =
   wp i "let %s_lowtype = PPVCL.vclist_lowtype %s\n\n" n (copyful_lowtype_name ty);
-  wp i "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop =\n" n n n;
-  wp i "  LPC.vmatch_synth (PPVD.vmatch_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.vmatch_vclist %s)) (fun (x: %s) -> (x <: LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)))\n\n" smin smax (scombinator_name ty) (copyful_vmatch_name ty) n smin smax (scombinator_name ty);
-  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "noextract let %s_mid = list %s\n\n" n (compile_type ty);
+  wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop =\n" n n n;
+  wp i "  PPVD.vmatch_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.vmatch_vclist (PPB.vmatch_conv %s %s))\n\n" smin smax (scombinator_name ty) (copyful_vmatch_name ty) (copyful_conv_name ty);
+  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) =\n" n n n;
+  wp i "  PPC.synth_conv (PPVD.vldata_strong_conv %d %d (LP.serialize_list _ %s) (fun (x: list %s) -> FStar.Pervasives.Native.Some x)) synth_%s\n\n" smin smax (scombinator_name ty) (compile_type ty) n;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
   wp o "\nlet %s_copyful_synth_injective () : Lemma (LP.synth_injective synth_%s) = ()\n\n" n n;
   wp o "let %s_copyful_synth_inverse () : Lemma (LP.synth_inverse synth_%s synth_%s_recip) = ()\n\n" n n n;
-  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n" n n n n;
   wp o "  %s_copyful_synth_injective ();\n" n;
   wp o "  %s_copyful_synth_inverse ();\n" n;
   wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
@@ -935,9 +969,7 @@ let emit_copyful_vllist o i n ty smin smax lenty =
   wp o "       (PPLS.copyful_parse_list %s %s ()) ())\n" (copyful_read_name ty) (pulse_jumper_name ty);
   wp o "    synth_%s synth_%s_recip\n\n" n n;
   wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
-  wp o "  PPC.free_synth\n";
-  wp o "    (PPVD.free_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.free_vclist %s))\n" smin smax (scombinator_name ty) (copyful_free_name ty);
-  wp o "    synth_%s_recip\n\n" n
+  wp o "  PPVD.free_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.free_vclist (PPB.free_vmatch_conv %s %s %s))\n\n" smin smax (scombinator_name ty) (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty)
 
 (* Emit a copyful parser (read_<n>) and free (free_<n>) for a length-framed
    SINGLE payload [t payload[len]] (compile_vldata's fits_in_bounds branch):
@@ -953,13 +985,16 @@ let emit_copyful_vllist o i n ty smin smax lenty =
    the high value nor its representation). [lenty] is the length-header repr. *)
 let emit_copyful_vlgen_payload o i n ty smin smax lenty =
   wp i "let %s_lowtype = %s\n\n" n (copyful_lowtype_name ty);
-  wp i "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop =\n" n n n;
-  wp i "  LPC.vmatch_synth (PPVD.vmatch_vldata_strong %d %d %s %s) (LP.synth_vlgen_recip %d %d %s)\n\n" smin smax (scombinator_name ty) (copyful_vmatch_name ty) smin smax (scombinator_name ty);
-  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "noextract let %s_mid = %s\n\n" n (copyful_mid_name ty);
+  wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop =\n" n n n;
+  wp i "  PPVD.vmatch_vldata_strong %d %d %s %s\n\n" smin smax (scombinator_name ty) (copyful_vmatch_name ty);
+  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) =\n" n n n;
+  wp i "  PPC.synth_conv (PPVD.vldata_strong_conv %d %d %s %s) (LP.synth_vlgen %d %d %s)\n\n" smin smax (scombinator_name ty) (copyful_conv_name ty) smin smax (scombinator_name ty);
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
   wp o "\nlet %s_copyful_synth_injective () : Lemma (LP.synth_injective (LP.synth_vlgen %d %d %s)) = ()\n\n" n smin smax (scombinator_name ty);
   wp o "let %s_copyful_synth_inverse () : Lemma (LP.synth_inverse (LP.synth_vlgen %d %d %s) (LP.synth_vlgen_recip %d %d %s)) = ()\n\n" n smin smax (scombinator_name ty) smin smax (scombinator_name ty);
-  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n" n n n n;
   wp o "  %s_copyful_synth_injective ();\n" n;
   wp o "  %s_copyful_synth_inverse ();\n" n;
   wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
@@ -968,9 +1003,7 @@ let emit_copyful_vlgen_payload o i n ty smin smax lenty =
   wp o "    (PPVG.copyful_parse_bounded_vlgen_payload %d %d %s %s %s %s ())\n" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty) (copyful_read_name ty);
   wp o "    (LP.synth_vlgen %d %d %s) (LP.synth_vlgen_recip %d %d %s)\n\n" smin smax (scombinator_name ty) smin smax (scombinator_name ty);
   wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
-  wp o "  PPC.free_synth\n";
-  wp o "    (PPVD.free_vldata_strong %d %d %s %s)\n" smin smax (scombinator_name ty) (copyful_free_name ty);
-  wp o "    (LP.synth_vlgen_recip %d %d %s)\n\n" smin smax (scombinator_name ty)
+  wp o "  PPVD.free_vldata_strong %d %d %s %s\n\n" smin smax (scombinator_name ty) (copyful_free_name ty)
 
 (* Like emit_copyful_vlgen_payload, but for the case where the payload type [ty]
    may exceed the length bounds, so compile_vldata's else-branch generates a
@@ -982,13 +1015,16 @@ let emit_copyful_vlgen_payload o i n ty smin smax lenty =
    copyful parser across the generated [synth_<n>]/[synth_<n>_recip] iso. *)
 let emit_copyful_vlgen_payload_refined o i n ty smin smax lenty =
   wp i "let %s_lowtype = %s\n\n" n (copyful_lowtype_name ty);
-  wp i "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop =\n" n n n;
-  wp i "  LPC.vmatch_synth (PPVD.vmatch_vldata_strong %d %d %s %s) (fun (x: %s) -> (x <: LP.parse_bounded_vldata_strong_t %d %d %s))\n\n" smin smax (scombinator_name ty) (copyful_vmatch_name ty) n smin smax (scombinator_name ty);
-  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "noextract let %s_mid = %s\n\n" n (copyful_mid_name ty);
+  wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop =\n" n n n;
+  wp i "  PPVD.vmatch_vldata_strong %d %d %s %s\n\n" smin smax (scombinator_name ty) (copyful_vmatch_name ty);
+  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) =\n" n n n;
+  wp i "  PPC.synth_conv (PPVD.vldata_strong_conv %d %d %s %s) synth_%s\n\n" smin smax (scombinator_name ty) (copyful_conv_name ty) n;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
   wp o "\nlet %s_copyful_synth_injective () : Lemma (LP.synth_injective synth_%s) = ()\n\n" n n;
   wp o "let %s_copyful_synth_inverse () : Lemma (LP.synth_inverse synth_%s synth_%s_recip) = ()\n\n" n n n;
-  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n" n n n n;
   wp o "  %s_copyful_synth_injective ();\n" n;
   wp o "  %s_copyful_synth_inverse ();\n" n;
   wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
@@ -997,9 +1033,7 @@ let emit_copyful_vlgen_payload_refined o i n ty smin smax lenty =
   wp o "    (PPVG.copyful_parse_bounded_vlgen_payload %d %d %s %s %s %s ())\n" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty) (copyful_read_name ty);
   wp o "    synth_%s synth_%s_recip\n\n" n n;
   wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
-  wp o "  PPC.free_synth\n";
-  wp o "    (PPVD.free_vldata_strong %d %d %s %s)\n" smin smax (scombinator_name ty) (copyful_free_name ty);
-  wp o "    synth_%s_recip\n\n" n
+  wp o "  PPVD.free_vldata_strong %d %d %s %s\n\n" smin smax (scombinator_name ty) (copyful_free_name ty)
 
 (* Copyful for a length-framed SINGLE payload [t x[len]] where the length [len]
    is a plain fixed-size integer field (uint8/uint16/uint24), routed to the
@@ -1012,10 +1046,12 @@ let emit_copyful_vlgen_payload_refined o i n ty smin smax lenty =
    enclosing struct's copyful composition resolves. *)
 let emit_copyful_bounded_vldata_payload o i n ty smax =
   wp i "let %s_lowtype = %s\n\n" n (copyful_lowtype_name ty);
-  wp i "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop = %s\n\n" n n n (copyful_vmatch_name ty);
-  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "noextract let %s_mid = %s\n\n" n (copyful_mid_name ty);
+  wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop = %s\n\n" n n n (copyful_vmatch_name ty);
+  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) = %s\n\n" n n n (copyful_conv_name ty);
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
-  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n" n n n n;
   wp o "  PPVD.copyful_parse_bounded_vldata_payload 0 %d %s (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" smax (copyful_read_name ty) (log256 smax);
   wp o "let free_%s : PPB.free_t %s_vmatch = %s\n\n" n n (copyful_free_name ty)
 
@@ -1027,22 +1063,23 @@ let emit_copyful_bounded_vldata_payload o i n ty smax =
    free=free_vldata_strong) across the generated synth iso. *)
 let emit_copyful_bounded_vldata_payload_refined o i n ty smax =
   wp i "let %s_lowtype = %s\n\n" n (copyful_lowtype_name ty);
-  wp i "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop =\n" n n n;
-  wp i "  LPC.vmatch_synth (PPVD.vmatch_vldata_strong %d %d %s %s) (fun (x: %s) -> (x <: LP.parse_bounded_vldata_strong_t %d %d %s))\n\n" 0 smax (scombinator_name ty) (copyful_vmatch_name ty) n 0 smax (scombinator_name ty);
-  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "noextract let %s_mid = %s\n\n" n (copyful_mid_name ty);
+  wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop =\n" n n n;
+  wp i "  PPVD.vmatch_vldata_strong %d %d %s %s\n\n" 0 smax (scombinator_name ty) (copyful_vmatch_name ty);
+  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) =\n" n n n;
+  wp i "  PPC.synth_conv (PPVD.vldata_strong_conv %d %d %s %s) synth_%s\n\n" 0 smax (scombinator_name ty) (copyful_conv_name ty) n;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
   wp o "\nlet %s_copyful_synth_injective () : Lemma (LP.synth_injective synth_%s) = ()\n\n" n n;
   wp o "let %s_copyful_synth_inverse () : Lemma (LP.synth_inverse synth_%s synth_%s_recip) = ()\n\n" n n n;
-  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n" n n n n;
   wp o "  %s_copyful_synth_injective ();\n" n;
   wp o "  %s_copyful_synth_inverse ();\n" n;
   wp o "  PPC.copyful_parse_synth\n";
   wp o "    (PPVD.copyful_parse_bounded_vldata_strong_payload %d %d %s %s (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash)\n" 0 smax (scombinator_name ty) (copyful_read_name ty) (log256 smax);
   wp o "    synth_%s synth_%s_recip\n\n" n n;
   wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
-  wp o "  PPC.free_synth\n";
-  wp o "    (PPVD.free_vldata_strong %d %d %s %s)\n" 0 smax (scombinator_name ty) (copyful_free_name ty);
-  wp o "    synth_%s_recip\n\n" n
+  wp o "  PPVD.free_vldata_strong %d %d %s %s\n\n" 0 smax (scombinator_name ty) (copyful_free_name ty)
 
 (* Emit copyful parser (read_<n>) and free (free_<n>) for a fixed-BYTE-length
    container of variable-length elements [t x[k]] (the VectorFixed branch). The
@@ -1059,11 +1096,14 @@ let emit_copyful_bounded_vldata_payload_refined o i n ty smax =
    dependent copyful_parse/free_t types). *)
 let emit_copyful_vectorfixed_list o i n ty k =
   wp i "let %s_lowtype = PPVCL.vclist_lowtype %s\n\n" n (copyful_lowtype_name ty);
-  wp i "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop =\n" n n n;
-  wp i "  fun xl xh -> PPVCL.vmatch_vclist %s xl (xh <: list %s)\n\n" (copyful_vmatch_name ty) (compile_type ty);
-  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "noextract let %s_mid = list %s\n\n" n (compile_type ty);
+  wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop =\n" n n n;
+  wp i "  PPVCL.vmatch_vclist (PPB.vmatch_conv %s %s)\n\n" (copyful_vmatch_name ty) (copyful_conv_name ty);
+  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) =\n" n n n;
+  wp i "  %s_eq (); PPFD.fldata_strong_conv (LP.serialize_list _ %s) %d (fun (x: list %s) -> FStar.Pervasives.Native.Some x)\n\n" n (scombinator_name ty) k (compile_type ty);
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
-  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n" n n n n;
   wp o "  %s_eq ();\n" n;
   wp o "  PPB.copyful_parse_ext\n";
   wp o "    (PPFD.copyful_parse_fldata_strong_payload (LP.serialize_list _ %s) %d\n" (scombinator_name ty) k;
@@ -1072,7 +1112,7 @@ let emit_copyful_vectorfixed_list o i n ty k =
   wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
   wp o "  %s_eq ();\n" n;
   wp o "  PPB.free_ext\n";
-  wp o "    (PPFD.free_fldata_strong (LP.serialize_list _ %s) %d (PPVCL.free_vclist %s))\n" (scombinator_name ty) k (copyful_free_name ty);
+  wp o "    (PPFD.free_fldata_strong (LP.serialize_list _ %s) %d (PPVCL.free_vclist (PPB.free_vmatch_conv %s %s %s)))\n" (scombinator_name ty) k (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty);
   wp o "    %s_vmatch ()\n\n" n
 
 (* Emit copyful parser (read_<n>) and free (free_<n>) for an explicit-length
@@ -1089,12 +1129,14 @@ let emit_copyful_vectorfixed_list o i n ty k =
    bounds; [mn]/[mx] are the element-count bounds. *)
 let emit_copyful_vlarray o i n ty low high mn mx =
   wp i "let %s_lowtype = PPVCL.vclist_lowtype %s\n\n" n (copyful_lowtype_name ty);
-  wp i "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop =\n" n n n;
-  wp i "  LPC.vmatch_synth (PPVD.vmatch_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.vmatch_vclist %s))\n" low high (scombinator_name ty) (copyful_vmatch_name ty);
-  wp i "    (LP.vlarray_to_vldata %d %d %s %d %d ())\n\n" low high (scombinator_name ty) mn mx;
-  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "noextract let %s_mid = list %s\n\n" n (compile_type ty);
+  wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop =\n" n n n;
+  wp i "  PPVD.vmatch_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.vmatch_vclist (PPB.vmatch_conv %s %s))\n\n" low high (scombinator_name ty) (copyful_vmatch_name ty) (copyful_conv_name ty);
+  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) =\n" n n n;
+  wp i "  PPC.synth_conv (PPVD.vldata_strong_conv %d %d (LP.serialize_list _ %s) (fun (x: list %s) -> FStar.Pervasives.Native.Some x)) (LP.vldata_to_vlarray %d %d %s %d %d ())\n\n" low high (scombinator_name ty) (compile_type ty) low high (scombinator_name ty) mn mx;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
-  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n" n n n n;
   wp o "  LP.vldata_to_vlarray_inj %d %d %s %d %d ();\n" low high (scombinator_name ty) mn mx;
   wp o "  LP.vlarray_to_vldata_to_vlarray %d %d %s %d %d ();\n" low high (scombinator_name ty) mn mx;
   wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
@@ -1106,9 +1148,7 @@ let emit_copyful_vlarray o i n ty low high mn mx =
   wp o "    (LP.vldata_to_vlarray %d %d %s %d %d ())\n" low high (scombinator_name ty) mn mx;
   wp o "    (LP.vlarray_to_vldata %d %d %s %d %d ())\n\n" low high (scombinator_name ty) mn mx;
   wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
-  wp o "  PPC.free_synth\n";
-  wp o "    (PPVD.free_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.free_vclist %s))\n" low high (scombinator_name ty) (copyful_free_name ty);
-  wp o "    (LP.vlarray_to_vldata %d %d %s %d %d ())\n\n" low high (scombinator_name ty) mn mx
+  wp o "  PPVD.free_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.free_vclist (PPB.free_vmatch_conv %s %s %s))\n\n" low high (scombinator_name ty) (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty)
 
 let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
   let qname = if tn = "" then n else tn^"@"^n in
@@ -2708,12 +2748,12 @@ and compile_vldata o i is_private n ty li elem_li lenty smin smax =
       if basic_type ty then sprintf "Seq.length (LP.serialize %s x)" (scombinator_name ty)
       else bytesize_call ty "x" in
     w i "type %s = x:%s{let l = %s in %d <= l /\\ l <= %d}\n\n" n (compile_type ty) sizef smin smax;
+    w (ipub i o) "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n smin smax (scombinator_name ty);
+    w (ipub i o) "inline_for_extraction let synth_%s (x: %s') : Tot %s =\n" n n n;
+    w (ipub i o) "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
+    w (ipub i o) "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' =\n" n n n;
+    w (ipub i o) "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
     write_api o i false is_private li.meta n min max;
-    w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n smin smax (scombinator_name ty);
-    w o "inline_for_extraction let synth_%s (x: %s') : Tot %s =\n" n n n;
-    w o "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
-    w o "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' =\n" n n n;
-    w o "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
     w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
     w o "  LP.parse_bounded_vlgen %d %d %s %s\n\n" smin smax (pcombinator_length_header_name lenty smin smax) (scombinator_name ty);
     let kind_eq = sprintf "(LP.get_parser_kind %s'_parser == %s_parser_kind)" n n in
@@ -2810,10 +2850,10 @@ and compile_vllist o i is_private n ty li elem_li lenty smin smax =
   wh o "let check_%s_list_bytesize l =\n" n;
   wh o "  let x = LSZ.size32_list %s () l in\n" (size32_name ty);
   wh o "  %dul `U32.lte` x && x `U32.lte` %dul\n\n" smin smax;
+  w (ipub i o) "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)\n\n" n smin smax (scombinator_name ty);
+  w (ipub i o) "inline_for_extraction let synth_%s (x: %s') : Tot %s = x\n\n" n n n;
+  w (ipub i o) "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' = x\n\n" n n n;
   write_api o i false is_private li.meta n li.min_len li.max_len;
-  w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)\n\n" n smin smax (scombinator_name ty);
-  w o "inline_for_extraction let synth_%s (x: %s') : Tot %s = x\n\n" n n n;
-  w o "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' = x\n\n" n n n;
   w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
   w o "  LP.parse_bounded_vlgen %d %d %s (LP.serialize_list _ %s)\n\n" smin smax (pcombinator_length_header_name lenty smin smax) (scombinator_name ty);
   let kind_eq = sprintf "(LP.get_parser_kind %s'_parser == %s_parser_kind)" n n in
@@ -2884,7 +2924,7 @@ and compile_vlbytes o i is_private n li lenty smin smax =
       wp o "let %s_jumper%s = PPBY.jump_bounded_vlgenbytes %d %d %s %s fits_u64_squash\n\n" n jumper_annot smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax)
     end;
   (* Pulse: copyful parser + free *)
-  emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlgenbytes %d %d %s %s fits_u64_squash" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax))
+  emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlgenbytes %d %d %s %s fits_u64_squash" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax)) (sprintf "PPBY.vlbytes_conv %d %d" smin smax)
 
 and compile_typedef tch o i tn fn (ty:type_t) vec def al =
   let n = if tn = "" then String.uncapitalize_ascii fn else tn^"_"^fn in
@@ -2950,10 +2990,12 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       end;
       (* Pulse: copyful parser + free for type aliases *)
       wp i "let %s_lowtype = %s\n\n" n (copyful_lowtype_name ty);
+      wp i "noextract let %s_mid = %s\n\n" n (copyful_mid_name ty);
       wp i "let %s_vmatch = %s\n\n" n (copyful_vmatch_name ty);
-      wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+      wp i "noextract let %s_conv = %s\n\n" n (copyful_conv_name ty);
+      wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
       wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
-      wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser = %s\n\n" n n n (copyful_read_name ty);
+      wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv = %s\n\n" n n n n (copyful_read_name ty);
       wp o "let free_%s : PPB.free_t %s_vmatch = %s\n\n" n n (copyful_free_name ty);
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %s) [SMTPat (%s_bytesize x)]\n\n" n n n (bytesize_call ty "x") n;
       w o "let %s_bytesize_eqn x = %s\n\n" n (bytesize_eq_call ty "x");
@@ -3104,12 +3146,12 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         wh o "  [@inline_let] let _ = %s in\n" (bytesize_eq_call (compile_type ty) "x");
         wh o "  let l = %s x in\n" (size32_name ty);
         wh o "  %dul `U32.lte` l && l `U32.lte` %dul\n\n" 0 smax;
+        w (ipub i o) "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n 0 smax (scombinator_name ty);
+        w (ipub i o) "inline_for_extraction let synth_%s (x: %s') : Tot %s =\n" n n n;
+        w (ipub i o) "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
+        w (ipub i o) "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' =\n" n n n;
+        w (ipub i o) "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
         write_api o i false is_private li.meta n min max;
-        w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n 0 smax (scombinator_name ty);
-        w o "inline_for_extraction let synth_%s (x: %s') : Tot %s =\n" n n n;
-        w o "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
-        w o "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' =\n" n n n;
-        w o "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
         w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
         w o "  LP.parse_bounded_vldata_strong %d %d %s\n\n" 0 smax (scombinator_name ty);
         w o "let %s_parser = LP.parse_synth %s'_parser synth_%s\n\n" n n n;
@@ -3237,7 +3279,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         wl o "let %s_jumper : LL.jumper %s_parser = LL.jump_flbytes %d %dul\n\n" n n k k
        end;
       (* Pulse: copyful parser + free *)
-      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_flbytes %d" k);
+      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_flbytes %d" k) (sprintf "PPBY.flbytes_conv %d" k);
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n n;
       w o "let %s_bytesize_eqn x = ()\n\n" n;
       (* intro *)
@@ -3335,9 +3377,9 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
          w o "let %s_list_bytesize x = Seq.length (LP.serialize (LP.serialize_list _ %s) x)\n\n" n (scombinator_name ty)
        end);
       w i "type %s = l:list %s{%s_list_bytesize l == %d}\n\n" n (compile_type ty) n k;
+      w (ipub i o) "type %s' = LP.parse_fldata_strong_t (LP.serialize_list _ %s) %d\n\n" n (scombinator_name ty) k;
+      w (ipub i o) "let %s_eq () : Lemma (%s' == %s) = assert_norm (%s' == %s)\n\n" n n n n n;
       write_api o i false is_private li.meta n li.min_len li.max_len;
-      w o "type %s' = LP.parse_fldata_strong_t (LP.serialize_list _ %s) %d\n\n" n (scombinator_name ty) k;
-      w o "let %s_eq () : Lemma (%s' == %s) = assert_norm (%s' == %s)\n\n" n n n n n;
       w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
       w o "  LP.parse_fldata_strong (LP.serialize_list _ %s) %d\n\n" (scombinator_name ty) k;
       w o "let %s_parser = %s_eq (); LP.coerce (LP.parser %s_parser_kind %s) %s'_parser\n\n" n n n n n;
@@ -3410,7 +3452,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         wp o "let %s_jumper%s = PPBY.jump_bounded_vlbytes %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" n jumper_annot low high high (log256 high)
       end;
       (* Pulse: copyful parser + free *)
-      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash" low high (log256 high));
+      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash" low high (log256 high)) (sprintf "PPBY.vlbytes_conv %d %d" low high);
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes %d %d x\n\n" n low high;
       (* length *)
@@ -3471,7 +3513,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         wp o "let %s_jumper%s = PPBY.jump_bounded_vlbytes' %d %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer %d) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" n jumper_annot low high repr repr repr
       end;
       (* Pulse: copyful parser + free *)
-      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash" low high repr repr);
+      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash" low high repr repr) (sprintf "PPBY.vlbytes_conv %d %d" low high);
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n repr n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes' %d %d %d x\n\n" n low high repr;
       (* length *)
@@ -3609,10 +3651,10 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       wh o "let check_%s_list_bytesize l =\n" n;
       wh o "  let x = LSZ.size32_list %s () l in\n" (size32_name ty);
       wh o "  %dul `U32.lte` x && x `U32.lte` %dul\n\n" min max;
+      w (ipub i o) "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)\n\n" n min max (scombinator_name ty);
+      w (ipub i o) "inline_for_extraction let synth_%s (x: %s') : Tot %s = x\n\n" n n n;
+      w (ipub i o) "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' = x\n\n" n n n;
       write_api o i false is_private li.meta n li.min_len li.max_len;
-      w o "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)\n\n" n min max (scombinator_name ty);
-      w o "inline_for_extraction let synth_%s (x: %s') : Tot %s = x\n\n" n n n;
-      w o "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' = x\n\n" n n n;
       w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
       w o "  LP.parse_bounded_vldata_strong %d %d (LP.serialize_list _ %s)\n\n" min max (scombinator_name ty);
       w o "let %s_parser = %s'_parser `LP.parse_synth` synth_%s \n\n" n n n;
@@ -3753,10 +3795,10 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
       tfields
   in
   let synth_body = List.fold_left (fun acc (fn, ty) -> sprintf "%s    %s = %s;\n" acc fn fn) "" fields in
-  w o "inline_for_extraction let synth_%s (x: %s') : %s =\n" n n n;
-  w o "  match x with %s -> {\n" synth_arg;
-  w o "%s" synth_body;
-  w o "  }\n\n";
+  w (ipub i o) "inline_for_extraction let synth_%s (x: %s') : %s =\n" n n n;
+  w (ipub i o) "  match x with %s -> {\n" synth_arg;
+  w (ipub i o) "%s" synth_body;
+  w (ipub i o) "  }\n\n";
   
   let synth_recip_body =
     btree_fold
@@ -3955,27 +3997,31 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
      synth_<n>_recip). *)
   let rec mk_pulse_copyful = function
     | TLeaf (_, ty) ->
-       (pulse_jumper_name ty, copyful_read_name ty, copyful_vmatch_name ty, copyful_free_name ty, copyful_lowtype_name ty)
+       (pulse_jumper_name ty, copyful_read_name ty, copyful_vmatch_name ty, copyful_free_name ty, copyful_lowtype_name ty, copyful_mid_name ty, copyful_conv_name ty)
     | TNode (_, tl, tr) ->
-       let (jl, rl, vml, fl, ltl) = mk_pulse_copyful tl in
-       let (jr, rr, vmr, fr, ltr) = mk_pulse_copyful tr in
+       let (jl, rl, vml, fl, ltl, midl, convl) = mk_pulse_copyful tl in
+       let (jr, rr, vmr, fr, ltr, midr, convr) = mk_pulse_copyful tr in
        let j = sprintf "(LPC.jump_nondep_then %s %s)" jl jr in
        let r = sprintf "(PPC.copyful_parse_pair %s %s () %s)" jl rl rr in
        let vm = sprintf "(LPC.vmatch_pair %s %s)" vml vmr in
        let f = sprintf "(PPC.free_pair %s %s)" fl fr in
        let lt = sprintf "(%s & %s)" ltl ltr in
-       (j, r, vm, f, lt)
+       let mid = sprintf "(%s & %s)" midl midr in
+       let conv = sprintf "(PPC.pair_conv %s %s)" convl convr in
+       (j, r, vm, f, lt, mid, conv)
   in
-  let (_, pulse_creader, pulse_cvmatch, pulse_cfree, pulse_clowtype) = mk_pulse_copyful tfields in
+  let (_, pulse_creader, pulse_cvmatch, pulse_cfree, pulse_clowtype, pulse_cmid, pulse_cconv) = mk_pulse_copyful tfields in
   wp i "let %s_lowtype = %s\n\n" n pulse_clowtype;
-  wp i "let %s_vmatch : %s_lowtype -> %s -> Pulse.Lib.Core.slprop = LPC.vmatch_synth %s synth_%s_recip\n\n" n n n pulse_cvmatch n;
-  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser\n\n" n n n;
+  wp i "noextract let %s_mid = %s\n\n" n pulse_cmid;
+  wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop = %s\n\n" n n n pulse_cvmatch;
+  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) = PPC.synth_conv %s synth_%s\n\n" n n n pulse_cconv n;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
-  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser =\n" n n n;
+  wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n" n n n n;
   wp o "  synth_%s_injective ();\n" n;
   wp o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
   wp o "  PPC.copyful_parse_synth %s synth_%s synth_%s_recip\n\n" pulse_creader n n;
-  wp o "let free_%s : PPB.free_t %s_vmatch = PPC.free_synth %s synth_%s_recip\n\n" n n pulse_cfree n;
+  wp o "let free_%s : PPB.free_t %s_vmatch = %s\n\n" n n pulse_cfree;
 
   (* bytesize *)
   w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %s) [SMTPat (%s_bytesize x)]\n\n"
