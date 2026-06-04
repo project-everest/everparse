@@ -94,7 +94,7 @@ else
 	+if test -d FStar ; then $(MAKE) -C FStar clean ; fi
 endif
 
-clean_rules := $(addsuffix .clean,z3 opam)
+clean_rules := $(addsuffix .clean,z3 opam karamel)
 
 $(clean_rules): %.clean:
 	rm -rf $(basename $@) $(basename $@).done
