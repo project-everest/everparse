@@ -8,6 +8,8 @@ depends: [
   "ocaml"
   "ctypes"
   "hex"
+  "menhir"
+  "process"
   "re"
   "sexplib"
   "sha"
