@@ -849,6 +849,74 @@ fn free_pair
   f2 (snd x);
 }
 
+(* Content lemma for the pair writer: slicing a prefix that lands inside the
+   second component of an append. *)
+let slice_append_prefix (#a:Type) (x y: Seq.seq a) (j: nat)
+  : Lemma
+    (j <= Seq.length y ==>
+      Seq.slice (Seq.append x y) 0 (Seq.length x + j) == Seq.append x (Seq.slice y 0 j))
+  = if j <= Seq.length y
+    then Seq.lemma_eq_intro (Seq.slice (Seq.append x y) 0 (Seq.length x + j)) (Seq.append x (Seq.slice y 0 j))
+    else ()
+
+(* Safe writer for [nondep_then p1 p2]: write field 1 into the whole output slice
+   (it writes a prefix of size [res1]); if it fails, propagate the error. Otherwise
+   split the output at [res1], write field 2 into the suffix, then join. The error
+   flag ends up true iff either child fails (conv = None or no room), which matches
+   [pair_conv] = None or insufficient total room. NEVER pre-split: [res1] is unknown
+   until field 1 is written. *)
+inline_for_extraction
+fn l2r_safe_writer_pair
+  (#tl1 #tl2 #tm1 #tm2 #th1 #th2: Type0)
+  (#vmatch1: tl1 -> tm1 -> slprop)
+  (#k1: parser_kind)
+  (#p1: parser k1 th1)
+  (#s1: serializer p1)
+  (#conv1: tm1 -> GTot (option th1))
+  (w1: PPB.l2r_safe_writer vmatch1 s1 conv1)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (#vmatch2: tl2 -> tm2 -> slprop)
+  (#k2: parser_kind)
+  (#p2: parser k2 th2)
+  (#s2: serializer p2)
+  (#conv2: tm2 -> GTot (option th2))
+  (w2: PPB.l2r_safe_writer vmatch2 s2 conv2)
+: PPB.l2r_safe_writer #(tl1 & tl2) #(tm1 & tm2) #(th1 & th2) (LPC.vmatch_pair vmatch1 vmatch2) #(and_then_kind k1 k2) #(nondep_then p1 p2) (serialize_nondep_then s1 s2) (pair_conv conv1 conv2)
+=
+  (x: (tl1 & tl2))
+  (#y: Ghost.erased (tm1 & tm2))
+  (out: slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: ref bool)
+{
+  unfold (LPC.vmatch_pair vmatch1 vmatch2 x (Ghost.reveal y));
+  FStar.Classical.forall_intro_2 (length_serialize_nondep_then s1 s2);
+  FStar.Classical.forall_intro (serialize_nondep_then_eq s1 s2);
+  FStar.Classical.forall_intro_3 (slice_append_prefix #byte);
+  let res1 = w1 (fst x) out perr;
+  let e1 = !perr;
+  if e1 {
+    S.pts_to_len out;
+    fold (LPC.vmatch_pair vmatch1 vmatch2 x (Ghost.reveal y));
+    res1
+  } else {
+    S.pts_to_len out;
+    let left, right = S.split out res1;
+    S.pts_to_len right;
+    let res2 = w2 (snd x) right perr;
+    let e2 = !perr;
+    S.pts_to_len right;
+    S.join left right out;
+    S.pts_to_len out;
+    fold (LPC.vmatch_pair vmatch1 vmatch2 x (Ghost.reveal y));
+    if e2 {
+      res1
+    } else {
+      SZ.add res1 res2
+    }
+  }
+}
+
 inline_for_extraction
 fn zero_copy_parse_filter
   (#t: Type0) (#t1: Type0)

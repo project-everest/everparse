@@ -1097,3 +1097,78 @@ let l2r_safe_writer
       (fun sz -> exists* v' err . S.pts_to out v' ** vmatch x y ** R.pts_to perr err **
       	   pure (l2r_safe_writer_postcond conv s (Ghost.reveal y) v' sz err)
       )
+
+(* Leaf safe writer: the copyful leaf representation IS the value (eq_as_slprop),
+   and [leaf_conv] never fails, so the writer fails (err=true) iff there is not
+   enough room. Requires a constant-size leaf so the serialized size [sz] is known
+   before writing. *)
+inline_for_extraction
+fn l2r_safe_writer_leaf
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (sz: SZ.t {
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_low == SZ.v sz
+  })
+  (w: LPS.l2r_leaf_writer s)
+: l2r_safe_writer #t #t #t (LPS.eq_as_slprop t) #k #p s (leaf_conv t)
+=
+  (x: t)
+  (#y: Ghost.erased t)
+  (out: slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: R.ref bool)
+{
+  unfold (LPS.eq_as_slprop t x (Ghost.reveal y));
+  S.pts_to_len out;
+  serialize_length s x;
+  let l = S.len out;
+  if (SZ.lt l sz) {
+    perr := true;
+    fold (LPS.eq_as_slprop t x (Ghost.reveal y));
+    sz
+  } else {
+    let res = w x out 0sz;
+    perr := false;
+    fold (LPS.eq_as_slprop t x (Ghost.reveal y));
+    res
+  }
+}
+
+(* Re-index an [l2r_safe_writer] from an inner mid type [tm1] to an exposed mid type
+   [tm2] (mirrors [free_coerce_mid] on the predicate side and additionally matches
+   the conv pointwise). The same per-type bridge lemmas generated for [read_<n>]
+   are reusable here. *)
+inline_for_extraction
+fn l2r_safe_writer_coerce_mid
+  (#t' #tm1 #t: Type0)
+  (#vmatch1: t' -> tm1 -> slprop)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (#conv1: tm1 -> GTot (option t))
+  (w: l2r_safe_writer vmatch1 s conv1)
+  (#tm2: Type0)
+  (vmatch2: t' -> tm2 -> slprop)
+  (conv2: tm2 -> GTot (option t))
+  (gf: tm2 -> GTot tm1)
+  (sq: squash (
+    (forall (x: t') (m2: tm2) . vmatch2 x m2 == vmatch1 x (gf m2)) /\
+    (forall (m2: tm2) . conv2 m2 == conv1 (gf m2))
+  ))
+: l2r_safe_writer #t' #tm2 #t vmatch2 #k #p s conv2
+=
+  (x: t')
+  (#y: Ghost.erased tm2)
+  (out: slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: R.ref bool)
+{
+  let y1 : Ghost.erased tm1 = Ghost.hide (gf (Ghost.reveal y));
+  rewrite (vmatch2 x (Ghost.reveal y)) as (vmatch1 x (Ghost.reveal y1));
+  let res = w x out perr;
+  rewrite (vmatch1 x (Ghost.reveal y1)) as (vmatch2 x (Ghost.reveal y));
+  res
+}
