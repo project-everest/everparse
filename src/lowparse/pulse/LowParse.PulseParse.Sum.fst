@@ -2036,6 +2036,25 @@ fn copyful_parse_false
   res
 }
 
+// l2r_safe_writer_false: the dead default-case writer for parse_false (mirrors
+// copyful_parse_false). Its low value is a proof of False, so the body is
+// unreachable and the postcondition is discharged from the contradiction.
+inline_for_extraction
+fn l2r_safe_writer_false
+  (vmatch: squash False -> squash False -> slprop)
+  (s: serializer #parse_false_kind #(squash False) parse_false)
+: PPB.l2r_safe_writer #(squash False) #(squash False) #(squash False) vmatch #parse_false_kind #parse_false s (fun (x: squash False) -> Some x)
+=
+  (x: squash False)
+  (#y: Ghost.erased (squash False))
+  (out: S.slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: _)
+{
+  let _ = x;
+  false_elim ()
+}
+
 let dsum_mid
   (t: dsum)
   (mid_of_tag: dsum_key t -> Type0)

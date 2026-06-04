@@ -1172,6 +1172,37 @@ fn l2r_safe_writer_ext
   rewrite (vmatch1 x (Ghost.reveal y)) as (vmatch2 x (Ghost.reveal y));
   res
 }
+
+(* Re-index an [l2r_safe_writer] across a transformed LOW (left) representation
+   (mirrors [copyful_parse_synth_lhs] / [free_synth_lhs]). The high value, parser,
+   serializer and conv are all unchanged; only the low type is mapped via the
+   runtime backward map [g'] (extensionally equal to the ghost [g]). *)
+inline_for_extraction
+fn l2r_safe_writer_synth_lhs
+  (#t1' #tm #t: Type0)
+  (#vmatch: t1' -> tm -> slprop)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (#conv: tm -> GTot (option t))
+  (w: l2r_safe_writer vmatch s conv)
+  (#t2': Type0)
+  (g: t2' -> GTot t1')
+  (g': t2' -> t1')
+  (sq: squash (forall (x: t2') . g' x == g x))
+: l2r_safe_writer #_ #_ #_ (vmatch_synth_lhs vmatch g) #_ #p s conv
+=
+  (x: t2')
+  (#y: Ghost.erased tm)
+  (out: slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: R.ref bool)
+{
+  rewrite (vmatch_synth_lhs vmatch g x (Ghost.reveal y)) as (vmatch (g' x) (Ghost.reveal y));
+  let res = w (g' x) out perr;
+  rewrite (vmatch (g' x) (Ghost.reveal y)) as (vmatch_synth_lhs vmatch g x (Ghost.reveal y));
+  res
+}
 inline_for_extraction
 fn l2r_safe_writer_coerce_mid
   (#t' #tm1 #t: Type0)
