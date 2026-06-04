@@ -62,8 +62,13 @@ fstar-deps.opam: FStar/Makefile
 	cp FStar/fstar.opam $@
 	touch $@
 
-opam.done: opam $(EVERPARSE_OPAM_FILES)
-	eval "$$(opam env --root=opam --set-root)" && opam install --deps-only $(addprefix ./,$(EVERPARSE_OPAM_FILES))
+# Populate the local opam root with EverParse's own OCaml tool
+# dependencies only. F*'s build dependencies (fstar-deps.opam) are NOT
+# installed here, so that creating the opam root does not require pulling
+# the F* sources; they are installed by the rule that builds F* from
+# source (see deps.Makefile, FStar.done).
+opam.done: opam everparse-deps.opam
+	eval "$$(opam env --root=opam --set-root)" && opam install --deps-only ./everparse-deps.opam
 	touch $@
 
 advance:

@@ -140,11 +140,26 @@ $(EVERPARSE_OPT_PATH)/FStar/Makefile: $(EVERPARSE_OPT_PATH)/hashes.Makefile
 $(EVERPARSE_OPT_PATH)/FStar/karamel/Makefile: $(EVERPARSE_OPT_PATH)/FStar/Makefile $(EVERPARSE_OPT_PATH)/hashes.Makefile
 	+$(MAKE) -C $(EVERPARSE_OPT_PATH) FStar/karamel/Makefile
 
-$(EVERPARSE_OPT_PATH)/opam.done: $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh $(EVERPARSE_OPT_PATH)/FStar/Makefile $(EVERPARSE_OPT_PATH)/FStar/karamel/Makefile
+$(EVERPARSE_OPT_PATH)/opam.done: $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh
 	+$(MAKE) -C $(EVERPARSE_OPT_PATH) opam.done
 
-$(EVERPARSE_OPT_PATH)/FStar.done: $(EVERPARSE_OPT_PATH)/FStar/Makefile $(NEED_OPAM)
+# F*'s OCaml build dependencies (fstar-deps.opam, derived from F*'s own
+# opam file) are installed as part of building F* from source, rather than
+# when populating the opam root. This keeps opam-root creation independent
+# of the F* sources. With an ambient opam root the user is responsible for
+# providing these dependencies, matching the opam.done convention above.
+$(EVERPARSE_OPT_PATH)/fstar-deps.opam: $(EVERPARSE_OPT_PATH)/FStar/Makefile
+	+$(MAKE) -C $(EVERPARSE_OPT_PATH) fstar-deps.opam
+
+ifneq (1,$(EVERPARSE_USE_OPAMROOT))
+install_fstar_deps := $(with_opam) env OPAMYES=1 OPAMNODEPEXTS=1 opam install --deps-only $(EVERPARSE_OPT_PATH)/fstar-deps.opam
+else
+install_fstar_deps := @echo "Using ambient opam root: assuming F* OCaml dependencies are already installed"
+endif
+
+$(EVERPARSE_OPT_PATH)/FStar.done: $(EVERPARSE_OPT_PATH)/FStar/Makefile $(EVERPARSE_OPT_PATH)/fstar-deps.opam $(NEED_OPAM)
 	rm -f $@
+	$(install_fstar_deps)
 	+$(with_opam) $(MAKE) -C $(EVERPARSE_OPT_PATH)/FStar ADMIT=1
 	touch $@
 
@@ -171,7 +186,7 @@ krmllib.done: $(NEED_KRML)
 # that links F*-extracted OCaml against fstar.lib (e.g. the 3d, ASN1 and cddl
 # tools). With a binary F* package, fstar.lib is not available until installed
 # here; with a source build, $(NEED_FSTAR) (FStar.done) rebuilds F* first.
-fstarlib.done: $(NEED_FSTAR)
+fstarlib.done: $(NEED_FSTAR) $(NEED_OPAM)
 	rm -f $@
 	$(with_opam) $(FSTAR_EXE) --install_lib_with_deps
 	touch $@
