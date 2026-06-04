@@ -1001,3 +1001,43 @@ fn free_ext
   rewrite (vmatch2 x v) as (vmatch1 x v1);
   free1 x #v1;
 }
+
+let l2r_safe_writer_postcond
+  (#tm #t: Type0)
+  (conv: tm -> GTot (option t))
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (y: tm)
+  (v': Seq.seq byte)
+  (res: SZ.t)
+  (err: bool)
+: Tot prop
+= begin match conv y with
+  | None -> err == true
+  | Some y' ->
+    let sy = serialize s y' in
+    let len = Seq.length sy in
+    err == (Seq.length v' < len) /\
+    (err == false ==> (SZ.v res == len /\ Seq.slice v' 0 len == sy))
+  end
+
+inline_for_extraction
+let l2r_safe_writer
+  (#t' #tm #t: Type0)
+  (vmatch: t' -> tm -> slprop)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (conv: tm -> GTot (option t))
+=
+  (x: t') ->
+  (#y: Ghost.erased tm) ->
+  (out: slice byte) ->
+  (#v: Ghost.erased (Seq.seq byte)) ->
+  (perr: ref bool) ->
+  stt SZ.t
+      (exists* err . S.pts_to out v ** vmatch x y ** R.pts_to perr err)
+      (fun sz -> exists* v' err . S.pts_to out v' ** vmatch x y ** R.pts_to perr err **
+      	   pure (l2r_safe_writer_postcond conv s (Ghost.reveal y) v' sz err)
+      )
