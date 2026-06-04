@@ -10,7 +10,7 @@ package-subset: quackyducky lowparse 3d
 
 .PHONY: package-subset
 
-clean_rules += clean-3d clean-lowparse clean-quackyducky clean-cbor-verify clean-cddl clean-bin clean-cose-test clean-asn1 clean-tests clean-3d-tests clean-doc
+clean_rules += clean-3d clean-lowparse clean-quackyducky clean-cbor-verify clean-cddl clean-bin clean-cose-test clean-asn1 clean-tests clean-3d-tests clean-doc clean-lowparse-pulse-test clean-quackyducky-pulse-test
 other_clean_rules += distclean
 
 include nofstar.Makefile
@@ -76,7 +76,7 @@ endif
 
 .PHONY: 3d-prelude
 
-3d-exe: $(NEED_Z3)
+3d-exe: $(NEED_Z3) fstarlib.done
 	+$(MAKE) -C src/3d 3d
 
 .PHONY: 3d-exe
@@ -105,7 +105,7 @@ lowparse-unit-test: lowparse
 
 3d-test: 3d-unit-test 3d-doc-test
 
-asn1-test: asn1
+asn1-test: asn1 fstarlib.done
 	+$(MAKE) -C src/ASN1 test
 
 lowparse-bitfields-test: lowparse
@@ -232,7 +232,7 @@ ifeq (,$(NO_PULSE))
 cddl-pulse: cddl-spec $(filter src/cddl/pulse/%,$(ALL_CHECKED_FILES))
 
 # cbor-extract-pre needed because Rust extraction extracts CBOR and COSE altogether
-cddl-tool: cddl-pulse $(filter src/cddl/tool/%,$(ALL_CHECKED_FILES)) cbor-extract-pre
+cddl-tool: cddl-pulse $(filter src/cddl/tool/%,$(ALL_CHECKED_FILES)) cbor-extract-pre fstarlib.done
 	+$(MAKE) -C src/cddl/tool
 else
 cddl-tool:
@@ -245,7 +245,7 @@ cddl: cbor cbor-interface cddl-spec cddl-tool
 .PHONY: cbor-det-c-test cbor-det-rust-test cbor-test cddl
 
 ifeq (,$(NO_PULSE))
-cddl-unit-tests: cddl
+cddl-unit-tests: cddl fstarlib.done
 	+$(MAKE) -C src/cddl test
 else
 cddl-unit-tests:
@@ -303,6 +303,16 @@ clean-lowparse:
 
 clean-quackyducky:
 	+$(MAKE) -C src/qd clean
+
+clean-lowparse-pulse-test:
+	+$(MAKE) -C share/everparse/tests/lowparse clean
+
+.PHONY: clean-lowparse-pulse-test
+
+clean-quackyducky-pulse-test:
+	+$(MAKE) -C share/everparse/tests/qd clean
+
+.PHONY: clean-quackyducky-pulse-test
 
 clean-cbor-verify:
 	+$(MAKE) -C src/cbor clean-verify

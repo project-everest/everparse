@@ -1,0 +1,210 @@
+#!/usr/bin/env bash
+# configure: generate config.Makefile for the EverParse dependency build.
+#
+# config.Makefile is included by deps.Makefile (and, for the Z3 version
+# only, by src/z3-version.Makefile). It records how EverParse's
+# dependencies (F*, Karamel, Pulse, opam, Z3) should be obtained, so that
+# this no longer needs to be passed through EVERPARSE_* environment
+# variables.
+#
+# With no options, EverParse builds F*, Karamel and Pulse from source under
+# opt/, using a local opam root, and downloads Z3.
+
+set -e
+unset CDPATH
+# Remember the directory from which configure was invoked, so that
+# relative paths given on the command line (e.g. to --fstar-bin-package
+# or --fstar-bin-package-tar) can be resolved against it rather than
+# against the EverParse source directory we cd into below.
+orig_pwd="$( pwd )"
+cd "$( dirname "${BASH_SOURCE[0]}" )"
+
+# Resolve a possibly-relative path against the invocation directory.
+make_abs() {
+  case "$1" in
+    /*) printf '%s\n' "$1" ;;
+    *)  printf '%s\n' "$orig_pwd/$1" ;;
+  esac
+}
+
+usage() {
+  cat <<'EOF'
+Usage: ./configure [options]
+
+Generates config.Makefile, which is included by deps.Makefile to configure
+how EverParse's dependencies (F*, Karamel, Pulse, opam, Z3) are obtained.
+
+With no options, EverParse builds F*, Karamel and Pulse from source under
+opt/, using a local opam root, and downloads Z3.
+
+Options:
+  --use-my-deps          Use pre-existing F*, Karamel and opam installations
+                         instead of building them from source. Equivalent to
+                         --use-fstar-exe --use-krml-exe --use-opamroot.
+                         (You will most likely also need --krml-exe=PATH.)
+
+  --use-fstar-exe        Use a pre-existing fstar.exe (taken from PATH unless
+                         --fstar-exe=PATH is also given) instead of building
+                         F* from source.
+
+  --fstar-exe=PATH       Use the fstar.exe at PATH. Implies --use-fstar-exe.
+
+  --use-krml-exe         Use a pre-existing krml executable instead of
+                         building Karamel from source. Requires --krml-exe=PATH
+                         (or KRML_EXE to be set when running make).
+
+  --krml-exe=PATH        Use the krml executable at PATH. Implies --use-krml-exe.
+
+  --fstar-bin-package=DIR
+                         Use the extracted F* binary package rooted at DIR
+                         (the directory containing bin/, lib/, share/, ...,
+                         as found at https://github.com/FStarLang/fstar-nightly).
+                         Shortcut for --fstar-exe=DIR/bin/fstar.exe
+                         --krml-exe=DIR/bin/krml. The package does not ship the
+                         Pulse DICE examples, so you will most likely also need
+                         --dice-home=PATH for the cddl DPE tests.
+
+  --fstar-bin-package-tar=FILE
+                         Like --fstar-bin-package, but FILE is an unextracted
+                         F* binary package tarball (e.g. fstar-Linux-x86_64.tar.gz).
+                         configure extracts it under opt/fstar-bin-package/ and
+                         uses the result. Mutually exclusive with
+                         --fstar-bin-package.
+
+  --use-opamroot         Use the ambient opam switch instead of creating a
+                         local opam root under opt/.
+
+  --opamroot=PATH        Use the opam root at PATH instead of creating a local
+                         opam root under opt/. Implies --use-opamroot. If not
+                         given (but --use-opamroot is), the ambient opam root
+                         (as reported by `opam var root`, or $OPAMROOT) is used.
+
+  --dice-home=PATH       Use PATH as the directory holding the Pulse DICE
+                         examples (used by the cddl DPE tests). When building
+                         F* from source this defaults to
+                         opt/FStar/pulse/share/pulse/examples/dice; with a F*
+                         binary package it must be set explicitly, as the
+                         examples are not shipped in the package.
+
+  --z3-version=VERSION   Use the given Z3 version (default: 4.13.3).
+
+  -h, --help             Print this help message and exit.
+EOF
+}
+
+use_fstar_exe=
+use_krml_exe=
+use_opamroot=
+fstar_exe=
+krml_exe=
+opamroot=
+dice_home=
+z3_version=
+fstar_bin_package=
+fstar_bin_package_tar=
+
+for arg in "$@"; do
+  case "$arg" in
+    --use-my-deps)
+      use_fstar_exe=1; use_krml_exe=1; use_opamroot=1 ;;
+    --use-fstar-exe)
+      use_fstar_exe=1 ;;
+    --fstar-exe=*)
+      use_fstar_exe=1; fstar_exe="${arg#--fstar-exe=}" ;;
+    --use-krml-exe)
+      use_krml_exe=1 ;;
+    --krml-exe=*)
+      use_krml_exe=1; krml_exe="${arg#--krml-exe=}" ;;
+    --fstar-bin-package=*)
+      fstar_bin_package="${arg#--fstar-bin-package=}" ;;
+    --fstar-bin-package-tar=*)
+      fstar_bin_package_tar="${arg#--fstar-bin-package-tar=}" ;;
+    --use-opamroot)
+      use_opamroot=1 ;;
+    --opamroot=*)
+      use_opamroot=1; opamroot="${arg#--opamroot=}" ;;
+    --dice-home=*)
+      dice_home="${arg#--dice-home=}" ;;
+    --z3-version=*)
+      z3_version="${arg#--z3-version=}" ;;
+    -h|--help)
+      usage; exit 0 ;;
+    *)
+      echo "configure: unknown option: $arg" >&2
+      echo >&2
+      usage >&2
+      exit 1 ;;
+  esac
+done
+
+# Process the F* binary package shortcuts. --fstar-bin-package-tar extracts
+# the tarball and reduces to the --fstar-bin-package (directory) case. Either
+# one then fills in --use-fstar-exe/--use-krml-exe and the executable paths.
+if [ -n "$fstar_bin_package_tar" ]; then
+  if [ -n "$fstar_bin_package" ]; then
+    echo "configure: --fstar-bin-package and --fstar-bin-package-tar are mutually exclusive" >&2
+    exit 1
+  fi
+  tarball="$( make_abs "$fstar_bin_package_tar" )"
+  if [ ! -f "$tarball" ]; then
+    echo "configure: F* binary package tarball not found: $tarball" >&2
+    exit 1
+  fi
+  # The F* binary package tarballs extract to a top-level fstar/ directory.
+  # We extract into a dedicated subdirectory (not opt/fstar, which would
+  # collide with opt/FStar on case-insensitive filesystems).
+  dest="$( pwd )/opt/fstar-bin-package"
+  rm -rf "$dest"
+  mkdir -p "$dest"
+  tar xf "$tarball" -C "$dest"
+  fstar_bin_package="$dest/fstar"
+fi
+
+if [ -n "$fstar_bin_package" ]; then
+  fstar_bin_package="$( make_abs "$fstar_bin_package" )"
+  if [ ! -x "$fstar_bin_package/bin/fstar.exe" ]; then
+    echo "configure: no bin/fstar.exe under F* binary package directory: $fstar_bin_package" >&2
+    exit 1
+  fi
+  use_fstar_exe=1
+  use_krml_exe=1
+  # Explicit --fstar-exe / --krml-exe take precedence over the package.
+  if [ -z "$fstar_exe" ]; then
+    fstar_exe="$fstar_bin_package/bin/fstar.exe"
+  fi
+  if [ -z "$krml_exe" ]; then
+    if [ ! -x "$fstar_bin_package/bin/krml" ]; then
+      echo "configure: no bin/krml under F* binary package directory: $fstar_bin_package" >&2
+      exit 1
+    fi
+    krml_exe="$fstar_bin_package/bin/krml"
+  fi
+fi
+
+out=config.Makefile
+tmp="$out.tmp"
+rm -f "$tmp"
+{
+  echo "# This file is generated by ./configure. Do not edit by hand."
+  echo "# Re-run ./configure (see ./configure --help) to regenerate it."
+  echo "EVERPARSE_USE_FSTAR_EXE := $use_fstar_exe"
+  echo "EVERPARSE_USE_KRML_EXE := $use_krml_exe"
+  echo "EVERPARSE_USE_OPAMROOT := $use_opamroot"
+  if [ -n "$fstar_exe" ]; then
+    echo "FSTAR_EXE := $fstar_exe"
+  fi
+  if [ -n "$krml_exe" ]; then
+    echo "KRML_EXE := $krml_exe"
+  fi
+  if [ -n "$opamroot" ]; then
+    echo "OPAMROOT := $opamroot"
+  fi
+  if [ -n "$dice_home" ]; then
+    echo "DICE_HOME := $dice_home"
+  fi
+  if [ -n "$z3_version" ]; then
+    echo "EVERPARSE_Z3_VERSION := $z3_version"
+  fi
+} > "$tmp"
+mv "$tmp" "$out"
+echo "configure: wrote $out"

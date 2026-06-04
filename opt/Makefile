@@ -24,7 +24,7 @@ cygwin_local_install += --cygwin-local-install
 endif
 
 # Change these if you want to use your own clones
-FStar_repo=https://github.com/FStarLang/FStar
+FStar_repo=https://github.com/tahina-pro/FStar
 
 # This rule is necessary for the package and release CI rules to pull
 # the right hash when building the F* source package for Windows
@@ -62,8 +62,13 @@ fstar-deps.opam: FStar/Makefile
 	cp FStar/fstar.opam $@
 	touch $@
 
-opam.done: opam $(EVERPARSE_OPAM_FILES)
-	eval "$$(opam env --root=opam --set-root)" && opam install --deps-only $(addprefix ./,$(EVERPARSE_OPAM_FILES))
+# Populate the local opam root with EverParse's own OCaml tool
+# dependencies only. F*'s build dependencies (fstar-deps.opam) are NOT
+# installed here, so that creating the opam root does not require pulling
+# the F* sources; they are installed by the rule that builds F* from
+# source (see deps.Makefile, FStar.done).
+opam.done: opam everparse-deps.opam
+	eval "$$(opam env --root=opam --set-root)" && opam install --deps-only ./everparse-deps.opam
 	touch $@
 
 advance:
@@ -89,7 +94,7 @@ else
 	+if test -d FStar ; then $(MAKE) -C FStar clean ; fi
 endif
 
-clean_rules := $(addsuffix .clean,z3 opam)
+clean_rules := $(addsuffix .clean,z3 opam karamel)
 
 $(clean_rules): %.clean:
 	rm -rf $(basename $@) $(basename $@).done

@@ -26,9 +26,15 @@ EverParse.nupkg
 nuget.exe
 nuget_package
 
+# F* binary package tarballs (used by fstarpkg.Dockerfile, not committed)
+fstar-*.tar.gz
+
 # make touchfiles
 .*.touch
 .opam
 .opam.tmp
 krmllib.done
+fstarlib.done
 opam-env.Makefile
+config.Makefile
+opt/fstar-bin-package

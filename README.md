@@ -200,7 +200,9 @@ NOTE: Support for encryption is in progress.
 
 	For testing, you can install additional packages with:
 
-	`sudo apt-get install --no-install-recommends cmake python3-pip python3-venv`
+	`sudo apt-get install --no-install-recommends cmake clang python3-pip python3-venv`
+
+	(`clang` is used by the EverCOSign interop tests.)
 
 * On MacOS, EverParse depends on:
 
@@ -368,32 +370,64 @@ Pulse from your clones with your patches.
 ## Using an existing opam root, F\*, etc.
 
 If you want to use existing dependencies instead of letting EverParse
-locally install them, you can populate the following environment
-variables:
+locally install them, you can run the `./configure` script with the
+appropriate options before building. `./configure` produces
+`config.Makefile`, which is read by the build. Run `./configure --help`
+for the full list of options. The most useful ones are:
 
-* `EVERPARSE_USE_OPAMROOT=1` instructs EverParse to use the current
-  opam installation (the value of `OPAMROOT` if set, otherwise
+* `--use-opamroot` instructs EverParse to use the current opam
+  installation (the value of `OPAMROOT` if set, otherwise
   `$HOME/.opam`) instead of creating a local install
 
-* If you want to use your own F\*, first set
-  `EVERPARSE_USE_FSTAR_EXE=1`, then set `FSTAR_EXE` to the full path
-  of your `fstar.exe` executable (by default, `fstar.exe` via your
-  `PATH`.)
-  
+* `--opamroot=PATH` instructs EverParse to use the opam root at `PATH`
+  (it implies `--use-opamroot`.) This is useful to point EverParse at a
+  dedicated opam root without having to set `OPAMROOT` in the environment
+  every time you run `make`.
+
+* If you want to use your own F\*, pass `--fstar-exe=PATH` with the full
+  path of your `fstar.exe` executable (or `--use-fstar-exe` to take
+  `fstar.exe` from your `PATH`.)
+
   NOTE: If you want to use EverCDDL, you cannot use a F\* binary
   package because EverCDDL has a F\* plugin that needs to be compiled
   with the very same OCaml environment as the one used to compile
-  F\*. This is why setting `EVERPARSE_USE_FSTAR_EXE` will automatically set
-  `EVERPARSE_USE_OPAMROOT=1`.
-  
-* If you want to use your own Karamel, first set
-  `EVERPARSE_USE_KRML_EXE=1`, then set `KRML_EXE` to the full path
-  of the Karamel executable.
+  F\*. In that case you should also pass `--use-opamroot` so that the
+  plugin is compiled against your F\*'s opam switch.
 
-As a shortcut, setting `EVERPARSE_USE_MY_DEPS=1` has the same effect
-as setting all of those environment variables to 1.
+* If you want to use your own Karamel, pass `--krml-exe=PATH` with the
+  full path of the Karamel executable (or `--use-krml-exe` if `KRML_EXE`
+  is set when running `make`.)
+
+* As a shortcut to point EverParse at a F\* binary package (from
+  https://github.com/FStarLang/fstar-nightly, which bundles `fstar.exe`,
+  `krml` and the compiled Pulse libraries), pass
+  `--fstar-bin-package=DIR` with the directory where you extracted the
+  package (the one containing `bin/`, `lib/`, `share/`, ...). This is a
+  shortcut for `--fstar-exe=DIR/bin/fstar.exe --krml-exe=DIR/bin/krml`.
+  If you have not extracted the package yet, you can instead pass
+  `--fstar-bin-package-tar=FILE` with the package tarball (e.g.
+  `fstar-Linux-x86_64.tar.gz`); `./configure` extracts it under
+  `opt/fstar-bin-package/` and uses the result. Note that the binary
+  package does not ship the Pulse DICE examples, so for the cddl DPE
+  tests you will most likely also need `--dice-home=PATH` (see below).
+
+* If you want to use a specific Z3 version, pass `--z3-version=VERSION`
+  (default: `4.13.3`.)
+
+* The cddl DPE tests need the Pulse DICE examples. When building F\*
+  from source, `./configure` defaults `DICE_HOME` to
+  `opt/FStar/pulse/share/pulse/examples/dice`. With a F\* binary package
+  the examples are not shipped, so you must point `DICE_HOME` at a
+  checkout of them with `--dice-home=PATH`.
+
+As a shortcut, `./configure --use-my-deps` has the same effect as
+`--use-fstar-exe --use-krml-exe --use-opamroot`.
+
+Running `make` without first running `./configure` is equivalent to
+running `./configure` with no argument, i.e. EverParse builds F\*,
+Karamel and Pulse from source.
 
 NOTES: These settings are all ignored when building a binary package.
 
 NOTE: DO NOT use the clones from the opt/ subdirectory with
-`EVERPARSE_USE_*`
+`./configure --use-*`
