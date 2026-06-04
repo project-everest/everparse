@@ -200,7 +200,9 @@ NOTE: Support for encryption is in progress.
 
 	For testing, you can install additional packages with:
 
-	`sudo apt-get install --no-install-recommends cmake python3-pip python3-venv`
+	`sudo apt-get install --no-install-recommends cmake clang python3-pip python3-venv`
+
+	(`clang` is used by the EverCOSign interop tests.)
 
 * On MacOS, EverParse depends on:
 
