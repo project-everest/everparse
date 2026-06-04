@@ -346,7 +346,12 @@ let _ =
     else
       [
           "-warn-error"; "@1..27";
-          (if !skip_compilation then "-skip-compilation" else "-skip-linking");
+          (* Always emit only: the CBOR Det types are now concrete in
+             CBORDetType.h, so krml re-emits the shared monomorphic instance
+             Pulse_Lib_Slice_slice__uint8_t into the generated headers, which
+             collides with the copy included from CBORDetType.h. We strip the
+             duplicate and drive the C compiler ourselves below. *)
+          "-skip-compilation";
           "-tmpdir"; !odir;
           "-header"; Filename.concat everparse_src_cddl_tool "noheader.txt";
         "-fnoshort-enums";
@@ -367,6 +372,55 @@ let _ =
     run_cmd
       krml_exe
       krml_options
+  in
+  (* In the C case, krml only emitted the sources (-skip-compilation). Strip the
+     duplicate Pulse_Lib_Slice_slice__uint8_t typedef that krml re-emits into the
+     generated headers (the canonical definition comes from the included
+     CBORDetType.h), then drive the C compiler ourselves unless compilation was
+     explicitly skipped. *)
+  let res =
+    if res = 0 && not (is_rust ())
+    then begin
+      let strip_slice h =
+        if Sys.file_exists h
+        then ignore (run_cmd "perl" [
+          "-0pi"; "-e";
+          "s/typedef struct Pulse_Lib_Slice_slice__uint8_t_s\\n\\{\\n  uint8_t \\*elt;\\n  size_t len;\\n\\}\\nPulse_Lib_Slice_slice__uint8_t;\\n//";
+          h
+        ])
+      in
+      strip_slice (Filename.concat !odir (mname_subst ^ ".h"));
+      strip_slice (Filename.concat (Filename.concat !odir "internal") (mname_subst ^ ".h"));
+      if !skip_compilation
+      then 0
+      else begin
+        let cc = try Sys.getenv "CC" with Not_found -> "cc" in
+        let det_c = Filename.concat (Filename.concat everparse_src_cbor_pulse "det") "c" in
+        let cc_args = [
+          "-I"; Filename.concat (Filename.concat krml_home "krmllib") "dist/minimal";
+          "-I"; Filename.concat krml_home "krmllib";
+          "-I"; det_c;
+          "-I"; Filename.concat krml_home "include";
+          "-I"; !odir;
+          "-Wall"; "-Werror"; "-Wno-unknown-warning-option"; "-g"; "-fwrapv";
+          "-D_BSD_SOURCE"; "-D_DEFAULT_SOURCE"; "-Wno-parentheses"; "-std=c11";
+          "-Wno-unused-variable";
+        ] in
+        let cfiles =
+          Array.to_list (Sys.readdir !odir)
+          |> List.filter (fun f -> Filename.check_suffix f ".c")
+          |> List.sort compare
+        in
+        List.fold_left (fun acc cf ->
+          if acc <> 0 then acc
+          else
+            let c = Filename.concat !odir cf in
+            let o = Filename.concat !odir (Filename.remove_extension cf ^ ".o") in
+            run_cmd cc (cc_args @ ["-c"; c; "-o"; o])
+        ) 0 cfiles
+      end
+    end
+    else res
   in
   if res = 0 then print_endline "EverCDDL succeeded!";
   exit res
