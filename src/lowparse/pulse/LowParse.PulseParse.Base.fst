@@ -1002,6 +1002,62 @@ fn free_ext
   free1 x #v1;
 }
 
+(* Re-index a [copyful_parse] from a mid type [tm1] (with predicate [vmatch1] and
+   conv [conv1]) to a different mid type [tm2] (predicate [vmatch2], conv [conv2]),
+   given a ghost map [fg : tm1 -> tm2] that is compatible with both the predicate
+   and the conv. Used to bridge the library's dependent-pair sum mid to a generated
+   transparent textual mid, while keeping conv tight. *)
+inline_for_extraction
+fn copyful_parse_coerce_mid
+  (#t' #tm1 #t1: Type0)
+  (#vmatch1: t' -> tm1 -> slprop)
+  (#conv1: tm1 -> GTot (option t1))
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t1)
+  (w: copyful_parse vmatch1 p1 conv1)
+  (#tm2: Type0)
+  (vmatch2: t' -> tm2 -> slprop)
+  (conv2: tm2 -> GTot (option t1))
+  (fg: tm1 -> GTot tm2)
+  (sq: squash (
+    (forall (x: t') (m1: tm1) . vmatch1 x m1 == vmatch2 x (fg m1)) /\
+    (forall (m1: tm1) . conv2 (fg m1) == conv1 m1)
+  ))
+: copyful_parse #_ #_ #_ vmatch2 #_ p1 conv2
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t1)
+{
+  let res = w input;
+  elim_vmatch_conv vmatch1 conv1 res (Ghost.reveal v);
+  with m1 . assert (vmatch1 res m1 ** pure (conv1 m1 == Some (Ghost.reveal v)));
+  rewrite (vmatch1 res m1) as (vmatch2 res (fg m1));
+  intro_vmatch_conv vmatch2 conv2 res (fg m1) (Ghost.reveal v);
+  res
+}
+
+(* Re-index a [free_t] from a mid type [tm1] to [tm2], given a ghost map
+   [gf : tm2 -> tm1] compatible with the predicate. *)
+inline_for_extraction
+fn free_coerce_mid
+  (#t' #tm1: Type0)
+  (#vmatch1: t' -> tm1 -> slprop)
+  (free1: free_t vmatch1)
+  (#tm2: Type0)
+  (vmatch2: t' -> tm2 -> slprop)
+  (gf: tm2 -> GTot tm1)
+  (sq: squash (forall (x: t') (m2: tm2) . vmatch2 x m2 == vmatch1 x (gf m2)))
+: free_t #t' #tm2 vmatch2
+=
+  (x: t')
+  (#v: Ghost.erased tm2)
+{
+  let v1 : Ghost.erased tm1 = Ghost.hide (gf (Ghost.reveal v));
+  rewrite (vmatch2 x v) as (vmatch1 x v1);
+  free1 x #v1;
+}
+
 let l2r_safe_writer_postcond
   (#tm #t: Type0)
   (conv: tm -> GTot (option t))
