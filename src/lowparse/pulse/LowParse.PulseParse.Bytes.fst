@@ -740,3 +740,184 @@ let l2r_safe_size_bounded_vlbytes
   (sq: squash FStar.SizeT.fits_u64)
 : PPB.l2r_safe_size #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes #_ #(parse_bounded_vlbytes min max) (serialize_bounded_vlbytes min max) (vlbytes_conv min max)
 = l2r_safe_size_bounded_vlbytes' min min_sz max max_sz (log256' max) l_sz sq
+
+(* ============================================================================ *)
+(* Copyful safe writer/size for a generic-length-prefixed byte array (vlgenbytes) *)
+(* ============================================================================ *)
+
+(* The serialized form of a [bounded_vlgenbytes] value [y] is the variable-width
+   length header (the generic serializer [ssk] applied to the byte length of [y])
+   followed by the raw payload bytes [B32.reveal y]. Derived from
+   [serialize_synth_eq] over the bounded-vlgen serializer (whose unfold, via
+   [serialize_bounded_vlgen_unfold], is exactly that append, using the identity
+   [serialize serialize_all_bytes y == B32.reveal y]). *)
+let serialize_bounded_vlgenbytes_bytes_eq
+  (vmin: nat)
+  (vmax: nat { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 })
+  (#sk: parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
+  (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
+  (y: parse_bounded_vlbytes_t vmin vmax)
+: Lemma (
+    serialize (serialize_bounded_vlgenbytes vmin vmax ssk) y ==
+    Seq.append
+      (serialize ssk (U32.uint_to_t (B32.length y)))
+      (B32.reveal y)
+  )
+= serialize_synth_eq
+    (parse_bounded_vlgen vmin vmax pk serialize_all_bytes)
+    (synth_bounded_vlbytes vmin vmax)
+    (serialize_bounded_vlgen vmin vmax ssk serialize_all_bytes)
+    (synth_bounded_vlbytes_recip vmin vmax)
+    ()
+    y;
+  serialize_bounded_vlgen_unfold vmin vmax ssk serialize_all_bytes
+    (synth_bounded_vlbytes_recip vmin vmax y)
+
+#push-options "--z3rlimit 64"
+
+(* Copyful safe serializer for a bounded variable-length byte array whose length
+   is framed by a generic (variable-width) length header [ssk]. The
+   variable-width analog of [l2r_safe_writer_bounded_vlbytes']: the header value
+   is the payload byte length [n] (read from the [lvec_len] field, sound by its
+   refinement); the header bytes are written by the generic leaf writer [hw] and
+   their size is computed up-front by [hsize].
+
+   Fails gracefully (err=true) iff the owned value's length is out of
+   [vmin, vmax] (so the conv [vlbytes_conv vmin vmax] is None) or the output
+   slice cannot hold the [header ++ payload] serialized bytes. Room is checked
+   incrementally (header first, then payload) so no [SZ.t] overflow can occur:
+   on success [tot = h + n <= length out] always fits. *)
+inline_for_extraction
+fn l2r_safe_writer_bounded_vlgenbytes
+  (vmin: nat) (vmin_sz: SZ.t { SZ.v vmin_sz == vmin })
+  (vmax: nat { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 }) (vmax_sz: SZ.t { SZ.v vmax_sz == vmax })
+  (#sk: parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
+  (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
+  (hsize: (x: bounded_int32 vmin vmax -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize ssk x) /\ SZ.v sz < pow2 64)))
+  (hw: LPS.l2r_leaf_writer ssk)
+  (sq: squash FStar.SizeT.fits_u64)
+: PPB.l2r_safe_writer #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t vmin vmax) vmatch_copy_bytes #_ #(parse_bounded_vlgenbytes vmin vmax pk) (serialize_bounded_vlgenbytes vmin vmax ssk) (vlbytes_conv vmin vmax)
+=
+  (x: lvec byte)
+  (#y: Ghost.erased B32.bytes)
+  (out: S.slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: R.ref bool)
+{
+  unfold (vmatch_copy_bytes x y);
+  V.pts_to_len x.lvec_vec;
+  let n = x.lvec_len;
+  S.pts_to_len out;
+  let lout = S.len out;
+  if (SZ.lte vmin_sz n && SZ.lte n vmax_sz) {
+    (* conv y == Some y; serialized length is h + n *)
+    SZ.fits_u64_implies_fits_32 ();
+    FStar.Math.Lemmas.small_mod (SZ.v n) (pow2 32);
+    let n32 : bounded_int32 vmin vmax = SZ.sizet_to_uint32 n;
+    U32.v_inj n32 (B32.len (Ghost.reveal y));
+    let h = hsize n32;
+    length_serialize_bounded_vlgenbytes vmin vmax ssk (Ghost.reveal y);
+    serialize_bounded_vlgenbytes_bytes_eq vmin vmax ssk (Ghost.reveal y);
+    if (SZ.lt lout h) {
+      (* not enough room even for the header *)
+      perr := true;
+      fold (vmatch_copy_bytes x y);
+      h
+    } else {
+      let sp1, sp2 = S.split out h;
+      S.pts_to_len sp1;
+      S.pts_to_len sp2;
+      with hv. assert (S.pts_to sp1 hv);
+      (* write the variable-width length header into sp1 == out[0, h) *)
+      let res_hdr = hw n32 sp1 0sz;
+      with hdr. assert (S.pts_to sp1 hdr);
+      S.pts_to_len sp1;
+      Seq.lemma_eq_elim hdr (Seq.slice hdr 0 (SZ.v h));
+      let lrest = S.len sp2;
+      if (SZ.lt lrest n) {
+        (* header written but not enough room for the payload *)
+        S.join sp1 sp2 out;
+        perr := true;
+        fold (vmatch_copy_bytes x y);
+        h
+      } else {
+        (* copy the payload into sp2a == out[h, h + n) *)
+        let sp2a, sp2b = S.split sp2 n;
+        S.pts_to_len sp2a;
+        V.to_array_pts_to x.lvec_vec;
+        let vecslice = S.from_array (V.vec_to_array x.lvec_vec) n;
+        S.pts_to_len vecslice;
+        S.copy sp2a vecslice;
+        S.to_array vecslice;
+        V.to_vec_pts_to x.lvec_vec;
+        S.join sp2a sp2b sp2;
+        S.join sp1 sp2 out;
+        SZ.fits_lte (SZ.v h + SZ.v n) (SZ.v lout);
+        let tot = SZ.add h n;
+        (* close the postcondition: written prefix == serialized bytes *)
+        vlbytes_prefix_slice_lemma hdr (B32.reveal y)
+          (Seq.slice (Ghost.reveal v) (SZ.v h + SZ.v n) (Seq.length (Ghost.reveal v)));
+        perr := false;
+        fold (vmatch_copy_bytes x y);
+        tot
+      }
+    }
+  } else {
+    (* length out of [vmin, vmax], so vlbytes_conv vmin vmax y == None *)
+    perr := true;
+    fold (vmatch_copy_bytes x y);
+    0sz
+  }
+}
+
+#pop-options
+
+#push-options "--z3rlimit 64"
+
+(* Copyful safe SIZE for a bounded variable-length byte array framed by a generic
+   (variable-width) length header: the size-computation analog of
+   [l2r_safe_writer_bounded_vlgenbytes]. It does not serialize; it only computes
+   the serialized size [h + n] of the variable-width header (size [h = hsize n32])
+   plus the [n]-byte payload, gracefully failing (err=true) on [SZ.t] overflow
+   (only possible for a pathological header serializer, since [n <= vmax]). It
+   also fails gracefully iff the owned value's length is out of [vmin, vmax] (so
+   the conv [vlbytes_conv vmin vmax] is None). The runtime length is read from
+   the [lvec_len] field (sound by its refinement). *)
+inline_for_extraction
+fn l2r_safe_size_bounded_vlgenbytes
+  (vmin: nat) (vmin_sz: SZ.t { SZ.v vmin_sz == vmin })
+  (vmax: nat { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 }) (vmax_sz: SZ.t { SZ.v vmax_sz == vmax })
+  (#sk: parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
+  (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
+  (hsize: (x: bounded_int32 vmin vmax -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize ssk x) /\ SZ.v sz < pow2 64)))
+  (sq: squash FStar.SizeT.fits_u64)
+: PPB.l2r_safe_size #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t vmin vmax) vmatch_copy_bytes #_ #(parse_bounded_vlgenbytes vmin vmax pk) (serialize_bounded_vlgenbytes vmin vmax ssk) (vlbytes_conv vmin vmax)
+=
+  (x: lvec byte)
+  (#y: Ghost.erased B32.bytes)
+  (perr: R.ref bool)
+{
+  unfold (vmatch_copy_bytes x y);
+  V.pts_to_len x.lvec_vec;
+  let n = x.lvec_len;
+  if (SZ.lte vmin_sz n && SZ.lte n vmax_sz) {
+    (* conv y == Some y; serialized length is h + n *)
+    SZ.fits_u64_implies_fits_32 ();
+    FStar.Math.Lemmas.small_mod (SZ.v n) (pow2 32);
+    let n32 : bounded_int32 vmin vmax = SZ.sizet_to_uint32 n;
+    U32.v_inj n32 (B32.len (Ghost.reveal y));
+    let h = hsize n32;
+    length_serialize_bounded_vlgenbytes vmin vmax ssk (Ghost.reveal y);
+    assert_norm (pow2 64 == 18446744073709551616);
+    let tot = PPB.size_add_checked sq h n perr;
+    fold (vmatch_copy_bytes x y);
+    tot
+  } else {
+    (* length out of [vmin, vmax], so vlbytes_conv vmin vmax y == None *)
+    perr := true;
+    fold (vmatch_copy_bytes x y);
+    0sz
+  }
+}
+
+#pop-options
