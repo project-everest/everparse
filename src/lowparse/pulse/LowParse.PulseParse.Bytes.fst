@@ -147,8 +147,28 @@ module B32 = LowParse.Bytes32
 module V = Pulse.Lib.Vec
 module A = Pulse.Lib.Array
 
+(* A sized, owned vector: an owned [Pulse.Lib.Vec.vec] paired with a *runtime*
+   length field whose [SizeT] value is, by a type refinement, provably equal to
+   the vector's (ghost) length [V.length].
+
+   WHY A REFINED LENGTH FIELD (rather than a bare pair or a pure proposition):
+   [V.length] is [Ghost], so there is NO runtime operation to recover a vector's
+   size. A copyful serializer (l2r_safe_writer) must, at run time, read the byte
+   length to (a) compute the serialized size and (b) gracefully fail when the
+   high-level conv rejects the value (e.g. a wrong-length [flbytes], or an
+   out-of-bounds [vlbytes]). Carrying the length as a refined field makes the
+   runtime [lvec_len] a *sound* stand-in for the ghost vector length, so those
+   checks need no (impossible) runtime length lookup. The vector comes FIRST
+   because the refinement on [lvec_len] mentions [lvec_vec]. *)
+noeq
+type lvec (t: Type0) = {
+  lvec_vec: V.vec t;
+  lvec_len: (n: SZ.t { SZ.v n == V.length lvec_vec });
+}
+
 (* Copyful parsing for bytes: the left-hand side of the vmatch is a freshly
-   allocated, owned (freeable) vector holding a copy of the parsed bytes.
+   allocated, owned (freeable) [lvec byte] holding a copy of the parsed bytes
+   together with their runtime length.
 
    NOTE on the choice of left-hand-side type: a [Pulse.Lib.Slice.slice] is a
    borrowing *view* with no allocation/deallocation API, and a slice value does
@@ -156,15 +176,18 @@ module A = Pulse.Lib.Array
    backing is existentially/ghost-bound). Consequently a [free_t] combinator,
    which only receives the left-hand-side value plus a ghost high-level value,
    cannot soundly free a bare slice. We therefore use an owned, freeable
-   [Pulse.Lib.Vec.vec byte] as the left-hand side; a read-only slice view is
-   always derivable on demand via [from_array (vec_to_array _)]. *)
+   [lvec byte] as the left-hand side; a read-only slice view is always derivable
+   on demand via [from_array (vec_to_array _)].
 
+   The length equality [SZ.v x.lvec_len == B32.length v] is NOT stated here: it
+   follows from [V.pts_to_len] (giving [V.length x.lvec_vec == B32.length v])
+   composed with the [lvec_len] field refinement. *)
 let vmatch_copy_bytes
-  (vc: V.vec byte)
+  (x: lvec byte)
   (v: B32.bytes)
 : slprop
-= V.pts_to vc (B32.reveal v) **
-  pure (V.is_full_vec vc)
+= V.pts_to x.lvec_vec (B32.reveal v) **
+  pure (V.is_full_vec x.lvec_vec)
 
 let flbytes_conv
   (sz: nat { sz < 4294967296 })
@@ -192,7 +215,7 @@ let vlbytes_conv
 
 inline_for_extraction
 fn free_copy_bytes
-  (x: V.vec byte)
+  (x: lvec byte)
   (#v: Ghost.erased B32.bytes)
 requires
   vmatch_copy_bytes x v
@@ -200,7 +223,7 @@ ensures
   emp
 {
   unfold (vmatch_copy_bytes x v);
-  V.free x
+  V.free x.lvec_vec
 }
 
 inline_for_extraction
@@ -210,11 +233,11 @@ fn alloc_and_copy
   (#w: Ghost.erased (Seq.seq byte))
 requires
   S.pts_to input #pm w
-returns vc: V.vec byte
+returns res: lvec byte
 ensures
   S.pts_to input #pm w **
-  V.pts_to vc w **
-  pure (V.is_full_vec vc)
+  V.pts_to res.lvec_vec w **
+  pure (V.is_full_vec res.lvec_vec /\ SZ.v res.lvec_len == Seq.length w)
 {
   S.pts_to_len input;
   let length = S.len input;
@@ -227,7 +250,9 @@ ensures
   S.copy tmp input;
   S.to_array tmp;
   V.to_vec_pts_to vc;
-  vc
+  let res : lvec byte = { lvec_vec = vc; lvec_len = length };
+  rewrite (V.pts_to vc w) as (V.pts_to res.lvec_vec w);
+  res
 }
 
 inline_for_extraction
@@ -237,7 +262,7 @@ fn copyful_parse_all_bytes
   (#v: Ghost.erased B32.bytes)
 requires
   PPB.pts_to_parsed parse_all_bytes input #pm v
-returns vc: V.vec byte
+returns vc: lvec byte
 ensures
   PPB.pts_to_parsed parse_all_bytes input #pm v **
   vmatch_copy_bytes vc v
@@ -247,7 +272,7 @@ ensures
   let vc = alloc_and_copy input;
   Trade.elim (S.pts_to input #pm w) (PPB.pts_to_parsed parse_all_bytes input #pm v);
   assert (pure (Ghost.reveal w == B32.reveal v));
-  rewrite (V.pts_to vc w) as (V.pts_to vc (B32.reveal v));
+  rewrite (V.pts_to vc.lvec_vec w) as (V.pts_to vc.lvec_vec (B32.reveal v));
   fold (vmatch_copy_bytes vc v);
   vc
 }
@@ -255,7 +280,7 @@ ensures
 inline_for_extraction
 fn copyful_parse_flbytes
   (sz: nat { sz < 4294967296 })
-: PPB.copyful_parse #(V.vec byte) #B32.bytes #(B32.lbytes sz) vmatch_copy_bytes (parse_flbytes sz) (flbytes_conv sz)
+: PPB.copyful_parse #(lvec byte) #B32.bytes #(B32.lbytes sz) vmatch_copy_bytes (parse_flbytes sz) (flbytes_conv sz)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -265,7 +290,7 @@ fn copyful_parse_flbytes
   with w. assert (S.pts_to input #pm w);
   let vc = alloc_and_copy input;
   Trade.elim (S.pts_to input #pm w) (PPB.pts_to_parsed (parse_flbytes sz) input #pm v);
-  rewrite (V.pts_to vc w) as (V.pts_to vc (B32.reveal v));
+  rewrite (V.pts_to vc.lvec_vec w) as (V.pts_to vc.lvec_vec (B32.reveal v));
   fold (vmatch_copy_bytes vc v);
   PPB.intro_vmatch_conv vmatch_copy_bytes (flbytes_conv sz) vc (Ghost.reveal v <: B32.bytes) (Ghost.reveal v);
   vc
@@ -278,7 +303,7 @@ fn copyful_parse_bounded_vldata_strong_payload
   (l: nat { l >= log256' max /\ l <= 4 })
   (lr: PPB.leaf_reader (parse_bounded_integer l))
   (u: squash FStar.SizeT.fits_u64)
-: PPB.copyful_parse #(V.vec byte) #B32.bytes #(parse_bounded_vldata_strong_t min max #_ #_ #parse_all_bytes serialize_all_bytes) vmatch_copy_bytes (parse_bounded_vldata_strong' min max l serialize_all_bytes) (vldata_all_bytes_conv min max)
+: PPB.copyful_parse #(lvec byte) #B32.bytes #(parse_bounded_vldata_strong_t min max #_ #_ #parse_all_bytes serialize_all_bytes) vmatch_copy_bytes (parse_bounded_vldata_strong' min max l serialize_all_bytes) (vldata_all_bytes_conv min max)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -302,7 +327,7 @@ fn copyful_parse_bounded_vlbytes'
   (l: nat { l >= log256' max /\ l <= 4 })
   (lr: PPB.leaf_reader (parse_bounded_integer l))
   (u: squash FStar.SizeT.fits_u64)
-: PPB.copyful_parse #(V.vec byte) #B32.bytes #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes (parse_bounded_vlbytes' min max l) (vlbytes_conv min max)
+: PPB.copyful_parse #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes (parse_bounded_vlbytes' min max l) (vlbytes_conv min max)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -329,7 +354,7 @@ let copyful_parse_bounded_vlbytes
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (lr: PPB.leaf_reader (parse_bounded_integer (log256' max)))
   (u: squash FStar.SizeT.fits_u64)
-: PPB.copyful_parse #(V.vec byte) #B32.bytes #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes (parse_bounded_vlbytes min max) (vlbytes_conv min max)
+: PPB.copyful_parse #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes (parse_bounded_vlbytes min max) (vlbytes_conv min max)
 = copyful_parse_bounded_vlbytes' min max (log256' max) lr u
 
 #push-options "--z3rlimit 128"
@@ -383,7 +408,7 @@ fn copyful_parse_bounded_vlgen_payload
   (jk: LPS.jumper pk)
   (rk: PPB.leaf_reader pk)
   (sq: squash (sk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
-: PPB.copyful_parse #(V.vec byte) #B32.bytes #(parse_bounded_vldata_strong_t vmin vmax #_ #_ #parse_all_bytes serialize_all_bytes) vmatch_copy_bytes (parse_bounded_vlgen vmin vmax pk serialize_all_bytes) (vldata_all_bytes_conv vmin vmax)
+: PPB.copyful_parse #(lvec byte) #B32.bytes #(parse_bounded_vldata_strong_t vmin vmax #_ #_ #parse_all_bytes serialize_all_bytes) vmatch_copy_bytes (parse_bounded_vlgen vmin vmax pk serialize_all_bytes) (vldata_all_bytes_conv vmin vmax)
 =
   (input: S.slice byte)
   (#pm: perm)
@@ -409,7 +434,7 @@ fn copyful_parse_bounded_vlgenbytes
   (jk: LPS.jumper pk)
   (rk: PPB.leaf_reader pk)
   (u: squash (sk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
-: PPB.copyful_parse #(V.vec byte) #B32.bytes #(parse_bounded_vlbytes_t vmin vmax) vmatch_copy_bytes (parse_bounded_vlgenbytes vmin vmax pk) (vlbytes_conv vmin vmax)
+: PPB.copyful_parse #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t vmin vmax) vmatch_copy_bytes (parse_bounded_vlgenbytes vmin vmax pk) (vlbytes_conv vmin vmax)
 =
   (input: S.slice byte)
   (#pm: perm)
