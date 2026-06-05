@@ -1043,7 +1043,17 @@ let emit_copyful_array o i n ty byte_size elem_count =
   wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
   wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
   wp o "  PPAR.copyful_parse_array %s %s %s %d %dsz %d %dsz ()\n\n" (scombinator_name ty) (copyful_read_name ty) (pulse_jumper_name ty) byte_size byte_size elem_count elem_count;
-  wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> PPAR.free_array (PPB.free_vmatch_conv %s %s %s) %dsz x #(Ghost.hide (Ghost.reveal v <: list %s))\n\n" n n (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty) elem_count (compile_type ty)
+  wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> PPAR.free_array (PPB.free_vmatch_conv %s %s %s) %dsz x #(Ghost.hide (Ghost.reveal v <: list %s))\n\n" n n (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty) elem_count (compile_type ty);
+  if !emit_pulse && copyful_writer_available ty then begin
+    wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+    wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n" n n n n;
+    wp o "  %s_eq ();\n" n;
+    wp o "  assert_norm (LP.fldata_array_precond (LP.get_parser_kind %s) %d %d == true);\n" (pcombinator_name ty) byte_size elem_count;
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
+    wp o "  PPAR.l2r_safe_writer_array %s %s %d %dsz %d %dsz () ()\n\n" (scombinator_name ty) (copyful_writer_name ty) byte_size byte_size elem_count elem_count;
+    register_writer n
+  end
 
 (* Emit copyful parser (read_<n>) and free (free_<n>) for a variable-count list
    [ty<low..high>] prefixed by its element count (parsed with [repr_t]'s leaf
@@ -1097,7 +1107,20 @@ let emit_copyful_vldata_list o i n ty min max =
   wp o "       (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash)\n" (log256 max);
   wp o "    synth_%s synth_%s_recip\n\n" n n;
   wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
-  wp o "  PPVD.free_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.free_vclist (PPB.free_vmatch_conv %s %s %s))\n\n" min max (scombinator_name ty) (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty)
+  wp o "  PPVD.free_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.free_vclist (PPB.free_vmatch_conv %s %s %s))\n\n" min max (scombinator_name ty) (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty);
+  if !emit_pulse && copyful_writer_available ty then begin
+    wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+    wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n" n n n n;
+    wp o "  %s_copyful_synth_injective ();\n" n;
+    wp o "  %s_copyful_synth_inverse ();\n" n;
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
+    wp o "  PPC.l2r_safe_writer_synth\n";
+    wp o "    ((PPVD.l2r_safe_writer_bounded_vldata_strong_payload %d %dsz %d %dsz %d %dsz (LP.serialize_list _ %s)\n" min min max max (log256 max) (log256 max) (scombinator_name ty);
+    wp o "       (PPLS.l2r_safe_writer_list %s %s ()) fits_u64_squash) <: PPB.l2r_safe_writer _ %s'_serializer _)\n" (scombinator_name ty) (copyful_writer_name ty) n;
+    wp o "    synth_%s synth_%s_recip\n\n" n n;
+    register_writer n
+  end
 
 (* Like emit_copyful_vldata_list but for a list framed by a generic length-header
    parser (parse_bounded_vlgen, used when the [<lo..hi : repr>] vector specifies
@@ -1238,7 +1261,17 @@ let emit_copyful_bounded_vldata_payload_refined o i n ty smax =
   wp o "    (PPVD.copyful_parse_bounded_vldata_strong_payload %d %d %s %s (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash)\n" 0 smax (scombinator_name ty) (copyful_read_name ty) (log256 smax);
   wp o "    synth_%s synth_%s_recip\n\n" n n;
   wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
-  wp o "  PPVD.free_vldata_strong %d %d %s %s\n\n" 0 smax (scombinator_name ty) (copyful_free_name ty)
+  wp o "  PPVD.free_vldata_strong %d %d %s %s\n\n" 0 smax (scombinator_name ty) (copyful_free_name ty);
+  if !emit_pulse && copyful_writer_available ty then begin
+    wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+    wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n" n n n n;
+    wp o "  %s_copyful_synth_injective ();\n" n;
+    wp o "  %s_copyful_synth_inverse ();\n" n;
+    wp o "  PPC.l2r_safe_writer_synth\n";
+    wp o "    ((PPVD.l2r_safe_writer_bounded_vldata_strong_payload %d %dsz %d %dsz %d %dsz %s %s fits_u64_squash) <: PPB.l2r_safe_writer _ %s'_serializer _)\n" 0 0 smax smax (log256 smax) (log256 smax) (scombinator_name ty) (copyful_writer_name ty) n;
+    wp o "    synth_%s synth_%s_recip\n\n" n n;
+    register_writer n
+  end
 
 (* Emit copyful parser (read_<n>) and free (free_<n>) for a fixed-BYTE-length
    container of variable-length elements [t x[k]] (the VectorFixed branch). The
@@ -1272,7 +1305,17 @@ let emit_copyful_vectorfixed_list o i n ty k =
   wp o "  %s_eq ();\n" n;
   wp o "  PPB.free_ext\n";
   wp o "    (PPFD.free_fldata_strong (LP.serialize_list _ %s) %d (PPVCL.free_vclist (PPB.free_vmatch_conv %s %s %s)))\n" (scombinator_name ty) k (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty);
-  wp o "    %s_vmatch ()\n\n" n
+  wp o "    %s_vmatch ()\n\n" n;
+  if !emit_pulse && copyful_writer_available ty then begin
+    wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+    wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n" n n n n;
+    wp o "  %s_eq ();\n" n;
+    wp o "  PPB.l2r_safe_writer_ext\n";
+    wp o "    ((PPFD.l2r_safe_writer_fldata_strong_payload (LP.serialize_list _ %s) %d %dsz\n" (scombinator_name ty) k k;
+    wp o "       (PPLS.l2r_safe_writer_list %s %s ())) <: PPB.l2r_safe_writer _ %s'_serializer _)\n" (scombinator_name ty) (copyful_writer_name ty) n;
+    wp o "    %s_serializer %s_vmatch ()\n\n" n n;
+    register_writer n
+  end
 
 (* Emit copyful parser (read_<n>) and free (free_<n>) for an explicit-length
    array [t x[len]] / count-bounded list of fixed-size elements (the vlarray
@@ -1307,7 +1350,21 @@ let emit_copyful_vlarray o i n ty low high mn mx =
   wp o "    (LP.vldata_to_vlarray %d %d %s %d %d ())\n" low high (scombinator_name ty) mn mx;
   wp o "    (LP.vlarray_to_vldata %d %d %s %d %d ())\n\n" low high (scombinator_name ty) mn mx;
   wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
-  wp o "  PPVD.free_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.free_vclist (PPB.free_vmatch_conv %s %s %s))\n\n" low high (scombinator_name ty) (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty)
+  wp o "  PPVD.free_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.free_vclist (PPB.free_vmatch_conv %s %s %s))\n\n" low high (scombinator_name ty) (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty);
+  if !emit_pulse && copyful_writer_available ty then begin
+    wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+    wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n" n n n n;
+    wp o "  LP.vldata_to_vlarray_inj %d %d %s %d %d ();\n" low high (scombinator_name ty) mn mx;
+    wp o "  LP.vlarray_to_vldata_to_vlarray %d %d %s %d %d ();\n" low high (scombinator_name ty) mn mx;
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
+    wp o "  PPC.l2r_safe_writer_synth\n";
+    wp o "    ((PPVD.l2r_safe_writer_bounded_vldata_strong_payload %d %dsz %d %dsz %d %dsz (LP.serialize_list _ %s)\n" low low high high (log256 high) (log256 high) (scombinator_name ty);
+    wp o "       (PPLS.l2r_safe_writer_list %s %s ()) fits_u64_squash) <: PPB.l2r_safe_writer _ (LP.serialize_bounded_vldata_strong %d %d (LP.serialize_list _ %s)) _)\n" (scombinator_name ty) (copyful_writer_name ty) low high (scombinator_name ty);
+    wp o "    (LP.vldata_to_vlarray %d %d %s %d %d ())\n" low high (scombinator_name ty) mn mx;
+    wp o "    (LP.vlarray_to_vldata %d %d %s %d %d ())\n\n" low high (scombinator_name ty) mn mx;
+    register_writer n
+  end
 
 let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
   let qname = if tn = "" then n else tn^"@"^n in
