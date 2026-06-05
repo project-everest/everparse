@@ -566,3 +566,140 @@ fn l2r_safe_writer_bounded_vlgen_payload
 }
 
 #pop-options
+
+(* ============================================================================ *)
+(* Safe SIZE computation for bounded generic-length-prefixed data (vlgen)        *)
+(* ============================================================================ *)
+
+(* Size analog of Step A (size pass error): the payload size pass signalled an
+   error, so either the payload conv is None, or the payload's serialized size is
+   >= pow2 64 (hence > vmax); either way the framing conv is None and err=true. *)
+let vlgen_size_postcond_err_lemma
+  (#tm #t: Type)
+  (vmin: nat)
+  (vmax: nat { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 })
+  (#sk: parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
+  (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
+  (#k: parser_kind) (#p: parser k t)
+  (s: serializer p)
+  (conv: tm -> GTot (option t))
+  (y: tm)
+  (n: SZ.t)
+: Lemma (requires PPB.l2r_safe_size_postcond conv s y n true)
+        (ensures PPB.l2r_safe_size_postcond (PPCV.vldata_strong_conv vmin vmax s conv) (serialize_bounded_vlgen vmin vmax ssk s) y n true)
+= assert_norm (pow2 64 == 18446744073709551616);
+  match conv y with
+  | None -> ()
+  | Some y' -> ()
+
+(* Size analog of Step B (out of bounds): the size pass succeeded but the payload
+   size is out of [vmin, vmax]; the framing conv is None, so err=true. *)
+let vlgen_size_postcond_oob_lemma
+  (#tm #t: Type)
+  (vmin: nat)
+  (vmax: nat { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 })
+  (#sk: parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
+  (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
+  (#k: parser_kind) (#p: parser k t)
+  (s: serializer p)
+  (conv: tm -> GTot (option t))
+  (y: tm)
+  (n: SZ.t)
+: Lemma (requires
+    PPB.l2r_safe_size_postcond conv s y n false /\
+    ~(vmin <= SZ.v n /\ SZ.v n <= vmax))
+  (ensures PPB.l2r_safe_size_postcond (PPCV.vldata_strong_conv vmin vmax s conv) (serialize_bounded_vlgen vmin vmax ssk s) y n true)
+= match conv y with
+  | None -> ()
+  | Some y' -> ()
+
+(* Size analog of Step E (success): the total serialized size [tot] is the header
+   size (for value [n32 = U32.uint_to_t (SZ.v n)]) plus the payload size [n].  The
+   parameters [tot] and [e] are taken straight from [size_add_checked] applied to
+   the header size [h] and the payload size [n]: if their sum fits in a machine
+   word then [e=false] and [tot] is the total; otherwise [e=true].  In both cases
+   the framing size postcondition holds (in the overflow case it holds vacuously,
+   since the true serialized length is then >= pow2 64). *)
+let vlgen_size_success_lemma
+  (#tm #t: Type)
+  (vmin: nat)
+  (vmax: nat { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 })
+  (#sk: parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
+  (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
+  (#k: parser_kind) (#p: parser k t)
+  (s: serializer p)
+  (conv: tm -> GTot (option t))
+  (y: tm)
+  (n: SZ.t)
+  (h: SZ.t)
+  (tot: SZ.t)
+  (e: bool)
+: Lemma (requires
+    PPB.l2r_safe_size_postcond conv s y n false /\
+    vmin <= SZ.v n /\ SZ.v n <= vmax /\
+    SZ.v h == Seq.length (serialize ssk (U32.uint_to_t (SZ.v n))) /\
+    (SZ.v h + SZ.v n < pow2 64 ==> (e == false /\ SZ.v tot == SZ.v h + SZ.v n /\ SZ.v tot < pow2 64)) /\
+    (SZ.v h + SZ.v n >= pow2 64 ==> e == true))
+  (ensures PPB.l2r_safe_size_postcond (PPCV.vldata_strong_conv vmin vmax s conv) (serialize_bounded_vlgen vmin vmax ssk s) y tot e)
+= match conv y with
+  | None -> ()
+  | Some y' ->
+    let y'' : parse_bounded_vldata_strong_t vmin vmax s = y' in
+    serialize_bounded_vlgen_unfold vmin vmax ssk s y''
+
+#push-options "--z3rlimit 64"
+
+(* l2r safe size for bounded generic-length-prefixed data (vlgen): compute the
+   serialized byte size of the [header ++ payload] form, where the payload's size
+   is computed by the sub-size pass [psz] and the header size for that value is
+   given by [hsize].  No output buffer is touched.  Fails gracefully (err=true)
+   iff the payload conv is None, the payload's serialized size is out of
+   [vmin, vmax], or the (header + payload) size overflows a machine word (which
+   cannot happen in practice for these bounds, but is still discharged). *)
+inline_for_extraction
+fn l2r_safe_size_bounded_vlgen_payload
+  (vmin: nat) (vmin_sz: SZ.t { SZ.v vmin_sz == vmin })
+  (vmax: nat { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 }) (vmax_sz: SZ.t { SZ.v vmax_sz == vmax })
+  (#sk: parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
+  (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
+  (hsize: (x: bounded_int32 vmin vmax -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize ssk x) /\ SZ.v sz < pow2 64)))
+  (#tl #tm #t: Type0) (#vmatch: tl -> tm -> slprop)
+  (#k: Ghost.erased parser_kind) (#p: parser k t) (#conv: tm -> GTot (option t))
+  (s: serializer p)
+  (psz: PPB.l2r_safe_size vmatch s conv)
+  (sq: squash FStar.SizeT.fits_u64)
+: PPB.l2r_safe_size (PPCV.vmatch_vldata_strong vmin vmax s vmatch) (serialize_bounded_vlgen vmin vmax ssk s) (PPCV.vldata_strong_conv vmin vmax s conv)
+=
+  (x: tl)
+  (#y: Ghost.erased tm)
+  (perr: R.ref bool)
+{
+  unfold (PPCV.vmatch_vldata_strong vmin vmax s vmatch x y);
+  let n = psz x perr;
+  let e_sz = !perr;
+  if e_sz {
+    vlgen_size_postcond_err_lemma vmin vmax ssk s conv (Ghost.reveal y) n;
+    perr := true;
+    fold (PPCV.vmatch_vldata_strong vmin vmax s vmatch x y);
+    n
+  } else {
+    if (SZ.lt n vmin_sz || SZ.lt vmax_sz n) {
+      vlgen_size_postcond_oob_lemma vmin vmax ssk s conv (Ghost.reveal y) n;
+      perr := true;
+      fold (PPCV.vmatch_vldata_strong vmin vmax s vmatch x y);
+      n
+    } else {
+      SZ.fits_u64_implies_fits_32 ();
+      FStar.Math.Lemmas.small_mod (SZ.v n) (pow2 32);
+      let n32 : bounded_int32 vmin vmax = SZ.sizet_to_uint32 n;
+      let h = hsize n32;
+      let tot = PPB.size_add_checked sq h n perr;
+      let e = !perr;
+      vlgen_size_success_lemma vmin vmax ssk s conv (Ghost.reveal y) n h tot e;
+      fold (PPCV.vmatch_vldata_strong vmin vmax s vmatch x y);
+      tot
+    }
+  }
+}
+
+#pop-options
