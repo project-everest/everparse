@@ -570,6 +570,46 @@ let copyful_conv_name ty =
   then sprintf "(PPB.leaf_conv %s)" (compile_type ty)
   else sprintf "%s_conv" (String.uncapitalize_ascii ty)
 
+(* ----- Copyful safe writers (l2r_safe_writer / write_<n>) ----- *)
+
+(* Is [ty] a base/leaf type that has a CONSTANT-SIZE graceful leaf safe writer?
+   This is a strict subset of [is_copyful_leaf_type]: it excludes variable-width
+   or little-endian leaves (uint*_le, uint24, bitcoin_varint, asn1_len) for which
+   no [l2r_safe_writer_leaf] (constant-size leaf writer) is available yet. *)
+let is_copyful_safe_leaf_type = function
+  | "opaque" | "uint8" | "uint16" | "uint32" | "uint64" | "Empty" -> true
+  | _ -> false
+
+(* The inline graceful leaf safe writer expression for a base safe-leaf type:
+   (serializer, byte-size, low-level constant-size leaf writer). *)
+let safe_leaf_writer_expr = function
+  | "opaque" | "uint8" -> "(PPB.l2r_safe_writer_leaf LPI.serialize_u8 1sz (LPPI.l2r_leaf_write_u8 ()))"
+  | "uint16" -> "(PPB.l2r_safe_writer_leaf LPI.serialize_u16 2sz (LPPI.l2r_leaf_write_u16 ()))"
+  | "uint32" -> "(PPB.l2r_safe_writer_leaf LPI.serialize_u32 4sz (LPPI.l2r_leaf_write_u32 ()))"
+  | "uint64" -> "(PPB.l2r_safe_writer_leaf LPI.serialize_u64 8sz (LPPI.l2r_leaf_write_u64 ()))"
+  | "Empty" -> "(PPB.l2r_safe_writer_leaf LP.serialize_empty 0sz LPC.l2r_leaf_write_empty)"
+  | t -> failwith (sprintf "safe_leaf_writer_expr: no safe leaf writer for %s" t)
+
+(* Registry of user type names [n] for which a [write_<n>] was emitted. Populated
+   in emission order (which follows the source/topological order, so a composite's
+   field types are always processed first). A composite emits [write_<n>] only if
+   every field type is writer-available, keeping the test gate green. *)
+let copyful_writers : (string, unit) Hashtbl.t = Hashtbl.create 97
+let register_writer n = Hashtbl.replace copyful_writers (String.uncapitalize_ascii n) ()
+let writer_registered n = Hashtbl.mem copyful_writers (String.uncapitalize_ascii n)
+
+(* Is a graceful [write_*] available for field type [ty]? *)
+let copyful_writer_available ty =
+  if is_copyful_leaf_type ty
+  then is_copyful_safe_leaf_type ty
+  else writer_registered ty
+
+(* The graceful safe writer (PPB.l2r_safe_writer) for a field type. *)
+let copyful_writer_name ty =
+  if is_copyful_leaf_type ty
+  then safe_leaf_writer_expr ty
+  else sprintf "write_%s" (String.uncapitalize_ascii ty)
+
 (* Emit a copyful parser (read_<n>) and free combinator (free_<n>) for a leaf
    type that has a leaf_reader (e.g. enums). The vmatch is a pure equality. *)
 let emit_copyful_leaf o i n =
@@ -581,6 +621,16 @@ let emit_copyful_leaf o i n =
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
   wp o "let read_%s = PPB.copyful_parse_leaf %s_reader\n\n" n n;
   wp o "let free_%s = PPB.free_leaf\n\n" n
+
+(* Emit the graceful copyful safe writer (write_<n>) for a CONSTANT-SIZE type
+   [n] whose copyful vmatch is [eq_as_slprop] and conv is [leaf_conv] (i.e. that
+   was emitted via [emit_copyful_leaf]: enums and fully leaf-readable constant-
+   size sums), and which already has a non-graceful [<n>_writer : l2r_leaf_writer
+   <n>_serializer]. [blen] is the constant serialized byte size. *)
+let emit_copyful_safe_leaf_writer o i n blen =
+  wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+  wp o "let write_%s = PPB.l2r_safe_writer_leaf %s_serializer %dsz %s_writer\n\n" n n blen n;
+  register_writer n
 
 (* Emit a copyful parser (read_<n>) and free combinator (free_<n>) for a
    byte-array type. The result is a freshly allocated, freeable sized byte
@@ -1783,6 +1833,9 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
 
   (* Pulse: copyful parser + free *)
   emit_copyful_leaf o i n;
+
+  (* Pulse: copyful safe writer (constant-size enum repr) *)
+  if !emit_pulse then emit_copyful_safe_leaf_writer o i n blen;
 
   (* bytesize lemma *)
   wl i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d) [SMTPat (%s_bytesize x)]\n\n" n n n blen n;
