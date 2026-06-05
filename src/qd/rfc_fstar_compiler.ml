@@ -1178,6 +1178,16 @@ let emit_copyful_array o i n ty byte_size elem_count =
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
     wp o "  PPAR.l2r_safe_writer_array %s %s %d %dsz %d %dsz () ()\n\n" (scombinator_name ty) (copyful_writer_name ty) byte_size byte_size elem_count elem_count;
     register_writer n
+  end;
+  if !emit_pulse && copyful_size_available ty then begin
+    wp i "val size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+    wp o "let size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv =\n" n n n n;
+    wp o "  %s_eq ();\n" n;
+    wp o "  assert_norm (LP.fldata_array_precond (LP.get_parser_kind %s) %d %d == true);\n" (pcombinator_name ty) byte_size elem_count;
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
+    wp o "  PPAR.l2r_safe_size_array %s %s %d %dsz %d %dsz () () fits_u64_squash\n\n" (scombinator_name ty) (copyful_size_name ty) byte_size byte_size elem_count elem_count;
+    register_size n
   end
 
 (* Emit copyful parser (read_<n>) and free (free_<n>) for a variable-count list
@@ -1298,7 +1308,28 @@ let emit_copyful_vllist o i n ty smin smax lenty =
     wp o "       (PPLS.l2r_safe_writer_list %s %s ()) (PPLS.l2r_safe_size_list fits_u64_squash %s %s ()) fits_u64_squash) <: PPB.l2r_safe_writer _ %s'_serializer _)\n" (scombinator_name ty) (copyful_writer_name ty) (scombinator_name ty) (copyful_size_name ty) n;
     wp o "    synth_%s synth_%s_recip\n\n" n n;
     register_writer n
+  end;
+  (* Pulse: copyful safe SIZE (size_<n>) for the bcvli-framed vllist. Needed so
+     the vllist can compose into an enclosing struct/list size pass. Gated only
+     on the element type having a graceful size. *)
+  if !emit_pulse && lenty = "bitcoin_varint" && copyful_size_available ty then begin
+    wp i "val size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+    wp o "let size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv =\n" n n n n;
+    wp o "  %s_copyful_synth_injective ();\n" n;
+    wp o "  %s_copyful_synth_inverse ();\n" n;
+    wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_length_header_name lenty smin smax);
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
+    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smin;
+    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smax;
+    wp o "  PPC.l2r_safe_size_synth\n";
+    wp o "    ((PPVG.l2r_safe_size_bounded_vlgen_payload %d (FStar.SizeT.uint_to_t %d) %d (FStar.SizeT.uint_to_t %d) %s (fun x -> PPBCVLI.bounded_bcvli_size %d %d x) (LP.serialize_list _ %s)\n" smin smin smax smax (scombinator_length_header_name lenty smin smax) smin smax (scombinator_name ty);
+    wp o "       (PPLS.l2r_safe_size_list fits_u64_squash %s %s ()) fits_u64_squash) <: PPB.l2r_safe_size _ %s'_serializer _)\n" (scombinator_name ty) (copyful_size_name ty) n;
+    wp o "    synth_%s synth_%s_recip\n\n" n n;
+    register_size n
   end
+
 (* Emit a copyful parser (read_<n>) and free (free_<n>) for a length-framed
    SINGLE payload [t payload[len]] (compile_vldata's fits_in_bounds branch):
    one [ty] value whose serialization occupies exactly [len] bytes, framed by a
