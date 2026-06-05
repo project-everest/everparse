@@ -355,3 +355,77 @@ fn free_fldata_strong
 }
 
 #pop-options
+
+(* ============================================================================ *)
+(* Copyful safe serializer (l2r safe writer) for fixed-length-framed payloads.  *)
+(* ============================================================================ *)
+
+(* The serialized form of a [parse_fldata_strong] value is just the payload
+   serialization (there is no length header; the fixed size [sz] is implicit in
+   the refinement). Definitional, but stated as a lemma for use in the writer's
+   postcondition proof. *)
+let serialize_fldata_strong_bytes_eq
+  (#k: parser_kind) (#t: Type) (#p: parser k t)
+  (s: serializer p)
+  (sz: nat)
+  (x: parse_fldata_strong_t s sz)
+: Lemma (serialize (serialize_fldata_strong s sz) x == serialize s (x <: t))
+= ()
+
+(* Pure postcondition lemma: lift the payload writer's postcondition (about the
+   payload conv [conv] and serializer [s]) to the framing postcondition (about
+   [fldata_strong_conv] and [serialize_fldata_strong]). The framing conv yields
+   [None] exactly when the payload conv is [None] or the payload's serialized
+   size is not [sz]; the framing error flag is therefore [ep || size<>sz]. *)
+let fldata_strong_writer_postcond_lemma
+  (#tm #t: Type0) (#k: parser_kind) (#p: parser k t)
+  (s: serializer p)
+  (sz: nat)
+  (conv: tm -> GTot (option t))
+  (y: tm)
+  (v': FStar.Seq.seq byte)
+  (res: SZ.t)
+  (ep: bool)
+: Lemma
+  (requires PPB.l2r_safe_writer_postcond conv s y v' res ep)
+  (ensures PPB.l2r_safe_writer_postcond
+            (fldata_strong_conv s sz conv) (serialize_fldata_strong s sz)
+            y v' res (ep || (SZ.v res <> sz)))
+= match conv y with
+  | None -> ()
+  | Some x ->
+    if Seq.length (serialize s x) = sz
+    then serialize_fldata_strong_bytes_eq s sz (x <: parse_fldata_strong_t s sz)
+    else ()
+
+#push-options "--z3rlimit 32"
+
+inline_for_extraction
+fn l2r_safe_writer_fldata_strong_payload
+  (#tl #tm #t: Type0) (#vmatch: tl -> tm -> slprop)
+  (#k: Ghost.erased parser_kind) (#p: parser k t)
+  (#conv: tm -> GTot (option t))
+  (s: serializer p)
+  (sz: nat)
+  (sz_sz: SZ.t { SZ.v sz_sz == sz })
+  (pw: PPB.l2r_safe_writer vmatch s conv)
+: PPB.l2r_safe_writer (vmatch_fldata_strong s sz vmatch) (serialize_fldata_strong s sz) (fldata_strong_conv s sz conv)
+=
+  (x: tl)
+  (#y: Ghost.erased tm)
+  (out: S.slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: R.ref bool)
+{
+  unfold (vmatch_fldata_strong s sz vmatch x y);
+  let res = pw x out perr;
+  let ep = !perr;
+  let bad = ep || not (SZ.eq res sz_sz);
+  perr := bad;
+  with v' . assert (S.pts_to out v');
+  fldata_strong_writer_postcond_lemma s sz conv (Ghost.reveal y) v' res ep;
+  fold (vmatch_fldata_strong s sz vmatch x y);
+  res
+}
+
+#pop-options
