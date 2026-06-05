@@ -583,11 +583,12 @@ let emit_copyful_leaf o i n =
   wp o "let free_%s = PPB.free_leaf\n\n" n
 
 (* Emit a copyful parser (read_<n>) and free combinator (free_<n>) for a
-   byte-array type. The result is a freshly allocated, freeable byte vector
+   byte-array type. The result is a freshly allocated, freeable sized byte
+   vector (PPBY.lvec, carrying a runtime length alongside the Pulse.Lib.Vec)
    related to the high-level value by PPBY.vmatch_copy_bytes. [combinator] is
-   the copyful_parse_* expression producing the vector. *)
+   the copyful_parse_* expression producing the lvec. *)
 let emit_copyful_bytes o i n combinator conv =
-  wp i "let %s_lowtype = Pulse.Lib.Vec.vec FStar.UInt8.t\n\n" n;
+  wp i "let %s_lowtype = PPBY.lvec FStar.UInt8.t\n\n" n;
   wp i "noextract let %s_mid = BY.bytes\n\n" n;
   wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop = PPBY.vmatch_copy_bytes\n\n" n n n;
   wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) = %s\n\n" n n n conv;
