@@ -1307,7 +1307,13 @@ let emit_copyful_bounded_vldata_payload o i n ty smax =
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
   wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n" n n n n;
   wp o "  PPVD.copyful_parse_bounded_vldata_payload 0 %d %s (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" smax (copyful_read_name ty) (log256 smax);
-  wp o "let free_%s : PPB.free_t %s_vmatch = %s\n\n" n n (copyful_free_name ty)
+  wp o "let free_%s : PPB.free_t %s_vmatch = %s\n\n" n n (copyful_free_name ty);
+  if !emit_pulse && copyful_writer_available ty then begin
+    wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+    wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n" n n n n;
+    wp o "  PPVD.l2r_safe_writer_bounded_vldata_payload 0 0sz %d %dsz %s %s fits_u64_squash\n\n" smax smax (scombinator_name ty) (copyful_writer_name ty);
+    register_writer n
+  end
 
 (* Like emit_copyful_bounded_vldata_payload but for the over-bounds case where a
    refined high type [<n> = x:ty{ 0 <= bytesize x <= smax }] and generated

@@ -925,3 +925,211 @@ fn l2r_safe_writer_bounded_vldata_strong_payload
 }
 
 #pop-options
+
+(* NON-STRONG (plain payload [conv] / [serialize_bounded_vldata]) analogs of the
+   strong-framing helper lemmas above. Under [serialize_bounded_vldata_precond],
+   every payload value serializes to a byte string whose length is always in
+   [min, max], so [serialize (serialize_bounded_vldata min max s) x] is exactly the
+   [log256' max]-byte header followed by the payload bytes. *)
+
+#push-options "--z3rlimit 64"
+
+(* The serialized bytes of the (non-strong) bounded-vldata form of [x] are the
+   header (encoding the payload length) followed by the payload bytes. *)
+let serialize_bounded_vldata_bytes_eq
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (#k: parser_kind) (#t: Type) (#p: parser k t)
+  (s: serializer p { serialize_bounded_vldata_precond min max k })
+  (x: t)
+: Lemma (
+    serialize (serialize_bounded_vldata min max s) x ==
+    Seq.append
+      (serialize (serialize_bounded_integer (log256' max)) (U32.uint_to_t (Seq.length (serialize s x))))
+      (serialize s x)
+  )
+= let x' : parse_bounded_vldata_strong_t min max s = x in
+  serialize_bounded_vldata_strong_bytes_eq min max (log256' max) s x'
+
+(* The serialized length is the [log256' max]-byte header plus the payload length. *)
+let serialize_bounded_vldata_len_eq
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (#k: parser_kind) (#t: Type) (#p: parser k t)
+  (s: serializer p { serialize_bounded_vldata_precond min max k })
+  (x: t)
+: Lemma (
+    Seq.length (serialize (serialize_bounded_vldata min max s) x) ==
+      log256' max + Seq.length (serialize s x)
+  )
+= serialize_bounded_vldata_bytes_eq min max s x;
+  serialize_bounded_integer_spec (log256' max) (U32.uint_to_t (Seq.length (serialize s x)))
+
+(* Step 1: no room even for the header. The output bytes are unchanged and the
+   error flag is true. *)
+let vldata_noroom_lemma'
+  (#tm #t: Type)
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (#k: parser_kind) (#p: parser k t)
+  (s: serializer p { serialize_bounded_vldata_precond min max k })
+  (conv: tm -> GTot (option t))
+  (y: tm)
+  (v: Seq.seq byte)
+  (res: SZ.t)
+: Lemma (requires Seq.length v < log256' max)
+        (ensures PPB.l2r_safe_writer_postcond conv (serialize_bounded_vldata min max s) y v res true)
+= match conv y with
+  | None -> ()
+  | Some y' -> serialize_bounded_vldata_len_eq min max s y'
+
+(* Step 2, payload writer failed: the output bytes are [header ++ rest_post] and the
+   payload error flag (true) forces the framed error flag true. *)
+let vldata_payload_noroom_lemma'
+  (#tm #t: Type)
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (#k: parser_kind) (#p: parser k t)
+  (s: serializer p { serialize_bounded_vldata_precond min max k })
+  (conv: tm -> GTot (option t))
+  (y: tm)
+  (v': Seq.seq byte)
+  (rest_post: Seq.seq byte)
+  (res: SZ.t)
+: Lemma (requires
+    Seq.length v' == log256' max + Seq.length rest_post /\
+    PPB.l2r_safe_writer_postcond conv s y rest_post res true)
+  (ensures PPB.l2r_safe_writer_postcond conv (serialize_bounded_vldata min max s) y v' res true)
+= match conv y with
+  | None -> ()
+  | Some y' -> serialize_bounded_vldata_len_eq min max s y'
+
+(* When the payload writer succeeded, the payload's serialized size is always in
+   [min, max] (consequence of the precond + [serialize_length]), so the
+   out-of-bounds branch of the strong writer is dead here. *)
+let vldata_inbounds_lemma'
+  (#tm #t: Type)
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (#k: parser_kind) (#p: parser k t)
+  (s: serializer p { serialize_bounded_vldata_precond min max k })
+  (conv: tm -> GTot (option t))
+  (y: tm)
+  (rest_post: Seq.seq byte)
+  (res: SZ.t)
+: Lemma (requires PPB.l2r_safe_writer_postcond conv s y rest_post res false)
+        (ensures min <= SZ.v res /\ SZ.v res <= max)
+= match conv y with
+  | None -> ()
+  | Some y' -> serialize_length s y'
+
+(* Step 2, success: the output bytes are [hdr_written ++ rest_post] where
+   hdr_written is the length header and [rest_post[0, res)] is the payload. *)
+let vldata_success_lemma'
+  (#tm #t: Type)
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (#k: parser_kind) (#p: parser k t)
+  (s: serializer p { serialize_bounded_vldata_precond min max k })
+  (conv: tm -> GTot (option t))
+  (y: tm)
+  (res: SZ.t)
+  (tot: SZ.t)
+  (hdr_written: Seq.seq byte)
+  (rest_post: Seq.seq byte)
+  (v': Seq.seq byte)
+: Lemma (requires
+    PPB.l2r_safe_writer_postcond conv s y rest_post res false /\
+    SZ.v tot == log256' max + SZ.v res /\
+    Seq.length hdr_written == log256' max /\
+    hdr_written == serialize (serialize_bounded_integer (log256' max)) (U32.uint_to_t (SZ.v res)) /\
+    SZ.v res <= Seq.length rest_post /\
+    v' == Seq.append hdr_written rest_post)
+  (ensures PPB.l2r_safe_writer_postcond conv (serialize_bounded_vldata min max s) y v' tot false)
+= match conv y with
+  | None -> ()
+  | Some y' ->
+    serialize_bounded_vldata_bytes_eq min max s y';
+    serialize_bounded_integer_spec (log256' max) (U32.uint_to_t (Seq.length (serialize s y')));
+    slice_append_prefix hdr_written rest_post (SZ.v res)
+
+(* l2r safe writer for the (non-strong) bounded variable-length-data framing:
+   serialize the payload (via [pw]) preceded by a [log256' max]-byte big-endian
+   length header. Because of the precond the payload length is always in [min, max],
+   so the writer fails gracefully (err=true) iff the payload conv is None or the
+   output slice cannot hold the [log256' max + payload-length] serialized bytes. *)
+inline_for_extraction
+fn l2r_safe_writer_bounded_vldata_payload
+  (#tl #tm #t: Type0) (#vmatch: tl -> tm -> slprop)
+  (#k: Ghost.erased parser_kind) (#p: parser k t)
+  (#conv: tm -> GTot (option t))
+  (min: nat) (min_sz: SZ.t { SZ.v min_sz == min })
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 }) (max_sz: SZ.t { SZ.v max_sz == max })
+  (s: serializer p { serialize_bounded_vldata_precond min max k })
+  (pw: PPB.l2r_safe_writer vmatch s conv)
+  (sq: squash FStar.SizeT.fits_u64)
+: PPB.l2r_safe_writer vmatch (serialize_bounded_vldata min max s) conv
+=
+  (x: tl)
+  (#y: Ghost.erased tm)
+  (out: slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: R.ref bool)
+{
+  let l : nat = log256' max;
+  SZ.fits_u64_implies_fits_32 ();
+  let l_sz = SZ.uint32_to_sizet (U32.uint_to_t l);
+  S.pts_to_len out;
+  let lout = S.len out;
+  if (SZ.lt lout l_sz) {
+    (* no room even for the header *)
+    vldata_noroom_lemma' min max s conv (Ghost.reveal y) (Ghost.reveal v) l_sz;
+    perr := true;
+    l_sz
+  } else {
+    let hdr, rest = S.split out l_sz;
+    S.pts_to_len hdr;
+    S.pts_to_len rest;
+    with hdr0. assert (S.pts_to hdr hdr0);
+    let res = pw x rest perr;
+    let ep = !perr;
+    with rest_post. assert (S.pts_to rest rest_post);
+    S.pts_to_len rest;
+    if ep {
+      (* payload writer failed: not enough room (or conv = None) *)
+      vldata_payload_noroom_lemma' min max s conv (Ghost.reveal y)
+        (Seq.append hdr0 rest_post) rest_post res;
+      S.join hdr rest out;
+      perr := true;
+      res
+    } else {
+      if (SZ.lte min_sz res && SZ.lte res max_sz) {
+        (* payload written and its size is in [min, max]: success, backpatch header *)
+        vldata_total_fits_lemma l (SZ.v res) max;
+        SZ.fits_u64_implies_fits (SZ.v l_sz + SZ.v res);
+        let n_u32 = SZ.sizet_to_uint32 res;
+        M.pow2_le_compat (FStar.Mul.op_Star 8 l) (FStar.Mul.op_Star 8 (log256' max));
+        let write_hdr = LPPI.write_bounded_integer_header l l_sz;
+        write_hdr n_u32 hdr #hdr0 l_sz;
+        with hdr_written. assert (S.pts_to hdr hdr_written);
+        S.pts_to_len hdr;
+        serialize_bounded_integer_spec l (U32.uint_to_t (SZ.v res));
+        Seq.lemma_eq_elim hdr_written (Seq.slice hdr_written 0 l);
+        S.join hdr rest out;
+        let tot = SZ.add l_sz res;
+        vldata_success_lemma' min max s conv (Ghost.reveal y) res tot
+          hdr_written rest_post (Seq.append hdr_written rest_post);
+        perr := false;
+        tot
+      } else {
+        (* dead branch: under the precond the payload size is always in [min, max] *)
+        vldata_inbounds_lemma' min max s conv (Ghost.reveal y) rest_post res;
+        S.join hdr rest out;
+        perr := true;
+        res
+      }
+    }
+  }
+}
+
+#pop-options
