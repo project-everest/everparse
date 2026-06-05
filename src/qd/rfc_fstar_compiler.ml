@@ -3294,8 +3294,19 @@ and compile_vlbytes o i is_private n li lenty smin smax =
       let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
       wp o "let %s_jumper%s = PPBY.jump_bounded_vlgenbytes %d %d %s %s fits_u64_squash\n\n" n jumper_annot smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax)
     end;
-  (* Pulse: copyful parser + free *)
+  (* Pulse: copyful parser + free (+ safe writer/size for bcvli headers) *)
+  let vlgenbytes_writer, vlgenbytes_size =
+    if lenty = "bitcoin_varint" then
+      let ssk = scombinator_length_header_name lenty smin smax in
+      let hsize = sprintf "(fun x -> PPBCVLI.bounded_bcvli_size %d %d x)" smin smax in
+      let hw = sprintf "(PPBCVLI.l2r_leaf_write_bounded_bcvli %d %d ())" smin smax in
+      let prelude = sprintf "let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n  FStar.SizeT.fits_u64_implies_fits %d;\n  FStar.SizeT.fits_u64_implies_fits %d;\n  " smin smax in
+      Some (sprintf "%sPPBY.l2r_safe_writer_bounded_vlgenbytes %d (FStar.SizeT.uint_to_t %d) %d (FStar.SizeT.uint_to_t %d) %s %s %s fits_u64_squash" prelude smin smin smax smax ssk hsize hw),
+      Some (sprintf "%sPPBY.l2r_safe_size_bounded_vlgenbytes %d (FStar.SizeT.uint_to_t %d) %d (FStar.SizeT.uint_to_t %d) %s %s fits_u64_squash" prelude smin smin smax smax ssk hsize)
+    else None, None
+  in
   emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlgenbytes %d %d %s %s fits_u64_squash" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax)) (sprintf "PPBY.vlbytes_conv %d %d" smin smax)
+    ?writer:vlgenbytes_writer ?size:vlgenbytes_size
 
 and compile_typedef tch o i tn fn (ty:type_t) vec def al =
   let n = if tn = "" then String.uncapitalize_ascii fn else tn^"_"^fn in
