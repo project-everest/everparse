@@ -6,6 +6,7 @@ open LowParse.PulseParse.Combinators
 open Pulse.Lib.Pervasives open Pulse.Lib.Slice.Util open Pulse.Lib.Trade
 
 module B = LowParse.Pulse.Combinators
+module LPB = LowParse.Pulse.Base
 module Trade = Pulse.Lib.Trade.Util
 
 inline_for_extraction
@@ -2054,6 +2055,322 @@ fn l2r_safe_writer_false
   let _ = x;
   false_elim ()
 }
+
+(* ========== Copyful "safe serializer" (l2r_safe_writer) combinators for CLOSED sums ========== *)
+
+// serialize_sum_eq_forall: the whole-sum serialized bytes decompose into the
+// enum-key tag bytes followed by the per-case payload bytes (for every value).
+let serialize_sum_eq_forall
+  (t: sum)
+  (#kt: parser_kind)
+  (#p: parser kt (sum_repr_type t))
+  (s: serializer p)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (sc: ((k: sum_key t) -> Tot (serializer (dsnd (pc k)))))
+  (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
+: Lemma
+  (forall (x: sum_type t).
+    serialize (serialize_sum t s sc) x ==
+    (let tg = sum_tag_of_data t x in
+     Seq.append (serialize (serialize_enum_key _ s (sum_enum t)) tg)
+                (serialize (sc tg) (synth_sum_case_recip t tg x))))
+= let aux (x: sum_type t) : Lemma
+    (serialize (serialize_sum t s sc) x ==
+     (let tg = sum_tag_of_data t x in
+      Seq.append (serialize (serialize_enum_key _ s (sum_enum t)) tg)
+                 (serialize (sc tg) (synth_sum_case_recip t tg x))))
+  = serialize_sum_eq t s sc x
+  in
+  Classical.forall_intro aux
+
+// l2r_safe_writer_sum_payload_t: per-key safe writer for the payload of a known tag
+// (uses vmatch_sum_case, the variant WITH the pure tag fact)
+let l2r_safe_writer_sum_payload_t
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (sc: ((k: sum_key t) -> Tot (serializer (dsnd (pc k)))))
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (mid_of_tag: sum_key t -> Type0)
+  (vmatch_cases: (k: sum_key t) -> low -> mid_of_tag k -> slprop)
+  (conv_of_tag: (k: sum_key t) -> mid_of_tag k -> GTot (option (sum_type_of_tag t k)))
+  (k: sum_key t)
+: Tot Type
+= PPB.l2r_safe_writer (vmatch_sum_case t low tag_of_low mid_of_tag vmatch_cases k) (sc k) (conv_of_tag k)
+
+inline_for_extraction
+fn l2r_safe_writer_sum_payload_if'
+  (t: sum u#0 u#0)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (sc: ((k: sum_key t) -> Tot (serializer (dsnd (pc k)))))
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (mid_of_tag: sum_key t -> Type0)
+  (vmatch_cases: (k: sum_key t) -> low -> mid_of_tag k -> slprop)
+  (conv_of_tag: (k: sum_key t) -> mid_of_tag k -> GTot (option (sum_type_of_tag t k)))
+  (k: sum_key t)
+  (cond: bool)
+  (ift: (cond_true cond -> Tot (l2r_safe_writer_sum_payload_t t pc sc low tag_of_low mid_of_tag vmatch_cases conv_of_tag k)))
+  (iff: (cond_false cond -> Tot (l2r_safe_writer_sum_payload_t t pc sc low tag_of_low mid_of_tag vmatch_cases conv_of_tag k)))
+: (l2r_safe_writer_sum_payload_t t pc sc low tag_of_low mid_of_tag vmatch_cases conv_of_tag k)
+=
+  (input: _)
+  (#y: _)
+  (out: _)
+  (#v: _)
+  (perr: _)
+{
+  if cond {
+    ift () input out perr
+  } else {
+    iff () input out perr
+  }
+}
+
+inline_for_extraction
+let l2r_safe_writer_sum_payload_if
+  (t: sum u#0 u#0)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (sc: ((k: sum_key t) -> Tot (serializer (dsnd (pc k)))))
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (mid_of_tag: sum_key t -> Type0)
+  (vmatch_cases: (k: sum_key t) -> low -> mid_of_tag k -> slprop)
+  (conv_of_tag: (k: sum_key t) -> mid_of_tag k -> GTot (option (sum_type_of_tag t k)))
+  (k: sum_key t)
+: Tot (if_combinator (l2r_safe_writer_sum_payload_t t pc sc low tag_of_low mid_of_tag vmatch_cases conv_of_tag k) eq_trivial)
+= l2r_safe_writer_sum_payload_if' t pc sc low tag_of_low mid_of_tag vmatch_cases conv_of_tag k
+
+inline_for_extraction
+let l2r_safe_writer_sum_payload_dispatch
+  (t: sum)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (sc: ((k: sum_key t) -> Tot (serializer (dsnd (pc k)))))
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (mid_of_tag: sum_key t -> Type0)
+  (vmatch_cases: (k: sum_key t) -> low -> mid_of_tag k -> slprop)
+  (conv_of_tag: (k: sum_key t) -> mid_of_tag k -> GTot (option (sum_type_of_tag t k)))
+  (w: (k: sum_key t) -> PPB.l2r_safe_writer (vmatch_sum_case t low tag_of_low mid_of_tag vmatch_cases k) (sc k) (conv_of_tag k))
+  (destr: dep_enum_destr (sum_enum t) (l2r_safe_writer_sum_payload_t t pc sc low tag_of_low mid_of_tag vmatch_cases conv_of_tag))
+  (k: sum_key t)
+: Tot (l2r_safe_writer_sum_payload_t t pc sc low tag_of_low mid_of_tag vmatch_cases conv_of_tag k)
+= destr
+    _
+    (l2r_safe_writer_sum_payload_if t pc sc low tag_of_low mid_of_tag vmatch_cases conv_of_tag)
+    (fun _ _ -> ())
+    (fun _ _ _ _ -> ())
+    w
+    k
+
+// l2r_safe_writer_sum_case: build a per-case safe writer from the field safe
+// writer and an option-valued discriminator `disc` (Some y on this constructor,
+// None otherwise). The writer CONSUMES the low value, so we mirror free_sum_case's
+// extraction approach. The squash is discharged by reduction at use site:
+//   vmatch_cases k xl cm == (match disc xl with Some y -> vmatch_field y cm | None -> pure False)
+inline_for_extraction
+fn l2r_safe_writer_sum_case
+  (t: sum u#0 u#0)
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (mid_of_tag: sum_key t -> Type0)
+  (vmatch_cases: (k: sum_key t) -> low -> mid_of_tag k -> slprop)
+  (conv_of_tag: (k: sum_key t) -> mid_of_tag k -> GTot (option (sum_type_of_tag t k)))
+  (k: sum_key t)
+  (#tf: Type0)
+  (#kf: Ghost.erased parser_kind)
+  (#pf: parser kf (sum_type_of_tag t k))
+  (#sf: serializer pf)
+  (#vmatch_field: tf -> mid_of_tag k -> slprop)
+  (wf: PPB.l2r_safe_writer vmatch_field sf (conv_of_tag k))
+  (disc: low -> option tf)
+  (sq: squash (forall (xl: low) (cm: mid_of_tag k) .
+        vmatch_cases k xl cm == (match disc xl with | Some y -> vmatch_field y cm | None -> pure False)))
+: PPB.l2r_safe_writer (vmatch_sum_case t low tag_of_low mid_of_tag vmatch_cases k) sf (conv_of_tag k)
+=
+  (xl: low)
+  (#y: Ghost.erased (mid_of_tag k))
+  (out: S.slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: ref bool)
+{
+  unfold (vmatch_sum_case t low tag_of_low mid_of_tag vmatch_cases k xl (Ghost.reveal y));
+  elim_pure_explicit (tag_of_low xl == k);
+  match disc xl {
+    Some yf -> {
+      rewrite (vmatch_cases k xl (Ghost.reveal y)) as (vmatch_field yf (Ghost.reveal y));
+      let res = wf yf out perr;
+      rewrite (vmatch_field yf (Ghost.reveal y)) as (vmatch_cases k xl (Ghost.reveal y));
+      fold (vmatch_sum_case t low tag_of_low mid_of_tag vmatch_cases k xl (Ghost.reveal y));
+      res
+    }
+    None -> {
+      rewrite (vmatch_cases k xl (Ghost.reveal y)) as (pure False);
+      let _ = elim_pure_explicit False;
+      intro_pure False ();
+      rewrite (pure False) as (vmatch_cases k xl (Ghost.reveal y));
+      fold (vmatch_sum_case t low tag_of_low mid_of_tag vmatch_cases k xl (Ghost.reveal y));
+      false_elim ()
+    }
+  }
+}
+
+#push-options "--z3rlimit 64"
+
+let recip_case_id (t: sum) (k: sum_key t) (vp: sum_type_of_tag t k)
+: Lemma (synth_sum_case_recip t k (synth_sum_case t k vp) == vp)
+= Sum?.synth_case_recip_synth_case t k vp
+
+// Postcondition lemma for the OK path: out = tag-bytes ++ payload-bytes.
+let l2r_safe_writer_sum_postcond_lemma
+  (t: sum)
+  (#kt: parser_kind)
+  (#p: parser kt (sum_repr_type t))
+  (s: serializer p)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (sc: ((k: sum_key t) -> Tot (serializer (dsnd (pc k)))))
+  (mid_of_tag: sum_key t -> Type0)
+  (conv_of_tag: (k: sum_key t) -> mid_of_tag k -> GTot (option (sum_type_of_tag t k)))
+  (m: sum_mid t mid_of_tag)
+  (vleft' vright': Seq.seq byte)
+  (res1 res2 resf: SZ.t)
+  (e2: bool)
+  (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
+: Lemma
+  (requires (
+    SZ.v res1 == Seq.length vleft' /\
+    vleft' == serialize (serialize_enum_key _ s (sum_enum t)) (dfst m) /\
+    (if e2 then SZ.v resf == SZ.v res1 else SZ.v resf == SZ.v res1 + SZ.v res2) /\
+    l2r_safe_writer_postcond (conv_of_tag (dfst m)) (sc (dfst m)) (dsnd m) vright' res2 e2
+  ))
+  (ensures (
+    l2r_safe_writer_postcond (sum_conv t mid_of_tag conv_of_tag) (serialize_sum t s sc)
+      m (Seq.append vleft' vright') resf e2
+  ))
+= let k = dfst m in
+  let cm = dsnd m in
+  synth_sum_case_injective t k;
+  synth_sum_case_inverse t k;
+  match conv_of_tag k cm with
+  | None -> ()
+  | Some vp ->
+    let yc : sum_cases t k = synth_sum_case t k vp in
+    let yh : sum_type t = yc in
+    assert (sum_tag_of_data t yh == k);
+    serialize_sum_eq t s sc yh;
+    recip_case_id t k vp;
+    assert (synth_sum_case_recip t k yh == vp);
+    assert (serialize (serialize_sum t s sc) yh ==
+            Seq.append (serialize (serialize_enum_key _ s (sum_enum t)) k) (serialize (sc k) vp));
+    slice_append_prefix vleft' vright' (Seq.length (serialize (sc k) vp))
+
+// Postcondition lemma for the no-room path: the output is untouched and shorter
+// than the (constant-size) tag, hence shorter than the whole serialization.
+let l2r_safe_writer_sum_noroom_lemma
+  (t: sum)
+  (#kt: parser_kind)
+  (#p: parser kt (sum_repr_type t))
+  (s: serializer p)
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (sc: ((k: sum_key t) -> Tot (serializer (dsnd (pc k)))))
+  (mid_of_tag: sum_key t -> Type0)
+  (conv_of_tag: (k: sum_key t) -> mid_of_tag k -> GTot (option (sum_type_of_tag t k)))
+  (m: sum_mid t mid_of_tag)
+  (vout: Seq.seq byte)
+  (resf tag_sz: SZ.t)
+  (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
+: Lemma
+  (requires (
+    Seq.length vout < SZ.v tag_sz /\
+    kt.parser_kind_high == Some kt.parser_kind_low /\
+    kt.parser_kind_low == SZ.v tag_sz
+  ))
+  (ensures (
+    l2r_safe_writer_postcond (sum_conv t mid_of_tag conv_of_tag) (serialize_sum t s sc)
+      m vout resf true
+  ))
+= let k = dfst m in
+  synth_sum_case_injective t k;
+  synth_sum_case_inverse t k;
+  match conv_of_tag k (dsnd m) with
+  | None -> ()
+  | Some vp ->
+    let yc : sum_cases t k = synth_sum_case t k vp in
+    let yh : sum_type t = yc in
+    assert (sum_tag_of_data t yh == k);
+    serialize_sum_eq t s sc yh;
+    serialize_length (serialize_enum_key _ s (sum_enum t)) k;
+    assert (Seq.length (serialize (serialize_enum_key _ s (sum_enum t)) k) == SZ.v tag_sz)
+
+inline_for_extraction
+fn l2r_safe_writer_sum
+  (t: sum u#0 u#0)
+  (#kt: Ghost.erased parser_kind)
+  (#p: parser kt (sum_repr_type t))
+  (s: serializer p)
+  (wt: LPB.l2r_leaf_writer (serialize_enum_key _ s (sum_enum t)))
+  (tag_sz: SZ.t {
+    (Ghost.reveal kt).parser_kind_high == Some (Ghost.reveal kt).parser_kind_low /\
+    (Ghost.reveal kt).parser_kind_low == SZ.v tag_sz
+  })
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (sc: ((k: sum_key t) -> Tot (serializer (dsnd (pc k)))))
+  (low: Type0)
+  (tag_of_low: low -> sum_key t)
+  (mid_of_tag: sum_key t -> Type0)
+  (vmatch_cases: (k: sum_key t) -> low -> mid_of_tag k -> slprop)
+  (conv_of_tag: (k: sum_key t) -> mid_of_tag k -> GTot (option (sum_type_of_tag t k)))
+  (w: (k: sum_key t) -> l2r_safe_writer_sum_payload_t t pc sc low tag_of_low mid_of_tag vmatch_cases conv_of_tag k)
+  (destr: dep_enum_destr (sum_enum t) (l2r_safe_writer_sum_payload_t t pc sc low tag_of_low mid_of_tag vmatch_cases conv_of_tag))
+  (sq: squash ((Ghost.reveal kt).parser_kind_subkind == Some ParserStrong))
+: PPB.l2r_safe_writer (vmatch_sum t low tag_of_low mid_of_tag vmatch_cases) (serialize_sum t s sc) (sum_conv t mid_of_tag conv_of_tag)
+=
+  (xl: low)
+  (#m: Ghost.erased (sum_mid t mid_of_tag))
+  (out: S.slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: ref bool)
+{
+  unfold (vmatch_sum t low tag_of_low mid_of_tag vmatch_cases xl (Ghost.reveal m));
+  elim_pure_explicit (tag_of_low xl == dfst (Ghost.reveal m));
+  let k = tag_of_low xl;
+  rewrite (vmatch_cases (dfst (Ghost.reveal m)) xl (dsnd (Ghost.reveal m)))
+    as (vmatch_cases k xl (dsnd (Ghost.reveal m)));
+  S.pts_to_len out;
+  let l = S.len out;
+  if (SZ.lt l tag_sz) {
+    perr := true;
+    rewrite (vmatch_cases k xl (dsnd (Ghost.reveal m)))
+      as (vmatch_cases (dfst (Ghost.reveal m)) xl (dsnd (Ghost.reveal m)));
+    fold (vmatch_sum t low tag_of_low mid_of_tag vmatch_cases xl (Ghost.reveal m));
+    l2r_safe_writer_sum_noroom_lemma t s pc sc mid_of_tag conv_of_tag (Ghost.reveal m) (Ghost.reveal v) tag_sz tag_sz sq;
+    tag_sz
+  } else {
+    fold (vmatch_sum_case t low tag_of_low mid_of_tag vmatch_cases k xl (dsnd (Ghost.reveal m)));
+    let left, right = S.split out tag_sz;
+    S.pts_to_len left;
+    serialize_length (serialize_enum_key _ s (sum_enum t)) k;
+    let res1 = wt k left 0sz;
+    with vleft'. assert (S.pts_to left vleft');
+    S.pts_to_len left;
+    assert (pure (vleft' == serialize (serialize_enum_key _ s (sum_enum t)) k));
+    let res2 = l2r_safe_writer_sum_payload_dispatch t pc sc low tag_of_low mid_of_tag vmatch_cases conv_of_tag w destr k xl right perr;
+    let e2 = !perr;
+    with vright'. assert (S.pts_to right vright');
+    S.pts_to_len right;
+    S.join left right out;
+    S.pts_to_len out;
+    unfold (vmatch_sum_case t low tag_of_low mid_of_tag vmatch_cases k xl (dsnd (Ghost.reveal m)));
+    rewrite (vmatch_cases k xl (dsnd (Ghost.reveal m)))
+      as (vmatch_cases (dfst (Ghost.reveal m)) xl (dsnd (Ghost.reveal m)));
+    fold (vmatch_sum t low tag_of_low mid_of_tag vmatch_cases xl (Ghost.reveal m));
+    let resf : SZ.t = if e2 { res1 } else { (SZ.add res1 res2 <: SZ.t) };
+    l2r_safe_writer_sum_postcond_lemma t s pc sc mid_of_tag conv_of_tag (Ghost.reveal m) vleft' vright' res1 res2 resf e2 sq;
+    resf
+  }
+}
+
+#pop-options
 
 let dsum_mid
   (t: dsum)
