@@ -440,3 +440,288 @@ fn l2r_safe_writer_list
 }
 
 #pop-options
+
+(* ============================================================================ *)
+(* l2r safe writer for count-prefixed variable-length lists (vclist)            *)
+(* ============================================================================ *)
+
+module U32 = FStar.UInt32
+open LowParse.Spec.VCList
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+(* The serialized form of a vclist decomposes as HEADER (count) ++ BODY (list). *)
+let serialize_vclist_decomp
+  (min: nat)
+  (max: nat { min <= max /\ max < 4294967296 })
+  (#lk: parser_kind)
+  (#lp: parser lk U32.t)
+  (ls: serializer lp { lk.parser_kind_subkind == Some ParserStrong })
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0 })
+  (l: vlarray t min max)
+: Lemma
+  (ensures (
+    serialize (serialize_vclist min max ls s) l ==
+    Seq.append (serialize ls (U32.uint_to_t (L.length l))) (serialize (serialize_list p s) l)
+  ))
+= serialize_nlist_serialize_list (L.length l) s l
+
+(* From the header/body writer facts (and the structural fact that the final
+   output is HEADER ++ BODY), derive the success-form serializer facts about the
+   full vclist serialization. *)
+let vclist_compose_lemma
+  (min: nat)
+  (max: nat { min <= max /\ max < 4294967296 })
+  (#lk: parser_kind)
+  (#lp: parser lk U32.t)
+  (ls: serializer lp { lk.parser_kind_subkind == Some ParserStrong })
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0 })
+  (l: vlarray t min max)
+  (cnt: U32.t)
+  (out': Seq.seq byte)
+  (body_out: Seq.seq byte)
+  (finalsz: SZ.t)
+  (hsz: nat)
+  (he be: bool)
+: Lemma
+  (requires (
+    U32.v cnt == L.length l /\
+    (he == true ==> (
+      Seq.length out' < Seq.length (serialize ls cnt) /\ be == true
+    )) /\
+    (he == false ==> (
+      hsz == Seq.length (serialize ls cnt) /\
+      out' == Seq.append (serialize ls cnt) body_out /\
+      (be == (Seq.length body_out < Seq.length (serialize (serialize_list p s) l))) /\
+      (be == false ==> (
+        SZ.v finalsz == hsz + Seq.length (serialize (serialize_list p s) l) /\
+        Seq.slice body_out 0 (Seq.length (serialize (serialize_list p s) l)) == serialize (serialize_list p s) l
+      ))
+    ))
+  ))
+  (ensures (
+    be == (Seq.length out' < Seq.length (serialize (serialize_vclist min max ls s) l)) /\
+    (be == false ==> (SZ.v finalsz == Seq.length (serialize (serialize_vclist min max ls s) l) /\ Seq.slice out' 0 (Seq.length (serialize (serialize_vclist min max ls s) l)) == serialize (serialize_vclist min max ls s) l))
+  ))
+= serialize_vclist_decomp min max ls s l;
+  let header = serialize ls cnt in
+  let body = serialize (serialize_list p s) l in
+  Seq.lemma_len_append header body;
+  if he
+  then ()
+  else begin
+    Seq.lemma_len_append header body_out;
+    if be
+    then ()
+    else slice_append_prefix header body_out (Seq.length body)
+  end
+
+(* When conv succeeds (count in [min,max]), the success-form facts coincide with
+   the full [l2r_safe_writer_postcond]. *)
+let vclist_postcond_lemma
+  (min: nat)
+  (max: nat { min <= max /\ max < 4294967296 })
+  (#lk: parser_kind)
+  (#lp: parser lk U32.t)
+  (ls: serializer lp { lk.parser_kind_subkind == Some ParserStrong })
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0 })
+  (l: vlarray t min max)
+  (v': Seq.seq byte)
+  (sz: SZ.t)
+  (err: bool)
+: Lemma
+  (requires (
+    err == (Seq.length v' < Seq.length (serialize (serialize_vclist min max ls s) l)) /\
+    (err == false ==> (SZ.v sz == Seq.length (serialize (serialize_vclist min max ls s) l) /\ Seq.slice v' 0 (Seq.length (serialize (serialize_vclist min max ls s) l)) == serialize (serialize_vclist min max ls s) l))
+  ))
+  (ensures (
+    PPB.l2r_safe_writer_postcond (PPVCL.vclist_conv min max) (serialize_vclist min max ls s) (l <: list t) v' sz err
+  ))
+= assert (PPVCL.vclist_conv min max (l <: list t) == Some l)
+
+(* The core writer assuming the count is valid (conv = Some): write the count
+   header with [cw], then split off the header and write the element list body
+   with [l2r_safe_writer_list]. *)
+inline_for_extraction
+fn l2r_safe_writer_vclist_aux
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max })
+  (#lk: Ghost.erased parser_kind)
+  (#lp: parser lk U32.t)
+  (ls: serializer lp)
+  (cw: PPB.l2r_safe_writer (LPS.eq_as_slprop U32.t) ls (PPB.leaf_conv U32.t))
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (#el #em: Type0)
+  (#elem_vmatch: el -> em -> slprop)
+  (#elem_conv: em -> GTot (option t))
+  (ew: PPB.l2r_safe_writer elem_vmatch s elem_conv)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0))
+  (u: squash (lk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+  (x: PPVCL.vclist_lowtype el)
+  (cnt: U32.t)
+  (#y: Ghost.erased (vlarray t (U32.v min) (U32.v max)))
+  (out: slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: R.ref bool)
+requires
+  (exists* err.
+    PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal y <: list t) **
+    S.pts_to out v ** R.pts_to perr err) **
+  pure (U32.v cnt == L.length (Ghost.reveal y))
+returns sz: SZ.t
+ensures
+  exists* v' err.
+    PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal y <: list t) **
+    S.pts_to out v' ** R.pts_to perr err **
+    pure (
+      err == (Seq.length v' < Seq.length (serialize (serialize_vclist (U32.v min) (U32.v max) ls s) (Ghost.reveal y))) /\
+      (err == false ==> (SZ.v sz == Seq.length (serialize (serialize_vclist (U32.v min) (U32.v max) ls s) (Ghost.reveal y)) /\ Seq.slice v' 0 (Seq.length (serialize (serialize_vclist (U32.v min) (U32.v max) ls s) (Ghost.reveal y))) == serialize (serialize_vclist (U32.v min) (U32.v max) ls s) (Ghost.reveal y)))
+    )
+{
+  S.pts_to_len out;
+  (* ---- write the count header ---- *)
+  fold (LPS.eq_as_slprop U32.t cnt cnt);
+  let hsz = cw cnt out perr;
+  unfold (LPS.eq_as_slprop U32.t cnt cnt);
+  with vmid herr0. assert (
+    S.pts_to out vmid ** R.pts_to perr herr0 **
+    pure (PPB.l2r_safe_writer_postcond (PPB.leaf_conv U32.t) ls cnt vmid hsz herr0));
+  S.pts_to_len out;
+  let he = !perr;
+  if he {
+    (* header did not fit: the whole vclist does not fit either *)
+    vclist_compose_lemma (U32.v min) (U32.v max) ls s (Ghost.reveal y) cnt vmid (Seq.empty #byte) hsz (Seq.length (serialize ls cnt)) true true;
+    hsz
+  } else {
+    (* header fit: hsz == length (serialize ls cnt), slice vmid 0 hsz == header *)
+    let hdr, body = S.split out hsz;
+    with vhdr. assert (S.pts_to hdr vhdr);
+    S.pts_to_len hdr;
+    S.pts_to_len body;
+    assert (pure (vhdr == serialize ls cnt));
+    let bsz = l2r_safe_writer_list s ew () x body perr;
+    with vbody berr. assert (
+      S.pts_to body vbody ** R.pts_to perr berr **
+      pure (PPB.l2r_safe_writer_postcond (fun (xx: list t) -> Some xx) (serialize_list p s) (Ghost.reveal y <: list t) vbody bsz berr));
+    S.pts_to_len body;
+    S.join hdr body out;
+    with vout'. assert (S.pts_to out vout');
+    S.pts_to_len out;
+    assert (pure (vout' == Seq.append (serialize ls cnt) vbody));
+    let be = !perr;
+    if be {
+      vclist_compose_lemma (U32.v min) (U32.v max) ls s (Ghost.reveal y) cnt vout' vbody hsz (SZ.v hsz) false true;
+      hsz
+    } else {
+      SZ.fits_lte (SZ.v hsz + SZ.v bsz) (Seq.length vout');
+      let fsz = SZ.add hsz bsz;
+      vclist_compose_lemma (U32.v min) (U32.v max) ls s (Ghost.reveal y) cnt vout' vbody fsz (SZ.v hsz) false false;
+      fsz
+    }
+  }
+}
+
+inline_for_extraction
+fn l2r_safe_writer_vclist
+  (min: U32.t)
+  (max: U32.t { U32.v min <= U32.v max })
+  (#lk: Ghost.erased parser_kind)
+  (#lp: parser lk U32.t)
+  (ls: serializer lp)
+  (cw: PPB.l2r_safe_writer (LPS.eq_as_slprop U32.t) ls (PPB.leaf_conv U32.t))
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (#el #em: Type0)
+  (#elem_vmatch: el -> em -> slprop)
+  (#elem_conv: em -> GTot (option t))
+  (ew: PPB.l2r_safe_writer elem_vmatch s elem_conv)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0))
+  (u: squash (lk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+: PPB.l2r_safe_writer
+    (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv))
+    (serialize_vclist (U32.v min) (U32.v max) ls s)
+    (PPVCL.vclist_conv (U32.v min) (U32.v max))
+=
+  (x: PPVCL.vclist_lowtype el)
+  (#y: Ghost.erased (list t))
+  (out: slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: R.ref bool)
+{
+  match x {
+    None -> {
+      unfold (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (None #(SZ.t & V.vec el)) (Ghost.reveal y));
+      fold (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (None #(SZ.t & V.vec el)) (Ghost.reveal y));
+      if (U32.eq min 0ul) {
+        let yv : Ghost.erased (vlarray t (U32.v min) (U32.v max)) = Ghost.hide (Ghost.reveal y <: vlarray t (U32.v min) (U32.v max));
+        rewrite (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (None #(SZ.t & V.vec el)) (Ghost.reveal y))
+          as (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal yv <: list t));
+        let sz = l2r_safe_writer_vclist_aux min max ls cw s ew () () x 0ul out perr;
+        with v' err. assert (
+          S.pts_to out v' ** R.pts_to perr err **
+          pure (
+            err == (Seq.length v' < Seq.length (serialize (serialize_vclist (U32.v min) (U32.v max) ls s) (Ghost.reveal yv))) /\
+            (err == false ==> (SZ.v sz == Seq.length (serialize (serialize_vclist (U32.v min) (U32.v max) ls s) (Ghost.reveal yv)) /\ Seq.slice v' 0 (Seq.length (serialize (serialize_vclist (U32.v min) (U32.v max) ls s) (Ghost.reveal yv))) == serialize (serialize_vclist (U32.v min) (U32.v max) ls s) (Ghost.reveal yv)))));
+        vclist_postcond_lemma (U32.v min) (U32.v max) ls s (Ghost.reveal yv) v' sz err;
+        rewrite (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal yv <: list t))
+          as (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal y));
+        sz
+      } else {
+        perr := true;
+        rewrite (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (None #(SZ.t & V.vec el)) (Ghost.reveal y))
+          as (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal y));
+        assert (pure (PPVCL.vclist_conv (U32.v min) (U32.v max) (Ghost.reveal y) == None));
+        0sz
+      }
+    }
+    Some yy -> {
+      unfold (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (Some yy) (Ghost.reveal y));
+      let n = fst yy;
+      with ss. assert (
+        V.pts_to (snd yy) ss **
+        SM.seq_list_match ss (Ghost.reveal y) (PPB.vmatch_conv elem_vmatch elem_conv));
+      fold (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (Some yy) (Ghost.reveal y));
+      SZ.fits_u64_implies_fits_32 ();
+      let smin = SZ.uint32_to_sizet min;
+      let smax = SZ.uint32_to_sizet max;
+      if (SZ.lte smin n && SZ.lte n smax) {
+        let cnt = SZ.sizet_to_uint32 n;
+        let yv : Ghost.erased (vlarray t (U32.v min) (U32.v max)) = Ghost.hide (Ghost.reveal y <: vlarray t (U32.v min) (U32.v max));
+        rewrite (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (Some yy) (Ghost.reveal y))
+          as (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal yv <: list t));
+        let sz = l2r_safe_writer_vclist_aux min max ls cw s ew () () x cnt out perr;
+        with v' err. assert (
+          S.pts_to out v' ** R.pts_to perr err **
+          pure (
+            err == (Seq.length v' < Seq.length (serialize (serialize_vclist (U32.v min) (U32.v max) ls s) (Ghost.reveal yv))) /\
+            (err == false ==> (SZ.v sz == Seq.length (serialize (serialize_vclist (U32.v min) (U32.v max) ls s) (Ghost.reveal yv)) /\ Seq.slice v' 0 (Seq.length (serialize (serialize_vclist (U32.v min) (U32.v max) ls s) (Ghost.reveal yv))) == serialize (serialize_vclist (U32.v min) (U32.v max) ls s) (Ghost.reveal yv)))));
+        vclist_postcond_lemma (U32.v min) (U32.v max) ls s (Ghost.reveal yv) v' sz err;
+        rewrite (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal yv <: list t))
+          as (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal y));
+        sz
+      } else {
+        perr := true;
+        rewrite (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (Some yy) (Ghost.reveal y))
+          as (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal y));
+        assert (pure (PPVCL.vclist_conv (U32.v min) (U32.v max) (Ghost.reveal y) == None));
+        0sz
+      }
+    }
+  }
+}
+
+#pop-options
