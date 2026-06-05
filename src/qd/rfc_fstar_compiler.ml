@@ -3294,6 +3294,11 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
       wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv = %s\n\n" n n n n (copyful_read_name ty);
       wp o "let free_%s : PPB.free_t %s_vmatch = %s\n\n" n n (copyful_free_name ty);
+      if !emit_pulse && copyful_writer_available ty then begin
+        wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+        wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv = %s\n\n" n n n n (copyful_writer_name ty);
+        register_writer n
+      end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %s) [SMTPat (%s_bytesize x)]\n\n" n n n (bytesize_call ty "x") n;
       w o "let %s_bytesize_eqn x = %s\n\n" n (bytesize_eq_call ty "x");
       if ty <> "Empty" && ty <> "Fail"
