@@ -4179,6 +4179,26 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
   wp o "  PPC.copyful_parse_synth %s synth_%s synth_%s_recip\n\n" pulse_creader n n;
   wp o "let free_%s : PPB.free_t %s_vmatch = %s\n\n" n n pulse_cfree;
 
+  (* Pulse: copyful safe writer. A struct's writer is a pair-tree of its fields'
+     safe writers wrapped with l2r_safe_writer_synth to (de)serialize the record.
+     Emitted only when every field type has a graceful writer. *)
+  if !emit_pulse && List.for_all (fun (_, ty) -> copyful_writer_available ty) fields then begin
+    let rec mk_pulse_safe_writer = function
+      | TLeaf (_, ty) -> copyful_writer_name ty
+      | TNode (_, tl, tr) ->
+         let wl = mk_pulse_safe_writer tl in
+         let wr = mk_pulse_safe_writer tr in
+         sprintf "(PPC.l2r_safe_writer_pair %s () %s)" wl wr
+    in
+    let pulse_swriter = mk_pulse_safe_writer tfields in
+    wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+    wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n" n n n n;
+    wp o "  synth_%s_injective ();\n" n;
+    wp o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
+    wp o "  PPC.l2r_safe_writer_synth %s synth_%s synth_%s_recip\n\n" pulse_swriter n n;
+    register_writer n
+  end;
+
   (* bytesize *)
   w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %s) [SMTPat (%s_bytesize x)]\n\n"
     n n n
