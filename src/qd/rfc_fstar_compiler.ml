@@ -637,7 +637,7 @@ let emit_copyful_safe_leaf_writer o i n blen =
    vector (PPBY.lvec, carrying a runtime length alongside the Pulse.Lib.Vec)
    related to the high-level value by PPBY.vmatch_copy_bytes. [combinator] is
    the copyful_parse_* expression producing the lvec. *)
-let emit_copyful_bytes o i n combinator conv =
+let emit_copyful_bytes ?writer o i n combinator conv =
   wp i "let %s_lowtype = PPBY.lvec FStar.UInt8.t\n\n" n;
   wp i "noextract let %s_mid = BY.bytes\n\n" n;
   wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop = PPBY.vmatch_copy_bytes\n\n" n n n;
@@ -645,7 +645,13 @@ let emit_copyful_bytes o i n combinator conv =
   wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
   wp o "let read_%s = %s\n\n" n combinator;
-  wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> PPBY.free_copy_bytes x #(Ghost.hide (Ghost.reveal v <: BY.bytes))\n\n" n n
+  wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> PPBY.free_copy_bytes x #(Ghost.hide (Ghost.reveal v <: BY.bytes))\n\n" n n;
+  (match writer with
+   | Some w when !emit_pulse ->
+     wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+     wp o "let write_%s = %s\n\n" n w;
+     register_writer n
+   | _ -> ())
 
 (* Emit copyful parser (read_<n>) and free (free_<n>) for a closed sum (tagged
    union) whose payloads are not all leaf-readable: it builds a freshly
@@ -3435,7 +3441,8 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         wl o "let %s_jumper : LL.jumper %s_parser = LL.jump_flbytes %d %dul\n\n" n n k k
        end;
       (* Pulse: copyful parser + free *)
-      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_flbytes %d" k) (sprintf "PPBY.flbytes_conv %d" k);
+      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_flbytes %d" k) (sprintf "PPBY.flbytes_conv %d" k)
+        ~writer:(sprintf "PPBY.l2r_safe_writer_flbytes %d %dsz" k k);
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n n;
       w o "let %s_bytesize_eqn x = ()\n\n" n;
       (* intro *)
@@ -3608,7 +3615,8 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         wp o "let %s_jumper%s = PPBY.jump_bounded_vlbytes %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" n jumper_annot low high high (log256 high)
       end;
       (* Pulse: copyful parser + free *)
-      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash" low high (log256 high)) (sprintf "PPBY.vlbytes_conv %d %d" low high);
+      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash" low high (log256 high)) (sprintf "PPBY.vlbytes_conv %d %d" low high)
+        ~writer:(sprintf "PPBY.l2r_safe_writer_bounded_vlbytes %d %dsz %d %dsz %dsz fits_u64_squash" low low high high (log256 high));
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes %d %d x\n\n" n low high;
       (* length *)
@@ -3669,7 +3677,8 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         wp o "let %s_jumper%s = PPBY.jump_bounded_vlbytes' %d %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer %d) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" n jumper_annot low high repr repr repr
       end;
       (* Pulse: copyful parser + free *)
-      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash" low high repr repr) (sprintf "PPBY.vlbytes_conv %d %d" low high);
+      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash" low high repr repr) (sprintf "PPBY.vlbytes_conv %d %d" low high)
+        ~writer:(sprintf "PPBY.l2r_safe_writer_bounded_vlbytes' %d %dsz %d %dsz %d %dsz fits_u64_squash" low low high high repr repr);
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n repr n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes' %d %d %d x\n\n" n low high repr;
       (* length *)

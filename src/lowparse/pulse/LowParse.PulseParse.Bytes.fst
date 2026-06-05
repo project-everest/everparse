@@ -148,6 +148,7 @@ module V = Pulse.Lib.Vec
 module A = Pulse.Lib.Array
 module E = LowParse.Pulse.Endianness
 module EI = LowParse.Spec.Endianness.Instances
+module LPPI = LowParse.Pulse.Int
 module FE = FStar.Endianness
 module M = FStar.Math.Lemmas
 
@@ -604,7 +605,7 @@ fn l2r_safe_writer_bounded_vlbytes'
       (* write the big-endian length header into sp1 == out[0, l) *)
       let n_u32 = SZ.sizet_to_uint32 n;
       M.pow2_le_compat (FStar.Mul.op_Star 8 l) (FStar.Mul.op_Star 8 (log256' max));
-      let write_hdr = E.mk_n_to_be EI.uint32 l;
+      let write_hdr = LPPI.write_bounded_integer_header l l_sz;
       write_hdr n_u32 sp1 #hv l_sz;
       with hdr. assert (S.pts_to sp1 hdr);
       S.pts_to_len sp1;

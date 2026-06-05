@@ -17,6 +17,7 @@ module PPCF = LowParse.PulseParse.FLData
 module U32 = FStar.UInt32
 module E = LowParse.Pulse.Endianness
 module EI = LowParse.Spec.Endianness.Instances
+module LPPI = LowParse.Pulse.Int
 module M = FStar.Math.Lemmas
 module Seq = FStar.Seq
 
@@ -897,7 +898,7 @@ fn l2r_safe_writer_bounded_vldata_strong_payload
         SZ.fits_u64_implies_fits (SZ.v l_sz + SZ.v res);
         let n_u32 = SZ.sizet_to_uint32 res;
         M.pow2_le_compat (FStar.Mul.op_Star 8 l) (FStar.Mul.op_Star 8 (log256' max));
-        let write_hdr = E.mk_n_to_be EI.uint32 l;
+        let write_hdr = LPPI.write_bounded_integer_header l l_sz;
         write_hdr n_u32 hdr #hdr0 l_sz;
         with hdr_written. assert (S.pts_to hdr hdr_written);
         S.pts_to_len hdr;
