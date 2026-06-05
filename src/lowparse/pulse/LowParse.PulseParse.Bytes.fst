@@ -647,3 +647,96 @@ let l2r_safe_writer_bounded_vlbytes
   (sq: squash FStar.SizeT.fits_u64)
 : PPB.l2r_safe_writer #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes #_ #(parse_bounded_vlbytes min max) (serialize_bounded_vlbytes min max) (vlbytes_conv min max)
 = l2r_safe_writer_bounded_vlbytes' min min_sz max max_sz (log256' max) l_sz sq
+
+(* Copyful safe SIZE for a fixed-length byte array: the size-computation analog
+   of [l2r_safe_writer_flbytes]. It does not serialize; it only reports the
+   serialized size [sz] (which is constant for [serialize_flbytes sz]). It fails
+   gracefully (err=true) iff the owned value does not have length [sz] (so the
+   conv [flbytes_conv sz] is None). The runtime length is read from the
+   [lvec_len] field (sound by its refinement). The constant size [sz] always
+   fits in a machine word. *)
+inline_for_extraction
+fn l2r_safe_size_flbytes
+  (sz: nat { sz < 4294967296 })
+  (sz_sz: SZ.t { SZ.v sz_sz == sz })
+: PPB.l2r_safe_size #(lvec byte) #B32.bytes #(B32.lbytes sz) vmatch_copy_bytes #_ #(parse_flbytes sz) (serialize_flbytes sz) (flbytes_conv sz)
+=
+  (x: lvec byte)
+  (#y: Ghost.erased B32.bytes)
+  (perr: R.ref bool)
+{
+  unfold (vmatch_copy_bytes x y);
+  V.pts_to_len x.lvec_vec;
+  let n = x.lvec_len;
+  if (SZ.eq n sz_sz) {
+    (* conv y == Some y; serialized length is exactly sz *)
+    assert_norm (pow2 64 == 18446744073709551616);
+    serialize_flbytes_eq sz (Ghost.reveal y <: B32.lbytes sz);
+    perr := false;
+    fold (vmatch_copy_bytes x y);
+    sz_sz
+  } else {
+    (* length =/= sz, so flbytes_conv sz y == None *)
+    perr := true;
+    fold (vmatch_copy_bytes x y);
+    sz_sz
+  }
+}
+
+#push-options "--z3rlimit 64"
+
+(* Copyful safe SIZE for a bounded variable-length byte array: the
+   size-computation analog of [l2r_safe_writer_bounded_vlbytes']. It does not
+   serialize; it only computes the serialized size [l + n] of the [l]-byte
+   length header plus the [n]-byte payload. It fails gracefully (err=true) iff
+   the owned value's length is out of [min, max] (so the conv
+   [vlbytes_conv min max] is None). The runtime length is read from the
+   [lvec_len] field (sound by its refinement). The total [l + n <= 4 + max]
+   always fits in a machine word. *)
+inline_for_extraction
+fn l2r_safe_size_bounded_vlbytes'
+  (min: nat)
+  (min_sz: SZ.t { SZ.v min_sz == min })
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (max_sz: SZ.t { SZ.v max_sz == max })
+  (l: nat { l >= log256' max /\ l <= 4 })
+  (l_sz: SZ.t { SZ.v l_sz == l })
+  (sq: squash FStar.SizeT.fits_u64)
+: PPB.l2r_safe_size #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes #_ #(parse_bounded_vlbytes' min max l) (serialize_bounded_vlbytes' min max l) (vlbytes_conv min max)
+=
+  (x: lvec byte)
+  (#y: Ghost.erased B32.bytes)
+  (perr: R.ref bool)
+{
+  unfold (vmatch_copy_bytes x y);
+  V.pts_to_len x.lvec_vec;
+  let n = x.lvec_len;
+  if (SZ.lte min_sz n && SZ.lte n max_sz) {
+    (* conv y == Some y; serialized length is l + n *)
+    length_serialize_bounded_vlbytes' min max l (Ghost.reveal y);
+    vlbytes_total_fits_lemma l (SZ.v n) max;
+    SZ.fits_u64_implies_fits (SZ.v l_sz + SZ.v n);
+    let tot_sz = SZ.add l_sz n;
+    perr := false;
+    fold (vmatch_copy_bytes x y);
+    tot_sz
+  } else {
+    (* length out of [min, max], so vlbytes_conv min max y == None *)
+    perr := true;
+    fold (vmatch_copy_bytes x y);
+    0sz
+  }
+}
+
+#pop-options
+
+inline_for_extraction
+let l2r_safe_size_bounded_vlbytes
+  (min: nat)
+  (min_sz: SZ.t { SZ.v min_sz == min })
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (max_sz: SZ.t { SZ.v max_sz == max })
+  (l_sz: SZ.t { SZ.v l_sz == log256' max })
+  (sq: squash FStar.SizeT.fits_u64)
+: PPB.l2r_safe_size #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes #_ #(parse_bounded_vlbytes min max) (serialize_bounded_vlbytes min max) (vlbytes_conv min max)
+= l2r_safe_size_bounded_vlbytes' min min_sz max max_sz (log256' max) l_sz sq
