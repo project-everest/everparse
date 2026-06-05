@@ -508,7 +508,9 @@ let pulse_leaf_reader_name = function
 let pulse_leaf_writer_name = function
   | "opaque" | "uint8" -> "(LPPI.l2r_leaf_write_u8 ())"
   | "uint16" -> "(LPPI.l2r_leaf_write_u16 ())"
+  | "uint16_le" -> "LPPILE.l2r_leaf_write_u16_le"
   | "uint32" -> "(LPPI.l2r_leaf_write_u32 ())"
+  | "uint32_le" -> "LPPILE.l2r_leaf_write_u32_le"
   | "uint64" -> "(LPPI.l2r_leaf_write_u64 ())"
   | "Empty" -> "LPC.l2r_leaf_write_empty"
   | "Fail" -> "(LPC.l2r_leaf_write_false ())"
@@ -578,6 +580,7 @@ let copyful_conv_name ty =
    no [l2r_safe_writer_leaf] (constant-size leaf writer) is available yet. *)
 let is_copyful_safe_leaf_type = function
   | "opaque" | "uint8" | "uint16" | "uint32" | "uint64" | "Empty" | "Fail" -> true
+  | "uint16_le" | "uint32_le" -> true
   | _ -> false
 
 (* The inline graceful leaf safe writer expression for a base safe-leaf type:
@@ -587,6 +590,8 @@ let safe_leaf_writer_expr = function
   | "uint16" -> "(PPB.l2r_safe_writer_leaf LPI.serialize_u16 2sz (LPPI.l2r_leaf_write_u16 ()))"
   | "uint32" -> "(PPB.l2r_safe_writer_leaf LPI.serialize_u32 4sz (LPPI.l2r_leaf_write_u32 ()))"
   | "uint64" -> "(PPB.l2r_safe_writer_leaf LPI.serialize_u64 8sz (LPPI.l2r_leaf_write_u64 ()))"
+  | "uint16_le" -> "(PPB.l2r_safe_writer_leaf LPI.serialize_u16_le 2sz LPPILE.l2r_leaf_write_u16_le)"
+  | "uint32_le" -> "(PPB.l2r_safe_writer_leaf LPI.serialize_u32_le 4sz LPPILE.l2r_leaf_write_u32_le)"
   | "Empty" -> "(PPB.l2r_safe_writer_leaf LP.serialize_empty 0sz LPC.l2r_leaf_write_empty)"
   | "Fail" -> "(PPS.l2r_safe_writer_false (LPS.eq_as_slprop (squash False)) LP.serialize_false)"
   | t -> failwith (sprintf "safe_leaf_writer_expr: no safe leaf writer for %s" t)
@@ -4631,6 +4636,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp i "module PPVCL = LowParse.PulseParse.VCList\n";
   wp i "module LPC = LowParse.Pulse.Combinators\n";
   wp i "module LPPI = LowParse.Pulse.Int\n";
+  wp i "module LPPILE = LowParse.Pulse.BoundedIntLE\n";
   wp i "module PPE = LowParse.PulseParse.Enum\n";
   wp i "module PPS = LowParse.PulseParse.Sum\n";
   wp i "module PPBI = LowParse.PulseParse.BoundedInt\n";
@@ -4666,6 +4672,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp o "module LPS = LowParse.Pulse.Base\n";
   wp o "module LPC = LowParse.Pulse.Combinators\n";
   wp o "module LPPI = LowParse.Pulse.Int\n";
+  wp o "module LPPILE = LowParse.Pulse.BoundedIntLE\n";
   wp o "module PPB = LowParse.PulseParse.Base\n";
   wp o "module PPC = LowParse.PulseParse.Combinators\n";
   wp o "module PPE = LowParse.PulseParse.Enum\n";
