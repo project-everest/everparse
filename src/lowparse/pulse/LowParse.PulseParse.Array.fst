@@ -398,3 +398,97 @@ ensures
 }
 
 #pop-options
+
+module PPVCL = LowParse.PulseParse.VCList
+
+(* The serialized bytes of an array equal the serialized bytes of its underlying
+   element list (the array serializer adds no header). *)
+let serialize_array_bytes_eq
+  (#k: parser_kind) (#t: Type) (#p: parser k t)
+  (s: serializer p) (sz: nat) (n: nat)
+  (u: unit { fldata_array_precond k sz n == true })
+  (x: LowParse.Spec.Array.array t n)
+  : Lemma
+    (serialize (serialize_array s sz n u) x ==
+     serialize (serialize_list _ s) (x <: list t))
+= fldata_to_array_inj s sz n u;
+  array_to_fldata_to_array s sz n u u;
+  serialize_synth_eq
+    _
+    (fldata_to_array s sz n u)
+    (serialize_fldata_strong (serialize_list _ s) sz)
+    (array_to_fldata s sz n u)
+    ()
+    x
+
+(* Translate the list-writer postcondition (in terms of serialize_list) into the
+   array-writer postcondition (in terms of serialize_array). Since vmatch_array
+   pins L.length y == elem_count, array_conv y is always Some y. *)
+let array_postcond_lemma
+  (#k: parser_kind) (#t: Type) (#p: parser k t)
+  (s: serializer p) (sz: nat) (n: nat)
+  (u: unit { fldata_array_precond k sz n == true /\ n > 0 })
+  (y: list t)
+  (v': Seq.seq byte) (res: SZ.t) (e: bool)
+  : Lemma
+    (requires (
+      L.length y == n /\
+      PPB.l2r_safe_writer_postcond (fun (x: list t) -> Some x) (serialize_list p s) y v' res e
+    ))
+    (ensures
+      PPB.l2r_safe_writer_postcond (array_conv n) (serialize_array s sz n u) y v' res e
+    )
+= serialize_array_bytes_eq s sz n u (y <: LowParse.Spec.Array.array t n)
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+inline_for_extraction
+fn l2r_safe_writer_array
+  (#eh: Type0) (#k: parser_kind) (#p: parser k eh) (s: serializer p)
+  (#el #em: Type0) (#elem_vmatch: el -> em -> slprop) (#elem_conv: em -> GTot (option eh))
+  (ew: PPB.l2r_safe_writer elem_vmatch s elem_conv)
+  (array_byte_size: nat) (array_byte_size_sz: SZ.t)
+  (elem_count: nat) (elem_count_sz: SZ.t)
+  (uprf: unit { fldata_array_precond k array_byte_size elem_count == true })
+  (u: squash (
+    fldata_array_precond k array_byte_size elem_count == true /\
+    SZ.v array_byte_size_sz == array_byte_size /\ SZ.v elem_count_sz == elem_count /\
+    k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0 /\ elem_count > 0))
+: PPB.l2r_safe_writer
+    (vmatch_array (PPB.vmatch_conv elem_vmatch elem_conv) elem_count_sz)
+    (serialize_array s array_byte_size elem_count uprf)
+    (array_conv elem_count)
+=
+  (x: V.vec el)
+  (#y: Ghost.erased (list eh))
+  (out: slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: R.ref bool)
+{
+  unfold (vmatch_array (PPB.vmatch_conv elem_vmatch elem_conv) elem_count_sz x (Ghost.reveal y));
+  with s_seq. assert (
+    V.pts_to x s_seq **
+    SM.seq_list_match s_seq (Ghost.reveal y) (PPB.vmatch_conv elem_vmatch elem_conv));
+  V.pts_to_len x;
+  SM.seq_list_match_length (PPB.vmatch_conv elem_vmatch elem_conv) s_seq (Ghost.reveal y);
+  // Bridge: vmatch_array resources -> vmatch_vclist (Some (elem_count_sz, x))
+  let xo = PPVCL.vmatch_vclist_some_intro
+    #el #eh #(PPB.vmatch_conv elem_vmatch elem_conv) elem_count_sz x #s_seq #y (Ghost.reveal y);
+  // Call the list-body writer (consumes & returns the vmatch_vclist unchanged)
+  let res = PPCL.l2r_safe_writer_list s ew () xo out perr;
+  with v'. assert (S.pts_to out v');
+  let e = !perr;
+  // Recover the array resources from the (Some) vmatch_vclist
+  rewrite (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) xo (Ghost.reveal y))
+    as (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (Some (elem_count_sz, x)) (Ghost.reveal y));
+  unfold (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (Some (elem_count_sz, x)) (Ghost.reveal y));
+  with s_seq2. assert (
+    V.pts_to x s_seq2 **
+    SM.seq_list_match s_seq2 (Ghost.reveal y) (PPB.vmatch_conv elem_vmatch elem_conv));
+  fold (vmatch_array (PPB.vmatch_conv elem_vmatch elem_conv) elem_count_sz x (Ghost.reveal y));
+  // Translate the postcondition
+  array_postcond_lemma s array_byte_size elem_count uprf (Ghost.reveal y) v' res e;
+  res
+}
+
+#pop-options
