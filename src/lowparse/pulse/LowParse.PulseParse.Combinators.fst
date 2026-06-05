@@ -1604,3 +1604,89 @@ fn accessor_dtuple2_snd
 }
 
 #pop-options
+
+(* ---------------------------------------------------------------------------
+   l2r_safe_size combinators (size-computation analog of l2r_safe_writer).
+   --------------------------------------------------------------------------- *)
+
+(* Safe size for [parse_synth p1 f2]: synth only relabels the high value, so the
+   serialized SIZE is unchanged; bridge the postcondition via [serialize_synth_eq]. *)
+let l2r_safe_size_postcond_synth_bridge
+  (#k1: parser_kind) (#t1: Type0) (p1: parser k1 t1) (s1: serializer p1)
+  (#t2: Type0) (f2: (t1 -> GTot t2)) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 /\ synth_injective f2 })
+  (#tm: Type0) (conv: tm -> GTot (option t1))
+  (y: tm) (sz: SZ.t) (err: bool)
+: Lemma
+    (requires PPB.l2r_safe_size_postcond conv s1 y sz err)
+    (ensures PPB.l2r_safe_size_postcond (synth_conv conv f2) (serialize_synth p1 f2 s1 f1 ()) y sz err)
+= match conv y with
+  | None -> ()
+  | Some x ->
+    serialize_synth_eq p1 f2 s1 f1 () (f2 x);
+    assert (f2 (f1 (f2 x)) == f2 x);
+    assert (f1 (f2 x) == x)
+
+inline_for_extraction
+fn l2r_safe_size_synth
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1)
+  (#tl: Type0) (#tm: Type0) (#vmatch: tl -> tm -> slprop) (#conv: tm -> GTot (option t1))
+  (w: PPB.l2r_safe_size vmatch s1 conv)
+  (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 })
+: PPB.l2r_safe_size #_ #_ #_ vmatch #_ #(parse_synth p1 f2) (serialize_synth p1 f2 s1 f1 ()) (synth_conv conv f2)
+=
+  (x: tl)
+  (#y: Ghost.erased tm)
+  (perr: ref bool)
+{
+  let res = w x perr;
+  with err. assert (vmatch x (Ghost.reveal y) ** Pulse.Lib.Reference.pts_to perr err ** pure (PPB.l2r_safe_size_postcond conv s1 (Ghost.reveal y) res err));
+  l2r_safe_size_postcond_synth_bridge p1 s1 f2 f1 conv (Ghost.reveal y) res err;
+  res
+}
+
+(* Safe size for [nondep_then p1 p2]: compute each child size, propagating any
+   error; otherwise add them with an overflow check. The error flag ends up true
+   iff either child fails (conv = None or size overflow) or the total overflows,
+   matching [pair_conv] = None or non-representable total size. *)
+inline_for_extraction
+fn l2r_safe_size_pair (sq: squash FStar.SizeT.fits_u64)
+  (#tl1 #tl2 #tm1 #tm2 #th1 #th2: Type0)
+  (#vmatch1: tl1 -> tm1 -> slprop)
+  (#k1: parser_kind)
+  (#p1: parser k1 th1)
+  (#s1: serializer p1)
+  (#conv1: tm1 -> GTot (option th1))
+  (w1: PPB.l2r_safe_size vmatch1 s1 conv1)
+  (sqs: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (#vmatch2: tl2 -> tm2 -> slprop)
+  (#k2: parser_kind)
+  (#p2: parser k2 th2)
+  (#s2: serializer p2)
+  (#conv2: tm2 -> GTot (option th2))
+  (w2: PPB.l2r_safe_size vmatch2 s2 conv2)
+: PPB.l2r_safe_size #(tl1 & tl2) #(tm1 & tm2) #(th1 & th2) (LPC.vmatch_pair vmatch1 vmatch2) #(and_then_kind k1 k2) #(nondep_then p1 p2) (serialize_nondep_then s1 s2) (pair_conv conv1 conv2)
+=
+  (x: (tl1 & tl2))
+  (#y: Ghost.erased (tm1 & tm2))
+  (perr: ref bool)
+{
+  unfold (LPC.vmatch_pair vmatch1 vmatch2 x (Ghost.reveal y));
+  FStar.Classical.forall_intro_2 (length_serialize_nondep_then s1 s2);
+  let sz1 = w1 (fst x) perr;
+  let e1 = !perr;
+  if e1 {
+    fold (LPC.vmatch_pair vmatch1 vmatch2 x (Ghost.reveal y));
+    sz1
+  } else {
+    let sz2 = w2 (snd x) perr;
+    let e2 = !perr;
+    if e2 {
+      fold (LPC.vmatch_pair vmatch1 vmatch2 x (Ghost.reveal y));
+      sz2
+    } else {
+      let res = PPB.size_add_checked sq sz1 sz2 perr;
+      fold (LPC.vmatch_pair vmatch1 vmatch2 x (Ghost.reveal y));
+      res
+    }
+  }
+}

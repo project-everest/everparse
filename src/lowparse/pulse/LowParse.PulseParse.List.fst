@@ -442,6 +442,162 @@ fn l2r_safe_writer_list
 #pop-options
 
 (* ============================================================================ *)
+(* l2r safe SIZE for byte-length-bounded lists                                  *)
+(* ============================================================================ *)
+
+(* Monotonicity: the serialized length of any prefix of [l] is at most the
+   serialized length of the whole list. *)
+let serialize_list_length_prefix_le
+  (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p)
+  (l: list t) (i: nat { i <= L.length l })
+: Lemma
+    (requires serialize_list_precond k)
+    (ensures
+      Seq.length (serialize (serialize_list p s) (fst (L.splitAt i l))) <=
+      Seq.length (serialize (serialize_list p s) l))
+= splitAt_append_list i l;
+  serialize_list_append p s (fst (L.splitAt i l)) (snd (L.splitAt i l))
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+
+inline_for_extraction
+fn l2r_safe_size_list
+  (sq: squash FStar.SizeT.fits_u64)
+  (#k: Ghost.erased parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p)
+  (#el #eh: Type0)
+  (#elem_vmatch: el -> eh -> slprop)
+  (#elem_conv: eh -> GTot (option t))
+  (es: PPB.l2r_safe_size elem_vmatch s elem_conv)
+  (sqs: squash (k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0))
+: PPB.l2r_safe_size
+    (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv))
+    (serialize_list p s)
+    (fun (x: list t) -> Some x)
+=
+  (x: PPVCL.vclist_lowtype el)
+  (#y: Ghost.erased (list t))
+  (perr: R.ref bool)
+{
+  match x {
+    None -> {
+      unfold (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (None #(SZ.t & V.vec el)) (Ghost.reveal y));
+      serialize_list_nil p s;
+      perr := false;
+      fold (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (None #(SZ.t & V.vec el)) (Ghost.reveal y));
+      rewrite (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (None #(SZ.t & V.vec el)) (Ghost.reveal y))
+        as (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal y));
+      0sz
+    }
+    Some yy -> {
+      unfold (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (Some yy) (Ghost.reveal y));
+      let n = fst yy;
+      with ss. assert (
+        V.pts_to (snd yy) ss **
+        SM.seq_list_match ss (Ghost.reveal y) (PPB.vmatch_conv elem_vmatch elem_conv));
+      V.pts_to_len (snd yy);
+      SM.seq_list_match_length (PPB.vmatch_conv elem_vmatch elem_conv) ss (Ghost.reveal y);
+      SM.seq_list_match_seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Ghost.reveal y);
+      SM.seq_seq_match_empty_intro (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) 0;
+      perr := false;
+      serialize_list_nil p s;
+      let mut pi = 0sz;
+      let mut poff = 0sz;
+      while (
+        let e = !perr;
+        let i = !pi;
+        ((not e) && SZ.lt i n)
+      )
+      invariant exists* (i: SZ.t) (off: SZ.t) (e: bool) .
+        R.pts_to pi i ** R.pts_to poff off ** R.pts_to perr e **
+        V.pts_to (snd yy) ss **
+        SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) 0 (SZ.v i) **
+        SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i) (SZ.v n) **
+        pure (
+          SZ.v n == L.length (Ghost.reveal y) /\
+          Seq.length ss == SZ.v n /\
+          SZ.v i <= SZ.v n /\
+          SZ.v off < pow2 64 /\
+          SZ.v off == Seq.length (serialize (serialize_list p s) (fst (L.splitAt (SZ.v i) (Ghost.reveal y)))) /\
+          (e == true ==> Seq.length (serialize (serialize_list p s) (Ghost.reveal y)) >= pow2 64)
+        )
+      {
+        let i = !pi;
+        let off = !poff;
+        let xi = V.op_Array_Access (snd yy) i;
+        SM.seq_seq_match_dequeue_left (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i) (SZ.v n);
+        Seq.lemma_seq_of_list_index (Ghost.reveal y) (SZ.v i);
+        rewrite (PPB.vmatch_conv elem_vmatch elem_conv (Seq.index ss (SZ.v i)) (Seq.index (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i)))
+          as (PPB.vmatch_conv elem_vmatch elem_conv xi (Seq.index (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i)));
+        PPB.elim_vmatch_conv elem_vmatch elem_conv xi (Seq.index (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i));
+        with vm_i. assert (
+          elem_vmatch xi vm_i **
+          pure (elem_conv vm_i == Some (Seq.index (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i))));
+        let r = es xi perr;
+        with ee. assert (
+          elem_vmatch xi vm_i **
+          R.pts_to perr ee **
+          pure (PPB.l2r_safe_size_postcond elem_conv s vm_i r ee));
+        PPB.intro_vmatch_conv elem_vmatch elem_conv xi vm_i (Seq.index (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i));
+        let ei = !perr;
+        if ei {
+          (* element failed (conv None impossible here, so size >= pow2 64) *)
+          snoc_step_lemma p s (Ghost.reveal y) (SZ.v i);
+          serialize_list_length_prefix_le s (Ghost.reveal y) (SZ.v i + 1);
+          SM.seq_seq_match_enqueue_left (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i + 1) (SZ.v n) xi (Seq.index (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i));
+          rewrite (SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) ((SZ.v i + 1) - 1) (SZ.v n))
+            as (SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i) (SZ.v n));
+        } else {
+          let off' = PPB.size_add_checked sq off r perr;
+          let ei2 = !perr;
+          if ei2 {
+            (* overflow: off + r >= pow2 64, but off + r = length(splitAt(i+1)) <= total *)
+            snoc_step_lemma p s (Ghost.reveal y) (SZ.v i);
+            serialize_list_length_prefix_le s (Ghost.reveal y) (SZ.v i + 1);
+            SM.seq_seq_match_enqueue_left (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i + 1) (SZ.v n) xi (Seq.index (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i));
+            rewrite (SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) ((SZ.v i + 1) - 1) (SZ.v n))
+              as (SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i) (SZ.v n));
+          } else {
+            let i1 = SZ.add i 1sz;
+            SM.seq_seq_match_enqueue_right (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) 0 (SZ.v i) xi (Seq.index (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i));
+            snoc_step_lemma p s (Ghost.reveal y) (SZ.v i);
+            serialize_list_length_prefix_le s (Ghost.reveal y) (SZ.v i + 1);
+            rewrite (SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) 0 (SZ.v i + 1))
+              as (SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) 0 (SZ.v i1));
+            rewrite (SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i + 1) (SZ.v n))
+              as (SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i1) (SZ.v n));
+            poff := off';
+            pi := i1;
+          }
+        }
+      };
+      let i = !pi;
+      let e = !perr;
+      let off = !poff;
+      SM.seq_seq_match_join (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) 0 (SZ.v i) (SZ.v n);
+      SM.seq_seq_match_seq_list_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Ghost.reveal y);
+      fold (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (Some yy) (Ghost.reveal y));
+      rewrite (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (Some yy) (Ghost.reveal y))
+        as (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal y));
+      if e {
+        off
+      } else {
+        L.lemma_splitAt_snd_length (SZ.v n) (Ghost.reveal y);
+        splitAt_append_list (SZ.v n) (Ghost.reveal y);
+        assert (pure (snd (L.splitAt (SZ.v n) (Ghost.reveal y)) == []));
+        L.append_l_nil (fst (L.splitAt (SZ.v n) (Ghost.reveal y)));
+        assert (pure (fst (L.splitAt (SZ.v n) (Ghost.reveal y)) == Ghost.reveal y));
+        off
+      }
+    }
+  }
+}
+
+#pop-options
+
+(* ============================================================================ *)
 (* l2r safe writer for count-prefixed variable-length lists (vclist)            *)
 (* ============================================================================ *)
 

@@ -7,6 +7,7 @@ open LowParse.Spec.Base
 module LPS = LowParse.Pulse.Base
 
 module SZ = FStar.SizeT
+module U64 = FStar.UInt64
 module Trade = Pulse.Lib.Trade.Util
 module S = Pulse.Lib.Slice
 
@@ -1233,4 +1234,112 @@ fn l2r_safe_writer_coerce_mid
   let res = w x out perr;
   rewrite (vmatch1 x (Ghost.reveal y1)) as (vmatch2 x (Ghost.reveal y));
   res
+}
+
+(* ---------------------------------------------------------------------------
+   l2r_safe_size: the size-computation analog of l2r_safe_writer. Instead of
+   serializing into an output buffer, it computes the serialized SIZE of the
+   value, signalling an error (err = true) when either the conversion fails or
+   the size does not fit in a machine word (>= pow2 64).
+   --------------------------------------------------------------------------- *)
+
+let l2r_safe_size_postcond
+  (#tm #t: Type0)
+  (conv: tm -> GTot (option t))
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (y: tm)
+  (sz: SZ.t)
+  (err: bool)
+: Tot prop
+= begin match conv y with
+  | None -> err == true
+  | Some y' ->
+    let len = Seq.length (serialize s y') in
+    (err == false ==> (SZ.v sz == len /\ len < pow2 64)) /\
+    (len < pow2 64 ==> err == false)
+  end
+
+inline_for_extraction
+let l2r_safe_size
+  (#t' #tm #t: Type0)
+  (vmatch: t' -> tm -> slprop)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (conv: tm -> GTot (option t))
+=
+  (x: t') ->
+  (#y: Ghost.erased tm) ->
+  (perr: ref bool) ->
+  stt SZ.t
+      (exists* err . vmatch x y ** R.pts_to perr err)
+      (fun sz -> exists* err . vmatch x y ** R.pts_to perr err **
+      	   pure (l2r_safe_size_postcond conv s (Ghost.reveal y) sz err)
+      )
+
+(* Pure helper relating the wrapped (mod pow2 64) sum to overflow. *)
+let add_mod_overflow_lemma (a b: nat)
+: Lemma
+    (requires a < pow2 64 /\ b < pow2 64)
+    (ensures (let s = (a + b) % pow2 64 in
+      (s < a <==> a + b >= pow2 64) /\
+      (a + b < pow2 64 ==> s == a + b)))
+= if a + b < pow2 64
+  then FStar.Math.Lemmas.small_mod (a + b) (pow2 64)
+  else begin
+    FStar.Math.Lemmas.lemma_mod_plus (a + b - pow2 64) 1 (pow2 64);
+    FStar.Math.Lemmas.small_mod (a + b - pow2 64) (pow2 64)
+  end
+
+(* Runtime overflow-checked SizeT addition via U64 wraparound. *)
+inline_for_extraction
+fn size_add_checked (sq: squash FStar.SizeT.fits_u64) (x: SZ.t) (y: SZ.t) (perr: ref bool)
+  requires (exists* e. R.pts_to perr e ** pure (SZ.v x < pow2 64 /\ SZ.v y < pow2 64))
+  returns z: SZ.t
+  ensures (exists* e. R.pts_to perr e ** pure (
+    (SZ.v x + SZ.v y < pow2 64 ==> (e == false /\ SZ.v z == SZ.v x + SZ.v y /\ SZ.v z < pow2 64)) /\
+    (SZ.v x + SZ.v y >= pow2 64 ==> e == true)))
+{
+  FStar.Math.Lemmas.small_mod (SZ.v x) (pow2 64);
+  FStar.Math.Lemmas.small_mod (SZ.v y) (pow2 64);
+  add_mod_overflow_lemma (SZ.v x) (SZ.v y);
+  let xu = SZ.sizet_to_uint64 x;
+  let yu = SZ.sizet_to_uint64 y;
+  let zu = U64.add_mod xu yu;
+  if (U64.lt zu xu) {
+    perr := true;
+    x
+  } else {
+    perr := false;
+    SZ.uint64_to_sizet zu
+  }
+}
+
+(* Leaf safe size: the copyful leaf representation IS the value (eq_as_slprop),
+   and [leaf_conv] never fails. For a constant-size leaf the serialized size is
+   the literal [sz] and never overflows. *)
+inline_for_extraction
+fn l2r_safe_size_leaf
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (sz: SZ.t {
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_low == SZ.v sz /\
+    SZ.v sz < pow2 64
+  })
+: l2r_safe_size #t #t #t (LPS.eq_as_slprop t) #k #p s (leaf_conv t)
+=
+  (x: t)
+  (#y: Ghost.erased t)
+  (perr: R.ref bool)
+{
+  unfold (LPS.eq_as_slprop t x (Ghost.reveal y));
+  serialize_length s x;
+  perr := false;
+  fold (LPS.eq_as_slprop t x (Ghost.reveal y));
+  sz
 }

@@ -318,3 +318,251 @@ fn copyful_parse_bounded_vlgen_payload
 }
 
 #pop-options
+
+(* ============================================================================ *)
+(* Copyful safe writer for bounded generic-length-prefixed data (vlgen)         *)
+(* ============================================================================ *)
+
+(* Content lemma: slicing a prefix that lands inside the second component of an
+   append (replicated locally from LowParse.PulseParse.Combinators.slice_append_prefix). *)
+let vlgen_slice_append_prefix (#a:Type) (x y: Seq.seq a) (j: nat)
+  : Lemma
+    (j <= Seq.length y ==>
+      Seq.slice (Seq.append x y) 0 (Seq.length x + j) == Seq.append x (Seq.slice y 0 j))
+  = if j <= Seq.length y
+    then Seq.lemma_eq_intro (Seq.slice (Seq.append x y) 0 (Seq.length x + j)) (Seq.append x (Seq.slice y 0 j))
+    else ()
+
+(* Step A: the size pass signalled an error.  Either the payload conv is None, or
+   the payload's serialized size does not fit in a machine word (>= pow2 64), in
+   which case it exceeds [vmax]; either way the framing conv is None and err=true. *)
+let vlgen_size_err_lemma
+  (#tm #t: Type)
+  (vmin: nat)
+  (vmax: nat { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 })
+  (#sk: parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
+  (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
+  (#k: parser_kind) (#p: parser k t)
+  (s: serializer p)
+  (conv: tm -> GTot (option t))
+  (y: tm)
+  (n: SZ.t)
+  (v: Seq.seq byte)
+  (res: SZ.t)
+: Lemma (requires PPB.l2r_safe_size_postcond conv s y n true)
+        (ensures PPB.l2r_safe_writer_postcond (PPCV.vldata_strong_conv vmin vmax s conv) (serialize_bounded_vlgen vmin vmax ssk s) y v res true)
+= assert_norm (pow2 64 == 18446744073709551616);
+  match conv y with
+  | None -> ()
+  | Some y' -> ()
+
+(* Step B: the size pass succeeded but the payload size is out of [vmin, vmax];
+   the framing conv is None, so err=true. *)
+let vlgen_oob_lemma
+  (#tm #t: Type)
+  (vmin: nat)
+  (vmax: nat { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 })
+  (#sk: parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
+  (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
+  (#k: parser_kind) (#p: parser k t)
+  (s: serializer p)
+  (conv: tm -> GTot (option t))
+  (y: tm)
+  (n: SZ.t)
+  (v: Seq.seq byte)
+  (res: SZ.t)
+: Lemma (requires
+    PPB.l2r_safe_size_postcond conv s y n false /\
+    ~(vmin <= SZ.v n /\ SZ.v n <= vmax))
+  (ensures PPB.l2r_safe_writer_postcond (PPCV.vldata_strong_conv vmin vmax s conv) (serialize_bounded_vlgen vmin vmax ssk s) y v res true)
+= match conv y with
+  | None -> ()
+  | Some y' -> ()
+
+(* Step C: not enough room even for the length header.  The output bytes are
+   unchanged ([v]); since the total serialized length is at least the header
+   length, [Seq.length v < total], so err=true. *)
+let vlgen_header_noroom_lemma
+  (#tm #t: Type)
+  (vmin: nat)
+  (vmax: nat { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 })
+  (#sk: parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
+  (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
+  (#k: parser_kind) (#p: parser k t)
+  (s: serializer p)
+  (conv: tm -> GTot (option t))
+  (y: tm)
+  (n: SZ.t)
+  (v: Seq.seq byte)
+  (res: SZ.t)
+: Lemma (requires
+    PPB.l2r_safe_size_postcond conv s y n false /\
+    vmin <= SZ.v n /\ SZ.v n <= vmax /\
+    Seq.length v < Seq.length (serialize ssk (U32.uint_to_t (SZ.v n))))
+  (ensures PPB.l2r_safe_writer_postcond (PPCV.vldata_strong_conv vmin vmax s conv) (serialize_bounded_vlgen vmin vmax ssk s) y v res true)
+= match conv y with
+  | None -> ()
+  | Some y' ->
+    let y'' : parse_bounded_vldata_strong_t vmin vmax s = y' in
+    serialize_bounded_vlgen_unfold vmin vmax ssk s y''
+
+(* Step D: the payload writer ran out of room.  The output bytes [v'] = header ++
+   rest_post, with rest_post the (length-preserved) post-state of the payload
+   region, and the payload writer's error flag (true) constrains rest_post so the
+   total written length is below the full serialized length. *)
+let vlgen_payload_noroom_lemma
+  (#tm #t: Type)
+  (vmin: nat)
+  (vmax: nat { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 })
+  (#sk: parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
+  (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
+  (#k: parser_kind) (#p: parser k t)
+  (s: serializer p)
+  (conv: tm -> GTot (option t))
+  (y: tm)
+  (n: SZ.t)
+  (v': Seq.seq byte)
+  (rest_post: Seq.seq byte)
+  (res: SZ.t)
+: Lemma (requires
+    PPB.l2r_safe_size_postcond conv s y n false /\
+    vmin <= SZ.v n /\ SZ.v n <= vmax /\
+    PPB.l2r_safe_writer_postcond conv s y rest_post res true /\
+    Seq.length v' == Seq.length (serialize ssk (U32.uint_to_t (SZ.v n))) + Seq.length rest_post)
+  (ensures PPB.l2r_safe_writer_postcond (PPCV.vldata_strong_conv vmin vmax s conv) (serialize_bounded_vlgen vmin vmax ssk s) y v' res true)
+= match conv y with
+  | None -> ()
+  | Some y' ->
+    let y'' : parse_bounded_vldata_strong_t vmin vmax s = y' in
+    serialize_bounded_vlgen_unfold vmin vmax ssk s y''
+
+(* Step E: success.  The output bytes [v'] = hdr_written ++ rest_post where
+   hdr_written is the serialized length header (the value [n32]) and
+   rest_post[0, res) is the serialized payload. *)
+let vlgen_success_lemma
+  (#tm #t: Type)
+  (vmin: nat)
+  (vmax: nat { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 })
+  (#sk: parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
+  (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
+  (#k: parser_kind) (#p: parser k t)
+  (s: serializer p)
+  (conv: tm -> GTot (option t))
+  (y: tm)
+  (n: SZ.t)
+  (res: SZ.t)
+  (tot: SZ.t)
+  (hdr_written: Seq.seq byte)
+  (rest_post: Seq.seq byte)
+  (v': Seq.seq byte)
+: Lemma (requires
+    PPB.l2r_safe_size_postcond conv s y n false /\
+    vmin <= SZ.v n /\ SZ.v n <= vmax /\
+    PPB.l2r_safe_writer_postcond conv s y rest_post res false /\
+    SZ.v tot == Seq.length (serialize ssk (U32.uint_to_t (SZ.v n))) + SZ.v res /\
+    Seq.length hdr_written == Seq.length (serialize ssk (U32.uint_to_t (SZ.v n))) /\
+    hdr_written == serialize ssk (U32.uint_to_t (SZ.v n)) /\
+    SZ.v res <= Seq.length rest_post /\
+    v' == Seq.append hdr_written rest_post)
+  (ensures PPB.l2r_safe_writer_postcond (PPCV.vldata_strong_conv vmin vmax s conv) (serialize_bounded_vlgen vmin vmax ssk s) y v' tot false)
+= match conv y with
+  | None -> ()
+  | Some y' ->
+    let y'' : parse_bounded_vldata_strong_t vmin vmax s = y' in
+    serialize_bounded_vlgen_unfold vmin vmax ssk s y'';
+    vlgen_slice_append_prefix hdr_written rest_post (SZ.v res)
+
+#push-options "--z3rlimit 64"
+
+(* l2r safe writer for bounded generic-length-prefixed data (vlgen): serialize the
+   payload (via the sub-writer [pw]) preceded by a generic-length header written by
+   [hw].  Unlike the fixed-width vldata combinator, the header value [n] is computed
+   up-front by the size pass [psz], so no backpatch is needed: we split off the
+   exact header region [h = hsize n], write the header, then write the payload into
+   the rest.  Fails gracefully (err=true) iff the payload conv is None, the payload's
+   serialized size is out of [vmin, vmax], or the output slice cannot hold the
+   [header ++ payload] serialized bytes. *)
+inline_for_extraction
+fn l2r_safe_writer_bounded_vlgen_payload
+  (vmin: nat) (vmin_sz: SZ.t { SZ.v vmin_sz == vmin })
+  (vmax: nat { vmin <= vmax /\ vmax > 0 /\ vmax < 4294967296 }) (vmax_sz: SZ.t { SZ.v vmax_sz == vmax })
+  (#sk: parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
+  (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
+  (hsize: (x: bounded_int32 vmin vmax -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize ssk x) /\ SZ.v sz < pow2 64)))
+  (hw: LPS.l2r_leaf_writer ssk)
+  (#tl #tm #t: Type0) (#vmatch: tl -> tm -> slprop)
+  (#k: Ghost.erased parser_kind) (#p: parser k t) (#conv: tm -> GTot (option t))
+  (s: serializer p)
+  (pw: PPB.l2r_safe_writer vmatch s conv)
+  (psz: PPB.l2r_safe_size vmatch s conv)
+  (sq: squash FStar.SizeT.fits_u64)
+: PPB.l2r_safe_writer (PPCV.vmatch_vldata_strong vmin vmax s vmatch) (serialize_bounded_vlgen vmin vmax ssk s) (PPCV.vldata_strong_conv vmin vmax s conv)
+=
+  (x: tl)
+  (#y: Ghost.erased tm)
+  (out: slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: R.ref bool)
+{
+  unfold (PPCV.vmatch_vldata_strong vmin vmax s vmatch x y);
+  let n = psz x perr;
+  let e_sz = !perr;
+  if e_sz {
+    vlgen_size_err_lemma vmin vmax ssk s conv (Ghost.reveal y) n (Ghost.reveal v) n;
+    perr := true;
+    fold (PPCV.vmatch_vldata_strong vmin vmax s vmatch x y);
+    n
+  } else {
+    if (SZ.lt n vmin_sz || SZ.lt vmax_sz n) {
+      vlgen_oob_lemma vmin vmax ssk s conv (Ghost.reveal y) n (Ghost.reveal v) n;
+      perr := true;
+      fold (PPCV.vmatch_vldata_strong vmin vmax s vmatch x y);
+      n
+    } else {
+      SZ.fits_u64_implies_fits_32 ();
+      FStar.Math.Lemmas.small_mod (SZ.v n) (pow2 32);
+      let n32 : bounded_int32 vmin vmax = SZ.sizet_to_uint32 n;
+      let h = hsize n32;
+      S.pts_to_len out;
+      let lout = S.len out;
+      if (SZ.lt lout h) {
+        vlgen_header_noroom_lemma vmin vmax ssk s conv (Ghost.reveal y) n (Ghost.reveal v) n;
+        perr := true;
+        fold (PPCV.vmatch_vldata_strong vmin vmax s vmatch x y);
+        n
+      } else {
+        let hdr, rest = S.split out h;
+        S.pts_to_len hdr;
+        S.pts_to_len rest;
+        with hdr0. assert (S.pts_to hdr hdr0);
+        let res_hdr = hw n32 hdr 0sz;
+        with hdr_written. assert (S.pts_to hdr hdr_written);
+        S.pts_to_len hdr;
+        Seq.lemma_eq_elim hdr_written (Seq.slice hdr_written 0 (SZ.v h));
+        let res2 = pw x rest perr;
+        let e_pw = !perr;
+        with rest_post. assert (S.pts_to rest rest_post);
+        S.pts_to_len rest;
+        if e_pw {
+          vlgen_payload_noroom_lemma vmin vmax ssk s conv (Ghost.reveal y) n
+            (Seq.append hdr_written rest_post) rest_post res2;
+          S.join hdr rest out;
+          perr := true;
+          fold (PPCV.vmatch_vldata_strong vmin vmax s vmatch x y);
+          res2
+        } else {
+          SZ.fits_lte (SZ.v h + SZ.v res2) (SZ.v lout);
+          let tot = SZ.add h res2;
+          S.join hdr rest out;
+          vlgen_success_lemma vmin vmax ssk s conv (Ghost.reveal y) n res2 tot
+            hdr_written rest_post (Seq.append hdr_written rest_post);
+          perr := false;
+          fold (PPCV.vmatch_vldata_strong vmin vmax s vmatch x y);
+          tot
+        }
+      }
+    }
+  }
+}
+
+#pop-options

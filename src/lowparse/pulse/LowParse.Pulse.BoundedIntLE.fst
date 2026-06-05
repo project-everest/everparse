@@ -21,6 +21,13 @@ let serialize_bounded_integer_le_unfold
   (bare_serialize (serialize_bounded_integer_le sz) n == SpecE.n_to_le sz (U32.v n))
 = ()
 
+let serialize_bounded_integer_le_length
+  (sz: integer_size)
+  (n: bounded_integer sz)
+: Lemma
+  (Seq.length (serialize (serialize_bounded_integer_le sz) n) == sz)
+= serialize_bounded_integer_le_unfold sz n
+
 inline_for_extraction
 noextract
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta_attr [`%E.must_reduce]; iota; zeta; primops]; FStar.Tactics.trefl ())]
