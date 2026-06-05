@@ -577,7 +577,7 @@ let copyful_conv_name ty =
    or little-endian leaves (uint*_le, uint24, bitcoin_varint, asn1_len) for which
    no [l2r_safe_writer_leaf] (constant-size leaf writer) is available yet. *)
 let is_copyful_safe_leaf_type = function
-  | "opaque" | "uint8" | "uint16" | "uint32" | "uint64" | "Empty" -> true
+  | "opaque" | "uint8" | "uint16" | "uint32" | "uint64" | "Empty" | "Fail" -> true
   | _ -> false
 
 (* The inline graceful leaf safe writer expression for a base safe-leaf type:
@@ -588,6 +588,7 @@ let safe_leaf_writer_expr = function
   | "uint32" -> "(PPB.l2r_safe_writer_leaf LPI.serialize_u32 4sz (LPPI.l2r_leaf_write_u32 ()))"
   | "uint64" -> "(PPB.l2r_safe_writer_leaf LPI.serialize_u64 8sz (LPPI.l2r_leaf_write_u64 ()))"
   | "Empty" -> "(PPB.l2r_safe_writer_leaf LP.serialize_empty 0sz LPC.l2r_leaf_write_empty)"
+  | "Fail" -> "(PPS.l2r_safe_writer_false (LPS.eq_as_slprop (squash False)) LP.serialize_false)"
   | t -> failwith (sprintf "safe_leaf_writer_expr: no safe leaf writer for %s" t)
 
 (* Registry of user type names [n] for which a [write_<n>] was emitted. Populated
@@ -781,7 +782,34 @@ let emit_copyful_owned_sum o i n tn cprefix cl =
     wp o "    )\n"
   ) cl;
   wp o "\n";
-  wp o "let free_%s : PPB.free_t %s_vmatch =\n  PPB.free_coerce_mid free_%s_sum %s_vmatch %s_gf (FStar.Classical.forall_intro_2 %s_free_vmatch_eq)\n\n" n n n n n n
+  wp o "let free_%s : PPB.free_t %s_vmatch =\n  PPB.free_coerce_mid free_%s_sum %s_vmatch %s_gf (FStar.Classical.forall_intro_2 %s_free_vmatch_eq)\n\n" n n n n n n;
+  (* Graceful safe writer (write_<n>), emitted only if every case field type has
+     an available writer. Mirrors read_<n>: build at the library sum mid via
+     PPS.l2r_safe_writer_sum, then re-index to the transparent interface
+     mid/vmatch/conv with PPB.l2r_safe_writer_coerce_mid (gf direction). *)
+  if !emit_pulse && List.for_all (fun (_, ty) -> copyful_writer_available ty) cl then begin
+    let tagsz = (get_leninfo tn).min_len in
+    (* per-case safe writers (tight conv) *)
+    wp o "inline_for_extraction\nlet write_%s_cases (k: LP.sum_key %s_sum)\n  : PPS.l2r_safe_writer_sum_payload_t %s_sum parse_%s_cases serialize_%s_cases %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag k =\n  match k with\n" n n n n n n n n n n;
+    List.iter (fun (case, ty) ->
+      let cn = String.capitalize_ascii case in
+      wp o "  | %s -> PPS.l2r_safe_writer_sum_case %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag %s\n      %s (fun xl -> match xl with | %s_%s_low v -> Some v | _ -> None) ()\n" cn n n n n n n cn (copyful_writer_name ty) cprefix case
+    ) cl;
+    wp o "\n";
+    (* safe writer at the library dependent-pair mid *)
+    wp o "let write_%s_sum\n  : PPB.l2r_safe_writer (PPS.vmatch_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) (LP.serialize_sum %s_sum %s_repr_serializer serialize_%s_cases) (PPS.sum_conv %s_sum %s_mid_of_tag %s_conv_of_tag) =\n  PPS.l2r_safe_writer_sum %s_sum %s_repr_serializer write_%s_key %dsz parse_%s_cases serialize_%s_cases\n    %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag write_%s_cases (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n n n n n n n tn n n n n n tn tn tagsz n n n n n n n n;
+    (* conv bridge in the gf direction (mirrors <n>_free_vmatch_eq for vmatch). *)
+    wp o "let %s_write_conv_eq (m: %s_mid)\n  : Lemma (%s_conv m == PPS.sum_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_gf m))\n  = match m with\n" n n n n n n n;
+    List.iter (fun (mcase, _) ->
+      wp o "  | %s_%s_mid cm -> assert (%s_conv (%s_%s_mid cm) == PPS.sum_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_gf (%s_%s_mid cm))) by (FStar.Tactics.norm [delta; iota; zeta; primops; unascribe; nbe]; FStar.Tactics.trefl ())\n"
+        cprefix mcase n cprefix mcase n n n n cprefix mcase
+    ) cl;
+    wp o "\n";
+    wp o "let %s_write_coerce_eq ()\n  : Lemma (\n      (forall (x: %s_low) (m2: %s_mid) . %s_vmatch x m2 == PPS.vmatch_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch x (%s_gf m2)) /\\\n      (forall (m2: %s_mid) . %s_conv m2 == PPS.sum_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_gf m2))\n    )\n  = FStar.Classical.forall_intro_2 %s_free_vmatch_eq;\n    FStar.Classical.forall_intro %s_write_conv_eq\n\n" n n n n n n n n n n n n n n n n n n;
+    wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+    wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n  PPB.l2r_safe_writer_coerce_mid write_%s_sum %s_vmatch %s_conv %s_gf (%s_write_coerce_eq ())\n\n" n n n n n n n n n;
+    register_writer n
+  end
 
 (* Emit copyful parser (read_<n>) and free (free_<n>) for an OPEN sum (dsum)
    whose payloads are not all leaf-readable. Like [emit_copyful_owned_sum] but
@@ -915,7 +943,29 @@ let emit_copyful_owned_dsum o i n tn cprefix cl dt =
   wp o "  | %s_Unknown_%s_mid rv cm -> (match xl with\n" cprefix tn;
   List.iter (fun lpat -> fv_assert (sprintf "%s_Unknown_%s_mid rv cm" cprefix tn) lpat) low_pats_f;
   wp o "    )\n\n";
-  wp o "let free_%s : PPB.free_t %s_vmatch =\n  PPB.free_coerce_mid free_%s_sum %s_vmatch %s_gf (FStar.Classical.forall_intro_2 %s_free_vmatch_eq)\n\n#pop-options\n\n" n n n n n n
+  wp o "let free_%s : PPB.free_t %s_vmatch =\n  PPB.free_coerce_mid free_%s_sum %s_vmatch %s_gf (FStar.Classical.forall_intro_2 %s_free_vmatch_eq)\n\n" n n n n n n;
+  (* Graceful safe writer (write_<n>) for the open dsum, emitted only if every
+     known case field type AND the default type have an available writer. *)
+  if !emit_pulse && copyful_writer_available dt && List.for_all (fun (_, ty) -> copyful_writer_available ty) cl then begin
+    let tagsz = (get_leninfo tn).min_len in
+    wp o "inline_for_extraction\nlet write_%s_cases (k: LP.dsum_key %s_sum)\n  : PPS.l2r_safe_writer_dsum_payload_t %s_sum parse_%s_cases serialize_%s_cases %s %s %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag k =\n  match k with\n  | LP.Known kk -> (match kk with\n" n n n n n (pcombinator_name dt) (scombinator_name dt) n n n n n;
+    List.iter (fun (case, ty) ->
+      wp o "    | %s -> PPS.l2r_safe_writer_dsum_case %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag (LP.Known %s)\n        %s (fun xl -> match xl with | %s_%s_low v -> Some v | _ -> None) ()\n" (cap case) n n n n n n (cap case) (copyful_writer_name ty) cprefix case
+    ) cl;
+    wp o "    )\n  | LP.Unknown r -> PPS.l2r_safe_writer_dsum_case %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag (LP.Unknown r)\n      %s (fun xl -> match xl with | %s_Unknown_%s_low _ v -> Some v | _ -> None) ()\n\n" n n n n n n (copyful_writer_name dt) cprefix tn;
+    wp o "let write_%s_sum\n  : PPB.l2r_safe_writer (PPS.vmatch_dsum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) (LP.serialize_dsum %s_sum %s_repr_serializer parse_%s_cases serialize_%s_cases %s %s) (PPS.dsum_conv %s_sum %s_mid_of_tag %s_conv_of_tag) =\n  PPS.l2r_safe_writer_dsum %s_sum %s_repr_serializer write_maybe_%s_key %dsz parse_%s_cases serialize_%s_cases %s %s\n    %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag write_%s_cases (_ by (LP.dep_maybe_enum_destr_t_tac ())) ()\n\n" n n n n n n n tn n n (pcombinator_name dt) (scombinator_name dt) n n n n tn tn tagsz n n (pcombinator_name dt) (scombinator_name dt) n n n n n n;
+    wp o "let %s_write_conv_eq (m: %s_mid)\n  : Lemma (%s_conv m == PPS.dsum_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_gf m))\n  = match m with\n" n n n n n n n;
+    List.iter (fun (mcase, _) ->
+      wp o "  | %s_%s_mid cm -> assert (%s_conv (%s_%s_mid cm) == PPS.dsum_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_gf (%s_%s_mid cm))) by (FStar.Tactics.norm [delta; iota; zeta; primops; unascribe; nbe]; FStar.Tactics.trefl ())\n"
+        cprefix mcase n cprefix mcase n n n n cprefix mcase
+    ) cl;
+    wp o "  | %s_Unknown_%s_mid rv cm -> assert (%s_conv (%s_Unknown_%s_mid rv cm) == PPS.dsum_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_gf (%s_Unknown_%s_mid rv cm))) by (FStar.Tactics.norm [delta; iota; zeta; primops; unascribe; nbe]; FStar.Tactics.trefl ())\n\n" cprefix tn n cprefix tn n n n n cprefix tn;
+    wp o "let %s_write_coerce_eq ()\n  : Lemma (\n      (forall (x: %s_low) (m2: %s_mid) . %s_vmatch x m2 == PPS.vmatch_dsum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch x (%s_gf m2)) /\\\n      (forall (m2: %s_mid) . %s_conv m2 == PPS.dsum_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_gf m2))\n    )\n  = FStar.Classical.forall_intro_2 %s_free_vmatch_eq;\n    FStar.Classical.forall_intro %s_write_conv_eq\n\n" n n n n n n n n n n n n n n n n n n;
+    wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+    wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n  PPB.l2r_safe_writer_coerce_mid write_%s_sum %s_vmatch %s_conv %s_gf (%s_write_coerce_eq ())\n\n" n n n n n n n n n;
+    register_writer n
+  end;
+  wp o "#pop-options\n\n"
 
 (* Emit copyful parser (read_<n>) and free (free_<n>) for an IMPLICIT sum: the
    tag is not stored inline but supplied as a parameter [k], the high type is
@@ -1023,7 +1073,29 @@ let emit_copyful_implicit_sum o i n tn cprefix cl =
     wp o "    )\n"
   ) cl;
   wp o "\n";
-  wp o "let free_%s (k:%s) : PPB.free_t (%s_vmatch k) =\n  PPB.free_coerce_mid (free_%s_sum k) (%s_vmatch k) (%s_gf k) (FStar.Classical.forall_intro_2 (%s_free_vmatch_eq k))\n\n" n tn n n n n n
+  wp o "let free_%s (k:%s) : PPB.free_t (%s_vmatch k) =\n  PPB.free_coerce_mid (free_%s_sum k) (%s_vmatch k) (%s_gf k) (FStar.Classical.forall_intro_2 (%s_free_vmatch_eq k))\n\n" n tn n n n n n;
+  (* Graceful safe writer (write_<n>, tag-parameterized) for the implicit sum,
+     emitted only if every case field type has an available writer. Mirrors
+     read_<n>: build at the library per-tag mid via PPS.l2r_safe_writer_sum_cases
+     (NO tag written), then re-index to the transparent interface mid/vmatch/conv
+     with PPB.l2r_safe_writer_coerce_mid (gf direction). *)
+  if !emit_pulse && List.for_all (fun (_, ty) -> copyful_writer_available ty) cl then begin
+    wp o "inline_for_extraction\nlet write_%s_cases (k: LP.sum_key %s_sum)\n  : PPS.l2r_safe_writer_sum_payload_t %s_sum parse_%s_cases serialize_%s_cases %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag k =\n  match k with\n" n n n n n n n n n n;
+    List.iter (fun (case, ty) ->
+      wp o "  | %s -> PPS.l2r_safe_writer_sum_case %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag %s\n      %s (fun xl -> match xl with | %s_%s_low v -> Some v | _ -> None) ()\n" (cap case) n n n n n n (cap case) (copyful_writer_name ty) cprefix case
+    ) cl;
+    wp o "\n";
+    wp o "let write_%s_sum (k:%s)\n  : PPB.l2r_safe_writer (PPS.vmatch_sum_cases %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch (%s_as_enum_key k)) (LP.serialize_sum_cases %s_sum parse_%s_cases serialize_%s_cases (%s_as_enum_key k)) (PPS.sum_cases_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_as_enum_key k)) =\n  PPS.l2r_safe_writer_sum_cases %s_sum parse_%s_cases serialize_%s_cases\n    %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag write_%s_cases (_ by (LP.dep_enum_destr_tac ())) (%s_as_enum_key k)\n\n" n tn n n n n n tn n n n tn n n n tn n n n n n n n n n tn;
+    wp o "let %s_write_conv_eq (k:%s) (m: %s_mid k)\n  : Lemma (%s_conv k m == PPS.sum_cases_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_as_enum_key k) (%s_gf k m))\n  = match k with\n" n tn n n n n n tn n;
+    List.iter (fun (kcase, _) ->
+      wp o "  | %s -> %s_eq_lemma %s; assert (%s_conv %s m == PPS.sum_cases_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_as_enum_key %s) (%s_gf %s m)) by (FStar.Tactics.norm [delta; iota; zeta; primops; unascribe; nbe]; FStar.Tactics.smt ())\n"
+        (cap kcase) n (cap kcase) n (cap kcase) n n n tn (cap kcase) n (cap kcase)
+    ) cl;
+    wp o "\n";
+    wp o "let %s_write_coerce_eq (k:%s)\n  : Lemma (\n      (forall (x: %s_low) (m2: %s_mid k) .\n        %s_vmatch k x m2 == PPS.vmatch_sum_cases %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch (%s_as_enum_key k) x (%s_gf k m2)) /\\\n      (forall (m2: %s_mid k) .\n        %s_conv k m2 == PPS.sum_cases_conv %s_sum %s_mid_of_tag %s_conv_of_tag (%s_as_enum_key k) (%s_gf k m2))\n    )\n  = FStar.Classical.forall_intro_2 (%s_free_vmatch_eq k);\n    FStar.Classical.forall_intro (%s_write_conv_eq k)\n\n" n tn n n n n n n n n tn n n n n n n tn n n n;
+    wp i "val write_%s (k:%s) : PPB.l2r_safe_writer (%s_vmatch k) (%s_serializer k) (%s_conv k)\n\n" n tn n n n;
+    wp o "let write_%s (k:%s) : PPB.l2r_safe_writer (%s_vmatch k) (%s_serializer k) (%s_conv k) =\n  PPB.l2r_safe_writer_coerce_mid (write_%s_sum k) (%s_vmatch k) (%s_conv k) (%s_gf k) (%s_write_coerce_eq k)\n\n" n tn n n n n n n n n
+  end
 
 (* Emit copyful parser (read_<n>) and free (free_<n>) for a fixed-count array
    [ty\[byte_size\]] (elem_count elements of element type [ty]). The low-level
