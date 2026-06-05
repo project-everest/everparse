@@ -296,6 +296,65 @@ fn copyful_parse_flbytes
   vc
 }
 
+let flbytes_prefix_slice_lemma (x v2: Seq.seq byte)
+: Lemma (Seq.slice (Seq.append x v2) 0 (Seq.length x) == x)
+= Seq.lemma_eq_intro (Seq.slice (Seq.append x v2) 0 (Seq.length x)) x
+
+let serialize_flbytes_eq (sz: nat { sz < 4294967296 }) (x: B32.lbytes sz)
+: Lemma (serialize (serialize_flbytes sz) x == B32.reveal x)
+= ()
+
+(* Copyful safe serializer for a fixed-length byte array. Fails gracefully
+   (err=true) iff the owned value does not have length [sz] (so the conv
+   [flbytes_conv sz] is None) or the output slice has fewer than [sz] bytes.
+   On success it copies the owned bytes into the [sz]-byte prefix of [out].
+   The runtime length is read from the [lvec_len] field (sound by its
+   refinement), so no impossible runtime [V.length] lookup is needed. *)
+inline_for_extraction
+fn l2r_safe_writer_flbytes
+  (sz: nat { sz < 4294967296 })
+  (sz_sz: SZ.t { SZ.v sz_sz == sz })
+: PPB.l2r_safe_writer #(lvec byte) #B32.bytes #(B32.lbytes sz) vmatch_copy_bytes #_ #(parse_flbytes sz) (serialize_flbytes sz) (flbytes_conv sz)
+=
+  (x: lvec byte)
+  (#y: Ghost.erased B32.bytes)
+  (out: S.slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: R.ref bool)
+{
+  unfold (vmatch_copy_bytes x y);
+  V.pts_to_len x.lvec_vec;
+  let n = x.lvec_len;
+  S.pts_to_len out;
+  let lout = S.len out;
+  if (SZ.eq n sz_sz) {
+    if (SZ.lt lout sz_sz) {
+      perr := true;
+      fold (vmatch_copy_bytes x y);
+      sz_sz
+    } else {
+      let sp1, sp2 = S.split out sz_sz;
+      S.pts_to_len sp1;
+      V.to_array_pts_to x.lvec_vec;
+      let vecslice = S.from_array (V.vec_to_array x.lvec_vec) n;
+      S.pts_to_len vecslice;
+      S.copy sp1 vecslice;
+      S.to_array vecslice;
+      V.to_vec_pts_to x.lvec_vec;
+      S.join sp1 sp2 out;
+      flbytes_prefix_slice_lemma (B32.reveal y) (Seq.slice (Ghost.reveal v) sz (Seq.length (Ghost.reveal v)));
+      serialize_flbytes_eq sz (Ghost.reveal y <: B32.lbytes sz);
+      perr := false;
+      fold (vmatch_copy_bytes x y);
+      sz_sz
+    }
+  } else {
+    perr := true;
+    fold (vmatch_copy_bytes x y);
+    sz_sz
+  }
+}
+
 inline_for_extraction
 fn copyful_parse_bounded_vldata_strong_payload
   (min: nat)
