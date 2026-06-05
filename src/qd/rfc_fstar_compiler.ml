@@ -616,6 +616,45 @@ let copyful_writer_name ty =
   then safe_leaf_writer_expr ty
   else sprintf "write_%s" (String.uncapitalize_ascii ty)
 
+(* ----- Copyful safe SIZE combinators (l2r_safe_size / size_<n>) ----- *)
+
+(* Is [ty] a base/leaf type with a CONSTANT-SIZE graceful leaf safe-size
+   ([l2r_safe_size_leaf])? Same set as [is_copyful_safe_leaf_type] minus [Fail]
+   (no [l2r_safe_size] for the vacuous false leaf). *)
+let is_copyful_safe_size_leaf_type = function
+  | "opaque" | "uint8" | "uint16" | "uint32" | "uint64" | "Empty" -> true
+  | "uint16_le" | "uint32_le" -> true
+  | _ -> false
+
+(* The inline graceful leaf safe-size expression for a base safe-leaf type. *)
+let safe_leaf_size_expr = function
+  | "opaque" | "uint8" -> "(PPB.l2r_safe_size_leaf LPI.serialize_u8 1sz)"
+  | "uint16" -> "(PPB.l2r_safe_size_leaf LPI.serialize_u16 2sz)"
+  | "uint32" -> "(PPB.l2r_safe_size_leaf LPI.serialize_u32 4sz)"
+  | "uint64" -> "(PPB.l2r_safe_size_leaf LPI.serialize_u64 8sz)"
+  | "uint16_le" -> "(PPB.l2r_safe_size_leaf LPI.serialize_u16_le 2sz)"
+  | "uint32_le" -> "(PPB.l2r_safe_size_leaf LPI.serialize_u32_le 4sz)"
+  | "Empty" -> "(PPB.l2r_safe_size_leaf LP.serialize_empty 0sz)"
+  | t -> failwith (sprintf "safe_leaf_size_expr: no safe leaf size for %s" t)
+
+(* Registry of user type names [n] for which a [size_<n>] (l2r_safe_size) was
+   emitted. Mirrors [copyful_writers]; populated in emission order. *)
+let copyful_sizes : (string, unit) Hashtbl.t = Hashtbl.create 97
+let register_size n = Hashtbl.replace copyful_sizes (String.uncapitalize_ascii n) ()
+let size_registered n = Hashtbl.mem copyful_sizes (String.uncapitalize_ascii n)
+
+(* Is a graceful [size_*] available for field type [ty]? *)
+let copyful_size_available ty =
+  if is_copyful_leaf_type ty
+  then is_copyful_safe_size_leaf_type ty
+  else size_registered ty
+
+(* The graceful safe-size (PPB.l2r_safe_size) for a field type. *)
+let copyful_size_name ty =
+  if is_copyful_leaf_type ty
+  then safe_leaf_size_expr ty
+  else sprintf "size_%s" (String.uncapitalize_ascii ty)
+
 (* Emit a copyful parser (read_<n>) and free combinator (free_<n>) for a leaf
    type that has a leaf_reader (e.g. enums). The vmatch is a pure equality. *)
 let emit_copyful_leaf o i n =
@@ -636,14 +675,17 @@ let emit_copyful_leaf o i n =
 let emit_copyful_safe_leaf_writer o i n blen =
   wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
   wp o "let write_%s = PPB.l2r_safe_writer_leaf %s_serializer %dsz %s_writer\n\n" n n blen n;
-  register_writer n
+  register_writer n;
+  wp i "val size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+  wp o "let size_%s = PPB.l2r_safe_size_leaf %s_serializer %dsz\n\n" n n blen;
+  register_size n
 
 (* Emit a copyful parser (read_<n>) and free combinator (free_<n>) for a
    byte-array type. The result is a freshly allocated, freeable sized byte
    vector (PPBY.lvec, carrying a runtime length alongside the Pulse.Lib.Vec)
    related to the high-level value by PPBY.vmatch_copy_bytes. [combinator] is
    the copyful_parse_* expression producing the lvec. *)
-let emit_copyful_bytes ?writer o i n combinator conv =
+let emit_copyful_bytes ?writer ?size o i n combinator conv =
   wp i "let %s_lowtype = PPBY.lvec FStar.UInt8.t\n\n" n;
   wp i "noextract let %s_mid = BY.bytes\n\n" n;
   wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop = PPBY.vmatch_copy_bytes\n\n" n n n;
@@ -657,6 +699,12 @@ let emit_copyful_bytes ?writer o i n combinator conv =
      wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
      wp o "let write_%s = %s\n\n" n w;
      register_writer n
+   | _ -> ());
+  (match size with
+   | Some s when !emit_pulse ->
+     wp i "val size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+     wp o "let size_%s = %s\n\n" n s;
+     register_size n
    | _ -> ())
 
 (* Emit copyful parser (read_<n>) and free (free_<n>) for a closed sum (tagged
@@ -1228,8 +1276,29 @@ let emit_copyful_vllist o i n ty smin smax lenty =
   wp o "       (PPLS.copyful_parse_list %s %s ()) ())\n" (copyful_read_name ty) (pulse_jumper_name ty);
   wp o "    synth_%s synth_%s_recip\n\n" n n;
   wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
-  wp o "  PPVD.free_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.free_vclist (PPB.free_vmatch_conv %s %s %s))\n\n" smin smax (scombinator_name ty) (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty)
-
+  wp o "  PPVD.free_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.free_vclist (PPB.free_vmatch_conv %s %s %s))\n\n" smin smax (scombinator_name ty) (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty);
+  (* Pulse: copyful safe writer. Only for bcvli (bitcoin_varint) length headers
+     (the only generic vlgen length-header writer built so far) and when the
+     element type has both a graceful writer and a graceful size (the payload
+     list size pass that feeds the up-front header value). *)
+  if !emit_pulse && lenty = "bitcoin_varint"
+     && copyful_writer_available ty && copyful_size_available ty then begin
+    wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+    wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n" n n n n;
+    wp o "  %s_copyful_synth_injective ();\n" n;
+    wp o "  %s_copyful_synth_inverse ();\n" n;
+    wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_length_header_name lenty smin smax);
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
+    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smin;
+    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smax;
+    wp o "  PPC.l2r_safe_writer_synth\n";
+    wp o "    ((PPVG.l2r_safe_writer_bounded_vlgen_payload %d (FStar.SizeT.uint_to_t %d) %d (FStar.SizeT.uint_to_t %d) %s (fun x -> PPBCVLI.bounded_bcvli_size %d %d x) (PPBCVLI.l2r_leaf_write_bounded_bcvli %d %d ()) (LP.serialize_list _ %s)\n" smin smin smax smax (scombinator_length_header_name lenty smin smax) smin smax smin smax (scombinator_name ty);
+    wp o "       (PPLS.l2r_safe_writer_list %s %s ()) (PPLS.l2r_safe_size_list fits_u64_squash %s %s ()) fits_u64_squash) <: PPB.l2r_safe_writer _ %s'_serializer _)\n" (scombinator_name ty) (copyful_writer_name ty) (scombinator_name ty) (copyful_size_name ty) n;
+    wp o "    synth_%s synth_%s_recip\n\n" n n;
+    register_writer n
+  end
 (* Emit a copyful parser (read_<n>) and free (free_<n>) for a length-framed
    SINGLE payload [t payload[len]] (compile_vldata's fits_in_bounds branch):
    one [ty] value whose serialization occupies exactly [len] bytes, framed by a
@@ -3587,7 +3656,8 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
        end;
       (* Pulse: copyful parser + free *)
       emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_flbytes %d" k) (sprintf "PPBY.flbytes_conv %d" k)
-        ~writer:(sprintf "PPBY.l2r_safe_writer_flbytes %d %dsz" k k);
+        ~writer:(sprintf "PPBY.l2r_safe_writer_flbytes %d %dsz" k k)
+        ~size:(sprintf "PPBY.l2r_safe_size_flbytes %d %dsz" k k);
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n n;
       w o "let %s_bytesize_eqn x = ()\n\n" n;
       (* intro *)
@@ -3761,7 +3831,8 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       end;
       (* Pulse: copyful parser + free *)
       emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash" low high (log256 high)) (sprintf "PPBY.vlbytes_conv %d %d" low high)
-        ~writer:(sprintf "PPBY.l2r_safe_writer_bounded_vlbytes %d %dsz %d %dsz %dsz fits_u64_squash" low low high high (log256 high));
+        ~writer:(sprintf "PPBY.l2r_safe_writer_bounded_vlbytes %d %dsz %d %dsz %dsz fits_u64_squash" low low high high (log256 high))
+        ~size:(sprintf "PPBY.l2r_safe_size_bounded_vlbytes %d %dsz %d %dsz %dsz fits_u64_squash" low low high high (log256 high));
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes %d %d x\n\n" n low high;
       (* length *)
@@ -3823,7 +3894,8 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       end;
       (* Pulse: copyful parser + free *)
       emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash" low high repr repr) (sprintf "PPBY.vlbytes_conv %d %d" low high)
-        ~writer:(sprintf "PPBY.l2r_safe_writer_bounded_vlbytes' %d %dsz %d %dsz %d %dsz fits_u64_squash" low low high high repr repr);
+        ~writer:(sprintf "PPBY.l2r_safe_writer_bounded_vlbytes' %d %dsz %d %dsz %d %dsz fits_u64_squash" low low high high repr repr)
+        ~size:(sprintf "PPBY.l2r_safe_size_bounded_vlbytes' %d %dsz %d %dsz %d %dsz fits_u64_squash" low low high high repr repr);
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n repr n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes' %d %d %d x\n\n" n low high repr;
       (* length *)
@@ -4351,6 +4423,25 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
     wp o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
     wp o "  PPC.l2r_safe_writer_synth %s synth_%s synth_%s_recip\n\n" pulse_swriter n n;
     register_writer n
+  end;
+
+  (* Pulse: copyful safe SIZE. A struct's size is a pair-tree of its fields'
+     safe sizes wrapped with l2r_safe_size_synth. Emitted only when every field
+     type has a graceful size. *)
+  if !emit_pulse && List.for_all (fun (_, ty) -> copyful_size_available ty) fields then begin
+    let rec mk_pulse_safe_size = function
+      | TLeaf (_, ty) -> copyful_size_name ty
+      | TNode (_, tl, tr) ->
+         let sl = mk_pulse_safe_size tl in
+         let sr = mk_pulse_safe_size tr in
+         sprintf "(PPC.l2r_safe_size_pair fits_u64_squash %s () %s)" sl sr
+    in
+    let pulse_ssize = mk_pulse_safe_size tfields in
+    wp i "val size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+    wp o "let size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv =\n" n n n n;
+    wp o "  synth_%s_injective ();\n" n;
+    wp o "  PPC.l2r_safe_size_synth %s synth_%s synth_%s_recip\n\n" pulse_ssize n n;
+    register_size n
   end;
 
   (* bytesize *)
