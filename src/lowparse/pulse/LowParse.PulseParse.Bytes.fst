@@ -146,6 +146,10 @@ let jump_bounded_vlgenbytes
 module B32 = LowParse.Bytes32
 module V = Pulse.Lib.Vec
 module A = Pulse.Lib.Array
+module E = LowParse.Pulse.Endianness
+module EI = LowParse.Spec.Endianness.Instances
+module FE = FStar.Endianness
+module M = FStar.Math.Lemmas
 
 (* A sized, owned vector: an owned [Pulse.Lib.Vec.vec] paired with a *runtime*
    length field whose [SizeT] value is, by a type refinement, provably equal to
@@ -513,3 +517,132 @@ fn copyful_parse_bounded_vlgenbytes
   PPB.intro_vmatch_conv vmatch_copy_bytes (vlbytes_conv vmin vmax) vc vm (Ghost.reveal v);
   vc
 }
+
+(* The serialized form of a [bounded_vlbytes] value [y] is the [l]-byte
+   big-endian length header (encoding [B32.length y]) followed by the raw
+   payload bytes [B32.reveal y]. Derived from [serialize_synth_eq] over the
+   strong-vldata serializer (whose [aux] is exactly that append). *)
+let serialize_bounded_vlbytes'_bytes_eq
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (l: nat { l >= log256' max /\ l <= 4 })
+  (y: parse_bounded_vlbytes_t min max)
+: Lemma (
+    serialize (serialize_bounded_vlbytes' min max l) y ==
+    Seq.append
+      (serialize (serialize_bounded_integer l) (U32.uint_to_t (B32.length y)))
+      (B32.reveal y)
+  )
+= serialize_synth_eq
+    (parse_bounded_vlbytes_aux min max l)
+    (synth_bounded_vlbytes min max)
+    (serialize_bounded_vlbytes_aux min max l)
+    (synth_bounded_vlbytes_recip min max)
+    ()
+    y
+
+let vlbytes_prefix_slice_lemma (hdr pay tail: Seq.seq byte)
+: Lemma
+  (ensures Seq.slice (Seq.append hdr (Seq.append pay tail)) 0 (Seq.length hdr + Seq.length pay)
+           == Seq.append hdr pay)
+= Seq.lemma_eq_intro
+    (Seq.slice (Seq.append hdr (Seq.append pay tail)) 0 (Seq.length hdr + Seq.length pay))
+    (Seq.append hdr pay)
+
+let vlbytes_total_fits_lemma (l n max: nat)
+: Lemma (requires l <= 4 /\ n <= max /\ max < 4294967296)
+        (ensures l + n < pow2 64)
+= assert_norm (pow2 64 == 18446744073709551616)
+
+#push-options "--z3rlimit 64"
+
+(* Copyful safe serializer for a bounded variable-length byte array. Fails
+   gracefully (err=true) iff the owned value's length is out of [min, max] (so
+   the conv [vlbytes_conv min max] is None) or the output slice cannot hold the
+   [l + length] serialized bytes. On success it writes the [l]-byte big-endian
+   length header into the prefix [0, l) and copies the owned payload bytes into
+   [l, l + n). The runtime length is read from the [lvec_len] field (sound by its
+   refinement), so no impossible runtime [V.length] lookup is needed. The extra
+   [SZ.t] parameters [min_sz]/[max_sz]/[l_sz] are runtime mirrors of the spec
+   nats [min]/[max]/[l]. *)
+inline_for_extraction
+fn l2r_safe_writer_bounded_vlbytes'
+  (min: nat)
+  (min_sz: SZ.t { SZ.v min_sz == min })
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (max_sz: SZ.t { SZ.v max_sz == max })
+  (l: nat { l >= log256' max /\ l <= 4 })
+  (l_sz: SZ.t { SZ.v l_sz == l })
+  (sq: squash FStar.SizeT.fits_u64)
+: PPB.l2r_safe_writer #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes #_ #(parse_bounded_vlbytes' min max l) (serialize_bounded_vlbytes' min max l) (vlbytes_conv min max)
+=
+  (x: lvec byte)
+  (#y: Ghost.erased B32.bytes)
+  (out: S.slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: R.ref bool)
+{
+  unfold (vmatch_copy_bytes x y);
+  V.pts_to_len x.lvec_vec;
+  let n = x.lvec_len;
+  S.pts_to_len out;
+  let lout = S.len out;
+  if (SZ.lte min_sz n && SZ.lte n max_sz) {
+    (* conv y == Some y; serialized length is l + n *)
+    length_serialize_bounded_vlbytes' min max l (Ghost.reveal y);
+    vlbytes_total_fits_lemma l (SZ.v n) max;
+    SZ.fits_u64_implies_fits (SZ.v l_sz + SZ.v n);
+    let tot_sz = SZ.add l_sz n;
+    if (SZ.lt lout tot_sz) {
+      perr := true;
+      fold (vmatch_copy_bytes x y);
+      tot_sz
+    } else {
+      let sp1, sp2 = S.split out l_sz;
+      S.pts_to_len sp1;
+      with hv. assert (S.pts_to sp1 hv);
+      (* write the big-endian length header into sp1 == out[0, l) *)
+      let n_u32 = SZ.sizet_to_uint32 n;
+      M.pow2_le_compat (FStar.Mul.op_Star 8 l) (FStar.Mul.op_Star 8 (log256' max));
+      let write_hdr = E.mk_n_to_be EI.uint32 l;
+      write_hdr n_u32 sp1 #hv l_sz;
+      with hdr. assert (S.pts_to sp1 hdr);
+      S.pts_to_len sp1;
+      (* copy the payload into sp2a == out[l, l + n) *)
+      let sp2a, sp2b = S.split sp2 n;
+      S.pts_to_len sp2a;
+      V.to_array_pts_to x.lvec_vec;
+      let vecslice = S.from_array (V.vec_to_array x.lvec_vec) n;
+      S.pts_to_len vecslice;
+      S.copy sp2a vecslice;
+      S.to_array vecslice;
+      V.to_vec_pts_to x.lvec_vec;
+      S.join sp2a sp2b sp2;
+      S.join sp1 sp2 out;
+      (* close the postcondition: written prefix == serialized bytes *)
+      serialize_bounded_vlbytes'_bytes_eq min max l (Ghost.reveal y);
+      serialize_bounded_integer_spec l (U32.uint_to_t (B32.length (Ghost.reveal y)));
+      vlbytes_prefix_slice_lemma hdr (B32.reveal y) (Seq.slice (Ghost.reveal v) (l + SZ.v n) (Seq.length (Ghost.reveal v)));
+      perr := false;
+      fold (vmatch_copy_bytes x y);
+      tot_sz
+    }
+  } else {
+    perr := true;
+    fold (vmatch_copy_bytes x y);
+    0sz
+  }
+}
+
+#pop-options
+
+inline_for_extraction
+let l2r_safe_writer_bounded_vlbytes
+  (min: nat)
+  (min_sz: SZ.t { SZ.v min_sz == min })
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (max_sz: SZ.t { SZ.v max_sz == max })
+  (l_sz: SZ.t { SZ.v l_sz == log256' max })
+  (sq: squash FStar.SizeT.fits_u64)
+: PPB.l2r_safe_writer #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes #_ #(parse_bounded_vlbytes min max) (serialize_bounded_vlbytes min max) (vlbytes_conv min max)
+= l2r_safe_writer_bounded_vlbytes' min min_sz max max_sz (log256' max) l_sz sq
