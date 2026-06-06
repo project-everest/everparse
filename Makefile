@@ -172,42 +172,44 @@ endif
 
 .PHONY: cbor-det-common-vertest
 
-cbor-verify: $(filter src/cbor/spec/%,$(ALL_CHECKED_FILES))
+cbor-verify-aux: $(filter src/cbor/spec/%,$(ALL_CHECKED_FILES))
 
 ifeq (,$(NO_PULSE))
-cbor-verify: $(filter src/cbor/pulse/%,$(ALL_CHECKED_FILES))
+cbor-verify-aux: $(filter src/cbor/pulse/%,$(ALL_CHECKED_FILES))
 endif
 
-.PHONY: cbor-verify
+.PHONY: cbor-verify-aux
 
 # The backend-specific CBOR.Pulse.Raw.Slice implementations (slice-c / slice-rust)
 # are selected by include path and are not part of the global checked-file cache:
 # the two impls of the same module cannot coexist in a single dependency scan, so
-# they are absent from SRC_DIRS and never built by cbor-verify. Build each one here,
-# sequentially (race-free), before any consumer extracts the CBOR Raw modules.
+# they are absent from SRC_DIRS and never built by cbor-verify-aux. Build each one
+# here, sequentially (race-free), before any consumer extracts the CBOR Raw modules.
+# `cbor-verify` is the full verification rule: cbor-verify-aux (the whole CBOR
+# closure) plus these two slice .checked files.
 #
-# This MUST run after cbor-verify: building a slice .checked regenerates the krml
-# extracted-c/.depend, which (with ALREADY_CACHED='*,-CBOR.Pulse.Raw.Slice,')
+# This MUST run after cbor-verify-aux: building a slice .checked regenerates the
+# krml extracted-c/.depend, which (with ALREADY_CACHED='*,-CBOR.Pulse.Raw.Slice,')
 # expects the whole CBOR closure to be already checked. Ordering it after
-# cbor-verify guarantees those .checked files exist; otherwise under `make -j`
+# cbor-verify-aux guarantees those .checked files exist; otherwise under `make -j`
 # the two run concurrently and the .depend scan fails (Error 317: "Expected
 # CBOR.Pulse.Raw.Compare.Base to be already checked but could not find it").
 CBOR_SLICE_C_CHECKED := $(abspath src/cbor/pulse/raw/slice-c/CBOR.Pulse.Raw.Slice.fst.checked)
 CBOR_SLICE_RUST_CHECKED := $(abspath src/cbor/pulse/raw/slice-rust/CBOR.Pulse.Raw.Slice.fst.checked)
 
 ifeq (,$(NO_PULSE))
-cbor-slice-checked: cbor-verify
+cbor-verify: cbor-verify-aux
 	+$(MAKE) -C src/cbor/pulse/krml CBOR_SLICE_BACKEND=c    ALREADY_CACHED='*,-CBOR.Pulse.Raw.Slice,' $(CBOR_SLICE_C_CHECKED)
 	+$(MAKE) -C src/cbor/pulse/krml CBOR_SLICE_BACKEND=rust ALREADY_CACHED='*,-CBOR.Pulse.Raw.Slice,' $(CBOR_SLICE_RUST_CHECKED)
 else
-cbor-slice-checked:
+cbor-verify: cbor-verify-aux
 endif
 
-.PHONY: cbor-slice-checked
+.PHONY: cbor-verify
 
 # lowparse needed for extraction because of .fst files behind .fsti
 ifeq (,$(NO_PULSE))
-cbor-extract-pre: cbor-verify cbor-slice-checked $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+cbor-extract-pre: cbor-verify $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
 
 .PHONY: cbor-extract-pre
 
