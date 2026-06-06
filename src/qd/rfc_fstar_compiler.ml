@@ -707,6 +707,25 @@ let emit_copyful_safe_leaf_writer o i n blen =
   wp o "let size_%s = PPB.l2r_safe_size_leaf %s_serializer %dsz\n\n" n n blen;
   register_size n
 
+(* Emit the graceful copyful safe writer (write_<n>) and size (size_<n>) for a
+   VARIABLE-SIZE leaf-readable type [n] whose copyful vmatch is [eq_as_slprop]
+   and conv is [leaf_conv] (i.e. emitted via [emit_copyful_leaf], e.g. a
+   leaf-readable sum), and which already has a non-graceful
+   [<n>_writer : l2r_leaf_writer <n>_serializer] and an
+   [<n>_size32 : LSZ.size32 <n>_serializer]. The exact serialized size is
+   obtained from [<n>_size32] via [PPSL.leaf_size_of_size32] (the parser kind's
+   [Some] high bound guarantees no saturation), and fed to the variable-length
+   leaf writer/size combinators. Works for both constant- and variable-size
+   leaf-readable types. *)
+let emit_copyful_safe_leaf_writer_vl o i n =
+  wp o "let %s_leaf_size = PPSL.leaf_size_of_size32 %s_serializer %s_size32 fits_u64_squash (_ by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.smt ()))\n\n" n n n;
+  wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+  wp o "let write_%s = PPB.l2r_safe_writer_leaf_vl %s_serializer %s_leaf_size %s_writer\n\n" n n n n;
+  register_writer n;
+  wp i "val size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+  wp o "let size_%s = PPB.l2r_safe_size_leaf_vl %s_serializer %s_leaf_size\n\n" n n n;
+  register_size n
+
 (* Emit a copyful parser (read_<n>) and free combinator (free_<n>) for a
    byte-array type. The result is a freshly allocated, freeable sized byte
    vector (PPBY.lvec, carrying a runtime length alongside the Pulse.Lib.Vec)
@@ -2876,8 +2895,10 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
        owned byte/list payloads need an owned low representation and are handled
        in a later layer. *)
     if !emit_pulse then begin
-      if li.has_lserializer then
-        emit_copyful_leaf o i n
+      if li.has_lserializer then begin
+        emit_copyful_leaf o i n;
+        emit_copyful_safe_leaf_writer_vl o i n
+      end
       else if def = None then
         emit_copyful_owned_sum o i n tn cprefix cl
       else if not is_implicit then
@@ -4903,6 +4924,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp i "module PPLS = LowParse.PulseParse.List\n";
   wp i "module PPFD = LowParse.PulseParse.FLData\n";
   wp i "module LPPS = LowParse.Pulse.Sum\n";
+  wp i "module PPSL = LowParse.PulseParse.SizeLeaf\n";
   (List.iter (w i "%s\n") (List.rev fsti));
   w i "\n";
 
@@ -4945,6 +4967,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp o "module PPAR = LowParse.PulseParse.Array\n";
   wp o "module PPFD = LowParse.PulseParse.FLData\n";
   wp o "module LPPS = LowParse.Pulse.Sum\n";
+  wp o "module PPSL = LowParse.PulseParse.SizeLeaf\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
 
