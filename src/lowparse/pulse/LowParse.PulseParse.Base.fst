@@ -1138,6 +1138,43 @@ fn l2r_safe_writer_leaf
   }
 }
 
+(* Variable-length leaf safe writer: like [l2r_safe_writer_leaf] but for a
+   variable-length leaf. Instead of a constant size, it takes a [size] function
+   computing the exact serialized length of [x] (whose postcondition gives
+   [SZ.v sz == Seq.length (serialize s x)]), so no fixed-size kind is needed. *)
+inline_for_extraction
+fn l2r_safe_writer_leaf_vl
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (size: (x: t -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize s x) /\ SZ.v sz < pow2 64)))
+  (w: LPS.l2r_leaf_writer s)
+: l2r_safe_writer #t #t #t (LPS.eq_as_slprop t) #k #p s (leaf_conv t)
+=
+  (x: t)
+  (#y: Ghost.erased t)
+  (out: slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: R.ref bool)
+{
+  let sz = size x;
+  unfold (LPS.eq_as_slprop t x (Ghost.reveal y));
+  S.pts_to_len out;
+  serialize_length s x;
+  let l = S.len out;
+  if (SZ.lt l sz) {
+    perr := true;
+    fold (LPS.eq_as_slprop t x (Ghost.reveal y));
+    sz
+  } else {
+    let res = w x out 0sz;
+    perr := false;
+    fold (LPS.eq_as_slprop t x (Ghost.reveal y));
+    res
+  }
+}
+
 (* Re-index an [l2r_safe_writer] across an extensionally-equal parser/serializer
    (mirrors [copyful_parse_ext]). The serialized bytes are unchanged because the
    precondition demands [serialize s2] agrees pointwise with [serialize s1]; the
@@ -1337,6 +1374,31 @@ fn l2r_safe_size_leaf
   (#y: Ghost.erased t)
   (perr: R.ref bool)
 {
+  unfold (LPS.eq_as_slprop t x (Ghost.reveal y));
+  serialize_length s x;
+  perr := false;
+  fold (LPS.eq_as_slprop t x (Ghost.reveal y));
+  sz
+}
+
+(* Variable-length leaf safe size: like [l2r_safe_size_leaf] but for a
+   variable-length leaf. The [size] function computes the exact serialized
+   length (and guarantees it fits in a machine word), so no fixed-size kind is
+   needed. *)
+inline_for_extraction
+fn l2r_safe_size_leaf_vl
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (size: (x: t -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize s x) /\ SZ.v sz < pow2 64)))
+: l2r_safe_size #t #t #t (LPS.eq_as_slprop t) #k #p s (leaf_conv t)
+=
+  (x: t)
+  (#y: Ghost.erased t)
+  (perr: R.ref bool)
+{
+  let sz = size x;
   unfold (LPS.eq_as_slprop t x (Ghost.reveal y));
   serialize_length s x;
   perr := false;
