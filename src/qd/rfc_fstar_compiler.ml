@@ -574,13 +574,15 @@ let copyful_conv_name ty =
 
 (* ----- Copyful safe writers (l2r_safe_writer / write_<n>) ----- *)
 
-(* Is [ty] a base/leaf type that has a CONSTANT-SIZE graceful leaf safe writer?
-   This is a strict subset of [is_copyful_leaf_type]: it excludes variable-width
-   or little-endian leaves (uint*_le, uint24, bitcoin_varint, asn1_len) for which
-   no [l2r_safe_writer_leaf] (constant-size leaf writer) is available yet. *)
+(* Is [ty] a base/leaf type that has a graceful leaf safe writer? This is a
+   subset of [is_copyful_leaf_type]: it excludes the leaves (uint24/uint24_le,
+   uint64_le, asn1_len) for which no [l2r_safe_writer_leaf]/[l2r_safe_writer_leaf_vl]
+   is wired yet. Fixed-size leaves use [l2r_safe_writer_leaf]; bitcoin_varint is a
+   variable-length leaf wired via [l2r_safe_writer_leaf_vl]. *)
 let is_copyful_safe_leaf_type = function
   | "opaque" | "uint8" | "uint16" | "uint32" | "uint64" | "Empty" | "Fail" -> true
   | "uint16_le" | "uint32_le" -> true
+  | "bitcoin_varint" -> true
   | _ -> false
 
 (* The inline graceful leaf safe writer expression for a base safe-leaf type:
@@ -592,6 +594,7 @@ let safe_leaf_writer_expr = function
   | "uint64" -> "(PPB.l2r_safe_writer_leaf LPI.serialize_u64 8sz (LPPI.l2r_leaf_write_u64 ()))"
   | "uint16_le" -> "(PPB.l2r_safe_writer_leaf LPI.serialize_u16_le 2sz LPPILE.l2r_leaf_write_u16_le)"
   | "uint32_le" -> "(PPB.l2r_safe_writer_leaf LPI.serialize_u32_le 4sz LPPILE.l2r_leaf_write_u32_le)"
+  | "bitcoin_varint" -> "(PPB.l2r_safe_writer_leaf_vl LPI.serialize_bcvli PPBCVLI.bcvli_size (PPBCVLI.l2r_leaf_write_bcvli ()))"
   | "Empty" -> "(PPB.l2r_safe_writer_leaf LP.serialize_empty 0sz LPC.l2r_leaf_write_empty)"
   | "Fail" -> "(PPS.l2r_safe_writer_false (LPS.eq_as_slprop (squash False)) LP.serialize_false)"
   | t -> failwith (sprintf "safe_leaf_writer_expr: no safe leaf writer for %s" t)
@@ -624,6 +627,7 @@ let copyful_writer_name ty =
 let is_copyful_safe_size_leaf_type = function
   | "opaque" | "uint8" | "uint16" | "uint32" | "uint64" | "Empty" -> true
   | "uint16_le" | "uint32_le" -> true
+  | "bitcoin_varint" -> true
   | _ -> false
 
 (* The inline graceful leaf safe-size expression for a base safe-leaf type. *)
@@ -634,6 +638,7 @@ let safe_leaf_size_expr = function
   | "uint64" -> "(PPB.l2r_safe_size_leaf LPI.serialize_u64 8sz)"
   | "uint16_le" -> "(PPB.l2r_safe_size_leaf LPI.serialize_u16_le 2sz)"
   | "uint32_le" -> "(PPB.l2r_safe_size_leaf LPI.serialize_u32_le 4sz)"
+  | "bitcoin_varint" -> "(PPB.l2r_safe_size_leaf_vl LPI.serialize_bcvli PPBCVLI.bcvli_size)"
   | "Empty" -> "(PPB.l2r_safe_size_leaf LP.serialize_empty 0sz)"
   | t -> failwith (sprintf "safe_leaf_size_expr: no safe leaf size for %s" t)
 
@@ -1394,7 +1399,40 @@ let emit_copyful_vlgen_payload o i n ty smin smax lenty =
   wp o "    (PPVG.copyful_parse_bounded_vlgen_payload %d %d %s %s %s %s ())\n" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty) (copyful_read_name ty);
   wp o "    (LP.synth_vlgen %d %d %s) (LP.synth_vlgen_recip %d %d %s)\n\n" smin smax (scombinator_name ty) smin smax (scombinator_name ty);
   wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
-  wp o "  PPVD.free_vldata_strong %d %d %s %s\n\n" smin smax (scombinator_name ty) (copyful_free_name ty)
+  wp o "  PPVD.free_vldata_strong %d %d %s %s\n\n" smin smax (scombinator_name ty) (copyful_free_name ty);
+  (* Pulse: copyful safe WRITER/SIZE for a bcvli-length-framed SINGLE payload.
+     The payload bytes are exactly [serialize <ty>] so the vlgen-payload combinator
+     writes the bcvli length header then the element via its own safe writer/size,
+     lifted across the library synth_vlgen iso (identity on values). Only
+     bitcoin_varint length headers are supported (bcvli leaf writer). *)
+  if !emit_pulse && lenty = "bitcoin_varint" && copyful_writer_available ty then begin
+    wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+    wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n" n n n n;
+    wp o "  %s_copyful_synth_injective ();\n" n;
+    wp o "  %s_copyful_synth_inverse ();\n" n;
+    wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_length_header_name lenty smin smax);
+    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smin;
+    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smax;
+    wp o "  PPC.l2r_safe_writer_synth\n";
+    wp o "    ((PPVG.l2r_safe_writer_bounded_vlgen_payload %d (FStar.SizeT.uint_to_t %d) %d (FStar.SizeT.uint_to_t %d) %s (fun x -> PPBCVLI.bounded_bcvli_size %d %d x) (PPBCVLI.l2r_leaf_write_bounded_bcvli %d %d ()) %s %s %s fits_u64_squash) <: PPB.l2r_safe_writer _ (LP.serialize_bounded_vlgen %d %d %s %s) _)\n" smin smin smax smax (scombinator_length_header_name lenty smin smax) smin smax smin smax (scombinator_name ty) (copyful_writer_name ty) (copyful_size_name ty) smin smax (scombinator_length_header_name lenty smin smax) (scombinator_name ty);
+    wp o "    (LP.synth_vlgen %d %d %s) (LP.synth_vlgen_recip %d %d %s)\n\n" smin smax (scombinator_name ty) smin smax (scombinator_name ty);
+    register_writer n
+  end;
+  if !emit_pulse && lenty = "bitcoin_varint" && copyful_size_available ty then begin
+    wp i "val size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+    wp o "let size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv =\n" n n n n;
+    wp o "  %s_copyful_synth_injective ();\n" n;
+    wp o "  %s_copyful_synth_inverse ();\n" n;
+    wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_length_header_name lenty smin smax);
+    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smin;
+    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smax;
+    wp o "  PPC.l2r_safe_size_synth\n";
+    wp o "    ((PPVG.l2r_safe_size_bounded_vlgen_payload %d (FStar.SizeT.uint_to_t %d) %d (FStar.SizeT.uint_to_t %d) %s (fun x -> PPBCVLI.bounded_bcvli_size %d %d x) %s %s fits_u64_squash) <: PPB.l2r_safe_size _ (LP.serialize_bounded_vlgen %d %d %s %s) _)\n" smin smin smax smax (scombinator_length_header_name lenty smin smax) smin smax (scombinator_name ty) (copyful_size_name ty) smin smax (scombinator_length_header_name lenty smin smax) (scombinator_name ty);
+    wp o "    (LP.synth_vlgen %d %d %s) (LP.synth_vlgen_recip %d %d %s)\n\n" smin smax (scombinator_name ty) smin smax (scombinator_name ty);
+    register_size n
+  end
 
 (* Like emit_copyful_vlgen_payload, but for the case where the payload type [ty]
    may exceed the length bounds, so compile_vldata's else-branch generates a
