@@ -33,15 +33,24 @@ let byte_slice1 : (t: Type0 { t == S.slice U8.t }) = byte_slice0
 // Coercions between `byte_slice1` and `slice uint8_t`, provided per backend as
 // the identity (in each implementation module `byte_slice0` is transparently
 // `slice uint8_t`, so the identity typechecks). Declared `inline_for_extraction
-// noextract [@@noextract_to "krml"]` so they inline to nothing and emit no
-// KaRaMeL code — no `coerce_eq` survives in either backend. Their parameters are
-// the *unrefined* `byte_slice1` / `slice uint8_t`, so a refined field value
-// (e.g. `ptr: byte_slice1{...}`) is upcast automatically before coercing, keeping
-// the call sites free of explicit type arguments or ascriptions.
-inline_for_extraction noextract [@@noextract_to "krml"]
+// noextract` so they inline to the identity at every use site and emit no
+// standalone KaRaMeL declaration — no `coerce_eq` survives in either backend.
+//
+// NOTE: these must NOT carry `[@@noextract_to "krml"]`. That directive removes
+// the body from KaRaMeL entirely, leaving the `inline_for_extraction` call sites
+// with nothing to inline; the Rust backend then erases them to `(()<: any)`,
+// corrupting the byte-slice fields (and tripping the fatal Warning 26 under
+// `-warn-error @1..27`). Keeping the body visible lets KaRaMeL inline the
+// identity, so the coercions vanish with no surviving code in either backend.
+//
+// Their parameters are the *unrefined* `byte_slice1` / `slice uint8_t`, so a
+// refined field value (e.g. `ptr: byte_slice1{...}`) is upcast automatically
+// before coercing, keeping the call sites free of explicit type arguments or
+// ascriptions.
+inline_for_extraction noextract
 val to_slice (x: byte_slice1) : S.slice U8.t
 
-inline_for_extraction noextract [@@noextract_to "krml"]
+inline_for_extraction noextract
 val of_slice (x: S.slice U8.t) : byte_slice1
 
 // Round-trip lemmas exposing that the two coercions are mutual inverses. With
@@ -49,10 +58,12 @@ val of_slice (x: S.slice U8.t) : byte_slice1
 // the SMT patterns let the construction sites (which build a field with `of_slice`
 // and read it back through `to_slice` in the match predicate) discharge the
 // `to_slice (of_slice s) == s` obligation automatically.
+[@@noextract_to "krml"]
 val to_of_slice (x: S.slice U8.t) : Lemma
   (ensures to_slice (of_slice x) == x)
   [SMTPat (to_slice (of_slice x))]
 
+[@@noextract_to "krml"]
 val of_to_slice (x: byte_slice1) : Lemma
   (ensures of_slice (to_slice x) == x)
   [SMTPat (of_slice (to_slice x))]

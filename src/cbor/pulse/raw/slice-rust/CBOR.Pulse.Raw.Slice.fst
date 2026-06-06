@@ -9,11 +9,13 @@ let byte_slice0 : (t: Type0 { t == S.slice U8.t }) = S.slice U8.t
 
 // `byte_slice0` (hence `byte_slice1`) is transparently `slice uint8_t` here, so
 // the coercions are the identity and erase at extraction.
-inline_for_extraction noextract [@@noextract_to "krml"]
+inline_for_extraction noextract
 let to_slice (x: byte_slice1) : S.slice U8.t = x
 
-inline_for_extraction noextract [@@noextract_to "krml"]
+inline_for_extraction noextract
 let of_slice (x: S.slice U8.t) : byte_slice1 = x
 
+[@@noextract_to "krml"]
 let to_of_slice x = ()
+[@@noextract_to "krml"]
 let of_to_slice x = ()

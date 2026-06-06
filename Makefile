@@ -180,9 +180,27 @@ endif
 
 .PHONY: cbor-verify
 
+# The backend-specific CBOR.Pulse.Raw.Slice implementations (slice-c / slice-rust)
+# are selected by include path and are not part of the global checked-file cache:
+# the two impls of the same module cannot coexist in a single dependency scan, so
+# they are absent from SRC_DIRS and never built by cbor-verify. Build each one here,
+# sequentially (race-free), before any consumer extracts the CBOR Raw modules.
+CBOR_SLICE_C_CHECKED := $(abspath src/cbor/pulse/raw/slice-c/CBOR.Pulse.Raw.Slice.fst.checked)
+CBOR_SLICE_RUST_CHECKED := $(abspath src/cbor/pulse/raw/slice-rust/CBOR.Pulse.Raw.Slice.fst.checked)
+
+ifeq (,$(NO_PULSE))
+cbor-slice-checked:
+	+$(MAKE) -C src/cbor/pulse/krml CBOR_SLICE_BACKEND=c    ALREADY_CACHED='*,-CBOR.Pulse.Raw.Slice,' $(CBOR_SLICE_C_CHECKED)
+	+$(MAKE) -C src/cbor/pulse/krml CBOR_SLICE_BACKEND=rust ALREADY_CACHED='*,-CBOR.Pulse.Raw.Slice,' $(CBOR_SLICE_RUST_CHECKED)
+else
+cbor-slice-checked:
+endif
+
+.PHONY: cbor-slice-checked
+
 # lowparse needed for extraction because of .fst files behind .fsti
 ifeq (,$(NO_PULSE))
-cbor-extract-pre: cbor-verify $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+cbor-extract-pre: cbor-verify cbor-slice-checked $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
 
 .PHONY: cbor-extract-pre
 
