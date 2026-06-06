@@ -780,10 +780,10 @@ ensures cbor_raw_match_content (cbor_raw_match_fuel (Ghost.reveal m)) pp pm h xl
       CBOR_Case_String v -> {
         cbor_raw_match_content_eq_string cbor_raw_match pp pm b la v c;
         rewrite (cbor_raw_match_content cbor_raw_match pp pm (| b, la |) (CBOR_Case_String v) c)
-             as (S.pts_to v.cbor_string_ptr #(pm *. v.cbor_string_perm) (content_as_seq_u8 b la c));
+             as (S.pts_to (to_slice v.cbor_string_ptr) #(pm *. v.cbor_string_perm) (content_as_seq_u8 b la c));
         let m : Ghost.erased nat = Ghost.hide 0;
         cbor_raw_match_content_eq_string (cbor_raw_match_fuel (Ghost.reveal m)) pp pm b la v c;
-        rewrite (S.pts_to v.cbor_string_ptr #(pm *. v.cbor_string_perm) (content_as_seq_u8 b la c))
+        rewrite (S.pts_to (to_slice v.cbor_string_ptr) #(pm *. v.cbor_string_perm) (content_as_seq_u8 b la c))
              as (cbor_raw_match_content (cbor_raw_match_fuel (Ghost.reveal m)) pp pm (| b, la |) (CBOR_Case_String v) c);
         rewrite (cbor_raw_match_content (cbor_raw_match_fuel (Ghost.reveal m)) pp pm (| b, la |) (CBOR_Case_String v) c)
              as (cbor_raw_match_content (cbor_raw_match_fuel (Ghost.reveal m)) pp pm h xl c);
@@ -1052,10 +1052,10 @@ ensures cbor_raw_match_content (cbor_raw_match_fuel (Ghost.reveal m)) pp pm h xl
       CBOR_Case_Tagged_Serialized v -> {
         cbor_raw_match_content_eq_tagged_serialized cbor_raw_match pp pm b la v c;
         rewrite (cbor_raw_match_content cbor_raw_match pp pm (| b, la |) (CBOR_Case_Tagged_Serialized v) c)
-             as (pts_to_parsed_strong_prefix pp v.cbor_tagged_serialized_ptr #(pm *. v.cbor_tagged_serialized_slice_perm) (content_as_raw_data_item b la c));
+             as (pts_to_parsed_strong_prefix pp (to_slice v.cbor_tagged_serialized_ptr) #(pm *. v.cbor_tagged_serialized_slice_perm) (content_as_raw_data_item b la c));
         let m : Ghost.erased nat = Ghost.hide 0;
         cbor_raw_match_content_eq_tagged_serialized (cbor_raw_match_fuel (Ghost.reveal m)) pp pm b la v c;
-        rewrite (pts_to_parsed_strong_prefix pp v.cbor_tagged_serialized_ptr #(pm *. v.cbor_tagged_serialized_slice_perm) (content_as_raw_data_item b la c))
+        rewrite (pts_to_parsed_strong_prefix pp (to_slice v.cbor_tagged_serialized_ptr) #(pm *. v.cbor_tagged_serialized_slice_perm) (content_as_raw_data_item b la c))
              as (cbor_raw_match_content (cbor_raw_match_fuel (Ghost.reveal m)) pp pm (| b, la |) (CBOR_Case_Tagged_Serialized v) c);
         rewrite (cbor_raw_match_content (cbor_raw_match_fuel (Ghost.reveal m)) pp pm (| b, la |) (CBOR_Case_Tagged_Serialized v) c)
              as (cbor_raw_match_content (cbor_raw_match_fuel (Ghost.reveal m)) pp pm h xl c);

@@ -858,10 +858,17 @@ ensures (match res with
                 (Map?.len (Ghost.reveal xh2)).value == U64.uint_to_t (L.length l_result))
         );
         // The rebuilt length field is the minimal (canonical) encoding.
+        // NOTE: typing the byte-slice fields as `byte_slice` (the C naming hint)
+        // perturbs the SMT context here, so derive the length equalities through
+        // explicit value-level steps rather than relying on the solver to chain
+        // `len64_rt = sizet_to_uint64 (mixed_list_length ml_result)` to the list
+        // length in one shot.
+        assert (pure (SZ.v len_sz_rt == L.length l_result));
+        assert (pure (FStar.UInt.fits (L.length l_result) U64.n));
+        assert (pure (U64.v len64_rt == L.length l_result));
         assert (pure (len64_rt == U64.uint_to_t (L.length l_result)));
         assert (pure (len_size == (Optimal.mk_raw_uint64 (U64.uint_to_t (L.length l_result))).size));
         assert (pure ((Map?.len (Ghost.reveal xh2) <: raw_uint64) == Optimal.mk_raw_uint64 (U64.uint_to_t (L.length l_result))));
-        assert (pure (FStar.UInt.fits (L.length l_result) U64.n));
         // Compose all trades back to the original resources.
         Trade.intro_trade
           (cbor_raw_match pm_result m (Ghost.reveal xh2))

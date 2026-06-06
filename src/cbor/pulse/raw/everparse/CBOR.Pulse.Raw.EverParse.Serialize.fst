@@ -391,7 +391,7 @@ let cbor_raw_get_header_pure (f64: squash SZ.fits_u64) (xl: cbor_raw) : Tot (opt
   | CBOR_Case_String v ->
     Some (raw_uint64_as_argument v.cbor_string_type
       ({ size = v.cbor_string_size;
-         value = SZ.sizet_to_uint64 (S.len v.cbor_string_ptr) }))
+         value = SZ.sizet_to_uint64 (S.len (to_slice v.cbor_string_ptr)) }))
   | CBOR_Case_Array v ->
     Some (raw_uint64_as_argument cbor_major_type_array
       ({ size = v.cbor_array_length_size;
@@ -411,7 +411,7 @@ let cbor_raw_get_header_pure_correct (f64: squash SZ.fits_u64) (xl: cbor_raw) : 
 =
   match xl with
   | CBOR_Case_String v ->
-    let n = S.len v.cbor_string_ptr in
+    let n = S.len (to_slice v.cbor_string_ptr) in
     assert (U64.v (SZ.sizet_to_uint64 n) == U64.v (U64.uint_to_t (SZ.v n)))
   | CBOR_Case_Array v ->
     let n = IT.mixed_list_length v.cbor_array_ptr in

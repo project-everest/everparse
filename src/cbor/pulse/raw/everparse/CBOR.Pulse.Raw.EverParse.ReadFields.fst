@@ -181,7 +181,7 @@ ensures cbor_raw_match pm x y ** pure (int64_value_of (Ghost.reveal y) == Some r
 
 let cbor_raw_string_length (x: cbor_raw) : Tot (option U64.t) =
   match x with
-  | CBOR_Case_String v -> Some (SZ.sizet_to_uint64 (S.len v.cbor_string_ptr))
+  | CBOR_Case_String v -> Some (SZ.sizet_to_uint64 (S.len (to_slice v.cbor_string_ptr)))
   | _ -> None
 
 (* ======== Tagged tag reader ======== *)

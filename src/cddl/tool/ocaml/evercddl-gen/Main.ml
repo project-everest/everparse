@@ -373,24 +373,15 @@ let _ =
       krml_exe
       krml_options
   in
-  (* In the C case, krml only emitted the sources (-skip-compilation). Strip the
-     duplicate Pulse_Lib_Slice_slice__uint8_t typedef that krml re-emits into the
-     generated headers (the canonical definition comes from the included
-     CBORDetType.h), then drive the C compiler ourselves unless compilation was
-     explicitly skipped. *)
+  (* In the C case, krml only emitted the sources (-skip-compilation). Drive the
+     C compiler ourselves unless compilation was explicitly skipped. The byte
+     slice that cbor_raw embeds is homed by the CBOR library as the nominal
+     `byte_slice` struct in the included CBORDetType.h, so the generated consumer
+     headers no longer collide with it (any `Pulse_Lib_Slice_slice__uint8_t` they
+     emit for their own buffers is now a distinct, self-contained definition). *)
   let res =
     if res = 0 && not (is_rust ())
     then begin
-      let strip_slice h =
-        if Sys.file_exists h
-        then ignore (run_cmd "perl" [
-          "-0pi"; "-e";
-          "s/typedef struct Pulse_Lib_Slice_slice__uint8_t_s\\n\\{\\n  uint8_t \\*elt;\\n  size_t len;\\n\\}\\nPulse_Lib_Slice_slice__uint8_t;\\n//";
-          h
-        ])
-      in
-      strip_slice (Filename.concat !odir (mname_subst ^ ".h"));
-      strip_slice (Filename.concat (Filename.concat !odir "internal") (mname_subst ^ ".h"));
       if !skip_compilation
       then 0
       else begin

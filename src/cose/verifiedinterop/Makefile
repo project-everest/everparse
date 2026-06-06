@@ -57,11 +57,6 @@ extract: extract-krml
 		-no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -no-prefix CBOR.Pulse.API.Det.Dummy -no-prefix Abort \
 		-add-include '"CBORDetType.h"' \
 		-skip-compilation $(ALL_KRML_FILES) -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -header noheader.txt
-# The CBOR Det types are now concrete (CBORDetType.h, no CAbstractStruct). krml therefore
-# re-emits the shared monomorphic instance Pulse_Lib_Slice_slice__uint8_t inside COSE_Format.h,
-# colliding with the identical definition that COSE_Format.h already #includes from CBORDetType.h.
-# Drop COSE's duplicate; the included CBORDetType.h provides the canonical definition.
-	perl -0pi -e 's/typedef struct Pulse_Lib_Slice_slice__uint8_t_s\n\{\n  uint8_t \*elt;\n  size_t len;\n\}\nPulse_Lib_Slice_slice__uint8_t;\n//' $(OUTPUT_DIRECTORY)/COSE_Format.h
 	$(CC) -fsyntax-only -Wall -Werror $(COSE_CC_INCLUDES) $(OUTPUT_DIRECTORY)/COSE_Format.c $(OUTPUT_DIRECTORY)/COSE_EverCrypt.c
 
 %.diff: extract

@@ -238,9 +238,9 @@ ghost fn cbor_raw_get_string_content
 requires
   cbor_raw_match_content r parse_raw_data_item pm h (CBOR_Case_String v) c
 ensures exists* (pm': perm) (vs: Seq.seq U8.t).
-  S.pts_to v.cbor_string_ptr #pm' vs **
+  S.pts_to (to_slice v.cbor_string_ptr) #pm' vs **
   trade
-    (S.pts_to v.cbor_string_ptr #pm' vs)
+    (S.pts_to (to_slice v.cbor_string_ptr) #pm' vs)
     (cbor_raw_match_content r parse_raw_data_item pm h (CBOR_Case_String v) c) **
   pure (pm' == pm *. v.cbor_string_perm /\ vs == content_as_seq_u8 (dfst h) (dsnd h) c)
 {
@@ -255,17 +255,17 @@ ensures exists* (pm': perm) (vs: Seq.seq U8.t).
   rewrite
     (cbor_raw_match_content r parse_raw_data_item pm (| b, la |) (CBOR_Case_String v) c)
     as
-    (S.pts_to v.cbor_string_ptr #(pm *. v.cbor_string_perm) (content_as_seq_u8 b la c));
+    (S.pts_to (to_slice v.cbor_string_ptr) #(pm *. v.cbor_string_perm) (content_as_seq_u8 b la c));
   intro
     (trade
-      (S.pts_to v.cbor_string_ptr #(pm *. v.cbor_string_perm) (content_as_seq_u8 b la c))
+      (S.pts_to (to_slice v.cbor_string_ptr) #(pm *. v.cbor_string_perm) (content_as_seq_u8 b la c))
       (cbor_raw_match_content r parse_raw_data_item pm h (CBOR_Case_String v) c))
     #emp
     fn _ {
       cbor_raw_match_content_eq_string r parse_raw_data_item pm b la v c;
       header_eta h;
       rewrite
-        (S.pts_to v.cbor_string_ptr #(pm *. v.cbor_string_perm) (content_as_seq_u8 b la c))
+        (S.pts_to (to_slice v.cbor_string_ptr) #(pm *. v.cbor_string_perm) (content_as_seq_u8 b la c))
         as
         (cbor_raw_match_content r parse_raw_data_item pm (| b, la |) (CBOR_Case_String v) c);
       rewrite
@@ -455,20 +455,20 @@ ensures exists* (pm': perm) (v: Seq.seq U8.t).
 
       // Bind the existentials from the helper
       let pm' = pm *. v.cbor_string_perm;
-      with _pm' _vs . assert (S.pts_to v.cbor_string_ptr #_pm' _vs);
-      with _pm'' _vs' . assert (trade (S.pts_to v.cbor_string_ptr #_pm'' _vs')
+      with _pm' _vs . assert (S.pts_to (to_slice v.cbor_string_ptr) #_pm' _vs);
+      with _pm'' _vs' . assert (trade (S.pts_to (to_slice v.cbor_string_ptr) #_pm'' _vs')
         (cbor_raw_match_content r parse_raw_data_item pm
           (dfst (synth_raw_data_item_recip (Ghost.reveal y)))
           (CBOR_Case_String v)
           (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))));
       rewrite
-        (trade (S.pts_to v.cbor_string_ptr #_pm'' _vs')
+        (trade (S.pts_to (to_slice v.cbor_string_ptr) #_pm'' _vs')
           (cbor_raw_match_content r parse_raw_data_item pm
             (dfst (synth_raw_data_item_recip (Ghost.reveal y)))
             (CBOR_Case_String v)
             (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))))
         as
-        (trade (S.pts_to v.cbor_string_ptr #_pm' _vs)
+        (trade (S.pts_to (to_slice v.cbor_string_ptr) #_pm' _vs)
           (cbor_raw_match_content r parse_raw_data_item pm
             (dfst (synth_raw_data_item_recip (Ghost.reveal y)))
             (CBOR_Case_String v)
@@ -476,7 +476,7 @@ ensures exists* (pm': perm) (v: Seq.seq U8.t).
 
       // Compose the two trades
       Trade.trans
-        (S.pts_to v.cbor_string_ptr #_pm' _vs)
+        (S.pts_to (to_slice v.cbor_string_ptr) #_pm' _vs)
         (cbor_raw_match_content r parse_raw_data_item pm
           (dfst (synth_raw_data_item_recip (Ghost.reveal y)))
           (CBOR_Case_String v)
@@ -484,13 +484,13 @@ ensures exists* (pm': perm) (v: Seq.seq U8.t).
         (cbor_raw_match_aux parse_raw_data_item r pm (CBOR_Case_String v) y);
 
       rewrite
-        (trade (S.pts_to v.cbor_string_ptr #_pm' _vs)
+        (trade (S.pts_to (to_slice v.cbor_string_ptr) #_pm' _vs)
           (cbor_raw_match_aux parse_raw_data_item r pm (CBOR_Case_String v) y))
         as
-        (trade (S.pts_to v.cbor_string_ptr #_pm' _vs)
+        (trade (S.pts_to (to_slice v.cbor_string_ptr) #_pm' _vs)
           (cbor_raw_match_aux parse_raw_data_item r pm x y));
 
-      v.cbor_string_ptr
+      (to_slice v.cbor_string_ptr)
     }
     CBOR_Case_Invalid -> {
       cbor_raw_get_string_content_false r pm
@@ -601,9 +601,9 @@ ghost fn cbor_raw_match_string_elim
   (#xh: Ghost.erased raw_data_item)
 requires cbor_raw_match pm (CBOR_Case_String str) xh
 ensures exists* v .
-  S.pts_to str.cbor_string_ptr #(pm *. str.cbor_string_perm) v **
+  S.pts_to (to_slice str.cbor_string_ptr) #(pm *. str.cbor_string_perm) v **
   trade
-    (S.pts_to str.cbor_string_ptr #(pm *. str.cbor_string_perm) v)
+    (S.pts_to (to_slice str.cbor_string_ptr) #(pm *. str.cbor_string_perm) v)
     (cbor_raw_match pm (CBOR_Case_String str) xh)
 {
   let x : cbor_raw = CBOR_Case_String str;
@@ -704,20 +704,20 @@ ensures exists* v .
     };
 
   // Bind the existentials
-  with _pm' _vs . assert (S.pts_to str.cbor_string_ptr #_pm' _vs);
-  with _pm'' _vs' . assert (trade (S.pts_to str.cbor_string_ptr #_pm'' _vs')
+  with _pm' _vs . assert (S.pts_to (to_slice str.cbor_string_ptr) #_pm' _vs);
+  with _pm'' _vs' . assert (trade (S.pts_to (to_slice str.cbor_string_ptr) #_pm'' _vs')
     (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm
       (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
       (CBOR_Case_String str)
       (dsnd (synth_raw_data_item_recip (Ghost.reveal xh)))));
   rewrite
-    (trade (S.pts_to str.cbor_string_ptr #_pm'' _vs')
+    (trade (S.pts_to (to_slice str.cbor_string_ptr) #_pm'' _vs')
       (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm
         (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
         (CBOR_Case_String str)
         (dsnd (synth_raw_data_item_recip (Ghost.reveal xh)))))
     as
-    (trade (S.pts_to str.cbor_string_ptr #_pm' _vs)
+    (trade (S.pts_to (to_slice str.cbor_string_ptr) #_pm' _vs)
       (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm
         (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
         (CBOR_Case_String str)
@@ -725,7 +725,7 @@ ensures exists* v .
 
   // Compose the two trades
   Trade.trans
-    (S.pts_to str.cbor_string_ptr #_pm' _vs)
+    (S.pts_to (to_slice str.cbor_string_ptr) #_pm' _vs)
     (cbor_raw_match_content cbor_raw_match parse_raw_data_item pm
       (dfst (synth_raw_data_item_recip (Ghost.reveal xh)))
       (CBOR_Case_String str)
@@ -1097,14 +1097,14 @@ ensures exists* (pm': perm) (payload: Ghost.erased raw_data_item).
           (CBOR_Case_Tagged_Serialized ts)
           (dsnd (synth_raw_data_item_recip (Ghost.reveal y))))
         as
-        (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+        (PPB.pts_to_parsed_strong_prefix parse_raw_data_item (to_slice ts.cbor_tagged_serialized_ptr)
           #(pm *. ts.cbor_tagged_serialized_slice_perm)
           (content_as_raw_data_item
             (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
             (dsnd (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
             (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))));
 
-      let res = reader ts.cbor_tagged_serialized_ptr
+      let res = reader (to_slice ts.cbor_tagged_serialized_ptr)
         #(pm *. ts.cbor_tagged_serialized_slice_perm)
         #(content_as_raw_data_item
             (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
@@ -1114,7 +1114,7 @@ ensures exists* (pm': perm) (payload: Ghost.erased raw_data_item).
       // Set up trade: pts_to_parsed_strong_prefix → content → cbor_raw_match_aux
       intro
         (trade
-          (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+          (PPB.pts_to_parsed_strong_prefix parse_raw_data_item (to_slice ts.cbor_tagged_serialized_ptr)
             #(pm *. ts.cbor_tagged_serialized_slice_perm)
             (content_as_raw_data_item
               (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
@@ -1131,7 +1131,7 @@ ensures exists* (pm': perm) (payload: Ghost.erased raw_data_item).
             (dsnd (synth_raw_data_item_recip (Ghost.reveal y)));
           header_eta (dfst (synth_raw_data_item_recip (Ghost.reveal y)));
           rewrite
-            (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+            (PPB.pts_to_parsed_strong_prefix parse_raw_data_item (to_slice ts.cbor_tagged_serialized_ptr)
               #(pm *. ts.cbor_tagged_serialized_slice_perm)
               (content_as_raw_data_item
                 (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
@@ -1175,7 +1175,7 @@ ensures exists* (pm': perm) (payload: Ghost.erased raw_data_item).
             (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
             (dsnd (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
             (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))))
-        (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+        (PPB.pts_to_parsed_strong_prefix parse_raw_data_item (to_slice ts.cbor_tagged_serialized_ptr)
           #(pm *. ts.cbor_tagged_serialized_slice_perm)
           (content_as_raw_data_item
             (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
@@ -1500,7 +1500,7 @@ ensures exists* (pm': perm) (payload: Ghost.erased raw_data_item).
           (CBOR_Case_Tagged_Serialized ts)
           (dsnd (synth_raw_data_item_recip (Ghost.reveal y))))
         as
-        (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+        (PPB.pts_to_parsed_strong_prefix parse_raw_data_item (to_slice ts.cbor_tagged_serialized_ptr)
           #(pm *. ts.cbor_tagged_serialized_slice_perm)
           (content_as_raw_data_item
             (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
@@ -1510,7 +1510,7 @@ ensures exists* (pm': perm) (payload: Ghost.erased raw_data_item).
       // Set up trade: pts_to_parsed_strong_prefix → content → cbor_raw_match_aux
       intro
         (trade
-          (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+          (PPB.pts_to_parsed_strong_prefix parse_raw_data_item (to_slice ts.cbor_tagged_serialized_ptr)
             #(pm *. ts.cbor_tagged_serialized_slice_perm)
             (content_as_raw_data_item
               (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
@@ -1527,7 +1527,7 @@ ensures exists* (pm': perm) (payload: Ghost.erased raw_data_item).
             (dsnd (synth_raw_data_item_recip (Ghost.reveal y)));
           header_eta (dfst (synth_raw_data_item_recip (Ghost.reveal y)));
           rewrite
-            (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+            (PPB.pts_to_parsed_strong_prefix parse_raw_data_item (to_slice ts.cbor_tagged_serialized_ptr)
               #(pm *. ts.cbor_tagged_serialized_slice_perm)
               (content_as_raw_data_item
                 (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
@@ -1567,7 +1567,7 @@ ensures exists* (pm': perm) (payload: Ghost.erased raw_data_item).
       // Strengthen: aux for CBOR_Case_Tagged_Serialized ts → aux for x y
       rewrite
         (trade
-          (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+          (PPB.pts_to_parsed_strong_prefix parse_raw_data_item (to_slice ts.cbor_tagged_serialized_ptr)
             #(pm *. ts.cbor_tagged_serialized_slice_perm)
             (content_as_raw_data_item
               (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
@@ -1576,32 +1576,32 @@ ensures exists* (pm': perm) (payload: Ghost.erased raw_data_item).
           (cbor_raw_match_aux parse_raw_data_item r pm (CBOR_Case_Tagged_Serialized ts) y))
         as
         (trade
-          (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+          (PPB.pts_to_parsed_strong_prefix parse_raw_data_item (to_slice ts.cbor_tagged_serialized_ptr)
             #(pm *. ts.cbor_tagged_serialized_slice_perm)
             (Tagged?.v (Ghost.reveal y)))
           (cbor_raw_match_aux parse_raw_data_item r pm x y));
 
       rewrite
-        (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+        (PPB.pts_to_parsed_strong_prefix parse_raw_data_item (to_slice ts.cbor_tagged_serialized_ptr)
           #(pm *. ts.cbor_tagged_serialized_slice_perm)
           (content_as_raw_data_item
             (dfst (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
             (dsnd (dfst (synth_raw_data_item_recip (Ghost.reveal y))))
             (dsnd (synth_raw_data_item_recip (Ghost.reveal y)))))
         as
-        (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+        (PPB.pts_to_parsed_strong_prefix parse_raw_data_item (to_slice ts.cbor_tagged_serialized_ptr)
           #(pm *. ts.cbor_tagged_serialized_slice_perm)
           (Tagged?.v (Ghost.reveal y)));
 
       // Wrap into ESerialized
-      let result : I.elt_or_serialized cbor_raw = I.ESerialized ts.cbor_tagged_serialized_ptr;
-      rewrite (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+      let result : I.elt_or_serialized cbor_raw = I.ESerialized (to_slice ts.cbor_tagged_serialized_ptr);
+      rewrite (PPB.pts_to_parsed_strong_prefix parse_raw_data_item (to_slice ts.cbor_tagged_serialized_ptr)
                 #(pm *. ts.cbor_tagged_serialized_slice_perm)
                 (Tagged?.v (Ghost.reveal y)))
         as (tagged_payload_eos_match r (pm *. ts.cbor_tagged_serialized_slice_perm) result
               (Tagged?.v (Ghost.reveal y)));
       rewrite (trade
-                (PPB.pts_to_parsed_strong_prefix parse_raw_data_item ts.cbor_tagged_serialized_ptr
+                (PPB.pts_to_parsed_strong_prefix parse_raw_data_item (to_slice ts.cbor_tagged_serialized_ptr)
                   #(pm *. ts.cbor_tagged_serialized_slice_perm)
                   (Tagged?.v (Ghost.reveal y)))
                 (cbor_raw_match_aux parse_raw_data_item r pm x y))

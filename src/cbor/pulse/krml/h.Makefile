@@ -2,7 +2,7 @@ all: extract
 
 EVERPARSE_SRC_PATH = $(realpath ../../..)
 SRC_DIRS += $(EVERPARSE_SRC_PATH)/cbor/pulse
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec
+INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cbor/pulse/raw/slice-c
 
 FSTAR_OPTIONS += --warn_error -342
 FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice,-CBOR.Spec,+CBOR.Spec.Constants'

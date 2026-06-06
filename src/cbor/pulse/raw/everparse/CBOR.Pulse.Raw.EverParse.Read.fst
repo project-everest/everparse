@@ -127,7 +127,7 @@ fn cbor_raw_read_content
     let res = CBOR_Case_String ({
       cbor_string_type = b.major_type;
       cbor_string_size = (argument_as_raw_uint64 b la).size;
-      cbor_string_ptr = input1;
+      cbor_string_ptr = of_slice input1;
       cbor_string_perm = pms /. pm;
     });
     // Establish the match content: S.pts_to input1 #(pm *. (pms/pm)) c
@@ -337,7 +337,7 @@ fn cbor_raw_read_content
     //   + trade back to pts_to_parsed_strong_prefix (parse_content pp h) input #pms v
     let res = CBOR_Case_Tagged_Serialized ({
       cbor_tagged_serialized_tag = argument_as_raw_uint64 b la;
-      cbor_tagged_serialized_ptr = input;
+      cbor_tagged_serialized_ptr = of_slice input;
       cbor_tagged_serialized_slice_perm = pms /. pm;
     });
     // Need to show: vmatch_dep_pair_with_proj_content ... h res v

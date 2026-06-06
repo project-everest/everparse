@@ -66,7 +66,7 @@ let cbor_raw_int_raw_uint64_eq
 inline_for_extraction
 let cbor_raw_string_len (x: cbor_raw) : raw_uint64 =
   match x with
-  | CBOR_Case_String v -> { size = v.cbor_string_size; value = SZ.sizet_to_uint64 (S.len v.cbor_string_ptr) }
+  | CBOR_Case_String v -> { size = v.cbor_string_size; value = SZ.sizet_to_uint64 (S.len (to_slice v.cbor_string_ptr)) }
   | _ -> { size = 0uy; value = 0UL }
 
 let cbor_raw_string_len_eq
@@ -76,7 +76,7 @@ let cbor_raw_string_len_eq
 : Lemma (cbor_raw_string_len x == String?.len v)
 = match x with
   | CBOR_Case_String vx ->
-    FStar.Math.Lemmas.small_mod (SZ.v (S.len vx.cbor_string_ptr)) (pow2 64)
+    FStar.Math.Lemmas.small_mod (SZ.v (S.len (to_slice vx.cbor_string_ptr))) (pow2 64)
   | _ -> ()
 
 inline_for_extraction

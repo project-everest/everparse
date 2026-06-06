@@ -3,12 +3,25 @@ include CBOR.Pulse.Raw.Util
 open CBOR.Spec.Raw.Base
 open Pulse.Lib.Pervasives
 open Pulse.Lib.Slice
+include CBOR.Pulse.Raw.Slice
 
 module SZ = FStar.SizeT
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 module I = LowParse.PulseParse.Iterator.Type
 module S = Pulse.Lib.Slice
+
+// The byte-slice fields below are typed `byte_slice0` (CBOR.Pulse.Raw.Slice), an
+// abstract CBOR-owned name for the monomorphic `slice uint8_t` byte-slice type.
+// In the C backend the implementation of `byte_slice0` unfolds to a plain abbrev
+// `byte_slice = slice uint8_t` that survives KaRaMeL monomorphization and names the
+// emitted C struct `byte_slice` (folding in every `slice U8.t` use, including the
+// iterator's Serialized payload) instead of the canonical
+// `Pulse_Lib_Slice_slice__uint8_t`, avoiding the duplicate-typedef collision in
+// CDDL/COSE consumer headers. In the Rust backend `byte_slice0` unfolds straight to
+// `slice uint8_t`, so Rust keeps the native `&[u8]` model type. The two backend
+// implementations live in src/cbor/pulse/raw/slice-c and .../slice-rust and are
+// selected by include path at extraction time.
 
 // not reusing raw_uint64, for packing purposes
 noeq
@@ -23,8 +36,8 @@ noeq
 type cbor_string = {
   cbor_string_type: major_type_byte_string_or_text_string;
   cbor_string_size: integer_size;
-  cbor_string_ptr: (ptr: slice U8.t {
-    let len = SZ.v (len ptr) in
+  cbor_string_ptr: (ptr: byte_slice1 {
+    let len = SZ.v (len (to_slice ptr)) in
     FStar.UInt.fits len 64 /\
     raw_uint64_size_prop cbor_string_size (U64.uint_to_t len)
   }) ;
@@ -42,7 +55,7 @@ type cbor_tagged ([@@@strictly_positive] cbor_raw: Type0) = {
 noeq
 type cbor_tagged_serialized = {
   cbor_tagged_serialized_tag: raw_uint64;
-  cbor_tagged_serialized_ptr: S.slice U8.t;
+  cbor_tagged_serialized_ptr: byte_slice1;
   cbor_tagged_serialized_slice_perm: perm;
 }
 

@@ -181,7 +181,7 @@ ensures exists* xh .
   let str : cbor_string = {
     cbor_string_type = ty;
     cbor_string_size = ru.size;
-    cbor_string_ptr = s;
+    cbor_string_ptr = of_slice s;
     cbor_string_perm = p /. 2.0R;
   };
   let res = CBOR_Case_String str;
@@ -204,8 +204,8 @@ ensures exists* xh .
       rewrite (cbor_raw_match 1.0R res (Ghost.reveal xh))
         as (cbor_raw_match 1.0R (CBOR_Case_String str) (Ghost.reveal xh));
       cbor_raw_match_string_unfold_no_trade str;
-      with v' . assert (S.pts_to str.cbor_string_ptr #(1.0R *. str.cbor_string_perm) v');
-      rewrite (S.pts_to str.cbor_string_ptr #(1.0R *. str.cbor_string_perm) v')
+      with v' . assert (S.pts_to (to_slice str.cbor_string_ptr) #(1.0R *. str.cbor_string_perm) v');
+      rewrite (S.pts_to (to_slice str.cbor_string_ptr) #(1.0R *. str.cbor_string_perm) v')
         as (S.pts_to s #(p /. 2.0R) v');
       S.gather s;
       // gather gives: S.pts_to s #(p /. 2.0R +. p /. 2.0R) v ** pure (v == v')
