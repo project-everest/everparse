@@ -1,7 +1,6 @@
 module LowParse.Pulse.BoundedIntLE
 #lang-pulse
 include LowParse.Spec.BoundedInt
-friend LowParse.Spec.BoundedInt
 open Pulse.Lib.Pervasives
 open LowParse.Pulse.Base
 
@@ -19,7 +18,7 @@ let serialize_bounded_integer_le_unfold
   (n: bounded_integer sz)
 : Lemma
   (bare_serialize (serialize_bounded_integer_le sz) n == SpecE.n_to_le sz (U32.v n))
-= ()
+= serialize_bounded_integer_le_spec sz n
 
 let serialize_bounded_integer_le_length
   (sz: integer_size)

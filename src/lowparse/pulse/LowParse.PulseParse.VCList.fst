@@ -706,6 +706,10 @@ let nil_of_length_zero (#a: Type) (l: list a)
 : Lemma (requires L.length l == 0) (ensures l == [])
 = ()
 
+let cons_of_length_pos (#a: Type) (l: list a)
+: Lemma (requires L.length l > 0) (ensures Cons? l)
+= ()
+
 let rec splitAt_index_hd_vc (#a:Type) (i:nat) (l:list a)
   : Lemma (requires i < L.length l)
     (ensures (L.lemma_splitAt_snd_length i l; L.hd (snd (L.splitAt i l)) == L.index l i))
@@ -793,26 +797,36 @@ ensures
       assert (PPB.pts_to_parsed (parse_nlist m p) cur #pm_cur rem **
               V.pts_to vec s1 **
               SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) s1 (Ghost.reveal sl) 0 (SZ.v i));
+    splitAt_index_hd_vc (SZ.v i) (Ghost.reveal fl);
+    splitAt_tl_vc (SZ.v i) (Ghost.reveal fl);
+    L.lemma_splitAt_snd_length (SZ.v i) (Ghost.reveal fl);
+    assert (pure (Ghost.reveal rem == snd (L.splitAt (SZ.v i) (Ghost.reveal fl))));
+    assert (pure (m > 0));
+    (* Re-express the remaining list as [snd (splitAt i fl)] via a let-bound nlist.
+       This makes [List.Tot.hd] below generate a specific (rather than generic)
+       [Cons?] proof obligation, which is discharged from [m > 0]. *)
+    let remc : Ghost.erased (nlist m eh) =
+      Ghost.hide (snd (L.splitAt (SZ.v i) (Ghost.reveal fl)) <: nlist m eh);
+    rewrite (PPB.pts_to_parsed (parse_nlist m p) cur #pm_cur rem)
+      as (PPB.pts_to_parsed (parse_nlist m p) cur #pm_cur remc);
     let (hd, tl) = nlist_hd_tl sq j (Ghost.hide (m <: pos)) cur;
-    unfold (nlist_hd_tl_post p sq m cur pm_cur rem (hd, tl));
-    unfold (nlist_hd_tl_post' p sq m cur pm_cur rem hd tl);
+    unfold (nlist_hd_tl_post p sq m cur pm_cur remc (hd, tl));
+    unfold (nlist_hd_tl_post' p sq m cur pm_cur remc hd tl);
     let elx = w hd;
     V.op_Array_Assignment vec i elx;
     with s1'. assert (V.pts_to vec s1');
     SM.seq_seq_match_rewrite_seq (PPB.vmatch_conv elem_vmatch elem_conv) s1 s1' (Ghost.reveal sl) (Ghost.reveal sl) 0 (SZ.v i);
-    splitAt_index_hd_vc (SZ.v i) (Ghost.reveal fl);
     Seq.lemma_seq_of_list_index (Ghost.reveal fl) (SZ.v i);
-    splitAt_tl_vc (SZ.v i) (Ghost.reveal fl);
-    rewrite ((PPB.vmatch_conv elem_vmatch elem_conv) elx (List.Tot.hd (Ghost.reveal rem)))
+    rewrite ((PPB.vmatch_conv elem_vmatch elem_conv) elx (List.Tot.hd (Ghost.reveal remc)))
       as ((PPB.vmatch_conv elem_vmatch elem_conv) (Seq.index s1' (SZ.v i)) (Seq.index (Ghost.reveal sl) (SZ.v i)));
     SM.seq_seq_match_enqueue_right (PPB.vmatch_conv elem_vmatch elem_conv) s1' (Ghost.reveal sl) 0 (SZ.v i) (Seq.index s1' (SZ.v i)) (Seq.index (Ghost.reveal sl) (SZ.v i));
     Trade.elim_hyp_l
-      (PPB.pts_to_parsed p hd #(pm_cur /. 2.0R) (List.Tot.hd (Ghost.reveal rem)))
-      (PPB.pts_to_parsed (parse_nlist (m - 1) p) tl #(pm_cur /. 2.0R) (List.Tot.tl (Ghost.reveal rem)))
-      (PPB.pts_to_parsed (parse_nlist m p) cur #pm_cur rem);
+      (PPB.pts_to_parsed p hd #(pm_cur /. 2.0R) (List.Tot.hd (Ghost.reveal remc)))
+      (PPB.pts_to_parsed (parse_nlist (m - 1) p) tl #(pm_cur /. 2.0R) (List.Tot.tl (Ghost.reveal remc)))
+      (PPB.pts_to_parsed (parse_nlist m p) cur #pm_cur remc);
     Trade.trans
-      (PPB.pts_to_parsed (parse_nlist (m - 1) p) tl #(pm_cur /. 2.0R) (List.Tot.tl (Ghost.reveal rem)))
-      (PPB.pts_to_parsed (parse_nlist m p) cur #pm_cur rem)
+      (PPB.pts_to_parsed (parse_nlist (m - 1) p) tl #(pm_cur /. 2.0R) (List.Tot.tl (Ghost.reveal remc)))
+      (PPB.pts_to_parsed (parse_nlist m p) cur #pm_cur remc)
       (PPB.pts_to_parsed (parse_nlist (Ghost.reveal gn) p) input #pm v);
     pcur := tl;
     pi := SZ.add i 1sz;

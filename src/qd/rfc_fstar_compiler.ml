@@ -538,6 +538,25 @@ let pulse_leaf_writer_name = function
   | "Fail" -> "(LPC.l2r_leaf_write_false ())"
   | t -> sprintf "%s_writer" (String.uncapitalize_ascii t)
 
+(* The pure structural [leaf_size] (LowParse.Pulse.Base.leaf_size) expression for
+   a base/leaf field type, parallel to [pulse_leaf_writer_name]. Constant-size
+   leaves use [leaf_size_constant_size] (the kind-bound squash is discharged by a
+   normalize+SMT tactic); [Empty]/[Fail] map to the dedicated combinators; user
+   types resolve to their emitted [<ty>_leaf_size]. *)
+let pulse_leaf_size_name =
+  let cst s sz = sprintf "(LPS.leaf_size_constant_size %s %dsz (_ by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.smt ())))" s sz in
+  function
+  | "opaque" | "uint8" -> cst "LPI.serialize_u8" 1
+  | "uint16" -> cst "LPI.serialize_u16" 2
+  | "uint16_le" -> cst "LPI.serialize_u16_le" 2
+  | "uint32" -> cst "LPI.serialize_u32" 4
+  | "uint32_le" -> cst "LPI.serialize_u32_le" 4
+  | "uint64" -> cst "LPI.serialize_u64" 8
+  | "Empty" -> "LPC.leaf_size_empty"
+  | "Fail" -> "(LPC.leaf_size_false ())"
+  | t -> sprintf "%s_leaf_size" (String.uncapitalize_ascii t)
+
+
 let assume_some = function
   | None -> failwith "assume_some"
   | Some x -> x
@@ -718,7 +737,6 @@ let emit_copyful_safe_leaf_writer o i n blen =
    leaf writer/size combinators. Works for both constant- and variable-size
    leaf-readable types. *)
 let emit_copyful_safe_leaf_writer_vl o i n =
-  wp o "let %s_leaf_size = PPSL.leaf_size_of_size32 %s_serializer %s_size32 fits_u64_squash (_ by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.smt ()))\n\n" n n n;
   wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
   wp o "let write_%s = PPB.l2r_safe_writer_leaf_vl %s_serializer %s_leaf_size %s_writer\n\n" n n n n;
   register_writer n;
@@ -2219,6 +2237,14 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
   wp o "  [@inline_let] let _ = lemma_synth_%s_inj (); lemma_synth_%s_inv () in\n" n n;
   wp o "  LPC.l2r_leaf_write_synth write_%s%s_key synth_%s synth_%s_inv (fun x -> synth_%s_inv x)\n\n" maybe n n n n;
 
+  (* Pulse: structural leaf_size (parallel to writer) *)
+  wp o "inline_for_extraction let size_%s%s_key : LPS.leaf_size (serialize_%s%s_key) =\n" maybe n maybe n;
+  wp o "  LPS.leaf_size_constant_size serialize_%s%s_key %dsz (_ by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.smt ()))\n\n" maybe n blen;
+  wp i "val %s_leaf_size: LPS.leaf_size %s_serializer\n\n" n n;
+  wp o "let %s_leaf_size =\n" n;
+  wp o "  [@inline_let] let _ = lemma_synth_%s_inj (); lemma_synth_%s_inv () in\n" n n;
+  wp o "  LPC.leaf_size_synth size_%s%s_key synth_%s synth_%s_inv (fun x -> synth_%s_inv x)\n\n" maybe n n n n;
+
   (* Pulse: copyful parser + free *)
   emit_copyful_leaf o i n;
 
@@ -2689,6 +2715,15 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
           wp o "  | %s -> [@inline_let] let u : LPS.l2r_leaf_writer (serialize_%s_cases %s) = %s in u\n" cn n cn (pulse_leaf_writer_name ty)
         ) cl;
       wp o "  | _ -> LPS.l2r_leaf_writer_zero_size _ ()\n\n";
+
+      (* Pulse: structural per-case leaf_size dispatch (parallel to write_%s_cases) *)
+      wp o "inline_for_extraction noextract let size_%s_cases (x:%s)\n" n ktype;
+      wp o "  : LPS.leaf_size (serialize_%s_cases x) =\n  match x with\n" n;
+      List.iter (fun (case, ty) ->
+          let cn = String.capitalize_ascii case in
+          wp o "  | %s -> [@inline_let] let u : LPS.leaf_size (serialize_%s_cases %s) = %s in u\n" cn n cn (pulse_leaf_size_name ty)
+        ) cl;
+      wp o "  | _ -> LPS.leaf_size_zero_size _ ()\n\n";
   end;
 
   if is_implicit then (
@@ -2875,6 +2910,16 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
             wp o "  LPPS.l2r_leaf_write_sum %s_sum %s_repr_serializer write_%s_key serialize_%s_cases write_%s_cases (_ by (LP.dep_enum_destr_tac ()))\n\n" n tn tn n n;
          | Some dt ->
             wp o "  LPPS.l2r_leaf_write_dsum %s_sum %s_repr_serializer write_maybe_%s_key parse_%s_cases serialize_%s_cases write_%s_cases %s (_ by (LP.dep_enum_destr_tac ()))\n\n" n tn tn n n n (pulse_leaf_writer_name dt));
+
+        (* Pulse: structural sum/dsum leaf_size (parallel to writer) *)
+        wp i "val %s_leaf_size : LPS.leaf_size %s_serializer\n\n" n n;
+        wp o "let %s_leaf_size =\n%s" n same_kind;
+        (match def with
+         | None ->
+            wp o "  LPPS.leaf_size_sum %s_sum %s_repr_serializer size_%s_key serialize_%s_cases size_%s_cases (_ by (LP.dep_enum_destr_tac ())) fits_u64_squash (_ by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.smt ()))\n\n" n tn tn n n;
+         | Some dt ->
+            wp o "  LPPS.leaf_size_dsum %s_sum %s_repr_serializer size_maybe_%s_key parse_%s_cases serialize_%s_cases size_%s_cases %s (_ by (LP.dep_enum_destr_tac ())) fits_u64_squash (_ by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.smt ()))\n\n" n tn tn n n n (pulse_leaf_size_name dt));
+
 
         let annot = if is_private then " : LL.serializer32 "^(scombinator_name n) else "" in
         wl i "val %s_lserializer: LL.serializer32 %s\n\n" n (scombinator_name n);
@@ -3543,7 +3588,9 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         wp i "val %s_reader : PPB.leaf_reader %s_parser\n\n" n n;
         wp o "let %s_reader = %s\n\n" n (pulse_leaf_reader_name ty);
         wp i "val %s_writer : LPS.l2r_leaf_writer %s_serializer\n\n" n n;
-        wp o "let %s_writer = %s\n\n" n (pulse_leaf_writer_name ty)
+        wp o "let %s_writer = %s\n\n" n (pulse_leaf_writer_name ty);
+        wp i "val %s_leaf_size : LPS.leaf_size %s_serializer\n\n" n n;
+        wp o "let %s_leaf_size = %s\n\n" n (pulse_leaf_size_name ty)
       end;
       (* Pulse: copyful parser + free for type aliases *)
       wp i "let %s_lowtype = %s\n\n" n (copyful_lowtype_name ty);
@@ -4542,6 +4589,21 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
         wp o "let %s_writer =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
         wp o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
         wp o "  LPC.l2r_leaf_write_synth %s'_writer synth_%s synth_%s_recip (fun x -> synth_%s_recip x)\n\n" n n n n;
+
+        (* Pulse: structural struct leaf_size (parallel to writer) *)
+        let rec mk_pulse_leaf_size = function
+          | TLeaf (_, ty) -> pulse_leaf_size_name ty
+          | TNode (_, tl, tr) ->
+             let sl = mk_pulse_leaf_size tl in
+             let sr = mk_pulse_leaf_size tr in
+             sprintf "(LPC.leaf_size_pair %s () %s fits_u64_squash (_ by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.smt ())))" sl sr
+        in
+        let pulse_leaf_size = mk_pulse_leaf_size tfields in
+        wp i "val %s_leaf_size : LPS.leaf_size %s_serializer\n\n" n n;
+        wp o "inline_for_extraction let %s'_leaf_size : LPS.leaf_size %s'_serializer = %s\n\n" n n pulse_leaf_size;
+        wp o "let %s_leaf_size =\n  [@inline_let] let _ = synth_%s_injective () in\n" n n;
+        wp o "  [@inline_let] let _ = synth_%s_inverse () in\n" n;
+        wp o "  LPC.leaf_size_synth %s'_leaf_size synth_%s synth_%s_recip (fun x -> synth_%s_recip x)\n\n" n n n n;
       end;
 
       let serializer32 = combinator lscombinator_name "LL.serialize32_nondep_then" in

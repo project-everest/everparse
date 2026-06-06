@@ -144,24 +144,6 @@ i
 
 let parse_bounded_integer_le_eq i input = ()
 
-inline_for_extraction
-let synth_u16_le
-  (x: bounded_integer 2)
-: Tot U16.t
-= Cast.uint32_to_uint16 x
-
-let synth_u16_le_injective : squash (synth_injective synth_u16_le) = ()
-
-let parse_u16_le = parse_bounded_integer_le 2 `parse_synth` synth_u16_le
-
-inline_for_extraction
-let synth_u32_le
-  (x: bounded_integer 4)
-: Tot U32.t
-= x
-
-let parse_u32_le = parse_bounded_integer_le 4 `parse_synth` synth_u32_le
-
 let serialize_bounded_integer_le'
   (sz: integer_size)
 : Tot (bare_serializer (bounded_integer sz))
@@ -194,35 +176,7 @@ sz
 = serialize_bounded_integer_le_correct sz;
   serialize_bounded_integer_le' sz
 
-inline_for_extraction
-let synth_u16_le_recip
-  (x: U16.t)
-: Tot (bounded_integer 2)
-= Cast.uint16_to_uint32 x
-
-let synth_u16_le_inverse : squash (synth_inverse synth_u16_le synth_u16_le_recip) = ()
-
-let serialize_u16_le : serializer parse_u16_le =
-  serialize_synth
-    _
-    synth_u16_le
-    (serialize_bounded_integer_le 2)
-    synth_u16_le_recip
-    ()
-
-inline_for_extraction
-let synth_u32_le_recip
-  (x: U32.t)
-: Tot (bounded_integer 4)
-= x
-
-let serialize_u32_le =
-  serialize_synth
-    _
-    synth_u32_le
-    (serialize_bounded_integer_le 4)
-    synth_u32_le_recip
-    ()
+let serialize_bounded_integer_le_spec sz x = ()
 
 let parse_bounded_int32
   min max
