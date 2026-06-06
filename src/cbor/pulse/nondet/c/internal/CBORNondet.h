@@ -29,7 +29,7 @@ FStar_Pervasives_Native_option__size_t;
 bool
 CBOR_Pulse_Raw_EverParse_Nondet_Gen_impl_check_map_depth_aux(
   size_t bound,
-  Pulse_Lib_Slice_slice__uint8_t *pl,
+  byte_slice *pl,
   size_t n1
 );
 
@@ -63,12 +63,7 @@ CBOR_Pulse_Raw_EverParse_Nondet_Compare_compare_cbor_raw_basic_fuel_map(
   cbor_raw x2
 );
 
-size_t
-CBOR_Pulse_Raw_EverParse_Serialize_ser_(
-  cbor_raw x_,
-  Pulse_Lib_Slice_slice__uint8_t out,
-  size_t offset
-);
+size_t CBOR_Pulse_Raw_EverParse_Serialize_ser_(cbor_raw x_, byte_slice out, size_t offset);
 
 bool CBOR_Pulse_Raw_EverParse_Serialize_siz_(cbor_raw x_, size_t *out);
 
@@ -76,9 +71,9 @@ FStar_Pervasives_Native_option__bool
 CBOR_Pulse_Raw_EverParse_Nondet_Basic_impl_check_equiv_map_hd_basic(
   FStar_Pervasives_Native_option__size_t map_bound,
   size_t n1,
-  Pulse_Lib_Slice_slice__uint8_t l1,
+  byte_slice l1,
   size_t n2,
-  Pulse_Lib_Slice_slice__uint8_t l2
+  byte_slice l2
 );
 
 #if defined(__cplusplus)

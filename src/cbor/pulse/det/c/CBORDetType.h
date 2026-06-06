@@ -16,6 +16,13 @@ typedef struct CBOR_Spec_Raw_Base_raw_uint64_s
 }
 CBOR_Spec_Raw_Base_raw_uint64;
 
+typedef struct byte_slice_s
+{
+  uint8_t *elt;
+  size_t len;
+}
+byte_slice;
+
 typedef struct cbor_int_s
 {
   uint8_t cbor_int_type;
@@ -24,25 +31,18 @@ typedef struct cbor_int_s
 }
 cbor_int;
 
-typedef struct Pulse_Lib_Slice_slice__uint8_t_s
-{
-  uint8_t *elt;
-  size_t len;
-}
-Pulse_Lib_Slice_slice__uint8_t;
-
 typedef struct cbor_string_s
 {
   uint8_t cbor_string_type;
   uint8_t cbor_string_size;
-  Pulse_Lib_Slice_slice__uint8_t cbor_string_ptr;
+  byte_slice cbor_string_ptr;
 }
 cbor_string;
 
 typedef struct cbor_tagged_serialized_s
 {
   CBOR_Spec_Raw_Base_raw_uint64 cbor_tagged_serialized_tag;
-  Pulse_Lib_Slice_slice__uint8_t cbor_tagged_serialized_ptr;
+  byte_slice cbor_tagged_serialized_ptr;
 }
 cbor_tagged_serialized;
 
@@ -81,7 +81,7 @@ LowParse_PulseParse_Iterator_Type_base_mixed_list__CBOR_Pulse_Raw_EverParse_Type
     struct
     {
       size_t count;
-      Pulse_Lib_Slice_slice__uint8_t payload;
+      byte_slice payload;
     }
     case_Serialized;
   }
@@ -152,7 +152,7 @@ LowParse_PulseParse_Iterator_Type_base_mixed_list__CBOR_Pulse_Raw_EverParse_Type
     struct
     {
       size_t count;
-      Pulse_Lib_Slice_slice__uint8_t payload;
+      byte_slice payload;
     }
     case_Serialized;
   }

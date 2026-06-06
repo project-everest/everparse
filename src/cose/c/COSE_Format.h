@@ -19,6 +19,12 @@ Parser for evercddl_bool
 */
 bool COSE_Format_parse_bool(cbor_det_t c);
 
+typedef struct Pulse_Lib_Slice_slice__uint8_t_s
+{
+  uint8_t *elt;
+  size_t len;
+}
+Pulse_Lib_Slice_slice__uint8_t;
 
 /**
 Serializer for evercddl_bool
