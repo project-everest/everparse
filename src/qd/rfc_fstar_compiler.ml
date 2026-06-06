@@ -1206,7 +1206,39 @@ let emit_copyful_vclist o i n ty low high repr_t =
   wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n" n n n n;
   wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
   wp o "  PPVCL.copyful_parse_vclist %dul %dul %s %s %s %s () fits_u64_squash\n\n" low high (pulse_jumper_name repr_t) (pulse_leaf_reader_name repr_t) (copyful_read_name ty) (pulse_jumper_name ty);
-  wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> PPVCL.free_vclist (PPB.free_vmatch_conv %s %s %s) x #(Ghost.hide (Ghost.reveal v <: list %s))\n\n" n n (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty) (compile_type ty)
+  wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> PPVCL.free_vclist (PPB.free_vmatch_conv %s %s %s) x #(Ghost.hide (Ghost.reveal v <: list %s))\n\n" n n (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty) (compile_type ty);
+  (* Pulse: copyful safe WRITER (write_<n>) for the element-count-framed (vclist)
+     list. The count header is a bcvli over U32; the payload bytes coincide with
+     [serialize_list] bytes, so the combinator writes the count then the list body.
+     Gated on the element type having a graceful writer. Only bitcoin_varint count
+     headers are supported (bcvli leaf writer). *)
+  if !emit_pulse && repr_t = "bitcoin_varint" && copyful_writer_available ty then begin
+    wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+    wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n" n n n n;
+    wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name repr_t);
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
+    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" low;
+    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" high;
+    wp o "  PPVCL.l2r_safe_writer_vclist (FStar.UInt32.v %dul) (FStar.SizeT.uint_to_t %d) (FStar.UInt32.v %dul) (FStar.SizeT.uint_to_t %d) %s PPBCVLI.bcvli_size (PPBCVLI.l2r_leaf_write_bcvli ()) %s %s ()\n\n" low low high high (scombinator_name repr_t) (scombinator_name ty) (copyful_writer_name ty);
+    register_writer n
+  end;
+  (* Pulse: copyful safe SIZE (size_<n>) for the element-count-framed (vclist)
+     list. Same structure as the writer but without an output buffer. Gated on the
+     element type having a graceful size. *)
+  if !emit_pulse && repr_t = "bitcoin_varint" && copyful_size_available ty then begin
+    wp i "val size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+    wp o "let size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv =\n" n n n n;
+    wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name repr_t);
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
+    wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
+    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" low;
+    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" high;
+    wp o "  PPVCL.l2r_safe_size_vclist (FStar.UInt32.v %dul) (FStar.SizeT.uint_to_t %d) (FStar.UInt32.v %dul) (FStar.SizeT.uint_to_t %d) %s PPBCVLI.bcvli_size %s %s ()\n\n" low low high high (scombinator_name repr_t) (scombinator_name ty) (copyful_size_name ty);
+    register_size n
+  end
 
 (* Emit copyful parser (read_<n>) and free (free_<n>) for a byte-length-bounded
    list [ty<low..high>]: a list of [ty] elements framed by a byte-length prefix
