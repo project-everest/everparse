@@ -646,6 +646,10 @@ ensures exists* v' .
       // The out_inv at off1 with l2=[] gives: slice v off1 (length v) `Seq.equal` (sk ++ sv)
       serialize_cbor_map_nil ();
       assert (pure (Seq.equal (serialize_cbor_map l2) Seq.empty));
+      // out_inv' directly states slice v off1 (length v) == sl2 ++ (sk ++ sv);
+      // with l2 == [] (so sl2 is empty) this collapses to sk ++ sv.
+      cbor_raw_map_insert_out_inv_equiv off1 l2 off2 key off3 value v;
+      Seq.append_empty_l (Seq.append (serialize_cbor key) (serialize_cbor value));
       assert (pure (Seq.slice v (SZ.v off1) (Seq.length v) `Seq.equal`
                     Seq.append (serialize_cbor key) (serialize_cbor value)));
       Seq.lemma_split v (SZ.v off1);
