@@ -2377,79 +2377,11 @@ and compile_ite tch o i n sn fn tagn clen cval tt tf al  =
   wp o "let %s_jumper = LPITE.jump_ifthenelse_test parse_%s_param %s_jumper %s_test\n" n n tagt n;
   wp o "  (fun b -> if b then %s else %s) ()\n\n" (pulse_jumper_name tt) (pulse_jumper_name tf);
 
-  (* Intermediate *)
-  wh o "let %s_parser32 = LS.parse32_ifthenelse parse_%s_param %s\n" n n (pcombinator32_name tagt);
-  wh o "  (fun x -> %s_cond x) (fun b -> if b then %s else %s)\n" n (pcombinator32_name tt) (pcombinator32_name tf);
-  wh o "  (fun b -> if b then (fun _ pl -> %s_true pl) else (fun t pl -> %s_false ({ tag = t; value = pl; })))\n\n" ncap ncap;
-  wh o "let %s_serializer32 = LS.serialize32_ifthenelse serialize_%s_param %s\n" n n (scombinator32_name tagt);
-  wh o "  (fun x -> match x with %s_true _ -> %s_cst | %s_false m -> m.tag)\n" ncap n ncap;
-  wh o "  (fun x -> %s_cond x) (fun b -> if b then (fun (%s_true y) -> y) else (fun (%s_false m) -> m.value))\n" n ncap ncap;
-  wh o "  (fun b -> if b then %s else %s)\n\n" (scombinator32_name tt) (scombinator32_name tf);
-  wh o "let %s_size32 = LSZ.size32_ifthenelse serialize_%s_param %s\n" n n (size32_name tagt);
-  wh o "  (fun x -> match x with %s_true _ -> %s_cst | %s_false m -> m.tag)" ncap n ncap;
-  wh o "  (fun x -> %s_cond x) (fun b -> if b then (fun (%s_true y) -> y) else (fun (%s_false m) -> m.value))\n" n ncap ncap;
-  wh o "  (fun b -> if b then %s else %s)\n\n" (size32_name tt) (size32_name tf);
-
-  (* Low *)
-  wl o "inline_for_extraction let test_%s : LL.test_ifthenelse_tag parse_%s_param =" n n;
-  wl o "  fun #_ #_ input pos -> LL.valid_slice_equals_bytes %s_cst input pos\n\n" n;
-  wl o "let %s_validator = LL.validate_ifthenelse parse_%s_param %s\n" n n (validator_name tagt);
-  wl o "  test_%s (fun b -> if b then %s else %s)\n\n" n (validator_name tt) (validator_name tf);
-  wl o "let %s_jumper = LL.jump_ifthenelse parse_%s_param %s\n" n n (jumper_name tagt);
-  wl o "  test_%s (fun b -> if b then %s else %s)\n\n" n (jumper_name tt) (jumper_name tf);
-  wl i "val %s_elim (h:HS.mem) (#rrel: _) (#rel: _) (input:LL.slice rrel rel) (pos: U32.t) : Lemma\n" n;
-  wl i "  (requires (LL.valid %s_parser h input pos))\n" n;
-  wl i "  (ensures (\n    LL.valid %s h input pos /\\ (\n" (pcombinator_name tagt);
-  wl i "    let x = LL.contents %s_parser h input pos in\n" n;
-  wl i "    let y = LL.contents %s h input pos in\n" (pcombinator_name tagt);
-  wl i "    y == (match x with | %s_true _ -> %s_cst | %s_false m -> m.tag))))\n\n" ncap n ncap;
-  wl o "let %s_elim h #_ #_ input pos = LL.valid_ifthenelse_elim parse_%s_param h input pos\n\n" n n;
-  wl i "val %s_test (#rrel: _) (#rel: _) (input:LL.slice rrel rel) (pos: U32.t) : HST.Stack bool\n" n;
-  wl i "  (requires (fun h -> LL.valid %s_parser h input pos))\n" n;
-  wl i "  (ensures (fun h res h' -> B.modifies B.loc_none h h' /\\\n";
-  wl i "    (res == true <==> %s_true? (LL.contents %s_parser h input pos))))\n\n" ncap n;
-  wl o "let %s_test #_ #_ input pos = let h = HST.get () in %s_elim h input pos; test_%s input pos\n\n" n n n;
-  wl i "noextract let %s_clens_tag : LL.clens %s %s = {\n" n n (compile_type tagt);
-  wl i "  LL.clens_cond = (fun x -> True);\n";
-  wl i "  LL.clens_get = (fun x -> (match x with | %s_true _ -> %s_cst | %s_false m -> m.tag));\n\n" ncap n ncap;
-  wl i "}\n\n";
-  wl i "val %s_gaccessor_tag: LL.gaccessor %s_parser %s %s_clens_tag\n\n" n n (pcombinator_name tagt) n;
-  wl o "let %s_gaccessor_tag = LL.gaccessor_ext (LL.gaccessor_ifthenelse_tag serialize_%s_param) %s_clens_tag ()\n\n" n n n;
-  wl i "val %s_accessor_tag: LL.accessor %s_gaccessor_tag\n\n" n n;
-  wl o "let %s_accessor_tag = LL.accessor_ext (LL.accessor_ifthenelse_tag serialize_%s_param) %s_clens_tag ()\n\n" n n n;
-  wl i "noextract let %s_clens_true : LL.clens %s %s = {\n" n n (compile_type tt);
-  wl i "  LL.clens_cond = (fun x -> %s_true? x);\n" ncap;
-  wl i "  LL.clens_get = (fun x -> (match x with %s_true y -> y) <: Ghost %s (requires (%s_true? x)) (ensures (fun _ -> True)));\n}\n\n" ncap (compile_type tt) ncap;
-  wl i "val %s_gaccessor_true: LL.gaccessor %s_parser %s %s_clens_true\n\n" n n (pcombinator_name tt) n;
-  wl i "val %s_accessor_true: LL.accessor %s_gaccessor_true\n\n" n n;
-  wl i "noextract let %s_clens_false : LL.clens %s %s = {\n" n n (compile_type tf);
-  wl i "  LL.clens_cond = (fun x -> %s_false? x);\n" ncap;
-  wl i "  LL.clens_get = (fun x -> (match x with %s_false m -> m.value) <: Ghost %s (requires (%s_false? x)) (ensures (fun _ -> True)));\n}\n\n" ncap (compile_type tf) ncap;
-  wl i "val %s_gaccessor_false: LL.gaccessor %s_parser %s %s_clens_false\n\n" n n (pcombinator_name tf) n;
-  wl i "val %s_accessor_false: LL.accessor %s_gaccessor_false\n\n" n n;
-  wl o "let %s_gaccessor_true = LL.gaccessor_ext (LL.gaccessor_ifthenelse_payload serialize_%s_param true) %s_clens_true ()\n\n" n n n;
-  wl o "let %s_accessor_true = LL.accessor_ext (LL.accessor_ifthenelse_payload serialize_%s_param %s true) %s_clens_true ()\n\n" n n (jumper_name tagt) n;
-  wl o "let %s_gaccessor_false = LL.gaccessor_ext (LL.gaccessor_ifthenelse_payload serialize_%s_param false) %s_clens_false ()\n\n" n n n;
-  wl o "let %s_accessor_false = LL.accessor_ext (LL.accessor_ifthenelse_payload serialize_%s_param %s false) %s_clens_false ()\n\n" n n (jumper_name tagt) n;
-  wl i "val %s_intro_true (h: HS.mem) (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : Lemma\n" n;
-  wl i "  (requires (LL.valid %s h input pos /\\ (\n" (pcombinator_name tagt);
-  wl i "    let x = LL.contents %s h input pos in\n" (pcombinator_name tagt);
-  wl i "    let pos1 = LL.get_valid_pos %s h input pos in\n" (pcombinator_name tagt);
-  wl i "    x == %s_cst /\\ LL.valid %s h input pos1\n" n (pcombinator_name tt);
-  wl i "  ))) (ensures (\n";
-  wl i "    let pos1 = LL.get_valid_pos %s h input pos in\n" (pcombinator_name tagt);
-  wl i "    LL.valid_content_pos %s_parser h input pos (%s_true (LL.contents %s h input pos1)) (LL.get_valid_pos %s h input pos1)\n  ))\n\n" n ncap (pcombinator_name tt) (pcombinator_name tt);
-  wl o "let %s_intro_true h #_ #_ input pos = LL.valid_ifthenelse_intro parse_%s_param h input pos\n\n" n n;
-  wl i "val %s_intro_false (h: HS.mem) (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : Lemma\n" n;
-  wl i "  (requires (LL.valid %s h input pos /\\ (\n" (pcombinator_name tagt);
-  wl i "    let x = LL.contents %s h input pos in\n" (pcombinator_name tagt);
-  wl i "   let pos1 = LL.get_valid_pos %s h input pos in\n" (pcombinator_name tagt);
-  wl i "    x =!= %s_cst /\\ LL.valid %s h input pos1\n" n (pcombinator_name tf);
-  wl i "  ))) (ensures (\n";
-  wl i "    let x = LL.contents %s h input pos in\n" (pcombinator_name tagt);
-  wl i "    let pos1 = LL.get_valid_pos %s h input pos in\n" (pcombinator_name tagt);
-  wl i "    LL.valid_content_pos %s_parser h input pos (%s_false ({ tag = x; value = (LL.contents %s h input pos1) })) (LL.get_valid_pos %s h input pos1)\n  ))\n\n" n ncap (pcombinator_name tf) (pcombinator_name tf);
-  wl o "let %s_intro_false h #_ #_ input pos = LL.valid_ifthenelse_intro parse_%s_param h input pos\n\n" n n;
+  (* SLow (wh) and Low* (wl) backends are intentionally not emitted for
+     if-then-else: this feature is -pulse-only (the driver errors out for the
+     other backends, see prog_has_ifeq in quackyducky.ml). The former code here
+     relied on FStar.Bytes-based combinators (e.g. valid_slice_equals_bytes) that
+     are incompatible with the Seq-based discriminant tag/constant. *)
   ()
 
 and compile_select tch o i n seln tagn tagt taga cl def al =

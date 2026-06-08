@@ -40,7 +40,25 @@ let rfc_pretty ast =
 	let p = rfc_pretty_print ast in
 	print_endline p
 
+(* if-then-else types are -pulse-only: the SLow/Low* backends are not ported
+   for them (see compile_ite). Detect any TypeIfeq in the grammar so the driver
+   can error out cleanly when an unsupported backend is requested. *)
+let field_has_ifeq ((_, t, _, _, _) : struct_field_t) = match t with
+	| TypeIfeq _ -> true
+	| _ -> false
+
+let gemstone_has_ifeq = function
+	| Struct (_, fields, _) -> List.exists field_has_ifeq fields
+	| Typedef f -> field_has_ifeq f
+	| _ -> false
+
+let prog_has_ifeq (ast: prog) = List.exists gemstone_has_ifeq ast
+
 let rfc_fstar ast =
+	if prog_has_ifeq ast && (!emit_high || !emit_low) then begin
+		eprintf "Error: if-then-else types require -pulse; the SLow/Low* backends are unsupported for them.\n";
+		exit 1
+	end;
 	rfc_generate_fstar ast
 
 let rfc_ocaml ast =
