@@ -771,6 +771,41 @@ let emit_copyful_bytes ?writer ?size o i n combinator conv =
      register_size n
    | _ -> ())
 
+(* Seq-native analog of [emit_copyful_bytes]: emits the copyful tag block for an
+  if-then-else discriminant whose high-level value is a plain [Seq.lseq byte
+  clen] (NO FStar.Bytes), using the LowParse.Pulse.SeqBytes combinators. The
+  freeable low representation [PPBY.lvec FStar.UInt8.t] is shared with the
+  FStar.Bytes version; only the vmatch/conv and the read/free/write/size
+  combinators are Seq-native. This is what lets the discriminant constant be
+  built by a total [Seq.seq_of_list] (no [assume]). *)
+let emit_copyful_seqbytes o i n clen =
+  wp i "let %s_lowtype = PPBY.lvec FStar.UInt8.t\n\n" n;
+  wp i "noextract let %s_mid = Seq.seq FStar.UInt8.t\n\n" n;
+  wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop = LSeqB.vmatch_copy_seqbytes\n\n" n n n;
+  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) = LSeqB.seq_flbytes_conv %d\n\n" n n n clen;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
+  wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
+  wp o "let read_%s = LSeqB.copyful_parse_seq_flbytes %d\n\n" n clen;
+  wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> LSeqB.free_copy_seqbytes x #(Ghost.hide (Ghost.reveal v <: Seq.seq FStar.UInt8.t))\n\n" n n;
+  wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+  wp o "let write_%s = LSeqB.l2r_safe_writer_seq_flbytes %d %dsz\n\n" n clen clen;
+  register_writer n;
+  wp i "val size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+  wp o "let size_%s = LSeqB.l2r_safe_size_seq_flbytes %d %dsz\n\n" n clen clen;
+  register_size n
+
+(* Render a hex string (2 chars per byte) as an F* byte-list literal, e.g.
+  "0001ff" -> "0x00uy; 0x01uy; 0xffuy". Used to build the if-then-else
+  discriminant constant via [Seq.seq_of_list] (total, no assume). *)
+let hex_to_uy_list (cval: string) : string =
+  let b = Buffer.create 64 in
+  let nbytes = String.length cval / 2 in
+  for j = 0 to nbytes - 1 do
+   if j > 0 then Buffer.add_string b "; ";
+   Buffer.add_string b (Printf.sprintf "0x%c%cuy" cval.[2*j] cval.[2*j+1])
+  done;
+  Buffer.contents b
+
 (* Emit copyful parser (read_<n>) and free (free_<n>) for a closed sum (tagged
    union) whose payloads are not all leaf-readable: it builds a freshly
    allocated, freeable "owned" low representation [<n>_low] (an inductive type
@@ -1938,6 +1973,25 @@ let write_api o i ?param:(p=None) has_lserializer is_private (md: parser_kind_me
    end
      
   
+(* Emit the if-then-else discriminant tag as a dedicated, spec-only, Seq-based
+   fixed-length-bytes type [tagt = Seq.lseq FStar.UInt8.t clen]. Unlike the
+   generic [opaque[clen]] typedef it does NOT use FStar.Bytes, so the discriminant
+   constant can be built by a total [Seq.seq_of_list] (no [assume]). Emits the
+   spec parser/serializer (over [parse_lseq_bytes]/[serialize_lseq_bytes]),
+   write_api declarations, bytesize, and—under -pulse—the copyful tag block via
+   [emit_copyful_seqbytes]. The SLow/Low [parser32]/[validator] declarations from
+   [write_api] are left undefined on purpose: if-then-else is -pulse only (guarded
+   elsewhere), and under -pulse those [wh]/[wl] writes are no-ops. *)
+let compile_ite_tag o i tagt clen is_private =
+  w i "type %s = Seq.lseq FStar.UInt8.t %d\n\n" tagt clen;
+  write_api o i false is_private MetadataTotal tagt clen clen;
+  w o "noextract let %s_parser = LP.parse_lseq_bytes %d\n\n" tagt clen;
+  w o "noextract let %s_serializer = LP.serialize_lseq_bytes %d\n\n" tagt clen;
+  write_bytesize o is_private tagt;
+  w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == Seq.length x) [SMTPat (%s_bytesize x)]\n\n" tagt tagt tagt tagt;
+  w o "let %s_bytesize_eqn x = ()\n\n" tagt;
+  if !emit_pulse then emit_copyful_seqbytes o i tagt clen
+
 (* binary trees to compile struct fields into log nesting instead of a comb *)
 
 type 'a btree =
@@ -2273,9 +2327,10 @@ and compile_ite tch o i n sn fn tagn clen cval tt tf al  =
   let ncap = String.capitalize_ascii n in
   let tagt = sprintf "%s_%s" sn tagn in
   if clen = 0 then failwith "Tag cannot be empty in if-then-else.";
-  compile_typedef tch o i sn tagn (TypeSimple "opaque") (VectorFixed clen) None al;
+  compile_ite_tag o i tagt clen is_private;
 
-  w i "let %s_cst : %s_%s =\n  let b = BY.bytes_of_hex \"%s\" in\n  assume(BY.length b == %d); b\n\n" n sn tagn cval clen;
+  let bl = hex_to_uy_list cval in
+  w i "let %s_cst : %s =\n  assert_norm (L.length [%s] == %d);\n  Seq.seq_of_list [%s]\n\n" n tagt bl clen bl;
   w i "type %s_false = {\n  tag: t:%s_%s{t <> %s_cst};\n  value: %s\n}\n\n" n n tagn n (compile_type tf);
   w i "type %s =\n  | %s_true of %s\n  | %s_false of %s_false\n\n" n ncap (compile_type tt) ncap n;
   write_api o i false is_private li.meta n (clen+li.min_len) (clen+li.max_len);
@@ -4987,6 +5042,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp i "module PPFD = LowParse.PulseParse.FLData\n";
   wp i "module LPPS = LowParse.Pulse.Sum\n";
   wp i "module PPSL = LowParse.PulseParse.SizeLeaf\n";
+  wp i "module LSeqB = LowParse.Pulse.SeqBytes\n";
   (List.iter (w i "%s\n") (List.rev fsti));
   w i "\n";
 
@@ -5030,6 +5086,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp o "module PPFD = LowParse.PulseParse.FLData\n";
   wp o "module LPPS = LowParse.Pulse.Sum\n";
   wp o "module PPSL = LowParse.PulseParse.SizeLeaf\n";
+  wp o "module LSeqB = LowParse.Pulse.SeqBytes\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
 
