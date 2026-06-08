@@ -2025,6 +2025,38 @@ let type_channel tch i = match tch with
   | None -> i
   | Some tch -> tch
 
+(* Emit the copyful (owned read/free/write/size + lowtype/mid/vmatch/conv)
+   interface for an if-then-else type [n] (tag type [tagt]; branch payload types
+   [tt] for the true arm, [tf] for the false arm), routed through the
+   LowParse.PulseParse.IfThenElse copyful combinators. This is what lets an
+   if-then-else type be used as a field of an enclosing copyful struct (the
+   struct's own [_lowtype]/[_vmatch]/[_conv]/[read_]/[free_] compose the field's).
+   Mirrors [emit_copyful_seqbytes] (the tag) / [emit_copyful_owned_sum] (a closed
+   sum) but over [parse_ifthenelse]/[serialize_ifthenelse].
+   REQUIRES [parse_<n>_param] and [<n>_cond] to be in the INTERFACE: the
+   transparent [<n>_vmatch]/[<n>_conv] reference them. -pulse-only. *)
+let emit_copyful_ite o i n tagt tt tf =
+  (* per-branch payload type/vmatch/conv families: payload b = if b then tt else tf *)
+  let fam f = sprintf "(fun b -> if b then %s else %s)" (f tt) (f tf) in
+  wp i "let %s_lowtype = LPITE.ite_lowtype %s_lowtype %s\n\n" n tagt (fam copyful_lowtype_name);
+  wp i "noextract let %s_mid = LPITE.ite_mid %s_mid %s\n\n" n tagt (fam copyful_mid_name);
+  wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop = LPITE.vmatch_ite %s_vmatch %s_cond %s_conv %s\n\n" n n n tagt n tagt (fam copyful_vmatch_name);
+  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) = LPITE.ite_conv parse_%s_param %s_conv %s\n\n" n n n n tagt (fam copyful_conv_name);
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
+  wp o "let read_%s = LPITE.copyful_parse_ifthenelse parse_%s_param %s_jumper %s_test read_%s\n  (fun b -> if b then %s else %s) ()\n\n" n n tagt n tagt (copyful_read_name tt) (copyful_read_name tf);
+  wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
+  wp o "let free_%s = LPITE.free_ifthenelse free_%s\n  (fun b -> if b then %s else %s)\n\n" n tagt (copyful_free_name tt) (copyful_free_name tf);
+  if copyful_writer_available tt && copyful_writer_available tf then begin
+    wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+    wp o "let write_%s = LPITE.l2r_safe_writer_ifthenelse parse_%s_param serialize_%s_param write_%s\n  (fun b -> if b then %s else %s)\n\n" n n n tagt (copyful_writer_name tt) (copyful_writer_name tf);
+    register_writer n
+  end;
+  if copyful_size_available tt && copyful_size_available tf then begin
+    wp i "val size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+    wp o "let size_%s = LPITE.l2r_safe_size_ifthenelse fits_u64_squash parse_%s_param serialize_%s_param size_%s\n  (fun b -> if b then %s else %s)\n\n" n n n tagt (copyful_size_name tt) (copyful_size_name tf);
+    register_size n
+  end
+
 let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
   let is_open = has_attr al "open" in
   let is_private = has_attr al "private" in
@@ -2344,19 +2376,24 @@ and compile_ite tch o i n sn fn tagn clen cval tt tf true_ctor_opt false_ctor_op
   w i "type %s =\n  | %s of %s\n  | %s of %s_false\n\n" n true_ctor (compile_type tt) false_ctor n;
   write_api o i false is_private li.meta n (clen+li.min_len) (clen+li.max_len);
 
-  (* Spec *)
-  w o "inline_for_extraction let %s_cond (x:%s_%s) : Tot bool = x = %s_cst\n\n" n n tagn n;
-  w o "inline_for_extraction let %s_payload (b:bool) : Tot Type =\n  if b then %s else %s\n\n" n (compile_type tt) (compile_type tf);
-  w o "inline_for_extraction let parse_%s_payload (b:bool) : Tot (k: LP.parser_kind & LP.parser k (%s_payload b)) =\n" n n;
-  w o "  if b then (| _ , %s |) else (| _, %s |)\n\n" (pcombinator_name tt) (pcombinator_name tf);
-  w o "inline_for_extraction let %s_synth (x:%s_%s) (y:%s_payload (%s_cond x)) : Tot %s =\n" n n tagn n n n;
-  w o "  if %s_cond x then %s y else %s ({ tag = x; value = y })\n\n" n true_ctor false_ctor;
-  w o "inline_for_extraction noextract let parse_%s_param = {\n" n;
-  w o "  LP.parse_ifthenelse_tag_kind = _; LP.parse_ifthenelse_tag_t = _;\n";
-  w o "  LP.parse_ifthenelse_tag_parser = %s; LP.parse_ifthenelse_tag_cond = %s_cond;\n" (pcombinator_name tagt) n;
-  w o "  LP.parse_ifthenelse_payload_t = %s_payload; LP.parse_ifthenelse_payload_parser = parse_%s_payload;\n" n n;
-  w o "  LP.parse_ifthenelse_t = _;  LP.parse_ifthenelse_synth = %s_synth;\n" n;
-  w o "  LP.parse_ifthenelse_synth_injective = (fun t1 x1 t2 x2 -> ());\n}\n\n";
+  (* Spec. The condition, payload type family, synth and the [parse_ifthenelse]
+     parameter record are emitted to the INTERFACE (not the impl): the copyful
+     [<n>_vmatch] (via [<n>_cond]) and [<n>_conv] (via [parse_<n>_param]) are
+     transparent interface definitions referenced by an enclosing copyful
+     struct's own interface, so their dependencies must be interface-visible.
+     (if-then-else is -pulse-only, so this never affects a non-pulse interface.) *)
+  w i "inline_for_extraction let %s_cond (x:%s_%s) : Tot bool = x = %s_cst\n\n" n n tagn n;
+  w i "inline_for_extraction let %s_payload (b:bool) : Tot Type =\n  if b then %s else %s\n\n" n (compile_type tt) (compile_type tf);
+  w i "inline_for_extraction let parse_%s_payload (b:bool) : Tot (k: LP.parser_kind & LP.parser k (%s_payload b)) =\n" n n;
+  w i "  if b then (| _ , %s |) else (| _, %s |)\n\n" (pcombinator_name tt) (pcombinator_name tf);
+  w i "inline_for_extraction let %s_synth (x:%s_%s) (y:%s_payload (%s_cond x)) : Tot %s =\n" n n tagn n n n;
+  w i "  if %s_cond x then %s y else %s ({ tag = x; value = y })\n\n" n true_ctor false_ctor;
+  w i "inline_for_extraction noextract let parse_%s_param = {\n" n;
+  w i "  LP.parse_ifthenelse_tag_kind = _; LP.parse_ifthenelse_tag_t = _;\n";
+  w i "  LP.parse_ifthenelse_tag_parser = %s; LP.parse_ifthenelse_tag_cond = %s_cond;\n" (pcombinator_name tagt) n;
+  w i "  LP.parse_ifthenelse_payload_t = %s_payload; LP.parse_ifthenelse_payload_parser = parse_%s_payload;\n" n n;
+  w i "  LP.parse_ifthenelse_t = _;  LP.parse_ifthenelse_synth = %s_synth;\n" n;
+  w i "  LP.parse_ifthenelse_synth_injective = (fun t1 x1 t2 x2 -> ());\n}\n\n";
   w o "let _ : squash (LP.parse_ifthenelse_kind parse_%s_param == %s_parser_kind) =\n" n n;
   w o "  _ by (FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ())\n\n";
   w o "let %s_parser = LP.parse_ifthenelse parse_%s_param\n\n" n n;
@@ -2385,6 +2422,12 @@ and compile_ite tch o i n sn fn tagn clen cval tt tf true_ctor_opt false_ctor_op
   wp o "  (fun b -> if b then %s else %s) ()\n\n" (pulse_validator_name tt) (pulse_validator_name tf);
   wp o "let %s_jumper = LPITE.jump_ifthenelse_test parse_%s_param %s_jumper %s_test\n" n n tagt n;
   wp o "  (fun b -> if b then %s else %s) ()\n\n" (pulse_jumper_name tt) (pulse_jumper_name tf);
+
+  (* Copyful (owned read/free/write/size + lowtype/mid/vmatch/conv) interface:
+     lets this if-then-else type be used as a field of an enclosing copyful
+     struct. Routes through the LowParse.PulseParse.IfThenElse copyful
+     combinators. -pulse-only. *)
+  if !emit_pulse then emit_copyful_ite o i n tagt tt tf;
 
   (* SLow (wh) and Low* (wl) backends are intentionally not emitted for
      if-then-else: this feature is -pulse-only (the driver errors out for the
