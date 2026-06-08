@@ -2363,6 +2363,20 @@ and compile_ite tch o i n sn fn tagn clen cval tt tf al  =
   w o "let %s_serializer = LP.serialize_ifthenelse serialize_%s_param\n\n" n n;
   write_bytesize o is_private n;
 
+  (* Pulse executable codegen (Part B): the validator and jumper. The 32-byte
+     discriminant tag has no scalar leaf reader, so we use the test-based
+     if-then-else combinators: the discriminant condition (tag = <n>_cst) is
+     computed in place over the validated tag region by [test_ifthenelse_tag_of_seqbytes_eq],
+     whose [seqbytes]-equality bridge is discharged by [seqbytes_cond_prop_lseq_bytes]. *)
+  wp o "let %s_test_cond () : Lemma (LPITE.test_seqbytes_cond_prop parse_%s_param %d %s_cst) =\n" n n clen n;
+  wp o "  LPITE.seqbytes_cond_prop_lseq_bytes %d %s_cst\n\n" clen n;
+  wp o "let %s_test : LPITE.test_ifthenelse_tag parse_%s_param =\n" n n;
+  wp o "  LPITE.test_ifthenelse_tag_of_seqbytes_eq parse_%s_param %dsz %s_cst (%s_test_cond ())\n\n" n clen n n;
+  wp o "let %s_validator = LPITE.validate_ifthenelse_test parse_%s_param %s_validator %s_test\n" n n tagt n;
+  wp o "  (fun b -> if b then %s else %s) ()\n\n" (pulse_validator_name tt) (pulse_validator_name tf);
+  wp o "let %s_jumper = LPITE.jump_ifthenelse_test parse_%s_param %s_jumper %s_test\n" n n tagt n;
+  wp o "  (fun b -> if b then %s else %s) ()\n\n" (pulse_jumper_name tt) (pulse_jumper_name tf);
+
   (* Intermediate *)
   wh o "let %s_parser32 = LS.parse32_ifthenelse parse_%s_param %s\n" n n (pcombinator32_name tagt);
   wh o "  (fun x -> %s_cond x) (fun b -> if b then %s else %s)\n" n (pcombinator32_name tt) (pcombinator32_name tf);
@@ -5043,6 +5057,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp i "module LPPS = LowParse.Pulse.Sum\n";
   wp i "module PPSL = LowParse.PulseParse.SizeLeaf\n";
   wp i "module LSeqB = LowParse.Pulse.SeqBytes\n";
+  wp i "module LPITE = LowParse.PulseParse.IfThenElse\n";
   (List.iter (w i "%s\n") (List.rev fsti));
   w i "\n";
 
@@ -5087,6 +5102,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp o "module LPPS = LowParse.Pulse.Sum\n";
   wp o "module PPSL = LowParse.PulseParse.SizeLeaf\n";
   wp o "module LSeqB = LowParse.Pulse.SeqBytes\n";
+  wp o "module LPITE = LowParse.PulseParse.IfThenElse\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
 

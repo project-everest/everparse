@@ -11,6 +11,8 @@ module Trade = Pulse.Lib.Trade.Util
 module S = Pulse.Lib.Slice
 module LPS = LowParse.Pulse.Base
 module PPB = LowParse.PulseParse.Base
+module R = Pulse.Lib.Reference
+module LSB = LowParse.Spec.SeqBytes
 
 #push-options "--z3rlimit 32"
 
@@ -79,6 +81,274 @@ fn jump_ifthenelse
     jp false input off
   }
 }
+
+#pop-options
+
+(* ========== Leaf-reader-free IfThenElse validators / jumpers ==========
+
+   Variants of validate_ifthenelse / jump_ifthenelse that do NOT require a
+   leaf_reader for the tag parser. Instead they take a `test` function which
+   computes the discriminant condition (p.parse_ifthenelse_tag_cond) in place
+   from the validated tag region. This is needed for tags that are
+   fixed-length byte sequences (Seq.lseq byte clen), which have no scalar
+   leaf reader. *)
+
+inline_for_extraction
+let test_ifthenelse_tag (p: parse_ifthenelse_param) : Tot Type =
+  (input: S.slice byte) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased bytes) ->
+  (offset: SZ.t) ->
+  (off: SZ.t) ->
+  stt bool
+    (pts_to input #pm v ** pure (LPS.validator_success p.parse_ifthenelse_tag_parser offset v off))
+    (fun res -> pts_to input #pm v ** pure (
+      LPS.validator_success p.parse_ifthenelse_tag_parser offset v off /\
+      res == p.parse_ifthenelse_tag_cond (fst (Some?.v (parse p.parse_ifthenelse_tag_parser (Seq.slice v (SZ.v offset) (Seq.length v)))))))
+
+#push-options "--z3rlimit 32"
+
+inline_for_extraction
+fn validate_ifthenelse_test
+  (p: parse_ifthenelse_param)
+  (vt: LPS.validator p.parse_ifthenelse_tag_parser)
+  (test: test_ifthenelse_tag p)
+  (vp: (b: bool) -> Tot (LPS.validator (dsnd (p.parse_ifthenelse_payload_parser b))))
+  (_: squash (p.parse_ifthenelse_tag_kind.parser_kind_subkind == Some ParserStrong))
+: LPS.validator (parse_ifthenelse p)
+=
+  (input: S.slice byte)
+  (poffset: ref SZ.t)
+  (#offset: Ghost.erased SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
+  parse_ifthenelse_eq p sinput;
+  let offset_val = !poffset;
+  let is_valid_tag = vt input poffset;
+  if is_valid_tag {
+    let off = !poffset;
+    let b = test input offset_val off;
+    Seq.lemma_eq_elim
+      (Seq.slice sinput (SZ.v off - SZ.v offset_val) (Seq.length sinput))
+      (Seq.slice v (SZ.v off) (Seq.length v));
+    if b {
+      vp true input poffset
+    } else {
+      vp false input poffset
+    }
+  } else {
+    false
+  }
+}
+
+inline_for_extraction
+fn jump_ifthenelse_test
+  (p: parse_ifthenelse_param)
+  (jt: LPS.jumper p.parse_ifthenelse_tag_parser)
+  (test: test_ifthenelse_tag p)
+  (jp: (b: bool) -> Tot (LPS.jumper (dsnd (p.parse_ifthenelse_payload_parser b))))
+  (_: squash (p.parse_ifthenelse_tag_kind.parser_kind_subkind == Some ParserStrong))
+: LPS.jumper (parse_ifthenelse p)
+=
+  (input: S.slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
+  parse_ifthenelse_eq p sinput;
+  pts_to_len input;
+  let off = jt input offset;
+  let b = test input offset off;
+  Seq.lemma_eq_elim
+    (Seq.slice sinput (SZ.v off - SZ.v offset) (Seq.length sinput))
+    (Seq.slice v (SZ.v off) (Seq.length v));
+  if b {
+    jp true input off
+  } else {
+    jp false input off
+  }
+}
+
+#pop-options
+
+(* ====== A concrete `test` builder for fixed-length-byte tags ====== *)
+
+(* Pure prefix-extension lemma on decidable byte-sequence equality. *)
+let slice_eq_extend (v cst: Seq.seq byte) (lo j: nat)
+  : Lemma
+    (requires (lo + j + 1 <= Seq.length v /\ j + 1 <= Seq.length cst))
+    (ensures (
+      (Seq.slice v lo (lo + j + 1) = Seq.slice cst 0 (j + 1)) ==
+      ((Seq.slice v lo (lo + j) = Seq.slice cst 0 j) && (Seq.index v (lo + j) = Seq.index cst j))
+    ))
+= let a1 = Seq.slice v lo (lo + j + 1) in
+  let b1 = Seq.slice cst 0 (j + 1) in
+  let a0 = Seq.slice v lo (lo + j) in
+  let b0 = Seq.slice cst 0 j in
+  if (a0 = b0) && (Seq.index v (lo+j) = Seq.index cst j)
+  then begin
+    assert (Seq.equal a0 b0);
+    introduce forall (i:nat{i < Seq.length a1}). Seq.index a1 i == Seq.index b1 i
+    with begin
+      if i < j then begin
+        assert (Seq.index a1 i == Seq.index v (lo + i));
+        assert (Seq.index a0 i == Seq.index v (lo + i));
+        assert (Seq.index b0 i == Seq.index cst i);
+        assert (Seq.index b1 i == Seq.index cst i)
+      end else ()
+    end;
+    Seq.lemma_eq_intro a1 b1;
+    assert (a1 = b1)
+  end else begin
+    if (a1 = b1) then begin
+      assert (Seq.equal a1 b1);
+      introduce forall (i:nat{i < Seq.length a0}). Seq.index a0 i == Seq.index b0 i
+      with begin
+        assert (Seq.index a0 i == Seq.index v (lo + i));
+        assert (Seq.index a1 i == Seq.index v (lo + i));
+        assert (Seq.index b1 i == Seq.index cst i);
+        assert (Seq.index b0 i == Seq.index cst i)
+      end;
+      Seq.lemma_eq_intro a0 b0;
+      assert (a0 = b0);
+      assert (Seq.index a1 j == Seq.index v (lo + j));
+      assert (Seq.index b1 j == Seq.index cst j)
+    end else ()
+  end
+
+(* Generic bridge between an arbitrary tag condition and concrete
+   byte-equality, over an arbitrary strong tag parser. Phrasing the helper
+   over an explicit parser value (rather than a projection of the record)
+   mirrors LowParse.Pulse.Base.validator and avoids Pulse's uvar solver
+   limitation on computation types mentioning record projections. *)
+let seqbytes_cond_prop
+  (#kt: parser_kind) (#tag_t: Type0)
+  (pt: parser kt tag_t)
+  (cond: tag_t -> Tot bool)
+  (clen: nat)
+  (cst: Seq.lseq byte clen)
+: prop =
+  forall (v: bytes) (offset off: SZ.t).
+    LPS.validator_success pt offset v off ==>
+    (SZ.v off - SZ.v offset == clen /\ SZ.v off <= Seq.length v /\
+     cond (fst (Some?.v (parse pt (Seq.slice v (SZ.v offset) (Seq.length v)))))
+       == (Seq.slice v (SZ.v offset) (SZ.v off) = cst))
+
+let seqbytes_cond_prop_elim
+  (#kt: parser_kind) (#tag_t: Type0)
+  (pt: parser kt tag_t)
+  (cond: tag_t -> Tot bool)
+  (clen: nat)
+  (cst: Seq.lseq byte clen)
+  (v: bytes)
+  (offset off: SZ.t)
+: Lemma
+  (requires (seqbytes_cond_prop pt cond clen cst /\ LPS.validator_success pt offset v off))
+  (ensures (
+    SZ.v off - SZ.v offset == clen /\ SZ.v off <= Seq.length v /\
+    cond (fst (Some?.v (parse pt (Seq.slice v (SZ.v offset) (Seq.length v)))))
+      == (Seq.slice v (SZ.v offset) (SZ.v off) = cst)))
+= ()
+
+(* Discharge of [seqbytes_cond_prop] for the concrete case the QuackyDucky
+   if-then-else code generator emits: the tag parser is [parse_lseq_bytes clen]
+   (fixed-length raw bytes) and the condition is byte-equality with a constant
+   [cst]. The code generator's [parse_<n>_param.parse_ifthenelse_tag_parser] and
+   [.parse_ifthenelse_tag_cond] reduce (definitionally) to exactly these, so
+   [test_seqbytes_cond_prop parse_<n>_param clen cst] is discharged by applying
+   this lemma. *)
+let seqbytes_cond_prop_lseq_bytes
+  (clen: nat)
+  (cst: Seq.lseq byte clen)
+: Lemma (seqbytes_cond_prop (LSB.parse_lseq_bytes clen) (fun (x: Seq.lseq byte clen) -> x = cst) clen cst)
+= introduce forall (v: bytes) (offset off: SZ.t).
+    LPS.validator_success (LSB.parse_lseq_bytes clen) offset v off ==>
+    (SZ.v off - SZ.v offset == clen /\ SZ.v off <= Seq.length v /\
+     ((fun (x: Seq.lseq byte clen) -> x = cst)
+       (fst (Some?.v (parse (LSB.parse_lseq_bytes clen) (Seq.slice v (SZ.v offset) (Seq.length v))))))
+       == (Seq.slice v (SZ.v offset) (SZ.v off) = cst))
+  with introduce _ ==> _
+  with _. (
+    let s = Seq.slice v (SZ.v offset) (Seq.length v) in
+    Seq.lemma_eq_intro (Seq.slice s 0 clen) (Seq.slice v (SZ.v offset) (SZ.v off))
+  )
+
+(* The task-facing bridge proposition, in terms of the IfThenElse record.
+   Definitionally equal to the generic [seqbytes_cond_prop] applied to the
+   record's tag parser and condition. *)
+let test_seqbytes_cond_prop
+  (p: parse_ifthenelse_param)
+  (clen: nat)
+  (cst: Seq.lseq byte clen)
+: prop =
+  seqbytes_cond_prop p.parse_ifthenelse_tag_parser p.parse_ifthenelse_tag_cond clen cst
+
+#push-options "--z3rlimit 32"
+
+inline_for_extraction
+fn seqbytes_eq_test
+  (#kt: parser_kind) (#tag_t: Type0)
+  (pt: parser kt tag_t)
+  (cond: tag_t -> Tot bool)
+  (clen: SZ.t)
+  (cst: Seq.lseq byte (SZ.v clen))
+  (sq: squash (seqbytes_cond_prop pt cond (SZ.v clen) cst))
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (offset: SZ.t)
+  (off: SZ.t)
+  requires pts_to input #pm v ** pure (LPS.validator_success pt offset v off)
+  returns res: bool
+  ensures pts_to input #pm v ** pure (
+    LPS.validator_success pt offset v off /\
+    res == cond (fst (Some?.v (parse pt (Seq.slice v (SZ.v offset) (Seq.length v))))))
+{
+  pts_to_len input;
+  seqbytes_cond_prop_elim pt cond (SZ.v clen) cst v offset off;
+  Seq.lemma_eq_elim (Seq.slice v (SZ.v offset) (SZ.v offset)) (Seq.slice cst 0 0);
+  let mut pres = true;
+  let mut pj = 0sz;
+  while (let j = !pj; SZ.lt j clen)
+  invariant exists* eqv jv. (
+    pts_to input #pm v **
+    R.pts_to pres eqv **
+    R.pts_to pj jv **
+    pure (
+      SZ.v jv <= SZ.v clen /\
+      SZ.v off - SZ.v offset == SZ.v clen /\
+      SZ.v offset + SZ.v clen <= Seq.length v /\
+      eqv == (Seq.slice v (SZ.v offset) (SZ.v offset + SZ.v jv) = Seq.slice cst 0 (SZ.v jv))
+    )
+  )
+  {
+    let j = !pj;
+    let cur = !pres;
+    let bi = input.(SZ.add offset j);
+    let ci = Seq.index cst (SZ.v j);
+    slice_eq_extend v cst (SZ.v offset) (SZ.v j);
+    pres := cur && (bi = ci);
+    pj := SZ.add j 1sz;
+  };
+  let res = !pres;
+  Seq.lemma_eq_elim (Seq.slice cst 0 (SZ.v clen)) cst;
+  res
+}
+
+inline_for_extraction
+let test_ifthenelse_tag_of_seqbytes_eq
+  (p: parse_ifthenelse_param)
+  (clen: SZ.t)
+  (cst: Seq.lseq byte (SZ.v clen))
+  (sq: squash (test_seqbytes_cond_prop p (SZ.v clen) cst))
+: test_ifthenelse_tag p
+= fun input #pm #v offset off ->
+    seqbytes_eq_test
+      p.parse_ifthenelse_tag_parser p.parse_ifthenelse_tag_cond
+      clen cst sq input #pm #v offset off
 
 #pop-options
 
