@@ -48,8 +48,9 @@ and print_struct_fields p (fl:struct_field_t list) =
 
 and print_type p = function
 	| TypeSimple t -> t
-        | TypeIfeq (n, c, t, f) ->
-           sprintf "if %s = %s %s else %s" n c t f
+        | TypeIfeq (n, c, tc, t, fc, f) ->
+           let lbl o = match o with None -> "" | Some s -> sprintf "%s : " s in
+           sprintf "if %s = %s %s%s else %s%s" n c (lbl tc) t (lbl fc) f
   | TypeSelect (n, cl, def) ->
     sprintf "select(%s) {\n%s%s%s}" n
     (print_select_fields (p+1) cl)

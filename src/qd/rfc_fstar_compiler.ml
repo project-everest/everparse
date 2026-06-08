@@ -18,7 +18,7 @@ type tag_select_t =
   attr list * attr list * typ * field * field * typ * (typ * typ) list * typ option
 
 type ite_t =
-  attr list * attr list * typ * typ * typ * int * string * typ * typ
+  attr list * attr list * typ * typ * typ * int * string * typ * typ * (string option) * (string option)
 
 let string_of_parser_kind_metadata = function
   | MetadataTotal -> "total"
@@ -155,7 +155,7 @@ let ends_with str suff =
   String.sub str (str_len - suff_len) suff_len = suff
 
 let rec sizeof = function
-  | TypeIfeq(tag, v, t, f) ->
+  | TypeIfeq(tag, v, _, t, _, f) ->
     let lit = sizeof (TypeSimple t) in
     let lif = sizeof (TypeSimple f) in
     {len_len = 0; min_len = min lit.min_len lif.min_len; max_len = max lit.max_len lif.max_len;
@@ -1832,7 +1832,7 @@ let add_field al (tn:typ) (n:field) (ty:type_t) (v:vector_t) =
 
 let typedep = function
   | TypeSimple ty -> [ty]
-  | TypeIfeq (tag, v, t, f) -> [t; f]
+  | TypeIfeq (tag, v, _, t, _, f) -> [t; f]
   | TypeSelect (_, l, o) ->
     let l = List.map (fun (_, ty)->ty) l in
     match o with None -> l | Some ty -> ty :: l
@@ -2321,18 +2321,27 @@ and compile_abstract tch o i n dn min max attrs =
       wl i "val %s_lserializer: LL.serializer32 %s\n\n" n (scombinator_name n);
   end
   
-and compile_ite tch o i n sn fn tagn clen cval tt tf al  =
+and compile_ite tch o i n sn fn tagn clen cval tt tf true_ctor_opt false_ctor_opt al  =
   let is_private = has_attr al "private" in
   let li = get_leninfo (sn^"@"^fn) in
   let ncap = String.capitalize_ascii n in
   let tagt = sprintf "%s_%s" sn tagn in
   if clen = 0 then failwith "Tag cannot be empty in if-then-else.";
+  (* Resolve the ADT constructor names: a custom label (capitalized) when given,
+     otherwise the default <N>_true / <N>_false. The <n>_false record-type name
+     is independent and always stays <n>_false. *)
+  let true_ctor = match true_ctor_opt with
+    | Some s -> String.capitalize_ascii s | None -> ncap ^ "_true" in
+  let false_ctor = match false_ctor_opt with
+    | Some s -> String.capitalize_ascii s | None -> ncap ^ "_false" in
+  if true_ctor = false_ctor then
+    failwith (sprintf "if-then-else %s: the true and false constructors must have distinct names (got %s)" n true_ctor);
   compile_ite_tag o i tagt clen is_private;
 
   let bl = hex_to_uy_list cval in
   w i "let %s_cst : %s =\n  assert_norm (L.length [%s] == %d);\n  Seq.seq_of_list [%s]\n\n" n tagt bl clen bl;
   w i "type %s_false = {\n  tag: t:%s_%s{t <> %s_cst};\n  value: %s\n}\n\n" n n tagn n (compile_type tf);
-  w i "type %s =\n  | %s_true of %s\n  | %s_false of %s_false\n\n" n ncap (compile_type tt) ncap n;
+  w i "type %s =\n  | %s of %s\n  | %s of %s_false\n\n" n true_ctor (compile_type tt) false_ctor n;
   write_api o i false is_private li.meta n (clen+li.min_len) (clen+li.max_len);
 
   (* Spec *)
@@ -2341,7 +2350,7 @@ and compile_ite tch o i n sn fn tagn clen cval tt tf al  =
   w o "inline_for_extraction let parse_%s_payload (b:bool) : Tot (k: LP.parser_kind & LP.parser k (%s_payload b)) =\n" n n;
   w o "  if b then (| _ , %s |) else (| _, %s |)\n\n" (pcombinator_name tt) (pcombinator_name tf);
   w o "inline_for_extraction let %s_synth (x:%s_%s) (y:%s_payload (%s_cond x)) : Tot %s =\n" n n tagn n n n;
-  w o "  if %s_cond x then %s_true y else %s_false ({ tag = x; value = y })\n\n" n ncap ncap;
+  w o "  if %s_cond x then %s y else %s ({ tag = x; value = y })\n\n" n true_ctor false_ctor;
   w o "inline_for_extraction noextract let parse_%s_param = {\n" n;
   w o "  LP.parse_ifthenelse_tag_kind = _; LP.parse_ifthenelse_tag_t = _;\n";
   w o "  LP.parse_ifthenelse_tag_parser = %s; LP.parse_ifthenelse_tag_cond = %s_cond;\n" (pcombinator_name tagt) n;
@@ -2354,7 +2363,7 @@ and compile_ite tch o i n sn fn tagn clen cval tt tf al  =
   w o "inline_for_extraction let serialize_%s_payload (b:bool) : Tot (LP.serializer (dsnd (parse_%s_param.LP.parse_ifthenelse_payload_parser b))) =\n" n n;
   w o "  if b then %s else %s\n\n" (scombinator_name tt) (scombinator_name tf);
   w o "inline_for_extraction let %s_synth_recip (x:%s) : GTot (t:%s_%s & (%s_payload (%s_cond t))) =\n" n n n tagn n n;
-  w o "  match x with\n  | %s_true y -> (| %s_cst, y |)\n  | %s_false m -> (| m.tag, m.value |)\n\n" ncap n ncap;
+  w o "  match x with\n  | %s y -> (| %s_cst, y |)\n  | %s m -> (| m.tag, m.value |)\n\n" true_ctor n false_ctor;
   w o "inline_for_extraction noextract let serialize_%s_param : LP.serialize_ifthenelse_param parse_%s_param = {\n" n n;
   w o "  LP.serialize_ifthenelse_tag_serializer = %s;\n" (scombinator_name tagt);
   w o "  LP.serialize_ifthenelse_payload_serializer = serialize_%s_payload;\n" n;
@@ -4863,14 +4872,14 @@ and normalize_symboliclen tch sn (fl:struct_field_t list) : struct_field_t list 
       let h =
         match ty with
         | TypeSimple ty -> (al @ al', TypeSimple ty, n, VectorVldata tagt, None)
-        | TypeIfeq (itag, cst, tt, tf) ->
+        | TypeIfeq (itag, cst, tc, tt, fc, tf) ->
           let et = sprintf "%s_%s_true" sn n in
           let ef = sprintf "%s_%s_false" sn n in
           let (o, i) = open_files et in
           let (o', i') = open_files ef in
           compile tch o i "" (Typedef (al', TypeSimple tt, et, VectorVldata tagt, None));
           compile tch o' i' "" (Typedef (al', TypeSimple tf, ef, VectorVldata tagt, None));
-          (al @ al', TypeIfeq(itag, cst, et, ef), n, VectorNone, None)
+          (al @ al', TypeIfeq(itag, cst, tc, et, fc, ef), n, VectorNone, None)
         | TypeSelect (sel, cl, def) ->
           let r = ref [] in
           let cl' = List.map (fun (c,t)->
@@ -4901,10 +4910,10 @@ and normalize_select sn (fl:struct_field_t list)
   match fl with
   | [] -> List.rev acc, List.rev acc', List.rev acc''
   | (al, TypeSimple("opaque"), tagn, VectorFixed d, None)
-    :: (al', TypeIfeq(tagn', tagv, tt, tf), ifn, vec, def)
+    :: (al', TypeIfeq(tagn', tagv, tc, tt, fc, tf), ifn, vec, def)
     :: r when tagn = tagn' ->
     let etyp = sprintf "%s_%s" sn ifn in
-    let ite : ite_t = (al, al', sn, ifn, tagn, d, tagv, tt, tf) in
+    let ite : ite_t = (al, al', sn, ifn, tagn, d, tagv, tt, tf, tc, fc) in
     let f' = (al', TypeSimple etyp, ifn, vec, def) in
     normalize_select sn r (f'::acc) acc' (ite::acc'')
   | (al, TypeSimple(tagt), tagn, VectorNone, None)
@@ -4923,7 +4932,7 @@ and subst_of (x:typ) = try SM.find x !subst with _ -> x
 and apply_subst_t (t:type_t) =
   match t with
   | TypeSimple(ty) -> TypeSimple(subst_of ty)
-  | TypeIfeq(tag, v, t, f) -> TypeIfeq(tag, v, subst_of t, subst_of f)
+  | TypeIfeq(tag, v, tc, t, fc, f) -> TypeIfeq(tag, v, tc, subst_of t, fc, subst_of f)
   | TypeSelect(sel, cl, def) ->
     let cl' = List.map (fun (case, ty) -> case, subst_of ty) cl in
     let def' = match def with None -> None | Some ty -> Some (subst_of ty) in
@@ -5063,8 +5072,8 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
     | Typedef(al, ty, n', vec, def) -> compile_typedef tch o i tn n' ty vec def al
     | Struct(al, fl, _) ->
       match normalize_select n fl [] [] [] with
-      | [_, TypeSimple etyp', seln', VectorNone, None], [], [al, al', sn, ifn, tagn, d, tagv, tt, tf] ->
-        compile_ite tch o i n sn ifn tagn d tagv tt tf al
+      | [_, TypeSimple etyp', seln', VectorNone, None], [], [al, al', sn, ifn, tagn, d, tagv, tt, tf, tc, fc] ->
+        compile_ite tch o i n sn ifn tagn d tagv tt tf tc fc al
       | [_, TypeSimple etyp', seln', VectorNone, None], [al, al', etyp, tagn, seln, tagt, cases, def], [] ->
         if etyp' <> etyp || seln' <> seln then failwith "Invalid rewrite of a select (QD bug)";
         compile_select tch o i n seln tagn tagt al cases def al'
@@ -5077,10 +5086,10 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
           w i "(* Internal select() for %s *)\ninclude %s\n\n" etyp (module_name etyp);
           w o "(* Internal select() for %s *)\nopen %s\n\n" etyp (module_name etyp);
         ) sell;
-        List.iter (fun (al, al', sn, ifn, tagn, d, tagv, tt, tf) ->
+        List.iter (fun (al, al', sn, ifn, tagn, d, tagv, tt, tf, tc, fc) ->
           let etyp = sprintf "%s_%s" sn ifn in
           let p = Struct([], [(al, TypeSimple("opaque"), tagn, VectorFixed d, None);
-            (al', TypeIfeq(tagn, tagv, tt, tf), ifn, VectorNone, None)], etyp) in
+            (al', TypeIfeq(tagn, tagv, tc, tt, fc, tf), ifn, VectorNone, None)], etyp) in
           let (o', i') = open_files etyp in
           compile tch o' i' "" p;
           w i "include %s\n\n" (module_name etyp);
