@@ -239,7 +239,7 @@ let size_of_bounded_length bound = function
      then 3
      else 5
   | _ -> failwith "not a has_bounded_length_parsers type"     
-       
+
 let make_combinator_length_header_name combino dup x min max =
   let typename = match x with
     | "asn1_len8"
@@ -561,6 +561,59 @@ let assume_some = function
   | None -> failwith "assume_some"
   | Some x -> x
 
+(* Under -pulse, most byte types are emitted Seq-natively (no FStar.Bytes).
+   The only var-length byte types that still go through the FStar.Bytes-based
+   combinators (compile_vlbytes / the explicit-length-size branch in
+   compile_typedef) are U8.t vectors whose length header is either a
+   bounded/variable encoding (asn1_len, asn1_len8, bitcoin_varint) or a
+   fixed-width integer wider than the value bound requires. The two functions
+   below mirror compile_typedef's leading (ty, vec) rewrite and its dispatch so
+   we can decide, before emitting the module headers, whether a gemstone still
+   references FStar.Bytes under -pulse. The FStar.Bytes module headers are then
+   emitted only for the modules that actually need them, keeping all Seq-native
+   modules (e.g. all of tls.qd.rfc) FStar.Bytes-free. *)
+let typedef_emits_fstar_bytes_pulse tn fn (ty:type_t) vec =
+  try
+    let qname = if tn = "" then String.uncapitalize_ascii fn else tn^"@"^fn in
+    let li = try get_leninfo qname with _ -> sizeof ty in
+    (* mirror compile_typedef's opaque/vldata rewrites *)
+    let (ty, vec) =
+      match ty, vec with
+      | _, VectorFixedCount k ->
+        if li.min_len = li.max_len then (ty, VectorFixed li.max_len) else (ty, vec)
+      | TypeSimple(t), VectorVldata vl when SM.mem (compile_type t) !erased ->
+        let (len_len_min, len_len_max, max_len) = basic_bounds vl in
+        TypeSimple("opaque"),
+        VectorRange(max 0 (li.min_len-len_len_min),
+                    min (assume_some max_len) (max 0 (li.max_len-len_len_max)),
+                    Some vl)
+      | TypeSimple("opaque"), VectorVldata vl ->
+        let (_, _, max_len) = basic_bounds vl in
+        TypeSimple("opaque"), VectorRange(0, assume_some max_len, Some vl)
+      | _ -> ty, vec in
+    match ty with
+    | TypeIfeq _ | TypeSelect _ -> false
+    | TypeSimple ty ->
+      let is_u8 = (try compile_type ty = "U8.t" with _ -> false) in
+      if not is_u8 then false else
+      (match vec with
+       (* compile_vlbytes: bounded/variable length header over U8.t bytes *)
+       | VectorVldata lenty when has_bounded_length_parsers lenty -> true
+       | VectorRange (_, _, Some lenty) when has_bounded_length_parsers lenty -> true
+       (* Seq-native path iff the length header width matches log256 high;
+          otherwise the explicit-length-size branch emits FStar.Bytes. *)
+       | VectorRange (_, high, Some t) ->
+         let (_, lm, _) = basic_bounds t in lm <> log256 high
+       | _ -> false)
+  with _ -> true
+
+let gemstone_uses_fstar_bytes_pulse (p:gemstone_t) =
+  match p with
+  | Typedef (_, ty, fn, vec, _) -> typedef_emits_fstar_bytes_pulse "" fn ty vec
+  | Struct (_, fl, n) ->
+     List.exists (fun (_, ty, fn, vec, _) -> typedef_emits_fstar_bytes_pulse n fn ty vec) fl
+  | _ -> false
+
 (* Is [ty] a base/leaf type whose copyful parser is built from a leaf_reader
    (as opposed to a user-defined type that has its own read_<ty>/free_<ty>)? *)
 let is_copyful_leaf_type = function
@@ -794,6 +847,34 @@ let emit_copyful_seqbytes o i n clen =
   wp o "let size_%s = LSeqB.l2r_safe_size_seq_flbytes %d %dsz\n\n" n clen clen;
   register_size n
 
+(* Seq-native analog of [emit_copyful_bytes] for VARIABLE-length byte types
+   (bounded vlbytes). The high-level value is a plain [Seq.seq FStar.UInt8.t]
+   refinement (NO FStar.Bytes); the freeable low representation [PPBY.lvec
+   FStar.UInt8.t] is shared with the FStar.Bytes version. [combinator] is the
+   copyful_parse_* expression and [conv] the option-conv, both from
+   LowParse.Pulse.SeqBytes. *)
+let emit_copyful_seqbytes_vl ?writer ?size o i n combinator conv =
+  wp i "let %s_lowtype = PPBY.lvec FStar.UInt8.t\n\n" n;
+  wp i "noextract let %s_mid = Seq.seq FStar.UInt8.t\n\n" n;
+  wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop = LSeqB.vmatch_copy_seqbytes\n\n" n n n;
+  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) = %s\n\n" n n n conv;
+  wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
+  wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
+  wp o "let read_%s = %s\n\n" n combinator;
+  wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> LSeqB.free_copy_seqbytes x #(Ghost.hide (Ghost.reveal v <: Seq.seq FStar.UInt8.t))\n\n" n n;
+  (match writer with
+   | Some w when !emit_pulse ->
+     wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+     wp o "let write_%s = %s\n\n" n w;
+     register_writer n
+   | _ -> ());
+  (match size with
+   | Some s when !emit_pulse ->
+     wp i "val size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv\n\n" n n n n;
+     wp o "let size_%s = %s\n\n" n s;
+     register_size n
+   | _ -> ())
+
 (* Render a hex string (2 chars per byte) as an F* byte-list literal, e.g.
   "0001ff" -> "0x00uy; 0x01uy; 0xffuy". Used to build the if-then-else
   discriminant constant via [Seq.seq_of_list] (total, no assume). *)
@@ -883,7 +964,7 @@ let emit_copyful_owned_sum o i n tn cprefix cl =
   wp o "    )\n\n";
   wp o "let %s_gf (m: %s_mid) : PPS.sum_mid %s_sum %s_mid_of_tag =\n  match m with\n" n n n n;
   List.iter (fun (case, ty) ->
-    wp o "  | %s_%s_mid cm -> (| %s, cm |)\n" cprefix case (String.capitalize_ascii case)
+    wp o "  | %s_%s_mid cm -> (| %s_as_enum_key %s, cm |)\n" cprefix case tn (String.capitalize_ascii case)
   ) cl;
   wp o "\n";
   (* per-case copyful parsers (tight conv) *)
@@ -1382,7 +1463,7 @@ let emit_copyful_vldata_list o i n ty min max =
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
     wp o "  PPC.l2r_safe_writer_synth\n";
-    wp o "    ((PPVD.l2r_safe_writer_bounded_vldata_strong_payload %d %dsz %d %dsz %d %dsz (LP.serialize_list _ %s)\n" min min max max (log256 max) (log256 max) (scombinator_name ty);
+    wp o "    ((PPVD.l2r_safe_writer_bounded_vldata_strong_payload %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d %dsz (LP.serialize_list _ %s)\n" min min max max (log256 max) (log256 max) (scombinator_name ty);
     wp o "       (PPLS.l2r_safe_writer_list %s %s ()) fits_u64_squash) <: PPB.l2r_safe_writer _ %s'_serializer _)\n" (scombinator_name ty) (copyful_writer_name ty) n;
     wp o "    synth_%s synth_%s_recip\n\n" n n;
     register_writer n
@@ -1611,7 +1692,7 @@ let emit_copyful_bounded_vldata_payload o i n ty smax =
   if !emit_pulse && copyful_writer_available ty then begin
     wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
     wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n" n n n n;
-    wp o "  PPVD.l2r_safe_writer_bounded_vldata_payload 0 0sz %d %dsz %s %s fits_u64_squash\n\n" smax smax (scombinator_name ty) (copyful_writer_name ty);
+    wp o "  PPVD.l2r_safe_writer_bounded_vldata_payload 0 0sz %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %s %s fits_u64_squash\n\n" smax smax (scombinator_name ty) (copyful_writer_name ty);
     register_writer n
   end
 
@@ -1646,7 +1727,7 @@ let emit_copyful_bounded_vldata_payload_refined o i n ty smax =
     wp o "  %s_copyful_synth_injective ();\n" n;
     wp o "  %s_copyful_synth_inverse ();\n" n;
     wp o "  PPC.l2r_safe_writer_synth\n";
-    wp o "    ((PPVD.l2r_safe_writer_bounded_vldata_strong_payload %d %dsz %d %dsz %d %dsz %s %s fits_u64_squash) <: PPB.l2r_safe_writer _ %s'_serializer _)\n" 0 0 smax smax (log256 smax) (log256 smax) (scombinator_name ty) (copyful_writer_name ty) n;
+    wp o "    ((PPVD.l2r_safe_writer_bounded_vldata_strong_payload %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d %dsz %s %s fits_u64_squash) <: PPB.l2r_safe_writer _ %s'_serializer _)\n" 0 0 smax smax (log256 smax) (log256 smax) (scombinator_name ty) (copyful_writer_name ty) n;
     wp o "    synth_%s synth_%s_recip\n\n" n n;
     register_writer n
   end
@@ -1737,7 +1818,7 @@ let emit_copyful_vlarray o i n ty low high mn mx =
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
     wp o "  PPC.l2r_safe_writer_synth\n";
-    wp o "    ((PPVD.l2r_safe_writer_bounded_vldata_strong_payload %d %dsz %d %dsz %d %dsz (LP.serialize_list _ %s)\n" low low high high (log256 high) (log256 high) (scombinator_name ty);
+    wp o "    ((PPVD.l2r_safe_writer_bounded_vldata_strong_payload %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d %dsz (LP.serialize_list _ %s)\n" low low high high (log256 high) (log256 high) (scombinator_name ty);
     wp o "       (PPLS.l2r_safe_writer_list %s %s ()) fits_u64_squash) <: PPB.l2r_safe_writer _ (LP.serialize_bounded_vldata_strong %d %d (LP.serialize_list _ %s)) _)\n" (scombinator_name ty) (copyful_writer_name ty) low high (scombinator_name ty);
     wp o "    (LP.vldata_to_vlarray %d %d %s %d %d ())\n" low high (scombinator_name ty) mn mx;
     wp o "    (LP.vlarray_to_vldata %d %d %s %d %d ())\n\n" low high (scombinator_name ty) mn mx;
@@ -2038,22 +2119,44 @@ let type_channel tch i = match tch with
 let emit_copyful_ite o i n tagt tt tf =
   (* per-branch payload type/vmatch/conv families: payload b = if b then tt else tf *)
   let fam f = sprintf "(fun b -> if b then %s else %s)" (f tt) (f tf) in
-  wp i "let %s_lowtype = LPITE.ite_lowtype %s_lowtype %s\n\n" n tagt (fam copyful_lowtype_name);
-  wp i "noextract let %s_mid = LPITE.ite_mid %s_mid %s\n\n" n tagt (fam copyful_mid_name);
-  wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop = LPITE.vmatch_ite %s_vmatch %s_cond %s_conv %s\n\n" n n n tagt n tagt (fam copyful_vmatch_name);
-  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) = LPITE.ite_conv parse_%s_param %s_conv %s\n\n" n n n n tagt (fam copyful_conv_name);
+  (* When both branches share the same family member (e.g. an if-then-else whose two
+     arms have the same payload type, as in TLS ServerHello/HelloRetryRequest), emit a
+     CONSTANT [(fun _ -> X)] rather than [(fun b -> if b then X else X)]. This matters
+     for the [free_<n>] call below: [free_ifthenelse]'s [vmatch_pl] is not pinned by its
+     value arguments (unlike read/write, which carry the [p] param), so leaving it
+     implicit makes F* infer a constant [(fun _ -> X)] from the [free_pl] argument. By
+     defining [<n>_payload_vmatch] itself as that same constant, the pinned result type
+     and the per-branch [free_pl] obligation both hold by beta-reduction alone — no
+     [if b then X else X] ite that would otherwise require functional extensionality. *)
+  let fam_eq f = if (f tt) = (f tf) then sprintf "(fun _ -> %s)" (f tt) else fam f in
+  wp i "let %s_lowtype = LPITE.ite_lowtype %s_lowtype %s\n\n" n tagt (fam_eq copyful_lowtype_name);
+  wp i "noextract let %s_mid = LPITE.ite_mid %s_mid %s\n\n" n tagt (fam_eq copyful_mid_name);
+  (* Named payload-vmatch family, shared by [<n>_vmatch] and [free_<n>] so the two
+     [vmatch_ite ...] terms are syntactically identical (the pinned [vmatch_pl] and the
+     one in [<n>_vmatch] are the same name). *)
+  wp i "let %s_payload_vmatch = %s\n\n" n (fam_eq copyful_vmatch_name);
+  (* Named payload-conv family, pinned in the write/size calls below alongside
+     [<n>_payload_vmatch] so their result conv/vmatch are exactly [<n>_conv]/[<n>_vmatch]
+     (the constant [fam_eq] form makes the per-branch obligations hold by beta). *)
+  wp i "noextract let %s_payload_conv = %s\n\n" n (fam_eq copyful_conv_name);
+  wp i "let %s_vmatch : %s_lowtype -> %s_mid -> Pulse.Lib.Core.slprop = LPITE.vmatch_ite %s_vmatch %s_cond %s_conv %s_payload_vmatch\n\n" n n n tagt n tagt n;
+  wp i "noextract let %s_conv : %s_mid -> GTot (FStar.Pervasives.Native.option %s) = LPITE.ite_conv parse_%s_param %s_conv %s_payload_conv\n\n" n n n n tagt n;
   wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
-  wp o "let read_%s = LPITE.copyful_parse_ifthenelse parse_%s_param %s_jumper %s_test read_%s\n  (fun b -> if b then %s else %s) ()\n\n" n n tagt n tagt (copyful_read_name tt) (copyful_read_name tf);
+  wp o "let read_%s = LPITE.copyful_parse_ifthenelse parse_%s_param %s_jumper %s_test read_%s\n  %s ()\n\n" n n tagt n tagt (fam_eq copyful_read_name);
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
-  wp o "let free_%s = LPITE.free_ifthenelse free_%s\n  (fun b -> if b then %s else %s)\n\n" n tagt (copyful_free_name tt) (copyful_free_name tf);
+  (* Pin tag_t/cond/conv_tag (free_ifthenelse lacks the [p] param that determines them)
+     and vmatch_pl to the named [<n>_payload_vmatch], so the result type is exactly
+     [<n>_vmatch]. The per-branch [free_pl] obligation discharges by beta-reduction
+     because [<n>_payload_vmatch] is the constant [fam_eq] family (see above). *)
+  wp o "let free_%s = LPITE.free_ifthenelse #_ #_ #%s #_ #%s_cond #%s_conv #_ #_ #%s_payload_vmatch free_%s\n  %s\n\n" n tagt n tagt n tagt (fam_eq copyful_free_name);
   if copyful_writer_available tt && copyful_writer_available tf then begin
     wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
-    wp o "let write_%s = LPITE.l2r_safe_writer_ifthenelse parse_%s_param serialize_%s_param write_%s\n  (fun b -> if b then %s else %s)\n\n" n n n tagt (copyful_writer_name tt) (copyful_writer_name tf);
+    wp o "let write_%s = LPITE.l2r_safe_writer_ifthenelse parse_%s_param serialize_%s_param #_ #_ #_ #_ #_ #_ #%s_payload_vmatch #%s_payload_conv write_%s\n  %s\n\n" n n n n n tagt (fam_eq copyful_writer_name);
     register_writer n
   end;
   if copyful_size_available tt && copyful_size_available tf then begin
     wp i "val size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv\n\n" n n n n;
-    wp o "let size_%s = LPITE.l2r_safe_size_ifthenelse fits_u64_squash parse_%s_param serialize_%s_param size_%s\n  (fun b -> if b then %s else %s)\n\n" n n n tagt (copyful_size_name tt) (copyful_size_name tf);
+    wp o "let size_%s = LPITE.l2r_safe_size_ifthenelse fits_u64_squash parse_%s_param serialize_%s_param #_ #_ #_ #_ #_ #_ #%s_payload_vmatch #%s_payload_conv size_%s\n  %s\n\n" n n n n n tagt (fam_eq copyful_size_name);
     register_size n
   end
 
@@ -2374,14 +2477,21 @@ and compile_ite tch o i n sn fn tagn clen cval tt tf true_ctor_opt false_ctor_op
   w i "let %s_cst : %s =\n  assert_norm (L.length [%s] == %d);\n  Seq.seq_of_list [%s]\n\n" n tagt bl clen bl;
   w i "type %s_false = {\n  tag: t:%s_%s{t <> %s_cst};\n  value: %s\n}\n\n" n n tagn n (compile_type tf);
   w i "type %s =\n  | %s of %s\n  | %s of %s_false\n\n" n true_ctor (compile_type tt) false_ctor n;
-  write_api o i false is_private li.meta n (clen+li.min_len) (clen+li.max_len);
 
   (* Spec. The condition, payload type family, synth and the [parse_ifthenelse]
      parameter record are emitted to the INTERFACE (not the impl): the copyful
      [<n>_vmatch] (via [<n>_cond]) and [<n>_conv] (via [parse_<n>_param]) are
      transparent interface definitions referenced by an enclosing copyful
      struct's own interface, so their dependencies must be interface-visible.
-     (if-then-else is -pulse-only, so this never affects a non-pulse interface.) *)
+     (if-then-else is -pulse-only, so this never affects a non-pulse interface.)
+
+     These spec lets are emitted BEFORE [write_api], i.e. before the [<n>_parser],
+     [<n>_serializer], [<n>_validator] and [<n>_jumper] vals: F* interleaves
+     interface declarations into the implementation in interface order, so an
+     interface [let] only becomes visible in the .fst after every preceding [val]
+     has been implemented. The .fst definitions of [<n>_parser] etc. reference
+     [parse_<n>_param], hence the param let must precede those vals in the
+     interface, otherwise the .fst cannot see it (Identifier not found). *)
   w i "inline_for_extraction let %s_cond (x:%s_%s) : Tot bool = x = %s_cst\n\n" n n tagn n;
   w i "inline_for_extraction let %s_payload (b:bool) : Tot Type =\n  if b then %s else %s\n\n" n (compile_type tt) (compile_type tf);
   w i "inline_for_extraction let parse_%s_payload (b:bool) : Tot (k: LP.parser_kind & LP.parser k (%s_payload b)) =\n" n n;
@@ -2394,6 +2504,9 @@ and compile_ite tch o i n sn fn tagn clen cval tt tf true_ctor_opt false_ctor_op
   w i "  LP.parse_ifthenelse_payload_t = %s_payload; LP.parse_ifthenelse_payload_parser = parse_%s_payload;\n" n n;
   w i "  LP.parse_ifthenelse_t = _;  LP.parse_ifthenelse_synth = %s_synth;\n" n;
   w i "  LP.parse_ifthenelse_synth_injective = (fun t1 x1 t2 x2 -> ());\n}\n\n";
+
+  write_api o i false is_private li.meta n (clen+li.min_len) (clen+li.max_len);
+
   w o "let _ : squash (LP.parse_ifthenelse_kind parse_%s_param == %s_parser_kind) =\n" n n;
   w o "  _ by (FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ())\n\n";
   w o "let %s_parser = LP.parse_ifthenelse parse_%s_param\n\n" n n;
@@ -3925,6 +4038,22 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       ()
 
     (* Fixed-length bytes *)
+    | VectorFixed k when (compile_type ty = "U8.t") && !emit_pulse ->
+      (* Pulse: Seq-native fixed-length bytes (no FStar.Bytes). The high-level
+         value is a plain [Seq.lseq FStar.UInt8.t k]; the spec is built over
+         [parse_lseq_bytes]/[serialize_lseq_bytes] and the copyful tag block uses
+         the LowParse.Pulse.SeqBytes combinators. *)
+      w i "type %s = Seq.lseq FStar.UInt8.t %d\n\n" n k;
+      write_api o i false is_private li.meta n li.min_len li.max_len;
+      w o "noextract let %s_parser = LP.parse_lseq_bytes %d\n\n" n k;
+      w o "noextract let %s_serializer = LP.serialize_lseq_bytes %d\n\n" n k;
+      write_bytesize o is_private n;
+      w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == Seq.length x) [SMTPat (%s_bytesize x)]\n\n" n n n n;
+      w o "let %s_bytesize_eqn x = ()\n\n" n;
+      emit_copyful_seqbytes o i n k;
+      ()
+
+    (* Fixed-length bytes *)
     | VectorFixed k when (compile_type ty = "U8.t") ->
       w i "type %s = lbytes %d\n\n" n k;
       write_api o i false is_private li.meta n li.min_len li.max_len;
@@ -4089,6 +4218,31 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
        else
          compile_vllist o i is_private n ty li elem_li lenty low high
       
+    (* Variable length bytes (Pulse, Seq-native: no FStar.Bytes) *)
+    | VectorRange (low, high, repr)
+      when compile_type ty = "U8.t" && !emit_pulse &&
+        (match repr with None -> true
+        | Some t -> let (_,lm,_) = basic_bounds t in lm = log256 high) ->
+      w i "inline_for_extraction noextract let min_len = %d\ninline_for_extraction noextract let max_len = %d\n" low high;
+      w i "type %s = LP.parse_bounded_seq_vlbytes_t %d %d\n\n" n low high;
+      write_api o i false is_private li.meta n li.min_len li.max_len;
+      w o "noextract let %s_parser = LP.parse_bounded_seq_vlbytes %d %d\n\n" n low high;
+      w o "noextract let %s_serializer = LP.serialize_bounded_seq_vlbytes %d %d\n\n" n low high;
+      write_bytesize o is_private n;
+      if need_validator then
+        wp o "let %s_validator = LSeqB.validate_bounded_seq_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" n low high (log256 high);
+      if need_jumper then begin
+        let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
+        wp o "let %s_jumper%s = LSeqB.jump_bounded_seq_vlbytes %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" n jumper_annot low high high (log256 high)
+      end;
+      (* Pulse: Seq-native copyful parser + free *)
+      emit_copyful_seqbytes_vl o i n (sprintf "LSeqB.copyful_parse_bounded_seq_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash" low high (log256 high)) (sprintf "LSeqB.seq_vlbytes_conv %d %d" low high)
+        ~writer:(sprintf "LSeqB.l2r_safe_writer_bounded_seq_vlbytes %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %dsz fits_u64_squash" low low high high (log256 high))
+        ~size:(sprintf "LSeqB.l2r_safe_size_bounded_seq_vlbytes %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %dsz fits_u64_squash" low low high high (log256 high));
+      w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + Seq.length x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n;
+      w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_seq_vlbytes %d %d x\n\n" n low high;
+      ()
+
     (* Variable length bytes *)
     | VectorRange (low, high, repr)
       when compile_type ty = "U8.t" &&
@@ -4996,12 +5150,22 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   let mn = module_name n in
   let (fst, fsti) = !headers in
 
+  (* Rewrite symbolic vldata before emitting headers, so needs_fstar_bytes sees normalized fields *)
+  let p = match p with
+    | Struct(al, fl, nn) -> Struct(al, normalize_symboliclen tch n fl, nn)
+    | p -> p in
+
+  (* Under -pulse, emit the FStar.Bytes module headers only for the rare modules
+     that still reference FStar.Bytes (var-length byte types with bounded/wide
+     length headers); all Seq-native modules stay FStar.Bytes-free. *)
+  let needs_fstar_bytes = (not !emit_pulse) || gemstone_uses_fstar_bytes_pulse p in
+
   (* .fsti *)
   w i "module %s\n\n" mn;
   write_autogen i;
   if !types_from <> "" then w i "include %s\n\n" !types_from;
   if !types_to <> "" then w i "include %s\n\n" (module_of_filename !types_to);
-  w i "open %s\n" !bytes;
+  if needs_fstar_bytes then w i "open %s\n" !bytes;
   w i "module U8 = FStar.UInt8\n";
   w i "module U16 = FStar.UInt16\n";
   w i "module U32 = FStar.UInt32\n";
@@ -5015,7 +5179,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wl i "module LL = LowParse.Low.Base\n";
   w i "module L = FStar.List.Tot\n";
   wl i "module B = LowStar.Buffer\n";
-  w i "module BY = FStar.Bytes\n";
+  if needs_fstar_bytes then w i "module BY = FStar.Bytes\n";
   wl i "module HS = FStar.HyperStack\n";
   wl i "module HST = FStar.HyperStack.ST\n";
   wp i "module LPS = LowParse.Pulse.Base\n";
@@ -5048,7 +5212,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   (* .fst *)
   w o "module %s\n\n" mn;
   write_autogen o;
-  w o "open %s\n" !bytes;
+  if needs_fstar_bytes then w o "open %s\n" !bytes;
   w o "module U8 = FStar.UInt8\n";
   w o "module U16 = FStar.UInt16\n";
   w o "module U32 = FStar.UInt32\n";
@@ -5061,7 +5225,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wl o "module LL = LowParse.Low\n";
 	w o "module L = FStar.List.Tot\n";
   wl o "module B = LowStar.Buffer\n";
-  w o "module BY = FStar.Bytes\n";
+  if needs_fstar_bytes then w o "module BY = FStar.Bytes\n";
   wl o "module HS = FStar.HyperStack\n";
   wl o "module HST = FStar.HyperStack.ST\n";
   wp o "module LPS = LowParse.Pulse.Base\n";
@@ -5089,11 +5253,6 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   wp o "module LPITE = LowParse.PulseParse.IfThenElse\n";
   (List.iter (w o "%s\n") (List.rev fst));
   w o "\n";
-
-  (* Rewrite synbolic vldata before computing length *)
-  let p = match p with
-    | Struct(al, fl, nn) -> Struct(al, normalize_symboliclen tch n fl, nn)
-    | p -> p in
 
   let depl = getdep (tn = "") p in
   let depl = List.filter (fun x -> not (basic_type x)) depl in

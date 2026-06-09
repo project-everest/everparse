@@ -129,6 +129,58 @@ let serialize_bounded_seq_vlbytes
     )
     ()
 
+(* The Seq-native reciprocal of [synth_bounded_seq_vlbytes]: both are the
+   identity on [Seq.seq byte], reflecting that a [parse_bounded_seq_vlbytes_t]
+   value IS a [parse_bounded_vldata_strong_t] value. *)
+inline_for_extraction
+let synth_bounded_seq_vlbytes_recip
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (x: parse_bounded_seq_vlbytes_t min max)
+: Tot (parse_bounded_vldata_strong_t min max #_ #_ #parse_seq_all_bytes serialize_seq_all_bytes)
+= x
+
+(* The serialized form of a [bounded_seq_vlbytes] value [y] is the
+   [(log256' max)]-byte big-endian length header (encoding [Seq.length y])
+   followed by the raw payload bytes [y] itself (the seq-all-bytes serializer is
+   the identity). Derived from [serialize_synth_eq] over the strong-vldata
+   serializer, whose [aux] is exactly that append. *)
+let serialize_bounded_seq_vlbytes_bytes_eq
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (y: parse_bounded_seq_vlbytes_t min max)
+: Lemma (
+    serialize (serialize_bounded_seq_vlbytes min max) y ==
+    Seq.append
+      (serialize (serialize_bounded_integer (log256' max)) (U32.uint_to_t (Seq.length y)))
+      y
+  )
+= serialize_synth_eq
+    (parse_bounded_seq_vlbytes' min max)
+    (synth_bounded_seq_vlbytes min max)
+    (serialize_bounded_seq_vlbytes' min max)
+    (fun (x: parse_bounded_seq_vlbytes_t min max) ->
+      (x <: parse_bounded_vldata_strong_t min max #_ #_ #parse_seq_all_bytes serialize_seq_all_bytes)
+    )
+    ()
+    y
+
+let length_serialize_bounded_seq_vlbytes
+  (min: nat)
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
+  (x: parse_bounded_seq_vlbytes_t min max)
+: Lemma
+  (Seq.length (serialize (serialize_bounded_seq_vlbytes min max) x) == log256' max + Seq.length x)
+= serialize_synth_eq
+    (parse_bounded_seq_vlbytes' min max)
+    (synth_bounded_seq_vlbytes min max)
+    (serialize_bounded_seq_vlbytes' min max)
+    (fun (x: parse_bounded_seq_vlbytes_t min max) ->
+      (x <: parse_bounded_vldata_strong_t min max #_ #_ #parse_seq_all_bytes serialize_seq_all_bytes)
+    )
+    ()
+    x
+
 
 let parse_lseq_bytes_gen
   (sz: nat)
