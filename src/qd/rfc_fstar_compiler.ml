@@ -2547,6 +2547,30 @@ and compile_ite tch o i n sn fn tagn clen cval tt tf true_ctor_opt false_ctor_op
      other backends, see prog_has_ifeq in quackyducky.ml). The former code here
      relied on FStar.Bytes-based combinators (e.g. valid_slice_equals_bytes) that
      are incompatible with the Seq-based discriminant tag/constant. *)
+
+  (* bytesize decomposition (per-constructor, mirroring the sum [bytesize_eqn]
+     lemmas): an if-then-else serializes as tag ++ payload, so its bytesize is the
+     constant discriminant length [clen] plus the payload bytesize.  Discharged via
+     [LP.length_serialize_ifthenelse] (tag ++ payload length split), the constant
+     tag length ([<tagt>_bytesize_eqn] over the [lseq clen] discriminant), and the
+     payload [_bytesize_eq].  These let an enclosing struct's [bytesize_eqn] (and
+     downstream length proofs) decompose an if-then-else field by SMTPat. *)
+  if not is_private then begin
+    w i "val %s_bytesize_eqn_%s (x: %s) : Lemma (%s_bytesize (%s x) == %d + %s) [SMTPat (%s_bytesize (%s x))]\n\n"
+      n true_ctor (compile_type tt) n true_ctor clen (bytesize_call tt "x") n true_ctor;
+    w o "let %s_bytesize_eqn_%s x =\n" n true_ctor;
+    w o "  %s_bytesize_eq (%s x);\n" n true_ctor;
+    w o "  LP.length_serialize_ifthenelse serialize_%s_param (%s x);\n" n true_ctor;
+    w o "  %s_bytesize_eq %s_cst;\n" tagt n;
+    w o "  %s\n\n" (bytesize_eq_call tt "x");
+    w i "val %s_bytesize_eqn_%s (m: %s_false) : Lemma (%s_bytesize (%s m) == %d + %s) [SMTPat (%s_bytesize (%s m))]\n\n"
+      n false_ctor n n false_ctor clen (bytesize_call tf "m.value") n false_ctor;
+    w o "let %s_bytesize_eqn_%s m =\n" n false_ctor;
+    w o "  %s_bytesize_eq (%s m);\n" n false_ctor;
+    w o "  LP.length_serialize_ifthenelse serialize_%s_param (%s m);\n" n false_ctor;
+    w o "  %s_bytesize_eq m.tag;\n" tagt;
+    w o "  %s\n\n" (bytesize_eq_call tf "m.value")
+  end;
   ()
 
 and compile_select tch o i n seln tagn tagt taga cl def al =
