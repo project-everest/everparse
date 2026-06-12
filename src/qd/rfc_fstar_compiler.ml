@@ -914,7 +914,7 @@ let emit_copyful_owned_sum o i n tn cprefix cl =
   wp i "let %s_low_tag (xl: %s_low) : LP.enum_key %s_enum =\n  match xl with\n" n n tn;
   List.iter (fun (case, ty) -> wp i "  | %s_%s_low _ -> %s_as_enum_key %s\n" cprefix case tn (String.capitalize_ascii case)) cl;
   wp i "\n";
-  wp i "let %s_mid_tag (m: %s_mid) : LP.enum_key %s_enum =\n  match m with\n" n n tn;
+  wp i "noextract let %s_mid_tag (m: %s_mid) : LP.enum_key %s_enum =\n  match m with\n" n n tn;
   List.iter (fun (case, ty) -> wp i "  | %s_%s_mid _ -> %s_as_enum_key %s\n" cprefix case tn (String.capitalize_ascii case)) cl;
   wp i "\n";
   (* transparent direct vmatch (interface), defined by a textual match over the
@@ -1072,7 +1072,7 @@ let emit_copyful_owned_dsum o i n tn cprefix cl dt =
   wp i "let %s_low_tag (xl: %s_low) : LP.maybe_enum_key %s_enum =\n  match xl with\n" n n tn;
   List.iter (fun (case, ty) -> wp i "  | %s_%s_low _ -> LP.Known (known_%s_as_enum_key %s)\n" cprefix case tn (cap case)) cl;
   wp i "  | %s_Unknown_%s_low v _ -> LP.Unknown (unknown_%s_as_enum_key v)\n\n" cprefix tn tn;
-  wp i "let %s_mid_tag (m: %s_mid) : LP.maybe_enum_key %s_enum =\n  match m with\n" n n tn;
+  wp i "noextract let %s_mid_tag (m: %s_mid) : LP.maybe_enum_key %s_enum =\n  match m with\n" n n tn;
   List.iter (fun (case, ty) -> wp i "  | %s_%s_mid _ -> LP.Known (known_%s_as_enum_key %s)\n" cprefix case tn (cap case)) cl;
   wp i "  | %s_Unknown_%s_mid v _ -> LP.Unknown (unknown_%s_as_enum_key v)\n\n" cprefix tn tn;
   (* transparent direct vmatch (interface). *)
