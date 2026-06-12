@@ -295,6 +295,7 @@ fn seqbytes_eq_test
   (cond: tag_t -> Tot bool)
   (clen: SZ.t)
   (cst: Seq.lseq byte (SZ.v clen))
+  (get_byte: (j: SZ.t { SZ.v j < SZ.v clen }) -> (b: byte { b == Seq.index cst (SZ.v j) }))
   (sq: squash (seqbytes_cond_prop pt cond (SZ.v clen) cst))
   (input: S.slice byte)
   (#pm: perm)
@@ -328,7 +329,7 @@ fn seqbytes_eq_test
     let j = !pj;
     let cur = !pres;
     let bi = input.(SZ.add offset j);
-    let ci = Seq.index cst (SZ.v j);
+    let ci = get_byte j;
     slice_eq_extend v cst (SZ.v offset) (SZ.v j);
     pres := cur && (bi = ci);
     pj := SZ.add j 1sz;
@@ -343,12 +344,13 @@ let test_ifthenelse_tag_of_seqbytes_eq
   (p: parse_ifthenelse_param)
   (clen: SZ.t)
   (cst: Seq.lseq byte (SZ.v clen))
+  (get_byte: (j: SZ.t { SZ.v j < SZ.v clen }) -> (b: byte { b == Seq.index cst (SZ.v j) }))
   (sq: squash (test_seqbytes_cond_prop p (SZ.v clen) cst))
 : test_ifthenelse_tag p
 = fun input #pm #v offset off ->
     seqbytes_eq_test
       p.parse_ifthenelse_tag_parser p.parse_ifthenelse_tag_cond
-      clen cst sq input #pm #v offset off
+      clen cst get_byte sq input #pm #v offset off
 
 #pop-options
 

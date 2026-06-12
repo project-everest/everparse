@@ -2526,11 +2526,39 @@ and compile_ite tch o i n sn fn tagn clen cval tt tf true_ctor_opt false_ctor_op
      discriminant tag has no scalar leaf reader, so we use the test-based
      if-then-else combinators: the discriminant condition (tag = <n>_cst) is
      computed in place over the validated tag region by [test_ifthenelse_tag_of_seqbytes_eq],
-     whose [seqbytes]-equality bridge is discharged by [seqbytes_cond_prop_lseq_bytes]. *)
+     whose [seqbytes]-equality bridge is discharged by [seqbytes_cond_prop_lseq_bytes].
+
+     The byte-by-byte comparison loop in [seqbytes_eq_test] needs the constant
+     tag byte at a *runtime* index [j : SizeT.t]. Reading it from the spec
+     [<n>_cst] (a [Seq.seq]) via [Seq.index <n>_cst (SZ.v j)] is NOT extractable
+     to C ([Seq.index] is ghost and [SZ.v] has no C implementation). Instead we
+     emit a C-extractable [<n>_get_byte] callback: an [if]-chain on [j] returning
+     the literal tag bytes, proved equal to [Seq.index <n>_cst (SZ.v j)]. The
+     impossible fall-through (all [clen] values [0sz .. clen-1] are covered, and
+     [SZ.v j < clen]) is discharged by [<n>_sz_contradiction]. *)
+  let byte_lit k = Printf.sprintf "0x%c%cuy" cval.[2*k] cval.[2*k+1] in
+  let neqs = Buffer.create 64 in
+  for k = 0 to clen - 1 do
+    if k > 0 then Buffer.add_string neqs " /\\ ";
+    Buffer.add_string neqs (Printf.sprintf "~(j == %dsz)" k)
+  done;
+  wp o "let %s_sz_contradiction (j: FStar.SizeT.t)\n" n;
+  wp o "  : Lemma (requires FStar.SizeT.v j < %d /\\ %s) (ensures False) = ()\n\n" clen (Buffer.contents neqs);
+  wp o "#push-options \"--z3rlimit 16\"\n";
+  wp o "inline_for_extraction\n";
+  wp o "let %s_get_byte (j: FStar.SizeT.t { FStar.SizeT.v j < %d })\n" n clen;
+  wp o "  : (b: FStar.UInt8.t { b == Seq.index %s_cst (FStar.SizeT.v j) }) =\n" n;
+  wp o "  assert_norm (FStar.List.Tot.Base.length [%s] == %d);\n" bl clen;
+  wp o "  FStar.Seq.Properties.lemma_seq_of_list_index [%s] (FStar.SizeT.v j);\n" bl;
+  for k = 0 to clen - 1 do
+    wp o "  if j = %dsz then (assert_norm (FStar.List.Tot.Base.index [%s] %d == %s); %s) else\n" k bl k (byte_lit k) (byte_lit k)
+  done;
+  wp o "  (%s_sz_contradiction j; 0uy)\n" n;
+  wp o "#pop-options\n\n";
   wp o "let %s_test_cond () : Lemma (LPITE.test_seqbytes_cond_prop parse_%s_param %d %s_cst) =\n" n n clen n;
   wp o "  LPITE.seqbytes_cond_prop_lseq_bytes %d %s_cst\n\n" clen n;
   wp o "let %s_test : LPITE.test_ifthenelse_tag parse_%s_param =\n" n n;
-  wp o "  LPITE.test_ifthenelse_tag_of_seqbytes_eq parse_%s_param %dsz %s_cst (%s_test_cond ())\n\n" n clen n n;
+  wp o "  LPITE.test_ifthenelse_tag_of_seqbytes_eq parse_%s_param %dsz %s_cst %s_get_byte (%s_test_cond ())\n\n" n clen n n n;
   wp o "let %s_validator = LPITE.validate_ifthenelse_test parse_%s_param %s_validator %s_test\n" n n tagt n;
   wp o "  (fun b -> if b then %s else %s) ()\n\n" (pulse_validator_name tt) (pulse_validator_name tf);
   wp o "let %s_jumper = LPITE.jump_ifthenelse_test parse_%s_param %s_jumper %s_test\n" n n tagt n;
