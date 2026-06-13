@@ -2225,7 +2225,7 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
   (* Enum definition. Under -pulse, emitted to the interface so that transparent
      Pulse vmatch tag-helpers (typed at [enum_key <n>_enum]) can reference it. *)
         let ienum = ipub i o in
-	w ienum "[@LT.Norm] inline_for_extraction let %s_enum : LP.enum %s %s =\n" n n (compile_type repr_t);
+	w ienum "[@LT.Norm] inline_for_extraction noextract let %s_enum : LP.enum %s %s =\n" n n (compile_type repr_t);
 	w ienum "  [@inline_let] let e = [\n";
 	List.iter (function
 	  | EnumFieldSimple (x, i) ->
