@@ -2474,7 +2474,21 @@ and compile_ite tch o i n sn fn tagn clen cval tt tf true_ctor_opt false_ctor_op
   compile_ite_tag o i tagt clen is_private;
 
   let bl = hex_to_uy_list cval in
-  w i "let %s_cst : %s =\n  assert_norm (L.length [%s] == %d);\n  Seq.seq_of_list [%s]\n\n" n tagt bl clen bl;
+  (* [<n>_cst] is the discriminant tag constant, a [Seq.seq] built by
+     [Seq.seq_of_list] over a literal byte list of length [clen]. It is marked
+     [noextract]: it is a pure SPEC value used only in erased/ghost positions of
+     the extracted code (the runtime tag comparison is performed byte-by-byte by
+     [<n>_get_byte] + [LPITE.seqbytes_eq_test], never by reading [<n>_cst]). If
+     it were extracted, KaRaMeL would lower the [Seq.seq] into a heap-allocated
+     singleton-buffer linked list ([newbuf { hd; tl = newbuf { ... } }]) of depth
+     [clen]; KaRaMeL's checker re-checks every [EBufCreate] initializer TWICE
+     (Checker.check': [check_or_infer] then [check]), which is O(2^clen) and hangs
+     extraction for large tags (e.g. a 32-byte tag => 2^32 checker traversals).
+     Keeping it [noextract] avoids emitting the constant entirely. [<n>_cond] and
+     [<n>_synth] are likewise SPEC-only (used by [parse_<n>_param] and the ghost
+     [<n>_vmatch]/[<n>_conv]) and must be [noextract] too so the extracted code
+     never refers back to the (now non-extracted) [<n>_cst]. *)
+  w i "noextract let %s_cst : %s =\n  assert_norm (L.length [%s] == %d);\n  Seq.seq_of_list [%s]\n\n" n tagt bl clen bl;
   w i "type %s_false = {\n  tag: t:%s_%s{t <> %s_cst};\n  value: %s\n}\n\n" n n tagn n (compile_type tf);
   w i "type %s =\n  | %s of %s\n  | %s of %s_false\n\n" n true_ctor (compile_type tt) false_ctor n;
 
@@ -2492,11 +2506,11 @@ and compile_ite tch o i n sn fn tagn clen cval tt tf true_ctor_opt false_ctor_op
      has been implemented. The .fst definitions of [<n>_parser] etc. reference
      [parse_<n>_param], hence the param let must precede those vals in the
      interface, otherwise the .fst cannot see it (Identifier not found). *)
-  w i "inline_for_extraction let %s_cond (x:%s_%s) : Tot bool = x = %s_cst\n\n" n n tagn n;
+  w i "noextract let %s_cond (x:%s_%s) : Tot bool = x = %s_cst\n\n" n n tagn n;
   w i "inline_for_extraction let %s_payload (b:bool) : Tot Type =\n  if b then %s else %s\n\n" n (compile_type tt) (compile_type tf);
   w i "inline_for_extraction let parse_%s_payload (b:bool) : Tot (k: LP.parser_kind & LP.parser k (%s_payload b)) =\n" n n;
   w i "  if b then (| _ , %s |) else (| _, %s |)\n\n" (pcombinator_name tt) (pcombinator_name tf);
-  w i "inline_for_extraction let %s_synth (x:%s_%s) (y:%s_payload (%s_cond x)) : Tot %s =\n" n n tagn n n n;
+  w i "noextract let %s_synth (x:%s_%s) (y:%s_payload (%s_cond x)) : Tot %s =\n" n n tagn n n n;
   w i "  if %s_cond x then %s y else %s ({ tag = x; value = y })\n\n" n true_ctor false_ctor;
   w i "inline_for_extraction noextract let parse_%s_param = {\n" n;
   w i "  LP.parse_ifthenelse_tag_kind = _; LP.parse_ifthenelse_tag_t = _;\n";
