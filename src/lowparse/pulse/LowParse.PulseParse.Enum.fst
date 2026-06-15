@@ -94,11 +94,67 @@ let mk_read_maybe_enum_key
 = read_maybe_enum_key r e (mk_maybe_enum_destr (maybe_enum_key e) e)
 
 inline_for_extraction
+let read_enum_key_prop
+  (#key #repr: eqtype)
+  (e: enum key repr)
+  (k: maybe_enum_key e)
+  (k' : enum_key e)
+: GTot prop
+= match k with Known k_ -> (k_ <: key) == (k' <: key) | _ -> False
+
+inline_for_extraction
+let read_enum_key_t
+  (#key #repr: eqtype)
+  (e: enum key repr)
+  (k: maybe_enum_key e)
+: Tot Type
+= squash (Known? k) -> Tot (k' : enum_key e { read_enum_key_prop e k k' } )
+
+inline_for_extraction
+let read_enum_key_f
+  (#key #repr: eqtype)
+  (e: enum key repr { Cons? e } )
+  (k: maybe_enum_key e)
+: Tot (read_enum_key_t e k)
+= fun (sq: squash (Known? k)) ->
+  match k with
+  | Known k_ ->
+    (k_ <: (k_ : enum_key e { read_enum_key_prop e k k_ } ))
+  | _ ->
+    (match e with (k_, _) :: _ ->
+    [@inline_let] let _ = assert False; assert (read_enum_key_prop e k k_) in
+    (k_ <: (k_ : enum_key e { read_enum_key_prop e k k_ } ))) // dummy, but needed to make extraction work
+
+inline_for_extraction
+let read_enum_key_eq
+  (#key #repr: eqtype)
+  (e: enum key repr)
+  (k: maybe_enum_key e)
+: Tot (read_enum_key_t e k -> read_enum_key_t e k -> GTot prop)
+= fun _ _ -> True
+
+inline_for_extraction
+let read_enum_key_if
+  (#key #repr: eqtype)
+  (e: enum key repr)
+  (k: maybe_enum_key e)
+: Tot (if_combinator _ (read_enum_key_eq e k))
+= fun
+  (cond: bool)
+  (sv_true: (cond_true cond -> Tot (read_enum_key_t e k)))
+  (sv_false: (cond_false cond -> Tot (read_enum_key_t e k)))
+  (sq: squash (Known? k)) ->
+  if cond
+  then sv_true () sq
+  else sv_false () sq
+
+inline_for_extraction
 let read_enum_key
   (#key #repr: eqtype)
   (#k: Ghost.erased parser_kind) (#p: parser k repr)
   (r: leaf_reader p)
-  (e: enum key repr)
+  (e: enum key repr { Cons? e })
+  (destr: dep_maybe_enum_destr_t e (read_enum_key_t e))
   (_: squash (k.parser_kind_subkind == Some ParserStrong))
 : Tot (leaf_reader (parse_enum_key p e))
 = serialize_enum_key_synth_inverse e;
@@ -107,14 +163,18 @@ let read_enum_key
       (read_filter (reader_of_leaf_reader r) (parse_enum_key_cond e))
       (parse_enum_key_synth e)
       (serialize_enum_key_synth_recip e)
-      (fun (x: parse_filter_refine (parse_enum_key_cond e)) -> read_synth_cont_init (enum_key_of_repr e x)))
+      (fun (x: parse_filter_refine (parse_enum_key_cond e)) ->
+        [@inline_let] let _ = assert (maybe_enum_key_of_repr e x == Known (enum_key_of_repr e x)) in
+        read_synth_cont_init
+          (destr (read_enum_key_eq e) (read_enum_key_if e)
+            (fun _ _ -> ()) (fun _ _ _ _ -> ()) (read_enum_key_f e) x ())))
 
 [@Norm]
 let mk_read_enum_key
   (#key #repr: eqtype)
   (#k: Ghost.erased parser_kind) (#p: parser k repr)
   (r: leaf_reader p)
-  (e: enum key repr)
+  (e: enum key repr { Cons? e })
   (_: squash (k.parser_kind_subkind == Some ParserStrong))
 : Tot (leaf_reader (parse_enum_key p e))
-= read_enum_key r e ()
+= read_enum_key r e (mk_dep_maybe_enum_destr e (read_enum_key_t e)) ()
