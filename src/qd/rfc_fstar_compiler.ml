@@ -3662,7 +3662,13 @@ and compile_vllist o i is_private n ty li elem_li lenty smin smax =
      w i "noextract val %s_list_bytesize: list %s -> GTot nat\n\n" n (compile_type ty);
      w o "let %s_list_bytesize x = Seq.length (LP.serialize (LP.serialize_list _ %s) x)\n\n" n (scombinator_name ty)
    end);
-  w i "type %s = l:list %s{let x = %s_list_bytesize l in %d <= x /\\ x <= %d}\n\n" n (compile_type ty) n smin smax;
+  (* Under -pulse, the executable representation is the Vec-based [<n>_lowtype]
+     (see emit_copyful_vllist); the spec list type [<n>] and the [synth_<n>]
+     coercions below are only used by ghost/noextract spec definitions, so mark
+     them noextract to keep the F* cons-list out of the extracted C.  In the
+     LowStar (non-pulse) path the list IS the runtime representation, so they
+     must stay extractable there. *)
+  w i "%stype %s = l:list %s{let x = %s_list_bytesize l in %d <= x /\\ x <= %d}\n\n" (if !emit_pulse then "noextract " else "") n (compile_type ty) n smin smax;
   w i "val %s_list_bytesize_nil : squash (%s_list_bytesize [] == 0)\n\n" n n;
   w o "let %s_list_bytesize_nil = LP.serialize_list_nil %s %s\n\n" n (pcombinator_name ty) (scombinator_name ty);
   w i "val %s_list_bytesize_cons (x: %s) (y: list %s) : Lemma (%s_list_bytesize (x :: y) == %s + %s_list_bytesize y) [SMTPat (%s_list_bytesize (x :: y))]\n\n" n (compile_type ty) (compile_type ty) n (bytesize_call ty "x") n n;
@@ -3673,9 +3679,9 @@ and compile_vllist o i is_private n ty li elem_li lenty smin smax =
   wh o "let check_%s_list_bytesize l =\n" n;
   wh o "  let x = LSZ.size32_list %s () l in\n" (size32_name ty);
   wh o "  %dul `U32.lte` x && x `U32.lte` %dul\n\n" smin smax;
-  w (ipub i o) "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)\n\n" n smin smax (scombinator_name ty);
-  w (ipub i o) "inline_for_extraction let synth_%s (x: %s') : Tot %s = x\n\n" n n n;
-  w (ipub i o) "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' = x\n\n" n n n;
+  w (ipub i o) "%stype %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)\n\n" (if !emit_pulse then "noextract " else "") n smin smax (scombinator_name ty);
+  w (ipub i o) "inline_for_extraction %slet synth_%s (x: %s') : Tot %s = x\n\n" (if !emit_pulse then "noextract " else "") n n n;
+  w (ipub i o) "inline_for_extraction %slet synth_%s_recip (x: %s) : Tot %s' = x\n\n" (if !emit_pulse then "noextract " else "") n n n;
   write_api o i false is_private li.meta n li.min_len li.max_len;
   w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
   w o "  LP.parse_bounded_vlgen %d %d %s (LP.serialize_list _ %s)\n\n" smin smax (pcombinator_length_header_name lenty smin smax) (scombinator_name ty);
@@ -4439,7 +4445,11 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
     (* Variable length list of fixed-length elements *)
     | VectorRange (low, high, _) when elem_li.min_len = elem_li.max_len ->
       w i "inline_for_extraction noextract let min_count = %d\ninline_for_extraction noextract let max_count = %d\n" li.min_count li.max_count;
-      w i "type %s = l:list %s{%d <= L.length l /\\ L.length l <= %d}\n\n" n (compile_type ty) li.min_count li.max_count;
+      (* Under -pulse the executable representation is the Vec-based array lowtype
+         (emit_copyful_vlarray); keep the spec list type noextract so the F*
+         cons-list stays out of the extracted C (LowStar accessors, emitted only
+         in the non-pulse path, still need it). *)
+      w i "%stype %s = l:list %s{%d <= L.length l /\\ L.length l <= %d}\n\n" (if !emit_pulse then "noextract " else "") n (compile_type ty) li.min_count li.max_count;
       write_api o i false is_private li.meta n li.min_len li.max_len;
       w o "private let pre : squash (LP.vldata_vlarray_precond %d %d %s %d %d == true) = _ by (FStar.Tactics.trefl ())\n\n" low high (pcombinator_name ty) li.min_count li.max_count;
       w o "let %s_parser =\n" n;
@@ -4528,7 +4538,10 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
          w i "noextract val %s_list_bytesize: list %s -> GTot nat\n\n" n (compile_type ty);
          w o "let %s_list_bytesize x = Seq.length (LP.serialize (LP.serialize_list _ %s) x)\n\n" n (scombinator_name ty)
        end);
-      w i "type %s = l:list %s{let x = %s_list_bytesize l in %d <= x /\\ x <= %d}\n\n" n (compile_type ty) n min max;
+      (* Under -pulse the executable representation is the Vec-based lowtype;
+         keep the spec list type and synth coercions noextract so the F* cons-list
+         does not leak into the extracted C (the LowStar path needs them). *)
+      w i "%stype %s = l:list %s{let x = %s_list_bytesize l in %d <= x /\\ x <= %d}\n\n" (if !emit_pulse then "noextract " else "") n (compile_type ty) n min max;
       w i "val %s_list_bytesize_nil : squash (%s_list_bytesize [] == 0)\n\n" n n;
       w o "let %s_list_bytesize_nil = LP.serialize_list_nil %s %s\n\n" n (pcombinator_name ty) (scombinator_name ty);
       w i "val %s_list_bytesize_cons (x: %s) (y: list %s) : Lemma (%s_list_bytesize (x :: y) == %s + %s_list_bytesize y) [SMTPat (%s_list_bytesize (x :: y))]\n\n" n (compile_type ty) (compile_type ty) n (bytesize_call ty "x") n n;
@@ -4539,9 +4552,9 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       wh o "let check_%s_list_bytesize l =\n" n;
       wh o "  let x = LSZ.size32_list %s () l in\n" (size32_name ty);
       wh o "  %dul `U32.lte` x && x `U32.lte` %dul\n\n" min max;
-      w (ipub i o) "type %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)\n\n" n min max (scombinator_name ty);
-      w (ipub i o) "inline_for_extraction let synth_%s (x: %s') : Tot %s = x\n\n" n n n;
-      w (ipub i o) "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' = x\n\n" n n n;
+      w (ipub i o) "%stype %s' = LP.parse_bounded_vldata_strong_t %d %d (LP.serialize_list _ %s)\n\n" (if !emit_pulse then "noextract " else "") n min max (scombinator_name ty);
+      w (ipub i o) "inline_for_extraction %slet synth_%s (x: %s') : Tot %s = x\n\n" (if !emit_pulse then "noextract " else "") n n n;
+      w (ipub i o) "inline_for_extraction %slet synth_%s_recip (x: %s) : Tot %s' = x\n\n" (if !emit_pulse then "noextract " else "") n n n;
       write_api o i false is_private li.meta n li.min_len li.max_len;
       w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
       w o "  LP.parse_bounded_vldata_strong %d %d (LP.serialize_list _ %s)\n\n" min max (scombinator_name ty);
