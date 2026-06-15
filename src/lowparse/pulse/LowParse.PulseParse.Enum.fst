@@ -75,11 +75,14 @@ let read_maybe_enum_key
   (#k: Ghost.erased parser_kind) (#p: parser k repr)
   (r: leaf_reader p)
   (e: enum key repr)
+  (destr: maybe_enum_destr_t (maybe_enum_key e) e)
 : Tot (leaf_reader (parse_maybe_enum_key p e))
 = leaf_reader_of_reader
-    (read_synth' (reader_of_leaf_reader r)
+    (read_synth (reader_of_leaf_reader r)
       (maybe_enum_key_of_repr e)
-      (repr_of_maybe_enum_key e))
+      (repr_of_maybe_enum_key e)
+      (fun x -> read_synth_cont_init
+        (destr _ (default_if _) (fun _ -> ()) (fun _ _ _ -> ()) (fun k -> k) x)))
 
 [@Norm]
 let mk_read_maybe_enum_key
@@ -88,7 +91,7 @@ let mk_read_maybe_enum_key
   (r: leaf_reader p)
   (e: enum key repr)
 : Tot (leaf_reader (parse_maybe_enum_key p e))
-= read_maybe_enum_key r e
+= read_maybe_enum_key r e (mk_maybe_enum_destr (maybe_enum_key e) e)
 
 inline_for_extraction
 let read_enum_key
