@@ -2649,19 +2649,31 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
 
   let prime = if is_implicit then "'" else "" in
   w o "friend %s\n\n" (module_name tagt);
+  (* Under -pulse, the executable representation is the Vec-based copyful lowtype
+     ([<n>_low]/[<n>_lowtype] with [<n>_vmatch]/[<n>_conv]); the high-level sum
+     type [<n>] and its [tag_of_<n>] discriminator are only referenced from
+     ghost/noextract spec code (the LowParse sum machinery is normalised into the
+     lowtype-based copyful path), yet KaRaMeL still materialises the high type and
+     its auto-generated discriminators -- leaking F* spec types (e.g. an opaque
+     [Seq.seq uint8] case payload as a [Prims_list] cons-list) into the extracted
+     C even though they are never used at runtime.  Mark them noextract under
+     -pulse (mirroring the struct/vllist fix); the LowStar (non-pulse) path uses
+     the high sum as its actual runtime representation, so they must stay
+     extractable there. *)
+  let nx = if !emit_pulse then "noextract " else "" in
   if !types_from = "" then begin
-  w (type_channel tch i) "type %s%s =\n" n prime;
+  w (type_channel tch i) "%stype %s%s =\n" nx n prime;
   List.iter (fun (case, ty) -> w (type_channel tch i) "  | %s_%s of %s\n" cprefix case (compile_type ty)) cl;
   (match def with Some d -> w (type_channel tch i) "  | %s_Unknown_%s: v:%s_repr{not (known_%s_repr v)} -> x:%s -> %s%s\n" cprefix tn tn tn (compile_type d) n prime | _ -> ());
   end;
 
-  w i "\ninline_for_extraction let tag_of_%s (x:%s%s) : %s = match x with\n" n n prime (compile_type tagt);
+  w i "\ninline_for_extraction %slet tag_of_%s (x:%s%s) : %s = match x with\n" nx n n prime (compile_type tagt);
   List.iter (fun (case, ty) -> w i "  | %s_%s _ -> %s\n" cprefix case (String.capitalize_ascii case)) cl;
   (match def with Some d -> w i "  | %s_Unknown_%s v _ -> Unknown_%s v\n" cprefix tn tn | _ -> ());
   w i "\n";
 
   if is_implicit then
-    w i "type %s (k:%s) = x:%s'{tag_of_%s x == k}\n\n" n (compile_type tagt) n n;
+    w i "%stype %s (k:%s) = x:%s'{tag_of_%s x == k}\n\n" nx n (compile_type tagt) n n;
 
   (* For sums under -pulse, emit the [as_enum_key] tag coercions to the interface
      BEFORE the parser/validator vals, so the transparent vmatch tag-helpers
@@ -4659,8 +4671,18 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
   assert (List.length fields >= 2);
   
   (* application type *)
+  (* Under -pulse, the executable representation is the Vec-based copyful lowtype
+     ([<n>_lowtype]); the high-level record [<n>], its tuple [<n>'], and the
+     [synth_<n>]/[synth_<n>_recip] coercions below are only referenced from
+     ghost/noextract spec code (the copyful/validate/jump/writer combinators take
+     the synth as GTot), yet KaRaMeL still materialises them -- leaking F* spec
+     types (e.g. a [Seq.seq uint8] opaque field as a [Prims_list] cons-list) into
+     the extracted C even though they are never used at runtime.  Mark them
+     noextract under -pulse (mirroring the vllist/vlarray fix); the LowStar
+     (non-pulse) path uses the record as its actual runtime representation, so
+     they must stay extractable there. *)
   if !types_from = "" then begin
-    w (type_channel tch i) "type %s = {\n" n;
+    w (type_channel tch i) "%stype %s = {\n" (if !emit_pulse then "noextract " else "") n;
     List.iter (fun (fn, ty) ->
       w (type_channel tch i) "  %s : %s;\n" fn (compile_type ty)) fields;
     w (type_channel tch i) "}\n\n";
@@ -4680,7 +4702,7 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
       ()
       tfields
   in
-  w (ipub i o) "type %s' = %s\n\n" n tuple;
+  w (ipub i o) "%stype %s' = %s\n\n" (if !emit_pulse then "noextract " else "") n tuple;
 
   (* synthethizer for tuple type *)
   let synth_arg =
@@ -4696,7 +4718,7 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
       tfields
   in
   let synth_body = List.fold_left (fun acc (fn, ty) -> sprintf "%s    %s = %s;\n" acc fn fn) "" fields in
-  w (ipub i o) "inline_for_extraction let synth_%s (x: %s') : %s =\n" n n n;
+  w (ipub i o) "inline_for_extraction %slet synth_%s (x: %s') : %s =\n" (if !emit_pulse then "noextract " else "") n n n;
   w (ipub i o) "  match x with %s -> {\n" synth_arg;
   w (ipub i o) "%s" synth_body;
   w (ipub i o) "  }\n\n";
@@ -4713,7 +4735,7 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
       ()
       tfields
   in
-  w (ipub i o) "inline_for_extraction let synth_%s_recip (x: %s) : %s' = %s\n\n" n n n synth_recip_body;
+  w (ipub i o) "inline_for_extraction %slet synth_%s_recip (x: %s) : %s' = %s\n\n" (if !emit_pulse then "noextract " else "") n n n synth_recip_body;
 
   (* Write parser API *)
   write_api o i li.has_lserializer is_private li.meta n li.min_len li.max_len;
