@@ -178,3 +178,35 @@ let mk_read_enum_key
   (_: squash (k.parser_kind_subkind == Some ParserStrong))
 : Tot (leaf_reader (parse_enum_key p e))
 = read_enum_key r e (mk_dep_maybe_enum_destr e (read_enum_key_t e)) ()
+
+// For a repr that is a known enum member, maybe_enum_key_of_repr reduces to Known
+// of the corresponding key.  Bridges the dependent-destructor result type.
+let maybe_enum_key_of_repr_known
+  (#key #repr: eqtype)
+  (e: enum key repr)
+  (r: enum_repr e)
+: Lemma (maybe_enum_key_of_repr e r == Known (enum_key_of_repr e r))
+= ()
+
+// Compute the (closed) enum key of a known repr via the reducible [@Norm]
+// dependent destructor, instead of the spec list-walker enum_key_of_repr.  The
+// result is propositionally equal to enum_key_of_repr e r, so callers can keep
+// the latter in ghost position.  Used by read_sum_tag (LowParse.PulseParse.Sum).
+inline_for_extraction
+let enum_key_of_repr_destr
+  (#key #repr: eqtype)
+  (e: enum key repr { Cons? e })
+  (destr: dep_maybe_enum_destr_t e (read_enum_key_t e))
+  (r: enum_repr e)
+: Tot (k: enum_key e { k == enum_key_of_repr e r })
+= maybe_enum_key_of_repr_known e r;
+  destr (read_enum_key_eq e) (read_enum_key_if e)
+    (fun _ _ -> ()) (fun _ _ _ _ -> ()) (read_enum_key_f e) r ()
+
+[@Norm]
+let mk_enum_key_of_repr_destr
+  (#key #repr: eqtype)
+  (e: enum key repr { Cons? e })
+  (r: enum_repr e)
+: Tot (k: enum_key e { k == enum_key_of_repr e r })
+= enum_key_of_repr_destr e (mk_dep_maybe_enum_destr e (read_enum_key_t e)) r

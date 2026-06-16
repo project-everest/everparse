@@ -976,7 +976,7 @@ let emit_copyful_owned_sum o i n tn cprefix cl =
   wp o "\n";
   (* copyful parser at the library dependent-pair mid, then bridged to the
      transparent interface mid/vmatch/conv via [copyful_parse_coerce_mid]. *)
-  wp o "let read_%s_sum\n  : PPB.copyful_parse (PPS.vmatch_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) %s_parser (PPS.sum_conv %s_sum %s_mid_of_tag %s_conv_of_tag) =\n  PPS.copyful_parse_sum %s_sum %s_repr_reader %s_repr_jumper parse_%s_cases\n    %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag copyful_%s_cases (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n n n n n n n n n n n tn tn n n n n n n n;
+  wp o "let read_%s_sum\n  : PPB.copyful_parse (PPS.vmatch_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch) %s_parser (PPS.sum_conv %s_sum %s_mid_of_tag %s_conv_of_tag) =\n  PPS.copyful_parse_sum %s_sum %s_repr_reader %s_repr_jumper parse_%s_cases\n    %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch %s_conv_of_tag copyful_%s_cases (_ by (LP.dep_enum_destr_tac ())) (_ by (LP.dep_maybe_enum_destr_t_tac ())) () ()\n\n" n n n n n n n n n n n tn tn n n n n n n n;
   wp o "let %s_coerce_vmatch_eq (xl: %s_low) (m1: PPS.sum_mid %s_sum %s_mid_of_tag)\n  : Lemma (PPS.vmatch_sum %s_sum %s_low %s_tag_of_low %s_mid_of_tag %s_casevmatch xl m1 == %s_vmatch xl (%s_fg m1))\n  = match m1 with\n  | (| k, cm |) ->\n    (match k with\n" n n n n n n n n n n n;
   List.iter (fun (kcase, kty) ->
     wp o "     | %s -> (match xl with\n" (String.capitalize_ascii kcase);
@@ -3130,7 +3130,7 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
         wp o "let %s_reader =\n%s" n same_kind;
         (match def with
          | None ->
-            wp o "  PPS.read_sum %s_sum %s_repr_reader %s_repr_jumper parse_%s_cases read_%s_cases (_ by (LP.dep_enum_destr_tac ())) ()\n\n" n tn tn n n;
+            wp o "  PPS.read_sum %s_sum %s_repr_reader %s_repr_jumper parse_%s_cases read_%s_cases (_ by (LP.dep_enum_destr_tac ())) (_ by (LP.dep_maybe_enum_destr_t_tac ())) () ()\n\n" n tn tn n n;
          | Some dt ->
             wp o "  PPS.read_dsum %s_sum read_maybe_%s_key %s_repr_jumper parse_%s_cases read_%s_cases %s (_ by (LP.dep_maybe_enum_destr_t_tac ())) ()\n\n" n tn tn n n (pulse_leaf_reader_name dt));
 

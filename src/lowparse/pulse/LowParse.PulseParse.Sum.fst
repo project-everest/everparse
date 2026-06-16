@@ -824,6 +824,8 @@ fn read_sum_tag
   (j: B.jumper p)
   (p32: leaf_reader p)
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (destr_tag: dep_maybe_enum_destr_t (sum_enum t) (read_enum_key_t (sum_enum t)))
+  (_: squash (Cons? (sum_enum t)))
   (_: squash (kt.parser_kind_subkind == Some ParserStrong))
   (input: S.slice byte)
   (#pm: perm)
@@ -845,7 +847,11 @@ fn read_sum_tag
   parse_enum_key_eq p (sum_enum t) bytes;
   synth_sum_case_inverse t (sum_tag_of_data t v);
   Trade.elim (S.pts_to input #pm bytes) (PPB.pts_to_parsed (parse_sum t p pc) input #pm v);
-  enum_key_of_repr (sum_enum t) k'
+  // The sum tag is a *closed* enum key.  Compute it via the reducible [@Norm]
+  // dependent enum destructor (destr_tag), keeping the spec list-walker
+  // enum_key_of_repr only in the ghost equality, so the extracted C does not
+  // build a runtime F* cons-list (cf. read_enum_key in LowParse.PulseParse.Enum).
+  enum_key_of_repr_destr (sum_enum t) destr_tag k'
 }
 
 #pop-options
@@ -1231,6 +1237,8 @@ fn read_sum
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (pc32: ((x: sum_key t) -> Tot (PPB.leaf_reader (dsnd (pc x)))))
   (destr: dep_enum_destr (sum_enum t) (read_sum_payload_t t pc))
+  (destr_tag: dep_maybe_enum_destr_t (sum_enum t) (read_enum_key_t (sum_enum t)))
+  (_: squash (Cons? (sum_enum t)))
   (_: squash (kt.parser_kind_subkind == Some ParserStrong))
 : PPB.leaf_reader (parse_sum t p pc)
 =
@@ -1238,7 +1246,7 @@ fn read_sum
   (#pm: _)
   (#v: _)
 {
-  let k = read_sum_tag t j p32 pc () input;
+  let k = read_sum_tag t j p32 pc destr_tag () () input;
   let payload = accessor_clens_sum_payload t j pc k () input;
   synth_sum_case_injective t k;
   synth_sum_case_inverse t k;
@@ -1882,6 +1890,8 @@ fn copyful_parse_sum
   (conv_of_tag: (k: sum_key t) -> mid_of_tag k -> GTot (option (sum_type_of_tag t k)))
   (w: (k: sum_key t) -> copyful_parse_sum_payload_t t pc low tag_of_low mid_of_tag vmatch_cases conv_of_tag k)
   (destr: dep_enum_destr (sum_enum t) (copyful_parse_sum_payload_t t pc low tag_of_low mid_of_tag vmatch_cases conv_of_tag))
+  (destr_tag: dep_maybe_enum_destr_t (sum_enum t) (read_enum_key_t (sum_enum t)))
+  (cons_sq: squash (Cons? (sum_enum t)))
   (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
 : PPB.copyful_parse (vmatch_sum t low tag_of_low mid_of_tag vmatch_cases) (parse_sum t p pc) (sum_conv t mid_of_tag conv_of_tag)
 =
@@ -1889,7 +1899,7 @@ fn copyful_parse_sum
   (#pm: perm)
   (#v: Ghost.erased (sum_type t))
 {
-  let k = read_sum_tag t j p32 pc () input;
+  let k = read_sum_tag t j p32 pc destr_tag () () input;
   let payload = accessor_clens_sum_payload t j pc k () input;
   with pm' v2. assert (PPB.pts_to_parsed (dsnd (pc k)) payload #pm' v2);
   let res = copyful_parse_sum_payload_dispatch t pc low tag_of_low mid_of_tag vmatch_cases conv_of_tag w destr k payload;
