@@ -365,6 +365,7 @@ fn validate_dsum_cases_fn
   (#g: parser k (dsum_type_of_unknown_tag s))
   (g': B.validator g)
   (destr: dep_maybe_enum_destr_t (dsum_enum s) (validate_dsum_cases_t s (Ghost.reveal f) g))
+  (destr_repr: enum_repr_of_key'_t (dsum_enum s))
   (x: dsum_key s)
 : B.validator (parse_dsum_cases s (Ghost.reveal f) g x)
 =
@@ -376,7 +377,7 @@ fn validate_dsum_cases_fn
 {
   let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
   parse_dsum_cases_eq' s (Ghost.reveal f) g x sinput;
-  validate_dsum_cases_dispatch s (Ghost.reveal f) f' g' destr (repr_of_maybe_enum_key (dsum_enum s) x) input poffset
+  validate_dsum_cases_dispatch s (Ghost.reveal f) f' g' destr (repr_of_maybe_enum_key_destr (dsum_enum s) destr_repr x) input poffset
 }
 
 #push-options "--z3rlimit 64"
@@ -762,6 +763,7 @@ fn jump_dsum_cases_fn
   (#g: parser k (dsum_type_of_unknown_tag s))
   (g': B.jumper g)
   (destr: dep_maybe_enum_destr_t (dsum_enum s) (jump_dsum_cases_t s f g))
+  (destr_repr: enum_repr_of_key'_t (dsum_enum s))
   (x: dsum_key s)
 : B.jumper (parse_dsum_cases s (Ghost.reveal f) g x)
 =
@@ -772,7 +774,7 @@ fn jump_dsum_cases_fn
 {
   let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
   parse_dsum_cases_eq' s (Ghost.reveal f) g x sinput;
-  jump_dsum_cases_dispatch s f f' g' destr (repr_of_maybe_enum_key (dsum_enum s) x) input offset
+  jump_dsum_cases_dispatch s f f' g' destr (repr_of_maybe_enum_key_destr (dsum_enum s) destr_repr x) input offset
 }
 
 #push-options "--z3rlimit 64"
@@ -1628,9 +1630,10 @@ let validate_dsum_cases_dispatch_reader
   (#g: parser k' (dsum_type_of_unknown_tag t))
   (g32: PPB.leaf_reader g)
   (destr: dep_maybe_enum_destr_t (dsum_enum t) (read_dsum_payload_t t f g))
+  (destr_repr: enum_repr_of_key'_t (dsum_enum t))
   (k: dsum_key t)
 : Tot (read_dsum_payload_t t f g k)
-= destr (fun _ -> eq_trivial) (read_dsum_payload_if t f g) (fun _ _ -> ()) (fun _ _ _ _ -> ()) (read_dsum_payload' t f f32 g32) (repr_of_maybe_enum_key (dsum_enum t) k)
+= destr (fun _ -> eq_trivial) (read_dsum_payload_if t f g) (fun _ _ -> ()) (fun _ _ _ _ -> ()) (read_dsum_payload' t f f32 g32) (repr_of_maybe_enum_key_destr (dsum_enum t) destr_repr k)
 
 #push-options "--z3rlimit 64"
 
@@ -1647,6 +1650,7 @@ fn read_dsum
   (#g: parser k' (dsum_type_of_unknown_tag t))
   (g32: PPB.leaf_reader g)
   (destr: dep_maybe_enum_destr_t (dsum_enum t) (read_dsum_payload_t t f g))
+  (destr_repr: enum_repr_of_key'_t (dsum_enum t))
   (_: squash (kt.parser_kind_subkind == Some ParserStrong))
 : PPB.leaf_reader (parse_dsum t p (Ghost.reveal f) g)
 =
@@ -1660,7 +1664,7 @@ fn read_dsum
   let payload = accessor_clens_dsum_payload t j (Ghost.reveal f) g k () input;
   synth_dsum_case_injective t k;
   synth_dsum_case_inverse t k;
-  let res = validate_dsum_cases_dispatch_reader t f f32 g32 destr k payload;
+  let res = validate_dsum_cases_dispatch_reader t f f32 g32 destr destr_repr k payload;
   Trade.elim _ _;
   res
 }
@@ -2579,6 +2583,7 @@ let copyful_parse_dsum_payload_dispatch
   (conv_of_tag: (k: dsum_key t) -> mid_of_tag k -> GTot (option (dsum_type_of_tag t k)))
   (w: (k: dsum_key t) -> copyful_parse_dsum_payload_t t f g low tag_of_low mid_of_tag vmatch_cases conv_of_tag k)
   (destr: dep_maybe_enum_destr_t (dsum_enum t) (copyful_parse_dsum_payload_t t f g low tag_of_low mid_of_tag vmatch_cases conv_of_tag))
+  (destr_repr: enum_repr_of_key'_t (dsum_enum t))
   (k: dsum_key t)
 : Tot (copyful_parse_dsum_payload_t t f g low tag_of_low mid_of_tag vmatch_cases conv_of_tag k)
 = destr
@@ -2587,7 +2592,7 @@ let copyful_parse_dsum_payload_dispatch
     (fun _ _ -> ())
     (fun _ _ _ _ -> ())
     (copyful_parse_dsum_payload_leaf t f g low tag_of_low mid_of_tag vmatch_cases conv_of_tag w)
-    (repr_of_maybe_enum_key (dsum_enum t) k)
+    (repr_of_maybe_enum_key_destr (dsum_enum t) destr_repr k)
 
 inline_for_extraction
 fn copyful_parse_dsum
@@ -2606,6 +2611,7 @@ fn copyful_parse_dsum
   (conv_of_tag: (k: dsum_key t) -> mid_of_tag k -> GTot (option (dsum_type_of_tag t k)))
   (w: (k: dsum_key t) -> copyful_parse_dsum_payload_t t f g low tag_of_low mid_of_tag vmatch_cases conv_of_tag k)
   (destr: dep_maybe_enum_destr_t (dsum_enum t) (copyful_parse_dsum_payload_t t f g low tag_of_low mid_of_tag vmatch_cases conv_of_tag))
+  (destr_repr: enum_repr_of_key'_t (dsum_enum t))
   (sq: squash (kt.parser_kind_subkind == Some ParserStrong))
 : PPB.copyful_parse (vmatch_dsum t low tag_of_low mid_of_tag vmatch_cases) (parse_dsum t p f g) (dsum_conv t mid_of_tag conv_of_tag)
 =
@@ -2618,7 +2624,7 @@ fn copyful_parse_dsum
   Trade.elim _ _;
   let payload = accessor_clens_dsum_payload t j (Ghost.hide f) g k () input;
   with pm' v2. assert (PPB.pts_to_parsed (parse_dsum_type_of_tag' t f g k) payload #pm' v2);
-  let res = copyful_parse_dsum_payload_dispatch t f g low tag_of_low mid_of_tag vmatch_cases conv_of_tag w destr k payload;
+  let res = copyful_parse_dsum_payload_dispatch t f g low tag_of_low mid_of_tag vmatch_cases conv_of_tag w destr destr_repr k payload;
   Trade.elim _ _;
   PPB.elim_vmatch_conv (vmatch_dsum_case t low tag_of_low mid_of_tag vmatch_cases k) (conv_of_tag k) res v2;
   with cm. assert (vmatch_dsum_case t low tag_of_low mid_of_tag vmatch_cases k res cm ** pure (conv_of_tag k cm == Some (Ghost.reveal v2)));
@@ -2740,6 +2746,7 @@ let free_dsum_payload_dispatch
   (vmatch_cases: (k: dsum_key t) -> low -> mid_of_tag k -> slprop)
   (f: (k: dsum_key t) -> PPB.free_t (vmatch_cases k))
   (destr: dep_maybe_enum_destr_t (dsum_enum t) (free_dsum_payload_t t low tag_of_low mid_of_tag vmatch_cases))
+  (destr_repr: enum_repr_of_key'_t (dsum_enum t))
   (k: dsum_key t)
 : Tot (free_dsum_payload_t t low tag_of_low mid_of_tag vmatch_cases k)
 = destr
@@ -2748,7 +2755,7 @@ let free_dsum_payload_dispatch
     (fun _ _ -> ())
     (fun _ _ _ _ -> ())
     (free_dsum_payload_leaf t low tag_of_low mid_of_tag vmatch_cases f)
-    (repr_of_maybe_enum_key (dsum_enum t) k)
+    (repr_of_maybe_enum_key_destr (dsum_enum t) destr_repr k)
 
 inline_for_extraction
 fn free_dsum
@@ -2759,6 +2766,7 @@ fn free_dsum
   (vmatch_cases: (k: dsum_key t) -> low -> mid_of_tag k -> slprop)
   (f: (k: dsum_key t) -> PPB.free_t (vmatch_cases k))
   (destr: dep_maybe_enum_destr_t (dsum_enum t) (free_dsum_payload_t t low tag_of_low mid_of_tag vmatch_cases))
+  (destr_repr: enum_repr_of_key'_t (dsum_enum t))
 : PPB.free_t #low #(dsum_mid t mid_of_tag) (vmatch_dsum t low tag_of_low mid_of_tag vmatch_cases)
 =
   (xl: low)
@@ -2770,7 +2778,7 @@ fn free_dsum
   let k = tag_of_low xl;
   rewrite (vmatch_cases (dfst (Ghost.reveal v)) xl (dsnd (Ghost.reveal v)))
     as (vmatch_cases k xl (dsnd (Ghost.reveal v)));
-  free_dsum_payload_dispatch t low tag_of_low mid_of_tag vmatch_cases f destr k xl;
+  free_dsum_payload_dispatch t low tag_of_low mid_of_tag vmatch_cases f destr destr_repr k xl;
   ()
 }
 
@@ -2983,6 +2991,7 @@ let l2r_safe_writer_dsum_payload_dispatch
   (conv_of_tag: (k: dsum_key t) -> mid_of_tag k -> GTot (option (dsum_type_of_tag t k)))
   (w: (k: dsum_key t) -> l2r_safe_writer_dsum_payload_t t f sr g sg low tag_of_low mid_of_tag vmatch_cases conv_of_tag k)
   (destr: dep_maybe_enum_destr_t (dsum_enum t) (l2r_safe_writer_dsum_payload_t t f sr g sg low tag_of_low mid_of_tag vmatch_cases conv_of_tag))
+  (destr_repr: enum_repr_of_key'_t (dsum_enum t))
   (k: dsum_key t)
 : Tot (l2r_safe_writer_dsum_payload_t t f sr g sg low tag_of_low mid_of_tag vmatch_cases conv_of_tag k)
 = destr
@@ -2991,7 +3000,7 @@ let l2r_safe_writer_dsum_payload_dispatch
     (fun _ _ -> ())
     (fun _ _ _ _ -> ())
     (l2r_safe_writer_dsum_payload_leaf t f sr g sg low tag_of_low mid_of_tag vmatch_cases conv_of_tag w)
-    (repr_of_maybe_enum_key (dsum_enum t) k)
+    (repr_of_maybe_enum_key_destr (dsum_enum t) destr_repr k)
 
 // l2r_safe_writer_dsum_case: build a per-case safe writer from the field safe
 // writer and an option-valued discriminator `disc` (mirror l2r_safe_writer_sum_case).
@@ -3163,6 +3172,7 @@ fn l2r_safe_writer_dsum
   (conv_of_tag: (k: dsum_key t) -> mid_of_tag k -> GTot (option (dsum_type_of_tag t k)))
   (w: (k: dsum_key t) -> l2r_safe_writer_dsum_payload_t t f sr g sg low tag_of_low mid_of_tag vmatch_cases conv_of_tag k)
   (destr: dep_maybe_enum_destr_t (dsum_enum t) (l2r_safe_writer_dsum_payload_t t f sr g sg low tag_of_low mid_of_tag vmatch_cases conv_of_tag))
+  (destr_repr: enum_repr_of_key'_t (dsum_enum t))
   (sq: squash ((Ghost.reveal kt).parser_kind_subkind == Some ParserStrong))
 : PPB.l2r_safe_writer (vmatch_dsum t low tag_of_low mid_of_tag vmatch_cases) (serialize_dsum t s f sr g sg) (dsum_conv t mid_of_tag conv_of_tag)
 =
@@ -3195,7 +3205,7 @@ fn l2r_safe_writer_dsum
     with vleft'. assert (S.pts_to left vleft');
     S.pts_to_len left;
     assert (pure (vleft' == serialize (serialize_maybe_enum_key _ s (dsum_enum t)) k));
-    let res2 = l2r_safe_writer_dsum_payload_dispatch t f sr g sg low tag_of_low mid_of_tag vmatch_cases conv_of_tag w destr k xl right perr;
+    let res2 = l2r_safe_writer_dsum_payload_dispatch t f sr g sg low tag_of_low mid_of_tag vmatch_cases conv_of_tag w destr destr_repr k xl right perr;
     let e2 = !perr;
     with vright'. assert (S.pts_to right vright');
     S.pts_to_len right;

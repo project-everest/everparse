@@ -210,3 +210,19 @@ let mk_enum_key_of_repr_destr
   (r: enum_repr e)
 : Tot (k: enum_key e { k == enum_key_of_repr e r })
 = enum_key_of_repr_destr e (mk_dep_maybe_enum_destr e (read_enum_key_t e)) r
+
+// Inverse direction: compute the repr of a (maybe) enum key via the reducible
+// enum_repr_of_key' destructor, instead of the spec list-walker
+// repr_of_maybe_enum_key (-> enum_repr_of_key -> L.assoc).  Used by the dsum
+// payload dispatch (LowParse.PulseParse.Sum) to feed the repr-indexed payload
+// destructor without building a runtime F* cons-list.
+inline_for_extraction
+let repr_of_maybe_enum_key_destr
+  (#key #repr: eqtype)
+  (e: enum key repr)
+  (destr: enum_repr_of_key'_t e)
+  (x: maybe_enum_key e)
+: Tot (r: repr { maybe_enum_key_of_repr e r == x })
+= match x with
+  | Known k' -> enum_key_of_repr_of_key e k'; destr k'
+  | Unknown r -> r
