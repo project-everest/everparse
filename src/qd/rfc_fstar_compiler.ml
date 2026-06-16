@@ -2064,7 +2064,12 @@ let write_api o i ?param:(p=None) has_lserializer is_private (md: parser_kind_me
    [write_api] are left undefined on purpose: if-then-else is -pulse only (guarded
    elsewhere), and under -pulse those [wh]/[wl] writes are no-ops. *)
 let compile_ite_tag o i tagt clen is_private =
-  w i "type %s = Seq.lseq FStar.UInt8.t %d\n\n" tagt clen;
+  (* Under -pulse the executable tag representation is the Vec-based lowtype
+     ([<tagt>_lowtype = PPBY.lvec uint8]); the high [Seq.lseq uint8 clen] type is
+     referenced only by noextract/GTot specs and phantom parser indices, so mark
+     it noextract to avoid a [Prims_list__uint8_t] cons-list typedef in the
+     extracted C.  if-then-else is -pulse-only, but gate defensively. *)
+  w i "%stype %s = Seq.lseq FStar.UInt8.t %d\n\n" (if !emit_pulse then "noextract " else "") tagt clen;
   write_api o i false is_private MetadataTotal tagt clen clen;
   w o "noextract let %s_parser = LP.parse_lseq_bytes %d\n\n" tagt clen;
   w o "noextract let %s_serializer = LP.serialize_lseq_bytes %d\n\n" tagt clen;
@@ -2489,8 +2494,17 @@ and compile_ite tch o i n sn fn tagn clen cval tt tf true_ctor_opt false_ctor_op
      [<n>_vmatch]/[<n>_conv]) and must be [noextract] too so the extracted code
      never refers back to the (now non-extracted) [<n>_cst]. *)
   w i "noextract let %s_cst : %s =\n  assert_norm (L.length [%s] == %d);\n  Seq.seq_of_list [%s]\n\n" n tagt bl clen bl;
-  w i "type %s_false = {\n  tag: t:%s_%s{t <> %s_cst};\n  value: %s\n}\n\n" n n tagn n (compile_type tf);
-  w i "type %s =\n  | %s of %s\n  | %s of %s_false\n\n" n true_ctor (compile_type tt) false_ctor n;
+  (* Under -pulse the executable representation is the Vec-based copyful lowtype
+     ([<n>_low]/[<n>_lowtype] with [<n>_vmatch]/[<n>_conv]); the high-level
+     if-then-else record [<n>_false] (carrying the [Seq]-based tag/payload) and
+     the high sum [<n>] are referenced only by ghost/noextract spec code and the
+     auto-generated discriminators, yet KaRaMeL still materialises them -- leaking
+     an opaque [Seq.seq uint8] field as a [Prims_list] cons-list into the
+     extracted C even though no runtime value is ever built from them.  Mark them
+     noextract under -pulse (if-then-else is -pulse-only, but gate defensively). *)
+  let nx = if !emit_pulse then "noextract " else "" in
+  w i "%stype %s_false = {\n  tag: t:%s_%s{t <> %s_cst};\n  value: %s\n}\n\n" nx n n tagn n (compile_type tf);
+  w i "%stype %s =\n  | %s of %s\n  | %s of %s_false\n\n" nx n true_ctor (compile_type tt) false_ctor n;
 
   (* Spec. The condition, payload type family, synth and the [parse_ifthenelse]
      parameter record are emitted to the INTERFACE (not the impl): the copyful
@@ -4126,8 +4140,12 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       (* Pulse: Seq-native fixed-length bytes (no FStar.Bytes). The high-level
          value is a plain [Seq.lseq FStar.UInt8.t k]; the spec is built over
          [parse_lseq_bytes]/[serialize_lseq_bytes] and the copyful tag block uses
-         the LowParse.Pulse.SeqBytes combinators. *)
-      w i "type %s = Seq.lseq FStar.UInt8.t %d\n\n" n k;
+         the LowParse.Pulse.SeqBytes combinators.  The executable representation is
+         the Vec-based [<n>_lowtype = PPBY.lvec uint8]; the high [Seq.lseq] type is
+         referenced only by noextract/GTot specs and (phantom) parser indices, so
+         mark it noextract to keep KaRaMeL from emitting a [Prims_list__uint8_t]
+         cons-list typedef.  (This branch is -pulse-only, see the guard above.) *)
+      w i "noextract type %s = Seq.lseq FStar.UInt8.t %d\n\n" n k;
       write_api o i false is_private li.meta n li.min_len li.max_len;
       w o "noextract let %s_parser = LP.parse_lseq_bytes %d\n\n" n k;
       w o "noextract let %s_serializer = LP.serialize_lseq_bytes %d\n\n" n k;
@@ -4308,7 +4326,13 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         (match repr with None -> true
         | Some t -> let (_,lm,_) = basic_bounds t in lm = log256 high) ->
       w i "inline_for_extraction noextract let min_len = %d\ninline_for_extraction noextract let max_len = %d\n" low high;
-      w i "type %s = LP.parse_bounded_seq_vlbytes_t %d %d\n\n" n low high;
+      (* Under -pulse the executable byte representation is the Vec-based lowtype
+         ([<n>_lowtype = PPBY.lvec uint8]); the high-level type [<n>] is the spec
+         [Seq.seq uint8] refinement, referenced only by noextract/GTot specs and
+         (phantom) parser indices, never built at runtime.  Mark it noextract so
+         KaRaMeL does not lower it to a [Prims_list__uint8_t] cons-list typedef.
+         (This whole branch is -pulse-only, see the guard above.) *)
+      w i "noextract type %s = LP.parse_bounded_seq_vlbytes_t %d %d\n\n" n low high;
       write_api o i false is_private li.meta n li.min_len li.max_len;
       w o "noextract let %s_parser = LP.parse_bounded_seq_vlbytes %d %d\n\n" n low high;
       w o "noextract let %s_serializer = LP.serialize_bounded_seq_vlbytes %d %d\n\n" n low high;
