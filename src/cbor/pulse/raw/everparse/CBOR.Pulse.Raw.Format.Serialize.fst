@@ -2230,6 +2230,8 @@ let cbor_serialize_array_t =
 
 #restart-solver
 
+#push-options "--z3rlimit 256"
+
 fn cbor_serialize_array'
   (len: raw_uint64)
   (out: S.slice U8.t)
@@ -2280,6 +2282,8 @@ ensures
     sz_zero
   }
 }
+
+#pop-options
 
 fn cbor_serialize_array
   (len: raw_uint64)
