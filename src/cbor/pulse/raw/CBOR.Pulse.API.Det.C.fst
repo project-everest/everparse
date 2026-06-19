@@ -255,7 +255,6 @@ fn cbor_det_mk_map_from_array_safe () :
   (#vv: _)
 {
   with vdest0 . assert (pts_to dest vdest0);
-  let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;  
   let s = S.from_array a (SZ.uint64_to_sizet len);
   S.pts_to_len s;
   PM.seq_list_match_length (cbor_det_map_entry_match pv) va vv;

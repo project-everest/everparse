@@ -1167,8 +1167,7 @@ fn cbor_det_array_iterator_start (_: unit) : array_iterator_start_t u#0 u#0 #_ #
   Trade.rewrite_with_trade
     (cbor_det_match p x v)
     (Raw.cbor_match p x (SpecRaw.mk_det_raw_cbor v));
-  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
-  let res = Read.cbor_array_iterator_init f64 x;
+  let res = Read.cbor_array_iterator_init x;
   Trade.trans _ (Raw.cbor_match p x (SpecRaw.mk_det_raw_cbor v)) (cbor_det_match p x v); // FIXME: WHY WHY WHY do I now need to help Pulse here?
   with p' l . assert (Read.cbor_array_iterator_match p' res l);
   list_map_mk_det_raw_cbor_mk_cbor l;
@@ -1303,7 +1302,7 @@ fn cbor_det_get_array_item (_: unit) : get_array_item_t u#0 #_ cbor_det_match
   Trade.rewrite_with_trade
     (cbor_det_match p x v)
     (Raw.cbor_match p x (SpecRaw.mk_det_raw_cbor v));
-  let res = Read.cbor_array_item (assume (SZ.fits_u64)) x i;
+  let res = Read.cbor_array_item x i;
   Trade.trans _ (Raw.cbor_match p x (SpecRaw.mk_det_raw_cbor v)) (cbor_det_match p x v); // FIXME: WHY WHY WHY do I now need to help Pulse here?
   with p' v' . assert (Raw.cbor_match p' res v');
   list_map_mk_cbor_mk_det_raw_cbor l;
@@ -1538,8 +1537,7 @@ fn cbor_det_map_iterator_start' (_: unit) : det_map_iterator_start_t
     (cbor_det_match p x y)
     (Raw.cbor_match p x (SpecRaw.mk_det_raw_cbor y));
   SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor y);
-  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
-  let res = Read.cbor_map_iterator_init f64 x;
+  let res = Read.cbor_map_iterator_init x;
   Trade.trans _ (Raw.cbor_match p x (SpecRaw.mk_det_raw_cbor y)) (cbor_det_match p x y); // FIXME: WHY WHY WHY do I now need to help Pulse here?
   with p' l . assert (Read.cbor_map_iterator_match p' res l);
   list_map_mk_det_raw_cbor_map_entry_mk_cbor_map_entry l;  

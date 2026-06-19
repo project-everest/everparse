@@ -2117,7 +2117,6 @@ fn mk_string_from_array
   (#v: Ghost.erased (Seq.seq U8.t))
 {
   A.pts_to_len a;
-  let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
   let s = S.from_array a (SZ.uint64_to_sizet len);
   intro
     (Trade.trade
@@ -2655,7 +2654,6 @@ fn mk_array_from_array
   (#vv: Ghost.erased (list cbor))
 {
   A.pts_to_len a;
-  let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
   let s = S.from_array a (SZ.uint64_to_sizet len);
   intro
     (Trade.trade
@@ -3071,7 +3069,6 @@ fn mk_map_from_array
   (#vv: Ghost.erased (list (cbor & cbor)))
 {
   A.pts_to_len a;
-  let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
   let s = S.from_array a (SZ.uint64_to_sizet len);
   S.pts_to_len s;
   let res = cbor_mk_map s;

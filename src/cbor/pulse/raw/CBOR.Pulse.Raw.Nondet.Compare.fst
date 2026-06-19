@@ -254,8 +254,8 @@ fn cbor_nondet_equiv_body
       if ((len1.value <: U64.t) <> len2.value) {
         false
       } else {
-        let i1 = Read.cbor_array_iterator_init () x1;
-        let i2 = Read.cbor_array_iterator_init () x2;
+        let i1 = Read.cbor_array_iterator_init x1;
+        let i2 = Read.cbor_array_iterator_init x2;
         let mut pi1 = i1;
         let mut pi2 = i2;
         let mut pres = true;
@@ -311,8 +311,8 @@ fn cbor_nondet_equiv_body
       Trade.elim _ _;
       res
     } else {
-      let i1 = Read.cbor_map_iterator_init () x1;
-      let i2 = Read.cbor_map_iterator_init () x2;
+      let i1 = Read.cbor_map_iterator_init x1;
+      let i2 = Read.cbor_map_iterator_init x2;
       if (not (cbor_nondet_list_for_all_setoid_assoc_eq cbor_nondet_equiv i2 i1)) {
         Trade.elim _ (cbor_match p1 x1 v1);
         Trade.elim _ _;

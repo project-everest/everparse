@@ -88,7 +88,6 @@ fn cbor_match_array_elim
 }
 
 fn cbor_array_item
-  (fits: squash (SZ.fits_u64))
   (c: cbor_raw)
   (i: U64.t)
   (#pm: perm)
@@ -150,7 +149,6 @@ let cbor_array_iterator_match : perm -> cbor_array_iterator -> list raw_data_ite
     cbor_serialized_array_iterator_match
 
 fn cbor_array_iterator_init
-  (fits: squash (SZ.fits_u64))
   (c: cbor_raw)
   (#pm: perm)
   (#r: Ghost.erased raw_data_item { Array? r })
@@ -433,7 +431,6 @@ let cbor_map_iterator_match : perm -> cbor_map_iterator -> list (raw_data_item &
     cbor_serialized_map_iterator_match
 
 fn cbor_map_iterator_init
-  (fits: squash (SZ.fits_u64))
   (c: cbor_raw)
   (#pm: perm)
   (#r: Ghost.erased raw_data_item { Map? r })

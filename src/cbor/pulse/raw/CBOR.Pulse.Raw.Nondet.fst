@@ -488,8 +488,7 @@ fn cbor_nondet_array_iterator_start (_: unit) : array_iterator_start_t u#0 u#0 #
   let v' = cbor_nondet_match_elim x;
   SpecRaw.mk_cbor_eq v'; 
   SpecRaw.valid_eq SpecRaw.basic_data_model v';
-  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
-  let res = Read.cbor_array_iterator_init f64 x;
+  let res = Read.cbor_array_iterator_init x;
   Trade.trans _ _ (cbor_nondet_match p x v);
   with p' l . assert (Read.cbor_array_iterator_match p' res l);
   cbor_nondet_array_iterator_match_intro res;
@@ -605,7 +604,7 @@ fn cbor_nondet_get_array_item (_: unit) : get_array_item_t u#0 #_ cbor_nondet_ma
   SpecRaw.mk_cbor_eq v';
   SpecRaw.valid_eq SpecRaw.basic_data_model v';
   let l' : Ghost.erased (list SpecRaw.raw_data_item) = Ghost.hide (SpecRaw.Array?.v v');
-  let res = Read.cbor_array_item (assume (SZ.fits_u64)) x i;
+  let res = Read.cbor_array_item x i;
   Trade.trans _ _ (cbor_nondet_match p x v);
   List.Tot.lemma_index_memP l' (U64.v i);
   List.Tot.for_all_mem SpecRaw.valid_raw_data_item l';
@@ -712,8 +711,7 @@ fn cbor_nondet_map_iterator_start (_: unit) : map_iterator_start_t u#0 u#0 #_ #_
   let y' = cbor_nondet_match_elim x;
   SpecRaw.mk_cbor_eq y';
   SpecRaw.valid_eq SpecRaw.basic_data_model y';
-  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
-  let res = Read.cbor_map_iterator_init f64 x;
+  let res = Read.cbor_map_iterator_init x;
   Trade.trans _ _ (cbor_nondet_match p x y);
   cbor_nondet_map_iterator_match_intro res;
   Trade.trans _ _ (cbor_nondet_match p x y);
