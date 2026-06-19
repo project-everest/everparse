@@ -316,14 +316,13 @@ fn cbor_compare_body
           }
           _ -> {
             cbor_compare_array_eq (Array?.v v1) (Array?.v v2);
-            let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
             let i1 = cbor_array_iterator_init x1;
             with p1' . assert (cbor_array_iterator_match p1' i1 (Array?.v v1));
             unfold (cbor_array_iterator_match p1' i1 (Array?.v v1));
             let i2 = cbor_array_iterator_init x2;
             with p2' . assert (cbor_array_iterator_match p2' i2 (Array?.v v2));
             unfold (cbor_array_iterator_match p2' i2 (Array?.v v2));
-            let res = lex_compare_iterator_peel_perm cbor_match cbor_serialized_array_iterator_match cbor_serialized_array_iterator_is_empty (cbor_serialized_array_iterator_next f64) cbor_compare (impl_compare_of_cbor_compare ih) i1 i2;
+            let res = lex_compare_iterator_peel_perm cbor_match cbor_serialized_array_iterator_match cbor_serialized_array_iterator_is_empty (cbor_serialized_array_iterator_next ()) cbor_compare (impl_compare_of_cbor_compare ih) i1 i2;
             fold (cbor_array_iterator_match p1' i1 (Array?.v v1));
             fold (cbor_array_iterator_match p2' i2 (Array?.v v2));
             Trade.elim _ (cbor_match p1 x1 v1);
@@ -354,14 +353,13 @@ fn cbor_compare_body
           }
           _ -> {
             cbor_compare_map_eq (Map?.v v1) (Map?.v v2);
-            let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
             let i1 = cbor_map_iterator_init x1;
             with p1' . assert (cbor_map_iterator_match p1' i1 (Map?.v v1));
             unfold (cbor_map_iterator_match p1' i1 (Map?.v v1));
             let i2 = cbor_map_iterator_init x2;
             with p2' . assert (cbor_map_iterator_match p2' i2 (Map?.v v2));
             unfold (cbor_map_iterator_match p2' i2 (Map?.v v2));
-            let res = lex_compare_iterator_peel_perm cbor_match_map_entry cbor_serialized_map_iterator_match cbor_serialized_map_iterator_is_empty (cbor_serialized_map_iterator_next f64) cbor_compare_key_value (impl_cbor_compare_key_value ih) i1 i2;
+            let res = lex_compare_iterator_peel_perm cbor_match_map_entry cbor_serialized_map_iterator_match cbor_serialized_map_iterator_is_empty (cbor_serialized_map_iterator_next ()) cbor_compare_key_value (impl_cbor_compare_key_value ih) i1 i2;
             fold (cbor_map_iterator_match p1' i1 (Map?.v v1));
             fold (cbor_map_iterator_match p2' i2 (Map?.v v2));
             Trade.elim _ (cbor_match p1 x1 v1);

@@ -526,8 +526,7 @@ fn cbor_nondet_array_iterator_next (_: unit) : array_iterator_next_t #_ #_ cbor_
   (#z: _)
 {
   let l' = cbor_nondet_array_iterator_match_elim y;
-  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
-  let res = Read.cbor_array_iterator_next f64 x;
+  let res = Read.cbor_array_iterator_next x;
   Trade.trans _ _ (cbor_nondet_array_iterator_match py y z);
   with y' z' . assert (pts_to x y' ** Read.cbor_array_iterator_match py y' z');
   cbor_nondet_array_iterator_match_intro y';
@@ -783,8 +782,7 @@ fn cbor_nondet_map_iterator_next (_: unit) : map_iterator_next_t #_ #_ cbor_nond
   (#z: _)
 {
   let l' = cbor_nondet_map_iterator_match_elim y;
-  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
-  let res = Read.cbor_map_iterator_next f64 x;
+  let res = Read.cbor_map_iterator_next x;
   Trade.trans _ _ (cbor_nondet_map_iterator_match py y z);
   cbor_nondet_map_entry_match_intro res;
   Trade.trans_hyp_l _ _ _ (cbor_nondet_map_iterator_match py y z);

@@ -1211,8 +1211,7 @@ fn cbor_det_array_iterator_next (_: unit) : array_iterator_next_t u#0 u#0 #_ #_ 
   Trade.rewrite_with_trade
     (cbor_det_array_iterator_match py y z)
     (Read.cbor_array_iterator_match py y (List.Tot.map mk_det_raw_cbor z));
-  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
-  let res = Read.cbor_array_iterator_next f64 x;
+  let res = Read.cbor_array_iterator_next x;
   Trade.trans _ (Read.cbor_array_iterator_match py y (List.Tot.map mk_det_raw_cbor z)) (cbor_det_array_iterator_match py y z); // FIXME: WHY WHY WHY do I now need to help Pulse here?
   with y' z' . assert (Read.cbor_array_iterator_match py y' z');
   Trade.rewrite_with_trade
@@ -1582,8 +1581,7 @@ fn cbor_det_map_iterator_next (_: unit) : map_iterator_next_t u#0 u#0 #_ #_ cbor
   Trade.rewrite_with_trade
     (cbor_det_map_iterator_match py y z)
     (Read.cbor_map_iterator_match py y (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry z));
-  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
-  let res = Read.cbor_map_iterator_next f64 x;
+  let res = Read.cbor_map_iterator_next x;
   Trade.trans _ (Read.cbor_map_iterator_match py
           y
           (List.Tot.Base.map SpecRaw.mk_det_raw_cbor_map_entry z)) (cbor_det_map_iterator_match py y z); // FIXME: WHY WHY WHY do I now need to help Pulse here?

@@ -18,14 +18,13 @@ val jump_header (_: unit) : jumper #header #parse_header_kind parse_header
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 val jump_leaf_content
-  (sq: squash (SZ.fits_u64))
   (h: header)
 : Tot (jumper (parse_leaf_content h))
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 val jump_leaf
-  (sq: squash (SZ.fits_u64))
+  (_: unit)
 : Tot (jumper parse_leaf)
 
 val impl_remaining_data_items_header
@@ -33,19 +32,18 @@ val impl_remaining_data_items_header
   (h: header)
 : Pure SZ.t
   (requires
-    SZ.fits_u64 /\
     remaining_data_items_header h <= SZ.v bound
   )
   (ensures fun res ->
     SZ.v res == remaining_data_items_header h
   )
 
-val jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
+val jump_recursive_step_count_leaf (_: unit) :
   jump_recursive_step_count #parse_raw_data_item_param serialize_raw_data_item_param
 
-val validate_raw_data_item (_: squash SZ.fits_u64) : validator #raw_data_item #parse_raw_data_item_kind parse_raw_data_item
+val validate_raw_data_item (_: unit) : validator #raw_data_item #parse_raw_data_item_kind parse_raw_data_item
 
-val jump_raw_data_item (_: squash SZ.fits_u64) : jumper #raw_data_item #parse_raw_data_item_kind parse_raw_data_item
+val jump_raw_data_item (_: unit) : jumper #raw_data_item #parse_raw_data_item_kind parse_raw_data_item
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -228,7 +226,6 @@ val pts_to_serialized_nlist_raw_data_item_head_header'
 
 inline_for_extraction
 val impl_holds_on_raw_data_item
-  (f64: squash SZ.fits_u64)
   (p: Ghost.erased (raw_data_item -> bool))
   (impl_p: LowParse.Pulse.Recursive.impl_pred_t serialize_raw_data_item_param p)
   (input: slice byte)

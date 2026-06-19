@@ -249,7 +249,6 @@ ensures
 }
 
 fn cbor_array_iterator_next
-  (sq: squash SZ.fits_u64)
   (pi: R.ref cbor_array_iterator)
   (#pm: perm)
   (#i: Ghost.erased cbor_array_iterator)
@@ -272,7 +271,7 @@ ensures exists* a p i' q .
   let res = cbor_raw_iterator_next
     cbor_match
     cbor_serialized_array_iterator_match
-    (cbor_serialized_array_iterator_next sq)
+    (cbor_serialized_array_iterator_next ())
     pi;
   with i'. assert (R.pts_to pi i');
   with l' . rewrite cbor_raw_iterator_match #cbor_raw
@@ -523,7 +522,6 @@ ensures
 }
 
 fn cbor_map_iterator_next
-  (sq: squash SZ.fits_u64)
   (pi: R.ref cbor_map_iterator)
   (#pm: perm)
   (#i: Ghost.erased cbor_map_iterator)
@@ -546,7 +544,7 @@ ensures exists* a p i' q .
   let res = cbor_raw_iterator_next
     cbor_match_map_entry
     cbor_serialized_map_iterator_match
-    (cbor_serialized_map_iterator_next sq)
+    (cbor_serialized_map_iterator_next ())
     pi;
   with i' . assert (R.pts_to pi i');
   with l' . rewrite cbor_raw_iterator_match #cbor_map_entry

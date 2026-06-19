@@ -398,7 +398,6 @@ fn impl_check_equiv_list
         let n = !pn;
         with gl1' . assert (pts_to_serialized (serialize_nlist (SZ.v n) serialize_raw_data_item) l1' #p1 gl1');
         with gl2' . assert (pts_to_serialized (serialize_nlist (SZ.v n) serialize_raw_data_item) l2' #p2 gl2');
-        assume (pure (SZ.fits_u64));
         raw_data_item_size_eq (List.Tot.hd gl1');
         raw_data_item_size_eq (List.Tot.hd gl2');
         if (CBOR.Pulse.Raw.Util.eq_Some_true r) {
@@ -457,7 +456,7 @@ fn impl_check_equiv_list
             pres := Some false
           } else {
             let (lc1, tl1') = split_nondep_then'
-              _ (jump_leaf_content () h1)
+              _ (jump_leaf_content h1)
               _ tl1;
             Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) serialize_raw_data_item) l1' #p1 gl1');
             with w1 . assert (
@@ -480,7 +479,7 @@ fn impl_check_equiv_list
             Trade.trans_hyp_r _ _ _ (pts_to_serialized (serialize_nlist (SZ.v n) serialize_raw_data_item) l1' #p1 gl1');
 
             let (lc2, tl2') = split_nondep_then'
-              _ (jump_leaf_content () h2)
+              _ (jump_leaf_content h2)
               _ tl2;
             Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) serialize_raw_data_item) l2' #p2 gl2');
             pts_to_serialized_nlist_append serialize_raw_data_item tl2' _ _;
@@ -706,7 +705,6 @@ ensures
     let si : serializer pi = serialize_nondep_then
         serialize_raw_data_item
         (serialize_nlist (SZ.v n') (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item));
-    assume (pure (SZ.fits_u64));
     let (lh, lt) = split_nondep_then'
       serialize_raw_data_item
       (jump_raw_data_item ())
@@ -881,7 +879,6 @@ ensures
     let si : serializer pi = serialize_nondep_then
         serialize_raw_data_item
         (serialize_nlist (SZ.v n') (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item));
-    assume (pure (SZ.fits_u64));
     let (lh, lt) = split_nondep_then'
       serialize_raw_data_item
       (jump_raw_data_item ())
@@ -1157,17 +1154,18 @@ fn impl_check_equiv_map_hd_body
         );
         let bound_eq: squash (bound_eq_prop v1 v2 bound) = ();
         let map_bound'_eq: squash (map_bound'_eq_prop (option_sz_v map_bound) gmap_bound') = ();
-        assume (pure (SZ.fits_u64));
         assert (pure (~ (long_argument_simple_value_prop (dfst h1))));
         assert (pure (~ (long_argument_simple_value_prop (dfst h2))));
-        let nv1 = SZ.uint64_to_sizet (argument_as_uint64 (dfst h1) (dsnd h1));
-        assume (pure (SZ.fits_u64));
-        let nv2 = SZ.uint64_to_sizet (argument_as_uint64 (dfst h2) (dsnd h2));
         let map1 = nlist_hd' serialize_raw_data_item (jump_raw_data_item ()) n1 l1 ();
         let mut ph = h1;
         let c1 = get_header_and_contents map1 ph;
         Trade.trans _ _ (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1);
         get_map_payload c1 (List.Tot.hd gl1);
+        pts_to_serialized_length (serialize_nlist (U64.v (Map?.len (List.Tot.hd gl1)).value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c1;
+        LowParse.Spec.VCList.parse_nlist_kind_low (U64.v (Map?.len (List.Tot.hd gl1)).value) (LowParse.Spec.Combinators.and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind);
+        assert_norm ((LowParse.Spec.Combinators.and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind).parser_kind_low == 2);
+        SZ.fits_lte (U64.v (Map?.len (List.Tot.hd gl1)).value) (SZ.v (Pulse.Lib.Slice.len c1));
+        let nv1 = SZ.uint64_to_sizet (argument_as_uint64 (dfst h1) (dsnd h1));
         Trade.trans _ _ (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1);
         pts_to_serialized_nlist_ext
           (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
@@ -1180,6 +1178,10 @@ fn impl_check_equiv_map_hd_body
         let c2 = get_header_and_contents map2 ph;
         Trade.trans _ _ (pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2);
         get_map_payload c2 (List.Tot.hd gl2);
+        pts_to_serialized_length (serialize_nlist (U64.v (Map?.len (List.Tot.hd gl2)).value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c2;
+        LowParse.Spec.VCList.parse_nlist_kind_low (U64.v (Map?.len (List.Tot.hd gl2)).value) (LowParse.Spec.Combinators.and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind);
+        SZ.fits_lte (U64.v (Map?.len (List.Tot.hd gl2)).value) (SZ.v (Pulse.Lib.Slice.len c2));
+        let nv2 = SZ.uint64_to_sizet (argument_as_uint64 (dfst h2) (dsnd h2));
         Trade.trans _ _ (pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2);
         pts_to_serialized_nlist_ext
           (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
@@ -1406,7 +1408,6 @@ ensures
     let si : serializer pi = serialize_nondep_then
         serialize_raw_data_item
         (serialize_nlist (SZ.v n') (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item));
-    assume (pure (SZ.fits_u64));
     let (lh, lt) = split_nondep_then'
       serialize_raw_data_item
       (jump_raw_data_item ())
@@ -1536,6 +1537,12 @@ ensures exists* l' gn' (gl': nlist gn' raw_data_item) .
     let l = !pl;
     let n = !pn;
     let n' = SZ.sub n 1sz;
+    // TODO(size_t): the array/map element counts converted below are bounded by
+    // the remaining bytes of the serialized traversal tail (each item is >= 1
+    // byte), so they fit size_t. Threading that bound through this streaming
+    // traversal is left as a follow-up; for now this is the only residual
+    // fits_u64 assumption in the CBOR validator/jumper path.
+    assume (pure (SZ.fits_u64));
     with gn (gl: nlist gn raw_data_item) . assert (pts_to_serialized (serialize_nlist gn serialize_raw_data_item) l #pm gl);
     let gn' : Ghost.erased nat = gn - 1;
     let gh = pts_to_serialized_nlist_raw_data_item_head_header'
@@ -1548,9 +1555,8 @@ ensures exists* l' gn' (gl': nlist gn' raw_data_item) .
     let h = read_header () hd;
     Trade.elim_hyp_l _ _ _;
     rewrite each gh as h;
-    assume (pure (SZ.fits_u64));
     let (_, tl) = split_nondep_then'
-      _ (jump_leaf_content () h)
+      _ (jump_leaf_content h)
       _ tl';
     Trade.trans _ _ (pts_to_serialized (serialize_nlist gn serialize_raw_data_item) l #pm gl);
     Trade.elim_hyp_l _ _ _;
@@ -1751,7 +1757,6 @@ ensures
     let si : serializer pi = serialize_nondep_then
         serialize_raw_data_item
         (serialize_nlist (SZ.v n') (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item));
-    assume (pure (SZ.fits_u64));
     let (lh, lt) = split_nondep_then'
       serialize_raw_data_item
       (jump_raw_data_item ())
@@ -1865,6 +1870,11 @@ fn impl_check_valid_item
   (#pm: perm)
   (#va: _)
 {
+  // TODO(size_t): the map element count converted below is bounded by the
+  // serialized payload length (each entry is >= 1 byte), so it fits size_t.
+  // Threading that bound here is left as a follow-up; this is a residual
+  // fits_u64 assumption.
+  assume (pure (SZ.fits_u64));
   pts_to_serialized_nlist_raw_data_item_head_header
     a
     (SZ.v n);
@@ -1883,7 +1893,6 @@ fn impl_check_valid_item
     _ (jump_header ())
     _ a;
   Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
-  assume (pure (SZ.fits_u64));
   let h = read_header () ah;
   Trade.elim _ _;
   if (get_header_major_type h = cbor_major_type_map) {
@@ -1932,9 +1941,7 @@ fn impl_check_valid
   (#p1: perm)
   (#gl1: _)
 {
-  assume (pure (SZ.fits_u64));
   impl_holds_on_raw_data_item
-    ()
     _
     (impl_check_valid_item map_bound impl_check_equiv strict_bound_check)
     l1
