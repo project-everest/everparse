@@ -54,6 +54,7 @@ FSTAR_FILES := $(ALL_FSTS)
 CBOR_KRML_MODULES += CBOR.Spec.Constants
 CBOR_KRML_MODULES += CBOR.Pulse.API.Det.Type
 CBOR_KRML_MODULES += CBOR.Pulse.API.Det.C
+CBOR_KRML_MODULES += CBOR.Pulse.API.Det.Dummy
 
 CBOR_KRML_MODULES += CDDL.Pulse.Misc
 CBOR_KRML_MODULES += CDDL.Spec.Misc
@@ -86,9 +87,9 @@ CBOR_KRML_FILES = $(patsubst %,%.krml,$(subst .,_,$(CBOR_KRML_MODULES)))
 
 $(OUTPUT_DIRECTORY)/%.c: $(OUTPUT_DIRECTORY)/%.krml $(addprefix $(OUTPUT_DIRECTORY)/,$(CBOR_KRML_FILES))
 	$(KRML) -fnoshort-enums \
-	 -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]' \
+	 -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C+FStar.Pervasives.Native=CBOR.\*[rename=CBORDetAPI]' \
 	 -bundle '$*=*' \
-	 -add-include '"CBORDetAbstract.h"' \
+	 -add-include '"CBORDetType.h"' -no-prefix CBOR.Pulse.API.Det.Dummy \
 	 -no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type \
 	 -no-prefix CBOR.Spec.Constants -skip-compilation $^ \
 	 -tmpdir $(OUTPUT_DIRECTORY)

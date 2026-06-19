@@ -20,23 +20,23 @@ fn cbor_match_serialized_tagged_elim
   requires
     cbor_match_serialized_tagged c pm r
   ensures exists* pm' .
-    pts_to_serialized serialize_raw_data_item c.cbor_serialized_payload #pm' (Tagged?.v r) **
+    pts_to_serialized serialize_raw_data_item (to_slice c.cbor_serialized_payload) #pm' (Tagged?.v r) **
     trade
-      (pts_to_serialized serialize_raw_data_item c.cbor_serialized_payload #pm' (Tagged?.v r))
+      (pts_to_serialized serialize_raw_data_item (to_slice c.cbor_serialized_payload) #pm' (Tagged?.v r))
       (cbor_match_serialized_tagged c pm r)
 {
   unfold (cbor_match_serialized_tagged c pm r);
-  unfold (cbor_match_serialized_payload_tagged c.cbor_serialized_payload (pm `perm_mul` c.cbor_serialized_perm) (Tagged?.v r));
-  with pm' . assert (pts_to_serialized serialize_raw_data_item c.cbor_serialized_payload #pm' (Tagged?.v r));
+  unfold (cbor_match_serialized_payload_tagged (to_slice c.cbor_serialized_payload) (pm `perm_mul` c.cbor_serialized_perm) (Tagged?.v r));
+  with pm' . assert (pts_to_serialized serialize_raw_data_item (to_slice c.cbor_serialized_payload) #pm' (Tagged?.v r));
   intro
     (Trade.trade
-      (pts_to_serialized serialize_raw_data_item c.cbor_serialized_payload #pm' (Tagged?.v r))
+      (pts_to_serialized serialize_raw_data_item (to_slice c.cbor_serialized_payload) #pm' (Tagged?.v r))
       (cbor_match_serialized_tagged c pm r)
     )
     #emp
     fn _
   {
-    fold (cbor_match_serialized_payload_tagged c.cbor_serialized_payload (pm `perm_mul` c.cbor_serialized_perm) (Tagged?.v r));
+    fold (cbor_match_serialized_payload_tagged (to_slice c.cbor_serialized_payload) (pm `perm_mul` c.cbor_serialized_perm) (Tagged?.v r));
     fold (cbor_match_serialized_tagged c pm r);
   };
 }
@@ -54,7 +54,7 @@ fn cbor_match_serialized_tagged_get_payload
       (cbor_match_serialized_tagged c pm r)
 {
   cbor_match_serialized_tagged_elim c pm r;
-  let res = cbor_read c.cbor_serialized_payload;
+  let res = cbor_read (to_slice c.cbor_serialized_payload);
   Trade.trans _ _ (cbor_match_serialized_tagged c pm r);
   res
 }
@@ -69,24 +69,24 @@ fn cbor_match_serialized_array_elim
   requires
     cbor_match_serialized_array c pm r
   ensures exists* pm' .
-    pts_to_serialized (LP.serialize_nlist (U64.v (Array?.len r).value) serialize_raw_data_item) c.cbor_serialized_payload #pm' (Array?.v r) **
+    pts_to_serialized (LP.serialize_nlist (U64.v (Array?.len r).value) serialize_raw_data_item) (to_slice c.cbor_serialized_payload) #pm' (Array?.v r) **
     trade
-      (pts_to_serialized (LP.serialize_nlist (U64.v (Array?.len r).value) serialize_raw_data_item) c.cbor_serialized_payload #pm' (Array?.v r))
+      (pts_to_serialized (LP.serialize_nlist (U64.v (Array?.len r).value) serialize_raw_data_item) (to_slice c.cbor_serialized_payload) #pm' (Array?.v r))
       (cbor_match_serialized_array c pm r) **
     pure (c.cbor_serialized_header == Array?.len r)
 {
   unfold (cbor_match_serialized_array c pm r);
-  unfold (cbor_match_serialized_payload_array c.cbor_serialized_payload (pm `perm_mul` c.cbor_serialized_perm) (Array?.v r));
-  with pm' . assert (pts_to_serialized (LP.serialize_nlist (U64.v (Array?.len r).value)  serialize_raw_data_item) c.cbor_serialized_payload #pm' (Array?.v r));
+  unfold (cbor_match_serialized_payload_array (to_slice c.cbor_serialized_payload) (pm `perm_mul` c.cbor_serialized_perm) (Array?.v r));
+  with pm' . assert (pts_to_serialized (LP.serialize_nlist (U64.v (Array?.len r).value)  serialize_raw_data_item) (to_slice c.cbor_serialized_payload) #pm' (Array?.v r));
   intro
     (Trade.trade
-      (pts_to_serialized (LP.serialize_nlist (U64.v (Array?.len r).value)  serialize_raw_data_item) c.cbor_serialized_payload #pm' (Array?.v r))
+      (pts_to_serialized (LP.serialize_nlist (U64.v (Array?.len r).value)  serialize_raw_data_item) (to_slice c.cbor_serialized_payload) #pm' (Array?.v r))
       (cbor_match_serialized_array c pm r)
     )
     #emp
     fn _
   {
-    fold (cbor_match_serialized_payload_array c.cbor_serialized_payload (pm `perm_mul` c.cbor_serialized_perm) (Array?.v r));
+    fold (cbor_match_serialized_payload_array (to_slice c.cbor_serialized_payload) (pm `perm_mul` c.cbor_serialized_perm) (Array?.v r));
     fold (cbor_match_serialized_array c pm r);
   };
 }
@@ -114,7 +114,7 @@ ensures exists* y .
   cbor_match_serialized_array_elim c pm r;
   let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
   let j : SZ.t = SZ.uint64_to_sizet i;
-  let elt = LowParse.Pulse.VCList.nlist_nth _ (jump_raw_data_item ()) (U64.v (Array?.len r).value) c.cbor_serialized_payload j;
+  let elt = LowParse.Pulse.VCList.nlist_nth _ (jump_raw_data_item ()) (U64.v (Array?.len r).value) (to_slice c.cbor_serialized_payload) j;
   Trade.trans _ _ (cbor_match_serialized_array c pm r);
   let res = cbor_read elt;
   Trade.trans _ _ (cbor_match_serialized_array c pm r);
@@ -143,7 +143,7 @@ ensures
   with p . assert (
     (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (U64.v (Array?.len (Ghost.reveal r)).value)
           serialize_raw_data_item)
-      c.cbor_serialized_payload
+      (to_slice c.cbor_serialized_payload)
       #p
       (Array?.v (Ghost.reveal r)))
   );
@@ -156,12 +156,12 @@ ensures
   Trade.rewrite_with_trade
     (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (U64.v (Array?.len (Ghost.reveal r)).value)
           serialize_raw_data_item)
-      c.cbor_serialized_payload
+      (to_slice c.cbor_serialized_payload)
       #p
       (Array?.v (Ghost.reveal r)))
     (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (Ghost.reveal res.glen)
           serialize_raw_data_item)
-      res.s
+      (to_slice res.s)
       #p
       (Array?.v (Ghost.reveal r))      
   )
@@ -213,24 +213,24 @@ fn cbor_match_serialized_map_elim
   requires
     cbor_match_serialized_map c pm r
   ensures exists* pm' .
-    pts_to_serialized (LP.serialize_nlist (U64.v (Map?.len r).value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c.cbor_serialized_payload #pm' (Map?.v r) **
+    pts_to_serialized (LP.serialize_nlist (U64.v (Map?.len r).value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) (to_slice c.cbor_serialized_payload) #pm' (Map?.v r) **
     trade
-      (pts_to_serialized (LP.serialize_nlist (U64.v (Map?.len r).value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c.cbor_serialized_payload #pm' (Map?.v r))
+      (pts_to_serialized (LP.serialize_nlist (U64.v (Map?.len r).value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) (to_slice c.cbor_serialized_payload) #pm' (Map?.v r))
       (cbor_match_serialized_map c pm r) **
     pure (c.cbor_serialized_header == Map?.len r)
 {
   unfold (cbor_match_serialized_map c pm r);
-  unfold (cbor_match_serialized_payload_map c.cbor_serialized_payload (pm `perm_mul` c.cbor_serialized_perm) (Map?.v r));
-  with pm' . assert (pts_to_serialized (LP.serialize_nlist (U64.v (Map?.len r).value)  (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c.cbor_serialized_payload #pm' (Map?.v r));
+  unfold (cbor_match_serialized_payload_map (to_slice c.cbor_serialized_payload) (pm `perm_mul` c.cbor_serialized_perm) (Map?.v r));
+  with pm' . assert (pts_to_serialized (LP.serialize_nlist (U64.v (Map?.len r).value)  (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) (to_slice c.cbor_serialized_payload) #pm' (Map?.v r));
   intro
     (Trade.trade
-      (pts_to_serialized (LP.serialize_nlist (U64.v (Map?.len r).value)  (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c.cbor_serialized_payload #pm' (Map?.v r))
+      (pts_to_serialized (LP.serialize_nlist (U64.v (Map?.len r).value)  (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) (to_slice c.cbor_serialized_payload) #pm' (Map?.v r))
       (cbor_match_serialized_map c pm r)
     )
     #emp
     fn _
   {
-    fold (cbor_match_serialized_payload_map c.cbor_serialized_payload (pm `perm_mul` c.cbor_serialized_perm) (Map?.v r));
+    fold (cbor_match_serialized_payload_map (to_slice c.cbor_serialized_payload) (pm `perm_mul` c.cbor_serialized_perm) (Map?.v r));
     fold (cbor_match_serialized_map c pm r);
   };
 }
@@ -254,7 +254,7 @@ ensures
   with p . assert (
     (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (U64.v (Map?.len (Ghost.reveal r)).value)
           (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
-      c.cbor_serialized_payload
+      (to_slice c.cbor_serialized_payload)
       #p
       (Map?.v (Ghost.reveal r)))
   );
@@ -267,12 +267,12 @@ ensures
   Trade.rewrite_with_trade
     (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (U64.v (Map?.len (Ghost.reveal r)).value)
           (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
-      c.cbor_serialized_payload
+      (to_slice c.cbor_serialized_payload)
       #p
       (Map?.v (Ghost.reveal r)))
     (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (Ghost.reveal res.glen)
           (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
-      res.s
+      (to_slice res.s)
       #p
       (Map?.v (Ghost.reveal r))      
   )
