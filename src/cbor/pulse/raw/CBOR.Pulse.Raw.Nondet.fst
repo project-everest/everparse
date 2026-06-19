@@ -1129,8 +1129,8 @@ fn cbor_nondet_mk_string (_: unit) : mk_string_t u#0 #_ cbor_nondet_match
   (#p: _)
   (#v: _)
 {
-  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   S.pts_to_len s;
+  FStar.Math.Lemmas.small_mod (SZ.v (S.len s)) (pow2 64);
   let len64 = SpecRaw.mk_raw_uint64 (SZ.sizet_to_uint64 (S.len s));
   let res1 = Raw.cbor_match_string_intro ty len64 s;
   with r. assert Raw.cbor_match 1.0R res1 r;
@@ -1156,7 +1156,6 @@ fn cbor_nondet_mk_tagged (_: unit) : mk_tagged_t #_ cbor_nondet_match
   (#pv: _)
   (#v': _)
 {
-  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   let tag64 = SpecRaw.mk_raw_uint64 tag;
   let w' = cbor_nondet_match_elim v;
   let res1 = Raw.cbor_match_tagged_intro tag64 r;

@@ -465,8 +465,8 @@ fn cbor_det_mk_string (_: unit) : mk_string_t u#0 #_ cbor_det_match
   (#p: _)
   (#v: _)
 {
-  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   S.pts_to_len s;
+  FStar.Math.Lemmas.small_mod (SZ.v (S.len s)) (pow2 64);
   let len64 = SpecRaw.mk_raw_uint64 (SZ.sizet_to_uint64 (S.len s));
   let res = Raw.cbor_match_string_intro ty len64 s;
   with r. assert Raw.cbor_match 1.0R res r;
@@ -501,7 +501,6 @@ fn cbor_det_mk_tagged (_: unit) : mk_tagged_t #_ cbor_det_match
   (#pv: _)
   (#v': _)
 {
-  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   let tag64 = SpecRaw.mk_raw_uint64 tag;
   let w' : Ghost.erased SpecRaw.raw_data_item = SpecRaw.mk_det_raw_cbor v';
   Trade.rewrite_with_trade
