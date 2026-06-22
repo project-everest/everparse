@@ -2,9 +2,12 @@ module CBOR.Pulse.Raw.EverParse.SizeComparison
 #lang-pulse
 open Pulse.Lib.Pervasives
 open FStar.Mul
+open LowParse.Pulse.Base
+open LowParse.Spec.VCList
 
 module SZ = FStar.SizeT
 module U64 = FStar.UInt64
+module S = Pulse.Lib.Slice
 
 (* A portable comparison between an untrusted [U64.t] (a CBOR header argument:
    an element count or byte length) and a [size_t] budget, without assuming
@@ -42,4 +45,30 @@ fn u64_lte_sizet (a: U64.t) (b: SZ.t)
     FStar.Math.Lemmas.small_mod (SZ.v b) (pow2 64);
     U64.lte a b64
   }
+}
+
+(* A serialized [nlist n p] whose element parser consumes at least one byte
+   occupies at least [n] bytes, so its element count [n] necessarily fits
+   [size_t]. This packages the "each item is >= 1 byte" argument as a single
+   reusable ghost lemma: only the resulting [SZ.fits n] fact enters the caller's
+   SMT context, which keeps it stable inside the deeply nested streaming
+   validators. *)
+
+ghost
+fn nlist_count_fits
+  (#k: parser_kind)
+  (#t: Type0)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (n: nat)
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: nlist n t)
+  requires pts_to_serialized (serialize_nlist n s) input #pm v ** pure (k.parser_kind_low >= 1)
+  ensures pts_to_serialized (serialize_nlist n s) input #pm v ** pure (SZ.fits n)
+{
+  pts_to_serialized_length (serialize_nlist n s) input;
+  parse_nlist_kind_low n k;
+  FStar.Math.Lemmas.lemma_mult_le_right n 1 k.parser_kind_low;
+  SZ.fits_lte n (SZ.v (S.len input));
 }
