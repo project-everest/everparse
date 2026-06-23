@@ -12,7 +12,12 @@ extern "C" {
 #include "CBORDetType.h"
 #include "../CBORDet.h"
 
-size_t CBOR_Pulse_Raw_Format_Serialize_ser_(cbor_raw x_, byte_slice out, size_t offset);
+size_t
+CBOR_Pulse_Raw_Format_Serialize_ser_(
+  cbor_raw x_,
+  CBOR_Pulse_Raw_Slice_byte_slice out,
+  size_t offset
+);
 
 bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out);
 

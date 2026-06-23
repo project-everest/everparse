@@ -16,16 +16,16 @@ typedef struct CBOR_Spec_Raw_Base_raw_uint64_s
 }
 CBOR_Spec_Raw_Base_raw_uint64;
 
-typedef struct byte_slice_s
+typedef struct CBOR_Pulse_Raw_Slice_byte_slice_s
 {
   uint8_t *elt;
   size_t len;
 }
-byte_slice;
+CBOR_Pulse_Raw_Slice_byte_slice;
 
 typedef struct CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator_s
 {
-  byte_slice s;
+  CBOR_Pulse_Raw_Slice_byte_slice s;
   uint64_t len;
 }
 CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator;
@@ -33,7 +33,7 @@ CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator;
 typedef struct cbor_serialized_s
 {
   CBOR_Spec_Raw_Base_raw_uint64 cbor_serialized_header;
-  byte_slice cbor_serialized_payload;
+  CBOR_Pulse_Raw_Slice_byte_slice cbor_serialized_payload;
 }
 cbor_serialized;
 
@@ -49,7 +49,7 @@ typedef struct cbor_string_s
 {
   uint8_t cbor_string_type;
   uint8_t cbor_string_size;
-  byte_slice cbor_string_ptr;
+  CBOR_Pulse_Raw_Slice_byte_slice cbor_string_ptr;
 }
 cbor_string;
 
