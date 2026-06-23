@@ -58,6 +58,7 @@ clean: pulse/det.clean pulse/nondet.clean
 .PHONY: clean
 
 clean-verify: spec.clean spec/raw.clean spec/raw/everparse.clean pulse.clean pulse/raw.clean pulse/raw/everparse.clean pulse/krml.clean
+	rm -f pulse/raw/slice-*/*.checked
 
 .PHONY: clean-verify
 
