@@ -28,9 +28,15 @@ nondet/test-snapshot: extract
 # matching pulse/krml/Makefile), so krml's dependency scan requires the slice .checked
 # to already exist. On separate recipe lines, hence sequential, so the two backend
 # builds never race on the shared CBOR.Pulse.Raw.Slice.fsti.checked.
-extract-krml:
+slice-c:
 	+$(MAKE) -C pulse/raw/slice-c
+
+slice-rust:
 	+$(MAKE) -C pulse/raw/slice-rust
+
+.PHONY: slice-c slice-rust
+
+extract-krml: slice-c slice-rust
 	+$(MAKE) -C pulse/krml extract-krml ALREADY_CACHED='*,-CBOR,CBOR.Pulse.Raw.Slice,'
 
 .PHONY: extract-krml
