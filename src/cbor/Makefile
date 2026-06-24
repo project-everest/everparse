@@ -37,12 +37,12 @@ slice-rust:
 .PHONY: slice-c slice-rust
 
 extract-krml: slice-c slice-rust
-	+$(MAKE) -C pulse/krml extract-krml ALREADY_CACHED='*,-CBOR,CBOR.Pulse.Raw.Slice,'
+	+$(MAKE) -C pulse/krml extract-krml
 
 .PHONY: extract-krml
 
 extract: extract-krml
-	+$(MAKE) -C pulse/krml ALREADY_CACHED='*,-CBOR,CBOR.Pulse.Raw.Slice,'
+	+$(MAKE) -C pulse/krml
 
 .PHONY: extract
 
