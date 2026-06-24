@@ -184,23 +184,36 @@ endif
 # are selected by include path and are not part of the global checked-file cache:
 # the two impls of the same module cannot coexist in a single dependency scan, so
 # they are absent from SRC_DIRS and never built by cbor-verify-aux. Build each one
-# here, sequentially (race-free), before any consumer extracts the CBOR Raw modules.
-# `cbor-verify` is the full verification rule: cbor-verify-aux (the whole CBOR
-# closure) plus these two slice .checked files.
+# via the krml Makefile. `cbor-verify` is the full verification rule: cbor-verify-aux
+# (the whole CBOR closure) plus these two slice .checked files.
 #
-# This MUST run after cbor-verify-aux: building a slice .checked regenerates the
-# krml extracted-c/.depend, which (with ALREADY_CACHED='*,-CBOR.Pulse.Raw.Slice,')
-# expects the whole CBOR closure to be already checked. Ordering it after
-# cbor-verify-aux guarantees those .checked files exist; otherwise under `make -j`
-# the two run concurrently and the .depend scan fails (Error 317: "Expected
-# CBOR.Pulse.Raw.Compare.Base to be already checked but could not find it").
+# The goal handed to the krml sub-make MUST be ABSOLUTE: that Makefile adds the slice
+# dir to its include path with $(realpath) (absolute), so the slice .checked appears
+# in its ALL_CHECKED_FILES as an absolute path, and the recipe is the static pattern
+# rule `$(ALL_CHECKED_FILES): %.checked:`, which fires only for goals whose string is
+# literally one of those (absolute) entries. A relative goal (e.g. ../raw/slice-c/...)
+# matches nothing and errors with "No rule to make target".
+#
+# Each slice build depends on cbor-verify-aux: its krml .depend scan runs with
+# ALREADY_CACHED='*,-CBOR.Pulse.Raw.Slice,', which expects the whole CBOR closure
+# (including the shared CBOR.Pulse.Raw.Slice.fsti.checked) to be already checked;
+# cbor-verify-aux produces those. Without that ordering, under `make -j` the scan
+# races cbor-verify-aux and fails (Error 317: "Expected CBOR.Pulse.Raw.Compare.Base
+# to be already checked but could not find it"). Given that ordering the two backend
+# builds touch only disjoint outputs (slice-c/ vs slice-rust/, extracted-c/ vs
+# extracted-rust/) and only read the already-valid shared .fsti.checked, so they are
+# expressed as independent targets and may run in parallel with each other under -j.
 CBOR_SLICE_C_CHECKED := $(abspath src/cbor/pulse/raw/slice-c/CBOR.Pulse.Raw.Slice.fst.checked)
 CBOR_SLICE_RUST_CHECKED := $(abspath src/cbor/pulse/raw/slice-rust/CBOR.Pulse.Raw.Slice.fst.checked)
 
 ifeq (,$(NO_PULSE))
-cbor-verify: cbor-verify-aux
+$(CBOR_SLICE_C_CHECKED): cbor-verify-aux
 	+$(MAKE) -C src/cbor/pulse/krml CBOR_SLICE_BACKEND=c    ALREADY_CACHED='*,-CBOR.Pulse.Raw.Slice,' $(CBOR_SLICE_C_CHECKED)
+
+$(CBOR_SLICE_RUST_CHECKED): cbor-verify-aux
 	+$(MAKE) -C src/cbor/pulse/krml CBOR_SLICE_BACKEND=rust ALREADY_CACHED='*,-CBOR.Pulse.Raw.Slice,' $(CBOR_SLICE_RUST_CHECKED)
+
+cbor-verify: cbor-verify-aux $(CBOR_SLICE_C_CHECKED) $(CBOR_SLICE_RUST_CHECKED)
 else
 cbor-verify: cbor-verify-aux
 endif
