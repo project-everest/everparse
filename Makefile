@@ -180,45 +180,37 @@ endif
 
 .PHONY: cbor-verify-aux
 
-# The backend-specific CBOR.Pulse.Raw.Slice implementations (slice-c / slice-rust)
-# are selected by include path and are not part of the global checked-file cache:
-# the two impls of the same module cannot coexist in a single dependency scan, so
-# they are absent from SRC_DIRS and never built by cbor-verify-aux. Build each one
-# via the krml Makefile. `cbor-verify` is the full verification rule: cbor-verify-aux
-# (the whole CBOR closure) plus these two slice .checked files.
+# The byte_slice seam (CBOR.Pulse.Raw.Slice) has two backend implementations,
+# slice-c and slice-rust, that share a module name and so cannot be checked in a
+# single dependency scan; each lives in its own directory with its own Makefile
+# (mirroring src/cbor/pulse/raw) and is excluded from SRC_DIRS and the global
+# checked-file cache. `cbor-verify` is the full verification rule: cbor-verify-aux
+# (the whole CBOR closure, including the shared CBOR.Pulse.Raw.Slice.fsti.checked)
+# plus each backend's CBOR.Pulse.Raw.Slice.fst.checked, built by delegating to the
+# per-directory Makefile. Delegating lets each slice directory name its own target
+# locally (the relative CBOR.Pulse.Raw.Slice.fst.checked) instead of threading its
+# absolute path to a sub-make.
 #
-# The goal handed to the krml sub-make MUST be ABSOLUTE: that Makefile adds the slice
-# dir to its include path with $(realpath) (absolute), so the slice .checked appears
-# in its ALL_CHECKED_FILES as an absolute path, and the recipe is the static pattern
-# rule `$(ALL_CHECKED_FILES): %.checked:`, which fires only for goals whose string is
-# literally one of those (absolute) entries. A relative goal (e.g. ../raw/slice-c/...)
-# matches nothing and errors with "No rule to make target".
-#
-# Each slice build depends on cbor-verify-aux: its krml .depend scan runs with
-# ALREADY_CACHED='*,-CBOR.Pulse.Raw.Slice,', which expects the whole CBOR closure
-# (including the shared CBOR.Pulse.Raw.Slice.fsti.checked) to be already checked;
-# cbor-verify-aux produces those. Without that ordering, under `make -j` the scan
-# races cbor-verify-aux and fails (Error 317: "Expected CBOR.Pulse.Raw.Compare.Base
-# to be already checked but could not find it"). Given that ordering the two backend
-# builds touch only disjoint outputs (slice-c/ vs slice-rust/, extracted-c/ vs
-# extracted-rust/) and only read the already-valid shared .fsti.checked, so they are
-# expressed as independent targets and may run in parallel with each other under -j.
-CBOR_SLICE_C_CHECKED := $(abspath src/cbor/pulse/raw/slice-c/CBOR.Pulse.Raw.Slice.fst.checked)
-CBOR_SLICE_RUST_CHECKED := $(abspath src/cbor/pulse/raw/slice-rust/CBOR.Pulse.Raw.Slice.fst.checked)
-
+# Each backend build depends on cbor-verify-aux: the local Makefile checks only the
+# backend .fst against the already-built shared .fsti.checked and CBOR closure, so
+# that closure must exist first (otherwise, under `make -j`, the local check races
+# cbor-verify-aux and fails, e.g. Error 317 "Expected CBOR.Pulse.Raw.Compare.Base
+# to be already checked"). Given that ordering the two backends touch only their own
+# directories and merely read the up-to-date shared .fsti.checked, so they are
+# independent targets and may run in parallel with each other under -j.
 ifeq (,$(NO_PULSE))
-$(CBOR_SLICE_C_CHECKED): cbor-verify-aux
-	+$(MAKE) -C src/cbor/pulse/krml CBOR_SLICE_BACKEND=c    ALREADY_CACHED='*,-CBOR.Pulse.Raw.Slice,' $(CBOR_SLICE_C_CHECKED)
+cbor-verify-slice-c: cbor-verify-aux
+	+$(MAKE) -C src/cbor/pulse/raw/slice-c
 
-$(CBOR_SLICE_RUST_CHECKED): cbor-verify-aux
-	+$(MAKE) -C src/cbor/pulse/krml CBOR_SLICE_BACKEND=rust ALREADY_CACHED='*,-CBOR.Pulse.Raw.Slice,' $(CBOR_SLICE_RUST_CHECKED)
+cbor-verify-slice-rust: cbor-verify-aux
+	+$(MAKE) -C src/cbor/pulse/raw/slice-rust
 
-cbor-verify: cbor-verify-aux $(CBOR_SLICE_C_CHECKED) $(CBOR_SLICE_RUST_CHECKED)
+cbor-verify: cbor-verify-aux cbor-verify-slice-c cbor-verify-slice-rust
 else
 cbor-verify: cbor-verify-aux
 endif
 
-.PHONY: cbor-verify
+.PHONY: cbor-verify cbor-verify-slice-c cbor-verify-slice-rust
 
 # lowparse needed for extraction because of .fst files behind .fsti
 ifeq (,$(NO_PULSE))
