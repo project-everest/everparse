@@ -9,6 +9,9 @@ module SZ = FStar.SizeT
 module U8 = FStar.UInt8
 module Trade = Pulse.Lib.Trade.Util
 module SM = Pulse.Lib.SeqMatch.Util
+module R = Pulse.Lib.Reference
+module U64 = FStar.UInt64
+module L = FStar.List.Tot
 
 val cbor_nondet_match: perm -> cbor_nondet_t -> Spec.cbor -> slprop
 
@@ -81,6 +84,79 @@ val cbor_nondet_array_iterator_share (_: unit) : share_t u#0 u#0 #_ #_ cbor_nond
 val cbor_nondet_array_iterator_gather (_: unit) : gather_t u#0 u#0 #_ #_ cbor_nondet_array_iterator_match
 
 val cbor_nondet_get_array_item (_: unit) : get_array_item_safe_t #_ cbor_nondet_match
+
+(* Structural array builder operations.
+
+   These build CBOR arrays by O(1) structural composition (no element copy or
+   re-encoding), on top of fully-owned arrays. [cbor_nondet_array_owned x l]
+   means [x] is a fully-owned (permission 1.0R, canonical length encoding) CBOR
+   array whose elements are [l]. Such arrays can be combined with
+   [cbor_nondet_array_append] and turned back into a normal CBOR object with
+   [cbor_nondet_array_finalize].
+
+   No heap allocation: the application provides the (fixed number of) scratch
+   references the operations need. *)
+
+val cbor_nondet_array_owned (x: cbor_nondet_t) (l: list Spec.cbor) : slprop
+
+val cbor_nondet_array_empty (_: unit)
+: stt cbor_nondet_t
+    emp
+    (fun res -> cbor_nondet_array_owned res [])
+
+val cbor_nondet_array_singleton
+  (x: cbor_nondet_t) (ry: R.ref cbor_nondet_t)
+  (#pm: perm) (#v: Ghost.erased Spec.cbor) (#w0: Ghost.erased cbor_nondet_t)
+: stt cbor_nondet_t
+    (cbor_nondet_match pm x v ** R.pts_to ry w0)
+    (fun res ->
+      cbor_nondet_array_owned res [Ghost.reveal v] **
+      Trade.trade
+        (cbor_nondet_array_owned res [Ghost.reveal v])
+        (cbor_nondet_match pm x v ** (exists* w. R.pts_to ry w)))
+
+val cbor_nondet_array_append
+  (x1 x2: cbor_nondet_t)
+  (r_before r_after: R.ref cbor_nondet_array_append_cell_t)
+  (#l1 #l2: Ghost.erased (list Spec.cbor))
+  (#vb0 #va0: Ghost.erased cbor_nondet_array_append_cell_t)
+: stt (option cbor_nondet_t)
+    (cbor_nondet_array_owned x1 l1 ** cbor_nondet_array_owned x2 l2 **
+     R.pts_to r_before vb0 ** R.pts_to r_after va0)
+    (fun res ->
+      match res with
+      | None ->
+        cbor_nondet_array_owned x1 l1 ** cbor_nondet_array_owned x2 l2 **
+        (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va) **
+        pure (~ (FStar.UInt.fits (L.length (Ghost.reveal l1) + L.length (Ghost.reveal l2)) U64.n))
+      | Some r ->
+        cbor_nondet_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)) **
+        Trade.trade
+          (cbor_nondet_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)))
+          (cbor_nondet_array_owned x1 l1 ** cbor_nondet_array_owned x2 l2 **
+           (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va)))
+
+val cbor_nondet_array_finalize
+  (x: cbor_nondet_t)
+  (#l: Ghost.erased (list Spec.cbor))
+: stt unit
+    (cbor_nondet_array_owned x l)
+    (fun _ ->
+      exists* (l': (l'': list Spec.cbor { FStar.UInt.fits (L.length l'') U64.n })).
+        cbor_nondet_match 1.0R x (Spec.pack (Spec.CArray l')) **
+        Trade.trade
+          (cbor_nondet_match 1.0R x (Spec.pack (Spec.CArray l')))
+          (cbor_nondet_array_owned x l) **
+        pure ((l' <: list Spec.cbor) == Ghost.reveal l))
+
+(* The length of an owned array fits in a u64; lets callers discharge the
+   refinement of [cbor_nondet_array_finalize] after a chain of [cbor_nondet_array_append]s. *)
+val cbor_nondet_array_owned_length_fits
+  (x: cbor_nondet_t) (#l: Ghost.erased (list Spec.cbor))
+: stt_ghost unit emp_inames
+    (cbor_nondet_array_owned x l)
+    (fun _ -> cbor_nondet_array_owned x l **
+      pure (FStar.UInt.fits (L.length (Ghost.reveal l)) U64.n))
 
 val cbor_nondet_get_map_length (_: unit) : get_map_length_safe_t u#0 #_ cbor_nondet_match
 
@@ -159,3 +235,64 @@ val cbor_nondet_mk_map (_: unit)
 type cbor_nondet_map_get_multiple_entry_t = cbor_map_get_multiple_entry_t cbor_nondet_t
 
 val cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_as_arrayptr_t #_ cbor_nondet_match cbor_nondet_map_get_multiple_entry_t
+
+(* Structural map-entry insertion (prepend, nondeterministic) operating directly
+   on a [cbor_nondet_t]. The operation gracefully fails (returns [None]) if [x]
+   is not a map, if the key is already defined in the map (up to the abstract
+   equality on keys), or if inserting the entry would overflow a u64 length.
+
+   The entry (key, value) is prepended (the nondeterministic encoding does not
+   require sorted keys).
+
+   No heap allocation: the application provides the (fixed number of) scratch
+   references the operation needs, namely two [cbor_nondet_map_entry_insert_cell_t]
+   references and one [cbor_nondet_map_entry_t] reference; use
+   [dummy_cbor_nondet_map_entry_insert_cell] and [dummy_cbor_nondet_map_entry] to
+   initialize them. *)
+
+inline_for_extraction
+val dummy_cbor_nondet_map_entry_insert_cell (_: unit) : cbor_nondet_map_entry_insert_cell_t
+
+inline_for_extraction
+val dummy_cbor_nondet_map_entry (_: unit) : cbor_nondet_map_entry_t
+
+let cbor_nondet_map_entry_insert_refs
+  (r1 r2: R.ref cbor_nondet_map_entry_insert_cell_t)
+  (ry: R.ref cbor_nondet_map_entry_t)
+: Tot slprop
+= exists* w1 w2 wy. R.pts_to r1 w1 ** R.pts_to r2 w2 ** R.pts_to ry wy
+
+val cbor_nondet_map_entry_insert
+  (x key value: cbor_nondet_t)
+  (r1 r2: R.ref cbor_nondet_map_entry_insert_cell_t)
+  (ry: R.ref cbor_nondet_map_entry_t)
+  (#p: perm) (#y: Ghost.erased Spec.cbor)
+  (#pkv: perm) (#vk #vv: Ghost.erased Spec.cbor)
+: stt (option cbor_nondet_t)
+    (cbor_nondet_match p x y **
+     cbor_nondet_match pkv key vk ** cbor_nondet_match pkv value vv **
+     cbor_nondet_map_entry_insert_refs r1 r2 ry)
+    (fun res ->
+      match res with
+      | None ->
+        cbor_nondet_match p x y **
+        cbor_nondet_match pkv key vk ** cbor_nondet_match pkv value vv **
+        cbor_nondet_map_entry_insert_refs r1 r2 ry **
+        pure (
+          ~ (Spec.CMap? (Spec.unpack y)) \/
+          (Spec.CMap? (Spec.unpack y) /\
+            (Spec.cbor_map_defined vk (Spec.CMap?.c (Spec.unpack y)) \/
+             ~ (FStar.UInt.fits (Spec.cbor_map_length (Spec.CMap?.c (Spec.unpack y)) + 1) U64.n))))
+      | Some m ->
+        exists* (p_res: perm) (vres: Spec.cbor).
+          cbor_nondet_match p_res m vres **
+          Trade.trade
+            (cbor_nondet_match p_res m vres)
+            (cbor_nondet_match p x y **
+             cbor_nondet_match pkv key vk ** cbor_nondet_match pkv value vv **
+             cbor_nondet_map_entry_insert_refs r1 r2 ry) **
+          pure (
+            Spec.CMap? (Spec.unpack y) /\
+            Spec.CMap? (Spec.unpack vres) /\
+            (Spec.CMap?.c (Spec.unpack vres) <: Spec.cbor_map) ==
+              Spec.cbor_map_union (Spec.CMap?.c (Spec.unpack y)) (Spec.cbor_map_singleton vk vv)))

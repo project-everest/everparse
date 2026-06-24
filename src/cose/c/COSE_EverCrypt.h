@@ -6,7 +6,8 @@
 #include "krmllib.h"
 
 #include "COSE_Format.h"
-#include "CBORDetAbstract.h"
+#include "CBORDetAPI.h"
+#include "CBORDetType.h"
 
 COSE_Format_evercddl_int COSE_EverCrypt_mk_int(int32_t i);
 
@@ -61,7 +62,7 @@ typedef void *COSE_EverCrypt_good_signature;
 
 typedef struct FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__uint8_t_s
 {
-  FStar_Pervasives_Native_option__size_t_tags tag;
+  FStar_Pervasives_Native_option__CBOR_Pulse_API_Det_Type_cbor_det_t_tags tag;
   Pulse_Lib_Slice_slice__uint8_t v;
 }
 FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__uint8_t;

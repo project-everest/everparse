@@ -1,6 +1,7 @@
 files=$(shell find . -type f)
 
 %.snapshot:
+	mkdir -p $(dir $(target_dir)/$(basename $@))
 	cp $(basename $@) $(target_dir)/$(basename $@)
 
 snapshot: $(addsuffix .snapshot,$(files))

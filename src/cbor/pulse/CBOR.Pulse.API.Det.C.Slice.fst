@@ -239,6 +239,29 @@ fn cbor_det_serialize_map
   res
 }
 
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_det_serialize_to_slice
+  (x: cbor_det_t)
+  (output: S.slice U8.t)
+  (#y: Ghost.erased Spec.cbor)
+  (#pm: perm)
+requires
+    (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (Seq.length (Spec.cbor_det_serialize y) <= SZ.v (S.len output)))
+returns res: SZ.t
+ensures
+    (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (
+      cbor_det_serialize_fits_postcond y res v
+    ))
+{
+  S.pts_to_len output;
+  let len = S.len output;
+  let ou = S.slice_to_arrayptr_intro output;
+  let res = cbor_det_serialize x ou len;
+  S.slice_to_arrayptr_elim ou;
+  res
+}
+
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_impl_utf8_correct (_: unit)
 : impl_utf8_correct_t

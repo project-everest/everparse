@@ -1559,7 +1559,7 @@ let leaf_compute_remaining_size_zero_size
 
 inline_for_extraction
 noeq
-type with_perm (t: Type) = {
+type with_perm ([@@@strictly_positive] t: Type) = {
   v: t;
   p: perm
 }

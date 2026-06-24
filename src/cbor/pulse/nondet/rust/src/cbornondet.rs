@@ -48,10 +48,10 @@ pub fn cbor_nondet_parse <'a>(map_key_bound: Option<usize>, strict_check: bool, 
 		}
 	};
     match crate::cbornondetver::cbor_nondet_parse(map_key_bound0, strict_check, input) {
-	crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None => {
+	crate::cbornondetver::option__·CBOR_Pulse_Raw_EverParse_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None => {
 	    return None;
 	}
-	crate::cbornondetveraux::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some {v} => {
+	crate::cbornondetver::option__·CBOR_Pulse_Raw_EverParse_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some {v} => {
 	    let (object, rem) = v;
 	    return Some((object, rem));
 	}
@@ -110,10 +110,10 @@ pub fn cbor_nondet_serialize <'a>(x: CborNondet <'a>, output: &'a mut [u8]) ->
 pub fn cbor_nondet_mk_simple_value <'a>(v: u8) -> Option<CborNondet<'a>>
 {
     match crate::cbornondetver::cbor_nondet_mk_simple_value(v) {
-	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbornondetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::None => {
 	    return None;
 	}
-	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbornondetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Some {v} => {
 	    return Some(v);
 	}
     }
@@ -157,10 +157,10 @@ pub fn cbor_nondet_mk_text_string <'a>(s: &'a str) ->
     let ty· : crate::cbornondetver::cbor_nondet_string_kind =
 	crate::cbornondetver::cbor_nondet_string_kind::TextString;
     match crate::cbornondetver::cbor_nondet_mk_string(ty·, s.as_bytes()) {
-	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbornondetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v } => {
+	crate::cbornondetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Some { v } => {
 	    Some(v)
 	}
     }
@@ -176,10 +176,10 @@ pub fn cbor_nondet_mk_byte_string <'a>(s: &'a [u8]) ->
     let ty· : crate::cbornondetver::cbor_nondet_string_kind =
 	crate::cbornondetver::cbor_nondet_string_kind::ByteString;
     match crate::cbornondetver::cbor_nondet_mk_string(ty·, s) {
-	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbornondetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v } => {
+	crate::cbornondetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Some { v } => {
 	    Some(v)
 	}
     }
@@ -208,10 +208,10 @@ pub fn cbor_nondet_mk_array <'a>(a: &'a [CborNondet <'a>]) ->
     Option<CborNondet<'a>>
 {
     match crate::cbornondetver::cbor_nondet_mk_array(a) {
-	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbornondetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbornondetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Some {v} => {
 	    Some(v)
 	}
     }
@@ -222,7 +222,7 @@ pub fn cbor_nondet_mk_array <'a>(a: &'a [CborNondet <'a>]) ->
  * arrays of map entry elements as input arguments.
  */
 /// The type of key-value map entries.
-pub type CborNondetMapEntry <'a> = crate::cbornondetveraux::cbor_map_entry <'a>;
+pub type CborNondetMapEntry <'a> = crate::cbornondetveraux::cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a>;
 
 /// Constructs a map entry from a key `xk` and a value `xv`.
 pub fn cbor_nondet_mk_map_entry <'a>(
@@ -246,10 +246,10 @@ pub fn cbor_nondet_mk_map <'a>(a: &'a mut [CborNondetMapEntry <'a>]) ->
     Option<CborNondet<'a>>
 {
     match crate::cbornondetver::cbor_nondet_mk_map(a) {
-	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbornondetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbornondetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Some {v} => {
 	    Some(v)
 	}
     }
@@ -351,7 +351,7 @@ pub fn cbor_nondet_get_array_length <'a>(x: CborNondetArray <'a>) -> u64
 /// The type of iterators over CBOR arrays. It is made
 /// abstract since it is meant to be used with an implementation of
 /// the `Iterator` trait only.
-pub struct CborNondetArrayIterator <'a> { iter: crate::cbornondetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a> }
+pub struct CborNondetArrayIterator <'a> { iter: crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a> }
 
 impl <'a> Iterator for CborNondetArrayIterator <'a> {
     type Item = CborNondet <'a>;
@@ -359,7 +359,9 @@ impl <'a> Iterator for CborNondetArrayIterator <'a> {
 	if crate::cbornondetver::cbor_nondet_array_iterator_is_empty(self.iter) {
 	    None
 	} else {
-	    Some (crate::cbornondetver::cbor_nondet_array_iterator_next(std::slice::from_mut(& mut self.iter)))
+	    let (elt, it) = crate::cbornondetver::cbor_nondet_array_iterator_next(self.iter);
+	    self.iter = it;
+	    Some (elt)
 	}
     }
 }
@@ -379,10 +381,10 @@ pub fn cbor_nondet_get_array_item <'a>(x: CborNondetArray <'a>, i: u64) ->
     Option<CborNondet<'a>>
 {
     match crate::cbornondetver::cbor_nondet_get_array_item(x.array, i) {
-	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbornondetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbornondetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Some {v} => {
 	    Some(v)
 	}
     }
@@ -397,7 +399,7 @@ pub fn cbor_nondet_get_map_length <'a>(x: CborNondetMap <'a>) -> u64
 /// The type of iterators over CBOR maps. It is made
 /// abstract since it is meant to be used with an implementation of
 /// the `Iterator` trait only.
-pub struct CborNondetMapIterator <'a> { iter: crate::cbornondetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a> }
+pub struct CborNondetMapIterator <'a> { iter: crate::cbornondetveraux::iterator__CBOR_Pulse_Raw_EverParse_Type_cbor_map_entry__CBOR_Pulse_Raw_EverParse_Type_cbor_raw <'a> }
 
 impl <'a> Iterator for CborNondetMapIterator <'a> {
     type Item = CborNondetMapEntry <'a>;
@@ -405,7 +407,9 @@ impl <'a> Iterator for CborNondetMapIterator <'a> {
 	if crate::cbornondetver::cbor_nondet_map_iterator_is_empty(self.iter) {
 	    None
 	} else {
-	    Some (crate::cbornondetver::cbor_nondet_map_iterator_next(std::slice::from_mut(& mut self.iter)))
+	    let (elt, it) = crate::cbornondetver::cbor_nondet_map_iterator_next(self.iter);
+	    self.iter = it;
+	    Some (elt)
 	}
     }
 }
@@ -440,10 +444,10 @@ pub fn cbor_nondet_map_get <'a>(
     Option<CborNondet<'a>>
 {
     match crate::cbornondetver::cbor_nondet_map_get(x.map, k) {
-	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbornondetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbornondetver::option__CBOR_Pulse_Raw_EverParse_Type_cbor_raw::Some {v} => {
 	    Some(v)
 	}
     }

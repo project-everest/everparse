@@ -1,12 +1,12 @@
 module CBOR.Pulse.API.Det.C
 #lang-pulse
 include CBOR.Pulse.API.Det.Type
+include CBOR.Pulse.API.Det.Dummy
 include CBOR.Pulse.API.Base
 open Pulse.Lib.Pervasives
 open CBOR.Spec.Constants
 
 module Spec = CBOR.Spec.API.Format
-module S = Pulse.Lib.Slice
 module A = Pulse.Lib.Array
 module PM = Pulse.Lib.SeqMatch
 module Trade = Pulse.Lib.Trade.Util
@@ -14,8 +14,9 @@ module SZ = FStar.SizeT
 module U64 = FStar.UInt64
 module U8 = FStar.UInt8
 
-module SU = Pulse.Lib.Slice.Util
 module AP = Pulse.Lib.ArrayPtr
+module R = Pulse.Lib.Reference
+module L = FStar.List.Tot
 
 val cbor_det_match: perm -> cbor_det_t -> Spec.cbor -> slprop
 
@@ -83,34 +84,11 @@ val cbor_det_serialize_safe
   (#v: Ghost.erased (Seq.seq U8.t))
   (#pm: perm)
 : stt SZ.t
-    (cbor_det_match pm x y ** pts_to output v ** pure (SZ.v output_len == Seq.length v /\ Seq.length (Spec.cbor_det_serialize y) <= SZ.v output_len))
+    (cbor_det_match pm x y ** pts_to output v ** pure (SZ.v output_len == Seq.length v))
     (fun res -> exists* v' . cbor_det_match pm x y ** pts_to output v' ** pure (
       SZ.v output_len == Seq.length v' /\
       cbor_det_serialize_postcond_c y v v' res
     ))
-
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-fn cbor_det_serialize_to_slice
-  (x: cbor_det_t)
-  (output: S.slice U8.t)
-  (#y: Ghost.erased Spec.cbor)
-  (#pm: perm)
-requires
-    (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (Seq.length (Spec.cbor_det_serialize y) <= SZ.v (S.len output)))
-returns res: SZ.t
-ensures
-    (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (
-      cbor_det_serialize_fits_postcond y res v
-    ))
-{
-  S.pts_to_len output;
-  let len = S.len output;
-  let ou = S.slice_to_arrayptr_intro output;
-  let res = cbor_det_serialize x ou len;
-  S.slice_to_arrayptr_elim ou;
-  res
-}
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let cbor_det_impl_utf8_correct_from_array_t =
@@ -139,6 +117,78 @@ val cbor_det_mk_array_from_array (_: unit) : mk_array_from_array_t cbor_det_matc
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let cbor_det_mk_array_from_array' = mk_array_from_array' (cbor_det_mk_array_from_array ())
+
+(* Structural array builder operations.
+
+   These build CBOR arrays by O(1) structural composition (no element copy or
+   re-encoding), on top of fully-owned arrays. [cbor_det_array_owned x l] means
+   [x] is a fully-owned (permission 1.0R, canonical length encoding) CBOR array
+   whose elements are [l]. Such arrays can be combined with [cbor_det_array_append]
+   and turned back into a normal CBOR object with [cbor_det_array_finalize].
+
+   No heap allocation: the application provides the (fixed number of) scratch
+   references the operations need. *)
+
+val cbor_det_array_owned (x: cbor_det_t) (l: list Spec.cbor) : slprop
+
+val cbor_det_array_empty (_: unit)
+: stt cbor_det_t
+    emp
+    (fun res -> cbor_det_array_owned res [])
+
+val cbor_det_array_singleton
+  (x: cbor_det_t) (ry: R.ref cbor_det_t)
+  (#pm: perm) (#v: Ghost.erased Spec.cbor) (#w0: Ghost.erased cbor_det_t)
+: stt cbor_det_t
+    (cbor_det_match pm x v ** R.pts_to ry w0)
+    (fun res ->
+      cbor_det_array_owned res [Ghost.reveal v] **
+      Trade.trade
+        (cbor_det_array_owned res [Ghost.reveal v])
+        (cbor_det_match pm x v ** (exists* w. R.pts_to ry w)))
+
+val cbor_det_array_append
+  (x1 x2: cbor_det_t)
+  (r_before r_after: R.ref cbor_det_array_append_cell_t)
+  (#l1 #l2: Ghost.erased (list Spec.cbor))
+  (#vb0 #va0: Ghost.erased cbor_det_array_append_cell_t)
+: stt (option cbor_det_t)
+    (cbor_det_array_owned x1 l1 ** cbor_det_array_owned x2 l2 **
+     R.pts_to r_before vb0 ** R.pts_to r_after va0)
+    (fun res ->
+      match res with
+      | None ->
+        cbor_det_array_owned x1 l1 ** cbor_det_array_owned x2 l2 **
+        (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va) **
+        pure (~ (FStar.UInt.fits (L.length (Ghost.reveal l1) + L.length (Ghost.reveal l2)) U64.n))
+      | Some r ->
+        cbor_det_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)) **
+        Trade.trade
+          (cbor_det_array_owned r (L.append (Ghost.reveal l1) (Ghost.reveal l2)))
+          (cbor_det_array_owned x1 l1 ** cbor_det_array_owned x2 l2 **
+           (exists* vb va. R.pts_to r_before vb ** R.pts_to r_after va)))
+
+val cbor_det_array_finalize
+  (x: cbor_det_t)
+  (#l: Ghost.erased (list Spec.cbor))
+: stt unit
+    (cbor_det_array_owned x l)
+    (fun _ ->
+      exists* (l': (l'': list Spec.cbor { FStar.UInt.fits (L.length l'') U64.n })).
+        cbor_det_match 1.0R x (Spec.pack (Spec.CArray l')) **
+        Trade.trade
+          (cbor_det_match 1.0R x (Spec.pack (Spec.CArray l')))
+          (cbor_det_array_owned x l) **
+        pure ((l' <: list Spec.cbor) == Ghost.reveal l))
+
+(* The length of an owned array fits in a u64; lets callers discharge the
+   refinement of [cbor_det_array_finalize] after a chain of [cbor_det_array_append]s. *)
+val cbor_det_array_owned_length_fits
+  (x: cbor_det_t) (#l: Ghost.erased (list Spec.cbor))
+: stt_ghost unit emp_inames
+    (cbor_det_array_owned x l)
+    (fun _ -> cbor_det_array_owned x l **
+      pure (FStar.UInt.fits (L.length (Ghost.reveal l)) U64.n))
 
 val cbor_det_map_entry_match: perm -> cbor_det_map_entry_t -> Spec.cbor & Spec.cbor -> slprop
 
@@ -226,6 +276,62 @@ val cbor_det_map_entry_share () : share_t cbor_det_map_entry_match
 val cbor_det_map_entry_gather () : gather_t cbor_det_map_entry_match
 
 val cbor_det_map_get () : map_get_by_ref_t cbor_det_match
+
+(* Structural map-entry insertion (sorted, deterministic) operating directly on
+   a [cbor_det_t]. The operation gracefully fails (returns [None]) if [x] is not
+   a map, if the key is already defined in the map, or if inserting the entry
+   would overflow a u64 length.
+
+   The entry (key, value) is inserted in canonical (sorted) position so that the
+   result is still a valid deterministically-encoded CBOR map.
+
+   No heap allocation: the application provides the (fixed number of) scratch
+   references the operation needs, namely four
+   [cbor_det_map_entry_insert_cell_t] references and one [cbor_det_map_entry_t]
+   reference; use [dummy_cbor_det_map_entry_insert_cell] and
+   [dummy_cbor_det_map_entry] to initialize them. *)
+let cbor_det_map_entry_insert_refs
+  (r1 r2 r3 r4: R.ref cbor_det_map_entry_insert_cell_t)
+  (ry: R.ref cbor_det_map_entry_t)
+: Tot slprop
+= exists* w1 w2 w3 w4 wy.
+    R.pts_to r1 w1 ** R.pts_to r2 w2 ** R.pts_to r3 w3 ** R.pts_to r4 w4 **
+    R.pts_to ry wy
+
+val cbor_det_map_entry_insert
+  (x key value: cbor_det_t)
+  (r1 r2 r3 r4: R.ref cbor_det_map_entry_insert_cell_t)
+  (ry: R.ref cbor_det_map_entry_t)
+  (#p: perm) (#y: Ghost.erased Spec.cbor)
+  (#pkv: perm) (#vk #vv: Ghost.erased Spec.cbor)
+: stt (option cbor_det_t)
+    (cbor_det_match p x y **
+     cbor_det_match pkv key vk ** cbor_det_match pkv value vv **
+     cbor_det_map_entry_insert_refs r1 r2 r3 r4 ry)
+    (fun res ->
+      match res with
+      | None ->
+        cbor_det_match p x y **
+        cbor_det_match pkv key vk ** cbor_det_match pkv value vv **
+        cbor_det_map_entry_insert_refs r1 r2 r3 r4 ry **
+        pure (
+          ~ (Spec.CMap? (Spec.unpack y)) \/
+          (Spec.CMap? (Spec.unpack y) /\
+            (Spec.cbor_map_defined vk (Spec.CMap?.c (Spec.unpack y)) \/
+             ~ (FStar.UInt.fits (Spec.cbor_map_length (Spec.CMap?.c (Spec.unpack y)) + 1) U64.n))))
+      | Some m ->
+        exists* (p_res: perm) (vres: Spec.cbor).
+          cbor_det_match p_res m vres **
+          Trade.trade
+            (cbor_det_match p_res m vres)
+            (cbor_det_match p x y **
+             cbor_det_match pkv key vk ** cbor_det_match pkv value vv **
+             cbor_det_map_entry_insert_refs r1 r2 r3 r4 ry) **
+          pure (
+            Spec.CMap? (Spec.unpack y) /\
+            Spec.CMap? (Spec.unpack vres) /\
+            (Spec.CMap?.c (Spec.unpack vres) <: Spec.cbor_map) ==
+              Spec.cbor_map_union (Spec.CMap?.c (Spec.unpack y)) (Spec.cbor_map_singleton vk vv)))
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let cbor_det_map_get_gen () : map_get_t cbor_det_match = map_get_as_option (cbor_det_map_get ())

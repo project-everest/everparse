@@ -1,0 +1,1754 @@
+module CBOR.Pulse.Raw.EverParse.Validate
+#lang-pulse
+open LowParse.Pulse.Int
+open LowParse.Pulse.BitSum
+open LowParse.Pulse.SeqBytes
+
+module PPB = LowParse.PulseParse.Base
+module PPC = LowParse.PulseParse.Combinators
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let read_initial_byte_t' : reader serialize_initial_byte_t =
+  reader_ext
+    (read_synth'
+      (read_bitsum'
+        destr_initial_byte
+        (reader_of_leaf_reader (read_u8' ()))
+      )
+      synth_initial_byte
+      synth_initial_byte_recip
+    )
+    _
+
+(* FIXME: WHY WHY WHY does this not extract?
+let read_initial_byte_t : leaf_reader serialize_initial_byte_t =
+  leaf_reader_of_reader read_initial_byte_t'
+*)
+
+fn read_initial_byte_t (_: unit) : leaf_reader #initial_byte_t #(parse_filter_kind parse_u8_kind) #parse_initial_byte_t serialize_initial_byte_t =
+  (input: Pulse.Lib.Slice.slice byte)
+  (#pm: perm)
+  (#v: _)
+{
+  leaf_reader_of_reader read_initial_byte_t' input #pm #v
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_initial_byte : validator parse_initial_byte =
+    validate_filter'
+      (validate_synth
+        (validate_ext
+          (validate_total_constant_size
+            (LowParse.Spec.BitSum.parse_bitsum'_no_bitsum
+              initial_byte_desc
+              parse_u8
+            )
+            1sz
+          )
+          parse_initial_byte'
+        )
+        synth_initial_byte
+      )
+      (read_initial_byte_t ())
+      initial_byte_wf
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_initial_byte : jumper parse_initial_byte =
+  jump_constant_size parse_initial_byte 1sz
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let read_initial_byte : reader serialize_initial_byte =
+  read_filter
+    (reader_of_leaf_reader (read_initial_byte_t ()))
+    initial_byte_wf
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let read_long_argument_8_simple_value
+  (b: initial_byte)
+  (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
+  (sq2: squash ((b.major_type = cbor_major_type_simple_value) == true))
+: Tot (reader (serialize_long_argument b))
+=
+          reader_ext
+            (read_synth'
+              (read_filter
+                (reader_of_leaf_reader (read_u8' ()))
+                simple_value_long_argument_wf
+              )
+              (LongArgumentSimpleValue #b ())
+              (LongArgumentSimpleValue?.v)
+            )
+            (serialize_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let read_long_argument_8_not_simple_value
+  (b: initial_byte)
+  (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
+  (sq2: squash ((b.major_type = cbor_major_type_simple_value) == false))
+: Tot (reader (serialize_long_argument b))
+=
+              reader_ext
+                (read_synth'
+                  (reader_of_leaf_reader (read_u8' ()))
+                  (LongArgumentU8 #b ())
+                  (LongArgumentU8?.v)
+                )
+                (serialize_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let read_long_argument_8
+  (b: initial_byte)
+  (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
+: Tot (reader (serialize_long_argument b))
+= ifthenelse_reader
+    (serialize_long_argument b)
+    (b.major_type = cbor_major_type_simple_value)
+    (read_long_argument_8_simple_value b sq1)
+    (read_long_argument_8_not_simple_value b sq1)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let read_long_argument_16
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_16_bits) == true))
+: Tot (reader (serialize_long_argument b))
+=
+              reader_ext
+                (read_synth'
+                  (reader_of_leaf_reader (read_u16' ()))
+                  (LongArgumentU16 #b ())
+                  (LongArgumentU16?.v)
+                )
+                (serialize_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let read_long_argument_32
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_32_bits) == true))
+: Tot (reader (serialize_long_argument b))
+=
+              reader_ext
+                (read_synth'
+                  (reader_of_leaf_reader (read_u32' ()))
+                  (LongArgumentU32 #b ())
+                  (LongArgumentU32?.v)
+                )
+                (serialize_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let read_long_argument_64
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_64_bits) == true))
+: Tot (reader (serialize_long_argument b))
+=
+              reader_ext
+                (read_synth'
+                  (reader_of_leaf_reader (read_u64' ()))
+                  (LongArgumentU64 #b ())
+                  (LongArgumentU64?.v)
+                )
+                (serialize_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let read_long_argument_other
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+  (sq32: squash ((b.additional_info = additional_info_long_argument_32_bits) == false))
+  (sq64: squash ((b.additional_info = additional_info_long_argument_64_bits) == false))
+: Tot (reader (serialize_long_argument b))
+=
+              reader_ext
+                (read_synth'
+                  (reader_of_leaf_reader leaf_read_empty)
+                  (LongArgumentOther #b ())
+                  LongArgumentOther?.v
+                )
+                (serialize_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let read_long_argument_not_8_16_32
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+  (sq32: squash ((b.additional_info = additional_info_long_argument_32_bits) == false))
+: Tot (reader (serialize_long_argument b))
+= ifthenelse_reader
+    (serialize_long_argument b)
+    (b.additional_info = additional_info_long_argument_64_bits)
+    (read_long_argument_64 b)
+    (read_long_argument_other b sq8 sq16 sq32)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let read_long_argument_not_8_16
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+: Tot (reader (serialize_long_argument b))
+= ifthenelse_reader
+    (serialize_long_argument b)
+    (b.additional_info = additional_info_long_argument_32_bits)
+    (read_long_argument_32 b)
+    (read_long_argument_not_8_16_32 b sq8 sq16)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let read_long_argument_not_8
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+: Tot (reader (serialize_long_argument b))
+= ifthenelse_reader
+    (serialize_long_argument b)
+    (b.additional_info = additional_info_long_argument_16_bits)
+    (read_long_argument_16 b)
+    (read_long_argument_not_8_16 b sq8)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let read_long_argument
+  (b: initial_byte)
+: Tot (reader (serialize_long_argument b))
+= ifthenelse_reader
+      (serialize_long_argument b)
+      (b.additional_info = additional_info_long_argument_8_bits)
+      (read_long_argument_8 b)
+      (read_long_argument_not_8 b)
+
+(* // FIXME: ideally I want lambdas, as in the following:
+inline_for_extraction
+noextract
+let read_long_argument
+  (b: initial_byte)
+: Tot (reader (serialize_long_argument b))
+=   ifthenelse_reader
+      (serialize_long_argument b)
+      (b.additional_info = additional_info_long_argument_8_bits)
+      (fun _ -> ifthenelse_reader
+        (serialize_long_argument b)
+        (b.major_type = cbor_major_type_simple_value)
+        (fun _ ->
+          reader_ext
+            (read_synth'
+              (read_filter
+                (reader_of_leaf_reader (read_u8' ()))
+                simple_value_long_argument_wf
+              )
+              (LongArgumentSimpleValue #b ())
+              (LongArgumentSimpleValue?.v)
+            )
+            (serialize_long_argument b)
+        )
+        (fun _ ->
+          reader_ext
+            (read_synth'
+              (reader_of_leaf_reader (read_u8' ()))
+              (LongArgumentU8 #b ())
+              (LongArgumentU8?.v)
+            )
+            (serialize_long_argument b)
+        )
+      )
+      (fun _ -> ifthenelse_reader
+        (serialize_long_argument b)
+        (b.additional_info = additional_info_long_argument_16_bits)
+        (fun _ ->
+          reader_ext
+            (read_synth'
+              (reader_of_leaf_reader (read_u16' ()))
+              (LongArgumentU16 #b ())
+              (LongArgumentU16?.v)
+            )
+            (serialize_long_argument b)
+        )
+        (fun _ -> ifthenelse_reader
+          (serialize_long_argument b)
+          (b.additional_info = additional_info_long_argument_32_bits)
+          (fun _ ->
+            reader_ext
+              (read_synth'
+                (reader_of_leaf_reader (read_u32' ()))
+                (LongArgumentU32 #b ())
+                (LongArgumentU32?.v)
+              )
+              (serialize_long_argument b)
+          )
+          (fun _ -> ifthenelse_reader
+            (serialize_long_argument b)
+            (b.additional_info = additional_info_long_argument_64_bits)
+            (fun _ ->
+              reader_ext
+                (read_synth'
+                  (reader_of_leaf_reader (read_u64' ()))
+                  (LongArgumentU64 #b ())
+                  (LongArgumentU64?.v)
+                )
+                (serialize_long_argument b)
+            )
+            (fun _ ->
+              reader_ext
+                (read_synth'
+                  (reader_of_leaf_reader leaf_read_empty)
+                  (LongArgumentOther #b ())
+                  LongArgumentOther?.v
+                )
+                (serialize_long_argument b)
+            )
+          )
+        )
+      )
+*)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let read_header' : reader serialize_header =
+  reader_ext
+    (read_dtuple2
+      jump_initial_byte
+      read_initial_byte
+      read_long_argument
+    )
+    _
+
+fn read_header (_: unit) : leaf_reader #header #parse_header_kind #parse_header serialize_header =
+  (input: Pulse.Lib.Slice.slice byte)
+  (#pm: perm)
+  (#v: _)
+{
+  leaf_reader_of_reader read_header' input #pm #v
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument_8_simple_value
+  (b: initial_byte)
+  (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
+  (sq2: squash ((b.major_type = cbor_major_type_simple_value) == true))
+: Tot (validator (parse_long_argument b))
+=
+          validate_ext
+            (validate_synth
+              (validate_filter'
+                validate_u8
+                (read_u8' ())
+                simple_value_long_argument_wf
+              )
+              (LongArgumentSimpleValue #b ())
+            )
+            (parse_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument_8_not_simple_value
+  (b: initial_byte)
+  (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
+  (sq2: squash ((b.major_type = cbor_major_type_simple_value) == false))
+: Tot (validator (parse_long_argument b))
+=
+              validate_ext
+                (validate_synth
+                  validate_u8
+                  (LongArgumentU8 #b ())
+                )
+                (parse_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument_8
+  (b: initial_byte)
+  (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
+: Tot (validator (parse_long_argument b))
+= ifthenelse_validator
+    (parse_long_argument b)
+    (b.major_type = cbor_major_type_simple_value)
+    (validate_long_argument_8_simple_value b sq1)
+    (validate_long_argument_8_not_simple_value b sq1)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument_16
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_16_bits) == true))
+: Tot (validator (parse_long_argument b))
+=
+              validate_ext
+                (validate_synth
+                  validate_u16
+                  (LongArgumentU16 #b ())
+                )
+                (parse_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument_32
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_32_bits) == true))
+: Tot (validator (parse_long_argument b))
+=
+              validate_ext
+                (validate_synth
+                  validate_u32
+                  (LongArgumentU32 #b ())
+                )
+                (parse_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument_64
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_64_bits) == true))
+: Tot (validator (parse_long_argument b))
+=
+              validate_ext
+                (validate_synth
+                  validate_u64
+                  (LongArgumentU64 #b ())
+                )
+                (parse_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument_other
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+  (sq32: squash ((b.additional_info = additional_info_long_argument_32_bits) == false))
+  (sq64: squash ((b.additional_info = additional_info_long_argument_64_bits) == false))
+: Tot (validator (parse_long_argument b))
+=
+              validate_ext
+                (validate_synth
+                  validate_empty
+                  (LongArgumentOther #b ())
+                )
+                (parse_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument_not_8_16_32
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+  (sq32: squash ((b.additional_info = additional_info_long_argument_32_bits) == false))
+: Tot (validator (parse_long_argument b))
+= ifthenelse_validator
+    (parse_long_argument b)
+    (b.additional_info = additional_info_long_argument_64_bits)
+    (validate_long_argument_64 b)
+    (validate_long_argument_other b sq8 sq16 sq32)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument_not_8_16
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+: Tot (validator (parse_long_argument b))
+= ifthenelse_validator
+    (parse_long_argument b)
+    (b.additional_info = additional_info_long_argument_32_bits)
+    (validate_long_argument_32 b)
+    (validate_long_argument_not_8_16_32 b sq8 sq16)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument_not_8
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+: Tot (validator (parse_long_argument b))
+= ifthenelse_validator
+    (parse_long_argument b)
+    (b.additional_info = additional_info_long_argument_16_bits)
+    (validate_long_argument_16 b)
+    (validate_long_argument_not_8_16 b sq8)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument
+  (b: initial_byte)
+: Tot (validator (parse_long_argument b))
+= ifthenelse_validator
+      (parse_long_argument b)
+      (b.additional_info = additional_info_long_argument_8_bits)
+      (validate_long_argument_8 b)
+      (validate_long_argument_not_8 b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_long_argument_8
+  (b: initial_byte)
+  (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
+: Tot (jumper (parse_long_argument b))
+=
+        jump_ext
+          (jump_constant_size (if b.major_type = cbor_major_type_simple_value then parse_synth (parse_filter parse_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue #b ()) else weaken (parse_filter_kind parse_u8_kind) (parse_synth parse_u8 (LongArgumentU8 #b ()))) 1sz)
+          (parse_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_long_argument_16
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_16_bits) == true))
+: Tot (jumper (parse_long_argument b))
+=
+              jump_ext
+                (jump_synth
+                  jump_u16
+                  (LongArgumentU16 #b ())
+                )
+                (parse_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_long_argument_32
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_32_bits) == true))
+: Tot (jumper (parse_long_argument b))
+=
+              jump_ext
+                (jump_synth
+                  jump_u32
+                  (LongArgumentU32 #b ())
+                )
+                (parse_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_long_argument_64
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_64_bits) == true))
+: Tot (jumper (parse_long_argument b))
+=
+              jump_ext
+                (jump_synth
+                  jump_u64
+                  (LongArgumentU64 #b ())
+                )
+                (parse_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_long_argument_other
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+  (sq32: squash ((b.additional_info = additional_info_long_argument_32_bits) == false))
+  (sq64: squash ((b.additional_info = additional_info_long_argument_64_bits) == false))
+: Tot (jumper (parse_long_argument b))
+=
+              jump_ext
+                (jump_synth
+                  jump_empty
+                  (LongArgumentOther #b ())
+                )
+                (parse_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_long_argument_not_8_16_32
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+  (sq32: squash ((b.additional_info = additional_info_long_argument_32_bits) == false))
+: Tot (jumper (parse_long_argument b))
+= ifthenelse_jumper
+    (parse_long_argument b)
+    (b.additional_info = additional_info_long_argument_64_bits)
+    (jump_long_argument_64 b)
+    (jump_long_argument_other b sq8 sq16 sq32)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_long_argument_not_8_16
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+: Tot (jumper (parse_long_argument b))
+= ifthenelse_jumper
+    (parse_long_argument b)
+    (b.additional_info = additional_info_long_argument_32_bits)
+    (jump_long_argument_32 b)
+    (jump_long_argument_not_8_16_32 b sq8 sq16)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_long_argument_not_8
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+: Tot (jumper (parse_long_argument b))
+= ifthenelse_jumper
+    (parse_long_argument b)
+    (b.additional_info = additional_info_long_argument_16_bits)
+    (jump_long_argument_16 b)
+    (jump_long_argument_not_8_16 b sq8)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_long_argument
+  (b: initial_byte)
+: Tot (jumper (parse_long_argument b))
+= ifthenelse_jumper
+      (parse_long_argument b)
+      (b.additional_info = additional_info_long_argument_8_bits)
+      (jump_long_argument_8 b)
+      (jump_long_argument_not_8 b)
+
+fn validate_header (_: unit) : validator #header #parse_header_kind parse_header =
+  (input: _)
+  (poffset: _)
+  (#offset: _)
+  (#pm: _)
+  (#v: _)
+{
+  validate_dtuple2 validate_initial_byte (leaf_reader_of_reader read_initial_byte) validate_long_argument
+    input poffset #offset #pm #v
+}
+
+fn jump_header (_: unit) : jumper #header #parse_header_kind parse_header =
+  (input: _)
+  (offset: _)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  jump_dtuple2 jump_initial_byte (leaf_reader_of_reader read_initial_byte) jump_long_argument
+    input offset #pm #v
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let impl_leaf_content_seq_cond
+  (h: header)
+: Pure bool
+    (requires True)
+    (ensures (fun res -> res == true <==> leaf_content_seq_cond h))
+= let b = get_header_initial_byte h in
+  b.major_type = cbor_major_type_byte_string ||
+  b.major_type = cbor_major_type_text_string
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_leaf_content_seq'
+  (h: header)
+  (prf: squash (impl_leaf_content_seq_cond h == true))
+  (n: SZ.t { SZ.v n == U64.v (get_header_argument_as_uint64 h) })
+: Tot (validator (parse_leaf_content h))
+= validate_ext
+    (validate_synth
+      (validate_filter_gen
+        (validate_total_constant_size
+          (LowParse.Spec.SeqBytes.parse_lseq_bytes (SZ.v n))
+          n
+        )
+        (LowParse.Spec.SeqBytes.serialize_lseq_bytes (SZ.v n))
+        _
+        (CBOR.Pulse.Raw.EverParse.UTF8.impl_lseq_utf8_correct (get_header_major_type h) n)
+      )
+      (LeafContentSeq ())
+    )
+    (parse_leaf_content h)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn validate_leaf_content_seq
+  (sq: squash (SZ.fits_u64))
+  (h: header)
+  (prf: squash (impl_leaf_content_seq_cond h == true))
+: validator #_ #_ (parse_leaf_content h)
+= (input: _)
+  (poffset: _)
+  (#offset: _)
+  (#pm: _)
+  (#v: _)
+{
+  let n = SZ.uint64_to_sizet (get_header_argument_as_uint64 h);
+  validate_leaf_content_seq' h prf n input poffset;
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_leaf_content_empty
+  (sq: squash (SZ.fits_u64))
+  (h: header)
+  (prf: squash (impl_leaf_content_seq_cond h == false))
+: Tot (validator (parse_leaf_content h))
+= validate_ext
+    (validate_synth
+      validate_empty
+      (LeafContentEmpty ())
+    )
+    (parse_leaf_content h)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_leaf_content
+  (sq: squash (SZ.fits_u64))
+  (h: header)
+: Tot (validator (parse_leaf_content h))
+= ifthenelse_validator
+    (parse_leaf_content h)
+    (impl_leaf_content_seq_cond h)
+    (validate_leaf_content_seq sq h)
+    (validate_leaf_content_empty sq h)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_leaf
+  (sq: squash (SZ.fits_u64))
+: Tot (validator parse_leaf)
+= validate_dtuple2
+    (validate_header ())
+    (read_header ())
+    (validate_leaf_content sq)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_leaf_content_seq
+  (sq: squash (SZ.fits_u64))
+  (h: header)
+  (prf: squash (impl_leaf_content_seq_cond h == true))
+: Tot (jumper (parse_leaf_content h))
+= jump_ext
+    (jump_constant_size
+      (parse_filter (LowParse.Spec.SeqBytes.parse_lseq_bytes (U64.v (get_header_argument_as_uint64 h))) (lseq_utf8_correct (get_header_major_type h) _) `parse_synth` LeafContentSeq ())
+      (SZ.uint64_to_sizet (get_header_argument_as_uint64 h))
+    )
+    (parse_leaf_content h)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_leaf_content_empty
+  (sq: squash (SZ.fits_u64))
+  (h: header)
+  (prf: squash (impl_leaf_content_seq_cond h == false))
+: Tot (jumper (parse_leaf_content h))
+= jump_ext
+    (jump_synth
+      jump_empty
+      (LeafContentEmpty ())
+    )
+    (parse_leaf_content h)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_leaf_content
+  (sq: squash (SZ.fits_u64))
+  (h: header)
+: Tot (jumper (parse_leaf_content h))
+= ifthenelse_jumper
+    (parse_leaf_content h)
+    (impl_leaf_content_seq_cond h)
+    (jump_leaf_content_seq sq h)
+    (jump_leaf_content_empty sq h)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_leaf
+  (sq: squash (SZ.fits_u64))
+: Tot (jumper parse_leaf)
+= jump_dtuple2
+    (jump_header ())
+    (read_header ())
+    (jump_leaf_content sq)
+
+fn validate_recursive_step_count_leaf (_: squash SZ.fits_u64) :
+  validate_recursive_step_count #parse_raw_data_item_param serialize_raw_data_item_param
+=
+    (#va: Ghost.erased leaf)
+    (#pm: perm)
+    (a: _)
+    (bound: SZ.t)
+    (#rem: Ghost.erased SZ.t)
+    (prem: R.ref SZ.t)
+{
+  pts_to_serialized_ext_trade
+    (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header)
+    (serialize_dtuple2 serialize_header serialize_leaf_content)
+    a;
+  let input1, input2 = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
+  unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va (input1, input2));
+  unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
+  let h = read_header () input1;
+  elim_trade
+    (pts_to_serialized serialize_header input1 #pm (dfst va) ** pts_to_serialized (serialize_leaf_content (dfst va)) input2 #pm (dsnd va))
+    (pts_to_serialized (serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
+  elim_trade _ _;
+  let typ = get_header_major_type h;
+  if (typ = cbor_major_type_array) {
+    let arg64 = get_header_argument_as_uint64 h;
+    prem := SZ.uint64_to_sizet arg64;
+    false
+  }
+  else if (typ = cbor_major_type_map) {
+    let arg64 = get_header_argument_as_uint64 h;
+    let arg = SZ.uint64_to_sizet arg64;
+    if SZ.gt arg bound {
+      true
+    } else if SZ.lt (SZ.sub bound arg) arg {
+      true
+    } else {
+      prem := (SZ.add arg arg);
+      false
+    }
+  }
+  else if (typ = cbor_major_type_tagged) {
+    prem := 1sz;
+    false
+  }
+  else {
+    prem := 0sz;
+    false
+  }
+}
+
+let impl_remaining_data_items_header
+  (bound: Ghost.erased SZ.t)
+  (h: header)
+: Pure SZ.t
+  (requires
+    SZ.fits_u64 /\
+    remaining_data_items_header h <= SZ.v bound
+  )
+  (ensures fun res ->
+    SZ.v res == remaining_data_items_header h
+  )
+= 
+  let typ = get_header_major_type h in
+  if (typ = cbor_major_type_array)
+  then
+    let arg64 = get_header_argument_as_uint64 h in
+    SZ.uint64_to_sizet arg64
+  else if (typ = cbor_major_type_map)
+  then
+    let arg64 = get_header_argument_as_uint64 h in
+    let arg = SZ.uint64_to_sizet arg64 in
+    SZ.add arg arg
+  else if (typ = cbor_major_type_tagged)
+  then
+    1sz
+  else
+    0sz
+
+#push-options "--z3rlimit 64"
+
+fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
+  jump_recursive_step_count #parse_raw_data_item_param serialize_raw_data_item_param
+=
+    (#va: Ghost.erased leaf)
+    (#pm: perm)
+    (a: _)
+    (bound: SZ.t)
+{
+  pts_to_serialized_ext_trade
+    (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header)
+    (serialize_dtuple2 serialize_header serialize_leaf_content)
+    a;
+  let input1, input2 = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
+  unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va (input1, input2));
+  unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
+  let h = read_header () input1;
+  elim_trade
+    (pts_to_serialized serialize_header input1 #pm (dfst va) ** pts_to_serialized (serialize_leaf_content (dfst va)) input2 #pm (dsnd va))
+    (pts_to_serialized (serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
+  elim_trade _ _;
+  impl_remaining_data_items_header bound h
+}
+
+#pop-options
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_raw_data_item' (_: squash SZ.fits_u64) : validator #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =
+  validate_recursive
+    serialize_raw_data_item_param
+    (validate_leaf ())
+    (validate_recursive_step_count_leaf ())
+
+fn validate_raw_data_item (_: squash SZ.fits_u64) : validator #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =
+  (input: _)
+  (poffset: _)
+  (#offset: _)
+  (#pm: _)
+  (#v: _)
+{
+  validate_raw_data_item' ()
+    input poffset #offset #pm #v
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_raw_data_item' (_: squash SZ.fits_u64) : jumper #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =
+  jump_recursive
+    serialize_raw_data_item_param
+    (jump_leaf ())
+    (jump_recursive_step_count_leaf ())
+
+fn jump_raw_data_item (_: squash SZ.fits_u64) : jumper #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =
+  (input: _)
+  (offset: _)
+  (#pm: _)
+  (#v: _)
+{
+  jump_raw_data_item' ()
+    input offset #pm #v
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn get_header_and_contents
+  (input: S.slice byte)
+  (outh: R.ref header)
+  (#pm: perm)
+  (#v: Ghost.erased raw_data_item)
+  norewrite
+  requires exists* h . pts_to_serialized serialize_raw_data_item input #pm v ** pts_to outh h
+  returns outc: S.slice byte
+  ensures exists* h c .
+    pts_to outh h **
+    pts_to_serialized (serialize_content h) outc #pm c **
+    trade (pts_to_serialized (serialize_content h) outc #pm c) (pts_to_serialized serialize_raw_data_item input #pm v) **
+    pure (synth_raw_data_item_recip v == (| h, c |))
+{
+  Classical.forall_intro parse_raw_data_item_eq;
+  pts_to_serialized_ext_trade
+    serialize_raw_data_item
+    serialize_raw_data_item_aux
+    input;
+  pts_to_serialized_synth_l2r_trade
+    (serialize_dtuple2 serialize_header serialize_content)
+    synth_raw_data_item
+    synth_raw_data_item_recip
+    input;
+  LowParse.Pulse.VCList.trade_trans_nounify _ _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+  with v' . assert (pts_to_serialized (serialize_dtuple2 serialize_header serialize_content) input #pm v');
+  let ph, outc = split_dtuple2 serialize_header (jump_header ()) serialize_content input;
+  unfold (split_dtuple2_post serialize_header serialize_content input pm v' (ph, outc));
+  unfold (split_dtuple2_post' serialize_header serialize_content input pm v' ph outc);
+  Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+  let h = read_header () ph;
+  Trade.elim_hyp_l _ _ _;
+  outh := h;
+  rewrite each dfst (synth_raw_data_item_recip
+                      v) as h;
+  outc
+}
+
+fn get_header_and_contents_strong_prefix
+  (input: S.slice byte)
+  (outh: R.ref header)
+  (#pm: perm)
+  (#v: Ghost.erased raw_data_item)
+  norewrite
+  requires exists* h . PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pm v ** pts_to outh h
+  returns outc: S.slice byte
+  ensures exists* h c .
+    pts_to outh h **
+    PPB.pts_to_parsed_strong_prefix (parse_content parse_raw_data_item h) outc #(pm /. 2.0R) c **
+    trade (PPB.pts_to_parsed_strong_prefix (parse_content parse_raw_data_item h) outc #(pm /. 2.0R) c) (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pm v) **
+    pure (synth_raw_data_item_recip v == (| h, c |))
+{
+  Classical.forall_intro parse_raw_data_item_eq;
+  PPC.pts_to_parsed_strong_prefix_ext_trade
+    #raw_data_item
+    #parse_raw_data_item_kind #parse_raw_data_item
+    #parse_raw_data_item_kind #(parse_raw_data_item_aux parse_raw_data_item)
+    input
+    ();
+  PPC.pts_to_parsed_strong_prefix_synth_l2r
+    (parse_dtuple2 parse_header (parse_content parse_raw_data_item))
+    synth_raw_data_item
+    synth_raw_data_item_recip
+    input;
+  LowParse.Pulse.VCList.trade_trans_nounify _ _ _ (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pm v);
+  with v' . assert (PPB.pts_to_parsed_strong_prefix (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) input #pm v');
+  let (left, right) = PPC.split_dtuple2_strong_prefix (jump_header ()) input ();
+  unfold (PPC.split_dtuple2_strong_prefix_post #header #content #parse_header_kind #parse_header #parse_content_kind #(parse_content parse_raw_data_item) input pm v' (left, right));
+  Trade.trans _ _ (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pm v);
+  let h = PPB.leaf_reader_of_serialized (read_header ()) left;
+  Trade.elim_hyp_l _ _ _;
+  outh := h;
+  rewrite each dfst (synth_raw_data_item_recip
+                      v) as h;
+  right
+}
+
+#push-options "--z3rlimit 64"
+
+ghost
+fn get_string_payload
+  (input: S.slice byte)
+  (v: Ghost.erased raw_data_item)
+  (#pm: perm)
+  (#h: Ghost.erased header)
+  (#c: Ghost.erased (content h)) 
+  requires pts_to_serialized (serialize_content h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |) /\ String? v)
+  ensures exists* (v': Seq.seq byte) .
+    pts_to input #pm v' **
+    trade (pts_to input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
+    pure (String? v /\ v' == String?.v v)
+{
+  pts_to_serialized_ext_trade_gen
+    (serialize_content h)
+    (serialize_filter (LowParse.Spec.SeqBytes.serialize_lseq_bytes (U64.v (String?.len v).value)) (lseq_utf8_correct (get_header_major_type h) _))
+    input;
+  pts_to_serialized_filter_elim_trade (LowParse.Spec.SeqBytes.serialize_lseq_bytes (U64.v (String?.len v).value)) (lseq_utf8_correct (get_header_major_type h) _) input;
+  Trade.trans _ _ (pts_to_serialized (serialize_content h) input #pm c);
+  with v1 . assert (pts_to_serialized (LowParse.Spec.SeqBytes.serialize_lseq_bytes (U64.v (String?.len v).value)) input #pm v1);
+  let v2 : Ghost.erased bytes = Ghost.hide #bytes (Ghost.reveal #(Seq.lseq byte (U64.v (String?.len v).value)) v1);
+  Trade.rewrite_with_trade
+    (pts_to_serialized (LowParse.Spec.SeqBytes.serialize_lseq_bytes (U64.v (String?.len v).value)) input #pm v1)
+    (pts_to input #pm v2);
+  Trade.trans _ _ (pts_to_serialized (serialize_content h) input #pm c)
+}
+
+ghost
+fn get_tagged_payload
+  (input: S.slice byte)
+  (v: Ghost.erased raw_data_item)
+  (#pm: perm)
+  (#h: Ghost.erased header)
+  (#c: Ghost.erased (content h)) 
+  requires pts_to_serialized (serialize_content h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |) /\ Tagged? v)
+  ensures exists* v' .
+    pts_to_serialized serialize_raw_data_item input #pm v' **
+    trade (pts_to_serialized serialize_raw_data_item input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
+    pure (Tagged? v /\ v' == Tagged?.v v)
+{
+  pts_to_serialized_ext_trade
+    (serialize_content h)
+    serialize_raw_data_item
+    input;
+  rewrite
+  trade #emp_inames
+      (pts_to_serialized #parse_raw_data_item_kind
+          #(content (reveal #header h))
+          #parse_raw_data_item
+          serialize_raw_data_item
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (pts_to_serialized #parse_content_kind
+          #(content (reveal #header h))
+          #(parse_content parse_raw_data_item (reveal #header h))
+          (serialize_content (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+    as
+    trade #emp_inames
+      (pts_to_serialized #parse_raw_data_item_kind
+          #raw_data_item
+          #parse_raw_data_item
+          serialize_raw_data_item
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (pts_to_serialized #parse_content_kind
+          #(content (reveal #header h))
+          #(parse_content parse_raw_data_item (reveal #header h))
+          (serialize_content (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      ;
+  ()
+}
+
+ghost
+fn get_array_payload'
+  (input: S.slice byte)
+  (v: Ghost.erased raw_data_item {Array? v })
+  (#pm: perm)
+  (#h: Ghost.erased header)
+  (#c: Ghost.erased (content h))
+  requires pts_to_serialized (serialize_content h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |))
+  ensures exists* v' .
+    pts_to_serialized (L.serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item) input #pm v' **
+    trade (pts_to_serialized (L.serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item) input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
+    pure (v' == Array?.v v)
+{
+  pts_to_serialized_ext_trade
+    (serialize_content h)
+    (L.serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item)
+    input;
+  rewrite
+    trade #emp_inames
+      (pts_to_serialized #(L.parse_nlist_kind (U64.v (Array?.len (reveal #raw_data_item v))
+                    .value)
+              parse_raw_data_item_kind)
+          #(content (reveal #header h))
+          #(L.parse_nlist (U64.v (Array?.len (reveal #raw_data_item v)).value)
+              #parse_raw_data_item_kind
+              #raw_data_item
+              parse_raw_data_item)
+          (L.serialize_nlist (U64.v (Array?.len (reveal #raw_data_item v)).value)
+              #parse_raw_data_item_kind
+              #raw_data_item
+              #parse_raw_data_item
+              serialize_raw_data_item)
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (pts_to_serialized #parse_content_kind
+          #(content (reveal #header h))
+          #(parse_content parse_raw_data_item (reveal #header h))
+          (serialize_content (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))  
+   as
+    trade #emp_inames
+      (pts_to_serialized #(L.parse_nlist_kind (U64.v (Array?.len (reveal #raw_data_item v))
+                    .value)
+              parse_raw_data_item_kind)
+          #(L.nlist (U64.v (Array?.len (reveal #raw_data_item v)).value) raw_data_item)
+          #(L.parse_nlist (U64.v (Array?.len (reveal #raw_data_item v)).value)
+              #parse_raw_data_item_kind
+              #raw_data_item
+              parse_raw_data_item)
+          (L.serialize_nlist (U64.v (Array?.len (reveal #raw_data_item v)).value)
+              #parse_raw_data_item_kind
+              #raw_data_item
+              #parse_raw_data_item
+              serialize_raw_data_item)
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (pts_to_serialized #parse_content_kind
+          #(content (reveal #header h))
+          #(parse_content parse_raw_data_item (reveal #header h))
+          (serialize_content (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c));
+  ()
+}
+
+#pop-options
+
+ghost
+fn get_array_payload
+  (input: S.slice byte)
+: get_array_payload_t input
+=
+  (v: _)
+  (#pm: perm)
+  (#h: Ghost.erased header)
+  (#c: Ghost.erased (content h)) 
+{
+  get_array_payload' input v
+}
+
+#push-options "--z3rlimit 64"
+ghost
+fn get_map_payload'
+  (input: S.slice byte)
+  (v: Ghost.erased raw_data_item {Map? v })
+  (#pm: perm)
+  (#h: Ghost.erased header)
+  (#c: Ghost.erased (content h))
+  requires pts_to_serialized (serialize_content h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |))
+  ensures exists* v' .
+    pts_to_serialized (L.serialize_nlist (U64.v (Map?.len v).value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) input #pm v' **
+    trade (pts_to_serialized (L.serialize_nlist (U64.v (Map?.len v).value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
+    pure (v' == Map?.v v)
+{
+  pts_to_serialized_ext_trade
+    (serialize_content h)
+    (L.serialize_nlist (U64.v (Map?.len v).value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+    input;
+  rewrite
+  trade #emp_inames
+      (pts_to_serialized #(L.parse_nlist_kind (U64.v (Map?.len (reveal #raw_data_item v))
+                    .value)
+              (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind))
+          #(content (reveal #header h))
+          #(L.parse_nlist (U64.v (Map?.len (reveal #raw_data_item v)).value)
+              #(and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)
+              #(raw_data_item & raw_data_item)
+              (nondep_then #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item
+                  #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item))
+          (L.serialize_nlist (U64.v (Map?.len (reveal #raw_data_item v)).value)
+              #(and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)
+              #(raw_data_item & raw_data_item)
+              #(nondep_then #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item
+                  #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item)
+              (serialize_nondep_then #parse_raw_data_item_kind
+                  #raw_data_item
+                  #parse_raw_data_item
+                  serialize_raw_data_item
+                  #parse_raw_data_item_kind
+                  #raw_data_item
+                  #parse_raw_data_item
+                  serialize_raw_data_item))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (pts_to_serialized #parse_content_kind
+          #(content (reveal #header h))
+          #(parse_content parse_raw_data_item (reveal #header h))
+          (serialize_content (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+   as trade #emp_inames
+      (pts_to_serialized #(L.parse_nlist_kind (U64.v (Map?.len (reveal #raw_data_item v))
+                    .value)
+              (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind))
+          #(L.nlist (U64.v (Map?.len (reveal #raw_data_item v)).value)
+              (raw_data_item & raw_data_item))
+          #(L.parse_nlist (U64.v (Map?.len (reveal #raw_data_item v)).value)
+              #(and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)
+              #(raw_data_item & raw_data_item)
+              (nondep_then #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item
+                  #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item))
+          (L.serialize_nlist (U64.v (Map?.len (reveal #raw_data_item v)).value)
+              #(and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)
+              #(raw_data_item & raw_data_item)
+              #(nondep_then #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item
+                  #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item)
+              (serialize_nondep_then #parse_raw_data_item_kind
+                  #raw_data_item
+                  #parse_raw_data_item
+                  serialize_raw_data_item
+                  #parse_raw_data_item_kind
+                  #raw_data_item
+                  #parse_raw_data_item
+                  serialize_raw_data_item))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (pts_to_serialized #parse_content_kind
+          #(content (reveal #header h))
+          #(parse_content parse_raw_data_item (reveal #header h))
+          (serialize_content (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+    ;
+  ()
+}
+#pop-options
+
+ghost
+fn get_map_payload
+  (input: S.slice byte)
+: get_map_payload_t input
+=
+  (v: _)
+  (#pm: perm)
+  (#h: Ghost.erased header)
+  (#c: Ghost.erased (content h)) 
+{
+  get_map_payload' input v
+}
+
+(* Strong prefix variants of payload accessors *)
+
+ghost
+fn get_tagged_payload_strong_prefix
+  (input: S.slice byte)
+  (v: Ghost.erased raw_data_item)
+  (#pm: perm)
+  (#h: Ghost.erased header)
+  (#c: Ghost.erased (content h)) 
+  requires PPB.pts_to_parsed_strong_prefix (parse_content parse_raw_data_item h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |) /\ Tagged? v)
+  ensures exists* v' .
+    PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pm v' **
+    trade (PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pm v') (PPB.pts_to_parsed_strong_prefix (parse_content parse_raw_data_item h) input #pm c) **
+    pure (Tagged? v /\ v' == Tagged?.v v)
+{
+  PPC.pts_to_parsed_strong_prefix_ext_trade_gen
+    #(content (reveal #header h))
+    #raw_data_item
+    #parse_content_kind #(parse_content parse_raw_data_item (reveal #header h))
+    #parse_raw_data_item_kind #parse_raw_data_item
+    input
+    ();
+  rewrite
+  trade #emp_inames
+      (PPB.pts_to_parsed_strong_prefix #parse_raw_data_item_kind
+          #(content (reveal #header h))
+          parse_raw_data_item
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (PPB.pts_to_parsed_strong_prefix #parse_content_kind
+          #(content (reveal #header h))
+          (parse_content parse_raw_data_item (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+    as
+    trade #emp_inames
+      (PPB.pts_to_parsed_strong_prefix #parse_raw_data_item_kind
+          #raw_data_item
+          parse_raw_data_item
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (PPB.pts_to_parsed_strong_prefix #parse_content_kind
+          #(content (reveal #header h))
+          (parse_content parse_raw_data_item (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      ;
+  ()
+}
+
+#push-options "--z3rlimit 64"
+
+ghost
+fn get_array_payload_strong_prefix
+  (input: S.slice byte)
+  (v: Ghost.erased raw_data_item {Array? v })
+  (#pm: perm)
+  (#h: Ghost.erased header)
+  (#c: Ghost.erased (content h))
+  requires PPB.pts_to_parsed_strong_prefix (parse_content parse_raw_data_item h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |))
+  ensures exists* v' .
+    PPB.pts_to_parsed_strong_prefix (L.parse_nlist (U64.v (Array?.len v).value) parse_raw_data_item) input #pm v' **
+    trade (PPB.pts_to_parsed_strong_prefix (L.parse_nlist (U64.v (Array?.len v).value) parse_raw_data_item) input #pm v') (PPB.pts_to_parsed_strong_prefix (parse_content parse_raw_data_item h) input #pm c) **
+    pure (v' == Array?.v v)
+{
+  PPC.pts_to_parsed_strong_prefix_ext_trade_gen
+    #(content (reveal #header h))
+    #(L.nlist (U64.v (Array?.len (reveal #raw_data_item v)).value) raw_data_item)
+    #parse_content_kind #(parse_content parse_raw_data_item (reveal #header h))
+    #(L.parse_nlist_kind (U64.v (Array?.len (reveal #raw_data_item v)).value) parse_raw_data_item_kind) #(L.parse_nlist (U64.v (Array?.len (reveal #raw_data_item v)).value) parse_raw_data_item)
+    input
+    ();
+  rewrite
+    trade #emp_inames
+      (PPB.pts_to_parsed_strong_prefix #(L.parse_nlist_kind (U64.v (Array?.len (reveal #raw_data_item v))
+                    .value)
+              parse_raw_data_item_kind)
+          #(content (reveal #header h))
+          (L.parse_nlist (U64.v (Array?.len (reveal #raw_data_item v)).value)
+              #parse_raw_data_item_kind
+              #raw_data_item
+              parse_raw_data_item)
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (PPB.pts_to_parsed_strong_prefix #parse_content_kind
+          #(content (reveal #header h))
+          (parse_content parse_raw_data_item (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+   as
+    trade #emp_inames
+      (PPB.pts_to_parsed_strong_prefix #(L.parse_nlist_kind (U64.v (Array?.len (reveal #raw_data_item v))
+                    .value)
+              parse_raw_data_item_kind)
+          #(L.nlist (U64.v (Array?.len (reveal #raw_data_item v)).value) raw_data_item)
+          (L.parse_nlist (U64.v (Array?.len (reveal #raw_data_item v)).value)
+              #parse_raw_data_item_kind
+              #raw_data_item
+              parse_raw_data_item)
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (PPB.pts_to_parsed_strong_prefix #parse_content_kind
+          #(content (reveal #header h))
+          (parse_content parse_raw_data_item (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c));
+  ()
+}
+
+ghost
+fn get_map_payload_strong_prefix
+  (input: S.slice byte)
+  (v: Ghost.erased raw_data_item {Map? v })
+  (#pm: perm)
+  (#h: Ghost.erased header)
+  (#c: Ghost.erased (content h))
+  requires PPB.pts_to_parsed_strong_prefix (parse_content parse_raw_data_item h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |))
+  ensures exists* v' .
+    PPB.pts_to_parsed_strong_prefix (L.parse_nlist (U64.v (Map?.len v).value) (nondep_then parse_raw_data_item parse_raw_data_item)) input #pm v' **
+    trade (PPB.pts_to_parsed_strong_prefix (L.parse_nlist (U64.v (Map?.len v).value) (nondep_then parse_raw_data_item parse_raw_data_item)) input #pm v') (PPB.pts_to_parsed_strong_prefix (parse_content parse_raw_data_item h) input #pm c) **
+    pure (v' == Map?.v v)
+{
+  PPC.pts_to_parsed_strong_prefix_ext_trade_gen
+    #(content (reveal #header h))
+    #(L.nlist (U64.v (Map?.len (reveal #raw_data_item v)).value) (raw_data_item & raw_data_item))
+    #parse_content_kind #(parse_content parse_raw_data_item (reveal #header h))
+    #(L.parse_nlist_kind (U64.v (Map?.len (reveal #raw_data_item v)).value) (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)) #(L.parse_nlist (U64.v (Map?.len (reveal #raw_data_item v)).value) (nondep_then parse_raw_data_item parse_raw_data_item))
+    input
+    ();
+  rewrite
+  trade #emp_inames
+      (PPB.pts_to_parsed_strong_prefix #(L.parse_nlist_kind (U64.v (Map?.len (reveal #raw_data_item v))
+                    .value)
+              (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind))
+          #(content (reveal #header h))
+          (L.parse_nlist (U64.v (Map?.len (reveal #raw_data_item v)).value)
+              #(and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)
+              #(raw_data_item & raw_data_item)
+              (nondep_then #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item
+                  #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (PPB.pts_to_parsed_strong_prefix #parse_content_kind
+          #(content (reveal #header h))
+          (parse_content parse_raw_data_item (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+   as trade #emp_inames
+      (PPB.pts_to_parsed_strong_prefix #(L.parse_nlist_kind (U64.v (Map?.len (reveal #raw_data_item v))
+                    .value)
+              (and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind))
+          #(L.nlist (U64.v (Map?.len (reveal #raw_data_item v)).value)
+              (raw_data_item & raw_data_item))
+          (L.parse_nlist (U64.v (Map?.len (reveal #raw_data_item v)).value)
+              #(and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind)
+              #(raw_data_item & raw_data_item)
+              (nondep_then #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item
+                  #parse_raw_data_item_kind
+                  #raw_data_item
+                  parse_raw_data_item))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+      (PPB.pts_to_parsed_strong_prefix #parse_content_kind
+          #(content (reveal #header h))
+          (parse_content parse_raw_data_item (reveal #header h))
+          input
+          #pm
+          (reveal #(content (reveal #header h)) c))
+    ;
+  ()
+}
+
+#pop-options
+
+#push-options "--z3rlimit 64"
+#restart-solver
+
+ghost fn pts_to_parsed_strong_prefix_nlist_raw_data_item_head_header
+  (a: slice byte)
+  (n: pos)
+  (#pm: perm)
+  (#va: Ghost.erased (LowParse.Spec.VCList.nlist n raw_data_item))
+requires
+  PPB.pts_to_parsed_strong_prefix (LowParse.Spec.VCList.parse_nlist n (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param))) a #pm va
+ensures exists* (l: leaf) (h: header) v' .
+  PPB.pts_to_parsed_strong_prefix
+    (LowParse.Spec.Combinators.nondep_then
+      parse_header
+      (LowParse.Spec.Combinators.nondep_then
+        (parse_leaf_content h)
+        (LowParse.Pulse.Recursive.parse_nlist_recursive_cons_payload parse_raw_data_item_param n l)
+      )
+    )
+    a #pm v' **
+  Trade.trade
+    (PPB.pts_to_parsed_strong_prefix
+      (LowParse.Spec.Combinators.nondep_then
+        parse_header
+        (LowParse.Spec.Combinators.nondep_then
+          (parse_leaf_content h)
+          (LowParse.Pulse.Recursive.parse_nlist_recursive_cons_payload parse_raw_data_item_param n l)
+        )
+      )
+      a #pm v'
+    )
+    (PPB.pts_to_parsed_strong_prefix (LowParse.Spec.VCList.parse_nlist n (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param))) a #pm va) **
+  pure (
+    h == get_raw_data_item_header (List.Tot.hd va) /\
+    l == dfst (synth_raw_data_item_from_alt_recip (List.Tot.hd va)) /\
+    fst v' == h /\
+    dfst l == h /\
+    fst (snd v') == dsnd l /\
+    (fst (snd (snd v')) <: list raw_data_item) == (dsnd (synth_raw_data_item_from_alt_recip (List.Tot.hd va)) <: list raw_data_item) /\
+    (snd (snd (snd v')) <: list raw_data_item) == List.Tot.tl va
+  )
+{
+  PPC.pts_to_parsed_strong_prefix_ext_trade
+    #_ #_ #(LowParse.Spec.VCList.parse_nlist n (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param)))
+    #_ #(LowParse.Pulse.Recursive.parse_nlist_recursive_cons parse_raw_data_item_param n)
+    a ();
+  PPC.pts_to_parsed_strong_prefix_ext_trade_gen
+    #_ #_
+    #_ #(LowParse.Pulse.Recursive.parse_nlist_recursive_cons parse_raw_data_item_param n)
+    #_ #(LowParse.Spec.Combinators.parse_synth
+        (LowParse.Spec.Combinators.parse_dtuple2 (parser_of_tot_parser parse_raw_data_item_param.parse_header) (LowParse.Pulse.Recursive.parse_nlist_recursive_cons_payload parse_raw_data_item_param n))
+        (LowParse.Pulse.Recursive.synth_nlist_recursive_cons parse_raw_data_item_param n)
+    )
+    a ();
+  Trade.trans _ _ (PPB.pts_to_parsed_strong_prefix (LowParse.Spec.VCList.parse_nlist n (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param))) a #pm va);
+  PPC.pts_to_parsed_strong_prefix_synth_l2r
+    (LowParse.Spec.Combinators.parse_dtuple2 (parser_of_tot_parser parse_raw_data_item_param.parse_header) (LowParse.Pulse.Recursive.parse_nlist_recursive_cons_payload parse_raw_data_item_param n))
+    (LowParse.Pulse.Recursive.synth_nlist_recursive_cons parse_raw_data_item_param n)
+    (LowParse.Pulse.Recursive.synth_nlist_recursive_cons_recip serialize_raw_data_item_param n)
+    a;
+  Trade.trans _ _ (PPB.pts_to_parsed_strong_prefix (LowParse.Spec.VCList.parse_nlist n (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param))) a #pm va);
+  with v . assert (PPB.pts_to_parsed_strong_prefix (LowParse.Spec.Combinators.parse_dtuple2 (parser_of_tot_parser parse_raw_data_item_param.parse_header) (LowParse.Pulse.Recursive.parse_nlist_recursive_cons_payload parse_raw_data_item_param n)) a #pm v);
+  PPC.pts_to_parsed_strong_prefix_dtuple2_as_nondep_then
+    #_ #_
+    #_ #(parser_of_tot_parser parse_raw_data_item_param.parse_header)
+    #_ #(LowParse.Pulse.Recursive.parse_nlist_recursive_cons_payload parse_raw_data_item_param n)
+    a ();
+  Trade.trans _ _ (PPB.pts_to_parsed_strong_prefix (LowParse.Spec.VCList.parse_nlist n (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param))) a #pm va);
+  PPC.pts_to_parsed_strong_prefix_ext_nondep_then_left
+    #_ #_ #_
+    #_ #(parser_of_tot_parser parse_raw_data_item_param.parse_header)
+    #_ #(LowParse.Spec.Combinators.parse_dtuple2 parse_header parse_leaf_content)
+    #_ #(LowParse.Pulse.Recursive.parse_nlist_recursive_cons_payload parse_raw_data_item_param n (dfst v))
+    a ();
+  Trade.trans _ _ (PPB.pts_to_parsed_strong_prefix (LowParse.Spec.VCList.parse_nlist n (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param))) a #pm va);
+  PPC.pts_to_parsed_strong_prefix_dtuple2_nondep_then_assoc_l2r
+    #_ #_ #_
+    #_ #parse_header
+    #_ #parse_leaf_content
+    #_ #(LowParse.Pulse.Recursive.parse_nlist_recursive_cons_payload parse_raw_data_item_param n (dfst v))
+    a ();
+  Trade.trans _ _ (PPB.pts_to_parsed_strong_prefix (LowParse.Spec.VCList.parse_nlist n (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param))) a #pm va);
+}
+
+#pop-options
+
+#push-options "--z3rlimit 64"
+#restart-solver
+
+ghost fn pts_to_serialized_nlist_raw_data_item_head_header_ (_: unit) : pts_to_serialized_nlist_raw_data_item_head_header_t
+=
+  (a: slice byte)
+  (n: pos)
+  (#pm: perm)
+  (#va: LowParse.Spec.VCList.nlist n raw_data_item)
+{
+  pts_to_serialized_ext_trade
+    (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param)))
+    (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons serialize_raw_data_item_param n)
+    a;
+  pts_to_serialized_ext_trade_gen
+    (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons serialize_raw_data_item_param n)
+    (LowParse.Spec.Combinators.serialize_synth
+        (LowParse.Spec.Combinators.parse_dtuple2 (parser_of_tot_parser parse_raw_data_item_param.parse_header) (LowParse.Pulse.Recursive.parse_nlist_recursive_cons_payload parse_raw_data_item_param n))
+        (LowParse.Pulse.Recursive.synth_nlist_recursive_cons parse_raw_data_item_param n)
+        (LowParse.Spec.Combinators.serialize_dtuple2 (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header) (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n))
+        (LowParse.Pulse.Recursive.synth_nlist_recursive_cons_recip serialize_raw_data_item_param n)
+        ()
+    )
+    a;
+  Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+  LowParse.Pulse.Combinators.pts_to_serialized_synth_l2r_trade
+    (LowParse.Spec.Combinators.serialize_dtuple2 (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header) (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n))
+    (LowParse.Pulse.Recursive.synth_nlist_recursive_cons parse_raw_data_item_param n)
+    (LowParse.Pulse.Recursive.synth_nlist_recursive_cons_recip serialize_raw_data_item_param n)
+    a;
+  Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+  with v . assert (pts_to_serialized (LowParse.Pulse.Combinators.serialize_dtuple2 (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header) (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n)) a #pm v);
+  LowParse.Pulse.Combinators.pts_to_serialized_dtuple2_as_nondep_then
+    (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header)
+    (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n)
+    a;
+  Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+  LowParse.Pulse.Combinators.pts_to_serialized_ext_nondep_then_left
+    (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header)
+    (LowParse.Pulse.Combinators.serialize_dtuple2 serialize_header serialize_leaf_content)
+    (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n (dfst v))
+    a;
+  Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+  LowParse.Pulse.Combinators.pts_to_serialized_dtuple2_nondep_then_assoc_l2r
+    serialize_header
+    serialize_leaf_content
+    (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n (dfst v))
+    a;
+  Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+}
+
+#pop-options
+
+let pts_to_serialized_nlist_raw_data_item_head_header = pts_to_serialized_nlist_raw_data_item_head_header_ ()
+
+#push-options "--z3rlimit 256"
+#restart-solver
+
+ghost fn pts_to_serialized_nlist_raw_data_item_head_header'
+  (a: slice byte)
+  (n: pos)
+  (#pm: perm)
+  (#va: LowParse.Spec.VCList.nlist n raw_data_item)
+requires
+  pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n serialize_raw_data_item) a #pm va
+returns h: Ghost.erased header
+ensures exists* v' .
+  pts_to_serialized
+    (LowParse.Spec.Combinators.serialize_nondep_then
+      serialize_header
+      (LowParse.Spec.Combinators.serialize_nondep_then
+        (serialize_leaf_content h)
+        (LowParse.Spec.Combinators.serialize_nondep_then
+          (L.serialize_nlist (remaining_data_items_header h) serialize_raw_data_item)
+          (L.serialize_nlist (n - 1) serialize_raw_data_item)
+        )
+      )
+    )
+    a #pm v' **
+  Trade.trade
+    (pts_to_serialized
+      (LowParse.Spec.Combinators.serialize_nondep_then
+        serialize_header
+        (LowParse.Spec.Combinators.serialize_nondep_then
+          (serialize_leaf_content h)
+          (LowParse.Spec.Combinators.serialize_nondep_then
+            (L.serialize_nlist (remaining_data_items_header h) serialize_raw_data_item)
+            (L.serialize_nlist (n - 1) serialize_raw_data_item)
+          )
+        )
+      )
+      a #pm v'
+    )
+    (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n serialize_raw_data_item) a #pm va) **
+  pure (
+    pts_to_serialized_nlist_raw_data_item_head_header'_post n va h v'
+  )
+{
+  pts_to_serialized_nlist_raw_data_item_head_header a n;
+  with l h v' . assert (
+  pts_to_serialized
+    (LowParse.Spec.Combinators.serialize_nondep_then
+      serialize_header
+      (LowParse.Spec.Combinators.serialize_nondep_then
+        (serialize_leaf_content h)
+        (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n l)
+      )
+    )
+    a #pm v'
+  );
+  LowParse.Pulse.Combinators.pts_to_serialized_nondep_then_assoc_r2l
+    serialize_header
+    (serialize_leaf_content h)
+    (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n l)
+    a;
+  Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+  LowParse.Pulse.Combinators.pts_to_serialized_ext_nondep_then_right
+    (LowParse.Spec.Combinators.serialize_nondep_then
+      serialize_header
+      (serialize_leaf_content h)
+    )
+    (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n l)
+    (LowParse.Spec.Combinators.serialize_nondep_then
+      (L.serialize_nlist (remaining_data_items_header h) serialize_raw_data_item)
+      (L.serialize_nlist (n - 1) serialize_raw_data_item)
+    )
+    a;
+  Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+  LowParse.Pulse.Combinators.pts_to_serialized_nondep_then_assoc_l2r
+    serialize_header
+    (serialize_leaf_content h)
+    (LowParse.Spec.Combinators.serialize_nondep_then
+      (L.serialize_nlist (remaining_data_items_header h) serialize_raw_data_item)
+      (L.serialize_nlist (n - 1) serialize_raw_data_item)
+    )
+    a;
+  Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+  h
+}
+
+#pop-options
+
+inline_for_extraction
+fn impl_holds_on_raw_data_item
+  (f64: squash SZ.fits_u64)
+  (p: Ghost.erased (raw_data_item -> bool))
+  (impl_p: LowParse.Pulse.Recursive.impl_pred_t serialize_raw_data_item_param p)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased raw_data_item)
+  requires pts_to_serialized serialize_raw_data_item input #pm v
+  returns res: bool
+  ensures pts_to_serialized serialize_raw_data_item input #pm v ** pure (res == holds_on_raw_data_item p v)
+{
+  LowParse.Pulse.Recursive.impl_pred_recursive serialize_raw_data_item_param (jump_leaf ()) (jump_recursive_step_count_leaf f64) (holds_on_raw_data_item_pred p) impl_p input
+}
+
+inline_for_extraction
+fn impl_holds_on_raw_data_item_strong_prefix
+  (f64: squash SZ.fits_u64)
+  (p: Ghost.erased (raw_data_item -> bool))
+  (impl_p: LowParse.Pulse.Recursive.impl_pred_strong_prefix_t serialize_raw_data_item_param p)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased raw_data_item)
+  requires PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pm v
+  returns res: bool
+  ensures PPB.pts_to_parsed_strong_prefix parse_raw_data_item input #pm v ** pure (res == holds_on_raw_data_item p v)
+{
+  LowParse.Pulse.Recursive.impl_pred_recursive_strong_prefix serialize_raw_data_item_param (jump_leaf ()) (jump_recursive_step_count_leaf f64) (holds_on_raw_data_item_pred p) impl_p input
+}
+
+(* Eta-expanded top-level wrappers around [jump_raw_data_item] (and its pair
+   composition via [jump_nondep_then]). These give KaRaMeL fully-applied
+   call-sites at iterator helpers (which now consume jumpers at runtime since
+   they are no longer [inline_for_extraction]). They are written in plain F*,
+   not Pulse, since they merely re-bundle existing computational values. *)
+
+assume val sz_fits_u64 : squash SZ.fits_u64
+
+let jump_raw_data_item_eta
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+: stt SZ.t
+    (pts_to input #pm v ** pure (jumper_pre' parse_raw_data_item offset v))
+    (fun res -> pts_to input #pm v ** pure (validator_success parse_raw_data_item offset v res))
+= jump_raw_data_item sz_fits_u64 input offset #pm #v
+
+let jump_nondep_then_raw_data_item_eta
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+: stt SZ.t
+    (pts_to input #pm v ** pure (jumper_pre' (LowParse.Spec.Combinators.nondep_then parse_raw_data_item parse_raw_data_item) offset v))
+    (fun res -> pts_to input #pm v ** pure (validator_success (LowParse.Spec.Combinators.nondep_then parse_raw_data_item parse_raw_data_item) offset v res))
+=
+  LowParse.Pulse.Combinators.jump_nondep_then
+    #raw_data_item #raw_data_item
+    #parse_raw_data_item_kind #parse_raw_data_item
+    jump_raw_data_item_eta
+    #parse_raw_data_item_kind #parse_raw_data_item
+    jump_raw_data_item_eta
+    input offset #pm #v

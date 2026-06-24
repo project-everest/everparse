@@ -43,15 +43,20 @@ C_FILES=$(BASE_C_FILES) $(addprefix internal/,$(INTERNAL_C_FILES))
 .PHONY: extract-krml
 extract-krml: $(ALL_KRML_FILES)
 
+# Include paths matching krml's built-in cc invocation, used by the post-extract syntax check.
+COSE_CC_INCLUDES = -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/minimal \
+	-I $(OUTPUT_DIRECTORY) -I $(OUTPUT_DIRECTORY)/internal -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c
+
 .PHONY: extract
 extract: extract-krml
 	$(KRML) -faggressive-inlining -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*[rename=fstar]' \
-		-bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]' \
-		-add-include '"CBORDetAbstract.h"' \
+		-bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C+CBOR.Pulse.API.Det.Dummy=CBOR.\*[rename=CBORDetAPI]' \
 		-bundle 'COSE.EverCrypt=Abort,EverCrypt.Ed25519' \
 		-bundle 'COSE.Format=*' \
-		-no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -no-prefix Abort \
-		-skip-linking $(ALL_KRML_FILES) -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -header noheader.txt
+		-no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -no-prefix CBOR.Pulse.API.Det.Dummy -no-prefix Abort \
+		-add-include '"CBORDetType.h"' \
+		-skip-compilation $(ALL_KRML_FILES) -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -header noheader.txt
+	$(CC) -fsyntax-only -Wall -Werror $(COSE_CC_INCLUDES) $(OUTPUT_DIRECTORY)/COSE_Format.c $(OUTPUT_DIRECTORY)/COSE_EverCrypt.c
 
 %.diff: extract
 	diff ../c/$(basename $@) $(OUTPUT_DIRECTORY)/$(basename $@)

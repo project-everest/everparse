@@ -315,6 +315,41 @@ ensures
     };
 }
 
+// Weaken pts_to_parsed to pts_to_parsed_strong_prefix at half perm, with a trade back.
+// The trade body gathers the two halves to recover the original bytes and refolds pts_to_parsed.
+ghost fn pts_to_parsed_weaken_strong_prefix
+  (#k: parser_kind) (#t: Type0) (p: parser k t)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+requires
+  pts_to_parsed p input #pm v **
+  pure (k.parser_kind_subkind == Some ParserStrong)
+ensures
+  pts_to_parsed_strong_prefix p input #(pm /. 2.0R) v **
+  Trade.trade
+    (pts_to_parsed_strong_prefix p input #(pm /. 2.0R) v)
+    (pts_to_parsed p input #pm v)
+{
+  unfold (pts_to_parsed p input #pm v);
+  with w. assert (S.pts_to input #pm w);
+  // pts_to_parsed_prop implies pts_to_parsed_strong_prefix_prop (when ParserStrong)
+  assert (pure (pts_to_parsed_strong_prefix_prop p w v));
+  S.share input;
+  fold (pts_to_parsed_strong_prefix p input #(pm /. 2.0R) v);
+  intro
+    (Trade.trade
+      (pts_to_parsed_strong_prefix p input #(pm /. 2.0R) v)
+      (pts_to_parsed p input #pm v)
+    )
+    #(S.pts_to input #(pm /. 2.0R) w ** pure (pts_to_parsed_prop p w v))
+    fn _ {
+      unfold (pts_to_parsed_strong_prefix p input #(pm /. 2.0R) v);
+      S.gather input;
+      fold (pts_to_parsed p input #pm v);
+    };
+}
+
 module R = Pulse.Lib.Reference
 
 inline_for_extraction
@@ -765,3 +800,248 @@ fn accessor_parser_ext
   with v2 . assert (pts_to_parsed p2 input #pm v2);
   input
 }
+
+(* zero_copy_parse_strong_prefix: like zero_copy_parse but with pts_to_parsed_strong_prefix precondition *)
+
+inline_for_extraction
+let zero_copy_parse_strong_prefix
+  (#t' #t: Type0)
+  (vmatch: t' -> t -> slprop)
+  (#k: parser_kind)
+  (p: parser k t)
+=
+  (input: slice byte) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased t) ->
+  stt t'
+    (pts_to_parsed_strong_prefix p input #pm v)
+    (fun res ->
+      vmatch res v **
+      Trade.trade
+        (vmatch res v)
+        (pts_to_parsed_strong_prefix p input #pm v)
+    )
+
+inline_for_extraction
+fn zero_copy_parse_of_strong_prefix
+  (#t' #t: Type0)
+  (#vmatch: t' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (r: zero_copy_parse_strong_prefix vmatch p)
+  (_: squash ((Ghost.reveal k).parser_kind_subkind == Some ParserStrong))
+: zero_copy_parse vmatch p
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  pts_to_parsed_weaken_strong_prefix p input;
+  let res = r input #(pm /. 2.0R) #v;
+  Trade.trans
+    (vmatch res v)
+    (pts_to_parsed_strong_prefix p input #(pm /. 2.0R) v)
+    (pts_to_parsed p input #pm v);
+  res
+}
+
+ghost fn pts_to_parsed_strong_prefix_elim
+  (#k: parser_kind) (#t: Type0) (#p: parser k t)
+  (#pm: perm)
+  (#v: t)
+  (input: slice byte)
+requires
+  pts_to_parsed_strong_prefix p input #pm v
+ensures exists* w .
+  S.pts_to input #pm w **
+  Trade.trade
+    (S.pts_to input #pm w)
+    (pts_to_parsed_strong_prefix p input #pm v) **
+  pure (pts_to_parsed_strong_prefix_prop p w v)
+{
+  unfold (pts_to_parsed_strong_prefix p input #pm v);
+  with w . assert (S.pts_to input #pm w);
+  intro
+    (Trade.trade
+      (S.pts_to input #pm w)
+      (pts_to_parsed_strong_prefix p input #pm v)
+    )
+    #emp
+    fn _ {
+      fold (pts_to_parsed_strong_prefix p input #pm v)
+    };
+}
+
+// Given pts_to_parsed_strong_prefix, use a jumper to find the exact consumed length,
+// split the slice, and return a sub-slice with pts_to_serialized and a trade back.
+inline_for_extraction
+fn pts_to_parsed_strong_prefix_to_serialized_trade
+  (#k: Ghost.erased parser_kind) (#t: Type0) (#p: parser k t)
+  (s: serializer p) (j: LPS.jumper p)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+requires
+  pts_to_parsed_strong_prefix p input #pm v
+returns exact: slice byte
+ensures
+  LPS.pts_to_serialized s exact #pm v **
+  Trade.trade
+    (LPS.pts_to_serialized s exact #pm v)
+    (pts_to_parsed_strong_prefix p input #pm v)
+{
+  // Step 1: Elim strong_prefix to raw bytes
+  pts_to_parsed_strong_prefix_elim input;
+  with w . assert (S.pts_to input #pm w);
+  // Step 2: Use jumper to find total consumed length
+  S.pts_to_len input;
+  let off = j input 0sz;
+  // Step 3: Split at off to get exact-size sub-slice
+  let exact, rest = split_trade input off;
+  with w_exact . assert (S.pts_to exact #pm w_exact);
+  with w_rest . assert (S.pts_to rest #pm w_rest);
+  // Step 4: Consume rest from the trade
+  Trade.elim_hyp_r (S.pts_to exact #pm w_exact) (S.pts_to rest #pm w_rest) (S.pts_to input #pm w);
+  // Step 5: Chain: exact → input → strong_prefix
+  Trade.trans (S.pts_to exact #pm w_exact) (S.pts_to input #pm w)
+    (pts_to_parsed_strong_prefix p input #pm v);
+  // Step 6: Prove w_exact == bare_serialize s v
+  parse_injective p w (bare_serialize s v);
+  // Step 7: Fold as pts_to_serialized
+  LPS.pts_to_serialized_intro_trade s exact v;
+  Trade.trans
+    (LPS.pts_to_serialized s exact #pm v)
+    (S.pts_to exact #pm w_exact)
+    (pts_to_parsed_strong_prefix p input #pm v);
+  exact
+}
+
+ghost fn pts_to_parsed_strong_prefix_ext
+  (#t: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t)
+  (#k2: parser_kind)
+  (p2: parser k2 t)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: t)
+  requires pts_to_parsed_strong_prefix p1 input #pm v ** pure (
+    k2.parser_kind_subkind == Some ParserStrong /\
+    (forall x . parse p1 x == parse p2 x)
+  )
+  ensures pts_to_parsed_strong_prefix p2 input #pm v
+{
+  unfold (pts_to_parsed_strong_prefix p1 input #pm v);
+  fold (pts_to_parsed_strong_prefix p2 input #pm v)
+}
+
+ghost fn pts_to_parsed_strong_prefix_ext_trade
+  (#t: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t)
+  (#k2: parser_kind)
+  (p2: parser k2 t)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: t)
+  requires pts_to_parsed_strong_prefix p1 input #pm v ** pure (
+    k1.parser_kind_subkind == Some ParserStrong /\
+    k2.parser_kind_subkind == Some ParserStrong /\
+    (forall x . parse p1 x == parse p2 x)
+  )
+  ensures pts_to_parsed_strong_prefix p2 input #pm v **
+    Trade.trade
+      (pts_to_parsed_strong_prefix p2 input #pm v)
+      (pts_to_parsed_strong_prefix p1 input #pm v)
+{
+    pts_to_parsed_strong_prefix_ext p2 input;
+    intro
+      (Trade.trade
+        (pts_to_parsed_strong_prefix p2 input #pm v)
+        (pts_to_parsed_strong_prefix p1 input #pm v)
+      )
+      #emp
+      fn _ {
+        pts_to_parsed_strong_prefix_ext p1 input
+      }
+}
+
+inline_for_extraction
+fn zero_copy_parse_strong_prefix_ext
+  (#t1'  #t: Type0)
+  (#vmatch1: t1' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (r: zero_copy_parse_strong_prefix vmatch1 p)
+  (#k': Ghost.erased parser_kind)
+  (p': parser k' t {
+    k'.parser_kind_subkind == Some ParserStrong /\
+    k.parser_kind_subkind == Some ParserStrong /\
+    (forall b . parse p b == parse p' b)
+  })
+: zero_copy_parse_strong_prefix #_ #_ vmatch1 #_ p'
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  pts_to_parsed_strong_prefix_ext_trade p input;
+  let res = r input;
+  Trade.trans (vmatch1 res v) _ _;
+  res
+}
+
+inline_for_extraction
+fn zero_copy_parse_strong_prefix_ifthenelse
+  (#t1'  #t: Type0)
+  (#vmatch1: t1' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (cond: bool)
+  (rtrue: squash (cond == true) -> zero_copy_parse_strong_prefix vmatch1 p)
+  (rfalse: squash (cond == false) -> zero_copy_parse_strong_prefix vmatch1 p)
+: zero_copy_parse_strong_prefix #_ #_ vmatch1 #_ p
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  if (cond) {
+    rtrue () input
+  } else {
+    rfalse () input
+  }
+}
+
+inline_for_extraction
+let share_t
+  (#t1 #t2: Type)
+  (vmatch: perm -> t1 -> t2 -> slprop)
+=
+  (x1: t1) ->
+  (#p: perm) ->
+  (#x2: t2) ->
+  stt_ghost unit emp_inames
+  (vmatch p x1 x2)
+  (fun _ ->
+    let open FStar.Real in
+    vmatch (p /. 2.0R) x1 x2 ** vmatch (p /. 2.0R) x1 x2
+  )
+
+inline_for_extraction
+let gather_t
+  (#t1 #t2: Type)
+  (vmatch: perm -> t1 -> t2 -> slprop)
+=
+  (x1: t1) ->
+  (#p: perm) ->
+  (#x2: t2) ->
+  (#p': perm) ->
+  (#x2': t2) ->
+  stt_ghost unit emp_inames
+  (vmatch p x1 x2 ** vmatch p' x1 x2')
+  (fun _ ->
+    let open FStar.Real in
+    vmatch (p +. p') x1 x2 **
+    pure (x2 == x2')
+  )

@@ -11,6 +11,8 @@ mod lowstar {
 
 mod cbordetveraux;
 
+mod pulse;
+
 pub mod cbordetver;
 
 pub mod cbordet;

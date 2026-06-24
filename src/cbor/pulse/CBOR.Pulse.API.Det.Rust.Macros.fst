@@ -250,6 +250,26 @@ fn cbor_det_array_iterator_start'
   res
 }
 
+(* Adapter that turns the by-value [cbor_det_array_iterator_next] (used
+   for Rust extraction, where a [&mut [t']] argument sharing a lifetime
+   with [t'] would be over-constrained) into the in-place
+   [array_iterator_next_t] expected by the generic CDDL combinators. *)
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_det_array_iterator_next'
+  (_: unit)
+: Base.array_iterator_next_t #_ #_ cbor_det_match cbor_det_array_iterator_match
+= (x: _)
+  (#y: _)
+  (#py: _)
+  (#z: _)
+{
+  let v = !x;
+  let res = cbor_det_array_iterator_next v;
+  x := snd res;
+  fst res
+}
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn cbor_det_get_array_item'
@@ -313,6 +333,24 @@ fn cbor_det_map_iterator_start'
   let res = cbor_det_map_iterator_start a;
   Trade.trans _ _ (cbor_det_match p x y);
   res
+}
+
+(* Adapter analogous to [cbor_det_array_iterator_next'] for map
+   iterators. *)
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_det_map_iterator_next'
+  (_: unit)
+: Base.map_iterator_next_t #_ #_ cbor_det_map_entry_match cbor_det_map_iterator_match
+= (x: _)
+  (#y: _)
+  (#py: _)
+  (#z: _)
+{
+  let v = !x;
+  let res = cbor_det_map_iterator_next v;
+  x := snd res;
+  fst res
 }
 
 ghost
