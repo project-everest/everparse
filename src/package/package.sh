@@ -107,7 +107,7 @@ make_everparse() {
 	# use (Cygwin's) `ldd` to find out which dll we are using exactly, and
 	# ship that.
 	# (See FStarLang/FStar#4064)
-	LIBGMP10_DLL="$(ldd "$FSTAR_EXE" | sed -n 's/^[[:space:]]libgmp-10.dll => *\([^ ]*\) .*$/\1/p')"
+	LIBGMP10_DLL="$(ldd "$FSTAR_EXE" | grep x86_64 | sed -n 's/^[[:space:]]libgmp-10.dll => *\([^ ]*\) .*$/\1/p')"
 	if [[ -z "$LIBGMP10_DLL" ]] ; then
             echo libgmp-10.dll is missing
             exit 1
