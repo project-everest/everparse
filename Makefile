@@ -172,13 +172,45 @@ endif
 
 .PHONY: cbor-det-common-vertest
 
-cbor-verify: $(filter src/cbor/spec/%,$(ALL_CHECKED_FILES))
+cbor-verify-aux: $(filter src/cbor/spec/%,$(ALL_CHECKED_FILES))
 
 ifeq (,$(NO_PULSE))
-cbor-verify: $(filter src/cbor/pulse/%,$(ALL_CHECKED_FILES))
+cbor-verify-aux: $(filter src/cbor/pulse/%,$(ALL_CHECKED_FILES))
 endif
 
-.PHONY: cbor-verify
+.PHONY: cbor-verify-aux
+
+# The byte_slice seam (CBOR.Pulse.Raw.Slice) has two backend implementations,
+# slice-c and slice-rust, that share a module name and so cannot be checked in a
+# single dependency scan; each lives in its own directory with its own Makefile
+# (mirroring src/cbor/pulse/raw) and is excluded from SRC_DIRS and the global
+# checked-file cache. `cbor-verify` is the full verification rule: cbor-verify-aux
+# (the whole CBOR closure, including the shared CBOR.Pulse.Raw.Slice.fsti.checked)
+# plus each backend's CBOR.Pulse.Raw.Slice.fst.checked, built by delegating to the
+# per-directory Makefile. Delegating lets each slice directory name its own target
+# locally (the relative CBOR.Pulse.Raw.Slice.fst.checked) instead of threading its
+# absolute path to a sub-make.
+#
+# Each backend build depends on cbor-verify-aux: the local Makefile checks only the
+# backend .fst against the already-built shared .fsti.checked and CBOR closure, so
+# that closure must exist first (otherwise, under `make -j`, the local check races
+# cbor-verify-aux and fails, e.g. Error 317 "Expected CBOR.Pulse.Raw.Compare.Base
+# to be already checked"). Given that ordering the two backends touch only their own
+# directories and merely read the up-to-date shared .fsti.checked, so they are
+# independent targets and may run in parallel with each other under -j.
+ifeq (,$(NO_PULSE))
+cbor-verify-slice-c: cbor-verify-aux
+	+$(MAKE) -C src/cbor/pulse/raw/slice-c
+
+cbor-verify-slice-rust: cbor-verify-aux
+	+$(MAKE) -C src/cbor/pulse/raw/slice-rust
+
+cbor-verify: cbor-verify-aux cbor-verify-slice-c cbor-verify-slice-rust
+else
+cbor-verify: cbor-verify-aux
+endif
+
+.PHONY: cbor-verify cbor-verify-slice-c cbor-verify-slice-rust
 
 # lowparse needed for extraction because of .fst files behind .fsti
 ifeq (,$(NO_PULSE))
@@ -271,12 +303,6 @@ cose-test: cose-extract-test cose-extracted-test
 cddl-test: cddl cddl-unit-tests
 
 .PHONY: cddl-test
-
-# cbor needed because we regenerate its Rust documentation
-3d-doc-ci: 3d-doc-test cbor
-	+$(MAKE) -C doc 3d-ci
-
-.PHONY: 3d-doc-ci
 
 3d-doc-snapshot: 3d $(NEED_Z3_TESTGEN)
 	+$(MAKE) -C doc 3d-snapshot

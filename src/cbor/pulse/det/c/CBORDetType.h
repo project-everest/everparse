@@ -1,7 +1,7 @@
 
 
-#ifndef CBORNondetType_H
-#define CBORNondetType_H
+#ifndef CBORDetType_H
+#define CBORDetType_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -156,17 +156,17 @@ typedef struct cbor_map_iterator_s
 }
 cbor_map_iterator;
 
-typedef cbor_raw cbor_nondet_t;
+typedef cbor_raw cbor_det_t;
 
-typedef cbor_array_iterator cbor_nondet_array_iterator_t;
+typedef cbor_map_entry cbor_det_map_entry_t;
 
-typedef cbor_map_iterator cbor_nondet_map_iterator_t;
+typedef cbor_array_iterator cbor_det_array_iterator_t;
 
-typedef cbor_map_entry cbor_nondet_map_entry_t;
+typedef cbor_map_iterator cbor_det_map_iterator_t;
 
 #if defined(__cplusplus)
 }
 #endif
 
-#define CBORNondetType_H_DEFINED
-#endif /* CBORNondetType_H */
+#define CBORDetType_H_DEFINED
+#endif /* CBORDetType_H */
