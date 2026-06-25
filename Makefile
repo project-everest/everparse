@@ -274,12 +274,6 @@ cddl-test: cddl cddl-unit-tests
 
 .PHONY: cddl-test
 
-# cbor needed because we regenerate its Rust documentation
-3d-doc-ci: 3d-doc-test cbor
-	+$(MAKE) -C doc 3d-ci
-
-.PHONY: 3d-doc-ci
-
 3d-doc-snapshot: 3d $(NEED_Z3_TESTGEN)
 	+$(MAKE) -C doc 3d-snapshot
 
