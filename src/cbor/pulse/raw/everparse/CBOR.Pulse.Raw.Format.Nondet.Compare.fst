@@ -123,8 +123,8 @@ ensures
 {
   unfold (cbor_match_serialized_array c1 pm1 r1);
   unfold (cbor_match_serialized_array c2 pm2 r2);
-  serialized_array_count_fits c1.cbor_serialized_payload (pm1 `perm_mul` c1.cbor_serialized_perm) (Array?.v r1);
-  serialized_array_count_fits c2.cbor_serialized_payload (pm2 `perm_mul` c2.cbor_serialized_perm) (Array?.v r2);
+  serialized_array_count_fits (to_slice c1.cbor_serialized_payload) (pm1 `perm_mul` c1.cbor_serialized_perm) (Array?.v r1);
+  serialized_array_count_fits (to_slice c2.cbor_serialized_payload) (pm2 `perm_mul` c2.cbor_serialized_perm) (Array?.v r2);
   unfold (cbor_match_serialized_payload_array (to_slice c1.cbor_serialized_payload) (pm1 `perm_mul` c1.cbor_serialized_perm) (Array?.v r1));
   unfold (cbor_match_serialized_payload_array (to_slice c2.cbor_serialized_payload) (pm2 `perm_mul` c2.cbor_serialized_perm) (Array?.v r2));
   valid_eq basic_data_model r1;
@@ -180,8 +180,8 @@ ensures
 {
   unfold (cbor_match_serialized_map c1 pm1 r1);
   unfold (cbor_match_serialized_map c2 pm2 r2);
-  serialized_map_count_fits c1.cbor_serialized_payload (pm1 `perm_mul` c1.cbor_serialized_perm) (Map?.v r1);
-  serialized_map_count_fits c2.cbor_serialized_payload (pm2 `perm_mul` c2.cbor_serialized_perm) (Map?.v r2);
+  serialized_map_count_fits (to_slice c1.cbor_serialized_payload) (pm1 `perm_mul` c1.cbor_serialized_perm) (Map?.v r1);
+  serialized_map_count_fits (to_slice c2.cbor_serialized_payload) (pm2 `perm_mul` c2.cbor_serialized_perm) (Map?.v r2);
   unfold (cbor_match_serialized_payload_map (to_slice c1.cbor_serialized_payload) (pm1 `perm_mul` c1.cbor_serialized_perm) (Map?.v r1));
   unfold (cbor_match_serialized_payload_map (to_slice c2.cbor_serialized_payload) (pm2 `perm_mul` c2.cbor_serialized_perm) (Map?.v r2));
   valid_eq basic_data_model r1;

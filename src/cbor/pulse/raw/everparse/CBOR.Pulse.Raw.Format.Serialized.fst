@@ -112,11 +112,11 @@ ensures exists* y .
       )
 {
   cbor_match_serialized_array_elim c pm r;
-  with pm' . assert (pts_to_serialized (LowParse.Pulse.VCList.serialize_nlist (U64.v (Array?.len r).value) serialize_raw_data_item) c.cbor_serialized_payload #pm' (Array?.v r));
-  LowParse.Pulse.Base.pts_to_serialized_length (LowParse.Pulse.VCList.serialize_nlist (U64.v (Array?.len r).value) serialize_raw_data_item) c.cbor_serialized_payload;
+  with pm' . assert (pts_to_serialized (LowParse.Pulse.VCList.serialize_nlist (U64.v (Array?.len r).value) serialize_raw_data_item) (to_slice c.cbor_serialized_payload) #pm' (Array?.v r));
+  LowParse.Pulse.Base.pts_to_serialized_length (LowParse.Pulse.VCList.serialize_nlist (U64.v (Array?.len r).value) serialize_raw_data_item) (to_slice c.cbor_serialized_payload);
   LowParse.Spec.VCList.parse_nlist_kind_low (U64.v (Array?.len r).value) parse_raw_data_item_kind;
   assert_norm (parse_raw_data_item_kind.parser_kind_low == 1);
-  SZ.fits_lte (U64.v i) (SZ.v (len c.cbor_serialized_payload));
+  SZ.fits_lte (U64.v i) (SZ.v (len (to_slice c.cbor_serialized_payload)));
   let j : SZ.t = SZ.uint64_to_sizet i;
   let elt = LowParse.Pulse.VCList.nlist_nth _ (jump_raw_data_item ()) (U64.v (Array?.len r).value) (to_slice c.cbor_serialized_payload) j;
   Trade.trans _ _ (cbor_match_serialized_array c pm r);
