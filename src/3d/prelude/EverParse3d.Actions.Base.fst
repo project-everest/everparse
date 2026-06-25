@@ -464,6 +464,7 @@ let validate_total_constant_size_no_read
 
 inline_for_extraction noextract
 let validate_pair
+       (typename: string)
        (name1: string)
        #nz1 (#k1:parser_kind nz1 WeakKindStrongPrefix) #t1 (#p1:parser k1 t1)
        (k1_const: bool)
@@ -490,7 +491,15 @@ let validate_pair
       k2.parser_kind_metadata = Some LP.ParserKindMetadataTotal &&
       k1.parser_kind_low + k2.parser_kind_low < 4294967296
     then
-      validate_drop (validate_total_constant_size_no_read (p1 `parse_pair` p2) (U64.uint_to_t (k1.parser_kind_low + k2.parser_kind_low)) () (conj_inv inv1 inv2) (conj_disjointness disj1 disj2) (l1 `eloc_union` l2))
+      // "Length-only" fast path: both fields are constant-size, total and
+      // action-free, so we fuse them into a single length check, erasing v1 and
+      // v2 (and any per-field error handlers they carried). Re-wrap the fused
+      // check with an error handler so that the failure of such a (sub-)struct
+      // -- including a constant-size suffix following a variable-size prefix --
+      // is still reported. For nested constant-size structs the outer fast path
+      // discards the inner validators, so only the outermost wrapper survives.
+      validate_with_error_handler typename name1
+        (validate_drop (validate_total_constant_size_no_read (p1 `parse_pair` p2) (U64.uint_to_t (k1.parser_kind_low + k2.parser_kind_low)) () (conj_inv inv1 inv2) (conj_disjointness disj1 disj2) (l1 `eloc_union` l2)))
     else
     fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos = start_position in
@@ -604,6 +613,10 @@ let validate_dep_pair_with_refinement_and_action'
         end
       end
 
+// This VC is provable per-subgoal but too large for Z3 to discharge as a single
+// monolithic query (it regressed with the F*/Z3 upgrade); splitting it keeps each
+// subgoal well within rlimit. See `--split_queries always` (each subgoal uses < 10 rlimit).
+#push-options "--split_queries always"
 inline_for_extraction noextract
 let validate_dep_pair_with_refinement_and_action_total_zero_parser'
       (name1: string)
@@ -666,6 +679,7 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
               end
              )
         end
+#pop-options
 
 inline_for_extraction noextract
 let validate_dep_pair_with_refinement_and_action
@@ -780,6 +794,8 @@ let validate_dep_pair_with_refinement'
              validate_drop (v2 field_value) ctxt error_handler_fn input input_length res1
         end
 
+// Same monolithic-VC regression as the action variant above; split the query.
+#push-options "--split_queries always"
 inline_for_extraction noextract
 let validate_dep_pair_with_refinement_total_zero_parser'
       (name1: string)
@@ -831,6 +847,7 @@ let validate_dep_pair_with_refinement_total_zero_parser'
              let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
              validate_drop (v2 field_value) ctxt error_handler_fn input input_length res1
         end
+#pop-options
 
 inline_for_extraction noextract
 let validate_dep_pair_with_refinement

@@ -257,6 +257,7 @@ val validate_ret
 
 inline_for_extraction noextract
 val validate_pair
+       (typename: string)
        (name1: string)
        (#nz1:_)
        (#k1:parser_kind nz1 WeakKindStrongPrefix)
