@@ -1,6 +1,7 @@
 module CBOR.Pulse.API.Det.Common
 #lang-pulse
 include CBOR.Pulse.API.Det.Type
+include CBOR.Pulse.API.Det.Dummy
 include CBOR.Pulse.API.Base
 open Pulse.Lib.Pervasives
 module Spec = CBOR.Spec.API.Format

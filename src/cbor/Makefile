@@ -22,13 +22,27 @@ det/test-snapshot: extract
 nondet/test-snapshot: extract
 	+$(MAKE) -C pulse/$(dir $@) $(notdir $@)
 
-extract-krml:
-	+$(MAKE) -C pulse/krml extract-krml ALREADY_CACHED='*,-CBOR,'
+# Build the two CBOR.Pulse.Raw.Slice backend implementations (each verified by its
+# own Makefile under pulse/raw/slice-{c,rust}) before invoking krml: the krml passes
+# treat the slice as already cached (ALREADY_CACHED='*,-CBOR,CBOR.Pulse.Raw.Slice,',
+# matching pulse/krml/Makefile), so krml's dependency scan requires the slice .checked
+# to already exist. On separate recipe lines, hence sequential, so the two backend
+# builds never race on the shared CBOR.Pulse.Raw.Slice.fsti.checked.
+slice-c:
+	+$(MAKE) -C pulse/raw/slice-c
+
+slice-rust:
+	+$(MAKE) -C pulse/raw/slice-rust
+
+.PHONY: slice-c slice-rust
+
+extract-krml: slice-c slice-rust
+	+$(MAKE) -C pulse/krml extract-krml
 
 .PHONY: extract-krml
 
 extract: extract-krml
-	+$(MAKE) -C pulse/krml ALREADY_CACHED='*,-CBOR,'
+	+$(MAKE) -C pulse/krml
 
 .PHONY: extract
 
@@ -58,6 +72,8 @@ clean: pulse/det.clean pulse/nondet.clean
 .PHONY: clean
 
 clean-verify: spec.clean spec/raw.clean spec/raw/everparse.clean pulse.clean pulse/raw.clean pulse/raw/everparse.clean pulse/krml.clean
+
+clean-verify: pulse/raw/slice-c.clean pulse/raw/slice-rust.clean
 
 .PHONY: clean-verify
 

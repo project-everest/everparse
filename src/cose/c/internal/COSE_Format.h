@@ -6,7 +6,7 @@
 #include "krmllib.h"
 
 #include "../COSE_Format.h"
-#include "CBORDetAbstract.h"
+#include "CBORDetType.h"
 
 size_t Pulse_Lib_Slice_len__uint8_t(Pulse_Lib_Slice_slice__uint8_t s);
 
