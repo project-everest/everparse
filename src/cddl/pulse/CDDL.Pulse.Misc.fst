@@ -321,8 +321,8 @@ fn impl_str_size
     (cbor_get_major_type: get_major_type_t vmatch)
     (cbor_destr_string: get_string_t vmatch)
     (ty: major_type_byte_string_or_text_string)
-    (lo hi: SZ.t)
-: impl_typ u#0 #t vmatch #None (str_size ty (SZ.v lo) (SZ.v hi))
+    (lo hi: U64.t)
+: impl_typ u#0 #t vmatch #None (str_size ty (U64.v lo) (U64.v hi))
 =
     (c: ty)
     (#p: perm)
@@ -334,8 +334,9 @@ fn impl_str_size
         S.pts_to_len str;
         let len = S.len str;
         Trade.elim _ _;
-        let z = (lo `SZ.lte` len && len `SZ.lte` hi);
-        z
+        let lo_ok = u64_lte_sizet lo len;
+        let hi_ok = sizet_lte_u64 len hi;
+        (lo_ok && hi_ok)
     } else {
         false
     }
