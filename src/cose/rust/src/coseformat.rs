@@ -919,7 +919,8 @@ serialize_tstr(c: &[u8], out: &mut [u8]) ->
 {
     let c·: &[u8] = tstr_left(c);
     let len: usize = c·.len();
-    if len <= 18446744073709551615u64 as usize
+    let __anf0: bool = crate::cbordetveraux::sizet_lte_u64(len, 18446744073709551615u64);
+    if __anf0
     {
         let correct: bool = crate::cbordetver::cbor_impl_utf8_correct(c·);
         if correct
@@ -1045,7 +1046,8 @@ serialize_bstr(c: &[u8], out: &mut [u8]) ->
 {
     let c·: &[u8] = bstr_left(c);
     let len: usize = c·.len();
-    if len <= 18446744073709551615u64 as usize
+    let __anf0: bool = crate::cbordetveraux::sizet_lte_u64(len, 18446744073709551615u64);
+    if __anf0
     {
         let mty: crate::cbordetver::cbor_det_string_kind =
             crate::cbordetver::cbor_det_string_kind::ByteString;
@@ -14713,7 +14715,8 @@ serialize_empty_or_serialized_map(c: empty_or_serialized_map, out: &mut [u8]) ->
         empty_or_serialized_map_ugly::Inl { v: c1 } =>
           {
               let sz: usize = serialize_header_map(c1, out);
-              if sz == 0usize || sz > 18446744073709551615u64 as usize
+              let fits: bool = crate::cbordetveraux::sizet_fits_u64(sz);
+              if sz == 0usize || ! fits
               { 0usize }
               else
               {
@@ -14727,12 +14730,16 @@ serialize_empty_or_serialized_map(c: empty_or_serialized_map, out: &mut [u8]) ->
         empty_or_serialized_map_ugly::Inr { v: c2 } =>
           {
               let len: usize = c2.len();
-              if (0u64 as usize) <= len && len <= 0u64 as usize
+              let lo_ok: bool = crate::cbordetveraux::u64_lte_sizet(0u64, len);
+              let hi_ok: bool = crate::cbordetveraux::sizet_lte_u64(len, 0u64);
+              if lo_ok && hi_ok
               {
                   if 2u8 == crate::cbordetveraux::cbor_major_type_byte_string
                   {
                       let len1: usize = c2.len();
-                      if len1 <= 18446744073709551615u64 as usize
+                      let __anf0: bool =
+                          crate::cbordetveraux::sizet_lte_u64(len1, 18446744073709551615u64);
+                      if __anf0
                       {
                           let mty: crate::cbordetver::cbor_det_string_kind =
                               crate::cbordetver::cbor_det_string_kind::ByteString;
@@ -14763,7 +14770,9 @@ serialize_empty_or_serialized_map(c: empty_or_serialized_map, out: &mut [u8]) ->
                   else
                   {
                       let len1: usize = c2.len();
-                      if len1 <= 18446744073709551615u64 as usize
+                      let __anf0: bool =
+                          crate::cbordetveraux::sizet_lte_u64(len1, 18446744073709551615u64);
+                      if __anf0
                       {
                           let correct: bool = crate::cbordetver::cbor_impl_utf8_correct(c2);
                           if correct
@@ -14897,7 +14906,8 @@ pub fn validate_sig_structure(c: crate::cbordetveraux::cbor_raw) -> bool
                                 crate::cbordetver::cbor_det_view::String { payload: a, .. } => a,
                                 _ => panic!("Incomplete pattern matching")
                             };
-                        if s.len() != 9u64 as usize
+                        let __anf0: bool = crate::cbordetveraux::sizet_eq_u64(s.len(), 9u64);
+                        if ! __anf0
                         { false }
                         else
                         {
@@ -14980,7 +14990,8 @@ pub fn validate_sig_structure(c: crate::cbordetveraux::cbor_raw) -> bool
                                 crate::cbordetver::cbor_det_view::String { payload: a, .. } => a,
                                 _ => panic!("Incomplete pattern matching")
                             };
-                        if s.len() != 10u64 as usize
+                        let __anf0: bool = crate::cbordetveraux::sizet_eq_u64(s.len(), 10u64);
+                        if ! __anf0
                         { false }
                         else
                         {
@@ -15290,7 +15301,8 @@ parse_sig_structure
                             crate::cbordetver::cbor_det_view::String { payload: a, .. } => a,
                             _ => panic!("Incomplete pattern matching")
                         };
-                    if s.len() != 9u64 as usize
+                    let __anf0: bool = crate::cbordetveraux::sizet_eq_u64(s.len(), 9u64);
+                    if ! __anf0
                     { false }
                     else
                     {
@@ -15373,7 +15385,8 @@ parse_sig_structure
                             crate::cbordetver::cbor_det_view::String { payload: a, .. } => a,
                             _ => panic!("Incomplete pattern matching")
                         };
-                    if s.len() != 10u64 as usize
+                    let __anf0: bool = crate::cbordetveraux::sizet_eq_u64(s.len(), 10u64);
+                    if ! __anf0
                     { false }
                     else
                     {
@@ -15470,7 +15483,8 @@ parse_sig_structure
                     crate::cbordetver::cbor_det_view::String { payload: a, .. } => a,
                     _ => panic!("Incomplete pattern matching")
                 };
-            if s.len() != 9u64 as usize
+            let __anf0: bool = crate::cbordetveraux::sizet_eq_u64(s.len(), 9u64);
+            if ! __anf0
             { false }
             else
             {
