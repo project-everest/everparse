@@ -149,12 +149,11 @@ fn impl_string_literal
   (#p: perm)
   (#v: Ghost.erased cbor)
 {
-  assume (pure (SZ.fits_u64));
   let test = impl_text cbor_get_major_type c;
   if (test) {
     let s = cbor_get_string c;
     S.pts_to_len s;
-    if (S.len s <> SZ.uint64_to_sizet len) {
+    if (not (sizet_eq_u64 (S.len s) len)) {
       Trade.elim _ _;
       false
     } else {

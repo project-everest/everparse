@@ -98,6 +98,32 @@ fn u64_lte_sizet (a: U64.t) (b: SZ.t)
   }
 }
 
+(* Portable [SZ.v b = U64.v a]. *)
+fn sizet_eq_u64 (b: SZ.t) (a: U64.t)
+  requires emp
+  returns res: bool
+  ensures pure (res == (SZ.v b = U64.v a))
+{
+  let q1 = SZ.div b 32768sz;
+  let q2 = SZ.div q1 32768sz;
+  let q3 = SZ.div q2 32768sz;
+  let q4 = SZ.div q3 32768sz;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) 32768 32768;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (FStar.Mul.op_Star 32768 32768) 32768;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (FStar.Mul.op_Star (FStar.Mul.op_Star 32768 32768) 32768) 32768;
+  assert (pure (SZ.v q4 == SZ.v b / 0x1000000000000000));
+  if SZ.gte q4 16sz {
+    assert (pure (SZ.v b >= FStar.Mul.op_Star 16 0x1000000000000000));
+    assert (pure (SZ.v b >= pow2 64));
+    false
+  } else {
+    assert (pure (SZ.v b < pow2 64));
+    let b64 = SZ.sizet_to_uint64 b;
+    FStar.Math.Lemmas.small_mod (SZ.v b) (pow2 64);
+    U64.eq b64 a
+  }
+}
+
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_uint
     (#ty: Type u#0)
