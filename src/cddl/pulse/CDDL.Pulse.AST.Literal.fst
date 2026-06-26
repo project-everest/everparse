@@ -286,7 +286,7 @@ fn with_cbor_literal_text_string
   (#vmatch: (perm -> ty -> cbor -> slprop))
   (cbor_mk_string: mk_string_t vmatch)
   (str: Ghost.erased AST.ascii_string)
-  (len: U64.t { String.length str == U64.v len })
+  (len: U64.t { String.length str == U64.v len /\ SZ.fits (U64.v len) })
   (f: slice_u8_fill_ascii_string_t str)
 : with_cbor_literal_t #_ vmatch (pack (CString cbor_major_type_text_string (AST.byte_seq_of_ascii_string str)))
 = (pre: _)
@@ -294,7 +294,6 @@ fn with_cbor_literal_text_string
   (post: _)
   (cont: _)
 {
-  assume (pure (SZ.fits_u64));
   let mut a = [| 0uy; SZ.uint64_to_sizet len |]; // I cannot use `len_sz` here because of non-constant-size C stack arrays; `inline_let` would solve that
   let len_sz = SZ.uint64_to_sizet len;
   let s = S.from_array a len_sz;
