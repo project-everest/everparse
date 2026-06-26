@@ -63,7 +63,6 @@ ensures
   Trade.refl (Read.cbor_map_iterator_match p1 i1 v1);
   let mut pi1 = i1;
   let mut pres = (None #bool);
-  let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   while (
     let res = !pres;
     let i1 = !pi1;
@@ -130,7 +129,6 @@ ensures
   let mut pi2 = i2;
   Trade.refl (Read.cbor_map_iterator_match p2 i2 v2);
   let mut pres = true;
-  let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   while (
     let res = !pres;
     let i2 = !pi2;
@@ -180,7 +178,6 @@ fn cbor_nondet_equiv_body
   SpecRaw.raw_equiv_eq_valid v1 v2;
   let mt1 = CBOR.Pulse.Raw.Compare.impl_major_type x1;
   let mt2 = CBOR.Pulse.Raw.Compare.impl_major_type x2;
-  let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   if (mt1 <> mt2) {
     false
   } else if (mt1 = Spec.cbor_major_type_simple_value) {

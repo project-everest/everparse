@@ -905,8 +905,7 @@ fn cbor_det_mk_map_gen (_: unit)
 {
   S.pts_to_len a;
   PM.seq_list_match_length (cbor_det_map_entry_match pv) va vv;
-  let _ : squash SZ.fits_u64 = assume (SZ.fits_u64);
-  if (SZ.gt (S.len a) (SZ.uint64_to_sizet 18446744073709551615uL)) {
+  if (not (CBOR.Pulse.Raw.EverParse.SizeComparison.sizet_fits_u64 (S.len a))) {
     Trade.refl (PM.seq_list_match va vv (cbor_det_map_entry_match pv));
     fold (mk_map_gen_post cbor_det_match cbor_det_map_entry_match a va pv vv None);
     false
