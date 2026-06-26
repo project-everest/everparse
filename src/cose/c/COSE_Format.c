@@ -12732,7 +12732,8 @@ bool COSE_Format_validate_empty_or_serialized_map(cbor_det_t c)
     len0 =
       Pulse_Lib_Slice_len__uint8_t(arrayptr_to_slice_intro__uint8_t(cbor_det_get_string(c),
           (size_t)len));
-    return (size_t)0U <= len0 && len0 <= (size_t)0U;
+    bool lo_ok = u64_lte_sizet(0ULL, len0);
+    return lo_ok && sizet_lte_u64(len0, 0ULL);
   }
   else
     return false;

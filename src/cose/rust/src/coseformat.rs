@@ -14531,7 +14531,9 @@ pub fn validate_empty_or_serialized_map(c: crate::cbordetveraux::cbor_raw) -> bo
                     _ => panic!("Incomplete pattern matching")
                 };
             let len: usize = str.len();
-            0usize <= len && len <= 0usize
+            let lo_ok: bool = crate::cbordetveraux::u64_lte_sizet(0u64, len);
+            let hi_ok: bool = crate::cbordetveraux::sizet_lte_u64(len, 0u64);
+            lo_ok && hi_ok
         }
         else
         { false }
