@@ -234,11 +234,10 @@ fn impl_serialize_bstr
   (#v: _)
   (out: _)
 {
-  let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   unfold (rel_slice_of_seq freeable c v);
   S.pts_to_len c.s;
   let len = S.len c.s;
-  if (SZ.lte len (SZ.uint64_to_sizet pow2_64_m1)) {
+  if (sizet_lte_u64 len pow2_64_m1) {
     let g = Ghost.hide (pack (CString cbor_major_type_byte_string v));
     Cbor.cbor_det_serialize_parse g;
     let x = cbor_mk_string cbor_major_type_byte_string c.s;
@@ -273,11 +272,10 @@ fn impl_serialize_tstr
   (#v: _)
   (out: _)
 {
-  let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   unfold (rel_slice_of_seq freeable c v);
   S.pts_to_len c.s;
   let len = S.len c.s;
-  if (SZ.lte len (SZ.uint64_to_sizet pow2_64_m1)) {
+  if (sizet_lte_u64 len pow2_64_m1) {
     let correct = cbor_utf8_correct c.s;
     if (correct) {
       let g = Ghost.hide (pack (CString cbor_major_type_text_string v));
@@ -321,12 +319,13 @@ fn impl_serialize_str_size
   (#v: _)
   (out: _)
 {
-  let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   unfold (rel_slice_of_seq freeable c v);
   S.pts_to_len c.s;
   let len = S.len c.s;
   fold (rel_slice_of_seq freeable c v);
-  if (SZ.lte (SZ.uint64_to_sizet lo) len && SZ.lte len (SZ.uint64_to_sizet hi)) {
+  let lo_ok = u64_lte_sizet lo len;
+  let hi_ok = sizet_lte_u64 len hi;
+  if (lo_ok && hi_ok) {
     if (mt = cbor_major_type_byte_string) {
       impl_serialize_bstr cbor_det_serialize cbor_mk_string freeable c out;
     } else {
@@ -491,9 +490,9 @@ fn impl_serialize_bstr_cbor_det
     (out: _)
 {
   Classical.forall_intro (Classical.move_requires (Cbor.cbor_det_serialize_string_length_gt cbor_major_type_byte_string));
-  let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   let sz = i1 c out;
-  if (sz = 0sz || SZ.gt sz (SZ.uint64_to_sizet pow2_64_m1)) {
+  let fits = sizet_fits_u64 sz;
+  if (sz = 0sz || not fits) {
     0sz
   } else {
     cbor_det_serialize_string cbor_major_type_byte_string (SZ.sizet_to_uint64 sz) out;

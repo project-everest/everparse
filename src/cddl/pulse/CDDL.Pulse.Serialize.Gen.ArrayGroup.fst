@@ -640,7 +640,6 @@ fn impl_serialize_array_group_item
     (#size_before: _)
     (l: _)
 {
-  assume (pure (SZ.fits_u64));
   let count = !out_count;
   if (U64.lt count pow2_64_m1) {
     let size = !out_size;

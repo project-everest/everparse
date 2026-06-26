@@ -47,6 +47,36 @@ fn u64_lte_sizet (a: U64.t) (b: SZ.t)
   }
 }
 
+(* Portable check whether a [size_t] [b] fits in [U64.t], i.e. [SZ.v b < 2^64].
+   Same base-2^15 technique as [u64_lte_sizet]: [b / 2^60 < 16]. When it holds,
+   [SZ.sizet_to_uint64 b] is exact (no truncation). *)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn sizet_fits_u64 (b: SZ.t)
+  requires emp
+  returns res: bool
+  ensures pure (res == (SZ.v b < pow2 64))
+{
+  let q1 = SZ.div b 32768sz;
+  let q2 = SZ.div q1 32768sz;
+  let q3 = SZ.div q2 32768sz;
+  let q4 = SZ.div q3 32768sz;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) 32768 32768;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (32768 * 32768) 32768;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (32768 * 32768 * 32768) 32768;
+  assert (pure (SZ.v q4 == SZ.v b / 0x1000000000000000));
+  if SZ.lt q4 16sz {
+    assert (pure (SZ.v b < 16 * 0x1000000000000000));
+    assert (pure (SZ.v b < pow2 64));
+    true
+  } else {
+    assert (pure (SZ.v b >= 16 * 0x1000000000000000));
+    assert (pure (SZ.v b >= pow2 64));
+    false
+  }
+}
+
 (* A serialized [nlist n p] whose element parser consumes at least one byte
    occupies at least [n] bytes, so its element count [n] necessarily fits
    [size_t]. This packages the "each item is >= 1 byte" argument as a single

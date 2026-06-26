@@ -1357,8 +1357,7 @@ fn cbor_nondet_mk_map_gen_by_ref (_: unit)
 {
   S.pts_to_len a;
   SM.seq_list_match_length (cbor_nondet_map_entry_match pv) va vv;
-  let _ : squash SZ.fits_u64 = assume (SZ.fits_u64);
-  if (SZ.gt (S.len a) (SZ.uint64_to_sizet 18446744073709551615uL)) {
+  if (not (CBOR.Pulse.Raw.EverParse.SizeComparison.sizet_fits_u64 (S.len a))) {
     Trade.refl (SM.seq_list_match va vv (cbor_nondet_map_entry_match pv));
     fold (mk_map_gen_post cbor_nondet_match cbor_nondet_map_entry_match a va pv vv None);
     false

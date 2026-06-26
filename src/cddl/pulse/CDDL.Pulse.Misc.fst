@@ -12,6 +12,92 @@ module S = Pulse.Lib.Slice
 module SZ = FStar.SizeT
 module U64 = FStar.UInt64
 
+(* Portable comparisons between an [FStar.SizeT.t] and an [FStar.UInt64.t]
+   without assuming [SZ.fits_u64] (sound on 16/32/64/wider-bit size_t). Same
+   base-2^15 = 32768 technique as CBOR.Pulse.Raw.EverParse.SizeComparison
+   (duplicated here because CDDL's C-extraction does not include the CBOR raw
+   layer): 32768 is the largest power of two guaranteed to fit any size_t, so
+   [b / 2^60] computed with four divisions by 32768 decides whether [b < 2^64];
+   if so, [sizet_to_uint64 b] narrows exactly. Each helper returns its boolean
+   in a single tail position (the [if] below only carries the ghost proof) so
+   that it inlines into C without a [let mutable] temporary. *)
+
+fn sizet_fits_u64 (b: SZ.t)
+  requires emp
+  returns res: bool
+  ensures pure (res == (SZ.v b < pow2 64))
+{
+  let q1 = SZ.div b 32768sz;
+  let q2 = SZ.div q1 32768sz;
+  let q3 = SZ.div q2 32768sz;
+  let q4 = SZ.div q3 32768sz;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) 32768 32768;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (FStar.Mul.op_Star 32768 32768) 32768;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (FStar.Mul.op_Star (FStar.Mul.op_Star 32768 32768) 32768) 32768;
+  assert (pure (SZ.v q4 == SZ.v b / 0x1000000000000000));
+  let res = SZ.lt q4 16sz;
+  if SZ.gte q4 16sz {
+    assert (pure (SZ.v b >= FStar.Mul.op_Star 16 0x1000000000000000));
+    assert (pure (SZ.v b >= pow2 64))
+  } else {
+    assert (pure (SZ.v b < FStar.Mul.op_Star 16 0x1000000000000000));
+    assert (pure (SZ.v b < pow2 64))
+  };
+  res
+}
+
+(* Portable [SZ.v b <= U64.v a]. *)
+fn sizet_lte_u64 (b: SZ.t) (a: U64.t)
+  requires emp
+  returns res: bool
+  ensures pure (res == (SZ.v b <= U64.v a))
+{
+  let q1 = SZ.div b 32768sz;
+  let q2 = SZ.div q1 32768sz;
+  let q3 = SZ.div q2 32768sz;
+  let q4 = SZ.div q3 32768sz;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) 32768 32768;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (FStar.Mul.op_Star 32768 32768) 32768;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (FStar.Mul.op_Star (FStar.Mul.op_Star 32768 32768) 32768) 32768;
+  assert (pure (SZ.v q4 == SZ.v b / 0x1000000000000000));
+  if SZ.gte q4 16sz {
+    assert (pure (SZ.v b >= FStar.Mul.op_Star 16 0x1000000000000000));
+    assert (pure (SZ.v b >= pow2 64));
+    false
+  } else {
+    assert (pure (SZ.v b < pow2 64));
+    let b64 = SZ.sizet_to_uint64 b;
+    FStar.Math.Lemmas.small_mod (SZ.v b) (pow2 64);
+    U64.lte b64 a
+  }
+}
+
+(* Portable [U64.v a <= SZ.v b]. *)
+fn u64_lte_sizet (a: U64.t) (b: SZ.t)
+  requires emp
+  returns res: bool
+  ensures pure (res == (U64.v a <= SZ.v b))
+{
+  let q1 = SZ.div b 32768sz;
+  let q2 = SZ.div q1 32768sz;
+  let q3 = SZ.div q2 32768sz;
+  let q4 = SZ.div q3 32768sz;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) 32768 32768;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (FStar.Mul.op_Star 32768 32768) 32768;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (FStar.Mul.op_Star (FStar.Mul.op_Star 32768 32768) 32768) 32768;
+  assert (pure (SZ.v q4 == SZ.v b / 0x1000000000000000));
+  if SZ.gte q4 16sz {
+    assert (pure (SZ.v b >= FStar.Mul.op_Star 16 0x1000000000000000));
+    assert (pure (SZ.v b >= pow2 64));
+    true
+  } else {
+    assert (pure (SZ.v b < pow2 64));
+    let b64 = SZ.sizet_to_uint64 b;
+    FStar.Math.Lemmas.small_mod (SZ.v b) (pow2 64);
+    U64.lte a b64
+  }
+}
+
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_uint
     (#ty: Type u#0)
