@@ -834,24 +834,56 @@ fn validate_recursive_step_count_leaf(a: &[u8], bound: usize, prem: &mut [usize]
         let b: initial_byte_t = h.fst;
         let l: long_argument = h.snd;
         let arg64: u64 = argument_as_uint64(b, l);
-        prem[0] = arg64 as usize;
-        false
+        let q1: usize = bound.wrapping_div(32768usize);
+        let q2: usize = q1.wrapping_div(32768usize);
+        let q3: usize = q2.wrapping_div(32768usize);
+        let q4: usize = q3.wrapping_div(32768usize);
+        let __anf0: bool =
+            if q4 >= 16usize
+            { true }
+            else
+            {
+                let b64: u64 = bound as u64;
+                arg64 <= b64
+            };
+        if __anf0
+        {
+            prem[0] = arg64 as usize;
+            false
+        }
+        else
+        { true }
     }
     else if typ == cbor_major_type_map
     {
         let b: initial_byte_t = h.fst;
         let l: long_argument = h.snd;
         let arg64: u64 = argument_as_uint64(b, l);
-        let arg: usize = arg64 as usize;
-        if arg > bound
-        { true }
-        else if bound.wrapping_sub(arg) < arg
-        { true }
-        else
+        let q1: usize = bound.wrapping_div(32768usize);
+        let q2: usize = q1.wrapping_div(32768usize);
+        let q3: usize = q2.wrapping_div(32768usize);
+        let q4: usize = q3.wrapping_div(32768usize);
+        let __anf0: bool =
+            if q4 >= 16usize
+            { true }
+            else
+            {
+                let b64: u64 = bound as u64;
+                arg64 <= b64
+            };
+        if __anf0
         {
-            prem[0] = arg.wrapping_add(arg);
-            false
+            let arg: usize = arg64 as usize;
+            if bound.wrapping_sub(arg) < arg
+            { true }
+            else
+            {
+                prem[0] = arg.wrapping_add(arg);
+                false
+            }
         }
+        else
+        { true }
     }
     else if typ == cbor_major_type_tagged
     {
@@ -966,19 +998,34 @@ fn validate_raw_data_item(input: &[u8], poffset: &mut [usize]) -> bool
                     ||
                     b.major_type == cbor_major_type_text_string
                     {
-                        let b0: initial_byte_t = x.fst;
-                        let l: long_argument = x.snd;
-                        let n1: usize = argument_as_uint64(b0, l) as usize;
                         let offset2: usize = poffset[0];
                         let offset3: usize = poffset[0];
-                        let is_valid: bool =
-                            if input.len().wrapping_sub(offset3) < n1
-                            { false }
+                        let remaining: usize = input.len().wrapping_sub(offset3);
+                        let q1: usize = remaining.wrapping_div(32768usize);
+                        let q2: usize = q1.wrapping_div(32768usize);
+                        let q3: usize = q2.wrapping_div(32768usize);
+                        let q4: usize = q3.wrapping_div(32768usize);
+                        let __anf0: bool =
+                            if q4 >= 16usize
+                            { true }
                             else
                             {
-                                poffset[0] = offset3.wrapping_add(n1);
-                                true
+                                let b64: u64 = remaining as u64;
+                                let b0: initial_byte_t = x.fst;
+                                let l: long_argument = x.snd;
+                                argument_as_uint64(b0, l) <= b64
                             };
+                        let is_valid: bool =
+                            if __anf0
+                            {
+                                let b0: initial_byte_t = x.fst;
+                                let l: long_argument = x.snd;
+                                poffset[0] =
+                                    offset3.wrapping_add(argument_as_uint64(b0, l) as usize);
+                                true
+                            }
+                            else
+                            { false };
                         if is_valid
                         {
                             let off2: usize = poffset[0];
@@ -2256,8 +2303,9 @@ pub(crate) fn ser·(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                     };
                 let mut pres: [usize; 1] = [res1; 1usize];
                 let mut pi: [usize; 1] = [0usize; 1usize];
+                let len: usize = a.len();
                 let i: usize = (&pi)[0];
-                let mut cond: bool = i < argument_as_uint64(xh1.fst, xh1.snd) as usize;
+                let mut cond: bool = i < len;
                 while
                 cond
                 {
@@ -2270,7 +2318,7 @@ pub(crate) fn ser·(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                     (&mut pi)[0] = i·;
                     (&mut pres)[0] = res;
                     let i1: usize = (&pi)[0];
-                    cond = i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
+                    cond = i1 < len
                 };
                 (&pres)[0]
             }
@@ -2320,8 +2368,9 @@ pub(crate) fn ser·(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                         };
                     let mut pres: [usize; 1] = [res1; 1usize];
                     let mut pi: [usize; 1] = [0usize; 1usize];
+                    let len: usize = a.len();
                     let i: usize = (&pi)[0];
-                    let mut cond: bool = i < argument_as_uint64(xh1.fst, xh1.snd) as usize;
+                    let mut cond: bool = i < len;
                     while
                     cond
                     {
@@ -2336,7 +2385,7 @@ pub(crate) fn ser·(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                         (&mut pi)[0] = i·;
                         (&mut pres)[0] = res;
                         let i1: usize = (&pi)[0];
-                        cond = i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
+                        cond = i1 < len
                     };
                     (&pres)[0]
                 }
@@ -2466,9 +2515,10 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
                         };
                     let mut pres: [bool; 1] = [true; 1usize];
                     let mut pi: [usize; 1] = [0usize; 1usize];
+                    let len: usize = a.len();
                     let res: bool = (&pres)[0];
                     let i: usize = (&pi)[0];
-                    let mut cond: bool = res && i < argument_as_uint64(xh1.fst, xh1.snd) as usize;
+                    let mut cond: bool = res && i < len;
                     while
                     cond
                     {
@@ -2485,7 +2535,7 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
                         { (&mut pres)[0] = false };
                         let res2: bool = (&pres)[0];
                         let i1: usize = (&pi)[0];
-                        cond = res2 && i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
+                        cond = res2 && i1 < len
                     };
                     (&pres)[0]
                 }
@@ -2536,10 +2586,10 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
                             };
                         let mut pres: [bool; 1] = [true; 1usize];
                         let mut pi: [usize; 1] = [0usize; 1usize];
+                        let len: usize = a.len();
                         let res: bool = (&pres)[0];
                         let i: usize = (&pi)[0];
-                        let mut cond: bool =
-                            res && i < argument_as_uint64(xh1.fst, xh1.snd) as usize;
+                        let mut cond: bool = res && i < len;
                         while
                         cond
                         {
@@ -2564,7 +2614,7 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
                             { (&mut pres)[0] = false };
                             let res2: bool = (&pres)[0];
                             let i1: usize = (&pi)[0];
-                            cond = res2 && i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
+                            cond = res2 && i1 < len
                         };
                         (&pres)[0]
                     }
@@ -2776,17 +2826,7 @@ pub(crate) fn impl_check_map_depth_aux(bound: usize, pl: &mut [&[u8]], n1: usize
             else if m == cbor_major_type_array
             {
                 pl[0] = tl;
-                (&mut pn)[0] =
-                    (argument_as_uint64(
-                        dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                            h
-                        ),
-                        dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                            h
-                        )
-                    )
-                    as
-                    usize).wrapping_add(n·)
+                (&mut pn)[0] = (impl_remaining_data_items_header(h)).wrapping_add(n·)
             }
             else if m == cbor_major_type_map
             {
@@ -2795,22 +2835,11 @@ pub(crate) fn impl_check_map_depth_aux(bound: usize, pl: &mut [&[u8]], n1: usize
                 else
                 {
                     pl[0] = tl;
-                    let npairs: usize =
-                        argument_as_uint64(
-                            dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                h
-                            ),
-                            dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                                h
-                            )
-                        )
-                        as
-                        usize;
                     let res0: bool =
                         impl_check_map_depth_aux(
                             bound.wrapping_sub(1usize),
                             pl,
-                            npairs.wrapping_add(npairs)
+                            impl_remaining_data_items_header(h)
                         );
                     if res0 { (&mut pn)[0] = n· } else { (&mut pres)[0] = false }
                 }
@@ -2933,28 +2962,6 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                           option__size_t::Some { v: b.wrapping_sub(1usize) },
                         _ => panic!("Incomplete pattern matching")
                     };
-                let nv1: usize =
-                    argument_as_uint64(
-                        dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                            h1
-                        ),
-                        dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                            h1
-                        )
-                    )
-                    as
-                    usize;
-                let nv2: usize =
-                    argument_as_uint64(
-                        dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                            h2
-                        ),
-                        dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-                            h2
-                        )
-                    )
-                    as
-                    usize;
                 let i1: usize = jump_raw_data_item(l1, 0usize);
                 let s1: (&[u8], &[u8]) = l1.split_at(i1);
                 let _letpattern5: (&[u8], &[u8]) =
@@ -3004,6 +3011,17 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                         (&mut ph)[0] = h;
                         outc
                     };
+                let nv1: usize =
+                    argument_as_uint64(
+                        dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                            h1
+                        ),
+                        dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                            h1
+                        )
+                    )
+                    as
+                    usize;
                 let i3: usize = jump_raw_data_item(l2, 0usize);
                 let s3: (&[u8], &[u8]) = l2.split_at(i3);
                 let _letpattern10: (&[u8], &[u8]) =
@@ -3052,6 +3070,17 @@ pub(crate) fn impl_check_equiv_map_hd_basic(map_bound: option__size_t, l1: &[u8]
                         (&mut ph)[0] = h;
                         outc
                     };
+                let nv2: usize =
+                    argument_as_uint64(
+                        dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                            h2
+                        ),
+                        dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
+                            h2
+                        )
+                    )
+                    as
+                    usize;
                 let mut pl: [&[u8]; 1] = [c1; 1usize];
                 let mut pn: [usize; 1] = [nv1; 1usize];
                 let mut pres: [option__bool; 1] = [option__bool::Some { v: true }; 1usize];
@@ -6477,8 +6506,13 @@ pub(crate) fn cbor_nondet_mk_map <'a>(a: &'a [cbor_map_entry <'a>]) ->
     <'a>
 {
     let mut dest: [cbor_raw; 1] = [cbor_raw::CBOR_Case_Simple { v: 0u8 }; 1usize];
+    let q1: usize = a.len().wrapping_div(32768usize);
+    let q2: usize = q1.wrapping_div(32768usize);
+    let q3: usize = q2.wrapping_div(32768usize);
+    let q4: usize = q3.wrapping_div(32768usize);
+    let __anf0: bool = if q4 < 16usize { true } else { false };
     let bres: bool =
-        if a.len() > 18446744073709551615u64 as usize
+        if ! __anf0
         { false }
         else
         {

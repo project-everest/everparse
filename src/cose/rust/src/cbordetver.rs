@@ -132,7 +132,12 @@ pub fn cbor_det_mk_string <'a>(ty: cbor_det_string_kind, s: &'a [u8]) ->
     option__CBOR_Pulse_Raw_Type_cbor_raw
     <'a>
 {
-    if s.len() > 18446744073709551615u64 as usize
+    let q1: usize = s.len().wrapping_div(32768usize);
+    let q2: usize = q1.wrapping_div(32768usize);
+    let q3: usize = q2.wrapping_div(32768usize);
+    let q4: usize = q3.wrapping_div(32768usize);
+    let __anf0: bool = if q4 < 16usize { true } else { false };
+    if ! __anf0
     { option__CBOR_Pulse_Raw_Type_cbor_raw::None }
     else
     {
@@ -186,7 +191,12 @@ pub fn cbor_det_mk_array <'a>(a: &'a [crate::cbordetveraux::cbor_raw <'a>]) ->
     option__CBOR_Pulse_Raw_Type_cbor_raw
     <'a>
 {
-    if a.len() > 18446744073709551615u64 as usize
+    let q1: usize = a.len().wrapping_div(32768usize);
+    let q2: usize = q1.wrapping_div(32768usize);
+    let q3: usize = q2.wrapping_div(32768usize);
+    let q4: usize = q3.wrapping_div(32768usize);
+    let __anf0: bool = if q4 < 16usize { true } else { false };
+    if ! __anf0
     { option__CBOR_Pulse_Raw_Type_cbor_raw::None }
     else
     {
@@ -207,8 +217,13 @@ pub fn cbor_det_mk_map <'a>(a: &'a mut [crate::cbordetveraux::cbor_map_entry <'a
 {
     let mut dest: [crate::cbordetveraux::cbor_raw; 1] =
         [crate::cbordetveraux::dummy_cbor_det_t(); 1usize];
+    let q1: usize = a.len().wrapping_div(32768usize);
+    let q2: usize = q1.wrapping_div(32768usize);
+    let q3: usize = q2.wrapping_div(32768usize);
+    let q4: usize = q3.wrapping_div(32768usize);
+    let __anf0: bool = if q4 < 16usize { true } else { false };
     let bres: bool =
-        if a.len() > 18446744073709551615u64 as usize
+        if ! __anf0
         { false }
         else
         {

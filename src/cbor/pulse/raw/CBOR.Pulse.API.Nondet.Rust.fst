@@ -113,9 +113,8 @@ ensures
   cbor_nondet_mk_string_post (if ty = ByteString then cbor_major_type_byte_string else cbor_major_type_text_string) s p v res **
   pure (Some? res <==> (FStar.UInt.fits (SZ.v (S.len s)) U64.n /\ (ty == TextString ==> CBOR.Spec.API.UTF8.correct v))) // this is true for Rust's str/String, but we will check anyway
 {
-  let sq: squash (SZ.fits_u64) = assume (SZ.fits_u64);
   S.pts_to_len s;
-  if SZ.gt (S.len s) (SZ.uint64_to_sizet 18446744073709551615uL) {
+  if not (CBOR.Pulse.Raw.EverParse.SizeComparison.sizet_fits_u64 (S.len s)) {
     fold (cbor_nondet_mk_string_post (if ty = ByteString then cbor_major_type_byte_string else cbor_major_type_text_string) s p v None);
     None #cbornondet
   } else {
@@ -154,8 +153,8 @@ ensures
   cbor_nondet_mk_array_post a pa va pv vv res **
   pure (Some? res <==> FStar.UInt.fits (SZ.v (S.len a)) U64.n)
 {
-  let _ : squash SZ.fits_u64 = assume (SZ.fits_u64);
-  if SZ.gt (S.len a) (SZ.uint64_to_sizet 18446744073709551615uL) {
+  S.pts_to_len a;
+  if not (CBOR.Pulse.Raw.EverParse.SizeComparison.sizet_fits_u64 (S.len a)) {
     fold (cbor_nondet_mk_array_post a pa va pv vv None);
     None #cbornondet;
   } else {

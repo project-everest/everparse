@@ -928,22 +928,22 @@ ensures
         (cbor_match p x v)
         (cbor_match_serialized_array a p v);
       unfold (cbor_match_serialized_array a p v);
-      let len = S.len a.cbor_serialized_payload;
+      let len = S.len (to_slice a.cbor_serialized_payload);
       let v' = V.alloc 0uy len;
       V.pts_to_len v';
       V.to_array_pts_to v';
       let s' = S.from_array (V.vec_to_array v') len;
       S.pts_to_len s';
-      cbor_match_serialized_payload_array_copy a.cbor_serialized_payload _ _ s';
+      cbor_match_serialized_payload_array_copy (to_slice a.cbor_serialized_payload) _ _ s';
       fold (cbor_match_serialized_array a p v);
       Trade.elim _ (cbor_match p x v);
       let a' = {
         cbor_serialized_header = a.cbor_serialized_header;
-        cbor_serialized_payload = s';
+        cbor_serialized_payload = of_slice s';
         cbor_serialized_perm = 1.0R;
       };
       rewrite cbor_match_serialized_payload_array s' 1.0R (Array?.v v)
-        as cbor_match_serialized_payload_array a'.cbor_serialized_payload
+        as cbor_match_serialized_payload_array (to_slice a'.cbor_serialized_payload)
         (perm_mul 1.0R a'.cbor_serialized_perm)
         (Array?.v v);
       fold (cbor_match_serialized_array a' 1.0R v);
@@ -964,7 +964,7 @@ ensures
         fn _
       {
         unfold (cbor_match_serialized_array a' 1.0R v);
-        rewrite     cbor_match_serialized_payload_array a'.cbor_serialized_payload
+        rewrite     cbor_match_serialized_payload_array (to_slice a'.cbor_serialized_payload)
           (perm_mul 1.0R a'.cbor_serialized_perm)
           (Array?.v v)
           as cbor_match_serialized_payload_array s' 1.0R (Array?.v v);
@@ -987,21 +987,21 @@ ensures
         (cbor_match p x v)
         (cbor_match_serialized_map a p v);
       unfold (cbor_match_serialized_map a p v);
-      let len = S.len a.cbor_serialized_payload;
+      let len = S.len (to_slice a.cbor_serialized_payload);
       let v' = V.alloc 0uy len;
       V.pts_to_len v';
       V.to_array_pts_to v';
       let s' = S.from_array (V.vec_to_array v') len;
       S.pts_to_len s';
-      cbor_match_serialized_payload_map_copy a.cbor_serialized_payload _ _ s';
+      cbor_match_serialized_payload_map_copy (to_slice a.cbor_serialized_payload) _ _ s';
       fold (cbor_match_serialized_map a p v);
       Trade.elim _ (cbor_match p x v);
       let a' = {
         cbor_serialized_header = a.cbor_serialized_header;
-        cbor_serialized_payload = s';
+        cbor_serialized_payload = of_slice s';
         cbor_serialized_perm = 1.0R;
       };
-      rewrite cbor_match_serialized_payload_map s' 1.0R (Map?.v v) as cbor_match_serialized_payload_map a'.cbor_serialized_payload
+      rewrite cbor_match_serialized_payload_map s' 1.0R (Map?.v v) as cbor_match_serialized_payload_map (to_slice a'.cbor_serialized_payload)
         (perm_mul 1.0R a'.cbor_serialized_perm)
         (Map?.v v);
       fold (cbor_match_serialized_map a' 1.0R v);
@@ -1022,7 +1022,7 @@ ensures
         fn _
       {
         unfold (cbor_match_serialized_map a' 1.0R v);
-        rewrite cbor_match_serialized_payload_map a'.cbor_serialized_payload
+        rewrite cbor_match_serialized_payload_map (to_slice a'.cbor_serialized_payload)
           (perm_mul 1.0R a'.cbor_serialized_perm)
           (Map?.v v)
           as  cbor_match_serialized_payload_map s' 1.0R (Map?.v v);
@@ -1045,22 +1045,22 @@ ensures
         (cbor_match p x v)
         (cbor_match_serialized_tagged a p v);
       unfold (cbor_match_serialized_tagged a p v);
-      let len = S.len a.cbor_serialized_payload;
+      let len = S.len (to_slice a.cbor_serialized_payload);
       let v' = V.alloc 0uy len;
       V.pts_to_len v';
       V.to_array_pts_to v';
       let s' = S.from_array (V.vec_to_array v') len;
       S.pts_to_len s';
-      cbor_match_serialized_payload_tagged_copy a.cbor_serialized_payload _ _ s';
+      cbor_match_serialized_payload_tagged_copy (to_slice a.cbor_serialized_payload) _ _ s';
       fold (cbor_match_serialized_tagged a p v);
       Trade.elim _ (cbor_match p x v);
       let a' = {
         cbor_serialized_header = a.cbor_serialized_header;
-        cbor_serialized_payload = s';
+        cbor_serialized_payload = of_slice s';
         cbor_serialized_perm = 1.0R;
       };
       rewrite cbor_match_serialized_payload_tagged s' 1.0R (Tagged?.v v)
-        as cbor_match_serialized_payload_tagged a'.cbor_serialized_payload
+        as cbor_match_serialized_payload_tagged (to_slice a'.cbor_serialized_payload)
         (perm_mul 1.0R a'.cbor_serialized_perm)
         (Tagged?.v v);
       fold (cbor_match_serialized_tagged a' 1.0R v);
@@ -1081,7 +1081,7 @@ ensures
         fn _
       {
         unfold (cbor_match_serialized_tagged a' 1.0R v);
-        rewrite cbor_match_serialized_payload_tagged a'.cbor_serialized_payload
+        rewrite cbor_match_serialized_payload_tagged (to_slice a'.cbor_serialized_payload)
           (perm_mul 1.0R a'.cbor_serialized_perm)
           (Tagged?.v v) as cbor_match_serialized_payload_tagged s' 1.0R (Tagged?.v v);
         Trade.elim _ _;

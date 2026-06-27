@@ -63,7 +63,6 @@ ensures
   Trade.refl (Read.cbor_map_iterator_match p1 i1 v1);
   let mut pi1 = i1;
   let mut pres = (None #bool);
-  let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   while (
     let res = !pres;
     let i1 = !pi1;
@@ -82,7 +81,7 @@ ensures
       CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1 v2 == (match res with Some r -> r | _ -> CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv l1 v2)
     )
   ) {
-    let x1 = Read.cbor_map_iterator_next () pi1;
+    let x1 = Read.cbor_map_iterator_next pi1;
     Trade.trans _ _ (Read.cbor_map_iterator_match p1 i1 v1);
     with px1 vx1 . assert (Read.cbor_match_map_entry px1 x1 vx1);
     unfold (Read.cbor_match_map_entry px1 x1 vx1);
@@ -130,7 +129,6 @@ ensures
   let mut pi2 = i2;
   Trade.refl (Read.cbor_map_iterator_match p2 i2 v2);
   let mut pres = true;
-  let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   while (
     let res = !pres;
     let i2 = !pi2;
@@ -149,7 +147,7 @@ ensures
       List.Tot.for_all (CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1) v2 == (res && List.Tot.for_all (CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1) l2)
     )
   ) {
-    let x2 = Read.cbor_map_iterator_next () pi2;
+    let x2 = Read.cbor_map_iterator_next pi2;
     Trade.trans _ _ (Read.cbor_map_iterator_match p2 i2 v2);
     pres := cbor_nondet_setoid_assoc_eq cbor_nondet_equiv i1 x2;
     Trade.elim_hyp_l _ _ _
@@ -180,7 +178,6 @@ fn cbor_nondet_equiv_body
   SpecRaw.raw_equiv_eq_valid v1 v2;
   let mt1 = CBOR.Pulse.Raw.Compare.impl_major_type x1;
   let mt2 = CBOR.Pulse.Raw.Compare.impl_major_type x2;
-  let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   if (mt1 <> mt2) {
     false
   } else if (mt1 = Spec.cbor_major_type_simple_value) {
@@ -254,8 +251,8 @@ fn cbor_nondet_equiv_body
       if ((len1.value <: U64.t) <> len2.value) {
         false
       } else {
-        let i1 = Read.cbor_array_iterator_init () x1;
-        let i2 = Read.cbor_array_iterator_init () x2;
+        let i1 = Read.cbor_array_iterator_init x1;
+        let i2 = Read.cbor_array_iterator_init x2;
         let mut pi1 = i1;
         let mut pi2 = i2;
         let mut pres = true;
@@ -282,9 +279,9 @@ fn cbor_nondet_equiv_body
             (SpecRaw.raw_equiv v1 v2 == (res && CBOR.Spec.Util.list_for_all2 SpecRaw.raw_equiv l1 l2))
           )
         ) {
-          let y1 = Read.cbor_array_iterator_next () pi1;
+          let y1 = Read.cbor_array_iterator_next pi1;
           Trade.trans _ _ (cbor_match p1 x1 v1);
-          let y2 = Read.cbor_array_iterator_next () pi2;
+          let y2 = Read.cbor_array_iterator_next pi2;
           Trade.trans _ _ (cbor_match p2 x2 v2);
           pres := cbor_nondet_equiv y1 y2;
           Trade.elim_hyp_l _ _ (cbor_match p1 x1 v1);
@@ -311,8 +308,8 @@ fn cbor_nondet_equiv_body
       Trade.elim _ _;
       res
     } else {
-      let i1 = Read.cbor_map_iterator_init () x1;
-      let i2 = Read.cbor_map_iterator_init () x2;
+      let i1 = Read.cbor_map_iterator_init x1;
+      let i2 = Read.cbor_map_iterator_init x2;
       if (not (cbor_nondet_list_for_all_setoid_assoc_eq cbor_nondet_equiv i2 i1)) {
         Trade.elim _ (cbor_match p1 x1 v1);
         Trade.elim _ _;
