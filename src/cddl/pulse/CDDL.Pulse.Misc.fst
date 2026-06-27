@@ -32,15 +32,15 @@ fn sizet_fits_u64 (b: SZ.t)
   let q3 = SZ.div q2 32768sz;
   let q4 = SZ.div q3 32768sz;
   FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) 32768 32768;
-  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (FStar.Mul.op_Star 32768 32768) 32768;
-  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (FStar.Mul.op_Star (FStar.Mul.op_Star 32768 32768) 32768) 32768;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (op_Star 32768 32768) 32768;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (op_Star (op_Star 32768 32768) 32768) 32768;
   assert (pure (SZ.v q4 == SZ.v b / 0x1000000000000000));
   let res = SZ.lt q4 16sz;
   if SZ.gte q4 16sz {
-    assert (pure (SZ.v b >= FStar.Mul.op_Star 16 0x1000000000000000));
+    assert (pure (SZ.v b >= op_Star 16 0x1000000000000000));
     assert (pure (SZ.v b >= pow2 64))
   } else {
-    assert (pure (SZ.v b < FStar.Mul.op_Star 16 0x1000000000000000));
+    assert (pure (SZ.v b < op_Star 16 0x1000000000000000));
     assert (pure (SZ.v b < pow2 64))
   };
   res
@@ -57,11 +57,11 @@ fn sizet_lte_u64 (b: SZ.t) (a: U64.t)
   let q3 = SZ.div q2 32768sz;
   let q4 = SZ.div q3 32768sz;
   FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) 32768 32768;
-  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (FStar.Mul.op_Star 32768 32768) 32768;
-  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (FStar.Mul.op_Star (FStar.Mul.op_Star 32768 32768) 32768) 32768;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (op_Star 32768 32768) 32768;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (op_Star (op_Star 32768 32768) 32768) 32768;
   assert (pure (SZ.v q4 == SZ.v b / 0x1000000000000000));
   if SZ.gte q4 16sz {
-    assert (pure (SZ.v b >= FStar.Mul.op_Star 16 0x1000000000000000));
+    assert (pure (SZ.v b >= op_Star 16 0x1000000000000000));
     assert (pure (SZ.v b >= pow2 64));
     false
   } else {
@@ -83,11 +83,11 @@ fn u64_lte_sizet (a: U64.t) (b: SZ.t)
   let q3 = SZ.div q2 32768sz;
   let q4 = SZ.div q3 32768sz;
   FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) 32768 32768;
-  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (FStar.Mul.op_Star 32768 32768) 32768;
-  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (FStar.Mul.op_Star (FStar.Mul.op_Star 32768 32768) 32768) 32768;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (op_Star 32768 32768) 32768;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (op_Star (op_Star 32768 32768) 32768) 32768;
   assert (pure (SZ.v q4 == SZ.v b / 0x1000000000000000));
   if SZ.gte q4 16sz {
-    assert (pure (SZ.v b >= FStar.Mul.op_Star 16 0x1000000000000000));
+    assert (pure (SZ.v b >= op_Star 16 0x1000000000000000));
     assert (pure (SZ.v b >= pow2 64));
     true
   } else {
@@ -109,11 +109,11 @@ fn sizet_eq_u64 (b: SZ.t) (a: U64.t)
   let q3 = SZ.div q2 32768sz;
   let q4 = SZ.div q3 32768sz;
   FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) 32768 32768;
-  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (FStar.Mul.op_Star 32768 32768) 32768;
-  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (FStar.Mul.op_Star (FStar.Mul.op_Star 32768 32768) 32768) 32768;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (op_Star 32768 32768) 32768;
+  FStar.Math.Lemmas.division_multiplication_lemma (SZ.v b) (op_Star (op_Star 32768 32768) 32768) 32768;
   assert (pure (SZ.v q4 == SZ.v b / 0x1000000000000000));
   if SZ.gte q4 16sz {
-    assert (pure (SZ.v b >= FStar.Mul.op_Star 16 0x1000000000000000));
+    assert (pure (SZ.v b >= op_Star 16 0x1000000000000000));
     assert (pure (SZ.v b >= pow2 64));
     false
   } else {
