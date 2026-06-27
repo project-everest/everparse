@@ -78,7 +78,7 @@ pub fn cbor_nondet_mk_string <'a>(ty: cbor_nondet_string_kind, s: &'a [u8]) ->
     let q2: usize = q1.wrapping_div(32768usize);
     let q3: usize = q2.wrapping_div(32768usize);
     let q4: usize = q3.wrapping_div(32768usize);
-    let __anf0: bool = if q4 < 16usize { true } else { false };
+    let __anf0: bool = q4 < 16usize;
     if ! __anf0
     { crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None }
     else
@@ -125,7 +125,7 @@ pub fn cbor_nondet_mk_array <'a>(a: &'a [crate::cbornondetveraux::cbor_raw <'a>]
     let q2: usize = q1.wrapping_div(32768usize);
     let q3: usize = q2.wrapping_div(32768usize);
     let q4: usize = q3.wrapping_div(32768usize);
-    let __anf0: bool = if q4 < 16usize { true } else { false };
+    let __anf0: bool = q4 < 16usize;
     if ! __anf0
     { crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None }
     else

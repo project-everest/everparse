@@ -6510,7 +6510,7 @@ pub(crate) fn cbor_nondet_mk_map <'a>(a: &'a [cbor_map_entry <'a>]) ->
     let q2: usize = q1.wrapping_div(32768usize);
     let q3: usize = q2.wrapping_div(32768usize);
     let q4: usize = q3.wrapping_div(32768usize);
-    let __anf0: bool = if q4 < 16usize { true } else { false };
+    let __anf0: bool = q4 < 16usize;
     let bres: bool =
         if ! __anf0
         { false }
