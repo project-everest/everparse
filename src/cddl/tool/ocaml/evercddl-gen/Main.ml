@@ -116,29 +116,30 @@ let fstar_exe =
        then fstar_exe
        else "fstar.exe" (* rely on PATH *)
 
-let krml_home () =
-  try
-    Sys.getenv "KRML_HOME"
-  with
-  | Not_found ->
-     let opt_krml = Filename.concat (Filename.concat everparse_home "opt") "karamel" in
-     if Sys.file_exists opt_krml
-     then opt_krml
-     else
-       (* assume a binary package *)
-       everparse_home
-
 let krml_exe =
   try
     Sys.getenv "KRML_EXE"
   with
   | Not_found ->
-  let krml_home = krml_home () in
-  let krml = "krml" ^ (if Sys.cygwin then ".exe" else "") in
-  let res1 = Filename.concat krml_home krml in
-  if Sys.file_exists res1
-  then res1
-  else Filename.concat (Filename.concat krml_home "bin") krml
+    let krml = "krml" ^ (if Sys.cygwin then ".exe" else "") in
+    let opt_krml = Filename.concat (Filename.concat (Filename.concat (Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "FStar") "karamel") "out") "bin") krml in
+    if Sys.file_exists opt_krml
+    then opt_krml
+    else
+       (* assume a binary package *)
+       Filename.concat (Filename.concat everparse_home "bin") krml
+
+let krml_locate k tmpdir =
+  let tmpfile = Filename.temp_file ~temp_dir:tmpdir ("krml_locate_" ^ k) ".tmp" in
+  let cmd = Filename.quote_command krml_exe ~stdout:tmpfile ["-locate-" ^ k] in
+  let ch = open_in tmpfile in
+  let res = input_line ch in
+  close_in ch;
+  res
+
+let krmllib = krml_locate "krmllib"
+
+let krmlinclude = krml_locate "include"
 
 let z3_version = Z3Version.z3_version
 
@@ -371,11 +372,13 @@ let _ =
       else begin
         let cc = try Sys.getenv "CC" with Not_found -> "cc" in
         let det_c = Filename.concat (Filename.concat everparse_src_cbor_pulse "det") "c" in
+        let krmllib = krmllib tmpdir in
+        let krmlinclude = krmlinclude tmpdir in
         let cc_args = [
-          "-I"; Filename.concat (Filename.concat krml_home "krmllib") "dist/minimal";
-          "-I"; Filename.concat krml_home "krmllib";
+          "-I"; Filename.concat (Filename.concat krmllib "dist") "minimal";
+          "-I"; krmllib;
           "-I"; det_c;
-          "-I"; Filename.concat krml_home "include";
+          "-I"; krmlinclude;
           "-I"; !odir;
           "-Wall"; "-Werror"; "-Wno-unknown-warning-option"; "-g"; "-fwrapv";
           "-D_BSD_SOURCE"; "-D_DEFAULT_SOURCE"; "-Wno-parentheses"; "-std=c11";
