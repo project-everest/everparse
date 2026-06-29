@@ -888,21 +888,41 @@ CBOR_Pulse_Raw_EverParse_Format_validate_recursive_step_count_leaf(
   uint8_t typ = CBOR_Spec_Raw_EverParse_get_header_major_type(h);
   if (typ == CBOR_MAJOR_TYPE_ARRAY)
   {
-    *prem = (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(h.fst, h.snd);
-    return false;
+    uint64_t arg64 = CBOR_Spec_Raw_EverParse_argument_as_uint64(h.fst, h.snd);
+    bool ite;
+    if (bound / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U)
+      ite = true;
+    else
+      ite = arg64 <= (uint64_t)bound;
+    if (ite)
+    {
+      *prem = (size_t)arg64;
+      return false;
+    }
+    else
+      return true;
   }
   else if (typ == CBOR_MAJOR_TYPE_MAP)
   {
-    size_t arg = (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(h.fst, h.snd);
-    if (arg > bound)
-      return true;
-    else if (bound - arg < arg)
-      return true;
+    uint64_t arg64 = CBOR_Spec_Raw_EverParse_argument_as_uint64(h.fst, h.snd);
+    bool ite;
+    if (bound / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >= (size_t)16U)
+      ite = true;
     else
+      ite = arg64 <= (uint64_t)bound;
+    if (ite)
     {
-      *prem = arg + arg;
-      return false;
+      size_t arg = (size_t)arg64;
+      if (bound - arg < arg)
+        return true;
+      else
+      {
+        *prem = arg + arg;
+        return false;
+      }
     }
+    else
+      return true;
   }
   else if (typ == CBOR_MAJOR_TYPE_TAGGED)
   {
@@ -1001,17 +1021,29 @@ CBOR_Pulse_Raw_EverParse_Format_validate_raw_data_item(
         if
         (b.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
         {
-          size_t n1 = (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(x.fst, x.snd);
           size_t offset2 = *poffset;
           size_t offset3 = *poffset;
-          bool ite;
-          if (Pulse_Lib_Slice_len__uint8_t(input) - offset3 < n1)
-            ite = false;
+          size_t remaining = Pulse_Lib_Slice_len__uint8_t(input) - offset3;
+          bool ite1;
+          if
+          (
+            remaining / (size_t)32768U / (size_t)32768U / (size_t)32768U / (size_t)32768U >=
+              (size_t)16U
+          )
+            ite1 = true;
           else
           {
-            *poffset = offset3 + n1;
+            uint64_t b64 = (uint64_t)remaining;
+            ite1 = CBOR_Spec_Raw_EverParse_argument_as_uint64(x.fst, x.snd) <= b64;
+          }
+          bool ite;
+          if (ite1)
+          {
+            *poffset = offset3 + (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(x.fst, x.snd);
             ite = true;
           }
+          else
+            ite = false;
           if (ite)
           {
             size_t off2 = *poffset;
@@ -2969,9 +3001,8 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
             "unreachable (pattern matches are exhaustive in F*)");
       size_t pres = res1;
       size_t pi = (size_t)0U;
-      size_t i0 = pi;
-      bool cond = i0 < (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(xh1.fst, xh1.snd);
-      while (cond)
+      size_t len = Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_raw(a);
+      while (pi < len)
       {
         size_t i = pi;
         size_t off = pres;
@@ -2984,8 +3015,6 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
             off);
         pi = i_;
         pres = res;
-        size_t i0 = pi;
-        cond = i0 < (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(xh1.fst, xh1.snd);
       }
       return pres;
     }
@@ -3043,9 +3072,8 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
             "unreachable (pattern matches are exhaustive in F*)");
       size_t pres = res1;
       size_t pi = (size_t)0U;
-      size_t i0 = pi;
-      bool cond = i0 < (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(xh1.fst, xh1.snd);
-      while (cond)
+      size_t len = Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(a);
+      while (pi < len)
       {
         size_t i = pi;
         size_t off = pres;
@@ -3059,8 +3087,6 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
             CBOR_Pulse_Raw_Format_Serialize_ser_(e.cbor_map_entry_key, out, off));
         pi = i_;
         pres = res;
-        size_t i0 = pi;
-        cond = i0 < (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(xh1.fst, xh1.snd);
       }
       return pres;
     }
@@ -3203,25 +3229,19 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
               "unreachable (pattern matches are exhaustive in F*)");
         bool pres = true;
         size_t pi = (size_t)0U;
-        bool res = pres;
-        size_t i0 = pi;
-        bool
-        cond = res && i0 < (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(xh1.fst, xh1.snd);
-        while (cond)
+        size_t len = Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_raw(a);
+        while (pres && pi < len)
         {
-          size_t i0 = pi;
+          size_t i = pi;
           if
           (
             CBOR_Pulse_Raw_Format_Serialize_siz_(Pulse_Lib_Slice_op_Array_Access__CBOR_Pulse_Raw_Type_cbor_raw(a,
-                i0),
+                i),
               out)
           )
-            pi = i0 + (size_t)1U;
+            pi = i + (size_t)1U;
           else
             pres = false;
-          bool res = pres;
-          size_t i = pi;
-          cond = res && i < (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(xh1.fst, xh1.snd);
         }
         return pres;
       }
@@ -3282,27 +3302,21 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
               "unreachable (pattern matches are exhaustive in F*)");
         bool pres = true;
         size_t pi = (size_t)0U;
-        bool res = pres;
-        size_t i0 = pi;
-        bool
-        cond = res && i0 < (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(xh1.fst, xh1.snd);
-        while (cond)
+        size_t len = Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(a);
+        while (pres && pi < len)
         {
-          size_t i0 = pi;
+          size_t i = pi;
           cbor_map_entry
-          e = Pulse_Lib_Slice_op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(a, i0);
+          e = Pulse_Lib_Slice_op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(a, i);
           bool ite;
           if (CBOR_Pulse_Raw_Format_Serialize_siz_(e.cbor_map_entry_key, out))
             ite = CBOR_Pulse_Raw_Format_Serialize_siz_(e.cbor_map_entry_value, out);
           else
             ite = false;
           if (ite)
-            pi = i0 + (size_t)1U;
+            pi = i + (size_t)1U;
           else
             pres = false;
-          bool res = pres;
-          size_t i = pi;
-          cond = res && i < (size_t)CBOR_Spec_Raw_EverParse_argument_as_uint64(xh1.fst, xh1.snd);
         }
         return pres;
       }
@@ -5096,9 +5110,19 @@ cbor_raw cbor_det_mk_map_from_array(cbor_map_entry *a, uint64_t len)
   Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
   s = Pulse_Lib_Slice_from_array__CBOR_Pulse_Raw_Type_cbor_map_entry(a, (size_t)len);
   cbor_raw dest = dummy_cbor_det_t();
-  bool ite;
+  bool ite0;
   if
-  (Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(s) > (size_t)18446744073709551615ULL)
+  (
+    Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(s) / (size_t)32768U / (size_t)32768U /
+      (size_t)32768U
+    / (size_t)32768U
+    < (size_t)16U
+  )
+    ite0 = true;
+  else
+    ite0 = false;
+  bool ite;
+  if (!ite0)
     ite = false;
   else if (CBOR_Pulse_API_Det_Common_cbor_raw_sort(s))
   {
@@ -5126,8 +5150,18 @@ bool cbor_det_mk_map_from_array_safe(cbor_map_entry *a, uint64_t len, cbor_raw *
 {
   Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
   s = Pulse_Lib_Slice_from_array__CBOR_Pulse_Raw_Type_cbor_map_entry(a, (size_t)len);
+  bool ite;
   if
-  (Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(s) > (size_t)18446744073709551615ULL)
+  (
+    Pulse_Lib_Slice_len__CBOR_Pulse_Raw_Type_cbor_map_entry(s) / (size_t)32768U / (size_t)32768U /
+      (size_t)32768U
+    / (size_t)32768U
+    < (size_t)16U
+  )
+    ite = true;
+  else
+    ite = false;
+  if (!ite)
     return false;
   else if (CBOR_Pulse_API_Det_Common_cbor_raw_sort(s))
   {

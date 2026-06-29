@@ -6,6 +6,49 @@ module EP = CBOR.Pulse.Raw.EverParse.Nondet.Basic
 module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
 
+module VCList = LowParse.Spec.VCList
+module LPB = LowParse.Pulse.Base
+module LPC = LowParse.Spec.Combinators
+module REP = CBOR.Spec.Raw.EverParse
+
+(* For a serialized array/map payload, the element count is bounded by the byte
+   length of the payload slice (each item parses to at least 1 byte, since
+   parse_raw_data_item_kind.parser_kind_low == 1), hence the count fits in size_t.
+   This is the "at least one byte" argument (Class A2). *)
+
+ghost
+fn serialized_array_count_fits
+  (payload: Pulse.Lib.Slice.slice FStar.UInt8.t)
+  (p: perm)
+  (r: list raw_data_item)
+requires cbor_match_serialized_payload_array payload p r
+ensures cbor_match_serialized_payload_array payload p r ** pure (SZ.fits (List.Tot.length r))
+{
+  unfold (cbor_match_serialized_payload_array payload p r);
+  with n r' . assert (LPB.pts_to_serialized (VCList.serialize_nlist n REP.serialize_raw_data_item) payload #p r');
+  LPB.pts_to_serialized_length (VCList.serialize_nlist n REP.serialize_raw_data_item) payload;
+  VCList.parse_nlist_kind_low n REP.parse_raw_data_item_kind;
+  assert_norm (REP.parse_raw_data_item_kind.parser_kind_low == 1);
+  fold (cbor_match_serialized_payload_array payload p r);
+}
+
+ghost
+fn serialized_map_count_fits
+  (payload: Pulse.Lib.Slice.slice FStar.UInt8.t)
+  (p: perm)
+  (r: list (raw_data_item & raw_data_item))
+requires cbor_match_serialized_payload_map payload p r
+ensures cbor_match_serialized_payload_map payload p r ** pure (SZ.fits (List.Tot.length r))
+{
+  unfold (cbor_match_serialized_payload_map payload p r);
+  with n r' . assert (LPB.pts_to_serialized (VCList.serialize_nlist n (LPC.serialize_nondep_then REP.serialize_raw_data_item REP.serialize_raw_data_item)) payload #p r');
+  LPB.pts_to_serialized_length (VCList.serialize_nlist n (LPC.serialize_nondep_then REP.serialize_raw_data_item REP.serialize_raw_data_item)) payload;
+  VCList.parse_nlist_kind_low n (LPC.and_then_kind REP.parse_raw_data_item_kind REP.parse_raw_data_item_kind);
+  assert_norm ((LPC.and_then_kind REP.parse_raw_data_item_kind REP.parse_raw_data_item_kind).parser_kind_low == 2);
+  fold (cbor_match_serialized_payload_map payload p r);
+}
+
+
 fn cbor_match_equal_serialized_tagged
   (c1 c2: cbor_serialized)
   (#pm1: perm)
@@ -80,6 +123,8 @@ ensures
 {
   unfold (cbor_match_serialized_array c1 pm1 r1);
   unfold (cbor_match_serialized_array c2 pm2 r2);
+  serialized_array_count_fits (to_slice c1.cbor_serialized_payload) (pm1 `perm_mul` c1.cbor_serialized_perm) (Array?.v r1);
+  serialized_array_count_fits (to_slice c2.cbor_serialized_payload) (pm2 `perm_mul` c2.cbor_serialized_perm) (Array?.v r2);
   unfold (cbor_match_serialized_payload_array (to_slice c1.cbor_serialized_payload) (pm1 `perm_mul` c1.cbor_serialized_perm) (Array?.v r1));
   unfold (cbor_match_serialized_payload_array (to_slice c2.cbor_serialized_payload) (pm2 `perm_mul` c2.cbor_serialized_perm) (Array?.v r2));
   valid_eq basic_data_model r1;
@@ -87,7 +132,6 @@ ensures
   raw_equiv_eq_valid r1 r2;
   Classical.forall_intro_2 (CBOR.Spec.Raw.Nondet.check_equiv_correct basic_data_model None);
   CBOR.Spec.Raw.Nondet.check_equiv_list_map_correct basic_data_model None (Array?.v r1) (Array?.v r2);
-  assume (pure (SZ.fits_u64));
   let n1 : SZ.t = (SZ.uint64_to_sizet c1.cbor_serialized_header.value);
   LowParse.Pulse.VCList.pts_to_serialized_nlist_ext _ _ (to_slice c1.cbor_serialized_payload) CBOR.Spec.Raw.EverParse.serialize_raw_data_item (SZ.v n1);
   with p1' r1' . assert (LowParse.Pulse.Base.pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n1) CBOR.Spec.Raw.EverParse.serialize_raw_data_item) (to_slice c1.cbor_serialized_payload) #p1' r1');
@@ -136,6 +180,8 @@ ensures
 {
   unfold (cbor_match_serialized_map c1 pm1 r1);
   unfold (cbor_match_serialized_map c2 pm2 r2);
+  serialized_map_count_fits (to_slice c1.cbor_serialized_payload) (pm1 `perm_mul` c1.cbor_serialized_perm) (Map?.v r1);
+  serialized_map_count_fits (to_slice c2.cbor_serialized_payload) (pm2 `perm_mul` c2.cbor_serialized_perm) (Map?.v r2);
   unfold (cbor_match_serialized_payload_map (to_slice c1.cbor_serialized_payload) (pm1 `perm_mul` c1.cbor_serialized_perm) (Map?.v r1));
   unfold (cbor_match_serialized_payload_map (to_slice c2.cbor_serialized_payload) (pm2 `perm_mul` c2.cbor_serialized_perm) (Map?.v r2));
   valid_eq basic_data_model r1;
@@ -152,7 +198,6 @@ ensures
     (CBOR.Spec.Raw.Nondet.check_equiv basic_data_model None)
     (CBOR.Spec.Util.list_sum (CBOR.Spec.Util.pair_sum raw_data_item_size raw_data_item_size) (Map?.v r1) + CBOR.Spec.Util.list_sum (CBOR.Spec.Util.pair_sum raw_data_item_size raw_data_item_size) (Map?.v r2))
     (Map?.v r2) (Map?.v r1);
-  assume (pure (SZ.fits_u64));
   let n1 : SZ.t = (SZ.uint64_to_sizet c1.cbor_serialized_header.value);
   LowParse.Pulse.VCList.pts_to_serialized_nlist_ext _ _ (to_slice c1.cbor_serialized_payload) (LowParse.Spec.Combinators.serialize_nondep_then CBOR.Spec.Raw.EverParse.serialize_raw_data_item CBOR.Spec.Raw.EverParse.serialize_raw_data_item) (SZ.v n1);
   with p1' r1' . assert (LowParse.Pulse.Base.pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n1) (LowParse.Spec.Combinators.serialize_nondep_then CBOR.Spec.Raw.EverParse.serialize_raw_data_item CBOR.Spec.Raw.EverParse.serialize_raw_data_item)) (to_slice c1.cbor_serialized_payload) #p1' r1');

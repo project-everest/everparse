@@ -712,7 +712,6 @@ ensures
       PM.seq_list_match_append_elim_trade (elt_match (pm `perm_mul` c'.payload_perm)) s1 l1 s2 l2;
       Trade.elim_hyp_r _ _ (PM.seq_list_match (s1 `Seq.append` s2) _ (elt_match (pm `perm_mul` c'.payload_perm)));
       trade_trans_hyp_r_nounify _ _ _ _ (cbor_raw_iterator_match elt_match ser_match pm c r);
-      assume (pure (SZ.fits_u64));
       let sl1, sl2 = S.split_trade c'.s (SZ.uint64_to_sizet len);
       S.pts_to_len sl1;
       Trade.elim_hyp_r _ _ (pts_to c'.s #(pm `perm_mul` c'.slice_perm) _);

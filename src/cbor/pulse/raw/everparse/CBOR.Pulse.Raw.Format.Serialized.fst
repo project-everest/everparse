@@ -112,7 +112,11 @@ ensures exists* y .
       )
 {
   cbor_match_serialized_array_elim c pm r;
-  let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
+  with pm' . assert (pts_to_serialized (LowParse.Pulse.VCList.serialize_nlist (U64.v (Array?.len r).value) serialize_raw_data_item) (to_slice c.cbor_serialized_payload) #pm' (Array?.v r));
+  LowParse.Pulse.Base.pts_to_serialized_length (LowParse.Pulse.VCList.serialize_nlist (U64.v (Array?.len r).value) serialize_raw_data_item) (to_slice c.cbor_serialized_payload);
+  LowParse.Spec.VCList.parse_nlist_kind_low (U64.v (Array?.len r).value) parse_raw_data_item_kind;
+  assert_norm (parse_raw_data_item_kind.parser_kind_low == 1);
+  SZ.fits_lte (U64.v i) (SZ.v (len (to_slice c.cbor_serialized_payload)));
   let j : SZ.t = SZ.uint64_to_sizet i;
   let elt = LowParse.Pulse.VCList.nlist_nth _ (jump_raw_data_item ()) (U64.v (Array?.len r).value) (to_slice c.cbor_serialized_payload) j;
   Trade.trans _ _ (cbor_match_serialized_array c pm r);
@@ -193,7 +197,7 @@ fn cbor_serialized_array_iterator_next_cont (_: unit)
   cbor_read x
 }
 
-let cbor_serialized_array_iterator_next sq = cbor_raw_serialized_iterator_next _ (jump_raw_data_item sq) cbor_match (cbor_serialized_array_iterator_next_cont ())
+let cbor_serialized_array_iterator_next _ = cbor_raw_serialized_iterator_next _ (jump_raw_data_item ()) cbor_match (cbor_serialized_array_iterator_next_cont ())
 
 let cbor_serialized_array_iterator_truncate = cbor_raw_serialized_iterator_truncate serialize_raw_data_item
 
@@ -299,12 +303,12 @@ let cbor_serialized_map_iterator_is_empty = cbor_raw_serialized_iterator_is_empt
 module LPC = LowParse.Pulse.Combinators
 
 inline_for_extraction
-fn cbor_serialized_map_iterator_next_cont (sq: squash SZ.fits_u64)
+fn cbor_serialized_map_iterator_next_cont (_: unit)
 : cbor_raw_serialized_iterator_next_cont #cbor_map_entry #(raw_data_item & raw_data_item) #(and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind) #(nondep_then parse_raw_data_item parse_raw_data_item) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) cbor_match_map_entry
 = (x: _) (#pm: _) (#v: _) {
   let s1, s2 = LPC.split_nondep_then
     serialize_raw_data_item
-    (jump_raw_data_item sq)
+    (jump_raw_data_item ())
     serialize_raw_data_item
     x;
   unfold (LPC.split_nondep_then_post serialize_raw_data_item serialize_raw_data_item x pm v (s1, s2));
@@ -326,7 +330,7 @@ fn cbor_serialized_map_iterator_next_cont (sq: squash SZ.fits_u64)
   res
 }
 
-let cbor_serialized_map_iterator_next sq = cbor_raw_serialized_iterator_next _ (jump_nondep_then (jump_raw_data_item sq) (jump_raw_data_item sq)) cbor_match_map_entry (cbor_serialized_map_iterator_next_cont sq)
+let cbor_serialized_map_iterator_next _ = cbor_raw_serialized_iterator_next _ (jump_nondep_then (jump_raw_data_item ()) (jump_raw_data_item ())) cbor_match_map_entry (cbor_serialized_map_iterator_next_cont ())
 
 let cbor_serialized_map_iterator_share = cbor_raw_serialized_iterator_share (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
 
