@@ -111,10 +111,12 @@ let cbor_match_serialized_tagged
 = cbor_match_serialized_payload_tagged (to_slice c.cbor_serialized_payload) (p `perm_mul` c.cbor_serialized_perm) (Tagged?.v r) **
   pure (c.cbor_serialized_header == Tagged?.tag r)
 
-let rec cbor_match
+[@@pulse_unfold]
+let cbor_match0
   (p: perm)
   (c: cbor_raw)
   (r: raw_data_item)
+  (cbor_match: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
 : Tot slprop
   (decreases r)
 = match c, r with
@@ -128,6 +130,16 @@ let rec cbor_match
   | CBOR_Case_Serialized_Map v, Map _ _ -> cbor_match_serialized_map v p r
   | CBOR_Case_Serialized_Tagged v, Tagged _ _ -> cbor_match_serialized_tagged v p r
   | _ -> pure False
+
+let cbor_match1 = cbor_match0
+
+let rec cbor_match
+  (p: perm)
+  (c: cbor_raw)
+  (r: raw_data_item)
+: Tot slprop
+  (decreases r)
+= cbor_match0 p c r cbor_match
 
 let cbor_match_map_entry
   (p: perm)
