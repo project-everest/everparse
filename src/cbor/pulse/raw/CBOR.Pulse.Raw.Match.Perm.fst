@@ -109,7 +109,7 @@ fn rec cbor_raw_share
       rewrite (cbor_match p c r)
         as (cbor_match_string v p r);
       unfold (cbor_match_string v p r);
-      S.share v.cbor_string_ptr;
+      S.share (to_slice v.cbor_string_ptr);
       half_mul_l p v.cbor_string_perm;
       fold (cbor_match_string v (p /. 2.0R) r);
       fold (cbor_match_string v (p /. 2.0R) r);
@@ -205,9 +205,9 @@ fn rec cbor_raw_share
       unfold (cbor_match_serialized_tagged v p r);
       cbor_match_serialized_payload_tagged_share _ _ _;
       half_mul_l p v.cbor_serialized_perm;
-      rewrite each cbor_match_serialized_payload_tagged v.cbor_serialized_payload
+      rewrite each cbor_match_serialized_payload_tagged (to_slice v.cbor_serialized_payload)
         (perm_mul p v.cbor_serialized_perm /. 2.0R)
-        (Tagged?.v r) as cbor_match_serialized_payload_tagged v.cbor_serialized_payload
+        (Tagged?.v r) as cbor_match_serialized_payload_tagged (to_slice v.cbor_serialized_payload)
         (perm_mul (p /. 2.0R) v.cbor_serialized_perm)
         (Tagged?.v r);
       fold (cbor_match_serialized_tagged v (p /. 2.0R) r);
@@ -224,10 +224,10 @@ fn rec cbor_raw_share
       unfold (cbor_match_serialized_array v p r);
       cbor_match_serialized_payload_array_share _ _ _;
       half_mul_l p v.cbor_serialized_perm;
-      rewrite each cbor_match_serialized_payload_array v.cbor_serialized_payload
+      rewrite each cbor_match_serialized_payload_array (to_slice v.cbor_serialized_payload)
       (perm_mul p v.cbor_serialized_perm /. 2.0R)
       (Array?.v r)
-       as cbor_match_serialized_payload_array v.cbor_serialized_payload
+       as cbor_match_serialized_payload_array (to_slice v.cbor_serialized_payload)
       (perm_mul (p /. 2.0R) v.cbor_serialized_perm)
       (Array?.v r);
       fold (cbor_match_serialized_array v (p /. 2.0R) r);
@@ -244,10 +244,10 @@ fn rec cbor_raw_share
       unfold (cbor_match_serialized_map v p r);
       cbor_match_serialized_payload_map_share _ _ _;
       half_mul_l p v.cbor_serialized_perm;
-      rewrite each cbor_match_serialized_payload_map v.cbor_serialized_payload
+      rewrite each cbor_match_serialized_payload_map (to_slice v.cbor_serialized_payload)
       (perm_mul p v.cbor_serialized_perm /. 2.0R)
       (Map?.v r)
-       as cbor_match_serialized_payload_map v.cbor_serialized_payload
+       as cbor_match_serialized_payload_map (to_slice v.cbor_serialized_payload)
       (perm_mul (p /. 2.0R) v.cbor_serialized_perm)
       (Map?.v r);
       fold (cbor_match_serialized_map v (p /. 2.0R) r);
@@ -485,7 +485,7 @@ fn rec cbor_raw_gather
       let String t2 l2 v2 = r2;
       unfold cbor_match_string v p1 (String t1 l1 v1);
       unfold cbor_match_string v p2 (String t2 l2 v2);
-      S.gather v.cbor_string_ptr;
+      S.gather (to_slice v.cbor_string_ptr);
       assert (pure (r1 == r2));
       perm_mul_add_l p1 p2 v.cbor_string_perm;
       fold cbor_match_string v (p1 +. p2) (String t1 l1 v1);

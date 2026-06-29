@@ -1,6 +1,7 @@
 module CBOR.Pulse.API.Det.C
 #lang-pulse
 include CBOR.Pulse.API.Det.Type
+include CBOR.Pulse.API.Det.Dummy
 include CBOR.Pulse.API.Base
 open Pulse.Lib.Pervasives
 open CBOR.Spec.Constants

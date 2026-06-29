@@ -34,10 +34,10 @@ let cbor_match_string
   (p: perm)
   (r: raw_data_item)
 : Tot slprop
-= exists* (v: Seq.seq U8.t) . pts_to c.cbor_string_ptr #(p `perm_mul` c.cbor_string_perm) v ** pure
-    (Seq.length v == SZ.v (S.len c.cbor_string_ptr) /\
+= exists* (v: Seq.seq U8.t) . pts_to (to_slice c.cbor_string_ptr) #(p `perm_mul` c.cbor_string_perm) v ** pure
+    (Seq.length v == SZ.v (S.len (to_slice c.cbor_string_ptr)) /\
       (c.cbor_string_type == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v) /\
-      r == String c.cbor_string_type ({ size = c.cbor_string_size; value = U64.uint_to_t (SZ.v (S.len c.cbor_string_ptr)) }) v
+      r == String c.cbor_string_type ({ size = c.cbor_string_size; value = U64.uint_to_t (SZ.v (S.len (to_slice c.cbor_string_ptr))) }) v
     )
 
 let cbor_match_tagged
@@ -92,7 +92,7 @@ let cbor_match_serialized_array
   (p: perm)
   (r: raw_data_item { Array? r })
 : Tot slprop
-= cbor_match_serialized_payload_array c.cbor_serialized_payload (p `perm_mul` c.cbor_serialized_perm)  (Array?.v r) **
+= cbor_match_serialized_payload_array (to_slice c.cbor_serialized_payload) (p `perm_mul` c.cbor_serialized_perm)  (Array?.v r) **
   pure (c.cbor_serialized_header == Array?.len r)
 
 let cbor_match_serialized_map
@@ -100,7 +100,7 @@ let cbor_match_serialized_map
   (p: perm)
   (r: raw_data_item { Map? r })
 : Tot slprop
-= cbor_match_serialized_payload_map c.cbor_serialized_payload (p `perm_mul` c.cbor_serialized_perm) (Map?.v r) **
+= cbor_match_serialized_payload_map (to_slice c.cbor_serialized_payload) (p `perm_mul` c.cbor_serialized_perm) (Map?.v r) **
   pure (c.cbor_serialized_header == Map?.len r)
 
 let cbor_match_serialized_tagged
@@ -108,7 +108,7 @@ let cbor_match_serialized_tagged
   (p: perm)
   (r: raw_data_item { Tagged? r })
 : Tot slprop
-= cbor_match_serialized_payload_tagged c.cbor_serialized_payload (p `perm_mul` c.cbor_serialized_perm) (Tagged?.v r) **
+= cbor_match_serialized_payload_tagged (to_slice c.cbor_serialized_payload) (p `perm_mul` c.cbor_serialized_perm) (Tagged?.v r) **
   pure (c.cbor_serialized_header == Tagged?.tag r)
 
 let rec cbor_match
@@ -534,17 +534,17 @@ fn cbor_match_string_intro_aux
   (r: raw_data_item)
   requires
     pts_to input #pm v ** pure (
-      input == c.cbor_string_ptr /\
+      input == to_slice c.cbor_string_ptr /\
       pm == c.cbor_string_perm /\
-      Seq.length v == SZ.v (S.len c.cbor_string_ptr) /\
+      Seq.length v == SZ.v (S.len (to_slice c.cbor_string_ptr)) /\
       (c.cbor_string_type == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v) /\
-      r == String c.cbor_string_type ({ size = c.cbor_string_size; value = U64.uint_to_t (SZ.v (S.len c.cbor_string_ptr)) }) v
+      r == String c.cbor_string_type ({ size = c.cbor_string_size; value = U64.uint_to_t (SZ.v (S.len (to_slice c.cbor_string_ptr))) }) v
     )
   ensures
     cbor_match_string c 1.0R r **
     trade (cbor_match_string c 1.0R r) (pts_to input #pm v)
 {
-  rewrite each input as c.cbor_string_ptr;
+  rewrite each input as (to_slice c.cbor_string_ptr);
   fold (cbor_match_string c 1.0R r);
   intro
     (Trade.trade
@@ -555,7 +555,7 @@ fn cbor_match_string_intro_aux
     fn _
   {
     unfold (cbor_match_string c 1.0R r);
-    rewrite S.pts_to c.cbor_string_ptr #pm v as S.pts_to input #pm v;
+    rewrite S.pts_to (to_slice c.cbor_string_ptr) #pm v as S.pts_to input #pm v;
     ();
   };
 }
@@ -583,7 +583,7 @@ fn cbor_match_string_intro
     )
 {
   S.pts_to_len input;
-  let ress = { cbor_string_type = typ; cbor_string_size = len.size; cbor_string_ptr = input; cbor_string_perm = pm };
+  let ress = { cbor_string_type = typ; cbor_string_size = len.size; cbor_string_ptr = of_slice input; cbor_string_perm = pm };
   let r : Ghost.erased raw_data_item = Ghost.hide (String typ len (Ghost.reveal v));
   cbor_match_string_intro_aux input ress r;
   let res = CBOR_Case_String ress;
@@ -635,7 +635,7 @@ ensures
   Trade.elim _ _;
   let res = {
     size = c'.cbor_string_size;
-    value = SZ.sizet_to_uint64 (S.len c'.cbor_string_ptr);
+    value = SZ.sizet_to_uint64 (S.len (to_slice c'.cbor_string_ptr));
   };
   res
 }
@@ -649,10 +649,10 @@ ghost fn cbor_match_string_elim_payload_aux
 requires
   pure (
     String?.typ r == c.cbor_string_type /\
-    String?.len r == ({ size = c.cbor_string_size; value = U64.uint_to_t (SZ.v (S.len c.cbor_string_ptr)) }) /\
+    String?.len r == ({ size = c.cbor_string_size; value = U64.uint_to_t (SZ.v (S.len (to_slice c.cbor_string_ptr))) }) /\
     v == (String?.v r <: Seq.seq U8.t)
   ) **
-  pts_to c.cbor_string_ptr #(p `perm_mul` c.cbor_string_perm) v
+  pts_to (to_slice c.cbor_string_ptr) #(p `perm_mul` c.cbor_string_perm) v
 ensures
   cbor_match_string c p r
 {
@@ -677,10 +677,10 @@ ensures exists* p' (v': Seq.seq U8.t) .
   let CBOR_Case_String c' = c;
   Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_string c' p v);
   unfold (cbor_match_string c' p v);
-  with v' . assert (pts_to c'.cbor_string_ptr #(p `perm_mul` c'.cbor_string_perm) v');
+  with v' . assert (pts_to (to_slice c'.cbor_string_ptr) #(p `perm_mul` c'.cbor_string_perm) v');
   intro
     (Trade.trade
-      (pts_to c'.cbor_string_ptr #(p `perm_mul` c'.cbor_string_perm) v')
+      (pts_to (to_slice c'.cbor_string_ptr) #(p `perm_mul` c'.cbor_string_perm) v')
       (cbor_match_string c' p v)
     )
     #emp
@@ -689,7 +689,7 @@ ensures exists* p' (v': Seq.seq U8.t) .
     fold (cbor_match_string c' p v)
   };
   Trade.trans _ _ (cbor_match p c v);
-  c'.cbor_string_ptr
+  to_slice c'.cbor_string_ptr
 }
 
 let cbor_match_eq_tagged

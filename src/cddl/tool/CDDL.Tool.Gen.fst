@@ -862,7 +862,6 @@ let aenv0_0 : ancillary_bundle_env Det.cbor_det_match env0.be_ast.e_sem_env =
 [@@noextract_to "^krml^"; sem_attr; bundle_attr; "^opaque_to_smt^"] noextract
 let aaenv0_0 : ancillary_array_bundle_env Det.cbor_det_array_iterator_match env0.be_ast.e_sem_env =
   fun _ _ -> None
-let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64)
 #set-options \"--warn_error -271-276\" // SMT patterns
 "
 

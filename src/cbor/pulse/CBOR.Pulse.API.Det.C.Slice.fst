@@ -136,9 +136,9 @@ fn cbor_det_get_string_as_slice
   (#p: _)
   (#y: _)
 {
-  assume (pure (SZ.fits_u64));
   let len = cbor_det_get_string_length () x;
   let a = cbor_det_get_string () x;
+  AP.pts_to_len a;
   let sl = S.arrayptr_to_slice_intro_trade a (SZ.uint64_to_sizet len);
   Trade.trans _ _ (cbor_det_match p x y);
   sl
