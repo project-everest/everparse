@@ -737,6 +737,8 @@ let print_definition (mname:string) (d:decl { Definition? (fst d)} ) : ML string
       td_params = params;
       td_entrypoint_probes = [];
       td_entrypoint = false;
+      td_entrypoint_plain = false;
+      td_entrypoint_plain_name = None;
       td_noextract = false;
     } in
     Printf.sprintf "%slet %s : %s = %s\n\n"
@@ -926,112 +928,278 @@ let print_c_entry
                   (env: global_env)
                   (ds:list decl)
     : ML (string & string)
-    =  let default_error_handler =
-         "static\n\
-          void DefaultErrorHandler(\n\t\
-                              const char *typename_s,\n\t\
-                              const char *fieldname,\n\t\
-                              const char *reason,\n\t\
-                              uint64_t error_code,\n\t\
-                              uint8_t *context,\n\t\
-                              EVERPARSE_INPUT_BUFFER input,\n\t\
-                              uint64_t start_pos)\n\
-          {\n\t\
-            EVERPARSE_ERROR_FRAME *frame = (EVERPARSE_ERROR_FRAME*)context;\n\t\
-            EverParseDefaultErrorHandler(\n\t\t\
-              typename_s,\n\t\t\
-              fieldname,\n\t\t\
-              reason,\n\t\t\
-              error_code,\n\t\t\
-              frame,\n\t\t\
-              input,\n\t\t\
-              start_pos\n\t\
-            );\n\
-          }" 
+    =  let hoist = Options.get_hoist_locals () in
+   let goto_return = Options.get_goto_for_early_return () in
+   let init = Options.get_init_locals () in
+   let struct_zero =
+     match init with
+     | Some "c23" -> " = { }"
+     | Some _ -> " = { 0 }"
+     | None -> ""
+   in
+   let scalar_zero =
+     match init with
+     | Some _ -> " = 0"
+     | None -> ""
+   in
+   let use_error_handler_macro = Options.get_use_error_handler_macro () in
+   let default_error_handler =
+     if use_error_handler_macro
+     then ""
+     else
+     let frame_decl =
+         "EVERPARSE_ERROR_FRAME *frame = (EVERPARSE_ERROR_FRAME*)context;"
+     in
+     Printf.sprintf
+          "static\n\
+           void DefaultErrorHandler(\n\t\
+                               const char *typename_s,\n\t\
+                               const char *fieldname,\n\t\
+                               const char *reason,\n\t\
+                               uint64_t error_code,\n\t\
+                               uint8_t *context,\n\t\
+                               EVERPARSE_INPUT_BUFFER input,\n\t\
+                               uint64_t start_pos)\n\
+           {\n\t\
+             %s\n\t\
+             EverParseDefaultErrorHandler(\n\t\t\
+               typename_s,\n\t\t\
+               fieldname,\n\t\t\
+               reason,\n\t\t\
+               error_code,\n\t\t\
+               frame,\n\t\t\
+               input,\n\t\t\
+               start_pos\n\t\
+             );\n\
+           }"
+          frame_decl
+   in
+   let error_handler_arg =
+     if use_error_handler_macro then "" else " &DefaultErrorHandler,"
    in
    let input_stream_binding = Options.get_input_stream_binding () in
    let is_input_stream_buffer = HashingOptions.InputStreamBuffer? input_stream_binding in
    let wrapped_call_buffer name params =
-     Printf.sprintf
-       "EVERPARSE_ERROR_FRAME frame;\n\t\
-       frame.filled = FALSE;\n\t\
-       %s\
-       uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);\n\t\
-       if (EverParseIsError(result))\n\t\
-       {\n\t\t\
-         if (frame.filled)\n\t\t\
-         {\n\t\t\t\
-           %sEverParseError(frame.typename_s, frame.fieldname, frame.reason);\n\t\t\
-         }\n\t\t\
-         return FALSE;\n\t\
-       }\n\t\
-       return TRUE;"
-       (if is_input_stream_buffer then ""
-         else "EVERPARSE_INPUT_BUFFER input = EverParseMakeInputBuffer(base);\n\t")
-        name
-        params
-        modul
+     let tail =
+       if goto_return then
+         Printf.sprintf
+           "if (EverParseIsError(ep_status))\n\t\
+            {\n\t\t\
+              if (frame.filled)\n\t\t\
+              {\n\t\t\t\
+                %sEverParseError(frame.typename_s, frame.fieldname, frame.reason);\n\t\t\
+              }\n\t\t\
+              goto exit;\n\t\
+            }\n\t\
+            result = TRUE;\n\n\
+            exit:\n\t\
+            return result;"
+           modul
+       else
+         Printf.sprintf
+           "if (EverParseIsError(ep_status))\n\t\
+            {\n\t\t\
+              if (frame.filled)\n\t\t\
+              {\n\t\t\t\
+                %sEverParseError(frame.typename_s, frame.fieldname, frame.reason);\n\t\t\
+              }\n\t\t\
+              return FALSE;\n\t\
+            }\n\t\
+            return TRUE;"
+           modul
+     in
+     if hoist then
+       (if goto_return then "BOOLEAN result = FALSE;\n\t" else "")
+       ^ Printf.sprintf "EVERPARSE_ERROR_FRAME frame%s;\n\t" struct_zero
+       ^ (if is_input_stream_buffer then ""
+          else Printf.sprintf "EVERPARSE_INPUT_BUFFER input%s;\n\t" struct_zero)
+       ^ Printf.sprintf "uint64_t ep_status%s;\n\n\t" scalar_zero
+       ^ "frame.filled = FALSE;\n\t"
+       ^ (if is_input_stream_buffer then ""
+          else "input = EverParseMakeInputBuffer(base);\n\t")
+       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s base, len, 0);\n\n\t" name params error_handler_arg
+       ^ tail
+     else
+       (if goto_return then "BOOLEAN result = FALSE;\n\t" else "")
+       ^ Printf.sprintf
+        "EVERPARSE_ERROR_FRAME frame%s;\n\t\
+        frame.filled = FALSE;\n\t\
+        %s\
+        uint64_t ep_status = %s(%s (uint8_t*)&frame,%s base, len, 0);\n\n\t\
+        %s"
+        struct_zero
+        (if is_input_stream_buffer then ""
+          else "EVERPARSE_INPUT_BUFFER input = EverParseMakeInputBuffer(base);\n\t")
+         name
+         params
+         error_handler_arg
+         tail
    in
    let probe_prefix probe wrappedName : ML string =
     let len = expr_to_c probe.probe_ep_length in
-    Printf.sprintf 
-   "if(providedSize < %s)\n\t\
-    {\n\t\t\
-      // Not enough space for probe\n\t\t\
-      return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;\n\t\
-    }\n\t\
-    if(!%s(\"%s\", %s, probeDest))\n\t\
-    {\n\t\t\
-      // ProbeInit failed\n\t\t\
-      return EVERPARSE_PROBE_FAILURE_INIT;\n\t\
-    }"
-    len
-    (probe_fn_to_c probe.probe_ep_init)
-    wrappedName
-    len
+    if goto_return then
+      Printf.sprintf 
+     "if(providedSize < %s)\n\t\
+      {\n\n\t\t\
+        //\n\t\t// Not enough space for probe\n\t\t//\n\n\t\t\
+        result = EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;\n\t\t\
+        goto exit;\n\t\
+      }\n\t\
+      if(!%s(\"%s\", %s, probeDest))\n\t\
+      {\n\n\t\t\
+        //\n\t\t// ProbeInit failed\n\t\t//\n\n\t\t\
+        result = EVERPARSE_PROBE_FAILURE_INIT;\n\t\t\
+        goto exit;\n\t\
+      }"
+      len
+      (probe_fn_to_c probe.probe_ep_init)
+      wrappedName
+      len
+    else
+      Printf.sprintf 
+     "if(providedSize < %s)\n\t\
+      {\n\n\t\t\
+        //\n\t\t// Not enough space for probe\n\t\t//\n\n\t\t\
+        return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;\n\t\
+      }\n\t\
+      if(!%s(\"%s\", %s, probeDest))\n\t\
+      {\n\n\t\t\
+        //\n\t\t// ProbeInit failed\n\t\t//\n\n\t\t\
+        return EVERPARSE_PROBE_FAILURE_INIT;\n\t\
+      }"
+      len
+      (probe_fn_to_c probe.probe_ep_init)
+      wrappedName
+      len
    in  
    let wrapped_call_probe_buffer wrappedName params (probe: probe_entrypoint) : ML string =
      let len = expr_to_c probe.probe_ep_length in
-     Printf.sprintf 
-   "%s\n\t\
-    if (!%s(%s, 0, 0, probeAddr, probeDest))\n\t\
-    {\n\t\t\
-      // Probe failed\n\t\t\
-      return EVERPARSE_PROBE_FAILURE_PROBE;\n\t\
-    }\n\t\
-    uint8_t * base = EverParseStreamOf(probeDest);\n\t\
-    if (!%s(%s base, %s))\n\t\
-    {\n\t\t\
-      return EVERPARSE_PROBE_FAILURE_VALIDATION;\n\t\
-    }\n\t\
-    return EVERPARSE_SUCCESS;"
-       (probe_prefix probe wrappedName)
-       (probe_fn_to_c probe.probe_ep_fn)
-       len
-       wrappedName
-       params
-       len
+     let tail =
+       if goto_return then
+         Printf.sprintf
+           "if (!%s(%s base, %s))\n\t\
+            {\n\t\t\
+              result = EVERPARSE_PROBE_FAILURE_VALIDATION;\n\t\t\
+              goto exit;\n\t\
+            }\n\t\
+            result = EVERPARSE_SUCCESS;\n\n\
+            exit:\n\t\
+            return result;"
+           wrappedName
+           params
+           len
+       else
+         Printf.sprintf
+           "if (!%s(%s base, %s))\n\t\
+            {\n\t\t\
+              return EVERPARSE_PROBE_FAILURE_VALIDATION;\n\t\
+            }\n\t\
+            return EVERPARSE_SUCCESS;"
+           wrappedName
+           params
+           len
+     in
+     if hoist then
+       (if goto_return then "uint32_t result = EVERPARSE_PROBE_FAILURE_INIT;\n\t" else "")
+       ^ Printf.sprintf "uint8_t *base%s;\n\n\t" scalar_zero
+       ^ probe_prefix probe wrappedName ^ "\n\t"
+       ^ (if goto_return then
+            Printf.sprintf
+              "if (!%s(%s, 0, 0, probeAddr, probeDest))\n\t\
+               {\n\n\t\t\
+                 //\n\t\t// Probe failed\n\t\t//\n\n\t\t\
+                 result = EVERPARSE_PROBE_FAILURE_PROBE;\n\t\t\
+                 goto exit;\n\t\
+               }\n\t\
+               base = EverParseStreamOf(probeDest);\n\t\
+               %s"
+              (probe_fn_to_c probe.probe_ep_fn)
+              len
+              tail
+          else
+            Printf.sprintf
+              "if (!%s(%s, 0, 0, probeAddr, probeDest))\n\t\
+               {\n\n\t\t\
+                 //\n\t\t// Probe failed\n\t\t//\n\n\t\t\
+                 return EVERPARSE_PROBE_FAILURE_PROBE;\n\t\
+               }\n\t\
+               base = EverParseStreamOf(probeDest);\n\t\
+               %s"
+              (probe_fn_to_c probe.probe_ep_fn)
+              len
+              tail)
+     else
+       (if goto_return then "uint32_t result = EVERPARSE_PROBE_FAILURE_INIT;\n\n\t" else "")
+       ^ (if goto_return then
+            Printf.sprintf 
+              "%s\n\t\
+               if (!%s(%s, 0, 0, probeAddr, probeDest))\n\t\
+               {\n\n\t\t\
+                 //\n\t\t// Probe failed\n\t\t//\n\n\t\t\
+                 result = EVERPARSE_PROBE_FAILURE_PROBE;\n\t\t\
+                 goto exit;\n\t\
+               }\n\t\
+               uint8_t *base = EverParseStreamOf(probeDest);\n\t\
+               %s"
+              (probe_prefix probe wrappedName)
+              (probe_fn_to_c probe.probe_ep_fn)
+              len
+              tail
+          else
+            Printf.sprintf 
+              "%s\n\t\
+               if (!%s(%s, 0, 0, probeAddr, probeDest))\n\t\
+               {\n\n\t\t\
+                 //\n\t\t// Probe failed\n\t\t//\n\n\t\t\
+                 return EVERPARSE_PROBE_FAILURE_PROBE;\n\t\
+               }\n\t\
+               uint8_t *base = EverParseStreamOf(probeDest);\n\t\
+               %s"
+              (probe_prefix probe wrappedName)
+              (probe_fn_to_c probe.probe_ep_fn)
+              len
+              tail)
    in
    let wrapped_call_stream name params =
-     Printf.sprintf
-       "EVERPARSE_ERROR_FRAME frame =\n\t\
-             { .filled = FALSE,\n\t\
-               .typename_s = \"UNKNOWN\",\n\t\
-               .fieldname =  \"UNKNOWN\",\n\t\
-               .reason =   \"UNKNOWN\",\n\t\
-               .error_code = 0uL\n\
-             };\n\
-       EVERPARSE_INPUT_BUFFER input = EverParseMakeInputBuffer(base);\n\t\
-       uint64_t result = %s(%s (uint8_t*)&frame, &DefaultErrorHandler, input, 0);\n\t\
-       uint64_t parsedSize = EverParseGetValidatorErrorPos(result);\n\
-       if (EverParseIsError(result))\n\t\
-       {\n\t\t\
-           EverParseHandleError(_extra, parsedSize, frame.typename_s, frame.fieldname, frame.reason, frame.error_code);\n\t\t\
-       }\n\t\
-       EverParseRetreat(_extra, base, parsedSize);\n\
-       return parsedSize;"
-       name
-       params
+     let tail =
+       "if (EverParseIsError(ep_status))\n\t\
+        {\n\t\t\
+            EverParseHandleError(_extra, parsedSize, frame.typename_s, frame.fieldname, frame.reason, frame.error_code);\n\t\t\
+        }\n\t\
+        EverParseRetreat(_extra, base, parsedSize);\n\
+        return parsedSize;"
+     in
+     if hoist then
+       Printf.sprintf "EVERPARSE_ERROR_FRAME frame%s;\n\t" struct_zero
+       ^ Printf.sprintf "EVERPARSE_INPUT_BUFFER input%s;\n\t" struct_zero
+       ^ Printf.sprintf "uint64_t ep_status%s;\n\t" scalar_zero
+       ^ Printf.sprintf "uint64_t parsedSize%s;\n\n\t" scalar_zero
+       ^ "frame.filled = FALSE;\n\t\
+          frame.typename_s = \"UNKNOWN\";\n\t\
+          frame.fieldname = \"UNKNOWN\";\n\t\
+          frame.reason = \"UNKNOWN\";\n\t\
+          frame.error_code = 0uL;\n\t"
+       ^ "input = EverParseMakeInputBuffer(base);\n\t"
+       ^ Printf.sprintf "ep_status = %s(%s (uint8_t*)&frame,%s input, 0);\n\t" name params error_handler_arg
+       ^ "parsedSize = EverParseGetValidatorErrorPos(ep_status);\n\n\t"
+       ^ tail
+     else
+       Printf.sprintf
+        "EVERPARSE_ERROR_FRAME frame =\n\t\
+              { .filled = FALSE,\n\t\
+                .typename_s = \"UNKNOWN\",\n\t\
+                .fieldname =  \"UNKNOWN\",\n\t\
+                .reason =   \"UNKNOWN\",\n\t\
+                .error_code = 0uL\n\
+              };\n\
+        EVERPARSE_INPUT_BUFFER input = EverParseMakeInputBuffer(base);\n\t\
+        uint64_t ep_status = %s(%s (uint8_t*)&frame,%s input, 0);\n\t\
+        uint64_t parsedSize = EverParseGetValidatorErrorPos(ep_status);\n\n\t\
+        %s"
+        name
+        params
+        error_handler_arg
+        tail
    in
    let mk_param (name: string) (typ: string) : Tot param =
      (A.with_range (A.to_ident' name) A.dummy_range, T_app (A.with_range (A.to_ident' typ) A.dummy_range) A.KindSpec [])
@@ -1079,17 +1247,18 @@ let print_c_entry
     (* Main wrapper *)
     let pparams = print_params params in
     let pargs = print_arguments params in
-    let signature =
+    let mk_main_signature (name: string) =
       if is_input_stream_buffer 
       then Printf.sprintf
             "BOOLEAN %s(%suint8_t *base, uint32_t len)"
-             wrapper_name
+             name
              pparams
       else Printf.sprintf
             "uint64_t %s(%sEVERPARSE_INPUT_STREAM_BASE base)"
-             wrapper_name
+             name
              pparams
     in
+    let signature = mk_main_signature wrapper_name in
     let validator_name = validator_name modul d.decl_name.td_name.A.v.A.name in
     let body = 
       if is_input_stream_buffer
@@ -1097,28 +1266,54 @@ let print_c_entry
       else wrapped_call_stream validator_name pargs
     in
     (* Probe wrapper *)
-    let probe_wrapper_signature probe : ML _ =
+    let probe_wrapper_signature (probe: probe_entrypoint) : ML _ =
       if not is_input_stream_buffer
       then ( //fail gracefully with an error message
         Ast.error "Top-level probe wrappers only for input stream buffer"
           probe.probe_ep_fn.range
       );
       let return_type = "uint32_t" in
-      let probe_fn = probe_fn_to_c probe.probe_ep_fn in
-      let probe_wrapper_name = probe_wrapper_name modul probe_fn d.decl_name.td_name.A.v.A.name in
+      let public_name =
+        match probe.probe_ep_name with
+        | Some n -> A.ident_name n
+        | None ->
+          let probe_fn = probe_fn_to_c probe.probe_ep_fn in
+          probe_wrapper_name modul probe_fn d.decl_name.td_name.A.v.A.name
+      in
       Printf.sprintf
             "%s %s(%sEVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize)"
              return_type
-             probe_wrapper_name
+             public_name
              pparams
+    in
+    (* Collecting everything together *)
+    let has_probes = Cons? d.decl_name.td_entrypoint_probes in
+    let effective_main_name =
+      if d.decl_name.td_entrypoint_plain then
+        match d.decl_name.td_entrypoint_plain_name with
+        | Some n -> A.ident_name n
+        | None -> wrapper_name
+      else wrapper_name
     in
     let probe_wrapper (probe: probe_entrypoint) : ML _ =
       constr_wrapper
         (probe_wrapper_signature probe)
-        (wrapped_call_probe_buffer wrapper_name pargs probe)
+        (wrapped_call_probe_buffer effective_main_name pargs probe)
     in
-    (* Collecting everything together *)
-    constr_wrapper signature body :: List.map probe_wrapper d.decl_name.td_entrypoint_probes
+    let main_wrapper =
+      if d.decl_name.td_entrypoint_plain then
+        (* Plain entrypoint declared: expose in header with custom name if provided *)
+        let public_signature = mk_main_signature effective_main_name in
+        constr_wrapper public_signature body
+      else if has_probes then
+        (* Only probe entrypoints: main wrapper is internal (static), not in header *)
+        let static_signature = "static " ^ signature in
+        ("", impl static_signature body)
+      else
+        (* Should not happen since we only get here if td_entrypoint is true *)
+        constr_wrapper signature body
+    in
+    main_wrapper :: List.map probe_wrapper d.decl_name.td_entrypoint_probes
   in
 
   let signatures_output_typ_deps =
@@ -1178,7 +1373,7 @@ let print_c_entry
        #endif\n"
       error_code_macros
       external_defs_includes
-      (signatures |> String.concat "\n\n")
+      (signatures |> List.filter (fun s -> s <> "") |> String.concat "\n\n")
   in
   let input_stream_include = HashingOptions.input_stream_include input_stream_binding in
   let header =
@@ -1222,7 +1417,7 @@ let print_c_entry
       "#include \"%sWrapper.h\"\n\
        #include \"EverParse.h\"\n\
        #include \"%s.h\"\n\
-       %s\
+       %s\n\
        %s\n\n\
        %s\n\n\
        %s\n"

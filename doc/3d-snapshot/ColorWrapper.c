@@ -1,6 +1,7 @@
 #include "ColorWrapper.h"
 #include "EverParse.h"
 #include "Color.h"
+
 void ColorEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static
@@ -27,9 +28,12 @@ void DefaultErrorHandler(
 
 BOOLEAN ColorCheckColoredPoint(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
 	frame.filled = FALSE;
-	uint64_t result = ColorValidateColoredPoint( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
-	if (EverParseIsError(result))
+	ep_status = ColorValidateColoredPoint( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
 	{
 		if (frame.filled)
 		{

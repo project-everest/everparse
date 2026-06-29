@@ -1046,6 +1046,10 @@ fn accessor_sum_tag
   input_tag
 }
 
+#pop-options
+
+#push-options "--z3rlimit 256"
+
 inline_for_extraction
 fn accessor_clens_sum_payload
   (t: sum u#0 u#0)

@@ -596,7 +596,7 @@ type probe_entrypoint = {
 [@@ PpxDerivingYoJson ]
 noeq
 type attribute =
-  | Entrypoint: (probe: option probe_entrypoint) -> attribute
+  | Entrypoint: (ep_name: option ident) -> (probe: option probe_entrypoint) -> attribute
   | Aligned
   | Noextract
 
@@ -1141,8 +1141,10 @@ let print_generics generics =
 
 let print_attribute (a:attribute) : ML string =
   match a with
-  | Entrypoint None -> "entrypoint"
-  | Entrypoint (Some p) -> Printf.sprintf "entrypoint(probe(%s, length=%s)" (print_ident p.probe_ep_fn) (print_expr p.probe_ep_length)
+  | Entrypoint None None -> "entrypoint"
+  | Entrypoint (Some n) None -> Printf.sprintf "entrypoint(%s)" (print_ident n)
+  | Entrypoint None (Some p) -> Printf.sprintf "entrypoint probe(%s, length=%s)" (print_ident p.probe_ep_fn) (print_expr p.probe_ep_length)
+  | Entrypoint (Some n) (Some p) -> Printf.sprintf "entrypoint(%s) probe(%s, length=%s)" (print_ident n) (print_ident p.probe_ep_fn) (print_expr p.probe_ep_length)
   | Aligned -> "aligned"
   | Noextract -> "noextract"
 let print_attributes (a:list attribute) : ML string =
@@ -1262,14 +1264,31 @@ let print_decls (ds:list decl) : ML string =
 let has_entrypoint (l:list attribute) : Tot bool =
   List.Tot.existsb Entrypoint? l
 
+let has_plain_entrypoint (l:list attribute) : Tot bool =
+  List.Tot.existsb (fun a -> match a with Entrypoint _ None -> true | _ -> false) l
+
 let rec get_entrypoint_probes' (l: list attribute) (accu: list probe_entrypoint) : Tot (list probe_entrypoint) =
   match l with
   | [] -> List.Tot.rev accu
-  | Entrypoint (Some probe) :: q -> get_entrypoint_probes' q (probe :: accu)
+  | Entrypoint _ (Some probe) :: q -> get_entrypoint_probes' q (probe :: accu)
   | _ :: q -> get_entrypoint_probes' q accu
 
 let get_entrypoint_probes (l: list attribute) : Tot (list probe_entrypoint) =
   get_entrypoint_probes' l []
+
+let get_plain_entrypoint_name (l: list attribute) : Tot (option ident) =
+  match List.Tot.find (fun a -> match a with Entrypoint _ None -> true | _ -> false) l with
+  | Some (Entrypoint n None) -> n
+  | _ -> None
+
+let rec get_probe_entrypoint_names' (l: list attribute) (accu: list (option ident)) : Tot (list (option ident)) =
+  match l with
+  | [] -> List.Tot.rev accu
+  | Entrypoint n (Some _) :: q -> get_probe_entrypoint_names' q (n :: accu)
+  | _ :: q -> get_probe_entrypoint_names' q accu
+
+let get_probe_entrypoint_names (l: list attribute) : Tot (list (option ident)) =
+  get_probe_entrypoint_names' l []
 
 let is_entrypoint_or_export d = match d.d_decl.v with
   | Record names _ _ _ _

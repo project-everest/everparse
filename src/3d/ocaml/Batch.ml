@@ -391,6 +391,24 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
                               "-minimal" ::
                                 "-add-include" :: "\"EverParse.h\"" ::
                                   "-fextern-c" ::
+                                    "-no-inline-type-abbrev" :: "EverParse3d.Actions.Common.error_handler" ::
+                                    (if Options.get_hoist_locals ()
+                                     then ["-fhoist-locals"]
+                                     else []) @
+                                    (if Options.get_goto_for_early_return ()
+                                     then ["-goto_for_early_return"]
+                                     else []) @
+                                    (if Options.get_blank_lines ()
+                                     then ["-fblank-lines"]
+                                     else []) @
+                                    (if Options.get_line_comments ()
+                                     then ["-fline-comments"]
+                                     else []) @
+                                    (let init_locals_value = match Options.get_init_locals () with
+                                     | Some v -> v
+                                     | None -> "no"
+                                     in
+                                     ["-finitialize-locals"; init_locals_value]) @
                                     external_types_lib_args @
                                     external_api_lib_args @
                                     external_types_no_prefix_args @
@@ -425,7 +443,7 @@ let call_krml files_and_modules_cleanup out_dir krml_args =
         "-bundle" ;
         Printf.sprintf "%s[rename=Lib,rename-prefix]" fstar_krmllib_bundle;
         "-bundle" ;
-        Printf.sprintf "%s[rename=EverParse,rename-prefix]" everparse_only_bundle;
+        Printf.sprintf "EverParse3d.Actions.Common=%s[rename=EverParse,rename-prefix]" everparse_only_bundle;
   ]
   in
   (* the argument list is too long, so we need to go through an argument file *)
@@ -449,6 +467,30 @@ let call_krml files_and_modules_cleanup out_dir krml_args =
       List.iter (remove_fst_and_krml_files out_dir) files_and_modules
   | _ -> ()
   end
+
+let with_preserved_everparse_h out_dir f =
+  let everparse_h = filename_concat out_dir "EverParse.h" in
+  let saved =
+    if Sys.file_exists everparse_h
+    then begin
+        let cin = open_in_bin everparse_h in
+        let n = in_channel_length cin in
+        let buf = Bytes.create n in
+        really_input cin buf 0 n;
+        close_in cin;
+        Some buf
+      end
+    else None
+  in
+  let res = f () in
+  begin match saved with
+  | None -> ()
+  | Some buf ->
+     let cout = open_out_bin everparse_h in
+     output_bytes cout buf;
+     close_out cout
+  end;
+  res
 
 let produce_c_files
       input_stream_binding
@@ -476,7 +518,9 @@ let produce_c_files
                                          modul)::acc) [] files_and_modules_with_types in
     krml_args@bundle_types
   in
-  call_krml (if cleanup then Some files_and_modules else None) out_dir krml_args
+  with_preserved_everparse_h out_dir (fun () ->
+    call_krml (if cleanup then Some files_and_modules else None) out_dir krml_args
+  )
 
 let produce_one_c_file
       input_stream_binding
@@ -496,7 +540,9 @@ let produce_one_c_file
         Printf.sprintf "%s=%s" modul (String.concat "," (Printf.sprintf "%s.Types" modul :: List.map (fun (_, m) -> Printf.sprintf "%s,%s.Types" m m) dep_files_and_modules));
       ]
   in
-  call_krml None out_dir krml_args
+  with_preserved_everparse_h out_dir (fun () ->
+    call_krml None out_dir krml_args
+  )
 
 (* Update EVERPARSEVERSION and FILENAME *)
 
@@ -775,14 +821,23 @@ let postprocess_c
       (cleanup: bool)
       (no_everparse_h: bool)
       (save_hashes_opt: bool)
+      ?(remove_krml_produced_everparse_h: bool = false)
       (out_dir: string)
       (files_and_modules: (string * string) list)
     : unit
   =
-  (* copy EverParse.h unless prevented *)
+  (* copy EverParse.h unless prevented; if prevented and Karamel produced its
+   * own (due to preserved type abbreviations from -no-inline-type-abbrev),
+   * remove it so the caller's expectations of "no EverParse.h here" hold. *)
   if not no_everparse_h
   then begin
       copy_everparse_h_raw input_stream_binding out_dir
+    end
+  else if remove_krml_produced_everparse_h
+  then begin
+      let dest_everparse_h = filename_concat out_dir "EverParse.h" in
+      if Sys.file_exists dest_everparse_h
+      then Sys.remove dest_everparse_h
     end;
   (* clang-format the files if asked for *)
   if clang_format
@@ -820,10 +875,14 @@ let produce_and_postprocess_c
   let everparse_h_existed_before = Sys.file_exists (filename_concat out_dir "EverParse.h") in
   (* produce the C files *)
   produce_c_files input_stream_binding emit_output_types_defs add_include skip_c_makefiles cleanup out_dir files_and_modules;
-  if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
-  then failwith "krml produced some EverParse.h, should not have happened";
+  (* Karamel may produce an EverParse.h containing preserved type abbreviations
+   * (see -no-inline-type-abbrev). The postprocess step below copies the proper
+   * full EverParse.h from the prelude, which already provides those typedefs.
+   * If [no_everparse_h] is set and the file didn't exist before krml ran, we
+   * also need to remove the krml-produced one. *)
+  let remove_krml_produced_everparse_h = not everparse_h_existed_before in
   (* postprocess the produced C files *)
-  postprocess_c input_stream_binding true true clang_format clang_format_executable copy_clang_format_opt skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
+  postprocess_c input_stream_binding true true clang_format clang_format_executable copy_clang_format_opt skip_c_makefiles cleanup no_everparse_h save_hashes_opt ~remove_krml_produced_everparse_h out_dir files_and_modules
 
 let produce_and_postprocess_one_c
       input_stream_binding
@@ -840,10 +899,10 @@ let produce_and_postprocess_one_c
   let everparse_h_existed_before = Sys.file_exists (filename_concat out_dir "EverParse.h") in
   (* produce the .c and .h file *)
   produce_one_c_file input_stream_binding emit_output_types_defs add_include out_dir file modul dep_files_and_modules;
-  if Sys.file_exists (filename_concat out_dir "EverParse.h") && not everparse_h_existed_before
-  then failwith "krml produced some EverParse.h, should not have happened";
+  (* See note in produce_and_postprocess_c. *)
+  let remove_krml_produced_everparse_h = not everparse_h_existed_before in
   (* postprocess the produced .c and .h files for this module *)
-  postprocess_c input_stream_binding true false clang_format clang_format_executable false true false true false out_dir [file, modul]
+  postprocess_c input_stream_binding true false clang_format clang_format_executable false true false true false ~remove_krml_produced_everparse_h out_dir [file, modul]
 
 let postprocess_wrappers
       input_stream_binding

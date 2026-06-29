@@ -34,7 +34,7 @@ snapshot: extract-all
 .PHONY: %.diff
 
 test: extract-all
-ifeq ($(EVERPARSE_NO_DIFF),) # Set this variable to disable diffs
+ifeq ($(EVERPARSE_CHECK_DIFF),1) # Set this variable to enable diffs
 test: $(addsuffix .diff,$(SNAPSHOT_FILES_RS))
 endif
 

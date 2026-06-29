@@ -403,6 +403,7 @@ let rec translate_typ (t:A.typ) : ML (T.typ & T.decls) =
     T.T_arrow ts t, List.flatten ds @ d
 
 let translate_probe_entrypoint
+  (ep_name: option A.ident)
   (p: A.probe_entrypoint)
 : ML T.probe_entrypoint
 = let init =
@@ -411,6 +412,7 @@ let translate_probe_entrypoint
     | Some i -> i
   in
   {
+    probe_ep_name = ep_name;
     probe_ep_init = init;
     probe_ep_fn = p.probe_ep_fn;
     probe_ep_length = translate_expr p.probe_ep_length;
@@ -433,13 +435,17 @@ let translate_typedef_name (tdn:A.typedef_names) (params:list Ast.param)
   : ML (T.typedef_name & T.decls) =
 
   let params, ds = translate_params params in
-  let entrypoint_probes = List.map translate_probe_entrypoint (A.get_entrypoint_probes tdn.typedef_attributes) in
+  let probe_names = A.get_probe_entrypoint_names tdn.typedef_attributes in
+  let probes = A.get_entrypoint_probes tdn.typedef_attributes in
+  let entrypoint_probes = List.map2 translate_probe_entrypoint probe_names probes in
 
   let open T in
   { td_name = tdn.typedef_name;
     td_params = params;
     td_entrypoint_probes = entrypoint_probes;
     td_entrypoint = has_entrypoint tdn.typedef_attributes;
+    td_entrypoint_plain = A.has_plain_entrypoint tdn.typedef_attributes;
+    td_entrypoint_plain_name = A.get_plain_entrypoint_name tdn.typedef_attributes;
     td_noextract = List.existsb Noextract? tdn.typedef_attributes }, ds
 
 let make_enum_typ (t:T.typ) (ids:list ident) =
@@ -1215,6 +1221,8 @@ let hoist_one_type_definition (should_inline:bool)
           td_params = List.rev env;
           td_entrypoint_probes = [];
           td_entrypoint = false;
+          td_entrypoint_plain = false;
+          td_entrypoint_plain_name = None;
       } in
       let t_parser = parse_typ orig_tdn.td_name type_name body in
       add_parser_kind_nz genv tdn.td_name t_parser.p_kind.pk_nz t_parser.p_kind.pk_weak_kind;

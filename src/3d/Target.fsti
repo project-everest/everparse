@@ -239,6 +239,7 @@ type typedef_body =
 
 noeq
 type probe_entrypoint = {
+  probe_ep_name: option A.ident;
   probe_ep_init: A.ident;
   probe_ep_fn: A.ident;
   probe_ep_length: expr;
@@ -250,6 +251,8 @@ type typedef_name = {
   td_params:list param;
   td_entrypoint_probes: list probe_entrypoint;
   td_entrypoint:bool;
+  td_entrypoint_plain:bool;
+  td_entrypoint_plain_name: option A.ident;
   td_noextract:bool;
 }
 type typedef = typedef_name & typedef_body

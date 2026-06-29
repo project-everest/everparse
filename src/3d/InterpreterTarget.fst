@@ -21,6 +21,13 @@ module A = Ast
 module T = Target
 module H = Hashtable
 
+(* The boolean value to substitute for `use_error_handler` in generated F* code:
+   `true` (the dynamic error handler) when the user did not pass
+   `--use_error_handler_macro`, and `false` (the C macro `EverParse3dErrorHandlerMacro`)
+   when they did. *)
+let use_error_handler () : ML bool =
+  not (Options.get_use_error_handler_macro ())
+
 
 noeq
 type inv =
@@ -936,9 +943,10 @@ let print_type_decl mname (td:type_decl) =
   FStar.Printf.sprintf
     "[@@specialize; noextract_to \"krml\"]\n\
      noextract\n\
-     let def_%s = ( %s <: Tot (typ _ _ _ _ _ _) by (T.norm [delta_attr [`%%specialize]; zeta; iota; primops]; T.smt()))\n"
+     let def_%s = ( %s <: Tot (typ %b _ _ _ _ _ _) by (T.norm [delta_attr [`%%specialize]; zeta; iota; primops]; T.smt()))\n"
       (print_typedef_name mname td.name)
       (print_typ mname td.typ)
+      (use_error_handler ())
 
 let print_args mname (es:list expr) =
     List.map (T.print_expr mname) es |> String.concat " "
@@ -989,26 +997,29 @@ let print_td_iface is_entrypoint mname root_name binders args
   let def'_t =
     Printf.sprintf "[@@noextract_to \"krml\"]\n\
                     noextract\n\
-                    val def'_%s %s: typ kind_%s %s %s %s %b %b"
+                    val def'_%s %s: typ %b kind_%s %s %s %s %b %b"
       root_name
       binders
+      (use_error_handler ())
       root_name
       inv disj eloc
       ha
       ar
   in
   let validator_t =
-    Printf.sprintf "val validate_%s %s : validator_of (def'_%s %s)"
+    Printf.sprintf "val validate_%s %s : validator_of %b (def'_%s %s)"
       root_name
       binders
+      (use_error_handler ())
       root_name args
   in
   let dtyp_t =
     Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
                     noextract\n\
-                    val dtyp_%s %s : dtyp_of (def'_%s %s)"
+                    val dtyp_%s %s : dtyp_of %b (def'_%s %s)"
       root_name
       binders
+      (use_error_handler ())
       root_name args
   in
   String.concat "\n\n" [kind_t; def'_t; validator_t; dtyp_t]
@@ -1053,10 +1064,11 @@ let print_binding mname (td:type_decl)
       "[@@specialize; noextract_to \"krml\"]\n\
         noextract\n\
         let def'_%s %s\n\
-          : typ kind_%s %s %s %s %b %b\n\
+          : typ %b kind_%s %s %s %s %b %b\n\
           = coerce (_ by (coerce_validator [`%%kind_%s])) (def_%s %s)"
         root_name
         binders
+        (use_error_handler ())
         root_name
         inv disj eloc
         td.has_action
@@ -1116,8 +1128,9 @@ let print_binding mname (td:type_decl)
     Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
                       noextract\n\
                       let dtyp_%s %s\n\
-                        : dtyp kind_%s %b %b %s %s %s\n\
+                        : dtyp %b kind_%s %b %b %s %s %s\n\
                         = mk_dtyp_app\n\
+                                  %b\n\
                                   kind_%s\n\
                                   %s\n\
                                   %s\n\
@@ -1130,8 +1143,10 @@ let print_binding mname (td:type_decl)
                                   (coerce (_ by %s) (validate_%s %s))\n\
                                   (_ by (T.norm [delta_only [`%%Some?]; iota]; T.trefl()))\n"
                       root_name binders
+                      (use_error_handler ())
                       root_name td.has_action td.allow_reading
                       inv disj eloc
+                      (use_error_handler ())
                       root_name
                       inv disj eloc
                       root_name args

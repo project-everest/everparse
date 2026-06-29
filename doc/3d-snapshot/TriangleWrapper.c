@@ -1,6 +1,7 @@
 #include "TriangleWrapper.h"
 #include "EverParse.h"
 #include "Triangle.h"
+
 void TriangleEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static
@@ -27,9 +28,12 @@ void DefaultErrorHandler(
 
 BOOLEAN TriangleCheckTriangle(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
 	frame.filled = FALSE;
-	uint64_t result = TriangleValidateTriangle( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
-	if (EverParseIsError(result))
+	ep_status = TriangleValidateTriangle( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
 	{
 		if (frame.filled)
 		{

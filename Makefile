@@ -18,7 +18,9 @@ include nofstar.Makefile
 include deps.Makefile
 
 ifneq ($(OS),Windows_NT)
+ifneq (1,$(EVERPARSE_ONLY_3D))
 package-subset: cddl
+endif
 endif
 
 # Disable COSE on MacOS because we don't know how to link with OpenSSL

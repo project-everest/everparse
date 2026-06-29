@@ -1,6 +1,7 @@
 #include "SmokerWrapper.h"
 #include "EverParse.h"
 #include "Smoker.h"
+
 void SmokerEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static
@@ -27,9 +28,12 @@ void DefaultErrorHandler(
 
 BOOLEAN SmokerCheckSmoker(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
 	frame.filled = FALSE;
-	uint64_t result = SmokerValidateSmoker( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
-	if (EverParseIsError(result))
+	ep_status = SmokerValidateSmoker( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
 	{
 		if (frame.filled)
 		{

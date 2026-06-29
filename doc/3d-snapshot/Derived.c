@@ -2,28 +2,22 @@
 
 #include "Derived.h"
 
+#include "EverParse.h"
+
 uint64_t
 DerivedValidateTriple(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
+  BOOLEAN hasBytes;
   KRML_MAYBE_UNUSED_VAR(Ctxt);
   KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
   KRML_MAYBE_UNUSED_VAR(Input);
-  BOOLEAN hasBytes = 12ULL <= (InputLength - StartPosition);
+  hasBytes = (InputLength - StartPosition) >= 12ULL;
   if (hasBytes)
   {
     return StartPosition + 12ULL;
@@ -34,25 +28,17 @@ DerivedValidateTriple(
 uint64_t
 DerivedValidateQuad(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
+  BOOLEAN hasBytes;
   KRML_MAYBE_UNUSED_VAR(Ctxt);
   KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
   KRML_MAYBE_UNUSED_VAR(Input);
-  BOOLEAN hasBytes = 16ULL <= (InputLength - StartPosition);
+  hasBytes = (InputLength - StartPosition) >= 16ULL;
   if (hasBytes)
   {
     return StartPosition + 16ULL;

@@ -7,7 +7,7 @@ snapshot: $(addsuffix .snapshot,$(files))
 
 .PHONY: snapshot %.snapshot
 
-ifeq ($(EVERPARSE_NO_DIFF),) # Set this variable to disable diffs
+ifeq ($(EVERPARSE_CHECK_DIFF),1) # Set this variable to enable diffs
 test-snapshot: $(addsuffix .test-snapshot,$(files))
 else
 test-snapshot:

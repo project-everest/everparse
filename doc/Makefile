@@ -9,7 +9,7 @@ FSTAR_EXE ?= fstar.exe
 
 export KRML_HOME?=$(realpath $(EVERPARSE_HOME)/../karamel)
 
-3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
+3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --hoist_locals
 3D_EXCLUDE=ConstColor.3d
 3D_CONFIG=Arch.3d.config
 3D_FILES_WITH_CONFIG=PointArch_32_64.3d
@@ -49,7 +49,7 @@ help: .venv
 html: Makefile .venv
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-ifeq ($(EVERPARSE_NO_DIFF),) # Set this variable to disable diffs
+ifeq ($(EVERPARSE_CHECK_DIFF),1) # Set this variable to enable diffs
 3d: $(3D_DIFF)
 else
 3d: 3d-do-tests
