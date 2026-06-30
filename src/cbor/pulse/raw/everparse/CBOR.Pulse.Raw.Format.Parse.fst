@@ -56,7 +56,7 @@ fn cbor_validate
       else exists v1 v2 . Ghost.reveal v == serialize_cbor v1 `Seq.append` v2 /\ SZ.v res == Seq.length (serialize_cbor v1)
   )
 {
-  let res = validate_nonempty (validate_raw_data_item (assume SZ.fits_u64)) input 0sz;
+  let res = validate_nonempty (validate_raw_data_item ()) input 0sz;
   cbor_validate_aux res v;
   res
 }
@@ -307,7 +307,6 @@ fn impl_deterministically_encoded_cbor_map_key_order (_: unit)
   (#v2: _)
 {
   deterministically_encoded_cbor_map_key_order_spec (v1) (v2);
-  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   unfold (pts_to_serialized serialize_raw_data_item a1 #p1 (v1));
   unfold (pts_to_serialized serialize_raw_data_item a2 #p2 (v2));
   let res = CompareBytes.lex_compare_bytes a1 a2;
@@ -371,7 +370,7 @@ module Ref = Pulse.Lib.Reference
 #restart-solver
 // #push-options "--z3rlimit 256 --query_stats --fuel 2 --ifuel 1 --split_queries always --z3refresh"
 #push-options "--z3rlimit 128"
-fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred_t u#0 u#0 #_ serialize_raw_data_item_param (R.raw_data_item_sorted_elem deterministically_encoded_cbor_map_key_order)
+fn cbor_raw_sorted (_: unit) : LowParse.Pulse.Recursive.impl_pred_t u#0 u#0 #_ serialize_raw_data_item_param (R.raw_data_item_sorted_elem deterministically_encoded_cbor_map_key_order)
 = (a: _)
   (n: _)
   (#pm: _)
@@ -422,7 +421,7 @@ fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred
       Trade.elim_hyp_l _ _ _;
       let input3 = nondep_then_snd
         (serialize_leaf_content gh)
-        (jump_leaf_content () h)
+        (jump_leaf_content h)
         (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param (SZ.v n) l)
         input2;
       Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
@@ -581,7 +580,6 @@ fn cbor_validate_det'
   returns res: (res: SZ.t { cbor_validate_det_post v res })
   ensures pts_to input #pm v
 {
-  let f64 : squash SZ.fits_u64 = assume SZ.fits_u64;
   let len = cbor_validate input;
   if (len = 0sz) {
     len
@@ -591,13 +589,13 @@ fn cbor_validate_det'
     let input1 = peek_trade_gen serialize_raw_data_item input 0sz len;
     with v1 . assert (pts_to_serialized serialize_raw_data_item input1 #pm v1);
     let mut check = false;
-    let check1 = impl_holds_on_raw_data_item f64 R.raw_data_item_ints_optimal_elem (cbor_raw_ints_optimal ()) input1;
+    let check1 = impl_holds_on_raw_data_item R.raw_data_item_ints_optimal_elem (cbor_raw_ints_optimal ()) input1;
     if (not check1) {
       cbor_validate_det_fail v v1 (Seq.slice v (SZ.v len) (Seq.length v));
       Trade.elim _ _;
       0sz
     } else {
-      let check2 = impl_holds_on_raw_data_item f64 (R.raw_data_item_sorted_elem deterministically_encoded_cbor_map_key_order) (cbor_raw_sorted f64) input1;
+      let check2 = impl_holds_on_raw_data_item (R.raw_data_item_sorted_elem deterministically_encoded_cbor_map_key_order) (cbor_raw_sorted ()) input1;
       Trade.elim _ _;
       if (not check2) {
         cbor_validate_det_fail v v1 (Seq.slice v (SZ.v len) (Seq.length v));
@@ -691,7 +689,6 @@ fn cbor_jump
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
 {
-  let sq: squash (SZ.fits_u64) = assume (SZ.fits_u64);
   cbor_jump_aux_pre off c v;
   let res = jump_raw_data_item () input off;
   cbor_jump_aux_post off c v res;

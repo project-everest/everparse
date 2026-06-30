@@ -488,8 +488,7 @@ fn cbor_nondet_array_iterator_start (_: unit) : array_iterator_start_t u#0 u#0 #
   let v' = cbor_nondet_match_elim x;
   SpecRaw.mk_cbor_eq v'; 
   SpecRaw.valid_eq SpecRaw.basic_data_model v';
-  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
-  let res = Read.cbor_array_iterator_init f64 x;
+  let res = Read.cbor_array_iterator_init x;
   Trade.trans _ _ (cbor_nondet_match p x v);
   with p' l . assert (Read.cbor_array_iterator_match p' res l);
   cbor_nondet_array_iterator_match_intro res;
@@ -527,8 +526,7 @@ fn cbor_nondet_array_iterator_next (_: unit) : array_iterator_next_t #_ #_ cbor_
   (#z: _)
 {
   let l' = cbor_nondet_array_iterator_match_elim y;
-  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
-  let res = Read.cbor_array_iterator_next f64 x;
+  let res = Read.cbor_array_iterator_next x;
   Trade.trans _ _ (cbor_nondet_array_iterator_match py y z);
   with y' z' . assert (pts_to x y' ** Read.cbor_array_iterator_match py y' z');
   cbor_nondet_array_iterator_match_intro y';
@@ -605,7 +603,7 @@ fn cbor_nondet_get_array_item (_: unit) : get_array_item_t u#0 #_ cbor_nondet_ma
   SpecRaw.mk_cbor_eq v';
   SpecRaw.valid_eq SpecRaw.basic_data_model v';
   let l' : Ghost.erased (list SpecRaw.raw_data_item) = Ghost.hide (SpecRaw.Array?.v v');
-  let res = Read.cbor_array_item (assume (SZ.fits_u64)) x i;
+  let res = Read.cbor_array_item x i;
   Trade.trans _ _ (cbor_nondet_match p x v);
   List.Tot.lemma_index_memP l' (U64.v i);
   List.Tot.for_all_mem SpecRaw.valid_raw_data_item l';
@@ -712,8 +710,7 @@ fn cbor_nondet_map_iterator_start (_: unit) : map_iterator_start_t u#0 u#0 #_ #_
   let y' = cbor_nondet_match_elim x;
   SpecRaw.mk_cbor_eq y';
   SpecRaw.valid_eq SpecRaw.basic_data_model y';
-  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
-  let res = Read.cbor_map_iterator_init f64 x;
+  let res = Read.cbor_map_iterator_init x;
   Trade.trans _ _ (cbor_nondet_match p x y);
   cbor_nondet_map_iterator_match_intro res;
   Trade.trans _ _ (cbor_nondet_match p x y);
@@ -785,8 +782,7 @@ fn cbor_nondet_map_iterator_next (_: unit) : map_iterator_next_t #_ #_ cbor_nond
   (#z: _)
 {
   let l' = cbor_nondet_map_iterator_match_elim y;
-  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
-  let res = Read.cbor_map_iterator_next f64 x;
+  let res = Read.cbor_map_iterator_next x;
   Trade.trans _ _ (cbor_nondet_map_iterator_match py y z);
   cbor_nondet_map_entry_match_intro res;
   Trade.trans_hyp_l _ _ _ (cbor_nondet_map_iterator_match py y z);
@@ -1131,8 +1127,8 @@ fn cbor_nondet_mk_string (_: unit) : mk_string_t u#0 #_ cbor_nondet_match
   (#p: _)
   (#v: _)
 {
-  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   S.pts_to_len s;
+  FStar.Math.Lemmas.small_mod (SZ.v (S.len s)) (pow2 64);
   let len64 = SpecRaw.mk_raw_uint64 (SZ.sizet_to_uint64 (S.len s));
   let res1 = Raw.cbor_match_string_intro ty len64 s;
   with r. assert Raw.cbor_match 1.0R res1 r;
@@ -1158,7 +1154,6 @@ fn cbor_nondet_mk_tagged (_: unit) : mk_tagged_t #_ cbor_nondet_match
   (#pv: _)
   (#v': _)
 {
-  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   let tag64 = SpecRaw.mk_raw_uint64 tag;
   let w' = cbor_nondet_match_elim v;
   let res1 = Raw.cbor_match_tagged_intro tag64 r;
@@ -1362,8 +1357,7 @@ fn cbor_nondet_mk_map_gen_by_ref (_: unit)
 {
   S.pts_to_len a;
   SM.seq_list_match_length (cbor_nondet_map_entry_match pv) va vv;
-  let _ : squash SZ.fits_u64 = assume (SZ.fits_u64);
-  if (SZ.gt (S.len a) (SZ.uint64_to_sizet 18446744073709551615uL)) {
+  if (not (CBOR.Pulse.Raw.EverParse.SizeComparison.sizet_fits_u64 (S.len a))) {
     Trade.refl (SM.seq_list_match va vv (cbor_nondet_map_entry_match pv));
     fold (mk_map_gen_post cbor_nondet_match cbor_nondet_map_entry_match a va pv vv None);
     false

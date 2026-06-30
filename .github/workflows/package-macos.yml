@@ -3,6 +3,7 @@ on:
   push:
     branches-ignore:
     - fstar2
+    - fstar2_**
     - _**
   pull_request:
     branches-ignore:

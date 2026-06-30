@@ -434,7 +434,7 @@ let array_group_concat_unique_strong_implies_weak
   (array_group_concat_unique_strong a1 a3 ==> array_group_concat_unique_weak a1 a3)
 = ()
 
-#push-options "--z3rlimit 512 --fuel 4 --ifuel 4"
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 #restart-solver
 
 let array_group_concat_unique_weak_concat_zero_or_more_right
@@ -447,7 +447,36 @@ let array_group_concat_unique_weak_concat_zero_or_more_right
   (ensures (
     array_group_concat_unique_weak a1 (array_group_concat (array_group_zero_or_more a2) a3)
   ))
-= ()
+= let azm2 = array_group_zero_or_more a2 in
+  let a23 = array_group_concat azm2 a3 in
+  let prf1
+    (l: (l: list Cbor.cbor { opt_precedes_list l b }))
+  : Lemma
+    (requires (array_group_concat a1 a23 l == Some (l, [])))
+    (ensures (
+      exists (l1 l2: list Cbor.cbor) .
+        a1 l == Some (l1, l2) /\
+        a1 l1 == Some (l1, []) /\
+        a23 l2 == Some (l2, [])
+    ))
+  = let Some (la, lb) = a1 l in
+    let Some (lc, le) = a23 lb in
+    array_group_zero_or_more_eq a2 lb;
+    if Some? (a2 lb)
+    then array_group_concat_unique_strong_elim2 a1 a2
+    else begin
+      List.Tot.append_assoc la lb (le <: list Cbor.cbor);
+      array_group_concat_unique_weak_elim1 a1 a3 l
+    end
+  in
+  let prf2
+    (l1 l2: (l: list Cbor.cbor { opt_precedes_list l b }))
+  : Lemma
+    (requires (a1 l1 == Some (l1, []) /\ a23 l2 == Some (l2, [])))
+    (ensures (a1 (l1 `List.Tot.append` l2) == Some (l1, l2)))
+  = array_group_zero_or_more_eq a2 l2
+  in
+  array_group_concat_unique_weak_intro a1 a23 prf1 prf2
 
 #pop-options
 
@@ -701,9 +730,49 @@ let array_group_concat_unique_strong_one_or_more_left
 
 #pop-options
 
-#push-options "--z3rlimit 32 --split_queries always"
-
+#push-options "--z3rlimit 32"
 #restart-solver
+
+let array_group_concat_unique_weak_one_or_more_left_prf1
+  #b (a1 a2: array_group b)
+  (l: (l: list Cbor.cbor { opt_precedes_list l b }))
+: Lemma
+  (requires (
+    array_group_concat_unique_weak a1 (array_group_concat (array_group_zero_or_more a1) a2) /\
+    array_group_concat_unique_weak (array_group_zero_or_more a1) a2 /\
+    array_group_concat (array_group_one_or_more a1) a2 l == Some (l, [])
+  ))
+  (ensures (
+    exists (l1 l2: list Cbor.cbor) .
+      array_group_one_or_more a1 l == Some (l1, l2) /\
+      array_group_one_or_more a1 l1 == Some (l1, []) /\
+      a2 l2 == Some (l2, [])
+  ))
+= let Some (l1, lr) = a1 l in
+  assert (array_group_concat (array_group_zero_or_more a1) a2 lr == Some (lr, []));
+  let Some (l1s, l2) = array_group_zero_or_more a1 lr in
+  assert (array_group_zero_or_more a1 l1s == Some (l1s, []));
+  assert (a2 l2 == Some (l2, []))
+
+let array_group_concat_unique_weak_one_or_more_left_prf2
+  #b (a1 a2: array_group b)
+  (l1 l2: (l: list Cbor.cbor { opt_precedes_list l b }))
+: Lemma
+  (requires (
+    array_group_concat_unique_weak a1 (array_group_concat (array_group_zero_or_more a1) a2) /\
+    array_group_concat_unique_weak (array_group_zero_or_more a1) a2 /\
+    array_group_one_or_more a1 l1 == Some (l1, []) /\
+    a2 l2 == Some (l2, [])
+  ))
+  (ensures (
+    array_group_one_or_more a1 (l1 `List.Tot.append` l2) == Some (l1, l2)
+  ))
+= assert (Some? (a1 l1));
+  assert (array_group_zero_or_more a1 l1 == Some (l1, []));
+  let l = l1 `List.Tot.append` l2 in
+  assert (array_group_concat (array_group_zero_or_more a1) a2 l == Some (l, []));
+  assert (Some? (a1 l))
+
 let array_group_concat_unique_weak_one_or_more_left'
   #b (a1 a2: array_group b)
 : Lemma
@@ -718,22 +787,8 @@ let array_group_concat_unique_weak_one_or_more_left'
 = array_group_concat_unique_weak_concat_zero_or_more_right a1 a1 a2;
   array_group_concat_unique_weak_zero_or_more_left a1 a2;
   array_group_concat_unique_weak_intro (array_group_one_or_more a1) a2
-      (fun l ->
-        let Some (l1, lr) = a1 l in
-        assert (array_group_concat (array_group_zero_or_more a1) a2 lr == Some (lr, []));
-        let Some (l1s, l2) = array_group_zero_or_more a1 lr in
-        assert (array_group_zero_or_more a1 l1s == Some (l1s, []));
-        assert (a2 l2 == Some (l2, []));
-        ()
-      )
-      (fun l1 l2 ->
-        assert (Some? (a1 l1));
-        assert (array_group_zero_or_more a1 l1 == Some (l1, []));
-        let l = l1 `List.Tot.append` l2 in
-        assert (array_group_concat (array_group_zero_or_more a1) a2 l == Some (l, []));
-        assert (Some? (a1 l));
-        ()
-      )
+      (fun l -> array_group_concat_unique_weak_one_or_more_left_prf1 a1 a2 l)
+      (fun l1 l2 -> array_group_concat_unique_weak_one_or_more_left_prf2 a1 a2 l1 l2)
 
 let array_group_concat_unique_weak_one_or_more_left
   #b (a1 a2: array_group b)

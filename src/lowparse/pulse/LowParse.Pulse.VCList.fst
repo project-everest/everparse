@@ -1251,28 +1251,30 @@ fn compute_remaining_size_nlist_as_slice
   (#p: parser k t)
   (s: serializer p  { k.parser_kind_subkind == Some ParserStrong })
   (w: ((a: tslice) -> compute_remaining_size (vmatch a) s))
-  (n: SZ.t)
-: compute_remaining_size #_ #_ (nlist_match_slice vslice vmatch (SZ.v n)) #_ #_ (LowParse.Spec.VCList.serialize_nlist (SZ.v n) s)
+  (n: Ghost.erased nat) // known as the length of the slice
+: compute_remaining_size #_ #_ (nlist_match_slice vslice vmatch n) #_ #_ (LowParse.Spec.VCList.serialize_nlist n s)
 =
   (arr: _)
   (#x: _)
   (out: _)
   (#v: _)
 {
-  unfold (nlist_match_slice vslice vmatch (SZ.v n) arr x);
+  unfold (nlist_match_slice vslice vmatch n arr x);
   with telem (ar : with_perm (S.slice _)) (c : _).
     assert S.pts_to #telem ar.v #ar.p c;
   let a = Some?.v (vslice arr);
   rewrite each ar as a;
+  S.pts_to_len a.v;
 
   let mut pres = true;
   let mut pi = 0sz;
   Trade.refl (PM.seq_list_match c x (vmatch arr));
   PM.seq_list_match_length (vmatch arr) _ _;
+  let len = S.len a.v;
   while (
     let res = !pres;
     let i = !pi;
-    (res && (SZ.lt i n))
+    (res && (SZ.lt i len))
   ) invariant exists* res i c2 l2 v1 . (
     pts_to a.v #a.p c **
     R.pts_to pres res **
@@ -1283,13 +1285,14 @@ fn compute_remaining_size_nlist_as_slice
       (PM.seq_list_match c2 l2 (vmatch arr))
       (PM.seq_list_match c x (vmatch arr))
     ** pure (
-      SZ.v i <= SZ.v n /\
-      Seq.length c == SZ.v n /\
-      (res == false ==> SZ.v v < Seq.length (serialize (serialize_nlist (SZ.v n) s) x)) /\
+      SZ.v i <= n /\
+      Seq.length c == n /\
+      SZ.v len == n /\
+      (res == false ==> SZ.v v < Seq.length (serialize (serialize_nlist (n) s) x)) /\
       (res == true ==> (
-        Seq.equal c2 (Seq.slice c (SZ.v i) (SZ.v n)) /\
-        List.Tot.length l2 == SZ.v n - SZ.v i /\
-        SZ.v v - Seq.length (serialize (serialize_nlist (SZ.v n) s) x) == SZ.v v1 - Seq.length (serialize (serialize_nlist (SZ.v n - SZ.v i) s) l2)
+        Seq.equal c2 (Seq.slice c (SZ.v i) (n)) /\
+        List.Tot.length l2 == n - SZ.v i /\
+        SZ.v v - Seq.length (serialize (serialize_nlist (n) s) x) == SZ.v v1 - Seq.length (serialize (serialize_nlist (n - SZ.v i) s) l2)
       )) /\
       True
     )
@@ -1301,7 +1304,7 @@ fn compute_remaining_size_nlist_as_slice
     let e = S.op_Array_Access a.v i;
     with ve l2'.
       assert (vmatch arr (Seq.head c2) ve ** PM.seq_list_match (Seq.tail c2) l2' (vmatch arr));
-    let ni' : Ghost.erased nat = Ghost.hide (SZ.v n - SZ.v i - 1);
+    let ni' : Ghost.erased nat = Ghost.hide (n - SZ.v i - 1);
     serialize_nlist_cons' (ni') s ve l2';
     Trade.rewrite_with_trade
       (vmatch arr _ _)
@@ -1319,7 +1322,7 @@ fn compute_remaining_size_nlist_as_slice
     }
   };
   Trade.elim _ _;
-  fold (nlist_match_slice vslice vmatch (SZ.v n) arr x);
+  fold (nlist_match_slice vslice vmatch n arr x);
   !pres
 }
 
@@ -1334,8 +1337,8 @@ fn l2r_write_nlist_as_slice
   (#p: parser k t)
   (s: serializer p  { k.parser_kind_subkind == Some ParserStrong })
   (w: ((a: tslice) -> l2r_writer (vmatch a) s))
-  (n: SZ.t)
-: l2r_writer #_ #_ (nlist_match_slice vslice vmatch (SZ.v n)) #_ #_ (LowParse.Spec.VCList.serialize_nlist (SZ.v n) s)
+  (n: Ghost.erased nat) // known as the length of the slice
+: l2r_writer #_ #_ (nlist_match_slice vslice vmatch n) #_ #_ (LowParse.Spec.VCList.serialize_nlist n s)
 =
   (arr: _)
   (#x: _)
@@ -1343,20 +1346,22 @@ fn l2r_write_nlist_as_slice
   (offset: _)
   (#v: _)
 {
-  unfold (nlist_match_slice vslice vmatch (SZ.v n) arr x);
+  unfold (nlist_match_slice vslice vmatch n arr x);
   with telem (ar : with_perm (S.slice _)) (c : _).
     assert S.pts_to #telem ar.v #ar.p c;
   let a = Some?.v (vslice arr);
   rewrite each ar as a;
+  S.pts_to_len a.v;
 
   let pl1 : GR.ref (list t) = GR.alloc #(list t) [];
   let mut pres = offset;
   let mut pi = 0sz;
   Trade.refl (PM.seq_list_match c x (vmatch arr));
   PM.seq_list_match_length (vmatch arr) _ _;
+  let len = S.len a.v;
   while (
     let i = !pi;
-    SZ.lt i n
+    SZ.lt i len
   ) invariant exists* res i l1 c2 l2 v1 . (
     pts_to a.v #a.p c **
     R.pts_to pres res **
@@ -1368,9 +1373,10 @@ fn l2r_write_nlist_as_slice
       (PM.seq_list_match c2 l2 (vmatch arr))
       (PM.seq_list_match c x (vmatch arr)) **
     pure (
-      SZ.v i <= SZ.v n /\
-      Seq.length c == SZ.v n /\
-      Seq.equal c2 (Seq.slice c (SZ.v i) (SZ.v n)) /\
+      SZ.v i <= n /\
+      Seq.length c == n /\
+      SZ.v len == n /\
+      Seq.equal c2 (Seq.slice c (SZ.v i) (n)) /\
       SZ.v offset <= SZ.v res /\
       SZ.v res <= Seq.length v /\
       Seq.length v1 == Seq.length v /\
@@ -1386,14 +1392,14 @@ fn l2r_write_nlist_as_slice
     PM.seq_list_match_length (vmatch arr) _ _;
     with l1 . assert (GR.pts_to pl1 l1);
     with c2 l2 . assert (PM.seq_list_match c2 l2 (vmatch arr));
-    serialize_nlist_append s (SZ.v i) l1 (SZ.v n - SZ.v i) l2;
+    serialize_nlist_append s (SZ.v i) l1 (n - SZ.v i) l2;
     PM.seq_list_match_cons_elim_trade c2 l2 (vmatch arr);
     let e = S.op_Array_Access a.v i;
     with ve l2'.
       assert (vmatch arr (Seq.head c2) ve ** PM.seq_list_match (Seq.tail c2) l2' (vmatch arr));
     List.Tot.append_assoc l1 [ve] l2';
     let i' = SZ.add i 1sz;
-    let ni' : Ghost.erased nat = Ghost.hide (SZ.v n - SZ.v i');
+    let ni' : Ghost.erased nat = Ghost.hide (n - SZ.v i');
     serialize_nlist_cons' (ni') s ve l2';
     serialize_nlist_singleton s ve;
     serialize_nlist_append s (SZ.v i) l1 1 [ve];
@@ -1436,7 +1442,7 @@ fn l2r_write_nlist_as_slice
   PM.seq_list_match_length (vmatch arr) _ _;
   List.Tot.append_l_nil l1;
   Trade.elim _ _;
-  fold (nlist_match_slice vslice vmatch (SZ.v n) arr x);
+  fold (nlist_match_slice vslice vmatch n arr x);
   !pres
 }
 
@@ -1562,15 +1568,7 @@ fn l2r_write_nlist_as_slice0
   (#v: _)
 {
   unfold (nlist_match_slice0 vmatch (n) arr x);
-  let ar = nlist_match_slice_elim Some (fun _ -> vmatch) n arr x;
-  with c . assert (pts_to (Ghost.reveal ar).v #ar.p c);
-  rewrite (pts_to (Ghost.reveal ar).v #ar.p c) as (pts_to arr.v #arr.p c);
-  S.pts_to_len arr.v;
-  PM.seq_list_match_length vmatch c x;
-  let n' = S.len arr.v;
-  nlist_match_slice_intro Some (fun _ -> vmatch) (SZ.v n') arr x arr c;
-  let res = l2r_write_nlist_as_slice Some (fun _ -> vmatch) s (fun _ -> w) n' arr out offset;
-  rewrite each SZ.v n' as n;
+  let res = l2r_write_nlist_as_slice Some (fun _ -> vmatch) s (fun _ -> w) n arr out offset;
   fold (nlist_match_slice0 vmatch (n) arr x);
   res
 }

@@ -40,14 +40,11 @@ BUILDDIR      = _build
 help: .venv
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help Makefile test all 3d clean 3d-do-tests %.diff 3d-snapshot 3d-ci %.diff-nobuild
+.PHONY: help Makefile test all 3d clean 3d-do-tests %.diff 3d-snapshot %.diff-nobuild
 
 .PHONYH: 3d-test
 
 3d-test: 3d html
-
-3d-ci: html
-	./ci.sh
 
 html: Makefile .venv
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)

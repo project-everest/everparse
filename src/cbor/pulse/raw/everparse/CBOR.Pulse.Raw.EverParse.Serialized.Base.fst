@@ -27,7 +27,7 @@ fn cbor_match_serialized_tagged_intro_aux
   requires
     pts_to_serialized serialize_raw_data_item pc #pm v ** pure (
       res.cbor_serialized_header == tag /\
-      res.cbor_serialized_payload == pc /\
+      (to_slice res.cbor_serialized_payload) == pc /\
       res.cbor_serialized_perm == pm /\
       r == Tagged tag v
     )
@@ -42,7 +42,7 @@ fn cbor_match_serialized_tagged_intro_aux
       (perm_mul 1.0R res.cbor_serialized_perm)
       v
     as
-   cbor_match_serialized_payload_tagged res.cbor_serialized_payload
+   cbor_match_serialized_payload_tagged (to_slice res.cbor_serialized_payload)
       (perm_mul 1.0R res.cbor_serialized_perm)
       (Tagged?.v r);
   fold (cbor_match_serialized_tagged res 1.0R r);
@@ -56,7 +56,7 @@ fn cbor_match_serialized_tagged_intro_aux
   {
     unfold (cbor_match_serialized_tagged res 1.0R r);
     rewrite
-    cbor_match_serialized_payload_tagged res.cbor_serialized_payload
+    cbor_match_serialized_payload_tagged (to_slice res.cbor_serialized_payload)
       (perm_mul 1.0R res.cbor_serialized_perm)
       (Tagged?.v r)
       as (cbor_match_serialized_payload_tagged pc pm v);
@@ -78,7 +78,7 @@ fn cbor_match_serialized_array_intro_aux
   requires
     pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n serialize_raw_data_item) pc #pm v ** pure (
       res.cbor_serialized_header == len /\
-      res.cbor_serialized_payload == pc /\
+      (to_slice res.cbor_serialized_payload) == pc /\
       res.cbor_serialized_perm == pm /\
       n == U64.v len.value /\
       r == Array len v
@@ -90,7 +90,7 @@ fn cbor_match_serialized_array_intro_aux
       (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n serialize_raw_data_item) pc #pm v)
 {
   fold (cbor_match_serialized_payload_array pc (1.0R `perm_mul` pm) v);
-  rewrite cbor_match_serialized_payload_array pc (perm_mul 1.0R pm) v as cbor_match_serialized_payload_array res.cbor_serialized_payload
+  rewrite cbor_match_serialized_payload_array pc (perm_mul 1.0R pm) v as cbor_match_serialized_payload_array (to_slice res.cbor_serialized_payload)
       (perm_mul 1.0R res.cbor_serialized_perm)
       (Array?.v r);
   fold (cbor_match_serialized_array res 1.0R r);
@@ -103,7 +103,7 @@ fn cbor_match_serialized_array_intro_aux
     fn _
   {
     unfold (cbor_match_serialized_array res 1.0R r);
-    rewrite cbor_match_serialized_payload_array res.cbor_serialized_payload
+    rewrite cbor_match_serialized_payload_array (to_slice res.cbor_serialized_payload)
       (perm_mul 1.0R res.cbor_serialized_perm)
       (Array?.v r) as cbor_match_serialized_payload_array pc pm (Array?.v r);
     unfold (cbor_match_serialized_payload_array pc pm (Array?.v r))
@@ -123,7 +123,7 @@ fn cbor_match_serialized_map_intro_aux
   requires
     pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) pc #pm v ** pure (
       res.cbor_serialized_header == len /\
-      res.cbor_serialized_payload == pc /\
+      (to_slice res.cbor_serialized_payload) == pc /\
       res.cbor_serialized_perm == pm /\
       n == U64.v len.value /\
       r == Map len v
@@ -135,7 +135,7 @@ fn cbor_match_serialized_map_intro_aux
       (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) pc #pm v)
 {
   fold (cbor_match_serialized_payload_map pc (1.0R `perm_mul` pm) v);
-  rewrite cbor_match_serialized_payload_map pc (perm_mul 1.0R pm) v as cbor_match_serialized_payload_map res.cbor_serialized_payload
+  rewrite cbor_match_serialized_payload_map pc (perm_mul 1.0R pm) v as cbor_match_serialized_payload_map (to_slice res.cbor_serialized_payload)
       (perm_mul 1.0R res.cbor_serialized_perm)
       (Map?.v r);
   fold (cbor_match_serialized_map res 1.0R r);
@@ -148,7 +148,7 @@ fn cbor_match_serialized_map_intro_aux
     fn _
   {
     unfold (cbor_match_serialized_map res 1.0R r);
-    rewrite cbor_match_serialized_payload_map res.cbor_serialized_payload
+    rewrite cbor_match_serialized_payload_map (to_slice res.cbor_serialized_payload)
       (perm_mul 1.0R res.cbor_serialized_perm)
       (Map?.v r) as cbor_match_serialized_payload_map pc pm (Map?.v r);
     unfold (cbor_match_serialized_payload_map pc pm (Map?.v r))
@@ -194,7 +194,7 @@ fn cbor_read
     Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
     let rest = {
       cbor_serialized_header = tag;
-      cbor_serialized_payload = pc;
+      cbor_serialized_payload = of_slice pc;
       cbor_serialized_perm = pm;
     };
     cbor_match_serialized_tagged_intro_aux tag pc rest v;
@@ -213,7 +213,7 @@ fn cbor_read
     Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
     let resa = {
       cbor_serialized_header = len;
-      cbor_serialized_payload = pc;
+      cbor_serialized_payload = of_slice pc;
       cbor_serialized_perm = pm;
     };
     cbor_match_serialized_array_intro_aux len pc #n #v' #pm resa (Ghost.reveal v) ();
@@ -232,7 +232,7 @@ fn cbor_read
     Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
     let resa = {
       cbor_serialized_header = len;
-      cbor_serialized_payload = pc;
+      cbor_serialized_payload = of_slice pc;
       cbor_serialized_perm = pm;
     };
     cbor_match_serialized_map_intro_aux len pc #n #v' #pm resa (Ghost.reveal v) ();
