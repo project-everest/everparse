@@ -2077,3 +2077,65 @@ fn cbor_match_with_depth_map_elim (depth: nat) (p: perm) (a: cbor_map) (r: raw_d
     rewrite (cbor_match_map0 a p r (depth_cb depth r)) as (cbor_match_with_depth depth p (CBOR_Case_Map a) r);
   };
 }
+
+// (D) A non-inline-composite cbor_raw (leaf or serialized) matches the same at
+// any depth: bump plain cbor_match to cbor_match_with_depth n (with a trade back).
+// Used to lift elements yielded by the serialized iterators (cbor_read always
+// returns a leaf or a CBOR_Case_Serialized_* node) into the depth-indexed world.
+ghost
+fn cbor_match_with_depth_intro_noninline (n: nat) (p: perm) (c: cbor_raw) (v: raw_data_item)
+  requires cbor_match p c v ** pure (~ (CBOR_Case_Array? c \/ CBOR_Case_Map? c \/ CBOR_Case_Tagged? c))
+  ensures cbor_match_with_depth n p c v ** trade (cbor_match_with_depth n p c v) (cbor_match p c v)
+{
+  cbor_match_cases c;
+  match c {
+    norewrite CBOR_Case_Int ct -> {
+      cbor_match_with_depth_eq_match_int n p ct v;
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_with_depth n p c v);
+    }
+    norewrite CBOR_Case_Simple ct -> {
+      cbor_match_with_depth_eq_match_simple n p ct v;
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_with_depth n p c v);
+    }
+    norewrite CBOR_Case_String ct -> {
+      cbor_match_with_depth_eq_match_string n p ct v;
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_with_depth n p c v);
+    }
+    norewrite CBOR_Case_Serialized_Array ct -> {
+      cbor_match_with_depth_eq_match_ser_array n p ct v;
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_with_depth n p c v);
+    }
+    norewrite CBOR_Case_Serialized_Map ct -> {
+      cbor_match_with_depth_eq_match_ser_map n p ct v;
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_with_depth n p c v);
+    }
+    norewrite CBOR_Case_Serialized_Tagged ct -> {
+      cbor_match_with_depth_eq_match_ser_tagged n p ct v;
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_with_depth n p c v);
+    }
+    norewrite CBOR_Case_Array ct -> {
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_with_depth n p c v);
+    }
+    norewrite CBOR_Case_Map ct -> {
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_with_depth n p c v);
+    }
+    norewrite CBOR_Case_Tagged ct -> {
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_with_depth n p c v);
+    }
+  }
+}
+
+// ===================================================================
+// Depth-aware map-entry element predicate (used by the depth-aware map
+// iterators in Read.fst and the depth-aware serialized map iterator-next
+// in Format.Serialized.fst). Mirrors [cbor_match_map_entry] but uses
+// [cbor_match_with_depth d] for both key and value.
+// ===================================================================
+let cbor_match_map_entry_with_depth
+  (d: Ghost.erased nat)
+  (p: perm)
+  (c: cbor_map_entry)
+  (r: (raw_data_item & raw_data_item))
+: slprop
+= cbor_match_with_depth d p c.cbor_map_entry_key (fst r) **
+  cbor_match_with_depth d p c.cbor_map_entry_value (snd r)
