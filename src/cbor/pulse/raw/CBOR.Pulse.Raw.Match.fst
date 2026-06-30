@@ -1861,3 +1861,219 @@ ghost fn cbor_match_match_with_depth (p: perm) (c: cbor_raw) (r: raw_data_item)
 {
   cbor_match_to_depth (raw_data_item_size r) p c r;
 }
+
+// ===================================================================
+// Phase 0: machinery for depth-indexed open recursion (cbor_copy0 etc.)
+// ===================================================================
+
+// (A) Monotonicity of cbor_match_with_depth in the depth argument.
+ghost
+fn rec cbor_match_with_depth_weaken (n: nat) (m: nat) (p: perm) (c: cbor_raw) (r: raw_data_item)
+  requires cbor_match_with_depth n p c r ** pure (n <= m)
+  ensures cbor_match_with_depth m p c r
+  decreases n
+{
+  cbor_match_with_depth_eq0 n p c r;
+  rewrite (cbor_match_with_depth n p c r) as (cbor_match0 p c r (depth_cb n r));
+  ghost fn imp
+    (p': perm) (c': cbor_raw)
+    (v': raw_data_item { v' << r /\ raw_data_item_size v' < raw_data_item_size r })
+    requires depth_cb n r p' c' v'
+    ensures depth_cb m r p' c' v'
+  {
+    if (n = 0) {
+      depth_cb_zero r p' c' v';
+      rewrite (depth_cb n r p' c' v') as (pure False);
+      rewrite (pure False) as (depth_cb m r p' c' v');
+    } else {
+      depth_cb_succ n r p' c' v';
+      rewrite (depth_cb n r p' c' v') as (cbor_match_with_depth (n - 1) p' c' v');
+      cbor_match_with_depth_weaken (n - 1) (m - 1) p' c' v';
+      depth_cb_succ m r p' c' v';
+      rewrite (cbor_match_with_depth (m - 1) p' c' v') as (depth_cb m r p' c' v');
+    }
+  };
+  cbor_match0_weaken p c r (depth_cb n r) (depth_cb m r) imp;
+  cbor_match_with_depth_eq0 m p c r;
+  rewrite (cbor_match0 p c r (depth_cb m r)) as (cbor_match_with_depth m p c r);
+}
+
+// (B) Leaf and serialized cases: the depth callback is unused, so
+// cbor_match_with_depth n coincides definitionally with cbor_match.
+let cbor_match_with_depth_eq_match_int (n: nat) (p: perm) (ct: cbor_int) (r: raw_data_item)
+  : Lemma (requires Int64? r)
+          (ensures cbor_match_with_depth n p (CBOR_Case_Int ct) r == cbor_match p (CBOR_Case_Int ct) r)
+= cbor_match_with_depth_eq0 n p (CBOR_Case_Int ct) r;
+  cbor_match_eq0 p (CBOR_Case_Int ct) r;
+  cbor_match0_eq_int p ct r (depth_cb n r);
+  cbor_match0_eq_int p ct r cbor_match
+
+let cbor_match_with_depth_eq_match_simple (n: nat) (p: perm) (ct: simple_value) (r: raw_data_item)
+  : Lemma (requires Simple? r)
+          (ensures cbor_match_with_depth n p (CBOR_Case_Simple ct) r == cbor_match p (CBOR_Case_Simple ct) r)
+= cbor_match_with_depth_eq0 n p (CBOR_Case_Simple ct) r;
+  cbor_match_eq0 p (CBOR_Case_Simple ct) r;
+  cbor_match0_eq_simple p ct r (depth_cb n r);
+  cbor_match0_eq_simple p ct r cbor_match
+
+let cbor_match_with_depth_eq_match_string (n: nat) (p: perm) (ct: cbor_string) (r: raw_data_item)
+  : Lemma (requires String? r)
+          (ensures cbor_match_with_depth n p (CBOR_Case_String ct) r == cbor_match p (CBOR_Case_String ct) r)
+= cbor_match_with_depth_eq0 n p (CBOR_Case_String ct) r;
+  cbor_match_eq0 p (CBOR_Case_String ct) r;
+  cbor_match0_eq_string p ct r (depth_cb n r);
+  cbor_match0_eq_string p ct r cbor_match
+
+let cbor_match_with_depth_eq_match_ser_array (n: nat) (p: perm) (ct: cbor_serialized) (r: raw_data_item)
+  : Lemma (requires Array? r)
+          (ensures cbor_match_with_depth n p (CBOR_Case_Serialized_Array ct) r == cbor_match p (CBOR_Case_Serialized_Array ct) r)
+= cbor_match_with_depth_eq0 n p (CBOR_Case_Serialized_Array ct) r;
+  cbor_match_eq0 p (CBOR_Case_Serialized_Array ct) r;
+  cbor_match0_eq_ser_array p ct r (depth_cb n r);
+  cbor_match0_eq_ser_array p ct r cbor_match
+
+let cbor_match_with_depth_eq_match_ser_map (n: nat) (p: perm) (ct: cbor_serialized) (r: raw_data_item)
+  : Lemma (requires Map? r)
+          (ensures cbor_match_with_depth n p (CBOR_Case_Serialized_Map ct) r == cbor_match p (CBOR_Case_Serialized_Map ct) r)
+= cbor_match_with_depth_eq0 n p (CBOR_Case_Serialized_Map ct) r;
+  cbor_match_eq0 p (CBOR_Case_Serialized_Map ct) r;
+  cbor_match0_eq_ser_map p ct r (depth_cb n r);
+  cbor_match0_eq_ser_map p ct r cbor_match
+
+let cbor_match_with_depth_eq_match_ser_tagged (n: nat) (p: perm) (ct: cbor_serialized) (r: raw_data_item)
+  : Lemma (requires Tagged? r)
+          (ensures cbor_match_with_depth n p (CBOR_Case_Serialized_Tagged ct) r == cbor_match p (CBOR_Case_Serialized_Tagged ct) r)
+= cbor_match_with_depth_eq0 n p (CBOR_Case_Serialized_Tagged ct) r;
+  cbor_match_eq0 p (CBOR_Case_Serialized_Tagged ct) r;
+  cbor_match0_eq_ser_tagged p ct r (depth_cb n r);
+  cbor_match0_eq_ser_tagged p ct r cbor_match
+
+// A child held at depth_cb depth witnesses depth >= 1 (the depth-0 callback is False).
+ghost
+fn depth_cb_pos (depth: nat) (r: raw_data_item) (p': perm) (c': cbor_raw) (v': raw_data_item { v' << r })
+  requires depth_cb depth r p' c' v'
+  ensures depth_cb depth r p' c' v' ** pure (depth >= 1)
+{
+  if (depth = 0) {
+    depth_cb_zero r p' c' v';
+    rewrite (depth_cb depth r p' c' v') as (pure False);
+    rewrite (pure False) as (depth_cb depth r p' c' v' ** pure (depth >= 1));
+  } else {
+    ()
+  }
+}
+
+// Total predecessor on nat (so child-depth terms typecheck without a local
+// `depth >= 1` refinement); equals depth - 1 whenever depth >= 1.
+let nat_pred (n: nat) : nat = if n = 0 then 0 else n - 1
+let nat_pred_succ (n: nat) : Lemma (requires n >= 1) (ensures nat_pred n == n - 1) = ()
+
+// (C) Depth-aware destructor for an inline tagged: exposes the payload one
+// depth level down, with a trade to restore the parent, and depth >= 1.
+ghost
+fn cbor_match_with_depth_tagged_elim (depth: nat) (p: perm) (a: cbor_tagged) (r: raw_data_item { Tagged? r })
+  requires cbor_match_with_depth depth p (CBOR_Case_Tagged a) r
+  ensures exists* c'.
+    R.pts_to a.cbor_tagged_ptr #(p `perm_mul` a.cbor_tagged_ref_perm) c' **
+    cbor_match_with_depth (nat_pred depth) (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r) **
+    trade
+      (R.pts_to a.cbor_tagged_ptr #(p `perm_mul` a.cbor_tagged_ref_perm) c' **
+       cbor_match_with_depth (nat_pred depth) (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r))
+      (cbor_match_with_depth depth p (CBOR_Case_Tagged a) r) **
+    pure (a.cbor_tagged_tag == Tagged?.tag r /\ depth >= 1)
+{
+  cbor_match_with_depth_eq_tagged depth p a r;
+  rewrite (cbor_match_with_depth depth p (CBOR_Case_Tagged a) r) as (cbor_match_tagged a p r (depth_cb depth r));
+  unfold (cbor_match_tagged a p r (depth_cb depth r));
+  with c'. assert (depth_cb depth r (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r));
+  depth_cb_pos depth r (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r);
+  depth_cb_succ depth r (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r);
+  nat_pred_succ depth;
+  rewrite (depth_cb depth r (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r))
+    as (cbor_match_with_depth (nat_pred depth) (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r));
+  intro
+    (Trade.trade
+      (R.pts_to a.cbor_tagged_ptr #(p `perm_mul` a.cbor_tagged_ref_perm) c' **
+       cbor_match_with_depth (nat_pred depth) (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r))
+      (cbor_match_with_depth depth p (CBOR_Case_Tagged a) r))
+    #(pure (depth >= 1))
+    fn _
+  {
+    depth_cb_succ depth r (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r);
+    nat_pred_succ depth;
+    rewrite (cbor_match_with_depth (nat_pred depth) (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r))
+      as (depth_cb depth r (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r));
+    fold (cbor_match_tagged a p r (depth_cb depth r));
+    cbor_match_with_depth_eq_tagged depth p a r;
+    rewrite (cbor_match_tagged a p r (depth_cb depth r)) as (cbor_match_with_depth depth p (CBOR_Case_Tagged a) r);
+  };
+}
+
+// (C') Depth-aware destructor for an inline array: exposes the element
+// sequence whose per-element predicate is the depth callback (depth_cb depth r),
+// with a trade to restore the parent. The loop converts each element from
+// depth_cb to cbor_match_with_depth (nat_pred depth) via depth_cb_pos/_succ.
+ghost
+fn cbor_match_with_depth_array_elim (depth: nat) (p: perm) (a: cbor_array) (r: raw_data_item { Array? r })
+  requires cbor_match_with_depth depth p (CBOR_Case_Array a) r
+  ensures exists* s.
+    pts_to a.cbor_array_ptr #(p `perm_mul` a.cbor_array_array_perm) s **
+    PM.seq_list_match s (Array?.v r) ((depth_cb depth r) (p `perm_mul` a.cbor_array_payload_perm)) **
+    trade
+      (pts_to a.cbor_array_ptr #(p `perm_mul` a.cbor_array_array_perm) s **
+       PM.seq_list_match s (Array?.v r) ((depth_cb depth r) (p `perm_mul` a.cbor_array_payload_perm)))
+      (cbor_match_with_depth depth p (CBOR_Case_Array a) r) **
+    pure (a.cbor_array_length_size == (Array?.len r).size /\
+      SZ.v (S.len a.cbor_array_ptr) == U64.v (Array?.len r).value)
+{
+  cbor_match_with_depth_eq_array depth p a r;
+  rewrite (cbor_match_with_depth depth p (CBOR_Case_Array a) r) as (cbor_match_array a p r (depth_cb depth r));
+  unfold (cbor_match_array a p r (depth_cb depth r));
+  with s. assert (pts_to a.cbor_array_ptr #(p `perm_mul` a.cbor_array_array_perm) s **
+    PM.seq_list_match s (Array?.v r) ((depth_cb depth r) (p `perm_mul` a.cbor_array_payload_perm)));
+  intro
+    (Trade.trade
+      (pts_to a.cbor_array_ptr #(p `perm_mul` a.cbor_array_array_perm) s **
+       PM.seq_list_match s (Array?.v r) ((depth_cb depth r) (p `perm_mul` a.cbor_array_payload_perm)))
+      (cbor_match_with_depth depth p (CBOR_Case_Array a) r))
+    #emp
+    fn _
+  {
+    fold (cbor_match_array a p r (depth_cb depth r));
+    cbor_match_with_depth_eq_array depth p a r;
+    rewrite (cbor_match_array a p r (depth_cb depth r)) as (cbor_match_with_depth depth p (CBOR_Case_Array a) r);
+  };
+}
+
+// (C'') Depth-aware destructor for an inline map.
+ghost
+fn cbor_match_with_depth_map_elim (depth: nat) (p: perm) (a: cbor_map) (r: raw_data_item { Map? r })
+  requires cbor_match_with_depth depth p (CBOR_Case_Map a) r
+  ensures exists* s.
+    pts_to a.cbor_map_ptr #(p `perm_mul` a.cbor_map_array_perm) s **
+    PM.seq_list_match s (Map?.v r) (cbor_match_map_entry0 r ((depth_cb depth r) (p `perm_mul` a.cbor_map_payload_perm))) **
+    trade
+      (pts_to a.cbor_map_ptr #(p `perm_mul` a.cbor_map_array_perm) s **
+       PM.seq_list_match s (Map?.v r) (cbor_match_map_entry0 r ((depth_cb depth r) (p `perm_mul` a.cbor_map_payload_perm))))
+      (cbor_match_with_depth depth p (CBOR_Case_Map a) r) **
+    pure (a.cbor_map_length_size == (Map?.len r).size /\
+      SZ.v (S.len a.cbor_map_ptr) == U64.v (Map?.len r).value)
+{
+  cbor_match_with_depth_eq_map0 depth p a r;
+  rewrite (cbor_match_with_depth depth p (CBOR_Case_Map a) r) as (cbor_match_map0 a p r (depth_cb depth r));
+  unfold (cbor_match_map0 a p r (depth_cb depth r));
+  with s. assert (pts_to a.cbor_map_ptr #(p `perm_mul` a.cbor_map_array_perm) s **
+    PM.seq_list_match s (Map?.v r) (cbor_match_map_entry0 r ((depth_cb depth r) (p `perm_mul` a.cbor_map_payload_perm))));
+  intro
+    (Trade.trade
+      (pts_to a.cbor_map_ptr #(p `perm_mul` a.cbor_map_array_perm) s **
+       PM.seq_list_match s (Map?.v r) (cbor_match_map_entry0 r ((depth_cb depth r) (p `perm_mul` a.cbor_map_payload_perm))))
+      (cbor_match_with_depth depth p (CBOR_Case_Map a) r))
+    #emp
+    fn _
+  {
+    fold (cbor_match_map0 a p r (depth_cb depth r));
+    cbor_match_with_depth_eq_map0 depth p a r;
+    rewrite (cbor_match_map0 a p r (depth_cb depth r)) as (cbor_match_with_depth depth p (CBOR_Case_Map a) r);
+  };
+}
