@@ -929,6 +929,55 @@ let vmatch_sum_payload
 : slprop
 = if sum_tag_of_data t v = k then vmatch_k xl (synth_sum_case_recip t k v) else pure False
 
+(* Robust helper for the sum-payload accessors (zero_copy_parse_sum_payload and
+   accessor_clens_sum_payload): from the fact that [bytes] parses to [v] as a sum
+   and that the tag consumes [off] bytes, derive that the payload parser succeeds
+   on the payload sub-slice, consumes it entirely, and reconstructs [v] via
+   synth_sum_case. Proved by explicit case analysis so that it is stable (verifies
+   at fuel 0/ifuel 0, seed-independent), avoiding the quantifier-search instability
+   of relying on parse_sum_eq'' inline (which caused a MacOS-only failure). *)
+#push-options "--z3rlimit 32 --fuel 2 --ifuel 1"
+let accessor_clens_sum_payload_lemma
+  (t: sum)
+  (#kt: parser_kind)
+  (p: parser kt (sum_repr_type t))
+  (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (k: sum_key t)
+  (bytes: bytes)
+  (off: nat)
+  (v: sum_type t)
+: Lemma
+  (requires (
+    parse (parse_sum t p pc) bytes == Some (v, Seq.length bytes) /\
+    sum_tag_of_data t v == k /\
+    off <= Seq.length bytes /\
+    (match parse p bytes with None -> False | Some (_, c) -> c == off)
+  ))
+  (ensures (
+    let payload_bytes = Seq.slice bytes off (Seq.length bytes) in
+    (match parse (dsnd (pc k)) payload_bytes with
+     | None -> False
+     | Some (x, consumed) ->
+       consumed == Seq.length payload_bytes /\
+       synth_sum_case t k x == v)
+  ))
+= parse_sum_eq'' t p pc bytes;
+  let payload_bytes = Seq.slice bytes off (Seq.length bytes) in
+  match parse p bytes with
+  | Some (k', consumed_k) ->
+    let mk = maybe_enum_key_of_repr (sum_enum t) k' in
+    begin match mk with
+    | Known kk ->
+      begin match parse (dsnd (pc kk)) payload_bytes with
+      | Some (x, consumed_x) ->
+        assert (sum_tag_of_data t (synth_sum_case t kk x) == kk);
+        assert (kk == k)
+      | None -> ()
+      end
+    | Unknown _ -> ()
+    end
+#pop-options
+
 #push-options "--z3rlimit 128"
 
 inline_for_extraction
@@ -965,6 +1014,7 @@ fn zero_copy_parse_sum_payload
   let off = j input 0sz;
   let payload_bytes = Ghost.hide (Seq.slice bytes (SZ.v off) (Seq.length bytes));
   parse_synth_eq (dsnd (pc k)) (synth_sum_case t k) payload_bytes;
+  accessor_clens_sum_payload_lemma t p pc k bytes (SZ.v off) v;
   let gx = Ghost.hide (fst (Some?.v (parse (dsnd (pc k)) payload_bytes)));
   let input_tag, input_payload = split_trade input off;
   with wb_tag . assert (S.pts_to input_tag #pm wb_tag);
@@ -1072,6 +1122,7 @@ fn accessor_clens_sum_payload
   let off = j input 0sz;
   let payload_bytes = Ghost.hide (Seq.slice bytes (SZ.v off) (Seq.length bytes));
   parse_synth_eq (dsnd (pc k)) (synth_sum_case t k) payload_bytes;
+  accessor_clens_sum_payload_lemma t p pc k bytes (SZ.v off) v;
   let gx = Ghost.hide (fst (Some?.v (parse (dsnd (pc k)) payload_bytes)));
   let input_tag, input_payload = split_trade input off;
   with wb_tag . assert (S.pts_to input_tag #pm wb_tag);
