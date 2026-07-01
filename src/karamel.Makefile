@@ -5,6 +5,13 @@ include $(EVERPARSE_SRC_PATH)/windows.Makefile
 
 ALREADY_CACHED := C,LowStar,$(ALREADY_CACHED)
 
-INCLUDE_PATHS += $(KRML_HOME)/krmllib $(KRML_HOME)/krmllib/obj
+# Do not run `krml -locate` during the Makefile parsing. Only when the command runs.
+ifeq (,$(KRML_LIB))
+  KRML_LIB := "$$("$(KRML_EXE)" -locate-krmllib)"
+endif
+INCLUDE_PATHS += $ $(KRML_LIB) $(KRML_LIB)/obj
 
-CFLAGS += -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/generic
+ifeq (,$(KRML_INCLUDE))
+  KRML_INCLUDE := "$$("$(KRML_EXE)" -locate-include)"
+endif
+CFLAGS += -I $(KRML_INCLUDE) -I $(KRML_LIB)/dist/generic
