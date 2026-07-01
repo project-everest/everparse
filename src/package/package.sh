@@ -14,7 +14,7 @@ DATE=$(which gdate >/dev/null 2>&1 && echo gdate || echo date)
 # FStar/ and karamel/.
 unset FSTAR_EXE
 unset FSTAR_HOME
-unset KRML_HOME
+unset KRML_EXE
 
 if [[ -z "$OS" ]] ; then
     OS=$(uname)
@@ -32,7 +32,7 @@ fi
 
 fixpath () {
     if $is_windows ; then
-        cygpath -m "$1"
+        cygpath -m "$(echo "$1" | sed 's!\r!!g')"
     else
         echo "$1"
     fi
@@ -83,7 +83,7 @@ make_everparse() {
     ## Clear all variables
     export EVERPARSE_USE_OPAMROOT=
     export EVERPARSE_USE_FSTAR_EXE=
-    export EVERPARSE_USE_KRML_HOME=
+    export EVERPARSE_USE_KRML_EXE=
     export EVERPARSE_USE_PULSE_HOME=
     rm -f "$EVERPARSE_HOME/opam-env.Makefile"
 
@@ -170,10 +170,11 @@ make_everparse() {
     fi
 
     # Copy KaRaMeL
-    $cp -L $KRML_HOME/krml everparse/bin/krml$exe
-    $cp -r $KRML_HOME/krmllib everparse/
-    $cp -r $KRML_HOME/include everparse/
-    $cp -r $KRML_HOME/misc everparse/
+    $cp -L "$KRML_EXE" everparse/bin/krml$exe
+    mkdir -p everparse/lib everparse/include
+    $cp -r "$(fixpath "$("$KRML_EXE" -locate-krmllib)")" everparse/lib/krml
+    $cp -r "$(fixpath "$("$KRML_EXE" -locate-include)")" everparse/include/krml
+#    $cp -r $KRML_HOME/misc everparse/ # TODO: do not rely on the Makefile produced by Karamel
 
     # Copy EverParse
     $cp $EVERPARSE_HOME/bin/qd.exe everparse/bin/qd.exe
@@ -227,8 +228,8 @@ make_everparse() {
     # licenses
     mkdir -p everparse/licenses
     download https://raw.githubusercontent.com/FStarLang/FStar/master/LICENSE everparse/licenses/FStar
-    $cp $KRML_HOME/LICENSE-APACHE everparse/licenses/KaRaMeL-Apache
-    $cp $KRML_HOME/LICENSE-MIT everparse/licenses/KaRaMeL-MIT
+    download https://raw.githubusercontent.com/FStarLang/karamel/master/LICENSE-APACHE everparse/licenses/KaRaMeL-Apache
+    download https://raw.githubusercontent.com/FStarLang/karamel/master/LICENSE-MIT everparse/licenses/KaRaMeL-MIT
     $cp $EVERPARSE_HOME/LICENSE everparse/licenses/EverParse
     download https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt everparse/licenses/z3
     download https://raw.githubusercontent.com/libffi/libffi/master/LICENSE everparse/licenses/libffi6
