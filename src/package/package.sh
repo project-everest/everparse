@@ -170,6 +170,7 @@ make_everparse() {
     fi
 
     # Copy KaRaMeL
+    KRML_EXE="$EVERPARSE_HOME/opt/karamel/out/bin/krml$exe"
     $cp -L "$KRML_EXE" everparse/bin/krml$exe
     mkdir -p everparse/lib everparse/include
     $cp -r "$(fixpath "$("$KRML_EXE" -locate-krmllib)")" everparse/lib/krml
