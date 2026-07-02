@@ -156,7 +156,9 @@ $(EVERPARSE_OPT_PATH)/z3: $(EVERPARSE_OPT_PATH)/FStar/Makefile
 # exported value and fails with "No rule to make target .../out/bin/krml".
 $(EVERPARSE_OPT_PATH)/karamel.done: $(EVERPARSE_OPT_PATH)/karamel/Makefile $(NEED_FSTAR) $(NEED_OPAM)
 	rm -f $@
-	+$(with_opam) env -u KRML_EXE OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $(EVERPARSE_OPT_PATH)/karamel
+	+$(with_opam) env -u KRML_EXE OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $(EVERPARSE_OPT_PATH)/karamel minimal
+	+$(with_opam) env -u KRML_EXE OTHERFLAGS='--admit_smt_queries true' KRML_LIBDIR="$(EVERPARSE_OPT_PATH)/karamel/krmllib" KRML_INCLUDEDIR="$(EVERPARSE_OPT_PATH)/karamel/include" KRML_MISCDIR="$(EVERPARSE_OPT_PATH)/karamel/misc" $(MAKE) -C "$(EVERPARSE_OPT_PATH)/karamel/krmllib"
+	+$(with_opam) env -u KRML_EXE $(MAKE) -C "$(EVERPARSE_OPT_PATH)/karamel" _install PREFIX="$(EVERPARSE_OPT_PATH)/karamel/out"
 ifeq ($(OS),Windows_NT)
 	mv "$(EVERPARSE_OPT_PATH)/karamel/out/bin/krml" "$(EVERPARSE_OPT_PATH)/karamel/out/bin/krml.exe"
 endif
