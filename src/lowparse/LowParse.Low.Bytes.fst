@@ -594,7 +594,7 @@ let clens_vlbytes_cond
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
   (length: nat)
   (x: parse_bounded_vlbytes_t min max)
-: GTot Type0
+: GTot prop
 = BY.length x == length
 
 let clens_vlbytes
@@ -1015,6 +1015,8 @@ let jump_bounded_vlgenbytes
     (fun x -> (x <: parse_bounded_vlbytes_t vmin vmax))
     ()
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction
 let bounded_vlgenbytes_payload_length
   (vmin: der_length_t)
@@ -1063,6 +1065,8 @@ let bounded_vlgenbytes_payload_length
   valid_exact_all_bytes_elim h input (Ghost.reveal pos1) (Ghost.reveal pos1 `U32.add` len);
   valid_flbytes_elim h (U32.v len) input (Ghost.reveal pos1);
   len
+
+#pop-options
 
 inline_for_extraction
 let get_bounded_vlgenbytes_contents

@@ -16,13 +16,6 @@ module U64 = FStar.UInt64
 module S = Pulse.Lib.Slice
 module SZ = FStar.SizeT
 
-[@@AST.sem_attr]
-let sz_uint_to_t
-  (x: nat)
-  (sq: squash (SZ.fits x))
-: Tot SZ.t
-= SZ.uint_to_t x
-
 #push-options "--z3rlimit 40"
 
 [@@AST.sem_attr]
@@ -37,7 +30,7 @@ let rec validate_typ
   (env: validator_env vmatch v_sem_env)
   (guard_choices: Ghost.erased bool)
   (ty: AST.typ)
-  (wf: AST.ast0_wf_typ ty { AST.spec_wf_typ v_sem_env guard_choices ty wf /\ SZ.fits_u64 })
+  (wf: AST.ast0_wf_typ ty { AST.spec_wf_typ v_sem_env guard_choices ty wf })
 : Tot (impl_typ vmatch (AST.typ_sem v_sem_env ty))
   (decreases wf)
 = match wf with
@@ -54,8 +47,8 @@ let rec validate_typ
       impl.cbor_get_major_type
       impl.cbor_get_string
       (U8.uint_to_t k)
-      (sz_uint_to_t lo (SZ.fits_u64_implies_fits hi))
-      (SZ.uint_to_t hi)
+      (U64.uint_to_t lo)
+      (U64.uint_to_t hi)
   | AST.WfTTagged None _ s' ->
     impl_tagged_none
       impl.cbor_get_major_type
@@ -111,7 +104,7 @@ and validate_array_group
   (#v_sem_env: AST.sem_env)
   (env: validator_env vmatch v_sem_env)
   (ty: AST.group)
-  (wf: AST.ast0_wf_array_group ty { AST.spec_wf_array_group v_sem_env ty wf /\ SZ.fits_u64 })
+  (wf: AST.ast0_wf_array_group ty { AST.spec_wf_array_group v_sem_env ty wf })
 : Tot (impl_array_group cbor_array_iterator_match (AST.array_group_sem v_sem_env ty))
   (decreases wf)
 = match wf with
@@ -153,7 +146,7 @@ and validate_map_group
   (#v_sem_env: AST.sem_env)
   (env: validator_env vmatch v_sem_env)
   (ty: AST.elab_map_group)
-  (wf: AST.ast0_wf_parse_map_group ty { AST.spec_wf_parse_map_group v_sem_env ty wf /\ SZ.fits_u64 })
+  (wf: AST.ast0_wf_parse_map_group ty { AST.spec_wf_parse_map_group v_sem_env ty wf })
 : Tot (impl_map_group_t vmatch (AST.elab_map_group_sem v_sem_env ty) (AST.spec_map_group_footprint v_sem_env ty))
   (decreases wf)
 = match wf with
@@ -217,7 +210,7 @@ and validate_map_constraint
   (#v_sem_env: AST.sem_env)
   (env: validator_env vmatch v_sem_env)
   (ty: AST.map_constraint)
-  (wf: AST.ast0_wf_map_constraint ty { AST.spec_wf_map_constraint v_sem_env ty wf /\ SZ.fits_u64 })
+  (wf: AST.ast0_wf_map_constraint ty { AST.spec_wf_map_constraint v_sem_env ty wf })
 : Tot (impl_map_entry_cond vmatch2 (AST.map_constraint_sem v_sem_env ty))
   (decreases wf)
 = match wf with
@@ -247,6 +240,6 @@ let validate_typ'
   (env: validator_env vmatch v_sem_env)
   (guard_choices: Ghost.erased bool)
   (ty: AST.typ)
-  (wf: AST.ast0_wf_typ ty { AST.spec_wf_typ v_sem_env guard_choices ty wf /\ SZ.fits_u64 })
+  (wf: AST.ast0_wf_typ ty { AST.spec_wf_typ v_sem_env guard_choices ty wf })
 : Tot (impl_typ vmatch (typ_sem_or_bust v_sem_env ty))
 = validate_typ impl env guard_choices ty wf

@@ -4,6 +4,8 @@ open LowParse.Pulse.Int
 open LowParse.Pulse.BitSum
 open LowParse.Pulse.SeqBytes
 
+module SZCmp = CBOR.Pulse.Raw.EverParse.SizeComparison
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let read_initial_byte_t' : reader serialize_initial_byte_t =
@@ -635,21 +637,81 @@ let impl_leaf_content_seq_cond
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-let validate_leaf_content_seq'
+fn validate_total_constant_size_u64 (#t: Type0) (#k: Ghost.erased parser_kind) (p: parser k t) (sz64: U64.t {
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_low == U64.v sz64 /\
+    k.parser_kind_metadata == Some ParserKindMetadataTotal
+})
+: validator #_ #k p =
+  (input: slice byte)
+  (poffset: _)
+  (#offset: _)
+  (#pm: perm)
+  (#v: _)
+{
+  parser_kind_prop_equiv k p;
+  Pulse.Lib.Slice.pts_to_len input;
+  let offset = !poffset;
+  let remaining = SZ.sub (Pulse.Lib.Slice.len input) offset;
+  if SZCmp.u64_lte_sizet sz64 remaining {
+    SZ.fits_lte (U64.v sz64) (SZ.v remaining);
+    poffset := SZ.add offset (SZ.uint64_to_sizet sz64);
+    true
+  } else {
+    false
+  }
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn jump_constant_size_u64 (#t: Type0) (#k: Ghost.erased parser_kind) (p: parser k t) (sz64: U64.t {
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_low == U64.v sz64
+})
+: jumper #_ #k p =
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: _)
+{
+  parser_kind_prop_equiv k p;
+  Pulse.Lib.Slice.pts_to_len input;
+  SZ.fits_lte (U64.v sz64) (SZ.v (Pulse.Lib.Slice.len input));
+  SZ.add offset (SZ.uint64_to_sizet sz64)
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn impl_lseq_utf8_correct_u64 (ty: major_type_byte_string_or_text_string) (arg: U64.t) :
+  validate_filter_test_t #_ #_ #_ (LowParse.Spec.SeqBytes.serialize_lseq_bytes (U64.v arg)) (lseq_utf8_correct ty (U64.v arg))
+= (x: _) (#pm: _) (#v: _)
+{
+  if (ty = cbor_major_type_byte_string) {
+    true
+  } else {
+    pts_to_serialized_lseq_bytes_elim (U64.v arg) _ x _;
+    let res = CBOR.Pulse.Raw.EverParse.UTF8.impl_correct x;
+    Trade.elim _ _;
+    res
+  }
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_leaf_content_seq
   (h: header)
   (prf: squash (impl_leaf_content_seq_cond h == true))
-  (n: SZ.t { SZ.v n == U64.v (get_header_argument_as_uint64 h) })
 : Tot (validator (parse_leaf_content h))
 = validate_ext
     (validate_synth
       (validate_filter_gen
-        (validate_total_constant_size
-          (LowParse.Spec.SeqBytes.parse_lseq_bytes (SZ.v n))
-          n
+        (validate_total_constant_size_u64
+          (LowParse.Spec.SeqBytes.parse_lseq_bytes (U64.v (get_header_argument_as_uint64 h)))
+          (get_header_argument_as_uint64 h)
         )
-        (LowParse.Spec.SeqBytes.serialize_lseq_bytes (SZ.v n))
+        (LowParse.Spec.SeqBytes.serialize_lseq_bytes (U64.v (get_header_argument_as_uint64 h)))
         _
-        (CBOR.Pulse.Raw.EverParse.UTF8.impl_lseq_utf8_correct (get_header_major_type h) n)
+        (impl_lseq_utf8_correct_u64 (get_header_major_type h) (get_header_argument_as_uint64 h))
       )
       (LeafContentSeq ())
     )
@@ -657,25 +719,7 @@ let validate_leaf_content_seq'
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-fn validate_leaf_content_seq
-  (sq: squash (SZ.fits_u64))
-  (h: header)
-  (prf: squash (impl_leaf_content_seq_cond h == true))
-: validator #_ #_ (parse_leaf_content h)
-= (input: _)
-  (poffset: _)
-  (#offset: _)
-  (#pm: _)
-  (#v: _)
-{
-  let n = SZ.uint64_to_sizet (get_header_argument_as_uint64 h);
-  validate_leaf_content_seq' h prf n input poffset;
-}
-
-inline_for_extraction
-noextract [@@noextract_to "krml"]
 let validate_leaf_content_empty
-  (sq: squash (SZ.fits_u64))
   (h: header)
   (prf: squash (impl_leaf_content_seq_cond h == false))
 : Tot (validator (parse_leaf_content h))
@@ -689,43 +733,40 @@ let validate_leaf_content_empty
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let validate_leaf_content
-  (sq: squash (SZ.fits_u64))
   (h: header)
 : Tot (validator (parse_leaf_content h))
 = ifthenelse_validator
     (parse_leaf_content h)
     (impl_leaf_content_seq_cond h)
-    (validate_leaf_content_seq sq h)
-    (validate_leaf_content_empty sq h)
+    (validate_leaf_content_seq h)
+    (validate_leaf_content_empty h)
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let validate_leaf
-  (sq: squash (SZ.fits_u64))
+  (_: unit)
 : Tot (validator parse_leaf)
 = validate_dtuple2
     (validate_header ())
     (read_header ())
-    (validate_leaf_content sq)
+    (validate_leaf_content)
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let jump_leaf_content_seq
-  (sq: squash (SZ.fits_u64))
   (h: header)
   (prf: squash (impl_leaf_content_seq_cond h == true))
 : Tot (jumper (parse_leaf_content h))
 = jump_ext
-    (jump_constant_size
+    (jump_constant_size_u64
       (parse_filter (LowParse.Spec.SeqBytes.parse_lseq_bytes (U64.v (get_header_argument_as_uint64 h))) (lseq_utf8_correct (get_header_major_type h) _) `parse_synth` LeafContentSeq ())
-      (SZ.uint64_to_sizet (get_header_argument_as_uint64 h))
+      (get_header_argument_as_uint64 h)
     )
     (parse_leaf_content h)
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let jump_leaf_content_empty
-  (sq: squash (SZ.fits_u64))
   (h: header)
   (prf: squash (impl_leaf_content_seq_cond h == false))
 : Tot (jumper (parse_leaf_content h))
@@ -739,26 +780,26 @@ let jump_leaf_content_empty
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let jump_leaf_content
-  (sq: squash (SZ.fits_u64))
   (h: header)
 : Tot (jumper (parse_leaf_content h))
 = ifthenelse_jumper
     (parse_leaf_content h)
     (impl_leaf_content_seq_cond h)
-    (jump_leaf_content_seq sq h)
-    (jump_leaf_content_empty sq h)
+    (jump_leaf_content_seq h)
+    (jump_leaf_content_empty h)
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let jump_leaf
-  (sq: squash (SZ.fits_u64))
+  (_: unit)
 : Tot (jumper parse_leaf)
 = jump_dtuple2
     (jump_header ())
     (read_header ())
-    (jump_leaf_content sq)
+    (jump_leaf_content)
 
-fn validate_recursive_step_count_leaf (_: squash SZ.fits_u64) :
+
+fn validate_recursive_step_count_leaf (_: unit) :
   validate_recursive_step_count #parse_raw_data_item_param serialize_raw_data_item_param
 =
     (#va: Ghost.erased leaf)
@@ -783,19 +824,27 @@ fn validate_recursive_step_count_leaf (_: squash SZ.fits_u64) :
   let typ = get_header_major_type h;
   if (typ = cbor_major_type_array) {
     let arg64 = get_header_argument_as_uint64 h;
-    prem := SZ.uint64_to_sizet arg64;
-    false
+    if SZCmp.u64_lte_sizet arg64 bound {
+      prem := SZ.uint64_to_sizet arg64;
+      false
+    }
+    else {
+      true
+    }
   }
   else if (typ = cbor_major_type_map) {
     let arg64 = get_header_argument_as_uint64 h;
-    let arg = SZ.uint64_to_sizet arg64;
-    if SZ.gt arg bound {
+    if SZCmp.u64_lte_sizet arg64 bound {
+      let arg = SZ.uint64_to_sizet arg64;
+      if SZ.lt (SZ.sub bound arg) arg {
+        true
+      } else {
+        prem := (SZ.add arg arg);
+        false
+      }
+    }
+    else {
       true
-    } else if SZ.lt (SZ.sub bound arg) arg {
-      true
-    } else {
-      prem := (SZ.add arg arg);
-      false
     }
   }
   else if (typ = cbor_major_type_tagged) {
@@ -813,7 +862,6 @@ let impl_remaining_data_items_header
   (h: header)
 : Pure SZ.t
   (requires
-    SZ.fits_u64 /\
     remaining_data_items_header h <= SZ.v bound
   )
   (ensures fun res ->
@@ -824,11 +872,14 @@ let impl_remaining_data_items_header
   if (typ = cbor_major_type_array)
   then
     let arg64 = get_header_argument_as_uint64 h in
+    SZ.fits_lte (U64.v arg64) (SZ.v bound);
     SZ.uint64_to_sizet arg64
   else if (typ = cbor_major_type_map)
   then
     let arg64 = get_header_argument_as_uint64 h in
+    SZ.fits_lte (U64.v arg64) (SZ.v bound);
     let arg = SZ.uint64_to_sizet arg64 in
+    SZ.fits_lte (U64.v arg64 + U64.v arg64) (SZ.v bound);
     SZ.add arg arg
   else if (typ = cbor_major_type_tagged)
   then
@@ -836,9 +887,9 @@ let impl_remaining_data_items_header
   else
     0sz
 
-#push-options "--z3rlimit 20"
+#push-options "--z3rlimit 64"
 
-fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
+fn jump_recursive_step_count_leaf (_: unit) :
   jump_recursive_step_count #parse_raw_data_item_param serialize_raw_data_item_param
 =
     (#va: Ghost.erased leaf)
@@ -865,13 +916,13 @@ fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-let validate_raw_data_item' (_: squash SZ.fits_u64) : validator #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =
+let validate_raw_data_item' (_: unit) : validator #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =
   validate_recursive
     serialize_raw_data_item_param
     (validate_leaf ())
     (validate_recursive_step_count_leaf ())
 
-fn validate_raw_data_item (_: squash SZ.fits_u64) : validator #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =
+fn validate_raw_data_item (_: unit) : validator #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =
   (input: _)
   (poffset: _)
   (#offset: _)
@@ -884,13 +935,13 @@ fn validate_raw_data_item (_: squash SZ.fits_u64) : validator #raw_data_item #pa
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-let jump_raw_data_item' (_: squash SZ.fits_u64) : jumper #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =
+let jump_raw_data_item' (_: unit) : jumper #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =
   jump_recursive
     serialize_raw_data_item_param
     (jump_leaf ())
     (jump_recursive_step_count_leaf ())
 
-fn jump_raw_data_item (_: squash SZ.fits_u64) : jumper #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =
+fn jump_raw_data_item (_: unit) : jumper #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =
   (input: _)
   (offset: _)
   (#pm: _)
@@ -940,7 +991,7 @@ fn get_header_and_contents
   outc
 }
 
-#push-options "--z3rlimit 20"
+#push-options "--z3rlimit 64"
 
 ghost
 fn get_string_payload
@@ -1107,7 +1158,7 @@ fn get_array_payload
   get_array_payload' input v
 }
 
-#push-options "--z3rlimit 20"
+#push-options "--z3rlimit 64"
 ghost
 fn get_map_payload'
   (input: S.slice byte)
@@ -1371,7 +1422,6 @@ ensures exists* v' .
 
 inline_for_extraction
 fn impl_holds_on_raw_data_item
-  (f64: squash SZ.fits_u64)
   (p: Ghost.erased (raw_data_item -> bool))
   (impl_p: LowParse.Pulse.Recursive.impl_pred_t serialize_raw_data_item_param p)
   (input: slice byte)
@@ -1381,5 +1431,5 @@ fn impl_holds_on_raw_data_item
   returns res: bool
   ensures pts_to_serialized serialize_raw_data_item input #pm v ** pure (res == holds_on_raw_data_item p v)
 {
-  LowParse.Pulse.Recursive.impl_pred_recursive serialize_raw_data_item_param (jump_leaf ()) (jump_recursive_step_count_leaf f64) (holds_on_raw_data_item_pred p) impl_p input
+  LowParse.Pulse.Recursive.impl_pred_recursive serialize_raw_data_item_param (jump_leaf ()) (jump_recursive_step_count_leaf ()) (holds_on_raw_data_item_pred p) impl_p input
 }

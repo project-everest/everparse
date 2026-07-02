@@ -6,7 +6,7 @@ EVERPARSE_SRC_PATH = $(realpath ../..)
 EVERPARSE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)
 OUTPUT_DIRECTORY := _output
 CACHE_DIRECTORY := $(OUTPUT_DIRECTORY)
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/tool $(EVERPARSE_PATH)/lib/evercddl/lib $(EVERPARSE_PATH)/lib/evercddl/plugin $(EVERPARSE_SRC_PATH)/cbor/pulse $(EVERPARSE_SRC_PATH)/cddl/pulse $(OUTPUT_DIRECTORY)
+INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/tool $(EVERPARSE_SRC_PATH)/cbor/pulse $(EVERPARSE_SRC_PATH)/cddl/pulse $(OUTPUT_DIRECTORY)
 OUTPUT:=$(OUTPUT_DIRECTORY)/COSE.Format.fst
 
 ifeq (1,$(ADMIT))
@@ -20,7 +20,6 @@ $(OUTPUT): ../cose-sign.cddl $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl
 	cp extract0.Makefile $(OUTPUT_DIRECTORY)/Makefile
 
 ALREADY_CACHED := *,-COSE,-Abort,-EverCrypt
-FSTAR_OPTIONS += --load_cmxs evercddl_lib --load_cmxs evercddl_plugin
 FSTAR_OPTIONS += --warn_error -342 # noextract
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice,-CDDL.Pulse.Bundle,-CDDL.Pulse.AST.Bundle,-CDDL.Tool'
@@ -47,8 +46,8 @@ extract-krml: $(ALL_KRML_FILES)
 .PHONY: extract
 extract: extract-krml
 	$(KRML) -faggressive-inlining -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*[rename=fstar]' \
-		-bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]' \
-		-add-include '"CBORDetAbstract.h"' \
+		-bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C+CBOR.Pulse.API.Det.Dummy=CBOR.\*[rename=CBORDetAPI]' \
+		-add-include '"CBORDetType.h"' -no-prefix CBOR.Pulse.API.Det.Dummy \
 		-bundle 'COSE.EverCrypt=Abort,EverCrypt.Ed25519' \
 		-bundle 'COSE.Format=*' \
 		-no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -no-prefix Abort \

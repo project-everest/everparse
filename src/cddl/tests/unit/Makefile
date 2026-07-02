@@ -43,10 +43,9 @@ $(ODIR)/%.o: $(ODIR)/%.c
 EVERPARSE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)
 OUTPUT_DIRECTORY := _output
 SRC_PATHS += $(OUTPUT_DIRECTORY)
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/tool $(EVERPARSE_PATH)/lib/evercddl/lib $(EVERPARSE_PATH)/lib/evercddl/plugin $(EVERPARSE_SRC_PATH)/cbor/pulse $(EVERPARSE_SRC_PATH)/cddl/pulse $(OUTPUT_DIRECTORY)
+INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/tool $(EVERPARSE_SRC_PATH)/cbor/pulse $(EVERPARSE_SRC_PATH)/cddl/pulse $(OUTPUT_DIRECTORY)
 
 ALREADY_CACHED := ,*
-FSTAR_OPTIONS += --load_cmxs evercddl_lib --load_cmxs evercddl_plugin
 FSTAR_OPTIONS += --warn_error -342
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 FSTAR_DEP_OPTIONS := --extract '*,-FStar,-Pulse,-CBOR,-CDDL'
@@ -55,6 +54,7 @@ FSTAR_FILES := $(ALL_FSTS)
 CBOR_KRML_MODULES += CBOR.Spec.Constants
 CBOR_KRML_MODULES += CBOR.Pulse.API.Det.Type
 CBOR_KRML_MODULES += CBOR.Pulse.API.Det.C
+CBOR_KRML_MODULES += CBOR.Pulse.API.Det.Dummy
 
 CBOR_KRML_MODULES += CDDL.Pulse.Misc
 CBOR_KRML_MODULES += CDDL.Spec.Misc
@@ -87,9 +87,9 @@ CBOR_KRML_FILES = $(patsubst %,%.krml,$(subst .,_,$(CBOR_KRML_MODULES)))
 
 $(OUTPUT_DIRECTORY)/%.c: $(OUTPUT_DIRECTORY)/%.krml $(addprefix $(OUTPUT_DIRECTORY)/,$(CBOR_KRML_FILES))
 	$(KRML) -fnoshort-enums \
-	 -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]' \
+	 -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C+FStar.Pervasives.Native=CBOR.\*[rename=CBORDetAPI]' \
 	 -bundle '$*=*' \
-	 -add-include '"CBORDetAbstract.h"' \
+	 -add-include '"CBORDetType.h"' -no-prefix CBOR.Pulse.API.Det.Dummy \
 	 -no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type \
 	 -no-prefix CBOR.Spec.Constants -skip-compilation $^ \
 	 -tmpdir $(OUTPUT_DIRECTORY)

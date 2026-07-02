@@ -8,5 +8,6 @@ val write_makefile
   (skip_o_rules: bool)
   (clang_format: bool)
   (copy_clang_format_opt: bool)
+  (save_hashes: bool)
   (files: list string)
 : FStar.All.ML unit

@@ -293,6 +293,10 @@ let fold_of_intro_union
   : Lemma
     (f op x == List.Tot.fold_left op x l)
   =
+    let filt_f : fold_of dom1' accu = fold_of_intro_filter dom1' dom1 l1 (Util.notp dom2) accu f1 in
+    let lf : enum_of dom1' = List.Tot.filter (Util.notp dom2) l1 in
+    fold_of_elim dom1' filt_f op lf x;
+    fold_of_elim dom2 f2 op l2 (filt_f op x);
     List.Tot.fold_left_append op (List.Tot.filter (Util.notp dom2) l1) l2
   in
   Classical.forall_intro_2 prf;

@@ -1036,6 +1036,25 @@ fn ref_pts_to_lens
   x
 }
 
+noextract
+let l2r_leaf_writer_postcond
+  (#t: Type)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (x: t)
+  (offset: SZ.t)
+  (v: Ghost.erased bytes)
+  (res: SZ.t)
+  (v': bytes)
+: Tot prop
+= let bs = bare_serialize s x in
+  SZ.v res == SZ.v offset + Seq.length bs /\
+  SZ.v res <= Seq.length v /\
+  Seq.length v' == Seq.length v /\
+  Seq.slice v' 0 (SZ.v offset) == Seq.slice v 0 (SZ.v offset) /\
+  Seq.slice v' (SZ.v offset) (SZ.v res) == bs
+
 inline_for_extraction
 let l2r_leaf_writer
   (#t: Type)
@@ -1052,12 +1071,7 @@ let l2r_leaf_writer
     ))
     (fun res -> exists* v' .
       pts_to out v' ** pure (
-      let bs = bare_serialize s x in
-      SZ.v res == SZ.v offset + Seq.length bs /\
-      SZ.v res <= Seq.length v /\
-      Seq.length v' == Seq.length v /\
-      Seq.slice v' 0 (SZ.v offset) == Seq.slice v 0 (SZ.v offset) /\
-      Seq.slice v' (SZ.v offset) (SZ.v res) == bs
+      l2r_leaf_writer_postcond s x offset v res v'
     ))
 
 inline_for_extraction
@@ -1070,6 +1084,27 @@ fn l2r_leaf_writer_ext
   (#k2: Ghost.erased parser_kind)
   (#p2: parser k2 t)
   (s2: serializer p2 { forall x . parse p1 x == parse p2 x })
+: l2r_leaf_writer u#0 #t #k2 #p2 s2
+= (x: t)
+  (out: slice byte)
+  (offset: SZ.t)
+  (#v: Ghost.erased bytes)
+{
+  serializer_unique_strong s1 s2 x;
+  w1 x out offset
+}
+
+inline_for_extraction
+fn l2r_leaf_writer_ext_squash
+  (#t: Type0)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t)
+  (#s1: serializer p1)
+  (w1: l2r_leaf_writer s1)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 t)
+  (s2: serializer p2)
+  (sq: squash (forall x . parse p1 x == parse p2 x))
 : l2r_leaf_writer u#0 #t #k2 #p2 s2
 = (x: t)
   (out: slice byte)

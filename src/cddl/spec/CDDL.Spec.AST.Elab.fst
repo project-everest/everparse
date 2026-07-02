@@ -237,6 +237,8 @@ let rec mk_elab_map_group_bounded
     mk_elab_map_group_bounded fuel' env (GElem cut t value)
   | _ -> ()
 
+#push-options "--z3rlimit 32"
+
 let rec mk_elab_map_group_correct
   (fuel: nat)
   (env: ast_env)
@@ -277,6 +279,7 @@ let rec mk_elab_map_group_correct
     | Some NGroup -> (env.e_env n)
     | Some NType -> GElem false (TElem EAny) (env.e_env n)
     in
+    assert (group_bounded env.e_sem_env.se_bound g');
     rewrite_group_correct env.e_sem_env fuel true (GZeroOrMore g');
     mk_elab_map_group_correct fuel' env (fst (rewrite_group fuel true (GZeroOrMore g')))
   | GElem cut (TDef nkey) value ->
@@ -286,6 +289,8 @@ let rec mk_elab_map_group_correct
     assert (map_group_sem env.e_sem_env (GElem cut t value) == map_group_sem env.e_sem_env (GElem cut (TDef nkey) value));
     mk_elab_map_group_correct fuel' env (GElem cut t value)
   | _ -> ()
+
+#pop-options
 
 let typ_inter_underapprox_postcond
   (env: ast_env)
@@ -630,7 +635,7 @@ let annot_tables_correct_aux_match
       bounded_elab_map_group env.e_sem_env.se_bound g
     ) = () in
     let sq2 : squash (annot_tables fuel env cut g == RSuccess (cut', g)) =
-      assert (annot_tables fuel env cut (MGMatch c name key value) == RSuccess (cut', MGMatch c name key value)) by (FStar.Tactics.trefl ())
+      assert (annot_tables fuel env cut (MGMatch c name key value) == RSuccess (cut', MGMatch c name key value))
     in
     begin match Cbor.cbor_map_get m (eval_literal key) with
     | None ->

@@ -190,7 +190,7 @@ let cbor_det_map_entry_match = CBOR.Pulse.API.Det.Common.cbor_det_map_entry_matc
 let cbor_det_mk_map_entry = CBOR.Pulse.API.Det.Common.cbor_det_mk_map_entry
 
 let cbor_det_mk_map_from_array : mk_map_from_array_t cbor_det_match cbor_det_map_entry_match =
-  mk_map_from_array (CBOR.Pulse.API.Base.mk_map_from_ref (CBOR.Pulse.API.Det.Type.dummy_cbor_det_t ()) (CBOR.Pulse.API.Det.Common.cbor_det_mk_map_gen ()))
+  mk_map_from_array (CBOR.Pulse.API.Base.mk_map_from_ref (CBOR.Pulse.API.Det.Dummy.dummy_cbor_det_t ()) (CBOR.Pulse.API.Det.Common.cbor_det_mk_map_gen ()))
 
 ghost fn map_gen_post_to_array
   (#t1 #t2: Type0)
@@ -255,7 +255,6 @@ fn cbor_det_mk_map_from_array_safe () :
   (#vv: _)
 {
   with vdest0 . assert (pts_to dest vdest0);
-  let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;  
   let s = S.from_array a (SZ.uint64_to_sizet len);
   S.pts_to_len s;
   PM.seq_list_match_length (cbor_det_map_entry_match pv) va vv;

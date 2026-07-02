@@ -99,7 +99,7 @@ let list_append_nil_r_pat
 
 (* Parse list lemmas *)
 
-#push-options "--z3rlimit_factor 32 --fuel 2 --ifuel 1"
+#push-options "--z3rlimit_factor 32 --fuel 2 --ifuel 1 --split_queries always"
 
 let rec cbor_parse_list_split
   (p: cbor_parser)
@@ -640,7 +640,6 @@ fn impl_serialize_array_group_item
     (#size_before: _)
     (l: _)
 {
-  assume (pure (SZ.fits_u64));
   let count = !out_count;
   if (U64.lt count pow2_64_m1) {
     let size = !out_size;

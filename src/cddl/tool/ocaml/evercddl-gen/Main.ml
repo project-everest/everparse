@@ -201,6 +201,7 @@ let include_options_for_rust =
       everparse_src_cbor_spec_raw;
       Filename.concat everparse_src_cbor_spec_raw "everparse";
       everparse_src_cbor_pulse_raw;
+      Filename.concat everparse_src_cbor_pulse_raw "slice-rust";
       Filename.concat everparse_src_cbor_pulse_raw "everparse";
       everparse_src_lowparse;
       Filename.concat everparse_src_lowparse "pulse";
@@ -216,8 +217,6 @@ let fstar_options =
       "--warn_error"; "@241";
       "--cmi";
       "--ext"; "context_pruning";
-      "--load_cmxs"; "evercddl_lib";
-      "--load_cmxs"; "evercddl_plugin";
     ] @
       include_options
 
@@ -346,7 +345,10 @@ let _ =
     else
       [
           "-warn-error"; "@1..27";
-          (if !skip_compilation then "-skip-compilation" else "-skip-linking");
+          (* Always emit only: the CBOR Det types are now concrete in
+             CBORDetType.h, so krml re-emits any shared monomorphic instance
+             into the generated headers; we drive the C compiler ourselves below. *)
+          "-skip-compilation";
           "-tmpdir"; !odir;
           "-header"; Filename.concat everparse_src_cddl_tool "noheader.txt";
         "-fnoshort-enums";
@@ -354,9 +356,10 @@ let _ =
         "-no-prefix"; "CBOR.Pulse.API.Det.C";
         "-no-prefix"; "CBOR.Pulse.API.Det.Type";
         "-no-prefix"; "CBOR.Spec.Constants";
+        "-no-prefix"; "CBOR.Pulse.API.Det.Dummy";
         "-bundle"; "CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\\*[rename=CBORDetAPI]";
 	"-bundle"; (!mname ^ "=\\*");
-	"-add-include"; "\"CBORDetAbstract.h\"";
+	"-add-include"; "\"CBORDetType.h\"";
         "-I"; Filename.concat (Filename.concat everparse_src_cbor_pulse "det") "c";
         "-ccopt"; "-Wno-unused-variable";
         krml_file;
@@ -367,6 +370,45 @@ let _ =
     run_cmd
       krml_exe
       krml_options
+  in
+  (* In the C case, krml only emitted the sources (-skip-compilation). Drive the
+     C compiler ourselves unless compilation was explicitly skipped. The byte
+     slice that cbor_raw embeds is homed by the CBOR library as the nominal
+     `byte_slice` struct in the included CBORDetType.h, so the generated consumer
+     headers no longer collide with it. *)
+  let res =
+    if res = 0 && not (is_rust ())
+    then begin
+      if !skip_compilation
+      then 0
+      else begin
+        let cc = try Sys.getenv "CC" with Not_found -> "cc" in
+        let det_c = Filename.concat (Filename.concat everparse_src_cbor_pulse "det") "c" in
+        let cc_args = [
+          "-I"; Filename.concat (Filename.concat krml_home "krmllib") "dist/minimal";
+          "-I"; Filename.concat krml_home "krmllib";
+          "-I"; det_c;
+          "-I"; Filename.concat krml_home "include";
+          "-I"; !odir;
+          "-Wall"; "-Werror"; "-Wno-unknown-warning-option"; "-g"; "-fwrapv";
+          "-D_BSD_SOURCE"; "-D_DEFAULT_SOURCE"; "-Wno-parentheses"; "-std=c11";
+          "-Wno-unused-variable";
+        ] in
+        let cfiles =
+          Array.to_list (Sys.readdir !odir)
+          |> List.filter (fun f -> Filename.check_suffix f ".c")
+          |> List.sort compare
+        in
+        List.fold_left (fun acc cf ->
+          if acc <> 0 then acc
+          else
+            let c = Filename.concat !odir cf in
+            let o = Filename.concat !odir (Filename.remove_extension cf ^ ".o") in
+            run_cmd cc (cc_args @ ["-c"; c; "-o"; o])
+        ) 0 cfiles
+      end
+    end
+    else res
   in
   if res = 0 then print_endline "EverCDDL succeeded!";
   exit res

@@ -5,8 +5,7 @@
 
 #include "krmllib.h"
 
-#include "CBORDetAPI.h"
-#include "CBORDetAbstract.h"
+#include "CBORDetType.h"
 
 bool COSE_Format_validate_bool(cbor_det_t c);
 

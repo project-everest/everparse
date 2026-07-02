@@ -509,6 +509,12 @@ let if_combinator
   (sv_false: (cond_false cond -> Tot t)) ->
   Tot (y: t { eq y (if cond then sv_true () else sv_false ()) } )
 
+let eq_trivial
+  (#t: Type)
+  (x y: t)
+: GTot Type0
+= True
+
 inline_for_extraction
 let default_if
   (t: Type)

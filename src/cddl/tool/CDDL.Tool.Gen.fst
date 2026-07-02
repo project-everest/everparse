@@ -826,8 +826,9 @@ let empty_ancillaries : ancillaries_t empty_sem_env = {
 let produce_defs0 nbe accu l =
   produce_defs' nbe 0 accu empty_wf_ast_env empty_ancillaries l  
 
-let prelude_fst mname lang filenames = "
+let prelude_fst mname lang filenames source_str = "
 module "^mname^"
+(* Source CDDL file(s): "^filenames^" *)
 open CDDL.Pulse.AST.Bundle
 open CDDL.Tool.Gen
 module Det = CDDL.Pulse.AST.Det."^lang^"
@@ -838,7 +839,7 @@ module T = CDDL.Pulse.AST.Tactics
 module SZ = FStar.SizeT
 module C = C // for _zero_for_deref
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; "^opaque_to_smt^"] noextract
-let option_source = CDDL.Tool.Plugin.parse ["^filenames^"]
+let option_source : option (list (string & decl)) = Some "^source_str^"
 let option_source_some () : squash (Some? option_source) = _ by (FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ())
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; "^opaque_to_smt^"] noextract
 let source = T.get_option_some option_source (option_source_some ())
@@ -861,7 +862,6 @@ let aenv0_0 : ancillary_bundle_env Det.cbor_det_match env0.be_ast.e_sem_env =
 [@@noextract_to "^krml^"; sem_attr; bundle_attr; "^opaque_to_smt^"] noextract
 let aaenv0_0 : ancillary_array_bundle_env Det.cbor_det_array_iterator_match env0.be_ast.e_sem_env =
   fun _ _ -> None
-let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64)
 #set-options \"--warn_error -271-276\" // SMT patterns
 "
 
@@ -870,10 +870,11 @@ let produce_defs_fst
   mname lang filenames (l: list (string & decl))
 : FStar.All.ML // Dv
   string
-= match CDDL.Spec.AST.Driver.topological_sort l with
+= let source_str = CDDL.Spec.AST.Print.program_to_string l in
+  match CDDL.Spec.AST.Driver.topological_sort l with
   | RFailure fail -> "Error: topological sort failed: "^ fail
   | RSuccess l ->
-    let accu = prelude_fst mname lang filenames in
+    let accu = prelude_fst mname lang filenames source_str in
     match produce_defs0 nbe accu l with
     | RSuccess s -> s
     | RFailure msg -> "Error: " ^ msg

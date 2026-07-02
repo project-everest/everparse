@@ -604,7 +604,7 @@ let add_sub_cancel
   ((a + c) + (b - c) == a + b)
 = ()
 
-#push-options "--z3rlimit 32 --split_queries always --fuel 8 --ifuel 6"
+#push-options "--z3rlimit 32 --split_queries always --fuel 2 --ifuel 1"
 
 #restart-solver
 ghost
@@ -681,7 +681,7 @@ ensures
 
 #pop-options
 
-#push-options "--z3rlimit 1024 --split_queries always --fuel 8 --ifuel 6 --z3seed 42"
+#push-options "--z3rlimit 768 --split_queries always --fuel 2 --ifuel 1"
 
 #restart-solver
 inline_for_extraction
