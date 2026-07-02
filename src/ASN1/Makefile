@@ -4,9 +4,12 @@ EVERPARSE_HOME ?= ../..
 
 LOWPARSE_HOME=$(EVERPARSE_HOME)/src/lowparse
 
-INCLUDE_PATH = $(LOWPARSE_HOME) $(KRML_HOME)/krmllib $(KRML_HOME)/krmllib/obj
+EVERPARSE_SRC_PATH := $(EVERPARSE_HOME)/src
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
-FSTAR_OPTIONS = --cache_checked_modules --ext optimize_let_vc \
+INCLUDE_PATH = $(LOWPARSE_HOME)
+
+FSTAR_OPTIONS += --cache_checked_modules --ext optimize_let_vc \
 		--already_cached *,-ASN1Test,-ASN1 \
 		--cmi \
 	        --odir ocaml/extracted \

@@ -2,13 +2,12 @@ EVERPARSE_SRC_PATH ?= $(realpath ../../src)
 
 FSTAR_EXE ?= fstar.exe
 LOWPARSE_HOME ?= ../../src/lowparse
-KRML_HOME ?= ../../../karamel
 
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/fstar.Makefile
 
 export FSTAR_EXE
 export LOWPARSE_HOME
-export KRML_HOME
 
 ifdef NO_QD_VERIFY
 LAX_EXT=.lax
@@ -24,7 +23,7 @@ CHECKED_EXT=.checked$(LAX_EXT)
 
 FSTAR_OPTIONS += --odir krml --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_modules \
 		--already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse \
-		--include $(LOWPARSE_HOME) --include $(KRML_HOME)/krmllib --include $(KRML_HOME)/krmllib/obj --include .. --cmi \
+		--include $(LOWPARSE_HOME) --include .. --cmi \
 		--ext 'optimize_let_vc=false'
 
 FSTAR = $(FSTAR_EXE) $(FSTAR_OPTIONS)
@@ -32,7 +31,7 @@ FSTAR = $(FSTAR_EXE) $(FSTAR_OPTIONS)
 HEADERS = $(addprefix -add-include ,'"krml/internal/compat.h"')
 
 # -Wno-tautological-overlap-compare because of T32
-KRML = $(KRML_HOME)/krml \
+KRML = $(KRML_EXE) \
 	 -fstar $(FSTAR_EXE) \
 	 -ccopt "-O3" -ccopt "-ffast-math" \
 	 -ccopt "-Wno-tautological-overlap-compare" \

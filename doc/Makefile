@@ -7,8 +7,6 @@ export EVERPARSE_HOME?=$(realpath ..)
 
 FSTAR_EXE ?= fstar.exe
 
-export KRML_HOME?=$(realpath $(EVERPARSE_HOME)/../karamel)
-
 3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
 3D_EXCLUDE=ConstColor.3d
 3D_CONFIG=Arch.3d.config
