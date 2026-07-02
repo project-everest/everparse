@@ -18,6 +18,7 @@ let krml =
 let krml_locate k tmpdir =
   let tmpfile = Filename.temp_file ~temp_dir:tmpdir ("krml_locate_" ^ k) ".tmp" in
   let cmd = Filename.quote_command krml ~stdout:tmpfile ["-locate-" ^ k] in
+  if Sys.command cmd <> 0 then failwith ("Unable to run krml -locate-" ^ k);
   let ch = open_in tmpfile in
   let res = input_line ch in
   close_in ch;
