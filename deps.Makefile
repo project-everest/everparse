@@ -24,7 +24,11 @@ endif
 
 NEED_KRML :=
 ifneq (1,$(EVERPARSE_USE_KRML_EXE))
+ifeq ($(OS),Windows_NT)
+export KRML_EXE := $(EVERPARSE_OPT_PATH)/karamel/out/bin/krml.exe
+else
 export KRML_EXE := $(EVERPARSE_OPT_PATH)/karamel/out/bin/krml
+endif
 NEED_KRML := $(EVERPARSE_OPT_PATH)/karamel.done
 else
 export EVERPARSE_USE_FSTAR_EXE:=1
@@ -148,6 +152,9 @@ $(EVERPARSE_OPT_PATH)/z3: $(EVERPARSE_OPT_PATH)/FStar/Makefile
 $(EVERPARSE_OPT_PATH)/karamel.done: $(EVERPARSE_OPT_PATH)/karamel/Makefile $(NEED_FSTAR) $(NEED_OPAM)
 	rm -f $@
 	+$(with_opam) env OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $(EVERPARSE_OPT_PATH)/karamel
+ifeq ($(OS),Windows_NT)
+	mv "$(EVERPARSE_OPT_PATH)/karamel/out/bin/krml" "$(EVERPARSE_OPT_PATH)/karamel/out/bin/krml.exe"
+endif
 	touch $@
 
 $(EVERPARSE_OPT_PATH)/pulse.done: $(EVERPARSE_OPT_PATH)/pulse/Makefile $(NEED_FSTAR) $(NEED_OPAM)
