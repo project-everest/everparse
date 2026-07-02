@@ -136,6 +136,7 @@ let krml_locate k tmpdir =
   let ch = open_in tmpfile in
   let res = input_line ch in
   close_in ch;
+  Sys.remove tmpfile;
   res
 
 let krmllib = krml_locate "krmllib"
