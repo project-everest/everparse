@@ -175,7 +175,9 @@ make_everparse() {
     mkdir -p everparse/lib everparse/include
     $cp -r "$(fixpath "$("$KRML_EXE" -locate-krmllib)")" everparse/lib/krml
     $cp -r "$(fixpath "$("$KRML_EXE" -locate-include)")" everparse/include/krml
-#    $cp -r $KRML_HOME/misc everparse/ # TODO: do not rely on the Makefile produced by Karamel
+    # TODO implement krml -locate-misc
+    mkdir -p everparse/share/krml
+    $cp -r "$EVERPARSE_HOME/opt/karamel/out/share/krml/misc" everparse/share/krml/misc
 
     # Copy EverParse
     $cp $EVERPARSE_HOME/bin/qd.exe everparse/bin/qd.exe
