@@ -149,9 +149,14 @@ $(EVERPARSE_OPT_PATH)/z3: $(EVERPARSE_OPT_PATH)/FStar/Makefile
 	mv $@.tmp $@
 	touch $@
 
+# NOTE: we unset KRML_EXE here so that Karamel's own build (in particular
+# krmllib) uses the freshly-built in-tree `krml` (../krml) instead of the
+# not-yet-installed $(EVERPARSE_OPT_PATH)/karamel/out/bin/krml that we export
+# below for EverParse. Otherwise krmllib's `KRML_EXE ?= ../krml` picks up our
+# exported value and fails with "No rule to make target .../out/bin/krml".
 $(EVERPARSE_OPT_PATH)/karamel.done: $(EVERPARSE_OPT_PATH)/karamel/Makefile $(NEED_FSTAR) $(NEED_OPAM)
 	rm -f $@
-	+$(with_opam) env OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $(EVERPARSE_OPT_PATH)/karamel
+	+$(with_opam) env -u KRML_EXE OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $(EVERPARSE_OPT_PATH)/karamel
 ifeq ($(OS),Windows_NT)
 	mv "$(EVERPARSE_OPT_PATH)/karamel/out/bin/krml" "$(EVERPARSE_OPT_PATH)/karamel/out/bin/krml.exe"
 endif
