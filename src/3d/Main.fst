@@ -556,7 +556,7 @@ let build_test_exe
   end else
   if not (Options.get_skip_c_makefiles ())
   then begin
-    OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"]
+    OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"; "KRML_LIBDIR=" ^ Batch.krmllib out_dir; "KRML_INCLUDEDIR=" ^ Batch.krmlinclude out_dir]
   end
 
 let build_and_run_test_exe
