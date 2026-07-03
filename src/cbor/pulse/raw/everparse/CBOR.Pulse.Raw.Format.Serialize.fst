@@ -1,8 +1,8 @@
 module CBOR.Pulse.Raw.Format.Serialize
-#lang-pulse
-open Pulse.Lib.Pervasives
 friend CBOR.Spec.Raw.Format
 friend CBOR.Pulse.Raw.Format.Match
+#lang-pulse
+open Pulse.Lib.Pervasives
 open CBOR.Spec.Raw.EverParse
 open LowParse.Spec.Base
 open LowParse.Pulse.Base
@@ -1362,6 +1362,10 @@ ensures
 {
   unfold (cbor_match_serialized_map xs p xh0);
   unfold (cbor_match_serialized_payload_map (to_slice xs.cbor_serialized_payload) (p `perm_mul` xs.cbor_serialized_perm) (Map?.v xh0));
+  let _ = assert_norm (
+    parse_raw_data_item_kind.parser_kind_subkind == Some ParserStrong /\
+    (LowParse.Spec.Combinators.and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind).parser_kind_subkind == Some ParserStrong
+  );
   with n' (r': LowParse.Spec.VCList.nlist n' (raw_data_item & raw_data_item)) . assert
     (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n' (LP.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) (to_slice xs.cbor_serialized_payload) #(p `perm_mul` xs.cbor_serialized_perm) r');
   rewrite (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n' (LP.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) (to_slice xs.cbor_serialized_payload) #(p `perm_mul` xs.cbor_serialized_perm) r')

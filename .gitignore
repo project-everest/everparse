@@ -30,4 +30,5 @@ nuget_package
 .*.touch
 .opam
 .opam.tmp
+krmllib.done
 opam-env.Makefile

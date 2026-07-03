@@ -1354,7 +1354,7 @@ let rec as_validator
       A.validate_with_error_handler typename fn (A.validate_eta (dtyp_as_validator td))
 
     | T_pair fn k1_const t1 k2_const t2 ->
-      assert_norm (as_type (T_pair fn k1_const t1 k2_const t2) == as_type t1 * as_type t2);
+      assert_norm (as_type (T_pair fn k1_const t1 k2_const t2) == as_type t1 & as_type t2);
       assert_norm (as_parser (T_pair fn k1_const t1 k2_const t2) == P.parse_pair (as_parser t1) (as_parser t2));
       A.validate_pair fn
           k1_const

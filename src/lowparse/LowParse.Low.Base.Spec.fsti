@@ -1945,7 +1945,7 @@ val serialized_list_length_constant_size
   (l: list t)
 : Lemma
   (ensures (
-    serialized_list_length s l == L.length l `Prims.op_Multiply` k.parser_kind_low
+    serialized_list_length s l == L.length l `op_Star` k.parser_kind_low
   ))
 
 let list_length_append (#t: Type) (l1 l2: list t) : Lemma (L.length (l1 `L.append` l2) == L.length l1 + L.length l2) = L.append_length l1 l2

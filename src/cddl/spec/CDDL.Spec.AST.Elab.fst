@@ -1069,7 +1069,7 @@ let map_group_filtered_table_except_ext
         (Util.notp (Util.andp (Spec.matches_map_group_entry key value) (Util.notp except1)))
         (Util.notp (Util.andp (Spec.matches_map_group_entry key value) (Util.notp except2)))
 
-#push-options "--z3rlimit 64 --ifuel 6 --fuel 4 --split_queries always"
+#push-options "--z3rlimit 64 --ifuel 6 --fuel 4 --split_queries always --z3refresh"
 
 #restart-solver
 
@@ -1295,7 +1295,7 @@ let rec mk_wf_typ
         let j = eval_int_value ri in
         if j < 0
         then RFailure "mk_wf_typ: uint .size negative"
-        else let i = (let open FStar.Mul in 8 * j) in
+        else let i = (8 * j) in
         if i >= 64
         then begin
           FStar.Math.Lemmas.pow2_le_compat i 64;

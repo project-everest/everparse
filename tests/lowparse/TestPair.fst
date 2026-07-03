@@ -17,7 +17,7 @@ open FStar.HyperStack.ST
 assume val havoc : unit -> Stack unit (fun h -> True) (fun _ _ _ -> True)
 
 let read_components (i:irepr P.pair_parser)
-  : Stack (UInt32.t * UInt32.t)
+  : Stack (UInt32.t & UInt32.t)
     (requires fun h ->
       True)
     (ensures fun h0 x h1 ->

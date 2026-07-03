@@ -15,7 +15,6 @@
 *)
 module Desugar
 open FStar.List.Tot
-open FStar.Mul
 open Ast
 open FStar.All
 module H = Hashtable

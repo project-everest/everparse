@@ -9,7 +9,7 @@ OTHERFLAGS += --warn_error +272
 
 OUTPUT_DIRECTORY := _output
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
-FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice'
+FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Pervasives,+Pulse.Lib.Slice'
 
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/everparse.Makefile

@@ -14,7 +14,7 @@
    limitations under the License.
 *)
 module Getopt
-open FStar.ST
+
 open FStar.All
 open FStar.Char
 
@@ -23,9 +23,9 @@ val nolong : string
 noeq
 type opt_variant 'a =
   | ZeroArgs of (unit -> ML 'a)
-  | OneArg of (string -> ML 'a) * string
+  | OneArg of (string -> ML 'a) & string
 
-type opt' 'a = char * string * opt_variant 'a
+type opt' 'a = char & string & opt_variant 'a
 type opt = opt' unit
 
 type parse_cmdline_res =

@@ -22,7 +22,7 @@ $(OUTPUT): ../cose-sign.cddl $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl
 ALREADY_CACHED := *,-COSE,-Abort,-EverCrypt
 FSTAR_OPTIONS += --warn_error -342 # noextract
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
-FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice,-CDDL.Pulse.Bundle,-CDDL.Pulse.AST.Bundle,-CDDL.Tool'
+FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Pervasives,+Pulse.Lib.Slice,-CDDL.Pulse.Bundle,-CDDL.Pulse.AST.Bundle,-CDDL.Tool'
 FSTAR_FILES := $(OUTPUT) $(wildcard *.fst *.fsti)
 
 clean_rules += clean-output
@@ -46,6 +46,7 @@ extract-krml: $(ALL_KRML_FILES)
 .PHONY: extract
 extract: extract-krml
 	$(KRML) -faggressive-inlining -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*[rename=fstar]' \
+		-skip-makefiles \
 		-bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C+CBOR.Pulse.API.Det.Dummy=CBOR.\*[rename=CBORDetAPI]' \
 		-add-include '"CBORDetType.h"' -no-prefix CBOR.Pulse.API.Det.Dummy \
 		-bundle 'COSE.EverCrypt=Abort,EverCrypt.Ed25519' \
@@ -67,7 +68,7 @@ snapshot: extract
 .PHONY: snapshot
 
 test: extract
-ifeq ($(EVERPARSE_NO_DIFF),) # Set this variable to disable diffs
+ifeq ($(EVERPARSE_CHECK_DIFF),1) # Set this variable to enable diffs
 test: $(addsuffix .diff,$(C_FILES))
 endif
 

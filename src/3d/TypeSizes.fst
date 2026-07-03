@@ -16,7 +16,6 @@
 module TypeSizes
 open FStar.All
 open Ast
-open FStar.Mul
 module H = Hashtable
 module B = Binding
 

@@ -14,7 +14,7 @@ include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
 FSTAR_OPTIONS += --ext optimize_let_vc --include $(EVERPARSE_HOME)/src/lowparse --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=10'
 #--z3cliopt 'smt.arith.nl=false' --smtencoding.elim_box true --smtencoding.l_arith_repr native --smtencoding.nl_arith_repr wrapped
-FSTAR=$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --cmi
+FSTAR=$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS)
 
 ROOT=$(wildcard *.fst) $(wildcard *.fsti)
 ALREADY_CACHED=--already_cached '+Prims +LowStar +FStar +LowParse +C +Spec.Loops'

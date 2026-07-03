@@ -14946,7 +14946,7 @@ pub fn validate_sig_structure(c: crate::cbordetveraux::cbor_raw) -> bool
                                                         if x7 == 114u8
                                                         {
                                                             let x8: u8 = s[i·7];
-                                                            if x8 == 101u8 { true } else { false }
+                                                            x8 == 101u8
                                                         }
                                                         else
                                                         { false }
@@ -15035,10 +15035,7 @@ pub fn validate_sig_structure(c: crate::cbordetveraux::cbor_raw) -> bool
                                                             if x8 == 101u8
                                                             {
                                                                 let x9: u8 = s[i·8];
-                                                                if x9 == 49u8
-                                                                { true }
-                                                                else
-                                                                { false }
+                                                                x9 == 49u8
                                                             }
                                                             else
                                                             { false }
@@ -15341,7 +15338,7 @@ parse_sig_structure
                                                     if x7 == 114u8
                                                     {
                                                         let x8: u8 = s[i·7];
-                                                        if x8 == 101u8 { true } else { false }
+                                                        x8 == 101u8
                                                     }
                                                     else
                                                     { false }
@@ -15429,7 +15426,7 @@ parse_sig_structure
                                                         if x8 == 101u8
                                                         {
                                                             let x9: u8 = s[i·8];
-                                                            if x9 == 49u8 { true } else { false }
+                                                            x9 == 49u8
                                                         }
                                                         else
                                                         { false }
@@ -15523,7 +15520,7 @@ parse_sig_structure
                                             if x8 == 114u8
                                             {
                                                 let x9: u8 = s[i·7];
-                                                if x9 == 101u8 { true } else { false }
+                                                x9 == 101u8
                                             }
                                             else
                                             { false }

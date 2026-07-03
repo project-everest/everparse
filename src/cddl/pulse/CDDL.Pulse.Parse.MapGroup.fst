@@ -70,6 +70,7 @@ let impl_zero_copy_map_group
         )
 
 module Util = CBOR.Spec.Util
+
 #push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 8 --query_stats --split_queries always"
 #restart-solver
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -645,7 +646,7 @@ let mk_map_iterator_eq_postcond
     res.tex == tex /\
     res.t2 == t2 /\
     res.ser2 == ser2 /\
-    res.ps2 == ps2 /\
+    res.ps2 === ps2 /\
     True
 
 let mk_map_iterator_eq
@@ -678,7 +679,10 @@ let mk_map_iterator_eq
     mk_map_iterator_eq_postcond cddl_map_iterator_contents pm sp1 eq1 tex ps2 res
   ))
   [SMTPat (mk_map_iterator cddl_map_iterator_contents pm sp1 eq1 cddl_map_iterator_impl_validate1 cddl_map_iterator_impl_parse1 cddl_map_iterator_impl_validate_ex cddl_map_iterator_impl_validate2 cddl_map_iterator_impl_parse2)]
-= ()
+= assert_norm (
+    let res = mk_map_iterator cddl_map_iterator_contents pm sp1 eq1 cddl_map_iterator_impl_validate1 cddl_map_iterator_impl_parse1 cddl_map_iterator_impl_validate_ex cddl_map_iterator_impl_validate2 cddl_map_iterator_impl_parse2 in
+    mk_map_iterator_eq_postcond cddl_map_iterator_contents pm sp1 eq1 tex ps2 res
+  )
 
 module Map = CDDL.Spec.Map
 
@@ -723,7 +727,7 @@ let rec parse_table_entries_memP_key
   (decreases l)
 = match l with
   | (k', v') :: q ->
-    if t1 k' && not (tex (k', v')) && t2 v' && FStar.StrongExcludedMiddle.strong_excluded_middle (sp1.parser k' == k)
+    if t1 k' && not (tex (k', v')) && t2 v' && FStar.IndefiniteDescription.strong_excluded_middle (sp1.parser k' == k)
     then ()
     else parse_table_entries_memP_key sp1 tex ps2 q k
 
@@ -894,9 +898,38 @@ let cddl_map_iterator_is_empty_t
     (map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch vmatch2)
     (rel_map_iterator vmatch vmatch2 cbor_map_iterator_match impl_elt1 impl_elt2)
 
-#restart-solver
+let map_of_list_cons_not_equal_empty
+  (#key #value: Type0)
+  (key_eq: EqTest.eq_test key)
+  (k: key)
+  (v: value)
+  (m: Map.t key (list value))
+: Lemma
+  (map_of_list_cons key_eq k v m =!= Map.empty key (list value))
+= assert (Some? (Map.get (map_of_list_cons key_eq k v m) k));
+  Map.ext (map_of_list_cons key_eq k v m) (Map.empty key (list value))
 
-let rec rel_map_iterator_cond_is_empty
+let map_of_list_pair_nil_is_empty
+  (#key #value: Type0)
+  (key_eq: EqTest.eq_test key)
+  (l: list (key & value))
+: Lemma
+  (requires Nil? l)
+  (ensures map_of_list_pair key_eq l == Map.empty key (list value))
+= ()
+
+let rec map_of_list_pair_cons_not_empty
+  (#key #value: Type0)
+  (key_eq: EqTest.eq_test key)
+  (l: list (key & value))
+: Lemma
+  (requires Cons? l)
+  (ensures map_of_list_pair key_eq l =!= Map.empty key (list value))
+= let (k, v) :: q = l in
+  map_of_list_pair_cons key_eq k v q;
+  map_of_list_cons_not_equal_empty key_eq k v (map_of_list_pair key_eq q)
+
+let rel_map_iterator_cond_is_empty
   (#ty #ty2: Type0) (#vmatch: perm -> ty -> cbor -> slprop)
   (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
   (#cbor_map_iterator_t: Type0)
@@ -913,25 +946,16 @@ let rec rel_map_iterator_cond_is_empty
   (ensures (
     s `Map.equal` Map.empty (dfst spec1) (list (dfst spec2)) <==> Nil? (parse_table_entries i.sp1.parser i.tex i.ps2 l)
   ))
-  (decreases l)
-= match l with
-  | [] ->
-    assert_norm (parse_table_entries i.sp1.parser i.tex i.ps2 [] == []);
-    assert_norm (map_of_list_pair i.eq1 [] == Map.empty (dfst spec1) (list (dfst spec2)))
-  | (k, v) :: q ->
-    rel_map_iterator_cond_is_empty i (map_of_list_pair i.eq1 (parse_table_entries i.sp1.parser i.tex i.ps2 q)) q;
-    let rq = parse_table_entries i.sp1.parser i.tex i.ps2 q in
-    assert_norm (parse_table_entries i.sp1.parser i.tex i.ps2 ((k, v) :: q) == (
-      if Ghost.reveal i.t1 k && not (Ghost.reveal i.tex (k, v)) && Ghost.reveal i.t2 v
-      then (i.sp1.parser k, Ghost.reveal i.ps2 v) :: rq
-      else rq
-    ));
-    if Ghost.reveal i.t1 k && not (Ghost.reveal i.tex (k, v)) && Ghost.reveal i.t2 v
-    then begin
-      map_of_list_pair_cons i.eq1 (i.sp1.parser k) (Ghost.reveal i.ps2 v) rq;
-      ()
-    end
-    else ()
+= let l' = parse_table_entries i.sp1.parser i.tex i.ps2 l in
+  if Nil? l'
+  then begin
+    map_of_list_pair_nil_is_empty i.eq1 l';
+    Map.ext s (Map.empty (dfst spec1) (list (dfst spec2)))
+  end
+  else begin
+    map_of_list_pair_cons_not_empty i.eq1 l';
+    Map.ext s (Map.empty (dfst spec1) (list (dfst spec2)))
+  end
 
 inline_for_extraction
 fn cddl_map_iterator_is_empty
@@ -1290,6 +1314,7 @@ let map_of_list_pair_parse_table_entries_correct
   Classical.forall_intro prf
 
 // FIXME: WHY WHY WHY is it SO tedious to prove this:
+#push-options "--z3rlimit 64"
 let impl_zero_copy_map_zero_or_more_aux
   (#ty #ty2: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -1340,10 +1365,12 @@ let impl_zero_copy_map_zero_or_more_aux
   assert (except == i.tex);
   assert (i.t2 == value);
   assert (Ghost.reveal i.ser2 == coerce_eq (_ by (FStar.Tactics.norm [delta_only [`%dfst; `%Mkdtuple2?._1; `%Iterator.mk_spec;]; iota; primops]; FStar.Tactics.trefl ())) sp2.serializable);
+  assert (i.ps2 === Ghost.hide sp2.parser);
   assert (sp2.parser == coerce_eq () (Ghost.reveal i.ps2));
   assert (parse_table_entries sp1.parser except sp2.parser li == parse_table_entries i.sp1.parser i.tex i.ps2 li);
   assert (s == map_of_list_pair key_eq (parse_table_entries sp1.parser except sp2.parser li));
   ()
+#pop-options
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_map_zero_or_more'

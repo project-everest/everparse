@@ -5,7 +5,6 @@ module E = LowParse.Endianness.BitFields
 module U = FStar.UInt
 module U8 = FStar.UInt8
 
-open FStar.Mul
 
 // Make all integer proofs (pow2, etc.) explicit
 #push-options "--z3cliopt smt.arith.nl=false --fuel 0"

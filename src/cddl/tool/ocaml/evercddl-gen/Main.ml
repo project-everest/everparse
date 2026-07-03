@@ -121,7 +121,7 @@ let krml_exe =
     Sys.getenv "KRML_EXE"
   with
   | Not_found ->
-    let krml = "krml" ^ (if Sys.win32 then ".exe" else "") in
+    let krml = "krml" ^ (if Sys.cygwin then ".exe" else "") in
     let opt_krml = Filename.concat (Filename.concat (Filename.concat (Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "FStar") "karamel") "out") "bin") krml in
     if Sys.file_exists opt_krml
     then opt_krml
@@ -136,26 +136,13 @@ let krml_locate k tmpdir =
   let ch = open_in tmpfile in
   let res = input_line ch in
   close_in ch;
-  Sys.remove tmpfile;
   res
 
 let krmllib = krml_locate "krmllib"
 
 let krmlinclude = krml_locate "include"
 
-let pulse_home =
-  try
-    Sys.getenv "PULSE_HOME"
-  with
-  | Not_found ->
-     let opt_pulse = Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "pulse") "out" in
-     if Sys.file_exists opt_pulse
-     then opt_pulse
-     else
-       (* assume a binary package *)
-       everparse_home
-
-let z3_version = "4.13.3"
+let z3_version = Z3Version.z3_version
 
 let z3_executable_option =
   let test = run_cmd ~silent:true fstar_exe ["--locate_z3"; z3_version] in
@@ -189,9 +176,6 @@ let include_options =
       everparse_src_cddl_spec;
       everparse_src_cddl_pulse;
       everparse_src_cddl_tool;
-      krml_home_krmllib;
-      Filename.concat krml_home_krmllib "obj";
-      Filename.concat (Filename.concat pulse_home "lib") "pulse";
       Filename.concat everparse_home_lib_evercddl "lib";
       Filename.concat everparse_home_lib_evercddl "plugin";
     ]
@@ -220,7 +204,6 @@ let fstar_options =
     [
       "--cache_checked_modules";
       "--warn_error"; "@241";
-      "--cmi";
       "--ext"; "context_pruning";
     ] @
       include_options
@@ -364,6 +347,7 @@ let _ =
         "-no-prefix"; "CBOR.Pulse.API.Det.Dummy";
         "-bundle"; "CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\\*[rename=CBORDetAPI]";
 	"-bundle"; (!mname ^ "=\\*");
+        "-skip-makefiles";
 	"-add-include"; "\"CBORDetType.h\"";
         "-I"; Filename.concat (Filename.concat everparse_src_cbor_pulse "det") "c";
         "-ccopt"; "-Wno-unused-variable";

@@ -13,7 +13,7 @@ let rec parse_list_aux
   (#t: Type)
   (p: parser k t)
   (b: bytes)
-: GTot (option (list t * (consumed_length b)))
+: GTot (option (list t & (consumed_length b)))
   (decreases (Seq.length b))
 = if Seq.length b = 0
   then 
@@ -569,7 +569,7 @@ val list_length_constant_size_parser_correct
     let pb = parse (parse_list p) b in
     Some? pb /\ (
     let (Some (l, _)) = pb in
-    FStar.Mul.op_Star (L.length l) k.parser_kind_low == Seq.length b
+    op_Star (L.length l) k.parser_kind_low == Seq.length b
   )))
   (decreases (Seq.length b))
 
@@ -585,7 +585,7 @@ let rec parse_list_total_constant_size
     serialize_list_precond k /\
     k.parser_kind_high == Some k.parser_kind_low /\
     k.parser_kind_metadata == Some ParserKindMetadataTotal /\
-    Seq.length x == elem_count `Prims.op_Multiply` k.parser_kind_low
+    Seq.length x == elem_count `op_Star` k.parser_kind_low
   ))
   (ensures (
     Some? (parse (parse_list p) x)
@@ -595,7 +595,7 @@ let rec parse_list_total_constant_size
   if elem_count = 0
   then ()
   else begin
-    assert (Seq.length x == k.parser_kind_low + ((elem_count - 1) `Prims.op_Multiply` k.parser_kind_low));
+    assert (Seq.length x == k.parser_kind_low + ((elem_count - 1) `op_Star` k.parser_kind_low));
     parser_kind_prop_equiv k p;
     assert (Some? (parse p x));
     let Some (_, len) = parse p x in

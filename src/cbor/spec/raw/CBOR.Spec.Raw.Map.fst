@@ -31,7 +31,7 @@ let rec list_sorted_map_entry_order_lt_tail
   (ensures (key_order (fst a) k))
   (decreases l)
 = let b :: q = l in
-  if FStar.StrongExcludedMiddle.strong_excluded_middle (k == fst b)
+  if FStar.IndefiniteDescription.strong_excluded_middle (k == fst b)
   then ()
   else list_sorted_map_entry_order_lt_tail key_order b q k
 

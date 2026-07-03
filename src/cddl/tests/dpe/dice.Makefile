@@ -3,7 +3,9 @@ all: verify
 EVERPARSE_SRC_PATH = $(realpath ../../..)
 
 CACHE_DIRECTORY := _output
-DICE_HOME := $(PULSE_HOME)/share/pulse/examples/dice
+ifeq (,$(DICE_HOME))
+DICE_HOME := $(realpath $(EVERPARSE_SRC_PATH)/../)/opt/FStar/pulse/share/pulse/examples/dice
+endif
 INCLUDE_PATHS += $(DICE_HOME) $(DICE_HOME)/_cache
 FSTAR_OPTIONS += --admit_smt_queries true
 FSTAR_DEP_FILE := $(CACHE_DIRECTORY)/dice.depend

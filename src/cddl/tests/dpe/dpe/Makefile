@@ -1,9 +1,12 @@
 all: extract
 
-DICE_HOME := $(PULSE_HOME)/share/pulse/examples/dice
-
 EVERPARSE_SRC_PATH = $(realpath ../../../..)
 EVERPARSE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)
+
+ifeq (,$(DICE_HOME))
+DICE_HOME := $(realpath $(EVERPARSE_SRC_PATH)/../)/opt/FStar/pulse/share/pulse/examples/dice
+endif
+
 OUTPUT_DIRECTORY := _output
 INCLUDE_PATHS += \
 $(EVERPARSE_SRC_PATH)/cddl/spec \
@@ -23,7 +26,7 @@ include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 
 ALREADY_CACHED := *,-CDDLTest.DPE,-DPESlice,
 FSTAR_OPTIONS += --warn_error -342
-FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice,-CDDL.Pulse.Bundle,-CDDL.Pulse.AST.Bundle,-CDDL.Tool'
+FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Pervasives,+Pulse.Lib.Slice,-CDDL.Pulse.Bundle,-CDDL.Pulse.AST.Bundle,-CDDL.Tool'
 
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 

@@ -15,13 +15,13 @@ module Cast = FStar.Int.Cast
 friend LowParse.Spec.BoundedInt
 
 inline_for_extraction
-let mul256 (x: U16.t) : Tot (y: U32.t { U32.v y == 256 `Prims.op_Multiply` U16.v x }) =
+let mul256 (x: U16.t) : Tot (y: U32.t { U32.v y == 256 `op_Star` U16.v x }) =
   assert_norm (pow2 8 == 256);
   FStar.Math.Lemmas.pow2_lt_compat 32 24;
   FStar.Math.Lemmas.pow2_lt_compat 24 16;
   FStar.Math.Lemmas.pow2_lt_compat 16 8;
   FStar.Math.Lemmas.pow2_plus 8 16;
-  FStar.Math.Lemmas.small_mod (U16.v x `Prims.op_Multiply` 256) (pow2 32);
+  FStar.Math.Lemmas.small_mod (U16.v x `op_Star` 256) (pow2 32);
   FStar.UInt.shift_left_value_lemma #32 (U16.v x) 8;
   Cast.uint16_to_uint32 x `U32.shift_left` 8ul
 

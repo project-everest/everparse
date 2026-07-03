@@ -18,7 +18,7 @@ INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cbor/spec
 INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/pulse/raw/slice-$(CBOR_SLICE_BACKEND)
 
 FSTAR_OPTIONS += --warn_error -342
-FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice,-CBOR.Spec,+CBOR.Spec.Constants,+CBOR.Spec.Raw.EverParse,+CBOR.Spec.Raw.Base,+CBOR.Spec.Raw.Optimal'
+FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Pervasives,+Pulse.Lib.Slice,-CBOR.Spec,+CBOR.Spec.Constants,+CBOR.Spec.Raw.EverParse,+CBOR.Spec.Raw.Base,+CBOR.Spec.Raw.Optimal'
 
 # The slice backend impl (CBOR.Pulse.Raw.Slice in slice-$(CBOR_SLICE_BACKEND)) is
 # selected per pass by include path and is not part of the committed checked-file

@@ -43,7 +43,7 @@ let b32_reveal_create
   let pty = (i: nat { i < Seq.length lhs }) in
   let post
     (i: pty)
-  : GTot Type0
+  : GTot prop
   = Seq.index lhs (i <: nat) == Seq.index rhs (i <: nat)
   in
   let f

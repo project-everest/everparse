@@ -11,7 +11,6 @@ module U32 = FStar.UInt32
 
 module Cast = FStar.Int.Cast
 
-open FStar.Mul
 
 let _ = assert_norm (pow2 16 == 65536)
 let _ = assert_norm (pow2 9 == 512)
@@ -83,14 +82,14 @@ let ret_t = utf8_cp_t
 
 let partial_t = U32.t
   
-let pre_t (s : utf8_cp_s) : partial_t -> Type0 =
+let pre_t (s : utf8_cp_s) : partial_t -> prop =
   match s with
   | S1 -> (fun data -> 1 < U32.v data /\ U32.v data < pow2 15)
   | S2 -> (fun data -> 0 < U32.v data /\ U32.v data < pow2 9)
   | S3 -> (fun data -> 0 < U32.v data /\ U32.v data < pow2 3)
   | S2' | S3' | Init -> (fun data -> U32.v data = 0)
 
-let post_t (s : utf8_cp_s) (data : partial_t {pre_t s data}) : ret_t -> Type0 =
+let post_t (s : utf8_cp_s) (data : partial_t {pre_t s data}) : ret_t -> prop =
   match s with
   | S1 -> (fun ret -> U32.v data * (pow2 6) <= U32.v ret /\ U32.v ret < (U32.v data + 1) * (pow2 6))
   | S2 -> (fun ret -> U32.v data * (pow2 12) <= U32.v ret /\ U32.v ret < (U32.v data + 1) * (pow2 12))

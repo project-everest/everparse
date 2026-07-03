@@ -1,6 +1,6 @@
 module CBOR.Pulse.Raw.EverParse.Serialized.Base
-#lang-pulse
 friend CBOR.Pulse.Raw.Format.Match
+#lang-pulse
 
 open CBOR.Pulse.Raw.EverParse.Format
 open LowParse.Pulse.Combinators

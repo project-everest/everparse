@@ -1,6 +1,7 @@
 module CDDL.Spec.Map
 module F = FStar.FunctionalExtensionality
 module Util = CBOR.Spec.Util
+module NE = FStar.Nonempty
 
 let ( ^-> ) = F.op_Hat_Subtraction_Greater
 
@@ -108,12 +109,12 @@ let nondep_feq_elim
 let fold_of_unique
   (#key: Type)
   (dom: (key -> bool))
-  (dom_ex: squash (enum_of dom))
+  (dom_ex: squash (NE.nonempty (enum_of dom)))
   (#accu: Type)
   (f1 f2: fold_of dom accu)
 : Lemma
   (ensures (f1 == f2))
-= let l : enum_of dom = FStar.IndefiniteDescription.elim_squash dom_ex in
+= let l : enum_of dom = NE.nonempty_elim (enum_of dom) in
   assert (forall (op: fold_op key accu) x . f1 op x == List.Tot.fold_left op x l);
   assert (forall (op: fold_op key accu) x . f2 op x == List.Tot.fold_left op x l);
   let prf
@@ -153,7 +154,7 @@ type t
 : Type u#a
 = {
   dom: key ^-> bool;
-  dom_ex: squash (enum_of dom);
+  dom_ex: squash (NE.nonempty (enum_of dom));
   dom_fold_bool: fold_of dom bool;
   dom_fold_nat: fold_of dom nat;
   dom_key_set: F.restricted_t (key_set_dom dom) (key_set_codom dom);
@@ -192,7 +193,7 @@ let key_set #key #key_s spec_key #value m =
     dom_key_prop = ();
   } in
   let res = m.dom_key_set d in
-  let l = Ghost.hide (FStar.IndefiniteDescription.elim_squash m.dom_ex) in
+  let l = Ghost.hide (NE.nonempty_elim (enum_of m.dom)) in
   let l' = Ghost.hide (S.set_as_list res) in
   Util.list_length_as_fold l 0;
   Util.list_length_as_fold l' 0;
@@ -214,7 +215,7 @@ let empty key value =
   let l : enum_of dom = [] in
   {
     dom = dom;
-    dom_ex = ();
+    dom_ex = NE.nonempty_intro l;
     dom_fold_bool = fold_of_intro_empty dom bool;
     dom_fold_nat = fold_of_intro_empty dom nat;
     dom_key_set = F.on_dom (key_set_dom dom) #(key_set_codom dom) (fun d -> S.emptyset _);
@@ -241,7 +242,7 @@ let singleton #key #value k k_eq v =
   let l : enum_of dom = [k] in
   {
     dom = dom;
-    dom_ex = ();
+    dom_ex = NE.nonempty_intro l;
     dom_fold_bool = fold_of_intro_singleton dom k bool;
     dom_fold_nat = fold_of_intro_singleton dom k nat;
     dom_key_set = F.on_dom (key_set_dom dom) #(key_set_codom dom) (fun d -> if d.dom_key_filter k then S.singleton _ k else S.emptyset _);
@@ -304,13 +305,13 @@ let fold_of_intro_union
 
 let union #key #value m1 m2 =
   let dom = F.on_dom key (fun k -> m1.dom k || m2.dom k) in
-  let l1 : Ghost.erased (enum_of m1.dom) = FStar.IndefiniteDescription.elim_squash m1.dom_ex in
-  let l2 : Ghost.erased (enum_of m2.dom) = FStar.IndefiniteDescription.elim_squash m2.dom_ex in
+  let l1 : Ghost.erased (enum_of m1.dom) = NE.nonempty_elim (enum_of m1.dom) in
+  let l2 : Ghost.erased (enum_of m2.dom) = NE.nonempty_elim (enum_of m2.dom) in
   Util.union_as_list l1 l2 m2.dom;
   let l : Ghost.erased (enum_of dom) = List.Tot.append (List.Tot.filter (Util.notp m2.dom) l1) l2 in
   {
     dom = dom;
-    dom_ex = ();
+    dom_ex = NE.nonempty_intro (Ghost.reveal l);
     dom_fold_bool = fold_of_intro_union dom m1.dom m2.dom l1 l2 _ m1.dom_fold_bool m2.dom_fold_bool;
     dom_fold_nat = fold_of_intro_union dom m1.dom m2.dom l1 l2 _ m1.dom_fold_nat m2.dom_fold_nat;
     dom_key_set = F.on_dom (key_set_dom dom) #(key_set_codom dom) (fun d ->
@@ -343,8 +344,8 @@ let length_enum_of
   Util.list_length_as_fold l 0
 
 let length_disjoint_union #key #value m1 m2 =
-  let l1 : Ghost.erased (enum_of m1.dom) = FStar.IndefiniteDescription.elim_squash m1.dom_ex in
-  let l2 : Ghost.erased (enum_of m2.dom) = FStar.IndefiniteDescription.elim_squash m2.dom_ex in
+  let l1 : Ghost.erased (enum_of m1.dom) = NE.nonempty_elim (enum_of m1.dom) in
+  let l2 : Ghost.erased (enum_of m2.dom) = NE.nonempty_elim (enum_of m2.dom) in
   Util.union_as_list l1 l2 m2.dom;
   let m = union m1 m2 in
   let l : Ghost.erased (enum_of m.dom) = List.Tot.append (List.Tot.filter (Util.notp m2.dom) l1) l2 in
@@ -368,12 +369,12 @@ let filter_op
 
 let filter #key #value f m =
   let dom = F.on_dom key (fun k -> filter_op f m k) in
-  let l : Ghost.erased (enum_of m.dom) = FStar.IndefiniteDescription.elim_squash m.dom_ex in
+  let l : Ghost.erased (enum_of m.dom) = NE.nonempty_elim (enum_of m.dom) in
   Classical.forall_intro (List.Tot.mem_filter (filter_op f m) l);
   let l' : Ghost.erased (enum_of dom) = List.Tot.filter (filter_op f m) l in
   {
     dom = dom;
-    dom_ex = ();
+    dom_ex = NE.nonempty_intro (Ghost.reveal l');
     dom_fold_bool = fold_of_intro_filter dom m.dom l (filter_op f m) _ m.dom_fold_bool;
     dom_fold_nat = fold_of_intro_filter dom m.dom l (filter_op f m) _ m.dom_fold_nat;
     dom_key_set = F.on_dom (key_set_dom dom) #(key_set_codom dom) (fun d ->
@@ -400,7 +401,7 @@ let get_filter f m k = ()
 
 let for_all
   #key #value f m
-= let l : Ghost.erased (enum_of m.dom) = FStar.IndefiniteDescription.elim_squash m.dom_ex in
+= let l : Ghost.erased (enum_of m.dom) = NE.nonempty_elim (enum_of m.dom) in
   Util.list_for_all_as_fold (filter_op f m) true l;
   List.Tot.for_all_mem (filter_op f m) l;
   m.dom_fold_bool (Util.list_for_all_as_fold_op (filter_op f m)) true

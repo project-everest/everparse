@@ -10,10 +10,6 @@
 
 COSE_Format_evercddl_int COSE_EverCrypt_mk_int(int32_t i);
 
-typedef void *COSE_EverCrypt_ser_to;
-
-typedef void *COSE_EverCrypt_to_be_signed_spec;
-
 void
 COSE_EverCrypt_create_sig(
   uint8_t *privkey,
@@ -27,8 +23,6 @@ K___COSE_Format_evercddl_label_COSE_Format_values COSE_EverCrypt_dummy_map_val(v
 
 COSE_Format_empty_or_serialized_map
 COSE_EverCrypt_mk_phdrs(int32_t alg, K___COSE_Format_evercddl_label_COSE_Format_values *rest);
-
-typedef void *COSE_EverCrypt_sign1_spec;
 
 Pulse_Lib_Slice_slice__uint8_t
 COSE_EverCrypt_sign1(
@@ -54,10 +48,6 @@ COSE_EverCrypt_verify_sig(
   Pulse_Lib_Slice_slice__uint8_t payload,
   uint8_t *sigbuf
 );
-
-typedef void *COSE_EverCrypt_parses_from;
-
-typedef void *COSE_EverCrypt_good_signature;
 
 typedef struct FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__uint8_t_s
 {

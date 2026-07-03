@@ -109,7 +109,7 @@ let rec tot_parse_list_aux
   (#t: Type)
   (p: tot_parser k t)
   (b: bytes)
-: Pure (option (list t * (consumed_length b)))
+: Pure (option (list t & (consumed_length b)))
     (requires True)
     (ensures (fun y -> y == parse_list_aux #k p b))
     (decreases (Seq.length b))

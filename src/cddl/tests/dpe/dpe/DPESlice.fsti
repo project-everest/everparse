@@ -34,7 +34,8 @@ module Slice = Pulse.Lib.Slice
 module PHT = Pulse.Lib.HashTable.Spec
 
 open PulseCore.Preorder
-open Pulse.Lib.OnRange
+open Pulse.Lib.ForEvery
+open Pulse.Lib.ForEvery.Range
 open Pulse.Lib.HashTable.Type
 open Pulse.Lib.HashTable
 

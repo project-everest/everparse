@@ -8,5 +8,5 @@ FSTAR_EXE ?= fstar.exe
 
 export FSTAR_EXE
 
-# Add common options here
-FSTAR_OPTIONS += --z3version 4.13.3
+include $(EVERPARSE_SRC_PATH)/z3-version.Makefile
+FSTAR_OPTIONS += --z3version $(EVERPARSE_Z3_VERSION)

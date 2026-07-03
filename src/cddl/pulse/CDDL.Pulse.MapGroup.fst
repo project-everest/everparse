@@ -316,11 +316,14 @@ let impl_map_group_zero_or_one
   ))
 : impl_map_group_t #_ vmatch (map_group_zero_or_one g1) f1
 =
-    (impl_map_group_choice
-      w1
-      (impl_map_group_nop ())
+    impl_map_group_ext
+      (impl_map_group_choice
+        w1
+        (impl_map_group_nop ())
+        ())
+      (map_group_zero_or_one g1)
+      f1
       ()
-    )
 
 let impl_map_group_match_item_for_body_post
   (#t: Type0)
