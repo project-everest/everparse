@@ -3,20 +3,20 @@ ifeq (,$(EVERPARSE_SRC_PATH))
 endif
 include $(EVERPARSE_SRC_PATH)/windows.Makefile
 
-ifeq (,$(KRML_HOME))
-  # assuming Everest layout
-  export KRML_HOME := $(realpath $(EVERPARSE_SRC_PATH)/../../karamel)
-  ifeq (,$(KRML_HOME))
-    $(error "KRML_HOME must be defined and set to the root directory of the Karamel repository")
+ALREADY_CACHED := C,LowStar,$(ALREADY_CACHED)
+
+# Do not run `krml -locate` during the Makefile parsing. Only when the command runs.
+ifeq (,$(KRML_LIB))
+  KRML_LIB := "$$("$(KRML_EXE)" -locate-krmllib)"
+  ifeq ($(OS),Windows_NT)
+    KRML_LIB := "$$(cygpath -m "$$(echo $(KRML_LIB) | sed 's!\r!!g')")"
   endif
 endif
 
-ifeq ($(OS),Windows_NT)
-export KRML_HOME := $(shell cygpath -m $(KRML_HOME))
+# Use `FSTAR_OPTIONS += --include` instead of `INCLUDE_PATHS` because some Makefiles include `fstar.Makefile` instead of `common.Makefile`, and also because `krml -locate` contains whitespace that `addprefix --include` will mishandle
+FSTAR_OPTIONS += --include $(KRML_LIB) --include $(KRML_LIB)/obj
+
+ifeq (,$(KRML_INCLUDE))
+  KRML_INCLUDE := "$$("$(KRML_EXE)" -locate-include)"
 endif
-
-ALREADY_CACHED := C,LowStar,$(ALREADY_CACHED)
-
-INCLUDE_PATHS += $(KRML_HOME)/krmllib $(KRML_HOME)/krmllib/obj
-
-CFLAGS += -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/generic
+CFLAGS += -I $(KRML_INCLUDE) -I $(KRML_LIB)/dist/generic

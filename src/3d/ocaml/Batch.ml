@@ -2,22 +2,42 @@ open OS
 open HashingOptions
 
 (* paths *)
-let krml_home =
-  match OS.getenv_opt "KRML_HOME" with
-  | Some k -> k
-  | _ ->
-     let opt_krml = filename_concat (filename_concat everparse_home "opt") "karamel" in
-     if Sys.file_exists opt_krml
-     then opt_krml
-     else everparse_home
-let krmllib = filename_concat krml_home "krmllib"
+let krml =
+  try
+    Sys.getenv "KRML_EXE"
+  with
+  | Not_found ->
+    let krml = "krml" ^ (if Sys.win32 then ".exe" else "") in
+    let opt_krml = Filename.concat (Filename.concat (Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "karamel") "out") "bin") krml in
+    if Sys.file_exists opt_krml
+    then opt_krml
+    else
+       (* assume a binary package *)
+       Filename.concat (Filename.concat everparse_home "bin") krml
+
+let krml_locate k tmpdir =
+  let tmpfile = Filename.temp_file ~temp_dir:tmpdir ("krml_locate_" ^ k) ".tmp" in
+  let cmd = Filename.quote_command krml ~stdout:tmpfile ["-locate-" ^ k] in
+  if Sys.command cmd <> 0 then failwith ("Unable to run krml -locate-" ^ k);
+  let ch = open_in tmpfile in
+  let res = input_line ch in
+  close_in ch;
+  Sys.remove tmpfile;
+  res
+
+let krmllib = krml_locate "krmllib"
+
+let krmlinclude = krml_locate "include"
+
 let lowparse_home = filename_concat (filename_concat everparse_home "src") "lowparse"
 let ddd_home = filename_concat (filename_concat everparse_home "src") "3d"
 let ddd_prelude_home = filename_concat (filename_concat (filename_concat everparse_home "src") "3d") "prelude"
 
-let _ = Unix.putenv "KRML_HOME" krml_home
-
-let cl_wrapper () = filename_concat krml_home (filename_concat "misc" "cl-wrapper.bat")
+(* TODO: implement krml -locate-misc *)
+let cl_wrapper () =
+  (* assume krml.exe is in bin/ *)
+  let krml_home = Filename.dirname (Filename.dirname krml) in
+  Filename.concat (Filename.concat (Filename.concat (Filename.concat krml_home "share") "krml") "misc") "cl-wrapper.bat"
 
 let ddd_actions_home input_stream_binding =
   let input_stream_dir =
@@ -30,44 +50,8 @@ let ddd_actions_home input_stream_binding =
 let ddd_actions_c_home input_stream_binding =
   filename_concat ddd_prelude_home (string_of_input_stream_binding input_stream_binding)
 
-(* krml: on Windows, needs to be copied into .exe *)
-let krml out_dir =
-  let rec aux exn = function
-    | [] -> if exn then failwith "no krml found" else ""
-    | (dir, file) :: q ->
-       let candidate = filename_concat dir file in
-       if Sys.file_exists candidate then candidate else aux exn q
-  in
-  let dir = krml_home in
-  let dir_bin = filename_concat dir "bin" in
-  if Sys.win32
-  then
-    let candidate =
-      aux false [
-          (dir_bin, "krml.exe"); (* binary package *)
-          (dir, "krml.exe");
-        ]
-    in
-    if candidate <> ""
-    then (false, candidate)
-    else begin
-        let target = Filename.temp_file ~temp_dir:out_dir "krml" ".exe" in
-        begin
-          (* Here, Windows cannot even read symlinks *)
-          let dir' = filename_concat (filename_concat (filename_concat dir "_build") "default") "src" in
-          let candidate = aux true [(dir', "Karamel.exe")] in
-          copy candidate target
-        end;
-        (true, target)
-      end
-  else
-    (false, aux true [
-                (dir_bin, "krml"); (* binary package *)
-                (dir, "krml");
-    ])
-
 (* command lines *)
-let fstar_args0 =
+let fstar_args0 krmllib =
   "--already_cached" :: "Prims,LowStar,FStar,LowParse,C,EverParse3d.\\*,Spec" ::
     "--include" :: lowparse_home ::
       "--include" :: krmllib ::
@@ -93,6 +77,7 @@ let z3_executable_option fstar_exe =
     else []
 
 let fstar_args
+  krmllib
   input_stream_binding
   out_dir
 =
@@ -100,7 +85,7 @@ let fstar_args
       "--cache_dir" :: out_dir ::
         "--include" :: ddd_actions_home input_stream_binding ::
         "--include" :: out_dir ::
-            fstar_args0
+            fstar_args0 krmllib
 
 let verify_fst_file
   fstar_exe
@@ -108,7 +93,7 @@ let verify_fst_file
   out_dir
   file
 =
-  let fstar_args = list_snoc (fstar_args input_stream_binding out_dir) file in
+  let fstar_args = list_snoc (fstar_args (krmllib out_dir) input_stream_binding out_dir) file in
   let fstar_args = z3_executable_option fstar_exe @ fstar_args in
   run_cmd fstar_exe ("--cache_checked_modules" :: fstar_args)
 
@@ -116,10 +101,10 @@ let fstar_modul_of_filename fst =
   let basename = remove_extension (basename fst) in
   String.concat "." (List.map String.capitalize_ascii (String.split_on_char '.' basename))
 
-let fstar_extract_args input_stream_binding out_dir fst =
+let fstar_extract_args krmllib input_stream_binding out_dir fst =
   "--extract_module" :: fstar_modul_of_filename fst ::
     "--codegen" :: "krml" ::
-      (list_snoc (fstar_args input_stream_binding out_dir) fst)
+      (list_snoc (fstar_args krmllib input_stream_binding out_dir) fst)
 
 let extract_fst_file
   fstar_exe
@@ -127,7 +112,7 @@ let extract_fst_file
   out_dir
   file
 =
-  run_cmd fstar_exe (fstar_extract_args input_stream_binding out_dir file)
+  run_cmd fstar_exe (fstar_extract_args (krmllib out_dir) input_stream_binding out_dir file)
 
 let pretty_print_source_file
   fstar_exe
@@ -135,7 +120,7 @@ let pretty_print_source_file
   out_dir
   file
 =
-  let fstar_args = list_snoc (fstar_args input_stream_binding out_dir) file in
+  let fstar_args = list_snoc (fstar_args (krmllib out_dir) input_stream_binding out_dir) file in
   run_cmd fstar_exe ("--print_in_place" :: fstar_args)
 
 let pretty_print_source_module
@@ -439,13 +424,11 @@ let call_krml files_and_modules_cleanup out_dir krml_args =
   in
   aux krml_args;
   close_out h;
-  let (is_temp_krml, krml) = krml out_dir in
   print_endline (Printf.sprintf "KaRaMeL found at: %s" krml);
   run_cmd krml [Printf.sprintf "@%s" argfile];
   begin match files_and_modules_cleanup with
   | Some files_and_modules ->
       Sys.remove argfile;
-      if is_temp_krml then Sys.remove krml;
       List.iter (remove_fst_and_krml_files out_dir) files_and_modules
   | _ -> ()
   end

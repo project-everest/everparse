@@ -8,24 +8,10 @@ FSTAR_OUT_DIR?=.fstar-out
 
 FSTAR_EXE ?= fstar.exe
 
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/fstar.Makefile
 
-ifndef KRML_HOME
-  KRMLLIB:=$(shell ocamlfind query karamel)
-  ifneq ($(.SHELLSTATUS),0)
-    KRML_HOME=../../../karamel
-  endif
-endif
-ifdef KRML_HOME
-  KRMLLIB:=$(KRML_HOME)/krmllib
-  KRML_EXE=$(KRML_HOME)/krml
-else
-  KRML_EXE=krml
-endif
-
-INCLUDE_KRML=--include $(KRMLLIB) --include $(KRMLLIB)/obj
-
-FSTAR_OPTIONS += --use_hints --trivial_pre_for_unannotated_effectful_fns false --include $(LOWPARSE_HOME) --already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse --cache_checked_modules --cache_dir $(FSTAR_OUT_DIR) --odir $(FSTAR_OUT_DIR) $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) --cmi
+FSTAR_OPTIONS += --use_hints --trivial_pre_for_unannotated_effectful_fns false --include $(LOWPARSE_HOME) --already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse --cache_checked_modules --cache_dir $(FSTAR_OUT_DIR) --odir $(FSTAR_OUT_DIR) $(addprefix --include , $(INCLUDE_PATHS)) --cmi
 
 # NOTE: the cache dir and out dir for F* MUST be the same, because the
 # .krml files should be generated only once.

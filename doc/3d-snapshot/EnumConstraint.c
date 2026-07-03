@@ -75,8 +75,7 @@ EnumConstraintValidateEnumConstraint(
         /* reading field_value */
         uint32_t x_refinement = Load32Le(Input + (uint32_t)positionAftercol1);
         /* start: checking constraint */
-        BOOLEAN
-        x_refinementConstraintIsOk = x_refinement == (uint32_t)0U || col == ENUMCONSTRAINT_GREEN;
+        BOOLEAN x_refinementConstraintIsOk = x_refinement == 0U || col == ENUMCONSTRAINT_GREEN;
         /* end: checking constraint */
         positionAfterEnumConstraint0 =
           EverParseCheckConstraintOk(x_refinementConstraintIsOk,

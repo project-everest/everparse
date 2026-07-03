@@ -8,15 +8,11 @@ ifeq (,$(HACL_HOME))
   HACL_HOME := $(CURDIR)/hacl-star
 endif
 export HACL_HOME
-ifeq (,$(KRML_HOME))
-  KRML_HOME := $(EVERPARSE_PATH)/opt/karamel
-endif
-export KRML_HOME
 
 CC     := clang
 CFLAGS += -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I ../../c -I _output
 
-$(HACL_HOME)/dist/gcc-compatible/libevercrypt.a: $(HACL_HOME) $(KRML_HOME)
+$(HACL_HOME)/dist/gcc-compatible/libevercrypt.a: $(HACL_HOME)
 	$(MAKE) -C $(dir $@)
 
 $(CURDIR)/hacl-star:

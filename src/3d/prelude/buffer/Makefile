@@ -21,7 +21,7 @@ EverParse.rsp: $(ALL_KRML_FILES) ../EverParse.rsp
 	mv $@.tmp $@
 
 EverParse.h: EverParse.rsp
-	$(KRML_HOME)/krml \
+	$(KRML_EXE) \
 	  -fstar $(FSTAR_EXE) \
 	  -skip-compilation \
 	  -skip-makefiles \
