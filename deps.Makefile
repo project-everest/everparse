@@ -24,11 +24,7 @@ endif
 
 NEED_KRML :=
 ifneq (1,$(EVERPARSE_USE_KRML_EXE))
-ifeq ($(OS),Windows_NT)
-export KRML_EXE := $(EVERPARSE_OPT_PATH)/karamel/out/bin/krml.exe
-else
-export KRML_EXE := $(EVERPARSE_OPT_PATH)/karamel/out/bin/krml
-endif
+export KRML_EXE := $(EVERPARSE_OPT_PATH)/FStar/karamel/out/bin/krml
 NEED_KRML := $(EVERPARSE_OPT_PATH)/karamel.done
 else
 export EVERPARSE_USE_FSTAR_EXE:=1
