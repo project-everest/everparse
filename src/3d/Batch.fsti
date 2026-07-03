@@ -2,6 +2,8 @@ module Batch
 open HashingOptions
 open FStar.All
 
+val krml: string
+
 val cl_wrapper: unit -> ML string
 
 (* The --print_in_place step has to be performed at source generation
