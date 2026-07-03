@@ -181,7 +181,7 @@ let everparse_src_cddl_tool = Filename.concat everparse_src_cddl "tool"
 let everparse_home_lib = Filename.concat everparse_home "lib"
 let everparse_home_lib_evercddl = Filename.concat everparse_home_lib "evercddl"
 
-let include_options krml_home_krmllib =
+let include_options =
   include_option_of_paths
     [
       everparse_src_cbor_spec;
@@ -215,7 +215,7 @@ let include_options_for_rust =
 (* TODO: honor OTHERFLAGS. This would require implementing Bash word
    splitting, since we are using lists of arguments. *)
 
-let fstar_options krmllib =
+let fstar_options =
   z3_executable_option @
     [
       "--cache_checked_modules";
@@ -223,7 +223,7 @@ let fstar_options krmllib =
       "--cmi";
       "--ext"; "context_pruning";
     ] @
-      include_options krmllib
+      include_options
 
 let admit = ref false
 
@@ -291,7 +291,6 @@ let _ =
   let basename = produce_fst_file tmpdir dir in
   if !fstar_only then exit 0;
   let filename = Filename.concat dir basename in
-  let krmllib = krmllib tmpdir in
   let res = run_cmd fstar_exe
     (
       [
@@ -300,7 +299,7 @@ let _ =
         "--already_cached"; ("*,-" ^ !mname);
       ] @
         (if !admit then [ "--admit_smt_queries"; "true" ] else []) @
-        fstar_options krmllib
+        fstar_options
     )
   in
   if res <> 0
@@ -321,7 +320,7 @@ let _ =
           "--extract_module"; !mname;
         ] @
           (if is_rust () then include_options_for_rust else []) @
-          fstar_options krmllib
+          fstar_options
       )
   in
   if res <> 0
@@ -390,6 +389,7 @@ let _ =
       else begin
         let cc = try Sys.getenv "CC" with Not_found -> "cc" in
         let det_c = Filename.concat (Filename.concat everparse_src_cbor_pulse "det") "c" in
+        let krmllib = krmllib tmpdir in
         let krmlinclude = krmlinclude tmpdir in
         let cc_args = [
           "-I"; Filename.concat (Filename.concat krmllib "dist") "minimal";
