@@ -78,7 +78,7 @@ pub fn cbor_nondet_mk_string <'a>(ty: cbor_nondet_string_kind, s: &'a [u8]) ->
     let q2: usize = q1.wrapping_div(32768usize);
     let q3: usize = q2.wrapping_div(32768usize);
     let q4: usize = q3.wrapping_div(32768usize);
-    let __anf0: bool = q4 < 16usize;
+    let __anf0: bool = if q4 < 16usize { true } else { false };
     if ! __anf0
     { crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None }
     else
@@ -87,14 +87,13 @@ pub fn cbor_nondet_mk_string <'a>(ty: cbor_nondet_string_kind, s: &'a [u8]) ->
             if ty == cbor_nondet_string_kind::TextString { cbor_impl_utf8_correct(s) } else { true };
         if correct
         {
+            let ite: u8 =
+                if ty == cbor_nondet_string_kind::ByteString
+                { crate::cbornondetveraux::cbor_major_type_byte_string }
+                else
+                { crate::cbornondetveraux::cbor_major_type_text_string };
             let res: crate::cbornondetveraux::cbor_raw =
-                crate::cbornondetveraux::cbor_nondet_mk_string(
-                    if ty == cbor_nondet_string_kind::ByteString
-                    { crate::cbornondetveraux::cbor_major_type_byte_string }
-                    else
-                    { crate::cbornondetveraux::cbor_major_type_text_string },
-                    s
-                );
+                crate::cbornondetveraux::cbor_nondet_mk_string(ite, s);
             crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: res }
         }
         else
@@ -125,7 +124,7 @@ pub fn cbor_nondet_mk_array <'a>(a: &'a [crate::cbornondetveraux::cbor_raw <'a>]
     let q2: usize = q1.wrapping_div(32768usize);
     let q3: usize = q2.wrapping_div(32768usize);
     let q4: usize = q3.wrapping_div(32768usize);
-    let __anf0: bool = q4 < 16usize;
+    let __anf0: bool = if q4 < 16usize { true } else { false };
     if ! __anf0
     { crate::cbornondetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None }
     else
