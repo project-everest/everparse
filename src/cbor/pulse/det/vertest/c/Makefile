@@ -10,12 +10,11 @@ CFLAGS += -I $(CBORDET_PATH)
 
 clean_rules += clean-extracted
 
+# Ensure KrmlLib C is extracted
+FSTAR_DEP_OPTIONS += $(KRML_HOME)/krmllib/C.fst
+
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
-
-# Ensure KrmlLib C is extracted
-FSTAR_DEP_OPTIONS += $(KRML_LIB)/C.fst
-
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 .PHONY: extract test
