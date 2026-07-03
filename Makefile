@@ -74,7 +74,7 @@ endif
 .PHONY: 3d-prelude-verify
 
 # TODO: re-enable once Low* is gone
-# 3d-prelude: $(filter src/3d/prelude/%,$(ALL_CHECKED_FILES)) $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+# 3d-prelude: 3d-prelude-verify
 #	+$(MAKE) -C src/3d/prelude
 3d-prelude:
 
