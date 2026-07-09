@@ -53,3 +53,11 @@ let error_handler =
         let sl = Ghost.reveal sl in
         modifies (app_loc ctxt eloc_none) h0 h1 /\
         B.live h1 ctxt)
+
+// The C macro used as the error handler when 3d is invoked with
+// `--use_error_handler_macro`. It lives here (rather than in
+// EverParse3d.Actions.Base) so that it is also reachable from
+// EverParse3d.ProbeActions, which must select between the dynamic
+// error-handler callback and this macro just like the validators do.
+[@@CMacro]
+assume val error_handler_macro: error_handler

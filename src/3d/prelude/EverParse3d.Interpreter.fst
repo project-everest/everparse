@@ -31,7 +31,7 @@ noextract
 let ___EVERPARSE_COPY_BUFFER_T = CP.copy_buffer_t
 
 inline_for_extraction
-let probe_m_unit = probe_m unit true false
+let probe_m_unit (use_error_handler:bool) = probe_m unit true false use_error_handler
 
 inline_for_extraction
 noextract
@@ -559,8 +559,8 @@ type atomic_probe_action : Type0 -> Type u#1 =
       atomic_probe_action unit
 
 [@@specialize]
-let atomic_probe_action_as_probe_m (#t:Type) (p:atomic_probe_action t)
-: PA.probe_m t true false
+let atomic_probe_action_as_probe_m (#use_error_handler:bool) (#t:Type) (p:atomic_probe_action t)
+: PA.probe_m t true false use_error_handler
 = match p with
   | Atomic_probe_and_copy bytes_to_read probe_fn_incremental ->
     PA.probe_fn_incremental_as_probe_m probe_fn_incremental bytes_to_read 
@@ -580,40 +580,40 @@ let atomic_probe_action_as_probe_m (#t:Type) (p:atomic_probe_action t)
     PA.fail
 
 noeq
-type probe_action : bool -> Type u#1 =
+type probe_action (use_error_handler:bool) : bool -> Type u#1 =
   | Probe_action_atomic :
       atomic_probe_action unit ->
-      probe_action false
+      probe_action use_error_handler false
   | Probe_action_var :
-      probe_m unit true false ->
-      probe_action false
+      probe_m unit true false use_error_handler ->
+      probe_action use_error_handler false
   | Probe_action_seq:
       detail:string ->
-      m1: probe_action false ->
-      m2: probe_action false ->
-      probe_action false
+      m1: probe_action use_error_handler false ->
+      m2: probe_action use_error_handler false ->
+      probe_action use_error_handler false
   | Probe_action_let:
       #t:Type0 ->
       detail:string ->
       m1: atomic_probe_action t ->
-      m2: (t -> probe_action false) ->
-      probe_action false
+      m2: (t -> probe_action use_error_handler false) ->
+      probe_action use_error_handler false
   | Probe_action_ite:
       cond:bool ->
-      m1: probe_action false ->
-      m2: probe_action false ->
-      probe_action false
+      m1: probe_action use_error_handler false ->
+      m2: probe_action use_error_handler false ->
+      probe_action use_error_handler false
   | Probe_action_array:
       bytes_len:U64.t ->
-      elemnent_probe:probe_action false ->
-      probe_action false
+      elemnent_probe:probe_action use_error_handler false ->
+      probe_action use_error_handler false
   | Probe_action_copy_init_sz:
       probe_fn:PA.probe_fn_incremental ->
-      probe_action false
+      probe_action use_error_handler false
 
 [@@specialize]
-let rec probe_action_as_probe_m #maybe_zero (p:probe_action maybe_zero)
-: PA.probe_m unit true maybe_zero
+let rec probe_action_as_probe_m (#use_error_handler:bool) #maybe_zero (p:probe_action use_error_handler maybe_zero)
+: PA.probe_m unit true maybe_zero use_error_handler
 = match p with
   | Probe_action_atomic a ->
     atomic_probe_action_as_probe_m a
@@ -622,7 +622,7 @@ let rec probe_action_as_probe_m #maybe_zero (p:probe_action maybe_zero)
   | Probe_action_seq detail m1 m2 ->
     PA.seq_probe_m detail () (probe_action_as_probe_m m1) (probe_action_as_probe_m m2)
   | Probe_action_let detail m1 m2 ->
-    let k x : PA.probe_m unit _ _ = probe_action_as_probe_m (m2 x) in
+    let k x : PA.probe_m unit _ _ _ = probe_action_as_probe_m (m2 x) in
     PA.bind_probe_m detail () (atomic_probe_action_as_probe_m m1) k
   | Probe_action_ite cond m1 m2 ->
     PA.if_then_else cond (probe_action_as_probe_m m1) (probe_action_as_probe_m m2)
@@ -729,7 +729,7 @@ type atomic_action (use_error_handler:bool)
       dest:CP.copy_buffer_t ->
       init_cb:PA.init_probe_dest_t ->
       dest_prep_sz:U64.t -> 
-      probe:probe_action maybe_zero ->
+      probe:probe_action use_error_handler maybe_zero ->
       atomic_action use_error_handler (join_inv inv (NonTrivial (A.copy_buffer_inv dest)))
                     (join_disj disj (disjoint (NonTrivial (A.copy_buffer_loc dest)) l))
                     (join_loc l (NonTrivial (A.copy_buffer_loc dest)))
@@ -1103,7 +1103,7 @@ let t_probe_then_validate
       (fieldname:string)
       (init_cb:PA.init_probe_dest_t)
       (dest_sz:U64.t)
-      (probe:probe_m unit true false)
+      (probe:probe_m unit true false use_error_handler)
       (dest:CP.copy_buffer_t)
       (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)
       (#nz #wk:_) (#pk:P.parser_kind nz wk)
@@ -1130,7 +1130,7 @@ let t_probe_then_validate_alt
       (fieldname:string)
       (init_cb:PA.init_probe_dest_t)
       (dest_sz:U64.t)
-      (probe:probe_action mz)
+      (probe:probe_action use_error_handler mz)
       (dest:CP.copy_buffer_t)
       (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)
       (#nz #wk:_) (#pk:P.parser_kind nz wk)

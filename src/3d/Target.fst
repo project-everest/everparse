@@ -437,6 +437,16 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
   match t with
   | T_false -> "False"
   | T_app hd _ args ->  //output types are already handled at the beginning of print_typ
+    if hd.v = Ast.to_ident' "probe_m_unit"
+    then
+      //`probe_m_unit` is the (interpreter-level) type of probe monad
+      //values threaded as first-class arguments (e.g. type-specialized
+      //and coerce probes).  It is parameterized by `use_error_handler`
+      //exactly like the validators, so we must apply it to the same
+      //compile-time boolean the rest of the generated code uses.
+      let ueh = if Options.get_use_error_handler_macro () then "false" else "true" in
+      Printf.sprintf "(probe_m_unit %s)" ueh
+    else
     let hd' =
       if hd.v = Ast.to_ident' "void"
       then "unit"

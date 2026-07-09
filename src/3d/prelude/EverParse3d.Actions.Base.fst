@@ -20,8 +20,6 @@ module U8 = FStar.UInt8
 module P = EverParse3d.Prelude
 module F = FStar.FunctionalExtensionality
 
-[@@CMacro]
-assume val error_handler_macro: error_handler
 let hinv = HS.mem ^-> prop
 let liveness_inv = i:hinv {
   forall l h0 h1. {:pattern (i h1); (modifies l h0 h1)}  i h0 /\ modifies l h0 h1 /\ address_liveness_insensitive_locs `loc_includes` l ==> i h1
@@ -2015,7 +2013,7 @@ let probe_then_validate
       (dest:CP.copy_buffer_t)
       (init:PA.init_probe_dest_t)
       (prep_dest_sz:U64.t)
-      (probe:PA.probe_m unit true maybe_zero_offset)
+      (probe:PA.probe_m unit true maybe_zero_offset use_error_handler)
 : action (conj_inv inv (copy_buffer_inv dest))
          (conj_disjointness disj (disjoint (copy_buffer_loc dest) l))
          (eloc_union l (copy_buffer_loc dest)) 
@@ -2033,13 +2031,7 @@ let probe_then_validate
         true
       )
       else (
-        [@inline_let] let eh : error_handler =
-          if use_error_handler then begin
-            [@inline_let] let eh1 : error_handler = error_handler_fn in
-            eh1
-          end else error_handler_macro
-        in
-        let b = PA.run_probe_m (PA.init_and_probe (typename ^ "." ^ fieldname) init probe) typename fieldname "probe" ctxt eh src64 prep_dest_sz dest in
+        let b = PA.run_probe_m (PA.init_and_probe (typename ^ "." ^ fieldname) init probe) typename fieldname "probe" ctxt error_handler_fn src64 prep_dest_sz dest in
         let h1 = HST.get () in
         modifies_address_liveness_insensitive_unused_in h0 h1;
         if b <> 0uL

@@ -1201,10 +1201,18 @@ let print_decl mname (d:decl)
     | T.Assumption _ -> T.print_assumption mname d, ""
     | T.Definition _ -> "", T.print_definition mname d
     | T.Probe_function id params body ->
+      //Fix `use_error_handler` on the emitted probe monad value to the
+      //compile-time boolean chosen by --use_error_handler_macro, so the
+      //probe function (which may be extracted as a standalone, shared
+      //function, e.g. for type-specialized/coerce probes) either takes
+      //the error-handler callback (dynamic) or drops it in favor of the
+      //EVERPARSE_ERROR_HANDLER_MACRO C macro, consistently with the
+      //validators that consume it.
       let impl =
-          Printf.sprintf "[@@ normalize_for_extraction specialization_steps]\nlet %s %s = probe_action_as_probe_m <| %s\n\n"
+          Printf.sprintf "[@@ normalize_for_extraction specialization_steps]\nlet %s %s = probe_action_as_probe_m #%b <| %s\n\n"
             (T.print_ident id)
             (T.print_params mname params)
+            (use_error_handler ())
             (T.print_probe_action mname body)
       in
       impl, ""

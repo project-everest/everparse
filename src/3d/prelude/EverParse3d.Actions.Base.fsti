@@ -978,7 +978,7 @@ val probe_then_validate
       (dest:CP.copy_buffer_t)
       (init:PA.init_probe_dest_t)
       (prep_dest_sz:U64.t)
-      (probe:PA.probe_m unit true maybe_zero_offset)
+      (probe:PA.probe_m unit true maybe_zero_offset use_error_handler)
   : action (conj_inv inv (copy_buffer_inv dest))
            (conj_disjointness disj (disjoint (copy_buffer_loc dest) l))
            (eloc_union l (copy_buffer_loc dest)) 
