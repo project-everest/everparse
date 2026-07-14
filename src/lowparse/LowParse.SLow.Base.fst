@@ -12,7 +12,7 @@ let parser32_correct
   (p: parser k t)
   (input: bytes32)
   (res: option (t & U32.t))
-: GTot Type0
+: GTot prop
 = let gp = parse p (B32.reveal input) in
   match res with
   | None -> gp == None
@@ -80,7 +80,7 @@ let validator_correct
   (p: parser k t)
   (input: bytes32)
   (res: option U32.t)
-: GTot Type0
+: GTot prop
 = let gp = parse p (B32.reveal input) in
   match res with
   | None -> gp == None
@@ -104,7 +104,7 @@ let serializer32_correct
   (s: serializer p)
   (input: t)
   (res: bytes32)
-: GTot Type0
+: GTot prop
 = B32.reveal res == s input
 
 let serializer32_correct'
@@ -114,7 +114,7 @@ let serializer32_correct'
   (s: serializer p)
   (input: t)
   (res: bytes32)
-: GTot Type0
+: GTot prop
 = B32.reveal res `bytes_equal` s input
 
 [@unifier_hint_injective]
@@ -323,7 +323,7 @@ let size32_postcond
   (s: serializer p)
   (x: t)
   (y: U32.t)
-: GTot Type0
+: GTot prop
 = let sz = Seq.length (serialize s x) in
   if sz > U32.v u32_max
   then y == u32_max
@@ -348,7 +348,7 @@ let size32_constant_precond
   (#p: parser k t)
   (s: serializer p)
   (len32: U32.t)
-: GTot Type0
+: GTot prop
 = k.parser_kind_high == Some k.parser_kind_low /\
   U32.v len32 == k.parser_kind_low
 

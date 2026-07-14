@@ -86,7 +86,7 @@ let parse_nlist_tailrec_inv
   (input: bytes32)
   (b: bool)
   (x: option (bytes32 & U32.t & list t & U32.t))
-: GTot Type0
+: GTot prop
 = match x with
   | Some (input', i, accu', consumed') ->
     U32.v i <= U32.v n /\
@@ -157,7 +157,7 @@ let parse32_nlist
 let serialize32_nlist_precond
   (n: nat)
   (k: parser_kind)
-: GTot Type0
+: GTot prop
 = k.parser_kind_subkind == Some ParserStrong /\ (
     match k.parser_kind_high with
     | None -> False
@@ -314,7 +314,7 @@ let serialize32_vclist_precond
   (max: nat { min <= max } )
   (lk: parser_kind)
   (k: parser_kind)
-: GTot Type0
+: GTot prop
 = match lk.parser_kind_high, k.parser_kind_high with
   | Some lhi, Some hi ->
     lhi + (max `FStar.Mul.op_Star` hi) < 4294967296

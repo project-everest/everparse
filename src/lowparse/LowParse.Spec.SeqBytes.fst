@@ -87,7 +87,7 @@ let parse_bounded_seq_vlbytes_pred
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
   (x: bytes)
-: GTot Type0
+: GTot prop
 = let reslen = Seq.length x in
   min <= reslen /\ reslen <= max
 

@@ -197,7 +197,7 @@ let serialize_client_hello : LP.serializer parse_client_hello =
 
 let with_psk
   (ch: client_hello)
-: GTot Type0
+: GTot prop
 = let (_, exts) = ch in
   Cons? exts /\
   PreSharedKeyExtension? (L.last exts)

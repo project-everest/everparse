@@ -94,7 +94,7 @@ let list_rev_inv
   (l: list t)
   (b: bool)
   (x: list t & list t)
-: GTot Type0
+: GTot prop
 = let (rem, acc) = x in
   L.rev l == L.rev_acc rem acc /\
   (b == false ==> rem == [])
@@ -127,7 +127,7 @@ let parse_list_tailrec_inv
   (input: bytes32)
   (b: bool)
   (x: option (bytes32 & list t))
-: GTot Type0
+: GTot prop
 = match x with
   | Some (input', accu') ->
     parse_list_tailrec' p32 input [] == parse_list_tailrec' p32 input' accu' /\
@@ -277,7 +277,7 @@ let partial_serialize32_list'_inv
   (input: list t)
   (continue: bool)
   (x: bytes32 & list t)
-: GTot Type0
+: GTot prop
 = serialize_list_precond k /\
   Seq.length (serialize (serialize_list p s) input) < 4294967296 /\ (
     let (accu, input') = x in
@@ -376,7 +376,7 @@ let size32_list_inv
   (input: list t)
   (continue: bool)
   (accu: (U32.t & list t))
-: GTot Type0
+: GTot prop
 = let (len, rem) = accu in
   let sz = Seq.length (serialize (serialize_list p s) input) in
   if continue

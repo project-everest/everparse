@@ -201,7 +201,7 @@ let parse32_strengthen
   (#t1: Type)
   (#p1: parser k t1)
   (p1' : parser32 p1)
-  (p2: t1 -> GTot Type0)
+  (p2: t1 -> GTot prop)
   (prf: parse_strengthen_prf p1 p2)
 : Tot (parser32 (parse_strengthen p1 p2 prf))
 = fun (xbytes: bytes32) -> ((
