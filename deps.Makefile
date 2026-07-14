@@ -24,9 +24,9 @@ endif
 NEED_KRML :=
 ifneq (1,$(EVERPARSE_USE_KRML_EXE))
 ifeq ($(OS),Windows_NT)
-export KRML_EXE := $(EVERPARSE_OPT_PATH)/FStar/karamel/out/bin/krml.exe
+export KRML_EXE := $(EVERPARSE_OPT_PATH)/karamel/out/bin/krml.exe
 else
-export KRML_EXE := $(EVERPARSE_OPT_PATH)/FStar/karamel/out/bin/krml
+export KRML_EXE := $(EVERPARSE_OPT_PATH)/karamel/out/bin/krml
 endif
 NEED_KRML := $(EVERPARSE_OPT_PATH)/karamel.done
 else
@@ -115,14 +115,15 @@ endif
 $(EVERPARSE_OPT_PATH)/FStar/Makefile: $(EVERPARSE_OPT_PATH)/hashes.Makefile
 	+$(MAKE) -C $(EVERPARSE_OPT_PATH) FStar/Makefile
 
-$(EVERPARSE_OPT_PATH)/FStar/karamel/Makefile: $(EVERPARSE_OPT_PATH)/FStar/Makefile $(EVERPARSE_OPT_PATH)/hashes.Makefile
-	+$(MAKE) -C $(EVERPARSE_OPT_PATH) FStar/karamel/Makefile
+$(EVERPARSE_OPT_PATH)/karamel/Makefile: $(EVERPARSE_OPT_PATH)/FStar/Makefile $(EVERPARSE_OPT_PATH)/hashes.Makefile
+	+$(MAKE) -C $(EVERPARSE_OPT_PATH) karamel/Makefile
 
-$(EVERPARSE_OPT_PATH)/opam.done: $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh $(EVERPARSE_OPT_PATH)/FStar/Makefile $(EVERPARSE_OPT_PATH)/FStar/karamel/Makefile
+$(EVERPARSE_OPT_PATH)/opam.done: $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh $(EVERPARSE_OPT_PATH)/FStar/Makefile $(EVERPARSE_OPT_PATH)/karamel/Makefile
 	+$(MAKE) -C $(EVERPARSE_OPT_PATH) opam.done
 
 $(EVERPARSE_OPT_PATH)/FStar.done: $(EVERPARSE_OPT_PATH)/FStar/Makefile $(NEED_OPAM)
 	rm -f $@
+	cd $(EVERPARSE_OPT_PATH)/FStar && git submodule init && git submodule update # TODO: allow F* to build without its Karamel submodule
 	+$(with_opam) $(MAKE) -C $(EVERPARSE_OPT_PATH)/FStar ADMIT=1
 	touch $@
 
@@ -134,11 +135,11 @@ $(EVERPARSE_OPT_PATH)/z3: $(EVERPARSE_OPT_PATH)/FStar/Makefile
 	mv $@.tmp $@
 	touch $@
 
-$(EVERPARSE_OPT_PATH)/karamel.done: $(EVERPARSE_OPT_PATH)/FStar/karamel/Makefile $(NEED_FSTAR) $(NEED_OPAM)
+$(EVERPARSE_OPT_PATH)/karamel.done: $(EVERPARSE_OPT_PATH)/karamel/Makefile $(NEED_FSTAR) $(NEED_OPAM)
 	rm -f $@
-	+$(with_opam) env OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $(EVERPARSE_OPT_PATH)/FStar/karamel minimal
+	+$(with_opam) env OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $(EVERPARSE_OPT_PATH)/karamel LOWSTAR=false
 ifeq ($(OS),Windows_NT)
-	mv "$(EVERPARSE_OPT_PATH)/FStar/karamel/out/bin/krml" "$(EVERPARSE_OPT_PATH)/FStar/karamel/out/bin/krml.exe"
+	mv "$(EVERPARSE_OPT_PATH)/karamel/out/bin/krml" "$(EVERPARSE_OPT_PATH)/karamel/out/bin/krml.exe"
 endif
 	touch $@
 
