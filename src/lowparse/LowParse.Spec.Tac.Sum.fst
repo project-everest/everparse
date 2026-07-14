@@ -11,7 +11,7 @@ module U32 = FStar.UInt32
 noextract
 let enum_destr_tac
   (#key #repr: Type)
-  (e: list (key * repr))
+  (e: list (key & repr))
 : T.Tac unit
 = enum_tac_gen (quote enum_destr_cons_nil') (quote enum_destr_cons') e
 

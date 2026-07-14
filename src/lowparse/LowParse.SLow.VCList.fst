@@ -13,9 +13,9 @@ let rec parse_nlist_tailrec
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (accu: list t * nat)
+  (accu: list t & nat)
   (b: bytes)
-: GTot (option (list t * nat))
+: GTot (option (list t & nat))
 = if n = 0
   then Some accu
   else
@@ -31,7 +31,7 @@ let rec parse_nlist_tailrec_correct'
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (accu: list t * nat)
+  (accu: list t & nat)
   (b: bytes)
 : Lemma
   (match parse_nlist_tailrec n p accu b, parse (parse_nlist n p) b with
@@ -82,10 +82,10 @@ let parse_nlist_tailrec_inv
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (accu: list t * nat)
+  (accu: list t & nat)
   (input: bytes32)
   (b: bool)
-  (x: option (bytes32 * U32.t * list t * U32.t))
+  (x: option (bytes32 & U32.t & list t & U32.t))
 : GTot Type0
 = match x with
   | Some (input', i, accu', consumed') ->
@@ -99,7 +99,7 @@ let parse_nlist_tailrec_inv
 let parse_nlist_tailrec_measure
   (#t: Type)
   (n: U32.t)
-  (x: option (bytes32 * U32.t * list t * U32.t))
+  (x: option (bytes32 & U32.t & list t & U32.t))
 : GTot nat
 = match x with
   | None -> 0
@@ -113,8 +113,8 @@ let parse_nlist_body
   (#p: parser k t)
   (p32: parser32 p)
   (input: bytes32)
-  (x: option (bytes32 * U32.t * list t * U32.t))
-: Pure (bool * option (bytes32 * U32.t * list t * U32.t))
+  (x: option (bytes32 & U32.t & list t & U32.t))
+: Pure (bool & option (bytes32 & U32.t & list t & U32.t))
   (requires (parse_nlist_tailrec_inv n p ([], 0) input true x))
   (ensures (fun (continue, y) ->
     parse_nlist_tailrec_inv n p ([], 0) input continue y /\
@@ -186,12 +186,12 @@ let serialize32_nlist
       Seq.append_empty_l (serialize (serialize_nlist (n) s) input)
     in
     let x = C.Loops.total_while
-      (fun (x: (list t * bytes32)) -> L.length (fst x))
-      (fun (continue: bool) (x: (list t * bytes32)) ->
+      (fun (x: (list t & bytes32)) -> L.length (fst x))
+      (fun (continue: bool) (x: (list t & bytes32)) ->
         serialize (serialize_nlist (n) s) input == B32.reveal (snd x) `Seq.append` serialize (serialize_nlist (L.length (fst x)) s) (fst x) /\
         (continue == false ==> fst x == [])
       )
-      (fun (x: (list t * bytes32)) ->
+      (fun (x: (list t & bytes32)) ->
          match x with
          | [], res -> (false, x)
          | a :: q, res ->
@@ -238,12 +238,12 @@ let size32_nlist
       parse_nlist_kind_high (n) k
     in
     let x = C.Loops.total_while
-      (fun (x: (list t * U32.t)) -> L.length (fst x))
-      (fun (continue: bool) (x: (list t * U32.t)) ->
+      (fun (x: (list t & U32.t)) -> L.length (fst x))
+      (fun (continue: bool) (x: (list t & U32.t)) ->
         Seq.length (serialize (serialize_nlist (n) s) input) == U32.v (snd x) + Seq.length (serialize (serialize_nlist (L.length (fst x)) s) (fst x)) /\
         (continue == false ==> fst x == [])
       )
-      (fun (x: (list t * U32.t)) ->
+      (fun (x: (list t & U32.t)) ->
          match x with
          | [], res -> (false, x)
          | a :: q, res ->

@@ -125,7 +125,7 @@ let rec automata_bare_parser'
   (s : cp.control_t)
   (data : dp.partial_t {dp.pre_t s data})
   (b : bytes)
-: Tot (option ((ret : dp.ret_t {dp.post_t s data ret}) * (consumed_length b)))
+: Tot (option ((ret : dp.ret_t {dp.post_t s data ret}) & (consumed_length b)))
   (decreases (Seq.length b))
 = match (bp.ch_t_bare_parser b) with
   | None -> None

@@ -11,7 +11,7 @@ let parser32_correct
   (#t: Type)
   (p: parser k t)
   (input: bytes32)
-  (res: option (t * U32.t))
+  (res: option (t & U32.t))
 : GTot Type0
 = let gp = parse p (B32.reveal input) in
   match res with
@@ -30,7 +30,7 @@ let parser32
   (#t: Type)
   (p: parser k t)
 : Tot Type
-= (input: bytes32) -> Tot (res: option (t * U32.t) { parser32_correct p input res } )
+= (input: bytes32) -> Tot (res: option (t & U32.t) { parser32_correct p input res } )
 
 let parser32_consumes
   (#k: parser_kind)
@@ -59,9 +59,9 @@ let make_parser32
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-  (p32: (input: bytes32) -> Pure (option (t * U32.t)) (requires True) (ensures (fun res -> parser32_correct p input res)))
+  (p32: (input: bytes32) -> Pure (option (t & U32.t)) (requires True) (ensures (fun res -> parser32_correct p input res)))
 : Tot (parser32 p)
-= (fun (input: bytes32) -> (p32 input <: (res: option (t * U32.t) { parser32_correct p input res } )))
+= (fun (input: bytes32) -> (p32 input <: (res: option (t & U32.t) { parser32_correct p input res } )))
 
 inline_for_extraction
 let coerce_parser32

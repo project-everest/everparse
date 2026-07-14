@@ -163,7 +163,7 @@ and asn1_sequence_k_wf (li : id_decs) : Type =
 
 let my_as_set l = Set.as_set l
 
-let proj2_of_3 (#a #b : Type) (#c : a -> b -> Type) (x : dtuple3 a (fun _ -> b) c) : a * b = 
+let proj2_of_3 (#a #b : Type) (#c : a -> b -> Type) (x : dtuple3 a (fun _ -> b) c) : a & b = 
   let (| xa, xb, _ |) = x in (xa, xb)
 
 let rec asn1_any_prefix_k_wf' (ks : Set.set asn1_id_t) (li : id_decs) (s : Set.set asn1_id_t) : Type =
@@ -199,7 +199,7 @@ type asn1_content_k : Type =
              prefix:asn1_gen_items_l id_decs_prefix ->
              id : asn1_id_t ->
              key_k : asn1_terminal_k ->
-             supported : list (asn1_terminal_t key_k * asn1_gen_items_lk) -> 
+             supported : list (asn1_terminal_t key_k & asn1_gen_items_lk) -> 
              fallback : option asn1_gen_items_lk ->
              pf_wf : squash (asn1_any_prefix_k_wf (Set.singleton id) id_decs_prefix) ->
              pf_sup : squash (List.noRepeats (List.map fst supported)) -> 
@@ -342,7 +342,7 @@ let rec asn1_content_t (k : asn1_content_k) : Tot Type (decreases k) =
       | Some fb -> make_gen_choice_type_with_fallback (asn1_any_t_core (asn1_terminal_t key_k) ls) (asn1_sequence_t_core (dsnd fb))) in
     asn1_sequence_any_t_core prefix suffix_t
 
-and asn1_any_t_core (t : eqtype) (ls : list (t * asn1_gen_items_lk)) : Tot (list (t & Type)) (decreases ls) =
+and asn1_any_t_core (t : eqtype) (ls : list (t & asn1_gen_items_lk)) : Tot (list (t & Type)) (decreases ls) =
   match ls with
   | [] -> [] 
   | h :: tl -> 
@@ -414,7 +414,7 @@ let rec asn1_sequence_t_core_equiv' (items:list asn1_gen_item_k)
     | hd::tl -> asn1_sequence_t_core_equiv' tl
 
 
-let rec asn1_any_t (t : eqtype) (ls : list (t * asn1_gen_items_k)) : Tot (list (t & Type)) (decreases ls) =
+let rec asn1_any_t (t : eqtype) (ls : list (t & asn1_gen_items_k)) : Tot (list (t & Type)) (decreases ls) =
   match ls with
   | [] -> [] 
   | h :: tl -> 

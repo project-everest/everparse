@@ -76,7 +76,7 @@ let parse_all_bytes_kind =
 
 let parse_all_bytes'
   (input: bytes)
-: Tot (option (B32.bytes * consumed_length input))
+: Tot (option (B32.bytes & consumed_length input))
 = let len = Seq.length input in
   if len >= 4294967296
   then None

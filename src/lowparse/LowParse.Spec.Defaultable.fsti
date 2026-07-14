@@ -6,7 +6,7 @@ let mk_option_tuple
   (#t #t' : Type)
   (a : option t)
   (b : option t')
-: option (t * t')
+: option (t & t')
 = match a, b with
   | None, _
   | _, None -> None

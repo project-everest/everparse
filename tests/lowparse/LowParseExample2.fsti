@@ -22,7 +22,7 @@ let make_t' (x: list t) : Tot (option t') =
 
 module U32 = FStar.UInt32
 
-val parse_t' : B32.bytes -> Tot (option (t' * U32.t))
+val parse_t' : B32.bytes -> Tot (option (t' & U32.t))
 
 val serialize_t' : t' -> Tot B32.bytes
 
