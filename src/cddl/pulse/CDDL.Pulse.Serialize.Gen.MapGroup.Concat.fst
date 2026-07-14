@@ -51,7 +51,8 @@ let mg_spec_concat_serializer_eq
 #pop-options
 
 
-#push-options "--z3rlimit 128 --split_queries always"
+#restart-solver
+#push-options "--z3rlimit 256 --split_queries always"
 
 let impl_serialize_map_group_concat_false_helper
   (p: bare_cbor_map_parser)

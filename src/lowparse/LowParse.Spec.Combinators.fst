@@ -417,10 +417,12 @@ let nondep_then_eq
     end
   | _ -> None
   ))
-
-  by (T.norm [delta_only [`%nondep_then;]])
-  
-= ()
+= parse_tagged_union_eq p1 fst (fun x -> parse_synth p2 (fun y -> (x, y) <: refine_with_tag fst x)) b;
+  match parse p1 b with
+  | None -> ()
+  | Some (x1, consumed1) ->
+    let b' = Seq.slice b consumed1 (Seq.length b) in
+    parse_synth_eq p2 (fun y -> (x1, y) <: refine_with_tag fst x1) b'
 #pop-options
 
 let tot_nondep_then_bare
