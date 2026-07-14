@@ -6,7 +6,7 @@
 #include "krmllib.h"
 
 #include "COSE_Format.h"
-#include "CBORDetAbstract.h"
+#include "CBORDetType.h"
 
 COSE_Format_evercddl_int COSE_EverCrypt_mk_int(int32_t i);
 

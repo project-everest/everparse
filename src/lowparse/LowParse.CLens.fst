@@ -28,7 +28,7 @@ let clens_snd (t1: Type) (t2: Type) : Tot (clens (t1 & t2) t2) = {
   clens_get = snd;
 }
 
-let clens_eq (#t: Type) (#t': Type) (cl1: clens t t') (cl2: clens t t') : GTot Type0 =
+let clens_eq (#t: Type) (#t': Type) (cl1: clens t t') (cl2: clens t t') : GTot prop =
   (forall (x: t) . {:pattern (cl1.clens_cond x) \/ (cl2.clens_cond x)} cl1.clens_cond x <==> cl2.clens_cond x) /\
   (forall (x: t) . {:pattern (cl1.clens_get x) \/ (cl2.clens_get x)} (cl1.clens_cond x \/ cl2.clens_cond x) ==> (cl1.clens_get x == cl2.clens_get x))
 
@@ -67,7 +67,7 @@ let clens_eq_intro'
 
 (*
 let clens_get_put'
-  (#t1: Type) (#clens_cond: t1 -> GTot Type0) (#t2: Type) (l: clens clens_cond t2)
+  (#t1: Type) (#clens_cond: t1 -> GTot prop) (#t2: Type) (l: clens clens_cond t2)
   (x1: t1) (x2: t2)
 : Lemma
   (requires (clens_cond x1))
@@ -76,7 +76,7 @@ let clens_get_put'
 = l.clens_get_put x1 x2
 
 let clens_put_put'
-  (#t1: Type) (#clens_cond: t1 -> GTot Type0) (#t2: Type) (l: clens clens_cond t2)
+  (#t1: Type) (#clens_cond: t1 -> GTot prop) (#t2: Type) (l: clens clens_cond t2)
   (x1: t1) (x2: t2) (x2' : t2)
 : Lemma
   (requires (clens_cond x1))
@@ -85,7 +85,7 @@ let clens_put_put'
 = l.clens_put_put x1 x2 x2'
 
 let clens_put_get'
-  (#t1: Type) (#clens_cond: t1 -> GTot Type0) (#t2: Type) (l: clens clens_cond t2)
+  (#t1: Type) (#clens_cond: t1 -> GTot prop) (#t2: Type) (l: clens clens_cond t2)
   (x1: t1)
 : Lemma
   (requires (clens_cond x1))
@@ -96,20 +96,20 @@ let clens_put_get'
 abstract
 let clens_disjoint_l
   (#t0: Type)
-  (#clens_cond2: t0 -> GTot Type0)
-  (#clens_cond3: t0 -> GTot Type0)
+  (#clens_cond2: t0 -> GTot prop)
+  (#clens_cond3: t0 -> GTot prop)
   (#t2 #t3: Type)
   (l2: clens clens_cond2 t2)
   (l3: clens clens_cond3 t3)
-: GTot Type0
+: GTot prop
 = (forall (x0: t0) (x2: t2) . (clens_cond2 x0 /\ clens_cond3 x0) ==> 
   (let x0' = l2.clens_put x0 x2 in clens_cond3 x0' /\ l3.clens_get x0' == l3.clens_get x0))
 
 abstract
 let clens_disjoint_l_elim
   (#t0: Type)
-  (#clens_cond2: t0 -> GTot Type0)
-  (#clens_cond3: t0 -> GTot Type0)
+  (#clens_cond2: t0 -> GTot prop)
+  (#clens_cond3: t0 -> GTot prop)
   (#t2 #t3: Type)
   (l2: clens clens_cond2 t2)
   (l3: clens clens_cond3 t3)
@@ -123,8 +123,8 @@ let clens_disjoint_l_elim
 abstract
 let clens_disjoint_l_intro
   (#t0: Type)
-  (#clens_cond2: t0 -> GTot Type0)
-  (#clens_cond3: t0 -> GTot Type0)
+  (#clens_cond2: t0 -> GTot prop)
+  (#clens_cond3: t0 -> GTot prop)
   (#t2 #t3: Type)
   (l2: clens clens_cond2 t2)
   (l3: clens clens_cond3 t3)
@@ -149,18 +149,18 @@ let clens_disjoint_l_intro
 
 let clens_disjoint
   (#t0: Type)
-  (#clens_cond2: t0 -> GTot Type0)
-  (#clens_cond3: t0 -> GTot Type0)
+  (#clens_cond2: t0 -> GTot prop)
+  (#clens_cond3: t0 -> GTot prop)
   (#t2 #t3: Type)
   (l2: clens clens_cond2 t2)
   (l3: clens clens_cond3 t3)
-: GTot Type0
+: GTot prop
 = clens_disjoint_l l2 l3 /\ clens_disjoint_l l3 l2
 
 let clens_disjoint_sym
   (#t0: Type)
-  (#clens_cond2: t0 -> GTot Type0)
-  (#clens_cond3: t0 -> GTot Type0)
+  (#clens_cond2: t0 -> GTot prop)
+  (#clens_cond3: t0 -> GTot prop)
   (#t2 #t3: Type)
   (l2: clens clens_cond2 t2)
   (l3: clens clens_cond3 t3)
@@ -208,7 +208,7 @@ let clens_compose_strong_pre
   (#t3: Type)
   (l12: clens t1 t2)
   (l23: clens t2 t3)
-: GTot Type0
+: GTot prop
 = forall (x: t1) . {:pattern (l12.clens_cond x) \/ (l23.clens_cond (l12.clens_get x))} l12.clens_cond x ==> l23.clens_cond (l12.clens_get x)
 
 let clens_compose_strong
@@ -227,12 +227,12 @@ let clens_compose_strong
 abstract
 let clens_disjoint_compose
   (#t0: Type)
-<  (#clens_cond2: t0 -> GTot Type0)
-  (#clens_cond3: t0 -> GTot Type0)
+<  (#clens_cond2: t0 -> GTot prop)
+  (#clens_cond3: t0 -> GTot prop)
   (#t2 #t3: Type)
   (l2: clens clens_cond2 t2)
   (l3: clens clens_cond3 t3)
-  (#clens_cond3': t3 -> GTot Type0)
+  (#clens_cond3': t3 -> GTot prop)
   (#t3' : Type)
   (l3' : clens clens_cond3' t3')
 : Lemma

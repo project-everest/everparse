@@ -1,6 +1,6 @@
 module CBOR.Pulse.Raw.Format.Nondet.Validate
-#lang-pulse
 friend CBOR.Spec.Raw.Format
+#lang-pulse
 module EP = CBOR.Pulse.Raw.EverParse.Format
 module EPND = CBOR.Pulse.Raw.EverParse.Nondet.Basic
 
@@ -18,7 +18,6 @@ ensures
     cbor_validate_nondet_post map_key_bound strict_check v res
   ))
 {
-  assume (pure (SZ.fits_u64));
   let mut poff = 0sz;
   let res = EP.validate_raw_data_item () input poff;
   if (res) {

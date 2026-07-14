@@ -29,7 +29,7 @@ BoundedSumWhereValidateBoundedSum(
   }
   else
   {
-    BOOLEAN preconditionConstraintIsOk = Bound <= (uint32_t)1729U;
+    BOOLEAN preconditionConstraintIsOk = Bound <= 1729U;
     uint64_t
     positionAfterPrecondition1 =
       EverParseCheckConstraintOk(preconditionConstraintIsOk,

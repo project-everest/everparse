@@ -389,7 +389,7 @@ let nondep_then
   (#k2: parser_kind)
   (#t2: Type)
   (p2: parser k2 t2)
-: Tot (parser (and_then_kind k1 k2) (t1 * t2))
+: Tot (parser (and_then_kind k1 k2) (t1 & t2))
 = parse_tagged_union
     p1
     fst
@@ -417,10 +417,12 @@ let nondep_then_eq
     end
   | _ -> None
   ))
-
-  by (T.norm [delta_only [`%nondep_then;]])
-  
-= ()
+= parse_tagged_union_eq p1 fst (fun x -> parse_synth p2 (fun y -> (x, y) <: refine_with_tag fst x)) b;
+  match parse p1 b with
+  | None -> ()
+  | Some (x1, consumed1) ->
+    let b' = Seq.slice b consumed1 (Seq.length b) in
+    parse_synth_eq p2 (fun y -> (x1, y) <: refine_with_tag fst x1) b'
 #pop-options
 
 let tot_nondep_then_bare
@@ -468,7 +470,7 @@ let serialize_nondep_then_eq
   (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
-  (input: t1 * t2)
+  (input: t1 & t2)
 : Lemma
   (serialize (serialize_nondep_then s1 s2) input == bare_serialize_nondep_then p1 s1 p2 s2 input)
 = ()
@@ -497,7 +499,7 @@ let serialize_nondep_then_upd_left
   (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
-  (x: t1 * t2)
+  (x: t1 & t2)
   (y: t1)
 : Lemma
   (requires (Seq.length (serialize s1 y) == Seq.length (serialize s1 (fst x))))
@@ -521,7 +523,7 @@ let serialize_nondep_then_upd_left_chain
   (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
-  (x: t1 * t2)
+  (x: t1 & t2)
   (y: t1)
   (i' : nat)
   (s' : bytes)
@@ -554,7 +556,7 @@ let serialize_nondep_then_upd_bw_left
   (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
-  (x: t1 * t2)
+  (x: t1 & t2)
   (y: t1)
 : Lemma
   (requires (Seq.length (serialize s1 y) == Seq.length (serialize s1 (fst x))))
@@ -577,7 +579,7 @@ let serialize_nondep_then_upd_bw_left_chain
   (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
-  (x: t1 * t2)
+  (x: t1 & t2)
   (y: t1)
   (i' : nat)
   (s' : bytes)
@@ -606,7 +608,7 @@ let serialize_nondep_then_upd_right
   (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
-  (x: t1 * t2)
+  (x: t1 & t2)
   (y: t2)
 : Lemma
   (requires (Seq.length (serialize s2 y) == Seq.length (serialize s2 (snd x))))
@@ -630,7 +632,7 @@ let serialize_nondep_then_upd_right_chain
   (#t2: Type)
   (#p2: parser k2 t2)
   (s2: serializer p2)
-  (x: t1 * t2)
+  (x: t1 & t2)
   (y: t2)
   (i' : nat)
   (s' : bytes)

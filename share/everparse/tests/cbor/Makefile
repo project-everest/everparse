@@ -41,10 +41,8 @@ CFLAGS  ?= -O2 -Wall
 # The non-deterministic snapshot ships only CBORNondet.o.
 NONDET_OBJS = $(EVERCBOR_NONDET_PATH)/CBORNondet.o
 
-# The deterministic snapshot ships CBORDet.o plus auxiliary object files.
-DET_OBJS    = $(EVERCBOR_DET_PATH)/CBORDet.o \
-              $(EVERCBOR_DET_PATH)/CBORDetAbstract.o \
-              $(EVERCBOR_DET_PATH)/CBORDetSizeCheck.o
+# The deterministic snapshot ships only CBORDet.o
+DET_OBJS    = $(EVERCBOR_DET_PATH)/CBORDet.o
 
 SRC = $(CURDIR)/cbor_tests.c
 

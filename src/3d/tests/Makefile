@@ -12,17 +12,12 @@ FSTAR_EXE ?= fstar.exe
 
 3D_Z3_EXECUTABLE ?= z3-4.13.3
 
-ifeq (,$(KRML_HOME))
-  KRML_HOME := $(realpath ../../../../karamel)
-endif
-ifeq ($(OS),Windows_NT)
-  KRML_HOME := $(shell cygpath -m "$(KRML_HOME)")
-endif
-export KRML_HOME
+EVERPARSE_SRC_PATH := $(EVERPARSE_HOME)/src
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
-INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffer $(EVERPARSE_HOME)/src/lowparse $(KRML_HOME)/krmllib/obj $(KRML_HOME)/krmllib
+INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffer $(EVERPARSE_HOME)/src/lowparse
 
-FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
+FSTAR_OPTIONS += $(addprefix --include , $(INCLUDES))
 
 positive_tests=$(filter-out $(wildcard FAIL*.3d) FieldDependence0.3d ActAndCheck.3d,$(wildcard *.3d))
 positive_tests_nosuffix=$(basename $(positive_tests))

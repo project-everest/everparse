@@ -20,7 +20,7 @@ val integer_size_values (i: integer_size) : Lemma
 let bounded_integer_prop
   (i: integer_size)
   (u: U32.t)
-: GTot Type0
+: GTot prop
 = U32.v u < (match i with 1 -> 256 | 2 -> 65536 | 3 -> 16777216 | 4 -> 4294967296)
 
 val bounded_integer_prop_equiv

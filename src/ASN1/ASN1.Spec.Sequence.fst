@@ -101,7 +101,7 @@ let and_then_cases_injective_some
   (#t: Type)
   (#t' : Type)
   (p': (option t -> Tot (bare_parser t')))
-: GTot Type0
+: GTot prop
 = forall (x1 x2: option t) (b1 b2: bytes) . {:pattern (parse (p' x1) b1); (parse (p' x2) b2)}
   and_then_cases_injective_precond p' x1 x2 b1 b2 /\ Some? x1 /\ Some? x2 ==>
   x1 == x2

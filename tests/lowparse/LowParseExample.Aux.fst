@@ -17,7 +17,7 @@ let case_B = (x: U16.t { parse_case_B_filter x } )
 
 noeq
 type t =
-  | A of (U8.t * U8.t)
+  | A of (U8.t & U8.t)
   | B of case_B
   | V2 of U16.t
   | V3 of U16.t
@@ -62,7 +62,7 @@ let u8 : eqtype = U8.t
 inline_for_extraction
 let case_enum : LP.enum cases u8 =
   [@inline_let]
-  let e : list (cases * U8.t) = [
+  let e : list (cases & U8.t) = [
     Case_A, 18uy;
     Case_B, 42uy;
     Case_V2, 71uy;
@@ -134,7 +134,7 @@ let type_of_case
   (x: cases)
 : Tot Type0
 = match x with
-  | Case_A -> U8.t * U8.t
+  | Case_A -> U8.t & U8.t
   | Case_B -> case_B
   | Case_V2 -> U16.t
   | Case_V3 -> U16.t
@@ -324,7 +324,7 @@ let parse32_cases
 
 inline_for_extraction
 let parse32_case_destr
-: (LP.enum_destr_t (option (t * FStar.UInt32.t)) case_enum)
+: (LP.enum_destr_t (option (t & FStar.UInt32.t)) case_enum)
 = _ by (LP.enum_destr_tac case_enum)
 
 let parse32_case_enum

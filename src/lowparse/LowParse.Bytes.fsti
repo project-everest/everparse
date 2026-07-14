@@ -6,7 +6,7 @@ module U8 = FStar.UInt8
 type byte = U8.byte
 type bytes = Seq.seq byte
 
-val bytes_equal (b1 b2: bytes) : GTot Type0
+val bytes_equal (b1 b2: bytes) : GTot prop
 
 val bytes_equal_intro (b1 b2: bytes) : Lemma
   (requires (

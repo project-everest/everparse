@@ -23,6 +23,5 @@ make -C everparse -j "$CI_THREADS" lowparse
 
 echo "Please set the following environment variables:"
 echo "FSTAR_EXE=$(pwd)/FStar/bin/fstar.exe"
-echo "KRML_HOME=$(pwd)/karamel"
 echo "EVERPARSE_HOME=$(pwd)/everparse"
 popd

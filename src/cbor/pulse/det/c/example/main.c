@@ -227,7 +227,7 @@ int main(void) {
      space.
   */
   // success
-  uint8_t validated_size = cbor_det_validate(output, output_size);
+  size_t validated_size = cbor_det_validate(output, output_size);
   assert (validated_size == cbor5_size);
   // failure: see RFC 8949, Section 3.3
   output_fail[0] = 0xf8u;

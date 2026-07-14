@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <assert.h>
 #include "Basic1.h"
 
 #define SIZE (1<<20)

@@ -180,11 +180,11 @@ fn lex_compare_bytes(s1: &[u8], s2: &[u8]) -> i16
     let mut pi2: [usize; 1] = [0usize; 1usize];
     let n1: usize = sp1.len();
     let n2: usize = sp2.len();
-    let ite: i16 =
-        if 0usize < n1
-        { if 0usize < n2 { 0i16 } else { 1i16 } }
-        else if 0usize < n2 { -1i16 } else { 0i16 };
-    let mut pres: [i16; 1] = [ite; 1usize];
+    let mut pres: [i16; 1] =
+        [if 0usize < n1
+            { if 0usize < n2 { 0i16 } else { 1i16 } }
+            else if 0usize < n2 { -1i16 } else { 0i16 };
+            1usize];
     let res: i16 = (&pres)[0];
     let i1: usize = (&pi1)[0];
     let mut cond: bool = res == 0i16 && i1 < n1;
@@ -610,12 +610,11 @@ fn validate_header(input: &[u8], poffset: &mut [usize]) -> bool
                     input2
                 };
             let x: initial_byte_t = read_initial_byte_t(input·);
-            let ite: bool =
-                if x.major_type == cbor_major_type_simple_value
-                { x.additional_info <= additional_info_long_argument_8_bits }
-                else
-                { true };
-            ite && x.additional_info < additional_info_unassigned_min
+            (x.major_type != cbor_major_type_simple_value
+            ||
+            x.additional_info <= additional_info_long_argument_8_bits)
+            &&
+            x.additional_info < additional_info_unassigned_min
         }
         else
         { false };
@@ -829,24 +828,56 @@ fn validate_recursive_step_count_leaf(a: &[u8], bound: usize, prem: &mut [usize]
         let b: initial_byte_t = h.fst;
         let l: long_argument = h.snd;
         let arg64: u64 = argument_as_uint64(b, l);
-        prem[0] = arg64 as usize;
-        false
+        let q1: usize = bound.wrapping_div(32768usize);
+        let q2: usize = q1.wrapping_div(32768usize);
+        let q3: usize = q2.wrapping_div(32768usize);
+        let q4: usize = q3.wrapping_div(32768usize);
+        let __anf0: bool =
+            if q4 >= 16usize
+            { true }
+            else
+            {
+                let b64: u64 = bound as u64;
+                arg64 <= b64
+            };
+        if __anf0
+        {
+            prem[0] = arg64 as usize;
+            false
+        }
+        else
+        { true }
     }
     else if typ == cbor_major_type_map
     {
         let b: initial_byte_t = h.fst;
         let l: long_argument = h.snd;
         let arg64: u64 = argument_as_uint64(b, l);
-        let arg: usize = arg64 as usize;
-        if arg > bound
-        { true }
-        else if bound.wrapping_sub(arg) < arg
-        { true }
-        else
+        let q1: usize = bound.wrapping_div(32768usize);
+        let q2: usize = q1.wrapping_div(32768usize);
+        let q3: usize = q2.wrapping_div(32768usize);
+        let q4: usize = q3.wrapping_div(32768usize);
+        let __anf0: bool =
+            if q4 >= 16usize
+            { true }
+            else
+            {
+                let b64: u64 = bound as u64;
+                arg64 <= b64
+            };
+        if __anf0
         {
-            prem[0] = arg.wrapping_add(arg);
-            false
+            let arg: usize = arg64 as usize;
+            if bound.wrapping_sub(arg) < arg
+            { true }
+            else
+            {
+                prem[0] = arg.wrapping_add(arg);
+                false
+            }
         }
+        else
+        { true }
     }
     else if typ == cbor_major_type_tagged
     {
@@ -961,19 +992,34 @@ fn validate_raw_data_item(input: &[u8], poffset: &mut [usize]) -> bool
                     ||
                     b.major_type == cbor_major_type_text_string
                     {
-                        let b0: initial_byte_t = x.fst;
-                        let l: long_argument = x.snd;
-                        let n1: usize = argument_as_uint64(b0, l) as usize;
                         let offset2: usize = poffset[0];
                         let offset3: usize = poffset[0];
-                        let is_valid: bool =
-                            if input.len().wrapping_sub(offset3) < n1
-                            { false }
+                        let remaining: usize = input.len().wrapping_sub(offset3);
+                        let q1: usize = remaining.wrapping_div(32768usize);
+                        let q2: usize = q1.wrapping_div(32768usize);
+                        let q3: usize = q2.wrapping_div(32768usize);
+                        let q4: usize = q3.wrapping_div(32768usize);
+                        let __anf0: bool =
+                            if q4 >= 16usize
+                            { true }
                             else
                             {
-                                poffset[0] = offset3.wrapping_add(n1);
-                                true
+                                let b64: u64 = remaining as u64;
+                                let b0: initial_byte_t = x.fst;
+                                let l: long_argument = x.snd;
+                                argument_as_uint64(b0, l) <= b64
                             };
+                        let is_valid: bool =
+                            if __anf0
+                            {
+                                let b0: initial_byte_t = x.fst;
+                                let l: long_argument = x.snd;
+                                poffset[0] =
+                                    offset3.wrapping_add(argument_as_uint64(b0, l) as usize);
+                                true
+                            }
+                            else
+                            { false };
                         if is_valid
                         {
                             let off2: usize = poffset[0];
@@ -1335,16 +1381,13 @@ fn cbor_validate(input: &[u8]) -> usize
 
 fn impl_raw_uint64_optimal(x: raw_uint64) -> bool
 {
-    if (x.value <= max_simple_value_additional_info as u64) == (x.size == 0u8)
-    {
-        if x.size <= 1u8
-        { true }
-        else if x.size == 2u8
-        { 256u64 <= x.value }
-        else if x.size == 3u8 { 65536u64 <= x.value } else { 4294967296u64 <= x.value }
-    }
-    else
-    { false }
+    (x.value <= max_simple_value_additional_info as u64) == (x.size == 0u8)
+    &&
+    (x.size <= 1u8
+    ||
+    if x.size == 2u8
+    { 256u64 <= x.value }
+    else if x.size == 3u8 { 65536u64 <= x.value } else { 4294967296u64 <= x.value })
 }
 
 fn cbor_raw_ints_optimal(a: &[u8]) -> bool
@@ -2919,8 +2962,9 @@ pub(crate) fn ser·(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                     };
                 let mut pres: [usize; 1] = [res1; 1usize];
                 let mut pi: [usize; 1] = [0usize; 1usize];
+                let len: usize = a.len();
                 let i: usize = (&pi)[0];
-                let mut cond: bool = i < argument_as_uint64(xh1.fst, xh1.snd) as usize;
+                let mut cond: bool = i < len;
                 while
                 cond
                 {
@@ -2933,7 +2977,7 @@ pub(crate) fn ser·(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                     (&mut pi)[0] = i·;
                     (&mut pres)[0] = res;
                     let i1: usize = (&pi)[0];
-                    cond = i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
+                    cond = i1 < len
                 };
                 (&pres)[0]
             }
@@ -2983,8 +3027,9 @@ pub(crate) fn ser·(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                         };
                     let mut pres: [usize; 1] = [res1; 1usize];
                     let mut pi: [usize; 1] = [0usize; 1usize];
+                    let len: usize = a.len();
                     let i: usize = (&pi)[0];
-                    let mut cond: bool = i < argument_as_uint64(xh1.fst, xh1.snd) as usize;
+                    let mut cond: bool = i < len;
                     while
                     cond
                     {
@@ -2999,7 +3044,7 @@ pub(crate) fn ser·(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                         (&mut pi)[0] = i·;
                         (&mut pres)[0] = res;
                         let i1: usize = (&pi)[0];
-                        cond = i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
+                        cond = i1 < len
                     };
                     (&pres)[0]
                 }
@@ -3130,9 +3175,10 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
                         };
                     let mut pres: [bool; 1] = [true; 1usize];
                     let mut pi: [usize; 1] = [0usize; 1usize];
+                    let len: usize = a.len();
                     let res: bool = (&pres)[0];
                     let i: usize = (&pi)[0];
-                    let mut cond: bool = res && i < argument_as_uint64(xh1.fst, xh1.snd) as usize;
+                    let mut cond: bool = res && i < len;
                     while
                     cond
                     {
@@ -3149,7 +3195,7 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
                         { (&mut pres)[0] = false };
                         let res2: bool = (&pres)[0];
                         let i1: usize = (&pi)[0];
-                        cond = res2 && i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
+                        cond = res2 && i1 < len
                     };
                     (&pres)[0]
                 }
@@ -3200,10 +3246,10 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
                             };
                         let mut pres: [bool; 1] = [true; 1usize];
                         let mut pi: [usize; 1] = [0usize; 1usize];
+                        let len: usize = a.len();
                         let res: bool = (&pres)[0];
                         let i: usize = (&pi)[0];
-                        let mut cond: bool =
-                            res && i < argument_as_uint64(xh1.fst, xh1.snd) as usize;
+                        let mut cond: bool = res && i < len;
                         while
                         cond
                         {
@@ -3228,7 +3274,7 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
                             { (&mut pres)[0] = false };
                             let res2: bool = (&pres)[0];
                             let i1: usize = (&pi)[0];
-                            cond = res2 && i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
+                            cond = res2 && i1 < len
                         };
                         (&pres)[0]
                     }
@@ -4205,6 +4251,9 @@ pub(crate) fn impl_cbor_compare(x1: cbor_raw, x2: cbor_raw) -> i16
     { c }
 }
 
+pub(crate) fn dummy_cbor_det_t <'a>() -> cbor_raw <'a>
+{ cbor_raw::CBOR_Case_Simple { v: 0u8 } }
+
 fn cbor_raw_compare(x1: cbor_raw, x2: cbor_raw) -> i16 { impl_cbor_compare(x1, x2) }
 
 fn cbor_map_entry_raw_compare(x1: cbor_map_entry, x2: cbor_map_entry) -> i16
@@ -4364,6 +4413,60 @@ pub(crate) enum impl_map_group_result
 pub(crate) fn uu___is_MGOK(projectee: impl_map_group_result) -> bool
 { match projectee { impl_map_group_result::MGOK => true, _ => false } }
 
+pub(crate) fn sizet_fits_u64(b: usize) -> bool
+{
+    let q1: usize = b.wrapping_div(32768usize);
+    let q2: usize = q1.wrapping_div(32768usize);
+    let q3: usize = q2.wrapping_div(32768usize);
+    let q4: usize = q3.wrapping_div(32768usize);
+    q4 < 16usize
+}
+
+pub(crate) fn sizet_lte_u64(b: usize, a: u64) -> bool
+{
+    let q1: usize = b.wrapping_div(32768usize);
+    let q2: usize = q1.wrapping_div(32768usize);
+    let q3: usize = q2.wrapping_div(32768usize);
+    let q4: usize = q3.wrapping_div(32768usize);
+    if q4 >= 16usize
+    { false }
+    else
+    {
+        let b64: u64 = b as u64;
+        b64 <= a
+    }
+}
+
+pub(crate) fn u64_lte_sizet(a: u64, b: usize) -> bool
+{
+    let q1: usize = b.wrapping_div(32768usize);
+    let q2: usize = q1.wrapping_div(32768usize);
+    let q3: usize = q2.wrapping_div(32768usize);
+    let q4: usize = q3.wrapping_div(32768usize);
+    if q4 >= 16usize
+    { true }
+    else
+    {
+        let b64: u64 = b as u64;
+        a <= b64
+    }
+}
+
+pub(crate) fn sizet_eq_u64(b: usize, a: u64) -> bool
+{
+    let q1: usize = b.wrapping_div(32768usize);
+    let q2: usize = q1.wrapping_div(32768usize);
+    let q3: usize = q2.wrapping_div(32768usize);
+    let q4: usize = q3.wrapping_div(32768usize);
+    if q4 >= 16usize
+    { false }
+    else
+    {
+        let b64: u64 = b as u64;
+        b64 == a
+    }
+}
+
 pub(crate) const cddl_simple_value_false: u8 = 20u8;
 
 pub(crate) const cddl_simple_value_true: u8 = 21u8;
@@ -4400,5 +4503,3 @@ pub type cbor_det_array_iterator_t <'a> = cbor_raw_iterator__CBOR_Pulse_Raw_Type
 
 pub type cbor_det_map_iterator_t <'a> =
 cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>;
-
-pub fn dummy_cbor_det_t <'a>() -> cbor_raw <'a> { cbor_raw::CBOR_Case_Simple { v: 0u8 } }

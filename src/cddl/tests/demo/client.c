@@ -1,4 +1,5 @@
 #include "CDDLExtractionTest.h"
+#include "CBORDetAPI.h"
 
 int main(void) {
   FStar_Pervasives_Native_option__CDDLTest_Test_evercddl_uint test_snd = {

@@ -256,7 +256,7 @@ let dummy_map_val () : dummy_map_type =
   Mkevercddl_label0
     (Mkevercddl_int0 (Mkevercddl_uint0 0uL)),
   Mkvalues0 (Mkany0
-    { c = CBOR.Pulse.API.Det.Type.dummy_cbor_det_t (); p = 0.5R })
+    { c = CBOR.Pulse.API.Det.Dummy.dummy_cbor_det_t (); p = 0.5R })
 
 let assert_norm' (p: prop) : Pure (squash p) (requires normalize p) (ensures fun _ -> True) = ()
 

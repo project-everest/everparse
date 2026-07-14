@@ -23,8 +23,7 @@ get_fstar_commit() {
 
 get_karamel_commit() {
     (
-	cd $KRML_HOME
-        git show --no-patch --format=%h
+        $KRML_EXE -version | sed -n 's/KaRaMeL version: \(.\{8\}\).*/\1/p'
     )
 }
 

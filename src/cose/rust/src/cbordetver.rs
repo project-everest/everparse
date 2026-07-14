@@ -105,15 +105,14 @@ pub fn cbor_det_mk_int64 <'a>(ty: cbor_det_int_kind, v: u64) ->
     crate::cbordetveraux::cbor_raw
     <'a>
 {
-    let ite: u8 =
-        if ty == cbor_det_int_kind::UInt64
-        { crate::cbordetveraux::cbor_major_type_uint64 }
-        else
-        { crate::cbordetveraux::cbor_major_type_neg_int64 };
     let resi: crate::cbordetveraux::cbor_int =
         crate::cbordetveraux::cbor_int
         {
-            cbor_int_type: ite,
+            cbor_int_type:
+            if ty == cbor_det_int_kind::UInt64
+            { crate::cbordetveraux::cbor_major_type_uint64 }
+            else
+            { crate::cbordetveraux::cbor_major_type_neg_int64 },
             cbor_int_size: (crate::cbordetveraux::mk_raw_uint64(v)).size,
             cbor_int_value: (crate::cbordetveraux::mk_raw_uint64(v)).value
         };
@@ -133,7 +132,12 @@ pub fn cbor_det_mk_string <'a>(ty: cbor_det_string_kind, s: &'a [u8]) ->
     option__CBOR_Pulse_Raw_Type_cbor_raw
     <'a>
 {
-    if s.len() > 18446744073709551615u64 as usize
+    let q1: usize = s.len().wrapping_div(32768usize);
+    let q2: usize = q1.wrapping_div(32768usize);
+    let q3: usize = q2.wrapping_div(32768usize);
+    let q4: usize = q3.wrapping_div(32768usize);
+    let __anf0: bool = q4 < 16usize;
+    if ! __anf0
     { option__CBOR_Pulse_Raw_Type_cbor_raw::None }
     else
     {
@@ -143,14 +147,17 @@ pub fn cbor_det_mk_string <'a>(ty: cbor_det_string_kind, s: &'a [u8]) ->
         {
             let len64: crate::cbordetveraux::raw_uint64 =
                 crate::cbordetveraux::mk_raw_uint64(s.len() as u64);
-            let ite: u8 =
-                if ty == cbor_det_string_kind::ByteString
-                { crate::cbordetveraux::cbor_major_type_byte_string }
-                else
-                { crate::cbordetveraux::cbor_major_type_text_string };
             let ress: crate::cbordetveraux::cbor_string =
                 crate::cbordetveraux::cbor_string
-                { cbor_string_type: ite, cbor_string_size: len64.size, cbor_string_ptr: s };
+                {
+                    cbor_string_type:
+                    if ty == cbor_det_string_kind::ByteString
+                    { crate::cbordetveraux::cbor_major_type_byte_string }
+                    else
+                    { crate::cbordetveraux::cbor_major_type_text_string },
+                    cbor_string_size: len64.size,
+                    cbor_string_ptr: s
+                };
             let res: crate::cbordetveraux::cbor_raw =
                 crate::cbordetveraux::cbor_raw::CBOR_Case_String { v: ress };
             option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: res }
@@ -184,7 +191,12 @@ pub fn cbor_det_mk_array <'a>(a: &'a [crate::cbordetveraux::cbor_raw <'a>]) ->
     option__CBOR_Pulse_Raw_Type_cbor_raw
     <'a>
 {
-    if a.len() > 18446744073709551615u64 as usize
+    let q1: usize = a.len().wrapping_div(32768usize);
+    let q2: usize = q1.wrapping_div(32768usize);
+    let q3: usize = q2.wrapping_div(32768usize);
+    let q4: usize = q3.wrapping_div(32768usize);
+    let __anf0: bool = q4 < 16usize;
+    if ! __anf0
     { option__CBOR_Pulse_Raw_Type_cbor_raw::None }
     else
     {
@@ -205,8 +217,13 @@ pub fn cbor_det_mk_map <'a>(a: &'a mut [crate::cbordetveraux::cbor_map_entry <'a
 {
     let mut dest: [crate::cbordetveraux::cbor_raw; 1] =
         [crate::cbordetveraux::dummy_cbor_det_t(); 1usize];
+    let q1: usize = a.len().wrapping_div(32768usize);
+    let q2: usize = q1.wrapping_div(32768usize);
+    let q3: usize = q2.wrapping_div(32768usize);
+    let q4: usize = q3.wrapping_div(32768usize);
+    let __anf0: bool = q4 < 16usize;
     let bres: bool =
-        if a.len() > 18446744073709551615u64 as usize
+        if ! __anf0
         { false }
         else
         {

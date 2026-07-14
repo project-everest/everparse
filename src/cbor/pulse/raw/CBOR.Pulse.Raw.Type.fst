@@ -3,6 +3,7 @@ include CBOR.Pulse.Raw.Util
 open CBOR.Spec.Raw.Base
 open Pulse.Lib.Pervasives
 open Pulse.Lib.Slice
+include CBOR.Pulse.Raw.Slice
 
 module SZ = FStar.SizeT
 module U8 = FStar.UInt8
@@ -12,7 +13,7 @@ inline_for_extraction
 noeq
 type cbor_serialized = {
   cbor_serialized_header: raw_uint64;
-  cbor_serialized_payload: slice U8.t;
+  cbor_serialized_payload: byte_slice1;
   cbor_serialized_perm: perm;
 }
 
@@ -31,8 +32,8 @@ noeq
 type cbor_string = {
   cbor_string_type: major_type_byte_string_or_text_string;
   cbor_string_size: integer_size;
-  cbor_string_ptr: (ptr: slice U8.t {
-    let len = SZ.v (len ptr) in
+  cbor_string_ptr: (ptr: byte_slice1 {
+    let len = SZ.v (len (to_slice ptr)) in
     FStar.UInt.fits len 64 /\
     raw_uint64_size_prop cbor_string_size (U64.uint_to_t len)
   }) ;

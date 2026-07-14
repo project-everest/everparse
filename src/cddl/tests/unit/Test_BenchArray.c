@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <assert.h>
 #include "BenchArray.h"
 #include "BenchArray_common.h"
 #include "timing.h"

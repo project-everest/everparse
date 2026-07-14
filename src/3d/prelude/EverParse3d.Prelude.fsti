@@ -70,7 +70,7 @@ val parse_dep_pair (#nz1:_) (#k1:parser_kind nz1 WeakKindStrongPrefix) (#t1: Typ
 inline_for_extraction noextract
 val parse_pair (#nz1:_) (#k1:parser_kind nz1 WeakKindStrongPrefix) (#t1:_) (p1:parser k1 t1)
                (#nz2:_) (#wk2: _) (#k2:parser_kind nz2 wk2) (#t2:_) (p2:parser k2 t2)
-  : Tot (parser (and_then_kind k1 k2) (t1 * t2))
+  : Tot (parser (and_then_kind k1 k2) (t1 & t2))
 
 /// Parser: filter
 let refine t (f:t -> bool) = x:t{f x}

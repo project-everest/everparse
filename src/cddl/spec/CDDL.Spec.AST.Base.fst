@@ -153,7 +153,7 @@ let wf_literal
 = match l with
 | LSimple x -> x >= 0 && x < pow2 8 && Cbor.simple_value_wf (U8.uint_to_t x)
 | LInt v -> v >= - pow2 64 && v < pow2 64
-| LTextString s -> String.length s < pow2 64 && string_is_ascii s // FIXME: support utf8
+| LTextString s -> String.length s < pow2 16 && string_is_ascii s // FIXME: support utf8; length bounded by 2^16 so it fits size_t (FStar.SizeT.fits_at_least_16)
 
 [@@base_attr]
 let wf_elem_typ

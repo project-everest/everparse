@@ -2117,7 +2117,6 @@ fn mk_string_from_array
   (#v: Ghost.erased (Seq.seq U8.t))
 {
   A.pts_to_len a;
-  let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
   let s = S.from_array a (SZ.uint64_to_sizet len);
   intro
     (Trade.trade
@@ -2267,7 +2266,6 @@ fn mk_string_from_arrayptr
   (#v: Ghost.erased (Seq.seq U8.t))
   (#w: _)
 {
-  let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
   if (AP.is_null a || R.is_null dest) {
     fold (mk_string_from_arrayptr_post_false a p v (Ghost.reveal w) (Ghost.reveal w));
     rewrite (mk_string_from_arrayptr_post_false a p v (Ghost.reveal w) (Ghost.reveal w))
@@ -2276,6 +2274,7 @@ fn mk_string_from_arrayptr
   } else {
     rewrite (AP.pts_to_or_null a #p v)
       as (AP.pts_to a #p v);
+    AP.pts_to_len a;
     let s = S.arrayptr_to_slice_intro_trade a (SZ.uint64_to_sizet len);
     S.pts_to_len s;
     if (impl_utf8_correct_if_text_string ty s) {
@@ -2655,7 +2654,6 @@ fn mk_array_from_array
   (#vv: Ghost.erased (list cbor))
 {
   A.pts_to_len a;
-  let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
   let s = S.from_array a (SZ.uint64_to_sizet len);
   intro
     (Trade.trade
@@ -2786,8 +2784,8 @@ fn mk_array_from_arrayptr
       as (mk_array_from_arrayptr_post vmatch a dest pa va pv vv w w);
     false
   } else {
-    let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
     rewrite (AP.pts_to_or_null a #pa va) as (AP.pts_to a #pa va);
+    AP.pts_to_len a;
     rewrite (ref_pts_to_or_null dest 1.0R w) as (pts_to dest w);
     let s = S.arrayptr_to_slice_intro a (SZ.uint64_to_sizet len);
     intro
@@ -3071,7 +3069,6 @@ fn mk_map_from_array
   (#vv: Ghost.erased (list (cbor & cbor)))
 {
   A.pts_to_len a;
-  let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
   let s = S.from_array a (SZ.uint64_to_sizet len);
   S.pts_to_len s;
   let res = cbor_mk_map s;
@@ -3360,7 +3357,7 @@ fn cbor_mk_map_from_arrayptr_safe
   } else {
     rewrite (ref_pts_to_or_null dest 1.0R vdest0) as (pts_to dest vdest0);
     rewrite (AP.pts_to_or_null a va) as (AP.pts_to a va);
-    let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;  
+    AP.pts_to_len a;
     let s = S.arrayptr_to_slice_intro a (SZ.uint64_to_sizet len);
     S.pts_to_len s;
     PM.seq_list_match_length (cbor_map_entry_match pv) va vv;
