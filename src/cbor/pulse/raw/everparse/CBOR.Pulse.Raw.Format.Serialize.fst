@@ -1,8 +1,8 @@
 module CBOR.Pulse.Raw.Format.Serialize
-#lang-pulse
-open Pulse.Lib.Pervasives
 friend CBOR.Spec.Raw.Format
 friend CBOR.Pulse.Raw.Format.Match
+#lang-pulse
+open Pulse.Lib.Pervasives
 open CBOR.Spec.Raw.EverParse
 open LowParse.Spec.Base
 open LowParse.Pulse.Base
