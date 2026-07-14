@@ -3,14 +3,12 @@ include LowParse.Spec.Base
 include LowParse.Spec.Int // for parse_u16_kind
 
 open FStar.Mul
-open LowParse.Spec.Combinators // for parse_synth / serialize_synth / synth_injective / synth_inverse
 
 module Seq = FStar.Seq
 module U8  = FStar.UInt8
 module U16 = FStar.UInt16
 module U32 = FStar.UInt32
 module E = FStar.Endianness
-module Cast = FStar.Int.Cast
 
 (* bounded integers *)
 
@@ -88,65 +86,17 @@ val parse_bounded_integer_le_eq
       let _ = FStar.Math.Lemmas.pow2_le_compat 32 (8 `FStar.Mul.op_Star` i) in
       Some (U32.uint_to_t (E.le_to_n (Seq.slice input 0 i)), i)))
 
-inline_for_extraction
-let synth_u16_le
-  (x: bounded_integer 2)
-: Tot U16.t
-= Cast.uint32_to_uint16 x
+val parse_u16_le : parser parse_u16_kind U16.t
 
-let synth_u16_le_injective : squash (synth_injective synth_u16_le) = ()
-
-let parse_u16_le : parser parse_u16_kind U16.t =
-  parse_bounded_integer_le 2 `parse_synth` synth_u16_le
-
-inline_for_extraction
-let synth_u32_le
-  (x: bounded_integer 4)
-: Tot U32.t
-= x
-
-let parse_u32_le : parser parse_u32_kind U32.t =
-  parse_bounded_integer_le 4 `parse_synth` synth_u32_le
+val parse_u32_le : parser parse_u32_kind U32.t
 
 val serialize_bounded_integer_le
   (sz: integer_size)
 : Tot (serializer (parse_bounded_integer_le sz))
 
-val serialize_bounded_integer_le_spec
-  (sz: integer_size)
-  (x: bounded_integer sz)
-: Lemma
-  (serialize (serialize_bounded_integer_le sz) x == FStar.Endianness.n_to_le sz (U32.v x))
+val serialize_u16_le : serializer parse_u16_le
 
-inline_for_extraction
-let synth_u16_le_recip
-  (x: U16.t)
-: Tot (bounded_integer 2)
-= Cast.uint16_to_uint32 x
-
-let synth_u16_le_inverse : squash (synth_inverse synth_u16_le synth_u16_le_recip) = ()
-
-let serialize_u16_le : serializer parse_u16_le =
-  serialize_synth
-    _
-    synth_u16_le
-    (serialize_bounded_integer_le 2)
-    synth_u16_le_recip
-    ()
-
-inline_for_extraction
-let synth_u32_le_recip
-  (x: U32.t)
-: Tot (bounded_integer 4)
-= x
-
-let serialize_u32_le : serializer parse_u32_le =
-  serialize_synth
-    _
-    synth_u32_le
-    (serialize_bounded_integer_le 4)
-    synth_u32_le_recip
-    ()
+val serialize_u32_le : serializer parse_u32_le
 
 inline_for_extraction
 let log256'

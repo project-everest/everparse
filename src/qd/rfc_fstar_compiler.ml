@@ -52,7 +52,17 @@ let w = fprintf
 let wh x = if !emit_high then fprintf x else ifprintf x
 let wl x = if !emit_low then fprintf x else ifprintf x
 let wp x = if !emit_pulse then fprintf x else ifprintf x
-let ws has_lserializer x = if has_lserializer then w x else wh x
+(* [wnp] ("write non-pulse"): like [w] (emit on all channels) outside [-pulse],
+   but a no-op under [-pulse]. Used for the SLow size32/LSZ machinery, which the
+   Pulse backend never references (it uses the structural leaf_size library
+   instead) and which must not leak into the extracted Pulse C. Outside [-pulse]
+   it behaves exactly like [w], preserving the Low*/High output unchanged. *)
+let wnp x = if !emit_pulse then ifprintf x else fprintf x
+(* [ws] gates the SLow [size32] combinators. Under [-pulse] they are dropped
+   entirely (the Pulse backend has no SLow dependency); outside [-pulse] the
+   master behaviour is preserved: emit to all channels when a low-level
+   serializer is available, otherwise High-only. *)
+let ws has_lserializer x = if !emit_pulse then wh x else (if has_lserializer then w x else wh x)
 
 (* Channel selector for definitions that a transparent Pulse [vmatch]/[lowtype]
    depends on. In [-pulse] mode (which is mutually exclusive with [-low], so the
@@ -2249,7 +2259,7 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
   w o "noextract let %s_repr_serializer = %s\n\n" n (scombinator_name repr_t);
   wh o "inline_for_extraction noextract let %s_repr_parser32 = %s\n\n" n (pcombinator32_name repr_t);
   wh o "inline_for_extraction noextract let %s_repr_serializer32 = %s\n\n" n (scombinator32_name repr_t);
-  w o "inline_for_extraction noextract let %s_repr_size32 = %s\n\n" n (size32_name repr_t);
+  wnp o "inline_for_extraction noextract let %s_repr_size32 = %s\n\n" n (size32_name repr_t);
   wl o "inline_for_extraction noextract let %s_repr_validator = %s\n\n" n (validator_name repr_t);
   wl o "inline_for_extraction noextract let %s_repr_jumper = %s\n\n" n (jumper_name repr_t);
   wl o "inline_for_extraction noextract let %s_repr_reader = %s\n\n" n (leaf_reader_name repr_t);
@@ -2343,9 +2353,9 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
 	wh o "  lemma_synth_%s_inj ();\n  lemma_synth_%s_inv ();\n" n n;
   wh o "  LS.serialize32_synth _ synth_%s _ serialize32_%s%s_key synth_%s_inv (fun x->synth_%s_inv x) ()\n\n" n maybe n n n;
 
-  w o "let %s_size32 =\n" n;
-  w o "  [@inline_let] let _ = assert_norm (LSZ.size32_constant_precond %s_serializer %dul) in\n" n blen;
-  w o "  LSZ.size32_constant %s_serializer %dul ()\n\n" n blen;
+  wnp o "let %s_size32 =\n" n;
+  wnp o "  [@inline_let] let _ = assert_norm (LSZ.size32_constant_precond %s_serializer %dul) in\n" n blen;
+  wnp o "  LSZ.size32_constant %s_serializer %dul ()\n\n" n blen;
 
   (* Low: validator *)
   if is_open then
@@ -5299,7 +5309,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   then w i "module LP = LowParse.Spec\n"
   else w i "module LP = LowParse.Spec.Base\n";
   wh i "module LS = LowParse.SLow.Base\n";
-  w i "module LSZ = LowParse.SLow.Base\n";
+  wnp i "module LSZ = LowParse.SLow.Base\n";
   w i "module LPI = LowParse.Spec.AllIntegers\n";
   wl i "module LL = LowParse.Low.Base\n";
   w i "module L = FStar.List.Tot\n";
@@ -5345,7 +5355,7 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   w o "module LP = LowParse.Spec\n";
   w o "module LT = LowParse.TacLib\n" ;
   wh o "module LS = LowParse.SLow\n";
-  w o "module LSZ = LowParse.SLow\n";
+  wnp o "module LSZ = LowParse.SLow\n";
   w o "module LPI = LowParse.Spec.AllIntegers\n";
   wl o "module LL = LowParse.Low\n";
 	w o "module L = FStar.List.Tot\n";

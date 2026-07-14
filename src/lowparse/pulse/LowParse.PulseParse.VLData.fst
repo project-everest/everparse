@@ -897,7 +897,7 @@ fn l2r_safe_writer_bounded_vldata_strong_payload
         vldata_total_fits_lemma l (SZ.v res) max;
         SZ.fits_u64_implies_fits (SZ.v l_sz + SZ.v res);
         let n_u32 = SZ.sizet_to_uint32 res;
-        M.pow2_le_compat (op_Star 8 l) (op_Star 8 (log256' max));
+        M.pow2_le_compat (FStar.Mul.op_Star 8 l) (FStar.Mul.op_Star 8 (log256' max));
         let write_hdr = LPPI.write_bounded_integer_header l l_sz;
         write_hdr n_u32 hdr #hdr0 l_sz;
         with hdr_written. assert (S.pts_to hdr hdr_written);
@@ -1108,7 +1108,7 @@ fn l2r_safe_writer_bounded_vldata_payload
         vldata_total_fits_lemma l (SZ.v res) max;
         SZ.fits_u64_implies_fits (SZ.v l_sz + SZ.v res);
         let n_u32 = SZ.sizet_to_uint32 res;
-        M.pow2_le_compat (op_Star 8 l) (op_Star 8 (log256' max));
+        M.pow2_le_compat (FStar.Mul.op_Star 8 l) (FStar.Mul.op_Star 8 (log256' max));
         let write_hdr = LPPI.write_bounded_integer_header l l_sz;
         write_hdr n_u32 hdr #hdr0 l_sz;
         with hdr_written. assert (S.pts_to hdr hdr_written);

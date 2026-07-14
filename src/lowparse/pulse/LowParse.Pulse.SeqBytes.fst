@@ -523,7 +523,7 @@ fn l2r_safe_writer_bounded_seq_vlbytes
       with hv. assert (S.pts_to sp1 hv);
       (* write the big-endian length header into sp1 == out[0, log256' max) *)
       let n_u32 = SZ.sizet_to_uint32 n;
-      M.pow2_le_compat (op_Star 8 (log256' max)) (op_Star 8 (log256' max));
+      M.pow2_le_compat (FStar.Mul.op_Star 8 (log256' max)) (FStar.Mul.op_Star 8 (log256' max));
       let write_hdr = LPPI.write_bounded_integer_header (log256' max) l_sz;
       write_hdr n_u32 sp1 #hv l_sz;
       with hdr. assert (S.pts_to sp1 hdr);
