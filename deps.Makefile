@@ -115,7 +115,7 @@ endif
 $(EVERPARSE_OPT_PATH)/FStar/Makefile: $(EVERPARSE_OPT_PATH)/hashes.Makefile
 	+$(MAKE) -C $(EVERPARSE_OPT_PATH) FStar/Makefile
 
-$(EVERPARSE_OPT_PATH)/karamel/Makefile: $(EVERPARSE_OPT_PATH)/FStar/Makefile $(EVERPARSE_OPT_PATH)/hashes.Makefile
+$(EVERPARSE_OPT_PATH)/karamel/Makefile: $(EVERPARSE_OPT_PATH)/hashes.Makefile
 	+$(MAKE) -C $(EVERPARSE_OPT_PATH) karamel/Makefile
 
 $(EVERPARSE_OPT_PATH)/opam.done: $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh $(EVERPARSE_OPT_PATH)/FStar/Makefile $(EVERPARSE_OPT_PATH)/karamel/Makefile
@@ -135,7 +135,7 @@ $(EVERPARSE_OPT_PATH)/z3: $(EVERPARSE_OPT_PATH)/FStar/Makefile
 	mv $@.tmp $@
 	touch $@
 
-$(EVERPARSE_OPT_PATH)/karamel.done: $(EVERPARSE_OPT_PATH)/karamel/Makefile $(NEED_FSTAR) $(NEED_OPAM)
+$(EVERPARSE_OPT_PATH)/karamel.done: $(EVERPARSE_OPT_PATH)/karamel/Makefile $(NEED_OPAM)
 	rm -f $@
 	+$(with_opam) env OTHERFLAGS='--admit_smt_queries true' $(MAKE) -C $(EVERPARSE_OPT_PATH)/karamel LOWSTAR=false
 ifeq ($(OS),Windows_NT)
