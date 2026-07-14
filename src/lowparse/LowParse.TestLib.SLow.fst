@@ -13,7 +13,7 @@ module U32 = FStar.UInt32
 (** The type of a unit test.  It takes an input Bytes, parses it,
     and returns a newly formatted Bytes.  Or it returns None if
     there is a fail to parse. *)
-type test_t = (input:FStar.Bytes.bytes) -> Stack (option (FStar.Bytes.bytes * U32.t)) (fun _ -> true) (fun _ _ _ -> true)
+type test_t = (input:FStar.Bytes.bytes) -> Stack (option (FStar.Bytes.bytes & U32.t)) (fun _ -> true) (fun _ _ _ -> true)
 
 assume val load_file: (filename:string) -> Tot FStar.Bytes.bytes
 

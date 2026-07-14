@@ -1,7 +1,7 @@
 module CBOR.Pulse.Raw.Nondet
-#lang-pulse
 friend CBOR.Pulse.API.Nondet.Type
 friend CBOR.Spec.API.Format
+#lang-pulse
 open CBOR.Pulse.Raw.Match
 
 module Raw = CBOR.Pulse.Raw.Match

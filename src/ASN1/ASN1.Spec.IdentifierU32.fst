@@ -270,8 +270,8 @@ let parse_asn1_identifier_loop_immediate_terminate
 
 let parse_cast
   (t : eqtype)
-  (p1 : t -> Type0)
-  (p2 : t -> Type0)
+  (p1 : t -> prop)
+  (p2 : t -> prop)
   (lem : (x : t -> (Lemma (p1 x ==> p2 x))))
   (#k : parser_kind)
   (p : parser k (x: t {p1 x}))
@@ -285,8 +285,8 @@ let parse_cast
 
 let parse_cast_inverse
   (t : eqtype)
-  (p1 : t -> Type0)
-  (p2 : t -> Type0)
+  (p1 : t -> prop)
+  (p2 : t -> prop)
   (lem : (x : t -> (Lemma (p1 x ==> p2 x))))
   (#k : parser_kind)
   (p : parser k (x : t {p1 x}))

@@ -776,7 +776,7 @@ let synth_raw_data_item'_from_alt
           then (| h, LeafContentSeq?.v lc |)
           else (| h, () |)
 
-#push-options "--ifuel 3 --z3rlimit_factor 2"
+#push-options "--ifuel 3 --z3rlimit_factor 4"
 #restart-solver
 
 let synth_raw_data_item'_from_alt_injective : squash (synth_injective synth_raw_data_item'_from_alt) =

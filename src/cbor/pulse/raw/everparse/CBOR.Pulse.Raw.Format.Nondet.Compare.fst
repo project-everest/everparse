@@ -1,6 +1,6 @@
 module CBOR.Pulse.Raw.Format.Nondet.Compare
-#lang-pulse
 friend CBOR.Pulse.Raw.Format.Match
+#lang-pulse
 
 module EP = CBOR.Pulse.Raw.EverParse.Nondet.Basic
 module SZ = FStar.SizeT

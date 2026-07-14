@@ -22,7 +22,7 @@ let rec enum_tac_gen
   (t_cons_nil: T.term)
   (t_cons: T.term)
   (#key #repr: Type)
-  (e: list (key * repr))
+  (e: list (key & repr))
 : T.Tac unit
 = match e with
   | [] -> T.fail "enum_tac_gen: e must be cons"
@@ -44,14 +44,14 @@ let rec enum_tac_gen
 noextract
 let maybe_enum_key_of_repr_tac
   (#key #repr: Type)
-  (e: list (key * repr))
+  (e: list (key & repr))
 : T.Tac unit
 = enum_tac_gen (quote maybe_enum_key_of_repr'_t_cons_nil') (quote maybe_enum_key_of_repr'_t_cons') e
 
 noextract
 let enum_repr_of_key_tac
   (#key #repr: Type)
-  (e: list (key * repr))
+  (e: list (key & repr))
 : T.Tac unit
 = enum_tac_gen (quote enum_repr_of_key_cons_nil') (quote enum_repr_of_key_cons') e
 
