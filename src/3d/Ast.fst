@@ -47,7 +47,7 @@ type comments_buffer_t = {
 
 #push-options "--warn_error -272" //top-level effect; ok
 let comments_buffer : comments_buffer_t =
-  let buffer : ref (list (string & pos & pos)) = FStar.ST.alloc [] in
+  let buffer : ref (list (string & pos & pos)) = alloc [] in
   let buffer_comment (c, s, p) =
     let c = String.substring c 2 (String.length c - 2) in
     buffer := (c, s, p) :: !buffer

@@ -14,7 +14,7 @@
    limitations under the License.
 *)
 module Getopt
-open FStar.ST
+
 open FStar.All
 open FStar.Char
 
