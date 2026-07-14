@@ -2240,7 +2240,7 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
   (* Enum definition. Under -pulse, emitted to the interface so that transparent
      Pulse vmatch tag-helpers (typed at [enum_key <n>_enum]) can reference it. *)
         let ienum = ipub i o in
-	w ienum "[@LT.Norm] inline_for_extraction noextract let %s_enum : LP.enum %s %s =\n" n n (compile_type repr_t);
+	w ienum "[@LT.Norm] inline_for_extraction %slet %s_enum : LP.enum %s %s =\n" (if !emit_pulse then "noextract " else "") n n (compile_type repr_t);
 	w ienum "  [@inline_let] let e = [\n";
 	List.iter (function
 	  | EnumFieldSimple (x, i) ->
@@ -2471,7 +2471,18 @@ and compile_abstract tch o i n dn min max attrs =
       wl i "val %s_lserializer: LL.serializer32 %s\n\n" n (scombinator_name n);
   end
   
-and compile_ite tch o i n sn fn tagn clen cval tt tf true_ctor_opt false_ctor_opt al  =
+and compile_ite tch o i n sn fn tagn clen cval tt tf true_ctor_opt false_ctor_opt al =
+  (* if-then-else has two independent backends: the Pulse (Seq-based, copyful)
+     one and the legacy non-pulse (FStar.Bytes-based SLow / Low-star) one. They
+     use incompatible discriminant tag representations (Seq.lseq vs FStar.Bytes),
+     so they are emitted by separate functions selected here. This preserves the
+     master non-pulse if-then-else codegen (tests/unittests.rfc t27) unchanged
+     while giving -pulse the new Seq-native codegen. *)
+  if !emit_pulse
+  then compile_ite_pulse tch o i n sn fn tagn clen cval tt tf true_ctor_opt false_ctor_opt al
+  else compile_ite_nonpulse tch o i n sn fn tagn clen cval tt tf al
+
+and compile_ite_pulse tch o i n sn fn tagn clen cval tt tf true_ctor_opt false_ctor_opt al  =
   let is_private = has_attr al "private" in
   let li = get_leninfo (sn^"@"^fn) in
   let ncap = String.capitalize_ascii n in
@@ -2639,6 +2650,122 @@ and compile_ite tch o i n sn fn tagn clen cval tt tf true_ctor_opt false_ctor_op
   end;
   ()
 
+and compile_ite_nonpulse tch o i n sn fn tagn clen cval tt tf al  =
+  let is_private = has_attr al "private" in
+  let li = get_leninfo (sn^"@"^fn) in
+  let ncap = String.capitalize_ascii n in
+  let tagt = sprintf "%s_%s" sn tagn in
+  if clen = 0 then failwith "Tag cannot be empty in if-then-else.";
+  compile_typedef tch o i sn tagn (TypeSimple "opaque") (VectorFixed clen) None al;
+
+  w i "let %s_cst : %s_%s =\n  let b = BY.bytes_of_hex \"%s\" in\n  assume(BY.length b == %d); b\n\n" n sn tagn cval clen;
+  w i "type %s_false = {\n  tag: t:%s_%s{t <> %s_cst};\n  value: %s\n}\n\n" n n tagn n (compile_type tf);
+  w i "type %s =\n  | %s_true of %s\n  | %s_false of %s_false\n\n" n ncap (compile_type tt) ncap n;
+  write_api o i false is_private li.meta n (clen+li.min_len) (clen+li.max_len);
+
+  (* Spec *)
+  w o "inline_for_extraction let %s_cond (x:%s_%s) : Tot bool = x = %s_cst\n\n" n n tagn n;
+  w o "inline_for_extraction let %s_payload (b:bool) : Tot Type =\n  if b then %s else %s\n\n" n (compile_type tt) (compile_type tf);
+  w o "inline_for_extraction let parse_%s_payload (b:bool) : Tot (k: LP.parser_kind & LP.parser k (%s_payload b)) =\n" n n;
+  w o "  if b then (| _ , %s |) else (| _, %s |)\n\n" (pcombinator_name tt) (pcombinator_name tf);
+  w o "inline_for_extraction let %s_synth (x:%s_%s) (y:%s_payload (%s_cond x)) : Tot %s =\n" n n tagn n n n;
+  w o "  if %s_cond x then %s_true y else %s_false ({ tag = x; value = y })\n\n" n ncap ncap;
+  w o "inline_for_extraction noextract let parse_%s_param = {\n" n;
+  w o "  LP.parse_ifthenelse_tag_kind = _; LP.parse_ifthenelse_tag_t = _;\n";
+  w o "  LP.parse_ifthenelse_tag_parser = %s; LP.parse_ifthenelse_tag_cond = %s_cond;\n" (pcombinator_name tagt) n;
+  w o "  LP.parse_ifthenelse_payload_t = %s_payload; LP.parse_ifthenelse_payload_parser = parse_%s_payload;\n" n n;
+  w o "  LP.parse_ifthenelse_t = _;  LP.parse_ifthenelse_synth = %s_synth;\n" n;
+  w o "  LP.parse_ifthenelse_synth_injective = (fun t1 x1 t2 x2 -> ());\n}\n\n";
+  w o "let _ : squash (LP.parse_ifthenelse_kind parse_%s_param == %s_parser_kind) =\n" n n;
+  w o "  _ by (FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ())\n\n";
+  w o "let %s_parser = LP.parse_ifthenelse parse_%s_param\n\n" n n;
+  w o "inline_for_extraction let serialize_%s_payload (b:bool) : Tot (LP.serializer (dsnd (parse_%s_param.LP.parse_ifthenelse_payload_parser b))) =\n" n n;
+  w o "  if b then %s else %s\n\n" (scombinator_name tt) (scombinator_name tf);
+  w o "inline_for_extraction let %s_synth_recip (x:%s) : GTot (t:%s_%s & (%s_payload (%s_cond t))) =\n" n n n tagn n n;
+  w o "  match x with\n  | %s_true y -> (| %s_cst, y |)\n  | %s_false m -> (| m.tag, m.value |)\n\n" ncap n ncap;
+  w o "inline_for_extraction noextract let serialize_%s_param : LP.serialize_ifthenelse_param parse_%s_param = {\n" n n;
+  w o "  LP.serialize_ifthenelse_tag_serializer = %s;\n" (scombinator_name tagt);
+  w o "  LP.serialize_ifthenelse_payload_serializer = serialize_%s_payload;\n" n;
+  w o "  LP.serialize_ifthenelse_synth_recip = %s_synth_recip;\n" n;
+  w o "  LP.serialize_ifthenelse_synth_inverse = (fun x -> ());\n}\n\n";
+  w o "let %s_serializer = LP.serialize_ifthenelse serialize_%s_param\n\n" n n;
+  write_bytesize o is_private n;
+
+  (* Intermediate *)
+  wh o "let %s_parser32 = LS.parse32_ifthenelse parse_%s_param %s\n" n n (pcombinator32_name tagt);
+  wh o "  (fun x -> %s_cond x) (fun b -> if b then %s else %s)\n" n (pcombinator32_name tt) (pcombinator32_name tf);
+  wh o "  (fun b -> if b then (fun _ pl -> %s_true pl) else (fun t pl -> %s_false ({ tag = t; value = pl; })))\n\n" ncap ncap;
+  wh o "let %s_serializer32 = LS.serialize32_ifthenelse serialize_%s_param %s\n" n n (scombinator32_name tagt);
+  wh o "  (fun x -> match x with %s_true _ -> %s_cst | %s_false m -> m.tag)\n" ncap n ncap;
+  wh o "  (fun x -> %s_cond x) (fun b -> if b then (fun (%s_true y) -> y) else (fun (%s_false m) -> m.value))\n" n ncap ncap;
+  wh o "  (fun b -> if b then %s else %s)\n\n" (scombinator32_name tt) (scombinator32_name tf);
+  wh o "let %s_size32 = LSZ.size32_ifthenelse serialize_%s_param %s\n" n n (size32_name tagt);
+  wh o "  (fun x -> match x with %s_true _ -> %s_cst | %s_false m -> m.tag)" ncap n ncap;
+  wh o "  (fun x -> %s_cond x) (fun b -> if b then (fun (%s_true y) -> y) else (fun (%s_false m) -> m.value))\n" n ncap ncap;
+  wh o "  (fun b -> if b then %s else %s)\n\n" (size32_name tt) (size32_name tf);
+
+  (* Low *)
+  wl o "inline_for_extraction let test_%s : LL.test_ifthenelse_tag parse_%s_param =" n n;
+  wl o "  fun #_ #_ input pos -> LL.valid_slice_equals_bytes %s_cst input pos\n\n" n;
+  wl o "let %s_validator = LL.validate_ifthenelse parse_%s_param %s\n" n n (validator_name tagt);
+  wl o "  test_%s (fun b -> if b then %s else %s)\n\n" n (validator_name tt) (validator_name tf);
+  wl o "let %s_jumper = LL.jump_ifthenelse parse_%s_param %s\n" n n (jumper_name tagt);
+  wl o "  test_%s (fun b -> if b then %s else %s)\n\n" n (jumper_name tt) (jumper_name tf);
+  wl i "val %s_elim (h:HS.mem) (#rrel: _) (#rel: _) (input:LL.slice rrel rel) (pos: U32.t) : Lemma\n" n;
+  wl i "  (requires (LL.valid %s_parser h input pos))\n" n;
+  wl i "  (ensures (\n    LL.valid %s h input pos /\\ (\n" (pcombinator_name tagt);
+  wl i "    let x = LL.contents %s_parser h input pos in\n" n;
+  wl i "    let y = LL.contents %s h input pos in\n" (pcombinator_name tagt);
+  wl i "    y == (match x with | %s_true _ -> %s_cst | %s_false m -> m.tag))))\n\n" ncap n ncap;
+  wl o "let %s_elim h #_ #_ input pos = LL.valid_ifthenelse_elim parse_%s_param h input pos\n\n" n n;
+  wl i "val %s_test (#rrel: _) (#rel: _) (input:LL.slice rrel rel) (pos: U32.t) : HST.Stack bool\n" n;
+  wl i "  (requires (fun h -> LL.valid %s_parser h input pos))\n" n;
+  wl i "  (ensures (fun h res h' -> B.modifies B.loc_none h h' /\\\n";
+  wl i "    (res == true <==> %s_true? (LL.contents %s_parser h input pos))))\n\n" ncap n;
+  wl o "let %s_test #_ #_ input pos = let h = HST.get () in %s_elim h input pos; test_%s input pos\n\n" n n n;
+  wl i "noextract let %s_clens_tag : LL.clens %s %s = {\n" n n (compile_type tagt);
+  wl i "  LL.clens_cond = (fun x -> True);\n";
+  wl i "  LL.clens_get = (fun x -> (match x with | %s_true _ -> %s_cst | %s_false m -> m.tag));\n\n" ncap n ncap;
+  wl i "}\n\n";
+  wl i "val %s_gaccessor_tag: LL.gaccessor %s_parser %s %s_clens_tag\n\n" n n (pcombinator_name tagt) n;
+  wl o "let %s_gaccessor_tag = LL.gaccessor_ext (LL.gaccessor_ifthenelse_tag serialize_%s_param) %s_clens_tag ()\n\n" n n n;
+  wl i "val %s_accessor_tag: LL.accessor %s_gaccessor_tag\n\n" n n;
+  wl o "let %s_accessor_tag = LL.accessor_ext (LL.accessor_ifthenelse_tag serialize_%s_param) %s_clens_tag ()\n\n" n n n;
+  wl i "noextract let %s_clens_true : LL.clens %s %s = {\n" n n (compile_type tt);
+  wl i "  LL.clens_cond = (fun x -> %s_true? x);\n" ncap;
+  wl i "  LL.clens_get = (fun x -> (match x with %s_true y -> y) <: Ghost %s (requires (%s_true? x)) (ensures (fun _ -> True)));\n}\n\n" ncap (compile_type tt) ncap;
+  wl i "val %s_gaccessor_true: LL.gaccessor %s_parser %s %s_clens_true\n\n" n n (pcombinator_name tt) n;
+  wl i "val %s_accessor_true: LL.accessor %s_gaccessor_true\n\n" n n;
+  wl i "noextract let %s_clens_false : LL.clens %s %s = {\n" n n (compile_type tf);
+  wl i "  LL.clens_cond = (fun x -> %s_false? x);\n" ncap;
+  wl i "  LL.clens_get = (fun x -> (match x with %s_false m -> m.value) <: Ghost %s (requires (%s_false? x)) (ensures (fun _ -> True)));\n}\n\n" ncap (compile_type tf) ncap;
+  wl i "val %s_gaccessor_false: LL.gaccessor %s_parser %s %s_clens_false\n\n" n n (pcombinator_name tf) n;
+  wl i "val %s_accessor_false: LL.accessor %s_gaccessor_false\n\n" n n;
+  wl o "let %s_gaccessor_true = LL.gaccessor_ext (LL.gaccessor_ifthenelse_payload serialize_%s_param true) %s_clens_true ()\n\n" n n n;
+  wl o "let %s_accessor_true = LL.accessor_ext (LL.accessor_ifthenelse_payload serialize_%s_param %s true) %s_clens_true ()\n\n" n n (jumper_name tagt) n;
+  wl o "let %s_gaccessor_false = LL.gaccessor_ext (LL.gaccessor_ifthenelse_payload serialize_%s_param false) %s_clens_false ()\n\n" n n n;
+  wl o "let %s_accessor_false = LL.accessor_ext (LL.accessor_ifthenelse_payload serialize_%s_param %s false) %s_clens_false ()\n\n" n n (jumper_name tagt) n;
+  wl i "val %s_intro_true (h: HS.mem) (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : Lemma\n" n;
+  wl i "  (requires (LL.valid %s h input pos /\\ (\n" (pcombinator_name tagt);
+  wl i "    let x = LL.contents %s h input pos in\n" (pcombinator_name tagt);
+  wl i "    let pos1 = LL.get_valid_pos %s h input pos in\n" (pcombinator_name tagt);
+  wl i "    x == %s_cst /\\ LL.valid %s h input pos1\n" n (pcombinator_name tt);
+  wl i "  ))) (ensures (\n";
+  wl i "    let pos1 = LL.get_valid_pos %s h input pos in\n" (pcombinator_name tagt);
+  wl i "    LL.valid_content_pos %s_parser h input pos (%s_true (LL.contents %s h input pos1)) (LL.get_valid_pos %s h input pos1)\n  ))\n\n" n ncap (pcombinator_name tt) (pcombinator_name tt);
+  wl o "let %s_intro_true h #_ #_ input pos = LL.valid_ifthenelse_intro parse_%s_param h input pos\n\n" n n;
+  wl i "val %s_intro_false (h: HS.mem) (#rrel: _) (#rel: _) (input: LL.slice rrel rel) (pos: U32.t) : Lemma\n" n;
+  wl i "  (requires (LL.valid %s h input pos /\\ (\n" (pcombinator_name tagt);
+  wl i "    let x = LL.contents %s h input pos in\n" (pcombinator_name tagt);
+  wl i "   let pos1 = LL.get_valid_pos %s h input pos in\n" (pcombinator_name tagt);
+  wl i "    x =!= %s_cst /\\ LL.valid %s h input pos1\n" n (pcombinator_name tf);
+  wl i "  ))) (ensures (\n";
+  wl i "    let x = LL.contents %s h input pos in\n" (pcombinator_name tagt);
+  wl i "    let pos1 = LL.get_valid_pos %s h input pos in\n" (pcombinator_name tagt);
+  wl i "    LL.valid_content_pos %s_parser h input pos (%s_false ({ tag = x; value = (LL.contents %s h input pos1) })) (LL.get_valid_pos %s h input pos1)\n  ))\n\n" n ncap (pcombinator_name tf) (pcombinator_name tf);
+  wl o "let %s_intro_false h #_ #_ input pos = LL.valid_ifthenelse_intro parse_%s_param h input pos\n\n" n n;
+  ()
+
 and compile_select tch o i n seln tagn tagt taga cl def al =
   let is_private = has_attr al "private" in
   let is_implicit = has_attr taga "implicit" in
@@ -2684,7 +2811,7 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
      -pulse (mirroring the struct/vllist fix); the LowStar (non-pulse) path uses
      the high sum as its actual runtime representation, so they must stay
      extractable there. *)
-  let nx = if !emit_pulse then "noextract " else "" in
+  let nx = if !emit_pulse && not li.has_lserializer then "noextract " else "" in
   if !types_from = "" then begin
   w (type_channel tch i) "%stype %s%s =\n" nx n prime;
   List.iter (fun (case, ty) -> w (type_channel tch i) "  | %s_%s of %s\n" cprefix case (compile_type ty)) cl;
@@ -3553,7 +3680,7 @@ and compile_vldata o i is_private n ty li elem_li lenty smin smax =
   let need_jumper = is_private || need_jumper li.min_len li.max_len in
   if fits_in_bounds then
    begin
-    w i "type %s = %s\n\n" n (compile_type ty);
+    w i "%stype %s = %s\n\n" (if !emit_pulse && not li.has_lserializer then "noextract " else "") n (compile_type ty);
     write_api o i false is_private li.meta n min max;
     w o "let %s_parser' =\n" n;
     w o "  LP.parse_vlgen %d %d %s %s\n\n" smin smax (pcombinator_length_header_name lenty smin smax) (scombinator_name ty);
@@ -3606,8 +3733,8 @@ and compile_vldata o i is_private n ty li elem_li lenty smin smax =
     let sizef =
       if basic_type ty then sprintf "Seq.length (LP.serialize %s x)" (scombinator_name ty)
       else bytesize_call ty "x" in
-    w i "type %s = x:%s{let l = %s in %d <= l /\\ l <= %d}\n\n" n (compile_type ty) sizef smin smax;
-    w (ipub i o) "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n smin smax (scombinator_name ty);
+    w i "%stype %s = x:%s{let l = %s in %d <= l /\\ l <= %d}\n\n" (if !emit_pulse && not li.has_lserializer then "noextract " else "") n (compile_type ty) sizef smin smax;
+    w (ipub i o) "%stype %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" (if !emit_pulse && not li.has_lserializer then "noextract " else "") n smin smax (scombinator_name ty);
     w (ipub i o) "inline_for_extraction let synth_%s (x: %s') : Tot %s =\n" n n n;
     w (ipub i o) "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
     w (ipub i o) "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' =\n" n n n;
@@ -3833,7 +3960,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
     match vec with
     (* Type aliasing *)
     | VectorNone ->
-      if !types_from = "" then w (type_channel tch i) "type %s = %s\n\n" n (compile_type ty);
+      if !types_from = "" then w (type_channel tch i) "%stype %s = %s\n\n" (if !emit_pulse && not li.has_lserializer then "noextract " else "") n (compile_type ty);
       write_api o i li.has_lserializer is_private li.meta n li.min_len li.max_len;
       w o "noextract let %s_parser = %s\n\n" n (pcombinator_name ty);
       w o "noextract let %s_serializer = %s\n\n" n (scombinator_name ty);
@@ -3896,7 +4023,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
     | VectorCount(low, high, repr) ->
       let repr_t = match repr with None -> "uint32" | Some t -> t in
       w i "inline_for_extraction noextract let min_count = %d\ninline_for_extraction noextract let max_count = %d\n" low high;
-      w i "type %s = l:list %s{%d <= L.length l /\\ L.length l <= %d}\n\n" n (compile_type ty) low high;
+      w i "%stype %s = l:list %s{%d <= L.length l /\\ L.length l <= %d}\n\n" (if !emit_pulse && not li.has_lserializer then "noextract " else "") n (compile_type ty) low high;
       write_api o i false is_private li.meta n li.min_len li.max_len;
       w o "let %s_parser' = LP.parse_vclist %d %d %s %s\n\n" n low high (pcombinator_name repr_t) (pcombinator_name ty);
       w o "private let kind_eq : squash (LP.get_parser_kind %s_parser' == %s_parser_kind) = _ by (FStar.Tactics.trefl ())\n\n" n n;
@@ -3937,7 +4064,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       let needs_synth = not fits_in_bounds in
       if fits_in_bounds then
        begin
-        w i "type %s = %s\n\n" n (compile_type ty);
+        w i "%stype %s = %s\n\n" (if !emit_pulse && not li.has_lserializer then "noextract " else "") n (compile_type ty);
         write_api o i false is_private li.meta n min max;
         w o "let %s_parser =\n" n;
         w o "  LP.parse_bounded_vldata %d %d %s\n\n" 0 smax (pcombinator_name ty);
@@ -4023,13 +4150,13 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         let sizef =
           if basic_type ty then sprintf "Seq.length (LP.serialize %s x)" (scombinator_name ty)
           else bytesize_call ty "x" in
-        w i "type %s = x:%s{let l = %s in %d <= l /\\ l <= %d}\n\n" n (compile_type ty) sizef 0 smax;
+        w i "%stype %s = x:%s{let l = %s in %d <= l /\\ l <= %d}\n\n" (if !emit_pulse && not li.has_lserializer then "noextract " else "") n (compile_type ty) sizef 0 smax;
         wh i "val check_%s_bytesize (x: %s) : Tot (b: bool {b == (let l = %s in %d <= l && l <= %d)})\n\n" n (compile_type ty) sizef 0 smax;
         wh o "let check_%s_bytesize x =\n" n;
         wh o "  [@inline_let] let _ = %s in\n" (bytesize_eq_call (compile_type ty) "x");
         wh o "  let l = %s x in\n" (size32_name ty);
         wh o "  %dul `U32.lte` l && l `U32.lte` %dul\n\n" 0 smax;
-        w (ipub i o) "type %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" n 0 smax (scombinator_name ty);
+        w (ipub i o) "%stype %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" (if !emit_pulse && not li.has_lserializer then "noextract " else "") n 0 smax (scombinator_name ty);
         w (ipub i o) "inline_for_extraction let synth_%s (x: %s') : Tot %s =\n" n n n;
         w (ipub i o) "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
         w (ipub i o) "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' =\n" n n n;
@@ -4212,9 +4339,9 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
     (* Fixed length list *)
     | VectorFixed k when elem_li.min_len = elem_li.max_len ->
       w i "unfold let %s_pred (l:list %s) (n:nat) : GTot prop = L.length l == n\n" n (compile_type ty);
-      w i "type %s = l:list %s{%s_pred l %d}\n\n" n (compile_type ty) n li.min_count;
+      w i "%stype %s = l:list %s{%s_pred l %d}\n\n" (if !emit_pulse then "noextract " else "") n (compile_type ty) n li.min_count;
       write_api o i false is_private li.meta n li.min_len li.max_len;
-      w o "type %s' = LP.array %s %d\n\n" n (compile_type ty) li.min_count;
+      w o "%stype %s' = LP.array %s %d\n\n" (if !emit_pulse then "noextract " else "") n (compile_type ty) li.min_count;
       w o "private let %s_eq () : Lemma (%s' == %s) =\n" n n n;
       w o "  assert(%s'==%s) by (FStar.Tactics.norm [delta_only [`%%(LP.array); `%%(%s); `%%(%s')]]; FStar.Tactics.trefl ())\n\n" n n n n;
       w o "noextract let %s'_parser = LP.parse_array %s %d %d\n\n" n (scombinator_name ty) k li.min_count;
@@ -4281,8 +4408,8 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
          w i "noextract val %s_list_bytesize: list %s -> GTot nat\n\n" n (compile_type ty);
          w o "let %s_list_bytesize x = Seq.length (LP.serialize (LP.serialize_list _ %s) x)\n\n" n (scombinator_name ty)
        end);
-      w i "type %s = l:list %s{%s_list_bytesize l == %d}\n\n" n (compile_type ty) n k;
-      w (ipub i o) "type %s' = LP.parse_fldata_strong_t (LP.serialize_list _ %s) %d\n\n" n (scombinator_name ty) k;
+      w i "%stype %s = l:list %s{%s_list_bytesize l == %d}\n\n" (if !emit_pulse && not li.has_lserializer then "noextract " else "") n (compile_type ty) n k;
+      w (ipub i o) "%stype %s' = LP.parse_fldata_strong_t (LP.serialize_list _ %s) %d\n\n" (if !emit_pulse && not li.has_lserializer then "noextract " else "") n (scombinator_name ty) k;
       w (ipub i o) "let %s_eq () : Lemma (%s' == %s) = assert_norm (%s' == %s)\n\n" n n n n n;
       write_api o i false is_private li.meta n li.min_len li.max_len;
       w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
@@ -4716,7 +4843,7 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
      (non-pulse) path uses the record as its actual runtime representation, so
      they must stay extractable there. *)
   if !types_from = "" then begin
-    w (type_channel tch i) "%stype %s = {\n" (if !emit_pulse then "noextract " else "") n;
+    w (type_channel tch i) "%stype %s = {\n" (if !emit_pulse && not li.has_lserializer then "noextract " else "") n;
     List.iter (fun (fn, ty) ->
       w (type_channel tch i) "  %s : %s;\n" fn (compile_type ty)) fields;
     w (type_channel tch i) "}\n\n";
@@ -4736,7 +4863,7 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
       ()
       tfields
   in
-  w (ipub i o) "%stype %s' = %s\n\n" (if !emit_pulse then "noextract " else "") n tuple;
+  w (ipub i o) "%stype %s' = %s\n\n" (if !emit_pulse && not li.has_lserializer then "noextract " else "") n tuple;
 
   (* synthethizer for tuple type *)
   let synth_arg =
@@ -4752,7 +4879,7 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
       tfields
   in
   let synth_body = List.fold_left (fun acc (fn, ty) -> sprintf "%s    %s = %s;\n" acc fn fn) "" fields in
-  w (ipub i o) "inline_for_extraction %slet synth_%s (x: %s') : %s =\n" (if !emit_pulse then "noextract " else "") n n n;
+  w (ipub i o) "inline_for_extraction %slet synth_%s (x: %s') : %s =\n" (if !emit_pulse && not li.has_lserializer then "noextract " else "") n n n;
   w (ipub i o) "  match x with %s -> {\n" synth_arg;
   w (ipub i o) "%s" synth_body;
   w (ipub i o) "  }\n\n";
@@ -4769,7 +4896,7 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
       ()
       tfields
   in
-  w (ipub i o) "inline_for_extraction %slet synth_%s_recip (x: %s) : %s' = %s\n\n" (if !emit_pulse then "noextract " else "") n n n synth_recip_body;
+  w (ipub i o) "inline_for_extraction %slet synth_%s_recip (x: %s) : %s' = %s\n\n" (if !emit_pulse && not li.has_lserializer then "noextract " else "") n n n synth_recip_body;
 
   (* Write parser API *)
   write_api o i li.has_lserializer is_private li.meta n li.min_len li.max_len;
