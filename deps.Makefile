@@ -124,7 +124,7 @@ $(EVERPARSE_OPT_PATH)/opam.done: $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh $(
 $(EVERPARSE_OPT_PATH)/FStar.done: $(EVERPARSE_OPT_PATH)/FStar/Makefile $(NEED_OPAM)
 	rm -f $@
 	cd $(EVERPARSE_OPT_PATH)/FStar && git submodule init && git submodule update # TODO: allow F* to build without its Karamel submodule
-	+$(with_opam) $(MAKE) -C $(EVERPARSE_OPT_PATH)/FStar ADMIT=1
+	+$(with_opam) $(MAKE) -C $(EVERPARSE_OPT_PATH)/FStar ADMIT=1 FSTAR_USE_KRML_EXE=1 KRML_EXE=$(KRML_EXE)
 	rm -rf $(EVERPARSE_OPT_PATH)/FStar/karamel
 	touch $@
 
