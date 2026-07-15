@@ -571,58 +571,14 @@ let assume_some = function
   | None -> failwith "assume_some"
   | Some x -> x
 
-(* Under -pulse, most byte types are emitted Seq-natively (no FStar.Bytes).
-   The only var-length byte types that still go through the FStar.Bytes-based
-   combinators (compile_vlbytes / the explicit-length-size branch in
-   compile_typedef) are U8.t vectors whose length header is either a
-   bounded/variable encoding (asn1_len, asn1_len8, bitcoin_varint) or a
-   fixed-width integer wider than the value bound requires. The two functions
-   below mirror compile_typedef's leading (ty, vec) rewrite and its dispatch so
-   we can decide, before emitting the module headers, whether a gemstone still
-   references FStar.Bytes under -pulse. The FStar.Bytes module headers are then
-   emitted only for the modules that actually need them, keeping all Seq-native
-   modules (e.g. all of tls.qd.rfc) FStar.Bytes-free. *)
-let typedef_emits_fstar_bytes_pulse tn fn (ty:type_t) vec =
-  try
-    let qname = if tn = "" then String.uncapitalize_ascii fn else tn^"@"^fn in
-    let li = try get_leninfo qname with _ -> sizeof ty in
-    (* mirror compile_typedef's opaque/vldata rewrites *)
-    let (ty, vec) =
-      match ty, vec with
-      | _, VectorFixedCount k ->
-        if li.min_len = li.max_len then (ty, VectorFixed li.max_len) else (ty, vec)
-      | TypeSimple(t), VectorVldata vl when SM.mem (compile_type t) !erased ->
-        let (len_len_min, len_len_max, max_len) = basic_bounds vl in
-        TypeSimple("opaque"),
-        VectorRange(max 0 (li.min_len-len_len_min),
-                    min (assume_some max_len) (max 0 (li.max_len-len_len_max)),
-                    Some vl)
-      | TypeSimple("opaque"), VectorVldata vl ->
-        let (_, _, max_len) = basic_bounds vl in
-        TypeSimple("opaque"), VectorRange(0, assume_some max_len, Some vl)
-      | _ -> ty, vec in
-    match ty with
-    | TypeIfeq _ | TypeSelect _ -> false
-    | TypeSimple ty ->
-      let is_u8 = (try compile_type ty = "U8.t" with _ -> false) in
-      if not is_u8 then false else
-      (match vec with
-       (* compile_vlbytes: bounded/variable length header over U8.t bytes *)
-       | VectorVldata lenty when has_bounded_length_parsers lenty -> true
-       | VectorRange (_, _, Some lenty) when has_bounded_length_parsers lenty -> true
-       (* Seq-native path iff the length header width matches log256 high;
-          otherwise the explicit-length-size branch emits FStar.Bytes. *)
-       | VectorRange (_, high, Some t) ->
-         let (_, lm, _) = basic_bounds t in lm <> log256 high
-       | _ -> false)
-  with _ -> true
-
-let gemstone_uses_fstar_bytes_pulse (p:gemstone_t) =
-  match p with
-  | Typedef (_, ty, fn, vec, _) -> typedef_emits_fstar_bytes_pulse "" fn ty vec
-  | Struct (_, fl, n) ->
-     List.exists (fun (_, ty, fn, vec, _) -> typedef_emits_fstar_bytes_pulse n fn ty vec) fl
-  | _ -> false
+(* Under -pulse, ALL byte types are emitted Seq-natively (no FStar.Bytes): fixed
+   and variable-length byte blobs, blobs with generic/variable-width length
+   headers (asn1_len, asn1_len8, bitcoin_varint), and blobs with an oversized
+   fixed-width header all go through the LowParse.Pulse.SeqBytes combinators (see
+   compile_vlbytes and the Seq-native VectorRange branches in compile_typedef).
+   Consequently no generated -pulse module references FStar.Bytes, so the
+   FStar.Bytes module headers are emitted only outside -pulse. *)
+let gemstone_uses_fstar_bytes_pulse (_p:gemstone_t) = false
 
 (* Is [ty] a base/leaf type whose copyful parser is built from a leaf_reader
    (as opposed to a user-defined type that has its own read_<ty>/free_<ty>)? *)
@@ -3895,6 +3851,36 @@ and compile_vlbytes o i is_private n li lenty smin smax =
   let (min, max) = li.min_len, li.max_len in
   let need_validator = is_private || need_validator li.meta li.min_len li.max_len in
   let need_jumper = is_private || need_jumper li.min_len li.max_len in
+  if !emit_pulse then begin
+    (* Pulse, Seq-native (no FStar.Bytes): the byte payload is a [Seq.seq byte]
+       refinement framed by a GENERIC (variable-width) length header. The high
+       [<n>] type is spec-only (the executable representation is the Vec-based
+       lowtype), so it is [noextract]. *)
+    w i "noextract type %s = LP.parse_bounded_seq_vlbytes_t %d %d\n\n" n smin smax;
+    write_api o i false is_private li.meta n min max;
+    w o "noextract let %s_parser = LP.parse_bounded_seq_vlgenbytes %d %d %s\n\n" n smin smax (pcombinator_length_header_name lenty smin smax);
+    w o "noextract let %s_serializer = LP.serialize_bounded_seq_vlgenbytes %d %d %s\n\n" n smin smax (scombinator_length_header_name lenty smin smax);
+    write_bytesize o is_private n;
+    if need_validator then
+      wp o "let %s_validator = LSeqB.validate_bounded_seq_vlgenbytes %d %d %s %s fits_u64_squash\n\n" n smin smax (pulse_validator_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax);
+    if need_jumper then begin
+        let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
+        wp o "let %s_jumper%s = LSeqB.jump_bounded_seq_vlgenbytes %d %d %s %s fits_u64_squash\n\n" n jumper_annot smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax)
+      end;
+    (* Pulse: Seq-native copyful parser + free (+ safe writer/size for bcvli headers) *)
+    let vlgenbytes_writer, vlgenbytes_size =
+      if lenty = "bitcoin_varint" then
+        let ssk = scombinator_length_header_name lenty smin smax in
+        let hsize = sprintf "(fun x -> PPBCVLI.bounded_bcvli_size %d %d x)" smin smax in
+        let hw = sprintf "(PPBCVLI.l2r_leaf_write_bounded_bcvli %d %d ())" smin smax in
+        let prelude = sprintf "let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n  FStar.SizeT.fits_u64_implies_fits %d;\n  FStar.SizeT.fits_u64_implies_fits %d;\n  " smin smax in
+        Some (sprintf "%sLSeqB.l2r_safe_writer_bounded_seq_vlgenbytes %d (FStar.SizeT.uint_to_t %d) %d (FStar.SizeT.uint_to_t %d) %s %s %s fits_u64_squash" prelude smin smin smax smax ssk hsize hw),
+        Some (sprintf "%sLSeqB.l2r_safe_size_bounded_seq_vlgenbytes %d (FStar.SizeT.uint_to_t %d) %d (FStar.SizeT.uint_to_t %d) %s %s fits_u64_squash" prelude smin smin smax smax ssk hsize)
+      else None, None
+    in
+    emit_copyful_seqbytes_vl o i n (sprintf "LSeqB.copyful_parse_bounded_seq_vlgenbytes %d %d %s %s fits_u64_squash" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax)) (sprintf "LSeqB.seq_vlbytes_conv %d %d" smin smax)
+      ?writer:vlgenbytes_writer ?size:vlgenbytes_size
+  end else begin
   w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" n smin smax;
   write_api o i false is_private li.meta n min max;
   w o "noextract let %s_parser = LP.parse_bounded_vlgenbytes %d %d %s\n\n" n smin smax (pcombinator_length_header_name lenty smin smax);
@@ -3928,6 +3914,8 @@ and compile_vlbytes o i is_private n li lenty smin smax =
   in
   emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlgenbytes %d %d %s %s fits_u64_squash" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax)) (sprintf "PPBY.vlbytes_conv %d %d" smin smax)
     ?writer:vlgenbytes_writer ?size:vlgenbytes_size
+  end
+
 
 and compile_typedef tch o i tn fn (ty:type_t) vec def al =
   let n = if tn = "" then String.uncapitalize_ascii fn else tn^"_"^fn in
@@ -4550,6 +4538,38 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       wl o "let %s_finalize #_ #_ input pos len =\n" n;
       wl o "  [@inline_let] let _ = assert_norm (%s == LP.parse_bounded_vlbytes_t %d %d) in\n" n low high;
       wl o "  LL.finalize_bounded_vlbytes %d %d input pos len\n\n" low high;
+      ()
+
+    (* Variable length bytes where the size of the length is explicit
+       (Pulse, Seq-native: no FStar.Bytes). This is the explicit-oversized-header
+       analog of the tight Seq-native branch above: the fixed-width header [repr]
+       exceeds [log256' high], so it goes through the [_gen] combinators. Reached
+       only under -pulse (the tight -pulse case is caught above; the non-pulse
+       explicit-header case falls through to the FStar.Bytes branch below). *)
+    | VectorRange (low, high, repr) when (compile_type ty = "U8.t") && !emit_pulse ->
+      let trepr = match repr with Some t -> t | None -> failwith "Missing vlbytes size repr (QD bug?)" in
+      let (_, repr, _) = basic_bounds trepr in
+      w i "inline_for_extraction noextract let min_len = %d\ninline_for_extraction noextract let max_len = %d\n" low high;
+      (* Under -pulse the executable byte representation is the Vec-based lowtype;
+         the high [<n>] type is the spec [Seq.seq uint8] refinement, spec-only, so
+         mark it noextract (see the tight branch above). *)
+      w i "noextract type %s = LP.parse_bounded_seq_vlbytes_t %d %d\n\n" n low high;
+      write_api o i false is_private li.meta n li.min_len li.max_len;
+      w o "noextract let %s_parser = LP.parse_bounded_seq_vlbytes_gen %d %d %d\n\n" n low high repr;
+      w o "noextract let %s_serializer = LP.serialize_bounded_seq_vlbytes_gen %d %d %d\n\n" n low high repr;
+      write_bytesize o is_private n;
+      if need_validator then
+        wp o "let %s_validator = LSeqB.validate_bounded_seq_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" n low high repr repr;
+      if need_jumper then begin
+        let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
+        wp o "let %s_jumper%s = LSeqB.jump_bounded_seq_vlbytes' %d %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer %d) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" n jumper_annot low high repr repr repr
+      end;
+      (* Pulse: Seq-native copyful parser + free + safe writer/size *)
+      emit_copyful_seqbytes_vl o i n (sprintf "LSeqB.copyful_parse_bounded_seq_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash" low high repr repr) (sprintf "LSeqB.seq_vlbytes_conv %d %d" low high)
+        ~writer:(sprintf "LSeqB.l2r_safe_writer_bounded_seq_vlbytes' %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d %dsz fits_u64_squash" low low high high repr repr)
+        ~size:(sprintf "LSeqB.l2r_safe_size_bounded_seq_vlbytes' %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d %dsz fits_u64_squash" low low high high repr repr);
+      w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + Seq.length x) [SMTPat (%s_bytesize x)]\n\n" n n n repr n;
+      w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_seq_vlbytes_gen %d %d %d x\n\n" n low high repr;
       ()
 
     (* Variable length bytes where the size of the length is explicit *)
