@@ -2203,14 +2203,14 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
   (* Synth *)
   if is_open then
    begin
-  	w o "inline_for_extraction let synth_%s (x:LP.maybe_enum_key %s_enum) : %s = \n" n n n;
+  	w o "inline_for_extraction %slet synth_%s (x:LP.maybe_enum_key %s_enum) : %s = \n" (if !emit_pulse then "noextract " else "") n n n;
   	w o "  match x with\n";
   	w o "  | LP.Known k -> k\n";
   	w o "  | LP.Unknown y ->\n";
   	w o "    [@inline_let] let v : %s = y in\n" (compile_type repr_t);
   	w o "    [@inline_let] let _ = assert_norm (LP.list_mem v (LP.list_map snd %s_enum) == known_%s_repr v) in\n" n n;
     w o "    Unknown_%s v\n\n" n;
-  	w o "inline_for_extraction let synth_%s_inv (x:%s) : LP.maybe_enum_key %s_enum = \n" n n n;
+  	w o "inline_for_extraction %slet synth_%s_inv (x:%s) : LP.maybe_enum_key %s_enum = \n" (if !emit_pulse then "noextract " else "") n n n;
   	w o "  match x with\n";
   	w o "  | Unknown_%s y ->\n" n;
   	w o "    [@inline_let] let v : %s = y in\n" (compile_type repr_t);
@@ -2238,8 +2238,8 @@ let rec compile_enum tch o i n (fl: enum_field_t list) (al:attr list) =
    end
   else
    begin
-    w o "inline_for_extraction let synth_%s (x: LP.enum_key %s_enum) : Tot %s = x\n\n" n n n;
-    w o "inline_for_extraction let synth_%s_inv (x: %s) : Tot (LP.enum_key %s_enum) =\n" n n n;
+    w o "inline_for_extraction %slet synth_%s (x: LP.enum_key %s_enum) : Tot %s = x\n\n" (if !emit_pulse then "noextract " else "") n n n;
+    w o "inline_for_extraction %slet synth_%s_inv (x: %s) : Tot (LP.enum_key %s_enum) =\n" (if !emit_pulse then "noextract " else "") n n n;
     w o "  [@inline_let] let _ : squash (LP.list_mem x (LP.list_map fst %s_enum)) =\n" n;
     w o "    _ by (LP.synth_maybe_enum_key_inv_unknown_tac x)\n";
     w o "  in\n";
@@ -2490,7 +2490,7 @@ and compile_ite_pulse tch o i n sn fn tagn clen cval tt tf true_ctor_opt false_c
   w o "let %s_parser = LP.parse_ifthenelse parse_%s_param\n\n" n n;
   w o "inline_for_extraction let serialize_%s_payload (b:bool) : Tot (LP.serializer (dsnd (parse_%s_param.LP.parse_ifthenelse_payload_parser b))) =\n" n n;
   w o "  if b then %s else %s\n\n" (scombinator_name tt) (scombinator_name tf);
-  w o "inline_for_extraction let %s_synth_recip (x:%s) : GTot (t:%s_%s & (%s_payload (%s_cond t))) =\n" n n n tagn n n;
+  w o "inline_for_extraction noextract let %s_synth_recip (x:%s) : GTot (t:%s_%s & (%s_payload (%s_cond t))) =\n" n n n tagn n n;
   w o "  match x with\n  | %s y -> (| %s_cst, y |)\n  | %s m -> (| m.tag, m.value |)\n\n" true_ctor n false_ctor;
   w o "inline_for_extraction noextract let serialize_%s_param : LP.serialize_ifthenelse_param parse_%s_param = {\n" n n;
   w o "  LP.serialize_ifthenelse_tag_serializer = %s;\n" (scombinator_name tagt);
@@ -2821,7 +2821,7 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
       w o "    (match x with %s_%s y -> (from_%s_case_of_%s %s y))\n"
         cprefix case n tn (String.capitalize_ascii case)
     ) cl;
-    w o "\ninline_for_extraction let %s_sum = LP.make_sum' %s_enum key_of_%s\n" n tn n;
+    w o "\ninline_for_extraction %slet %s_sum = LP.make_sum' %s_enum key_of_%s\n" (if !emit_pulse then "noextract " else "") n tn n;
     w o "  %s_case_of_%s synth_%s_cases synth_%s_cases_recip\n" n tn n n;
     w o "  (_ by (LP.make_sum_synth_case_recip_synth_case_tac ()))\n";
     w o "  (_ by (LP.synth_case_synth_case_recip_tac ()))\n\n";
@@ -2911,7 +2911,7 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
     ) cl;
     w o  "   | _ -> [@inline_let] let _ = synth_%s_cases_recip_pre_intro (LP.Known k') in false_elim ()\n\n" n;
 
-    w o "inline_for_extraction let %s_sum : LP.dsum = LP.make_dsum' %s_enum key_of_%s\n" n tn n;
+    w o "inline_for_extraction %slet %s_sum : LP.dsum = LP.make_dsum' %s_enum key_of_%s\n" (if !emit_pulse then "noextract " else "") n tn n;
     w o "  %s_case_of_%s %s synth_%s_cases synth_%s_cases_recip\n" n tn tyd n n;
     w o "  (_ by (LP.make_dsum_synth_case_recip_synth_case_known_tac ()))\n";
     w o "  (_ by (LP.make_dsum_synth_case_recip_synth_case_unknown_tac ()))\n";
@@ -3080,8 +3080,8 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
     | Some def -> (* Horible synth boilerplate to deal with refine_with_tag *)
       w o "let _ : squash (%s_parser_kind == LP.weaken_parse_dsum_cases_kind %s_sum parse_%s_cases (LP.get_parser_kind %s)) =\n" n n n (pcombinator_name def);
       w o "  _ by (FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ())\n\n";
-      w o "inline_for_extraction let synth_%s (k:%s) (x:LP.refine_with_tag key_of_%s (synth_%s_inv k)) : %s k = x\n\n" n tn n tn n;
-      w o "inline_for_extraction let synth_%s_recip (k:%s) (x:%s k) : LP.refine_with_tag key_of_%s (synth_%s_inv k) = x\n\n" n tn n n tn;
+      w o "inline_for_extraction %slet synth_%s (k:%s) (x:LP.refine_with_tag key_of_%s (synth_%s_inv k)) : %s k = x\n\n" (if !emit_pulse then "noextract " else "") n tn n tn n;
+      w o "inline_for_extraction %slet synth_%s_recip (k:%s) (x:%s k) : LP.refine_with_tag key_of_%s (synth_%s_inv k) = x\n\n" (if !emit_pulse then "noextract " else "") n tn n n tn;
       w o "let synth_%s_inj (k:%s) : Lemma (LP.synth_injective (synth_%s k)) = ()\n\n" n tn n;
       w o "let synth_%s_inv (k:%s) : Lemma (LP.synth_inverse (synth_%s k) (synth_%s_recip k)) = ()\n\n" n tn n n;
       w o "noextract inline_for_extraction let %s_parser' = LP.parse_dsum_cases %s_sum parse_%s_cases %s\n\n" n n n (pcombinator_name def);
@@ -3664,9 +3664,9 @@ and compile_vldata o i is_private n ty li elem_li lenty smin smax =
       else bytesize_call ty "x" in
     w i "%stype %s = x:%s{let l = %s in %d <= l /\\ l <= %d}\n\n" (if !emit_pulse && not li.has_lserializer then "noextract " else "") n (compile_type ty) sizef smin smax;
     w (ipub i o) "%stype %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" (if !emit_pulse && not li.has_lserializer then "noextract " else "") n smin smax (scombinator_name ty);
-    w (ipub i o) "inline_for_extraction let synth_%s (x: %s') : Tot %s =\n" n n n;
+    w (ipub i o) "inline_for_extraction %slet synth_%s (x: %s') : Tot %s =\n" (if !emit_pulse then "noextract " else "") n n n;
     w (ipub i o) "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
-    w (ipub i o) "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' =\n" n n n;
+    w (ipub i o) "inline_for_extraction %slet synth_%s_recip (x: %s) : Tot %s' =\n" (if !emit_pulse then "noextract " else "") n n n;
     w (ipub i o) "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
     write_api o i false is_private li.meta n min max;
     w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
@@ -4118,9 +4118,9 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         wh o "  let l = %s x in\n" (size32_name ty);
         wh o "  %dul `U32.lte` l && l `U32.lte` %dul\n\n" 0 smax;
         w (ipub i o) "%stype %s' = LP.parse_bounded_vldata_strong_t %d %d %s\n\n" (if !emit_pulse && not li.has_lserializer then "noextract " else "") n 0 smax (scombinator_name ty);
-        w (ipub i o) "inline_for_extraction let synth_%s (x: %s') : Tot %s =\n" n n n;
+        w (ipub i o) "inline_for_extraction %slet synth_%s (x: %s') : Tot %s =\n" (if !emit_pulse then "noextract " else "") n n n;
         w (ipub i o) "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
-        w (ipub i o) "inline_for_extraction let synth_%s_recip (x: %s) : Tot %s' =\n" n n n;
+        w (ipub i o) "inline_for_extraction %slet synth_%s_recip (x: %s) : Tot %s' =\n" (if !emit_pulse then "noextract " else "") n n n;
         w (ipub i o) "  [@inline_let] let _ = %s in x\n\n" (bytesize_eq_call ty "x");
         write_api o i false is_private li.meta n min max;
         w o "noextract let %s'_parser : LP.parser _ %s' =\n" n n;
