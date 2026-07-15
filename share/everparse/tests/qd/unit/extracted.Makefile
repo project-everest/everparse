@@ -45,7 +45,7 @@ KRML = $(KRML_EXE) \
 	 -bundle 'FStar.\*,Prims,Pulse.\*,LowParse.\*' \
 	 $(KRML_OPTS) \
 	 $(HEADERS) \
-	 -warn-error '@2-26'
+	 -warn-error '@2@15-26'
 
 QD_FILES = $(wildcard *.fst *.fsti)
 
