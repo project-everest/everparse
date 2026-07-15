@@ -1186,6 +1186,67 @@ let l2r_leaf_writer_zero_size
 = l2r_leaf_writer_of_writer
     (l2r_writer_zero_size _ s ())
 
+(* Pure, total serialized-size function: the exact [FStar.SizeT.t] serialized
+   length of [x], with the guarantee that it fits in a machine word. This is the
+   shape required by the variable-length leaf writer/size combinators
+   ([l2r_safe_writer_leaf_vl] / [l2r_safe_size_leaf_vl]); it is the Pulse-native,
+   structural counterpart of [LowParse.SLow.Base.size32] (no SLow dependency). *)
+inline_for_extraction
+let leaf_size
+  (#t: Type0) (#k: parser_kind) (#p: parser k t) (s: serializer p)
+: Type0
+= (x: t) -> Pure SZ.t
+    (requires True)
+    (ensures (fun sz -> SZ.v sz == Seq.length (serialize s x) /\ SZ.v sz < pow2 64))
+
+(* Re-index a [leaf_size] across an extensionally-equal parser/serializer (mirrors
+   [l2r_leaf_writer_ext_squash]). *)
+inline_for_extraction
+let leaf_size_ext
+  (#t: Type0)
+  (#k1: parser_kind) (#p1: parser k1 t) (#s1: serializer p1)
+  (w1: leaf_size s1)
+  (#k2: parser_kind) (#p2: parser k2 t)
+  (s2: serializer p2)
+  (sq: squash (forall x . parse p1 x == parse p2 x))
+: leaf_size #t #k2 #p2 s2
+= fun x ->
+    serializer_unique_strong s1 s2 x;
+    w1 x
+
+(* Constant-size leaf: the serialized length is the literal [sz] (the parser kind
+   pins low == high == [SZ.v sz]). *)
+inline_for_extraction
+let leaf_size_constant_size
+  (#t: Type0)
+  (#k: parser_kind) (#p: parser k t)
+  (s: serializer p)
+  (sz: SZ.t)
+  (sq: squash (
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_low == SZ.v sz /\
+    SZ.v sz < pow2 64
+  ))
+: leaf_size s
+= fun x ->
+    serialize_length s x;
+    sz
+
+(* Zero-size leaf: a serializer whose parser kind pins [high == Some 0] always
+   serializes to the empty sequence, so the size is [0sz] (mirrors
+   [l2r_leaf_writer_zero_size]). Used for the absent/false cases of a sum/dsum
+   per-case size dispatch. *)
+inline_for_extraction
+let leaf_size_zero_size
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind) (#p: parser k t)
+  (s: serializer p)
+  (sq: squash (k.parser_kind_high == Some 0))
+: leaf_size s
+= fun x ->
+    serialize_length s x;
+    0sz
+
 inline_for_extraction
 let compute_remaining_size
   (#t' #t: Type0)

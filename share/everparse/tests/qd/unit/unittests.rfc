@@ -255,3 +255,7 @@ struct {
   t39 x;
   t40 y;
 } t41;
+
+uint32_le t60[8];
+
+uint16_le t61[6];

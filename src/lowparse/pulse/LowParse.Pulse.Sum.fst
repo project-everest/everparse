@@ -331,3 +331,55 @@ fn l2r_leaf_write_dsum
 }
 
 #pop-options
+
+(* ===== Pure structural [leaf_size] for sum / dsum ===== *)
+
+#push-options "--z3rlimit 128"
+
+inline_for_extraction
+let leaf_size_sum
+  (#kt: Ghost.erased parser_kind) (t: sum) (#p: parser kt (sum_repr_type t))
+  (s: serializer p { kt.parser_kind_subkind == Some ParserStrong })
+  (size_tag: LPB.leaf_size (serialize_enum_key _ s (sum_enum t)))
+  (#pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
+  (sc: ((x: sum_key t) -> Tot (serializer (dsnd (pc x)))))
+  (sc32: ((x: sum_key t) -> Tot (LPB.leaf_size (sc x))))
+  (destr: dep_enum_destr (sum_enum t) (leaf_size_sum_cases_t t sc))
+  (sqb: squash (match (parse_sum_kind kt t pc).parser_kind_high with | Some h -> h < pow2 16 | None -> False))
+: LPB.leaf_size #(sum_type t) #(parse_sum_kind kt t pc) #(parse_sum t p pc) (serialize_sum t s sc)
+= fun x ->
+    let tg = sum_tag_of_data t x in
+    serialize_sum_eq_all t s sc x;
+    serialize_length (serialize_sum t s sc) x;
+    let sz_tag = size_tag tg in
+    let sz_case = leaf_size_sum_cases t sc sc32 destr tg x in
+    // sz_tag + sz_case == serialized length <= parser_kind_high < pow2 16, fits via fits_at_least_16
+    FStar.SizeT.add sz_tag sz_case
+
+#pop-options
+
+#push-options "--z3rlimit 128"
+
+inline_for_extraction
+let leaf_size_dsum
+  (#kt: Ghost.erased parser_kind) (t: dsum) (#p: parser kt (dsum_repr_type t))
+  (s: serializer p { kt.parser_kind_subkind == Some ParserStrong })
+  (size_tag: LPB.leaf_size (serialize_maybe_enum_key _ s (dsum_enum t)))
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (sf: (x: dsum_known_key t) -> Tot (serializer (dsnd (f x))))
+  (sf32: (x: dsum_known_key t) -> Tot (LPB.leaf_size (sf x)))
+  (#k': Ghost.erased parser_kind) (#g: parser k' (dsum_type_of_unknown_tag t)) (#sg: serializer g)
+  (sg32: LPB.leaf_size sg)
+  (destr: dep_enum_destr _ (leaf_size_dsum_cases_t t f sf g sg))
+  (sqb: squash (match (parse_dsum_kind kt t f k').parser_kind_high with | Some h -> h < pow2 16 | None -> False))
+: LPB.leaf_size #(dsum_type t) #(parse_dsum_kind kt t f k') #(parse_dsum t p f g) (serialize_dsum t s f sf g sg)
+= fun x ->
+    let tg = dsum_tag_of_data t x in
+    serialize_dsum_eq_all t s f sf g sg x;
+    serialize_length (serialize_dsum t s f sf g sg) x;
+    let sz_tag = size_tag tg in
+    let sz_case = leaf_size_dsum_cases t f sf sf32 sg32 destr tg x in
+    // sz_tag + sz_case == serialized length <= parser_kind_high < pow2 16, fits via fits_at_least_16
+    FStar.SizeT.add sz_tag sz_case
+
+#pop-options

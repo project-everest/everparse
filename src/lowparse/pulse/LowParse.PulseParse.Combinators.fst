@@ -152,6 +152,26 @@ fn pts_to_parsed_synth_r2l
   fold (PPB.pts_to_parsed (parse_synth p f) input #pm v)
 }
 
+inline_for_extraction
+fn leaf_read_synth
+  (#t #t': Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (r: PPB.leaf_reader p)
+  (f: (t -> GTot t') { synth_injective f })
+  (f': (t' -> GTot t) { synth_inverse f f' })
+  (fc: (x: t) -> (y: t' { y == f x }))
+: PPB.leaf_reader #t' #k (parse_synth p f)
+= (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t')
+{
+  pts_to_parsed_synth_l2r p f f' input;
+  let x = r input;
+  pts_to_parsed_synth_r2l p f f' input (Ghost.reveal v);
+  fc x
+}
+
 ghost
 fn pts_to_parsed_synth_l2r_trade
   (#t #t': Type0)
@@ -717,6 +737,222 @@ fn zero_copy_parse_synth
     (LPC.vmatch_synth vmatch f1 res v);
   Trade.trans (LPC.vmatch_synth vmatch f1 res v) (vmatch res (f1 v)) _;
   res
+}
+
+(* copyful_parse combinators *)
+
+(* [conv] for [parse_synth p1 f2]: synth is an isomorphism, so the mid type and
+   [vmatch] are UNCHANGED; only the conversion threads through [f2]. *)
+let synth_conv
+  (#tm #t1 #t2: Type0)
+  (conv: tm -> GTot (option t1))
+  (f2: t1 -> GTot t2)
+  (vm: tm)
+: GTot (option t2)
+= match conv vm with
+  | Some x -> Some (f2 x)
+  | None -> None
+
+(* [conv] for [nondep_then p1 p2]: option-monadic product of the child convs. *)
+let pair_conv
+  (#tm1 #tm2 #t1 #t2: Type0)
+  (conv1: tm1 -> GTot (option t1))
+  (conv2: tm2 -> GTot (option t2))
+  (vm: (tm1 & tm2))
+: GTot (option (t1 & t2))
+= match conv1 (fst vm), conv2 (snd vm) with
+  | Some x, Some y -> Some (x, y)
+  | _ -> None
+
+inline_for_extraction
+fn copyful_parse_synth
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#tl: Type0) (#tm: Type0) (#vmatch: tl -> tm -> slprop) (#conv: tm -> GTot (option t1)) (r: PPB.copyful_parse vmatch p1 conv)
+  (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 })
+: PPB.copyful_parse #_ #_ #_ vmatch #_ (parse_synth p1 f2) (synth_conv conv f2)
+= (input: slice byte)
+  (#pm: _)
+  (#v: _)
+{
+  pts_to_parsed_synth_l2r p1 f2 f1 input;
+  let res = r input;
+  pts_to_parsed_synth_r2l p1 f2 f1 input v;
+  PPB.elim_vmatch_conv vmatch conv res (f1 (Ghost.reveal v));
+  with vm . assert (vmatch res vm ** pure (conv vm == Some (f1 (Ghost.reveal v))));
+  PPB.intro_vmatch_conv vmatch (synth_conv conv f2) res vm (Ghost.reveal v);
+  res
+}
+
+inline_for_extraction
+fn free_synth
+  (#tl #th1 #th2: Type0)
+  (#vmatch: tl -> th1 -> slprop)
+  (f: PPB.free_t vmatch)
+  (f1: (th2 -> GTot th1))
+: PPB.free_t #_ #th2 (LPC.vmatch_synth vmatch f1)
+= (x: tl)
+  (#v: Ghost.erased th2)
+{
+  unfold (LPC.vmatch_synth vmatch f1 x v);
+  f x;
+}
+
+(* Safe writer for [parse_synth p1 f2]: synth only relabels the high value, so the
+   serialized bytes are unchanged; delegate to the underlying writer and re-relate
+   the postcondition via [serialize_synth_eq]. *)
+let l2r_safe_writer_postcond_synth_bridge
+  (#k1: parser_kind) (#t1: Type0) (p1: parser k1 t1) (s1: serializer p1)
+  (#t2: Type0) (f2: (t1 -> GTot t2)) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 /\ synth_injective f2 })
+  (#tm: Type0) (conv: tm -> GTot (option t1))
+  (y: tm) (v': Seq.seq byte) (res: SZ.t) (err: bool)
+: Lemma
+    (requires PPB.l2r_safe_writer_postcond conv s1 y v' res err)
+    (ensures PPB.l2r_safe_writer_postcond (synth_conv conv f2) (serialize_synth p1 f2 s1 f1 ()) y v' res err)
+= match conv y with
+  | None -> ()
+  | Some x ->
+    serialize_synth_eq p1 f2 s1 f1 () (f2 x);
+    assert (f2 (f1 (f2 x)) == f2 x);
+    assert (f1 (f2 x) == x)
+
+inline_for_extraction
+fn l2r_safe_writer_synth
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1)
+  (#tl: Type0) (#tm: Type0) (#vmatch: tl -> tm -> slprop) (#conv: tm -> GTot (option t1))
+  (w: PPB.l2r_safe_writer vmatch s1 conv)
+  (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 })
+: PPB.l2r_safe_writer #_ #_ #_ vmatch #_ #(parse_synth p1 f2) (serialize_synth p1 f2 s1 f1 ()) (synth_conv conv f2)
+=
+  (x: tl)
+  (#y: Ghost.erased tm)
+  (out: slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: ref bool)
+{
+  let res = w x out perr;
+  with v' err. assert (S.pts_to out v' ** vmatch x (Ghost.reveal y) ** Pulse.Lib.Reference.pts_to perr err ** pure (PPB.l2r_safe_writer_postcond conv s1 (Ghost.reveal y) v' res err));
+  l2r_safe_writer_postcond_synth_bridge p1 s1 f2 f1 conv (Ghost.reveal y) v' res err;
+  res
+}
+
+inline_for_extraction
+fn copyful_parse_pair
+  (#tl1 #tl2 #tm1 #tm2 #th1 #th2: Type0)
+  (#vmatch1: tl1 -> tm1 -> slprop)
+  (#conv1: tm1 -> GTot (option th1))
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 th1)
+  (#vmatch2: tl2 -> tm2 -> slprop)
+  (#conv2: tm2 -> GTot (option th2))
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 th2)
+  (j1: LPS.jumper p1)
+  (w1: PPB.copyful_parse vmatch1 p1 conv1)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (w2: PPB.copyful_parse vmatch2 p2 conv2)
+: PPB.copyful_parse #_ #_ #(th1 & th2) (LPC.vmatch_pair vmatch1 vmatch2) #(and_then_kind k1 k2) (nondep_then p1 p2) (pair_conv conv1 conv2)
+= (input: slice byte)
+  (#pm: _)
+  (#v: _)
+{
+  let input1, input2 = split_nondep_then j1 input sq;
+  unfold (split_nondep_then_post p1 p2 input pm v (input1, input2));
+  let res1 = w1 input1;
+  let res2 = w2 input2;
+  Trade.elim
+    (PPB.pts_to_parsed p1 input1 #(pm /. 2.0R) (fst v) ** PPB.pts_to_parsed p2 input2 #(pm /. 2.0R) (snd v))
+    (PPB.pts_to_parsed (nondep_then p1 p2) input #pm v);
+  PPB.elim_vmatch_conv vmatch1 conv1 res1 (fst (Ghost.reveal v));
+  with vm1 . assert (vmatch1 res1 vm1 ** pure (conv1 vm1 == Some (fst (Ghost.reveal v))));
+  PPB.elim_vmatch_conv vmatch2 conv2 res2 (snd (Ghost.reveal v));
+  with vm2 . assert (vmatch2 res2 vm2 ** pure (conv2 vm2 == Some (snd (Ghost.reveal v))));
+  fold (LPC.vmatch_pair vmatch1 vmatch2 (res1, res2) (vm1, vm2));
+  assert (pure (Mktuple2 (fst (Ghost.reveal v)) (snd (Ghost.reveal v)) == Ghost.reveal v));
+  PPB.intro_vmatch_conv (LPC.vmatch_pair vmatch1 vmatch2) (pair_conv conv1 conv2) (res1, res2) (vm1, vm2) (Ghost.reveal v);
+  (res1, res2)
+}
+
+inline_for_extraction
+fn free_pair
+  (#tl1 #tl2 #tm1 #tm2: Type0)
+  (#vmatch1: tl1 -> tm1 -> slprop)
+  (#vmatch2: tl2 -> tm2 -> slprop)
+  (f1: PPB.free_t vmatch1)
+  (f2: PPB.free_t vmatch2)
+: PPB.free_t #_ #(tm1 & tm2) (LPC.vmatch_pair vmatch1 vmatch2)
+= (x: (tl1 & tl2))
+  (#v: Ghost.erased (tm1 & tm2))
+{
+  unfold (LPC.vmatch_pair vmatch1 vmatch2 x v);
+  f1 (fst x);
+  f2 (snd x);
+}
+
+(* Content lemma for the pair writer: slicing a prefix that lands inside the
+   second component of an append. *)
+let slice_append_prefix (#a:Type) (x y: Seq.seq a) (j: nat)
+  : Lemma
+    (j <= Seq.length y ==>
+      Seq.slice (Seq.append x y) 0 (Seq.length x + j) == Seq.append x (Seq.slice y 0 j))
+  = if j <= Seq.length y
+    then Seq.lemma_eq_intro (Seq.slice (Seq.append x y) 0 (Seq.length x + j)) (Seq.append x (Seq.slice y 0 j))
+    else ()
+
+(* Safe writer for [nondep_then p1 p2]: write field 1 into the whole output slice
+   (it writes a prefix of size [res1]); if it fails, propagate the error. Otherwise
+   split the output at [res1], write field 2 into the suffix, then join. The error
+   flag ends up true iff either child fails (conv = None or no room), which matches
+   [pair_conv] = None or insufficient total room. NEVER pre-split: [res1] is unknown
+   until field 1 is written. *)
+inline_for_extraction
+fn l2r_safe_writer_pair
+  (#tl1 #tl2 #tm1 #tm2 #th1 #th2: Type0)
+  (#vmatch1: tl1 -> tm1 -> slprop)
+  (#k1: parser_kind)
+  (#p1: parser k1 th1)
+  (#s1: serializer p1)
+  (#conv1: tm1 -> GTot (option th1))
+  (w1: PPB.l2r_safe_writer vmatch1 s1 conv1)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (#vmatch2: tl2 -> tm2 -> slprop)
+  (#k2: parser_kind)
+  (#p2: parser k2 th2)
+  (#s2: serializer p2)
+  (#conv2: tm2 -> GTot (option th2))
+  (w2: PPB.l2r_safe_writer vmatch2 s2 conv2)
+: PPB.l2r_safe_writer #(tl1 & tl2) #(tm1 & tm2) #(th1 & th2) (LPC.vmatch_pair vmatch1 vmatch2) #(and_then_kind k1 k2) #(nondep_then p1 p2) (serialize_nondep_then s1 s2) (pair_conv conv1 conv2)
+=
+  (x: (tl1 & tl2))
+  (#y: Ghost.erased (tm1 & tm2))
+  (out: slice byte)
+  (#v: Ghost.erased (Seq.seq byte))
+  (perr: ref bool)
+{
+  unfold (LPC.vmatch_pair vmatch1 vmatch2 x (Ghost.reveal y));
+  FStar.Classical.forall_intro_2 (length_serialize_nondep_then s1 s2);
+  FStar.Classical.forall_intro (serialize_nondep_then_eq s1 s2);
+  FStar.Classical.forall_intro_3 (slice_append_prefix #byte);
+  let res1 = w1 (fst x) out perr;
+  let e1 = !perr;
+  if e1 {
+    S.pts_to_len out;
+    fold (LPC.vmatch_pair vmatch1 vmatch2 x (Ghost.reveal y));
+    res1
+  } else {
+    S.pts_to_len out;
+    let left, right = S.split out res1;
+    S.pts_to_len right;
+    let res2 = w2 (snd x) right perr;
+    let e2 = !perr;
+    S.pts_to_len right;
+    S.join left right out;
+    S.pts_to_len out;
+    fold (LPC.vmatch_pair vmatch1 vmatch2 x (Ghost.reveal y));
+    if e2 {
+      res1
+    } else {
+      SZ.add res1 res2
+    }
+  }
 }
 
 inline_for_extraction
@@ -1368,3 +1604,89 @@ fn accessor_dtuple2_snd
 }
 
 #pop-options
+
+(* ---------------------------------------------------------------------------
+   l2r_safe_size combinators (size-computation analog of l2r_safe_writer).
+   --------------------------------------------------------------------------- *)
+
+(* Safe size for [parse_synth p1 f2]: synth only relabels the high value, so the
+   serialized SIZE is unchanged; bridge the postcondition via [serialize_synth_eq]. *)
+let l2r_safe_size_postcond_synth_bridge
+  (#k1: parser_kind) (#t1: Type0) (p1: parser k1 t1) (s1: serializer p1)
+  (#t2: Type0) (f2: (t1 -> GTot t2)) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 /\ synth_injective f2 })
+  (#tm: Type0) (conv: tm -> GTot (option t1))
+  (y: tm) (sz: SZ.t) (err: bool)
+: Lemma
+    (requires PPB.l2r_safe_size_postcond conv s1 y sz err)
+    (ensures PPB.l2r_safe_size_postcond (synth_conv conv f2) (serialize_synth p1 f2 s1 f1 ()) y sz err)
+= match conv y with
+  | None -> ()
+  | Some x ->
+    serialize_synth_eq p1 f2 s1 f1 () (f2 x);
+    assert (f2 (f1 (f2 x)) == f2 x);
+    assert (f1 (f2 x) == x)
+
+inline_for_extraction
+fn l2r_safe_size_synth
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1)
+  (#tl: Type0) (#tm: Type0) (#vmatch: tl -> tm -> slprop) (#conv: tm -> GTot (option t1))
+  (w: PPB.l2r_safe_size vmatch s1 conv)
+  (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 })
+: PPB.l2r_safe_size #_ #_ #_ vmatch #_ #(parse_synth p1 f2) (serialize_synth p1 f2 s1 f1 ()) (synth_conv conv f2)
+=
+  (x: tl)
+  (#y: Ghost.erased tm)
+  (perr: ref bool)
+{
+  let res = w x perr;
+  with err. assert (vmatch x (Ghost.reveal y) ** Pulse.Lib.Reference.pts_to perr err ** pure (PPB.l2r_safe_size_postcond conv s1 (Ghost.reveal y) res err));
+  l2r_safe_size_postcond_synth_bridge p1 s1 f2 f1 conv (Ghost.reveal y) res err;
+  res
+}
+
+(* Safe size for [nondep_then p1 p2]: compute each child size, propagating any
+   error; otherwise add them with an overflow check. The error flag ends up true
+   iff either child fails (conv = None or size overflow) or the total overflows,
+   matching [pair_conv] = None or non-representable total size. *)
+inline_for_extraction
+fn l2r_safe_size_pair
+  (#tl1 #tl2 #tm1 #tm2 #th1 #th2: Type0)
+  (#vmatch1: tl1 -> tm1 -> slprop)
+  (#k1: parser_kind)
+  (#p1: parser k1 th1)
+  (#s1: serializer p1)
+  (#conv1: tm1 -> GTot (option th1))
+  (w1: PPB.l2r_safe_size vmatch1 s1 conv1)
+  (sqs: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (#vmatch2: tl2 -> tm2 -> slprop)
+  (#k2: parser_kind)
+  (#p2: parser k2 th2)
+  (#s2: serializer p2)
+  (#conv2: tm2 -> GTot (option th2))
+  (w2: PPB.l2r_safe_size vmatch2 s2 conv2)
+: PPB.l2r_safe_size #(tl1 & tl2) #(tm1 & tm2) #(th1 & th2) (LPC.vmatch_pair vmatch1 vmatch2) #(and_then_kind k1 k2) #(nondep_then p1 p2) (serialize_nondep_then s1 s2) (pair_conv conv1 conv2)
+=
+  (x: (tl1 & tl2))
+  (#y: Ghost.erased (tm1 & tm2))
+  (perr: ref bool)
+{
+  unfold (LPC.vmatch_pair vmatch1 vmatch2 x (Ghost.reveal y));
+  FStar.Classical.forall_intro_2 (length_serialize_nondep_then s1 s2);
+  let sz1 = w1 (fst x) perr;
+  let e1 = !perr;
+  if e1 {
+    fold (LPC.vmatch_pair vmatch1 vmatch2 x (Ghost.reveal y));
+    sz1
+  } else {
+    let sz2 = w2 (snd x) perr;
+    let e2 = !perr;
+    if e2 {
+      fold (LPC.vmatch_pair vmatch1 vmatch2 x (Ghost.reveal y));
+      sz2
+    } else {
+      let res = PPB.size_add_checked sz1 sz2 perr;
+      fold (LPC.vmatch_pair vmatch1 vmatch2 x (Ghost.reveal y));
+      res
+    }
+  }
+}
