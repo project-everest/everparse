@@ -4273,26 +4273,6 @@ ensures
   ser_unfold (ser_body (ser_fold f)) x' x out offset v;
 }
 
-fn rec ser'
-  (x': with_perm cbor_raw)
-  (x: Ghost.erased raw_data_item)
-  (out: S.slice LP.byte)
-  (offset: SZ.t)
-  (v: Ghost.erased LP.bytes)
-requires
-  (ser_pre x' x out offset v)
-returns res: SZ.t
-ensures
-  ser_post x' x out offset v res
-{
-  ser_body' (ser') x' x out offset v
-}
-
-let ser (p: perm) : l2r_writer (cbor_match p) serialize_raw_data_item =
-  l2r_writer_lens
-    (cbor_match_with_perm_lens p)
-    (ser_fold (ser'))
-
 // ==== DEPTH-INDEXED KNOT (proven-terminating). Mechanical mirrors first. ====
 
 inline_for_extraction
@@ -4967,25 +4947,6 @@ ensures
 {
   size_unfold (size_body (size_fold f)) x' x out v;
 }
-
-fn rec siz'
-  (x': with_perm cbor_raw)
-  (x: Ghost.erased raw_data_item)
-  (out: ref SZ.t)
-  (v: Ghost.erased SZ.t)
-requires
-  (size_pre x' x out v)
-returns res: bool
-ensures
-  size_post x' x out v res
-{
-  size_body' (siz') x' x out v
-}
-
-let siz (p: perm) : compute_remaining_size (cbor_match p) serialize_raw_data_item =
-  compute_remaining_size_lens
-    (cbor_match_with_perm_lens p)
-    (size_fold (siz'))
 
 fn cbor_size
   (x: cbor_raw)
