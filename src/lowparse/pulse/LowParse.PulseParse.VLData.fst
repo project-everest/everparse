@@ -1060,6 +1060,7 @@ fn l2r_safe_writer_bounded_vldata_payload
   (#conv: tm -> GTot (option t))
   (min: nat) (min_u32: U32.t { (U32.v min_u32 <: nat) == min })
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 }) (max_u32: U32.t { (U32.v max_u32 <: nat) == max })
+  (l: nat { l == log256' max }) (l_sz: SZ.t { SZ.v l_sz == l })
   (s: serializer p { serialize_bounded_vldata_precond min max k })
   (pw: PPB.l2r_safe_writer vmatch s conv)
 : PPB.l2r_safe_writer vmatch (serialize_bounded_vldata min max s) conv
@@ -1070,8 +1071,6 @@ fn l2r_safe_writer_bounded_vldata_payload
   (#v: Ghost.erased (Seq.seq byte))
   (perr: R.ref bool)
 {
-  let l : nat = log256' max;
-  let l_sz = SZ.uint32_to_sizet (U32.uint_to_t l);
   S.pts_to_len out;
   let lout = S.len out;
   if (SZ.lt lout l_sz) {

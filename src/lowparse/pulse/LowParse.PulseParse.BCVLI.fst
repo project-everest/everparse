@@ -339,6 +339,7 @@ let bcvli_size (x: U32.t)
   else if U32.lte x 65535ul then 3sz
   else 5sz
 
+inline_for_extraction
 let bounded_bcvli_size (min: nat) (max: nat { min <= max }) (x: bounded_int32 min max { max < 4294967296 })
 : (sz: SZ.t { SZ.v sz == Seq.length (serialize (serialize_bounded_bcvli min max) x) /\ SZ.v sz < pow2 64 })
 = serialize_bounded_bcvli_eq min max x;

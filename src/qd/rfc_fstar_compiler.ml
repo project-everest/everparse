@@ -1631,7 +1631,7 @@ let emit_copyful_bounded_vldata_payload o i n ty smax =
   if !emit_pulse && copyful_writer_available ty then begin
     wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
     wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n" n n n n;
-    wp o "  PPVD.l2r_safe_writer_bounded_vldata_payload 0 0ul %d %dul %s %s\n\n" smax smax (scombinator_name ty) (copyful_writer_name ty);
+    wp o "  PPVD.l2r_safe_writer_bounded_vldata_payload 0 0ul %d %dul %d %dsz %s %s\n\n" smax smax (log256 smax) (log256 smax) (scombinator_name ty) (copyful_writer_name ty);
     register_writer n
   end
 
