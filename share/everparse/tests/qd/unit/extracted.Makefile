@@ -42,7 +42,7 @@ KRML = $(KRML_EXE) \
 	 -ccopt "-Wno-tautological-overlap-compare" \
 	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
 	 -tmpdir out -I .. \
-	 -bundle 'LowParse.\*' \
+	 -bundle 'FStar.\*,Prims,Pulse.\*,LowParse.\*' \
 	 $(KRML_OPTS) \
 	 $(HEADERS) \
 	 -warn-error '@2-26'
