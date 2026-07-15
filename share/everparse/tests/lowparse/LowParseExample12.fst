@@ -76,7 +76,7 @@ let validate_t : LPS.validator parse_t =
     (PPDER.validate_bounded_der_length32 0ul 1023ul (LPI.read_u8' ()) leaf_read_bi_serialized)
     leaf_read_der
     (serialize_bounded_vlbytes 0 512)
-    (PPBY.validate_bounded_vlbytes 0 512 (leaf_read_bi 2) ())
+    (PPBY.validate_bounded_vlbytes 0 512 (leaf_read_bi 2))
     ()
 
 (* Pulse jumper *)

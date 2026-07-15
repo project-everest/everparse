@@ -14,7 +14,7 @@ and gemstone_t =
 and type_t =
   | TypeSimple of typ
   | TypeSelect of field * (typ * typ) list * typ option
-	| TypeIfeq of typ * string * typ * typ
+	| TypeIfeq of typ * string * (string option) * typ * (string option) * typ
 
 and vector_t =
 	| VectorNone

@@ -14,6 +14,7 @@ module S = Pulse.Lib.Slice
 module LPS = LowParse.Pulse.Base
 module PPB = LowParse.PulseParse.Base
 module U32 = FStar.UInt32
+module SC = LowParse.Pulse.SizeComparison
 
 #push-options "--z3rlimit 32"
 
@@ -36,7 +37,7 @@ fn validate_deplen
   (#pp: parser pk pt)
   (ps: serializer pp)
   (pv: LPS.validator pp)
-  (_: squash (hk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+  (_: squash (hk.parser_kind_subkind == Some ParserStrong))
 : LPS.validator (parse_deplen min max hp dlf ps)
 =
   (input: S.slice byte)
@@ -54,14 +55,14 @@ fn validate_deplen
     let off1 = !poffset;
     let h_val = PPB.read_parsed_from_validator_success hr input offset_val off1;
     let payload_len = dlf h_val;
-    FStar.SizeT.fits_u64_implies_fits_32 ();
-    let payload_len_sz = SZ.uint32_to_sizet payload_len;
     let input_len = len input;
     let remaining = SZ.sub input_len off1;
-    if SZ.lt remaining payload_len_sz {
+    if not (SC.u32_lte_sizet payload_len remaining) {
       poffset := offset_val;
       false
     } else {
+      SZ.fits_lte (U32.v payload_len) (SZ.v remaining);
+      let payload_len_sz = SZ.uint32_to_sizet payload_len;
       let payload_end = SZ.add off1 payload_len_sz;
       let input1, input2 = split_trade input payload_end;
       with v2 . assert (pts_to input2 #pm v2);
