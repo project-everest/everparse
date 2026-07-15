@@ -144,6 +144,22 @@ ifeq ($(OS),Windows_NT)
 endif
 	touch $@
 
+# Building F* from source (FStar.done) also builds F*'s bundled Karamel
+# submodule (opt/FStar/karamel) via `dune build`, only to delete it afterwards.
+# Under a parallel `make deps`, that `dune build` runs concurrently with the
+# standalone Karamel build (karamel.done, in opt/karamel). When both share
+# Dune's build directory, they contend on Dune's build-directory lock
+# ($build_dir/.lock) and one aborts with "Another Dune instance is currently
+# running". Force the standalone Karamel build to complete first so the two
+# `dune build`s never overlap. The dependency is order-only so that rebuilding
+# Karamel does not needlessly retrigger the (expensive) F* build, and it is
+# added only when both are built from source (i.e. both sentinels are needed).
+ifneq (,$(NEED_FSTAR))
+ifneq (,$(NEED_KRML))
+$(EVERPARSE_OPT_PATH)/FStar.done: | $(EVERPARSE_OPT_PATH)/karamel.done
+endif
+endif
+
 krmllib.done: $(NEED_KRML)
 	# Needed by LowParse (Pulse) tests
 	+export KRML_LIBPATH="$$($(KRML_EXE) -locate-krmllib)" && $(MAKE) -C "$$KRML_LIBPATH"/dist/generic -f Makefile.basic
