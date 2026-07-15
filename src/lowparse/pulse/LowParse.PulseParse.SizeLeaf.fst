@@ -23,12 +23,11 @@ let leaf_size_of_size32
   (#p: parser k t)
   (s: serializer p)
   (sz32: LSZ.size32 s)
-  (sqf: squash FStar.SizeT.fits_u64)
-  (sq: squash (Some? k.parser_kind_high /\ Some?.v k.parser_kind_high <= U32.v LSZ.u32_max))
+  (sq: squash (Some? k.parser_kind_high /\ Some?.v k.parser_kind_high < pow2 16))
   (x: t)
 : Pure SZ.t
     (requires True)
     (ensures (fun sz -> SZ.v sz == Seq.length (serialize s x) /\ SZ.v sz < pow2 64))
 = serialize_length s x;
-  FStar.SizeT.fits_u64_implies_fits_32 ();
+  // serialized length <= parser_kind_high < pow2 16, so fits via fits_at_least_16
   SZ.uint32_to_sizet (sz32 x)

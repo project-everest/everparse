@@ -16,6 +16,7 @@ module PPC = LowParse.PulseParse.Combinators
 module LPC = LowParse.Pulse.Combinators
 module PPCV = LowParse.PulseParse.VLData
 module PPVG = LowParse.PulseParse.VLGen
+module SC = LowParse.Pulse.SizeComparison
 module U32 = FStar.UInt32
 
 inline_for_extraction
@@ -34,7 +35,7 @@ let jump_flbytes
 
 inline_for_extraction
 fn jump_all_bytes
-  (_: squash FStar.SizeT.fits_u64)
+  (_: unit)
 : LPS.jumper parse_all_bytes
 =
   (input: slice byte)
@@ -49,7 +50,7 @@ fn jump_all_bytes
 
 inline_for_extraction
 fn validate_all_bytes
-  (_: squash FStar.SizeT.fits_u64)
+  (_: unit)
 : LPS.validator parse_all_bytes
 =
   (input: slice byte)
@@ -62,9 +63,10 @@ fn validate_all_bytes
   let offset_val = !poffset;
   let input_len = len input;
   let remaining = SZ.sub input_len offset_val;
-  SZ.fits_u64_implies_fits_32 ();
-  // parse_all_bytes succeeds only for inputs < 4294967296 bytes
-  if SZ.gt remaining (SZ.uint32_to_sizet 4294967295ul) {
+  // parse_all_bytes succeeds only for inputs < 4294967296 (2^32) bytes;
+  // [SC.u64_lte_sizet 4294967296uL remaining] is [remaining >= 2^32], portable
+  // (no [uint32_to_sizet] of a value that may not fit a 16-bit size_t).
+  if SC.u64_lte_sizet 4294967296uL remaining {
     false
   } else {
     poffset := input_len;
@@ -78,10 +80,9 @@ let validate_bounded_vlbytes'
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (l: nat { l >= log256' max /\ l <= 4 })
   (lr: PPB.leaf_reader (parse_bounded_integer l))
-  (_: squash FStar.SizeT.fits_u64)
 : LPS.validator (parse_bounded_vlbytes' min max l)
 = LPC.validate_synth
-    (PPCV.validate_bounded_vldata_strong' min max l serialize_all_bytes (validate_all_bytes ()) lr ())
+    (PPCV.validate_bounded_vldata_strong' min max l serialize_all_bytes (validate_all_bytes ()) lr)
     (synth_bounded_vlbytes min max)
 
 inline_for_extraction
@@ -89,9 +90,8 @@ let validate_bounded_vlbytes
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (lr: PPB.leaf_reader (parse_bounded_integer (log256' max)))
-  (_: squash FStar.SizeT.fits_u64)
 : LPS.validator (parse_bounded_vlbytes min max)
-= validate_bounded_vlbytes' min max (log256' max) lr ()
+= validate_bounded_vlbytes' min max (log256' max) lr
 
 inline_for_extraction
 let validate_bounded_vlgenbytes
@@ -101,7 +101,7 @@ let validate_bounded_vlgenbytes
   (#pk: parser sk (bounded_int32 vmin vmax))
   (vk: LPS.validator pk)
   (rk: PPB.leaf_reader pk)
-  (_: squash (sk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+  (_: squash (sk.parser_kind_subkind == Some ParserStrong))
 : LPS.validator (parse_bounded_vlgenbytes vmin vmax pk)
 = LPC.validate_synth
     (PPVG.validate_bounded_vlgen vmin vmax vk rk serialize_all_bytes (validate_all_bytes ()) ())
@@ -114,10 +114,9 @@ let jump_bounded_vlbytes'
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (l: nat { l >= log256' max /\ l <= 4 })
   (lr: LPS.leaf_reader (serialize_bounded_integer l))
-  (_: squash FStar.SizeT.fits_u64)
 : LPS.jumper (parse_bounded_vlbytes' min max l)
 = LPC.jump_synth
-    (PPCV.jump_bounded_vldata_strong' min max l serialize_all_bytes lr ())
+    (PPCV.jump_bounded_vldata_strong' min max l serialize_all_bytes lr)
     (synth_bounded_vlbytes min max)
 
 inline_for_extraction
@@ -125,9 +124,8 @@ let jump_bounded_vlbytes
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (lr: LPS.leaf_reader (serialize_bounded_integer (log256' max)))
-  (_: squash FStar.SizeT.fits_u64)
 : LPS.jumper (parse_bounded_vlbytes min max)
-= jump_bounded_vlbytes' min max (log256' max) lr ()
+= jump_bounded_vlbytes' min max (log256' max) lr
 
 inline_for_extraction
 let jump_bounded_vlgenbytes
@@ -137,7 +135,7 @@ let jump_bounded_vlgenbytes
   (#pk: parser sk (bounded_int32 vmin vmax))
   (jk: LPS.jumper pk)
   (rk: PPB.leaf_reader pk)
-  (_: squash (sk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+  (_: squash (sk.parser_kind_subkind == Some ParserStrong))
 : LPS.jumper (parse_bounded_vlgenbytes vmin vmax pk)
 = LPC.jump_synth
     (PPVG.jump_bounded_vlgen vmin vmax jk rk serialize_all_bytes ())
@@ -366,14 +364,13 @@ fn copyful_parse_bounded_vldata_strong_payload
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (l: nat { l >= log256' max /\ l <= 4 })
   (lr: PPB.leaf_reader (parse_bounded_integer l))
-  (u: squash FStar.SizeT.fits_u64)
 : PPB.copyful_parse #(lvec byte) #B32.bytes #(parse_bounded_vldata_strong_t min max #_ #_ #parse_all_bytes serialize_all_bytes) vmatch_copy_bytes (parse_bounded_vldata_strong' min max l serialize_all_bytes) (vldata_all_bytes_conv min max)
 =
   (input: S.slice byte)
   (#pm: perm)
   (#v: Ghost.erased (parse_bounded_vldata_strong_t min max #_ #_ #parse_all_bytes serialize_all_bytes))
 {
-  let result = PPCV.accessor_bounded_vldata_strong_payload' min max l serialize_all_bytes lr u input;
+  let result = PPCV.accessor_bounded_vldata_strong_payload' min max l serialize_all_bytes lr input;
   with pm' v2. assert (PPB.pts_to_parsed parse_all_bytes result #pm' v2);
   let vc = copyful_parse_all_bytes result;
   Trade.elim
@@ -390,7 +387,6 @@ fn copyful_parse_bounded_vlbytes'
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (l: nat { l >= log256' max /\ l <= 4 })
   (lr: PPB.leaf_reader (parse_bounded_integer l))
-  (u: squash FStar.SizeT.fits_u64)
 : PPB.copyful_parse #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes (parse_bounded_vlbytes' min max l) (vlbytes_conv min max)
 =
   (input: S.slice byte)
@@ -402,7 +398,7 @@ fn copyful_parse_bounded_vlbytes'
     (synth_bounded_vlbytes min max)
     (synth_bounded_vlbytes_recip min max)
     input;
-  let vc = copyful_parse_bounded_vldata_strong_payload min max l lr u input;
+  let vc = copyful_parse_bounded_vldata_strong_payload min max l lr input;
   Trade.elim
     (PPB.pts_to_parsed (parse_bounded_vldata_strong' min max l serialize_all_bytes) input #pm (synth_bounded_vlbytes_recip min max v))
     (PPB.pts_to_parsed (parse_bounded_vlbytes' min max l) input #pm v);
@@ -417,9 +413,8 @@ let copyful_parse_bounded_vlbytes
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (lr: PPB.leaf_reader (parse_bounded_integer (log256' max)))
-  (u: squash FStar.SizeT.fits_u64)
 : PPB.copyful_parse #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes (parse_bounded_vlbytes min max) (vlbytes_conv min max)
-= copyful_parse_bounded_vlbytes' min max (log256' max) lr u
+= copyful_parse_bounded_vlbytes' min max (log256' max) lr
 
 #push-options "--z3rlimit 128"
 
@@ -431,7 +426,7 @@ fn accessor_bounded_vlgen_all_bytes_payload
   (#pk: parser sk (bounded_int32 vmin vmax))
   (jk: LPS.jumper pk)
   (rk: PPB.leaf_reader pk)
-  (sq: squash (sk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+  (sq: squash (sk.parser_kind_subkind == Some ParserStrong))
 : PPB.accessor (parse_bounded_vlgen vmin vmax pk serialize_all_bytes) parse_all_bytes (PPCV.clens_bounded_vldata_strong vmin vmax serialize_all_bytes)
 =
   (input: S.slice byte)
@@ -441,7 +436,6 @@ fn accessor_bounded_vlgen_all_bytes_payload
   PPB.pts_to_parsed_elim input;
   with bytes . assert (S.pts_to input #pm bytes);
   S.pts_to_len input;
-  SZ.fits_u64_implies_fits_32 ();
   Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
   parse_bounded_vlgen_unfold_aux vmin vmax pk serialize_all_bytes bytes;
   parser_kind_prop_equiv sk pk;
@@ -471,7 +465,7 @@ fn copyful_parse_bounded_vlgen_payload
   (#pk: parser sk (bounded_int32 vmin vmax))
   (jk: LPS.jumper pk)
   (rk: PPB.leaf_reader pk)
-  (sq: squash (sk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+  (sq: squash (sk.parser_kind_subkind == Some ParserStrong))
 : PPB.copyful_parse #(lvec byte) #B32.bytes #(parse_bounded_vldata_strong_t vmin vmax #_ #_ #parse_all_bytes serialize_all_bytes) vmatch_copy_bytes (parse_bounded_vlgen vmin vmax pk serialize_all_bytes) (vldata_all_bytes_conv vmin vmax)
 =
   (input: S.slice byte)
@@ -497,7 +491,7 @@ fn copyful_parse_bounded_vlgenbytes
   (#pk: parser sk (bounded_int32 vmin vmax))
   (jk: LPS.jumper pk)
   (rk: PPB.leaf_reader pk)
-  (u: squash (sk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+  (u: squash (sk.parser_kind_subkind == Some ParserStrong))
 : PPB.copyful_parse #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t vmin vmax) vmatch_copy_bytes (parse_bounded_vlgenbytes vmin vmax pk) (vlbytes_conv vmin vmax)
 =
   (input: S.slice byte)
@@ -574,7 +568,6 @@ fn l2r_safe_writer_bounded_vlbytes'
   (max_sz: SZ.t { SZ.v max_sz == max })
   (l: nat { l >= log256' max /\ l <= 4 })
   (l_sz: SZ.t { SZ.v l_sz == l })
-  (sq: squash FStar.SizeT.fits_u64)
 : PPB.l2r_safe_writer #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes #_ #(parse_bounded_vlbytes' min max l) (serialize_bounded_vlbytes' min max l) (vlbytes_conv min max)
 =
   (x: lvec byte)
@@ -592,13 +585,16 @@ fn l2r_safe_writer_bounded_vlbytes'
     (* conv y == Some y; serialized length is l + n *)
     length_serialize_bounded_vlbytes' min max l (Ghost.reveal y);
     vlbytes_total_fits_lemma l (SZ.v n) max;
-    SZ.fits_u64_implies_fits (SZ.v l_sz + SZ.v n);
-    let tot_sz = SZ.add l_sz n;
-    if (SZ.lt lout tot_sz) {
+    if not (SC.sizet_sum_within_budget lout l_sz n) {
+      (* [l + n] exceeds the output slice capacity: fail gracefully. Guarding
+         the sum by [lout] (which fits) lets [fits_lte] recover [fits (l + n)]
+         portably, with no 64-bit-size_t assumption. *)
       perr := true;
       fold (vmatch_copy_bytes x y);
-      tot_sz
+      0sz
     } else {
+      SZ.fits_lte (SZ.v l_sz + SZ.v n) (SZ.v lout);
+      let tot_sz = SZ.add l_sz n;
       let sp1, sp2 = S.split out l_sz;
       S.pts_to_len sp1;
       with hv. assert (S.pts_to sp1 hv);
@@ -644,9 +640,8 @@ let l2r_safe_writer_bounded_vlbytes
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (max_sz: SZ.t { SZ.v max_sz == max })
   (l_sz: SZ.t { SZ.v l_sz == log256' max })
-  (sq: squash FStar.SizeT.fits_u64)
 : PPB.l2r_safe_writer #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes #_ #(parse_bounded_vlbytes min max) (serialize_bounded_vlbytes min max) (vlbytes_conv min max)
-= l2r_safe_writer_bounded_vlbytes' min min_sz max max_sz (log256' max) l_sz sq
+= l2r_safe_writer_bounded_vlbytes' min min_sz max max_sz (log256' max) l_sz
 
 (* Copyful safe SIZE for a fixed-length byte array: the size-computation analog
    of [l2r_safe_writer_flbytes]. It does not serialize; it only reports the
@@ -701,7 +696,6 @@ fn l2r_safe_size_bounded_vlbytes'
   (max_sz: SZ.t { SZ.v max_sz == max })
   (l: nat { l >= log256' max /\ l <= 4 })
   (l_sz: SZ.t { SZ.v l_sz == l })
-  (sq: squash FStar.SizeT.fits_u64)
 : PPB.l2r_safe_size #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes #_ #(parse_bounded_vlbytes' min max l) (serialize_bounded_vlbytes' min max l) (vlbytes_conv min max)
 =
   (x: lvec byte)
@@ -715,9 +709,10 @@ fn l2r_safe_size_bounded_vlbytes'
     (* conv y == Some y; serialized length is l + n *)
     length_serialize_bounded_vlbytes' min max l (Ghost.reveal y);
     vlbytes_total_fits_lemma l (SZ.v n) max;
-    SZ.fits_u64_implies_fits (SZ.v l_sz + SZ.v n);
-    let tot_sz = SZ.add l_sz n;
-    perr := false;
+    (* standalone size: [size_add_checked] fails gracefully on [SZ.t] overflow
+       and is complete up to the [pow2 16] floor that [l2r_safe_size_postcond]
+       allows -- no 64-bit-size_t assumption. *)
+    let tot_sz = PPB.size_add_checked l_sz n perr;
     fold (vmatch_copy_bytes x y);
     tot_sz
   } else {
@@ -737,9 +732,8 @@ let l2r_safe_size_bounded_vlbytes
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (max_sz: SZ.t { SZ.v max_sz == max })
   (l_sz: SZ.t { SZ.v l_sz == log256' max })
-  (sq: squash FStar.SizeT.fits_u64)
 : PPB.l2r_safe_size #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t min max) vmatch_copy_bytes #_ #(parse_bounded_vlbytes min max) (serialize_bounded_vlbytes min max) (vlbytes_conv min max)
-= l2r_safe_size_bounded_vlbytes' min min_sz max max_sz (log256' max) l_sz sq
+= l2r_safe_size_bounded_vlbytes' min min_sz max max_sz (log256' max) l_sz
 
 (* ============================================================================ *)
 (* Copyful safe writer/size for a generic-length-prefixed byte array (vlgenbytes) *)
@@ -795,7 +789,6 @@ fn l2r_safe_writer_bounded_vlgenbytes
   (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
   (hsize: (x: bounded_int32 vmin vmax -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize ssk x) /\ SZ.v sz < pow2 64)))
   (hw: LPS.l2r_leaf_writer ssk)
-  (sq: squash FStar.SizeT.fits_u64)
 : PPB.l2r_safe_writer #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t vmin vmax) vmatch_copy_bytes #_ #(parse_bounded_vlgenbytes vmin vmax pk) (serialize_bounded_vlgenbytes vmin vmax ssk) (vlbytes_conv vmin vmax)
 =
   (x: lvec byte)
@@ -811,7 +804,6 @@ fn l2r_safe_writer_bounded_vlgenbytes
   let lout = S.len out;
   if (SZ.lte vmin_sz n && SZ.lte n vmax_sz) {
     (* conv y == Some y; serialized length is h + n *)
-    SZ.fits_u64_implies_fits_32 ();
     FStar.Math.Lemmas.small_mod (SZ.v n) (pow2 32);
     let n32 : bounded_int32 vmin vmax = SZ.sizet_to_uint32 n;
     U32.v_inj n32 (B32.len (Ghost.reveal y));
@@ -890,7 +882,6 @@ fn l2r_safe_size_bounded_vlgenbytes
   (#sk: parser_kind) (#pk: parser sk (bounded_int32 vmin vmax))
   (ssk: serializer pk { sk.parser_kind_subkind == Some ParserStrong })
   (hsize: (x: bounded_int32 vmin vmax -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize ssk x) /\ SZ.v sz < pow2 64)))
-  (sq: squash FStar.SizeT.fits_u64)
 : PPB.l2r_safe_size #(lvec byte) #B32.bytes #(parse_bounded_vlbytes_t vmin vmax) vmatch_copy_bytes #_ #(parse_bounded_vlgenbytes vmin vmax pk) (serialize_bounded_vlgenbytes vmin vmax ssk) (vlbytes_conv vmin vmax)
 =
   (x: lvec byte)
@@ -902,14 +893,13 @@ fn l2r_safe_size_bounded_vlgenbytes
   let n = x.lvec_len;
   if (SZ.lte vmin_sz n && SZ.lte n vmax_sz) {
     (* conv y == Some y; serialized length is h + n *)
-    SZ.fits_u64_implies_fits_32 ();
     FStar.Math.Lemmas.small_mod (SZ.v n) (pow2 32);
     let n32 : bounded_int32 vmin vmax = SZ.sizet_to_uint32 n;
     U32.v_inj n32 (B32.len (Ghost.reveal y));
     let h = hsize n32;
     length_serialize_bounded_vlgenbytes vmin vmax ssk (Ghost.reveal y);
     assert_norm (pow2 64 == 18446744073709551616);
-    let tot = PPB.size_add_checked sq h n perr;
+    let tot = PPB.size_add_checked h n perr;
     fold (vmatch_copy_bytes x y);
     tot
   } else {

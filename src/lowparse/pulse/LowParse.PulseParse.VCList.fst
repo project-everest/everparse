@@ -18,6 +18,23 @@ module PPB = LowParse.PulseParse.Base
 module PPC = LowParse.PulseParse.Combinators
 module LPV = LowParse.Pulse.VCList
 module U32 = FStar.UInt32
+module U64 = FStar.UInt64
+module SC = LowParse.Pulse.SizeComparison
+
+(* Portable count bound: a successful [parse_nlist n p] whose element parser
+   consumes at least one byte necessarily has [n <= |bytes|] (each of the [n]
+   elements consumes >= 1 byte).  Used to recover [SZ.fits n] for the wire
+   element count with no [fits_u64] assumption, and (contrapositive) to justify
+   rejecting inputs whose count exceeds the available bytes. *)
+let parse_nlist_count_le_length
+  (n: nat) (#k: parser_kind) (#t: Type) (p: parser k t) (b: bytes)
+: Lemma
+    (requires k.parser_kind_low >= 1)
+    (ensures (Some? (parse (parse_nlist n p) b) ==> n <= Seq.length b))
+= parse_nlist_kind_low n k;
+  parser_kind_prop_equiv (parse_nlist_kind n k) (parse_nlist n p);
+  FStar.Math.Lemmas.lemma_mult_le_right n 1 k.parser_kind_low
+
 
 (* pts_to_parsed for nlist 1: convert between pts_to_parsed p and pts_to_parsed (parse_nlist 1 p) *)
 
@@ -354,7 +371,7 @@ fn validate_vclist
   (#t: Type0)
   (#p: parser k t)
   (w: LPS.validator p)
-  (u: squash (lk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+  (u: squash (lk.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0))
 : LPS.validator #(vlarray t (U32.v min) (U32.v max)) #(parse_vclist_kind (U32.v min) (U32.v max) lk k) (parse_vclist (U32.v min) (U32.v max) lp p)
 =
   (input: slice byte)
@@ -373,13 +390,24 @@ fn validate_vclist
     if (U32.lt count min || U32.lt max count) {
       false
     } else {
-      SZ.fits_u64_implies_fits_32 ();
-      let n = SZ.uint32_to_sizet count;
+      pts_to_len input;
+      let remaining = SZ.sub (S.len input) off;
       let consumed_n = Ghost.hide (SZ.v off - SZ.v offset);
       Seq.lemma_eq_elim
         (Seq.slice sinput consumed_n (Seq.length sinput))
         (Seq.slice v_bytes (SZ.v off) (Seq.length v_bytes));
-      validate_nlist n w input poffset
+      (* portable: the element count [count] must be representable as size_t;
+         each element consumes >= 1 byte (k.parser_kind_low > 0), so if [count]
+         exceeds the remaining bytes the nlist cannot parse and we reject; else
+         [count <= remaining] recovers [SZ.fits count]. *)
+      parse_nlist_count_le_length (U32.v count) p (Seq.slice v_bytes (SZ.v off) (Seq.length v_bytes));
+      if (SC.u32_lte_sizet count remaining) {
+        SZ.fits_lte (U32.v count) (SZ.v remaining);
+        let n = SZ.uint32_to_sizet count;
+        validate_nlist n w input poffset
+      } else {
+        false
+      }
     }
   } else {
     false
@@ -401,7 +429,7 @@ fn jump_vclist
   (#t: Type0)
   (#p: parser k t)
   (j: LPS.jumper p)
-  (u: squash (lk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+  (u: squash (lk.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0))
 : LPS.jumper #(vlarray t (U32.v min) (U32.v max)) #(parse_vclist_kind (U32.v min) (U32.v max) lk k) (parse_vclist (U32.v min) (U32.v max) lp p)
 =
   (input: slice byte)
@@ -414,11 +442,15 @@ fn jump_vclist
   pts_to_len input;
   let off1 = lj input offset;
   let count = PPB.read_parsed_from_validator_success lr input offset off1;
-  SZ.fits_u64_implies_fits_32 ();
-  let n = SZ.uint32_to_sizet count;
   Seq.lemma_eq_elim
     (Seq.slice sinput (SZ.v off1 - SZ.v offset) (Seq.length sinput))
     (Seq.slice v_bytes (SZ.v off1) (Seq.length v_bytes));
+  (* portable: the parse succeeds (jumper precondition), so the [count]-element
+     nlist fits the available bytes; with k.parser_kind_low > 0 this bounds
+     [count] by the byte length, recovering [SZ.fits count] with no [fits_u64]. *)
+  parse_nlist_count_le_length (U32.v count) p (Seq.slice v_bytes (SZ.v off1) (Seq.length v_bytes));
+  SZ.fits_lte (U32.v count) (SZ.v (S.len input));
+  let n = SZ.uint32_to_sizet count;
   LPV.jump_nlist j n input off1
 }
 
@@ -724,6 +756,13 @@ let rec splitAt_tl_vc (#a:Type) (i:nat) (l:list a)
   = if i = 0 then ()
     else (match l with x :: xs -> splitAt_tl_vc (i-1) xs)
 
+(* Portable: [sizet_to_uint32] returns [v x % pow2 32]; when the value is below
+   2^32 the modulo is the identity, so the U32 result equals the size_t value.
+   This lets us materialize a bounded wire count as U32 with no [fits_u64]. *)
+let mod_pow2_32_id (x: nat)
+  : Lemma (requires x < 4294967296) (ensures x % pow2 32 == x)
+  = assert_norm (pow2 32 == 4294967296)
+
 (* copyful_parse_nlist: fill a Vec from a parsed nlist of runtime-known positive length *)
 
 #push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
@@ -904,8 +943,8 @@ fn copyful_parse_vclist
   (#elem_conv: em -> GTot (option t))
   (w: PPB.copyful_parse elem_vmatch p elem_conv)
   (j: LPS.jumper p)
-  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
-  (u: squash (lk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0))
+  (u: squash (lk.parser_kind_subkind == Some ParserStrong))
   (input: slice byte)
   (#pm: perm)
   (#v: Ghost.erased (vlarray t (U32.v min) (U32.v max)))
@@ -924,7 +963,11 @@ ensures
   parse_vclist_eq (U32.v min) (U32.v max) lp p w_bytes;
   let off1 = lj input 0sz;
   let count = PPB.read_parsed_from_validator_success lr input 0sz off1;
-  SZ.fits_u64_implies_fits_32 ();
+  (* portable: the parse succeeds, so the [count]-element nlist fits the input
+     bytes; with k.parser_kind_low > 0 this bounds [count] by the byte length,
+     recovering [SZ.fits count] with no [fits_u64] assumption. *)
+  parse_nlist_count_le_length (U32.v count) p (Seq.slice w_bytes (SZ.v off1) (Seq.length w_bytes));
+  SZ.fits_lte (U32.v count) (SZ.v (S.len input));
   let n = SZ.uint32_to_sizet count;
   assert (pure (U32.v count == L.length (Ghost.reveal v)));
   Trade.elim
@@ -935,7 +978,7 @@ ensures
     Classical.forall_intro (parse_vclist_dtuple2_eq (U32.v min) (U32.v max) lp p);
     let payload = accessor_vclist_payload (U32.v min) (U32.v max) lj #k #t #p (Ghost.hide (U32.v count)) () input;
     with pm3 v3. assert (PPB.pts_to_parsed (parse_nlist (U32.v count) p) payload #pm3 v3);
-    let vec = copyful_parse_nlist w j sq (Ghost.hide (U32.v count)) n payload;
+    let vec = copyful_parse_nlist w j () (Ghost.hide (U32.v count)) n payload;
     Trade.elim
       (PPB.pts_to_parsed (parse_nlist (U32.v count) p) payload #pm3 v3)
       (PPB.pts_to_parsed (parse_vclist (U32.v min) (U32.v max) lp p) input #pm v);
@@ -1260,7 +1303,6 @@ let serialize_list_length_prefix_le
 
 inline_for_extraction
 fn l2r_safe_size_list_body
-  (sq: squash FStar.SizeT.fits_u64)
   (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
@@ -1317,9 +1359,8 @@ fn l2r_safe_size_list_body
           SZ.v n == L.length (Ghost.reveal y) /\
           Seq.length ss == SZ.v n /\
           SZ.v i <= SZ.v n /\
-          SZ.v off < pow2 64 /\
           SZ.v off == Seq.length (serialize (serialize_list p s) (fst (L.splitAt (SZ.v i) (Ghost.reveal y)))) /\
-          (e == true ==> Seq.length (serialize (serialize_list p s) (Ghost.reveal y)) >= pow2 64)
+          (Seq.length (serialize (serialize_list p s) (Ghost.reveal y)) < pow2 16 ==> e == false)
         )
       {
         let i = !pi;
@@ -1341,17 +1382,17 @@ fn l2r_safe_size_list_body
         PPB.intro_vmatch_conv elem_vmatch elem_conv xi vm_i (Seq.index (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i));
         let ei = !perr;
         if ei {
-          (* element failed (conv None impossible here, so size >= pow2 64) *)
+          (* element failed (conv None impossible here, so size >= pow2 16) *)
           snoc_step_lemma p s (Ghost.reveal y) (SZ.v i);
           serialize_list_length_prefix_le s (Ghost.reveal y) (SZ.v i + 1);
           SM.seq_seq_match_enqueue_left (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i + 1) (SZ.v n) xi (Seq.index (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i));
           rewrite (SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) ((SZ.v i + 1) - 1) (SZ.v n))
             as (SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i) (SZ.v n));
         } else {
-          let off' = PPB.size_add_checked sq off r perr;
+          let off' = PPB.size_add_checked off r perr;
           let ei2 = !perr;
           if ei2 {
-            (* overflow: off + r >= pow2 64, but off + r = length(splitAt(i+1)) <= total *)
+            (* overflow: off + r >= pow2 16, but off + r = length(splitAt(i+1)) <= total *)
             snoc_step_lemma p s (Ghost.reveal y) (SZ.v i);
             serialize_list_length_prefix_le s (Ghost.reveal y) (SZ.v i + 1);
             SM.seq_seq_match_enqueue_left (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i + 1) (SZ.v n) xi (Seq.index (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i));
@@ -1516,7 +1557,7 @@ fn l2r_safe_writer_vclist_aux
   (#elem_conv: em -> GTot (option t))
   (ew: PPB.l2r_safe_writer elem_vmatch s elem_conv)
   (sq: squash (k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0))
-  (u: squash (lk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+  (u: squash (lk.parser_kind_subkind == Some ParserStrong))
   (x: vclist_lowtype el)
   (cnt: U32.t)
   (#y: Ghost.erased (vlarray t min max))
@@ -1584,8 +1625,8 @@ ensures
    output slice cannot hold header ++ body. *)
 inline_for_extraction
 fn l2r_safe_writer_vclist
-  (min: nat) (min_sz: SZ.t { SZ.v min_sz == min })
-  (max: nat { min <= max /\ max < 4294967296 }) (max_sz: SZ.t { SZ.v max_sz == max })
+  (min: nat) (min_u32: U32.t { (U32.v min_u32 <: nat) == min })
+  (max: nat { min <= max /\ max < 4294967296 }) (max_u32: U32.t { (U32.v max_u32 <: nat) == max })
   (#lk: parser_kind) (#lp: parser lk U32.t)
   (ls: serializer lp { lk.parser_kind_subkind == Some ParserStrong })
   (lsize: (x: U32.t -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize ls x) /\ SZ.v sz < pow2 64)))
@@ -1594,7 +1635,7 @@ fn l2r_safe_writer_vclist
   (#el #em: Type0) (#elem_vmatch: el -> em -> slprop) (#elem_conv: em -> GTot (option t))
   (s: serializer p)
   (ew: PPB.l2r_safe_writer elem_vmatch s elem_conv)
-  (sq: squash (k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0 /\ FStar.SizeT.fits_u64))
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0))
 : PPB.l2r_safe_writer
     (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv))
     (serialize_vclist min max ls s)
@@ -1610,7 +1651,7 @@ fn l2r_safe_writer_vclist
     None -> {
       unfold (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (None #(SZ.t & V.vec el)) (Ghost.reveal y));
       fold (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (None #(SZ.t & V.vec el)) (Ghost.reveal y));
-      if (SZ.lte min_sz 0sz) {
+      if (U32.eq min_u32 0ul) {
         let yv : Ghost.erased (vlarray t min max) = Ghost.hide (Ghost.reveal y <: vlarray t min max);
         rewrite (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (None #(SZ.t & V.vec el)) (Ghost.reveal y))
           as (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal yv <: list t));
@@ -1639,9 +1680,11 @@ fn l2r_safe_writer_vclist
         V.pts_to (snd yy) ss **
         SM.seq_list_match ss (Ghost.reveal y) (PPB.vmatch_conv elem_vmatch elem_conv));
       fold (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (Some yy) (Ghost.reveal y));
-      SZ.fits_u64_implies_fits_32 ();
-      if (SZ.lte min_sz n && SZ.lte n max_sz) {
+      let c1 = SC.u32_lte_sizet min_u32 n;
+      let c2 = SC.sizet_lte_u32 n max_u32;
+      if (c1 && c2) {
         let cnt = SZ.sizet_to_uint32 n;
+        mod_pow2_32_id (SZ.v n);
         let yv : Ghost.erased (vlarray t min max) = Ghost.hide (Ghost.reveal y <: vlarray t min max);
         rewrite (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (Some yy) (Ghost.reveal y))
           as (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal yv <: list t));
@@ -1668,7 +1711,7 @@ fn l2r_safe_writer_vclist
 
 
 (* Size analog: the element-list body size pass signalled an error, so the body
-   serialized size is >= pow2 64; hence so is the whole vclist. *)
+   serialized size is >= pow2 16; hence so is the whole vclist. *)
 let vclist_size_body_err_lemma
   (min: nat)
   (max: nat { min <= max /\ max < 4294967296 })
@@ -1683,7 +1726,7 @@ let vclist_size_body_err_lemma
   (bsz: SZ.t)
 : Lemma
   (requires PPB.l2r_safe_size_postcond (fun (xx: list t) -> Some xx) (serialize_list p s) (l <: list t) bsz true)
-  (ensures Seq.length (serialize (serialize_vclist min max ls s) l) >= pow2 64)
+  (ensures Seq.length (serialize (serialize_vclist min max ls s) l) >= pow2 16)
 = serialize_vclist_decomp min max ls s l;
   Seq.lemma_len_append (serialize ls (U32.uint_to_t (L.length l))) (serialize (serialize_list p s) l)
 
@@ -1709,13 +1752,13 @@ let vclist_size_success_lemma
     U32.v cnt == L.length l /\
     PPB.l2r_safe_size_postcond (fun (xx: list t) -> Some xx) (serialize_list p s) (l <: list t) bsz false /\
     SZ.v h == Seq.length (serialize ls cnt) /\
-    (SZ.v h + SZ.v bsz < pow2 64 ==> (e == false /\ SZ.v tot == SZ.v h + SZ.v bsz /\ SZ.v tot < pow2 64)) /\
-    (SZ.v h + SZ.v bsz >= pow2 64 ==> e == true)
+    (e == false ==> SZ.v tot == SZ.v h + SZ.v bsz) /\
+    (SZ.v h + SZ.v bsz < pow2 16 ==> e == false)
   ))
   (ensures (
     let len = Seq.length (serialize (serialize_vclist min max ls s) l) in
-    (e == false ==> (SZ.v tot == len /\ len < pow2 64)) /\
-    (len < pow2 64 ==> e == false)
+    (e == false ==> SZ.v tot == len) /\
+    (len < pow2 16 ==> e == false)
   ))
 = serialize_vclist_decomp min max ls s l;
   Seq.lemma_len_append (serialize ls (U32.uint_to_t (L.length l))) (serialize (serialize_list p s) l)
@@ -1738,8 +1781,8 @@ let vclist_size_postcond_lemma
 : Lemma
   (requires (
     let len = Seq.length (serialize (serialize_vclist min max ls s) l) in
-    (err == false ==> (SZ.v sz == len /\ len < pow2 64)) /\
-    (len < pow2 64 ==> err == false)
+    (err == false ==> SZ.v sz == len) /\
+    (len < pow2 16 ==> err == false)
   ))
   (ensures PPB.l2r_safe_size_postcond (vclist_conv min max) (serialize_vclist min max ls s) (l <: list t) sz err)
 = assert (vclist_conv min max (l <: list t) == Some l)
@@ -1762,7 +1805,7 @@ fn l2r_safe_size_vclist_aux
   (#elem_conv: em -> GTot (option t))
   (es: PPB.l2r_safe_size elem_vmatch s elem_conv)
   (sq: squash (k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0))
-  (u: squash (lk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+  (u: squash (lk.parser_kind_subkind == Some ParserStrong))
   (x: vclist_lowtype el)
   (cnt: U32.t)
   (#y: Ghost.erased (vlarray t min max))
@@ -1779,11 +1822,11 @@ ensures
     R.pts_to perr err **
     pure (
       let len = Seq.length (serialize (serialize_vclist min max ls s) (Ghost.reveal y)) in
-      (err == false ==> (SZ.v sz == len /\ len < pow2 64)) /\
-      (len < pow2 64 ==> err == false)
+      (err == false ==> SZ.v sz == len) /\
+      (len < pow2 16 ==> err == false)
     )
 {
-  let bsz = l2r_safe_size_list_body () s es () x perr;
+  let bsz = l2r_safe_size_list_body s es () x perr;
   with berr. assert (
     vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal y <: list t) **
     R.pts_to perr berr **
@@ -1794,7 +1837,7 @@ ensures
     bsz
   } else {
     let h = lsize cnt;
-    let tot = PPB.size_add_checked () h bsz perr;
+    let tot = PPB.size_add_checked h bsz perr;
     let e = !perr;
     vclist_size_success_lemma min max ls s (Ghost.reveal y) cnt bsz h tot e;
     tot
@@ -1807,8 +1850,8 @@ ensures
    is out of [min, max] (conv None) or the size overflows a machine word. *)
 inline_for_extraction
 fn l2r_safe_size_vclist
-  (min: nat) (min_sz: SZ.t { SZ.v min_sz == min })
-  (max: nat { min <= max /\ max < 4294967296 }) (max_sz: SZ.t { SZ.v max_sz == max })
+  (min: nat) (min_u32: U32.t { (U32.v min_u32 <: nat) == min })
+  (max: nat { min <= max /\ max < 4294967296 }) (max_u32: U32.t { (U32.v max_u32 <: nat) == max })
   (#lk: parser_kind) (#lp: parser lk U32.t)
   (ls: serializer lp { lk.parser_kind_subkind == Some ParserStrong })
   (lsize: (x: U32.t -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize ls x) /\ SZ.v sz < pow2 64)))
@@ -1816,7 +1859,7 @@ fn l2r_safe_size_vclist
   (#el #em: Type0) (#elem_vmatch: el -> em -> slprop) (#elem_conv: em -> GTot (option t))
   (s: serializer p)
   (es: PPB.l2r_safe_size elem_vmatch s elem_conv)
-  (sq: squash (k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0 /\ FStar.SizeT.fits_u64))
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0))
 : PPB.l2r_safe_size
     (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv))
     (serialize_vclist min max ls s)
@@ -1830,7 +1873,7 @@ fn l2r_safe_size_vclist
     None -> {
       unfold (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (None #(SZ.t & V.vec el)) (Ghost.reveal y));
       fold (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (None #(SZ.t & V.vec el)) (Ghost.reveal y));
-      if (SZ.lte min_sz 0sz) {
+      if (U32.eq min_u32 0ul) {
         let yv : Ghost.erased (vlarray t min max) = Ghost.hide (Ghost.reveal y <: vlarray t min max);
         rewrite (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (None #(SZ.t & V.vec el)) (Ghost.reveal y))
           as (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal yv <: list t));
@@ -1839,8 +1882,8 @@ fn l2r_safe_size_vclist
           R.pts_to perr err **
           pure (
             let len = Seq.length (serialize (serialize_vclist min max ls s) (Ghost.reveal yv)) in
-            (err == false ==> (SZ.v sz == len /\ len < pow2 64)) /\
-            (len < pow2 64 ==> err == false)));
+            (err == false ==> SZ.v sz == len) /\
+            (len < pow2 16 ==> err == false)));
         vclist_size_postcond_lemma min max ls s (Ghost.reveal yv) sz err;
         rewrite (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal yv <: list t))
           as (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal y));
@@ -1860,9 +1903,11 @@ fn l2r_safe_size_vclist
         V.pts_to (snd yy) ss **
         SM.seq_list_match ss (Ghost.reveal y) (PPB.vmatch_conv elem_vmatch elem_conv));
       fold (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (Some yy) (Ghost.reveal y));
-      SZ.fits_u64_implies_fits_32 ();
-      if (SZ.lte min_sz n && SZ.lte n max_sz) {
+      let c1 = SC.u32_lte_sizet min_u32 n;
+      let c2 = SC.sizet_lte_u32 n max_u32;
+      if (c1 && c2) {
         let cnt = SZ.sizet_to_uint32 n;
+        mod_pow2_32_id (SZ.v n);
         let yv : Ghost.erased (vlarray t min max) = Ghost.hide (Ghost.reveal y <: vlarray t min max);
         rewrite (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (Some yy) (Ghost.reveal y))
           as (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal yv <: list t));
@@ -1871,8 +1916,8 @@ fn l2r_safe_size_vclist
           R.pts_to perr err **
           pure (
             let len = Seq.length (serialize (serialize_vclist min max ls s) (Ghost.reveal yv)) in
-            (err == false ==> (SZ.v sz == len /\ len < pow2 64)) /\
-            (len < pow2 64 ==> err == false)));
+            (err == false ==> SZ.v sz == len) /\
+            (len < pow2 16 ==> err == false)));
         vclist_size_postcond_lemma min max ls s (Ghost.reveal yv) sz err;
         rewrite (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal yv <: list t))
           as (vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) x (Ghost.reveal y));

@@ -17,6 +17,9 @@ module V = Pulse.Lib.Vec
 module SM = Pulse.Lib.SeqMatch
 module Seq = FStar.Seq
 module L = FStar.List.Tot
+module U64 = FStar.UInt64
+module Cast = FStar.Int.Cast
+module SC = LowParse.Pulse.SizeComparison
 
 let parse_consume (#k: parser_kind) (#t: Type) (p: parser k t) (b: bytes)
 : GTot (option nat)
@@ -462,7 +465,6 @@ let serialize_list_length_prefix_le
 
 inline_for_extraction
 fn l2r_safe_size_list
-  (sq: squash FStar.SizeT.fits_u64)
   (#k: Ghost.erased parser_kind)
   (#t: Type0)
   (#p: parser k t)
@@ -519,9 +521,8 @@ fn l2r_safe_size_list
           SZ.v n == L.length (Ghost.reveal y) /\
           Seq.length ss == SZ.v n /\
           SZ.v i <= SZ.v n /\
-          SZ.v off < pow2 64 /\
           SZ.v off == Seq.length (serialize (serialize_list p s) (fst (L.splitAt (SZ.v i) (Ghost.reveal y)))) /\
-          (e == true ==> Seq.length (serialize (serialize_list p s) (Ghost.reveal y)) >= pow2 64)
+          (Seq.length (serialize (serialize_list p s) (Ghost.reveal y)) < pow2 16 ==> e == false)
         )
       {
         let i = !pi;
@@ -543,17 +544,17 @@ fn l2r_safe_size_list
         PPB.intro_vmatch_conv elem_vmatch elem_conv xi vm_i (Seq.index (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i));
         let ei = !perr;
         if ei {
-          (* element failed (conv None impossible here, so size >= pow2 64) *)
+          (* element failed (conv None impossible here, so size >= pow2 16) *)
           snoc_step_lemma p s (Ghost.reveal y) (SZ.v i);
           serialize_list_length_prefix_le s (Ghost.reveal y) (SZ.v i + 1);
           SM.seq_seq_match_enqueue_left (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i + 1) (SZ.v n) xi (Seq.index (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i));
           rewrite (SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) ((SZ.v i + 1) - 1) (SZ.v n))
             as (SM.seq_seq_match (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i) (SZ.v n));
         } else {
-          let off' = PPB.size_add_checked sq off r perr;
+          let off' = PPB.size_add_checked off r perr;
           let ei2 = !perr;
           if ei2 {
-            (* overflow: off + r >= pow2 64, but off + r = length(splitAt(i+1)) <= total *)
+            (* overflow: off + r >= pow2 16, but off + r = length(splitAt(i+1)) <= total *)
             snoc_step_lemma p s (Ghost.reveal y) (SZ.v i);
             serialize_list_length_prefix_le s (Ghost.reveal y) (SZ.v i + 1);
             SM.seq_seq_match_enqueue_left (PPB.vmatch_conv elem_vmatch elem_conv) ss (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i + 1) (SZ.v n) xi (Seq.index (Seq.seq_of_list (Ghost.reveal y)) (SZ.v i));
@@ -603,6 +604,21 @@ fn l2r_safe_size_list
 
 module U32 = FStar.UInt32
 open LowParse.Spec.VCList
+
+(* Portable decision of [SZ.v n <= U32.v m] without assuming [SZ.fits_u64]:
+   widen [m] to [U64.t] (exact, since [U32.v m < 2^32 <= 2^64]), add one (no
+   overflow), and use the portable [SC.u64_lte_sizet] comparison. *)
+inline_for_extraction
+fn sizet_lte_u32 (n: SZ.t) (m: U32.t)
+  requires emp
+  returns res: bool
+  ensures pure (res == (SZ.v n <= U32.v m))
+{
+  let m64 = Cast.uint32_to_uint64 m;
+  FStar.Math.Lemmas.pow2_lt_compat 64 32;
+  let m64p1 = U64.add m64 1uL;
+  not (SC.u64_lte_sizet m64p1 n)
+}
 
 #push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 
@@ -724,7 +740,7 @@ fn l2r_safe_writer_vclist_aux
   (#elem_conv: em -> GTot (option t))
   (ew: PPB.l2r_safe_writer elem_vmatch s elem_conv)
   (sq: squash (k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0))
-  (u: squash (lk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+  (u: squash (lk.parser_kind_subkind == Some ParserStrong))
   (x: PPVCL.vclist_lowtype el)
   (cnt: U32.t)
   (#y: Ghost.erased (vlarray t (U32.v min) (U32.v max)))
@@ -806,7 +822,7 @@ fn l2r_safe_writer_vclist
   (#elem_conv: em -> GTot (option t))
   (ew: PPB.l2r_safe_writer elem_vmatch s elem_conv)
   (sq: squash (k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0))
-  (u: squash (lk.parser_kind_subkind == Some ParserStrong /\ FStar.SizeT.fits_u64))
+  (u: squash (lk.parser_kind_subkind == Some ParserStrong))
 : PPB.l2r_safe_writer
     (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv))
     (serialize_vclist (U32.v min) (U32.v max) ls s)
@@ -851,10 +867,9 @@ fn l2r_safe_writer_vclist
         V.pts_to (snd yy) ss **
         SM.seq_list_match ss (Ghost.reveal y) (PPB.vmatch_conv elem_vmatch elem_conv));
       fold (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (Some yy) (Ghost.reveal y));
-      SZ.fits_u64_implies_fits_32 ();
-      let smin = SZ.uint32_to_sizet min;
-      let smax = SZ.uint32_to_sizet max;
-      if (SZ.lte smin n && SZ.lte n smax) {
+      let c1 = SC.u32_lte_sizet min n;
+      let c2 = sizet_lte_u32 n max;
+      if (c1 && c2) {
         let cnt = SZ.sizet_to_uint32 n;
         let yv : Ghost.erased (vlarray t (U32.v min) (U32.v max)) = Ghost.hide (Ghost.reveal y <: vlarray t (U32.v min) (U32.v max));
         rewrite (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) (Some yy) (Ghost.reveal y))

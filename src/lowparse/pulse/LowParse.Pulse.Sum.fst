@@ -345,8 +345,7 @@ let leaf_size_sum
   (sc: ((x: sum_key t) -> Tot (serializer (dsnd (pc x)))))
   (sc32: ((x: sum_key t) -> Tot (LPB.leaf_size (sc x))))
   (destr: dep_enum_destr (sum_enum t) (leaf_size_sum_cases_t t sc))
-  (sqf: squash (FStar.SizeT.fits_u64))
-  (sqb: squash (match (parse_sum_kind kt t pc).parser_kind_high with | Some h -> h < pow2 64 | None -> False))
+  (sqb: squash (match (parse_sum_kind kt t pc).parser_kind_high with | Some h -> h < pow2 16 | None -> False))
 : LPB.leaf_size #(sum_type t) #(parse_sum_kind kt t pc) #(parse_sum t p pc) (serialize_sum t s sc)
 = fun x ->
     let tg = sum_tag_of_data t x in
@@ -354,7 +353,7 @@ let leaf_size_sum
     serialize_length (serialize_sum t s sc) x;
     let sz_tag = size_tag tg in
     let sz_case = leaf_size_sum_cases t sc sc32 destr tg x in
-    FStar.SizeT.fits_u64_implies_fits (SZ.v sz_tag + SZ.v sz_case);
+    // sz_tag + sz_case == serialized length <= parser_kind_high < pow2 16, fits via fits_at_least_16
     FStar.SizeT.add sz_tag sz_case
 
 #pop-options
@@ -372,8 +371,7 @@ let leaf_size_dsum
   (#k': Ghost.erased parser_kind) (#g: parser k' (dsum_type_of_unknown_tag t)) (#sg: serializer g)
   (sg32: LPB.leaf_size sg)
   (destr: dep_enum_destr _ (leaf_size_dsum_cases_t t f sf g sg))
-  (sqf: squash (FStar.SizeT.fits_u64))
-  (sqb: squash (match (parse_dsum_kind kt t f k').parser_kind_high with | Some h -> h < pow2 64 | None -> False))
+  (sqb: squash (match (parse_dsum_kind kt t f k').parser_kind_high with | Some h -> h < pow2 16 | None -> False))
 : LPB.leaf_size #(dsum_type t) #(parse_dsum_kind kt t f k') #(parse_dsum t p f g) (serialize_dsum t s f sf g sg)
 = fun x ->
     let tg = dsum_tag_of_data t x in
@@ -381,7 +379,7 @@ let leaf_size_dsum
     serialize_length (serialize_dsum t s f sf g sg) x;
     let sz_tag = size_tag tg in
     let sz_case = leaf_size_dsum_cases t f sf sf32 sg32 destr tg x in
-    FStar.SizeT.fits_u64_implies_fits (SZ.v sz_tag + SZ.v sz_case);
+    // sz_tag + sz_case == serialized length <= parser_kind_high < pow2 16, fits via fits_at_least_16
     FStar.SizeT.add sz_tag sz_case
 
 #pop-options

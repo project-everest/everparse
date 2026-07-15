@@ -75,11 +75,11 @@ let validate_vlarray
     vldata_vlarray_precond array_byte_size_min array_byte_size_max p elem_count_min elem_count_max == true
   })
   (lr: PPB.leaf_reader (parse_bounded_integer (log256' array_byte_size_max)))
-  (_: squash (FStar.SizeT.fits_u64 /\ array_byte_size_max < 4294967296))
+  (_: squash (array_byte_size_max < 4294967296))
 : LPS.validator (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max u)
 = vldata_to_vlarray_inj array_byte_size_min array_byte_size_max s elem_count_min elem_count_max u;
   LPC.validate_synth
-    (PPCV.validate_bounded_vldata_strong array_byte_size_min array_byte_size_max (serialize_list _ s) (PPCL.validate_list v ()) lr ())
+    (PPCV.validate_bounded_vldata_strong array_byte_size_min array_byte_size_max (serialize_list _ s) (PPCL.validate_list v ()) lr)
     (vldata_to_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ())
 
 
@@ -113,11 +113,11 @@ let jump_vlarray
     vldata_vlarray_precond array_byte_size_min array_byte_size_max p elem_count_min elem_count_max == true
   })
   (lr: LPS.leaf_reader (serialize_bounded_integer (log256' array_byte_size_max)))
-  (_: squash (FStar.SizeT.fits_u64 /\ array_byte_size_max < 4294967296))
+  (_: squash (array_byte_size_max < 4294967296))
 : LPS.jumper (parse_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max u)
 = vldata_to_vlarray_inj array_byte_size_min array_byte_size_max s elem_count_min elem_count_max u;
   LPC.jump_synth
-    (PPCV.jump_bounded_vldata_strong array_byte_size_min array_byte_size_max (serialize_list _ s) lr ())
+    (PPCV.jump_bounded_vldata_strong array_byte_size_min array_byte_size_max (serialize_list _ s) lr)
     (vldata_to_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max ())
 
 module SM = Pulse.Lib.SeqMatch
@@ -526,7 +526,6 @@ fn l2r_safe_size_array
     fldata_array_precond k array_byte_size elem_count == true /\
     SZ.v array_byte_size_sz == array_byte_size /\ SZ.v elem_count_sz == elem_count /\
     k.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_low > 0 /\ elem_count > 0))
-  (sq: squash FStar.SizeT.fits_u64)
 : PPB.l2r_safe_size
     (vmatch_array (PPB.vmatch_conv elem_vmatch elem_conv) elem_count_sz)
     (serialize_array s array_byte_size elem_count uprf)
@@ -546,7 +545,7 @@ fn l2r_safe_size_array
   let xo = PPVCL.vmatch_vclist_some_intro
     #el #eh #(PPB.vmatch_conv elem_vmatch elem_conv) elem_count_sz x #s_seq #y (Ghost.reveal y);
   // Call the list-body size combinator (consumes & returns the vmatch_vclist unchanged)
-  let res = PPCL.l2r_safe_size_list sq s es () xo perr;
+  let res = PPCL.l2r_safe_size_list s es () xo perr;
   let e = !perr;
   // Recover the array resources from the (Some) vmatch_vclist
   rewrite (PPVCL.vmatch_vclist (PPB.vmatch_conv elem_vmatch elem_conv) xo (Ghost.reveal y))

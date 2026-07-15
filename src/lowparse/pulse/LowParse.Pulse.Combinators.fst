@@ -2949,8 +2949,7 @@ let leaf_size_pair
   (#k1: parser_kind) (#p1: parser k1 t1) (#s1: serializer p1) (w1: leaf_size s1)
   (sqs: squash (k1.parser_kind_subkind == Some ParserStrong))
   (#k2: parser_kind) (#p2: parser k2 t2) (#s2: serializer p2) (w2: leaf_size s2)
-  (sqf: squash FStar.SizeT.fits_u64)
-  (sqb: squash (match (and_then_kind k1 k2).parser_kind_high with | Some h -> h < pow2 64 | None -> False))
+  (sqb: squash (match (and_then_kind k1 k2).parser_kind_high with | Some h -> h < pow2 16 | None -> False))
 : leaf_size #(t1 & t2) #(and_then_kind k1 k2) #(nondep_then p1 p2) (serialize_nondep_then s1 s2)
 = fun x ->
     let (x1, x2) = x in
@@ -2958,7 +2957,7 @@ let leaf_size_pair
     serialize_length (serialize_nondep_then s1 s2) x;
     let sz1 = w1 x1 in
     let sz2 = w2 x2 in
-    FStar.SizeT.fits_u64_implies_fits (SZ.v sz1 + SZ.v sz2);
+    // sz1 + sz2 == serialized length <= parser_kind_high < pow2 16, fits via fits_at_least_16
     FStar.SizeT.add sz1 sz2
 
 (* Size through [serialize_filter]: filtering does not change the serialized bytes

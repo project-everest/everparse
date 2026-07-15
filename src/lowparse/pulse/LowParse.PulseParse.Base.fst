@@ -10,6 +10,7 @@ module SZ = FStar.SizeT
 module U64 = FStar.UInt64
 module Trade = Pulse.Lib.Trade.Util
 module S = Pulse.Lib.Slice
+module SC = LowParse.Pulse.SizeComparison
 
 let pts_to_parsed_prop
   (#k: parser_kind) (#t: Type) (p: parser k t)
@@ -1148,7 +1149,7 @@ fn l2r_safe_writer_leaf_vl
   (#k: parser_kind)
   (#p: parser k t)
   (s: serializer p)
-  (size: (x: t -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize s x) /\ SZ.v sz < pow2 64)))
+  (size: (x: t -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize s x))))
   (w: LPS.l2r_leaf_writer s)
 : l2r_safe_writer #t #t #t (LPS.eq_as_slprop t) #k #p s (leaf_conv t)
 =
@@ -1277,7 +1278,21 @@ fn l2r_safe_writer_coerce_mid
    l2r_safe_size: the size-computation analog of l2r_safe_writer. Instead of
    serializing into an output buffer, it computes the serialized SIZE of the
    value, signalling an error (err = true) when either the conversion fails or
-   the size does not fit in a machine word (>= pow2 64).
+   the size cannot be represented/constructed as a size_t.
+
+   COMPLETENESS is subtle and platform-limited. Unlike the writer (which is
+   bounded by its output slice length, a size_t witness that makes [fits]
+   recoverable via [fits_lte]), a STANDALONE size computation has no such
+   witness. The natural completeness [SZ.fits len ==> err == false] is
+   UNIMPLEMENTABLE on a general size_t: [FStar.SizeT.fits] is abstract and
+   NO exposed lemma ever concludes [~ SZ.fits _] (all of them conclude [fits]),
+   so a size function can never justify [err = true] against [SZ.fits]. We
+   therefore use the CONCRETE, always-honorable boundary [pow2 16]: every size
+   [< pow2 16] is representable on any >= 16-bit size_t ([fits_at_least_16]),
+   so [len < pow2 16 ==> err == false] is portable, sound, and composes. For
+   larger guaranteed capacity a caller must supply a size_t BUDGET witness (see
+   [size_add_checked_budget] / [LowParse.Pulse.SizeComparison.sizet_sum_within_budget]),
+   exactly as the writer relies on its output buffer length.
    --------------------------------------------------------------------------- *)
 
 let l2r_safe_size_postcond
@@ -1294,8 +1309,8 @@ let l2r_safe_size_postcond
   | None -> err == true
   | Some y' ->
     let len = Seq.length (serialize s y') in
-    (err == false ==> (SZ.v sz == len /\ len < pow2 64)) /\
-    (len < pow2 64 ==> err == false)
+    (err == false ==> SZ.v sz == len) /\
+    (len < pow2 16 ==> err == false)
   end
 
 inline_for_extraction
@@ -1330,27 +1345,87 @@ let add_mod_overflow_lemma (a b: nat)
     FStar.Math.Lemmas.small_mod (a + b - pow2 64) (pow2 64)
   end
 
-(* Runtime overflow-checked SizeT addition via U64 wraparound. *)
+(* Overflow-checked SizeT addition, PORTABLE on any >= 16-bit size_t, with NO
+   [FStar.SizeT.fits_u64] assumption and NO caller precondition [Q].
+
+   Rationale (why there is no [Q], and why completeness stops at [pow2 16]).
+   An EXACT width-agnostic decision of [SZ.fits (SZ.v x + SZ.v y)] is IMPOSSIBLE:
+   [fits] is compared against the platform's [SIZE_MAX], which F* neither exposes
+   (no [SIZE_MAX] constant) nor lets a program observe -- for e.g. [x = y = pow2 15]
+   the inputs are byte-for-byte identical on a size_t of bound [pow2 16] (where
+   [fits (pow2 16)] is false) and of bound [pow2 17] (where it is true), so no
+   function can return the two different answers the spec would require. Dually,
+   [~ SZ.fits _] is never provable at all (every exposed [FStar.SizeT] lemma
+   concludes [fits], never its negation), so a checked add can never justify
+   [err = true] against [fits]. We therefore give the honest CONCRETE contract:
+   soundness always, plus a guaranteed non-error for sums [< pow2 16] (which are
+   representable on any >= 16-bit size_t by [fits_at_least_16]). Success may of
+   course also happen above [pow2 16], but is not promised without a witness.
+   For GUARANTEED capacity beyond [pow2 16] use [size_add_checked_budget], which
+   decides the sum EXACTLY against a caller-supplied size_t budget. *)
 inline_for_extraction
-fn size_add_checked (sq: squash FStar.SizeT.fits_u64) (x: SZ.t) (y: SZ.t) (perr: ref bool)
-  requires (exists* e. R.pts_to perr e ** pure (SZ.v x < pow2 64 /\ SZ.v y < pow2 64))
+fn size_add_checked (x: SZ.t) (y: SZ.t) (perr: ref bool)
+  requires (exists* e. R.pts_to perr e)
   returns z: SZ.t
   ensures (exists* e. R.pts_to perr e ** pure (
-    (SZ.v x + SZ.v y < pow2 64 ==> (e == false /\ SZ.v z == SZ.v x + SZ.v y /\ SZ.v z < pow2 64)) /\
-    (SZ.v x + SZ.v y >= pow2 64 ==> e == true)))
+    (e == false ==> SZ.v z == SZ.v x + SZ.v y) /\
+    (SZ.v x + SZ.v y < pow2 16 ==> e == false)))
 {
-  FStar.Math.Lemmas.small_mod (SZ.v x) (pow2 64);
-  FStar.Math.Lemmas.small_mod (SZ.v y) (pow2 64);
-  add_mod_overflow_lemma (SZ.v x) (SZ.v y);
-  let xu = SZ.sizet_to_uint64 x;
-  let yu = SZ.sizet_to_uint64 y;
-  let zu = U64.add_mod xu yu;
-  if (U64.lt zu xu) {
+  let fx = SC.sizet_fits_u64 x;
+  let fy = SC.sizet_fits_u64 y;
+  if (fx && fy) {
+    FStar.Math.Lemmas.small_mod (SZ.v x) (pow2 64);
+    FStar.Math.Lemmas.small_mod (SZ.v y) (pow2 64);
+    add_mod_overflow_lemma (SZ.v x) (SZ.v y);
+    let xu = SZ.sizet_to_uint64 x;
+    let yu = SZ.sizet_to_uint64 y;
+    let zu = U64.add_mod xu yu;
+    if (U64.lt zu xu) {
+      (* x + y >= pow2 64 > pow2 16 *)
+      perr := true;
+      x
+    } else {
+      if (U64.lt zu 65536uL) {
+        (* x + y = zu < pow2 16, representable by fits_at_least_16 *)
+        perr := false;
+        SZ.uint64_to_sizet zu
+      } else {
+        (* pow2 16 <= x + y < pow2 64: no fits witness, report overflow *)
+        perr := true;
+        x
+      }
+    }
+  } else {
+    (* an operand is >= pow2 64, so x + y >= pow2 64 > pow2 16 *)
     perr := true;
     x
-  } else {
+  }
+}
+
+(* Overflow-checked SizeT addition against a caller-supplied size_t [budget].
+   Fully PORTABLE (any >= 16-bit size_t), EXACT in both directions, and with NO
+   [fits_u64] and NO [pow2 16] cap: capacity is the whole [budget] (up to any
+   size_t value). Soundness of a successful add is recovered from the budget by
+   [fits_lte], exactly as the writer recovers it from its output slice length.
+   This is the recommended primitive for summing unbounded/variable sizes when a
+   representable upper bound (an allocation cap, or an output buffer length) is
+   available. *)
+inline_for_extraction
+fn size_add_checked_budget (budget: SZ.t) (x: SZ.t) (y: SZ.t) (perr: ref bool)
+  requires (exists* e. R.pts_to perr e)
+  returns z: SZ.t
+  ensures (exists* e. R.pts_to perr e ** pure (
+    (e == false ==> (SZ.v z == SZ.v x + SZ.v y /\ SZ.v x + SZ.v y <= SZ.v budget)) /\
+    (SZ.v x + SZ.v y <= SZ.v budget ==> e == false)))
+{
+  let within = SC.sizet_sum_within_budget budget x y;
+  if within {
+    SZ.fits_lte (SZ.v x + SZ.v y) (SZ.v budget);
     perr := false;
-    SZ.uint64_to_sizet zu
+    SZ.add x y
+  } else {
+    perr := true;
+    x
   }
 }
 
@@ -1365,8 +1440,7 @@ fn l2r_safe_size_leaf
   (s: serializer p)
   (sz: SZ.t {
     k.parser_kind_high == Some k.parser_kind_low /\
-    k.parser_kind_low == SZ.v sz /\
-    SZ.v sz < pow2 64
+    k.parser_kind_low == SZ.v sz
   })
 : l2r_safe_size #t #t #t (LPS.eq_as_slprop t) #k #p s (leaf_conv t)
 =
@@ -1383,15 +1457,15 @@ fn l2r_safe_size_leaf
 
 (* Variable-length leaf safe size: like [l2r_safe_size_leaf] but for a
    variable-length leaf. The [size] function computes the exact serialized
-   length (and guarantees it fits in a machine word), so no fixed-size kind is
-   needed. *)
+   length (which is representable as a size_t since its value equals [SZ.v sz]),
+   so no fixed-size kind is needed. *)
 inline_for_extraction
 fn l2r_safe_size_leaf_vl
   (#t: Type0)
   (#k: parser_kind)
   (#p: parser k t)
   (s: serializer p)
-  (size: (x: t -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize s x) /\ SZ.v sz < pow2 64)))
+  (size: (x: t -> Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize s x))))
 : l2r_safe_size #t #t #t (LPS.eq_as_slprop t) #k #p s (leaf_conv t)
 =
   (x: t)

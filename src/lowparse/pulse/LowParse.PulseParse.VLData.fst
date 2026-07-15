@@ -14,6 +14,7 @@ module LPS = LowParse.Pulse.Base
 module PPB = LowParse.PulseParse.Base
 module PPC = LowParse.PulseParse.Combinators
 module PPCF = LowParse.PulseParse.FLData
+module SC = LowParse.Pulse.SizeComparison
 module U32 = FStar.UInt32
 module E = LowParse.Pulse.Endianness
 module EI = LowParse.Spec.Endianness.Instances
@@ -35,7 +36,6 @@ fn validate_vldata_gen
   (#p: parser k t)
   (v: LPS.validator p)
   (lr: PPB.leaf_reader (parse_bounded_integer sz))
-  (u: squash FStar.SizeT.fits_u64)
 : LPS.validator #t #(parse_vldata_gen_kind sz k) (parse_vldata_gen sz f p)
 =
   (input: slice byte)
@@ -49,7 +49,6 @@ fn validate_vldata_gen
   parser_kind_prop_equiv (parse_bounded_integer_kind sz) (parse_bounded_integer sz);
   pts_to_len input;
   let offset_val = !poffset;
-  SZ.fits_u64_implies_fits_32 ();
   let sz_sz = SZ.uint32_to_sizet (U32.uint_to_t sz);
   let input_len = len input;
   let remaining = SZ.sub input_len offset_val;
@@ -62,11 +61,12 @@ fn validate_vldata_gen
     if not (f' bi) {
       false
     } else {
-      let len_payload = SZ.uint32_to_sizet bi;
       let remaining2 = SZ.sub input_len off1;
-      if SZ.lt remaining2 len_payload {
+      if not (SC.u32_lte_sizet bi remaining2) {
         false
       } else {
+        SZ.fits_lte (U32.v bi) (SZ.v remaining2);
+        let len_payload = SZ.uint32_to_sizet bi;
         let payload_end = SZ.add off1 len_payload;
         let input3, input4 = split_trade input payload_end;
         with v4 . assert (pts_to input4 #pm v4);
@@ -104,7 +104,6 @@ fn jump_vldata_gen
   (#t: Type0)
   (p: parser k t)
   (lr: LPS.leaf_reader (serialize_bounded_integer sz))
-  (u: squash FStar.SizeT.fits_u64)
 : LPS.jumper #t #(parse_vldata_gen_kind sz k) (parse_vldata_gen sz f p)
 =
   (input: S.slice byte)
@@ -114,12 +113,14 @@ fn jump_vldata_gen
 {
   let sinput = Ghost.hide (Seq.slice v (SZ.v offset) (Seq.length v));
   parse_vldata_gen_eq sz f p sinput;
+  parse_vldata_gen_eq_some_elim sz f p sinput;
   parser_kind_prop_equiv (parse_bounded_integer_kind sz) (parse_bounded_integer sz);
   pts_to_len input;
-  SZ.fits_u64_implies_fits_32 ();
   let sz_sz = SZ.uint32_to_sizet (U32.uint_to_t sz);
   let off1 = SZ.add offset sz_sz;
   let len = LPS.read_from_validator_success lr input offset off1;
+  let remaining = SZ.sub (S.len input) off1;
+  SZ.fits_lte (U32.v len) (SZ.v remaining);
   let len_sz = SZ.uint32_to_sizet len;
   SZ.add off1 len_sz
 }
@@ -135,7 +136,6 @@ fn jump_bounded_vldata'
   (#t: Type0)
   (p: parser k t)
   (lr: LPS.leaf_reader (serialize_bounded_integer l))
-  (u: squash FStar.SizeT.fits_u64)
 : LPS.jumper #t #(parse_bounded_vldata_strong_kind min max l k) (parse_bounded_vldata' min max l p)
 =
   (input: S.slice byte)
@@ -144,7 +144,7 @@ fn jump_bounded_vldata'
   (#v: Ghost.erased bytes)
 {
   parse_bounded_vldata_correct min max l p;
-  jump_vldata_gen l (in_bounds min max) p lr () input offset
+  jump_vldata_gen l (in_bounds min max) p lr input offset
 }
 
 (* jump_bounded_vldata: bounded variable-length data with default log *)
@@ -157,7 +157,6 @@ fn jump_bounded_vldata
   (#t: Type0)
   (p: parser k t)
   (lr: LPS.leaf_reader (serialize_bounded_integer (log256' max)))
-  (u: squash FStar.SizeT.fits_u64)
 : LPS.jumper #t #(parse_bounded_vldata_strong_kind min max (log256' max) k) (parse_bounded_vldata min max p)
 =
   (input: S.slice byte)
@@ -165,7 +164,7 @@ fn jump_bounded_vldata
   (#pm: perm)
   (#v: Ghost.erased bytes)
 {
-  jump_bounded_vldata' min max (log256' max) p lr () input offset
+  jump_bounded_vldata' min max (log256' max) p lr input offset
 }
 
 (* jump_bounded_vldata_strong': strong bounded variable-length data *)
@@ -180,7 +179,6 @@ fn jump_bounded_vldata_strong'
   (#p: parser k t)
   (s: serializer p)
   (lr: LPS.leaf_reader (serialize_bounded_integer l))
-  (u: squash FStar.SizeT.fits_u64)
 : LPS.jumper #(parse_bounded_vldata_strong_t min max s) #(parse_bounded_vldata_strong_kind min max l k) (parse_bounded_vldata_strong' min max l s)
 =
   (input: S.slice byte)
@@ -188,7 +186,7 @@ fn jump_bounded_vldata_strong'
   (#pm: perm)
   (#v: Ghost.erased bytes)
 {
-  jump_bounded_vldata' min max l p lr () input offset
+  jump_bounded_vldata' min max l p lr input offset
 }
 
 (* jump_bounded_vldata_strong: strong bounded variable-length data with default log *)
@@ -202,7 +200,6 @@ fn jump_bounded_vldata_strong
   (#p: parser k t)
   (s: serializer p)
   (lr: LPS.leaf_reader (serialize_bounded_integer (log256' max)))
-  (u: squash FStar.SizeT.fits_u64)
 : LPS.jumper #(parse_bounded_vldata_strong_t min max s) #(parse_bounded_vldata_strong_kind min max (log256' max) k) (parse_bounded_vldata_strong min max s)
 =
   (input: S.slice byte)
@@ -210,7 +207,7 @@ fn jump_bounded_vldata_strong
   (#pm: perm)
   (#v: Ghost.erased bytes)
 {
-  jump_bounded_vldata_strong' min max (log256' max) s lr () input offset
+  jump_bounded_vldata_strong' min max (log256' max) s lr input offset
 }
 
 #pop-options
@@ -227,7 +224,6 @@ fn validate_bounded_vldata'
   (#p: parser k t)
   (v: LPS.validator p)
   (lr: PPB.leaf_reader (parse_bounded_integer l))
-  (u: squash FStar.SizeT.fits_u64)
 : LPS.validator #t #(parse_bounded_vldata_strong_kind min max l k) (parse_bounded_vldata' min max l p)
 =
   (input: slice byte)
@@ -237,7 +233,7 @@ fn validate_bounded_vldata'
   (#v_bytes: Ghost.erased bytes)
 {
   parse_bounded_vldata_correct min max l p;
-  validate_vldata_gen l (in_bounds min max) (fun (i: bounded_integer l) -> if min = 0 then U32.lte i (U32.uint_to_t max) else (U32.lte (U32.uint_to_t min) i && U32.lte i (U32.uint_to_t max))) v lr () input poffset
+  validate_vldata_gen l (in_bounds min max) (fun (i: bounded_integer l) -> if min = 0 then U32.lte i (U32.uint_to_t max) else (U32.lte (U32.uint_to_t min) i && U32.lte i (U32.uint_to_t max))) v lr input poffset
 }
 
 (* validate_bounded_vldata: bounded variable-length data with default log *)
@@ -251,7 +247,6 @@ fn validate_bounded_vldata
   (#p: parser k t)
   (v: LPS.validator p)
   (lr: PPB.leaf_reader (parse_bounded_integer (log256' max)))
-  (u: squash FStar.SizeT.fits_u64)
 : LPS.validator #t #(parse_bounded_vldata_strong_kind min max (log256' max) k) (parse_bounded_vldata min max p)
 =
   (input: slice byte)
@@ -260,13 +255,13 @@ fn validate_bounded_vldata
   (#pm: perm)
   (#v_bytes: Ghost.erased bytes)
 {
-  validate_bounded_vldata' min max (log256' max) v lr () input poffset
+  validate_bounded_vldata' min max (log256' max) v lr input poffset
 }
 
 (* validate_vldata_payload: payload validator for variable-length data *)
 
 inline_for_extraction
-let validate_vldata_payload
+fn validate_vldata_payload
   (sz: integer_size)
   (f: ((x: bounded_integer sz) -> GTot bool))
   (#k: Ghost.erased parser_kind)
@@ -274,10 +269,26 @@ let validate_vldata_payload
   (#p: parser k t)
   (v: LPS.validator p)
   (i: bounded_integer sz { f i == true })
-  (_: squash FStar.SizeT.fits_u64)
-: Tot (LPS.validator (parse_vldata_payload sz f p i))
-= FStar.SizeT.fits_u64_implies_fits_32 ();
-  LPS.validate_weaken (parse_vldata_payload_kind sz k) (PPCF.validate_fldata v (SZ.uint32_to_sizet i))
+: LPS.validator #t #(parse_vldata_payload_kind sz k) (parse_vldata_payload sz f p i)
+=
+  (input: slice byte)
+  (poffset: R.ref SZ.t)
+  (#offset: Ghost.erased SZ.t)
+  (#pm: perm)
+  (#v_bytes: Ghost.erased bytes)
+{
+  pts_to_len input;
+  let offset_val = !poffset;
+  let remaining = SZ.sub (len input) offset_val;
+  if not (SC.u32_lte_sizet i remaining) {
+    (* not enough bytes remaining for the [U32.v i]-byte payload: parse fails *)
+    false
+  } else {
+    SZ.fits_lte (U32.v i) (SZ.v remaining);
+    let i_sz = SZ.uint32_to_sizet i;
+    LPS.validate_weaken (parse_vldata_payload_kind sz k) (PPCF.validate_fldata v i_sz) input poffset
+  }
+}
 
 (* validate_bounded_vldata_strong': validates parse_bounded_vldata_strong' *)
 
@@ -292,7 +303,6 @@ fn validate_bounded_vldata_strong'
   (s: serializer p)
   (v: LPS.validator p)
   (lr: PPB.leaf_reader (parse_bounded_integer l))
-  (u: squash FStar.SizeT.fits_u64)
 : LPS.validator #(parse_bounded_vldata_strong_t min max s) #(parse_bounded_vldata_strong_kind min max l k) (parse_bounded_vldata_strong' min max l s)
 =
   (input: slice byte)
@@ -301,7 +311,7 @@ fn validate_bounded_vldata_strong'
   (#pm: perm)
   (#v_bytes: Ghost.erased bytes)
 {
-  validate_bounded_vldata' min max l v lr () input poffset
+  validate_bounded_vldata' min max l v lr input poffset
 }
 
 (* validate_bounded_vldata_strong: default log version *)
@@ -316,7 +326,6 @@ fn validate_bounded_vldata_strong
   (s: serializer p)
   (v: LPS.validator p)
   (lr: PPB.leaf_reader (parse_bounded_integer (log256' max)))
-  (u: squash FStar.SizeT.fits_u64)
 : LPS.validator #(parse_bounded_vldata_strong_t min max s) #(parse_bounded_vldata_strong_kind min max (log256' max) k) (parse_bounded_vldata_strong min max s)
 =
   (input: slice byte)
@@ -325,7 +334,7 @@ fn validate_bounded_vldata_strong
   (#pm: perm)
   (#v_bytes: Ghost.erased bytes)
 {
-  validate_bounded_vldata_strong' min max (log256' max) s v lr () input poffset
+  validate_bounded_vldata_strong' min max (log256' max) s v lr input poffset
 }
 
 (* zero_copy_parse_bounded_vldata_payload': access the payload of bounded vldata *)
@@ -341,7 +350,6 @@ fn zero_copy_parse_bounded_vldata_payload'
   (l: nat { l >= log256' max /\ l <= 4 })
   (w: PPB.zero_copy_parse vmatch p)
   (lr: PPB.leaf_reader (parse_bounded_integer l))
-  (u: squash FStar.SizeT.fits_u64)
 : PPB.zero_copy_parse vmatch (parse_bounded_vldata' min max l p)
 = (input: _)
   (#pm: _)
@@ -350,7 +358,6 @@ fn zero_copy_parse_bounded_vldata_payload'
   PPB.pts_to_parsed_elim input;
   with bytes . assert (S.pts_to input #pm bytes);
   S.pts_to_len input;
-  SZ.fits_u64_implies_fits_32 ();
   let l_sz = SZ.uint32_to_sizet (U32.uint_to_t l);
   parser_kind_prop_equiv (parse_bounded_integer_kind l) (parse_bounded_integer l);
   Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
@@ -379,9 +386,8 @@ let zero_copy_parse_bounded_vldata_payload
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (w: PPB.zero_copy_parse vmatch p)
   (lr: PPB.leaf_reader (parse_bounded_integer (log256' max)))
-  (u: squash FStar.SizeT.fits_u64)
 : PPB.zero_copy_parse vmatch (parse_bounded_vldata min max p)
-= zero_copy_parse_bounded_vldata_payload' min max (log256' max) w lr u
+= zero_copy_parse_bounded_vldata_payload' min max (log256' max) w lr
 
 (* accessor_bounded_vldata_payload': accessor for bounded vldata payload *)
 
@@ -396,7 +402,6 @@ fn accessor_bounded_vldata_payload'
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (l: nat { l >= log256' max /\ l <= 4 })
   (lr: PPB.leaf_reader (parse_bounded_integer l))
-  (u: squash FStar.SizeT.fits_u64)
 : PPB.accessor (parse_bounded_vldata' min max l p) p (clens_id t)
 =
   (input: slice byte)
@@ -406,7 +411,6 @@ fn accessor_bounded_vldata_payload'
   PPB.pts_to_parsed_elim input;
   with bytes . assert (S.pts_to input #pm bytes);
   S.pts_to_len input;
-  SZ.fits_u64_implies_fits_32 ();
   let l_sz = SZ.uint32_to_sizet (U32.uint_to_t l);
   parser_kind_prop_equiv (parse_bounded_integer_kind l) (parse_bounded_integer l);
   Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
@@ -429,9 +433,8 @@ let accessor_bounded_vldata_payload
   (min: nat)
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (lr: PPB.leaf_reader (parse_bounded_integer (log256' max)))
-  (u: squash FStar.SizeT.fits_u64)
 : PPB.accessor (parse_bounded_vldata min max p) p (clens_id t)
-= accessor_bounded_vldata_payload' min max (log256' max) lr u
+= accessor_bounded_vldata_payload' min max (log256' max) lr
 
 (* accessor_bounded_vldata_strong_payload: accessor for strong bounded vldata payload *)
 
@@ -454,7 +457,6 @@ fn accessor_bounded_vldata_strong_payload'
   (l: nat { l >= log256' max /\ l <= 4 })
   (s: serializer p)
   (lr: PPB.leaf_reader (parse_bounded_integer l))
-  (u: squash FStar.SizeT.fits_u64)
 : PPB.accessor (parse_bounded_vldata_strong' min max l s) p (clens_bounded_vldata_strong min max s)
 =
   (input: slice byte)
@@ -464,7 +466,6 @@ fn accessor_bounded_vldata_strong_payload'
   PPB.pts_to_parsed_elim input;
   with bytes . assert (S.pts_to input #pm bytes);
   S.pts_to_len input;
-  SZ.fits_u64_implies_fits_32 ();
   let l_sz = SZ.uint32_to_sizet (U32.uint_to_t l);
   parser_kind_prop_equiv (parse_bounded_integer_kind l) (parse_bounded_integer l);
   Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
@@ -488,9 +489,8 @@ let accessor_bounded_vldata_strong_payload
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (s: serializer p)
   (lr: PPB.leaf_reader (parse_bounded_integer (log256' max)))
-  (u: squash FStar.SizeT.fits_u64)
 : PPB.accessor (parse_bounded_vldata_strong min max s) p (clens_bounded_vldata_strong min max s)
-= accessor_bounded_vldata_strong_payload' min max (log256' max) s lr u
+= accessor_bounded_vldata_strong_payload' min max (log256' max) s lr
 
 #pop-options
 
@@ -515,7 +515,6 @@ fn copyful_parse_bounded_vldata_payload'
   (l: nat { l >= log256' max /\ l <= 4 })
   (w: PPB.copyful_parse vmatch p conv)
   (lr: PPB.leaf_reader (parse_bounded_integer l))
-  (u: squash FStar.SizeT.fits_u64)
 : PPB.copyful_parse vmatch (parse_bounded_vldata' min max l p) conv
 =
   (input: slice byte)
@@ -525,7 +524,6 @@ fn copyful_parse_bounded_vldata_payload'
   PPB.pts_to_parsed_elim input;
   with bytes . assert (S.pts_to input #pm bytes);
   S.pts_to_len input;
-  SZ.fits_u64_implies_fits_32 ();
   let l_sz = SZ.uint32_to_sizet (U32.uint_to_t l);
   parser_kind_prop_equiv (parse_bounded_integer_kind l) (parse_bounded_integer l);
   Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
@@ -553,9 +551,8 @@ let copyful_parse_bounded_vldata_payload
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 })
   (w: PPB.copyful_parse vmatch p conv)
   (lr: PPB.leaf_reader (parse_bounded_integer (log256' max)))
-  (u: squash FStar.SizeT.fits_u64)
 : PPB.copyful_parse vmatch (parse_bounded_vldata min max p) conv
-= copyful_parse_bounded_vldata_payload' min max (log256' max) w lr u
+= copyful_parse_bounded_vldata_payload' min max (log256' max) w lr
 
 (* Separation logic predicate for the strong variant: the low-level
    representation [xl] relates to the refined high-level value [xh] exactly when
@@ -609,7 +606,6 @@ fn copyful_parse_bounded_vldata_strong_payload'
   (s: serializer p)
   (w: PPB.copyful_parse vmatch p conv)
   (lr: PPB.leaf_reader (parse_bounded_integer l))
-  (u: squash FStar.SizeT.fits_u64)
 : PPB.copyful_parse (vmatch_vldata_strong min max s vmatch) (parse_bounded_vldata_strong' min max l s) (vldata_strong_conv min max s conv)
 =
   (input: slice byte)
@@ -619,7 +615,6 @@ fn copyful_parse_bounded_vldata_strong_payload'
   PPB.pts_to_parsed_elim input;
   with bytes . assert (S.pts_to input #pm bytes);
   S.pts_to_len input;
-  SZ.fits_u64_implies_fits_32 ();
   let l_sz = SZ.uint32_to_sizet (U32.uint_to_t l);
   parser_kind_prop_equiv (parse_bounded_integer_kind l) (parse_bounded_integer l);
   Seq.lemma_eq_elim (Seq.slice bytes 0 (Seq.length bytes)) bytes;
@@ -652,9 +647,8 @@ let copyful_parse_bounded_vldata_strong_payload
   (s: serializer p)
   (w: PPB.copyful_parse vmatch p conv)
   (lr: PPB.leaf_reader (parse_bounded_integer (log256' max)))
-  (u: squash FStar.SizeT.fits_u64)
 : PPB.copyful_parse (vmatch_vldata_strong min max s vmatch) (parse_bounded_vldata_strong min max s) (vldata_strong_conv min max s conv)
-= copyful_parse_bounded_vldata_strong_payload' min max (log256' max) s w lr u
+= copyful_parse_bounded_vldata_strong_payload' min max (log256' max) s w lr
 
 inline_for_extraction
 fn free_vldata_strong
@@ -851,12 +845,11 @@ fn l2r_safe_writer_bounded_vldata_strong_payload
   (#tl #tm #t: Type0) (#vmatch: tl -> tm -> slprop)
   (#k: Ghost.erased parser_kind) (#p: parser k t)
   (#conv: tm -> GTot (option t))
-  (min: nat) (min_sz: SZ.t { SZ.v min_sz == min })
-  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 }) (max_sz: SZ.t { SZ.v max_sz == max })
+  (min: nat) (min_u32: U32.t { (U32.v min_u32 <: nat) == min })
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 }) (max_u32: U32.t { (U32.v max_u32 <: nat) == max })
   (l: nat { l >= log256' max /\ l <= 4 }) (l_sz: SZ.t { SZ.v l_sz == l })
   (s: serializer p)
   (pw: PPB.l2r_safe_writer vmatch s conv)
-  (sq: squash FStar.SizeT.fits_u64)
 : PPB.l2r_safe_writer (vmatch_vldata_strong min max s vmatch) (serialize_bounded_vldata_strong' min max l s) (vldata_strong_conv min max s conv)
 =
   (x: tl)
@@ -892,10 +885,12 @@ fn l2r_safe_writer_bounded_vldata_strong_payload
       fold (vmatch_vldata_strong min max s vmatch x y);
       res
     } else {
-      if (SZ.lte min_sz res && SZ.lte res max_sz) {
+      let c1 = SC.u32_lte_sizet min_u32 res;
+      let c2 = SC.sizet_lte_u32 res max_u32;
+      if (c1 && c2) {
         (* payload written and its size is in [min, max]: success, backpatch header *)
         vldata_total_fits_lemma l (SZ.v res) max;
-        SZ.fits_u64_implies_fits (SZ.v l_sz + SZ.v res);
+        SZ.fits_lte (SZ.v l_sz + SZ.v res) (SZ.v lout);
         let n_u32 = SZ.sizet_to_uint32 res;
         M.pow2_le_compat (FStar.Mul.op_Star 8 l) (FStar.Mul.op_Star 8 (log256' max));
         let write_hdr = LPPI.write_bounded_integer_header l l_sz;
@@ -1063,11 +1058,10 @@ fn l2r_safe_writer_bounded_vldata_payload
   (#tl #tm #t: Type0) (#vmatch: tl -> tm -> slprop)
   (#k: Ghost.erased parser_kind) (#p: parser k t)
   (#conv: tm -> GTot (option t))
-  (min: nat) (min_sz: SZ.t { SZ.v min_sz == min })
-  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 }) (max_sz: SZ.t { SZ.v max_sz == max })
+  (min: nat) (min_u32: U32.t { (U32.v min_u32 <: nat) == min })
+  (max: nat { min <= max /\ max > 0 /\ max < 4294967296 }) (max_u32: U32.t { (U32.v max_u32 <: nat) == max })
   (s: serializer p { serialize_bounded_vldata_precond min max k })
   (pw: PPB.l2r_safe_writer vmatch s conv)
-  (sq: squash FStar.SizeT.fits_u64)
 : PPB.l2r_safe_writer vmatch (serialize_bounded_vldata min max s) conv
 =
   (x: tl)
@@ -1077,7 +1071,6 @@ fn l2r_safe_writer_bounded_vldata_payload
   (perr: R.ref bool)
 {
   let l : nat = log256' max;
-  SZ.fits_u64_implies_fits_32 ();
   let l_sz = SZ.uint32_to_sizet (U32.uint_to_t l);
   S.pts_to_len out;
   let lout = S.len out;
@@ -1103,10 +1096,12 @@ fn l2r_safe_writer_bounded_vldata_payload
       perr := true;
       res
     } else {
-      if (SZ.lte min_sz res && SZ.lte res max_sz) {
+      let c1 = SC.u32_lte_sizet min_u32 res;
+      let c2 = SC.sizet_lte_u32 res max_u32;
+      if (c1 && c2) {
         (* payload written and its size is in [min, max]: success, backpatch header *)
         vldata_total_fits_lemma l (SZ.v res) max;
-        SZ.fits_u64_implies_fits (SZ.v l_sz + SZ.v res);
+        SZ.fits_lte (SZ.v l_sz + SZ.v res) (SZ.v lout);
         let n_u32 = SZ.sizet_to_uint32 res;
         M.pow2_le_compat (FStar.Mul.op_Star 8 l) (FStar.Mul.op_Star 8 (log256' max));
         let write_hdr = LPPI.write_bounded_integer_header l l_sz;

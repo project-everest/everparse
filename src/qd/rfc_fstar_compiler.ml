@@ -272,14 +272,14 @@ let reader_length_header_name = make_combinator_length_header_name "LL.read" fal
 (* Pulse length header helpers *)
 let pulse_validator_length_header_name x min max = match x with
   | "asn1_len8" | "asn1_len" ->
-    sprintf "(PPDER.validate_bounded_der_length32 %dul %dul (LPPI.read_u8' ()) (fun i -> if i = 1 then PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer 1) (PPBI.leaf_read_bounded_integer_1 fits_u64_squash) else if i = 2 then PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer 2) (PPBI.leaf_read_bounded_integer_2 fits_u64_squash) else if i = 3 then PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer 3) (PPBI.leaf_read_bounded_integer_3 fits_u64_squash) else PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer 4) (PPBI.leaf_read_bounded_integer_4 fits_u64_squash)))" min max
+    sprintf "(PPDER.validate_bounded_der_length32 %dul %dul (LPPI.read_u8' ()) (fun i -> if i = 1 then PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer 1) (PPBI.leaf_read_bounded_integer_1 ()) else if i = 2 then PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer 2) (PPBI.leaf_read_bounded_integer_2 ()) else if i = 3 then PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer 3) (PPBI.leaf_read_bounded_integer_3 ()) else PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer 4) (PPBI.leaf_read_bounded_integer_4 ())))" min max
   | "bitcoin_varint" ->
     sprintf "(PPBCVLI.validate_bounded_bcvli %dul %dul PPBI.leaf_read_bounded_integer_le_1 PPBI.leaf_read_bounded_integer_le_2 PPBI.leaf_read_bounded_integer_le_4)" min max
   | _ -> failwith (sprintf "pulse_validator_length_header_name: %s not found" x)
 
 let pulse_reader_length_header_name x min max = match x with
   | "asn1_len8" | "asn1_len" ->
-    sprintf "(PPDER.leaf_read_bounded_der_length32 %d %d (PPB.leaf_reader_of_serialized (LPPI.read_u8' ())) (PPBI.leaf_read_bounded_integer fits_u64_squash))" min max
+    sprintf "(PPDER.leaf_read_bounded_der_length32 %d %d (PPB.leaf_reader_of_serialized (LPPI.read_u8' ())) (PPBI.leaf_read_bounded_integer))" min max
   | "bitcoin_varint" ->
     sprintf "(PPBCVLI.leaf_read_bounded_bcvli %d %d PPBI.leaf_read_bounded_integer_le_1 PPBI.leaf_read_bounded_integer_le_2 PPBI.leaf_read_bounded_integer_le_4)" min max
   | _ -> failwith (sprintf "pulse_reader_length_header_name: %s not found" x)
@@ -1332,7 +1332,7 @@ let emit_copyful_array o i n ty byte_size elem_count =
     wp o "  assert_norm (LP.fldata_array_precond (LP.get_parser_kind %s) %d %d == true);\n" (pcombinator_name ty) byte_size elem_count;
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
-    wp o "  PPAR.l2r_safe_size_array %s %s %d %dsz %d %dsz () () fits_u64_squash\n\n" (scombinator_name ty) (copyful_size_name ty) byte_size byte_size elem_count elem_count;
+    wp o "  PPAR.l2r_safe_size_array %s %s %d %dsz %d %dsz () ()\n\n" (scombinator_name ty) (copyful_size_name ty) byte_size byte_size elem_count elem_count;
     register_size n
   end
 
@@ -1351,7 +1351,7 @@ let emit_copyful_vclist o i n ty low high repr_t =
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
   wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n" n n n n;
   wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
-  wp o "  PPVCL.copyful_parse_vclist %dul %dul %s %s %s %s () fits_u64_squash\n\n" low high (pulse_jumper_name repr_t) (pulse_leaf_reader_name repr_t) (copyful_read_name ty) (pulse_jumper_name ty);
+  wp o "  PPVCL.copyful_parse_vclist %dul %dul %s %s %s %s () ()\n\n" low high (pulse_jumper_name repr_t) (pulse_leaf_reader_name repr_t) (copyful_read_name ty) (pulse_jumper_name ty);
   wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> PPVCL.free_vclist (PPB.free_vmatch_conv %s %s %s) x #(Ghost.hide (Ghost.reveal v <: list %s))\n\n" n n (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty) (compile_type ty);
   (* Pulse: copyful safe WRITER (write_<n>) for the element-count-framed (vclist)
      list. The count header is a bcvli over U32; the payload bytes coincide with
@@ -1361,13 +1361,10 @@ let emit_copyful_vclist o i n ty low high repr_t =
   if !emit_pulse && repr_t = "bitcoin_varint" && copyful_writer_available ty then begin
     wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
     wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n" n n n n;
-    wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name repr_t);
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
-    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" low;
-    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" high;
-    wp o "  PPVCL.l2r_safe_writer_vclist (FStar.UInt32.v %dul) (FStar.SizeT.uint_to_t %d) (FStar.UInt32.v %dul) (FStar.SizeT.uint_to_t %d) %s PPBCVLI.bcvli_size (PPBCVLI.l2r_leaf_write_bcvli ()) %s %s ()\n\n" low low high high (scombinator_name repr_t) (scombinator_name ty) (copyful_writer_name ty);
+    wp o "  PPVCL.l2r_safe_writer_vclist (FStar.UInt32.v %dul) %dul (FStar.UInt32.v %dul) %dul %s PPBCVLI.bcvli_size (PPBCVLI.l2r_leaf_write_bcvli ()) %s %s ()\n\n" low low high high (scombinator_name repr_t) (scombinator_name ty) (copyful_writer_name ty);
     register_writer n
   end;
   (* Pulse: copyful safe SIZE (size_<n>) for the element-count-framed (vclist)
@@ -1376,13 +1373,10 @@ let emit_copyful_vclist o i n ty low high repr_t =
   if !emit_pulse && repr_t = "bitcoin_varint" && copyful_size_available ty then begin
     wp i "val size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv\n\n" n n n n;
     wp o "let size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv =\n" n n n n;
-    wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name repr_t);
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
-    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" low;
-    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" high;
-    wp o "  PPVCL.l2r_safe_size_vclist (FStar.UInt32.v %dul) (FStar.SizeT.uint_to_t %d) (FStar.UInt32.v %dul) (FStar.SizeT.uint_to_t %d) %s PPBCVLI.bcvli_size %s %s ()\n\n" low low high high (scombinator_name repr_t) (scombinator_name ty) (copyful_size_name ty);
+    wp o "  PPVCL.l2r_safe_size_vclist (FStar.UInt32.v %dul) %dul (FStar.UInt32.v %dul) %dul %s PPBCVLI.bcvli_size %s %s ()\n\n" low low high high (scombinator_name repr_t) (scombinator_name ty) (copyful_size_name ty);
     register_size n
   end
 
@@ -1417,7 +1411,7 @@ let emit_copyful_vldata_list o i n ty min max =
   wp o "  PPC.copyful_parse_synth\n";
   wp o "    (PPVD.copyful_parse_bounded_vldata_strong_payload %d %d (LP.serialize_list _ %s)\n" min max (scombinator_name ty);
   wp o "       (PPLS.copyful_parse_list %s %s ())\n" (copyful_read_name ty) (pulse_jumper_name ty);
-  wp o "       (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash)\n" (log256 max);
+  wp o "       (PPBI.leaf_read_bounded_integer_%d ()))\n" (log256 max);
   wp o "    synth_%s synth_%s_recip\n\n" n n;
   wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
   wp o "  PPVD.free_vldata_strong %d %d (LP.serialize_list _ %s) (PPVCL.free_vclist (PPB.free_vmatch_conv %s %s %s))\n\n" min max (scombinator_name ty) (copyful_vmatch_name ty) (copyful_conv_name ty) (copyful_free_name ty);
@@ -1429,8 +1423,8 @@ let emit_copyful_vldata_list o i n ty min max =
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
     wp o "  PPC.l2r_safe_writer_synth\n";
-    wp o "    ((PPVD.l2r_safe_writer_bounded_vldata_strong_payload %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d %dsz (LP.serialize_list _ %s)\n" min min max max (log256 max) (log256 max) (scombinator_name ty);
-    wp o "       (PPLS.l2r_safe_writer_list %s %s ()) fits_u64_squash) <: PPB.l2r_safe_writer _ %s'_serializer _)\n" (scombinator_name ty) (copyful_writer_name ty) n;
+    wp o "    ((PPVD.l2r_safe_writer_bounded_vldata_strong_payload %d %dul %d %dul %d %dsz (LP.serialize_list _ %s)\n" min min max max (log256 max) (log256 max) (scombinator_name ty);
+    wp o "       (PPLS.l2r_safe_writer_list %s %s ())) <: PPB.l2r_safe_writer _ %s'_serializer _)\n" (scombinator_name ty) (copyful_writer_name ty) n;
     wp o "    synth_%s synth_%s_recip\n\n" n n;
     register_writer n
   end
@@ -1455,7 +1449,6 @@ let emit_copyful_vllist o i n ty smin smax lenty =
   wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n" n n n n;
   wp o "  %s_copyful_synth_injective ();\n" n;
   wp o "  %s_copyful_synth_inverse ();\n" n;
-  wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
   wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_length_header_name lenty smin smax);
   wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
   wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
@@ -1475,15 +1468,12 @@ let emit_copyful_vllist o i n ty smin smax lenty =
     wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n" n n n n;
     wp o "  %s_copyful_synth_injective ();\n" n;
     wp o "  %s_copyful_synth_inverse ();\n" n;
-    wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_length_header_name lenty smin smax);
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
-    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smin;
-    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smax;
     wp o "  PPC.l2r_safe_writer_synth\n";
-    wp o "    ((PPVG.l2r_safe_writer_bounded_vlgen_payload %d (FStar.SizeT.uint_to_t %d) %d (FStar.SizeT.uint_to_t %d) %s (fun x -> PPBCVLI.bounded_bcvli_size %d %d x) (PPBCVLI.l2r_leaf_write_bounded_bcvli %d %d ()) (LP.serialize_list _ %s)\n" smin smin smax smax (scombinator_length_header_name lenty smin smax) smin smax smin smax (scombinator_name ty);
-    wp o "       (PPLS.l2r_safe_writer_list %s %s ()) (PPLS.l2r_safe_size_list fits_u64_squash %s %s ()) fits_u64_squash) <: PPB.l2r_safe_writer _ %s'_serializer _)\n" (scombinator_name ty) (copyful_writer_name ty) (scombinator_name ty) (copyful_size_name ty) n;
+    wp o "    ((PPVG.l2r_safe_writer_bounded_vlgen_payload %d %dul %d %dul %s (fun x -> PPBCVLI.bounded_bcvli_size %d %d x) (PPBCVLI.l2r_leaf_write_bounded_bcvli %d %d ()) (LP.serialize_list _ %s)\n" smin smin smax smax (scombinator_length_header_name lenty smin smax) smin smax smin smax (scombinator_name ty);
+    wp o "       (PPLS.l2r_safe_writer_list %s %s ()) (PPLS.l2r_safe_size_list %s %s ())) <: PPB.l2r_safe_writer _ %s'_serializer _)\n" (scombinator_name ty) (copyful_writer_name ty) (scombinator_name ty) (copyful_size_name ty) n;
     wp o "    synth_%s synth_%s_recip\n\n" n n;
     register_writer n
   end;
@@ -1495,15 +1485,12 @@ let emit_copyful_vllist o i n ty smin smax lenty =
     wp o "let size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv =\n" n n n n;
     wp o "  %s_copyful_synth_injective ();\n" n;
     wp o "  %s_copyful_synth_inverse ();\n" n;
-    wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_length_header_name lenty smin smax);
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
-    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smin;
-    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smax;
     wp o "  PPC.l2r_safe_size_synth\n";
-    wp o "    ((PPVG.l2r_safe_size_bounded_vlgen_payload %d (FStar.SizeT.uint_to_t %d) %d (FStar.SizeT.uint_to_t %d) %s (fun x -> PPBCVLI.bounded_bcvli_size %d %d x) (LP.serialize_list _ %s)\n" smin smin smax smax (scombinator_length_header_name lenty smin smax) smin smax (scombinator_name ty);
-    wp o "       (PPLS.l2r_safe_size_list fits_u64_squash %s %s ()) fits_u64_squash) <: PPB.l2r_safe_size _ %s'_serializer _)\n" (scombinator_name ty) (copyful_size_name ty) n;
+    wp o "    ((PPVG.l2r_safe_size_bounded_vlgen_payload %d %dul %d %dul %s (fun x -> PPBCVLI.bounded_bcvli_size %d %d x) (LP.serialize_list _ %s)\n" smin smin smax smax (scombinator_length_header_name lenty smin smax) smin smax (scombinator_name ty);
+    wp o "       (PPLS.l2r_safe_size_list %s %s ())) <: PPB.l2r_safe_size _ %s'_serializer _)\n" (scombinator_name ty) (copyful_size_name ty) n;
     wp o "    synth_%s synth_%s_recip\n\n" n n;
     register_size n
   end
@@ -1534,7 +1521,6 @@ let emit_copyful_vlgen_payload o i n ty smin smax lenty =
   wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n" n n n n;
   wp o "  %s_copyful_synth_injective ();\n" n;
   wp o "  %s_copyful_synth_inverse ();\n" n;
-  wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
   wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_length_header_name lenty smin smax);
   wp o "  PPC.copyful_parse_synth\n";
   wp o "    (PPVG.copyful_parse_bounded_vlgen_payload %d %d %s %s %s %s ())\n" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty) (copyful_read_name ty);
@@ -1551,12 +1537,9 @@ let emit_copyful_vlgen_payload o i n ty smin smax lenty =
     wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n" n n n n;
     wp o "  %s_copyful_synth_injective ();\n" n;
     wp o "  %s_copyful_synth_inverse ();\n" n;
-    wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_length_header_name lenty smin smax);
-    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smin;
-    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smax;
     wp o "  PPC.l2r_safe_writer_synth\n";
-    wp o "    ((PPVG.l2r_safe_writer_bounded_vlgen_payload %d (FStar.SizeT.uint_to_t %d) %d (FStar.SizeT.uint_to_t %d) %s %s %s %s %s %s fits_u64_squash) <: PPB.l2r_safe_writer _ (LP.serialize_bounded_vlgen %d %d %s %s) _)\n" smin smin smax smax (scombinator_length_header_name lenty smin smax) (pulse_size_length_header_name lenty smin smax) (pulse_leaf_writer_length_header_name lenty smin smax) (scombinator_name ty) (copyful_writer_name ty) (copyful_size_name ty) smin smax (scombinator_length_header_name lenty smin smax) (scombinator_name ty);
+    wp o "    ((PPVG.l2r_safe_writer_bounded_vlgen_payload %d %dul %d %dul %s %s %s %s %s %s) <: PPB.l2r_safe_writer _ (LP.serialize_bounded_vlgen %d %d %s %s) _)\n" smin smin smax smax (scombinator_length_header_name lenty smin smax) (pulse_size_length_header_name lenty smin smax) (pulse_leaf_writer_length_header_name lenty smin smax) (scombinator_name ty) (copyful_writer_name ty) (copyful_size_name ty) smin smax (scombinator_length_header_name lenty smin smax) (scombinator_name ty);
     wp o "    (LP.synth_vlgen %d %d %s) (LP.synth_vlgen_recip %d %d %s)\n\n" smin smax (scombinator_name ty) smin smax (scombinator_name ty);
     register_writer n
   end;
@@ -1565,12 +1548,9 @@ let emit_copyful_vlgen_payload o i n ty smin smax lenty =
     wp o "let size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv =\n" n n n n;
     wp o "  %s_copyful_synth_injective ();\n" n;
     wp o "  %s_copyful_synth_inverse ();\n" n;
-    wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_length_header_name lenty smin smax);
-    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smin;
-    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smax;
     wp o "  PPC.l2r_safe_size_synth\n";
-    wp o "    ((PPVG.l2r_safe_size_bounded_vlgen_payload %d (FStar.SizeT.uint_to_t %d) %d (FStar.SizeT.uint_to_t %d) %s %s %s %s fits_u64_squash) <: PPB.l2r_safe_size _ (LP.serialize_bounded_vlgen %d %d %s %s) _)\n" smin smin smax smax (scombinator_length_header_name lenty smin smax) (pulse_size_length_header_name lenty smin smax) (scombinator_name ty) (copyful_size_name ty) smin smax (scombinator_length_header_name lenty smin smax) (scombinator_name ty);
+    wp o "    ((PPVG.l2r_safe_size_bounded_vlgen_payload %d %dul %d %dul %s %s %s %s) <: PPB.l2r_safe_size _ (LP.serialize_bounded_vlgen %d %d %s %s) _)\n" smin smin smax smax (scombinator_length_header_name lenty smin smax) (pulse_size_length_header_name lenty smin smax) (scombinator_name ty) (copyful_size_name ty) smin smax (scombinator_length_header_name lenty smin smax) (scombinator_name ty);
     wp o "    (LP.synth_vlgen %d %d %s) (LP.synth_vlgen_recip %d %d %s)\n\n" smin smax (scombinator_name ty) smin smax (scombinator_name ty);
     register_size n
   end
@@ -1597,7 +1577,6 @@ let emit_copyful_vlgen_payload_refined o i n ty smin smax lenty =
   wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n" n n n n;
   wp o "  %s_copyful_synth_injective ();\n" n;
   wp o "  %s_copyful_synth_inverse ();\n" n;
-  wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
   wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_length_header_name lenty smin smax);
   wp o "  PPC.copyful_parse_synth\n";
   wp o "    (PPVG.copyful_parse_bounded_vlgen_payload %d %d %s %s %s %s ())\n" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty) (copyful_read_name ty);
@@ -1612,12 +1591,9 @@ let emit_copyful_vlgen_payload_refined o i n ty smin smax lenty =
     wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n" n n n n;
     wp o "  %s_copyful_synth_injective ();\n" n;
     wp o "  %s_copyful_synth_inverse ();\n" n;
-    wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_length_header_name lenty smin smax);
-    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smin;
-    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smax;
     wp o "  PPC.l2r_safe_writer_synth\n";
-    wp o "    ((PPVG.l2r_safe_writer_bounded_vlgen_payload %d (FStar.SizeT.uint_to_t %d) %d (FStar.SizeT.uint_to_t %d) %s %s %s %s %s %s fits_u64_squash) <: PPB.l2r_safe_writer _ %s'_serializer _)\n" smin smin smax smax (scombinator_length_header_name lenty smin smax) (pulse_size_length_header_name lenty smin smax) (pulse_leaf_writer_length_header_name lenty smin smax) (scombinator_name ty) (copyful_writer_name ty) (copyful_size_name ty) n;
+    wp o "    ((PPVG.l2r_safe_writer_bounded_vlgen_payload %d %dul %d %dul %s %s %s %s %s %s) <: PPB.l2r_safe_writer _ %s'_serializer _)\n" smin smin smax smax (scombinator_length_header_name lenty smin smax) (pulse_size_length_header_name lenty smin smax) (pulse_leaf_writer_length_header_name lenty smin smax) (scombinator_name ty) (copyful_writer_name ty) (copyful_size_name ty) n;
     wp o "    synth_%s synth_%s_recip\n\n" n n;
     register_writer n
   end;
@@ -1626,12 +1602,9 @@ let emit_copyful_vlgen_payload_refined o i n ty smin smax lenty =
     wp o "let size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv =\n" n n n n;
     wp o "  %s_copyful_synth_injective ();\n" n;
     wp o "  %s_copyful_synth_inverse ();\n" n;
-    wp o "  let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n";
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_length_header_name lenty smin smax);
-    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smin;
-    wp o "  FStar.SizeT.fits_u64_implies_fits %d;\n" smax;
     wp o "  PPC.l2r_safe_size_synth\n";
-    wp o "    ((PPVG.l2r_safe_size_bounded_vlgen_payload %d (FStar.SizeT.uint_to_t %d) %d (FStar.SizeT.uint_to_t %d) %s %s %s %s fits_u64_squash) <: PPB.l2r_safe_size _ %s'_serializer _)\n" smin smin smax smax (scombinator_length_header_name lenty smin smax) (pulse_size_length_header_name lenty smin smax) (scombinator_name ty) (copyful_size_name ty) n;
+    wp o "    ((PPVG.l2r_safe_size_bounded_vlgen_payload %d %dul %d %dul %s %s %s %s) <: PPB.l2r_safe_size _ %s'_serializer _)\n" smin smin smax smax (scombinator_length_header_name lenty smin smax) (pulse_size_length_header_name lenty smin smax) (scombinator_name ty) (copyful_size_name ty) n;
     wp o "    synth_%s synth_%s_recip\n\n" n n;
     register_size n
   end
@@ -1653,12 +1626,12 @@ let emit_copyful_bounded_vldata_payload o i n ty smax =
   wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
   wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n" n n n n;
-  wp o "  PPVD.copyful_parse_bounded_vldata_payload 0 %d %s (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" smax (copyful_read_name ty) (log256 smax);
+  wp o "  PPVD.copyful_parse_bounded_vldata_payload 0 %d %s (PPBI.leaf_read_bounded_integer_%d ())\n\n" smax (copyful_read_name ty) (log256 smax);
   wp o "let free_%s : PPB.free_t %s_vmatch = %s\n\n" n n (copyful_free_name ty);
   if !emit_pulse && copyful_writer_available ty then begin
     wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
     wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n" n n n n;
-    wp o "  PPVD.l2r_safe_writer_bounded_vldata_payload 0 0sz %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %s %s fits_u64_squash\n\n" smax smax (scombinator_name ty) (copyful_writer_name ty);
+    wp o "  PPVD.l2r_safe_writer_bounded_vldata_payload 0 0ul %d %dul %s %s\n\n" smax smax (scombinator_name ty) (copyful_writer_name ty);
     register_writer n
   end
 
@@ -1683,7 +1656,7 @@ let emit_copyful_bounded_vldata_payload_refined o i n ty smax =
   wp o "  %s_copyful_synth_injective ();\n" n;
   wp o "  %s_copyful_synth_inverse ();\n" n;
   wp o "  PPC.copyful_parse_synth\n";
-  wp o "    (PPVD.copyful_parse_bounded_vldata_strong_payload %d %d %s %s (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash)\n" 0 smax (scombinator_name ty) (copyful_read_name ty) (log256 smax);
+  wp o "    (PPVD.copyful_parse_bounded_vldata_strong_payload %d %d %s %s (PPBI.leaf_read_bounded_integer_%d ()))\n" 0 smax (scombinator_name ty) (copyful_read_name ty) (log256 smax);
   wp o "    synth_%s synth_%s_recip\n\n" n n;
   wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
   wp o "  PPVD.free_vldata_strong %d %d %s %s\n\n" 0 smax (scombinator_name ty) (copyful_free_name ty);
@@ -1693,7 +1666,7 @@ let emit_copyful_bounded_vldata_payload_refined o i n ty smax =
     wp o "  %s_copyful_synth_injective ();\n" n;
     wp o "  %s_copyful_synth_inverse ();\n" n;
     wp o "  PPC.l2r_safe_writer_synth\n";
-    wp o "    ((PPVD.l2r_safe_writer_bounded_vldata_strong_payload %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d %dsz %s %s fits_u64_squash) <: PPB.l2r_safe_writer _ %s'_serializer _)\n" 0 0 smax smax (log256 smax) (log256 smax) (scombinator_name ty) (copyful_writer_name ty) n;
+    wp o "    ((PPVD.l2r_safe_writer_bounded_vldata_strong_payload %d %dul %d %dul %d %dsz %s %s) <: PPB.l2r_safe_writer _ %s'_serializer _)\n" 0 0 smax smax (log256 smax) (log256 smax) (scombinator_name ty) (copyful_writer_name ty) n;
     wp o "    synth_%s synth_%s_recip\n\n" n n;
     register_writer n
   end
@@ -1771,7 +1744,7 @@ let emit_copyful_vlarray o i n ty low high mn mx =
   wp o "  PPC.copyful_parse_synth\n";
   wp o "    (PPVD.copyful_parse_bounded_vldata_strong_payload %d %d (LP.serialize_list _ %s)\n" low high (scombinator_name ty);
   wp o "       (PPLS.copyful_parse_list %s %s ())\n" (copyful_read_name ty) (pulse_jumper_name ty);
-  wp o "       (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash)\n" (log256 high);
+  wp o "       (PPBI.leaf_read_bounded_integer_%d ()))\n" (log256 high);
   wp o "    (LP.vldata_to_vlarray %d %d %s %d %d ())\n" low high (scombinator_name ty) mn mx;
   wp o "    (LP.vlarray_to_vldata %d %d %s %d %d ())\n\n" low high (scombinator_name ty) mn mx;
   wp o "let free_%s : PPB.free_t %s_vmatch =\n" n n;
@@ -1784,8 +1757,8 @@ let emit_copyful_vlarray o i n ty low high mn mx =
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_subkind == Some LP.ParserStrong);\n" (pcombinator_name ty);
     wp o "  assert_norm ((LP.get_parser_kind %s).LP.parser_kind_low > 0);\n" (pcombinator_name ty);
     wp o "  PPC.l2r_safe_writer_synth\n";
-    wp o "    ((PPVD.l2r_safe_writer_bounded_vldata_strong_payload %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d %dsz (LP.serialize_list _ %s)\n" low low high high (log256 high) (log256 high) (scombinator_name ty);
-    wp o "       (PPLS.l2r_safe_writer_list %s %s ()) fits_u64_squash) <: PPB.l2r_safe_writer _ (LP.serialize_bounded_vldata_strong %d %d (LP.serialize_list _ %s)) _)\n" (scombinator_name ty) (copyful_writer_name ty) low high (scombinator_name ty);
+    wp o "    ((PPVD.l2r_safe_writer_bounded_vldata_strong_payload %d %dul %d %dul %d %dsz (LP.serialize_list _ %s)\n" low low high high (log256 high) (log256 high) (scombinator_name ty);
+    wp o "       (PPLS.l2r_safe_writer_list %s %s ())) <: PPB.l2r_safe_writer _ (LP.serialize_bounded_vldata_strong %d %d (LP.serialize_list _ %s)) _)\n" (scombinator_name ty) (copyful_writer_name ty) low high (scombinator_name ty);
     wp o "    (LP.vldata_to_vlarray %d %d %s %d %d ())\n" low high (scombinator_name ty) mn mx;
     wp o "    (LP.vlarray_to_vldata %d %d %s %d %d ())\n\n" low high (scombinator_name ty) mn mx;
     register_writer n
@@ -2127,7 +2100,7 @@ let emit_copyful_ite o i n tagt tt tf =
   end;
   if copyful_size_available tt && copyful_size_available tf then begin
     wp i "val size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv\n\n" n n n n;
-    wp o "let size_%s = LPITE.l2r_safe_size_ifthenelse fits_u64_squash parse_%s_param serialize_%s_param #_ #_ #_ #_ #_ #_ #%s_payload_vmatch #%s_payload_conv size_%s\n  %s\n\n" n n n n n tagt (fam_eq copyful_size_name);
+    wp o "let size_%s = LPITE.l2r_safe_size_ifthenelse parse_%s_param serialize_%s_param #_ #_ #_ #_ #_ #_ #%s_payload_vmatch #%s_payload_conv size_%s\n  %s\n\n" n n n n n tagt (fam_eq copyful_size_name);
     register_size n
   end
 
@@ -3267,9 +3240,9 @@ and compile_select tch o i n seln tagn tagt taga cl def al =
         wp o "let %s_leaf_size =\n%s" n same_kind;
         (match def with
          | None ->
-            wp o "  LPPS.leaf_size_sum %s_sum %s_repr_serializer size_%s_key serialize_%s_cases size_%s_cases (_ by (LP.dep_enum_destr_tac ())) fits_u64_squash (_ by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.smt ()))\n\n" n tn tn n n;
+            wp o "  LPPS.leaf_size_sum %s_sum %s_repr_serializer size_%s_key serialize_%s_cases size_%s_cases (_ by (LP.dep_enum_destr_tac ())) (_ by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.smt ()))\n\n" n tn tn n n;
          | Some dt ->
-            wp o "  LPPS.leaf_size_dsum %s_sum %s_repr_serializer size_maybe_%s_key parse_%s_cases serialize_%s_cases size_%s_cases %s (_ by (LP.dep_enum_destr_tac ())) fits_u64_squash (_ by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.smt ()))\n\n" n tn tn n n n (pulse_leaf_size_name dt));
+            wp o "  LPPS.leaf_size_dsum %s_sum %s_repr_serializer size_maybe_%s_key parse_%s_cases serialize_%s_cases size_%s_cases %s (_ by (LP.dep_enum_destr_tac ())) (_ by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.smt ()))\n\n" n tn tn n n n (pulse_leaf_size_name dt));
 
 
         let annot = if is_private then " : LL.serializer32 "^(scombinator_name n) else "" in
@@ -3658,7 +3631,7 @@ and compile_vldata o i is_private n ty li elem_li lenty smin smax =
     );
     if need_validator then (
       wp o "let %s_validator =\n" n;
-      wp o "  PPVG.validate_vlgen %d %d %s %s %s %s fits_u64_squash\n\n" smin smax (pulse_validator_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty) (pulse_validator_name ty);
+      wp o "  PPVG.validate_vlgen %d %d %s %s %s %s ()\n\n" smin smax (pulse_validator_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty) (pulse_validator_name ty);
     );
     if need_jumper then (
       let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
@@ -3668,7 +3641,7 @@ and compile_vldata o i is_private n ty li elem_li lenty smin smax =
     if need_jumper then (
       let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
       wp o "let %s_jumper%s =\n" n jumper_annot;
-      wp o "  PPVG.jump_vlgen %d %d %s %s %s fits_u64_squash\n\n" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty)
+      wp o "  PPVG.jump_vlgen %d %d %s %s %s ()\n\n" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty)
     );
     (* accessor *)
     if ty <> "Empty" && ty <> "Fail" then begin
@@ -3677,7 +3650,7 @@ and compile_vldata o i is_private n ty li elem_li lenty smin smax =
       wl i "val %s_accessor : LL.accessor %s_gaccessor\n\n" n n;
       wl o "let %s_accessor = LL.accessor_vlgen_payload %d %d %s %s\n\n" n smin smax (jumper_length_header_name lenty smin smax) (scombinator_name ty);
       wp i "val %s_accessor : PPB.accessor %s_parser %s (LowParse.CLens.clens_id %s)\n\n" n n (pcombinator_name ty) (compile_type ty);
-      wp o "let %s_accessor = PPVG.accessor_vlgen_payload %d %d %s %s %s fits_u64_squash\n\n" n smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty);
+      wp o "let %s_accessor = PPVG.accessor_vlgen_payload %d %d %s %s %s ()\n\n" n smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty);
       ()
     end;
     (if !emit_pulse then emit_copyful_vlgen_payload o i n ty smin smax lenty);
@@ -3721,7 +3694,7 @@ and compile_vldata o i is_private n ty li elem_li lenty smin smax =
     );
     if need_validator then (
       wp o "inline_for_extraction let %s'_validator : LPS.validator %s'_parser =\n" n n;
-      wp o "  PPVG.validate_bounded_vlgen %d %d %s %s %s %s fits_u64_squash\n\n" smin smax (pulse_validator_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty) (pulse_validator_name ty);
+      wp o "  PPVG.validate_bounded_vlgen %d %d %s %s %s %s ()\n\n" smin smax (pulse_validator_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty) (pulse_validator_name ty);
       wp o "let %s_validator = LPC.validate_synth %s'_validator synth_%s\n\n" n n n
     );
     if need_jumper then (
@@ -3732,7 +3705,7 @@ and compile_vldata o i is_private n ty li elem_li lenty smin smax =
     );
     if need_jumper then (
       wp o "inline_for_extraction let %s'_jumper : LPS.jumper %s'_parser =\n" n n;
-      wp o "  PPVG.jump_bounded_vlgen %d %d %s %s %s fits_u64_squash\n\n" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty);
+      wp o "  PPVG.jump_bounded_vlgen %d %d %s %s %s ()\n\n" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty);
       let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
       wp o "let %s_jumper%s = LPC.jump_synth %s'_jumper synth_%s\n\n" n jumper_annot n n
     );
@@ -3762,7 +3735,7 @@ and compile_vldata o i is_private n ty li elem_li lenty smin smax =
     wp i "  LowParse.CLens.clens_get = (fun (x: %s) -> (x <: %s));\n" n (compile_type ty);
     wp i "}\n\n";
     wp i "val %s_accessor : PPB.accessor %s_parser %s %s_clens\n\n" n n (pcombinator_name ty) n;
-    wp o "inline_for_extraction noextract let %s_vlgen_acc = PPVG.accessor_bounded_vlgen_payload %d %d %s %s %s fits_u64_squash\n\n" n smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty);
+    wp o "inline_for_extraction noextract let %s_vlgen_acc = PPVG.accessor_bounded_vlgen_payload %d %d %s %s %s ()\n\n" n smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty);
     wp o "inline_for_extraction noextract let %s_synth_acc : PPB.accessor %s_parser %s'_parser _ = PPC.accessor_synth_inv synth_%s synth_%s_recip\n\n" n n n n n;
     wp o "inline_for_extraction noextract let %s_composed_acc = PPC.accessor_compose %s_synth_acc %s_vlgen_acc ()\n\n" n n n;
     wp o "let %s_accessor : PPB.accessor %s_parser %s %s_clens = PPC.accessor_ext %s_composed_acc %s_clens ()\n\n" n n (pcombinator_name ty) n n n;
@@ -3827,7 +3800,7 @@ and compile_vllist o i is_private n ty li elem_li lenty smin smax =
   );
   if need_validator then (
     wp o "inline_for_extraction let %s'_validator : LPS.validator %s'_parser =\n" n n;
-    wp o "  PPVG.validate_bounded_vlgen %d %d %s %s (LP.serialize_list _ %s) (PPLS.validate_list %s ()) fits_u64_squash\n\n" smin smax (pulse_validator_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty) (pulse_validator_name ty);
+    wp o "  PPVG.validate_bounded_vlgen %d %d %s %s (LP.serialize_list _ %s) (PPLS.validate_list %s ()) ()\n\n" smin smax (pulse_validator_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty) (pulse_validator_name ty);
     wp o "let %s_validator = LPC.validate_synth %s'_validator synth_%s\n\n" n n n
   );
   if need_jumper then (
@@ -3838,7 +3811,7 @@ and compile_vllist o i is_private n ty li elem_li lenty smin smax =
   );
   if need_jumper then (
     wp o "inline_for_extraction let %s'_jumper : LPS.jumper %s'_parser =\n" n n;
-    wp o "  PPVG.jump_bounded_vlgen %d %d %s %s (LP.serialize_list _ %s) fits_u64_squash\n\n" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty);
+    wp o "  PPVG.jump_bounded_vlgen %d %d %s %s (LP.serialize_list _ %s) ()\n\n" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax) (scombinator_name ty);
     let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
     wp o "let %s_jumper%s = LPC.jump_synth %s'_jumper synth_%s\n\n" n jumper_annot n n
   );
@@ -3862,10 +3835,10 @@ and compile_vlbytes o i is_private n li lenty smin smax =
     w o "noextract let %s_serializer = LP.serialize_bounded_seq_vlgenbytes %d %d %s\n\n" n smin smax (scombinator_length_header_name lenty smin smax);
     write_bytesize o is_private n;
     if need_validator then
-      wp o "let %s_validator = LSeqB.validate_bounded_seq_vlgenbytes %d %d %s %s fits_u64_squash\n\n" n smin smax (pulse_validator_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax);
+      wp o "let %s_validator = LSeqB.validate_bounded_seq_vlgenbytes %d %d %s %s ()\n\n" n smin smax (pulse_validator_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax);
     if need_jumper then begin
         let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
-        wp o "let %s_jumper%s = LSeqB.jump_bounded_seq_vlgenbytes %d %d %s %s fits_u64_squash\n\n" n jumper_annot smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax)
+        wp o "let %s_jumper%s = LSeqB.jump_bounded_seq_vlgenbytes %d %d %s %s ()\n\n" n jumper_annot smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax)
       end;
     (* Pulse: Seq-native copyful parser + free (+ safe writer/size for bcvli headers) *)
     let vlgenbytes_writer, vlgenbytes_size =
@@ -3873,12 +3846,12 @@ and compile_vlbytes o i is_private n li lenty smin smax =
         let ssk = scombinator_length_header_name lenty smin smax in
         let hsize = sprintf "(fun x -> PPBCVLI.bounded_bcvli_size %d %d x)" smin smax in
         let hw = sprintf "(PPBCVLI.l2r_leaf_write_bounded_bcvli %d %d ())" smin smax in
-        let prelude = sprintf "let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n  FStar.SizeT.fits_u64_implies_fits %d;\n  FStar.SizeT.fits_u64_implies_fits %d;\n  " smin smax in
-        Some (sprintf "%sLSeqB.l2r_safe_writer_bounded_seq_vlgenbytes %d (FStar.SizeT.uint_to_t %d) %d (FStar.SizeT.uint_to_t %d) %s %s %s fits_u64_squash" prelude smin smin smax smax ssk hsize hw),
-        Some (sprintf "%sLSeqB.l2r_safe_size_bounded_seq_vlgenbytes %d (FStar.SizeT.uint_to_t %d) %d (FStar.SizeT.uint_to_t %d) %s %s fits_u64_squash" prelude smin smin smax smax ssk hsize)
+        let prelude = "" in
+        Some (sprintf "%sLSeqB.l2r_safe_writer_bounded_seq_vlgenbytes %d %dul %d %dul %s %s %s" prelude smin smin smax smax ssk hsize hw),
+        Some (sprintf "%sLSeqB.l2r_safe_size_bounded_seq_vlgenbytes %d %dul %d %dul %s %s" prelude smin smin smax smax ssk hsize)
       else None, None
     in
-    emit_copyful_seqbytes_vl o i n (sprintf "LSeqB.copyful_parse_bounded_seq_vlgenbytes %d %d %s %s fits_u64_squash" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax)) (sprintf "LSeqB.seq_vlbytes_conv %d %d" smin smax)
+    emit_copyful_seqbytes_vl o i n (sprintf "LSeqB.copyful_parse_bounded_seq_vlgenbytes %d %d %s %s ()" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax)) (sprintf "LSeqB.seq_vlbytes_conv %d %d" smin smax)
       ?writer:vlgenbytes_writer ?size:vlgenbytes_size
   end else begin
   w i "type %s = b:bytes{%d <= length b /\\ length b <= %d}\n\n" n smin smax;
@@ -3892,14 +3865,14 @@ and compile_vlbytes o i is_private n li lenty smin smax =
   if need_validator then
     wl o "let %s_validator = LL.validate_bounded_vlgenbytes %d %dul %d %dul %s %s\n\n" n smin smin smax smax (validator_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax);
   if need_validator then
-    wp o "let %s_validator = PPBY.validate_bounded_vlgenbytes %d %d %s %s fits_u64_squash\n\n" n smin smax (pulse_validator_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax);
+    wp o "let %s_validator = PPBY.validate_bounded_vlgenbytes %d %d %s %s\n\n" n smin smax (pulse_validator_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax);
   if need_jumper then begin
       let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
       wl o "let %s_jumper%s = LL.jump_bounded_vlgenbytes %d %d %s %s\n\n" n jumper_annot smin smax (jumper_length_header_name lenty smin smax) (reader_length_header_name lenty smin smax)
     end;
   if need_jumper then begin
       let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
-      wp o "let %s_jumper%s = PPBY.jump_bounded_vlgenbytes %d %d %s %s fits_u64_squash\n\n" n jumper_annot smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax)
+      wp o "let %s_jumper%s = PPBY.jump_bounded_vlgenbytes %d %d %s %s\n\n" n jumper_annot smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax)
     end;
   (* Pulse: copyful parser + free (+ safe writer/size for bcvli headers) *)
   let vlgenbytes_writer, vlgenbytes_size =
@@ -3907,12 +3880,12 @@ and compile_vlbytes o i is_private n li lenty smin smax =
       let ssk = scombinator_length_header_name lenty smin smax in
       let hsize = sprintf "(fun x -> PPBCVLI.bounded_bcvli_size %d %d x)" smin smax in
       let hw = sprintf "(PPBCVLI.l2r_leaf_write_bounded_bcvli %d %d ())" smin smax in
-      let prelude = sprintf "let _ : squash FStar.SizeT.fits_u64 = fits_u64_squash in\n  FStar.SizeT.fits_u64_implies_fits %d;\n  FStar.SizeT.fits_u64_implies_fits %d;\n  " smin smax in
-      Some (sprintf "%sPPBY.l2r_safe_writer_bounded_vlgenbytes %d (FStar.SizeT.uint_to_t %d) %d (FStar.SizeT.uint_to_t %d) %s %s %s fits_u64_squash" prelude smin smin smax smax ssk hsize hw),
-      Some (sprintf "%sPPBY.l2r_safe_size_bounded_vlgenbytes %d (FStar.SizeT.uint_to_t %d) %d (FStar.SizeT.uint_to_t %d) %s %s fits_u64_squash" prelude smin smin smax smax ssk hsize)
+      let prelude = "" in
+      Some (sprintf "%sPPBY.l2r_safe_writer_bounded_vlgenbytes %d %dul %d %dul %s %s %s" prelude smin smin smax smax ssk hsize hw),
+      Some (sprintf "%sPPBY.l2r_safe_size_bounded_vlgenbytes %d %dul %d %dul %s %s" prelude smin smin smax smax ssk hsize)
     else None, None
   in
-  emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlgenbytes %d %d %s %s fits_u64_squash" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax)) (sprintf "PPBY.vlbytes_conv %d %d" smin smax)
+  emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlgenbytes %d %d %s %s" smin smax (pulse_jumper_length_header_name lenty smin smax) (pulse_reader_length_header_name lenty smin smax)) (sprintf "PPBY.vlbytes_conv %d %d" smin smax)
     ?writer:vlgenbytes_writer ?size:vlgenbytes_size
   end
 
@@ -4025,13 +3998,13 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       wh o "let %s_size32 =\n  [@inline_let] let _ = assert_norm (LS.serialize32_vclist_precond %d %d (LP.get_parser_kind %s) (LP.get_parser_kind %s)) in\n" n low high (pcombinator_name repr_t) (pcombinator_name ty);
       wh o "  LSZ.size32_vclist %d %d %s %s\n\n" low high (size32_name repr_t) (size32_name ty);
       wl o "let %s_validator = LL.validate_vclist %dul %dul %s %s %s\n\n" n low high (validator_name repr_t) (leaf_reader_name repr_t) (validator_name ty);
-      wp o "let %s_validator = PPVCL.validate_vclist %dul %dul %s %s %s fits_u64_squash\n\n" n low high (pulse_validator_name repr_t) (pulse_leaf_reader_name repr_t) (pulse_validator_name ty);
+      wp o "let %s_validator = PPVCL.validate_vclist %dul %dul %s %s %s ()\n\n" n low high (pulse_validator_name repr_t) (pulse_leaf_reader_name repr_t) (pulse_validator_name ty);
       let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
       wl o "let %s_jumper%s =\n" n jumper_annot;
       wl o "  LL.jump_vclist %d %d %s %s %s\n\n" low high (jumper_name repr_t) (leaf_reader_name repr_t) (jumper_name ty);
       let jumper_annot_p = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
       wp o "let %s_jumper%s =\n" n jumper_annot_p;
-      wp o "  PPVCL.jump_vclist %dul %dul %s %s %s fits_u64_squash\n\n" low high (pulse_jumper_name repr_t) (pulse_leaf_reader_name repr_t) (pulse_jumper_name ty);
+      wp o "  PPVCL.jump_vclist %dul %dul %s %s %s ()\n\n" low high (pulse_jumper_name repr_t) (pulse_leaf_reader_name repr_t) (pulse_jumper_name ty);
       (if !emit_pulse then emit_copyful_vclist o i n ty low high repr_t);
       (* finalizer, count, i-th accessor TODO *)
       ()
@@ -4071,7 +4044,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         );
         if need_validator then (
           wp o "let %s_validator =\n" n;
-          wp o "  PPVD.validate_bounded_vldata %d %d %s (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" 0 smax (pulse_validator_name ty) (log256 smax);
+          wp o "  PPVD.validate_bounded_vldata %d %d %s (PPBI.leaf_read_bounded_integer_%d ())\n\n" 0 smax (pulse_validator_name ty) (log256 smax);
         );
         if need_jumper then (
           let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
@@ -4081,13 +4054,13 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         if need_jumper then (
           let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
           wp o "let %s_jumper%s =\n" n jumper_annot;
-          wp o "  PPVD.jump_bounded_vldata %d %d %s (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" 0 smax (pcombinator_name ty) smax (log256 smax)
+          wp o "  PPVD.jump_bounded_vldata %d %d %s (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d ()))\n\n" 0 smax (pcombinator_name ty) smax (log256 smax)
         );
         (* Pulse accessor *)
         if ty <> "Empty" && ty <> "Fail" then
          begin
           wp i "val %s_accessor : PPB.accessor %s_parser %s (PPVD.clens_id %s)\n\n" n n (pcombinator_name ty) (compile_type ty);
-          wp o "let %s_accessor = PPVD.accessor_bounded_vldata_payload %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" n 0 smax (log256 smax);
+          wp o "let %s_accessor = PPVD.accessor_bounded_vldata_payload %d %d (PPBI.leaf_read_bounded_integer_%d ())\n\n" n 0 smax (log256 smax);
          end;
         (* accessor *)
         if ty <> "Empty" && ty <> "Fail" then
@@ -4173,7 +4146,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         );
         if need_validator then (
           wp o "inline_for_extraction let %s'_validator : LPS.validator %s'_parser =\n" n n;
-          wp o "  PPVD.validate_bounded_vldata_strong %d %d %s %s (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" 0 smax (scombinator_name ty) (pulse_validator_name ty) (log256 smax);
+          wp o "  PPVD.validate_bounded_vldata_strong %d %d %s %s (PPBI.leaf_read_bounded_integer_%d ())\n\n" 0 smax (scombinator_name ty) (pulse_validator_name ty) (log256 smax);
           wp o "let %s_validator = LPC.validate_synth %s'_validator synth_%s\n\n" n n n
         );
         if need_jumper then (
@@ -4184,7 +4157,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         );
         if need_jumper then (
           wp o "inline_for_extraction let %s'_jumper : LPS.jumper %s'_parser =\n" n n;
-          wp o "  PPVD.jump_bounded_vldata_strong %d %d %s (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" 0 smax (scombinator_name ty) smax (log256 smax);
+          wp o "  PPVD.jump_bounded_vldata_strong %d %d %s (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d ()))\n\n" 0 smax (scombinator_name ty) smax (log256 smax);
           let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
           wp o "let %s_jumper%s = LPC.jump_synth %s'_jumper synth_%s\n\n" n jumper_annot n n
         );
@@ -4199,7 +4172,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
         wp o "  PPC.accessor_ext\n";
         wp o "    (PPC.accessor_compose\n";
         wp o "      (PPC.accessor_synth synth_%s synth_%s_recip)\n" n n;
-        wp o "      (PPVD.accessor_bounded_vldata_strong_payload %d %d %s (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash) ())\n" 0 smax (scombinator_name ty) (log256 smax);
+        wp o "      (PPVD.accessor_bounded_vldata_strong_payload %d %d %s (PPBI.leaf_read_bounded_integer_%d ())) ())\n" 0 smax (scombinator_name ty) (log256 smax);
         wp o "    %s_clens ()\n\n" n;
         (* finalizer *)
         if ty = "Empty" || ty = "Fail" then failwith "vldata empty/fail should have been in the 'bounds OK' case";
@@ -4463,15 +4436,15 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       w o "noextract let %s_serializer = LP.serialize_bounded_seq_vlbytes %d %d\n\n" n low high;
       write_bytesize o is_private n;
       if need_validator then
-        wp o "let %s_validator = LSeqB.validate_bounded_seq_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" n low high (log256 high);
+        wp o "let %s_validator = LSeqB.validate_bounded_seq_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d ())\n\n" n low high (log256 high);
       if need_jumper then begin
         let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
-        wp o "let %s_jumper%s = LSeqB.jump_bounded_seq_vlbytes %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" n jumper_annot low high high (log256 high)
+        wp o "let %s_jumper%s = LSeqB.jump_bounded_seq_vlbytes %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d ()))\n\n" n jumper_annot low high high (log256 high)
       end;
       (* Pulse: Seq-native copyful parser + free *)
-      emit_copyful_seqbytes_vl o i n (sprintf "LSeqB.copyful_parse_bounded_seq_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash" low high (log256 high)) (sprintf "LSeqB.seq_vlbytes_conv %d %d" low high)
-        ~writer:(sprintf "LSeqB.l2r_safe_writer_bounded_seq_vlbytes %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %dsz fits_u64_squash" low low high high (log256 high))
-        ~size:(sprintf "LSeqB.l2r_safe_size_bounded_seq_vlbytes %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %dsz fits_u64_squash" low low high high (log256 high));
+      emit_copyful_seqbytes_vl o i n (sprintf "LSeqB.copyful_parse_bounded_seq_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d ())" low high (log256 high)) (sprintf "LSeqB.seq_vlbytes_conv %d %d" low high)
+        ~writer:(sprintf "LSeqB.l2r_safe_writer_bounded_seq_vlbytes %d %dul %d %dul %dsz" low low high high (log256 high))
+        ~size:(sprintf "LSeqB.l2r_safe_size_bounded_seq_vlbytes %d %dul %d %dul %dsz" low low high high (log256 high));
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + Seq.length x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_seq_vlbytes %d %d x\n\n" n low high;
       ()
@@ -4493,19 +4466,19 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       if need_validator then
         wl o "let %s_validator = LL.validate_bounded_vlbytes %d %d\n\n" n low high;
       if need_validator then
-        wp o "let %s_validator = PPBY.validate_bounded_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" n low high (log256 high);
+        wp o "let %s_validator = PPBY.validate_bounded_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d ())\n\n" n low high (log256 high);
       if need_jumper then begin
         let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
         wl o "let %s_jumper%s = LL.jump_bounded_vlbytes %d %d\n\n" n jumper_annot low high
       end;
       if need_jumper then begin
         let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
-        wp o "let %s_jumper%s = PPBY.jump_bounded_vlbytes %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" n jumper_annot low high high (log256 high)
+        wp o "let %s_jumper%s = PPBY.jump_bounded_vlbytes %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d ()))\n\n" n jumper_annot low high high (log256 high)
       end;
       (* Pulse: copyful parser + free *)
-      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash" low high (log256 high)) (sprintf "PPBY.vlbytes_conv %d %d" low high)
-        ~writer:(sprintf "PPBY.l2r_safe_writer_bounded_vlbytes %d %dsz %d %dsz %dsz fits_u64_squash" low low high high (log256 high))
-        ~size:(sprintf "PPBY.l2r_safe_size_bounded_vlbytes %d %dsz %d %dsz %dsz fits_u64_squash" low low high high (log256 high));
+      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlbytes %d %d (PPBI.leaf_read_bounded_integer_%d ())" low high (log256 high)) (sprintf "PPBY.vlbytes_conv %d %d" low high)
+        ~writer:(sprintf "PPBY.l2r_safe_writer_bounded_vlbytes %d %dsz %d %dsz %dsz" low low high high (log256 high))
+        ~size:(sprintf "PPBY.l2r_safe_size_bounded_vlbytes %d %dsz %d %dsz %dsz" low low high high (log256 high));
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n li.len_len n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes %d %d x\n\n" n low high;
       (* length *)
@@ -4559,15 +4532,15 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       w o "noextract let %s_serializer = LP.serialize_bounded_seq_vlbytes_gen %d %d %d\n\n" n low high repr;
       write_bytesize o is_private n;
       if need_validator then
-        wp o "let %s_validator = LSeqB.validate_bounded_seq_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" n low high repr repr;
+        wp o "let %s_validator = LSeqB.validate_bounded_seq_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d ())\n\n" n low high repr repr;
       if need_jumper then begin
         let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
-        wp o "let %s_jumper%s = LSeqB.jump_bounded_seq_vlbytes' %d %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer %d) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" n jumper_annot low high repr repr repr
+        wp o "let %s_jumper%s = LSeqB.jump_bounded_seq_vlbytes' %d %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer %d) (PPBI.leaf_read_bounded_integer_%d ()))\n\n" n jumper_annot low high repr repr repr
       end;
       (* Pulse: Seq-native copyful parser + free + safe writer/size *)
-      emit_copyful_seqbytes_vl o i n (sprintf "LSeqB.copyful_parse_bounded_seq_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash" low high repr repr) (sprintf "LSeqB.seq_vlbytes_conv %d %d" low high)
-        ~writer:(sprintf "LSeqB.l2r_safe_writer_bounded_seq_vlbytes' %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d %dsz fits_u64_squash" low low high high repr repr)
-        ~size:(sprintf "LSeqB.l2r_safe_size_bounded_seq_vlbytes' %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d (LSeqB.mk_seq_sizet %d fits_u64_squash) %d %dsz fits_u64_squash" low low high high repr repr);
+      emit_copyful_seqbytes_vl o i n (sprintf "LSeqB.copyful_parse_bounded_seq_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d ())" low high repr repr) (sprintf "LSeqB.seq_vlbytes_conv %d %d" low high)
+        ~writer:(sprintf "LSeqB.l2r_safe_writer_bounded_seq_vlbytes' %d %dul %d %dul %d %dsz" low low high high repr repr)
+        ~size:(sprintf "LSeqB.l2r_safe_size_bounded_seq_vlbytes' %d %dul %d %dul %d %dsz" low low high high repr repr);
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + Seq.length x) [SMTPat (%s_bytesize x)]\n\n" n n n repr n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_seq_vlbytes_gen %d %d %d x\n\n" n low high repr;
       ()
@@ -4588,19 +4561,19 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       if need_validator then
         wl o "let %s_validator = LL.validate_bounded_vlbytes' %d %d %d\n\n" n low high repr;
       if need_validator then
-        wp o "let %s_validator = PPBY.validate_bounded_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" n low high repr repr;
+        wp o "let %s_validator = PPBY.validate_bounded_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d ())\n\n" n low high repr repr;
       if need_jumper then begin
         let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
         wl o "let %s_jumper%s = LL.jump_bounded_vlbytes' %d %d %d\n\n" n jumper_annot low high repr
       end;
       if need_jumper then begin
         let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
-        wp o "let %s_jumper%s = PPBY.jump_bounded_vlbytes' %d %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer %d) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" n jumper_annot low high repr repr repr
+        wp o "let %s_jumper%s = PPBY.jump_bounded_vlbytes' %d %d %d (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer %d) (PPBI.leaf_read_bounded_integer_%d ()))\n\n" n jumper_annot low high repr repr repr
       end;
       (* Pulse: copyful parser + free *)
-      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash" low high repr repr) (sprintf "PPBY.vlbytes_conv %d %d" low high)
-        ~writer:(sprintf "PPBY.l2r_safe_writer_bounded_vlbytes' %d %dsz %d %dsz %d %dsz fits_u64_squash" low low high high repr repr)
-        ~size:(sprintf "PPBY.l2r_safe_size_bounded_vlbytes' %d %dsz %d %dsz %d %dsz fits_u64_squash" low low high high repr repr);
+      emit_copyful_bytes o i n (sprintf "PPBY.copyful_parse_bounded_vlbytes' %d %d %d (PPBI.leaf_read_bounded_integer_%d ())" low high repr repr) (sprintf "PPBY.vlbytes_conv %d %d" low high)
+        ~writer:(sprintf "PPBY.l2r_safe_writer_bounded_vlbytes' %d %dsz %d %dsz %d %dsz" low low high high repr repr)
+        ~size:(sprintf "PPBY.l2r_safe_size_bounded_vlbytes' %d %dsz %d %dsz %d %dsz" low low high high repr repr);
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %d + BY.length x) [SMTPat (%s_bytesize x)]\n\n" n n n repr n;
       w o "let %s_bytesize_eqn x = LP.length_serialize_bounded_vlbytes' %d %d %d x\n\n" n low high repr;
       (* length *)
@@ -4663,7 +4636,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       end;
       if need_validator then begin
         wp o "let %s_validator =\n" n;
-        wp o " PPAR.validate_vlarray %d %d %s %s %d %d () (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" low high (scombinator_name ty) (pulse_validator_name ty) li.min_count li.max_count (log256 high)
+        wp o " PPAR.validate_vlarray %d %d %s %s %d %d () (PPBI.leaf_read_bounded_integer_%d ()) ()\n\n" low high (scombinator_name ty) (pulse_validator_name ty) li.min_count li.max_count (log256 high)
       end;
       if need_jumper then begin
         let jumper_annot = if is_private then sprintf " : LL.jumper %s_parser" n else "" in
@@ -4673,7 +4646,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       if need_jumper then begin
         let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
         wp o "let %s_jumper%s =\n" n jumper_annot;
-        wp o " PPAR.jump_vlarray %d %d %s %d %d () (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" low high (scombinator_name ty) li.min_count li.max_count high (log256 high)
+        wp o " PPAR.jump_vlarray %d %d %s %d %d () (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d ())) ()\n\n" low high (scombinator_name ty) li.min_count li.max_count high (log256 high)
       end;
       (* finalizer *)
       wl i "inline_for_extraction val finalize_%s (#rrel: _) (#rel: _) (sl: LL.slice rrel rel) (pos pos' : U32.t) : HST.Stack unit\n" n;
@@ -4772,7 +4745,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       end;
       if need_validator then begin
         wp o "inline_for_extraction let %s'_validator : LPS.validator %s'_parser =\n" n n;
-        wp o "  PPVD.validate_bounded_vldata_strong %d %d (LP.serialize_list _ %s) (PPLS.validate_list %s ()) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash) fits_u64_squash\n\n" min max (scombinator_name ty) (pulse_validator_name ty) (log256 max);
+        wp o "  PPVD.validate_bounded_vldata_strong %d %d (LP.serialize_list _ %s) (PPLS.validate_list %s ()) (PPBI.leaf_read_bounded_integer_%d ())\n\n" min max (scombinator_name ty) (pulse_validator_name ty) (log256 max);
         wp o "let %s_validator = LPC.validate_synth %s'_validator synth_%s\n\n" n n n
       end;
       if need_jumper then begin
@@ -4783,7 +4756,7 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       end;
       if need_jumper then begin
         wp o "inline_for_extraction let %s'_jumper : LPS.jumper %s'_parser =\n" n n;
-        wp o "  PPVD.jump_bounded_vldata_strong %d %d (LP.serialize_list _ %s) (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d fits_u64_squash)) fits_u64_squash\n\n" min max (scombinator_name ty) max (log256 max);
+        wp o "  PPVD.jump_bounded_vldata_strong %d %d (LP.serialize_list _ %s) (PPB.serialized_of_leaf_reader (LP.serialize_bounded_integer (LP.log256' %d)) (PPBI.leaf_read_bounded_integer_%d ()))\n\n" min max (scombinator_name ty) max (log256 max);
         let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
         wp o "let %s_jumper%s = LPC.jump_synth %s'_jumper synth_%s\n\n" n jumper_annot n n
       end;
@@ -5085,7 +5058,7 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
           | TNode (_, tl, tr) ->
              let sl = mk_pulse_leaf_size tl in
              let sr = mk_pulse_leaf_size tr in
-             sprintf "(LPC.leaf_size_pair %s () %s fits_u64_squash (_ by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.smt ())))" sl sr
+             sprintf "(LPC.leaf_size_pair %s () %s (_ by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.smt ())))" sl sr
         in
         let pulse_leaf_size = mk_pulse_leaf_size tfields in
         wp i "val %s_leaf_size : LPS.leaf_size %s_serializer\n\n" n n;
@@ -5171,7 +5144,7 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
       | TNode (_, tl, tr) ->
          let sl = mk_pulse_safe_size tl in
          let sr = mk_pulse_safe_size tr in
-         sprintf "(PPC.l2r_safe_size_pair fits_u64_squash %s () %s)" sl sr
+         sprintf "(PPC.l2r_safe_size_pair %s () %s)" sl sr
     in
     let pulse_ssize = mk_pulse_safe_size tfields in
     wp i "val size_%s : PPB.l2r_safe_size %s_vmatch %s_serializer %s_conv\n\n" n n n n;
@@ -5546,7 +5519,6 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
 
   let rlimit = 16 in
 	w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection -Pulse -PulseCore' --z3rlimit %d --z3cliopt smt.arith.nl=false --max_fuel 2 --max_ifuel 2\"\n\n" rlimit;
-  wp o "assume val fits_u64_squash : squash FStar.SizeT.fits_u64\n\n";
 
   try let _ =
     match p with

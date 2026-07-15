@@ -1649,7 +1649,7 @@ fn l2r_safe_size_synth
    iff either child fails (conv = None or size overflow) or the total overflows,
    matching [pair_conv] = None or non-representable total size. *)
 inline_for_extraction
-fn l2r_safe_size_pair (sq: squash FStar.SizeT.fits_u64)
+fn l2r_safe_size_pair
   (#tl1 #tl2 #tm1 #tm2 #th1 #th2: Type0)
   (#vmatch1: tl1 -> tm1 -> slprop)
   (#k1: parser_kind)
@@ -1684,7 +1684,7 @@ fn l2r_safe_size_pair (sq: squash FStar.SizeT.fits_u64)
       fold (LPC.vmatch_pair vmatch1 vmatch2 x (Ghost.reveal y));
       sz2
     } else {
-      let res = PPB.size_add_checked sq sz1 sz2 perr;
+      let res = PPB.size_add_checked sz1 sz2 perr;
       fold (LPC.vmatch_pair vmatch1 vmatch2 x (Ghost.reveal y));
       res
     }

@@ -916,7 +916,6 @@ fn l2r_safe_writer_ifthenelse
    payload branch, with an overflow check, mirroring [l2r_safe_size_pair]. *)
 inline_for_extraction
 fn l2r_safe_size_ifthenelse
-  (sq: squash FStar.SizeT.fits_u64)
   (p: parse_ifthenelse_param)
   (s: serialize_ifthenelse_param p { p.parse_ifthenelse_tag_kind.parser_kind_subkind == Some ParserStrong })
   (#tlt #tmt: Type0)
@@ -970,7 +969,7 @@ fn l2r_safe_size_ifthenelse
     if e2 {
       sz2
     } else {
-      let res = PPB.size_add_checked sq sz1 sz2 perr;
+      let res = PPB.size_add_checked sz1 sz2 perr;
       res
     }
   }
