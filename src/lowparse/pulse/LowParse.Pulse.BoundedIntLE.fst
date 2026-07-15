@@ -1,7 +1,7 @@
 module LowParse.Pulse.BoundedIntLE
+friend LowParse.Spec.BoundedInt
 #lang-pulse
 include LowParse.Spec.BoundedInt
-friend LowParse.Spec.BoundedInt
 open Pulse.Lib.Pervasives
 open LowParse.Pulse.Base
 
