@@ -3941,17 +3941,17 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       end;
       (* Pulse: validator, jumper, reader for type aliases *)
       (if need_validator then
-        wp o "let %s_validator = %s\n\n" n (pulse_validator_name ty));
+        wp o "let %s_validator = fun input poffset #offset #pm #v -> (%s) input poffset #offset #pm #v\n\n" n (pulse_validator_name ty));
       (if need_jumper then
          let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
-         wp o "let %s_jumper%s = %s\n\n" n jumper_annot (pulse_jumper_name ty));
+         wp o "let %s_jumper%s = fun input offset #pm #v -> (%s) input offset #pm #v\n\n" n jumper_annot (pulse_jumper_name ty));
       if li.has_lserializer then begin
         wp i "val %s_reader : PPB.leaf_reader %s_parser\n\n" n n;
-        wp o "let %s_reader = %s\n\n" n (pulse_leaf_reader_name ty);
+        wp o "let %s_reader = fun input #pm #v -> (%s) input #pm #v\n\n" n (pulse_leaf_reader_name ty);
         wp i "val %s_writer : LPS.l2r_leaf_writer %s_serializer\n\n" n n;
-        wp o "let %s_writer = %s\n\n" n (pulse_leaf_writer_name ty);
+        wp o "let %s_writer = fun x out offset #v -> (%s) x out offset #v\n\n" n (pulse_leaf_writer_name ty);
         wp i "val %s_leaf_size : LPS.leaf_size %s_serializer\n\n" n n;
-        wp o "let %s_leaf_size = %s\n\n" n (pulse_leaf_size_name ty)
+        wp o "let %s_leaf_size = fun x -> (%s) x\n\n" n (pulse_leaf_size_name ty)
       end;
       (* Pulse: copyful parser + free for type aliases *)
       wp i "let %s_lowtype = %s\n\n" n (copyful_lowtype_name ty);
