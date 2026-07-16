@@ -119,6 +119,7 @@ let set_snd_None
 
 module PM = Pulse.Lib.SeqMatch.Util
 
+(* begin: valid for fstar2 only (F* #4347 slprop normalization) *)
 ghost fn trade_assoc_hyp_r2l
   (a b c d: slprop)
 requires
@@ -126,8 +127,7 @@ requires
 ensures
   Trade.trade ((a ** b) ** c) d
 {
-  slprop_equivs ();
-  rewrite Trade.trade (a ** (b ** c)) d as Trade.trade ((a ** b) ** c) d
+  slprop_equivs ()
 }
 
 ghost fn trade_assoc_hyp_l2r
@@ -137,8 +137,7 @@ requires
 ensures
   Trade.trade (a ** (b ** c)) d
 {
-  slprop_equivs ();
-  rewrite Trade.trade ((a ** b) ** c) d as Trade.trade (a ** (b ** c)) d
+  slprop_equivs ()
 }
 
 ghost fn trade_assoc_concl_r2l
@@ -148,8 +147,7 @@ requires
 ensures
   Trade.trade a ((b ** c) ** d)
 {
-  slprop_equivs ();
-  rewrite Trade.trade a (b ** (c ** d)) as Trade.trade a ((b ** c) ** d)
+  slprop_equivs ()
 }
 
 ghost fn trade_assoc_concl_l2r
@@ -159,9 +157,9 @@ requires
 ensures
   Trade.trade a (b ** (c ** d))
 {
-  slprop_equivs ();
-  rewrite Trade.trade a ((b ** c) ** d) as Trade.trade a (b ** (c ** d))
+  slprop_equivs ()
 }
+(* end: valid for fstar2 only *)
 
 let list_memP_map_intro_forall
   (#a #b: Type)
@@ -186,10 +184,15 @@ requires
 ensures
   Trade.trade ((a ** b1) ** (c ** d1)) e
 {
-  slprop_equivs ();
-  rewrite (Trade.trade ((a ** b2) ** (c ** d2)) e) as Trade.trade ((a ** c) ** (b2 ** d2)) e;
-  Trade.trans_hyp_r (a ** c) _ _ _;
-  rewrite Trade.trade ((a ** c) ** (b1 ** d1)) e as (Trade.trade ((a ** b1) ** (c ** d1)) e)
+  (* begin: valid for fstar2 only (F* #4347 slprop normalization) *)
+  intro
+    (Trade.trade (a ** b1 ** c ** d1) e)
+    #(Trade.trade (b1 ** d1) (b2 ** d2) ** Trade.trade (a ** b2 ** c ** d2) e)
+    fn _ {
+      Trade.elim (b1 ** d1) _;
+      Trade.elim (a ** b2 ** c ** d2) _;
+    }
+  (* end: valid for fstar2 only *)
 }
 
 ghost fn trade_prod_cancel_hyp_r_concl_l
@@ -336,15 +339,14 @@ ensures
    Trade.trade (a ** (d ** b ** c))
       (ef)
 {
-  slprop_equivs ();
-  rewrite
-   Trade.trade (((a **
-        b) **
-        c) **
-        d)
-      (ef)
-  as Trade.trade (a ** (d ** b ** c))
-      (ef)
+  (* begin: valid for fstar2 only (F* #4347 slprop normalization) *)
+  intro
+    (Trade.trade (a ** d ** b ** c) ef)
+    #(Trade.trade (a ** b ** c ** d) ef)
+    fn _ {
+      Trade.elim (a ** b ** c ** d) _;
+    }
+  (* end: valid for fstar2 only *)
 }
 
 ghost fn cbor_map_get_multiple_entry_match_snd_prop

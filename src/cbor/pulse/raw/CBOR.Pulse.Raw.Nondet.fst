@@ -1414,6 +1414,7 @@ let set_snd_None
 
 module PM = Pulse.Lib.SeqMatch.Util
 
+(* begin: valid for fstar2 only (F* #4347 slprop normalization) *)
 ghost fn trade_assoc_hyp_r2l
   (a b c d: slprop)
 requires
@@ -1421,8 +1422,7 @@ requires
 ensures
   Trade.trade ((a ** b) ** c) d
 {
-  slprop_equivs ();
-  rewrite Trade.trade (a ** (b ** c)) d as Trade.trade ((a ** b) ** c) d
+  slprop_equivs ()
 }
 
 ghost fn trade_assoc_hyp_l2r
@@ -1432,8 +1432,7 @@ requires
 ensures
   Trade.trade (a ** (b ** c)) d
 {
-  slprop_equivs ();
-  rewrite Trade.trade ((a ** b) ** c) d as Trade.trade (a ** (b ** c)) d
+  slprop_equivs ()
 }
 
 ghost fn trade_assoc_concl_r2l
@@ -1443,8 +1442,7 @@ requires
 ensures
   Trade.trade a ((b ** c) ** d)
 {
-  slprop_equivs ();
-  rewrite Trade.trade a (b ** (c ** d)) as Trade.trade a ((b ** c) ** d)
+  slprop_equivs ()
 }
 
 ghost fn trade_assoc_concl_l2r
@@ -1454,9 +1452,9 @@ requires
 ensures
   Trade.trade a (b ** (c ** d))
 {
-  slprop_equivs ();
-  rewrite Trade.trade a ((b ** c) ** d) as Trade.trade a (b ** (c ** d))
+  slprop_equivs ()
 }
+(* end: valid for fstar2 only *)
 
 let list_memP_map_intro_forall
   (#a #b: Type)
@@ -1481,10 +1479,15 @@ requires
 ensures
   Trade.trade ((a ** b1) ** (c ** d1)) e
 {
-  slprop_equivs ();
-  rewrite (Trade.trade ((a ** b2) ** (c ** d2)) e) as Trade.trade ((a ** c) ** (b2 ** d2)) e;
-  Trade.trans_hyp_r (a ** c) _ _ _;
-  rewrite Trade.trade ((a ** c) ** (b1 ** d1)) e as (Trade.trade ((a ** b1) ** (c ** d1)) e)
+  (* begin: valid for fstar2 only (F* #4347 slprop normalization) *)
+  intro
+    (Trade.trade (a ** b1 ** c ** d1) e)
+    #(Trade.trade (b1 ** d1) (b2 ** d2) ** Trade.trade (a ** b2 ** c ** d2) e)
+    fn _ {
+      Trade.elim (b1 ** d1) _;
+      Trade.elim (a ** b2 ** c ** d2) _;
+    }
+  (* end: valid for fstar2 only *)
 }
 
 ghost fn trade_prod_cancel_hyp_r_concl_l
@@ -1631,15 +1634,14 @@ ensures
    Trade.trade (a ** (d ** b ** c))
       (ef)
 {
-  slprop_equivs ();
-  rewrite
-   Trade.trade (((a **
-        b) **
-        c) **
-        d)
-      (ef)
-  as Trade.trade (a ** (d ** b ** c))
-      (ef)
+  (* begin: valid for fstar2 only (F* #4347 slprop normalization) *)
+  intro
+    (Trade.trade (a ** d ** b ** c) ef)
+    #(Trade.trade (a ** b ** c ** d) ef)
+    fn _ {
+      Trade.elim (a ** b ** c ** d) _;
+    }
+  (* end: valid for fstar2 only *)
 }
 
 ghost fn cbor_map_get_multiple_entry_match_snd_prop
@@ -1660,6 +1662,42 @@ ensures
 }
 
 #push-options "--z3rlimit 128 --print_implicits"
+
+(* begin: valid for fstar2 only (F* #4347 slprop normalization) *)
+ghost fn trade_trans_hyp_l_prod2
+  (p1 pa pb q r: slprop)
+requires
+  Trade.trade p1 (pa ** pb) **
+  Trade.trade (pa ** pb ** q) r
+ensures
+  Trade.trade (p1 ** q) r
+{
+  intro
+    (Trade.trade (p1 ** q) r)
+    #(Trade.trade p1 (pa ** pb) ** Trade.trade (pa ** pb ** q) r)
+    fn _ {
+      Trade.elim p1 (pa ** pb);
+      Trade.elim (pa ** pb ** q) r;
+    }
+}
+
+ghost fn trade_trans_hyp_l_merge2
+  (pa pb m q r: slprop)
+requires
+  Trade.trade (pa ** pb) m **
+  Trade.trade (m ** q) r
+ensures
+  Trade.trade (pa ** pb ** q) r
+{
+  intro
+    (Trade.trade (pa ** pb ** q) r)
+    #(Trade.trade (pa ** pb) m ** Trade.trade (m ** q) r)
+    fn _ {
+      Trade.elim (pa ** pb) m;
+      Trade.elim (m ** q) r;
+    }
+}
+(* end: valid for fstar2 only *)
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nondet_match
@@ -1737,7 +1775,9 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
     Trade.trans_hyp_r _ _ _ (PM.seq_list_match s v (cbor_map_get_multiple_entry_match cbor_nondet_match false ps));
     trade_assoc_hyp_r2l _ _ _ _;
     PM.seq_list_match_append_intro_trade (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) s1 l1 _ _;
-    Trade.trans_hyp_l _ _ _ _;
+    (* begin: valid for fstar2 only (F* #4347 slprop normalization) *)
+    trade_trans_hyp_l_prod2 _ _ _ _ _;
+    (* end: valid for fstar2 only *)
     List.Tot.map_append fst l1 l2;
     List.Tot.append_assoc (List.Tot.map fst l1) [fst y'] (List.Tot.map fst (List.Tot.tl l2));
     List.Tot.map_append fst l1 [(Ghost.reveal y')];
@@ -1789,15 +1829,18 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
     )
   ) {
     let entry = cbor_nondet_map_iterator_next () piter;
-    Trade.trans_hyp_l _ (cbor_nondet_map_iterator_match _ _ _) _ _;
-    trade_assoc_hyp_l2r _ _ _ _;
+    (* begin: valid for fstar2 only (F* #4347 slprop normalization) *)
+    trade_trans_hyp_l_merge2 _ _ (cbor_nondet_map_iterator_match _ _ _) _ _;
+    (* end: valid for fstar2 only *)
     with pentry ventry . assert (cbor_nondet_map_entry_match pentry entry ventry);
     Trade.rewrite_with_trade
       (cbor_nondet_map_entry_match pentry entry ventry)
       (cbor_nondet_match pentry entry.cbor_map_entry_key (fst ventry) **
         cbor_nondet_match pentry entry.cbor_map_entry_value (snd ventry)
       );
-    Trade.trans_hyp_l _ (cbor_nondet_map_entry_match _ _ _) _ _;
+    (* begin: valid for fstar2 only (F* #4347 slprop normalization) *)
+    trade_trans_hyp_l_merge2 _ _ (cbor_nondet_map_entry_match _ _ _) _ _;
+    (* end: valid for fstar2 only *)
     with s0 l0 . assert (PM.seq_list_match s0 l0 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps));
     Seq.append_empty_l s0;
     Trade.rewrite_with_trade
@@ -1897,10 +1940,46 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
               (Seq.Properties.tail s2))
           ((fst (List.Tot.Base.hd l2), Some (snd ventry)) :: List.Tot.Base.tl l2)
           (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)) _;
-        lemma_trade_rewrite5 _ _ _ _ _;
-        Trade.trans_hyp_r _ _ _
-          (cbor_nondet_match pentry entry.cbor_map_entry_value (snd ventry) ** 
-            PM.seq_list_match s0 l0 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps));
+        (* begin: valid for fstar2 only (F* #4347 slprop normalization) *)
+        intro
+          (Trade.trade
+            (cbor_nondet_match pvalue' entry.cbor_map_entry_value (snd ventry) **
+              PM.seq_list_match
+                (Seq.append (Seq.append s1 (Seq.cons dest_entry' Seq.empty)) (Seq.tail s2))
+                (List.Tot.append (List.Tot.append l1 [(fst (List.Tot.hd l2), Some (snd ventry))]) (List.Tot.tl l2))
+                (cbor_map_get_multiple_entry_match cbor_nondet_match true ps))
+            (cbor_nondet_match pentry entry.cbor_map_entry_value (snd ventry) **
+              PM.seq_list_match s0 l0 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)))
+          #(Trade.trade
+              (((cbor_nondet_match pvalue' entry.cbor_map_entry_value (snd ventry) **
+                  cbor_map_get_multiple_entry_match cbor_nondet_match true ps dest_entry' (fst (List.Tot.hd l2), Some (snd ventry))) **
+                 PM.seq_list_match (Seq.tail s2) (List.Tot.tl l2) (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)) **
+                PM.seq_list_match s1 l1 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps))
+              (cbor_nondet_match pentry entry.cbor_map_entry_value (snd ventry) **
+                PM.seq_list_match s0 l0 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)) **
+            Trade.trade
+              (PM.seq_list_match
+                (Seq.append (Seq.append s1 (Seq.cons dest_entry' Seq.empty)) (Seq.tail s2))
+                (List.Tot.append (List.Tot.append l1 [(fst (List.Tot.hd l2), Some (snd ventry))]) (List.Tot.tl l2))
+                (cbor_map_get_multiple_entry_match cbor_nondet_match true ps))
+              (PM.seq_list_match s1 l1 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) **
+                cbor_map_get_multiple_entry_match cbor_nondet_match true ps dest_entry' (fst (List.Tot.hd l2), Some (snd ventry)) **
+                PM.seq_list_match (Seq.tail s2) (List.Tot.tl l2) (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)))
+          fn _ {
+            Trade.elim
+              (PM.seq_list_match
+                (Seq.append (Seq.append s1 (Seq.cons dest_entry' Seq.empty)) (Seq.tail s2))
+                (List.Tot.append (List.Tot.append l1 [(fst (List.Tot.hd l2), Some (snd ventry))]) (List.Tot.tl l2))
+                (cbor_map_get_multiple_entry_match cbor_nondet_match true ps))
+              _;
+            Trade.elim
+              (((cbor_nondet_match pvalue' entry.cbor_map_entry_value (snd ventry) **
+                  cbor_map_get_multiple_entry_match cbor_nondet_match true ps dest_entry' (fst (List.Tot.hd l2), Some (snd ventry))) **
+                 PM.seq_list_match (Seq.tail s2) (List.Tot.tl l2) (cbor_map_get_multiple_entry_match cbor_nondet_match true ps)) **
+                PM.seq_list_match s1 l1 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps))
+              _;
+          };
+        (* end: valid for fstar2 only *)
         let lx = Ghost.hide [(fst (List.Tot.Base.hd l2), Some (snd ventry))];
         with s' . assert (S.pts_to dest s');
         with s1' s2' l1' l2' . assert (Pulse.Lib.SeqMatch.seq_list_match (Seq.append s1' s2') (List.Tot.append l1' l2') (cbor_map_get_multiple_entry_match cbor_nondet_match true ps));
@@ -1966,6 +2045,9 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
     with gi . assert (pts_to pi gi);
     lemma_trade_ab_cd_e _ _ _ _ _ _ _;
     Trade.elim_hyp_l _ _ _;
+    (* begin: valid for fstar2 only (F* #4347 slprop normalization) *)
+    Trade.elim_hyp_l _ _ _;
+    (* end: valid for fstar2 only *)
 //    if (SZ.lt j (S.len dest)) {
       List.Tot.map_append snd l1 l2;
       List.Tot.append_count (List.Tot.map snd l1) (List.Tot.map snd l2) None;
