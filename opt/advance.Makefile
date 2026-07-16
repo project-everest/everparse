@@ -1,3 +1,3 @@
 FStar_hash := origin/fstar1
-karamel_hash := origin/master
-pulse_hash := origin/fstar1
+karamel_hash := origin/everparse-fstar1
+pulse_hash := origin/fstar1_merge_sort_20260716
