@@ -1627,7 +1627,7 @@ let emit_copyful_bounded_vldata_payload o i n ty smax =
   wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
   wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv =\n" n n n n;
   wp o "  PPVD.copyful_parse_bounded_vldata_payload 0 %d %s (PPBI.leaf_read_bounded_integer_%d ())\n\n" smax (copyful_read_name ty) (log256 smax);
-  wp o "let free_%s : PPB.free_t %s_vmatch = %s\n\n" n n (copyful_free_name ty);
+  wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> (%s) x #v\n\n" n n (copyful_free_name ty);
   if !emit_pulse && copyful_writer_available ty then begin
     wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
     wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv =\n" n n n n;
@@ -3941,17 +3941,17 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       end;
       (* Pulse: validator, jumper, reader for type aliases *)
       (if need_validator then
-        wp o "let %s_validator = %s\n\n" n (pulse_validator_name ty));
+        wp o "let %s_validator = fun input poffset #offset #pm #v -> (%s) input poffset #offset #pm #v\n\n" n (pulse_validator_name ty));
       (if need_jumper then
          let jumper_annot = if is_private then sprintf " : LPS.jumper %s_parser" n else "" in
-         wp o "let %s_jumper%s = %s\n\n" n jumper_annot (pulse_jumper_name ty));
+         wp o "let %s_jumper%s = fun input offset #pm #v -> (%s) input offset #pm #v\n\n" n jumper_annot (pulse_jumper_name ty));
       if li.has_lserializer then begin
         wp i "val %s_reader : PPB.leaf_reader %s_parser\n\n" n n;
-        wp o "let %s_reader = %s\n\n" n (pulse_leaf_reader_name ty);
+        wp o "let %s_reader = fun input #pm #v -> (%s) input #pm #v\n\n" n (pulse_leaf_reader_name ty);
         wp i "val %s_writer : LPS.l2r_leaf_writer %s_serializer\n\n" n n;
-        wp o "let %s_writer = %s\n\n" n (pulse_leaf_writer_name ty);
+        wp o "let %s_writer = fun x out offset #v -> (%s) x out offset #v\n\n" n (pulse_leaf_writer_name ty);
         wp i "val %s_leaf_size : LPS.leaf_size %s_serializer\n\n" n n;
-        wp o "let %s_leaf_size = %s\n\n" n (pulse_leaf_size_name ty)
+        wp o "let %s_leaf_size = fun x -> (%s) x\n\n" n (pulse_leaf_size_name ty)
       end;
       (* Pulse: copyful parser + free for type aliases *)
       wp i "let %s_lowtype = %s\n\n" n (copyful_lowtype_name ty);
@@ -3960,11 +3960,11 @@ and compile_typedef tch o i tn fn (ty:type_t) vec def al =
       wp i "noextract let %s_conv = %s\n\n" n (copyful_conv_name ty);
       wp i "val read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv\n\n" n n n n;
       wp i "val free_%s : PPB.free_t %s_vmatch\n\n" n n;
-      wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv = %s\n\n" n n n n (copyful_read_name ty);
-      wp o "let free_%s : PPB.free_t %s_vmatch = %s\n\n" n n (copyful_free_name ty);
+      wp o "let read_%s : PPB.copyful_parse %s_vmatch %s_parser %s_conv = fun input #pm #v -> (%s) input #pm #v\n\n" n n n n (copyful_read_name ty);
+      wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> (%s) x #v\n\n" n n (copyful_free_name ty);
       if !emit_pulse && copyful_writer_available ty then begin
         wp i "val write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv\n\n" n n n n;
-        wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv = %s\n\n" n n n n (copyful_writer_name ty);
+        wp o "let write_%s : PPB.l2r_safe_writer %s_vmatch %s_serializer %s_conv = fun x #y out #v perr -> (%s) x #y out #v perr\n\n" n n n n (copyful_writer_name ty);
         register_writer n
       end;
       w i "val %s_bytesize_eqn (x: %s) : Lemma (%s_bytesize x == %s) [SMTPat (%s_bytesize x)]\n\n" n n n (bytesize_call ty "x") n;
@@ -5112,7 +5112,7 @@ and compile_struct tch o i n (fl: struct_field_t list) (al:attr list) =
   wp o "  synth_%s_injective ();\n" n;
   wp o "  assert_norm (%s_parser_kind == %s'_parser_kind);\n" n n;
   wp o "  PPC.copyful_parse_synth %s synth_%s synth_%s_recip\n\n" pulse_creader n n;
-  wp o "let free_%s : PPB.free_t %s_vmatch = %s\n\n" n n pulse_cfree;
+  wp o "let free_%s : PPB.free_t %s_vmatch = fun x #v -> (%s) x #v\n\n" n n pulse_cfree;
 
   (* Pulse: copyful safe writer. A struct's writer is a pair-tree of its fields'
      safe writers wrapped with l2r_safe_writer_synth to (de)serialize the record.
