@@ -571,7 +571,7 @@ ensures
   }
 }
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 
 fn cbor_match_array_get_length_with_depth
   (depth: Ghost.erased nat) (c: cbor_raw) (#p: perm) (#v: Ghost.erased raw_data_item)
