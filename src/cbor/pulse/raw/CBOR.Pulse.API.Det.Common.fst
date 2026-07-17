@@ -1720,6 +1720,8 @@ fn cbor_det_map_entry_gather
   fold (cbor_det_map_entry_match (p +. p') x v);
 }
 
+let det_length_pos_of_cons (#t: Type) (l: list t) : Lemma (requires Cons? l) (ensures List.Tot.length l >= 1) = () // fstar2 only
+
 let cbor_det_map_get_invariant_none
   (b: bool)
   (px: perm)
@@ -1728,6 +1730,7 @@ let cbor_det_map_get_invariant_none
   (vk: Spec.cbor)
   (m: Spec.cbor_map)
   (i: cbor_det_map_iterator_t)
+  (n: nat) // fstar2 only
 : Tot slprop
 = exists* p' l .
     cbor_det_map_iterator_match p' i l **
@@ -1738,6 +1741,7 @@ let cbor_det_map_get_invariant_none
     List.Tot.sorted (SpecRaw.map_entry_order cbor_det_order _) l /\
     Spec.cbor_map_get m vk == (if b then List.Tot.assoc vk l else None) /\
     (b ==> Cons? l)
+    /\ n == List.Tot.length l // fstar2 only
   )
 
 let cbor_det_map_get_invariant_some
@@ -1766,9 +1770,11 @@ let cbor_det_map_get_invariant
   (m: Spec.cbor_map)
   (i: cbor_det_map_iterator_t)
   (res: option cbor_det_t)
+  (n: nat) // fstar2 only
 : Tot slprop
 = match res with
   | None -> cbor_det_map_get_invariant_none b px x vx vk m i
+      n // fstar2 only
   | Some x' -> cbor_det_map_get_invariant_some px x vx vk m x'
 
 let cbor_det_map_get_invariant_false_elim_precond
@@ -1789,8 +1795,9 @@ fn cbor_det_map_get_invariant_false_elim
   (m: Spec.cbor_map)
   (i: cbor_det_map_iterator_t)
   (res: option cbor_det_t)
+  (n: nat) // fstar2 only
 requires
-  cbor_det_map_get_invariant gb px x vx vk m i res **
+  cbor_det_map_get_invariant gb px x vx vk m i res n **
   pure (gb == false) **
   pure (cbor_det_map_get_invariant_false_elim_precond vx m)
 ensures
@@ -1800,8 +1807,8 @@ ensures
   rewrite each gb as false;
   match res {
     None -> {
-      unfold (cbor_det_map_get_invariant false px x vx vk m i None);
-      unfold (cbor_det_map_get_invariant_none false px x vx vk m i);
+      unfold (cbor_det_map_get_invariant false px x vx vk m i None n);
+      unfold (cbor_det_map_get_invariant_none false px x vx vk m i n);
       Trade.elim _ _;
       fold (map_get_post_none cbor_det_match x px vx vk);
       fold (map_get_post cbor_det_match x px vx vk None);
@@ -1810,7 +1817,7 @@ ensures
       ();
     }
     Some x' -> {
-      unfold (cbor_det_map_get_invariant false px x vx vk m i (Some x'));
+      unfold (cbor_det_map_get_invariant false px x vx vk m i (Some x') n);
       unfold (cbor_det_map_get_invariant_some px x vx vk m x');
       fold (map_get_post_some cbor_det_match x px vx vk x');
       fold (map_get_post cbor_det_match x px vx vk (Some x'));
@@ -1840,25 +1847,32 @@ fn cbor_det_map_get (_: unit)
   let i_is_empty = cbor_det_map_iterator_is_empty () i;
   let cont = not i_is_empty;
   let mut pcont = cont;
-  fold (cbor_det_map_get_invariant_none cont px x vx vk m i);
-  fold (cbor_det_map_get_invariant cont px x vx vk m i None);
+  let mut pmeasure = Ghost.hide (List.Tot.length (Ghost.reveal l)); // fstar2 only
+  fold (cbor_det_map_get_invariant_none cont px x vx vk m i (List.Tot.length (Ghost.reveal l))); // fstar2 only
+  fold (cbor_det_map_get_invariant cont px x vx vk m i None (List.Tot.length (Ghost.reveal l))); // fstar2 only
   while (
     !pcont
-  ) invariant exists* i res cont .
+  ) invariant exists* i res cont msr .
     pts_to pi i **
     pts_to pcont cont **
     pts_to pres res **
+    pts_to pmeasure msr **
     cbor_det_match pk k vk **
-    cbor_det_map_get_invariant cont px x vx vk m i res **
+    cbor_det_map_get_invariant cont px x vx vk m i res msr **
     pure (cont == true ==>  None? res)
+    decreases (Ghost.reveal (!pmeasure)) // fstar2 only
   {
-    with gb gi gres . assert (cbor_det_map_get_invariant gb px x vx vk m gi gres);
-    rewrite (cbor_det_map_get_invariant gb px x vx vk m gi gres)
-      as   (cbor_det_map_get_invariant gb px x vx vk m gi None);
-    unfold (cbor_det_map_get_invariant gb px x vx vk m gi None);
-    unfold (cbor_det_map_get_invariant_none gb px x vx vk m gi);
+    with gb gi gres gmsr . assert (cbor_det_map_get_invariant gb px x vx vk m gi gres gmsr);
+    rewrite (cbor_det_map_get_invariant gb px x vx vk m gi gres gmsr)
+      as   (cbor_det_map_get_invariant gb px x vx vk m gi None gmsr);
+    unfold (cbor_det_map_get_invariant gb px x vx vk m gi None gmsr);
+    unfold (cbor_det_map_get_invariant_none gb px x vx vk m gi gmsr);
+    with gpp gll . assert (cbor_det_map_iterator_match gpp gi gll); // fstar2 only
+    det_length_pos_of_cons (Ghost.reveal gll); // fstar2 only
     let entry = cbor_det_map_iterator_next () pi;
     Trade.trans _ _ (cbor_det_match px x vx);
+    with mm . assert (pts_to pmeasure mm); // fstar2 only
+    pmeasure := Ghost.hide (Ghost.reveal mm - 1); // fstar2 only
     with pentry ventry . assert (cbor_det_map_entry_match pentry entry ventry);
     let key = cbor_det_map_entry_key () entry;
     let comp = impl_cbor_det_compare key k;
@@ -1872,7 +1886,8 @@ fn cbor_det_map_get (_: unit)
       pres := Some value;
       pcont := false;
       fold (cbor_det_map_get_invariant_some px x vx vk m value);
-      fold (cbor_det_map_get_invariant false px x vx vk m gi' (Some value))
+      with cmsr . assert (pts_to pmeasure cmsr); // fstar2 only
+      fold (cbor_det_map_get_invariant false px x vx vk m gi' (Some value) cmsr) // fstar2 only
     } else if (I16.gt comp 0s) {
       Trade.elim_hyp_l _ _ (cbor_det_match px x vx);
       cbor_det_compare_swap vk (fst ventry);
@@ -1880,9 +1895,10 @@ fn cbor_det_map_get (_: unit)
       Classical.move_requires (Map.list_sorted_map_entry_order_lt_tail cbor_det_order ventry l') vk;
       List.Tot.assoc_mem (Ghost.reveal vk) l';
       pcont := false;
-      fold (cbor_det_map_get_invariant_none false px x vx vk m gi');
+      with cmsr . assert (pts_to pmeasure cmsr); // fstar2 only
+      fold (cbor_det_map_get_invariant_none false px x vx vk m gi' cmsr); // fstar2 only
       assert (pts_to pres None);
-      fold (cbor_det_map_get_invariant false px x vx vk m gi' None);
+      fold (cbor_det_map_get_invariant false px x vx vk m gi' None cmsr); // fstar2 only
     } else {
       Trade.elim_hyp_l _ _ (cbor_det_match px x vx);
       let i' = !pi;
@@ -1892,13 +1908,14 @@ fn cbor_det_map_get (_: unit)
       let is_empty = cbor_det_map_iterator_is_empty () i';
       let cont = not is_empty;
       pcont := cont;
-      fold (cbor_det_map_get_invariant_none cont px x vx vk m i');
+      with cmsr . assert (pts_to pmeasure cmsr); // fstar2 only
+      fold (cbor_det_map_get_invariant_none cont px x vx vk m i' cmsr); // fstar2 only
       assert (pts_to pres None);
-      fold (cbor_det_map_get_invariant cont px x vx vk m i' None);
+      fold (cbor_det_map_get_invariant cont px x vx vk m i' None cmsr); // fstar2 only
     }
   };
-  with gb gi gres . assert (cbor_det_map_get_invariant gb px x vx vk m gi gres);
-  cbor_det_map_get_invariant_false_elim px x vx vk m gi gres;
+  with gb gi gres gmsr . assert (cbor_det_map_get_invariant gb px x vx vk m gi gres gmsr);
+  cbor_det_map_get_invariant_false_elim px x vx vk m gi gres gmsr;
   let res = !pres;
   match res {
     None -> {

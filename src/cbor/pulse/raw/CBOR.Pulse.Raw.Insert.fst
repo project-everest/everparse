@@ -244,7 +244,9 @@ ensures exists* v .
     pure (
       cbor_raw_map_insert_inv m off2 key off3 value v l1 l2 off res
     )
-  ) {
+  )
+    decreases %[(if CInProgress? !pres then 1 else 0); (SZ.v off2 - SZ.v (!poff))] // fstar2 only
+  {
     with l1 . assert (GR.pts_to pl1 l1);
     with l2 . assert (GR.pts_to pl2 l2);
     with v . assert (pts_to out v);
@@ -312,6 +314,9 @@ ensures exists* v .
       assert (pure (
         SZ.v off' == SZ.v off + Seq.length slkv'
       ));
+      serialize_cbor_nonempty key'; // fstar2 only
+      Seq.lemma_len_append (serialize_cbor key') (serialize_cbor value'); // fstar2 only
+      assert (pure (SZ.v off < SZ.v off')); // fstar2 only
       assert (pure (
         SZ.v off' + Seq.length sl2' == SZ.v off2
       ));

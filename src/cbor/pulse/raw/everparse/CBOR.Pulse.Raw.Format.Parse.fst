@@ -484,6 +484,7 @@ fn cbor_raw_sorted (_: unit) : LowParse.Pulse.Recursive.impl_pred_t u#0 u#0 #_ s
           vn == U64.v vpairs + U64.v vpairs /\
           List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) l0 == (vres && sorted2 deterministically_encoded_cbor_map_key_order (vkey :: vvalue :: fst vtail))
         )
+      decreases %[(if !pres then 1 else 0); (U64.v (!ppairs))] // fstar2 only
       {
         with vn stail vtail . assert (pts_to_serialized (serialize_nondep_then (LowParse.Spec.VCList.serialize_nlist vn serialize_raw_data_item) s) stail #pm vtail);
         let tail = !ptail;

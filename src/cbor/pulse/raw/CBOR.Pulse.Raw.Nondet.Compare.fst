@@ -304,12 +304,14 @@ ensures
   Trade.refl (Read.cbor_map_iterator_match_with_depth (nat_pred depth) p1 i1 v1);
   let mut pi1 = i1;
   let mut pres = (None #bool);
+  let mut pmeasure = Ghost.hide (List.Tot.length (Ghost.reveal v1)); // fstar2 only
   while (
     let res = !pres;
     let i1 = !pi1;
     (None? res && not (Read.cbor_map_iterator_is_empty_with_depth (nat_pred depth) i1))
-  ) invariant exists* gi1 l1 res . (
+  ) invariant exists* gi1 l1 res m . (
     pts_to pi1 gi1 **
+    pts_to pmeasure m **
     Read.cbor_map_iterator_match_with_depth (nat_pred depth) p1 gi1 l1 **
     Trade.trade
       (Read.cbor_map_iterator_match_with_depth (nat_pred depth) p1 gi1 l1)
@@ -320,11 +322,16 @@ ensures
       List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l1) /\
       List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd l1) /\
       (Cons? l1 ==> Ghost.reveal depth >= 1) /\
-      CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1 v2 == (match res with Some r -> r | _ -> CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv l1 v2)
+      CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1 v2 == (match res with Some r -> r | _ -> CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv l1 v2) /\
+      Ghost.reveal m == List.Tot.length l1 // fstar2 only
     )
-  ) {
+  )
+    decreases (Ghost.reveal (!pmeasure)) // fstar2 only
+  {
     let x1 = Read.cbor_map_iterator_next_with_depth (nat_pred depth) pi1;
     Trade.trans _ _ (Read.cbor_map_iterator_match_with_depth (nat_pred depth) p1 i1 v1);
+    with mm . assert (pts_to pmeasure mm); // fstar2 only
+    pmeasure := Ghost.hide (Ghost.reveal mm - 1); // fstar2 only
     with px1 vx1 . assert (cbor_match_map_entry_with_depth (nat_pred depth) px1 x1 vx1);
     unfold (cbor_match_map_entry_with_depth (nat_pred depth) px1 x1 vx1);
     unfold (cbor_match_map_entry_with_depth (nat_pred depth) p2 x2 v2);
@@ -373,13 +380,15 @@ ensures
   let mut pi2 = i2;
   Trade.refl (Read.cbor_map_iterator_match_with_depth (nat_pred depth) p2 i2 v2);
   let mut pres = true;
+  let mut pmeasure = Ghost.hide (List.Tot.length (Ghost.reveal v2)); // fstar2 only
   while (
     let res = !pres;
     let i2 = !pi2;
     (res && not (Read.cbor_map_iterator_is_empty_with_depth (nat_pred depth) i2))
-  ) invariant exists* gi2 l2 res . (
+  ) invariant exists* gi2 l2 res m . (
     Read.cbor_map_iterator_match_with_depth (nat_pred depth) p1 i1 v1 **
     pts_to pi2 gi2 **
+    pts_to pmeasure m **
     Read.cbor_map_iterator_match_with_depth (nat_pred depth) p2 gi2 l2 **
     pts_to pres res **
     Trade.trade
@@ -389,11 +398,16 @@ ensures
       List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l2) /\
       List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map snd l2) /\
       ((Cons? v1 /\ Cons? l2) ==> Ghost.reveal depth >= 1) /\
-      List.Tot.for_all (CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1) v2 == (res && List.Tot.for_all (CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1) l2)
+      List.Tot.for_all (CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1) v2 == (res && List.Tot.for_all (CBOR.Spec.Util.setoid_assoc_eq SpecRaw.raw_equiv SpecRaw.raw_equiv v1) l2) /\
+      Ghost.reveal m == List.Tot.length l2 // fstar2 only
     )
-  ) {
+  )
+    decreases (Ghost.reveal (!pmeasure)) // fstar2 only
+  {
     let x2 = Read.cbor_map_iterator_next_with_depth (nat_pred depth) pi2;
     Trade.trans _ _ (Read.cbor_map_iterator_match_with_depth (nat_pred depth) p2 i2 v2);
+    with mm . assert (pts_to pmeasure mm); // fstar2 only
+    pmeasure := Ghost.hide (Ghost.reveal mm - 1); // fstar2 only
     pres := cbor_nondet_setoid_assoc_eq_with_depth depth req i1 x2;
     Trade.elim_hyp_l _ _ _
   };
@@ -576,14 +590,17 @@ ensures
         let mut pi1 = i1;
         let mut pi2 = i2;
         let mut pres = true;
+        with pj1_init l1_init . assert (Read.cbor_array_iterator_match_with_depth (nat_pred depth) pj1_init i1 l1_init); // fstar2 only
+        let mut pmeasure = Ghost.hide (List.Tot.length l1_init); // fstar2 only
         while (
           let res = !pres;
           let i1 = !pi1;
           (res && not (Read.cbor_array_iterator_is_empty_with_depth (nat_pred depth) i1))
-        ) invariant exists* i1 i2 res l1 l2 pj1 pj2 . (
+        ) invariant exists* i1 i2 res l1 l2 pj1 pj2 m . (
           pts_to pi1 i1 **
           pts_to pi2 i2 **
           pts_to pres res **
+          pts_to pmeasure m **
           Read.cbor_array_iterator_match_with_depth (nat_pred depth) pj1 i1 l1 **
           Read.cbor_array_iterator_match_with_depth (nat_pred depth) pj2 i2 l2 **
           Trade.trade
@@ -597,13 +614,18 @@ ensures
             List.Tot.for_all SpecRaw.valid_raw_data_item l1 /\
             List.Tot.for_all SpecRaw.valid_raw_data_item l2 /\
             (Cons? l1 ==> Ghost.reveal depth >= 1) /\
-            (SpecRaw.raw_equiv v1 v2 == (res && CBOR.Spec.Util.list_for_all2 SpecRaw.raw_equiv l1 l2))
+            (SpecRaw.raw_equiv v1 v2 == (res && CBOR.Spec.Util.list_for_all2 SpecRaw.raw_equiv l1 l2)) /\
+            Ghost.reveal m == List.Tot.length l1 // fstar2 only
           )
-        ) {
+        )
+          decreases (Ghost.reveal (!pmeasure)) // fstar2 only
+        {
           let y1 = Read.cbor_array_iterator_next_with_depth (nat_pred depth) pi1;
           Trade.trans _ _ (cbor_match_with_depth depth p1 x1 v1);
           let y2 = Read.cbor_array_iterator_next_with_depth (nat_pred depth) pi2;
           Trade.trans _ _ (cbor_match_with_depth depth p2 x2 v2);
+          with mm . assert (pts_to pmeasure mm); // fstar2 only
+          pmeasure := Ghost.hide (Ghost.reveal mm - 1); // fstar2 only
           pres := req (nat_pred depth) y1 y2;
           Trade.elim_hyp_l _ _ (cbor_match_with_depth depth p1 x1 v1);
           Trade.elim_hyp_l _ _ (cbor_match_with_depth depth p2 x2 v2);
@@ -750,7 +772,9 @@ ensures
       List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l1) /\
       CBOR.Spec.Util.list_no_setoid_repeats SpecRaw.raw_equiv (List.Tot.map fst l) == (res && CBOR.Spec.Util.list_no_setoid_repeats SpecRaw.raw_equiv (List.Tot.map fst l1))
     )
-  ) {
+  )
+    decreases %[(if !pres then 1 else 0); (SZ.v (S.len x) - SZ.v (!pn1))] // fstar2 only
+  {
     SM.seq_list_match_length (Raw.cbor_match_map_entry ps) _ _;
     let n1 = !pn1;
     let x1 = S.op_Array_Access x n1;
@@ -782,7 +806,9 @@ ensures
         List.Tot.for_all SpecRaw.valid_raw_data_item (List.Tot.map fst l2) /\
         CBOR.Spec.Util.list_no_setoid_repeats SpecRaw.raw_equiv (List.Tot.map fst l) == (res && (not (List.Tot.existsb (SpecRaw.raw_equiv (fst y1)) (List.Tot.map fst l2))) && CBOR.Spec.Util.list_no_setoid_repeats SpecRaw.raw_equiv (List.Tot.map fst l1'))
       )
-    ) {
+    )
+      decreases %[(if !pres then 1 else 0); (SZ.v (S.len x) - SZ.v (!pn2))] // fstar2 only
+    {
       SM.seq_list_match_length (Raw.cbor_match_map_entry ps) _ _;
       let n2 = !pn2;
       let x2 = S.op_Array_Access x n2;
