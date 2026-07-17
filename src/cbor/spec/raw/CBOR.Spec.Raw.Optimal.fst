@@ -1,7 +1,6 @@
 module CBOR.Spec.Raw.Optimal
 include CBOR.Spec.Raw.Valid
 open CBOR.Spec.Util
-open FStar.Mul
 
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64

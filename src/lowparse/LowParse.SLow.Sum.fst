@@ -8,7 +8,7 @@ module U32 = FStar.UInt32
 let serializer32_sum_gen_precond
   (kt: parser_kind)
   (k: parser_kind)
-: GTot Type0
+: GTot prop
 = kt.parser_kind_subkind == Some ParserStrong /\
   Some? kt.parser_kind_high /\
   Some? k.parser_kind_high /\ (
@@ -21,7 +21,7 @@ inline_for_extraction
 let parse32_sum_t (t: sum) : Tot Type =
   bytes32 -> Tot (option (sum_type t & U32.t))
 
-let parse32_sum_eq (t: sum) : Tot (parse32_sum_t t -> parse32_sum_t t -> GTot Type0) =
+let parse32_sum_eq (t: sum) : Tot (parse32_sum_t t -> parse32_sum_t t -> GTot prop) =
   feq _ _ (eq2 #_)
 
 inline_for_extraction
@@ -98,7 +98,7 @@ let parse32_sum_cases_t_eq
   (pc: ((x: sum_key t) -> Tot (k: parser_kind & parser k (sum_type_of_tag t x))))
   (k: sum_key t)
   (x y : parse32_sum_cases_t t pc k)
-: GTot Type0
+: GTot prop
 = True
 
 inline_for_extraction
@@ -219,7 +219,7 @@ let serialize32_sum_cases_t_eq
   (sc: ((x: sum_key t) -> Tot (serializer (dsnd (pc x)))))
   (k: sum_key t)
   (x y: serialize32_sum_cases_t t sc k)
-: GTot Type0
+: GTot prop
 = True
 
 inline_for_extraction
@@ -306,7 +306,7 @@ module T = FStar.Tactics
 let serialize32_sum_destr_eq
   (t: sum)
   (k: sum_key t)
-: Tot (serialize32_sum_destr_codom t k -> serialize32_sum_destr_codom t k -> GTot Type0)
+: Tot (serialize32_sum_destr_codom t k -> serialize32_sum_destr_codom t k -> GTot prop)
 = _ by (T.apply (`feq); T.apply (`eq2))
 
 let serialize32_sum_destr_trans
@@ -396,7 +396,7 @@ let size32_sum_cases_t_eq
   (sc: ((x: sum_key t) -> Tot (serializer (dsnd (pc x)))))
   (k: sum_key t)
   (x y: size32_sum_cases_t t sc k)
-: GTot Type0
+: GTot prop
 = True
 
 inline_for_extraction
@@ -462,7 +462,7 @@ let size32_sum_destr_codom
 let size32_sum_destr_eq
   (t: sum)
   (k: sum_key t)
-: Tot (size32_sum_destr_codom t k -> size32_sum_destr_codom t k -> GTot Type0)
+: Tot (size32_sum_destr_codom t k -> size32_sum_destr_codom t k -> GTot prop)
 = _ by (T.apply (`feq); T.apply (`eq2))
 
 let size32_sum_destr_trans
@@ -482,7 +482,7 @@ let size32_sum_destr_if
 let size32_sum_gen_precond
   (kt: parser_kind)
   (k: parser_kind)
-: GTot Type0
+: GTot prop
 = kt.parser_kind_subkind == Some ParserStrong /\
   Some? kt.parser_kind_high /\
   Some? k.parser_kind_high /\ (
@@ -608,7 +608,7 @@ let parse32_dsum_cases_t_eq
   (g: parser k' (dsum_type_of_unknown_tag t))
   (k: dsum_known_key t)
   (x y : parse32_dsum_cases_t t f g k)
-: GTot Type0
+: GTot prop
 = True
 
 inline_for_extraction
@@ -786,7 +786,7 @@ let serialize32_dsum_cases_t_eq
   (sg: serializer g)
   (k: dsum_known_key t)
   (x y: serialize32_dsum_cases_t t f sf g sg k)
-: GTot Type0
+: GTot prop
 = True
 
 inline_for_extraction
@@ -841,7 +841,7 @@ let serialize32_dsum_known_destr_codom
 let serialize32_dsum_known_destr_eq
   (t: dsum)
   (k: dsum_known_key t)
-: Tot (serialize32_dsum_known_destr_codom t k -> serialize32_dsum_known_destr_codom t k -> GTot Type0)
+: Tot (serialize32_dsum_known_destr_codom t k -> serialize32_dsum_known_destr_codom t k -> GTot prop)
 = _ by (T.apply (`feq); T.apply (`eq2))
 
 let serialize32_dsum_known_destr_eq_trans
@@ -956,7 +956,7 @@ let size32_dsum_cases_t_eq
   (sg: serializer g)
   (k: dsum_known_key t)
   (x y: size32_dsum_cases_t t f sf g sg k)
-: GTot Type0
+: GTot prop
 = True
 
 inline_for_extraction
@@ -1011,7 +1011,7 @@ let size32_dsum_known_destr_codom
 let size32_dsum_known_destr_eq
   (t: dsum)
   (k: dsum_known_key t)
-: Tot (size32_dsum_known_destr_codom t k -> size32_dsum_known_destr_codom t k -> GTot Type0)
+: Tot (size32_dsum_known_destr_codom t k -> size32_dsum_known_destr_codom t k -> GTot prop)
 = _ by (T.apply (`feq); T.apply (`eq2))
 
 let size32_dsum_known_destr_eq_trans

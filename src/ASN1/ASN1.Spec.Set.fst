@@ -45,7 +45,7 @@ let repr_order_spec
   (p: LPC.parser k t)
   (x1 x2: t)
 : GTot bool
-= FStar.StrongExcludedMiddle.strong_excluded_middle (repr_order_prop byte_order p x1 x2)
+= FStar.IndefiniteDescription.strong_excluded_middle (repr_order_prop byte_order p x1 x2)
 
 let parse_byte_sorted_list_filter
   (byte_order: (LPC.bytes -> LPC.bytes -> prop))
@@ -139,7 +139,7 @@ let repr_order_prop_intro
     | _ -> True)
   = match LPC.parse p b1', LPC.parse p b2' with
     | Some (x1', _), Some (x2', _) ->
-      if FStar.StrongExcludedMiddle.strong_excluded_middle (x1' == x1 /\ x2' == x2)
+      if FStar.IndefiniteDescription.strong_excluded_middle (x1' == x1 /\ x2' == x2)
       then begin
         LPC.parse_injective p b1 b1';
         LPC.parse_injective p b2 b2'

@@ -22,7 +22,6 @@ module Binding
      -- computing the size of types
      -- computing which fields are dependent on others
 *)
-open FStar.Mul
 open FStar.List.Tot
 open Ast
 open FStar.All

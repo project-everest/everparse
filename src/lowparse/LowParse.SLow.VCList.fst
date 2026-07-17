@@ -161,7 +161,7 @@ let serialize32_nlist_precond
 = k.parser_kind_subkind == Some ParserStrong /\ (
     match k.parser_kind_high with
     | None -> False
-    | Some hi -> n `FStar.Mul.op_Star` hi < 4294967296
+    | Some hi -> n `op_Star` hi < 4294967296
   )
 
 #push-options "--z3rlimit 100"
@@ -317,7 +317,7 @@ let serialize32_vclist_precond
 : GTot prop
 = match lk.parser_kind_high, k.parser_kind_high with
   | Some lhi, Some hi ->
-    lhi + (max `FStar.Mul.op_Star` hi) < 4294967296
+    lhi + (max `op_Star` hi) < 4294967296
   | _ -> False
 
 inline_for_extraction

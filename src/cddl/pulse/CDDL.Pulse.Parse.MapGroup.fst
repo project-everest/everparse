@@ -727,7 +727,7 @@ let rec parse_table_entries_memP_key
   (decreases l)
 = match l with
   | (k', v') :: q ->
-    if t1 k' && not (tex (k', v')) && t2 v' && FStar.StrongExcludedMiddle.strong_excluded_middle (sp1.parser k' == k)
+    if t1 k' && not (tex (k', v')) && t2 v' && FStar.IndefiniteDescription.strong_excluded_middle (sp1.parser k' == k)
     then ()
     else parse_table_entries_memP_key sp1 tex ps2 q k
 

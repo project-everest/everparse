@@ -55,7 +55,7 @@ FSTAR_FILES ?= $(wildcard $(addsuffix /*.fst,$(SRC_DIRS)) $(addsuffix /*.fsti,$(
 ifeq ($(OS),Windows_NT)
 INCLUDE_PATHS := $(shell cygpath -m $(INCLUDE_PATHS))
 endif
-FSTAR_OPTIONS += $(OTHERFLAGS) $(addprefix --include ,$(INCLUDE_PATHS)) --cache_checked_modules --warn_error @241 --already_cached $(ALREADY_CACHED)Prims,FStar,LowStar --cmi --ext context_pruning
+FSTAR_OPTIONS += $(OTHERFLAGS) $(addprefix --include ,$(INCLUDE_PATHS)) --cache_checked_modules --warn_error @241 --already_cached $(ALREADY_CACHED)Prims,FStar,LowStar --ext context_pruning
 
 # https://github.com/FStarLang/FStar/pull/3861
 # FSTAR_OPTIONS += --ext optimize_let_vc
@@ -86,7 +86,9 @@ endif
 ifneq (,$(CACHE_DIRECTORY))
 	mkdir -p $(CACHE_DIRECTORY)
 endif
-	$(Q)true $(shell mkdir -p $(dir $@)) $(shell rm -f $@.rsp) $(foreach f,$(FSTAR_FILES),$(shell echo $(f) >> $@.rsp))
+	if test -n "$(dir $@)" ; then mkdir -p "$(dir $@)" ; fi
+	rm -f $@.rsp
+	for f in $(FSTAR_FILES) ; do echo $$f ; done > $@.rsp
 	$(Q)$(FSTAR) $(FSTAR_DEP_OPTIONS) --dep full @$@.rsp --output_deps_to $@.aux
 	mv $@.aux $@
 

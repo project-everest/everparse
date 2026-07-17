@@ -11,7 +11,6 @@ let nlist ([@@@strictly_positive] t: eqtype) (n: nat) : Tot eqtype = (l: list t 
 
 type integer_size = (n: U8.t { U8.v n <= 4 })
 
-open FStar.Mul
 
 let raw_uint64_size_prop (size: integer_size) (value: U64.t) : Tot prop =
   if U8.v size = 0

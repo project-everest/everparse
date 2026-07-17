@@ -11,7 +11,6 @@ module U32 = FStar.UInt32
 
 module Cast = FStar.Int.Cast
 
-open FStar.Mul
 
 let _ = assert_norm (pow2 16 == 65536)
 let _ = assert_norm (pow2 9 == 512)

@@ -19,10 +19,6 @@ pub fn mk_int(i: i32) -> crate::coseformat::evercddl_int
     }
 }
 
-pub type ser_to = ();
-
-pub type to_be_signed_spec = ();
-
 pub fn create_sig(
     privkey: &[u8],
     phdr: crate::coseformat::empty_or_serialized_map,
@@ -104,8 +100,6 @@ pub fn mk_phdrs <'a>(
         }
     }
 }
-
-pub type sign1_spec = ();
 
 pub fn sign1 <'a>(
     privkey: &'a [u8],
@@ -310,8 +304,6 @@ pub fn verify_sig(
         success
     }
 }
-
-pub type good_signature = ();
 
 fn uu___is_Inl__COSE_Format_bstr_COSE_Format_nil(
     projectee: crate::coseformat::either__COSE_Format_bstr_COSE_Format_nil

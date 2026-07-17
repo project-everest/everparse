@@ -84,7 +84,7 @@ let rec as_constant n =
   )
   | App (Mul _) [ n; m ] -> (
     match as_constant n, as_constant m with
-    | Some (A.Int sw i), Some (A.Int _ j) -> Some (A.Int sw (i `op_Multiply` j))
+    | Some (A.Int sw i), Some (A.Int _ j) -> Some (A.Int sw (i `op_Star` j))
     | _ -> None
   )
   | _ -> None

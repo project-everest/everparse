@@ -7,4 +7,3 @@ module Env = CDDL.Pulse.AST.Env
 module Parse = CDDL.Pulse.AST.Parse
 module T = CDDL.Pulse.AST.Tactics
 module SZ = FStar.SizeT
-module C = C // for _zero_for_deref

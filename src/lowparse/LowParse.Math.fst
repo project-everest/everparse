@@ -1,6 +1,5 @@
 module LowParse.Math
 include FStar.Math.Lemmas
-open FStar.Mul
 
 let mul_reg_r
   (a b x: int)
@@ -96,4 +95,4 @@ let lemma_mult_nat (a b: nat) : Lemma
 = ()
 
 inline_for_extraction
-let mult_nat (a b: nat) : Tot (c: nat { c == a `Prims.op_Multiply` b } ) = a `Prims.op_Multiply` b
+let mult_nat (a b: nat) : Tot (c: nat { c == a `op_Star` b } ) = a `op_Star` b

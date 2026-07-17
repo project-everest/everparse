@@ -4,7 +4,6 @@ module BF = LowParse.BitFields
 
 module S = FStar.Seq
 
-open FStar.Mul
 
 let slice_n_to_be_bitfield
   (len: pos)

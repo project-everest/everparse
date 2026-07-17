@@ -194,7 +194,7 @@ let rec list_existsb_intro (#t: Type) (p: t -> bool) (l: list t) (x: t) : Lemma
   (decreases l)
 = match l with
   | a :: q ->
-    if FStar.StrongExcludedMiddle.strong_excluded_middle (x == a)
+    if FStar.IndefiniteDescription.strong_excluded_middle (x == a)
     then ()
     else list_existsb_intro p q x
 
@@ -271,7 +271,7 @@ let rec list_sorted_memP
   (ensures (order a x == true))
   (decreases l)
 = let a' :: l' = l in
-  if FStar.StrongExcludedMiddle.strong_excluded_middle (a' == x)
+  if FStar.IndefiniteDescription.strong_excluded_middle (a' == x)
   then ()
   else list_sorted_memP order a' l' x
 
@@ -288,7 +288,7 @@ let list_sorted_cons_not_memP
     List.Tot.sorted order (a :: l)
   ))
   (ensures (~ (List.Tot.memP a l)))
-= if FStar.StrongExcludedMiddle.strong_excluded_middle (List.Tot.memP a l)
+= if FStar.IndefiniteDescription.strong_excluded_middle (List.Tot.memP a l)
   then list_sorted_memP order a l a
   else ()
 
@@ -329,7 +329,7 @@ let rec list_sorted_ext_eq
 = match l1, l2 with
   | [], [] -> ()
   | a1 :: q1, a2 :: q2 ->
-    if FStar.StrongExcludedMiddle.strong_excluded_middle (a1 == a2)
+    if FStar.IndefiniteDescription.strong_excluded_middle (a1 == a2)
     then begin
       list_sorted_cons_not_memP order a1 q1;
       list_sorted_cons_not_memP order a2 q2;
@@ -838,10 +838,10 @@ let rec list_no_setoid_repeats_append_elim_memP
 : Lemma
   (ensures (List.Tot.memP x1 l1 /\ List.Tot.memP x2 l2) ==> equiv x1 x2 == false)
   (decreases l1)
-= if FStar.StrongExcludedMiddle.strong_excluded_middle (List.Tot.memP x1 l1 /\ List.Tot.memP x2 l2)
+= if FStar.IndefiniteDescription.strong_excluded_middle (List.Tot.memP x1 l1 /\ List.Tot.memP x2 l2)
   then begin
     let x1' :: l1' = l1 in
-    if FStar.StrongExcludedMiddle.strong_excluded_middle (x1 == x1')
+    if FStar.IndefiniteDescription.strong_excluded_middle (x1 == x1')
     then begin
       if equiv x1 x2
       then begin
@@ -925,7 +925,7 @@ let rec list_memP_map_elim
   (ensures (fun (x : a) -> List.Tot.memP x l /\ f x == y))
   (decreases l)
 = let x :: q = l in
-  if (FStar.StrongExcludedMiddle.strong_excluded_middle (f x == y))
+  if (FStar.IndefiniteDescription.strong_excluded_middle (f x == y))
   then x
   else list_memP_map_elim f y q
 
@@ -1163,7 +1163,7 @@ let rec list_sum_memP (#t: Type) (f: t -> nat) (l: list t) (x: t) : Lemma
   (requires (List.Tot.memP x l))
   (ensures (f x <= list_sum f l))
 = let a :: q = l in
-  if FStar.StrongExcludedMiddle.strong_excluded_middle (x == a)
+  if FStar.IndefiniteDescription.strong_excluded_middle (x == a)
   then ()
   else list_sum_memP f q x
 
@@ -1418,7 +1418,7 @@ let rec list_setoid_assoc_mem_elim
     Some? (list_setoid_assoc equiv x l)
   ))
 = let xy' :: q = l in
-  if FStar.StrongExcludedMiddle.strong_excluded_middle (xy == xy')
+  if FStar.IndefiniteDescription.strong_excluded_middle (xy == xy')
   then ()
   else list_setoid_assoc_mem_elim equiv q xy x
 
@@ -1739,7 +1739,7 @@ let rec list_assoc_no_repeats_mem_elim
   let (k', v') :: l' = l in
   if (k = k')
   then
-    if FStar.StrongExcludedMiddle.strong_excluded_middle (v == v')
+    if FStar.IndefiniteDescription.strong_excluded_middle (v == v')
     then ()
     else List.Tot.memP_map_intro fst (k, v) l'
   else list_assoc_no_repeats_mem_elim k v l'
@@ -1888,7 +1888,7 @@ let rec list_memP_extract
     l == ll `List.Tot.append` (x :: lr)
   )
 = let a :: q = l in
-  if FStar.StrongExcludedMiddle.strong_excluded_middle (a == x)
+  if FStar.IndefiniteDescription.strong_excluded_middle (a == x)
   then ([], q)
   else
     let (ll, lr) = list_memP_extract x q in
@@ -1985,7 +1985,7 @@ let rec list_filter_not_in
   | [] -> []
   | b :: q ->
     let q' = list_filter_not_in a q in
-    if FStar.StrongExcludedMiddle.strong_excluded_middle (a == b)
+    if FStar.IndefiniteDescription.strong_excluded_middle (a == b)
     then q'
     else b :: q'
 
@@ -2044,7 +2044,7 @@ let rec list_filter_not_in_fold
 : Lemma
   (ensures (List.Tot.fold_left f (f a h) l == List.Tot.fold_left f (f a h) (list_filter_not_in h l)))
   (decreases (List.Tot.length l))
-= if FStar.StrongExcludedMiddle.strong_excluded_middle (List.Tot.memP h l)
+= if FStar.IndefiniteDescription.strong_excluded_middle (List.Tot.memP h l)
   then begin
     let (l1, l2) = list_memP_extract h l in
     list_fold_comm f (f a h) l1 (h :: l2);

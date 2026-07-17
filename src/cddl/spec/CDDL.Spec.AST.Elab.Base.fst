@@ -678,7 +678,7 @@ let rec split_interval
       then begin match extract_int_value e t' with
       | Some ti ->
         let i = eval_int_value ti in
-        if i < 0 then None else Some (0, pow2 (let open FStar.Mul in 8 * i) - 1)
+        if i < 0 then None else Some (0, pow2 (8 * i) - 1)
       | _ -> None
       end
       else begin match extract_range_value e t' with
@@ -1031,7 +1031,7 @@ let rec array_group_concat_unique_strong
 
 #pop-options
 
-#push-options "--z3rlimit 128 --split_queries always --query_stats --fuel 4 --ifuel 8"
+#push-options "--z3rlimit 16 --split_queries always --query_stats --fuel 2 --ifuel 2"
 
 #restart-solver
 let rec array_group_concat_unique_weak

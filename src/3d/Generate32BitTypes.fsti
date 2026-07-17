@@ -18,7 +18,6 @@ module Generate32BitTypes
   This module implements a pass over the source AS11T,
   to add 32-bit variants of types that have probe functions
 *)
-open FStar.Mul
 open FStar.List.Tot
 open Ast
 open FStar.All

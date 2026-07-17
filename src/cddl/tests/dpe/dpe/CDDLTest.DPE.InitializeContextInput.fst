@@ -64,12 +64,9 @@ requires
 ensures
   trade ((p1 ** q1) ** q2) r
 {
-  slprop_equivs();
-  rewrite each ((p2 ** q1) ** q2) as (p2 ** (q1 ** q2));
+  (* begin: valid for fstar2 only (F* #4347 slprop normalization) *)
   Trade.Util.trans_hyp_l _ _ _ r;
-  rewrite
-    trade (p1 ** q1 ** q2) r
-    as trade ((p1 ** q1) ** q2) r;
+  (* end: valid for fstar2 only *)
 }
 
 ghost
@@ -94,9 +91,38 @@ ensures
 {
   destruct_pair _ r3 _ _ ();
   destruct_pair _ r2 _ _ ();
-  Trade.Util.trans_hyp_l _ _ _ (rel_pair (rel_pair (rel_pair r0 r1) r2) r3 x y);
   destruct_pair _ r1 _ _ ();
-  trans_hyp_l_2 _ _ _ _ (rel_pair (rel_pair (rel_pair r0 r1) r2) r3 x y);
+  (* begin: valid for fstar2 only (F* #4347 slprop normalization) *)
+  intro (Trade.trade
+           (r0 (fst (fst (fst x))) (fst (fst (fst y))) **
+            (r1 (snd (fst (fst x))) (snd (fst (fst y))) **
+             (r2 (snd (fst x)) (snd (fst y)) **
+              r3 (snd x) (snd y))))
+           (rel_pair (rel_pair (rel_pair r0 r1) r2) r3 x y))
+    #(Trade.trade
+        (r0 (fst (fst (fst x))) (fst (fst (fst y))) **
+         r1 (snd (fst (fst x))) (snd (fst (fst y))))
+        (rel_pair r0 r1 (fst (fst x)) (fst (fst y))) **
+      Trade.trade
+        (rel_pair r0 r1 (fst (fst x)) (fst (fst y)) **
+         r2 (snd (fst x)) (snd (fst y)))
+        (rel_pair (rel_pair r0 r1) r2 (fst x) (fst y)) **
+      Trade.trade
+        (rel_pair (rel_pair r0 r1) r2 (fst x) (fst y) **
+         r3 (snd x) (snd y))
+        (rel_pair (rel_pair (rel_pair r0 r1) r2) r3 x y))
+    fn _ {
+      Trade.elim_trade
+        (r0 (fst (fst (fst x))) (fst (fst (fst y))) **
+         r1 (snd (fst (fst x))) (snd (fst (fst y)))) _;
+      Trade.elim_trade
+        (rel_pair r0 r1 (fst (fst x)) (fst (fst y)) **
+         r2 (snd (fst x)) (snd (fst y))) _;
+      Trade.elim_trade
+        (rel_pair (rel_pair r0 r1) r2 (fst x) (fst y) **
+         r3 (snd x) (snd y)) _;
+    };
+  (* end: valid for fstar2 only *)
   rewrite each (fst (fst (fst x))) as (proj_1_4 x);
   rewrite each (snd (fst (fst x))) as (proj_2_4 x);
   rewrite each (snd (fst x)) as (proj_3_4 x);
@@ -155,10 +181,11 @@ ensures parsed_initialize_context_input s #p w x
       Trade.trade_compose _ _ (rel_initialize_context_input_args __
           (reveal #spect_initialize_context_input_args _wx12));
       Trade.trade_compose _ _ (pts_to s #p w);
+      (* begin: valid for fstar2 only (F* #4347 slprop normalization) *)
+      Trade.Util.elim_hyp_l _ _ (pts_to s #p w);
+      Trade.Util.elim_hyp_l _ _ (pts_to s #p w);
       Trade.Util.elim_hyp_r _ _ (pts_to s #p w);
-      Trade.Util.assoc_hyp_r _ _ _ (pts_to s #p w);
-      Trade.Util.elim_hyp_l _ _ (pts_to s #p w);
-      Trade.Util.elim_hyp_l _ _ (pts_to s #p w);
+      (* end: valid for fstar2 only *)
       rel_option_cases (rel_bytes) _ _;
       match proj_3_4 (initialize_context_input_args_left x) {
         None -> {

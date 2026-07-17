@@ -562,6 +562,8 @@ jobs:
       - name: Everparse CI
         run: |
           make -C everparse -j$(nproc) -k test
+        env:
+          EVERPARSE_CHECK_DIFF: 1
 
   ci-macos:
     needs: prepare
@@ -592,6 +594,8 @@ jobs:
           nproc=$(sysctl -n hw.logicalcpu)
           if [[ $nproc -gt 8 ]] ; then nproc=8 ; fi
           cd everparse && gmake -j$nproc -k all test
+        env:
+          EVERPARSE_CHECK_DIFF: 1
 
   push-tag:
     runs-on: ubuntu-latest

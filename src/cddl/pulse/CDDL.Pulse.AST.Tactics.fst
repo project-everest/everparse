@@ -15,7 +15,7 @@ let lemma_as_squash () : FStar.Tactics.Tac unit =
   let p = forall_intro () in
   let h = implies_intro () in
   let any_result = forall_intro () in
-  let term = (`(FStar.Squash.return_squash (`#(h)))) in
+  let term = h in
   let hh = instantiate h any_result in
   mapply hh
 

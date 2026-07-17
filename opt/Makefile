@@ -5,7 +5,7 @@ git-clone:
 
 include hashes.Makefile
 
-EVERPARSE_OPAM_FILES_DEFAULT = fstar-deps.opam karamel-deps.opam pulse-deps.opam everparse-deps.opam
+EVERPARSE_OPAM_FILES_DEFAULT = fstar-deps.opam everparse-deps.opam
 EVERPARSE_OPAM_FILES := $(EVERPARSE_OPAM_FILES_DEFAULT)
 
 # Include specific options on release branches (e.g. EVERPARSE_OPAM_FILES)
@@ -26,7 +26,6 @@ endif
 # Change these if you want to use your own clones
 FStar_repo=https://github.com/FStarLang/FStar
 karamel_repo=https://github.com/FStarLang/karamel
-pulse_repo=https://github.com/FStarLang/pulse
 
 # This rule is necessary for the package and release CI rules to pull
 # the right hash when building the F* source package for Windows
@@ -41,7 +40,7 @@ ifeq ($(OS),Windows_NT)
 endif
 	git clone $(FStar_repo) $@
 
-karamel pulse: %:
+karamel: %:
 	git clone $($@_repo) $@
 
 opam:
@@ -56,7 +55,8 @@ opam:
 
 snapshot:
 	./snapshot.sh
-	touch -c FStar/Makefile karamel/Makefile pulse/Makefile
+	touch -c FStar/Makefile
+	touch -c karamel/Makefile
 
 .PHONY: snapshot
 
@@ -69,11 +69,6 @@ karamel-deps.opam: karamel/Makefile
 	grep -v '^ *"fstar"' < karamel/karamel.opam > $@.tmp
 	mv $@.tmp $@
 
-pulse-deps.opam: pulse/Makefile
-	rm -f $@ $@.tmp
-	grep -v '^ *"fstar"' < pulse/pulse.opam > $@.tmp
-	mv $@.tmp $@
-
 opam.done: opam $(EVERPARSE_OPAM_FILES)
 	eval "$$(opam env --root=opam --set-root)" && opam install --deps-only $(addprefix ./,$(EVERPARSE_OPAM_FILES))
 	touch $@
@@ -82,7 +77,7 @@ advance:
 	rm -f hashes.Makefile
 	cp advance.Makefile hashes.Makefile
 	touch hashes.Makefile
-	+$(MAKE) FStar/Makefile karamel/Makefile pulse/Makefile
+	+$(MAKE) FStar/Makefile karamel/Makefile
 	+$(MAKE) snapshot
 
 .PHONY: advance
@@ -101,7 +96,7 @@ else
 	+if test -d FStar ; then $(MAKE) -C FStar clean ; fi
 endif
 
-clean_rules := $(addsuffix .clean,karamel pulse z3 opam)
+clean_rules := $(addsuffix .clean,karamel z3 opam)
 
 $(clean_rules): %.clean:
 	rm -rf $(basename $@) $(basename $@).done
@@ -113,6 +108,6 @@ clean: FStar.clean $(clean_rules) clean-opam
 .PHONY: clean
 
 clean-opam:
-	rm -f $(addsuffix -deps.opam,fstar karamel pulse) opam.done
+	rm -f $(addsuffix -deps.opam,fstar karamel) opam.done
 
 .PHONY: clean-opam

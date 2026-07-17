@@ -1796,6 +1796,7 @@ let map_group_zero_or_more_map_group_match_item_for
       | MapGroupDet consumed rem ->
         assert (cbor_map_length rem < cbor_map_length l);
         map_group_concat_eq_r g (bound_map_group l (map_group_zero_or_more g)) map_group_nop l (fun l' ->
+          map_group_match_item_for_eq_gen cut key value l;
           map_group_zero_or_more_eq g (snd l');
           map_group_match_item_for_eq_gen cut key value (snd l');
           assert (cbor_map_get (snd l') key == None)

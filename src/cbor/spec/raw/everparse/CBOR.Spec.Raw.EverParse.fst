@@ -1937,7 +1937,7 @@ let bytes_lex_compare_refl
 
 #pop-options
 
-#push-options "--z3rlimit 256 --split_queries always"
+#push-options "--z3rlimit 128 --split_queries always"
 
 let serialized_lex_compare_simple_value
   (x1 x2: simple_value)
@@ -2089,11 +2089,11 @@ let big_endian_lex_compare'
   (x y: nat)
 : Lemma
   (
-    let open FStar.Mul in
+
     (x < pow2 (8 * n) /\ y < pow2 (8 * n)) ==>
     (bytes_lex_compare (LowParse.Endianness.n_to_be n x) (LowParse.Endianness.n_to_be n y) == int_compare x y)
   )
-= if x < pow2 (let open FStar.Mul in 8 * n) && y < pow2 (let open FStar.Mul in 8 * n)
+= if x < pow2 (8 * n) && y < pow2 (8 * n)
   then begin
     bytes_lex_compare_oppose (LowParse.Endianness.n_to_be n x) (LowParse.Endianness.n_to_be n y);
     LowParse.Spec.Endianness.big_endian_lex_compare n byte_compare (fun _ _ -> ()) (fun _ _ -> ()) x y;
@@ -2118,7 +2118,7 @@ let lex_compare_with_header_uint
   (g: (long_argument b1 -> Tot t) { synth_inverse f g })
   (s: tot_serializer p)
   (n: nat)
-  (uv: (t -> FStar.UInt.uint_t (8 `op_Multiply` n)))
+  (uv: (t -> FStar.UInt.uint_t (8 `op_Star` n)))
   (s_spec: (
     (x: t) ->
     Lemma

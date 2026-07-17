@@ -43,7 +43,7 @@ let make_slice
   len = len;
 }
 
-let live_slice  (#rrel #rel: _) (h: HS.mem) (s: slice rrel rel) : GTot Type0 = B.live h s.base
+let live_slice  (#rrel #rel: _) (h: HS.mem) (s: slice rrel rel) : GTot prop = B.live h s.base
 
 let bytes_of_slice_from   (#rrel #rel: _)
   (h: HS.mem) (s: slice rrel rel) (pos: U32.t) : GTot bytes =

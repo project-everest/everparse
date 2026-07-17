@@ -9,12 +9,11 @@ module M = LowParse.Math
 
 module U32 = FStar.UInt32
 
-open FStar.Mul // for Prims.op_Multiply
 
 // arith lemmas must be called explicitly
 #reset-options "--z3cliopt smt.arith.nl=false"
 
-let array_pred (#t: Type) (n: nat) (s: list t) : GTot Type0 =
+let array_pred (#t: Type) (n: nat) (s: list t) : GTot prop =
   L.length s == n
 
 inline_for_extraction
@@ -282,7 +281,7 @@ let length_serialize_array
   })
   (x: array t elem_count)
 : Lemma
-  (Seq.length (serialize (serialize_array s array_byte_size elem_count u) x) == L.length x `FStar.Mul.op_Star` k.parser_kind_low)
+  (Seq.length (serialize (serialize_array s array_byte_size elem_count u) x) == L.length x `op_Star` k.parser_kind_low)
 = 
   fldata_to_array_inj s array_byte_size elem_count u;
   array_to_fldata_to_array s array_byte_size elem_count u u;
@@ -297,7 +296,7 @@ let length_serialize_array
   list_length_constant_size_parser_correct p (serialize (serialize_list _ s) x)
 
 
-let vlarray_pred (#t: Type) (min max: nat) (s: list t) : GTot Type0 =
+let vlarray_pred (#t: Type) (min max: nat) (s: list t) : GTot prop =
     let l = L.length s in
     min <= l /\ l <= max
 
@@ -584,7 +583,7 @@ let length_serialize_vlarray
   })
   (x: vlarray t elem_count_min elem_count_max)
 : Lemma
-  (Seq.length (serialize (serialize_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max u) x) == log256' array_byte_size_max + (L.length x `FStar.Mul.op_Star` k.parser_kind_low))
+  (Seq.length (serialize (serialize_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max u) x) == log256' array_byte_size_max + (L.length x `op_Star` k.parser_kind_low))
 = vldata_to_vlarray_inj array_byte_size_min array_byte_size_max s elem_count_min elem_count_max u;
   vlarray_to_vldata_to_vlarray array_byte_size_min array_byte_size_max s elem_count_min elem_count_max u;
   serialize_synth_eq

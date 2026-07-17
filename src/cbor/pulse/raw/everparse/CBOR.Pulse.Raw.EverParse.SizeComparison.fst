@@ -1,7 +1,6 @@
 module CBOR.Pulse.Raw.EverParse.SizeComparison
 #lang-pulse
 open Pulse.Lib.Pervasives
-open FStar.Mul
 open LowParse.Pulse.Base
 open LowParse.Spec.VCList
 

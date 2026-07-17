@@ -1295,7 +1295,7 @@ let rec mk_wf_typ
         let j = eval_int_value ri in
         if j < 0
         then RFailure "mk_wf_typ: uint .size negative"
-        else let i = (let open FStar.Mul in 8 * j) in
+        else let i = (8 * j) in
         if i >= 64
         then begin
           FStar.Math.Lemmas.pow2_le_compat i 64;

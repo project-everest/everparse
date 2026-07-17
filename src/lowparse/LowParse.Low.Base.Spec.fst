@@ -673,7 +673,7 @@ let rec serialized_list_length_constant_size
   (l: list t)
 : Lemma
   (ensures (
-    serialized_list_length s l == L.length l `Prims.op_Multiply` k.parser_kind_low
+    serialized_list_length s l == L.length l `op_Star` k.parser_kind_low
   ))
 = match l with
   | [] ->

@@ -66,6 +66,7 @@ CBOR_KRML_MODULES += CDDL.Pulse.Parse.ArrayGroup
 # CBOR_KRML_MODULES += CDDL.Pulse.Serialize.ArrayGroup
 CBOR_KRML_MODULES += CDDL.Pulse.Types
 
+CBOR_KRML_MODULES += Pulse.Lib.Pervasives
 CBOR_KRML_MODULES += Pulse.Lib.Slice
 
 CBOR_KRML_MODULES += FStar.Pervasives
@@ -89,6 +90,7 @@ $(OUTPUT_DIRECTORY)/%.c: $(OUTPUT_DIRECTORY)/%.krml $(addprefix $(OUTPUT_DIRECTO
 	$(KRML) -fnoshort-enums \
 	 -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C+FStar.Pervasives.Native=CBOR.\*[rename=CBORDetAPI]' \
 	 -bundle '$*=*' \
+	 -skip-makefiles \
 	 -add-include '"CBORDetType.h"' -no-prefix CBOR.Pulse.API.Det.Dummy \
 	 -no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type \
 	 -no-prefix CBOR.Spec.Constants -skip-compilation $^ \

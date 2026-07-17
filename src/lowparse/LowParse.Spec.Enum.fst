@@ -329,7 +329,7 @@ let serialize_maybe_enum_key_eq
   (serialize (serialize_maybe_enum_key p s e) x == serialize s (repr_of_maybe_enum_key e x))
 = serialize_synth_eq p (maybe_enum_key_of_repr e) s (repr_of_maybe_enum_key e) () x 
 
-let is_total_enum (#key: eqtype) (#repr: eqtype) (l: list (key & repr)) : GTot Type0 =
+let is_total_enum (#key: eqtype) (#repr: eqtype) (l: list (key & repr)) : GTot prop =
   forall (k: key) . {:pattern (list_mem k (list_map fst l))} list_mem k (list_map fst l)
 
 let total_enum (key: eqtype) (repr: eqtype) : Tot eqtype =
@@ -459,20 +459,20 @@ let parse_maybe_total_enum_key_eq
 
 let r_reflexive_prop
   (t: Type)
-  (r: (t -> t -> GTot Type0))
-: GTot Type0
+  (r: (t -> t -> GTot prop))
+: GTot prop
 = forall (x: t) . {:pattern (r x x)} r x x
 
 inline_for_extraction
 let r_reflexive_t
   (t: Type)
-  (r: (t -> t -> GTot Type0))
+  (r: (t -> t -> GTot prop))
 : Tot Type
 = (x: t) -> Lemma (r x x)
 
 let r_reflexive_t_elim
   (t: Type)
-  (r: (t -> t -> GTot Type0))
+  (r: (t -> t -> GTot prop))
   (phi: r_reflexive_t t r)
 : Lemma
   (r_reflexive_prop t r)
@@ -480,20 +480,20 @@ let r_reflexive_t_elim
 
 let r_transitive_prop
   (t: Type)
-  (r: (t -> t -> GTot Type0))
-: GTot Type0
+  (r: (t -> t -> GTot prop))
+: GTot prop
 = forall (x y z: t) . {:pattern (r x y); (r y z)} (r x y /\ r y z) ==> r x z
 
 inline_for_extraction
 let r_transitive_t
   (t: Type)
-  (r: (t -> t -> GTot Type0))
+  (r: (t -> t -> GTot prop))
 : Tot Type
 = (x: t) -> (y: t) -> (z: t) -> Lemma ((r x y /\ r y z) ==> r x z)
 
 let r_transitive_t_elim
   (t: Type)
-  (r: (t -> t -> GTot Type0))
+  (r: (t -> t -> GTot prop))
   (phi: r_transitive_t t r)
 : Lemma
   (r_transitive_prop t r)
@@ -502,7 +502,7 @@ let r_transitive_t_elim
 inline_for_extraction
 let if_combinator
   (t: Type)
-  (eq: (t -> t -> GTot Type0))
+  (eq: (t -> t -> GTot prop))
 : Tot Type
 = (cond: bool) ->
   (sv_true: (cond_true cond -> Tot t)) ->
@@ -512,7 +512,7 @@ let if_combinator
 let eq_trivial
   (#t: Type)
   (x y: t)
-: GTot Type0
+: GTot prop
 = True
 
 inline_for_extraction
@@ -529,16 +529,16 @@ let default_if
 
 let feq
   (u v: Type)
-  (eq: (v -> v -> GTot Type0))
+  (eq: (v -> v -> GTot prop))
   (f1 f2: (u -> Tot v))
-: GTot Type0
+: GTot prop
 = (forall (x: u) . {:pattern (f1 x); (f2 x)} eq (f1 x) (f2 x))
 
 (* #!$% patterns on forall, the following proofs should be trivial and now they aren't *)
 
 let feq_elim
   (u v: Type)
-  (eq: (v -> v -> GTot Type0))
+  (eq: (v -> v -> GTot prop))
   (f1 f2: (u -> Tot v))
   (x: u)
 : Lemma
@@ -548,7 +548,7 @@ let feq_elim
 
 let feq_intro
   (u v: Type)
-  (eq: (v -> v -> GTot Type0))
+  (eq: (v -> v -> GTot prop))
   (f1 f2: (u -> Tot v))
   (phi: (x: u) -> Lemma (f1 x `eq` f2 x))
 : Lemma (feq _ _ eq f1 f2)
@@ -556,7 +556,7 @@ let feq_intro
 
 let feq_trans
   (u v: Type)
-  (eq: (v -> v -> GTot Type0))
+  (eq: (v -> v -> GTot prop))
 : Pure (r_transitive_t _ (feq _ _ eq))
   (requires (r_transitive_prop _ eq))
   (ensures (fun _ -> True))
@@ -578,7 +578,7 @@ let feq_trans
 inline_for_extraction
 let fif
   (u v: Type)
-  (eq: (v -> v -> GTot Type0))
+  (eq: (v -> v -> GTot prop))
   (ifc: if_combinator v eq)
 : Tot (if_combinator (u -> Tot v) (feq u v eq))
 = fun (cond: bool) (s_true: (cond_true cond -> u -> Tot v)) (s_false: (cond_false cond -> u -> Tot v)) (x: u) ->
@@ -593,7 +593,7 @@ let enum_destr_t
   (#key #repr: eqtype)  
   (e: enum key repr)
 : Tot Type
-= (eq: (t -> t -> GTot Type0)) ->
+= (eq: (t -> t -> GTot prop)) ->
   (ift: if_combinator t eq) ->
   (eq_refl: r_reflexive_t _ eq) ->
   (eq_trans: r_transitive_t _ eq) ->
@@ -626,7 +626,7 @@ let enum_destr_cons
 : Pure (enum_destr_t t e)
   (requires (Cons? e))
   (ensures (fun _ -> True))
-= fun (eq: (t -> t -> GTot Type0)) (ift: if_combinator t eq) (eq_refl: r_reflexive_t _ eq) (eq_trans: r_transitive_t _ eq) ->
+= fun (eq: (t -> t -> GTot prop)) (ift: if_combinator t eq) (eq_refl: r_reflexive_t _ eq) (eq_trans: r_transitive_t _ eq) ->
   [@inline_let]
   let _ = r_reflexive_t_elim _ _ eq_refl in
   [@inline_let]
@@ -674,7 +674,7 @@ let enum_destr_cons_nil
 : Pure (enum_destr_t t e)
   (requires (Cons? e /\ Nil? (enum_tail' e)))
   (ensures (fun _ -> True))
-= fun (eq: (t -> t -> GTot Type0)) (ift: if_combinator t eq) (eq_refl: r_reflexive_t _ eq) (eq_trans: r_transitive_t _ eq) ->
+= fun (eq: (t -> t -> GTot prop)) (ift: if_combinator t eq) (eq_refl: r_reflexive_t _ eq) (eq_trans: r_transitive_t _ eq) ->
   [@inline_let]
   let _ = r_reflexive_t_elim _ _ eq_refl in
   (fun (e' : list (key & repr) { e' == e } ) -> match e' with
@@ -702,7 +702,7 @@ let dep_enum_destr
   (e: enum key repr)
   (v: (enum_key e -> Tot (Type u#a)))
 : Tot (Type)
-= (v_eq: ((k: enum_key e) -> v k -> v k -> GTot Type0)) ->
+= (v_eq: ((k: enum_key e) -> v k -> v k -> GTot prop)) ->
   (v_if: ((k: enum_key e) -> Tot (if_combinator (v k) (v_eq k)))) ->
   (v_eq_refl: ((k: enum_key e) -> Tot (r_reflexive_t _ (v_eq k)))) ->
   (v_eq_trans: ((k: enum_key e) -> Tot (r_transitive_t _ (v_eq k)))) ->
@@ -723,7 +723,7 @@ let dep_enum_destr_cons
 = match e with
   | ((k, _) :: _) ->
     fun
-    (v_eq: ((k: enum_key e) -> v k -> v k -> GTot Type0))
+    (v_eq: ((k: enum_key e) -> v k -> v k -> GTot prop))
     (v_if: ((k: enum_key e) -> Tot (if_combinator (v k) (v_eq k))))
     (v_eq_refl: ((k: enum_key e) -> Tot (r_reflexive_t _ (v_eq k))))
     (v_eq_trans: ((k: enum_key e) -> Tot (r_transitive_t _ (v_eq k))))
@@ -743,7 +743,7 @@ let dep_enum_destr_cons
         [@inline_let]
         let v' (k: enum_key (enum_tail e)) : Tot Type = v (k <: key) in
         [@inline_let]
-        let v'_eq (k: enum_key (enum_tail e)) : Tot (v' k -> v' k -> GTot Type0) = v_eq (k <: key) in
+        let v'_eq (k: enum_key (enum_tail e)) : Tot (v' k -> v' k -> GTot prop) = v_eq (k <: key) in
         [@inline_let]
         let v'_if (k: enum_key (enum_tail e)) : Tot (if_combinator (v' k) (v'_eq k)) = v_if (k <: key) in
         [@inline_let]
@@ -777,7 +777,7 @@ let dep_enum_destr_cons_nil
 = match e with
   | ((k, _) :: _) ->
     fun
-    (v_eq: ((k: enum_key e) -> v k -> v k -> GTot Type0))
+    (v_eq: ((k: enum_key e) -> v k -> v k -> GTot prop))
     (v_if: ((k: enum_key e) -> Tot (if_combinator (v k) (v_eq k))))
     (v_eq_refl: ((k: enum_key e) -> Tot (r_reflexive_t _ (v_eq k))))
     (v_eq_trans: ((k: enum_key e) -> Tot (r_transitive_t _ (v_eq k))))
@@ -794,7 +794,7 @@ let dep_enum_destr_cons_nil
 (* Destructor from the representation *)
 
 
-let maybe_enum_key_of_repr_not_in (#key #repr: eqtype) (e: enum key repr) (l: list (key & repr)) (x: repr) : GTot Type0 =
+let maybe_enum_key_of_repr_not_in (#key #repr: eqtype) (e: enum key repr) (l: list (key & repr)) (x: repr) : GTot prop =
   (~ (L.mem x (L.map snd l)))
 
 let list_rev_cons
@@ -836,7 +836,7 @@ let maybe_enum_destr_t'
   (l1 l2: list (key & repr))
   (u1: squash (e == L.append (L.rev l1) l2))
 : Tot Type
-= (eq: (t -> t -> GTot Type0)) ->
+= (eq: (t -> t -> GTot prop)) ->
   (ift: if_combinator t eq) ->
   (eq_refl: r_reflexive_t _ eq) ->
   (eq_trans: r_transitive_t _ eq) ->
@@ -850,7 +850,7 @@ let maybe_enum_destr_t
   (#key #repr: eqtype)  
   (e: enum key repr)
 : Tot Type
-= (eq: (t -> t -> GTot Type0)) ->
+= (eq: (t -> t -> GTot prop)) ->
   (ift: if_combinator t eq) ->
   (eq_refl: r_reflexive_t _ eq) ->
   (eq_trans: r_transitive_t _ eq) ->
@@ -864,7 +864,7 @@ let destr_maybe_total_enum_repr
   (#key #repr: eqtype)
   (e: total_enum key repr)
   (destr: maybe_enum_destr_t t e)
-  (eq: (t -> t -> GTot Type0))
+  (eq: (t -> t -> GTot prop))
   (ift: if_combinator t eq)
   (eq_refl: r_reflexive_t _ eq)
   (eq_trans: r_transitive_t _ eq)
@@ -921,7 +921,7 @@ let maybe_enum_destr_cons
   (u1: squash (Cons? l2 /\ e == L.append (L.rev l1) l2))
   (g: (maybe_enum_destr_t' t e (list_hd l2 :: l1) (list_tl l2) (list_append_rev_cons l1 (list_hd l2) (list_tl l2))))
 : Tot (maybe_enum_destr_t' t e l1 l2 u1)
-= fun (eq: (t -> t -> GTot Type0)) (ift: if_combinator t eq) (eq_refl: r_reflexive_t _ eq) (eq_trans: r_transitive_t _ eq) (f: (maybe_enum_key e -> Tot t)) ->
+= fun (eq: (t -> t -> GTot prop)) (ift: if_combinator t eq) (eq_refl: r_reflexive_t _ eq) (eq_trans: r_transitive_t _ eq) (f: (maybe_enum_key e -> Tot t)) ->
   [@inline_let]
   let _ = r_reflexive_t_elim _ _ eq_refl in
   [@inline_let]
@@ -971,7 +971,7 @@ let maybe_enum_destr_nil
   (l2: list (key & repr))
   (u1: squash (Nil? l2 /\ e == L.append (L.rev l1) []))
 : Tot (maybe_enum_destr_t' t e l1 l2 u1)
-= fun (eq: (t -> t -> GTot Type0)) (ift: if_combinator t eq) (eq_refl: r_reflexive_t _ eq) (eq_trans: r_transitive_t _ eq) (f: (maybe_enum_key e -> Tot t)) ->
+= fun (eq: (t -> t -> GTot prop)) (ift: if_combinator t eq) (eq_refl: r_reflexive_t _ eq) (eq_trans: r_transitive_t _ eq) (f: (maybe_enum_key e -> Tot t)) ->
   [@inline_let]
   let _ = r_reflexive_t_elim _ _ eq_refl in
   [@inline_let]
@@ -1016,7 +1016,7 @@ let dep_maybe_enum_destr_t
   (e: enum key repr)
   (v: (maybe_enum_key e -> Tot Type))
 : Tot Type
-= (v_eq: ((k: maybe_enum_key e) -> v k -> v k -> GTot Type0)) ->
+= (v_eq: ((k: maybe_enum_key e) -> v k -> v k -> GTot prop)) ->
   (v_if: ((k: maybe_enum_key e) -> Tot (if_combinator (v k) (v_eq k)))) ->
   (v_eq_refl: ((k: maybe_enum_key e) -> Tot (r_reflexive_t _ (v_eq k)))) ->
   (v_eq_trans: ((k: maybe_enum_key e) -> Tot (r_transitive_t _ (v_eq k)))) ->
@@ -1032,7 +1032,7 @@ let dep_maybe_enum_destr_t'
   (l1 l2: list (key & repr))
   (u1: squash (e == L.append (L.rev l1) l2))
 : Tot Type
-= (v_eq: ((k: maybe_enum_key e) -> v k -> v k -> GTot Type0)) ->
+= (v_eq: ((k: maybe_enum_key e) -> v k -> v k -> GTot prop)) ->
   (v_if: ((k: maybe_enum_key e) -> Tot (if_combinator (v k) (v_eq k)))) ->
   (v_eq_refl: ((k: maybe_enum_key e) -> Tot (r_reflexive_t _ (v_eq k)))) ->
   (v_eq_trans: ((k: maybe_enum_key e) -> Tot (r_transitive_t _ (v_eq k)))) ->
@@ -1060,7 +1060,7 @@ let dep_maybe_enum_destr_cons
   (g: (dep_maybe_enum_destr_t' e v (list_hd l2 :: l1) (list_tl l2) (list_append_rev_cons l1 (list_hd l2) (list_tl l2))))
 : Tot (dep_maybe_enum_destr_t' e v l1 l2 u1)
 = fun
-  (v_eq: ((k: maybe_enum_key e) -> v k -> v k -> GTot Type0))
+  (v_eq: ((k: maybe_enum_key e) -> v k -> v k -> GTot prop))
   (v_if: ((k: maybe_enum_key e) -> Tot (if_combinator (v k) (v_eq k))))
   (v_eq_refl: ((k: maybe_enum_key e) -> Tot (r_reflexive_t _ (v_eq k))))
   (v_eq_trans: ((k: maybe_enum_key e) -> Tot (r_transitive_t _ (v_eq k))))
@@ -1110,7 +1110,7 @@ let dep_maybe_enum_destr_nil
   (u1: squash (Nil? l2 /\ e == L.append (L.rev l1) []))
 : Tot (dep_maybe_enum_destr_t' e v l1 l2 u1)
 = fun
-  (v_eq: ((k: maybe_enum_key e) -> v k -> v k -> GTot Type0))
+  (v_eq: ((k: maybe_enum_key e) -> v k -> v k -> GTot prop))
   (v_if: ((k: maybe_enum_key e) -> Tot (if_combinator (v k) (v_eq k))))
   (v_eq_refl: ((k: maybe_enum_key e) -> Tot (r_reflexive_t _ (v_eq k))))
   (v_eq_trans: ((k: maybe_enum_key e) -> Tot (r_transitive_t _ (v_eq k))))
@@ -1152,12 +1152,12 @@ let mk_dep_maybe_enum_destr
 
 (* Eliminators and destructors for verification purposes *)
 
-let rec list_forallp (#t: Type) (p: t -> GTot Type0) (l: list t) : GTot Type0 =
+let rec list_forallp (#t: Type) (p: t -> GTot prop) (l: list t) : GTot prop =
   match l with
   | [] -> True
   | a :: q -> p a /\ list_forallp p q
 
-let rec list_forallp_mem (#t: eqtype) (p: t -> GTot Type0) (l: list t) : Lemma
+let rec list_forallp_mem (#t: eqtype) (p: t -> GTot prop) (l: list t) : Lemma
   (list_forallp p l <==> (forall x . L.mem x l ==> p x))
 = match l with
   | [] -> ()
@@ -1187,7 +1187,7 @@ let destruct_maybe_enum_key
 let forall_maybe_enum_key
   (#key #value: eqtype)
   (e: enum key value)
-  (f: maybe_enum_key e -> GTot Type0)
+  (f: maybe_enum_key e -> GTot prop)
   (f_known: squash (list_forallp (fun (x: key) -> list_mem x (list_map fst e) /\ f (Known x)) (list_map fst e)))
   (f_unknown: (
     (x: value) ->
