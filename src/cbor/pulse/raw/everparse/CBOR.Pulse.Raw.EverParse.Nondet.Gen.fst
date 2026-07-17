@@ -27,38 +27,6 @@ let impl_equiv_with_bound_t
       )
     )
 
-inline_for_extraction
-let impl_equiv_hd_with_bound_t
-  (#t: Type)
-  (bound: nat)
-  (equiv: (x1: raw_data_item) -> (x2: raw_data_item { raw_data_item_size x1 + raw_data_item_size x2 <= bound }) -> t)
-=
-  (n1: Ghost.erased nat) ->
-  (l1: S.slice byte) ->
-  (n2: Ghost.erased nat) ->
-  (l2: S.slice byte) ->
-  (#p1: perm) ->
-  (#gl1: Ghost.erased (nlist n1 raw_data_item)) ->
-  (#p2: perm) ->
-  (#gl2: Ghost.erased (nlist n2 raw_data_item)) ->
-  stt t
-    (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
-      pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2 **
-      pure (
-        n1 > 0 /\ n2 > 0 /\
-        raw_data_item_size (List.Tot.hd gl1) + raw_data_item_size (List.Tot.hd gl2) <= bound
-      )
-    )
-    (fun res ->
-pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
-      pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2 **
-      pure (
-        n1 > 0 /\ n2 > 0 /\
-        raw_data_item_size (List.Tot.hd gl1) + raw_data_item_size (List.Tot.hd gl2) <= bound /\
-        res == equiv (List.Tot.hd gl1) (List.Tot.hd gl2)
-      )
-    )
-
 #push-options "--z3rlimit 32"
 
 let pts_to_serialized_nlist_raw_data_item_head_header'_post_children
@@ -1096,10 +1064,11 @@ ensures pure
 
 inline_for_extraction
 fn impl_check_equiv_map_hd_body
+  (d: Ghost.erased nat)
   (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
   (impl_data_model: impl_equiv_hd_t data_model)
-  (impl_check_equiv_map_hd: impl_check_equiv_map_hd_t data_model)
-: impl_check_equiv_map_hd_t (Ghost.reveal data_model)
+  (impl_check_equiv_map_hd: (d': Ghost.erased nat { Ghost.reveal d' << Ghost.reveal d }) -> impl_check_equiv_map_hd_t data_model d')
+: impl_check_equiv_map_hd_t (Ghost.reveal data_model) d
 =
   (map_bound: _)
   (n1: Ghost.erased nat)
@@ -1154,6 +1123,9 @@ fn impl_check_equiv_map_hd_body
         );
         let bound_eq: squash (bound_eq_prop v1 v2 bound) = ();
         let map_bound'_eq: squash (map_bound'_eq_prop (option_sz_v map_bound) gmap_bound') = ();
+        raw_data_item_size_eq (List.Tot.hd gl1);
+        raw_data_item_size_eq (List.Tot.hd gl2);
+        let sq_dec : squash (Ghost.reveal bound << Ghost.reveal d) = ();
         assert (pure (~ (long_argument_simple_value_prop (dfst h1))));
         assert (pure (~ (long_argument_simple_value_prop (dfst h2))));
         let map1 = nlist_hd' serialize_raw_data_item (jump_raw_data_item ()) n1 l1 ();
@@ -1193,11 +1165,7 @@ fn impl_check_equiv_map_hd_body
         let res = impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow_with_bound
           (impl_check_equiv_aux
             (impl_check_equiv_list
-              (impl_equiv_hd_with_bound_of_equiv_hd
-                _
-                (impl_check_equiv_map_hd map_bound')
-                bound
-              )
+              (impl_check_equiv_map_hd bound map_bound')
             )
           )
           nv2 c2 nv1 c1;
@@ -1205,11 +1173,7 @@ fn impl_check_equiv_map_hd_body
           let res = impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow_with_bound
           (impl_check_equiv_aux
             (impl_check_equiv_list
-              (impl_equiv_hd_with_bound_of_equiv_hd
-                _
-                (impl_check_equiv_map_hd map_bound')
-                bound
-              )
+              (impl_check_equiv_map_hd bound map_bound')
             )
           )
           nv1 c1 nv2 c2;
@@ -1253,7 +1217,7 @@ fn impl_check_equiv_map_hd_body
 inline_for_extraction
 fn impl_check_equiv_list_map
   (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
-  (impl_check_equiv_map_hd: impl_check_equiv_map_hd_t data_model)
+  (impl_check_equiv_map_hd: (d: Ghost.erased nat) -> impl_check_equiv_map_hd_t data_model d)
   (map_bound: option SZ.t)
 : impl_check_equiv_list_t (check_equiv_map data_model (option_sz_v map_bound))
 =
@@ -1271,11 +1235,7 @@ fn impl_check_equiv_list_map
     list_sum raw_data_item_size gl1 + list_sum raw_data_item_size gl2 <= bound
   ) = ();
   impl_check_equiv_list
-    (impl_equiv_hd_with_bound_of_equiv_hd
-      _
-      (impl_check_equiv_map_hd map_bound)
-      bound
-    )
+    (impl_check_equiv_map_hd bound map_bound)
     n1 l1 n2 l2
     sq
 }
