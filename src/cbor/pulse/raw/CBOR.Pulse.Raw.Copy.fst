@@ -303,7 +303,7 @@ type cbor_freeable = {
 
 let freeable (f: cbor_freeable) : Tot slprop = freeable_match' f.footprint f.tree
 
-fn rec cbor_free0
+fn cbor_free0
   (x: cbor_freeable)
 requires
   freeable x
