@@ -124,6 +124,32 @@ let ftmap_precedes
   [SMTPat (FTMap r0)]
 = ftmap_precedes' (FTMap r0)
 
+let ftbox_precedes'
+  (r: freeable_tree { FTBox? r })
+: Lemma
+  (FTBox?.b r << r)
+= ()
+
+let ftbox_precedes
+  (r0: freeable_tree)
+: Lemma
+  (ensures (r0 << FTBox r0))
+  [SMTPat (FTBox r0)]
+= ftbox_precedes' (FTBox r0)
+
+let ftarray_precedes'
+  (r: freeable_tree { FTArray? r })
+: Lemma
+  (FTArray?.a r << r)
+= ()
+
+let ftarray_precedes
+  (r0: list freeable_tree)
+: Lemma
+  (ensures (r0 << FTArray r0))
+  [SMTPat (FTArray r0)]
+= ftarray_precedes' (FTArray r0)
+
 ghost
 fn freeable_match_map_entry_weaken_recip
   (r0: list (freeable_tree & freeable_tree))
@@ -171,35 +197,38 @@ ensures
 }
 
 inline_for_extraction
-let cbor_free'_t =
+let cbor_free'_t (bound: freeable_tree) =
   (x: cbor_freeable0) ->
-  (ft: freeable_tree) ->
+  (ft: freeable_tree { ft << bound }) ->
   stt unit
     (freeable_match' x ft)
     (fun _ -> emp)
 
 inline_for_extraction
 fn cbor_free_map_entry
-  (cbor_free': cbor_free'_t)
+  (bound: freeable_tree)
+  (cbor_free': cbor_free'_t bound)
   (x: cbor_freeable_map_entry)
-  (ft: Ghost.erased (freeable_tree & freeable_tree))
+  (ft: Ghost.erased (freeable_tree & freeable_tree) { fst (Ghost.reveal ft) << bound /\ snd (Ghost.reveal ft) << bound })
 requires
     (freeable_match_map_entry x ft)
 ensures
     (emp)
 {
   unfold (freeable_match_map_entry x ft);
-  cbor_free' x.map_entry_key _;
-  cbor_free' x.map_entry_value _;
+  cbor_free' x.map_entry_key (fst (Ghost.reveal ft));
+  cbor_free' x.map_entry_value (snd (Ghost.reveal ft));
 }
 
 fn rec cbor_free'
+  (bound: freeable_tree)
   (x: cbor_freeable0)
-  (ft: freeable_tree)
+  (ft: freeable_tree { ft << bound })
 requires
   freeable_match' x ft
 ensures
   emp
+decreases bound
 {
   freeable_match'_cases x ft;
   match x {
@@ -219,7 +248,7 @@ ensures
       unfold (freeable_match' (CBOR_Copy_Box b) (FTBox ft'));
       B.free b.box_cbor;
       let b' = ((let open Pulse.Lib.Box in ( ! )) b.box_footprint);
-      cbor_free' b' _;
+      cbor_free' ft b' _;
       B.free b.box_footprint
     }
     CBOR_Copy_Array a -> {
@@ -232,28 +261,30 @@ ensures
       SM.seq_list_match_length freeable_match' s ft';
       SM.seq_list_match_seq_seq_match freeable_match' s ft';
       let len = a.array_len;
-      with s' . assert (SM.seq_seq_match freeable_match' s s' 0 (SZ.v len));
       let mut pi = 0sz;
       while (
         let i = !pi;
         (SZ.lt i len)
-      ) invariant exists* i j . (
+      ) invariant exists* i . (
         pts_to a.array_footprint s **
         pts_to pi i **
-        SM.seq_seq_match freeable_match' s s' j (SZ.v len) **
+        SM.seq_seq_match freeable_match' s (Seq.seq_of_list (Ghost.reveal ft')) (SZ.v i) (SZ.v len) **
         pure (
-          j == SZ.v i /\
-          SZ.v i <= SZ.v len
+          SZ.v i <= SZ.v len /\
+          SZ.v len == List.Tot.length (Ghost.reveal ft') /\
+          Ghost.reveal ft == FTArray (Ghost.reveal ft')
         )
       ) {
-        SM.seq_seq_match_dequeue_left freeable_match' s s' _ _;
         let i = !pi;
+        SM.seq_seq_match_dequeue_left freeable_match' s (Seq.seq_of_list (Ghost.reveal ft')) (SZ.v i) (SZ.v len);
         let x' = V.op_Array_Access a.array_footprint i;
-        with x_ y_ . rewrite freeable_match' x_ y_ as freeable_match' x' y_;
-        cbor_free' x' _;
+        rewrite (freeable_match' (Seq.index s (SZ.v i)) (Seq.index (Seq.seq_of_list (Ghost.reveal ft')) (SZ.v i)))
+             as (freeable_match' x' (Seq.index (Seq.seq_of_list (Ghost.reveal ft')) (SZ.v i)));
+        FStar.List.Tot.Properties.memP_precedes (List.Tot.index (Ghost.reveal ft') (SZ.v i)) (Ghost.reveal ft');
+        cbor_free' ft x' _;
         pi := (SZ.add i 1sz);
       };
-      SM.seq_seq_match_empty_elim freeable_match' s s' (SZ.v len);
+      SM.seq_seq_match_empty_elim freeable_match' s (Seq.seq_of_list (Ghost.reveal ft')) (SZ.v len);
       V.free a.array_footprint
     }
     CBOR_Copy_Map a -> {
@@ -267,28 +298,30 @@ ensures
       SM.seq_list_match_length freeable_match_map_entry s ft';
       SM.seq_list_match_seq_seq_match freeable_match_map_entry s ft';
       let len = a.map_len;
-      with s' . assert (SM.seq_seq_match freeable_match_map_entry s s' 0 (SZ.v len));
       let mut pi = 0sz;
       while (
         let i = !pi;
         (SZ.lt i len)
-      ) invariant exists* i j . (
+      ) invariant exists* i . (
         pts_to a.map_footprint s **
         pts_to pi i **
-        SM.seq_seq_match freeable_match_map_entry s s' j (SZ.v len) **
+        SM.seq_seq_match freeable_match_map_entry s (Seq.seq_of_list (Ghost.reveal ft')) (SZ.v i) (SZ.v len) **
         pure (
-          j == SZ.v i /\
-          SZ.v i <= SZ.v len
+          SZ.v i <= SZ.v len /\
+          SZ.v len == List.Tot.length (Ghost.reveal ft') /\
+          Ghost.reveal ft == FTMap (Ghost.reveal ft')
         )
       ) {
-        SM.seq_seq_match_dequeue_left freeable_match_map_entry s s' _ _;
         let i = !pi;
+        SM.seq_seq_match_dequeue_left freeable_match_map_entry s (Seq.seq_of_list (Ghost.reveal ft')) (SZ.v i) (SZ.v len);
         let x' = V.op_Array_Access a.map_footprint i;
-        with x_ y_ . rewrite freeable_match_map_entry x_ y_ as freeable_match_map_entry x' y_;
-        cbor_free_map_entry cbor_free' x' _;
+        rewrite (freeable_match_map_entry (Seq.index s (SZ.v i)) (Seq.index (Seq.seq_of_list (Ghost.reveal ft')) (SZ.v i)))
+             as (freeable_match_map_entry x' (Seq.index (Seq.seq_of_list (Ghost.reveal ft')) (SZ.v i)));
+        FStar.List.Tot.Properties.memP_precedes (List.Tot.index (Ghost.reveal ft') (SZ.v i)) (Ghost.reveal ft');
+        cbor_free_map_entry ft (cbor_free' ft) x' _;
         pi := (SZ.add i 1sz);
       };
-      SM.seq_seq_match_empty_elim freeable_match_map_entry s s' (SZ.v len);
+      SM.seq_seq_match_empty_elim freeable_match_map_entry s (Seq.seq_of_list (Ghost.reveal ft')) (SZ.v len);
       V.free a.map_footprint
     }
   }
@@ -311,7 +344,7 @@ ensures
   emp
 {
   unfold (freeable x);
-  cbor_free' x.footprint _
+  cbor_free' (FTBox x.tree) x.footprint _
 }
 
 open CBOR.Pulse.Raw.Read
