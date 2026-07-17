@@ -64,6 +64,7 @@ fn validate_list
          Some? (parse (parse_list p) (Seq.slice v_bytes (SZ.v off) (Seq.length v_bytes))))) /\
       (c == false ==> None? (parse (parse_list p) (Seq.slice v_bytes (SZ.v offset) (Seq.length v_bytes))))
     )
+    decreases %[(if !pcontinue then 1 else 0); (SZ.v input_len - SZ.v (!poffset))] // fstar2 only
   {
     let off = !poffset;
     let s = Ghost.hide (Seq.slice v_bytes (SZ.v off) (Seq.length v_bytes));
@@ -173,6 +174,7 @@ ensures
         L.length (fst (Some?.v (parse (parse_list p) (Seq.slice w_bytes (SZ.v off) (Seq.length w_bytes)))))
         == L.length (Ghost.reveal v)
     )
+    decreases (SZ.v input_len - SZ.v (!poffset)) // fstar2 only
   {
     let off = !poffset;
     let count = !pcount;
@@ -366,6 +368,7 @@ fn l2r_safe_writer_list
           Seq.slice vout 0 (SZ.v off) == serialize (serialize_list p s) (fst (L.splitAt (SZ.v i) (Ghost.reveal y))) /\
           (e == true ==> (SZ.v i < SZ.v n /\ Seq.length (Ghost.reveal v) < Seq.length (serialize (serialize_list p s) (Ghost.reveal y))))
         )
+        decreases %[(if !perr then 0 else 1); (SZ.v n - SZ.v (!pi))] // fstar2 only
       {
         let i = !pi;
         let off = !poff;
@@ -524,6 +527,7 @@ fn l2r_safe_size_list
           SZ.v off == Seq.length (serialize (serialize_list p s) (fst (L.splitAt (SZ.v i) (Ghost.reveal y)))) /\
           (Seq.length (serialize (serialize_list p s) (Ghost.reveal y)) < pow2 16 ==> e == false)
         )
+        decreases %[(if !perr then 0 else 1); (SZ.v n - SZ.v (!pi))] // fstar2 only
       {
         let i = !pi;
         let off = !poff;

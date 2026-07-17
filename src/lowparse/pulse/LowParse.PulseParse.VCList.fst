@@ -334,6 +334,7 @@ fn validate_nlist
         (SZ.v offset + snd (Some?.v (parse (parse_nlist (SZ.v n) p) s0)) ==
          SZ.v off + snd (Some?.v (parse (parse_nlist (SZ.v r) p) s))))
     ))
+    decreases %[(if !pcontinue then 1 else 0); (SZ.v (!pcount))] // fstar2 only
   {
     let off = !poffset;
     let r = !pcount;
@@ -518,7 +519,9 @@ ensures exists* v' pm' .
     pure (
       nlist_nth_inv #t n0 v0 i0 i n v
     )
-  ) {
+  )
+    decreases (SZ.v i0 - SZ.v (!pi)) // fstar2 only
+  {
     with 'res. assert R.pts_to pres 'res;
     let res = !pres;
     rewrite each 'res as res;
@@ -829,6 +832,7 @@ ensures
       (Ghost.reveal rem <: list eh) == snd (L.splitAt (SZ.v i) (Ghost.reveal fl)) /\
       L.length (Ghost.reveal rem) == m
     )
+    decreases (SZ.v n - SZ.v (!pi)) // fstar2 only
   {
     let i = !pi;
     let cur = !pcur;
@@ -1034,6 +1038,7 @@ fn free_vclist
       invariant exists* i. R.pts_to pi i ** V.pts_to (snd y) s **
         SM.seq_seq_match elem_vmatch s (Seq.seq_of_list (Ghost.reveal v)) (SZ.v i) (L.length (Ghost.reveal v)) **
         pure (SZ.v i <= SZ.v nn /\ Seq.length s == SZ.v nn /\ L.length (Ghost.reveal v) == SZ.v nn)
+        decreases (SZ.v nn - SZ.v (!pi)) // fstar2 only
       {
         let i = !pi;
         SM.seq_seq_match_dequeue_left elem_vmatch s (Seq.seq_of_list (Ghost.reveal v)) (SZ.v i) (L.length (Ghost.reveal v));
@@ -1210,6 +1215,7 @@ fn l2r_safe_writer_list_body
           Seq.slice vout 0 (SZ.v off) == serialize (serialize_list p s) (fst (L.splitAt (SZ.v i) (Ghost.reveal y))) /\
           (e == true ==> (SZ.v i < SZ.v n /\ Seq.length (Ghost.reveal v) < Seq.length (serialize (serialize_list p s) (Ghost.reveal y))))
         )
+        decreases %[(if !perr then 0 else 1); (SZ.v n - SZ.v (!pi))] // fstar2 only
       {
         let i = !pi;
         let off = !poff;
@@ -1362,6 +1368,7 @@ fn l2r_safe_size_list_body
           SZ.v off == Seq.length (serialize (serialize_list p s) (fst (L.splitAt (SZ.v i) (Ghost.reveal y)))) /\
           (Seq.length (serialize (serialize_list p s) (Ghost.reveal y)) < pow2 16 ==> e == false)
         )
+        decreases %[(if !perr then 0 else 1); (SZ.v n - SZ.v (!pi))] // fstar2 only
       {
         let i = !pi;
         let off = !poff;
