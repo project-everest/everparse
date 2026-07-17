@@ -1585,7 +1585,9 @@ fn impl_serialize_array_group_zero_or_more_slice
         SZ.v size_before <= SZ.v size
       )
     )
-  ) {
+  )
+    decreases %[(if !pres then 1 else 0); (SZ.v slen - SZ.v (!pi))] // fstar2 only
+  {
     with s2 l2 . assert (SM.seq_list_match s2 l2 r1);
     S.pts_to_len c.s;
     SM.seq_list_match_length r1 s2 l2;
@@ -1744,6 +1746,7 @@ fn impl_serialize_array_group_zero_or_more_iterator
   let mut pres = true;
   ag_spec_zero_or_more_serializer_nil ps1;
   Trade.refl (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) c0 v);
+  let mut pmeasure = Ghost.hide (List.Tot.length (Ghost.reveal v)); // fstar2 only
   while (
     with gc l2 . assert (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) gc l2);
     let c = !pc;
@@ -1751,7 +1754,7 @@ fn impl_serialize_array_group_zero_or_more_iterator
     let em = cddl_array_iterator_is_empty is_empty impl_tgt1 _ c;
     let res = !pres;
     (res && not em)
-  ) invariant exists* l1 c res l2 w count size . (
+  ) invariant exists* l1 c res l2 w count size m . (
     GR.pts_to pl1 l1 **
     pts_to pc c **
     rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) c l2 **
@@ -1759,11 +1762,13 @@ fn impl_serialize_array_group_zero_or_more_iterator
     pts_to out w **
     pts_to out_count count **
     pts_to out_size size **
+    pts_to pmeasure m ** // fstar2 only
     Trade.trade
       (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) c l2)
       (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) c0 v)
       **
     pure (
+      Ghost.reveal m == List.Tot.length l2 /\ // fstar2 only
       (res == true ==> Ghost.reveal v == List.Tot.append l1 l2) /\
       ps.ag_serializable l1 /\
       Seq.length w == Seq.length w0 /\
@@ -1776,10 +1781,14 @@ fn impl_serialize_array_group_zero_or_more_iterator
         SZ.v size_before <= SZ.v size
       )
     )
-  ) {
+  )
+    decreases (Ghost.reveal (!pmeasure)) // fstar2 only
+  {
     with gc l2 . assert (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) gc l2);
     let x : impl_tgt1 = cddl_array_iterator_next length share gather truncate impl_tgt1 _ pc;
     with gc' l2' . assert (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) gc' l2');
+    with mm . assert (pts_to pmeasure mm); // fstar2 only
+    pmeasure := Ghost.hide (Ghost.reveal mm - 1); // fstar2 only
     let z : Ghost.erased tgt1 = Ghost.hide (List.Tot.hd l2);
     Trade.rewrite_with_trade (dsnd (Iterator.mk_spec r1) _ _) (r1 x z);
     Trade.trans_hyp_l (r1 x z) _ _ _;
