@@ -92,20 +92,21 @@ requires
         impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res l /\
         Ghost.reveal res == true /\ Ghost.reveal em == false
       )
-ensures exists* c v em res vout size count m min max .
+ensures exists* c v em res_new vout size count_new m min max .
       pts_to out vout **
       pts_to pc c **
       r _ _ c v **
       Trade.trade (r _ _ c v) (r _ _ c0 v0) **
       pts_to pem em **
-      pts_to pres res **
+      pts_to pres res_new **
       GR.pts_to gm m **
       GR.pts_to gmin min **
       GR.pts_to gmax max **
       pts_to out_size size **
-      pts_to out_count count **
+      pts_to out_count count_new **
       pure (
-        impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count m v0 v min max res l
+        impl_serialize_map_zero_or_more_iterator_gen_invariant p sp1 sp2 except em out vout size count_new m v0 v min max res_new l /\
+        (res_new == true ==> U64.v count_new > U64.v (Ghost.reveal count))
       )
 {
     let count = !out_count;
