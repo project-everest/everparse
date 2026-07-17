@@ -13,15 +13,15 @@ extern "C" {
 #include "../CBORDet.h"
 
 size_t
-CBOR_Pulse_Raw_Format_Serialize_ser_(
+CBOR_Pulse_Raw_Format_Serialize_ser__d(
   cbor_raw x_,
   CBOR_Pulse_Raw_Slice_byte_slice out,
   size_t offset
 );
 
-bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out);
+bool CBOR_Pulse_Raw_Format_Serialize_siz__d(cbor_raw x_, size_t *out);
 
-int16_t CBOR_Pulse_Raw_Compare_impl_cbor_compare(cbor_raw x1, cbor_raw x2);
+int16_t CBOR_Pulse_Raw_Compare_cbor_compare_with_depth(cbor_raw x1, cbor_raw x2);
 
 bool
 CBOR_Pulse_API_Det_Common_cbor_raw_sort_aux(
@@ -30,7 +30,7 @@ CBOR_Pulse_API_Det_Common_cbor_raw_sort_aux(
 
 void cbor_free_(cbor_freeable0 x);
 
-cbor_freeable cbor_copy0(cbor_raw x);
+cbor_freeable cbor_copy0_with_depth(cbor_raw x);
 
 typedef cbor_freeable cbor_det_freeable_t;
 
