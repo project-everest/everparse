@@ -672,7 +672,7 @@ ensures
   cbor_match_with_depth depth p1 x1 v1 **
   cbor_match_with_depth depth p2 x2 v2 **
   pure (res == SpecRaw.raw_equiv v1 v2)
-decreases depth
+decreases (Ghost.reveal depth)
 {
   cbor_nondet_equiv_body_d depth (fun (depth': Ghost.erased nat { depth' < depth }) -> cbor_nondet_equiv_with_depth depth') x1 x2
 }

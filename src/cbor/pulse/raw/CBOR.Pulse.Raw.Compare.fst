@@ -825,7 +825,7 @@ ensures
       same_sign (I16.v res) (cbor_compare v1 v2)
     )
   )
-decreases depth
+decreases (Ghost.reveal depth)
 {
   cbor_compare_body_d depth (fun (depth': Ghost.erased nat { depth' < depth }) -> cbor_compare_with_depth depth') x1 x2
 }

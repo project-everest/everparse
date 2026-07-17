@@ -1405,7 +1405,7 @@ fn rec cbor_copy0_with_depth (depth: Ghost.erased nat) (x: cbor_raw) (#p: perm) 
   requires cbor_match_with_depth depth p x v
   returns res: cbor_freeable
   ensures cbor_match_with_depth depth p x v ** cbor_match 1.0R res.cbor v ** Trade.trade (cbor_match 1.0R res.cbor v) (freeable res)
-  decreases depth
+  decreases (Ghost.reveal depth)
 {
   cbor_copy0_body depth (fun (depth': Ghost.erased nat { depth' < depth }) -> cbor_copy0_with_depth depth') x
 }
