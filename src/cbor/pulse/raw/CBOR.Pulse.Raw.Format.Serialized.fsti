@@ -23,7 +23,8 @@ val cbor_match_serialized_tagged_get_payload
     cbor_match 1.0R res (Tagged?.v r) **
     trade
       (cbor_match 1.0R res (Tagged?.v r))
-      (cbor_match_serialized_tagged c pm r)
+      (cbor_match_serialized_tagged c pm r) **
+    pure (~ (CBOR_Case_Array? res \/ CBOR_Case_Map? res \/ CBOR_Case_Tagged? res))
   )
 
 val cbor_serialized_array_item
@@ -71,6 +72,8 @@ val cbor_serialized_array_iterator_length : cbor_raw_serialized_iterator_length_
 
 val cbor_serialized_array_iterator_next (_: unit) : cbor_raw_serialized_iterator_next_t cbor_match cbor_serialized_array_iterator_match
 
+val cbor_serialized_array_iterator_next_with_depth (n: Ghost.erased nat) : cbor_raw_serialized_iterator_next_t (cbor_match_with_depth n) cbor_serialized_array_iterator_match
+
 val cbor_serialized_array_iterator_truncate : cbor_raw_serialized_iterator_truncate_t cbor_serialized_array_iterator_match
 
 val cbor_serialized_array_iterator_share : cbor_raw_serialized_iterator_share_t cbor_serialized_array_iterator_match
@@ -99,6 +102,8 @@ val cbor_serialized_map_iterator_init
 val cbor_serialized_map_iterator_is_empty : cbor_raw_serialized_iterator_is_empty_t cbor_serialized_map_iterator_match
 
 val cbor_serialized_map_iterator_next (_: unit) : cbor_raw_serialized_iterator_next_t cbor_match_map_entry cbor_serialized_map_iterator_match
+
+val cbor_serialized_map_iterator_next_with_depth (n: Ghost.erased nat) : cbor_raw_serialized_iterator_next_t (cbor_match_map_entry_with_depth n) cbor_serialized_map_iterator_match
 
 val cbor_serialized_map_iterator_share : cbor_raw_serialized_iterator_share_t cbor_serialized_map_iterator_match
 

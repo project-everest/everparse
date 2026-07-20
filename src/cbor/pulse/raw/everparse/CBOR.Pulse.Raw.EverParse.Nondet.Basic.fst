@@ -28,6 +28,7 @@ fn impl_basic_data_model (_: unit): impl_equiv_hd_t basic_data_model =
 
 // FIXME: fold definition of impl_check_equiv_map_hd_t
 fn rec impl_check_equiv_map_hd_basic
+  (d: Ghost.erased nat)
   (map_bound: option SZ.t)
   (n1: Ghost.erased nat)
   (l1: S.slice byte)
@@ -41,7 +42,8 @@ fn rec impl_check_equiv_map_hd_basic
     (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
       pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2 **
       pure (
-        n1 > 0 /\ n2 > 0
+        n1 > 0 /\ n2 > 0 /\
+        raw_data_item_size (List.Tot.hd gl1) + raw_data_item_size (List.Tot.hd gl2) <= d
       )
     )
   returns res: option bool
@@ -51,11 +53,13 @@ pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
       pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2 **
       pure (
         n1 > 0 /\ n2 > 0 /\
+        raw_data_item_size (List.Tot.hd gl1) + raw_data_item_size (List.Tot.hd gl2) <= d /\
         res == (check_equiv_map basic_data_model (option_sz_v map_bound)) (List.Tot.hd gl1) (List.Tot.hd gl2)
       )
     )
+  decreases (Ghost.reveal d)
 {
-  impl_check_equiv_map_hd_body (impl_basic_data_model ()) (impl_check_equiv_map_hd_basic) map_bound n1 l1 n2 l2
+  impl_check_equiv_map_hd_body d (impl_basic_data_model ()) (fun (d': Ghost.erased nat { Ghost.reveal d' << Ghost.reveal d }) -> impl_check_equiv_map_hd_basic d') map_bound n1 l1 n2 l2
 }
 
 let impl_check_equiv_list_basic

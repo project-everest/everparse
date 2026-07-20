@@ -76,6 +76,38 @@ pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
     )
 
 inline_for_extraction
+let impl_equiv_hd_with_bound_t
+  (#t: Type)
+  (bound: nat)
+  (equiv: (x1: raw_data_item) -> (x2: raw_data_item { raw_data_item_size x1 + raw_data_item_size x2 <= bound }) -> t)
+=
+  (n1: Ghost.erased nat) ->
+  (l1: S.slice byte) ->
+  (n2: Ghost.erased nat) ->
+  (l2: S.slice byte) ->
+  (#p1: perm) ->
+  (#gl1: Ghost.erased (nlist n1 raw_data_item)) ->
+  (#p2: perm) ->
+  (#gl2: Ghost.erased (nlist n2 raw_data_item)) ->
+  stt t
+    (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
+      pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2 **
+      pure (
+        n1 > 0 /\ n2 > 0 /\
+        raw_data_item_size (List.Tot.hd gl1) + raw_data_item_size (List.Tot.hd gl2) <= bound
+      )
+    )
+    (fun res ->
+pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) l1 #p1 gl1 **
+      pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) l2 #p2 gl2 **
+      pure (
+        n1 > 0 /\ n2 > 0 /\
+        raw_data_item_size (List.Tot.hd gl1) + raw_data_item_size (List.Tot.hd gl2) <= bound /\
+        res == equiv (List.Tot.hd gl1) (List.Tot.hd gl2)
+      )
+    )
+
+inline_for_extraction
 val impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow
   (#equiv: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> option bool))
   (impl_equiv: impl_equiv_t equiv)
@@ -103,16 +135,18 @@ val impl_list_for_all_with_overflow_setoid_assoc_eq_with_overflow
 inline_for_extraction
 let impl_check_equiv_map_hd_t
   (data_model: (raw_data_item -> raw_data_item -> bool))
+  (d: nat)
 =
   (map_bound: option SZ.t) ->
-  impl_equiv_hd_t (check_equiv_map data_model (option_sz_v map_bound))
+  impl_equiv_hd_with_bound_t d (check_equiv_map data_model (option_sz_v map_bound))
 
 inline_for_extraction
 val impl_check_equiv_map_hd_body
+  (d: Ghost.erased nat)
   (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
   (impl_data_model: impl_equiv_hd_t data_model)
-  (impl_check_equiv_map_hd: impl_check_equiv_map_hd_t data_model)
-: impl_check_equiv_map_hd_t (Ghost.reveal data_model)
+  (impl_check_equiv_map_hd: (d': Ghost.erased nat { Ghost.reveal d' << Ghost.reveal d }) -> impl_check_equiv_map_hd_t data_model d')
+: impl_check_equiv_map_hd_t (Ghost.reveal data_model) d
 
 inline_for_extraction
 let impl_check_equiv_list_t
@@ -141,7 +175,7 @@ let impl_check_equiv_list_t
 inline_for_extraction
 val impl_check_equiv_list_map
   (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
-  (impl_check_equiv_map_hd: impl_check_equiv_map_hd_t data_model)
+  (impl_check_equiv_map_hd: (d: Ghost.erased nat) -> impl_check_equiv_map_hd_t data_model d)
   (map_bound: option SZ.t)
 : impl_check_equiv_list_t (check_equiv_map data_model (option_sz_v map_bound))
 
