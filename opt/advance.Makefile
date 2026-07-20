@@ -1,2 +1,2 @@
-FStar_hash := origin/_taramana_merge_sort
+FStar_hash := origin/master
 karamel_hash := origin/master
