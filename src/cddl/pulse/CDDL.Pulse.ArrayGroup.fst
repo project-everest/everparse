@@ -169,17 +169,20 @@ fn impl_array_group_zero_or_more
 {
     let mut pcont = true;
     Trade.refl (cbor_array_iterator_match p gi l);
+    let mut pmeasure = Ghost.hide (List.Tot.length (Ghost.reveal l)); // fstar2 only
     while (
       let cont = !pcont;
       cont
-    ) invariant exists* cont p' gi1 l1 .
+    ) invariant exists* cont p' gi1 l1 m .
       R.pts_to pi gi1 **
+      R.pts_to pmeasure m ** // fstar2 only
       cbor_array_iterator_match p' gi1 l1 **
       Trade.trade
         (cbor_array_iterator_match p' gi1 l1)
         (cbor_array_iterator_match p gi l) **
       R.pts_to pcont cont **
       pure (
+        Ghost.reveal m == List.Tot.length l1 /\ // fstar2 only
         begin match array_group_zero_or_more g1 l, array_group_zero_or_more g1 l1 with
         | None, None -> True
         | Some (_, rem), Some (_, rem1) -> rem == rem1
@@ -187,6 +190,7 @@ fn impl_array_group_zero_or_more
         end /\
         (cont == false ==> None? (Ghost.reveal g1 l1))
       )
+      decreases %[(if !pcont then 1 else 0); (Ghost.reveal (!pmeasure))] // fstar2 only
     {
       with p' gi1 l1 . assert (cbor_array_iterator_match p' gi1 l1);
       let i1 = !pi;
@@ -200,7 +204,11 @@ fn impl_array_group_zero_or_more
         pi := i1;
         pcont := false;
       } else {
-        Trade.trans _ _ (cbor_array_iterator_match p gi l)
+        Trade.trans _ _ (cbor_array_iterator_match p gi l);
+        with p'' i' l'' . assert (cbor_array_iterator_match p'' i' l''); // fstar2 only
+        List.Tot.Properties.append_length (fst (Some?.v (Ghost.reveal g1 l1))) l''; // fstar2 only
+        assert (pure (List.Tot.length l'' < List.Tot.length l1)); // fstar2 only
+        pmeasure := Ghost.hide (List.Tot.length l''); // fstar2 only
       }
     };
     true

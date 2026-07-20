@@ -128,6 +128,7 @@ ensures
       SZ.v i <= Seq.length v /\
       correct v == (res && correct (Seq.slice v (SZ.v i) (Seq.length v)))
     )
+    decreases %[(if !pres then 1 else 0); (SZ.v len - SZ.v (!pi))] // fstar2 only
   {
     impl_fetch_utf8_correct s len pi pres;
     ()

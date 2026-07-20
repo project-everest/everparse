@@ -7,6 +7,8 @@ open CBOR.Pulse.Raw.Match
 module Raw = CBOR.Pulse.Raw.Match
 module SpecRaw = CBOR.Spec.Raw
 
+let length_pos_of_cons (#t: Type) (l: list t) : Lemma (requires Cons? l) (ensures List.Tot.length l >= 1) = () // fstar2 only
+
 let cbor_nondet_match
   (p: perm)
   (c: cbor_raw)
@@ -956,6 +958,7 @@ let cbor_nondet_map_get_invariant_false
   (vdest: cbor_nondet_t)
   (i: cbor_nondet_map_iterator_t)
   (cont: bool)
+  (n: nat) // fstar2 only
 : Tot slprop
 = exists* p' l .
     cbor_nondet_map_iterator_match p' i l **
@@ -965,7 +968,8 @@ let cbor_nondet_map_get_invariant_false
     pure (
       cbor_nondet_map_get_invariant_false_postcond vx vk l /\
       vdest == vdest0 /\
-      cont == Cons? l
+      cont == Cons? l /\
+      n == List.Tot.length l // fstar2 only
     )
 
 let cbor_nondet_map_get_invariant
@@ -978,10 +982,11 @@ let cbor_nondet_map_get_invariant
   (i: cbor_nondet_map_iterator_t)
   (cont: bool)
   (res: bool)
+  (n: nat) // fstar2 only
 : Tot slprop
 = if res
   then cbor_nondet_map_get_invariant_true px x vx vk vdest
-  else cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest i cont
+  else cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest i cont n // fstar2 only
 
 ghost fn cbor_nondet_map_get_concl
   (px: perm)
@@ -993,8 +998,9 @@ ghost fn cbor_nondet_map_get_concl
   (i: cbor_nondet_map_iterator_t)
   (cont: bool)
   (bres: bool)
+  (n: nat) // fstar2 only
 requires
-  cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i cont bres ** pure ((cont && not bres) == false)
+  cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i cont bres n ** pure ((cont && not bres) == false)
 ensures
   exists* res .
       map_get_post cbor_nondet_match x px vx vk res **
@@ -1003,15 +1009,15 @@ ensures
       )
 {
   if bres {
-    rewrite (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i cont bres)
+    rewrite (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i cont bres n)
       as (cbor_nondet_map_get_invariant_true px x vx vk vdest);
     unfold (cbor_nondet_map_get_invariant_true px x vx vk vdest);
     fold (map_get_post_some cbor_nondet_match x px vx vk vdest);
     fold (map_get_post cbor_nondet_match x px vx vk (Some vdest));
   } else {
-    rewrite (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i cont bres)
-      as (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest i false);
-    unfold (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest i false);
+    rewrite (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i cont bres n)
+      as (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest i false n);
+    unfold (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest i false n);
     Trade.elim _ _;
     fold (map_get_post_none cbor_nondet_match x px vx vk);
     fold (map_get_post cbor_nondet_match x px vx vk None);
@@ -1036,27 +1042,35 @@ fn cbor_nondet_map_get_by_ref (_: unit)
   let mut pres = false;
   let cont = not (cbor_nondet_map_iterator_is_empty () i);
   let mut pcont = cont;
-  fold (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest0 i cont);
-  rewrite (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest0 i cont)
-    as (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest0 i cont false);
+  let mut pmeasure = Ghost.hide (List.Tot.length (Ghost.reveal l0)); // fstar2 only
+  fold (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest0 i cont (List.Tot.length (Ghost.reveal l0))); // fstar2 only
+  rewrite (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest0 i cont (List.Tot.length (Ghost.reveal l0)))
+    as (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest0 i cont false (List.Tot.length (Ghost.reveal l0))); // fstar2 only
   while (
     let res = !pres;
     let cont = !pcont;
     (cont && not res)
-  ) invariant exists* i vdest res cont . (
+  ) invariant exists* i vdest res cont msr . (
     pts_to pi i **
     pts_to dest vdest **
     pts_to pres res **
     pts_to pcont cont **
+    pts_to pmeasure msr **
     cbor_nondet_match pk k vk **
-    cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i cont res
-  ) {
-    with gi vdest gres gcont . assert (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest gi gcont gres);
-    rewrite (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest gi gcont gres)
-      as (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest gi true);
-    unfold (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest gi true);
+    cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i cont res msr
+  )
+    decreases (Ghost.reveal (!pmeasure)) // fstar2 only
+  {
+    with gi vdest gres gcont gmsr . assert (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest gi gcont gres gmsr);
+    rewrite (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest gi gcont gres gmsr)
+      as (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest gi true gmsr);
+    unfold (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest gi true gmsr);
+    with gpp gll . assert (cbor_nondet_map_iterator_match gpp gi gll); // fstar2 only
+    length_pos_of_cons (Ghost.reveal gll); // fstar2 only
     let y = cbor_nondet_map_iterator_next () pi;
     Trade.trans _ _ (cbor_nondet_match px x vx);
+    with mm . assert (pts_to pmeasure mm); // fstar2 only
+    pmeasure := Ghost.hide (Ghost.reveal mm - 1); // fstar2 only
     with py y vy . assert (cbor_nondet_map_entry_match py y vy);
     Trade.rewrite_with_trade
       (cbor_nondet_map_entry_match py y vy)
@@ -1070,23 +1084,26 @@ fn cbor_nondet_map_get_by_ref (_: unit)
       fold (cbor_nondet_map_get_invariant_true px x vx vk y.cbor_map_entry_value);
       with i . assert (pts_to pi i);
       with gcont . assert (pts_to pcont gcont);
+      with cmsr . assert (pts_to pmeasure cmsr); // fstar2 only
       rewrite (cbor_nondet_map_get_invariant_true px x vx vk y.cbor_map_entry_value)
-        as (cbor_nondet_map_get_invariant px x vx vdest0 vk y.cbor_map_entry_value i gcont true);
+        as (cbor_nondet_map_get_invariant px x vx vdest0 vk y.cbor_map_entry_value i gcont true cmsr);
     } else {
       Trade.elim _ (cbor_nondet_map_entry_match py y vy);
       Trade.elim_hyp_l _ _ _;
       let i = !pi;
       let cont = not (cbor_nondet_map_iterator_is_empty () i);
       pcont := cont;
-      fold (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest i cont);
-      rewrite (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest i cont)
-        as (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i cont gres)
+      with cmsr . assert (pts_to pmeasure cmsr); // fstar2 only
+      fold (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest i cont cmsr);
+      rewrite (cbor_nondet_map_get_invariant_false px x vx vdest0 vk vdest i cont cmsr)
+        as (cbor_nondet_map_get_invariant px x vx vdest0 vk vdest i cont gres cmsr)
     }
   };
   let res = !pres;
   with vdest . assert (pts_to dest vdest);
   with i . assert (pts_to pi i);
-  cbor_nondet_map_get_concl px x vx vdest0 vk vdest i _ res;
+  with fmsr . assert (pts_to pmeasure fmsr); // fstar2 only
+  cbor_nondet_map_get_concl px x vx vdest0 vk vdest i _ res fmsr;
   res
 }
 
@@ -1751,7 +1768,9 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
       List.Tot.count None (List.Tot.map snd l1) == List.Tot.length l1 /\
       SZ.v i == Seq.length s1
     )
-  ) {
+  )
+    decreases (SZ.v (S.len dest) - SZ.v (!pi)) // fstar2 only
+  {
     with s1 s2 l1 l2 . assert (
       PM.seq_list_match s1 l1 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) **
       PM.seq_list_match s2 l2 (cbor_map_get_multiple_entry_match cbor_nondet_match false ps)
@@ -1802,13 +1821,16 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
   let iter = cbor_nondet_map_iterator_start () map;
   Trade.prod _ (cbor_nondet_match pmap map vmap) _ _;
   let mut piter = iter;
+  with pm_init l_init . assert (cbor_nondet_map_iterator_match pm_init iter l_init); // fstar2 only
+  let mut pmeasure = Ghost.hide (List.Tot.length l_init); // fstar2 only
   while (
     let i = !pi;
     let iter = !piter;
     (i <> 0sz && not (cbor_nondet_map_iterator_is_empty () iter))
-  ) invariant exists* i iter l s0 l0 pmi . (
+  ) invariant exists* i iter l s0 l0 pmi msr . (
     pts_to pi i **
     pts_to piter iter **
+    pts_to pmeasure msr **
     S.pts_to dest s0 **
     cbor_nondet_map_iterator_match pmi iter l **
     PM.seq_list_match s0 l0 (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) **
@@ -1825,10 +1847,17 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
       List.Tot.count None (List.Tot.map snd l0) == SZ.v i /\
       List.Tot.no_repeats_p (List.Tot.map fst l) /\
       (forall x . Some? (List.Tot.assoc x l) ==> Spec.cbor_map_get m x == List.Tot.assoc x l) /\
-      (forall x . List.Tot.memP x l0 ==> Spec.cbor_map_get m (fst x) == (match snd x with None -> List.Tot.assoc (fst x) l | Some z -> Some z))
+      (forall x . List.Tot.memP x l0 ==> Spec.cbor_map_get m (fst x) == (match snd x with None -> List.Tot.assoc (fst x) l | Some z -> Some z)) /\
+      Ghost.reveal msr == List.Tot.length l // fstar2 only
     )
-  ) {
+  )
+    decreases (Ghost.reveal (!pmeasure)) // fstar2 only
+  {
+    with pmi0 iter0 l0iter . assert (cbor_nondet_map_iterator_match pmi0 iter0 l0iter); // fstar2 only
+    length_pos_of_cons (Ghost.reveal l0iter); // fstar2 only
     let entry = cbor_nondet_map_iterator_next () piter;
+    with mm . assert (pts_to pmeasure mm); // fstar2 only
+    pmeasure := Ghost.hide (Ghost.reveal mm - 1); // fstar2 only
     (* begin: valid for fstar2 only (F* #4347 slprop normalization) *)
     trade_trans_hyp_l_merge2 _ _ (cbor_nondet_map_iterator_match _ _ _) _ _;
     (* end: valid for fstar2 only *)
@@ -1880,7 +1909,9 @@ fn cbor_nondet_map_get_multiple (_: unit) : cbor_map_get_multiple_t #_ cbor_nond
         SZ.v j == Seq.length s1 /\
         Seq.length s1 == List.Tot.length l1
       )
-    ) {
+    )
+      decreases (SZ.v (S.len dest) - SZ.v (!pj)) // fstar2 only
+    {
       with pvalue . assert (cbor_nondet_match pvalue entry.cbor_map_entry_value (snd ventry));
       S.pts_to_len dest;
       PM.seq_list_match_length (cbor_map_get_multiple_entry_match cbor_nondet_match true ps) _ _;

@@ -274,7 +274,9 @@ decreases bound
           SZ.v len == List.Tot.length (Ghost.reveal ft') /\
           Ghost.reveal ft == FTArray (Ghost.reveal ft')
         )
-      ) {
+      )
+        decreases (SZ.v len - SZ.v (!pi)) // fstar2 only
+      {
         let i = !pi;
         SM.seq_seq_match_dequeue_left freeable_match' s (Seq.seq_of_list (Ghost.reveal ft')) (SZ.v i) (SZ.v len);
         let x' = V.op_Array_Access a.array_footprint i;
@@ -311,7 +313,9 @@ decreases bound
           SZ.v len == List.Tot.length (Ghost.reveal ft') /\
           Ghost.reveal ft == FTMap (Ghost.reveal ft')
         )
-      ) {
+      )
+        decreases (SZ.v len - SZ.v (!pi)) // fstar2 only
+      {
         let i = !pi;
         SM.seq_seq_match_dequeue_left freeable_match_map_entry s (Seq.seq_of_list (Ghost.reveal ft')) (SZ.v i) (SZ.v len);
         let x' = V.op_Array_Access a.map_footprint i;
@@ -704,7 +708,9 @@ ensures
       Seq.length st == SZ.v len /\
       (Cons? (Array?.v v) ==> Ghost.reveal depth >= 1)
     )
-  ) {
+  )
+    decreases (SZ.v len - SZ.v (!pi)) // fstar2 only
+  {
     S.pts_to_len ar;
     V.pts_to_len v';
     V.pts_to_len vf;
@@ -902,7 +908,9 @@ ensures
       Seq.length st == SZ.v len /\
       (Cons? (Map?.v v) ==> Ghost.reveal depth >= 1)
     )
-  ) {
+  )
+    decreases (SZ.v len - SZ.v (!pi)) // fstar2 only
+  {
     S.pts_to_len ar;
     V.pts_to_len v';
     V.pts_to_len vf;

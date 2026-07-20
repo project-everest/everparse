@@ -158,6 +158,7 @@ fn validate_tot_nlist_recursive
         Some? pr0 == (res && Some? pr) /\
         (Some? pr0 ==> (SZ.v offset0 + Some?.v pr0 == SZ.v offset + Some?.v pr))
     ))
+    decreases %[(if !pres then 1 else 0); (Seq.length v - SZ.v (!poffset))] // fstar2 only
   {
     let off = !poffset;
     let n = !pn;
@@ -290,12 +291,15 @@ fn jump_tot_nlist_recursive
         Some? pr0 /\ Some? pr /\
         (SZ.v offset0 + Some?.v pr0 == SZ.v offset + Some?.v pr)
     ))
+    decreases (Seq.length v - SZ.v (!poffset)) // fstar2 only
   {
     with gn . assert (pts_to pn gn);
     with goffset . assert (pts_to poffset goffset);
     parse_consume_nlist_recursive_eq' p (SZ.v gn) (Seq.slice v (SZ.v goffset) (Seq.length v));
     let off = !poffset;
     let off1 = w input off;
+    parser_kind_prop_equiv p.parse_header_kind p.parse_header; // fstar2 only
+    assert (pure (SZ.v off < SZ.v off1)); // fstar2 only
     poffset := off1;
     let input1 = peek_trade_gen (serializer_of_tot_serializer s.serialize_header) input off off1;
     with gv . assert (pts_to_serialized (serializer_of_tot_serializer s.serialize_header) input1 #pm gv);
@@ -623,7 +627,9 @@ fn impl_nlist_forall_pred_recursive
     ) **
     pure (
       List.Tot.for_all pr.pred v == (res && List.Tot.for_all pr.pred vi)
-    )) {
+    ))
+      decreases %[(if !pres then 1 else 0); (SZ.v (S.len (!ppi)))] // fstar2 only
+    {
     let n = !pn;
     with pi'. assert pts_to ppi pi';
     let pi = !ppi;
@@ -661,6 +667,8 @@ fn impl_nlist_forall_pred_recursive
           )
           pi #pm vi
       );
+      pts_to_serialized_length (C.serialize_dtuple2 (serializer_of_tot_serializer s.serialize_header) (serialize_nlist_recursive_cons_payload s (SZ.v n))) pi; // fstar2 only
+      LowParse.Spec.Combinators.serialize_dtuple2_eq (serializer_of_tot_serializer s.serialize_header) (serialize_nlist_recursive_cons_payload s (SZ.v n)) vi; // fstar2 only
       let ph, pc = C.split_dtuple2
         (serializer_of_tot_serializer s.serialize_header)
         j
@@ -672,6 +680,9 @@ fn impl_nlist_forall_pred_recursive
         _ _
         (pts_to_serialized (L.serialize_nlist (SZ.v n0) (serializer_of_tot_serializer (serialize_recursive s))) input #pm v);
       with h c . assert (pts_to_serialized (serializer_of_tot_serializer s.serialize_header) ph #pm h ** pts_to_serialized (serialize_nlist_recursive_cons_payload s (SZ.v n) h) pc #pm c);
+      pts_to_serialized_length (serializer_of_tot_serializer s.serialize_header) ph; // fstar2 only
+      pts_to_serialized_length (serialize_nlist_recursive_cons_payload s (SZ.v n) h) pc; // fstar2 only
+      parser_kind_prop_equiv p.parse_header_kind p.parse_header; // fstar2 only
       List.Tot.for_all_append pr.pred (fst c) (snd c);
       synth_nlist_append_recip_inverse p.t (p.count h) (SZ.v n - 1); // FIXME: WHY WHY WHY does this pattern not trigger?
       C.pts_to_serialized_synth_trade
@@ -705,6 +716,7 @@ fn impl_nlist_forall_pred_recursive
         (pts_to_serialized (L.serialize_nlist (SZ.v n0) (serializer_of_tot_serializer (serialize_recursive s))) input #pm v);
       let n' = SZ.add (SZ.sub n 1sz) count;
       pn := n';
+      assert (pure (SZ.v (S.len pc) < SZ.v (S.len pi))); // fstar2 only
       ppi := pc;
       with vi' . assert (pts_to_serialized (L.serialize_nlist (SZ.v n') (serializer_of_tot_serializer (serialize_recursive s))) pc #pm vi');
       trade_rewrite_l _ (pts_to_serialized (L.serialize_nlist (SZ.v n') (serializer_of_tot_serializer (serialize_recursive s))) pc #pm vi') _;

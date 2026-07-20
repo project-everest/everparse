@@ -978,6 +978,7 @@ fn cddl_map_iterator_is_empty
   Trade.refl (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents li);
   let mut pj = i.cddl_map_iterator_contents;
   let mut pres = true;
+  let mut pmeasure = Ghost.hide (List.Tot.length (Ghost.reveal li)); // fstar2 only
   while (
     with p' gj lj . assert (pts_to pj gj ** cbor_map_iterator_match p' gj lj);
     let j = !pj;
@@ -987,19 +988,25 @@ fn cddl_map_iterator_is_empty
     Trade.elim _ (cbor_map_iterator_match p' gj lj);
     let res = !pres;
     (res && not test)
-  ) invariant exists* p' j lj res . (
+  ) invariant exists* p' j lj res m . (
     pts_to pj j **
+    pts_to pmeasure m ** // fstar2 only
     cbor_map_iterator_match p' j lj **
     Trade.trade
       (cbor_map_iterator_match p' j lj)
       (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents li) **
     pts_to pres res **
     pure (
-      Nil? (parse_table_entries i.sp1.parser i.tex i.ps2 li) == (res && Nil? (parse_table_entries i.sp1.parser i.tex i.ps2 lj))
+      Nil? (parse_table_entries i.sp1.parser i.tex i.ps2 li) == (res && Nil? (parse_table_entries i.sp1.parser i.tex i.ps2 lj)) /\
+      Ghost.reveal m == List.Tot.length lj // fstar2 only
     )
-  ) {
+  )
+    decreases (Ghost.reveal (!pmeasure)) // fstar2 only
+  {
     let elt = map_next pj;
     Trade.trans _ _ (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents li);
+    with mm . assert (pts_to pmeasure mm); // fstar2 only
+    pmeasure := Ghost.hide (Ghost.reveal mm - 1); // fstar2 only
     let elt_key = map_entry_key elt;
     let test_key = cddl_map_iterator_impl_validate1 i elt_key;
     Trade.elim _ (vmatch2 _ elt _);
@@ -1168,12 +1175,15 @@ fn cddl_map_iterator_next
   Trade.elim (vmatch _ hv0 _) (vmatch2 _ hd0 _);
   let te0 = cddl_map_iterator_impl_validate_ex i hd0;
   let mut pcont = (not tk0 || not tv0 || te0);
+  with p0 j0 lj0 . assert (cbor_map_iterator_match p0 j0 lj0); // fstar2 only
+  let mut pmeasure = Ghost.hide (List.Tot.length lj0); // fstar2 only
   while (
     !pcont
-  ) invariant exists* p' hd pmhd vhd j lj cond .
+  ) invariant exists* p' hd pmhd vhd j lj cond m .
     pts_to phd hd **
     vmatch2 pmhd hd vhd **
     pts_to pj j **
+    pts_to pmeasure m ** // fstar2 only
     cbor_map_iterator_match p' j lj **
     Trade.trade
       (vmatch2 pmhd hd vhd ** cbor_map_iterator_match p' j lj)
@@ -1182,12 +1192,16 @@ fn cddl_map_iterator_next
     pure (
       cond == not (Ghost.reveal gi.t1 (fst vhd) && not (Ghost.reveal gi.tex vhd) && Ghost.reveal gi.t2 (snd vhd)) /\
       List.Tot.no_repeats_p (List.Tot.map fst (vhd :: lj)) /\
-      parse_table_entries i.sp1.parser i.tex i.ps2 li == parse_table_entries i.sp1.parser i.tex i.ps2 (vhd :: lj)
+      parse_table_entries i.sp1.parser i.tex i.ps2 li == parse_table_entries i.sp1.parser i.tex i.ps2 (vhd :: lj) /\
+      Ghost.reveal m == List.Tot.length lj // fstar2 only
     )
+    decreases (Ghost.reveal (!pmeasure)) // fstar2 only
   {
     Trade.elim_hyp_l _ _ _;
     let hd = map_next pj;
     Trade.trans _ _ (rel_map_iterator vmatch vmatch2 cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 gi l);
+    with mm . assert (pts_to pmeasure mm); // fstar2 only
+    pmeasure := Ghost.hide (Ghost.reveal mm - 1); // fstar2 only
     phd := hd;
     let hk = map_entry_key hd;
     let tk = cddl_map_iterator_impl_validate1 i hk;

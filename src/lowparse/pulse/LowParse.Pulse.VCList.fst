@@ -179,7 +179,9 @@ fn jump_nlist
   ) invariant exists* n offset . (
     pts_to input #pm v ** R.pts_to pn n ** R.pts_to poffset offset ** pure (
     jump_nlist_inv #t #k p n0 offset0 v n offset)
-  ) {
+  )
+    decreases (SZ.v (!pn)) // fstar2 only
+  {
     let n = !pn;
     let offset = !poffset;
     parse_nlist_eq (SZ.v n) p (Seq.slice v (SZ.v offset) (Seq.length v));
@@ -726,7 +728,9 @@ ensures exists* v .
     pure (
       nlist_nth_inv #t n0 v0 i0 i n v
     )
-  ) {
+  )
+    decreases (SZ.v i0 - SZ.v (!pi)) // fstar2 only
+  {
     with 'res. assert R.pts_to pres 'res;
     let res = !pres;
     rewrite each 'res as res;
@@ -818,6 +822,7 @@ ensures
       pure (
         List.Tot.sorted order v == (res && List.Tot.sorted order (hd :: tl))
       )
+    decreases %[(if !pres then 1 else 0); (SZ.v (!pi))] // fstar2 only
     {
       with gi . assert (R.pts_to pi gi);
       with 'stl. assert R.pts_to ptl 'stl;
@@ -1033,7 +1038,9 @@ fn compute_remaining_size_nlist_as_array
       )) /\
       True
     )
-  ) {
+  )
+    decreases %[(if !pres then 1 else 0); (SZ.v n - SZ.v (!pi))] // fstar2 only
+  {
     let i = !pi;
     PM.seq_list_match_length (vmatch arr) _ _;
     with c2 l2 . assert (PM.seq_list_match c2 l2 (vmatch arr));
@@ -1119,7 +1126,9 @@ fn l2r_write_nlist_as_array
       List.Tot.append l1 l2 == Ghost.reveal x /\
       True
     )
-  ) {
+  )
+    decreases (SZ.v n - SZ.v (!pi)) // fstar2 only
+  {
     let i = !pi;
     let off = !pres;
     PM.seq_list_match_length (vmatch arr) _ _;
@@ -1296,7 +1305,9 @@ fn compute_remaining_size_nlist_as_slice
       )) /\
       True
     )
-  ) {
+  )
+    decreases %[(if !pres then 1 else 0); (SZ.v len - SZ.v (!pi))] // fstar2 only
+  {
     let i = !pi;
     PM.seq_list_match_length (vmatch arr) _ _;
     with c2 l2 . assert (PM.seq_list_match c2 l2 (vmatch arr));
@@ -1386,7 +1397,9 @@ fn l2r_write_nlist_as_slice
       List.Tot.append l1 l2 == Ghost.reveal x /\
       True
     )
-  ) {
+  )
+    decreases (SZ.v len - SZ.v (!pi)) // fstar2 only
+  {
     let i = !pi;
     let off = !pres;
     PM.seq_list_match_length (vmatch arr) _ _;

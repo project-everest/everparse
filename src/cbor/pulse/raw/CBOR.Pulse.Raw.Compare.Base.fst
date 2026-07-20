@@ -164,7 +164,9 @@ fn impl_lex_compare
       same_sign (lex_compare compare v1 v2) (if res = 0s then lex_compare' compare v1 v2 (SZ.v i1) (SZ.v i2) else I16.v res) /\
       (res == 0s ==> (SZ.lt i1 n1 == SZ.lt i2 n2))
     )
-  ) {
+  )
+    decreases %[(if !pres = 0s then 1 else 0); (SZ.v n1 - SZ.v (!pi1))] // fstar2 only
+  {
     let i1 = !pi1;
     let x1 = S.op_Array_Access s1.v i1;
     SM.seq_list_match_index_trade vmatch c1 v1 (SZ.v i1);

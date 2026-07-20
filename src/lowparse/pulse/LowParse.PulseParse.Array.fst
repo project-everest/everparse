@@ -164,6 +164,7 @@ fn free_array
   let mut pi = 0sz;
   while (let i = !pi; SZ.lt i elem_count_sz)
   invariant exists* i. R.pts_to pi i ** V.pts_to x s ** SM.seq_seq_match elem_vmatch s (Seq.seq_of_list v) (SZ.v i) (L.length v) ** pure (SZ.v i <= SZ.v elem_count_sz /\ Seq.length s == SZ.v elem_count_sz /\ L.length v == SZ.v elem_count_sz)
+    decreases (SZ.v elem_count_sz - SZ.v (!pi)) // fstar2 only
   {
     let i = !pi;
     SM.seq_seq_match_dequeue_left elem_vmatch s (Seq.seq_of_list v) (SZ.v i) (L.length v);
@@ -359,6 +360,7 @@ ensures
       (let rem = Seq.slice w_bytes (SZ.v cur_off_sz) (Seq.length w_bytes) in
        parse (parse_list p) rem == Some (snd (L.splitAt (SZ.v i) (Ghost.reveal fl)), Seq.length rem))
     )
+    decreases (SZ.v elem_count_sz - SZ.v (!pi)) // fstar2 only
   {
     let i = !pi;
     let cur = !poff;
