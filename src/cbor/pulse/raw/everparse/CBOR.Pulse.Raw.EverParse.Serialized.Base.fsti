@@ -23,5 +23,6 @@ val cbor_read
     pts_to_serialized serialize_raw_data_item input #pm v)
   (ensures fun res ->
       cbor_match 1.0R res v **
-      trade (cbor_match 1.0R res v) (pts_to_serialized serialize_raw_data_item input #pm v)
+      trade (cbor_match 1.0R res v) (pts_to_serialized serialize_raw_data_item input #pm v) **
+      pure (~ (CBOR_Case_Array? res \/ CBOR_Case_Map? res \/ CBOR_Case_Tagged? res))
   )
