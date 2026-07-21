@@ -1580,7 +1580,7 @@ let print_out_expr_set (tbl:set) (oe:output_expr) : ML string =
       fn_arg2_t
       fn_arg2_name
       fn_body in
-    Printf.sprintf "\n\n%s\n\n" fn
+    Printf.sprintf "%s\n" fn
 
 (*
  * F* val for the getter for the output expression
@@ -1616,7 +1616,7 @@ let print_out_expr_get(tbl:set) (oe:output_expr) : ML string =
       fn_arg1_t
       (A.ident_name fn_arg1_name)
       fn_body in
-    Printf.sprintf "\n\n%s\n\n" fn
+    Printf.sprintf "%s\n" fn
 
 let output_setter_name lhs = Printf.sprintf "set_%s" (out_fn_name lhs)
 let output_getter_name lhs = Printf.sprintf "get_%s" (out_fn_name lhs)
