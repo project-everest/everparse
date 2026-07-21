@@ -1573,7 +1573,7 @@ let print_out_expr_set (tbl:set) (oe:output_expr) : ML string =
       (print_out_expr' oe.oe_expr)
       fn_arg2_name in
     let fn = Printf.sprintf
-      "void %s (%s %s, %s %s){\n    %s;\n}\n"
+      "void %s (%s %s, %s %s){\n    %s\n}\n"
       fn_name
       fn_arg1_t
       (A.ident_name fn_arg1_name)
@@ -1610,7 +1610,7 @@ let print_out_expr_get(tbl:set) (oe:output_expr) : ML string =
     let fn_arg1_name = base_id_of_output_expr oe in
     let fn_res = print_as_c_type oe.oe_t in
     let fn_body = Printf.sprintf "return %s;" (print_out_expr' oe.oe_expr) in
-    let fn = Printf.sprintf "%s %s (%s %s){\n    %s;\n}\n"
+    let fn = Printf.sprintf "%s %s (%s %s){\n    %s\n}\n"
       fn_res
       fn_name
       fn_arg1_t
