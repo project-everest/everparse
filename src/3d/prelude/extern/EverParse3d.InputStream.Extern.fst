@@ -128,7 +128,7 @@ let has
 =
   if x.Aux.has_length
   then
-    n `U64.lte` (x.Aux.length `U64.sub` position)
+    (x.Aux.length `U64.sub` position) `U64.gte` n
   else
     Aux.has x.Aux.base n
 

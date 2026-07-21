@@ -7,6 +7,14 @@ on:
         default: _release
         type: string
         required: true
+      version:
+        description: 'Version number (leave empty to auto-compute as vYYYY.MM.DD)'
+        type: string
+        default: ''
+      only_build_3d:
+        description: Only build 3D
+        type: boolean
+        default: false
 
 defaults:
   run:
@@ -124,7 +132,11 @@ jobs:
         run: |
           cd "$GITHUB_WORKSPACE"
           if ! [[ -e version.txt ]] ; then
-            date '+v%Y.%m.%d' > version.txt
+            if [[ -n "${{ inputs.version }}" ]] ; then
+              echo "${{ inputs.version }}" > version.txt
+            else
+              date '+v%Y.%m.%d' > version.txt
+            fi
             git add version.txt
             git commit -m 'Set version number'
           fi
@@ -144,6 +156,7 @@ jobs:
           name: hash
 
   build-macos:
+    if: ${{ !inputs.only_build_3d }}
     runs-on: macos-latest
     needs: prepare
     steps:
@@ -185,6 +198,7 @@ jobs:
           name: everparse-build-macos
 
   test-macos:
+    if: ${{ !inputs.only_build_3d }}
     needs: build-macos
     runs-on: macos-latest
     steps:
@@ -222,6 +236,7 @@ jobs:
           name: everparse-test-macos
 
   build-linux:
+    if: ${{ !inputs.only_build_3d }}
     runs-on: Ubuntu-22.04
     needs: prepare
     steps:
@@ -259,6 +274,7 @@ jobs:
           name: everparse-build-linux
 
   test-linux:
+    if: ${{ !inputs.only_build_3d }}
     needs: build-linux
     runs-on: ubuntu-22.04
     steps:
@@ -332,6 +348,8 @@ jobs:
 
       - name: Build package
         shell: C:\.opam\.cygwin\root\bin\bash.exe --login '{0}'
+        env:
+          EVERPARSE_ONLY_3D: ${{ inputs.only_build_3d && '1' || '' }}
         run: >-
           cd $GITHUB_WORKSPACE && eval $(opam env) && env V=1 MAKE=make make -f package.Makefile package -kj$(nproc)
 
@@ -386,6 +404,7 @@ jobs:
           name: everparse-test-windows
 
   test-interop-macos:
+    if: ${{ !inputs.only_build_3d }}
     needs: [build-macos, test-linux, test-windows]
     runs-on: macos-latest
     steps:
@@ -418,6 +437,7 @@ jobs:
           cd ${{ github.workspace }}/windows/ && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
 
   test-interop-linux:
+    if: ${{ !inputs.only_build_3d }}
     needs: [build-linux, test-macos, test-windows]
     runs-on: ubuntu-22.04
     steps:
@@ -450,6 +470,7 @@ jobs:
           cd ${{ github.workspace }}/windows/ && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace Comments.3d
 
   test-interop-windows:
+    if: ${{ !inputs.only_build_3d }}
     needs: [build-windows, test-linux, test-macos]
     runs-on: windows-latest
     steps:
@@ -483,6 +504,7 @@ jobs:
           cd ${{ github.workspace }}\macos && ${{ github.workspace }}\test\everparse.cmd --check_hashes inplace Comments.3d
 
   build-docker:
+    if: ${{ !inputs.only_build_3d }}
     needs: prepare
     runs-on: ubuntu-latest
     steps:
@@ -527,6 +549,7 @@ jobs:
           tags: ghcr.io/${{ github.repository }}:_dzomo_release_${{ github.run_id }}
 
   test-docker:
+    if: ${{ !inputs.only_build_3d }}
     needs: build-docker
     runs-on: ubuntu-latest
     steps:
@@ -539,6 +562,7 @@ jobs:
           docker run ghcr.io/${{ github.repository }}:_dzomo_release_${{ github.run_id }} '[[ "$(git rev-parse HEAD)" = '"$(cat hash.txt)"' ]] && make -j$(nproc) test'
 
   ci-linux:
+    if: ${{ !inputs.only_build_3d }}
     needs: prepare
     runs-on: ubuntu-latest
     steps:
@@ -562,8 +586,11 @@ jobs:
       - name: Everparse CI
         run: |
           make -C everparse -j$(nproc) -k test
+        env:
+          EVERPARSE_CHECK_DIFF: 1
 
   ci-macos:
+    if: ${{ !inputs.only_build_3d }}
     needs: prepare
     runs-on: macOS-latest
     steps:
@@ -592,10 +619,13 @@ jobs:
           nproc=$(sysctl -n hw.logicalcpu)
           if [[ $nproc -gt 8 ]] ; then nproc=8 ; fi
           cd everparse && gmake -j$nproc -k all test
+        env:
+          EVERPARSE_CHECK_DIFF: 1
 
   push-tag:
     runs-on: ubuntu-latest
-    needs: [test-interop-macos, test-interop-linux, test-interop-windows, test-docker, ci-linux, ci-macos]
+    if: ${{ !cancelled() && !failure() }}
+    needs: [test-interop-macos, test-interop-linux, test-interop-windows, test-docker, ci-linux, ci-macos, test-windows]
     steps:
       - name: Set up git
         run: |
@@ -627,6 +657,7 @@ jobs:
 
   push-release:
     runs-on: ubuntu-latest
+    if: ${{ !cancelled() && !failure() }}
     needs: push-tag
     steps:
       - name: Set up git
@@ -667,6 +698,7 @@ jobs:
             "$CI_TAG" artifacts/*
 
   push-docker:
+    if: ${{ !cancelled() && !failure() && !inputs.only_build_3d }}
     needs: push-tag
     runs-on: ubuntu-latest
     steps:
@@ -714,6 +746,7 @@ jobs:
           tags: ghcr.io/${{ github.repository }}:${{ env.CI_TAG }}
 
   delete-docker:
+    if: ${{ !cancelled() && !failure() && !inputs.only_build_3d }}
     needs: push-docker
     runs-on: ubuntu-latest
     steps:
@@ -732,6 +765,7 @@ jobs:
 
   delete-release:
     runs-on: ubuntu-latest
+    if: ${{ !cancelled() && !failure() }}
     needs: push-release
     steps:
     - uses: geekyeggo/delete-artifact@v5
@@ -767,6 +801,7 @@ jobs:
           git push
 
   delete-branch:
+    if: ${{ !cancelled() && !failure() }}
     needs: [delete-docker, delete-release, push-release-branch]
     runs-on: ubuntu-latest
     steps:

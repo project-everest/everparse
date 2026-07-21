@@ -30,6 +30,16 @@ val get_skip_c_makefiles : unit -> ML bool
 
 val get_no_everparse_h : unit -> ML bool
 
+val get_hoist_locals : unit -> ML bool
+
+val get_goto_for_early_return : unit -> ML bool
+
+val get_blank_lines : unit -> ML bool
+
+val get_line_comments : unit -> ML bool
+
+val get_init_locals : unit -> ML (option string)
+
 val get_check_hashes : unit -> ML (option check_hashes_t)
 
 val get_save_hashes : unit -> ML bool
@@ -89,6 +99,8 @@ val get_z3_flight_name: unit -> ML string
 val get_produce_testcases_c: unit -> ML bool
 
 val get_z3_skip_c_initializers: unit -> ML bool
+
+val get_use_error_handler_macro: unit -> ML bool
 
 val get_z3_use_ptr: unit -> ML bool
 

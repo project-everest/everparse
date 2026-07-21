@@ -131,3 +131,39 @@ typedef struct _CoercePtr(EVERPARSE_COPY_BUFFER_T dest) {
   T(Bound) *pointer(UINT32) ptr probe ProbeAndCopy(length=sizeof(T), destination=dest);
 } CoercePtr;
 //SNIPPET_END: coerce$
+
+//SNIPPET_START: selective entrypoint$
+entrypoint probe ProbeAndCopy(length=sizeof(this))
+typedef struct _ProbeOnly {
+  UINT32 x;
+  UINT32 y;
+} ProbeOnly;
+
+entrypoint
+entrypoint probe ProbeAndCopy(length=sizeof(this))
+typedef struct _BothEntrypoints {
+  UINT32 x;
+  UINT32 y;
+} BothEntrypoints;
+//SNIPPET_END: selective entrypoint$
+
+//SNIPPET_START: named entrypoint$
+entrypoint(ValidateMyData)
+typedef struct _NamedPlainEp {
+  UINT32 x;
+  UINT32 y;
+} NamedPlainEp;
+
+entrypoint(ProbeMyData) probe ProbeAndCopy(length=sizeof(this))
+typedef struct _NamedProbeEp {
+  UINT32 x;
+  UINT32 y;
+} NamedProbeEp;
+
+entrypoint(CheckAll)
+entrypoint(ProbeAll) probe ProbeAndCopy(length=sizeof(this))
+typedef struct _NamedBothEp {
+  UINT32 x;
+  UINT32 y;
+} NamedBothEp;
+//SNIPPET_END: named entrypoint$

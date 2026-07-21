@@ -1407,6 +1407,16 @@ let out_witness_len
   out (string_of_int num);
   out "[0].len"
 
+(* The generated validators take the dynamic error-handler callback
+   (`&TestErrorHandler`) as an argument only when 3d is NOT invoked with
+   `--use_error_handler_macro`.  Under that option they instead call the
+   `EVERPARSE_ERROR_HANDLER_MACRO` C macro directly and drop the
+   argument, so the test harness must omit it too. *)
+let test_error_handler_call_arg () : ML string =
+  if Options.get_use_error_handler_macro ()
+  then ""
+  else "&TestErrorHandler, "
+
 let print_witness_call_as_c_aux
   (out: (string -> ML unit))
   (flight: string)
@@ -1419,7 +1429,9 @@ let print_witness_call_as_c_aux
   out validator_name;
   out "(";
   print_witness_args_as_c out arg_types args;
-  out "&context, &TestErrorHandler, witness";
+  out "&context, ";
+  out (test_error_handler_call_arg ());
+  out "witness";
   out flight;
   out (string_of_int num);
   out "[0].buf, ";
@@ -2045,7 +2057,7 @@ let mk_get_negative_test_witness (name: string) (l: list arg_type) : string =
 (assert (= state-witness-input-size -1)) ; validator shall genuinely fail, we are not interested in positive cases followed by garbage
 "
 
-let test_error_handler = "
+let test_error_handler_fn = "
 static void TestErrorHandler (
   const char *typename_s,
   const char *fieldname,
@@ -2064,12 +2076,26 @@ static void TestErrorHandler (
     *context = 1;
   }
 }
+"
 
+let witness_layer_typedef = "
 typedef struct {
   uint8_t *buf;
   uint64_t len;
 } witness_layer_t;
 "
+
+(* Preamble shared by the generated test harnesses.  The
+   `TestErrorHandler` dynamic callback is emitted only when it is
+   actually passed to the validators, i.e. when 3d is NOT invoked with
+   `--use_error_handler_macro` (otherwise it would be an unused
+   function and the validators call `EVERPARSE_ERROR_HANDLER_MACRO`
+   directly).  The `witness_layer_t` typedef is always needed. *)
+let test_error_handler () : ML string =
+  (if Options.get_use_error_handler_macro ()
+   then ""
+   else test_error_handler_fn)
+  ^ witness_layer_typedef
 
 let test_default_probe_functions = "
 typedef struct {
@@ -2194,7 +2220,7 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
   cout modul;
   cout ".h\"
 ";
-  cout test_error_handler;
+  cout (test_error_handler ());
   cout_test_probe_functions use_ptr cout prog;
   cout "
   int main(void) {
@@ -2277,7 +2303,7 @@ let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
   cout modul2;
   cout ".h\"
 ";
-  cout test_error_handler;
+  cout (test_error_handler ());
   cout_test_probe_functions use_ptr cout prog;
   cout "
   int main(void) {
@@ -2329,7 +2355,7 @@ let test_checker_c
   (validator_name: string)
   (outparameters: string)
   (params: list (string & arg_type))
-: Tot string
+: ML string
 =
   let (nb_cmd_and_args, read_args, call_args_lhs, call_args_rhs) = List.Tot.fold_left test_exe_mk_arg (2, "", "", "") params in
   let nb_cmd_and_args_s = string_of_int nb_cmd_and_args in
@@ -2346,7 +2372,7 @@ let test_checker_c
 #include <stdlib.h>
 #include <string.h>
 
-"^test_error_handler^"
+"^test_error_handler ()^"
 
 int main(int argc, char** argv) {
   if (argc < "^nb_cmd_and_args_s^") {
@@ -2386,7 +2412,7 @@ int main(int argc, char** argv) {
   };
   printf(\"Read %\" PRIuPTR \" bytes from %s\\n\", len, filename);
   uint8_t context = 0;
-  uint64_t result = "^validator_name^"("^call_args_lhs^"&context, &TestErrorHandler, buf, len, 0);
+  uint64_t result = "^validator_name^"("^call_args_lhs^"&context, "^test_error_handler_call_arg ()^"buf, len, 0);
   if (len > 0)
     munmap(vbuf, len);
   close(testfile);

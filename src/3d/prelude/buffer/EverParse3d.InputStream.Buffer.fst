@@ -131,7 +131,7 @@ let inst = {
   extra_t = unit;
 
   has = begin fun x xlen currentPosition n ->
-    n `U64.lte` (xlen `U64.sub` currentPosition)
+    (xlen `U64.sub` currentPosition) `U64.gte` n
   end;
 
   read = begin fun _ k p r x currentPosition n ->
