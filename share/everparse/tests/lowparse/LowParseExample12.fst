@@ -26,9 +26,11 @@ module I32 = FStar.Int32
 module U8 = FStar.UInt8
 
 inline_for_extraction
+noextract
 type t = parse_bounded_vlbytes_t 0 512
 
 inline_for_extraction
+noextract
 let parse_t_kind : parser_kind = strong_parser_kind 3 517 None
 
 let parse_t' = parse_vlgen 0 1023 (parse_bounded_der_length32 0 1023) (serialize_bounded_vlbytes 0 512)
@@ -74,7 +76,7 @@ let validate_t : LPS.validator parse_t =
     (PPDER.validate_bounded_der_length32 0ul 1023ul (LPI.read_u8' ()) leaf_read_bi_serialized)
     leaf_read_der
     (serialize_bounded_vlbytes 0 512)
-    (PPBY.validate_bounded_vlbytes 0 512 (leaf_read_bi 2) ())
+    (PPBY.validate_bounded_vlbytes 0 512 (leaf_read_bi 2))
     ()
 
 (* Pulse jumper *)

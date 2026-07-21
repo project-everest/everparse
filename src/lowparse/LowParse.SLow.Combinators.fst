@@ -12,7 +12,7 @@ let parse32_ret
   (#t: Type)
   (x: t)
 : Tot (parser32 (parse_ret x))
-= (fun input -> ((Some (x, 0ul)) <: (res: option (t * U32.t) { parser32_correct (parse_ret x) input res } )))
+= (fun input -> ((Some (x, 0ul)) <: (res: option (t & U32.t) { parser32_correct (parse_ret x) input res } )))
 
 inline_for_extraction
 let parse32_empty : parser32 parse_empty = parse32_ret ()
@@ -78,7 +78,7 @@ let parse32_and_then
     | _ -> None
     end
   | _ -> None
-  ) <: (res: option (t' * U32.t) { parser32_correct (p `and_then` p') input res } ))
+  ) <: (res: option (t' & U32.t) { parser32_correct (p `and_then` p') input res } ))
 
 inline_for_extraction
 let parse32_nondep_then
@@ -103,7 +103,7 @@ let parse32_nondep_then
     | _ -> None
     end
   | _ -> None
-  ) <: (res: option ((t1 * t2) * U32.t) { parser32_correct (p1 `nondep_then` p2) input res } ))
+  ) <: (res: option ((t1 & t2) & U32.t) { parser32_correct (p1 `nondep_then` p2) input res } ))
 
 let serialize32_kind_precond
   (k1 k2: parser_kind)
@@ -127,7 +127,7 @@ let serialize32_nondep_then
     serialize32_kind_precond k1 k2
   })
 : Tot (serializer32 (serialize_nondep_then s1 s2))
-= fun (input: t1 * t2) ->
+= fun (input: t1 & t2) ->
   [@inline_let]
   let _ = serialize_nondep_then_eq s1 s2 input in
   match input with
@@ -164,7 +164,7 @@ let parse32_dtuple2
     | _ -> None
     end
   | _ -> None
-  ) <: (res: option (dtuple2 t1 t2 * U32.t) { parser32_correct (parse_dtuple2 p1 p2) input res } ))
+  ) <: (res: option (dtuple2 t1 t2 & U32.t) { parser32_correct (parse_dtuple2 p1 p2) input res } ))
 
 inline_for_extraction
 let serialize32_dtuple2
@@ -201,7 +201,7 @@ let parse32_strengthen
   (#t1: Type)
   (#p1: parser k t1)
   (p1' : parser32 p1)
-  (p2: t1 -> GTot Type0)
+  (p2: t1 -> GTot prop)
   (prf: parse_strengthen_prf p1 p2)
 : Tot (parser32 (parse_strengthen p1 p2 prf))
 = fun (xbytes: bytes32) -> ((
@@ -213,7 +213,7 @@ let parse32_strengthen
     let (x' : t1 { p2 x' } ) = x in
     Some (x', consumed)
   | _ -> None
-  ) <: (res: option ((x: t1 { p2 x}) * U32.t) { parser32_correct (parse_strengthen p1 p2 prf) xbytes res } ))
+  ) <: (res: option ((x: t1 { p2 x}) & U32.t) { parser32_correct (parse_strengthen p1 p2 prf) xbytes res } ))
 
 inline_for_extraction
 let parse32_synth
@@ -234,7 +234,7 @@ let parse32_synth
     match p1' input with
     | Some (v1, consumed) -> Some (f2' v1, consumed)
     | _ -> None
-   ) <: (res: option (t2 * U32.t) { parser32_correct (parse_synth p1 f2) input res } ))
+   ) <: (res: option (t2 & U32.t) { parser32_correct (parse_synth p1 f2) input res } ))
 
 inline_for_extraction
 let parse32_synth'
@@ -309,7 +309,7 @@ let parse32_filter
       else
         None
     | _ -> None
-  ) <: (res: option ((v': t { f v' == true } ) * U32.t) { parser32_correct (parse_filter p f) input res } ))
+  ) <: (res: option ((v': t { f v' == true } ) & U32.t) { parser32_correct (parse_filter p f) input res } ))
 
 inline_for_extraction
 let serialize32_filter
@@ -342,7 +342,7 @@ let make_constant_size_parser32
       | None -> None
       | Some v -> Some (v, sz')
     end
-  ) <: (res: option (t * U32.t) { parser32_correct (make_constant_size_parser sz t f) input res } ))
+  ) <: (res: option (t & U32.t) { parser32_correct (make_constant_size_parser sz t f) input res } ))
 
 inline_for_extraction
 let make_total_constant_size_parser32
@@ -361,7 +361,7 @@ let make_total_constant_size_parser32
     else
       let s' = B32.slice input 0ul sz' in
       Some (f' s', sz')
-  ) <: (res: option (t * U32.t) { parser32_correct (make_total_constant_size_parser sz t f) input res } ))
+  ) <: (res: option (t & U32.t) { parser32_correct (make_total_constant_size_parser sz t f) input res } ))
 
 inline_for_extraction
 let size32_nondep_then

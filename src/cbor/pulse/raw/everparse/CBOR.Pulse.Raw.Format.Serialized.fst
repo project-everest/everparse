@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.Format.Serialized
+friend CBOR.Pulse.Raw.Format.Match
 #lang-pulse
 open CBOR.Spec.Raw.Base
 open CBOR.Pulse.Raw.Iterator
@@ -8,7 +9,6 @@ open CBOR.Spec.Raw.EverParse
 open CBOR.Pulse.Raw.EverParse.Format
 open LowParse.Pulse.Combinators
 open CBOR.Pulse.Raw.EverParse.Serialized.Base
-friend CBOR.Pulse.Raw.Format.Match
 
 module Trade = Pulse.Lib.Trade.Util
 
@@ -51,7 +51,8 @@ fn cbor_match_serialized_tagged_get_payload
     cbor_match 1.0R res (Tagged?.v r) **
     trade
       (cbor_match 1.0R res (Tagged?.v r))
-      (cbor_match_serialized_tagged c pm r)
+      (cbor_match_serialized_tagged c pm r) **
+    pure (~ (CBOR_Case_Array? res \/ CBOR_Case_Map? res \/ CBOR_Case_Tagged? res))
 {
   cbor_match_serialized_tagged_elim c pm r;
   let res = cbor_read (to_slice c.cbor_serialized_payload);
@@ -199,6 +200,18 @@ fn cbor_serialized_array_iterator_next_cont (_: unit)
 
 let cbor_serialized_array_iterator_next _ = cbor_raw_serialized_iterator_next _ (jump_raw_data_item ()) cbor_match (cbor_serialized_array_iterator_next_cont ())
 
+inline_for_extraction
+fn cbor_serialized_array_iterator_next_cont_with_depth (n: Ghost.erased nat) (_: unit)
+: cbor_raw_serialized_iterator_next_cont #cbor_raw #raw_data_item #parse_raw_data_item_kind #parse_raw_data_item serialize_raw_data_item (cbor_match_with_depth n)
+= (x: _) (#pm: _) (#v: _) {
+  let res = cbor_read x;
+  cbor_match_with_depth_intro_noninline n 1.0R res v;
+  Trade.trans _ _ (pts_to_serialized serialize_raw_data_item x #pm v);
+  res
+}
+
+let cbor_serialized_array_iterator_next_with_depth (n: Ghost.erased nat) = cbor_raw_serialized_iterator_next _ (jump_raw_data_item ()) (cbor_match_with_depth n) (cbor_serialized_array_iterator_next_cont_with_depth n ())
+
 let cbor_serialized_array_iterator_truncate = cbor_raw_serialized_iterator_truncate serialize_raw_data_item
 
 let cbor_serialized_array_iterator_share = cbor_raw_serialized_iterator_share serialize_raw_data_item
@@ -331,6 +344,40 @@ fn cbor_serialized_map_iterator_next_cont (_: unit)
 }
 
 let cbor_serialized_map_iterator_next _ = cbor_raw_serialized_iterator_next _ (jump_nondep_then (jump_raw_data_item ()) (jump_raw_data_item ())) cbor_match_map_entry (cbor_serialized_map_iterator_next_cont ())
+
+inline_for_extraction
+fn cbor_serialized_map_iterator_next_cont_with_depth (n: Ghost.erased nat) (_: unit)
+: cbor_raw_serialized_iterator_next_cont #cbor_map_entry #(raw_data_item & raw_data_item) #(and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind) #(nondep_then parse_raw_data_item parse_raw_data_item) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) (cbor_match_map_entry_with_depth n)
+= (x: _) (#pm: _) (#v: _) {
+  let s1, s2 = LPC.split_nondep_then
+    serialize_raw_data_item
+    (jump_raw_data_item ())
+    serialize_raw_data_item
+    x;
+  unfold (LPC.split_nondep_then_post serialize_raw_data_item serialize_raw_data_item x pm v (s1, s2));
+  unfold (LPC.split_nondep_then_post' serialize_raw_data_item serialize_raw_data_item x pm v s1 s2);
+  with v1 . assert (pts_to_serialized serialize_raw_data_item s1 #pm v1);
+  with v2 . assert (pts_to_serialized serialize_raw_data_item s2 #pm v2);
+  let res1 = cbor_read s1;
+  let res2 = cbor_read s2;
+  cbor_match_with_depth_intro_noninline n 1.0R res1 v1;
+  Trade.trans _ _ (pts_to_serialized serialize_raw_data_item s1 #pm v1);
+  cbor_match_with_depth_intro_noninline n 1.0R res2 v2;
+  Trade.trans _ _ (pts_to_serialized serialize_raw_data_item s2 #pm v2);
+  Trade.prod _ (pts_to_serialized serialize_raw_data_item s1 #pm v1) _ (pts_to_serialized serialize_raw_data_item s2 #pm v2);
+  Trade.trans _ _ (pts_to_serialized (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) x #pm v);
+  let res : cbor_map_entry = {
+    cbor_map_entry_key = res1;
+    cbor_map_entry_value = res2;
+  };
+  Trade.rewrite_with_trade
+    (cbor_match_with_depth n 1.0R res1 v1 ** cbor_match_with_depth n 1.0R res2 v2)
+    (cbor_match_map_entry_with_depth n 1.0R res v);
+  Trade.trans _ _ (pts_to_serialized (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) x #pm v);
+  res
+}
+
+let cbor_serialized_map_iterator_next_with_depth (n: Ghost.erased nat) = cbor_raw_serialized_iterator_next _ (jump_nondep_then (jump_raw_data_item ()) (jump_raw_data_item ())) (cbor_match_map_entry_with_depth n) (cbor_serialized_map_iterator_next_cont_with_depth n ())
 
 let cbor_serialized_map_iterator_share = cbor_raw_serialized_iterator_share (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
 

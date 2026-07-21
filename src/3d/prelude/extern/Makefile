@@ -26,7 +26,7 @@ EverParse.rsp: $(FILTERED_KRML_FILES) ../EverParse.rsp
 	while read file ; do grep "^$$file"'$$' $@.tmp > /dev/null || { echo ../$$file >> $@.tmp ; } ; done < ../EverParse.rsp
 	mv $@.tmp $@
 
-KRML_EXTERN = $(KRML_HOME)/krml \
+KRML_EXTERN = $(KRML_EXE) \
 	  -fstar $(FSTAR_EXE) \
 	  -skip-compilation \
 	  -skip-makefiles \

@@ -1,7 +1,7 @@
 module CBOR.Pulse.API.Det.Common
-#lang-pulse
 friend CBOR.Pulse.API.Det.Type
 friend CBOR.Spec.API.Format
+#lang-pulse
 
 module SpecRaw = CBOR.Spec.Raw
 module Raw = CBOR.Pulse.Raw.Match
@@ -666,28 +666,33 @@ fn cbor_map_entry_raw_compare
 
 fn rec cbor_raw_sort_aux
   (p: perm)
+  (n: Ghost.erased nat)
   (a: S.slice Raw.cbor_map_entry)
   (#c: Ghost.erased (Seq.seq Raw.cbor_map_entry))
   (#l: Ghost.erased (list (SpecRaw.raw_data_item & SpecRaw.raw_data_item)))
 requires
   pts_to a c **
-  SM.seq_list_match c l (Raw.cbor_match_map_entry p)
+  SM.seq_list_match c l (Raw.cbor_match_map_entry p) **
+  pure (SZ.v (S.len a) <= n)
 returns res: bool
 ensures
   Pulse.Lib.Sort.Merge.Slice.sort_aux_post (Raw.cbor_match_map_entry p) SpecF.cbor_map_entry_raw_compare a c l res
+decreases (Ghost.reveal n)
 {
   Pulse.Lib.Sort.Merge.Slice.sort_aux
     (Raw.cbor_match_map_entry p)
     SpecF.cbor_map_entry_raw_compare
     (cbor_map_entry_raw_compare p)
-    (cbor_raw_sort_aux p)
+    n
+    (fun (m: Ghost.erased nat { Ghost.reveal m << Ghost.reveal n }) -> cbor_raw_sort_aux p m)
     a
 }
 
 let cbor_raw_sort
   (p: perm)
-: Pulse.Lib.Sort.Merge.Slice.sort_t #_ #_ (Raw.cbor_match_map_entry p) SpecF.cbor_map_entry_raw_compare
-= Pulse.Lib.Sort.Merge.Slice.sort _ _ (cbor_raw_sort_aux p)
+  (n: Ghost.erased nat)
+: Pulse.Lib.Sort.Merge.Slice.sort_t #_ #_ (Raw.cbor_match_map_entry p) SpecF.cbor_map_entry_raw_compare n
+= Pulse.Lib.Sort.Merge.Slice.sort _ _ n (cbor_raw_sort_aux p n)
 
 ghost
 fn rec seq_list_map_cbor_det_map_entry_match_elim
@@ -914,7 +919,7 @@ fn cbor_det_mk_map_gen (_: unit)
     Pulse.Lib.Sort.Merge.Spec.spec_sort_correct (SpecRaw.map_entry_order SpecF.deterministically_encoded_cbor_map_key_order _) SpecF.cbor_map_entry_raw_compare vv1;
     SpecRaw.no_repeats_map_fst_mk_det_raw_cbor_map_entry vv;
     seq_list_map_cbor_det_map_entry_match_elim pv va vv;
-    let correct : bool = cbor_raw_sort pv a;
+    let correct : bool = cbor_raw_sort pv (Ghost.hide (SZ.v (S.len a))) a;
     Trade.trans _ _ (SM.seq_list_match va vv (cbor_det_map_entry_match pv));
     with va' vv' . assert (pts_to a va' ** SM.seq_list_match va' vv' (Raw.cbor_match_map_entry pv));
     S.pts_to_len a;

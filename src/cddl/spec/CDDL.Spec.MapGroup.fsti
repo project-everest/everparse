@@ -191,6 +191,7 @@ let map_constraint_choice
 : Tot bool
 = f1 x || f2 x
 
+#push-options "--z3rlimit 32"
 #restart-solver
 let map_group_footprint_concat
   (g1 g2: map_group)
@@ -204,7 +205,28 @@ let map_group_footprint_concat
     map_group_footprint (map_group_concat g1 g2) (map_constraint_choice f1 f2)
   ))
   [SMTPat (map_group_footprint (map_group_concat g1 g2) (map_constraint_choice f1 f2))]
-= bring_cbor_map_defined_alt ()
+= bring_cbor_map_defined_alt ();
+  map_group_footprint_intro
+    (map_group_concat g1 g2)
+    (map_constraint_choice f1 f2)
+    (fun m m' ->
+      apply_map_group_det_concat g1 g2 m;
+      apply_map_group_det_concat g1 g2 (m `cbor_map_union` m');
+      match apply_map_group_det g1 m, apply_map_group_det g1 (m `cbor_map_union` m') with
+      | MapGroupCutFail, _ -> ()
+      | MapGroupFail, _ -> ()
+      | MapGroupDet c1 r1, MapGroupDet _ r1' ->
+        assert (r1' == r1 `cbor_map_union` m');
+        begin match apply_map_group_det g2 r1, apply_map_group_det g2 (r1 `cbor_map_union` m') with
+        | MapGroupCutFail, _ -> ()
+        | MapGroupFail, _ -> ()
+        | MapGroupDet _ r2, MapGroupDet _ r2' ->
+          assert (r2' == r2 `cbor_map_union` m')
+        | _ -> ()
+        end
+      | _ -> ()
+    )
+#pop-options
 
 #restart-solver
 let map_group_footprint_choice
@@ -2346,6 +2368,7 @@ let map_group_zero_or_more_match_item_parser_op_comm
 = ()
 #pop-options
 
+#push-options "--z3rlimit_factor 8 --split_queries always"
 let rec list_fold_map_group_zero_or_more_match_item_parser_op_mem
   (#tkey #tvalue: Type)
   (#key #value: typ)
@@ -2381,6 +2404,7 @@ let rec list_fold_map_group_zero_or_more_match_item_parser_op_mem
     | a :: q ->
       list_fold_map_group_zero_or_more_match_item_parser_op_mem pkey pvalue except m (map_group_zero_or_more_match_item_parser_op pkey pvalue except m accu a) q k v
     end
+#pop-options
 
 let map_group_zero_or_more_match_item_parser_op_length
   (#tkey #tvalue: Type)

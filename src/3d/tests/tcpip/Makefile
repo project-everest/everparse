@@ -21,9 +21,12 @@ extern: $(SOURCE_FILES_EXTERN) extern.out
 
 .PHONY: all interpret extern clean
 
-INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffer $(EVERPARSE_HOME)/src/lowparse $(KRML_HOME)/krmllib/obj $(KRML_HOME)/krmllib
+EVERPARSE_SRC_PATH := $(EVERPARSE_HOME)/src
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
-FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
+INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffer $(EVERPARSE_HOME)/src/lowparse
+
+FSTAR_OPTIONS += $(addprefix --include , $(INCLUDES))
 
 %.fst-in:
 	@echo $(FSTAR_OPTIONS)

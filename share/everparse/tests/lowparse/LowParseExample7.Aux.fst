@@ -16,7 +16,7 @@ type binders = LP.parse_bounded_vlbytes_t 0 65535
 let parse_binders : LP.parser _ binders = LP.parse_bounded_vlbytes 0 65535
 let serialize_binders: LP.serializer parse_binders = LP.serialize_bounded_vlbytes 0 65535
 
-type pre_shared_key_extension = (U32.t * binders)
+type pre_shared_key_extension = (U32.t & binders)
 let parse_pre_shared_key_extension : LP.parser _ pre_shared_key_extension = LP.nondep_then LP.parse_u32 parse_binders
 let serialize_pre_shared_key_extension : LP.serializer parse_pre_shared_key_extension = LP.serialize_nondep_then LP.serialize_u32 serialize_binders
 
@@ -24,7 +24,7 @@ type extension_type = | PreSharedKeyExtension_t
 
 inline_for_extraction
 let extension_enum : LP.enum extension_type U32.t =
-  let l : list (extension_type * U32.t) = [
+  let l : list (extension_type & U32.t) = [
     PreSharedKeyExtension_t, 18ul;
   ]
   in

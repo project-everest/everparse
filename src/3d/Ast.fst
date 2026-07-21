@@ -47,7 +47,7 @@ type comments_buffer_t = {
 
 #push-options "--warn_error -272" //top-level effect; ok
 let comments_buffer : comments_buffer_t =
-  let buffer : ref (list (string & pos & pos)) = FStar.ST.alloc [] in
+  let buffer : ref (list (string & pos & pos)) = alloc [] in
   let buffer_comment (c, s, p) =
     let c = String.substring c 2 (String.length c - 2) in
     buffer := (c, s, p) :: !buffer
@@ -83,7 +83,7 @@ let string_of_pos p =
 
 /// range: A source extent
 [@@ PpxDerivingYoJson ]
-let range = pos * pos
+let range = pos & pos
 
 /// comment: A list of line comments, i.e., a list of strings
 let comments = list string
@@ -166,7 +166,7 @@ type integer_type =
 [@@ PpxDerivingYoJson ]
 let pointer_size_t = i:integer_type { i == UInt32 \/ i == UInt64 }
 
-let parse_int_suffix (i:string) : string * option integer_type =
+let parse_int_suffix (i:string) : string & option integer_type =
     let l = String.length i in
     if l >= 2
     then let suffix = String.sub i (l - 2) 2 in
@@ -767,7 +767,7 @@ let decl_with_v (d:decl) (v:decl') : decl =
 noeq
 type type_refinement = {
   includes:list string;
-  type_map:list (ident * option ident);
+  type_map:list (ident & option ident);
   auto_type_map: list (ident & option ident); //map from type to its auto-generated type
 }
 
@@ -1567,7 +1567,7 @@ let map_opt (f:'a -> ML 'b) (o:option 'a) : ML (option 'b) =
 ////////////////////////////////////////////////////////////////////////////////
 module H = Hashtable
 let subst = H.t ident' expr
-let mk_subst (s:list (ident * expr)) : ML subst =
+let mk_subst (s:list (ident & expr)) : ML subst =
   let h = H.create 10 in
   List.iter (fun (i, e) -> H.insert h i.v e) s;
   h

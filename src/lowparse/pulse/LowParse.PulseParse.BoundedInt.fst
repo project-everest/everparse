@@ -23,9 +23,8 @@ let validate_bounded_integer (i: integer_size)
 
 inline_for_extraction
 let validate_bounded_integer' (i: U32.t { 1 <= U32.v i /\ U32.v i <= 4 })
-  (_: squash (FStar.SizeT.fits_u64))
 : Tot (LPS.validator (parse_bounded_integer (U32.v i)))
-= FStar.SizeT.fits_u64_implies_fits_32 ();
+= // U32.v i <= 4 < pow2 16, so fits (U32.v i) holds via fits_at_least_16
   LPS.validate_total_constant_size (parse_bounded_integer (U32.v i)) (FStar.SizeT.uint32_to_sizet i)
 
 inline_for_extraction noextract
@@ -572,7 +571,7 @@ ensures
 
 inline_for_extraction
 fn leaf_read_bounded_integer_1
-  (_: squash FStar.SizeT.fits_u64)
+  (_: unit)
 : PPB.leaf_reader (parse_bounded_integer 1)
 =
   (input: S.slice byte)
@@ -594,7 +593,7 @@ fn leaf_read_bounded_integer_1
 
 inline_for_extraction
 fn leaf_read_bounded_integer_2
-  (_: squash FStar.SizeT.fits_u64)
+  (_: unit)
 : PPB.leaf_reader (parse_bounded_integer 2)
 =
   (input: S.slice byte)
@@ -622,7 +621,7 @@ fn leaf_read_bounded_integer_2
 
 inline_for_extraction
 fn leaf_read_bounded_integer_3
-  (_: squash FStar.SizeT.fits_u64)
+  (_: unit)
 : PPB.leaf_reader (parse_bounded_integer 3)
 =
   (input: S.slice byte)
@@ -656,7 +655,7 @@ fn leaf_read_bounded_integer_3
 
 inline_for_extraction
 fn leaf_read_bounded_integer_4
-  (_: squash FStar.SizeT.fits_u64)
+  (_: unit)
 : PPB.leaf_reader (parse_bounded_integer 4)
 =
   (input: S.slice byte)
@@ -699,10 +698,9 @@ fn leaf_read_bounded_integer_4
 
 inline_for_extraction
 let leaf_read_bounded_integer
-  (sq: squash FStar.SizeT.fits_u64)
   (i: integer_size)
 : Tot (PPB.leaf_reader (parse_bounded_integer i))
-= if i = 1 then leaf_read_bounded_integer_1 sq
-  else if i = 2 then leaf_read_bounded_integer_2 sq
-  else if i = 3 then leaf_read_bounded_integer_3 sq
-  else leaf_read_bounded_integer_4 sq
+= if i = 1 then leaf_read_bounded_integer_1 ()
+  else if i = 2 then leaf_read_bounded_integer_2 ()
+  else if i = 3 then leaf_read_bounded_integer_3 ()
+  else leaf_read_bounded_integer_4 ()

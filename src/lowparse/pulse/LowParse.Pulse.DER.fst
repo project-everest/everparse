@@ -344,3 +344,123 @@ fn leaf_read_bounded_der_length32
 }
 
 #pop-options
+
+(* leaf writer and size for parse_bounded_der_length32 *)
+
+module SpecBI = LowParse.Spec.BoundedInt
+
+let seq_append_slices
+  (#t: Type)
+  (v1 v2: Seq.seq t)
+  (offset off1 off2: nat)
+  (a b: Seq.seq t)
+: Lemma
+  (requires (
+    offset <= off1 /\ off1 <= off2 /\ off2 <= Seq.length v2 /\
+    Seq.length v1 == Seq.length v2 /\
+    Seq.slice v2 0 off1 == Seq.slice v1 0 off1 /\
+    Seq.slice v1 offset off1 == a /\
+    Seq.slice v2 off1 off2 == b
+  ))
+  (ensures (
+    Seq.slice v2 offset off2 == Seq.append a b /\
+    Seq.slice v2 0 offset == Seq.slice v1 0 offset
+  ))
+= Seq.slice_slice v2 0 off1 offset off1;
+  Seq.slice_slice v2 0 off1 0 offset;
+  Seq.slice_slice v1 0 off1 0 offset;
+  Seq.slice_slice v2 offset off2 0 (off1 - offset);
+  Seq.slice_slice v2 offset off2 (off1 - offset) (off2 - offset);
+  Seq.lemma_split (Seq.slice v2 offset off2) (off1 - offset);
+  Seq.lemma_eq_intro (Seq.slice v2 offset off2) (Seq.append a b)
+
+#push-options "--z3rlimit 64"
+
+inline_for_extraction
+fn l2r_leaf_write_bounded_integer_be
+  (sz: integer_size)
+  (sz_sz: SZ.t { SZ.v sz_sz == sz })
+: LPS.l2r_leaf_writer #(bounded_integer sz) #(parse_bounded_integer_kind sz) #(parse_bounded_integer sz) (serialize_bounded_integer sz)
+= (n: bounded_integer sz)
+  (out: S.slice byte)
+  (offset: SZ.t)
+  (#v: Ghost.erased bytes)
+{
+  S.pts_to_len out;
+  SpecBI.serialize_bounded_integer_spec sz n;
+  SpecBI.bounded_integer_prop_equiv sz n;
+  let pos' = SZ.add offset sz_sz;
+  LPI.write_bounded_integer_header sz sz_sz n out #v pos';
+  pos'
+}
+
+#pop-options
+
+#push-options "--z3rlimit 128"
+
+inline_for_extraction
+fn l2r_leaf_write_bounded_der_length32
+  (vmin: der_length_t)
+  (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 })
+: LPS.l2r_leaf_writer (serialize_bounded_der_length32 vmin vmax)
+= (y': bounded_int32 vmin vmax)
+  (out: S.slice byte)
+  (offset: SZ.t)
+  (#v: Ghost.erased bytes)
+{
+  S.pts_to_len out;
+  serialize_bounded_der_length32_unfold vmin vmax y';
+  serialize_bounded_der_length32_size vmin vmax y';
+  serialize_u8_spec (tag_of_der_length32_impl y');
+  let x = tag_of_der_length32_impl y';
+  let off1 = (LPI.l2r_leaf_write_u8 ()) x out offset;
+  with v1. assert (S.pts_to out v1);
+  if (U8.lt x 128uy) {
+    off1
+  } else if (U8.eq x 129uy) {
+    serialize_u8_spec (Cast.uint32_to_uint8 y');
+    let off2 = (LPI.l2r_leaf_write_u8 ()) (Cast.uint32_to_uint8 y') out off1;
+    with v2. assert (S.pts_to out v2);
+    seq_append_slices v1 v2 (SZ.v offset) (SZ.v off1) (SZ.v off2)
+      (Seq.create 1 x) (Seq.create 1 (Cast.uint32_to_uint8 y'));
+    off2
+  } else if (U8.eq x 130uy) {
+    let off2 = (l2r_leaf_write_bounded_integer_be 2 2sz) y' out off1;
+    with v2. assert (S.pts_to out v2);
+    seq_append_slices v1 v2 (SZ.v offset) (SZ.v off1) (SZ.v off2)
+      (Seq.create 1 x) (serialize (serialize_bounded_integer 2) y');
+    off2
+  } else if (U8.eq x 131uy) {
+    let off2 = (l2r_leaf_write_bounded_integer_be 3 3sz) y' out off1;
+    with v2. assert (S.pts_to out v2);
+    seq_append_slices v1 v2 (SZ.v offset) (SZ.v off1) (SZ.v off2)
+      (Seq.create 1 x) (serialize (serialize_bounded_integer 3) y');
+    off2
+  } else {
+    let off2 = (l2r_leaf_write_bounded_integer_be 4 4sz) y' out off1;
+    with v2. assert (S.pts_to out v2);
+    seq_append_slices v1 v2 (SZ.v offset) (SZ.v off1) (SZ.v off2)
+      (Seq.create 1 x) (serialize (serialize_bounded_integer 4) y');
+    off2
+  }
+}
+
+#pop-options
+
+inline_for_extraction
+let bounded_der_length32_size
+  (vmin: der_length_t)
+  (vmax: der_length_t { vmin <= vmax /\ vmax < 4294967296 })
+  (x: bounded_int32 vmin vmax)
+: Pure SZ.t (requires True) (ensures fun sz -> SZ.v sz == Seq.length (serialize (serialize_bounded_der_length32 vmin vmax) x) /\ SZ.v sz < pow2 64)
+= serialize_bounded_der_length32_size vmin vmax x;
+  assert_norm (pow2 64 == 18446744073709551616);
+  if x `U32.lt` 128ul
+  then 1sz
+  else if x `U32.lt` 256ul
+  then 2sz
+  else if x `U32.lt` 65536ul
+  then 3sz
+  else if x `U32.lt` 16777216ul
+  then 4sz
+  else 5sz

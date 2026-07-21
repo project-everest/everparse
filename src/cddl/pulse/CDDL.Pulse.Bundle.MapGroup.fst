@@ -227,7 +227,7 @@ let bundle_map_match_item_for
   mb_footprint = _;
   mb_footprint_correct = ();
   mb_spec_type = maybe_named nm b_spec_type;
-  mb_spec_type_eq = b_spec_type_eq;
+  mb_spec_type_eq = coerce_eq () b_spec_type_eq;
   mb_spec = mg_spec_match_item_for cut key b_spec;
   mb_impl_type = maybe_named nm b_impl_type;
   mb_rel = _;

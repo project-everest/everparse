@@ -26,7 +26,7 @@ let nlist_cons (#t: Type) (#n: nat) (a: t) (q: nlist n t) : Tot (nlist (n + 1) t
 
 // abstract
 inline_for_extraction
-let nlist_destruct (#t: Type) (#n: nat) (x: nlist (n + 1) t) : Tot (t * nlist n t) =
+let nlist_destruct (#t: Type) (#n: nat) (x: nlist (n + 1) t) : Tot (t & nlist n t) =
   match x with (a :: q) -> a, q
 
 // abstract
@@ -37,12 +37,12 @@ let nlist_cons_unique (#t: Type) (#n: nat) (x: nlist (n + 1) t) : Lemma
 unfold let mul = Prims.op_Multiply
 
 inline_for_extraction
-let synth_nlist (#t: Type) (n: nat) (xy: t * nlist n t) : Tot (nlist (n + 1) t) =
+let synth_nlist (#t: Type) (n: nat) (xy: t & nlist n t) : Tot (nlist (n + 1) t) =
   match xy with (x, y) ->
   nlist_cons x y
 
 inline_for_extraction
-let synth_nlist_recip (#t: Type) (n: nat) (xy: nlist (n + 1) t) : Tot (t * nlist n t) =
+let synth_nlist_recip (#t: Type) (n: nat) (xy: nlist (n + 1) t) : Tot (t & nlist n t) =
   nlist_destruct xy
 
 // abstract

@@ -152,6 +152,37 @@ noextract
 let n_to_be_4 =  (E.mk_n_to_be EI.uint32 4)
 
 inline_for_extraction
+noextract
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta_attr [`%E.must_reduce]; iota; zeta; primops]; FStar.Tactics.trefl ())]
+let n_to_be_u32_1 = (E.mk_n_to_be EI.uint32 1)
+
+inline_for_extraction
+noextract
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta_attr [`%E.must_reduce]; iota; zeta; primops]; FStar.Tactics.trefl ())]
+let n_to_be_u32_2 = (E.mk_n_to_be EI.uint32 2)
+
+inline_for_extraction
+noextract
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta_attr [`%E.must_reduce]; iota; zeta; primops]; FStar.Tactics.trefl ())]
+let n_to_be_u32_3 = (E.mk_n_to_be EI.uint32 3)
+
+inline_for_extraction
+fn write_bounded_integer_header
+  (l: nat { 1 <= l /\ l <= 4 })
+  (l_sz: SZ.t { SZ.v l_sz == l })
+: E.n_to_be_t EI.uint32 l
+= (n: FStar.UInt32.t)
+  (x: S.slice FStar.UInt8.t)
+  (#v: Ghost.erased (Seq.seq FStar.UInt8.t))
+  (pos: SZ.t)
+{
+  if (l = 1) { n_to_be_u32_1 n x pos }
+  else if (l = 2) { n_to_be_u32_2 n x pos }
+  else if (l = 3) { n_to_be_u32_3 n x pos }
+  else { n_to_be_4 n x pos }
+}
+
+inline_for_extraction
 fn l2r_leaf_write_u32 (_: unit) : l2r_leaf_writer u#0 #FStar.UInt32.t #parse_u32_kind #parse_u32 serialize_u32
 = (n: _)
   (x: _)

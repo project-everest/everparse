@@ -15,7 +15,7 @@ val parse_seq_aux
   (#t: Type)
   (p: bare_parser t)
   (b: bytes)
-: GTot (option (Seq.seq t * (consumed_length b)))
+: GTot (option (Seq.seq t & (consumed_length b)))
   (decreases (Seq.length b))
 
 let rec parse_seq_aux #t p b =

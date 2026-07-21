@@ -1,6 +1,6 @@
 module CBOR.Pulse.Raw.EverParse.Serialized.Base
-#lang-pulse
 friend CBOR.Pulse.Raw.Format.Match
+#lang-pulse
 
 open CBOR.Pulse.Raw.EverParse.Format
 open LowParse.Pulse.Combinators
@@ -165,7 +165,8 @@ fn cbor_read
   returns res: cbor_raw
   ensures
       cbor_match 1.0R res v **
-      trade (cbor_match 1.0R res v) (pts_to_serialized serialize_raw_data_item input #pm v)
+      trade (cbor_match 1.0R res v) (pts_to_serialized serialize_raw_data_item input #pm v) **
+      pure (~ (CBOR_Case_Array? res \/ CBOR_Case_Map? res \/ CBOR_Case_Tagged? res))
 {
   let mut ph = dummy_header;
   let pc = get_header_and_contents input ph;
@@ -176,6 +177,7 @@ fn cbor_read
     let i = get_int64_value v h;
     let res = cbor_match_int_intro_trade (pts_to_serialized serialize_raw_data_item input #pm v) typ i;
     rewrite each (Int64 typ i) as v;
+    cbor_match_cases res;
     res
   }
   else if (typ = cbor_major_type_text_string || typ = cbor_major_type_byte_string) {
@@ -186,6 +188,7 @@ fn cbor_read
     Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
     with r . assert cbor_match 1.0R res r;
     rewrite each r as v;
+    cbor_match_cases res;
     res
   }
   else if (typ = cbor_major_type_tagged) {
@@ -250,6 +253,7 @@ fn cbor_read
     let i = get_simple_value v h;
     let res = cbor_match_simple_intro_trade (pts_to_serialized serialize_raw_data_item input #pm v) i;
     rewrite each (Simple i) as v;
+    cbor_match_cases res;
     res
   }
 }

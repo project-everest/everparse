@@ -202,7 +202,7 @@ let bundle_set_parser_and_serializer
 = {
     b_typ = b.b_typ;
     b_spec_type = spect;
-    b_spec_type_eq = b.b_spec_type_eq;
+    b_spec_type_eq = coerce_eq () b.b_spec_type_eq;
     b_spec = b.b_spec;
     b_impl_type = t;
     b_rel = r;

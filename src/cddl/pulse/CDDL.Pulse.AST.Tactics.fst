@@ -2,9 +2,9 @@ module CDDL.Pulse.AST.Tactics
 include CDDL.Spec.AST.Elab
 include CDDL.Pulse.AST.Bundle
 
-let as_squash (#t:Type0) (f: unit -> Lemma t) : squash t = f ()
+let as_squash (#t:prop) (f: unit -> Lemma t) : squash t = f ()
 
-let squash_bij_lemma (#a:Type) (#p:a -> Type)
+let squash_bij_lemma (#a:Type) (#p:a -> prop)
     ($f: (x:a -> Lemma (p x)))
     (x:a)
 : squash (p x)
