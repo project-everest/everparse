@@ -1,7 +1,6 @@
 #include "BoundedSumWrapper.h"
 #include "EverParse.h"
 #include "BoundedSum.h"
-
 void BoundedSumEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static
@@ -28,12 +27,9 @@ void DefaultErrorHandler(
 
 BOOLEAN BoundedSumCheckBoundedSum(uint32_t bound, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
-
 	frame.filled = FALSE;
-	ep_status = BoundedSumValidateBoundedSum(bound,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
-
-	if (EverParseIsError(ep_status))
+	uint64_t result = BoundedSumValidateBoundedSum(bound,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(result))
 	{
 		if (frame.filled)
 		{
@@ -46,12 +42,9 @@ BOOLEAN BoundedSumCheckBoundedSum(uint32_t bound, uint8_t *base, uint32_t len) {
 
 BOOLEAN BoundedSumCheckMySum(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
-
 	frame.filled = FALSE;
-	ep_status = BoundedSumValidateMySum( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
-
-	if (EverParseIsError(ep_status))
+	uint64_t result = BoundedSumValidateMySum( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(result))
 	{
 		if (frame.filled)
 		{

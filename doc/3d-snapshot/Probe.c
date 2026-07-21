@@ -3,32 +3,29 @@
 #include "Probe.h"
 
 #include "Probe_ExternalAPI.h"
-#include "EverParse.h"
 
 static inline uint64_t
 ValidateT(
   uint32_t Bound,
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 2ULL;
+  BOOLEAN hasBytes0 = 2ULL <= (InputLength - StartPosition);
   uint64_t positionAfterx;
-  uint64_t positionAfterT;
-  uint16_t r0;
-  uint16_t x;
-  BOOLEAN xConstraintIsOk;
-  uint64_t positionAfterx1;
-  BOOLEAN hasBytes;
-  uint64_t positionAftery_refinement;
-  uint64_t positionAfterT0;
-  uint16_t r;
-  uint16_t y_refinement;
-  BOOLEAN y_refinementConstraintIsOk;
   if (hasBytes0)
   {
     positionAfterx = StartPosition + 2ULL;
@@ -39,16 +36,17 @@ ValidateT(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
+  uint64_t positionAfterT;
   if (EverParseIsError(positionAfterx))
   {
     positionAfterT = positionAfterx;
   }
   else
   {
-    r0 = Load16Le(Input + (uint32_t)StartPosition);
-    x = (uint16_t)(uint32_t)r0;
-    xConstraintIsOk = (uint32_t)x >= Bound;
-    positionAfterx1 = EverParseCheckConstraintOk(xConstraintIsOk, positionAfterx);
+    uint16_t r0 = Load16Le(Input + (uint32_t)StartPosition);
+    uint16_t x = (uint16_t)(uint32_t)r0;
+    BOOLEAN xConstraintIsOk = (uint32_t)x >= Bound;
+    uint64_t positionAfterx1 = EverParseCheckConstraintOk(xConstraintIsOk, positionAfterx);
     if (EverParseIsError(positionAfterx1))
     {
       positionAfterT = positionAfterx1;
@@ -57,7 +55,8 @@ ValidateT(
     {
       /* Validating field y */
       /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-      hasBytes = (InputLength - positionAfterx1) >= 2ULL;
+      BOOLEAN hasBytes = 2ULL <= (InputLength - positionAfterx1);
+      uint64_t positionAftery_refinement;
       if (hasBytes)
       {
         positionAftery_refinement = positionAfterx1 + 2ULL;
@@ -68,6 +67,7 @@ ValidateT(
           EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
             positionAfterx1);
       }
+      uint64_t positionAfterT0;
       if (EverParseIsError(positionAftery_refinement))
       {
         positionAfterT0 = positionAftery_refinement;
@@ -75,10 +75,10 @@ ValidateT(
       else
       {
         /* reading field_value */
-        r = Load16Le(Input + (uint32_t)positionAfterx1);
-        y_refinement = (uint16_t)(uint32_t)r;
+        uint16_t r = Load16Le(Input + (uint32_t)positionAfterx1);
+        uint16_t y_refinement = (uint16_t)(uint32_t)r;
         /* start: checking constraint */
-        y_refinementConstraintIsOk = (uint32_t)y_refinement >= (uint32_t)x;
+        BOOLEAN y_refinementConstraintIsOk = y_refinement >= x;
         /* end: checking constraint */
         positionAfterT0 =
           EverParseCheckConstraintOk(y_refinementConstraintIsOk,
@@ -119,34 +119,24 @@ uint64_t
 ProbeValidateS(
   EVERPARSE_COPY_BUFFER_T Dest,
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 1ULL;
+  BOOLEAN hasBytes0 = 1ULL <= (InputLength - StartPosition);
   uint64_t positionAfterS;
-  uint64_t positionAfterbound;
-  uint8_t bound;
-  BOOLEAN hasBytes;
-  uint64_t positionAftertpointer;
-  uint64_t positionAfterS0;
-  uint64_t tpointer;
-  uint64_t src64;
-  uint64_t readOffset;
-  uint64_t writeOffset;
-  BOOLEAN failed;
-  BOOLEAN ok;
-  uint64_t rd;
-  uint64_t wr0;
-  BOOLEAN ok1;
-  uint64_t wr;
-  BOOLEAN hasFailed;
-  uint64_t b;
-  BOOLEAN actionResult;
-  uint64_t result;
   if (hasBytes0)
   {
     positionAfterS = StartPosition + 1ULL;
@@ -157,6 +147,7 @@ ProbeValidateS(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
+  uint64_t positionAfterbound;
   if (EverParseIsSuccess(positionAfterS))
   {
     positionAfterbound = positionAfterS;
@@ -176,9 +167,10 @@ ProbeValidateS(
   {
     return positionAfterbound;
   }
-  bound = Input[(uint32_t)StartPosition];
+  uint8_t bound = Input[(uint32_t)StartPosition];
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = (InputLength - positionAfterbound) >= 8ULL;
+  BOOLEAN hasBytes = 8ULL <= (InputLength - positionAfterbound);
+  uint64_t positionAftertpointer;
   if (hasBytes)
   {
     positionAftertpointer = positionAfterbound + 8ULL;
@@ -189,27 +181,28 @@ ProbeValidateS(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         positionAfterbound);
   }
+  uint64_t positionAfterS0;
   if (EverParseIsError(positionAftertpointer))
   {
     positionAfterS0 = positionAftertpointer;
   }
   else
   {
-    tpointer = Load64Le(Input + (uint32_t)positionAfterbound);
-    src64 = tpointer;
-    readOffset = 0ULL;
-    writeOffset = 0ULL;
-    failed = FALSE;
-    ok = ProbeInit2("_S.tpointer", (uint64_t)4U, Dest);
+    uint64_t tpointer = Load64Le(Input + (uint32_t)positionAfterbound);
+    uint64_t src64 = tpointer;
+    uint64_t readOffset = 0ULL;
+    uint64_t writeOffset = 0ULL;
+    BOOLEAN failed = FALSE;
+    BOOLEAN ok = ProbeInit2("_S.tpointer", (uint64_t)4U, Dest);
     if (ok)
     {
-      rd = readOffset;
-      wr0 = writeOffset;
-      ok1 = ProbeAndCopy2((uint64_t)4U, rd, wr0, src64, Dest);
+      uint64_t rd = readOffset;
+      uint64_t wr = writeOffset;
+      BOOLEAN ok1 = ProbeAndCopy2((uint64_t)4U, rd, wr, src64, Dest);
       if (ok1)
       {
         readOffset = rd + (uint64_t)4U;
-        writeOffset = wr0 + (uint64_t)4U;
+        writeOffset = wr + (uint64_t)4U;
       }
       else
       {
@@ -220,8 +213,9 @@ ProbeValidateS(
     {
       failed = TRUE;
     }
-    wr = writeOffset;
-    hasFailed = failed;
+    uint64_t wr = writeOffset;
+    BOOLEAN hasFailed = failed;
+    uint64_t b;
     if (hasFailed)
     {
       ErrorHandlerFn("_S", "tpointer", "probe", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -231,8 +225,10 @@ ProbeValidateS(
     {
       b = wr;
     }
+    BOOLEAN actionResult;
     if (b != 0ULL)
     {
+      uint64_t
       result =
         ValidateT((uint32_t)bound,
           Ctxt,
@@ -283,7 +279,16 @@ ProbeValidateU(
   EVERPARSE_COPY_BUFFER_T DestS,
   EVERPARSE_COPY_BUFFER_T DestT,
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
@@ -291,27 +296,8 @@ ProbeValidateU(
 {
   /* Validating field tag */
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 1ULL;
+  BOOLEAN hasBytes0 = 1ULL <= (InputLength - StartPosition);
   uint64_t positionAfterU;
-  uint64_t res;
-  uint64_t positionAftertag;
-  BOOLEAN hasBytes;
-  uint64_t positionAfterspointer;
-  uint64_t positionAfterU0;
-  uint64_t spointer;
-  uint64_t src64;
-  uint64_t readOffset;
-  uint64_t writeOffset;
-  BOOLEAN failed;
-  BOOLEAN ok;
-  uint64_t rd;
-  uint64_t wr0;
-  BOOLEAN ok1;
-  uint64_t wr;
-  BOOLEAN hasFailed;
-  uint64_t b;
-  BOOLEAN actionResult;
-  uint64_t result;
   if (hasBytes0)
   {
     positionAfterU = StartPosition + 1ULL;
@@ -322,6 +308,7 @@ ProbeValidateU(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
+  uint64_t res;
   if (EverParseIsSuccess(positionAfterU))
   {
     res = positionAfterU;
@@ -337,13 +324,14 @@ ProbeValidateU(
       StartPosition);
     res = positionAfterU;
   }
-  positionAftertag = res;
+  uint64_t positionAftertag = res;
   if (EverParseIsError(positionAftertag))
   {
     return positionAftertag;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = (InputLength - positionAftertag) >= 8ULL;
+  BOOLEAN hasBytes = 8ULL <= (InputLength - positionAftertag);
+  uint64_t positionAfterspointer;
   if (hasBytes)
   {
     positionAfterspointer = positionAftertag + 8ULL;
@@ -354,27 +342,28 @@ ProbeValidateU(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         positionAftertag);
   }
+  uint64_t positionAfterU0;
   if (EverParseIsError(positionAfterspointer))
   {
     positionAfterU0 = positionAfterspointer;
   }
   else
   {
-    spointer = Load64Le(Input + (uint32_t)positionAftertag);
-    src64 = spointer;
-    readOffset = 0ULL;
-    writeOffset = 0ULL;
-    failed = FALSE;
-    ok = ProbeInit2("_U.spointer", (uint64_t)9U, DestS);
+    uint64_t spointer = Load64Le(Input + (uint32_t)positionAftertag);
+    uint64_t src64 = spointer;
+    uint64_t readOffset = 0ULL;
+    uint64_t writeOffset = 0ULL;
+    BOOLEAN failed = FALSE;
+    BOOLEAN ok = ProbeInit2("_U.spointer", (uint64_t)9U, DestS);
     if (ok)
     {
-      rd = readOffset;
-      wr0 = writeOffset;
-      ok1 = ProbeAndCopy2((uint64_t)9U, rd, wr0, src64, DestS);
+      uint64_t rd = readOffset;
+      uint64_t wr = writeOffset;
+      BOOLEAN ok1 = ProbeAndCopy2((uint64_t)9U, rd, wr, src64, DestS);
       if (ok1)
       {
         readOffset = rd + (uint64_t)9U;
-        writeOffset = wr0 + (uint64_t)9U;
+        writeOffset = wr + (uint64_t)9U;
       }
       else
       {
@@ -385,8 +374,9 @@ ProbeValidateU(
     {
       failed = TRUE;
     }
-    wr = writeOffset;
-    hasFailed = failed;
+    uint64_t wr = writeOffset;
+    BOOLEAN hasFailed = failed;
+    uint64_t b;
     if (hasFailed)
     {
       ErrorHandlerFn("_U", "spointer", "probe", 0ULL, Ctxt, EverParseStreamOf(DestS), 0ULL);
@@ -396,8 +386,10 @@ ProbeValidateU(
     {
       b = wr;
     }
+    BOOLEAN actionResult;
     if (b != 0ULL)
     {
+      uint64_t
       result =
         ProbeValidateS(DestT,
           Ctxt,
@@ -448,70 +440,24 @@ ProbeValidateV(
   EVERPARSE_COPY_BUFFER_T DestS,
   EVERPARSE_COPY_BUFFER_T DestT,
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 1ULL;
+  BOOLEAN hasBytes0 = 1ULL <= (InputLength - StartPosition);
   uint64_t positionAfterV;
-  uint64_t positionAftertag;
-  uint8_t tag;
-  BOOLEAN hasBytes1;
-  uint64_t positionAftersptr0;
-  uint64_t positionAfterV0;
-  uint64_t sptr;
-  uint64_t src640;
-  uint64_t readOffset;
-  uint64_t writeOffset;
-  BOOLEAN failed0;
-  BOOLEAN ok0;
-  uint64_t rd0;
-  uint64_t wr0;
-  BOOLEAN ok10;
-  uint64_t wr1;
-  BOOLEAN hasFailed;
-  uint64_t b0;
-  BOOLEAN actionResult;
-  uint64_t result0;
-  uint64_t positionAftersptr;
-  BOOLEAN hasBytes2;
-  uint64_t positionAftertptr0;
-  uint64_t positionAfterV1;
-  uint64_t tptr;
-  uint64_t src641;
-  uint64_t readOffset0;
-  uint64_t writeOffset0;
-  BOOLEAN failed1;
-  BOOLEAN ok2;
-  uint64_t rd1;
-  uint64_t wr2;
-  BOOLEAN ok11;
-  uint64_t wr3;
-  BOOLEAN hasFailed0;
-  uint64_t b1;
-  BOOLEAN actionResult0;
-  uint64_t result1;
-  uint64_t positionAftertptr;
-  BOOLEAN hasBytes;
-  uint64_t positionAftert2ptr;
-  uint64_t positionAfterV2;
-  uint64_t t2ptr;
-  uint64_t src64;
-  uint64_t readOffset1;
-  uint64_t writeOffset1;
-  BOOLEAN failed;
-  BOOLEAN ok;
-  uint64_t rd;
-  uint64_t wr4;
-  BOOLEAN ok1;
-  uint64_t wr;
-  BOOLEAN hasFailed1;
-  uint64_t b;
-  BOOLEAN actionResult1;
-  uint64_t result;
   if (hasBytes0)
   {
     positionAfterV = StartPosition + 1ULL;
@@ -522,6 +468,7 @@ ProbeValidateV(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
+  uint64_t positionAftertag;
   if (EverParseIsSuccess(positionAfterV))
   {
     positionAftertag = positionAfterV;
@@ -541,9 +488,10 @@ ProbeValidateV(
   {
     return positionAftertag;
   }
-  tag = Input[(uint32_t)StartPosition];
+  uint8_t tag = Input[(uint32_t)StartPosition];
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes1 = (InputLength - positionAftertag) >= 8ULL;
+  BOOLEAN hasBytes1 = 8ULL <= (InputLength - positionAftertag);
+  uint64_t positionAftersptr0;
   if (hasBytes1)
   {
     positionAftersptr0 = positionAftertag + 8ULL;
@@ -554,58 +502,62 @@ ProbeValidateV(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         positionAftertag);
   }
+  uint64_t positionAfterV0;
   if (EverParseIsError(positionAftersptr0))
   {
     positionAfterV0 = positionAftersptr0;
   }
   else
   {
-    sptr = Load64Le(Input + (uint32_t)positionAftertag);
-    src640 = sptr;
-    readOffset = 0ULL;
-    writeOffset = 0ULL;
-    failed0 = FALSE;
-    ok0 = ProbeInit2("_V.sptr", (uint64_t)9U, DestS);
-    if (ok0)
+    uint64_t sptr = Load64Le(Input + (uint32_t)positionAftertag);
+    uint64_t src64 = sptr;
+    uint64_t readOffset = 0ULL;
+    uint64_t writeOffset = 0ULL;
+    BOOLEAN failed = FALSE;
+    BOOLEAN ok = ProbeInit2("_V.sptr", (uint64_t)9U, DestS);
+    if (ok)
     {
-      rd0 = readOffset;
-      wr0 = writeOffset;
-      ok10 = ProbeAndCopy2((uint64_t)9U, rd0, wr0, src640, DestS);
-      if (ok10)
+      uint64_t rd = readOffset;
+      uint64_t wr = writeOffset;
+      BOOLEAN ok1 = ProbeAndCopy2((uint64_t)9U, rd, wr, src64, DestS);
+      if (ok1)
       {
-        readOffset = rd0 + (uint64_t)9U;
-        writeOffset = wr0 + (uint64_t)9U;
+        readOffset = rd + (uint64_t)9U;
+        writeOffset = wr + (uint64_t)9U;
       }
       else
       {
-        failed0 = TRUE;
+        failed = TRUE;
       }
     }
     else
     {
-      failed0 = TRUE;
+      failed = TRUE;
     }
-    wr1 = writeOffset;
-    hasFailed = failed0;
+    uint64_t wr = writeOffset;
+    BOOLEAN hasFailed = failed;
+    uint64_t b;
     if (hasFailed)
     {
       ErrorHandlerFn("_V", "sptr", "probe", 0ULL, Ctxt, EverParseStreamOf(DestS), 0ULL);
-      b0 = 0ULL;
+      b = 0ULL;
     }
     else
     {
-      b0 = wr1;
+      b = wr;
     }
-    if (b0 != 0ULL)
+    BOOLEAN actionResult;
+    if (b != 0ULL)
     {
-      result0 =
+      uint64_t
+      result =
         ProbeValidateS(DestT,
           Ctxt,
           ErrorHandlerFn,
           EverParseStreamOf(DestS),
           EverParseStreamLen(DestS),
           0ULL);
-      actionResult = !EverParseIsError(result0);
+      actionResult = !EverParseIsError(result);
     }
     else
     {
@@ -629,6 +581,7 @@ ProbeValidateV(
           positionAftersptr0);
     }
   }
+  uint64_t positionAftersptr;
   if (EverParseIsSuccess(positionAfterV0))
   {
     positionAftersptr = positionAfterV0;
@@ -649,7 +602,8 @@ ProbeValidateV(
     return positionAftersptr;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes2 = (InputLength - positionAftersptr) >= 8ULL;
+  BOOLEAN hasBytes2 = 8ULL <= (InputLength - positionAftersptr);
+  uint64_t positionAftertptr0;
   if (hasBytes2)
   {
     positionAftertptr0 = positionAftersptr + 8ULL;
@@ -660,58 +614,62 @@ ProbeValidateV(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         positionAftersptr);
   }
+  uint64_t positionAfterV1;
   if (EverParseIsError(positionAftertptr0))
   {
     positionAfterV1 = positionAftertptr0;
   }
   else
   {
-    tptr = Load64Le(Input + (uint32_t)positionAftersptr);
-    src641 = tptr;
-    readOffset0 = 0ULL;
-    writeOffset0 = 0ULL;
-    failed1 = FALSE;
-    ok2 = ProbeInit2("_V.tptr", (uint64_t)8U, DestT);
-    if (ok2)
+    uint64_t tptr = Load64Le(Input + (uint32_t)positionAftersptr);
+    uint64_t src64 = tptr;
+    uint64_t readOffset = 0ULL;
+    uint64_t writeOffset = 0ULL;
+    BOOLEAN failed = FALSE;
+    BOOLEAN ok = ProbeInit2("_V.tptr", (uint64_t)8U, DestT);
+    if (ok)
     {
-      rd1 = readOffset0;
-      wr2 = writeOffset0;
-      ok11 = ProbeAndCopy2((uint64_t)8U, rd1, wr2, src641, DestT);
-      if (ok11)
+      uint64_t rd = readOffset;
+      uint64_t wr = writeOffset;
+      BOOLEAN ok1 = ProbeAndCopy2((uint64_t)8U, rd, wr, src64, DestT);
+      if (ok1)
       {
-        readOffset0 = rd1 + (uint64_t)8U;
-        writeOffset0 = wr2 + (uint64_t)8U;
+        readOffset = rd + (uint64_t)8U;
+        writeOffset = wr + (uint64_t)8U;
       }
       else
       {
-        failed1 = TRUE;
+        failed = TRUE;
       }
     }
     else
     {
-      failed1 = TRUE;
+      failed = TRUE;
     }
-    wr3 = writeOffset0;
-    hasFailed0 = failed1;
-    if (hasFailed0)
+    uint64_t wr = writeOffset;
+    BOOLEAN hasFailed = failed;
+    uint64_t b;
+    if (hasFailed)
     {
       ErrorHandlerFn("_V", "tptr", "probe", 0ULL, Ctxt, EverParseStreamOf(DestT), 0ULL);
-      b1 = 0ULL;
+      b = 0ULL;
     }
     else
     {
-      b1 = wr3;
+      b = wr;
     }
-    if (b1 != 0ULL)
+    BOOLEAN actionResult;
+    if (b != 0ULL)
     {
-      result1 =
+      uint64_t
+      result =
         ValidateT((uint32_t)17U,
           Ctxt,
           ErrorHandlerFn,
           EverParseStreamOf(DestT),
           EverParseStreamLen(DestT),
           0ULL);
-      actionResult0 = !EverParseIsError(result1);
+      actionResult = !EverParseIsError(result);
     }
     else
     {
@@ -722,9 +680,9 @@ ProbeValidateV(
         Ctxt,
         Input,
         positionAftersptr);
-      actionResult0 = FALSE;
+      actionResult = FALSE;
     }
-    if (actionResult0)
+    if (actionResult)
     {
       positionAfterV1 = positionAftertptr0;
     }
@@ -735,6 +693,7 @@ ProbeValidateV(
           positionAftertptr0);
     }
   }
+  uint64_t positionAftertptr;
   if (EverParseIsSuccess(positionAfterV1))
   {
     positionAftertptr = positionAfterV1;
@@ -755,7 +714,8 @@ ProbeValidateV(
     return positionAftertptr;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = (InputLength - positionAftertptr) >= 8ULL;
+  BOOLEAN hasBytes = 8ULL <= (InputLength - positionAftertptr);
+  uint64_t positionAftert2ptr;
   if (hasBytes)
   {
     positionAftert2ptr = positionAftertptr + 8ULL;
@@ -766,27 +726,28 @@ ProbeValidateV(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         positionAftertptr);
   }
+  uint64_t positionAfterV2;
   if (EverParseIsError(positionAftert2ptr))
   {
     positionAfterV2 = positionAftert2ptr;
   }
   else
   {
-    t2ptr = Load64Le(Input + (uint32_t)positionAftertptr);
-    src64 = t2ptr;
-    readOffset1 = 0ULL;
-    writeOffset1 = 0ULL;
-    failed = FALSE;
-    ok = ProbeInit2("_V.t2ptr", (uint64_t)8U, DestT);
+    uint64_t t2ptr = Load64Le(Input + (uint32_t)positionAftertptr);
+    uint64_t src64 = t2ptr;
+    uint64_t readOffset = 0ULL;
+    uint64_t writeOffset = 0ULL;
+    BOOLEAN failed = FALSE;
+    BOOLEAN ok = ProbeInit2("_V.t2ptr", (uint64_t)8U, DestT);
     if (ok)
     {
-      rd = readOffset1;
-      wr4 = writeOffset1;
-      ok1 = ProbeAndCopy2((uint64_t)8U, rd, wr4, src64, DestT);
+      uint64_t rd = readOffset;
+      uint64_t wr = writeOffset;
+      BOOLEAN ok1 = ProbeAndCopy2((uint64_t)8U, rd, wr, src64, DestT);
       if (ok1)
       {
-        readOffset1 = rd + (uint64_t)8U;
-        writeOffset1 = wr4 + (uint64_t)8U;
+        readOffset = rd + (uint64_t)8U;
+        writeOffset = wr + (uint64_t)8U;
       }
       else
       {
@@ -797,9 +758,10 @@ ProbeValidateV(
     {
       failed = TRUE;
     }
-    wr = writeOffset1;
-    hasFailed1 = failed;
-    if (hasFailed1)
+    uint64_t wr = writeOffset;
+    BOOLEAN hasFailed = failed;
+    uint64_t b;
+    if (hasFailed)
     {
       ErrorHandlerFn("_V", "t2ptr", "probe", 0ULL, Ctxt, EverParseStreamOf(DestT), 0ULL);
       b = 0ULL;
@@ -808,8 +770,10 @@ ProbeValidateV(
     {
       b = wr;
     }
+    BOOLEAN actionResult;
     if (b != 0ULL)
     {
+      uint64_t
       result =
         ValidateT((uint32_t)tag,
           Ctxt,
@@ -817,7 +781,7 @@ ProbeValidateV(
           EverParseStreamOf(DestT),
           EverParseStreamLen(DestT),
           0ULL);
-      actionResult1 = !EverParseIsError(result);
+      actionResult = !EverParseIsError(result);
     }
     else
     {
@@ -828,9 +792,9 @@ ProbeValidateV(
         Ctxt,
         Input,
         positionAftertptr);
-      actionResult1 = FALSE;
+      actionResult = FALSE;
     }
-    if (actionResult1)
+    if (actionResult)
     {
       positionAfterV2 = positionAftert2ptr;
     }
@@ -858,17 +822,25 @@ ProbeValidateV(
 uint64_t
 ProbeValidateIndirect(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes;
   KRML_MAYBE_UNUSED_VAR(Ctxt);
   KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
   KRML_MAYBE_UNUSED_VAR(Input);
-  hasBytes = (InputLength - StartPosition) >= 9ULL;
+  BOOLEAN hasBytes = 9ULL <= (InputLength - StartPosition);
   if (hasBytes)
   {
     return StartPosition + 9ULL;
@@ -878,7 +850,7 @@ ProbeValidateIndirect(
 
 static inline uint64_t ValidateTt(uint64_t InputLength, uint64_t StartPosition)
 {
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 9ULL;
+  BOOLEAN hasBytes = 9ULL <= (InputLength - StartPosition);
   if (hasBytes)
   {
     return StartPosition + 9ULL;
@@ -890,31 +862,24 @@ uint64_t
 ProbeValidateI(
   EVERPARSE_COPY_BUFFER_T Dest,
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 8ULL;
+  BOOLEAN hasBytes = 8ULL <= (InputLength - StartPosition);
   uint64_t positionAfterttptr;
-  uint64_t positionAfterI;
-  uint64_t ttptr;
-  uint64_t src64;
-  uint64_t readOffset;
-  uint64_t writeOffset;
-  BOOLEAN failed;
-  BOOLEAN ok;
-  uint64_t rd;
-  uint64_t wr0;
-  BOOLEAN ok1;
-  uint64_t wr;
-  BOOLEAN hasFailed;
-  uint64_t b;
-  BOOLEAN actionResult;
-  uint8_t *unused;
-  uint64_t result;
   if (hasBytes)
   {
     positionAfterttptr = StartPosition + 8ULL;
@@ -925,27 +890,28 @@ ProbeValidateI(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
+  uint64_t positionAfterI;
   if (EverParseIsError(positionAfterttptr))
   {
     positionAfterI = positionAfterttptr;
   }
   else
   {
-    ttptr = Load64Le(Input + (uint32_t)StartPosition);
-    src64 = ttptr;
-    readOffset = 0ULL;
-    writeOffset = 0ULL;
-    failed = FALSE;
-    ok = ProbeInit2("_I.ttptr", (uint64_t)9U, Dest);
+    uint64_t ttptr = Load64Le(Input + (uint32_t)StartPosition);
+    uint64_t src64 = ttptr;
+    uint64_t readOffset = 0ULL;
+    uint64_t writeOffset = 0ULL;
+    BOOLEAN failed = FALSE;
+    BOOLEAN ok = ProbeInit2("_I.ttptr", (uint64_t)9U, Dest);
     if (ok)
     {
-      rd = readOffset;
-      wr0 = writeOffset;
-      ok1 = ProbeAndCopy2((uint64_t)9U, rd, wr0, src64, Dest);
+      uint64_t rd = readOffset;
+      uint64_t wr = writeOffset;
+      BOOLEAN ok1 = ProbeAndCopy2((uint64_t)9U, rd, wr, src64, Dest);
       if (ok1)
       {
         readOffset = rd + (uint64_t)9U;
-        writeOffset = wr0 + (uint64_t)9U;
+        writeOffset = wr + (uint64_t)9U;
       }
       else
       {
@@ -956,8 +922,9 @@ ProbeValidateI(
     {
       failed = TRUE;
     }
-    wr = writeOffset;
-    hasFailed = failed;
+    uint64_t wr = writeOffset;
+    BOOLEAN hasFailed = failed;
+    uint64_t b;
     if (hasFailed)
     {
       ErrorHandlerFn("_I", "ttptr", "probe", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -967,11 +934,12 @@ ProbeValidateI(
     {
       b = wr;
     }
+    BOOLEAN actionResult;
     if (b != 0ULL)
     {
-      unused = EverParseStreamOf(Dest);
+      uint8_t *unused = EverParseStreamOf(Dest);
       KRML_MAYBE_UNUSED_VAR(unused);
-      result = ValidateTt(EverParseStreamLen(Dest), 0ULL);
+      uint64_t result = ValidateTt(EverParseStreamLen(Dest), 0ULL);
       actionResult = !EverParseIsError(result);
     }
     else
@@ -1015,7 +983,16 @@ ProbeValidateMultiProbe(
   EVERPARSE_COPY_BUFFER_T DestT1,
   EVERPARSE_COPY_BUFFER_T DestT2,
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
@@ -1023,53 +1000,8 @@ ProbeValidateMultiProbe(
 {
   /* Validating field fst */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytes0 = 4ULL <= (InputLength - StartPosition);
   uint64_t positionAfterMultiProbe;
-  uint64_t res0;
-  uint64_t positionAfterfst;
-  BOOLEAN hasBytes1;
-  uint64_t positionAfterMultiProbe0;
-  uint64_t res1;
-  uint64_t positionAftersnd;
-  BOOLEAN hasBytes2;
-  uint64_t positionAfterMultiProbe1;
-  uint64_t res;
-  uint64_t positionAftertag;
-  BOOLEAN hasBytes3;
-  uint64_t positionAftertptr10;
-  uint64_t positionAfterMultiProbe2;
-  uint64_t tptr1;
-  uint64_t src640;
-  uint64_t readOffset;
-  uint64_t writeOffset;
-  BOOLEAN failed0;
-  BOOLEAN ok0;
-  uint64_t rd0;
-  uint64_t wr0;
-  BOOLEAN ok10;
-  uint64_t wr1;
-  BOOLEAN hasFailed;
-  uint64_t b0;
-  BOOLEAN actionResult;
-  uint64_t result0;
-  uint64_t positionAftertptr1;
-  BOOLEAN hasBytes;
-  uint64_t positionAftertptr2;
-  uint64_t positionAfterMultiProbe3;
-  uint64_t tptr2;
-  uint64_t src64;
-  uint64_t readOffset0;
-  uint64_t writeOffset0;
-  BOOLEAN failed;
-  BOOLEAN ok;
-  uint64_t rd;
-  uint64_t wr2;
-  BOOLEAN ok1;
-  uint64_t wr;
-  BOOLEAN hasFailed0;
-  uint64_t b;
-  BOOLEAN actionResult0;
-  uint64_t result;
   if (hasBytes0)
   {
     positionAfterMultiProbe = StartPosition + 4ULL;
@@ -1080,6 +1012,7 @@ ProbeValidateMultiProbe(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
+  uint64_t res0;
   if (EverParseIsSuccess(positionAfterMultiProbe))
   {
     res0 = positionAfterMultiProbe;
@@ -1095,14 +1028,15 @@ ProbeValidateMultiProbe(
       StartPosition);
     res0 = positionAfterMultiProbe;
   }
-  positionAfterfst = res0;
+  uint64_t positionAfterfst = res0;
   if (EverParseIsError(positionAfterfst))
   {
     return positionAfterfst;
   }
   /* Validating field snd */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes1 = (InputLength - positionAfterfst) >= 4ULL;
+  BOOLEAN hasBytes1 = 4ULL <= (InputLength - positionAfterfst);
+  uint64_t positionAfterMultiProbe0;
   if (hasBytes1)
   {
     positionAfterMultiProbe0 = positionAfterfst + 4ULL;
@@ -1113,6 +1047,7 @@ ProbeValidateMultiProbe(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         positionAfterfst);
   }
+  uint64_t res1;
   if (EverParseIsSuccess(positionAfterMultiProbe0))
   {
     res1 = positionAfterMultiProbe0;
@@ -1128,14 +1063,15 @@ ProbeValidateMultiProbe(
       positionAfterfst);
     res1 = positionAfterMultiProbe0;
   }
-  positionAftersnd = res1;
+  uint64_t positionAftersnd = res1;
   if (EverParseIsError(positionAftersnd))
   {
     return positionAftersnd;
   }
   /* Validating field tag */
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  hasBytes2 = (InputLength - positionAftersnd) >= 1ULL;
+  BOOLEAN hasBytes2 = 1ULL <= (InputLength - positionAftersnd);
+  uint64_t positionAfterMultiProbe1;
   if (hasBytes2)
   {
     positionAfterMultiProbe1 = positionAftersnd + 1ULL;
@@ -1146,6 +1082,7 @@ ProbeValidateMultiProbe(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         positionAftersnd);
   }
+  uint64_t res;
   if (EverParseIsSuccess(positionAfterMultiProbe1))
   {
     res = positionAfterMultiProbe1;
@@ -1161,13 +1098,14 @@ ProbeValidateMultiProbe(
       positionAftersnd);
     res = positionAfterMultiProbe1;
   }
-  positionAftertag = res;
+  uint64_t positionAftertag = res;
   if (EverParseIsError(positionAftertag))
   {
     return positionAftertag;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes3 = (InputLength - positionAftertag) >= 8ULL;
+  BOOLEAN hasBytes3 = 8ULL <= (InputLength - positionAftertag);
+  uint64_t positionAftertptr10;
   if (hasBytes3)
   {
     positionAftertptr10 = positionAftertag + 8ULL;
@@ -1178,58 +1116,62 @@ ProbeValidateMultiProbe(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         positionAftertag);
   }
+  uint64_t positionAfterMultiProbe2;
   if (EverParseIsError(positionAftertptr10))
   {
     positionAfterMultiProbe2 = positionAftertptr10;
   }
   else
   {
-    tptr1 = Load64Le(Input + (uint32_t)positionAftertag);
-    src640 = tptr1;
-    readOffset = 0ULL;
-    writeOffset = 0ULL;
-    failed0 = FALSE;
-    ok0 = ProbeInit2("_MultiProbe.tptr1", (uint64_t)4U, DestT1);
-    if (ok0)
+    uint64_t tptr1 = Load64Le(Input + (uint32_t)positionAftertag);
+    uint64_t src64 = tptr1;
+    uint64_t readOffset = 0ULL;
+    uint64_t writeOffset = 0ULL;
+    BOOLEAN failed = FALSE;
+    BOOLEAN ok = ProbeInit2("_MultiProbe.tptr1", (uint64_t)4U, DestT1);
+    if (ok)
     {
-      rd0 = readOffset;
-      wr0 = writeOffset;
-      ok10 = ProbeAndCopy2((uint64_t)4U, rd0, wr0, src640, DestT1);
-      if (ok10)
+      uint64_t rd = readOffset;
+      uint64_t wr = writeOffset;
+      BOOLEAN ok1 = ProbeAndCopy2((uint64_t)4U, rd, wr, src64, DestT1);
+      if (ok1)
       {
-        readOffset = rd0 + (uint64_t)4U;
-        writeOffset = wr0 + (uint64_t)4U;
+        readOffset = rd + (uint64_t)4U;
+        writeOffset = wr + (uint64_t)4U;
       }
       else
       {
-        failed0 = TRUE;
+        failed = TRUE;
       }
     }
     else
     {
-      failed0 = TRUE;
+      failed = TRUE;
     }
-    wr1 = writeOffset;
-    hasFailed = failed0;
+    uint64_t wr = writeOffset;
+    BOOLEAN hasFailed = failed;
+    uint64_t b;
     if (hasFailed)
     {
       ErrorHandlerFn("_MultiProbe", "tptr1", "probe", 0ULL, Ctxt, EverParseStreamOf(DestT1), 0ULL);
-      b0 = 0ULL;
+      b = 0ULL;
     }
     else
     {
-      b0 = wr1;
+      b = wr;
     }
-    if (b0 != 0ULL)
+    BOOLEAN actionResult;
+    if (b != 0ULL)
     {
-      result0 =
+      uint64_t
+      result =
         ValidateT((uint32_t)17U,
           Ctxt,
           ErrorHandlerFn,
           EverParseStreamOf(DestT1),
           EverParseStreamLen(DestT1),
           0ULL);
-      actionResult = !EverParseIsError(result0);
+      actionResult = !EverParseIsError(result);
     }
     else
     {
@@ -1253,6 +1195,7 @@ ProbeValidateMultiProbe(
           positionAftertptr10);
     }
   }
+  uint64_t positionAftertptr1;
   if (EverParseIsSuccess(positionAfterMultiProbe2))
   {
     positionAftertptr1 = positionAfterMultiProbe2;
@@ -1273,7 +1216,8 @@ ProbeValidateMultiProbe(
     return positionAftertptr1;
   }
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = (InputLength - positionAftertptr1) >= 8ULL;
+  BOOLEAN hasBytes = 8ULL <= (InputLength - positionAftertptr1);
+  uint64_t positionAftertptr2;
   if (hasBytes)
   {
     positionAftertptr2 = positionAftertptr1 + 8ULL;
@@ -1284,27 +1228,28 @@ ProbeValidateMultiProbe(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         positionAftertptr1);
   }
+  uint64_t positionAfterMultiProbe3;
   if (EverParseIsError(positionAftertptr2))
   {
     positionAfterMultiProbe3 = positionAftertptr2;
   }
   else
   {
-    tptr2 = Load64Le(Input + (uint32_t)positionAftertptr1);
-    src64 = tptr2;
-    readOffset0 = 0ULL;
-    writeOffset0 = 0ULL;
-    failed = FALSE;
-    ok = ProbeInit2("_MultiProbe.tptr2", (uint64_t)4U, DestT2);
+    uint64_t tptr2 = Load64Le(Input + (uint32_t)positionAftertptr1);
+    uint64_t src64 = tptr2;
+    uint64_t readOffset = 0ULL;
+    uint64_t writeOffset = 0ULL;
+    BOOLEAN failed = FALSE;
+    BOOLEAN ok = ProbeInit2("_MultiProbe.tptr2", (uint64_t)4U, DestT2);
     if (ok)
     {
-      rd = readOffset0;
-      wr2 = writeOffset0;
-      ok1 = ProbeAndCopyAlt((uint64_t)4U, rd, wr2, src64, DestT2);
+      uint64_t rd = readOffset;
+      uint64_t wr = writeOffset;
+      BOOLEAN ok1 = ProbeAndCopyAlt((uint64_t)4U, rd, wr, src64, DestT2);
       if (ok1)
       {
-        readOffset0 = rd + (uint64_t)4U;
-        writeOffset0 = wr2 + (uint64_t)4U;
+        readOffset = rd + (uint64_t)4U;
+        writeOffset = wr + (uint64_t)4U;
       }
       else
       {
@@ -1315,9 +1260,10 @@ ProbeValidateMultiProbe(
     {
       failed = TRUE;
     }
-    wr = writeOffset0;
-    hasFailed0 = failed;
-    if (hasFailed0)
+    uint64_t wr = writeOffset;
+    BOOLEAN hasFailed = failed;
+    uint64_t b;
+    if (hasFailed)
     {
       ErrorHandlerFn("_MultiProbe", "tptr2", "probe", 0ULL, Ctxt, EverParseStreamOf(DestT2), 0ULL);
       b = 0ULL;
@@ -1326,8 +1272,10 @@ ProbeValidateMultiProbe(
     {
       b = wr;
     }
+    BOOLEAN actionResult;
     if (b != 0ULL)
     {
+      uint64_t
       result =
         ValidateT((uint32_t)42U,
           Ctxt,
@@ -1335,7 +1283,7 @@ ProbeValidateMultiProbe(
           EverParseStreamOf(DestT2),
           EverParseStreamLen(DestT2),
           0ULL);
-      actionResult0 = !EverParseIsError(result);
+      actionResult = !EverParseIsError(result);
     }
     else
     {
@@ -1346,9 +1294,9 @@ ProbeValidateMultiProbe(
         Ctxt,
         Input,
         positionAftertptr1);
-      actionResult0 = FALSE;
+      actionResult = FALSE;
     }
-    if (actionResult0)
+    if (actionResult)
     {
       positionAfterMultiProbe3 = positionAftertptr2;
     }
@@ -1377,34 +1325,24 @@ uint64_t
 ProbeValidateMaybeT(
   EVERPARSE_COPY_BUFFER_T Dest,
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytes0 = 4ULL <= (InputLength - StartPosition);
   uint64_t positionAfterMaybeT;
-  uint64_t positionAfterBound;
-  uint32_t bound;
-  BOOLEAN hasBytes;
-  uint64_t positionAfterptr;
-  uint64_t positionAfterMaybeT0;
-  uint64_t ptr;
-  uint64_t src64;
-  BOOLEAN actionResult;
-  uint64_t readOffset;
-  uint64_t writeOffset;
-  BOOLEAN failed;
-  BOOLEAN ok;
-  uint64_t rd;
-  uint64_t wr0;
-  BOOLEAN ok1;
-  uint64_t wr;
-  BOOLEAN hasFailed;
-  uint64_t b;
-  uint64_t result;
   if (hasBytes0)
   {
     positionAfterMaybeT = StartPosition + 4ULL;
@@ -1415,6 +1353,7 @@ ProbeValidateMaybeT(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
+  uint64_t positionAfterBound;
   if (EverParseIsSuccess(positionAfterMaybeT))
   {
     positionAfterBound = positionAfterMaybeT;
@@ -1434,9 +1373,10 @@ ProbeValidateMaybeT(
   {
     return positionAfterBound;
   }
-  bound = Load32Le(Input + (uint32_t)StartPosition);
+  uint32_t bound = Load32Le(Input + (uint32_t)StartPosition);
   /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-  hasBytes = (InputLength - positionAfterBound) >= 8ULL;
+  BOOLEAN hasBytes = 8ULL <= (InputLength - positionAfterBound);
+  uint64_t positionAfterptr;
   if (hasBytes)
   {
     positionAfterptr = positionAfterBound + 8ULL;
@@ -1447,33 +1387,35 @@ ProbeValidateMaybeT(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         positionAfterBound);
   }
+  uint64_t positionAfterMaybeT0;
   if (EverParseIsError(positionAfterptr))
   {
     positionAfterMaybeT0 = positionAfterptr;
   }
   else
   {
-    ptr = Load64Le(Input + (uint32_t)positionAfterBound);
-    src64 = ptr;
+    uint64_t ptr = Load64Le(Input + (uint32_t)positionAfterBound);
+    uint64_t src64 = ptr;
+    BOOLEAN actionResult;
     if (src64 == 0ULL)
     {
       actionResult = TRUE;
     }
     else
     {
-      readOffset = 0ULL;
-      writeOffset = 0ULL;
-      failed = FALSE;
-      ok = ProbeInit2("_MaybeT.ptr", (uint64_t)4U, Dest);
+      uint64_t readOffset = 0ULL;
+      uint64_t writeOffset = 0ULL;
+      BOOLEAN failed = FALSE;
+      BOOLEAN ok = ProbeInit2("_MaybeT.ptr", (uint64_t)4U, Dest);
       if (ok)
       {
-        rd = readOffset;
-        wr0 = writeOffset;
-        ok1 = ProbeAndCopy2((uint64_t)4U, rd, wr0, src64, Dest);
+        uint64_t rd = readOffset;
+        uint64_t wr = writeOffset;
+        BOOLEAN ok1 = ProbeAndCopy2((uint64_t)4U, rd, wr, src64, Dest);
         if (ok1)
         {
           readOffset = rd + (uint64_t)4U;
-          writeOffset = wr0 + (uint64_t)4U;
+          writeOffset = wr + (uint64_t)4U;
         }
         else
         {
@@ -1484,8 +1426,9 @@ ProbeValidateMaybeT(
       {
         failed = TRUE;
       }
-      wr = writeOffset;
-      hasFailed = failed;
+      uint64_t wr = writeOffset;
+      BOOLEAN hasFailed = failed;
+      uint64_t b;
       if (hasFailed)
       {
         ErrorHandlerFn("_MaybeT", "ptr", "probe", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -1497,6 +1440,7 @@ ProbeValidateMaybeT(
       }
       if (b != 0ULL)
       {
+        uint64_t
         result =
           ValidateT(bound,
             Ctxt,
@@ -1547,34 +1491,24 @@ uint64_t
 ProbeValidateCoercePtr(
   EVERPARSE_COPY_BUFFER_T Dest,
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytes0 = 4ULL <= (InputLength - StartPosition);
   uint64_t positionAfterCoercePtr;
-  uint64_t positionAfterBound;
-  uint32_t bound;
-  BOOLEAN hasBytes;
-  uint64_t positionAfterptr;
-  uint64_t positionAfterCoercePtr0;
-  uint32_t ptr;
-  uint64_t src64;
-  uint64_t readOffset;
-  uint64_t writeOffset;
-  BOOLEAN failed;
-  BOOLEAN ok;
-  uint64_t rd;
-  uint64_t wr0;
-  BOOLEAN ok1;
-  uint64_t wr;
-  BOOLEAN hasFailed;
-  uint64_t b;
-  BOOLEAN actionResult;
-  uint64_t result;
   if (hasBytes0)
   {
     positionAfterCoercePtr = StartPosition + 4ULL;
@@ -1585,6 +1519,7 @@ ProbeValidateCoercePtr(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         StartPosition);
   }
+  uint64_t positionAfterBound;
   if (EverParseIsSuccess(positionAfterCoercePtr))
   {
     positionAfterBound = positionAfterCoercePtr;
@@ -1604,9 +1539,10 @@ ProbeValidateCoercePtr(
   {
     return positionAfterBound;
   }
-  bound = Load32Le(Input + (uint32_t)StartPosition);
+  uint32_t bound = Load32Le(Input + (uint32_t)StartPosition);
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  hasBytes = (InputLength - positionAfterBound) >= 4ULL;
+  BOOLEAN hasBytes = 4ULL <= (InputLength - positionAfterBound);
+  uint64_t positionAfterptr;
   if (hasBytes)
   {
     positionAfterptr = positionAfterBound + 4ULL;
@@ -1617,27 +1553,28 @@ ProbeValidateCoercePtr(
       EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
         positionAfterBound);
   }
+  uint64_t positionAfterCoercePtr0;
   if (EverParseIsError(positionAfterptr))
   {
     positionAfterCoercePtr0 = positionAfterptr;
   }
   else
   {
-    ptr = Load32Le(Input + (uint32_t)positionAfterBound);
-    src64 = UlongToPtr2(ptr);
-    readOffset = 0ULL;
-    writeOffset = 0ULL;
-    failed = FALSE;
-    ok = ProbeInit2("_CoercePtr.ptr", (uint64_t)4U, Dest);
+    uint32_t ptr = Load32Le(Input + (uint32_t)positionAfterBound);
+    uint64_t src64 = UlongToPtr2(ptr);
+    uint64_t readOffset = 0ULL;
+    uint64_t writeOffset = 0ULL;
+    BOOLEAN failed = FALSE;
+    BOOLEAN ok = ProbeInit2("_CoercePtr.ptr", (uint64_t)4U, Dest);
     if (ok)
     {
-      rd = readOffset;
-      wr0 = writeOffset;
-      ok1 = ProbeAndCopy2((uint64_t)4U, rd, wr0, src64, Dest);
+      uint64_t rd = readOffset;
+      uint64_t wr = writeOffset;
+      BOOLEAN ok1 = ProbeAndCopy2((uint64_t)4U, rd, wr, src64, Dest);
       if (ok1)
       {
         readOffset = rd + (uint64_t)4U;
-        writeOffset = wr0 + (uint64_t)4U;
+        writeOffset = wr + (uint64_t)4U;
       }
       else
       {
@@ -1648,8 +1585,9 @@ ProbeValidateCoercePtr(
     {
       failed = TRUE;
     }
-    wr = writeOffset;
-    hasFailed = failed;
+    uint64_t wr = writeOffset;
+    BOOLEAN hasFailed = failed;
+    uint64_t b;
     if (hasFailed)
     {
       ErrorHandlerFn("_CoercePtr", "ptr", "probe", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
@@ -1659,8 +1597,10 @@ ProbeValidateCoercePtr(
     {
       b = wr;
     }
+    BOOLEAN actionResult;
     if (b != 0ULL)
     {
+      uint64_t
       result =
         ValidateT(bound,
           Ctxt,
@@ -1704,110 +1644,5 @@ ProbeValidateCoercePtr(
     Input,
     positionAfterBound);
   return positionAfterCoercePtr0;
-}
-
-uint64_t
-ProbeValidateProbeOnly(
-  uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
-  uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
-)
-{
-  BOOLEAN hasBytes;
-  KRML_MAYBE_UNUSED_VAR(Ctxt);
-  KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
-  KRML_MAYBE_UNUSED_VAR(Input);
-  hasBytes = (InputLength - StartPosition) >= 8ULL;
-  if (hasBytes)
-  {
-    return StartPosition + 8ULL;
-  }
-  return EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
-}
-
-uint64_t
-ProbeValidateBothEntrypoints(
-  uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
-  uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
-)
-{
-  BOOLEAN hasBytes;
-  KRML_MAYBE_UNUSED_VAR(Ctxt);
-  KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
-  KRML_MAYBE_UNUSED_VAR(Input);
-  hasBytes = (InputLength - StartPosition) >= 8ULL;
-  if (hasBytes)
-  {
-    return StartPosition + 8ULL;
-  }
-  return EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
-}
-
-uint64_t
-ProbeValidateNamedPlainEp(
-  uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
-  uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
-)
-{
-  BOOLEAN hasBytes;
-  KRML_MAYBE_UNUSED_VAR(Ctxt);
-  KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
-  KRML_MAYBE_UNUSED_VAR(Input);
-  hasBytes = (InputLength - StartPosition) >= 8ULL;
-  if (hasBytes)
-  {
-    return StartPosition + 8ULL;
-  }
-  return EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
-}
-
-uint64_t
-ProbeValidateNamedProbeEp(
-  uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
-  uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
-)
-{
-  BOOLEAN hasBytes;
-  KRML_MAYBE_UNUSED_VAR(Ctxt);
-  KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
-  KRML_MAYBE_UNUSED_VAR(Input);
-  hasBytes = (InputLength - StartPosition) >= 8ULL;
-  if (hasBytes)
-  {
-    return StartPosition + 8ULL;
-  }
-  return EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
-}
-
-uint64_t
-ProbeValidateNamedBothEp(
-  uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
-  uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
-)
-{
-  BOOLEAN hasBytes;
-  KRML_MAYBE_UNUSED_VAR(Ctxt);
-  KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
-  KRML_MAYBE_UNUSED_VAR(Input);
-  hasBytes = (InputLength - StartPosition) >= 8ULL;
-  if (hasBytes)
-  {
-    return StartPosition + 8ULL;
-  }
-  return EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
 }
 

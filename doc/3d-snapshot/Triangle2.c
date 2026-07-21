@@ -2,21 +2,27 @@
 
 #include "Triangle2.h"
 
-#include "EverParse.h"
-
 uint64_t
 Triangle2ValidateTriangle(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Validating field corners */
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= (uint64_t)12U;
+  BOOLEAN hasBytes = (uint64_t)12U <= (InputLength - StartPosition);
   uint64_t res;
-  uint64_t positionAfterTriangle;
   if (hasBytes)
   {
     res = StartPosition + (uint64_t)12U;
@@ -25,7 +31,7 @@ Triangle2ValidateTriangle(
   {
     res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  positionAfterTriangle = res;
+  uint64_t positionAfterTriangle = res;
   if (EverParseIsSuccess(positionAfterTriangle))
   {
     return positionAfterTriangle;

@@ -1,7 +1,6 @@
 #include "ReadPairWrapper.h"
 #include "EverParse.h"
 #include "ReadPair.h"
-
 void ReadPairEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static
@@ -28,12 +27,9 @@ void DefaultErrorHandler(
 
 BOOLEAN ReadPairCheckPair(uint32_t* x, uint32_t* y, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
-
 	frame.filled = FALSE;
-	ep_status = ReadPairValidatePair(x, y,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
-
-	if (EverParseIsError(ep_status))
+	uint64_t result = ReadPairValidatePair(x, y,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(result))
 	{
 		if (frame.filled)
 		{

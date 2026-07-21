@@ -1,7 +1,6 @@
 #include "Specialize1Wrapper.h"
 #include "EverParse.h"
 #include "Specialize1.h"
-
 void Specialize1EverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static
@@ -28,12 +27,9 @@ void DefaultErrorHandler(
 
 BOOLEAN Specialize1CheckR(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
-
 	frame.filled = FALSE;
-	ep_status = Specialize1ValidateR(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
-
-	if (EverParseIsError(ep_status))
+	uint64_t result = Specialize1ValidateR(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(result))
 	{
 		if (frame.filled)
 		{
@@ -46,12 +42,9 @@ BOOLEAN Specialize1CheckR(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS, EV
 
 BOOLEAN Specialize1CheckRmux(BOOLEAN requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
-
 	frame.filled = FALSE;
-	ep_status = Specialize1ValidateRmux(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
-
-	if (EverParseIsError(ep_status))
+	uint64_t result = Specialize1ValidateRmux(requestor32, destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(result))
 	{
 		if (frame.filled)
 		{

@@ -2,19 +2,26 @@
 
 #include "Base.h"
 
-#include "EverParse.h"
-
 uint64_t
 BaseValidateUlong(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (InputLength - StartPosition) >= 4ULL;
+  BOOLEAN hasBytes = 4ULL <= (InputLength - StartPosition);
   uint64_t positionAfterUlong;
   if (hasBytes)
   {
@@ -43,17 +50,25 @@ BaseValidateUlong(
 uint64_t
 BaseValidatePair(
   uint8_t *Ctxt,
-  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  void
+  (*ErrorHandlerFn)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
-  BOOLEAN hasBytes;
   KRML_MAYBE_UNUSED_VAR(Ctxt);
   KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
   KRML_MAYBE_UNUSED_VAR(Input);
-  hasBytes = (InputLength - StartPosition) >= 8ULL;
+  BOOLEAN hasBytes = 8ULL <= (InputLength - StartPosition);
   if (hasBytes)
   {
     return StartPosition + 8ULL;

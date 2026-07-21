@@ -1,7 +1,6 @@
 #include "HelloWorldWrapper.h"
 #include "EverParse.h"
 #include "HelloWorld.h"
-
 void HelloWorldEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static
@@ -28,12 +27,9 @@ void DefaultErrorHandler(
 
 BOOLEAN HelloWorldCheckPoint(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
-
 	frame.filled = FALSE;
-	ep_status = HelloWorldValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
-
-	if (EverParseIsError(ep_status))
+	uint64_t result = HelloWorldValidatePoint( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(result))
 	{
 		if (frame.filled)
 		{

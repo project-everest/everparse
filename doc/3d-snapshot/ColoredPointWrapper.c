@@ -1,7 +1,6 @@
 #include "ColoredPointWrapper.h"
 #include "EverParse.h"
 #include "ColoredPoint.h"
-
 void ColoredPointEverParseError(const char *StructName, const char *FieldName, const char *Reason);
 
 static
@@ -28,12 +27,9 @@ void DefaultErrorHandler(
 
 BOOLEAN ColoredPointCheckColoredPoint1(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
-
 	frame.filled = FALSE;
-	ep_status = ColoredPointValidateColoredPoint1( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
-
-	if (EverParseIsError(ep_status))
+	uint64_t result = ColoredPointValidateColoredPoint1( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(result))
 	{
 		if (frame.filled)
 		{
@@ -46,12 +42,9 @@ BOOLEAN ColoredPointCheckColoredPoint1(uint8_t *base, uint32_t len) {
 
 BOOLEAN ColoredPointCheckColoredPoint2(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
-	uint64_t ep_status;
-
 	frame.filled = FALSE;
-	ep_status = ColoredPointValidateColoredPoint2( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
-
-	if (EverParseIsError(ep_status))
+	uint64_t result = ColoredPointValidateColoredPoint2( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(result))
 	{
 		if (frame.filled)
 		{
