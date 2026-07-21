@@ -2270,7 +2270,7 @@ let check_attribute
   (a: attribute)
 : ML attribute
 = match a with
-  | Entrypoint (Some p) ->
+  | Entrypoint ep_name (Some p) ->
     let ep_len = check_entrypoint_probe_length e p.probe_ep_length in
     let ep_init =
       match p.probe_ep_init with
@@ -2287,7 +2287,7 @@ let check_attribute
            error (Printf.sprintf "Probe function %s not found or not an init function" (print_ident i))
                  i.range)
     in
-    Entrypoint (Some ({
+    Entrypoint ep_name (Some ({
       p with probe_ep_init = ep_init; probe_ep_length = ep_len
     }))
   | _ -> a
@@ -2300,10 +2300,9 @@ let check_typedef_names
   let attrs = List.map (check_attribute env) tdnames.typedef_attributes in
   let eq_attrs a0 a1 =
     match a0, a1 with
-    | Entrypoint None, Entrypoint _
-    | Entrypoint _, Entrypoint None ->
+    | Entrypoint _ None, Entrypoint _ None ->
       true
-    | Entrypoint (Some p0), Entrypoint (Some p1) ->
+    | Entrypoint _ (Some p0), Entrypoint _ (Some p1) ->
       eq_idents p0.probe_ep_fn p1.probe_ep_fn
     | Aligned, Aligned
     | Noextract, Noextract -> true

@@ -1168,14 +1168,17 @@ fields.::
      0........1........2........3........4........5........6........7........8.........9 
   TT:{        x                          |                 y                 |   tag    }
 
-This yields the following C interface, with two entry points. The first is to
-probe and validate a pointer to the type ``Indirect``, while the second is to
-validate a ``struct Indirect``.
+This yields the following C interface with the probe entry point to
+probe and validate a pointer to the type ``Indirect``:
 
 .. code-block:: c
 
-  BOOLEAN ProbeProbeAndCopyCheckIndirect(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr);
-  BOOLEAN ProbeCheckIndirect(uint8_t *base, uint32_t len);
+  uint32_t ProbeProbeAndCopyCheckIndirect(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize);
+
+Since only ``entrypoint probe`` is declared (and not a plain ``entrypoint``),
+only the probe entry point appears in the header. If we also wanted a plain
+validation entry point, we would additionally write ``entrypoint`` before
+the type definition (see :ref:`Selective_Entrypoint_Generation` below).
 
 The specification is equivalent to the following, though more concise:
 
@@ -1248,7 +1251,7 @@ The example below shows how to use multiple probes:
 * One can also associate different probes on each field of a type.
 
 The resulting C interface contains multiple entry points, one for each variant
-of probing entry point, and one for the non-probing variant:
+of probing entry point:
 
 .. code-block:: c
 
@@ -1266,11 +1269,10 @@ of probing entry point, and one for the non-probing variant:
     uint64_t probeAddr,
     uint64_t providedSize);
 
-  BOOLEAN ProbeCheckMultiProbe(
-    EVERPARSE_COPY_BUFFER_T destT1,
-    EVERPARSE_COPY_BUFFER_T destT2,
-    uint8_t *base,
-    uint32_t len);
+Since only ``entrypoint probe`` attributes are declared on ``MultiProbe`` (no plain
+``entrypoint``), only the probe entry points appear in the public header. If a
+plain validation entry point were also desired, the user would add a plain
+``entrypoint`` attribute to the type definition.
 
 
 The ``providedSize`` argument on the first two function signatures allows the
@@ -1327,6 +1329,72 @@ pointer is non-null:
 
 * If the pointer is non-null, the probe function is called, and validation
   proceeds as in the non-null case.
+
+
+.. _Selective_Entrypoint_Generation:
+
+Selective Entrypoint Generation
+...............................
+
+By default, when a type is marked as an ``entrypoint``, 3d generates a
+validation entry point in the wrapper header. When combined with probe
+attributes, 3d generates entry points *only* for the kinds of entry points
+that the user explicitly declares.
+
+For example, if a type only has ``entrypoint probe`` attributes, only the
+probe entry points appear in the public header—the underlying validation
+wrapper is still generated in the ``.c`` file (as a ``static`` function)
+but is not exposed publicly:
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: selective entrypoint$
+  :end-before: SNIPPET_END: selective entrypoint$
+
+For ``ProbeOnly``, since only ``entrypoint probe`` is specified, only the probe
+entry point is public:
+
+.. code-block:: c
+
+  uint32_t ProbeProbeAndCopyCheckProbeOnly(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize);
+
+For ``BothEntrypoints``, since both a plain ``entrypoint`` and an
+``entrypoint probe`` are declared, both entry points are public:
+
+.. code-block:: c
+
+  BOOLEAN ProbeCheckBothEntrypoints(uint8_t *base, uint32_t len);
+  uint32_t ProbeProbeAndCopyCheckBothEntrypoints(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize);
+
+
+.. _Named_Entrypoints:
+
+Named Entrypoints
+.................
+
+By default, the names of entry points are auto-generated from the module name,
+probe function name, and type name (e.g., ``ProbeProbeAndCopyCheckIndirect``).
+One can override these names using the ``entrypoint(Name)`` syntax:
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: named entrypoint$
+  :end-before: SNIPPET_END: named entrypoint$
+
+This produces the following public entry points:
+
+.. code-block:: c
+
+  BOOLEAN ValidateMyData(uint8_t *base, uint32_t len);
+
+  uint32_t ProbeMyData(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize);
+
+  BOOLEAN CheckAll(uint8_t *base, uint32_t len);
+  uint32_t ProbeAll(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize);
+
+The name argument is optional: ``entrypoint`` without parentheses continues to
+use the auto-generated name. Named and unnamed entry points can be freely mixed
+on the same type.
 
 
 An End-to-end Executable Example

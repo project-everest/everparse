@@ -35,6 +35,7 @@ noextract
 let t = input_buffer
 
 unfold
+noextract [@@noextract_to "krml"]
 let _live
   (x: t)
   (h: HS.mem)

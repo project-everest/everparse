@@ -7,7 +7,7 @@ export EVERPARSE_HOME?=$(realpath ..)
 
 FSTAR_EXE ?= fstar.exe
 
-3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
+3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --hoist_locals
 3D_EXCLUDE=ConstColor.3d
 3D_CONFIG=Arch.3d.config
 3D_FILES_WITH_CONFIG=PointArch_32_64.3d

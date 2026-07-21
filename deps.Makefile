@@ -13,6 +13,10 @@ export EVERPARSE_OPT_PATH := $(shell cygpath -m $(EVERPARSE_OPT_PATH))
 NO_PULSE := 1
 endif
 
+ifeq (1,$(EVERPARSE_ONLY_3D))
+NO_PULSE := 1
+endif
+
 include src/z3-version.Makefile
 
 ifeq (1,$(EVERPARSE_USE_MY_DEPS))

@@ -23,8 +23,10 @@ type maybe a =
 let loc_of (x:copy_buffer_t) : GTot B.loc =
   I.footprint (stream_of x)
 
+noextract [@@noextract_to "krml"]
 let inv (x:copy_buffer_t) (h:HS.mem) = I.live (stream_of x) h
 
+noextract [@@noextract_to "krml"]
 let liveness_preserved (x:copy_buffer_t) =
   let sl = stream_of x in
   forall l h0 h1. {:pattern (modifies l h0 h1)}
