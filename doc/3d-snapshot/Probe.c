@@ -46,7 +46,7 @@ ValidateT(
   else
   {
     r0 = Load16Le(Input + (uint32_t)StartPosition);
-    x = (uint16_t)(uint32_t)r0;
+    x = r0;
     xConstraintIsOk = (uint32_t)x >= Bound;
     positionAfterx1 = EverParseCheckConstraintOk(xConstraintIsOk, positionAfterx);
     if (EverParseIsError(positionAfterx1))
@@ -76,7 +76,7 @@ ValidateT(
       {
         /* reading field_value */
         r = Load16Le(Input + (uint32_t)positionAfterx1);
-        y_refinement = (uint16_t)(uint32_t)r;
+        y_refinement = r;
         /* start: checking constraint */
         y_refinementConstraintIsOk = y_refinement >= x;
         /* end: checking constraint */

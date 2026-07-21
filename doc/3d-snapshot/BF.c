@@ -59,7 +59,7 @@ ValidateBf2bis(
     return positionAfterBitfield0;
   }
   r0 = Load16Le(Input + (uint32_t)StartPosition);
-  bitfield0 = (uint16_t)(uint32_t)r0;
+  bitfield0 = r0;
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
   hasBytes1 = (InputLength - positionAfterBitfield0) >= 2ULL;
   if (hasBytes1)
@@ -79,7 +79,7 @@ ValidateBf2bis(
   else
   {
     r = Load16Le(Input + (uint32_t)positionAfterBitfield0);
-    bitfield1 = (uint16_t)(uint32_t)r;
+    bitfield1 = r;
     bitfield1constraintIsOk =
       EverParseGetBitfield16(bitfield1, 0U, 12U) < EverParseGetBitfield16(bitfield0, 0U, 6U);
     positionAfterBitfield11 =
