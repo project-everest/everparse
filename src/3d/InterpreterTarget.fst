@@ -1032,6 +1032,14 @@ let print_binders_as_args mname binders =
     List.map (fun (i, _) -> print_ident mname i) binders |>
     String.concat " "
 
+// This large ML pretty-printer builds its result through ~20 chained
+// `let` bindings, so its (trivial) verification condition is a deep
+// continuation-passing term. The whole query verifies using ~8 rlimit,
+// but the default budget of 5 makes F* cancel it and retry by splitting,
+// and the split subquery then diverges into a quantifier cascade over the
+// effect continuations ("incomplete quantifiers"). Raising the budget lets
+// the whole query succeed in one shot, avoiding the split entirely.
+#push-options "--z3rlimit 32"
 let print_binding mname (td:type_decl)
 : ML (string & string)
 = let tdn = td.name in
@@ -1191,6 +1199,7 @@ let print_binding mname (td:type_decl)
     in
     impl, iface
   else impl, ""
+#pop-options
 
 let print_decl mname (d:decl)
   : ML (string & string) =
