@@ -9,8 +9,6 @@ endif
 export EVERPARSE_OPT_PATH := $(realpath opt)
 ifeq ($(OS),Windows_NT)
 export EVERPARSE_OPT_PATH := $(shell cygpath -m $(EVERPARSE_OPT_PATH))
-# Pulse does not compile on Windows
-NO_PULSE := 1
 endif
 
 ifeq (1,$(EVERPARSE_ONLY_3D))
