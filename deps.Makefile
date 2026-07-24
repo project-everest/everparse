@@ -6,6 +6,12 @@ ifeq (,$(OS))
 export OS := $(shell uname)
 endif
 
+ifeq ($(OS),Windows_NT)
+  export CC:=x86_64-w64-mingw32-gcc
+  export LD:=x86_64-w64-mingw32-ld
+  export AR:=x86_64-w64-mingw32-ar
+endif
+
 export EVERPARSE_OPT_PATH := $(realpath opt)
 ifeq ($(OS),Windows_NT)
 export EVERPARSE_OPT_PATH := $(shell cygpath -m $(EVERPARSE_OPT_PATH))
@@ -172,6 +178,11 @@ $(EVERPARSE_OPT_PATH)/pulse.done: $(EVERPARSE_OPT_PATH)/pulse/Makefile $(NEED_FS
 	touch $@
 
 env:
+ifeq ($(OS),Windows_NT)
+	@echo export CC=$(CC)
+	@echo export LD=$(LD)
+	@echo export AR=$(AR)
+endif
 	@echo export EVERPARSE_USE_OPAMROOT=$(EVERPARSE_USE_OPAMROOT)
 	@echo export EVERPARSE_USE_FSTAR_EXE=$(EVERPARSE_USE_FSTAR_EXE)
 	@echo export EVERPARSE_USE_KRML_EXE=$(EVERPARSE_USE_KRML_EXE)
