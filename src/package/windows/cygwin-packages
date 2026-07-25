@@ -9,3 +9,4 @@ mingw64-x86_64-libffi
 zip
 unzip
 make
+cmake
