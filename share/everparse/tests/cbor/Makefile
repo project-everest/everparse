@@ -55,9 +55,17 @@ OUT_DIR = $(CURDIR)/out
 
 # Python virtual environment used to run the cross-language tests.
 PYTHON       ?= python3
-VENV_DIR      = $(CURDIR)/.venv
-VENV_PYTHON   = $(VENV_DIR)/bin/python
-PY_SRC        = $(CURDIR)/cbor_tests.py
+ifeq ($(OS),Windows_NT)
+VENV_DIR      := $(shell cygpath -m $(CURDIR))/.venv
+VENV_PYTHON   := $(VENV_DIR)/Scripts/python.exe
+else
+VENV_DIR      := $(CURDIR)/.venv
+VENV_PYTHON   := $(VENV_DIR)/bin/python
+endif
+PY_SRC        := $(CURDIR)/cbor_tests.py
+ifeq ($(OS),Windows_NT)
+  PY_SRC := $(shell cygpath -m $(PY_SRC))
+endif
 # Pin a cbor2 floor that includes the Rust rewrite (immutable / allow_indefinite
 # decoder flags). 6.0.x is the first family with that codebase.
 CBOR2_REQ    ?= cbor2>=6.0,<7
