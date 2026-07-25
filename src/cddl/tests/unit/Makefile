@@ -3,6 +3,7 @@
 all: all-c
 all: all-build
 all: all-run
+all: run-qcbor_bench
 
 .NOTINTERMEDIATE:
 .DELETE_ON_ERROR:
@@ -151,6 +152,8 @@ run-qcbor_bench: qcbor_bench
 	./$<
 
 # all: run
+
+.PHONY: run-qcbor_bench
 
 .PHONY: all-build
 all-build: $(patsubst %,$(ODIR)/Test_%.exe,$(RUN))
