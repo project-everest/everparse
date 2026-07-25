@@ -17,12 +17,10 @@ ValidateBf2bis(
   BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 2ULL;
   uint64_t positionAfterBf2bis;
   uint64_t positionAfterBitfield0;
-  uint16_t r0;
   uint16_t bitfield0;
   BOOLEAN hasBytes1;
   uint64_t positionAfterBitfield1;
   uint64_t positionAfterBf2bis0;
-  uint16_t r;
   uint16_t bitfield1;
   BOOLEAN bitfield1constraintIsOk;
   uint64_t positionAfterBitfield11;
@@ -58,8 +56,7 @@ ValidateBf2bis(
   {
     return positionAfterBitfield0;
   }
-  r0 = Load16Le(Input + (uint32_t)StartPosition);
-  bitfield0 = r0;
+  bitfield0 = Load16Le(Input + (uint32_t)StartPosition);
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
   hasBytes1 = (InputLength - positionAfterBitfield0) >= 2ULL;
   if (hasBytes1)
@@ -78,8 +75,7 @@ ValidateBf2bis(
   }
   else
   {
-    r = Load16Le(Input + (uint32_t)positionAfterBitfield0);
-    bitfield1 = r;
+    bitfield1 = Load16Le(Input + (uint32_t)positionAfterBitfield0);
     bitfield1constraintIsOk =
       EverParseGetBitfield16(bitfield1, 0U, 12U) < EverParseGetBitfield16(bitfield0, 0U, 6U);
     positionAfterBitfield11 =

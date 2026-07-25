@@ -737,7 +737,7 @@ offsets computed by 3d match what the C compiler computes.
 For example, for the types defined in this section, 3d generates a file
 ``AlignAutoStaticAssertions.c`` with the contents below:
 
-.. literalinclude:: out/AlignAutoStaticAssertions.c
+.. literalinclude:: 3d-snapshot/AlignAutoStaticAssertions.c
   :language: c
 
 Notice that in the C transcription of the type ``TLV``, 3d simply omits the
@@ -827,7 +827,7 @@ Let's also decorate the 3d file with the following refining declaration:
   
 The 3d compiler emits the following static assertions:
 
-.. literalinclude:: out/AlignStaticAssertions.c
+.. literalinclude:: 3d-snapshot/AlignStaticAssertions.c
   :language: c
 
 As before, the ``sizeof(TLV)==10`` fails, because of differences in alignment
@@ -1664,7 +1664,7 @@ computed by whatever C compiler one uses to compile the code.
 For our example above, 3d automatically generates a ``refining`` block and emits
 the following C code:
 
-.. literalinclude:: out/Specialize1StandaloneAutoStaticAssertions.c
+.. literalinclude:: 3d-snapshot/Specialize1StandaloneAutoStaticAssertions.c
   :language: c
 
 

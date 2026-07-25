@@ -134,7 +134,7 @@ jobs:
           { gunzip < lowparse.tgz | docker exec -i $container tar -x ; } && rm lowparse.tgz && docker exec $container /bin/bash -c "touch src/lowparse/*.checked src/lowparse/pulse/*.checked"
       - name: Test 3D/QD
         run: |
-          docker exec $container make -kj$(nproc) 3d-test quackyducky-test lowparse-test asn1-test ADMIT_LOWPARSE=1
+          docker exec $container make -kj$(nproc) 3d-test quackyducky-test lowparse-test asn1-test ADMIT_LOWPARSE=1 EVERPARSE_CHECK_DIFF=1
       - name: Remove container
         run: |
           docker stop $container && docker rm $container
@@ -198,7 +198,7 @@ jobs:
           { gunzip < lowparse.tgz | docker exec -i $container tar -x ; } && rm lowparse.tgz && docker exec $container /bin/bash -c "touch src/lowparse/*.checked src/lowparse/pulse/*.checked"
       - name: Test CBOR/CDDL
         run: |
-          docker exec $container /usr/bin/env BASH_ENV=/home/test/.cargo/env /bin/bash -c "make -kj$(nproc) cddl-test cbor-test cose-test ADMIT_LOWPARSE=1 ADMIT_CBOR_CDDL=1"
+          docker exec $container /usr/bin/env BASH_ENV=/home/test/.cargo/env /bin/bash -c "make -kj$(nproc) cddl-test cbor-test cose-test ADMIT_LOWPARSE=1 ADMIT_CBOR_CDDL=1 EVERPARSE_CHECK_DIFF=1"
       - name: Remove container
         run: |
           docker stop $container && docker rm $container
