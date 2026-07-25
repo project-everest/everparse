@@ -19,12 +19,17 @@ INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffe
 
 FSTAR_OPTIONS += $(addprefix --include , $(INCLUDES))
 
-positive_tests=$(filter-out $(wildcard FAIL*.3d) FieldDependence0.3d ActAndCheck.3d,$(wildcard *.3d))
+positive_tests:=$(filter-out $(wildcard FAIL*.3d) FieldDependence0.3d ActAndCheck.3d,$(wildcard *.3d))
+ifeq ($(OS),Windows_NT)
+  # UlongToPtr is defined in Windows DLLs, conflicts with those examples
+  exclude_modules := FineGrainedProbe FineGrainedProbeSpecialize Specialize2 Specialize3 Specialize5 Specialize6
+  positive_tests:=$(filter-out $(addsuffix .3d,$(exclude_modules)),$(positive_tests))
+endif
 positive_tests_nosuffix=$(basename $(positive_tests))
 modules_or_wrappers=$(positive_tests_nosuffix) $(addsuffix Wrapper,$(positive_tests_nosuffix))
 modules_static_assertions=$(addsuffix StaticAssertions.c, TestFieldPtr Align)
-modules_auto_static_assertions=$(addsuffix AutoStaticAssertions.c, Align Specialize2 Specialize3 Specialize5 Specialize6 FineGrainedProbe FineGrainedProbeSpecialize)
-module_extern_apis=$(addsuffix _ExternalAPI.h, Specialize2 Specialize3 Specialize5 Specialize6 FineGrainedProbe FineGrainedProbeSpecialize)
+modules_auto_static_assertions=$(addsuffix AutoStaticAssertions.c, $(filter-out $(exclude_modules),Align Specialize2 Specialize3 Specialize5 Specialize6 FineGrainedProbe FineGrainedProbeSpecialize))
+module_extern_apis=$(addsuffix _ExternalAPI.h, $(filter-out $(exclude_modules),Specialize2 Specialize3 Specialize5 Specialize6 FineGrainedProbe FineGrainedProbeSpecialize))
 clean_out_files=\
 	$(addsuffix .c,$(modules_or_wrappers)) \
 	$(modules_static_assertions) \
@@ -36,9 +41,15 @@ OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
 all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules \
 	 tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs \
-	 probe iter z3-testgen-test exttype z3-testgen-probe-test specialize_test specialize_test2 \
-	 use_error_handler_macro specialize_test_error_handler_macro probe_error_handler_macro \
-	 specialize_tagged_union_array save_hashes
+	 probe iter z3-testgen-test exttype z3-testgen-probe-test \
+	 use_error_handler_macro \
+	 save_hashes
+
+ifneq ($(OS),Windows_NT)
+# Tests disabled on Windows because of UlongToPtr conflict
+# probe_error_handler_macro disabled on Windows because sys/mman.h is not available
+all: specialize_test specialize_test2 specialize_test_error_handler_macro specialize_tagged_union_array probe_error_handler_macro
+endif
 
 .PHONY: exttype
 
