@@ -19,6 +19,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#if defined(__MINGW64__)
+#  define MKDIR(name, perm) mkdir(name)
+#else
+#  define MKDIR(name, perm) mkdir(name, perm)
+#endif
+
 #if defined(EVERCBOR_DET) && defined(EVERCBOR_NONDET)
 #  error "Define exactly one of EVERCBOR_DET or EVERCBOR_NONDET"
 #endif
@@ -357,7 +363,7 @@ static const char *g_current_test  = "(unset)";
 static int         g_write_files   = 0;
 
 static int ensure_out_dir(void) {
-  if (mkdir(g_out_dir, 0755) != 0 && errno != EEXIST) {
+  if (MKDIR(g_out_dir, 0755) != 0 && errno != EEXIST) {
     fprintf(stderr, "FATAL: cannot create output dir '%s': %s\n",
             g_out_dir, strerror(errno));
     return 1;
