@@ -1,6 +1,7 @@
 all: build-rust
 
-EVERPARSE_SRC_PATH = $(realpath ../../..)
+EVERPARSE_SRC_PATH := $(realpath ../../..)
+include $(EVERPARSE_SRC_PATH)/windows.Makefile
 
 OUTPUT=_output/CDDLTest.Test.fst
 
