@@ -11,15 +11,15 @@ if [[ "$OS" = Windows_NT ]] ; then
     OPAMROOT="$(cygpath -m "$OPAMROOT")"
 fi
 root_opam="--root=$OPAMROOT"
-opam env "$root_opam" --set-root --shell=sh | grep -v '^PATH=' |
+opam env "$root_opam" --set-root --shell=sh |
     if [[ "$1" = --shell ]] ; then
-	cat
+        $SED 's!^PATH=\(.*\); export PATH;$!PATH=\1:"$PATH"; export PATH;!'
     else
-	$SED 's!^\([^=]*\)='"'"'\(.*\)'"'"'; export [^;]*;$!export \1 := \2!'
+	$SED 's!^\([^=]*\)='"'"'\(.*\)'"'"'; export [^;]*;$!export \1 := \2!' |
+	$SED 's!^export PATH := \(.*\)$!export PATH := \1:$(PATH)!'
     fi
 if [[ "$1" = --shell ]] ; then
     equal="="
-    epath=':"$PATH"'
     if [[ "$OS" = Windows_NT ]] ; then
 	eocamlpath="';'"'"$OCAMLPATH"'
 	eopamswitchprefixunix='"$(cygpath -u "$OPAM_SWITCH_PREFIX")"'
@@ -30,7 +30,6 @@ if [[ "$1" = --shell ]] ; then
     fi
 else
     equal=':='
-    epath=':$(PATH)'
     if [[ "$OS" = Windows_NT ]] ; then
 	eopamswitchprefixunix='$(shell cygpath -u "$(OPAM_SWITCH_PREFIX)")'
 	eopamswitchprefixwindows='$(shell cygpath -m "$(OPAM_SWITCH_PREFIX)")'
@@ -44,4 +43,3 @@ if [[ "$OS" = Windows_NT ]] ; then
     # Work around an opam bug about `opam var lib`
     echo 'export OCAMLPATH'"$equal$eopamswitchprefixwindows/lib$eocamlpath"
 fi
-echo 'export PATH'"$equal$eopamswitchprefixunix/bin$epath"
