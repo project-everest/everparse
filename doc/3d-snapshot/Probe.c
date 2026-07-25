@@ -19,14 +19,12 @@ ValidateT(
   BOOLEAN hasBytes0 = (InputLength - StartPosition) >= 2ULL;
   uint64_t positionAfterx;
   uint64_t positionAfterT;
-  uint16_t r0;
   uint16_t x;
   BOOLEAN xConstraintIsOk;
   uint64_t positionAfterx1;
   BOOLEAN hasBytes;
   uint64_t positionAftery_refinement;
   uint64_t positionAfterT0;
-  uint16_t r;
   uint16_t y_refinement;
   BOOLEAN y_refinementConstraintIsOk;
   if (hasBytes0)
@@ -45,8 +43,7 @@ ValidateT(
   }
   else
   {
-    r0 = Load16Le(Input + (uint32_t)StartPosition);
-    x = r0;
+    x = Load16Le(Input + (uint32_t)StartPosition);
     xConstraintIsOk = (uint32_t)x >= Bound;
     positionAfterx1 = EverParseCheckConstraintOk(xConstraintIsOk, positionAfterx);
     if (EverParseIsError(positionAfterx1))
@@ -75,8 +72,7 @@ ValidateT(
       else
       {
         /* reading field_value */
-        r = Load16Le(Input + (uint32_t)positionAfterx1);
-        y_refinement = r;
+        y_refinement = Load16Le(Input + (uint32_t)positionAfterx1);
         /* start: checking constraint */
         y_refinementConstraintIsOk = y_refinement >= x;
         /* end: checking constraint */
