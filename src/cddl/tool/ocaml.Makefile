@@ -1,6 +1,8 @@
 all: build
 
-EVERPARSE_SRC_PATH = $(realpath ../..)
+EVERPARSE_SRC_PATH := $(realpath ../..)
+include $(EVERPARSE_SRC_PATH)/windows.Makefile
+
 INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/pulse
 FSTAR_FILES := $(EVERPARSE_SRC_PATH)/cddl/spec/CDDL.Spec.AST.Base.fst $(EVERPARSE_SRC_PATH)/cddl/spec/CDDL.Spec.AST.Print.fst $(EVERPARSE_SRC_PATH)/cddl/spec/CDDL.Spec.AST.Elab.fst $(EVERPARSE_SRC_PATH)/cddl/spec/CDDL.Spec.AST.Driver.fst CDDL.Tool.Gen.fst $(EVERPARSE_SRC_PATH)/cbor/spec/CBOR.Spec.Constants.fst
 ALREADY_CACHED := *,
