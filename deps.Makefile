@@ -10,6 +10,7 @@ ifeq ($(OS),Windows_NT)
   export CC:=x86_64-w64-mingw32-gcc
   export LD:=x86_64-w64-mingw32-ld
   export AR:=x86_64-w64-mingw32-ar
+  export CXX:=x86_64-w64-mingw32-g++
 endif
 
 export EVERPARSE_OPT_PATH := $(realpath opt)
@@ -182,6 +183,7 @@ ifeq ($(OS),Windows_NT)
 	@echo export CC=$(CC)
 	@echo export LD=$(LD)
 	@echo export AR=$(AR)
+	@echo export CXX=$(CXX)
 endif
 	@echo export EVERPARSE_USE_OPAMROOT=$(EVERPARSE_USE_OPAMROOT)
 	@echo export EVERPARSE_USE_FSTAR_EXE=$(EVERPARSE_USE_FSTAR_EXE)
