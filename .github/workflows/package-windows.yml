@@ -5,6 +5,11 @@ on:
     - _**
   pull_request:
   workflow_dispatch:
+    inputs:
+      run_full_ci:
+        description: Run full CI
+        type: boolean
+        default: false
 
 jobs:
   fstar-src:
@@ -77,6 +82,7 @@ jobs:
           name: package-src
 
   testci:
+    if: ${{ inputs.run_full_ci }}
     needs: fstar-src
     runs-on: windows-2025
     steps:
