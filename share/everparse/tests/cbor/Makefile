@@ -22,9 +22,15 @@
 # The snapshot directory must contain the corresponding header(s) and
 # pre-built object file (CBORNondet.o or CBORDet.o, plus its dependencies).
 
+ifeq ($(OS),Windows_NT)
+  local_curdir := $(shell cygpath -m $(CURDIR))
+else
+  local_curdir := $(CURDIR)
+endif
+
 # Default snapshot locations: the in-tree C extractions.
-EVERCBOR_NONDET_PATH ?= $(realpath $(CURDIR)/../../../../src/cbor/pulse/nondet/c)
-EVERCBOR_DET_PATH    ?= $(realpath $(CURDIR)/../../../../src/cbor/pulse/det/c)
+EVERCBOR_NONDET_PATH ?= $(local_curdir)/../../../../src/cbor/pulse/nondet/c
+EVERCBOR_DET_PATH    ?= $(local_curdir)/../../../../src/cbor/pulse/det/c
 
 # Number of iterations for benchmarking. Override on the command line to make
 # timing measurements more reliable, e.g. BENCH_ITERATIONS=1000.
@@ -44,28 +50,24 @@ NONDET_OBJS = $(EVERCBOR_NONDET_PATH)/CBORNondet.o
 # The deterministic snapshot ships only CBORDet.o
 DET_OBJS    = $(EVERCBOR_DET_PATH)/CBORDet.o
 
-SRC = $(CURDIR)/cbor_tests.c
+SRC = $(local_curdir)/cbor_tests.c
 
 NONDET_BIN = cbor_tests_nondet.exe
 DET_BIN    = cbor_tests_det.exe
 
 # Directory into which the C binaries write artefact files for the
 # Python harness to consume.
-OUT_DIR = $(CURDIR)/out
+OUT_DIR = $(local_curdir)/out
 
 # Python virtual environment used to run the cross-language tests.
 PYTHON       ?= python3
+VENV_DIR      := $(local_curdir)/.venv
 ifeq ($(OS),Windows_NT)
-VENV_DIR      := $(shell cygpath -m $(CURDIR))/.venv
 VENV_PYTHON   := $(VENV_DIR)/Scripts/python.exe
 else
-VENV_DIR      := $(CURDIR)/.venv
 VENV_PYTHON   := $(VENV_DIR)/bin/python
 endif
-PY_SRC        := $(CURDIR)/cbor_tests.py
-ifeq ($(OS),Windows_NT)
-  PY_SRC := $(shell cygpath -m $(PY_SRC))
-endif
+PY_SRC        := $(local_curdir)/cbor_tests.py
 # Pin a cbor2 floor that includes the Rust rewrite (immutable / allow_indefinite
 # decoder flags). 6.0.x is the first family with that codebase.
 CBOR2_REQ    ?= cbor2>=6.0,<7
@@ -121,7 +123,7 @@ run-python: run-nondet run-det $(VENV_PYTHON) $(PY_SRC)
 
 # Run the Rust conformance suite against the C-emitted artefacts. Depends
 # on the C runs so that the artefacts exist on disk first.
-RUST_DIR = $(CURDIR)/cbor_tests_rust
+RUST_DIR = $(local_curdir)/cbor_tests_rust
 CARGO   ?= cargo
 run-rust: run-nondet run-det
 	cd $(RUST_DIR) && CBOR_TEST_OUT_DIR=$(OUT_DIR) $(CARGO) test --release
