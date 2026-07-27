@@ -1,6 +1,8 @@
 all: build extraction-all
 
-EVERPARSE_SRC_PATH = $(realpath ../..)
+EVERPARSE_SRC_PATH := $(realpath ../..)
+include $(EVERPARSE_SRC_PATH)/windows.Makefile
+
 INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/pulse $(EVERPARSE_SRC_PATH)/cbor/pulse
 
 ALREADY_CACHED := *,-CDDL.Tool,
@@ -24,7 +26,7 @@ build: $(EVERPARSE_CDDL)
 
 $(EVERPARSE_CDDL): ocaml.done $(wildcard ocaml/*/*.ml*)
 	cd ocaml && $(FSTAR_EXE) --ocamlenv dune build
-	cd ocaml && dune install --prefix=$(realpath $(EVERPARSE_SRC_PATH)/..)
+	cd ocaml && dune install --prefix=$(EVERPARSE_SRC_PATH)/..
 
 .PHONY: all
 

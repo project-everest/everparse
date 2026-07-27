@@ -1,6 +1,8 @@
 all: extract
 
-EVERPARSE_SRC_PATH = $(realpath ../../..)
+EVERPARSE_SRC_PATH := $(realpath ../../..)
+include $(EVERPARSE_SRC_PATH)/windows.Makefile
+
 SRC_DIRS += $(EVERPARSE_SRC_PATH)/cbor/pulse
 INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cbor/spec/raw $(EVERPARSE_SRC_PATH)/cbor/spec/raw/everparse $(EVERPARSE_SRC_PATH)/cbor/pulse/raw $(EVERPARSE_SRC_PATH)/cbor/pulse/raw/everparse $(EVERPARSE_SRC_PATH)/lowparse $(EVERPARSE_SRC_PATH)/lowparse/pulse
 
