@@ -180,20 +180,20 @@ make_everparse() {
 
     # Copy EverParse
     $cp $EVERPARSE_HOME/bin/qd.exe everparse/bin/qd.exe
-    $cp -r $EVERPARSE_HOME/bin/3d.exe everparse/bin/3d.exe
-    mkdir -p everparse/src/3d
+#    $cp -r $EVERPARSE_HOME/bin/3d.exe everparse/bin/3d.exe
+#    mkdir -p everparse/src/3d
     $cp -r $EVERPARSE_HOME/src/lowparse everparse/src/
     if $is_windows ; then
         $cp -r $EVERPARSE_HOME/src/package/everparse.cmd everparse/
     else
         $cp -r $EVERPARSE_HOME/src/package/everparse.sh everparse/
     fi
-    $cp -r $EVERPARSE_HOME/src/3d/prelude everparse/src/3d/prelude
-    $cp -r $EVERPARSE_HOME/src/3d/.clang-format everparse/src/3d
-    $cp -r $EVERPARSE_HOME/src/3d/copyright.txt everparse/src/3d
-    if $is_windows ; then $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi
-    $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness.h everparse/src/3d/
-    $cp -r $EVERPARSE_HOME/src/3d/noheader.txt everparse/src/3d/
+#    $cp -r $EVERPARSE_HOME/src/3d/prelude everparse/src/3d/prelude
+#    $cp -r $EVERPARSE_HOME/src/3d/.clang-format everparse/src/3d
+#    $cp -r $EVERPARSE_HOME/src/3d/copyright.txt everparse/src/3d
+#    if $is_windows ; then $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi
+#    $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness.h everparse/src/3d/
+#    $cp -r $EVERPARSE_HOME/src/3d/noheader.txt everparse/src/3d/
     if $is_windows ; then
         $cp -r $EVERPARSE_HOME/src/package/README.Windows.pkg everparse/README
     else
