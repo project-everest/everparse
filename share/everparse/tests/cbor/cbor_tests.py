@@ -34,6 +34,15 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
+import threading
+
+# Set stack size to 8 MB (must be a multiple of 4096 on Windows)
+try:
+    threading.stack_size(8 * 1024 * 1024)
+except (ValueError, threading.ThreadError) as e:
+    print(f"Error setting stack size: {e}")
+    sys.exit(1)
+
 try:
     import cbor2
     from cbor2 import CBORDecodeError, CBORTag, CBORSimpleValue
@@ -929,6 +938,12 @@ def main() -> int:
           f"{overall_skipped} skipped; total {overall_seconds:.6f}s")
     return 0 if overall_failed == 0 else 1
 
+def main0(shared_data) -> None:
+    shared_data["result"] = main()
 
 if __name__ == "__main__":
-    sys.exit(main())
+    res = {"result": 0}
+    t = threading.Thread(target=main0, args=(res,))
+    t.start()
+    t.join()
+    sys.exit(res["result"])
