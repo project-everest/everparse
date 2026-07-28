@@ -208,6 +208,8 @@ make_everparse() {
     if $is_windows ; then
         chmod a+x everparse/bin/*.exe everparse/bin/*.dll everparse/lib/fstar/z3-*/bin/*.exe
 	chmod a+x everparse/lib/fstar/z3-*/bin/*.dll || true
+    else
+        chmod a+x everparse/bin/*
     fi
 
     # licenses
