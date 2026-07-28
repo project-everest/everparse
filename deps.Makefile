@@ -101,8 +101,6 @@ export PATH := $(z3_dir):$(PATH)
 $(EVERPARSE_OPT_PATH)/opam/opam-init/init.sh:
 	+$(MAKE) -C $(EVERPARSE_OPT_PATH) opam
 
-clean_rules += clean-krmllib
-
 ifeq (,$(filter clean distclean $(clean_rules),$(MAKECMDGOALS)))
 opam-env.Makefile: $(NEED_OPAM_DIR)
 	rm -rf $@.tmp
@@ -156,11 +154,6 @@ ifeq ($(OS),Windows_NT)
 endif
 	touch $@
 
-krmllib.done: $(NEED_KRML)
-	# Needed by LowParse (Pulse) tests
-	+export KRML_LIBPATH="$$($(KRML_EXE) -locate-krmllib)" && $(MAKE) -C "$$KRML_LIBPATH"/dist/generic -f Makefile.basic
-	touch $@
-
 env:
 ifeq ($(OS),Windows_NT)
 	@echo export CC=$(CC)
@@ -186,17 +179,9 @@ endif
 
 deps: $(NEED_OPAM) $(NEED_FSTAR) $(NEED_Z3) $(NEED_KRML)
 
-deps: krmllib.done
-
 .PHONY: deps
 
-clean-krmllib:
-	rm -f krmllib.done
-	# +$(MAKE) -C "$$($(KRML_EXE) -locate-krmllib)"/dist/generic -f Makefile.basic clean || true # This works, but I am not sure we should clean up anything outside of the EverParse tree. In the opt/ case, krmllib is in opt/FStar, which `distclean` will remove altogether.
-
-.PHONY: clean-krmllib
-
-distclean: clean clean-krmllib
+distclean: clean
 	rm -rf opam-env.Makefile
 	+$(MAKE) -C opt clean
 
