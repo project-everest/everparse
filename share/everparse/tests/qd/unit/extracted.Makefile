@@ -29,8 +29,6 @@ FSTAR_OPTIONS += --odir krml --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked
 
 FSTAR = $(FSTAR_EXE) $(FSTAR_OPTIONS)
 
-HEADERS = $(addprefix -add-include ,'"krml/internal/compat.h"')
-
 ifeq ($(OS),Darwin)
 KRML_OPTS += -ccopt -Wno-tautological-constant-out-of-range-compare
 endif
@@ -38,13 +36,13 @@ endif
 # -Wno-tautological-overlap-compare because of T32
 KRML = $(KRML_EXE) \
 	 -fstar $(FSTAR_EXE) \
+	 -skip-compilation \
 	 -ccopt "-O3" -ccopt "-ffast-math" \
 	 -ccopt "-Wno-tautological-overlap-compare" \
 	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
 	 -tmpdir out -I .. \
-	 -bundle 'FStar.\*,Prims,Pulse.\*,LowParse.\*' \
+	 -bundle 'FStar.\*,Prims,Pulse.\*,PulseCore.\*,LowParse.\*,C,C.\*' \
 	 $(KRML_OPTS) \
-	 $(HEADERS) \
 	 -warn-error '@2@15-26'
 
 QD_FILES = $(wildcard *.fst *.fsti)
@@ -83,16 +81,10 @@ endif
 
 ALL_KRML_FILES := $(filter-out krml/prims.krml,$(ALL_KRML_FILES))
 
-extract: $(ALL_KRML_FILES) # from .depend
+test: $(ALL_KRML_FILES) krml/Test.krml
 	-@mkdir out
-	$(KRML) -skip-compilation $^
-
-test.exe: $(ALL_KRML_FILES) krml/Test.krml
-	-@mkdir out
-	$(KRML) $(LOWPARSE_HOME)/LowParse_TestLib_Low_c.c -no-prefix Test $^ -o test.exe
-
-test: test.exe
-	./test.exe
+	$(KRML) -no-prefix Test $^
+	$(CC) -c -I out -I .. $$f out/*.c
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
