@@ -4,7 +4,7 @@ EVERPARSE_SRC_PATH = $(realpath ../../..)
 
 CACHE_DIRECTORY := _output
 ifeq (,$(DICE_HOME))
-DICE_HOME := $(realpath $(EVERPARSE_SRC_PATH)/../)/opt/FStar/pulse/share/pulse/examples/dice
+  $(error "Please define DICE_HOME")
 endif
 INCLUDE_PATHS += $(DICE_HOME) $(DICE_HOME)/_cache
 FSTAR_OPTIONS += --admit_smt_queries true

@@ -1,7 +1,8 @@
 all: dpe
 
-EVERPARSE_SRC_PATH = $(realpath ../../..)
-EVERPARSE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)
+EVERPARSE_SRC_PATH := $(realpath ../../..)
+include $(EVERPARSE_SRC_PATH)/windows.Makefile
+
 OUTPUT_DIRECTORY := _output
 INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/tool $(EVERPARSE_SRC_PATH)/cbor/pulse $(EVERPARSE_SRC_PATH)/cddl/pulse $(OUTPUT_DIRECTORY)
 
@@ -42,9 +43,11 @@ util:
 
 .PHONY: %.clean
 
+include dice_home.Makefile
+
 # The Pulse DPE Makefile cannot be used outside of the Pulse
 # repository, so we need to build it by hand
-dice:
+dice: $(NEED_DICE)
 	+$(MAKE) -f dice.Makefile
 
 .PHONY: dpe dice util

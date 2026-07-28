@@ -4,7 +4,7 @@ EVERPARSE_SRC_PATH = $(realpath ../../../..)
 EVERPARSE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)
 
 ifeq (,$(DICE_HOME))
-DICE_HOME := $(realpath $(EVERPARSE_SRC_PATH)/../)/opt/FStar/pulse/share/pulse/examples/dice
+  $(error "Please set DICE_HOME")
 endif
 
 OUTPUT_DIRECTORY := _output

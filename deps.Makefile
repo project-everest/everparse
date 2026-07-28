@@ -48,7 +48,6 @@ endif
 NEED_FSTAR :=
 ifneq (1,$(EVERPARSE_USE_FSTAR_EXE))
 export FSTAR_EXE := $(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe
-export DICE_HOME := $(EVERPARSE_OPT_PATH)/FStar/pulse/share/pulse/examples/dice
 NEED_FSTAR := $(EVERPARSE_OPT_PATH)/FStar.done
 z3_exe := $(shell $(FSTAR_EXE) --locate_z3 \$(EVERPARSE_Z3_VERSION) 2>/dev/null)
 ifneq (0,$(.SHELLSTATUS))
@@ -165,7 +164,6 @@ endif
 	@echo export EVERPARSE_USE_FSTAR_EXE=$(EVERPARSE_USE_FSTAR_EXE)
 	@echo export EVERPARSE_USE_KRML_EXE=$(EVERPARSE_USE_KRML_EXE)
 	@echo export FSTAR_EXE=$(FSTAR_EXE)
-	@echo export DICE_HOME=$(DICE_HOME)
 	@echo export KRML_EXE=$(KRML_EXE)
 ifeq ($(OS),Windows_NT)
 	@echo export EVERPARSE_HOME=$(shell cygpath -u $(CURDIR))
