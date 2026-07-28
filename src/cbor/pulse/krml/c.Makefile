@@ -2,8 +2,12 @@ CBOR_SLICE_BACKEND := c
 
 include extract.Makefile
 
-NONDET_C_DIRECTORY:=$(realpath ..)/nondet/c-extracted
-DET_C_DIRECTORY:=$(realpath ../det/c)/extracted
+parent_dir := $(realpath ..)
+ifeq ($(OS),Windows_NT)
+  parent_dir := $(shell cygpath -m $(parent_dir))
+endif
+NONDET_C_DIRECTORY:=$(parent_dir)/nondet/c-extracted
+DET_C_DIRECTORY:=$(parent_dir)/det/c/extracted
 
 $(NONDET_C_DIRECTORY)/CBORNondet.c: $(filter-out %CBOR_Pulse_API_Det_Rust.krml %CBOR_Pulse_API_Det_C.krml,$(ALL_KRML_FILES))
 	mkdir -p $(dir $@)

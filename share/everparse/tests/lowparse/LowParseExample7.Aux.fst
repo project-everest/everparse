@@ -7,7 +7,6 @@ module LowParseExample7.Aux
    (use internal APIs not compatible with CMI). *)
 
 module LP = LowParse.Spec
-module B32 = FStar.Bytes
 module U32 = FStar.UInt32
 module L = FStar.List.Tot
 

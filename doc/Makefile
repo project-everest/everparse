@@ -3,7 +3,7 @@
 
 all: html 3d
 
-export EVERPARSE_HOME?=$(realpath ..)
+EVERPARSE_HOME?=$(realpath ..)
 
 FSTAR_EXE ?= fstar.exe
 
@@ -22,17 +22,26 @@ AUX_HEADERS=GetFieldPtrBase.h arch_flags.h
 
 # You can set these variables from the command line.
 SPHINXOPTS    = -W
+ifeq ($(OS),Windows_NT)
+SPHINXBUILD   = .venv/Scripts/sphinx-build.exe
+else
 SPHINXBUILD   = .venv/bin/sphinx-build
+endif
 SPHINXPROJ    = EverParseDoc
 SOURCEDIR     = .
 BUILDDIR      = _build
 
-# jinja2==3.0.0 because of https://github.com/mkdocs/mkdocs/issues/2799
+ifeq ($(OS),Windows_NT)
+python := .venv/Scripts/python.exe
+else
+python := .venv/bin/python3
+endif
+
 .venv:
 	rm -rf $@ $@.tmp
 	python3 -m venv $@.tmp
 	mv $@.tmp $@
-	if ! $@/bin/python3 -m pip install pytz tzdata sphinx==1.7.2 jinja2==3.0.0 alabaster==0.7.13 setuptools==81.0.0 sphinx-rtd-theme ; then mv $@ $@.tmp ; exit 1 ; fi
+	if ! $(python) -m pip install "sphinx-rtd-theme>=3.0.0" ; then mv $@ $@.tmp ; exit 1 ; fi
 
 # Put it first so that "make" without argument is like "make help".
 help: .venv

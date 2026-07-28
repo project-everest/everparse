@@ -6,11 +6,16 @@ ifeq (,$(OS))
 export OS := $(shell uname)
 endif
 
+ifeq ($(OS),Windows_NT)
+  export CC:=x86_64-w64-mingw32-gcc
+  export LD:=x86_64-w64-mingw32-ld
+  export AR:=x86_64-w64-mingw32-ar
+  export CXX:=x86_64-w64-mingw32-g++
+endif
+
 export EVERPARSE_OPT_PATH := $(realpath opt)
 ifeq ($(OS),Windows_NT)
 export EVERPARSE_OPT_PATH := $(shell cygpath -m $(EVERPARSE_OPT_PATH))
-# Pulse does not compile on Windows
-NO_PULSE := 1
 endif
 
 ifeq (1,$(EVERPARSE_ONLY_3D))
@@ -154,6 +159,12 @@ krmllib.done: $(NEED_KRML)
 	touch $@
 
 env:
+ifeq ($(OS),Windows_NT)
+	@echo export CC=$(CC)
+	@echo export LD=$(LD)
+	@echo export AR=$(AR)
+	@echo export CXX=$(CXX)
+endif
 	@echo export EVERPARSE_USE_OPAMROOT=$(EVERPARSE_USE_OPAMROOT)
 	@echo export EVERPARSE_USE_FSTAR_EXE=$(EVERPARSE_USE_FSTAR_EXE)
 	@echo export EVERPARSE_USE_KRML_EXE=$(EVERPARSE_USE_KRML_EXE)

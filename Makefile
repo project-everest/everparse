@@ -17,15 +17,16 @@ include nofstar.Makefile
 
 include deps.Makefile
 
-ifneq ($(OS),Windows_NT)
 ifneq (1,$(EVERPARSE_ONLY_3D))
 package-subset: cddl
 endif
-endif
 
 # Disable COSE on MacOS because we don't know how to link with OpenSSL
+# Disable COSE on Windows because we don't know how to link with OpenSSL
+ifneq ($(OS),Windows_NT)
 ifneq ($(OS),Darwin)
 all: cose
+endif
 endif
 
 ifeq (,$(NO_PULSE))
@@ -150,8 +151,11 @@ test: 3d-test
 endif
 
 # Disable COSE tests on MacOS because we don't know how to link with OpenSSL
+# Disable COSE tests on Windows because we don't know how to link with OpenSSL
+ifneq ($(OS),Windows_NT)
 ifneq ($(OS),Darwin)
 test: cose-test
+endif
 endif
 
 submodules:

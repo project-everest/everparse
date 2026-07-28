@@ -27,7 +27,7 @@ endif
 # source file.
 ifneq (,$(CACHE_DIRECTORY))
 ifeq ($(OS),Windows_NT)
-  CACHE_DIRECTORY := $(shell cygpath -m $(CACHE_DIRECTORY)
+  CACHE_DIRECTORY := $(shell cygpath -m $(CACHE_DIRECTORY))
 endif
   FSTAR_OPTIONS += --cache_dir $(CACHE_DIRECTORY)
   INCLUDE_PATHS+=$(CACHE_DIRECTORY)

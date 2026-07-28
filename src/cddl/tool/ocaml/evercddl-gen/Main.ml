@@ -355,11 +355,16 @@ let _ =
       ] @
         c_krml_list
   in
+  let krml_tmpfile = Filename.temp_file ~temp_dir:tmpdir "krml_options" ".rsp" in
+  let krml_tmpfile_out = open_out krml_tmpfile in
+  let _ = List.iter (fun s -> output_string krml_tmpfile_out s; output_char krml_tmpfile_out '\n') krml_options in
+  let _ = close_out krml_tmpfile_out in
   let res =
     run_cmd
       krml_exe
-      krml_options
+      ["@" ^ krml_tmpfile]
   in
+  let _ = Sys.remove krml_tmpfile in
   (* In the C case, krml only emitted the sources (-skip-compilation). Drive the
      C compiler ourselves unless compilation was explicitly skipped. The byte
      slice that cbor_raw embeds is homed by the CBOR library as the nominal
