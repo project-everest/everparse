@@ -45,6 +45,9 @@ jobs:
         with:
           name: everparse
           path: ${{ github.workspace }}/test
+      - name: Restore permissions
+        run: |
+          chmod +x ${{ github.workspace }}/test/bin/* ${{ github.workspace }}/test/lib/fstar/z3-*/bin/*
       - name: Check out repo
         uses: actions/checkout@v4
         with:
