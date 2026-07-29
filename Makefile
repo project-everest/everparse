@@ -119,7 +119,7 @@ lowparse-bitfields-test: lowparse
 #	+$(MAKE) -C tests/bitfields
 
 ifeq (,$(NO_PULSE))
-lowparse-pulse-test: lowparse krmllib.done
+lowparse-pulse-test: lowparse
 	+$(MAKE) -C share/everparse/tests/lowparse
 #	+$(MAKE) -C tests/pulse # TODO: move it into `share/everparse/tests/lowparse` and re-enable it
 else
@@ -135,7 +135,7 @@ quackyducky-lowstar-test: quackyducky
 
 .PHONY: quackyducky-lowstar-test
 
-quackyducky-pulse-test: quackyducky krmllib.done
+quackyducky-pulse-test: quackyducky
 	+$(MAKE) -C share/everparse/tests/qd
 
 .PHONY: quackyducky-pulse-test

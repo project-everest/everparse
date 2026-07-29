@@ -264,7 +264,7 @@ jobs:
           eval $(opam env)
           export FSTAR_TAG=
           # ^ no tag in source package
-          make -skj$(nproc) package-src ADMIT=1
+          make -skj$(nproc) package-src ADMIT=1 FSTAR_USE_KRML_EXE=1 KRML_EXE=/dev/null
       - name: Save
         if: steps.check-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4

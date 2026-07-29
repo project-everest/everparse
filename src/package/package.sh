@@ -149,11 +149,8 @@ make_everparse() {
 
     # Copy F*
     cp -L $FSTAR_PKG_ROOT/bin/* everparse/bin/
-    mkdir -p everparse/lib/fstar/
-    cp -L $FSTAR_PKG_ROOT/lib/fstar/fstar.include everparse/lib/fstar/
-    cp -L -r $FSTAR_PKG_ROOT/lib/fstar/ulib everparse/lib/fstar/ulib
-    cp -L -r $FSTAR_PKG_ROOT/lib/fstar/ulib.checked everparse/lib/fstar/ulib.checked
-    cp -L -r $FSTAR_PKG_ROOT/lib/fstar/pluginlib everparse/lib/fstar/pluginlib
+    mkdir -p everparse/lib
+    $cp -L -r $FSTAR_PKG_ROOT/lib/fstar everparse/lib/
     z3_version=4.13.3
     if ! z3=$(which z3-$z3_version$exe) ; then
 	z3="$FSTAR_PKG_ROOT/lib/fstar/z3-$z3_version$exe"
@@ -162,7 +159,7 @@ make_everparse() {
 	fi
     fi
     if [[ -z "$z3" ]] ; then
-	cp -r $FSTAR_PKG_ROOT/lib/fstar/z3-$z3_version everparse/lib/fstar/z3-$z3_version
+	true
     else
 	mkdir -p everparse/lib/fstar/z3-$z3_version/bin
 	cp -r $z3 everparse/lib/fstar/z3-$z3_version/bin/z3$exe
@@ -180,20 +177,20 @@ make_everparse() {
 
     # Copy EverParse
     $cp $EVERPARSE_HOME/bin/qd.exe everparse/bin/qd.exe
-    $cp -r $EVERPARSE_HOME/bin/3d.exe everparse/bin/3d.exe
-    mkdir -p everparse/src/3d
+#    $cp -r $EVERPARSE_HOME/bin/3d.exe everparse/bin/3d.exe
+#    mkdir -p everparse/src/3d
     $cp -r $EVERPARSE_HOME/src/lowparse everparse/src/
     if $is_windows ; then
         $cp -r $EVERPARSE_HOME/src/package/everparse.cmd everparse/
     else
         $cp -r $EVERPARSE_HOME/src/package/everparse.sh everparse/
     fi
-    $cp -r $EVERPARSE_HOME/src/3d/prelude everparse/src/3d/prelude
-    $cp -r $EVERPARSE_HOME/src/3d/.clang-format everparse/src/3d
-    $cp -r $EVERPARSE_HOME/src/3d/copyright.txt everparse/src/3d
-    if $is_windows ; then $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi
-    $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness.h everparse/src/3d/
-    $cp -r $EVERPARSE_HOME/src/3d/noheader.txt everparse/src/3d/
+#    $cp -r $EVERPARSE_HOME/src/3d/prelude everparse/src/3d/prelude
+#    $cp -r $EVERPARSE_HOME/src/3d/.clang-format everparse/src/3d
+#    $cp -r $EVERPARSE_HOME/src/3d/copyright.txt everparse/src/3d
+#    if $is_windows ; then $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi
+#    $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness.h everparse/src/3d/
+#    $cp -r $EVERPARSE_HOME/src/3d/noheader.txt everparse/src/3d/
     if $is_windows ; then
         $cp -r $EVERPARSE_HOME/src/package/README.Windows.pkg everparse/README
     else
@@ -205,7 +202,6 @@ make_everparse() {
     if [[ -z "$EVERPARSE_ONLY_3D" ]]; then
     $cp -r $EVERPARSE_HOME/src/cbor everparse/src/cbor
     $cp -r $EVERPARSE_HOME/src/cddl everparse/src/cddl
-	$cp -r $EVERPARSE_HOME/opt/FStar/pulse/lib/pulse everparse/lib/
 	$cp $EVERPARSE_HOME/bin/cddl.exe everparse/bin/cddl.exe
 	$cp -r $EVERPARSE_HOME/lib/evercddl everparse/lib/
     fi
@@ -225,6 +221,8 @@ make_everparse() {
     if $is_windows ; then
         chmod a+x everparse/bin/*.exe everparse/bin/*.dll everparse/lib/fstar/z3-*/bin/*.exe
 	chmod a+x everparse/lib/fstar/z3-*/bin/*.dll || true
+    else
+        chmod a+x everparse/bin/*
     fi
 
     # licenses

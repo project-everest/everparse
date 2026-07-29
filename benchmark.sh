@@ -54,7 +54,6 @@ setup_env() {
     export OPAM_SWITCH_PREFIX="$OPAMROOT/5.3.0"
     export CAML_LD_LIBRARY_PATH="$OPAM_SWITCH_PREFIX/lib/stublibs:$OPAM_SWITCH_PREFIX/lib/ocaml/stublibs:$OPAM_SWITCH_PREFIX/lib/ocaml"
     export FSTAR_EXE="$SCRIPT_DIR/opt/FStar/out/bin/fstar.exe"
-    export DICE_HOME="$SCRIPT_DIR/opt/FStar/pulse/share/pulse/examples/dice"
     export KRML_HOME="$SCRIPT_DIR/opt/karamel"
     export EVERPARSE_HOME="$SCRIPT_DIR"
     export EVERPARSE_Z3_VERSION=4.13.3
