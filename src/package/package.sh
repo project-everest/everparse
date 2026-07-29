@@ -149,8 +149,23 @@ make_everparse() {
 
     # Copy F*
     cp -L $FSTAR_PKG_ROOT/bin/* everparse/bin/
-    mkdir -p everparse/lib
-    $cp -L -r $FSTAR_PKG_ROOT/lib/fstar everparse/lib/
+    mkdir -p everparse/lib/fstar/
+    cp -L $FSTAR_PKG_ROOT/lib/fstar/fstar.include everparse/lib/fstar/
+    cp -L -r $FSTAR_PKG_ROOT/lib/fstar/ulib everparse/lib/fstar/ulib
+    cp -L -r $FSTAR_PKG_ROOT/lib/fstar/ulib.checked everparse/lib/fstar/ulib.checked
+    z3_version=4.13.3
+    if ! z3=$(which z3-$z3_version$exe) ; then
+	z3="$FSTAR_PKG_ROOT/lib/fstar/z3-$z3_version$exe"
+	if ! [[ -f "$z3" ]] ; then
+	    z3=
+	fi
+    fi
+    if [[ -z "$z3" ]] ; then
+	cp -r $FSTAR_PKG_ROOT/lib/fstar/z3-$z3_version everparse/lib/fstar/z3-$z3_version
+    else
+	mkdir -p everparse/lib/fstar/z3-$z3_version/bin
+	cp -r $z3 everparse/lib/fstar/z3-$z3_version/bin/z3$exe
+    fi
 
     # Copy KaRaMeL
     KRML_EXE="$EVERPARSE_HOME/opt/karamel/out/bin/krml$exe"
