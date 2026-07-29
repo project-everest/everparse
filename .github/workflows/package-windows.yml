@@ -2,11 +2,8 @@ name: Build everparse package (windows)
 on:
   push:
     branches-ignore:
-    - fstar2
     - _**
   pull_request:
-    branches-ignore:
-    - fstar2
   workflow_dispatch:
     inputs:
       run_full_ci:
