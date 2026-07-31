@@ -1338,16 +1338,11 @@ ensures
     (cbor_match_with_depth n xl.p xl.v xh');
   Trade.trans (cbor_match_with_depth n xl.p xl.v xh') (cbor_match_with_perm_d n xl xh') _;
   cbor_match_with_depth_cases n xl.p xl.v xh';
-  let _ : squash (cbor_major_type_byte_string == 2uy) =
-    assert_norm (cbor_major_type_byte_string == 2uy);
-  let _ : squash (cbor_major_type_text_string == 3uy) =
-    assert_norm (cbor_major_type_text_string == 3uy);
-  let _ : squash (cbor_major_type_array == 4uy) =
-    assert_norm (cbor_major_type_array == 4uy);
-  let _ : squash (cbor_major_type_map == 5uy) =
-    assert_norm (cbor_major_type_map == 5uy);
-  let _ : squash (cbor_major_type_tagged == 6uy) =
-    assert_norm (cbor_major_type_tagged == 6uy);
+  assert_norm ((cbor_major_type_byte_string <: FStar.UInt8.t) == 2uy);
+  assert_norm ((cbor_major_type_text_string <: FStar.UInt8.t) == 3uy);
+  assert_norm ((cbor_major_type_array <: FStar.UInt8.t) == 4uy);
+  assert_norm ((cbor_major_type_map <: FStar.UInt8.t) == 5uy);
+  assert_norm ((cbor_major_type_tagged <: FStar.UInt8.t) == 6uy);
   get_major_type_synth_raw_data_item_recip (Ghost.reveal xh');
   cbor_match_with_depth_to_match n xl.v;
   Trade.trans (cbor_match xl.p xl.v xh') (cbor_match_with_depth n xl.p xl.v xh') _;
