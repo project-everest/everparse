@@ -1817,8 +1817,8 @@ fn cbor_array_iterator_next <'b, 'a>(
     cbor_raw
     <'a>
 {
-    let i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = pi[0];
-    match i0
+    let iter: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = pi[0];
+    match iter
     {
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: i1 } =>
           {
@@ -1920,8 +1920,8 @@ fn cbor_map_iterator_next <'b, 'a>(
     cbor_map_entry
     <'a>
 {
-    let i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = pi[0];
-    match i0
+    let iter: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = pi[0];
+    match iter
     {
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice { _0: i1 } =>
           {
@@ -1987,8 +1987,8 @@ fn cbor_array_iterator_next_with_depth <'b, 'a>(
     cbor_raw
     <'a>
 {
-    let i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = pi[0];
-    match i0
+    let iter: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = pi[0];
+    match iter
     {
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: i1 } =>
           {
@@ -2058,8 +2058,8 @@ fn cbor_map_iterator_next_with_depth <'b, 'a>(
     cbor_map_entry
     <'a>
 {
-    let i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = pi[0];
-    match i0
+    let iter: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = pi[0];
+    match iter
     {
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice { _0: i1 } =>
           {
