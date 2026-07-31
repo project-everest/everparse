@@ -562,7 +562,7 @@ fn impl_serialize_array_group_bij
     (g21: (impl_tgt' -> impl_tgt))
     ([@@@erasable]gprf_21_12: (x: impl_tgt) -> squash (g21 (g12 x) == x))
     ([@@@erasable]gprf_12_21: (x: impl_tgt') -> squash (g12 (g21 x) == x))
-: impl_serialize_array_group lmin lmax #(Ghost.reveal t) #tgt' #inj (ag_spec_inj ps f12 f21 fprf_21_12 fprf_12_21) #impl_tgt' (rel_fun r g21 f21)
+: impl_serialize_array_group lmin lmax #(Ghost.reveal t) #tgt' #inj (ag_spec_inj ps f12 f21 fprf_21_12 fprf_12_21) #impl_tgt' (rel_fun r g21 (Ghost.reveal f21))
 =
     (c: _)
     (#v: _)
@@ -573,12 +573,9 @@ fn impl_serialize_array_group_bij
     (#size_before: _)
     (l: _)
 {
-  let c' = g21 c;
-  Trade.rewrite_with_trade
-    (rel_fun r g21 f21 c v)
-    (r c' (Ghost.reveal f21 v));
-  let res = i c' #(Ghost.reveal f21 v) out out_count out_size l;
-  Trade.elim _ _;
+  unfold (rel_fun r g21 (Ghost.reveal f21) c (Ghost.reveal v));
+  let res = i (g21 c) #((Ghost.reveal f21) (Ghost.reveal v)) out out_count out_size l;
+  fold (rel_fun r g21 (Ghost.reveal f21) c (Ghost.reveal v));
   res
 }
 
