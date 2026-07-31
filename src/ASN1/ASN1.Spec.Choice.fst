@@ -79,7 +79,11 @@ let rec make_gen_choice_strong_payload_parser
     if (id = id') then
       let p = (Mkgenparser?.p gp) in 
       parse_synth p (attach_tag lc id)
-    else 
+    else
+      let _ = assert (extract_types lc ==
+        (fst hd, Mkgenparser?.t (snd hd)) :: extract_types tl) in
+      let _ = assert_norm (project_tags lc ==
+        tag_of_gen_choice_type (extract_types lc)) in
       parse_synth (make_gen_choice_strong_payload_parser tl id) (fun x -> lemma_choice_cast (fst hd, Mkgenparser?.t (snd hd)) (extract_types tl) id x)
 
 let make_gen_choice_strong_parser
