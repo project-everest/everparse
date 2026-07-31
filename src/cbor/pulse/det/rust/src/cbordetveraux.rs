@@ -2452,8 +2452,8 @@ pub(crate) fn cbor_array_iterator_next <'b, 'a>(
     cbor_raw
     <'a>
 {
-    let i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = pi[0];
-    match i0
+    let iter: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = pi[0];
+    match iter
     {
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: i1 } =>
           {
@@ -2558,8 +2558,8 @@ pub(crate) fn cbor_map_iterator_next <'b, 'a>(
     cbor_map_entry
     <'a>
 {
-    let i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = pi[0];
-    match i0
+    let iter: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = pi[0];
+    match iter
     {
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice { _0: i1 } =>
           {
@@ -4357,9 +4357,9 @@ pub(crate) fn cbor_compare_with_depth(x1: cbor_raw, x2: cbor_raw) -> i16
                         while
                         cond
                         {
-                            let i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = (&pi1)[0];
+                            let iter: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = (&pi1)[0];
                             let elt1: cbor_raw =
-                                match i0
+                                match iter
                                 {
                                     cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
                                     { _0: i }
@@ -4386,9 +4386,9 @@ pub(crate) fn cbor_compare_with_depth(x1: cbor_raw, x2: cbor_raw) -> i16
                                     => cbor_serialized_array_iterator_next_with_depth(&mut pi1, i),
                                     _ => panic!("Incomplete pattern matching")
                                 };
-                            let i00: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = (&pi2)[0];
+                            let iter0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = (&pi2)[0];
                             let elt2: cbor_raw =
-                                match i00
+                                match iter0
                                 {
                                     cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
                                     { _0: i }
@@ -4551,10 +4551,10 @@ pub(crate) fn cbor_compare_with_depth(x1: cbor_raw, x2: cbor_raw) -> i16
                         while
                         cond
                         {
-                            let i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
+                            let iter: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
                                 (&pi1)[0];
                             let elt1: cbor_map_entry =
-                                match i0
+                                match iter
                                 {
                                     cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
                                     { _0: i }
@@ -4581,10 +4581,10 @@ pub(crate) fn cbor_compare_with_depth(x1: cbor_raw, x2: cbor_raw) -> i16
                                     => cbor_serialized_map_iterator_next_with_depth(&mut pi1, i),
                                     _ => panic!("Incomplete pattern matching")
                                 };
-                            let i00: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
+                            let iter0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
                                 (&pi2)[0];
                             let elt2: cbor_map_entry =
-                                match i00
+                                match iter0
                                 {
                                     cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
                                     { _0: i }

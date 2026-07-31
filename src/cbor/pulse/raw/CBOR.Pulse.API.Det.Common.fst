@@ -791,6 +791,61 @@ let rec list_map_mk_det_raw_cbor_map_entry_mk_cbor_map_entry
     SpecRaw.mk_det_raw_cbor_mk_cbor v;
     list_map_mk_det_raw_cbor_map_entry_mk_cbor_map_entry q
 
+let list_memP_map_mk_cbor_map_entry_equiv
+  (vv: list (Spec.cbor & Spec.cbor))
+  (vv': list (SpecRaw.raw_data_item & SpecRaw.raw_data_item))
+: Lemma
+  (requires (
+    List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry
+      (List.Tot.map SpecRaw.mk_cbor_map_entry vv') == vv' /\
+    (forall y .
+      List.Tot.memP y vv' <==>
+      List.Tot.memP y (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry vv))
+  ))
+  (ensures (
+    forall x .
+      List.Tot.memP x (List.Tot.map SpecRaw.mk_cbor_map_entry vv') <==>
+      List.Tot.memP x vv
+  ))
+= let prf
+    (x: Spec.cbor & Spec.cbor)
+  : Lemma
+    (List.Tot.memP x (List.Tot.map SpecRaw.mk_cbor_map_entry vv') <==>
+      List.Tot.memP x vv)
+  = let raw_x = SpecRaw.mk_det_raw_cbor_map_entry x in
+    if FStar.IndefiniteDescription.strong_excluded_middle
+      (List.Tot.memP x (List.Tot.map SpecRaw.mk_cbor_map_entry vv'))
+    then begin
+      List.Tot.memP_map_intro
+        SpecRaw.mk_det_raw_cbor_map_entry
+        x
+        (List.Tot.map SpecRaw.mk_cbor_map_entry vv');
+      assert (List.Tot.memP raw_x vv');
+      assert (
+        List.Tot.memP raw_x vv' <==>
+        List.Tot.memP raw_x (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry vv)
+      );
+      let y = CBOR.Spec.Util.list_memP_map_elim
+        SpecRaw.mk_det_raw_cbor_map_entry raw_x vv in
+      SpecRaw.mk_det_raw_cbor_inj (fst y) (fst x);
+      SpecRaw.mk_det_raw_cbor_inj (snd y) (snd x)
+    end
+    else if FStar.IndefiniteDescription.strong_excluded_middle
+      (List.Tot.memP x vv)
+    then begin
+      List.Tot.memP_map_intro SpecRaw.mk_det_raw_cbor_map_entry x vv;
+      assert (
+        List.Tot.memP raw_x vv' <==>
+        List.Tot.memP raw_x (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry vv)
+      );
+      assert (List.Tot.memP raw_x vv');
+      assert (SpecRaw.mk_cbor_map_entry raw_x == x);
+      List.Tot.memP_map_intro SpecRaw.mk_cbor_map_entry raw_x vv'
+    end
+    else ()
+  in
+  Classical.forall_intro prf
+
 let list_no_repeats_map_fst_intro_mk_det_raw_cbor1
   (vv: list (Spec.cbor & Spec.cbor))
   (l1 l2: list (SpecRaw.raw_data_item & SpecRaw.raw_data_item))
@@ -962,7 +1017,8 @@ fn cbor_det_mk_map_gen (_: unit)
       seq_list_map_mk_cbor_map_entry_intro pv va' vv';
       Trade.trans _ _ (SM.seq_list_match va vv (cbor_det_map_entry_match pv));
       let vv2 = Ghost.hide (List.Tot.map SpecRaw.mk_cbor_map_entry vv');
-      assert (pure (forall x . List.Tot.memP x vv2 <==> List.Tot.memP x vv));
+      list_map_mk_det_raw_cbor_map_entry_mk_cbor_map_entry vv';
+      list_memP_map_mk_cbor_map_entry_equiv vv vv';
       assert (pure (List.Tot.length vv2 == List.Tot.length vv));
       assert (pure (~ (List.Tot.no_repeats_p (List.Tot.map fst vv))));
       assert (pure (List.Tot.length vv <= pow2 64 - 1));

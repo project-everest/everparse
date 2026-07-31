@@ -1386,9 +1386,8 @@ fn cbor_nondet_mk_map_gen_by_ref (_: unit)
       SM.seq_list_match_length (Raw.cbor_match_map_entry pv) va v';
       let raw_len = SpecRaw.mk_raw_uint64 (SZ.sizet_to_uint64 (S.len a));
       fits_mod (SZ.v (S.len a)) U64.n;
-      let sq : squash (List.Tot.length v' == U64.v raw_len.value) = ();
       let v'' : Ghost.erased (SpecRaw.nlist (SpecRaw.raw_data_item & SpecRaw.raw_data_item) (U64.v raw_len.value)) =
-        nlist_intro v' (U64.v raw_len.value) sq
+        nlist_intro v' (U64.v raw_len.value) ()
       ;
       let cr : Ghost.erased SpecRaw.raw_data_item = SpecRaw.Map raw_len v'';
       SpecRaw.valid_eq SpecRaw.basic_data_model cr;

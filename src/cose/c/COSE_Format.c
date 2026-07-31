@@ -436,17 +436,20 @@ Serializer for any
 */
 size_t COSE_Format_serialize_any(cbor_det_t c, Pulse_Lib_Slice_slice__uint8_t out)
 {
-  cbor_det_t c_ = any_left(c);
-  size_t len = cbor_det_size(c_, Pulse_Lib_Slice_len__uint8_t(out));
+  size_t slen = Pulse_Lib_Slice_len__uint8_t(out);
+  size_t len = cbor_det_size(any_left(c), slen);
   option__size_t scrut;
   if (len > (size_t)0U)
+  {
+    uint8_t *out1 = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(out);
     scrut =
       (
         (option__size_t){
           .tag = FStar_Pervasives_Native_Some,
-          .v = cbor_det_serialize(c_, Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(out), len)
+          .v = cbor_det_serialize(any_left(c), out1, len)
         }
       );
+  }
   else
     scrut = ((option__size_t){ .tag = FStar_Pervasives_Native_None });
   if (scrut.tag == FStar_Pervasives_Native_None)
@@ -1217,28 +1220,27 @@ COSE_Format_serialize_tstr(
   Pulse_Lib_Slice_slice__uint8_t out
 )
 {
-  Pulse_Lib_Slice_slice__uint8_t c_ = tstr_left(c);
-  if (sizet_lte_u64(Pulse_Lib_Slice_len__uint8_t(c_), 18446744073709551615ULL))
+  if (sizet_lte_u64(Pulse_Lib_Slice_len__uint8_t(tstr_left(c)), 18446744073709551615ULL))
   {
-    size_t alen = Pulse_Lib_Slice_len__uint8_t(c_);
+    size_t alen = Pulse_Lib_Slice_len__uint8_t(tstr_left(c));
     if
     (
-      cbor_det_impl_utf8_correct_from_array(Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(c_),
+      cbor_det_impl_utf8_correct_from_array(Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(tstr_left(c)),
         alen)
     )
     {
-      uint8_t *a = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(c_);
+      uint8_t *a = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(tstr_left(c));
       cbor_det_t pres = dummy_cbor_det_t();
       bool ite;
       if (CBOR_MAJOR_TYPE_TEXT_STRING == CBOR_MAJOR_TYPE_BYTE_STRING)
         ite =
           cbor_det_mk_byte_string_from_arrayptr(a,
-            (uint64_t)Pulse_Lib_Slice_len__uint8_t(c_),
+            (uint64_t)Pulse_Lib_Slice_len__uint8_t(tstr_left(c)),
             &pres);
       else
         ite =
           cbor_det_mk_text_string_from_arrayptr(a,
-            (uint64_t)Pulse_Lib_Slice_len__uint8_t(c_),
+            (uint64_t)Pulse_Lib_Slice_len__uint8_t(tstr_left(c)),
             &pres);
       KRML_MAYBE_UNUSED_VAR(ite);
       cbor_det_t x = pres;
@@ -1386,12 +1388,13 @@ COSE_Format_serialize_bstr(
   Pulse_Lib_Slice_slice__uint8_t out
 )
 {
-  Pulse_Lib_Slice_slice__uint8_t c_ = bstr_left(c);
-  if (sizet_lte_u64(Pulse_Lib_Slice_len__uint8_t(c_), 18446744073709551615ULL))
+  if (sizet_lte_u64(Pulse_Lib_Slice_len__uint8_t(bstr_left(c)), 18446744073709551615ULL))
   {
-    uint8_t *a = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(c_);
+    uint8_t *a = Pulse_Lib_Slice_slice_to_arrayptr_intro__uint8_t(bstr_left(c));
     cbor_det_t pres = dummy_cbor_det_t();
-    cbor_det_mk_byte_string_from_arrayptr(a, (uint64_t)Pulse_Lib_Slice_len__uint8_t(c_), &pres);
+    cbor_det_mk_byte_string_from_arrayptr(a,
+      (uint64_t)Pulse_Lib_Slice_len__uint8_t(bstr_left(c)),
+      &pres);
     cbor_det_t x = pres;
     size_t len1 = cbor_det_size(x, Pulse_Lib_Slice_len__uint8_t(out));
     option__size_t scrut;
@@ -4115,17 +4118,17 @@ COSE_Format_aux_env29_serialize_1(
   size_t *out_size
 )
 {
-  COSE_Format_aux_env29_type_1_ugly c_ = aux_env29_type_1_left(c);
   uint64_t count = *out_count;
   if (count < 18446744073709551615ULL)
   {
     size_t size = *out_size;
     Pulse_Lib_Slice_slice__uint8_t out1 = split__uint8_t(out, size).snd;
+    COSE_Format_aux_env29_type_1_ugly scrut = aux_env29_type_1_left(c);
     size_t size1;
-    if (c_.tag == COSE_Format_Inl)
-      size1 = COSE_Format_serialize_tstr(c_.case_Inl, out1);
-    else if (c_.tag == COSE_Format_Inr)
-      size1 = COSE_Format_serialize_int(c_.case_Inr, out1);
+    if (scrut.tag == COSE_Format_Inl)
+      size1 = COSE_Format_serialize_tstr(scrut.case_Inl, out1);
+    else if (scrut.tag == COSE_Format_Inr)
+      size1 = COSE_Format_serialize_int(scrut.case_Inr, out1);
     else
       size1 = KRML_EABORT(size_t, "unreachable (pattern matches are exhaustive in F*)");
     if (size1 == (size_t)0U)
@@ -6687,12 +6690,12 @@ COSE_Format_aux_env30_serialize_1(
   size_t *out_size
 )
 {
-  COSE_Format_cose_key_generic c_ = aux_env30_type_1_left(c);
   uint64_t count = *out_count;
   if (count < 18446744073709551615ULL)
   {
     size_t size = *out_size;
-    size_t size1 = COSE_Format_serialize_cose_key_generic(c_, split__uint8_t(out, size).snd);
+    Pulse_Lib_Slice_slice__uint8_t out1 = split__uint8_t(out, size).snd;
+    size_t size1 = COSE_Format_serialize_cose_key_generic(aux_env30_type_1_left(c), out1);
     if (size1 == (size_t)0U)
       return false;
     else
@@ -8878,12 +8881,12 @@ COSE_Format_aux_env34_serialize_1(
   size_t *out_size
 )
 {
-  COSE_Format_evercddl_label c_ = aux_env34_type_1_left(c);
   uint64_t count = *out_count;
   if (count < 18446744073709551615ULL)
   {
     size_t size = *out_size;
-    size_t size1 = COSE_Format_serialize_evercddl_label(c_, split__uint8_t(out, size).snd);
+    Pulse_Lib_Slice_slice__uint8_t out1 = split__uint8_t(out, size).snd;
+    size_t size1 = COSE_Format_serialize_evercddl_label(aux_env34_type_1_left(c), out1);
     if (size1 == (size_t)0U)
       return false;
     else
@@ -14856,12 +14859,12 @@ COSE_Format_aux_env41_serialize_1(
   size_t *out_size
 )
 {
-  COSE_Format_cose_signature c_ = aux_env41_type_1_left(c);
   uint64_t count = *out_count;
   if (count < 18446744073709551615ULL)
   {
     size_t size = *out_size;
-    size_t size1 = COSE_Format_serialize_cose_signature(c_, split__uint8_t(out, size).snd);
+    Pulse_Lib_Slice_slice__uint8_t out1 = split__uint8_t(out, size).snd;
+    size_t size1 = COSE_Format_serialize_cose_signature(aux_env41_type_1_left(c), out1);
     if (size1 == (size_t)0U)
       return false;
     else

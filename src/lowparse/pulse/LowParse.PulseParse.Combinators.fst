@@ -972,7 +972,7 @@ fn zero_copy_parse_filter
   Trade.trans (vmatch res v') _ _;
   Trade.rewrite_with_trade
     (vmatch res v')
-    (LPC.vmatch_filter vmatch f res v);
+    (LPC.vmatch_filter vmatch f res (Ghost.reveal v));
   Trade.trans _ (vmatch res v') _;
   res
 }
@@ -1107,8 +1107,8 @@ fn zero_copy_parse_fst
   Trade.elim_hyp_r (vmatch1 res _) (PPB.pts_to_parsed p2 input2 #(pm /. 2.0R) gv2) (PPB.pts_to_parsed (nondep_then p1 p2) input #pm v);
   Trade.rewrite_with_trade
     (vmatch1 res _)
-    (LPC.vmatch_synth vmatch1 fst res v);
-  Trade.trans (LPC.vmatch_synth vmatch1 fst res v) _ _;
+    (LPC.vmatch_synth vmatch1 fst res (Ghost.reveal v));
+  Trade.trans (LPC.vmatch_synth vmatch1 fst res (Ghost.reveal v)) _ _;
   res
 }
 
@@ -1149,8 +1149,8 @@ fn zero_copy_parse_snd
   Trade.elim_hyp_l (PPB.pts_to_parsed p1 input1 #(pm /. 2.0R) gv1) _ (PPB.pts_to_parsed (nondep_then p1 p2) input #pm v);
   Trade.rewrite_with_trade
     (vmatch2 res _)
-    (LPC.vmatch_synth vmatch2 snd res v);
-  Trade.trans (LPC.vmatch_synth vmatch2 snd res v) _ _;
+    (LPC.vmatch_synth vmatch2 snd res (Ghost.reveal v));
+  Trade.trans (LPC.vmatch_synth vmatch2 snd res (Ghost.reveal v)) _ _;
   res
 }
 
@@ -1192,8 +1192,8 @@ fn zero_copy_parse_dtuple2_fst
   Trade.elim_hyp_r (vmatch1 res _) (PPB.pts_to_parsed (p2 gdv1) input2 #(pm /. 2.0R) gdv2) (PPB.pts_to_parsed (parse_dtuple2 p1 p2) input #pm v);
   Trade.rewrite_with_trade
     (vmatch1 res _)
-    (LPC.vmatch_synth vmatch1 dfst res v);
-  Trade.trans (LPC.vmatch_synth vmatch1 dfst res v) _ _;
+    (LPC.vmatch_synth vmatch1 dfst res (Ghost.reveal v));
+  Trade.trans (LPC.vmatch_synth vmatch1 dfst res (Ghost.reveal v)) _ _;
   res
 }
 
