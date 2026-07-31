@@ -2767,9 +2767,9 @@ fn l2r_write_filter
   (offset: _)
   (#v: _)
 {
-  unfold (vmatch_filter vmatch f x' x);
+  unfold (vmatch_filter vmatch f x' (Ghost.reveal x));
   let res = w x' #(Ghost.hide #t1 (Ghost.reveal x)) out offset;
-  fold (vmatch_filter vmatch f x' x);
+  fold (vmatch_filter vmatch f x' (Ghost.reveal x));
   res
 }
 
@@ -2785,9 +2785,9 @@ fn compute_remaining_size_filter
   (out: _)
   (#v: _)
 {
-  unfold (vmatch_filter vmatch f x' x);
+  unfold (vmatch_filter vmatch f x' (Ghost.reveal x));
   let res = w x' #(Ghost.hide #t1 (Ghost.reveal x)) out;
-  fold (vmatch_filter vmatch f x' x);
+  fold (vmatch_filter vmatch f x' (Ghost.reveal x));
   res
 }
 
@@ -2808,7 +2808,7 @@ fn zero_copy_parse_filter
   Trade.trans (vmatch res v') _ _;
   Trade.rewrite_with_trade
     (vmatch res v')
-    (vmatch_filter vmatch f res v);
+    (vmatch_filter vmatch f res (Ghost.reveal v));
   Trade.trans _ (vmatch res v') _;
   res
 }

@@ -1787,9 +1787,31 @@ let depth_cb (n: nat) (r: raw_data_item)
    then (fun (_: perm) (_: cbor_raw) (_: raw_data_item) -> pure False)
    else cbor_match_with_depth (n - 1))
 
+let depth_cb_eq
+  (n: nat)
+  (r: raw_data_item)
+: Lemma
+  (ensures
+    depth_cb n r ==
+      ((if n = 0
+        then (fun (_: perm) (_: cbor_raw) (_: raw_data_item) -> pure False)
+        else cbor_match_with_depth (n - 1))
+       <: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop)))
+= assert (
+    depth_cb n r ==
+      ((if n = 0
+         then (fun (_: perm) (_: cbor_raw) (_: raw_data_item) -> pure False)
+         else cbor_match_with_depth (n - 1))
+        <: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+  ) by (
+      FStar.Tactics.norm [delta_only [`%depth_cb]];
+      FStar.Tactics.trefl ()
+    )
+
 let cbor_match_with_depth_eq0 (n: nat) (p: perm) (c: cbor_raw) (r: raw_data_item)
 : Lemma (ensures cbor_match_with_depth n p c r == cbor_match0 p c r (depth_cb n r))
-= assert_norm (cbor_match_with_depth n p c r == cbor_match0 p c r (depth_cb n r))
+= depth_cb_eq n r;
+  assert_norm (cbor_match_with_depth n p c r == cbor_match0 p c r (depth_cb n r))
 
 let cbor_match_eq0 (p: perm) (c: cbor_raw) (r: raw_data_item)
 : Lemma (ensures cbor_match p c r == cbor_match0 p c r cbor_match)
@@ -1983,6 +2005,7 @@ fn cbor_match_with_depth_tagged_elim (depth: nat) (p: perm) (a: cbor_tagged) (r:
     pure (a.cbor_tagged_tag == Tagged?.tag r /\ depth >= 1)
 {
   cbor_match_with_depth_eq_tagged depth p a r;
+  depth_cb_eq depth r;
   rewrite (cbor_match_with_depth depth p (CBOR_Case_Tagged a) r) as (cbor_match_tagged a p r (depth_cb depth r));
   unfold (cbor_match_tagged a p r (depth_cb depth r));
   with c'. assert (depth_cb depth r (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r));
@@ -2005,6 +2028,7 @@ fn cbor_match_with_depth_tagged_elim (depth: nat) (p: perm) (a: cbor_tagged) (r:
       as (depth_cb depth r (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r));
     fold (cbor_match_tagged a p r (depth_cb depth r));
     cbor_match_with_depth_eq_tagged depth p a r;
+    depth_cb_eq depth r;
     rewrite (cbor_match_tagged a p r (depth_cb depth r)) as (cbor_match_with_depth depth p (CBOR_Case_Tagged a) r);
   };
 }
@@ -2027,6 +2051,7 @@ fn cbor_match_with_depth_array_elim (depth: nat) (p: perm) (a: cbor_array) (r: r
       SZ.v (S.len a.cbor_array_ptr) == U64.v (Array?.len r).value)
 {
   cbor_match_with_depth_eq_array depth p a r;
+  depth_cb_eq depth r;
   rewrite (cbor_match_with_depth depth p (CBOR_Case_Array a) r) as (cbor_match_array a p r (depth_cb depth r));
   unfold (cbor_match_array a p r (depth_cb depth r));
   with s. assert (pts_to a.cbor_array_ptr #(p `perm_mul` a.cbor_array_array_perm) s **
@@ -2041,6 +2066,7 @@ fn cbor_match_with_depth_array_elim (depth: nat) (p: perm) (a: cbor_array) (r: r
   {
     fold (cbor_match_array a p r (depth_cb depth r));
     cbor_match_with_depth_eq_array depth p a r;
+    depth_cb_eq depth r;
     rewrite (cbor_match_array a p r (depth_cb depth r)) as (cbor_match_with_depth depth p (CBOR_Case_Array a) r);
   };
 }
@@ -2060,6 +2086,7 @@ fn cbor_match_with_depth_map_elim (depth: nat) (p: perm) (a: cbor_map) (r: raw_d
       SZ.v (S.len a.cbor_map_ptr) == U64.v (Map?.len r).value)
 {
   cbor_match_with_depth_eq_map0 depth p a r;
+  depth_cb_eq depth r;
   rewrite (cbor_match_with_depth depth p (CBOR_Case_Map a) r) as (cbor_match_map0 a p r (depth_cb depth r));
   unfold (cbor_match_map0 a p r (depth_cb depth r));
   with s. assert (pts_to a.cbor_map_ptr #(p `perm_mul` a.cbor_map_array_perm) s **
@@ -2074,6 +2101,7 @@ fn cbor_match_with_depth_map_elim (depth: nat) (p: perm) (a: cbor_map) (r: raw_d
   {
     fold (cbor_match_map0 a p r (depth_cb depth r));
     cbor_match_with_depth_eq_map0 depth p a r;
+    depth_cb_eq depth r;
     rewrite (cbor_match_map0 a p r (depth_cb depth r)) as (cbor_match_with_depth depth p (CBOR_Case_Map a) r);
   };
 }
