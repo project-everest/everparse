@@ -49,10 +49,10 @@ ensures
           bytes_left
           spect_bytes_left
           x
-          y);
+          (reveal y));
   Trade.Util.elim_hyp_r _ _ _;
   rewrite each
-  (rel_fun rel_bstr bytes_left spect_bytes_left x y)  
+  (rel_fun rel_bstr bytes_left spect_bytes_left x (reveal y))
    as (rel_bytes x y);
   res.s
 }

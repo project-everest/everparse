@@ -1225,7 +1225,7 @@ vmatch_lens #_ #_ #_
       (lseq_utf8_correct (get_header_initial_byte xh1).major_type
           (U64.v (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
       )
-      res z
+      res (Ghost.reveal z)
     );
   Trade.trans _ 
     (LowParse.Pulse.SeqBytes.pts_to_seqbytes
@@ -1280,6 +1280,8 @@ let size_payload_string
 // cbor_match via cbor_match_with_depth_to_match, then the rest reuses the exact
 // non-depth seqbytes extraction. No recursion / no `f`.
 // ============================================================================
+
+#push-options "--z3rlimit 10 --split_queries always"
 
 ghost
 fn ser_payload_string_lens_aux_d
@@ -1336,6 +1338,12 @@ ensures
     (cbor_match_with_depth n xl.p xl.v xh');
   Trade.trans (cbor_match_with_depth n xl.p xl.v xh') (cbor_match_with_perm_d n xl xh') _;
   cbor_match_with_depth_cases n xl.p xl.v xh';
+  assert_norm ((cbor_major_type_byte_string <: FStar.UInt8.t) == 2uy);
+  assert_norm ((cbor_major_type_text_string <: FStar.UInt8.t) == 3uy);
+  assert_norm ((cbor_major_type_array <: FStar.UInt8.t) == 4uy);
+  assert_norm ((cbor_major_type_map <: FStar.UInt8.t) == 5uy);
+  assert_norm ((cbor_major_type_tagged <: FStar.UInt8.t) == 6uy);
+  get_major_type_synth_raw_data_item_recip (Ghost.reveal xh');
   cbor_match_with_depth_to_match n xl.v;
   Trade.trans (cbor_match xl.p xl.v xh') (cbor_match_with_depth n xl.p xl.v xh') _;
   Trade.rewrite_with_trade
@@ -1344,6 +1352,8 @@ ensures
   Trade.trans (cbor_match_with_perm xl xh') (cbor_match xl.p xl.v xh') _;
   xh'
 }
+
+#pop-options
 
 #push-options "--z3rlimit 32"
 
@@ -1414,7 +1424,7 @@ vmatch_lens #_ #_ #_
       (lseq_utf8_correct (get_header_initial_byte xh1).major_type
           (U64.v (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
       )
-      res z
+      res (Ghost.reveal z)
     );
   Trade.trans _ 
     (LowParse.Pulse.SeqBytes.pts_to_seqbytes
@@ -1489,6 +1499,19 @@ let cbor_with_perm_case_array_match_elem
 = cbor_match
     (perm_mul c.p (match c.v with CBOR_Case_Array a -> a.cbor_array_payload_perm | _ -> 1.0R (* dummy *) ))
 
+let cbor_with_perm_case_array_match_elem_eq
+  (c: with_perm cbor_raw)
+  (a: cbor_array)
+  (sq: squash (c.v == CBOR_Case_Array a))
+: Lemma (
+    (match c.v with
+      | CBOR_Case_Array a' -> a'.cbor_array_payload_perm
+      | _ -> 1.0R) == a.cbor_array_payload_perm
+  )
+= match c.v with
+  | CBOR_Case_Array a' -> assert (a' == a)
+  | _ -> assert False
+
 inline_for_extraction
 let ser_payload_array_array_elem
   (f: l2r_writer cbor_match_with_perm serialize_raw_data_item)
@@ -1550,9 +1573,10 @@ ensures
                           xh1)
                       (get_header_long_argument xh1)))
           raw_data_item) (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array) _ _;
-  vmatch_with_cond_elim_trade (match_cbor_payload xh1) _ _ _;
-  Trade.trans (match_cbor_payload xh1 _ _) _ _;
-  let xh0 = match_cbor_payload_elim_trade xh1 _ _;
+  assert (pure (Ghost.reveal xh2 == xh));
+  vmatch_with_cond_elim_trade (match_cbor_payload xh1) _ xl (Ghost.reveal xh2);
+  Trade.trans (match_cbor_payload xh1 xl (Ghost.reveal xh2)) _ _;
+  let xh0 = match_cbor_payload_elim_trade xh1 xl (Ghost.reveal xh2);
   Trade.trans (cbor_match_with_perm xl xh0) _ _;
   Trade.rewrite_with_trade
     (cbor_match_with_perm xl xh0)
@@ -1560,12 +1584,33 @@ ensures
   Trade.trans (cbor_match _ _ _) (cbor_match_with_perm _ _) _; // FIXME: WHY WHY WHY do I need to help Pulse here?
   cbor_match_cases _;
   let CBOR_Case_Array a = xl.v;
+  cbor_with_perm_case_array_match_elem_eq xl a ();
   cbor_match_eq_array xl.p a xh0;
+  assert (pure (Array?.v (Ghost.reveal xh0) == xh));
   Trade.rewrite_with_trade
     (cbor_match xl.p xl.v xh0)
     (cbor_match_array a xl.p xh0 cbor_match);
   Trade.trans (cbor_match_array a xl.p xh0 cbor_match) _ _;
   unfold (cbor_match_array a xl.p xh0 cbor_match);
+  with s. assert (PM.seq_list_match s (Array?.v xh0)
+    (cbor_match (xl.p `perm_mul` a.cbor_array_payload_perm)));
+  rewrite
+    (PM.seq_list_match s (Array?.v xh0)
+      (cbor_match (xl.p `perm_mul` a.cbor_array_payload_perm)))
+    as (PM.seq_list_match s xh
+      (cbor_match
+        (xl.p `perm_mul`
+          (match xl.v with
+            | CBOR_Case_Array a' -> a'.cbor_array_payload_perm
+            | _ -> 1.0R))));
+  rewrite
+    (PM.seq_list_match s xh
+      (cbor_match
+        (xl.p `perm_mul`
+          (match xl.v with
+            | CBOR_Case_Array a' -> a'.cbor_array_payload_perm
+            | _ -> 1.0R))))
+    as (PM.seq_list_match s xh (cbor_with_perm_case_array_match_elem xl));
   // let ar = Some?.v (cbor_with_perm_case_array_get xl);
   let Some ar = cbor_with_perm_case_array_get xl;
   rewrite each a.cbor_array_ptr as ar.v;
@@ -1574,7 +1619,7 @@ ensures
     (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
       (get_header_long_argument xh1)))
     xl xh
-    ar _
+      ar s
   ;
   intro
     (Trade.trade
@@ -1600,6 +1645,23 @@ ensures
     (* ^ There is a single pts_to in the context, rewrite the slice ptr into
        a.cbor_array_ptr and then let maching figure it out. *)
     rewrite S.pts_to s #p v as S.pts_to a.cbor_array_ptr #p v;
+    rewrite
+      (PM.seq_list_match v xh (cbor_with_perm_case_array_match_elem xl))
+      as (PM.seq_list_match v xh
+        (cbor_match
+          (xl.p `perm_mul`
+            (match xl.v with
+              | CBOR_Case_Array a' -> a'.cbor_array_payload_perm
+              | _ -> 1.0R))));
+    rewrite
+      (PM.seq_list_match v xh
+        (cbor_match
+          (xl.p `perm_mul`
+            (match xl.v with
+              | CBOR_Case_Array a' -> a'.cbor_array_payload_perm
+              | _ -> 1.0R))))
+      as (PM.seq_list_match v (Array?.v xh0)
+        (cbor_match (xl.p `perm_mul` a.cbor_array_payload_perm)));
     fold (cbor_match_array a xl.p xh0 cbor_match);
     ()
   };
@@ -1872,6 +1934,20 @@ let cbor_with_perm_case_array_match_elem_d
 = cbor_match_with_depth m
     (perm_mul c.p (match c.v with CBOR_Case_Array a -> a.cbor_array_payload_perm | _ -> 1.0R (* dummy *) ))
 
+let cbor_with_perm_case_array_match_elem_d_eq
+  (m: nat)
+  (c: with_perm cbor_raw)
+  (a: cbor_array)
+  (sq: squash (c.v == CBOR_Case_Array a))
+: Lemma (
+    (match c.v with
+      | CBOR_Case_Array a' -> a'.cbor_array_payload_perm
+      | _ -> 1.0R) == a.cbor_array_payload_perm
+  )
+= match c.v with
+  | CBOR_Case_Array a' -> assert (a' == a)
+  | _ -> assert False
+
 // DELIVERABLE 2: depth-aware element writer / size-computer.
 inline_for_extraction
 let ser_payload_array_array_elem_d
@@ -1944,9 +2020,10 @@ ensures
                           xh1)
                       (get_header_long_argument xh1)))
           raw_data_item) (vmatch_with_cond (match_cbor_payload_d n xh1) cbor_with_perm_case_array) _ _;
-  vmatch_with_cond_elim_trade (match_cbor_payload_d n xh1) _ _ _;
-  Trade.trans (match_cbor_payload_d n xh1 _ _) _ _;
-  let xh0 = match_cbor_payload_elim_trade_d n xh1 _ _;
+  assert (pure (Ghost.reveal xh2 == xh));
+  vmatch_with_cond_elim_trade (match_cbor_payload_d n xh1) _ xl (Ghost.reveal xh2);
+  Trade.trans (match_cbor_payload_d n xh1 xl (Ghost.reveal xh2)) _ _;
+  let xh0 = match_cbor_payload_elim_trade_d n xh1 xl (Ghost.reveal xh2);
   Trade.trans (cbor_match_with_perm_d n xl xh0) _ _;
   Trade.rewrite_with_trade
     (cbor_match_with_perm_d n xl xh0)
@@ -1954,7 +2031,10 @@ ensures
   Trade.trans (cbor_match_with_depth n xl.p xl.v xh0) (cbor_match_with_perm_d n xl xh0) _; // FIXME: WHY WHY WHY do I need to help Pulse here?
   cbor_match_with_depth_cases n xl.p xl.v xh0;
   let CBOR_Case_Array a = xl.v;
+  cbor_with_perm_case_array_match_elem_d_eq (nat_pred n) xl a ();
   cbor_match_with_depth_eq_array n xl.p a xh0;
+  depth_cb_eq n (Ghost.reveal xh0);
+  assert (pure (Array?.v (Ghost.reveal xh0) == xh));
   Trade.rewrite_with_trade
     (cbor_match_with_depth n xl.p xl.v xh0)
     (cbor_match_array a xl.p xh0 (depth_cb n xh0));
@@ -1963,6 +2043,25 @@ ensures
   with s. assert (PM.seq_list_match s (Array?.v xh0)
     ((depth_cb n xh0) (xl.p `perm_mul` a.cbor_array_payload_perm)));
   array_to_unref n xh0 (xl.p `perm_mul` a.cbor_array_payload_perm) s;
+  rewrite
+    (PM.seq_list_match s (Array?.v xh0)
+      (cbor_match_with_depth (nat_pred n)
+        (xl.p `perm_mul` a.cbor_array_payload_perm)))
+    as (PM.seq_list_match s xh
+      (cbor_match_with_depth (nat_pred n)
+        (xl.p `perm_mul`
+          (match xl.v with
+            | CBOR_Case_Array a' -> a'.cbor_array_payload_perm
+            | _ -> 1.0R))));
+  rewrite
+    (PM.seq_list_match s xh
+      (cbor_match_with_depth (nat_pred n)
+        (xl.p `perm_mul`
+          (match xl.v with
+            | CBOR_Case_Array a' -> a'.cbor_array_payload_perm
+            | _ -> 1.0R))))
+    as (PM.seq_list_match s xh
+      (cbor_with_perm_case_array_match_elem_d (nat_pred n) xl));
   let Some ar = cbor_with_perm_case_array_get xl;
   rewrite each a.cbor_array_ptr as ar.v;
   LowParse.Pulse.VCList.nlist_match_slice_intro cbor_with_perm_case_array_get
@@ -1970,7 +2069,7 @@ ensures
     (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
       (get_header_long_argument xh1)))
     xl xh
-    ar _
+      ar s
   ;
   intro
     (Trade.trade
@@ -1996,6 +2095,25 @@ ensures
     (* ^ There is a single pts_to in the context, rewrite the slice ptr into
        a.cbor_array_ptr and then let matching figure it out. *)
     rewrite (S.pts_to sl #p v) as (S.pts_to a.cbor_array_ptr #p v);
+    rewrite
+      (PM.seq_list_match v xh
+        (cbor_with_perm_case_array_match_elem_d (nat_pred n) xl))
+      as (PM.seq_list_match v xh
+        (cbor_match_with_depth (nat_pred n)
+          (xl.p `perm_mul`
+            (match xl.v with
+              | CBOR_Case_Array a' -> a'.cbor_array_payload_perm
+              | _ -> 1.0R))));
+    rewrite
+      (PM.seq_list_match v xh
+        (cbor_match_with_depth (nat_pred n)
+          (xl.p `perm_mul`
+            (match xl.v with
+              | CBOR_Case_Array a' -> a'.cbor_array_payload_perm
+              | _ -> 1.0R))))
+      as (PM.seq_list_match v (Array?.v xh0)
+        (cbor_match_with_depth (nat_pred n)
+          (xl.p `perm_mul` a.cbor_array_payload_perm)));
     array_to_ref n xh0 (xl.p `perm_mul` a.cbor_array_payload_perm) v;
     fold (cbor_match_array a xl.p xh0 (depth_cb n xh0));
     ()
@@ -2260,6 +2378,18 @@ let cbor_with_perm_case_map_match_elem
   Tot slprop
 = cbor_match_map_entry (cbor_with_perm_case_map_match_elem_perm c)
 
+let cbor_with_perm_case_map_match_elem_eq
+  (c: with_perm cbor_raw)
+  (a: cbor_map)
+  (sq: squash (c.v == CBOR_Case_Map a))
+: Lemma (
+    cbor_with_perm_case_map_match_elem_perm c ==
+      c.p `perm_mul` a.cbor_map_payload_perm
+  )
+= match c.v with
+  | CBOR_Case_Map a' -> assert (a' == a)
+  | _ -> assert False
+
 inline_for_extraction
 fn ser_payload_map_map_elem_fst
   (a: with_perm cbor_raw)
@@ -2382,9 +2512,10 @@ ensures
                           xh1)
                       (get_header_long_argument xh1)))
           (raw_data_item & raw_data_item)) (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_map) _ _;
-  vmatch_with_cond_elim_trade (match_cbor_payload xh1) _ _ _;
-  Trade.trans (match_cbor_payload xh1 _ _) _ _;
-  let xh0 = match_cbor_payload_elim_trade xh1 _ _;
+  assert (pure (Ghost.reveal xh2 == xh));
+  vmatch_with_cond_elim_trade (match_cbor_payload xh1) _ xl (Ghost.reveal xh2);
+  Trade.trans (match_cbor_payload xh1 xl (Ghost.reveal xh2)) _ _;
+  let xh0 = match_cbor_payload_elim_trade xh1 xl (Ghost.reveal xh2);
   Trade.trans (cbor_match_with_perm xl xh0) _ _;
   Trade.rewrite_with_trade
     (cbor_match_with_perm xl xh0)
@@ -2392,7 +2523,9 @@ ensures
   Trade.trans (cbor_match _ _ _) (cbor_match_with_perm xl xh0) _; // FIXME: WHY WHY WHY do I need to help Pulse here?
   cbor_match_cases _;
   let CBOR_Case_Map a = xl.v;
+  cbor_with_perm_case_map_match_elem_eq xl a ();
   cbor_match_eq_map0 xl.p a xh0;
+  assert (pure (Map?.v (Ghost.reveal xh0) == xh));
   Trade.rewrite_with_trade
     (cbor_match xl.p xl.v xh0)
     (cbor_match_map0 a xl.p xh0 cbor_match);
@@ -2400,6 +2533,17 @@ ensures
   cbor_match_map0_map_trade a xl.p xh0;
   Trade.trans (cbor_match_map xl.p a xh0) _ _;
   unfold (cbor_match_map xl.p a xh0);
+  with s. assert (PM.seq_list_match s (Map?.v xh0)
+    (cbor_match_map_entry (xl.p `perm_mul` a.cbor_map_payload_perm)));
+  rewrite
+    (PM.seq_list_match s (Map?.v xh0)
+      (cbor_match_map_entry (xl.p `perm_mul` a.cbor_map_payload_perm)))
+    as (PM.seq_list_match s xh
+      (cbor_match_map_entry (cbor_with_perm_case_map_match_elem_perm xl)));
+  rewrite
+    (PM.seq_list_match s xh
+      (cbor_match_map_entry (cbor_with_perm_case_map_match_elem_perm xl)))
+    as (PM.seq_list_match s xh (cbor_with_perm_case_map_match_elem xl));
   let Some ar = cbor_with_perm_case_map_get xl;
   rewrite each a.cbor_map_ptr as (Mkwith_perm?.v ar);
   LowParse.Pulse.VCList.nlist_match_slice_intro cbor_with_perm_case_map_get
@@ -2407,7 +2551,7 @@ ensures
     (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
       (get_header_long_argument xh1)))
     xl xh
-    ar _
+      ar s
   ;
   intro
     (Trade.trade
@@ -2430,6 +2574,15 @@ ensures
     );
     with ar _p _v. assert (S.pts_to #cbor_map_entry (Mkwith_perm?.v ar) #_p _v);
     rewrite each (Mkwith_perm?.v ar) as a.cbor_map_ptr;
+    rewrite
+      (PM.seq_list_match _v xh (cbor_with_perm_case_map_match_elem xl))
+      as (PM.seq_list_match _v xh
+        (cbor_match_map_entry (cbor_with_perm_case_map_match_elem_perm xl)));
+    rewrite
+      (PM.seq_list_match _v xh
+        (cbor_match_map_entry (cbor_with_perm_case_map_match_elem_perm xl)))
+      as (PM.seq_list_match _v (Map?.v xh0)
+        (cbor_match_map_entry (xl.p `perm_mul` a.cbor_map_payload_perm)));
     fold (cbor_match_map xl.p a xh0);
     ()
   };
@@ -2704,6 +2857,19 @@ let cbor_with_perm_case_map_match_elem_d
   Tot slprop
 = cbor_match_map_entry_with_depth m (cbor_with_perm_case_map_match_elem_perm c)
 
+let cbor_with_perm_case_map_match_elem_d_eq
+  (m: nat)
+  (c: with_perm cbor_raw)
+  (a: cbor_map)
+  (sq: squash (c.v == CBOR_Case_Map a))
+: Lemma (
+    cbor_with_perm_case_map_match_elem_perm c ==
+      c.p `perm_mul` a.cbor_map_payload_perm
+  )
+= match c.v with
+  | CBOR_Case_Map a' -> assert (a' == a)
+  | _ -> assert False
+
 // DELIVERABLE 3 (map): split the depth entry match into key / value halves.
 inline_for_extraction
 fn ser_payload_map_map_elem_fst_d
@@ -2837,9 +3003,10 @@ ensures
                           xh1)
                       (get_header_long_argument xh1)))
           (raw_data_item & raw_data_item)) (vmatch_with_cond (match_cbor_payload_d n xh1) cbor_with_perm_case_map) _ _;
-  vmatch_with_cond_elim_trade (match_cbor_payload_d n xh1) _ _ _;
-  Trade.trans (match_cbor_payload_d n xh1 _ _) _ _;
-  let xh0 = match_cbor_payload_elim_trade_d n xh1 _ _;
+  assert (pure (Ghost.reveal xh2 == xh));
+  vmatch_with_cond_elim_trade (match_cbor_payload_d n xh1) _ xl (Ghost.reveal xh2);
+  Trade.trans (match_cbor_payload_d n xh1 xl (Ghost.reveal xh2)) _ _;
+  let xh0 = match_cbor_payload_elim_trade_d n xh1 xl (Ghost.reveal xh2);
   Trade.trans (cbor_match_with_perm_d n xl xh0) _ _;
   Trade.rewrite_with_trade
     (cbor_match_with_perm_d n xl xh0)
@@ -2847,7 +3014,10 @@ ensures
   Trade.trans (cbor_match_with_depth n xl.p xl.v xh0) (cbor_match_with_perm_d n xl xh0) _;
   cbor_match_with_depth_cases n xl.p xl.v xh0;
   let CBOR_Case_Map a = xl.v;
+  cbor_with_perm_case_map_match_elem_d_eq (nat_pred n) xl a ();
   cbor_match_with_depth_eq_map0 n xl.p a xh0;
+  depth_cb_eq n (Ghost.reveal xh0);
+  assert (pure (Map?.v (Ghost.reveal xh0) == xh));
   Trade.rewrite_with_trade
     (cbor_match_with_depth n xl.p xl.v xh0)
     (cbor_match_map0 a xl.p xh0 (depth_cb n xh0));
@@ -2856,6 +3026,19 @@ ensures
   with s. assert (PM.seq_list_match s (Map?.v xh0)
     (cbor_match_map_entry0 xh0 ((depth_cb n xh0) (xl.p `perm_mul` a.cbor_map_payload_perm))));
   map_to_unref n xh0 (xl.p `perm_mul` a.cbor_map_payload_perm) s;
+  rewrite
+    (PM.seq_list_match s (Map?.v xh0)
+      (cbor_match_map_entry_with_depth (nat_pred n)
+        (xl.p `perm_mul` a.cbor_map_payload_perm)))
+    as (PM.seq_list_match s xh
+      (cbor_match_map_entry_with_depth (nat_pred n)
+        (cbor_with_perm_case_map_match_elem_perm xl)));
+  rewrite
+    (PM.seq_list_match s xh
+      (cbor_match_map_entry_with_depth (nat_pred n)
+        (cbor_with_perm_case_map_match_elem_perm xl)))
+    as (PM.seq_list_match s xh
+      (cbor_with_perm_case_map_match_elem_d (nat_pred n) xl));
   let Some ar = cbor_with_perm_case_map_get xl;
   rewrite each a.cbor_map_ptr as ar.v;
   LowParse.Pulse.VCList.nlist_match_slice_intro cbor_with_perm_case_map_get
@@ -2863,7 +3046,7 @@ ensures
     (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
       (get_header_long_argument xh1)))
     xl xh
-    ar _
+      ar s
   ;
   intro
     (Trade.trade
@@ -2887,6 +3070,19 @@ ensures
     with (sl : S.slice cbor_map_entry) #p v.
       assert (S.pts_to sl #p v);
     rewrite (S.pts_to sl #p v) as (S.pts_to a.cbor_map_ptr #p v);
+    rewrite
+      (PM.seq_list_match v xh
+        (cbor_with_perm_case_map_match_elem_d (nat_pred n) xl))
+      as (PM.seq_list_match v xh
+        (cbor_match_map_entry_with_depth (nat_pred n)
+          (cbor_with_perm_case_map_match_elem_perm xl)));
+    rewrite
+      (PM.seq_list_match v xh
+        (cbor_match_map_entry_with_depth (nat_pred n)
+          (cbor_with_perm_case_map_match_elem_perm xl)))
+      as (PM.seq_list_match v (Map?.v xh0)
+        (cbor_match_map_entry_with_depth (nat_pred n)
+          (xl.p `perm_mul` a.cbor_map_payload_perm)));
     map_to_ref n xh0 (xl.p `perm_mul` a.cbor_map_payload_perm) v;
     fold (cbor_match_map0 a xl.p xh0 (depth_cb n xh0));
     ()
@@ -3147,8 +3343,8 @@ fn ser_payload_tagged_tagged_lens
 {
   vmatch_with_cond_elim_trade (vmatch_ext raw_data_item (match_cbor_payload xh1)) cbor_with_perm_case_tagged _ _;
   let xh2 = vmatch_ext_elim_trade raw_data_item (match_cbor_payload xh1) _ _;
-  Trade.trans (match_cbor_payload xh1 xl xh2) _ _;
-  let xh0 = match_cbor_payload_elim_trade xh1 xl xh2;
+  Trade.trans (match_cbor_payload xh1 xl (Ghost.reveal xh2)) _ _;
+  let xh0 = match_cbor_payload_elim_trade xh1 xl (Ghost.reveal xh2);
   Trade.trans (cbor_match_with_perm xl xh0) _ _;
   Trade.rewrite_with_trade
     (cbor_match_with_perm xl xh0)
@@ -3225,8 +3421,8 @@ fn ser_payload_tagged_not_tagged_lens
 {
   vmatch_with_cond_elim_trade (vmatch_ext raw_data_item (match_cbor_payload xh1)) (pnot cbor_with_perm_case_tagged) _ _;
   let xh2 = vmatch_ext_elim_trade raw_data_item (match_cbor_payload xh1) _ _;
-  Trade.trans (match_cbor_payload xh1 xl xh2) _ _;
-  let xh0 = match_cbor_payload_elim_trade xh1 xl xh2;
+  Trade.trans (match_cbor_payload xh1 xl (Ghost.reveal xh2)) _ _;
+  let xh0 = match_cbor_payload_elim_trade xh1 xl (Ghost.reveal xh2);
   Trade.trans (cbor_match_with_perm xl xh0) _ _;
   Trade.rewrite_with_trade
     (cbor_match_with_perm xl xh0)
@@ -3322,8 +3518,8 @@ fn ser_payload_tagged_tagged_lens_d
 {
   vmatch_with_cond_elim_trade (vmatch_ext raw_data_item (match_cbor_payload_d n xh1)) cbor_with_perm_case_tagged _ _;
   let xh2 = vmatch_ext_elim_trade raw_data_item (match_cbor_payload_d n xh1) _ _;
-  Trade.trans (match_cbor_payload_d n xh1 xl xh2) _ _;
-  let xh0 = match_cbor_payload_elim_trade_d n xh1 xl xh2;
+  Trade.trans (match_cbor_payload_d n xh1 xl (Ghost.reveal xh2)) _ _;
+  let xh0 = match_cbor_payload_elim_trade_d n xh1 xl (Ghost.reveal xh2);
   Trade.trans (cbor_match_with_perm_d n xl xh0) _ _;
   Trade.rewrite_with_trade
     (cbor_match_with_perm_d n xl xh0)
@@ -3372,8 +3568,8 @@ fn ser_payload_tagged_not_tagged_lens_d
 {
   vmatch_with_cond_elim_trade (vmatch_ext raw_data_item (match_cbor_payload_d n xh1)) (pnot cbor_with_perm_case_tagged) _ _;
   let xh2 = vmatch_ext_elim_trade raw_data_item (match_cbor_payload_d n xh1) _ _;
-  Trade.trans (match_cbor_payload_d n xh1 xl xh2) _ _;
-  let xh0 = match_cbor_payload_elim_trade_d n xh1 xl xh2;
+  Trade.trans (match_cbor_payload_d n xh1 xl (Ghost.reveal xh2)) _ _;
+  let xh0 = match_cbor_payload_elim_trade_d n xh1 xl (Ghost.reveal xh2);
   Trade.trans (cbor_match_with_perm_d n xl xh0) _ _;
   Trade.rewrite_with_trade
     (cbor_match_with_perm_d n xl xh0)
@@ -3808,6 +4004,7 @@ ensures
   cbor_match_with_depth_cases 0 xl.p xl.v xh0;
   let CBOR_Case_Array a = xl.v;
   cbor_match_with_depth_eq_array 0 xl.p a xh0;
+  depth_cb_eq 0 (Ghost.reveal xh0);
   Trade.rewrite_with_trade
     (cbor_match_with_depth 0 xl.p xl.v xh0)
     (cbor_match_array a xl.p xh0 (depth_cb 0 xh0));
@@ -3846,6 +4043,7 @@ ensures
   cbor_match_with_depth_cases 0 xl.p xl.v xh0;
   let CBOR_Case_Map a = xl.v;
   cbor_match_with_depth_eq_map0 0 xl.p a xh0;
+  depth_cb_eq 0 (Ghost.reveal xh0);
   Trade.rewrite_with_trade
     (cbor_match_with_depth 0 xl.p xl.v xh0)
     (cbor_match_map0 a xl.p xh0 (depth_cb 0 xh0));
@@ -3943,7 +4141,7 @@ fn ser_payload_tagged_tagged_impossible_d
 {
   vmatch_with_cond_elim_trade (vmatch_ext raw_data_item (match_cbor_payload_d 0 xh1)) cbor_with_perm_case_tagged x' x;
   let xh2 = vmatch_ext_elim_trade raw_data_item (match_cbor_payload_d 0 xh1) x' x;
-  let xh0 = match_cbor_payload_elim_trade_d 0 xh1 x' xh2;
+  let xh0 = match_cbor_payload_elim_trade_d 0 xh1 x' (Ghost.reveal xh2);
   Trade.rewrite_with_trade
     (cbor_match_with_perm_d 0 x' xh0)
     (cbor_match_with_depth 0 x'.p x'.v xh0);
@@ -3969,7 +4167,7 @@ fn size_payload_tagged_tagged_impossible_d
 {
   vmatch_with_cond_elim_trade (vmatch_ext raw_data_item (match_cbor_payload_d 0 xh1)) cbor_with_perm_case_tagged x' x;
   let xh2 = vmatch_ext_elim_trade raw_data_item (match_cbor_payload_d 0 xh1) x' x;
-  let xh0 = match_cbor_payload_elim_trade_d 0 xh1 x' xh2;
+  let xh0 = match_cbor_payload_elim_trade_d 0 xh1 x' (Ghost.reveal xh2);
   Trade.rewrite_with_trade
     (cbor_match_with_perm_d 0 x' xh0)
     (cbor_match_with_depth 0 x'.p x'.v xh0);
@@ -4605,6 +4803,7 @@ ensures
     CBOR_Case_Array a -> {
       rewrite (cbor_match_with_depth n x'.p x'.v x) as (cbor_match_with_depth n x'.p (CBOR_Case_Array a) x);
       cbor_match_with_depth_eq_array n x'.p a x;
+      depth_cb_eq n (Ghost.reveal x);
       rewrite (cbor_match_with_depth n x'.p (CBOR_Case_Array a) x) as (cbor_match_array a x'.p x (depth_cb n x));
       unfold (cbor_match_array a x'.p x (depth_cb n x));
       with s. assert (
@@ -4616,6 +4815,7 @@ ensures
       PM.seq_list_match_nil_intro s (Array?.v x) ((depth_cb 0 x) (x'.p `perm_mul` a.cbor_array_payload_perm));
       fold (cbor_match_array a x'.p x (depth_cb 0 x));
       cbor_match_with_depth_eq_array 0 x'.p a x;
+      depth_cb_eq 0 (Ghost.reveal x);
       rewrite (cbor_match_array a x'.p x (depth_cb 0 x)) as (cbor_match_with_depth 0 x'.p (CBOR_Case_Array a) x);
       rewrite (cbor_match_with_depth 0 x'.p (CBOR_Case_Array a) x) as (cbor_match_with_depth 0 x'.p x'.v x);
       fold (cbor_match_with_perm_d 0 x' x);
@@ -4627,6 +4827,7 @@ ensures
         unfold (cbor_match_with_perm_d 0 x' x);
         rewrite (cbor_match_with_depth 0 x'.p x'.v x) as (cbor_match_with_depth 0 x'.p (CBOR_Case_Array a) x);
         cbor_match_with_depth_eq_array 0 x'.p a x;
+        depth_cb_eq 0 (Ghost.reveal x);
         rewrite (cbor_match_with_depth 0 x'.p (CBOR_Case_Array a) x) as (cbor_match_array a x'.p x (depth_cb 0 x));
         unfold (cbor_match_array a x'.p x (depth_cb 0 x));
         with s2. assert (
@@ -4638,6 +4839,7 @@ ensures
         PM.seq_list_match_nil_intro s2 (Array?.v x) ((depth_cb n x) (x'.p `perm_mul` a.cbor_array_payload_perm));
         fold (cbor_match_array a x'.p x (depth_cb n x));
         cbor_match_with_depth_eq_array n x'.p a x;
+        depth_cb_eq n (Ghost.reveal x);
         rewrite (cbor_match_array a x'.p x (depth_cb n x)) as (cbor_match_with_depth n x'.p (CBOR_Case_Array a) x);
         rewrite (cbor_match_with_depth n x'.p (CBOR_Case_Array a) x) as (cbor_match_with_depth n x'.p x'.v x);
         fold (cbor_match_with_perm_d n x' x);
@@ -4647,6 +4849,7 @@ ensures
     CBOR_Case_Map a -> {
       rewrite (cbor_match_with_depth n x'.p x'.v x) as (cbor_match_with_depth n x'.p (CBOR_Case_Map a) x);
       cbor_match_with_depth_eq_map0 n x'.p a x;
+      depth_cb_eq n (Ghost.reveal x);
       rewrite (cbor_match_with_depth n x'.p (CBOR_Case_Map a) x) as (cbor_match_map0 a x'.p x (depth_cb n x));
       unfold (cbor_match_map0 a x'.p x (depth_cb n x));
       with s. assert (
@@ -4658,6 +4861,7 @@ ensures
       PM.seq_list_match_nil_intro s (Map?.v x) (cbor_match_map_entry0 x ((depth_cb 0 x) (x'.p `perm_mul` a.cbor_map_payload_perm)));
       fold (cbor_match_map0 a x'.p x (depth_cb 0 x));
       cbor_match_with_depth_eq_map0 0 x'.p a x;
+      depth_cb_eq 0 (Ghost.reveal x);
       rewrite (cbor_match_map0 a x'.p x (depth_cb 0 x)) as (cbor_match_with_depth 0 x'.p (CBOR_Case_Map a) x);
       rewrite (cbor_match_with_depth 0 x'.p (CBOR_Case_Map a) x) as (cbor_match_with_depth 0 x'.p x'.v x);
       fold (cbor_match_with_perm_d 0 x' x);
@@ -4669,6 +4873,7 @@ ensures
         unfold (cbor_match_with_perm_d 0 x' x);
         rewrite (cbor_match_with_depth 0 x'.p x'.v x) as (cbor_match_with_depth 0 x'.p (CBOR_Case_Map a) x);
         cbor_match_with_depth_eq_map0 0 x'.p a x;
+        depth_cb_eq 0 (Ghost.reveal x);
         rewrite (cbor_match_with_depth 0 x'.p (CBOR_Case_Map a) x) as (cbor_match_map0 a x'.p x (depth_cb 0 x));
         unfold (cbor_match_map0 a x'.p x (depth_cb 0 x));
         with s2. assert (
@@ -4680,6 +4885,7 @@ ensures
         PM.seq_list_match_nil_intro s2 (Map?.v x) (cbor_match_map_entry0 x ((depth_cb n x) (x'.p `perm_mul` a.cbor_map_payload_perm)));
         fold (cbor_match_map0 a x'.p x (depth_cb n x));
         cbor_match_with_depth_eq_map0 n x'.p a x;
+        depth_cb_eq n (Ghost.reveal x);
         rewrite (cbor_match_map0 a x'.p x (depth_cb n x)) as (cbor_match_with_depth n x'.p (CBOR_Case_Map a) x);
         rewrite (cbor_match_with_depth n x'.p (CBOR_Case_Map a) x) as (cbor_match_with_depth n x'.p x'.v x);
         fold (cbor_match_with_perm_d n x' x);
