@@ -159,12 +159,12 @@ val parse_t_exact (n:U32.t) (#nz:bool) (#wk: _) (#k:parser_kind nz wk) (#t:_) (p
 ////////////////////////////////////////////////////////////////////////////////
 
 inline_for_extraction noextract
-val reader (#nz:_) (#k:parser_kind nz WeakKindStrongPrefix) (#t:_) (p:parser k t) : Type u#1
+val reader (#nz:_) (#k:parser_kind nz WeakKindStrongPrefix) (#t:Type0) (p:parser k t) : Type u#1
 
 inline_for_extraction noextract
 val read_filter (#nz:_)
                 (#k: parser_kind nz WeakKindStrongPrefix)
-                (#t: Type)
+                (#t: Type0)
                 (#p: parser k t)
                 (p32: reader p)
                 (f: (t -> bool))

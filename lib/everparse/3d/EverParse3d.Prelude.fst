@@ -18,8 +18,6 @@ friend EverParse3d.Kinds
 module BF = LowParse.BitFields
 module LP = LowParse.Spec.Base
 module LPC = LowParse.Spec.Combinators
-module LPL = LowParse.Low.Base
-module LPLC = LowParse.Low.Combinators
 module U16 = FStar.UInt16
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
@@ -208,18 +206,14 @@ let parse_t_exact n #nz #wk #k #t p
 ////////////////////////////////////////////////////////////////////////////////
 
 inline_for_extraction noextract
-let reader p = LPLC.leaf_reader p
+let reader #_ #k #t p = LowParse.PulseParse.Base.reader #t #k (p <: LP.parser k t)
 
 inline_for_extraction noextract
-let read_filter p32 f
-    = LPLC.read_filter p32 f
+let read_filter #_ #k #t #p p32 f
+    = LowParse.PulseParse.Combinators.read_filter #k #t p32 f
 
-let read_impos : reader (parse_impos()) = 
-  fun #rrel #rel sl pos -> 
-    let h = FStar.HyperStack.ST.get() in
-    assert (LPLC.valid (parse_impos()) h sl pos);
-    LowParse.Low.Base.Spec.valid_equiv (parse_impos()) h sl pos;
-    false_elim ()
+let read_impos : reader (parse_impos()) =
+  admit () // TODO
   
 // ////////////////////////////////////////////////////////////////////////////////
 // // Validators
@@ -227,12 +221,12 @@ let read_impos : reader (parse_impos()) =
 inline_for_extraction noextract
 let validator #nz #wk (#k:parser_kind nz wk) (#t:Type) (p:parser k t)
   : Type
-  = LPL.validator #k #t p
+  = LowParse.Pulse.Base.validator #t #k p
 
 inline_for_extraction noextract
 let validator_no_read #nz #wk (#k:parser_kind nz wk) (#t:Type) (p:parser k t)
   : Type
-  = LPL.validator_no_read #k #t p
+  = admit () // TODO
 
 inline_for_extraction noextract
 let validate_nlist_total_constant_size_mod_ok
@@ -249,17 +243,8 @@ let validate_nlist_total_constant_size_mod_ok
     U32.v n % k.LP.parser_kind_low == 0
   ))
   (ensures (fun _ -> True))
-= 
-      (fun #rrel #rel sl len pos ->
-         let h = FStar.HyperStack.ST.get () in
-         [@inline_let]
-         let _ =
-           parse_nlist_total_fixed_size_kind_correct n n_is_const p;
-           LPL.valid_facts (parse_nlist n n_is_const p) h sl (LPL.uint64_to_uint32 pos);
-           LPL.valid_facts (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n n_is_const p)) h sl (LPL.uint64_to_uint32 pos)
-         in
-         LPL.validate_total_constant_size_no_read (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n n_is_const p)) (FStar.Int.Cast.uint32_to_uint64 n) () sl len pos
-      )
+=
+	admit () // TODO
 
 module LUT = LowParse.Spec.ListUpTo
 
@@ -297,39 +282,38 @@ let parse_all_zeros = LowParse.Spec.List.parse_list (LowParse.Spec.Combinators.p
 
 /// UINT8
 let parse____UINT8 = LowParse.Spec.Int.parse_u8
-let read____UINT8 = LowParse.Low.Int.read_u8
+let read____UINT8 = LowParse.PulseParse.Base.reader_of_serialized LowParse.Pulse.Int.read_u8
 
 /// UINT8BE
 let parse____UINT8BE = LowParse.Spec.Int.parse_u8
-let read____UINT8BE = LowParse.Low.Int.read_u8
+let read____UINT8BE = LowParse.PulseParse.Base.reader_of_serialized LowParse.Pulse.Int.read_u8
 
 /// UInt16BE
 let parse____UINT16BE = LowParse.Spec.Int.parse_u16
-let read____UINT16BE = LowParse.Low.Int.read_u16
+let read____UINT16BE = LowParse.PulseParse.Base.reader_of_serialized LowParse.Pulse.Int.read_u16
 
 /// UInt32BE
 let parse____UINT32BE = LowParse.Spec.Int.parse_u32
-let read____UINT32BE = LowParse.Low.Int.read_u32
+let read____UINT32BE = LowParse.PulseParse.Base.reader_of_serialized LowParse.Pulse.Int.read_u32
 
 /// UInt64BE
 let parse____UINT64BE = LowParse.Spec.Int.parse_u64
-let read____UINT64BE = LowParse.Low.Int.read_u64
+let read____UINT64BE = LowParse.PulseParse.Base.reader_of_serialized LowParse.Pulse.Int.read_u64
 
 
 /// UInt16
 let parse____UINT16 = LowParse.Spec.BoundedInt.parse_u16_le
-let read____UINT16 = LowParse.Low.BoundedInt.read_u16_le
+let read____UINT16 = LowParse.PulseParse.Base.reader_of_leaf_reader LowParse.PulseParse.BoundedIntLE.read_u16_le
 
 /// UInt32
 let parse____UINT32 = LowParse.Spec.BoundedInt.parse_u32_le
-let read____UINT32 = LowParse.Low.BoundedInt.read_u32_le
+let read____UINT32 = LowParse.PulseParse.Base.reader_of_leaf_reader LowParse.PulseParse.BoundedIntLE.read_u32_le
 
 
 /// UInt64
 let parse____UINT64 = LowParse.Spec.Int.parse_u64_le
-let read____UINT64 = LowParse.Low.Int.read_u64_le
+let read____UINT64 = admit () // TODO
   
 inline_for_extraction noextract
 let read_unit
-  : LPL.leaf_reader (parse_ret ())
-  = LPLC.read_ret ()
+  = LowParse.PulseParse.Combinators.read_ret () (fun _ -> ())
