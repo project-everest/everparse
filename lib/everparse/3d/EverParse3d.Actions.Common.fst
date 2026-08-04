@@ -21,14 +21,15 @@ let error_handler =
     error_code:U64.t ->
     ctxt: app_ctxt ->
     sl: input_buffer_t ->
+    contents_sl: Ghost.erased (Seq.seq U8.t) ->
     v_sl: Ghost.erased (Seq.seq U8.t) ->
     stt unit
       (requires exists* v_ctxt .
-        I.pts_to sl v_sl **
+        I.pts_to sl contents_sl v_sl **
 	pts_to ctxt v_ctxt
       )
       (ensures fun _ -> exists* v_ctxt' .
-	I.pts_to sl v_sl **
+	I.pts_to sl contents_sl v_sl **
 	pts_to ctxt v_ctxt'
       )
 

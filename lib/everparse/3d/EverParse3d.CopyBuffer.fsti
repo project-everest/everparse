@@ -11,5 +11,5 @@ val copy_buffer_t : Type0
 
 val stream_of : copy_buffer_t -> I.t
 
-let pts_to (c: copy_buffer_t) (v: Seq.seq U8.t) : Tot slprop =
-  I.pts_to (stream_of c) v
+let pts_to (c: copy_buffer_t) (contents: Seq.seq U8.t) (v: Seq.seq U8.t) : Tot slprop =
+  I.pts_to (stream_of c) contents v
