@@ -1,0 +1,41 @@
+module EverParse3d.Actions.Common
+open Pulse.Lib.Pervasives
+module I = EverParse3d.InputStream.Base
+module AppCtxt = EverParse3d.AppCtxt
+open FStar.FunctionalExtensionality
+module U8 = FStar.UInt8
+module F = FStar.FunctionalExtensionality
+module U64 = FStar.UInt64
+module SZ = FStar.SizeT
+  
+let app_ctxt = AppCtxt.app_ctxt
+
+inline_for_extraction
+noextract
+let input_buffer_t = EverParse3d.InputStream.All.t
+
+let error_handler = 
+    typename:string ->
+    fieldname:string ->
+    error_reason:string ->
+    error_code:U64.t ->
+    ctxt: app_ctxt ->
+    sl: input_buffer_t ->
+    v_sl: Ghost.erased (Seq.seq U8.t) ->
+    stt unit
+      (requires exists* v_ctxt .
+        I.pts_to sl v_sl **
+	pts_to ctxt v_ctxt
+      )
+      (ensures fun _ -> exists* v_ctxt' .
+	I.pts_to sl v_sl **
+	pts_to ctxt v_ctxt'
+      )
+
+// The C macro used as the error handler when 3d is invoked with
+// `--use_error_handler_macro`. It lives here (rather than in
+// EverParse3d.Actions.Base) so that it is also reachable from
+// EverParse3d.ProbeActions, which must select between the dynamic
+// error-handler callback and this macro just like the validators do.
+[@@CMacro]
+assume val error_handler_macro: error_handler
