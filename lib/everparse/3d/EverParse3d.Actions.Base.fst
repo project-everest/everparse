@@ -146,8 +146,6 @@ let leaf_reader
   ))
 
 
-(*
-
 noextract
 inline_for_extraction
 let action_bind
@@ -155,10 +153,13 @@ let action_bind
       (#extra_state_value: Type0)
       (#extra_state: extra_state_value -> slprop)
       (#use_error_handler:bool)
-      (f: action extra_state use_error_handler)
-      (#invg:slice_inv) #disjg (#lg:eloc) #bg #rtg
-      (#b:Type) (g: (a -> action invg disjg lg bg rtg b use_error_handler))
+      (#a: Type)
+      (f: action extra_state use_error_handler a)
+      (#b:Type) (g: (a -> action extra_state use_error_handler b))
+: Tot (action extra_state use_error_handler b)
 = admit ()
+
+(*
 
 noextract
 inline_for_extraction
