@@ -247,6 +247,13 @@ let action_assignment
 : Tot (action (forevery_state (state_dict_singleton name (pts_to x #1.0R))) use_error_handler a)
 = admit ()
 
+let state_dict_empty
+: state_dict = {
+  state_p = (fun _ -> False);
+  state_values = (fun _ -> unit);
+  state = (fun _ _ -> emp);
+}
+
 (*
 let external_action t l =
   unit -> Stack t (fun _ -> True) (fun h0 _ h1 -> B.modifies l h0 h1)
