@@ -221,3 +221,26 @@ let state_dict_singleton
     (forevery_singleton_prop name)
     (forevery_singleton_values name t)
     (forevery_singleton_state name state)
+
+let state_dict_prod
+  (d1 d2: state_dict)
+: Pure state_dict
+  (requires (forall x . ~ (d1.state_p x /\ d2.state_p x)))
+  (ensures fun _ -> True)
+= mk_state_dict
+    (fun x -> d1.state_p x || d2.state_p x)
+    (fun x -> if d1.state_p x then d1.state_values x else d2.state_values x)
+    (fun x v -> if d1.state_p x then d1.state x v else d2.state x v)
+
+let state_dict_prod_comm
+  (d1 d2: state_dict)
+: Lemma
+  (requires (forall x . ~ (d1.state_p x /\ d2.state_p x)))
+  (ensures (state_dict_prod d1 d2 == state_dict_prod d2 d1))
+= mk_state_dict_ext
+    (fun x -> d1.state_p x || d2.state_p x)
+    (fun x -> if d1.state_p x then d1.state_values x else d2.state_values x)
+    (fun x v -> if d1.state_p x then d1.state x v else d2.state x v)
+    (fun x -> d2.state_p x || d1.state_p x)
+    (fun x -> if d2.state_p x then d2.state_values x else d1.state_values x)
+    (fun x v -> if d2.state_p x then d2.state x v else d1.state x v)
