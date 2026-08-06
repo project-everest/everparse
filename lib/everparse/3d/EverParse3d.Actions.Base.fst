@@ -159,6 +159,40 @@ let action_bind
 : Tot (action extra_state use_error_handler b)
 = admit ()
 
+let forevery_values
+      (p1: string -> prop)
+      (values1: (x: string { p1 x }) -> Type0)
+: Tot Type0
+= (x: string { p1 x }) -> values1 x
+
+open Pulse.Lib.ForEvery
+
+let forevery_state
+      (p1: string -> prop)
+      (#values1: (x: string { p1 x }) -> Type0)
+      (state1: (x: string { p1 x }) -> values1 x -> slprop)
+      (v: forevery_values p1 values1)
+: Tot slprop
+= forall+ (x: string { p1 x }) . state1 x (v x)
+
+noextract
+inline_for_extraction
+let action_weaken
+      (p1: string -> prop)
+      (#values1: (x: string { p1 x }) -> Type0)
+      (#state1: (x: string { p1 x }) -> values1 x -> slprop)
+      (#use_error_handler:bool)
+      (#a: Type)
+      (f: action (forevery_state p1 state1) use_error_handler a)
+      (p2: string -> prop)
+      (#values2: (x: string { p2 x }) -> Type0)
+      (state2: (x: string { p2 x }) -> values2 x -> slprop)
+      (p2_extends: squash (forall (x: string) . p1 x ==> p2 x))
+      (values2_extends: squash (forall (x: string { p1 x }) . values1 x == values2 x))
+      (state2_extends: squash (forall (x: string { p1 x }) . state1 x == state2 x))
+: Tot (action (forevery_state p2 state2) use_error_handler a)
+= admit ()
+
 (*
 
 noextract
