@@ -158,6 +158,26 @@ let mk_state_dict_ext
   assert (feq d1.state (coerce_eq () d2.state <: restricted_t' (refine_t string d1.state_p) (fun x -> (d1.state_values x `arrow` slprop))));
   state_dict_ext d1 d2
 
+let mk_state_dict_idem
+  (d: state_dict)
+: Lemma
+  (d == mk_state_dict
+    (fun x -> d.state_p x == true)
+    d.state_values
+    d.state
+  )
+= mk_state_dict_correct
+    (fun x -> d.state_p x == true)
+    d.state_values
+    d.state;
+  state_dict_ext
+    d
+    (mk_state_dict
+      (fun x -> d.state_p x == true)
+      d.state_values
+      d.state
+    )
+
 let state_p
   (d: state_dict)
   (x: string)
@@ -228,7 +248,7 @@ let state_dict_prod
   (requires (forall x . ~ (d1.state_p x /\ d2.state_p x)))
   (ensures fun _ -> True)
 = mk_state_dict
-    (fun x -> d1.state_p x || d2.state_p x)
+    (fun x -> d1.state_p x \/ d2.state_p x)
     (fun x -> if d1.state_p x then d1.state_values x else d2.state_values x)
     (fun x v -> if d1.state_p x then d1.state x v else d2.state x v)
 
@@ -238,9 +258,74 @@ let state_dict_prod_comm
   (requires (forall x . ~ (d1.state_p x /\ d2.state_p x)))
   (ensures (state_dict_prod d1 d2 == state_dict_prod d2 d1))
 = mk_state_dict_ext
-    (fun x -> d1.state_p x || d2.state_p x)
+    (fun x -> d1.state_p x \/ d2.state_p x)
     (fun x -> if d1.state_p x then d1.state_values x else d2.state_values x)
     (fun x v -> if d1.state_p x then d1.state x v else d2.state x v)
-    (fun x -> d2.state_p x || d1.state_p x)
+    (fun x -> d2.state_p x \/ d1.state_p x)
     (fun x -> if d2.state_p x then d2.state_values x else d1.state_values x)
     (fun x v -> if d2.state_p x then d2.state x v else d1.state x v)
+
+let state_dict_prod_empty
+  (d: state_dict)
+: Lemma
+  (state_dict_prod d state_dict_empty == d)
+= assert_norm (state_dict_prod d state_dict_empty == mk_state_dict
+    (fun x -> d.state_p x \/ state_dict_empty.state_p x)
+    (fun x -> if d.state_p x then d.state_values x else state_dict_empty.state_values x)
+    (fun x v -> if d.state_p x then d.state x v else state_dict_empty.state x v)
+  );
+  mk_state_dict_ext
+    (fun x -> d.state_p x \/ state_dict_empty.state_p x)
+    (fun x -> if d.state_p x then d.state_values x else state_dict_empty.state_values x)
+    (fun x v -> if d.state_p x then d.state x v else state_dict_empty.state x v)
+    (fun x -> d.state_p x == true)
+    d.state_values
+    d.state;
+ mk_state_dict_idem d
+
+#push-options "--z3rlimit 32"
+
+let state_dict_prod_assoc
+  (d1 d2 d3: state_dict)
+: Lemma
+  (requires (
+    (forall x . ~ (d1.state_p x /\ d2.state_p x)) /\
+    (forall x . ~ ((d1.state_p x \/ d2.state_p x) /\ d3.state_p x))
+  ))
+  (ensures (
+    (d1 `state_dict_prod` d2) `state_dict_prod` d3 ==
+    d1 `state_dict_prod` (d2 `state_dict_prod` d3)
+  ))
+= let d12 = d1 `state_dict_prod` d2 in
+  let d23 = d2 `state_dict_prod` d3 in
+  mk_state_dict_correct
+    (fun x -> d2.state_p x \/ d3.state_p x)
+    (fun x -> if d2.state_p x then d2.state_values x else d3.state_values x)
+    (fun x v -> if d2.state_p x then d2.state x v else d3.state x v);
+  mk_state_dict_correct
+    (fun x -> d1.state_p x \/ d2.state_p x)
+    (fun x -> if d1.state_p x then d1.state_values x else d2.state_values x)
+    (fun x v -> if d1.state_p x then d1.state x v else d2.state x v);
+  assert_norm (d1 `state_dict_prod` d23 == mk_state_dict
+    (fun x -> d1.state_p x \/ d23.state_p x)
+    (fun x -> if d1.state_p x then d1.state_values x else d23.state_values x)
+    (fun x v -> if d1.state_p x then d1.state x v else d23.state x v)
+  );
+  assert_norm (d12 `state_dict_prod` d3 == mk_state_dict
+    (fun x -> d12.state_p x \/ d3.state_p x)
+    (fun x -> if d12.state_p x then d12.state_values x else d3.state_values x)
+    (fun x v -> if d12.state_p x then d12.state x v else d3.state x v)
+  );
+  mk_state_dict_ext
+    (fun x -> d1.state_p x \/ d23.state_p x)
+    (fun x -> if d1.state_p x then d1.state_values x else d23.state_values x)
+    (fun x v -> if d1.state_p x then d1.state x v else d23.state x v)
+    (fun x -> d12.state_p x \/ d3.state_p x)
+    (fun x -> if d12.state_p x then d12.state_values x else d3.state_values x)
+    (fun x v -> if d12.state_p x then d12.state x v else d3.state x v);
+  assert (
+    (d1 `state_dict_prod` d2) `state_dict_prod` d3 ==
+    d1 `state_dict_prod` (d2 `state_dict_prod` d3)
+  )
+
+#pop-options
