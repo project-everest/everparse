@@ -5481,6 +5481,10 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
      if friends <> [] then (List.iter (fun f -> w o "friend %s\n" f) friends; w o "\n")
    | _ -> ());
   write_autogen o;
+  (* The implementation no longer inherits the interface's scoping declarations,
+     so it must repeat them itself. *)
+  if !types_from <> "" then w o "include %s\n\n" !types_from;
+  if !types_to <> "" then w o "include %s\n\n" (module_of_filename !types_to);
   if needs_fstar_bytes then w o "open %s\n" !bytes;
   w o "module U8 = FStar.UInt8\n";
   w o "module U16 = FStar.UInt16\n";
@@ -5527,9 +5531,10 @@ and compile tch o i (tn:typ) (p:gemstone_t) =
   let depl = List.filter (fun x -> not (basic_type x)) depl in
   let depl = List.map module_name depl in
   (List.iter (fun dep ->
-    if BatString.starts_with dep (mn^"_") then w i "include %s\n" dep
-    else w i "open %s\n" dep) depl);
+    if BatString.starts_with dep (mn^"_") then (w i "include %s\n" dep; w o "include %s\n" dep)
+    else (w i "open %s\n" dep; w o "open %s\n" dep)) depl);
   w i "\n";
+  w o "\n";
 
   let rlimit = 16 in
 	w o "#reset-options \"--using_facts_from '* -FStar.Tactics -FStar.Reflection -Pulse -PulseCore' --z3rlimit %d --z3cliopt smt.arith.nl=false --max_fuel 2 --max_ifuel 2\"\n\n" rlimit;
