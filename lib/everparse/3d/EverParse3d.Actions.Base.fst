@@ -193,87 +193,52 @@ let action_weaken
 : Tot (action (forevery_state p2 state2) use_error_handler a)
 = admit ()
 
-(*
+let forevery_singleton_prop
+  (name: string)
+  (x: string)
+: Tot prop
+= x == name
 
-noextract
-inline_for_extraction
-let action_seq
-      (#invf:slice_inv) #disjf (#lf:eloc)
-      #bf #rtf (#a:Type)
-      (#use_error_handler:bool)
-      (f: action invf disjf lf bf rtf a use_error_handler)
-      (#invg:slice_inv) #disjg (#lg:eloc) #bg #rtg
-      (#b:Type) (g: action invg disjg lg bg rtg b use_error_handler)
-= fun ctxt error_handler_fn input input_length pos posf ->
-    let h0 = HST.get () in
-    let _ = f ctxt error_handler_fn input input_length pos posf in
-    let h1 = HST.get () in
-    modifies_address_liveness_insensitive_unused_in h0 h1;
-    g ctxt error_handler_fn input input_length pos posf
+let forevery_singleton_values
+  (name: string)
+  (t: Type0)
+  (x: string { forevery_singleton_prop name x })
+: Tot Type0
+= t
 
-noextract
-inline_for_extraction
-let action_ite
-      (#invf:slice_inv) #disjf (#lf:eloc)
-      (guard:bool)
-      #bf #rtf (#a:Type)
-      (#use_error_handler:bool)
-      (then_: squash guard -> action invf disjf lf bf rtf a use_error_handler)
-      (#invg:slice_inv) #disjg (#lg:eloc) #bg #rtg
-      (else_: squash (not guard) -> action invg disjg lg bg rtg a use_error_handler)
-= fun ctxt error_handler_fn input input_length pos posf ->
-    if guard 
-    then then_ () ctxt error_handler_fn input input_length pos posf
-    else else_ () ctxt error_handler_fn input input_length pos posf
+let forevery_singleton_state
+  (name: string)
+  (#t: Type0)
+  (state: t -> slprop)
+  (x: string { forevery_singleton_prop name x })
+  (v: forevery_singleton_values name t x)
+: Tot slprop
+= state v
 
-noextract
-inline_for_extraction
-let action_abort #use_error_handler
-= fun _ _ _ _ _ _ -> false
-
-noextract
-inline_for_extraction
-let action_field_pos_64 #use_error_handler
-= fun _ _ _ _ pos _ -> pos
-
-(* FIXME: this is now unsound in general (only valid for flat buffer)
-noextract
-inline_for_extraction
-let action_field_ptr
-      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t) (u:unit)
-   : action p true_inv eloc_none true LPL.puint8
-   = fun input startPosition _ ->
-       let open LowParse.Slice in
-       LPL.offset input (LPL.uint64_to_uint32 startPosition)
-*)
-module T = FStar.Tactics
-let ptr_inv_elim (x:B.pointer 'a)
-: Lemma
-  (ensures forall h. ptr_inv x h ==> B.live h x)
-= introduce forall h. ptr_inv x h ==> B.live h x
-       with assert (ptr_inv x h ==> B.live h x)
-                by (T.norm [delta])
+let forevery_state_singleton
+  (name: string)
+  (#t: Type0)
+  (state: t -> slprop)
+: Tot (forevery_values (forevery_singleton_prop name) (forevery_singleton_values name t) -> slprop)
+= forevery_state (forevery_singleton_prop name) (forevery_singleton_state name state)
 
 noextract
 inline_for_extraction
 let action_deref
-      (#a:_) (x:B.pointer a) #use_error_handler
-= fun _ _ _ _ _ _ -> 
-    ptr_inv_elim x;
-    !*x
+      (name: string)
+      (#a:Type) (x:ref a) (#use_error_handler: bool)
+: Tot (action (forevery_state_singleton name (pts_to x #1.0R)) use_error_handler a)
+= admit ()
 
 noextract
 inline_for_extraction
 let action_assignment
-      (#a:_) (x:B.pointer a) (v:a) #use_error_handler
-= fun _ _ _ _ _ _ ->
-    ptr_inv_elim x;
-    x *= v
+      (name: string)
+      (#a:Type) (x:ref a) (w: a) (#use_error_handler: bool)
+: Tot (action (forevery_state_singleton name (pts_to x #1.0R)) use_error_handler a)
+= admit ()
 
-noextract
-inline_for_extraction
-let action_weaken #inv #disj #l #b #a #use_error_handler act #inv' #disj' #l' = act
-
+(*
 let external_action t l =
   unit -> Stack t (fun _ -> True) (fun h0 _ h1 -> B.modifies l h0 h1)
 
