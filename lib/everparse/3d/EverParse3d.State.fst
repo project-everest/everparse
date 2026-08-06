@@ -198,6 +198,19 @@ let forevery_values
 : Tot Type0
 = forevery_values0 (state_p d) d.state_values
 
+let forevery_values_ext
+  (d: state_dict)
+  (f1 f2: forevery_values d)
+: Lemma
+  (requires (
+    forall (x: string { state_p d x }) . f1 x == f2 x
+  ))
+  (ensures (f1 == f2))
+= extensionality_g'
+    (refine_prop_t string (on_dom string (state_p d)))
+    (on_dom (refine_prop_t string (on_dom string (state_p d))) (d.state_values))
+    f1 f2
+
 let forevery_state_body
       (d: state_dict)
       (v: forevery_values d)
