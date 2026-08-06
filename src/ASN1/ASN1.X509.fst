@@ -1,5 +1,5 @@
 module ASN1.X509
-#push-options "--split_queries no --fuel 2 --ifuel 0"
+#push-options " --fuel 2 --ifuel 0"
 
 module U32 = FStar.UInt32
 module List = FStar.List.Tot

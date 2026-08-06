@@ -390,8 +390,10 @@ let check_equiv_aux_precond_intro
   ))
 : Lemma
   (check_equiv_aux_precond data_model map_bound bound equiv x1 x2)
-= Classical.forall_intro_2 (fun x1' x2' -> Classical.move_requires (sq2 x1') x2');
-  ()
+= introduce forall (x1': raw_data_item) (x2': raw_data_item { raw_data_item_size x1' + raw_data_item_size x2' <= bound }) .
+    (Valid.valid data_model x1' /\ Valid.valid data_model x2') ==>
+    check_equiv_map_cond data_model map_bound x1' x2' (equiv x1' x2')
+  with Classical.move_requires (sq2 x1') x2'
 
 let check_equiv_aux_correct
   (data_model: (raw_data_item -> raw_data_item -> bool))

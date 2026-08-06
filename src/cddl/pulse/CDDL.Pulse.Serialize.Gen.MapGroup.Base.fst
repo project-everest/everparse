@@ -235,7 +235,7 @@ let cbor_map_fold_max_length_accu_prop'
 
 #restart-solver
 
-#push-options "--z3rlimit 64 --split_queries always"
+#push-options "--z3rlimit 64"
 
 let cbor_map_fold_max_length_accu
   (f: cbor -> option nat)

@@ -343,7 +343,7 @@ let and_then_cases_injective_intro
   ))
 : Lemma
   (and_then_cases_injective p')
-= Classical.forall_intro_3 (fun x1 x2 b1 -> Classical.forall_intro (Classical.move_requires (lem x1 x2 b1)))
+= Classical.forall_intro_4 (Classical.move_requires_4 lem)
 
 let and_then_injective
   (#t:Type)
@@ -504,9 +504,10 @@ let and_then_no_lookahead
   ))
   (ensures ((k.parser_kind_subkind == Some ParserStrong /\ k'.parser_kind_subkind == Some ParserStrong) ==> no_lookahead (and_then_bare p p')))
 = parser_kind_prop_equiv k p;
-  Classical.forall_intro (fun (x: t) -> parser_kind_prop_equiv k' (p' x));
+  introduce forall (x: t) . parser_kind_prop k' (p' x) <==> parser_kind_prop' k' (p' x)
+  with parser_kind_prop_equiv k' (p' x);
   if k.parser_kind_subkind = Some ParserStrong && k.parser_kind_subkind = Some ParserStrong then
-    Classical.forall_intro_2 (fun x -> Classical.move_requires (and_then_no_lookahead_on p p' x))
+    Classical.forall_intro_2 (Classical.move_requires_2 (and_then_no_lookahead_on p p'))
   else ()
 
 #set-options "--max_fuel 8 --max_ifuel 8 --z3rlimit 64"
@@ -527,7 +528,8 @@ let and_then_correct
     parser_kind_prop (and_then_kind k k') (and_then_bare p p')
   ))
 = parser_kind_prop_equiv k p;
-  Classical.forall_intro (fun x -> parser_kind_prop_equiv k' (p' x));
+  introduce forall (x: t) . parser_kind_prop k' (p' x) <==> parser_kind_prop' k' (p' x)
+  with parser_kind_prop_equiv k' (p' x);
   parser_kind_prop_equiv (and_then_kind k k') (and_then_bare p p');
   (if k.parser_kind_injective && k'.parser_kind_injective then and_then_injective p p' else ());
   and_then_no_lookahead p p'
@@ -2273,7 +2275,11 @@ let tot_parse_dtuple2_filter_swap'
     dsnd x == dsnd x'
   | _ -> False
   )
-= Classical.forall_intro_2 (fun x1 input -> tot_parse_filter_eq (p2 x1) (f x1) input);
+= introduce forall (x1: t1) (input: bytes) .
+    parse (tot_parse_filter (p2 x1) (f x1)) input == (match parse (p2 x1) input with
+    | None -> None
+    | Some (x, consumed) -> if f x1 x then Some (x, consumed) else None)
+  with tot_parse_filter_eq (p2 x1) (f x1) input;
   Classical.forall_intro (tot_parse_filter_eq (tot_parse_dtuple2 p1 p2) (fun x -> f (dfst x) (dsnd x)))
 
 let tot_parse_dtuple2_filter_swap

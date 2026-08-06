@@ -421,7 +421,7 @@ let impl_bundle_wf_map_group_concat
   let _ = assert (impl_bundle_wf_map_group_post env (WfMConcat g1 s1 g2 s2) res) in
   res
 
-#push-options "--z3rlimit 1024 --query_stats --ifuel 4 --fuel 4 --split_queries always"
+#push-options "--z3rlimit 1024 --query_stats --ifuel 4 --fuel 4"
 
 [@@bundle_attr]
 let rec impl_bundle_wf_type
