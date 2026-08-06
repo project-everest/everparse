@@ -15,6 +15,7 @@ open CBOR.Spec.Raw.EverParse
 open CBOR.Pulse.Raw.EverParse.Format
 open LowParse.Spec.Base
 open LowParse.Pulse.Base
+open CBOR.Spec.Raw.Format // must come last, to match the interface's resolution
 
 module CompareBytes = CBOR.Pulse.Raw.Compare.Bytes
 

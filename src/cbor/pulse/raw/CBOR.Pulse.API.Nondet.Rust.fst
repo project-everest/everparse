@@ -31,7 +31,10 @@ let cbor_nondet_share () = Nondet.cbor_nondet_share ()
 
 let cbor_nondet_gather () = Nondet.cbor_nondet_gather ()
 
-let cbor_nondet_parse () : Base.cbor_nondet_parse_t cbor_nondet_match = Nondet.cbor_nondet_parse ()
+inline_for_extraction noextract [@@noextract_to "krml"]
+let cbor_nondet_parse_aux : Base.cbor_nondet_parse_t cbor_nondet_match = Nondet.cbor_nondet_parse ()
+
+let cbor_nondet_parse () map_key_bound strict_check input #pm #v = cbor_nondet_parse_aux map_key_bound strict_check input #pm #v
 
 let cbor_nondet_match_with_size = Nondet.cbor_nondet_match_with_size
 
