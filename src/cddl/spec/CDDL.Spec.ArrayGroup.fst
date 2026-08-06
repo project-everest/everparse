@@ -1,5 +1,7 @@
 module CDDL.Spec.ArrayGroup
 
+include CDDL.Spec.Base
+module Cbor = CBOR.Spec.API.Type
 let array_group_concat_assoc
   (#b: _)
   (a1 a2 a3: array_group b)

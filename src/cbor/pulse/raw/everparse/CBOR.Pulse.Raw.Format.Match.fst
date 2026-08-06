@@ -1,4 +1,10 @@
 module CBOR.Pulse.Raw.Format.Match
+include CBOR.Pulse.Raw.Type
+open CBOR.Spec.Raw.Base
+open Pulse.Lib.Pervasives
+open Pulse.Lib.Slice
+module U8 = FStar.UInt8
+module Trade = Pulse.Lib.Trade
 #lang-pulse
 open CBOR.Spec.Raw.EverParse
 open LowParse.Spec.VCList

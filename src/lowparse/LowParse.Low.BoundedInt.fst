@@ -14,6 +14,8 @@ module Cast = FStar.Int.Cast
 
 friend LowParse.Spec.BoundedInt
 
+include LowParse.Spec.BoundedInt
+include LowParse.Low.Base
 inline_for_extraction
 let mul256 (x: U16.t) : Tot (y: U32.t { U32.v y == 256 `op_Star` U16.v x }) =
   assert_norm (pow2 8 == 256);

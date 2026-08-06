@@ -3,6 +3,8 @@ friend CBOR.Pulse.API.Det.Type
 friend CBOR.Spec.API.Format
 friend CBOR.Pulse.API.Det.Common
 friend CBOR.Pulse.API.Det.C
+include CBOR.Pulse.API.Det.C
+open Pulse.Lib.Pervasives
 #lang-pulse
 
 module SpecRaw = CBOR.Spec.Raw

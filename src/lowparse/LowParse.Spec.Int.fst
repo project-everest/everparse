@@ -1,4 +1,11 @@
 module LowParse.Spec.Int
+include LowParse.Spec.Base
+module Seq = FStar.Seq
+module E = FStar.Endianness
+module U8  = FStar.UInt8
+module U16 = FStar.UInt16
+module U32 = FStar.UInt32
+module U64 = FStar.UInt64
 open LowParse.Spec.Combinators
 
 let decode_u8

@@ -1,6 +1,17 @@
 module CBOR.Pulse.API.Det.Common
 friend CBOR.Pulse.API.Det.Type
 friend CBOR.Spec.API.Format
+include CBOR.Pulse.API.Det.Type
+include CBOR.Pulse.API.Det.Dummy
+include CBOR.Pulse.API.Base
+open Pulse.Lib.Pervasives
+module Spec = CBOR.Spec.API.Format
+module S = Pulse.Lib.Slice
+module Trade = Pulse.Lib.Trade.Util
+module SZ = FStar.SizeT
+module U64 = FStar.UInt64
+module U8 = FStar.UInt8
+module PM = Pulse.Lib.SeqMatch
 #lang-pulse
 
 module SpecRaw = CBOR.Spec.Raw

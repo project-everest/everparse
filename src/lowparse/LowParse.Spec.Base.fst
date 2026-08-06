@@ -1,4 +1,5 @@
 module LowParse.Spec.Base
+include LowParse.Norm
 include LowParse.Bytes
 
 module Seq = FStar.Seq

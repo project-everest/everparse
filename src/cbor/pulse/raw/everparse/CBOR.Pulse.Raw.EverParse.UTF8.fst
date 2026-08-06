@@ -1,6 +1,15 @@
 module CBOR.Pulse.Raw.EverParse.UTF8
 friend CBOR.Spec.Raw.Format.UTF8
 friend CBOR.Spec.API.UTF8
+include CBOR.Spec.API.UTF8
+open Pulse.Lib.Pervasives
+open CBOR.Spec.Constants
+open CBOR.Spec.Raw.EverParse
+open LowParse.Pulse.Combinators
+open LowParse.Pulse.SeqBytes
+module U8 = FStar.UInt8
+module S = Pulse.Lib.Slice
+module SZ = FStar.SizeT
 #lang-pulse
 
 open CBOR.Spec.Raw.Format.UTF8

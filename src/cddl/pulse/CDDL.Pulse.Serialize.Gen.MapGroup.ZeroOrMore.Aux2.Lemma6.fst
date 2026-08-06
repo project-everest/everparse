@@ -1,4 +1,5 @@
 module CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma6
+include CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Invariant
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Invariant
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux1
 open CDDL.Pulse.Serialize.Gen.MapGroup.Aux

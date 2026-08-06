@@ -1,5 +1,8 @@
 module LowParse.Endianness
 
+include FStar.Endianness
+module S = FStar.Seq
+module U8 = FStar.UInt8
 let rec index_be_to_n'
   (b: bytes)
   (i: nat)

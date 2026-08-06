@@ -1,4 +1,15 @@
 module CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux1
+include CDDL.Pulse.Serialize.Gen.MapGroup.Base
+include Pulse.Lib.Pervasives
+include CBOR.Spec.API.Type
+include CBOR.Pulse.API.Base
+include CDDL.Pulse.Serialize.Gen.MapGroup.Aux
+include CDDL.Pulse.Serialize.Gen.MapGroup.Choice
+module S = Pulse.Lib.Slice
+module U8 = FStar.UInt8
+module SZ = FStar.SizeT
+module EqTest = CDDL.Spec.EqTest
+module Map = CDDL.Spec.Map
 #lang-pulse
 
 #push-options "--z3rlimit 32 --split_queries always"

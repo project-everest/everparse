@@ -1,4 +1,10 @@
 module CBOR.Pulse.API.Nondet.C
+include CBOR.Pulse.API.Nondet.Type
+open CBOR.Spec.Constants
+open CBOR.Pulse.API.Base
+open Pulse.Lib.Pervasives
+module Spec = CBOR.Spec.API.Format
+module Trade = Pulse.Lib.Trade.Util
 #lang-pulse
 module Rust = CBOR.Pulse.Raw.Nondet
 

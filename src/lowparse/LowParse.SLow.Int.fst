@@ -10,6 +10,8 @@ module B32 = LowParse.Bytes32
 
 friend LowParse.Spec.Int
 
+include LowParse.Spec.Int
+include LowParse.SLow.Base
 let parse32_u8 =
   decode_u8_injective ();
   make_total_constant_size_parser32 1 1ul

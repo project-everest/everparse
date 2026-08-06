@@ -1,4 +1,12 @@
 module CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore
+include CDDL.Pulse.Serialize.Gen.MapGroup.Base
+open Pulse.Lib.Pervasives
+open CBOR.Spec.API.Type
+open CBOR.Pulse.API.Base
+module Trade = Pulse.Lib.Trade.Util
+module S = Pulse.Lib.Slice
+module Iterator = CDDL.Pulse.Iterator.Base
+module EqTest = CDDL.Spec.EqTest
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2
 #lang-pulse
 

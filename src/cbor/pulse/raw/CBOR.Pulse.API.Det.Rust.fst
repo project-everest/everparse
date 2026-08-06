@@ -1,4 +1,14 @@
 module CBOR.Pulse.API.Det.Rust
+open CBOR.Spec.Constants
+open Pulse.Lib.Pervasives
+module Spec = CBOR.Spec.API.Format
+module Trade = Pulse.Lib.Trade.Util
+module U8 = FStar.UInt8
+module U64 = FStar.UInt64
+module S = Pulse.Lib.Slice
+module SZ = FStar.SizeT
+module Base = CBOR.Pulse.API.Base
+module PM = Pulse.Lib.SeqMatch
 #lang-pulse
 
 (* NOTE: this .fst file does not need anything from the Raw namespace,

@@ -1,5 +1,6 @@
 module CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma7
 
+include CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Invariant
 #push-options "--z3rlimit 64"
 
 let invariant_init

@@ -1,4 +1,14 @@
 module CBOR.Pulse.Raw.EverParse.Nondet.Gen
+include CBOR.Spec.Raw.Nondet
+open CBOR.Spec.Util
+open CBOR.Spec.Raw.EverParse
+include CBOR.Pulse.Raw.EverParse.Format
+open LowParse.Spec.VCList
+open LowParse.Pulse.VCList
+open Pulse.Lib.Pervasives
+module S = Pulse.Lib.Slice.Util
+module SZ = FStar.SizeT
+module Trade = Pulse.Lib.Trade.Util
 #lang-pulse
 
 inline_for_extraction

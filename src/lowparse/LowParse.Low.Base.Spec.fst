@@ -1,5 +1,9 @@
 module LowParse.Low.Base.Spec
 
+include LowParse.Spec.Base
+include LowParse.Slice
+include LowParse.CLens
+module L = FStar.List.Tot
 module M = LowParse.Math
 module B = LowStar.Monotonic.Buffer
 module U32 = FStar.UInt32

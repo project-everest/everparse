@@ -1,4 +1,7 @@
 module CBOR.Spec.Raw.Format
+include CBOR.Spec.Raw.Valid
+module U8 = FStar.UInt8
+module U64 = FStar.UInt64
 module F = CBOR.Spec.Raw.EverParse
 module M = CBOR.Spec.Raw.Map
 module LP = LowParse.Spec.Combinators
