@@ -37,9 +37,8 @@ let serialize_cbor_inj'
   (s1: Seq.seq U8.t)
 : Lemma
   (forall c2 s2 . serialize_cbor c1 `Seq.append` s1 == serialize_cbor c2 `Seq.append` s2 ==> (c1 == c2 /\ s1 == s2))
-= Classical.forall_intro_2 (fun c2 s2 ->
-    Classical.move_requires (serialize_cbor_inj c1 c2 s1) s2
-  )
+= introduce forall c2 s2 . serialize_cbor c1 `Seq.append` s1 == serialize_cbor c2 `Seq.append` s2 ==> (c1 == c2 /\ s1 == s2)
+  with Classical.move_requires (serialize_cbor_inj c1 c2 s1) s2
 
 val parse_cbor (x: Seq.seq U8.t) : Pure (option (raw_data_item & nat))
   (requires True)

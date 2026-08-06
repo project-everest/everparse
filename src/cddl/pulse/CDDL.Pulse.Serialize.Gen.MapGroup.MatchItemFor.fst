@@ -243,7 +243,7 @@ let impl_serialize_match_item_for_post_false_count_overflow
   if pvalue.serializable v then
     cbor_map_length_singleton key (pvalue.serializer v)
 
-#push-options "--z3rlimit 512 --split_queries always"
+#push-options "--z3rlimit 512"
 
 inline_for_extraction
 fn impl_serialize_match_item_for

@@ -451,7 +451,7 @@ fn cbor_det_mk_simple_value (_: unit) : mk_simple_t u#0 #_ cbor_det_match
   res
 }
 #pop-options
-#push-options "--z3rlimit 64 --fuel 2 --ifuel 1 --split_queries always --query_stats"
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 1 --query_stats"
 #restart-solver
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_mk_int64 (_: unit) : mk_int64_t u#0 #_ cbor_det_match

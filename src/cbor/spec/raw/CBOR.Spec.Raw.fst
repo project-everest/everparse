@@ -280,7 +280,7 @@ let mk_det_raw_cbor_map_raw_mem m x =
 
 let mk_cbor_eq_map x = ()
 
-#push-options "--z3rlimit 32 --split_queries always"
+#push-options "--z3rlimit 32"
 
 #restart-solver
 

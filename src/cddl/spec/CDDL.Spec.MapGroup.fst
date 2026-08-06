@@ -167,7 +167,7 @@ let parser_spec_map_group_eq
     parser_spec_map_group source0 p target_prop' x == p x'
   ))
 
-#push-options "--z3rlimit 256 --split_queries always"
+#push-options "--z3rlimit 256"
 
 #restart-solver
 let map_group_concat_footprint_disjoint
@@ -661,7 +661,7 @@ let rec list_fold_map_group_zero_or_more_match_item_serializer_length
     list_fold_map_group_zero_or_more_match_item_serializer_length pkey pvalue except m (map_group_zero_or_more_match_item_serializer_op pkey pvalue except m accu a) q
 
 #restart-solver
-#push-options "--z3rlimit_factor 4 --fuel 2 --ifuel 2 --split_queries always --query_stats"
+#push-options "--z3rlimit_factor 4 --fuel 2 --ifuel 2 --query_stats"
 #restart-solver
 let map_group_zero_or_more_match_item_serializer
   (#tkey #tvalue: Type)

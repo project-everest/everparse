@@ -1,7 +1,7 @@
 module LowParse.SLow.BoundedInt
 
 open LowParse.SLow.Combinators
-#set-options "--split_queries no"
+#set-options ""
 #set-options "--z3rlimit 20"
 
 module Seq = FStar.Seq

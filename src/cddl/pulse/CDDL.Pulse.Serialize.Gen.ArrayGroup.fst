@@ -112,7 +112,7 @@ let list_append_nil_r_pat
 
 (* Parse list lemmas *)
 
-#push-options "--z3rlimit_factor 32 --fuel 2 --ifuel 1 --split_queries always"
+#push-options "--z3rlimit_factor 32 --fuel 2 --ifuel 1"
 
 let rec cbor_parse_list_split
   (p: cbor_parser)
@@ -626,7 +626,7 @@ let impl_serialize_array_group_item_correct
 
 #pop-options
 
-#push-options "--z3rlimit_factor 8 --fuel 1 --ifuel 1 --split_queries always"
+#push-options "--z3rlimit_factor 8 --fuel 1 --ifuel 1"
 #restart-solver
 
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -994,7 +994,7 @@ let rec ag_spec_zero_or_more_size_append
   | [] -> ()
   | hd :: tl -> ag_spec_zero_or_more_size_append p tl l2
 
-#push-options "--fuel 4 --ifuel 4 --z3rlimit_factor 4 --split_queries always"
+#push-options "--fuel 4 --ifuel 4 --z3rlimit_factor 4"
 #restart-solver
 let rec ag_spec_zero_or_more_serializer_append
   (#source: nonempty_array_group)
@@ -1052,7 +1052,7 @@ let ag_serializable_zero_or_more_append
   end;
   ()
 
-#push-options "--z3rlimit_factor 32 --fuel 4 --ifuel 4 --split_queries always"
+#push-options "--z3rlimit_factor 32 --fuel 4 --ifuel 4"
 #restart-solver
 
 let rec ag_spec_zero_or_more_serializer_cons_aux
@@ -1446,7 +1446,7 @@ let ag_spec_zero_or_more_serializer_nil
 
 #pop-options
 
-#push-options "--z3rlimit_factor 64 --fuel 2 --ifuel 2 --split_queries always"
+#push-options "--z3rlimit_factor 64 --fuel 2 --ifuel 2"
 #restart-solver
 
 let impl_serialize_array_group_post_zero_or_more_exit
@@ -1513,7 +1513,7 @@ let impl_serialize_array_group_post_zero_or_more_exit
 
 #pop-options
 
-#push-options "--z3rlimit_factor 16 --fuel 1 --ifuel 1 --split_queries always"
+#push-options "--z3rlimit_factor 16 --fuel 1 --ifuel 1"
 #restart-solver
 
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -1712,7 +1712,7 @@ let impl_serialize_array_group_zero_or_more_iterator_t
 =
   impl_serialize_array_group lmin lmax #_ #(list tgt1) #_ (ag_spec_zero_or_more ps1) #(array_iterator_t impl_tgt1 cbor_array_iterator_match (Iterator.mk_spec r1)) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1))
 
-#push-options "--z3rlimit_factor 16 --fuel 1 --ifuel 1 --split_queries always"
+#push-options "--z3rlimit_factor 16 --fuel 1 --ifuel 1"
 #restart-solver
 
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -1973,7 +1973,7 @@ let impl_serialize_array_group_one_or_more_nonempty
 
 #pop-options
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 8 --split_queries always"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 8"
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_array_group_one_or_more_slice
@@ -2044,7 +2044,7 @@ let impl_serialize_array_group_one_or_more_iterator_t
 =
   impl_serialize_array_group lmin lmax #_ #(list tgt1) #_ (ag_spec_one_or_more ps1) #(array_iterator_t impl_tgt1 cbor_array_iterator_match (Iterator.mk_spec r1)) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1))
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 8 --split_queries always"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 8"
 #restart-solver
 
 inline_for_extraction noextract [@@noextract_to "krml"]

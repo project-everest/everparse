@@ -712,7 +712,7 @@ let annot_tables_correct_aux'_t
   )) ->
   Lemma (ensures annot_tables_correct_postcond fuel env cut g m)
 
-#push-options "--z3rlimit 128 --ifuel 8 --fuel 4 --split_queries always"
+#push-options "--z3rlimit 128 --ifuel 8 --fuel 4"
 
 let annot_tables_correct_aux'_choice
   (g: elab_map_group { MGChoice? g })
@@ -1069,7 +1069,7 @@ let map_group_filtered_table_except_ext
         (Util.notp (Util.andp (Spec.matches_map_group_entry key value) (Util.notp except1)))
         (Util.notp (Util.andp (Spec.matches_map_group_entry key value) (Util.notp except2)))
 
-#push-options "--z3rlimit 64 --ifuel 6 --fuel 4 --split_queries always --z3refresh"
+#push-options "--z3rlimit 64 --ifuel 6 --fuel 4 --z3refresh"
 
 #restart-solver
 
@@ -1170,7 +1170,7 @@ let annot_tables'_correct
 = annot_tables_correct fuel env g;
   annot_tables'_correct' fuel env MCFalse MCFalse g
 
-#push-options "--z3rlimit 128 --split_queries always --query_stats --fuel 4 --ifuel 8"
+#push-options "--z3rlimit 128 --query_stats --fuel 4 --ifuel 8"
 
 #restart-solver
 let rec mk_wf_typ

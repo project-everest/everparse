@@ -95,7 +95,7 @@ let validate_tot_nlist_recursive_progress
 
 #restart-solver
 
-#push-options "--z3rlimit_factor 4 --split_queries always"
+#push-options "--z3rlimit_factor 4"
 let validate_tot_nlist_recursive_overflow
   (p: parse_recursive_param)
   (v: bytes)

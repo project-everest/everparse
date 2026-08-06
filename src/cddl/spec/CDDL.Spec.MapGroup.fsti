@@ -1774,7 +1774,7 @@ val mg_spec_concat_inj
     map_group_serializer_spec_concat p1.mg_serializer p2.mg_serializer (mg_spec_concat_size p1.mg_size p2.mg_size) (mg_spec_concat_serializable p1.mg_serializer p2.mg_serializer) (map_group_parser_spec_concat p1.mg_serializer p2.mg_serializer (mg_spec_concat_size p1.mg_size p2.mg_size) (mg_spec_concat_serializable p1.mg_serializer p2.mg_serializer) m) == m
   ))
 
-#push-options "--z3rlimit_factor 4 --split_queries always"
+#push-options "--z3rlimit_factor 4"
 let mg_spec_concat_domain_inj'
   (#source1: det_map_group)
   (#source_fp1: map_constraint)
@@ -2350,7 +2350,7 @@ let map_group_zero_or_more_match_item_parser_op
     Map.union accu (mk_map_singleton pkey (pkey.parser x) (pvalue.parser y))
 //    else accu
 
-#push-options "--z3rlimit_factor 4 --split_queries always"
+#push-options "--z3rlimit_factor 4"
 let map_group_zero_or_more_match_item_parser_op_comm
   (#tkey #tvalue: Type)
   (#key #value: typ)
@@ -2368,7 +2368,7 @@ let map_group_zero_or_more_match_item_parser_op_comm
 = ()
 #pop-options
 
-#push-options "--z3rlimit_factor 8 --split_queries always"
+#push-options "--z3rlimit_factor 8"
 let rec list_fold_map_group_zero_or_more_match_item_parser_op_mem
   (#tkey #tvalue: Type)
   (#key #value: typ)
