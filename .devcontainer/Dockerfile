@@ -23,6 +23,9 @@ RUN apt-get update \
       tmux \
       rustup \
       dotnet-sdk-8.0 \
+      python3-venv \
+      clang \
+      cmake \
     && apt-get clean -y
 # FIXME: libgmp-dev should be installed automatically by opam,
 # but it is not working, so just adding it above.
