@@ -351,7 +351,7 @@ let synth_bitsum'_injective
 
 // #push-options "--z3rlimit 128 --z3cliopt smt.arith.nl=false"
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 64 --z3rlimit_factor 4 --fuel 4 --ifuel 4"
 
 let rec synth_bitsum'_ext
   (#tot: pos)
@@ -386,8 +386,6 @@ let rec synth_bitsum'_ext
     let k = enum_key_of_repr e f in
     let u = synth_bitsum' (payload k) x in
     let v = synth_bitsum' (payload k) y in
-    assert (synth_bitsum' (BitSum' key key_size e payload) x == bitsum'_type_intro_BitSum' cl bitsum'_size key key_size e payload (| k, u |));
-    assert (synth_bitsum' (BitSum' key key_size e payload) y == bitsum'_type_intro_BitSum' cl bitsum'_size key key_size e payload (| k, v |));
     BF.get_bitfield_get_bitfield (cl.v x) 0 bitsum'_size 0 (bitsum'_size - key_size);
     assert (BF.get_bitfield (cl.v x) 0 (bitsum'_size - key_size) == BF.get_bitfield (BF.get_bitfield (cl.v x) 0 bitsum'_size) (0) (bitsum'_size - key_size));
     BF.get_bitfield_get_bitfield (cl.v y) 0 bitsum'_size 0 (bitsum'_size - key_size);
@@ -523,7 +521,7 @@ let rec get_bitfield_synth_bitsum'_recip'_other
 
 #pop-options
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 64 --z3rlimit_factor 4"
 
 let rec filter_bitsum'_ext
   (#tot: pos)
@@ -551,6 +549,8 @@ let rec filter_bitsum'_ext
     assert (cl.v f == BF.get_bitfield (cl.v x) (bitsum'_size - key_size) (bitsum'_size));
     assert (cl.v g == BF.get_bitfield (cl.v y) (bitsum'_size - key_size) (bitsum'_size));
     assert (cl.uint_to_t (cl.v f) == cl.uint_to_t (cl.v g));
+    cl.uint_to_t_v f;
+    cl.uint_to_t_v g;
     assert (f == g);
     if list_mem f (list_map snd e)
     then begin
