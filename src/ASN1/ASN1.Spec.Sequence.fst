@@ -121,7 +121,7 @@ let and_then_cases_injective_some_intro
   ))
 : Lemma
   (and_then_cases_injective_some p')
-= Classical.forall_intro_3 (fun x1 x2 b1 -> Classical.forall_intro (Classical.move_requires (lem x1 x2 b1)))
+= Classical.forall_intro_4 (Classical.move_requires_4 lem)
 
 let and_then_cases_injective_elim
   (#t:Type)
