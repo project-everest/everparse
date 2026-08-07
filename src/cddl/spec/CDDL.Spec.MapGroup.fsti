@@ -94,6 +94,12 @@ let map_group_footprint_elim
 = match apply_map_group_det g m, apply_map_group_det g (m `cbor_map_union` m') with
   | MapGroupDet c r, MapGroupDet c' r' ->
     assert (r' == r `cbor_map_union` m');
+    introduce forall k . cbor_map_get c' k == cbor_map_get c k
+    with begin
+      assert (cbor_map_get (cbor_map_union c' r') k == cbor_map_get (cbor_map_union m m') k);
+      assert (cbor_map_get (cbor_map_union c r) k == cbor_map_get m k);
+      assert (cbor_map_get (cbor_map_union r m') k == cbor_map_get r' k)
+    end;
     assert (cbor_map_equal c' c)
   | _ -> ()
 
@@ -1774,7 +1780,7 @@ val mg_spec_concat_inj
     map_group_serializer_spec_concat p1.mg_serializer p2.mg_serializer (mg_spec_concat_size p1.mg_size p2.mg_size) (mg_spec_concat_serializable p1.mg_serializer p2.mg_serializer) (map_group_parser_spec_concat p1.mg_serializer p2.mg_serializer (mg_spec_concat_size p1.mg_size p2.mg_size) (mg_spec_concat_serializable p1.mg_serializer p2.mg_serializer) m) == m
   ))
 
-#push-options "--z3rlimit_factor 4"
+#push-options "--z3rlimit_factor 16"
 let mg_spec_concat_domain_inj'
   (#source1: det_map_group)
   (#source_fp1: map_constraint)
