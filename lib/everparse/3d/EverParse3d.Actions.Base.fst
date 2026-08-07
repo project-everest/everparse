@@ -17,8 +17,7 @@ module SZ = FStar.SizeT
 open EverParse3d.State
 
 let action
-  (#extra_state_value: Type0)
-  (extra_state: extra_state_value -> slprop)
+  (extra_state: state_dict)
   (use_error_handler: bool)
   (a: Type0)
 =
@@ -31,12 +30,12 @@ let action
     (exists* v_ctxt extra .
       pts_to ctxt v_ctxt **
       I.pts_to sl contents_sl v_sl **
-      extra_state extra
+      forevery_state extra_state extra
     )
     (fun _ -> exists* v_ctxt' extra' .
       pts_to ctxt v_ctxt' **
       I.pts_to sl contents_sl v_sl **
-      extra_state extra'
+      forevery_state extra_state extra'
     )
 
 module LP = LowParse.Spec.Base
@@ -52,31 +51,31 @@ let validate_with_action_t
      (#k:LP.parser_kind)
      (#t:Type)
      (p:LP.parser k t)
-     (#extra_state_value: Type0)
-     (extra_state: extra_state_value -> slprop)
+     (extra_state: state_dict)
      (has_action:bool)
      (use_error_handler:bool)
 : Type 
 = (ctxt: app_ctxt) ->
   (error_handler_fn : (if use_error_handler then error_handler else unit)) ->
   (sl: input_buffer_t) ->
-  (extra: Ghost.erased extra_state_value) ->
+  (extra: forevery_values extra_state) ->
   (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
   (v_sl: Ghost.erased (Seq.seq U8.t)) ->
   stt U8.t
   (requires exists* v_ctxt .
     pts_to ctxt v_ctxt **
     I.pts_to sl contents_sl v_sl **
-    extra_state extra
+    forevery_state extra_state extra
   )
   (ensures fun res -> exists* v_ctxt' v_sl' extra' .
     pts_to ctxt v_ctxt' **
     I.pts_to sl contents_sl v_sl' **
-    extra_state extra' **
+    forevery_state extra_state extra' **
     pure (
       (res == action_failed ==> has_action) /\
-      (not has_action ==> extra' == Ghost.reveal extra) /\
+      (not has_action ==> extra' == extra) /\
       (U8.v res > U8.v action_failed ==> None? (LP.parse p v_sl)) /\
+      I.seq_is_suffix_of v_sl' v_sl /\
       (res == success ==> (Some? (LP.parse p v_sl) /\ v_sl' == Seq.slice v_sl (snd (Some?.v (LP.parse p v_sl))) (Seq.length v_sl)))
   ))
 
@@ -85,8 +84,7 @@ let validate_with_action_no_read
      (#k:LP.parser_kind)
      (#t:Type)
      (p:LP.parser k t)
-     (#extra_state_value: Type0)
-     (extra_state: extra_state_value -> slprop)
+     (extra_state: state_dict)
      (has_action:bool)
      (use_error_handler:bool)
 : Type 
@@ -94,7 +92,7 @@ let validate_with_action_no_read
   (error_handler_fn : (if use_error_handler then error_handler else unit)) ->
   (sl: input_buffer_t) ->
   (pos: ref SZ.t) ->
-  (extra: Ghost.erased extra_state_value) ->
+  (extra: forevery_values extra_state) ->
   (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
   (v_sl: Ghost.erased (Seq.seq U8.t)) ->
   (v_pos: Ghost.erased SZ.t) ->
@@ -103,19 +101,19 @@ let validate_with_action_no_read
     pts_to ctxt v_ctxt **
     I.pts_to sl contents_sl v_sl ** // necessary for actions and the error handler
     pts_to pos v_pos **
-    extra_state extra **
+    forevery_state extra_state extra **
     pure (SZ.v v_pos <= Seq.length v_sl)
   )
   (ensures fun res -> exists* v_ctxt' extra' v_pos' .
     pts_to ctxt v_ctxt' **
     I.pts_to sl contents_sl v_sl **
     pts_to pos v_pos' **
-    extra_state extra' **
+    forevery_state extra_state extra' **
     pure (
       SZ.v v_pos <= Seq.length v_sl /\ (
       let pp = LP.parse p (Seq.slice v_sl (SZ.v v_pos) (Seq.length v_sl)) in
       (res == action_failed ==> has_action) /\
-      (not has_action ==> extra' == Ghost.reveal extra) /\
+      (not has_action ==> extra' == extra) /\
       (U8.v res > U8.v action_failed ==> None? pp /\
       (res == success ==> (Some? pp /\ SZ.v v_pos' == SZ.v v_pos + snd (Some?.v pp)))
   ))))
@@ -152,8 +150,7 @@ noextract
 inline_for_extraction
 let action_bind
       (name: string)
-      (#extra_state_value: Type0)
-      (#extra_state: extra_state_value -> slprop)
+      (#extra_state: state_dict)
       (#use_error_handler:bool)
       (#a: Type)
       (f: action extra_state use_error_handler a)
@@ -167,10 +164,10 @@ let action_weaken
       (#d1: state_dict)
       (#use_error_handler:bool)
       (#a: Type)
-      (f: action (forevery_state d1) use_error_handler a)
+      (f: action d1 use_error_handler a)
       (d2: state_dict)
       (d2_extends: squash (state_dict_weaken_prop d1 d2))
-: Tot (action (forevery_state d2) use_error_handler a)
+: Tot (action d2 use_error_handler a)
 = admit ()
 
 noextract
@@ -178,7 +175,7 @@ inline_for_extraction
 let action_deref
       (name: string)
       (#a:Type) (x:ref a) (#use_error_handler: bool)
-: Tot (action (forevery_state (state_dict_singleton name (pts_to x #1.0R))) use_error_handler a)
+: Tot (action (state_dict_singleton name (pts_to x #1.0R)) use_error_handler a)
 = admit ()
 
 noextract
@@ -186,7 +183,7 @@ inline_for_extraction
 let action_assignment
       (name: string)
       (#a:Type) (x:ref a) (w: a) (#use_error_handler: bool)
-: Tot (action (forevery_state (state_dict_singleton name (pts_to x #1.0R))) use_error_handler a)
+: Tot (action (state_dict_singleton name (pts_to x #1.0R)) use_error_handler a)
 = admit ()
 
 (*

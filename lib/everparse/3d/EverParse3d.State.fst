@@ -31,7 +31,7 @@ let restricted_t'_eq (a1: Type) (b1: a1 -> Type) (a2: Type) (b2: a2 -> Type) : L
 
 let arrow (t1: Type) (t2: Type) = t1 ^-> t2
 
-inline_for_extraction noextract
+[@@erasable]
 noeq type state_dict = {
   state_p: string `arrow_g` bool;
   state_values: refine_bool_t string state_p `arrow` Type0;
@@ -187,12 +187,14 @@ let state_p
 
 let refine_prop_t (t: Type) (p: t `arrow` prop) = (x: t { p x })
 
+[@@erasable]
 let forevery_values0
       (p1: string -> prop)
       (values1: (x: string { p1 x }) -> Type0)
 : Tot Type0
 = restricted_g_t (refine_prop_t string (on_dom string p1)) (on_dom (refine_prop_t string (on_dom string p1)) values1)
 
+[@@erasable]
 let forevery_values
   (d: state_dict)
 : Tot Type0
