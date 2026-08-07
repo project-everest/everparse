@@ -24,6 +24,21 @@ class input_stream_inst (t: Type) : Type = {
       (pts_to x contents v)
       (fun _ -> pts_to x contents v ** pure (v `seq_is_suffix_of` contents));
 
+  get_position:
+    (x: t) ->
+    (contents: Ghost.erased (Seq.seq U8.t)) ->
+    (v: Ghost.erased (Seq.seq U8.t)) ->
+    stt SZ.t
+    (requires (
+      pts_to x contents v
+    ))
+    (ensures fun res ->
+      pts_to x contents v **
+      pure (
+        SZ.v res + Seq.length v == Seq.length contents
+      )
+    );
+
   has:
     (x: t) ->
     (n: SZ.t) ->
@@ -109,13 +124,15 @@ class input_stream_inst (t: Type) : Type = {
       pts_to x contents v ** pure (
       SZ.v n <= Seq.length v
     )))
-    (ensures (fun res -> exists* v1 v2 .
-      pts_to res v1 v1 **
+    (ensures (fun res -> exists* contents' v1 v2 .
+      pts_to res contents' v1 **
       is_prefix_of res x contents v2 **
       pure (
       	SZ.v n <= Seq.length v /\
         Seq.equal v1 (Seq.slice v 0 (SZ.v n)) /\
 	Seq.equal v2 (Seq.slice v (SZ.v n) (Seq.length v)) /\
+	Seq.length v <= Seq.length contents /\
+	Seq.equal contents' (Seq.append (Seq.slice contents 0 (Seq.length contents - Seq.length v)) v1) /\
 	Ghost.reveal v == Seq.append v1 v2
     )));
 
