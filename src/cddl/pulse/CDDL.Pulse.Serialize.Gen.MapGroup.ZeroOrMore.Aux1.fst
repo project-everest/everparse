@@ -12,7 +12,7 @@ module EqTest = CDDL.Spec.EqTest
 module Map = CDDL.Spec.Map
 #lang-pulse
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 32 --z3rlimit_factor 16"
 
 #restart-solver
 let map_of_list_serializable_disjoint

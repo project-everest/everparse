@@ -490,6 +490,7 @@ and rewrite_group_correct
     if is_map_group && GConcat? t2
     then begin
       let GConcat t2 t3 = t2 in
+      Spec.map_group_concat_assoc (map_group_sem env t1) (map_group_sem env t2) (map_group_sem env t3);
       rewrite_group_correct env fuel' is_map_group (GConcat (GConcat t1 t2) t3)
     end else if (not is_map_group) && GConcat? t1
     then begin

@@ -89,6 +89,7 @@ let impl_serialize_map_group_concat_false_helper
   if ps.mg_serializable v then begin
     let m1 = ps1.mg_serializer (fst v) in
     let m2 = ps2.mg_serializer (snd v) in
+    cbor_map_union_assoc l m1 m2;
     Classical.move_requires (cbor_map_disjoint_union_left l m1) m2;
     Classical.move_requires (cbor_map_disjoint_union_right l m1) m2;
     Classical.move_requires (cbor_map_max_length_union maxl l) m1;
@@ -130,6 +131,7 @@ let impl_serialize_map_group_concat_true_helper
   if ps.mg_serializable v then begin
     let m1 = ps1.mg_serializer (fst v) in
     let m2 = ps2.mg_serializer (snd v) in
+    cbor_map_union_assoc l m1 m2;
     Classical.move_requires (cbor_map_disjoint_union_left l m1) m2;
     Classical.move_requires (cbor_map_disjoint_union_right l m1) m2;
     Classical.move_requires (cbor_map_max_length_union maxl l) m1;

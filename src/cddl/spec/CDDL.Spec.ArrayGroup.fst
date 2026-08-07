@@ -549,7 +549,7 @@ let array_group_concat_unique_weak_zero_or_more_left
   #b (a1 a2: array_group b)
 = array_group_concat_unique_weak_zero_or_more_left' a1 (close_array_group a2)
 
-#push-options "--z3rlimit 128 --fuel 2 --ifuel 2"
+#push-options "--z3rlimit 128 --z3rlimit_factor 4 --fuel 2 --ifuel 2"
 #restart-solver
 
 let array_group_concat_unique_weak_zero_or_more_right
