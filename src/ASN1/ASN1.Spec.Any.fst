@@ -51,6 +51,7 @@ let make_gen_choice_weak_parser_twin
 : asn1_id_t -> parser (and_then_kind k asn1_weak_parser_kind) (make_gen_choice_type (extract_types lc))
 = fun id -> parse_tagged_union (fp id) (tag_of_gen_choice_type (extract_types lc)) (make_gen_choice_weak_payload_parser lc)
 
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 let make_gen_choice_weak_parser_twin_precond
   (#t : eqtype)
   (#k : parser_kind)
@@ -67,6 +68,7 @@ let make_gen_choice_weak_parser_twin_precond
     (make_gen_choice_weak_payload_parser lc) b1;
   parse_tagged_union_eq (fp x2) (tag_of_gen_choice_type (extract_types lc))
     (make_gen_choice_weak_payload_parser lc) b2
+#pop-options
 
 let make_gen_choice_weak_parser_twin_and_then_cases_injective
   (#t : eqtype)
@@ -149,6 +151,24 @@ let make_gen_choice_with_fallback_weak_parser_twin
   : asn1_id_t -> parser (and_then_kind k asn1_weak_parser_kind) (make_gen_choice_type_with_fallback (extract_types lc) (Mkgenparser?.t fb))
 = fun id -> parse_tagged_union (fp id) (tag_of_gen_choice_type_with_fallback (extract_types lc) (Mkgenparser?.t fb)) (make_gen_choice_with_fallback_weak_payload_parser lc fb)
 
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
+let make_gen_choice_with_fallback_weak_parser_twin_precond
+  (#t : eqtype)
+  (#k : parser_kind)
+  (fp : asn1_id_t -> parser k t {and_then_cases_injective fp})
+  (lc : list (t & (gen_parser asn1_weak_parser_kind)))
+  (fb : gen_parser asn1_weak_parser_kind)
+  (x1 x2 : asn1_id_t)
+  (b1 b2 : LowParse.Bytes.bytes)
+: Lemma
+  (requires (and_then_cases_injective_precond
+    (make_gen_choice_with_fallback_weak_parser_twin fp lc fb) x1 x2 b1 b2))
+  (ensures (and_then_cases_injective_precond fp x1 x2 b1 b2))
+=
+  parse_tagged_union_eq (fp x1) (tag_of_gen_choice_type_with_fallback (extract_types lc) (Mkgenparser?.t fb)) (make_gen_choice_with_fallback_weak_payload_parser lc fb) b1;
+  parse_tagged_union_eq (fp x2) (tag_of_gen_choice_type_with_fallback (extract_types lc) (Mkgenparser?.t fb)) (make_gen_choice_with_fallback_weak_payload_parser lc fb) b2
+#pop-options
+
 let make_gen_choice_with_fallback_weak_parser_twin_and_then_cases_injective
   (#t : eqtype)
   (#k : parser_kind)
@@ -158,8 +178,7 @@ let make_gen_choice_with_fallback_weak_parser_twin_and_then_cases_injective
 : Lemma (ensures (and_then_cases_injective (make_gen_choice_with_fallback_weak_parser_twin fp lc fb)))
 = let p = make_gen_choice_with_fallback_weak_parser_twin fp lc fb in
   and_then_cases_injective_intro p (fun x1 x2 b1 b2 ->
-    parse_tagged_union_eq (fp x1) (tag_of_gen_choice_type_with_fallback (extract_types lc) (Mkgenparser?.t fb)) (make_gen_choice_with_fallback_weak_payload_parser lc fb) b1;
-    parse_tagged_union_eq (fp x2) (tag_of_gen_choice_type_with_fallback (extract_types lc) (Mkgenparser?.t fb)) (make_gen_choice_with_fallback_weak_payload_parser lc fb) b2;
+    make_gen_choice_with_fallback_weak_parser_twin_precond fp lc fb x1 x2 b1 b2;
     and_then_cases_injective_elim fp x1 x2 b1 b2
   )
 

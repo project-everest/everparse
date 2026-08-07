@@ -71,7 +71,7 @@ let impl_zero_copy_map_group
 
 module Util = CBOR.Spec.Util
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 8 --query_stats --split_queries always"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 8 --query_stats"
 #restart-solver
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_map
@@ -1125,7 +1125,7 @@ ensures exists* l .
 }
 #pop-options
 #show-options
-#push-options "--z3rlimit_factor 4 --fuel 2 --ifuel 2 --split_queries always --query_stats"
+#push-options "--z3rlimit_factor 4 --fuel 2 --ifuel 2 --query_stats"
 inline_for_extraction
 fn cddl_map_iterator_next
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)

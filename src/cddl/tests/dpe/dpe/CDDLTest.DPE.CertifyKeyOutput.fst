@@ -79,6 +79,7 @@ let is_serialized_certify_key_output hres w =
           sz
 
 
+#push-options "--z3rlimit_factor 8"
 ghost
 fn destruct_certifykeyoutputargs x hres pubkey cert p q pk c
 requires
@@ -100,6 +101,7 @@ ensures
   rewrite each xx as pubkey, yy as cert;
   ()
 }
+#pop-options
 
 fn write_certify_key_output
     (out:Slice.slice UInt8.t)

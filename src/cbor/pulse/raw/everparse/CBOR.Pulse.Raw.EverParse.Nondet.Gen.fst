@@ -1091,7 +1091,7 @@ ensures pure
   ()
 }
 
-#push-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --z3cliopt smt.qi.eager_threshold=10 --fuel 2 --ifuel 4 --split_queries always"
+#push-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --z3cliopt smt.qi.eager_threshold=10 --fuel 2 --ifuel 4"
 
 inline_for_extraction
 fn impl_check_equiv_map_hd_body
@@ -1688,6 +1688,7 @@ fn trade_trans_hyp_l_nounify
   Trade.trans_hyp_l p1 p2 q r
 }
 
+#push-options "--z3rlimit_factor 4"
 inline_for_extraction
 fn impl_list_no_setoid_repeats_with_overflow_map_fst
   (#equiv: Ghost.erased (raw_data_item -> raw_data_item -> option bool))
@@ -1861,6 +1862,7 @@ ensures
   Trade.elim _ _;
   !pres
 }
+#pop-options
 
 #push-options "--z3rlimit 64"
 

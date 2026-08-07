@@ -943,7 +943,8 @@ let serialize_bounded_vldata_bytes_eq
       (serialize (serialize_bounded_integer (log256' max)) (U32.uint_to_t (Seq.length (serialize s x))))
       (serialize s x)
   )
-= let x' : parse_bounded_vldata_strong_t min max s = x in
+= serialize_length s x;
+  let x' : parse_bounded_vldata_strong_t min max s = x in
   serialize_bounded_vldata_strong_bytes_eq min max (log256' max) s x'
 
 (* The serialized length is the [log256' max]-byte header plus the payload length. *)

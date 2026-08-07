@@ -100,7 +100,7 @@ let array_group_included_gdef_snd
   else ROutOfFuel
 #pop-options
 
-#push-options "--z3rlimit 512 --query_stats --split_queries always --fuel 4 --ifuel 8 --z3refresh"
+#push-options "--z3rlimit 512 --query_stats --fuel 4 --ifuel 8 --z3refresh"
 
 let array_group_included
   (typ_included: typ_included_t)

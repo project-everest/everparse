@@ -241,7 +241,7 @@ let list_for_all_exists_equal_eq (#t: eqtype) (l1 l2: list t) : Lemma
   (ensures (
     forall x . List.Tot.memP x l1 ==> List.Tot.memP x l2
   ))
-= Classical.forall_intro (fun x -> Classical.move_requires (list_for_all_exists_equal_eq' l1 l2) x)
+= Classical.forall_intro (Classical.move_requires (list_for_all_exists_equal_eq' l1 l2))
 
 let order_irrefl
   (#t: Type)
@@ -935,8 +935,10 @@ let list_memP_map_forall
   (l: list t1)
 : Lemma
   (forall y . List.Tot.memP y (List.Tot.map f l) <==> (exists x . List.Tot.memP x l /\ y == f x))
-= Classical.forall_intro (fun y -> List.Tot.memP_map_elim f y l);
-  Classical.forall_intro (fun x -> List.Tot.memP_map_intro f x l)
+= introduce forall y . List.Tot.memP y (List.Tot.map f l) ==> (exists x . List.Tot.memP x l /\ f x == y)
+  with List.Tot.memP_map_elim f y l;
+  introduce forall x . List.Tot.memP x l ==> List.Tot.memP (f x) (List.Tot.map f l)
+  with List.Tot.memP_map_intro f x l
 
 let rec list_no_setoid_repeats_map
   (#t1: Type)

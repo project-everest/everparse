@@ -400,7 +400,7 @@ let if_then_else (#use_error_handler:bool) (b:bool) (m0 m1:probe_m unit true fal
 
 module HST = FStar.HyperStack.ST
 module CL = C.Loops
-#push-options "--z3rlimit_factor 2 --ifuel 0 --fuel 0 --split_queries no"
+#push-options "--z3rlimit_factor 2 --ifuel 0 --fuel 0"
 
 unfold
 let array_inv
@@ -456,7 +456,7 @@ let array_inv
    let remaining_bytes = B.get h0 ctr 0 in
    U64.v bytes_read_so_far + U64.v remaining_bytes == U64.v byte_len)))
  
-#push-options "--z3rlimit_factor 8 --ifuel 2 --fuel 0 --split_queries no --query_stats"
+#push-options "--z3rlimit_factor 8 --ifuel 2 --fuel 0 --query_stats"
 inline_for_extraction
 noextract
 let probe_array_aux (#use_error_handler:bool) (byte_len:U64.t) (probe_elem:probe_m unit true false use_error_handler)
@@ -574,7 +574,7 @@ let init_and_probe
 
 #pop-options
 
-#push-options "--z3rlimit_factor 8 --split_queries no"
+#push-options "--z3rlimit_factor 8"
 
 inline_for_extraction
 noextract

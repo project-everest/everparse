@@ -91,15 +91,17 @@ let list_append_length_pat
   [SMTPat (List.Tot.append l1 l2)]
 = List.Tot.append_length l1 l2
 
+(* NOTE: no SMTPat here. Associativity has a propositional-equality conclusion,
+   so both nestings join the same congruence class and E-matching (which works
+   modulo congruence) re-triggers on every member, enumerating all Catalan-many
+   parse trees of an append chain. With the SMTPat this quantifier reached
+   ~358k instantiations in a single query and starved the arithmetic solver.
+   Related: https://github.com/Z3Prover/z3/issues/10435 *)
 let list_append_assoc_pat
   (#t: Type)
   (l1 l2 l3: list t)
 : Lemma
   (ensures (List.Tot.append l1 (List.Tot.append l2 l3) == List.Tot.append (List.Tot.append l1 l2) l3))
-  [SMTPatOr [
-    [SMTPat (List.Tot.append l1 (List.Tot.append l2 l3))];
-    [SMTPat (List.Tot.append (List.Tot.append l1 l2) l3)];
-  ]]
 = List.Tot.append_assoc l1 l2 l3
 
 let list_append_nil_r_pat
@@ -112,7 +114,7 @@ let list_append_nil_r_pat
 
 (* Parse list lemmas *)
 
-#push-options "--z3rlimit_factor 32 --fuel 2 --ifuel 1 --split_queries always"
+#push-options "--z3rlimit_factor 32 --fuel 2 --ifuel 1"
 
 let rec cbor_parse_list_split
   (p: cbor_parser)
@@ -626,7 +628,7 @@ let impl_serialize_array_group_item_correct
 
 #pop-options
 
-#push-options "--z3rlimit_factor 8 --fuel 1 --ifuel 1 --split_queries always"
+#push-options "--z3rlimit_factor 8 --fuel 1 --ifuel 1"
 #restart-solver
 
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -994,7 +996,7 @@ let rec ag_spec_zero_or_more_size_append
   | [] -> ()
   | hd :: tl -> ag_spec_zero_or_more_size_append p tl l2
 
-#push-options "--fuel 4 --ifuel 4 --z3rlimit_factor 4 --split_queries always"
+#push-options "--fuel 4 --ifuel 4 --z3rlimit_factor 4"
 #restart-solver
 let rec ag_spec_zero_or_more_serializer_append
   (#source: nonempty_array_group)
@@ -1023,7 +1025,11 @@ let rec ag_spec_zero_or_more_serializer_append
   match l1 with
   | [] -> ()
   | hd :: tl ->
-    ag_spec_zero_or_more_serializer_append ps1 tl l2
+    ag_spec_zero_or_more_serializer_append ps1 tl l2;
+    List.Tot.append_assoc
+      (ps1.ag_serializer hd)
+      ((ag_spec_zero_or_more ps1).ag_serializer tl)
+      ((ag_spec_zero_or_more ps1).ag_serializer l2)
 #pop-options
 
 let ag_serializable_zero_or_more_append
@@ -1052,7 +1058,7 @@ let ag_serializable_zero_or_more_append
   end;
   ()
 
-#push-options "--z3rlimit_factor 32 --fuel 4 --ifuel 4 --split_queries always"
+#push-options "--z3rlimit_factor 32 --fuel 4 --ifuel 4"
 #restart-solver
 
 let rec ag_spec_zero_or_more_serializer_cons_aux
@@ -1079,7 +1085,11 @@ let rec ag_spec_zero_or_more_serializer_cons_aux
 = match l1 with
   | [] -> ()
   | hd :: tl ->
-    ag_spec_zero_or_more_serializer_cons_aux ps1 tl l2
+    ag_spec_zero_or_more_serializer_cons_aux ps1 tl l2;
+    List.Tot.append_assoc
+      (ps1.ag_serializer hd)
+      ((ag_spec_zero_or_more ps1).ag_serializer tl)
+      ((ag_spec_zero_or_more ps1).ag_serializer l2)
 
 let ag_spec_zero_or_more_serializer_cons
   (#source: nonempty_array_group)
@@ -1256,6 +1266,8 @@ let impl_serialize_array_group_post_zero_or_more_extend
     i < SZ.v size_prev /\
     Seq.index (Seq.slice w_prev 0 (SZ.v size_prev)) i == Seq.index (Seq.slice w 0 (SZ.v size_prev)) i
   ));
+  Seq.slice_slice w_prev 0 (SZ.v size_prev) 0 (SZ.v size_before_overall);
+  Seq.slice_slice w 0 (SZ.v size_prev) 0 (SZ.v size_before_overall);
   Seq.lemma_eq_intro (Seq.slice w_prev 0 (SZ.v size_before_overall)) (Seq.slice w 0 (SZ.v size_before_overall));
   Seq.lemma_eq_intro (Seq.slice w0 0 (SZ.v size_before_overall)) (Seq.slice w 0 (SZ.v size_before_overall))
 
@@ -1446,7 +1458,7 @@ let ag_spec_zero_or_more_serializer_nil
 
 #pop-options
 
-#push-options "--z3rlimit_factor 64 --fuel 2 --ifuel 2 --split_queries always"
+#push-options "--z3rlimit_factor 64 --fuel 2 --ifuel 2"
 #restart-solver
 
 let impl_serialize_array_group_post_zero_or_more_exit
@@ -1513,7 +1525,7 @@ let impl_serialize_array_group_post_zero_or_more_exit
 
 #pop-options
 
-#push-options "--z3rlimit_factor 16 --fuel 1 --ifuel 1 --split_queries always"
+#push-options "--z3rlimit_factor 16 --fuel 1 --ifuel 1"
 #restart-solver
 
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -1712,7 +1724,7 @@ let impl_serialize_array_group_zero_or_more_iterator_t
 =
   impl_serialize_array_group lmin lmax #_ #(list tgt1) #_ (ag_spec_zero_or_more ps1) #(array_iterator_t impl_tgt1 cbor_array_iterator_match (Iterator.mk_spec r1)) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1))
 
-#push-options "--z3rlimit_factor 16 --fuel 1 --ifuel 1 --split_queries always"
+#push-options "--z3rlimit_factor 16 --fuel 1 --ifuel 1"
 #restart-solver
 
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -1973,7 +1985,7 @@ let impl_serialize_array_group_one_or_more_nonempty
 
 #pop-options
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 8 --split_queries always"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 8"
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_array_group_one_or_more_slice
@@ -2044,7 +2056,7 @@ let impl_serialize_array_group_one_or_more_iterator_t
 =
   impl_serialize_array_group lmin lmax #_ #(list tgt1) #_ (ag_spec_one_or_more ps1) #(array_iterator_t impl_tgt1 cbor_array_iterator_match (Iterator.mk_spec r1)) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1))
 
-#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 8 --split_queries always"
+#push-options "--fuel 1 --ifuel 1 --z3rlimit_factor 8"
 #restart-solver
 
 inline_for_extraction noextract [@@noextract_to "krml"]

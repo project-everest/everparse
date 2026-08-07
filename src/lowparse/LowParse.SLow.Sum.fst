@@ -48,7 +48,7 @@ let parse32_sum_cases'
             (pc32 k)
             ()
 #restart-solver
-#push-options "--z3rlimit_factor 4 --split_queries always"
+#push-options "--z3rlimit_factor 4"
 let parse32_sum_aux
   (#kt: parser_kind)
   (t: sum)
@@ -140,7 +140,7 @@ let parse32_sum_cases
     k
 
 #restart-solver
-#push-options "--z3rlimit_factor 4 --split_queries always"
+#push-options "--z3rlimit_factor 4"
 inline_for_extraction
 let parse32_sum'
   (#kt: parser_kind)
