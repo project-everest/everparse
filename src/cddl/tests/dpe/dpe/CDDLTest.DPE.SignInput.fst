@@ -61,6 +61,7 @@ let is_tbs_bytes (tbs_bytes:Seq.seq UInt8.t) (w:Seq.seq UInt8.t) =
 let parse_failed (w:Seq.seq UInt8.t) =
   validate_and_parse_postcond_none bundle_signinputargs.b_typ w
 
+#push-options "--z3rlimit_factor 8"
 fn parse_sign_input_args (s:Slice.slice UInt8.t) (#p:perm) (#w:erased _)
 requires pts_to s #p w
 returns tbs:option (Slice.slice UInt8.t)
@@ -92,3 +93,4 @@ ensures (
     }
   }
 }
+#pop-options
