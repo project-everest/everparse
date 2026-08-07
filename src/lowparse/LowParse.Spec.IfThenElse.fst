@@ -39,7 +39,14 @@ let parse_ifthenelse_kind
 = and_then_kind p.parse_ifthenelse_tag_kind (parse_ifthenelse_payload_kind p)
 
 let parse_ifthenelse_synth_injective (p: parse_ifthenelse_param) (t: p.parse_ifthenelse_tag_t) : Lemma (synth_injective (p.parse_ifthenelse_synth t)) [SMTPat (synth_injective (p.parse_ifthenelse_synth t))] =
-  Classical.forall_intro_2 (fun x1 x2 -> Classical.move_requires (p.parse_ifthenelse_synth_injective t x1 t) x2)
+  let aux
+    (x1 x2: p.parse_ifthenelse_payload_t (p.parse_ifthenelse_tag_cond t))
+  : Lemma
+    (requires (p.parse_ifthenelse_synth t x1 == p.parse_ifthenelse_synth t x2))
+    (ensures (x1 == x2))
+  = p.parse_ifthenelse_synth_injective t x1 t x2
+  in
+  Classical.forall_intro_2 (Classical.move_requires_2 aux)
 
 let parse_ifthenelse_payload (p: parse_ifthenelse_param) (t: p.parse_ifthenelse_tag_t) : Tot (parser (parse_ifthenelse_payload_kind p) p.parse_ifthenelse_t) =
   weaken (parse_ifthenelse_payload_kind p) (parse_synth (dsnd (p.parse_ifthenelse_payload_parser (p.parse_ifthenelse_tag_cond t))) (p.parse_ifthenelse_synth t))
