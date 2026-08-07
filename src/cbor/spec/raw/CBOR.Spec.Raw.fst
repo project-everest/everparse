@@ -2,6 +2,12 @@ module CBOR.Spec.Raw
 friend CBOR.Spec.Raw.DataModel
 friend CBOR.Spec.API.Type
 
+include CBOR.Spec.Raw.Sort
+include CBOR.Spec.API.Type
+module RF = CBOR.Spec.Raw.Format
+module R = CBOR.Spec.Raw.Sort
+module RS = CBOR.Spec.Raw.Sort
+module U = CBOR.Spec.Util
 module DM = CBOR.Spec.Raw.DataModel
 
 let mk_cbor r =

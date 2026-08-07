@@ -1,4 +1,7 @@
 module CBOR.Spec.API.Format
+include CBOR.Spec.API.Type
+module U8 = FStar.UInt8
+module U64 = FStar.UInt64
 module RV = CBOR.Spec.Raw.Optimal
 module RF = CBOR.Spec.Raw.Format
 module RS = CBOR.Spec.Raw.Sort

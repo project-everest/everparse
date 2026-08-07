@@ -1,6 +1,11 @@
 module CBOR.Pulse.Raw.Format.Serialize
 friend CBOR.Spec.Raw.Format
 friend CBOR.Pulse.Raw.Format.Match
+include CBOR.Pulse.Raw.Match
+open CBOR.Spec.Raw.Format
+open Pulse.Lib.Trade
+module U8 = FStar.UInt8
+module S = Pulse.Lib.Slice
 #lang-pulse
 open Pulse.Lib.Pervasives
 open CBOR.Spec.Raw.EverParse

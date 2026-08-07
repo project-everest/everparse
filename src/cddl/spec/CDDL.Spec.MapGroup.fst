@@ -1,4 +1,8 @@
 module CDDL.Spec.MapGroup
+include CDDL.Spec.MapGroup.Base
+module Map = CDDL.Spec.Map
+open CBOR.Spec.API.Type
+module Util = CBOR.Spec.Util
 module U = CBOR.Spec.Util
 
 #push-options "--z3rlimit 64"

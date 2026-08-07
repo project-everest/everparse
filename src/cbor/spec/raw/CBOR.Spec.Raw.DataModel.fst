@@ -1,5 +1,10 @@
 module CBOR.Spec.Raw.DataModel
 
+include CBOR.Spec.Constants
+module U64 = FStar.UInt64
+module FS = FStar.FiniteSet.Base
+module U = CBOR.Spec.Util
+open CBOR.Spec.Raw.Base
 module R = CBOR.Spec.Raw.Sort
 
 let cbor_bool

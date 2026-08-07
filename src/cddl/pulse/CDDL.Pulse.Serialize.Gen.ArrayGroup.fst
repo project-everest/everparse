@@ -1,4 +1,17 @@
 module CDDL.Pulse.Serialize.Gen.ArrayGroup
+include CDDL.Pulse.Serialize.Gen.Base
+include CDDL.Pulse.Parse.ArrayGroup
+open Pulse.Lib.Pervasives
+open CBOR.Spec.API.Type
+open CBOR.Pulse.API.Base
+module Trade = Pulse.Lib.Trade.Util
+module R = Pulse.Lib.Reference
+module S = Pulse.Lib.Slice
+module U8 = FStar.UInt8
+module SZ = FStar.SizeT
+module Cbor = CBOR.Spec.API.Format
+module U64 = FStar.UInt64
+module Iterator = CDDL.Pulse.Iterator.Base
 #lang-pulse
 module SM = Pulse.Lib.SeqMatch.Util
 module GR = Pulse.Lib.GhostReference

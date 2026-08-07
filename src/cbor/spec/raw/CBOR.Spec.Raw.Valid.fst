@@ -1,5 +1,7 @@
 module CBOR.Spec.Raw.Valid
 
+include CBOR.Spec.Raw.Base
+open CBOR.Spec.Util
 let raw_data_item_size_eq_pat
   (x: raw_data_item)
 : Lemma

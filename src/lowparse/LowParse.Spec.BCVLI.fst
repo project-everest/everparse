@@ -1,4 +1,5 @@
 module LowParse.Spec.BCVLI
+include LowParse.Spec.BoundedInt // for bounded_integer
 open LowParse.Spec.Combinators // for parse_ret
 
 module U32 = FStar.UInt32

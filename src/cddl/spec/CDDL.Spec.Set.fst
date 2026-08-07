@@ -1,4 +1,6 @@
 module CDDL.Spec.Set
+open CDDL.Spec.Base
+module U = CBOR.Spec.Util
 module Cbor = CBOR.Spec.API.Type
 
 let dummy_cbor : Cbor.cbor = Cbor.pack (Cbor.CSimple 0uy)

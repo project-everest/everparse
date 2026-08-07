@@ -1,4 +1,6 @@
 module CDDL.Spec.MapGroup.Base
+include CDDL.Spec.Base
+module Cbor = CBOR.Spec.API.Type
 open CBOR.Spec.API.Type
 
 module FE = FStar.FunctionalExtensionality

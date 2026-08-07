@@ -1,4 +1,11 @@
 module CBOR.Pulse.Raw.Match.Perm
+include CBOR.Pulse.Raw.Match
+open CBOR.Spec.Raw.Base
+open Pulse.Lib.Pervasives
+open Pulse.Lib.Trade
+module PM = Pulse.Lib.SeqMatch
+module S = Pulse.Lib.Slice
+module R = Pulse.Lib.Reference
 #lang-pulse
 open CBOR.Pulse.Raw.Util
 

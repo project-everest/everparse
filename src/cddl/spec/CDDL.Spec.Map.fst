@@ -1,4 +1,6 @@
 module CDDL.Spec.Map
+open CDDL.Spec.Base
+module S = CDDL.Spec.Set
 module F = FStar.FunctionalExtensionality
 module Util = CBOR.Spec.Util
 module NE = FStar.Nonempty

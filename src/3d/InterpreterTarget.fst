@@ -14,6 +14,7 @@
    limitations under the License.
 *)
 module InterpreterTarget
+open Binding
 (* The abstract syntax for the code produced by 3d, targeting prelude/Interpreter.fst *)
 open FStar.All
 open FStar.List.Tot

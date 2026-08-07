@@ -1,6 +1,15 @@
 module CBOR.Pulse.Raw.Nondet
 friend CBOR.Pulse.API.Nondet.Type
 friend CBOR.Spec.API.Format
+include CBOR.Pulse.API.Nondet.Type
+open CBOR.Pulse.API.Base
+open Pulse.Lib.Pervasives
+module Spec = CBOR.Spec.API.Format
+module SZ = FStar.SizeT
+module U8 = FStar.UInt8
+module S = Pulse.Lib.Slice.Util
+module Trade = Pulse.Lib.Trade.Util
+module SM = Pulse.Lib.SeqMatch.Util
 #lang-pulse
 open CBOR.Pulse.Raw.Match
 

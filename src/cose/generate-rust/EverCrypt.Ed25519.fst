@@ -1,4 +1,7 @@
 module EverCrypt.Ed25519
+open Pulse.Lib.Pervasives
+module S = Pulse.Lib.Slice
+module U8 = FStar.UInt8
 open Pulse
 #lang-pulse
 

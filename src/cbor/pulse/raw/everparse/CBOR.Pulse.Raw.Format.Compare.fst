@@ -1,6 +1,11 @@
 module CBOR.Pulse.Raw.Format.Compare
 friend CBOR.Pulse.Raw.Format.Match
 friend CBOR.Spec.Raw.Format
+include CBOR.Spec.Raw.Format
+include CBOR.Pulse.Raw.Compare.Base
+include CBOR.Pulse.Raw.Match
+open Pulse.Lib.Pervasives
+module I16 = FStar.Int16
 #lang-pulse
 module Bytes = CBOR.Pulse.Raw.Compare.Bytes
 module F = CBOR.Spec.Raw.EverParse

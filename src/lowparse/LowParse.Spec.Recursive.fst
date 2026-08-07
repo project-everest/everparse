@@ -1,5 +1,8 @@
 module LowParse.Spec.Recursive
 
+open LowParse.Spec.Combinators
+open LowParse.Spec.VCList
+open LowParse.WellFounded
 open LowParse.Spec.Fuel
 
 module Seq = FStar.Seq

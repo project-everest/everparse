@@ -1,4 +1,11 @@
 module CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2
+include CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux1
+module Trade = Pulse.Lib.Trade.Util
+module SZ = FStar.SizeT
+module U64 = FStar.UInt64
+module Iterator = CDDL.Pulse.Iterator.Base
+module EqTest = CDDL.Spec.EqTest
+module Map = CDDL.Spec.Map
 #lang-pulse
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Proof0
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma1

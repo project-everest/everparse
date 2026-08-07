@@ -271,7 +271,7 @@ let seqbytes_cond_prop_lseq_bytes
        (fst (Some?.v (parse (LSB.parse_lseq_bytes clen) (Seq.slice v (SZ.v offset) (Seq.length v))))))
        == (Seq.slice v (SZ.v offset) (SZ.v off) = cst))
   with introduce _ ==> _
-  with _. (
+  with (
     let s = Seq.slice v (SZ.v offset) (Seq.length v) in
     Seq.lemma_eq_intro (Seq.slice s 0 clen) (Seq.slice v (SZ.v offset) (SZ.v off))
   )

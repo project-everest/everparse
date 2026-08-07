@@ -1,4 +1,8 @@
 module CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.LoopBody
+include CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Invariant
+open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma11
+open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma12
+open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma13
 #lang-pulse
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Proof0
 open CDDL.Pulse.Serialize.Gen.MapGroup.ZeroOrMore.Aux2.Lemma1

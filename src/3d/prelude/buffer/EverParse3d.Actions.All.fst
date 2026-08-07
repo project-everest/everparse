@@ -3,6 +3,7 @@ friend EverParse3d.Actions.Base
 friend EverParse3d.InputStream.All
 friend EverParse3d.InputStream.Buffer
 
+include EverParse3d.Actions.Base
 let _ = EverParse3d.Actions.BackendFlagValue.backend_flag_value
 
 module IB = EverParse3d.InputBuffer

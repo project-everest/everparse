@@ -1,5 +1,7 @@
 module EverParse3d.Readable
 
+module B = LowStar.Buffer
+module U32 = FStar.UInt32
 let perm0 t = B.pointer (Ghost.erased (Seq.seq bool))
 
 let perm_prop p b = B.loc_disjoint (B.loc_buffer b) (B.loc_buffer p) /\ True

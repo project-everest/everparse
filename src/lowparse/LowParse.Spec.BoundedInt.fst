@@ -1,5 +1,7 @@
 module LowParse.Spec.BoundedInt
 
+include LowParse.Spec.Base
+include LowParse.Spec.Int // for parse_u16_kind
 open LowParse.Spec.Combinators // for make_total_constant_size_parser_precond
 
 module Seq = FStar.Seq

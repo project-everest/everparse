@@ -1,6 +1,10 @@
 module EverParse3d.Actions.Base
 friend EverParse3d.Kinds
 friend EverParse3d.Prelude
+module Cast = FStar.Int.Cast
+open EverParse3d.Prelude
+module U32 = FStar.UInt32
+module U64 = FStar.UInt64
 open FStar.HyperStack.ST
 open LowStar.Buffer
 open LowStar.BufferOps
@@ -101,14 +105,14 @@ let index_equations ()
          i0 `inv_implies` i2) ==>
         (i0 `inv_implies` (i1 `conj_inv` i2))
     with introduce _ ==> _
-    with _ . inv_implies_conj i0 i1 i2 () ();
+    with inv_implies_conj i0 i1 i2 () ();
     introduce forall l. _
     with eloc_includes_none l;
     introduce forall l0 l1 l2. (l0 `eloc_includes` l1 /\
          l0 `eloc_includes` l2) ==>
         (l0 `eloc_includes` (l1 `eloc_union` l2))
     with introduce _ ==> _
-    with _ . eloc_includes_union l0 l1 l2 () ();
+    with eloc_includes_union l0 l1 l2 () ();
     introduce forall l. _
     with eloc_includes_refl l
 

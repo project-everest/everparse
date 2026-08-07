@@ -1,11 +1,21 @@
 module CBOR.Pulse.Raw.Format.Parse
 friend CBOR.Spec.Raw.Format
+include CBOR.Pulse.Raw.Match
+open CBOR.Spec.Raw.Format
+open Pulse.Lib.Pervasives
+open Pulse.Lib.Trade
+open Pulse.Lib.Slice
+module U8 = FStar.UInt8
+module SZ = FStar.SizeT
+module Trade = Pulse.Lib.Trade.Util
+module R = CBOR.Spec.Raw.Optimal
 #lang-pulse
 open CBOR.Pulse.Raw.EverParse.Serialized.Base
 open CBOR.Spec.Raw.EverParse
 open CBOR.Pulse.Raw.EverParse.Format
 open LowParse.Spec.Base
 open LowParse.Pulse.Base
+open CBOR.Spec.Raw.Format // must come last, to match the interface's resolution
 
 module CompareBytes = CBOR.Pulse.Raw.Compare.Bytes
 
@@ -19,7 +29,7 @@ let parse_fail_no_serialize
 = introduce forall v1 v2.
     (v == serialize_cbor v1 `Seq.append` v2) ==> False
   with introduce _ ==> _
-  with _ . (
+  with (
     parse_strong_prefix #parse_raw_data_item_kind #raw_data_item parse_raw_data_item (serialize_cbor v1) v
   )
 #pop-options
@@ -96,14 +106,12 @@ let cbor_parse_aux
     Classical.forall_intro_2 (fun v1 v2 -> Classical.move_requires (prf v1) v2);
     ()
 
-module Trade = Pulse.Lib.Trade.Util
 
 #push-options "--z3rlimit 16"
 
 #restart-solver
 
 module U64 = FStar.UInt64
-module U8 = FStar.UInt8
 
 #restart-solver
 #push-options "--fuel 1"
