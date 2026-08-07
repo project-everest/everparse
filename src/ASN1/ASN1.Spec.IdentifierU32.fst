@@ -801,7 +801,9 @@ let encode_asn1_first_byte
   U8.add b0'
          (U8.add b1'
                  b)
+#pop-options
 
+#push-options "--fuel 1 --ifuel 2 --z3rlimit 64"
 let lemma_encode_asn1_first_byte_inverse
   (buf : byte)
 : Lemma (ensures

@@ -146,6 +146,7 @@ ensures record_perm record spec ** Trade.trade (record_perm record spec) k
   }
 }
 
+#push-options "--z3rlimit_factor 8"
 fn derive_context_aux
   (sid:sid_t)
   (#t:G.erased trace)
@@ -170,8 +171,9 @@ ensures derive_context_post sid t p w input res
     false -> { Session_error }
   }
 }
+#pop-options
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 32 --z3rlimit_factor 8"
 
 fn derive_context
   (sid:sid_t)
