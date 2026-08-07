@@ -60,6 +60,20 @@ let impl_serialize_map_zero_or_more_iterator_gen_invariant_min_next
   (v0 v': Map.t tkey (list tvalue))
   (gk: tkey)
   (gv: tvalue)
-= Classical.forall_intro_2 (fun (v: Map.t tkey (list tvalue)) (eqtest: EqTest.eq_test tkey) ->
-    Classical.move_requires (invariant_min_next_aux p sp1 sp2 except min v0 v v' gk gv) eqtest
-  )
+= let aux
+    (v: Map.t tkey (list tvalue))
+    (eqtest: EqTest.eq_test tkey)
+  : Lemma
+    (requires
+      map_of_list_maps_to_nonempty v' /\
+      impl_serialize_map_zero_or_more_iterator_gen_invariant_min p sp1 sp2 except min v0 v /\
+      v == map_of_list_cons eqtest gk gv v'
+    )
+    (ensures
+      impl_serialize_map_zero_or_more_iterator_gen_invariant_min p sp1 sp2 except
+        (impl_serialize_map_zero_or_more_iterator_gen_update_min minl sp1 sp2 except min gk gv)
+        v0 v'
+    )
+  = invariant_min_next_aux p sp1 sp2 except min v0 v v' gk gv eqtest
+  in
+  Classical.forall_intro_2 (Classical.move_requires_2 aux)

@@ -164,14 +164,64 @@ let to_be_signed_spec
     (aad payload: spect_bstr)
     (tbs: Seq.seq UInt8.t)
     : prop =
-  ser_to bundle_sig_structure''.b_spec (mk_sig_structure_spec phdr aad payload) tbs
+  // NOTE: this must use exactly the spec that appears in the postcondition of
+  // [serialize_sig_structure'].  F* no longer substitutes let-bound definitions
+  // into VCs, so the SMT solver can no longer relate this to the (definitionally
+  // equal) [bundle_sig_structure''.b_spec]: both are huge generated terms.
+  ser_to (CDDL.Pulse.Serialize.Base.coerce_spec bundle_sig_structure.b_spec spect_sig_structure ())
+    (mk_sig_structure_spec phdr aad payload) tbs
+
+let sizet_gt0 (x: SizeT.t) : Lemma (requires x <> 0sz) (ensures SizeT.v x > 0) = ()
+
+// Hoist the slice-length obligation out of the huge Pulse context: the
+// refinement on [Seq.slice] can no longer be discharged there.
+let ed25519_sign_len (k: Seq.lseq UInt8.t 32)
+    (m: Seq.seq UInt8.t { Seq.length m <= max_size_t })
+: Lemma (Seq.length (spec_ed25519_sign k m) == 64)
+  [SMTPat (spec_ed25519_sign k m)]
+= ()
+
+#push-options "--fuel 0 --ifuel 0 --z3rlimit_factor 16"
+let slice_len (s: Seq.seq UInt8.t) (n: nat) : Lemma
+  (requires n <= Seq.length s)
+  (ensures Seq.length (Seq.slice s 0 n) == n)
+= ()
+#pop-options
+
+// [ser_to_inj] can no longer be applied through the definition of
+// [to_be_signed_spec]; restate it with a trigger on [to_be_signed_spec] itself.
+let to_be_signed_spec_inj
+    (phdr: spect_empty_or_serialized_map)
+    (aad payload: spect_bstr)
+    (tbs tbs': Seq.seq UInt8.t)
+: Lemma
+  (requires to_be_signed_spec phdr aad payload tbs /\ to_be_signed_spec phdr aad payload tbs')
+  (ensures tbs == tbs')
+  [SMTPat (to_be_signed_spec phdr aad payload tbs); SMTPat (to_be_signed_spec phdr aad payload tbs')]
+= ser_to_inj
+    (CDDL.Pulse.Serialize.Base.coerce_spec bundle_sig_structure.b_spec spect_sig_structure ())
+    (mk_sig_structure_spec phdr aad payload) tbs tbs'
+
+let to_be_signed_spec_intro
+    (phdr: spect_empty_or_serialized_map)
+    (aad payload: spect_bstr)
+    (w: Seq.seq UInt8.t)
+    (res: SizeT.t)
+: Lemma
+  (requires
+    CDDL.Pulse.Serialize.Base.impl_serialize_post
+      (CDDL.Pulse.Serialize.Base.coerce_spec bundle_sig_structure.b_spec spect_sig_structure ())
+      (mk_sig_structure_spec phdr aad payload) w res /\
+    SizeT.v res > 0)
+  (ensures to_be_signed_spec phdr aad payload (Seq.slice w 0 (SizeT.v res)))
+= ()
 
 inline_for_extraction noextract
 let sz_to_u32_safe (i: SizeT.t { SizeT.v i < pow2 32 }) : j:UInt32.t { UInt32.v j == SizeT.v i } =
   Math.Lemmas.small_mod (SizeT.v i) (pow2 32);
   SizeT.sizet_to_uint32 i
 
-#push-options "--z3rlimit 32 --fuel 0 --ifuel 0"
+#push-options "--z3rlimit 32 --z3rlimit_factor 32 --fuel 0 --ifuel 0"
 fn create_sig privkey phdr aad payload (sigbuf: AP.ptr UInt8.t)
     (#vphdr: erased _) (#vaad: erased _) (#vpayload: erased _) (#pprivkey: erased _)
     (#vprivkey: erased (Seq.seq UInt8.t) { Seq.length vprivkey == 32 })
@@ -208,9 +258,13 @@ fn create_sig privkey phdr aad payload (sigbuf: AP.ptr UInt8.t)
     with vsigbuf. rewrite AP.pts_to sigbuf vsigbuf as AP.pts_to sigbuf (spec_ed25519_sign vprivkey vsigbuf);
     with voutbuf. rewrite S.pts_to outbuf voutbuf ** S.is_from_array (V.vec_to_array arr) outbuf as emp;
   } else {
+    sizet_gt0 written;
+    with vout. assert S.pts_to outbuf vout;
+    to_be_signed_spec_intro vphdr vaad vpayload vout written;
+    slice_len vout (SizeT.v written);
     let tbs = Pulse.Lib.Slice.Util.subslice_trade outbuf 0sz written;
     with vtbs. assert S.pts_to tbs vtbs ** pure (to_be_signed_spec vphdr vaad vpayload vtbs);
-    S.pts_to_len _;
+    S.pts_to_len tbs;
     let tbs' = S.slice_to_arrayptr_intro tbs;
     sign sigbuf privkey (sz_to_u32_safe written) tbs';
     S.slice_to_arrayptr_elim tbs';
@@ -259,6 +313,71 @@ let dummy_map_val () : dummy_map_type =
     { c = CBOR.Pulse.API.Det.Dummy.dummy_cbor_det_t (); p = 0.5R })
 
 let assert_norm' (p: prop) : Pure (squash p) (requires normalize p) (ensures fun _ -> True) = ()
+
+#push-options "--fuel 2 --ifuel 2"
+let map_of_list_pair_nil (#key #value: Type0) (key_eq: CDDL.Spec.EqTest.eq_test key)
+  (l: list (key & value))
+: Lemma (requires Nil? l)
+        (ensures map_of_list_pair key_eq l == CDDL.Spec.Map.empty key (list value))
+= ()
+#pop-options
+
+#push-options "--fuel 2 --ifuel 2"
+let label_map_of_list_pair_nil (l: list (spect_evercddl_label & spect_values))
+: Lemma (requires Nil? l)
+        (ensures map_of_list_pair
+      (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_label_right
+                      spect_evercddl_label_left
+                      spect_evercddl_label_left_right
+                      spect_evercddl_label_right_left
+                      (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_int_right
+                              spect_evercddl_int_left
+                              spect_evercddl_int_left_right
+                              spect_evercddl_int_right_left
+                              (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_uint_right
+                                      spect_evercddl_uint_left
+                                      spect_evercddl_uint_left_right
+                                      spect_evercddl_uint_right_left
+                                      (CDDL.Spec.EqTest.eqtype_eq UInt64.t))
+                                  (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_nint_right
+                                      spect_nint_left
+                                      spect_nint_left_right
+                                      spect_nint_right_left
+                                      (CDDL.Spec.EqTest.eqtype_eq UInt64.t))))
+                          (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_tstr_right
+                              spect_tstr_left
+                              spect_tstr_left_right
+                              spect_tstr_right_left
+                              (CDDL.Spec.EqTest.eqtype_eq (Seq.Base.seq UInt8.t)))))
+          l == CDDL.Spec.Map.empty spect_evercddl_label (list spect_values))
+= map_of_list_pair_nil
+      (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_label_right
+                      spect_evercddl_label_left
+                      spect_evercddl_label_left_right
+                      spect_evercddl_label_right_left
+                      (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_int_right
+                              spect_evercddl_int_left
+                              spect_evercddl_int_left_right
+                              spect_evercddl_int_right_left
+                              (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_uint_right
+                                      spect_evercddl_uint_left
+                                      spect_evercddl_uint_left_right
+                                      spect_evercddl_uint_right_left
+                                      (CDDL.Spec.EqTest.eqtype_eq UInt64.t))
+                                  (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_nint_right
+                                      spect_nint_left
+                                      spect_nint_left_right
+                                      spect_nint_right_left
+                                      (CDDL.Spec.EqTest.eqtype_eq UInt64.t))))
+                          (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_tstr_right
+                              spect_tstr_left
+                              spect_tstr_left_right
+                              spect_tstr_right_left
+                              (CDDL.Spec.EqTest.eqtype_eq (Seq.Base.seq UInt8.t)))))
+
+          l
+#pop-options
+#push-options "--z3rlimit_factor 32"
 
 let rel_inl_map_eq (x: slice (evercddl_label & values)) y = assert_norm' (rel_inl_map x y == 
   (exists* l .
@@ -319,6 +438,7 @@ fn mk_phdrs (alg: Int32.t) (rest: A.larray (evercddl_label & values) 0)
   assert pure ((Ghost.reveal vrest) `Seq.equal` Seq.empty);
   Pulse.Lib.SeqMatch.seq_list_match_nil_intro (Ghost.reveal vrest) []
       (rel_pair rel_evercddl_label rel_values);
+  label_map_of_list_pair_nil [];
   rw_l (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
   rw_l (rel_map_sign1_phdrs_eq alg alg' _);
   with res. assert rel_empty_or_serialized_map res (sign1_phdrs_spec alg);
@@ -327,6 +447,7 @@ fn mk_phdrs (alg: Int32.t) (rest: A.larray (evercddl_label & values) 0)
     ensures pts_to rest #prest vrest
   {
     rw_r (rel_map_sign1_phdrs_eq alg alg' _);
+    label_map_of_list_pair_nil [];
     rw_r (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
     S.to_array rest2;
     A.pts_to_len rest;
@@ -366,6 +487,7 @@ fn mk_emphdrs (rest: A.larray (evercddl_label & values) 0)
   let rest2 = S.from_array rest 0sz;
   Pulse.Lib.SeqMatch.seq_list_match_nil_intro (Ghost.reveal vrest) []
       (rel_pair rel_evercddl_label rel_values);
+  label_map_of_list_pair_nil [];
   rw_l (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
   rw_l (rel_map_sign1_emphdrs_eq _);
   with res. assert rel_header_map res (sign1_emphdrs_spec ());
@@ -375,6 +497,7 @@ fn mk_emphdrs (rest: A.larray (evercddl_label & values) 0)
     ensures pts_to rest #prest vrest
   {
     rw_r (rel_map_sign1_emphdrs_eq _);
+    label_map_of_list_pair_nil [];
     rw_r (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
     S.to_array rest2;
     A.pts_to_len rest;
@@ -421,7 +544,9 @@ let sign1_spec
     : prop =
   let phdr = sign1_phdrs_spec (-8l) in
   exists tbs. to_be_signed_spec phdr aad payload tbs /\
-  ser_to bundle_cose_sign1_tagged''.b_spec
+  // NOTE: must use exactly the spec appearing in the postcondition of
+  // [serialize_cose_sign1_tagged']; see the note on [to_be_signed_spec].
+  ser_to (CDDL.Pulse.Serialize.Base.coerce_spec bundle_cose_sign1_tagged.b_spec spect_cose_sign1_tagged ())
     (Mkspect_cose_sign1_tagged0 (Mkspect_cose_sign10
         phdr uhdr (Inl payload) (Mkspect_bstr0 (spec_ed25519_sign privkey tbs))))
     msg
@@ -439,7 +564,8 @@ ghost fn trade_exists (#t: Type0) (p: t->slprop) x
   { () };
 }
 
-#push-options "--fuel 0 --ifuel 0 --z3rlimit_factor 10 --query_stats"
+#pop-options
+#push-options "--fuel 0 --ifuel 0 --z3rlimit_factor 64 --query_stats"
 //the proof of pure sign1_spec takes a while---should profile it
 fn sign1 privkey uhdr aad payload (outbuf: S.slice UInt8.t)
     #pprivkey (#vprivkey: erased (Seq.seq UInt8.t) { Seq.length vprivkey == 32 })
@@ -465,10 +591,14 @@ fn sign1 privkey uhdr aad payload (outbuf: S.slice UInt8.t)
   let phdr = mk_phdrs alg phdrauxbuf;
   let mut sigbuf = [| 0uy; 64sz |];
   Seq.lemma_create_len (SizeT.v 64sz) 0uy; //?!?
+  Seq.lemma_create_len 64 0uy;
   let sigbuf2 = AP.from_array sigbuf;
   create_sig privkey phdr aad payload sigbuf2;
-  AP.to_array sigbuf2 sigbuf #_ #(spec_ed25519_sign vprivkey _);
-  with tbs. assert A.pts_to sigbuf (spec_ed25519_sign vprivkey tbs);
+  with tbs. assert AP.pts_to sigbuf2 (spec_ed25519_sign vprivkey tbs);
+  assert pure (Seq.length (Seq.create 64 0uy) == 64);
+  assert pure (Seq.length (spec_ed25519_sign vprivkey tbs) == 64);
+  AP.to_array sigbuf2 sigbuf #1.0R #(spec_ed25519_sign vprivkey tbs);
+  assert A.pts_to sigbuf (spec_ed25519_sign vprivkey tbs);
   let sigbuf3 = S.from_array sigbuf 64sz;
   with sigbuf4. assert pure ((sigbuf4 <: bstr) == Mkbstr0 { p = 1.0R; s = sigbuf3 });
   rw_l_wt (rel_bstr_eq sigbuf4 (Mkspect_bstr0 (spec_ed25519_sign vprivkey tbs)));
@@ -685,6 +815,35 @@ fn borrow_payload
   (Inl?.v msg._x0.payload)._x0.s
 }
 
+// [fits 0] obligation of the literal [0sz] times out in the huge context below.
+inline_for_extraction noextract
+let zero_sz: v: SizeT.t { SizeT.v v == 0 } = 0sz
+
+// The [Pure] postcondition of [cbor_det_parse] is no longer picked up
+// automatically in ghost/prop positions, and re-deriving it inside the (very
+// large) proof context of [verify1] times out.  Package the bound into the
+// return type instead.
+#push-options "--fuel 2 --ifuel 2"
+noextract
+let parse_len (x: Seq.seq UInt8.t) : GTot (n: nat { n <= Seq.length x }) =
+  match CBOR.Spec.API.Format.cbor_det_parse x with
+  | Some (_, n) -> n
+  | None -> 0
+
+let parse_len_eq (x: Seq.seq UInt8.t)
+: Lemma (requires Some? (CBOR.Spec.API.Format.cbor_det_parse x))
+        (ensures parse_len x == (Some?.v (CBOR.Spec.API.Format.cbor_det_parse x))._2)
+= ()
+
+// Discharged here rather than inline, so that the refinement obligations on the
+// arguments of [Seq.lemma_len_slice] are not raised in the huge proof context of
+// [verify1].
+let parse_len_full (x rem: Seq.seq UInt8.t)
+: Lemma (requires rem == Seq.slice x (parse_len x) (Seq.length x) /\ Seq.length rem == 0)
+        (ensures parse_len x == Seq.length x)
+= Seq.lemma_len_slice x (parse_len x) (Seq.length x)
+#pop-options
+
 let parses_from #t #st (s: CDDL.Spec.Base.spec t st true) (x: st) y : prop =
   match CBOR.Spec.API.Format.cbor_det_parse y with
   | Some (c, len) -> len == Seq.length y /\ t c /\ s.parser c == x
@@ -700,6 +859,28 @@ let good_signature (pubkey: Seq.seq UInt8.t { Seq.length pubkey == 32 })
   Seq.length vmsg._x0.signature._x0 == 64 /\
   to_be_signed_spec vmsg._x0.protected (Mkspect_bstr0 aad) (Mkspect_bstr0 payload) tbs /\
   spec_ed25519_verify pubkey tbs vmsg._x0.signature._x0
+
+// Explicit introduction rule: the existential witnesses can no longer be found
+// by the SMT solver inside the huge proof context of [verify1].
+#push-options "--fuel 2 --ifuel 2"
+let good_signature_intro
+    (pubkey: Seq.seq UInt8.t { Seq.length pubkey == 32 })
+    (msg: Seq.seq UInt8.t)
+    (vaad: spect_bstr)
+    (vmsg: spect_cose_sign1_tagged { Inl? vmsg._x0.payload })
+: Lemma
+  (requires
+    parses_from bundle_cose_sign1_tagged''.b_spec vmsg msg /\
+    Seq.length vmsg._x0.signature._x0 == 64 /\
+    (exists (tbs: Seq.seq UInt8.t { Seq.length tbs <= max_size_t }).
+      to_be_signed_spec vmsg._x0.protected vaad (Inl?.v vmsg._x0.payload) tbs /\
+      spec_ed25519_verify pubkey tbs vmsg._x0.signature._x0))
+  (ensures good_signature pubkey msg vaad._x0 (Inl?.v vmsg._x0.payload)._x0)
+= match vmsg._x0.payload with
+  | Inl p ->
+    assert (p == Mkspect_bstr0 p._x0);
+    assert (vaad == Mkspect_bstr0 vaad._x0)
+#pop-options
 
 let int_eq_of_diff_zero (a b: int) : Lemma (requires a - b == 0) (ensures a == b) = ()
 let nat_eq_of_diff_zero (a b: nat) : Lemma (requires a - b == 0) (ensures a == b) =
@@ -746,15 +927,15 @@ fn verify1 pubkey aad msg
           rel_either_cases _ _ _ _;
           elim_trade _ (rel_cose_sign1_tagged _ _);
 
-          if (S.len rem = 0sz && Inl? x._x0.payload) {
-            let len = hide (Some?.v (CBOR.Spec.API.Format.cbor_det_parse vmsg))._2;
+          if (S.len rem = zero_sz && Inl? x._x0.payload) {
+            let len = hide (parse_len vmsg);
             S.pts_to_len rem;
             assert pure (Seq.length wr == 0);
-            Seq.lemma_len_slice vmsg len (Seq.length vmsg);
-            nat_eq_of_diff_zero (Seq.length vmsg) len;
+            parse_len_full vmsg wr;
             assert pure (parses_from bundle_cose_sign1_tagged''.b_spec y vmsg);
             let success = verify1_core pubkey aad x;
             if (success) {
+              good_signature_intro vpubkey vmsg vaad y;
               let payload = borrow_payload x;
               elim_hyp_r _ _ _;
               trade_compose _ (rel_cose_sign1_tagged _ _) _;

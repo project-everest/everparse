@@ -91,15 +91,17 @@ let list_append_length_pat
   [SMTPat (List.Tot.append l1 l2)]
 = List.Tot.append_length l1 l2
 
+(* NOTE: no SMTPat here. Associativity has a propositional-equality conclusion,
+   so both nestings join the same congruence class and E-matching (which works
+   modulo congruence) re-triggers on every member, enumerating all Catalan-many
+   parse trees of an append chain. With the SMTPat this quantifier reached
+   ~358k instantiations in a single query and starved the arithmetic solver.
+   Related: https://github.com/Z3Prover/z3/issues/10435 *)
 let list_append_assoc_pat
   (#t: Type)
   (l1 l2 l3: list t)
 : Lemma
   (ensures (List.Tot.append l1 (List.Tot.append l2 l3) == List.Tot.append (List.Tot.append l1 l2) l3))
-  [SMTPatOr [
-    [SMTPat (List.Tot.append l1 (List.Tot.append l2 l3))];
-    [SMTPat (List.Tot.append (List.Tot.append l1 l2) l3)];
-  ]]
 = List.Tot.append_assoc l1 l2 l3
 
 let list_append_nil_r_pat
@@ -1023,7 +1025,11 @@ let rec ag_spec_zero_or_more_serializer_append
   match l1 with
   | [] -> ()
   | hd :: tl ->
-    ag_spec_zero_or_more_serializer_append ps1 tl l2
+    ag_spec_zero_or_more_serializer_append ps1 tl l2;
+    List.Tot.append_assoc
+      (ps1.ag_serializer hd)
+      ((ag_spec_zero_or_more ps1).ag_serializer tl)
+      ((ag_spec_zero_or_more ps1).ag_serializer l2)
 #pop-options
 
 let ag_serializable_zero_or_more_append
@@ -1079,7 +1085,11 @@ let rec ag_spec_zero_or_more_serializer_cons_aux
 = match l1 with
   | [] -> ()
   | hd :: tl ->
-    ag_spec_zero_or_more_serializer_cons_aux ps1 tl l2
+    ag_spec_zero_or_more_serializer_cons_aux ps1 tl l2;
+    List.Tot.append_assoc
+      (ps1.ag_serializer hd)
+      ((ag_spec_zero_or_more ps1).ag_serializer tl)
+      ((ag_spec_zero_or_more ps1).ag_serializer l2)
 
 let ag_spec_zero_or_more_serializer_cons
   (#source: nonempty_array_group)
@@ -1256,6 +1266,8 @@ let impl_serialize_array_group_post_zero_or_more_extend
     i < SZ.v size_prev /\
     Seq.index (Seq.slice w_prev 0 (SZ.v size_prev)) i == Seq.index (Seq.slice w 0 (SZ.v size_prev)) i
   ));
+  Seq.slice_slice w_prev 0 (SZ.v size_prev) 0 (SZ.v size_before_overall);
+  Seq.slice_slice w 0 (SZ.v size_prev) 0 (SZ.v size_before_overall);
   Seq.lemma_eq_intro (Seq.slice w_prev 0 (SZ.v size_before_overall)) (Seq.slice w 0 (SZ.v size_before_overall));
   Seq.lemma_eq_intro (Seq.slice w0 0 (SZ.v size_before_overall)) (Seq.slice w 0 (SZ.v size_before_overall))
 

@@ -73,7 +73,8 @@ let cbor_map_fold_singleton_forall
   (key value: cbor)
 : Lemma
   (forall x . cbor_map_fold f x (cbor_map_singleton key value) == f x key)
-= Classical.forall_intro (fun x -> cbor_map_fold_singleton f x key value)
+= introduce forall x . cbor_map_fold f x (cbor_map_singleton key value) == f x key
+  with cbor_map_fold_singleton f x key value
 
 let cbor_map_fold_union_forall
   (#a: Type)
@@ -89,7 +90,10 @@ let cbor_map_fold_union_forall
     cbor_map_fold f x (cbor_map_union m1 m2) ==
       cbor_map_fold f (cbor_map_fold f x m1) m2
   ))
-= Classical.forall_intro (fun x -> Classical.move_requires (cbor_map_fold_union f x m1) m2)
+= introduce forall x .
+    cbor_map_fold f x (cbor_map_union m1 m2) ==
+      cbor_map_fold f (cbor_map_fold f x m1) m2
+  with cbor_map_fold_union f x m1 m2
 
 let cbor_map_fold_min_length_accu
   (f: cbor -> nat)

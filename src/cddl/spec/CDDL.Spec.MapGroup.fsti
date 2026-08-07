@@ -1052,7 +1052,9 @@ let matches_map_group_comm'
       (map_group_concat g1 (map_group_concat g3 (map_group_concat g2 g4)))
       m
   ))
-= matches_map_group_comm_aux g1 g2 (map_group_concat g3 g4) t1 t2 (map_constraint_choice t3 t4) m;
+= map_group_concat_assoc g1 g3 g4;
+  map_group_concat_assoc g1 g3 (map_group_concat g2 g4);
+  matches_map_group_comm_aux g1 g2 (map_group_concat g3 g4) t1 t2 (map_constraint_choice t3 t4) m;
   matches_map_group_comm_aux g2 (map_group_concat g1 g3) g4 t2 (map_constraint_choice t1 t3) t4 m
 
 let matches_map_group_comm
@@ -1081,7 +1083,11 @@ let matches_map_group_comm
       (map_group_concat g1 (map_group_concat g4 (map_group_concat g3 (map_group_concat g2 g5))))
       m
   ))
-= matches_map_group_comm' g1 g2 (map_group_concat g3 g4) g5 t1 t2 (map_constraint_choice t3 t4) t5 m;
+= map_group_concat_assoc g3 g4 g5;
+  map_group_concat_assoc g3 g4 (map_group_concat g2 g5);
+  map_group_concat_assoc g1 g3 (map_group_concat g4 (map_group_concat g2 g5));
+  map_group_concat_assoc g1 g3 (map_group_concat g2 (map_group_concat g4 g5));
+  matches_map_group_comm' g1 g2 (map_group_concat g3 g4) g5 t1 t2 (map_constraint_choice t3 t4) t5 m;
   matches_map_group_comm' (map_group_concat g1 g3) g4 g2 g5 (map_constraint_choice t1 t3) t4 t2 t5 m;
   matches_map_group_comm' g1 g4 g3 (map_group_concat g2 g5) t1 t4 t3 (map_constraint_choice t2 t5) m
 

@@ -167,7 +167,7 @@ let parser_spec_map_group_eq
     parser_spec_map_group source0 p target_prop' x == p x'
   ))
 
-#push-options "--z3rlimit 256"
+#push-options "--z3rlimit 256 --z3rlimit_factor 2"
 
 #restart-solver
 let map_group_concat_footprint_disjoint
