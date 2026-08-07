@@ -1,6 +1,8 @@
 module EverParse3d.Actions.Base
+#lang-pulse
 friend EverParse3d.Kinds
 friend EverParse3d.Prelude
+open EverParse3d.Prelude
 open Pulse.Lib.Pervasives
 module I = EverParse3d.InputStream.Base
 module CP = EverParse3d.CopyBuffer
@@ -48,9 +50,11 @@ let action_failed = 1uy
 
 inline_for_extraction noextract
 let validate_with_action_t
-     (#k:LP.parser_kind)
-     (#t:Type)
-     (p:LP.parser k t)
+     (#nz:bool)
+     (#wk: _)
+     (#k:parser_kind nz wk)
+     (#t:Type0)
+     (p:parser k t)
      (extra_state: state_dict)
      (has_action:bool)
      (use_error_handler:bool)
@@ -81,9 +85,11 @@ let validate_with_action_t
 
 inline_for_extraction noextract
 let validate_with_action_no_read
-     (#k:LP.parser_kind)
+     (#nz:bool)
+     (#wk: _)
+     (#k:parser_kind nz wk)
      (#t:Type)
-     (p:LP.parser k t)
+     (p:parser k t)
      (extra_state: state_dict)
      (has_action:bool)
      (use_error_handler:bool)
@@ -120,10 +126,10 @@ let validate_with_action_no_read
 
 inline_for_extraction
 let leaf_reader
-  #nz
-  #k
+  (#nz:bool)
+  (#k: parser_kind nz WeakKindStrongPrefix)
   (#t: Type)
-  (p: LP.parser k t)
+  (p: parser k t)
 : Tot Type
 =
   (sl: input_buffer_t) ->
