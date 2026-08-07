@@ -101,7 +101,14 @@ let synth_sum_case (s: sum) : (k: sum_key s) -> (x: sum_type_of_tag s k) -> Tot 
 
 let synth_sum_case_injective (s: sum) (k: sum_key s) : Lemma
   (synth_injective (synth_sum_case s k))
-= Classical.forall_intro (Sum?.synth_case_recip_synth_case s k)
+= let aux (x x': sum_type_of_tag s k) : Lemma
+    (requires (synth_sum_case s k x == synth_sum_case s k x'))
+    (ensures (x == x'))
+  = Sum?.synth_case_recip_synth_case s k x;
+    Sum?.synth_case_recip_synth_case s k x'
+  in
+  Classical.forall_intro_2 (Classical.move_requires_2 aux);
+  synth_injective_intro (synth_sum_case s k)
 
 let parse_sum_cases
   (s: sum)
@@ -264,7 +271,12 @@ let synth_sum_case_recip (s: sum) (k: sum_key s) (x: sum_cases s k) : Tot (sum_t
 
 let synth_sum_case_inverse (s: sum) (k: sum_key s) : Lemma
   (synth_inverse (synth_sum_case s k) (synth_sum_case_recip s k))
-= Classical.forall_intro (Sum?.synth_case_synth_case_recip s)
+= let aux (x: sum_cases s k) : Lemma
+    (synth_sum_case s k (synth_sum_case_recip s k x) == x)
+  = Sum?.synth_case_synth_case_recip s x
+  in
+  Classical.forall_intro aux;
+  synth_inverse_intro (synth_sum_case s k) (synth_sum_case_recip s k)
 
 let serialize_sum_cases'
   (s: sum)

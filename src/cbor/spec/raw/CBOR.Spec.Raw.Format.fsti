@@ -75,9 +75,9 @@ let serialize_cbor_with_test_correct
     forall (c': raw_data_item) (suff': Seq.seq U8.t) .
     serialize_cbor c `Seq.append` suff == serialize_cbor c' `Seq.append` suff' ==> ~ (p c' suff'))
   )
-= Classical.forall_intro_2 (fun c' suff' ->
-    Classical.move_requires (serialize_cbor_inj c c' suff) suff'
-  )
+= introduce forall (c': raw_data_item) (suff': Seq.seq U8.t) .
+    serialize_cbor c `Seq.append` suff == serialize_cbor c' `Seq.append` suff' ==> ~ (p c' suff')
+  with Classical.move_requires (serialize_cbor_inj c c' suff) suff'
 
 val serialize_cbor_nonempty
   (c: raw_data_item)

@@ -651,7 +651,7 @@ let check_equiv_correct
   (ensures check_equiv_precond data_model x1 x2 ==> check_equiv_cond data_model map_bound x1 x2 (check_equiv data_model map_bound x1 x2))
 = if check_equiv_precond data_model x1 x2
   then begin
-  Classical.forall_intro_2 (fun x1 x2 -> Classical.move_requires (check_equiv_map_correct data_model map_bound x1) x2);
+  Classical.forall_intro_2 (check_equiv_map_correct data_model map_bound);
   check_equiv_aux_correct data_model map_bound (raw_data_item_size x1 + raw_data_item_size x2) (check_equiv_map data_model map_bound) x1 x2;
   ()
   end

@@ -753,6 +753,7 @@ let set_bitfield_size
     end
   )
 
+#push-options "--z3rlimit_factor 16 --fuel 0 --ifuel 1"
 let set_bitfield_bound
   (#tot: pos)
   (x: U.uint_t tot)
@@ -769,6 +770,7 @@ let set_bitfield_bound
     M.pow2_le_compat bound (hi - lo);
     set_bitfield_size bound tot x lo hi v
   end
+#pop-options
 
 #push-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --fuel 0 --ifuel 0"
 
