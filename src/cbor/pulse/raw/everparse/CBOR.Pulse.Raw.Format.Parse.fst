@@ -103,7 +103,7 @@ let cbor_parse_aux
     = parsed_data_is_serialize #parse_raw_data_item_kind #raw_data_item #parse_raw_data_item serialize_raw_data_item v;
       serialize_strong_prefix serialize_raw_data_item v1 v' v2 (Seq.slice v consumed (Seq.length v))
     in
-    Classical.forall_intro_2 (fun v1 v2 -> Classical.move_requires (prf v1) v2);
+    Classical.forall_intro_2 (Classical.move_requires_2 prf);
     ()
 
 
@@ -577,7 +577,7 @@ let cbor_validate_det_fail
     (ensures False)
   = serialize_cbor_inj v1 v1' v2 v2' 
   in
-  Classical.forall_intro_2 (fun v1 v2 -> Classical.move_requires (aux v1) v2)
+  Classical.forall_intro_2 (Classical.move_requires_2 aux)
 
 #restart-solver
 

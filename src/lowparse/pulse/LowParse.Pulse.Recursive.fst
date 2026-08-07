@@ -59,7 +59,7 @@ let parse_nlist_recursive_bound_correct
 
 #restart-solver
 
-#push-options "--z3rlimit_factor 4"
+#push-options "--z3rlimit_factor 16"
 
 let validate_tot_nlist_recursive_progress
   (p: parse_recursive_param)

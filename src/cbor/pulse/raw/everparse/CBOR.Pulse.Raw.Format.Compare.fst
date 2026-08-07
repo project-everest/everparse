@@ -12,6 +12,7 @@ module F = CBOR.Spec.Raw.EverParse
 module VCList = LowParse.Spec.VCList
 
 #set-options "--print_implicits"
+#push-options "--z3rlimit_factor 4"
 
 fn cbor_match_compare_serialized_tagged
   (c1 c2: cbor_serialized)
@@ -60,6 +61,8 @@ ensures
   fold (cbor_match_serialized_tagged c2 pm2 r2);
   res
 }
+#pop-options
+
 
 fn cbor_match_compare_serialized_array
   (c1 c2: cbor_serialized)
