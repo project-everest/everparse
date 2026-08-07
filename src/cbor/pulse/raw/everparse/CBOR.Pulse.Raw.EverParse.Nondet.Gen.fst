@@ -1688,6 +1688,7 @@ fn trade_trans_hyp_l_nounify
   Trade.trans_hyp_l p1 p2 q r
 }
 
+#push-options "--z3rlimit_factor 4"
 inline_for_extraction
 fn impl_list_no_setoid_repeats_with_overflow_map_fst
   (#equiv: Ghost.erased (raw_data_item -> raw_data_item -> option bool))
@@ -1861,6 +1862,7 @@ ensures
   Trade.elim _ _;
   !pres
 }
+#pop-options
 
 #push-options "--z3rlimit 64"
 

@@ -861,7 +861,9 @@ let rec weaken_parse_bitsum_cases_kind'
         let aux2 (z: bitsum'_key_type (payload x)) : Lemma
           (requires (forall (y: bitsum'_key_type b) . (f y).parser_kind_injective == true))
           (ensures ((g z).parser_kind_injective == true))
-        = assert (g z == f (bitsum'_key_type_intro_BitSum' cl bitsum'_size key key_size e payload (| x, z |)))
+        = let y : bitsum'_key_type b = bitsum'_key_type_intro_BitSum' cl bitsum'_size key key_size e payload (| x, z |) in
+          assert (g z == f y);
+          assert ((f y).parser_kind_injective == true)
         in
         let _ : squash ((inj /\ (forall (y: bitsum'_key_type b) . (f y).parser_kind_injective == true)) ==> k.parser_kind_injective == true) =
           let aux3 (_: squash (inj /\ (forall (y: bitsum'_key_type b) . (f y).parser_kind_injective == true))) : Lemma (k.parser_kind_injective == true) =
