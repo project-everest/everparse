@@ -18,7 +18,7 @@ let error_handler =
     typename:string ->
     fieldname:string ->
     error_reason:string ->
-    error_code:U64.t ->
+    error_code:U8.t ->
     ctxt: app_ctxt ->
     sl: input_buffer_t ->
     contents_sl: Ghost.erased (Seq.seq U8.t) ->
