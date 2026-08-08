@@ -424,19 +424,41 @@ fn action_weaken
 
 noextract
 inline_for_extraction
-let action_deref
+fn action_deref
       (name: string)
-      (#a:Type) (x:ref a) (#use_error_handler: bool)
-: Tot (action (state_dict_singleton name (pts_to x #1.0R)) a use_error_handler)
-= admit ()
+      (#a:Type0) (x:ref a) (#use_error_handler: bool)
+: action (state_dict_singleton name (pts_to x #1.0R)) a use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  forevery_state_dict_singleton_unfold' _ _ _;
+  let res = !x;
+  forevery_state_dict_singleton_fold name (pts_to x #1.0R) _;
+  res
+}
 
 noextract
 inline_for_extraction
-let action_assignment
+fn action_assignment
       (name: string)
       (#a:Type) (x:ref a) (w: a) (#use_error_handler: bool)
-: Tot (action (state_dict_singleton name (pts_to x #1.0R)) a use_error_handler)
-= admit ()
+: action (state_dict_singleton name (pts_to x #1.0R)) a use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  forevery_state_dict_singleton_unfold' _ _ _;
+  x := w;
+  forevery_state_dict_singleton_fold name (pts_to x #1.0R) _;
+  w
+}
 
 (*
 let external_action t l =

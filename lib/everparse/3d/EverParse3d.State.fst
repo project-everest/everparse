@@ -286,6 +286,20 @@ ensures
   rewrite (forevery_state_body (state_dict_singleton name state) v name) as (state (v name))
 }
 
+ghost fn forevery_state_dict_singleton_unfold'
+  (name: string)
+  (#t: Type0)
+  (state: t -> slprop)
+  (v: forevery_values (state_dict_singleton name state))
+requires
+  forevery_state (state_dict_singleton name state) v
+ensures exists* w .
+  state w **
+  pure (w == v name)
+{
+  forevery_state_dict_singleton_unfold name state v
+}
+
 let mk_state_dict_value
   (d: state_dict)
   (f: (x: refine_prop_t string (on_dom string (state_p d))) -> GTot (d.state_values x))
