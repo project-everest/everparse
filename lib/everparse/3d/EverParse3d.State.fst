@@ -95,13 +95,14 @@ let mk_state_dict_correct
   (values: (x: string { p x }) -> Type0)
   (state: (x: string { p x }) -> values x -> slprop)
 : Lemma
-  (let d = mk_state_dict p values state in
+  (ensures (let d = mk_state_dict p values state in
     (forall x . d.state_p x == true <==> p x) /\
     (forall (x: string { p x }) . values x == d.state_values x) /\
     (forall (x: refine_bool_t string d.state_p) . d.state_values x == values x) /\
     (forall (x: refine_bool_t string d.state_p) (y: d.state_values x) . d.state x y == state x y) /\
     (forall (x: string { p x }) (y: values x) . state x y == d.state x y)
-  )
+  ))
+  [SMTPat (mk_state_dict p values state)]
 = let d = mk_state_dict p values state in
   let prf
     (x: refine_bool_t string d.state_p)
@@ -148,8 +149,6 @@ let mk_state_dict_ext
   : Lemma
     (d1.state x == (coerce_eq () (d2.state x) <: d1.state_values x `arrow` slprop))
   =
-    mk_state_dict_correct p1 values1 state1;
-    mk_state_dict_correct p2 values2 state2;
     assert (forall y . d1.state x y == d2.state x y);
     assert (feq (d1.state x) (coerce_eq () (d2.state x) <: d1.state_values x `arrow` slprop));
     extensionality' (d1.state_values x) (fun _ -> slprop) (d1.state x) (coerce_eq () (d2.state x) <: d1.state_values x `arrow` slprop)
@@ -167,11 +166,7 @@ let mk_state_dict_idem
     d.state_values
     d.state
   )
-= mk_state_dict_correct
-    (fun x -> d.state_p x == true)
-    d.state_values
-    d.state;
-  state_dict_ext
+= state_dict_ext
     d
     (mk_state_dict
       (fun x -> d.state_p x == true)
@@ -288,10 +283,6 @@ ensures
   unfold (forevery_state (state_dict_singleton name state) v);
   forevery_remove' _ _ name;
   forevery_elim_empty _;
-  mk_state_dict_correct
-    (forevery_singleton_prop name)
-    (forevery_singleton_values name t)
-    (forevery_singleton_state name state);
   rewrite (forevery_state_body (state_dict_singleton name state) v name) as (state (v name))
 }
 
@@ -324,10 +315,6 @@ requires
 ensures
   forevery_state (state_dict_singleton name state) (mk_singleton_value name state v)
 {
-  mk_state_dict_correct
-    (forevery_singleton_prop name)
-    (forevery_singleton_values name t)
-    (forevery_singleton_state name state);
   rewrite (state v) as (forevery_state_body (state_dict_singleton name state) (mk_singleton_value name state v) name);
   forevery_intro_false (forevery_state_body (state_dict_singleton name state) (mk_singleton_value name state v));
   forevery_insert _ _;
@@ -391,14 +378,6 @@ let state_dict_prod_assoc
   ))
 = let d12 = d1 `state_dict_prod` d2 in
   let d23 = d2 `state_dict_prod` d3 in
-  mk_state_dict_correct
-    (fun x -> d2.state_p x \/ d3.state_p x)
-    (fun x -> if d2.state_p x then d2.state_values x else d3.state_values x)
-    (fun x v -> if d2.state_p x then d2.state x v else d3.state x v);
-  mk_state_dict_correct
-    (fun x -> d1.state_p x \/ d2.state_p x)
-    (fun x -> if d1.state_p x then d1.state_values x else d2.state_values x)
-    (fun x v -> if d1.state_p x then d1.state x v else d2.state x v);
   assert_norm (d1 `state_dict_prod` d23 == mk_state_dict
     (fun x -> d1.state_p x \/ d23.state_p x)
     (fun x -> if d1.state_p x then d1.state_values x else d23.state_values x)
@@ -451,11 +430,7 @@ let state_dict_weaken_prod
     state_dict_weaken_prop d2 (state_dict_prod d1 d2)
   ))
   [SMTPat (state_dict_prod d1 d2)]
-= mk_state_dict_correct
-    (fun x -> d1.state_p x \/ d2.state_p x)
-    (fun x -> if d1.state_p x then d1.state_values x else d2.state_values x)
-    (fun x v -> if d1.state_p x then d1.state x v else d2.state x v);
-  assert (state_dict_weaken_prop0 d1 (state_dict_prod d1 d2));
+= assert (state_dict_weaken_prop0 d1 (state_dict_prod d1 d2));
   assert (state_dict_weaken_prop0 d2 (state_dict_prod d1 d2))  
 
 ghost
