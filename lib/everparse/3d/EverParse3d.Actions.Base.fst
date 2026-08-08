@@ -398,15 +398,29 @@ fn action_bind
 
 noextract
 inline_for_extraction
-let action_weaken
+fn action_weaken
       (#d1: state_dict)
       (#use_error_handler:bool)
       (#a: Type)
       (f: action d1 a use_error_handler)
       (d2: state_dict)
       (d2_extends: squash (state_dict_weaken_prop d1 d2))
-: Tot (action d2 a use_error_handler)
-= admit ()
+: action d2 a use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  let d3 = state_dict_weaken_sub d2 d1;
+  with extra2 . rewrite (forevery_state d2 extra2) as (forevery_state (state_dict_prod d1 d3) extra2);
+  forevery_state_dict_prod_unfold () _;
+  let res = f ctxt error_handler_fn sl _ _;
+  forevery_state_dict_prod_fold d1 d3 ();
+  with extra2' . rewrite (forevery_state (state_dict_prod d1 d3) extra2') as (forevery_state d2 extra2');
+  res
+}
 
 noextract
 inline_for_extraction

@@ -520,10 +520,10 @@ ensures
 }
 
 ghost fn forevery_state_dict_prod_fold
-  (#d1: state_dict)
-  (#d2: state_dict)
-  (v1: forevery_values d1)
-  (v2: forevery_values d2)
+  (d1: state_dict)
+  (d2: state_dict)
+  (#v1: forevery_values d1)
+  (#v2: forevery_values d2)
   (_: squash (forall x . ~ (d1.state_p x /\ d2.state_p x)))
 requires
   forevery_state d1 v1 **
@@ -545,3 +545,66 @@ ensures
   forevery_refine_ext' (state_p (state_dict_prod d1 d2)) _;
   fold (forevery_state (state_dict_prod d1 d2) (mk_prod_value v1 v2 ()))
 }
+
+
+let state_dict_filter
+  (d: state_dict)
+  (f: string -> prop)
+: state_dict
+= mk_state_dict
+    (fun x -> state_p d x /\ f x)
+    d.state_values
+    d.state
+
+let state_dict_filter_self
+  (d: state_dict)
+  (f: string -> prop)
+: Lemma
+  (requires (
+    forall x . state_p d x ==> f x
+  ))
+  (ensures (
+    state_dict_filter d f == d
+  ))
+= state_dict_ext (state_dict_filter d f) d
+
+let notp
+  (#t: Type)
+  (f: t -> prop)
+  (x: t)
+: Tot prop
+= ~ (f x)
+
+#push-options "--z3rlimit 32"
+
+let state_dict_decomp
+  (d: state_dict)
+  (f: string -> prop)
+: Lemma
+  (d == state_dict_prod (state_dict_filter d f) (state_dict_filter d (notp f)))
+= state_dict_ext
+    d
+    (state_dict_prod (state_dict_filter d f) (state_dict_filter d (notp f)))
+
+#pop-options
+
+let state_dict_weaken_filter
+  (d1 d2: state_dict)
+: Lemma
+  (requires (state_dict_weaken_prop d1 d2))
+  (ensures (state_dict_filter d2 (state_p d1) == d1))
+= state_dict_ext
+    (state_dict_filter d2 (state_p d1))
+    d1
+
+let state_dict_weaken_sub
+  (d2 d1: state_dict)
+: Pure state_dict
+  (requires (state_dict_weaken_prop d1 d2))
+  (ensures (fun d3 ->
+    (forall x . ~ (state_p d1 x /\ state_p d3 x)) /\
+    d2 == state_dict_prod d1 d3
+  ))
+= state_dict_weaken_filter d1 d2;
+  state_dict_decomp d2 (state_p d1);
+  state_dict_filter d2 (notp (state_p d1))
