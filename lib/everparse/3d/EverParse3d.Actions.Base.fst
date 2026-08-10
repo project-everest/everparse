@@ -462,6 +462,58 @@ fn validate_filter_with_action
   }
 }
 
+inline_for_extraction noextract
+fn validate_weaken_left
+       (#nz:_)
+       (#wk: _)
+       (#k:parser_kind nz wk)
+       (#[@@@erasable] t:Type)
+       (#[@@@erasable] p:parser k t)
+       (#[@@@erasable] extra_state: state_dict)
+       (#has_action:_)
+       (#use_error_handler:bool)
+       (v:validate_with_action_t p extra_state has_action use_error_handler)
+       (#nz':_)
+       (#wk': _)
+       (k':parser_kind nz' wk')
+  : validate_with_action_t (parse_weaken_left p k') extra_state has_action use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  v ctxt error_handler_fn sl _ _ _
+}
+
+inline_for_extraction noextract
+fn validate_weaken_right
+       (#nz:_)
+       (#wk: _)
+       (#k:parser_kind nz wk)
+       (#[@@@erasable] t:Type)
+       (#[@@@erasable] p:parser k t)
+       (#[@@@erasable] extra_state: state_dict)
+       (#has_action:_)
+       (#use_error_handler:bool)
+       (v:validate_with_action_t p extra_state has_action use_error_handler)
+       (#nz':_)
+       (#wk': _)
+       (k':parser_kind nz' wk')
+  : validate_with_action_t (parse_weaken_right p k') extra_state has_action use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  v ctxt error_handler_fn sl _ _ _
+}
+
 #push-options "--z3rlimit 32"
 
 noextract
