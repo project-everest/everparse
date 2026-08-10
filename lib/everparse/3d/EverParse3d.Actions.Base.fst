@@ -14,6 +14,7 @@ module AppCtxt = EverParse3d.AppCtxt
 open FStar.FunctionalExtensionality
 open EverParse3d.Actions.Common
 module U8 = FStar.UInt8
+module U32 = FStar.UInt32
 module P = EverParse3d.Prelude
 module SZ = FStar.SizeT
 
@@ -606,6 +607,78 @@ fn validate_ite
   } else {
     v2 () ctxt error_handler_fn sl _ _ _;
   }
+}
+
+noextract inline_for_extraction
+fn validate_nlist
+       (n:U32.t)
+       (n_is_const:option nat { memoizes_n_as_const n_is_const n})
+       (#wk: _)
+       (#k:parser_kind true wk)
+       (#[@@@erasable] t:Type)
+       (#[@@@erasable] p:parser k t)
+       (#[@@@erasable] extra_state: _)
+       (#ha:bool)
+       (#use_error_handler:bool)
+       (v: validate_with_action_t p extra_state ha use_error_handler)
+: validate_with_action_t (parse_nlist n n_is_const p) extra_state ha use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  admit ()
+}
+
+noextract inline_for_extraction
+fn validate_t_at_most
+       (n:U32.t)
+       (#nz: _)
+       (#wk: _)
+       (#k:parser_kind nz wk)
+       (#[@@@erasable] t:Type)
+       (#[@@@erasable] p:parser k t)
+       (#[@@@erasable] extra_state: _)
+       (#ha:_)
+       (#use_error_handler:bool)
+       (v:validate_with_action_t p extra_state ha use_error_handler)
+  : validate_with_action_t (parse_t_at_most n p) extra_state ha use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  admit ()
+}
+
+noextract inline_for_extraction
+fn validate_t_exact
+       (n:U32.t)
+       (#nz: _)
+       (#wk: _)
+       (#k:parser_kind nz wk)
+       (#[@@@erasable] t:Type)
+       (#[@@@erasable] p:parser k t)
+       (#[@@@erasable] extra_state: _)
+       (#ha:_)
+       (#use_error_handler:bool)
+       (v:validate_with_action_t p extra_state ha use_error_handler)
+  : validate_with_action_t (parse_t_exact n p) extra_state ha use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  admit ()
 }
 
 noextract
