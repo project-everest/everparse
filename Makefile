@@ -41,6 +41,7 @@ SRC_DIRS += src/lowparse src/ASN1 src/cbor/spec src/cbor/spec/raw src/cbor/spec/
 
 ifeq (,$(NO_PULSE))
   SRC_DIRS += src/lowparse/pulse src/cbor/pulse src/cbor/pulse/raw src/cbor/pulse/raw/everparse src/cddl/pulse src/cddl/tool
+  SRC_DIRS += lib/everparse/3d
 endif
 
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
@@ -81,6 +82,13 @@ endif
 	+$(MAKE) -C src/3d 3d
 
 .PHONY: 3d-exe
+
+# lowparse needed because of .fst behind .fsti for extraction
+3d-pulse-prelude: $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES))) $(filter lib/everparse/3d/%,$(ALL_CHECKED_FILES))
+
+.PHONY: 3d-pulse-prelude
+
+3d: 3d-pulse-prelude
 
 3d: 3d-prelude 3d-exe
 
