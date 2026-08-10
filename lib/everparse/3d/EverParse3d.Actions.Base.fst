@@ -374,6 +374,135 @@ fn validate_dep_pair_with_refinement_and_action
 
 #pop-options
 
+inline_for_extraction noextract
+fn validate_filter
+       (name: string)
+       (#nz:_)
+       (#k:parser_kind nz WeakKindStrongPrefix)
+       (#t:Type)
+       (#[@@@erasable] p:parser k t)
+       (#[@@@erasable] extra_state: state_dict)
+       (#has_action:_)
+       (#use_error_handler:bool)
+       (v:validate_with_action_no_read p extra_state has_action use_error_handler)
+       (r:leaf_reader p)
+       (f:t -> bool)
+       (cr:string)
+       (cf:string)
+  : validate_with_action_t (p `parse_filter` f) extra_state has_action use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  LowParse.Spec.Combinators.parse_filter_eq p f v_sl;
+  let mut pos = 0sz;
+  let res_key = v ctxt error_handler_fn sl pos _ _ _ _;
+  if (res_key = validator_success) {
+    let val_key = r sl _ _;
+    if (f val_key) {
+      validator_success
+    } else {
+      validator_error_constraint_failed
+    }
+  } else {
+    res_key
+  }
+}
+
+inline_for_extraction noextract
+fn validate_filter_with_action
+       (name: string)
+       (#nz:_)
+       (#k:parser_kind nz WeakKindStrongPrefix)
+       (#t:Type)
+       (#[@@@erasable] p:parser k t)
+       (#[@@@erasable] extra_state: state_dict)
+       (#has_action:_)
+       (#use_error_handler:bool)
+       (v:validate_with_action_no_read p extra_state has_action use_error_handler)
+       (r:leaf_reader p)
+       (f:t -> bool)
+       (cr:string)
+       (cf:string)
+       (a: t -> action extra_state bool use_error_handler)
+  : validate_with_action_t #nz
+      (p `parse_filter` f)
+      extra_state
+      true
+      use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  LowParse.Spec.Combinators.parse_filter_eq p f v_sl;
+  let mut pos = 0sz;
+  let res_key = v ctxt error_handler_fn sl pos _ _ _ _;
+  if (res_key = validator_success) {
+    let val_key = r sl _ _;
+    if (f val_key) {
+      let res_action = a val_key ctxt error_handler_fn sl _ _;
+      if (res_action) {
+      	validator_success
+      } else {
+        validator_error_action_failed
+      }
+    } else {
+      validator_error_constraint_failed
+    }
+  } else {
+    res_key
+  }
+}
+
+#push-options "--z3rlimit 32"
+
+noextract
+inline_for_extraction
+fn validate_weaken
+       (name: string)
+       (#nz:_)
+       (#wk:_)
+       (#k:parser_kind nz wk)
+       (#t:Type)
+       (#[@@@erasable] p:parser k t)
+       (#[@@@erasable] d1: state_dict)
+       (#has_action:_)
+       (#use_error_handler:bool)
+       (v:validate_with_action_t p d1 has_action use_error_handler)
+      (d2: state_dict)
+      (d2_extends: squash (state_dict_weaken_prop d1 d2))
+: validate_with_action_t p d2 has_action use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  let d3 = state_dict_weaken_sub d2 d1;
+  with extra2 . assert (forevery_state d2 extra2);
+  rewrite (forevery_state d2 extra2) as (forevery_state (state_dict_prod d1 d3) extra2);
+  forevery_state_dict_prod_unfold () _;
+  with extra1 . assert (forevery_state d1 extra1);
+  with extra3 . assert (forevery_state d3 extra3);
+  forevery_values_ext d2 extra2 (mk_prod_value extra1 extra3 ());
+  let res = v ctxt error_handler_fn sl _ _ _;
+  forevery_state_dict_prod_fold d1 d3 ();
+  with extra2' . rewrite (forevery_state (state_dict_prod d1 d3) extra2') as (forevery_state d2 extra2');
+  res
+}
+
+#pop-options
+
 
 noextract
 inline_for_extraction
