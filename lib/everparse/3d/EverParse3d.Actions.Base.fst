@@ -503,6 +503,58 @@ fn validate_weaken
 
 #pop-options
 
+inline_for_extraction noextract
+fn validate_impos
+       (#extra_state: _)
+       (#use_error_handler:bool)
+       (_:unit)
+  : validate_with_action_t (parse_impos ()) extra_state false use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  validator_error_impossible
+}
+
+noextract inline_for_extraction
+fn validate_ite
+       (#nz:_)
+       (#wk: _)
+       (#k:parser_kind nz wk)
+       (e:bool)
+       (#[@@@erasable] a:squash e -> Type)
+       (#[@@@erasable] b:squash (not e) -> Type)
+       (#[@@@erasable] extra_state: _)
+       (#ha1:_)
+       (#ha2:_)
+       (#use_error_handler:bool)
+       ([@@@erasable] p1:squash e -> parser k (a()))
+       (v1:(squash e -> validate_with_action_t (p1()) extra_state ha1 use_error_handler))
+       ([@@@erasable] p2:squash (not e) -> parser k (b()))
+       (v2:(squash (not e) -> validate_with_action_t (p2()) extra_state ha2 use_error_handler))
+  : validate_with_action_t
+      (parse_ite e p1 p2)
+      extra_state
+      (ha1 || ha2)
+      use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  if (e) {
+    v1 () ctxt error_handler_fn sl _ _ _;
+  } else {
+    v2 () ctxt error_handler_fn sl _ _ _;
+  }
+}
 
 noextract
 inline_for_extraction
