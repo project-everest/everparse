@@ -45,6 +45,13 @@ type comments_buffer_t = {
   flush_until: pos -> ML (list string);
 }
 
+let _ : nonempty comments_buffer_t =
+  nonempty_intro ({
+    push = (fun _ -> ());
+    flush = (fun _ -> []);
+    flush_until = (fun _ -> []);
+  })
+
 #push-options "--warn_error -272" //top-level effect; ok
 let comments_buffer : comments_buffer_t =
   let buffer : ref (list (string & pos & pos)) = alloc [] in

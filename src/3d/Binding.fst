@@ -63,6 +63,12 @@ let copy_env (e:env) =
   }
 
 #push-options "--warn_error -272"  //intentional top-level effect
+
+let _ : nonempty (global_env -> env) =
+  H.nonempty_t ident' (ident' & typ & bool);
+  let locals : local_env = nonempty_elim local_env in
+  nonempty_intro (fun g -> { this = None; generics = []; locals; globals = g })
+
 let env_of_global_env 
   : global_env -> env
   = let locals = H.create 1 in

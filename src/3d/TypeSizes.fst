@@ -200,6 +200,10 @@ let size_and_alignment_of_atomic_field (env:env_t) (f:atomic_field)
 
 #push-options "--warn_error -272"
 let alignment_prefix = Printf.sprintf "%salignment_padding" Ast.reserved_prefix
+
+let _ : nonempty (unit -> ML ident) =
+  nonempty_intro (fun _ -> failwith "")
+
 let gen_alignment_ident
   : unit -> ML ident
   = let ctr : ref int = alloc 0 in

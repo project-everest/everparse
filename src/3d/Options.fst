@@ -357,6 +357,9 @@ let display_usage_1 (options: ref (list cmd_option)) : ML unit =
     ;
   FStar.IO.print_string (Printf.sprintf "\nCurrent options are:%s\n" (compute_current_options options []))
 
+let _ : nonempty ((unit -> ML unit) & (list string -> ML string) & list fstar_opt) =
+  nonempty_intro ((fun _ -> ()), (fun _ -> ""), [])
+
 let (display_usage_2, compute_options_2, fstar_options) =
   let options : ref (list cmd_option) = alloc [] in
   let display_usage () = display_usage_1 options in
