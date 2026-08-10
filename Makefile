@@ -37,7 +37,7 @@ EVERPARSE_SRC_PATH := $(realpath src)
 
 ALREADY_CACHED := *,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,
 
-SRC_DIRS += src/lowparse src/ASN1 src/3d/prelude src/cbor/spec src/cbor/spec/raw src/cbor/spec/raw/everparse src/cddl/spec
+SRC_DIRS += src/lowparse src/ASN1 src/cbor/spec src/cbor/spec/raw src/cbor/spec/raw/everparse src/cddl/spec
 
 ifeq (,$(NO_PULSE))
   SRC_DIRS += src/lowparse/pulse src/cbor/pulse src/cbor/pulse/raw src/cbor/pulse/raw/everparse src/cddl/pulse src/cddl/tool
@@ -68,7 +68,7 @@ lowparse: $(filter src/lowparse/pulse/%,$(ALL_CHECKED_FILES))
 endif
 
 # lowparse needed because of .fst behind .fsti for extraction
-3d-prelude-verify: $(filter src/3d/prelude/%,$(ALL_CHECKED_FILES)) $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+3d-prelude-verify: $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
 
 .PHONY: 3d-prelude-verify
 
