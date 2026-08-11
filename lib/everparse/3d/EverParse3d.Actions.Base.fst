@@ -556,6 +556,39 @@ fn validate_weaken
 
 #pop-options
 
+noextract
+inline_for_extraction
+fn validate_call
+       (name: string)
+       (#nz:_)
+       (#wk:_)
+       (#k:parser_kind nz wk)
+       (#t:Type)
+       (#[@@@erasable] p:parser k t)
+       (#[@@@erasable] d': state_dict)
+       (#has_action:_)
+       (#use_error_handler:bool)
+       (v:validate_with_action_t p d' has_action use_error_handler)
+      (d: state_dict)
+      (#[@@@erasable] f: Ghost.erased ((x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p)))) // TODO: change to GTot once we switch to ghost bijections
+      (#[@@@erasable] g: Ghost.erased (refine_bool_t string d'.state_p -> Tot (refine_bool_t string d.state_p)))
+      ([@@@erasable] sq: squash (state_dict_rename_prop d d' f g))
+: validate_with_action_t p d has_action use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  state_dict_rename_call d d' f g sq extra;
+  state_dict_rename_values_return_call d d' f g extra;
+  let res = v ctxt error_handler_fn sl _ _ _;
+  state_dict_rename_return d d' f g sq extra _;
+  res
+}
+
 inline_for_extraction noextract
 fn validate_impos
        (#extra_state: _)
@@ -725,6 +758,31 @@ fn action_weaken
   let res = f ctxt error_handler_fn sl _ _;
   forevery_state_dict_prod_fold d1 d3 ();
   with extra2' . rewrite (forevery_state (state_dict_prod d1 d3) extra2') as (forevery_state d2 extra2');
+  res
+}
+
+noextract
+inline_for_extraction
+fn action_call
+      (#d': state_dict)
+      (#use_error_handler:bool)
+      (#a: Type)
+      (act: action d' a use_error_handler)
+      (d: state_dict)
+      (#[@@@erasable] f: Ghost.erased ((x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p)))) // TODO: change to GTot once we switch to ghost bijections
+      (#[@@@erasable] g: Ghost.erased (refine_bool_t string d'.state_p -> Tot (refine_bool_t string d.state_p)))
+      ([@@@erasable] sq: squash (state_dict_rename_prop d d' f g))
+: action d a use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  state_dict_rename_call d d' f g sq _;
+  let res = act ctxt error_handler_fn sl _ _;
+  state_dict_rename_return d d' f g sq _ _;
   res
 }
 

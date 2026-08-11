@@ -840,3 +840,19 @@ ensures
   forevery_unrefine _;
   fold forevery_state d (state_dict_rename_values_return d d' f g v v')
 }
+
+let state_dict_rename_values_return_call
+  (d: state_dict)
+  (d': state_dict)
+  (f: (x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p)))
+  (g: refine_bool_t string d'.state_p -> Tot (refine_bool_t string d.state_p))
+  (v: forevery_values d)
+: Lemma
+  (requires (state_dict_rename_prop d d' f g))
+  (ensures (
+    state_dict_rename_values_return d d' f g v (state_dict_rename_values_call d d' f g v) == v
+  ))
+= forevery_values_ext
+    d
+    (state_dict_rename_values_return d d' f g v (state_dict_rename_values_call d d' f g v))
+    v
