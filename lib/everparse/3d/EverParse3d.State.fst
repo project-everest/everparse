@@ -219,7 +219,7 @@ let forevery_state
       (d: state_dict)
       (v: forevery_values d)
 : Tot slprop
-= forall+ (x: string { state_p d x }) . forevery_state_body d v x
+= forall+ (x: string) . forevery_state_body d v x
 
 let state_dict_empty
 : state_dict =
@@ -281,7 +281,13 @@ ensures
   state (v name)
 {
   unfold (forevery_state (state_dict_singleton name state) v);
-  forevery_remove' _ _ name;
+  forevery_remove _ name;
+  forevery_unrefine_pred _ _;
+  forevery_map (fun x -> when_ (x =!= name) (forevery_state_body (state_dict_singleton name state) v x)) (fun x -> when_ False emp) fn (x: _) {
+    rewrite (when_ (x =!= name) (forevery_state_body (state_dict_singleton name state) v x))
+    as (when_ False emp)
+  };
+  forevery_refine_pred _ _;
   forevery_elim_empty _;
   rewrite (forevery_state_body (state_dict_singleton name state) v name) as (state (v name))
 }
@@ -329,10 +335,11 @@ requires
 ensures
   forevery_state (state_dict_singleton name state) (mk_singleton_value name state v)
 {
-  rewrite (state v) as (forevery_state_body (state_dict_singleton name state) (mk_singleton_value name state v) name);
-  forevery_intro_false (forevery_state_body (state_dict_singleton name state) (mk_singleton_value name state v));
-  forevery_insert _ _;
-  forevery_refine_ext (state_p (state_dict_singleton name state)) _;
+  forevery_singleton_intro' #(x: string { x == name }) (fun _ -> state v) name;
+  forevery_unrefine_pred #string (fun _ -> state v) _;
+  forevery_map (fun x -> when_ (x == name) (state v)) (fun x -> forevery_state_body (state_dict_singleton name state) (mk_singleton_value name state v) x) fn (x: _) {
+    rewrite (when_ (x == name) (state v)) as (forevery_state_body (state_dict_singleton name state) (mk_singleton_value name state v) x);
+  };
   fold (forevery_state (state_dict_singleton name state) (mk_singleton_value name state v));
 }
 
@@ -447,65 +454,6 @@ let state_dict_weaken_prod
 = assert (state_dict_weaken_prop0 d1 (state_dict_prod d1 d2));
   assert (state_dict_weaken_prop0 d2 (state_dict_prod d1 d2))  
 
-ghost
-fn forevery_when_split
-  (#a:Type0)
-  (p: a -> slprop)
-  (f: a -> prop)
-  (g: a -> prop)
-  requires
-    forall+ (x:a). when_ (f x /\ g x) (p x)
-  ensures
-    forall+ (x:a). when_ (f x) (when_ (g x) (p x))
-{
-  forevery_map #a (fun x -> when_ (f x /\ g x) (p x)) (fun x -> when_ (f x) (when_ (g x) (p x))) fn x {
-    rewrite when_ (f x /\ g x) (p x)
-    as when_ (f x) (when_ (g x) (p x))
-  }
-}
-
-ghost
-fn forevery_when_join
-  (#a:Type0)
-  (p: a -> slprop)
-  (f: a -> prop)
-  (g: a -> prop)
-  requires
-    forall+ (x:a). when_ (f x) (when_ (g x) (p x))
-  ensures
-    forall+ (x:a). when_ (f x /\ g x) (p x)
-{
-  forevery_map #a (fun x -> when_ (f x) (when_ (g x) (p x))) (fun x -> when_ (f x /\ g x) (p x)) fn x {
-    rewrite when_ (f x) (when_ (g x) (p x))
-    as when_ (f x /\ g x) (p x)
-  }
-}
-
-ghost
-fn forevery_refine_split'
-  (#a:Type0)
-  (p: a -> slprop)
-  (f: a -> prop)
-  (g: a -> prop)
-  requires
-    forall+ (x:a{f x}). p x
-  ensures
-    forall+ (x:a{f x /\ g x}). p x
-  ensures
-    forall+ (x:a{f x /\ ~ (g x)}). p x
-{
-  forevery_unrefine_pred _ _;
-  forevery_refine_split _ g;
-  forevery_unrefine_pred (fun x -> when_ (f x) (p x)) (fun x -> g x);
-  forevery_when_join _ _ _;
-  forevery_refine_pred _ (fun x -> g x /\ f x);
-  forevery_refine_ext' (fun x -> f x /\ g x) p;
-  forevery_unrefine_pred (fun x -> when_ (f x) (p x)) (fun x -> ~ (g x));
-  forevery_when_join _ _ _;
-  forevery_refine_pred _ (fun x -> (~ (g x)) /\ f x);
-  forevery_refine_ext' #_ #(fun x -> (~ (g x)) /\ f x) (fun x -> f x /\ ~ (g x)) p;
-}
-
 ghost fn forevery_state_dict_prod_unfold
   (#d1: state_dict)
   (#d2: state_dict)
@@ -518,18 +466,23 @@ ensures
   forevery_state d2 (mk_proj_value v d2 ())
 {
   unfold (forevery_state (state_dict_prod d1 d2) v);
-  forevery_refine_split' _ _ (state_p d1);
-  forevery_refine_ext' #_ #(fun x -> state_p (state_dict_prod d1 d2) x /\ state_p d1 x) (state_p d1) _;
-  forevery_map #(x: string { state_p d1 x }) (fun x -> forevery_state_body (state_dict_prod d1 d2) v x) (fun x -> forevery_state_body d1 (mk_proj_value v d1 ()) x) fn x {
-    rewrite forevery_state_body (state_dict_prod d1 d2) v x
-    as forevery_state_body d1 (mk_proj_value v d1 ()) x
+  forevery_map (fun x -> forevery_state_body (state_dict_prod d1 d2) v x) (fun x ->
+    forevery_state_body d1 (mk_proj_value v d1 ()) x **
+    forevery_state_body d2 (mk_proj_value v d2 ()) x
+  ) fn (x: _) {
+    let cond = d1.state_p x;
+    if (cond) {
+       rewrite forevery_state_body (state_dict_prod d1 d2) v x
+       as forevery_state_body d1 (mk_proj_value v d1 ()) x;
+       rewrite emp as forevery_state_body d2 (mk_proj_value v d2 ()) x
+    } else {
+       rewrite emp as forevery_state_body d1 (mk_proj_value v d1 ()) x;
+       rewrite forevery_state_body (state_dict_prod d1 d2) v x
+       as forevery_state_body d2 (mk_proj_value v d2 ()) x
+    }
   };
+  forevery_unzip _ _;
   fold (forevery_state d1 (mk_proj_value v d1 ()));
-  forevery_refine_ext' #_ #(fun x -> state_p (state_dict_prod d1 d2) x /\ ~ (state_p d1 x)) (state_p d2) _;
-  forevery_map #(x: string { state_p d2 x }) (fun x -> forevery_state_body (state_dict_prod d1 d2) v x) (fun x -> forevery_state_body d2 (mk_proj_value v d2 ()) x) fn x {
-    rewrite forevery_state_body (state_dict_prod d1 d2) v x
-    as forevery_state_body d2 (mk_proj_value v d2 ()) x
-  };
   fold (forevery_state d2 (mk_proj_value v d2 ()));
 }
 
@@ -546,17 +499,22 @@ ensures
   forevery_state (state_dict_prod d1 d2) (mk_prod_value v1 v2 ())
 {
   unfold (forevery_state d1 v1);
-  forevery_map #(x: string { state_p d1 x }) (fun x -> forevery_state_body d1 v1 x) (fun x -> forevery_state_body (state_dict_prod d1 d2) (mk_prod_value v1 v2 ()) x)  fn x {
-    rewrite forevery_state_body d1 v1 x
-    as forevery_state_body (state_dict_prod d1 d2) (mk_prod_value v1 v2 ()) x
-  };
   unfold (forevery_state d2 v2);
-  forevery_map #(x: string { state_p d2 x }) (fun x -> forevery_state_body d2 v2 x) (fun x -> forevery_state_body (state_dict_prod d1 d2) (mk_prod_value v1 v2 ()) x)  fn x {
-    rewrite forevery_state_body d2 v2 x
-    as forevery_state_body (state_dict_prod d1 d2) (mk_prod_value v1 v2 ()) x
+  forevery_zip (forevery_state_body d1 v1) (forevery_state_body d2 v2);
+  forevery_map (fun x -> forevery_state_body d1 v1 x ** forevery_state_body d2 v2 x) (forevery_state_body (state_dict_prod d1 d2) (mk_prod_value v1 v2 ())) fn (x: _) {
+    let cond = d1.state_p x;
+    if (cond) {
+      rewrite forevery_state_body d1 v1 x
+      as forevery_state_body (state_dict_prod d1 d2) (mk_prod_value v1 v2 ()) x;
+      rewrite forevery_state_body d2 v2 x
+      as emp
+    } else {
+      rewrite forevery_state_body d2 v2 x
+      as forevery_state_body (state_dict_prod d1 d2) (mk_prod_value v1 v2 ()) x;
+      rewrite forevery_state_body d1 v1 x
+      as emp
+    }
   };
-  forevery_refine_join _ (state_p d1) (state_p d2);
-  forevery_refine_ext' (state_p (state_dict_prod d1 d2)) _;
   fold (forevery_state (state_dict_prod d1 d2) (mk_prod_value v1 v2 ()))
 }
 
