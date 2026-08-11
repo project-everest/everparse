@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
-#include <malloc.h>
+#include <stdlib.h>
 
 #if !defined(KRML_MAYBE_UNUSED_VAR)
 # define KRML_MAYBE_UNUSED_VAR(x) ((void) (x))
