@@ -580,3 +580,187 @@ let state_dict_weaken_sub
 = state_dict_weaken_filter d1 d2;
   state_dict_decomp d2 (state_p d1);
   state_dict_filter d2 (notp (state_p d1))
+
+let state_dict_rename_prop
+  (d: state_dict)
+  (d': state_dict)
+  (f: (x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p))) // TODO: change to GTot once we switch to ghost bijections
+  (g: refine_bool_t string d'.state_p -> Tot (refine_bool_t string d.state_p))
+: Tot prop
+=
+  (forall x . Some? (f x) ==> g (Some?.v (f x)) == x) /\
+  (forall x . f (g x) == Some x) /\
+  (forall x . d'.state_values x == d.state_values (g x)) /\
+  (forall x y . d'.state x y == d.state (g x) y)
+
+let state_dict_rename_values_call
+  (d: state_dict)
+  (d': state_dict)
+  (f: (x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p)))
+  (g: refine_bool_t string d'.state_p -> Tot (refine_bool_t string d.state_p))
+  (v: forevery_values d)
+: Pure (forevery_values d')
+    (requires (state_dict_rename_prop d d' f g))
+    (ensures (fun _ -> True))
+= mk_state_dict_value d' (fun x -> v (g x))
+
+let state_dict_rename_values_frame_p
+  (d: state_dict)
+  (d': state_dict)
+  (f: (x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p)))
+  (x: string)
+: Tot prop
+= state_p d x /\ None? (f x)
+
+let state_dict_rename_values_frame
+  (d: state_dict)
+  (d': state_dict)
+  (f: (x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p)))
+  (v: forevery_values d)
+: Tot (forevery_values (state_dict_filter d (state_dict_rename_values_frame_p d d' f)))
+= mk_proj_value v (state_dict_filter d (state_dict_rename_values_frame_p d d' f)) ()
+
+ghost fn when_intro_true
+  (p: prop)
+  (s: slprop)
+requires
+  pure p ** s
+ensures
+  when_ p s
+{
+  rewrite s as (when_ p s)
+}
+
+ghost fn when_intro_false
+  (p: prop)
+  (s: slprop)
+requires
+  pure (~ p)
+ensures
+  when_ p s
+{
+  rewrite emp as (when_ p s)
+}
+
+ghost fn when_elim_true
+  (p: prop)
+  (s: slprop)
+requires
+  when_ p s ** pure p
+ensures
+  s
+{
+  rewrite (when_ p s) as s
+}
+
+ghost fn when_elim_false
+  (p: prop)
+  (s: slprop)
+requires
+  when_ p s ** pure (~ p)
+ensures
+  emp
+{
+  rewrite (when_ p s) as emp
+}
+
+#push-options "--z3rlimit 64"
+
+ghost fn state_dict_rename_call
+  (d: state_dict)
+  (d': state_dict)
+  (f: (x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p)))
+  (g: refine_bool_t string d'.state_p -> Tot (refine_bool_t string d.state_p))
+  (sq: squash (state_dict_rename_prop d d' f g))
+  (v: forevery_values d)
+requires
+  forevery_state d v
+ensures
+  forevery_state (state_dict_filter d (state_dict_rename_values_frame_p d d' f)) (state_dict_rename_values_frame d d' f v) **
+  forevery_state d' (state_dict_rename_values_call d d' f g v)
+{
+  state_dict_decomp d (state_dict_rename_values_frame_p d d' f);
+  rewrite forevery_state d v
+  as forevery_state (state_dict_prod (state_dict_filter d (state_dict_rename_values_frame_p d d' f)) (state_dict_filter d (notp (state_dict_rename_values_frame_p d d' f)))) v;
+  forevery_state_dict_prod_unfold () _;
+  with vf . rewrite forevery_state (state_dict_filter d (state_dict_rename_values_frame_p d d' f)) vf
+  as forevery_state (state_dict_filter d (state_dict_rename_values_frame_p d d' f)) (state_dict_rename_values_frame d d' f v);
+  with vc . unfold forevery_state (state_dict_filter d (notp (state_dict_rename_values_frame_p d d' f))) vc;
+  forevery_map (forevery_state_body (state_dict_filter d (notp (state_dict_rename_values_frame_p d d' f))) vc) (fun x -> when_ (state_p d x /\ notp (state_dict_rename_values_frame_p d d' f) x) (forevery_state_body (state_dict_filter d (notp (state_dict_rename_values_frame_p d d' f))) vc x)) fn (x: _) {
+    let cond1 = d.state_p x;
+    if (cond1) {
+      if (Some? (f x)) {
+        when_intro_true
+	  (state_p d x /\ notp (state_dict_rename_values_frame_p d d' f) x) (forevery_state_body (state_dict_filter d (notp (state_dict_rename_values_frame_p d d' f))) vc x);
+      } else {
+      	rewrite forevery_state_body (state_dict_filter d (notp (state_dict_rename_values_frame_p d d' f))) vc x
+	as emp;
+        when_intro_false
+	  (state_p d x /\ notp (state_dict_rename_values_frame_p d d' f) x) (forevery_state_body (state_dict_filter d (notp (state_dict_rename_values_frame_p d d' f))) vc x);
+      }
+    } else {
+      	rewrite forevery_state_body (state_dict_filter d (notp (state_dict_rename_values_frame_p d d' f))) vc x
+	as emp;
+        when_intro_false
+	  (state_p d x /\ notp (state_dict_rename_values_frame_p d d' f) x) (forevery_state_body (state_dict_filter d (notp (state_dict_rename_values_frame_p d d' f))) vc x);
+    }
+  };
+  forevery_refine_pred _ _;
+  let bi : FStar.Bijection.bijection (x: string { state_p d x /\ notp (state_dict_rename_values_frame_p d d' f) x }) (refine_bool_t string d'.state_p) = FStar.Bijection.mk_bijection
+    (fun (x: string { state_p d x /\ notp (state_dict_rename_values_frame_p d d' f) x }) -> Some?.v (f x))
+    (fun (x: refine_bool_t string d'.state_p) -> g x)
+    (fun x -> ())
+    (fun x -> ())
+    ;
+  forevery_iso bi _;
+  forevery_map
+    (fun (x: refine_bool_t string d'.state_p) -> forevery_state_body (state_dict_filter d (notp (state_dict_rename_values_frame_p d d' f))) vc (bi.left x))
+    (fun (x: refine_bool_t string d'.state_p) -> forevery_state_body d' (state_dict_rename_values_call d d' f g v) x)
+    fn (x: _) {
+      rewrite forevery_state_body (state_dict_filter d (notp (state_dict_rename_values_frame_p d d' f))) vc (bi.left x)
+      as forevery_state_body d' (state_dict_rename_values_call d d' f g v) x
+    };
+  forevery_unrefine_pred #string _ _;
+  forevery_map
+    (fun x -> when_ (d'.state_p x == true) (forevery_state_body d' (state_dict_rename_values_call d d' f g v) x))
+    (forevery_state_body d' (state_dict_rename_values_call d d' f g v))
+    fn (x: _) {
+      rewrite when_ (d'.state_p x == true) (forevery_state_body d' (state_dict_rename_values_call d d' f g v) x)
+      as forevery_state_body d' (state_dict_rename_values_call d d' f g v) x
+    };
+  fold (forevery_state d' (state_dict_rename_values_call d d' f g v))
+}
+
+#pop-options
+
+let state_dict_rename_values_return
+  (d: state_dict)
+  (d': state_dict)
+  (f: (x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p)))
+  (g: refine_bool_t string d'.state_p -> Tot (refine_bool_t string d.state_p))
+  (v: forevery_values d)
+  (v': forevery_values d')
+: Pure (forevery_values d)
+    (requires (state_dict_rename_prop d d' f g))
+    (ensures (fun _ -> True))
+= mk_state_dict_value d (fun x -> match f x with
+  | Some x' -> v' x'
+  | None -> v x
+  )
+
+ghost fn state_dict_rename_return
+  (d: state_dict)
+  (d': state_dict)
+  (f: (x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p)))
+  (g: refine_bool_t string d'.state_p -> Tot (refine_bool_t string d.state_p))
+  (sq: squash (state_dict_rename_prop d d' f g))
+  (v: forevery_values d)
+  (v': forevery_values d')
+requires
+  forevery_state (state_dict_filter d (state_dict_rename_values_frame_p d d' f)) (state_dict_rename_values_frame d d' f v) **
+  forevery_state d' v'
+ensures
+  forevery_state d (state_dict_rename_values_return d d' f g v v')
+{
+  admit ()
+}
