@@ -24,9 +24,9 @@ cygwin_local_install += --cygwin-local-install
 endif
 
 # Change these if you want to use your own clones
-FStar_repo=https://github.com/FStarLang/FStar
+FStar_repo=https://github.com/tahina-pro/FStar
 karamel_repo=https://github.com/FStarLang/karamel
-pulse_repo=https://github.com/FStarLang/pulse
+pulse_repo=https://github.com/tahina-pro/pulse
 
 # This rule is necessary for the package and release CI rules to pull
 # the right hash when building the F* source package for Windows
