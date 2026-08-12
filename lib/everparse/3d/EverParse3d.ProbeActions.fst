@@ -116,12 +116,15 @@ let probe_m_post
   )
 
 inline_for_extraction
-let probe_m a (requires_unread_dest:bool) (expect_zero_offsets:bool) (use_error_handler:bool) =
+let probe_m
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
+  a (requires_unread_dest:bool) (expect_zero_offsets:bool) (use_error_handler:bool) =
   typename:string ->
   fieldname:string ->
   fielddetail:string ->
   ctxt: app_ctxt ->
-  error_handler_fn : (if use_error_handler then error_handler else unit) ->
+  error_handler_fn : (if use_error_handler then error_handler #_ #inst else unit) ->
   read_offset:ref U64.t ->
   write_offset:ref U64.t ->
   failed:ref bool ->
@@ -162,8 +165,10 @@ let probe_m a (requires_unread_dest:bool) (expect_zero_offsets:bool) (use_error_
 inline_for_extraction
 noextract
 fn handle_probe_error
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
       (#use_error_handler:bool)
-      (err : (if use_error_handler then error_handler else unit))
+      (err : (if use_error_handler then error_handler #input_buffer_t else unit))
       (tn fn_ det:string)
       (ctxt:app_ctxt)
       (dest:copy_buffer_t)
@@ -186,8 +191,11 @@ ensures exists* v_ctxt' .
 
 inline_for_extraction
 noextract
-fn probe_fn_incremental_as_probe_m (#use_error_handler:bool) (f:probe_fn_incremental) (bytes_to_read:U64.t)
-: probe_m unit true false use_error_handler
+fn probe_fn_incremental_as_probe_m
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
+  (#use_error_handler:bool) (f:probe_fn_incremental) (bytes_to_read:U64.t)
+: probe_m #input_buffer_t unit true false use_error_handler
 =
   (tn: _)
   (fn_: _)
@@ -216,7 +224,10 @@ fn probe_fn_incremental_as_probe_m (#use_error_handler:bool) (f:probe_fn_increme
 
 inline_for_extraction
 noextract
-let init_probe_m (#use_error_handler:bool) struct_name (f:init_probe_dest_t)
+let init_probe_m
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
+  (#use_error_handler:bool) struct_name (f:init_probe_dest_t)
 : probe_m unit false false use_error_handler
 = admit ()
 
@@ -232,7 +243,10 @@ fun _ _ _ ctxt err read_offset write_offset failed src sz dest ->
 
 inline_for_extraction
 noextract
-let init_probe_size (#use_error_handler:bool)
+let init_probe_size
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
+  (#use_error_handler:bool)
 : probe_m U64.t true false use_error_handler
 = admit ()
 (*
@@ -242,7 +256,10 @@ let init_probe_size (#use_error_handler:bool)
 
 inline_for_extraction
 noextract
-let write_at_offset_m (#use_error_handler:bool) (#t:Type0) (#w:U64.t { w <> 0uL }) (f:write_at_offset_t t w) (v:t)
+let write_at_offset_m
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
+  (#use_error_handler:bool) (#t:Type0) (#w:U64.t { w <> 0uL }) (f:write_at_offset_t t w) (v:t)
 : probe_m unit true false use_error_handler
 = admit ()
 (*
@@ -260,7 +277,10 @@ let write_at_offset_m (#use_error_handler:bool) (#t:Type0) (#w:U64.t { w <> 0uL 
 
 inline_for_extraction
 noextract
-let probe_and_read_at_offset_m (#use_error_handler:bool) (#t:Type0) (#s:U64.t { s <> 0uL }) (reader:probe_and_read_at_offset_t t s)
+let probe_and_read_at_offset_m
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
+  (#use_error_handler:bool) (#t:Type0) (#s:U64.t { s <> 0uL }) (reader:probe_and_read_at_offset_t t s)
 : probe_m t true false use_error_handler
 = admit ()
 (*
@@ -281,7 +301,10 @@ let probe_and_read_at_offset_m (#use_error_handler:bool) (#t:Type0) (#s:U64.t { 
 
 inline_for_extraction
 noextract
-let seq_probe_m (#use_error_handler:bool) (#a:Type) (detail:string) (dflt:a) (m1:probe_m unit true false use_error_handler) (m2:probe_m a true false use_error_handler)
+let seq_probe_m
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
+  (#use_error_handler:bool) (#a:Type) (detail:string) (dflt:a) (m1:probe_m unit true false use_error_handler) (m2:probe_m a true false use_error_handler)
 : probe_m a true false use_error_handler
 = admit ()
 
@@ -299,7 +322,10 @@ let seq_probe_m (#use_error_handler:bool) (#a:Type) (detail:string) (dflt:a) (m1
 
 inline_for_extraction
 noextract
-let bind_probe_m (#use_error_handler:bool) (#a #b:Type) (detail:string) (dflt:b) (m1:probe_m a true false use_error_handler) (m2:a -> probe_m b true false use_error_handler)
+let bind_probe_m
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
+  (#use_error_handler:bool) (#a #b:Type) (detail:string) (dflt:b) (m1:probe_m a true false use_error_handler) (m2:a -> probe_m b true false use_error_handler)
 : probe_m b true false use_error_handler
 = admit ()
 (*
@@ -316,7 +342,10 @@ let bind_probe_m (#use_error_handler:bool) (#a #b:Type) (detail:string) (dflt:b)
 
 inline_for_extraction
 noextract
-let probe_and_copy_init_sz (#use_error_handler:bool) (f:probe_fn_incremental)
+let probe_and_copy_init_sz
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
+  (#use_error_handler:bool) (f:probe_fn_incremental)
 : probe_m unit true false use_error_handler
 = bind_probe_m 
    "probe_and_copy_init_sz"
@@ -326,7 +355,10 @@ let probe_and_copy_init_sz (#use_error_handler:bool) (f:probe_fn_incremental)
 
 inline_for_extraction
 noextract
-let return_probe_m (#use_error_handler:bool) (#a:Type) (v:a)
+let return_probe_m
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
+  (#use_error_handler:bool) (#a:Type) (v:a)
 : probe_m a true false use_error_handler
 = admit ()
 (*
@@ -341,7 +373,10 @@ let check_overflow_add (x:U64.t) (y:U64.t)
 
 inline_for_extraction
 noextract
-let skip_read (#use_error_handler:bool) (bytes_to_skip:U64.t)
+let skip_read
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
+  (#use_error_handler:bool) (bytes_to_skip:U64.t)
 : probe_m unit true false use_error_handler
 = admit ()
 (*
@@ -358,7 +393,10 @@ let skip_read (#use_error_handler:bool) (bytes_to_skip:U64.t)
 
 inline_for_extraction
 noextract
-let skip_write (#use_error_handler:bool) (bytes_to_skip:U64.t)
+let skip_write
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
+  (#use_error_handler:bool) (bytes_to_skip:U64.t)
 : probe_m unit true false use_error_handler
 = admit ()
 (*
@@ -375,7 +413,10 @@ let skip_write (#use_error_handler:bool) (bytes_to_skip:U64.t)
 
 inline_for_extraction
 noextract
-let fail (#use_error_handler:bool)
+let fail
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
+  (#use_error_handler:bool)
 : probe_m unit true false use_error_handler
 = admit ()
 (*
@@ -385,7 +426,10 @@ let fail (#use_error_handler:bool)
 
 inline_for_extraction
 noextract
-let if_then_else (#use_error_handler:bool) (b:bool) (m0 m1:probe_m unit true false use_error_handler)
+let if_then_else
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
+(#use_error_handler:bool) (b:bool) (m0 m1:probe_m unit true false use_error_handler)
 : probe_m unit true false use_error_handler
 = admit ()
 (*
@@ -542,7 +586,10 @@ let probe_array_aux (#use_error_handler:bool) (byte_len:U64.t) (probe_elem:probe
 
 inline_for_extraction
 noextract
-let probe_array (#use_error_handler:bool) (byte_len:U64.t) (probe_elem:probe_m unit true false use_error_handler)
+let probe_array
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
+  (#use_error_handler:bool) (byte_len:U64.t) (probe_elem:probe_m unit true false use_error_handler)
 : probe_m unit true false use_error_handler
 = admit ()
 (*
@@ -551,7 +598,10 @@ let probe_array (#use_error_handler:bool) (byte_len:U64.t) (probe_elem:probe_m u
 
 inline_for_extraction
 noextract
-let lift_pure_external_action (#use_error_handler:bool) (#a:Type) (f:pure_external_action a)
+let lift_pure_external_action
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
+  (#use_error_handler:bool) (#a:Type) (f:pure_external_action a)
 : probe_m a true false use_error_handler
 = admit ()
 (*
@@ -561,6 +611,8 @@ let lift_pure_external_action (#use_error_handler:bool) (#a:Type) (f:pure_extern
 inline_for_extraction
 noextract
 let init_and_probe
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
       (#use_error_handler:bool)
       (#mz:bool)
       (struct_name:string)

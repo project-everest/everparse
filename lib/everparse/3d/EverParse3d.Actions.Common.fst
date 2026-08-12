@@ -10,17 +10,15 @@ module SZ = FStar.SizeT
   
 let app_ctxt = AppCtxt.app_ctxt
 
-inline_for_extraction
-noextract
-let input_buffer_t = EverParse3d.InputStream.All.t
-
-let error_handler = 
+let error_handler
+    {| inst: I.input_stream_inst 'input_buffer_t  |}
+= 
     typename:string ->
     fieldname:string ->
     error_reason:string ->
     error_code:U8.t ->
     ctxt: app_ctxt ->
-    sl: input_buffer_t ->
+    sl: 'input_buffer_t ->
     contents_sl: Ghost.erased (Seq.seq U8.t) ->
     v_sl: Ghost.erased (Seq.seq U8.t) ->
     stt unit
@@ -33,6 +31,7 @@ let error_handler =
 	pts_to ctxt v_ctxt'
       )
 
+(*
 // The C macro used as the error handler when 3d is invoked with
 // `--use_error_handler_macro`. It lives here (rather than in
 // EverParse3d.Actions.Base) so that it is also reachable from

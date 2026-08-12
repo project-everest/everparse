@@ -21,12 +21,14 @@ module SZ = FStar.SizeT
 open EverParse3d.State
 
 let action
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
   (extra_state: state_dict)
   (a: Type0)
   (use_error_handler: bool)
 =
   ctxt: app_ctxt ->
-  error_handler_fn : (if use_error_handler then error_handler else unit) ->
+  error_handler_fn : (if use_error_handler then error_handler #input_buffer_t else unit) ->
   sl: input_buffer_t ->
   contents_sl: Ghost.erased (Seq.seq U8.t) ->
   v_sl: Ghost.erased (Seq.seq U8.t) ->
@@ -46,6 +48,8 @@ module LP = LowParse.Spec.Base
 
 inline_for_extraction noextract
 let validate_with_action_t
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
      (#nz:bool)
      (#wk: _)
      (#k:parser_kind nz wk)
@@ -56,7 +60,7 @@ let validate_with_action_t
      (use_error_handler:bool)
 : Type 
 = (ctxt: app_ctxt) ->
-  (error_handler_fn : (if use_error_handler then error_handler else unit)) ->
+  (error_handler_fn : (if use_error_handler then error_handler #input_buffer_t else unit)) ->
   (sl: input_buffer_t) ->
   (extra: forevery_values extra_state) ->
   (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
@@ -81,6 +85,8 @@ let validate_with_action_t
 
 inline_for_extraction noextract
 let validate_with_action_no_read
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
      (#nz:bool)
      (#wk: _)
      (#k:parser_kind nz wk)
@@ -91,7 +97,7 @@ let validate_with_action_no_read
      (use_error_handler:bool)
 : Type 
 = (ctxt: app_ctxt) ->
-  (error_handler_fn : (if use_error_handler then error_handler else unit)) ->
+  (error_handler_fn : (if use_error_handler then error_handler #input_buffer_t else unit)) ->
   (sl: input_buffer_t) ->
   (pos: ref SZ.t) ->
   (extra: forevery_values extra_state) ->
@@ -122,6 +128,8 @@ let validate_with_action_no_read
 
 inline_for_extraction noextract
 fn validate_eta
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
       (#nz:bool)
       (#wk: _)
       (#k:parser_kind nz wk)
@@ -130,8 +138,8 @@ fn validate_eta
       (#[@@@erasable] extra_state: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v: validate_with_action_t p extra_state has_action use_error_handler)
-: validate_with_action_t p extra_state has_action use_error_handler
+      (v: validate_with_action_t #input_buffer_t p extra_state has_action use_error_handler)
+: validate_with_action_t #input_buffer_t p extra_state has_action use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -145,12 +153,14 @@ fn validate_eta
 
 inline_for_extraction noextract
 fn act_with_comment
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
       (s: string)
       (extra_state: state_dict)
       (#use_error_handler:bool)
       (#res:Type)
-      (a: action extra_state res use_error_handler)
-: action extra_state res use_error_handler
+      (a: action #input_buffer_t extra_state res use_error_handler)
+: action #input_buffer_t extra_state res use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -164,6 +174,8 @@ fn act_with_comment
 
 inline_for_extraction
 let leaf_reader
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
   (#nz:bool)
   (#k: parser_kind nz WeakKindStrongPrefix)
   (#t: Type)
@@ -191,6 +203,8 @@ let leaf_reader
 
 inline_for_extraction noextract
 fn validate_with_success_action
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
       (name: string)
       (#nz:bool)
       (#wk: _)
@@ -200,9 +214,9 @@ fn validate_with_success_action
       (#[@@@erasable] extra: state_dict)
       (#has_action:bool)
       (#use_error_handler:bool)
-      (v1:validate_with_action_t p1 extra has_action use_error_handler)
-      (a:action extra bool use_error_handler)
-  : validate_with_action_t p1 extra true use_error_handler
+      (v1:validate_with_action_t #input_buffer_t p1 extra has_action use_error_handler)
+      (a:action #input_buffer_t extra bool use_error_handler)
+  : validate_with_action_t #input_buffer_t p1 extra true use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -226,6 +240,9 @@ fn validate_with_success_action
 
 inline_for_extraction noextract
 fn validate_with_error_handler
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
+  (error_handler_macro: error_handler #input_buffer_t)
       (typename: string)
       (fieldname: string)
       (#nz: _)
@@ -236,8 +253,8 @@ fn validate_with_error_handler
       (#[@@@erasable] extra_state: state_dict)
       (#has_action: _)
       (#use_error_handler:bool)
-      (v1:validate_with_action_t p1 extra_state has_action use_error_handler)
-  : validate_with_action_t p1 extra_state has_action use_error_handler
+      (v1:validate_with_action_t #input_buffer_t p1 extra_state has_action use_error_handler)
+  : validate_with_action_t #input_buffer_t p1 extra_state has_action use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -250,16 +267,18 @@ fn validate_with_error_handler
   if (res = validator_success) { // TODO: turn this `if ... else` into a non-terminal `if (res <> validator_success)` with an `ensures` clause
     res
   } else {
-    ((if use_error_handler then error_handler_fn else error_handler_macro) <: error_handler) typename fieldname (error_reason_of_result res) res ctxt sl _ _;
+    ((if use_error_handler then error_handler_fn else error_handler_macro) <: error_handler #input_buffer_t #inst) typename fieldname (error_reason_of_result res) res ctxt sl _ _;
     res
   };
 }
 
 inline_for_extraction noextract
 fn validate_ret
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
       (#extra_state: state_dict)
       (#use_error_handler:bool)
-  : validate_with_action_t (parse_ret ()) extra_state false use_error_handler
+  : validate_with_action_t #input_buffer_t (parse_ret ()) extra_state false use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -273,6 +292,8 @@ fn validate_ret
 
 inline_for_extraction noextract
 fn validate_pair
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
        (typename: string)
        (name1: string)
        (#nz1:_)
@@ -283,7 +304,7 @@ fn validate_pair
        (#[@@@erasable] extra_state: state_dict)
        (#has_action1:bool)
        (#use_error_handler:bool)
-       (v1:validate_with_action_t p1 extra_state has_action1 use_error_handler)
+       (v1:validate_with_action_t #input_buffer_t p1 extra_state has_action1 use_error_handler)
        (#nz2:_)
        (#wk2: _)
        (#k2:parser_kind nz2 wk2)
@@ -291,8 +312,9 @@ fn validate_pair
        (#[@@@erasable] p2:parser k2 t2)
        (k2_const: bool)
        (#has_action2:bool)
-       (v2:validate_with_action_t p2 extra_state has_action2 use_error_handler)
+       (v2:validate_with_action_t #input_buffer_t p2 extra_state has_action2 use_error_handler)
   : validate_with_action_t
+      #input_buffer_t
       (p1 `parse_pair` p2)
       extra_state
       (has_action1 || has_action2)
@@ -319,6 +341,8 @@ fn validate_pair
 
 inline_for_extraction noextract
 fn validate_dep_pair_with_refinement_and_action
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
       (p1_is_constant_size_without_actions: bool)
       (name1: string)
       (#nz1:_)
@@ -328,18 +352,19 @@ fn validate_dep_pair_with_refinement_and_action
       (#[@@@erasable] extra_state: state_dict)
       (#has_action1:bool)
       (#use_error_handler:bool)
-      (v1:validate_with_action_no_read p1 extra_state has_action1 use_error_handler)
-      (r1: leaf_reader p1)
+      (v1:validate_with_action_no_read #input_buffer_t p1 extra_state has_action1 use_error_handler)
+      (r1: leaf_reader #input_buffer_t p1)
       (f: t1 -> bool)
-      (a:t1 -> action extra_state bool use_error_handler)
+      (a:t1 -> action #input_buffer_t extra_state bool use_error_handler)
       (#nz2:_)
       (#wk2: _)
       (#k2:parser_kind nz2 wk2)
       (#[@@@erasable] t2:refine _ f -> Type)
       (#[@@@erasable] p2:(x:refine _ f -> parser k2 (t2 x)))
       (#has_action2:bool)
-      (v2:(x:refine _ f -> validate_with_action_t (p2 x) extra_state has_action2 use_error_handler))
+      (v2:(x:refine _ f -> validate_with_action_t #input_buffer_t (p2 x) extra_state has_action2 use_error_handler))
   : validate_with_action_t
+      #input_buffer_t
       ((p1 `parse_filter` f) `parse_dep_pair` p2)
       extra_state
       true
@@ -377,6 +402,8 @@ fn validate_dep_pair_with_refinement_and_action
 
 inline_for_extraction noextract
 fn validate_filter
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
        (name: string)
        (#nz:_)
        (#k:parser_kind nz WeakKindStrongPrefix)
@@ -385,12 +412,12 @@ fn validate_filter
        (#[@@@erasable] extra_state: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_no_read p extra_state has_action use_error_handler)
-       (r:leaf_reader p)
+       (v:validate_with_action_no_read #input_buffer_t p extra_state has_action use_error_handler)
+       (r:leaf_reader #input_buffer_t p)
        (f:t -> bool)
        (cr:string)
        (cf:string)
-  : validate_with_action_t (p `parse_filter` f) extra_state has_action use_error_handler
+  : validate_with_action_t #input_buffer_t (p `parse_filter` f) extra_state has_action use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -416,6 +443,8 @@ fn validate_filter
 
 inline_for_extraction noextract
 fn validate_filter_with_action
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
        (name: string)
        (#nz:_)
        (#k:parser_kind nz WeakKindStrongPrefix)
@@ -424,13 +453,14 @@ fn validate_filter_with_action
        (#[@@@erasable] extra_state: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_no_read p extra_state has_action use_error_handler)
-       (r:leaf_reader p)
+       (v:validate_with_action_no_read #input_buffer_t p extra_state has_action use_error_handler)
+       (r:leaf_reader #input_buffer_t p)
        (f:t -> bool)
        (cr:string)
        (cf:string)
-       (a: t -> action extra_state bool use_error_handler)
-  : validate_with_action_t #nz
+       (a: t -> action #input_buffer_t extra_state bool use_error_handler)
+  : validate_with_action_t
+      #input_buffer_t
       (p `parse_filter` f)
       extra_state
       true
@@ -465,6 +495,8 @@ fn validate_filter_with_action
 
 inline_for_extraction noextract
 fn validate_weaken_left
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
        (#nz:_)
        (#wk: _)
        (#k:parser_kind nz wk)
@@ -473,11 +505,11 @@ fn validate_weaken_left
        (#[@@@erasable] extra_state: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_t p extra_state has_action use_error_handler)
+       (v:validate_with_action_t #input_buffer_t p extra_state has_action use_error_handler)
        (#nz':_)
        (#wk': _)
        (k':parser_kind nz' wk')
-  : validate_with_action_t (parse_weaken_left p k') extra_state has_action use_error_handler
+  : validate_with_action_t #input_buffer_t (parse_weaken_left p k') extra_state has_action use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -491,6 +523,8 @@ fn validate_weaken_left
 
 inline_for_extraction noextract
 fn validate_weaken_right
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
        (#nz:_)
        (#wk: _)
        (#k:parser_kind nz wk)
@@ -499,11 +533,11 @@ fn validate_weaken_right
        (#[@@@erasable] extra_state: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_t p extra_state has_action use_error_handler)
+       (v:validate_with_action_t #input_buffer_t p extra_state has_action use_error_handler)
        (#nz':_)
        (#wk': _)
        (k':parser_kind nz' wk')
-  : validate_with_action_t (parse_weaken_right p k') extra_state has_action use_error_handler
+  : validate_with_action_t #input_buffer_t (parse_weaken_right p k') extra_state has_action use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -520,6 +554,8 @@ fn validate_weaken_right
 noextract
 inline_for_extraction
 fn validate_weaken
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
        (name: string)
        (#nz:_)
        (#wk:_)
@@ -529,10 +565,10 @@ fn validate_weaken
        (#[@@@erasable] d1: state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_t p d1 has_action use_error_handler)
+       (v:validate_with_action_t #input_buffer_t p d1 has_action use_error_handler)
       (d2: state_dict)
       (d2_extends: squash (state_dict_weaken_prop d1 d2))
-: validate_with_action_t p d2 has_action use_error_handler
+: validate_with_action_t #input_buffer_t p d2 has_action use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -559,6 +595,8 @@ fn validate_weaken
 noextract
 inline_for_extraction
 fn validate_call
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
        (name: string)
        (#nz:_)
        (#wk:_)
@@ -568,12 +606,12 @@ fn validate_call
        (#[@@@erasable] d': state_dict)
        (#has_action:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_t p d' has_action use_error_handler)
+       (v:validate_with_action_t #input_buffer_t p d' has_action use_error_handler)
       (d: state_dict)
       (#[@@@erasable] f: Ghost.erased ((x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p)))) // TODO: change to GTot once we switch to ghost bijections
       (#[@@@erasable] g: Ghost.erased (refine_bool_t string d'.state_p -> Tot (refine_bool_t string d.state_p)))
       ([@@@erasable] sq: squash (state_dict_rename_prop d d' f g))
-: validate_with_action_t p d has_action use_error_handler
+: validate_with_action_t #input_buffer_t p d has_action use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -591,10 +629,12 @@ fn validate_call
 
 inline_for_extraction noextract
 fn validate_impos
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
        (#extra_state: _)
        (#use_error_handler:bool)
        (_:unit)
-  : validate_with_action_t (parse_impos ()) extra_state false use_error_handler
+  : validate_with_action_t #input_buffer_t (parse_impos ()) extra_state false use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -608,6 +648,8 @@ fn validate_impos
 
 noextract inline_for_extraction
 fn validate_ite
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
        (#nz:_)
        (#wk: _)
        (#k:parser_kind nz wk)
@@ -619,10 +661,11 @@ fn validate_ite
        (#ha2:_)
        (#use_error_handler:bool)
        ([@@@erasable] p1:squash e -> parser k (a()))
-       (v1:(squash e -> validate_with_action_t (p1()) extra_state ha1 use_error_handler))
+       (v1:(squash e -> validate_with_action_t #input_buffer_t (p1()) extra_state ha1 use_error_handler))
        ([@@@erasable] p2:squash (not e) -> parser k (b()))
-       (v2:(squash (not e) -> validate_with_action_t (p2()) extra_state ha2 use_error_handler))
+       (v2:(squash (not e) -> validate_with_action_t #input_buffer_t (p2()) extra_state ha2 use_error_handler))
   : validate_with_action_t
+      #input_buffer_t
       (parse_ite e p1 p2)
       extra_state
       (ha1 || ha2)
@@ -644,6 +687,8 @@ fn validate_ite
 
 noextract inline_for_extraction
 fn validate_nlist
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
        (n:U32.t)
        (n_is_const:option nat { memoizes_n_as_const n_is_const n})
        (#wk: _)
@@ -653,8 +698,8 @@ fn validate_nlist
        (#[@@@erasable] extra_state: _)
        (#ha:bool)
        (#use_error_handler:bool)
-       (v: validate_with_action_t p extra_state ha use_error_handler)
-: validate_with_action_t (parse_nlist n n_is_const p) extra_state ha use_error_handler
+       (v: validate_with_action_t #input_buffer_t p extra_state ha use_error_handler)
+: validate_with_action_t #input_buffer_t (parse_nlist n n_is_const p) extra_state ha use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -668,6 +713,8 @@ fn validate_nlist
 
 noextract inline_for_extraction
 fn validate_t_at_most
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
        (n:U32.t)
        (#nz: _)
        (#wk: _)
@@ -677,8 +724,8 @@ fn validate_t_at_most
        (#[@@@erasable] extra_state: _)
        (#ha:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_t p extra_state ha use_error_handler)
-  : validate_with_action_t (parse_t_at_most n p) extra_state ha use_error_handler
+       (v:validate_with_action_t #input_buffer_t p extra_state ha use_error_handler)
+  : validate_with_action_t #input_buffer_t (parse_t_at_most n p) extra_state ha use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -692,6 +739,8 @@ fn validate_t_at_most
 
 noextract inline_for_extraction
 fn validate_t_exact
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
        (n:U32.t)
        (#nz: _)
        (#wk: _)
@@ -701,8 +750,8 @@ fn validate_t_exact
        (#[@@@erasable] extra_state: _)
        (#ha:_)
        (#use_error_handler:bool)
-       (v:validate_with_action_t p extra_state ha use_error_handler)
-  : validate_with_action_t (parse_t_exact n p) extra_state ha use_error_handler
+       (v:validate_with_action_t #input_buffer_t p extra_state ha use_error_handler)
+  : validate_with_action_t #input_buffer_t (parse_t_exact n p) extra_state ha use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -716,13 +765,15 @@ fn validate_t_exact
 
 inline_for_extraction noextract
 fn read_filter
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
        (#nz:_)
        (#k: parser_kind nz WeakKindStrongPrefix)
        (#t: Type0)
        (#[@@@erasable] p: parser k t)
-       (p32: leaf_reader p)
+       (p32: leaf_reader #input_buffer_t p)
        (f: (t -> bool))
-    : leaf_reader (parse_filter p f)
+    : leaf_reader #input_buffer_t (parse_filter p f)
 =
   (sl: input_buffer_t)
   (contents_sl: Ghost.erased (Seq.seq U8.t))
@@ -736,8 +787,10 @@ fn read_filter
 
 inline_for_extraction noextract
 fn read_impos
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
     ()
-    : leaf_reader (parse_impos())
+    : leaf_reader #input_buffer_t (parse_impos())
 =
   (sl: _)
   (contents_sl: _)
@@ -747,8 +800,11 @@ fn read_impos
 }
 
 inline_for_extraction
-let validator #nz #wk (#k:parser_kind nz wk) (#t:Type) (p:parser k t) (#use_error_handler:bool)
-  = validate_with_action_no_read p state_dict_empty false use_error_handler
+let validator
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
+  #nz #wk (#k:parser_kind nz wk) (#t:Type) (p:parser k t) (#use_error_handler:bool)
+  = validate_with_action_no_read #input_buffer_t p state_dict_empty false use_error_handler
 
 
 
@@ -756,13 +812,15 @@ let validator #nz #wk (#k:parser_kind nz wk) (#t:Type) (p:parser k t) (#use_erro
 noextract
 inline_for_extraction
 fn action_bind
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
       (name: string)
       (#extra_state: state_dict)
       (#use_error_handler:bool)
       (#a: Type)
-      (f: action extra_state a use_error_handler)
-      (#b:Type) (g: (a -> action extra_state b use_error_handler))
-: action extra_state b use_error_handler
+      (f: action #input_buffer_t extra_state a use_error_handler)
+      (#b:Type) (g: (a -> action #input_buffer_t extra_state b use_error_handler))
+: action #input_buffer_t extra_state b use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -777,13 +835,15 @@ fn action_bind
 noextract
 inline_for_extraction
 fn action_weaken
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
       (#d1: state_dict)
       (#use_error_handler:bool)
       (#a: Type)
-      (f: action d1 a use_error_handler)
+      (f: action #input_buffer_t d1 a use_error_handler)
       (d2: state_dict)
       (d2_extends: squash (state_dict_weaken_prop d1 d2))
-: action d2 a use_error_handler
+: action #input_buffer_t d2 a use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -803,15 +863,17 @@ fn action_weaken
 noextract
 inline_for_extraction
 fn action_call
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
       (#d': state_dict)
       (#use_error_handler:bool)
       (#a: Type)
-      (act: action d' a use_error_handler)
+      (act: action #input_buffer_t d' a use_error_handler)
       (d: state_dict)
       (#[@@@erasable] f: Ghost.erased ((x: refine_bool_t string d.state_p) -> Tot (option (refine_bool_t string d'.state_p)))) // TODO: change to GTot once we switch to ghost bijections
       (#[@@@erasable] g: Ghost.erased (refine_bool_t string d'.state_p -> Tot (refine_bool_t string d.state_p)))
       ([@@@erasable] sq: squash (state_dict_rename_prop d d' f g))
-: action d a use_error_handler
+: action #input_buffer_t d a use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -828,9 +890,11 @@ fn action_call
 noextract
 inline_for_extraction
 fn action_deref
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
       (name: string)
       (#a:Type0) (x:ref a) (#use_error_handler: bool)
-: action (state_dict_singleton name (pts_to x #1.0R)) a use_error_handler
+: action #input_buffer_t (state_dict_singleton name (pts_to x #1.0R)) a use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
@@ -847,9 +911,11 @@ fn action_deref
 noextract
 inline_for_extraction
 fn action_assignment
+  (#input_buffer_t: Type0)
+  {| inst: I.input_stream_inst input_buffer_t  |}
       (name: string)
       (#a:Type) (x:ref a) (w: a) (#use_error_handler: bool)
-: action (state_dict_singleton name (pts_to x #1.0R)) a use_error_handler
+: action #input_buffer_t (state_dict_singleton name (pts_to x #1.0R)) a use_error_handler
 =
   (ctxt: _)
   (error_handler_fn: _)
