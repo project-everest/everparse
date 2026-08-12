@@ -714,6 +714,45 @@ fn validate_t_exact
   admit ()
 }
 
+inline_for_extraction noextract
+fn read_filter
+       (#nz:_)
+       (#k: parser_kind nz WeakKindStrongPrefix)
+       (#t: Type0)
+       (#[@@@erasable] p: parser k t)
+       (p32: leaf_reader p)
+       (f: (t -> bool))
+    : leaf_reader (parse_filter p f)
+=
+  (sl: input_buffer_t)
+  (contents_sl: Ghost.erased (Seq.seq U8.t))
+  (v_sl: Ghost.erased (Seq.seq U8.t))
+{
+  LowParse.Spec.Combinators.parse_filter_eq p f v_sl;
+  let res = p32 sl _ _;
+  assert pure (f res == true);
+  res
+}
+
+inline_for_extraction noextract
+fn read_impos
+    ()
+    : leaf_reader (parse_impos())
+=
+  (sl: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  ()
+}
+
+inline_for_extraction
+let validator #nz #wk (#k:parser_kind nz wk) (#t:Type) (p:parser k t) (#use_error_handler:bool)
+  = validate_with_action_no_read p state_dict_empty false use_error_handler
+
+
+
+
 noextract
 inline_for_extraction
 fn action_bind
