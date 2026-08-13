@@ -12,6 +12,31 @@ module F = CBOR.Spec.Raw.EverParse
 module VCList = LowParse.Spec.VCList
 
 #set-options "--print_implicits"
+
+(* Discharged inside the Pulse function below, this one step of [cbor_compare]
+   only fits in the rlimit by a hair (17.2 of 20), and it went over in CI.
+   Prove it once here instead, in a small context where it is cheap. *)
+#push-options "--fuel 1 --ifuel 1 --z3rlimit 32"
+
+let cbor_compare_tagged'
+  (tag: raw_uint64)
+  (v1 v2: raw_data_item)
+: Lemma
+  (ensures (cbor_compare (Tagged tag v1) (Tagged tag v2) == cbor_compare v1 v2))
+= assert_norm (get_major_type (Tagged tag v1) == cbor_major_type_tagged);
+  assert_norm (raw_uint64_compare tag tag == 0)
+
+let cbor_compare_tagged
+  (x1 x2: raw_data_item)
+: Lemma
+  (requires (Tagged? x1 /\ Tagged? x2 /\ Tagged?.tag x1 == Tagged?.tag x2))
+  (ensures (cbor_compare x1 x2 == cbor_compare (Tagged?.v x1) (Tagged?.v x2)))
+= let Tagged tag v1 = x1 in
+  let Tagged _ v2 = x2 in
+  cbor_compare_tagged' tag v1 v2
+
+#pop-options
+
 #push-options "--z3rlimit_factor 4"
 
 fn cbor_match_compare_serialized_tagged
@@ -39,6 +64,7 @@ ensures
   unfold (cbor_match_serialized_tagged c2 pm2 r2);
   unfold (cbor_match_serialized_payload_tagged (to_slice c1.cbor_serialized_payload) (pm1 `perm_mul` c1.cbor_serialized_perm) (Tagged?.v r1));
   unfold (cbor_match_serialized_payload_tagged (to_slice c2.cbor_serialized_payload) (pm2 `perm_mul` c2.cbor_serialized_perm) (Tagged?.v r2));
+  cbor_compare_tagged r1 r2;
   assert (pure (cbor_compare r1 r2 == cbor_compare (Tagged?.v r1) (Tagged?.v r2)));
   cbor_compare_correct (Tagged?.v r1) (Tagged?.v r2);
   (* tedious folding/unfolding, desperately need an "unfold all" that's universe polymorphic *)
