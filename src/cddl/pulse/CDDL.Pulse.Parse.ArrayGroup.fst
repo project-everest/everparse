@@ -14,6 +14,21 @@ let impl_zero_copy_array_group_precond
 : Tot prop
 = t l == Some (l, [])
 
+(* Bridges `t_array` (which only states that the group consumes the whole list
+   up to a `Nil?` remainder) to `impl_zero_copy_array_group_precond` (which
+   states the consumed prefix is the list itself). The step relies on the
+   `Pure` postcondition of `array_group`, which is no longer picked up
+   automatically. *)
+let impl_zero_copy_array_group_precond_intro
+  (t: array_group None)
+  (v: cbor)
+  (l: list cbor { FStar.UInt.fits (List.Tot.length l) FStar.UInt64.n })
+: Lemma
+  (requires (t_array t v /\ unpack v == CArray l))
+  (ensures (impl_zero_copy_array_group_precond t l))
+= let Some (l1, l2) = t l in
+  List.Tot.append_l_nil l1
+
 let impl_zero_copy_array_group_postcond
   (#t: array_group None)
   (#tgt: Type0)
@@ -98,6 +113,7 @@ fn impl_zero_copy_array
   Trade.rewrite_with_trade (cbor_array_iterator_match pl ar l1)
     (cbor_array_iterator_match pl ar l);
   Trade.trans _ _ (vmatch p c v);
+  impl_zero_copy_array_group_precond_intro t v l;
   // END FIXME
   let res = pa ar;
   Trade.trans _ _ (vmatch p c v);

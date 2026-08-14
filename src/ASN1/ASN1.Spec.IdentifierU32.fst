@@ -788,7 +788,11 @@ let encode_asn1_first_byte
            | _ -> 3uy
            )
   in
+  assert (U8.v b0 <= 3);
   let b0' = U8.shift_left b0 6ul in
+  UInt.shift_left_value_lemma #8 (U8.v b0) 6;
+  assert_norm (pow2 6 == 64);
+  assert_norm (pow2 8 == 256);
   assert (U8.v b0' <= 128 + 64);
   let b1 = (match id_flag with
            | PRIMITIVE -> 0uy
@@ -801,7 +805,9 @@ let encode_asn1_first_byte
   U8.add b0'
          (U8.add b1'
                  b)
+#pop-options
 
+#push-options "--fuel 1 --ifuel 2 --z3rlimit 64"
 let lemma_encode_asn1_first_byte_inverse
   (buf : byte)
 : Lemma (ensures
@@ -817,7 +823,11 @@ let lemma_encode_asn1_first_byte_inverse
              )
   in
   assert (b0 = (U8.shift_right buf) 6ul);
+  assert (U8.v b0 <= 3);
   let b0' = U8.shift_left b0 6ul in
+  UInt.shift_left_value_lemma #8 (U8.v b0) 6;
+  assert_norm (pow2 6 == 64);
+  assert_norm (pow2 8 == 256);
   assert (U8.v b0' <= 128 + 64);
   let b1 = (match id_flag with
            | PRIMITIVE -> 0uy

@@ -299,7 +299,7 @@ let parse_nlist_ext'
   (ensures (LP.parse (LowParse.Spec.VCList.parse_nlist n p) b == LP.parse (LowParse.Spec.VCList.parse_nlist n p') b))
 = LowParse.Spec.VCList.parse_nlist_ext n p p' b (fun x -> ())
 
-#push-options "--z3rlimit 64 --split_queries always"
+#push-options "--z3rlimit 64"
 
 #restart-solver
 

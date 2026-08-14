@@ -19,7 +19,7 @@ open CBOR.Spec.Raw.Format // must come last, to match the interface's resolution
 
 module CompareBytes = CBOR.Pulse.Raw.Compare.Bytes
 
-#push-options "--split_queries no --fuel 0 --ifuel 0"
+#push-options " --fuel 0 --ifuel 0"
 #push-options "--z3rlimit_factor 4"
 let parse_fail_no_serialize
   (v: Seq.seq U8.t)
@@ -103,7 +103,7 @@ let cbor_parse_aux
     = parsed_data_is_serialize #parse_raw_data_item_kind #raw_data_item #parse_raw_data_item serialize_raw_data_item v;
       serialize_strong_prefix serialize_raw_data_item v1 v' v2 (Seq.slice v consumed (Seq.length v))
     in
-    Classical.forall_intro_2 (fun v1 v2 -> Classical.move_requires (prf v1) v2);
+    Classical.forall_intro_2 (Classical.move_requires_2 prf);
     ()
 
 
@@ -376,7 +376,7 @@ module GR = Pulse.Lib.GhostReference
 module Ref = Pulse.Lib.Reference
 
 #restart-solver
-// #push-options "--z3rlimit 256 --query_stats --fuel 2 --ifuel 1 --split_queries always --z3refresh"
+// #push-options "--z3rlimit 256 --query_stats --fuel 2 --ifuel 1 --z3refresh"
 #push-options "--z3rlimit 128"
 fn cbor_raw_sorted (_: unit) : LowParse.Pulse.Recursive.impl_pred_t u#0 u#0 #_ serialize_raw_data_item_param (R.raw_data_item_sorted_elem deterministically_encoded_cbor_map_key_order)
 = (a: _)
@@ -577,7 +577,7 @@ let cbor_validate_det_fail
     (ensures False)
   = serialize_cbor_inj v1 v1' v2 v2' 
   in
-  Classical.forall_intro_2 (fun v1 v2 -> Classical.move_requires (aux v1) v2)
+  Classical.forall_intro_2 (Classical.move_requires_2 aux)
 
 #restart-solver
 

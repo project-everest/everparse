@@ -844,7 +844,7 @@ let tot_parse_nlist_parse_nlist'
   (ensures (tot_parse_nlist n p b == parse_nlist n #k p b))
 = tot_parse_nlist_parse_nlist n p b
 
-#push-options "--z3rlimit 256 --ifuel 2 --split_queries always"
+#push-options "--z3rlimit 256 --ifuel 2"
 
 #restart-solver
 let parse_raw_data_item_eq
@@ -1937,7 +1937,7 @@ let bytes_lex_compare_refl
 
 #pop-options
 
-#push-options "--z3rlimit 128 --split_queries always"
+#push-options "--z3rlimit 128"
 
 let serialized_lex_compare_simple_value
   (x1 x2: simple_value)
@@ -2468,7 +2468,7 @@ let rec lex_compare_ext
 
 #pop-options
 
-#push-options "--z3rlimit 128 --split_queries always"
+#push-options "--z3rlimit 128"
 
 let serialized_lex_compare_array_aux
   (len1: raw_uint64)
@@ -2565,7 +2565,7 @@ let tot_nondep_then_eq_gen
 
 #pop-options
 
-#push-options "--z3rlimit 64 --split_queries always"
+#push-options "--z3rlimit 64"
 
 let serialized_lex_compare_map_aux
   (len1: raw_uint64)

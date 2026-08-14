@@ -11,7 +11,7 @@ FSTAR_EXE ?= fstar.exe
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/fstar.Makefile
 
-FSTAR_OPTIONS += --use_hints --trivial_pre_for_unannotated_effectful_fns false --include $(LOWPARSE_HOME) --already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse --cache_checked_modules --cache_dir $(FSTAR_OUT_DIR) --odir $(FSTAR_OUT_DIR) $(addprefix --include , $(INCLUDE_PATHS)) --cmi
+FSTAR_OPTIONS += --trivial_pre_for_unannotated_effectful_fns false --include $(LOWPARSE_HOME) --already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse --cache_checked_modules --cache_dir $(FSTAR_OUT_DIR) --odir $(FSTAR_OUT_DIR) $(addprefix --include , $(INCLUDE_PATHS)) --cmi
 
 # NOTE: the cache dir and out dir for F* MUST be the same, because the
 # .krml files should be generated only once.

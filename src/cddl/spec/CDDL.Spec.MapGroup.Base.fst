@@ -697,8 +697,8 @@ let map_group_equiv_intro
 : Lemma
   (map_group_equiv m1 m2)
 = Classical.forall_intro prf0;
-  Classical.forall_intro_2 (fun l l' -> Classical.move_requires (prf12 l) l');
-  Classical.forall_intro_2 (fun l l' -> Classical.move_requires (prf21 l) l')
+  Classical.forall_intro_2 (Classical.move_requires_2 prf12);
+  Classical.forall_intro_2 (Classical.move_requires_2 prf21)
 
 let map_group_equiv_intro_equiv
   (m1 m2: map_group)
@@ -903,11 +903,12 @@ let map_group_concat_always_false
   (m: map_group)
 : Lemma
   (map_group_concat map_group_always_false m == map_group_always_false)
-= map_group_equiv_intro_equiv
-    (map_group_concat map_group_always_false m)
-    map_group_always_false
-    (fun _ -> ())
-    (fun _ _ -> ())
+= introduce forall l . map_group_concat map_group_always_false m l == map_group_always_false l
+  with begin
+    assert (map_group_always_false l == MapGroupResult MPS.empty);
+    assert (MPS.equal (map_group_concat_result l m MPS.empty) MPS.empty)
+  end;
+  FE.extensionality _ _ (map_group_concat map_group_always_false m) map_group_always_false
 
 let bound_map_group
   (l0: cbor_map)
@@ -1460,7 +1461,8 @@ let apply_map_group_det_match_item_cut
   match cbor_map_key_list s with
   | [] ->
       assert (MPS.equal res MPS.empty);
-      assert (map_group_match_item_cut_pre l res == MPS.singleton (cbor_map_empty, l))
+      assert (map_group_match_item_cut_pre l res == MPS.singleton (cbor_map_empty, l));
+      assert (apply_map_group_det (map_group_match_item true k ty) l == MapGroupFail)
   | key :: q ->
     cbor_map_key_list_mem s key;
     let Some value = cbor_map_get s key in
@@ -1473,6 +1475,8 @@ let apply_map_group_det_match_item_cut
       assert (MPS.equal res (MPS.singleton (s, s')));
       assert (map_group_match_item_cut_pre l res == res);
       assert (~ (mps_exists (map_group_match_item_cut_exists_pred k res) res));
+      assert (map_group_match_item true k ty l == MapGroupResult res);
+      apply_map_group_det_eq_singleton (map_group_match_item true k ty) l (s, s');
       ()
     end
     else
@@ -1530,6 +1534,12 @@ let apply_map_group_det_match_item_cut
           Classical.forall_intro_2 aux;
           assert (MPS.equal res MPS.empty);
           assert (map_group_match_item_cut_pre l res == MPS.singleton (cbor_map_empty, l));
+          let s0 = MPS.singleton (cbor_map_empty, l) in
+          assert (cbor_map_mem (key, value) l);
+          assert (map_group_match_item_cut_failure_witness_pred k s0 (cbor_map_empty, l) (key, value));
+          assert (map_group_match_item_cut_exists_pred k s0 (cbor_map_empty, l));
+          assert (mps_exists (map_group_match_item_cut_exists_pred k s0) s0);
+          assert (apply_map_group_det (map_group_match_item true k ty) l == MapGroupCutFail);
           ()
         | key2 :: _ ->
           cbor_map_key_list_mem s key2;

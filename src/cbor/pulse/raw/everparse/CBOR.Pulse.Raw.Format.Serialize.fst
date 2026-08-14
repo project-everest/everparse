@@ -1286,7 +1286,7 @@ let size_payload_string
 // non-depth seqbytes extraction. No recursion / no `f`.
 // ============================================================================
 
-#push-options "--z3rlimit 10 --split_queries always"
+#push-options "--z3rlimit 10"
 
 ghost
 fn ser_payload_string_lens_aux_d

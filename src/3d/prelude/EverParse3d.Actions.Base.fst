@@ -618,7 +618,7 @@ let validate_dep_pair_with_refinement_and_action'
 // This VC is provable per-subgoal but too large for Z3 to discharge as a single
 // monolithic query (it regressed with the F*/Z3 upgrade); splitting it keeps each
 // subgoal well within rlimit. See `--split_queries always` (each subgoal uses < 10 rlimit).
-#push-options "--split_queries always"
+#push-options ""
 inline_for_extraction noextract
 let validate_dep_pair_with_refinement_and_action_total_zero_parser'
       (name1: string)
@@ -797,7 +797,7 @@ let validate_dep_pair_with_refinement'
         end
 
 // Same monolithic-VC regression as the action variant above; split the query.
-#push-options "--split_queries always"
+#push-options ""
 inline_for_extraction noextract
 let validate_dep_pair_with_refinement_total_zero_parser'
       (name1: string)

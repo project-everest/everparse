@@ -6,7 +6,7 @@ module U64 = FStar.UInt64
 module Util = CBOR.Spec.Util
 module U8 = FStar.UInt8
 
-#push-options "--z3rlimit 256 --query_stats --split_queries always --fuel 4 --ifuel 8"
+#push-options "--z3rlimit 256 --query_stats --fuel 4 --ifuel 8"
 
 let typ_included2
   (typ_included: typ_included_t)

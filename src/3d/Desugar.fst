@@ -469,7 +469,12 @@ let resolve_out_type (env:qenv) (out_t:out_typ) : ML out_typ =
     out_typ_names = resolve_typedef_names env out_t.out_typ_names;
     out_typ_fields = List.map (resolve_out_field env) out_t.out_typ_fields }
 
-let resolve_probe_function_type env = function
+let resolve_probe_function_type env (t: probe_function_type)
+: ML (t': probe_function_type {
+    (CoerceProbeFunction? t ==> CoerceProbeFunction? t') /\
+    (CoerceProbeFunctionPlaceholder? t ==> CoerceProbeFunctionPlaceholder? t')
+  })
+= match t with
     | SimpleProbeFunction id -> SimpleProbeFunction (resolve_ident env id)
     | CoerceProbeFunctionPlaceholder i -> CoerceProbeFunctionPlaceholder (resolve_ident env i)
     | CoerceProbeFunction (x, y) -> CoerceProbeFunction (resolve_ident env x, resolve_ident env y)

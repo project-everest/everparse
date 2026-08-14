@@ -61,7 +61,7 @@ let mg_spec_concat_serializer_eq
 
 
 #restart-solver
-#push-options "--z3rlimit 256 --split_queries always"
+#push-options "--z3rlimit 256"
 
 let impl_serialize_map_group_concat_false_helper
   (p: bare_cbor_map_parser)
@@ -89,6 +89,7 @@ let impl_serialize_map_group_concat_false_helper
   if ps.mg_serializable v then begin
     let m1 = ps1.mg_serializer (fst v) in
     let m2 = ps2.mg_serializer (snd v) in
+    cbor_map_union_assoc l m1 m2;
     Classical.move_requires (cbor_map_disjoint_union_left l m1) m2;
     Classical.move_requires (cbor_map_disjoint_union_right l m1) m2;
     Classical.move_requires (cbor_map_max_length_union maxl l) m1;
@@ -130,6 +131,7 @@ let impl_serialize_map_group_concat_true_helper
   if ps.mg_serializable v then begin
     let m1 = ps1.mg_serializer (fst v) in
     let m2 = ps2.mg_serializer (snd v) in
+    cbor_map_union_assoc l m1 m2;
     Classical.move_requires (cbor_map_disjoint_union_left l m1) m2;
     Classical.move_requires (cbor_map_disjoint_union_right l m1) m2;
     Classical.move_requires (cbor_map_max_length_union maxl l) m1;
@@ -142,7 +144,7 @@ let impl_serialize_map_group_concat_true_helper
 
 #pop-options
 
-#push-options "--z3rlimit 32 --split_queries always"
+#push-options "--z3rlimit 32"
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_map_group_concat

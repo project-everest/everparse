@@ -422,7 +422,7 @@ let rewrite_group_correct_postcond
     end
   end
 
-#push-options "--z3rlimit 128 --ifuel 8 --split_queries always"
+#push-options "--z3rlimit 128 --ifuel 8"
 
 #restart-solver
 let rec rewrite_typ_correct
@@ -490,6 +490,7 @@ and rewrite_group_correct
     if is_map_group && GConcat? t2
     then begin
       let GConcat t2 t3 = t2 in
+      Spec.map_group_concat_assoc (map_group_sem env t1) (map_group_sem env t2) (map_group_sem env t3);
       rewrite_group_correct env fuel' is_map_group (GConcat (GConcat t1 t2) t3)
     end else if (not is_map_group) && GConcat? t1
     then begin
@@ -898,7 +899,7 @@ let rec array_group_is_nonempty
   | GElem _ _ _
   | GAlwaysFalse -> RSuccess ()
 
-#push-options "--z3rlimit 128 --split_queries always --query_stats --fuel 4 --ifuel 8"
+#push-options "--z3rlimit 128 --query_stats --fuel 4 --ifuel 8"
 
 #restart-solver
 let rec array_group_concat_unique_strong
@@ -1031,7 +1032,7 @@ let rec array_group_concat_unique_strong
 
 #pop-options
 
-#push-options "--z3rlimit 16 --split_queries always --query_stats --fuel 2 --ifuel 2"
+#push-options "--z3rlimit 16 --query_stats --fuel 2 --ifuel 2"
 
 #restart-solver
 let rec array_group_concat_unique_weak
@@ -1242,7 +1243,7 @@ let spec_map_group_footprint_choice_or_concat
     spec_map_group_footprint env (MGConcat g1 g2) == (Ghost.hide ((spec_map_group_footprint env g1) `Spec.map_constraint_choice` (spec_map_group_footprint env g2)))
   )
 
-#push-options "--z3rlimit 128 --ifuel 8 --fuel 2 --split_queries always --query_stats"
+#push-options "--z3rlimit 128 --ifuel 8 --fuel 2 --query_stats"
 
 let map_constraint_included_mcor
   (env: sem_env)

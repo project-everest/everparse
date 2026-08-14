@@ -48,7 +48,7 @@ let cbor_raw_map_insert_out_inv
   Seq.slice v (SZ.v off2) (SZ.v off3) `Seq.equal` sk /\
   Seq.slice v (SZ.v off3) (Seq.length v) `Seq.equal` sv
 
-#push-options "--z3rlimit 32 --split_queries always"
+#push-options "--z3rlimit 32"
 
 #restart-solver
 

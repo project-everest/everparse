@@ -264,7 +264,8 @@ let cbor_map_to_list_correct
 = let l' = cbor_map_to_list m l in
   Classical.forall_intro (cbor_map_to_list_assoc' m l);
   cbor_map_to_list_map_fst m l;
-  Classical.forall_intro (fun x -> List.Tot.assoc_mem x l')
+  introduce forall x . List.Tot.mem x (List.Tot.map fst l') <==> (exists y . List.Tot.assoc x l' == Some y)
+  with List.Tot.assoc_mem x l'
 
 let cbor_det_serialize_map_append_length m1 m2 =
   let l = cbor_map_key_list m2 in

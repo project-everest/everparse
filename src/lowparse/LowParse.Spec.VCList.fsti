@@ -699,6 +699,10 @@ let rec refine_nlist_of_nlist_refine_injective
       )
   end
 
+(* This goal used 4.17 of the default rlimit 5 after the switch to per-goal
+   SMT encoding; give it some headroom so it does not flake on slower CI. *)
+#push-options "--z3rlimit 20"
+
 let rec tot_parse_nlist_refine_eq
   (#k: parser_kind)
   (#t: Type)
@@ -741,6 +745,8 @@ let rec tot_parse_nlist_refine_eq
         fl
         b'
   end
+
+#pop-options
 
 let rec nlist_refine_of_refine_nlist
   (#t: Type)
@@ -923,6 +929,7 @@ let synth_bounded_count
 : Tot (bounded_count min max)
 = x
 
+#push-options "--z3rlimit_factor 4"
 let parse_vclist_and_then_cases_injective
   (min: nat)
   (max: nat { min <= max } )
@@ -937,6 +944,7 @@ let parse_vclist_and_then_cases_injective
     parse_synth_eq (parse_nlist (U32.v x1) p) (synth_vclist_payload min max x1) b1;
     parse_synth_eq (parse_nlist (U32.v x2) p) (synth_vclist_payload min max x2) b2
   )
+#pop-options
 
 let parse_vclist
   (min: nat)

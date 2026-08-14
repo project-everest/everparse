@@ -485,6 +485,7 @@ let get_bitfield_hi_lt_pow2
     M.lemma_mod_lt x (pow2 mi)
   end
 
+#push-options "--z3rlimit_factor 4"
 let get_bitfield_get_bitfield
   (#tot: pos)
   (x: U.uint_t tot)
@@ -498,6 +499,7 @@ let get_bitfield_get_bitfield
     if i < hi' - lo'
     then nth_get_bitfield x lo hi (i + lo')
   )
+#pop-options
 
 #push-options "--z3rlimit_factor 4"
 let get_bitfield_zero_inner
@@ -751,6 +753,7 @@ let set_bitfield_size
     end
   )
 
+#push-options "--z3rlimit_factor 16 --fuel 0 --ifuel 1"
 let set_bitfield_bound
   (#tot: pos)
   (x: U.uint_t tot)
@@ -767,6 +770,7 @@ let set_bitfield_bound
     M.pow2_le_compat bound (hi - lo);
     set_bitfield_size bound tot x lo hi v
   end
+#pop-options
 
 #push-options "--z3rlimit 64 --z3cliopt smt.arith.nl=false --fuel 0 --ifuel 0"
 
