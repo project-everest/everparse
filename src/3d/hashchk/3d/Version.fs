@@ -1,4 +1,4 @@
 module Version
-let everparse_version = "v2024.08.23"
-let fstar_commit = "8b2041e93d"
-let karamel_commit = "ba951d85"
+let everparse_version = "v2026.07.09"
+let fstar_commit = "a22c993210"
+let karamel_commit = "51367a68"
