@@ -762,6 +762,11 @@ let go () : ML unit =
     in
     FStar.IO.print_string "EverParse succeeded!\n"
   else
+  (* Special mode: --check_hashes *)
+  let check_hashes = Options.check_hashes () in
+  if Some? check_hashes
+  then Batch.check_all_hashes (Some?.v check_hashes) out_dir (List.map (fun file -> (file, Options.module_name file)) cmd_line_files)
+  else
   (* for other modes, the list of files provided on the command line is assumed to be a list of .3d files, and the list of all .3d files in dependency order has to be inferred from the list of .3d input files provided by the user, unless --__skip_deps is provided *)
   let all_files =
     if Options.skip_deps ()
@@ -769,11 +774,6 @@ let go () : ML unit =
     else Deps.collect_and_sort_dependencies cmd_line_files
   in
   let all_files_and_modules = List.map (fun file -> (file, Options.module_name file)) all_files in
-  (* Special mode: --check_hashes *)
-  let check_hashes = Options.check_hashes () in
-  if Some? check_hashes
-  then Batch.check_all_hashes (Some?.v check_hashes) out_dir all_files_and_modules
-  else
   (* Special mode: --emit_smt_encoding *)
   if Options.emit_smt_encoding ()
   then produce_z3 all_files_and_modules
