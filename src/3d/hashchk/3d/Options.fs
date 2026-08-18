@@ -320,7 +320,7 @@ end))
 
 
 type fstar_opt =
-(FStarGetopt.opt * Prims.string)
+(Getopt.opt * Prims.string)
 
 type cmd_option =
 | CmdOption of Prims.string * cmd_option_kind * Prims.string * Prims.string Prims.list
@@ -411,7 +411,7 @@ end))
 let cmd_option_arg_desc : cmd_option  ->  Prims.string = (fun ( a  :  cmd_option ) -> (match (a) with
 | CmdFStarOption ((uu___, uu___1, arg), uu___2) -> begin
 (match (arg) with
-| FStarGetopt.OneArg (uu___3, argdesc) -> begin
+| Getopt.OneArg (uu___3, argdesc) -> begin
 argdesc
 end
 | uu___3 -> begin
@@ -484,12 +484,12 @@ end
 | CmdOption (name, kind, desc, implies) -> begin
 (match (kind) with
 | OptBool (v) -> begin
-(((((FStarGetopt.noshort), (name), (FStarGetopt.ZeroArgs ((fun ( uu___  :  unit ) -> ((set_implies options implies);
+(((((Getopt.noshort), (name), (Getopt.ZeroArgs ((fun ( uu___  :  unit ) -> ((set_implies options implies);
 (FStar_ST.op_Colon_Equals v true);
-)))))), (desc)))::(((((FStarGetopt.noshort), ((negate_name name)), (FStarGetopt.ZeroArgs ((fun ( uu___  :  unit ) -> (FStar_ST.op_Colon_Equals v false)))))), ((negate_description desc))))::[]
+)))))), (desc)))::(((((Getopt.noshort), ((negate_name name)), (Getopt.ZeroArgs ((fun ( uu___  :  unit ) -> (FStar_ST.op_Colon_Equals v false)))))), ((negate_description desc))))::[]
 end
 | OptStringOption (arg_desc, valid, v) -> begin
-(((((FStarGetopt.noshort), (name), (FStarGetopt.OneArg ((((fun ( x  :  Prims.string ) -> (match ((valid x)) with
+(((((Getopt.noshort), (name), (Getopt.OneArg ((((fun ( x  :  Prims.string ) -> (match ((valid x)) with
 | true -> begin
 ((set_implies options implies);
 (FStar_ST.op_Colon_Equals v (FStar_Pervasives_Native.Some (x)));
@@ -497,10 +497,10 @@ end
 end
 | uu___ -> begin
 (failwith (Prims.strcat (Prims.strcat (Prims.strcat "Bad argument to " (Prims.strcat name ": got ")) (Prims.strcat x ", expected ")) (Prims.strcat arg_desc "")))
-end))), (arg_desc)))))), (desc)))::(((((FStarGetopt.noshort), ((negate_name name)), (FStarGetopt.ZeroArgs ((fun ( uu___  :  unit ) -> (FStar_ST.op_Colon_Equals v FStar_Pervasives_Native.None)))))), ((negate_description desc))))::[]
+end))), (arg_desc)))))), (desc)))::(((((Getopt.noshort), ((negate_name name)), (Getopt.ZeroArgs ((fun ( uu___  :  unit ) -> (FStar_ST.op_Colon_Equals v FStar_Pervasives_Native.None)))))), ((negate_description desc))))::[]
 end
 | OptList (arg_desc, valid, v) -> begin
-(((((FStarGetopt.noshort), (name), (FStarGetopt.OneArg ((((fun ( x  :  Prims.string ) -> (match ((valid x)) with
+(((((Getopt.noshort), (name), (Getopt.OneArg ((((fun ( x  :  Prims.string ) -> (match ((valid x)) with
 | true -> begin
 ((set_implies options implies);
 (
@@ -514,7 +514,7 @@ in (FStar_ST.op_Colon_Equals v uu___1));
 end
 | uu___ -> begin
 (failwith (Prims.strcat (Prims.strcat (Prims.strcat "Bad argument to " (Prims.strcat name ": got ")) (Prims.strcat x ", expected ")) (Prims.strcat arg_desc "")))
-end))), (arg_desc)))))), (desc)))::(((((FStarGetopt.noshort), ((negate_name name)), (FStarGetopt.ZeroArgs ((fun ( uu___  :  unit ) -> (FStar_ST.op_Colon_Equals v [])))))), (desc)))::[]
+end))), (arg_desc)))))), (desc)))::(((((Getopt.noshort), ((negate_name name)), (Getopt.ZeroArgs ((fun ( uu___  :  unit ) -> (FStar_ST.op_Colon_Equals v [])))))), (desc)))::[]
 end)
 end))
 
@@ -691,9 +691,9 @@ let display_usage = (fun ( uu___  :  unit ) -> (display_usage_1 options))
 in (
 
 let compute_options = (compute_current_options options)
-in ((FStar_ST.op_Colon_Equals options ((CmdOption ("add_include", OptList ("<include.h>|\"include.h\"", always_valid, _add_include), "Prepend #include ... to generated .c/.h files", []))::(CmdOption ("batch", OptBool (_batch), "Verify the generated F* code and extract C code", []))::(CmdOption ("check_hashes", OptStringOption ("weak|strong|inplace", valid_check_hashes, _check_hashes), "Check hashes", ("batch")::[]))::(CmdOption ("check_inplace_hash", OptList ("file.3d=file.h", always_valid, _inplace_hashes), "Check hashes stored in one .h/.c file", []))::(CmdOption ("clang_format", OptBool (_clang_format), "Call clang-format on extracted .c/.h files (--batch only)", ("batch")::[]))::(CmdOption ("clang_format_executable", OptStringOption ("clang-format full path", always_valid, _clang_format_executable), "Set the path to clang-format if not reachable through PATH", ("batch")::("clang_format")::[]))::(CmdOption ("cleanup", OptBool (_cleanup), "Remove *.fst*, *.krml and krml-args.rsp (--batch only)", []))::(CmdOption ("config", OptStringOption ("config file", check_config_file_name, _config_file), "The name of a JSON formatted file containing configuration options", []))::(CmdOption ("emit_output_types_defs", OptBool (_emit_output_types_defs), "Emit definitions of output types in a .h file", []))::(CmdOption ("emit_smt_encoding", OptBool (_emit_smt_encoding), "Emit an SMT encoding of parser specifications", []))::(CmdOption ("input_stream", OptStringOption ("buffer|extern|static", valid_input_stream_binding, _input_stream_binding), "Input stream binding (default buffer)", []))::(CmdOption ("input_stream_include", OptStringOption (".h file", always_valid, _input_stream_include), "Include file defining the EverParseInputStreamBase type (only for --input_stream extern or static)", []))::(CmdOption ("no_copy_everparse_h", OptBool (_no_copy_everparse_h), "Do not Copy EverParse.h (--batch only)", []))::(CmdOption ("debug", OptBool (_debug), "Emit a lot of debugging output", []))::(CmdFStarOption ((((('h'), ("help"), (FStarGetopt.ZeroArgs ((fun ( uu___1  :  unit ) -> ((display_usage ());
+in ((FStar_ST.op_Colon_Equals options ((CmdOption ("add_include", OptList ("<include.h>|\"include.h\"", always_valid, _add_include), "Prepend #include ... to generated .c/.h files", []))::(CmdOption ("batch", OptBool (_batch), "Verify the generated F* code and extract C code", []))::(CmdOption ("check_hashes", OptStringOption ("weak|strong|inplace", valid_check_hashes, _check_hashes), "Check hashes", ("batch")::[]))::(CmdOption ("check_inplace_hash", OptList ("file.3d=file.h", always_valid, _inplace_hashes), "Check hashes stored in one .h/.c file", []))::(CmdOption ("clang_format", OptBool (_clang_format), "Call clang-format on extracted .c/.h files (--batch only)", ("batch")::[]))::(CmdOption ("clang_format_executable", OptStringOption ("clang-format full path", always_valid, _clang_format_executable), "Set the path to clang-format if not reachable through PATH", ("batch")::("clang_format")::[]))::(CmdOption ("cleanup", OptBool (_cleanup), "Remove *.fst*, *.krml and krml-args.rsp (--batch only)", []))::(CmdOption ("config", OptStringOption ("config file", check_config_file_name, _config_file), "The name of a JSON formatted file containing configuration options", []))::(CmdOption ("emit_output_types_defs", OptBool (_emit_output_types_defs), "Emit definitions of output types in a .h file", []))::(CmdOption ("emit_smt_encoding", OptBool (_emit_smt_encoding), "Emit an SMT encoding of parser specifications", []))::(CmdOption ("input_stream", OptStringOption ("buffer|extern|static", valid_input_stream_binding, _input_stream_binding), "Input stream binding (default buffer)", []))::(CmdOption ("input_stream_include", OptStringOption (".h file", always_valid, _input_stream_include), "Include file defining the EverParseInputStreamBase type (only for --input_stream extern or static)", []))::(CmdOption ("no_copy_everparse_h", OptBool (_no_copy_everparse_h), "Do not Copy EverParse.h (--batch only)", []))::(CmdOption ("debug", OptBool (_debug), "Emit a lot of debugging output", []))::(CmdFStarOption ((((('h'), ("help"), (Getopt.ZeroArgs ((fun ( uu___1  :  unit ) -> ((display_usage ());
 (FStar_All.exit (Prims.parse_int "0"));
-)))))), ("Show this help message"))))::(CmdOption ("json", OptBool (_json), "Dump the AST in JSON format", []))::(CmdOption ("makefile", OptStringOption ("gmake|nmake", valid_makefile, _makefile), "Do not produce anything, other than a Makefile to produce everything", []))::(CmdOption ("makefile_name", OptStringOption ("some file name", always_valid, _makefile_name), "Name of the Makefile to produce (with --makefile, default <output directory>/EverParse.Makefile", []))::(CmdOption ("odir", OptStringOption ("output directory", always_valid, _output_dir), "output directory (default \'.\'); writes <module_name>.fst and <module_name>_wrapper.c to the output directory", []))::(CmdOption ("save_hashes", OptBool (_save_hashes), "Save hashes", []))::(CmdOption ("save_z3_transcript", OptStringOption ("some file name", always_valid, _save_z3_transcript), "Save the Z3 transcript (input and output) to a file", []))::(CmdOption ("skip_c_makefiles", OptBool (_skip_c_makefiles), "Do not Generate Makefile.basic, Makefile.include", []))::(CmdOption ("skip_o_rules", OptBool (_skip_o_rules), "With --makefile, do not generate rules for .o files", []))::(CmdOption ("test_checker", OptStringOption ("parser name", always_valid, _test_checker), "produce a test checker executable", []))::(CmdFStarOption (((((FStarGetopt.noshort), ("version"), (FStarGetopt.ZeroArgs ((fun ( uu___1  :  unit ) -> ((FStar_IO.print_string (Prims.strcat "EverParse/3d " (Prims.strcat Version.everparse_version "\nCopyright 2018, 2019, 2020 Microsoft Corporation\n")));
+)))))), ("Show this help message"))))::(CmdOption ("json", OptBool (_json), "Dump the AST in JSON format", []))::(CmdOption ("makefile", OptStringOption ("gmake|nmake", valid_makefile, _makefile), "Do not produce anything, other than a Makefile to produce everything", []))::(CmdOption ("makefile_name", OptStringOption ("some file name", always_valid, _makefile_name), "Name of the Makefile to produce (with --makefile, default <output directory>/EverParse.Makefile", []))::(CmdOption ("odir", OptStringOption ("output directory", always_valid, _output_dir), "output directory (default \'.\'); writes <module_name>.fst and <module_name>_wrapper.c to the output directory", []))::(CmdOption ("save_hashes", OptBool (_save_hashes), "Save hashes", []))::(CmdOption ("save_z3_transcript", OptStringOption ("some file name", always_valid, _save_z3_transcript), "Save the Z3 transcript (input and output) to a file", []))::(CmdOption ("skip_c_makefiles", OptBool (_skip_c_makefiles), "Do not Generate Makefile.basic, Makefile.include", []))::(CmdOption ("skip_o_rules", OptBool (_skip_o_rules), "With --makefile, do not generate rules for .o files", []))::(CmdOption ("test_checker", OptStringOption ("parser name", always_valid, _test_checker), "produce a test checker executable", []))::(CmdFStarOption (((((Getopt.noshort), ("version"), (Getopt.ZeroArgs ((fun ( uu___1  :  unit ) -> ((FStar_IO.print_string (Prims.strcat "EverParse/3d " (Prims.strcat Version.everparse_version "\nCopyright 2018, 2019, 2020 Microsoft Corporation\n")));
 (FStar_All.exit (Prims.parse_int "0"));
 )))))), ("Show this version of EverParse"))))::(CmdOption ("equate_types", OptList ("an argument of the form A,B, to generate asserts of the form (A.t == B.t)", valid_equate_types, _equate_types_list), "Takes an argument of the form A,B and then for each entrypoint definition in B, it generates an assert (A.t == B.t) in the B.Types file, useful when refactoring specs, you can provide multiple equate_types on the command line", []))::(CmdOption ("z3_branch_depth", OptStringOption ("nb", always_valid, _z3_branch_depth), "enumerate branch choices up to depth nb (default 0)", []))::(CmdOption ("z3_diff_test", OptStringOption ("parser1,parser2", valid_equate_types, _z3_diff_test), "produce differential tests for two parsers", []))::(CmdOption ("z3_executable", OptStringOption ("path/to/z3", always_valid, _z3_executable), "z3 executable for test case generation (default `z3`; does not affect verification of generated F* code)", []))::(CmdOption ("z3_options", OptStringOption ("\'options to z3\'", always_valid, _z3_options), "command-line options to pass to z3 for test case generation (does not affect verification of generated F* code)", []))::(CmdOption ("z3_test", OptStringOption ("parser name", always_valid, _z3_test), "produce positive and/or negative test cases for a given parser", []))::(CmdOption ("z3_test_mode", OptStringOption ("pos|neg|all", valid_z3_test_mode, _z3_test_mode), "produce positive, negative, or all kinds of test cases (default all)", []))::(CmdOption ("z3_witnesses", OptStringOption ("nb", always_valid, _z3_witnesses), "ask for nb distinct test witnesses per branch case (default 1)", []))::(CmdOption ("__arg0", OptStringOption ("executable name", always_valid, _arg0), "executable name to use for the help message", []))::(CmdOption ("__micro_step", OptStringOption ("verify|extract|copy_clang_format|copy_everparse_h|emit_config", valid_micro_step, _micro_step), "micro step", []))::(CmdOption ("__produce_c_from_existing_krml", OptBool (_produce_c_from_existing_krml), "produce C from .krml files", []))::(CmdOption ("__skip_deps", OptBool (_skip_deps), "skip dependency analysis, assume all dependencies are specified on the command line", []))::[]));
 (
@@ -732,25 +732,25 @@ let compute_options : Prims.string Prims.list  ->  Prims.string = compute_option
 
 let parse_cmd_line : unit  ->  Prims.string Prims.list = (fun ( uu___  :  unit ) -> (
 
-let res = (FStarGetopt.parse_cmdline (FStar_List_Tot_Base.map FStar_Pervasives_Native.fst fstar_options) (fun ( file  :  Prims.string ) -> ((
+let res = (Getopt.parse_cmdline (FStar_List_Tot_Base.map FStar_Pervasives_Native.fst fstar_options) (fun ( file  :  Prims.string ) -> ((
 
 let uu___2 = (
 
 let uu___3 = (FStar_ST.op_Bang _input_file)
 in (file)::uu___3)
 in (FStar_ST.op_Colon_Equals _input_file uu___2));
-FStarGetopt.Success;
+Getopt.Success;
 )))
 in (match (res) with
-| FStarGetopt.Success -> begin
+| Getopt.Success -> begin
 (FStar_ST.op_Bang _input_file)
 end
-| FStarGetopt.Help -> begin
+| Getopt.Help -> begin
 ((display_usage ());
 (FStar_All.exit (Prims.parse_int "0"));
 )
 end
-| FStarGetopt.Error (s) -> begin
+| Getopt.Error (s) -> begin
 ((FStar_IO.print_string s);
 (FStar_All.exit (Prims.parse_int "1"));
 )

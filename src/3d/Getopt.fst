@@ -1,4 +1,4 @@
-module FStarGetopt
+module Getopt
 let noshort = '\0'
 
 let bind (l: parse_cmdline_res) (f: unit -> ML parse_cmdline_res) : ML parse_cmdline_res =
