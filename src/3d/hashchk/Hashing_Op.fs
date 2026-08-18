@@ -73,8 +73,7 @@ let hash_file (h: hash_state) (f: string) : unit =
     let len = int32 file.Length
     hash_int h len
     use arr = h.new_array(len)
-    let read = file.Read(arr.rw)
-    assert (read = len)
+    file.ReadExactly(arr.rw)
     h.AppendData arr
 
 let hash_file_option (h: hash_state) (s: FStar_Pervasives_Native.option<string>) : unit =
