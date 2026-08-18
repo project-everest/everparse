@@ -120,9 +120,24 @@ let hashed_files
       end;
   }
 
+let check_hash
+  load_hash
+  f opt_c f_json
+=
+  match load_hash f_json (opt_c = None) with
+  | None ->
+     FStar.IO.print_string (Printf.sprintf "No hashes found in %s for %s\n" f_json f);
+     false
+  | Some h0 ->
+     let h = hash f opt_c in
+     let res = (h0 = h) in
+     if not res
+     then FStar.IO.print_string (Printf.sprintf "%s hash check failed for %s from %s\nOriginal: %s\nComputed: %s\n" (if opt_c = None then "weak" else "strong") f f_json h0 h);
+     res
+
 let check_hashes
       check_inplace_hashes_f
-      check_hash_f
+      load_hash
       (ch: check_hashes_t)
       (out_dir: string)
       (file, modul)
@@ -133,23 +148,23 @@ let check_hashes
      check_inplace_hashes_on check_inplace_hashes_f file (AllHashes c)
   | _ ->
      let json = OS.concat out_dir (Printf.sprintf "%s.json" modul) in
-     if check_hash_f file None json
+     if check_hash load_hash file None json
      then (
        if is_weak ch
        then true
        else (
          let c = hashed_files out_dir modul in
-         check_hash_f file (Some c) json
+         check_hash load_hash file (Some c) json
      ))
      else false
 
 let check_all_hashes
-      check_inplace_hashes_f check_hash
+      check_inplace_hashes_f load_hash
       (ch: check_hashes_t)
       (out_dir: string)
       (files_and_modules: list (string & string))
     : FStar.All.ML unit
-  = if List.for_all (check_hashes check_inplace_hashes_f check_hash ch out_dir) files_and_modules
+  = if List.for_all (check_hashes check_inplace_hashes_f load_hash ch out_dir) files_and_modules
     then FStar.IO.print_string "EverParse check_hashes succeeded!\n"
     else begin
         FStar.IO.print_string "EverParse check_hashes failed\n";

@@ -858,4 +858,4 @@ let postprocess_fst
   (* produce the .c and .h files and format them *)
   produce_and_postprocess_c input_stream_binding emit_output_types_defs add_include clang_format clang_format_executable copy_clang_format_opt skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
 
-let check_all_hashes = Hashing_Hash.check_all_hashes Hashing.check_inplace_hashes_f Hashing.check_hash
+let check_all_hashes = Hashing_Hash.check_all_hashes Hashing.check_inplace_hashes_f Hashing.load_hash
