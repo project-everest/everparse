@@ -30,9 +30,6 @@ let check_inplace_hashes_f h file_c =
     close_in ch;
     res
 
-let check_inplace_hashes file_3d files_c =
-  Hashing_Hash.check_inplace_hashes_on check_inplace_hashes_f file_3d files_c
-
 (* load, check and save hashes from/to JSON file *)
 
 let load_hash file is_weak =

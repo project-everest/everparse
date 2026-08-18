@@ -1,5 +1,6 @@
 module Hashing.Hash
 open Hashing.Op
+open HashingOptions
 
 type c_files = {
     wrapper_h: option string;
@@ -43,6 +44,7 @@ type check_inplace_hashes_t =
   | AllHashes of c_files
   | OneHash of string
 
+(* this function implements `--check_hashes inplace` *)
 let check_inplace_hashes_on f file_3d files_c =
   let h = hash file_3d None in
   match files_c with
@@ -84,4 +86,72 @@ let check_inplace_hash
        end
   | _ -> FStar.All.failwith "check_inplace_hash: expected file.3d=file.h"
 
+(* this function implements `--check_inplace_hash A.3d=A.c --check_inplace_hash B.3d=B.c` *)
 let check_inplace_hashes f = List.iter (check_inplace_hash f)
+
+let hashed_files
+      (out_dir: string)
+      (modul: string)
+: FStar.All.ML _
+  =
+  {
+    c = OS.concat out_dir (Printf.sprintf "%s.c" modul);
+    h = OS.concat out_dir (Printf.sprintf "%s.h" modul);
+    wrapper_c =
+      begin
+        let w = OS.concat out_dir (Printf.sprintf "%sWrapper.c" modul) in
+        if OS.file_exists w
+        then Some w
+        else None
+      end;
+    wrapper_h =
+      begin
+        let w = OS.concat out_dir (Printf.sprintf "%sWrapper.h" modul) in
+        if OS.file_exists w
+        then Some w
+        else None
+      end;
+    assertions =
+      begin
+        let assertions = OS.concat out_dir (Printf.sprintf "%sStaticAssertions.c" modul) in
+        if OS.file_exists assertions
+        then Some assertions
+        else None
+      end;
+  }
+
+let check_hashes
+      check_inplace_hashes_f
+      check_hash_f
+      (ch: check_hashes_t)
+      (out_dir: string)
+      (file, modul)
+  =
+  let c = hashed_files out_dir modul in
+  match ch with
+  | InplaceHashes ->
+     check_inplace_hashes_on check_inplace_hashes_f file (AllHashes c)
+  | _ ->
+     let json = OS.concat out_dir (Printf.sprintf "%s.json" modul) in
+     if check_hash_f file None json
+     then (
+       if is_weak ch
+       then true
+       else (
+         let c = hashed_files out_dir modul in
+         check_hash_f file (Some c) json
+     ))
+     else false
+
+let check_all_hashes
+      check_inplace_hashes_f check_hash
+      (ch: check_hashes_t)
+      (out_dir: string)
+      (files_and_modules: list (string & string))
+    : FStar.All.ML unit
+  = if List.for_all (check_hashes check_inplace_hashes_f check_hash ch out_dir) files_and_modules
+    then FStar.IO.print_string "EverParse check_hashes succeeded!\n"
+    else begin
+        FStar.IO.print_string "EverParse check_hashes failed\n";
+        FStar.All.exit 255
+      end

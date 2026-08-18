@@ -23,3 +23,6 @@ let int_of_string (s: string) : Prims.int =
     if System.Int32.TryParse(s, r)
     then Prims.int_intro !r
     else Prims.int_zero
+
+let file_exists (s: string) : bool =
+    System.IO.File.Exists(s)

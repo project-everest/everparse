@@ -690,59 +690,12 @@ let call_clang_format
 
 (* Check and Save hashes *)
 
-let hashed_files
-      (out_dir: string)
-      (modul: string)
-  =
-  {
-    Hashing_Hash.c = filename_concat out_dir (Printf.sprintf "%s.c" modul);
-    Hashing_Hash.h = filename_concat out_dir (Printf.sprintf "%s.h" modul);
-    Hashing_Hash.wrapper_c =
-      begin
-        let w = filename_concat out_dir (Printf.sprintf "%sWrapper.c" modul) in
-        if Sys.file_exists w
-        then Some w
-        else None
-      end;
-    Hashing_Hash.wrapper_h =
-      begin
-        let w = filename_concat out_dir (Printf.sprintf "%sWrapper.h" modul) in
-        if Sys.file_exists w
-        then Some w
-        else None
-      end;
-    Hashing_Hash.assertions =
-      begin
-        let assertions = filename_concat out_dir (Printf.sprintf "%sStaticAssertions.c" modul) in
-        if Sys.file_exists assertions
-        then Some assertions
-        else None
-      end;
-  }
-
 let check_inplace_hashes = Hashing_Hash.check_inplace_hashes Hashing.check_inplace_hashes_f
-
-let check_hashes
-      (ch: check_hashes_t)
-      (out_dir: string)
-      (file, modul)
-  =
-  let c = hashed_files out_dir modul in
-  match ch with
-  | InplaceHashes ->
-     Hashing.check_inplace_hashes file (Hashing_Hash.AllHashes c)
-  | _ ->
-     let json = filename_concat out_dir (Printf.sprintf "%s.json" modul) in
-     Hashing.check_hash file None json && (
-       is_weak ch ||
-         let c = hashed_files out_dir modul in
-         Hashing.check_hash file (Some c) json
-     )
 
 let save_hashes
       (out_dir: string)
       (file, modul)
-  = let c = hashed_files out_dir modul in
+  = let c = Hashing_Hash.hashed_files out_dir modul in
     let json = filename_concat out_dir (Printf.sprintf "%s.json" modul) in
     Hashing.save_hashes file (Some c) json
 
@@ -905,14 +858,4 @@ let postprocess_fst
   (* produce the .c and .h files and format them *)
   produce_and_postprocess_c input_stream_binding emit_output_types_defs add_include clang_format clang_format_executable copy_clang_format_opt skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
 
-let check_all_hashes
-      (ch: check_hashes_t)
-      (out_dir: string)
-      (files_and_modules: (string * string) list)
-    : unit
-  = if List.for_all (check_hashes ch out_dir) files_and_modules
-    then print_endline "EverParse check_hashes succeeded!"
-    else begin
-        print_endline "EverParse check_hashes failed";
-        exit 255
-      end
+let check_all_hashes = Hashing_Hash.check_all_hashes Hashing.check_inplace_hashes_f Hashing.check_hash
