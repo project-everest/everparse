@@ -80,7 +80,7 @@ let add_cfg_file_dep ext deps
   
 let produce_config_fst_file_rule ()
 : FStar.All.ML (list rule_t)
-= match Options.config_module_name (), Options.config_file() with
+= match Options.config_module_name (), Options.get_config_file() with
   | Some module_name, Some cfg_file_name ->
     let fst_file_name = mk_filename module_name "fst" in
     let checked_file_name = mk_filename module_name "fst.checked" in
@@ -614,7 +614,7 @@ let write_makefile
   (files: list string)
 : FStar.All.ML unit
 =
-  let makefile_final = Options.makefile_name () in
+  let makefile_final = Options.get_makefile_name () in
   let makefile_tmp = makefile_final ^ ".tmp" in
   let file = FStar.IO.open_write_file makefile_tmp in
   let {graph = g; rules; all_files} = produce_makefile mtype everparse_h emit_output_types_defs skip_o_rules clang_format copy_clang_format_opt save_hashes files in

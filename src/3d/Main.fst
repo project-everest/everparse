@@ -105,7 +105,7 @@ let parse_check_and_desugar (en:env) (mname:string) (fn:string)
   Options.debug_print_string (print_decls decls);
   Options.debug_print_string "\n";
 
-  if Options.json()
+  if Options.get_json()
   then (
     IO.print_string (JSON.prog_to_json (decls, refinement));
     IO.print_string "\n"
@@ -484,7 +484,7 @@ let process_files_gen
   let all_modules = List.map snd files_and_modules in
   let env = initial_env () in
   if Some? emit_fstar then
-    if Options.batch() then emit_config_as_fstar_module();
+    if Options.get_batch() then emit_config_as_fstar_module();
   files_and_modules
   |> List.fold_left (fun env (fn, modul) ->
                     process_file env fn modul (match emit_fstar with Some f -> f modul | _ -> false) emit_output_types_defs all_modules) env
@@ -554,7 +554,7 @@ let build_test_exe
     let cl_wrapper = Batch.cl_wrapper () in
     OS.run_cmd "cmd" ("/C" :: "cd" :: out_dir :: "&&" :: "call" :: cl_wrapper :: "/Fe:" :: OS.concat "." "test.exe" :: testcases_c_file "." :: List.Tot.map (fun x -> x ^ ".c") modules)
   end else
-  if not (Options.skip_c_makefiles ())
+  if not (Options.get_skip_c_makefiles ())
   then begin
     OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"; "KRML_LIBDIR=" ^ Batch.krmllib out_dir; "KRML_INCLUDEDIR=" ^ Batch.krmlinclude out_dir]
   end
@@ -564,7 +564,7 @@ let build_and_run_test_exe
   (out_dir: string)
 : ML unit
 =
-  if not (Options.skip_c_makefiles ())
+  if not (Options.get_skip_c_makefiles ())
   then begin
         build_test_exe modules out_dir;
     	OS.run_cmd (OS.concat out_dir "test.exe") []
@@ -601,13 +601,13 @@ let produce_z3_and_test_gen
   (emit_fstar:string -> ML bool)
   (emit_output_types_defs:bool)
 ->
-  let nbwitnesses = Options.z3_witnesses () in
+  let nbwitnesses = Options.get_z3_witnesses () in
   let testcases_c = testcases_c_file out_dir in
   if produce_testcases_c then OS.overwrite_file testcases_c; // because Batch.krml_args will add the testcase file only if it exists, so we need to create it before generating the parser, otherwise we might have a race
   let buf : ref string = alloc "" in
   let prog = process_files_for_z3 (fun s -> buf := !buf ^ s) files_and_modules (if batch then Some emit_fstar else None) emit_output_types_defs in
   let modules = List.Tot.map snd files_and_modules in
-  with_z3_thread_or (batch && produce_testcases_c) modules out_dir (Options.debug ()) (Options.save_z3_transcript ()) (fun z3 ->
+  with_z3_thread_or (batch && produce_testcases_c) modules out_dir (Options.get_debug ()) (Options.get_save_z3_transcript ()) (fun z3 ->
     z3.to_z3 !buf;
     do_test (if produce_testcases_c then Some testcases_c else None) nbwitnesses prog z3
   )
@@ -622,7 +622,7 @@ let produce_z3_and_test
     let print_c_initializers = not (Options.get_z3_skip_c_initializers ()) in
     let use_ptr = Options.get_z3_use_ptr () in
     let flight = Options.get_z3_flight_name () in
-    Z3TestGen.do_test out_dir out_file z3 print_c_initializers use_ptr flight prog name nbwitnesses (Options.z3_branch_depth ()) (Options.z3_pos_test ()) (Options.z3_neg_test ())
+    Z3TestGen.do_test out_dir out_file z3 print_c_initializers use_ptr flight prog name nbwitnesses (Options.get_z3_branch_depth ()) (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
   )
 
 let produce_z3_and_diff_test
@@ -636,7 +636,7 @@ let produce_z3_and_diff_test
     let print_c_initializers = not (Options.get_z3_skip_c_initializers ()) in
     let use_ptr = Options.get_z3_use_ptr () in
     let flight = Options.get_z3_flight_name () in
-    Z3TestGen.do_diff_test out_dir out_file z3 print_c_initializers use_ptr flight prog name1 name2 nbwitnesses (Options.z3_branch_depth ())
+    Z3TestGen.do_diff_test out_dir out_file z3 print_c_initializers use_ptr flight prog name1 name2 nbwitnesses (Options.get_z3_branch_depth ())
   )
 
 let produce_test_checker_exe
@@ -670,11 +670,11 @@ let produce_and_postprocess_c
   (* remove the current module from the deps *)
   let dep_files_and_modules = List.filter (fun (_, m) -> m <> modul) dep_files_and_modules in
   Batch.produce_and_postprocess_one_c
-    (Options.input_stream_binding ())
-    (Options.emit_output_types_defs ())
-    (Options.add_include ())
-    (Options.clang_format ())
-    (Options.clang_format_executable ())
+    (Options.get_input_stream_binding ())
+    (Options.get_emit_output_types_defs ())
+    (Options.get_add_include ())
+    (Options.get_clang_format ())
+    (Options.get_clang_format_executable ())
     out_dir
     file
     modul
@@ -689,7 +689,7 @@ let go () : ML unit =
   if Cons? inplace_hashes
   then Batch.check_inplace_hashes inplace_hashes
   else
-  let micro_step = Options.micro_step () in
+  let micro_step = Options.get_micro_step () in
   if micro_step = Some HashingOptions.MicroStepEmitConfig
   then (
     emit_config_as_fstar_module ();
@@ -706,9 +706,9 @@ let go () : ML unit =
   then
   (* Special mode: --__micro_step copy_everparse_h *)
     let _ = Batch.copy_everparse_h
-      (Options.clang_format ())
-      (Options.clang_format_executable ())
-      (Options.input_stream_binding ())
+      (Options.get_clang_format ())
+      (Options.get_clang_format_executable ())
+      (Options.get_input_stream_binding ())
       (Options.output_dir ())
     in
     exit 0
@@ -724,7 +724,7 @@ let go () : ML unit =
     exit 0
   else
   (* for other modes, a nonempty list of files is needed on the command line, so if none are there, then we shall print the help message *)
-  let input_stream_binding = Options.input_stream_binding () in
+  let input_stream_binding = Options.get_input_stream_binding () in
   if Nil? cmd_line_files
   then let _ = Options.display_usage () in exit 1
   else
@@ -740,21 +740,21 @@ let go () : ML unit =
     List.iter (f (Options.get_fstar_exe ()) input_stream_binding out_dir) cmd_line_files
   | None ->
   (* Special mode: --makefile" *)
-  match Options.makefile () with
+  match Options.get_makefile () with
   | Some t ->
     GenMakefile.write_makefile
       t
       input_stream_binding
-      (not (Options.no_everparse_h ()))
-      (Options.emit_output_types_defs ())
-      (Options.skip_o_rules ())
-      (Options.clang_format ())
+      (not (Options.get_no_everparse_h ()))
+      (Options.get_emit_output_types_defs ())
+      (Options.get_skip_o_rules ())
+      (Options.get_clang_format ())
       (not (Options.get_clang_format_use_custom_config ()))
-      (Options.save_hashes ())
+      (Options.get_save_hashes ())
       cmd_line_files
   | None ->
   (* Special mode: --__produce_c_from_existing_krml *)
-  if Options.produce_c_from_existing_krml ()
+  if Options.get_produce_c_from_existing_krml ()
   then
     let _ = List.iter
       (produce_and_postprocess_c out_dir)
@@ -769,39 +769,39 @@ let go () : ML unit =
   else
   (* for other modes, the list of files provided on the command line is assumed to be a list of .3d files, and the list of all .3d files in dependency order has to be inferred from the list of .3d input files provided by the user, unless --__skip_deps is provided *)
   let all_files =
-    if Options.skip_deps ()
+    if Options.get_skip_deps ()
     then List.Tot.rev cmd_line_files (* files are accumulated in reverse on the command line *)
     else Deps.collect_and_sort_dependencies cmd_line_files
   in
   let all_files_and_modules = List.map (fun file -> (file, Options.module_name file)) all_files in
   (* Special mode: --emit_smt_encoding *)
-  if Options.emit_smt_encoding ()
+  if Options.get_emit_smt_encoding ()
   then produce_z3 all_files_and_modules
   else
   (* Default mode: process .3d files *)
-  let batch = Options.batch () in
+  let batch = Options.get_batch () in
   let should_emit_fstar_code : string -> ML bool =
     let cmd_line_modules = List.map Options.module_name cmd_line_files in
     fun modul ->
       batch || List.Tot.mem modul cmd_line_modules in
   let process : process_files_t =
     (* Special mode: --test_checker *)
-    let test_checker = Options.test_checker () in
+    let test_checker = Options.get_test_checker () in
     if Some? test_checker
     then produce_test_checker_exe batch out_dir (Some?.v test_checker)
     else
     (* Special mode: --z3_diff_test *)
-    let z3_diff_test = Options.z3_diff_test () in
+    let z3_diff_test = Options.get_z3_diff_test () in
     if Some? z3_diff_test
     then produce_z3_and_diff_test batch (Options.get_produce_testcases_c ()) out_dir (Some?.v z3_diff_test)
     else
     (* Special mode: --z3_test *)
-    let z3_test = Options.z3_test () in
+    let z3_test = Options.get_z3_test () in
     if Some? z3_test
     then produce_z3_and_test batch (Options.get_produce_testcases_c ()) out_dir (Some?.v z3_test)
     else process_files
   in
-  match process all_files_and_modules should_emit_fstar_code (Options.emit_output_types_defs ()) with
+  match process all_files_and_modules should_emit_fstar_code (Options.get_emit_output_types_defs ()) with
   | None -> ()
   | Some finalize ->
   (* we need to pretty-print source modules in all cases, regardless of --batch,
@@ -819,15 +819,15 @@ let go () : ML unit =
   let _ = Batch.postprocess_fst
         (Options.get_fstar_exe ())
         input_stream_binding
-        (Options.emit_output_types_defs ())
-        (Options.add_include ())
-        (Options.clang_format ())
-        (Options.clang_format_executable ())
+        (Options.get_emit_output_types_defs ())
+        (Options.get_add_include ())
+        (Options.get_clang_format ())
+        (Options.get_clang_format_executable ())
         (not (Options.get_clang_format_use_custom_config ()))
-        (Options.skip_c_makefiles ())
-        (Options.cleanup ())
-        (Options.no_everparse_h ())
-        (Options.save_hashes ())
+        (Options.get_skip_c_makefiles ())
+        (Options.get_cleanup ())
+        (Options.get_no_everparse_h ())
+        (Options.get_save_hashes ())
         out_dir all_files_and_modules
   in
   FStar.IO.print_string "EverParse succeeded!\n"
@@ -836,8 +836,8 @@ let go () : ML unit =
        (copyright header and clang-format) *)
     Batch.postprocess_wrappers
         input_stream_binding
-        (Options.clang_format ())
-        (Options.clang_format_executable ())
+        (Options.get_clang_format ())
+        (Options.get_clang_format_executable ())
         out_dir all_files_and_modules
   in
   finalize ()

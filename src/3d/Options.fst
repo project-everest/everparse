@@ -8,20 +8,20 @@ module U8 = FStar.UInt8
 module OS = OS
 open Utils
 
-let file_name mname = mname ^ ".3d"
+let get_file_name mname = mname ^ ".3d"
 
 let debug_print_string (s:string): ML unit =
   if !_debug
   then FStar.IO.print_string s
   else ()
 
-let batch () =
+let get_batch () =
   !_batch
 
-let clang_format () =
+let get_clang_format () =
   !_clang_format
 
-let clang_format_executable () =
+let get_clang_format_executable () =
   match !_clang_format_executable with
   | None -> ""
   | Some s -> s
@@ -29,13 +29,13 @@ let clang_format_executable () =
 let get_clang_format_use_custom_config () =
   !clang_format_use_custom_config
 
-let cleanup () =
+let get_cleanup () =
   !_cleanup
 
-let skip_c_makefiles () =
+let get_skip_c_makefiles () =
   !_skip_c_makefiles
 
-let no_everparse_h () =
+let get_no_everparse_h () =
   !_no_copy_everparse_h
 
 let get_hoist_locals () =
@@ -55,17 +55,17 @@ let get_init_locals () : ML (option string) =
   | Some s -> Some (s <: string)
   | None -> None
 
-let save_hashes () =
+let get_save_hashes () =
   !_save_hashes
 
-let equate_types_list () =
+let get_equate_types_list () =
   List.map
     (fun (x: valid_string valid_equate_types) ->
       let [a; b] = String.split [','] x in (a, b)
     )
     !_equate_types_list
 
-let micro_step _ =
+let get_micro_step _ =
   match !_micro_step with
   | None -> None
   | Some "verify" -> Some MicroStepVerify
@@ -75,30 +75,30 @@ let micro_step _ =
   | Some "emit_config" -> Some MicroStepEmitConfig
   | Some "save_hashes" -> Some MicroStepSaveHashes
 
-let produce_c_from_existing_krml _ =
+let get_produce_c_from_existing_krml _ =
   !_produce_c_from_existing_krml
 
-let skip_deps _ =
+let get_skip_deps _ =
   !_skip_deps
 
-let makefile _ =
+let get_makefile _ =
   match !_makefile with
   | None -> None
   | Some "gmake" -> Some MakefileGMake
   | Some "nmake" -> Some MakefileNMake
 
-let makefile_name _ =
+let get_makefile_name _ =
   match !_makefile_name with
   | None -> OS.concat (output_dir ()) "EverParse.Makefile"
   | Some mf -> OS.concat_if_not_absolute (output_dir ()) mf
 
-let skip_o_rules _ =
+let get_skip_o_rules _ =
   !_skip_o_rules
 
-let json () =
+let get_json () =
   !_json
 
-let input_stream_binding () : ML input_stream_binding_t =
+let get_input_stream_binding () : ML input_stream_binding_t =
   let input_stream_include () : ML string =
     match !_input_stream_include with
     | None -> ""
@@ -112,18 +112,18 @@ let input_stream_binding () : ML input_stream_binding_t =
   | Some "static" ->
     InputStreamStatic (input_stream_include ())
 
-let emit_output_types_defs () = !_emit_output_types_defs
+let get_emit_output_types_defs () = !_emit_output_types_defs
 
-let config_file () = 
+let get_config_file () = 
   match !_config_file with
   | None -> None
   | Some s -> Some s
 
-let add_include () =
+let get_add_include () =
   !_add_include
 
 let make_includes () =
-  let incs = add_include () in
+  let incs = get_add_include () in
   List.Tot.fold_left
     (fun accu inc ->
       Printf.sprintf
@@ -139,26 +139,26 @@ let config_module_name () =
   | None -> None
   | Some s -> Some (strip_suffix (OS.basename s) ".3d.config")
 
-let emit_smt_encoding () =
+let get_emit_smt_encoding () =
   !_emit_smt_encoding
 
-let z3_test () = !_z3_test
+let get_z3_test () = !_z3_test
 
-let z3_pos_test () =
+let get_z3_pos_test () =
   match !_z3_test with
   | None -> false
   | _ -> match !_z3_test_mode with
   | Some "neg" -> false
   | _ -> true
 
-let z3_neg_test () =
+let get_z3_neg_test () =
   match !_z3_test with
   | None -> false
   | _ -> match !_z3_test_mode with
   | Some "pos" -> false
   | _ -> true
 
-let z3_witnesses () =
+let get_z3_witnesses () =
   match !_z3_witnesses with
   | None -> 1
   | Some s ->
@@ -170,9 +170,9 @@ let z3_witnesses () =
     end
   with _ -> 1
 
-let debug _ = !_debug
+let get_debug _ = !_debug
 
-let z3_diff_test _ =
+let get_z3_diff_test _ =
   match !_z3_diff_test with
   | None -> None
   | Some s -> let [p1; p2] = String.split [','] s in Some (p1, p2)
@@ -182,11 +182,11 @@ let z3_executable () =
   | None -> "z3"
   | Some z3 -> z3
 
-let save_z3_transcript () = !_save_z3_transcript
+let get_save_z3_transcript () = !_save_z3_transcript
 
-let test_checker () = !_test_checker
+let get_test_checker () = !_test_checker
 
-let z3_branch_depth () =
+let get_z3_branch_depth () =
   match !_z3_branch_depth with
   | None -> 0
   | Some s ->
