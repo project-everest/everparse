@@ -1,4 +1,4 @@
-ROOT=Main.fst
+ROOT=Main.fst Hashing.Hash.fst
 
 EVERPARSE_HOME=$(realpath ../..)
 
@@ -18,7 +18,7 @@ export KRML_HOME?=$(realpath ../../../karamel)
 
 INCLUDE_PATHS=
 OTHERFLAGS?=
-FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(OTHERFLAGS) $(addprefix --include , $(INCLUDE_PATHS) $(EVERPARSE_HOME)/src/3d/prelude) --already_cached 'Prims FStar -FStar.Getopt'
+FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(OTHERFLAGS) $(addprefix --include , $(INCLUDE_PATHS) $(EVERPARSE_HOME)/src/3d/prelude) --already_cached 'Prims FStar'
 
 all: 3d prelude
 
@@ -73,3 +73,12 @@ FSTAR_OPTIONS=$(OTHERFLAGS) $(addprefix --include , $(EVERPARSE_HOME)/src/lowpar
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
+
+.PHONY: hashchk hashchk-boot
+
+hashchk:
+	cd hashchk && dotnet publish -o $(EVERPARSE_HOME)/bin everparse.fsproj
+
+hashchk-boot: 3d
+	+$(MAKE) -f hashchk.Makefile
+	+$(MAKE) hashchk

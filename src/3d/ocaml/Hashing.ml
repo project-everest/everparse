@@ -1,106 +1,8 @@
-(* Hash a boolean *)
-
-let hash_bool h b =
-  let buf = Bytes.make 1 (char_of_int (if b then 1 else 0)) in
-  HashingBase.update h buf
-
-(* Hash an integer *)
-
-let hash_int h i =
-  let i32 = Int32.of_int i in
-  let buf = Bytes.create 4 in
-  Bytes.set_int32_be buf 0 i32;
-  HashingBase.update h buf
-
-(* Hash a file *)
-
-let hash_file h f =
-  let ch = open_in_bin f in
-  let len = in_channel_length ch in
-  hash_int h len;
-  let buf = Bytes.create len in
-  let _ = input ch buf 0 len in
-  close_in ch;
-  HashingBase.update h buf
-
-let hash_file_option h = function
-  | None -> hash_bool h false
-  | Some f -> hash_bool h true; hash_file h f
-
-(* Hash a string *)
-
-let hash_string h s =
-  hash_int h (String.length s);
-  HashingBase.update h (Bytes.of_string s)
-
-
-let char_of_int4 x =
-  assert (0 <= x && x < 16);
-  if x < 10
-  then char_of_int (int_of_char '0' + x)
-  else char_of_int (int_of_char 'a' + x - 10)
-
-let hex_of_char c =
-  let i = int_of_char c in
-  assert (0 <= i && i < 256);
-  char_of_int4 (i / 16), char_of_int4 (i mod 16)
-
-let hex_of_bytes buf =
-  let hex = Bytes.create (Bytes.length buf * 2) in
-  Bytes.iteri (fun idx c ->
-      let hi, lo = hex_of_char c in
-      Bytes.set hex (2 * idx) hi;
-      Bytes.set hex (2 * idx + 1) lo
-    ) buf;
-  Bytes.to_string hex
-
-type c_files = {
-    wrapper_h: string option;
-    wrapper_c: string option;
-    h: string;
-    c: string;
-    assertions: string option;
-  }
-
-let hash f opt_c =
-  let h = HashingBase.init () in
-  hash_string h Version.everparse_version;
-  hash_string h Version.fstar_commit;
-  hash_string h Version.karamel_commit;
-  hash_file h f;
-  begin match opt_c with
-  | None -> hash_bool h false
-  | Some c ->
-     hash_bool h true;
-     hash_file_option h c.wrapper_h;
-     hash_file_option h c.wrapper_c;
-     hash_file h c.h;
-     hash_file h c.c;
-     begin match c.assertions with
-     | None ->
-        hash_bool h false
-     | Some assertions ->
-        hash_bool h true;
-        hash_file h assertions
-     end
-  end;
-  hex_of_bytes (HashingBase.finish h)
+open Hashing_Hash
 
 (* load, check and save weak hashes from a C file *)
 
-let c_comment_intro = "EverParse checksum hash"
-
-let hash_as_comment file =
-  let h = hash file None in
-  Printf.sprintf "%s:%s" c_comment_intro h
-
-type check_inplace_hashes_t =
-  | AllHashes of c_files
-  | OneHash of string
-
-let check_inplace_hashes file_3d files_c =
-  let h = hash file_3d None in
-  let f file_c =
+let check_inplace_hashes_f h file_c =
     let ch = open_in file_c in
     (* Check fails if a bad hash or no hash is found. A
        good hash alone does not make the check succeed *)
@@ -127,27 +29,9 @@ let check_inplace_hashes file_3d files_c =
     let res = aux false in
     close_in ch;
     res
-  in
-  match files_c with
-  | OneHash c_file -> f c_file
-  | AllHashes files_c ->
-    List.for_all f (
-      files_c.c ::
-      files_c.h ::
-      begin match files_c.wrapper_c with
-      | None -> []
-      | Some w -> [w]
-      end @
-      begin match files_c.wrapper_h with
-      | None -> []
-      | Some w -> [w]
-      end @
-      begin match files_c.assertions with
-      | None -> []
-      | Some assertions -> [assertions]
-      end
-    )
-  
+
+let check_inplace_hashes file_3d files_c =
+  Hashing_Hash.check_inplace_hashes_on check_inplace_hashes_f file_3d files_c
 
 (* load, check and save hashes from/to JSON file *)
 
