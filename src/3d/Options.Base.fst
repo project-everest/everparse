@@ -380,7 +380,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
   options := [
     CmdOption "add_include" (OptList "<include.h>|\"include.h\"" always_valid _add_include) "Prepend #include ... to generated .c/.h files" [];
     CmdOption "batch" (OptBool _batch) "Verify the generated F* code and extract C code" [];
-    CmdOption "check_hashes" (OptStringOption "weak|strong|inplace" valid_check_hashes _check_hashes) "Check hashes" ["batch"];
+    CmdOption "check_hashes" (OptStringOption "weak|strong|inplace" valid_check_hashes _check_hashes) "Check hashes" [];
     CmdOption "check_inplace_hash" (OptList "file.3d=file.h" always_valid _inplace_hashes) "Check hashes stored in one .h/.c file" [];
     CmdOption "clang_format" (OptBool _clang_format) "Call clang-format on extracted .c/.h files (--batch only)" ["batch"];
     CmdOption "clang_format_executable" (OptStringOption "clang-format full path" always_valid _clang_format_executable) "Set the path to clang-format if not reachable through PATH" ["batch"; "clang_format"];
@@ -452,12 +452,11 @@ let output_dir () =
   | Some s -> s
 
 let check_hashes () =
-  if !_batch then match !_check_hashes with
+  match !_check_hashes with
   | None -> None
   | Some "weak" -> Some WeakHashes
   | Some "strong" -> Some StrongHashes
   | Some "inplace" -> Some InplaceHashes
-  else None
 
 let check_inplace_hashes () =
   List.rev !_inplace_hashes
