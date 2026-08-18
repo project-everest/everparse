@@ -23,7 +23,7 @@ let hash_file h f =
   let len = in_channel_length ch in
   hash_int h len;
   let buf = Bytes.create len in
-  let _ = input ch buf 0 len in
+  let _ = really_input ch buf 0 len in
   close_in ch;
   HashingBase.update h buf
 
