@@ -50,12 +50,17 @@ clean-3d:
 
 .PHONY: clean-3d
 
-.PHONY: hashchk hashchk-boot
+.PHONY: hashchk hashchk-boot hashchk-rebuild
 
 hashchk:
 	cd hashchk && dotnet build everparse.fsproj && dotnet build everparse-hashchk.fsproj
 
-hashchk-boot: 3d
+# Re-extract the hash checker from F* and rebuild it. Contrary to
+# hashchk-boot, this rule assumes that 3d is already built.
+hashchk-rebuild:
 	rm -rf hashchk/3d
 	+$(MAKE) -f hashchk.Makefile
 	+$(MAKE) hashchk
+
+hashchk-boot: 3d
+	+$(MAKE) hashchk-rebuild
