@@ -93,6 +93,10 @@ jobs:
         uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: 5
+      - name: Set-up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: everparse/src/3d/hashchk/global.json
       - name: Everparse CI
         run: |
           make -C everparse -j$(nproc) -k test
