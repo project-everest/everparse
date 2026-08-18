@@ -1,7 +1,5 @@
 #light "off"
 module Hashing_Hash
-open Prims
-open FStar_Pervasives
 type c_files =
 {wrapper_h : Prims.string FStar_Pervasives_Native.option; wrapper_c : Prims.string FStar_Pervasives_Native.option; h : Prims.string; c : Prims.string; assertions : Prims.string FStar_Pervasives_Native.option}
 

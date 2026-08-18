@@ -1,4 +1,14 @@
+#light "off"
 module Version
-let everparse_version = "v2026.07.09"
-let fstar_commit = "a22c993210"
-let karamel_commit = "51367a68"
+
+let everparse_version : Prims.string = "6d4d1a536-unreleased"
+
+
+let fstar_commit : Prims.string = "de9d045cbf"
+
+
+let karamel_commit : Prims.string = "6c5e3d20"
+
+
+
+

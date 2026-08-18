@@ -1,7 +1,5 @@
 #light "off"
 module HashingOptions
-open Prims
-open FStar_Pervasives
 type check_hashes_t =
 | WeakHashes
 | StrongHashes
@@ -52,6 +50,7 @@ type micro_step_t =
 | MicroStepCopyClangFormat
 | MicroStepCopyEverParseH
 | MicroStepEmitConfig
+| MicroStepSaveHashes
 
 
 let uu___is_MicroStepVerify : micro_step_t  ->  Prims.bool = (fun ( projectee  :  micro_step_t ) -> (match (projectee) with
@@ -92,6 +91,15 @@ end))
 
 let uu___is_MicroStepEmitConfig : micro_step_t  ->  Prims.bool = (fun ( projectee  :  micro_step_t ) -> (match (projectee) with
 | MicroStepEmitConfig -> begin
+true
+end
+| uu___ -> begin
+false
+end))
+
+
+let uu___is_MicroStepSaveHashes : micro_step_t  ->  Prims.bool = (fun ( projectee  :  micro_step_t ) -> (match (projectee) with
+| MicroStepSaveHashes -> begin
 true
 end
 | uu___ -> begin
