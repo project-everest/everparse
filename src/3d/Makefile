@@ -56,5 +56,6 @@ hashchk:
 	cd hashchk && dotnet build everparse.fsproj && dotnet build everparse-hashchk.fsproj
 
 hashchk-boot: 3d
+	rm -rf hashchk/3d
 	+$(MAKE) -f hashchk.Makefile
 	+$(MAKE) hashchk

@@ -30,6 +30,7 @@
     <Compile Include="3d\Hashing_Hash.fs" />
     <Compile Include="3d\HashingOptions.fs" />
     <Compile Include="OS.fs" />
+    <Compile Include="3d\Utils.fs" />
     <Compile Include="3d\Getopt.fs" />
     <Compile Include="3d\Options.fs" />
     <Compile Include="HashCheck.fs" />

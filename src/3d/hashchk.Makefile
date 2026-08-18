@@ -2,23 +2,13 @@ ROOT=Hashing.Hash.fst Options.fst
 
 EVERPARSE_HOME=$(realpath ../..)
 
-ifndef FSTAR_HOME
-  FSTAR_EXE=$(shell which fstar.exe)
-  ifeq ($(FSTAR_EXE),)
-    # fstar.exe not found in PATH, assuming Everest source tree
-    FSTAR_HOME=$(realpath $(EVERPARSE_HOME)/../FStar)
-  else
-    # fstar.exe found in PATH, assuming directory ending with /bin
-    FSTAR_HOME=$(realpath $(dir $(FSTAR_EXE))/..)
-  endif
-endif
-export FSTAR_HOME
+FSTAR_EXE ?= fstar.exe
 
 INCLUDE_PATHS=
 OTHERFLAGS?=
-FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(OTHERFLAGS) $(addprefix --include , $(INCLUDE_PATHS) $(EVERPARSE_HOME)/src/3d/prelude) --already_cached '*,'
+FSTAR=$(FSTAR_EXE) $(OTHERFLAGS) $(addprefix --include , $(INCLUDE_PATHS) $(EVERPARSE_HOME)/src/3d/prelude) --already_cached '*,'
 
-all: extract-hashchk fstarlib
+all: extract-hashchk
 
 .PHONY: all extract-hashchk
 
@@ -34,6 +24,10 @@ include hashchk.depend
 
 extract-hashchk: $(ALL_FS_FILES)
 
+# For fstarlib only
+
+FSTAR_HOME := $(EVERPARSE_HOME)/opt/FStar
+
 .PHONY: fstarlib
 
 FSTARLIB_FILES= \
@@ -46,7 +40,6 @@ FSTARLIB_FILES= \
 
 
 fstarlib:
-	+$(MAKE) -C $(FSTAR_HOME)/ulib -f Makefile.extract.fsharp all-fs
 	rm -rf hashchk/fstarlib
 	mkdir -p hashchk/fstarlib
-	cp $(addprefix $(FSTAR_HOME)/ulib/fs/,$(FSTARLIB_FILES)) hashchk/fstarlib/
+	cp $(addprefix $(FSTAR_HOME)/fsharp/base/,$(FSTARLIB_FILES)) hashchk/fstarlib/

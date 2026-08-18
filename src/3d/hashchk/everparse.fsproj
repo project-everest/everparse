@@ -13,8 +13,8 @@
     <UseVSHostingProcess>true</UseVSHostingProcess>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="3d\Version.fs" />
     <Compile Include="prims.fs" />
+    <Compile Include="3d\Version.fs" />
     <Compile Include="FStar_Pervasives_Native.fs" />
     <Compile Include="Hashing_Op.fs" />
     <Compile Include="PackageHashes.fs" />
