@@ -32,7 +32,7 @@
     <Compile Include="OS.fs" />
     <Compile Include="3d\Utils.fs" />
     <Compile Include="3d\Getopt.fs" />
-    <Compile Include="3d\Options.fs" />
+    <Compile Include="3d\Options_Base.fs" />
     <Compile Include="HashCheck.fs" />
   </ItemGroup>
 </Project>

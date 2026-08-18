@@ -1,12 +1,7 @@
 module Options
+include Options.Base
 open HashingOptions
 open FStar.All
-
-val display_usage : unit -> ML unit
-
-val compute_options (ignore: list string) : ML string
-
-val parse_cmd_line : unit -> ML (list string)
 
 val file_name (mname:string) : ML string
 
@@ -40,11 +35,7 @@ val get_line_comments : unit -> ML bool
 
 val get_init_locals : unit -> ML (option string)
 
-val check_hashes : unit -> ML (option check_hashes_t)
-
 val save_hashes : unit -> ML bool
-
-val check_inplace_hashes : unit -> ML (list string)
 
 val equate_types_list : unit -> ML (list (string & string))
 

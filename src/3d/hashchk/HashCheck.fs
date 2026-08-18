@@ -38,9 +38,9 @@ let check_inplace_hashes_f h file_c =
 [<EntryPoint>]
 let main _ =
   (* Parse command-line options. This action is only accumulating values into globals, without any further action (other than --help and --version, which interrupt the execution.) *)
-  let _ = Options.parse_cmd_line() in
+  let _ = Options_Base.parse_cmd_line() in
   (* Special mode: --check_inplace_hashes *)
-  let inplace_hashes = Options.check_inplace_hashes () in
+  let inplace_hashes = Options_Base.check_inplace_hashes () in
   if not (List.isEmpty inplace_hashes)
   then
     Hashing_Hash.check_inplace_hashes check_inplace_hashes_f inplace_hashes
