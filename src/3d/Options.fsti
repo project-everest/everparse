@@ -5,10 +5,6 @@ open FStar.All
 
 val file_name (mname:string) : ML string
 
-val module_name (file: string) : ML string
-
-val output_dir : unit -> ML string
-
 val debug_print_string (s:string) : ML unit
 
 val batch : unit -> ML bool

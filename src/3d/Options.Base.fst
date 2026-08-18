@@ -8,6 +8,20 @@ open Utils
 #push-options "--warn_error -272" //top-level effects are okay
 
 
+let split_3d_file_name fn =
+  let fn = OS.basename fn in
+  if OS.extension fn = ".3d"
+  then Some (OS.remove_extension fn)
+  else None
+
+let module_name (file: string) =
+    match split_3d_file_name file with
+    | Some nm ->
+      if starts_with_capital nm
+      then nm
+      else failwith (Printf.sprintf "Input file name %s must start with a capital letter" file)
+    | None -> failwith (Printf.sprintf "Input file name %s must end with .3d" file)
+
 let check_config_file_name (fn:string) 
   : bool
   = let fn = OS.basename fn in
@@ -431,6 +445,11 @@ let parse_cmd_line () : ML (list string) =
   | Help -> display_usage(); exit 0
   | Error s -> FStar.IO.print_string s; exit 1
   | _ -> exit 2
+
+let output_dir () =
+  match !_output_dir with
+  | None -> "."
+  | Some s -> s
 
 let check_hashes () =
   if !_batch then match !_check_hashes with

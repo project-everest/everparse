@@ -8,26 +8,7 @@ module U8 = FStar.UInt8
 module OS = OS
 open Utils
 
-let split_3d_file_name fn =
-  let fn = OS.basename fn in
-  if OS.extension fn = ".3d"
-  then Some (OS.remove_extension fn)
-  else None
-
 let file_name mname = mname ^ ".3d"
-
-let module_name (file: string) =
-    match split_3d_file_name file with
-    | Some nm ->
-      if starts_with_capital nm
-      then nm
-      else failwith (Printf.sprintf "Input file name %s must start with a capital letter" file)
-    | None -> failwith (Printf.sprintf "Input file name %s must end with .3d" file)
-
-let output_dir () =
-  match !_output_dir with
-  | None -> "."
-  | Some s -> s
 
 let debug_print_string (s:string): ML unit =
   if !_debug
