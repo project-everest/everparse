@@ -21,6 +21,7 @@ open Binding
 
 /// The same as A.op, but with `SizeOf` removed
 /// and arithmetic operators resolved to their types
+noeq
 type op =
   | Eq
   | Neq
@@ -46,6 +47,7 @@ type op =
   | BitFieldOf: size: int -> order: A.bitfield_bit_order -> op //BitFieldOf(i, from, to)
   | Cast : from:A.integer_type -> to:A.integer_type -> op
   | Ext of string
+  | ProbeFunctionName of A.ident
 
 /// Same as A.expr, but with `This` removed
 ///
@@ -57,9 +59,35 @@ type expr' =
   | Constant   : c:A.constant -> expr'
   | Identifier : i:A.ident -> expr'
   | App        : hd:op -> args:list expr -> expr'
-  | Record     : type_name:A.ident -> list (A.ident * expr) -> expr'
+  | Record     : type_name:A.ident -> list (A.ident & expr) -> expr'
 
 and expr = expr' & A.range
+
+let rec as_constant n =
+  match fst n with
+  | Constant (A.Int sw i) ->
+    Some (A.Int sw i)
+  | App (Cast _from to) [ n ] -> (
+    match as_constant n with
+    | Some (A.Int _ i) -> Some (A.Int to i)
+    | _ -> None
+  )
+  | App (Plus _) [ n; m ] -> (
+    match as_constant n, as_constant m with
+    | Some (A.Int sw i), Some (A.Int _ j) -> Some (A.Int sw (i + j))
+    | _ -> None
+  )
+  | App (Minus _) [ n; m ] -> (
+    match as_constant n, as_constant m with
+    | Some (A.Int sw i), Some (A.Int _ j) -> Some (A.Int sw (i - j))
+    | _ -> None
+  )
+  | App (Mul _) [ n; m ] -> (
+    match as_constant n, as_constant m with
+    | Some (A.Int sw i), Some (A.Int _ j) -> Some (A.Int sw (i `op_Multiply` j))
+    | _ -> None
+  )
+  | _ -> None
 
 let subst = list (A.ident' & expr)
 val subst_expr (s:subst) (e:expr) : expr
@@ -90,17 +118,94 @@ type action =
   
 (* A subset of F* types that the translation targets *)
 noeq
+type atomic_probe_action =
+  | Atomic_probe_and_copy :
+      bytes_to_read : expr ->
+      probe_fn: A.ident ->
+      atomic_probe_action
+  | Atomic_probe_and_read :
+      reader : A.ident ->
+      atomic_probe_action
+  | Atomic_probe_write_at_offset :
+      v:expr ->
+      writer : A.ident ->
+      atomic_probe_action
+  | Atomic_probe_call_pure :
+      f: A.ident ->
+      args: list expr ->
+      atomic_probe_action
+  | Atomic_probe_skip_read:
+      n:expr ->
+      atomic_probe_action
+  | Atomic_probe_skip_write:
+      n:expr ->
+      atomic_probe_action
+  | Atomic_probe_init:
+      f:A.ident ->
+      n:expr ->
+      atomic_probe_action
+  | Atomic_probe_return:
+      v:expr ->
+      atomic_probe_action
+  | Atomic_probe_fail:
+      atomic_probe_action
+
+noeq
+type probe_action =
+  | Probe_action_atomic :
+      atomic_probe_action ->
+      probe_action
+  | Probe_action_var :
+      expr ->
+      probe_action
+  | Probe_action_seq:
+      detail:expr ->
+      probe_action ->
+      probe_action ->
+      probe_action
+  | Probe_action_let:
+      detail:expr ->
+      i:A.ident ->
+      m1: atomic_probe_action ->
+      m2: probe_action ->
+      probe_action
+  | Probe_action_ite:
+      cond: expr ->
+      m1: probe_action ->
+      m2: probe_action ->
+      probe_action
+  | Probe_action_array:
+      len: expr ->
+      m: probe_action ->
+      probe_action
+  | Probe_action_copy_init_sz:
+      f:A.ident ->
+      probe_action 
+  
+noeq
 type typ =
   | T_false    : typ
   | T_app      : hd:A.ident -> A.t_kind -> args:list index -> typ
+  | T_nlist    : elt: typ -> bytesize: expr -> typ
+  | T_pair     : fst: typ -> snd: typ -> typ
   | T_dep_pair : dfst:typ -> dsnd:(A.ident & typ) -> typ
   | T_refine   : base:typ -> refinement:lam expr -> typ
   | T_if_else  : e:expr -> t:typ -> f:typ -> typ
-  | T_pointer  : typ -> typ
+  | T_pointer  : typ -> pointer_size:A.integer_type -> typ
   | T_with_action: typ -> action -> typ
   | T_with_dep_action: typ -> a:lam action -> typ
   | T_with_comment: typ -> A.comments -> typ
-  | T_with_probe: typ -> probe_fn:A.ident -> len:expr -> dest:A.ident -> typ
+  | T_with_probe: 
+      content_typ:typ ->
+      pointer_size:A.pointer_size_t ->
+      pointer_nullable:bool ->
+      probe_fn:probe_action ->
+      dest:A.ident ->
+      as_u64:A.ident ->
+      init:A.ident ->
+      dest_sz:expr ->
+      typ
+  | T_arrow : list typ -> typ -> typ
 
 (* An index is an F* type or an expression
    -- we reuse Ast expressions for this
@@ -134,6 +239,8 @@ type typedef_body =
 
 noeq
 type probe_entrypoint = {
+  probe_ep_name: option A.ident;
+  probe_ep_init: A.ident;
   probe_ep_fn: A.ident;
   probe_ep_length: expr;
 }
@@ -143,7 +250,10 @@ type typedef_name = {
   td_name:A.ident;
   td_params:list param;
   td_entrypoint_probes: list probe_entrypoint;
-  td_entrypoint:bool
+  td_entrypoint:bool;
+  td_entrypoint_plain:bool;
+  td_entrypoint_plain_name: option A.ident;
+  td_noextract:bool;
 }
 type typedef = typedef_name & typedef_body
 
@@ -154,7 +264,7 @@ type parser_kind' =
   | PK_return
   | PK_impos
   | PK_base     : hd:A.ident -> parser_kind'
-  | PK_list     : parser_kind'
+  | PK_list     : elt_kind:parser_kind -> option nat -> parser_kind'
   | PK_t_at_most: parser_kind'
   | PK_t_exact  : parser_kind'
   | PK_filter   : k:parser_kind -> parser_kind'
@@ -165,7 +275,7 @@ type parser_kind' =
 and parser_kind = {
   pk_kind : parser_kind';
   pk_weak_kind : A.weak_kind ;
-  pk_nz: bool
+  pk_nz: bool;
 }
 
 val expr_eq (e1 e1:expr) : bool
@@ -177,10 +287,10 @@ noeq
 type parser' =
   | Parse_return    : v:expr -> parser'
   | Parse_app       : hd:A.ident -> args:list index -> parser'
-  | Parse_nlist     : n:expr -> t:parser -> parser'
+  | Parse_nlist     : t_size_constant:bool -> n:expr -> t:parser -> parser'
   | Parse_t_at_most : n:expr -> t:parser -> parser'
   | Parse_t_exact   : n:expr -> t:parser -> parser'
-  | Parse_pair      : n1: A.ident -> p:parser -> q:parser -> parser'
+  | Parse_pair      : n1: A.ident -> p_is_const: bool -> p:parser -> q_is_const: bool -> q:parser -> parser' // p_is_const, q_is_const record whether p and q are total compile-time constant size parsers
   | Parse_dep_pair  : n1: A.ident -> p:parser -> k:lam parser -> parser'
   | Parse_dep_pair_with_refinement: n1: A.ident -> dfst:parser -> refinement:lam expr -> dsnd:lam parser -> parser'
   | Parse_dep_pair_with_action: dfst:parser -> a:lam action -> dsnd:lam parser -> parser'
@@ -196,7 +306,16 @@ type parser' =
   | Parse_impos     : parser'
   | Parse_with_comment: p:parser -> c:A.comments -> parser'
   | Parse_string    : p:parser -> zero:expr -> parser'
-  | Parse_with_probe : p:parser -> probe:A.ident -> len:expr -> dest:A.ident -> parser'
+  | Parse_with_probe :
+      p:parser ->
+      pointer_size:A.pointer_size_t ->
+      pointer_nullable:bool ->
+      probe:probe_action ->
+      dest:A.ident ->
+      as_u64:A.ident ->
+      probe_init:A.ident ->
+      dest_sz:expr ->
+      parser'
   
 and parser = {
   p_kind:parser_kind;
@@ -224,9 +343,9 @@ type type_decl = {
   decl_is_enum : bool
 }
 
-let definition = A.ident * list param * typ * expr
+let definition = A.ident & list param & typ & expr
 
-let assumption = A.ident * typ
+let assumption = A.ident & typ
 
 type decl_attributes = {
   is_hoisted: bool;
@@ -263,20 +382,30 @@ and output_expr = {
  * This decl will then be used to emit F* and C code for output types
  *)
 
+type probe_qualifier =
+  | PQWithOffsets
+  | PQInit
+  | PQRead of A.integer_type
+  | PQWrite of A.integer_type
+
+
 noeq
 type decl' =
   | Assumption : assumption -> decl'
   | Definition : definition -> decl' //the bool marks it for inline_for_extraction
   | Type_decl  : type_decl -> decl'
+  | Probe_function :
+      A.ident ->
+      params:list param ->
+      probe_action ->
+      decl'
   | Output_type: A.out_typ -> decl'  //output types specifications, we keep them if we need to print them to C
-
   | Output_type_expr : output_expr -> is_get:bool -> decl'  //is_get boolean indicates that the output expression appears in a getter position, i.e. in a type parameter, it is false when the output expression is an assignment action lhs
-
   | Extern_type : A.ident -> decl'
-  | Extern_fn : A.ident -> typ -> list param -> decl'
-  | Extern_probe : A.ident -> decl'
+  | Extern_fn : A.ident -> typ -> list param -> pure:bool -> decl'
+  | Extern_probe : A.ident -> probe_qualifier -> decl'
 
-type decl = decl' * decl_attributes
+type decl = decl' & decl_attributes
 
 type decls = list decl
 val has_output_types (ds:list decl) : bool
@@ -292,7 +421,9 @@ val print_maybe_qualified_ident (mname:string) (i:A.ident) : ML string
 val print_expr (mname:string) (e:expr) : ML string
 val print_typ (mname:string) (t:typ) : ML string
 val print_kind (mname:string) (k:parser_kind) : Tot string
+val print_params (mname:string) (ps:list param) : ML string
 val print_action (mname:string) (a:action) : ML string
+val print_probe_action  (mname:string) (a:probe_action) : ML string
 val print_definition (mname:string) (d:decl { Definition? (fst d)} ) : ML string
 val print_assumption (mname:string) (d:decl { Assumption? (fst d) } ) : ML string
 val wrapper_name (modul: string) (fn: string) : ML string

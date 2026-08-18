@@ -1,0 +1,12 @@
+{
+    "fstar_exe": "../../../fstar.sh",
+    "options": [],
+    "include_dirs": [
+      "./_output",
+      "../../../src/cbor/spec",
+      "../../../src/cbor/pulse",
+      "../../../src/cddl/pulse",
+      "../../../src/cddl/spec",
+      "../../../src/cddl/tool"
+    ]
+  }

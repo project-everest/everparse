@@ -10,7 +10,9 @@ krml/%.krml:
 	$(FSTAR) --codegen krml $(patsubst %.checked,%,$(notdir $<)) --extract_module $(basename $(patsubst %.checked,%,$(notdir $<))) --warn_error '@241'
 	@touch $@
 
+ifeq (,$(filter clean,$(MAKECMDGOALS)))
 -include .depend
+endif
 
 .depend: $(QD_FILES) .qd_files
 	+$(MAKE) -f Makefile.depend

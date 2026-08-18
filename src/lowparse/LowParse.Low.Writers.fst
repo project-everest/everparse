@@ -788,6 +788,8 @@ let olwriter_singleton
     res
   )
 
+#push-options "--z3rlimit 16"
+
 inline_for_extraction
 noextract
 let olwriter_append
@@ -819,6 +821,8 @@ let olwriter_append
       res2
     end
   )
+
+#pop-options
 
 inline_for_extraction
 noextract

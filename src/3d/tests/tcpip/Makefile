@@ -1,6 +1,7 @@
 EVERPARSE_HOME ?= $(realpath ../../../..)
 export EVERPARSE_HOME
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe
+FSTAR_EXE ?= fstar.exe
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
 SOURCE_FILES_NO_EXTERN=TCP.3d Ethernet.3d
 SOURCE_FILES_EXTERN=ICMP.3d IPV4.3d VXLAN.3d UDP.3d IPV6.3d
 SOURCE_FILES=$(SOURCE_FILES_NO_EXTERN) $(SOURCE_FILES_EXTERN)
@@ -20,9 +21,12 @@ extern: $(SOURCE_FILES_EXTERN) extern.out
 
 .PHONY: all interpret extern clean
 
-INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffer $(EVERPARSE_HOME)/src/lowparse $(KRML_HOME)/krmllib/obj $(KRML_HOME)/krmllib
+EVERPARSE_SRC_PATH := $(EVERPARSE_HOME)/src
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
-FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
+INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffer $(EVERPARSE_HOME)/src/lowparse
+
+FSTAR_OPTIONS += $(addprefix --include , $(INCLUDES))
 
 %.fst-in:
 	@echo $(FSTAR_OPTIONS)

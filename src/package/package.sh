@@ -4,9 +4,17 @@ set -e
 set -x
 
 SED=$(which gsed >/dev/null 2>&1 && echo gsed || echo sed)
+if [[ -z "$MAKE" ]] ; then
 MAKE="$(which gmake >/dev/null 2>&1 && echo gmake || echo make) $EVERPARSE_MAKE_OPTS"
+fi
 DATE=$(which gdate >/dev/null 2>&1 && echo gdate || echo date)
 
+# We do not read any of these from the environment. This builds a
+# package from the current master branches, or the existing checkouts in
+# FStar/ and karamel/.
+unset FSTAR_EXE
+unset FSTAR_HOME
+unset KRML_EXE
 
 if [[ -z "$OS" ]] ; then
     OS=$(uname)
@@ -17,9 +25,14 @@ if [[ "$OS" = "Windows_NT" ]] ; then
    is_windows=true
 fi
 
+is_macos=false
+if [[ "$OS" = "Darwin" ]] ; then
+    is_macos=true
+fi
+
 fixpath () {
     if $is_windows ; then
-        cygpath -m "$1"
+        cygpath -m "$(echo "$1" | sed 's!\r!!g')"
     else
         echo "$1"
     fi
@@ -38,44 +51,13 @@ else
     exe=
 fi
 
-platform=$(uname -m)
-z3=z3$exe
-if ! Z3_DIR=$(dirname $(which $z3)) ; then
-    if $is_windows ; then
-        if ! [[ -d z3 ]] ; then
-            z3_tagged=Z3-4.8.5
-            z3_archive=z3-4.8.5-x64-win.zip
-            wget --output-document=$z3_archive https://github.com/Z3Prover/z3/releases/download/$z3_tagged/$z3_archive
-            unzip $z3_archive
-            mv z3-4.8.5-x64-win z3
-            chmod +x z3/bin/z3.exe
-            for f in z3/bin/*.dll ; do if [[ -f $f ]] ; then chmod +x $f ; fi ; done
-            if [[ -f z3/lib/*.dll ]] ; then chmod +x z3/lib/*.dll ; fi
-        fi
-        Z3_DIR="$PWD/z3/bin"
-    elif [[ "$OS" = "Linux" ]] && [[ "$platform" = x86_64 ]] ; then
-        if ! [[ -d z3 ]] ; then
-            # Download a dependency-free z3
-            z3_tagged=z3-4.8.5-linux-clang
-            z3_archive=$z3_tagged-$platform.tar.gz
-            wget --output-document=$z3_archive https://github.com/tahina-pro/z3/releases/download/$z3_tagged/$z3_archive
-            tar xzf $z3_archive
-        fi
-        Z3_DIR="$PWD/z3"
-    else
-        echo "z3 4.8.5 is missing, please add it to your PATH"
-        exit 1
-    fi
-    export PATH="$Z3_DIR:$PATH"
-fi
+download () {
+    source="$1"
+    target="$2"
+    curl -L -o "$target" "$source"
+}
 
-if $is_windows ; then
-    LIBGMP10_DLL=$(which libgmp-10.dll)
-    if [[ -z "$LIBGMP10_DLL" ]] ; then
-        echo libgmp-10.dll is missing
-        exit 1
-    fi
-fi
+platform=$(uname -m)
 
 if [[ -d everparse ]] ; then
     echo everparse/ is already there, please make way
@@ -94,79 +76,46 @@ print_date_utc_of_iso_hr() {
     $DATE --utc --date="$1" '+%Y-%m-%d %H:%M:%S'
 }
 
-if [[ -z "$everparse_version" ]] ; then
-    everparse_version=$(sed 's!\r!!g' $EVERPARSE_HOME/version.txt)
-    everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
-    if everparse_commit=$(git show --no-patch --format=%h) ; then
-        if [[ $everparse_commit != $everparse_last_version ]] ; then
-            everparse_version=$everparse_commit
-        fi
-    fi
-fi
-
 make_everparse() {
-    # Verify if F* and KaRaMeL are here
     cp0=$(which gcp >/dev/null 2>&1 && echo gcp || echo cp)
     cp="$cp0 --preserve=mode,timestamps"
-    if [[ -z "$FSTAR_HOME" ]] ; then
-        if [[ -d FStar ]] ; then
-            export FSTAR_HOME=$(fixpath $PWD/FStar)
-        elif find_fstar="$(which fstar.exe)" ; then
-            export FSTAR_HOME=$(fixpath "$(dirname $find_fstar)"/..)
-        else
-            git clone https://github.com/FStarLang/FStar
-            export FSTAR_HOME=$(fixpath $PWD/FStar)
-        fi
-    else
-        export FSTAR_HOME=$(fixpath "$FSTAR_HOME")
-    fi
-    if [[ -z "$KRML_HOME" ]] ; then
-        { [[ -d karamel ]] || git clone https://github.com/FStarLang/karamel ; }
-        export KRML_HOME=$(fixpath $PWD/karamel)
-    else
-        export KRML_HOME=$(fixpath "$KRML_HOME")
-    fi
 
-    if fstar_commit_id=$(print_component_commit_id "$FSTAR_HOME") ; then
-        fstar_commit_date_iso=$(print_component_commit_date_iso "$FSTAR_HOME")
-        fstar_commit_date_hr=$(print_date_utc_of_iso_hr "$fstar_commit_date_iso")" UTC+0000"
-    fi
-    if karamel_commit_id=$(print_component_commit_id "$KRML_HOME") ; then
-        karamel_commit_date_iso=$(print_component_commit_date_iso "$KRML_HOME")
-        karamel_commit_date_hr=$(print_date_utc_of_iso_hr "$karamel_commit_date_iso")" UTC+0000"
-    fi
-    z3_version_string=$($Z3_DIR/$z3 --version)
-
-    # Rebuild F* and KaRaMeL
-    export OTHERFLAGS='--admit_smt_queries true'
-    if [[ -f "$FSTAR_HOME/Makefile" ]] ; then
-        # assume F* source tree
-        $MAKE -C "$FSTAR_HOME" "$@"
-    fi
-    if [[ -z "$fstar_commit_id" ]] ; then
-        fstar_commit_id=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^commit=' | sed 's!^.*=!!')
-        fstar_commit_date_hr=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^date=' | sed 's!^.*=!!')
-    fi
-    $MAKE -C "$KRML_HOME" "$@" minimal
-    $MAKE -C "$KRML_HOME/krmllib" "$@" verify-all
-
-    # Install ocaml-sha if not found
-    if ! ocamlfind query sha ; then
-        opam install --yes sha
-    fi
+    ## Clear all variables
+    export EVERPARSE_USE_OPAMROOT=
+    export EVERPARSE_USE_FSTAR_EXE=
+    export EVERPARSE_USE_KRML_EXE=
+    export EVERPARSE_USE_PULSE_HOME=
+    rm -f "$EVERPARSE_HOME/opam-env.Makefile"
 
     # Rebuild EverParse
-    $MAKE -C "$EVERPARSE_HOME" "$@"
+    $MAKE -C "$EVERPARSE_HOME" "$@" deps
+    ADMIT=1 $MAKE -C "$EVERPARSE_HOME" "$@" package-subset
 
-    # Copy dependencies and Z3
+    # Set environment
+    eval "$($MAKE -C "$EVERPARSE_HOME" -s --no-print-directory env)"
+    FSTAR_PKG_ROOT="$(fixpath "$(dirname "$FSTAR_EXE")/..")"
+    
+    # Copy dependencies
     mkdir -p everparse/bin
     if $is_windows
     then
+	# F* was built in this cygwin environment, and can run. There is
+	# somewhere a libgmp DLL that is being used, and that we must ship in
+	# order for systems without this DLL to able to run F*. Using `which
+	# libgmp-10.dll` returns a hit, but it seems to be (sometimes?) wrong and
+	# point to a 32-bit version of the library that does not work. Here, we
+	# use (Cygwin's) `ldd` to find out which dll we are using exactly, and
+	# ship that.
+	# (See FStarLang/FStar#4064)
+	LIBGMP10_DLL="$(ldd "$FSTAR_EXE" | grep x86_64 | sed -n 's/^[[:space:]]libgmp-10.dll => *\([^ ]*\) .*$/\1/p')"
+	if [[ -z "$LIBGMP10_DLL" ]] ; then
+            echo libgmp-10.dll is missing
+            exit 1
+	fi
         $cp $LIBGMP10_DLL everparse/bin/
-        $cp $Z3_DIR/*.exe everparse/bin/
-	find $Z3_DIR/.. -name *.dll -exec cp {} everparse/bin \;
-        # copy libffi-6 in all cases (ocaml-sha also seems to need it)
-        $cp $(which libffi-6.dll) everparse/bin/
+    elif $is_macos
+    then
+	true
     else
         {
             # Locate libffi
@@ -197,28 +146,38 @@ make_everparse() {
             }
             $cp $libffi everparse/bin/
         }
-        $cp $Z3_DIR/z3 everparse/bin/
     fi
 
     # Copy F*
-    if [[ -d $FSTAR_HOME/ulib ]] ; then
-      # we have a F* source tree
-      # TODO: create some `install-minimal` rule in the F* Makefile
-      everparse_package_dir=$(fixpath "$(pwd)/everparse")
-      (cd $FSTAR_HOME/ocaml && dune install --prefix="$everparse_package_dir")
-      PREFIX="$everparse_package_dir" $MAKE -C $FSTAR_HOME/ulib install
+    cp -L $FSTAR_PKG_ROOT/bin/* everparse/bin/
+    mkdir -p everparse/lib/fstar/
+    cp -L $FSTAR_PKG_ROOT/lib/fstar/fstar.include everparse/lib/fstar/
+    cp -L -r $FSTAR_PKG_ROOT/lib/fstar/ulib everparse/lib/fstar/ulib
+    cp -L -r $FSTAR_PKG_ROOT/lib/fstar/ulib.checked everparse/lib/fstar/ulib.checked
+    cp -L -r $FSTAR_PKG_ROOT/lib/fstar/pluginlib everparse/lib/fstar/pluginlib
+    z3_version=4.13.3
+    if ! z3=$(which z3-$z3_version$exe) ; then
+	z3="$FSTAR_PKG_ROOT/lib/fstar/z3-$z3_version$exe"
+	if ! [[ -f "$z3" ]] ; then
+	    z3=
+	fi
+    fi
+    if [[ -z "$z3" ]] ; then
+	cp -r $FSTAR_PKG_ROOT/lib/fstar/z3-$z3_version everparse/lib/fstar/z3-$z3_version
     else
-      # we have a F* binary package, or opam package
-      $cp $FSTAR_HOME/bin/fstar.exe everparse/bin/
-      mkdir everparse/lib
-      $cp -r $FSTAR_HOME/lib/fstar everparse/lib/fstar
+	mkdir -p everparse/lib/fstar/z3-$z3_version/bin
+	cp -r $z3 everparse/lib/fstar/z3-$z3_version/bin/z3$exe
     fi
 
     # Copy KaRaMeL
-    $cp -L $KRML_HOME/krml everparse/bin/krml$exe
-    $cp -r $KRML_HOME/krmllib everparse/
-    $cp -r $KRML_HOME/include everparse/
-    $cp -r $KRML_HOME/misc everparse/
+    KRML_EXE="$EVERPARSE_HOME/opt/karamel/out/bin/krml$exe"
+    $cp -L "$KRML_EXE" everparse/bin/krml$exe
+    mkdir -p everparse/lib everparse/include
+    $cp -r "$(fixpath "$("$KRML_EXE" -locate-krmllib)")" everparse/lib/krml
+    $cp -r "$(fixpath "$("$KRML_EXE" -locate-include)")" everparse/include/krml
+    # TODO implement krml -locate-misc
+    mkdir -p everparse/share/krml
+    $cp -r "$EVERPARSE_HOME/opt/karamel/out/share/krml/misc" everparse/share/krml/misc
 
     # Copy EverParse
     $cp $EVERPARSE_HOME/bin/qd.exe everparse/bin/qd.exe
@@ -241,46 +200,44 @@ make_everparse() {
     else
         $cp -r $EVERPARSE_HOME/src/package/README.pkg everparse/README
     fi
-    echo "This is EverParse $everparse_version" >> everparse/README
-    echo "Running with F* $fstar_commit_id ($fstar_commit_date_hr)" >> everparse/README
-    echo "Running with KaRaMeL $karamel_commit_id ($karamel_commit_date_hr)" >> everparse/README
-    echo -n "Running with $z3_version_string" >> everparse/README
+    $EVERPARSE_HOME/bin/3d.exe --version >> everparse/README
 
-    # Download and copy clang-format
-    if $is_windows ; then
-        wget --output-document=everparse/bin/clang-format.exe https://prereleases.llvm.org/win-snapshots/clang-format-2663a25f.exe
+    # Copy Pulse, evercbor and evercddl
+    if [[ -z "$EVERPARSE_ONLY_3D" ]]; then
+    $cp -r $EVERPARSE_HOME/src/cbor everparse/src/cbor
+    $cp -r $EVERPARSE_HOME/src/cddl everparse/src/cddl
+	$cp -r $PULSE_HOME/lib/pulse everparse/lib/
+	$cp $EVERPARSE_HOME/bin/cddl.exe everparse/bin/cddl.exe
+	$cp -r $EVERPARSE_HOME/lib/evercddl everparse/lib/
     fi
 
-    # Download and build the latest z3 for test case generation purposes
-    if ! $is_windows ; then
-        if ! [[ -d z3-latest ]] ; then
-            git clone https://github.com/Z3Prover/z3 z3-latest
-        fi
-        z3_latest_dir="$PWD/everparse/z3-latest"
-        mkdir -p "$z3_latest_dir"
-        pushd z3-latest
-        python scripts/mk_make.py --prefix="$z3_latest_dir"
-        $MAKE -C build "$@"
-        $MAKE -C build install "$@"
-        popd
+    # Download and copy clang-format from the LLVM release
+    if $is_windows ; then
+        LLVM_VERSION=22.1.1
+        CLANG_LLVM_DIR=clang+llvm-$LLVM_VERSION-x86_64-pc-windows-msvc
+        CLANG_LLVM_ARCHIVE=$CLANG_LLVM_DIR.tar.xz
+        download https://github.com/llvm/llvm-project/releases/download/llvmorg-$LLVM_VERSION/$CLANG_LLVM_ARCHIVE $CLANG_LLVM_ARCHIVE
+        tar xf $CLANG_LLVM_ARCHIVE $CLANG_LLVM_DIR/bin/clang-format.exe
+        mv $CLANG_LLVM_DIR/bin/clang-format.exe everparse/bin/clang-format.exe
+        rm -rf $CLANG_LLVM_DIR $CLANG_LLVM_ARCHIVE
+    fi
+
+    # Set executable permissions on EXE and DLL on Windows
+    if $is_windows ; then
+        chmod a+x everparse/bin/*.exe everparse/bin/*.dll everparse/lib/fstar/z3-*/bin/*.exe
+	chmod a+x everparse/lib/fstar/z3-*/bin/*.dll || true
     fi
 
     # licenses
     mkdir -p everparse/licenses
-    if [[ -f $FSTAR_HOME/LICENSE ]] ; then
-        # F* license found in the source tree
-        $cp $FSTAR_HOME/LICENSE everparse/licenses/FStar
-    else
-        # F* license not found, download it from GitHub
-        # TODO: have F* install its license
-        wget --output-document=everparse/licenses/FStar https://raw.githubusercontent/FStarLang/FStar/master/LICENSE
-    fi
-    $cp $KRML_HOME/LICENSE everparse/licenses/KaRaMeL
+    download https://raw.githubusercontent.com/FStarLang/FStar/master/LICENSE everparse/licenses/FStar
+    download https://raw.githubusercontent.com/FStarLang/karamel/master/LICENSE-APACHE everparse/licenses/KaRaMeL-Apache
+    download https://raw.githubusercontent.com/FStarLang/karamel/master/LICENSE-MIT everparse/licenses/KaRaMeL-MIT
     $cp $EVERPARSE_HOME/LICENSE everparse/licenses/EverParse
-    wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt
-    wget --output-document=everparse/licenses/libffi6 https://raw.githubusercontent.com/libffi/libffi/master/LICENSE
+    download https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt everparse/licenses/z3
+    download https://raw.githubusercontent.com/libffi/libffi/master/LICENSE everparse/licenses/libffi6
     if $is_windows ; then
-        wget --output-document=everparse/licenses/clang-format https://raw.githubusercontent.com/llvm/llvm-project/main/clang/LICENSE.TXT
+        download https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-$LLVM_VERSION/clang/LICENSE.TXT everparse/licenses/clang-format
     fi
     if $is_windows ; then
         {
@@ -293,18 +250,13 @@ in accordance with Section 4.d.1 of the GNU LGPL v3.
 
 EOF
         }
-        wget --output-document=everparse/licenses/gnulgplv3 https://www.gnu.org/licenses/lgpl-3.0.txt
+        download https://raw.githubusercontent.com/github/choosealicense.com/refs/heads/gh-pages/_licenses/lgpl-3.0.txt everparse/licenses/gnulgplv3
         cat everparse/licenses/gnulgplv3 >> everparse/licenses/libgmp10
         rm everparse/licenses/gnulgplv3
-        wget --output-document=everparse/licenses/gnugplv3 https://www.gnu.org/licenses/gpl-3.0.txt
+        download https://raw.githubusercontent.com/github/choosealicense.com/refs/heads/gh-pages/_licenses/gpl-3.0.txt everparse/licenses/gnugplv3
         cat everparse/licenses/gnugplv3 >> everparse/licenses/libgmp10
         rm everparse/licenses/gnugplv3
-    fi
-    
-    # Reset permissions and build the package
-    if $is_windows ; then
-        chmod a+x everparse/bin/*.exe everparse/bin/*.dll
-    fi
+    fi    
 }
 
 zip_everparse() {
@@ -320,8 +272,14 @@ zip_everparse() {
     else
         time tar cvzf everparse$ext everparse/*
     fi
-    if $with_version ; then mv everparse$ext everparse_"$everparse_version"_"$OS"_"$platform"$ext ; fi
+    if $with_version ; then
+	everparse_version="$(everparse/bin/3d.exe --short_version)"
+	mv everparse$ext everparse_"$everparse_version"_"$OS"_"$platform"$ext
+    fi
+}
 
+nuget_everparse() {
+    with_version=$1
     if $is_windows ; then
         # Create the nuget package
 
@@ -354,14 +312,17 @@ zip_everparse() {
 
         # Download nuget.exe to create the package
         nuget_exe_url=https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
-        wget $nuget_exe_url
+        download $nuget_exe_url nuget.exe
         chmod a+x nuget.exe
 
         # Run the pack command
         pushd $nuget_base
 
 
-	if [[ -z "$everparse_nuget_version" ]] ; then
+	if [[ -f "$EVERPARSE_HOME/version.txt" ]] ; then
+	        everparse_nuget_version=$(cat "$EVERPARSE_HOME/version.txt")
+		everparse_nuget_version=${everparse_nuget_version:1} # strip the v
+	else
 		everparse_nuget_version=1.0.0
 	fi
 	# NoDefaultExcludes for .clang-format file that nuget pack excludes
@@ -369,6 +330,8 @@ zip_everparse() {
         cp EverParse.nupkg ..
         if $with_version ; then mv ../EverParse.nupkg ../EverParse."$everparse_nuget_version".nupkg ; fi
         popd
+    else
+        echo "We are not on Windows, skipping nuget package"
     fi
     # Not doing any cleanup in the spirit of existing package
 
@@ -383,34 +346,92 @@ print_usage ()
   cat <<HELP
 USAGE: $0 [OPTIONS]
 
+By default, this script builds and places all components in the everparse folder
+
 OPTION:
-  -make     Build and place all components in the everparse folder
+  -zip      Also zip on Windows, tar.gz on Linux, the folder and name with the version
 
-  -zip      Like -make, but also zip the folder and name with the version
+  -zip-noversion
+            Like -zip, but without the version. Incompatible with -zip
 
-  -zip-noversion      Like -zip, but without the version
+  -nuget    Also nuget the folder and name with the version.
+            Does nothing on non-Windows platforms.
+
+  -nuget-noversion
+            Like -nuget, but without the version.
+            Incompatible with -nuget
+
+  --        Ends the list of script-specific options. Beyond that option,
+            passes other arguments to 'make'
 HELP
 }
 
-case "$1" in
-    -zip)
-        shift
-        make_everparse "$@"
-            zip_everparse true
-        ;;
+zip_everparse_cmd=
+nuget_everparse_cmd=
+process_args=true
 
-    -zip-noversion)
-        shift
-        make_everparse "$@"
-            zip_everparse false
-        ;;
+while [[ -n "$1" ]] && $process_args ; do
+    case "$1" in
+        -zip)
+            shift
+            if [[ -n "$zip_everparse_cmd" ]] ; then
+               echo "ERROR: only one of -zip or -zip-noversion can be given"
+               print_usage
+               exit 1
+            fi
+            zip_everparse_cmd="zip_everparse true"
+            ;;
 
-    -make)
-        shift
-        make_everparse "$@"
-        ;;
+        -zip-noversion)
+            shift
+            if [[ -n "$zip_everparse_cmd" ]] ; then
+               echo "ERROR: only one of -zip or -zip-noversion can be given"
+               print_usage
+               exit 1
+            fi
+            zip_everparse_cmd="zip_everparse false"
+            ;;
 
-    *)
-        print_usage
-        ;;
-esac
+        -nuget)
+            shift
+            if [[ -n "$nuget_everparse_cmd" ]] ; then
+               echo "ERROR: only one of -nuget or -nuget-noversion can be given"
+               print_usage
+               exit 1
+            fi
+            nuget_everparse_cmd="nuget_everparse true"
+            ;;
+
+        -nuget-noversion)
+            shift
+            if [[ -n "$nuget_everparse_cmd" ]] ; then
+               echo "ERROR: only one of -nuget or -nuget-noversion can be given"
+               print_usage
+               exit 1
+            fi
+            nuget_everparse_cmd="nuget_everparse false"
+            ;;
+
+        -help)
+            shift
+            print_usage
+            exit 0
+            ;;
+
+        --)
+            shift
+            process_args=false
+            ;;
+
+        *)
+            print_usage
+            exit 1
+            ;;
+    esac
+done
+
+
+make_everparse "$@"
+if [[ -n "$zip_everparse_cmd" ]] ; then $zip_everparse_cmd ; fi
+if [[ -n "$nuget_everparse_cmd" ]] ; then $nuget_everparse_cmd ; fi
+true

@@ -25,7 +25,7 @@ VEC *Alloc ()
   VEC *vec = (VEC *) malloc(sizeof(VEC));
   vec->max = 2;
   vec->cur = 0;
-  vec->arr = (POINT *) malloc(sizeof(POINT) * 2);
+  vec->arr = (POINT_T *) malloc(sizeof(POINT_T) * 2);
   return vec;
 }
 

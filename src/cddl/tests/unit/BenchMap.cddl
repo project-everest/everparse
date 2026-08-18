@@ -1,0 +1,5 @@
+map = {
+  * (uint => uint)
+}
+
+uint = #0

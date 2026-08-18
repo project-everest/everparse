@@ -1,3 +1,4 @@
+//SNIPPET_START: casetype$
 #define size8  8
 #define size16 16
 #define size32 32
@@ -14,3 +15,15 @@ entrypoint typedef struct _integer {
   UINT32                size;
   int_payload(size) payload;
 } integer;
+//SNIPPET_END: casetype$
+
+//SNIPPET_START: switch literal$
+typedef struct _integer_alt {
+  UINT32                size;
+  switch (size) {
+    case size8:  UINT8  value8;
+    case size16: UINT16 value16;
+    case size32: UINT32 value32;
+  } payload;
+} integer_alt;
+//SNIPPET_END: switch literal$

@@ -1,7 +1,7 @@
 
 
-#ifndef __ColoredPoint_H
-#define __ColoredPoint_H
+#ifndef ColoredPoint_H
+#define ColoredPoint_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -12,16 +12,7 @@ extern "C" {
 uint64_t
 ColoredPointValidateColoredPoint1(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
@@ -30,16 +21,7 @@ ColoredPointValidateColoredPoint1(
 uint64_t
 ColoredPointValidateColoredPoint2(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
@@ -49,5 +31,5 @@ ColoredPointValidateColoredPoint2(
 }
 #endif
 
-#define __ColoredPoint_H_DEFINED
-#endif
+#define ColoredPoint_H_DEFINED
+#endif /* ColoredPoint_H */

@@ -3,6 +3,8 @@ include .qd_files
 
 all:
 	cat .qd_files > .depend
-	$(FSTAR) --dep full $(QD_FILES) >> .depend
+	$(FSTAR) --dep full $(QD_FILES) --output_deps_to .depend.fstar.tmp
+	cat .depend.fstar.tmp >> .depend
+	rm -f .depend.fstar.tmp
 
 .PHONY: all

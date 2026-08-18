@@ -9,7 +9,25 @@ _build
 *.cmxa
 *.krml
 tests/unit/*
-!tests/unit/Makefile
 **/out
 bin/qd.exe
 bin/3d.exe
+bin/cddl.exe
+lib/evercddl
+.depend.rsp
+
+# package.sh creates there
+__fstar-install
+fstar-src/fstar/*.checked
+everparse/**
+everparse_*.tar.gz
+everparse_*.zip
+EverParse.nupkg
+nuget.exe
+nuget_package
+
+# make touchfiles
+.*.touch
+.opam
+.opam.tmp
+opam-env.Makefile

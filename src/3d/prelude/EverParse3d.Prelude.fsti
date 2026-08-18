@@ -70,7 +70,7 @@ val parse_dep_pair (#nz1:_) (#k1:parser_kind nz1 WeakKindStrongPrefix) (#t1: Typ
 inline_for_extraction noextract
 val parse_pair (#nz1:_) (#k1:parser_kind nz1 WeakKindStrongPrefix) (#t1:_) (p1:parser k1 t1)
                (#nz2:_) (#wk2: _) (#k2:parser_kind nz2 wk2) (#t2:_) (p2:parser k2 t2)
-  : Tot (parser (and_then_kind k1 k2) (t1 * t2))
+  : Tot (parser (and_then_kind k1 k2) (t1 & t2))
 
 /// Parser: filter
 let refine t (f:t -> bool) = x:t{f x}
@@ -110,11 +110,23 @@ val parse_ite (#nz:_) (#wk: _) (#k:parser_kind nz wk)
 ////////////////////////////////////////////////////////////////////////////////
 // Variable-sized list whose size in bytes is exactly n
 ////////////////////////////////////////////////////////////////////////////////
+unfold
+let memoizes_n_as_const (n_is_const:option nat) (n:U32.t) =
+  match n_is_const with
+  | Some m -> m = U32.v n
+  | _ -> true
+
 val nlist (n:U32.t) (t:Type u#r) : Type u#r
 
 inline_for_extraction noextract
-val parse_nlist (n:U32.t) (#wk: _) (#k:parser_kind true wk) (#t:_) (p:parser k t)
-  : Tot (parser kind_nlist (nlist n t))
+val parse_nlist
+        (n:U32.t)
+        (n_const:option nat { Some? n_const ==> Some?.v n_const == U32.v n })
+        (#wk: _)
+        (#k:parser_kind true wk)
+        (#t:_)
+        (p:parser k t)
+  : Tot (parser (kind_nlist k n_const) (nlist n t))
 
 /////
 // Parse all of the remaining bytes of the input buffer

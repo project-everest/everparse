@@ -1,0 +1,4 @@
+*.do
+message.*
+.venv
+*.exe

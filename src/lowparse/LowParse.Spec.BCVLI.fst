@@ -10,6 +10,7 @@ let parse_bcvli_payload_kind = {
   parser_kind_high = Some 4;
   parser_kind_subkind = Some ParserStrong;
   parser_kind_metadata = None;
+  parser_kind_injective = true;
 }
 
 let parse_bcvli_payload (x: bounded_integer 1) : Tot (parser parse_bcvli_payload_kind U32.t) =

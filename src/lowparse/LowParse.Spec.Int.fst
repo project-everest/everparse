@@ -23,14 +23,14 @@ let parse_u8_spec
 
 let parse_u8_spec' b = ()
 
-let serialize_u8 =
+let tot_serialize_u8 =
   Seq.create 1
 
 let serialize_u8_spec x = ()
 
 let decode_u16
   (b: bytes { Seq.length b == 2 } )
-: GTot U16.t
+: Tot U16.t
 = E.lemma_be_to_n_is_bounded b;
   U16.uint_to_t (E.be_to_n b)
 
@@ -55,21 +55,21 @@ let decode_u16_injective
   (make_total_constant_size_parser_precond 2 U16.t decode_u16)
 = Classical.forall_intro_2 decode_u16_injective'
 
-let parse_u16 =
+let tot_parse_u16 =
   decode_u16_injective ();
-  make_total_constant_size_parser 2 U16.t decode_u16
+  tot_make_total_constant_size_parser 2 U16.t decode_u16
 
 let parse_u16_spec
   b
 =
   E.lemma_be_to_n_is_bounded (Seq.slice b 0 2)
 
-let serialize_u16 =
+let tot_serialize_u16 =
   (fun (x: U16.t) -> E.n_to_be 2 (U16.v x))
 
 let decode_u32
   (b: bytes { Seq.length b == 4 } )
-: GTot U32.t
+: Tot U32.t
 = E.lemma_be_to_n_is_bounded b;
   U32.uint_to_t (E.be_to_n b)
 
@@ -92,21 +92,21 @@ let decode_u32_injective () : Lemma
   (make_total_constant_size_parser_precond 4 U32.t decode_u32)
 = Classical.forall_intro_2 decode_u32_injective'
 
-let parse_u32 =
+let tot_parse_u32 =
   decode_u32_injective ();
-  make_total_constant_size_parser 4 U32.t decode_u32
+  tot_make_total_constant_size_parser 4 U32.t decode_u32
 
 let parse_u32_spec
   b
 =
   E.lemma_be_to_n_is_bounded (Seq.slice b 0 4)
 
-let serialize_u32 =
+let tot_serialize_u32 =
   (fun (x: U32.t) -> E.n_to_be 4 (U32.v x))
 
 let decode_u64
   (b: bytes { Seq.length b == 8 } )
-: GTot U64.t
+: Tot U64.t
 = E.lemma_be_to_n_is_bounded b;
   U64.uint_to_t (E.be_to_n b)
 
@@ -129,15 +129,15 @@ let decode_u64_injective () : Lemma
   (make_total_constant_size_parser_precond 8 U64.t decode_u64)
 = Classical.forall_intro_2 decode_u64_injective'
 
-let parse_u64 =
+let tot_parse_u64 =
   decode_u64_injective ();
-  make_total_constant_size_parser 8 U64.t decode_u64
+  tot_make_total_constant_size_parser 8 U64.t decode_u64
 
 let parse_u64_spec
   b
 = E.lemma_be_to_n_is_bounded (Seq.slice b 0 8)
 
-let serialize_u64 =
+let tot_serialize_u64 =
   (fun (x: U64.t) -> E.n_to_be 8 (U64.v x))
 
 let decode_u64_le

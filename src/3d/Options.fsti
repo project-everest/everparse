@@ -22,11 +22,23 @@ val clang_format : unit -> ML bool
 
 val clang_format_executable : unit -> ML string
 
+val get_clang_format_use_custom_config: unit -> ML bool
+
 val cleanup : unit -> ML bool
 
 val skip_c_makefiles : unit -> ML bool
 
 val no_everparse_h : unit -> ML bool
+
+val get_hoist_locals : unit -> ML bool
+
+val get_goto_for_early_return : unit -> ML bool
+
+val get_blank_lines : unit -> ML bool
+
+val get_line_comments : unit -> ML bool
+
+val get_init_locals : unit -> ML (option string)
 
 val check_hashes : unit -> ML (option check_hashes_t)
 
@@ -81,3 +93,15 @@ val save_z3_transcript: unit -> ML (option string)
 val test_checker: unit -> ML (option string)
 
 val z3_branch_depth: unit -> ML nat
+
+val get_z3_flight_name: unit -> ML string
+
+val get_produce_testcases_c: unit -> ML bool
+
+val get_z3_skip_c_initializers: unit -> ML bool
+
+val get_use_error_handler_macro: unit -> ML bool
+
+val get_z3_use_ptr: unit -> ML bool
+
+val get_fstar_exe: unit -> ML string

@@ -210,7 +210,6 @@ let data_accessor_tag =
     (LL.accessor_compose
       (LL.accessor_sum_tag data_sum boolean_repr_parser parse_data_cases)
       (LL.accessor_synth_inv parse_boolean_key synth_boolean synth_boolean_inv ())
-      ()
     )
     data_clens_tag
     ()

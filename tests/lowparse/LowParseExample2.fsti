@@ -7,7 +7,7 @@ type t = {
   b: (b: B32.bytes { B32.length b <= 65535 } );
 }
 
-val t'_l_serializable (x: list t) : GTot Type0
+val t'_l_serializable (x: list t) : GTot prop
 
 val check_t'_l_serializable (x: list t) : Tot (b: bool { b == true <==> t'_l_serializable x } )
 
@@ -22,7 +22,7 @@ let make_t' (x: list t) : Tot (option t') =
 
 module U32 = FStar.UInt32
 
-val parse_t' : B32.bytes -> Tot (option (t' * U32.t))
+val parse_t' : B32.bytes -> Tot (option (t' & U32.t))
 
 val serialize_t' : t' -> Tot B32.bytes
 

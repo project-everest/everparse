@@ -395,6 +395,8 @@ let jump_bounded_vlbytes
 : Tot (jumper (parse_bounded_vlbytes min max))
 = jump_bounded_vlbytes' min max (log256' max)
 
+#push-options "--z3rlimit 32"
+
 let valid_exact_all_bytes_elim
   (h: HS.mem)
   (#rrel #rel: _)
@@ -414,8 +416,6 @@ let valid_exact_all_bytes_elim
   valid_facts (parse_flbytes length) h input pos ;
   assert (no_lookahead_on (parse_flbytes length) (bytes_of_slice_from_to h input pos pos') (bytes_of_slice_from h input pos));
   assert (injective_postcond (parse_flbytes length) (bytes_of_slice_from_to h input pos pos') (bytes_of_slice_from h input pos))
-
-#push-options "--z3rlimit 32"
 
 let valid_bounded_vlbytes'_elim
   (h: HS.mem)
@@ -594,7 +594,7 @@ let clens_vlbytes_cond
   (max: nat { min <= max /\ max > 0 /\ max < 4294967296 } )
   (length: nat)
   (x: parse_bounded_vlbytes_t min max)
-: GTot Type0
+: GTot prop
 = BY.length x == length
 
 let clens_vlbytes
@@ -844,7 +844,7 @@ let accessor_vlbytes_get
 : Tot (accessor (gaccessor_vlbytes_get min max i))
 = accessor_vlbytes'_get min max (log256' max) i
 
-#push-options "--z3rlimit 128 --max_fuel 2 --initial_fuel 2 --max_ifuel 6 --initial_ifuel 6"
+#push-options "--z3rlimit 512 --max_fuel 2 --initial_fuel 2 --max_ifuel 6 --initial_ifuel 6"
 
 let valid_bounded_vlbytes'_intro
   (h: HS.mem)
@@ -903,6 +903,8 @@ let valid_bounded_vlbytes_intro
   ))
 = valid_bounded_vlbytes'_intro h min max (log256' max) input pos len
 
+#push-options "--z3rlimit 20"
+
 inline_for_extraction
 let finalize_bounded_vlbytes'
   (min: nat)
@@ -940,6 +942,8 @@ let finalize_bounded_vlbytes'
     valid_bounded_vlbytes'_intro h min max l input pos len
   in
   pos_payload `U32.add` len
+
+#pop-options
 
 inline_for_extraction
 let finalize_bounded_vlbytes
@@ -1011,6 +1015,8 @@ let jump_bounded_vlgenbytes
     (fun x -> (x <: parse_bounded_vlbytes_t vmin vmax))
     ()
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction
 let bounded_vlgenbytes_payload_length
   (vmin: der_length_t)
@@ -1059,6 +1065,8 @@ let bounded_vlgenbytes_payload_length
   valid_exact_all_bytes_elim h input (Ghost.reveal pos1) (Ghost.reveal pos1 `U32.add` len);
   valid_flbytes_elim h (U32.v len) input (Ghost.reveal pos1);
   len
+
+#pop-options
 
 inline_for_extraction
 let get_bounded_vlgenbytes_contents

@@ -9,6 +9,8 @@ module U32 = FStar.UInt32
 module Classical = FStar.Classical
 module L = FStar.List.Tot
 
+let tot_parse_nlist n p = tot_parse_nlist' n p
+
 let parse_nlist
   (n: nat)
   (#k: parser_kind)
@@ -17,7 +19,18 @@ let parse_nlist
 : Tot (y: parser (parse_nlist_kind n k) (nlist n t) { y == parse_nlist' n p } )
 = parse_nlist' n p
 
-#push-options "--z3rlimit 32"
+let parse_nlist_ext_forall
+  n #k #t p #k' p'
+=
+  let prf
+    (b: bytes)
+  : Lemma
+    (parse (parse_nlist n p) b == parse (parse_nlist n p') b)
+  = parse_nlist_ext n p p' b (fun _ -> ())
+  in
+  Classical.forall_intro prf
+
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 #restart-solver
 
 let rec parse_nlist_sum
@@ -155,3 +168,113 @@ let serialize_nlist
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
 : Tot (y: serializer (parse_nlist n p) { y == serialize_nlist' n s })
 = serialize_nlist' n s
+
+let tot_serialize_nlist n s = tot_serialize_nlist' n s
+
+#push-options "--z3rlimit 32"
+
+#restart-solver
+let rec tot_serialize_nlist_refine_eq
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t { k.parser_kind_subkind == Some ParserStrong })
+  (f: t -> bool)
+  (fl: list t -> bool { forall l . fl l == List.Tot.for_all f l })
+  (s: tot_serializer (tot_parse_filter p f))
+  (n: nat)
+  (l: parse_filter_refine #(nlist n t) fl)
+: Lemma
+  (ensures (tot_serialize_nlist_refine p f fl s n l == tot_serialize_nlist_refine' p f fl s n l))
+  (decreases n)
+= refine_nlist_of_nlist_refine_injective f fl n;
+  refine_nlist_of_nlist_refine_inverse f fl n;
+  tot_serialize_synth_eq
+    (tot_parse_nlist n (tot_parse_filter p f))
+    (refine_nlist_of_nlist_refine f fl n)
+    (tot_serialize_nlist n s)
+    (nlist_refine_of_refine_nlist f fl n)
+    ()
+    l;
+  if n = 0
+  then ()
+  else begin
+    let a :: q = l in
+    let q : parse_filter_refine #(nlist (n - 1) t) fl = q in
+    tot_serialize_nlist_refine_eq p f fl s (n - 1) q;
+    refine_nlist_of_nlist_refine_injective f fl (n - 1);
+    refine_nlist_of_nlist_refine_inverse f fl (n - 1);
+    assert (refine_nlist_of_nlist_refine f fl (n - 1) (nlist_refine_of_refine_nlist f fl (n - 1) q) == q);
+    tot_serialize_nlist_cons (n - 1) s a (nlist_refine_of_refine_nlist f fl (n - 1) q);
+    assert (bare_serialize (tot_serialize_nlist (n - 1 + 1) s) (a :: nlist_refine_of_refine_nlist f fl (n - 1) q) == tot_serialize_nlist n s (nlist_refine_of_refine_nlist f fl n l));
+    assert (tot_serialize_nlist n s (nlist_refine_of_refine_nlist f fl n l) == s a `Seq.append` tot_serialize_nlist (n - 1) s (nlist_refine_of_refine_nlist f fl (n - 1) q));
+    assert (
+      tot_serialize_nlist_refine p f fl s (n - 1) q == tot_serialize_nlist_refine' p f fl s (n - 1) q
+    );
+    let _ : squash (
+      tot_serialize_nlist_refine p f fl s (n - 1) q == tot_serialize_nlist (n - 1) s (nlist_refine_of_refine_nlist f fl (n - 1) q)
+    ) =
+      assert_norm (
+        tot_serialize_nlist_refine p f fl s (n - 1) ==
+        tot_serialize_synth
+          (tot_parse_nlist (n - 1) (tot_parse_filter p f))
+          (refine_nlist_of_nlist_refine f fl (n - 1))
+          (tot_serialize_nlist (n - 1) s)
+          (nlist_refine_of_refine_nlist f fl (n - 1))
+          ()
+      );
+      tot_serialize_synth_eq
+        (tot_parse_nlist (n - 1) (tot_parse_filter p f))
+        (refine_nlist_of_nlist_refine f fl (n - 1))
+        (tot_serialize_nlist (n - 1) s)
+        (nlist_refine_of_refine_nlist f fl (n - 1))
+        ()
+        q
+    in
+    assert (
+      tot_serialize_nlist_refine p f fl s n l == tot_serialize_nlist_refine' p f fl s n l
+    )
+  end
+
+let bare_serialize_vclist_correct
+  (min: nat)
+  (max: nat { min <= max /\ max < 4294967296 } )
+  (#lk: parser_kind)
+  (#lp: parser lk U32.t)
+  (ls: serializer lp  { lk.parser_kind_subkind == Some ParserStrong } )
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
+: Lemma
+  (serializer_correct (parse_vclist min max lp p) (bare_serialize_vclist min max ls s))
+= let prf (x: vlarray t min max)
+  : Lemma
+    (let fx = bare_serialize_vclist min max ls s x in
+      parse (parse_vclist min max lp p) fx == Some (x, Seq.length fx))
+  = let fx = bare_serialize_vclist min max ls s x in
+    parse_vclist_eq min max lp p fx;
+    let n = L.length x in
+    let un = U32.uint_to_t n in
+    let fn = serialize ls un in
+    parse_strong_prefix lp fn fx;
+    let fl = serialize (serialize_nlist n s) x in
+    assert (fl `Seq.equal` Seq.slice fx (Seq.length fn) (Seq.length fx))
+  in
+  Classical.forall_intro prf
+
+#pop-options
+
+let parse_vclist_dtuple2_eq min max lp p input =
+  parse_vclist_eq min max lp p input;
+  parse_synth_eq
+    (parse_dtuple2
+      (parse_vclist_dtuple2_tag_parser min max lp)
+      (parse_vclist_dtuple2_payload_parser min max p))
+    (parse_vclist_dtuple2_synth min max #_)
+    input;
+  parse_dtuple2_eq
+    (parse_vclist_dtuple2_tag_parser min max lp)
+    (parse_vclist_dtuple2_payload_parser min max p)
+    input;
+  parse_synth_eq (lp `parse_filter` bounded_count_prop min max) (synth_bounded_count min max) input;
+  parse_filter_eq lp (bounded_count_prop min max) input

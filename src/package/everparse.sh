@@ -3,9 +3,8 @@ set -e
 unset CDPATH
 export EVERPARSE_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 (cd "$EVERPARSE_HOME/bin" ; chmod +x * ) || true
-(cd "$EVERPARSE_HOME/z3-latest/bin" ; chmod +x * ) || true
-export FSTAR_HOME="$EVERPARSE_HOME"
-export KRML_HOME="$EVERPARSE_HOME"
+(cd "$EVERPARSE_HOME/lib/fstar/z3-4.13.3/bin" ; chmod +x * ) || true
+FSTAR_EXE="$EVERPARSE_HOME/bin/fstar.exe"
 export PATH="$EVERPARSE_HOME/bin:$PATH" # because of z3
 export LD_LIBRARY_PATH="$EVERPARSE_HOME/bin:$LD_LIBRARY_PATH"
 if which clang-format >/dev/null ; then
@@ -13,4 +12,4 @@ if which clang-format >/dev/null ; then
 else
     clang_format=
 fi
-exec "$EVERPARSE_HOME/bin/3d.exe" --__arg0 everparse.sh --batch --z3_executable "$EVERPARSE_HOME/z3-latest/bin/z3" $clang_format "$@"
+exec "$EVERPARSE_HOME/bin/3d.exe" --__arg0 everparse.sh --fstar "$FSTAR_EXE" --batch --z3_executable "$EVERPARSE_HOME/lib/fstar/z3-4.13.3/bin/z3" $clang_format "$@"

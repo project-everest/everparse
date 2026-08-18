@@ -13,7 +13,7 @@ $(QD_BUILD): $(filter-out %~,$(wildcard *.ml*))
 	dune build
 
 clean:
-	dune clean
+	if which dune ; then dune clean ; fi
 	rm -rf $(QD_BIN)
 
 .PHONY: all clean

@@ -1,0 +1,5 @@
+_output
+.venv
+test-batch-*
+encrypt
+mac

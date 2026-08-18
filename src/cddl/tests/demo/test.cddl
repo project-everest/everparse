@@ -1,0 +1,34 @@
+; This file is standalone (does not require postlude.cddl)
+
+test1 = {
+  foo: uint,
+  ? bar: uint
+}
+
+test2 = [
+  * uint, bstr
+]
+
+test3 = test1 / test2
+
+test4 = { }
+
+bstr = #2
+uint = #0
+
+test5 = [
+  foo : uint,
+  bar : uint
+]
+
+arr_intkeys = [
+  1 : uint,
+  -3 : bool,
+  bar : uint
+]
+
+map_intkeys = {
+  1 : uint,
+  -3 : bool,
+  bar : uint
+}

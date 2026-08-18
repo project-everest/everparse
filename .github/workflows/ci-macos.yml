@@ -1,0 +1,28 @@
+name: CI (MacOS)
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  ci-macos:
+    runs-on: macOS-latest
+    steps:
+      - uses: actions/checkout@master
+        with:
+          submodules: true
+          path: everparse
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5
+      - name: Install Homebrew tools
+        run: |
+          brew install bash gnu-getopt make gnu-time
+      - name: Test
+        run: |
+          nproc=$(sysctl -n hw.logicalcpu)
+          if [[ $nproc -gt 8 ]] ; then nproc=8 ; fi
+          cd everparse && gmake -j$nproc -k all test

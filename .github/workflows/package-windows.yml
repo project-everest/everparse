@@ -1,0 +1,211 @@
+name: Build everparse package (windows)
+on:
+  push:
+    branches-ignore:
+    - _**
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run_full_ci:
+        description: Run full CI
+        type: boolean
+        default: false
+
+jobs:
+  fstar-src:
+    ## NOTE: This is copied from build-src in the F* repo.
+
+    runs-on: ubuntu-22.04
+    # We prefer slightly older Ubuntu so we get binaries that work on
+    # all more recent versions.
+    steps:
+      - uses: actions/checkout@master
+        with:
+          path: everparse
+          sparse-checkout: |
+            opt/Makefile
+            opt/hashes.Makefile
+
+      - name: Get F* hash
+        run: |
+          echo "fstar_hash=$(make -s -C everparse/opt echo-FStar-hash)" >> $GITHUB_ENV
+
+      - uses: actions/checkout@master
+        id: checkout
+        with:
+          repository: FStarLang/FStar
+          ref: ${{ env.fstar_hash }}
+
+      - name: Check cache
+        id: check-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: fstar-src.tar.gz
+          key: FStar-src-${{steps.checkout.outputs.commit}}
+
+      - uses: ocaml/setup-ocaml@v3
+        if: steps.check-cache.outputs.cache-hit != 'true'
+        with:
+          ocaml-compiler: 4.14.2
+
+      - name: Prepare
+        if: steps.check-cache.outputs.cache-hit != 'true'
+        run: |
+          ./.scripts/get_fstar_z3.sh $HOME/bin
+          echo "PATH=$HOME/bin:$PATH" >> $GITHUB_ENV
+          opam install --deps-only ./fstar.opam
+
+      - name: Set F* version
+        if: steps.check-cache.outputs.cache-hit != 'true'
+        run: |
+          echo FSTAR_VERSION="$(git describe --tags --dirty)" >> $GITHUB_ENV
+
+      # NB: release workflow later adds version number to the name
+      - name: Build package
+        if: steps.check-cache.outputs.cache-hit != 'true'
+        run: |
+          eval $(opam env)
+          export FSTAR_TAG=
+          # ^ no tag in source package
+          make -skj$(nproc) package-src ADMIT=1
+
+      - name: Save
+        if: steps.check-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: fstar-src.tar.gz
+          key: FStar-src-${{steps.checkout.outputs.commit}}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          path: fstar-src.tar.gz
+          name: package-src
+
+  testci:
+    if: ${{ inputs.run_full_ci }}
+    needs: fstar-src
+    runs-on: windows-2025
+    steps:
+
+      - run: git config --global core.autocrlf input
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 4.14.2
+        # This will install Cygwin as well
+
+      - name: Install Cygwin packages
+        shell: C:\.opam\.cygwin\root\bin\bash.exe --login '{0}'
+        env:
+          CYGWIN_ROOT: C:\.opam\.cygwin\root
+          CYGWIN_MIRROR: https://mirrors.kernel.org/sourceware/cygwin/
+        run: >-
+          "$GITHUB_WORKSPACE"/src/package/windows/install-cygwin-packages.sh
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: package-src
+
+      - name: Expand F* source package
+        shell: C:\.opam\.cygwin\root\bin\bash.exe --login '{0}'
+        run: >-
+          cd "$GITHUB_WORKSPACE" && tar xzf fstar-src.tar.gz && mv fstar opt/FStar
+
+      - name: Run tests
+        shell: C:\.opam\.cygwin\root\bin\bash.exe --login '{0}'
+        run: >-
+          cd $GITHUB_WORKSPACE && eval $(opam env) && env V=1 MAKE=make make test -kj$(nproc)
+
+  build:
+    needs: fstar-src
+    runs-on: windows-2025
+    steps:
+
+      - run: git config --global core.autocrlf input
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Set-up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 4.14.2
+        # This will install Cygwin as well
+
+      - name: Install Cygwin packages
+        shell: C:\.opam\.cygwin\root\bin\bash.exe --login '{0}'
+        env:
+          CYGWIN_ROOT: C:\.opam\.cygwin\root
+          CYGWIN_MIRROR: https://mirrors.kernel.org/sourceware/cygwin/
+        run: >-
+          "$GITHUB_WORKSPACE"/src/package/windows/install-cygwin-packages.sh
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: package-src
+
+      - name: Expand F* source package
+        shell: C:\.opam\.cygwin\root\bin\bash.exe --login '{0}'
+        run: >-
+          cd "$GITHUB_WORKSPACE" && tar xzf fstar-src.tar.gz && mv fstar opt/FStar
+
+      - name: Build package
+        shell: C:\.opam\.cygwin\root\bin\bash.exe --login '{0}'
+        run: >-
+          cd $GITHUB_WORKSPACE && eval $(opam env) && env V=1 MAKE=make make -f package.Makefile nuget-noversion -kj$(nproc)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          path: |
+            everparse
+          name: everparse
+      - uses: actions/upload-artifact@v4
+        with:
+          path: |
+            EverParse*.nupkg
+          name: everparse-nupkg
+
+  testpackage:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - name: Download and extract artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse
+          path: ${{ github.workspace }}\test
+      - name: Check out repo
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            src/3d/tests
+            src/cddl/tests/demo/test.cddl
+          path: ${{ github.workspace }}\everparse
+      - name: Test EverParse
+        shell: cmd
+        run: |
+          ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\Arithmetic.3d ${{ github.workspace }}\everparse\src\3d\tests\FieldDependence0.3d && ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\Comments.3d && ${{ github.workspace }}\test\everparse.cmd --check_hashes inplace ${{ github.workspace }}\everparse\src\3d\tests\Comments.3d
+      - name: Test EverParse test case generation
+        shell: cmd
+        run: |
+          ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\ELFTestGen.3d --odir ${{ github.workspace }}\test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+      - name: Test EverParse test case generation with probe
+        shell: cmd
+        run: |
+          ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\probe\src\Probe.3d --odir ${{ github.workspace }}\test-probe --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5
+      - name: Test EverCDDL
+        run: |
+          ${{ github.workspace }}\test\bin\cddl.exe ${{ github.workspace }}\everparse\src\cddl\tests\demo\test.cddl
+
+  test:
+    needs: [testpackage, testci]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Workflow succeeded!"

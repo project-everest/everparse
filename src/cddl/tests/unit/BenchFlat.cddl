@@ -1,0 +1,12 @@
+record = {
+  f1 : uint,
+  f2 : uint,
+  f3 : uint,
+  f4 : uint,
+  f5 : uint,
+  f6 : uint,
+  f7 : uint,
+  f8 : uint
+}
+
+uint = #0

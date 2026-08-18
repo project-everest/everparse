@@ -1,12 +1,55 @@
 let argv _ = Array.to_list Sys.argv
 
+let is_windows () = Sys.win32
+
 let dirname = Filename.dirname
+
+let mkdir dir =
+  if Sys.file_exists dir && Sys.is_directory dir
+  then ()
+  else try Sys.mkdir dir 0o755 with _ -> ()
 
 (* The filename without its path *)
 
 let basename = Filename.basename
 
 let concat = Filename.concat
+
+(* Conditionally concatenating a dir path and a filename, only if the filename is not absolute *)
+
+(* NOTE: Working around https://github.com/ocaml-batteries-team/batteries-included/issues/1136 *)
+let is_absolute_windows (path_str : string) : bool =
+  if is_windows () then
+    match BatString.to_list path_str with
+    | '\\' :: _ -> true
+    | letter :: ':' :: '\\' :: _ -> BatChar.is_letter letter
+    | _ -> false
+  else
+    false
+
+let is_path_absolute path_str =
+  let open Batteries.Incubator in
+  let open BatPathGen.OfString in
+  let path = of_string path_str in
+  is_absolute path || is_absolute_windows path_str
+
+let concat_if_not_absolute dir file =
+  if is_path_absolute file
+  then file
+  else concat dir file
+
+let get_absolute_filename n =
+  if is_path_absolute n
+  then n
+  else Filename.concat (Sys.getcwd ()) n
+
+let everparse_home =
+  try
+    Sys.getenv "EVERPARSE_HOME"
+  with
+  | Not_found ->
+     (* assume the executable is in the bin/ subdirectory *)
+     get_absolute_filename (Filename.concat (Filename.dirname Sys.executable_name) Filename.parent_dir_name)
 
 (* The filename without its extension *)
 
@@ -15,6 +58,12 @@ let remove_extension = Filename.remove_extension
 (* The extension of the filename, including its leading . *)
 
 let extension = Filename.extension
+
+(* The filename where all `\` have been replaced with `/` (because GNU Make uses `/` even on Windows) *)
+
+let regexp_backslash = Re.Posix.compile_pat "\\\\" (* because both OCaml and POSIX regular expressions need to quote backslashes *)
+
+let replace_backslashes (s: string) = Re.replace_string regexp_backslash ~by:"/" s
 
 (* Concatenating a dir path and a filename *)
 
@@ -31,6 +80,11 @@ let getenv var =
   with Not_found ->
     raise (Undefined_environment_variable var)
 
+let getenv_opt var =
+  try
+    Some (getenv var)
+  with Undefined_environment_variable _ -> None
+
 let getenv_array var =
   try
     String.split_on_char ' ' (String.trim (getenv var))
@@ -39,7 +93,7 @@ let getenv_array var =
 (* Run program prog with argument args (starting from $1, so prog need
    not be duplicated). *)
 
-let run_cmd prog args =
+let run_cmd_with_code prog args =
   let cmd = String.concat " " (prog :: args) in
   print_endline (Printf.sprintf "Running: %s" cmd);
   let args = Array.of_list args in
@@ -52,14 +106,19 @@ let run_cmd prog args =
      Providing exit_status to Process.run would leave no chance to
      print out the command output *)
   match out.Process.Output.exit_status with
-  | Process.Exit.Exit 0 -> ()
+  | Process.Exit.Exit 0 -> 0
   | st ->
     prerr_endline (Process.Exit.to_string st);
-    exit
       begin match st with
       | Process.Exit.Exit n -> n
       | _ -> 127
       end
+
+let run_cmd prog args =
+  let ret = run_cmd_with_code prog args in
+  if ret = 0
+  then ()
+  else exit ret
 
 (* Copy a file. target must be a filename *)
 
@@ -122,6 +181,9 @@ let file_contents f =
   let s = really_input_string ic l in
   close_in ic;
   s
+
+let overwrite_file filename =
+  BatFile.with_file_out filename (fun _ -> ())
 
 let write_witness_to_file w filename =
   BatFile.with_file_out filename (fun out ->

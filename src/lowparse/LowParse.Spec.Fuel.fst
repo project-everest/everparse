@@ -3,7 +3,7 @@ include LowParse.Spec.Base
 
 module Seq = FStar.Seq
 
-let injective_fuel (fuel: nat) (#t: Type) (p: bare_parser t) : GTot Type0 =
+let injective_fuel (fuel: nat) (#t: Type) (p: bare_parser t) : Tot prop =
   forall (b1 b2: bytes) . {:pattern (injective_precond p b1 b2) \/ (injective_postcond p b1 b2)}
   (injective_precond p b1 b2 /\ Seq.length b1 < fuel /\ Seq.length b2 < fuel) ==>
   injective_postcond p b1 b2
@@ -12,20 +12,20 @@ let no_lookahead_fuel
   (fuel: nat)
   (#t: Type)
   (f: bare_parser t)
-: GTot Type0
+: Tot prop
 = forall (x x' : bytes) . {:pattern (no_lookahead_on_precond f x x') \/ (no_lookahead_on_postcond f x x')} (Seq.length x < fuel /\ Seq.length x' < fuel) ==> no_lookahead_on f x x'
 
 let consumes_all_fuel
   (fuel: nat)
   (#t: Type)
   (p: bare_parser t)
-: GTot Type0
+: Tot prop
 = forall (b: bytes { Seq.length b < fuel }) . {:pattern (parse p b)} Some? (parse p b) ==> (
     let (Some (_, len)) = parse p b in
     Seq.length b == len
   )
 
-let parser_subkind_prop_fuel (fuel: nat) (k: parser_subkind) (#t: Type) (f: bare_parser t) : GTot Type0 =
+let parser_subkind_prop_fuel (fuel: nat) (k: parser_subkind) (#t: Type) (f: bare_parser t) : Tot prop =
   match k with
   | ParserStrong ->
     no_lookahead_fuel fuel f
@@ -37,7 +37,7 @@ let parses_at_least_fuel
   (sz: nat)
   (#t: Type)
   (f: bare_parser t)
-: GTot Type0
+: Tot prop
 = forall (s: bytes { Seq.length s < fuel }) . {:pattern (parse f s)}
   Some? (parse f s) ==> (
     let (_, consumed) = Some?.v (parse f s) in
@@ -49,7 +49,7 @@ let parses_at_most_fuel
   (sz: nat)
   (#t: Type)
   (f: bare_parser t)
-: GTot Type0
+: Tot prop
 = forall (s: bytes { Seq.length s < fuel }) . {:pattern (parse f s)}
   Some? (parse f s) ==> (
     let (_, consumed) = Some?.v (parse f s) in
@@ -61,29 +61,29 @@ let is_total_constant_size_parser_fuel
   (sz: nat)
   (#t: Type)
   (f: bare_parser t)
-: GTot Type0
+: Tot prop
 = forall (s: bytes { Seq.length s < fuel }) . {:pattern (parse f s) }
   (Seq.length s < sz) == (None? (parse f s))
 
-let parser_always_fails_fuel (fuel: nat) (#t: Type) (f: bare_parser t) : GTot Type0 =
+let parser_always_fails_fuel (fuel: nat) (#t: Type) (f: bare_parser t) : Tot prop =
   forall (input: bytes { Seq.length input < fuel }) . {:pattern (parse f input)} parse f input == None
 
-let parser_kind_metadata_prop_fuel (fuel: nat) (#t: Type) (k: parser_kind) (f: bare_parser t) : GTot Type0 =
+let parser_kind_metadata_prop_fuel (fuel: nat) (#t: Type) (k: parser_kind) (f: bare_parser t) : Tot prop =
   match k.parser_kind_metadata with
   | None -> True
   | Some ParserKindMetadataTotal -> k.parser_kind_high == Some k.parser_kind_low ==> is_total_constant_size_parser_fuel fuel k.parser_kind_low f
   | Some ParserKindMetadataFail -> parser_always_fails_fuel fuel f
 
-let parser_kind_prop_fuel (fuel: nat) (#t: Type) (k: parser_kind) (f: bare_parser t) : GTot Type0 =
-  injective_fuel fuel f /\
+let parser_kind_prop_fuel (fuel: nat) (#t: Type) (k: parser_kind) (f: bare_parser t) : Tot prop =
+  (k.parser_kind_injective ==> injective_fuel fuel f) /\
   (Some? k.parser_kind_subkind ==> parser_subkind_prop_fuel fuel (Some?.v k.parser_kind_subkind) f) /\
   parses_at_least_fuel fuel k.parser_kind_low f /\
   (Some? k.parser_kind_high ==> (parses_at_most_fuel fuel (Some?.v k.parser_kind_high) f)) /\
   parser_kind_metadata_prop_fuel fuel k f
 
 unfold
-let parser_kind_prop' (#t: Type) (k: parser_kind) (f: bare_parser t) : GTot Type0 =
-  injective f /\
+let parser_kind_prop' (#t: Type) (k: parser_kind) (f: bare_parser t) : Tot prop =
+  (k.parser_kind_injective ==> injective f) /\
   (Some? k.parser_kind_subkind ==> parser_subkind_prop (Some?.v k.parser_kind_subkind) f) /\
   parses_at_least k.parser_kind_low f /\
   (Some? k.parser_kind_high ==> (parses_at_most (Some?.v k.parser_kind_high) f)) /\
@@ -134,7 +134,7 @@ let parser_kind_prop_fuel_correct
 : Lemma
   (requires (forall fuel . parser_kind_prop_fuel fuel k f))
   (ensures (parser_kind_prop' k f))
-= injective_fuel_correct f;
+= (if k.parser_kind_injective then injective_fuel_correct f else ());
   begin match k.parser_kind_subkind with
   | None -> ()
   | Some k' -> parser_subkind_prop_fuel_correct k' f
@@ -205,6 +205,13 @@ let close_by_fuel'
 : Tot (bare_parser t)
 = fun x -> f (closure x) x
 
+let tot_close_by_fuel'
+  (#t: Type)
+  (f: (nat -> Tot (tot_bare_parser t)))
+  (closure: ((b: bytes) -> Tot (n: nat { Seq.length b < n })))
+: Tot (tot_bare_parser t)
+= fun x -> f (closure x) x
+
 let close_by_fuel_correct
   (#t: Type)
   (k: parser_kind)
@@ -245,7 +252,7 @@ let close_by_fuel
   (#k: parser_kind)
   (#t: Type)
   (f: (nat -> Tot (parser k t)))
-  (closure: ((b: bytes) -> Tot (n: nat { Seq.length b < n })))
+  (closure: ((b: bytes) -> GTot (n: nat { Seq.length b < n })))
   (f_ext: (
     (fuel: nat) ->
     (b: bytes { Seq.length b < fuel }) ->
@@ -255,3 +262,39 @@ let close_by_fuel
 : Tot (parser k t)
 = close_by_fuel_correct k f closure f_ext (fun fuel -> parser_kind_prop_equiv k (f fuel));
   close_by_fuel' f closure
+
+let tot_close_by_fuel_correct
+  (#t: Type)
+  (k: parser_kind)
+  (f: (nat -> Tot (tot_bare_parser t)))
+  (closure: ((b: bytes) -> Tot (n: nat { Seq.length b < n })))
+  (f_ext: (
+    (fuel: nat) ->
+    (b: bytes { Seq.length b < fuel }) ->
+    Lemma
+    (f fuel b == f (closure b) b)
+  ))
+  (f_prop: (
+    (fuel: nat) ->
+    Lemma
+    (parser_kind_prop_fuel fuel k (f fuel))
+  ))
+: Lemma
+  (parser_kind_prop k (tot_close_by_fuel' f closure))
+= close_by_fuel_correct k f closure f_ext f_prop;
+  parser_kind_prop_ext k (tot_close_by_fuel' f closure) (close_by_fuel' f closure)
+
+let tot_close_by_fuel
+  (#k: parser_kind)
+  (#t: Type)
+  (f: (nat -> Tot (tot_parser k t)))
+  (closure: ((b: bytes) -> Tot (n: nat { Seq.length b < n })))
+  (f_ext: (
+    (fuel: nat) ->
+    (b: bytes { Seq.length b < fuel }) ->
+    Lemma
+    (f fuel b == f (closure b) b)
+  ))
+: Tot (tot_parser k t)
+= tot_close_by_fuel_correct k f closure f_ext (fun fuel -> parser_kind_prop_equiv k (f fuel));
+  tot_close_by_fuel' f closure

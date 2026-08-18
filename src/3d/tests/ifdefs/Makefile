@@ -23,7 +23,8 @@ export EVERPARSE_HOME
 # Command to run EverParse: path to either the 3d executable or the
 # everparse.sh or everparse.cmd script from the EverParse binary
 # package; followed by arguments
-EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe
+FSTAR_EXE ?= fstar.exe
+EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
 EVERPARSE_CMD=$(EVERPARSE_EXE) --config $(EVERPARSE_INPUT_DIR)/CompileTimeIfFlags.3d.config
 
 # Output directory for .c/.h files as well as temporary files (.fst,
@@ -52,17 +53,9 @@ $(everparse_makefile): $(wildcard src/*.3d) $(EVERPARSE_OUTPUT_DIR)
 	$(EVERPARSE_CMD) --makefile gmake --makefile_name $@ $(wildcard $(EVERPARSE_INPUT_DIR)/*.3d)
 
 # Include the generated Makefile
+ifeq (,$(filter clean,$(MAKECMDGOALS)))
 include $(everparse_makefile)
-
-###########
-# Cleanup #
-###########
-
-# Since everything is output to the same directory, including the
-# generated Makefile, it is enough to remove that directory.
-clean:
-	rm -rf $(EVERPARSE_OUTPUT_DIR)
-
+endif
 
 #######################################################
 # Specifying the `world` rule run by the default rule #
@@ -86,3 +79,12 @@ batch: $(EVERPARSE_BATCH_OUTPUT_DIR)
 # Declare all phony rules.
 # Cf. https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
 .PHONY: all world test clean batch
+
+###########
+# Cleanup #
+###########
+
+# Since everything is output to the same directory, including the
+# generated Makefile, it is enough to remove that directory.
+clean:
+	rm -rf $(EVERPARSE_OUTPUT_DIR) $(EVERPARSE_BATCH_OUTPUT_DIR)

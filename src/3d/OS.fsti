@@ -2,6 +2,10 @@ module OS
 
 val argv : unit -> FStar.All.ML (list string)
 
+val is_windows : unit -> FStar.All.ML bool
+
+val mkdir : string -> FStar.All.ML unit
+
 val dirname : string -> Tot string
 
 (* The filename without its path *)
@@ -9,6 +13,10 @@ val dirname : string -> Tot string
 val basename : string -> Tot string
 
 val concat : string -> string -> Tot string
+
+val concat_if_not_absolute: string -> string -> Tot string
+
+val everparse_home : string
 
 (* The filename without its extension *)
 
@@ -18,14 +26,24 @@ val remove_extension: string -> Tot string
 
 val extension: string -> Tot string
 
+(* The filename where all `\` have been replaced with `/` (because GNU Make uses `/` even on Windows) *)
+
+val replace_backslashes: string -> Tot string
+
+val getenv_opt: string -> FStar.All.ML (option string)
+
 (* Run a command *)
 val run_cmd: string -> list string -> FStar.All.ML unit
 
 (* Probe a file *)
 
+val rename: (src: string) -> (dst: string) -> FStar.All.ML unit
+
 val file_exists: string -> FStar.All.ML bool
 
 val file_contents: string -> FStar.All.ML string
+
+val overwrite_file: string -> FStar.All.ML unit
 
 (* Write a witness into a binary file *)
 

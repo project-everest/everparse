@@ -27,7 +27,7 @@ let solve_vc ()
 
 [@@ noextract_to "krml"]
 let app_head_tail (t: term) :
-    Tac (term * list argv)
+    Tac (term & list argv)
 = collect_app t
 
 [@@ noextract_to "krml"]
@@ -60,7 +60,7 @@ let rec intros_until_eq_hyp
   ()
 : Tac binder
 = let i = intro () in
-  let (sq, ar) = app_head_tail (type_of_binder i) in
+  let (sq, ar) = app_head_tail (type_of_binding i) in
   let cond =
     if sq `is_fvar` (`%squash) then
       match ar with

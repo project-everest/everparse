@@ -78,7 +78,7 @@ let array_nth_ghost''
   then (i `Prims.op_Multiply` k.parser_kind_low)
   else (0) // dummy
 
-#reset-options "--z3cliopt smt.arith.nl=false"
+#reset-options "--z3cliopt smt.arith.nl=false --z3rlimit 32"
 
 let array_nth_ghost_correct'
   (#k: parser_kind)

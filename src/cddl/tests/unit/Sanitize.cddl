@@ -1,0 +1,10 @@
+player = {
+  id-1 : uint,
+  id_2 : uint,
+  _id3 : uint,
+  @id4 : uint,
+  id-five : uint,
+  id.6 : uint,
+  x : uint
+}
+uint = #0

@@ -1,33 +1,17 @@
 all: extract
 
-EVERPARSE_HOME=$(realpath ../../../..)
+EVERPARSE_SRC_PATH := $(realpath ../../..)
 
-ifndef FSTAR_HOME
-  FSTAR_EXE=$(shell which fstar.exe)
-  ifeq ($(FSTAR_EXE),)
-    # fstar.exe not found in PATH, assuming Everest source tree
-    FSTAR_HOME=$(realpath $(EVERPARSE_HOME)/../FStar)
-  else
-    # fstar.exe found in PATH, assuming directory ending with /bin
-    FSTAR_HOME=$(realpath $(dir $(FSTAR_EXE))/..)
-  endif
-  export FSTAR_HOME
-endif
+FSTAR_OPTIONS := --z3rlimit_factor 8 --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=100'
 
-KRML_HOME?=$(realpath ../../../../../karamel)
-OTHERFLAGS?=
+ALREADY_CACHED := '*,-EverParse3d.Actions.All,-EverParse3d.InputStream.All,-EverParse3d.InputStream.Extern,-EverParse3d.Actions.BackendFlag,-EverParse3d.Actions.BackendFlagValue,'
 
-FSTAR_OPTIONS=$(addprefix --include , .. $(EVERPARSE_HOME)/src/lowparse $(KRML_HOME)/krmllib $(KRML_HOME)/krmllib/obj) --z3rlimit_factor 8 --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=100'
-FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(FSTAR_OPTIONS) $(OTHERFLAGS) --cmi
+FSTAR_DEP_OPTIONS := --extract 'krml:*,-Prims,-FStar.Tactics'
 
-ROOT=$(wildcard *.fst) $(wildcard *.fsti)
-ALREADY_CACHED=--already_cached '*,-EverParse3d.Actions.All,-EverParse3d.InputStream.All,-EverParse3d.InputStream.Extern,-EverParse3d.Actions.BackendFlag,-EverParse3d.Actions.BackendFlagValue'
+INCLUDE_PATHS += ..
 
-.depend: $(ROOT)
-	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract 'krml:*,-Prims,-FStar.Tactics' > $@.tmp
-	mv $@.tmp $@
-
--include .depend
+include $(EVERPARSE_SRC_PATH)/everparse.Makefile
+include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 FILTERED_KRML_FILES=$(filter-out ResultOps.krml Actions.krml,$(ALL_KRML_FILES))
 
@@ -42,11 +26,12 @@ EverParse.rsp: $(FILTERED_KRML_FILES) ../EverParse.rsp
 	while read file ; do grep "^$$file"'$$' $@.tmp > /dev/null || { echo ../$$file >> $@.tmp ; } ; done < ../EverParse.rsp
 	mv $@.tmp $@
 
-KRML_EXTERN = $(KRML_HOME)/krml \
+KRML_EXTERN = $(KRML_EXE) \
+	  -fstar $(FSTAR_EXE) \
 	  -skip-compilation \
 	  -skip-makefiles \
 	  -bundle 'Prims,C.\*,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
-	  -bundle 'EverParse3d.Prelude.StaticHeader+EverParse3d.ErrorCode+EverParse3d.InputStream.Extern.Base+EverParse3d.InputStream.Extern.Type+EverParse3d.CopyBuffer=LowParse.\*,EverParse3d.\*[rename=EverParse,rename-prefix]' \
+	  -bundle 'EverParse3d.Prelude.StaticHeader+EverParse3d.ErrorCode+EverParse3d.InputStream.Extern.Base+EverParse3d.InputStream.Extern.Type+EverParse3d.CopyBuffer+EverParse3d.Actions.Common=LowParse.\*,EverParse3d.\*[rename=EverParse,rename-prefix]' \
 	  -warn-error -9@4 \
 	  -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft \
 	  -header ../../noheader.txt \
@@ -73,21 +58,8 @@ EverParse.h: EverParse.rsp
 	test '!' -e $(dir $@)/EverParse.c
 	test '!' -e $(dir $@)/SHOULDNOTBETHERE.h
 
-%.krml:
-	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen krml --extract_module $(basename $(notdir $(subst .checked,,$<)))
-	touch $@
-
-%.checked:
-	$(FSTAR) $< --cache_checked_modules $(ALREADY_CACHED)
-	touch $@
-
-%.fst-in %.fsti-in:
-	@echo $(FSTAR_OPTIONS)
-
-verify: $(ALL_CHECKED_FILES)
-
 .PHONY: all extract clean verify extract-extern extract-static
 
 clean:
-	rm -f *.checked *.krml EverParse.h EverParse.rsp .depend *.tmp .depend.tmp *~ ../static
-
+	rm -f *.checked *.krml EverParse.h EverParse.rsp .depend *.tmp .depend.tmp *~
+	rm -rf ../static

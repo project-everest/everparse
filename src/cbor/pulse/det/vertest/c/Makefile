@@ -1,0 +1,40 @@
+all: verify test
+
+EVERPARSE_SRC_PATH = $(realpath ../../../../..)
+INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cbor/pulse
+ALREADY_CACHED := *,-CBORTest,
+OUTPUT_DIRECTORY:=extracted
+CBORDET_PATH := $(realpath ../../c)
+
+CFLAGS += -I $(CBORDET_PATH)
+
+clean_rules += clean-extracted
+
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
+include $(EVERPARSE_SRC_PATH)/pulse.Makefile
+
+# Ensure KrmlLib C is extracted
+FSTAR_DEP_OPTIONS += $(KRML_LIB)/C.fst
+
+include $(EVERPARSE_SRC_PATH)/common.Makefile
+
+.PHONY: extract test
+
+extract: $(OUTPUT_DIRECTORY)/test.exe
+
+$(OUTPUT_DIRECTORY)/test.exe: $(OUTPUT_DIRECTORY)/CBORTest.o
+	$(CC) -o $@ $^ $(CBORDET_PATH)/CBORDet.o
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(OUTPUT_DIRECTORY)/CBORTest.c: $(ALL_KRML_FILES)
+	$(KRML_EXE) $(KRML_OPTS) -warn-error @1..27 -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*[rename=fstar]' -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C+CBOR.Pulse.API.Det.Dummy=CBOR.\*[rename=CBORDetAPI]' -bundle 'CBORTest=\*' -add-include '"CBORDetType.h"' -no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -no-prefix CBOR.Pulse.API.Det.Dummy -no-prefix CBORTest -tmpdir $(OUTPUT_DIRECTORY) -header header.txt -skip-makefiles -skip-compilation $^
+
+test: extract
+	$(OUTPUT_DIRECTORY)/test.exe
+
+clean-extracted:
+	rm -rf extracted
+
+.PHONY: clean-extracted

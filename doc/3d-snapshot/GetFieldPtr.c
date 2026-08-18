@@ -2,91 +2,39 @@
 
 #include "GetFieldPtr.h"
 
+#include "EverParse.h"
+
 uint64_t
 GetFieldPtrValidateT(
   uint8_t **Out,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
   /* Validating field f1 */
-  BOOLEAN hasEnoughBytes0 = (uint64_t)(uint32_t)10U <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= (uint64_t)10U;
+  uint64_t res0;
   uint64_t positionAfterT;
-  if (!hasEnoughBytes0)
+  uint64_t positionAfterf1;
+  BOOLEAN hasBytes;
+  uint64_t res;
+  uint64_t positionAfterT0;
+  uint64_t positionAfterf2;
+  uint64_t positionAfterT1;
+  uint8_t *hd;
+  BOOLEAN actionSuccessF2;
+  if (hasBytes0)
   {
-    positionAfterT =
-      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        StartPosition);
+    res0 = StartPosition + (uint64_t)10U;
   }
   else
   {
-    uint8_t *truncatedInput = Input;
-    uint64_t truncatedInputLength = StartPosition + (uint64_t)(uint32_t)10U;
-    uint64_t result = StartPosition;
-    while (TRUE)
-    {
-      uint64_t position = result;
-      BOOLEAN ite;
-      if (!(1ULL <= (truncatedInputLength - position)))
-      {
-        ite = TRUE;
-      }
-      else
-      {
-        /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-        BOOLEAN hasBytes = 1ULL <= (truncatedInputLength - position);
-        uint64_t positionAfterT0;
-        if (hasBytes)
-        {
-          positionAfterT0 = position + 1ULL;
-        }
-        else
-        {
-          positionAfterT0 =
-            EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-              position);
-        }
-        uint64_t res;
-        if (EverParseIsSuccess(positionAfterT0))
-        {
-          res = positionAfterT0;
-        }
-        else
-        {
-          ErrorHandlerFn("_T",
-            "f1.element",
-            EverParseErrorReasonOfResult(positionAfterT0),
-            EverParseGetValidatorErrorKind(positionAfterT0),
-            Ctxt,
-            truncatedInput,
-            position);
-          res = positionAfterT0;
-        }
-        uint64_t result1 = res;
-        result = result1;
-        ite = EverParseIsError(result1);
-      }
-      if (ite)
-      {
-        break;
-      }
-    }
-    uint64_t res = result;
-    positionAfterT = res;
+    res0 = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
-  uint64_t positionAfterf1;
+  positionAfterT = res0;
   if (EverParseIsSuccess(positionAfterT))
   {
     positionAfterf1 = positionAfterT;
@@ -107,71 +55,16 @@ GetFieldPtrValidateT(
     return positionAfterf1;
   }
   /* Validating field f2 */
-  BOOLEAN hasEnoughBytes = (uint64_t)(uint32_t)20U <= (InputLength - positionAfterf1);
-  uint64_t positionAfterT0;
-  if (!hasEnoughBytes)
+  hasBytes = (InputLength - positionAfterf1) >= (uint64_t)20U;
+  if (hasBytes)
   {
-    positionAfterT0 =
-      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAfterf1);
+    res = positionAfterf1 + (uint64_t)20U;
   }
   else
   {
-    uint8_t *truncatedInput = Input;
-    uint64_t truncatedInputLength = positionAfterf1 + (uint64_t)(uint32_t)20U;
-    uint64_t result = positionAfterf1;
-    while (TRUE)
-    {
-      uint64_t position = result;
-      BOOLEAN ite;
-      if (!(1ULL <= (truncatedInputLength - position)))
-      {
-        ite = TRUE;
-      }
-      else
-      {
-        /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-        BOOLEAN hasBytes = 1ULL <= (truncatedInputLength - position);
-        uint64_t positionAfterT1;
-        if (hasBytes)
-        {
-          positionAfterT1 = position + 1ULL;
-        }
-        else
-        {
-          positionAfterT1 =
-            EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-              position);
-        }
-        uint64_t res;
-        if (EverParseIsSuccess(positionAfterT1))
-        {
-          res = positionAfterT1;
-        }
-        else
-        {
-          ErrorHandlerFn("_T",
-            "f2.base.element",
-            EverParseErrorReasonOfResult(positionAfterT1),
-            EverParseGetValidatorErrorKind(positionAfterT1),
-            Ctxt,
-            truncatedInput,
-            position);
-          res = positionAfterT1;
-        }
-        uint64_t result1 = res;
-        result = result1;
-        ite = EverParseIsError(result1);
-      }
-      if (ite)
-      {
-        break;
-      }
-    }
-    uint64_t res = result;
-    positionAfterT0 = res;
+    res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, positionAfterf1);
   }
-  uint64_t positionAfterf2;
+  positionAfterT0 = res;
   if (EverParseIsSuccess(positionAfterT0))
   {
     positionAfterf2 = positionAfterT0;
@@ -187,22 +80,13 @@ GetFieldPtrValidateT(
       positionAfterf1);
     positionAfterf2 = positionAfterT0;
   }
-  uint64_t positionAfterT1;
   if (EverParseIsSuccess(positionAfterf2))
   {
-    uint8_t *hd = Input + (uint32_t)positionAfterf1;
+    hd = Input + (uint32_t)positionAfterf1;
     *Out = hd;
-    BOOLEAN actionSuccessF2 = TRUE;
-    if (!actionSuccessF2)
-    {
-      positionAfterT1 =
-        EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED,
-          positionAfterf2);
-    }
-    else
-    {
-      positionAfterT1 = positionAfterf2;
-    }
+    actionSuccessF2 = TRUE;
+    KRML_MAYBE_UNUSED_VAR(actionSuccessF2);
+    positionAfterT1 = positionAfterf2;
   }
   else
   {
@@ -220,5 +104,107 @@ GetFieldPtrValidateT(
     Input,
     positionAfterf1);
   return positionAfterT1;
+}
+
+uint64_t
+GetFieldPtrValidateTact(
+  uint8_t **Out,
+  uint8_t *Ctxt,
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
+  uint8_t *Input,
+  uint64_t InputLength,
+  uint64_t StartPosition
+)
+{
+  /* Validating field f1 */
+  BOOLEAN hasBytes0 = (InputLength - StartPosition) >= (uint64_t)10U;
+  uint64_t res0;
+  uint64_t positionAfterTact;
+  uint64_t positionAfterf1;
+  BOOLEAN hasBytes;
+  uint64_t res;
+  uint64_t positionAfterTact0;
+  uint64_t positionAfterf2;
+  uint64_t positionAfterTact1;
+  uint8_t *hd;
+  BOOLEAN actionSuccessF2;
+  if (hasBytes0)
+  {
+    res0 = StartPosition + (uint64_t)10U;
+  }
+  else
+  {
+    res0 = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
+  }
+  positionAfterTact = res0;
+  if (EverParseIsSuccess(positionAfterTact))
+  {
+    positionAfterf1 = positionAfterTact;
+  }
+  else
+  {
+    ErrorHandlerFn("_TAct",
+      "f1",
+      EverParseErrorReasonOfResult(positionAfterTact),
+      EverParseGetValidatorErrorKind(positionAfterTact),
+      Ctxt,
+      Input,
+      StartPosition);
+    positionAfterf1 = positionAfterTact;
+  }
+  if (EverParseIsError(positionAfterf1))
+  {
+    return positionAfterf1;
+  }
+  /* Validating field f2 */
+  hasBytes = (InputLength - positionAfterf1) >= (uint64_t)20U;
+  if (hasBytes)
+  {
+    res = positionAfterf1 + (uint64_t)20U;
+  }
+  else
+  {
+    res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, positionAfterf1);
+  }
+  positionAfterTact0 = res;
+  if (EverParseIsSuccess(positionAfterTact0))
+  {
+    positionAfterf2 = positionAfterTact0;
+  }
+  else
+  {
+    ErrorHandlerFn("_TAct",
+      "f2.base",
+      EverParseErrorReasonOfResult(positionAfterTact0),
+      EverParseGetValidatorErrorKind(positionAfterTact0),
+      Ctxt,
+      Input,
+      positionAfterf1);
+    positionAfterf2 = positionAfterTact0;
+  }
+  if (EverParseIsSuccess(positionAfterf2))
+  {
+    hd = Input + (uint32_t)positionAfterf1;
+    *Out = hd;
+    actionSuccessF2 = TRUE;
+    KRML_MAYBE_UNUSED_VAR(actionSuccessF2);
+    positionAfterTact1 = positionAfterf2;
+  }
+  else
+  {
+    positionAfterTact1 = positionAfterf2;
+  }
+  if (EverParseIsSuccess(positionAfterTact1))
+  {
+    return positionAfterTact1;
+  }
+  ErrorHandlerFn("_TAct",
+    "f2",
+    EverParseErrorReasonOfResult(positionAfterTact1),
+    EverParseGetValidatorErrorKind(positionAfterTact1),
+    Ctxt,
+    Input,
+    positionAfterf1);
+  return positionAfterTact1;
 }
 

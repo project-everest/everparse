@@ -1,9 +1,6 @@
 {
-    "fstar_exe": "fstar.exe",
-    "options": [],
+    "fstar_exe": "../../fstar.sh",
     "include_dirs": [
-      "${KRML_HOME}/krmllib",
-      "${KRML_HOME}/krmllib/obj"
+      "./pulse"
     ]
   }
-  

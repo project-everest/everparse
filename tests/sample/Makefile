@@ -16,8 +16,10 @@ krml/%.krml:
 
 -include .depend
 
+ifeq (,$(filter clean,$(MAKECMDGOALS)))
 .depend: $(QD_FILES) .qd_files
 	+$(MAKE) -f Makefile.depend
+endif
 
 depend: .depend
 

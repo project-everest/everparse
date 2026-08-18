@@ -38,7 +38,7 @@ type binders = LP.parse_bounded_vlbytes_t 0 65535
 let parse_binders : LP.parser _ binders = LP.parse_bounded_vlbytes 0 65535
 let serialize_binders: LP.serializer parse_binders = LP.serialize_bounded_vlbytes 0 65535
 
-type pre_shared_key_extension = (U32.t * binders)
+type pre_shared_key_extension = (U32.t & binders)
 let parse_pre_shared_key_extension : LP.parser _ pre_shared_key_extension = LP.nondep_then LP.parse_u32 parse_binders
 let serialize_pre_shared_key_extension : LP.serializer parse_pre_shared_key_extension = LP.serialize_nondep_then _ LP.serialize_u32 () _ serialize_binders
 
@@ -46,7 +46,7 @@ type extension_type = | PreSharedKeyExtension_t
 
 inline_for_extraction
 let extension_enum : LP.enum extension_type U32.t =
-  let l : list (extension_type * U32.t) = [
+  let l : list (extension_type & U32.t) = [
     PreSharedKeyExtension_t, 18ul;
   ]
   in
@@ -56,7 +56,7 @@ let extension_enum : LP.enum extension_type U32.t =
 noeq
 type extension =
 | PreSharedKeyExtension of LP.parse_bounded_vldata_strong_t 2 65535 serialize_pre_shared_key_extension
-| UnknownExtension of (LP.unknown_enum_repr extension_enum * LP.parse_bounded_vlbytes_t 2 65535)
+| UnknownExtension of (LP.unknown_enum_repr extension_enum & LP.parse_bounded_vlbytes_t 2 65535)
 
 let type_of_extension (e: extension) : GTot (LP.maybe_enum_key extension_enum) =
   match e with
@@ -197,7 +197,7 @@ let serialize_client_hello : LP.serializer parse_client_hello =
 
 let with_psk
   (ch: client_hello)
-: GTot Type0
+: GTot prop
 = let (_, exts) = ch in
   Cons? exts /\
   PreSharedKeyExtension? (L.last exts)

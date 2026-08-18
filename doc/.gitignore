@@ -1,1 +1,4 @@
 out
+project-everest-github-io
+.venv*
+__pycache__

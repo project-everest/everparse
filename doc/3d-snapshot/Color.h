@@ -1,7 +1,7 @@
 
 
-#ifndef __Color_H
-#define __Color_H
+#ifndef Color_H
+#define Color_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -27,16 +27,7 @@ Enum constant
 uint64_t
 ColorValidateColoredPoint(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
@@ -46,5 +37,5 @@ ColorValidateColoredPoint(
 }
 #endif
 
-#define __Color_H_DEFINED
-#endif
+#define Color_H_DEFINED
+#endif /* Color_H */

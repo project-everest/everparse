@@ -1,0 +1,17 @@
+player = {
+  name : bstr,
+  dob : {
+    year : uint,
+    month : uint,
+    day : uint
+  },
+  scores : [
+    foo : bstr,
+    * uint ; note: label ignored currently
+    ; * (points : uint) ; note: label ignored currently
+    ; ^ This seems to loop in F*.
+  ],
+}
+
+bstr = #2
+uint = #0

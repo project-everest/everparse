@@ -1,7 +1,7 @@
 
 
-#ifndef __ReadPair_H
-#define __ReadPair_H
+#ifndef ReadPair_H
+#define ReadPair_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -14,16 +14,7 @@ ReadPairValidatePair(
   uint32_t *X,
   uint32_t *Y,
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
@@ -33,5 +24,5 @@ ReadPairValidatePair(
 }
 #endif
 
-#define __ReadPair_H_DEFINED
-#endif
+#define ReadPair_H_DEFINED
+#endif /* ReadPair_H */

@@ -1,0 +1,2169 @@
+module CBOR.Pulse.Raw.Match
+#lang-pulse
+include CBOR.Pulse.Raw.Format.Match
+open CBOR.Spec.Raw.Base
+open Pulse.Lib.Pervasives
+open Pulse.Lib.Trade
+
+module PM = Pulse.Lib.SeqMatch
+module S = Pulse.Lib.Slice
+module R = Pulse.Lib.Reference
+module SZ = FStar.SizeT
+module U64 = FStar.UInt64
+module U8 = FStar.UInt8
+module Trade = Pulse.Lib.Trade.Util
+
+let cbor_match_int
+  (c: cbor_int)
+  (r: raw_data_item)
+: Tot slprop
+= pure (
+    r == Int64 c.cbor_int_type ({ size = c.cbor_int_size; value = c.cbor_int_value })
+  )
+
+let cbor_match_simple
+  (c: simple_value)
+  (r: raw_data_item)
+: Tot slprop
+= pure (
+    r == Simple c
+  )
+
+let cbor_match_string
+  (c: cbor_string)
+  (p: perm)
+  (r: raw_data_item)
+: Tot slprop
+= exists* (v: Seq.seq U8.t) . pts_to (to_slice c.cbor_string_ptr) #(p `perm_mul` c.cbor_string_perm) v ** pure
+    (Seq.length v == SZ.v (S.len (to_slice c.cbor_string_ptr)) /\
+      (c.cbor_string_type == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v) /\
+      r == String c.cbor_string_type ({ size = c.cbor_string_size; value = U64.uint_to_t (SZ.v (S.len (to_slice c.cbor_string_ptr))) }) v
+    )
+
+let cbor_match_tagged
+  (c: cbor_tagged)
+  (p: perm)
+  (r: raw_data_item { Tagged? r })
+  (cbor_match: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+: Tot slprop
+= exists* c' . R.pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) c' **
+    cbor_match (p `perm_mul` c.cbor_tagged_payload_perm) c' (Tagged?.v r) **
+    pure (c.cbor_tagged_tag == Tagged?.tag r)
+
+let cbor_match_array
+  (c: cbor_array)
+  (p: perm)
+  (r: raw_data_item {Array? r})
+  (cbor_match: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+: Tot slprop
+= exists* (v : Seq.seq cbor_raw) .
+    pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) v **
+    PM.seq_list_match v (Array?.v r) (cbor_match (p `perm_mul` c.cbor_array_payload_perm)) **
+    pure (
+      c.cbor_array_length_size == (Array?.len r).size /\
+      SZ.v (S.len c.cbor_array_ptr) == U64.v (Array?.len r).value
+    )
+
+let cbor_match_map_entry0
+  (r0: raw_data_item)
+  (cbor_match: (cbor_raw -> (v': raw_data_item { v' << r0 }) -> slprop))
+  (c: cbor_map_entry)
+  (r: (raw_data_item & raw_data_item) { r << r0 })
+: Tot slprop
+= cbor_match c.cbor_map_entry_key (fst r) **
+  cbor_match c.cbor_map_entry_value (snd r)
+
+let cbor_match_map0
+  (c: cbor_map)
+  (p: perm)
+  (r: raw_data_item {Map? r})
+  (cbor_match: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+: Tot slprop
+= exists* v .
+    pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) v **
+    PM.seq_list_match v (Map?.v r) (cbor_match_map_entry0 r (cbor_match (p `perm_mul` c.cbor_map_payload_perm))) **
+    pure (
+      c.cbor_map_length_size == (Map?.len r).size /\
+      SZ.v (S.len c.cbor_map_ptr) == U64.v (Map?.len r).value
+    )
+
+let cbor_match_serialized_array
+  (c: cbor_serialized)
+  (p: perm)
+  (r: raw_data_item { Array? r })
+: Tot slprop
+= cbor_match_serialized_payload_array (to_slice c.cbor_serialized_payload) (p `perm_mul` c.cbor_serialized_perm)  (Array?.v r) **
+  pure (c.cbor_serialized_header == Array?.len r)
+
+let cbor_match_serialized_map
+  (c: cbor_serialized)
+  (p: perm)
+  (r: raw_data_item { Map? r })
+: Tot slprop
+= cbor_match_serialized_payload_map (to_slice c.cbor_serialized_payload) (p `perm_mul` c.cbor_serialized_perm) (Map?.v r) **
+  pure (c.cbor_serialized_header == Map?.len r)
+
+let cbor_match_serialized_tagged
+  (c: cbor_serialized)
+  (p: perm)
+  (r: raw_data_item { Tagged? r })
+: Tot slprop
+= cbor_match_serialized_payload_tagged (to_slice c.cbor_serialized_payload) (p `perm_mul` c.cbor_serialized_perm) (Tagged?.v r) **
+  pure (c.cbor_serialized_header == Tagged?.tag r)
+
+[@@pulse_unfold]
+let cbor_match0
+  (p: perm)
+  (c: cbor_raw)
+  (r: raw_data_item)
+  (cbor_match: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+: Tot slprop
+  (decreases r)
+= match c, r with
+  | CBOR_Case_Array v, Array _ _ -> cbor_match_array v p r cbor_match
+  | CBOR_Case_Map v, Map _ _ -> cbor_match_map0 v p r cbor_match
+  | CBOR_Case_Simple v, Simple _ -> cbor_match_simple v r
+  | CBOR_Case_Int v, Int64 _ _ -> cbor_match_int v r
+  | CBOR_Case_String v, String _ _ _ -> cbor_match_string v p r
+  | CBOR_Case_Tagged v, Tagged _ _ -> cbor_match_tagged v p r cbor_match
+  | CBOR_Case_Serialized_Array v, Array _ _ -> cbor_match_serialized_array v p r
+  | CBOR_Case_Serialized_Map v, Map _ _ -> cbor_match_serialized_map v p r
+  | CBOR_Case_Serialized_Tagged v, Tagged _ _ -> cbor_match_serialized_tagged v p r
+  | _ -> pure False
+
+let cbor_match1 = cbor_match0
+
+let rec cbor_match
+  (p: perm)
+  (c: cbor_raw)
+  (r: raw_data_item)
+: Tot slprop
+  (decreases r)
+= cbor_match0 p c r cbor_match
+
+let cbor_match_map_entry
+  (p: perm)
+  (c: cbor_map_entry)
+  (r: (raw_data_item & raw_data_item))
+: Tot slprop
+= cbor_match p c.cbor_map_entry_key (fst r) **
+  cbor_match p c.cbor_map_entry_value (snd r)
+
+let cbor_match_map
+  (p: perm)
+  (c: cbor_map)
+  (r: raw_data_item {Map? r})
+: Tot slprop
+= exists* v .
+    pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) v **
+    PM.seq_list_match v (Map?.v r) (cbor_match_map_entry (p `perm_mul` c.cbor_map_payload_perm)) **
+    pure (
+      c.cbor_map_length_size == (Map?.len r).size /\
+      SZ.v (S.len c.cbor_map_ptr) == U64.v (Map?.len r).value
+    )
+
+let slprop_implies (s1 s2: slprop) =
+  unit -> stt_ghost unit emp_inames s1 (fun _ -> s2)
+
+let slprop_implies_elim (#s1 #s2: slprop) (f: slprop_implies s1 s2) : stt_ghost unit emp_inames s1 (fun _ -> s2) =
+  f ()
+
+let seq_list_match_implies
+  (#t #t': Type0)
+  (c: Seq.seq t)
+  (v: list t')
+  (item_match1: (t -> (v': t' { v' << v }) -> slprop))
+  (item_match2: (t -> (v': t' { v' << v }) -> slprop))
+  (imp: ((v0: t) -> (v': t' { v' << v }) -> slprop_implies (item_match1 v0 v') (item_match2 v0 v')))
+: Tot (slprop_implies (PM.seq_list_match c v item_match1) (PM.seq_list_match c v item_match2))
+  (decreases v)
+= fun _ -> PM.seq_list_match_weaken c v item_match1 item_match2 (fun v0 v' -> imp v0 v' ())
+
+fn cbor_match_map_entry0_entry
+  (r0: raw_data_item)
+  (p: perm)
+  (c: cbor_map_entry)
+  (r: (raw_data_item & raw_data_item) { r << r0 })
+: slprop_implies (cbor_match_map_entry0 r0 (cbor_match p) c r) (cbor_match_map_entry p c r)
+= (_: _) {
+  rewrite (cbor_match_map_entry0 r0 (cbor_match p) c r)
+    as (cbor_match_map_entry p c r)
+}
+
+ghost
+fn cbor_match_map0_map
+  (c: cbor_map)
+  (p: perm)
+  (r: raw_data_item {Map? r})
+requires
+  (cbor_match_map0 c p r cbor_match)
+ensures
+  (cbor_match_map p c r)
+{
+  unfold (cbor_match_map0 c p r cbor_match);
+  with v . assert (PM.seq_list_match v (Map?.v r) (cbor_match_map_entry0 r (cbor_match (p `perm_mul` c.cbor_map_payload_perm))));
+  slprop_implies_elim (seq_list_match_implies v (Map?.v r) (cbor_match_map_entry0 r (cbor_match (p `perm_mul` c.cbor_map_payload_perm))) (cbor_match_map_entry (p `perm_mul` c.cbor_map_payload_perm)) (cbor_match_map_entry0_entry r (p `perm_mul` c.cbor_map_payload_perm)));
+  fold (cbor_match_map p c r)
+}
+
+fn cbor_match_map_entry_entry0
+  (r0: raw_data_item)
+  (p: perm)
+  (c: cbor_map_entry)
+  (r: (raw_data_item & raw_data_item) { r << r0 })
+: slprop_implies (cbor_match_map_entry p c r) (cbor_match_map_entry0 r0 (cbor_match p) c r)
+= (_: _) {
+  rewrite (cbor_match_map_entry p c r)
+    as (cbor_match_map_entry0 r0 (cbor_match p) c r)
+}
+
+ghost
+fn cbor_match_map_map0
+  (c: cbor_map)
+  (p: perm)
+  (r: raw_data_item {Map? r})
+requires
+  (cbor_match_map p c r)
+ensures
+  (cbor_match_map0 c p r cbor_match)
+{
+  unfold (cbor_match_map p c r);
+  with v . assert (PM.seq_list_match v (Map?.v r) (cbor_match_map_entry (p `perm_mul` c.cbor_map_payload_perm)));
+  slprop_implies_elim (seq_list_match_implies v (Map?.v r)
+    (cbor_match_map_entry (p `perm_mul` c.cbor_map_payload_perm))
+    (cbor_match_map_entry0 r (cbor_match (p `perm_mul` c.cbor_map_payload_perm)))
+    (cbor_match_map_entry_entry0 r (p `perm_mul` c.cbor_map_payload_perm))
+  );
+  fold (cbor_match_map0 c p r cbor_match)
+}
+
+ghost
+fn cbor_match_map0_map_trade
+  (c: cbor_map)
+  (p: perm)
+  (r: raw_data_item {Map? r})
+requires
+  (cbor_match_map0 c p r cbor_match)
+ensures
+  (cbor_match_map p c r ** trade (cbor_match_map p c r) (cbor_match_map0 c p r cbor_match))
+{
+  cbor_match_map0_map c p r;
+  intro
+    (Trade.trade
+      (cbor_match_map p c r)
+      (cbor_match_map0 c p r cbor_match)
+    )
+    #emp
+    fn _
+  {
+    cbor_match_map_map0 c p r;
+  };
+}
+
+ghost
+fn cbor_match_map_map0_trade
+  (c: cbor_map)
+  (p: perm)
+  (r: raw_data_item {Map? r})
+requires
+  (cbor_match_map p c r)
+ensures
+  (cbor_match_map0 c p r cbor_match ** trade (cbor_match_map0 c p r cbor_match) (cbor_match_map p c r))
+{
+  cbor_match_map_map0 c p r;
+  intro
+    (Trade.trade
+      (cbor_match_map0 c p r cbor_match)
+      (cbor_match_map p c r)
+    )
+    #emp
+    fn _
+  {
+    cbor_match_map0_map c p r;
+  };
+}
+
+let cbor_match_cases_pred
+  (c: cbor_raw)
+  (r: raw_data_item)
+: Tot bool
+= 
+    match c, r with
+    | CBOR_Case_Array _, Array _ _
+    | CBOR_Case_Map _, Map _ _
+    | CBOR_Case_Simple _, Simple _
+    | CBOR_Case_Int _, Int64 _ _
+    | CBOR_Case_String _, String _ _ _
+    | CBOR_Case_Tagged _, Tagged _ _
+    | CBOR_Case_Serialized_Array _, Array _ _
+    | CBOR_Case_Serialized_Map _, Map _ _
+    | CBOR_Case_Serialized_Tagged _, Tagged _ _ ->
+      true
+    | _ -> false
+
+ghost
+fn cbor_match_cases
+  (c: cbor_raw)
+  (#pm: perm)
+  (#r: raw_data_item)
+  requires cbor_match pm c r
+  ensures cbor_match pm c r ** pure (cbor_match_cases_pred c r)
+{
+  if cbor_match_cases_pred c r {
+    ()
+  } else {
+    rewrite (cbor_match pm c r) as (pure False);
+    rewrite emp as (cbor_match pm c r)
+  }
+}
+
+ghost
+fn cbor_match_int_intro_trade_aux
+  (q: slprop)
+  (res: cbor_int)
+  (v: raw_data_item)
+  requires
+    q
+  ensures
+    trade (cbor_match_int res v) q
+{ 
+  intro
+    (Trade.trade
+      (cbor_match_int res v)
+      q
+    )
+    #q
+    fn _
+  {
+    unfold (cbor_match_int res v)
+  };
+}
+
+inline_for_extraction
+fn cbor_match_int_intro_aux
+  (typ: major_type_uint64_or_neg_int64)
+  (i: raw_uint64)
+  requires emp
+  returns res: cbor_int
+  ensures cbor_match_int res (Int64 typ i)
+{
+  let res = { cbor_int_type = typ; cbor_int_size = i.size; cbor_int_value = i.value };
+  fold (cbor_match_int res (Int64 typ i));
+  res
+}
+
+inline_for_extraction
+fn cbor_match_int_intro
+  (typ: major_type_uint64_or_neg_int64)
+  (i: raw_uint64)
+  requires emp
+  returns res: cbor_raw
+  ensures cbor_match 1.0R res (Int64 typ i)
+{
+  let resi = cbor_match_int_intro_aux typ i;
+  let res = CBOR_Case_Int resi;
+  fold (cbor_match 1.0R (CBOR_Case_Int resi) (Int64 typ i));
+  rewrite (cbor_match 1.0R (CBOR_Case_Int resi) (Int64 typ i)) as cbor_match 1.0R res (Int64 typ i);
+  res
+}
+
+inline_for_extraction
+fn cbor_match_int_intro_trade
+  (q: slprop)
+  (typ: major_type_uint64_or_neg_int64)
+  (i: raw_uint64)
+  requires q
+  returns res: cbor_raw
+  ensures cbor_match 1.0R res (Int64 typ i) ** trade (cbor_match 1.0R res (Int64 typ i)) q
+{
+  let resi = cbor_match_int_intro_aux typ i;
+  cbor_match_int_intro_trade_aux q resi (Int64 typ i);
+  let res = CBOR_Case_Int resi;
+  Trade.rewrite_with_trade (cbor_match_int resi (Int64 typ i)) (cbor_match 1.0R res (Int64 typ i));
+  Trade.trans _ _ q;
+  res
+}
+
+inline_for_extraction
+fn cbor_match_int_elim_type
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (Int64? v)
+returns res: major_type_uint64_or_neg_int64
+ensures
+  cbor_match p c v ** pure (Int64? v /\ res == Int64?.typ v)
+{
+  cbor_match_cases c;
+  norewrite
+  let CBOR_Case_Int c' = c;
+  Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_int c' v);
+  unfold (cbor_match_int c' v);
+  fold (cbor_match_int c' v);
+  Trade.elim _ _;
+  c'.cbor_int_type
+}
+
+inline_for_extraction
+fn cbor_match_int_elim_value
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (Int64? v)
+returns res: raw_uint64
+ensures
+  cbor_match p c v ** pure (Int64? v /\ res == Int64?.v v)
+{
+  cbor_match_cases c;
+  norewrite
+  let CBOR_Case_Int c' = c;
+  Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_int c' v);
+  unfold (cbor_match_int c' v);
+  fold (cbor_match_int c' v);
+  Trade.elim _ _;
+  let res = {
+    size = c'.cbor_int_size;
+    value = c'.cbor_int_value;
+  };
+  res
+}
+
+ghost
+fn cbor_match_int_free
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (Int64? v)
+ensures
+  emp
+{
+  cbor_match_cases c;
+  norewrite
+  let CBOR_Case_Int c' = c;
+  rewrite (cbor_match p c v) as (cbor_match_int c' v);
+  unfold (cbor_match_int c' v)
+}
+
+ghost
+fn cbor_match_simple_intro_trade_aux
+  (q: slprop)
+  (res: simple_value)
+  (v: raw_data_item)
+  requires
+    q
+  ensures
+    trade (cbor_match_simple res v) q
+{ 
+  intro
+    (Trade.trade
+      (cbor_match_simple res v)
+      q
+    )
+    #q
+    fn _
+  {
+    unfold (cbor_match_simple res v)
+  };
+}
+
+inline_for_extraction
+fn cbor_match_simple_intro
+  (i: simple_value)
+  requires emp
+  returns res: cbor_raw
+  ensures cbor_match 1.0R res (Simple i)
+{
+  fold (cbor_match_simple i (Simple i));
+  let res = CBOR_Case_Simple i;
+  fold (cbor_match 1.0R (CBOR_Case_Simple i) (Simple i));
+  rewrite (cbor_match 1.0R (CBOR_Case_Simple i) (Simple i)) as cbor_match 1.0R res (Simple i);
+  res
+}
+
+inline_for_extraction
+fn cbor_match_simple_intro_trade
+  (q: slprop)
+  (i: simple_value)
+  requires q
+  returns res: cbor_raw
+  ensures cbor_match 1.0R res (Simple i) ** trade (cbor_match 1.0R res (Simple i)) q
+{
+  cbor_match_simple_intro_trade_aux q i (Simple i);
+  fold (cbor_match_simple i (Simple i));
+  let res = CBOR_Case_Simple i;
+  Trade.rewrite_with_trade (cbor_match_simple i (Simple i)) (cbor_match 1.0R res (Simple i));
+  Trade.trans _ _ q;
+  res
+}
+
+inline_for_extraction
+fn cbor_match_simple_elim
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (Simple? v)
+returns res: simple_value
+ensures
+  cbor_match p c v ** pure (v == Simple res)
+{
+  cbor_match_cases c;
+  norewrite
+  let CBOR_Case_Simple res = c;
+  Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_simple res v);
+  unfold (cbor_match_simple res v);
+  fold (cbor_match_simple res v);
+  Trade.elim _ _;
+  res
+}
+
+ghost
+fn cbor_match_simple_free
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (Simple? v)
+ensures
+  emp
+{
+  cbor_match_cases c;
+  norewrite
+  let CBOR_Case_Simple res = c;
+  rewrite (cbor_match p c v) as (cbor_match_simple res v);
+  unfold (cbor_match_simple res v)
+}
+
+ghost
+fn cbor_match_string_intro_aux
+  (input: S.slice U8.t)
+  (#pm: perm)
+  (#v: Seq.seq U8.t)
+  (c: cbor_string)
+  (r: raw_data_item)
+  requires
+    pts_to input #pm v ** pure (
+      input == to_slice c.cbor_string_ptr /\
+      pm == c.cbor_string_perm /\
+      Seq.length v == SZ.v (S.len (to_slice c.cbor_string_ptr)) /\
+      (c.cbor_string_type == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v) /\
+      r == String c.cbor_string_type ({ size = c.cbor_string_size; value = U64.uint_to_t (SZ.v (S.len (to_slice c.cbor_string_ptr))) }) v
+    )
+  ensures
+    cbor_match_string c 1.0R r **
+    trade (cbor_match_string c 1.0R r) (pts_to input #pm v)
+{
+  rewrite each input as (to_slice c.cbor_string_ptr);
+  fold (cbor_match_string c 1.0R r);
+  intro
+    (Trade.trade
+      (cbor_match_string c 1.0R r)
+      (pts_to input #pm v)
+    )
+    #emp
+    fn _
+  {
+    unfold (cbor_match_string c 1.0R r);
+    rewrite S.pts_to (to_slice c.cbor_string_ptr) #pm v as S.pts_to input #pm v;
+    ();
+  };
+}
+
+inline_for_extraction
+fn cbor_match_string_intro
+  (typ: major_type_byte_string_or_text_string)
+  (len: raw_uint64)
+  (input: S.slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+  requires
+    pts_to input #pm v ** pure (
+      (typ == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v) /\
+      Seq.length v == U64.v len.value
+    )
+  returns c: cbor_raw
+  ensures exists* r .
+    cbor_match 1.0R c r **
+    trade (cbor_match 1.0R c r) (pts_to input #pm v) **
+    pure (
+      Seq.length v == U64.v len.value /\
+      (typ == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v) /\
+      r == String typ len (Ghost.reveal v)
+    )
+{
+  S.pts_to_len input;
+  let ress = { cbor_string_type = typ; cbor_string_size = len.size; cbor_string_ptr = of_slice input; cbor_string_perm = pm };
+  let r : Ghost.erased raw_data_item = Ghost.hide (String typ len (Ghost.reveal v));
+  cbor_match_string_intro_aux input ress r;
+  let res = CBOR_Case_String ress;
+  Trade.rewrite_with_trade
+    (cbor_match_string ress 1.0R r)
+    (cbor_match 1.0R res r);
+  Trade.trans _ _ (pts_to input #pm v);
+  res
+}
+
+inline_for_extraction
+fn cbor_match_string_elim_type
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (String? v)
+returns res: major_type_byte_string_or_text_string
+ensures
+  cbor_match p c v ** pure (String? v /\ res == String?.typ v)
+{
+  cbor_match_cases c;
+  norewrite
+  let CBOR_Case_String c' = c;
+  Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_string c' p v);
+  unfold (cbor_match_string c' p v);
+  fold (cbor_match_string c' p v);
+  Trade.elim _ _;
+  c'.cbor_string_type
+}
+
+inline_for_extraction
+fn cbor_match_string_elim_length
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (String? v)
+returns res: raw_uint64
+ensures
+  cbor_match p c v ** pure (String? v /\ res == String?.len v)
+{
+  cbor_match_cases c;
+  norewrite
+  let CBOR_Case_String c' = c;
+  Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_string c' p v);
+  unfold (cbor_match_string c' p v);
+  fold (cbor_match_string c' p v);
+  Trade.elim _ _;
+  let res = {
+    size = c'.cbor_string_size;
+    value = SZ.sizet_to_uint64 (S.len (to_slice c'.cbor_string_ptr));
+  };
+  res
+}
+
+ghost fn cbor_match_string_elim_payload_aux
+  (c: cbor_string)
+  (p: perm)
+  (r: Ghost.erased raw_data_item { String? r })
+  (v: Seq.seq U8.t)
+  (_: unit)
+requires
+  pure (
+    String?.typ r == c.cbor_string_type /\
+    String?.len r == ({ size = c.cbor_string_size; value = U64.uint_to_t (SZ.v (S.len (to_slice c.cbor_string_ptr))) }) /\
+    v == (String?.v r <: Seq.seq U8.t)
+  ) **
+  pts_to (to_slice c.cbor_string_ptr) #(p `perm_mul` c.cbor_string_perm) v
+ensures
+  cbor_match_string c p r
+{
+  fold (cbor_match_string c p r)
+}
+
+inline_for_extraction
+fn cbor_match_string_elim_payload
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (String? v)
+returns res: S.slice U8.t
+ensures exists* p' (v': Seq.seq U8.t) .
+  pts_to res #p' v' **
+  trade (pts_to res #p' v') (cbor_match p c v) **
+  pure (String? v /\ v' == String?.v v)
+{
+  cbor_match_cases c;
+  norewrite
+  let CBOR_Case_String c' = c;
+  Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_string c' p v);
+  unfold (cbor_match_string c' p v);
+  with v' . assert (pts_to (to_slice c'.cbor_string_ptr) #(p `perm_mul` c'.cbor_string_perm) v');
+  intro
+    (Trade.trade
+      (pts_to (to_slice c'.cbor_string_ptr) #(p `perm_mul` c'.cbor_string_perm) v')
+      (cbor_match_string c' p v)
+    )
+    #emp
+    fn _
+  {
+    fold (cbor_match_string c' p v)
+  };
+  Trade.trans _ _ (cbor_match p c v);
+  to_slice c'.cbor_string_ptr
+}
+
+let cbor_match_eq_tagged
+  (pm: perm)
+  (ct: cbor_tagged)
+  (r: raw_data_item)
+: Lemma
+  (requires (Tagged? r))
+  (ensures 
+    (cbor_match pm (CBOR_Case_Tagged ct) r ==
+    cbor_match_tagged ct pm r cbor_match
+  ))
+=
+  let Tagged tag v = r in
+  assert_norm (
+    cbor_match pm (CBOR_Case_Tagged ct) (Tagged tag v) ==
+      cbor_match_tagged ct pm (Tagged tag v) cbor_match
+  )
+
+inline_for_extraction
+fn cbor_match_tagged_get_tag
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (Tagged? v)
+returns res: raw_uint64
+ensures
+  cbor_match p c v ** pure (Tagged? v /\ res == Tagged?.tag v)
+{
+  cbor_match_cases c;
+  match c {
+    norewrite
+    CBOR_Case_Tagged c' -> {
+      cbor_match_eq_tagged p c' v;
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_tagged c' p v cbor_match);
+      unfold (cbor_match_tagged c' p v cbor_match);
+      fold (cbor_match_tagged c' p v cbor_match);
+      Trade.elim _ _;
+      c'.cbor_tagged_tag
+    }
+    norewrite
+    CBOR_Case_Serialized_Tagged c' -> {
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_serialized_tagged c' p v);
+      unfold (cbor_match_serialized_tagged c' p v);
+      fold (cbor_match_serialized_tagged c' p v);
+      Trade.elim _ _;
+      c'.cbor_serialized_header
+    }
+  }
+}
+
+ghost
+fn cbor_match_tagged_elim
+  (c: cbor_tagged)
+  (p: perm)
+  (r: raw_data_item { Tagged? r })
+  requires
+    cbor_match_tagged c p r cbor_match
+  ensures exists* c' . R.pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) c' **
+    cbor_match (p `perm_mul` c.cbor_tagged_payload_perm) c' (Tagged?.v r) **
+    trade
+      (R.pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) c' **
+        cbor_match (p `perm_mul` c.cbor_tagged_payload_perm) c' (Tagged?.v r))
+      (cbor_match_tagged c p r cbor_match)
+{
+  unfold (cbor_match_tagged c p r cbor_match);
+  with c' . assert (R.pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) c' **
+    cbor_match (p `perm_mul` c.cbor_tagged_payload_perm) c' (Tagged?.v r));
+  intro
+    (Trade.trade
+      (R.pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) c' **
+        cbor_match (p `perm_mul` c.cbor_tagged_payload_perm) c' (Tagged?.v r)
+      )
+      (cbor_match_tagged c p r cbor_match)
+    )
+    #emp
+    fn _
+  {
+    fold (cbor_match_tagged c p r cbor_match)
+  };
+}
+
+inline_for_extraction
+fn cbor_match_tagged_intro
+  (tag: raw_uint64)
+  (pc: R.ref cbor_raw)
+  (#pr: perm)
+  (#c: Ghost.erased cbor_raw)
+  (#pm: perm)
+  (#r: Ghost.erased raw_data_item)
+  requires R.pts_to pc #pr c ** cbor_match pm c r
+  returns res: cbor_raw
+  ensures
+    cbor_match 1.0R res (Tagged tag r) **
+    trade
+      (cbor_match 1.0R res (Tagged tag r))
+      (R.pts_to pc #pr c ** cbor_match pm c r)
+{
+  let res' = {
+    cbor_tagged_tag = tag;
+    cbor_tagged_ptr = pc;
+    cbor_tagged_ref_perm = pr /. 2.0R;
+    cbor_tagged_payload_perm = pm;
+  };
+  R.share pc;
+  rewrite (R.pts_to pc #(pr /. 2.0R) c)
+    as (R.pts_to res'.cbor_tagged_ptr #res'.cbor_tagged_ref_perm c);
+  rewrite cbor_match pm c r as cbor_match (perm_mul 1.0R res'.cbor_tagged_payload_perm) c (Tagged?.v (Tagged tag r));
+  fold (cbor_match_tagged res' 1.0R (Tagged tag r) cbor_match);
+  intro
+    (Trade.trade
+      (cbor_match_tagged res' 1.0R (Tagged tag r) cbor_match)
+      (R.pts_to pc #pr c ** cbor_match pm c r)
+    )
+    #(R.pts_to pc #(pr /. 2.0R) c)
+    fn _
+  {
+    unfold (cbor_match_tagged res' 1.0R (Tagged tag r) cbor_match);
+    with c' . assert (R.pts_to res'.cbor_tagged_ptr #res'.cbor_tagged_ref_perm c');
+    rewrite (R.pts_to res'.cbor_tagged_ptr #res'.cbor_tagged_ref_perm c')
+      as (R.pts_to pc #(pr /. 2.0R) c');
+    rewrite cbor_match (perm_mul 1.0R res'.cbor_tagged_payload_perm)
+      c'
+      (Tagged?.v (Tagged tag r))
+    as cbor_match pm c' r;
+    R.gather pc;
+    rewrite each c' as c
+  };
+  cbor_match_eq_tagged 1.0R res' (Tagged tag r);
+  let res = CBOR_Case_Tagged res';
+  Trade.rewrite_with_trade
+    (cbor_match_tagged res' 1.0R (Tagged tag r) cbor_match)
+    (cbor_match 1.0R res (Tagged tag r));
+  Trade.trans (cbor_match 1.0R res (Tagged tag r)) _ _;
+  res
+}
+
+let cbor_match_eq_array
+  (pm: perm)
+  (ct: cbor_array)
+  (r: raw_data_item)
+: Lemma
+  (requires (Array? r))
+  (ensures 
+    cbor_match pm (CBOR_Case_Array ct) r ==
+    cbor_match_array ct pm r cbor_match
+  )
+=
+  assert_norm (cbor_match pm (CBOR_Case_Array ct) (Array (Array?.len r) (Array?.v r)) ==
+    cbor_match_array ct pm (Array (Array?.len r) (Array?.v r)) cbor_match
+  )
+
+inline_for_extraction
+fn cbor_match_array_get_length
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (Array? v)
+returns res: raw_uint64
+ensures
+  cbor_match p c v ** pure (Array? v /\ res == Array?.len v)
+{
+  cbor_match_cases c;
+  match c {
+    norewrite
+    CBOR_Case_Array c' -> {
+      cbor_match_eq_array p c' v;
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_array c' p v cbor_match);
+      unfold (cbor_match_array c' p v cbor_match);
+      fold (cbor_match_array c' p v cbor_match);
+      Trade.elim _ _;
+      ({ size = c'.cbor_array_length_size; value = SZ.sizet_to_uint64 (S.len c'.cbor_array_ptr) })
+    }
+    norewrite
+    CBOR_Case_Serialized_Array c' -> {
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_serialized_array c' p v);
+      unfold (cbor_match_serialized_array c' p v);
+      fold (cbor_match_serialized_array c' p v);
+      Trade.elim _ _;
+      c'.cbor_serialized_header
+    }
+  }
+}
+
+inline_for_extraction
+fn cbor_match_array_intro
+  (len: raw_uint64)
+  (pc: S.slice cbor_raw)
+  (#pr: perm)
+  (#c: Ghost.erased (Seq.seq cbor_raw))
+  (#pm: perm)
+  (#r: Ghost.erased (list raw_data_item))
+  requires pts_to pc #pr c ** PM.seq_list_match c r (cbor_match pm) ** pure (Seq.length c == U64.v len.value)
+  returns res: cbor_raw
+  ensures exists* r' .
+    cbor_match 1.0R res (Array len r') **
+    trade
+      (cbor_match 1.0R res (Array len r'))
+      (pts_to pc #pr c ** PM.seq_list_match c r (cbor_match pm)) **
+    pure (Ghost.reveal r == r')
+{
+  S.pts_to_len pc;
+  PM.seq_list_match_length (cbor_match pm) c r;
+  let res' = {
+    cbor_array_length_size = len.size;
+    cbor_array_ptr = pc;
+    cbor_array_array_perm = pr /. 2.0R;
+    cbor_array_payload_perm = pm;
+  };
+  S.share pc;
+  rewrite (pts_to pc #(pr /. 2.0R) c)
+    as (pts_to res'.cbor_array_ptr #(1.0R `perm_mul` res'.cbor_array_array_perm) c);
+  fold (cbor_match_array res' 1.0R (Array len r) cbor_match);
+  intro
+    (Trade.trade
+      (cbor_match_array res' 1.0R (Array len r) cbor_match)
+      (pts_to pc #pr c **
+        PM.seq_list_match c r (cbor_match pm)
+      )
+    )
+    #(pts_to pc #(pr /. 2.0R) c)
+    fn _
+  {
+    unfold (cbor_match_array res' 1.0R (Array len r) cbor_match);
+    with c' . assert (pts_to res'.cbor_array_ptr #(1.0R `perm_mul` res'.cbor_array_array_perm) c');
+    rewrite (pts_to res'.cbor_array_ptr #res'.cbor_array_array_perm c')
+            as (pts_to pc #(pr /. 2.0R) c');
+    S.gather pc;
+    with v _x _y.
+      assert PM.seq_list_match #cbor_raw #raw_data_item v _x _y;
+    rewrite each v as c;
+    ()
+  };
+  cbor_match_eq_array 1.0R res' (Array len r);
+  let res = CBOR_Case_Array res';
+  Trade.rewrite_with_trade
+    (cbor_match_array res' 1.0R (Array len r) cbor_match)
+    (cbor_match 1.0R res (Array len r));
+  Trade.trans (cbor_match 1.0R res (Array len r)) _ _;
+  res
+}
+
+let cbor_match_eq_map0
+  (pm: perm)
+  (ct: cbor_map)
+  (r: raw_data_item)
+: Lemma
+  (requires (Map? r))
+  (ensures 
+    cbor_match pm (CBOR_Case_Map ct) r ==
+    cbor_match_map0 ct pm r cbor_match
+  )
+=
+  assert_norm (cbor_match pm (CBOR_Case_Map ct) (Map (Map?.len r) (Map?.v r)) ==
+    cbor_match_map0 ct pm (Map (Map?.len r) (Map?.v r)) cbor_match
+  )
+
+inline_for_extraction
+fn cbor_match_map_get_length
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (Map? v)
+returns res: raw_uint64
+ensures
+  cbor_match p c v ** pure (Map? v /\ res == Map?.len v)
+{
+  cbor_match_cases c;
+  match c {
+    norewrite
+    CBOR_Case_Map c' -> {
+      cbor_match_eq_map0 p c' v;
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_map0 c' p v cbor_match);
+      unfold (cbor_match_map0 c' p v cbor_match);
+      fold (cbor_match_map0 c' p v cbor_match);
+      Trade.elim _ _;
+      ({ size = c'.cbor_map_length_size; value = SZ.sizet_to_uint64 (S.len c'.cbor_map_ptr) })
+    }
+    norewrite
+    CBOR_Case_Serialized_Map c' -> {
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_serialized_map c' p v);
+      unfold (cbor_match_serialized_map c' p v);
+      fold (cbor_match_serialized_map c' p v);
+      Trade.elim _ _;
+      c'.cbor_serialized_header
+    }
+  }
+}
+
+inline_for_extraction
+fn cbor_match_map_intro
+  (len: raw_uint64)
+  (pc: S.slice cbor_map_entry)
+  (#pr: perm)
+  (#c: Ghost.erased (Seq.seq cbor_map_entry))
+  (#pm: perm)
+  (#r: Ghost.erased (list (raw_data_item & raw_data_item)))
+  requires pts_to pc #pr c ** PM.seq_list_match c r (cbor_match_map_entry pm) ** pure (Seq.length c == U64.v len.value)
+  returns res: cbor_raw
+  ensures exists* r' .
+    cbor_match 1.0R res (Map len r') **
+    trade
+      (cbor_match 1.0R res (Map len r'))
+      (pts_to pc #pr c ** PM.seq_list_match c r (cbor_match_map_entry pm)) **
+    pure (Ghost.reveal r == r')
+{
+  S.pts_to_len pc;
+  PM.seq_list_match_length (cbor_match_map_entry pm) c r;
+  let res' = {
+    cbor_map_length_size = len.size;
+    cbor_map_ptr = pc;
+    cbor_map_array_perm = pr /. 2.0R;
+    cbor_map_payload_perm = pm;
+  };
+  S.share pc;
+  rewrite (pts_to pc #(pr /. 2.0R) c)
+    as (pts_to res'.cbor_map_ptr #(1.0R `perm_mul` res'.cbor_map_array_perm) c);
+  fold (cbor_match_map 1.0R res' (Map len r));
+  intro
+    (Trade.trade
+      (cbor_match_map 1.0R res' (Map len r))
+      (pts_to pc #pr c **
+        PM.seq_list_match c r (cbor_match_map_entry pm)
+      )
+    )
+    #(pts_to pc #(pr /. 2.0R) c)
+    fn _
+  {
+    unfold (cbor_match_map 1.0R res' (Map len r));
+    with c' . assert (pts_to res'.cbor_map_ptr #(1.0R `perm_mul` res'.cbor_map_array_perm) c');
+    rewrite (pts_to res'.cbor_map_ptr #res'.cbor_map_array_perm c')
+      as (pts_to pc #(pr /. 2.0R) c');
+    S.gather pc;
+    with v _x _y.
+      assert PM.seq_list_match #cbor_map_entry #(raw_data_item & raw_data_item) v _x _y;
+    rewrite each v as c;
+    ()
+  };
+  cbor_match_map_map0_trade res' 1.0R (Map len r);
+  Trade.trans _ (cbor_match_map 1.0R res' (Map len r)) _;
+  cbor_match_eq_map0 1.0R res' (Map len r);
+  let res = CBOR_Case_Map res';
+  Trade.rewrite_with_trade
+    (cbor_match_map0 res' 1.0R (Map len r) cbor_match)
+    (cbor_match 1.0R res (Map len r));
+  Trade.trans (cbor_match 1.0R res (Map len r)) _ _;
+  res
+}
+
+let cbor_string_reset_perm (p: perm) (c: cbor_string) : cbor_string = {
+  c with cbor_string_perm = p `perm_mul` c.cbor_string_perm
+}
+
+let cbor_serialized_reset_perm (p: perm) (c: cbor_serialized) : cbor_serialized = {
+  c with cbor_serialized_perm = p `perm_mul` c.cbor_serialized_perm
+}
+
+let cbor_tagged_reset_perm (p: perm) (c: cbor_tagged) : cbor_tagged = {
+  c with
+    cbor_tagged_ref_perm = p `perm_mul` c.cbor_tagged_ref_perm;
+    cbor_tagged_payload_perm = p `perm_mul` c.cbor_tagged_payload_perm
+}
+
+let cbor_array_reset_perm (p: perm) (c: cbor_array) : cbor_array = {
+  c with
+    cbor_array_array_perm = p `perm_mul` c.cbor_array_array_perm;
+    cbor_array_payload_perm = p `perm_mul` c.cbor_array_payload_perm;
+}
+
+let cbor_map_reset_perm (p: perm) (c: cbor_map) : cbor_map = {
+  c with
+    cbor_map_array_perm = p `perm_mul` c.cbor_map_array_perm;
+    cbor_map_payload_perm = p `perm_mul` c.cbor_map_payload_perm;
+}
+
+let cbor_raw_reset_perm_tot (p: perm) (c: cbor_raw) : cbor_raw = match c with
+| CBOR_Case_String v -> CBOR_Case_String (cbor_string_reset_perm p v)
+| CBOR_Case_Tagged v -> CBOR_Case_Tagged (cbor_tagged_reset_perm p v)
+| CBOR_Case_Array v -> CBOR_Case_Array (cbor_array_reset_perm p v)
+| CBOR_Case_Map v -> CBOR_Case_Map (cbor_map_reset_perm p v)
+| CBOR_Case_Serialized_Tagged v -> CBOR_Case_Serialized_Tagged (cbor_serialized_reset_perm p v)
+| CBOR_Case_Serialized_Array v -> CBOR_Case_Serialized_Array (cbor_serialized_reset_perm p v)
+| CBOR_Case_Serialized_Map v -> CBOR_Case_Serialized_Map (cbor_serialized_reset_perm p v)
+| _ -> c
+
+let perm_q_p_r (q p r: perm) : Lemma
+  (q *. ((p /. q) *. r) == p *. r)
+= ()
+
+ghost
+fn cbor_string_reset_perm_correct
+  (p: perm)
+  (c: cbor_string)
+  (r: raw_data_item)
+  (q: perm)
+  requires
+    cbor_match_string c p r
+  ensures
+    cbor_match_string (cbor_string_reset_perm (p /. q) c) q r **
+    trade
+      (cbor_match_string (cbor_string_reset_perm (p /. q) c) q r)
+      (cbor_match_string c p r)
+{
+  perm_q_p_r q p c.cbor_string_perm;
+  let c' = cbor_string_reset_perm (p /. q) c;
+  unfold (cbor_match_string c p r);
+  rewrite each c.cbor_string_ptr as c'.cbor_string_ptr;
+  fold (cbor_match_string c' q r);
+  intro
+    (Trade.trade
+      (cbor_match_string c' q r)
+      (cbor_match_string c p r)
+    )
+    #emp
+    fn _
+  {
+    unfold (cbor_match_string c' q r);
+    rewrite each c'.cbor_string_ptr as c.cbor_string_ptr;
+    fold (cbor_match_string c p r)
+  };
+  rewrite each c' as cbor_string_reset_perm (p /. q) c;
+}
+
+ghost
+fn cbor_tagged_reset_perm_correct
+  (p: perm)
+  (c: cbor_tagged)
+  (r: raw_data_item { Tagged? r })
+  (q: perm)
+  requires
+    cbor_match_tagged c p r cbor_match
+  ensures
+    cbor_match_tagged (cbor_tagged_reset_perm (p /. q) c) q r cbor_match **
+    trade
+      (cbor_match_tagged (cbor_tagged_reset_perm (p /. q) c) q r cbor_match)
+      (cbor_match_tagged c p r cbor_match)
+{
+  perm_q_p_r q p c.cbor_tagged_ref_perm;
+  perm_q_p_r q p c.cbor_tagged_payload_perm;
+  let c' = cbor_tagged_reset_perm (p /. q) c;
+  unfold (cbor_match_tagged c p r cbor_match);
+  with s . assert (pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) s);
+  rewrite (pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) s)
+    as (pts_to c'.cbor_tagged_ptr #(q `perm_mul` c'.cbor_tagged_ref_perm) s);
+  with c_ . rewrite
+    cbor_match (perm_mul p c.cbor_tagged_payload_perm) c_ (Tagged?.v r)
+  as
+    cbor_match (perm_mul q c'.cbor_tagged_payload_perm) c_ (Tagged?.v r);
+  fold (cbor_match_tagged c' q r cbor_match);
+  intro
+    (Trade.trade
+      (cbor_match_tagged c' q r cbor_match)
+      (cbor_match_tagged c p r cbor_match)
+    )
+    #emp
+    fn _
+  {
+    unfold (cbor_match_tagged c' q r);
+    with s . assert (pts_to c'.cbor_tagged_ptr #(q `perm_mul` c'.cbor_tagged_ref_perm) s);
+    rewrite (pts_to c'.cbor_tagged_ptr #(q `perm_mul` c'.cbor_tagged_ref_perm) s)
+      as (pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) s);
+  with c_ . rewrite  cbor_match (perm_mul q c'.cbor_tagged_payload_perm) c_ (Tagged?.v r)
+    as cbor_match (perm_mul p c.cbor_tagged_payload_perm) c_ (Tagged?.v r);
+    fold (cbor_match_tagged c p r cbor_match);
+    ()
+  };
+  rewrite each c' as cbor_tagged_reset_perm (p /. q) c;
+}
+
+ghost
+fn cbor_array_reset_perm_correct
+  (p: perm)
+  (c: cbor_array)
+  (r: raw_data_item { Array? r })
+  (q: perm)
+  requires
+    cbor_match_array c p r cbor_match
+  ensures
+    cbor_match_array (cbor_array_reset_perm (p /. q) c) q r cbor_match **
+    trade
+      (cbor_match_array (cbor_array_reset_perm (p /. q) c) q r cbor_match)
+      (cbor_match_array c p r cbor_match)
+{
+  perm_q_p_r q p c.cbor_array_array_perm;
+  perm_q_p_r q p c.cbor_array_payload_perm;
+  let c' = cbor_array_reset_perm (p /. q) c;
+  unfold (cbor_match_array c p r cbor_match);
+  with s . assert (pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) s);
+  rewrite (pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) s)
+    as (pts_to c'.cbor_array_ptr #(q `perm_mul` c'.cbor_array_array_perm) s);
+  fold (cbor_match_array c' q r cbor_match);
+  intro
+    (Trade.trade
+      (cbor_match_array c' q r cbor_match)
+      (cbor_match_array c p r cbor_match)
+    )
+    #emp
+    fn _
+  {
+    unfold (cbor_match_array c' q r);
+    with s . assert (pts_to c'.cbor_array_ptr #(q `perm_mul` c'.cbor_array_array_perm) s);
+    rewrite (pts_to c'.cbor_array_ptr #(q `perm_mul` c'.cbor_array_array_perm) s)
+      as (pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) s);
+    fold (cbor_match_array c p r cbor_match)
+  };
+  rewrite each c' as cbor_array_reset_perm (p /. q) c;
+}
+
+ghost
+fn cbor_map_reset_perm_correct
+  (p: perm)
+  (c: cbor_map)
+  (r: raw_data_item { Map? r })
+  (q: perm)
+  requires
+    cbor_match_map0 c p r cbor_match
+  ensures
+    cbor_match_map0 (cbor_map_reset_perm (p /. q) c) q r cbor_match **
+    trade
+      (cbor_match_map0 (cbor_map_reset_perm (p /. q) c) q r cbor_match)
+      (cbor_match_map0 c p r cbor_match)
+{
+  perm_q_p_r q p c.cbor_map_array_perm;
+  perm_q_p_r q p c.cbor_map_payload_perm;
+  let c' = cbor_map_reset_perm (p /. q) c;
+  unfold (cbor_match_map0 c p r cbor_match);
+  with s . assert (pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) s);
+  rewrite (pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) s)
+    as (pts_to c'.cbor_map_ptr #(q `perm_mul` c'.cbor_map_array_perm) s);
+  fold (cbor_match_map0 c' q r cbor_match);
+  intro
+    (Trade.trade
+      (cbor_match_map0 c' q r cbor_match)
+      (cbor_match_map0 c p r cbor_match)
+    )
+    #emp
+    fn _
+  {
+    unfold (cbor_match_map0 c' q r);
+    with s . assert (pts_to c'.cbor_map_ptr #(q `perm_mul` c'.cbor_map_array_perm) s);
+    rewrite (pts_to c'.cbor_map_ptr #(q `perm_mul` c'.cbor_map_array_perm) s)
+      as (pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) s);
+    fold (cbor_match_map0 c p r cbor_match)
+  };
+  rewrite each c' as cbor_map_reset_perm (p /. q) c;
+}
+
+ghost
+fn cbor_raw_reset_perm_correct
+  (p: perm)
+  (c: cbor_raw)
+  (r: raw_data_item)
+  (q: perm)
+  requires
+    cbor_match p c r
+  ensures
+    cbor_match q (cbor_raw_reset_perm_tot (p /. q) c) r **
+    trade
+      (cbor_match q (cbor_raw_reset_perm_tot (p /. q) c) r)
+      (cbor_match p c r)
+{
+  cbor_match_cases c;
+  let c' = cbor_raw_reset_perm_tot (p /. q) c;
+  match c {
+    norewrite
+    CBOR_Case_String v -> {
+      Trade.rewrite_with_trade
+        (cbor_match p c r)
+        (cbor_match_string v p r);
+        cbor_string_reset_perm_correct p v r q;
+        Trade.trans _ _ (cbor_match p c r);
+        Trade.rewrite_with_trade
+          (cbor_match_string (cbor_string_reset_perm (p /. q) v) q r)
+          (cbor_match q c' r);
+        rewrite each c' as (cbor_raw_reset_perm_tot (p /. q) c);
+        Trade.trans _ _ (cbor_match p c r)
+    }
+    norewrite
+    CBOR_Case_Int v -> {
+      Trade.rewrite_with_trade
+        (cbor_match p c r)
+        (cbor_match_int v r);
+      Trade.rewrite_with_trade
+        (cbor_match_int v r)
+        (cbor_match q (cbor_raw_reset_perm_tot (p /. q) c) r);
+      Trade.trans _ _ (cbor_match p c r)
+    }
+    norewrite
+    CBOR_Case_Simple v -> {
+      Trade.rewrite_with_trade
+        (cbor_match p c r)
+        (cbor_match_simple v r);
+      Trade.rewrite_with_trade
+        (cbor_match_simple v r)
+        (cbor_match q (cbor_raw_reset_perm_tot (p /. q) c) r);
+      Trade.trans _ _ (cbor_match p c r)
+    }
+    norewrite
+    CBOR_Case_Tagged v -> {
+      cbor_match_eq_tagged p v r;
+      cbor_match_eq_tagged q (cbor_tagged_reset_perm (p /. q) v) r;
+      Trade.rewrite_with_trade
+        (cbor_match p c r)
+        (cbor_match_tagged v p r cbor_match);
+      cbor_tagged_reset_perm_correct p v r q;
+      Trade.trans _ _ (cbor_match p c r);
+      Trade.rewrite_with_trade
+        (cbor_match_tagged (cbor_tagged_reset_perm (p /. q) v) q r cbor_match)
+        (cbor_match q c' r);
+      rewrite each c' as (cbor_raw_reset_perm_tot (p /. q) c);
+      Trade.trans _ _ (cbor_match p c r)
+    }
+    norewrite
+    CBOR_Case_Array v -> {
+      cbor_match_eq_array p v r;
+      cbor_match_eq_array q (cbor_array_reset_perm (p /. q) v) r;
+      Trade.rewrite_with_trade
+        (cbor_match p c r)
+        (cbor_match_array v p r cbor_match);
+      cbor_array_reset_perm_correct p v r q;
+      Trade.trans _ _ (cbor_match p c r);
+      Trade.rewrite_with_trade
+        (cbor_match_array (cbor_array_reset_perm (p /. q) v) q r cbor_match)
+        (cbor_match q c' r);
+      rewrite each c' as (cbor_raw_reset_perm_tot (p /. q) c);
+      Trade.trans _ _ (cbor_match p c r)
+    }
+    norewrite
+    CBOR_Case_Map v -> {
+      cbor_match_eq_map0 p v r;
+      cbor_match_eq_map0 q (cbor_map_reset_perm (p /. q) v) r;
+      Trade.rewrite_with_trade
+        (cbor_match p c r)
+        (cbor_match_map0 v p r cbor_match);
+      cbor_map_reset_perm_correct p v r q;
+      Trade.trans _ _ (cbor_match p c r);
+      Trade.rewrite_with_trade
+        (cbor_match_map0 (cbor_map_reset_perm (p /. q) v) q r cbor_match)
+        (cbor_match q c' r);
+      rewrite each c' as (cbor_raw_reset_perm_tot (p /. q) c);
+      Trade.trans _ _ (cbor_match p c r)
+    }
+    norewrite
+    CBOR_Case_Serialized_Tagged s -> {
+      perm_q_p_r q p s.cbor_serialized_perm;
+      Trade.rewrite_with_trade
+        (cbor_match p c r)
+        (cbor_match q (cbor_raw_reset_perm_tot (p /. q) c) r)
+    }
+    norewrite
+    CBOR_Case_Serialized_Array s -> {
+      perm_q_p_r q p s.cbor_serialized_perm;
+      Trade.rewrite_with_trade
+        (cbor_match p c r)
+        (cbor_match q (cbor_raw_reset_perm_tot (p /. q) c) r)
+    }
+    norewrite
+    CBOR_Case_Serialized_Map s -> {
+      perm_q_p_r q p s.cbor_serialized_perm;
+      Trade.rewrite_with_trade
+        (cbor_match p c r)
+        (cbor_match q (cbor_raw_reset_perm_tot (p /. q) c) r)
+    }
+  }
+}
+
+inline_for_extraction
+fn cbor_raw_reset_perm
+  (p: perm)
+  (c: cbor_raw)
+  (r: Ghost.erased raw_data_item)
+  (q: perm)
+  requires
+    cbor_match p c r
+  returns c' : cbor_raw
+  ensures
+    cbor_match q c' r **
+    trade
+      (cbor_match q c' r)
+      (cbor_match p c r)
+{
+  cbor_raw_reset_perm_correct p c r q;
+  cbor_raw_reset_perm_tot (p /. q) c
+}
+
+fn cbor_mk_map_entry
+  (xk: cbor_raw)
+  (xv: cbor_raw)
+  (#pk: perm)
+  (#vk: Ghost.erased raw_data_item)
+  (#pv: perm)
+  (#vv: Ghost.erased raw_data_item)
+requires
+    (cbor_match pk xk vk ** cbor_match pv xv vv)
+returns res: cbor_map_entry
+ensures
+    (
+      cbor_match_map_entry 1.0R res (Ghost.reveal vk, Ghost.reveal vv) **
+      Trade.trade
+        (cbor_match_map_entry 1.0R res (Ghost.reveal vk, Ghost.reveal vv))
+        (cbor_match pk xk vk ** cbor_match pv xv vv)
+    )
+{
+  let res : cbor_map_entry = {
+    cbor_map_entry_key = cbor_raw_reset_perm_tot pk xk;
+    cbor_map_entry_value = cbor_raw_reset_perm_tot pv xv;
+  };
+  cbor_raw_reset_perm_correct pk xk vk 1.0R;
+  cbor_raw_reset_perm_correct pv xv vv 1.0R;
+  Trade.rewrite_with_trade
+    (cbor_match 1.0R (cbor_raw_reset_perm_tot (pk /. 1.0R) xk) vk ** cbor_match 1.0R (cbor_raw_reset_perm_tot (pv /. 1.0R) xv) vv)
+    (cbor_match_map_entry 1.0R res (Ghost.reveal vk, Ghost.reveal vv));
+  Trade.trans_concl_l (cbor_match_map_entry 1.0R res (Ghost.reveal vk, Ghost.reveal vv)) _ _ _; 
+  Trade.trans_concl_r (cbor_match_map_entry 1.0R res (Ghost.reveal vk, Ghost.reveal vv)) _ _ _; 
+  res
+}
+
+(* Depth-indexed view of [cbor_match].
+
+   [cbor_match_with_depth n p c r] is [cbor_match p c r] together with the
+   information that the *non-serialized* (inline) part of [c] has depth at most
+   [n]: every inline [CBOR_Case_{Array,Map,Tagged}] constructor consumes one unit
+   of fuel, while leaves ([CBOR_Case_{Int,Simple,String}]) and the serialized
+   cases ([CBOR_Case_Serialized_*]) consume none.
+
+   Inspired by EverParse PR 291 (LowParse.PulseParse.Iterator's [mixed_list_match_n],
+   a depth-indexed recursive slprop). Since [cbor_raw] carries no depth field, [n]
+   is a separate fuel argument; we still recurse structurally on [r] (as [cbor_match]
+   does), and the callback is passed *partially applied* so that the unfolding
+   lemmas below normalize without looping. *)
+
+let rec cbor_match_with_depth
+  (n: nat)
+  (p: perm)
+  (c: cbor_raw)
+  (r: raw_data_item)
+: Tot slprop
+  (decreases r)
+= cbor_match0 p c r
+    ((if n = 0
+      then (fun (_: perm) (_: cbor_raw) (_: raw_data_item) -> pure False)
+      else cbor_match_with_depth (n - 1))
+     <: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+
+let cbor_match_with_depth_eq_array
+  (n: nat)
+  (pm: perm)
+  (ct: cbor_array)
+  (r: raw_data_item)
+: Lemma
+  (requires (Array? r))
+  (ensures
+    cbor_match_with_depth n pm (CBOR_Case_Array ct) r ==
+    cbor_match_array ct pm r
+      ((if n = 0
+        then (fun (_: perm) (_: cbor_raw) (_: raw_data_item) -> pure False)
+        else cbor_match_with_depth (n - 1))
+       <: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+  )
+= assert_norm (cbor_match_with_depth n pm (CBOR_Case_Array ct) (Array (Array?.len r) (Array?.v r)) ==
+    cbor_match_array ct pm (Array (Array?.len r) (Array?.v r))
+      ((if n = 0
+        then (fun (_: perm) (_: cbor_raw) (_: raw_data_item) -> pure False)
+        else cbor_match_with_depth (n - 1))
+       <: (perm -> cbor_raw -> (v': raw_data_item { v' << Array (Array?.len r) (Array?.v r) }) -> slprop))
+  )
+
+let cbor_match_with_depth_eq_map0
+  (n: nat)
+  (pm: perm)
+  (ct: cbor_map)
+  (r: raw_data_item)
+: Lemma
+  (requires (Map? r))
+  (ensures
+    cbor_match_with_depth n pm (CBOR_Case_Map ct) r ==
+    cbor_match_map0 ct pm r
+      ((if n = 0
+        then (fun (_: perm) (_: cbor_raw) (_: raw_data_item) -> pure False)
+        else cbor_match_with_depth (n - 1))
+       <: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+  )
+= assert_norm (cbor_match_with_depth n pm (CBOR_Case_Map ct) (Map (Map?.len r) (Map?.v r)) ==
+    cbor_match_map0 ct pm (Map (Map?.len r) (Map?.v r))
+      ((if n = 0
+        then (fun (_: perm) (_: cbor_raw) (_: raw_data_item) -> pure False)
+        else cbor_match_with_depth (n - 1))
+       <: (perm -> cbor_raw -> (v': raw_data_item { v' << Map (Map?.len r) (Map?.v r) }) -> slprop))
+  )
+
+let cbor_match_with_depth_eq_tagged
+  (n: nat)
+  (pm: perm)
+  (ct: cbor_tagged)
+  (r: raw_data_item)
+: Lemma
+  (requires (Tagged? r))
+  (ensures
+    cbor_match_with_depth n pm (CBOR_Case_Tagged ct) r ==
+    cbor_match_tagged ct pm r
+      ((if n = 0
+        then (fun (_: perm) (_: cbor_raw) (_: raw_data_item) -> pure False)
+        else cbor_match_with_depth (n - 1))
+       <: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+  )
+= let Tagged tag v = r in
+  assert_norm (cbor_match_with_depth n pm (CBOR_Case_Tagged ct) (Tagged tag v) ==
+    cbor_match_tagged ct pm (Tagged tag v)
+      ((if n = 0
+        then (fun (_: perm) (_: cbor_raw) (_: raw_data_item) -> pure False)
+        else cbor_match_with_depth (n - 1))
+       <: (perm -> cbor_raw -> (v': raw_data_item { v' << Tagged tag v }) -> slprop))
+  )
+
+// ===== PURE forward size-bound helpers (robust, no << inversion) =====
+let size_array_elt (r: raw_data_item { Array? r }) (e: raw_data_item)
+  : Lemma (requires List.Tot.memP e (Array?.v r)) (ensures raw_data_item_size e < raw_data_item_size r)
+= raw_data_item_size_eq r;
+  CBOR.Spec.Util.list_sum_memP raw_data_item_size (Array?.v r) e
+
+let size_map_entry (r: raw_data_item { Map? r }) (e: (raw_data_item & raw_data_item))
+  : Lemma (requires List.Tot.memP e (Map?.v r))
+          (ensures raw_data_item_size (fst e) < raw_data_item_size r /\ raw_data_item_size (snd e) < raw_data_item_size r)
+= raw_data_item_size_eq r;
+  CBOR.Spec.Util.list_sum_memP (CBOR.Spec.Util.pair_sum raw_data_item_size raw_data_item_size) (Map?.v r) e
+
+let size_tagged_child (r: raw_data_item { Tagged? r })
+  : Lemma (raw_data_item_size (Tagged?.v r) < raw_data_item_size r)
+= raw_data_item_size_eq r
+
+// ===== Generic eq lemmas: cbor_match0 p (CBOR_Case_X ct) r cm == cbor_match_X ct p r cm =====
+let cbor_match0_eq_array (p: perm) (ct: cbor_array) (r: raw_data_item)
+  (cm: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+  : Lemma (requires Array? r) (ensures cbor_match0 p (CBOR_Case_Array ct) r cm == cbor_match_array ct p r cm)
+= assert_norm (cbor_match0 p (CBOR_Case_Array ct) (Array (Array?.len r) (Array?.v r))
+      (cm <: (perm -> cbor_raw -> (v': raw_data_item { v' << Array (Array?.len r) (Array?.v r) }) -> slprop))
+    == cbor_match_array ct p (Array (Array?.len r) (Array?.v r))
+      (cm <: (perm -> cbor_raw -> (v': raw_data_item { v' << Array (Array?.len r) (Array?.v r) }) -> slprop)))
+
+// ===== Generic cases dispatch for cbor_match0 =====
+ghost fn cbor_match0_cases (p: perm) (c: cbor_raw) (r: raw_data_item)
+  (cm: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+  requires cbor_match0 p c r cm
+  ensures cbor_match0 p c r cm ** pure (cbor_match_cases_pred c r)
+{
+  if cbor_match_cases_pred c r { () }
+  else {
+    rewrite (cbor_match0 p c r cm) as (pure False);
+    rewrite emp as (cbor_match0 p c r cm)
+  }
+}
+
+// ===== list membership helpers =====
+let memP_hd (#t: Type) (v: list t) : Lemma (requires Cons? v) (ensures List.Tot.memP (List.Tot.hd v) v) = ()
+let memP_tl_mono (#t: Type) (v: list t) (x: t) : Lemma (requires Cons? v /\ List.Tot.memP x (List.Tot.tl v)) (ensures List.Tot.memP x v) = ()
+
+// ===== membership-threading seq_list_match converter =====
+ghost fn rec seq_list_match_conv
+  (#t #t': Type0)
+  (c: Seq.seq t)
+  (v: list t')
+  (im1 im2: (t -> (v': t' { v' << v }) -> slprop))
+  (prf: (
+    (c': t) ->
+    (v': t' { v' << v /\ List.Tot.memP v' v }) ->
+    stt_ghost unit emp_inames (im1 c' v') (fun _ -> im2 c' v')
+  ))
+  requires PM.seq_list_match c v im1
+  ensures PM.seq_list_match c v im2
+  decreases v
+{
+  if Nil? v {
+    PM.seq_list_match_nil_elim c v im1;
+    PM.seq_list_match_nil_intro c v im2;
+  } else {
+    PM.seq_list_match_cons_elim c v im1;
+    memP_hd v;
+    prf (Seq.head c) (List.Tot.hd v);
+    ghost fn prf'
+      (c': t)
+      (v': t' { v' << List.Tot.tl v /\ List.Tot.memP v' (List.Tot.tl v) })
+      requires im1 c' v'
+      ensures im2 c' v'
+    {
+      memP_tl_mono v v';
+      prf c' v'
+    };
+    seq_list_match_conv (Seq.tail c) (List.Tot.tl v) im1 im2 prf';
+    Seq.cons_head_tail c;
+    PM.seq_list_match_cons_intro (Seq.head c) (List.Tot.hd v) (Seq.tail c) (List.Tot.tl v) im2;
+    rewrite each Seq.cons (Seq.head c) (Seq.tail c) as c;
+  }
+}
+
+let cbor_match0_eq_map0 (p: perm) (ct: cbor_map) (r: raw_data_item)
+  (cm: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+  : Lemma (requires Map? r) (ensures cbor_match0 p (CBOR_Case_Map ct) r cm == cbor_match_map0 ct p r cm)
+= assert_norm (cbor_match0 p (CBOR_Case_Map ct) (Map (Map?.len r) (Map?.v r))
+      (cm <: (perm -> cbor_raw -> (v': raw_data_item { v' << Map (Map?.len r) (Map?.v r) }) -> slprop))
+    == cbor_match_map0 ct p (Map (Map?.len r) (Map?.v r))
+      (cm <: (perm -> cbor_raw -> (v': raw_data_item { v' << Map (Map?.len r) (Map?.v r) }) -> slprop)))
+
+let cbor_match0_eq_tagged (p: perm) (ct: cbor_tagged) (r: raw_data_item)
+  (cm: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+  : Lemma (requires Tagged? r) (ensures cbor_match0 p (CBOR_Case_Tagged ct) r cm == cbor_match_tagged ct p r cm)
+= let Tagged tag v = r in
+  assert_norm (cbor_match0 p (CBOR_Case_Tagged ct) (Tagged tag v)
+      (cm <: (perm -> cbor_raw -> (v': raw_data_item { v' << Tagged tag v }) -> slprop))
+    == cbor_match_tagged ct p (Tagged tag v)
+      (cm <: (perm -> cbor_raw -> (v': raw_data_item { v' << Tagged tag v }) -> slprop)))
+
+let cbor_match0_eq_int (p: perm) (ct: cbor_int) (r: raw_data_item)
+  (cm: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+  : Lemma (requires Int64? r) (ensures cbor_match0 p (CBOR_Case_Int ct) r cm == cbor_match_int ct r)
+= assert_norm (cbor_match0 p (CBOR_Case_Int ct) (Int64 (Int64?.typ r) (Int64?.v r))
+      (cm <: (perm -> cbor_raw -> (v': raw_data_item { v' << Int64 (Int64?.typ r) (Int64?.v r) }) -> slprop))
+    == cbor_match_int ct (Int64 (Int64?.typ r) (Int64?.v r)))
+
+let cbor_match0_eq_simple (p: perm) (ct: simple_value) (r: raw_data_item)
+  (cm: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+  : Lemma (requires Simple? r) (ensures cbor_match0 p (CBOR_Case_Simple ct) r cm == cbor_match_simple ct r)
+= assert_norm (cbor_match0 p (CBOR_Case_Simple ct) (Simple (Simple?.v r))
+      (cm <: (perm -> cbor_raw -> (v': raw_data_item { v' << Simple (Simple?.v r) }) -> slprop))
+    == cbor_match_simple ct (Simple (Simple?.v r)))
+
+let cbor_match0_eq_string (p: perm) (ct: cbor_string) (r: raw_data_item)
+  (cm: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+  : Lemma (requires String? r) (ensures cbor_match0 p (CBOR_Case_String ct) r cm == cbor_match_string ct p r)
+= assert_norm (cbor_match0 p (CBOR_Case_String ct) (String (String?.typ r) (String?.len r) (String?.v r))
+      (cm <: (perm -> cbor_raw -> (v': raw_data_item { v' << String (String?.typ r) (String?.len r) (String?.v r) }) -> slprop))
+    == cbor_match_string ct p (String (String?.typ r) (String?.len r) (String?.v r)))
+
+let cbor_match0_eq_ser_array (p: perm) (ct: cbor_serialized) (r: raw_data_item)
+  (cm: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+  : Lemma (requires Array? r) (ensures cbor_match0 p (CBOR_Case_Serialized_Array ct) r cm == cbor_match_serialized_array ct p r)
+= assert_norm (cbor_match0 p (CBOR_Case_Serialized_Array ct) (Array (Array?.len r) (Array?.v r))
+      (cm <: (perm -> cbor_raw -> (v': raw_data_item { v' << Array (Array?.len r) (Array?.v r) }) -> slprop))
+    == cbor_match_serialized_array ct p (Array (Array?.len r) (Array?.v r)))
+
+let cbor_match0_eq_ser_map (p: perm) (ct: cbor_serialized) (r: raw_data_item)
+  (cm: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+  : Lemma (requires Map? r) (ensures cbor_match0 p (CBOR_Case_Serialized_Map ct) r cm == cbor_match_serialized_map ct p r)
+= assert_norm (cbor_match0 p (CBOR_Case_Serialized_Map ct) (Map (Map?.len r) (Map?.v r))
+      (cm <: (perm -> cbor_raw -> (v': raw_data_item { v' << Map (Map?.len r) (Map?.v r) }) -> slprop))
+    == cbor_match_serialized_map ct p (Map (Map?.len r) (Map?.v r)))
+
+let cbor_match0_eq_ser_tagged (p: perm) (ct: cbor_serialized) (r: raw_data_item)
+  (cm: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+  : Lemma (requires Tagged? r) (ensures cbor_match0 p (CBOR_Case_Serialized_Tagged ct) r cm == cbor_match_serialized_tagged ct p r)
+= let Tagged tag v = r in
+  assert_norm (cbor_match0 p (CBOR_Case_Serialized_Tagged ct) (Tagged tag v)
+      (cm <: (perm -> cbor_raw -> (v': raw_data_item { v' << Tagged tag v }) -> slprop))
+    == cbor_match_serialized_tagged ct p (Tagged tag v))
+
+// ===== generic callback weakening for cbor_match0 (provides size bound to imp) =====
+ghost fn cbor_match0_weaken
+  (p: perm) (c: cbor_raw) (r: raw_data_item)
+  (cm1 cm2: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+  (imp: (
+    (p': perm) ->
+    (c': cbor_raw) ->
+    (v': raw_data_item { v' << r /\ raw_data_item_size v' < raw_data_item_size r }) ->
+    stt_ghost unit emp_inames (cm1 p' c' v') (fun _ -> cm2 p' c' v')
+  ))
+  requires cbor_match0 p c r cm1
+  ensures cbor_match0 p c r cm2
+{
+  cbor_match0_cases p c r cm1;
+  match c {
+    norewrite
+    CBOR_Case_Array ct -> {
+      cbor_match0_eq_array p ct r cm1;
+      rewrite (cbor_match0 p c r cm1) as (cbor_match_array ct p r cm1);
+      unfold (cbor_match_array ct p r cm1);
+      with vseq. assert (PM.seq_list_match vseq (Array?.v r) (cm1 (p `perm_mul` ct.cbor_array_payload_perm)));
+      ghost fn arr_prf
+        (c': cbor_raw)
+        (v': raw_data_item { v' << Array?.v r /\ List.Tot.memP v' (Array?.v r) })
+        requires cm1 (p `perm_mul` ct.cbor_array_payload_perm) c' v'
+        ensures cm2 (p `perm_mul` ct.cbor_array_payload_perm) c' v'
+      {
+        size_array_elt r v';
+        imp (p `perm_mul` ct.cbor_array_payload_perm) c' v'
+      };
+      seq_list_match_conv vseq (Array?.v r)
+        (cm1 (p `perm_mul` ct.cbor_array_payload_perm))
+        (cm2 (p `perm_mul` ct.cbor_array_payload_perm))
+        arr_prf;
+      fold (cbor_match_array ct p r cm2);
+      cbor_match0_eq_array p ct r cm2;
+      rewrite (cbor_match_array ct p r cm2) as (cbor_match0 p c r cm2);
+    }
+    norewrite
+    CBOR_Case_Map ct -> {
+      cbor_match0_eq_map0 p ct r cm1;
+      rewrite (cbor_match0 p c r cm1) as (cbor_match_map0 ct p r cm1);
+      unfold (cbor_match_map0 ct p r cm1);
+      with vseq. assert (PM.seq_list_match vseq (Map?.v r) (cbor_match_map_entry0 r (cm1 (p `perm_mul` ct.cbor_map_payload_perm))));
+      ghost fn map_prf
+        (c': cbor_map_entry)
+        (pr: (raw_data_item & raw_data_item) { pr << Map?.v r /\ List.Tot.memP pr (Map?.v r) })
+        requires cbor_match_map_entry0 r (cm1 (p `perm_mul` ct.cbor_map_payload_perm)) c' pr
+        ensures cbor_match_map_entry0 r (cm2 (p `perm_mul` ct.cbor_map_payload_perm)) c' pr
+      {
+        size_map_entry r pr;
+        unfold (cbor_match_map_entry0 r (cm1 (p `perm_mul` ct.cbor_map_payload_perm)) c' pr);
+        imp (p `perm_mul` ct.cbor_map_payload_perm) c'.cbor_map_entry_key (fst pr);
+        imp (p `perm_mul` ct.cbor_map_payload_perm) c'.cbor_map_entry_value (snd pr);
+        fold (cbor_match_map_entry0 r (cm2 (p `perm_mul` ct.cbor_map_payload_perm)) c' pr);
+      };
+      seq_list_match_conv vseq (Map?.v r)
+        (cbor_match_map_entry0 r (cm1 (p `perm_mul` ct.cbor_map_payload_perm)))
+        (cbor_match_map_entry0 r (cm2 (p `perm_mul` ct.cbor_map_payload_perm)))
+        map_prf;
+      fold (cbor_match_map0 ct p r cm2);
+      cbor_match0_eq_map0 p ct r cm2;
+      rewrite (cbor_match_map0 ct p r cm2) as (cbor_match0 p c r cm2);
+    }
+    norewrite
+    CBOR_Case_Tagged ct -> {
+      cbor_match0_eq_tagged p ct r cm1;
+      rewrite (cbor_match0 p c r cm1) as (cbor_match_tagged ct p r cm1);
+      unfold (cbor_match_tagged ct p r cm1);
+      with cc. assert (cm1 (p `perm_mul` ct.cbor_tagged_payload_perm) cc (Tagged?.v r));
+      size_tagged_child r;
+      imp (p `perm_mul` ct.cbor_tagged_payload_perm) cc (Tagged?.v r);
+      fold (cbor_match_tagged ct p r cm2);
+      cbor_match0_eq_tagged p ct r cm2;
+      rewrite (cbor_match_tagged ct p r cm2) as (cbor_match0 p c r cm2);
+    }
+    norewrite
+    CBOR_Case_Int ct -> {
+      cbor_match0_eq_int p ct r cm1;
+      cbor_match0_eq_int p ct r cm2;
+      rewrite (cbor_match0 p c r cm1) as (cbor_match_int ct r);
+      rewrite (cbor_match_int ct r) as (cbor_match0 p c r cm2);
+    }
+    norewrite
+    CBOR_Case_Simple ct -> {
+      cbor_match0_eq_simple p ct r cm1;
+      cbor_match0_eq_simple p ct r cm2;
+      rewrite (cbor_match0 p c r cm1) as (cbor_match_simple ct r);
+      rewrite (cbor_match_simple ct r) as (cbor_match0 p c r cm2);
+    }
+    norewrite
+    CBOR_Case_String ct -> {
+      cbor_match0_eq_string p ct r cm1;
+      cbor_match0_eq_string p ct r cm2;
+      rewrite (cbor_match0 p c r cm1) as (cbor_match_string ct p r);
+      rewrite (cbor_match_string ct p r) as (cbor_match0 p c r cm2);
+    }
+    norewrite
+    CBOR_Case_Serialized_Array ct -> {
+      cbor_match0_eq_ser_array p ct r cm1;
+      cbor_match0_eq_ser_array p ct r cm2;
+      rewrite (cbor_match0 p c r cm1) as (cbor_match_serialized_array ct p r);
+      rewrite (cbor_match_serialized_array ct p r) as (cbor_match0 p c r cm2);
+    }
+    norewrite
+    CBOR_Case_Serialized_Map ct -> {
+      cbor_match0_eq_ser_map p ct r cm1;
+      cbor_match0_eq_ser_map p ct r cm2;
+      rewrite (cbor_match0 p c r cm1) as (cbor_match_serialized_map ct p r);
+      rewrite (cbor_match_serialized_map ct p r) as (cbor_match0 p c r cm2);
+    }
+    norewrite
+    CBOR_Case_Serialized_Tagged ct -> {
+      cbor_match0_eq_ser_tagged p ct r cm1;
+      cbor_match0_eq_ser_tagged p ct r cm2;
+      rewrite (cbor_match0 p c r cm1) as (cbor_match_serialized_tagged ct p r);
+      rewrite (cbor_match_serialized_tagged ct p r) as (cbor_match0 p c r cm2);
+    }
+  }
+}
+
+// ===== bridging callback helpers =====
+let depth_cb (n: nat) (r: raw_data_item)
+: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop)
+= (if n = 0
+   then (fun (_: perm) (_: cbor_raw) (_: raw_data_item) -> pure False)
+   else cbor_match_with_depth (n - 1))
+
+let depth_cb_eq
+  (n: nat)
+  (r: raw_data_item)
+: Lemma
+  (ensures
+    depth_cb n r ==
+      ((if n = 0
+        then (fun (_: perm) (_: cbor_raw) (_: raw_data_item) -> pure False)
+        else cbor_match_with_depth (n - 1))
+       <: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop)))
+= assert (
+    depth_cb n r ==
+      ((if n = 0
+         then (fun (_: perm) (_: cbor_raw) (_: raw_data_item) -> pure False)
+         else cbor_match_with_depth (n - 1))
+        <: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+  ) by (
+      FStar.Tactics.norm [delta_only [`%depth_cb]];
+      FStar.Tactics.trefl ()
+    )
+
+let cbor_match_with_depth_eq0 (n: nat) (p: perm) (c: cbor_raw) (r: raw_data_item)
+: Lemma (ensures cbor_match_with_depth n p c r == cbor_match0 p c r (depth_cb n r))
+= depth_cb_eq n r;
+  assert_norm (cbor_match_with_depth n p c r == cbor_match0 p c r (depth_cb n r))
+
+let cbor_match_eq0 (p: perm) (c: cbor_raw) (r: raw_data_item)
+: Lemma (ensures cbor_match p c r == cbor_match0 p c r cbor_match)
+= assert_norm (cbor_match p c r == cbor_match0 p c r cbor_match)
+
+let depth_cb_zero (r: raw_data_item) (p': perm) (c': cbor_raw) (v': raw_data_item { v' << r })
+: Lemma (ensures depth_cb 0 r p' c' v' == pure False)
+= assert_norm (depth_cb 0 r p' c' v' == pure False)
+
+let depth_cb_succ (n: nat) (r: raw_data_item) (p': perm) (c': cbor_raw) (v': raw_data_item { v' << r })
+: Lemma (requires n <> 0) (ensures depth_cb n r p' c' v' == cbor_match_with_depth (n - 1) p' c' v')
+= ()
+
+// ===== (A) forget depth =====
+ghost fn rec cbor_match_with_depth_forget (n: nat) (p: perm) (c: cbor_raw) (r: raw_data_item)
+  requires cbor_match_with_depth n p c r
+  ensures cbor_match p c r
+  decreases n
+{
+  cbor_match_with_depth_eq0 n p c r;
+  rewrite (cbor_match_with_depth n p c r) as (cbor_match0 p c r (depth_cb n r));
+  ghost fn imp
+    (p': perm) (c': cbor_raw)
+    (v': raw_data_item { v' << r /\ raw_data_item_size v' < raw_data_item_size r })
+    requires depth_cb n r p' c' v'
+    ensures cbor_match p' c' v'
+  {
+    if (n = 0) {
+      depth_cb_zero r p' c' v';
+      rewrite (depth_cb n r p' c' v') as (pure False);
+      rewrite emp as (cbor_match p' c' v');
+    } else {
+      depth_cb_succ n r p' c' v';
+      rewrite (depth_cb n r p' c' v') as (cbor_match_with_depth (n - 1) p' c' v');
+      cbor_match_with_depth_forget (n - 1) p' c' v';
+    }
+  };
+  cbor_match0_weaken p c r (depth_cb n r) cbor_match imp;
+  cbor_match_eq0 p c r;
+  rewrite (cbor_match0 p c r cbor_match) as (cbor_match p c r);
+}
+
+// ===== (B) introduce depth =====
+ghost fn rec cbor_match_to_depth (n: nat) (p: perm) (c: cbor_raw) (r: raw_data_item)
+  requires cbor_match p c r ** pure (raw_data_item_size r <= n)
+  ensures cbor_match_with_depth n p c r
+  decreases r
+{
+  cbor_match_eq0 p c r;
+  rewrite (cbor_match p c r) as (cbor_match0 p c r cbor_match);
+  ghost fn imp
+    (p': perm) (c': cbor_raw)
+    (v': raw_data_item { v' << r /\ raw_data_item_size v' < raw_data_item_size r })
+    requires cbor_match p' c' v'
+    ensures depth_cb n r p' c' v'
+  {
+    depth_cb_succ n r p' c' v';
+    cbor_match_to_depth (n - 1) p' c' v';
+    rewrite (cbor_match_with_depth (n - 1) p' c' v') as (depth_cb n r p' c' v');
+  };
+  cbor_match0_weaken p c r cbor_match (depth_cb n r) imp;
+  cbor_match_with_depth_eq0 n p c r;
+  rewrite (cbor_match0 p c r (depth_cb n r)) as (cbor_match_with_depth n p c r);
+}
+
+ghost fn cbor_match_match_with_depth (p: perm) (c: cbor_raw) (r: raw_data_item)
+  requires cbor_match p c r
+  ensures exists* (n: nat). cbor_match_with_depth n p c r
+{
+  cbor_match_to_depth (raw_data_item_size r) p c r;
+}
+
+// ===================================================================
+// Phase 0: machinery for depth-indexed open recursion (cbor_copy0 etc.)
+// ===================================================================
+
+// (A) Monotonicity of cbor_match_with_depth in the depth argument.
+ghost
+fn rec cbor_match_with_depth_weaken (n: nat) (m: nat) (p: perm) (c: cbor_raw) (r: raw_data_item)
+  requires cbor_match_with_depth n p c r ** pure (n <= m)
+  ensures cbor_match_with_depth m p c r
+  decreases n
+{
+  cbor_match_with_depth_eq0 n p c r;
+  rewrite (cbor_match_with_depth n p c r) as (cbor_match0 p c r (depth_cb n r));
+  ghost fn imp
+    (p': perm) (c': cbor_raw)
+    (v': raw_data_item { v' << r /\ raw_data_item_size v' < raw_data_item_size r })
+    requires depth_cb n r p' c' v'
+    ensures depth_cb m r p' c' v'
+  {
+    if (n = 0) {
+      depth_cb_zero r p' c' v';
+      rewrite (depth_cb n r p' c' v') as (pure False);
+      rewrite (pure False) as (depth_cb m r p' c' v');
+    } else {
+      depth_cb_succ n r p' c' v';
+      rewrite (depth_cb n r p' c' v') as (cbor_match_with_depth (n - 1) p' c' v');
+      cbor_match_with_depth_weaken (n - 1) (m - 1) p' c' v';
+      depth_cb_succ m r p' c' v';
+      rewrite (cbor_match_with_depth (m - 1) p' c' v') as (depth_cb m r p' c' v');
+    }
+  };
+  cbor_match0_weaken p c r (depth_cb n r) (depth_cb m r) imp;
+  cbor_match_with_depth_eq0 m p c r;
+  rewrite (cbor_match0 p c r (depth_cb m r)) as (cbor_match_with_depth m p c r);
+}
+
+// (B) Leaf and serialized cases: the depth callback is unused, so
+// cbor_match_with_depth n coincides definitionally with cbor_match.
+let cbor_match_with_depth_eq_match_int (n: nat) (p: perm) (ct: cbor_int) (r: raw_data_item)
+  : Lemma (requires Int64? r)
+          (ensures cbor_match_with_depth n p (CBOR_Case_Int ct) r == cbor_match p (CBOR_Case_Int ct) r)
+= cbor_match_with_depth_eq0 n p (CBOR_Case_Int ct) r;
+  cbor_match_eq0 p (CBOR_Case_Int ct) r;
+  cbor_match0_eq_int p ct r (depth_cb n r);
+  cbor_match0_eq_int p ct r cbor_match
+
+let cbor_match_with_depth_eq_match_simple (n: nat) (p: perm) (ct: simple_value) (r: raw_data_item)
+  : Lemma (requires Simple? r)
+          (ensures cbor_match_with_depth n p (CBOR_Case_Simple ct) r == cbor_match p (CBOR_Case_Simple ct) r)
+= cbor_match_with_depth_eq0 n p (CBOR_Case_Simple ct) r;
+  cbor_match_eq0 p (CBOR_Case_Simple ct) r;
+  cbor_match0_eq_simple p ct r (depth_cb n r);
+  cbor_match0_eq_simple p ct r cbor_match
+
+let cbor_match_with_depth_eq_match_string (n: nat) (p: perm) (ct: cbor_string) (r: raw_data_item)
+  : Lemma (requires String? r)
+          (ensures cbor_match_with_depth n p (CBOR_Case_String ct) r == cbor_match p (CBOR_Case_String ct) r)
+= cbor_match_with_depth_eq0 n p (CBOR_Case_String ct) r;
+  cbor_match_eq0 p (CBOR_Case_String ct) r;
+  cbor_match0_eq_string p ct r (depth_cb n r);
+  cbor_match0_eq_string p ct r cbor_match
+
+let cbor_match_with_depth_eq_match_ser_array (n: nat) (p: perm) (ct: cbor_serialized) (r: raw_data_item)
+  : Lemma (requires Array? r)
+          (ensures cbor_match_with_depth n p (CBOR_Case_Serialized_Array ct) r == cbor_match p (CBOR_Case_Serialized_Array ct) r)
+= cbor_match_with_depth_eq0 n p (CBOR_Case_Serialized_Array ct) r;
+  cbor_match_eq0 p (CBOR_Case_Serialized_Array ct) r;
+  cbor_match0_eq_ser_array p ct r (depth_cb n r);
+  cbor_match0_eq_ser_array p ct r cbor_match
+
+let cbor_match_with_depth_eq_match_ser_map (n: nat) (p: perm) (ct: cbor_serialized) (r: raw_data_item)
+  : Lemma (requires Map? r)
+          (ensures cbor_match_with_depth n p (CBOR_Case_Serialized_Map ct) r == cbor_match p (CBOR_Case_Serialized_Map ct) r)
+= cbor_match_with_depth_eq0 n p (CBOR_Case_Serialized_Map ct) r;
+  cbor_match_eq0 p (CBOR_Case_Serialized_Map ct) r;
+  cbor_match0_eq_ser_map p ct r (depth_cb n r);
+  cbor_match0_eq_ser_map p ct r cbor_match
+
+let cbor_match_with_depth_eq_match_ser_tagged (n: nat) (p: perm) (ct: cbor_serialized) (r: raw_data_item)
+  : Lemma (requires Tagged? r)
+          (ensures cbor_match_with_depth n p (CBOR_Case_Serialized_Tagged ct) r == cbor_match p (CBOR_Case_Serialized_Tagged ct) r)
+= cbor_match_with_depth_eq0 n p (CBOR_Case_Serialized_Tagged ct) r;
+  cbor_match_eq0 p (CBOR_Case_Serialized_Tagged ct) r;
+  cbor_match0_eq_ser_tagged p ct r (depth_cb n r);
+  cbor_match0_eq_ser_tagged p ct r cbor_match
+
+// A child held at depth_cb depth witnesses depth >= 1 (the depth-0 callback is False).
+ghost
+fn depth_cb_pos (depth: nat) (r: raw_data_item) (p': perm) (c': cbor_raw) (v': raw_data_item { v' << r })
+  requires depth_cb depth r p' c' v'
+  ensures depth_cb depth r p' c' v' ** pure (depth >= 1)
+{
+  if (depth = 0) {
+    depth_cb_zero r p' c' v';
+    rewrite (depth_cb depth r p' c' v') as (pure False);
+    rewrite (pure False) as (depth_cb depth r p' c' v' ** pure (depth >= 1));
+  } else {
+    ()
+  }
+}
+
+// Total predecessor on nat (so child-depth terms typecheck without a local
+// `depth >= 1` refinement); equals depth - 1 whenever depth >= 1.
+let nat_pred (n: nat) : nat = if n = 0 then 0 else n - 1
+let nat_pred_succ (n: nat) : Lemma (requires n >= 1) (ensures nat_pred n == n - 1) = ()
+
+// (C) Depth-aware destructor for an inline tagged: exposes the payload one
+// depth level down, with a trade to restore the parent, and depth >= 1.
+ghost
+fn cbor_match_with_depth_tagged_elim (depth: nat) (p: perm) (a: cbor_tagged) (r: raw_data_item { Tagged? r })
+  requires cbor_match_with_depth depth p (CBOR_Case_Tagged a) r
+  ensures exists* c'.
+    R.pts_to a.cbor_tagged_ptr #(p `perm_mul` a.cbor_tagged_ref_perm) c' **
+    cbor_match_with_depth (nat_pred depth) (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r) **
+    trade
+      (R.pts_to a.cbor_tagged_ptr #(p `perm_mul` a.cbor_tagged_ref_perm) c' **
+       cbor_match_with_depth (nat_pred depth) (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r))
+      (cbor_match_with_depth depth p (CBOR_Case_Tagged a) r) **
+    pure (a.cbor_tagged_tag == Tagged?.tag r /\ depth >= 1)
+{
+  cbor_match_with_depth_eq_tagged depth p a r;
+  depth_cb_eq depth r;
+  rewrite (cbor_match_with_depth depth p (CBOR_Case_Tagged a) r) as (cbor_match_tagged a p r (depth_cb depth r));
+  unfold (cbor_match_tagged a p r (depth_cb depth r));
+  with c'. assert (depth_cb depth r (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r));
+  depth_cb_pos depth r (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r);
+  depth_cb_succ depth r (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r);
+  nat_pred_succ depth;
+  rewrite (depth_cb depth r (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r))
+    as (cbor_match_with_depth (nat_pred depth) (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r));
+  intro
+    (Trade.trade
+      (R.pts_to a.cbor_tagged_ptr #(p `perm_mul` a.cbor_tagged_ref_perm) c' **
+       cbor_match_with_depth (nat_pred depth) (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r))
+      (cbor_match_with_depth depth p (CBOR_Case_Tagged a) r))
+    #(pure (depth >= 1))
+    fn _
+  {
+    depth_cb_succ depth r (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r);
+    nat_pred_succ depth;
+    rewrite (cbor_match_with_depth (nat_pred depth) (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r))
+      as (depth_cb depth r (p `perm_mul` a.cbor_tagged_payload_perm) c' (Tagged?.v r));
+    fold (cbor_match_tagged a p r (depth_cb depth r));
+    cbor_match_with_depth_eq_tagged depth p a r;
+    depth_cb_eq depth r;
+    rewrite (cbor_match_tagged a p r (depth_cb depth r)) as (cbor_match_with_depth depth p (CBOR_Case_Tagged a) r);
+  };
+}
+
+// (C') Depth-aware destructor for an inline array: exposes the element
+// sequence whose per-element predicate is the depth callback (depth_cb depth r),
+// with a trade to restore the parent. The loop converts each element from
+// depth_cb to cbor_match_with_depth (nat_pred depth) via depth_cb_pos/_succ.
+ghost
+fn cbor_match_with_depth_array_elim (depth: nat) (p: perm) (a: cbor_array) (r: raw_data_item { Array? r })
+  requires cbor_match_with_depth depth p (CBOR_Case_Array a) r
+  ensures exists* s.
+    pts_to a.cbor_array_ptr #(p `perm_mul` a.cbor_array_array_perm) s **
+    PM.seq_list_match s (Array?.v r) ((depth_cb depth r) (p `perm_mul` a.cbor_array_payload_perm)) **
+    trade
+      (pts_to a.cbor_array_ptr #(p `perm_mul` a.cbor_array_array_perm) s **
+       PM.seq_list_match s (Array?.v r) ((depth_cb depth r) (p `perm_mul` a.cbor_array_payload_perm)))
+      (cbor_match_with_depth depth p (CBOR_Case_Array a) r) **
+    pure (a.cbor_array_length_size == (Array?.len r).size /\
+      SZ.v (S.len a.cbor_array_ptr) == U64.v (Array?.len r).value)
+{
+  cbor_match_with_depth_eq_array depth p a r;
+  depth_cb_eq depth r;
+  rewrite (cbor_match_with_depth depth p (CBOR_Case_Array a) r) as (cbor_match_array a p r (depth_cb depth r));
+  unfold (cbor_match_array a p r (depth_cb depth r));
+  with s. assert (pts_to a.cbor_array_ptr #(p `perm_mul` a.cbor_array_array_perm) s **
+    PM.seq_list_match s (Array?.v r) ((depth_cb depth r) (p `perm_mul` a.cbor_array_payload_perm)));
+  intro
+    (Trade.trade
+      (pts_to a.cbor_array_ptr #(p `perm_mul` a.cbor_array_array_perm) s **
+       PM.seq_list_match s (Array?.v r) ((depth_cb depth r) (p `perm_mul` a.cbor_array_payload_perm)))
+      (cbor_match_with_depth depth p (CBOR_Case_Array a) r))
+    #emp
+    fn _
+  {
+    fold (cbor_match_array a p r (depth_cb depth r));
+    cbor_match_with_depth_eq_array depth p a r;
+    depth_cb_eq depth r;
+    rewrite (cbor_match_array a p r (depth_cb depth r)) as (cbor_match_with_depth depth p (CBOR_Case_Array a) r);
+  };
+}
+
+// (C'') Depth-aware destructor for an inline map.
+ghost
+fn cbor_match_with_depth_map_elim (depth: nat) (p: perm) (a: cbor_map) (r: raw_data_item { Map? r })
+  requires cbor_match_with_depth depth p (CBOR_Case_Map a) r
+  ensures exists* s.
+    pts_to a.cbor_map_ptr #(p `perm_mul` a.cbor_map_array_perm) s **
+    PM.seq_list_match s (Map?.v r) (cbor_match_map_entry0 r ((depth_cb depth r) (p `perm_mul` a.cbor_map_payload_perm))) **
+    trade
+      (pts_to a.cbor_map_ptr #(p `perm_mul` a.cbor_map_array_perm) s **
+       PM.seq_list_match s (Map?.v r) (cbor_match_map_entry0 r ((depth_cb depth r) (p `perm_mul` a.cbor_map_payload_perm))))
+      (cbor_match_with_depth depth p (CBOR_Case_Map a) r) **
+    pure (a.cbor_map_length_size == (Map?.len r).size /\
+      SZ.v (S.len a.cbor_map_ptr) == U64.v (Map?.len r).value)
+{
+  cbor_match_with_depth_eq_map0 depth p a r;
+  depth_cb_eq depth r;
+  rewrite (cbor_match_with_depth depth p (CBOR_Case_Map a) r) as (cbor_match_map0 a p r (depth_cb depth r));
+  unfold (cbor_match_map0 a p r (depth_cb depth r));
+  with s. assert (pts_to a.cbor_map_ptr #(p `perm_mul` a.cbor_map_array_perm) s **
+    PM.seq_list_match s (Map?.v r) (cbor_match_map_entry0 r ((depth_cb depth r) (p `perm_mul` a.cbor_map_payload_perm))));
+  intro
+    (Trade.trade
+      (pts_to a.cbor_map_ptr #(p `perm_mul` a.cbor_map_array_perm) s **
+       PM.seq_list_match s (Map?.v r) (cbor_match_map_entry0 r ((depth_cb depth r) (p `perm_mul` a.cbor_map_payload_perm))))
+      (cbor_match_with_depth depth p (CBOR_Case_Map a) r))
+    #emp
+    fn _
+  {
+    fold (cbor_match_map0 a p r (depth_cb depth r));
+    cbor_match_with_depth_eq_map0 depth p a r;
+    depth_cb_eq depth r;
+    rewrite (cbor_match_map0 a p r (depth_cb depth r)) as (cbor_match_with_depth depth p (CBOR_Case_Map a) r);
+  };
+}
+
+// (D) A non-inline-composite cbor_raw (leaf or serialized) matches the same at
+// any depth: bump plain cbor_match to cbor_match_with_depth n (with a trade back).
+// Used to lift elements yielded by the serialized iterators (cbor_read always
+// returns a leaf or a CBOR_Case_Serialized_* node) into the depth-indexed world.
+ghost
+fn cbor_match_with_depth_intro_noninline (n: nat) (p: perm) (c: cbor_raw) (v: raw_data_item)
+  requires cbor_match p c v ** pure (~ (CBOR_Case_Array? c \/ CBOR_Case_Map? c \/ CBOR_Case_Tagged? c))
+  ensures cbor_match_with_depth n p c v ** trade (cbor_match_with_depth n p c v) (cbor_match p c v)
+{
+  cbor_match_cases c;
+  match c {
+    norewrite CBOR_Case_Int ct -> {
+      cbor_match_with_depth_eq_match_int n p ct v;
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_with_depth n p c v);
+    }
+    norewrite CBOR_Case_Simple ct -> {
+      cbor_match_with_depth_eq_match_simple n p ct v;
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_with_depth n p c v);
+    }
+    norewrite CBOR_Case_String ct -> {
+      cbor_match_with_depth_eq_match_string n p ct v;
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_with_depth n p c v);
+    }
+    norewrite CBOR_Case_Serialized_Array ct -> {
+      cbor_match_with_depth_eq_match_ser_array n p ct v;
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_with_depth n p c v);
+    }
+    norewrite CBOR_Case_Serialized_Map ct -> {
+      cbor_match_with_depth_eq_match_ser_map n p ct v;
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_with_depth n p c v);
+    }
+    norewrite CBOR_Case_Serialized_Tagged ct -> {
+      cbor_match_with_depth_eq_match_ser_tagged n p ct v;
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_with_depth n p c v);
+    }
+    norewrite CBOR_Case_Array ct -> {
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_with_depth n p c v);
+    }
+    norewrite CBOR_Case_Map ct -> {
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_with_depth n p c v);
+    }
+    norewrite CBOR_Case_Tagged ct -> {
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_with_depth n p c v);
+    }
+  }
+}
+
+// ===================================================================
+// Depth-aware map-entry element predicate (used by the depth-aware map
+// iterators in Read.fst and the depth-aware serialized map iterator-next
+// in Format.Serialized.fst). Mirrors [cbor_match_map_entry] but uses
+// [cbor_match_with_depth d] for both key and value.
+// ===================================================================
+let cbor_match_map_entry_with_depth
+  (d: Ghost.erased nat)
+  (p: perm)
+  (c: cbor_map_entry)
+  (r: (raw_data_item & raw_data_item))
+: slprop
+= cbor_match_with_depth d p c.cbor_map_entry_key (fst r) **
+  cbor_match_with_depth d p c.cbor_map_entry_value (snd r)

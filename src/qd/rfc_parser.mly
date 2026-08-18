@@ -78,12 +78,20 @@ struct_field:
 
 field_type:
   | t = TYPE; { TypeSimple t }
-	| LPAREN; IF; n = TYPE; EQUALS; c = LITERAL; t = TYPE; ELSE; f = TYPE; RPAREN;
-	  { TypeIfeq(n, c, t, f) }
-	| LPAREN; IF; n = TYPE; EQUALS; c = LITERAL; t = TYPE; RPAREN;
-	  { TypeIfeq(n, c, t, "Fail") }
+	| LPAREN; IF; n = TYPE; EQUALS; c = LITERAL; tb = ifeq_branch; ELSE; fb = ifeq_branch; RPAREN;
+	  { let (tc, t) = tb in let (fc, f) = fb in TypeIfeq(n, c, tc, t, fc, f) }
+	| LPAREN; IF; n = TYPE; EQUALS; c = LITERAL; tb = ifeq_branch; RPAREN;
+	  { let (tc, t) = tb in TypeIfeq(n, c, tc, t, None, "Fail") }
 	| SELECT; LPAREN; n = TYPE; RPAREN; LBRACE; cases = list(select_case); def = default_case; RBRACE;
 	  { TypeSelect(n, cases, def) }
+;
+
+(* An if-then-else branch is a type, optionally prefixed by an explicit
+   constructor name: [CtorName : Type]. The bare [Type] form keeps the default
+   <N>_true / <N>_false constructor names. *)
+ifeq_branch:
+	| t = TYPE; { (None, t) }
+	| ctor = TYPE; FULCOL; t = TYPE; { (Some ctor, t) }
 ;
 
 select_case:

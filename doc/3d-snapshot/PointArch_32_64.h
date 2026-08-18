@@ -1,7 +1,7 @@
 
 
-#ifndef __PointArch_32_64_H
-#define __PointArch_32_64_H
+#ifndef PointArch_32_64_H
+#define PointArch_32_64_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -13,16 +13,7 @@ extern "C" {
 uint64_t
 PointArch3264ValidatePoint(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
@@ -32,5 +23,5 @@ PointArch3264ValidatePoint(
 }
 #endif
 
-#define __PointArch_32_64_H_DEFINED
-#endif
+#define PointArch_32_64_H_DEFINED
+#endif /* PointArch_32_64_H */

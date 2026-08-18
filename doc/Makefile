@@ -3,54 +3,64 @@
 
 all: html 3d
 
-export EVERPARSE_HOME?=$(realpath ..)
+EVERPARSE_HOME?=$(realpath ..)
 
-ifndef FSTAR_HOME
-  FSTAR_EXE=$(shell which fstar.exe)
-  ifeq ($(FSTAR_EXE),)
-    # fstar.exe not found in PATH, assuming Everest source tree
-    FSTAR_HOME=$(realpath $(EVERPARSE_HOME)/../FStar)
-  else
-    # fstar.exe found in PATH, assuming directory ending with /bin
-    FSTAR_HOME=$(realpath $(dir $(FSTAR_EXE))/..)
-  endif
-  export FSTAR_HOME
-endif
+FSTAR_EXE ?= fstar.exe
 
-export KRML_HOME?=$(realpath $(EVERPARSE_HOME)/../karamel)
-
-3D=$(EVERPARSE_HOME)/bin/3d.exe
+3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE) --hoist_locals
 3D_EXCLUDE=ConstColor.3d
 3D_CONFIG=Arch.3d.config
 3D_FILES_WITH_CONFIG=PointArch_32_64.3d
 3D_FILES=$(filter-out $(3D_EXCLUDE) $(3D_FILES_WITH_CONFIG),$(wildcard *.3d))
 3D_MODULES=$(basename $(3D_FILES) $(3D_FILES_WITH_CONFIG))
 3D_MODULES_AND_WRAPPERS=$(3D_MODULES) $(addsuffix Wrapper,$(3D_MODULES))
-3D_C_AND_H_FILES=$(filter-out BaseWrapper.c BaseWrapper.h,$(addsuffix .c,$(3D_MODULES_AND_WRAPPERS)) $(addsuffix .h,$(3D_MODULES_AND_WRAPPERS)))
+3D_C_AND_H_FILES=$(filter-out BaseWrapper.c BaseWrapper.h,$(addsuffix .c,$(3D_MODULES_AND_WRAPPERS)) $(addsuffix .h,$(3D_MODULES_AND_WRAPPERS))) $(addsuffix StaticAssertions.c,AlignAuto Align Specialize1StandaloneAuto)
 3D_DIFF=$(addsuffix .diff,$(3D_C_AND_H_FILES))
 3D_OUT=$(addprefix out/,$(3D_C_AND_H_FILES))
 3D_SNAPSHOT=$(addprefix 3d-snapshot/,$(3D_C_AND_H_FILES))
-AUX_HEADERS=GetFieldPtrBase.h
+AUX_HEADERS=GetFieldPtrBase.h arch_flags.h
 
 # You can set these variables from the command line.
 SPHINXOPTS    = -W
-SPHINXBUILD   = sphinx-build
+ifeq ($(OS),Windows_NT)
+SPHINXBUILD   = .venv/Scripts/sphinx-build.exe
+else
+SPHINXBUILD   = .venv/bin/sphinx-build
+endif
 SPHINXPROJ    = EverParseDoc
 SOURCEDIR     = .
 BUILDDIR      = _build
 
+ifeq ($(OS),Windows_NT)
+python := .venv/Scripts/python.exe
+else
+python := .venv/bin/python3
+endif
+
+.venv:
+	rm -rf $@ $@.tmp
+	python3 -m venv $@.tmp
+	mv $@.tmp $@
+	if ! $(python) -m pip install "sphinx-rtd-theme>=3.0.0" ; then mv $@ $@.tmp ; exit 1 ; fi
+
 # Put it first so that "make" without argument is like "make help".
-help:
+help: .venv
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help Makefile test all 3d clean 3d-do-tests %.diff 3d-snapshot 3d-ci %.diff-nobuild
+.PHONY: help Makefile test all 3d clean 3d-do-tests %.diff 3d-snapshot %.diff-nobuild
 
-# Catch-all target: route all unknown targets to Sphinx using the new
-# "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-%: Makefile
+.PHONYH: 3d-test
+
+3d-test: 3d html
+
+html: Makefile .venv
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
+ifeq ($(EVERPARSE_CHECK_DIFF),1) # Set this variable to enable diffs
 3d: $(3D_DIFF)
+else
+3d: 3d-do-tests
+endif
 
 3d-do-tests:
 	mkdir -p out
@@ -79,5 +89,10 @@ all-diffs-nobuild: $(addsuffix -nobuild, $(3D_DIFF))
 
 %.accept:
 	cp  out/$(basename $@) 3d-snapshot/$(basename $@)
+
+accept-all: $(addsuffix .accept, $(subst .diff,,$(3D_DIFF)))
+
 clean:
-	rm -rf out _build
+	rm -rf _build .venv __pycache__ out
+
+.PHONY: accept-all all-diffs-nobuild

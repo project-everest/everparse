@@ -1,7 +1,7 @@
 
 
-#ifndef __HelloWorld_H
-#define __HelloWorld_H
+#ifndef HelloWorld_H
+#define HelloWorld_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -12,16 +12,7 @@ extern "C" {
 uint64_t
 HelloWorldValidatePoint(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
@@ -31,5 +22,5 @@ HelloWorldValidatePoint(
 }
 #endif
 
-#define __HelloWorld_H_DEFINED
-#endif
+#define HelloWorld_H_DEFINED
+#endif /* HelloWorld_H */

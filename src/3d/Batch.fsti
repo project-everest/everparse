@@ -2,6 +2,11 @@ module Batch
 open HashingOptions
 open FStar.All
 
+val krmllib: string -> ML string
+val krmlinclude: string -> ML string
+
+val cl_wrapper: unit -> ML string
+
 (* The --print_in_place step has to be performed at source generation
    time, not at verification time, because if the user requests files
    to be processed by a Makefile, they must not be modified again
@@ -9,18 +14,21 @@ open FStar.All
    --batch. *)
 
 val pretty_print_source_modules
+  (fstar_exe : string)
   (_: input_stream_binding_t)
   (out_dir: string)
   (files_and_modules: list (string & string))
 : ML unit
 
 val verify_fst_file
+  (fstar_exe : string)
   (_: input_stream_binding_t)
   (out_dir: string)
   (file: string)
 : ML unit
 
 val extract_fst_file
+  (fstar_exe : string)
   (_: input_stream_binding_t)
   (out_dir: string)
   (file: string)
@@ -62,11 +70,13 @@ val postprocess_wrappers
 : ML unit
 
 val postprocess_fst
+  (fstar_exe : string)
   (_: input_stream_binding_t)
   (emit_output_types_defs: bool)
   (add_include: list string)
   (clang_format: bool)
   (clang_format_executable: string)
+  (copy_clang_format_opt: bool)
   (skip_c_makefiles: bool)
   (cleanup: bool)
   (no_everparse_h: bool)
@@ -79,4 +89,10 @@ val check_all_hashes
   (ch: check_hashes_t)
   (out_dir: string)
   (files_and_modules: list (string & string))
+: ML unit
+
+val save_hashes_for_module
+  (out_dir: string)
+  (file: string)
+  (modul: string)
 : ML unit

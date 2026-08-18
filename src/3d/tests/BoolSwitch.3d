@@ -9,3 +9,15 @@ casetype _T (Bool b)
          UINT32 integer;
    }
 } T;
+
+entrypoint
+casetype _S (Bool b)
+{
+   switch (b)
+   {
+      case true:
+         UINT32 f;
+      default:
+         UINT32 g;
+   }
+} S;

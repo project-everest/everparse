@@ -447,8 +447,15 @@ noextract
 let parse_vlgen_weak_payload_kind
   (min: nat)
   (max: nat { min <= max /\ max < 4294967296 } )
+  (inj: bool)
 : Tot parser_kind
-= strong_parser_kind min max None
+= {
+    parser_kind_low = min;
+    parser_kind_high = Some max;
+    parser_kind_subkind = Some ParserStrong;
+    parser_kind_metadata = None;
+    parser_kind_injective = inj;
+  }
 
 let parse_vlgen_weak_payload
   (min: nat)
@@ -457,8 +464,8 @@ let parse_vlgen_weak_payload
   (#t: Type)
   (p: parser k t)
   (bound: bounded_int32 min max)
-: Tot (parser (parse_vlgen_weak_payload_kind min max) t)
-= weaken (parse_vlgen_weak_payload_kind min max) (parse_fldata p (U32.v bound))
+: Tot (parser (parse_vlgen_weak_payload_kind min max k.parser_kind_injective) t)
+= weaken (parse_vlgen_weak_payload_kind min max k.parser_kind_injective) (parse_fldata p (U32.v bound))
 
 let parse_vlgen_weak_payload_and_then_cases_injective
   (min: nat)
@@ -467,16 +474,19 @@ let parse_vlgen_weak_payload_and_then_cases_injective
   (#t: Type)
   (p: parser k t)
 : Lemma
-  (and_then_cases_injective (parse_vlgen_weak_payload min max p))
+  (k.parser_kind_injective ==> and_then_cases_injective (parse_vlgen_weak_payload min max p))
 =
-  and_then_cases_injective_intro
-    (parse_vlgen_weak_payload min max p)
-    (fun (x1 x2: bounded_int32 min max) b1 b2 ->
-      parse_injective
-        p
-        (Seq.slice b1 0 (U32.v x1))
-        (Seq.slice b2 0 (U32.v x2))
-    )
+  if k.parser_kind_injective
+  then begin
+    and_then_cases_injective_intro
+      (parse_vlgen_weak_payload min max p)
+      (fun (x1 x2: bounded_int32 min max) b1 b2 ->
+        parse_injective
+          p
+          (Seq.slice b1 0 (U32.v x1))
+          (Seq.slice b2 0 (U32.v x2))
+      )
+  end
 
 inline_for_extraction
 noextract
@@ -484,8 +494,9 @@ let parse_vlgen_weak_kind
   (kl: parser_kind)
   (min: nat)
   (max: nat { min <= max /\ max < 4294967296 } )
+  (inj: bool)
 : Tot parser_kind
-= and_then_kind kl (parse_vlgen_weak_payload_kind min max)
+= and_then_kind kl (parse_vlgen_weak_payload_kind min max inj)
 
 let parse_vlgen_weak
   (min: nat)
@@ -495,7 +506,7 @@ let parse_vlgen_weak
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-: Tot (parser (parse_vlgen_weak_kind sk min max) t)
+: Tot (parser (parse_vlgen_weak_kind sk min max k.parser_kind_injective) t)
 =
   parse_vlgen_weak_payload_and_then_cases_injective min max p;
   pk `and_then` parse_vlgen_weak_payload min max p
@@ -572,11 +583,12 @@ let parse_vlgen_weak_eq_parse_vlgen
   parse_vlgen_weak_unfold min max pk p input;
   parse_vlgen_unfold min max pk s input 
 
-let parse_vlgen_alt_payload_kind : parser_kind = {
+let parse_vlgen_alt_payload_kind (inj: bool) : parser_kind = {
   parser_kind_low = 0;
   parser_kind_high = None;
   parser_kind_subkind = Some ParserStrong;
   parser_kind_metadata = None;
+  parser_kind_injective = inj;
 }
 
 let parse_vlgen_alt_body_t
@@ -585,7 +597,7 @@ let parse_vlgen_alt_body_t
   (p: parser k t)
   (n: nat)
 : Tot Type
-= parser_range (weaken parse_vlgen_alt_payload_kind (parse_fldata p n))
+= parser_range (weaken (parse_vlgen_alt_payload_kind k.parser_kind_injective) (parse_fldata p n))
 
 let parse_vlgen_alt_body
   (#k: Ghost.erased parser_kind)
@@ -593,7 +605,7 @@ let parse_vlgen_alt_body
   (p: parser k t)
   (n: nat)
 : Tot (parser _ (parse_vlgen_alt_body_t p n))
-= parse_strict (weaken parse_vlgen_alt_payload_kind (parse_fldata p n))
+= parse_strict (weaken (parse_vlgen_alt_payload_kind k.parser_kind_injective) (parse_fldata p n))
 
 let synth_vlgen_alt_payload
   (#k: parser_kind)
@@ -608,15 +620,18 @@ let synth_vlgen_alt_payload_injective
   (#t: Type)
   (p: parser k t)
 : Lemma
-  (synth_injective (synth_vlgen_alt_payload p))
+  (k.parser_kind_injective ==> synth_injective (synth_vlgen_alt_payload p))
   [SMTPat (synth_injective (synth_vlgen_alt_payload p))]
-= synth_injective_intro'
-    (synth_vlgen_alt_payload p)
-    (fun (x x' : dtuple2 nat (parse_vlgen_alt_body_t p)) ->
-      let b = FStar.IndefiniteDescription.indefinite_description_ghost bytes (fun b -> parser_matches (parse_fldata p (dfst x)) (dsnd x) b) in
-      let b' = FStar.IndefiniteDescription.indefinite_description_ghost bytes (fun b -> parser_matches (parse_fldata p (dfst x')) (dsnd x') b) in
-      parse_injective p (Seq.slice b 0 (dfst x)) (Seq.slice b' 0 (dfst x'))
-    )
+= if k.parser_kind_injective
+  then begin
+    synth_injective_intro'
+      (synth_vlgen_alt_payload p)
+      (fun (x x' : dtuple2 nat (parse_vlgen_alt_body_t p)) ->
+        let b = FStar.IndefiniteDescription.indefinite_description_ghost bytes (fun b -> parser_matches (parse_fldata p (dfst x)) (dsnd x) b) in
+        let b' = FStar.IndefiniteDescription.indefinite_description_ghost bytes (fun b -> parser_matches (parse_fldata p (dfst x')) (dsnd x') b) in
+        parse_injective p (Seq.slice b 0 (dfst x)) (Seq.slice b' 0 (dfst x'))
+      )
+  end
 
 let parse_vlgen_alt
   (#sk: parser_kind)
@@ -624,7 +639,7 @@ let parse_vlgen_alt
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-: Tot (parser (and_then_kind sk parse_vlgen_alt_payload_kind) t)
+: Tot (parser (and_then_kind sk (parse_vlgen_alt_payload_kind k.parser_kind_injective)) t)
 = (pk `parse_dtuple2` parse_vlgen_alt_body p)
     `parse_synth`
     synth_vlgen_alt_payload p

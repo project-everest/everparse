@@ -1,52 +1,328 @@
-all: quackyducky lowparse 3d
+#NOTE: if you want to add global F* options, you need to do the following:
+# 1. Add them to FSTAR_OPTIONS in src/fstar.Makefile
+# 2. Add them to fstar_args0 in src/3d/ocaml/Batch.ml
 
-lowparse:
-	+$(MAKE) -C src/lowparse
+all: package-subset asn1 cbor
 
-3d: lowparse
-	+$(MAKE) -C src/3d
+.PHONY: all
 
-quackyducky:
+package-subset: quackyducky lowparse 3d
+
+.PHONY: package-subset
+
+clean_rules += clean-3d clean-lowparse clean-quackyducky clean-cbor-verify clean-cddl clean-bin clean-cose-test clean-asn1 clean-tests clean-3d-tests clean-doc
+other_clean_rules += distclean
+
+include nofstar.Makefile
+
+include deps.Makefile
+
+ifneq (1,$(EVERPARSE_ONLY_3D))
+package-subset: cddl
+endif
+
+# Disable COSE on MacOS because we don't know how to link with OpenSSL
+# Disable COSE on Windows because we don't know how to link with OpenSSL
+ifneq ($(OS),Windows_NT)
+ifneq ($(OS),Darwin)
+all: cose
+endif
+endif
+
+ifeq (,$(NO_PULSE))
+all: cddl cbor-interface
+endif
+
+EVERPARSE_SRC_PATH := $(realpath src)
+
+ALREADY_CACHED := *,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,
+
+SRC_DIRS += src/lowparse src/ASN1 src/3d/prelude src/cbor/spec src/cbor/spec/raw src/cbor/spec/raw/everparse src/cddl/spec
+
+ifeq (,$(NO_PULSE))
+  SRC_DIRS += src/lowparse/pulse src/cbor/pulse src/cbor/pulse/raw src/cbor/pulse/raw/everparse src/cddl/pulse src/cddl/tool
+endif
+
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
+ifeq (,$(NO_PULSE))
+  include $(EVERPARSE_SRC_PATH)/pulse.Makefile
+endif
+include $(EVERPARSE_SRC_PATH)/common.Makefile
+
+$(FSTAR_DEP_FILE): $(NEED_FSTAR) $(NEED_KRML) $(NEED_PULSE)
+
+$(ALL_CHECKED_FILES): %.checked: $(NEED_FSTAR) $(NEED_Z3) $(NEED_KRML) $(NEED_PULSE)
+
+ifeq (1,$(ADMIT_LOWPARSE))
+$(filter src/lowparse/%,$(ALL_CHECKED_FILES)): ADMIT := 1
+endif
+
+ifeq (1,$(ADMIT_CBOR_CDDL))
+$(filter src/cbor/% src/cddl/%,$(ALL_CHECKED_FILES)): ADMIT := 1
+endif
+
+lowparse: $(filter-out src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+
+ifeq (,$(NO_PULSE))
+lowparse: $(filter src/lowparse/pulse/%,$(ALL_CHECKED_FILES))
+endif
+
+# lowparse needed because of .fst behind .fsti for extraction
+3d-prelude-verify: $(filter src/3d/prelude/%,$(ALL_CHECKED_FILES)) $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+
+.PHONY: 3d-prelude-verify
+
+3d-prelude: 3d-prelude-verify
+	+$(MAKE) -C src/3d/prelude
+
+.PHONY: 3d-prelude
+
+3d-exe: $(NEED_Z3)
+	+$(MAKE) -C src/3d 3d
+
+.PHONY: 3d-exe
+
+3d: 3d-prelude 3d-exe
+
+# filter-out comes from NOT_INCLUDED in src/ASN1/Makefile
+asn1: $(filter-out $(addprefix src/ASN1/,$(addsuffix .checked,ASN1.Tmp.fst ASN1.Test.Interpreter.fst ASN1.Low.% ASN1Test.fst ASN1.bak%)),$(filter src/ASN1/%,$(ALL_CHECKED_FILES)))
+
+quackyducky: qd-exe lowparse
+
+qd-exe: $(NEED_OPAM)
 	+$(MAKE) -C src/qd
 
-gen-test: quackyducky
-	-rm tests/unit/*.fst tests/unit/*.fsti || true
-	bin/qd.exe -odir tests/unit tests/unittests.rfc
-	bin/qd.exe -low -odir tests/unit tests/bitcoin.rfc
+.PHONY: qd-exe
 
 lowparse-unit-test: lowparse
 	+$(MAKE) -C tests/lowparse
 
-3d-unit-test: 3d
+3d-unit-test: 3d $(NEED_Z3_TESTGEN)
 	+$(MAKE) -C src/3d test
 
-3d-doc-test: 3d
-	+$(MAKE) -C doc 3d
+3d-doc-test: 3d $(NEED_Z3_TESTGEN)
+	+$(MAKE) -C doc 3d-test
 
 3d-test: 3d-unit-test 3d-doc-test
+
+asn1-test: asn1
+	+$(MAKE) -C src/ASN1 test
 
 lowparse-bitfields-test: lowparse
 	+$(MAKE) -C tests/bitfields
 
-lowparse-test: lowparse-unit-test lowparse-bitfields-test
+ifeq (,$(NO_PULSE))
+lowparse-pulse-test: lowparse
+	+$(MAKE) -C share/everparse/tests/lowparse
+#	+$(MAKE) -C tests/pulse # TODO: move it into `share/everparse/tests/lowparse` and re-enable it
+else
+lowparse-pulse-test:
+endif
 
-quackyducky-unit-test: gen-test lowparse
-	+$(MAKE) -C tests/unit
+.PHONY: lowparse-pulse-test
 
-quackyducky-sample-test: quackyducky lowparse
-	+$(MAKE) -C tests/sample
+lowparse-test: lowparse-unit-test lowparse-bitfields-test lowparse-pulse-test
 
-quackyducky-sample-low-test: quackyducky lowparse
-	+$(MAKE) -C tests/sample_low
+quackyducky-lowstar-test: quackyducky
+	+$(MAKE) -C tests
 
-quackyducky-sample0-test: quackyducky lowparse
-	+$(MAKE) -C tests/sample0
+.PHONY: quackyducky-lowstar-test
 
-quackyducky-test: quackyducky-unit-test quackyducky-sample-test quackyducky-sample0-test quackyducky-sample-low-test
+quackyducky-pulse-test: quackyducky
+	+$(MAKE) -C share/everparse/tests/qd
 
-test: all lowparse-test quackyducky-test 3d-test
+.PHONY: quackyducky-pulse-test
 
-ci: test
+quackyducky-test: quackyducky-lowstar-test quackyducky-pulse-test
+
+test: all lowparse-test quackyducky-test asn1-test cbor-test cddl-test
+
+# Disable 3d-unit-test on MacOS because there is a loop in Makefiles
+# Disable 3d-doc-test on MacOS because sphinx is not available
+ifneq ($(OS),Darwin)
+test: 3d-test
+endif
+
+# Disable COSE tests on MacOS because we don't know how to link with OpenSSL
+# Disable COSE tests on Windows because we don't know how to link with OpenSSL
+ifneq ($(OS),Windows_NT)
+ifneq ($(OS),Darwin)
+test: cose-test
+endif
+endif
+
+submodules:
+	$(MAKE) -C $(EVERPARSE_OPT_PATH) submodules
+
+.PHONY: submodules
+
+cbor-interface: $(filter-out src/cbor/spec/raw/%,$(filter src/cbor/spec/%,$(ALL_CHECKED_FILES)))
+
+ifeq (,$(NO_PULSE))
+cbor-interface: $(filter-out src/cbor/pulse/raw/%,$(filter src/cbor/pulse/%,$(ALL_CHECKED_FILES)))
+endif
+
+.PHONY: cbor-interface
+
+ifeq (,$(NO_PULSE))
+cbor-det-c-vertest: cbor cbor-interface
+	+$(MAKE) -C src/cbor/pulse/det/vertest/c
+else
+cbor-det-c-vertest:
+endif
+
+.PHONY: cbor-det-c-vertest
+
+ifeq (,$(NO_PULSE))
+cbor-det-common-vertest: cbor cbor-interface
+	+$(MAKE) -C src/cbor/pulse/det/vertest/common
+else
+cbor-det-common-vertest:
+endif
+
+.PHONY: cbor-det-common-vertest
+
+cbor-verify-aux: $(filter src/cbor/spec/%,$(ALL_CHECKED_FILES))
+
+ifeq (,$(NO_PULSE))
+cbor-verify-aux: $(filter src/cbor/pulse/%,$(ALL_CHECKED_FILES))
+endif
+
+.PHONY: cbor-verify-aux
+
+# The byte_slice seam (CBOR.Pulse.Raw.Slice) has two backend implementations,
+# slice-c and slice-rust, that share a module name and so cannot be checked in a
+# single dependency scan; each lives in its own directory with its own Makefile
+# (mirroring src/cbor/pulse/raw) and is excluded from SRC_DIRS and the global
+# checked-file cache. `cbor-verify` is the full verification rule: cbor-verify-aux
+# (the whole CBOR closure, including the shared CBOR.Pulse.Raw.Slice.fsti.checked)
+# plus each backend's CBOR.Pulse.Raw.Slice.fst.checked, built by delegating to the
+# per-directory Makefile. Delegating lets each slice directory name its own target
+# locally (the relative CBOR.Pulse.Raw.Slice.fst.checked) instead of threading its
+# absolute path to a sub-make.
+#
+# Each backend build depends on cbor-verify-aux: the local Makefile checks only the
+# backend .fst against the already-built shared .fsti.checked and CBOR closure, so
+# that closure must exist first (otherwise, under `make -j`, the local check races
+# cbor-verify-aux and fails, e.g. Error 317 "Expected CBOR.Pulse.Raw.Compare.Base
+# to be already checked"). Given that ordering the two backends touch only their own
+# directories and merely read the up-to-date shared .fsti.checked, so they are
+# independent targets and may run in parallel with each other under -j.
+ifeq (,$(NO_PULSE))
+cbor-verify-slice-c: cbor-verify-aux
+	+$(MAKE) -C src/cbor/pulse/raw/slice-c
+
+cbor-verify-slice-rust: cbor-verify-aux
+	+$(MAKE) -C src/cbor/pulse/raw/slice-rust
+
+cbor-verify: cbor-verify-aux cbor-verify-slice-c cbor-verify-slice-rust
+else
+cbor-verify: cbor-verify-aux
+endif
+
+.PHONY: cbor-verify cbor-verify-slice-c cbor-verify-slice-rust
+
+# lowparse needed for extraction because of .fst files behind .fsti
+ifeq (,$(NO_PULSE))
+cbor-extract-pre: cbor-verify $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+
+.PHONY: cbor-extract-pre
+
+cbor-extract-krml: cbor-extract-pre
+	+$(MAKE) -C src/cbor extract-krml
+
+.PHONY: cbor-extract-krml
+
+cbor-test-snapshot: cbor-extract-krml
+	+$(MAKE) -C src/cbor test-snapshot
+else
+cbor-test-snapshot: cbor-verify
+endif
+
+.PHONY: cbor-test-snapshot
+
+# This rule is incompatible with `cbor` and `cbor-test-snapshot`
+ifeq (,$(NO_PULSE))
+cbor-snapshot: cbor-extract-krml
+	+$(MAKE) -C src/cbor snapshot
+else
+cbor-snapshot:
+endif
+
+.PHONY: cbor-snapshot
+
+cbor-test-verified: cbor-det-c-vertest cbor-det-common-vertest
+
+.PHONY: cbor-test-verified
+
+cbor-test-extracted: cbor-test-unverified cbor-test-verified
+
+.PHONY: cbor-test-extracted
+
+cbor-test: cbor-test-extracted cbor-test-snapshot
+
+cddl-spec: $(filter src/cddl/spec/%,$(ALL_CHECKED_FILES))
+
+ifeq (,$(NO_PULSE))
+cddl-pulse: cddl-spec $(filter src/cddl/pulse/%,$(ALL_CHECKED_FILES))
+
+# cbor-extract-pre needed because Rust extraction extracts CBOR and COSE altogether
+cddl-tool: cddl-pulse $(filter src/cddl/tool/%,$(ALL_CHECKED_FILES)) cbor-extract-pre
+	+$(MAKE) -C src/cddl/tool
+else
+cddl-tool:
+endif
+
+cddl: cbor cbor-interface cddl-spec cddl-tool
+
+.PHONY: cddl-spec cddl-tool
+
+.PHONY: cbor-det-c-test cbor-det-rust-test cbor-test cddl
+
+ifeq (,$(NO_PULSE))
+cddl-unit-tests: cddl
+	+$(MAKE) -C src/cddl test
+else
+cddl-unit-tests:
+endif
+
+.PHONY: cddl-unit-tests
+
+ifeq (,$(NO_PULSE))
+cose-extract-krml: cddl-tool
+	+$(MAKE) -C src/cose extract-krml
+
+cose-extract-test: cose-extract-krml cbor
+	+$(MAKE) -C src/cose test-extract
+
+# This rule is incompatible with cose-extract-test
+cose-snapshot: cose-extract-krml cbor
+	+$(MAKE) -C src/cose snapshot
+else
+cose-extract-krml:
+cose-extract-test:
+cose-snapshot:
+endif
+
+.PHONY: cose-extract-krml cose-extract-test cose-snapshot
+
+cose-test: cose-extract-test cose-extracted-test
+
+.PHONY: cose-test
+
+cddl-test: cddl cddl-unit-tests
+
+.PHONY: cddl-test
+
+3d-doc-snapshot: 3d $(NEED_Z3_TESTGEN)
+	+$(MAKE) -C doc 3d-snapshot
+
+.PHONY: 3d-doc-snapshot
+
+clean-asn1:
+	+$(MAKE) -C src/ASN1 clean
+
+.PHONY: clean-asn1
 
 clean-3d:
 	+$(MAKE) -C src/3d clean
@@ -57,24 +333,45 @@ clean-lowparse:
 clean-quackyducky:
 	+$(MAKE) -C src/qd clean
 
-clean: clean-3d clean-lowparse clean-quackyducky
-	rm -rf bin
+clean-cbor-verify:
+	+$(MAKE) -C src/cbor clean-verify
 
-.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test quackyducky-test lowparse-fstar-test quackyducky-sample-test quackyducky-sample0-test quackyducky-unit-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse 3d-unit-test 3d-doc-test ci clean-3d clean-lowparse clean-quackyducky
+clean-cddl:
+	+$(MAKE) -C src/cddl clean
 
-release:
-	+src/package/release.sh
+.PHONY: clean-cbor-verify
 
-# Windows binary package
-package:
-	+src/package/package.sh -zip
+clean-bin:
+	rm -rf bin lib
 
-# Windows binary package
-package-noversion:
-	+src/package/package.sh -zip-noversion
+.PHONY: clean-bin
 
-everparse:
-	+src/package/package.sh -make
+clean-cose-test:
+	+$(MAKE) -C src/cose clean-extract
+
+.PHONY: clean-cose-test
+
+clean-tests:
+	+$(MAKE) -C tests clean
+
+.PHONY: clean-tests
+
+clean-3d-tests:
+	+$(MAKE) -C src/3d/tests clean
+
+.PHONY: clean-3d-tests
+
+clean-doc:
+	+$(MAKE) -C doc clean
+
+.PHONY: clean-doc
+
+clean: $(clean_rules)
+
+.PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test lowparse-fstar-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse 3d-unit-test 3d-doc-test ci clean-3d clean-lowparse clean-quackyducky asn1 asn1-test
+
+release package package-noversion nuget-noversion everparse:
+	+$(MAKE) -f package.Makefile $@
 
 # For F* testing purposes, cf. FStarLang/FStar@fc30456a163c749843c50ee5f86fa22de7f8ad7a
 

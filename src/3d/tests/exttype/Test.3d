@@ -1,0 +1,8 @@
+/* This test exercises #172 */
+
+extern typedef struct _A A
+
+entrypoint
+typedef struct _B {
+    UINT32 b;
+} B;

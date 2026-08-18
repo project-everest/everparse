@@ -36,3 +36,7 @@ let update h b =
       let s = finish h' in
       print_endline ("Update: " ^ hex_of_bytes s)
   end
+
+let get_current_digest h =
+  let h' = Sha256.copy h in
+  finish h'

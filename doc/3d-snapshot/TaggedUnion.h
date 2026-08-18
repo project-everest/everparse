@@ -1,7 +1,7 @@
 
 
-#ifndef __TaggedUnion_H
-#define __TaggedUnion_H
+#ifndef TaggedUnion_H
+#define TaggedUnion_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -18,16 +18,7 @@ extern "C" {
 uint64_t
 TaggedUnionValidateInteger(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
@@ -37,5 +28,5 @@ TaggedUnionValidateInteger(
 }
 #endif
 
-#define __TaggedUnion_H_DEFINED
-#endif
+#define TaggedUnion_H_DEFINED
+#endif /* TaggedUnion_H */

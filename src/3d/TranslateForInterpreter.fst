@@ -78,10 +78,9 @@ let add_parser_kind_is_constant_size (genv:global_env) (id:A.ident) (is_constant
 
 /// gensym (top-level effect, safe to ignore)
 #push-options "--warn_error -272"
-let gen_ident : option string -> St ident =
-  let open FStar.ST in
+let gen_ident : option string -> ML ident =
   let ctr : ref int = alloc 0 in
-  let next base_name_opt =
+  let next base_name_opt : ML _ =
     let v = !ctr in
     ctr := v + 1;
     let id =
@@ -128,8 +127,8 @@ let pk_base id nz wk = T.({
   pk_weak_kind = wk;
   pk_nz = nz
 })
-let pk_list = T.({
-  pk_kind = PK_list;
+let pk_list k0 n = T.({
+  pk_kind = PK_list k0 n;
   pk_weak_kind = WeakKindStrongPrefix;
   pk_nz = false
 })
@@ -164,6 +163,30 @@ let pk_glb k1 k2 = T.({
   pk_nz = k1.pk_nz && k2.pk_nz
 })
 
+let rec is_compile_time_fixed_size (env:global_env) (t:T.typ)
+: ML bool
+= match t with
+  | T.T_false -> true
+  | T.T_app hd _ _ ->
+    begin
+      try
+        let size = TypeSizes.size_of_typename env.size_env hd in
+        TS.Fixed? size
+      with _ -> false
+    end
+  | T.T_pointer _ _ -> true
+  | T.T_refine base _ -> is_compile_time_fixed_size env base
+  | T.T_with_comment t _ -> is_compile_time_fixed_size env t
+  | T.T_nlist elt n -> // this is the main reason why we need T.T_pair
+    if Some? (T.as_constant n)
+    then is_compile_time_fixed_size env elt
+    else false
+  | T.T_pair t1 t2 -> // this is the main reason why we need T.T_pair
+    if is_compile_time_fixed_size env t1
+    then is_compile_time_fixed_size env t2
+    else false
+  | _ -> false
+
 let false_typ = T.T_false
 let unit_typ =
     T.T_app (with_dummy_range (to_ident' "unit")) KindSpec []
@@ -173,20 +196,22 @@ let unit_parser =
     let unit_id = with_dummy_range (to_ident' "unit") in
     mk_parser pk_return unit_typ unit_id "none" (T.Parse_return unit_val)
 let pair_typ t1 t2 =
-    T.T_app (with_dummy_range (to_ident' "tuple2")) KindSpec [Inl t1; Inl t2]
+    T.T_pair t1 t2
 let pair_value x y =
     T.Record (with_dummy_range (to_ident' "tuple2"))
              [(with_dummy_range (to_ident' "fst"), T.mk_expr (T.Identifier x));
-              (with_dummy_range (to_ident' "snd"), T.mk_expr (T.Identifier y))]
-let pair_parser n1 p1 p2 =
+              (with_dummy_range (to_ident' "snd"), T.mk_expr (T.Identifier y))]  
+let pair_parser env n1 p1 p2 =
     let open T in
     let pt = pair_typ p1.p_typ p2.p_typ in
     let t_id = with_dummy_range (to_ident' "tuple2") in
+    let p1_is_const = is_compile_time_fixed_size env p1.p_typ in
+    let p2_is_const = is_compile_time_fixed_size env p2.p_typ in
     mk_parser (pk_and_then p1.p_kind p2.p_kind)
               pt
               t_id
               (ident_to_string n1)
-              (Parse_pair n1 p1 p2)
+              (Parse_pair n1 p1_is_const p1 p2_is_const p2)
 let dep_pair_typ t1 (t2:(A.ident & T.typ)) : T.typ =
     T.T_dep_pair t1 t2
 let dep_pair_value x y : T.expr =
@@ -243,9 +268,7 @@ let dep_pair_with_action_parser p1 (a:T.lam T.action) (p2:A.ident & T.parser) =
 let extend_fieldname fieldname e = Printf.sprintf "%s.%s" fieldname e
 let ite_parser typename fieldname (e:T.expr) (then_:T.parser) (else_:T.parser) : ML T.parser =      
     let k, p1, p2 =
-      if T.parser_kind_eq then_.p_kind else_.p_kind
-      then then_.p_kind, then_, else_
-      else let k = pk_glb then_.p_kind else_.p_kind in
+      let k = pk_glb then_.p_kind else_.p_kind in
            k,
            mk_parser k then_.p_typ typename (extend_fieldname fieldname "case_left") (T.Parse_weaken_right then_ else_.p_kind),
            mk_parser k else_.p_typ typename (extend_fieldname fieldname "case_right") (T.Parse_weaken_left else_ then_.p_kind)
@@ -289,8 +312,8 @@ let translate_op : A.op -> ML T.op =
   | Cast None _
   | SizeOf -> failwith (Printf.sprintf "Operator `%s` should have been eliminated already"
                                   (Ast.print_op op))
-
-
+  | ProbeFunctionName i -> T.ProbeFunctionName i
+ 
 let rec translate_expr (e:A.expr) : ML T.expr =
   (match e.v with
    | Constant c -> T.Constant c
@@ -306,8 +329,8 @@ let rec translate_expr (e:A.expr) : ML T.expr =
 
 let rec translate_output_type (t:A.typ) : ML T.typ =
   match t.v with
-  | Pointer t -> T.T_pointer (translate_output_type t)
-  | Type_app id b [] -> T.T_app id b []
+  | Pointer t (PQ A.UInt64 _ _) -> T.T_pointer (translate_output_type t) A.UInt64
+  | Type_app id b [] [] -> T.T_app id b []
   | _ -> failwith "Impossible, translate_output_type did not get an output type!"
 
 let rec translate_out_expr_node (oe:with_meta_t out_expr')
@@ -340,7 +363,7 @@ let output_types_attributes = {
   T.is_if_def = false;
   T.is_exported = false;
   T.should_inline = false;
-  T.comments = [] 
+  T.comments = [] ;
 }
 
 (*
@@ -366,35 +389,63 @@ let translate_typ_param (p:typ_param) : ML (T.expr & T.decls) =
 
 let rec translate_typ (t:A.typ) : ML (T.typ & T.decls) =
   match t.v with
-  | Pointer t ->
+  | Pointer t (PQ a _ nullable) ->
     let t', decls = translate_typ t in
-    T.T_pointer t', decls
-  | Type_app hd b args ->
+    T.T_pointer t' a, decls
+  | Type_app hd b gs args ->
+    let gs = gs |> List.map translate_expr |> List.map Inr in
     let args, decls = args |> List.map translate_typ_param |> List.split in
-    T.T_app hd b (List.map Inr args), List.flatten decls
+    T.T_app hd b (gs@List.map Inr args), List.flatten decls
+  | Type_arrow ts t ->
+    let ts, ds = ts |> List.map translate_typ |> List.split in
+    let t, d = translate_typ t in
+    T.T_arrow ts t, List.flatten ds @ d
 
 let translate_probe_entrypoint
+  (ep_name: option A.ident)
   (p: A.probe_entrypoint)
 : ML T.probe_entrypoint
-= {
+= let init =
+    match p.probe_ep_init with
+    | None -> failwith "Impossible, probe_ep_init should be set after elaboration!"
+    | Some i -> i
+  in
+  {
+    probe_ep_name = ep_name;
+    probe_ep_init = init;
     probe_ep_fn = p.probe_ep_fn;
     probe_ep_length = translate_expr p.probe_ep_length;
   }
 
+let translate_params (params:list Ast.param)
+: ML (list T.param & T.decls)
+= let ps, ds =
+    params
+    |> List.map
+        (fun (t, id, _) ->  //TODO: ignores qualifier
+          let t, ds = translate_typ t in
+          (id, t), ds)
+    |> List.split
+  in
+  ps, List.flatten ds
+
+ 
 let translate_typedef_name (tdn:A.typedef_names) (params:list Ast.param)
   : ML (T.typedef_name & T.decls) =
 
-  let params, ds = params |> List.map (fun (t, id, _) ->  //TODO: ignores qualifier
-    let t, ds = translate_typ t in
-    (id, t), ds) |> List.split in
-
-  let entrypoint_probes = List.map translate_probe_entrypoint (A.get_entrypoint_probes tdn.typedef_attributes) in
+  let params, ds = translate_params params in
+  let probe_names = A.get_probe_entrypoint_names tdn.typedef_attributes in
+  let probes = A.get_entrypoint_probes tdn.typedef_attributes in
+  let entrypoint_probes = List.map2 translate_probe_entrypoint probe_names probes in
 
   let open T in
   { td_name = tdn.typedef_name;
     td_params = params;
     td_entrypoint_probes = entrypoint_probes;
-    td_entrypoint = has_entrypoint tdn.typedef_attributes }, List.flatten ds
+    td_entrypoint = has_entrypoint tdn.typedef_attributes;
+    td_entrypoint_plain = A.has_plain_entrypoint tdn.typedef_attributes;
+    td_entrypoint_plain_name = A.get_plain_entrypoint_name tdn.typedef_attributes;
+    td_noextract = List.existsb Noextract? tdn.typedef_attributes }, ds
 
 let make_enum_typ (t:T.typ) (ids:list ident) =
   let refinement i =
@@ -464,13 +515,19 @@ let rec parse_typ (env:global_env)
   | T.T_app _ A.KindExtern _ ->
     failwith "Impossible, did not expect parse_typ to be called with an output/extern type!"
 
-  | T.T_app {v={name="nlist"}} KindSpec [Inr e; Inl t] ->
-    let pt = parse_typ env typename (extend_fieldname "element") t in
-    mk_parser pk_list
+  | T.T_nlist telt e ->
+    let pt = parse_typ env typename (extend_fieldname "element") telt in
+    let t_size_constant = is_compile_time_fixed_size env telt in
+    let n_is_const =
+      match T.as_constant e with
+      | Some (A.Int _ n) -> if n >= 0 then Some n else None
+      | _ -> None
+    in
+    mk_parser (pk_list pt.p_kind n_is_const)
               t
               typename
               fieldname
-              (T.Parse_nlist e pt)
+              (T.Parse_nlist t_size_constant e pt)
 
   | T.T_app {v={name="t_at_most"}} KindSpec [Inr e; Inl t] ->
     let pt = parse_typ env typename (extend_fieldname "element") t in
@@ -513,6 +570,11 @@ let rec parse_typ (env:global_env)
     let p2 = parse_typ env typename fieldname t2 in
     ite_parser typename fieldname e p1 p2
 
+  | T.T_pair t1 t2 ->
+    pair_parser env typename
+      (parse_typ env typename (extend_fieldname "first") t1)
+      (parse_typ env typename (extend_fieldname "second") t1)
+
   | T.T_dep_pair t1 (x, t2) ->
     dep_pair_parser typename (parse_typ env typename (extend_fieldname "first") t1) 
                              (x, parse_typ env typename (extend_fieldname "second") t2)
@@ -554,19 +616,23 @@ let rec parse_typ (env:global_env)
     let p = parse_typ env typename fieldname t in
     { p with p_parser = T.Parse_with_comment p c }
 
-  | T.T_pointer _ ->
-    failwith "No parsers for pointer types"
+  | T.T_pointer _ pointer_size ->
+    let u64_or_u32, _ = translate_typ (A.type_of_integer_type pointer_size) in
+    parse_typ env typename fieldname u64_or_u32
 
-  | T.T_with_probe content_type probe len dest -> 
+  | T.T_with_probe content_type integer_type pointer_nullable probe as_u64 dest init dest_sz -> 
     let p = parse_typ env typename fieldname content_type in
-    let q = T.Parse_with_probe p probe len dest in
-    let u64_t, _ = translate_typ A.tuint64 in
-    let u64_parser = parse_typ env typename fieldname u64_t in
-    { p_kind = u64_parser.p_kind;
+    let q = T.Parse_with_probe p integer_type pointer_nullable probe as_u64 dest init dest_sz in
+    let u64_or_u32, _ = translate_typ (A.type_of_integer_type integer_type) in
+    let u64_or_u32_parser = parse_typ env typename fieldname u64_or_u32 in
+    { p_kind = u64_or_u32_parser.p_kind;
       p_typ = t;
       p_parser = q;
       p_typename = typename;
       p_fieldname = fieldname }
+  
+  | T.T_arrow _ _ ->
+    failwith "Impossible, did not expect parse_typ to be called with an arrow type!"
 
 
 let rec read_typ (env:global_env) (t:T.typ) : ML (option T.reader) =
@@ -695,12 +761,12 @@ let rec parser_is_constant_size_without_actions
     -> true
   | T.Parse_app hd _
     -> parser_kind_is_constant_size env hd
-  | T.Parse_nlist array_size parse_elem
+  | T.Parse_nlist _ array_size parse_elem
     -> begin match fst array_size with
       | T.Constant (A.Int _ array_size) -> parser_is_constant_size_without_actions env parse_elem
       | _ -> false
       end
-  | T.Parse_pair _ hd tl
+  | T.Parse_pair _ _ hd _ tl
     -> if parser_is_constant_size_without_actions env hd
       then parser_is_constant_size_without_actions env tl
       else false
@@ -719,7 +785,7 @@ let rec parser_is_constant_size_without_actions
   | T.Parse_with_action _ _ _
   | T.Parse_if_else _ _ _
   | T.Parse_string _ _
-  | T.Parse_with_probe _ _ _ _
+  | T.Parse_with_probe _ _ _ _ _ _ _ _
     -> false
   | T.Parse_map p _
   | T.Parse_refinement _ p _
@@ -740,21 +806,90 @@ let make_zero (r: range) (t: typ) : ML T.expr =
   let it = typ_as_integer_type t in
   (T.Constant (Int it 0), r)
 
+let rec translate_probe_action (a:A.probe_action) : ML (T.probe_action & T.decls) =
+  let translate_atomic (a:A.probe_atomic_action) : ML T.atomic_probe_action =
+    match a with
+    | A.Probe_action_return e ->
+      T.Atomic_probe_return (translate_expr e)
+    | A.Probe_action_call f args ->
+      T.Atomic_probe_call_pure f (List.map translate_expr args)
+    | A.Probe_action_read f ->
+      T.Atomic_probe_and_read f
+    | A.Probe_action_write f v ->
+      T.Atomic_probe_write_at_offset (translate_expr v) f
+    | A.Probe_action_copy_and_return r w ty maybe_warn ->
+      failwith "Probe_action_copy_and_return should already have been desugared in the outer pass"
+    | A.Probe_action_copy f v ->
+      T.Atomic_probe_and_copy (translate_expr v) f
+    | A.Probe_action_skip_read n ->
+      T.Atomic_probe_skip_read (translate_expr n)
+    | A.Probe_action_skip_write n ->
+      T.Atomic_probe_skip_write (translate_expr n)
+    | A.Probe_action_fail ->
+      T.Atomic_probe_fail
+  in
+  match a.v with
+  | A.Probe_atomic_action a ->
+    T.Probe_action_atomic (translate_atomic a), []
+  | A.Probe_action_var i ->
+    T.Probe_action_var (translate_expr i), []
+  | A.Probe_action_seq d hd tl ->
+    let hd, ds1 = translate_probe_action hd in
+    let tl, ds2 = translate_probe_action tl in
+    T.Probe_action_seq (translate_expr d) hd tl, ds1@ds2
+  | A.Probe_action_let d i (A.Probe_action_copy_and_return reader writer _ _) k ->
+    let reader = A.Probe_action_read reader in
+    let writer = A.Probe_action_write writer (A.with_dummy_range <| Identifier i) in
+    let simplified = 
+      with_dummy_range <|
+        A.Probe_action_let d i reader
+          (with_dummy_range <|
+            A.Probe_action_seq d (with_dummy_range <| A.Probe_atomic_action writer) k)
+    in
+    translate_probe_action simplified
+  | A.Probe_action_let d i a k ->
+    let a = translate_atomic a in
+    let tl, ds2 = translate_probe_action k in
+    T.Probe_action_let (translate_expr d) i a tl, ds2
+  | A.Probe_action_ite e th el ->
+    let th, ds1 = translate_probe_action th in
+    let el, ds2 = translate_probe_action el in
+    T.Probe_action_ite (translate_expr e) th el, ds1@ds2
+  | A.Probe_action_array len e ->
+    let len = translate_expr len in
+    let e, ds = translate_probe_action e in
+    T.Probe_action_array len e, ds
+  | A.Probe_action_copy_init_sz f ->
+    T.Probe_action_copy_init_sz f, []
+
 #push-options "--z3rlimit_factor 4"
 let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =
   let sf = f.v in
+  let translate_probe_call (p:probe_call) 
+    : ML (T.probe_action & A.ident & T.decls & A.ident & T.expr) =
+    let { probe_dest; probe_block; probe_init; probe_dest_sz } = p in
+    let probe_block, ds = translate_probe_action probe_block in
+    match probe_init with
+    | None -> failwith "Impossible: probe_init should have been resolved"
+    | Some probe_init ->
+      probe_block, probe_dest, ds, probe_init, translate_expr probe_dest_sz
+  in
   match f.v.field_probe with
   | Some probe_call -> (
-    match f.v.field_type.v, probe_call.probe_fn with
-    | Pointer t, Some probe_fn ->
+    let as_u64 =
+      match probe_call.probe_ptr_as_u64 with
+      | None -> failwith "Impossible: probe_ptr_as_u64 should have been resolved"
+      | Some i -> i
+    in
+    let probe_action, dest, ds, probe_init, dest_sz = translate_probe_call probe_call in
+    match f.v.field_type.v with
+    | Pointer t (PQ a _ nullable) ->
       let t, ds1 = translate_typ t in
-      let len = translate_expr probe_call.probe_length in
-      let dest = probe_call.probe_dest in
-      let sf_typ = T.T_with_probe t probe_fn len dest in
+      let sf_typ = T.T_with_probe t a nullable probe_action dest as_u64 probe_init dest_sz in
       T.({ sf_dependence=sf.field_dependence;
            sf_ident=sf.field_ident;
            sf_typ=sf_typ }), 
-      ds1
+      ds@ds1
       
     | _ -> 
       failwith "Impossible: probed fields must be pointers and the probe function must be resolved"
@@ -772,7 +907,7 @@ let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =
         | FieldArrayQualified (e, ByteArrayByteSize)
         | FieldArrayQualified (e, ArrayByteSize) ->
           let e = translate_expr e in
-          T.T_app (with_range (to_ident' "nlist") sf.field_type.range) KindSpec [Inr e; Inl t]
+          T.T_nlist t e
         | FieldArrayQualified (e, ArrayByteSizeAtMost) ->
           mk_at_most t e
         | FieldArrayQualified (e, ArrayByteSizeSingleElementArray) ->
@@ -885,7 +1020,7 @@ let parse_grouped_fields (env:global_env) (typename:A.ident) (gfs:grouped_fields
           parse_typ sf.sf_ident sf.sf_typ
 
         | Some rest -> 
-          pair_parser sf.sf_ident
+          pair_parser env sf.sf_ident
             (parse_typ sf.sf_ident sf.sf_typ)
             (aux rest)
         )
@@ -902,7 +1037,7 @@ let parse_grouped_fields (env:global_env) (typename:A.ident) (gfs:grouped_fields
           aux gfs
 
         | Some rest -> 
-          pair_parser id
+          pair_parser env id
             (aux gfs)
             (aux rest)
         )
@@ -911,15 +1046,15 @@ let parse_grouped_fields (env:global_env) (typename:A.ident) (gfs:grouped_fields
     aux gfs
 
 
-let make_tdn (i:A.ident) =
+let make_tdn (i:A.ident) (attrs:list A.attribute) =
   {
     typedef_name = i;
     typedef_abbrev = with_dummy_range (to_ident' "");
-    typedef_ptr_abbrev = with_dummy_range (to_ident' "");
-    typedef_attributes = []
+    typedef_ptr_abbrev = None;
+    typedef_attributes = attrs
   }
 
-let env_t = list (A.ident * T.typ)
+let env_t = list (A.ident & T.typ)
 
 let check_in_global_env (env:global_env) (i:A.ident) =
   let _ = B.lookup_expr_name (B.mk_env env.benv) i in ()
@@ -955,13 +1090,34 @@ let rec free_vars_expr (genv:global_env)
     | Record _ fields ->
       List.fold_left (fun out (_, e) -> free_vars_expr genv env out e) out fields
 
-let with_attrs (d:T.decl') (h:bool) (is_entrypoint: bool) (ifdef:bool) (e:bool) (i:bool) (c:list string)
+let with_attrs 
+      (d:T.decl')
+      (h:bool)
+      (is_entrypoint: bool)
+      (ifdef:bool)
+      (e:bool)
+      (i:bool)
+      (c:list string)
   : T.decl
-  = d, T.({ is_hoisted = h; is_entrypoint = is_entrypoint; is_if_def = ifdef; is_exported = e; should_inline = i; comments = c } )
+  = d, T.({ 
+      is_hoisted = h;
+      is_entrypoint;
+      is_if_def = ifdef;
+      is_exported = e;
+      should_inline = i;
+      comments = c
+    } )
 
 let with_comments (d:T.decl') (is_entrypoint: bool) (e:bool) (c:list string)
   : T.decl
-  = d, T.({ is_hoisted = false; is_entrypoint = is_entrypoint; is_if_def=false; is_exported = e; should_inline = false; comments = c } )
+  = d, T.({
+      is_hoisted = false;
+      is_entrypoint;
+      is_if_def=false;
+      is_exported = e;
+      should_inline = false;
+      comments = c;
+    } )
 
 let rec hoist_typ
           (fn:string)
@@ -972,7 +1128,12 @@ let rec hoist_typ
   = let open T in
     match t with
     | T_false -> [], t
+    | T_nlist _ _
     | T_app _ _ _ -> [], t
+    | T_pair t1 t2 ->
+      let ds, t1 = hoist_typ fn genv env t1 in
+      let ds', t2 = hoist_typ fn genv env t2 in
+      ds@ds', T_pair t1 t2
     | T_dep_pair t1 (x, t2) ->
       let ds, t1 = hoist_typ fn genv env t1 in
       let ds', t2 = hoist_typ fn genv ((x, t1)::env) t2 in
@@ -1019,8 +1180,9 @@ let rec hoist_typ
       let d, t = hoist_typ fn genv env t in
       d, T_with_comment t c
 
-    | T_pointer _
-    | T_with_probe _ _ _ _ ->
+    | T_pointer _ _
+    | T_with_probe _ _ _ _ _ _ _ _
+    | T_arrow _ _ ->
       [], t
 
 let add_parser_kind_nz (genv:global_env) (id:A.ident) (nz:bool) (wk: weak_kind) =
@@ -1053,10 +1215,13 @@ let hoist_one_type_definition (should_inline:bool)
                                    prefix
                                    (ident_to_string orig_tdn.td_name) in
       let tdn = {
+        orig_tdn with
           td_name = id;
           td_params = List.rev env;
           td_entrypoint_probes = [];
-          td_entrypoint = false
+          td_entrypoint = false;
+          td_entrypoint_plain = false;
+          td_entrypoint_plain_name = None;
       } in
       let t_parser = parse_typ orig_tdn.td_name type_name body in
       add_parser_kind_nz genv tdn.td_name t_parser.p_kind.pk_nz t_parser.p_kind.pk_weak_kind;
@@ -1091,7 +1256,7 @@ let hoist_field (genv:global_env) (env:env_t) (tdn:T.typedef_name) (f:T.field)
       d@[td], f
 
 let hoist_refinements (genv:global_env) (tdn:T.typedef_name) (fields:list T.field)
-  : ML (list T.decl * list T.field)
+  : ML (list T.decl & list T.field)
   = let hoist_one_field edf (f:T.field)
         : ML _ =
         let open T in
@@ -1196,8 +1361,11 @@ let parse_field (env:global_env)
   = let _, gfs, decls = field_as_grouped_fields f in
     parse_grouped_fields env typename gfs, decls
 
-  
+let generics_as_params (gs:list generic_param) =
+  List.map (function GenericProbeFunction i ty _ -> ty, i, Immutable) gs
+
 let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
+  if A.is_noextract d then [] else
   match d.d_decl.v with
   | ModuleAbbrev _ _ -> []
   | Define i None s ->
@@ -1207,10 +1375,11 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     let t, ds = translate_typ t in
     ds@[with_comments (T.Definition (i, [], t, T.mk_expr (T.Constant s))) (A.is_entrypoint d) d.d_exported d.d_decl.comments]
 
-  | TypeAbbrev t i ->
-    let tdn = make_tdn i in
+  | TypeAbbrev attrs t i gs ps ->
+    let tdn = make_tdn i attrs in
     let t, ds1 = translate_typ t in
-    let tdn, ds2 = translate_typedef_name tdn [] in
+    let params =  generics_as_params gs @ ps in
+    let tdn, ds2 = translate_typedef_name tdn params in
     let p = parse_typ env i "" t in
     let open T in
     add_parser_kind_nz env tdn.td_name p.p_kind.pk_nz p.p_kind.pk_weak_kind;
@@ -1221,11 +1390,11 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
         decl_parser = p;
         decl_is_enum = false
     } in
-    ds1@ds2@[with_comments (Type_decl td) (A.is_entrypoint d) d.d_exported A.(d.d_decl.comments)]
+    ds1@ds2@[with_comments (Type_decl td) (A.has_entrypoint attrs) d.d_exported A.(d.d_decl.comments)]
 
   | Enum t i ids ->
     let ids = Desugar.check_desugared_enum_cases ids in
-    let tdn = make_tdn i in
+    let tdn = make_tdn i [] in
     let typ, ds1 = translate_typ t in
     let tdn, ds2 = translate_typedef_name tdn [] in
     let refined_typ = make_enum_typ typ ids in
@@ -1241,8 +1410,8 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     } in
     ds1@ds2@[with_comments (Type_decl td) (A.is_entrypoint d) d.d_exported A.(d.d_decl.comments)]
 
-  | Record tdn params _ ast_fields ->
-    let tdn, ds1 = translate_typedef_name tdn params in
+  | Record tdn gs params _ ast_fields ->
+    let tdn, ds1 = translate_typedef_name tdn (generics_as_params gs @ params) in
     let dummy_ident = with_dummy_range (to_ident' "_") in
     let p, ds2 = parse_field env tdn.td_name (with_dummy_range (RecordField ast_fields dummy_ident)) in
     let open T in
@@ -1255,10 +1424,10 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
           decl_parser = p;
           decl_is_enum = false
     } in
-   ds1@ds2 @ [with_comments (Type_decl td) (A.is_entrypoint d) d.d_exported A.(d.d_decl.comments)]
+    ds1@ds2 @ [with_comments (Type_decl td) (A.is_entrypoint d) d.d_exported A.(d.d_decl.comments)]
 
-  | CaseType tdn0 params switch_case ->
-    let tdn, ds1 = translate_typedef_name tdn0 params in
+  | CaseType tdn0 gs params switch_case ->
+    let tdn, ds1 = translate_typedef_name tdn0 (generics_as_params gs @ params) in
     let dummy_ident = with_dummy_range (to_ident' "_") in    
     let p, ds2 = parse_field env tdn.td_name (with_dummy_range (SwitchCaseField switch_case dummy_ident)) in
     let open T in
@@ -1273,19 +1442,38 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     } in
     ds1 @ ds2 @ [with_comments (Type_decl td) (A.is_entrypoint d) d.d_exported A.(d.d_decl.comments)]
 
+  | ProbeFunction id ps pb _ ->
+    let ps, ds = translate_params ps in
+    let pb, ds' = translate_probe_action pb in
+    ds@ds'@[with_comments (T.Probe_function id ps pb) false false A.(d.d_decl.comments)]
+
+  | CoerceProbeFunctionStub _ _ _ ->
+    failwith "Coerce probe function stub: should have been eliminated before translation"
+
+  | Specialize _ _ _ ->
+    failwith "Specialize: should have been eliminated before translation"
+
   | OutputType out_t -> [with_comments (T.Output_type out_t) (A.is_entrypoint d) false []]  //No decl for output type specifications
 
   | ExternType tdnames -> [with_comments (T.Extern_type tdnames.typedef_abbrev) (A.is_entrypoint d) false []]
 
-  | ExternFn f ret params ->
+  | ExternFn f ret params pure ->
     let ret, ds = translate_typ ret in
     let params, ds = List.fold_left (fun (params, ds) (t, i, _) ->
       let t, ds_t = translate_typ t in
       params@[i, t],ds@ds_t) ([], ds) params in
-    ds @ [with_comments (T.Extern_fn f ret params) (A.is_entrypoint d) false []]
+    ds @ [with_comments (T.Extern_fn f ret params pure) (A.is_entrypoint d) false []]
 
-  | ExternProbe f ->
-    [with_comments (T.Extern_probe f) (A.is_entrypoint d) false []]
+  | ExternProbe f pq ->
+    let translate_qualifier (pq:A.probe_qualifier) : ML T.probe_qualifier =
+      match pq with
+      | A.PQWithOffsets -> T.PQWithOffsets
+      | A.PQInit -> T.PQInit
+      | A.PQRead t -> T.PQRead t
+      | A.PQWrite t -> T.PQWrite t
+    in
+    let pq = translate_qualifier pq in
+    [with_comments (T.Extern_probe f pq) (A.is_entrypoint d) false []]
 
 noeq
 type translate_env = {
