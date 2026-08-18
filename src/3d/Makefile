@@ -53,7 +53,7 @@ clean-3d:
 .PHONY: hashchk hashchk-boot
 
 hashchk:
-	cd hashchk && dotnet publish -o $(EVERPARSE_HOME)/bin everparse.fsproj
+	cd hashchk && dotnet build everparse.fsproj && dotnet build everparse-hashchk.fsproj
 
 hashchk-boot: 3d
 	+$(MAKE) -f hashchk.Makefile
