@@ -987,7 +987,7 @@ let print_c_entry
    let error_handler_arg =
      if use_error_handler_macro then "" else " &DefaultErrorHandler,"
    in
-   let input_stream_binding = Options.get_input_stream_binding () in
+   let input_stream_binding = Options.input_stream_binding () in
    let is_input_stream_buffer = HashingOptions.InputStreamBuffer? input_stream_binding in
    let wrapped_call_buffer name params =
      let tail =

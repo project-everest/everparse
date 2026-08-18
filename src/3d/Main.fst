@@ -273,7 +273,7 @@ let emit_static_assertions
     let c_static_asserts_file =
       open_write_file
         (Printf.sprintf "%s/%s%s.c"
-          (Options.get_output_dir())
+          (Options.output_dir())
           modul
           filename_suffix) in
     FStar.IO.write_string c_static_asserts_file "\n\n";
@@ -716,10 +716,10 @@ let go () : ML unit =
   if micro_step = Some HashingOptions.MicroStepSaveHashes
   then
   (* Special mode: --__micro_step save_hashes *)
-    let out_dir = Options.get_output_dir () in
+    let out_dir = Options.output_dir () in
     let _ = OS.mkdir out_dir in
     List.iter (fun file ->
-      Batch.save_hashes_for_module out_dir file (Options.get_module_name file)
+      Batch.save_hashes_for_module out_dir file (Options.module_name file)
     ) cmd_line_files;
     exit 0
   else
@@ -750,7 +750,7 @@ let go () : ML unit =
       (Options.skip_o_rules ())
       (Options.clang_format ())
       (not (Options.get_clang_format_use_custom_config ()))
-      (Options.get_save_hashes ())
+      (Options.save_hashes ())
       cmd_line_files
   | None ->
   (* Special mode: --__produce_c_from_existing_krml *)

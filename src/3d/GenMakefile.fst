@@ -533,7 +533,7 @@ let produce_hash_rule
   (file: string)
 : FStar.All.ML rule_t
 =
-  let modul = Options.get_module_name file in
+  let modul = Options.module_name file in
   let deps =
     [mk_input_filename file;
      mk_filename modul "c";
@@ -652,7 +652,7 @@ let write_makefile
   write_all_ext_files "C" "c";
   write_all_ext_files "O" (oext mtype);
   if save_hashes then begin
-    let json_files = List.map (fun f -> mk_filename (Options.get_module_name f) "json") all_files in
+    let json_files = List.map (fun f -> mk_filename (Options.module_name f) "json") all_files in
     FStar.IO.write_string file (Printf.sprintf "EVERPARSE_ALL_JSON_FILES=%s\n" (String.concat " " (List.Tot.map (mk_rule_operand mtype) json_files)))
   end;
   FStar.IO.close_write_file file;
