@@ -43,7 +43,7 @@ LDLIBS   += -pthread
 all: $(BIN)
 
 $(CURDIR)/thrift-build:
-	+cd thrift && ./bootstrap.sh && ./configure --prefix=$@ --with-cpp --without-perl --without-python --disable-dependency-tracking && $(MAKE) && $(MAKE) install
+	+cd thrift && ./bootstrap.sh && ./configure --prefix=$@ --with-cpp --without-perl --without-python --without-nodejs --without-netstd --without-rs --disable-dependency-tracking && $(MAKE) && $(MAKE) install
 
 $(BIN): $(OBJS) $(THRIFT_PREFIX)
 	$(CXX) $(LDFLAGS) -o $@ $(OBJS) $(LDLIBS)
