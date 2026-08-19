@@ -32,6 +32,7 @@ SRC_DIRS += src/lowparse src/ASN1 src/3d/prelude src/cbor/spec src/cbor/spec/raw
 
 ifeq (,$(NO_PULSE))
   SRC_DIRS += src/lowparse/pulse src/cbor/pulse src/cbor/pulse/raw src/cbor/pulse/raw/everparse src/cddl/pulse src/cddl/tool
+  SRC_DIRS += src/Parquet
 endif
 
 ifneq (,$(FSTAR_EXE))
@@ -272,6 +273,15 @@ ci: test 3d-doc-ci
 	+$(MAKE) -C doc 3d-snapshot
 
 .PHONY: 3d-doc-snapshot
+
+ifeq (,$(NO_PULSE))
+parquet: $(filter src/Parquet/%,$(ALL_CHECKED_FILES)) $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+	+$(MAKE) -C src/Parquet
+else
+parquet:
+endif
+
+.PHONY: parquet
 
 clean-3d:
 	+$(MAKE) -C src/3d clean
