@@ -5,7 +5,7 @@ EVERPARSE_SRC_PATH = $(realpath ..)
 
 INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/lowparse/pulse $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/pulse
 ALREADY_CACHED := *,-Parquet,-CDDL.Pulse.Types.Base,-CDDL.Spec.Bijection,-CBOR.Spec.Util
-FSTAR_DEP_OPTIONS += --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice'
+FSTAR_DEP_OPTIONS += --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Pervasives,+Pulse.Lib.Slice'
 OUTPUT_DIRECTORY := _output
 
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
@@ -17,7 +17,7 @@ include $(EVERPARSE_SRC_PATH)/common.Makefile
 extract: cpp/EverParquet.c
 
 cpp/EverParquet.c: $(ALL_KRML_FILES)
-	$(KRML_HOME)/krml -skip-compilation -bundle Parquet.Pulse.Toplevel+Parquet.Pulse.Toplevel0=\*[rename=EverParquet] -skip-makefiles -tmpdir $(dir $@) -header noheader.txt $(ALL_KRML_FILES)
+	$(KRML_EXE) -skip-compilation -bundle Parquet.Pulse.Toplevel+Parquet.Pulse.Toplevel0=\*[rename=EverParquet] -skip-makefiles -tmpdir $(dir $@) -header noheader.txt $(ALL_KRML_FILES)
 
 cpp: extract
 	+$(MAKE) -C cpp

@@ -1,9 +1,9 @@
-ifeq (,$(KRML_HOME))
-  $(error please define KRML_HOME to point to the root of your KaRaMeL git checkout)
+ifeq (,$(KRML_EXE))
+  $(error please define KRML_EXE to point to the KaRaMeL executable)
 endif
 
-KRML_INC  := $(KRML_HOME)/include
-KRML_MIN  := $(KRML_HOME)/krmllib/dist/minimal
+KRML_INC  := $(shell $(KRML_EXE) -locate-include)
+KRML_MIN  := $(shell $(KRML_EXE) -locate-krmllib)/dist/minimal
 
 # ---- toolchain ----
 CC      := gcc
