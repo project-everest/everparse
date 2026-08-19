@@ -1,4 +1,5 @@
 all: verify extract
+all: cpp
 
 EVERPARSE_SRC_PATH = $(realpath ..)
 
@@ -17,3 +18,8 @@ extract: cpp/EverParquet.c
 
 cpp/EverParquet.c: $(ALL_KRML_FILES)
 	$(KRML_HOME)/krml -skip-compilation -bundle Parquet.Pulse.Toplevel+Parquet.Pulse.Toplevel0=\*[rename=EverParquet] -skip-makefiles -tmpdir $(dir $@) -header noheader.txt $(ALL_KRML_FILES)
+
+cpp: extract
+	+$(MAKE) -C cpp
+
+.PHONY: cpp
