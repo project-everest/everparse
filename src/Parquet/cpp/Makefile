@@ -42,8 +42,20 @@ LDLIBS   += -pthread
 
 all: $(BIN)
 
+# Thrift's C++ library needs the Boost headers (>= 1.56). If Boost lives in a
+# non-standard prefix, set BOOST_ROOT to point to it.
+THRIFT_CONFIGURE_FLAGS := \
+  --disable-dependency-tracking --disable-tests --disable-tutorial \
+  --with-cpp $(if $(BOOST_ROOT),--with-boost=$(BOOST_ROOT),) \
+  --without-c_glib --without-qt5 --without-java --without-kotlin \
+  --without-python --without-py3 --without-perl --without-php \
+  --without-php_extension --without-ruby --without-go --without-rs \
+  --without-nodejs --without-nodets --without-netstd --without-dart \
+  --without-erlang --without-lua --without-swift --without-cl \
+  --without-haxe --without-d
+
 $(CURDIR)/thrift-build:
-	+cd thrift && ./bootstrap.sh && ./configure --prefix=$@ --with-cpp --without-perl --without-python --without-nodejs --without-netstd --without-rs --disable-dependency-tracking && $(MAKE) && $(MAKE) install
+	+cd thrift && ./bootstrap.sh && ./configure --prefix=$@ $(THRIFT_CONFIGURE_FLAGS) && $(MAKE) && $(MAKE) install
 
 $(BIN): $(OBJS) $(THRIFT_PREFIX)
 	$(CXX) $(LDFLAGS) -o $@ $(OBJS) $(LDLIBS)
