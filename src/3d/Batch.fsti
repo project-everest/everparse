@@ -2,6 +2,9 @@ module Batch
 open HashingOptions
 open FStar.All
 
+val krmllib: string -> ML string
+val krmlinclude: string -> ML string
+
 val cl_wrapper: unit -> ML string
 
 (* The --print_in_place step has to be performed at source generation
@@ -86,4 +89,10 @@ val check_all_hashes
   (ch: check_hashes_t)
   (out_dir: string)
   (files_and_modules: list (string & string))
+: ML unit
+
+val save_hashes_for_module
+  (out_dir: string)
+  (file: string)
+  (modul: string)
 : ML unit

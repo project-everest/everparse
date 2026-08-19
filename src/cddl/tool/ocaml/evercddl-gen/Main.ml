@@ -26,13 +26,25 @@ let list_is_empty = function
 
 let fstar_only = ref false
 
-let produce_fst_file (dir: string) : string =
+let mkdir dir =
+  if Sys.file_exists dir && Sys.is_directory dir
+  then ()
+  else try Sys.mkdir dir 0o755 with _ -> ()
+
+let nbe = ref true
+
+let produce_fst_file (tmpdir: string) (dir: string) : string =
   let filenames = List.rev !rev_filenames in
   match ParseFromFile.parse_from_files filenames with
   | None -> failwith "Parsing failed"
   | Some l ->
+     let progstr = CDDL_Spec_AST_Print.program_to_string l in
+     let _ = mkdir tmpdir in
+     let progch = open_out (Filename.concat tmpdir (!mname ^ ".ml")) in
+     let _ = output_string progch progstr in
+     let _ = close_out progch in
      let filenames_str = List.fold_left (fun accu fn -> accu ^ "\"" ^ fn ^ "\";") "" filenames in
-     let str = CDDL_Tool_Gen.produce_defs_fst !mname !lang filenames_str l in
+     let str = CDDL_Tool_Gen.produce_defs_fst !nbe !mname !lang filenames_str l in
      if String.starts_with ~prefix:"Error: " str
      then begin
          print_endline str;
@@ -42,7 +54,7 @@ let produce_fst_file (dir: string) : string =
          let basename = !mname ^ ".fst" in
          let filename = Filename.concat dir basename in
          let filename_tmp = filename ^ ".tmp" in
-         if not (Sys.file_exists dir && Sys.is_directory dir) then Sys.mkdir dir 0o755;
+         mkdir dir;
          let ch = open_out filename_tmp in
          output_string ch str;
          close_out ch;
@@ -72,7 +84,7 @@ let string_matches_regexp s r = Re.execp r s
 let filename_is_relative n =
   if Filename.is_relative n
   then true
-  else if Sys.cygwin
+  else if Sys.win32
   then not (string_matches_regexp n regexp_path_drive)
   else false
 
@@ -97,21 +109,40 @@ let fstar_exe =
      let opt_fstar_exe = Filename.concat (Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "FStar") "bin") "fstar.exe" in
      if Sys.file_exists opt_fstar_exe
      then opt_fstar_exe
-     else "fstar.exe" (* rely on PATH *)
+     else
+       (* assume a binary package *)
+       let fstar_exe = Filename.concat (Filename.concat everparse_home "bin") "fstar.exe" in
+       if Sys.file_exists fstar_exe
+       then fstar_exe
+       else "fstar.exe" (* rely on PATH *)
 
-let krml_home =
+let krml_exe =
   try
-    Sys.getenv "KRML_HOME"
+    Sys.getenv "KRML_EXE"
   with
-  | Not_found -> Filename.concat (Filename.concat everparse_home "opt") "karamel"
+  | Not_found ->
+    let krml = "krml" ^ (if Sys.win32 then ".exe" else "") in
+    let opt_krml = Filename.concat (Filename.concat (Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "karamel") "out") "bin") krml in
+    if Sys.file_exists opt_krml
+    then opt_krml
+    else
+       (* assume a binary package *)
+       Filename.concat (Filename.concat everparse_home "bin") krml
 
-let pulse_home =
-  try
-    Sys.getenv "PULSE_HOME"
-  with
-  | Not_found -> Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "pulse") "out"
+let krml_locate k tmpdir =
+  let tmpfile = Filename.temp_file ~temp_dir:tmpdir ("krml_locate_" ^ k) ".tmp" in
+  let cmd = Filename.quote_command krml_exe ~stdout:tmpfile ["-locate-" ^ k] in
+  if Sys.command cmd <> 0 then failwith ("Unable to run krml -locate-" ^ k);
+  let ch = open_in tmpfile in
+  let res = input_line ch in
+  close_in ch;
+  res
 
-let z3_version = "4.13.3"
+let krmllib = krml_locate "krmllib"
+
+let krmlinclude = krml_locate "include"
+
+let z3_version = Z3Version.z3_version
 
 let z3_executable_option =
   let test = run_cmd ~silent:true fstar_exe ["--locate_z3"; z3_version] in
@@ -134,7 +165,6 @@ let everparse_src_cddl = Filename.concat everparse_src "cddl"
 let everparse_src_cddl_spec = Filename.concat everparse_src_cddl "spec"
 let everparse_src_cddl_pulse = Filename.concat everparse_src_cddl "pulse"
 let everparse_src_cddl_tool = Filename.concat everparse_src_cddl "tool"
-let krml_home_krmllib = Filename.concat krml_home "krmllib"
 let everparse_home_lib = Filename.concat everparse_home "lib"
 let everparse_home_lib_evercddl = Filename.concat everparse_home_lib "evercddl"
 
@@ -146,9 +176,6 @@ let include_options =
       everparse_src_cddl_spec;
       everparse_src_cddl_pulse;
       everparse_src_cddl_tool;
-      krml_home_krmllib;
-      Filename.concat krml_home_krmllib "obj";
-      Filename.concat (Filename.concat pulse_home "lib") "pulse";
       Filename.concat everparse_home_lib_evercddl "lib";
       Filename.concat everparse_home_lib_evercddl "plugin";
     ]
@@ -163,6 +190,7 @@ let include_options_for_rust =
       everparse_src_cbor_spec_raw;
       Filename.concat everparse_src_cbor_spec_raw "everparse";
       everparse_src_cbor_pulse_raw;
+      Filename.concat everparse_src_cbor_pulse_raw "slice-rust";
       Filename.concat everparse_src_cbor_pulse_raw "everparse";
       everparse_src_lowparse;
       Filename.concat everparse_src_lowparse "pulse";
@@ -176,10 +204,7 @@ let fstar_options =
     [
       "--cache_checked_modules";
       "--warn_error"; "@241";
-      "--cmi";
       "--ext"; "context_pruning";
-      "--load_cmxs"; "evercddl_lib";
-      "--load_cmxs"; "evercddl_plugin";
     ] @
       include_options
 
@@ -217,6 +242,8 @@ let rust_krml_list =
     (Filename.concat everparse_src_cddl_tool "extraction-rust")
     "rust.lst"
 
+let skip_compilation = ref false
+
 let _ =
   let argspec = ref [
       ("--admit", Arg.Unit (fun _ -> admit := true), "Admit proofs");
@@ -224,7 +251,9 @@ let _ =
       ("--mname", Arg.String (fun m -> mname := m), "Set the module name");
       ("--odir", Arg.String (fun d -> odir := d), "Set the output directory (default .)");
       ("--fstar_only", Arg.Unit (fun _ -> fstar_only := true), "Only generate F*");
+      ("--skip_compilation", Arg.Unit (fun _ -> skip_compilation := true), "Do not compile produced C files");
       ("--tmpdir", Arg.String (fun d -> tmpdir := d), "Set the temporary directory (default automatically generated)");
+      ("--__tmp_no_nbe", Arg.Unit (fun _ -> nbe := false), "(TEMP) Disable NBE for extraction");
     ]
   in
   let usagemsg = "EverCDDL: Produces a F* file to generate formally verified parsers and serializers from CDDL specifications.\nUsage: "^Sys.argv.(0) ^" [options] file1 [file2 ...]" in
@@ -240,8 +269,9 @@ let _ =
       prerr_endline ("ERROR: Module name " ^ !mname ^ " contains a period. This has unintended consequences for Rust code generation. Please specify a module name with --mname");
       exit 1
     end;
-  let dir = if !fstar_only then !odir else if !tmpdir <> "" then !tmpdir else mk_tmp_dir_name () in
-  let basename = produce_fst_file dir in
+  let tmpdir = if !tmpdir <> "" then !tmpdir else mk_tmp_dir_name () in
+  let dir = if !fstar_only then !odir else tmpdir in
+  let basename = produce_fst_file tmpdir dir in
   if !fstar_only then exit 0;
   let filename = Filename.concat dir basename in
   let res = run_cmd fstar_exe
@@ -287,7 +317,6 @@ let _ =
   let krml_options =
     if is_rust () then
       [
-        "-fstar"; fstar_exe;
         "-backend"; "rust";
         "-fno-box";
         "-fkeep-tuples";
@@ -304,26 +333,78 @@ let _ =
     else
       [
           "-warn-error"; "@1..27";
+          (* Always emit only: the CBOR Det types are now concrete in
+             CBORDetType.h, so krml re-emits any shared monomorphic instance
+             into the generated headers; we drive the C compiler ourselves below. *)
           "-skip-compilation";
           "-tmpdir"; !odir;
           "-header"; Filename.concat everparse_src_cddl_tool "noheader.txt";
-        "-fstar"; fstar_exe;
         "-fnoshort-enums";
         "-bundle"; "FStar.\\*,LowStar.\\*,C.\\*,C,PulseCore.\\*,Pulse.\\*[rename=fstar]";
         "-no-prefix"; "CBOR.Pulse.API.Det.C";
         "-no-prefix"; "CBOR.Pulse.API.Det.Type";
         "-no-prefix"; "CBOR.Spec.Constants";
+        "-no-prefix"; "CBOR.Pulse.API.Det.Dummy";
         "-bundle"; "CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\\*[rename=CBORDetAPI]";
 	"-bundle"; (!mname ^ "=\\*");
-	"-add-include"; "\"CBORDetAbstract.h\"";
+        "-skip-makefiles";
+	"-add-include"; "\"CBORDetType.h\"";
+        "-I"; Filename.concat (Filename.concat everparse_src_cbor_pulse "det") "c";
+        "-ccopt"; "-Wno-unused-variable";
         krml_file;
       ] @
         c_krml_list
   in
+  let krml_tmpfile = Filename.temp_file ~temp_dir:tmpdir "krml_options" ".rsp" in
+  let krml_tmpfile_out = open_out krml_tmpfile in
+  let _ = List.iter (fun s -> output_string krml_tmpfile_out s; output_char krml_tmpfile_out '\n') krml_options in
+  let _ = close_out krml_tmpfile_out in
   let res =
     run_cmd
-      (Filename.concat krml_home "krml")
-      krml_options
+      krml_exe
+      ["@" ^ krml_tmpfile]
+  in
+  let _ = Sys.remove krml_tmpfile in
+  (* In the C case, krml only emitted the sources (-skip-compilation). Drive the
+     C compiler ourselves unless compilation was explicitly skipped. The byte
+     slice that cbor_raw embeds is homed by the CBOR library as the nominal
+     `byte_slice` struct in the included CBORDetType.h, so the generated consumer
+     headers no longer collide with it. *)
+  let res =
+    if res = 0 && not (is_rust ())
+    then begin
+      if !skip_compilation
+      then 0
+      else begin
+        let cc = try Sys.getenv "CC" with Not_found -> "cc" in
+        let det_c = Filename.concat (Filename.concat everparse_src_cbor_pulse "det") "c" in
+        let krmllib = krmllib tmpdir in
+        let krmlinclude = krmlinclude tmpdir in
+        let cc_args = [
+          "-I"; Filename.concat (Filename.concat krmllib "dist") "minimal";
+          "-I"; krmllib;
+          "-I"; det_c;
+          "-I"; krmlinclude;
+          "-I"; !odir;
+          "-Wall"; "-Werror"; "-Wno-unknown-warning-option"; "-g"; "-fwrapv";
+          "-D_BSD_SOURCE"; "-D_DEFAULT_SOURCE"; "-Wno-parentheses"; "-std=c11";
+          "-Wno-unused-variable";
+        ] in
+        let cfiles =
+          Array.to_list (Sys.readdir !odir)
+          |> List.filter (fun f -> Filename.check_suffix f ".c")
+          |> List.sort compare
+        in
+        List.fold_left (fun acc cf ->
+          if acc <> 0 then acc
+          else
+            let c = Filename.concat !odir cf in
+            let o = Filename.concat !odir (Filename.remove_extension cf ^ ".o") in
+            run_cmd cc (cc_args @ ["-c"; c; "-o"; o])
+        ) 0 cfiles
+      end
+    end
+    else res
   in
   if res = 0 then print_endline "EverCDDL succeeded!";
   exit res

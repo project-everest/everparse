@@ -1,9 +1,11 @@
 module CBOR.Pulse.API.Det.C.Copy
-#lang-pulse
-friend CBOR.Pulse.API.Det.C
-friend CBOR.Pulse.API.Det.Common
 friend CBOR.Pulse.API.Det.Type
 friend CBOR.Spec.API.Format
+friend CBOR.Pulse.API.Det.Common
+friend CBOR.Pulse.API.Det.C
+include CBOR.Pulse.API.Det.C
+open Pulse.Lib.Pervasives
+#lang-pulse
 
 module SpecRaw = CBOR.Spec.Raw
 module Raw = CBOR.Pulse.Raw.Match

@@ -95,7 +95,7 @@ let parse32_bounded_vldata_strong_aux
   (s: serializer p)
   (p32: parser32 p)
   (input: bytes32)
-: Tot (option (parse_bounded_vldata_strong_t min max #k #t #p s * U32.t))
+: Tot (option (parse_bounded_vldata_strong_t min max #k #t #p s & U32.t))
 = let res =
     parse32_strengthen
       #(parse_bounded_vldata_strong_kind min max l k)
@@ -125,7 +125,7 @@ let parse32_bounded_vldata_strong_correct
   (p32: parser32 p)
   (input: bytes32)
 : Lemma
-  ( let res : option (parse_bounded_vldata_strong_t min max s * U32.t) = 
+  ( let res : option (parse_bounded_vldata_strong_t min max s & U32.t) = 
       parse32_bounded_vldata_strong_aux min min32 max max32 l s p32 input
     in
     parser32_correct (parse_bounded_vldata_strong' min max l s) input res)

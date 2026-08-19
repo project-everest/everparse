@@ -1,6 +1,7 @@
 module CBOR.Pulse.API.Det.C
 #lang-pulse
 include CBOR.Pulse.API.Det.Type
+include CBOR.Pulse.API.Det.Dummy
 include CBOR.Pulse.API.Base
 open Pulse.Lib.Pervasives
 open CBOR.Spec.Constants
@@ -130,7 +131,9 @@ val cbor_det_mk_simple_value () : mk_simple_t cbor_det_match
 val cbor_det_mk_int64 () : mk_int64_t cbor_det_match
 val cbor_det_mk_tagged () : mk_tagged_t cbor_det_match
 
-val cbor_det_mk_string_from_arrayptr (_: unit) : mk_string_from_arrayptr_t cbor_det_match
+val cbor_det_mk_byte_string_from_arrayptr (_: unit) : mk_string_from_arrayptr_t cbor_det_match cbor_major_type_byte_string
+
+val cbor_det_mk_text_string_from_arrayptr (_: unit) : mk_string_from_arrayptr_t cbor_det_match cbor_major_type_text_string
 
 val cbor_det_mk_array_from_array (_: unit) : mk_array_from_array_t cbor_det_match
 

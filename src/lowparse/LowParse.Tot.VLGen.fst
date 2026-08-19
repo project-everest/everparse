@@ -40,7 +40,7 @@ let parse_vlgen_weak
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-: Tot (parser (parse_vlgen_weak_kind sk min max) t)
+: Tot (parser (parse_vlgen_weak_kind sk min max k.parser_kind_injective) t)
 = Classical.forall_intro (parse_vlgen_weak_unfold min max #sk pk #k #t p);
-  parser_kind_prop_ext (parse_vlgen_weak_kind sk min max) (parse_vlgen_weak min max #sk pk #k #t p) (parse_vlgen_weak_bare min max pk p);
+  parser_kind_prop_ext (parse_vlgen_weak_kind sk min max k.parser_kind_injective) (parse_vlgen_weak min max #sk pk #k #t p) (parse_vlgen_weak_bare min max pk p);
   parse_vlgen_weak_bare min max pk p

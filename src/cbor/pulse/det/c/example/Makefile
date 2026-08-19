@@ -5,7 +5,8 @@ EVERPARSE_SRC_PATH = $(realpath ../../../../..)
 CBOR_LIB_PATH = $(realpath ..)
 CBOR_INCLUDE_PATH = $(realpath ..)
 
-CFLAGS += -Werror -I $(CBOR_INCLUDE_PATH) -g
+# -Wno-pointer-sign because of string to uint8_t* conversion
+CFLAGS += -Werror -I $(CBOR_INCLUDE_PATH) -g -Wno-pointer-sign
 
 .PHONY: all
 
@@ -21,3 +22,8 @@ $(OBJ_FILES): %.o: %.c
 
 CBORDetTest.exe: $(OBJ_FILES) $(CBOR_LIB_PATH)/CBORDet.o
 	$(CC) -o CBORDetTest.exe $^
+
+clean:
+	rm -f CBORDetTest.exe *.o
+
+.PHONY: clean

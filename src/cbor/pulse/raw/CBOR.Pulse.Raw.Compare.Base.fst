@@ -152,7 +152,7 @@ fn impl_lex_compare
     let i1 = !pi1;
     let i2 = !pi2;
     (res = 0s && SZ.lt i1 n1)
-  ) invariant cont . exists* res i1 i2 . (
+  ) invariant exists* res i1 i2 . (
     pts_to s1.v #s1.p c1 ** SM.seq_list_match c1 v1 vmatch **
     pts_to s2.v #s2.p c2 ** SM.seq_list_match c2 v2 vmatch **
     pts_to pres res **
@@ -162,10 +162,11 @@ fn impl_lex_compare
       SZ.v i1 <= SZ.v n1 /\
       SZ.v i2 <= SZ.v n2 /\
       same_sign (lex_compare compare v1 v2) (if res = 0s then lex_compare' compare v1 v2 (SZ.v i1) (SZ.v i2) else I16.v res) /\
-      (res == 0s ==> (SZ.lt i1 n1 == SZ.lt i2 n2)) /\
-      cont == (res = 0s && SZ.lt i1 n1)
+      (res == 0s ==> (SZ.lt i1 n1 == SZ.lt i2 n2))
     )
-  ) {
+  )
+    decreases %[(if !pres = 0s then 1 else 0); (SZ.v n1 - SZ.v (!pi1))] // fstar2 only
+  {
     let i1 = !pi1;
     let x1 = S.op_Array_Access s1.v i1;
     SM.seq_list_match_index_trade vmatch c1 v1 (SZ.v i1);
@@ -346,13 +347,16 @@ ensures
     (vmatch_slice_list_scalar sl sh)
 {
   vmatch_slice_list_of_vmatch_slice_list_scalar sl sh;
-  ghost fn aux (_: unit)
-    requires emp ** vmatch_slice_list (eq_as_slprop th) sl sh
-    ensures vmatch_slice_list_scalar sl sh
+  intro
+    (Trade.trade
+      (vmatch_slice_list (eq_as_slprop th) sl sh)
+      (vmatch_slice_list_scalar sl sh)
+    )
+    #emp
+    fn _
   {
     vmatch_slice_list_scalar_of_vmatch_slice_list sl sh
   };
-  Trade.intro _ _ _ aux;
 }
 
 inline_for_extraction

@@ -1,12 +1,20 @@
 module CBOR.Pulse.API.Det.Rust
+open CBOR.Spec.Constants
+open Pulse.Lib.Pervasives
+module Spec = CBOR.Spec.API.Format
+module Trade = Pulse.Lib.Trade.Util
+module U8 = FStar.UInt8
+module U64 = FStar.UInt64
+module S = Pulse.Lib.Slice
+module SZ = FStar.SizeT
+module Base = CBOR.Pulse.API.Base
+module PM = Pulse.Lib.SeqMatch
 #lang-pulse
 
 (* NOTE: this .fst file does not need anything from the Raw namespace,
 but it has been moved here to be hidden from verified clients. *)
 
 module Det = CBOR.Pulse.API.Det.Common
-
-module C = C // necessary to pull C.krml into extraction, otherwise Karamel fails with "`C._zero_for_deref`: impossible", believing that it is a non-function external symbol, which Karamel extraction to Rust does not support
 
 (* Validation, parsing and serialization *)
 
@@ -110,7 +118,7 @@ ensures cbor_det_match 1.0R res (Spec.pack (Spec.CInt64 (if ty = UInt64 then cbo
 let uint64_max_prop : squash (pow2 64 - 1 == 18446744073709551615) =
   assert_norm (pow2 64 - 1 == 18446744073709551615)
 
-module UTF8 = CBOR.Pulse.Raw.UTF8
+module UTF8 = CBOR.Pulse.API.UTF8
 
 fn cbor_impl_utf8_correct () : Base.impl_utf8_correct_t =
   (s: _)
@@ -150,9 +158,8 @@ ensures
   cbor_det_mk_string_post (if ty = ByteString then cbor_major_type_byte_string else cbor_major_type_text_string) s p v res **
   pure (Some? res <==> (FStar.UInt.fits (SZ.v (S.len s)) U64.n /\ (ty == TextString ==> CBOR.Spec.API.UTF8.correct v))) // this is true for Rust's str/String, but we will check anyway
 {
-  let sq: squash (SZ.fits_u64) = assume (SZ.fits_u64);
   S.pts_to_len s;
-  if SZ.gt (S.len s) (SZ.uint64_to_sizet 18446744073709551615uL) {
+  if not (CBOR.Pulse.Raw.EverParse.SizeComparison.sizet_fits_u64 (S.len s)) {
     fold (cbor_det_mk_string_post (if ty = ByteString then cbor_major_type_byte_string else cbor_major_type_text_string) s p v None);
     None #cbordet
   } else {
@@ -191,8 +198,8 @@ ensures
   cbor_det_mk_array_post a pa va pv vv res **
   pure (Some? res <==> FStar.UInt.fits (SZ.v (S.len a)) U64.n)
 {
-  let _ : squash SZ.fits_u64 = assume (SZ.fits_u64);
-  if SZ.gt (S.len a) (SZ.uint64_to_sizet 18446744073709551615uL) {
+  S.pts_to_len a;
+  if not (CBOR.Pulse.Raw.EverParse.SizeComparison.sizet_fits_u64 (S.len a)) {
     fold (cbor_det_mk_array_post a pa va pv vv None);
     None #cbordet;
   } else {
@@ -255,13 +262,16 @@ ensures exists* p' .
     let k = (if ty = cbor_major_type_uint64 then UInt64 else NegInt64);
     let i = cbor_det_read_uint64 () c;
     fold (cbor_det_view_match p (Int64 k i) v);
-    ghost fn aux (_: unit)
-      requires cbor_det_match p c v ** cbor_det_view_match p (Int64 k i) v
-      ensures cbor_det_match p c v
+    intro
+      (Trade.trade
+        (cbor_det_view_match p (Int64 k i) v)
+        (cbor_det_match p c v)
+      )
+      #(cbor_det_match p c v)
+      fn _
     {
       unfold (cbor_det_view_match p (Int64 k i) v)
     };
-    Trade.intro _ _ _ aux;
     Int64 k i
   }
   else if (ty = cbor_major_type_byte_string || ty = cbor_major_type_text_string) {
@@ -269,44 +279,57 @@ ensures exists* p' .
     let s = cbor_det_get_string () c;
     with p' v' . assert (pts_to s #p' v');
     fold (cbor_det_string_match ty p' s v);
-    fold (cbor_det_view_match p' (String k s) v);
-    ghost fn aux (_: unit)
-    requires emp ** cbor_det_view_match p' (String k s) v
-    ensures pts_to s #p' v'
+    rewrite (cbor_det_string_match ty p' s v) as (cbor_det_view_match p' (String k s) v);
+    intro
+      (Trade.trade
+        (cbor_det_view_match p' (String k s) v)
+        (pts_to s #p' v')
+      )
+      #emp
+      fn _
     {
       unfold (cbor_det_view_match p' (String k s) v);
-      unfold (cbor_det_string_match ty p' s v);
+      with ty . unfold (cbor_det_string_match ty p' s v);
     };
-    Trade.intro _ _ _ aux;
     Trade.trans _ _ (cbor_det_match p c v);
     String k s
   }
   else if (ty = cbor_major_type_array) {
     let res : cbor_det_array = { array = c };
+    rewrite Det.cbor_det_match p c v as Det.cbor_det_match p res.array v;
     fold (cbor_det_array_match p res v);
     fold (cbor_det_view_match p (Array res) v);
-    ghost fn aux (_: unit)
-    requires emp ** cbor_det_view_match p (Array res) v
-    ensures cbor_det_match p c v
+    intro
+      (Trade.trade
+        (cbor_det_view_match p (Array res) v)
+        (cbor_det_match p c v)
+      )
+      #emp
+      fn _
     {
       unfold (cbor_det_view_match p (Array res) v);
       unfold (cbor_det_array_match p res v);
+      rewrite Det.cbor_det_match p res.array v as Det.cbor_det_match p c v;
     };
-    Trade.intro _ _ _ aux;
     Array res
   }
   else if (ty = cbor_major_type_map) {
     let res : cbor_det_map = { map = c };
+    rewrite Det.cbor_det_match p c v as Det.cbor_det_match p res.map v;
     fold (cbor_det_map_match p res v);
     fold (cbor_det_view_match p (Map res) v);
-    ghost fn aux (_: unit)
-    requires emp ** cbor_det_view_match p (Map res) v
-    ensures cbor_det_match p c v
+    intro
+      (Trade.trade
+        (cbor_det_view_match p (Map res) v)
+        (cbor_det_match p c v)
+      )
+      #emp
+      fn _
     {
       unfold (cbor_det_view_match p (Map res) v);
       unfold (cbor_det_map_match p res v);
+      rewrite Det.cbor_det_match p res.map v as Det.cbor_det_match p c v;
     };
-    Trade.intro _ _ _ aux;
     Map res
   }
   else if (ty = cbor_major_type_tagged) {
@@ -315,27 +338,34 @@ ensures exists* p' .
     with p' v' . assert (cbor_det_match p' payload v');
     fold (cbor_det_tagged_match p' tag payload v);
     fold (cbor_det_view_match p' (Tagged tag payload) v);
-    ghost fn aux (_: unit)
-    requires emp ** cbor_det_view_match p' (Tagged tag payload) v
-    ensures cbor_det_match p' payload v'
+    intro
+      (Trade.trade
+        (cbor_det_view_match p' (Tagged tag payload) v)
+        (cbor_det_match p' payload v')
+      )
+      #emp
+      fn _
     {
       unfold (cbor_det_view_match p' (Tagged tag payload) v);
       unfold (cbor_det_tagged_match p' tag payload v);
+      with v_ . rewrite Det.cbor_det_match p' payload v_ as Det.cbor_det_match p' payload v'
     };
-    Trade.intro _ _ _ aux;
     Trade.trans _ _ (cbor_det_match p c v);
     Tagged tag payload
   }
   else {
     let i = cbor_det_read_simple_value () c;
     fold (cbor_det_view_match p (SimpleValue i) v);
-    ghost fn aux (_: unit)
-      requires cbor_det_match p c v ** cbor_det_view_match p (SimpleValue i) v
-      ensures cbor_det_match p c v
+    intro
+      (Trade.trade
+        (cbor_det_view_match p (SimpleValue i) v)
+        (cbor_det_match p c v)
+      )
+      #(cbor_det_match p c v)
+      fn _
     {
       unfold (cbor_det_view_match p (SimpleValue i) v)
     };
-    Trade.intro _ _ _ aux;
     SimpleValue i
   }
 }
@@ -373,13 +403,16 @@ ensures cbor_det_match p x.array y **
   pure (Spec.CArray? (Spec.unpack y))
 {
   unfold (cbor_det_array_match p x y);
-  ghost fn aux (_: unit)
-  requires emp ** cbor_det_match p x.array y
-  ensures cbor_det_array_match p x y
+  intro
+    (Trade.trade
+      (cbor_det_match p x.array y)
+      (cbor_det_array_match p x y)
+    )
+    #emp
+    fn _
   {
     fold (cbor_det_array_match p x y);
   };
-  Trade.intro _ _ _ aux;
 }
 
 let cbor_det_array_iterator_t = cbor_det_array_iterator_t
@@ -477,13 +510,16 @@ ensures cbor_det_match p x.map y **
   pure (Spec.CMap? (Spec.unpack y))
 {
   unfold (cbor_det_map_match p x y);
-  ghost fn aux (_: unit)
-  requires emp ** cbor_det_match p x.map y
-  ensures cbor_det_map_match p x y
+  intro
+    (Trade.trade
+      (cbor_det_match p x.map y)
+      (cbor_det_map_match p x y)
+    )
+    #emp
+    fn _
   {
     fold (cbor_det_map_match p x y);
   };
-  Trade.intro _ _ _ aux;
 }
 
 let cbor_det_map_iterator_t = Det.cbor_det_map_iterator_t
@@ -538,6 +574,7 @@ fn cbor_det_map_get_post_to_safe
   (vk: Spec.cbor)
   (res: option cbordet)
 requires
+  pure (Spec.CMap? (Spec.unpack vx) /\ Some? (Spec.cbor_map_get (Spec.CMap?.c (Spec.unpack vx)) vk) == Some? res) **
   map_get_post cbor_det_match x.map px vx vk res **
   Trade.trade (cbor_det_match px x.map vx) (cbor_det_map_match px x vx)
 ensures
@@ -549,12 +586,14 @@ ensures
       unfold (map_get_post_none cbor_det_match x.map px vx vk);
       Trade.elim _ _;
       fold (safe_map_get_post x px vx vk None);
+      rewrite (safe_map_get_post x px vx vk None) as (safe_map_get_post x px vx vk res)
     }
     Some res' -> {
       unfold (map_get_post cbor_det_match x.map px vx vk (Some res'));
       unfold (map_get_post_some cbor_det_match x.map px vx vk res');
       Trade.trans _ _ (cbor_det_map_match px x vx);
       fold (safe_map_get_post x px vx vk (Some res'));
+      rewrite (safe_map_get_post x px vx vk (Some res')) as (safe_map_get_post x px vx vk res)
     }
   }
 }

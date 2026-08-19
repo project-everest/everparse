@@ -19,6 +19,17 @@ let parse_nlist
 : Tot (y: parser (parse_nlist_kind n k) (nlist n t) { y == parse_nlist' n p } )
 = parse_nlist' n p
 
+let parse_nlist_ext_forall
+  n #k #t p #k' p'
+=
+  let prf
+    (b: bytes)
+  : Lemma
+    (parse (parse_nlist n p) b == parse (parse_nlist n p') b)
+  = parse_nlist_ext n p p' b (fun _ -> ())
+  in
+  Classical.forall_intro prf
+
 #push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 #restart-solver
 
@@ -224,4 +235,46 @@ let rec tot_serialize_nlist_refine_eq
     )
   end
 
+let bare_serialize_vclist_correct
+  (min: nat)
+  (max: nat { min <= max /\ max < 4294967296 } )
+  (#lk: parser_kind)
+  (#lp: parser lk U32.t)
+  (ls: serializer lp  { lk.parser_kind_subkind == Some ParserStrong } )
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
+: Lemma
+  (serializer_correct (parse_vclist min max lp p) (bare_serialize_vclist min max ls s))
+= let prf (x: vlarray t min max)
+  : Lemma
+    (let fx = bare_serialize_vclist min max ls s x in
+      parse (parse_vclist min max lp p) fx == Some (x, Seq.length fx))
+  = let fx = bare_serialize_vclist min max ls s x in
+    parse_vclist_eq min max lp p fx;
+    let n = L.length x in
+    let un = U32.uint_to_t n in
+    let fn = serialize ls un in
+    parse_strong_prefix lp fn fx;
+    let fl = serialize (serialize_nlist n s) x in
+    assert (fl `Seq.equal` Seq.slice fx (Seq.length fn) (Seq.length fx))
+  in
+  Classical.forall_intro prf
+
 #pop-options
+
+let parse_vclist_dtuple2_eq min max lp p input =
+  parse_vclist_eq min max lp p input;
+  parse_synth_eq
+    (parse_dtuple2
+      (parse_vclist_dtuple2_tag_parser min max lp)
+      (parse_vclist_dtuple2_payload_parser min max p))
+    (parse_vclist_dtuple2_synth min max #_)
+    input;
+  parse_dtuple2_eq
+    (parse_vclist_dtuple2_tag_parser min max lp)
+    (parse_vclist_dtuple2_payload_parser min max p)
+    input;
+  parse_synth_eq (lp `parse_filter` bounded_count_prop min max) (synth_bounded_count min max) input;
+  parse_filter_eq lp (bounded_count_prop min max) input

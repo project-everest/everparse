@@ -110,15 +110,16 @@ ensures
     (vmatch xl v)
 {
   fold (eq_as_slprop unit () v);
-  ghost fn aux (_: unit)
-  requires
-    vmatch xl v ** eq_as_slprop unit () v
-  ensures
-    vmatch xl v
+  intro
+    (Trade.trade
+      (eq_as_slprop unit () v)
+      (vmatch xl v)
+    )
+    #(vmatch xl v)
+    fn _
   {
     unfold (eq_as_slprop unit () v)
   };
-  Trade.intro _ _ _ aux
 }
 
 inline_for_extraction
@@ -260,15 +261,16 @@ fn pts_to_serialized_synth_trade
   ensures pts_to_serialized (serialize_synth p f s f' ()) input #pm (f v) ** trade (pts_to_serialized (serialize_synth p f s f' ()) input #pm (f v)) (pts_to_serialized s input #pm v)
 {
   pts_to_serialized_synth_intro s f f' input;
-  ghost
-  fn aux
-    (_: unit)
-    requires emp ** pts_to_serialized (serialize_synth p f s f' ()) input #pm (f v)
-    ensures pts_to_serialized s input #pm v
+  intro
+    (Trade.trade
+      (pts_to_serialized (serialize_synth p f s f' ()) input #pm (f v))
+      (pts_to_serialized s input #pm v)
+    )
+    #emp
+    fn _
   {
     pts_to_serialized_synth_elim s f f' input v 
   };
-  intro_trade _ _ _ aux
 }
 
 ghost
@@ -324,15 +326,16 @@ fn pts_to_serialized_synth_l2r_trade
   ensures pts_to_serialized s input #pm (f' v) ** trade (pts_to_serialized s input #pm (f' v)) (pts_to_serialized (serialize_synth p f s f' ()) input #pm v)
 {
   pts_to_serialized_synth_l2r s f f' input;
-  ghost
-  fn aux
-    (_: unit)
-    requires emp ** pts_to_serialized s input #pm (f' v)
-    ensures pts_to_serialized (serialize_synth p f s f' ()) input #pm v
+  intro
+    (Trade.trade
+      (pts_to_serialized s input #pm (f' v))
+      (pts_to_serialized (serialize_synth p f s f' ()) input #pm v)
+    )
+    #emp
+    fn _
   {
     pts_to_serialized_synth_r2l s f f' input v
   };
-  intro_trade _ _ _ aux
 }
 
 ghost
@@ -626,13 +629,16 @@ fn pts_to_serialized_filter_elim_trade
   ensures exists* (v': t) . pts_to_serialized s input #pm v' ** Trade.trade (pts_to_serialized s input #pm v') (pts_to_serialized (serialize_filter s f) input #pm v) ** pure (v' == v)
 {
   pts_to_serialized_filter_elim s f input;
-  ghost fn aux (_: unit)
-  requires emp ** pts_to_serialized s input #pm v
-  ensures (pts_to_serialized (serialize_filter s f) input #pm v)
+  intro
+    (Trade.trade
+      (pts_to_serialized s input #pm v)
+      (pts_to_serialized (serialize_filter s f) input #pm v)
+    )
+    #emp
+    fn _
   {
     pts_to_serialized_filter_intro s f input
   };
-  Trade.intro _ _ _ aux
 }
 
 inline_for_extraction
@@ -977,7 +983,7 @@ let split_dtuple2_post'
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
   (#k2: parser_kind)
   (#p2: (x: t1) -> parser k2 (t2 x))
-  (s2: (x: t1) -> serializer (p2 x))
+  (s2: (x: t1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (input: slice byte)
   (pm: perm)
   (v: Ghost.erased (dtuple2 t1 t2))
@@ -997,7 +1003,7 @@ let split_dtuple2_post
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
   (#k2: parser_kind)
   (#p2: (x: t1) -> parser k2 (t2 x))
-  (s2: (x: t1) -> serializer (p2 x))
+  (s2: (x: t1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (input: slice byte)
   (pm: perm)
   (v: Ghost.erased (dtuple2 t1 t2))
@@ -1016,7 +1022,7 @@ fn split_dtuple2
   (j1: jumper p1)
   (#k2: Ghost.erased parser_kind)
   (#p2: ((x: t1) -> parser k2 (t2 x)))
-  (s2: (x: t1) -> serializer (p2 x))
+  (s2: (x: t1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (input: slice byte)
   (#pm: perm)
   (#v: Ghost.erased (dtuple2 t1 t2))
@@ -1049,7 +1055,7 @@ ghost fn ghost_split_dtuple2
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
   (#k2: parser_kind)
   (#p2: ((x: t1) -> parser k2 (t2 x)))
-  (s2: (x: t1) -> serializer (p2 x))
+  (s2: (x: t1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (input: slice byte)
   (#pm: perm)
   (#v: (dtuple2 t1 t2))
@@ -1085,7 +1091,7 @@ ghost fn join_dtuple2
   (#v1: t1)
   (#k2: parser_kind)
   (#p2: ((x: t1) -> parser k2 (t2 x)))
-  (s2: (x: t1) -> serializer (p2 x))
+  (s2: (x: t1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (x2: slice byte)
   (x: slice byte)
   (#v2: t2 v1)
@@ -1115,7 +1121,7 @@ fn dtuple2_dfst
   (j1: jumper p1)
   (#k2: Ghost.erased parser_kind)
   (#p2: ((x: t1) -> parser k2 (t2 x)))
-  (s2: (x: t1) -> serializer (p2 x))
+  (s2: (x: t1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (input: slice byte)
   (#pm: perm)
   (#v: Ghost.erased (dtuple2 t1 t2))
@@ -1141,7 +1147,7 @@ fn dtuple2_dsnd
   (j1: jumper p1)
   (#k2: Ghost.erased parser_kind)
   (#p2: ((x: t1) -> parser k2 (t2 x)))
-  (s2: (x: t1) -> serializer (p2 x))
+  (s2: (x: t1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (input: slice byte)
   (#pm: perm)
   (#v: Ghost.erased (dtuple2 t1 t2))
@@ -1167,7 +1173,7 @@ let split_nondep_then_post'
   (s2: serializer p2)
   (input: slice byte)
   (pm: perm)
-  (v: Ghost.erased (t1 & t2))
+  (v: (t1 & t2))
   (left right: slice byte)
 : Tot slprop
 = pts_to_serialized s1 left #pm (fst v) **
@@ -1186,7 +1192,7 @@ let split_nondep_then_post
   (s2: serializer p2)
   (input: slice byte)
   (pm: perm)
-  (v: Ghost.erased (t1 & t2))
+  (v: (t1 & t2))
   (res: (slice byte & slice byte))
 : Tot slprop
 = let (left, right) = res in
@@ -1274,9 +1280,119 @@ fn split_nondep_then
   unfold (split_dtuple2_post #t1 #(const_fun t2) s1 #k2 #(const_fun p2) (const_fun s2) input pm (dtuple2_of_pair v) (input1, input2));
   unfold (split_dtuple2_post' #t1 #(const_fun t2) s1 #_ #(const_fun p2) (const_fun s2) input pm (dtuple2_of_pair v) input1 input2);
   Trade.trans (_ ** _) _ _;
+  rewrite
+    (trade (pts_to_serialized s1 input1 #pm (dfst (dtuple2_of_pair v)) **
+        pts_to_serialized (const_fun s2 (dfst (dtuple2_of_pair v)))
+          input2 #pm
+          (dsnd (dtuple2_of_pair v)))
+      (pts_to_serialized (serialize_nondep_then s1 s2) input #pm v))
+    as
+    (trade (pts_to_serialized s1 input1 #pm (fst v) **
+        pts_to_serialized (const_fun s2 (fst v))
+          input2 #pm
+          (snd v))
+      (pts_to_serialized (serialize_nondep_then s1 s2) input #pm v));
   fold (split_nondep_then_post' s1 s2 input pm v input1 input2);
   fold (split_nondep_then_post s1 s2 input pm v (input1, input2));
   (input1, input2)
+}
+
+inline_for_extraction
+fn split_nondep_then'
+  (#t1 #t2: Type0)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (j1: jumper p1)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (t1 & t2))
+  requires pts_to_serialized (serialize_nondep_then s1 s2) input #pm v
+  returns res: (slice byte & slice byte)
+  ensures (
+  let (left, right) = res in
+  pts_to_serialized s1 left #pm (fst v) **
+  pts_to_serialized s2 right #pm (snd v) **
+  trade (pts_to_serialized s1 left #pm (fst v) **
+  pts_to_serialized s2 right #pm (snd v))
+    (pts_to_serialized (serialize_nondep_then s1 s2) input #pm v)
+  )
+{
+  let (left, right) = split_nondep_then s1 j1 s2 input;
+  unfold (split_nondep_then_post s1 s2 input pm v (left, right));
+  unfold (split_nondep_then_post' s1 s2 input pm v left right);
+  (left, right)
+}
+
+let split_nondep_then''_precond
+  (#t0 #t1 #t2: Type0)
+  (#k0: Ghost.erased parser_kind)
+  (p0: parser k0 t0)
+  (#k1: Ghost.erased parser_kind)
+  (p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind)
+  (p2: parser k2 t2)
+: Tot prop
+= t0 == (t1 & t2) /\
+  k1.parser_kind_subkind == Some ParserStrong /\
+  (forall b . parse p0 b == parse (nondep_then p1 p2) b)
+
+let split_nondep_then''_postcond
+  (#t0 #t1 #t2: Type)
+  (v: t0)
+  (v1: t1)
+  (v2: t2)
+: Tot prop
+= t0 == (t1 & t2) /\
+  v == coerce_eq () (v1, v2)
+
+#push-options "--print_implicits"
+
+inline_for_extraction
+fn split_nondep_then''
+  (#t0 #t1 #t2: Type0)
+  (#k0: Ghost.erased parser_kind)
+  (#p0: parser k0 t0)
+  (#s0: serializer p0)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1)
+  (j1: jumper p1)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t0)
+  (sq: squash (
+    split_nondep_then''_precond p0 p1 p2
+  ))
+  requires pts_to_serialized s0 input #pm v
+  returns res: (slice byte & slice byte)
+  ensures (
+  let (left, right) = res in
+  exists* v1 v2 .
+  pts_to_serialized s1 left #pm v1 **
+  pts_to_serialized s2 right #pm v2 **
+  trade (pts_to_serialized s1 left #pm v1 **
+  pts_to_serialized s2 right #pm v2)
+    (pts_to_serialized s0 input #pm v) **
+  pure (split_nondep_then''_postcond (Ghost.reveal v) v1 v2)
+  )
+{
+  pts_to_serialized_ext_trade
+    s0
+    (serialize_nondep_then s1 s2)
+    input;
+  let (left, right) = split_nondep_then s1 j1 s2 input;
+  unfold (split_nondep_then_post s1 s2 input pm v (left, right));
+  unfold (split_nondep_then_post' s1 s2 input pm v left right);
+  rewrite each (t1 & t2) as t0;
+  Trade.trans (_ ** _) _ (pts_to_serialized s0 input #pm v);
+  (left, right)
 }
 
 ghost fn ghost_split_nondep_then
@@ -1387,6 +1503,46 @@ ensures exists* v' .
     (pts_to_serialized (serialize_nondep_then s1 (serialize_nondep_then s2 s3)) x #pm v')
 }
 
+ghost fn pts_to_serialized_nondep_then_assoc_r2l
+  (#t1: Type0)
+  (#t2: Type0)
+  (#t3: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#p2: (parser k2 (t2)))
+  (s2: serializer (p2) { k2.parser_kind_subkind == Some ParserStrong })
+  (#k3: parser_kind)
+  (#p3: (parser k3 (t3)))
+  (s3: serializer (p3))
+  (x: slice byte)
+  (#pm: perm)
+  (#v: (t1 & (t2 & t3)))
+requires
+  pts_to_serialized (serialize_nondep_then s1 (serialize_nondep_then s2 s3)) x #pm v
+ensures exists* v' .
+  pts_to_serialized (serialize_nondep_then (serialize_nondep_then s1 s2) s3) x #pm v' **
+  Trade.trade
+    (pts_to_serialized (serialize_nondep_then (serialize_nondep_then s1 s2) s3) x #pm v')
+    (pts_to_serialized (serialize_nondep_then s1 (serialize_nondep_then s2 s3)) x #pm v) **
+  pure (v' == ((fst v, fst (snd v)), snd (snd v)))
+{
+  let v1 = fst v;
+  let v2 = fst (snd v);
+  let v3 = snd (snd v);
+  serialize_nondep_then_eq s1 (serialize_nondep_then s2 s3) v;
+  serialize_nondep_then_eq s2 s3 (snd v);
+  let v12 = (v1, v2);
+  serialize_nondep_then_eq s1 s2 v12;
+  let v' = (v12, v3);
+  serialize_nondep_then_eq (serialize_nondep_then s1 s2) s3 v';
+  Seq.append_assoc (serialize s1 v1) (serialize s2 v2) (serialize s3 v3);
+  Trade.rewrite_with_trade
+    (pts_to_serialized (serialize_nondep_then s1 (serialize_nondep_then s2 s3)) x #pm v)
+    (pts_to_serialized (serialize_nondep_then (serialize_nondep_then s1 s2) s3) x #pm v')
+}
+
 ghost fn pts_to_serialized_dtuple2_as_nondep_then
   (#t1: Type0)
   (#t2: t1 -> Type0)
@@ -1395,7 +1551,7 @@ ghost fn pts_to_serialized_dtuple2_as_nondep_then
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
   (#k2: parser_kind)
   (#p2: ((x: t1) -> parser k2 (t2 x)))
-  (s2: (x: t1) -> serializer (p2 x))
+  (s2: (x: t1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (input: slice byte)
   (#pm: perm)
   (#v: (dtuple2 t1 t2))
@@ -1424,7 +1580,7 @@ ghost fn pts_to_serialized_dtuple2_nondep_then_assoc_l2r
   (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
   (#k2: parser_kind)
   (#p2: ((x: t1) -> parser k2 (t2 x)))
-  (s2: ((x: t1) -> serializer (p2 x)) { k2.parser_kind_subkind == Some ParserStrong } ) 
+  (s2: ((x: t1) -> serializer (p2 x)) { k2.parser_kind_subkind == Some ParserStrong /\ k2.parser_kind_injective == true } ) 
   (#k3: parser_kind)
   (#p3: parser k3 t3)
   (s3: serializer p3)
@@ -1445,18 +1601,19 @@ ghost fn pts_to_serialized_dtuple2_nondep_then_assoc_l2r
   join_nondep_then s1 (fst res12) (s2 (dfst v12)) (snd res12) (fst res);
   join_nondep_then (serialize_nondep_then s1 (s2 (dfst v12))) (fst res) s3 (snd res) input;
   with v_ . assert (pts_to_serialized (serialize_nondep_then (serialize_nondep_then s1 (s2 (dfst v12))) s3) input #pm v_);
-  ghost fn aux (_: unit)
-  requires
-    (emp ** pts_to_serialized (serialize_nondep_then (serialize_nondep_then s1 (s2 (dfst v12))) s3) input #pm v_)
-  ensures
-    (pts_to_serialized (serialize_nondep_then (serialize_dtuple2 s1 s2) s3) input #pm v)
+  intro
+    (Trade.trade
+      (pts_to_serialized (serialize_nondep_then (serialize_nondep_then s1 (s2 (dfst v12))) s3) input #pm v_)
+      (pts_to_serialized (serialize_nondep_then (serialize_dtuple2 s1 s2) s3) input #pm v)
+    )
+    #emp
+    fn _
   {
     let res = ghost_split_nondep_then (serialize_nondep_then s1 (s2 (dfst v12))) s3 input;
     let res12 = ghost_split_nondep_then s1 (s2 (dfst v12)) (fst res);
     join_dtuple2 s1 (fst res12) s2 (snd res12) (fst res);
     join_nondep_then (serialize_dtuple2 s1 s2) (fst res) s3 (snd res) input
   };
-  Trade.intro _ _ _ aux;
   pts_to_serialized_nondep_then_assoc_l2r s1 (s2 (dfst v12)) s3 input;
   Trade.trans _ _ (pts_to_serialized (serialize_nondep_then (serialize_dtuple2 s1 s2) s3) input #pm v)
 }
@@ -1489,17 +1646,18 @@ fn pts_to_serialized_synth_l2r_nondep_then_left
   pts_to_serialized_synth_l2r s f f' (fst res);
   join_nondep_then s (fst res) s2 (snd res) input;
   with v' . assert (pts_to_serialized (serialize_nondep_then s s2) input #pm v');
-  ghost
-  fn aux
-    (_: unit)
-    requires emp ** (pts_to_serialized (serialize_nondep_then s s2) input #pm v')
-    ensures pts_to_serialized (serialize_nondep_then (serialize_synth p f s f' ()) s2) input #pm v
+  intro
+    (Trade.trade
+      (pts_to_serialized (serialize_nondep_then s s2) input #pm v')
+      (pts_to_serialized (serialize_nondep_then (serialize_synth p f s f' ()) s2) input #pm v)
+    )
+    #emp
+    fn _
   {
     let res = ghost_split_nondep_then s s2 input;
     pts_to_serialized_synth_intro s f f' (fst res);
     join_nondep_then (serialize_synth p f s f' ()) (fst res) s2 (snd res) input;
   };
-  intro_trade _ _ _ aux
 }
 
 ghost
@@ -1527,15 +1685,18 @@ fn pts_to_serialized_filter_elim_nondep_then_left
   pts_to_serialized_filter_elim s f (fst res);
   join_nondep_then s (fst res) s2 (snd res) input;
   with v' . assert (pts_to_serialized (s `serialize_nondep_then` s2) input #pm v');
-  ghost fn aux (_: unit)
-  requires emp ** (pts_to_serialized (s `serialize_nondep_then` s2) input #pm v')
-  ensures (pts_to_serialized (serialize_filter s f `serialize_nondep_then` s2) input #pm v)
+  intro
+    (Trade.trade
+      (pts_to_serialized (s `serialize_nondep_then` s2) input #pm v')
+      (pts_to_serialized (serialize_filter s f `serialize_nondep_then` s2) input #pm v)
+    )
+    #emp
+    fn _
   {
     let res = ghost_split_nondep_then s s2 input;
     pts_to_serialized_filter_intro s f (fst res);
     join_nondep_then (serialize_filter s f) (fst res) s2 (snd res) input;
   };
-  Trade.intro _ _ _ aux
 }
 
 ghost
@@ -1593,14 +1754,93 @@ fn pts_to_serialized_ext_nondep_then_left
 {
   pts_to_serialized_ext_nondep_then_left' s1 s2 s3 input;
   with v23 . assert (pts_to_serialized (serialize_nondep_then s2 s3) input #pm v23);
-  ghost fn aux (_: unit)
-  requires (emp ** pts_to_serialized (serialize_nondep_then s2 s3) input #pm v23)
-  ensures (pts_to_serialized (serialize_nondep_then s1 s3) input #pm v)
+  intro
+    (Trade.trade
+      (pts_to_serialized (serialize_nondep_then s2 s3) input #pm v23)
+      (pts_to_serialized (serialize_nondep_then s1 s3) input #pm v)
+    )
+    #emp
+    fn _
   {
     pts_to_serialized_ext_nondep_then_left' s2 s1 s3 input;
   };
-  Trade.intro _ _ _ aux
 }
+
+ghost
+fn pts_to_serialized_ext_nondep_then_right'
+  (#t1 #t2 #t3: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2)
+  (#k3: parser_kind)
+  (#p3: parser k3 t3)
+  (s3: serializer p3)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: (t1 & t2))
+  requires pts_to_serialized (serialize_nondep_then s1 s2) input #pm v ** pure (
+    pts_to_serialized_ext_trade_gen_precond p2 p3
+  )
+  ensures exists* v13 .
+    pts_to_serialized (serialize_nondep_then s1 s3) input #pm v13 **
+    pure (t2 == t3 /\
+      v == v13
+    )
+{
+  let res = ghost_split_nondep_then s1 s2 input;
+  pts_to_serialized_ext s2 s3 (snd res);
+  join_nondep_then s1 (fst res) s3 (snd res) input;
+}
+
+let pts_to_serialized_ext_nondep_then_right_post
+  (#t1 #t2 #t3: Type)
+  (v: (t1 & t2))
+  (v13: (t1 & t3))
+: Tot prop
+= t2 == t3 /\
+  v == v13
+
+ghost
+fn pts_to_serialized_ext_nondep_then_right
+  (#t1 #t2 #t3: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2)
+  (#k3: parser_kind)
+  (#p3: parser k3 t3)
+  (s3: serializer p3)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: (t1 & t2))
+  requires pts_to_serialized (serialize_nondep_then s1 s2) input #pm v ** pure (
+    pts_to_serialized_ext_trade_gen_precond p2 p3
+  )
+  ensures exists* v13 .
+    pts_to_serialized (serialize_nondep_then s1 s3) input #pm v13 ** trade (pts_to_serialized (serialize_nondep_then s1 s3) input #pm v13) (pts_to_serialized (serialize_nondep_then s1 s2) input #pm v) **
+    pure (
+      pts_to_serialized_ext_nondep_then_right_post v v13
+    )
+{
+  pts_to_serialized_ext_nondep_then_right' s1 s2 s3 input;
+  with v13 . assert (pts_to_serialized (serialize_nondep_then s1 s3) input #pm v13);
+  intro
+    (Trade.trade
+      (pts_to_serialized (serialize_nondep_then s1 s3) input #pm v13)
+      (pts_to_serialized (serialize_nondep_then s1 s2) input #pm v)
+    )
+    #emp
+    fn _
+  {
+    pts_to_serialized_ext_nondep_then_right' s1 s3 s2 input;
+  };
+}
+
 
 inline_for_extraction
 fn nondep_then_fst
@@ -1624,6 +1864,66 @@ fn nondep_then_fst
   unfold (split_nondep_then_post s1 s2 input pm v (input1, input2));
   unfold (split_nondep_then_post' s1 s2 input pm v input1 input2);
   Trade.elim_hyp_r _ _ _;
+  input1
+}
+
+let nondep_then_fst'_precond
+  (#t0 #t1 #t2: Type0)
+  (#k0: Ghost.erased parser_kind)
+  (p0: parser k0 t0)
+  (#k1: Ghost.erased parser_kind)
+  (p1: parser k1 t1)
+  (#k2: Ghost.erased parser_kind)
+  (p2: parser k2 t2)
+: Tot prop
+= t0 == (t1 & t2) /\
+  k1.parser_kind_subkind == Some ParserStrong /\
+  (forall b . parse p0 b == parse (nondep_then p1 p2) b)
+
+let nondep_then_fst'_postcond
+  (#t0 #t1 t2: Type)
+  (v: t0)
+  (v': t1)
+: Tot prop
+= t0 == (t1 & t2) /\
+  v' == fst #t1 #t2 (coerce_eq () v)
+
+inline_for_extraction
+fn nondep_then_fst'
+  (#t0 #t1 #t2: Type0)
+  (#k0: Ghost.erased parser_kind)
+  (#p0: parser k0 t0)
+  (#s0: serializer p0)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1)
+  (j1: jumper p1)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t0)
+  (sq: squash (
+    nondep_then_fst'_precond p0 p1 p2
+  ))
+  requires pts_to_serialized s0 input #pm v
+  returns res: slice byte
+  ensures exists* v' . pts_to_serialized s1 res #pm v' **
+    trade (pts_to_serialized s1 res #pm v') (pts_to_serialized s0 input #pm v) **
+    pure (nondep_then_fst'_postcond #t0 #t1 t2 v v')
+{
+  pts_to_serialized_ext_trade
+    s0
+    (serialize_nondep_then s1 s2)
+    input;
+  let v0 : Ghost.erased (t1 & t2) = Ghost.hide (coerce_eq () (Ghost.reveal v));
+  let input1, input2 = split_nondep_then s1 j1 s2 input;
+  unfold (split_nondep_then_post s1 s2 input pm v (input1, input2));
+  unfold (split_nondep_then_post' s1 s2 input pm v input1 input2);
+  Trade.elim_hyp_r _ _ _;
+  rewrite each (t1 & t2) as t0;
+  Trade.trans _ _ (pts_to_serialized s0 input #pm v);
   input1
 }
 
@@ -1663,7 +1963,7 @@ fn read_dtuple2
   (r1: reader s1)
   (#k2: Ghost.erased parser_kind)
   (#p2: (x: t1) -> parser k2 (t2 x))
-  (#s2: (x: t1) -> serializer (p2 x))
+  (#s2: (x: t1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (r2: (x: t1) -> reader (s2 x))
 : reader #(dtuple2 t1 t2) #(and_then_kind k1 k2) #(parse_dtuple2 p1 p2) (serialize_dtuple2 s1 s2)
 =   
@@ -1708,7 +2008,7 @@ fn compute_remaining_size_dtuple2
   (#vmatch2: (x: th1) -> tl2 -> th2 x -> slprop)
   (#k2: Ghost.erased parser_kind)
   (#p2: (x: th1) -> parser k2 (th2 x))
-  (#s2: (x: th1) -> serializer (p2 x))
+  (#s2: (x: th1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (w2: (xl: tl1) -> (xh: Ghost.erased th1) -> compute_remaining_size (vmatch_and_const (vmatch1 xl xh) (vmatch2 xh)) (s2 xh))
 : compute_remaining_size #(tl1 `cpair` tl2) #(dtuple2 th1 th2) (vmatch_dep_prod vmatch1 vmatch2) #(and_then_kind k1 k2) #(parse_dtuple2 p1 p2) (serialize_dtuple2 s1 s2)
 = (x': _)
@@ -1746,7 +2046,7 @@ fn l2r_write_dtuple2
   (#vmatch2: (x: th1) -> tl2 -> th2 x -> slprop)
   (#k2: Ghost.erased parser_kind)
   (#p2: (x: th1) -> parser k2 (th2 x))
-  (#s2: (x: th1) -> serializer (p2 x))
+  (#s2: (x: th1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (w2: (xl: tl1) -> (xh: Ghost.erased th1) -> l2r_writer (vmatch_and_const (vmatch1 xl xh) (vmatch2 xh)) (s2 xh))
 : l2r_writer #(tl1 `cpair` tl2) #(dtuple2 th1 th2) (vmatch_dep_prod vmatch1 vmatch2) #(and_then_kind k1 k2) #(parse_dtuple2 p1 p2) (serialize_dtuple2 s1 s2)
 = (x': _)
@@ -1816,7 +2116,7 @@ fn l2r_write_dtuple2_recip
   (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
   (#k2: Ghost.erased parser_kind)
   (#p2: (x: th1) -> parser k2 (th2 x))
-  (#s2: (x: th1) -> serializer (p2 x))
+  (#s2: (x: th1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (w2: (xh1: Ghost.erased th1) -> l2r_writer (vmatch_dep_proj2 vmatch xh1) (s2 xh1))
 : l2r_writer #tl #(dtuple2 th1 th2) vmatch #(and_then_kind k1 k2) #(parse_dtuple2 p1 p2) (serialize_dtuple2 s1 s2)
 = (x': _)
@@ -1862,7 +2162,7 @@ fn compute_remaining_size_dtuple2_recip
   (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
   (#k2: Ghost.erased parser_kind)
   (#p2: (x: th1) -> parser k2 (th2 x))
-  (#s2: (x: th1) -> serializer (p2 x))
+  (#s2: (x: th1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (w2: (xh1: Ghost.erased th1) -> compute_remaining_size (vmatch_dep_proj2 vmatch xh1) (s2 xh1))
 : compute_remaining_size #tl #(dtuple2 th1 th2) vmatch #(and_then_kind k1 k2) #(parse_dtuple2 p1 p2) (serialize_dtuple2 s1 s2)
 = (x': _)
@@ -1915,7 +2215,7 @@ fn l2r_write_dtuple2_recip_explicit_header
   (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
   (#k2: Ghost.erased parser_kind)
   (#p2: (x: th1) -> parser k2 (th2 x))
-  (#s2: (x: th1) -> serializer (p2 x))
+  (#s2: (x: th1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (w2: (xh1: th1) -> l2r_writer (vmatch_dep_proj2 vmatch xh1) (s2 xh1))
 : l2r_writer #tl #(dtuple2 th1 th2) vmatch #(and_then_kind k1 k2) #(parse_dtuple2 p1 p2) (serialize_dtuple2 s1 s2)
 = (x': _)
@@ -1960,7 +2260,7 @@ fn compute_remaining_size_dtuple2_recip_explicit_header
   (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
   (#k2: Ghost.erased parser_kind)
   (#p2: (x: th1) -> parser k2 (th2 x))
-  (#s2: (x: th1) -> serializer (p2 x))
+  (#s2: (x: th1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (w2: (xh1: th1) -> compute_remaining_size (vmatch_dep_proj2 vmatch xh1) (s2 xh1))
 : compute_remaining_size #tl #(dtuple2 th1 th2) vmatch #(and_then_kind k1 k2) #(parse_dtuple2 p1 p2) (serialize_dtuple2 s1 s2)
 = (x': _)
@@ -2026,15 +2326,18 @@ ensures
   unfold (eq_as_slprop (dtuple2 th1 th2) x' (| xh1, x |));
   let res : Ghost.erased (th2 xh1) = dsnd x';
   fold (eq_as_slprop (th2 xh1) res x);
-  ghost fn aux (_: unit)
-    requires emp ** eq_as_slprop (th2 xh1) res x
-    ensures vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1 x' x
+  intro
+    (Trade.trade
+      (eq_as_slprop (th2 xh1) res x)
+      (vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1 x' x)
+    )
+    #emp
+    fn _
   {
     unfold (eq_as_slprop (th2 xh1) res x);
     fold (eq_as_slprop (dtuple2 th1 th2) x' (| xh1, x |));
     fold (vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1 x' x);
   };
-  Trade.intro _ _ _ aux;
   res
 }
 
@@ -2052,6 +2355,10 @@ fn l2r_leaf_write_dtuple2_body_lens
   (x: Ghost.erased (th2 xh1))
 {
   let _ = l2r_leaf_write_dtuple2_body_lens_aux xh1 x' x;
+  with y . rewrite (trade (eq_as_slprop (th2 xh1) y x)
+      (vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1 x' x) ** eq_as_slprop (th2 xh1) y x)
+    as (trade (eq_as_slprop (th2 xh1) (dsnd x') x)
+      (vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1 x' x) ** eq_as_slprop (th2 xh1) (dsnd x') x);
   dsnd x'
 }
 
@@ -2061,7 +2368,7 @@ let l2r_leaf_write_dtuple2_body
   (#th2: (th1 -> Type0))
   (#k2: Ghost.erased parser_kind)
   (#p2: (x: th1) -> parser k2 (th2 x))
-  (#s2: (x: th1) -> serializer (p2 x))
+  (#s2: (x: th1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (w2: (xh1: th1) -> l2r_leaf_writer (s2 xh1))
   (xh1: th1)
 : l2r_writer (vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1) (s2 xh1)
@@ -2075,7 +2382,7 @@ let leaf_compute_remaining_size_dtuple2_body
   (#th2: (th1 -> Type0))
   (#k2: Ghost.erased parser_kind)
   (#p2: (x: th1) -> parser k2 (th2 x))
-  (#s2: (x: th1) -> serializer (p2 x))
+  (#s2: (x: th1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (w2: (xh1: th1) -> leaf_compute_remaining_size (s2 xh1))
   (xh1: th1)
 : compute_remaining_size (vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1) (s2 xh1)
@@ -2094,7 +2401,7 @@ let l2r_leaf_write_dtuple2
   (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
   (#k2: Ghost.erased parser_kind)
   (#p2: (x: th1) -> parser k2 (th2 x))
-  (#s2: (x: th1) -> serializer (p2 x))
+  (#s2: (x: th1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (w2: (xh1: th1) -> l2r_leaf_writer (s2 xh1))
 : l2r_leaf_writer (serialize_dtuple2 s1 s2)
 = l2r_leaf_writer_of_writer
@@ -2116,7 +2423,7 @@ let leaf_compute_remaining_size_dtuple2
   (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
   (#k2: Ghost.erased parser_kind)
   (#p2: (x: th1) -> parser k2 (th2 x))
-  (#s2: (x: th1) -> serializer (p2 x))
+  (#s2: (x: th1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (w2: (xh1: th1) -> leaf_compute_remaining_size (s2 xh1))
 : leaf_compute_remaining_size (serialize_dtuple2 s1 s2)
 = leaf_compute_remaining_size_of_compute_remaining_size
@@ -2141,7 +2448,7 @@ fn zero_copy_parse_dtuple2
   (#vmatch2: (x: th1) -> tl2 -> th2 x -> slprop)
   (#k2: Ghost.erased parser_kind)
   (#p2: (x: th1) -> parser k2 (th2 x))
-  (#s2: (x: th1) -> serializer (p2 x))
+  (#s2: (x: th1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (w2: (xh: Ghost.erased th1) -> zero_copy_parse (vmatch2 xh) (s2 xh))
 : zero_copy_parse #(tl1 `cpair` tl2) #(dtuple2 th1 th2) (vmatch_dep_prod vmatch1 vmatch2) #(and_then_kind k1 k2) #(parse_dtuple2 p1 p2) (serialize_dtuple2 s1 s2)
 = (input: _)
@@ -2177,7 +2484,7 @@ fn read_and_zero_copy_parse_dtuple2
   (#vmatch: tl -> dtuple2 th1 th2 -> slprop)
   (#k2: Ghost.erased parser_kind)
   (#p2: (x: th1) -> parser k2 (th2 x))
-  (#s2: (x: th1) -> serializer (p2 x))
+  (#s2: (x: th1) -> serializer (p2 x) { k2.parser_kind_injective == true })
   (w2: (xh: th1) -> zero_copy_parse (vmatch_dep_proj2 vmatch xh) (s2 xh))
 : zero_copy_parse #tl #(dtuple2 th1 th2) vmatch #(and_then_kind k1 k2) #(parse_dtuple2 p1 p2) (serialize_dtuple2 s1 s2)
 = (input: _)
@@ -2190,6 +2497,7 @@ fn read_and_zero_copy_parse_dtuple2
   let v1 = w1 input1;
   Trade.elim_hyp_l _ _ _;
   let res = w2 v1 input2;
+  rewrite each (dfst v) as v1;
   Trade.trans (vmatch_dep_proj2 vmatch v1 res _) _ _;
   Trade.rewrite_with_trade
     (vmatch_dep_proj2 vmatch v1 res _)
@@ -2311,7 +2619,7 @@ returns xl1: tl1
 ensures
   vmatch1 xl1 (fst xh) ** trade (vmatch1 xl1 (fst xh)) (vmatch_pair vmatch1 vmatch2 xl xh)
 {
-  let (res, _) = xl;
+  norewrite let (res, _) = xl;
   Trade.rewrite_with_trade
     (vmatch_pair vmatch1 vmatch2 xl xh)
     (vmatch1 res (fst xh) ** vmatch2 (snd xl) (snd xh));
@@ -2332,7 +2640,7 @@ returns xl2: tl2
 ensures
   vmatch2 xl2 (snd xh) ** trade (vmatch2 xl2 (snd xh)) (vmatch_pair vmatch1 vmatch2 xl xh)
 {
-  let (_, res) = xl;
+  norewrite let (_, res) = xl;
   Trade.rewrite_with_trade
     (vmatch_pair vmatch1 vmatch2 xl xh)
     (vmatch1 (fst xl) (fst xh) ** vmatch2 res (snd xh));
@@ -2393,7 +2701,7 @@ fn zero_copy_parse_nondep_then
   Trade.rewrite_with_trade
     (vmatch1 res1 _ ** vmatch2 res2 _)
     (vmatch_pair vmatch1 vmatch2 (res1, res2) v);
-  Trade.trans (vmatch_pair vmatch1 vmatch2 (res1, res2) v) _ _;
+  Trade.trans (vmatch_pair vmatch1 vmatch2 (res1, res2) v) (vmatch1 res1 (fst v) ** vmatch2 res2 (snd v)) _;
   (res1, res2)
 }
 
@@ -2449,6 +2757,50 @@ let leaf_compute_remaining_size_synth'
   (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> Tot t1) { synth_inverse f2 f1 })
 : leaf_compute_remaining_size #t2 #k1 #(parse_synth p1 f2) (serialize_synth p1 f2 s1 f1 ())
 = leaf_compute_remaining_size_synth w f2 f1 (mk_synth f1)
+
+#push-options "--z3rlimit 128"
+
+inline_for_extraction
+fn l2r_leaf_write_nondep_then
+  (#t1 #t2: Type0)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1) (#s1: serializer p1) (w1: l2r_leaf_writer u#0 s1)
+  (#k2: Ghost.erased parser_kind) (#p2: parser k2 t2) (#s2: serializer p2) (w2: l2r_leaf_writer u#0 s2)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+: l2r_leaf_writer u#0 #(t1 & t2) #(and_then_kind k1 k2) #(nondep_then p1 p2) (serialize_nondep_then s1 s2)
+=
+  (x: (t1 & t2))
+  (out: slice byte)
+  (offset: SZ.t)
+  (#v: Ghost.erased bytes)
+{
+  let (x1, x2) = x;
+  serialize_nondep_then_eq s1 s2 x;
+  Seq.lemma_len_append (bare_serialize s1 x1) (bare_serialize s2 x2);
+  let off1 = w1 x1 out offset;
+  with v1 . assert (pts_to out v1);
+  let off2 = w2 x2 out off1;
+  with v2 . assert (pts_to out v2);
+  // Prove v2[offset..off2] == serialize s1 x1 @ serialize s2 x2
+  // From w2: v2[0..off1] == v1[0..off1] and v2[off1..off2] == serialize s2 x2
+  // From w1: v1[offset..off1] == serialize s1 x1
+  assert (pure (Seq.slice v2 0 (SZ.v off1) == Seq.slice v1 0 (SZ.v off1)));
+  assert (pure (Seq.slice v1 (SZ.v offset) (SZ.v off1) == bare_serialize s1 x1));
+  assert (pure (Seq.slice v2 (SZ.v off1) (SZ.v off2) == bare_serialize s2 x2));
+  Seq.slice_slice v2 0 (SZ.v off1) (SZ.v offset) (SZ.v off1);
+  assert (pure (Seq.slice v2 (SZ.v offset) (SZ.v off1) == bare_serialize s1 x1));
+  Seq.lemma_split (Seq.slice v2 (SZ.v offset) (SZ.v off2)) (SZ.v off1 - SZ.v offset);
+  Seq.slice_slice v2 (SZ.v offset) (SZ.v off2) 0 (SZ.v off1 - SZ.v offset);
+  Seq.slice_slice v2 (SZ.v offset) (SZ.v off2) (SZ.v off1 - SZ.v offset) (SZ.v off2 - SZ.v offset);
+  assert (pure (Seq.slice v2 (SZ.v offset) (SZ.v off2) `Seq.equal` Seq.append (bare_serialize s1 x1) (bare_serialize s2 x2)));
+  Seq.lemma_eq_intro (Seq.slice v2 (SZ.v offset) (SZ.v off2)) (Seq.append (bare_serialize s1 x1) (bare_serialize s2 x2));
+  assert (pure (Seq.slice v2 (SZ.v offset) (SZ.v off2) == bare_serialize (serialize_nondep_then s1 s2) x));
+  assert (pure (SZ.v off2 - SZ.v offset == Seq.length (bare_serialize (serialize_nondep_then s1 s2) x)));
+  Seq.slice_slice v2 0 (SZ.v off1) 0 (SZ.v offset);
+  Seq.slice_slice v1 0 (SZ.v off1) 0 (SZ.v offset);
+  off2
+}
+
+#pop-options
 
 let vmatch_synth
   (#tl: Type)
@@ -2538,7 +2890,7 @@ fn zero_copy_parse_synth
   Trade.rewrite_with_trade
     (vmatch res (f1 v))
     (vmatch_synth vmatch f1 res v);
-  Trade.trans (vmatch_synth vmatch f1 res v) _ _;
+  Trade.trans (vmatch_synth vmatch f1 res v) (vmatch res (f1 v)) _;
   res
 }
 
@@ -2636,9 +2988,9 @@ fn l2r_write_filter
   (offset: _)
   (#v: _)
 {
-  unfold (vmatch_filter vmatch f x' x);
+  unfold (vmatch_filter vmatch f x' (Ghost.reveal x));
   let res = w x' #(Ghost.hide #t1 (Ghost.reveal x)) out offset;
-  fold (vmatch_filter vmatch f x' x);
+  fold (vmatch_filter vmatch f x' (Ghost.reveal x));
   res
 }
 
@@ -2654,9 +3006,9 @@ fn compute_remaining_size_filter
   (out: _)
   (#v: _)
 {
-  unfold (vmatch_filter vmatch f x' x);
+  unfold (vmatch_filter vmatch f x' (Ghost.reveal x));
   let res = w x' #(Ghost.hide #t1 (Ghost.reveal x)) out;
-  fold (vmatch_filter vmatch f x' x);
+  fold (vmatch_filter vmatch f x' (Ghost.reveal x));
   res
 }
 
@@ -2677,7 +3029,7 @@ fn zero_copy_parse_filter
   Trade.trans (vmatch res v') _ _;
   Trade.rewrite_with_trade
     (vmatch res v')
-    (vmatch_filter vmatch f res v);
+    (vmatch_filter vmatch f res (Ghost.reveal v));
   Trade.trans _ (vmatch res v') _;
   res
 }
@@ -2754,13 +3106,87 @@ fn zero_copy_parse_filter_recip
   unfold (vmatch_filter_recip f vmatch res v');
   with v'' . assert (vmatch res v'');
   rewrite (vmatch res v'') as (vmatch res v);
-  ghost fn aux ()
-  requires emp ** vmatch res v
-  ensures vmatch_filter_recip f vmatch res v'
+  intro
+    (Trade.trade
+      (vmatch res v)
+      (vmatch_filter_recip f vmatch res v')
+    )
+    #emp
+    fn _
   {
     fold (vmatch_filter_recip f vmatch res v')
   };
-  Trade.intro _ _ _ aux;
   Trade.trans (vmatch res v) _ _;
   res
 }
+
+inline_for_extraction
+fn l2r_leaf_write_false (_: unit)
+: l2r_leaf_writer u#0 serialize_false
+=
+  (x: squash False)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  0sz // dummy
+}
+
+(* ===== Pure structural [leaf_size] combinators (LowParse.Pulse.Base.leaf_size) ===== *)
+
+inline_for_extraction
+let leaf_size_empty : leaf_size serialize_empty =
+  leaf_size_constant_size serialize_empty 0sz ()
+
+inline_for_extraction
+let leaf_size_false (_: unit) : leaf_size serialize_false =
+  fun (x: squash False) -> 0sz
+
+(* Size through [serialize_synth]: the synthesized value serializes to exactly the
+   same bytes as its preimage (mirrors [l2r_leaf_write_synth]). *)
+inline_for_extraction
+let leaf_size_synth
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (w: leaf_size s1)
+  (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 })
+  (f1': ((x2: t2) -> (x1: t1 { x1 == f1 x2 })))
+: leaf_size #t2 #k1 #(parse_synth p1 f2) (serialize_synth p1 f2 s1 f1 ())
+= fun x ->
+    serialize_synth_eq p1 f2 s1 f1 () x;
+    w (f1' x)
+
+inline_for_extraction
+let leaf_size_synth'
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (w: leaf_size s1)
+  (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> Tot t1) { synth_inverse f2 f1 })
+: leaf_size #t2 #k1 #(parse_synth p1 f2) (serialize_synth p1 f2 s1 f1 ())
+= leaf_size_synth w f2 f1 (mk_synth f1)
+
+(* Size through [serialize_nondep_then]: the total length is the sum of the two
+   child lengths (mirrors [l2r_leaf_write_nondep_then]). The kind-high bound below
+   guarantees the total fits in a machine word, so the addition cannot overflow. *)
+inline_for_extraction
+let leaf_size_pair
+  (#t1 #t2: Type0)
+  (#k1: parser_kind) (#p1: parser k1 t1) (#s1: serializer p1) (w1: leaf_size s1)
+  (sqs: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (#k2: parser_kind) (#p2: parser k2 t2) (#s2: serializer p2) (w2: leaf_size s2)
+  (sqb: squash (match (and_then_kind k1 k2).parser_kind_high with | Some h -> h < pow2 16 | None -> False))
+: leaf_size #(t1 & t2) #(and_then_kind k1 k2) #(nondep_then p1 p2) (serialize_nondep_then s1 s2)
+= fun x ->
+    let (x1, x2) = x in
+    length_serialize_nondep_then s1 s2 x1 x2;
+    serialize_length (serialize_nondep_then s1 s2) x;
+    let sz1 = w1 x1 in
+    let sz2 = w2 x2 in
+    // sz1 + sz2 == serialized length <= parser_kind_high < pow2 16, fits via fits_at_least_16
+    FStar.SizeT.add sz1 sz2
+
+(* Size through [serialize_filter]: filtering does not change the serialized bytes
+   (mirrors [l2r_leaf_write_filter]). *)
+inline_for_extraction
+let leaf_size_filter
+  (#t1: Type0)
+  (#k1: parser_kind) (#p1: parser k1 t1) (#s1: serializer p1) (w: leaf_size #t1 s1)
+  (f: (t1 -> GTot bool))
+: leaf_size #(parse_filter_refine u#0 f) #(parse_filter_kind k1) #(parse_filter p1 f) (serialize_filter s1 f)
+= fun x -> w x

@@ -5,7 +5,6 @@ module E = LowParse.Endianness.BitFields
 module U = FStar.UInt
 module U8 = FStar.UInt8
 
-open FStar.Mul
 
 // Make all integer proofs (pow2, etc.) explicit
 #push-options "--z3cliopt smt.arith.nl=false --fuel 0"
@@ -924,6 +923,7 @@ let parse_untagged_bounded_integer_kind (bound: pos) : LP.parser_kind = {
   LP.parser_kind_high = Some bound;
   LP.parser_kind_subkind = None;
   LP.parser_kind_metadata = None;
+  LP.parser_kind_injective = true;
 }
 
 let parse_untagged_bounded_integer'
@@ -972,6 +972,7 @@ let parse_integer_payload_kind : LP.parser_kind =
     parser_kind_high = None;
     parser_kind_subkind = Some ParserStrong;
     parser_kind_metadata = None;
+    parser_kind_injective = true;
   }
 
 let parse_integer_payload

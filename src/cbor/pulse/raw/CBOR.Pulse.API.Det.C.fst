@@ -1,4 +1,18 @@
 module CBOR.Pulse.API.Det.C
+include CBOR.Pulse.API.Det.Type
+include CBOR.Pulse.API.Det.Dummy
+include CBOR.Pulse.API.Base
+open Pulse.Lib.Pervasives
+open CBOR.Spec.Constants
+module Spec = CBOR.Spec.API.Format
+module S = Pulse.Lib.Slice
+module A = Pulse.Lib.Array
+module PM = Pulse.Lib.SeqMatch
+module Trade = Pulse.Lib.Trade.Util
+module SZ = FStar.SizeT
+module U8 = FStar.UInt8
+module SU = Pulse.Lib.Slice.Util
+module AP = Pulse.Lib.ArrayPtr
 #lang-pulse
 
 (* NOTE: this .fst file does not need anything from the Raw namespace,
@@ -67,14 +81,17 @@ ensures
   let v1v2 = cbor_det_validate_success_elim len v;
   assert (pure (Seq.equal (Seq.slice v 0 (SZ.v len)) (Spec.cbor_det_serialize (fst v1v2))));
   let gr : Ghost.erased (AP.ptr U8.t) = AP.ghost_split input len;
-  ghost fn aux (_: unit)
-  requires pts_to (Ghost.reveal gr) #pm (Seq.slice v (SZ.v len) (Seq.length v)) ** pts_to input #pm (Seq.slice v 0 (SZ.v len))
-  ensures pts_to input #pm v
+  intro
+    (Trade.trade
+      (pts_to input #pm (Seq.slice v 0 (SZ.v len)))
+      (pts_to input #pm v)
+    )
+    #(pts_to (Ghost.reveal gr) #pm (Seq.slice v (SZ.v len) (Seq.length v)))
+    fn _
   {
     Seq.lemma_split v (SZ.v len);
     AP.join input gr
   };
-  Trade.intro _ _ _ aux;
   Seq.append_empty_r (Spec.cbor_det_serialize (fst v1v2));
   let s = SU.arrayptr_to_slice_intro_trade input len;
   Trade.trans _ _ (pts_to input #pm v);
@@ -93,6 +110,7 @@ fn cbor_det_serialize
   (output_len: SZ.t)
   (#y: Ghost.erased Spec.cbor)
   (#pm: perm)
+norewrite
 requires
     (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (SZ.v output_len == Seq.length v /\ Seq.length (Spec.cbor_det_serialize y) <= SZ.v output_len))
 returns res: SZ.t
@@ -162,7 +180,7 @@ fn cbor_det_impl_utf8_correct_from_array (_: unit) : cbor_det_impl_utf8_correct_
 {
   let sl = S.arrayptr_to_slice_intro s len;
   S.pts_to_len sl;
-  let res = CBOR.Pulse.Raw.UTF8.impl_utf8_correct sl;
+  let res = CBOR.Pulse.API.UTF8.impl_utf8_correct sl;
   S.arrayptr_to_slice_elim sl;
   res
 }
@@ -171,8 +189,11 @@ let cbor_det_mk_simple_value = CBOR.Pulse.API.Det.Common.cbor_det_mk_simple_valu
 let cbor_det_mk_int64 = CBOR.Pulse.API.Det.Common.cbor_det_mk_int64
 let cbor_det_mk_tagged = CBOR.Pulse.API.Det.Common.cbor_det_mk_tagged
 
-let cbor_det_mk_string_from_arrayptr (_: unit) =
-  mk_string_from_arrayptr (CBOR.Pulse.API.Det.Common.cbor_det_mk_string ())
+let cbor_det_mk_byte_string_from_arrayptr (_: unit) =
+  mk_string_from_arrayptr (CBOR.Pulse.API.Det.Common.cbor_det_mk_string ()) cbor_major_type_byte_string
+
+let cbor_det_mk_text_string_from_arrayptr (_: unit) =
+  mk_string_from_arrayptr (CBOR.Pulse.API.Det.Common.cbor_det_mk_string ()) cbor_major_type_text_string
 
 let cbor_det_mk_array_from_array (_: unit) =
   mk_array_from_array (CBOR.Pulse.API.Det.Common.cbor_det_mk_array ())
@@ -183,7 +204,7 @@ let cbor_det_map_entry_match = CBOR.Pulse.API.Det.Common.cbor_det_map_entry_matc
 let cbor_det_mk_map_entry = CBOR.Pulse.API.Det.Common.cbor_det_mk_map_entry
 
 let cbor_det_mk_map_from_array : mk_map_from_array_t cbor_det_match cbor_det_map_entry_match =
-  mk_map_from_array (CBOR.Pulse.API.Base.mk_map_from_ref (CBOR.Pulse.API.Det.Type.dummy_cbor_det_t ()) (CBOR.Pulse.API.Det.Common.cbor_det_mk_map_gen ()))
+  mk_map_from_array (CBOR.Pulse.API.Base.mk_map_from_ref (CBOR.Pulse.API.Det.Dummy.dummy_cbor_det_t ()) (CBOR.Pulse.API.Det.Common.cbor_det_mk_map_gen ()))
 
 ghost fn map_gen_post_to_array
   (#t1 #t2: Type0)
@@ -212,20 +233,27 @@ ensures
       unfold (mk_map_gen_post vmatch1 vmatch2 s va pv vv None);
       S.to_array s;
       fold (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest false);
+      rewrite (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest false)
+        as (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest bres);
     }
     Some vres -> {
       unfold (mk_map_gen_post vmatch1 vmatch2 s va pv vv (Some vres));
       with w va' . assert (Trade.trade (vmatch1 1.0R vres w) (pts_to s va' ** PM.seq_list_match va vv (vmatch2 pv)));
-      ghost fn aux (_: unit)
-      requires S.is_from_array a s ** S.pts_to s va'
-      ensures A.pts_to a va'
+      intro
+        (Trade.trade
+          (S.pts_to s va')
+          (A.pts_to a va')
+        )
+        #(S.is_from_array a s)
+        fn _
       {
         S.to_array s;
       };
-      Trade.intro _ _ _ aux;
       Trade.trans_concl_l _ _ _ _;
       rewrite each vres as vdest;
       fold (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest true);
+      rewrite (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest true)
+        as (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest bres);
     }
   }
 }
@@ -241,7 +269,6 @@ fn cbor_det_mk_map_from_array_safe () :
   (#vv: _)
 {
   with vdest0 . assert (pts_to dest vdest0);
-  let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;  
   let s = S.from_array a (SZ.uint64_to_sizet len);
   S.pts_to_len s;
   PM.seq_list_match_length (cbor_det_map_entry_match pv) va vv;

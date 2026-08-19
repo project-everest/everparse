@@ -7,10 +7,11 @@ open CBOR.Spec.API.Type
 module EqTest = CDDL.Spec.EqTest
 open FStar.List.Tot.Base { (@) }
 
+[@@bundle_attr] // so it inlines
 let allowed (c: Char.char) : bool =
   let open FStar.UInt32 in
   let code = FStar.Char.u32_of_char c in
-  (code `gte` FStar.Char.u32_of_char 'a' &&
+  (code `gte` FStar.Char.u32_of_char 'A' &&
     code `lte` FStar.Char.u32_of_char 'Z') ||
   (code `gte` FStar.Char.u32_of_char 'a' &&
     code `lte` FStar.Char.u32_of_char 'z') ||
@@ -18,12 +19,13 @@ let allowed (c: Char.char) : bool =
     code `lte` FStar.Char.u32_of_char '9') ||
   code = FStar.Char.u32_of_char '_'
 
+[@@bundle_attr] // so it inlines
 let escape (c: Char.char) : list Char.char =
   (* Escape '-' as '_', for the rest use character codes. *)
   if c = '-' then
     ['_']
   else
-    let code = FStar.Char.u32_of_char c |> FStar.UInt32.v in
+    let code = FStar.UInt32.v (FStar.Char.u32_of_char c) in
     let s = string_of_int code in
     let s = FStar.String.list_of_string s in
     '_' :: s
@@ -39,10 +41,11 @@ let rec sanitize_aux (s : list Char.char) : list Char.char =
 
 [@@bundle_attr] // so it inlines
 let sanitize_name (s:string) : string =
-  s
-  |> FStar.String.list_of_string
-  |> sanitize_aux
-  |> FStar.String.string_of_list
+  let s0 = s in
+  let s1 = FStar.String.list_of_string s0 in
+  let s2 = sanitize_aux s1 in
+  let s3 = FStar.String.string_of_list s2 in
+  s3
 
 [@@bundle_attr] // so it inlines
 unfold noextract
@@ -199,7 +202,7 @@ let bundle_set_parser_and_serializer
 = {
     b_typ = b.b_typ;
     b_spec_type = spect;
-    b_spec_type_eq = b.b_spec_type_eq;
+    b_spec_type_eq = coerce_eq () b.b_spec_type_eq;
     b_spec = b.b_spec;
     b_impl_type = t;
     b_rel = r;

@@ -1,4 +1,10 @@
 module EverParse3d.InputStream.Buffer
+module U8 = FStar.UInt8
+module U32 = FStar.UInt32
+module HS = FStar.HyperStack
+module HST = FStar.HyperStack.ST
+module B = LowStar.Buffer
+open EverParse3d.InputStream.Base
 open EverParse3d.InputStream.Buffer.Aux
 
 (* Implementation for single buffers *)
@@ -131,7 +137,7 @@ let inst = {
   extra_t = unit;
 
   has = begin fun x xlen currentPosition n ->
-    n `U64.lte` (xlen `U64.sub` currentPosition)
+    (xlen `U64.sub` currentPosition) `U64.gte` n
   end;
 
   read = begin fun _ k p r x currentPosition n ->

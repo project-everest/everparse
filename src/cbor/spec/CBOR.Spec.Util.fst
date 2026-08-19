@@ -1,5 +1,21 @@
 module CBOR.Spec.Util
 
+let rec list_index_map
+  (#t1 #t2: Type)
+  (f: (t1 -> t2))
+  (l: list t1)
+  (i: nat)
+: Lemma
+  (requires (i < List.Tot.length l))
+  (ensures (
+    let l' = List.Tot.map f l in
+    i < List.Tot.length l' /\
+    List.Tot.index l' i == f (List.Tot.index l i)
+  ))
+= if i = 0
+  then ()
+  else list_index_map f (List.Tot.tl l) (i - 1)
+
 let rec list_for_all2 (#t1 #t2: Type) (p: t1 -> t2 -> bool) (l1: list t1) (l2: list t2) : Tot bool (decreases l1) =
   match l1, l2 with
   | [], [] -> true
@@ -178,7 +194,7 @@ let rec list_existsb_intro (#t: Type) (p: t -> bool) (l: list t) (x: t) : Lemma
   (decreases l)
 = match l with
   | a :: q ->
-    if FStar.StrongExcludedMiddle.strong_excluded_middle (x == a)
+    if FStar.IndefiniteDescription.strong_excluded_middle (x == a)
     then ()
     else list_existsb_intro p q x
 
@@ -225,7 +241,7 @@ let list_for_all_exists_equal_eq (#t: eqtype) (l1 l2: list t) : Lemma
   (ensures (
     forall x . List.Tot.memP x l1 ==> List.Tot.memP x l2
   ))
-= Classical.forall_intro (fun x -> Classical.move_requires (list_for_all_exists_equal_eq' l1 l2) x)
+= Classical.forall_intro (Classical.move_requires (list_for_all_exists_equal_eq' l1 l2))
 
 let order_irrefl
   (#t: Type)
@@ -255,7 +271,7 @@ let rec list_sorted_memP
   (ensures (order a x == true))
   (decreases l)
 = let a' :: l' = l in
-  if FStar.StrongExcludedMiddle.strong_excluded_middle (a' == x)
+  if FStar.IndefiniteDescription.strong_excluded_middle (a' == x)
   then ()
   else list_sorted_memP order a' l' x
 
@@ -272,7 +288,7 @@ let list_sorted_cons_not_memP
     List.Tot.sorted order (a :: l)
   ))
   (ensures (~ (List.Tot.memP a l)))
-= if FStar.StrongExcludedMiddle.strong_excluded_middle (List.Tot.memP a l)
+= if FStar.IndefiniteDescription.strong_excluded_middle (List.Tot.memP a l)
   then list_sorted_memP order a l a
   else ()
 
@@ -313,7 +329,7 @@ let rec list_sorted_ext_eq
 = match l1, l2 with
   | [], [] -> ()
   | a1 :: q1, a2 :: q2 ->
-    if FStar.StrongExcludedMiddle.strong_excluded_middle (a1 == a2)
+    if FStar.IndefiniteDescription.strong_excluded_middle (a1 == a2)
     then begin
       list_sorted_cons_not_memP order a1 q1;
       list_sorted_cons_not_memP order a2 q2;
@@ -822,10 +838,10 @@ let rec list_no_setoid_repeats_append_elim_memP
 : Lemma
   (ensures (List.Tot.memP x1 l1 /\ List.Tot.memP x2 l2) ==> equiv x1 x2 == false)
   (decreases l1)
-= if FStar.StrongExcludedMiddle.strong_excluded_middle (List.Tot.memP x1 l1 /\ List.Tot.memP x2 l2)
+= if FStar.IndefiniteDescription.strong_excluded_middle (List.Tot.memP x1 l1 /\ List.Tot.memP x2 l2)
   then begin
     let x1' :: l1' = l1 in
-    if FStar.StrongExcludedMiddle.strong_excluded_middle (x1 == x1')
+    if FStar.IndefiniteDescription.strong_excluded_middle (x1 == x1')
     then begin
       if equiv x1 x2
       then begin
@@ -909,7 +925,7 @@ let rec list_memP_map_elim
   (ensures (fun (x : a) -> List.Tot.memP x l /\ f x == y))
   (decreases l)
 = let x :: q = l in
-  if (FStar.StrongExcludedMiddle.strong_excluded_middle (f x == y))
+  if (FStar.IndefiniteDescription.strong_excluded_middle (f x == y))
   then x
   else list_memP_map_elim f y q
 
@@ -919,8 +935,10 @@ let list_memP_map_forall
   (l: list t1)
 : Lemma
   (forall y . List.Tot.memP y (List.Tot.map f l) <==> (exists x . List.Tot.memP x l /\ y == f x))
-= Classical.forall_intro (fun y -> List.Tot.memP_map_elim f y l);
-  Classical.forall_intro (fun x -> List.Tot.memP_map_intro f x l)
+= introduce forall y . List.Tot.memP y (List.Tot.map f l) ==> (exists x . List.Tot.memP x l /\ f x == y)
+  with List.Tot.memP_map_elim f y l;
+  introduce forall x . List.Tot.memP x l ==> List.Tot.memP (f x) (List.Tot.map f l)
+  with List.Tot.memP_map_intro f x l
 
 let rec list_no_setoid_repeats_map
   (#t1: Type)
@@ -1147,7 +1165,7 @@ let rec list_sum_memP (#t: Type) (f: t -> nat) (l: list t) (x: t) : Lemma
   (requires (List.Tot.memP x l))
   (ensures (f x <= list_sum f l))
 = let a :: q = l in
-  if FStar.StrongExcludedMiddle.strong_excluded_middle (x == a)
+  if FStar.IndefiniteDescription.strong_excluded_middle (x == a)
   then ()
   else list_sum_memP f q x
 
@@ -1182,6 +1200,26 @@ let rec list_sum_map (#t1: Type) (f1: t1 -> nat) (l1: list t1) (#t2: Type) (f2: 
 
 let pair_sum (#t1: Type) (#t2: Type) (f1: t1 -> nat) (f2: t2 -> nat) (x: (t1 & t2)) : Tot nat =
   f1 (fst x) + f2 (snd x)
+
+let rec list_max (#t: Type) (f: t -> nat) (l: list t) : Tot nat =
+  match l with
+  | [] -> 0
+  | a :: q ->
+    let n1 = f a in
+    let n2 = list_max f q in
+    if n1 > n2 then n1 else n2
+
+let rec list_max_append (#t: Type) (f: t -> nat) (l1 l2: list t) : Lemma
+  (ensures (
+    let n1 = list_max f l1 in
+    let n2 = list_max f l2 in
+    list_max f (List.Tot.append l1 l2) == (if n1 > n2 then n1 else n2)
+  ))
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | _ :: q -> list_max_append f q l2
+
 
 let rec list_of_pair_list
   (#t: Type)
@@ -1382,7 +1420,7 @@ let rec list_setoid_assoc_mem_elim
     Some? (list_setoid_assoc equiv x l)
   ))
 = let xy' :: q = l in
-  if FStar.StrongExcludedMiddle.strong_excluded_middle (xy == xy')
+  if FStar.IndefiniteDescription.strong_excluded_middle (xy == xy')
   then ()
   else list_setoid_assoc_mem_elim equiv q xy x
 
@@ -1617,6 +1655,60 @@ let list_assoc_append
   list_setoid_assoc_eqtype k l1;
   list_setoid_assoc_eqtype k l2
 
+let equiv_fst
+  (#t1 #t2: Type)
+  (equiv: t1 -> t1 -> bool)
+  (a: t1)
+  (b: (t1 & t2))
+: Tot bool
+= equiv a (fst b)
+
+let notp (#t: Type) (p: t -> bool) (x: t) : Tot bool =
+  not (p x)
+
+let rec setoid_assoc_eq_filter_notp_equiv_fst
+  (#t1 #t2: Type)
+  (equiv1: t1 -> t1 -> bool)
+  (equiv2: t2 -> t2 -> bool)
+  (a: t1)
+  (b: (t1 & t2))
+  (l: list (t1 & t2))
+: Lemma
+  (requires
+    equiv1 a (fst b) == false /\
+    (forall x y . equiv1 x y == equiv1 y x) /\
+    order_trans equiv1
+  )
+  (ensures
+    setoid_assoc_eq equiv1 equiv2 l b == setoid_assoc_eq equiv1 equiv2 (List.Tot.filter (notp (equiv_fst equiv1 a)) l) b
+  )
+= match l with
+  | (k, v) :: q ->
+    setoid_assoc_eq_filter_notp_equiv_fst equiv1 equiv2 a b q
+  | _ -> ()
+
+let rec list_for_all_setoid_assoc_eq_filter_notp_equiv_fst
+  (#t1 #t2: Type)
+  (equiv1: t1 -> t1 -> bool)
+  (equiv2: t2 -> t2 -> bool)
+  (a: t1)
+  (ll lr: list (t1 & t2))
+: Lemma
+  (requires 
+    (forall x y . equiv1 x y == equiv1 y x) /\
+    order_trans equiv1 /\
+    ~ (List.Tot.existsb (equiv1 a) (List.Tot.map fst lr))
+  )
+  (ensures
+    List.Tot.for_all (setoid_assoc_eq equiv1 equiv2 ll) lr == List.Tot.for_all (setoid_assoc_eq equiv1 equiv2 (List.Tot.filter (notp (equiv_fst equiv1 a)) ll)) lr
+  )
+  (decreases lr)
+= match lr with
+  | [] -> ()
+  | b :: q ->
+    setoid_assoc_eq_filter_notp_equiv_fst equiv1 equiv2 a b ll;
+    list_for_all_setoid_assoc_eq_filter_notp_equiv_fst equiv1 equiv2 a ll q
+
 let rec list_assoc_mem_intro
   (#tk: eqtype)
   (#tv: Type)
@@ -1649,7 +1741,7 @@ let rec list_assoc_no_repeats_mem_elim
   let (k', v') :: l' = l in
   if (k = k')
   then
-    if FStar.StrongExcludedMiddle.strong_excluded_middle (v == v')
+    if FStar.IndefiniteDescription.strong_excluded_middle (v == v')
     then ()
     else List.Tot.memP_map_intro fst (k, v) l'
   else list_assoc_no_repeats_mem_elim k v l'
@@ -1766,6 +1858,28 @@ let op_comm
 : Tot prop
 = forall a x1 x2 . f (f a x1) x2 == f (f a x2) x1
 
+let rec list_map_splitAt
+  (#t1 #t2: Type)
+  (f: t1 -> t2)
+  (l: list t1)
+  (n: nat)
+: Lemma
+  (List.Tot.map f (fst (List.Tot.splitAt n l)) == fst (List.Tot.splitAt n (List.Tot.map f l)))
+= if n = 0 then () else
+  match l with
+  | [] -> ()
+  | a :: q -> list_map_splitAt f q (n - 1)
+
+let list_for_all_splitAt
+  (#t: Type)
+  (f: t -> bool)
+  (l: list t)
+  (n: nat)
+: Lemma
+  (List.Tot.for_all f l == (List.Tot.for_all f (fst (List.Tot.splitAt n l)) && List.Tot.for_all f (snd (List.Tot.splitAt n l))))
+= list_splitAt_append n l;
+  List.Tot.for_all_append f (fst (List.Tot.splitAt n l)) (snd (List.Tot.splitAt n l))
+
 let rec list_memP_extract
   (#t: Type)
   (x: t)
@@ -1776,7 +1890,7 @@ let rec list_memP_extract
     l == ll `List.Tot.append` (x :: lr)
   )
 = let a :: q = l in
-  if FStar.StrongExcludedMiddle.strong_excluded_middle (a == x)
+  if FStar.IndefiniteDescription.strong_excluded_middle (a == x)
   then ([], q)
   else
     let (ll, lr) = list_memP_extract x q in
@@ -1873,7 +1987,7 @@ let rec list_filter_not_in
   | [] -> []
   | b :: q ->
     let q' = list_filter_not_in a q in
-    if FStar.StrongExcludedMiddle.strong_excluded_middle (a == b)
+    if FStar.IndefiniteDescription.strong_excluded_middle (a == b)
     then q'
     else b :: q'
 
@@ -1932,7 +2046,7 @@ let rec list_filter_not_in_fold
 : Lemma
   (ensures (List.Tot.fold_left f (f a h) l == List.Tot.fold_left f (f a h) (list_filter_not_in h l)))
   (decreases (List.Tot.length l))
-= if FStar.StrongExcludedMiddle.strong_excluded_middle (List.Tot.memP h l)
+= if FStar.IndefiniteDescription.strong_excluded_middle (List.Tot.memP h l)
   then begin
     let (l1, l2) = list_memP_extract h l in
     list_fold_comm f (f a h) l1 (h :: l2);
@@ -2040,9 +2154,6 @@ let rec list_fold_filter
     if f a
     then list_fold_filter f q phi (phi accu a)
     else list_fold_filter f q phi accu
-
-let notp (#t: Type) (p: t -> bool) (x: t) : Tot bool =
-  not (p x)
 
 let rec list_no_repeats_filter
   (#t: Type)
@@ -2211,3 +2322,74 @@ let rec wf_list_map_length (#t1 #t2: Type) (l: list t1) (f: (x1: t1 { List.Tot.m
 = match l with
   | [] -> ()
   | _ :: q -> wf_list_map_length q f
+
+let rec wf_list_max (#t: Type) (l: list t) (f: (x: t { List.Tot.memP x l /\ x << l }) -> nat) : Tot nat (decreases l) =
+  match l with
+  | [] -> 0
+  | a :: q -> 
+    let n1 = f a in
+    let n2 = wf_list_max q f in
+    if n1 > n2 then n1 else n2
+
+let rec wf_list_max_correct (#t: Type) (l: list t) (f: (x: t { List.Tot.memP x l /\ x << l }) -> nat) (x: t) : Lemma
+  (ensures (List.Tot.memP x l ==> (x << l /\ f x <= wf_list_max l f)))
+  (decreases l)
+= Classical.move_requires (List.Tot.memP_precedes x) l;
+  match l with
+  | [] -> ()
+  | _ :: q -> wf_list_max_correct q f x
+
+let rec wf_list_max_eq (#t: Type) (f: t -> nat) (l: list t) : Lemma
+  (ensures (wf_list_max l f == list_max f l))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | _ :: q -> wf_list_max_eq f q
+
+let list_max_correct
+  (#t: Type) (f: t -> nat) (l: list t) (x: t)
+: Lemma
+  (ensures List.Tot.memP x l ==> (x << l /\ f x <= list_max f l))
+= wf_list_max_eq f l;
+  wf_list_max_correct l f x
+
+let rec list_max_le
+  (#t: Type0)
+  (f1: t -> nat)
+  (f2: t -> nat)
+  (l: list t)
+  (prf: (x: t { List.Tot.memP x l /\ x << l }) -> Lemma
+    (f1 x <= f2 x)
+  )
+: Lemma
+  (ensures (list_max f1 l <= list_max f2 l))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q -> prf a; list_max_le f1 f2 q prf
+
+let rec list_max_filter
+  (#t: Type0)
+  (f: t -> nat)
+  (p: t -> bool)
+  (l: list t)
+: Lemma
+  (list_max f l == (
+    let n1 = list_max f (List.Tot.filter p l) in
+    let n2 = list_max f (List.Tot.filter (notp p) l) in
+    if n1 >= n2 then n1 else n2
+  ))
+= match l with
+  | [] -> ()
+  | a :: q -> list_max_filter f p q
+
+let rec list_sum_filter
+  (#t: Type0)
+  (f: t -> nat)
+  (p: t -> bool)
+  (l: list t)
+: Lemma
+  (list_sum f l == list_sum f (List.Tot.filter p l) + list_sum f (List.Tot.filter (notp p) l))
+= match l with
+  | [] -> ()
+  | a :: q -> list_sum_filter f p q

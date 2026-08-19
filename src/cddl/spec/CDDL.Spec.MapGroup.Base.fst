@@ -1,4 +1,6 @@
 module CDDL.Spec.MapGroup.Base
+include CDDL.Spec.Base
+module Cbor = CBOR.Spec.API.Type
 open CBOR.Spec.API.Type
 
 module FE = FStar.FunctionalExtensionality
@@ -77,7 +79,8 @@ let cbor_map_singleton_inj
   (requires (cbor_map_singleton k1 v1 == cbor_map_singleton k2 v2))
   (ensures (k1 == k2 /\ v1 == v2))
   [SMTPat (cbor_map_singleton k1 v1); SMTPat (cbor_map_singleton k2 v2)]
-= assert (forall x . cbor_map_mem x (cbor_map_singleton k1 v1) ==> x == (k1, v1));
+= bring_cbor_map_defined_alt ();
+  assert (forall x . cbor_map_mem x (cbor_map_singleton k1 v1) ==> x == (k1, v1));
   assert (forall x . cbor_map_mem x (cbor_map_singleton k2 v2) ==> x == (k2, v2))
 
 unfold
@@ -414,7 +417,7 @@ let cbor_map_disjoint_union_intro
   (ensures cbor_map_disjoint m (m1 `cbor_map_union` m2))
 = ()
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 #restart-solver
 let map_group_concat_witness_pred_correct
@@ -482,7 +485,7 @@ let map_group_concat_result_map
 : Tot map_group_item
 = (cbor_map_union consumed (fst x), snd x)
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 let map_group_concat_result_op
   (f: cbor_map)
@@ -694,8 +697,8 @@ let map_group_equiv_intro
 : Lemma
   (map_group_equiv m1 m2)
 = Classical.forall_intro prf0;
-  Classical.forall_intro_2 (fun l l' -> Classical.move_requires (prf12 l) l');
-  Classical.forall_intro_2 (fun l l' -> Classical.move_requires (prf21 l) l')
+  Classical.forall_intro_2 (Classical.move_requires_2 prf12);
+  Classical.forall_intro_2 (Classical.move_requires_2 prf21)
 
 let map_group_equiv_intro_equiv
   (m1 m2: map_group)
@@ -900,11 +903,12 @@ let map_group_concat_always_false
   (m: map_group)
 : Lemma
   (map_group_concat map_group_always_false m == map_group_always_false)
-= map_group_equiv_intro_equiv
-    (map_group_concat map_group_always_false m)
-    map_group_always_false
-    (fun _ -> ())
-    (fun _ _ -> ())
+= introduce forall l . map_group_concat map_group_always_false m l == map_group_always_false l
+  with begin
+    assert (map_group_always_false l == MapGroupResult MPS.empty);
+    assert (MPS.equal (map_group_concat_result l m MPS.empty) MPS.empty)
+  end;
+  FE.extensionality _ _ (map_group_concat map_group_always_false m) map_group_always_false
 
 let bound_map_group
   (l0: cbor_map)
@@ -997,7 +1001,7 @@ let map_group_is_productive_choice
   ))
 = ()
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 #restart-solver
 let map_group_is_productive_concat
@@ -1081,6 +1085,8 @@ let map_group_match_item_for_eq_none
   | MapGroupCutFailure -> assert False
   | MapGroupResult s -> assert (s `MPS.equal` MPS.empty)
 
+#push-options "--z3rlimit 32"
+
 #restart-solver
 let map_group_match_item_for_eq
   (k: cbor)
@@ -1152,6 +1158,8 @@ let map_group_match_item_for_eq_gen
       assert (mps_exists (map_group_match_item_cut_exists_pred (t_literal k) s) s);
       assert (map_group_match_item_for true k ty l == MapGroupCutFailure)
     end
+
+#pop-options
 
 let mps_equal_intro
   (s1 s2: MPS.t)
@@ -1400,8 +1408,6 @@ let apply_map_group_det_concat (m1 m2: map_group) (l: cbor_map) =
     end
   | _ -> ()
 
-#pop-options
-
 #restart-solver
 let apply_map_group_det_match_item_for
   (cut: bool)
@@ -1423,6 +1429,8 @@ let apply_map_group_det_match_item_for
     end
     else ()
   | _ -> ()
+
+#pop-options
 
 #push-options "--z3rlimit 512"
 
@@ -1453,7 +1461,8 @@ let apply_map_group_det_match_item_cut
   match cbor_map_key_list s with
   | [] ->
       assert (MPS.equal res MPS.empty);
-      assert (map_group_match_item_cut_pre l res == MPS.singleton (cbor_map_empty, l))
+      assert (map_group_match_item_cut_pre l res == MPS.singleton (cbor_map_empty, l));
+      assert (apply_map_group_det (map_group_match_item true k ty) l == MapGroupFail)
   | key :: q ->
     cbor_map_key_list_mem s key;
     let Some value = cbor_map_get s key in
@@ -1466,6 +1475,8 @@ let apply_map_group_det_match_item_cut
       assert (MPS.equal res (MPS.singleton (s, s')));
       assert (map_group_match_item_cut_pre l res == res);
       assert (~ (mps_exists (map_group_match_item_cut_exists_pred k res) res));
+      assert (map_group_match_item true k ty l == MapGroupResult res);
+      apply_map_group_det_eq_singleton (map_group_match_item true k ty) l (s, s');
       ()
     end
     else
@@ -1523,6 +1534,12 @@ let apply_map_group_det_match_item_cut
           Classical.forall_intro_2 aux;
           assert (MPS.equal res MPS.empty);
           assert (map_group_match_item_cut_pre l res == MPS.singleton (cbor_map_empty, l));
+          let s0 = MPS.singleton (cbor_map_empty, l) in
+          assert (cbor_map_mem (key, value) l);
+          assert (map_group_match_item_cut_failure_witness_pred k s0 (cbor_map_empty, l) (key, value));
+          assert (map_group_match_item_cut_exists_pred k s0 (cbor_map_empty, l));
+          assert (mps_exists (map_group_match_item_cut_exists_pred k s0) s0);
+          assert (apply_map_group_det (map_group_match_item true k ty) l == MapGroupCutFail);
           ()
         | key2 :: _ ->
           cbor_map_key_list_mem s key2;
@@ -1543,6 +1560,8 @@ let map_group_filter
 let apply_map_group_det_filter
   f l
 = ()
+
+#push-options "--z3rlimit 64"
 
 #restart-solver
 let map_group_filter_filter
@@ -1582,8 +1601,6 @@ let map_group_zero_or_one_match_item_filter_matched
   cbor_map_equiv s (cbor_map_filter (CBOR.Spec.Util.notp p) s);
   cbor_map_disjoint_union_filter p s l';
   cbor_map_equiv cbor_map_empty (cbor_map_filter p s)
-
-#push-options "--z3rlimit 16"
 
 #restart-solver
 let map_group_zero_or_one_match_item_filter
@@ -1657,6 +1674,7 @@ let map_group_concat_eq_l
   | _ -> ()
 
 #restart-solver
+#push-options "--z3rlimit 10"
 let map_group_zero_or_one_bound_match_item_filter
   (key value: typ)
   (l: cbor_map)
@@ -1689,6 +1707,7 @@ let map_group_zero_or_one_bound_match_item_filter
       (fun _ -> ());
     map_group_zero_or_one_match_item_filter key value p
   end
+#pop-options
 
 #restart-solver
 let map_group_zero_or_one_map_group_match_item_no_cut_nonempty
@@ -1789,6 +1808,7 @@ let map_group_zero_or_more_map_group_match_item_for
       | MapGroupDet consumed rem ->
         assert (cbor_map_length rem < cbor_map_length l);
         map_group_concat_eq_r g (bound_map_group l (map_group_zero_or_more g)) map_group_nop l (fun l' ->
+          map_group_match_item_for_eq_gen cut key value l;
           map_group_zero_or_more_eq g (snd l');
           map_group_match_item_for_eq_gen cut key value (snd l');
           assert (cbor_map_get (snd l') key == None)
@@ -1811,7 +1831,7 @@ let map_group_fail_shorten_intro
   (map_group_fail_shorten g)
 = Classical.forall_intro_2 (fun m1 -> Classical.move_requires (prf m1))
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 128"
 
 #restart-solver
 
@@ -1975,6 +1995,8 @@ let apply_map_group_det_cut
   [SMTPat (apply_map_group_det (map_group_cut k) l)]
 = ()
 
+#push-options "--z3rlimit 20"
+
 let map_group_concat_match_item_cut_eq
   (k: cbor) (v: typ) (b: bool)
 : Lemma
@@ -1983,7 +2005,9 @@ let map_group_concat_match_item_cut_eq
     (map_group_match_item_for b k v)
     (map_group_concat (map_group_match_item_for b k v) (map_group_cut (t_literal k)))
 
-#push-options "--z3rlimit 32"
+#pop-options
+
+#push-options "--z3rlimit 64"
 
 #restart-solver
 let map_group_concat_zero_or_one_match_item_cut_eq
@@ -2028,7 +2052,7 @@ let t_map_ext g1 g2 =
 
 #pop-options
 
-#push-options "--z3rlimit 128"
+#push-options "--z3rlimit 256"
 
 #restart-solver
 let t_map_concat_cut_r_gen

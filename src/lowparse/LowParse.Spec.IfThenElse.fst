@@ -39,7 +39,14 @@ let parse_ifthenelse_kind
 = and_then_kind p.parse_ifthenelse_tag_kind (parse_ifthenelse_payload_kind p)
 
 let parse_ifthenelse_synth_injective (p: parse_ifthenelse_param) (t: p.parse_ifthenelse_tag_t) : Lemma (synth_injective (p.parse_ifthenelse_synth t)) [SMTPat (synth_injective (p.parse_ifthenelse_synth t))] =
-  Classical.forall_intro_2 (fun x1 x2 -> Classical.move_requires (p.parse_ifthenelse_synth_injective t x1 t) x2)
+  let aux
+    (x1 x2: p.parse_ifthenelse_payload_t (p.parse_ifthenelse_tag_cond t))
+  : Lemma
+    (requires (p.parse_ifthenelse_synth t x1 == p.parse_ifthenelse_synth t x2))
+    (ensures (x1 == x2))
+  = p.parse_ifthenelse_synth_injective t x1 t x2
+  in
+  Classical.forall_intro_2 (Classical.move_requires_2 aux)
 
 let parse_ifthenelse_payload (p: parse_ifthenelse_param) (t: p.parse_ifthenelse_tag_t) : Tot (parser (parse_ifthenelse_payload_kind p) p.parse_ifthenelse_t) =
   weaken (parse_ifthenelse_payload_kind p) (parse_synth (dsnd (p.parse_ifthenelse_payload_parser (p.parse_ifthenelse_tag_cond t))) (p.parse_ifthenelse_synth t))
@@ -133,12 +140,41 @@ let bare_serialize_ifthenelse_correct
   in
   Classical.forall_intro prf
 
+let serialize_ifthenelse_param_injective
+  (#p: parse_ifthenelse_param)
+  (s: serialize_ifthenelse_param p)
+: Lemma
+  ((parse_ifthenelse_kind p).parser_kind_injective == true)
+= serializer_parser_injective s.serialize_ifthenelse_tag_serializer;
+  serializer_parser_injective (s.serialize_ifthenelse_payload_serializer true);
+  serializer_parser_injective (s.serialize_ifthenelse_payload_serializer false)
+
 let serialize_ifthenelse
   (#p: parse_ifthenelse_param)
   (s: serialize_ifthenelse_param p { p.parse_ifthenelse_tag_kind.parser_kind_subkind == Some ParserStrong } )
 : Tot (serializer (parse_ifthenelse p))
 = bare_serialize_ifthenelse_correct s;
+  serialize_ifthenelse_param_injective s;
   bare_serialize_ifthenelse s
+
+(* The serialization of an if-then-else value is the concatenation of the tag
+   serialization and the payload serialization, so its length is the sum of the
+   two. This lets generated code derive a [bytesize] decomposition for
+   if-then-else types (mirroring the struct/sum [bytesize_eqn] lemmas). *)
+let length_serialize_ifthenelse
+  (#p: parse_ifthenelse_param)
+  (s: serialize_ifthenelse_param p { p.parse_ifthenelse_tag_kind.parser_kind_subkind == Some ParserStrong } )
+  (x: p.parse_ifthenelse_t)
+: Lemma
+  (let (| t, y |) = s.serialize_ifthenelse_synth_recip x in
+   Seq.length (serialize (serialize_ifthenelse s) x) ==
+   Seq.length (serialize s.serialize_ifthenelse_tag_serializer t) +
+   Seq.length (serialize (s.serialize_ifthenelse_payload_serializer (p.parse_ifthenelse_tag_cond t)) y))
+= let (| t, y |) = s.serialize_ifthenelse_synth_recip x in
+  assert (serialize (serialize_ifthenelse s) x == bare_serialize_ifthenelse s x);
+  Seq.lemma_len_append
+    (serialize s.serialize_ifthenelse_tag_serializer t)
+    (serialize (s.serialize_ifthenelse_payload_serializer (p.parse_ifthenelse_tag_cond t)) y)
 
 let serialize_ifthenelse_synth_inverse'
   (#p: parse_ifthenelse_param)

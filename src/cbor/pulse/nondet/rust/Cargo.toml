@@ -1,0 +1,11 @@
+[package]
+name = "cborrs-nondet"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[profile.test]
+inherits = "release"
+lto = "fat"
+opt-level = 2

@@ -48,7 +48,7 @@ let cbor_raw_map_insert_out_inv
   Seq.slice v (SZ.v off2) (SZ.v off3) `Seq.equal` sk /\
   Seq.slice v (SZ.v off3) (Seq.length v) `Seq.equal` sv
 
-#push-options "--z3rlimit 32 --split_queries always"
+#push-options "--z3rlimit 32"
 
 #restart-solver
 
@@ -233,23 +233,20 @@ ensures exists* v .
   let mut pres = CInProgress;
   while (
     let res = !pres;
-    if (CInProgress? res) {
-      let off = !poff;
-      (SZ.lt off off2)
-    } else {
-      false
-    }
-  ) invariant b . exists* v l1 l2 off res . (
+    let off = !poff;
+    (CInProgress? res && SZ.lt off off2)
+  ) invariant exists* v l1 l2 off res . (
     pts_to out v **
     GR.pts_to pl1 l1 **
     GR.pts_to pl2 l2 **
     R.pts_to poff off **
     R.pts_to pres res **
     pure (
-      cbor_raw_map_insert_inv m off2 key off3 value v l1 l2 off res /\
-      b == (CInProgress? res && (SZ.v off < SZ.v off2))
+      cbor_raw_map_insert_inv m off2 key off3 value v l1 l2 off res
     )
-  ) {
+  )
+    decreases %[(if CInProgress? !pres then 1 else 0); (SZ.v off2 - SZ.v (!poff))] // fstar2 only
+  {
     with l1 . assert (GR.pts_to pl1 l1);
     with l2 . assert (GR.pts_to pl2 l2);
     with v . assert (pts_to out v);
@@ -309,11 +306,17 @@ ensures exists* v .
         SZ.v off + Seq.length (serialize_cbor_map l2) == SZ.v off2
       ));
       assert (pure (
+        Seq.length slkv' + Seq.length sl2' == Seq.length (serialize_cbor_map l2)
+      ));
+      assert (pure (
         SZ.v off + (Seq.length slkv' + Seq.length sl2') == SZ.v off2
       ));
       assert (pure (
         SZ.v off' == SZ.v off + Seq.length slkv'
       ));
+      serialize_cbor_nonempty key'; // fstar2 only
+      Seq.lemma_len_append (serialize_cbor key') (serialize_cbor value'); // fstar2 only
+      assert (pure (SZ.v off < SZ.v off')); // fstar2 only
       assert (pure (
         SZ.v off' + Seq.length sl2' == SZ.v off2
       ));

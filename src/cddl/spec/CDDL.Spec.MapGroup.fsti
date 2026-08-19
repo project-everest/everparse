@@ -54,7 +54,7 @@ let map_group_footprint_equiv
     map_constraint_equiv f1 f2
   )
   (ensures map_group_footprint g f2)
-= ()
+= bring_cbor_map_defined_alt ()
 
 let map_constraint_included
   (f1 f2: map_constraint)
@@ -70,7 +70,7 @@ let map_group_footprint_implies
     map_constraint_included f1 f2
   )
   (ensures map_group_footprint g f2)
-= ()
+= bring_cbor_map_defined_alt ()
 
 #restart-solver
 let map_group_footprint_elim
@@ -94,6 +94,12 @@ let map_group_footprint_elim
 = match apply_map_group_det g m, apply_map_group_det g (m `cbor_map_union` m') with
   | MapGroupDet c r, MapGroupDet c' r' ->
     assert (r' == r `cbor_map_union` m');
+    introduce forall k . cbor_map_get c' k == cbor_map_get c k
+    with begin
+      assert (cbor_map_get (cbor_map_union c' r') k == cbor_map_get (cbor_map_union m m') k);
+      assert (cbor_map_get (cbor_map_union c r) k == cbor_map_get m k);
+      assert (cbor_map_get (cbor_map_union r m') k == cbor_map_get r' k)
+    end;
     assert (cbor_map_equal c' c)
   | _ -> ()
 
@@ -191,6 +197,7 @@ let map_constraint_choice
 : Tot bool
 = f1 x || f2 x
 
+#push-options "--z3rlimit 32"
 #restart-solver
 let map_group_footprint_concat
   (g1 g2: map_group)
@@ -203,8 +210,29 @@ let map_group_footprint_concat
   (ensures (
     map_group_footprint (map_group_concat g1 g2) (map_constraint_choice f1 f2)
   ))
-  [SMTPat (map_group_footprint g1 f1); SMTPat (map_group_footprint g2 f2); SMTPat (map_group_concat g1 g2)]
-= ()
+  [SMTPat (map_group_footprint (map_group_concat g1 g2) (map_constraint_choice f1 f2))]
+= bring_cbor_map_defined_alt ();
+  map_group_footprint_intro
+    (map_group_concat g1 g2)
+    (map_constraint_choice f1 f2)
+    (fun m m' ->
+      apply_map_group_det_concat g1 g2 m;
+      apply_map_group_det_concat g1 g2 (m `cbor_map_union` m');
+      match apply_map_group_det g1 m, apply_map_group_det g1 (m `cbor_map_union` m') with
+      | MapGroupCutFail, _ -> ()
+      | MapGroupFail, _ -> ()
+      | MapGroupDet c1 r1, MapGroupDet _ r1' ->
+        assert (r1' == r1 `cbor_map_union` m');
+        begin match apply_map_group_det g2 r1, apply_map_group_det g2 (r1 `cbor_map_union` m') with
+        | MapGroupCutFail, _ -> ()
+        | MapGroupFail, _ -> ()
+        | MapGroupDet _ r2, MapGroupDet _ r2' ->
+          assert (r2' == r2 `cbor_map_union` m')
+        | _ -> ()
+        end
+      | _ -> ()
+    )
+#pop-options
 
 #restart-solver
 let map_group_footprint_choice
@@ -218,8 +246,8 @@ let map_group_footprint_choice
   (ensures (
     map_group_footprint (map_group_choice g1 g2) (map_constraint_choice f1 f2)
   ))
-  [SMTPat (map_group_footprint g1 f1); SMTPat (map_group_footprint g2 f2); SMTPat (map_group_choice g1 g2)]
-= ()
+  [SMTPat (map_group_footprint (map_group_choice g1 g2) (map_constraint_choice f1 f2))]
+= bring_cbor_map_defined_alt ()
 
 #restart-solver
 let map_group_footprint_zero_or_one
@@ -232,7 +260,7 @@ let map_group_footprint_zero_or_one
   (ensures (
     map_group_footprint (map_group_zero_or_one g1) f1
   ))
-= ()
+= bring_cbor_map_defined_alt ()
 
 #restart-solver
 let map_group_footprint_consumes_all
@@ -258,6 +286,7 @@ let map_group_footprint_consumes_all
   ()
 
 #restart-solver
+#push-options "--z3rlimit_factor 4"
 let map_group_footprint_concat_consumes_all
   (g1 g2: map_group)
   (f1 f2: map_constraint)
@@ -282,6 +311,7 @@ let map_group_footprint_concat_consumes_all
   assert (MapGroupDet?.consumed x `cbor_map_equal` (m1 `cbor_map_union` m2));
   assert (MapGroupDet?.remaining x `cbor_map_equal` cbor_map_empty);
   ()
+#pop-options
 
 let map_group_match_item_for_footprint // FIXME: necessary because Pulse does not handle `if then else` in `pure` conditions
   (cut: bool)
@@ -348,7 +378,7 @@ let map_group_footprint_zero_or_more_match_item
 : Lemma
   (map_group_footprint (map_group_zero_or_more (map_group_match_item false key value)) (matches_map_group_entry key value))
   [SMTPat (map_group_zero_or_more (map_group_match_item false key value))]
-= ()
+= bring_cbor_map_defined_alt ()
 
 let map_group_footprint_match_item_cut
   (key value: typ)
@@ -368,7 +398,7 @@ let map_group_footprint_cut
 : Lemma
   (ensures (map_group_footprint (map_group_cut k) (matches_map_group_entry k any)))
   [SMTPat (map_group_cut k)]
-= ()
+= bring_cbor_map_defined_alt ()
 
 let cbor_map_included (c' c : cbor_map) : Tot prop =
   (forall x . Some? (cbor_map_get c' x) ==> cbor_map_get c' x == cbor_map_get c x)
@@ -934,6 +964,7 @@ let cbor_map_in_footprint
 = forall x . Some? (cbor_map_get m x) ==> (f (x, Some?.v (cbor_map_get m x)))
 
 #restart-solver
+#push-options "--z3rlimit 10"
 let matches_map_group_comm_aux'
   (g2 g3 g4: det_map_group)
   (t2 t3 t4: map_constraint)
@@ -972,6 +1003,7 @@ let matches_map_group_comm_aux'
     MapGroupDet (cbor_map_union m3 (cbor_map_union m2 m4)) cbor_map_empty
   );
   ()
+#pop-options
 
 #restart-solver
 let matches_map_group_comm_aux
@@ -1020,7 +1052,9 @@ let matches_map_group_comm'
       (map_group_concat g1 (map_group_concat g3 (map_group_concat g2 g4)))
       m
   ))
-= matches_map_group_comm_aux g1 g2 (map_group_concat g3 g4) t1 t2 (map_constraint_choice t3 t4) m;
+= map_group_concat_assoc g1 g3 g4;
+  map_group_concat_assoc g1 g3 (map_group_concat g2 g4);
+  matches_map_group_comm_aux g1 g2 (map_group_concat g3 g4) t1 t2 (map_constraint_choice t3 t4) m;
   matches_map_group_comm_aux g2 (map_group_concat g1 g3) g4 t2 (map_constraint_choice t1 t3) t4 m
 
 let matches_map_group_comm
@@ -1049,7 +1083,11 @@ let matches_map_group_comm
       (map_group_concat g1 (map_group_concat g4 (map_group_concat g3 (map_group_concat g2 g5))))
       m
   ))
-= matches_map_group_comm' g1 g2 (map_group_concat g3 g4) g5 t1 t2 (map_constraint_choice t3 t4) t5 m;
+= map_group_concat_assoc g3 g4 g5;
+  map_group_concat_assoc g3 g4 (map_group_concat g2 g5);
+  map_group_concat_assoc g1 g3 (map_group_concat g4 (map_group_concat g2 g5));
+  map_group_concat_assoc g1 g3 (map_group_concat g2 (map_group_concat g4 g5));
+  matches_map_group_comm' g1 g2 (map_group_concat g3 g4) g5 t1 t2 (map_constraint_choice t3 t4) t5 m;
   matches_map_group_comm' (map_group_concat g1 g3) g4 g2 g5 (map_constraint_choice t1 t3) t4 t2 t5 m;
   matches_map_group_comm' g1 g4 g3 (map_group_concat g2 g5) t1 t4 t3 (map_constraint_choice t2 t5) m
 
@@ -1620,7 +1658,8 @@ val map_group_parser_spec_concat_eq
   [SMTPat (map_group_parser_spec_concat s1 s2 target_size target_prop l)]
 
 #restart-solver
-let map_group_serializer_spec_concat
+
+val map_group_serializer_spec_concat
   (#source1: det_map_group)
   (#source_fp1: map_constraint)
   (#target1: Type)
@@ -1652,31 +1691,50 @@ let map_group_serializer_spec_concat
     )
   })
 : Tot (map_group_serializer_spec (map_group_parser_spec_concat s1 s2 target_size target_prop))
-= fun x ->
-    map_group_footprint_concat source1 source2 source_fp1 source_fp2;
-    let (x1, x2) = x in
-    let l1 = s1 x1 in
-    let l2 = s2 x2 in
-    let res = l1 `cbor_map_union` l2 in
-    assert (cbor_map_disjoint l1 l2);
-    map_group_footprint_concat_consumes_all source1 source2 source_fp1 source_fp2 (l1) (l2);
-    assert (cbor_map_in_footprint (l1) (source_fp1 `map_constraint_choice` source_fp2));
-    assert (cbor_map_in_footprint (l2) (source_fp1 `map_constraint_choice` source_fp2));
-    assert (cbor_map_in_footprint (l1 `cbor_map_union` l2) (source_fp1 `map_constraint_choice` source_fp2));
-    assert (map_group_serializer_spec_arg_prop (source1 `map_group_concat` source2) (source_fp1 `map_constraint_choice` source_fp2) res);
-    let f1 = source_fp1 in
-    let f2 = source_fp2 in
-    let f = (source_fp1 `map_constraint_choice` source_fp2) in
-    cbor_map_filter_ext (f1 `orp` f2) f res;
-    assert (cbor_map_equal l1 (cbor_map_filter f1 l1));
-    assert (cbor_map_equal cbor_map_empty (cbor_map_filter f1 l2));
-    assert (cbor_map_equal l1 (cbor_map_filter f1 res));
-    assert (cbor_map_equal l2 (cbor_map_filter f2 l2));
-    assert (cbor_map_equal cbor_map_empty (cbor_map_filter f2 l1));
-    assert (cbor_map_equal l2 (cbor_map_filter f2 res));
-    assert (map_group_parser_spec_concat s1 s2 target_size target_prop res == x);
-    cbor_map_length_disjoint_union l1 l2;
-    res
+
+val map_group_serializer_spec_concat_eq
+  (#source1: det_map_group)
+  (#source_fp1: map_constraint)
+  (#target1: Type)
+  (#target_size1: target1 -> Tot nat)
+  (#target_prop1: target1 -> bool)
+  (#p1: map_group_parser_spec source1 source_fp1 target_size1 target_prop1)
+  (s1: map_group_serializer_spec p1)
+  (#source2: det_map_group)
+  (#source_fp2: map_constraint)
+  (#target2: Type)
+  (#target_size2: target2 -> Tot nat)
+  (#target_prop2: target2 -> bool)
+  (#p2: map_group_parser_spec source2 source_fp2 target_size2 target_prop2)
+  (s2: map_group_serializer_spec p2)
+  (target_size: (target1 & target2) -> Tot nat {
+    map_group_footprint source1 source_fp1 /\
+    map_group_footprint source2 source_fp2 /\
+    (
+      (map_constraint_disjoint source_fp1 source_fp2 /\
+        map_group_parser_spec_domain_inj p1 /\
+        map_group_parser_spec_domain_inj p2
+      ) \/ map_constraint_disjoint_domains source_fp1 source_fp2
+    ) /\
+    (forall x . target_size x == target_size1 (fst x) + target_size2 (snd x))
+  })
+  (target_prop: (target1 & target2) -> bool {
+    forall x . target_prop x <==> (target_prop1 (fst x) /\ target_prop2 (snd x) /\
+      cbor_map_disjoint (s1 (fst x)) (s2 (snd x))
+    )
+  })
+  (x: (target1 & target2) { target_prop x })
+: Lemma
+  (ensures
+    map_group_serializer_spec_concat s1 s2 target_size target_prop x == (
+      let (x1, x2) = x in
+      let l1 = s1 x1 in
+      let l2 = s2 x2 in
+      let res = l1 `cbor_map_union` l2 in
+      res
+    )
+  )
+  [SMTPat (map_group_serializer_spec_concat s1 s2 target_size target_prop x)]
 
 let mg_spec_concat_size
   (#target1: Type)
@@ -1706,7 +1764,7 @@ let mg_spec_concat_serializable
 : Tot bool
 = target_prop1 (fst x) && target_prop2 (snd x) && cbor_map_disjoint_tot (s1 (fst x)) (s2 (snd x))
 
-let mg_spec_concat_inj
+val mg_spec_concat_inj
   (#source1: det_map_group)
   (#source_fp1: map_constraint)
   (#target1: Type)
@@ -1727,8 +1785,8 @@ let mg_spec_concat_inj
   (ensures (
     map_group_serializer_spec_concat p1.mg_serializer p2.mg_serializer (mg_spec_concat_size p1.mg_size p2.mg_size) (mg_spec_concat_serializable p1.mg_serializer p2.mg_serializer) (map_group_parser_spec_concat p1.mg_serializer p2.mg_serializer (mg_spec_concat_size p1.mg_size p2.mg_size) (mg_spec_concat_serializable p1.mg_serializer p2.mg_serializer) m) == m
   ))
-= map_group_concat_footprint_disjoint source1 source_fp1 source2 source_fp2 m
 
+#push-options "--z3rlimit_factor 16"
 let mg_spec_concat_domain_inj'
   (#source1: det_map_group)
   (#source_fp1: map_constraint)
@@ -1736,6 +1794,7 @@ let mg_spec_concat_domain_inj'
   (#inj1: bool)
   (p1: mg_spec source1 source_fp1 target1 inj1)
   (#source2: det_map_group)
+
   (#source_fp2: map_constraint)
   (#target2: Type)
   (#inj2: bool)
@@ -1780,6 +1839,7 @@ let mg_spec_concat_domain_inj'
   assert (forall k . cbor_map_defined k x2' ==> cbor_map_defined k x2);
   assert (cbor_map_defined k x' ==> cbor_map_defined k x);
   ()
+#pop-options
 
 let mg_spec_concat_domain_inj
   (#source1: det_map_group)
@@ -2250,7 +2310,7 @@ let map_group_footprint_filtered_table
   (except: map_constraint)
 : Lemma
   (map_group_footprint (map_group_filtered_table key value except) (Util.andp (matches_map_group_entry key value) (Util.notp except)))
-= ()
+= bring_cbor_map_defined_alt ()
 
 let map_group_filtered_table_ext
   (key value: typ)
@@ -2302,6 +2362,7 @@ let map_group_zero_or_more_match_item_parser_op
     Map.union accu (mk_map_singleton pkey (pkey.parser x) (pvalue.parser y))
 //    else accu
 
+#push-options "--z3rlimit_factor 4"
 let map_group_zero_or_more_match_item_parser_op_comm
   (#tkey #tvalue: Type)
   (#key #value: typ)
@@ -2317,7 +2378,9 @@ let map_group_zero_or_more_match_item_parser_op_comm
   ))
   [SMTPat (map_group_zero_or_more_match_item_parser_op pkey pvalue except m (map_group_zero_or_more_match_item_parser_op pkey pvalue except m accu x1) x2)]
 = ()
+#pop-options
 
+#push-options "--z3rlimit_factor 8"
 let rec list_fold_map_group_zero_or_more_match_item_parser_op_mem
   (#tkey #tvalue: Type)
   (#key #value: typ)
@@ -2353,6 +2416,7 @@ let rec list_fold_map_group_zero_or_more_match_item_parser_op_mem
     | a :: q ->
       list_fold_map_group_zero_or_more_match_item_parser_op_mem pkey pvalue except m (map_group_zero_or_more_match_item_parser_op pkey pvalue except m accu a) q k v
     end
+#pop-options
 
 let map_group_zero_or_more_match_item_parser_op_length
   (#tkey #tvalue: Type)
@@ -2726,8 +2790,7 @@ let map_group_zero_or_more_match_item_serializer'_length
   Set.fold_eq (map_group_zero_or_more_match_item_serializer_op pkey pvalue except m) cbor_map_empty s l;
   list_fold_map_group_zero_or_more_match_item_serializer_length pkey pvalue except m cbor_map_empty l
 
-#restart-solver
-let map_group_zero_or_more_match_item_serializer
+val map_group_zero_or_more_match_item_serializer
   (#tkey #tvalue: Type)
   (#key #value: typ)
   (pkey: spec key tkey true)
@@ -2735,15 +2798,22 @@ let map_group_zero_or_more_match_item_serializer
   (pvalue: spec value tvalue inj)
   (except: map_constraint { map_constraint_value_injective key pvalue.parser except })
 : Tot (map_group_serializer_spec (map_group_zero_or_more_match_item_parser pkey pvalue except))
-= fun x ->
-  let y = map_group_zero_or_more_match_item_serializer' pkey pvalue except x in
-  assert (forall x . Some? (cbor_map_get y x) ==> cbor_map_mem (x, Some?.v (cbor_map_get y x)) y);
-  let py = map_group_zero_or_more_match_item_parser' pkey pvalue except y in
-  assert (forall (kv: (tkey & list tvalue)) . Map.mem kv x ==> cbor_map_mem (pkey.serializer (fst kv), pvalue.serializer (List.Tot.hd (snd kv))) y);
-  assert (Map.equal' py x);
-  y
 
-let map_group_zero_or_more_match_item_parser_inj
+val map_group_zero_or_more_match_item_serializer_eq
+  (#tkey #tvalue: Type)
+  (#key #value: typ)
+  (pkey: spec key tkey true)
+  (#inj: bool)
+  (pvalue: spec value tvalue inj)
+  (except: map_constraint { map_constraint_value_injective key pvalue.parser except })
+  (x: Map.t tkey (list tvalue) { map_group_zero_or_more_match_item_serializable pkey pvalue except x })
+: Lemma
+  (ensures map_group_zero_or_more_match_item_serializer pkey pvalue except x ==
+    map_group_zero_or_more_match_item_serializer' pkey pvalue except x
+  )
+  [SMTPat (map_group_zero_or_more_match_item_serializer pkey pvalue except x)]
+
+val map_group_zero_or_more_match_item_parser_inj
   (#tkey #tvalue: Type)
   (#key #value: typ)
   (pkey: spec key tkey true)
@@ -2756,14 +2826,6 @@ let map_group_zero_or_more_match_item_parser_inj
   (ensures (
     map_group_zero_or_more_match_item_serializer pkey pvalue except (map_group_zero_or_more_match_item_parser pkey pvalue except m) `cbor_map_equal'` m
   ))
-= let y = map_group_zero_or_more_match_item_parser pkey pvalue except m in
-  let sy = map_group_zero_or_more_match_item_serializer pkey pvalue except y in
-  assert (forall k . Some? (cbor_map_get m k) ==> cbor_map_mem (k, Some?.v (cbor_map_get m k)) m);
-  assert (forall k . Map.defined k y ==> Map.mem (k, Some?.v (Map.get y k)) y);
-  assert (cbor_map_filter (Util.andp (matches_map_group_entry key value) (Util.notp except)) m `cbor_map_equal` m);
-  assert (forall (kv: (cbor & cbor)) . cbor_map_mem kv m ==> value (snd kv));
-  assert (forall (kv: (cbor & cbor)) . cbor_map_mem kv m ==> (value (snd kv) /\ Map.mem (pkey.parser (fst kv), [pvalue.parser (snd kv)]) y));
-  ()
 
 let map_group_zero_or_more_match_item_parser_domain_inj'
   (#tkey #tvalue: Type)

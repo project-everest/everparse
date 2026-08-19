@@ -141,6 +141,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | Probe_action_call f args -> List.collect deps_of_expr args
     | Probe_action_read f -> []
     | Probe_action_write f v -> deps_of_expr v
+    | Probe_action_copy_and_return r w ty maybe_warn -> []
     | Probe_action_copy f len -> deps_of_expr len
     | Probe_action_skip_read len
     | Probe_action_skip_write len -> deps_of_expr len
@@ -205,7 +206,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | _ -> [] in
 
   let deps_of_attribute (a:attribute) : ML (list string) = match a with
-    | Entrypoint (Some p) -> maybe_dep p.probe_ep_fn `List.Tot.append` deps_of_expr p.probe_ep_length
+    | Entrypoint _ (Some p) -> maybe_dep p.probe_ep_fn `List.Tot.append` deps_of_expr p.probe_ep_length
     | _ -> []
   in
 
@@ -360,7 +361,7 @@ let has_extern_probe g m = List.Tot.mem m g.modules_with_extern_probe
 
 
 #push-options "--warn_error -272"
-let parsed_config : ref (option (Config.config & string)) = ST.alloc None
+let parsed_config : ref (option (Config.config & string)) = alloc None
 #pop-options
 
 let parse_config () =

@@ -1,10 +1,10 @@
 module Main
+
 open FStar.IO
 open FStar.All
 open Ast
 open ParserDriver
 module T = Target
-open FStar.ST
 #push-options "--z3rlimit_factor 2"
 
 let open_write_file (s:string) : ML FStar.IO.fd_write =
@@ -120,7 +120,11 @@ let parse_check_and_desugar (en:env) (mname:string) (fn:string)
   let decls = TypeSizes.size_of_decls benv en.typesizes_env decls in
 
   Options.debug_print_string "=============After typesizes pass=============\n";
+  Options.debug_print_string (print_decls decls);
+  Options.debug_print_string "\n";
 
+  Options.debug_print_string "=============Starting coerce probes=============\n";
+ 
   let decls = CoerceProbes.replace_stubs benv decls in
 
   Options.debug_print_string "=============After coerce probes =============\n";
@@ -552,7 +556,7 @@ let build_test_exe
   end else
   if not (Options.get_skip_c_makefiles ())
   then begin
-    OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"]
+    OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"; "KRML_LIBDIR=" ^ Batch.krmllib out_dir; "KRML_INCLUDEDIR=" ^ Batch.krmlinclude out_dir]
   end
 
 let build_and_run_test_exe
@@ -709,6 +713,16 @@ let go () : ML unit =
     in
     exit 0
   else
+  if micro_step = Some HashingOptions.MicroStepSaveHashes
+  then
+  (* Special mode: --__micro_step save_hashes *)
+    let out_dir = Options.get_output_dir () in
+    let _ = OS.mkdir out_dir in
+    List.iter (fun file ->
+      Batch.save_hashes_for_module out_dir file (Options.get_module_name file)
+    ) cmd_line_files;
+    exit 0
+  else
   (* for other modes, a nonempty list of files is needed on the command line, so if none are there, then we shall print the help message *)
   let input_stream_binding = Options.get_input_stream_binding () in
   if Nil? cmd_line_files
@@ -736,6 +750,7 @@ let go () : ML unit =
       (Options.get_skip_o_rules ())
       (Options.get_clang_format ())
       (not (Options.get_clang_format_use_custom_config ()))
+      (Options.get_save_hashes ())
       cmd_line_files
   | None ->
   (* Special mode: --__produce_c_from_existing_krml *)

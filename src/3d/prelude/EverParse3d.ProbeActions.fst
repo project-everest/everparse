@@ -43,6 +43,7 @@ let probe_fn_incremental =
 inline_for_extraction
 noextract
 let init_probe_dest_t =
+  struct_name:string ->
   sz:U64.t ->
   dest:copy_buffer_t ->
   Stack bool
@@ -184,12 +185,12 @@ let probe_m_post
     modifies (app_loc ctxt locs) h0 h1)
 
 inline_for_extraction
-let probe_m a (requires_unread_dest:bool) (expect_zero_offsets:bool) =
+let probe_m a (requires_unread_dest:bool) (expect_zero_offsets:bool) (use_error_handler:bool) =
   typename:string ->
   fieldname:string ->
   fielddetail:string ->
   ctxt: app_ctxt ->
-  error_handler_fn : error_handler ->
+  error_handler_fn : (if use_error_handler then error_handler else unit) ->
   read_offset:B.pointer U64.t ->
   write_offset:B.pointer U64.t ->
   failed:B.pointer bool ->
@@ -202,10 +203,39 @@ let probe_m a (requires_unread_dest:bool) (expect_zero_offsets:bool) =
     (probe_m_post
       requires_unread_dest expect_zero_offsets ctxt read_offset write_offset failed src dest)
 
+(* Report an error either through the dynamic error-handler callback
+   (`err`, when `use_error_handler` is set) or through the
+   `EVERPARSE_ERROR_HANDLER_MACRO` C macro (`error_handler_macro`,
+   otherwise).  This is the probe-monad counterpart of the branch used
+   by the validators in EverParse3d.Actions.Base, and is what lets the
+   probe combinators drop the function-pointer argument (it becomes
+   `unit`, erased by KaRaMeL) under `--use_error_handler_macro`. *)
 inline_for_extraction
 noextract
-let probe_fn_incremental_as_probe_m (f:probe_fn_incremental) (bytes_to_read:U64.t)
-: probe_m unit true false
+let handle_probe_error
+      (#use_error_handler:bool)
+      (err : (if use_error_handler then error_handler else unit))
+      (tn fn det:string)
+      (ctxt:app_ctxt)
+      (dest:copy_buffer_t)
+: Stack unit
+    (requires fun h ->
+      I.live (stream_of dest) h /\
+      app_ctxt_error_pre ctxt (I.footprint (stream_of dest)) h)
+    (ensures fun h0 _ h1 ->
+      modifies (app_loc ctxt eloc_none) h0 h1 /\
+      B.live h1 ctxt)
+= if use_error_handler
+  then begin
+    [@inline_let] let eh : error_handler = err in
+    eh tn fn det 0uL ctxt (stream_of dest) 0uL
+  end
+  else error_handler_macro tn fn det 0uL ctxt (stream_of dest) 0uL
+
+inline_for_extraction
+noextract
+let probe_fn_incremental_as_probe_m (#use_error_handler:bool) (f:probe_fn_incremental) (bytes_to_read:U64.t)
+: probe_m unit true false use_error_handler
 = fun _ _ _ ctxt err read_offset write_offset failed src _sz dest ->
     let h0  = get () in
     let rd = !*read_offset in
@@ -223,10 +253,10 @@ let probe_fn_incremental_as_probe_m (f:probe_fn_incremental) (bytes_to_read:U64.
 
 inline_for_extraction
 noextract
-let init_probe_m (f:init_probe_dest_t)
-: probe_m unit false false
+let init_probe_m (#use_error_handler:bool) struct_name (f:init_probe_dest_t)
+: probe_m unit false false use_error_handler
 = fun _ _ _ ctxt err read_offset write_offset failed src sz dest ->
-    let ok = f sz dest in
+    let ok = f struct_name sz dest in
     if ok
     then ()
     else (
@@ -235,15 +265,15 @@ let init_probe_m (f:init_probe_dest_t)
 
 inline_for_extraction
 noextract
-let init_probe_size
-: probe_m U64.t true false
+let init_probe_size (#use_error_handler:bool)
+: probe_m U64.t true false use_error_handler
 = fun _ _ _ ctxt err read_offset write_offset failed src sz dest ->
     sz
 
 inline_for_extraction
 noextract
-let write_at_offset_m (#t:Type0) (#w:U64.t { w <> 0uL }) (f:write_at_offset_t t w) (v:t)
-: probe_m unit true false
+let write_at_offset_m (#use_error_handler:bool) (#t:Type0) (#w:U64.t { w <> 0uL }) (f:write_at_offset_t t w) (v:t)
+: probe_m unit true false use_error_handler
 = fun _ _ _ ctxt err read_offset write_offset failed src _sz dest ->
     let wr = !*write_offset in
     let ok = f v wr dest in
@@ -258,15 +288,15 @@ let write_at_offset_m (#t:Type0) (#w:U64.t { w <> 0uL }) (f:write_at_offset_t t 
 
 inline_for_extraction
 noextract
-let probe_and_read_at_offset_m (#t:Type0) (#s:U64.t { s <> 0uL }) (reader:probe_and_read_at_offset_t t s)
-: probe_m t true false
+let probe_and_read_at_offset_m (#use_error_handler:bool) (#t:Type0) (#s:U64.t { s <> 0uL }) (reader:probe_and_read_at_offset_t t s)
+: probe_m t true false use_error_handler
 = fun tn fn det ctxt err read_offset write_offset failed src _sz dest ->
     let rd = !*read_offset in
     let v = reader failed rd src dest in
     let has_failed = !*failed in
     if has_failed
     then (
-      err tn fn det 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
+      handle_probe_error err tn fn det ctxt dest;
       v
     )
     else (
@@ -276,36 +306,36 @@ let probe_and_read_at_offset_m (#t:Type0) (#s:U64.t { s <> 0uL }) (reader:probe_
 
 inline_for_extraction
 noextract
-let seq_probe_m (#a:Type) (detail:string) (dflt:a) (m1:probe_m unit true false) (m2:probe_m a true false)
-: probe_m a true false
+let seq_probe_m (#use_error_handler:bool) (#a:Type) (detail:string) (dflt:a) (m1:probe_m unit true false use_error_handler) (m2:probe_m a true false use_error_handler)
+: probe_m a true false use_error_handler
 = fun tn fn det ctxt err read_offset write_offset failed src sz dest ->
     let res1 = m1 tn fn det ctxt err read_offset write_offset failed src sz dest in
     let has_failed = !*failed in
     if has_failed
     then (
-      err tn fn detail 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
+      handle_probe_error err tn fn detail ctxt dest;
       dflt
     )
     else m2 tn fn det ctxt err read_offset write_offset failed src sz dest
 
 inline_for_extraction
 noextract
-let bind_probe_m (#a #b:Type) (detail:string) (dflt:b) (m1:probe_m a true false) (m2:a -> probe_m b true false)
-: probe_m b true false
+let bind_probe_m (#use_error_handler:bool) (#a #b:Type) (detail:string) (dflt:b) (m1:probe_m a true false use_error_handler) (m2:a -> probe_m b true false use_error_handler)
+: probe_m b true false use_error_handler
 = fun tn fn det ctxt err read_offset write_offset failed src sz dest ->
     let res1 = m1 tn fn det ctxt err read_offset write_offset failed src sz dest in
     let has_failed = !*failed in
     if has_failed 
     then (
-      err tn fn detail 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
+      handle_probe_error err tn fn detail ctxt dest;
       dflt
     )
     else m2 res1 tn fn det ctxt err read_offset write_offset failed src sz dest
 
 inline_for_extraction
 noextract
-let probe_and_copy_init_sz (f:probe_fn_incremental)
-: probe_m unit true false
+let probe_and_copy_init_sz (#use_error_handler:bool) (f:probe_fn_incremental)
+: probe_m unit true false use_error_handler
 = bind_probe_m 
    "probe_and_copy_init_sz"
     ()
@@ -314,8 +344,8 @@ let probe_and_copy_init_sz (f:probe_fn_incremental)
 
 inline_for_extraction
 noextract
-let return_probe_m (#a:Type) (v:a)
-: probe_m a true false
+let return_probe_m (#use_error_handler:bool) (#a:Type) (v:a)
+: probe_m a true false use_error_handler
 = fun _ _ _ ctxt err read_offset write_offset failed src sz dest -> v
 
 inline_for_extraction
@@ -326,8 +356,8 @@ let check_overflow_add (x:U64.t) (y:U64.t)
 
 inline_for_extraction
 noextract
-let skip_read (bytes_to_skip:U64.t)
-: probe_m unit true false
+let skip_read (#use_error_handler:bool) (bytes_to_skip:U64.t)
+: probe_m unit true false use_error_handler
 = fun _ _ _ ctxt err read_offset write_offset failed src sz dest ->
     let rd = !*read_offset in
     if check_overflow_add rd bytes_to_skip
@@ -340,8 +370,8 @@ let skip_read (bytes_to_skip:U64.t)
 
 inline_for_extraction
 noextract
-let skip_write (bytes_to_skip:U64.t)
-: probe_m unit true false
+let skip_write (#use_error_handler:bool) (bytes_to_skip:U64.t)
+: probe_m unit true false use_error_handler
 = fun _ _ _ ctxt err read_offset write_offset failed src sz dest ->
     let wr = !*write_offset in
     if check_overflow_add wr bytes_to_skip
@@ -354,15 +384,15 @@ let skip_write (bytes_to_skip:U64.t)
 
 inline_for_extraction
 noextract
-let fail
-: probe_m unit true false
+let fail (#use_error_handler:bool)
+: probe_m unit true false use_error_handler
 = fun _ _ _ ctxt err read_offset write_offset failed src sz dest ->
     failed *= true
 
 inline_for_extraction
 noextract
-let if_then_else (b:bool) (m0 m1:probe_m unit true false)
-: probe_m unit true false
+let if_then_else (#use_error_handler:bool) (b:bool) (m0 m1:probe_m unit true false use_error_handler)
+: probe_m unit true false use_error_handler
 = fun tn fn det ctxt err read_offset write_offset failed src sz dest ->
     if b
     then m0 tn fn det ctxt err read_offset write_offset failed src sz dest
@@ -370,7 +400,7 @@ let if_then_else (b:bool) (m0 m1:probe_m unit true false)
 
 module HST = FStar.HyperStack.ST
 module CL = C.Loops
-#push-options "--z3rlimit_factor 2 --ifuel 0 --fuel 0 --split_queries no"
+#push-options "--z3rlimit_factor 2 --ifuel 0 --fuel 0"
 
 unfold
 let array_inv
@@ -426,13 +456,13 @@ let array_inv
    let remaining_bytes = B.get h0 ctr 0 in
    U64.v bytes_read_so_far + U64.v remaining_bytes == U64.v byte_len)))
  
-#push-options "--z3rlimit_factor 8 --ifuel 2 --fuel 0 --split_queries no --query_stats"
+#push-options "--z3rlimit_factor 8 --ifuel 2 --fuel 0 --query_stats"
 inline_for_extraction
 noextract
-let probe_array_aux (byte_len:U64.t) (probe_elem:probe_m unit true false)
+let probe_array_aux (#use_error_handler:bool) (byte_len:U64.t) (probe_elem:probe_m unit true false use_error_handler)
   (tn fn det:string)
   (ctxt:AppCtxt.app_ctxt)
-  (err:error_handler)
+  (err:(if use_error_handler then error_handler else unit))
   (read_offset:B.pointer U64.t)
   (write_offset:B.pointer U64.t)
   (failed:B.pointer bool)
@@ -485,7 +515,7 @@ let probe_array_aux (byte_len:U64.t) (probe_elem:probe_m unit true false)
         || bytes_read = 0uL
         || U64.(c <^ bytes_read)
         then (
-          err tn fn det 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
+          handle_probe_error err tn fn det ctxt dest;
           failed *= true;
           ()
         )
@@ -513,25 +543,27 @@ let probe_array_aux (byte_len:U64.t) (probe_elem:probe_m unit true false)
 
 inline_for_extraction
 noextract
-let probe_array (byte_len:U64.t) (probe_elem:probe_m unit true false)
-: probe_m unit true false
+let probe_array (#use_error_handler:bool) (byte_len:U64.t) (probe_elem:probe_m unit true false use_error_handler)
+: probe_m unit true false use_error_handler
 = probe_array_aux byte_len probe_elem
 
 inline_for_extraction
 noextract
-let lift_pure_external_action (#a:Type) (f:pure_external_action a)
-: probe_m a true false
+let lift_pure_external_action (#use_error_handler:bool) (#a:Type) (f:pure_external_action a)
+: probe_m a true false use_error_handler
 = fun _ _ _ ctxt err read_offset write_offset failed src sz dest -> f()
 
 inline_for_extraction
 noextract
 let init_and_probe
+      (#use_error_handler:bool)
       (#mz:bool)
+      (struct_name:string)
       (init:init_probe_dest_t)
-      (probe:probe_m unit true mz)
-: probe_m unit false mz
+      (probe:probe_m unit true mz use_error_handler)
+: probe_m unit false mz use_error_handler
 = fun tn fn det ctxt err read_offset write_offset failed src sz dest ->
-    let ok = init sz dest in
+    let ok = init struct_name sz dest in
     if ok
     then (
       probe tn fn det ctxt err read_offset write_offset failed src sz dest
@@ -542,15 +574,15 @@ let init_and_probe
 
 #pop-options
 
-#push-options "--z3rlimit_factor 8 --split_queries no"
+#push-options "--z3rlimit_factor 8"
 
 inline_for_extraction
 noextract
-let run_probe_m (#any:bool) 
-  (m:probe_m unit false any)
+let run_probe_m (#use_error_handler:bool) (#any:bool) 
+  (m:probe_m unit false any use_error_handler)
   (tn fn det:string)
   (ctxt:app_ctxt)
-  (err:error_handler)
+  (err:(if use_error_handler then error_handler else unit))
   (src:U64.t)
   (sz:U64.t)
   (dest:copy_buffer_t)
@@ -576,7 +608,7 @@ let run_probe_m (#any:bool)
   pop_frame();
   if has_failed
   then (
-    err tn fn det 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
+    handle_probe_error err tn fn det ctxt dest;
     0uL
   )
   else wr

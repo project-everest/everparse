@@ -22,6 +22,7 @@ let sanitify_parser_kind (k : parser_kind)
   parser_kind_high = k.parser_kind_high;
   parser_kind_subkind = k.parser_kind_subkind;
   parser_kind_metadata = (match k.parser_kind_metadata with Some ParserKindMetadataFail -> Some ParserKindMetadataFail | _ -> None);
+  parser_kind_injective = k.parser_kind_injective;
   }
 
 let rec make_gen_choice_kind
@@ -78,7 +79,11 @@ let rec make_gen_choice_strong_payload_parser
     if (id = id') then
       let p = (Mkgenparser?.p gp) in 
       parse_synth p (attach_tag lc id)
-    else 
+    else
+      let _ = assert (extract_types lc ==
+        (fst hd, Mkgenparser?.t (snd hd)) :: extract_types tl) in
+      let _ = assert_norm (project_tags lc ==
+        tag_of_gen_choice_type (extract_types lc)) in
       parse_synth (make_gen_choice_strong_payload_parser tl id) (fun x -> lemma_choice_cast (fst hd, Mkgenparser?.t (snd hd)) (extract_types tl) id x)
 
 let make_gen_choice_strong_parser
@@ -91,7 +96,7 @@ let make_gen_choice_strong_parser
 = parse_tagged_union p (tag_of_gen_choice_type (extract_types lc)) (make_gen_choice_strong_payload_parser lc)
 
 let make_asn1_choice_parser
-  (lc : list (asn1_id_t * asn1_content_k))
+  (lc : list (asn1_id_t & asn1_content_k))
   (pf : squash (List.noRepeats (List.map fst lc)))
   (#s : _)
   (k : asn1_k s)
@@ -103,7 +108,7 @@ let make_asn1_choice_parser
 = weaken asn1_strong_parser_kind (make_gen_choice_strong_parser parse_asn1_identifier_U32 lp)
 
 let make_asn1_choice_parser_twin
-  (lc : list (asn1_id_t * asn1_content_k))
+  (lc : list (asn1_id_t & asn1_content_k))
   (pf : squash (List.noRepeats (List.map fst lc)))
   (#s : _)
   (k : asn1_k s)
@@ -116,7 +121,7 @@ let make_asn1_choice_parser_twin
 = parse_tagged_union_payload (project_tags lp) (make_gen_choice_strong_payload_parser lp) id'
 
 let make_asn1_choice_parser_twin_cases_injective
-  (lc : list (asn1_id_t * asn1_content_k))
+  (lc : list (asn1_id_t & asn1_content_k))
   (pf : squash (List.noRepeats (List.map fst lc)))
   (#s : _)
   (k : asn1_k s)

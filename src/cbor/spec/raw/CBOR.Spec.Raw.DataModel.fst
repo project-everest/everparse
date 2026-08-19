@@ -1,5 +1,10 @@
 module CBOR.Spec.Raw.DataModel
 
+include CBOR.Spec.Constants
+module U64 = FStar.UInt64
+module FS = FStar.FiniteSet.Base
+module U = CBOR.Spec.Util
+open CBOR.Spec.Raw.Base
 module R = CBOR.Spec.Raw.Sort
 
 let cbor_bool
@@ -517,3 +522,7 @@ let size_unpack #order #compare x =
     Classical.forall_intro (Classical.move_requires (list_cbor_of_cbor_list_size #order #compare v));
     ()
   | _ -> ()
+
+let cbor_map_depth x = map_depth x
+
+let cbor_map_key_depth x = map_key_depth x

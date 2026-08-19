@@ -1,6 +1,5 @@
 module LowParse.Endianness
 include FStar.Endianness
-open FStar.Mul
 
 module S = FStar.Seq
 module U8 = FStar.UInt8

@@ -2,32 +2,40 @@
 
 #include "Align.h"
 
+#include "EverParse.h"
+
 uint64_t
 AlignValidateColoredPoint1(
   uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
+  EVERPARSE_ERROR_HANDLER ErrorHandlerFn,
   uint8_t *Input,
   uint64_t InputLength,
   uint64_t StartPosition
 )
 {
-  KRML_MAYBE_UNUSED_VAR(Ctxt);
-  KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
-  KRML_MAYBE_UNUSED_VAR(Input);
-  BOOLEAN hasBytes = 6ULL <= (InputLength - StartPosition);
+  BOOLEAN hasBytes = (InputLength - StartPosition) >= 6ULL;
+  uint64_t res;
+  uint64_t positionAfterColoredPoint1;
   if (hasBytes)
   {
-    return StartPosition + 6ULL;
+    res = StartPosition + 6ULL;
   }
-  return EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
+  else
+  {
+    res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
+  }
+  positionAfterColoredPoint1 = res;
+  if (EverParseIsSuccess(positionAfterColoredPoint1))
+  {
+    return positionAfterColoredPoint1;
+  }
+  ErrorHandlerFn("_coloredPoint1",
+    "color",
+    EverParseErrorReasonOfResult(positionAfterColoredPoint1),
+    EverParseGetValidatorErrorKind(positionAfterColoredPoint1),
+    Ctxt,
+    Input,
+    StartPosition);
+  return positionAfterColoredPoint1;
 }
 

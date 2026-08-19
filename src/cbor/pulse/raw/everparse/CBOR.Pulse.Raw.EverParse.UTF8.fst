@@ -1,7 +1,16 @@
 module CBOR.Pulse.Raw.EverParse.UTF8
-#lang-pulse
-friend CBOR.Spec.API.UTF8
 friend CBOR.Spec.Raw.Format.UTF8
+friend CBOR.Spec.API.UTF8
+include CBOR.Spec.API.UTF8
+open Pulse.Lib.Pervasives
+open CBOR.Spec.Constants
+open CBOR.Spec.Raw.EverParse
+open LowParse.Pulse.Combinators
+open LowParse.Pulse.SeqBytes
+module U8 = FStar.UInt8
+module S = Pulse.Lib.Slice
+module SZ = FStar.SizeT
+#lang-pulse
 
 open CBOR.Spec.Raw.Format.UTF8
 
@@ -97,7 +106,7 @@ ensures
   }
 }
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 #restart-solver
 
@@ -118,21 +127,17 @@ ensures
   Seq.slice_length v;
   while (
     let res = !pres;
-    if res {
-      let i = !pi;
-      SZ.lt i len
-    } else {
-      false
-    }
-  ) invariant cont . exists* res i .
+    let i = !pi;
+    (res && SZ.lt i len)
+  ) invariant exists* res i .
     pts_to s #p v **
     pts_to pres res **
     pts_to pi i **
     pure (
       SZ.v i <= Seq.length v /\
-      correct v == (res && correct (Seq.slice v (SZ.v i) (Seq.length v))) /\
-      cont == (res && SZ.v i < Seq.length v)
+      correct v == (res && correct (Seq.slice v (SZ.v i) (Seq.length v)))
     )
+    decreases %[(if !pres then 1 else 0); (SZ.v len - SZ.v (!pi))] // fstar2 only
   {
     impl_fetch_utf8_correct s len pi pres;
     ()

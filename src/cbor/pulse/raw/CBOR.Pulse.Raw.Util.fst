@@ -33,7 +33,7 @@ let half_mul (a b: real) : Lemma
 
 let perm_mul_div (a b: perm) : Lemma
   (a `perm_mul` (b `perm_div` a) == b)
-= ()
+= assert (a *. (b /. a) == b)
 
 let perm_half_mult
   (pm ip: perm)
@@ -50,3 +50,35 @@ let perm_mul_add_l (a b c: real) : Lemma
 = ()
 
 #pop-options // F* #3782, though it's fixed now
+
+// Operations on option types
+
+// inline_for_extraction
+let eq_Some_true
+  (x: option bool)
+: Pure bool
+  (requires True)
+  (ensures fun b -> b == (x = Some true))
+= match x with
+  | Some b -> b
+  | _ -> false
+
+// inline_for_extraction
+let eq_Some_false
+  (x: option bool)
+: Pure bool
+  (requires True)
+  (ensures fun b -> b == (x = Some false))
+= match x with
+  | Some b -> not b
+  | _ -> false
+
+// inline_for_extraction
+let eq_Some_0sz
+  (x:option FStar.SizeT.t)
+: Pure bool
+  (requires True)
+  (ensures fun b -> b == (x = Some 0sz))
+= match x with
+  | Some y -> y = 0sz
+  | _ -> false

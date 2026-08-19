@@ -1,7 +1,7 @@
 module LowParse.SLow.BoundedInt
 
 open LowParse.SLow.Combinators
-#set-options "--split_queries no"
+#set-options ""
 #set-options "--z3rlimit 20"
 
 module Seq = FStar.Seq
@@ -15,6 +15,8 @@ module Cast = FStar.Int.Cast
 
 friend LowParse.Spec.BoundedInt
 
+include LowParse.Spec.BoundedInt
+include LowParse.SLow.Base
 inline_for_extraction
 noextract
 let be_to_n_1 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_be_to_n (EI.bounded_integer 1) 1)

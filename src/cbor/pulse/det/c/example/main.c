@@ -22,13 +22,15 @@ int main(void) {
   /* Stack-allocate a byte string object (major type 2) */
   #define my_bytes_len 4
   uint8_t my_bytes[my_bytes_len] = { 18, 42, 17, 29 };
-  cbor_det_t cbor2 = cbor_det_mk_string_from_arrayptr(CBOR_MAJOR_TYPE_BYTE_STRING, my_bytes, my_bytes_len);
+  cbor_det_t cbor2;
+  assert (cbor_det_mk_byte_string_from_arrayptr(my_bytes, my_bytes_len, &cbor2));
 
   /* Stack-allocate a text string object (major type 3) */
-  uint8_t * my_string = "Hello world!";
+  uint8_t my_string[] = "Hello world!";
   assert (sizeof(my_string) > 0);
   uint64_t my_string_len = sizeof(my_string) - 1; // we don't want the null terminator
-  cbor_det_t cbor3 = cbor_det_mk_string_from_arrayptr(CBOR_MAJOR_TYPE_TEXT_STRING, my_string, my_string_len);
+  cbor_det_t cbor3;
+  assert (cbor_det_mk_text_string_from_arrayptr(my_string, my_string_len, &cbor3));
 
   /* Stack-allocate an array object (major type 4) with array elements cbor0 and cbor1 */
   #define my_array_len 2
@@ -42,9 +44,9 @@ int main(void) {
      order.
   */
   #define my_map_len 2
-  cbor_map_entry my_entry0 = cbor_det_mk_map_entry(cbor0, cbor1);
-  cbor_map_entry my_entry1 = cbor_det_mk_map_entry(cbor2, cbor3);
-  cbor_map_entry my_map[my_map_len] = { my_entry0, my_entry1 };
+  cbor_det_map_entry_t my_entry0 = cbor_det_mk_map_entry(cbor0, cbor1);
+  cbor_det_map_entry_t my_entry1 = cbor_det_mk_map_entry(cbor2, cbor3);
+  cbor_det_map_entry_t my_map[my_map_len] = { my_entry0, my_entry1 };
   cbor_det_t cbor5 = dummy_cbor_det_t();
   bool result5 = cbor_det_mk_map_from_array_safe(my_map, my_map_len, &cbor5);
   assert (result5);
@@ -53,8 +55,8 @@ int main(void) {
      cbor1) and (cbor0, cbor3) (notice the duplicate keys.) Then,
      cbor_det_mk_map_from_array_safe will gracefully fail
   */
-  cbor_map_entry my_entry1_fail = cbor_det_mk_map_entry(cbor0, cbor3);
-  cbor_map_entry my_map_fail[my_map_len] = { my_entry0, my_entry1_fail };
+  cbor_det_map_entry_t my_entry1_fail = cbor_det_mk_map_entry(cbor0, cbor3);
+  cbor_det_map_entry_t my_map_fail[my_map_len] = { my_entry0, my_entry1_fail };
   cbor_det_t cbor5_fail = dummy_cbor_det_t();
   assert (! cbor_det_mk_map_from_array_safe(my_map_fail, my_map_len, &cbor5_fail));
   
@@ -154,7 +156,7 @@ int main(void) {
   cbor_det_map_iterator_t map_iter = cbor_det_map_iterator_start(cbor5);
   while (! cbor_det_map_iterator_is_empty(map_iter)) {
     // note the pointer here
-    cbor_map_entry entry = cbor_det_map_iterator_next(&map_iter);
+    cbor_det_map_entry_t entry = cbor_det_map_iterator_next(&map_iter);
     cbor_det_t entry_key = cbor_det_map_entry_key(entry);
     cbor_det_t entry_value = cbor_det_map_entry_value(entry);
   }
@@ -225,7 +227,7 @@ int main(void) {
      space.
   */
   // success
-  uint8_t validated_size = cbor_det_validate(output, output_size);
+  size_t validated_size = cbor_det_validate(output, output_size);
   assert (validated_size == cbor5_size);
   // failure: see RFC 8949, Section 3.3
   output_fail[0] = 0xf8u;

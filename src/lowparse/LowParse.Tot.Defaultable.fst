@@ -2,10 +2,10 @@ module LowParse.Tot.Defaultable
 include LowParse.Spec.Defaultable
 include LowParse.Tot.Combinators
 
-let parse_defaultable_injective_cond (#k : parser_kind) (#t : Type) (defaultablev : option t) (p : parser k t) (b : bytes) : GTot Type0 =
+let parse_defaultable_injective_cond (#k : parser_kind) (#t : Type) (defaultablev : option t) (p : parser k t) (b : bytes) : GTot prop =
   parse_defaultable_injective_cond #k defaultablev p b
 
-let parse_defaultable_injective_cond_prop (#k : parser_kind) (#t : Type) (defaultablev : option t) (p : parser k t) : GTot Type0 =
+let parse_defaultable_injective_cond_prop (#k : parser_kind) (#t : Type) (defaultablev : option t) (p : parser k t) : GTot prop =
   parse_defaultable_injective_cond_prop #k defaultablev p
 
 val parse_defaultable (#k: parser_kind) (#t : Type) (defaultablev : option t) (p : parser k t) : Pure (parser (parse_defaultable_kind k) t) 

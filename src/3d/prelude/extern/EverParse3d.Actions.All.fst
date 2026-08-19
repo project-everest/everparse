@@ -2,6 +2,7 @@ module EverParse3d.Actions.All
 friend EverParse3d.Actions.Base
 friend EverParse3d.InputStream.All
 
+include EverParse3d.Actions.Base
 let _ = EverParse3d.Actions.BackendFlagValue.backend_flag_value
 
 let ___PUINT8 = (b:LowStar.Buffer.buffer FStar.UInt8.t { ~ (LowStar.Buffer.g_is_null b) })

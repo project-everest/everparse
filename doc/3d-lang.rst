@@ -653,12 +653,10 @@ more limited:
   :end-before: SNIPPET_END: union
 
 Here, we have an aligned "union". 3d checks that every branch of the union
-describes field with the same size. It *does not* insert padding to make every
-type have the same size. For example, if the ``UINT16 other`` fields were left out
-of the default case of ``Value``, the 3d compiler would emit the following error
-message::
-
-  With the 'aligned' qualifier, all cases of a union with a fixed size must have the same size; union padding is not yet supported
+describes a field with a fixed size. It then inserts padding at the end of each
+field whose size is smaller than the maximum-sized field, to make it so that
+every field of the union has the same size. As such, the ``aligned`` attribute
+on a ``casetype`` allows one to model the layout of a C union.
 
 Note, the ``aligned`` attribute is not allowed on typedefs, enums, or other kinds
 of 3d declarations.
@@ -739,7 +737,7 @@ offsets computed by 3d match what the C compiler computes.
 For example, for the types defined in this section, 3d generates a file
 ``AlignAutoStaticAssertions.c`` with the contents below:
 
-.. literalinclude:: out/AlignAutoStaticAssertions.c
+.. literalinclude:: 3d-snapshot/AlignAutoStaticAssertions.c
   :language: c
 
 Notice that in the C transcription of the type ``TLV``, 3d simply omits the
@@ -829,7 +827,7 @@ Let's also decorate the 3d file with the following refining declaration:
   
 The 3d compiler emits the following static assertions:
 
-.. literalinclude:: out/AlignStaticAssertions.c
+.. literalinclude:: 3d-snapshot/AlignStaticAssertions.c
   :language: c
 
 As before, the ``sizeof(TLV)==10`` fails, because of differences in alignment
@@ -1015,6 +1013,7 @@ ProbeInit``. This results in the following extern C declaration in
 .. code-block:: c
 
   extern BOOLEAN ProbeInit(
+    char *typeAndFieldName,
     uint64_t size,
     EVERPARSE_COPY_BUFFER_T dst
   )
@@ -1060,8 +1059,8 @@ Instructs the parser to:
 
   * First, read the contents of the ``tpointer`` field into a local vairable ``src``
 
-  * Then, call ``ProbeInit(4, dest)`` to prepare the destination buffer, where
-    ``sizeof(T)=4``.
+  * Then, call ``ProbeInit("S.tpointer", 4, dest)`` to prepare the destination
+    buffer, where ``sizeof(T)=4``.
 
   * Then, if ``ProbeInit`` succeeds, use ``ProbeAndCopy(sizeof(T), 0, 0, src,
     destS)`` check that the ``sizeof(T)`` bytes starting at the address pointed
@@ -1107,7 +1106,7 @@ Operationally, the validator for ``U`` proceeds by:
 
 * Then, reading ``spointer`` into ``srcS`` and
 
-  - Calling ``ProbeInit(sizeof(S), destS)``
+  - Calling ``ProbeInit("U.spointer", sizeof(S), destS)``
 
   - Then, ``ProbeAndCopy(sizeof(S), 0, 0, srcS, destS)``
 
@@ -1169,14 +1168,17 @@ fields.::
      0........1........2........3........4........5........6........7........8.........9 
   TT:{        x                          |                 y                 |   tag    }
 
-This yields the following C interface, with two entry points. The first is to
-probe and validate a pointer to the type ``Indirect``, while the second is to
-validate a ``struct Indirect``.
+This yields the following C interface with the probe entry point to
+probe and validate a pointer to the type ``Indirect``:
 
 .. code-block:: c
 
-  BOOLEAN ProbeProbeAndCopyCheckIndirect(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr);
-  BOOLEAN ProbeCheckIndirect(uint8_t *base, uint32_t len);
+  uint32_t ProbeProbeAndCopyCheckIndirect(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize);
+
+Since only ``entrypoint probe`` is declared (and not a plain ``entrypoint``),
+only the probe entry point appears in the header. If we also wanted a plain
+validation entry point, we would additionally write ``entrypoint`` before
+the type definition (see :ref:`Selective_Entrypoint_Generation` below).
 
 The specification is equivalent to the following, though more concise:
 
@@ -1249,28 +1251,41 @@ The example below shows how to use multiple probes:
 * One can also associate different probes on each field of a type.
 
 The resulting C interface contains multiple entry points, one for each variant
-of probing entry point, and one for the non-probing variant:
+of probing entry point:
 
 .. code-block:: c
 
-  BOOLEAN ProbeProbeAndCopyCheckMultiProbe(
+  uint32_t ProbeProbeAndCopyCheckMultiProbe(
     EVERPARSE_COPY_BUFFER_T destT1,
     EVERPARSE_COPY_BUFFER_T destT2,
     EVERPARSE_COPY_BUFFER_T probeDest,
-    uint64_t probeAddr);
+    uint64_t probeAddr,
+    uint64_t providedSize);
 
-  BOOLEAN ProbeProbeAndCopyAltCheckMultiProbe(
+  uint32_t ProbeProbeAndCopyAltCheckMultiProbe(
     EVERPARSE_COPY_BUFFER_T destT1,
     EVERPARSE_COPY_BUFFER_T destT2,
     EVERPARSE_COPY_BUFFER_T probeDest,
-    uint64_t probeAddr);
+    uint64_t probeAddr,
+    uint64_t providedSize);
 
-  BOOLEAN ProbeCheckMultiProbe(
-    EVERPARSE_COPY_BUFFER_T destT1,
-    EVERPARSE_COPY_BUFFER_T destT2,
-    uint8_t *base,
-    uint32_t len);
+Since only ``entrypoint probe`` attributes are declared on ``MultiProbe`` (no plain
+``entrypoint``), only the probe entry points appear in the public header. If a
+plain validation entry point were also desired, the user would add a plain
+``entrypoint`` attribute to the type definition.
 
+
+The ``providedSize`` argument on the first two function signatures allows the
+caller to provide a claimed size of valid probed memory.
+
+If the requested size of greater than this claimed size, the function failed
+immediately with the error code ``EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE``
+without doing anything else.
+
+If the probe init function itself fails, we return
+``EVERPARSE_PROBE_FAILURE_INIT``; if the probe function itself fails we return
+``EVERPARSE_PROBE_FAILURE_PROBE``; if the underlying validator fails, we return
+``EVERPARE_PROBE_FAILURE_VALIDATION``.
 
 .. note:: 
 
@@ -1314,6 +1329,72 @@ pointer is non-null:
 
 * If the pointer is non-null, the probe function is called, and validation
   proceeds as in the non-null case.
+
+
+.. _Selective_Entrypoint_Generation:
+
+Selective Entrypoint Generation
+...............................
+
+By default, when a type is marked as an ``entrypoint``, 3d generates a
+validation entry point in the wrapper header. When combined with probe
+attributes, 3d generates entry points *only* for the kinds of entry points
+that the user explicitly declares.
+
+For example, if a type only has ``entrypoint probe`` attributes, only the
+probe entry points appear in the public header—the underlying validation
+wrapper is still generated in the ``.c`` file (as a ``static`` function)
+but is not exposed publicly:
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: selective entrypoint$
+  :end-before: SNIPPET_END: selective entrypoint$
+
+For ``ProbeOnly``, since only ``entrypoint probe`` is specified, only the probe
+entry point is public:
+
+.. code-block:: c
+
+  uint32_t ProbeProbeAndCopyCheckProbeOnly(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize);
+
+For ``BothEntrypoints``, since both a plain ``entrypoint`` and an
+``entrypoint probe`` are declared, both entry points are public:
+
+.. code-block:: c
+
+  BOOLEAN ProbeCheckBothEntrypoints(uint8_t *base, uint32_t len);
+  uint32_t ProbeProbeAndCopyCheckBothEntrypoints(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize);
+
+
+.. _Named_Entrypoints:
+
+Named Entrypoints
+.................
+
+By default, the names of entry points are auto-generated from the module name,
+probe function name, and type name (e.g., ``ProbeProbeAndCopyCheckIndirect``).
+One can override these names using the ``entrypoint(Name)`` syntax:
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: named entrypoint$
+  :end-before: SNIPPET_END: named entrypoint$
+
+This produces the following public entry points:
+
+.. code-block:: c
+
+  BOOLEAN ValidateMyData(uint8_t *base, uint32_t len);
+
+  uint32_t ProbeMyData(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize);
+
+  BOOLEAN CheckAll(uint8_t *base, uint32_t len);
+  uint32_t ProbeAll(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize);
+
+The name argument is optional: ``entrypoint`` without parentheses continues to
+use the auto-generated name. Named and unnamed entry points can be freely mixed
+on the same type.
 
 
 An End-to-end Executable Example
@@ -1423,18 +1504,18 @@ The probe block will first call ``ProbeInit``, initializing the ``destS``
 buffer, preparing it to receive ``sizeof(S64)`` bytes. Then, within the probe
 block, it executes a sequence of actions:
 
-* Copy the first 4 bytes references by ``ptrS``--this is the ``s1`` field
+* Copy the first 4 bytes referenced by ``ptrS``--this is the ``s1`` field
 
 * Skip 4 bytes of alignment padding
 
-* Then read a 32 bit pointer ``ptrT``, coerce it to 64-butes, and write it into
+* Then read a 32 bit pointer ``ptrT``, coerce it to 64-bytes, and write it into
   the destination buffer
 
 * Then copy the next 4 bytes from the input buffer (field ``s2``)
 
 * Finally, skip 4 bytes of padding at the end
 
-After the probe block executed, we validate the ``EverParseStreamOf(destS)`` to
+After the probe block executes, we validate the ``EverParseStreamOf(destS)`` to
 contain a valid  ``S64(r1, destT)``, which in turn will probe ``ptrT`` etc.
 
 This does what we want, in the sense that if validation succeeds, then ``destS``
@@ -1470,7 +1551,7 @@ callbacks.
   :start-after: SNIPPET_START: specialize$
   :end-before: SNIPPET_END: specialize$
 
-The first callback, a ``UlongToPtr`` coercions, we saw :ref:`before
+The first callback, a ``UlongToPtr`` coercion, we saw :ref:`before
 <Coercing_pointers>`: we'll need it to coerce a 32-bit pointer to 64-bits. It
 produces the following C signature:
 
@@ -1583,7 +1664,7 @@ computed by whatever C compiler one uses to compile the code.
 For our example above, 3d automatically generates a ``refining`` block and emits
 the following C code:
 
-.. literalinclude:: out/Specialize1StandaloneAutoStaticAssertions.c
+.. literalinclude:: 3d-snapshot/Specialize1StandaloneAutoStaticAssertions.c
   :language: c
 
 
@@ -1630,7 +1711,7 @@ Consider the following canonical tag-length-value encoding:
   } TLV;
 
 
-Now, let's say one wanted to prove a pointer to a ``TLV``, one could attempt
+Now, let's say one wanted to probe a pointer to a ``TLV``, one could attempt
 this:
 
 .. code-block:: 3d
@@ -1678,55 +1759,56 @@ advance:
 This works: if the caller can bound the entire size of the pointed to data and
 pass it to ``WRAPPER`` as a parameter ``Len``, then we can use that as a bound.
 
-However, if now we try to specialize ``WRAPPER`` as follows:
-
-.. code-block:: 3d
-
-  specialize (pointer(*), pointer(UINT32)) WRAPPER WRAPPER_32;
-
-We get the following error:
-
-.. code-block:: text
-
-  ./SpecializeDep1.3d:(22,11): (Error) Cannot coerce a type with data-dependency; 
-    field payload of type SpecializeDep1.UNION(tag) may depend on the field `tag`
-
-That is, in order to coerce a ``UNION(tag)`` from a 32- to 64-bit
-representation, in genneral, a coercion would have to read the ``tag`` field of
-``TLV``, then branch on it, and then coerce each case of ``UNION`` accordingly.
-As mentioned earlier, coercions cannot depend on the data being coerced---so 3d
-rejects this specification.
-
-Note, in this case, one could argue that ``UNION(tag)`` has the same
-representation in 32- and 64-bits, so 3d could accept the specification:
-however, 3d does not yet recognize such special cases.
-
-One could play the same game again, and try to get the caller to provide the
-``tag`` as a parameter (although as we do this, increasingly, the caller has to
-be able to predict the cases of the data). The listing below works:
-
 .. literalinclude:: SpecializeDep1.3d
   :language: 3d
   :start-after: //SNIPPET_START: main$
   :end-before: //SNIPPET_END: main$
 
-However, we remark on a few points:
+However, we remark on a few limitations:
 
-  * First, this specification is far from ideal, since it requires the caller to
-    predict both the ``tag`` and ``length`` of the TLV message.
+First, 3d does not support arbitrary data dependences in coercions. One can only
+depend on fields with simple, unconstrained types. For example, replacing the
+TLV type in the listing above with the following specification is rejected:
 
-  * Second, 3d's determination of data dependence is a syntactic criterion:
-    notice how we have changed the type of the payload field to only mention the
-    parameters in scope, rather than the fields.
+.. code-block:: 3d
 
-    .. code-block:: 3d
+  typedef struct _TLV(UINT16 Len)
+  {
+      UINT8 tag { tag == 0 || tag == 1 || tag == 2 };
+      UINT32 length { length == Len };
+      UNION(tag) payload[:byte-size Len];
+  } TLV;
 
-      UNION(Expected) payload[:byte-size Len];
+The error message reported by 3d is as follows:
 
+.. code-block:: text
+
+    ./SpecializeDep1.3d:(24,11):
+    (Error) Coercive probes cannot read integer or pointer types with constraints or enum types;
+    field tag has type UINT8 with constraint (((tag = 0uy) || (tag = 1uy)) || (tag = 2uy))
+
+3d's determination of data dependence is a syntactic criterion, e.g., if one
+were to use ``length`` instead of ``Len`` in the specification, as shown below,
+then once again 3d's reports an error:
+
+.. code-block:: 3d
+
+  typedef struct _TLV(UINT16 Len)
+  {
+      UINT8 tag;
+      UINT32 length { length == Len };
+      UNION(tag) payload[:byte-size length];
+  } TLV;
+
+.. code-block:: text
+
+    ./SpecializeDep1.3d:(25,12): (Error) Coercive probes cannot read integer or pointer types with constraints or enum types;
+    field length has type UINT32 with constraint (length = (UINT32) Len)
+    
 Note, one does not always need the calling context to pass in arguments like
-``Len`` or ``Expected``: these just need to be values in scope at the point at
-which the probe is used. For instance, the following would work too, for a
-pointer to a variable length array, each of whose elements is a ``UNION(tag)``:
+``Len``: these just need to be values in scope at the point at which the probe
+is used. For instance, the following would work too, for a pointer to a variable
+length array, each of whose elements is a ``UNION(tag)``:
 
 .. literalinclude:: SpecializeDep1.3d
   :language: 3d
@@ -1796,6 +1878,9 @@ structures is available in the EverParse repository
 <https://github.com/project-everest/everparse/tree/master/src/3d/tests/specialize_test2>`_, 
 including a main file driving the generated code with test input.
 
+Another example, `with data dependent tagged unions
+<https://github.com/project-everest/everparse/tree/master/src/3d/tests/specialize_tagged_union_array>`_, 
+is also available.
 
 
 Other forms of Specialization

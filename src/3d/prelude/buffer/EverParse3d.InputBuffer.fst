@@ -1,5 +1,6 @@
 module EverParse3d.InputBuffer
 
+include LowParse.Low.Base
 module B = LowStar.Buffer
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST

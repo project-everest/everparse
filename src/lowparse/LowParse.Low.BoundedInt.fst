@@ -14,14 +14,16 @@ module Cast = FStar.Int.Cast
 
 friend LowParse.Spec.BoundedInt
 
+include LowParse.Spec.BoundedInt
+include LowParse.Low.Base
 inline_for_extraction
-let mul256 (x: U16.t) : Tot (y: U32.t { U32.v y == 256 `Prims.op_Multiply` U16.v x }) =
+let mul256 (x: U16.t) : Tot (y: U32.t { U32.v y == 256 `op_Star` U16.v x }) =
   assert_norm (pow2 8 == 256);
   FStar.Math.Lemmas.pow2_lt_compat 32 24;
   FStar.Math.Lemmas.pow2_lt_compat 24 16;
   FStar.Math.Lemmas.pow2_lt_compat 16 8;
   FStar.Math.Lemmas.pow2_plus 8 16;
-  FStar.Math.Lemmas.small_mod (U16.v x `Prims.op_Multiply` 256) (pow2 32);
+  FStar.Math.Lemmas.small_mod (U16.v x `op_Star` 256) (pow2 32);
   FStar.UInt.shift_left_value_lemma #32 (U16.v x) 8;
   Cast.uint16_to_uint32 x `U32.shift_left` 8ul
 
@@ -118,7 +120,7 @@ let serialize32_bounded_integer_2 () =
   LE.store_post_modifies out (U32.v pos) 2 (fun s -> E.be_to_n s == U16.v v') h h';
   2ul
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 128"
 
 let serialize32_bounded_integer_3 () =
   fun (v: bounded_integer 3) #rrel #rel out pos ->
@@ -342,11 +344,19 @@ let read_bounded_integer_le_4 =
 
 let read_u16_le =
   [@inline_let] let _ = synth_u16_le_injective in
-  read_inline_synth'
-    _
-    synth_u16_le
-    read_bounded_integer_le_2
-    ()
+  [@inline_let] let _ = bounded_integer_of_le_injective 2 in
+  leaf_reader_ext
+    (make_total_constant_size_reader 2 2ul #U16.t
+      (fun s -> synth_u16_le (bounded_integer_of_le 2 s))
+      ()
+      (fun #rrel #rel b pos ->
+        let h = HST.get () in
+        E.lemma_le_to_n_is_bounded (Seq.slice (B.as_seq h b) (U32.v pos) (U32.v pos + 2));
+        LE.load16_le_i (* #(Ghost.hide rrel) #(Ghost.hide rel) *) b pos))
+    parse_u16_le
+    (fun x ->
+      parse_synth_eq (parse_bounded_integer_le 2) synth_u16_le x;
+      parse_bounded_integer_le_eq 2 x)
 
 let read_u32_le =
   read_inline_synth'
@@ -380,7 +390,7 @@ let serialize32_bounded_integer_le_2
 
 let write_bounded_integer_le_2 = leaf_writer_strong_of_serializer32 serialize32_bounded_integer_le_2 ()
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 128"
 
 let serialize32_bounded_integer_le_3
 = fun v #rrel #rel out pos ->

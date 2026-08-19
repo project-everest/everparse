@@ -17,8 +17,8 @@ open('message.pubkey', 'wb').write(cose_pubkey)
 payload = b'payload'
 open('message.data', 'wb').write(payload)
 
-print('Running ./signtest')
-subprocess.check_call(['./signtest', 'message.data', 'message.privkey', 'message.cbor'])
+print('Running ./signtest.exe')
+subprocess.check_call(['./signtest.exe', 'message.data', 'message.privkey', 'message.cbor'])
 
 msg = Sign1Message.decode(open('message.cbor', 'rb').read())
 
@@ -28,8 +28,8 @@ assert msg.payload == b'payload', msg.payload
 assert msg.external_aad == b'', msg.aad
 print('Signature verifies!')
 
-print('Running ./verifytest')
-verify = subprocess.run(['./verifytest', 'message.pubkey', 'message.cbor'], stdout=subprocess.PIPE)
+print('Running ./verifytest.exe')
+verify = subprocess.run(['./verifytest.exe', 'message.pubkey', 'message.cbor'], stdout=subprocess.PIPE)
 verify.check_returncode()
 assert verify.stdout == payload, verify.stdout
 print('Signature verifies using our tool!')
@@ -42,8 +42,8 @@ msg2 = Sign1Message(phdr={Algorithm: EdDSA}, uhdr={ContentType: 'text/plain'}, p
 msg2.key = key
 open('message.pycose.cbor', 'wb').write(msg2.encode())
 
-print('Running ./verifytest')
-verify = subprocess.run(['./verifytest', 'message.pubkey', 'message.pycose.cbor'], stdout=subprocess.PIPE)
+print('Running ./verifytest.exe')
+verify = subprocess.run(['./verifytest.exe', 'message.pubkey', 'message.pycose.cbor'], stdout=subprocess.PIPE)
 verify.check_returncode()
 assert verify.stdout == payload, verify.stdout
 print('PyCOSE Signature verifies using our tool!')

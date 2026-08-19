@@ -33,6 +33,8 @@ let validate_t = LL.validate_vclist 10ul 1000ul LL.validate_bcvli LL.read_bcvli 
 
 let jump_t =  LL.jump_vclist 10 1000 LL.jump_bcvli LL.read_bcvli LL.jump_bcvli
 
+#push-options "--z3rlimit 16"
+
 let read_6th sl pos =
   let h = HST.get () in
   LL.valid_vclist_elim 10 1000 LL.parse_bcvli LL.parse_bcvli h sl pos;
@@ -42,5 +44,7 @@ let read_6th sl pos =
   LL.valid_nlist_valid_list (U32.v len) LL.parse_bcvli h sl pos_payload;
   let pos_6th = LL.list_nth LL.parse_bcvli LL.jump_bcvli sl pos_payload pos' 6ul in
   LL.read_bcvli sl pos_6th
+
+#pop-options
 
 let main _ _ = C.EXIT_SUCCESS

@@ -14,6 +14,8 @@ module LE = LowParse.Low.Endianness
 
 friend LowParse.Spec.Int
 
+include LowParse.Spec.Int
+include LowParse.Low.Base
 let read_u8 : leaf_reader parse_u8 =
   decode_u8_injective ();
   leaf_reader_ext

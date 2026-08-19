@@ -13,7 +13,7 @@ let rec parse_list_aux
   (#t: Type)
   (p: parser k t)
   (b: bytes)
-: GTot (option (list t * (consumed_length b)))
+: GTot (option (list t & (consumed_length b)))
   (decreases (Seq.length b))
 = if Seq.length b = 0
   then 
@@ -70,22 +70,24 @@ val parse_list_bare_injective
   (#t: Type)
   (p: parser k t)
 : Lemma
+  (requires (k.parser_kind_injective == true))
   (ensures (injective (parse_list_bare p)))
 
 inline_for_extraction
-let parse_list_kind =
+let parse_list_kind (inj: bool) =
   {
     parser_kind_low = 0;
     parser_kind_high = None;
     parser_kind_metadata = None;
     parser_kind_subkind = Some ParserConsumesAll;
+    parser_kind_injective = inj;
   }
 
 val parse_list
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
-: Tot (parser parse_list_kind (list t))
+: Tot (parser (parse_list_kind k.parser_kind_injective) (list t))
 
 val parse_list_eq
   (#k: parser_kind)
@@ -134,7 +136,7 @@ val tot_parse_list
   (#k: parser_kind)
   (#t: Type)
   (p: tot_parser k t)
-: Pure (tot_parser parse_list_kind (list t))
+: Pure (tot_parser (parse_list_kind k.parser_kind_injective) (list t))
     (requires True)
     (ensures (fun y ->
       forall x . parse y x == parse (parse_list #k p) x
@@ -567,7 +569,7 @@ val list_length_constant_size_parser_correct
     let pb = parse (parse_list p) b in
     Some? pb /\ (
     let (Some (l, _)) = pb in
-    FStar.Mul.op_Star (L.length l) k.parser_kind_low == Seq.length b
+    op_Star (L.length l) k.parser_kind_low == Seq.length b
   )))
   (decreases (Seq.length b))
 
@@ -583,7 +585,7 @@ let rec parse_list_total_constant_size
     serialize_list_precond k /\
     k.parser_kind_high == Some k.parser_kind_low /\
     k.parser_kind_metadata == Some ParserKindMetadataTotal /\
-    Seq.length x == elem_count `Prims.op_Multiply` k.parser_kind_low
+    Seq.length x == elem_count `op_Star` k.parser_kind_low
   ))
   (ensures (
     Some? (parse (parse_list p) x)
@@ -593,7 +595,7 @@ let rec parse_list_total_constant_size
   if elem_count = 0
   then ()
   else begin
-    assert (Seq.length x == k.parser_kind_low + ((elem_count - 1) `Prims.op_Multiply` k.parser_kind_low));
+    assert (Seq.length x == k.parser_kind_low + ((elem_count - 1) `op_Star` k.parser_kind_low));
     parser_kind_prop_equiv k p;
     assert (Some? (parse p x));
     let Some (_, len) = parse p x in

@@ -121,6 +121,8 @@ let simplify_probe_atomic_action (env:T.env_t) (a:probe_atomic_action)
       Probe_action_read f
     | Probe_action_write f v ->
       Probe_action_write f (simplify_expr env v)
+    | Probe_action_copy_and_return r w ty maybe_warn ->
+      Probe_action_copy_and_return r w ty maybe_warn
     | Probe_action_copy f v ->
       Probe_action_copy f (simplify_expr env v)
     | Probe_action_skip_read e ->
@@ -223,10 +225,10 @@ let check_probe_size_range (e: expr) : ML unit =
 
 let simplify_attribute (env: T.env_t) (attr: attribute) : ML attribute =
   match attr with
-  | Entrypoint (Some p) ->
+  | Entrypoint ep_name (Some p) ->
     let e' = simplify_expr env p.probe_ep_length in
     check_probe_size_range e';
-    Entrypoint (Some ({
+    Entrypoint ep_name (Some ({
       p with
         probe_ep_length = e';
     }))

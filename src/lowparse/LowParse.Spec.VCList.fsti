@@ -26,7 +26,7 @@ let nlist_cons (#t: Type) (#n: nat) (a: t) (q: nlist n t) : Tot (nlist (n + 1) t
 
 // abstract
 inline_for_extraction
-let nlist_destruct (#t: Type) (#n: nat) (x: nlist (n + 1) t) : Tot (t * nlist n t) =
+let nlist_destruct (#t: Type) (#n: nat) (x: nlist (n + 1) t) : Tot (t & nlist n t) =
   match x with (a :: q) -> a, q
 
 // abstract
@@ -34,15 +34,15 @@ let nlist_cons_unique (#t: Type) (#n: nat) (x: nlist (n + 1) t) : Lemma
   (let (a, q) = nlist_destruct x in x == nlist_cons a q)
 = ()
 
-unfold let mul = Prims.op_Multiply
+unfold let mul = op_Star
 
 inline_for_extraction
-let synth_nlist (#t: Type) (n: nat) (xy: t * nlist n t) : Tot (nlist (n + 1) t) =
+let synth_nlist (#t: Type) (n: nat) (xy: t & nlist n t) : Tot (nlist (n + 1) t) =
   match xy with (x, y) ->
   nlist_cons x y
 
 inline_for_extraction
-let synth_nlist_recip (#t: Type) (n: nat) (xy: nlist (n + 1) t) : Tot (t * nlist n t) =
+let synth_nlist_recip (#t: Type) (n: nat) (xy: nlist (n + 1) t) : Tot (t & nlist n t) =
   nlist_destruct xy
 
 // abstract
@@ -114,6 +114,17 @@ let rec parse_nlist_kind_subkind
   then ()
   else parse_nlist_kind_subkind (n - 1) k
 
+let rec parse_nlist_kind_injective
+  (n: nat)
+  (k: parser_kind)
+: Lemma
+  ((parse_nlist_kind' n k).parser_kind_injective == (
+    if n = 0 then true else k.parser_kind_injective
+  ))
+= if n = 0
+  then ()
+  else parse_nlist_kind_injective (n - 1) k
+
 inline_for_extraction
 let parse_nlist_kind
   (n: nat)
@@ -125,7 +136,8 @@ let parse_nlist_kind
     parse_nlist_kind_low n k;
     parse_nlist_kind_high n k;
     parse_nlist_kind_metadata n k;
-    parse_nlist_kind_subkind n k
+    parse_nlist_kind_subkind n k;
+    parse_nlist_kind_injective n k
   in
   {
     parser_kind_low = n `mul` k.parser_kind_low;
@@ -135,6 +147,7 @@ let parse_nlist_kind
     );
     parser_kind_metadata = (if n = 0 then Some ParserKindMetadataTotal else k.parser_kind_metadata);
     parser_kind_subkind = (if n = 0 then Some ParserStrong else k.parser_kind_subkind);
+    parser_kind_injective = (if n = 0 then true else k.parser_kind_injective);
   }
 
 
@@ -287,6 +300,21 @@ let rec parse_nlist_ext
       let b' = Seq.slice b consumed (Seq.length b) in
       parse_nlist_ext (n - 1) p p' b' prf
   end
+
+val parse_nlist_ext_forall
+  (n: nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: (parser k t))
+  (#k': parser_kind)
+  (p' : parser k' t)
+: Lemma
+  (requires
+    forall b . parse p b == parse p' b
+  )
+  (ensures
+    forall b . parse (parse_nlist n p) b == parse (parse_nlist n p') b
+  )
 
 let parse_nlist_fuel_ext
   (n: nat)
@@ -671,6 +699,10 @@ let rec refine_nlist_of_nlist_refine_injective
       )
   end
 
+(* This goal used 4.17 of the default rlimit 5 after the switch to per-goal
+   SMT encoding; give it some headroom so it does not flake on slower CI. *)
+#push-options "--z3rlimit 20"
+
 let rec tot_parse_nlist_refine_eq
   (#k: parser_kind)
   (#t: Type)
@@ -713,6 +745,8 @@ let rec tot_parse_nlist_refine_eq
         fl
         b'
   end
+
+#pop-options
 
 let rec nlist_refine_of_refine_nlist
   (#t: Type)
@@ -842,6 +876,7 @@ let parse_vclist_payload_kind
     );
     parser_kind_metadata = (if max = 0 then Some ParserKindMetadataTotal else if min = 0 && k.parser_kind_metadata <> Some ParserKindMetadataTotal then None else k.parser_kind_metadata);
     parser_kind_subkind = (if max = 0 then Some ParserStrong else if min = 0 && k.parser_kind_subkind <> Some ParserStrong then None else k.parser_kind_subkind);
+    parser_kind_injective = (if max = 0 then true else k.parser_kind_injective);
   }
 
 let parse_vclist_payload_kind_is_weaker_than
@@ -894,6 +929,7 @@ let synth_bounded_count
 : Tot (bounded_count min max)
 = x
 
+#push-options "--z3rlimit_factor 4"
 let parse_vclist_and_then_cases_injective
   (min: nat)
   (max: nat { min <= max } )
@@ -908,6 +944,7 @@ let parse_vclist_and_then_cases_injective
     parse_synth_eq (parse_nlist (U32.v x1) p) (synth_vclist_payload min max x1) b1;
     parse_synth_eq (parse_nlist (U32.v x2) p) (synth_vclist_payload min max x2) b2
   )
+#pop-options
 
 let parse_vclist
   (min: nat)
@@ -971,7 +1008,7 @@ let bare_serialize_vclist
   let un = U32.uint_to_t n in
   serialize ls un `Seq.append` serialize (serialize_nlist n s) l
 
-let bare_serialize_vclist_correct
+val bare_serialize_vclist_correct
   (min: nat)
   (max: nat { min <= max /\ max < 4294967296 } )
   (#lk: parser_kind)
@@ -983,20 +1020,6 @@ let bare_serialize_vclist_correct
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
 : Lemma
   (serializer_correct (parse_vclist min max lp p) (bare_serialize_vclist min max ls s))
-= let prf (x: vlarray t min max)
-  : Lemma
-    (let fx = bare_serialize_vclist min max ls s x in
-      parse (parse_vclist min max lp p) fx == Some (x, Seq.length fx))
-  = let fx = bare_serialize_vclist min max ls s x in
-    parse_vclist_eq min max lp p fx;
-    let n = L.length x in
-    let un = U32.uint_to_t n in
-    let fn = serialize ls un in
-    parse_strong_prefix lp fn fx;
-    let fl = serialize (serialize_nlist n s) x in
-    assert (fl `Seq.equal` Seq.slice fx (Seq.length fn) (Seq.length fx))
-  in
-  Classical.forall_intro prf
 
 let serialize_vclist
   (min: nat)
@@ -1011,3 +1034,48 @@ let serialize_vclist
 : Tot (serializer (parse_vclist min max lp p))
 = [@inline_let] let _ = bare_serialize_vclist_correct min max ls s in
   bare_serialize_vclist min max ls s
+
+(* Extensional equality between parse_vclist and a dtuple2-based formulation *)
+
+let parse_vclist_dtuple2_tag_parser
+  (min: nat)
+  (max: nat { min <= max })
+  (#lk: parser_kind)
+  (lp: parser lk U32.t)
+: Tot (parser (parse_filter_kind lk) (bounded_count min max))
+= (lp `parse_filter` bounded_count_prop min max) `parse_synth` synth_bounded_count min max
+
+let parse_vclist_dtuple2_payload_parser
+  (min: nat)
+  (max: nat { min <= max })
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (n: bounded_count min max)
+: Tot (parser (parse_vclist_payload_kind min max k) (nlist (U32.v n) t))
+= weaken (parse_vclist_payload_kind min max k) (parse_nlist (U32.v n) p)
+
+let parse_vclist_dtuple2_synth
+  (min: nat)
+  (max: nat { min <= max })
+  (#t: Type)
+  (x: dtuple2 (bounded_count min max) (fun (n: bounded_count min max) -> nlist (U32.v n) t))
+: Tot (vlarray t min max)
+= dsnd x
+
+val parse_vclist_dtuple2_eq
+  (min: nat)
+  (max: nat { min <= max })
+  (#lk: parser_kind)
+  (lp: parser lk U32.t)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (input: bytes)
+: Lemma
+  (parse (parse_vclist min max lp p) input ==
+   parse (parse_synth
+     (parse_dtuple2
+       (parse_vclist_dtuple2_tag_parser min max lp)
+       (parse_vclist_dtuple2_payload_parser min max p))
+     (parse_vclist_dtuple2_synth min max #t)) input)

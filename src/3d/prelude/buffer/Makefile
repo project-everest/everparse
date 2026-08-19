@@ -21,12 +21,12 @@ EverParse.rsp: $(ALL_KRML_FILES) ../EverParse.rsp
 	mv $@.tmp $@
 
 EverParse.h: EverParse.rsp
-	$(KRML_HOME)/krml \
+	$(KRML_EXE) \
 	  -fstar $(FSTAR_EXE) \
 	  -skip-compilation \
 	  -skip-makefiles \
 	  -bundle 'Prims,C.\*,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
-	  -bundle 'EverParse3d.Prelude.StaticHeader+EverParse3d.ErrorCode+EverParse3d.InputStream.Buffer.Aux+EverParse3d.CopyBuffer=LowParse.\*,EverParse3d.\*[rename=EverParse,rename-prefix]' \
+	  -bundle 'EverParse3d.Prelude.StaticHeader+EverParse3d.ErrorCode+EverParse3d.InputStream.Buffer.Aux+EverParse3d.CopyBuffer+EverParse3d.Actions.Common=LowParse.\*,EverParse3d.\*[rename=EverParse,rename-prefix]' \
 	  -warn-error -9@4 \
 	  -fnoreturn-else -fparentheses -fcurly-braces -fmicrosoft \
 	  -header ../../noheader.txt \

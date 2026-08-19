@@ -4,6 +4,10 @@ endif
 
 include $(EVERPARSE_SRC_PATH)/fstar.Makefile
 
+# Clean rules (excluding clean itself)
+clean_rules += clean-checked clean-krml clean-ml clean-depend
+other_clean_rules += clean
+
 # List the directories of all root files
 SRC_DIRS += .
 
@@ -12,6 +16,9 @@ INCLUDE_PATHS += $(SRC_DIRS)
 
 # A place to put all build artifacts
 ifneq (,$(OUTPUT_DIRECTORY))
+ifeq ($(OS),Windows_NT)
+  OUTPUT_DIRECTORY := $(shell cygpath -m $(OUTPUT_DIRECTORY))
+endif
   FSTAR_OPTIONS += --odir $(OUTPUT_DIRECTORY)
 endif
 
@@ -19,6 +26,9 @@ endif
 # each .checked file will be generated right next to its corresponding
 # source file.
 ifneq (,$(CACHE_DIRECTORY))
+ifeq ($(OS),Windows_NT)
+  CACHE_DIRECTORY := $(shell cygpath -m $(CACHE_DIRECTORY))
+endif
   FSTAR_OPTIONS += --cache_dir $(CACHE_DIRECTORY)
   INCLUDE_PATHS+=$(CACHE_DIRECTORY)
 endif
@@ -36,10 +46,16 @@ FSTAR_ML_CODEGEN ?= OCaml
 FSTAR_OPTIONS += $(PROFILE)
 
 # List the roots from where all dependencies are computed
+ifeq ($(OS),Windows_NT)
+SRC_DIRS := $(shell cygpath -m $(SRC_DIRS))
+endif
 FSTAR_FILES ?= $(wildcard $(addsuffix /*.fst,$(SRC_DIRS)) $(addsuffix /*.fsti,$(SRC_DIRS)))
 
 # `ALREADY_CACHED` expected to be empty or to end with a comma
-FSTAR_OPTIONS += $(OTHERFLAGS) $(addprefix --include ,$(INCLUDE_PATHS)) --cache_checked_modules --warn_error @241 --already_cached $(ALREADY_CACHED)Prims,FStar,LowStar --cmi --ext context_pruning
+ifeq ($(OS),Windows_NT)
+INCLUDE_PATHS := $(shell cygpath -m $(INCLUDE_PATHS))
+endif
+FSTAR_OPTIONS += $(OTHERFLAGS) $(addprefix --include ,$(INCLUDE_PATHS)) --cache_checked_modules --warn_error @241 --already_cached $(ALREADY_CACHED)Prims,FStar,LowStar --ext context_pruning
 
 # https://github.com/FStarLang/FStar/pull/3861
 # FSTAR_OPTIONS += --ext optimize_let_vc
@@ -70,15 +86,19 @@ endif
 ifneq (,$(CACHE_DIRECTORY))
 	mkdir -p $(CACHE_DIRECTORY)
 endif
-	$(Q)true $(shell mkdir -p $(dir $@)) $(shell rm -f $@.rsp) $(foreach f,$(FSTAR_FILES),$(shell echo $(f) >> $@.rsp))
+	if test -n "$(dir $@)" ; then mkdir -p "$(dir $@)" ; fi
+	rm -f $@.rsp
+	for f in $(FSTAR_FILES) ; do echo $$f ; done > $@.rsp
 	$(Q)$(FSTAR) $(FSTAR_DEP_OPTIONS) --dep full @$@.rsp --output_deps_to $@.aux
 	mv $@.aux $@
 
+ifeq (,$(filter $(clean_rules) $(other_clean_rules),$(MAKECMDGOALS)))
 include $(FSTAR_DEP_FILE)
+endif
 
 $(ALL_CHECKED_FILES): %.checked:
 	$(call msg, "CHECK", $(basename $(notdir $@)))
-	$(Q)$(RUNLIM) $(FSTAR) $(SIL) $(COMPAT_INDEXED_EFFECTS) $<
+	$(Q)$(RUNLIM) $(FSTAR) $(SIL) $(COMPAT_INDEXED_EFFECTS) $(if $(filter 1,$(ADMIT)),--admit_smt_queries true,) $<
 	touch -c $@
 
 verify: $(ALL_CHECKED_FILES)
@@ -97,3 +117,36 @@ $(ALL_KRML_FILES): %.krml:
 	touch -c $@
 
 .PHONY: all verify %.fst-in %.fsti-in
+
+clean-checked:
+ifneq (,$(CACHE_DIRECTORY))
+	rm -f $(CACHE_DIRECTORY)/*.checked
+endif
+	rm -f *.checked
+
+.PHONY: clean-checked
+
+clean-krml:
+ifneq (,$(OUTPUT_DIRECTORY))
+	rm -f $(OUTPUT_DIRECTORY)/*.krml
+endif
+	rm -f *.krml
+
+.PHONY: clean-krml
+
+clean-ml:
+ifneq (,$(OUTPUT_DIRECTORY))
+	rm -f $(OUTPUT_DIRECTORY)/*.ml
+endif
+	rm -f *.ml
+
+.PHONY: clean-ml
+
+clean-depend:
+	rm -f $(FSTAR_DEP_FILE) $(FSTAR_DEP_FILE).aux $(FSTAR_DEP_FILE).rsp
+
+.PHONY: clean-depend
+
+clean: $(clean_rules)
+
+.PHONY: clean

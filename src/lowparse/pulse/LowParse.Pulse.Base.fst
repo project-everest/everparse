@@ -40,7 +40,7 @@ ghost
 fn pts_to_serialized_length
   (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm: perm) (#v: t)
   requires (pts_to_serialized s input #pm v)
-  ensures (pts_to_serialized s input #pm v ** pure (Seq.length (bare_serialize s v) == SZ.v (len input)))
+  ensures (pts_to_serialized s input #pm v ** pure (Seq.length (serialize s v) == SZ.v (len input)))
 {
   unfold (pts_to_serialized s input #pm v);
   pts_to_len input;
@@ -94,6 +94,15 @@ let pts_to_serialized_ext_trade_gen_precond
   t1 == t2 /\
   (forall x . parse p1 x == parse p2 x)
 
+let pts_to_serialized_ext_trade_gen_post
+  (t1 t2: Type0)
+  (v: t1)
+  (v2: t2)
+: Tot prop
+=
+  t1 == t2 /\
+  v == v2
+
 ghost
 fn pts_to_serialized_ext_trade_gen
   (#t1 #t2: Type0)
@@ -111,20 +120,15 @@ fn pts_to_serialized_ext_trade_gen
   )
   ensures exists* v2 .
     pts_to_serialized s2 input #pm v2 ** trade (pts_to_serialized s2 input #pm v2) (pts_to_serialized s1 input #pm v) **
-    pure (t1 == t2 /\
-      v == v2
-    )
+    pure (pts_to_serialized_ext_trade_gen_post t1 t2 v v2)
 {
   pts_to_serialized_ext s1 s2 input;
-  ghost
-  fn aux
-    (_: unit)
-    requires emp ** pts_to_serialized s2 input #pm v
-    ensures pts_to_serialized s1 input #pm v
-  {
-    pts_to_serialized_ext s2 s1 input
-  };
-  intro_trade _ _ _ aux
+  intro
+    (Trade.trade (pts_to_serialized s2 input #pm v) (pts_to_serialized s1 input #pm v))
+    #emp
+    fn _{
+      pts_to_serialized_ext s2 s1 input
+    };
 }
 
 ghost
@@ -145,15 +149,12 @@ fn pts_to_serialized_ext_trade
   ensures pts_to_serialized s2 input #pm v ** trade (pts_to_serialized s2 input #pm v) (pts_to_serialized s1 input #pm v)
 {
   pts_to_serialized_ext s1 s2 input;
-  ghost
-  fn aux
-    (_: unit)
-    requires emp ** pts_to_serialized s2 input #pm v
-    ensures pts_to_serialized s1 input #pm v
-  {
+  intro
+    (Trade.trade (pts_to_serialized s2 input #pm v) (pts_to_serialized s1 input #pm v))
+    #emp
+    fn _{
     pts_to_serialized_ext s2 s1 input
   };
-  intro_trade _ _ _ aux
 }
 
 ghost
@@ -832,13 +833,9 @@ ensures
 {
   unfold (vmatch_ext t2 vmatch x' x2);
   with x1 . assert (vmatch x' x1);
-  ghost fn aux (_: unit)
-    requires emp ** vmatch x' x1
-    ensures vmatch_ext t2 vmatch x' x2
-  {
+  intro (Trade.trade (vmatch x' x1) (vmatch_ext t2 vmatch x' x2)) #emp fn _{
     fold (vmatch_ext t2 vmatch x' x2);
   };
-  Trade.intro _ _ _ aux;
   x1
 }
 
@@ -937,13 +934,9 @@ ensures
   pure (cond xl)
 {
   unfold (vmatch_with_cond vmatch cond xl xh);
-  ghost fn aux (_: unit)
-    requires emp ** vmatch xl xh
-    ensures vmatch_with_cond vmatch cond xl xh
-  {
+  intro (Trade.trade (vmatch xl xh) (vmatch_with_cond vmatch cond xl xh)) #emp fn _{
     fold (vmatch_with_cond vmatch cond xl xh)
   };
-  Trade.intro _ _ _ aux
 }
 
 let pnot (#t: Type) (cond: t -> GTot bool) (x: t) : GTot bool = not (cond x)
@@ -1065,20 +1058,6 @@ let eq_as_slprop (t: Type) (x x': t) : slprop = pure (x == x')
 let ref_pts_to (t: Type0) (p: perm) (r: ref t) (v: t) : slprop =
   R.pts_to r #p v
 
-ghost
-fn ref_pts_to_lens_aux
-  (#t: Type)
-  (p: perm)
-  (r: R.ref t)
-  (v: t)
-  (x: t)
-  (_: unit)
-  requires ref_pts_to t p r v ** eq_as_slprop t x v
-  ensures ref_pts_to t p r v
-{
-  unfold (eq_as_slprop t x v)
-}
-
 inline_for_extraction
 fn ref_pts_to_lens
   (t: Type0)
@@ -1092,9 +1071,30 @@ fn ref_pts_to_lens
   let x = !r;
   fold (ref_pts_to t p r v);
   fold (eq_as_slprop t x v);
-  Trade.intro _ _ _ (ref_pts_to_lens_aux p r v x);
+  intro (Trade.trade (eq_as_slprop t x v) (ref_pts_to t p r v)) #(ref_pts_to t p r v) fn _{
+    unfold (eq_as_slprop t x v)
+  };
   x
 }
+
+noextract
+let l2r_leaf_writer_postcond
+  (#t: Type)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (x: t)
+  (offset: SZ.t)
+  (v: Ghost.erased bytes)
+  (res: SZ.t)
+  (v': bytes)
+: Tot prop
+= let bs = bare_serialize s x in
+  SZ.v res == SZ.v offset + Seq.length bs /\
+  SZ.v res <= Seq.length v /\
+  Seq.length v' == Seq.length v /\
+  Seq.slice v' 0 (SZ.v offset) == Seq.slice v 0 (SZ.v offset) /\
+  Seq.slice v' (SZ.v offset) (SZ.v res) == bs
 
 inline_for_extraction
 let l2r_leaf_writer
@@ -1112,12 +1112,7 @@ let l2r_leaf_writer
     ))
     (fun res -> exists* v' .
       pts_to out v' ** pure (
-      let bs = bare_serialize s x in
-      SZ.v res == SZ.v offset + Seq.length bs /\
-      SZ.v res <= Seq.length v /\
-      Seq.length v' == Seq.length v /\
-      Seq.slice v' 0 (SZ.v offset) == Seq.slice v 0 (SZ.v offset) /\
-      Seq.slice v' (SZ.v offset) (SZ.v res) == bs
+      l2r_leaf_writer_postcond s x offset v res v'
     ))
 
 inline_for_extraction
@@ -1130,6 +1125,27 @@ fn l2r_leaf_writer_ext
   (#k2: Ghost.erased parser_kind)
   (#p2: parser k2 t)
   (s2: serializer p2 { forall x . parse p1 x == parse p2 x })
+: l2r_leaf_writer u#0 #t #k2 #p2 s2
+= (x: t)
+  (out: slice byte)
+  (offset: SZ.t)
+  (#v: Ghost.erased bytes)
+{
+  serializer_unique_strong s1 s2 x;
+  w1 x out offset
+}
+
+inline_for_extraction
+fn l2r_leaf_writer_ext_squash
+  (#t: Type0)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t)
+  (#s1: serializer p1)
+  (w1: l2r_leaf_writer s1)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 t)
+  (s2: serializer p2)
+  (sq: squash (forall x . parse p1 x == parse p2 x))
 : l2r_leaf_writer u#0 #t #k2 #p2 s2
 = (x: t)
   (out: slice byte)
@@ -1210,6 +1226,67 @@ let l2r_leaf_writer_zero_size
 : l2r_leaf_writer u#0 #t #k #p s
 = l2r_leaf_writer_of_writer
     (l2r_writer_zero_size _ s ())
+
+(* Pure, total serialized-size function: the exact [FStar.SizeT.t] serialized
+   length of [x], with the guarantee that it fits in a machine word. This is the
+   shape required by the variable-length leaf writer/size combinators
+   ([l2r_safe_writer_leaf_vl] / [l2r_safe_size_leaf_vl]); it is the Pulse-native,
+   structural counterpart of [LowParse.SLow.Base.size32] (no SLow dependency). *)
+inline_for_extraction
+let leaf_size
+  (#t: Type0) (#k: parser_kind) (#p: parser k t) (s: serializer p)
+: Type0
+= (x: t) -> Pure SZ.t
+    (requires True)
+    (ensures (fun sz -> SZ.v sz == Seq.length (serialize s x) /\ SZ.v sz < pow2 64))
+
+(* Re-index a [leaf_size] across an extensionally-equal parser/serializer (mirrors
+   [l2r_leaf_writer_ext_squash]). *)
+inline_for_extraction
+let leaf_size_ext
+  (#t: Type0)
+  (#k1: parser_kind) (#p1: parser k1 t) (#s1: serializer p1)
+  (w1: leaf_size s1)
+  (#k2: parser_kind) (#p2: parser k2 t)
+  (s2: serializer p2)
+  (sq: squash (forall x . parse p1 x == parse p2 x))
+: leaf_size #t #k2 #p2 s2
+= fun x ->
+    serializer_unique_strong s1 s2 x;
+    w1 x
+
+(* Constant-size leaf: the serialized length is the literal [sz] (the parser kind
+   pins low == high == [SZ.v sz]). *)
+inline_for_extraction
+let leaf_size_constant_size
+  (#t: Type0)
+  (#k: parser_kind) (#p: parser k t)
+  (s: serializer p)
+  (sz: SZ.t)
+  (sq: squash (
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_low == SZ.v sz /\
+    SZ.v sz < pow2 64
+  ))
+: leaf_size s
+= fun x ->
+    serialize_length s x;
+    sz
+
+(* Zero-size leaf: a serializer whose parser kind pins [high == Some 0] always
+   serializes to the empty sequence, so the size is [0sz] (mirrors
+   [l2r_leaf_writer_zero_size]). Used for the absent/false cases of a sum/dsum
+   per-case size dispatch. *)
+inline_for_extraction
+let leaf_size_zero_size
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind) (#p: parser k t)
+  (s: serializer p)
+  (sq: squash (k.parser_kind_high == Some 0))
+: leaf_size s
+= fun x ->
+    serialize_length s x;
+    0sz
 
 inline_for_extraction
 let compute_remaining_size
@@ -1618,7 +1695,7 @@ let vmatch_ref_wf
   (r: with_perm (ref tl))
   (vh: th)
 : Tot slprop
-= if FStar.StrongExcludedMiddle.strong_excluded_middle (vh << bound)
+= if FStar.IndefiniteDescription.strong_excluded_middle (vh << bound)
   then vmatch_ref_wf0 bound vmatch r vh (Some ())
   else pure False
 
@@ -1632,7 +1709,7 @@ let vmatch_ref_wf_eq
 : Lemma
   (requires (vh << bound))
   (ensures (vmatch_ref_wf bound vmatch r vh == vmatch_ref vmatch r vh))
-= let b = (FStar.StrongExcludedMiddle.strong_excluded_middle (vh << bound)) in // FIXME: WHY WHY WHY the let binding?
+= let b = (FStar.IndefiniteDescription.strong_excluded_middle (vh << bound)) in // FIXME: WHY WHY WHY the let binding?
   assert (vmatch_ref_wf bound vmatch r vh == vmatch_ref_wf0 bound vmatch r vh (Some ()));
   assert_norm (vmatch_ref_wf0 bound vmatch r vh (Some ()) == vmatch_ref vmatch r vh)
 
@@ -1650,13 +1727,9 @@ ensures exists* vl .
 {
   unfold (vmatch_ref vmatch r vh);
   with vl . assert (R.pts_to r.v #r.p vl ** vmatch vl vh);
-  ghost fn aux ()
-  requires emp ** (R.pts_to r.v #r.p vl ** vmatch vl vh)
-  ensures vmatch_ref vmatch r vh
-  {
+  intro (Trade.trade (R.pts_to r.v #r.p vl ** vmatch vl vh) (vmatch_ref vmatch r vh)) #emp fn _{
     fold (vmatch_ref vmatch r vh)
   };
-  Trade.intro _ _ _ aux
 }
 
 inline_for_extraction
@@ -1858,13 +1931,9 @@ fn zero_copy_parse_read
 {
   let res = r input;
   fold (eq_as_slprop t res v);
-  ghost fn aux ()
-  requires pts_to_serialized s input #pm v ** eq_as_slprop t res v
-  ensures pts_to_serialized s input #pm v
-  {
+  intro (Trade.trade (eq_as_slprop t res v) (pts_to_serialized s input #pm v)) #(pts_to_serialized s input #pm v) fn _{
     unfold (eq_as_slprop t res v)
   };
-  Trade.intro _ _ _ aux;
   res
 }
 
@@ -1883,13 +1952,9 @@ fn zero_copy_parse_ignore
   (#v: Ghost.erased _)
 {
   fold (vmatch_ignore () (Ghost.reveal v));
-  ghost fn aux ()
-  requires pts_to_serialized s input #pm v ** (vmatch_ignore () (Ghost.reveal v))
-  ensures pts_to_serialized s input #pm v
-  {
+  intro (Trade.trade (vmatch_ignore () (Ghost.reveal v)) (pts_to_serialized s input #pm v)) #(pts_to_serialized s input #pm v) fn _{
     unfold (vmatch_ignore () (Ghost.reveal v))
   };
-  Trade.intro _ _ _ aux;
   ()
 }
 
@@ -1939,4 +2004,88 @@ fn zero_copy_parse_ifthenelse
   } else {
     rfalse () input
   }
+}
+
+let pts_to_serialized_strong_prefix
+  (#k: parser_kind) (#t: Type) (#p: parser k t)
+  (s: serializer p)
+  ([@@@mkey]input: slice byte)
+  (#[exact (`1.0R)] pm: perm)
+  (v: t)
+: slprop =
+  exists* v' .
+  S.pts_to input #pm v' **
+  pure (
+    let sv = bare_serialize s v in
+    k.parser_kind_subkind == Some ParserStrong /\
+    Seq.length sv <= Seq.length v' /\
+    Seq.slice v' 0 (Seq.length sv) == sv
+  )
+
+ghost fn pts_to_serialized_strong_prefix_intro
+  (#k: parser_kind) (#t: Type0) (#p: parser k t)
+  (s: serializer p)
+  (input: slice byte)
+  (#pm: perm)
+  (v: t)
+  (#v': bytes)
+requires
+  S.pts_to input #pm v' **
+  pure (
+    let sv = bare_serialize s v in
+    k.parser_kind_subkind == Some ParserStrong /\
+    Seq.length sv <= Seq.length v' /\
+    Seq.slice v' 0 (Seq.length sv) == sv
+  )
+ensures exists* pm' .
+  pts_to_serialized_strong_prefix s input #pm' v **
+  Trade.trade
+    (pts_to_serialized_strong_prefix s input #pm' v)
+    (S.pts_to input #pm v')
+{
+  S.share input;
+  let pm' = pm /. 2.0R;
+  fold (pts_to_serialized_strong_prefix s input #pm' v);
+  intro
+    (Trade.trade
+      (pts_to_serialized_strong_prefix s input #pm' v)
+      (S.pts_to input #pm v')
+    )
+    #(S.pts_to input #pm' v')
+    fn _ {
+      unfold (pts_to_serialized_strong_prefix s input #pm' v);
+      S.gather input
+    };
+}
+
+ghost fn pts_to_serialized_strong_prefix_intro_pts_to_serialized
+  (#k: parser_kind) (#t: Type0) (#p: parser k t)
+  (s: serializer p)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: t)
+requires
+  pts_to_serialized s input #pm v **
+  pure (
+    k.parser_kind_subkind == Some ParserStrong
+  )
+ensures
+  pts_to_serialized_strong_prefix s input #pm v **
+  Trade.trade
+    (pts_to_serialized_strong_prefix s input #pm v)
+    (pts_to_serialized s input #pm v)
+{
+  unfold (pts_to_serialized s input #pm v);
+  S.pts_to_len input;
+  fold (pts_to_serialized_strong_prefix s input #pm v);
+  intro
+    (Trade.trade
+      (pts_to_serialized_strong_prefix s input #pm v)
+      (pts_to_serialized s input #pm v)
+    )
+    fn _ {
+      unfold (pts_to_serialized_strong_prefix s input #pm v);
+      S.pts_to_len input;
+      fold (pts_to_serialized s input #pm v);
+    }
 }

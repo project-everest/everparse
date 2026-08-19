@@ -7,7 +7,7 @@ open CBOR.Spec.API.Type
 open CBOR.Pulse.API.Base
 module EqTest = CDDL.Spec.EqTest
 
-inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"]
 noeq
 type array_bundle
   (#cbor_array_iterator_t: Type0)
@@ -127,7 +127,7 @@ let array_bundle_set_parser_and_serializer
 = {
     ab_typ = b.ab_typ;
     ab_spec_type = spect;
-    ab_spec_type_eq = b.ab_spec_type_eq;
+    ab_spec_type_eq = coerce_eq () b.ab_spec_type_eq;
     ab_spec = b.ab_spec;
     ab_impl_type = t;
     ab_rel = r;
@@ -212,8 +212,8 @@ let bundle_array_group_item
   | Mkbundle b_typ b_spec_type b_spec_type_eq b_spec b_impl_type b_rel b_parser b_serializer ->
 {
   ab_typ = _;
-  ab_spec_type = _;
-  ab_spec_type_eq = b_spec_type_eq;
+  ab_spec_type = maybe_named nm b_spec_type;
+  ab_spec_type_eq = coerce_eq () b_spec_type_eq;
   ab_spec = ag_spec_item b_spec;
   ab_impl_type = maybe_named nm b_impl_type;
   ab_rel = _;

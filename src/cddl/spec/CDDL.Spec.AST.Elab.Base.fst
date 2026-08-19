@@ -67,7 +67,7 @@ let rec elab_map_group_is_productive
 : Tot (result unit)
 = match g with
   | MGAlwaysFalse
-  | MGMatch _ _ _
+  | MGMatch _ _ _ _
   | MGMatchWithCut _ _
     -> RSuccess ()
   | MGNop -> RFailure "elab_map_group_is_productive: MGNop"
@@ -111,7 +111,7 @@ let rec apply_map_group_det_empty_fail
 : Tot (result bool)
 = match g with
   | MGAlwaysFalse
-  | MGMatch _ _ _
+  | MGMatch _ _ _ _
   | MGMatchWithCut _ _ -> RSuccess true
   | MGCut _
   | MGTable _ _ _
@@ -159,7 +159,7 @@ let rec apply_map_group_det_empty_fail_correct
       apply_map_group_det_empty_fail_correct env g2
     | _ -> ()
     end
-  | MGMatch cut k v ->
+  | MGMatch cut _ k v ->
     Spec.apply_map_group_det_match_item_for cut (eval_literal k) (typ_sem env v) Cbor.cbor_map_empty
   | _ -> ()
 
@@ -210,6 +210,9 @@ let rec rewrite_typ
     let (base', res) = rewrite_typ fuel' base in
     // NOTE: I cannot rewrite `range` because it is matched syntactically
     (TSize base' range, res)
+  | TNamed name t ->
+    let (t', res) = rewrite_typ fuel' t in
+    (TNamed name t', res)
   | _ -> (t, true)
 
 and rewrite_group
@@ -312,6 +315,7 @@ let rec rewrite_typ_bounded
   match t with
   | TChoice (TChoice t1 t2) t3 ->
     rewrite_typ_bounded env fuel' (TChoice t1 (TChoice t2 t3))
+  | TNamed _ t
   | TChoice t (TElem EAlwaysFalse)
   | TChoice (TElem EAlwaysFalse) t
   | TSize t _
@@ -418,7 +422,7 @@ let rewrite_group_correct_postcond
     end
   end
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 128 --ifuel 8"
 
 #restart-solver
 let rec rewrite_typ_correct
@@ -441,6 +445,7 @@ let rec rewrite_typ_correct
   match t with
   | TChoice (TChoice t1 t2) t3 ->
     rewrite_typ_correct env fuel' (TChoice t1 (TChoice t2 t3))
+  | TNamed _ t
   | TSize t _
   | TChoice t (TElem EAlwaysFalse)
   | TChoice (TElem EAlwaysFalse) t
@@ -485,6 +490,7 @@ and rewrite_group_correct
     if is_map_group && GConcat? t2
     then begin
       let GConcat t2 t3 = t2 in
+      Spec.map_group_concat_assoc (map_group_sem env t1) (map_group_sem env t2) (map_group_sem env t3);
       rewrite_group_correct env fuel' is_map_group (GConcat (GConcat t1 t2) t3)
     end else if (not is_map_group) && GConcat? t1
     then begin
@@ -653,6 +659,7 @@ let rec split_interval
       | Some mi -> (lo <= mi /\ mi < hi)
     )
 = match t with
+  | TNamed _ t -> split_interval e is_int lo hi t
   | TChoice t1 t2 ->
     begin match split_interval e is_int lo hi t1 with
     | None -> split_interval e is_int lo hi t2
@@ -672,7 +679,7 @@ let rec split_interval
       then begin match extract_int_value e t' with
       | Some ti ->
         let i = eval_int_value ti in
-        if i < 0 then None else Some (0, pow2 (let open FStar.Mul in 8 * i) - 1)
+        if i < 0 then None else Some (0, pow2 (8 * i) - 1)
       | _ -> None
       end
       else begin match extract_range_value e t' with
@@ -870,7 +877,11 @@ let rec array_group_is_nonempty
   then ROutOfFuel
   else let fuel' : nat = fuel - 1 in
   match g with
-  | GDef n -> array_group_is_nonempty fuel' env (env.e_env n)
+  | GDef n ->
+    begin match env.e_sem_env.se_bound n with
+    | Some NGroup -> array_group_is_nonempty fuel' env (env.e_env n)
+    | Some NType -> RSuccess ()
+    end
   | GOneOrMore g' -> array_group_is_nonempty fuel' env g'
   | GZeroOrOne _ -> RFailure "array_group_is_nonempty: GZeroOrOne"
   | GZeroOrMore _ -> RFailure "array_group_is_nonempty: GZeroOrMore"
@@ -888,7 +899,7 @@ let rec array_group_is_nonempty
   | GElem _ _ _
   | GAlwaysFalse -> RSuccess ()
 
-#push-options "--z3rlimit 64 --split_queries always --query_stats --fuel 4 --ifuel 8"
+#push-options "--z3rlimit 128 --query_stats --fuel 4 --ifuel 8"
 
 #restart-solver
 let rec array_group_concat_unique_strong
@@ -954,12 +965,12 @@ let rec array_group_concat_unique_strong
   | _ ->
     begin match destruct_group g2 with
     | (GDef i, g2r) ->
-      let g2' = GConcat (env.e_env i) g2r in
-      Spec.array_group_concat_equiv
-        (fst (Ghost.reveal (env.e_sem_env.se_env i) <: (Spec.array_group None & Spec.map_group)))
-        (array_group_sem env.e_sem_env (env.e_env i))
-        (array_group_sem env.e_sem_env g2r)
-        (array_group_sem env.e_sem_env g2r);
+      let ei = match env.e_sem_env.se_bound i with
+      | Some NType -> GElem false (TElem EAny) (env.e_env i)
+      | Some NGroup -> env.e_env i
+      in
+      let g2' = GConcat ei g2r in
+      assert (Spec.array_group_equiv (array_group_sem env.e_sem_env g2) (array_group_sem env.e_sem_env g2'));
       rewrite_group_correct env.e_sem_env fuel false g2';
       let (g22, res_) = rewrite_group fuel false g2' in
       Spec.array_group_concat_unique_strong_equiv
@@ -1019,6 +1030,10 @@ let rec array_group_concat_unique_strong
       end
     end
 
+#pop-options
+
+#push-options "--z3rlimit 16 --query_stats --fuel 2 --ifuel 2"
+
 #restart-solver
 let rec array_group_concat_unique_weak
   (array_group_disjoint: array_group_disjoint_t)
@@ -1054,10 +1069,12 @@ let rec array_group_concat_unique_weak
     if not (RSuccess? res3)
     then res3
     else begin
+      assert (array_group_sem env.e_sem_env (GConcat g1r g2) == Spec.array_group_concat (array_group_sem env.e_sem_env g1r) (array_group_sem env.e_sem_env g2));
       Spec.array_group_concat_unique_weak_choice_left
         (array_group_sem env.e_sem_env g1l)
         (array_group_sem env.e_sem_env g1r)
         (array_group_sem env.e_sem_env g2);
+      assert (Spec.array_group_concat_unique_weak (Spec.array_group_choice (array_group_sem env.e_sem_env g1l) (array_group_sem env.e_sem_env g1r)) (array_group_sem env.e_sem_env g2));
       RSuccess ()
     end
   | _ ->
@@ -1074,6 +1091,7 @@ let rec array_group_concat_unique_weak
           (array_group_sem env.e_sem_env g1)
           (array_group_sem env.e_sem_env g2l)
           (array_group_sem env.e_sem_env g2r);
+        assert (Spec.array_group_concat_unique_weak (array_group_sem env.e_sem_env g1) (Spec.array_group_choice (array_group_sem env.e_sem_env g2l) (array_group_sem env.e_sem_env g2r)));
         RSuccess ()
       end
     | _ ->
@@ -1087,6 +1105,10 @@ let rec array_group_concat_unique_weak
         if not (RSuccess? res2)
         then res2
         else begin
+          assert (array_group_sem env.e_sem_env g1 == Spec.array_group_concat (array_group_sem env.e_sem_env g1l) (array_group_sem env.e_sem_env g1r));
+          assert (Spec.array_group_concat_unique_weak (array_group_sem env.e_sem_env g1l) (array_group_sem env.e_sem_env g1r));
+          assert (array_group_sem env.e_sem_env (GConcat g1r g2) == Spec.array_group_concat (array_group_sem env.e_sem_env g1r) (array_group_sem env.e_sem_env g2));
+          assert (Spec.array_group_concat_unique_weak (array_group_sem env.e_sem_env g1l) (Spec.array_group_concat (array_group_sem env.e_sem_env g1r) (array_group_sem env.e_sem_env g2)));
           Spec.array_group_concat_unique_weak_concat_left
             (array_group_sem env.e_sem_env g1l)
             (array_group_sem env.e_sem_env g1r)
@@ -1116,11 +1138,13 @@ let rec array_group_concat_unique_weak
         else begin
           match g' with
           | GZeroOrMore _ ->
+            assert (array_group_sem env.e_sem_env g' == Spec.array_group_zero_or_more (array_group_sem env.e_sem_env g));
             Spec.array_group_concat_unique_weak_zero_or_more_left
               (array_group_sem env.e_sem_env g)
               (array_group_sem env.e_sem_env g2);
             RSuccess ()
           | GOneOrMore _ ->
+            assert (array_group_sem env.e_sem_env g' == Spec.array_group_one_or_more (array_group_sem env.e_sem_env g));
             Spec.array_group_concat_unique_weak_one_or_more_left
               (array_group_sem env.e_sem_env g)
               (array_group_sem env.e_sem_env g2);
@@ -1137,6 +1161,7 @@ let rec array_group_concat_unique_weak
           Spec.array_group_concat_unique_weak_zero_or_one_left
             (array_group_sem env.e_sem_env g)
             (array_group_sem env.e_sem_env g2);
+          assert (Spec.array_group_concat_unique_weak (Spec.array_group_zero_or_one (array_group_sem env.e_sem_env g)) (array_group_sem env.e_sem_env g2));
           RSuccess ()
         end
       end
@@ -1218,7 +1243,24 @@ let spec_map_group_footprint_choice_or_concat
     spec_map_group_footprint env (MGConcat g1 g2) == (Ghost.hide ((spec_map_group_footprint env g1) `Spec.map_constraint_choice` (spec_map_group_footprint env g2)))
   )
 
-#push-options "--z3rlimit 64 --ifuel 8 --fuel 2 --split_queries always --query_stats"
+#push-options "--z3rlimit 128 --ifuel 8 --fuel 2 --query_stats"
+
+let map_constraint_included_mcor
+  (env: sem_env)
+  (s1 s2: Spec.map_constraint)
+  (te1 te2: map_constraint)
+: Lemma
+  (requires
+    bounded_map_constraint env.se_bound te1 /\
+    bounded_map_constraint env.se_bound te2 /\
+    Spec.map_constraint_included s1 (map_constraint_sem env te1) /\
+    Spec.map_constraint_included s2 (map_constraint_sem env te2)
+  )
+  (ensures
+    bounded_map_constraint env.se_bound (MCOr te1 te2) /\
+    Spec.map_constraint_included (Spec.map_constraint_choice s1 s2) (map_constraint_sem env (MCOr te1 te2))
+  )
+= ()
 
 #restart-solver
 let rec map_group_footprint'
@@ -1234,7 +1276,7 @@ let rec map_group_footprint'
   | MGAlwaysFalse ->
     let res = RSuccess MCFalse in
     assert (map_group_footprint'_postcond env.e_sem_env g res); (| res, () |)
-  | MGMatch cut key value
+  | MGMatch cut _ key value
     ->
     let res = RSuccess (MCKeyValue (TElem (ELiteral key)) (if cut then TElem EAny else value)) in
     assert (map_group_footprint'_postcond env.e_sem_env g res); (| res, () |)
@@ -1262,6 +1304,7 @@ let rec map_group_footprint'
         let s1 = (spec_map_group_footprint env.e_sem_env g1) in
         let s2 = (spec_map_group_footprint env.e_sem_env g2) in
         let te' = MCOr te1 te2 in
+        map_constraint_included_mcor env.e_sem_env s1 s2 te1 te2;
         map_group_footprint'_postcond_intro_success env.e_sem_env g te' (Spec.map_constraint_choice s1 s2);
         (| RSuccess (te'),  () |)
       | res -> (| ROutOfFuel, map_group_footprint'_postcond_intro_out_of_fuel env.e_sem_env g (ROutOfFuel) () () |)

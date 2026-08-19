@@ -5,7 +5,11 @@ typedef UINT8 BYTE;
 typedef UINT8 UCHAR;
 
 extern probe ProbeAndCopy
+extern probe (READ UINT16) ProbeAndReadU16
+extern probe (WRITE UINT16) ProbeAndWriteU16
 extern probe (READ UINT32) ProbeAndReadU32
+extern probe (WRITE UINT32) ProbeAndWriteU32
+extern probe (READ UINT64) ReadU64
 extern probe (WRITE UINT64) WriteU64
 extern probe (INIT) ProbeInit
 extern PURE UINT64 UlongToPtr(UINT32 ptr)

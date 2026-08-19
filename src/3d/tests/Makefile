@@ -12,24 +12,24 @@ FSTAR_EXE ?= fstar.exe
 
 3D_Z3_EXECUTABLE ?= z3-4.13.3
 
-ifeq (,$(KRML_HOME))
-  KRML_HOME := $(realpath ../../../../karamel)
-endif
+EVERPARSE_SRC_PATH := $(EVERPARSE_HOME)/src
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
+
+INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffer $(EVERPARSE_HOME)/src/lowparse
+
+FSTAR_OPTIONS += $(addprefix --include , $(INCLUDES))
+
+positive_tests:=$(filter-out $(wildcard FAIL*.3d) FieldDependence0.3d ActAndCheck.3d,$(wildcard *.3d))
 ifeq ($(OS),Windows_NT)
-  KRML_HOME := $(shell cygpath -m "$(KRML_HOME)")
+  # UlongToPtr is defined in Windows DLLs, conflicts with those examples
+  exclude_modules := FineGrainedProbe FineGrainedProbeSpecialize Specialize2 Specialize3 Specialize5 Specialize6
+  positive_tests:=$(filter-out $(addsuffix .3d,$(exclude_modules)),$(positive_tests))
 endif
-export KRML_HOME
-
-INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffer $(EVERPARSE_HOME)/src/lowparse $(KRML_HOME)/krmllib/obj $(KRML_HOME)/krmllib
-
-FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
-
-positive_tests=$(filter-out $(wildcard FAIL*.3d) FieldDependence0.3d ActAndCheck.3d,$(wildcard *.3d))
 positive_tests_nosuffix=$(basename $(positive_tests))
 modules_or_wrappers=$(positive_tests_nosuffix) $(addsuffix Wrapper,$(positive_tests_nosuffix))
 modules_static_assertions=$(addsuffix StaticAssertions.c, TestFieldPtr Align)
-modules_auto_static_assertions=$(addsuffix AutoStaticAssertions.c, Align Specialize2 Specialize3 Specialize5 Specialize6 FineGrainedProbe FineGrainedProbeSpecialize)
-module_extern_apis=$(addsuffix _ExternalAPI.h, Specialize2 Specialize3 Specialize5 Specialize6 FineGrainedProbe FineGrainedProbeSpecialize)
+modules_auto_static_assertions=$(addsuffix AutoStaticAssertions.c, $(filter-out $(exclude_modules),Align Specialize2 Specialize3 Specialize5 Specialize6 FineGrainedProbe FineGrainedProbeSpecialize))
+module_extern_apis=$(addsuffix _ExternalAPI.h, $(filter-out $(exclude_modules),Specialize2 Specialize3 Specialize5 Specialize6 FineGrainedProbe FineGrainedProbeSpecialize))
 clean_out_files=\
 	$(addsuffix .c,$(modules_or_wrappers)) \
 	$(modules_static_assertions) \
@@ -39,7 +39,17 @@ clean_out_files=\
 
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
-all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs probe iter z3-testgen-test exttype z3-testgen-probe-test specialize_test specialize_test2
+all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules \
+	 tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs \
+	 probe iter z3-testgen-test exttype z3-testgen-probe-test \
+	 use_error_handler_macro \
+	 save_hashes
+
+ifneq ($(OS),Windows_NT)
+# Tests disabled on Windows because of UlongToPtr conflict
+# probe_error_handler_macro disabled on Windows because sys/mman.h is not available
+all: specialize_test specialize_test2 specialize_test_error_handler_macro specialize_tagged_union_array probe_error_handler_macro
+endif
 
 .PHONY: exttype
 
@@ -82,6 +92,30 @@ probe:
 
 .PHONY: specialize_test
 specialize_test:
+	+$(MAKE) -C $@
+
+.PHONY: specialize_test2
+specialize_test2:
+	+$(MAKE) -C $@
+
+.PHONY: specialize_tagged_union_array
+specialize_tagged_union_array:
+	+$(MAKE) -C $@
+
+.PHONY: use_error_handler_macro
+use_error_handler_macro:
+	+$(MAKE) -C $@
+
+.PHONY: specialize_test_error_handler_macro
+specialize_test_error_handler_macro:
+	+$(MAKE) -C $@
+
+.PHONY: probe_error_handler_macro
+probe_error_handler_macro:
+	+$(MAKE) -C $@ 3D_Z3_EXECUTABLE=$(3D_Z3_EXECUTABLE)
+
+.PHONY: save_hashes
+save_hashes:
 	+$(MAKE) -C $@
 
 batch-test-negative: $(addsuffix .negtest,$(wildcard FAIL*.3d))
@@ -146,10 +180,18 @@ batch-cleanup-test:
 %.interpret: %.3d
 	$(3D) --batch $^
 
-clean:
-	rm -rf out.batch out.fail.batch out.cleanup out.elf out.inplace-hash out.pos test-cpp.exe out.batch-interpret out.z3-testgen
-	make -C specialize_test clean
-	make -C specialize_test2 clean
-	make -C probe clean
+%.clean:
+	make -C $(basename $@) clean
+
+.PHONY: %.clean
+
+clean-files:
+	rm -rf out.batch out.fail.batch out.cleanup out.elf out.inplace-hash out.pos test-cpp.exe out.batch-interpret out.z3-testgen *.out *.err
+
+.PHONY: clean-files
+
+clean: clean-files specialize_test.clean specialize_test2.clean probe.clean extern.clean exttype.clean funptr.clean ifdefs.clean iter/coarse.clean iter/fine.clean modules.clean output_types.clean static.clean tcpip.clean specialize_tagged_union_array.clean save_hashes.clean
+
+clean: use_error_handler_macro.clean specialize_test_error_handler_macro.clean probe_error_handler_macro.clean
 
 .PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules tcpip extern %.interpret batch-interpret-test static funptr ifdefs

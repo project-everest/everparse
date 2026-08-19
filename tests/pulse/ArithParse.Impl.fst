@@ -797,14 +797,17 @@ fn value_lens
     (eq_as_slprop U64.t value value)
     (vmatch_dep_proj2 (vmatch_synth rel_base synth_expr) xh res ph);
   unfold (vmatch_ignore pl ph);
-  ghost fn aux ()
-  requires emp ** eq_as_slprop U64.t value value
-  ensures vmatch_ignore pl ph
+  intro
+    (Trade.trade
+      (eq_as_slprop U64.t value value)
+      (vmatch_ignore pl ph)
+    )
+    #emp
+    fn _
   {
     unfold (eq_as_slprop U64.t value value);
     fold (vmatch_ignore pl ph);
   };
-  Trade.intro _ _ _ aux;
   Trade.trans (vmatch_dep_proj2 (vmatch_synth rel_base synth_expr) xh res ph) _ _;
   res
 }
@@ -908,14 +911,16 @@ fn plus_lens
 {
   let count = get_header_type xh;
   let res = EUPlus count pl;
-  ghost fn aux ()
-  requires emp ** 
-    (pure (eq2 #nat (count_payload xh) (U8.v count)) ** pts_to_serialized_with_perm (serialize_nlist (count_payload xh) serialize_expr) pl ph)
-  ensures pts_to_serialized_with_perm (serialize_nlist (count_payload xh) serialize_expr) pl ph
+  intro
+    (Trade.trade
+      (pure (eq2 #nat (count_payload xh) (U8.v count)) ** pts_to_serialized_with_perm (serialize_nlist (count_payload xh) serialize_expr) pl ph)
+      (pts_to_serialized_with_perm (serialize_nlist (count_payload xh) serialize_expr) pl ph)
+    )
+    #emp
+    fn _
   {
     ()
   };
-  Trade.intro _ _ _ aux;
   Trade.rewrite_with_trade
     (pure (eq2 #nat (count_payload xh) (U8.v count)) ** pts_to_serialized_with_perm (serialize_nlist (count_payload xh) serialize_expr) pl ph)
     (vmatch_dep_proj2 (vmatch_synth rel_base synth_expr) xh res ph);

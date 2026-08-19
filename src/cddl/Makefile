@@ -6,15 +6,20 @@ tool.do: pulse.do
 
 demo.do: tool.do
 
-test.do: tool.do
+tests.do: tool.do
 
-unit-tests.do: tool.do
-
-test-rust.do: tool.do
-
-test: test.do demo.do unit-tests.do test-rust.do
+test: tests.do
 
 %.do:
 	+$(MAKE) -C $(basename $@)
 
 .PHONY: all test %.do
+
+clean: spec.clean pulse.clean tool.clean tests.clean
+
+.PHONY: clean
+
+%.clean:
+	+$(MAKE) -C $(basename $@) clean
+
+.PHONY: %.clean

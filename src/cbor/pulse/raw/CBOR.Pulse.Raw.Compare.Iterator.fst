@@ -56,13 +56,14 @@ fn lex_compare_iterator
     let mut pi2 = x2.v;
     let mut pres = 0s;
     let mut pfin1 = false;
+    let mut pmeasure = Ghost.hide (List.Tot.length (Ghost.reveal v1)); // fstar2 only
     Trade.refl (cbor_raw_iterator_match elt_match ser_match x1.p x1.v v1);
     Trade.refl (cbor_raw_iterator_match elt_match ser_match x2.p x2.v v2);
     while (
       let res = !pres;
       let fin1 = !pfin1;
       (res = 0s && not fin1)
-    ) invariant cont . exists* i1 i2 l1 l2 fin1 res . (
+    ) invariant exists* i1 i2 l1 l2 fin1 res m . (
       pts_to pi1 i1 ** cbor_raw_iterator_match elt_match ser_match x1.p i1 l1 **
       Trade.trade
         (cbor_raw_iterator_match elt_match ser_match x1.p i1 l1) 
@@ -73,16 +74,21 @@ fn lex_compare_iterator
         (cbor_raw_iterator_match elt_match ser_match x2.p x2.v v2) **
       pts_to pres res **
       pts_to pfin1 fin1 **
+      pts_to pmeasure m **
       pure (
+        Ghost.reveal m == List.Tot.length l1 /\
         same_sign (lex_compare compare v1 v2) (if res = 0s then lex_compare compare l1 l2 else I16.v res) /\
-        (res == 0s ==> (Nil? l1 == Nil? l2 /\ fin1 == Nil? l1)) /\
-        cont == (res = 0s && Cons? l1)
+        (res == 0s ==> (Nil? l1 == Nil? l2 /\ fin1 == Nil? l1))
       )
-    ) {
+    )
+      decreases (Ghost.reveal (!pmeasure)) // fstar2 only
+    {
       let elt1 = cbor_raw_iterator_next elt_match ser_match ser_next pi1;
       Trade.trans _ _ (cbor_raw_iterator_match elt_match ser_match x1.p x1.v v1);
       let elt2 = cbor_raw_iterator_next elt_match ser_match ser_next pi2;
       Trade.trans _ _ (cbor_raw_iterator_match elt_match ser_match x2.p x2.v v2);
+      with mm . assert (pts_to pmeasure mm); // fstar2 only
+      pmeasure := Ghost.hide (Ghost.reveal mm - 1); // fstar2 only
       with p1 hd1 . assert (elt_match p1 elt1 hd1);
       let pelt1 = Mkwith_perm elt1 p1;
       Trade.rewrite_with_trade

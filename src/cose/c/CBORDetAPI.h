@@ -5,7 +5,7 @@
 
 #include "krmllib.h"
 
-#include "CBORDetAbstract.h"
+#include "CBORDetType.h"
 
 #define CBOR_MAJOR_TYPE_SIMPLE_VALUE (7U)
 
@@ -27,16 +27,6 @@
 
 #define MAX_SIMPLE_VALUE_ADDITIONAL_INFO (23U)
 
-typedef struct cbor_det_t_s cbor_det_t;
-
-typedef struct cbor_det_map_entry_t_s cbor_det_map_entry_t;
-
-typedef struct cbor_det_array_iterator_t_s cbor_det_array_iterator_t;
-
-typedef struct cbor_det_map_iterator_t_s cbor_det_map_iterator_t;
-
-extern cbor_det_t dummy_cbor_det_t(void);
-
 extern cbor_det_t cbor_det_reset_perm(cbor_det_t x0);
 
 extern size_t cbor_det_validate(uint8_t *input, size_t input_len);
@@ -57,7 +47,9 @@ extern cbor_det_t cbor_det_mk_int64(uint8_t x0, uint64_t x1);
 
 extern cbor_det_t cbor_det_mk_tagged(uint64_t x0, cbor_det_t *x1);
 
-extern cbor_det_t cbor_det_mk_string_from_arrayptr(uint8_t x0, uint8_t *x1, uint64_t x2);
+extern bool cbor_det_mk_byte_string_from_arrayptr(uint8_t *x0, uint64_t x1, cbor_det_t *x2);
+
+extern bool cbor_det_mk_text_string_from_arrayptr(uint8_t *x0, uint64_t x1, cbor_det_t *x2);
 
 extern cbor_det_t cbor_det_mk_array_from_array(cbor_det_t *x0, uint64_t x1);
 
@@ -125,6 +117,8 @@ extern bool
 cbor_det_serialize_map_insert_to_array(uint8_t *x0, size_t x1, size_t x2, size_t x3);
 
 extern size_t cbor_det_serialize_map_to_array(uint64_t x0, uint8_t *x1, size_t x2, size_t x3);
+
+extern cbor_det_t dummy_cbor_det_t(void);
 
 
 #define CBORDetAPI_H_DEFINED

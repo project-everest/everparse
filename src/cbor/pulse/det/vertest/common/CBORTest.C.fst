@@ -9,7 +9,7 @@ module CborBase = CBOR.Pulse.API.Base
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let cbor_det_mk_string_from_array () =
-  Cbor.mk_string_from_array (Cbor.mk_string_from_slice (Cbor.cbor_det_mk_string_from_arrayptr ()))
+  CborBase.mk_string_from_array (CborBase.mk_string_from_slice (CborBase.mk_string_from_arrayptr_dispatch (Cbor.cbor_det_mk_byte_string_from_arrayptr ()) (Cbor.cbor_det_mk_text_string_from_arrayptr ())) (Cbor.dummy_cbor_det_t ()))
 
 fn main
   (_: unit)

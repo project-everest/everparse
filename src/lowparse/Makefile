@@ -12,10 +12,9 @@ include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
 ALREADY_CACHED := *,-LowParse,
 
-include $(EVERPARSE_SRC_PATH)/common.Makefile
+clean_rules += clean-pulse
 
-clean:
-	rm -rf *.checked *.source .depend
+include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 tot: $(filter LowParse.Tot.%,$(ALL_CHECKED_FILES))
 
@@ -32,6 +31,10 @@ low: $(filter LowParse.Low.%,$(ALL_CHECKED_FILES))
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS) $(OTHERFLAGS)
 
+clean-pulse:
+	+$(MAKE) -C pulse clean
+
+.PHONY: clean-pulse
 
 # For F* testing purposes, cf. FStarLang/FStar@fc30456a163c749843c50ee5f86fa22de7f8ad7a
 

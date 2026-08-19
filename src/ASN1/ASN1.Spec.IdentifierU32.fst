@@ -6,7 +6,6 @@ open LowParse.Tot.Base
 open LowParse.Tot.Combinators
 open LowParse.Tot.Int
 
-open FStar.Mul
 
 module U8 = FStar.UInt8
 module U32 = FStar.UInt32
@@ -270,8 +269,8 @@ let parse_asn1_identifier_loop_immediate_terminate
 
 let parse_cast
   (t : eqtype)
-  (p1 : t -> Type0)
-  (p2 : t -> Type0)
+  (p1 : t -> prop)
+  (p2 : t -> prop)
   (lem : (x : t -> (Lemma (p1 x ==> p2 x))))
   (#k : parser_kind)
   (p : parser k (x: t {p1 x}))
@@ -285,8 +284,8 @@ let parse_cast
 
 let parse_cast_inverse
   (t : eqtype)
-  (p1 : t -> Type0)
-  (p2 : t -> Type0)
+  (p1 : t -> prop)
+  (p2 : t -> prop)
   (lem : (x : t -> (Lemma (p1 x ==> p2 x))))
   (#k : parser_kind)
   (p : parser k (x : t {p1 x}))
@@ -481,7 +480,8 @@ let parse_asn1_identifier_head'
   (requires (partial_state_bound_f32 state = 0))
   (ensures (fun _ -> True))
 = let c = parse_asn1_identifier_loop 0 in
-  let _ = Squash.give_proof (Classical.Sugar.forall_elim state (Squash.get_proof (parse_loop_continuation_spec 0 c))) in
+  assert (parse_loop_continuation_spec 0 c);
+  assert (and_then_cases_injective (c state));
   weaken (parse_asn1_identifier_head_kind)  
     (parse_u8
     `and_then`
@@ -788,7 +788,11 @@ let encode_asn1_first_byte
            | _ -> 3uy
            )
   in
+  assert (U8.v b0 <= 3);
   let b0' = U8.shift_left b0 6ul in
+  UInt.shift_left_value_lemma #8 (U8.v b0) 6;
+  assert_norm (pow2 6 == 64);
+  assert_norm (pow2 8 == 256);
   assert (U8.v b0' <= 128 + 64);
   let b1 = (match id_flag with
            | PRIMITIVE -> 0uy
@@ -801,7 +805,9 @@ let encode_asn1_first_byte
   U8.add b0'
          (U8.add b1'
                  b)
+#pop-options
 
+#push-options "--fuel 1 --ifuel 2 --z3rlimit 64"
 let lemma_encode_asn1_first_byte_inverse
   (buf : byte)
 : Lemma (ensures
@@ -817,7 +823,11 @@ let lemma_encode_asn1_first_byte_inverse
              )
   in
   assert (b0 = (U8.shift_right buf) 6ul);
+  assert (U8.v b0 <= 3);
   let b0' = U8.shift_left b0 6ul in
+  UInt.shift_left_value_lemma #8 (U8.v b0) 6;
+  assert_norm (pow2 6 == 64);
+  assert_norm (pow2 8 == 256);
   assert (U8.v b0' <= 128 + 64);
   let b1 = (match id_flag with
            | PRIMITIVE -> 0uy

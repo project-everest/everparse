@@ -1,7 +1,7 @@
 module Options
 open HashingOptions
 open FStar.All
-open FStar.ST
+
 module U8 = FStar.UInt8
 module OS = OS
 open Utils
@@ -35,6 +35,17 @@ let inplace_hashes : ref (list vstring) = alloc []
 let input_file : ref (list string) = alloc []
 let json : ref bool = alloc false
 let no_copy_everparse_h : ref bool = alloc false
+let hoist_locals : ref bool = alloc false
+let goto_for_early_return : ref bool = alloc false
+let blank_lines : ref bool = alloc false
+let line_comments : ref bool = alloc false
+let valid_init_locals : string -> Tot bool = function
+| "c23"
+| "c99"
+| "c89"
+  -> true
+| _ -> false
+let init_locals : ref (option (valid_string valid_init_locals)) = alloc None
 let no_produce_testcases_c : ref bool = alloc false
 let output_dir : ref (option vstring) = alloc None
 let save_hashes : ref bool = alloc false
@@ -50,6 +61,7 @@ let valid_micro_step (str: string) : Tot bool = match str with
   | "copy_clang_format"
   | "copy_everparse_h"
   | "emit_config"
+  | "save_hashes"
     -> true
   | _ -> false
 let micro_step : ref (option (valid_string valid_micro_step)) = alloc None
@@ -123,6 +135,8 @@ let z3_branch_depth : ref (option vstring) = alloc None
 let z3_options : ref (option vstring) = alloc None
 
 let z3_skip_c_initializers: ref bool = alloc false
+
+let use_error_handler_macro : ref bool = alloc false
 
 let char_le (c1 c2: FStar.Char.char) : Tot bool =
   FStar.Char.int_of_char c1 <= FStar.Char.int_of_char c2
@@ -343,6 +357,9 @@ let display_usage_1 (options: ref (list cmd_option)) : ML unit =
     ;
   FStar.IO.print_string (Printf.sprintf "\nCurrent options are:%s\n" (compute_current_options options []))
 
+let _ : nonempty ((unit -> ML unit) & (list string -> ML string) & list fstar_opt) =
+  nonempty_intro ((fun _ -> ()), (fun _ -> ""), [])
+
 let (display_usage_2, compute_options_2, fstar_options) =
   let options : ref (list cmd_option) = alloc [] in
   let display_usage () = display_usage_1 options in
@@ -360,6 +377,11 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "emit_output_types_defs" (OptBool emit_output_types_defs) "Emit definitions of output types in a .h file" [];
     CmdOption "emit_smt_encoding" (OptBool emit_smt_encoding) "Emit an SMT encoding of parser specifications" [];
     CmdOption "fstar" (OptStringOption "executable" always_valid fstar_exe) "The F* command to run. Default: 'fstar.exe'" [];
+    CmdOption "blank_lines" (OptBool blank_lines) "Insert blank lines between declaration blocks for readability in generated C code (--batch only)" ["batch"];
+    CmdOption "goto_for_early_return" (OptBool goto_for_early_return) "Use goto for early return in generated C code (--batch only)" ["batch"];
+    CmdOption "hoist_locals" (OptBool hoist_locals) "Hoist local variable declarations to the top of each C function (--batch only)" ["batch"];
+    CmdOption "line_comments" (OptBool line_comments) "Use C line comments (// ...) instead of block comments (/* ... */) in generated C code (--batch only)" ["batch"];
+    CmdOption "init_locals" (OptStringOption "c23|c99|c89" valid_init_locals init_locals) "Initialize all local variable declarations with zero values" [];
     CmdOption "input_stream" (OptStringOption "buffer|extern|static" valid_input_stream_binding input_stream_binding) "Input stream binding (default buffer)" [];
     CmdOption "input_stream_include" (OptStringOption ".h file" always_valid input_stream_include) "Include file defining the EverParseInputStreamBase type (only for --input_stream extern or static)" [];
     CmdOption "no_copy_everparse_h" (OptBool no_copy_everparse_h) "Do not Copy EverParse.h (--batch only)" [];
@@ -374,7 +396,8 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "skip_c_makefiles" (OptBool skip_c_makefiles) "Do not Generate Makefile.basic, Makefile.include" [];
     CmdOption "skip_o_rules" (OptBool skip_o_rules) "With --makefile, do not generate rules for .o files" [];
     CmdOption "test_checker" (OptStringOption "parser name" always_valid test_checker) "produce a test checker executable" [];
-    CmdFStarOption ((let open Getopt in noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0)), "Show this version of EverParse");
+    CmdFStarOption ((let open Getopt in noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018-2025 Microsoft Corporation\nUsing F* %s\nUsing Karamel %s\n" Version.everparse_version Version.fstar_commit Version.karamel_commit); exit 0)), "Show this version of EverParse");
+    CmdFStarOption ((let open Getopt in noshort, "short_version", ZeroArgs (fun _ -> FStar.IO.print_string Version.everparse_version; exit 0)), "Show the version number of EverParse, without any other information");
     CmdOption "equate_types" (OptList "an argument of the form A,B, to generate asserts of the form (A.t == B.t)" valid_equate_types equate_types_list) "Takes an argument of the form A,B and then for each entrypoint definition in B, it generates an assert (A.t == B.t) in the B.Types file, useful when refactoring specs, you can provide multiple equate_types on the command line" [];
     CmdOption "z3_branch_depth" (OptStringOption "nb" always_valid z3_branch_depth) "enumerate branch choices up to depth nb (default 0)" [];
     CmdOption "z3_diff_test" (OptStringOption "parser1,parser2" valid_equate_types z3_diff_test) "produce differential tests for two parsers" [];
@@ -383,12 +406,13 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "z3_options" (OptStringOption "'options to z3'" always_valid z3_options) "command-line options to pass to z3 for test case generation (does not affect verification of generated F* code)" [];
     CmdOption "z3_skip_testcases_c" (OptBool no_produce_testcases_c) "skip generating test cases to <output directory>/testcases.c" [];
     CmdOption "z3_skip_c_initializers" (OptBool z3_skip_c_initializers) "Do not use C field initializers for test cases" [];
+    CmdOption "use_error_handler_macro" (OptBool use_error_handler_macro) "Use the C macro `EverParse3dErrorHandlerMacro` instead of the dynamic error handler" [];
     CmdOption "z3_test" (OptStringOption "parser name" always_valid z3_test) "produce positive and/or negative test cases for a given parser" [];
     CmdOption "z3_test_mode" (OptStringOption "pos|neg|all" valid_z3_test_mode z3_test_mode) "produce positive, negative, or all kinds of test cases (default all)" [];
     CmdOption "z3_use_ptr" (OptBool use_ptr_for_probe) "use pointers rather than array indices for probes" [];
     CmdOption "z3_witnesses" (OptStringOption "nb" always_valid z3_witnesses) "ask for nb distinct test witnesses per branch case (default 1)" [];
     CmdOption "__arg0" (OptStringOption "executable name" always_valid arg0) "executable name to use for the help message" [];
-    CmdOption "__micro_step" (OptStringOption "verify|extract|copy_clang_format|copy_everparse_h|emit_config" valid_micro_step micro_step) "micro step" [];
+    CmdOption "__micro_step" (OptStringOption "verify|extract|copy_clang_format|copy_everparse_h|emit_config|save_hashes" valid_micro_step micro_step) "micro step" [];
     CmdOption "__produce_c_from_existing_krml" (OptBool produce_c_from_existing_krml) "produce C from .krml files" [];
     CmdOption "__skip_deps" (OptBool skip_deps) "skip dependency analysis, assume all dependencies are specified on the command line" [];
   ];
@@ -459,6 +483,23 @@ let get_skip_c_makefiles () =
 let get_no_everparse_h () =
   !no_copy_everparse_h
 
+let get_hoist_locals () =
+  !hoist_locals
+
+let get_goto_for_early_return () =
+  !goto_for_early_return
+
+let get_blank_lines () =
+  !blank_lines
+
+let get_line_comments () =
+  !line_comments
+
+let get_init_locals () : ML (option string) =
+  match !init_locals with
+  | Some s -> Some (s <: string)
+  | None -> None
+
 let get_check_hashes () =
   if !batch then match !check_hashes with
   | None -> None
@@ -488,6 +529,7 @@ let get_micro_step _ =
   | Some "copy_clang_format" -> Some MicroStepCopyClangFormat
   | Some "copy_everparse_h" -> Some MicroStepCopyEverParseH
   | Some "emit_config" -> Some MicroStepEmitConfig
+  | Some "save_hashes" -> Some MicroStepSaveHashes
 
 let get_produce_c_from_existing_krml _ =
   !produce_c_from_existing_krml
@@ -512,8 +554,8 @@ let get_skip_o_rules _ =
 let get_json () =
   !json
 
-let get_input_stream_binding _ =
-  let get_include () =
+let get_input_stream_binding () : ML input_stream_binding_t =
+  let get_include () : ML string =
     match !input_stream_include with
     | None -> ""
     | Some s -> s
@@ -628,10 +670,25 @@ let get_produce_testcases_c () : ML bool =
 let get_z3_skip_c_initializers () : ML bool =
   !z3_skip_c_initializers
 
+let get_use_error_handler_macro () : ML bool =
+  !use_error_handler_macro
+
 let get_z3_use_ptr () : ML bool =
   !use_ptr_for_probe
 
 let get_fstar_exe () : ML string =
   match !fstar_exe with
-  | None -> "fstar.exe"
+  | None ->
+    begin match OS.getenv_opt "FSTAR_EXE" with
+    | Some s -> s
+    | None ->
+      let opt_fstar = OS.concat (OS.concat (OS.concat (OS.concat (OS.concat OS.everparse_home "opt") "FStar") "out") "bin") "fstar.exe" in
+      if OS.file_exists opt_fstar
+      then opt_fstar
+      else
+        let fstar_exe = OS.concat (OS.concat OS.everparse_home "bin") "fstar.exe" in
+        if OS.file_exists fstar_exe
+        then fstar_exe
+        else "fstar.exe"
+    end
   | Some s -> s

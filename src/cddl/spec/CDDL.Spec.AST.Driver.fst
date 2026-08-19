@@ -40,7 +40,6 @@ let check_name (env: name_env) (name: string) (k: name_env_elem) : Tot (option n
     then Some env
     else None
 
-open FStar.Mul
 
 [@@PpxDerivingShow]
 type topological_sort_result =

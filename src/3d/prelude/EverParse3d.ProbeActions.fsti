@@ -30,6 +30,10 @@ noextract
 val probe_and_read_at_offset_t (t:Type0) (size_t:U64.t) : Type0
 
 inline_for_extraction
+let probe_and_read_at_offset_uint8 = probe_and_read_at_offset_t U8.t 1uL
+inline_for_extraction
+let probe_and_read_at_offset_uint16 = probe_and_read_at_offset_t U16.t 2uL
+inline_for_extraction
 let probe_and_read_at_offset_uint32 = probe_and_read_at_offset_t U32.t 4uL
 inline_for_extraction
 let probe_and_read_at_offset_uint64 = probe_and_read_at_offset_t U64.t 8uL
@@ -43,78 +47,78 @@ inline_for_extraction
 let write_at_offset_uint64 = write_at_offset_t U64.t 8uL
 
 inline_for_extraction
-val probe_m (a:Type0) (requires_unread_dest:bool) (expect_zero_offsets:bool) : Type0
+val probe_m (a:Type0) (requires_unread_dest:bool) (expect_zero_offsets:bool) (use_error_handler:bool) : Type0
 
 inline_for_extraction
 noextract
-val probe_fn_incremental_as_probe_m (f:probe_fn_incremental) (bytes_to_read:U64.t)
-: probe_m unit true false
+val probe_fn_incremental_as_probe_m (#use_error_handler:bool) (f:probe_fn_incremental) (bytes_to_read:U64.t)
+: probe_m unit true false use_error_handler
 
 inline_for_extraction
 noextract
-val init_probe_m (f:init_probe_dest_t)
-: probe_m unit false false
+val init_probe_m (#use_error_handler:bool) (probe_struct_name:string) (f:init_probe_dest_t)
+: probe_m unit false false use_error_handler
 
 inline_for_extraction
 noextract
-val init_probe_size
-: probe_m U64.t true false
+val init_probe_size (#use_error_handler:bool)
+: probe_m U64.t true false use_error_handler
 
 inline_for_extraction
 noextract
-val write_at_offset_m (#t:Type0) (#w:U64.t { w <> 0uL }) (f:write_at_offset_t t w) (v:t)
-: probe_m unit true false
+val write_at_offset_m (#use_error_handler:bool) (#t:Type0) (#w:U64.t { w <> 0uL }) (f:write_at_offset_t t w) (v:t)
+: probe_m unit true false use_error_handler
 
 inline_for_extraction
 noextract
-val probe_and_read_at_offset_m (#t:Type0) (#s:U64.t { s <> 0uL }) (reader:probe_and_read_at_offset_t t s)
-: probe_m t true false
+val probe_and_read_at_offset_m (#use_error_handler:bool) (#t:Type0) (#s:U64.t { s <> 0uL }) (reader:probe_and_read_at_offset_t t s)
+: probe_m t true false use_error_handler
 
 inline_for_extraction
 noextract
-val seq_probe_m (#a:Type) (detail:string) (dflt:a) (m1:probe_m unit true false) (m2:probe_m a true false)
-: probe_m a true false
+val seq_probe_m (#use_error_handler:bool) (#a:Type) (detail:string) (dflt:a) (m1:probe_m unit true false use_error_handler) (m2:probe_m a true false use_error_handler)
+: probe_m a true false use_error_handler
 
 inline_for_extraction
 noextract
-val bind_probe_m (#a #b:Type) (detail:string) (dflt:b) (m1:probe_m a true false) (m2:a -> probe_m b true false)
-: probe_m b true false
+val bind_probe_m (#use_error_handler:bool) (#a #b:Type) (detail:string) (dflt:b) (m1:probe_m a true false use_error_handler) (m2:a -> probe_m b true false use_error_handler)
+: probe_m b true false use_error_handler
 
 inline_for_extraction
 noextract
-val probe_and_copy_init_sz (f:probe_fn_incremental)
-: probe_m unit true false
+val probe_and_copy_init_sz (#use_error_handler:bool) (f:probe_fn_incremental)
+: probe_m unit true false use_error_handler
 
 inline_for_extraction
 noextract
-val return_probe_m (#a:Type) (v:a)
-: probe_m a true false
+val return_probe_m (#use_error_handler:bool) (#a:Type) (v:a)
+: probe_m a true false use_error_handler
 
 inline_for_extraction
 noextract
-val skip_read (bytes_to_skip:U64.t)
-: probe_m unit true false
+val skip_read (#use_error_handler:bool) (bytes_to_skip:U64.t)
+: probe_m unit true false use_error_handler
 
 inline_for_extraction
 noextract
-val skip_write (bytes_to_skip:U64.t)
-: probe_m unit true false
+val skip_write (#use_error_handler:bool) (bytes_to_skip:U64.t)
+: probe_m unit true false use_error_handler
 
 
 inline_for_extraction
 noextract
-val fail
-: probe_m unit true false
+val fail (#use_error_handler:bool)
+: probe_m unit true false use_error_handler
 
 inline_for_extraction
 noextract
-val if_then_else (b:bool) (m0 m1:probe_m unit true false)
-: probe_m unit true false
+val if_then_else (#use_error_handler:bool) (b:bool) (m0 m1:probe_m unit true false use_error_handler)
+: probe_m unit true false use_error_handler
 
 inline_for_extraction
 noextract
-val probe_array (byte_len:U64.t) (probe_elem:probe_m unit true false)
-: probe_m unit true false
+val probe_array (#use_error_handler:bool) (byte_len:U64.t) (probe_elem:probe_m unit true false use_error_handler)
+: probe_m unit true false use_error_handler
 
 inline_for_extraction
 noextract
@@ -123,24 +127,26 @@ let pure_external_action t =
 
 inline_for_extraction
 noextract
-val lift_pure_external_action (#a:Type) (f:pure_external_action a)
-: probe_m a true false
+val lift_pure_external_action (#use_error_handler:bool) (#a:Type) (f:pure_external_action a)
+: probe_m a true false use_error_handler
 
 inline_for_extraction
 noextract
 val init_and_probe 
+      (#use_error_handler:bool)
       (#mz:bool)
+      (struct_name:string)
       (init:init_probe_dest_t)
-      (probe:probe_m unit true mz)
-: probe_m unit false mz
+      (probe:probe_m unit true mz use_error_handler)
+: probe_m unit false mz use_error_handler
 
 inline_for_extraction
 noextract
-val run_probe_m (#any:bool) 
-  (m:probe_m unit false any)
+val run_probe_m (#use_error_handler:bool) (#any:bool) 
+  (m:probe_m unit false any use_error_handler)
   (tn fn det:string)
   (ctxt:app_ctxt)
-  (err:error_handler)
+  (err:(if use_error_handler then error_handler else unit))
   (src:U64.t)
   (sz:U64.t)
   (dest:copy_buffer_t)

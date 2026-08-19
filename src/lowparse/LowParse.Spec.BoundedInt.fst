@@ -1,5 +1,7 @@
 module LowParse.Spec.BoundedInt
 
+include LowParse.Spec.Base
+include LowParse.Spec.Int // for parse_u16_kind
 open LowParse.Spec.Combinators // for make_total_constant_size_parser_precond
 
 module Seq = FStar.Seq
@@ -32,7 +34,7 @@ let decode_bounded_integer
   (b: bytes { Seq.length b == i } )
 : GTot (bounded_integer i)
 = E.lemma_be_to_n_is_bounded b;
-  M.pow2_le_compat 32 (8 `FStar.Mul.op_Star` i);
+  M.pow2_le_compat 32 (8 `op_Star` i);
   U32.uint_to_t (E.be_to_n b)
 
 let decode_bounded_integer_injective'
@@ -65,7 +67,7 @@ let parse_bounded_integer
 
 let parse_bounded_integer_spec i input =
   parser_kind_prop_equiv (parse_bounded_integer_kind i) (parse_bounded_integer i);
-  M.pow2_le_compat 32 (8 `FStar.Mul.op_Star` i);
+  M.pow2_le_compat 32 (8 `op_Star` i);
   match parse (parse_bounded_integer i) input with
   | None -> ()
   | Some (y, consumed) ->
@@ -110,7 +112,7 @@ let bounded_integer_of_le
   (b: bytes { Seq.length b == i } )
 : GTot (bounded_integer i)
 = E.lemma_le_to_n_is_bounded b;
-  M.pow2_le_compat 32 (8 `FStar.Mul.op_Star` i);
+  M.pow2_le_compat 32 (8 `op_Star` i);
   U32.uint_to_t (E.le_to_n b)
 
 let bounded_integer_of_le_injective'
@@ -141,6 +143,8 @@ let parse_bounded_integer_le
 i
 = bounded_integer_of_le_injective i;
   make_total_constant_size_parser i (bounded_integer i) (bounded_integer_of_le i)
+
+let parse_bounded_integer_le_eq i input = ()
 
 inline_for_extraction
 let synth_u16_le
@@ -256,39 +260,68 @@ let parse_u32_le_spec b =
   let b' = Seq.slice b 0 4 in
   E.lemma_le_to_n_is_bounded b'
 
+let parse_bounded_int32_coerce
+  (min: nat)
+  (max: nat { min <= max })
+  (x: parse_filter_refine (in_bounds min max))
+: GTot (bounded_int32 min max)
+= (x <: bounded_int32 min max)
+
 let parse_bounded_int32
   min max
 = let sz = log256' max in
-  (parse_bounded_integer sz `parse_filter` in_bounds min max) `parse_synth` (fun x -> (x <: bounded_int32 min max))
+  (parse_bounded_integer sz `parse_filter` in_bounds min max) `parse_synth` (parse_bounded_int32_coerce min max)
+
+let parse_bounded_int32_eq
+  min max input
+= let sz = log256' max in
+  parse_synth_eq
+    (parse_bounded_integer sz `parse_filter` in_bounds min max)
+    (parse_bounded_int32_coerce min max)
+    input;
+  parse_filter_eq (parse_bounded_integer sz) (in_bounds min max) input
 
 let serialize_bounded_int32
   min max
 = let sz = log256' max in
   serialize_synth
     (parse_bounded_integer sz `parse_filter` in_bounds min max)
-    (fun x -> (x <: bounded_int32 min max))
+    (parse_bounded_int32_coerce min max)
     (serialize_filter (serialize_bounded_integer sz) (in_bounds min max))
-    (fun x -> x)
+    (fun (x: bounded_int32 min max) -> x)
     ()
 
 let parse_bounded_int32_le
   min max
 = let sz = log256' max in
-  (parse_bounded_integer_le sz `parse_filter` in_bounds min max) `parse_synth` (fun x -> (x <: bounded_int32 min max))
+  (parse_bounded_integer_le sz `parse_filter` in_bounds min max) `parse_synth` (parse_bounded_int32_coerce min max)
+
+let parse_bounded_int32_le_eq
+  min max input
+= let sz = log256' max in
+  parse_synth_eq
+    (parse_bounded_integer_le sz `parse_filter` in_bounds min max)
+    (parse_bounded_int32_coerce min max)
+    input;
+  parse_filter_eq (parse_bounded_integer_le sz) (in_bounds min max) input
 
 let serialize_bounded_int32_le
   min max
 = let sz = log256' max in
   serialize_synth
     (parse_bounded_integer_le sz `parse_filter` in_bounds min max)
-    (fun x -> (x <: bounded_int32 min max))
+    (parse_bounded_int32_coerce min max)
     (serialize_filter (serialize_bounded_integer_le sz) (in_bounds min max))
-    (fun x -> x)
+    (fun (x: bounded_int32 min max) -> x)
     ()
 
 let parse_bounded_int32_le_fixed_size
   min max
 = parse_filter parse_u32_le (in_bounds min max)
+
+let parse_bounded_int32_le_fixed_size_eq
+  min max input
+= parse_filter_eq parse_u32_le (in_bounds min max) input
 
 let serialize_bounded_int32_le_fixed_size
   min max

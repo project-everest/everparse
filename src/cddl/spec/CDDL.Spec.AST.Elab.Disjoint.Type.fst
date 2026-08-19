@@ -7,7 +7,7 @@ module U64 = FStar.UInt64
 module Util = CBOR.Spec.Util
 module U8 = FStar.UInt8
 
-#push-options "--z3rlimit 256 --query_stats --split_queries always --fuel 4 --ifuel 8"
+#push-options "--z3rlimit 256 --query_stats --fuel 4 --ifuel 8"
 
 #restart-solver
 [@@"opaque_to_smt"]
@@ -17,6 +17,8 @@ let typ_disjoint
 : typ_disjoint_t
 = fun e t1 t2 ->
   match t1, t2 with
+  | TNamed _ t1, t2
+  | t1, TNamed _ t2 -> typ_disjoint e t1 t2
   | TElem EAlwaysFalse, _
   | _, TElem EAlwaysFalse -> RSuccess ()
   | TElem EAny, _
@@ -77,7 +79,7 @@ let typ_disjoint
         let j = eval_int_value v in
         if j < 0
         then RSuccess ()
-        else let vv = (let open FStar.Mul in 8 * j) in
+        else let vv = (8 * j) in
         if vv < 64
         then begin
           FStar.Math.Lemmas.pow2_lt_compat 64 vv;

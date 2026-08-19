@@ -52,7 +52,9 @@ $(everparse_makefile): $(wildcard src/*.3d) $(EVERPARSE_OUTPUT_DIR)
 	$(EVERPARSE_CMD) --makefile gmake --makefile_name $@ $(EVERPARSE_INPUT_DIR)/Test.3d
 
 # Include the generated Makefile
+ifeq (,$(filter clean,$(MAKECMDGOALS)))
 include $(everparse_makefile)
+endif
 
 #############################
 # Building the test program #

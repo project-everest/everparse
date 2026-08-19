@@ -1,9 +1,11 @@
 module LowParse.Spec.DER
+include LowParse.Spec.Int
+include LowParse.Spec.BoundedInt
+module Cast = FStar.Int.Cast
 open LowParse.Spec.Combinators
 open LowParse.Spec.SeqBytes.Base
 // include LowParse.Spec.VLData // for in_bounds
 
-open FStar.Mul
 
 module U8 = FStar.UInt8
 module UInt = FStar.UInt

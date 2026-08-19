@@ -4,7 +4,9 @@ set -e
 set -x
 
 SED=$(which gsed >/dev/null 2>&1 && echo gsed || echo sed)
+if [[ -z "$MAKE" ]] ; then
 MAKE="$(which gmake >/dev/null 2>&1 && echo gmake || echo make) $EVERPARSE_MAKE_OPTS"
+fi
 DATE=$(which gdate >/dev/null 2>&1 && echo gdate || echo date)
 
 # We do not read any of these from the environment. This builds a
@@ -12,7 +14,7 @@ DATE=$(which gdate >/dev/null 2>&1 && echo gdate || echo date)
 # FStar/ and karamel/.
 unset FSTAR_EXE
 unset FSTAR_HOME
-unset KRML_HOME
+unset KRML_EXE
 
 if [[ -z "$OS" ]] ; then
     OS=$(uname)
@@ -23,9 +25,14 @@ if [[ "$OS" = "Windows_NT" ]] ; then
    is_windows=true
 fi
 
+is_macos=false
+if [[ "$OS" = "Darwin" ]] ; then
+    is_macos=true
+fi
+
 fixpath () {
     if $is_windows ; then
-        cygpath -m "$1"
+        cygpath -m "$(echo "$1" | sed 's!\r!!g')"
     else
         echo "$1"
     fi
@@ -52,14 +59,6 @@ download () {
 
 platform=$(uname -m)
 
-if $is_windows ; then
-    LIBGMP10_DLL=$(which libgmp-10.dll)
-    if [[ -z "$LIBGMP10_DLL" ]] ; then
-        echo libgmp-10.dll is missing
-        exit 1
-    fi
-fi
-
 if [[ -d everparse ]] ; then
     echo everparse/ is already there, please make way
     exit 1
@@ -77,103 +76,45 @@ print_date_utc_of_iso_hr() {
     $DATE --utc --date="$1" '+%Y-%m-%d %H:%M:%S'
 }
 
-if [[ -z "$everparse_version" ]] ; then
-    everparse_version=$(sed 's!\r!!g' $EVERPARSE_HOME/version.txt)
-    everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
-    if everparse_commit=$(git show --no-patch --format=%h) ; then
-        if [[ $everparse_commit != $everparse_last_version ]] ; then
-            everparse_version=$everparse_commit
-        fi
-    fi
-fi
-
 make_everparse() {
-    #!!!!! NB: We admit queries when building F*, krml, and everparse!
-    export OTHERFLAGS='--admit_smt_queries true'
-    #!!!!!
-
     cp0=$(which gcp >/dev/null 2>&1 && echo gcp || echo cp)
     cp="$cp0 --preserve=mode,timestamps"
 
-    ## Setup F*. We need to locate a package, either it's already
-    # there or we try to build one from the repo.
-
-    FSTAR_PKG_ENVELOPE=__fstar-install
-    # The package extracts into a fstar directory, and everything
-    # is under there.
-    FSTAR_PKG_ROOT="$FSTAR_PKG_ENVELOPE/fstar"
-    FSTAR_SRC_PKG_ROOT=fstar-src/fstar
-    if ! [[ -d $FSTAR_PKG_ROOT ]] ; then
-        if [[ -d $FSTAR_SRC_PKG_ROOT ]] ; then
-            # build from a source package
-            dune_sandbox_opt=
-            if $is_windows ; then
-		# Dune crashes with "cannot delete sandbox." This fix comes
-		# from https://github.com/ocaml/dune/issues/8228#issuecomment-1642104172
-                dune_sandbox_opt=DUNE_CONFIG__BACKGROUND_SANDBOXES=disabled
-            fi
-            env $dune_sandbox_opt $MAKE -C $FSTAR_SRC_PKG_ROOT "$@" ADMIT=1 package
-            $cp $FSTAR_SRC_PKG_ROOT/fstar.tar.gz . || $cp $FSTAR_SRC_PKG_ROOT/fstar.zip .
-        else
-            if ! [ -f fstar.tar.gz ] && ! [ -f fstar.zip ]; then
-                # build a binary package from a full F* clone
-                if ! [ -d FStar ]; then
-                    git clone https://github.com/FStarLang/FStar --depth 1
-                fi
-                $MAKE -C FStar "$@" ADMIT=1
-                $MAKE -C FStar "$@" FSTAR_TAG= package
-                $cp FStar/fstar.tar.gz . || $cp FStar/fstar.zip .
-            fi
-        fi
-	{
-            mkdir -p "$FSTAR_PKG_ENVELOPE"
-            if [ -f fstar.tar.gz ]; then
-                FSTAR_PKG=$(realpath fstar.tar.gz)
-                tar xzf $FSTAR_PKG -C "$FSTAR_PKG_ENVELOPE"
-            elif [ -f fstar.zip ]; then
-                FSTAR_PKG=$(realpath fstar.zip)
-                pushd "$FSTAR_PKG_ENVELOPE"
-                unzip -q "$FSTAR_PKG"
-                popd
-            else
-                echo "unexpected, no package?" >&2
-                exit 1
-            fi
-	}
-    fi
-
-    export FSTAR_EXE=$(realpath $FSTAR_PKG_ROOT/bin/fstar.exe)
-    export FSTAR_EXE=$(fixpath "$FSTAR_EXE")
-    fstar_commit_id=$("$FSTAR_EXE" --version | grep '^commit=' | sed 's!^.*=!!')
-    fstar_commit_date_hr=$("$FSTAR_EXE" --version | grep '^date=' | sed 's!^.*=!!')
-
-    ## Setup krml
-
-    if ! [ -d karamel ]; then
-      git clone https://github.com/FStarLang/karamel --depth 1
-    fi
-    export KRML_HOME=$(fixpath $PWD/karamel)
-    $MAKE -C "$KRML_HOME" "$@"
-    if karamel_commit_id=$(print_component_commit_id "$KRML_HOME") ; then
-        karamel_commit_date_iso=$(print_component_commit_date_iso "$KRML_HOME")
-        karamel_commit_date_hr=$(print_date_utc_of_iso_hr "$karamel_commit_date_iso")" UTC+0000"
-    fi
-
-    # Install ocaml-sha if not found
-    if ! ocamlfind query sha ; then
-        opam install --yes sha
-    fi
+    ## Clear all variables
+    export EVERPARSE_USE_OPAMROOT=
+    export EVERPARSE_USE_FSTAR_EXE=
+    export EVERPARSE_USE_KRML_EXE=
+    rm -f "$EVERPARSE_HOME/opam-env.Makefile"
 
     # Rebuild EverParse
-    NO_PULSE=1 $MAKE -C "$EVERPARSE_HOME" "$@" package-subset
+    $MAKE -C "$EVERPARSE_HOME" "$@" deps
+    ADMIT=1 $MAKE -C "$EVERPARSE_HOME" "$@" package-subset
 
+    # Set environment
+    eval "$($MAKE -C "$EVERPARSE_HOME" -s --no-print-directory env)"
+    FSTAR_PKG_ROOT="$(fixpath "$(dirname "$FSTAR_EXE")/..")"
+    
     # Copy dependencies
     mkdir -p everparse/bin
     if $is_windows
     then
+	# F* was built in this cygwin environment, and can run. There is
+	# somewhere a libgmp DLL that is being used, and that we must ship in
+	# order for systems without this DLL to able to run F*. Using `which
+	# libgmp-10.dll` returns a hit, but it seems to be (sometimes?) wrong and
+	# point to a 32-bit version of the library that does not work. Here, we
+	# use (Cygwin's) `ldd` to find out which dll we are using exactly, and
+	# ship that.
+	# (See FStarLang/FStar#4064)
+	LIBGMP10_DLL="$(ldd "$FSTAR_EXE" | grep x86_64 | sed -n 's/^[[:space:]]libgmp-10.dll => *\([^ ]*\) .*$/\1/p')"
+	if [[ -z "$LIBGMP10_DLL" ]] ; then
+            echo libgmp-10.dll is missing
+            exit 1
+	fi
         $cp $LIBGMP10_DLL everparse/bin/
-        # copy libffi-6 in all cases (ocaml-sha also seems to need it)
-        $cp $(which libffi-6.dll) everparse/bin/
+    elif $is_macos
+    then
+	true
     else
         {
             # Locate libffi
@@ -207,64 +148,93 @@ make_everparse() {
     fi
 
     # Copy F*
-    cp $FSTAR_PKG_ROOT/bin/* everparse/bin/
-    mkdir -p everparse/lib/fstar/
-    cp $FSTAR_PKG_ROOT/lib/fstar/fstar.include everparse/lib/fstar/
-    cp -r $FSTAR_PKG_ROOT/lib/fstar/ulib everparse/lib/fstar/ulib
-    cp -r $FSTAR_PKG_ROOT/lib/fstar/ulib.checked everparse/lib/fstar/ulib.checked
-    cp -r $FSTAR_PKG_ROOT/lib/fstar/z3-4.13.3 everparse/lib/fstar/
+    cp -L $FSTAR_PKG_ROOT/bin/* everparse/bin/
+    mkdir -p everparse/lib
+    $cp -L -r $FSTAR_PKG_ROOT/lib/fstar everparse/lib/
+    z3_version=4.13.3
+    if ! z3=$(which z3-$z3_version$exe) ; then
+	z3="$FSTAR_PKG_ROOT/lib/fstar/z3-$z3_version$exe"
+	if ! [[ -f "$z3" ]] ; then
+	    z3=
+	fi
+    fi
+    if [[ -z "$z3" ]] ; then
+	true
+    else
+	mkdir -p everparse/lib/fstar/z3-$z3_version/bin
+	cp -r $z3 everparse/lib/fstar/z3-$z3_version/bin/z3$exe
+    fi
 
     # Copy KaRaMeL
-    $cp -L $KRML_HOME/krml everparse/bin/krml$exe
-    $cp -r $KRML_HOME/krmllib everparse/
-    $cp -r $KRML_HOME/include everparse/
-    $cp -r $KRML_HOME/misc everparse/
+    KRML_EXE="$EVERPARSE_HOME/opt/karamel/out/bin/krml$exe"
+    $cp -L "$KRML_EXE" everparse/bin/krml$exe
+    mkdir -p everparse/lib everparse/include
+    $cp -r "$(fixpath "$("$KRML_EXE" -locate-krmllib)")" everparse/lib/krml
+    $cp -r "$(fixpath "$("$KRML_EXE" -locate-include)")" everparse/include/krml
+    # TODO implement krml -locate-misc
+    mkdir -p everparse/share/krml
+    $cp -r "$EVERPARSE_HOME/opt/karamel/out/share/krml/misc" everparse/share/krml/misc
 
     # Copy EverParse
     $cp $EVERPARSE_HOME/bin/qd.exe everparse/bin/qd.exe
-    $cp -r $EVERPARSE_HOME/bin/3d.exe everparse/bin/3d.exe
-    mkdir -p everparse/src/3d
+#    $cp -r $EVERPARSE_HOME/bin/3d.exe everparse/bin/3d.exe
+#    mkdir -p everparse/src/3d
     $cp -r $EVERPARSE_HOME/src/lowparse everparse/src/
     if $is_windows ; then
         $cp -r $EVERPARSE_HOME/src/package/everparse.cmd everparse/
     else
         $cp -r $EVERPARSE_HOME/src/package/everparse.sh everparse/
     fi
-    $cp -r $EVERPARSE_HOME/src/3d/prelude everparse/src/3d/prelude
-    $cp -r $EVERPARSE_HOME/src/3d/.clang-format everparse/src/3d
-    $cp -r $EVERPARSE_HOME/src/3d/copyright.txt everparse/src/3d
-    if $is_windows ; then $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi
-    $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness.h everparse/src/3d/
-    $cp -r $EVERPARSE_HOME/src/3d/noheader.txt everparse/src/3d/
+#    $cp -r $EVERPARSE_HOME/src/3d/prelude everparse/src/3d/prelude
+#    $cp -r $EVERPARSE_HOME/src/3d/.clang-format everparse/src/3d
+#    $cp -r $EVERPARSE_HOME/src/3d/copyright.txt everparse/src/3d
+#    if $is_windows ; then $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness_Windows_NT.h everparse/src/3d/ ; fi
+#    $cp -r $EVERPARSE_HOME/src/3d/EverParseEndianness.h everparse/src/3d/
+#    $cp -r $EVERPARSE_HOME/src/3d/noheader.txt everparse/src/3d/
     if $is_windows ; then
         $cp -r $EVERPARSE_HOME/src/package/README.Windows.pkg everparse/README
     else
         $cp -r $EVERPARSE_HOME/src/package/README.pkg everparse/README
     fi
-    echo "This is EverParse $everparse_version" >> everparse/README
-    echo "Running with F* $fstar_commit_id ($fstar_commit_date_hr)" >> everparse/README
-    echo "Running with KaRaMeL $karamel_commit_id ($karamel_commit_date_hr)" >> everparse/README
+    $EVERPARSE_HOME/bin/3d.exe --version >> everparse/README
 
-    # Download and copy clang-format
+    # Copy Pulse, evercbor and evercddl
+    if [[ -z "$EVERPARSE_ONLY_3D" ]]; then
+    $cp -r $EVERPARSE_HOME/src/cbor everparse/src/cbor
+    $cp -r $EVERPARSE_HOME/src/cddl everparse/src/cddl
+	$cp $EVERPARSE_HOME/bin/cddl.exe everparse/bin/cddl.exe
+	$cp -r $EVERPARSE_HOME/lib/evercddl everparse/lib/
+    fi
+
+    # Download and copy clang-format from the LLVM release
     if $is_windows ; then
-        download https://prereleases.llvm.org/win-snapshots/clang-format-2663a25f.exe everparse/bin/clang-format.exe
+        LLVM_VERSION=22.1.1
+        CLANG_LLVM_DIR=clang+llvm-$LLVM_VERSION-x86_64-pc-windows-msvc
+        CLANG_LLVM_ARCHIVE=$CLANG_LLVM_DIR.tar.xz
+        download https://github.com/llvm/llvm-project/releases/download/llvmorg-$LLVM_VERSION/$CLANG_LLVM_ARCHIVE $CLANG_LLVM_ARCHIVE
+        tar xf $CLANG_LLVM_ARCHIVE $CLANG_LLVM_DIR/bin/clang-format.exe
+        mv $CLANG_LLVM_DIR/bin/clang-format.exe everparse/bin/clang-format.exe
+        rm -rf $CLANG_LLVM_DIR $CLANG_LLVM_ARCHIVE
     fi
 
     # Set executable permissions on EXE and DLL on Windows
     if $is_windows ; then
-        chmod a+x everparse/bin/*.exe everparse/bin/*.dll everparse/lib/fstar/z3-*/bin/*.exe everparse/lib/fstar/z3-*/bin/*.dll
+        chmod a+x everparse/bin/*.exe everparse/bin/*.dll everparse/lib/fstar/z3-*/bin/*.exe
+	chmod a+x everparse/lib/fstar/z3-*/bin/*.dll || true
+    else
+        chmod a+x everparse/bin/*
     fi
 
     # licenses
     mkdir -p everparse/licenses
-    $cp $FSTAR_PKG_ROOT/LICENSE everparse/licenses/FStar
-    $cp $KRML_HOME/LICENSE-APACHE everparse/licenses/KaRaMeL-Apache
-    $cp $KRML_HOME/LICENSE-MIT everparse/licenses/KaRaMeL-MIT
+    download https://raw.githubusercontent.com/FStarLang/FStar/master/LICENSE everparse/licenses/FStar
+    download https://raw.githubusercontent.com/FStarLang/karamel/master/LICENSE-APACHE everparse/licenses/KaRaMeL-Apache
+    download https://raw.githubusercontent.com/FStarLang/karamel/master/LICENSE-MIT everparse/licenses/KaRaMeL-MIT
     $cp $EVERPARSE_HOME/LICENSE everparse/licenses/EverParse
     download https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt everparse/licenses/z3
     download https://raw.githubusercontent.com/libffi/libffi/master/LICENSE everparse/licenses/libffi6
     if $is_windows ; then
-        download https://raw.githubusercontent.com/llvm/llvm-project/main/clang/LICENSE.TXT everparse/licenses/clang-format
+        download https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-$LLVM_VERSION/clang/LICENSE.TXT everparse/licenses/clang-format
     fi
     if $is_windows ; then
         {
@@ -299,7 +269,10 @@ zip_everparse() {
     else
         time tar cvzf everparse$ext everparse/*
     fi
-    if $with_version ; then mv everparse$ext everparse_"$everparse_version"_"$OS"_"$platform"$ext ; fi
+    if $with_version ; then
+	everparse_version="$(everparse/bin/3d.exe --short_version)"
+	mv everparse$ext everparse_"$everparse_version"_"$OS"_"$platform"$ext
+    fi
 }
 
 nuget_everparse() {
@@ -343,7 +316,10 @@ nuget_everparse() {
         pushd $nuget_base
 
 
-	if [[ -z "$everparse_nuget_version" ]] ; then
+	if [[ -f "$EVERPARSE_HOME/version.txt" ]] ; then
+	        everparse_nuget_version=$(cat "$EVERPARSE_HOME/version.txt")
+		everparse_nuget_version=${everparse_nuget_version:1} # strip the v
+	else
 		everparse_nuget_version=1.0.0
 	fi
 	# NoDefaultExcludes for .clang-format file that nuget pack excludes

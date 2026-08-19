@@ -37,9 +37,8 @@ let serialize_cbor_inj'
   (s1: Seq.seq U8.t)
 : Lemma
   (forall c2 s2 . serialize_cbor c1 `Seq.append` s1 == serialize_cbor c2 `Seq.append` s2 ==> (c1 == c2 /\ s1 == s2))
-= Classical.forall_intro_2 (fun c2 s2 ->
-    Classical.move_requires (serialize_cbor_inj c1 c2 s1) s2
-  )
+= introduce forall c2 s2 . serialize_cbor c1 `Seq.append` s1 == serialize_cbor c2 `Seq.append` s2 ==> (c1 == c2 /\ s1 == s2)
+  with Classical.move_requires (serialize_cbor_inj c1 c2 s1) s2
 
 val parse_cbor (x: Seq.seq U8.t) : Pure (option (raw_data_item & nat))
   (requires True)
@@ -76,9 +75,9 @@ let serialize_cbor_with_test_correct
     forall (c': raw_data_item) (suff': Seq.seq U8.t) .
     serialize_cbor c `Seq.append` suff == serialize_cbor c' `Seq.append` suff' ==> ~ (p c' suff'))
   )
-= Classical.forall_intro_2 (fun c' suff' ->
-    Classical.move_requires (serialize_cbor_inj c c' suff) suff'
-  )
+= introduce forall (c': raw_data_item) (suff': Seq.seq U8.t) .
+    serialize_cbor c `Seq.append` suff == serialize_cbor c' `Seq.append` suff' ==> ~ (p c' suff')
+  with Classical.move_requires (serialize_cbor_inj c c' suff) suff'
 
 val serialize_cbor_nonempty
   (c: raw_data_item)
@@ -466,4 +465,39 @@ val cbor_serialize_map_length_gt_list
   (ensures (
     U64.v len.value == List.Tot.length l /\
     Seq.length (serialize_cbor (Map len l)) > Seq.length (serialize_cbor_map l)
+  ))
+
+val parse_cbor_map
+  (n: nat)
+  (s: Seq.seq U8.t)
+: Pure (option (list (raw_data_item & raw_data_item) & nat))
+    (requires True)
+    (ensures fun res -> match res with
+    | None -> True
+    | Some (v, len) ->
+      List.Tot.length v == n /\
+      len <= Seq.length s
+    )
+
+val parse_cbor_map_prefix
+  (n: nat)
+  (s1 s2: Seq.seq U8.t)
+: Lemma
+  (match parse_cbor_map n s1 with
+  | None -> True
+  | Some (l, len1) ->
+    (len1 <= Seq.length s2 /\ Seq.slice s1 0 len1 == Seq.slice s2 0 len1) ==>
+    parse_cbor_map n s2 == Some (l, len1)
+  )
+
+val parse_cbor_map_equiv
+  (n: nat)
+  (s: Seq.seq U8.t)
+  (l: list (raw_data_item & raw_data_item))
+  (len: nat)
+: Lemma
+  (parse_cbor_map n s == Some (l, len) <==> (
+    n == List.Tot.length l /\
+    len <= Seq.length s /\
+    Seq.slice s 0 len == serialize_cbor_map l
   ))

@@ -53,17 +53,9 @@ $(everparse_makefile): $(wildcard src/*.3d) $(EVERPARSE_OUTPUT_DIR)
 	$(EVERPARSE_CMD) --makefile gmake --makefile_name $@ $(wildcard $(EVERPARSE_INPUT_DIR)/*.3d)
 
 # Include the generated Makefile
+ifeq (,$(filter clean,$(MAKECMDGOALS)))
 include $(everparse_makefile)
-
-###########
-# Cleanup #
-###########
-
-# Since everything is output to the same directory, including the
-# generated Makefile, it is enough to remove that directory.
-clean:
-	rm -rf $(EVERPARSE_OUTPUT_DIR)
-
+endif
 
 #######################################################
 # Specifying the `world` rule run by the default rule #
@@ -87,3 +79,12 @@ batch: $(EVERPARSE_BATCH_OUTPUT_DIR)
 # Declare all phony rules.
 # Cf. https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
 .PHONY: all world test clean batch
+
+###########
+# Cleanup #
+###########
+
+# Since everything is output to the same directory, including the
+# generated Makefile, it is enough to remove that directory.
+clean:
+	rm -rf $(EVERPARSE_OUTPUT_DIR) $(EVERPARSE_BATCH_OUTPUT_DIR)

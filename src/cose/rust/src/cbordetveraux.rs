@@ -6,8 +6,6 @@
 
 pub(crate) const _zero_for_deref: u32 = 0u32;
 
-#[derive(PartialEq, Clone, Copy)] pub struct raw_uint64 { pub size: u8, pub value: u64 }
-
 fn get_bitfield_gen8(x: u8, lo: u32, hi: u32) -> u8
 {
     let op1: u8 = x.wrapping_shl(8u32.wrapping_sub(hi));
@@ -24,6 +22,8 @@ fn set_bitfield_gen8(x: u8, lo: u32, hi: u32, v: u8) -> u8
     let op5: u8 = v.wrapping_shl(lo);
     op4 | op5
 }
+
+#[derive(PartialEq, Clone, Copy)] pub struct raw_uint64 { pub size: u8, pub value: u64 }
 
 const additional_info_long_argument_8_bits: u8 = 24u8;
 
@@ -158,26 +158,236 @@ fn get_header_major_type(h: header) -> u8
     b.major_type
 }
 
+pub(crate) fn mk_raw_uint64(x: u64) -> raw_uint64
+{
+    let size: u8 =
+        if x <= max_simple_value_additional_info as u64
+        { 0u8 }
+        else if x < 256u64
+        { 1u8 }
+        else if x < 65536u64 { 2u8 } else if x < 4294967296u64 { 3u8 } else { 4u8 };
+    raw_uint64 { size, value: x }
+}
+
+fn impl_uint8_compare(x1: u8, x2: u8) -> i16
+{ if x1 < x2 { -1i16 } else if x1 > x2 { 1i16 } else { 0i16 } }
+
+fn lex_compare_bytes(s1: &[u8], s2: &[u8]) -> i16
+{
+    let sp1: &[u8] = s1;
+    let sp2: &[u8] = s2;
+    let mut pi1: [usize; 1] = [0usize; 1usize];
+    let mut pi2: [usize; 1] = [0usize; 1usize];
+    let n1: usize = sp1.len();
+    let n2: usize = sp2.len();
+    let mut pres: [i16; 1] =
+        [if 0usize < n1
+            { if 0usize < n2 { 0i16 } else { 1i16 } }
+            else if 0usize < n2 { -1i16 } else { 0i16 };
+            1usize];
+    let res: i16 = (&pres)[0];
+    let i1: usize = (&pi1)[0];
+    let mut cond: bool = res == 0i16 && i1 < n1;
+    while
+    cond
+    {
+        let i10: usize = (&pi1)[0];
+        let x1: u8 = sp1[i10];
+        let i2: usize = (&pi2)[0];
+        let x2: u8 = sp2[i2];
+        let c: i16 = impl_uint8_compare(x1, x2);
+        if c == 0i16
+        {
+            let i1·: usize = i10.wrapping_add(1usize);
+            let i2·: usize = i2.wrapping_add(1usize);
+            let ci1·: bool = i1· < n1;
+            let ci2·: bool = i2· < n2;
+            if ci2· && ! ci1·
+            { (&mut pres)[0] = -1i16 }
+            else if ci1· && ! ci2·
+            { (&mut pres)[0] = 1i16 }
+            else
+            {
+                (&mut pi1)[0] = i1·;
+                (&mut pi2)[0] = i2·
+            }
+        }
+        else
+        { (&mut pres)[0] = c };
+        let res0: i16 = (&pres)[0];
+        let i11: usize = (&pi1)[0];
+        cond = res0 == 0i16 && i11 < n1
+    };
+    (&pres)[0]
+}
+
+#[derive(PartialEq, Clone, Copy)]
+pub struct cbor_raw_serialized_iterator <'a>
+{ pub s: &'a [u8], pub len: u64 }
+
+#[derive(PartialEq, Clone, Copy)]
+pub struct cbor_string <'a>
+{ pub cbor_string_type: u8, pub cbor_string_size: u8, pub cbor_string_ptr: &'a [u8] }
+
+fn cbor_string_reset_perm <'a>(c: cbor_string <'a>) -> cbor_string <'a>
+{
+    cbor_string
+    {
+        cbor_string_type: c.cbor_string_type,
+        cbor_string_size: c.cbor_string_size,
+        cbor_string_ptr: c.cbor_string_ptr
+    }
+}
+
+#[derive(PartialEq, Clone, Copy)]
+pub struct cbor_serialized <'a>
+{ pub cbor_serialized_header: raw_uint64, pub cbor_serialized_payload: &'a [u8] }
+
+fn cbor_serialized_reset_perm <'a>(c: cbor_serialized <'a>) -> cbor_serialized <'a>
+{
+    cbor_serialized
+    {
+        cbor_serialized_header: c.cbor_serialized_header,
+        cbor_serialized_payload: c.cbor_serialized_payload
+    }
+}
+
+#[derive(PartialEq, Clone, Copy)]
+pub struct cbor_tagged <'a>
+{ pub cbor_tagged_tag: raw_uint64, pub cbor_tagged_ptr: &'a [cbor_raw <'a>] }
+
+fn cbor_tagged_reset_perm <'a>(c: cbor_tagged <'a>) -> cbor_tagged <'a>
+{ cbor_tagged { cbor_tagged_tag: c.cbor_tagged_tag, cbor_tagged_ptr: c.cbor_tagged_ptr } }
+
+#[derive(PartialEq, Clone, Copy)]
+pub struct cbor_int
+{ pub cbor_int_type: u8, pub cbor_int_size: u8, pub cbor_int_value: u64 }
+
+#[derive(PartialEq, Clone, Copy)]
+pub struct cbor_array <'a>
+{ pub cbor_array_length_size: u8, pub cbor_array_ptr: &'a [cbor_raw <'a>] }
+
+#[derive(PartialEq, Clone, Copy)]
+enum cbor_raw_tags
+{
+    CBOR_Case_Int,
+    CBOR_Case_Simple,
+    CBOR_Case_String,
+    CBOR_Case_Tagged,
+    CBOR_Case_Array,
+    CBOR_Case_Map,
+    CBOR_Case_Serialized_Tagged,
+    CBOR_Case_Serialized_Array,
+    CBOR_Case_Serialized_Map
+}
+
+#[derive(PartialEq, Clone, Copy)]
+pub enum cbor_raw <'a>
+{
+    CBOR_Case_Int { v: cbor_int },
+    CBOR_Case_Simple { v: u8 },
+    CBOR_Case_String { v: cbor_string <'a> },
+    CBOR_Case_Tagged { v: cbor_tagged <'a> },
+    CBOR_Case_Array { v: cbor_array <'a> },
+    CBOR_Case_Map { v: cbor_map <'a> },
+    CBOR_Case_Serialized_Tagged { v: cbor_serialized <'a> },
+    CBOR_Case_Serialized_Array { v: cbor_serialized <'a> },
+    CBOR_Case_Serialized_Map { v: cbor_serialized <'a> }
+}
+
+#[derive(PartialEq, Clone, Copy)]
+pub struct cbor_map_entry <'a>
+{ pub cbor_map_entry_key: cbor_raw <'a>, pub cbor_map_entry_value: cbor_raw <'a> }
+
+#[derive(PartialEq, Clone, Copy)]
+pub struct cbor_map <'a>
+{ pub cbor_map_length_size: u8, pub cbor_map_ptr: &'a [cbor_map_entry <'a>] }
+
+#[derive(PartialEq, Clone, Copy)]
+pub enum cbor_rawÂ· <'a>
+{
+    CBOR_Case_Int { v: cbor_int },
+    CBOR_Case_Simple { v: u8 },
+    CBOR_Case_String { v: cbor_string <'a> },
+    CBOR_Case_Tagged { v: cbor_tagged <'a> },
+    CBOR_Case_Array { v: cbor_array <'a> },
+    CBOR_Case_Map { v: cbor_map <'a> },
+    CBOR_Case_Serialized_Tagged { v: cbor_serialized <'a> },
+    CBOR_Case_Serialized_Array { v: cbor_serialized <'a> },
+    CBOR_Case_Serialized_Map { v: cbor_serialized <'a> }
+}
+
+#[derive(PartialEq, Clone, Copy)]
+pub struct cbor_arrayÂ· <'a>
+{ pub cbor_array_length_size: u8, pub cbor_array_ptr: &'a [cbor_raw <'a>] }
+
+fn cbor_array_reset_perm <'a>(c: cbor_array <'a>) -> cbor_array <'a>
+{
+    cbor_array
+    { cbor_array_length_size: c.cbor_array_length_size, cbor_array_ptr: c.cbor_array_ptr }
+}
+
+fn cbor_map_reset_perm <'a>(c: cbor_map <'a>) -> cbor_map <'a>
+{ cbor_map { cbor_map_length_size: c.cbor_map_length_size, cbor_map_ptr: c.cbor_map_ptr } }
+
+pub(crate) fn cbor_raw_reset_perm_tot <'a>(c: cbor_raw <'a>) -> cbor_raw <'a>
+{
+    match c
+    {
+        cbor_raw::CBOR_Case_String { v } =>
+          cbor_raw::CBOR_Case_String { v: cbor_string_reset_perm(v) },
+        cbor_raw::CBOR_Case_Tagged { v } =>
+          cbor_raw::CBOR_Case_Tagged { v: cbor_tagged_reset_perm(v) },
+        cbor_raw::CBOR_Case_Array { v } => cbor_raw::CBOR_Case_Array { v: cbor_array_reset_perm(v) },
+        cbor_raw::CBOR_Case_Map { v } => cbor_raw::CBOR_Case_Map { v: cbor_map_reset_perm(v) },
+        cbor_raw::CBOR_Case_Serialized_Tagged { v } =>
+          cbor_raw::CBOR_Case_Serialized_Tagged { v: cbor_serialized_reset_perm(v) },
+        cbor_raw::CBOR_Case_Serialized_Array { v } =>
+          cbor_raw::CBOR_Case_Serialized_Array { v: cbor_serialized_reset_perm(v) },
+        cbor_raw::CBOR_Case_Serialized_Map { v } =>
+          cbor_raw::CBOR_Case_Serialized_Map { v: cbor_serialized_reset_perm(v) },
+        _ => c
+    }
+}
+
+pub(crate) fn cbor_mk_map_entry <'a>(xk: cbor_raw <'a>, xv: cbor_raw <'a>) ->
+    cbor_map_entry
+    <'a>
+{
+    cbor_map_entry
+    {
+        cbor_map_entry_key: cbor_raw_reset_perm_tot(xk),
+        cbor_map_entry_value: cbor_raw_reset_perm_tot(xv)
+    }
+}
+
+fn cbor_match_compare_serialized_tagged(c1: cbor_serialized, c2: cbor_serialized) -> i16
+{ lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload) }
+
+fn cbor_match_compare_serialized_array(c1: cbor_serialized, c2: cbor_serialized) -> i16
+{ lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload) }
+
+fn cbor_match_compare_serialized_map(c1: cbor_serialized, c2: cbor_serialized) -> i16
+{ lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload) }
+
+pub(crate) const simple_value_false: u8 = 20u8;
+
+pub(crate) const simple_value_true: u8 = 21u8;
+
 pub(crate) fn impl_correct(s: &[u8]) -> bool
 {
     let mut pres: [bool; 1] = [true; 1usize];
     let mut pi: [usize; 1] = [0usize; 1usize];
     let len: usize = s.len();
     let res: bool = (&pres)[0];
-    let mut cond: bool =
-        if res
-        {
-            let i: usize = (&pi)[0];
-            i < len
-        }
-        else
-        { false };
+    let i: usize = (&pi)[0];
+    let mut cond: bool = res && i < len;
     while
     cond
     {
-        let i: usize = (&pi)[0];
-        let byte1: u8 = s[i];
-        let i1: usize = i.wrapping_add(1usize);
+        let i0: usize = (&pi)[0];
+        let byte1: u8 = s[i0];
+        let i1: usize = i0.wrapping_add(1usize);
         if byte1 <= 0x7Fu8
         { (&mut pi)[0] = i1 }
         else if i1 == len
@@ -233,200 +443,8 @@ pub(crate) fn impl_correct(s: &[u8]) -> bool
             }
         };
         let res0: bool = (&pres)[0];
-        let ite: bool =
-            if res0
-            {
-                let i0: usize = (&pi)[0];
-                i0 < len
-            }
-            else
-            { false };
-        cond = ite
-    };
-    (&pres)[0]
-}
-
-#[derive(PartialEq, Clone, Copy)]
-pub struct cbor_raw_serialized_iterator <'a>
-{ pub s: &'a [u8], pub len: u64 }
-
-#[derive(PartialEq, Clone, Copy)]
-pub struct cbor_string <'a>
-{ pub cbor_string_type: u8, pub cbor_string_size: u8, pub cbor_string_ptr: &'a [u8] }
-
-fn cbor_string_reset_perm <'a>(c: cbor_string <'a>) -> cbor_string <'a>
-{
-    cbor_string
-    {
-        cbor_string_type: c.cbor_string_type,
-        cbor_string_size: c.cbor_string_size,
-        cbor_string_ptr: c.cbor_string_ptr
-    }
-}
-
-#[derive(PartialEq, Clone, Copy)]
-pub struct cbor_serialized <'a>
-{ pub cbor_serialized_header: raw_uint64, pub cbor_serialized_payload: &'a [u8] }
-
-fn cbor_serialized_reset_perm <'a>(c: cbor_serialized <'a>) -> cbor_serialized <'a>
-{
-    cbor_serialized
-    {
-        cbor_serialized_header: c.cbor_serialized_header,
-        cbor_serialized_payload: c.cbor_serialized_payload
-    }
-}
-
-#[derive(PartialEq, Clone, Copy)]
-pub struct cbor_tagged <'a>
-{ pub cbor_tagged_tag: raw_uint64, pub cbor_tagged_ptr: &'a [cbor_raw <'a>] }
-
-fn cbor_tagged_reset_perm <'a>(c: cbor_tagged <'a>) -> cbor_tagged <'a>
-{ cbor_tagged { cbor_tagged_tag: c.cbor_tagged_tag, cbor_tagged_ptr: c.cbor_tagged_ptr } }
-
-#[derive(PartialEq, Clone, Copy)]
-pub struct cbor_int
-{ pub cbor_int_type: u8, pub cbor_int_size: u8, pub cbor_int_value: u64 }
-
-#[derive(PartialEq, Clone, Copy)]
-pub struct cbor_map_entry <'a>
-{ pub cbor_map_entry_key: cbor_raw <'a>, pub cbor_map_entry_value: cbor_raw <'a> }
-
-#[derive(PartialEq, Clone, Copy)]
-pub struct cbor_map <'a>
-{ pub cbor_map_length_size: u8, pub cbor_map_ptr: &'a [cbor_map_entry <'a>] }
-
-#[derive(PartialEq, Clone, Copy)]
-enum cbor_raw_tags
-{
-    CBOR_Case_Int,
-    CBOR_Case_Simple,
-    CBOR_Case_String,
-    CBOR_Case_Tagged,
-    CBOR_Case_Array,
-    CBOR_Case_Map,
-    CBOR_Case_Serialized_Tagged,
-    CBOR_Case_Serialized_Array,
-    CBOR_Case_Serialized_Map
-}
-
-#[derive(PartialEq, Clone, Copy)]
-pub enum cbor_raw <'a>
-{
-    CBOR_Case_Int { v: cbor_int },
-    CBOR_Case_Simple { v: u8 },
-    CBOR_Case_String { v: cbor_string <'a> },
-    CBOR_Case_Tagged { v: cbor_tagged <'a> },
-    CBOR_Case_Array { v: cbor_array <'a> },
-    CBOR_Case_Map { v: cbor_map <'a> },
-    CBOR_Case_Serialized_Tagged { v: cbor_serialized <'a> },
-    CBOR_Case_Serialized_Array { v: cbor_serialized <'a> },
-    CBOR_Case_Serialized_Map { v: cbor_serialized <'a> }
-}
-
-#[derive(PartialEq, Clone, Copy)]
-pub struct cbor_array <'a>
-{ pub cbor_array_length_size: u8, pub cbor_array_ptr: &'a [cbor_raw <'a>] }
-
-fn cbor_array_reset_perm <'a>(c: cbor_array <'a>) -> cbor_array <'a>
-{
-    cbor_array
-    { cbor_array_length_size: c.cbor_array_length_size, cbor_array_ptr: c.cbor_array_ptr }
-}
-
-fn cbor_map_reset_perm <'a>(c: cbor_map <'a>) -> cbor_map <'a>
-{ cbor_map { cbor_map_length_size: c.cbor_map_length_size, cbor_map_ptr: c.cbor_map_ptr } }
-
-pub(crate) fn cbor_raw_reset_perm_tot <'a>(c: cbor_raw <'a>) -> cbor_raw <'a>
-{
-    match c
-    {
-        cbor_raw::CBOR_Case_String { v } =>
-          cbor_raw::CBOR_Case_String { v: cbor_string_reset_perm(v) },
-        cbor_raw::CBOR_Case_Tagged { v } =>
-          cbor_raw::CBOR_Case_Tagged { v: cbor_tagged_reset_perm(v) },
-        cbor_raw::CBOR_Case_Array { v } => cbor_raw::CBOR_Case_Array { v: cbor_array_reset_perm(v) },
-        cbor_raw::CBOR_Case_Map { v } => cbor_raw::CBOR_Case_Map { v: cbor_map_reset_perm(v) },
-        cbor_raw::CBOR_Case_Serialized_Tagged { v } =>
-          cbor_raw::CBOR_Case_Serialized_Tagged { v: cbor_serialized_reset_perm(v) },
-        cbor_raw::CBOR_Case_Serialized_Array { v } =>
-          cbor_raw::CBOR_Case_Serialized_Array { v: cbor_serialized_reset_perm(v) },
-        cbor_raw::CBOR_Case_Serialized_Map { v } =>
-          cbor_raw::CBOR_Case_Serialized_Map { v: cbor_serialized_reset_perm(v) },
-        _ => c
-    }
-}
-
-pub(crate) fn cbor_mk_map_entry <'a>(xk: cbor_raw <'a>, xv: cbor_raw <'a>) ->
-    cbor_map_entry
-    <'a>
-{
-    cbor_map_entry
-    {
-        cbor_map_entry_key: cbor_raw_reset_perm_tot(xk),
-        cbor_map_entry_value: cbor_raw_reset_perm_tot(xv)
-    }
-}
-
-pub(crate) fn mk_raw_uint64(x: u64) -> raw_uint64
-{
-    let size: u8 =
-        if x <= max_simple_value_additional_info as u64
-        { 0u8 }
-        else if x < 256u64
-        { 1u8 }
-        else if x < 65536u64 { 2u8 } else if x < 4294967296u64 { 3u8 } else { 4u8 };
-    raw_uint64 { size, value: x }
-}
-
-fn impl_uint8_compare(x1: u8, x2: u8) -> i16
-{ if x1 < x2 { -1i16 } else if x1 > x2 { 1i16 } else { 0i16 } }
-
-fn lex_compare_bytes(s1: &[u8], s2: &[u8]) -> i16
-{
-    let sp1: &[u8] = s1;
-    let sp2: &[u8] = s2;
-    let mut pi1: [usize; 1] = [0usize; 1usize];
-    let mut pi2: [usize; 1] = [0usize; 1usize];
-    let n1: usize = sp1.len();
-    let n2: usize = sp2.len();
-    let ite: i16 =
-        if 0usize < n1
-        { if 0usize < n2 { 0i16 } else { 1i16 } }
-        else if 0usize < n2 { -1i16 } else { 0i16 };
-    let mut pres: [i16; 1] = [ite; 1usize];
-    let res: i16 = (&pres)[0];
-    let i1: usize = (&pi1)[0];
-    let mut cond: bool = res == 0i16 && i1 < n1;
-    while
-    cond
-    {
-        let i10: usize = (&pi1)[0];
-        let x1: u8 = sp1[i10];
-        let i2: usize = (&pi2)[0];
-        let x2: u8 = sp2[i2];
-        let c: i16 = impl_uint8_compare(x1, x2);
-        if c == 0i16
-        {
-            let i1·: usize = i10.wrapping_add(1usize);
-            let i2·: usize = i2.wrapping_add(1usize);
-            let ci1·: bool = i1· < n1;
-            let ci2·: bool = i2· < n2;
-            if ci2· && ! ci1·
-            { (&mut pres)[0] = -1i16 }
-            else if ci1· && ! ci2·
-            { (&mut pres)[0] = 1i16 }
-            else
-            {
-                (&mut pi1)[0] = i1·;
-                (&mut pi2)[0] = i2·
-            }
-        }
-        else
-        { (&mut pres)[0] = c };
-        let res0: i16 = (&pres)[0];
-        let i11: usize = (&pi1)[0];
-        cond = res0 == 0i16 && i11 < n1
+        let i2: usize = (&pi)[0];
+        cond = res0 && i2 < len
     };
     (&pres)[0]
 }
@@ -592,12 +610,11 @@ fn validate_header(input: &[u8], poffset: &mut [usize]) -> bool
                     input2
                 };
             let x: initial_byte_t = read_initial_byte_t(input·);
-            let ite: bool =
-                if x.major_type == cbor_major_type_simple_value
-                { x.additional_info <= additional_info_long_argument_8_bits }
-                else
-                { true };
-            ite && x.additional_info < additional_info_unassigned_min
+            (x.major_type != cbor_major_type_simple_value
+            ||
+            x.additional_info <= additional_info_long_argument_8_bits)
+            &&
+            x.additional_info < additional_info_unassigned_min
         }
         else
         { false };
@@ -783,7 +800,7 @@ fn jump_header(input: &[u8], offset: usize) -> usize
     else if x0.additional_info == additional_info_long_argument_64_bits
     { off1.wrapping_add(8usize) }
     else
-    { off1.wrapping_add(0usize) }
+    { off1 }
 }
 
 fn validate_recursive_step_count_leaf(a: &[u8], bound: usize, prem: &mut [usize]) -> bool
@@ -811,24 +828,56 @@ fn validate_recursive_step_count_leaf(a: &[u8], bound: usize, prem: &mut [usize]
         let b: initial_byte_t = h.fst;
         let l: long_argument = h.snd;
         let arg64: u64 = argument_as_uint64(b, l);
-        prem[0] = arg64 as usize;
-        false
+        let q1: usize = bound.wrapping_div(32768usize);
+        let q2: usize = q1.wrapping_div(32768usize);
+        let q3: usize = q2.wrapping_div(32768usize);
+        let q4: usize = q3.wrapping_div(32768usize);
+        let __anf0: bool =
+            if q4 >= 16usize
+            { true }
+            else
+            {
+                let b64: u64 = bound as u64;
+                arg64 <= b64
+            };
+        if __anf0
+        {
+            prem[0] = arg64 as usize;
+            false
+        }
+        else
+        { true }
     }
     else if typ == cbor_major_type_map
     {
         let b: initial_byte_t = h.fst;
         let l: long_argument = h.snd;
         let arg64: u64 = argument_as_uint64(b, l);
-        let arg: usize = arg64 as usize;
-        if arg > bound
-        { true }
-        else if bound.wrapping_sub(arg) < arg
-        { true }
-        else
+        let q1: usize = bound.wrapping_div(32768usize);
+        let q2: usize = q1.wrapping_div(32768usize);
+        let q3: usize = q2.wrapping_div(32768usize);
+        let q4: usize = q3.wrapping_div(32768usize);
+        let __anf0: bool =
+            if q4 >= 16usize
+            { true }
+            else
+            {
+                let b64: u64 = bound as u64;
+                arg64 <= b64
+            };
+        if __anf0
         {
-            prem[0] = arg.wrapping_add(arg);
-            false
+            let arg: usize = arg64 as usize;
+            if bound.wrapping_sub(arg) < arg
+            { true }
+            else
+            {
+                prem[0] = arg.wrapping_add(arg);
+                false
+            }
         }
+        else
+        { true }
     }
     else if typ == cbor_major_type_tagged
     {
@@ -840,6 +889,27 @@ fn validate_recursive_step_count_leaf(a: &[u8], bound: usize, prem: &mut [usize]
         prem[0] = 0usize;
         false
     }
+}
+
+fn impl_remaining_data_items_header(h: header) -> usize
+{
+    let typ: u8 = get_header_major_type(h);
+    if typ == cbor_major_type_array
+    {
+        let b: initial_byte_t = h.fst;
+        let l: long_argument = h.snd;
+        let arg64: u64 = argument_as_uint64(b, l);
+        arg64 as usize
+    }
+    else if typ == cbor_major_type_map
+    {
+        let b: initial_byte_t = h.fst;
+        let l: long_argument = h.snd;
+        let arg64: u64 = argument_as_uint64(b, l);
+        let arg: usize = arg64 as usize;
+        arg.wrapping_add(arg)
+    }
+    else if typ == cbor_major_type_tagged { 1usize } else { 0usize }
 }
 
 fn jump_recursive_step_count_leaf(a: &[u8]) -> usize
@@ -861,23 +931,7 @@ fn jump_recursive_step_count_leaf(a: &[u8]) -> usize
     let input1: &[u8] = _letpattern0.0;
     let _input2: &[u8] = _letpattern0.1;
     let h: header = read_header(input1);
-    let typ: u8 = get_header_major_type(h);
-    if typ == cbor_major_type_array
-    {
-        let b: initial_byte_t = h.fst;
-        let l: long_argument = h.snd;
-        let arg64: u64 = argument_as_uint64(b, l);
-        arg64 as usize
-    }
-    else if typ == cbor_major_type_map
-    {
-        let b: initial_byte_t = h.fst;
-        let l: long_argument = h.snd;
-        let arg64: u64 = argument_as_uint64(b, l);
-        let arg: usize = arg64 as usize;
-        arg.wrapping_add(arg)
-    }
-    else if typ == cbor_major_type_tagged { 1usize } else { 0usize }
+    impl_remaining_data_items_header(h)
 }
 
 fn validate_raw_data_item(input: &[u8], poffset: &mut [usize]) -> bool
@@ -938,19 +992,34 @@ fn validate_raw_data_item(input: &[u8], poffset: &mut [usize]) -> bool
                     ||
                     b.major_type == cbor_major_type_text_string
                     {
-                        let b0: initial_byte_t = x.fst;
-                        let l: long_argument = x.snd;
-                        let n1: usize = argument_as_uint64(b0, l) as usize;
                         let offset2: usize = poffset[0];
                         let offset3: usize = poffset[0];
-                        let is_valid: bool =
-                            if input.len().wrapping_sub(offset3) < n1
-                            { false }
+                        let remaining: usize = input.len().wrapping_sub(offset3);
+                        let q1: usize = remaining.wrapping_div(32768usize);
+                        let q2: usize = q1.wrapping_div(32768usize);
+                        let q3: usize = q2.wrapping_div(32768usize);
+                        let q4: usize = q3.wrapping_div(32768usize);
+                        let __anf0: bool =
+                            if q4 >= 16usize
+                            { true }
                             else
                             {
-                                poffset[0] = offset3.wrapping_add(n1);
-                                true
+                                let b64: u64 = remaining as u64;
+                                let b0: initial_byte_t = x.fst;
+                                let l: long_argument = x.snd;
+                                argument_as_uint64(b0, l) <= b64
                             };
+                        let is_valid: bool =
+                            if __anf0
+                            {
+                                let b0: initial_byte_t = x.fst;
+                                let l: long_argument = x.snd;
+                                poffset[0] =
+                                    offset3.wrapping_add(argument_as_uint64(b0, l) as usize);
+                                true
+                            }
+                            else
+                            { false };
                         if is_valid
                         {
                             let off2: usize = poffset[0];
@@ -1102,7 +1171,7 @@ fn jump_raw_data_item(input: &[u8], offset: usize) -> usize
                 off1.wrapping_add(argument_as_uint64(b0, l) as usize)
             }
             else
-            { off1.wrapping_add(0usize) };
+            { off1 };
         (&mut poffset)[0] = off10;
         let s·0: (&[u8], &[u8]) = input.split_at(off);
         let _letpattern0: (&[u8], &[u8]) =
@@ -1312,16 +1381,13 @@ fn cbor_validate(input: &[u8]) -> usize
 
 fn impl_raw_uint64_optimal(x: raw_uint64) -> bool
 {
-    if (x.value <= max_simple_value_additional_info as u64) == (x.size == 0u8)
-    {
-        if x.size <= 1u8
-        { true }
-        else if x.size == 2u8
-        { 256u64 <= x.value }
-        else if x.size == 3u8 { 65536u64 <= x.value } else { 4294967296u64 <= x.value }
-    }
-    else
-    { false }
+    (x.value <= max_simple_value_additional_info as u64) == (x.size == 0u8)
+    &&
+    (x.size <= 1u8
+    ||
+    if x.size == 2u8
+    { 256u64 <= x.value }
+    else if x.size == 3u8 { 65536u64 <= x.value } else { 4294967296u64 <= x.value })
 }
 
 fn cbor_raw_ints_optimal(a: &[u8]) -> bool
@@ -1419,7 +1485,7 @@ fn cbor_raw_sorted(a: &[u8]) -> bool
                 {
                     let b0: initial_byte_t = h.fst;
                     let l: long_argument = h.snd;
-                    0usize.wrapping_add(argument_as_uint64(b0, l) as usize)
+                    argument_as_uint64(b0, l) as usize
                 }
                 else
                 { 0usize };
@@ -1702,7 +1768,7 @@ fn cbor_validate_det·(input: &[u8]) -> usize
                         off1.wrapping_add(argument_as_uint64(b0, l) as usize)
                     }
                     else
-                    { off1.wrapping_add(0usize) };
+                    { off1 };
                 let s: (&[u8], &[u8]) = pi.split_at(i);
                 let _letpattern1: (&[u8], &[u8]) =
                     {
@@ -1721,7 +1787,8 @@ fn cbor_validate_det·(input: &[u8]) -> usize
                 let unused: usize = pc.len();
                 crate::lowstar::ignore::ignore::<usize>(unused);
                 let count: usize = jump_recursive_step_count_leaf(ph);
-                (&mut pn)[0] = n0.wrapping_sub(1usize).wrapping_add(count);
+                let n·: usize = n0.wrapping_sub(1usize).wrapping_add(count);
+                (&mut pn)[0] = n·;
                 (&mut ppi)[0] = pc
             };
             let res1: bool = (&pres)[0];
@@ -1792,7 +1859,7 @@ fn cbor_validate_det·(input: &[u8]) -> usize
                             off1.wrapping_add(argument_as_uint64(b0, l) as usize)
                         }
                         else
-                        { off1.wrapping_add(0usize) };
+                        { off1 };
                     let s: (&[u8], &[u8]) = pi.split_at(i);
                     let _letpattern1: (&[u8], &[u8]) =
                         {
@@ -1811,7 +1878,8 @@ fn cbor_validate_det·(input: &[u8]) -> usize
                     let unused: usize = pc.len();
                     crate::lowstar::ignore::ignore::<usize>(unused);
                     let count: usize = jump_recursive_step_count_leaf(ph);
-                    (&mut pn0)[0] = n1.wrapping_sub(1usize).wrapping_add(count);
+                    let n·: usize = n1.wrapping_sub(1usize).wrapping_add(count);
+                    (&mut pn0)[0] = n·;
                     (&mut ppi0)[0] = pc
                 };
                 let res2: bool = (&pres0)[0];
@@ -1879,23 +1947,17 @@ pub(crate) fn cbor_raw_map_insert(out: &mut [u8], off2: usize, off3: usize) -> b
     let mut pres: [cbor_raw_map_insert_result; 1] =
         [cbor_raw_map_insert_result::CInProgress; 1usize];
     let res: cbor_raw_map_insert_result = (&pres)[0];
-    let mut cond: bool =
-        if uu___is_CInProgress(res)
-        {
-            let off: usize = (&poff)[0];
-            off < off2
-        }
-        else
-        { false };
+    let off: usize = (&poff)[0];
+    let mut cond: bool = uu___is_CInProgress(res) && off < off2;
     while
     cond
     {
-        let off: usize = (&poff)[0];
-        let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(off);
+        let off0: usize = (&poff)[0];
+        let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(off0);
         {
             let _out1: &[u8] = _letpattern.0;
             let out2kv: &mut [u8] = _letpattern.1;
-            let _letpattern1: (&[u8], &[u8]) = out2kv.split_at(off2.wrapping_sub(off));
+            let _letpattern1: (&[u8], &[u8]) = out2kv.split_at(off2.wrapping_sub(off0));
             let out2: &[u8] = _letpattern1.0;
             let outkv: &[u8] = _letpattern1.1;
             let _letpattern2: (&[u8], &[u8]) = outkv.split_at(off3.wrapping_sub(off2));
@@ -1909,17 +1971,17 @@ pub(crate) fn cbor_raw_map_insert(out: &mut [u8], off2: usize, off3: usize) -> b
             if c < 0i16
             {
                 let offq: usize = cbor_jump(outvq, 0usize);
-                let off·: usize = off.wrapping_add(offk.wrapping_add(offq));
+                let off·: usize = off0.wrapping_add(offk.wrapping_add(offq));
                 (&mut poff)[0] = off·
             }
             else if c > 0i16
             {
-                if ! (off2.wrapping_sub(off) == 0usize || off2.wrapping_sub(off) == out2kv.len())
+                if ! (off2.wrapping_sub(off0) == 0usize || off2.wrapping_sub(off0) == out2kv.len())
                 {
                     let mut pn: [usize; 1] = [out2kv.len(); 1usize];
-                    let mut pl: [usize; 1] = [off2.wrapping_sub(off); 1usize];
-                    let __anf3172: usize = (&pl)[0];
-                    let mut cond0: bool = __anf3172 > 0usize;
+                    let mut pl: [usize; 1] = [off2.wrapping_sub(off0); 1usize];
+                    let __anf0: usize = (&pl)[0];
+                    let mut cond0: bool = __anf0 > 0usize;
                     while
                     cond0
                     {
@@ -1928,14 +1990,14 @@ pub(crate) fn cbor_raw_map_insert(out: &mut [u8], off2: usize, off3: usize) -> b
                         let l·: usize = n.wrapping_rem(l);
                         (&mut pn)[0] = l;
                         (&mut pl)[0] = l·;
-                        let __anf31720: usize = (&pl)[0];
-                        cond0 = __anf31720 > 0usize
+                        let __anf00: usize = (&pl)[0];
+                        cond0 = __anf00 > 0usize
                     };
                     let d: usize = (&pn)[0];
                     let q: usize = out2kv.len().wrapping_div(d);
                     let mut pi: [usize; 1] = [0usize; 1usize];
-                    let __anf4223: usize = (&pi)[0];
-                    let mut cond1: bool = __anf4223 < d;
+                    let __anf00: usize = (&pi)[0];
+                    let mut cond1: bool = __anf00 < d;
                     while
                     cond1
                     {
@@ -1943,8 +2005,8 @@ pub(crate) fn cbor_raw_map_insert(out: &mut [u8], off2: usize, off3: usize) -> b
                         let save: u8 = out2kv[i];
                         let mut pj: [usize; 1] = [0usize; 1usize];
                         let mut pidx: [usize; 1] = [i; 1usize];
-                        let __anf6456: usize = (&pj)[0];
-                        let mut cond2: bool = __anf6456 < q.wrapping_sub(1usize);
+                        let __anf01: usize = (&pj)[0];
+                        let mut cond2: bool = __anf01 < q.wrapping_sub(1usize);
                         while
                         cond2
                         {
@@ -1954,28 +2016,28 @@ pub(crate) fn cbor_raw_map_insert(out: &mut [u8], off2: usize, off3: usize) -> b
                                 if
                                 idx.wrapping_sub(0usize)
                                 >=
-                                out2kv.len().wrapping_sub(off2.wrapping_sub(off))
+                                out2kv.len().wrapping_sub(off2.wrapping_sub(off0))
                                 {
                                     idx.wrapping_sub(
-                                        out2kv.len().wrapping_sub(off2.wrapping_sub(off))
+                                        out2kv.len().wrapping_sub(off2.wrapping_sub(off0))
                                     )
                                 }
                                 else
-                                { idx.wrapping_add(off2.wrapping_sub(off).wrapping_sub(0usize)) };
+                                { idx.wrapping_add(off2.wrapping_sub(off0).wrapping_sub(0usize)) };
                             let x: u8 = out2kv[idx·];
                             let j·: usize = j.wrapping_add(1usize);
                             out2kv[idx] = x;
                             (&mut pj)[0] = j·;
                             (&mut pidx)[0] = idx·;
-                            let __anf64560: usize = (&pj)[0];
-                            cond2 = __anf64560 < q.wrapping_sub(1usize)
+                            let __anf02: usize = (&pj)[0];
+                            cond2 = __anf02 < q.wrapping_sub(1usize)
                         };
                         let idx: usize = (&pidx)[0];
                         out2kv[idx] = save;
                         let i·: usize = i.wrapping_add(1usize);
                         (&mut pi)[0] = i·;
-                        let __anf42230: usize = (&pi)[0];
-                        cond1 = __anf42230 < d
+                        let __anf02: usize = (&pi)[0];
+                        cond1 = __anf02 < d
                     }
                 };
                 (&mut pres)[0] = cbor_raw_map_insert_result::CSuccess
@@ -1984,15 +2046,8 @@ pub(crate) fn cbor_raw_map_insert(out: &mut [u8], off2: usize, off3: usize) -> b
             { (&mut pres)[0] = cbor_raw_map_insert_result::CFailure }
         };
         let res0: cbor_raw_map_insert_result = (&pres)[0];
-        let ite: bool =
-            if uu___is_CInProgress(res0)
-            {
-                let off0: usize = (&poff)[0];
-                off0 < off2
-            }
-            else
-            { false };
-        cond = ite
+        let off1: usize = (&poff)[0];
+        cond = uu___is_CInProgress(res0) && off1 < off2
     };
     let res0: cbor_raw_map_insert_result = (&pres)[0];
     match res0
@@ -2144,6 +2199,43 @@ fn cbor_serialized_array_iterator_next <'b, 'a>(
     res
 }
 
+fn cbor_serialized_array_iterator_next_with_depth <'b, 'a>(
+    pi: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>],
+    i: cbor_raw_serialized_iterator <'a>
+) ->
+    cbor_raw
+    <'a>
+{
+    let i1: usize = jump_raw_data_item(i.s, 0usize);
+    let s: (&[u8], &[u8]) = (i.s).split_at(i1);
+    let _letpattern: (&[u8], &[u8]) =
+        {
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
+    let _letpattern0: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = _letpattern.0;
+            let input2: &[u8] = _letpattern.1;
+            (input1,input2)
+        };
+    let _letpattern1: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = _letpattern0.0;
+            let input2: &[u8] = _letpattern0.1;
+            (input1,input2)
+        };
+    let s1: &[u8] = _letpattern1.0;
+    let s2: &[u8] = _letpattern1.1;
+    let res: cbor_raw = cbor_read(s1);
+    let i·: cbor_raw_serialized_iterator =
+        cbor_raw_serialized_iterator { s: s2, len: (i.len).wrapping_sub(1u64) };
+    pi[0] =
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized { _0: i· };
+    res
+}
+
 fn cbor_serialized_array_iterator_truncate <'a>(c: cbor_raw_serialized_iterator <'a>, len: u64) ->
     cbor_raw_serialized_iterator
     <'a>
@@ -2168,6 +2260,72 @@ pub enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>
 }
 
 fn cbor_serialized_map_iterator_next <'b, 'a>(
+    pi: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>],
+    i: cbor_raw_serialized_iterator <'a>
+) ->
+    cbor_map_entry
+    <'a>
+{
+    let off1: usize = jump_raw_data_item(i.s, 0usize);
+    let i1: usize = jump_raw_data_item(i.s, off1);
+    let s: (&[u8], &[u8]) = (i.s).split_at(i1);
+    let _letpattern: (&[u8], &[u8]) =
+        {
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
+    let _letpattern0: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = _letpattern.0;
+            let input2: &[u8] = _letpattern.1;
+            (input1,input2)
+        };
+    let _letpattern1: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = _letpattern0.0;
+            let input2: &[u8] = _letpattern0.1;
+            (input1,input2)
+        };
+    let s1: &[u8] = _letpattern1.0;
+    let s2: &[u8] = _letpattern1.1;
+    let i10: usize = jump_raw_data_item(s1, 0usize);
+    let s0: (&[u8], &[u8]) = s1.split_at(i10);
+    let _letpattern10: (&[u8], &[u8]) =
+        {
+            let s11: &[u8] = s0.0;
+            let s21: &[u8] = s0.1;
+            (s11,s21)
+        };
+    let _letpattern11: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = _letpattern10.0;
+            let input2: &[u8] = _letpattern10.1;
+            (input1,input2)
+        };
+    let _letpattern12: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = _letpattern11.0;
+            let input2: &[u8] = _letpattern11.1;
+            (input1,input2)
+        };
+    let res: cbor_map_entry =
+        {
+            let s11: &[u8] = _letpattern12.0;
+            let s21: &[u8] = _letpattern12.1;
+            let res1: cbor_raw = cbor_read(s11);
+            let res2: cbor_raw = cbor_read(s21);
+            cbor_map_entry { cbor_map_entry_key: res1, cbor_map_entry_value: res2 }
+        };
+    let i·: cbor_raw_serialized_iterator =
+        cbor_raw_serialized_iterator { s: s2, len: (i.len).wrapping_sub(1u64) };
+    pi[0] =
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
+        { _0: i· };
+    res
+}
+
+fn cbor_serialized_map_iterator_next_with_depth <'b, 'a>(
     pi: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>],
     i: cbor_raw_serialized_iterator <'a>
 ) ->
@@ -2307,8 +2465,8 @@ pub(crate) fn cbor_array_iterator_next <'b, 'a>(
     cbor_raw
     <'a>
 {
-    let i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = pi[0];
-    match i0
+    let iter: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = pi[0];
+    match iter
     {
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: i1 } =>
           {
@@ -2413,8 +2571,8 @@ pub(crate) fn cbor_map_iterator_next <'b, 'a>(
     cbor_map_entry
     <'a>
 {
-    let i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = pi[0];
-    match i0
+    let iter: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = pi[0];
+    match iter
     {
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice { _0: i1 } =>
           {
@@ -2436,6 +2594,60 @@ pub(crate) fn cbor_map_iterator_next <'b, 'a>(
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
         { _0: i1 }
         => cbor_serialized_map_iterator_next(pi, i1),
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+fn cbor_array_iterator_init_with_depth <'a>(c: cbor_raw <'a>) ->
+    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
+    <'a>
+{
+    match c
+    {
+        cbor_raw::CBOR_Case_Serialized_Array { v: c· } =>
+          {
+              let i·: cbor_raw_serialized_iterator = cbor_serialized_array_iterator_init(c·);
+              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
+              { _0: i· }
+          },
+        cbor_raw::CBOR_Case_Array { v: c· } =>
+          {
+              let i: &[cbor_raw] = c·.cbor_array_ptr;
+              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: i }
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+fn cbor_map_iterator_init_with_depth <'a>(c: cbor_raw <'a>) ->
+    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+    <'a>
+{
+    match c
+    {
+        cbor_raw::CBOR_Case_Serialized_Map { v: c· } =>
+          {
+              let i·: cbor_raw_serialized_iterator = cbor_serialized_map_iterator_init(c·);
+              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
+              { _0: i· }
+          },
+        cbor_raw::CBOR_Case_Map { v: c· } =>
+          {
+              let i: &[cbor_map_entry] = c·.cbor_map_ptr;
+              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
+              { _0: i }
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+fn cbor_match_tagged_get_payload_with_depth <'a>(c: cbor_raw <'a>) -> cbor_raw <'a>
+{
+    match c
+    {
+        cbor_raw::CBOR_Case_Serialized_Tagged { v: cs } =>
+          cbor_match_serialized_tagged_get_payload(cs),
+        cbor_raw::CBOR_Case_Tagged { v: ct } => ct.cbor_tagged_ptr[0],
         _ => panic!("Incomplete pattern matching")
     }
 }
@@ -2691,7 +2903,61 @@ fn size_header(x: header, out: &mut [usize]) -> bool
     { false }
 }
 
-fn cbor_raw_get_header(xl: cbor_raw) -> header
+fn cbor_match_array_get_length_with_depth(c: cbor_raw) -> raw_uint64
+{
+    match c
+    {
+        cbor_raw::CBOR_Case_Array { v: a } =>
+          raw_uint64 { size: a.cbor_array_length_size, value: (a.cbor_array_ptr).len() as u64 },
+        cbor_raw::CBOR_Case_Serialized_Array { .. } =>
+          match c
+          {
+              cbor_raw::CBOR_Case_Array { v: c· } =>
+                raw_uint64
+                { size: c·.cbor_array_length_size, value: (c·.cbor_array_ptr).len() as u64 },
+              cbor_raw::CBOR_Case_Serialized_Array { v: c· } => c·.cbor_serialized_header,
+              _ => panic!("Incomplete pattern matching")
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+fn cbor_match_map_get_length_with_depth(c: cbor_raw) -> raw_uint64
+{
+    match c
+    {
+        cbor_raw::CBOR_Case_Map { v: a } =>
+          raw_uint64 { size: a.cbor_map_length_size, value: (a.cbor_map_ptr).len() as u64 },
+        cbor_raw::CBOR_Case_Serialized_Map { .. } =>
+          match c
+          {
+              cbor_raw::CBOR_Case_Map { v: c· } =>
+                raw_uint64
+                { size: c·.cbor_map_length_size, value: (c·.cbor_map_ptr).len() as u64 },
+              cbor_raw::CBOR_Case_Serialized_Map { v: c· } => c·.cbor_serialized_header,
+              _ => panic!("Incomplete pattern matching")
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+fn cbor_match_tagged_get_tag_with_depth(c: cbor_raw) -> raw_uint64
+{
+    match c
+    {
+        cbor_raw::CBOR_Case_Tagged { v: a } => a.cbor_tagged_tag,
+        cbor_raw::CBOR_Case_Serialized_Tagged { .. } =>
+          match c
+          {
+              cbor_raw::CBOR_Case_Tagged { v: c· } => c·.cbor_tagged_tag,
+              cbor_raw::CBOR_Case_Serialized_Tagged { v: c· } => c·.cbor_serialized_header,
+              _ => panic!("Incomplete pattern matching")
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+fn cbor_raw_get_header_d(xl: cbor_raw) -> header
 {
     match xl
     {
@@ -2736,82 +3002,32 @@ fn cbor_raw_get_header(xl: cbor_raw) -> header
           },
         cbor_raw::CBOR_Case_Tagged { .. } =>
           {
-              let tag: raw_uint64 =
-                  match xl
-                  {
-                      cbor_raw::CBOR_Case_Tagged { v: c· } => c·.cbor_tagged_tag,
-                      cbor_raw::CBOR_Case_Serialized_Tagged { v: c· } => c·.cbor_serialized_header,
-                      _ => panic!("Incomplete pattern matching")
-                  };
+              let tag: raw_uint64 = cbor_match_tagged_get_tag_with_depth(xl);
               raw_uint64_as_argument(cbor_major_type_tagged, tag)
           },
         cbor_raw::CBOR_Case_Serialized_Tagged { .. } =>
           {
-              let tag: raw_uint64 =
-                  match xl
-                  {
-                      cbor_raw::CBOR_Case_Tagged { v: c· } => c·.cbor_tagged_tag,
-                      cbor_raw::CBOR_Case_Serialized_Tagged { v: c· } => c·.cbor_serialized_header,
-                      _ => panic!("Incomplete pattern matching")
-                  };
+              let tag: raw_uint64 = cbor_match_tagged_get_tag_with_depth(xl);
               raw_uint64_as_argument(cbor_major_type_tagged, tag)
           },
         cbor_raw::CBOR_Case_Array { .. } =>
           {
-              let len: raw_uint64 =
-                  match xl
-                  {
-                      cbor_raw::CBOR_Case_Array { v: c· } =>
-                        raw_uint64
-                        {
-                            size: c·.cbor_array_length_size,
-                            value: (c·.cbor_array_ptr).len() as u64
-                        },
-                      cbor_raw::CBOR_Case_Serialized_Array { v: c· } => c·.cbor_serialized_header,
-                      _ => panic!("Incomplete pattern matching")
-                  };
+              let len: raw_uint64 = cbor_match_array_get_length_with_depth(xl);
               raw_uint64_as_argument(cbor_major_type_array, len)
           },
         cbor_raw::CBOR_Case_Serialized_Array { .. } =>
           {
-              let len: raw_uint64 =
-                  match xl
-                  {
-                      cbor_raw::CBOR_Case_Array { v: c· } =>
-                        raw_uint64
-                        {
-                            size: c·.cbor_array_length_size,
-                            value: (c·.cbor_array_ptr).len() as u64
-                        },
-                      cbor_raw::CBOR_Case_Serialized_Array { v: c· } => c·.cbor_serialized_header,
-                      _ => panic!("Incomplete pattern matching")
-                  };
+              let len: raw_uint64 = cbor_match_array_get_length_with_depth(xl);
               raw_uint64_as_argument(cbor_major_type_array, len)
           },
         cbor_raw::CBOR_Case_Map { .. } =>
           {
-              let len: raw_uint64 =
-                  match xl
-                  {
-                      cbor_raw::CBOR_Case_Map { v: c· } =>
-                        raw_uint64
-                        { size: c·.cbor_map_length_size, value: (c·.cbor_map_ptr).len() as u64 },
-                      cbor_raw::CBOR_Case_Serialized_Map { v: c· } => c·.cbor_serialized_header,
-                      _ => panic!("Incomplete pattern matching")
-                  };
+              let len: raw_uint64 = cbor_match_map_get_length_with_depth(xl);
               raw_uint64_as_argument(cbor_major_type_map, len)
           },
         cbor_raw::CBOR_Case_Serialized_Map { .. } =>
           {
-              let len: raw_uint64 =
-                  match xl
-                  {
-                      cbor_raw::CBOR_Case_Map { v: c· } =>
-                        raw_uint64
-                        { size: c·.cbor_map_length_size, value: (c·.cbor_map_ptr).len() as u64 },
-                      cbor_raw::CBOR_Case_Serialized_Map { v: c· } => c·.cbor_serialized_header,
-                      _ => panic!("Incomplete pattern matching")
-                  };
+              let len: raw_uint64 = cbor_match_map_get_length_with_depth(xl);
               raw_uint64_as_argument(cbor_major_type_map, len)
           },
         cbor_raw::CBOR_Case_Simple { .. } =>
@@ -2829,11 +3045,22 @@ fn cbor_raw_get_header(xl: cbor_raw) -> header
     }
 }
 
-fn cbor_raw_with_perm_get_header(xl: cbor_raw) -> header { cbor_raw_get_header(xl) }
+fn cbor_raw_with_perm_get_header_d(xl: cbor_raw) -> header { cbor_raw_get_header_d(xl) }
+
+fn compute_deep(c: cbor_raw) -> bool
+{
+    match c
+    {
+        cbor_raw::CBOR_Case_Tagged { .. } => true,
+        cbor_raw::CBOR_Case_Array { v: a } => (a.cbor_array_ptr).len() != 0usize,
+        cbor_raw::CBOR_Case_Map { v: a } => (a.cbor_map_ptr).len() != 0usize,
+        _ => false
+    }
+}
 
 #[derive(PartialEq, Clone, Copy)]
 enum
-option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags
+option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_tags
 {
     None,
     Some
@@ -2841,7 +3068,7 @@ option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Typ
 
 #[derive(PartialEq, Clone, Copy)]
 enum
-option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw
+option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw
 <'a>
 {
     None,
@@ -2850,144 +3077,83 @@ option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Typ
 
 #[derive(PartialEq, Clone, Copy)]
 enum
-option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry
+option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry
 <'a>
 {
     None,
     Some { v: &'a [cbor_map_entry <'a>] }
 }
 
-pub(crate) fn ser·(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
+pub(crate) fn ser·_d(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
 {
-    let xh1: header = cbor_raw_with_perm_get_header(x·);
-    let res1: usize = write_header(xh1, out, offset);
-    let b: initial_byte_t = xh1.fst;
-    if b.major_type == cbor_major_type_byte_string || b.major_type == cbor_major_type_text_string
+    let deep: bool = compute_deep(x·);
+    if deep
     {
-        let _letpattern: cbor_raw = x·;
-        let x2·: &[u8] =
-            match _letpattern
-            {
-                cbor_raw::CBOR_Case_String { v: c· } => c·.cbor_string_ptr,
-                _ => panic!("Incomplete pattern matching")
-            };
-        let length: usize = x2·.len();
-        let _letpattern0: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
-        let _sp11: &[u8] = _letpattern0.0;
-        let sp12: &mut [u8] = _letpattern0.1;
-        let _letpattern1: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
-        let sp21: &mut [u8] = _letpattern1.0;
-        let _sp22: &[u8] = _letpattern1.1;
-        sp21.copy_from_slice(x2·);
-        res1.wrapping_add(length)
-    }
-    else
-    {
-        let b0: initial_byte_t = xh1.fst;
-        if b0.major_type == cbor_major_type_array
+        let xh1: header = cbor_raw_with_perm_get_header_d(x·);
+        let res1: usize = write_header(xh1, out, offset);
+        let b: initial_byte_t = xh1.fst;
+        if
+        b.major_type == cbor_major_type_byte_string || b.major_type == cbor_major_type_text_string
         {
-            if match x· { cbor_raw::CBOR_Case_Array { .. } => true, _ => false }
-            {
-                let x2·: cbor_raw = x·;
-                let a: &[cbor_raw] =
-                    match
-                    match x2·
-                    {
-                        cbor_raw::CBOR_Case_Array { v: a } =>
-                          option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
-                          { v: a.cbor_array_ptr },
-                        _ =>
-                          option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::None
-                    }
-                    {
-                        option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
-                        { v }
-                        => v,
-                        _ => panic!("Incomplete pattern matching")
-                    };
-                let mut pres: [usize; 1] = [res1; 1usize];
-                let mut pi: [usize; 1] = [0usize; 1usize];
-                let i: usize = (&pi)[0];
-                let mut cond: bool = i < argument_as_uint64(xh1.fst, xh1.snd) as usize;
-                while
-                cond
+            let _letpattern: cbor_raw = x·;
+            let x2·: &[u8] =
+                match _letpattern
                 {
-                    let i0: usize = (&pi)[0];
-                    let off: usize = (&pres)[0];
-                    let e: cbor_raw = a[i0];
-                    let i·: usize = i0.wrapping_add(1usize);
-                    let x2·1: cbor_raw = e;
-                    let res: usize = ser·(x2·1, out, off);
-                    (&mut pi)[0] = i·;
-                    (&mut pres)[0] = res;
-                    let i1: usize = (&pi)[0];
-                    cond = i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
+                    cbor_raw::CBOR_Case_String { v: c· } => c·.cbor_string_ptr,
+                    _ => panic!("Incomplete pattern matching")
                 };
-                (&pres)[0]
-            }
-            else
-            {
-                let _letpattern: cbor_raw = x·;
-                let x2·: &[u8] =
-                    match _letpattern
-                    {
-                        cbor_raw::CBOR_Case_Serialized_Array { v: xs } => xs.cbor_serialized_payload,
-                        _ => panic!("Incomplete pattern matching")
-                    };
-                let length: usize = x2·.len();
-                let _letpattern0: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
-                let _sp11: &[u8] = _letpattern0.0;
-                let sp12: &mut [u8] = _letpattern0.1;
-                let _letpattern1: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
-                let sp21: &mut [u8] = _letpattern1.0;
-                let _sp22: &[u8] = _letpattern1.1;
-                sp21.copy_from_slice(x2·);
-                res1.wrapping_add(length)
-            }
+            let length: usize = x2·.len();
+            let _letpattern0: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
+            let _sp11: &[u8] = _letpattern0.0;
+            let sp12: &mut [u8] = _letpattern0.1;
+            let _letpattern1: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
+            let sp21: &mut [u8] = _letpattern1.0;
+            let _sp22: &[u8] = _letpattern1.1;
+            sp21.copy_from_slice(x2·);
+            res1.wrapping_add(length)
         }
         else
         {
-            let b1: initial_byte_t = xh1.fst;
-            if b1.major_type == cbor_major_type_map
+            let b0: initial_byte_t = xh1.fst;
+            if b0.major_type == cbor_major_type_array
             {
-                if match x· { cbor_raw::CBOR_Case_Map { .. } => true, _ => false }
+                if match x· { cbor_raw::CBOR_Case_Array { .. } => true, _ => false }
                 {
                     let x2·: cbor_raw = x·;
-                    let a: &[cbor_map_entry] =
+                    let a: &[cbor_raw] =
                         match
                         match x2·
                         {
-                            cbor_raw::CBOR_Case_Map { v: a } =>
-                              option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
-                              { v: a.cbor_map_ptr },
+                            cbor_raw::CBOR_Case_Array { v: a } =>
+                              option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
+                              { v: a.cbor_array_ptr },
                             _ =>
-                              option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::None
+                              option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::None
                         }
                         {
-                            option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
+                            option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
                             { v }
                             => v,
                             _ => panic!("Incomplete pattern matching")
                         };
                     let mut pres: [usize; 1] = [res1; 1usize];
                     let mut pi: [usize; 1] = [0usize; 1usize];
+                    let len: usize = a.len();
                     let i: usize = (&pi)[0];
-                    let mut cond: bool = i < argument_as_uint64(xh1.fst, xh1.snd) as usize;
+                    let mut cond: bool = i < len;
                     while
                     cond
                     {
                         let i0: usize = (&pi)[0];
                         let off: usize = (&pres)[0];
-                        let e: cbor_map_entry = a[i0];
+                        let e: cbor_raw = a[i0];
                         let i·: usize = i0.wrapping_add(1usize);
-                        let x11: cbor_raw = e.cbor_map_entry_key;
-                        let res11: usize = ser·(x11, out, off);
-                        let x2: cbor_raw = e.cbor_map_entry_value;
-                        let res: usize = ser·(x2, out, res11);
+                        let x2·1: cbor_raw = e;
+                        let res: usize = ser·_d(x2·1, out, off);
                         (&mut pi)[0] = i·;
                         (&mut pres)[0] = res;
                         let i1: usize = (&pi)[0];
-                        cond = i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
+                        cond = i1 < len
                     };
                     (&pres)[0]
                 }
@@ -2997,7 +3163,7 @@ pub(crate) fn ser·(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                     let x2·: &[u8] =
                         match _letpattern
                         {
-                            cbor_raw::CBOR_Case_Serialized_Map { v: xs } =>
+                            cbor_raw::CBOR_Case_Serialized_Array { v: xs } =>
                               xs.cbor_serialized_payload,
                             _ => panic!("Incomplete pattern matching")
                         };
@@ -3014,156 +3180,6 @@ pub(crate) fn ser·(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
             }
             else
             {
-                let b2: initial_byte_t = xh1.fst;
-                if b2.major_type == cbor_major_type_tagged
-                {
-                    if match x· { cbor_raw::CBOR_Case_Tagged { .. } => true, _ => false }
-                    {
-                        let _letpattern: cbor_raw = x·;
-                        let x2·: cbor_raw =
-                            match _letpattern
-                            {
-                                cbor_raw::CBOR_Case_Tagged { v: tg } => tg.cbor_tagged_ptr[0],
-                                _ => panic!("Incomplete pattern matching")
-                            };
-                        ser·(x2·, out, res1)
-                    }
-                    else
-                    {
-                        let _letpattern: cbor_raw = x·;
-                        let x2·: &[u8] =
-                            match _letpattern
-                            {
-                                cbor_raw::CBOR_Case_Serialized_Tagged { v: ser } =>
-                                  ser.cbor_serialized_payload,
-                                _ => panic!("Incomplete pattern matching")
-                            };
-                        let length: usize = x2·.len();
-                        let _letpattern0: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
-                        let _sp11: &[u8] = _letpattern0.0;
-                        let sp12: &mut [u8] = _letpattern0.1;
-                        let _letpattern1: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
-                        let sp21: &mut [u8] = _letpattern1.0;
-                        let _sp22: &[u8] = _letpattern1.1;
-                        sp21.copy_from_slice(x2·);
-                        res1.wrapping_add(length)
-                    }
-                }
-                else
-                { res1 }
-            }
-        }
-    }
-}
-
-fn ser(x1·: cbor_raw, out: &mut [u8], offset: usize) -> usize
-{
-    let x2·: cbor_raw = x1·;
-    ser·(x2·, out, offset)
-}
-
-pub(crate) fn cbor_serialize(x: cbor_raw, output: &mut [u8]) -> usize
-{ ser(x, output, 0usize) }
-
-pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
-{
-    let xh1: header = cbor_raw_with_perm_get_header(x·);
-    let res1: bool = size_header(xh1, out);
-    if res1
-    {
-        let b: initial_byte_t = xh1.fst;
-        if
-        b.major_type == cbor_major_type_byte_string || b.major_type == cbor_major_type_text_string
-        {
-            let _letpattern: cbor_raw = x·;
-            let x2·: &[u8] =
-                match _letpattern
-                {
-                    cbor_raw::CBOR_Case_String { v: c· } => c·.cbor_string_ptr,
-                    _ => panic!("Incomplete pattern matching")
-                };
-            let length: usize = x2·.len();
-            let cur: usize = out[0];
-            if cur < length
-            { false }
-            else
-            {
-                out[0] = cur.wrapping_sub(length);
-                true
-            }
-        }
-        else
-        {
-            let b0: initial_byte_t = xh1.fst;
-            if b0.major_type == cbor_major_type_array
-            {
-                if match x· { cbor_raw::CBOR_Case_Array { .. } => true, _ => false }
-                {
-                    let x2·: cbor_raw = x·;
-                    let a: &[cbor_raw] =
-                        match
-                        match x2·
-                        {
-                            cbor_raw::CBOR_Case_Array { v: a } =>
-                              option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
-                              { v: a.cbor_array_ptr },
-                            _ =>
-                              option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::None
-                        }
-                        {
-                            option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
-                            { v }
-                            => v,
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    let mut pres: [bool; 1] = [true; 1usize];
-                    let mut pi: [usize; 1] = [0usize; 1usize];
-                    let res: bool = (&pres)[0];
-                    let i: usize = (&pi)[0];
-                    let mut cond: bool = res && i < argument_as_uint64(xh1.fst, xh1.snd) as usize;
-                    while
-                    cond
-                    {
-                        let i0: usize = (&pi)[0];
-                        let e: cbor_raw = a[i0];
-                        let x2·1: cbor_raw = e;
-                        let res0: bool = siz·(x2·1, out);
-                        if res0
-                        {
-                            let i·: usize = i0.wrapping_add(1usize);
-                            (&mut pi)[0] = i·
-                        }
-                        else
-                        { (&mut pres)[0] = false };
-                        let res2: bool = (&pres)[0];
-                        let i1: usize = (&pi)[0];
-                        cond = res2 && i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
-                    };
-                    (&pres)[0]
-                }
-                else
-                {
-                    let _letpattern: cbor_raw = x·;
-                    let x2·: &[u8] =
-                        match _letpattern
-                        {
-                            cbor_raw::CBOR_Case_Serialized_Array { v: xs } =>
-                              xs.cbor_serialized_payload,
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    let length: usize = x2·.len();
-                    let cur: usize = out[0];
-                    if cur < length
-                    { false }
-                    else
-                    {
-                        out[0] = cur.wrapping_sub(length);
-                        true
-                    }
-                }
-            }
-            else
-            {
                 let b1: initial_byte_t = xh1.fst;
                 if b1.major_type == cbor_major_type_map
                 {
@@ -3175,48 +3191,37 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
                             match x2·
                             {
                                 cbor_raw::CBOR_Case_Map { v: a } =>
-                                  option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
+                                  option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
                                   { v: a.cbor_map_ptr },
                                 _ =>
-                                  option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::None
+                                  option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::None
                             }
                             {
-                                option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
+                                option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
                                 { v }
                                 => v,
                                 _ => panic!("Incomplete pattern matching")
                             };
-                        let mut pres: [bool; 1] = [true; 1usize];
+                        let mut pres: [usize; 1] = [res1; 1usize];
                         let mut pi: [usize; 1] = [0usize; 1usize];
-                        let res: bool = (&pres)[0];
+                        let len: usize = a.len();
                         let i: usize = (&pi)[0];
-                        let mut cond: bool =
-                            res && i < argument_as_uint64(xh1.fst, xh1.snd) as usize;
+                        let mut cond: bool = i < len;
                         while
                         cond
                         {
                             let i0: usize = (&pi)[0];
+                            let off: usize = (&pres)[0];
                             let e: cbor_map_entry = a[i0];
+                            let i·: usize = i0.wrapping_add(1usize);
                             let x11: cbor_raw = e.cbor_map_entry_key;
-                            let res11: bool = siz·(x11, out);
-                            let res0: bool =
-                                if res11
-                                {
-                                    let x2: cbor_raw = e.cbor_map_entry_value;
-                                    siz·(x2, out)
-                                }
-                                else
-                                { false };
-                            if res0
-                            {
-                                let i·: usize = i0.wrapping_add(1usize);
-                                (&mut pi)[0] = i·
-                            }
-                            else
-                            { (&mut pres)[0] = false };
-                            let res2: bool = (&pres)[0];
+                            let res11: usize = ser·_d(x11, out, off);
+                            let x2: cbor_raw = e.cbor_map_entry_value;
+                            let res: usize = ser·_d(x2, out, res11);
+                            (&mut pi)[0] = i·;
+                            (&mut pres)[0] = res;
                             let i1: usize = (&pi)[0];
-                            cond = res2 && i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
+                            cond = i1 < len
                         };
                         (&pres)[0]
                     }
@@ -3231,14 +3236,14 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
                                 _ => panic!("Incomplete pattern matching")
                             };
                         let length: usize = x2·.len();
-                        let cur: usize = out[0];
-                        if cur < length
-                        { false }
-                        else
-                        {
-                            out[0] = cur.wrapping_sub(length);
-                            true
-                        }
+                        let _letpattern0: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
+                        let _sp11: &[u8] = _letpattern0.0;
+                        let sp12: &mut [u8] = _letpattern0.1;
+                        let _letpattern1: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
+                        let sp21: &mut [u8] = _letpattern1.0;
+                        let _sp22: &[u8] = _letpattern1.1;
+                        sp21.copy_from_slice(x2·);
+                        res1.wrapping_add(length)
                     }
                 }
                 else
@@ -3255,7 +3260,7 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
                                     cbor_raw::CBOR_Case_Tagged { v: tg } => tg.cbor_tagged_ptr[0],
                                     _ => panic!("Incomplete pattern matching")
                                 };
-                            siz·(x2·, out)
+                            ser·_d(x2·, out, res1)
                         }
                         else
                         {
@@ -3263,8 +3268,320 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
                             let x2·: &[u8] =
                                 match _letpattern
                                 {
-                                    cbor_raw::CBOR_Case_Serialized_Tagged { v: ser1 } =>
-                                      ser1.cbor_serialized_payload,
+                                    cbor_raw::CBOR_Case_Serialized_Tagged { v: ser } =>
+                                      ser.cbor_serialized_payload,
+                                    _ => panic!("Incomplete pattern matching")
+                                };
+                            let length: usize = x2·.len();
+                            let _letpattern0: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
+                            let _sp11: &[u8] = _letpattern0.0;
+                            let sp12: &mut [u8] = _letpattern0.1;
+                            let _letpattern1: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
+                            let sp21: &mut [u8] = _letpattern1.0;
+                            let _sp22: &[u8] = _letpattern1.1;
+                            sp21.copy_from_slice(x2·);
+                            res1.wrapping_add(length)
+                        }
+                    }
+                    else
+                    { res1 }
+                }
+            }
+        }
+    }
+    else
+    {
+        let xh1: header = cbor_raw_with_perm_get_header_d(x·);
+        let res1: usize = write_header(xh1, out, offset);
+        let b: initial_byte_t = xh1.fst;
+        if
+        b.major_type == cbor_major_type_byte_string || b.major_type == cbor_major_type_text_string
+        {
+            let _letpattern: cbor_raw = x·;
+            let x2·: &[u8] =
+                match _letpattern
+                {
+                    cbor_raw::CBOR_Case_String { v: c· } => c·.cbor_string_ptr,
+                    _ => panic!("Incomplete pattern matching")
+                };
+            let length: usize = x2·.len();
+            let _letpattern0: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
+            let _sp11: &[u8] = _letpattern0.0;
+            let sp12: &mut [u8] = _letpattern0.1;
+            let _letpattern1: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
+            let sp21: &mut [u8] = _letpattern1.0;
+            let _sp22: &[u8] = _letpattern1.1;
+            sp21.copy_from_slice(x2·);
+            res1.wrapping_add(length)
+        }
+        else
+        {
+            let b0: initial_byte_t = xh1.fst;
+            if b0.major_type == cbor_major_type_array
+            {
+                if match x· { cbor_raw::CBOR_Case_Array { .. } => true, _ => false }
+                { res1 }
+                else
+                {
+                    let _letpattern: cbor_raw = x·;
+                    let x2·: &[u8] =
+                        match _letpattern
+                        {
+                            cbor_raw::CBOR_Case_Serialized_Array { v: xs } =>
+                              xs.cbor_serialized_payload,
+                            _ => panic!("Incomplete pattern matching")
+                        };
+                    let length: usize = x2·.len();
+                    let _letpattern0: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
+                    let _sp11: &[u8] = _letpattern0.0;
+                    let sp12: &mut [u8] = _letpattern0.1;
+                    let _letpattern1: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
+                    let sp21: &mut [u8] = _letpattern1.0;
+                    let _sp22: &[u8] = _letpattern1.1;
+                    sp21.copy_from_slice(x2·);
+                    res1.wrapping_add(length)
+                }
+            }
+            else
+            {
+                let b1: initial_byte_t = xh1.fst;
+                if b1.major_type == cbor_major_type_map
+                {
+                    if match x· { cbor_raw::CBOR_Case_Map { .. } => true, _ => false }
+                    { res1 }
+                    else
+                    {
+                        let _letpattern: cbor_raw = x·;
+                        let x2·: &[u8] =
+                            match _letpattern
+                            {
+                                cbor_raw::CBOR_Case_Serialized_Map { v: xs } =>
+                                  xs.cbor_serialized_payload,
+                                _ => panic!("Incomplete pattern matching")
+                            };
+                        let length: usize = x2·.len();
+                        let _letpattern0: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
+                        let _sp11: &[u8] = _letpattern0.0;
+                        let sp12: &mut [u8] = _letpattern0.1;
+                        let _letpattern1: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
+                        let sp21: &mut [u8] = _letpattern1.0;
+                        let _sp22: &[u8] = _letpattern1.1;
+                        sp21.copy_from_slice(x2·);
+                        res1.wrapping_add(length)
+                    }
+                }
+                else
+                {
+                    let b2: initial_byte_t = xh1.fst;
+                    if b2.major_type == cbor_major_type_tagged
+                    {
+                        if match x· { cbor_raw::CBOR_Case_Tagged { .. } => true, _ => false }
+                        {
+                            let _letpattern: cbor_raw = x·;
+                            match _letpattern
+                            {
+                                cbor_raw::CBOR_Case_Tagged { .. } => res1,
+                                _ => panic!("Incomplete pattern matching")
+                            }
+                        }
+                        else
+                        {
+                            let _letpattern: cbor_raw = x·;
+                            let x2·: &[u8] =
+                                match _letpattern
+                                {
+                                    cbor_raw::CBOR_Case_Serialized_Tagged { v: ser } =>
+                                      ser.cbor_serialized_payload,
+                                    _ => panic!("Incomplete pattern matching")
+                                };
+                            let length: usize = x2·.len();
+                            let _letpattern0: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
+                            let _sp11: &[u8] = _letpattern0.0;
+                            let sp12: &mut [u8] = _letpattern0.1;
+                            let _letpattern1: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
+                            let sp21: &mut [u8] = _letpattern1.0;
+                            let _sp22: &[u8] = _letpattern1.1;
+                            sp21.copy_from_slice(x2·);
+                            res1.wrapping_add(length)
+                        }
+                    }
+                    else
+                    { res1 }
+                }
+            }
+        }
+    }
+}
+
+pub(crate) fn siz·_d(x·: cbor_raw, out: &mut [usize]) -> bool
+{
+    let deep: bool = compute_deep(x·);
+    if deep
+    {
+        let xh1: header = cbor_raw_with_perm_get_header_d(x·);
+        let res1: bool = size_header(xh1, out);
+        if res1
+        {
+            let b: initial_byte_t = xh1.fst;
+            if
+            b.major_type == cbor_major_type_byte_string
+            ||
+            b.major_type == cbor_major_type_text_string
+            {
+                let _letpattern: cbor_raw = x·;
+                let x2·: &[u8] =
+                    match _letpattern
+                    {
+                        cbor_raw::CBOR_Case_String { v: c· } => c·.cbor_string_ptr,
+                        _ => panic!("Incomplete pattern matching")
+                    };
+                let length: usize = x2·.len();
+                let cur: usize = out[0];
+                if cur < length
+                { false }
+                else
+                {
+                    out[0] = cur.wrapping_sub(length);
+                    true
+                }
+            }
+            else
+            {
+                let b0: initial_byte_t = xh1.fst;
+                if b0.major_type == cbor_major_type_array
+                {
+                    if match x· { cbor_raw::CBOR_Case_Array { .. } => true, _ => false }
+                    {
+                        let x2·: cbor_raw = x·;
+                        let a: &[cbor_raw] =
+                            match
+                            match x2·
+                            {
+                                cbor_raw::CBOR_Case_Array { v: a } =>
+                                  option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
+                                  { v: a.cbor_array_ptr },
+                                _ =>
+                                  option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::None
+                            }
+                            {
+                                option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
+                                { v }
+                                => v,
+                                _ => panic!("Incomplete pattern matching")
+                            };
+                        let mut pres: [bool; 1] = [true; 1usize];
+                        let mut pi: [usize; 1] = [0usize; 1usize];
+                        let len: usize = a.len();
+                        let res: bool = (&pres)[0];
+                        let i: usize = (&pi)[0];
+                        let mut cond: bool = res && i < len;
+                        while
+                        cond
+                        {
+                            let i0: usize = (&pi)[0];
+                            let e: cbor_raw = a[i0];
+                            let x2·1: cbor_raw = e;
+                            let res0: bool = siz·_d(x2·1, out);
+                            if res0
+                            {
+                                let i·: usize = i0.wrapping_add(1usize);
+                                (&mut pi)[0] = i·
+                            }
+                            else
+                            { (&mut pres)[0] = false };
+                            let res2: bool = (&pres)[0];
+                            let i1: usize = (&pi)[0];
+                            cond = res2 && i1 < len
+                        };
+                        (&pres)[0]
+                    }
+                    else
+                    {
+                        let _letpattern: cbor_raw = x·;
+                        let x2·: &[u8] =
+                            match _letpattern
+                            {
+                                cbor_raw::CBOR_Case_Serialized_Array { v: xs } =>
+                                  xs.cbor_serialized_payload,
+                                _ => panic!("Incomplete pattern matching")
+                            };
+                        let length: usize = x2·.len();
+                        let cur: usize = out[0];
+                        if cur < length
+                        { false }
+                        else
+                        {
+                            out[0] = cur.wrapping_sub(length);
+                            true
+                        }
+                    }
+                }
+                else
+                {
+                    let b1: initial_byte_t = xh1.fst;
+                    if b1.major_type == cbor_major_type_map
+                    {
+                        if match x· { cbor_raw::CBOR_Case_Map { .. } => true, _ => false }
+                        {
+                            let x2·: cbor_raw = x·;
+                            let a: &[cbor_map_entry] =
+                                match
+                                match x2·
+                                {
+                                    cbor_raw::CBOR_Case_Map { v: a } =>
+                                      option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
+                                      { v: a.cbor_map_ptr },
+                                    _ =>
+                                      option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::None
+                                }
+                                {
+                                    option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
+                                    { v }
+                                    => v,
+                                    _ => panic!("Incomplete pattern matching")
+                                };
+                            let mut pres: [bool; 1] = [true; 1usize];
+                            let mut pi: [usize; 1] = [0usize; 1usize];
+                            let len: usize = a.len();
+                            let res: bool = (&pres)[0];
+                            let i: usize = (&pi)[0];
+                            let mut cond: bool = res && i < len;
+                            while
+                            cond
+                            {
+                                let i0: usize = (&pi)[0];
+                                let e: cbor_map_entry = a[i0];
+                                let x11: cbor_raw = e.cbor_map_entry_key;
+                                let res11: bool = siz·_d(x11, out);
+                                let res0: bool =
+                                    if res11
+                                    {
+                                        let x2: cbor_raw = e.cbor_map_entry_value;
+                                        siz·_d(x2, out)
+                                    }
+                                    else
+                                    { false };
+                                if res0
+                                {
+                                    let i·: usize = i0.wrapping_add(1usize);
+                                    (&mut pi)[0] = i·
+                                }
+                                else
+                                { (&mut pres)[0] = false };
+                                let res2: bool = (&pres)[0];
+                                let i1: usize = (&pi)[0];
+                                cond = res2 && i1 < len
+                            };
+                            (&pres)[0]
+                        }
+                        else
+                        {
+                            let _letpattern: cbor_raw = x·;
+                            let x2·: &[u8] =
+                                match _letpattern
+                                {
+                                    cbor_raw::CBOR_Case_Serialized_Map { v: xs } =>
+                                      xs.cbor_serialized_payload,
                                     _ => panic!("Incomplete pattern matching")
                                 };
                             let length: usize = x2·.len();
@@ -3279,25 +3596,194 @@ pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
                         }
                     }
                     else
-                    { true }
+                    {
+                        let b2: initial_byte_t = xh1.fst;
+                        if b2.major_type == cbor_major_type_tagged
+                        {
+                            if match x· { cbor_raw::CBOR_Case_Tagged { .. } => true, _ => false }
+                            {
+                                let _letpattern: cbor_raw = x·;
+                                let x2·: cbor_raw =
+                                    match _letpattern
+                                    {
+                                        cbor_raw::CBOR_Case_Tagged { v: tg } =>
+                                          tg.cbor_tagged_ptr[0],
+                                        _ => panic!("Incomplete pattern matching")
+                                    };
+                                siz·_d(x2·, out)
+                            }
+                            else
+                            {
+                                let _letpattern: cbor_raw = x·;
+                                let x2·: &[u8] =
+                                    match _letpattern
+                                    {
+                                        cbor_raw::CBOR_Case_Serialized_Tagged { v: ser } =>
+                                          ser.cbor_serialized_payload,
+                                        _ => panic!("Incomplete pattern matching")
+                                    };
+                                let length: usize = x2·.len();
+                                let cur: usize = out[0];
+                                if cur < length
+                                { false }
+                                else
+                                {
+                                    out[0] = cur.wrapping_sub(length);
+                                    true
+                                }
+                            }
+                        }
+                        else
+                        { true }
+                    }
                 }
             }
         }
+        else
+        { false }
     }
     else
-    { false }
+    {
+        let xh1: header = cbor_raw_with_perm_get_header_d(x·);
+        let res1: bool = size_header(xh1, out);
+        if res1
+        {
+            let b: initial_byte_t = xh1.fst;
+            if
+            b.major_type == cbor_major_type_byte_string
+            ||
+            b.major_type == cbor_major_type_text_string
+            {
+                let _letpattern: cbor_raw = x·;
+                let x2·: &[u8] =
+                    match _letpattern
+                    {
+                        cbor_raw::CBOR_Case_String { v: c· } => c·.cbor_string_ptr,
+                        _ => panic!("Incomplete pattern matching")
+                    };
+                let length: usize = x2·.len();
+                let cur: usize = out[0];
+                if cur < length
+                { false }
+                else
+                {
+                    out[0] = cur.wrapping_sub(length);
+                    true
+                }
+            }
+            else
+            {
+                let b0: initial_byte_t = xh1.fst;
+                if b0.major_type == cbor_major_type_array
+                {
+                    if match x· { cbor_raw::CBOR_Case_Array { .. } => true, _ => false }
+                    { true }
+                    else
+                    {
+                        let _letpattern: cbor_raw = x·;
+                        let x2·: &[u8] =
+                            match _letpattern
+                            {
+                                cbor_raw::CBOR_Case_Serialized_Array { v: xs } =>
+                                  xs.cbor_serialized_payload,
+                                _ => panic!("Incomplete pattern matching")
+                            };
+                        let length: usize = x2·.len();
+                        let cur: usize = out[0];
+                        if cur < length
+                        { false }
+                        else
+                        {
+                            out[0] = cur.wrapping_sub(length);
+                            true
+                        }
+                    }
+                }
+                else
+                {
+                    let b1: initial_byte_t = xh1.fst;
+                    if b1.major_type == cbor_major_type_map
+                    {
+                        if match x· { cbor_raw::CBOR_Case_Map { .. } => true, _ => false }
+                        { true }
+                        else
+                        {
+                            let _letpattern: cbor_raw = x·;
+                            let x2·: &[u8] =
+                                match _letpattern
+                                {
+                                    cbor_raw::CBOR_Case_Serialized_Map { v: xs } =>
+                                      xs.cbor_serialized_payload,
+                                    _ => panic!("Incomplete pattern matching")
+                                };
+                            let length: usize = x2·.len();
+                            let cur: usize = out[0];
+                            if cur < length
+                            { false }
+                            else
+                            {
+                                out[0] = cur.wrapping_sub(length);
+                                true
+                            }
+                        }
+                    }
+                    else
+                    {
+                        let b2: initial_byte_t = xh1.fst;
+                        if b2.major_type == cbor_major_type_tagged
+                        {
+                            if match x· { cbor_raw::CBOR_Case_Tagged { .. } => true, _ => false }
+                            {
+                                let _letpattern: cbor_raw = x·;
+                                match _letpattern
+                                {
+                                    cbor_raw::CBOR_Case_Tagged { .. } => false,
+                                    _ => panic!("Incomplete pattern matching")
+                                }
+                            }
+                            else
+                            {
+                                let _letpattern: cbor_raw = x·;
+                                let x2·: &[u8] =
+                                    match _letpattern
+                                    {
+                                        cbor_raw::CBOR_Case_Serialized_Tagged { v: ser } =>
+                                          ser.cbor_serialized_payload,
+                                        _ => panic!("Incomplete pattern matching")
+                                    };
+                                let length: usize = x2·.len();
+                                let cur: usize = out[0];
+                                if cur < length
+                                { false }
+                                else
+                                {
+                                    out[0] = cur.wrapping_sub(length);
+                                    true
+                                }
+                            }
+                        }
+                        else
+                        { true }
+                    }
+                }
+            }
+        }
+        else
+        { false }
+    }
 }
 
-fn siz(x1·: cbor_raw, out: &mut [usize]) -> bool
+pub(crate) fn cbor_serialize(x: cbor_raw, output: &mut [u8]) -> usize
 {
-    let x2·: cbor_raw = x1·;
-    siz·(x2·, out)
+    let xp: cbor_raw = x;
+    ser·_d(xp, output, 0usize)
 }
 
 pub(crate) fn cbor_size(x: cbor_raw, bound: usize) -> usize
 {
     let mut output: [usize; 1] = [bound; 1usize];
-    let res: bool = siz(x, &mut output);
+    let xp: cbor_raw = x;
+    let res: bool = siz·_d(xp, &mut output);
     if res
     {
         let rem: usize = (&output)[0];
@@ -3331,8 +3817,8 @@ fn cbor_serialize_array·(len: raw_uint64, out: &mut [u8], off: usize) -> usize
         {
             let mut pn: [usize; 1] = [sp1.len(); 1usize];
             let mut pl: [usize; 1] = [off; 1usize];
-            let __anf3172: usize = (&pl)[0];
-            let mut cond: bool = __anf3172 > 0usize;
+            let __anf0: usize = (&pl)[0];
+            let mut cond: bool = __anf0 > 0usize;
             while
             cond
             {
@@ -3341,14 +3827,14 @@ fn cbor_serialize_array·(len: raw_uint64, out: &mut [u8], off: usize) -> usize
                 let l·: usize = n.wrapping_rem(l1);
                 (&mut pn)[0] = l1;
                 (&mut pl)[0] = l·;
-                let __anf31720: usize = (&pl)[0];
-                cond = __anf31720 > 0usize
+                let __anf00: usize = (&pl)[0];
+                cond = __anf00 > 0usize
             };
             let d: usize = (&pn)[0];
             let q: usize = sp1.len().wrapping_div(d);
             let mut pi: [usize; 1] = [0usize; 1usize];
-            let __anf4223: usize = (&pi)[0];
-            let mut cond0: bool = __anf4223 < d;
+            let __anf00: usize = (&pi)[0];
+            let mut cond0: bool = __anf00 < d;
             while
             cond0
             {
@@ -3356,8 +3842,8 @@ fn cbor_serialize_array·(len: raw_uint64, out: &mut [u8], off: usize) -> usize
                 let save: u8 = sp1[i];
                 let mut pj: [usize; 1] = [0usize; 1usize];
                 let mut pidx: [usize; 1] = [i; 1usize];
-                let __anf6456: usize = (&pj)[0];
-                let mut cond1: bool = __anf6456 < q.wrapping_sub(1usize);
+                let __anf01: usize = (&pj)[0];
+                let mut cond1: bool = __anf01 < q.wrapping_sub(1usize);
                 while
                 cond1
                 {
@@ -3373,15 +3859,15 @@ fn cbor_serialize_array·(len: raw_uint64, out: &mut [u8], off: usize) -> usize
                     sp1[idx] = x;
                     (&mut pj)[0] = j·;
                     (&mut pidx)[0] = idx·;
-                    let __anf64560: usize = (&pj)[0];
-                    cond1 = __anf64560 < q.wrapping_sub(1usize)
+                    let __anf02: usize = (&pj)[0];
+                    cond1 = __anf02 < q.wrapping_sub(1usize)
                 };
                 let idx: usize = (&pidx)[0];
                 sp1[idx] = save;
                 let i·: usize = i.wrapping_add(1usize);
                 (&mut pi)[0] = i·;
-                let __anf42230: usize = (&pi)[0];
-                cond0 = __anf42230 < d
+                let __anf02: usize = (&pi)[0];
+                cond0 = __anf02 < d
             }
         };
         llen
@@ -3410,8 +3896,8 @@ pub(crate) fn cbor_serialize_string(ty: u8, off: raw_uint64, out: &mut [u8]) -> 
         {
             let mut pn: [usize; 1] = [sp1.len(); 1usize];
             let mut pl: [usize; 1] = [soff; 1usize];
-            let __anf3172: usize = (&pl)[0];
-            let mut cond: bool = __anf3172 > 0usize;
+            let __anf0: usize = (&pl)[0];
+            let mut cond: bool = __anf0 > 0usize;
             while
             cond
             {
@@ -3420,14 +3906,14 @@ pub(crate) fn cbor_serialize_string(ty: u8, off: raw_uint64, out: &mut [u8]) -> 
                 let l·: usize = n.wrapping_rem(l);
                 (&mut pn)[0] = l;
                 (&mut pl)[0] = l·;
-                let __anf31720: usize = (&pl)[0];
-                cond = __anf31720 > 0usize
+                let __anf00: usize = (&pl)[0];
+                cond = __anf00 > 0usize
             };
             let d: usize = (&pn)[0];
             let q: usize = sp1.len().wrapping_div(d);
             let mut pi: [usize; 1] = [0usize; 1usize];
-            let __anf4223: usize = (&pi)[0];
-            let mut cond0: bool = __anf4223 < d;
+            let __anf00: usize = (&pi)[0];
+            let mut cond0: bool = __anf00 < d;
             while
             cond0
             {
@@ -3435,8 +3921,8 @@ pub(crate) fn cbor_serialize_string(ty: u8, off: raw_uint64, out: &mut [u8]) -> 
                 let save: u8 = sp1[i];
                 let mut pj: [usize; 1] = [0usize; 1usize];
                 let mut pidx: [usize; 1] = [i; 1usize];
-                let __anf6456: usize = (&pj)[0];
-                let mut cond1: bool = __anf6456 < q.wrapping_sub(1usize);
+                let __anf01: usize = (&pj)[0];
+                let mut cond1: bool = __anf01 < q.wrapping_sub(1usize);
                 while
                 cond1
                 {
@@ -3452,15 +3938,15 @@ pub(crate) fn cbor_serialize_string(ty: u8, off: raw_uint64, out: &mut [u8]) -> 
                     sp1[idx] = x;
                     (&mut pj)[0] = j·;
                     (&mut pidx)[0] = idx·;
-                    let __anf64560: usize = (&pj)[0];
-                    cond1 = __anf64560 < q.wrapping_sub(1usize)
+                    let __anf02: usize = (&pj)[0];
+                    cond1 = __anf02 < q.wrapping_sub(1usize)
                 };
                 let idx: usize = (&pidx)[0];
                 sp1[idx] = save;
                 let i·: usize = i.wrapping_add(1usize);
                 (&mut pi)[0] = i·;
-                let __anf42230: usize = (&pi)[0];
-                cond0 = __anf42230 < d
+                let __anf02: usize = (&pi)[0];
+                cond0 = __anf02 < d
             }
         };
         llen
@@ -3485,8 +3971,8 @@ fn cbor_serialize_map·(len: raw_uint64, out: &mut [u8], off: usize) -> usize
         {
             let mut pn: [usize; 1] = [sp1.len(); 1usize];
             let mut pl: [usize; 1] = [off; 1usize];
-            let __anf3172: usize = (&pl)[0];
-            let mut cond: bool = __anf3172 > 0usize;
+            let __anf0: usize = (&pl)[0];
+            let mut cond: bool = __anf0 > 0usize;
             while
             cond
             {
@@ -3495,14 +3981,14 @@ fn cbor_serialize_map·(len: raw_uint64, out: &mut [u8], off: usize) -> usize
                 let l·: usize = n.wrapping_rem(l1);
                 (&mut pn)[0] = l1;
                 (&mut pl)[0] = l·;
-                let __anf31720: usize = (&pl)[0];
-                cond = __anf31720 > 0usize
+                let __anf00: usize = (&pl)[0];
+                cond = __anf00 > 0usize
             };
             let d: usize = (&pn)[0];
             let q: usize = sp1.len().wrapping_div(d);
             let mut pi: [usize; 1] = [0usize; 1usize];
-            let __anf4223: usize = (&pi)[0];
-            let mut cond0: bool = __anf4223 < d;
+            let __anf00: usize = (&pi)[0];
+            let mut cond0: bool = __anf00 < d;
             while
             cond0
             {
@@ -3510,8 +3996,8 @@ fn cbor_serialize_map·(len: raw_uint64, out: &mut [u8], off: usize) -> usize
                 let save: u8 = sp1[i];
                 let mut pj: [usize; 1] = [0usize; 1usize];
                 let mut pidx: [usize; 1] = [i; 1usize];
-                let __anf6456: usize = (&pj)[0];
-                let mut cond1: bool = __anf6456 < q.wrapping_sub(1usize);
+                let __anf01: usize = (&pj)[0];
+                let mut cond1: bool = __anf01 < q.wrapping_sub(1usize);
                 while
                 cond1
                 {
@@ -3527,15 +4013,15 @@ fn cbor_serialize_map·(len: raw_uint64, out: &mut [u8], off: usize) -> usize
                     sp1[idx] = x;
                     (&mut pj)[0] = j·;
                     (&mut pidx)[0] = idx·;
-                    let __anf64560: usize = (&pj)[0];
-                    cond1 = __anf64560 < q.wrapping_sub(1usize)
+                    let __anf02: usize = (&pj)[0];
+                    cond1 = __anf02 < q.wrapping_sub(1usize)
                 };
                 let idx: usize = (&pidx)[0];
                 sp1[idx] = save;
                 let i·: usize = i.wrapping_add(1usize);
                 (&mut pi)[0] = i·;
-                let __anf42230: usize = (&pi)[0];
-                cond0 = __anf42230 < d
+                let __anf02: usize = (&pi)[0];
+                cond0 = __anf02 < d
             }
         };
         llen
@@ -3546,15 +4032,6 @@ fn cbor_serialize_map·(len: raw_uint64, out: &mut [u8], off: usize) -> usize
 
 pub(crate) fn cbor_serialize_map(len: raw_uint64, out: &mut [u8], off: usize) -> usize
 { cbor_serialize_map·(len, out, off) }
-
-fn cbor_match_compare_serialized_tagged(c1: cbor_serialized, c2: cbor_serialized) -> i16
-{ lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload) }
-
-fn cbor_match_compare_serialized_array(c1: cbor_serialized, c2: cbor_serialized) -> i16
-{ lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload) }
-
-fn cbor_match_compare_serialized_map(c1: cbor_serialized, c2: cbor_serialized) -> i16
-{ lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload) }
 
 pub(crate) fn impl_major_type(x: cbor_raw) -> u8
 {
@@ -3598,61 +4075,97 @@ fn impl_raw_uint64_compare(x1: raw_uint64, x2: raw_uint64) -> i16
     if c == 0i16 { uint64_compare(x1.value, x2.value) } else { c }
 }
 
-#[derive(PartialEq, Clone, Copy)]
-enum
-option__·CBOR_Pulse_Raw_Type_cbor_serialized···CBOR_Pulse_Raw_Type_cbor_serialized·
-<'a>
+fn impl_major_type_with_depth(x: cbor_raw) -> u8
 {
-    None,
-    Some { v: (cbor_serialized <'a>, cbor_serialized <'a>) }
-}
-
-fn cbor_pair_is_serialized <'a>(c1: cbor_raw <'a>, c2: cbor_raw <'a>) ->
-    option__·CBOR_Pulse_Raw_Type_cbor_serialized···CBOR_Pulse_Raw_Type_cbor_serialized·
-    <'a>
-{
-    match c1
+    match x
     {
-        cbor_raw::CBOR_Case_Serialized_Tagged { v: s1 } =>
-          match c2
+        cbor_raw::CBOR_Case_Simple { .. } => cbor_major_type_simple_value,
+        cbor_raw::CBOR_Case_Int { .. } =>
           {
-              cbor_raw::CBOR_Case_Serialized_Tagged { v: s2 } =>
-                option__·CBOR_Pulse_Raw_Type_cbor_serialized···CBOR_Pulse_Raw_Type_cbor_serialized·::Some
-                { v: (s1,s2) },
-              _ =>
-                option__·CBOR_Pulse_Raw_Type_cbor_serialized···CBOR_Pulse_Raw_Type_cbor_serialized·::None
+              let _letpattern: cbor_raw = x;
+              match _letpattern
+              {
+                  cbor_raw::CBOR_Case_Int { v: c· } => c·.cbor_int_type,
+                  _ => panic!("Incomplete pattern matching")
+              }
           },
-        _ =>
-          option__·CBOR_Pulse_Raw_Type_cbor_serialized···CBOR_Pulse_Raw_Type_cbor_serialized·::None
+        cbor_raw::CBOR_Case_String { .. } =>
+          {
+              let _letpattern: cbor_raw = x;
+              match _letpattern
+              {
+                  cbor_raw::CBOR_Case_String { v: c· } => c·.cbor_string_type,
+                  _ => panic!("Incomplete pattern matching")
+              }
+          },
+        cbor_raw::CBOR_Case_Tagged { .. } => cbor_major_type_tagged,
+        cbor_raw::CBOR_Case_Serialized_Tagged { .. } => cbor_major_type_tagged,
+        cbor_raw::CBOR_Case_Array { .. } => cbor_major_type_array,
+        cbor_raw::CBOR_Case_Serialized_Array { .. } => cbor_major_type_array,
+        cbor_raw::CBOR_Case_Map { .. } => cbor_major_type_map,
+        cbor_raw::CBOR_Case_Serialized_Map { .. } => cbor_major_type_map,
+        _ => panic!("Incomplete pattern matching")
     }
 }
 
-fn fst__CBOR_Pulse_Raw_Type_cbor_serialized_CBOR_Pulse_Raw_Type_cbor_serialized <'a>(
-    x: (cbor_serialized <'a>, cbor_serialized <'a>)
-) ->
-    cbor_serialized
-    <'a>
+fn cbor_match_array_get_length_with_depth0(c: cbor_raw) -> raw_uint64
 {
-    let _1: cbor_serialized = x.0;
-    let __2: cbor_serialized = x.1;
-    _1
+    match c
+    {
+        cbor_raw::CBOR_Case_Array { v: a } =>
+          raw_uint64 { size: a.cbor_array_length_size, value: (a.cbor_array_ptr).len() as u64 },
+        cbor_raw::CBOR_Case_Serialized_Array { .. } =>
+          match c
+          {
+              cbor_raw::CBOR_Case_Array { v: c· } =>
+                raw_uint64
+                { size: c·.cbor_array_length_size, value: (c·.cbor_array_ptr).len() as u64 },
+              cbor_raw::CBOR_Case_Serialized_Array { v: c· } => c·.cbor_serialized_header,
+              _ => panic!("Incomplete pattern matching")
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
 }
 
-fn snd__CBOR_Pulse_Raw_Type_cbor_serialized_CBOR_Pulse_Raw_Type_cbor_serialized <'a>(
-    x: (cbor_serialized <'a>, cbor_serialized <'a>)
-) ->
-    cbor_serialized
-    <'a>
+fn cbor_match_map_get_length_with_depth0(c: cbor_raw) -> raw_uint64
 {
-    let __1: cbor_serialized = x.0;
-    let _2: cbor_serialized = x.1;
-    _2
+    match c
+    {
+        cbor_raw::CBOR_Case_Map { v: a } =>
+          raw_uint64 { size: a.cbor_map_length_size, value: (a.cbor_map_ptr).len() as u64 },
+        cbor_raw::CBOR_Case_Serialized_Map { .. } =>
+          match c
+          {
+              cbor_raw::CBOR_Case_Map { v: c· } =>
+                raw_uint64
+                { size: c·.cbor_map_length_size, value: (c·.cbor_map_ptr).len() as u64 },
+              cbor_raw::CBOR_Case_Serialized_Map { v: c· } => c·.cbor_serialized_header,
+              _ => panic!("Incomplete pattern matching")
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
 }
 
-pub(crate) fn impl_cbor_compare(x1: cbor_raw, x2: cbor_raw) -> i16
+fn cbor_match_tagged_get_tag_with_depth0(c: cbor_raw) -> raw_uint64
 {
-    let ty1: u8 = impl_major_type(x1);
-    let ty2: u8 = impl_major_type(x2);
+    match c
+    {
+        cbor_raw::CBOR_Case_Tagged { v: a } => a.cbor_tagged_tag,
+        cbor_raw::CBOR_Case_Serialized_Tagged { .. } =>
+          match c
+          {
+              cbor_raw::CBOR_Case_Tagged { v: c· } => c·.cbor_tagged_tag,
+              cbor_raw::CBOR_Case_Serialized_Tagged { v: c· } => c·.cbor_serialized_header,
+              _ => panic!("Incomplete pattern matching")
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+pub(crate) fn cbor_compare_with_depth(x1: cbor_raw, x2: cbor_raw) -> i16
+{
+    let ty1: u8 = impl_major_type_with_depth(x1);
+    let ty2: u8 = impl_major_type_with_depth(x2);
     let c: i16 = impl_uint8_compare(ty1, ty2);
     if c == 0i16
     {
@@ -3720,42 +4233,44 @@ pub(crate) fn impl_cbor_compare(x1: cbor_raw, x2: cbor_raw) -> i16
         }
         else if ty1 == cbor_major_type_tagged
         {
-            let tag1: raw_uint64 =
-                match x1
-                {
-                    cbor_raw::CBOR_Case_Tagged { v: c· } => c·.cbor_tagged_tag,
-                    cbor_raw::CBOR_Case_Serialized_Tagged { v: c· } => c·.cbor_serialized_header,
-                    _ => panic!("Incomplete pattern matching")
-                };
-            let tag2: raw_uint64 =
-                match x2
-                {
-                    cbor_raw::CBOR_Case_Tagged { v: c· } => c·.cbor_tagged_tag,
-                    cbor_raw::CBOR_Case_Serialized_Tagged { v: c· } => c·.cbor_serialized_header,
-                    _ => panic!("Incomplete pattern matching")
-                };
+            let tag1: raw_uint64 = cbor_match_tagged_get_tag_with_depth0(x1);
+            let tag2: raw_uint64 = cbor_match_tagged_get_tag_with_depth0(x2);
             let c1: i16 = impl_raw_uint64_compare(tag1, tag2);
             if c1 == 0i16
             {
-                match cbor_pair_is_serialized(x1, x2)
+                if
+                match (x1,x2)
                 {
-                    option__·CBOR_Pulse_Raw_Type_cbor_serialized···CBOR_Pulse_Raw_Type_cbor_serialized·::Some
-                    { v: pair }
-                    =>
-                      cbor_match_compare_serialized_tagged(
-                          fst__CBOR_Pulse_Raw_Type_cbor_serialized_CBOR_Pulse_Raw_Type_cbor_serialized(
-                              pair
-                          ),
-                          snd__CBOR_Pulse_Raw_Type_cbor_serialized_CBOR_Pulse_Raw_Type_cbor_serialized(
-                              pair
-                          )
-                      ),
-                    _ =>
-                      {
-                          let pl1: cbor_raw = cbor_match_tagged_get_payload(x1);
-                          let pl2: cbor_raw = cbor_match_tagged_get_payload(x2);
-                          impl_cbor_compare(pl1, pl2)
-                      }
+                    (
+                        cbor_raw::CBOR_Case_Serialized_Tagged
+                        { .. },cbor_raw::CBOR_Case_Serialized_Tagged
+                        { .. }
+                    )
+                    => true,
+                    _ => false
+                }
+                {
+                    let _letpattern: cbor_raw = x1;
+                    match _letpattern
+                    {
+                        cbor_raw::CBOR_Case_Serialized_Tagged { v: cs1 } =>
+                          {
+                              let _letpattern1: cbor_raw = x2;
+                              match _letpattern1
+                              {
+                                  cbor_raw::CBOR_Case_Serialized_Tagged { v: cs2 } =>
+                                    cbor_match_compare_serialized_tagged(cs1, cs2),
+                                  _ => panic!("Incomplete pattern matching")
+                              }
+                          },
+                        _ => panic!("Incomplete pattern matching")
+                    }
+                }
+                else
+                {
+                    let pl1: cbor_raw = cbor_match_tagged_get_payload_with_depth(x1);
+                    let pl2: cbor_raw = cbor_match_tagged_get_payload_with_depth(x2);
+                    cbor_compare_with_depth(pl1, pl2)
                 }
             }
             else
@@ -3763,195 +4278,193 @@ pub(crate) fn impl_cbor_compare(x1: cbor_raw, x2: cbor_raw) -> i16
         }
         else if ty1 == cbor_major_type_array
         {
-            let len1: raw_uint64 =
-                match x1
-                {
-                    cbor_raw::CBOR_Case_Array { v: c· } =>
-                      raw_uint64
-                      { size: c·.cbor_array_length_size, value: (c·.cbor_array_ptr).len() as u64 },
-                    cbor_raw::CBOR_Case_Serialized_Array { v: c· } => c·.cbor_serialized_header,
-                    _ => panic!("Incomplete pattern matching")
-                };
-            let len2: raw_uint64 =
-                match x2
-                {
-                    cbor_raw::CBOR_Case_Array { v: c· } =>
-                      raw_uint64
-                      { size: c·.cbor_array_length_size, value: (c·.cbor_array_ptr).len() as u64 },
-                    cbor_raw::CBOR_Case_Serialized_Array { v: c· } => c·.cbor_serialized_header,
-                    _ => panic!("Incomplete pattern matching")
-                };
+            let len1: raw_uint64 = cbor_match_array_get_length_with_depth0(x1);
+            let len2: raw_uint64 = cbor_match_array_get_length_with_depth0(x2);
             let c1: i16 = impl_raw_uint64_compare(len1, len2);
             if c1 == 0i16
             {
-                match cbor_pair_is_serialized(x1, x2)
+                if
+                match (x1,x2)
                 {
-                    option__·CBOR_Pulse_Raw_Type_cbor_serialized···CBOR_Pulse_Raw_Type_cbor_serialized·::Some
-                    { v: pair }
-                    =>
-                      cbor_match_compare_serialized_array(
-                          fst__CBOR_Pulse_Raw_Type_cbor_serialized_CBOR_Pulse_Raw_Type_cbor_serialized(
-                              pair
-                          ),
-                          snd__CBOR_Pulse_Raw_Type_cbor_serialized_CBOR_Pulse_Raw_Type_cbor_serialized(
-                              pair
-                          )
-                      ),
-                    _ =>
-                      {
-                          let i1: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-                              cbor_array_iterator_init(x1);
-                          let i2: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-                              cbor_array_iterator_init(x2);
-                          let pl1: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = i1;
-                          let pl2: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = i2;
-                          let fin1: bool =
-                              match pl1
-                              {
-                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                                  { _0: c· }
-                                  => c·.len() == 0usize,
-                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-                                  { _0: c· }
-                                  => cbor_serialized_array_iterator_is_empty(c·),
-                                  _ => panic!("Incomplete pattern matching")
-                              };
-                          let fin2: bool =
-                              match pl2
-                              {
-                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                                  { _0: c· }
-                                  => c·.len() == 0usize,
-                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-                                  { _0: c· }
-                                  => cbor_serialized_array_iterator_is_empty(c·),
-                                  _ => panic!("Incomplete pattern matching")
-                              };
-                          if fin1
-                          { if fin2 { 0i16 } else { -1i16 } }
-                          else if fin2
-                          { 1i16 }
-                          else
+                    (
+                        cbor_raw::CBOR_Case_Serialized_Array
+                        { .. },cbor_raw::CBOR_Case_Serialized_Array
+                        { .. }
+                    )
+                    => true,
+                    _ => false
+                }
+                {
+                    let _letpattern: cbor_raw = x1;
+                    match _letpattern
+                    {
+                        cbor_raw::CBOR_Case_Serialized_Array { v: cs1 } =>
                           {
-                              let mut pi1: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
-                                  [pl1; 1usize];
-                              let mut pi2: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
-                                  [pl2; 1usize];
-                              let mut pres: [i16; 1] = [0i16; 1usize];
-                              let mut pfin1: [bool; 1] = [false; 1usize];
-                              let res: i16 = (&pres)[0];
-                              let fin11: bool = (&pfin1)[0];
-                              let mut cond: bool = res == 0i16 && ! fin11;
-                              while
-                              cond
+                              let _letpattern1: cbor_raw = x2;
+                              match _letpattern1
                               {
-                                  let i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-                                      (&pi1)[0];
-                                  let elt1: cbor_raw =
-                                      match i0
+                                  cbor_raw::CBOR_Case_Serialized_Array { v: cs2 } =>
+                                    cbor_match_compare_serialized_array(cs1, cs2),
+                                  _ => panic!("Incomplete pattern matching")
+                              }
+                          },
+                        _ => panic!("Incomplete pattern matching")
+                    }
+                }
+                else if len1.value == 0u64
+                { 0i16 }
+                else
+                {
+                    let i1: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
+                        cbor_array_iterator_init_with_depth(x1);
+                    let i2: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
+                        cbor_array_iterator_init_with_depth(x2);
+                    let pl1: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = i1;
+                    let pl2: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = i2;
+                    let fin1: bool =
+                        match pl1
+                        {
+                            cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
+                            { _0: c· }
+                            => c·.len() == 0usize,
+                            cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
+                            { _0: c· }
+                            => cbor_serialized_array_iterator_is_empty(c·),
+                            _ => panic!("Incomplete pattern matching")
+                        };
+                    let fin2: bool =
+                        match pl2
+                        {
+                            cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
+                            { _0: c· }
+                            => c·.len() == 0usize,
+                            cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
+                            { _0: c· }
+                            => cbor_serialized_array_iterator_is_empty(c·),
+                            _ => panic!("Incomplete pattern matching")
+                        };
+                    if fin1
+                    { if fin2 { 0i16 } else { -1i16 } }
+                    else if fin2
+                    { 1i16 }
+                    else
+                    {
+                        let mut pi1: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
+                            [pl1; 1usize];
+                        let mut pi2: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
+                            [pl2; 1usize];
+                        let mut pres: [i16; 1] = [0i16; 1usize];
+                        let mut pfin1: [bool; 1] = [false; 1usize];
+                        let res: i16 = (&pres)[0];
+                        let fin11: bool = (&pfin1)[0];
+                        let mut cond: bool = res == 0i16 && ! fin11;
+                        while
+                        cond
+                        {
+                            let iter: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = (&pi1)[0];
+                            let elt1: cbor_raw =
+                                match iter
+                                {
+                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
+                                    { _0: i }
+                                    =>
                                       {
-                                          cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                                          { _0: i }
-                                          =>
-                                            {
-                                                let res0: cbor_raw = i[0usize];
-                                                let _letpattern: (&[cbor_raw], &[cbor_raw]) =
-                                                    i.split_at(1usize);
-                                                let s·: &[cbor_raw] =
-                                                    {
-                                                        let _s1: &[cbor_raw] = _letpattern.0;
-                                                        let s2: &[cbor_raw] = _letpattern.1;
-                                                        s2
-                                                    };
-                                                let i11: &[cbor_raw] = s·;
-                                                let i·: &[cbor_raw] = i11;
-                                                (&mut pi1)[0] =
-                                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                                                    { _0: i· };
-                                                res0
-                                            },
-                                          cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-                                          { _0: i }
-                                          => cbor_serialized_array_iterator_next(&mut pi1, i),
-                                          _ => panic!("Incomplete pattern matching")
-                                      };
-                                  let i00: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-                                      (&pi2)[0];
-                                  let elt2: cbor_raw =
-                                      match i00
+                                          let res0: cbor_raw = i[0usize];
+                                          let _letpattern: (&[cbor_raw], &[cbor_raw]) =
+                                              i.split_at(1usize);
+                                          let s·: &[cbor_raw] =
+                                              {
+                                                  let _s1: &[cbor_raw] = _letpattern.0;
+                                                  let s2: &[cbor_raw] = _letpattern.1;
+                                                  s2
+                                              };
+                                          let i11: &[cbor_raw] = s·;
+                                          let i·: &[cbor_raw] = i11;
+                                          (&mut pi1)[0] =
+                                              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
+                                              { _0: i· };
+                                          res0
+                                      },
+                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
+                                    { _0: i }
+                                    => cbor_serialized_array_iterator_next_with_depth(&mut pi1, i),
+                                    _ => panic!("Incomplete pattern matching")
+                                };
+                            let iter0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = (&pi2)[0];
+                            let elt2: cbor_raw =
+                                match iter0
+                                {
+                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
+                                    { _0: i }
+                                    =>
                                       {
-                                          cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                                          { _0: i }
-                                          =>
-                                            {
-                                                let res0: cbor_raw = i[0usize];
-                                                let _letpattern: (&[cbor_raw], &[cbor_raw]) =
-                                                    i.split_at(1usize);
-                                                let s·: &[cbor_raw] =
-                                                    {
-                                                        let _s1: &[cbor_raw] = _letpattern.0;
-                                                        let s2: &[cbor_raw] = _letpattern.1;
-                                                        s2
-                                                    };
-                                                let i11: &[cbor_raw] = s·;
-                                                let i·: &[cbor_raw] = i11;
-                                                (&mut pi2)[0] =
-                                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                                                    { _0: i· };
-                                                res0
-                                            },
-                                          cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-                                          { _0: i }
-                                          => cbor_serialized_array_iterator_next(&mut pi2, i),
-                                          _ => panic!("Incomplete pattern matching")
-                                      };
-                                  let pelt1: cbor_raw = elt1;
-                                  let pelt2: cbor_raw = elt2;
-                                  let c2: i16 = impl_cbor_compare(pelt1, pelt2);
-                                  if c2 == 0i16
-                                  {
-                                      let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-                                          (&pi1)[0];
-                                      let fin110: bool =
-                                          match i11
-                                          {
+                                          let res0: cbor_raw = i[0usize];
+                                          let _letpattern: (&[cbor_raw], &[cbor_raw]) =
+                                              i.split_at(1usize);
+                                          let s·: &[cbor_raw] =
+                                              {
+                                                  let _s1: &[cbor_raw] = _letpattern.0;
+                                                  let s2: &[cbor_raw] = _letpattern.1;
+                                                  s2
+                                              };
+                                          let i11: &[cbor_raw] = s·;
+                                          let i·: &[cbor_raw] = i11;
+                                          (&mut pi2)[0] =
                                               cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                                              { _0: c· }
-                                              => c·.len() == 0usize,
-                                              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-                                              { _0: c· }
-                                              => cbor_serialized_array_iterator_is_empty(c·),
-                                              _ => panic!("Incomplete pattern matching")
-                                          };
-                                      let i21: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-                                          (&pi2)[0];
-                                      let fin21: bool =
-                                          match i21
-                                          {
-                                              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                                              { _0: c· }
-                                              => c·.len() == 0usize,
-                                              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-                                              { _0: c· }
-                                              => cbor_serialized_array_iterator_is_empty(c·),
-                                              _ => panic!("Incomplete pattern matching")
-                                          };
-                                      if fin110 == fin21
-                                      { (&mut pfin1)[0] = fin110 }
-                                      else if fin110
-                                      { (&mut pres)[0] = -1i16 }
-                                      else
-                                      { (&mut pres)[0] = 1i16 }
-                                  }
-                                  else
-                                  { (&mut pres)[0] = c2 };
-                                  let res0: i16 = (&pres)[0];
-                                  let fin110: bool = (&pfin1)[0];
-                                  cond = res0 == 0i16 && ! fin110
-                              };
-                              (&pres)[0]
-                          }
-                      }
+                                              { _0: i· };
+                                          res0
+                                      },
+                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
+                                    { _0: i }
+                                    => cbor_serialized_array_iterator_next_with_depth(&mut pi2, i),
+                                    _ => panic!("Incomplete pattern matching")
+                                };
+                            let pelt1: cbor_raw = elt1;
+                            let pelt2: cbor_raw = elt2;
+                            let c2: i16 = cbor_compare_with_depth(pelt1, pelt2);
+                            if c2 == 0i16
+                            {
+                                let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
+                                    (&pi1)[0];
+                                let fin110: bool =
+                                    match i11
+                                    {
+                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
+                                        { _0: c· }
+                                        => c·.len() == 0usize,
+                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
+                                        { _0: c· }
+                                        => cbor_serialized_array_iterator_is_empty(c·),
+                                        _ => panic!("Incomplete pattern matching")
+                                    };
+                                let i21: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
+                                    (&pi2)[0];
+                                let fin21: bool =
+                                    match i21
+                                    {
+                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
+                                        { _0: c· }
+                                        => c·.len() == 0usize,
+                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
+                                        { _0: c· }
+                                        => cbor_serialized_array_iterator_is_empty(c·),
+                                        _ => panic!("Incomplete pattern matching")
+                                    };
+                                if fin110 == fin21
+                                { (&mut pfin1)[0] = fin110 }
+                                else if fin110
+                                { (&mut pres)[0] = -1i16 }
+                                else
+                                { (&mut pres)[0] = 1i16 }
+                            }
+                            else
+                            { (&mut pres)[0] = c2 };
+                            let res0: i16 = (&pres)[0];
+                            let fin110: bool = (&pfin1)[0];
+                            cond = res0 == 0i16 && ! fin110
+                        };
+                        (&pres)[0]
+                    }
                 }
             }
             else
@@ -3959,221 +4472,209 @@ pub(crate) fn impl_cbor_compare(x1: cbor_raw, x2: cbor_raw) -> i16
         }
         else if ty1 == cbor_major_type_map
         {
-            let len1: raw_uint64 =
-                match x1
-                {
-                    cbor_raw::CBOR_Case_Map { v: c· } =>
-                      raw_uint64
-                      { size: c·.cbor_map_length_size, value: (c·.cbor_map_ptr).len() as u64 },
-                    cbor_raw::CBOR_Case_Serialized_Map { v: c· } => c·.cbor_serialized_header,
-                    _ => panic!("Incomplete pattern matching")
-                };
-            let len2: raw_uint64 =
-                match x2
-                {
-                    cbor_raw::CBOR_Case_Map { v: c· } =>
-                      raw_uint64
-                      { size: c·.cbor_map_length_size, value: (c·.cbor_map_ptr).len() as u64 },
-                    cbor_raw::CBOR_Case_Serialized_Map { v: c· } => c·.cbor_serialized_header,
-                    _ => panic!("Incomplete pattern matching")
-                };
+            let len1: raw_uint64 = cbor_match_map_get_length_with_depth0(x1);
+            let len2: raw_uint64 = cbor_match_map_get_length_with_depth0(x2);
             let c1: i16 = impl_raw_uint64_compare(len1, len2);
             if c1 == 0i16
             {
-                match cbor_pair_is_serialized(x1, x2)
+                if
+                match (x1,x2)
                 {
-                    option__·CBOR_Pulse_Raw_Type_cbor_serialized···CBOR_Pulse_Raw_Type_cbor_serialized·::Some
-                    { v: pair }
-                    =>
-                      cbor_match_compare_serialized_map(
-                          fst__CBOR_Pulse_Raw_Type_cbor_serialized_CBOR_Pulse_Raw_Type_cbor_serialized(
-                              pair
-                          ),
-                          snd__CBOR_Pulse_Raw_Type_cbor_serialized_CBOR_Pulse_Raw_Type_cbor_serialized(
-                              pair
-                          )
-                      ),
-                    _ =>
-                      {
-                          let i1: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-                              cbor_map_iterator_init(x1);
-                          let i2: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-                              cbor_map_iterator_init(x2);
-                          let pl1: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = i1;
-                          let pl2: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = i2;
-                          let fin1: bool =
-                              match pl1
-                              {
-                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                                  { _0: c· }
-                                  => c·.len() == 0usize,
-                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-                                  { _0: c· }
-                                  => cbor_serialized_map_iterator_is_empty(c·),
-                                  _ => panic!("Incomplete pattern matching")
-                              };
-                          let fin2: bool =
-                              match pl2
-                              {
-                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                                  { _0: c· }
-                                  => c·.len() == 0usize,
-                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-                                  { _0: c· }
-                                  => cbor_serialized_map_iterator_is_empty(c·),
-                                  _ => panic!("Incomplete pattern matching")
-                              };
-                          if fin1
-                          { if fin2 { 0i16 } else { -1i16 } }
-                          else if fin2
-                          { 1i16 }
-                          else
+                    (
+                        cbor_raw::CBOR_Case_Serialized_Map
+                        { .. },cbor_raw::CBOR_Case_Serialized_Map
+                        { .. }
+                    )
+                    => true,
+                    _ => false
+                }
+                {
+                    let _letpattern: cbor_raw = x1;
+                    match _letpattern
+                    {
+                        cbor_raw::CBOR_Case_Serialized_Map { v: cs1 } =>
                           {
-                              let
-                              mut pi1: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1]
-                              =
-                                  [pl1; 1usize];
-                              let
-                              mut pi2: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1]
-                              =
-                                  [pl2; 1usize];
-                              let mut pres: [i16; 1] = [0i16; 1usize];
-                              let mut pfin1: [bool; 1] = [false; 1usize];
-                              let res: i16 = (&pres)[0];
-                              let fin11: bool = (&pfin1)[0];
-                              let mut cond: bool = res == 0i16 && ! fin11;
-                              while
-                              cond
+                              let _letpattern1: cbor_raw = x2;
+                              match _letpattern1
                               {
-                                  let i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-                                      (&pi1)[0];
-                                  let elt1: cbor_map_entry =
-                                      match i0
+                                  cbor_raw::CBOR_Case_Serialized_Map { v: cs2 } =>
+                                    cbor_match_compare_serialized_map(cs1, cs2),
+                                  _ => panic!("Incomplete pattern matching")
+                              }
+                          },
+                        _ => panic!("Incomplete pattern matching")
+                    }
+                }
+                else if len1.value == 0u64
+                { 0i16 }
+                else
+                {
+                    let i1: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
+                        cbor_map_iterator_init_with_depth(x1);
+                    let i2: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
+                        cbor_map_iterator_init_with_depth(x2);
+                    let pl1: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = i1;
+                    let pl2: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = i2;
+                    let fin1: bool =
+                        match pl1
+                        {
+                            cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
+                            { _0: c· }
+                            => c·.len() == 0usize,
+                            cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
+                            { _0: c· }
+                            => cbor_serialized_map_iterator_is_empty(c·),
+                            _ => panic!("Incomplete pattern matching")
+                        };
+                    let fin2: bool =
+                        match pl2
+                        {
+                            cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
+                            { _0: c· }
+                            => c·.len() == 0usize,
+                            cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
+                            { _0: c· }
+                            => cbor_serialized_map_iterator_is_empty(c·),
+                            _ => panic!("Incomplete pattern matching")
+                        };
+                    if fin1
+                    { if fin2 { 0i16 } else { -1i16 } }
+                    else if fin2
+                    { 1i16 }
+                    else
+                    {
+                        let mut pi1: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] =
+                            [pl1; 1usize];
+                        let mut pi2: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] =
+                            [pl2; 1usize];
+                        let mut pres: [i16; 1] = [0i16; 1usize];
+                        let mut pfin1: [bool; 1] = [false; 1usize];
+                        let res: i16 = (&pres)[0];
+                        let fin11: bool = (&pfin1)[0];
+                        let mut cond: bool = res == 0i16 && ! fin11;
+                        while
+                        cond
+                        {
+                            let iter: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
+                                (&pi1)[0];
+                            let elt1: cbor_map_entry =
+                                match iter
+                                {
+                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
+                                    { _0: i }
+                                    =>
                                       {
-                                          cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                                          { _0: i }
-                                          =>
-                                            {
-                                                let res0: cbor_map_entry = i[0usize];
-                                                let
-                                                _letpattern: (&[cbor_map_entry], &[cbor_map_entry])
-                                                =
-                                                    i.split_at(1usize);
-                                                let s·: &[cbor_map_entry] =
-                                                    {
-                                                        let _s1: &[cbor_map_entry] = _letpattern.0;
-                                                        let s2: &[cbor_map_entry] = _letpattern.1;
-                                                        s2
-                                                    };
-                                                let i11: &[cbor_map_entry] = s·;
-                                                let i·: &[cbor_map_entry] = i11;
-                                                (&mut pi1)[0] =
-                                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                                                    { _0: i· };
-                                                res0
-                                            },
-                                          cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-                                          { _0: i }
-                                          => cbor_serialized_map_iterator_next(&mut pi1, i),
-                                          _ => panic!("Incomplete pattern matching")
-                                      };
-                                  let i00: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-                                      (&pi2)[0];
-                                  let elt2: cbor_map_entry =
-                                      match i00
-                                      {
-                                          cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                                          { _0: i }
-                                          =>
-                                            {
-                                                let res0: cbor_map_entry = i[0usize];
-                                                let
-                                                _letpattern: (&[cbor_map_entry], &[cbor_map_entry])
-                                                =
-                                                    i.split_at(1usize);
-                                                let s·: &[cbor_map_entry] =
-                                                    {
-                                                        let _s1: &[cbor_map_entry] = _letpattern.0;
-                                                        let s2: &[cbor_map_entry] = _letpattern.1;
-                                                        s2
-                                                    };
-                                                let i11: &[cbor_map_entry] = s·;
-                                                let i·: &[cbor_map_entry] = i11;
-                                                (&mut pi2)[0] =
-                                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                                                    { _0: i· };
-                                                res0
-                                            },
-                                          cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-                                          { _0: i }
-                                          => cbor_serialized_map_iterator_next(&mut pi2, i),
-                                          _ => panic!("Incomplete pattern matching")
-                                      };
-                                  let pelt1: cbor_map_entry = elt1;
-                                  let pelt2: cbor_map_entry = elt2;
-                                  let c2: i16 =
-                                      impl_cbor_compare(
-                                          pelt1.cbor_map_entry_key,
-                                          pelt2.cbor_map_entry_key
-                                      );
-                                  let c20: i16 =
-                                      if c2 == 0i16
-                                      {
-                                          impl_cbor_compare(
-                                              pelt1.cbor_map_entry_value,
-                                              pelt2.cbor_map_entry_value
-                                          )
-                                      }
-                                      else
-                                      { c2 };
-                                  if c20 == 0i16
-                                  {
-                                      let
-                                      i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                      =
-                                          (&pi1)[0];
-                                      let fin110: bool =
-                                          match i11
-                                          {
+                                          let res0: cbor_map_entry = i[0usize];
+                                          let _letpattern: (&[cbor_map_entry], &[cbor_map_entry]) =
+                                              i.split_at(1usize);
+                                          let s·: &[cbor_map_entry] =
+                                              {
+                                                  let _s1: &[cbor_map_entry] = _letpattern.0;
+                                                  let s2: &[cbor_map_entry] = _letpattern.1;
+                                                  s2
+                                              };
+                                          let i11: &[cbor_map_entry] = s·;
+                                          let i·: &[cbor_map_entry] = i11;
+                                          (&mut pi1)[0] =
                                               cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                                              { _0: c· }
-                                              => c·.len() == 0usize,
-                                              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-                                              { _0: c· }
-                                              => cbor_serialized_map_iterator_is_empty(c·),
-                                              _ => panic!("Incomplete pattern matching")
-                                          };
-                                      let
-                                      i21: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-                                      =
-                                          (&pi2)[0];
-                                      let fin21: bool =
-                                          match i21
-                                          {
+                                              { _0: i· };
+                                          res0
+                                      },
+                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
+                                    { _0: i }
+                                    => cbor_serialized_map_iterator_next_with_depth(&mut pi1, i),
+                                    _ => panic!("Incomplete pattern matching")
+                                };
+                            let iter0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
+                                (&pi2)[0];
+                            let elt2: cbor_map_entry =
+                                match iter0
+                                {
+                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
+                                    { _0: i }
+                                    =>
+                                      {
+                                          let res0: cbor_map_entry = i[0usize];
+                                          let _letpattern: (&[cbor_map_entry], &[cbor_map_entry]) =
+                                              i.split_at(1usize);
+                                          let s·: &[cbor_map_entry] =
+                                              {
+                                                  let _s1: &[cbor_map_entry] = _letpattern.0;
+                                                  let s2: &[cbor_map_entry] = _letpattern.1;
+                                                  s2
+                                              };
+                                          let i11: &[cbor_map_entry] = s·;
+                                          let i·: &[cbor_map_entry] = i11;
+                                          (&mut pi2)[0] =
                                               cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                                              { _0: c· }
-                                              => c·.len() == 0usize,
-                                              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-                                              { _0: c· }
-                                              => cbor_serialized_map_iterator_is_empty(c·),
-                                              _ => panic!("Incomplete pattern matching")
-                                          };
-                                      if fin110 == fin21
-                                      { (&mut pfin1)[0] = fin110 }
-                                      else if fin110
-                                      { (&mut pres)[0] = -1i16 }
-                                      else
-                                      { (&mut pres)[0] = 1i16 }
-                                  }
-                                  else
-                                  { (&mut pres)[0] = c20 };
-                                  let res0: i16 = (&pres)[0];
-                                  let fin110: bool = (&pfin1)[0];
-                                  cond = res0 == 0i16 && ! fin110
-                              };
-                              (&pres)[0]
-                          }
-                      }
+                                              { _0: i· };
+                                          res0
+                                      },
+                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
+                                    { _0: i }
+                                    => cbor_serialized_map_iterator_next_with_depth(&mut pi2, i),
+                                    _ => panic!("Incomplete pattern matching")
+                                };
+                            let pelt1: cbor_map_entry = elt1;
+                            let pelt2: cbor_map_entry = elt2;
+                            let c2: i16 =
+                                cbor_compare_with_depth(
+                                    pelt1.cbor_map_entry_key,
+                                    pelt2.cbor_map_entry_key
+                                );
+                            let c20: i16 =
+                                if c2 == 0i16
+                                {
+                                    cbor_compare_with_depth(
+                                        pelt1.cbor_map_entry_value,
+                                        pelt2.cbor_map_entry_value
+                                    )
+                                }
+                                else
+                                { c2 };
+                            if c20 == 0i16
+                            {
+                                let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
+                                    (&pi1)[0];
+                                let fin110: bool =
+                                    match i11
+                                    {
+                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
+                                        { _0: c· }
+                                        => c·.len() == 0usize,
+                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
+                                        { _0: c· }
+                                        => cbor_serialized_map_iterator_is_empty(c·),
+                                        _ => panic!("Incomplete pattern matching")
+                                    };
+                                let i21: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
+                                    (&pi2)[0];
+                                let fin21: bool =
+                                    match i21
+                                    {
+                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
+                                        { _0: c· }
+                                        => c·.len() == 0usize,
+                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
+                                        { _0: c· }
+                                        => cbor_serialized_map_iterator_is_empty(c·),
+                                        _ => panic!("Incomplete pattern matching")
+                                    };
+                                if fin110 == fin21
+                                { (&mut pfin1)[0] = fin110 }
+                                else if fin110
+                                { (&mut pres)[0] = -1i16 }
+                                else
+                                { (&mut pres)[0] = 1i16 }
+                            }
+                            else
+                            { (&mut pres)[0] = c20 };
+                            let res0: i16 = (&pres)[0];
+                            let fin110: bool = (&pfin1)[0];
+                            cond = res0 == 0i16 && ! fin110
+                        };
+                        (&pres)[0]
+                    }
                 }
             }
             else
@@ -4201,6 +4702,12 @@ pub(crate) fn impl_cbor_compare(x1: cbor_raw, x2: cbor_raw) -> i16
     else
     { c }
 }
+
+pub(crate) fn impl_cbor_compare(x1: cbor_raw, x2: cbor_raw) -> i16
+{ cbor_compare_with_depth(x1, x2) }
+
+pub(crate) fn dummy_cbor_det_t <'a>() -> cbor_raw <'a>
+{ cbor_raw::CBOR_Case_Simple { v: 0u8 } }
 
 fn cbor_raw_compare(x1: cbor_raw, x2: cbor_raw) -> i16 { impl_cbor_compare(x1, x2) }
 
@@ -4266,24 +4773,24 @@ pub(crate) fn cbor_raw_sort_aux(a: &mut [cbor_map_entry]) -> bool
                         {
                             let mut pn: [usize; 1] = [ac1.len(); 1usize];
                             let mut pl: [usize; 1] = [i20.wrapping_sub(i10); 1usize];
-                            let __anf3172: usize = (&pl)[0];
-                            let mut cond0: bool = __anf3172 > 0usize;
+                            let __anf0: usize = (&pl)[0];
+                            let mut cond0: bool = __anf0 > 0usize;
                             while
                             cond0
                             {
-                                let n: usize = (&pn)[0];
+                                let n1: usize = (&pn)[0];
                                 let l3: usize = (&pl)[0];
-                                let l·: usize = n.wrapping_rem(l3);
+                                let l·: usize = n1.wrapping_rem(l3);
                                 (&mut pn)[0] = l3;
                                 (&mut pl)[0] = l·;
-                                let __anf31720: usize = (&pl)[0];
-                                cond0 = __anf31720 > 0usize
+                                let __anf00: usize = (&pl)[0];
+                                cond0 = __anf00 > 0usize
                             };
                             let d: usize = (&pn)[0];
                             let q: usize = ac1.len().wrapping_div(d);
                             let mut pi: [usize; 1] = [0usize; 1usize];
-                            let __anf4223: usize = (&pi)[0];
-                            let mut cond1: bool = __anf4223 < d;
+                            let __anf00: usize = (&pi)[0];
+                            let mut cond1: bool = __anf00 < d;
                             while
                             cond1
                             {
@@ -4291,8 +4798,8 @@ pub(crate) fn cbor_raw_sort_aux(a: &mut [cbor_map_entry]) -> bool
                                 let save: cbor_map_entry = ac1[i];
                                 let mut pj: [usize; 1] = [0usize; 1usize];
                                 let mut pidx: [usize; 1] = [i; 1usize];
-                                let __anf6456: usize = (&pj)[0];
-                                let mut cond2: bool = __anf6456 < q.wrapping_sub(1usize);
+                                let __anf01: usize = (&pj)[0];
+                                let mut cond2: bool = __anf01 < q.wrapping_sub(1usize);
                                 while
                                 cond2
                                 {
@@ -4319,15 +4826,15 @@ pub(crate) fn cbor_raw_sort_aux(a: &mut [cbor_map_entry]) -> bool
                                     ac1[idx] = x;
                                     (&mut pj)[0] = j·;
                                     (&mut pidx)[0] = idx·;
-                                    let __anf64560: usize = (&pj)[0];
-                                    cond2 = __anf64560 < q.wrapping_sub(1usize)
+                                    let __anf02: usize = (&pj)[0];
+                                    cond2 = __anf02 < q.wrapping_sub(1usize)
                                 };
                                 let idx: usize = (&pidx)[0];
                                 ac1[idx] = save;
                                 let i·: usize = i.wrapping_add(1usize);
                                 (&mut pi)[0] = i·;
-                                let __anf42230: usize = (&pi)[0];
-                                cond1 = __anf42230 < d
+                                let __anf02: usize = (&pi)[0];
+                                cond1 = __anf02 < d
                             }
                         };
                         let i1·: usize = i10.wrapping_add(1usize);
@@ -4350,10 +4857,6 @@ pub(crate) fn cbor_raw_sort(a: &mut [cbor_map_entry]) -> bool { cbor_raw_sort_au
 pub(crate) fn impl_cbor_det_compare(x1: cbor_raw, x2: cbor_raw) -> i16
 { impl_cbor_compare(x1, x2) }
 
-pub(crate) const simple_value_false: u8 = 20u8;
-
-pub(crate) const simple_value_true: u8 = 21u8;
-
 #[derive(PartialEq, Clone, Copy)]
 pub(crate) enum impl_map_group_result
 {
@@ -4364,6 +4867,60 @@ pub(crate) enum impl_map_group_result
 
 pub(crate) fn uu___is_MGOK(projectee: impl_map_group_result) -> bool
 { match projectee { impl_map_group_result::MGOK => true, _ => false } }
+
+pub(crate) fn sizet_fits_u64(b: usize) -> bool
+{
+    let q1: usize = b.wrapping_div(32768usize);
+    let q2: usize = q1.wrapping_div(32768usize);
+    let q3: usize = q2.wrapping_div(32768usize);
+    let q4: usize = q3.wrapping_div(32768usize);
+    q4 < 16usize
+}
+
+pub(crate) fn sizet_lte_u64(b: usize, a: u64) -> bool
+{
+    let q1: usize = b.wrapping_div(32768usize);
+    let q2: usize = q1.wrapping_div(32768usize);
+    let q3: usize = q2.wrapping_div(32768usize);
+    let q4: usize = q3.wrapping_div(32768usize);
+    if q4 >= 16usize
+    { false }
+    else
+    {
+        let b64: u64 = b as u64;
+        b64 <= a
+    }
+}
+
+pub(crate) fn u64_lte_sizet(a: u64, b: usize) -> bool
+{
+    let q1: usize = b.wrapping_div(32768usize);
+    let q2: usize = q1.wrapping_div(32768usize);
+    let q3: usize = q2.wrapping_div(32768usize);
+    let q4: usize = q3.wrapping_div(32768usize);
+    if q4 >= 16usize
+    { true }
+    else
+    {
+        let b64: u64 = b as u64;
+        a <= b64
+    }
+}
+
+pub(crate) fn sizet_eq_u64(b: usize, a: u64) -> bool
+{
+    let q1: usize = b.wrapping_div(32768usize);
+    let q2: usize = q1.wrapping_div(32768usize);
+    let q3: usize = q2.wrapping_div(32768usize);
+    let q4: usize = q3.wrapping_div(32768usize);
+    if q4 >= 16usize
+    { false }
+    else
+    {
+        let b64: u64 = b as u64;
+        b64 == a
+    }
+}
 
 pub(crate) const cddl_simple_value_false: u8 = 20u8;
 
@@ -4401,5 +4958,3 @@ pub type cbor_det_array_iterator_t <'a> = cbor_raw_iterator__CBOR_Pulse_Raw_Type
 
 pub type cbor_det_map_iterator_t <'a> =
 cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>;
-
-pub fn dummy_cbor_det_t <'a>() -> cbor_raw <'a> { cbor_raw::CBOR_Case_Simple { v: 0u8 } }

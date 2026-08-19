@@ -1,6 +1,7 @@
 module CBOR.Spec.Raw.Format.MapPair
-friend CBOR.Spec.API.Type
 friend CBOR.Spec.Raw.DataModel
+friend CBOR.Spec.API.Type
+open CBOR.Spec.API.Type
 open LowParse.Spec.Combinators
 open LowParse.Spec.VCList
 open CBOR.Spec.Raw.EverParse

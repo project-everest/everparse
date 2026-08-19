@@ -50,7 +50,6 @@ fn be_to_n_0
 }
 
 open FStar.Math.Lemmas
-open FStar.Mul
 
 inline_for_extraction
 noextract
@@ -323,6 +322,9 @@ let rec mk_le_to_n
   then le_to_n_1 u
   else le_to_n_S (mk_le_to_n u (len - 1))
 
+// Writing from left to right: pos is the position of the start of the writing zone
+// (the low byte is written first, at the lowest index)
+
 inline_for_extraction
 noextract
 let n_to_le_t
@@ -361,7 +363,7 @@ fn n_to_le_0
   (#v: Ghost.erased (Seq.seq U8.t))
   (pos: SZ.t)
 {
-  E.reveal_le_to_n (Seq.slice (v) (SZ.v pos) (SZ.v pos));
+  E.reveal_n_to_le 0 (u.v n);
   ()
 }
 
@@ -380,7 +382,7 @@ fn n_to_le_1
   E.reveal_n_to_le 1 (u.v n);
   E.reveal_n_to_le 0 (u.v n / pow2 8);
   let n' = u.to_byte n;
-  S.op_Array_Assignment x (pos) n'
+  S.op_Array_Assignment x pos n'
 }
 
 inline_for_extraction
@@ -397,22 +399,25 @@ fn n_to_le_S
   (#v: Ghost.erased (Seq.seq U8.t))
   (pos: SZ.t)
 {
+  assert_norm (pow2 8 == 256);
   S.pts_to_len x;
   reveal_n_to_le (len + 1) (u.v n);
   let lo = u.to_byte n;
   let hi = u.div256 n;
   let pos' = pos `SZ.add` 1sz;
-  with v1 . assert (pts_to x v1);
-  S.pts_to_len x;
   let _ = ih hi x pos';
+  with v1b . assert (pts_to x v1b);
+  Seq.slice_slice v1b 0 (SZ.v pos + 1) 0 (SZ.v pos);
+  Seq.slice_slice v 0 (SZ.v pos + 1) 0 (SZ.v pos);
   S.op_Array_Assignment x pos lo;
-  with v' . assert (pts_to x v');
-  S.pts_to_len x;
-  Seq.lemma_split (Seq.slice v1 0 (SZ.v pos')) (SZ.v pos);
-  assert (pure (Seq.slice v' 0 (SZ.v pos) `Seq.equal` Seq.slice (v) 0 (SZ.v pos)));
-  assert (pure (Seq.slice v' (SZ.v pos) (SZ.v pos + (len + 1)) `Seq.equal` n_to_le (len + 1) (u.v n)));
-  assert (pure (Seq.slice v' (SZ.v pos + (len + 1)) (Seq.length v') `Seq.equal` Seq.slice v (SZ.v pos + (len + 1)) (Seq.length v)));
-  ()
+  with v2 . assert (pts_to x v2);
+  Seq.slice_upd v1b 0 (SZ.v pos) (SZ.v pos) lo;
+  Seq.slice_upd v1b (SZ.v pos + 1) (SZ.v pos + 1 + len) (SZ.v pos) lo;
+  Seq.slice_upd v1b (SZ.v pos + (len + 1)) (Seq.length v1b) (SZ.v pos) lo;
+  Seq.lemma_split (Seq.slice v2 (SZ.v pos) (SZ.v pos + (len + 1))) 1;
+  assert (pure (Seq.slice v2 0 (SZ.v pos) `Seq.equal` Seq.slice v 0 (SZ.v pos)));
+  assert (pure (Seq.slice v2 (SZ.v pos + (len+1)) (Seq.length v2) `Seq.equal` Seq.slice v (SZ.v pos + (len+1)) (Seq.length v)));
+  assert (pure (Seq.slice v2 (SZ.v pos) (SZ.v pos + (len+1)) `Seq.equal` n_to_le (len+1) (u.v n)));
 }
 
 [@must_reduce]

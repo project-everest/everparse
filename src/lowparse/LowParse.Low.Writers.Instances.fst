@@ -23,7 +23,8 @@ let swrite_weaken
   (k2: parser_kind)
   (w1: swriter s1 h0 space_beyond sout pout_from0 {
     (k2 `is_weaker_than` k1) /\
-    k2.parser_kind_subkind == Some ParserStrong
+    k2.parser_kind_subkind == Some ParserStrong /\
+    k2.parser_kind_injective == true
   })
 : Tot (w2: swriter (serialize_weaken k2 s1) h0 space_beyond sout pout_from0 {
     swvalue w2 == swvalue w1
@@ -247,7 +248,7 @@ let swrite_bounded_vlgenbytes
 
 #pop-options
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 128"
 
 inline_for_extraction
 noextract
@@ -334,12 +335,12 @@ let serialize32_bounded_integer_ct
   E.slice_n_to_be_bitfield 4 (U32.v after) (U32.v i) 4;
   Seq.lemma_split (Seq.slice (B.as_seq h' b) (U32.v pos) (U32.v pos + 4)) (U32.v i);
   Seq.lemma_split (Seq.slice (B.as_seq h b) (U32.v pos) (U32.v pos + 4)) (U32.v i);
-  BF.get_bitfield_set_bitfield_other #32 (U32.v before) (8 `op_Multiply` (4 - U32.v i)) 32 (U32.v x) 0 (8 `op_Multiply` (4 - U32.v i));
+  BF.get_bitfield_set_bitfield_other #32 (U32.v before) (8 `op_Star` (4 - U32.v i)) 32 (U32.v x) 0 (8 `op_Star` (4 - U32.v i));
   Seq.lemma_split (Seq.slice (B.as_seq h' b) (U32.v pos + U32.v i) (B.length b)) (4 - U32.v i);
   Seq.lemma_split (Seq.slice (B.as_seq h b) (U32.v pos + U32.v i) (B.length b)) (4 - U32.v i);
   B.modifies_loc_buffer_from_to_intro b pos (pos `U32.add` i) B.loc_none h h';
   E.slice_n_to_be_bitfield 4 (U32.v after) 0 (U32.v i);
-  BF.get_bitfield_set_bitfield_same #32 (U32.v before) (8 `op_Multiply` (4 - U32.v i)) 32 (U32.v x);
+  BF.get_bitfield_set_bitfield_same #32 (U32.v before) (8 `op_Star` (4 - U32.v i)) 32 (U32.v x);
   serialize_bounded_integer_spec (U32.v i) x 
 
 #pop-options

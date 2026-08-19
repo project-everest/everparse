@@ -7,19 +7,14 @@ endif
 
 FSTAR_EXE ?= fstar.exe
 
-ifeq (,$(KRML_HOME))
-  KRML_HOME := $(realpath ../../../../karamel)
-endif
-ifeq ($(OS),Windows_NT)
-  KRML_HOME := $(shell cygpath -m $(KRML_HOME))
-endif
-export KRML_HOME
-
 OTHERFLAGS?=
 
-FSTAR_OPTIONS=--ext optimize_let_vc $(addprefix --include , $(EVERPARSE_HOME)/src/lowparse $(KRML_HOME)/krmllib $(KRML_HOME)/krmllib/obj) --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=10'
+EVERPARSE_SRC_PATH := $(EVERPARSE_HOME)/src
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
+
+FSTAR_OPTIONS += --ext optimize_let_vc --include $(EVERPARSE_HOME)/src/lowparse --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=10'
 #--z3cliopt 'smt.arith.nl=false' --smtencoding.elim_box true --smtencoding.l_arith_repr native --smtencoding.nl_arith_repr wrapped
-FSTAR=$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --cmi
+FSTAR=$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS)
 
 ROOT=$(wildcard *.fst) $(wildcard *.fsti)
 ALREADY_CACHED=--already_cached '+Prims +LowStar +FStar +LowParse +C +Spec.Loops'
@@ -27,7 +22,9 @@ ALREADY_CACHED=--already_cached '+Prims +LowStar +FStar +LowParse +C +Spec.Loops
 .depend: $(ROOT)
 	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract 'krml:*,-Prims,-EverParse3d.Interpreter,-FStar.Tactics' --output_deps_to $@
 
+ifeq (,$(filter clean clean-buffer clean-extern,$(MAKECMDGOALS)))
 include .depend
+endif
 
 buffer: EverParse.rsp
 	+$(MAKE) -C buffer

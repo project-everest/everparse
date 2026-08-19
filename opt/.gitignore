@@ -2,4 +2,11 @@ z3
 FStar
 everest
 karamel
-pulse
+opam
+opam-env.Makefile
+fstar-deps.opam
+karamel-deps.opam
+opam.done
+FStar.done
+karamel.done
+hashes.lock

@@ -6,12 +6,7 @@ include $(EVERPARSE_SRC_PATH)/windows.Makefile
 
 FSTAR_EXE ?= fstar.exe
 
-FSTAR_VERSION != $(FSTAR_EXE) --version
-ifneq ($(.SHELLSTATUS),0)
-  $(error "F* version check failed (FSTAR_EXE = $(FSTAR_EXE))" )
-endif
-
 export FSTAR_EXE
 
-# Add common options here
-FSTAR_OPTIONS += --z3version 4.13.3
+include $(EVERPARSE_SRC_PATH)/z3-version.Makefile
+FSTAR_OPTIONS += --z3version $(EVERPARSE_Z3_VERSION)

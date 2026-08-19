@@ -11,7 +11,7 @@ module R = Pulse.Lib.Reference
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_array_group
-  (#cbor_array_iterator_t: Type)
+  (#cbor_array_iterator_t: Type0)
   (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
     (#b: Ghost.erased (option cbor))
     (g: array_group b)
@@ -25,11 +25,11 @@ let impl_array_group
             cbor_array_iterator_match p i l **
             pure (opt_precedes_list (Ghost.reveal l) b)
         )
-        (fun res -> exists* i' l'.
+        (fun res -> exists* p' i' l'.
             R.pts_to pi i' **
-            cbor_array_iterator_match p i' l' **
+            cbor_array_iterator_match p' i' l' **
             Trade.trade
-              (cbor_array_iterator_match p i' l')
+              (cbor_array_iterator_match p' i' l')
               (cbor_array_iterator_match p i l) **
             pure (
                 opt_precedes_list (Ghost.reveal l) b /\
@@ -169,17 +169,20 @@ fn impl_array_group_zero_or_more
 {
     let mut pcont = true;
     Trade.refl (cbor_array_iterator_match p gi l);
+    let mut pmeasure = Ghost.hide (List.Tot.length (Ghost.reveal l)); // fstar2 only
     while (
       let cont = !pcont;
       cont
-    ) invariant cont . exists* gi1 l1 .
+    ) invariant exists* cont p' gi1 l1 m .
       R.pts_to pi gi1 **
-      cbor_array_iterator_match p gi1 l1 **
+      R.pts_to pmeasure m ** // fstar2 only
+      cbor_array_iterator_match p' gi1 l1 **
       Trade.trade
-        (cbor_array_iterator_match p gi1 l1)
+        (cbor_array_iterator_match p' gi1 l1)
         (cbor_array_iterator_match p gi l) **
       R.pts_to pcont cont **
       pure (
+        Ghost.reveal m == List.Tot.length l1 /\ // fstar2 only
         begin match array_group_zero_or_more g1 l, array_group_zero_or_more g1 l1 with
         | None, None -> True
         | Some (_, rem), Some (_, rem1) -> rem == rem1
@@ -187,20 +190,25 @@ fn impl_array_group_zero_or_more
         end /\
         (cont == false ==> None? (Ghost.reveal g1 l1))
       )
+      decreases %[(if !pcont then 1 else 0); (Ghost.reveal (!pmeasure))] // fstar2 only
     {
-      with gi1 l1 . assert (cbor_array_iterator_match p gi1 l1);
+      with p' gi1 l1 . assert (cbor_array_iterator_match p' gi1 l1);
       let i1 = !pi;
       Trade.rewrite_with_trade
-        (cbor_array_iterator_match p gi1 l1)
-        (cbor_array_iterator_match p i1 l1);
+        (cbor_array_iterator_match p' gi1 l1)
+        (cbor_array_iterator_match p' i1 l1);
       Trade.trans _ _ (cbor_array_iterator_match p gi l);
       let cont = f1 pi;
       if (not cont) {
-        Trade.elim _ (cbor_array_iterator_match p i1 l1);
+        Trade.elim _ (cbor_array_iterator_match p' i1 l1);
         pi := i1;
         pcont := false;
       } else {
-        Trade.trans _ _ (cbor_array_iterator_match p gi l)
+        Trade.trans _ _ (cbor_array_iterator_match p gi l);
+        with p'' i' l'' . assert (cbor_array_iterator_match p'' i' l''); // fstar2 only
+        List.Tot.Properties.append_length (fst (Some?.v (Ghost.reveal g1 l1))) l''; // fstar2 only
+        assert (pure (List.Tot.length l'' < List.Tot.length l1)); // fstar2 only
+        pmeasure := Ghost.hide (List.Tot.length l''); // fstar2 only
       }
     };
     true
@@ -277,11 +285,11 @@ fn impl_t_array
         let b_success = ig pi #p' #i #l';
         Trade.trans _ _ (vmatch p c v);
         if (b_success) {
-          with l2 gi2 . assert (cbor_array_iterator_match p' gi2 l2);
+          with p2 l2 gi2 . assert (cbor_array_iterator_match p2 gi2 l2);
           let i' = ! pi;
           Trade.rewrite_with_trade
-            (cbor_array_iterator_match p' gi2 l2)
-            (cbor_array_iterator_match p' i' l2);
+            (cbor_array_iterator_match p2 gi2 l2)
+            (cbor_array_iterator_match p2 i' l2);
           Trade.trans _ _ (vmatch p c v);
           let b_end = cbor_array_iterator_is_done i';
           Trade.elim _ _;

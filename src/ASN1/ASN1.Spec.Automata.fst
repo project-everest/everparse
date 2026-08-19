@@ -58,10 +58,10 @@ noeq
 type automata_data_param (cp : automata_control_param) = {
   ret_t : eqtype;
   partial_t : eqtype;
-  pre_t : cp.control_t -> partial_t -> Type0;
+  pre_t : cp.control_t -> partial_t -> prop;
   post_t : (s : cp.control_t) -> 
            (data : partial_t {pre_t s data}) ->
-           ret_t -> Type0;
+           ret_t -> prop;
   update_term : (s : cp.control_t) ->
                 (data : partial_t {pre_t s data}) ->
                 (ch : cp.ch_t {cp.fail_check s ch = false /\ cp.termination_check s ch = true}) ->
@@ -110,8 +110,8 @@ type automata_bare_parser_param (cp : automata_control_param) = {
 
 let id_cast
   (t : eqtype)
-  (p1 : t -> Type0)
-  (p2 : t -> Type0)
+  (p1 : t -> prop)
+  (p2 : t -> prop)
   (lem : (x : t -> (Lemma (requires p1 x) (ensures p2 x))))
   (x : t {p1 x})
 : (x' : t {p2 x'})
@@ -125,7 +125,7 @@ let rec automata_bare_parser'
   (s : cp.control_t)
   (data : dp.partial_t {dp.pre_t s data})
   (b : bytes)
-: Tot (option ((ret : dp.ret_t {dp.post_t s data ret}) * (consumed_length b)))
+: Tot (option ((ret : dp.ret_t {dp.post_t s data ret}) & (consumed_length b)))
   (decreases (Seq.length b))
 = match (bp.ch_t_bare_parser b) with
   | None -> None
@@ -153,6 +153,7 @@ type automata_default_parser_kind : parser_kind = {
   parser_kind_low = 0;
   parser_kind_high = None;
   parser_kind_subkind = Some ParserStrong;
+  parser_kind_injective = true;
 }
 
 noeq
@@ -199,11 +200,11 @@ type automata_parser_param (cp : automata_control_param) (dp : automata_data_par
 let and_then_cases_injective_dep_precond
   (#t:Type)
   (#t': Type)
-  (gt : t -> t' -> Type0)
+  (gt : t -> t' -> prop)
   (p': ((x : t) -> Tot (bare_parser (y : t' {gt x y}))))
   (x1 x2: t)
   (b1 b2: bytes)
-: GTot Type0
+: GTot prop
 = Some? (parse (p' x1) b1) /\
   Some? (parse (p' x2) b2) /\ (
     let (Some (v1, _)) = parse (p' x1) b1 in
@@ -214,9 +215,9 @@ let and_then_cases_injective_dep_precond
 let and_then_cases_injective_dep
   (#t : Type)
   (#t' : Type)
-  (gt : t -> t' -> Type0)
+  (gt : t -> t' -> prop)
   (p': ((m : t) -> Tot (bare_parser (x : t' {gt m x}))))
-: GTot Type0
+: GTot prop
 = forall (x1 x2: t) (b1 b2: bytes) . {:pattern (parse (p' x1) b1); (parse (p' x2) b2)}
   and_then_cases_injective_dep_precond gt p' x1 x2 b1 b2 ==>
   x1 == x2
@@ -224,7 +225,7 @@ let and_then_cases_injective_dep
 let and_then_cases_injective_dep_intro
   (#t : Type)
   (#t': Type)
-  (gt : t -> t' -> Type0)
+  (gt : t -> t' -> prop)
   (p': ((x : t) -> Tot (bare_parser (y : t' {gt x y}))))
   (lem: (
     (x1: t) -> 
@@ -237,7 +238,7 @@ let and_then_cases_injective_dep_intro
   ))
 : Lemma
   (and_then_cases_injective_dep gt p')
-= Classical.forall_intro_4 (fun x1 x2 b1 b2 -> (Classical.move_requires (lem x1 x2 b1) b2))
+= Classical.forall_intro_4 (Classical.move_requires_4 lem)
 
 let rec automata_bare_parser'_pf1_aux
   (cp : automata_control_param)
@@ -305,6 +306,7 @@ let automata_bare_parser'_pf1
 = let p = automata_bare_parser' cp dp bp s in
   and_then_cases_injective_dep_intro (dp.post_t s) p (automata_bare_parser'_pf1_aux cp dp bp pp s)
 
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 let rec automata_bare_parser'_pf2_aux
   (cp : automata_control_param)
   (dp : automata_data_param cp)
@@ -327,6 +329,7 @@ let rec automata_bare_parser'_pf2_aux
     Seq.lemma_split (Seq.slice b1 0 l1) l01
   in
   assert (Seq.slice b2 0 l01 == Seq.slice b1 0 l01);
+  assert (no_lookahead_on bp.ch_t_bare_parser b1 b2);
   match (parse (bp.ch_t_bare_parser) b2) with 
   | None -> 
     assert (no_lookahead_on bp.ch_t_bare_parser b1 b2)
@@ -348,6 +351,7 @@ let rec automata_bare_parser'_pf2_aux
       let (b'2 : bytes{Seq.length b'2 < Seq.length b2}) = Seq.slice b2 l01 (Seq.length b2) in
       automata_bare_parser'_pf2_aux cp dp bp pp s' x' b'1 b'2
     )
+#pop-options
 
 let automata_bare_parser'_pf2
   (cp : automata_control_param)
@@ -357,7 +361,7 @@ let automata_bare_parser'_pf2
   (s : cp.control_t)
   (x : dp.partial_t {dp.pre_t s x})
 : Lemma (no_lookahead (automata_bare_parser' cp dp bp s x))
-= Classical.forall_intro_2 (fun b1 b2 -> Classical.move_requires (automata_bare_parser'_pf2_aux cp dp bp pp s x b1) b2)
+= Classical.forall_intro_2 (Classical.move_requires_2 (automata_bare_parser'_pf2_aux cp dp bp pp s x))
 
 let rec automata_bare_parser'_pf3_aux
   (cp : automata_control_param)
@@ -435,7 +439,7 @@ let automata_bare_parser'_pf3
   (s : cp.control_t)
   (x : dp.partial_t {dp.pre_t s x})
 : Lemma (injective (automata_bare_parser' cp dp bp s x))
-= Classical.forall_intro_2 (fun b1 b2 -> Classical.move_requires (automata_bare_parser'_pf3_aux cp dp bp pp s x b1) b2)
+= Classical.forall_intro_2 (Classical.move_requires_2 (automata_bare_parser'_pf3_aux cp dp bp pp s x))
 
 let automata_bare_parser'_pf23
   (cp : automata_control_param)
@@ -457,8 +461,8 @@ let automata_bare_parser'_pf
 : Lemma (
   (forall s. and_then_cases_injective_dep (dp.post_t s) (automata_bare_parser' cp dp bp s)) /\
   (forall s data. parser_kind_prop automata_default_parser_kind (automata_bare_parser' cp dp bp s data)))
-= Classical.forall_intro (fun s -> automata_bare_parser'_pf1 cp dp bp pp s);
-  Classical.forall_intro_2 (fun s data -> automata_bare_parser'_pf23 cp dp bp pp s data)
+= Classical.forall_intro (automata_bare_parser'_pf1 cp dp bp pp);
+  Classical.forall_intro_2 (automata_bare_parser'_pf23 cp dp bp pp)
   
 let automata_parser
   (cp : automata_control_param)

@@ -1,7 +1,13 @@
 module CBOR.Spec.Raw
-friend CBOR.Spec.API.Type
 friend CBOR.Spec.Raw.DataModel
+friend CBOR.Spec.API.Type
 
+include CBOR.Spec.Raw.Sort
+include CBOR.Spec.API.Type
+module RF = CBOR.Spec.Raw.Format
+module R = CBOR.Spec.Raw.Sort
+module RS = CBOR.Spec.Raw.Sort
+module U = CBOR.Spec.Util
 module DM = CBOR.Spec.Raw.DataModel
 
 let mk_cbor r =
@@ -40,6 +46,8 @@ let mk_cbor_equiv
   Classical.move_requires (equiv_trans basic_data_model (mk_cbor r1) r1) r2;
   Classical.move_requires (equiv_trans basic_data_model (mk_cbor r1) r2) (mk_cbor r2);
   Classical.move_requires (R.raw_equiv_sorted_optimal RF.deterministically_encoded_cbor_map_key_order (mk_cbor r1)) (mk_cbor r2)
+
+#push-options "--z3rlimit 40"
 
 let mk_cbor_eq
   r
@@ -132,6 +140,8 @@ let rec no_repeats_map_fst_mk_det_raw_cbor_map_entry
     CBOR.Spec.Util.list_memP_map_forall fst (List.Tot.map mk_det_raw_cbor_map_entry q);
     no_repeats_map_fst_mk_det_raw_cbor_map_entry q
 
+#pop-options
+
 let rec assoc_map_mk_det_raw_cbor_map_entry
   (l: list (cbor & cbor))
   (x: cbor)
@@ -146,6 +156,30 @@ let rec assoc_map_mk_det_raw_cbor_map_entry
     assoc_map_mk_det_raw_cbor_map_entry q x
   end
   | _ -> ()
+
+let mk_det_raw_cbor_map_sorted l' =
+  let m : cbor_map = l' in
+  DM.cbor_map_length_eq m;
+  assert (cbor_map_length m == List.Tot.length l');
+  let prf
+    (x: cbor)
+  : Lemma
+    (mk_cbor_match_map_elem l' m (mk_det_raw_cbor x))
+  =
+    List.Tot.for_all_mem (CBOR.Spec.Util.holds_on_pair R.raw_data_item_ints_optimal) l';
+    List.Tot.for_all_mem (CBOR.Spec.Util.holds_on_pair (R.raw_data_item_sorted RF.deterministically_encoded_cbor_map_key_order)) l';
+    let x' = mk_det_raw_cbor x in
+    assert (x' == x);
+    RS.list_setoid_assoc_sorted_optimal RF.deterministically_encoded_cbor_map_key_order x' l';
+    assert (Some? (U.list_setoid_assoc R.raw_equiv x' l') == Some? (cbor_map_get m x));
+    match List.Tot.assoc x' l' with
+    | None -> ()
+    | Some v ->
+      DM.list_assoc_cbor m x';
+      mk_det_raw_cbor_mk_cbor v
+  in
+  Classical.forall_intro prf;  
+  m
 
 let mk_det_raw_cbor_map
   l len
@@ -244,9 +278,23 @@ let mk_det_raw_cbor_map_raw_mem m x =
   Classical.move_requires prf1 ();
   Classical.move_requires prf2 ()
 
-let mk_cbor_eq_map x = ()
+#restart-solver
+#push-options "--z3rlimit_factor 8"
+let mk_cbor_eq_map x =
+  let R.Map len l = mk_det_raw_cbor x in
+  assert (R.raw_data_item_ints_optimal (R.Map len l) == true);
+  R.holds_on_raw_data_item_eq R.raw_data_item_ints_optimal_elem (R.Map len l);
+  assert (R.raw_uint64_optimal len == true);
+  assert (CMap? (unpack x));
+  mk_cbor_eq (R.Map len l);
+  let CMap m = unpack x in
+  assert (cbor_map_length m == List.Tot.length l);
+  FStar.UInt64.uv_inv len.value;
+  assert (len == R.mk_raw_uint64 (FStar.UInt64.uint_to_t (cbor_map_length m)));
+  ()
+#pop-options
 
-#push-options "--z3rlimit 32 --split_queries always"
+#push-options "--z3rlimit 32"
 
 #restart-solver
 
@@ -291,3 +339,11 @@ let mk_det_raw_cbor_map_raw_snoc m key value =
     ()
 
 #pop-options
+
+let mk_cbor_map_depth x =
+  mk_cbor_equiv' x;
+  map_depth_raw_equiv x (mk_cbor x)
+
+let mk_cbor_map_key_depth x =
+  mk_cbor_equiv' x;
+  map_key_depth_raw_equiv x (mk_cbor x)

@@ -3,7 +3,7 @@
  (name evercddl_lib)
  (public_name evercddl.lib)
  (libraries
-    fstar.pluginlib
+    fstar.lib
     ppxlib
  )
  (modes native)

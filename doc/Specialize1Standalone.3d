@@ -2,6 +2,7 @@
   extern probe (INIT) ProbeInit
   extern PURE UINT64 UlongToPtr(UINT32 ptr)
   extern probe (READ UINT32) ProbeAndReadU32
+  extern probe (WRITE UINT32) WriteU32
   extern probe (WRITE UINT64) WriteU64
 
   aligned

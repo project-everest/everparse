@@ -62,7 +62,7 @@ let opt_precedes_list_item
   (x2: option t2)
   (x1: t1)
 : GTot bool
-= FStar.StrongExcludedMiddle.strong_excluded_middle (opt_precedes x1 x2)
+= FStar.IndefiniteDescription.strong_excluded_middle (opt_precedes x1 x2)
 
 noextract
 let opt_precedes_list

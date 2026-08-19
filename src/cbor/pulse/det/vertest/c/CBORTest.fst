@@ -68,9 +68,9 @@ let exit_impossible : I32.t = 2l
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let cbor_det_mk_string_from_array () =
-  mk_string_from_array (mk_string_from_slice (cbor_det_mk_string_from_arrayptr ()))
+  mk_string_from_array (mk_string_from_slice (mk_string_from_arrayptr_dispatch (cbor_det_mk_byte_string_from_arrayptr ()) (cbor_det_mk_text_string_from_arrayptr ())) (dummy_cbor_det_t ()))
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 
 #restart-solver
 fn test_on
@@ -109,6 +109,7 @@ ensures
         with pm vm vk . assert (map_get_post cbor_det_match m pm vm vk ov);
         Trade.elim (cbor_det_match _ bar _) _;
         match ov {
+          norewrite
           None -> {
             rewrite (map_get_post cbor_det_match m pm vm vk ov)
               as (map_get_post_none cbor_det_match m pm vm vk);
@@ -116,6 +117,7 @@ ensures
             Trade.elim (cbor_det_match _ m _) _;
             exit_impossible
           }
+          norewrite
           Some v -> {
             rewrite (map_get_post cbor_det_match m pm vm vk ov)
               as (map_get_post_some cbor_det_match m pm vm vk v);

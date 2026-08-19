@@ -23,7 +23,7 @@ let cbor_raw_serialized_iterator_match
   (c: cbor_raw_serialized_iterator)
   (l: list elt_high)
 : Tot slprop
-= exists* l' . LP.pts_to_serialized (LP.serialize_nlist c.glen s) c.s #(pm *. c.p) l' ** pure (
+= exists* l' . LP.pts_to_serialized (LP.serialize_nlist c.glen s) (to_slice c.s) #(pm *. c.p) l' ** pure (
      U64.v c.len <= c.glen /\
      l == fst (List.Tot.splitAt (U64.v c.len) l')
   )
@@ -40,24 +40,27 @@ fn cbor_raw_serialized_iterator_unfold
 requires
   cbor_raw_serialized_iterator_match s pm c l
 ensures exists* l' .
-  LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) c.s #(pm *. c.p) l' **
+  LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) (to_slice c.s) #(pm *. c.p) l' **
   pure (
     U64.v c.len <= c.glen /\
     l == fst (List.Tot.splitAt (U64.v c.len) l')
   ) **
   trade
-    (LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) c.s #(pm *. c.p) l')
+    (LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) (to_slice c.s) #(pm *. c.p) l')
     (cbor_raw_serialized_iterator_match s pm c l)
 {
   unfold (cbor_raw_serialized_iterator_match s pm c l);
-  with l' . assert (LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) c.s #(pm *. c.p) l');
-  ghost fn aux (_: unit)
-    requires (emp ** LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) c.s #(pm *. c.p) l')
-    ensures (cbor_raw_serialized_iterator_match s pm c l)
+  with l' . assert (LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) (to_slice c.s) #(pm *. c.p) l');
+  intro
+    (Trade.trade
+      (LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) (to_slice c.s) #(pm *. c.p) l')
+      (cbor_raw_serialized_iterator_match s pm c l)
+    )
+    #emp
+    fn _
   {
     fold (cbor_raw_serialized_iterator_match s pm c l)
   };
-  Trade.intro _ _ _ aux;
   ()
 }
 
@@ -71,30 +74,33 @@ fn cbor_raw_serialized_iterator_fold // this function cannot be used to truncate
   (c: cbor_raw_serialized_iterator)
   (l: LP.nlist (c.glen) elt_high)
 requires
-  LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) c.s #(pm *. c.p) l ** pure (
+  LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) (to_slice c.s) #(pm *. c.p) l ** pure (
     Ghost.reveal c.glen == U64.v c.len
   )
 ensures
   cbor_raw_serialized_iterator_match s pm c l **
   trade
     (cbor_raw_serialized_iterator_match s pm c l)
-    (LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) c.s #(pm *. c.p) l)
+    (LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) (to_slice c.s) #(pm *. c.p) l)
 {
   List.Tot.append_l_nil l;
   list_splitAt_append_elim l [];
   fold (cbor_raw_serialized_iterator_match s pm c l);
-  ghost fn aux (_: unit)
-    requires (emp ** cbor_raw_serialized_iterator_match s pm c l)
-    ensures (LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) c.s #(pm *. c.p) l)
+  intro
+    (Trade.trade
+      (cbor_raw_serialized_iterator_match s pm c l)
+      (LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) (to_slice c.s) #(pm *. c.p) l)
+    )
+    #emp
+    fn _
   {
     unfold (cbor_raw_serialized_iterator_match s pm c l);
-    with l' . assert (LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) c.s #(pm *. c.p) l');
+    with l' . assert (LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) (to_slice c.s) #(pm *. c.p) l');
     List.Tot.append_l_nil l';
     list_splitAt_append_elim l' [];
-    rewrite (LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) c.s #(pm *. c.p) l')
-      as (LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) c.s #(pm *. c.p) l)
+    rewrite (LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) (to_slice c.s) #(pm *. c.p) l')
+      as (LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) (to_slice c.s) #(pm *. c.p) l)
   };
-  Trade.intro _ _ _ aux;
   ()
 }
 
@@ -114,7 +120,7 @@ fn cbor_raw_serialized_iterator_fold_with_perm
 requires
   LP.pts_to_serialized (LP.serialize_nlist (glen) s) sl #(pm') l' ** pure (
     Ghost.reveal c.glen == glen /\
-    c.s == sl /\
+    (to_slice c.s) == sl /\
     U64.v c.len <= Ghost.reveal c.glen /\
     l == fst (List.Tot.splitAt (U64.v c.len) l') /\
     pm' == pm *. c.p +. pm *. c.p
@@ -125,21 +131,22 @@ ensures
     (cbor_raw_serialized_iterator_match s pm c l)
     (LP.pts_to_serialized (LP.serialize_nlist (glen) s) sl #(pm') l')
 {
-  rewrite each sl as c.s;
-  LP.pts_to_serialized_share (LP.serialize_nlist (glen) s) c.s;
+  rewrite each sl as (to_slice c.s);
+  LP.pts_to_serialized_share (LP.serialize_nlist (glen) s) (to_slice c.s);
   fold (cbor_raw_serialized_iterator_match s pm c l);
-  ghost fn aux (_: unit)
-  requires
-    LP.pts_to_serialized (LP.serialize_nlist (glen) s) c.s #(pm' /. 2.0R) l' ** cbor_raw_serialized_iterator_match s pm c l
-  ensures
-    LP.pts_to_serialized (LP.serialize_nlist (glen) s) c.s #(pm') l'
+  intro
+    (Trade.trade
+      (cbor_raw_serialized_iterator_match s pm c l)
+      (LP.pts_to_serialized (LP.serialize_nlist (glen) s) (to_slice c.s) #(pm') l')
+    )
+    #(LP.pts_to_serialized (LP.serialize_nlist (glen) s) (to_slice c.s) #(pm' /. 2.0R) l') 
+    fn _
   {
     unfold (cbor_raw_serialized_iterator_match s pm c l);
-    LP.pts_to_serialized_gather (LP.serialize_nlist (glen) s) c.s;
+    LP.pts_to_serialized_gather (LP.serialize_nlist (glen) s) (to_slice c.s);
     ()
   };
-  Trade.intro _ _ _ aux;
-  rewrite each c.s as sl;
+  rewrite each (to_slice c.s) as sl;
   ()
 }
 
@@ -188,7 +195,7 @@ fn cbor_raw_serialized_iterator_length
   (#l: Ghost.erased (list elt_high))
 {
   cbor_raw_serialized_iterator_unfold s pm c l;
-  with l' . assert (LP.pts_to_serialized (LP.serialize_nlist c.glen s) c.s #(pm *. c.p) l');
+  with l' . assert (LP.pts_to_serialized (LP.serialize_nlist c.glen s) (to_slice c.s) #(pm *. c.p) l');
   CBOR.Spec.Util.list_splitAt_length (U64.v c.len) l';
   Trade.elim _ _;
   c.len
@@ -230,8 +237,8 @@ fn cbor_raw_serialized_iterator_next
   (#l: Ghost.erased (list elt_high))
 {
   cbor_raw_serialized_iterator_unfold s pm i l;
-  with l' . assert (LP.pts_to_serialized (LP.serialize_nlist i.glen s) i.s #(pm *. i.p) l');
-  LP.nlist_cons_as_nondep_then s i.glen i.s;
+  with l' . assert (LP.pts_to_serialized (LP.serialize_nlist i.glen s) (to_slice i.s) #(pm *. i.p) l');
+  LP.nlist_cons_as_nondep_then s i.glen (to_slice i.s);
   Trade.trans _ _ (cbor_raw_serialized_iterator_match s pm i l);
   let glen' : Ghost.erased nat = i.glen - 1;
   let k' : Ghost.erased LP.parser_kind = LP.parse_nlist_kind glen' k;
@@ -240,7 +247,7 @@ fn cbor_raw_serialized_iterator_next
   let v' : Ghost.erased (elt_high & LP.nlist glen' elt_high) = Ghost.hide (List.Tot.hd l', List.Tot.tl l');
   assert (LP.pts_to_serialized
     (LPC.serialize_nondep_then s s')
-    i.s
+    (to_slice i.s)
     #(pm *. i.p)
     v'
   );
@@ -250,10 +257,10 @@ fn cbor_raw_serialized_iterator_next
     #k'
     #p'
     s'
-    i.s;
-  unfold (LPC.split_nondep_then_post s s' i.s (pm *. i.p) v' (s1, s2));
-  unfold (LPC.split_nondep_then_post' s s' i.s (pm *. i.p) v' s1 s2);
-  Trade.trans _ _ (cbor_raw_serialized_iterator_match s pm i l);
+    (to_slice i.s);
+  unfold (LPC.split_nondep_then_post s s' (to_slice i.s) (pm *. i.p) v' (s1, s2));
+  unfold (LPC.split_nondep_then_post' s s' (to_slice i.s) (pm *. i.p) v' s1 s2);
+  trade_trans_nounify _ _ _ (cbor_raw_serialized_iterator_match s pm i l);
   let res = phi s1;
   with pm' . assert (elt_match pm' res (fst v'));
   Trade.rewrite_with_trade
@@ -261,7 +268,7 @@ fn cbor_raw_serialized_iterator_next
     (elt_match pm' res (List.Tot.hd l));
   Trade.trans (elt_match pm' res (List.Tot.hd l)) _ _;
   let i' : cbor_raw_serialized_iterator = {
-    s = s2;
+    s = of_slice s2;
     p = i.p /. 2.0R;
     len = U64.sub i.len 1uL;
     glen = glen';
@@ -274,7 +281,7 @@ fn cbor_raw_serialized_iterator_next
     _
     (cbor_raw_serialized_iterator_match s pm i' (List.Tot.tl l))
     _;
-  Trade.trans _ _ (cbor_raw_serialized_iterator_match s pm i l);
+  trade_trans_nounify _ _ _ (cbor_raw_serialized_iterator_match s pm i l);
   res
 }
 
@@ -312,7 +319,7 @@ fn cbor_raw_serialized_iterator_truncate
   (#l: Ghost.erased (list elt_high))
 {
   cbor_raw_serialized_iterator_unfold s pm c l;
-  with l' . assert (LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) c.s #(pm *. c.p) l');
+  with l' . assert (LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) (to_slice c.s) #(pm *. c.p) l');
   list_splitAt_splitAt l' (U64.v c.len) (U64.v len);
   let c' : cbor_raw_serialized_iterator = {
     s = c.s;
@@ -323,7 +330,7 @@ fn cbor_raw_serialized_iterator_truncate
   cbor_raw_serialized_iterator_fold_with_perm
     s
     (Ghost.reveal c.glen)
-    c.s
+    (to_slice c.s)
     (pm *. c.p)
     l'
     c'
@@ -346,7 +353,7 @@ fn cbor_raw_serialized_iterator_share
   (#l: (list elt_high))
 {
   unfold (cbor_raw_serialized_iterator_match s pm c l);
-  LP.pts_to_serialized_share (LP.serialize_nlist (c.glen) s) c.s;
+  LP.pts_to_serialized_share (LP.serialize_nlist (c.glen) s) (to_slice c.s);
   half_mul_l pm c.p;
   fold (cbor_raw_serialized_iterator_match s (pm /. 2.0R) c l);
   fold (cbor_raw_serialized_iterator_match s (pm /. 2.0R) c l);
@@ -368,7 +375,7 @@ fn cbor_raw_serialized_iterator_gather
 {
   unfold (cbor_raw_serialized_iterator_match s pm1 c l1);
   unfold (cbor_raw_serialized_iterator_match s pm2 c l2);
-  LP.pts_to_serialized_gather (LP.serialize_nlist (c.glen) s) c.s;
+  LP.pts_to_serialized_gather (LP.serialize_nlist (c.glen) s) (to_slice c.s);
   perm_mul_add_l pm1 pm2 c.p;
   fold (cbor_raw_serialized_iterator_match s (pm1 +. pm2) c l1);
 }

@@ -84,19 +84,22 @@ fn slice_from_array_trade
     )
 {
   let s = S.from_array a alen;
-  ghost fn aux (_: unit)
-    requires S.is_from_array a s ** pts_to s #p v
-    ensures pts_to a #p v
+  intro
+    (Trade.trade
+      (pts_to s #p v)
+      (pts_to a #p v)
+    )
+    #(S.is_from_array a s)
+    fn _
   {
     S.to_array s
   };
-  Trade.intro _ _ _ aux;
   s
 }
 
 #pop-options
 
-#push-options "--fuel 8 --z3rlimit 32"
+#push-options "--fuel 8 --z3rlimit 64"
 
 #restart-solver
 inline_for_extraction
@@ -145,6 +148,7 @@ ensures
         with pm vm vk . assert (Base.map_get_post cbor_match m pm vm vk ov);
         Trade.elim (cbor_match _ bar _) _;
         match ov {
+          norewrite
           None -> {
             rewrite (Base.map_get_post cbor_match m pm vm vk ov)
               as (Base.map_get_post_none cbor_match m pm vm vk);
@@ -152,6 +156,7 @@ ensures
             Trade.elim (cbor_match _ m _) _;
             exit_impossible
           }
+          norewrite
           Some v -> {
             rewrite (Base.map_get_post cbor_match m pm vm vk ov)
               as (Base.map_get_post_some cbor_match m pm vm vk v);

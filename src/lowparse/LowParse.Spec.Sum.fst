@@ -85,11 +85,14 @@ let weaken_parse_cases_kind
   (f: (x: sum_key s) -> Tot (k: parser_kind & parser k (sum_type_of_tag s x)))
 : Tot parser_kind
 = let keys : list (sum_key_type s) = List.Tot.map fst (sum_enum s) in
-  glb_list_of #(sum_key_type s) (fun (x: sum_key_type s) ->
-    if List.Tot.mem x keys
-    then let (| k, _ |) = f x in k
-    else default_parser_kind
-  ) (List.Tot.map fst (sum_enum s))
+  match keys with
+  | [] -> strong_parser_kind 0 0 None
+  | _ ->
+    glb_list_of #(sum_key_type s) (fun (x: sum_key_type s) ->
+      if List.Tot.mem x keys
+      then let (| k, _ |) = f x in k
+      else default_parser_kind
+    ) keys
 
 inline_for_extraction
 let synth_sum_case (s: sum) : (k: sum_key s) -> (x: sum_type_of_tag s k) -> Tot (sum_cases s k) =
@@ -98,7 +101,14 @@ let synth_sum_case (s: sum) : (k: sum_key s) -> (x: sum_type_of_tag s k) -> Tot 
 
 let synth_sum_case_injective (s: sum) (k: sum_key s) : Lemma
   (synth_injective (synth_sum_case s k))
-= Classical.forall_intro (Sum?.synth_case_recip_synth_case s k)
+= let aux (x x': sum_type_of_tag s k) : Lemma
+    (requires (synth_sum_case s k x == synth_sum_case s k x'))
+    (ensures (x == x'))
+  = Sum?.synth_case_recip_synth_case s k x;
+    Sum?.synth_case_recip_synth_case s k x'
+  in
+  Classical.forall_intro_2 (Classical.move_requires_2 aux);
+  synth_injective_intro (synth_sum_case s k)
 
 let parse_sum_cases
   (s: sum)
@@ -261,7 +271,12 @@ let synth_sum_case_recip (s: sum) (k: sum_key s) (x: sum_cases s k) : Tot (sum_t
 
 let synth_sum_case_inverse (s: sum) (k: sum_key s) : Lemma
   (synth_inverse (synth_sum_case s k) (synth_sum_case_recip s k))
-= Classical.forall_intro (Sum?.synth_case_synth_case_recip s)
+= let aux (x: sum_cases s k) : Lemma
+    (synth_sum_case s k (synth_sum_case_recip s k x) == x)
+  = Sum?.synth_case_synth_case_recip s x
+  in
+  Classical.forall_intro aux;
+  synth_inverse_intro (synth_sum_case s k) (synth_sum_case_recip s k)
 
 let serialize_sum_cases'
   (s: sum)
@@ -279,6 +294,51 @@ let serialize_sum_cases'
       ()
     )
 
+#push-options "--z3rlimit 20"
+
+let rec glb_list_of_injective
+  (#key: eqtype)
+  (#repr: eqtype)
+  (e: enum key repr)
+  (type_of_tag: (enum_key e -> Tot Type))
+  (f: (x: enum_key e) -> Tot (k: parser_kind & parser k (type_of_tag x)))
+  (sr: (x: enum_key e) -> Tot (serializer (dsnd (f x))))
+  (l: list key)
+: Lemma
+  (requires (Cons? l /\ (forall x . List.Tot.mem x l ==> List.Tot.mem x (List.Tot.map fst e))))
+  (ensures (
+    (glb_list_of #key (fun (x: key) ->
+      if List.Tot.mem x (List.Tot.map fst e)
+      then let (| k, _ |) = f x in k
+      else default_parser_kind
+    ) l).parser_kind_injective == true
+  ))
+  (decreases l)
+= match l with
+  | [h] -> 
+    serializer_parser_injective (sr h)
+  | h :: t ->
+    glb_list_of_injective e type_of_tag f sr t;
+    serializer_parser_injective (sr h)
+
+#pop-options
+
+let weaken_parse_cases_kind_injective
+  (s: sum)
+  (f: (x: sum_key s) -> Tot (k: parser_kind & parser k (sum_type_of_tag s x)))
+  (sr: (x: sum_key s) -> Tot (serializer (dsnd (f x))))
+: Lemma
+  ((weaken_parse_cases_kind s f).parser_kind_injective == true)
+= match List.Tot.map fst (sum_enum s) with
+  | [] -> ()
+  | _ -> glb_list_of_injective (sum_enum s) (sum_type_of_tag s) f sr (List.Tot.map fst (sum_enum s))
+
+let sum_key_implies_enum_nonempty
+  (s: sum)
+  (x: sum_key s)
+: Lemma (Cons? (sum_enum s))
+= ()
+
 let serialize_sum_cases
   (s: sum)
   (f: (x: sum_key s) -> Tot (k: parser_kind & parser k (sum_type_of_tag s x)))
@@ -286,6 +346,8 @@ let serialize_sum_cases
   (x: sum_key s)
 : Tot (serializer (parse_sum_cases s f x))
 = Classical.forall_intro (parse_sum_cases_eq' s f x);
+  sum_key_implies_enum_nonempty s x;
+  weaken_parse_cases_kind_injective s f sr;
   serialize_ext
     (parse_sum_cases' s f x)
     (serialize_sum_cases' s f sr x)
@@ -300,7 +362,7 @@ let serialize_sum'
   (#pc: ((x: sum_key t) -> Tot (parser k (sum_cases t x))))
   (sc: ((x: sum_key t) -> Tot (serializer (pc x))))
 : Pure (serializer (parse_sum' t p pc))
-  (requires (kt.parser_kind_subkind == Some ParserStrong))
+  (requires (kt.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_injective == true))
   (ensures (fun _ -> True))
 = serialize_tagged_union
     #(parse_filter_kind kt)
@@ -324,7 +386,10 @@ let serialize_sum
   (requires (kt.parser_kind_subkind == Some ParserStrong))
   (ensures (fun _ -> True))
 = // FIXME: WHY WHY WHY is implicit argument inference failing here? (i.e. introducing an eta-expansion)
+  weaken_parse_cases_kind_injective t pc sc;
   serialize_sum' t s #_ #(parse_sum_cases t pc) (serialize_sum_cases t pc sc)
+
+#push-options "--z3rlimit 16"
 
 let serialize_sum_eq
   (#kt: parser_kind)
@@ -346,6 +411,8 @@ let serialize_sum_eq
   synth_sum_case_injective t tg;
   synth_sum_case_inverse t tg;
   serialize_synth_eq (dsnd (pc tg)) (synth_sum_case t tg) (sc tg)  (synth_sum_case_recip t tg) () x
+
+#pop-options
 
 inline_for_extraction
 let make_sum
@@ -380,7 +447,7 @@ let synth_case_recip_synth_case_post
   (synth_case: ((x: enum_key e) -> (y: type_of_tag x) -> Tot (refine_with_tag tag_of_data x)))
   (synth_case_recip: ((k: enum_key e) -> (x: refine_with_tag tag_of_data k) -> Tot (type_of_tag k)))
   (x: key)
-: GTot Type0
+: GTot prop
 = 
   list_mem x (list_map fst e) ==> (
     forall (y: type_of_tag x) . {:pattern (synth_case_recip' e tag_of_data type_of_tag synth_case_recip (synth_case x y))}
@@ -545,11 +612,14 @@ let weaken_parse_dsum_cases_kind
   (k' : parser_kind)
 : Tot parser_kind
 = let keys : list (dsum_key_type s) = List.Tot.map fst (dsum_enum s) in
-  glb_list_of #(dsum_key_type s) (fun (x: dsum_key_type s) ->
-    if List.Tot.mem x keys
-    then let (| k, _ |) = f x in k
-    else k'
-  ) (List.Tot.map fst (dsum_enum s)) `glb` k'
+  match keys with
+  | [] -> k'
+  | _ ->
+    glb_list_of #(dsum_key_type s) (fun (x: dsum_key_type s) ->
+      if List.Tot.mem x keys
+      then let (| k, _ |) = f x in k
+      else k'
+    ) keys `glb` k'
 
 let weaken_parse_dsum_cases_kind'
   (s: dsum)
@@ -558,6 +628,26 @@ let weaken_parse_dsum_cases_kind'
   (p: parser k' (dsum_type_of_unknown_tag s))
 : Tot parser_kind
 = weaken_parse_dsum_cases_kind s f k'
+
+let dsum_known_key_implies_enum_nonempty
+  (s: dsum)
+  (x: dsum_known_key s)
+: Lemma (Cons? (dsum_enum s))
+= ()
+
+let weaken_parse_dsum_cases_kind_injective
+  (s: dsum)
+  (f: (x: dsum_known_key s) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag s x)))
+  (sr: (x: dsum_known_key s) -> Tot (serializer (dsnd (f x))))
+  (#k': parser_kind)
+  (#g: parser k' (dsum_type_of_unknown_tag s))
+  (sg: serializer g)
+: Lemma
+  ((weaken_parse_dsum_cases_kind s f k').parser_kind_injective == true)
+= serializer_parser_injective sg;
+  match List.Tot.map fst (dsum_enum s) with
+  | [] -> ()
+  | _ -> glb_list_of_injective (dsum_enum s) (dsum_type_of_known_tag s) f sr (List.Tot.map fst (dsum_enum s))
 
 inline_for_extraction
 let synth_dsum_case
@@ -815,6 +905,24 @@ let parse_dsum_eq
       parse_synth_eq (weaken (weaken_parse_dsum_cases_kind t f k') g) (synth_dsum_case t k) input_k
     end
 
+let parse_dsum_tag_of_data
+  (#kt: parser_kind)
+  (t: dsum)
+  (p: parser kt (dsum_repr_type t))
+  (f: (x: dsum_known_key t) -> Tot (k: parser_kind & parser k (dsum_type_of_known_tag t x)))
+  (#k': parser_kind)
+  (g: parser k' (dsum_type_of_unknown_tag t))
+  (input: bytes)
+: Lemma
+  (ensures (
+    match parse (parse_dsum t p f g) input with
+    | None -> True
+    | Some (v, _) ->
+      Some? (parse (parse_maybe_enum_key p (dsum_enum t)) input) /\
+      dsum_tag_of_data t v == fst (Some?.v (parse (parse_maybe_enum_key p (dsum_enum t)) input))
+  ))
+= parse_tagged_union_eq (parse_maybe_enum_key p (dsum_enum t)) (dsum_tag_of_data t) (parse_dsum_cases t f g) input
+
 let parse_dsum_eq3
   (#kt: parser_kind)
   (t: dsum)
@@ -859,7 +967,8 @@ let serialize_dsum_type_of_tag
   (sg: serializer g)
   (x: dsum_key s)
 : Tot (serializer (parse_dsum_type_of_tag s f g x))
-= match x with
+= weaken_parse_dsum_cases_kind_injective s f sr sg;
+  match x with
   | Known x' ->
     serialize_ext (dsnd (f x')) (sr x') (parse_dsum_type_of_tag s f g x)
   | Unknown x' ->
@@ -892,7 +1001,7 @@ let serialize_dsum'
   (#pc: ((x: dsum_key t) -> Tot (parser k (dsum_cases t x))))
   (sc: ((x: dsum_key t) -> Tot (serializer (pc x))))
 : Pure (serializer (parse_dsum' t p pc))
-  (requires (kt.parser_kind_subkind == Some ParserStrong))
+  (requires (kt.parser_kind_subkind == Some ParserStrong /\ k.parser_kind_injective == true))
   (ensures (fun _ -> True))
 = serialize_tagged_union
     #(kt)
@@ -918,7 +1027,8 @@ let serialize_dsum
 : Pure (serializer (parse_dsum s pt f g))
   (requires (kt.parser_kind_subkind == Some ParserStrong))
   (ensures (fun _ -> True))
-= serialize_dsum' s st #_ #(parse_dsum_cases s f g) (serialize_dsum_cases s f sr g sg)
+= weaken_parse_dsum_cases_kind_injective s f sr sg;
+  serialize_dsum' s st #_ #(parse_dsum_cases s f g) (serialize_dsum_cases s f sr g sg)
 
 let synth_dsum_case_recip_synth_case_known_post
   (#key #repr: eqtype)
@@ -930,7 +1040,7 @@ let synth_dsum_case_recip_synth_case_known_post
   (synth_case: ((x: maybe_enum_key e) -> (y: dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag x) -> Tot (refine_with_tag tag_of_data x)))
   (synth_case_recip: ((k: maybe_enum_key e) -> (refine_with_tag tag_of_data k) -> Tot (dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag k)))
   (x: key)
-: GTot Type0
+: GTot prop
 = 
   list_mem x (list_map fst e) ==> (
     forall (y: type_of_known_tag x) . {:pattern (synth_case_recip (Known x) (synth_case (Known x) y))}
@@ -947,7 +1057,7 @@ let synth_dsum_case_recip_synth_case_unknown_post
   (synth_case: ((x: maybe_enum_key e) -> (y: dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag x) -> Tot (refine_with_tag tag_of_data x)))
   (synth_case_recip: ((k: maybe_enum_key e) -> (refine_with_tag tag_of_data k) -> Tot (dsum_type_of_tag' e type_of_known_tag type_of_unknown_tag k)))
   (x: repr)
-: GTot Type0
+: GTot prop
 = 
   list_mem x (list_map snd e) == false ==> (
     forall (y: type_of_unknown_tag) . {:pattern (synth_case_recip (Unknown x) (synth_case (Unknown x) y))}
@@ -1232,3 +1342,4 @@ let serialize_dsum_upd_bw_chain
   assert (tlen + j' == Seq.length sx' - i' - Seq.length s');
   assert (seq_upd_bw_seq sx' i' s' == seq_upd_seq sx' (tlen + j') s');
   ()
+

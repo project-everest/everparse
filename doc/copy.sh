@@ -26,7 +26,7 @@ fi
 
 mkdir -p "$destpath"
 
-# make html # assume this is already done, see in the Makefile, 3d-ci depends on html
+# make html # assume this is already done by the caller before invoking copy.sh
 cp -R _build/html/* "$destpath"
 
 cd "$destpath"

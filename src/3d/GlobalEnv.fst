@@ -22,7 +22,6 @@ module GlobalEnv
      -- computing the size of types
      -- computing which fields are dependent on others
 *)
-open FStar.Mul
 open FStar.List.Tot
 open Ast
 open FStar.All
@@ -39,7 +38,8 @@ type decl_attributes = {
   bit_order: (bit_order: option bitfield_bit_order { Some? bit_order ==> Some? integral });
   has_reader:bool;
   parser_weak_kind:weak_kind;
-  parser_kind_nz:option bool
+  parser_kind_nz:option bool;
+  primitive:bool;
 }
 
 noeq

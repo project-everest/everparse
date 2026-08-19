@@ -11,36 +11,6 @@ open CBOR.Spec.API.Type
 module Env = CDDL.Pulse.AST.Env // for validator_env
 module Parse = CDDL.Pulse.AST.Parse // for ancillary_validate_env
 
-[@@bundle_attr]
-let name_from_literal (l : literal) : option string =
-  match l with
-  | LTextString s -> Some s
-  | LSimple i
-  | LInt i ->
-    Some (if i >= 0
-          then "intkey" ^ string_of_int i
-          else "intkeyneg" ^ string_of_int (-i))
-
-[@@bundle_attr]
-let rec extract_name_map_group (t : ast0_wf_parse_map_group 'a) : option string =
-  match t with
-  | WfMLiteral _ l _ _ -> name_from_literal l
-  | WfMZeroOrOne _g sub -> extract_name_map_group sub
-  | _ -> None
-
-[@@bundle_attr]
-let name_from_array_key (key : typ) : option string =
-  match key with
-  | TElem (ELiteral l) -> name_from_literal l
-  | _ -> None
-
-[@@bundle_attr]
-let rec extract_name_array_group (t : ast0_wf_array_group 'a) : option string =
-  match t with
-  | WfAElem _ key _ _ -> name_from_array_key key
-  | WfAZeroOrOne _g sub -> extract_name_array_group sub
-  | _ -> None
-
 let bundle_env'
   (#t: Type0)
   (vmatch: (perm -> t -> cbor -> slprop))
@@ -159,8 +129,7 @@ let sem_of_typ_sem_wf_ast_env_extend_typ_with_weak
   (let e' = (wf_ast_env_extend_typ_with_weak e new_name t t_wf) in
     sem_of_type_sem (e'.e_sem_env.se_env new_name) == typ_sem e.e_sem_env t
   )
-= 
-  assert_norm (let e' = (wf_ast_env_extend_typ_with_weak e new_name t t_wf) in sem_of_type_sem (e'.e_sem_env.se_env new_name) == typ_sem e.e_sem_env t)
+= ()
 
 [@@bundle_attr; sem_attr] // sem_attr for validate_typ
 let bundle_env_extend_typ_with_weak
@@ -374,7 +343,7 @@ let impl_bundle_wf_map_group_pre
   (t_wf: ast0_wf_parse_map_group t)
 : Tot prop
 =
-    spec_wf_parse_map_group env.be_ast.e_sem_env t t_wf /\ SZ.fits_u64
+    spec_wf_parse_map_group env.be_ast.e_sem_env t t_wf
     /\ None? (Parse.ask_zero_copy_wf_map_group (Parse.ancillary_validate_env_is_some ancillary_v) (ancillary_bundle_env_is_some ancillary) (ancillary_array_bundle_env_is_some ancillary_ag) (Parse.ancillary_map_constraint_env_is_some ancillary_mg) t_wf)
 
 [@@bundle_attr]
@@ -431,7 +400,6 @@ let impl_bundle_wf_map_group_concat
   (b2: map_bundle vmatch)
 : Pure (map_bundle vmatch)
     (requires (spec_wf_parse_map_group env.be_ast.e_sem_env (MGConcat g1 g2) (WfMConcat g1 s1 g2 s2) /\
-      SZ.fits_u64 /\
       impl_bundle_wf_map_group_post env s1 b1 /\
       impl_bundle_wf_map_group_post env s2 b2
     ))
@@ -453,7 +421,7 @@ let impl_bundle_wf_map_group_concat
   let _ = assert (impl_bundle_wf_map_group_post env (WfMConcat g1 s1 g2 s2) res) in
   res
 
-#push-options "--z3rlimit 1024 --query_stats --ifuel 4 --fuel 4 --split_queries always"
+#push-options "--z3rlimit 1024 --query_stats --ifuel 4 --fuel 4"
 
 [@@bundle_attr]
 let rec impl_bundle_wf_type
@@ -472,7 +440,7 @@ let rec impl_bundle_wf_type
   (t_wf: ast0_wf_typ t)
 : Pure (bundle vmatch)
     (requires 
-    spec_wf_typ env.be_ast.e_sem_env true t t_wf /\ SZ.fits_u64
+    spec_wf_typ env.be_ast.e_sem_env true t t_wf
     /\ None? (Parse.ask_zero_copy_wf_type (Parse.ancillary_validate_env_is_some ancillary_v) (ancillary_bundle_env_is_some ancillary) (ancillary_array_bundle_env_is_some ancillary_ag) (Parse.ancillary_map_constraint_env_is_some ancillary_mg) t_wf)
     )
     (ensures fun res ->
@@ -533,7 +501,7 @@ and impl_bundle_wf_array_group
   (t_wf: ast0_wf_array_group t)
 : Pure (array_bundle cbor_array_iterator_match)
     (requires 
-    spec_wf_array_group env.be_ast.e_sem_env t t_wf /\ SZ.fits_u64
+    spec_wf_array_group env.be_ast.e_sem_env t t_wf
     /\ None? (Parse.ask_zero_copy_wf_array_group (Parse.ancillary_validate_env_is_some ancillary_v) (ancillary_bundle_env_is_some ancillary) (ancillary_array_bundle_env_is_some ancillary_ag) (Parse.ancillary_map_constraint_env_is_some ancillary_mg) t_wf)
     )
     (ensures fun res ->
@@ -618,7 +586,7 @@ and impl_bundle_wf_map_group
       )
       (map_constraint_choice ps1.mb_footprint map_constraint_empty)
       ()
-  | WfMLiteral cut key _ s ->
+  | WfMLiteral cut _ key _ s ->
     let nm = extract_name_map_group t_wf in
     let ps1 = impl_bundle_wf_type impl env ancillary_v ancillary ancillary_ag ancillary_mg s in
         (bundle_map_match_item_for
@@ -639,6 +607,7 @@ and impl_bundle_wf_map_group
         )
   | WfMZeroOrMore t_key t_value except s_key s_value s_except ->
     let Some (v_key, p_key) = match t_key with
+    | TNamed _ (TDef n)
     | TDef n -> 
       [@@inline_let] let _ = env.be_b_correct n in
       Some (env.be_v n, env.be_b n)
@@ -646,6 +615,7 @@ and impl_bundle_wf_map_group
     in
     let Some (v_except) = ancillary_mg except in
     let Some (v_value, p_value) = match t_value with
+    | TNamed _ (TDef n)
     | TDef n ->
       [@@inline_let] let _ = env.be_b_correct n in
       Some (env.be_v n, env.be_b n)
@@ -688,7 +658,7 @@ let impl_bundle_wf_type'
   (ancillary_mg: Parse.ancillary_map_constraint_env vmatch2 env.be_ast.e_sem_env)
   (#t: typ)
   (t_wf: Ghost.erased (ast0_wf_typ t) {
-    spec_wf_typ env.be_ast.e_sem_env true t t_wf /\ SZ.fits_u64
+    spec_wf_typ env.be_ast.e_sem_env true t t_wf
   })
   (t_wf': ast0_wf_typ t)
   (_: squash (t_wf' == Ghost.reveal t_wf))
@@ -708,14 +678,14 @@ let impl_bundle_wf_ask_for_guarded_type
   (#vmatch2: (perm -> t2 -> (cbor & cbor) -> slprop))
   (#cbor_array_iterator_match: (perm -> t_arr -> list cbor -> slprop))
   (#cbor_map_iterator_match: (perm -> t_map -> list (cbor & cbor) -> slprop))
-  (impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match { SZ.fits_u64 })
+  (impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
   (env: bundle_env vmatch)
   (ancillary_v: Parse.ancillary_validate_env vmatch env.be_ast.e_sem_env)
   (ancillary: ancillary_bundle_env vmatch env.be_ast.e_sem_env)
   (ancillary_ag: ancillary_array_bundle_env cbor_array_iterator_match env.be_ast.e_sem_env)
   (ancillary_mg: Parse.ancillary_map_constraint_env vmatch2 env.be_ast.e_sem_env)
-  (a: option (Parse.ask_for env.be_ast.e_sem_env))
-  (sq: squash (Parse.option_ask_for_is_guarded_type env.be_ast.e_sem_env a))
+  (a:  Parse.option_ask_for env.be_ast.e_sem_env)
+  (sq: squash (Parse.option_ask_for_is_guarded_type a))
   (sq2: squash (None? (Parse.ask_zero_copy_ask_for_option (Parse.ancillary_validate_env_is_some ancillary_v) (ancillary_bundle_env_is_some ancillary) (ancillary_array_bundle_env_is_some ancillary_ag) (Parse.ancillary_map_constraint_env_is_some ancillary_mg) a)))
 : Tot (res: bundle vmatch {
       spec_wf_typ env.be_ast.e_sem_env true _ (Parse.AskForType?.t_wf (Some?.v a)) /\
@@ -730,14 +700,14 @@ let impl_bundle_wf_ask_for_array_group
   (#vmatch2: (perm -> t2 -> (cbor & cbor) -> slprop))
   (#cbor_array_iterator_match: (perm -> t_arr -> list cbor -> slprop))
   (#cbor_map_iterator_match: (perm -> t_map -> list (cbor & cbor) -> slprop))
-  (impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match { SZ.fits_u64 })
+  (impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
   (env: bundle_env vmatch)
   (ancillary_v: Parse.ancillary_validate_env vmatch env.be_ast.e_sem_env)
   (ancillary: ancillary_bundle_env vmatch env.be_ast.e_sem_env)
   (ancillary_ag: ancillary_array_bundle_env cbor_array_iterator_match env.be_ast.e_sem_env)
   (ancillary_mg: Parse.ancillary_map_constraint_env vmatch2 env.be_ast.e_sem_env)
-  (a: option (Parse.ask_for env.be_ast.e_sem_env))
-  (sq: squash (Parse.option_ask_for_is_array_group env.be_ast.e_sem_env a))
+  (a: Parse.option_ask_for env.be_ast.e_sem_env)
+  (sq: squash (Parse.option_ask_for_is_array_group a))
   (sq2: squash (None? (Parse.ask_zero_copy_ask_for_option (Parse.ancillary_validate_env_is_some ancillary_v) (ancillary_bundle_env_is_some ancillary) (ancillary_array_bundle_env_is_some ancillary_ag) (Parse.ancillary_map_constraint_env_is_some ancillary_mg) a)))
 : Tot (res: array_bundle cbor_array_iterator_match {
       spec_wf_array_group env.be_ast.e_sem_env _ (Parse.AskForArrayGroup?.t_wf (Some?.v a)) /\
@@ -751,8 +721,8 @@ let ancillary_bundle_env_set_ask_for
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
   (#se: sem_env)
   (env1: ancillary_bundle_env vmatch se)
-  (a: option (Parse.ask_for se))
-  (sq: squash (Parse.option_ask_for_is_guarded_type se a))
+  (a: Parse.option_ask_for se)
+  (sq: squash (Parse.option_ask_for_is_guarded_type a))
   (i: impl_typ vmatch (typ_sem se (Parse.AskForType?.t (Some?.v a))))
   (b: bundle vmatch { Ghost.reveal b.b_typ == typ_sem se (Parse.AskForType?.t (Some?.v a)) })
 : Tot (ancillary_bundle_env vmatch se)
@@ -764,8 +734,8 @@ let ancillary_array_bundle_env_set_ask_for
   (#cbor_array_iterator_match: perm -> cbor_t -> list cbor -> slprop)
   (#se: sem_env)
   (env1: ancillary_array_bundle_env cbor_array_iterator_match se)
-  (a: option (Parse.ask_for se))
-  (sq: squash (Parse.option_ask_for_is_array_group se a))
+  (a: Parse.option_ask_for se)
+  (sq: squash (Parse.option_ask_for_is_array_group a))
   (i: impl_array_group cbor_array_iterator_match (array_group_sem se (Parse.AskForArrayGroup?.t (Some?.v a))))
   (b: array_bundle cbor_array_iterator_match { Ghost.reveal b.ab_typ == array_group_sem se (Parse.AskForArrayGroup?.t (Some?.v a)) })
 : Tot (ancillary_array_bundle_env cbor_array_iterator_match se)

@@ -32,7 +32,7 @@ let cbor_det_impl : cbor_impl cbor_det_match cbor_det_map_entry_match cbor_det_a
   cbor_elim_int64 = cbor_det_elim_int64 ();
   cbor_mk_simple = cbor_det_mk_simple_value ();
   cbor_elim_simple = cbor_det_elim_simple ();
-  cbor_mk_string = mk_string_from_slice (cbor_det_mk_string_from_arrayptr ());
+  cbor_mk_string = mk_string_from_slice (mk_string_from_arrayptr_dispatch (cbor_det_mk_byte_string_from_arrayptr ()) (cbor_det_mk_text_string_from_arrayptr ())) (dummy_cbor_det_t ());
   cbor_map_iterator_init = cbor_det_map_iterator_start ();
   cbor_map_iterator_is_empty = cbor_det_map_iterator_is_empty ();
   cbor_map_iterator_next = cbor_det_map_iterator_next ();

@@ -25,9 +25,12 @@ interpret: $(SOURCE_FILES) interpret.out
 	$(CC) -o interpret.out/test3 -I interpret.out -I . $(addprefix interpret.out/, ExternVector.c ExternVectorWrapper.c) ExternVectorDriver.c
 	./interpret.out/test3
 
-INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffer $(EVERPARSE_HOME)/src/lowparse $(KRML_HOME)/krmllib/obj $(KRML_HOME)/krmllib
+EVERPARSE_SRC_PATH := $(EVERPARSE_HOME)/src
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
-FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
+INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffer $(EVERPARSE_HOME)/src/lowparse
+
+FSTAR_OPTIONS += $(addprefix --include , $(INCLUDES))
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
@@ -36,3 +39,8 @@ FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
 	mkdir -p $@
 
 .PHONY: all interpret modules modules_batch
+
+clean:
+	rm -rf interpret.out modules/obj modules_batch/basic.out
+
+.PHONY: clean

@@ -128,7 +128,7 @@ let has
 =
   if x.Aux.has_length
   then
-    n `U64.lte` (x.Aux.length `U64.sub` position)
+    (x.Aux.length `U64.sub` position) `U64.gte` n
   else
     Aux.has x.Aux.base n
 
@@ -288,7 +288,7 @@ let peep0_pre'
 = peep_pre' x position h /\
   Seq.length (get_remaining x h) >= U64.v n
 
-// #push-options "--split_queries no --quake 10 --query_stats"
+// #push-options " --quake 10 --query_stats"
 // #restart-solver
 
 let peep_post_extract_concl

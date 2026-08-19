@@ -59,7 +59,7 @@ void bench_verify(uint8_t *privkey, uint8_t *pubkey) {
 
     bstr outbuf = { .len = 1024 };
     check(outbuf.elt = malloc(outbuf.len));
-    bstr signed_msg = sign1_simple(privkey, payload, outbuf);
+    bstr signed_msg = COSE_EverCrypt_sign1_simple(privkey, payload, outbuf);
     clock_gettime(CLOCK_MONOTONIC, &start);
     for (unsigned i = 0; i < nruns; i++) {
         check(COSE_EverCrypt_verify1_simple(pubkey, signed_msg).tag);
@@ -74,9 +74,9 @@ void bench_ed25519_sign(uint8_t *privkey) {
     unsigned nruns = 100000;
     struct timespec start, finish;
 
-    COSE_Format_evercddl_Sig_structure_pretty sig_struct = {
+    COSE_Format_sig_structure sig_struct = {
         .context = 1,
-        .body_protected = mk_phdrs(-8, NULL),
+        .body_protected = COSE_EverCrypt_mk_phdrs(-8, NULL),
         ._x0 = {
             .tag = COSE_Format_Inr,
             .case_Inr = {
@@ -87,7 +87,7 @@ void bench_ed25519_sign(uint8_t *privkey) {
     };
     bstr msg = { .len = 1024 };
     check(msg.elt = malloc(msg.len));
-    COSE_Format_serialize_Sig_structure(sig_struct, msg);
+    COSE_Format_serialize_sig_structure(sig_struct, msg);
 
     clock_gettime(CLOCK_MONOTONIC, &start);
     for (unsigned i = 0; i < nruns; i++) {
@@ -104,9 +104,9 @@ void bench_ed25519_verify(uint8_t *privkey, uint8_t *pubkey) {
     unsigned nruns = 100000;
     struct timespec start, finish;
 
-    COSE_Format_evercddl_Sig_structure_pretty sig_struct = {
+    COSE_Format_sig_structure sig_struct = {
         .context = 1,
-        .body_protected = mk_phdrs(-8, NULL),
+        .body_protected = COSE_EverCrypt_mk_phdrs(-8, NULL),
         ._x0 = {
             .tag = COSE_Format_Inr,
             .case_Inr = {
@@ -117,7 +117,7 @@ void bench_ed25519_verify(uint8_t *privkey, uint8_t *pubkey) {
     };
     bstr msg = { .len = 1024 };
     check(msg.elt = malloc(msg.len));
-    COSE_Format_serialize_Sig_structure(sig_struct, msg);
+    COSE_Format_serialize_sig_structure(sig_struct, msg);
     uint8_t sig[64];
     EverCrypt_Ed25519_sign(sig, privkey, msg.len, msg.elt);
 

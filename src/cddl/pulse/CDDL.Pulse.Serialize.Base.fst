@@ -10,6 +10,7 @@ module S = Pulse.Lib.Slice
 module U8 = FStar.UInt8
 module SZ = FStar.SizeT
 module Cbor = CBOR.Spec.API.Format
+module Gen = CDDL.Pulse.Serialize.Gen.Base
 
 let impl_serialize_post
     (#t: typ)
@@ -97,6 +98,74 @@ let impl_serialize_t_eq
 : Tot (squash (impl_serialize s #impl_tgt r == impl_serialize s #impl_tgt2 (coerce_rel r impl_tgt2 ieq)))
 = ()
 
+let impl_serialize_elim_lemma
+    (#t: typ)
+    (#tgt: Type0)
+    (#inj: bool)
+    (s: spec t tgt inj)
+    (v: tgt)
+    (w: Seq.seq U8.t)
+    (res: SZ.t)
+: Lemma
+    (requires impl_serialize_post s v w res)
+    (ensures Gen.impl_serialize_post Gen.cbor_det_min_length Gen.cbor_det_max_length s v w res)
+    [SMTPat (impl_serialize_post s v w res)]
+= if s.serializable v
+  then Cbor.cbor_det_serialize_parse (s.serializer v)
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_elim
+    (#[@@@erasable]t: Ghost.erased typ)
+    (#[@@@erasable]tgt: Type0)
+    (#[@@@erasable] inj: Ghost.erased bool)
+    (#[@@@erasable]ps: Ghost.erased (spec t tgt inj))
+    (#impl_tgt: Type0)
+    (#[@@@erasable]r: rel impl_tgt tgt)
+    (i: impl_serialize ps r)
+: Gen.impl_serialize Gen.cbor_det_min_length Gen.cbor_det_max_length ps r
+=
+  (c: _)
+  (#v: _)
+  (out: _)
+{
+  let res = i c out;
+  res
+}
+
+let impl_serialize_intro_lemma
+    (#t: typ)
+    (#tgt: Type0)
+    (#inj: bool)
+    (s: spec t tgt inj)
+    (v: tgt)
+    (w: Seq.seq U8.t)
+    (res: SZ.t)
+: Lemma
+    (requires Gen.impl_serialize_post Gen.cbor_det_min_length Gen.cbor_det_max_length s v w res)
+    (ensures impl_serialize_post s v w res)
+    [SMTPat (Gen.impl_serialize_post Gen.cbor_det_min_length Gen.cbor_det_max_length s v w res)]
+= if s.serializable v
+  then Cbor.cbor_det_serialize_parse (s.serializer v)
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_intro
+    (#[@@@erasable]t: Ghost.erased typ)
+    (#[@@@erasable]tgt: Type0)
+    (#[@@@erasable] inj: Ghost.erased bool)
+    (#[@@@erasable]ps: Ghost.erased (spec t tgt inj))
+    (#impl_tgt: Type0)
+    (#[@@@erasable]r: rel impl_tgt tgt)
+    (i: Gen.impl_serialize Gen.cbor_det_min_length Gen.cbor_det_max_length ps r)
+: impl_serialize ps r
+=
+  (c: _)
+  (#v: _)
+  (out: _)
+{
+  let res = i c out;
+  res
+}
+
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_always_false
     (#t: Ghost.erased typ)
@@ -125,7 +194,7 @@ fn impl_serialize_ext
     ([@@@erasable]sq: squash (
       (Ghost.reveal inj == true \/ Ghost.reveal inj' == true) /\
       typ_equiv t' t /\
-      (forall (x: cbor) . Ghost.reveal t' x ==> ((Ghost.reveal ps'.parser x <: tgt) == Ghost.reveal ps.parser x))
+      (forall (x: cbor) . Ghost.reveal t' x ==> (((Ghost.reveal ps').parser x <: tgt) == (Ghost.reveal ps).parser x))
     ))
 : impl_serialize #(Ghost.reveal t') #tgt #inj' (Ghost.reveal ps') #impl_tgt r
 =
@@ -155,18 +224,15 @@ fn impl_serialize_bij
     (g21: (impl_tgt' -> impl_tgt))
     ([@@@erasable]gprf_21_12: (x: impl_tgt) -> squash (g21 (g12 x) == x))
     ([@@@erasable]gprf_12_21: (x: impl_tgt') -> squash (g12 (g21 x) == x))
-: impl_serialize #t #tgt' #inj (spec_inj ps f12 f21 fprf_21_12 fprf_12_21) #impl_tgt' (rel_fun r g21 f21)
+: impl_serialize #t #tgt' #inj (spec_inj ps f12 f21 fprf_21_12 fprf_12_21) #impl_tgt' (rel_fun r g21 (Ghost.reveal f21))
 =
     (c: _)
     (#v: _)
     (out: _)
 {
-  let c' = g21 c;
-  Trade.rewrite_with_trade
-    (rel_fun r g21 f21 c v)
-    (r c' (Ghost.reveal f21 v));
-  let res = i c' #(Ghost.reveal f21 v) out; // FIXME: WHY WHY WHY the explicit here?
-  Trade.elim _ _;
+  unfold (rel_fun r g21 (Ghost.reveal f21) c (Ghost.reveal v));
+  let res = i (g21 c) #((Ghost.reveal f21) (Ghost.reveal v)) out; // FIXME: WHY WHY WHY the explicit here?
+  fold (rel_fun r g21 (Ghost.reveal f21) c (Ghost.reveal v));
   res
 }
 

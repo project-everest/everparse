@@ -13,3 +13,8 @@ $(ALL_O_FILES): %.o: %.c
 build: $(ALL_O_FILES)
 
 .PHONY: build all
+
+clean:
+	rm -f *.o
+
+.PHONY: clean

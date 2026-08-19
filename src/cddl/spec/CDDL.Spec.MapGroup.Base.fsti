@@ -106,12 +106,16 @@ let map_group_zero_or_one (m: map_group) : map_group =
 
 val map_group_concat (m1 m2: map_group) : map_group
 
+(* NOTE: this lemma deliberately carries no SMTPat. Since its conclusion is a
+   propositional equality, both nestings end up in the same congruence class, and
+   E-matching (which matches modulo congruence) would then re-trigger on every
+   member of that class. On a chain `m1 `concat` (m2 `concat` (m3 `concat` ...))`
+   this enumerates all Catalan-many parse trees in a single E-class. In practice
+   that made Z3 4.13.3/4.15.3/5.0.0 abort with
+   `(error "Overflow encountered when expanding vector")`; see
+   https://github.com/Z3Prover/z3/issues/10435. Call it explicitly instead. *)
 val map_group_concat_assoc (m1 m2 m3: map_group) : Lemma
   (map_group_concat m1 (map_group_concat m2 m3) == map_group_concat (map_group_concat m1 m2) m3)
-  [SMTPatOr [
-//    [SMTPat (map_group_concat m1 (map_group_concat m2 m3))];
-    [SMTPat (map_group_concat (map_group_concat m1 m2) m3)]
-  ]]
 
 val map_group_concat_nop_l
   (m: map_group)
@@ -520,6 +524,8 @@ let map_group_concat_cut_choice
     (map_group_concat (map_group_cut k) (map_group_choice g1 g2))
     (map_group_choice (map_group_concat (map_group_cut k) g1) (map_group_concat (map_group_cut k) g2))
 
+#push-options "--z3rlimit 10"
+
 let map_group_concat_choice_cut
   (g1 g2: det_map_group)
   (k: typ)
@@ -529,6 +535,8 @@ let map_group_concat_choice_cut
 = apply_map_group_det_map_group_equiv
     (map_group_concat (map_group_choice g1 g2) (map_group_cut k))
     (map_group_choice (map_group_concat g1 (map_group_cut k)) (map_group_concat g2 (map_group_cut k)))
+
+#pop-options
 
 val matches_map_group (g: map_group) (m: Cbor.cbor_map) : Tot bool
 
