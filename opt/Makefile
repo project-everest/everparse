@@ -18,7 +18,7 @@ submodules:
 
 FStar:
 	git clone "https://github.com/FStarLang/FStar" $@
-	cd $@ && git checkout 627e8590a81fd0afb9d9b20391105d7d355922b4
+	cd $@ && git checkout 6433df9e660d5df5ef0be9ba5c8d49bd8e40a181
 
 karamel:
 	git clone "https://github.com/FStarLang/karamel" $@
