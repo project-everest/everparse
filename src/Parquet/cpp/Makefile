@@ -24,6 +24,7 @@ OBJS      := $(OBJS_C) $(OBJS_CPP)
 
 # ---- flags ----
 THRIFT_PREFIX ?= $(CURDIR)/thrift-build
+THRIFT_HDR    := $(THRIFT_PREFIX)/include/thrift/Thrift.h
 
 CPPFLAGS += -I. \
             -I$(THRIFT_PREFIX)/include \
@@ -61,18 +62,23 @@ THRIFT_CHECK_CPP := \
   grep -q '^S\["WITH_CPP_TRUE"\]=""$$' config.status || \
   { echo 'ERROR: Thrift configure disabled the C++ library; install the Boost headers (>= 1.56, e.g. libboost-dev or boost-devel) or set BOOST_ROOT' >&2; exit 1; }
 
-$(CURDIR)/thrift-build:
-	+cd thrift && ./bootstrap.sh && ./configure --prefix=$@ $(THRIFT_CONFIGURE_FLAGS) && { $(THRIFT_CHECK_CPP) ; } && $(MAKE) && $(MAKE) install
+# Depend on an installed header rather than on $(THRIFT_PREFIX): configure
+# creates that directory even when it installs nothing into it, so it would be
+# considered up to date after a failed build, and its timestamp would keep
+# changing and force needless recompilations.
+$(THRIFT_HDR):
+	+cd thrift && ./bootstrap.sh && ./configure --prefix=$(THRIFT_PREFIX) $(THRIFT_CONFIGURE_FLAGS) && { $(THRIFT_CHECK_CPP) ; } && $(MAKE) && $(MAKE) install
+	test -f $@
 
-$(BIN): $(OBJS) $(THRIFT_PREFIX)
+$(BIN): $(OBJS) $(THRIFT_HDR)
 	$(CXX) $(LDFLAGS) -o $@ $(OBJS) $(LDLIBS)
 
 # Compile C (KaRaMeL)
-%.o: %.c $(THRIFT_PREFIX)
+%.o: %.c $(THRIFT_HDR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
 
 # Compile C++ (Thrift + shim + main)
-%.o: %.cpp $(THRIFT_PREFIX)
+%.o: %.cpp $(THRIFT_HDR)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
 
 clean:
