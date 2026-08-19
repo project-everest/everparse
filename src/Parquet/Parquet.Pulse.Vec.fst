@@ -60,17 +60,17 @@ ensures
     {
       rewrite (Rel.rel_option r None (option_hd y)) as emp
     };
-    Trade.intro _ _ _ aux;
+    Trade.intro_trade _ _ _ aux;
     None
   } else {
     with s . assert (pts_to x.data s ** SM.seq_list_match s y r);
-    ghost fn aux (_: unit)
-    requires emp ** (pts_to x.data s ** SM.seq_list_match s y r)
-    ensures rel_vec_of_list r x y
+    intro (Trade.trade
+      (pts_to x.data s ** SM.seq_list_match s y r)
+      (rel_vec_of_list r x y)
+    ) fn _
     {
       fold (rel_vec_of_list r x y)
     };
-    Trade.intro _ _ _ aux;
     let rv = V.op_Array_Access x.data 0sz;
     Trade.elim_hyp_l _ _ _;
     SM.seq_list_match_cons_elim_trade _ _ r;
@@ -122,13 +122,10 @@ fn impl_for_all
   let mut pres = true;
   let pll = GR.alloc #(list spect) [];
   while (
-    if (!pres) {
-      let i = !pi;
-      (SZ.lt i x.len)
-    } else {
-      false
-    }
-  ) invariant b . exists* i ll lr sr res . (
+    let res = !pres;
+    let i = !pi;
+    (res && SZ.lt i x.len)
+  ) invariant exists* i ll lr sr res . (
     precond **
     pts_to pi i **
     pts_to x.data s **
@@ -141,13 +138,14 @@ fn impl_for_all
     pure (
       SZ.v i <= Seq.length s /\
       sr == Seq.slice s (SZ.v i) (Seq.length s) /\
-      b == (res && (SZ.v i < Seq.length s)) /\
       List.Tot.length ll == SZ.v i /\
       Ghost.reveal y == List.Tot.append ll lr /\
       List.Tot.length y == List.Tot.length ll + List.Tot.length lr /\
       List.Tot.for_all f y == (res && List.Tot.for_all f lr)
     )
-  ) {
+  )
+    decreases %[(if !pres then 1 else 0); (Seq.length s - SZ.v (!pi))]
+  {
     with sr lr . assert (SM.seq_list_match sr lr r);
     SM.seq_list_match_length _ _ _;
     SM.seq_list_match_cons_elim_trade _ _ _;
@@ -244,13 +242,10 @@ fn impl_mem_map
   let mut pi = 0sz;
   let mut pres = false;
   while (
-    if (!pres) {
-      false
-    } else {
-      let i = !pi;
-      (SZ.lt i x.len)
-    }
-  ) invariant b . exists* i lr sr res . (
+    let res = !pres;
+    let i = !pi;
+    ((not res) && SZ.lt i x.len)
+  ) invariant exists* i lr sr res . (
     pts_to pi i **
     pts_to x.data s **
     pts_to pres res **
@@ -261,10 +256,11 @@ fn impl_mem_map
     pure (
       SZ.v i <= Seq.length s /\
       sr == Seq.slice s (SZ.v i) (Seq.length s) /\
-      b == ((not res) && (SZ.v i < Seq.length s)) /\
       List.Tot.mem a (List.Tot.map f y) == (res || List.Tot.mem a (List.Tot.map f lr))
     )
-  ) {
+  )
+    decreases %[(if !pres then 0 else 1); (Seq.length s - SZ.v (!pi))]
+  {
     with sr lr . assert (SM.seq_list_match sr lr r);
     SM.seq_list_match_length _ _ _;
     SM.seq_list_match_cons_elim_trade _ _ _;

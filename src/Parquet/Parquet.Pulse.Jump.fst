@@ -118,7 +118,12 @@ ensures exists* v' .
   )
 {
   pts_to_serialized_filter_elim_trade serialize_seq_all_bytes phi input;
+  with v0 . assert (pts_to_serialized serialize_seq_all_bytes input #pm v0);
   pts_to_serialized_elim_trade serialize_seq_all_bytes input;
+  Trade.trans _ _ (pts_to_serialized (serialize_filter serialize_seq_all_bytes phi) input #pm v);
+  Trade.rewrite_with_trade
+    (S.pts_to input #pm (bare_serialize serialize_seq_all_bytes v0))
+    (S.pts_to input #pm (Ghost.reveal v));
   Trade.trans _ _ (pts_to_serialized (serialize_filter serialize_seq_all_bytes phi) input #pm v);
   let res = impl_pred_jump_with_offset_and_size_then_parse offset size s input v;
   Trade.trans _ _ (pts_to_serialized (serialize_filter serialize_seq_all_bytes phi) input #pm v);
@@ -186,14 +191,9 @@ ensures
     let mut pi = 1sz;
     while (
       let res = !pres;
-      if (res) {
-        SM.seq_list_match_length r _ _;
-        let i = !pi;
-        SZ.lt i impl.len
-      } else {
-        false
-      }
-    ) invariant b . exists* impll specl sr specr res i . (
+      let i = !pi;
+      (res && SZ.lt i impl.len)
+    ) invariant exists* impll specl sr specr res i . (
       pts_to impl.data s **
       pts_to pl impll **
       r impll specl **
@@ -206,10 +206,13 @@ ensures
       pure (
         SZ.v i <= Seq.length s /\
         sr == Seq.slice s (SZ.v i) (Seq.length s) /\
-        offsets_and_sizes_are_contiguous (List.Tot.map f spec) == (res && offsets_and_sizes_are_contiguous (List.Tot.map f (specl :: specr))) /\
-        b == (res && Cons? specr)
+        offsets_and_sizes_are_contiguous (List.Tot.map f spec) == (res && offsets_and_sizes_are_contiguous (List.Tot.map f (specl :: specr)))
       )
-    ) {
+    )
+      decreases %[(if !pres then 1 else 0); (Seq.length s - SZ.v (!pi))]
+    {
+      V.pts_to_len impl.data;
+      SM.seq_list_match_length r _ _;
       let impl1 = !pl;
       with spec1 . assert (r impl1 spec1);
       let off1 = implf_fst impl1 _;
@@ -242,6 +245,7 @@ ensures
         }
       }
     };
+    SM.seq_list_match_length r _ _;
     Trade.elim _ _;
     fold (PV.rel_vec_of_list r impl spec);
     !pres
@@ -279,14 +283,9 @@ ensures
     let mut pi = 1sz;
     while (
       let res = !pres;
-      if (res) {
-        SM.seq_list_match_length r _ _;
-        let i = !pi;
-        SZ.lt i impl.len
-      } else {
-        false
-      }
-    ) invariant b . exists* impll specl sr specr res i . (
+      let i = !pi;
+      (res && SZ.lt i impl.len)
+    ) invariant exists* impll specl sr specr res i . (
       pts_to impl.data s **
       pts_to pl impll **
       r impll specl **
@@ -299,10 +298,13 @@ ensures
       pure (
         SZ.v i <= Seq.length s /\
         sr == Seq.slice s (SZ.v i) (Seq.length s) /\
-        offsets_and_sizes_are_sorted (List.Tot.map f spec) == (res && offsets_and_sizes_are_sorted (List.Tot.map f (specl :: specr))) /\
-        b == (res && Cons? specr)
+        offsets_and_sizes_are_sorted (List.Tot.map f spec) == (res && offsets_and_sizes_are_sorted (List.Tot.map f (specl :: specr)))
       )
-    ) {
+    )
+      decreases %[(if !pres then 1 else 0); (Seq.length s - SZ.v (!pi))]
+    {
+      V.pts_to_len impl.data;
+      SM.seq_list_match_length r _ _;
       let impl1 = !pl;
       with spec1 . assert (r impl1 spec1);
       let off1 = implf_fst impl1 _;
@@ -335,6 +337,7 @@ ensures
         }
       }
     };
+    SM.seq_list_match_length r _ _;
     Trade.elim _ _;
     fold (PV.rel_vec_of_list r impl spec);
     !pres

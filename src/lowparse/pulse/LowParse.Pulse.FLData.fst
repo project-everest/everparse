@@ -99,13 +99,13 @@ ensures exists* v' .
 {
   pts_to_serialized_fldata_strong_intro s length input;
   with v' . assert (pts_to_serialized (serialize_fldata_strong s length) input #pm v');
-  ghost fn aux (_: unit)
-  requires emp ** pts_to_serialized (serialize_fldata_strong s length) input #pm v'
-  ensures pts_to_serialized s input #pm v
+  intro (Trade.trade
+    (pts_to_serialized (serialize_fldata_strong s length) input #pm v')
+    (pts_to_serialized s input #pm v)
+  ) fn _
   {
     pts_to_serialized_fldata_strong_elim s length input
-  };
-  Trade.intro _ _ _ aux
+  }
 }
 
 ghost
@@ -127,11 +127,11 @@ ensures
     (pts_to_serialized (serialize_fldata_strong s length) input #pm v)
 {
   pts_to_serialized_fldata_strong_elim s length input;
-  ghost fn aux (_: unit)
-  requires emp ** pts_to_serialized s input #pm v
-  ensures pts_to_serialized (serialize_fldata_strong s length) input #pm v
+  intro (Trade.trade
+    (pts_to_serialized s input #pm (v <: t))
+    (pts_to_serialized (serialize_fldata_strong s length) input #pm v)
+  ) fn _
   {
     pts_to_serialized_fldata_strong_intro s length input
-  };
-  Trade.intro _ _ _ aux
+  }
 }

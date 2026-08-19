@@ -736,7 +736,7 @@ fn validate_nondep_then_rtol
   (#p1: parser k1 t1 { k1.parser_kind_subkind == Some ParserConsumesAll } )
   (v1: validator p1)
   (v2: validator p2)
-: validator #(t2 & t1) #(nondep_then_rtol_kind k1 k2.parser_kind_low) (parse_nondep_then_rtol #k2 #t2 p2 #k1 #t1 p1)
+: validator #(t2 & t1) #(nondep_then_rtol_kind k1 k2) (parse_nondep_then_rtol #k2 #t2 p2 #k1 #t1 p1)
 = 
   (input: slice byte)
   (poffset: _)
@@ -758,7 +758,7 @@ fn validate_nondep_then_rtol
       let is_valid1 = v1 l poffset;
       Trade.elim _ _;
       poffset := input_len;
-      parser_kind_prop_equiv (nondep_then_rtol_kind k1 k2.parser_kind_low) (parse_nondep_then_rtol p2 p1);
+      parser_kind_prop_equiv (nondep_then_rtol_kind k1 k2) (parse_nondep_then_rtol p2 p1);
       is_valid1
     } else {
       false
@@ -778,7 +778,7 @@ fn validate_dtuple2_rtol_gen
   (#p1: (x: t2) -> parser k1 (t1 x) { k1.parser_kind_subkind == Some ParserConsumesAll } )
   (v1: (x: Ghost.erased t2) -> (y: slice byte) -> (pm: perm) -> validator_gen (pts_to_serialized s2 y #pm x) (p1 x))
   (v2: validator p2)
-: validator #(dtuple2 t2 t1) #(dtuple2_rtol_kind k1 k2.parser_kind_low) (parse_dtuple2_rtol #k2 #t2 p2 #k1 #t1 p1)
+: validator #(dtuple2 t2 t1) #(dtuple2_rtol_kind k1 k2) (parse_dtuple2_rtol #k2 #t2 p2 #k1 #t1 p1)
 = 
   (input: slice byte)
   (poffset: _)
@@ -801,7 +801,7 @@ fn validate_dtuple2_rtol_gen
       let is_valid1 = v1 _ y pm l poffset;
       Trade.elim _ _;
       poffset := input_len;
-      parser_kind_prop_equiv (dtuple2_rtol_kind k1 k2.parser_kind_low) (parse_dtuple2_rtol p2 p1);
+      parser_kind_prop_equiv (dtuple2_rtol_kind k1 k2) (parse_dtuple2_rtol p2 p1);
       is_valid1
     } else {
       false
@@ -822,7 +822,7 @@ fn validate_dtuple2_rtol
   (#p1: (x: t2) -> parser k1 (t1 x) { k1.parser_kind_subkind == Some ParserConsumesAll } )
   (v1: (x: t2) -> validator (p1 x))
   (v2: validator p2)
-: validator #(dtuple2 t2 t1) #(dtuple2_rtol_kind k1 k2.parser_kind_low) (parse_dtuple2_rtol #k2 #t2 p2 #k1 #t1 p1)
+: validator #(dtuple2 t2 t1) #(dtuple2_rtol_kind k1 k2) (parse_dtuple2_rtol #k2 #t2 p2 #k1 #t1 p1)
 = 
   (input: slice byte)
   (poffset: _)
@@ -846,7 +846,7 @@ fn validate_dtuple2_rtol
       let is_valid1 = v1 x l poffset;
       Trade.elim _ _;
       poffset := input_len;
-      parser_kind_prop_equiv (dtuple2_rtol_kind k1 k2.parser_kind_low) (parse_dtuple2_rtol p2 p1);
+      parser_kind_prop_equiv (dtuple2_rtol_kind k1 k2) (parse_dtuple2_rtol p2 p1);
       is_valid1
     } else {
       false

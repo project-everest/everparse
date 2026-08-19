@@ -158,13 +158,9 @@ ensures exists* overflow .
   let mut pi = 0sz;
   while (
     let accu = !paccu;
-    if (Some? accu) {
-      let i = !pi;
-      SZ.lt i cc.len
-    } else {
-      false
-    }
-  ) invariant b . exists* sr vcr accu i overflow .
+    let i = !pi;
+    (Some? accu && SZ.lt i cc.len)
+  ) invariant exists* sr vcr accu i overflow .
     Vec.pts_to cc.data s **
     SM.seq_list_match sr vcr rel_column_chunk **
     pts_to paccu accu **
@@ -174,10 +170,11 @@ ensures exists* overflow .
     pure (
       compute_cols_size_invariant bound vcc vcr overflow accu /\
       SZ.v i <= Seq.length s /\
-      sr == Seq.slice s (SZ.v i) (Seq.length s) /\
-      b == (Some? accu && SZ.v i < Seq.length s)
+      sr == Seq.slice s (SZ.v i) (Seq.length s)
     )
+    decreases %[(if Some? !paccu then 1 else 0); (Seq.length s - SZ.v (!pi))]
   {
+    Vec.pts_to_len cc.data;
     SM.seq_list_match_length rel_column_chunk _ _;
     SM.seq_list_match_cons_elim_trade _ _ rel_column_chunk;
     with gimpl gspec . assert (rel_column_chunk gimpl gspec);
@@ -590,21 +587,20 @@ ensures
       let mut pres = true;
       Vec.pts_to_len crg;
       while (
-        if (!pres) {
-          SZ.lt !pj n;
-        } else {
-          false
-        }
-      ) invariant b . exists* j res . (
+        let res = !pres;
+        let j = !pj;
+        (res && SZ.lt j n)
+      ) invariant exists* j res . (
         Vec.pts_to crg srg **
         pts_to pj j **
         pts_to pres res **
         pure (
           SZ.v j <= SZ.v n /\
-          b == (SZ.v j < SZ.v n && res) /\
           List.Tot.for_all (disjoint (Some?.v (option_i64_v_pair rg))) (list_option_map option_i64_v_pair (Seq.seq_to_list (Seq.slice srg (SZ.v i) (Seq.length srg)))) == (res && List.Tot.for_all (disjoint (Some?.v (option_i64_v_pair rg))) (list_option_map option_i64_v_pair (Seq.seq_to_list (Seq.slice srg (SZ.v j) (Seq.length srg)))))
         )
-      ) {
+      )
+        decreases %[(if !pres then 1 else 0); (SZ.v n - SZ.v (!pj))]
+      {
         let j = !pj;
         Seq.cons_head_tail (Seq.slice srg (SZ.v j) (Seq.length srg));
         let rg1 = Vec.op_Array_Access crg j;
@@ -640,12 +636,9 @@ fn impl_validate_file_meta_data_aux (data_size: I64.t) : PV.impl_pred #_ #_ emp 
     List.Tot.append_l_nil vl;
     while (
       let res = !pres;
-      if (res) {
-        (!pi <> 0sz)
-      } else {
-        false
-      }
-    ) invariant b . exists* res sl sr vll vlr i cl . (
+      let i = !pi;
+      (res && (i <> 0sz))
+    ) invariant exists* res sl sr vll vlr i cl . (
       Vec.pts_to l.data s **
       GR.pts_to pll vll **
       GR.pts_to plr vlr **
@@ -660,7 +653,6 @@ fn impl_validate_file_meta_data_aux (data_size: I64.t) : PV.impl_pred #_ #_ emp 
         SZ.v i == List.Tot.length vll /\
         sl == Seq.slice s 0 (SZ.v i) /\
         Seq.equal sr (Seq.slice s (SZ.v i) (Seq.length s)) /\
-        b == (res && Cons? vll) /\
         Seq.length cl == Seq.length s /\
         (res ==> (
           validate_file_meta_data_aux data_size vlr /\
@@ -668,7 +660,9 @@ fn impl_validate_file_meta_data_aux (data_size: I64.t) : PV.impl_pred #_ #_ emp 
         )) /\
         ((~ res) ==> (~ (validate_file_meta_data_aux data_size vl)))
       )
-    ) {
+    )
+      decreases %[(if !pres then 1 else 0); SZ.v (!pi)]
+    {
       with sl sr vll vlr . assert (
         GR.pts_to pll vll ** SM.seq_list_match sl vll rel_row_group **
         GR.pts_to plr vlr ** SM.seq_list_match sr vlr rel_row_group
@@ -1046,9 +1040,10 @@ fn impl_validate_offset_index_col_size () : PV.impl_pred2 #_ #_ #_ #_ emp rel_co
       Trade.refl (SM.seq_list_match s voi.page_locations rel_page_location);
       list_fold_validate_offset_index_col_size_add_nonnegative 0 voi.page_locations;
       while (
-        SM.seq_list_match_length rel_page_location _ _;
-        (!pres && SZ.lt !pi oi.page_locations.len)
-      ) invariant b . exists* res accu i sr vlr . (
+        let res = !pres;
+        let i = !pi;
+        (res && SZ.lt i oi.page_locations.len)
+      ) invariant exists* res accu i sr vlr . (
         Vec.pts_to oi.page_locations.data s **
         pts_to pres res **
         pts_to paccu accu **
@@ -1061,10 +1056,12 @@ fn impl_validate_offset_index_col_size () : PV.impl_pred2 #_ #_ #_ #_ emp rel_co
           0 <= I64.v accu /\
           (let goal = List.Tot.fold_left validate_offset_index_col_size_add 0 voi.page_locations in if res then I64.v accu <= I64.v md.total_compressed_size /\ goal == List.Tot.fold_left validate_offset_index_col_size_add (I64.v accu) vlr else goal <> I64.v md.total_compressed_size) /\
           SZ.v i <= Seq.length s /\
-          sr == Seq.slice s (SZ.v i) (Seq.length s) /\
-          b == (res && (Cons? vlr))
+          sr == Seq.slice s (SZ.v i) (Seq.length s)
         )
-      ) {
+      )
+        decreases %[(if !pres then 1 else 0); (Seq.length s - SZ.v (!pi))]
+      {
+        Vec.pts_to_len oi.page_locations.data;
         with sr vlr . assert (SM.seq_list_match sr vlr rel_page_location);
         SM.seq_list_match_length rel_page_location _ _;
         SM.seq_list_match_cons_elim_trade sr vlr rel_page_location;
@@ -1089,6 +1086,8 @@ fn impl_validate_offset_index_col_size () : PV.impl_pred2 #_ #_ #_ #_ emp rel_co
           }
         }
       };
+      Vec.pts_to_len oi.page_locations.data;
+      SM.seq_list_match_length rel_page_location _ _;
       Trade.elim _ _;
       fold (PV.rel_vec_of_list rel_page_location oi.page_locations voi.page_locations);
       fold (rel_offset_index oi voi);
@@ -1298,7 +1297,7 @@ let validate_parquet (sq: squash SZ.fits_u32) : validator parse_parquet =
     (validate_dtuple2_rtol
       4sz
       (leaf_reader_of_reader read_u32_le)
-      (fun len -> validate_weaken (dtuple2_rtol_kind parse_seq_all_bytes_kind 0)
+      (fun len -> validate_weaken (dtuple2_rtol_kind parse_seq_all_bytes_kind (total_constant_size_parser_kind 0))
         (validate_dtuple2_rtol_gen
           (SZ.uint32_to_sizet len)
           (serialize_fldata_strong serialize_footer (U32.v len))

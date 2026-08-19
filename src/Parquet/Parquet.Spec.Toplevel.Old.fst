@@ -552,7 +552,7 @@ let parse_parquet =
   parse_nondep_then_rtol (parse_filter (parse_seq_flbytes 4) is_PAR1)
     (parse_dtuple2_rtol parse_u32_le
         (fun len ->
-            (weaken (dtuple2_rtol_kind parse_seq_all_bytes_kind 0)
+            (weaken (dtuple2_rtol_kind parse_seq_all_bytes_kind (total_constant_size_parser_kind 0))
                 (parse_dtuple2_rtol (parse_fldata_strong serialize_footer (U32.v len))
                     (fun footer ->
                         parse_filter parse_seq_all_bytes (validate_all footer)
