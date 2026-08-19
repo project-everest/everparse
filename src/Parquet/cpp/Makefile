@@ -66,7 +66,9 @@ THRIFT_CHECK_CPP := \
 # creates that directory even when it installs nothing into it, so it would be
 # considered up to date after a failed build, and its timestamp would keep
 # changing and force needless recompilations.
-$(THRIFT_HDR):
+# We only need to rebuild the header for the default THRIFT_PREFIX value,
+# because if the user overrode it, we should assume the header already present.
+$(CURDIR)/thrift-build/include/thrift/Thrift.h:
 	+cd thrift && ./bootstrap.sh && ./configure --prefix=$(THRIFT_PREFIX) $(THRIFT_CONFIGURE_FLAGS) && { $(THRIFT_CHECK_CPP) ; } && $(MAKE) && $(MAKE) install
 	test -f $@
 
