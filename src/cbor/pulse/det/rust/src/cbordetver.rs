@@ -101,6 +101,12 @@ pub enum cbor_det_int_kind
     NegInt64
 }
 
+pub fn uu___is_UInt64(projectee: cbor_det_int_kind) -> bool
+{ match projectee { cbor_det_int_kind::UInt64 => true, _ => false } }
+
+pub fn uu___is_NegInt64(projectee: cbor_det_int_kind) -> bool
+{ match projectee { cbor_det_int_kind::NegInt64 => true, _ => false } }
+
 pub fn cbor_det_mk_int64 <'a>(ty: cbor_det_int_kind, v: u64) ->
     crate::cbordetveraux::cbor_raw
     <'a>
@@ -125,6 +131,12 @@ pub enum cbor_det_string_kind
     ByteString,
     TextString
 }
+
+pub fn uu___is_ByteString(projectee: cbor_det_string_kind) -> bool
+{ match projectee { cbor_det_string_kind::ByteString => true, _ => false } }
+
+pub fn uu___is_TextString(projectee: cbor_det_string_kind) -> bool
+{ match projectee { cbor_det_string_kind::TextString => true, _ => false } }
 
 pub fn cbor_impl_utf8_correct(s: &[u8]) -> bool { crate::cbordetveraux::impl_correct(s) }
 
@@ -287,6 +299,24 @@ pub enum cbor_det_view <'a>
     Tagged { tag: u64, payload: crate::cbordetveraux::cbor_raw <'a> },
     SimpleValue { _0: u8 }
 }
+
+pub fn uu___is_Int64(projectee: cbor_det_view) -> bool
+{ match projectee { cbor_det_view::Int64 { .. } => true, _ => false } }
+
+pub fn uu___is_String(projectee: cbor_det_view) -> bool
+{ match projectee { cbor_det_view::String { .. } => true, _ => false } }
+
+pub fn uu___is_Array(projectee: cbor_det_view) -> bool
+{ match projectee { cbor_det_view::Array { .. } => true, _ => false } }
+
+pub fn uu___is_Map(projectee: cbor_det_view) -> bool
+{ match projectee { cbor_det_view::Map { .. } => true, _ => false } }
+
+pub fn uu___is_Tagged(projectee: cbor_det_view) -> bool
+{ match projectee { cbor_det_view::Tagged { .. } => true, _ => false } }
+
+pub fn uu___is_SimpleValue(projectee: cbor_det_view) -> bool
+{ match projectee { cbor_det_view::SimpleValue { .. } => true, _ => false } }
 
 pub fn cbor_det_destruct <'a>(c: crate::cbordetveraux::cbor_raw <'a>) -> cbor_det_view <'a>
 {

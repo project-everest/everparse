@@ -325,14 +325,6 @@ COSE_EverCrypt_verify_sig(
   }
 }
 
-static bool
-uu___is_Inl__COSE_Format_bstr_COSE_Format_nil(
-  FStar_Pervasives_either__COSE_Format_bstr_COSE_Format_nil projectee
-)
-{
-  return projectee.tag == COSE_Format_Inl;
-}
-
 FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice__uint8_t
 COSE_EverCrypt_verify1(
   uint8_t *pubkey,
@@ -354,11 +346,7 @@ COSE_EverCrypt_verify1(
     K___COSE_Format_cose_sign1_tagged_Pulse_Lib_Slice_slice__uint8_t res1 = scrut0.v;
     COSE_Format_cose_sign1 x = res1.fst;
     Pulse_Lib_Slice_slice__uint8_t rem = res1.snd;
-    if
-    (
-      Pulse_Lib_Slice_len__uint8_t(rem) == (size_t)0U &&
-        uu___is_Inl__COSE_Format_bstr_COSE_Format_nil(x.payload)
-    )
+    if (Pulse_Lib_Slice_len__uint8_t(rem) == (size_t)0U && x.payload.tag == COSE_Format_Inl)
     {
       Pulse_Lib_Slice_slice__uint8_t sig = x.signature;
       bool ite0;

@@ -305,15 +305,6 @@ pub fn verify_sig(
     }
 }
 
-fn uu___is_Inl__COSE_Format_bstr_COSE_Format_nil(
-    projectee: crate::coseformat::either__COSE_Format_bstr_COSE_Format_nil
-) ->
-    bool
-{
-    match projectee
-    { crate::coseformat::either__COSE_Format_bstr_COSE_Format_nil::Inl { .. } => true, _ => false }
-}
-
 #[derive(PartialEq, Clone, Copy)]
 pub enum option__Pulse_Lib_Slice_slice·uint8_t <'a>
 {
@@ -340,7 +331,14 @@ pub fn verify1 <'a>(pubkey: &'a [u8], aad: &'a [u8], msg: &'a [u8]) ->
           {
               let x: crate::coseformat::cose_sign1 = res1.0;
               let rem: &[u8] = res1.1;
-              if rem.len() == 0usize && uu___is_Inl__COSE_Format_bstr_COSE_Format_nil(x.payload)
+              if
+              rem.len() == 0usize
+              &&
+              match x.payload
+              {
+                  crate::coseformat::either__COSE_Format_bstr_COSE_Format_nil::Inl { .. } => true,
+                  _ => false
+              }
               {
                   let sig: &[u8] = x.signature;
                   let success: bool =
@@ -405,7 +403,14 @@ pub fn verify1_simple <'a>(pubkey: &'a [u8], msg: &'a [u8]) ->
           {
               let x: crate::coseformat::cose_sign1 = res1.0;
               let rem: &[u8] = res1.1;
-              if rem.len() == 0usize && uu___is_Inl__COSE_Format_bstr_COSE_Format_nil(x.payload)
+              if
+              rem.len() == 0usize
+              &&
+              match x.payload
+              {
+                  crate::coseformat::either__COSE_Format_bstr_COSE_Format_nil::Inl { .. } => true,
+                  _ => false
+              }
               {
                   let sig: &[u8] = x.signature;
                   let success: bool =

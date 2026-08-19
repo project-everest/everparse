@@ -51,6 +51,12 @@ pub enum cbor_nondet_int_kind
     NegInt64
 }
 
+pub fn uu___is_UInt64(projectee: cbor_nondet_int_kind) -> bool
+{ match projectee { cbor_nondet_int_kind::UInt64 => true, _ => false } }
+
+pub fn uu___is_NegInt64(projectee: cbor_nondet_int_kind) -> bool
+{ match projectee { cbor_nondet_int_kind::NegInt64 => true, _ => false } }
+
 pub fn cbor_nondet_mk_int64 <'a>(ty: cbor_nondet_int_kind, v: u64) ->
     crate::cbornondetveraux::cbor_raw
     <'a>
@@ -67,6 +73,12 @@ pub enum cbor_nondet_string_kind
     ByteString,
     TextString
 }
+
+pub fn uu___is_ByteString(projectee: cbor_nondet_string_kind) -> bool
+{ match projectee { cbor_nondet_string_kind::ByteString => true, _ => false } }
+
+pub fn uu___is_TextString(projectee: cbor_nondet_string_kind) -> bool
+{ match projectee { cbor_nondet_string_kind::TextString => true, _ => false } }
 
 pub fn cbor_impl_utf8_correct(s: &[u8]) -> bool { crate::cbornondetveraux::impl_correct(s) }
 
@@ -176,6 +188,24 @@ pub enum cbor_nondet_view <'a>
     Tagged { tag: u64, payload: crate::cbornondetveraux::cbor_raw <'a> },
     SimpleValue { _0: u8 }
 }
+
+pub fn uu___is_Int64(projectee: cbor_nondet_view) -> bool
+{ match projectee { cbor_nondet_view::Int64 { .. } => true, _ => false } }
+
+pub fn uu___is_String(projectee: cbor_nondet_view) -> bool
+{ match projectee { cbor_nondet_view::String { .. } => true, _ => false } }
+
+pub fn uu___is_Array(projectee: cbor_nondet_view) -> bool
+{ match projectee { cbor_nondet_view::Array { .. } => true, _ => false } }
+
+pub fn uu___is_Map(projectee: cbor_nondet_view) -> bool
+{ match projectee { cbor_nondet_view::Map { .. } => true, _ => false } }
+
+pub fn uu___is_Tagged(projectee: cbor_nondet_view) -> bool
+{ match projectee { cbor_nondet_view::Tagged { .. } => true, _ => false } }
+
+pub fn uu___is_SimpleValue(projectee: cbor_nondet_view) -> bool
+{ match projectee { cbor_nondet_view::SimpleValue { .. } => true, _ => false } }
 
 pub fn cbor_nondet_destruct <'a>(c: crate::cbornondetveraux::cbor_raw <'a>) ->
     cbor_nondet_view

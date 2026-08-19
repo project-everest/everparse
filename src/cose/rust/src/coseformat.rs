@@ -4748,8 +4748,10 @@ parse_cose_key_generic
               },
             _ => panic!("Incomplete pattern matching")
         };
+    let sw: bool =
+        match test1 { crate::cbordetveraux::impl_map_group_result::MGOK => true, _ => false };
     let w2: option__COSE_Format_bstr =
-        if crate::cbordetveraux::uu___is_MGOK(test1)
+        if sw
         {
             let mty1: crate::cbordetver::cbor_det_int_kind =
                 crate::cbordetver::cbor_det_int_kind::UInt64;
@@ -4806,8 +4808,10 @@ parse_cose_key_generic
               },
             _ => panic!("Incomplete pattern matching")
         };
+    let sw0: bool =
+        match test10 { crate::cbordetveraux::impl_map_group_result::MGOK => true, _ => false };
     let w20: option__COSE_Format_aux_env29_type_1_ugly =
-        if crate::cbordetveraux::uu___is_MGOK(test10)
+        if sw0
         {
             let mty2: crate::cbordetver::cbor_det_int_kind =
                 crate::cbordetver::cbor_det_int_kind::UInt64;
@@ -4971,11 +4975,13 @@ parse_cose_key_generic
               },
             _ => panic!("Incomplete pattern matching")
         };
+    let sw1: bool =
+        match test11 { crate::cbordetveraux::impl_map_group_result::MGOK => true, _ => false };
     let
     w21:
     option__FStar_Pervasives_either__CDDL_Pulse_Types_slice__COSE_Format_aux_env29_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env29_type_1
     =
-        if crate::cbordetveraux::uu___is_MGOK(test11)
+        if sw1
         {
             let mty3: crate::cbordetver::cbor_det_int_kind =
                 crate::cbordetver::cbor_det_int_kind::UInt64;
@@ -5074,8 +5080,10 @@ parse_cose_key_generic
               },
             _ => panic!("Incomplete pattern matching")
         };
+    let sw2: bool =
+        match test12 { crate::cbordetveraux::impl_map_group_result::MGOK => true, _ => false };
     let w22: option__COSE_Format_bstr =
-        if crate::cbordetveraux::uu___is_MGOK(test12)
+        if sw2
         {
             let mty4: crate::cbordetver::cbor_det_int_kind =
                 crate::cbordetver::cbor_det_int_kind::UInt64;
@@ -8117,8 +8125,10 @@ parse_cose_key_okp
               },
             _ => panic!("Incomplete pattern matching")
         };
+    let sw: bool =
+        match test1 { crate::cbordetveraux::impl_map_group_result::MGOK => true, _ => false };
     let w20: option__COSE_Format_bstr =
-        if crate::cbordetveraux::uu___is_MGOK(test1)
+        if sw
         {
             let mty2: crate::cbordetver::cbor_det_int_kind =
                 if
@@ -8187,8 +8197,10 @@ parse_cose_key_okp
               },
             _ => panic!("Incomplete pattern matching")
         };
+    let sw0: bool =
+        match test10 { crate::cbordetveraux::impl_map_group_result::MGOK => true, _ => false };
     let w21: option__COSE_Format_bstr =
-        if crate::cbordetveraux::uu___is_MGOK(test10)
+        if sw0
         {
             let mty3: crate::cbordetver::cbor_det_int_kind =
                 if
@@ -11286,8 +11298,10 @@ parse_header_map
               },
             _ => panic!("Incomplete pattern matching")
         };
+    let sw: bool =
+        match test1 { crate::cbordetveraux::impl_map_group_result::MGOK => true, _ => false };
     let w1: option__COSE_Format_evercddl_label_ugly =
-        if crate::cbordetveraux::uu___is_MGOK(test1)
+        if sw
         {
             let mty0: crate::cbordetver::cbor_det_int_kind =
                 crate::cbordetver::cbor_det_int_kind::UInt64;
@@ -11444,11 +11458,13 @@ parse_header_map
               },
             _ => panic!("Incomplete pattern matching")
         };
+    let sw0: bool =
+        match test10 { crate::cbordetveraux::impl_map_group_result::MGOK => true, _ => false };
     let
     w2:
     option__FStar_Pervasives_either__CDDL_Pulse_Types_slice__COSE_Format_aux_env34_type_1_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_COSE_Format_aux_env34_type_1
     =
-        if crate::cbordetveraux::uu___is_MGOK(test10)
+        if sw0
         {
             let mty1: crate::cbordetver::cbor_det_int_kind =
                 crate::cbordetver::cbor_det_int_kind::UInt64;
@@ -11548,8 +11564,10 @@ parse_header_map
               },
             _ => panic!("Incomplete pattern matching")
         };
+    let sw1: bool =
+        match test11 { crate::cbordetveraux::impl_map_group_result::MGOK => true, _ => false };
     let w20: option__COSE_Format_aux_env29_type_1_ugly =
-        if crate::cbordetveraux::uu___is_MGOK(test11)
+        if sw1
         {
             let mty2: crate::cbordetver::cbor_det_int_kind =
                 crate::cbordetver::cbor_det_int_kind::UInt64;
@@ -11623,8 +11641,10 @@ parse_header_map
               },
             _ => panic!("Incomplete pattern matching")
         };
+    let sw2: bool =
+        match test12 { crate::cbordetveraux::impl_map_group_result::MGOK => true, _ => false };
     let w21: option__COSE_Format_bstr =
-        if crate::cbordetveraux::uu___is_MGOK(test12)
+        if sw2
         {
             let mty3: crate::cbordetver::cbor_det_int_kind =
                 crate::cbordetver::cbor_det_int_kind::UInt64;
@@ -11741,11 +11761,13 @@ parse_header_map
               crate::cbordetveraux::impl_map_group_result::MGCutFail,
             _ => panic!("Precondition of the function most likely violated")
         };
+    let sw3: bool =
+        match test13 { crate::cbordetveraux::impl_map_group_result::MGOK => true, _ => false };
     let
     w22:
     either__·COSE_Format_bstr···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·_FStar_Pervasives_either__·COSE_Format_bstr···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·_·FStar_Pervasives_Native_option__COSE_Format_everparsenomatch···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·
     =
-        if crate::cbordetveraux::uu___is_MGOK(test13)
+        if sw3
         {
             let mty4: crate::cbordetver::cbor_det_int_kind =
                 crate::cbordetver::cbor_det_int_kind::UInt64;
@@ -11798,8 +11820,11 @@ parse_header_map
                       },
                     _ => panic!("Incomplete pattern matching")
                 };
+            let sw4: bool =
+                match test110
+                { crate::cbordetveraux::impl_map_group_result::MGOK => true, _ => false };
             let w22: option__COSE_Format_everparsenomatch =
-                if crate::cbordetveraux::uu___is_MGOK(test110)
+                if sw4
                 {
                     let mty6: crate::cbordetver::cbor_det_int_kind =
                         crate::cbordetver::cbor_det_int_kind::UInt64;
@@ -11920,11 +11945,14 @@ parse_header_map
                       crate::cbordetveraux::impl_map_group_result::MGCutFail,
                     _ => panic!("Precondition of the function most likely violated")
                 };
+            let sw4: bool =
+                match test110
+                { crate::cbordetveraux::impl_map_group_result::MGOK => true, _ => false };
             let
             w22:
             either__·COSE_Format_bstr···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·_·FStar_Pervasives_Native_option__COSE_Format_everparsenomatch···FStar_Pervasives_Native_option__COSE_Format_everparsenomatch·
             =
-                if crate::cbordetveraux::uu___is_MGOK(test110)
+                if sw4
                 {
                     let mty5: crate::cbordetver::cbor_det_int_kind =
                         crate::cbordetver::cbor_det_int_kind::UInt64;
@@ -11982,8 +12010,11 @@ parse_header_map
                               },
                             _ => panic!("Incomplete pattern matching")
                         };
+                    let sw5: bool =
+                        match test120
+                        { crate::cbordetveraux::impl_map_group_result::MGOK => true, _ => false };
                     let w22: option__COSE_Format_everparsenomatch =
-                        if crate::cbordetveraux::uu___is_MGOK(test120)
+                        if sw5
                         {
                             let mty7: crate::cbordetver::cbor_det_int_kind =
                                 crate::cbordetver::cbor_det_int_kind::UInt64;
@@ -12054,8 +12085,11 @@ parse_header_map
                               },
                             _ => panic!("Incomplete pattern matching")
                         };
+                    let sw5: bool =
+                        match test120
+                        { crate::cbordetveraux::impl_map_group_result::MGOK => true, _ => false };
                     let w110: option__COSE_Format_everparsenomatch =
-                        if crate::cbordetveraux::uu___is_MGOK(test120)
+                        if sw5
                         {
                             let mty6: crate::cbordetver::cbor_det_int_kind =
                                 crate::cbordetver::cbor_det_int_kind::UInt64;
@@ -12120,8 +12154,11 @@ parse_header_map
                               },
                             _ => panic!("Incomplete pattern matching")
                         };
+                    let sw6: bool =
+                        match test121
+                        { crate::cbordetveraux::impl_map_group_result::MGOK => true, _ => false };
                     let w22: option__COSE_Format_everparsenomatch =
-                        if crate::cbordetveraux::uu___is_MGOK(test121)
+                        if sw6
                         {
                             let mty7: crate::cbordetver::cbor_det_int_kind =
                                 crate::cbordetver::cbor_det_int_kind::UInt64;

@@ -61,6 +61,39 @@ enum long_argument
     LongArgumentOther
 }
 
+fn __proj__LongArgumentSimpleValue__item__v(projectee: long_argument) -> u8
+{
+    match projectee
+    {
+        long_argument::LongArgumentSimpleValue { v } => v,
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+fn __proj__LongArgumentU8__item__v(projectee: long_argument) -> u8
+{
+    match projectee
+    { long_argument::LongArgumentU8 { v } => v, _ => panic!("Incomplete pattern matching") }
+}
+
+fn __proj__LongArgumentU16__item__v(projectee: long_argument) -> u16
+{
+    match projectee
+    { long_argument::LongArgumentU16 { v } => v, _ => panic!("Incomplete pattern matching") }
+}
+
+fn __proj__LongArgumentU32__item__v(projectee: long_argument) -> u32
+{
+    match projectee
+    { long_argument::LongArgumentU32 { v } => v, _ => panic!("Incomplete pattern matching") }
+}
+
+fn __proj__LongArgumentU64__item__v(projectee: long_argument) -> u64
+{
+    match projectee
+    { long_argument::LongArgumentU64 { v } => v, _ => panic!("Incomplete pattern matching") }
+}
+
 #[derive(PartialEq, Clone, Copy)]
 struct header
 { pub fst: initial_byte_t, pub snd: long_argument }
@@ -1925,9 +1958,6 @@ enum cbor_raw_map_insert_result
     CSuccess
 }
 
-fn uu___is_CInProgress(projectee: cbor_raw_map_insert_result) -> bool
-{ match projectee { cbor_raw_map_insert_result::CInProgress => true, _ => false } }
-
 pub(crate) fn cbor_raw_map_insert(out: &mut [u8], off2: usize, off3: usize) -> bool
 {
     let mut poff: [usize; 1] = [0usize; 1usize];
@@ -1935,7 +1965,8 @@ pub(crate) fn cbor_raw_map_insert(out: &mut [u8], off2: usize, off3: usize) -> b
         [cbor_raw_map_insert_result::CInProgress; 1usize];
     let res: cbor_raw_map_insert_result = (&pres)[0];
     let off: usize = (&poff)[0];
-    let mut cond: bool = uu___is_CInProgress(res) && off < off2;
+    let sw: bool = match res { cbor_raw_map_insert_result::CInProgress => true, _ => false };
+    let mut cond: bool = sw && off < off2;
     while
     cond
     {
@@ -2034,7 +2065,8 @@ pub(crate) fn cbor_raw_map_insert(out: &mut [u8], off2: usize, off3: usize) -> b
         };
         let res0: cbor_raw_map_insert_result = (&pres)[0];
         let off1: usize = (&poff)[0];
-        cond = uu___is_CInProgress(res0) && off1 < off2
+        let sw0: bool = match res0 { cbor_raw_map_insert_result::CInProgress => true, _ => false };
+        cond = sw0 && off1 < off2
     };
     let res0: cbor_raw_map_insert_result = (&pres)[0];
     match res0
@@ -2639,39 +2671,17 @@ fn cbor_match_tagged_get_payload_with_depth <'a>(c: cbor_raw <'a>) -> cbor_raw <
     }
 }
 
-fn
-__proj__Mkdtuple2__item___1__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-    pair: header
-) ->
-    initial_byte_t
-{ pair.fst }
-
 fn dfst__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
     t: header
 ) ->
     initial_byte_t
-{
-    __proj__Mkdtuple2__item___1__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-        t
-    )
-}
-
-fn
-__proj__Mkdtuple2__item___2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-    pair: header
-) ->
-    long_argument
-{ pair.snd }
+{ t.fst }
 
 fn dsnd__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
     t: header
 ) ->
     long_argument
-{
-    __proj__Mkdtuple2__item___2__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
-        t
-    )
-}
+{ t.snd }
 
 fn write_header(x: header, out: &mut [u8], offset: usize) -> usize
 {
@@ -2694,24 +2704,14 @@ fn write_header(x: header, out: &mut [u8], offset: usize) -> usize
         if xh1.major_type == cbor_major_type_simple_value
         {
             let pos·0: usize = res1.wrapping_add(1usize);
-            let n·0: u8 =
-                match x2·
-                {
-                    long_argument::LongArgumentSimpleValue { v } => v,
-                    _ => panic!("Incomplete pattern matching")
-                };
+            let n·0: u8 = __proj__LongArgumentSimpleValue__item__v(x2·);
             out[pos·0.wrapping_sub(1usize)] = n·0;
             pos·0
         }
         else
         {
             let pos·0: usize = res1.wrapping_add(1usize);
-            let n·0: u8 =
-                match x2·
-                {
-                    long_argument::LongArgumentU8 { v } => v,
-                    _ => panic!("Incomplete pattern matching")
-                };
+            let n·0: u8 = __proj__LongArgumentU8__item__v(x2·);
             out[pos·0.wrapping_sub(1usize)] = n·0;
             pos·0
         }
@@ -2719,20 +2719,8 @@ fn write_header(x: header, out: &mut [u8], offset: usize) -> usize
     else if xh1.additional_info == additional_info_long_argument_16_bits
     {
         let pos·0: usize = res1.wrapping_add(2usize);
-        let lo: u8 =
-            match x2·
-            {
-                long_argument::LongArgumentU16 { v } => v,
-                _ => panic!("Incomplete pattern matching")
-            }
-            as
-            u8;
-        let hi: u16 =
-            match x2·
-            {
-                long_argument::LongArgumentU16 { v } => v,
-                _ => panic!("Incomplete pattern matching")
-            }.wrapping_div(256u16);
+        let lo: u8 = __proj__LongArgumentU16__item__v(x2·) as u8;
+        let hi: u16 = (__proj__LongArgumentU16__item__v(x2·)).wrapping_div(256u16);
         let pos·1: usize = pos·0.wrapping_sub(1usize);
         let n·0: u8 = hi as u8;
         out[pos·1.wrapping_sub(1usize)] = n·0;
@@ -2742,20 +2730,8 @@ fn write_header(x: header, out: &mut [u8], offset: usize) -> usize
     else if xh1.additional_info == additional_info_long_argument_32_bits
     {
         let pos·0: usize = res1.wrapping_add(4usize);
-        let lo: u8 =
-            match x2·
-            {
-                long_argument::LongArgumentU32 { v } => v,
-                _ => panic!("Incomplete pattern matching")
-            }
-            as
-            u8;
-        let hi: u32 =
-            match x2·
-            {
-                long_argument::LongArgumentU32 { v } => v,
-                _ => panic!("Incomplete pattern matching")
-            }.wrapping_div(256u32);
+        let lo: u8 = __proj__LongArgumentU32__item__v(x2·) as u8;
+        let hi: u32 = (__proj__LongArgumentU32__item__v(x2·)).wrapping_div(256u32);
         let pos·1: usize = pos·0.wrapping_sub(1usize);
         let lo1: u8 = hi as u8;
         let hi1: u32 = hi.wrapping_div(256u32);
@@ -2773,20 +2749,8 @@ fn write_header(x: header, out: &mut [u8], offset: usize) -> usize
     else if xh1.additional_info == additional_info_long_argument_64_bits
     {
         let pos·0: usize = res1.wrapping_add(8usize);
-        let lo: u8 =
-            match x2·
-            {
-                long_argument::LongArgumentU64 { v } => v,
-                _ => panic!("Incomplete pattern matching")
-            }
-            as
-            u8;
-        let hi: u64 =
-            match x2·
-            {
-                long_argument::LongArgumentU64 { v } => v,
-                _ => panic!("Incomplete pattern matching")
-            }.wrapping_div(256u64);
+        let lo: u8 = __proj__LongArgumentU64__item__v(x2·) as u8;
+        let hi: u64 = (__proj__LongArgumentU64__item__v(x2·)).wrapping_div(256u64);
         let pos·1: usize = pos·0.wrapping_sub(1usize);
         let lo1: u8 = hi as u8;
         let hi1: u64 = hi.wrapping_div(256u64);
@@ -3119,8 +3083,8 @@ pub(crate) fn ser·_d(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                         }
                         {
                             option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
-                            { v }
-                            => v,
+                            { v: v1 }
+                            => v1,
                             _ => panic!("Incomplete pattern matching")
                         };
                     let mut pres: [usize; 1] = [res1; 1usize];
@@ -3185,8 +3149,8 @@ pub(crate) fn ser·_d(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
                             }
                             {
                                 option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
-                                { v }
-                                => v,
+                                { v: v1 }
+                                => v1,
                                 _ => panic!("Incomplete pattern matching")
                             };
                         let mut pres: [usize; 1] = [res1; 1usize];
@@ -3452,8 +3416,8 @@ pub(crate) fn siz·_d(x·: cbor_raw, out: &mut [usize]) -> bool
                             }
                             {
                                 option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw::Some
-                                { v }
-                                => v,
+                                { v: v1 }
+                                => v1,
                                 _ => panic!("Incomplete pattern matching")
                             };
                         let mut pres: [bool; 1] = [true; 1usize];
@@ -3523,8 +3487,8 @@ pub(crate) fn siz·_d(x·: cbor_raw, out: &mut [usize]) -> bool
                                 }
                                 {
                                     option__LowParse_Pulse_Base_with_perm__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry::Some
-                                    { v }
-                                    => v,
+                                    { v: v1 }
+                                    => v1,
                                     _ => panic!("Incomplete pattern matching")
                                 };
                             let mut pres: [bool; 1] = [true; 1usize];
@@ -4869,6 +4833,33 @@ pub const cbor_major_type_tagged: u8 = 6u8;
 pub const min_simple_value_long_argument: u8 = 32u8;
 
 pub const max_simple_value_additional_info: u8 = 23u8;
+
+pub fn uu___is_CBOR_Case_Int(projectee: cbor_raw) -> bool
+{ match projectee { cbor_raw::CBOR_Case_Int { .. } => true, _ => false } }
+
+pub fn uu___is_CBOR_Case_Simple(projectee: cbor_raw) -> bool
+{ match projectee { cbor_raw::CBOR_Case_Simple { .. } => true, _ => false } }
+
+pub fn uu___is_CBOR_Case_String(projectee: cbor_raw) -> bool
+{ match projectee { cbor_raw::CBOR_Case_String { .. } => true, _ => false } }
+
+pub fn uu___is_CBOR_Case_Tagged(projectee: cbor_raw) -> bool
+{ match projectee { cbor_raw::CBOR_Case_Tagged { .. } => true, _ => false } }
+
+pub fn uu___is_CBOR_Case_Array(projectee: cbor_raw) -> bool
+{ match projectee { cbor_raw::CBOR_Case_Array { .. } => true, _ => false } }
+
+pub fn uu___is_CBOR_Case_Map(projectee: cbor_raw) -> bool
+{ match projectee { cbor_raw::CBOR_Case_Map { .. } => true, _ => false } }
+
+pub fn uu___is_CBOR_Case_Serialized_Tagged(projectee: cbor_raw) -> bool
+{ match projectee { cbor_raw::CBOR_Case_Serialized_Tagged { .. } => true, _ => false } }
+
+pub fn uu___is_CBOR_Case_Serialized_Array(projectee: cbor_raw) -> bool
+{ match projectee { cbor_raw::CBOR_Case_Serialized_Array { .. } => true, _ => false } }
+
+pub fn uu___is_CBOR_Case_Serialized_Map(projectee: cbor_raw) -> bool
+{ match projectee { cbor_raw::CBOR_Case_Serialized_Map { .. } => true, _ => false } }
 
 pub type cbor_array_iterator <'a> = cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>;
 
