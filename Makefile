@@ -328,7 +328,7 @@ cddl-test: cddl cddl-unit-tests
 .PHONY: 3d-doc-snapshot
 
 ifeq (,$(NO_PULSE))
-parquet: $(filter src/Parquet/%,$(ALL_CHECKED_FILES)) $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+parquet: $(filter src/Parquet/%,$(ALL_CHECKED_FILES)) $(filter-out $(LOWPARSE_LOW_FILTER),$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
 	+$(MAKE) -C src/Parquet
 else
 parquet:
