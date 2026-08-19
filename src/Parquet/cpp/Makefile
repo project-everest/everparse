@@ -54,8 +54,15 @@ THRIFT_CONFIGURE_FLAGS := \
   --without-erlang --without-lua --without-swift --without-cl \
   --without-haxe --without-d
 
+# Thrift's configure silently downgrades --with-cpp to "no" when it cannot find
+# the Boost headers, and then quietly installs nothing under include/thrift, so
+# check the outcome before spending time on a build that cannot work.
+THRIFT_CHECK_CPP := \
+  grep -q '^S\["WITH_CPP_TRUE"\]=""$$' config.status || \
+  { echo 'ERROR: Thrift configure disabled the C++ library; install the Boost headers (>= 1.56, e.g. libboost-dev or boost-devel) or set BOOST_ROOT' >&2; exit 1; }
+
 $(CURDIR)/thrift-build:
-	+cd thrift && ./bootstrap.sh && ./configure --prefix=$@ $(THRIFT_CONFIGURE_FLAGS) && $(MAKE) && $(MAKE) install
+	+cd thrift && ./bootstrap.sh && ./configure --prefix=$@ $(THRIFT_CONFIGURE_FLAGS) && { $(THRIFT_CHECK_CPP) ; } && $(MAKE) && $(MAKE) install
 
 $(BIN): $(OBJS) $(THRIFT_PREFIX)
 	$(CXX) $(LDFLAGS) -o $@ $(OBJS) $(LDLIBS)
