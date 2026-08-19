@@ -11,10 +11,7 @@ Parquet_Pulse_Toplevel_uu___is_ENCRYPTION_WITH_FOOTER_KEY(
   Parquet_Pulse_Toplevel_column_crypto_meta_data projectee
 )
 {
-  if (projectee.tag == Parquet_Pulse_Toplevel_ENCRYPTION_WITH_FOOTER_KEY)
-    return true;
-  else
-    return false;
+  return projectee.tag == Parquet_Pulse_Toplevel_ENCRYPTION_WITH_FOOTER_KEY;
 }
 
 bool
@@ -22,10 +19,7 @@ Parquet_Pulse_Toplevel_uu___is_ENCRYPTION_WITH_COLUMN_KEY(
   Parquet_Pulse_Toplevel_column_crypto_meta_data projectee
 )
 {
-  if (projectee.tag == Parquet_Pulse_Toplevel_ENCRYPTION_WITH_COLUMN_KEY)
-    return true;
-  else
-    return false;
+  return projectee.tag == Parquet_Pulse_Toplevel_ENCRYPTION_WITH_COLUMN_KEY;
 }
 
 static uint8_t op_Array_Access__uint8_t(Pulse_Lib_Slice_slice__uint8_t a, size_t i)
@@ -44,10 +38,7 @@ bool Parquet_Pulse_Toplevel0_validate_is_PAR1(Pulse_Lib_Slice_slice__uint8_t inp
 
 static bool uu___is_Some__int64_t(FStar_Pervasives_Native_option__int64_t projectee)
 {
-  if (projectee.tag == FStar_Pervasives_Native_Some)
-    return true;
-  else
-    return false;
+  return projectee.tag == FStar_Pervasives_Native_Some;
 }
 
 FStar_Pervasives_Native_option__int64_t
@@ -57,19 +48,13 @@ Parquet_Pulse_Toplevel0_compute_cols_size(
   int64_t bound
 )
 {
-  *poverflow = bound < (int64_t)0;
+  *poverflow = bound < 0LL;
   FStar_Pervasives_Native_option__int64_t
-  paccu = { .tag = FStar_Pervasives_Native_Some, .v = (int64_t)0 };
+  paccu = { .tag = FStar_Pervasives_Native_Some, .v = 0LL };
   size_t pi = (size_t)0U;
   FStar_Pervasives_Native_option__int64_t accu0 = paccu;
-  bool cond;
-  if (uu___is_Some__int64_t(accu0))
-  {
-    size_t i = pi;
-    cond = i < cc.len;
-  }
-  else
-    cond = false;
+  size_t i0 = pi;
+  bool cond = uu___is_Some__int64_t(accu0) && i0 < cc.len;
   while (cond)
   {
     size_t i0 = pi;
@@ -113,15 +98,8 @@ Parquet_Pulse_Toplevel0_compute_cols_size(
       KRML_HOST_EXIT(255U);
     }
     FStar_Pervasives_Native_option__int64_t accu = paccu;
-    bool ite;
-    if (uu___is_Some__int64_t(accu))
-    {
-      size_t i = pi;
-      ite = i < cc.len;
-    }
-    else
-      ite = false;
-    cond = ite;
+    size_t i = pi;
+    cond = uu___is_Some__int64_t(accu) && i < cc.len;
   }
   return paccu;
 }
@@ -136,7 +114,7 @@ Parquet_Pulse_Toplevel0_impl_column_size_nonnegative(Parquet_Pulse_Toplevel_colu
     Parquet_Pulse_Toplevel_column_meta_data md = cc.meta_data.v;
     return
       Parquet_Pulse_Toplevel0_print_bool("impl_column_size_nonnegative",
-        (int64_t)0 <= md.total_compressed_size);
+        0LL <= md.total_compressed_size);
   }
   else
   {
@@ -157,10 +135,7 @@ Parquet_Pulse_Toplevel0_impl_offset_of_column_chunk(Parquet_Pulse_Toplevel_colum
     if (cc.index_page_offset.tag == FStar_Pervasives_Native_Some)
     {
       int64_t off = cc.index_page_offset.v;
-      if (off < cc.data_page_offset)
-        return off;
-      else
-        return cc.data_page_offset;
+      return off < cc.data_page_offset ? off : cc.data_page_offset;
     }
     else if (cc.index_page_offset.tag == FStar_Pervasives_Native_None)
       return cc.data_page_offset;
@@ -232,10 +207,7 @@ Parquet_Pulse_Toplevel0_impl_validate_column_chunk_offsets_ok(
 
 static bool uu___is_Some__int32_t(FStar_Pervasives_Native_option__int32_t projectee)
 {
-  if (projectee.tag == FStar_Pervasives_Native_Some)
-    return true;
-  else
-    return false;
+  return projectee.tag == FStar_Pervasives_Native_Some;
 }
 
 bool
@@ -277,10 +249,7 @@ uu___is_Some__Parquet_Pulse_Toplevel_column_meta_data(
   FStar_Pervasives_Native_option__Parquet_Pulse_Toplevel_column_meta_data projectee
 )
 {
-  if (projectee.tag == FStar_Pervasives_Native_Some)
-    return true;
-  else
-    return false;
+  return projectee.tag == FStar_Pervasives_Native_Some;
 }
 
 int64_t
@@ -298,7 +267,7 @@ Parquet_Pulse_Toplevel0_impl_column_chunk_offset(Parquet_Pulse_Toplevel_column_c
     return Parquet_Pulse_Toplevel0_impl_offset_of_column_chunk(md);
   }
   else
-    return (int64_t)0;
+    return 0LL;
 }
 
 int64_t Parquet_Pulse_Toplevel0_impl_column_chunk_size(Parquet_Pulse_Toplevel_column_chunk cc)
@@ -315,7 +284,7 @@ int64_t Parquet_Pulse_Toplevel0_impl_column_chunk_size(Parquet_Pulse_Toplevel_co
     return md.total_compressed_size;
   }
   else
-    return (int64_t)0;
+    return 0LL;
 }
 
 bool
@@ -331,16 +300,10 @@ Parquet_Pulse_Toplevel0_impl_validate_row_group_sorted_ok(Parquet_Pulse_Toplevel
 {
   size_t pi0 = (size_t)0U;
   bool pres0 = true;
-  bool __anf0 = pres0;
-  bool cond0;
-  if (__anf0)
-  {
-    size_t i = pi0;
-    cond0 = i < rg.columns.len;
-  }
-  else
-    cond0 = false;
-  while (cond0)
+  bool res0 = pres0;
+  size_t i0 = pi0;
+  bool cond = res0 && i0 < rg.columns.len;
+  while (cond)
   {
     size_t i0 = pi0;
     Parquet_Pulse_Toplevel_column_chunk elt = rg.columns.data[i0];
@@ -348,19 +311,12 @@ Parquet_Pulse_Toplevel0_impl_validate_row_group_sorted_ok(Parquet_Pulse_Toplevel
     pres0 = res;
     if (res)
       pi0 = i0 + (size_t)1U;
-    bool __anf0 = pres0;
-    bool ite;
-    if (__anf0)
-    {
-      size_t i = pi0;
-      ite = i < rg.columns.len;
-    }
-    else
-      ite = false;
-    cond0 = ite;
+    bool res0 = pres0;
+    size_t i = pi0;
+    cond = res0 && i < rg.columns.len;
   }
-  bool __anf00 = pres0;
-  if (__anf00)
+  bool __anf0 = pres0;
+  if (__anf0)
   {
     bool res0;
     if (rg.columns.len < (size_t)2U)
@@ -372,24 +328,18 @@ Parquet_Pulse_Toplevel0_impl_validate_row_group_sorted_ok(Parquet_Pulse_Toplevel
       bool pres = true;
       size_t pi = (size_t)1U;
       bool res = pres;
-      bool cond;
-      if (res)
-      {
-        size_t i = pi;
-        cond = i < rg.columns.len;
-      }
-      else
-        cond = false;
+      size_t i0 = pi;
+      bool cond = res && i0 < rg.columns.len;
       while (cond)
       {
         Parquet_Pulse_Toplevel_column_chunk impl1 = pl;
         int64_t off1 = Parquet_Pulse_Toplevel0_impl_column_chunk_offset(impl1);
-        if (off1 < (int64_t)0)
+        if (off1 < 0LL)
           pres = false;
         else
         {
           int64_t sz1 = Parquet_Pulse_Toplevel0_impl_column_chunk_size(impl1);
-          if (sz1 < (int64_t)0)
+          if (sz1 < 0LL)
             pres = false;
           else
           {
@@ -408,15 +358,8 @@ Parquet_Pulse_Toplevel0_impl_validate_row_group_sorted_ok(Parquet_Pulse_Toplevel
           }
         }
         bool res = pres;
-        bool ite;
-        if (res)
-        {
-          size_t i = pi;
-          ite = i < rg.columns.len;
-        }
-        else
-          ite = false;
-        cond = ite;
+        size_t i = pi;
+        cond = res && i < rg.columns.len;
       }
       res0 = pres;
     }
@@ -433,15 +376,9 @@ bool Parquet_Pulse_Toplevel0_impl_validate_row_group_aux(Parquet_Pulse_Toplevel_
   {
     size_t pi = (size_t)0U;
     bool pres = true;
-    bool __anf01 = pres;
-    bool cond;
-    if (__anf01)
-    {
-      size_t i = pi;
-      cond = i < rg.columns.len;
-    }
-    else
-      cond = false;
+    bool res = pres;
+    size_t i0 = pi;
+    bool cond = res && i0 < rg.columns.len;
     while (cond)
     {
       size_t i0 = pi;
@@ -450,19 +387,12 @@ bool Parquet_Pulse_Toplevel0_impl_validate_row_group_aux(Parquet_Pulse_Toplevel_
       pres = res;
       if (res)
         pi = i0 + (size_t)1U;
-      bool __anf01 = pres;
-      bool ite;
-      if (__anf01)
-      {
-        size_t i = pi;
-        ite = i < rg.columns.len;
-      }
-      else
-        ite = false;
-      cond = ite;
+      bool res0 = pres;
+      size_t i = pi;
+      cond = res0 && i < rg.columns.len;
     }
-    bool res = pres;
-    return Parquet_Pulse_Toplevel0_print_bool("impl_validate_row_group_aux", res);
+    bool res0 = pres;
+    return Parquet_Pulse_Toplevel0_print_bool("impl_validate_row_group_aux", res0);
   }
   else
     return false;
@@ -645,22 +575,9 @@ Parquet_Pulse_Toplevel0_impl_disjoint(
     {
       int64_t len1 = rg1.v.snd;
       int64_t st1 = rg1.v.fst;
-      if ((int64_t)0 <= st && (int64_t)0 <= len && (int64_t)0 <= st1 && (int64_t)0 <= len1)
-      {
-        bool ite;
-        if (st <= st1)
-          ite = st1 - st >= len;
-        else
-          ite = false;
-        if (ite)
-          return true;
-        else if (st1 <= st)
-          return st - st1 >= len1;
-        else
-          return false;
-      }
-      else
-        return false;
+      return
+        0LL <= st && 0LL <= len && 0LL <= st1 && 0LL <= len1 &&
+          (st <= st1 && st1 - st >= len || st1 <= st && st - st1 >= len1);
     }
     else
     {
@@ -686,10 +603,7 @@ uu___is_None___int64_t___int64_t_(
   FStar_Pervasives_Native_option___int64_t___int64_t_ projectee
 )
 {
-  if (projectee.tag == FStar_Pervasives_Native_None)
-    return true;
-  else
-    return false;
+  return projectee.tag == FStar_Pervasives_Native_None;
 }
 
 bool
@@ -706,39 +620,26 @@ Parquet_Pulse_Toplevel0_impl_rg_disjoint(
   {
     size_t pj = i;
     bool pres = true;
-    bool __anf0 = pres;
-    bool cond;
-    if (__anf0)
-    {
-      size_t __anf01 = pj;
-      cond = __anf01 < n;
-    }
-    else
-      cond = false;
+    bool res = pres;
+    size_t j0 = pj;
+    bool cond = res && j0 < n;
     while (cond)
     {
-      size_t j = pj;
-      FStar_Pervasives_Native_option___int64_t___int64_t_ rg1 = crg[j];
+      size_t j0 = pj;
+      FStar_Pervasives_Native_option___int64_t___int64_t_ rg1 = crg[j0];
       if (uu___is_None___int64_t___int64_t_(rg1))
-        pj = j + (size_t)1U;
+        pj = j0 + (size_t)1U;
       else
       {
         pres = Parquet_Pulse_Toplevel0_impl_disjoint(rg, rg1);
-        pj = j + (size_t)1U;
+        pj = j0 + (size_t)1U;
       }
-      bool __anf0 = pres;
-      bool ite;
-      if (__anf0)
-      {
-        size_t __anf01 = pj;
-        ite = __anf01 < n;
-      }
-      else
-        ite = false;
-      cond = ite;
+      bool res = pres;
+      size_t j = pj;
+      cond = res && j < n;
     }
-    bool __anf00 = pres;
-    return Parquet_Pulse_Toplevel0_print_bool("impl_rg_disjoint", __anf00);
+    bool __anf0 = pres;
+    return Parquet_Pulse_Toplevel0_print_bool("impl_rg_disjoint", __anf0);
   }
 }
 
@@ -766,33 +667,21 @@ Parquet_Pulse_Toplevel0_impl_validate_file_meta_data_aux(
           );
     bool pres = true;
     size_t pi = l.len;
-    bool res = pres;
-    bool cond0;
-    if (res)
-    {
-      size_t __anf0 = pi;
-      cond0 = __anf0 != (size_t)0U;
-    }
-    else
-      cond0 = false;
-    while (cond0)
+    bool res0 = pres;
+    size_t i0 = pi;
+    bool cond = res0 && i0 != (size_t)0U;
+    while (cond)
     {
       size_t i_ = pi;
-      size_t i = i_ - (size_t)1U;
-      Parquet_Pulse_Toplevel_row_group rg = l.data[i];
-      pi = i;
+      size_t i0 = i_ - (size_t)1U;
+      Parquet_Pulse_Toplevel_row_group rg = l.data[i0];
+      pi = i0;
       size_t pi1 = (size_t)0U;
       bool pres1 = true;
-      bool __anf00 = pres1;
-      bool cond;
-      if (__anf00)
-      {
-        size_t i1 = pi1;
-        cond = i1 < rg.columns.len;
-      }
-      else
-        cond = false;
-      while (cond)
+      bool res = pres1;
+      size_t i10 = pi1;
+      bool cond0 = res && i10 < rg.columns.len;
+      while (cond0)
       {
         size_t i10 = pi1;
         Parquet_Pulse_Toplevel_column_chunk elt = rg.columns.data[i10];
@@ -800,19 +689,12 @@ Parquet_Pulse_Toplevel0_impl_validate_file_meta_data_aux(
         pres1 = res;
         if (res)
           pi1 = i10 + (size_t)1U;
-        bool __anf0 = pres1;
-        bool ite;
-        if (__anf0)
-        {
-          size_t i1 = pi1;
-          ite = i1 < rg.columns.len;
-        }
-        else
-          ite = false;
-        cond = ite;
+        bool res0 = pres1;
+        size_t i1 = pi1;
+        cond0 = res0 && i1 < rg.columns.len;
       }
-      bool __anf01 = pres1;
-      if (!__anf01)
+      bool __anf0 = pres1;
+      if (!__anf0)
         pres = false;
       else
       {
@@ -845,22 +727,15 @@ Parquet_Pulse_Toplevel0_impl_validate_file_meta_data_aux(
           {
             FStar_Pervasives_Native_option___int64_t___int64_t_
             rrg = Parquet_Pulse_Toplevel0_impl_rg_range(rg, csz);
-            rg_ranges[i] = rrg;
+            rg_ranges[i0] = rrg;
             bool __anf01 = Parquet_Pulse_Toplevel0_impl_rg_disjoint(rrg, l.len, rg_ranges, i_);
             pres = __anf01;
           }
         }
       }
-      bool res = pres;
-      bool ite;
-      if (res)
-      {
-        size_t __anf0 = pi;
-        ite = __anf0 != (size_t)0U;
-      }
-      else
-        ite = false;
-      cond0 = ite;
+      bool res0 = pres;
+      size_t i = pi;
+      cond = res0 && i != (size_t)0U;
     }
     KRML_HOST_FREE(rg_ranges);
     bool __anf0 = pres;
@@ -875,7 +750,7 @@ Parquet_Pulse_Toplevel0_impl_validate_file_meta_data(
 )
 {
   uint64_t footer_start_u64 = (uint64_t)footer_start;
-  if ((size_t)footer_start_u64 != footer_start)
+  if (footer_start_u64 != footer_start)
     return
       Parquet_Pulse_Toplevel0_print_bool("impl_validate_file_meta_data footer_start_fits",
         false);
@@ -894,15 +769,9 @@ Parquet_Pulse_Toplevel0_impl_validate_file_meta_data(
     {
       size_t pi = (size_t)0U;
       bool pres = true;
-      bool __anf01 = pres;
-      bool cond;
-      if (__anf01)
-      {
-        size_t i = pi;
-        cond = i < md.row_groups.len;
-      }
-      else
-        cond = false;
+      bool res = pres;
+      size_t i0 = pi;
+      bool cond = res && i0 < md.row_groups.len;
       while (cond)
       {
         size_t i0 = pi;
@@ -911,16 +780,9 @@ Parquet_Pulse_Toplevel0_impl_validate_file_meta_data(
         pres = res;
         if (res)
           pi = i0 + (size_t)1U;
-        bool __anf01 = pres;
-        bool ite;
-        if (__anf01)
-        {
-          size_t i = pi;
-          ite = i < md.row_groups.len;
-        }
-        else
-          ite = false;
-        cond = ite;
+        bool res0 = pres;
+        size_t i = pi;
+        cond = res0 && i < md.row_groups.len;
       }
       return pres;
     }
@@ -941,38 +803,38 @@ Parquet_Pulse_Toplevel0_impl_validate_page_data(
 )
 {
   Parquet_Pulse_Toplevel_page_header ph_ = Parquet_Pulse_Toplevel0_read_page_header(ph);
-  if (ph_.compressed_page_size < (int32_t)0)
+  if (ph_.compressed_page_size < 0)
     return Parquet_Pulse_Toplevel0_print_bool("impl_validate_page_data nonnegative", false);
   else
     return
       Parquet_Pulse_Toplevel0_print_bool("impl_validate_page_data",
-        (size_t)(uint32_t)ph_.compressed_page_size == len__uint8_t(data));
+        (uint32_t)ph_.compressed_page_size == len__uint8_t(data));
 }
 
-typedef struct __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t_s
+typedef struct __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t_s
 {
   Pulse_Lib_Slice_slice__uint8_t fst;
   Pulse_Lib_Slice_slice__uint8_t snd;
 }
-__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t;
+__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t;
 
-static __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+static __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
 split__uint8_t(Pulse_Lib_Slice_slice__uint8_t s, size_t i)
 {
   uint8_t *elt_ = s.elt + i;
   Pulse_Lib_Slice_slice__uint8_t s1 = { .elt = s.elt, .len = i };
   Pulse_Lib_Slice_slice__uint8_t s2 = { .elt = elt_, .len = s.len - i };
   return
-    ((__Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t){ .fst = s1, .snd = s2 });
+    ((__Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t){ .fst = s1, .snd = s2 });
 }
 
 typedef struct
-__Pulse_Lib_Slice_slice_uint8_t__Pulse_Lib_Slice_slice_uint8_t___Pulse_Lib_Slice_slice_uint8_t__s
+__Pulse_Lib_Slice_slice__uint8_t__Pulse_Lib_Slice_slice__uint8_t___Pulse_Lib_Slice_slice__uint8_t__s
 {
   Pulse_Lib_Slice_slice__uint8_t fst;
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t snd;
+  __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t snd;
 }
-__Pulse_Lib_Slice_slice_uint8_t__Pulse_Lib_Slice_slice_uint8_t___Pulse_Lib_Slice_slice_uint8_t_;
+__Pulse_Lib_Slice_slice__uint8_t__Pulse_Lib_Slice_slice__uint8_t___Pulse_Lib_Slice_slice__uint8_t_;
 
 bool
 Parquet_Pulse_Toplevel0_validate_page(Pulse_Lib_Slice_slice__uint8_t input, size_t *poffset)
@@ -982,61 +844,62 @@ Parquet_Pulse_Toplevel0_validate_page(Pulse_Lib_Slice_slice__uint8_t input, size
   if (is_valid1)
   {
     size_t off = *poffset;
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     s_ = split__uint8_t(input, offset1);
     Pulse_Lib_Slice_slice__uint8_t s10 = s_.fst;
     Pulse_Lib_Slice_slice__uint8_t s20 = s_.snd;
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     _letpattern = { .fst = s10, .snd = s20 };
     Pulse_Lib_Slice_slice__uint8_t input10 = _letpattern.fst;
     Pulse_Lib_Slice_slice__uint8_t input230 = _letpattern.snd;
     size_t consumed0 = off - offset1;
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     _letpattern1 = split__uint8_t(input230, consumed0);
     Pulse_Lib_Slice_slice__uint8_t s11 = _letpattern1.fst;
     Pulse_Lib_Slice_slice__uint8_t s21 = _letpattern1.snd;
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     _letpattern10 = { .fst = s11, .snd = s21 };
     Pulse_Lib_Slice_slice__uint8_t left0 = _letpattern10.fst;
     Pulse_Lib_Slice_slice__uint8_t right0 = _letpattern10.snd;
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     _letpattern11 = { .fst = left0, .snd = right0 };
     Pulse_Lib_Slice_slice__uint8_t input20 = _letpattern11.fst;
     Pulse_Lib_Slice_slice__uint8_t input30 = _letpattern11.snd;
-    __Pulse_Lib_Slice_slice_uint8_t__Pulse_Lib_Slice_slice_uint8_t___Pulse_Lib_Slice_slice_uint8_t_
+    __Pulse_Lib_Slice_slice__uint8_t__Pulse_Lib_Slice_slice__uint8_t___Pulse_Lib_Slice_slice__uint8_t_
     _letpattern0 = { .fst = input10, .snd = { .fst = input20, .snd = input30 } };
     Pulse_Lib_Slice_slice__uint8_t xr = _letpattern0.snd.snd;
     Pulse_Lib_Slice_slice__uint8_t x = _letpattern0.snd.fst;
     *poffset = (size_t)0U;
     size_t offset2 = *poffset;
-    *poffset = len__uint8_t(xr);
+    size_t input_len = len__uint8_t(xr);
+    *poffset = input_len;
     bool is_valid = true;
     bool res;
     if (is_valid)
     {
       size_t off1 = *poffset;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       s_ = split__uint8_t(xr, offset2);
       Pulse_Lib_Slice_slice__uint8_t s10 = s_.fst;
       Pulse_Lib_Slice_slice__uint8_t s20 = s_.snd;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       _letpattern1 = { .fst = s10, .snd = s20 };
       Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern1.fst;
       Pulse_Lib_Slice_slice__uint8_t input23 = _letpattern1.snd;
       size_t consumed = off1 - offset2;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       _letpattern2 = split__uint8_t(input23, consumed);
       Pulse_Lib_Slice_slice__uint8_t s1 = _letpattern2.fst;
       Pulse_Lib_Slice_slice__uint8_t s2 = _letpattern2.snd;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       _letpattern20 = { .fst = s1, .snd = s2 };
       Pulse_Lib_Slice_slice__uint8_t left = _letpattern20.fst;
       Pulse_Lib_Slice_slice__uint8_t right = _letpattern20.snd;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       _letpattern21 = { .fst = left, .snd = right };
       Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern21.fst;
       Pulse_Lib_Slice_slice__uint8_t input3 = _letpattern21.snd;
-      __Pulse_Lib_Slice_slice_uint8_t__Pulse_Lib_Slice_slice_uint8_t___Pulse_Lib_Slice_slice_uint8_t_
+      __Pulse_Lib_Slice_slice__uint8_t__Pulse_Lib_Slice_slice__uint8_t___Pulse_Lib_Slice_slice__uint8_t_
       _letpattern10 = { .fst = input1, .snd = { .fst = input2, .snd = input3 } };
       Pulse_Lib_Slice_slice__uint8_t x1 = _letpattern10.snd.fst;
       res = Parquet_Pulse_Toplevel0_impl_validate_page_data(x, x1);
@@ -1073,11 +936,11 @@ Parquet_Pulse_Toplevel0_validate_jump_page(
     return false;
   else
   {
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     s_ = split__uint8_t(input, offset_sz + size_sz);
     Pulse_Lib_Slice_slice__uint8_t s1 = s_.fst;
     Pulse_Lib_Slice_slice__uint8_t s2 = s_.snd;
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     _letpattern = { .fst = s1, .snd = s2 };
     Pulse_Lib_Slice_slice__uint8_t s10 = _letpattern.fst;
     size_t poffset = offset_sz;
@@ -1096,7 +959,7 @@ Parquet_Pulse_Toplevel0_impl_validate_page_location_all(
   size_t offset_sz = (size_t)(uint64_t)pl.offset;
   size_t length_sz = (size_t)(uint32_t)pl.compressed_page_size1;
   bool __anf0 = Parquet_Pulse_Toplevel0_validate_jump_page(offset_sz, length_sz, data, pl, data);
-  bool res = pl.offset >= (int64_t)0 && pl.compressed_page_size1 >= (int32_t)0 && __anf0;
+  bool res = pl.offset >= 0LL && pl.compressed_page_size1 >= 0 && __anf0;
   return Parquet_Pulse_Toplevel0_print_bool("impl_validate_page_location_all", res);
 }
 
@@ -1108,15 +971,9 @@ Parquet_Pulse_Toplevel0_impl_validate_offset_index_all_aux(
 {
   size_t pi = (size_t)0U;
   bool pres = true;
-  bool __anf0 = pres;
-  bool cond;
-  if (__anf0)
-  {
-    size_t i = pi;
-    cond = i < oi.page_locations.len;
-  }
-  else
-    cond = false;
+  bool res = pres;
+  size_t i0 = pi;
+  bool cond = res && i0 < oi.page_locations.len;
   while (cond)
   {
     size_t i0 = pi;
@@ -1125,16 +982,9 @@ Parquet_Pulse_Toplevel0_impl_validate_offset_index_all_aux(
     pres = res;
     if (res)
       pi = i0 + (size_t)1U;
-    bool __anf0 = pres;
-    bool ite;
-    if (__anf0)
-    {
-      size_t i = pi;
-      ite = i < oi.page_locations.len;
-    }
-    else
-      ite = false;
-    cond = ite;
+    bool res0 = pres;
+    size_t i = pi;
+    cond = res0 && i < oi.page_locations.len;
   }
   return pres;
 }
@@ -1222,15 +1072,9 @@ Parquet_Pulse_Toplevel0_option_offset_in_page_locations(
     int64_t off = o.v;
     size_t pi = (size_t)0U;
     bool pres = false;
-    bool __anf0 = pres;
-    bool cond;
-    if (__anf0)
-      cond = false;
-    else
-    {
-      size_t i = pi;
-      cond = i < pl.len;
-    }
+    bool res = pres;
+    size_t i0 = pi;
+    bool cond = !res && i0 < pl.len;
     while (cond)
     {
       size_t i0 = pi;
@@ -1242,16 +1086,9 @@ Parquet_Pulse_Toplevel0_option_offset_in_page_locations(
         pres = true;
       else
         pi = i0 + (size_t)1U;
-      bool __anf0 = pres;
-      bool ite;
-      if (__anf0)
-        ite = false;
-      else
-      {
-        size_t i = pi;
-        ite = i < pl.len;
-      }
-      cond = ite;
+      bool res0 = pres;
+      size_t i = pi;
+      cond = !res0 && i < pl.len;
     }
     return pres;
   }
@@ -1286,15 +1123,9 @@ Parquet_Pulse_Toplevel0_impl_validate_offset_index_cc_page_offsets(
         oi.page_locations);
     size_t pi = (size_t)0U;
     bool pres = false;
-    bool __anf0 = pres;
-    bool cond;
-    if (__anf0)
-      cond = false;
-    else
-    {
-      size_t i = pi;
-      cond = i < oi.page_locations.len;
-    }
+    bool res = pres;
+    size_t i0 = pi;
+    bool cond = !res && i0 < oi.page_locations.len;
     while (cond)
     {
       size_t i0 = pi;
@@ -1306,20 +1137,13 @@ Parquet_Pulse_Toplevel0_impl_validate_offset_index_cc_page_offsets(
         pres = true;
       else
         pi = i0 + (size_t)1U;
-      bool __anf0 = pres;
-      bool ite;
-      if (__anf0)
-        ite = false;
-      else
-      {
-        size_t i = pi;
-        ite = i < oi.page_locations.len;
-      }
-      cond = ite;
+      bool res0 = pres;
+      size_t i = pi;
+      cond = !res0 && i < oi.page_locations.len;
     }
-    bool __anf00 = pres;
-    bool res = __anf2 && __anf1 && __anf00;
-    return Parquet_Pulse_Toplevel0_print_bool("impl_validate_offset_index_cc_page_offsets", res);
+    bool __anf0 = pres;
+    bool res0 = __anf2 && __anf1 && __anf0;
+    return Parquet_Pulse_Toplevel0_print_bool("impl_validate_offset_index_cc_page_offsets", res0);
   }
   else
   {
@@ -1342,18 +1166,18 @@ Parquet_Pulse_Toplevel0_impl_validate_offset_index_col_size(
   else if (cc.meta_data.tag == FStar_Pervasives_Native_Some)
   {
     Parquet_Pulse_Toplevel_column_meta_data md = cc.meta_data.v;
-    bool pres = (int64_t)0 <= md.total_compressed_size;
-    int64_t paccu = (int64_t)0;
+    bool pres = 0LL <= md.total_compressed_size;
+    int64_t paccu = 0LL;
     size_t pi = (size_t)0U;
-    bool __anf1 = pres;
-    size_t __anf00 = pi;
-    bool cond = __anf1 && __anf00 < oi.page_locations.len;
+    bool res = pres;
+    size_t i0 = pi;
+    bool cond = res && i0 < oi.page_locations.len;
     while (cond)
     {
-      size_t i = pi;
-      Parquet_Spec_Toplevel_Types_page_location pl = oi.page_locations.data[i];
-      pi = i + (size_t)1U;
-      if ((int32_t)0 <= pl.compressed_page_size1)
+      size_t i0 = pi;
+      Parquet_Spec_Toplevel_Types_page_location pl = oi.page_locations.data[i0];
+      pi = i0 + (size_t)1U;
+      if (0 <= pl.compressed_page_size1)
       {
         int64_t accu = paccu;
         int64_t psz = (int64_t)pl.compressed_page_size1;
@@ -1362,15 +1186,15 @@ Parquet_Pulse_Toplevel0_impl_validate_offset_index_col_size(
         else
           paccu = accu + psz;
       }
-      bool __anf1 = pres;
-      size_t __anf0 = pi;
-      cond = __anf1 && __anf0 < oi.page_locations.len;
+      bool res = pres;
+      size_t i = pi;
+      cond = res && i < oi.page_locations.len;
     }
-    bool __anf10 = pres;
+    bool __anf1 = pres;
     int64_t __anf0 = paccu;
     return
       Parquet_Pulse_Toplevel0_print_bool("impl_validate_offset_index_col_size",
-        __anf10 && __anf0 == md.total_compressed_size);
+        __anf1 && __anf0 == md.total_compressed_size);
   }
   else
   {
@@ -1419,24 +1243,18 @@ Parquet_Pulse_Toplevel0_impl_validate_offset_index(
           bool pres = true;
           size_t pi = (size_t)1U;
           bool res = pres;
-          bool cond;
-          if (res)
-          {
-            size_t i = pi;
-            cond = i < oi.page_locations.len;
-          }
-          else
-            cond = false;
+          size_t i0 = pi;
+          bool cond = res && i0 < oi.page_locations.len;
           while (cond)
           {
             Parquet_Spec_Toplevel_Types_page_location impl1 = pl;
             int64_t off1 = Parquet_Pulse_Toplevel0_impl_page_location_offset(impl1);
-            if (off1 < (int64_t)0)
+            if (off1 < 0LL)
               pres = false;
             else
             {
               int64_t sz1 = Parquet_Pulse_Toplevel0_impl_page_location_size(impl1);
-              if (sz1 < (int64_t)0)
+              if (sz1 < 0LL)
                 pres = false;
               else
               {
@@ -1455,15 +1273,8 @@ Parquet_Pulse_Toplevel0_impl_validate_offset_index(
               }
             }
             bool res = pres;
-            bool ite;
-            if (res)
-            {
-              size_t i = pi;
-              ite = i < oi.page_locations.len;
-            }
-            else
-              ite = false;
-            cond = ite;
+            size_t i = pi;
+            cond = res && i < oi.page_locations.len;
           }
           res0 = pres;
         }
@@ -1517,11 +1328,11 @@ Parquet_Pulse_Toplevel0_validate_jump_offset_index(
     return false;
   else
   {
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     s_ = split__uint8_t(input, offset_sz + length_sz);
     Pulse_Lib_Slice_slice__uint8_t s1 = s_.fst;
     Pulse_Lib_Slice_slice__uint8_t s2 = s_.snd;
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     _letpattern = { .fst = s1, .snd = s2 };
     Pulse_Lib_Slice_slice__uint8_t s10 = _letpattern.fst;
     size_t poffset = offset_sz;
@@ -1531,28 +1342,28 @@ Parquet_Pulse_Toplevel0_validate_jump_offset_index(
     if (is_valid0)
     {
       size_t off = poffset;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       s_ = split__uint8_t(s10, offset);
       Pulse_Lib_Slice_slice__uint8_t s110 = s_.fst;
       Pulse_Lib_Slice_slice__uint8_t s210 = s_.snd;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       _letpattern1 = { .fst = s110, .snd = s210 };
       Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern1.fst;
       Pulse_Lib_Slice_slice__uint8_t input23 = _letpattern1.snd;
       size_t consumed = off - offset;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       _letpattern2 = split__uint8_t(input23, consumed);
       Pulse_Lib_Slice_slice__uint8_t s11 = _letpattern2.fst;
       Pulse_Lib_Slice_slice__uint8_t s21 = _letpattern2.snd;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       _letpattern20 = { .fst = s11, .snd = s21 };
       Pulse_Lib_Slice_slice__uint8_t left = _letpattern20.fst;
       Pulse_Lib_Slice_slice__uint8_t right = _letpattern20.snd;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       _letpattern21 = { .fst = left, .snd = right };
       Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern21.fst;
       Pulse_Lib_Slice_slice__uint8_t input3 = _letpattern21.snd;
-      __Pulse_Lib_Slice_slice_uint8_t__Pulse_Lib_Slice_slice_uint8_t___Pulse_Lib_Slice_slice_uint8_t_
+      __Pulse_Lib_Slice_slice__uint8_t__Pulse_Lib_Slice_slice__uint8_t___Pulse_Lib_Slice_slice__uint8_t_
       _letpattern10 = { .fst = input1, .snd = { .fst = input2, .snd = input3 } };
       Pulse_Lib_Slice_slice__uint8_t x = _letpattern10.snd.fst;
       is_valid = Parquet_Pulse_Toplevel0_impl_validate_offset_index_all0(data, cc, x);
@@ -1585,7 +1396,7 @@ Parquet_Pulse_Toplevel0_impl_validate_all_validate_column_chunk(
         int32_t length = _letpattern1.v;
         size_t offset_sz = (size_t)(uint64_t)offset;
         size_t length_sz = (size_t)(uint32_t)length;
-        if ((int64_t)0 <= offset && (int32_t)0 <= length)
+        if (0LL <= offset && 0 <= length)
         {
           bool
           res =
@@ -1629,15 +1440,9 @@ Parquet_Pulse_Toplevel0_impl_validate_all_validate_row_group(
 {
   size_t pi = (size_t)0U;
   bool pres = true;
-  bool __anf0 = pres;
-  bool cond;
-  if (__anf0)
-  {
-    size_t i = pi;
-    cond = i < rg.columns.len;
-  }
-  else
-    cond = false;
+  bool res = pres;
+  size_t i0 = pi;
+  bool cond = res && i0 < rg.columns.len;
   while (cond)
   {
     size_t i0 = pi;
@@ -1646,16 +1451,9 @@ Parquet_Pulse_Toplevel0_impl_validate_all_validate_row_group(
     pres = res;
     if (res)
       pi = i0 + (size_t)1U;
-    bool __anf0 = pres;
-    bool ite;
-    if (__anf0)
-    {
-      size_t i = pi;
-      ite = i < rg.columns.len;
-    }
-    else
-      ite = false;
-    cond = ite;
+    bool res0 = pres;
+    size_t i = pi;
+    cond = res0 && i < rg.columns.len;
   }
   return pres;
 }
@@ -1668,11 +1466,11 @@ bool Parquet_Pulse_Toplevel0_validate_header_magic_number(Pulse_Lib_Slice_slice_
     return false;
   else
   {
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     s_ = split__uint8_t(input, (size_t)4U);
     Pulse_Lib_Slice_slice__uint8_t s1 = s_.fst;
     Pulse_Lib_Slice_slice__uint8_t s2 = s_.snd;
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
     _letpattern = { .fst = s1, .snd = s2 };
     Pulse_Lib_Slice_slice__uint8_t s10 = _letpattern.fst;
     size_t poffset = (size_t)0U;
@@ -1690,28 +1488,28 @@ bool Parquet_Pulse_Toplevel0_validate_header_magic_number(Pulse_Lib_Slice_slice_
     if (is_valid0)
     {
       size_t off = poffset;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       s_ = split__uint8_t(s10, offset);
       Pulse_Lib_Slice_slice__uint8_t s110 = s_.fst;
       Pulse_Lib_Slice_slice__uint8_t s210 = s_.snd;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       _letpattern1 = { .fst = s110, .snd = s210 };
       Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern1.fst;
       Pulse_Lib_Slice_slice__uint8_t input23 = _letpattern1.snd;
       size_t consumed = off - offset;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       _letpattern2 = split__uint8_t(input23, consumed);
       Pulse_Lib_Slice_slice__uint8_t s11 = _letpattern2.fst;
       Pulse_Lib_Slice_slice__uint8_t s21 = _letpattern2.snd;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       _letpattern20 = { .fst = s11, .snd = s21 };
       Pulse_Lib_Slice_slice__uint8_t left = _letpattern20.fst;
       Pulse_Lib_Slice_slice__uint8_t right = _letpattern20.snd;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       _letpattern21 = { .fst = left, .snd = right };
       Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern21.fst;
       Pulse_Lib_Slice_slice__uint8_t input3 = _letpattern21.snd;
-      __Pulse_Lib_Slice_slice_uint8_t__Pulse_Lib_Slice_slice_uint8_t___Pulse_Lib_Slice_slice_uint8_t_
+      __Pulse_Lib_Slice_slice__uint8_t__Pulse_Lib_Slice_slice__uint8_t___Pulse_Lib_Slice_slice__uint8_t_
       _letpattern10 = { .fst = input1, .snd = { .fst = input2, .snd = input3 } };
       Pulse_Lib_Slice_slice__uint8_t x = _letpattern10.snd.fst;
       is_valid = Parquet_Pulse_Toplevel0_validate_is_PAR1(x);
@@ -1738,15 +1536,9 @@ Parquet_Pulse_Toplevel0_impl_validate_all0(
     {
       size_t pi = (size_t)0U;
       bool pres = true;
-      bool __anf0 = pres;
-      bool cond;
-      if (__anf0)
-      {
-        size_t i = pi;
-        cond = i < fmd.row_groups.len;
-      }
-      else
-        cond = false;
+      bool res = pres;
+      size_t i0 = pi;
+      bool cond = res && i0 < fmd.row_groups.len;
       while (cond)
       {
         size_t i0 = pi;
@@ -1755,16 +1547,9 @@ Parquet_Pulse_Toplevel0_impl_validate_all0(
         pres = res;
         if (res)
           pi = i0 + (size_t)1U;
-        bool __anf0 = pres;
-        bool ite;
-        if (__anf0)
-        {
-          size_t i = pi;
-          ite = i < fmd.row_groups.len;
-        }
-        else
-          ite = false;
-        cond = ite;
+        bool res0 = pres;
+        size_t i = pi;
+        cond = res0 && i < fmd.row_groups.len;
       }
       return pres;
     }
@@ -1801,40 +1586,40 @@ Parquet_Pulse_Toplevel0_validate_parquet(Pulse_Lib_Slice_slice__uint8_t input, s
     size_t poff = off;
     size_t offset20 = poff;
     size_t offset30 = poff;
-    bool is_valid0;
+    bool is_valid;
     if (len__uint8_t(input) - offset30 < (size_t)4U)
-      is_valid0 = false;
+      is_valid = false;
     else
     {
       poff = offset30 + (size_t)4U;
-      is_valid0 = true;
+      is_valid = true;
     }
     bool is_valid2;
-    if (is_valid0)
+    if (is_valid)
     {
       size_t off1 = poff;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       s_ = split__uint8_t(input, offset20);
       Pulse_Lib_Slice_slice__uint8_t s10 = s_.fst;
       Pulse_Lib_Slice_slice__uint8_t s20 = s_.snd;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       _letpattern = { .fst = s10, .snd = s20 };
       Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern.fst;
       Pulse_Lib_Slice_slice__uint8_t input23 = _letpattern.snd;
       size_t consumed = off1 - offset20;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       _letpattern1 = split__uint8_t(input23, consumed);
       Pulse_Lib_Slice_slice__uint8_t s1 = _letpattern1.fst;
       Pulse_Lib_Slice_slice__uint8_t s2 = _letpattern1.snd;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       _letpattern10 = { .fst = s1, .snd = s2 };
       Pulse_Lib_Slice_slice__uint8_t left = _letpattern10.fst;
       Pulse_Lib_Slice_slice__uint8_t right = _letpattern10.snd;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       _letpattern11 = { .fst = left, .snd = right };
       Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern11.fst;
       Pulse_Lib_Slice_slice__uint8_t input3 = _letpattern11.snd;
-      __Pulse_Lib_Slice_slice_uint8_t__Pulse_Lib_Slice_slice_uint8_t___Pulse_Lib_Slice_slice_uint8_t_
+      __Pulse_Lib_Slice_slice__uint8_t__Pulse_Lib_Slice_slice__uint8_t___Pulse_Lib_Slice_slice__uint8_t_
       _letpattern0 = { .fst = input1, .snd = { .fst = input2, .snd = input3 } };
       Pulse_Lib_Slice_slice__uint8_t x = _letpattern0.snd.fst;
       is_valid2 = Parquet_Pulse_Toplevel0_validate_is_PAR1(x);
@@ -1843,10 +1628,11 @@ Parquet_Pulse_Toplevel0_validate_parquet(Pulse_Lib_Slice_slice__uint8_t input, s
       is_valid2 = false;
     if (is_valid2)
     {
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t s_ = split__uint8_t(input, off);
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
+      s_ = split__uint8_t(input, off);
       Pulse_Lib_Slice_slice__uint8_t s10 = s_.fst;
       Pulse_Lib_Slice_slice__uint8_t s20 = s_.snd;
-      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
       _letpattern = { .fst = s10, .snd = s20 };
       Pulse_Lib_Slice_slice__uint8_t l = _letpattern.fst;
       size_t input_len1 = len__uint8_t(l);
@@ -1870,28 +1656,28 @@ Parquet_Pulse_Toplevel0_validate_parquet(Pulse_Lib_Slice_slice__uint8_t input, s
         if (is_valid21)
         {
           size_t off_ = poff1;
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           s_ = split__uint8_t(l, off1);
           Pulse_Lib_Slice_slice__uint8_t s10 = s_.fst;
           Pulse_Lib_Slice_slice__uint8_t s20 = s_.snd;
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           _letpattern1 = { .fst = s10, .snd = s20 };
           Pulse_Lib_Slice_slice__uint8_t input10 = _letpattern1.fst;
           Pulse_Lib_Slice_slice__uint8_t input230 = _letpattern1.snd;
           size_t consumed0 = off_ - off1;
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           _letpattern2 = split__uint8_t(input230, consumed0);
           Pulse_Lib_Slice_slice__uint8_t s11 = _letpattern2.fst;
           Pulse_Lib_Slice_slice__uint8_t s21 = _letpattern2.snd;
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           _letpattern20 = { .fst = s11, .snd = s21 };
           Pulse_Lib_Slice_slice__uint8_t left0 = _letpattern20.fst;
           Pulse_Lib_Slice_slice__uint8_t right0 = _letpattern20.snd;
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           _letpattern21 = { .fst = left0, .snd = right0 };
           Pulse_Lib_Slice_slice__uint8_t input20 = _letpattern21.fst;
           Pulse_Lib_Slice_slice__uint8_t input30 = _letpattern21.snd;
-          __Pulse_Lib_Slice_slice_uint8_t__Pulse_Lib_Slice_slice_uint8_t___Pulse_Lib_Slice_slice_uint8_t_
+          __Pulse_Lib_Slice_slice__uint8_t__Pulse_Lib_Slice_slice__uint8_t___Pulse_Lib_Slice_slice__uint8_t_
           _letpattern10 = { .fst = input10, .snd = { .fst = input20, .snd = input30 } };
           Pulse_Lib_Slice_slice__uint8_t input_ = _letpattern10.snd.fst;
           size_t pos_ = (size_t)1U;
@@ -1909,11 +1695,11 @@ Parquet_Pulse_Toplevel0_validate_parquet(Pulse_Lib_Slice_slice__uint8_t input, s
           uint32_t bfirst = (uint32_t)first;
           uint32_t x = bfirst + n1 * 256U;
           uint32_t x0 = x;
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           s_0 = split__uint8_t(l, off1);
           Pulse_Lib_Slice_slice__uint8_t s12 = s_0.fst;
           Pulse_Lib_Slice_slice__uint8_t s22 = s_0.snd;
-          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
           _letpattern11 = { .fst = s12, .snd = s22 };
           Pulse_Lib_Slice_slice__uint8_t l1 = _letpattern11.fst;
           size_t input_len2 = len__uint8_t(l1);
@@ -1932,11 +1718,11 @@ Parquet_Pulse_Toplevel0_validate_parquet(Pulse_Lib_Slice_slice__uint8_t input, s
             else
             {
               size_t off_len = off30 + (size_t)x0;
-              __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+              __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
               s_ = split__uint8_t(l1, off_len);
               Pulse_Lib_Slice_slice__uint8_t s1 = s_.fst;
               Pulse_Lib_Slice_slice__uint8_t s2 = s_.snd;
-              __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+              __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
               _letpattern2 = { .fst = s1, .snd = s2 };
               Pulse_Lib_Slice_slice__uint8_t inl = _letpattern2.fst;
               bool res = Parquet_Pulse_Toplevel0_validate_footer(inl, &poff2);
@@ -1946,60 +1732,61 @@ Parquet_Pulse_Toplevel0_validate_parquet(Pulse_Lib_Slice_slice__uint8_t input, s
             if (is_valid22)
             {
               size_t off_1 = poff2;
-              __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+              __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
               s_ = split__uint8_t(l1, off2);
               Pulse_Lib_Slice_slice__uint8_t s10 = s_.fst;
               Pulse_Lib_Slice_slice__uint8_t s20 = s_.snd;
-              __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+              __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
               _letpattern2 = { .fst = s10, .snd = s20 };
               Pulse_Lib_Slice_slice__uint8_t input10 = _letpattern2.fst;
               Pulse_Lib_Slice_slice__uint8_t input230 = _letpattern2.snd;
               size_t consumed0 = off_1 - off2;
-              __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+              __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
               _letpattern3 = split__uint8_t(input230, consumed0);
               Pulse_Lib_Slice_slice__uint8_t s11 = _letpattern3.fst;
               Pulse_Lib_Slice_slice__uint8_t s21 = _letpattern3.snd;
-              __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+              __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
               _letpattern30 = { .fst = s11, .snd = s21 };
               Pulse_Lib_Slice_slice__uint8_t left0 = _letpattern30.fst;
               Pulse_Lib_Slice_slice__uint8_t right0 = _letpattern30.snd;
-              __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+              __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
               _letpattern31 = { .fst = left0, .snd = right0 };
               Pulse_Lib_Slice_slice__uint8_t input20 = _letpattern31.fst;
               Pulse_Lib_Slice_slice__uint8_t input30 = _letpattern31.snd;
-              __Pulse_Lib_Slice_slice_uint8_t__Pulse_Lib_Slice_slice_uint8_t___Pulse_Lib_Slice_slice_uint8_t_
+              __Pulse_Lib_Slice_slice__uint8_t__Pulse_Lib_Slice_slice__uint8_t___Pulse_Lib_Slice_slice__uint8_t_
               _letpattern20 = { .fst = input10, .snd = { .fst = input20, .snd = input30 } };
               Pulse_Lib_Slice_slice__uint8_t y = _letpattern20.snd.fst;
               Pulse_Lib_Slice_slice__uint8_t l2 = _letpattern20.fst;
               size_t offset4 = *poffset;
-              *poffset = len__uint8_t(l2);
+              size_t input_len3 = len__uint8_t(l2);
+              *poffset = input_len3;
               bool is_valid = true;
               bool is_valid1;
               if (is_valid)
               {
                 size_t off3 = *poffset;
-                __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+                __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
                 s_ = split__uint8_t(l2, offset4);
                 Pulse_Lib_Slice_slice__uint8_t s10 = s_.fst;
                 Pulse_Lib_Slice_slice__uint8_t s20 = s_.snd;
-                __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+                __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
                 _letpattern3 = { .fst = s10, .snd = s20 };
                 Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern3.fst;
                 Pulse_Lib_Slice_slice__uint8_t input23 = _letpattern3.snd;
                 size_t consumed = off3 - offset4;
-                __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+                __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
                 _letpattern4 = split__uint8_t(input23, consumed);
                 Pulse_Lib_Slice_slice__uint8_t s1 = _letpattern4.fst;
                 Pulse_Lib_Slice_slice__uint8_t s2 = _letpattern4.snd;
-                __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+                __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
                 _letpattern40 = { .fst = s1, .snd = s2 };
                 Pulse_Lib_Slice_slice__uint8_t left = _letpattern40.fst;
                 Pulse_Lib_Slice_slice__uint8_t right = _letpattern40.snd;
-                __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+                __Pulse_Lib_Slice_slice__uint8_t_Pulse_Lib_Slice_slice__uint8_t
                 _letpattern41 = { .fst = left, .snd = right };
                 Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern41.fst;
                 Pulse_Lib_Slice_slice__uint8_t input3 = _letpattern41.snd;
-                __Pulse_Lib_Slice_slice_uint8_t__Pulse_Lib_Slice_slice_uint8_t___Pulse_Lib_Slice_slice_uint8_t_
+                __Pulse_Lib_Slice_slice__uint8_t__Pulse_Lib_Slice_slice__uint8_t___Pulse_Lib_Slice_slice__uint8_t_
                 _letpattern30 = { .fst = input1, .snd = { .fst = input2, .snd = input3 } };
                 Pulse_Lib_Slice_slice__uint8_t x1 = _letpattern30.snd.fst;
                 is_valid1 = Parquet_Pulse_Toplevel0_impl_validate_all(x0, y, x1);
