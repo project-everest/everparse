@@ -4,6 +4,7 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu24.04
 # CI dependencies: jq (to identify F* branch)
 # python3 (for interactive tests)
 # libicu (for .NET, cf. https://aka.ms/dotnet-missing-libicu )
+# Apache Thrift dependencies from src/Parquet/cpp/README.md
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
       ca-certificates \
@@ -26,6 +27,11 @@ RUN apt-get update \
       python3-venv \
       clang \
       cmake \
+      libtool \
+      yacc \
+      flex \
+      libboost-dev \
+      libssl-dev \
     && apt-get clean -y
 # FIXME: libgmp-dev should be installed automatically by opam,
 # but it is not working, so just adding it above.
