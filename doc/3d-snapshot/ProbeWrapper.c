@@ -45,6 +45,29 @@ BOOLEAN ProbeCheckS(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 	return TRUE;
 }
 
+BOOLEAN ProbeCheckCompleteS(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = ProbeValidateS(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		ProbeEverParseError("_S", "", "unexpected trailing bytes");
+		return FALSE;
+	}
+	return TRUE;
+}
+
 BOOLEAN ProbeCheckU(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	uint64_t ep_status;
@@ -63,6 +86,29 @@ BOOLEAN ProbeCheckU(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT
 	return TRUE;
 }
 
+BOOLEAN ProbeCheckCompleteU(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = ProbeValidateU(destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		ProbeEverParseError("_U", "", "unexpected trailing bytes");
+		return FALSE;
+	}
+	return TRUE;
+}
+
 BOOLEAN ProbeCheckV(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	uint64_t ep_status;
@@ -76,6 +122,29 @@ BOOLEAN ProbeCheckV(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT
 		{
 			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
 		}
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOLEAN ProbeCheckCompleteV(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = ProbeValidateV(destS, destT,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		ProbeEverParseError("_V", "", "unexpected trailing bytes");
 		return FALSE;
 	}
 	return TRUE;
@@ -137,6 +206,67 @@ uint32_t ProbeProbeAndCopyCheckIndirect(EVERPARSE_COPY_BUFFER_T probeDest, uint6
 	return EVERPARSE_SUCCESS;
 }
 
+static BOOLEAN ProbeCheckCompleteIndirect(uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = ProbeValidateIndirect( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		ProbeEverParseError("_Indirect", "", "unexpected trailing bytes");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+uint32_t ProbeProbeAndCopyCheckCompleteIndirect(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
+	uint8_t *base;
+
+	if(providedSize < 9U)
+	{
+
+		//
+		// Not enough space for probe
+		//
+
+		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
+	}
+	if(!ProbeInit("ProbeCheckCompleteIndirect", 9U, probeDest))
+	{
+
+		//
+		// ProbeInit failed
+		//
+
+		return EVERPARSE_PROBE_FAILURE_INIT;
+	}
+	if (!ProbeAndCopy(9U, 0, 0, probeAddr, probeDest))
+	{
+
+		//
+		// Probe failed
+		//
+
+		return EVERPARSE_PROBE_FAILURE_PROBE;
+	}
+	base = EverParseStreamOf(probeDest);
+	if (!ProbeCheckCompleteIndirect( base, 9U))
+	{
+		return EVERPARSE_PROBE_FAILURE_VALIDATION;
+	}
+	return EVERPARSE_SUCCESS;
+}
+
 BOOLEAN ProbeCheckI(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	uint64_t ep_status;
@@ -150,6 +280,29 @@ BOOLEAN ProbeCheckI(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 		{
 			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
 		}
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOLEAN ProbeCheckCompleteI(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = ProbeValidateI(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		ProbeEverParseError("_I", "", "unexpected trailing bytes");
 		return FALSE;
 	}
 	return TRUE;
@@ -249,6 +402,105 @@ uint32_t ProbeProbeAndCopyAltCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVE
 	return EVERPARSE_SUCCESS;
 }
 
+static BOOLEAN ProbeCheckCompleteMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2, uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = ProbeValidateMultiProbe(destT1, destT2,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		ProbeEverParseError("_MultiProbe", "", "unexpected trailing bytes");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+uint32_t ProbeProbeAndCopyCheckCompleteMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2, EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
+	uint8_t *base;
+
+	if(providedSize < 25U)
+	{
+
+		//
+		// Not enough space for probe
+		//
+
+		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
+	}
+	if(!ProbeInit("ProbeCheckCompleteMultiProbe", 25U, probeDest))
+	{
+
+		//
+		// ProbeInit failed
+		//
+
+		return EVERPARSE_PROBE_FAILURE_INIT;
+	}
+	if (!ProbeAndCopy(25U, 0, 0, probeAddr, probeDest))
+	{
+
+		//
+		// Probe failed
+		//
+
+		return EVERPARSE_PROBE_FAILURE_PROBE;
+	}
+	base = EverParseStreamOf(probeDest);
+	if (!ProbeCheckCompleteMultiProbe(destT1, destT2,  base, 25U))
+	{
+		return EVERPARSE_PROBE_FAILURE_VALIDATION;
+	}
+	return EVERPARSE_SUCCESS;
+}
+
+uint32_t ProbeProbeAndCopyAltCheckCompleteMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2, EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
+	uint8_t *base;
+
+	if(providedSize < 25U)
+	{
+
+		//
+		// Not enough space for probe
+		//
+
+		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
+	}
+	if(!ProbeInit("ProbeCheckCompleteMultiProbe", 25U, probeDest))
+	{
+
+		//
+		// ProbeInit failed
+		//
+
+		return EVERPARSE_PROBE_FAILURE_INIT;
+	}
+	if (!ProbeAndCopyAlt(25U, 0, 0, probeAddr, probeDest))
+	{
+
+		//
+		// Probe failed
+		//
+
+		return EVERPARSE_PROBE_FAILURE_PROBE;
+	}
+	base = EverParseStreamOf(probeDest);
+	if (!ProbeCheckCompleteMultiProbe(destT1, destT2,  base, 25U))
+	{
+		return EVERPARSE_PROBE_FAILURE_VALIDATION;
+	}
+	return EVERPARSE_SUCCESS;
+}
+
 BOOLEAN ProbeCheckMaybeT(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	uint64_t ep_status;
@@ -267,6 +519,29 @@ BOOLEAN ProbeCheckMaybeT(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t l
 	return TRUE;
 }
 
+BOOLEAN ProbeCheckCompleteMaybeT(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = ProbeValidateMaybeT(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		ProbeEverParseError("_MaybeT", "", "unexpected trailing bytes");
+		return FALSE;
+	}
+	return TRUE;
+}
+
 BOOLEAN ProbeCheckCoercePtr(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	uint64_t ep_status;
@@ -280,6 +555,29 @@ BOOLEAN ProbeCheckCoercePtr(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_
 		{
 			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
 		}
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOLEAN ProbeCheckCompleteCoercePtr(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = ProbeValidateCoercePtr(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		ProbeEverParseError("_CoercePtr", "", "unexpected trailing bytes");
 		return FALSE;
 	}
 	return TRUE;
@@ -335,6 +633,67 @@ uint32_t ProbeProbeAndCopyCheckProbeOnly(EVERPARSE_COPY_BUFFER_T probeDest, uint
 	}
 	base = EverParseStreamOf(probeDest);
 	if (!ProbeCheckProbeOnly( base, 8U))
+	{
+		return EVERPARSE_PROBE_FAILURE_VALIDATION;
+	}
+	return EVERPARSE_SUCCESS;
+}
+
+static BOOLEAN ProbeCheckCompleteProbeOnly(uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = ProbeValidateProbeOnly( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		ProbeEverParseError("_ProbeOnly", "", "unexpected trailing bytes");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+uint32_t ProbeProbeAndCopyCheckCompleteProbeOnly(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
+	uint8_t *base;
+
+	if(providedSize < 8U)
+	{
+
+		//
+		// Not enough space for probe
+		//
+
+		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
+	}
+	if(!ProbeInit("ProbeCheckCompleteProbeOnly", 8U, probeDest))
+	{
+
+		//
+		// ProbeInit failed
+		//
+
+		return EVERPARSE_PROBE_FAILURE_INIT;
+	}
+	if (!ProbeAndCopy(8U, 0, 0, probeAddr, probeDest))
+	{
+
+		//
+		// Probe failed
+		//
+
+		return EVERPARSE_PROBE_FAILURE_PROBE;
+	}
+	base = EverParseStreamOf(probeDest);
+	if (!ProbeCheckCompleteProbeOnly( base, 8U))
 	{
 		return EVERPARSE_PROBE_FAILURE_VALIDATION;
 	}
@@ -397,6 +756,67 @@ uint32_t ProbeProbeAndCopyCheckBothEntrypoints(EVERPARSE_COPY_BUFFER_T probeDest
 	return EVERPARSE_SUCCESS;
 }
 
+BOOLEAN ProbeCheckCompleteBothEntrypoints(uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = ProbeValidateBothEntrypoints( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		ProbeEverParseError("_BothEntrypoints", "", "unexpected trailing bytes");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+uint32_t ProbeProbeAndCopyCheckCompleteBothEntrypoints(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
+	uint8_t *base;
+
+	if(providedSize < 8U)
+	{
+
+		//
+		// Not enough space for probe
+		//
+
+		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
+	}
+	if(!ProbeInit("ProbeCheckCompleteBothEntrypoints", 8U, probeDest))
+	{
+
+		//
+		// ProbeInit failed
+		//
+
+		return EVERPARSE_PROBE_FAILURE_INIT;
+	}
+	if (!ProbeAndCopy(8U, 0, 0, probeAddr, probeDest))
+	{
+
+		//
+		// Probe failed
+		//
+
+		return EVERPARSE_PROBE_FAILURE_PROBE;
+	}
+	base = EverParseStreamOf(probeDest);
+	if (!ProbeCheckCompleteBothEntrypoints( base, 8U))
+	{
+		return EVERPARSE_PROBE_FAILURE_VALIDATION;
+	}
+	return EVERPARSE_SUCCESS;
+}
+
 BOOLEAN ValidateMyData(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	uint64_t ep_status;
@@ -410,6 +830,29 @@ BOOLEAN ValidateMyData(uint8_t *base, uint32_t len) {
 		{
 			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
 		}
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOLEAN ValidateMyDataComplete(uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = ProbeValidateNamedPlainEp( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		ProbeEverParseError("_NamedPlainEp", "", "unexpected trailing bytes");
 		return FALSE;
 	}
 	return TRUE;
@@ -471,6 +914,67 @@ uint32_t ProbeMyData(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint
 	return EVERPARSE_SUCCESS;
 }
 
+static BOOLEAN ProbeCheckCompleteNamedProbeEp(uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = ProbeValidateNamedProbeEp( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		ProbeEverParseError("_NamedProbeEp", "", "unexpected trailing bytes");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+uint32_t ProbeMyDataComplete(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
+	uint8_t *base;
+
+	if(providedSize < 8U)
+	{
+
+		//
+		// Not enough space for probe
+		//
+
+		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
+	}
+	if(!ProbeInit("ProbeCheckCompleteNamedProbeEp", 8U, probeDest))
+	{
+
+		//
+		// ProbeInit failed
+		//
+
+		return EVERPARSE_PROBE_FAILURE_INIT;
+	}
+	if (!ProbeAndCopy(8U, 0, 0, probeAddr, probeDest))
+	{
+
+		//
+		// Probe failed
+		//
+
+		return EVERPARSE_PROBE_FAILURE_PROBE;
+	}
+	base = EverParseStreamOf(probeDest);
+	if (!ProbeCheckCompleteNamedProbeEp( base, 8U))
+	{
+		return EVERPARSE_PROBE_FAILURE_VALIDATION;
+	}
+	return EVERPARSE_SUCCESS;
+}
+
 BOOLEAN CheckAll(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	uint64_t ep_status;
@@ -521,6 +1025,67 @@ uint32_t ProbeAll(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_
 	}
 	base = EverParseStreamOf(probeDest);
 	if (!CheckAll( base, 8U))
+	{
+		return EVERPARSE_PROBE_FAILURE_VALIDATION;
+	}
+	return EVERPARSE_SUCCESS;
+}
+
+BOOLEAN CheckAllComplete(uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = ProbeValidateNamedBothEp( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		ProbeEverParseError("_NamedBothEp", "", "unexpected trailing bytes");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+uint32_t ProbeAllComplete(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize) {
+	uint8_t *base;
+
+	if(providedSize < 8U)
+	{
+
+		//
+		// Not enough space for probe
+		//
+
+		return EVERPARSE_PROBE_FAILURE_INCORRECT_SIZE;
+	}
+	if(!ProbeInit("CheckAllComplete", 8U, probeDest))
+	{
+
+		//
+		// ProbeInit failed
+		//
+
+		return EVERPARSE_PROBE_FAILURE_INIT;
+	}
+	if (!ProbeAndCopy(8U, 0, 0, probeAddr, probeDest))
+	{
+
+		//
+		// Probe failed
+		//
+
+		return EVERPARSE_PROBE_FAILURE_PROBE;
+	}
+	base = EverParseStreamOf(probeDest);
+	if (!CheckAllComplete( base, 8U))
 	{
 		return EVERPARSE_PROBE_FAILURE_VALIDATION;
 	}
