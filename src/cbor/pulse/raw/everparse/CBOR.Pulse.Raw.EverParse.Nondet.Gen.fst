@@ -1866,6 +1866,18 @@ ensures
 
 #push-options "--z3rlimit 64"
 
+let hd_map
+  (n: nat)
+  (va: Ghost.erased (LowParse.Spec.VCList.nlist n parse_raw_data_item_param.t))
+  (h: header)
+: Pure (v: Ghost.erased raw_data_item { Map? v })
+  (requires (
+    Cons? (Ghost.reveal va) /\
+    h == get_raw_data_item_header (List.Tot.hd (Ghost.reveal va)) /\
+    get_header_major_type h == cbor_major_type_map
+  ))
+  (ensures (fun res -> Ghost.reveal res == List.Tot.hd (Ghost.reveal va)))
+= Ghost.hide (List.Tot.hd (Ghost.reveal va))
 inline_for_extraction
 fn impl_check_valid_item
   (#data_model: Ghost.erased ((x1: raw_data_item) -> (x2: raw_data_item) -> bool))
@@ -1915,12 +1927,13 @@ fn impl_check_valid_item
     let mut ph = h;
     let c = get_header_and_contents hd ph;
     Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
-    get_map_payload c (List.Tot.hd va);
+    let vhd = hd_map (SZ.v n) va h;
+    get_map_payload c vhd;
     Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
     assert_norm ((LowParse.Spec.Combinators.and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind).parser_kind_low == 2);
     CBOR.Pulse.Raw.EverParse.SizeComparison.nlist_count_fits
       (LowParse.Spec.Combinators.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
-      (U64.v (Map?.len (List.Tot.hd va)).value)
+      (U64.v (Map?.len (Ghost.reveal vhd)).value)
       c;
     let res = impl_list_no_setoid_repeats_with_overflow_map_fst
       (impl_check_equiv)

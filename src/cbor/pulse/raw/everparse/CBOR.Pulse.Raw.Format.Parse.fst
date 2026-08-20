@@ -375,6 +375,23 @@ fn split_nondep_then_tot_kind
 module GR = Pulse.Lib.GhostReference
 module Ref = Pulse.Lib.Reference
 
+#push-options "--fuel 1 --ifuel 1"
+
+let hd_map_payload
+  (n: nat)
+  (va: LowParse.Spec.VCList.nlist n parse_raw_data_item_param.t)
+  (h: header)
+: Ghost (list (raw_data_item & raw_data_item))
+  (requires (
+    Cons? va /\
+    h == get_raw_data_item_header (List.Tot.hd va) /\
+    get_header_major_type h == cbor_major_type_map
+  ))
+  (ensures (fun res -> Map? (List.Tot.hd va) /\ res == Map?.v (List.Tot.hd va)))
+= Map?.v (List.Tot.hd va)
+
+#pop-options
+
 #restart-solver
 // #push-options "--z3rlimit 256 --query_stats --fuel 2 --ifuel 1 --z3refresh"
 #push-options "--z3rlimit 128"
@@ -434,8 +451,7 @@ fn cbor_raw_sorted (_: unit) : LowParse.Pulse.Recursive.impl_pred_t u#0 u#0 #_ s
         input2;
       Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
       with v3 . assert (pts_to_serialized (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param (SZ.v n) l) input3 #pm v3);
-      let l0 : Ghost.erased (list (raw_data_item & raw_data_item)) = Ghost.hide (Map?.v (List.Tot.hd va));
-      assert (pure (list_of_pair_list raw_data_item (U64.v nbpairs) l0 == fst v3));
+      let l0 : Ghost.erased (list (raw_data_item & raw_data_item)) = Ghost.hide (hd_map_payload (SZ.v n) va h);      assert (pure (list_of_pair_list raw_data_item (U64.v nbpairs) l0 == fst v3));
       sorted2_correct deterministically_encoded_cbor_map_key_order (U64.v nbpairs) l0;
       let n' : erased nat = SZ.v n - 1;
       let k : Ghost.erased parser_kind = Ghost.hide (LowParse.Spec.VCList.parse_nlist_kind n' parse_raw_data_item_kind);

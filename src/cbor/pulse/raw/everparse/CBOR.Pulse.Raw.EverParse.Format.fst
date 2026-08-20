@@ -1433,6 +1433,11 @@ ensures exists* v' .
 #pop-options
 
 inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_leaf_header (_: unit) : jumper (parser_of_tot_parser parse_raw_data_item_param.parse_header) =
+  jump_leaf ()
+
+inline_for_extraction
 fn impl_holds_on_raw_data_item
   (p: Ghost.erased (raw_data_item -> bool))
   (impl_p: LowParse.Pulse.Recursive.impl_pred_t serialize_raw_data_item_param p)
@@ -1443,5 +1448,5 @@ fn impl_holds_on_raw_data_item
   returns res: bool
   ensures pts_to_serialized serialize_raw_data_item input #pm v ** pure (res == holds_on_raw_data_item p v)
 {
-  LowParse.Pulse.Recursive.impl_pred_recursive serialize_raw_data_item_param (jump_leaf ()) (jump_recursive_step_count_leaf ()) (holds_on_raw_data_item_pred p) impl_p input
+  LowParse.Pulse.Recursive.impl_pred_recursive serialize_raw_data_item_param (jump_leaf_header ()) (jump_recursive_step_count_leaf ()) (holds_on_raw_data_item_pred p) impl_p input
 }

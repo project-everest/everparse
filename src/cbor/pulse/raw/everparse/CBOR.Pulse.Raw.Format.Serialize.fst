@@ -4734,6 +4734,16 @@ let sz_len_nonzero (x: SZ.t) : Lemma (requires SZ.v x == 0) (ensures x == 0sz) =
 let sz_pos (x: SZ.t) : Lemma (requires x <> 0sz) (ensures SZ.v x > 0) =
   if SZ.v x = 0 then sz_len_nonzero x else ()
 
+let array_payload_cons (x: raw_data_item { Array? x }) : Lemma
+  (requires (U64.v (Array?.len x).value > 0))
+  (ensures (Cons? (Array?.v x)))
+= ()
+
+let map_payload_cons (x: raw_data_item { Map? x }) : Lemma
+  (requires (U64.v (Map?.len x).value > 0))
+  (ensures (Cons? (Map?.v x)))
+= ()
+
 #push-options "--z3rlimit 40 --fuel 2 --ifuel 2"
 ghost
 fn estab_deep_pos
@@ -4764,6 +4774,7 @@ ensures
         pts_to a.cbor_array_ptr #(x'.p `perm_mul` a.cbor_array_array_perm) s **
         PM.seq_list_match s (Array?.v x) ((depth_cb n x) (x'.p `perm_mul` a.cbor_array_payload_perm)));
       sz_pos (S.len a.cbor_array_ptr);
+      array_payload_cons x;
       array_peek n x (x'.p `perm_mul` a.cbor_array_payload_perm) s;
       assert (pure (Ghost.reveal n >= 1));
       Trade.elim _ (cbor_match_with_depth n x'.p (CBOR_Case_Array a) x);
