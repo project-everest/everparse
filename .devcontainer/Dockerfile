@@ -27,6 +27,7 @@ RUN apt-get update \
       python3-venv \
       clang \
       cmake \
+      automake \
       libtool \
       yacc \
       flex \
