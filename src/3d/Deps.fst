@@ -318,7 +318,7 @@ let build_dep_graph_from_list files =
     modules_with_extern_probe = [];
   }
   in
-  let g1 = List.fold_left (fun acc fn -> build_dep_graph_aux (OS.dirname fn) (Options.get_module_name fn) acc) (g0, []) files
+  let g1 = List.fold_left (fun acc fn -> build_dep_graph_aux (OS.dirname fn) (Options.module_name fn) acc) (g0, []) files
   |> fst
   in
   {g1 with graph =
@@ -339,7 +339,7 @@ let collect_and_sort_dependencies_from_graph (g: dep_graph) (files:list string) 
   let dirname = files |> List.hd |> OS.dirname in
   let filename_of modul = Options.get_file_name (OS.concat dirname modul) in
   files
-  |> List.map Options.get_module_name
+  |> List.map Options.module_name
   |> get_sorted_deps g
   |> List.fold_left (fun acc mod -> if List.mem mod acc then acc else mod::acc) []
   |> List.rev
