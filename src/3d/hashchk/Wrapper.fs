@@ -35,8 +35,8 @@ let everparse_unpack dirname =
     System.IO.Compression.ZipFile.ExtractToDirectory(everparse_filename, ".", false)
   else
     failwith "everparse_unpack: Cannot determine OS platform"
-  System.Console.WriteLine("Waiting for 10 s")
-  System.Threading.Thread.Sleep(10000)
+  System.Console.WriteLine("Waiting for 30 s")
+  System.Threading.Thread.Sleep(30000)
   System.Console.WriteLine("Renaming directory")
   System.IO.Directory.Move("everparse", dirname)
 
@@ -74,6 +74,7 @@ let main _ =
            System.Console.WriteLine "You are trying to call the EverParse/3d inplace hash checker with an unsupported EverParse/3d option. The only supported option is --check_inplace_hash . Do you want to try downloading a full EverParse binary package from GitHub Releases and running it? (y/N)" // please download and use a full EverParse binary package from https://github.com/project-everest/everparse/releases"
            if System.Convert.ToChar(System.Console.Read()).ToString() <> "y" then
              exit 1
+           System.Console.WriteLine ("Downloading from " ^ everparse_url)
            wc.DownloadFile(everparse_url, everparse_filename)
          let s = hash_file everparse_filename
          System.Console.WriteLine ("Expected hash: " ^ everparse_hash)
