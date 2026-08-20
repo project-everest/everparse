@@ -44,6 +44,29 @@ BOOLEAN DerivedCheckTriple(uint8_t *base, uint32_t len) {
 	return TRUE;
 }
 
+BOOLEAN DerivedCheckCompleteTriple(uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = DerivedValidateTriple( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			DerivedEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		DerivedEverParseError("_Triple", "", "unexpected trailing bytes");
+		return FALSE;
+	}
+	return TRUE;
+}
+
 BOOLEAN DerivedCheckQuad(uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	uint64_t ep_status;
@@ -57,6 +80,29 @@ BOOLEAN DerivedCheckQuad(uint8_t *base, uint32_t len) {
 		{
 			DerivedEverParseError(frame.typename_s, frame.fieldname, frame.reason);
 		}
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOLEAN DerivedCheckCompleteQuad(uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	uint64_t ep_status;
+
+	frame.filled = FALSE;
+	ep_status = DerivedValidateQuad( (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+
+	if (EverParseIsError(ep_status))
+	{
+		if (frame.filled)
+		{
+			DerivedEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	if (EverParseGetValidatorErrorPos(ep_status) != (uint64_t)len)
+	{
+		DerivedEverParseError("_Quad", "", "unexpected trailing bytes");
 		return FALSE;
 	}
 	return TRUE;

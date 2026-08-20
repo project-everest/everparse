@@ -49,6 +49,7 @@ all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules
 	 tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs \
 	 probe iter z3-testgen-test exttype z3-testgen-probe-test \
 	 use_error_handler_macro \
+	 check_complete \
 	 save_hashes \
 	 hashchk-tests
 
@@ -111,6 +112,10 @@ specialize_tagged_union_array:
 
 .PHONY: use_error_handler_macro
 use_error_handler_macro:
+	+$(MAKE) -C $@
+
+.PHONY: check_complete
+check_complete:
 	+$(MAKE) -C $@
 
 .PHONY: specialize_test_error_handler_macro
@@ -239,6 +244,6 @@ clean-files:
 
 clean: clean-files specialize_test.clean specialize_test2.clean probe.clean extern.clean exttype.clean funptr.clean ifdefs.clean iter/coarse.clean iter/fine.clean modules.clean output_types.clean static.clean tcpip.clean specialize_tagged_union_array.clean save_hashes.clean
 
-clean: use_error_handler_macro.clean specialize_test_error_handler_macro.clean probe_error_handler_macro.clean
+clean: use_error_handler_macro.clean specialize_test_error_handler_macro.clean probe_error_handler_macro.clean check_complete.clean
 
 .PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules tcpip extern %.interpret batch-interpret-test static funptr ifdefs

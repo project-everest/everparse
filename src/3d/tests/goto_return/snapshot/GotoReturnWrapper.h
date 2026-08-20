@@ -21,7 +21,11 @@ extern "C" {
 #endif
 BOOLEAN GotoReturnCheckPoint(uint8_t *base, uint32_t len);
 
+BOOLEAN GotoReturnCheckCompletePoint(uint8_t *base, uint32_t len);
+
 uint32_t GotoReturnProbeInPlaceCheckTagged(uint64_t bound, EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize);
+
+uint32_t GotoReturnProbeInPlaceCheckCompleteTagged(uint64_t bound, EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr, uint64_t providedSize);
 #ifdef __cplusplus
 }
 #endif
