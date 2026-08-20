@@ -100,9 +100,18 @@ ci: $(EVERPARSE_ALL_O_FILES) $(EVERPARSE_ALL_H_FILES)
 	$(EVERPARSE_CMD) --check_inplace_hash src/Point.3d=$(EVERPARSE_OUTPUT_DIR)/Point.h
 	$(EVERPARSE_CMD) --check_inplace_hash src/Point.3d=$(EVERPARSE_OUTPUT_DIR)/Point.c
 
+# Same inplace hash checks, but with the standalone F# hash checker.
+# This rule is for continuous integration only, and is called by the
+# hashchk-modules rule of the parent Makefile.
+HASHCHK ?= dotnet $(EVERPARSE_HOME)/src/3d/hashchk/bin/Debug/net8.0/win-x64/everparse-hashchk.dll
+
+hashchk-check: $(EVERPARSE_ALL_H_FILES)
+	$(HASHCHK) --check_inplace_hash src/Point.3d=$(EVERPARSE_OUTPUT_DIR)/Point.h
+	$(HASHCHK) --check_inplace_hash src/Point.3d=$(EVERPARSE_OUTPUT_DIR)/Point.c
+
 # Specify the behavior of the default rule
 world: ci test
 
 # Declare all phony rules.
 # Cf. https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
-.PHONY: all world test clean ci
+.PHONY: all world test clean ci hashchk-check

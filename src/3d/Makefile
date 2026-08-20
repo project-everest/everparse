@@ -4,6 +4,7 @@ EVERPARSE_SRC_PATH=$(realpath ..)
 EVERPARSE_HOME=$(realpath ../..)
 
 FSTAR_FILES := Main.fst Version.fst
+FSTAR_FILES += Hashing.Hash.fst
 FSTAR_DEP_OPTIONS := --extract '* -Prims -FStar'
 OUTPUT_DIRECTORY := ocaml/generated
 
@@ -48,3 +49,18 @@ clean-3d:
 	rm -rf *.checked *~ Version.fst $(EVERPARSE_HOME)/bin/3d.exe
 
 .PHONY: clean-3d
+
+.PHONY: hashchk hashchk-boot hashchk-rebuild
+
+hashchk:
+	cd hashchk && dotnet build everparse.fsproj && dotnet build everparse-hashchk.fsproj
+
+# Re-extract the hash checker from F* and rebuild it. Contrary to
+# hashchk-boot, this rule assumes that 3d is already built.
+hashchk-rebuild:
+	rm -rf hashchk/3d
+	+$(MAKE) -f hashchk.Makefile
+	+$(MAKE) hashchk
+
+hashchk-boot: 3d
+	+$(MAKE) hashchk-rebuild
