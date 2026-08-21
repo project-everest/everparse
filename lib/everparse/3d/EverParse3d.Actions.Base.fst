@@ -1952,3 +1952,211 @@ fn validate_all_bytes
   Seq.lemma_eq_elim (Seq.slice (Ghost.reveal v_sl) (Seq.length v_sl) (Seq.length v_sl)) (Seq.empty #LP.byte);
   validator_success
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Group B: turning a non-consuming (`no_read`) validator into a consuming one
+////////////////////////////////////////////////////////////////////////////////
+
+let seq_slice_is_suffix_of
+  (v: Seq.seq LP.byte) (i: nat)
+: Lemma
+  (requires (i <= Seq.length v))
+  (ensures (Seq.slice v i (Seq.length v) `I.seq_is_suffix_of` v))
+= Seq.lemma_eq_elim
+    (Seq.slice v (Seq.length v - (Seq.length v - i)) (Seq.length v))
+    (Seq.slice v i (Seq.length v))
+
+inline_for_extraction noextract
+fn validate_drop
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#nz:bool)
+      (#wk: _)
+      (#k:parser_kind nz wk)
+      (#[@@@erasable] t:Type)
+      (#[@@@erasable] p:parser k t)
+      (#[@@@erasable] extra_state: state_dict)
+      (#has_action:bool)
+      (#use_error_handler:bool)
+      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  let mut pos = 0sz;
+  let res = v ctxt error_handler_fn sl_base sl_len sl_pos pos extra contents_sl v_sl 0sz;
+  if (res = validator_success) {
+    let consumed = !pos;
+    I.skip sl_base sl_len sl_pos consumed contents_sl v_sl;
+    seq_slice_is_suffix_of v_sl (SZ.v consumed);
+    validator_success
+  } else {
+    seq_is_suffix_of_refl (Ghost.reveal v_sl);
+    res
+  }
+}
+
+inline_for_extraction noextract
+fn validate_without_reading
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#nz:bool)
+      (#wk: _)
+      (#k:parser_kind nz wk)
+      (#[@@@erasable] t:Type)
+      (#[@@@erasable] p:parser k t)
+      (#[@@@erasable] extra_state: state_dict)
+      (#has_action:bool)
+      (#use_error_handler:bool)
+      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action use_error_handler
+= validate_drop v
+
+////////////////////////////////////////////////////////////////////////////////
+// Group C: field position actions
+////////////////////////////////////////////////////////////////////////////////
+
+noextract
+inline_for_extraction
+fn action_field_pos_64
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#[@@@erasable] extra_state: state_dict)
+      (#use_error_handler:bool)
+: action #base_t #len_t #pos_t extra_state U64.t use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  let pos = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+  SZ.sizet_to_uint64 pos
+}
+
+noextract
+inline_for_extraction
+fn action_field_pos_32
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#[@@@erasable] extra_state: state_dict)
+      (#use_error_handler:bool)
+: action #base_t #len_t #pos_t extra_state U32.t use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  let pos = I.get_position sl_base sl_len sl_pos contents_sl v_sl;
+  SZ.sizet_to_uint32 pos
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Group C: field pointer actions.
+//
+// In Low*, `action_field_ptr` is available only for the `buffer` backend and
+// `action_field_ptr_after` only for the `extern` backend, and this is enforced
+// by a global `backend_flag`. Here we do not want to depend on linking against
+// a particular module, so instead each of these operations is passed in as an
+// `option`, and the corresponding action takes a `squash (Some? ...)` witness.
+// A backend that does not support an operation simply provides `None`.
+////////////////////////////////////////////////////////////////////////////////
+
+inline_for_extraction noextract
+let field_ptr_t
+  (base_t len_t pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (ptr_t: Type0)
+: Type
+= (sl_base: base_t) ->
+  (sl_len: len_t) ->
+  (sl_pos: pos_t) ->
+  (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
+  (v_sl: Ghost.erased (Seq.seq U8.t)) ->
+  stt ptr_t
+    (I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
+    (fun _ -> I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
+
+inline_for_extraction noextract
+let field_ptr_after_t
+  (base_t len_t pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (ptr_t: Type0)
+: Type
+= (sz: U64.t) ->
+  (write_to: ref ptr_t) ->
+  (sl_base: base_t) ->
+  (sl_len: len_t) ->
+  (sl_pos: pos_t) ->
+  (w: Ghost.erased ptr_t) ->
+  (contents_sl: Ghost.erased (Seq.seq U8.t)) ->
+  (v_sl: Ghost.erased (Seq.seq U8.t)) ->
+  stt bool
+    (pts_to write_to #1.0R w ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
+    (fun _ -> exists* w' . pts_to write_to #1.0R w' ** I.pts_to sl_base sl_len sl_pos contents_sl v_sl)
+
+noextract
+inline_for_extraction
+fn action_field_ptr
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#ptr_t: Type0)
+      (f: option (field_ptr_t base_t len_t pos_t ptr_t))
+      ([@@@erasable] sq: squash (Some? f))
+      (#[@@@erasable] extra_state: state_dict)
+      (#use_error_handler:bool)
+: action #base_t #len_t #pos_t extra_state ptr_t use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  (Some?.v f) sl_base sl_len sl_pos contents_sl v_sl
+}
+
+noextract
+inline_for_extraction
+fn action_field_ptr_after
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#ptr_t: Type0)
+      (f: option (field_ptr_after_t base_t len_t pos_t ptr_t))
+      ([@@@erasable] sq: squash (Some? f))
+      (name: string)
+      (sz: U64.t)
+      (write_to: ref ptr_t)
+      (#use_error_handler:bool)
+: action #base_t #len_t #pos_t (state_dict_singleton name (pts_to write_to #1.0R)) bool use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  forevery_state_dict_singleton_unfold' _ _ _;
+  with w . assert (pts_to write_to #1.0R w);
+  let res = (Some?.v f) sz write_to sl_base sl_len sl_pos w contents_sl v_sl;
+  forevery_state_dict_singleton_fold name (pts_to write_to #1.0R) _;
+  res
+}
