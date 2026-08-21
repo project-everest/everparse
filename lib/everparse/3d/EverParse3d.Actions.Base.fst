@@ -1312,3 +1312,403 @@ let probe_then_validate
       )
 
 #pop-options
+
+////////////////////////////////////////////////////////////////////////////////
+// Group A combinators: actions
+////////////////////////////////////////////////////////////////////////////////
+
+noextract
+inline_for_extraction
+fn action_return
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#[@@@erasable] extra_state: state_dict)
+      (#use_error_handler:bool)
+      (#a: Type)
+      (x: a)
+: action #base_t #len_t #pos_t extra_state a use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  x
+}
+
+noextract
+inline_for_extraction
+fn action_return_true
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#[@@@erasable] extra_state: state_dict)
+      (#use_error_handler:bool)
+: action #base_t #len_t #pos_t extra_state bool use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  true
+}
+
+noextract
+inline_for_extraction
+fn action_abort
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#[@@@erasable] extra_state: state_dict)
+      (#use_error_handler:bool)
+: action #base_t #len_t #pos_t extra_state bool use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  false
+}
+
+noextract
+inline_for_extraction
+fn action_seq
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#[@@@erasable] extra_state: state_dict)
+      (#use_error_handler:bool)
+      (#a: Type)
+      (f: action #base_t #len_t #pos_t extra_state a use_error_handler)
+      (#b: Type)
+      (g: action #base_t #len_t #pos_t extra_state b use_error_handler)
+: action #base_t #len_t #pos_t extra_state b use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  let ignored = f ctxt error_handler_fn sl_base sl_len sl_pos _ _;
+  g ctxt error_handler_fn sl_base sl_len sl_pos _ _
+}
+
+noextract
+inline_for_extraction
+fn action_ite
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#[@@@erasable] extra_state: state_dict)
+      (#use_error_handler:bool)
+      (#a: Type)
+      (guard: bool)
+      (then_: (squash (guard == true) -> action #base_t #len_t #pos_t extra_state a use_error_handler))
+      (else_: (squash (guard == false) -> action #base_t #len_t #pos_t extra_state a use_error_handler))
+: action #base_t #len_t #pos_t extra_state a use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  if (guard) {
+    then_ () ctxt error_handler_fn sl_base sl_len sl_pos _ _
+  } else {
+    else_ () ctxt error_handler_fn sl_base sl_len sl_pos _ _
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Group A combinators: validators
+////////////////////////////////////////////////////////////////////////////////
+
+inline_for_extraction noextract
+fn validate_with_comment
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (c: string)
+      (#nz:bool)
+      (#wk: _)
+      (#k:parser_kind nz wk)
+      (#[@@@erasable] t:Type)
+      (#[@@@erasable] p:parser k t)
+      (#[@@@erasable] extra_state: state_dict)
+      (#has_action:bool)
+      (#use_error_handler:bool)
+      (v: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+: validate_with_action_t #base_t #len_t #pos_t p extra_state has_action use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  // TODO: add support for extracting compile-time comments in Pulse
+  v ctxt error_handler_fn sl_base sl_len sl_pos extra contents_sl v_sl
+}
+
+inline_for_extraction noextract
+fn validate_unit
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#[@@@erasable] extra_state: state_dict)
+      (#use_error_handler:bool)
+: validate_with_action_t #base_t #len_t #pos_t parse_unit extra_state false use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  validator_success
+}
+
+inline_for_extraction noextract
+fn validate_unit_refinement
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (f: unit -> bool)
+      (cf: string)
+      (#[@@@erasable] extra_state: state_dict)
+      (#use_error_handler:bool)
+: validate_with_action_t #base_t #len_t #pos_t (parse_filter parse_unit f) extra_state false use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  LowParse.Spec.Combinators.parse_filter_eq parse_unit f v_sl;
+  if (f ()) {
+    validator_success
+  } else {
+    validator_error_constraint_failed
+  }
+}
+
+#push-options "--z3rlimit 32"
+
+inline_for_extraction noextract
+fn validate_dep_pair
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (name1: string)
+      (#nz1:_)
+      (#k1:parser_kind nz1 WeakKindStrongPrefix)
+      (#t1:Type)
+      (#[@@@erasable] p1:parser k1 t1)
+      (#[@@@erasable] extra_state: state_dict)
+      (#has_action1:bool)
+      (#use_error_handler:bool)
+      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+      (r1: leaf_reader #base_t #len_t #pos_t p1)
+      (#nz2:_)
+      (#wk2: _)
+      (#k2:parser_kind nz2 wk2)
+      (#[@@@erasable] t2:t1 -> Type)
+      (#[@@@erasable] p2:(x:t1 -> parser k2 (t2 x)))
+      (#has_action2:bool)
+      (v2:(x:t1 -> validate_with_action_t #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+  : validate_with_action_t
+      #base_t #len_t #pos_t
+      (p1 `parse_dep_pair` p2)
+      extra_state
+      (has_action1 || has_action2)
+      use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  LowParse.Spec.Combinators.parse_dtuple2_eq p1 p2 v_sl;
+  let mut pos = 0sz;
+  let res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  if (res_key = validator_success) {
+    let val_key = r1 sl_base sl_len sl_pos _ _;
+    v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
+  } else {
+    res_key
+  }
+}
+
+inline_for_extraction noextract
+fn validate_dep_pair_with_action
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#nz1:_)
+      (#k1:parser_kind nz1 WeakKindStrongPrefix)
+      (#t1:Type)
+      (#[@@@erasable] p1:parser k1 t1)
+      (#[@@@erasable] extra_state: state_dict)
+      (#has_action1:bool)
+      (#use_error_handler:bool)
+      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+      (r1: leaf_reader #base_t #len_t #pos_t p1)
+      (a:t1 -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
+      (#nz2:_)
+      (#wk2: _)
+      (#k2:parser_kind nz2 wk2)
+      (#[@@@erasable] t2:t1 -> Type)
+      (#[@@@erasable] p2:(x:t1 -> parser k2 (t2 x)))
+      (#has_action2:bool)
+      (v2:(x:t1 -> validate_with_action_t #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+  : validate_with_action_t
+      #base_t #len_t #pos_t
+      (p1 `parse_dep_pair` p2)
+      extra_state
+      true
+      use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  LowParse.Spec.Combinators.parse_dtuple2_eq p1 p2 v_sl;
+  let mut pos = 0sz;
+  let res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  if (res_key = validator_success) {
+    let val_key = r1 sl_base sl_len sl_pos _ _;
+    let res_action = a val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _;
+    if (res_action) {
+      v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
+    } else {
+      validator_error_action_failed
+    }
+  } else {
+    res_key
+  }
+}
+
+inline_for_extraction noextract
+fn validate_dep_pair_with_refinement
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (p1_is_constant_size_without_actions: bool)
+      (name1: string)
+      (#nz1:_)
+      (#k1:parser_kind nz1 WeakKindStrongPrefix)
+      (#t1:Type)
+      (#[@@@erasable] p1:parser k1 t1)
+      (#[@@@erasable] extra_state: state_dict)
+      (#has_action1:bool)
+      (#use_error_handler:bool)
+      (v1:validate_with_action_no_read #base_t #len_t #pos_t p1 extra_state has_action1 use_error_handler)
+      (r1: leaf_reader #base_t #len_t #pos_t p1)
+      (f: t1 -> bool)
+      (#nz2:_)
+      (#wk2: _)
+      (#k2:parser_kind nz2 wk2)
+      (#[@@@erasable] t2:refine _ f -> Type)
+      (#[@@@erasable] p2:(x:refine _ f -> parser k2 (t2 x)))
+      (#has_action2:bool)
+      (v2:(x:refine _ f -> validate_with_action_t #base_t #len_t #pos_t (p2 x) extra_state has_action2 use_error_handler))
+  : validate_with_action_t
+      #base_t #len_t #pos_t
+      ((p1 `parse_filter` f) `parse_dep_pair` p2)
+      extra_state
+      (has_action1 || has_action2)
+      use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  LowParse.Spec.Combinators.parse_dtuple2_eq (parse_filter p1 f) p2 v_sl;
+  LowParse.Spec.Combinators.parse_filter_eq p1 f v_sl;
+  let mut pos = 0sz;
+  let res_key = v1 ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  if (res_key = validator_success) {
+    let val_key = r1 sl_base sl_len sl_pos _ _;
+    if (f val_key) {
+      v2 val_key ctxt error_handler_fn sl_base sl_len sl_pos _ _ _;
+    } else {
+      validator_error_constraint_failed
+    }
+  } else {
+    res_key
+  }
+}
+
+inline_for_extraction noextract
+fn validate_with_dep_action
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (name: string)
+      (#nz:_)
+      (#k:parser_kind nz WeakKindStrongPrefix)
+      (#t:Type)
+      (#[@@@erasable] p:parser k t)
+      (#[@@@erasable] extra_state: state_dict)
+      (#has_action:bool)
+      (#use_error_handler:bool)
+      (v:validate_with_action_no_read #base_t #len_t #pos_t p extra_state has_action use_error_handler)
+      (r:leaf_reader #base_t #len_t #pos_t p)
+      (a: t -> action #base_t #len_t #pos_t extra_state bool use_error_handler)
+  : validate_with_action_t #base_t #len_t #pos_t p extra_state true use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  let mut pos = 0sz;
+  let res = v ctxt error_handler_fn sl_base sl_len sl_pos pos _ _ _ _;
+  if (res = validator_success) {
+    let field_value = r sl_base sl_len sl_pos _ _;
+    let action_result = a field_value ctxt error_handler_fn sl_base sl_len sl_pos _ _;
+    if (action_result) {
+      validator_success
+    } else {
+      validator_error_action_failed
+    }
+  } else {
+    res
+  }
+}
+
+#pop-options
