@@ -199,7 +199,8 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
     stt_ghost unit emp_inames
     (requires (
        pts_to base_x len_x pos_x contents v **
-       is_prefix_of base_x len_x pos_x base_y len_y pos_y contents0 suffix
+       is_prefix_of base_x len_x pos_x base_y len_y pos_y contents0 suffix **
+       pure (contents0 == Seq.append contents suffix)
     ))
     (ensures (fun _ ->
        pts_to base_y len_y pos_y contents0 (Seq.append v suffix)

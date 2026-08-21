@@ -781,6 +781,23 @@ let seq_is_suffix_of_append
     (Seq.slice large (Seq.length large - Seq.length small) (Seq.length large))
     small
 
+(* The contents of the enclosing stream are recovered by appending the leftover
+   suffix to the contents of the truncated stream. This is the pure side
+   condition of [I.untruncate]. *)
+let seq_truncate_append
+  (contents v v1 v2 contents1: Seq.seq LP.byte)
+: Lemma
+  (requires (
+    v `I.seq_is_suffix_of` contents /\
+    Seq.equal contents1 (Seq.append (Seq.slice contents 0 (Seq.length contents - Seq.length v)) v1) /\
+    v == Seq.append v1 v2
+  ))
+  (ensures (contents == Seq.append contents1 v2))
+= let k = Seq.length contents - Seq.length v in
+  Seq.append_assoc (Seq.slice contents 0 k) v1 v2;
+  Seq.lemma_eq_elim contents (Seq.append (Seq.slice contents 0 k) v);
+  Seq.lemma_eq_elim contents (Seq.append contents1 v2)
+
 (* The bytes remaining in the enclosing stream, after the truncated prefix has
    been fully consumed, are exactly [Seq.slice v_sl (U32.v n) (Seq.length v_sl)]. *)
 let seq_append_empty_slice
@@ -842,6 +859,8 @@ let parse_list_consumes_all
    | _ -> True)
 = LP.parser_kind_prop_equiv (LPL.parse_list_kind k.LP.parser_kind_injective) (LPL.parse_list p)
 
+#push-options "--z3rlimit 32"
+
 noextract inline_for_extraction
 fn validate_nlist
   (#base_t #len_t #pos_t: Type0)
@@ -871,6 +890,7 @@ fn validate_nlist
   parse_fldata_eq (LPL.parse_list p) (U32.v n) v_sl;
   let n_sz = SZ.uint32_to_sizet n;
   let hasBytes = I.has sl_base sl_len sl_pos n_sz contents_sl v_sl;
+  I.pts_to_is_suffix_of sl_base sl_len sl_pos contents_sl v_sl;
   if (not hasBytes) {
     validator_error_not_enough_data
   } else {
@@ -879,6 +899,7 @@ fn validate_nlist
       I.pts_to tr._1 tr._2 tr._3 contents1 v1 **
       I.is_prefix_of tr._1 tr._2 tr._3 sl_base sl_len sl_pos contents_sl v2
     );
+    seq_truncate_append contents_sl v_sl v1 v2 contents1;
     parse_list_consumes_all p v1;
     seq_is_suffix_of_refl v1;
     let mut res = validator_success;
@@ -963,6 +984,7 @@ fn validate_t_at_most
   parse_fldata_eq (LowParse.Spec.Combinators.nondep_then p parse_all_bytes) (U32.v n) v_sl;
   let n_sz = SZ.uint32_to_sizet n;
   let hasBytes = I.has sl_base sl_len sl_pos n_sz contents_sl v_sl;
+  I.pts_to_is_suffix_of sl_base sl_len sl_pos contents_sl v_sl;
   if (not hasBytes) {
     validator_error_not_enough_data
   } else {
@@ -972,6 +994,7 @@ fn validate_t_at_most
       I.pts_to tr._1 tr._2 tr._3 contents1 v1 **
       I.is_prefix_of tr._1 tr._2 tr._3 sl_base sl_len sl_pos contents_sl v2
     );
+    seq_truncate_append contents_sl v_sl v1 v2 contents1;
     let res = v ctxt error_handler_fn tr._1 tr._2 tr._3 extra _ _;
     if (res = validator_success) {
       with v1'. assert (I.pts_to tr._1 tr._2 tr._3 contents1 v1');
@@ -1019,6 +1042,7 @@ fn validate_t_exact
   parse_fldata_eq p (U32.v n) v_sl;
   let n_sz = SZ.uint32_to_sizet n;
   let hasBytes = I.has sl_base sl_len sl_pos n_sz contents_sl v_sl;
+  I.pts_to_is_suffix_of sl_base sl_len sl_pos contents_sl v_sl;
   if (not hasBytes) {
     validator_error_not_enough_data
   } else {
@@ -1027,6 +1051,7 @@ fn validate_t_exact
       I.pts_to tr._1 tr._2 tr._3 contents1 v1 **
       I.is_prefix_of tr._1 tr._2 tr._3 sl_base sl_len sl_pos contents_sl v2
     );
+    seq_truncate_append contents_sl v_sl v1 v2 contents1;
     let res = v ctxt error_handler_fn tr._1 tr._2 tr._3 extra _ _;
     if (res = validator_success) {
       with v1'. assert (I.pts_to tr._1 tr._2 tr._3 contents1 v1');
@@ -1047,6 +1072,8 @@ fn validate_t_exact
     }
   }
 }
+
+#pop-options
 
 inline_for_extraction noextract
 fn read_filter
