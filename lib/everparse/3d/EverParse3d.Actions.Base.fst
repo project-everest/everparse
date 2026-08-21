@@ -723,6 +723,77 @@ fn validate_ite
   }
 }
 
+(* [FStar.SizeT.t] is at least as large as [FStar.UInt32.t]. This is
+   guaranteed by the `EVERPARSE_STATIC_ASSERT(sizeof(size_t) >= sizeof(uint32_t))`
+   emitted by the 3D frontend in the generated Wrapper file. *)
+assume val size_t_fits_u32 : squash SZ.fits_u32
+
+module FLD = LowParse.Spec.FLData
+
+(* Unfolding lemmas for the fixed-length-data-based combinators. Those
+   hold by computation, so they cost nothing. *)
+
+let parse_fldata_eq
+  (#k: LP.parser_kind) (#t: Type) (p: LP.parser k t) (sz: nat) (input: LP.bytes)
+: Lemma
+  (LP.parse (FLD.parse_fldata p sz) input == (
+    if Seq.length input < sz
+    then None
+    else match LP.parse p (Seq.slice input 0 sz) with
+    | Some (v, consumed) ->
+      if (consumed <: nat) = sz then Some (v, (sz <: LP.consumed_length input)) else None
+    | _ -> None
+  ))
+= ()
+
+let parse_t_exact_eq
+  (n: U32.t) (#nz: _) (#wk: _) (#k: parser_kind nz wk) (#t: Type) (p: parser k t) (input: LP.bytes)
+: Lemma
+  (LP.parse (parse_t_exact n p) input == LP.parse (FLD.parse_fldata p (U32.v n)) input)
+= ()
+
+let parse_t_at_most_eq
+  (n: U32.t) (#nz: _) (#wk: _) (#k: parser_kind nz wk) (#t: Type) (p: parser k t) (input: LP.bytes)
+: Lemma
+  (LP.parse (parse_t_at_most n p) input ==
+    LP.parse (FLD.parse_fldata (LowParse.Spec.Combinators.nondep_then p parse_all_bytes) (U32.v n)) input)
+= ()
+
+let parse_nlist_eq
+  (n: U32.t) (n_is_const: option nat { memoizes_n_as_const n_is_const n })
+  (#wk: _) (#k: parser_kind true wk) (#t: Type) (p: parser k t) (input: LP.bytes)
+: Lemma
+  (LP.parse (parse_nlist n n_is_const p) input ==
+    LP.parse (FLD.parse_fldata (LowParse.Spec.List.parse_list p) (U32.v n)) input)
+= ()
+
+(* [Seq.append v1' v2] is a suffix of [Seq.append v1 v2] whenever [v1'] is a
+   suffix of [v1]. This is what lets us relate the state of the truncated
+   stream, after validation, back to the state of the enclosing stream. *)
+let seq_is_suffix_of_append
+  (v1' v1 v2: Seq.seq LP.byte)
+: Lemma
+  (requires (v1' `I.seq_is_suffix_of` v1))
+  (ensures (Seq.append v1' v2 `I.seq_is_suffix_of` Seq.append v1 v2))
+= let large = Seq.append v1 v2 in
+  let small = Seq.append v1' v2 in
+  Seq.lemma_eq_elim
+    (Seq.slice large (Seq.length large - Seq.length small) (Seq.length large))
+    small
+
+(* The bytes remaining in the enclosing stream, after the truncated prefix has
+   been fully consumed, are exactly [Seq.slice v_sl (U32.v n) (Seq.length v_sl)]. *)
+let seq_append_empty_slice
+  (v_sl v1 v2: Seq.seq LP.byte) (n: nat)
+: Lemma
+  (requires (
+    n <= Seq.length v_sl /\
+    Seq.equal v1 (Seq.slice v_sl 0 n) /\
+    Seq.equal v2 (Seq.slice v_sl n (Seq.length v_sl))
+  ))
+  (ensures (Seq.equal (Seq.append Seq.empty v2) (Seq.slice v_sl n (Seq.length v_sl))))
+= ()
+
 noextract inline_for_extraction
 fn validate_nlist
   (#base_t #len_t #pos_t: Type0)
@@ -804,7 +875,37 @@ fn validate_t_exact
   (contents_sl: _)
   (v_sl: _)
 {
-  admit ()
+  parse_t_exact_eq n p v_sl;
+  parse_fldata_eq p (U32.v n) v_sl;
+  let n_sz = SZ.uint32_to_sizet n;
+  let hasBytes = I.has sl_base sl_len sl_pos n_sz contents_sl v_sl;
+  if (not hasBytes) {
+    validator_error_not_enough_data
+  } else {
+    let tr = I.truncate sl_base sl_len sl_pos n_sz contents_sl v_sl;
+    with contents1 v1 v2. assert (
+      I.pts_to tr._1 tr._2 tr._3 contents1 v1 **
+      I.is_prefix_of tr._1 tr._2 tr._3 sl_base sl_len sl_pos contents_sl v2
+    );
+    let res = v ctxt error_handler_fn tr._1 tr._2 tr._3 extra _ _;
+    if (res = validator_success) {
+      with v1'. assert (I.pts_to tr._1 tr._2 tr._3 contents1 v1');
+      let stillHasBytes = I.has tr._1 tr._2 tr._3 1sz contents1 v1';
+      seq_is_suffix_of_append v1' v1 v2;
+      I.untruncate tr._1 tr._2 tr._3 sl_base sl_len sl_pos contents1 v1' contents_sl v2;
+      if (stillHasBytes) {
+        validator_error_unexpected_padding
+      } else {
+        seq_append_empty_slice v_sl v1 v2 (U32.v n);
+        validator_success
+      }
+    } else {
+      with v1'. assert (I.pts_to tr._1 tr._2 tr._3 contents1 v1');
+      seq_is_suffix_of_append v1' v1 v2;
+      I.untruncate tr._1 tr._2 tr._3 sl_base sl_len sl_pos contents1 v1' contents_sl v2;
+      res
+    }
+  }
 }
 
 inline_for_extraction noextract

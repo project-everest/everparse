@@ -12,9 +12,28 @@ let seq_is_suffix_of (#t: Type) (small large: Seq.seq t) : Tot prop =
 
 noextract
 inline_for_extraction
-class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
-  
+class input_stream_pts_to (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
+
   pts_to: base_t -> len_t -> pos_t -> Seq.seq U8.t -> Seq.seq U8.t -> slprop;
+
+  is_prefix_of:
+    (base_x: base_t) ->
+    (len_x: len_t) ->
+    (pos_x: pos_t) ->
+    (base_y: base_t) ->
+    (len_y: len_t) ->
+    (pos_y: pos_t) ->
+    (contents: Seq.seq U8.t) ->
+    (suffix: Seq.seq U8.t) ->
+    Tot slprop;
+}
+
+noextract
+inline_for_extraction
+class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
+
+  [@@@FStar.Tactics.Typeclasses.no_method]
+  pts_to_inst: input_stream_pts_to base_t len_t pos_t;
 
   pts_to_is_suffix_of:
     (base: base_t) ->
@@ -119,17 +138,6 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
       SZ.v res == Seq.length v
     )));
 
-  is_prefix_of:
-    (base_x: base_t) ->
-    (len_x: len_t) ->
-    (pos_x: pos_t) ->
-    (base_y: base_t) ->
-    (len_y: len_t) ->
-    (pos_y: pos_t) ->
-    (contents: Seq.seq U8.t) ->
-    (suffix: Seq.seq U8.t) ->
-    Tot slprop;
-
   truncate:
     (base: base_t) ->
     (len: len_t) ->
@@ -174,3 +182,11 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
        pts_to base_y len_y pos_y contents0 (Seq.append v suffix)
     ));
 }
+
+noextract
+inline_for_extraction
+instance input_stream_pts_to_of_inst
+  (#base_t: Type0) (#len_t: Type0) (#pos_t: Type0)
+  {| inst: input_stream_inst base_t len_t pos_t |}
+: Tot (input_stream_pts_to base_t len_t pos_t)
+= inst.pts_to_inst
