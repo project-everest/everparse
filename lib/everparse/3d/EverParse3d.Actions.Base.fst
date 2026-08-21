@@ -1712,3 +1712,243 @@ fn validate_with_dep_action
 }
 
 #pop-options
+
+////////////////////////////////////////////////////////////////////////////////
+// Group A combinators: leaf validators and readers
+////////////////////////////////////////////////////////////////////////////////
+
+module LPP = LowParse.PulseParse.Base
+
+inline_for_extraction noextract
+fn validate_total_constant_size_no_read
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#nz:bool)
+      (#wk: _)
+      (#k:parser_kind nz wk)
+      (#[@@@erasable] t:Type)
+      ([@@@erasable] p:parser k t)
+      (sz: SZ.t)
+      ([@@@erasable] u: squash (
+        k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
+        k.LP.parser_kind_low == SZ.v sz /\
+        k.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal
+      ))
+      (#[@@@erasable] extra_state: state_dict)
+      (#use_error_handler:bool)
+: validate_with_action_no_read #base_t #len_t #pos_t p extra_state false use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+  (v_pos: _)
+{
+  LP.parser_kind_prop_equiv k p;
+  let p0 = !pos;
+  let hasBytes = I.has_at sl_base sl_len sl_pos p0 sz contents_sl v_sl;
+  if (hasBytes) {
+    pos := SZ.add p0 sz;
+    validator_success
+  } else {
+    validator_error_not_enough_data
+  }
+}
+
+inline_for_extraction noextract
+fn lift_reader
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#nz:bool)
+      (#k:parser_kind nz WeakKindStrongPrefix)
+      (#[@@@erasable] t:Type0)
+      ([@@@erasable] p:parser k t)
+      (r: P.reader p)
+      (sz: SZ.t)
+      ([@@@erasable] u: squash (
+        k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
+        k.LP.parser_kind_low == SZ.v sz
+      ))
+: leaf_reader #base_t #len_t #pos_t p
+=
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  LP.parser_kind_prop_equiv k p;
+  I.read t k p (LPP.leaf_reader_of_reader r) sl_base sl_len sl_pos sz contents_sl v_sl
+}
+
+inline_for_extraction noextract
+fn validate____UINT8
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[@@@erasable] extra_state: state_dict)
+  (#use_error_handler:bool)
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT8 extra_state false use_error_handler
+= validate_total_constant_size_no_read parse____UINT8 1sz ()
+
+inline_for_extraction noextract
+fn read____UINT8
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+: leaf_reader #base_t #len_t #pos_t parse____UINT8
+= lift_reader parse____UINT8 P.read____UINT8 1sz ()
+
+inline_for_extraction noextract
+fn validate____UINT8BE
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[@@@erasable] extra_state: state_dict)
+  (#use_error_handler:bool)
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT8BE extra_state false use_error_handler
+= validate_total_constant_size_no_read parse____UINT8BE 1sz ()
+
+inline_for_extraction noextract
+fn read____UINT8BE
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+: leaf_reader #base_t #len_t #pos_t parse____UINT8BE
+= lift_reader parse____UINT8BE P.read____UINT8BE 1sz ()
+
+inline_for_extraction noextract
+fn validate____UINT16BE
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[@@@erasable] extra_state: state_dict)
+  (#use_error_handler:bool)
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT16BE extra_state false use_error_handler
+= validate_total_constant_size_no_read parse____UINT16BE 2sz ()
+
+inline_for_extraction noextract
+fn read____UINT16BE
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+: leaf_reader #base_t #len_t #pos_t parse____UINT16BE
+= lift_reader parse____UINT16BE P.read____UINT16BE 2sz ()
+
+inline_for_extraction noextract
+fn validate____UINT32BE
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[@@@erasable] extra_state: state_dict)
+  (#use_error_handler:bool)
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT32BE extra_state false use_error_handler
+= validate_total_constant_size_no_read parse____UINT32BE 4sz ()
+
+inline_for_extraction noextract
+fn read____UINT32BE
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+: leaf_reader #base_t #len_t #pos_t parse____UINT32BE
+= lift_reader parse____UINT32BE P.read____UINT32BE 4sz ()
+
+inline_for_extraction noextract
+fn validate____UINT64BE
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[@@@erasable] extra_state: state_dict)
+  (#use_error_handler:bool)
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT64BE extra_state false use_error_handler
+= validate_total_constant_size_no_read parse____UINT64BE 8sz ()
+
+inline_for_extraction noextract
+fn read____UINT64BE
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+: leaf_reader #base_t #len_t #pos_t parse____UINT64BE
+= lift_reader parse____UINT64BE P.read____UINT64BE 8sz ()
+
+inline_for_extraction noextract
+fn validate____UINT16
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[@@@erasable] extra_state: state_dict)
+  (#use_error_handler:bool)
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT16 extra_state false use_error_handler
+= validate_total_constant_size_no_read parse____UINT16 2sz ()
+
+inline_for_extraction noextract
+fn read____UINT16
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+: leaf_reader #base_t #len_t #pos_t parse____UINT16
+= lift_reader parse____UINT16 P.read____UINT16 2sz ()
+
+inline_for_extraction noextract
+fn validate____UINT32
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[@@@erasable] extra_state: state_dict)
+  (#use_error_handler:bool)
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT32 extra_state false use_error_handler
+= validate_total_constant_size_no_read parse____UINT32 4sz ()
+
+inline_for_extraction noextract
+fn read____UINT32
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+: leaf_reader #base_t #len_t #pos_t parse____UINT32
+= lift_reader parse____UINT32 P.read____UINT32 4sz ()
+
+inline_for_extraction noextract
+fn validate____UINT64
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[@@@erasable] extra_state: state_dict)
+  (#use_error_handler:bool)
+: validate_with_action_no_read #base_t #len_t #pos_t parse____UINT64 extra_state false use_error_handler
+= validate_total_constant_size_no_read parse____UINT64 8sz ()
+
+inline_for_extraction noextract
+fn read____UINT64
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+: leaf_reader #base_t #len_t #pos_t parse____UINT64
+= lift_reader parse____UINT64 P.read____UINT64 8sz ()
+
+inline_for_extraction noextract
+fn read_unit
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+: leaf_reader #base_t #len_t #pos_t (parse_ret ())
+=
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  Seq.lemma_eq_elim (Seq.slice (Ghost.reveal v_sl) 0 (Seq.length v_sl)) (Ghost.reveal v_sl);
+  ()
+}
+
+inline_for_extraction noextract
+fn validate_all_bytes
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[@@@erasable] extra_state: state_dict)
+  (#use_error_handler:bool)
+: validate_with_action_t #base_t #len_t #pos_t parse_all_bytes extra_state false use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  let ignored = I.empty sl_base sl_len sl_pos contents_sl v_sl;
+  seq_empty_is_suffix_of v_sl;
+  Seq.lemma_eq_elim (Seq.slice (Ghost.reveal v_sl) (Seq.length v_sl) (Seq.length v_sl)) (Seq.empty #LP.byte);
+  validator_success
+}

@@ -78,6 +78,29 @@ class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
       pure (res == true <==> SZ.v n <= Seq.length v)
     ));
   
+  (* [has_at base len pos off n] tests whether [n] bytes are available
+     starting [off] bytes after the current position, without consuming
+     anything. This is what the "no read" (non-consuming) validators need,
+     since they track their position in a separate [SZ.t] reference. *)
+  has_at:
+    (base: base_t) ->
+    (len: len_t) ->
+    (pos: pos_t) ->
+    (off: SZ.t) ->
+    (n: SZ.t) ->
+    (contents: Ghost.erased (Seq.seq U8.t)) ->
+    (v: Ghost.erased (Seq.seq U8.t)) ->
+    stt bool
+    (requires (
+      pts_to base len pos contents v ** pure (
+      SZ.v off <= Seq.length v
+    )))
+    (ensures (fun res ->
+      pts_to base len pos contents v ** pure (
+      (res == true <==> SZ.v off + SZ.v n <= Seq.length v) /\
+      (res == true ==> SZ.fits (SZ.v off + SZ.v n))
+    )));
+
   read:
     (t': Type0) ->
     (k: LP.parser_kind) ->
