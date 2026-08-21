@@ -794,6 +794,54 @@ let seq_append_empty_slice
   (ensures (Seq.equal (Seq.append Seq.empty v2) (Seq.slice v_sl n (Seq.length v_sl))))
 = ()
 
+(* [Seq.empty] is a suffix of any sequence. *)
+let seq_empty_is_suffix_of
+  (v: Seq.seq LP.byte)
+: Lemma
+  (Seq.empty #LP.byte `I.seq_is_suffix_of` v)
+= Seq.lemma_eq_elim (Seq.slice v (Seq.length v) (Seq.length v)) (Seq.empty #LP.byte)
+
+(* [I.seq_is_suffix_of] is reflexive and transitive. *)
+let seq_is_suffix_of_refl
+  (v: Seq.seq LP.byte)
+: Lemma
+  (v `I.seq_is_suffix_of` v)
+= Seq.lemma_eq_elim (Seq.slice v 0 (Seq.length v)) v
+
+let seq_is_suffix_of_trans
+  (v1 v2 v3: Seq.seq LP.byte)
+: Lemma
+  (requires (v1 `I.seq_is_suffix_of` v2 /\ v2 `I.seq_is_suffix_of` v3))
+  (ensures (v1 `I.seq_is_suffix_of` v3))
+= Seq.lemma_eq_elim
+    (Seq.slice v3 (Seq.length v3 - Seq.length v1) (Seq.length v3))
+    v1
+
+(* Same as [seq_append_empty_slice], but for an arbitrary empty sequence. *)
+let seq_append_nil_slice
+  (v_sl v1 v2 vcur: Seq.seq LP.byte) (n: nat)
+: Lemma
+  (requires (
+    n <= Seq.length v_sl /\
+    Seq.equal v1 (Seq.slice v_sl 0 n) /\
+    Seq.equal v2 (Seq.slice v_sl n (Seq.length v_sl)) /\
+    Seq.length vcur == 0
+  ))
+  (ensures (Seq.equal (Seq.append vcur v2) (Seq.slice v_sl n (Seq.length v_sl))))
+= ()
+
+module LPL = LowParse.Spec.List
+
+(* [LPL.parse_list] has the [ParserConsumesAll] subkind, so whenever it
+   succeeds, it consumes the whole input. *)
+let parse_list_consumes_all
+  (#wk: _) (#k: parser_kind true wk) (#t: Type) (p: parser k t) (b: LP.bytes)
+: Lemma
+  (match LP.parse (LPL.parse_list p) b with
+   | Some (_, consumed) -> (consumed <: nat) == Seq.length b
+   | _ -> True)
+= LP.parser_kind_prop_equiv (LPL.parse_list_kind k.LP.parser_kind_injective) (LPL.parse_list p)
+
 noextract inline_for_extraction
 fn validate_nlist
   (#base_t #len_t #pos_t: Type0)
@@ -819,7 +867,71 @@ fn validate_nlist
   (contents_sl: _)
   (v_sl: _)
 {
-  admit ()
+  parse_nlist_eq n n_is_const p v_sl;
+  parse_fldata_eq (LPL.parse_list p) (U32.v n) v_sl;
+  let n_sz = SZ.uint32_to_sizet n;
+  let hasBytes = I.has sl_base sl_len sl_pos n_sz contents_sl v_sl;
+  if (not hasBytes) {
+    validator_error_not_enough_data
+  } else {
+    let tr = I.truncate sl_base sl_len sl_pos n_sz contents_sl v_sl;
+    with contents1 v1 v2. assert (
+      I.pts_to tr._1 tr._2 tr._3 contents1 v1 **
+      I.is_prefix_of tr._1 tr._2 tr._3 sl_base sl_len sl_pos contents_sl v2
+    );
+    parse_list_consumes_all p v1;
+    seq_is_suffix_of_refl v1;
+    let mut res = validator_success;
+    let mut stop = false;
+    while (not !stop)
+    invariant exists* vres vstop vcur v_ctxt' extra' .
+      pts_to res vres **
+      pts_to stop vstop **
+      pts_to ctxt v_ctxt' **
+      I.pts_to tr._1 tr._2 tr._3 contents1 vcur **
+      forevery_state extra_state extra' **
+      pure (
+        vcur `I.seq_is_suffix_of` v1 /\
+        (vres == validator_error_action_failed ==> ha) /\
+        (not ha ==> extra' == extra) /\
+        (U8.v vres > U8.v validator_error_action_failed ==> None? (LP.parse (LPL.parse_list p) v1)) /\
+        (vres =!= validator_success ==> vstop == true) /\
+        (vres == validator_success ==>
+          (Some? (LP.parse (LPL.parse_list p) v1) <==> Some? (LP.parse (LPL.parse_list p) vcur))) /\
+        (vres == validator_success /\ vstop == true ==> Seq.length vcur == 0)
+      )
+    {
+      with vcur. assert (I.pts_to tr._1 tr._2 tr._3 contents1 vcur);
+      with extra'. assert (forevery_state extra_state extra');
+      let hasMore = I.has tr._1 tr._2 tr._3 1sz contents1 vcur;
+      if (not hasMore) {
+        stop := true;
+      } else {
+        LPL.parse_list_eq' p vcur;
+        let r = v ctxt error_handler_fn tr._1 tr._2 tr._3 extra' contents1 vcur;
+        with vcur'. assert (I.pts_to tr._1 tr._2 tr._3 contents1 vcur');
+        seq_is_suffix_of_trans vcur' vcur v1;
+        if (r = validator_success) {
+          ()
+        } else {
+          res := r;
+          stop := true;
+        }
+      }
+    };
+    let fres = !res;
+    with vcur. assert (I.pts_to tr._1 tr._2 tr._3 contents1 vcur);
+    LPL.parse_list_eq p vcur;
+    Seq.lemma_eq_elim v1 (Seq.slice v_sl 0 (U32.v n));
+    seq_is_suffix_of_append vcur v1 v2;
+    I.untruncate tr._1 tr._2 tr._3 sl_base sl_len sl_pos contents1 vcur contents_sl v2;
+    if (fres = validator_success) {
+      seq_append_nil_slice v_sl v1 v2 vcur (U32.v n);
+      fres
+    } else {
+      fres
+    }
+  }
 }
 
 noextract inline_for_extraction
@@ -847,7 +959,35 @@ fn validate_t_at_most
   (contents_sl: _)
   (v_sl: _)
 {
-  admit ()
+  parse_t_at_most_eq n p v_sl;
+  parse_fldata_eq (LowParse.Spec.Combinators.nondep_then p parse_all_bytes) (U32.v n) v_sl;
+  let n_sz = SZ.uint32_to_sizet n;
+  let hasBytes = I.has sl_base sl_len sl_pos n_sz contents_sl v_sl;
+  if (not hasBytes) {
+    validator_error_not_enough_data
+  } else {
+    LowParse.Spec.Combinators.nondep_then_eq p parse_all_bytes (Seq.slice v_sl 0 (U32.v n));
+    let tr = I.truncate sl_base sl_len sl_pos n_sz contents_sl v_sl;
+    with contents1 v1 v2. assert (
+      I.pts_to tr._1 tr._2 tr._3 contents1 v1 **
+      I.is_prefix_of tr._1 tr._2 tr._3 sl_base sl_len sl_pos contents_sl v2
+    );
+    let res = v ctxt error_handler_fn tr._1 tr._2 tr._3 extra _ _;
+    if (res = validator_success) {
+      with v1'. assert (I.pts_to tr._1 tr._2 tr._3 contents1 v1');
+      let unused = I.empty tr._1 tr._2 tr._3 contents1 v1';
+      seq_empty_is_suffix_of v1;
+      seq_is_suffix_of_append (Seq.empty #LP.byte) v1 v2;
+      I.untruncate tr._1 tr._2 tr._3 sl_base sl_len sl_pos contents1 (Seq.empty #LP.byte) contents_sl v2;
+      seq_append_empty_slice v_sl v1 v2 (U32.v n);
+      validator_success
+    } else {
+      with v1'. assert (I.pts_to tr._1 tr._2 tr._3 contents1 v1');
+      seq_is_suffix_of_append v1' v1 v2;
+      I.untruncate tr._1 tr._2 tr._3 sl_base sl_len sl_pos contents1 v1' contents_sl v2;
+      res
+    }
+  }
 }
 
 noextract inline_for_extraction
