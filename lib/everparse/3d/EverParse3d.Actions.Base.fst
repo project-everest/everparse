@@ -2160,3 +2160,232 @@ fn action_field_ptr_after
   forevery_state_dict_singleton_fold name (pts_to write_to #1.0R) _;
   res
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Lists that consume all the remaining input
+////////////////////////////////////////////////////////////////////////////////
+
+inline_for_extraction noextract
+fn validate_list
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#wk: _)
+      (#k:parser_kind true wk)
+      (#[@@@erasable] t:Type)
+      (#[@@@erasable] p:parser k t)
+      (#[@@@erasable] extra_state: state_dict)
+      (#ha:bool)
+      (#use_error_handler:bool)
+      (v: validate_with_action_t #base_t #len_t #pos_t p extra_state ha use_error_handler)
+: validate_with_action_t
+    #base_t #len_t #pos_t
+    #false #WeakKindConsumesAll
+    #(LPL.parse_list_kind k.LP.parser_kind_injective)
+    (LPL.parse_list p) extra_state ha use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  parse_list_consumes_all p v_sl;
+  seq_is_suffix_of_refl (Ghost.reveal v_sl);
+  let mut res = validator_success;
+  let mut stop = false;
+  while (not !stop)
+  invariant exists* vres vstop vcur v_ctxt' extra' .
+    pts_to res vres **
+    pts_to stop vstop **
+    pts_to ctxt v_ctxt' **
+    I.pts_to sl_base sl_len sl_pos contents_sl vcur **
+    forevery_state extra_state extra' **
+    pure (
+      vcur `I.seq_is_suffix_of` v_sl /\
+      (vres == validator_error_action_failed ==> ha) /\
+      (not ha ==> extra' == extra) /\
+      (U8.v vres > U8.v validator_error_action_failed ==> None? (LP.parse (LPL.parse_list p) v_sl)) /\
+      (vres =!= validator_success ==> vstop == true) /\
+      (vres == validator_success ==>
+        (Some? (LP.parse (LPL.parse_list p) v_sl) <==> Some? (LP.parse (LPL.parse_list p) vcur))) /\
+      (vres == validator_success /\ vstop == true ==> Seq.length vcur == 0)
+    )
+  {
+    with vcur. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur);
+    with extra'. assert (forevery_state extra_state extra');
+    let hasMore = I.has sl_base sl_len sl_pos 1sz contents_sl vcur;
+    if (not hasMore) {
+      stop := true;
+    } else {
+      LPL.parse_list_eq' p vcur;
+      let r = v ctxt error_handler_fn sl_base sl_len sl_pos extra' contents_sl vcur;
+      with vcur'. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur');
+      seq_is_suffix_of_trans vcur' vcur v_sl;
+      if (r = validator_success) {
+        ()
+      } else {
+        res := r;
+        stop := true;
+      }
+    }
+  };
+  let fres = !res;
+  with vcur. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur);
+  LPL.parse_list_eq p vcur;
+  Seq.lemma_eq_elim vcur (Seq.slice (Ghost.reveal v_sl) (Seq.length v_sl) (Seq.length v_sl));
+  fres
+}
+
+inline_for_extraction noextract
+fn validate_all_zeros
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  (#[@@@erasable] extra_state: state_dict)
+  (#use_error_handler:bool)
+: validate_with_action_t #base_t #len_t #pos_t parse_all_zeros extra_state false use_error_handler
+= validate_list
+    (validate_filter "parse_zeros" validate____UINT8 read____UINT8 is_zero "check if zero" "")
+
+////////////////////////////////////////////////////////////////////////////////
+// Lists up to a terminator (strings)
+////////////////////////////////////////////////////////////////////////////////
+
+module LUT = LowParse.Spec.ListUpTo
+
+(* While the loop has not reached the terminator yet, the amount of input
+   consumed so far is exactly [Seq.length v_sl - Seq.length vcur]. *)
+let list_up_to_ongoing
+  (#k: LP.parser_kind) (#t: Type) (q: LP.parser k t) (v_sl vcur: Seq.seq LP.byte)
+: Tot prop
+= (Some? (LP.parse q v_sl) <==> Some? (LP.parse q vcur)) /\
+  (Some? (LP.parse q v_sl) ==>
+    snd (Some?.v (LP.parse q v_sl)) ==
+      (Seq.length v_sl - Seq.length vcur) + snd (Some?.v (LP.parse q vcur)))
+
+let list_up_to_done
+  (#k: LP.parser_kind) (#t: Type) (q: LP.parser k t) (v_sl vcur: Seq.seq LP.byte)
+: Tot prop
+= Some? (LP.parse q v_sl) /\
+  snd (Some?.v (LP.parse q v_sl)) == Seq.length v_sl - Seq.length vcur
+
+inline_for_extraction noextract
+fn validate_list_up_to
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#k: parser_kind true WeakKindStrongPrefix)
+      (#t: eqtype)
+      (#[@@@erasable] p: parser k t)
+      (#[@@@erasable] extra_state: state_dict)
+      (#ha:bool)
+      (#use_error_handler:bool)
+      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
+      (r: leaf_reader #base_t #len_t #pos_t p)
+      (terminator: t)
+      ([@@@erasable] prf: LUT.consumes_if_not_cond (cond_string_up_to terminator) p)
+: validate_with_action_t
+    #base_t #len_t #pos_t
+    #true #WeakKindStrongPrefix
+    #(LUT.parse_list_up_to_kind k)
+    (LUT.parse_list_up_to (cond_string_up_to terminator) p prf)
+    extra_state ha use_error_handler
+=
+  (ctxt: _)
+  (error_handler_fn: _)
+  (sl_base: _)
+  (sl_len: _)
+  (sl_pos: _)
+  (extra: _)
+  (contents_sl: _)
+  (v_sl: _)
+{
+  seq_is_suffix_of_refl (Ghost.reveal v_sl);
+  let mut res = validator_success;
+  let mut stop = false;
+  let mut pos = 0sz;
+  while (not !stop)
+  invariant exists* vres vstop vpos vcur v_ctxt' extra' .
+    pts_to res vres **
+    pts_to stop vstop **
+    pts_to pos vpos **
+    pts_to ctxt v_ctxt' **
+    I.pts_to sl_base sl_len sl_pos contents_sl vcur **
+    forevery_state extra_state extra' **
+    pure (
+      vcur `I.seq_is_suffix_of` v_sl /\
+      (vres == validator_error_action_failed ==> ha) /\
+      (not ha ==> extra' == extra) /\
+      (U8.v vres > U8.v validator_error_action_failed ==>
+        None? (LP.parse (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) v_sl)) /\
+      (vres =!= validator_success ==> vstop == true) /\
+      (vres == validator_success ==>
+        (if vstop
+         then list_up_to_done (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) v_sl vcur
+         else list_up_to_ongoing (LUT.parse_list_up_to (cond_string_up_to terminator) p prf) v_sl vcur))
+    )
+  {
+    with vcur. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur);
+    with extra'. assert (forevery_state extra_state extra');
+    LUT.parse_list_up_to_eq (cond_string_up_to terminator) p prf vcur;
+    pos := 0sz;
+    let r0 = v ctxt error_handler_fn sl_base sl_len sl_pos pos extra' contents_sl vcur 0sz;
+    if (r0 = validator_success) {
+      let x = r sl_base sl_len sl_pos contents_sl vcur;
+      with vcur'. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur');
+      seq_slice_is_suffix_of vcur (Seq.length vcur - Seq.length vcur');
+      seq_is_suffix_of_trans vcur' vcur v_sl;
+      if (x = terminator) {
+        stop := true;
+      } else {
+        ()
+      }
+    } else {
+      res := r0;
+      stop := true;
+    }
+  };
+  let fres = !res;
+  with vcur. assert (I.pts_to sl_base sl_len sl_pos contents_sl vcur);
+  Seq.lemma_eq_elim vcur (Seq.slice (Ghost.reveal v_sl) (Seq.length v_sl - Seq.length vcur) (Seq.length v_sl));
+  fres
+}
+
+inline_for_extraction noextract
+fn validate_string
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (#k: parser_kind true WeakKindStrongPrefix)
+      (#t: eqtype)
+      (#[@@@erasable] p: parser k t)
+      (#[@@@erasable] extra_state: state_dict)
+      (#ha:bool)
+      (#use_error_handler:bool)
+      (v: validate_with_action_no_read #base_t #len_t #pos_t p extra_state ha use_error_handler)
+      (r: leaf_reader #base_t #len_t #pos_t p)
+      (terminator: t)
+: validate_with_action_t #base_t #len_t #pos_t (parse_string p terminator) extra_state ha use_error_handler
+= validate_weaken (validate_list_up_to v r terminator (fun _ _ _ -> ())) parse_string_kind
+
+(* In Low*, when the payload has a total constant size, this combinator picks a
+   specialized validator that merely checks that enough bytes are available,
+   instead of iterating over the elements. This is only an optimization; here we
+   always take the general path for now.
+   TODO: port validate_nlist_total_constant_size{,_mod_ok,_mod_ko}. *)
+inline_for_extraction noextract
+fn validate_nlist_constant_size_without_actions
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+      (n:U32.t)
+      (n_is_const:option nat { memoizes_n_as_const n_is_const n})
+      (payload_is_constant_size: bool)
+      (#wk: _)
+      (#k:parser_kind true wk)
+      (#[@@@erasable] t:Type)
+      (#[@@@erasable] p:parser k t)
+      (#[@@@erasable] extra_state: state_dict)
+      (#use_error_handler:bool)
+      (v: validate_with_action_t #base_t #len_t #pos_t p extra_state false use_error_handler)
+: validate_with_action_t #base_t #len_t #pos_t (parse_nlist n n_is_const p) extra_state false use_error_handler
+= validate_nlist n n_is_const v
