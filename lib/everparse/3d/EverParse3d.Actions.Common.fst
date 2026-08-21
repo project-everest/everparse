@@ -11,23 +11,25 @@ module SZ = FStar.SizeT
 let app_ctxt = AppCtxt.app_ctxt
 
 let error_handler
-    {| inst: I.input_stream_inst 'input_buffer_t  |}
+    {| inst: I.input_stream_inst 'base_t 'len_t 'pos_t  |}
 = 
     typename:string ->
     fieldname:string ->
     error_reason:string ->
     error_code:U8.t ->
     ctxt: app_ctxt ->
-    sl: 'input_buffer_t ->
+    sl_base: 'base_t ->
+    sl_len: 'len_t ->
+    sl_pos: 'pos_t ->
     contents_sl: Ghost.erased (Seq.seq U8.t) ->
     v_sl: Ghost.erased (Seq.seq U8.t) ->
     stt unit
       (requires exists* v_ctxt .
-        I.pts_to sl contents_sl v_sl **
+        I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
 	pts_to ctxt v_ctxt
       )
       (ensures fun _ -> exists* v_ctxt' .
-	I.pts_to sl contents_sl v_sl **
+	I.pts_to sl_base sl_len sl_pos contents_sl v_sl **
 	pts_to ctxt v_ctxt'
       )
 

@@ -7,13 +7,20 @@ module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 open Pulse.Lib.Pervasives
 
-class copy_buffer (copy_buffer_t: Type0) (input_buffer_t: Type0) {| I.input_stream_inst input_buffer_t |} = {
-  stream_of : copy_buffer_t -> input_buffer_t;
+class copy_buffer (copy_buffer_t: Type0) (base_t: Type0) (len_t: Type0) (pos_t: Type0) {| I.input_stream_inst base_t len_t pos_t |} = {
+  base_of : copy_buffer_t -> base_t;
+  len_of : copy_buffer_t -> len_t;
+  pos_of : copy_buffer_t -> pos_t;
 }
 
 let pts_to
-  (#copy_buffer_t #input_buffer_t: Type0)
-  {| I.input_stream_inst input_buffer_t |}
-  {| copy_buffer copy_buffer_t input_buffer_t |}
+  (#copy_buffer_t: Type0)
+  (#base_t #len_t #pos_t: Type0)
+  {| I.input_stream_inst base_t len_t pos_t |}
+  {| copy_buffer copy_buffer_t base_t len_t pos_t |}
   (c: copy_buffer_t) (contents: Seq.seq U8.t) (v: Seq.seq U8.t) : Tot slprop =
-  I.pts_to #input_buffer_t (stream_of c) contents v
+  I.pts_to #base_t #len_t #pos_t
+    (base_of #_ #base_t #len_t #pos_t c)
+    (len_of #_ #base_t #len_t #pos_t c)
+    (pos_of #_ #base_t #len_t #pos_t c)
+    contents v

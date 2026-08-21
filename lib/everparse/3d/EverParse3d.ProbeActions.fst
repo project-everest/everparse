@@ -3,9 +3,9 @@ module EverParse3d.ProbeActions
 
 let probe_fn_incremental
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
 = 
   bytes_to_read:U64.t ->
   read_offset:U64.t ->
@@ -15,9 +15,9 @@ let probe_fn_incremental
   contents_dest: Ghost.erased (Seq.seq U8.t) ->
   v_dest: Ghost.erased (Seq.seq U8.t) ->
   stt bool
-    (CB.pts_to #_ #input_buffer_t dest contents_dest v_dest)
+    (CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest v_dest)
     (fun b -> exists* contents_dest' v_dest' .
-      CB.pts_to #_ #input_buffer_t dest contents_dest v_dest **
+      CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest v_dest **
       pure
       (if b
        then (
@@ -34,27 +34,27 @@ inline_for_extraction
 noextract
 let init_probe_dest_t
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
 =
   struct_name:string ->
   sz:U64.t ->
   dest:copy_buffer_t ->
   stt bool
     (exists* contents_dest v_dest .
-      CB.pts_to #_ #input_buffer_t dest contents_dest v_dest
+      CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest v_dest
     )
     (fun b -> exists* contents_dest' .
-      CB.pts_to #_ #input_buffer_t dest contents_dest' contents_dest'
+      CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest' contents_dest'
     )
 
 inline_for_extraction
 let write_at_offset_t
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
 (t:Type0) (n:U64.t) =
   v:t ->
   write_offset:U64.t ->
@@ -62,9 +62,9 @@ let write_at_offset_t
   contents_dest: Ghost.erased (Seq.seq U8.t) ->
   v_dest: Ghost.erased (Seq.seq U8.t) ->
   stt bool
-    (CB.pts_to #_ #input_buffer_t dest contents_dest v_dest)
+    (CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest v_dest)
     (fun b -> exists* contents_dest' v_dest' .
-      CB.pts_to #_ #input_buffer_t dest contents_dest v_dest **
+      CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest v_dest **
       pure
       (if b
        then (
@@ -83,9 +83,9 @@ inline_for_extraction
 noextract
 let probe_and_read_at_offset_t
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
   (t:Type0) (size_t:U64.t) =
   failed:ref bool ->
   read_offset:U64.t ->
@@ -94,11 +94,11 @@ let probe_and_read_at_offset_t
   stt t
     (exists* contents_dest v_dest .
       pts_to failed false **
-      CB.pts_to #_ #input_buffer_t dest contents_dest v_dest
+      CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest v_dest
     )
     (fun _ -> exists* has_failed contents_dest' v_dest' .
       pts_to failed has_failed **
-      CB.pts_to #_ #input_buffer_t dest contents_dest' v_dest' **
+      CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest' v_dest' **
       pure (
         not has_failed ==> U64.fits (U64.v read_offset + U64.v size_t)
       ))
@@ -138,15 +138,15 @@ let probe_m_post
 inline_for_extraction
 let probe_m
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
   a (requires_unread_dest:bool) (expect_zero_offsets:bool) (use_error_handler:bool) =
   typename:string ->
   fieldname:string ->
   fielddetail:string ->
   ctxt: app_ctxt ->
-  error_handler_fn : (if use_error_handler then error_handler #_ #inst else unit) ->
+  error_handler_fn : (if use_error_handler then error_handler #_ #_ #_ #inst else unit) ->
   read_offset:ref U64.t ->
   write_offset:ref U64.t ->
   failed:ref bool ->
@@ -161,7 +161,7 @@ let probe_m
       pts_to failed v_failed **
       pts_to read_offset v_read_offset **
       pts_to write_offset v_write_offset **
-      CB.pts_to #_ #input_buffer_t #_ #cb_inst dest contents_dest v_dest **
+      CB.pts_to #_ #base_t #len_t #pos_t #_ #cb_inst dest contents_dest v_dest **
       pure
     (probe_m_pre
       requires_unread_dest expect_zero_offsets v_read_offset v_write_offset v_failed contents_dest v_dest)
@@ -171,7 +171,7 @@ let probe_m
       pts_to failed v_failed' **
       pts_to read_offset v_read_offset' **
       pts_to write_offset v_write_offset' **
-      CB.pts_to #_ #input_buffer_t #_ #cb_inst dest contents_dest' v_dest' **
+      CB.pts_to #_ #base_t #len_t #pos_t #_ #cb_inst dest contents_dest' v_dest' **
       pure
     (probe_m_post
       v_read_offset v_read_offset' v_write_offset v_write_offset' contents_dest' v_dest')
@@ -188,21 +188,21 @@ inline_for_extraction
 noextract
 fn handle_probe_error
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
       (#use_error_handler:bool)
-      (err : (if use_error_handler then error_handler #input_buffer_t else unit))
+      (err : (if use_error_handler then error_handler #base_t #len_t #pos_t else unit))
       (tn fn_ det:string)
       (ctxt:app_ctxt)
       (dest:copy_buffer_t)
       (contents_dest v_dest: Ghost.erased (Seq.seq U8.t))
 requires exists* v_ctxt .
       pts_to ctxt v_ctxt **
-      CB.pts_to #_ #input_buffer_t dest contents_dest v_dest
+      CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest v_dest
 ensures exists* v_ctxt' .
       pts_to ctxt v_ctxt' **
-      CB.pts_to #_ #input_buffer_t dest contents_dest v_dest
+      CB.pts_to #_ #base_t #len_t #pos_t dest contents_dest v_dest
 {
   if (use_error_handler) {
 //    coerce_eq #_ #error_handler () err tn fn_ det 0uL ctxt (stream_of dest) 0uL _
@@ -217,11 +217,11 @@ inline_for_extraction
 noextract
 fn probe_fn_incremental_as_probe_m
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
-  (#use_error_handler:bool) (f:probe_fn_incremental #copy_buffer_t #input_buffer_t) (bytes_to_read:U64.t)
-: probe_m #copy_buffer_t #input_buffer_t unit true false use_error_handler
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
+  (#use_error_handler:bool) (f:probe_fn_incremental #copy_buffer_t #base_t #len_t #pos_t) (bytes_to_read:U64.t)
+: probe_m #copy_buffer_t #base_t #len_t #pos_t unit true false use_error_handler
 =
   (tn: _)
   (fn_: _)
@@ -252,11 +252,11 @@ inline_for_extraction
 noextract
 let init_probe_m
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
   (#use_error_handler:bool) struct_name (f:init_probe_dest_t)
-: probe_m #copy_buffer_t #input_buffer_t unit false false use_error_handler
+: probe_m #copy_buffer_t #base_t #len_t #pos_t unit false false use_error_handler
 = admit ()
 
 (*
@@ -273,11 +273,11 @@ inline_for_extraction
 noextract
 let init_probe_size
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
   (#use_error_handler:bool)
-: probe_m #copy_buffer_t #input_buffer_t U64.t true false use_error_handler
+: probe_m #copy_buffer_t #base_t #len_t #pos_t U64.t true false use_error_handler
 = admit ()
 (*
 = fun _ _ _ ctxt err read_offset write_offset failed src sz dest ->
@@ -288,9 +288,9 @@ inline_for_extraction
 noextract
 let write_at_offset_m
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
   (#use_error_handler:bool) (#t:Type0) (#w:U64.t { w <> 0uL }) (f:write_at_offset_t t w) (v:t)
 : probe_m unit true false use_error_handler
 = admit ()
@@ -311,9 +311,9 @@ inline_for_extraction
 noextract
 let probe_and_read_at_offset_m
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
   (#use_error_handler:bool) (#t:Type0) (#s:U64.t { s <> 0uL }) (reader:probe_and_read_at_offset_t t s)
 : probe_m t true false use_error_handler
 = admit ()
@@ -337,9 +337,9 @@ inline_for_extraction
 noextract
 let seq_probe_m
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
   (#use_error_handler:bool) (#a:Type) (detail:string) (dflt:a) (m1:probe_m unit true false use_error_handler) (m2:probe_m a true false use_error_handler)
 : probe_m a true false use_error_handler
 = admit ()
@@ -360,9 +360,9 @@ inline_for_extraction
 noextract
 let bind_probe_m
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
   (#use_error_handler:bool) (#a #b:Type) (detail:string) (dflt:b) (m1:probe_m a true false use_error_handler) (m2:a -> probe_m b true false use_error_handler)
 : probe_m b true false use_error_handler
 = admit ()
@@ -382,9 +382,9 @@ inline_for_extraction
 noextract
 let probe_and_copy_init_sz
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
   (#use_error_handler:bool) (f:probe_fn_incremental)
 : probe_m unit true false use_error_handler
 = bind_probe_m 
@@ -397,9 +397,9 @@ inline_for_extraction
 noextract
 let return_probe_m
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
   (#use_error_handler:bool) (#a:Type) (v:a)
 : probe_m a true false use_error_handler
 = admit ()
@@ -417,9 +417,9 @@ inline_for_extraction
 noextract
 let skip_read
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
   (#use_error_handler:bool) (bytes_to_skip:U64.t)
 : probe_m unit true false use_error_handler
 = admit ()
@@ -439,9 +439,9 @@ inline_for_extraction
 noextract
 let skip_write
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
   (#use_error_handler:bool) (bytes_to_skip:U64.t)
 : probe_m unit true false use_error_handler
 = admit ()
@@ -461,9 +461,9 @@ inline_for_extraction
 noextract
 let fail
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
   (#use_error_handler:bool)
 : probe_m unit true false use_error_handler
 = admit ()
@@ -476,9 +476,9 @@ inline_for_extraction
 noextract
 let if_then_else
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
 (#use_error_handler:bool) (b:bool) (m0 m1:probe_m unit true false use_error_handler)
 : probe_m unit true false use_error_handler
 = admit ()
@@ -638,9 +638,9 @@ inline_for_extraction
 noextract
 let probe_array
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
   (#use_error_handler:bool) (byte_len:U64.t) (probe_elem:probe_m unit true false use_error_handler)
 : probe_m unit true false use_error_handler
 = admit ()
@@ -652,9 +652,9 @@ inline_for_extraction
 noextract
 let lift_pure_external_action
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
   (#use_error_handler:bool) (#a:Type) (f:pure_external_action a)
 : probe_m a true false use_error_handler
 = admit ()
@@ -666,9 +666,9 @@ inline_for_extraction
 noextract
 let init_and_probe
   (#copy_buffer_t: Type0)
-  (#input_buffer_t: Type0)
-  {| inst: I.input_stream_inst input_buffer_t  |}
-  {| cb_inst: copy_buffer copy_buffer_t input_buffer_t  |}
+  (#base_t #len_t #pos_t: Type0)
+  {| inst: I.input_stream_inst base_t len_t pos_t  |}
+  {| cb_inst: copy_buffer copy_buffer_t base_t len_t pos_t  |}
       (#use_error_handler:bool)
       (#mz:bool)
       (struct_name:string)

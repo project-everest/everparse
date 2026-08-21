@@ -12,44 +12,50 @@ let seq_is_suffix_of (#t: Type) (small large: Seq.seq t) : Tot prop =
 
 noextract
 inline_for_extraction
-class input_stream_inst (t: Type) : Type = {
+class input_stream_inst (base_t: Type0) (len_t: Type0) (pos_t: Type0) : Type = {
   
-  pts_to: t -> Seq.seq U8.t -> Seq.seq U8.t -> slprop;
+  pts_to: base_t -> len_t -> pos_t -> Seq.seq U8.t -> Seq.seq U8.t -> slprop;
 
   pts_to_is_suffix_of:
-    (x: t) ->
+    (base: base_t) ->
+    (len: len_t) ->
+    (pos: pos_t) ->
     (contents: Seq.seq U8.t) ->
     (v: Seq.seq U8.t) ->
     stt_ghost unit emp_inames
-      (pts_to x contents v)
-      (fun _ -> pts_to x contents v ** pure (v `seq_is_suffix_of` contents));
+      (pts_to base len pos contents v)
+      (fun _ -> pts_to base len pos contents v ** pure (v `seq_is_suffix_of` contents));
 
   get_position:
-    (x: t) ->
+    (base: base_t) ->
+    (len: len_t) ->
+    (pos: pos_t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
     stt SZ.t
     (requires (
-      pts_to x contents v
+      pts_to base len pos contents v
     ))
     (ensures fun res ->
-      pts_to x contents v **
+      pts_to base len pos contents v **
       pure (
         SZ.v res + Seq.length v == Seq.length contents
       )
     );
 
   has:
-    (x: t) ->
+    (base: base_t) ->
+    (len: len_t) ->
+    (pos: pos_t) ->
     (n: SZ.t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
     stt bool
     (requires (
-      pts_to x contents v
+      pts_to base len pos contents v
     ))
     (ensures (fun res ->
-      pts_to x contents v **
+      pts_to base len pos contents v **
       pure (res == true <==> SZ.v n <= Seq.length v)
     ));
   
@@ -58,20 +64,22 @@ class input_stream_inst (t: Type) : Type = {
     (k: LP.parser_kind) ->
     (p: LP.parser k t') ->
     (r: LPL.leaf_reader p) ->
-    (x: t) ->
+    (base: base_t) ->
+    (len: len_t) ->
+    (pos: pos_t) ->
     (n: SZ.t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
     stt t'
     (requires (
-      pts_to x contents v ** pure (
+      pts_to base len pos contents v ** pure (
       k.LP.parser_kind_subkind == Some LP.ParserStrong /\
       k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
       k.LP.parser_kind_low == SZ.v n /\
       Some? (LP.parse p v)
     )))
     (ensures (fun dst' -> exists* v' .
-      pts_to x contents v' ** pure (
+      pts_to base len pos contents v' ** pure (
       Seq.length v >= SZ.v n /\
       LP.parse p (Seq.slice v 0 (SZ.v n)) == Some (dst', SZ.v n) /\
       LP.parse p v == Some (dst', SZ.v n) /\
@@ -79,76 +87,35 @@ class input_stream_inst (t: Type) : Type = {
     )));
 
   skip:
-    (x: t) ->
+    (base: base_t) ->
+    (len: len_t) ->
+    (pos: pos_t) ->
     (n: SZ.t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
     stt unit
     (requires (
-      pts_to x contents v ** pure (
+      pts_to base len pos contents v ** pure (
       Seq.length v >= SZ.v n
     )))
     (ensures (fun _ -> exists* v' .
-      pts_to x contents v' ** pure (
+      pts_to base len pos contents v' ** pure (
       Seq.length v >= SZ.v n /\
       v' `Seq.equal` Seq.slice v (SZ.v n) (Seq.length v)
     )));
   
   empty:
-    (x: t) ->
+    (base: base_t) ->
+    (len: len_t) ->
+    (pos: pos_t) ->
     (contents: Ghost.erased (Seq.seq U8.t)) ->
     (v: Ghost.erased (Seq.seq U8.t)) ->
     stt SZ.t
     (requires (
-      pts_to x contents v
+      pts_to base len pos contents v
     ))
     (ensures (fun res ->
-      pts_to x contents Seq.empty ** pure (
+      pts_to base len pos contents Seq.empty ** pure (
       SZ.v res == Seq.length v
     )));
-
-  is_prefix_of:
-    (x: t) ->
-    (y: t) ->
-    (contents: Seq.seq U8.t) ->
-    (suffix: Seq.seq U8.t) ->
-    Tot slprop;
-
-  truncate:
-    (x: t) ->
-    (n: SZ.t) ->
-    (contents: Ghost.erased (Seq.seq U8.t)) ->
-    (v: Ghost.erased (Seq.seq U8.t)) ->
-    stt t
-    (requires (
-      pts_to x contents v ** pure (
-      SZ.v n <= Seq.length v
-    )))
-    (ensures (fun res -> exists* contents' v1 v2 .
-      pts_to res contents' v1 **
-      is_prefix_of res x contents v2 **
-      pure (
-      	SZ.v n <= Seq.length v /\
-        Seq.equal v1 (Seq.slice v 0 (SZ.v n)) /\
-	Seq.equal v2 (Seq.slice v (SZ.v n) (Seq.length v)) /\
-	Seq.length v <= Seq.length contents /\
-	Seq.equal contents' (Seq.append (Seq.slice contents 0 (Seq.length contents - Seq.length v)) v1) /\
-	Ghost.reveal v == Seq.append v1 v2
-    )));
-
-  untruncate:
-    (x: t) ->
-    (y: t) ->
-    (contents: Seq.seq U8.t) ->
-    (v: Seq.seq U8.t) ->
-    (contents0: Seq.seq U8.t) ->
-    (suffix: Seq.seq U8.t) ->
-    stt_ghost unit emp_inames
-    (requires (
-       pts_to x contents v **
-       is_prefix_of x y contents0 suffix
-    ))
-    (ensures (fun _ ->
-       pts_to y contents0 (Seq.append v suffix)
-    ));
 }
