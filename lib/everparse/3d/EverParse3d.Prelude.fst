@@ -212,8 +212,13 @@ inline_for_extraction noextract
 let read_filter #_ #k #t #p p32 f
     = LowParse.PulseParse.Combinators.read_filter #k #t p32 f
 
+let squash_of_erased (#a: Type) (x: FStar.Ghost.erased a) : squash a =
+  FStar.Squash.return_squash (FStar.Ghost.reveal x)
+
 let read_impos : reader (parse_impos()) =
-  admit () // TODO
+  fun input #pm #v t' f ->
+    let _ = squash_of_erased v in
+    false_elim ()
   
 // ////////////////////////////////////////////////////////////////////////////////
 // // Validators
@@ -222,29 +227,6 @@ inline_for_extraction noextract
 let validator #nz #wk (#k:parser_kind nz wk) (#t:Type) (p:parser k t)
   : Type
   = LowParse.Pulse.Base.validator #t #k p
-
-inline_for_extraction noextract
-let validator_no_read #nz #wk (#k:parser_kind nz wk) (#t:Type) (p:parser k t)
-  : Type
-  = admit () // TODO
-
-inline_for_extraction noextract
-let validate_nlist_total_constant_size_mod_ok
-    (n:U32.t)
-    (n_is_const:option nat { memoizes_n_as_const n_is_const n })
-    #wk (#k:parser_kind true wk) (#t: Type) (p:parser k t)
-  : Pure (validator_no_read (parse_nlist n n_is_const p))
-  (requires (
-    let open LP in
-    k.parser_kind_subkind == Some ParserStrong /\
-    k.parser_kind_high == Some k.parser_kind_low /\
-    k.parser_kind_metadata == Some ParserKindMetadataTotal /\
-    k.parser_kind_low < 4294967296 /\
-    U32.v n % k.LP.parser_kind_low == 0
-  ))
-  (ensures (fun _ -> True))
-=
-	admit () // TODO
 
 module LUT = LowParse.Spec.ListUpTo
 
@@ -312,7 +294,7 @@ let read____UINT32 = LowParse.PulseParse.Base.reader_of_leaf_reader LowParse.Pul
 
 /// UInt64
 let parse____UINT64 = LowParse.Spec.Int.parse_u64_le
-let read____UINT64 = admit () // TODO
+let read____UINT64 = LowParse.PulseParse.Base.reader_of_serialized LowParse.Pulse.Int.read_u64_le
   
 inline_for_extraction noextract
 let read_unit

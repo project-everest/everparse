@@ -226,6 +226,27 @@ inline_for_extraction
 let read_u64 : reader serialize_u64 = reader_of_leaf_reader (read_u64' ())
 
 inline_for_extraction
+noextract
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta_attr [`%E.must_reduce]; iota; zeta; primops]; FStar.Tactics.trefl ())]
+let le_to_n_8 = (E.mk_le_to_n EI.uint64 8)
+
+inline_for_extraction
+fn read_u64_le' (_: unit) : leaf_reader #FStar.UInt64.t #parse_u64_kind #parse_u64_le serialize_u64_le
+= (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased FStar.UInt64.t)
+{
+  unfold (pts_to_serialized serialize_u64_le input #pm v);
+  serialize_u64_le_spec_le v;
+  let res = le_to_n_8 input 0sz;
+  fold (pts_to_serialized serialize_u64_le input #pm v);
+  res
+}
+
+inline_for_extraction
+let read_u64_le : reader serialize_u64_le = reader_of_leaf_reader (read_u64_le' ())
+
+inline_for_extraction
 let size_u64 (#t: Type) (vmatch: t -> FStar.UInt64.t -> slprop) : compute_remaining_size vmatch serialize_u64 =
   compute_remaining_size_constant_size vmatch serialize_u64 8sz
 
